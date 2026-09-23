@@ -1,9 +1,8 @@
 /**
- * RichTextLabel's native (WebGL canvas) solve: `get_minimum_size`
- * (`scene/gui/rich_text_label.cpp:8036-8047`) over `get_content_height` and
- * `get_content_width` (`:7491-7522`), the theme keys of
- * `scene/theme/default_theme.cpp:1194-1211`, and the styled-run layout the
- * painter draws. Pure math, no THREE or React.
+ * RichTextLabel's native (WebGL canvas) solve: `get_minimum_size` (`scene/gui/rich_text_label.cpp:8036-8047`)
+ * over `get_content_height` and `get_content_width` (`:7491-7522`), the theme keys of
+ * `scene/theme/default_theme.cpp:1194-1211`, and the styled-run layout the painter draws.
+ * Pure math, no THREE or React.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

@@ -1,23 +1,8 @@
 /**
  * ItemList's native (WebGL canvas) rect solver: `ItemList::force_update_list_size`
- * (`scene/gui/item_list.cpp:1733-1912`), its per-item minsize (`:1743-1796`),
- * `ItemList::get_minimum_size` (`:2136-2146`) and the draw-time icon fit
- * `_adjust_to_max_size` (`:1186-1197`). Pure per-node math, no THREE/React.
- *
- * Not modelled:
- *  - Bidi shaping: `_shape_text` hands `is_layout_rtl()` to the TextServer
- *    (`item_list.cpp:41-45`), and the text engine has no bidi pass, so an RTL
- *    script draws in logical order. Each layout branch of `is_layout_rtl()` is ported.
- *  - Selected, hovered, cursor and focus backgrounds, and `custom_bg`/`custom_fg`:
- *    item_list.cpp's helper registers only `text`/`icon`/`selectable`/`disabled`
- *    (`:2461-2467`), so no `.tscn` reaches them.
- *  - The scroll-hint icon, which needs a vendored icon and a scrolled position
- *    (`comparison.md`). Guide lines are modelled: at scroll zero each separator shows.
- *  - The scrollbar-driven `fit_size` adjustment (`item_list.cpp:1798-1801,1862-1864`),
- *    reachable only with `max_columns > 1`, `wraparound_items` and no `auto_width`.
- *  - Re-shaping text at the final column width (`item_list.cpp:1628-1634,1657-1661`):
- *    text shapes once at the packing width, exact under `fixed_column_width` or
- *    `same_column_width`, approximate when a fitted column ends up wider.
+ * (`scene/gui/item_list.cpp:1733-1912`), its per-item minsize (`:1743-1796`), `get_minimum_size`
+ * (`:2136-2146`) and the draw-time icon fit `_adjust_to_max_size` (`:1186-1197`). Pure per-node
+ * math, no THREE or React. `comparison.md` lists what it leaves out, under Known limitations.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -220,7 +205,8 @@ export function itemListAutowrapMode(iconMode: number, maxTextLines: number): Au
 /**
  * The width `text_buf->set_width()` is called with during the MINSIZE pass
  * (`item_list.cpp:1763-1766`): `fixed_column_width` when set, else
- * unconstrained (Godot's `-1`, this engine's `0`).
+ * unconstrained (Godot's `-1`, this engine's `0`). Text is not shaped again at the
+ * final column width (`item_list.cpp:1628-1634,1657-1661`), so a wider fitted column is approximate.
  */
 export function itemListShapeWidth(fixedColumnWidth: number): number {
   return fixedColumnWidth > 0 ? fixedColumnWidth : 0;
@@ -353,7 +339,11 @@ export interface ItemListPackInput {
   sameColumnWidth: boolean;
   /** `<= 0` means unbounded (`item_list.cpp:1804-1807`). Godot's own class default is 1, not 0: callers pass `maxColumns ?? 1`. */
   maxColumns: number;
-  /** `size.x - panel_style->get_minimum_size().width` (`item_list.cpp:1798`), without the unported scrollbar adjustment (`:1798-1801,1862-1864`). */
+  /**
+   * `size.x - panel_style->get_minimum_size().width` (`item_list.cpp:1798`), without the unported
+   * scrollbar adjustment (`:1798-1801,1862-1864`). Only a pass with more than one column,
+   * `wraparound_items` and no `auto_width` reads it.
+   */
   fitSize: number;
   wraparoundItems: boolean;
   autoWidth: boolean;

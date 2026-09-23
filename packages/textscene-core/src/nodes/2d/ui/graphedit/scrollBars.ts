@@ -1,15 +1,7 @@
 /**
- * GraphEdit's own two scrollbars: `h_scrollbar`/`v_scrollbar`, constructor-
- * built children of `top_layer` (`scene/gui/graph_edit.cpp:3210-3216`), sized
- * and valued by `_update_scrollbars` (`:463-510`) and anchored by
- * `_notification(NOTIFICATION_READY)` (`:840-851`).
- *
- * Both are visible in every GraphEdit with a non-zero rect: the range
- * `_update_scrollbars` builds is the graph box grown by one whole GraphEdit
- * rect on each side (`:491-492`), while the page is that rect, so
- * `max - min <= page`, the only `hide()` branch (`:499,509`), cannot hold.
- *
- * Pure data + functions, no React, no THREE.
+ * GraphEdit's two scrollbars, `h_scrollbar` and `v_scrollbar`: children of `top_layer` that the
+ * constructor builds (`scene/gui/graph_edit.cpp:3210-3216`), sized and valued by
+ * `_update_scrollbars` (`:463-510`) and anchored at `NOTIFICATION_READY` (`:840-851`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -41,6 +33,11 @@ function ratioOf(value: number, min: number, max: number): number {
   return Math.min(1, Math.max(0, (value - min) / (max - min)));
 }
 
+/**
+ * Both bars, on every GraphEdit with a non-zero rect: `_update_scrollbars` grows the graph box by
+ * one GraphEdit rect on each side (`:491-492`) while the page is that rect, so its only `hide()`
+ * branch, `max - min <= page` (`:499,509`), never holds.
+ */
 export function graphEditScrollBars(
   graphEditSize: Vec2,
   bounds: GraphScrollBounds,

@@ -3,13 +3,6 @@
  * frozen pose is one specific draw from the stream, so a uniform substitute puts
  * the sparks in the wrong places.
  *
- *  - `GodotRandomPCG`: the `RandomNumberGenerator` re-seeded per particle at
- *    birth (`cpu_particles_2d.cpp:922`), for everything decided once per particle.
- *  - `randFromSeed`: a Park–Miller/Lehmer generator threaded through the
- *    per-frame update (`cpu_particles_2d.cpp:1072-1109`).
- *  - `idhash`: an integer avalanche that only `randomness_ratio` uses to jitter
- *    a particle's restart phase (`cpu_particles_2d.cpp:860`).
- *
  * Derived from Godot Engine (`core/math/random_pcg.h`,
  * `thirdparty/misc/pcg.cpp`, and `scene/2d/cpu_particles_2d.cpp`). The Godot
  * portions are used under the MIT licence:
@@ -49,6 +42,8 @@ const UINT64_MASK = 0xffffffffffffffffn;
 /**
  * Godot's `RandomPCG` over the vendored minimal PCG32 (XSH-RR, 64-bit state,
  * 32-bit output), exposing only what CPUParticles2D uses: `seed` and `randf`.
+ * Re-seeded per particle at birth (`cpu_particles_2d.cpp:922`) for everything
+ * decided once per particle.
  */
 export class GodotRandomPCG {
   private state = 0n;
@@ -102,7 +97,8 @@ export interface SeedRef {
 
 /**
  * `rand_from_seed` (`cpu_particles_2d.cpp:694-707`): a Park–Miller minimal
- * standard generator using Schrage's trick to stay inside 32-bit arithmetic.
+ * standard generator using Schrage's trick to stay inside 32-bit arithmetic,
+ * threaded through the per-frame update (`cpu_particles_2d.cpp:1072-1109`).
  * Advances `state.value` in place and returns the new state scaled to 0..1.
  */
 export function randFromSeed(state: SeedRef): number {
@@ -116,8 +112,9 @@ export function randFromSeed(state: SeedRef): number {
 }
 
 /**
- * `idhash` (`cpu_particles_2d.cpp:687-692`): the xor-multiply avalanche
- * `randomness_ratio` uses to scatter restart phases.
+ * `idhash` (`cpu_particles_2d.cpp:687-692`): the xor-multiply avalanche that
+ * only `randomness_ratio` uses, to jitter a particle's restart phase
+ * (`cpu_particles_2d.cpp:860`).
  */
 export function idhash(x: number): number {
   let h = x >>> 0;

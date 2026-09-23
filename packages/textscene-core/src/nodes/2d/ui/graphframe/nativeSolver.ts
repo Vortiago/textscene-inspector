@@ -1,18 +1,8 @@
 /**
- * GraphFrame's native (WebGL canvas) rect solve: `GraphFrame::_resort`,
- * `GraphFrame::get_minimum_size` (`scene/gui/graph_frame.cpp:145-169,324-346`),
- * `scene/gui/container.cpp` (`Container::fit_child_in_rect`) and this node's
- * own titlebar band (`../graphelement/graphTitlebar.ts`).
- *
- * Unlike GraphNode, every child shares one content rect (`_resort` feeds one
- * `Rect2(offset, size)` to each `fit_child_in_rect` call, `:167`), with no
- * stacking, separation or slots.
- *
- * `get_minimum_size` folds height as `minsize.y += MAX(minsize.y, size.y)`
- * (`:340`), not `=`, so each child at least doubles the running height. The
- * port keeps it: the engine source is the spec.
- *
- * Pure data + functions, no React, no THREE.
+ * GraphFrame's native (WebGL canvas) rect solve: `GraphFrame::_resort` and `get_minimum_size`
+ * (`scene/gui/graph_frame.cpp:145-169,324-346`), `Container::fit_child_in_rect` and the titlebar
+ * band (`../graphelement/graphTitlebar.ts`). Unlike GraphNode, every child shares one content rect
+ * (`:167`), with no stacking, separation or slots.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -152,7 +142,8 @@ export const graphFrameMinimumSize: MinimumSizeFn = (n, ctx) => {
     const cms = ctx.combinedMinimumSize(child);
     const w = cms.x + panel.contentMargin.left + panel.contentMargin.right;
     width = Math.max(width, w);
-    // graph_frame.cpp:340: `minsize.y += MAX(minsize.y, size.y)`, literal.
+    // graph_frame.cpp:340: `minsize.y += MAX(minsize.y, size.y)`, not `=`, so each child at least
+    // doubles the running height. The port keeps it: the engine source is the spec.
     height += Math.max(height, cms.y);
   }
 

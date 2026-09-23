@@ -1,29 +1,8 @@
 /**
- * Line justification — a port of `TextServer::shaped_text_fit_to_width`
- * (`modules/text_server_adv/text_server_adv.cpp:5531-5686`), scoped to what a
- * Latin font with no kashida elongation glyphs and no BiDi reaches:
- *
- * - `JUSTIFICATION_WORD_BOUND` — ported (grow OR shrink every space glyph).
- * - `JUSTIFICATION_TRIM_EDGE_SPACES` — ported (zeroes the edge spaces' own
- *   advance before measuring).
- * - `JUSTIFICATION_AFTER_LAST_TAB` — ported (only the run after the last tab
- *   is justified).
- * - `JUSTIFICATION_KASHIDA` — dead here: it only ever fires on
- *   `GRAPHEME_IS_ELONGATION` glyphs (Arabic-script tatweel runs), which this
- *   engine's Latin shaper never tags. Accepted as a flag bit, never consulted.
- * - The `adv_remain` whole-pixel carry (`:5662-5671`) is dead in the SOURCE
- *   itself: `gl.advance = new_advance` runs before `adv_remain += (new_advance
- *   - gl.advance)`, which is therefore always `+= 0`, so the carry-triggered
- *   branches below it never execute. Not ported.
- * - `JUSTIFICATION_CONSTRAIN_ELLIPSIS` — accepted as a flag bit, not wired:
- *   it narrows the justified range to a PRIOR overrun trim's cut point, an
- *   interaction only reachable on one Label combination (autowrap OFF,
- *   `HORIZONTAL_ALIGNMENT_FILL`, and a trimming `text_overrun_behavior`, all
- *   three at once) — see the label slice's own `comparison.md`.
- * - `JUSTIFICATION_SKIP_LAST_LINE` / `..._WITH_VISIBLE_CHARS` /
- *   `DO_NOT_SKIP_SINGLE_LINE` decide WHICH lines a caller fits at all
- *   (`label.cpp:273-297`), never anything inside one line's own fit — they
- *   are the caller's business, not this function's.
+ * Line justification, a port of `TextServer::shaped_text_fit_to_width`
+ * (`modules/text_server_adv/text_server_adv.cpp:5531-5686`) scoped to what a Latin font with no
+ * kashida elongation glyphs and no BiDi reaches. It ports `WORD_BOUND`, `TRIM_EDGE_SPACES` and
+ * `AFTER_LAST_TAB`. Each other `JustificationFlag` member says why it does nothing here.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -35,11 +14,27 @@ import { isTabChar, isWhitespace, type TextLineLayout } from './textLayout';
 /** `TextServer::JustificationFlag` (`servers/text/text_server.h:78-87`). */
 export enum JustificationFlag {
   NONE = 0,
+  /**
+   * Never consulted: it fires only on `GRAPHEME_IS_ELONGATION` glyphs (Arabic-script tatweel
+   * runs), which this engine's Latin shaper never tags.
+   */
   KASHIDA = 1 << 0,
+  /** Grows or shrinks every space glyph. */
   WORD_BOUND = 1 << 1,
+  /** Zeroes the edge spaces' own advance before measuring. */
   TRIM_EDGE_SPACES = 1 << 2,
+  /** Justifies only the run after the last tab. */
   AFTER_LAST_TAB = 1 << 3,
+  /**
+   * Not wired. It narrows the justified range to an earlier overrun trim's cut point, which only a
+   * Label with autowrap off, `HORIZONTAL_ALIGNMENT_FILL` and a trimming `text_overrun_behavior`
+   * reaches (the label slice's `comparison.md`).
+   */
   CONSTRAIN_ELLIPSIS = 1 << 4,
+  /**
+   * With the next two, decides which lines a caller fits at all (`label.cpp:273-297`), never
+   * anything inside one line's fit, so it is the caller's business.
+   */
   SKIP_LAST_LINE = 1 << 5,
   SKIP_LAST_LINE_WITH_VISIBLE_CHARS = 1 << 6,
   DO_NOT_SKIP_SINGLE_LINE = 1 << 7,
@@ -55,7 +50,11 @@ export interface FitLineResult {
   fitWidthMinimumReached: boolean;
 }
 
-/** Port of `TextServer::shaped_text_fit_to_width`, scoped per this module's own doc. */
+/**
+ * Port of `TextServer::shaped_text_fit_to_width`, scoped per this module's own doc. The source's
+ * `adv_remain` whole-pixel carry (`:5662-5671`) is not ported: `gl.advance = new_advance` runs
+ * before `adv_remain += (new_advance - gl.advance)`, so the carry is always zero.
+ */
 export function fitLineToWidth(line: TextLineLayout, widthPx: number, flags: JustificationFlag, options: FitLineOptions): FitLineResult {
   const glyphs = line.glyphs;
   if (glyphs.length === 0) return { line, fitWidthMinimumReached: false };

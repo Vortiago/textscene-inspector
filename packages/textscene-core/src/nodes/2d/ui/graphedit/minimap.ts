@@ -1,21 +1,8 @@
 /**
- * `GraphEditMinimap`'s geometry: the bottom-right overview panel GraphEdit's
- * own constructor builds (`scene/gui/graph_edit.cpp:3325-3340`), so every
- * GraphEdit carries one whatever the scene file says.
- *
- * Three pieces of Godot arithmetic meet here:
- *
- *  - `GraphEdit::set_minimap_size` (`:2770-2780`): the panel's own rect:
- *    `PRESET_BOTTOM_RIGHT` plus four offsets built from the size after
- *    `Control::set_size`'s floor against `custom_minimum_size` (`:3332`).
- *  - `GraphEdit::_update_scrollbars` (`:472-493`): `min_scroll_offset`/
- *    `max_scroll_offset`, the graph bounding box every conversion below is
- *    expressed against. It merges into a default `Rect2`, so the graph origin
- *    is always inside the box (`core/math/rect2.h:165-180`).
- *  - `GraphEditMinimap::update_minimap` (`:76-101`) and its two converters
- *    (`:135-158`): the letterboxed graph-to-minimap mapping.
- *
- * Pure data + functions, no React, no THREE.
+ * The geometry of `GraphEditMinimap`, the bottom-right overview panel that GraphEdit's constructor
+ * builds (`scene/gui/graph_edit.cpp:3325-3340`), so every GraphEdit carries one whatever the file
+ * says: its rect (`set_minimap_size`), the graph box it maps (`_update_scrollbars`), and the
+ * letterboxed graph-to-minimap mapping (`update_minimap` and its two converters, `:135-158`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -60,7 +47,10 @@ export function minimapOpacity(props: GraphEditProperties): number {
   return props.minimapOpacity ?? GRAPH_EDIT_MINIMAP_DEFAULT_OPACITY;
 }
 
-/** `GraphEdit::set_minimap_size` (`:2770-2780`), the rect its four offsets resolve to inside GraphEdit's own. */
+/**
+ * `GraphEdit::set_minimap_size` (`:2770-2780`): `PRESET_BOTTOM_RIGHT` plus four offsets, resolved
+ * to a rect inside GraphEdit's own.
+ */
 export function minimapRect(graphEditSize: Vec2, props: GraphEditProperties): Rect2 {
   const requested = props.minimapSize ?? GRAPH_EDIT_MINIMAP_DEFAULT_SIZE;
   // `minimap->get_size()` after `Control::set_size`'s own floor (`control.cpp:1496-1503`).
@@ -87,9 +77,9 @@ export interface GraphScrollBounds {
 }
 
 /**
- * `GraphEdit::_update_scrollbars`' own screen-space bounding box
- * (`:472-493`). No visibility test: a hidden GraphElement still widens it,
- * unlike `_minimap_draw`'s own loops (`:1821,1844`).
+ * `GraphEdit::_update_scrollbars`' own screen-space bounding box (`:472-493`). It merges into a
+ * default `Rect2`, so the graph origin is always inside (`core/math/rect2.h:165-180`). No visibility
+ * test: a hidden GraphElement still widens it, unlike `_minimap_draw`'s own loops (`:1821,1844`).
  */
 export function graphScrollBounds(
   elements: readonly GraphElementBox[],

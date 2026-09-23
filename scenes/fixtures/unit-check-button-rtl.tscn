@@ -1,6 +1,7 @@
 ; The one variable: `layout_direction = 3` (RTL) on the lower CheckButton. Under RTL it draws the
 ; separate `toggle_on_mirrored` icon (check_button.cpp:109-120) at the left content margin (:135).
-; Both rows are pressed, so a missed swap cannot hide behind a moved icon. unit-check-button is LTR.
+; Both rows are pressed, so a missed swap cannot hide behind a moved icon. No other scene pairs a
+; CheckButton with a layout direction, so a regression here is invisible in every other golden.
 
 [gd_scene format=3 uid="uid://unitcheckbuttonrtl"]
 

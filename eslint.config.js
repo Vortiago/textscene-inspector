@@ -110,11 +110,9 @@ export default [
     },
   },
 
-  // Guard: node-type parser/linter registration entry points must stay
-  // React/THREE-free (ADR-0001). `index.ts` registers the parser, `index.linter.ts`
-  // the lint rules — only `index.r3f.ts` may import the render component. The
-  // runtime `linter/reactFree.test.ts` is the comprehensive module-graph check;
-  // this is the fast editor-time guard against the obvious leak.
+  // A node type's parser and linter entry points stay React- and THREE-free (ADR-0001): only
+  // `index.r3f.ts` imports the render component. This is the fast editor-time guard against the
+  // obvious leak. `linter/reactFree.test.ts` checks the whole module graph.
   {
     files: [
       'packages/textscene-core/src/nodes/**/index.ts',

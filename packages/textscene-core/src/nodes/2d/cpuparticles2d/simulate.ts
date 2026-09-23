@@ -1,16 +1,7 @@
 /**
  * CPUParticles2D's simulation, evaluated once to a frozen pose: a pure, React-free
  * and THREE-free port of `CPUParticles2D::_particles_process` and the settle loop
- * `_update_internal` spends `pre_process_time` through.
- *
- * No clock: the settle steps at a fixed 1/30 s (or `fixed_fps`) with `speed_scale`
- * forced to 1 (`cpu_particles_2d.cpp:727-738`), a running emitter would make a
- * golden unstable, and the transport starts stopped (ADR-0012). Godot's editor
- * animates an emitter on wall clock (`set_process_internal(emitting)`, `:1262`, no
- * `is_editor_hint` guard), which no file or reference render can name.
- *
- * A colour ramp reads the gradient slice's pure `sample.ts`, the
- * `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
+ * `_update_internal` spends `pre_process_time` through (`cpu_particles_2d.cpp:727-738`).
  *
  * Derived from Godot Engine (`scene/2d/cpu_particles_2d.cpp`), used under the
  * MIT licence:
@@ -44,6 +35,7 @@ import type { Color, Vector2 } from '../../base/node2d/types';
 import type { Curve } from '../../../resources/curves/curve/types';
 import { sampleCurve } from '../../../resources/curves/curve/sample';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
+// The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
 import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from './godotRng';
 import {
@@ -153,8 +145,10 @@ export function settleSeconds(props: CPUParticles2DProperties): number {
 }
 
 /**
- * Evaluate the emitter to a single pose, in the emitter node's local space and
- * in the order it must be drawn.
+ * Evaluate the emitter to a single pose, in the emitter node's local space and in the order
+ * it must be drawn. No clock: a running emitter makes a golden unstable (ADR-0012), and the
+ * editor animates on wall clock (`set_process_internal(emitting)`, `cpu_particles_2d.cpp:1262`,
+ * no `is_editor_hint` guard), at an instant that no file or reference render can name.
  */
 export function simulateFrozenPose(input: ParticleSimInput): RenderedParticle[] {
   const { props } = input;

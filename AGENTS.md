@@ -24,10 +24,9 @@ Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnp
   vitest and tsc but fail CI.
 - Changed `.tscn` fixtures: `pnpm build:linter && pnpm lint:tscn <files>`.
 - Changed a linter rule or validator: `pnpm lint:scenes`, in `validate` and in CI. It
-  sweeps every shipped directory under `scenes/` except `fixtures` (`scenes/examples`,
-  `scenes/demos`, `scenes/isometric`, `scenes/materials`) and fails on any error. The
-  directory list lives in `lint:scenes:only`, which CI runs too. It never lives inside the
-  linter or the core package: the tool takes paths, the caller chooses them.
+  sweeps `scenes/demos` and `scenes/isometric` and fails on any error. The directory
+  list lives in `lint:scenes:only`, which CI runs too. It never lives inside the linter
+  or the core package: the tool takes paths, the caller chooses them.
   `scenes/demos` and `scenes/isometric` are vendored from Godot's own demo projects, so an
   error there is a false positive in a rule, not a broken scene. Warnings there are
   expected and do not fail. `fixtureLint.test.ts` covers `scenes/fixtures`, this

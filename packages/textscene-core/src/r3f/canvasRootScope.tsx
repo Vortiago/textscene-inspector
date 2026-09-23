@@ -1,28 +1,8 @@
 /**
- * The scope a canvas root draws in: the canvas itself, not the node above it.
- *
- * `CanvasItem::get_parent_item()` answers nullptr when the direct parent fails
- * `Object::cast_to<CanvasItem>` or when the item's own `top_level`
- * short-circuits the cast (`scene/main/canvas_item.cpp:565-571`), and
- * `_enter_canvas` then parents the item at the CanvasLayer's or the viewport's
- * own canvas rather than at an ancestor item (`canvas_item.cpp:234-285`).
- * `_render_canvas_item_tree` culls every such root from the canvas transform,
- * `Color(1, 1, 1, 1)`, `p_z = 0` and a null material owner
- * (`servers/rendering/renderer_canvas_cull.cpp:70-83`) — the same four resets
- * `CanvasLayerScope` publishes for the same reason, one canvas further in.
- *
- * Visibility is the one thing that still crosses: `_handle_visibility_change`
- * walks the scene-tree children and propagates into a top_level child anyway
- * (`canvas_item.cpp:102-108`). So the root stays nested inside its ancestors'
- * groups — where an eye toggle and a `visible = false` still reach it — and
- * cancels their accumulated transform with an inverse instead of being lifted
- * out of them.
- *
- * `CanvasSpaceContext` is what makes that inverse available: the three-space
- * transform accumulated by `<CanvasItem2D>` groups since the last object whose
- * world matrix is written outright. A `CanvasLayer` contributes nothing to it
- * because it mounts no transform of its own in this walk, which is exactly why
- * a canvas root beneath one still cancels the Node2D above the layer.
+ * The scope a canvas root (`isCanvasRoot`) draws in: the canvas itself, not the node above it.
+ * `_render_canvas_item_tree` culls each root from the canvas transform, `Color(1, 1, 1, 1)`,
+ * `p_z = 0` and a null material owner (`servers/rendering/renderer_canvas_cull.cpp:70-83`),
+ * the four resets `CanvasLayerScope` publishes one canvas further in.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -39,6 +19,11 @@ import { ROOT_TEXTURE_SAMPLER, TextureSampler2DContext } from './canvasItemTextu
 import { EffectiveZProvider } from './lighting2d/canvasItemPlacement.js';
 import { CanvasItemMaterialProvider } from './components/canvasItemMaterialContext.js';
 
+/**
+ * The three-space transform the `<CanvasItem2D>` groups accumulate since the last object whose
+ * world matrix is written outright. A `CanvasLayer` mounts no transform in this walk and adds
+ * nothing, so a canvas root beneath one still cancels the Node2D above the layer.
+ */
 const CanvasSpaceContext = createContext<THREE.Matrix4 | null>(null);
 CanvasSpaceContext.displayName = 'CanvasSpaceContext';
 
@@ -91,6 +76,9 @@ export function CanvasRootScope({
 }) {
   const ambient = useCanvasSpace();
   const isRoot = isCanvasRoot(node, parentIsCanvasItem);
+  // Visibility still crosses: `_handle_visibility_change` propagates into a top_level child
+  // (`canvas_item.cpp:102-108`). So the root stays inside its ancestors' groups, where an eye
+  // toggle and `visible = false` reach it, and cancels their transform with this inverse.
   const inverse = useMemo(
     () => (isRoot && ambient ? ambient.clone().invert() : null),
     [isRoot, ambient]

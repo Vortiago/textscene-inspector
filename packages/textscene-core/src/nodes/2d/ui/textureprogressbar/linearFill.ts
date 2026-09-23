@@ -1,10 +1,8 @@
 /**
- * `TextureProgressBar`'s non-radial, non-nine-patch progress crop (the `draw_texture_rect_region`
- * calls in `texture_progress_bar.cpp:445-482`). With `nine_patch_stretch` a linear mode takes
- * `draw_nine_patch_stretched` (`:452`), so `s` here is always `progress->get_size()`.
- *
- * Every branch's `region` and `source` share the ratio-scaled size and differ only in position
- * (`region` adds `progress_offset`): a crop-and-place, not a stretch. Pure TS, no React or THREE.
+ * `TextureProgressBar`'s non-radial, non-nine-patch progress crop (the `draw_texture_rect_region` calls
+ * in `texture_progress_bar.cpp:445-482`). With `nine_patch_stretch` a linear mode takes
+ * `draw_nine_patch_stretched` (`:452`), so `s` here is always `progress->get_size()`. Each branch's `region`
+ * and `source` share the ratio-scaled size, and `region` adds `progress_offset`: a crop-and-place, not a stretch.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

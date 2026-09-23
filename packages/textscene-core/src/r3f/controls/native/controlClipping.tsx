@@ -1,40 +1,8 @@
 /**
- * The accumulated canvas clip for the native Control canvas. Clip planes, not
- * stencil: the 2D `<Canvas>` in `World2DCanvas.tsx` requests no stencil buffer,
- * and three defaults it off, so a stencil clip would do nothing.
- *
- * The clip is a rect first and planes second, because Godot's is. A clipping
- * canvas item resolves to one `final_clip_rect`, and that rect alone becomes the
- * scissor (`servers/rendering/renderer_canvas_cull.cpp:412-424`):
- *
- *     if (p_canvas_clip != nullptr) {
- *         ci->final_clip_rect = p_canvas_clip->final_clip_rect.intersection(global_rect);
- *     } else {
- *         ci->final_clip_rect = p_clip_rect.intersection(global_rect);
- *     }
- *     if (ci->final_clip_rect.size.width < 0.5 || ci->final_clip_rect.size.height < 0.5) {
- *         return;
- *     }
- *     ci->final_clip_rect.position = ci->final_clip_rect.position.round();
- *     ci->final_clip_rect.size = ci->final_clip_rect.size.round();
- *
- * 1. A nested clip intersects the enclosing rect, then rounds, so a chain is one
- *    rect. The context carries the rect: a narrowed plane set cannot be rounded.
- * 2. Position and size round separately, so `round(pos) + round(size)` differs
- *    from `round(pos + size)` at a fractional origin. The pixel snap
- *    (`controlPixelSnap.ts`) keeps most origins whole.
- * 3. The `< 0.5` early-out needs no code: the size rounds to zero, and a
- *    zero-size rect's planes keep no fragment below it.
- *
- * `Control::clip_contents` clips to `Rect2(Point2(), get_size())`, ignoring any
- * scrollbar (`scene/gui/control.cpp:3948`). Planes are per-material state, so
- * every leaf material spreads `useControlClipPlanes`, as `controlQuad.tsx` and
- * `StyleBoxQuad.tsx` do.
- *
- * Not modelled: Godot intersects the root with the viewport (`p_clip_rect`),
- * which matters only for a clipper outside the viewport at a fractional origin.
- * A rotated clipper scissors its AABB in Godot (`Transform2D::xform(Rect2)`),
- * but here keeps its rotated planes and skips quantization.
+ * The accumulated canvas clip for the native Control canvas, as clip planes: the 2D `<Canvas>` in
+ * `World2DCanvas.tsx` has no stencil buffer. The clip is a rounded rect first and planes second, as
+ * Godot's scissor is (`servers/rendering/renderer_canvas_cull.cpp:412-424`). Planes are
+ * per-material, so every leaf material spreads `useControlClipPlanes`. See `controlClipping.md`.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

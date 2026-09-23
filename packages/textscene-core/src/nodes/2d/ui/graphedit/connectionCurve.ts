@@ -1,12 +1,7 @@
 /**
- * `GraphEdit::get_connection_line` (`scene/gui/graph_edit.cpp:1523-1542`) —
- * the connection curve's four Bezier control points, plus
- * `Curve2D::tessellate`'s adaptive subdivision (`scene/resources/curve.cpp:
- * 846-863,1263-1291`) specialised to the single two-anchor segment
- * `get_connection_line` builds. `MAX_CONNECTION_LINE_CURVE_TESSELATION_STAGES`
- * is 5 (`graph_edit.cpp:54`); `tessellate`'s own default tolerance is 4
- * degrees (`curve.h:253`), used untouched by the `curvature <= 0` branch,
- * while the `curvature > 0` branch passes tolerance 2 explicitly.
+ * The connection curve: `GraphEdit::get_connection_line` (`scene/gui/graph_edit.cpp:1523-1542`)
+ * and the `Curve2D::tessellate` subdivision it runs (`scene/resources/curve.cpp:846-863,1263-1291`),
+ * specialised to the one two-anchor segment that `get_connection_line` builds.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -16,7 +11,10 @@
 
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 
+/** `MAX_CONNECTION_LINE_CURVE_TESSELATION_STAGES` (`graph_edit.cpp:54`). */
 const MAX_STAGES = 5;
+// The `curvature > 0` branch passes tolerance 2 explicitly. The `curvature <= 0` branch keeps
+// `tessellate`'s default of 4 degrees (`curve.h:253`).
 const CURVED_TOLERANCE_DEG = 2;
 const STRAIGHT_TOLERANCE_DEG = 4;
 

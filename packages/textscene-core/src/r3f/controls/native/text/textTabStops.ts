@@ -1,5 +1,5 @@
 /**
- * Tab-stop alignment — a port of `TextServer::shaped_text_tab_align`
+ * Tab-stop alignment, a port of `TextServer::shaped_text_tab_align`
  * (`modules/text_server_adv/text_server_adv.cpp:5688-5742`), LTR-only.
  *
  * Portions ported from Godot Engine (MIT).

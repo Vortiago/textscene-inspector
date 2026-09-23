@@ -1,30 +1,9 @@
 /**
- * Godot's CSG normal rule, transcribed rather than approximated.
+ * Godot's CSG normal rule, which every CSG builder in this folder finishes with. A smooth
+ * face's vertex takes the normalised sum of the unit plane normals of every smooth face at that
+ * exact position, and a flat face's vertex takes its own plane normal. Neither `flatShading`
+ * nor `computeVertexNormals()` gives this.
  *
- * Every CSG geometry builder in this folder emits a face soup and finishes here, because
- * Godot does not compute CSG normals the way any three.js primitive does. `smooth_faces`
- * is neither `flatShading` nor `computeVertexNormals()`:
- *
- *   - a smooth face's vertex takes the normalized sum of the unit plane normals of every
- *     smooth face touching that exact vertex position;
- *   - a flat face's vertex takes its own face's plane normal, and neither contributes to
- *     nor reads the accumulation.
- *
- * Keying on position rather than on vertex index is the load-bearing part, and it is where
- * three.js diverges. `THREE.CylinderGeometry(0, 0.4, 1, 8)` gives the collapsed cone apex
- * nine distinct vertices with nine radial normals; Godot collapses all nine into one
- * straight-up normal. On a cone that difference alone is plainly visible as shading.
- *
- * The accumulation is an unweighted sum of unit normals, so a large face and a small one
- * meeting at a vertex pull on it equally. That is deliberate on Godot's side and is not
- * what area-weighted averaging (the usual choice) would produce.
- *
- * `invert` is `CSGPrimitive3D.flip_faces`. It both swaps vertices 1 and 2 and negates the
- * normal, so it lives here with the winding rather than being applied by each builder.
- * Godot carries it per face because a `CSGBrush` merges faces from several shapes; a
- * builder produces one shape, so it is one flag for the whole soup.
- *
- * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`modules/csg/csg_shape.cpp`, `CSGShape3D::update_shape`,
  * and `core/math/plane.h`, `Plane(p_point1, p_point2, p_point3)`), used under the MIT
  * licence:
@@ -52,7 +31,6 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * See THIRD-PARTY-NOTICES.md.
- * ---------------------------------------------------------------------------
  */
 
 import * as THREE from 'three';
@@ -68,7 +46,11 @@ export interface CsgFaceSoup {
   uvs: Float32Array;
   /** Per-triangle `smooth_faces`. Length is `positions.length / 9`. */
   smooth: readonly boolean[];
-  /** `flip_faces` for the whole shape. Defaults to false. */
+  /**
+   * `CSGPrimitive3D.flip_faces`: it swaps vertices 1 and 2 and negates the normal, so it lives
+   * here with the winding. Godot carries it per face, because a `CSGBrush` merges several
+   * shapes. One builder makes one shape, so one flag covers the soup. Defaults to false.
+   */
   invert?: boolean;
 }
 
@@ -115,7 +97,9 @@ export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
   const { positions, uvs, smooth, invert } = soup;
   const triangles = Math.floor(positions.length / 9);
 
-  // Pass 1: accumulate unit plane normals per vertex position, smooth faces only.
+  // Pass 1: sum unit plane normals per vertex position, smooth faces only. Position, not index,
+  // is the key: three gives a cone apex nine radial normals where Godot collapses them to one.
+  // The sum is unweighted, so a small face pulls on a vertex as hard as a large one.
   const accumulated = new Map<string, THREE.Vector3>();
   const plane = new THREE.Vector3();
   const edgeA = new THREE.Vector3();

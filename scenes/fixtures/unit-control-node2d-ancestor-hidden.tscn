@@ -1,4 +1,4 @@
-; The one variable: a hidden Node2D ancestor over a Control subtree. The Control promotes past the
+; The one variable, which no other fixture moves: a hidden Node2D ancestor over a Control subtree. The Control promotes past the
 ; Node2D, so one that ignores the ancestor's `visible` draws a panel Godot hides. The visible sibling
 ; proves the frame is not blank for another reason.
 

@@ -1,21 +1,9 @@
 /**
- * CSGPolygon3D geometry: a 2D outline swept into a solid, three ways.
+ * CSGPolygon3D geometry: a 2D outline swept into a solid by Godot's own frame-walking loop,
+ * which its three modes share. Three's `ExtrudeGeometry` extrudes to +Z where Godot extrudes to
+ * -Z, and `LatheGeometry` starts on +Z with no end caps. `polygonSweepSpec` says what to build,
+ * `extrusionCounts` how far to walk and `polygonSweepFrames` holds the pieces.
  *
- * Nothing three ships builds this shape. `ExtrudeGeometry` extrudes to +Z over `[0, depth]`
- * where Godot extrudes to -Z over `[-depth, 0]`, and `LatheGeometry` starts its profile on
- * +Z where Godot starts on +X and emits no end caps at all. So the sweep is Godot's own,
- * and the three modes share one frame-walking loop exactly as they do in the engine.
- *
- * `polygonRings` from the Polygon2D slice is not reusable here: it works in Godot's
- * +Y-down pixel space and carries hole/invert machinery CSGPolygon3D has no concept of.
- * `fanTriangulate` is not usable either, being convex-only, while a swept profile is
- * routinely concave.
- *
- * The frame-walking loop is this file; what it is asked for is `polygonSweepSpec`,
- * how far it walks is `extrusionCounts`, and the pieces it walks with are
- * `polygonSweepFrames`.
- *
- * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`modules/csg/csg_shape.cpp`, `CSGPolygon3D::_build_brush`),
  * used under the MIT licence:
  *
@@ -42,7 +30,6 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * See THIRD-PARTY-NOTICES.md.
- * ---------------------------------------------------------------------------
  */
 
 import * as THREE from 'three';
@@ -80,6 +67,8 @@ export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeome
   if (signedArea(shape) > 0) shape.reverse();
   const shapeSides = shape.length;
 
+  // A swept profile is routinely concave, and `fanTriangulate` is convex-only. Polygon2D's
+  // `polygonRings` works in +Y-down pixel space, with hole and invert handling CSGPolygon3D lacks.
   const triangles = THREE.ShapeUtils.triangulateShape(shape, []);
   if (triangles.length < 1) {
     warnOnce(

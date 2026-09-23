@@ -1,11 +1,8 @@
 /**
- * The port position of a connection endpoint, in the GraphNode's local space:
- * `GraphNode::_port_pos_update` (`scene/gui/graph_node.cpp:1007-1059`), fed by
- * `get_output_port_position` and `get_input_port_position` (`:1078-1123`).
- *
- * A sibling painter has no route to a child's `meta` (`ControlComponentRegistry.ts`), so this
- * runs the child's registered layout function again at its solved size. The ports then
- * match what the child's painter draws.
+ * A connection endpoint's port position in the GraphNode's local space: `GraphNode::_port_pos_update`
+ * (`scene/gui/graph_node.cpp:1007-1059`) through `get_output_port_position` and
+ * `get_input_port_position` (`:1078-1123`). A sibling painter cannot reach a child's `meta`, so this
+ * reruns the child's registered layout at its solved size, and the ports match what its painter draws.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

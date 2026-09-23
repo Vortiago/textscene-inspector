@@ -3,9 +3,7 @@
  * ported to GLSL ES. `EYEDIR` and `LIGHTn_*` become a varying and uniforms,
  * `COLOR` becomes `gl_FragColor`. The maths is unchanged, not approximated.
  *
- * ---------------------------------------------------------------------------
- * Portions of this file are derived from Godot Engine, used under the MIT
- * licence:
+ * Portions ported from Godot Engine, used under the MIT licence:
  *
  *   Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md).
  *   Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -30,7 +28,6 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * See THIRD-PARTY-NOTICES.md.
- * ---------------------------------------------------------------------------
  */
 
 import type { SkyProperties } from './types';

@@ -2,12 +2,7 @@
  * `CodeHighlighter::_get_line_syntax_highlighting_impl`
  * (`scene/resources/syntax_highlighter.cpp:118-411`): a line scanner with no
  * grammar. Keywords are lookups at word boundaries, a number is a shape, and a
- * color region is a literal delimiter match. A real lexer would draw a different picture.
- *
- * `color_region_cache` (`:131-152`) carries an open region into the next line.
- * Godot walks back through uncached lines (`:133-144`). Callers here visit lines
- * in order, so `resolveLineColors` takes the region open at the line start and
- * returns the one open at its end.
+ * colour region is a literal delimiter match. A real lexer would draw a different picture.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -290,6 +285,10 @@ function scanLine(
  * drawing side starts at the font colour (`fontColor`) and takes the last
  * `color_map` entry at or before each glyph. Forward-filling the delta map once
  * reproduces that lookup.
+ * @param regionAtLineStart The colour region open at the line start, as Godot's
+ *   `color_region_cache` (`:131-152`) carries it into the next line. Godot walks back through
+ *   uncached lines (`:133-144`). Callers here visit lines in order, so they pass the previous
+ *   line's `regionAtLineEnd`.
  */
 export function resolveLineColors(
   line: string,

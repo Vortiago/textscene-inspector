@@ -1,14 +1,9 @@
 /**
- * CSGSphere3D geometry, built the way Godot builds it.
- *
- * Godot's sphere differs from three's `SphereGeometry` in ways that matter for parity:
- * it walks latitude from the north pole downward so UVs map like an image, it gives sin
- * to X and cos to Z (not the other way round) so UVs run counter-clockwise on +X, and it
- * emits a single triangle per quad at each pole instead of a degenerate quad. Its poles
- * are collapsed vertices, which is exactly where three's per-segment normals and Godot's
+ * CSGSphere3D geometry, built the way Godot builds it rather than with three's `SphereGeometry`:
+ * latitude runs down from the north pole, sin goes to X and cos to Z, and each pole quad emits
+ * one triangle. The collapsed poles are where three's per-segment normals and Godot's
  * position-keyed averaging diverge.
  *
- * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`modules/csg/csg_shape.cpp`, `CSGSphere3D::_build_brush`),
  * used under the MIT licence:
  *
@@ -35,7 +30,6 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * See THIRD-PARTY-NOTICES.md.
- * ---------------------------------------------------------------------------
  */
 
 import type * as THREE from 'three';

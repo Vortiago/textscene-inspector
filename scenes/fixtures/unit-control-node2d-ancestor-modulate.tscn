@@ -1,4 +1,4 @@
-; The one variable: a modulated Node2D ancestor over a Control subtree. A promoted Control that
+; The one variable, which no other fixture moves: a modulated Node2D ancestor over a Control subtree. A promoted Control that
 ; ignores the ancestor's `modulate` paints untinted. Its `self_modulate` must not reach the child,
 ; and the untinted sibling holds the reference colour.
 

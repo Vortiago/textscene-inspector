@@ -1,21 +1,8 @@
 /**
- * GraphNode's native (WebGL canvas) rect solve: `GraphNode::_resort`,
- * `GraphNode::get_minimum_size` (`scene/gui/graph_node.cpp:153-293,977-1008`),
- * `scene/gui/container.cpp` (`Container::fit_child_in_rect`) and this node's
- * own titlebar band (`../graphelement/graphTitlebar.ts`).
- *
- * The two loops treat an undeclared slot differently. `get_minimum_size` (`:993`)
- * gates the slot-stylebox floor on `slot_table.has(i)`, so it adds nothing.
- * `_resort` (`:183,278-279`) reads `slot_table[i]`, whose `operator[]` inserts a
- * default `Slot()` (`draw_stylebox = true`): the child gets the `sb_slot` margin,
- * and `NOTIFICATION_DRAW` later draws that slot's box under a real
- * `theme_override_styles/slot`.
- *
- * Both loops index by the raw child position among all `get_child_count(false)`
- * children, hidden ones included: `if (i > 0) minsize.height += separation;`
- * charges a hidden leading child's sibling one `separation`.
- *
- * Pure data + functions, no React, no THREE.
+ * GraphNode's native (WebGL canvas) rect solve: `GraphNode::_resort` and `get_minimum_size`
+ * (`scene/gui/graph_node.cpp:153-293,977-1008`), `Container::fit_child_in_rect` and the titlebar
+ * band (`../graphelement/graphTitlebar.ts`). The two loops treat an undeclared slot differently:
+ * see `declaredSlot` and `graphNodeEffectiveSlot`.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -129,7 +116,11 @@ function declaredSlot(slots: Map<number, GraphNodeSlot>, rawIndex: number): Grap
   return slots.get(rawIndex);
 }
 
-/** `_resort`/`NOTIFICATION_DRAW`'s own gate: `operator[]` auto-vivifies a class-default `Slot()` for an undeclared index. */
+/**
+ * `_resort`/`NOTIFICATION_DRAW`'s own gate (`:183,278-279`): `operator[]` inserts a class-default
+ * `Slot()` (`draw_stylebox = true`) for an undeclared index, so the child gets the `sb_slot` margin
+ * and the draw pass boxes that slot under a real `theme_override_styles/slot`.
+ */
 export function graphNodeEffectiveSlot(slots: Map<number, GraphNodeSlot>, rawIndex: number): GraphNodeSlot {
   return slots.get(rawIndex) ?? defaultGraphNodeSlot();
 }
@@ -162,6 +153,8 @@ export const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
     }
     height += h;
     width = Math.max(width, w);
+    // `i` counts every child, hidden ones included, so the sibling of a hidden leading child
+    // still pays one `separation`.
     if (i > 0) height += separationOf(n, ctx.theme);
   });
 

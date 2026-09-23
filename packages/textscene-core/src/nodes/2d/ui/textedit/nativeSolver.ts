@@ -1,16 +1,8 @@
 /**
- * TextEdit's native (WebGL canvas) rect solver: `TextEdit::get_minimum_size`
- * (`scene/gui/text_edit.cpp:3491-3500`) over `_update_scrollbars`'s `content_size_cache`
- * (`:8587-8656`), plus the shaping, row geometry and theme `Component.tsx` paints with.
- * CodeEdit's solver calls these with its gutter width added, since it keeps TextEdit's minimum.
- *
- * Scroll is inert: `scroll_horizontal`/`scroll_vertical` are never read. Caret 0 starts at
- * (0, 0), and no `.tscn` property moves it, so the first draw's `adjust_viewport_to_caret()`
- * (`text_edit.cpp:904-909`) snaps both back, and `highlight_current_line` always marks line 0.
- *
- * Vertically (`:6639-6659`), caret line 0 above a positive `first_visible_line` resets it to 0.
- * Horizontally (`_adjust_viewport_to_caret_horizontally`, `:8820-8884`), a wrap mode resets
- * `first_visible_col` to 0 up front, and otherwise caret column 0 at x 0 resets it.
+ * TextEdit's native (WebGL canvas) rect solver: `get_minimum_size` (`scene/gui/text_edit.cpp:3491-3500`)
+ * over `content_size_cache` (`:8587-8656`), with the shaping, row geometry and theme `Component.tsx`
+ * paints with. CodeEdit calls these with its gutter width added. Scroll is inert: no `.tscn` moves caret
+ * 0 from (0, 0), so the first draw's `adjust_viewport_to_caret()` (`:904-909`) snaps both scrolls back.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -315,8 +307,9 @@ export function layoutTextEditDrawBand(
 
 /**
  * One drawn row's band top, `ofs_y = style->get_margin(SIDE_TOP) + i * row_height + line_spacing / 2`
- * (`text_edit.cpp:1376-1378`), with the inert scroll terms (`:1379-1380`) at 0. The per-line
- * background and `highlight_current_line` fill this band, and the text centres inside it.
+ * (`text_edit.cpp:1376-1378`), with the scroll terms (`:1379-1380`) at 0. Caret line 0 resets a positive
+ * `first_visible_line` (`:6639-6659`), and a wrap mode or caret column 0 resets `first_visible_col` (`:8820-8884`).
+ * The per-line background and `highlight_current_line`, always on line 0, fill this band, and the text centres in it.
  */
 export function textEditRowBandTopPx(
   row: number,

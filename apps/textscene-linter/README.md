@@ -41,7 +41,7 @@ node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/isometric/*
 node apps/textscene-linter/dist/cli.js scenes/
 
 # Plain output (no ANSI colors), for example for CI logs
-node apps/textscene-linter/dist/cli.js --no-color scenes/examples/example-hallway-mockup.tscn
+node apps/textscene-linter/dist/cli.js --no-color scenes/fixtures/example-hallway-mockup.tscn
 ```
 
 Diagnostics print to stdout in every format. In `text` format a read failure

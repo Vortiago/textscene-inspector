@@ -4,7 +4,6 @@
  * Godot averages them, visibly. So the faces follow Godot's construction and the normals come from
  * `applyCsgNormals`, the one normal rule every CSG builder shares.
  *
- * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`modules/csg/csg_shape.cpp`, `CSGCylinder3D::_build_brush`),
  * used under the MIT licence:
  *
@@ -31,7 +30,6 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * See THIRD-PARTY-NOTICES.md.
- * ---------------------------------------------------------------------------
  */
 
 import type * as THREE from 'three';

@@ -1,13 +1,8 @@
 /**
- * Evaluate a Godot `Curve` at an offset.
+ * Evaluate a Godot `Curve` at an offset. Each span is the engine's cubic Bézier, with control
+ * points a third of the span apart and lifted by the tangents, not the equivalent Hermite
+ * spline, so the arithmetic matches Godot's and not only its exact maths.
  *
- * Godot draws the span between two points as a cubic Bézier whose two control
- * points sit a THIRD of the span apart horizontally, lifted by the authored
- * tangents — not as a Hermite spline, even though the two are algebraically the
- * same family. Reproducing the Bézier form keeps the arithmetic identical to
- * the engine's rather than merely equivalent in exact maths.
- *
- * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`scene/resources/curve.cpp`, `Curve::sample`,
  * `Curve::sample_local_nocheck`, `Curve::get_index`, and
  * `Math::bezier_interpolate`), used under the MIT licence:
@@ -35,7 +30,6 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * See THIRD-PARTY-NOTICES.md.
- * ---------------------------------------------------------------------------
  */
 
 import type { Curve, CurvePoint } from './types';

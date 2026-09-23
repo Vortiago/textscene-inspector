@@ -1,16 +1,8 @@
 /**
- * TabBar's native (WebGL canvas) rect solver and draw-time tab layout:
- * `TabBar::get_minimum_size` (`scene/gui/tab_bar.cpp:44-122`), `get_tab_width`
- * (`:1754-1804`) and `_update_cache` (`:1196-1291`). TabContainer's internal strip
- * reuses `computeTabBarDrawLayout` and the theme helpers, so one layout serves both.
- *
- * `right_button` (`set_tab_button_icon`) is script-only, so no `.tscn` tab
- * carries one and it is not modelled.
- *
- * `tabBarStyleBoxes` derives TabBar's style boxes from `default_theme.cpp:974-992`.
- * `button_highlight`/`button_pressed` are `make_flat_stylebox` of `style_normal_color`
- * and `style_pressed_color` (`default_theme.cpp:138-139`), the same boxes as Button's
- * `normal`/`pressed` (`:239,241`), so `theme.widgets.button` stands in for them.
+ * TabBar's native (WebGL canvas) rect solver and draw-time tab layout: `TabBar::get_minimum_size`
+ * (`scene/gui/tab_bar.cpp:44-122`), `get_tab_width` (`:1754-1804`) and `_update_cache` (`:1196-1291`).
+ * TabContainer's internal strip reuses `computeTabBarDrawLayout` and the theme helpers. `right_button`
+ * (`set_tab_button_icon`) is script-only, so no `.tscn` tab carries one and it is not modelled.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -312,6 +304,9 @@ export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vec2 => {
   const closeDisplayPolicy = props.tabCloseDisplayPolicy ?? 0;
   const hSeparation = n.constants.h_separation ?? ctx.theme.separation;
   const iconMaxWidth = n.constants.icon_max_width ?? 0;
+  // `button_highlight` and `button_pressed` are flat boxes of `style_normal_color` and
+  // `style_pressed_color` (`default_theme.cpp:138-139`), the same as Button's `normal` and `pressed`
+  // (`:239,241`), so `theme.widgets.button` stands in for them.
   const closeButtonMarginLeft = ctx.theme.widgets.button.normal.contentMargin.left;
 
   if (tabs.length === 0) return { x: 0, y: 0 };

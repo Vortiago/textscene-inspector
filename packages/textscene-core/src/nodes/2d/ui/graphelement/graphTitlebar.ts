@@ -1,20 +1,8 @@
 /**
- * The titlebar band GraphNode and GraphFrame build from an internal
- * `HBoxContainer` (`titlebar_hbox`) that holds one internal `Label`
- * (`title_label`, type variation `GraphNodeTitleLabel`/`GraphFrameTitleLabel`):
- * `graph_node.cpp:1322-1334`, `graph_frame.cpp:348-360`. Both are
- * `INTERNAL_MODE_FRONT` children and never serialised, so the owning node's
- * `title` is the only `.tscn` input.
- *
- * `titlebar_hbox` is `SIZE_EXPAND_FILL` wide, FILL tall, and its minimum size is
- * `title_label`'s. `_resort` hands `fit_child_in_rect` a height already reduced
- * by `sb_titlebar`'s margins, so `Control::set_rect`'s minimum-size floor
- * (`control.cpp:1773-1797`) raises it back to the text's minimum height.
- * `controlRectSolver.ts` cannot apply that floor, since `titlebar_hbox` is no
- * `SolveNode`, so this module computes the converged height in closed form,
- * independent of the margins. It matches `titlebar_rect` in `NOTIFICATION_DRAW`
- * (`graph_node.cpp:634`, `graph_frame.cpp:106`):
- * `titlebar_hbox->get_size() + sb_titlebar->get_minimum_size()`.
+ * The titlebar band GraphNode and GraphFrame build from an internal `HBoxContainer` (`titlebar_hbox`)
+ * that holds one internal `Label` (`title_label`): `graph_node.cpp:1322-1334`, `graph_frame.cpp:348-360`.
+ * Both are `INTERNAL_MODE_FRONT` children and never serialised, so the owning node's `title` is the
+ * only `.tscn` input.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -110,7 +98,12 @@ export interface TitlebarGeometry {
   contentRect: { x: number; y: number; w: number; h: number };
 }
 
-/** The titlebar band's converged geometry. `nodeWidth` is the owning node's solved width. */
+/**
+ * The band's converged geometry, `titlebar_hbox->get_size() + sb_titlebar->get_minimum_size()`
+ * (`graph_node.cpp:634`, `graph_frame.cpp:106`), in closed form: `set_rect`'s minimum-size floor
+ * (`control.cpp:1773-1797`) lifts the margin-reduced height back to the text's, and no `SolveNode`
+ * carries the band for `controlRectSolver.ts` to floor. `nodeWidth` is the owner's solved width.
+ */
 export function titlebarGeometry(
   nodeWidth: number,
   textMinHeight: number,

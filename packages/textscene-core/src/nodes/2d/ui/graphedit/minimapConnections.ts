@@ -1,23 +1,8 @@
 /**
- * The minimap's own copy of every connection:
- * `GraphEdit::_draw_minimap_connection_line`
- * (`scene/gui/graph_edit.cpp:1592-1612`), driven by `_minimap_draw`'s
- * connection loop (`:1870-1883`).
- *
- * Godot reuses `get_connection_line` here, but feeds it positions already
- * shifted by `_get_graph_offset()`: `min_scroll_offset` (`:119`), not
- * `scroll_offset`, which is why the minimap keeps showing the whole graph
- * however far the view has scrolled. Every tessellated point is then mapped
- * through `_convert_from_graph_position` (`:135-143`) and offset by the
- * minimap's own letterbox origin.
- *
- * The per-point colour is a plain `from.lerp(to, t)` where `t` is the point's
- * distance from the first point over the straight first-to-last distance:
- * measured after the mapping, so the minimap's own aspect ratio changes the
- * ramp. `activity` is a runtime-only field no scene serialises, so the
- * activity lerp at `:1877-1880` is unreachable from a file.
- *
- * Pure data + functions, no React, no THREE.
+ * The minimap's copy of every connection: `GraphEdit::_draw_minimap_connection_line`
+ * (`scene/gui/graph_edit.cpp:1592-1612`), driven by `_minimap_draw`'s connection loop (`:1870-1883`).
+ * It feeds `get_connection_line` positions shifted by `min_scroll_offset` (`:119`), not
+ * `scroll_offset`, so the minimap shows the whole graph however far the view has scrolled.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -52,6 +37,12 @@ function distance(a: Vec2, b: Vec2): number {
   return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
+/**
+ * Maps each tessellated point through `_convert_from_graph_position` (`:135-143`) and the letterbox
+ * origin. A point's colour lerps by its distance from the first point over the straight first-to-last
+ * distance, after the mapping, so the minimap's aspect ratio changes the ramp. `activity` is runtime
+ * only, so the activity lerp at `:1877-1880` is unreachable from a file.
+ */
 export function minimapConnectionLines(
   connections: readonly ResolvedConnection[],
   transform: MinimapTransform,

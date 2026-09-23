@@ -1,27 +1,8 @@
 /**
  * GraphEdit's native (WebGL canvas) rect solve: `GraphEdit::_update_scroll_offset`
- * (`scene/gui/graph_edit.cpp:435-462`), the only place Godot positions a
- * GraphElement child: `set_position(position_offset * zoom - scroll_offset)`,
- * `set_scale(Vector2(zoom, zoom))`.
- *
- * `GraphEdit` is a plain `Control`, not a `Container` (`graph_edit.h:114`). It
- * registers as one only so the solver can hand a child a computed position.
- * The cost: `ControlCanvasWalker`'s `isFreeParent` gate forces each child of a
- * registered container to scale=1/rotation=0 (`ControlCanvasWalker.tsx:210-216`),
- * so only the position half is ported, which is exact at the default `zoom = 1`.
- * `Component.tsx` has the matching gap on the draw side.
- *
- * A child that is not a GraphElement skips `_update_scroll_offset`'s
- * `Object::cast_to<GraphElement>` guard (`:441-444`) and resolves as an ordinary
- * free/anchored Control against GraphEdit's rect, through `resolveControlLayout`
- * and `anchoredRect` (`scene/gui/control.cpp:1531-1541`): a registered
- * container's children never reach the automatic free/anchored path
- * (`controlRectSolver.ts`).
- *
- * No `MinimumSizeFn` is registered: `GraphEdit` overrides no `get_minimum_size`,
- * so Godot's `Control::get_minimum_size` default of `(0, 0)` holds.
- *
- * Pure data + functions, no React, no THREE.
+ * (`scene/gui/graph_edit.cpp:435-462`), the only place Godot positions a GraphElement child, with
+ * `set_position(position_offset * zoom - scroll_offset)`. No `MinimumSizeFn` is registered:
+ * `GraphEdit` overrides no `get_minimum_size`, so `Control`'s `(0, 0)` holds.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -52,7 +33,12 @@ function anchoredRect(
   return { x: left, y: top, w: right - left, h: bottom - top };
 }
 
-/** `GraphEdit::_update_scroll_offset` (`:435-462`), position half only. */
+/**
+ * `GraphEdit::_update_scroll_offset` (`:435-462`), position half only: GraphEdit is a plain `Control`
+ * (`graph_edit.h:114`) registered as a container to place its children, and `ControlCanvasWalker`
+ * then forces each child to scale 1 and rotation 0 (`ControlCanvasWalker.tsx:210-216`). Exact at the
+ * default `zoom = 1`. `Component.tsx` has the matching gap.
+ */
 export const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const props = n.node.properties as GraphEditProperties;
   const zoom = props.zoom ?? 1;
@@ -77,6 +63,8 @@ export const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx
         h: natural.h,
       });
     } else {
+      // `_update_scroll_offset` skips a non-GraphElement (`:441-444`), so it keeps its anchored rect.
+      // A registered container's child never reaches `controlRectSolver.ts`'s own anchored path.
       rects.set(child.path, natural);
     }
   }

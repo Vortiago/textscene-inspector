@@ -1,12 +1,8 @@
 /**
- * GraphNode parser: GraphElement + `title`/`ignore_invalid_connection_type`/
- * `slots_focus_mode` + the hand-rolled `slot/<index>/<leaf>` family.
- *
- * `GraphNode::_set` (`graph_node.cpp:38-88`) applies one leaf at a time onto the
- * slot's state or a fresh `Slot()`, then calls `set_slot`, which erases the entry
- * (`:705-713`) while every leaf but `draw_stylebox` is at its default. A later
- * write starts from `Slot()` again, so file order matters; `Object.entries` keeps
- * it for `slot/N/leaf` keys, which are never array indices.
+ * GraphNode parser: GraphElement plus `title`, `ignore_invalid_connection_type`, `slots_focus_mode`
+ * and the `slot/<index>/<leaf>` family. `GraphNode::_set` (`graph_node.cpp:38-88`) applies one leaf,
+ * and `set_slot` erases an entry whose leaves other than `draw_stylebox` are default (`:705-713`), so
+ * a later write restarts from `Slot()`. `Object.entries` keeps file order for these non-index keys.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

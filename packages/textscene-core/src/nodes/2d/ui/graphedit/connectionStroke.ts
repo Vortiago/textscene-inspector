@@ -1,16 +1,8 @@
 /**
  * A connection's stroked ribbon as vertex-coloured triangles: the fragment stage of
- * `default_connections_shader` (`scene/gui/graph_edit.cpp:
- * 217-238`) ported as fixed-width rings, as `styleBoxFlatGeometry.ts` does for AA:
- *
- *   dist = abs(UV.y - 0.5)                              // 0 at the centreline, 0.5 at the edge
- *   fake_aa_width = rim_width = 1.5 / line_width         // UV units; 1.5px in SCREEN space either way
- *   alpha       = smoothstep(0.5, 0.5 - fake_aa_width, dist)
- *   final_color = mix(rim_color, COLOR, smoothstep(0.5 - rim_width, 0.5 - fake_aa_width - rim_width, dist))
- *
- * From each edge inward: 1.5px fades `rim_color` to alpha 0, 1.5px blends `rim_color` into
- * the core colour, and the rest is the core. A thin ribbon clamps its inner ring. The rings
- * interpolate linearly, not with `smoothstep`, which needs a custom fragment shader.
+ * `default_connections_shader` (`scene/gui/graph_edit.cpp:217-238`) as fixed-width rings, as
+ * `styleBoxFlatGeometry.ts` does for antialiasing. From each edge inward, 1.5 px fades `rim_color`
+ * out, 1.5 px blends it into the core colour, and the rest is core. `graphEdit.md` has the shader.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -36,7 +28,11 @@ export interface GeometryBuffers {
 /** The numerator `1.5` of `fake_aa_width` and `rim_width` (`graph_edit.cpp:232-233`). */
 const FADE_BAND_PX = 1.5;
 const RIM_BAND_PX = 1.5;
-/** Six cross-section vertices per sample point: two each for the outer fade, the rim and the core. */
+/**
+ * Six cross-section vertices per sample point: two each for the outer fade, the rim and the core.
+ * The rings interpolate linearly, since `smoothstep` would need a custom fragment shader. A thin
+ * ribbon clamps its inner ring.
+ */
 const RINGS_PER_POINT = 6;
 
 function lerpColor(a: StrokeRGBA, b: StrokeRGBA, t: number): StrokeRGBA {

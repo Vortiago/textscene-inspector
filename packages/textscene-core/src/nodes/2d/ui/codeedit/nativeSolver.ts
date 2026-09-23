@@ -1,16 +1,7 @@
 /**
  * CodeEdit's native (WebGL canvas) rect solver. `get_minimum_size` is TextEdit's (`code_edit.h`
  * declares no override), so this adds CodeEdit's gutter band to `../textedit/nativeSolver.ts` through
- * `gutterBandWidthPx`. The constructor adds three gutters in this order (`code_edit.cpp:3928-3949`),
- * each drawn only on a line's first wrapped row (`text_edit.cpp:1410-1481`):
- *
- *  1. `main_gutter`, drawn for any of the bookmark, breakpoint or executing-line flags
- *     (`code_edit.cpp:1335-1337`), width `get_line_height()` (`code_edit.cpp:57`). Its icons need
- *     per-line metadata only a script sets, so its column is reserved but blank.
- *  2. `line_numbers`, drawn for `gutters_draw_line_numbers`, width
- *     `(line_number_digits + 1) * font->get_char_size('0', font_size).width` (`:1607`).
- *  3. `fold_gutter`, drawn for `gutters_draw_fold_gutter`, width `get_line_height() / 1.2` (`:59`),
- *     whose arrows `lineFolding.ts` decides.
+ * `gutterBandWidthPx`. Each gutter draws only on a line's first wrapped row (`text_edit.cpp:1410-1481`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -70,7 +61,12 @@ export interface CodeEditGutterBand {
   totalWidthPx: number;
 }
 
-/** Every gutter's own drawn state and width, plus the combined band `TextEdit`'s shared solver functions need. */
+/**
+ * The constructor's three gutters, in order (`code_edit.cpp:3928-3949`). `main_gutter` is a line height
+ * wide (`code_edit.cpp:57`) for any bookmark, breakpoint or executing-line flag (`:1335-1337`), and blank:
+ * its icons need metadata only a script sets. The line numbers take `(digits + 1)` '0' advances
+ * (`:1607`), and the fold gutter a line height / 1.2 (`:59`), with arrows from `lineFolding.ts`.
+ */
 export function codeEditGutterBand(
   props: CodeEditProperties,
   rowHeightPx: number,

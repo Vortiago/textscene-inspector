@@ -2,10 +2,6 @@
  * TextureProgressBar's native (WebGL canvas) rect solver: `TextureProgressBar::get_minimum_size`
  * (`texture_progress_bar.cpp:81-97`). Pure per-node math, no THREE or React.
  *
- * Without `nine_patch_stretch` (`:86-96`) it maxes the natural sizes of `texture_under`,
- * `texture_progress` and `texture_over`, which `buildSolveTree.ts` does not resolve by default, so
- * `textureProgressBarTextureSlots` declares them and the walker resolves them like any Texture2D ref.
- *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -25,7 +21,11 @@ export const TEXTURE_UNDER_KEY = 'texture_under';
 export const TEXTURE_PROGRESS_KEY = 'texture_progress';
 export const TEXTURE_OVER_KEY = 'texture_over';
 
-/** `TextureProgressBar`'s own three Texture2D properties (`texture_progress_bar.h:38-40`). */
+/**
+ * `TextureProgressBar`'s own three Texture2D properties (`texture_progress_bar.h:38-40`). Without
+ * `nine_patch_stretch`, `get_minimum_size` maxes their natural sizes (`texture_progress_bar.cpp:86-96`).
+ * `buildSolveTree.ts` resolves none of them by default, so this declares them for the walker.
+ */
 export const textureProgressBarTextureSlots: TextureSlotsFn = (node: TscnNode) => {
   const props = node.properties as TextureProgressBarProperties;
   const requests: TextureSlotRequest[] = [];

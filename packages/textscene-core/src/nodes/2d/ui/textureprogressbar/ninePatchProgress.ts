@@ -3,9 +3,6 @@
  * and margins of a partial nine-patch, short of `RS::canvas_item_add_nine_patch`, which
  * `r3f/controls/native/ninePatchGeometry.ts` turns into quads. Pure TS, no React or THREE.
  *
- * `Texture2D::get_rect_region` (`:424`) is not modelled: it passes every texture but `AtlasTexture`
- * through (`texture.cpp:85-89` in `scene/resources`), and `useTexture2D` crops an `AtlasTexture` first.
- *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -201,6 +198,8 @@ export function drawNinePatchStretched(
     dstOffset = { x: dstOffset.x + progressOffset.x, y: dstOffset.y + progressOffset.y };
   }
 
+  // `Texture2D::get_rect_region` (`:424`) is not modelled: it passes every texture but `AtlasTexture`
+  // through (`scene/resources/texture.cpp:85-89`), and `useTexture2D` crops an `AtlasTexture` first.
   return {
     srcOffset,
     srcSize,

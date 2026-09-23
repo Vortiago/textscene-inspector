@@ -1,15 +1,8 @@
 /**
- * Resolves each `connections` entry to the two endpoints `GraphEdit::_update_connections`
- * draws between (`scene/gui/graph_edit.cpp:1614-1660`):
- *
- *   from_pos = gnode_from.get_output_port_position(from_port) + gnode_from.position_offset
- *   line_points = get_connection_line(from_pos * zoom, to_pos * zoom)
- *
- * `connections_layer->set_position(-scroll_offset)` (`:454`) translates and never scales, so a
- * zoomed point reaches GraphEdit's local space by subtracting the unscaled `scroll_offset`.
- *
- * An endpoint that is not a GraphNode (`graph_edit.cpp:1618,1623`) or has an out-of-range
- * port (`ERR_FAIL_INDEX_V`, `graph_node.cpp:1080-1123`) draws nothing, whatever `keep_alive` says.
+ * Resolves each `connections` entry to the two endpoints `GraphEdit::_update_connections` draws
+ * between (`scene/gui/graph_edit.cpp:1614-1660`): a port position plus its node's `position_offset`,
+ * times `zoom`. An endpoint that is not a GraphNode (`:1618,1623`) or has an out-of-range port
+ * (`ERR_FAIL_INDEX_V`, `graph_node.cpp:1080-1123`) draws nothing, whatever `keep_alive` says.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -39,6 +32,8 @@ export interface ResolvedConnection {
   to: ResolvedConnectionEndpoint;
 }
 
+// `connections_layer->set_position(-scroll_offset)` (`graph_edit.cpp:454`) translates and never
+// scales, so a zoomed point reaches GraphEdit's local space by subtracting the unscaled `scroll_offset`.
 function endpoint(portLocal: Vec2, positionOffset: Vec2, zoom: number, scrollOffset: Vec2, color: ControlColor): ResolvedConnectionEndpoint {
   const graphPos = { x: (portLocal.x + positionOffset.x) * zoom, y: (portLocal.y + positionOffset.y) * zoom };
   return { pos: { x: graphPos.x - scrollOffset.x, y: graphPos.y - scrollOffset.y }, graphPos, color };

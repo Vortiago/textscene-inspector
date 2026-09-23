@@ -1,11 +1,8 @@
 /**
- * FlowContainer's native rect solve: a port of `FlowContainer::_resort` and
- * `FlowContainer::get_minimum_size` (`scene/gui/flow_container.cpp`), with the
- * `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`) each child passes through.
- *
- * `_resort` works in `int`, `Size2i` and `Vector2i`, so each float intermediate is
- * truncated toward zero: `Math.trunc`, not `Math.floor`, which differs where
- * `stretch_avail` goes negative on an overflowing line.
+ * FlowContainer's native rect solve, ported from `_resort` and `get_minimum_size`
+ * (`scene/gui/flow_container.cpp`) with `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`).
+ * `_resort` works in `int`, `Size2i` and `Vector2i`, so each float truncates toward zero: `Math.trunc`,
+ * not `Math.floor`, which differs where an overflowing line makes `stretch_avail` negative.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

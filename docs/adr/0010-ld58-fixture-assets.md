@@ -12,7 +12,7 @@ Only raw `res://`-resolvable files are vendored. No Godot `.import` files and no
 
 `scenes/ld58/` is not committed. It is gitignored. A contributor who wants the vendored corpus locally, for example to re-derive a fixture, runs `pnpm vendor:ld58` (`scripts/vendor-ld58.mjs`). That is a manual, opt-in step against the public source repository, not part of `pnpm install` or CI. The showcase clips and screenshots that used `scenes/ld58/` content were removed or recorded again against synthetic and public fixtures.
 
-The wall-transform, instance-composition and 2D-UI-overlay regression tests rest on synthetic fixtures in `scenes/examples/` and `scenes/fixtures/`. They reproduce the same structural shapes (nested instance transforms, rotated planes, Control-heavy UI trees) with no vendored asset or content. The `res://`-mirrored layout above does not describe the current tree.
+The wall-transform, instance-composition and 2D-UI-overlay regression tests rest on synthetic fixtures in `scenes/fixtures/`. They reproduce the same structural shapes (nested instance transforms, rotated planes, Control-heavy UI trees) with no vendored asset or content. The `res://`-mirrored layout above does not describe the current tree.
 
 ## Amendment: deployed, not committed
 

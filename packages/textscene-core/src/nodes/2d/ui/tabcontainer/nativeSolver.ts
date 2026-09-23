@@ -1,19 +1,8 @@
 /**
  * TabContainer's native (WebGL canvas) rect solver: `TabContainer::get_minimum_size`
  * (`scene/gui/tab_container.cpp:1027-1065`), `_repaint` (`:359-403`), `_update_margins`
- * (`:405-460`) and `_get_tab_height` (`:51-58`).
- *
- * The internal `TabBar` is no scene node (`memnew`d at `tab_container.cpp:1280`), so a
- * synthetic `SolveNode` with this node's scope and type `'TabBar'` reaches `tabBarMinimumSize`.
- * `_get_tab_rect` (`:35-42`) serves only the tab-menu popup, which is not modelled.
- *
- * A tab title is the child's name unless `tab_<idx>/title` overrides it
- * (`add_child_notify`, `:653`, versus `set_tab_title`, `:883-907`).
- *
- * Every page gets the same content rect: `_repaint` (`:377-399`) insets only the current
- * page and hides the rest, and {@link tabContainerChildVisibility} ports that `hide()`.
- * `_repaint` sets `PRESET_FULL_RECT` and pixel offsets, never `fit_child_in_rect`, so only
- * `Control::set_rect`'s floor (`dispatchChildren` in `controlRectSolver.ts`) applies.
+ * (`:405-460`) and `_get_tab_height` (`:51-58`). `_get_tab_rect` (`:35-42`) serves only the
+ * tab-menu popup, which is not modelled.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -102,6 +91,7 @@ export function deriveTabContainerTabs(
     .map((child, i) => {
       const override = overrides?.[i];
       return {
+        // `add_child_notify` names the tab after the child (`:653`), and `set_tab_title` overrides it (`:883-907`).
         title: override?.title ?? child.node.name,
         tooltip: '',
         icon: override?.icon,
@@ -146,7 +136,8 @@ function internalTabBarThemeConstants(constants: SolveNode['constants'], theme: 
 }
 
 /**
- * A synthetic `SolveNode` for TabContainer's internal `TabBar`, with the scope of `n`.
+ * A synthetic `SolveNode` for TabContainer's internal `TabBar`, with the scope of `n`. The bar is no
+ * scene node (`memnew`d at `tab_container.cpp:1280`), and type `'TabBar'` reaches `tabBarMinimumSize`.
  * `tabCloseDisplayPolicy` is `SHOW_NEVER` and `maxTabWidth` 0, since TabContainer exposes neither.
  */
 export function buildInternalTabBarNode(
@@ -255,7 +246,12 @@ export function tabHeaderBand(containerRect: Rect2, headerHeight: number, tabsPo
   return { x: 0, y, w: containerRect.w, h: headerHeight };
 }
 
-/** `TabContainer::_repaint` (`:359-403`): the content band before `panel_style`'s margin inset. The module header says why every page gets the same rect. */
+/**
+ * `TabContainer::_repaint` (`:359-403`): the content band before `panel_style`'s margin inset. Every page
+ * gets it: `_repaint` insets only the current page and hides the rest (`:377-399`), as {@link tabContainerChildVisibility}
+ * does. It sets `PRESET_FULL_RECT` and pixel offsets, never `fit_child_in_rect`, so only `Control::set_rect`'s
+ * floor (`dispatchChildren` in `controlRectSolver.ts`) applies.
+ */
 export function tabContentBand(containerRect: Rect2, headerHeight: number, tabsPosition: number): Rect2 {
   const y = tabsPosition === TABS_POSITION_TOP ? headerHeight : 0;
   return { x: 0, y, w: containerRect.w, h: containerRect.h - headerHeight };

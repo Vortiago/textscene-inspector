@@ -1,13 +1,8 @@
 /**
- * GraphEdit's toolbar: the `menu_panel`/`menu_hbox` row its own constructor
- * builds (`scene/gui/graph_edit.cpp:3229-3324`), so every GraphEdit carries
- * one whatever the scene file says. Its geometry is described by nothing in
- * the file: a hardcoded `set_position(Vector2(10, 10))` (`:3232`), one
- * `PanelContainer` sized to its own minimum, and an `HBoxContainer` of nine
- * widgets. Only which of the nine participate, and which toggles read
- * pressed, comes from the scene (`:2812-2870`).
- *
- * Pure data + functions, no React, no THREE.
+ * GraphEdit's toolbar, the `menu_panel` and `menu_hbox` row its constructor builds
+ * (`scene/gui/graph_edit.cpp:3229-3324`), so every GraphEdit carries one whatever the file says. Its
+ * geometry is hardcoded: `set_position(Vector2(10, 10))` (`:3232`) and a minimum-size panel of nine
+ * widgets. The scene decides only which widgets take part and which toggles read pressed (`:2812-2870`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

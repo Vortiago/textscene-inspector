@@ -2,11 +2,7 @@
  * TextureButton's native (WebGL canvas) rect solver: `TextureButton::get_minimum_size`
  * (`scene/gui/texture_button.cpp:31-52`), the `stretch_mode` draw rect (`NOTIFICATION_DRAW`,
  * `:120-230`) and the texture pick per draw state. Pure data and functions, no THREE or React.
- *
- * `StretchMode` (`texture_button.h:39-47`) matches `TextureRect::StretchMode` (`texture_rect.h`), but
- * TextureRect's KEEP_ASPECT arms truncate to `int` (`texture_rect.cpp:63-69`) and TextureButton's are
- * pure `float` (`texture_button.cpp:206-219`), so this ports its own switch. The sampler mapping and
- * the flip mirror are the same, so `Component.tsx` imports them from the TextureRect slice.
+ * The sampler mapping and the flip mirror match TextureRect's, so `Component.tsx` imports them from there.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -130,8 +126,9 @@ export function textureButtonDraw(
 
     case STRETCH_KEEP_ASPECT:
     case STRETCH_KEEP_ASPECT_CENTERED: {
-      // Pure float, no truncation (`texture_button.cpp:206-219`), unlike
-      // `TextureRect`'s `int tex_width`/`tex_height` for the same modes.
+      // Pure float, no truncation (`texture_button.cpp:206-219`), unlike TextureRect's `int` arms for the
+      // same modes (`texture_rect.cpp:63-69`). So this ports its own switch, though `StretchMode`
+      // (`texture_button.h:39-47`) matches `TextureRect::StretchMode` (`texture_rect.h`).
       let texWidth = (textureSize.x * rectSize.y) / textureSize.y;
       let texHeight = rectSize.y;
       if (texWidth > rectSize.x) {

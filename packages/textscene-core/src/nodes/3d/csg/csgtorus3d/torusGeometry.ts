@@ -1,13 +1,9 @@
 /**
- * CSGTorus3D geometry, built the way Godot builds it.
+ * CSGTorus3D geometry, built the way Godot builds it rather than with `THREE.TorusGeometry`.
+ * Godot's ring lies in XZ with the hole on +Y, where three's lies in XY. Godot's `sides` counts
+ * segments around the ring, where three's `radialSegments` counts them around the tube. Normals
+ * are accumulated by position, not analytic, as for every CSG shape.
  *
- * Porting the construction rather than mapping onto `THREE.TorusGeometry` settles three easy
- * silent errors. Godot's ring lies in XZ with the hole on +Y, where three's lies in XY with the
- * hole on +Z. Godot's `sides` counts segments around the ring, where three's `radialSegments`
- * counts them around the tube, so the two parameters swap. And the collapsed-vertex normal
- * problem applies to any three primitive whose normals are analytic, not accumulated by position.
- *
- * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`modules/csg/csg_shape.cpp`, `CSGTorus3D::_build_brush`),
  * used under the MIT licence:
  *
@@ -34,7 +30,6 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * See THIRD-PARTY-NOTICES.md.
- * ---------------------------------------------------------------------------
  */
 
 import type * as THREE from 'three';

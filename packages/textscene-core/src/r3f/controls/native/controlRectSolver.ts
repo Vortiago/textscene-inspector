@@ -1,9 +1,8 @@
 /**
  * The Control rect solve, a port of Godot 4.6.3's `Control` layout math
- * (`scene/gui/control.cpp`). Phase 1 finds combined minimum sizes bottom-up.
- * Phase 2 assigns rects top-down: free Controls anchor against their parent's rect,
- * and container children take a registered `ContainerLayoutFn`'s. An unregistered
- * type is a leaf of minimum `(0, 0)` that imposes no layout. No React, no THREE.
+ * (`scene/gui/control.cpp`). Phase 1 finds combined minimum sizes bottom-up. Phase 2 assigns
+ * rects top-down: free Controls anchor against their parent's rect, and container children take
+ * a registered `ContainerLayoutFn`'s. An unregistered type has minimum `(0, 0)` and imposes no layout.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

@@ -3,10 +3,6 @@
  * `get_relative_center` (`:245-256`) and the `draw_polygon` build in `NOTIFICATION_DRAW`
  * (`:483-524`). Pure TS, no React or THREE.
  *
- * `points` walks the unit square from `from` to `to`, with the centre appended last, and every
- * vertex sits at `offset + uv * size`. One affine map covers the polygon, so this fan matches
- * `draw_polygon`'s triangulator pixel for pixel: they differ only in which diagonal splits a quad.
- *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -119,8 +115,9 @@ export interface RadialFillGeometry {
 
 /**
  * The triangle-fan geometry for `0 < val < 1` (`:487-522`), or `null` when `draw_polygon`'s
- * `points.size() >= 2` guard (`:518`) fails. The caller handles `val === 1` (full rect) and
- * `val === 0` (nothing) (`:485-486`).
+ * `points.size() >= 2` guard (`:518`) fails. The caller handles `val === 1` (full rect) and `val === 0`
+ * (nothing) (`:485-486`). Every vertex is `offset + uv * size`, one affine map, so the fan matches
+ * `draw_polygon`'s triangulator pixel for pixel: the two differ only in which diagonal splits a quad.
  */
 export function radialFillGeometry(
   mode: number,

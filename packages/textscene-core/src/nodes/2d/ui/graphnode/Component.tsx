@@ -1,14 +1,8 @@
 /**
- * `<GraphNode>`, the native (WebGL canvas) painter for
- * `GraphNode::_notification(NOTIFICATION_DRAW)` (`scene/gui/graph_node.cpp:621-703`)
- * in source order: body panel, titlebar, title text, per-row ports and slot
- * boxes, resizer. Each colour composes with the walker's `tint` in sRGB, as in `PanelChrome`.
- *
- * `selected_slot` has no `ADD_PROPERTY` and only input changes it
- * (`graph_node.cpp:409-538`), so it stays -1 on load and the
- * `slot_index == selected_slot` branch (`:670-683`) never draws.
- *
- * `ControlCanvasWalker` owns `visible`, `children` and the transform.
+ * `<GraphNode>`, the native (WebGL canvas) painter for `GraphNode::_notification(NOTIFICATION_DRAW)`
+ * (`scene/gui/graph_node.cpp:621-703`) in source order: body panel, titlebar, title text, per-row
+ * ports and slot boxes, resizer. Each colour composes with the walker's `tint` in sRGB, as in
+ * `PanelChrome`, and `ControlCanvasWalker` owns `visible`, `children` and the transform.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -135,6 +129,8 @@ export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRect
     [titlePlacements, titleLayout]
   );
 
+  // `selected_slot` has no `ADD_PROPERTY` and only input changes it (`graph_node.cpp:409-538`), so
+  // it stays -1 on load and the `slot_index == selected_slot` branch (`:670-683`) never draws.
   const rows = useMemo(
     () =>
       graphNodeDrawRows(

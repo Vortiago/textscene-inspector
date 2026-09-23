@@ -1,9 +1,7 @@
 /**
- * ProgressBar's native (WebGL canvas) rect solver
- * (`scene/gui/progress_bar.cpp:37-48`) and draw geometry, with its
- * default `background` and `fill` StyleBoxes (`scene/theme/default_theme.cpp:438-449`).
- * `Component.tsx` paints with the same builder, so the minimum size and the
- * drawn box always agree.
+ * ProgressBar's native (WebGL canvas) rect solver (`scene/gui/progress_bar.cpp:37-48`) and draw
+ * geometry, with its default `background` and `fill` StyleBoxes (`scene/theme/default_theme.cpp:438-449`).
+ * `Component.tsx` paints with the same builder, so the minimum size and the drawn box always agree.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

@@ -1,17 +1,8 @@
 /**
- * GraphElement's native (WebGL canvas) rect solve: `GraphElement::_resort`
- * and `GraphElement::get_minimum_size` (`scene/gui/graph_element.cpp:47-73`),
- * plus the shared `Container::fit_child_in_rect`
- * (`scene/gui/container.cpp:95-128`).
- *
- * `get_minimum_size` passes `SortableVisibilityMode::IGNORE` explicitly
- * (`:62`), unlike `_resort`'s default `VISIBLE_IN_TREE` (`:51`): a hidden
- * child still floors this node's minimum size but is skipped when laying
- * children out. `GraphNode`/`GraphFrame` each override `_resort` with their
- * own titlebar/panel geometry (their own `nativeSolver.ts`), so this
- * registration only ever runs for a bare `GraphElement` node.
- *
- * Pure data + functions, no React, no THREE.
+ * GraphElement's native (WebGL canvas) rect solve: `GraphElement::_resort` and `get_minimum_size`
+ * (`scene/gui/graph_element.cpp:47-73`), with `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`).
+ * GraphNode and GraphFrame override `_resort` in their own `nativeSolver.ts`, so this registration
+ * runs only for a bare `GraphElement`.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -58,10 +49,9 @@ export const graphElementMinimumSize: MinimumSizeFn = (n, ctx) => {
 controlSolverRegistry.registerMinimumSize('GraphElement', graphElementMinimumSize);
 
 /**
- * `GraphElement::_resort` (`:47-57`): every visible child fitted into this
- * node's own full rect: no chrome, no margin. No RTL branch of its own
- * (`graph_element.cpp` calls `is_layout_rtl()` nowhere); the container's flag
- * still reaches a child through `fit_child_in_rect`, which reads it itself.
+ * `GraphElement::_resort` (`:47-57`): every visible child (`VISIBLE_IN_TREE`, `:51`) fitted into this
+ * node's own full rect, with no chrome and no margin. `graph_element.cpp` calls `is_layout_rtl()`
+ * nowhere, but the container's flag still reaches a child through `fit_child_in_rect`.
  */
 export const graphElementLayout: ContainerLayoutFn = (n, children, contentRect) => {
   const rects = new Map<string, Rect2>();

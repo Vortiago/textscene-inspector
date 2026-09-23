@@ -3,9 +3,6 @@
  * `Color::find_named_color` lookup over it (`core/math/color.cpp:412-431`). `Color::from_string`
  * (`color.cpp:450-456`) consults it for a string that is not valid hex, as `[color=red]` does.
  *
- * Keys drop underscores, as `find_named_color` builds its hash map (`color.cpp:422`), and a query
- * normalises the same way. Values are the source's own `0xRRGGBBAA` literals, to diff by eye.
- *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -14,7 +11,11 @@
 
 import type { Color } from './colorParser';
 
-/** The raw table: normalized name → `0xRRGGBBAA`. */
+/**
+ * The raw table: normalised name → `0xRRGGBBAA`. Keys drop underscores, as `find_named_color`
+ * builds its hash map (`color.cpp:422`), and a query normalises the same way. Values are the
+ * source's own literals, to diff by eye.
+ */
 export const GODOT_NAMED_COLORS: Readonly<Record<string, number>> = {
   ALICEBLUE: 0xF0F8FFFF,
   ANTIQUEWHITE: 0xFAEBD7FF,

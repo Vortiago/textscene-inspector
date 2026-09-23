@@ -1,12 +1,8 @@
 /**
- * CodeHighlighter decode: property bag to colour data. The seven `ADD_PROPERTY`
- * calls (`syntax_highlighter.cpp:604-611`) are four scalar Colors plus three
- * `Dictionary(PROPERTY_HINT_TYPE_STRING, "String;Color")`. `SyntaxHighlighter`
- * (`syntax_highlighter.h`) adds none.
- *
- * `font_color` and `uint_suffix_enabled` are class members (`syntax_highlighter.h:89,95`)
- * with no `ADD_PROPERTY`, so a `.tscn` cannot set them. `font_color` comes from
- * the owning TextEdit's theme at `_update_cache` (`:420-422`).
+ * CodeHighlighter decode: property bag to colour data. Its seven `ADD_PROPERTY` calls
+ * (`syntax_highlighter.cpp:604-611`) are four Colors and three `String;Color` dictionaries,
+ * and `SyntaxHighlighter` adds none. `font_color` (the TextEdit theme's, `:420-422`) and
+ * `uint_suffix_enabled` are members with no property (`syntax_highlighter.h:89,95`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

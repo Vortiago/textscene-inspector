@@ -1,10 +1,8 @@
 /**
- * Tree's draw-time geometry: `_get_content_rect`, `_get_title_button_height` and
- * `get_column_width` (`scene/gui/tree.cpp`), for the always-empty case (`root` is null,
- * `parser.ts`), so each column's floor is its title button's chrome alone.
- *
- * Tree overrides no `get_minimum_size` in `tree.cpp`, so it registers no `MinimumSizeFn` and
- * floors at Control's `(0, 0)`. `Component.tsx` reads this geometry for painting.
+ * Tree's draw-time geometry: `_get_content_rect`, `_get_title_button_height` and `get_column_width`
+ * (`scene/gui/tree.cpp`), for the always-empty case (`root` is null, `parser.ts`), so each column's
+ * floor is its title button's chrome alone. Tree overrides no `get_minimum_size`, so it registers no
+ * `MinimumSizeFn` and floors at Control's `(0, 0)`. `Component.tsx` paints from this geometry.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

@@ -1,29 +1,8 @@
 /**
  * Framework-free line breaking and glyph placement for the native (WebGL) Control text engine: a
- * port of Godot's Label shaping against a `FontMetrics`.
- *
- * Shaping metrics come from `options.fontMetrics`, by default `OPEN_SANS_FONT_METRICS`, and the
- * px-quantisation math lives once in `fontMetrics.ts`. Atlas bitmaps are looked up only for an
- * `'atlas'` font: a `'canvas'` scene font gets `glyph: null` and `TextRun.tsx` rasterises it,
- * because an atlas lookup would give another font's advances Open Sans ink.
- *
- * Line breaking ports:
- *   scene/gui/label.cpp :: Label::_shape() (~209-225): maps `Label.autowrap_mode` to break flags:
- *       AUTOWRAP_OFF          -> no wrap flags, only hard breaks
- *       AUTOWRAP_ARBITRARY    -> BREAK_GRAPHEME_BOUND | BREAK_MANDATORY
- *       AUTOWRAP_WORD         -> BREAK_WORD_BOUND | BREAK_MANDATORY
- *       AUTOWRAP_WORD_SMART   -> BREAK_WORD_BOUND | BREAK_ADAPTIVE | BREAK_MANDATORY
- *     ORed with `autowrap_flags_trim`, which defaults to both edge-space trims (label.h:45).
- *   servers/text/text_server.cpp :: TextServer::shaped_text_get_line_breaks() (~1024-1209), the
- *     scalar-width overload Label calls. `width <= 0` disables the overflow check, so AUTOWRAP_OFF
- *     passes an unconstrained width and only hard breaks start a line.
- *   modules/text_server_adv/text_server_adv.cpp :: _shaped_text_update_breaks() (~6258-6420): for
- *     space-separated text, UAX#14 soft breaks reduce to the space glyph (BREAK_WORD_BOUND), and
- *     BREAK_GRAPHEME_BOUND makes every glyph position one.
- *   text_server.cpp:1174-1176: BREAK_ADAPTIVE breaks mid-word while `wordCount === 0`, so under
- *     WORD_SMART a word wider than its box wraps, where plain WORD overflows.
- *   core/string/char_utils.h :: is_whitespace() / is_linebreak(): the full codepoint ranges.
- *   scene/theme/default_theme.cpp:392: Label's `line_spacing` constant, `round(3 * scale)`.
+ * port of Godot's Label shaping against a `FontMetrics`, whose px quantisation is `fontMetrics.ts`.
+ * Only an `'atlas'` font gets atlas bitmaps. A `'canvas'` scene font gets `glyph: null` for
+ * `TextRun.tsx` to rasterise, since an atlas lookup would give its advances Open Sans ink.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -225,15 +204,27 @@ export function isTextLayoutResult(value: unknown): value is TextLayoutResult {
   );
 }
 
+/**
+ * The soft-break flags `_shaped_text_update_breaks` reads (`text_server_adv.cpp` ~6258-6420). For
+ * space-separated text, UAX#14 soft breaks reduce to the space glyph.
+ */
 interface BreakFlags {
   /** BREAK_WORD_BOUND: a space glyph is a safe break point. */
   wordBound: boolean;
   /** BREAK_GRAPHEME_BOUND: every glyph position is a safe break point. */
   graphemeBound: boolean;
-  /** BREAK_ADAPTIVE: a mid-word fallback break, live only while `wordCount === 0`. */
+  /**
+   * BREAK_ADAPTIVE: a mid-word fallback break, live only while `wordCount === 0`
+   * (`text_server.cpp:1174-1176`). Under WORD_SMART a word wider than its box wraps, where plain
+   * WORD overflows.
+   */
   adaptive: boolean;
 }
 
+/**
+ * `Label::_shape()`'s mode-to-flags map (`scene/gui/label.cpp` ~209-225), each mode with
+ * `BREAK_MANDATORY` too. OFF sets no soft flag, so only hard breaks start a line.
+ */
 function breakFlagsForAutowrap(mode: AutowrapMode): BreakFlags {
   switch (mode) {
     case AutowrapMode.ARBITRARY:
@@ -414,9 +405,10 @@ function roundAdvancesToWholePixels(
 }
 
 /**
- * Port of the scalar-width `TextServer::shaped_text_get_line_breaks`. Returns `[start, end)` ranges,
- * one per line, trimmed of edge spaces. The trim narrows only the emitted range: the width check
- * still counts the trimmed space.
+ * Port of `TextServer::shaped_text_get_line_breaks` (`servers/text/text_server.cpp` ~1024-1209),
+ * the scalar-width overload Label calls. Returns `[start, end)` ranges, one per line, trimmed of
+ * edge spaces. The trim narrows only the emitted range: the width check still counts the trimmed
+ * space. A `width <= 0` disables the overflow check.
  */
 function shapedTextGetLineBreaks(
   glyphs: BreakGlyph[],

@@ -44,8 +44,8 @@ The two rules are easy to merge into one and get wrong:
 ## Consequences
 
 Committed regression coverage cannot rest on the corpus. Synthetic fixtures in
-`scenes/examples/` and `scenes/fixtures/` reproduce its structural shapes (wall
-transforms, instance composition, 2D UI) and carry no vendored content.
+`scenes/fixtures/` reproduce its structural shapes (wall transforms, instance
+composition, 2D UI) and carry no vendored content.
 
 A deployment that carries the corpus unstripped should be purged, not left to age out. The
 replacement deploy carries the stripped form.

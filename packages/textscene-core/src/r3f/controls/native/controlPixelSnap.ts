@@ -1,29 +1,8 @@
 /**
- * Godot's whole-pixel snap for a Control's drawn transform.
- *
- * `scene/gui/control.cpp`, `Control::_update_canvas_item_transform()`:
- *
- *     Transform2D xform = _get_internal_transform();
- *     xform[2] += get_position();
- *     if (is_inside_tree() && Math::abs(Math::sin(data.rotation * 4.0f)) < 0.00001f
- *             && get_viewport()->is_snap_controls_to_pixels_enabled()) {
- *         xform[2] = (xform[2] + Vector2(0.5, 0.5)).floor();
- *     }
- *
- * 1. The snap lands on the canvas item, never on the rect. `get_rect()` and the
- *    layout above it, such as the `GROW_DIRECTION_BOTH` halving
- *    (`control.cpp:1789-1797`), stay unsnapped, so the solve never reads a
- *    rounded number.
- * 2. It snaps the composite translation, the internal transform's column plus
- *    the position. Godot 4.6.3 draws a ColorRect at (100, 100) with
- *    `pivot_offset = (10.25, 10.25)` and `scale = (2, 2)` at exactly 90,
- *    `floor(100 + (10.25 - 20.5) + 0.5)`, not at 89.75.
- * 3. `sin(rotation * 4)` vanishes only at multiples of 45°, so any other angle
- *    draws unsnapped.
- *
- * Each CanvasItem snaps its own parent-relative transform, so a fractionally
- * placed parent leaves its child fractional. Nested groups reproduce that.
- * No React, no THREE. Godot pixels, +Y down: the caller negates Y (`rect.ts`).
+ * Godot's whole-pixel snap for a Control's drawn transform, from `_update_canvas_item_transform`
+ * (`controlPixelSnap.md` quotes it). It lands on the canvas item, never on the rect, so the layout
+ * never reads a rounded number. Each CanvasItem snaps its own parent-relative transform, as the
+ * nested groups here do. Godot pixels, +Y down: the caller negates Y (`rect.ts`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -40,7 +19,8 @@ export const SNAP_CONTROLS_TO_PIXELS_SETTING = 'gui/common/snap_controls_to_pixe
 
 /**
  * `Control::_update_canvas_item_transform`'s rotation tolerance, verbatim:
- * `Math::abs(Math::sin(data.rotation * 4.0f)) < 0.00001f`.
+ * `Math::abs(Math::sin(data.rotation * 4.0f)) < 0.00001f`. `sin(rotation * 4)` vanishes only at
+ * multiples of 45°, so any other angle draws unsnapped.
  */
 const SNAP_ROTATION_EPSILON = 0.00001;
 

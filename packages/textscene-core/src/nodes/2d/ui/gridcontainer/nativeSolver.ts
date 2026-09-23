@@ -1,25 +1,8 @@
 /**
- * GridContainer's native (WebGL canvas) rect solve: a port of
- * `GridContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN` handler and
- * `GridContainer::get_minimum_size` (`scene/gui/grid_container.cpp`), plus
- * the shared `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`)
- * every container child goes through.
- *
- * `fit_child_in_rect` ends in `Control::set_rect`/`Control::_size_changed`
- * (`scene/gui/control.cpp:1531-
- * 1541,1760-1797`), which floors the rect at the child's full-precision
- * `get_combined_minimum_size()`, as `native/controlRectSolver.ts` does for the
- * free/anchored path (`GROW_DIRECTION_*`).
- * The grid truncates each child minimum to `Size2i` (`grid_container.cpp:290`), so
- * a fractional minimum outgrows its cell: `Vector2(10.7, 5)` in a 10-wide column
- * is 10.7 wide, and `grow_horizontal = 0` (`GROW_DIRECTION_BEGIN`) shifts x by -0.7.
- *
- * Under RTL each row starts at the trailing edge and walks back
- * (`grid_container.cpp:157,190-194,220-228`), and `fit_child_in_rect` gets the
- * flag too. Column indices do not change, so the empty expanded columns past
- * the last used one keep the high indices.
- *
- * Pure data + functions, no React, no THREE.
+ * GridContainer's native (WebGL canvas) rect solve: a port of `NOTIFICATION_SORT_CHILDREN` and
+ * `get_minimum_size` (`scene/gui/grid_container.cpp`), with the `Container::fit_child_in_rect`
+ * (`scene/gui/container.cpp:95-128`) every container child goes through. Pure data and functions,
+ * no React, no THREE.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -233,8 +216,9 @@ export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect,
     const col = index % columns;
 
     if (col === 0) {
-      // `col_ofs = get_size().width` under RTL (`grid_container.cpp:190-194`);
-      // this container insets nothing, so its content rect is its own size.
+      // Under RTL a row starts at `col_ofs = get_size().width` and walks back
+      // (`grid_container.cpp:157,190-194,220-228`). This container insets nothing, so its content rect
+      // is its own size. Column indices do not mirror, so the empty expanded columns keep the high ones.
       colOfs = rtl ? contentRect.w : 0;
       if (row > 0) {
         const prevRow = row - 1;
@@ -249,9 +233,10 @@ export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect,
     if (rowExpanded.has(row) && row < rowRemainingPixelIndex) h += 1;
 
     const cell: Rect2 = { x: rtl ? colOfs - w : colOfs, y: rowOfs, w, h };
-    // No local minimum re-floor: the solver core applies `Control::set_rect`'s
-    // floor (grow direction included) to every rect a container returns, so
-    // doing it here too would be a second copy of the same rule to keep in sync.
+    // The solver core applies `Control::set_rect`'s floor (`control.cpp:1531-1541,1760-1797`) at the
+    // full-precision minimum, grow direction included, so a local re-floor would copy that rule. The
+    // cell uses the `Size2i` minimum (`grid_container.cpp:290`): `Vector2(10.7, 5)` in a 10-wide column
+    // is 10.7 wide, and `grow_horizontal = 0` (`GROW_DIRECTION_BEGIN`) shifts x by -0.7.
     rects.set(child.path, fitChildInRect(cell, minSize, hFlagsOf(child), vFlagsOf(child), rtl));
 
     colOfs += rtl ? -(w + hSep) : w + hSep;

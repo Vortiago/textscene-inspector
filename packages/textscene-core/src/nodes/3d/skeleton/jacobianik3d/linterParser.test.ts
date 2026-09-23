@@ -101,9 +101,8 @@ describe('JacobianIK3D inherited validators', () => {
   it('reaches every tier that declares a key for it', () => {
     // JacobianIK3D < IterateIK3D < ChainIK3D < IKModifier3D < SkeletonModifier3D. A missing hop
     // drops a whole tier's validators in silence. The nearest hop is pinned exactly, the rest by
-    // membership. The ancestry table is
-    // GENERATED from the node catalog, and `baseChainCompleteness` already owns
-    // the whole-table claim.
+    // membership. The ancestry table is generated from the node catalog, and
+    // `baseChainCompleteness` owns the whole-table claim.
     expect(baseChain('JacobianIK3D')[0]).toBe('IterateIK3D');
     for (const tier of ['ChainIK3D', 'IKModifier3D', 'SkeletonModifier3D', 'Node3D']) {
       expect(baseChain('JacobianIK3D')).toContain(tier);

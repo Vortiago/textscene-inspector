@@ -1,9 +1,7 @@
 /**
- * `<GraphFrame>`, the native (WebGL canvas) painter for
- * `GraphFrame::_notification(NOTIFICATION_DRAW)` (`scene/gui/graph_frame.cpp:93-143`)
- * in source order: body panel, titlebar, title text, resizer. The walker's
- * `tint` composes with each base colour in sRGB, as in `PanelChrome`.
- *
+ * `<GraphFrame>`, the native (WebGL canvas) painter for `GraphFrame::_notification(NOTIFICATION_DRAW)`
+ * (`scene/gui/graph_frame.cpp:93-143`) in source order: body panel, titlebar, title text, resizer.
+ * The walker's `tint` composes with each base colour in sRGB, as in `PanelChrome`, and
  * `ControlCanvasWalker` owns `visible`, `children` and the transform.
  *
  * Portions ported from Godot Engine (MIT).

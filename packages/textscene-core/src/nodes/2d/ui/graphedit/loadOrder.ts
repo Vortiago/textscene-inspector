@@ -1,43 +1,8 @@
 /**
- * What `GraphEdit`'s setters store when a scene's properties apply in file order.
- * Three setters read state an earlier key wrote, so an order-free property bag
- * cannot recover the stored value. `SceneState::instantiate` sets every property
- * (`scene/resources/packed_scene.cpp:492`) before it parents the node (`:541`),
- * so each setter below runs outside the tree:
- *
- *  - `Control::_size_changed` updates `data.size_cache` but skips
- *    `NOTIFICATION_RESIZED` outside the tree (`scene/gui/control.cpp:1812`), so
- *    the resize handler (`:867`) never calls `GraphEdit::_update_scrollbars`,
- *    the only writer of `min_scroll_offset`/
- *    `max_scroll_offset` (`graph_edit.cpp:492-493`). Both bounds are still
- *    `(0, 0)` when `set_scroll_offset` clamps (`:407`), and `CLAMP` tests the min
- *    branch first (`core/typedefs.h:139-141`): the range is inverted and each
- *    authored offset lands on `0` or on `-size`.
- *    A `zoom` write that moves the value calls `_update_scrollbars` first
- *    (`:2448`). `SceneState` parents GraphEdit's children after its own
- *    properties, so the child list is still empty then, and the merged rect is one
- *    size out from the origin (`:488-493`) and a later clamp reads the proper
- *    range `min_scroll_offset` to `max_scroll_offset - size`, where an authored
- *    offset survives. `set_scroll_offset` reruns `_update_scrollbars` (`:414`)
- *    only after its own clamp, and a file writes the key once.
- *  - `get_parent_anchorable_rect` returns an empty `Rect2` outside the tree
- *    (`control.cpp:687-689`), so each `anchor_*` adds zero and the size is
- *    `offset_right - offset_left` by `offset_bottom - offset_top`, floored by
- *    `custom_minimum_size` (`control.cpp:1773-1797`, `:1744-1750`).
- *
- * `set_zoom` clamps against `zoom_min`/`zoom_max` as they stand (`:2434`), and
- * each bound's setter reruns `set_zoom(zoom)` (`:2487`, `:2502`).
- * `set_zoom_custom` returns before it touches the buttons' disabled flags when
- * the clamp changes nothing (`:2435-2437`), so a bound written after `zoom`
- * moves neither.
- *
- * The replay follows `Label`'s `resolveVisibleChars` (`../label/parser.ts`): the
- * raw property bag's insertion order is file order (`TscnParserCore.ts`). Not
- * modelled: `anchors_preset` and `layout_mode`, whose offset rewrites resolve
- * against the same empty parent rect and which Godot's saver writes ahead of
- * the `offset_*` keys that overwrite them.
- *
- * Pure data + functions, no React, no THREE.
+ * What `GraphEdit`'s setters store when a scene's properties apply in file order, before the node
+ * is parented (`scene/resources/packed_scene.cpp:492`, `:541`). Three setters read state an earlier
+ * key wrote, so an order-free property bag cannot recover the stored value. `graphEdit.md` walks
+ * each setter through the engine lines that decide it.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -93,7 +58,11 @@ interface ReplayState {
   scrollOffset: Vec2 | undefined;
 }
 
-/** `Control::get_size()` as `_size_changed` leaves it out of tree (`control.cpp:1765-1797`). */
+/**
+ * `Control::get_size()` as `_size_changed` leaves it out of tree (`control.cpp:1765-1797`): the
+ * parent rect is empty there (`:687-689`), so each `anchor_*` adds zero and the offsets span the
+ * size, floored by `custom_minimum_size` (`:1744-1750`).
+ */
 function sizeOf(state: ReplayState): Vec2 {
   return {
     x: Math.max(state.offsets[2] - state.offsets[0], state.customMinimum.x),
@@ -116,6 +85,8 @@ function installScrollBounds(state: ReplayState): void {
 function applySetZoom(state: ReplayState, requested: number): void {
   const zoom = clamp(requested, state.zoomMin, state.zoomMax);
   state.zoomTouched = true;
+  // An unchanged zoom returns before the buttons' disabled flags (`:2435-2437`), so a bound
+  // written after `zoom` moves neither.
   if (state.zoom === zoom) return;
   state.zoom = zoom;
   state.minusDisabled = zoom === state.zoomMin;
@@ -130,6 +101,11 @@ const OFFSET_KEYS: Record<string, 0 | 1 | 2 | 3> = {
   offset_bottom: 3,
 };
 
+/**
+ * Replays the keys in file order, as `Label`'s `resolveVisibleChars` does (`../label/parser.ts`):
+ * the raw property bag's insertion order is file order (`TscnParserCore.ts`). `anchors_preset` and
+ * `layout_mode` are not modelled (`graphEdit.md`).
+ */
 export function resolveGraphEditLoadState(properties: Record<string, string>): GraphEditLoadState {
   const state: ReplayState = {
     offsets: [0, 0, 0, 0],

@@ -83,7 +83,7 @@ function getSceneIndex(roots: TscnNode[]): SceneIndex {
   return index;
 }
 
-/** Shared empty result for a type or name miss: one frozen instance, not an allocation per miss. */
+/** Shared empty result for a type miss: one frozen instance, not an allocation per miss. */
 const NO_MATCHES: readonly TscnNode[] = Object.freeze([]);
 
 /**

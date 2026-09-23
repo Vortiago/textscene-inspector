@@ -1,12 +1,8 @@
 /**
- * FoldableContainer's native rect solver: `get_minimum_size`
- * (`scene/gui/foldable_container.cpp:36-51`), `_update_title_min_size` (`:441-478`) and
- * `NOTIFICATION_SORT_CHILDREN` (`:329-386`), with the "FoldableContainer" entries of
- * `scene/theme/default_theme.cpp:1302-1336`. Hover and focus never come from a `.tscn`,
- * so `folded` alone picks the title style and icon.
- *
- * `title_controls` is not modelled: `add_title_bar_control` is a method with no
- * `ADD_PROPERTY` (`foldable_container.cpp:552-553`), so no `.tscn` can author it.
+ * FoldableContainer's native rect solver: `get_minimum_size` (`scene/gui/foldable_container.cpp:36-51`),
+ * `_update_title_min_size` (`:441-478`) and `NOTIFICATION_SORT_CHILDREN` (`:329-386`), with the
+ * "FoldableContainer" entries of `scene/theme/default_theme.cpp:1302-1336`. No `.tscn` sets hover or
+ * focus, so `folded` alone picks the title style and icon.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -167,7 +163,11 @@ export interface FoldableContainerTitleMetrics {
   color: ControlColor;
   /** The shaped title text, or `null` for an empty title or before a measurer exists. */
   layout: TextLayoutResult | null;
-  /** `title_minimum_size` (`foldable_container.cpp:441-478`): the minimum size of the title bar. */
+  /**
+   * `title_minimum_size` (`foldable_container.cpp:441-478`): the minimum size of the title bar. It has
+   * no `title_controls` term: `add_title_bar_control` is a method with no `ADD_PROPERTY`
+   * (`foldable_container.cpp:552-553`), so no `.tscn` can author one.
+   */
   size: Vec2;
 }
 
