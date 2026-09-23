@@ -1,7 +1,6 @@
 /**
- * Semantic linter rules for Skeleton3D
- *
- * Validates property values and reports common issues.
+ * Semantic linter rules for Skeleton3D: debug and deprecated flags, 3.x pose keys and bone-name
+ * writes.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -20,31 +19,23 @@ const DEPRECATED_POSE_KEY = indexedKeyRegex(
   'to_int'
 );
 
-/**
- * Check if properties are valid Skeleton3D properties
- */
 function isSkeleton3DProperties(props: unknown): props is Skeleton3DProperties {
   return typeof props === 'object' && props !== null;
 }
 
-/**
- * Validate Skeleton3D semantic rules
- */
 function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  // Type guard for properties
   if (!isSkeleton3DProperties(node.properties)) {
     return diagnostics;
   }
 
-  // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // `motion_scale` is validated in linterParser.ts, both tiers of it.
+  // linterParser.ts validates `motion_scale` and `modifier_callback_mode_process`, so neither gets
+  // a rule here.
 
-  // show_rest_only = true: debugging mode, animations disabled.
   if (boolSlotValue(rawProps.show_rest_only) === true) {
     diagnostics.push({
       severity: 'info',
@@ -55,7 +46,6 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Warning: animate_physical_bones = true (deprecated ragdoll feature)
   if (boolSlotValue(rawProps.animate_physical_bones) === true) {
     diagnostics.push({
       severity: 'warning',
@@ -65,8 +55,6 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
       ruleName: 'skeleton3d-deprecated-feature',
     });
   }
-
-  // modifier_callback_mode_process values are valid modes — no diagnostic
 
   // skeleton_3d.cpp:108-110 fires WARN_DEPRECATED_MSG before recomputing the
   // pose. Once per node rather than once per key: the engine warns per write,
@@ -105,9 +93,6 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
   return diagnostics;
 }
 
-/**
- * Skeleton3D semantic validation rule
- */
 const skeleton3DValidationRule: LintRule = {
   meta: {
     name: 'valid-skeleton3d-usage',
@@ -149,8 +134,6 @@ const skeleton3DValidationRule: LintRule = {
   check: checkSkeleton3D,
 };
 
-// Self-register the rule
 ruleRegistry.register(skeleton3DValidationRule);
 
-// Export for testing
 export { skeleton3DValidationRule };

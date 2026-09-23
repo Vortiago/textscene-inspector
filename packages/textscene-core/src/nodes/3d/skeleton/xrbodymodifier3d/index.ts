@@ -1,9 +1,7 @@
 /**
- * XRBodyModifier3D registration — parser.
- *
- * Reuses the Node3D parse; property knowledge lives in linterParser.ts.
- * Draws nothing by design (ADR-0008), so index.r3f.ts registers Node3D
- * and its children still land in the right transform space.
+ * XRBodyModifier3D registration: the parser. It reuses the Node3D parse, and linterParser.ts holds
+ * the property knowledge. XRBodyModifier3D draws nothing (ADR-0008), so index.r3f.ts registers
+ * Node3D to keep its children in the right transform space.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

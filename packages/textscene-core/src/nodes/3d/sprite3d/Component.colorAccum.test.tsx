@@ -1,16 +1,8 @@
 /**
- * `SpriteBase3D::_get_color_accum()` (`sprite_3d.cpp:36-52`): a sprite's drawn
- * colour is its parent's accumulated colour × its own modulate, r/g/b AND a,
- * consumed as the vertex colour at `:124`.
- *
- * The accumulation walks the IMMEDIATE parent only — `parent_sprite` is
- * `Object::cast_to<SpriteBase3D>(get_parent())` (`:75`) — so one intervening
- * node restarts it at white. Label3D is not in the family: it derives from
- * GeometryInstance3D (`label_3d.h:38`) as SpriteBase3D does (`sprite_3d.h:36`),
- * making them siblings, not ancestor and descendant.
- *
- * Rendered through the dispatcher because the rule is about what a node's
- * PARENT is, which a directly-mounted component cannot express.
+ * `SpriteBase3D::_get_color_accum()` (`sprite_3d.cpp:36-52`): a sprite's drawn colour is its
+ * parent's accumulated colour × its own modulate, r/g/b and a, the vertex colour at `:124`. Only
+ * the immediate parent counts (`cast_to<SpriteBase3D>(get_parent())`, `:75`), so a node between
+ * restarts at white. Rendered through the dispatcher, since the rule is about the parent.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -28,7 +20,7 @@ import '../../../r3f/nodes/index';
 
 const TEXTURE_PATH = 'res://sprite.png';
 
-/** Independent of the renderer's own conversion — the sRGB EOTF as specced. */
+/** Independent of the renderer's own conversion: the sRGB EOTF as specified. */
 function srgbToLinear(c: number): number {
   return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
@@ -119,7 +111,7 @@ describe('SpriteBase3D colour accumulation', () => {
   });
 
   it('restarts at white when a plain Node3D sits between two sprites', async () => {
-    // `sprite_3d.cpp:75` casts the IMMEDIATE parent; a Node3D fails the cast,
+    // `sprite_3d.cpp:75` casts the immediate parent, and a Node3D fails the cast,
     // so the grandchild has no `parent_sprite` and accumulates from white.
     const renderer = await render([
       sprite('Parent', { modulate: HALF }, [
@@ -133,9 +125,9 @@ describe('SpriteBase3D colour accumulation', () => {
   });
 
   it('restarts at white when a Label3D sits between two sprites', async () => {
-    // Label3D derives from GeometryInstance3D (`label_3d.h:38`), as SpriteBase3D
-    // does (`sprite_3d.h:36`) — siblings, so the cast fails here too. It carries
-    // a `modulate` of its own, which makes it the tempting wrong answer.
+    // Label3D derives from GeometryInstance3D (`label_3d.h:38`), as SpriteBase3D does
+    // (`sprite_3d.h:36`), so they are siblings and the cast fails here too. Its own `modulate`
+    // makes it the tempting wrong answer.
     const renderer = await render([
       sprite('Parent', { modulate: HALF }, [
         label('Between', [sprite('Child', { modulate: HALF })]),

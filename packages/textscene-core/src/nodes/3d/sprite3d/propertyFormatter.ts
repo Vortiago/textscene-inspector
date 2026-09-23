@@ -1,7 +1,4 @@
-/**
- * Sprite3D property formatter — formats sprite properties for the
- * details panel.
- */
+/** Sprite3D property formatter: formats sprite properties for the details panel. */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import {

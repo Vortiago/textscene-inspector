@@ -1,13 +1,8 @@
 /**
- * Tests for the SkeletonModifier3D parent rule
- * (`skeletonmodifier3d-parent-not-skeleton3d`), skeleton_modifier_3d.cpp:36.
- *
- * Driven through `Linter`, which registers nothing of its own — not the whole
- * barrel, since that cannot run while sibling slices are mid-write. Reach is
- * asserted by constructing each concrete type name directly:
- * `applicableNodeTypeMatcher` only needs the predicate to match, and
- * `StrictTscnParser` is type-registry-agnostic, so none of the 20 slices'
- * own parsers need to be imported for this file's rule to see them.
+ * Tests for the SkeletonModifier3D parent rule (`skeletonmodifier3d-parent-not-skeleton3d`),
+ * skeleton_modifier_3d.cpp:36. Driven through `Linter`, which registers nothing of its own.
+ * `applicableNodeTypeMatcher` needs only the type name to match and `StrictTscnParser` is
+ * type-registry-agnostic, so no descendant slice's parser is imported.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -31,10 +26,9 @@ function scene(type: string, parent?: string): string {
   return `[gd_scene format=3]\n\n${root}${heading}\n`;
 }
 
-// Every concrete SkeletonModifier3D descendant this repo registers, plus the
-// class itself — skeleton_modifier_3d.cpp:36 reaches all of them via virtual
-// dispatch (none override get_configuration_warnings without calling the
-// base). This is the reach assertion this batch exists to prove.
+// Every concrete SkeletonModifier3D descendant this repo registers, plus the class itself.
+// skeleton_modifier_3d.cpp:36 reaches all of them through virtual dispatch, since none overrides
+// get_configuration_warnings without calling the base.
 const REACHED_TYPES = [
   'SkeletonModifier3D',
   'AimModifier3D',

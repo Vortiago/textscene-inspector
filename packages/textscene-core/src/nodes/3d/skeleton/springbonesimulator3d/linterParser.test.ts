@@ -1,20 +1,8 @@
 /**
- * SpringBoneSimulator3D strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing. Rule-level behaviour belongs in linter.test.ts.
- *
- * The load-bearing case is `RESOLVABLE_KEYS`: every key of the family, asserted
- * to reach a validator AND to be accepted. Most of the rows are the two complete
- * property sets Godot 4.6.3's own serialiser emits for a SpringBoneSimulator3D,
- * one per config mode; the four marked below are constructed, because the engine
- * hides those keys in whichever state the rest of the table is in. The rows are
- * therefore a single `settings/0` carrying both modes at once, which is a
- * combination Godot never writes and a validator must still accept key by key.
- *
- * It is the leaf set's real check: the fixture can only ever carry one
- * arrangement of the family, and this class hides half its keys in each mode.
+ * SpringBoneSimulator3D strict validators: format and range checks. Asserted through
+ * `validatorRegistry`, so a failure points at the validator, not at scene parsing. The load-bearing
+ * case is `RESOLVABLE_KEYS`, which asserts every key of the family reaches a validator and is
+ * accepted: the fixture carries one arrangement, and the class hides half its keys in each mode.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -30,22 +18,19 @@ function check(property: string, value: string) {
 }
 
 /**
- * Every key SpringBoneSimulator3D registers of its own. `settings/*` is the
- * PLAIN wildcard: the family nests (`end_bone/direction`, `joints/<j>/radius`)
- * and its own dispatcher reads that depth.
+ * Every key SpringBoneSimulator3D registers of its own. `settings/*` is the plain wildcard: the
+ * family nests (`end_bone/direction`, `joints/<j>/radius`), and its own dispatcher reads that
+ * depth.
  */
 const KEYS: string[] = ['external_force', 'mutable_bone_axes', 'setting_count', 'settings/*'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * What Godot 4.6.3 writes for a two-mode SpringBoneSimulator3D, verbatim.
- *
- * Shared mode (`individual_config = false`) first: the shared block is live, the
- * joint list collapses to the `bone`/`bone_name` pair that
- * `_validate_dynamic_prop`'s `usage ^= PROPERTY_USAGE_STORAGE` hands storage
- * back to, and `joint_count` loses it. Individual mode second: the shared block
- * disappears, `joint_count` and the six per-joint tunables appear.
+ * What Godot 4.6.3 writes for a SpringBoneSimulator3D in each mode, verbatim, plus four constructed
+ * rows, so `settings/0` carries both modes at once. Shared mode's `usage ^= PROPERTY_USAGE_STORAGE`
+ * stores only `bone` and `bone_name` per joint and hides `joint_count`. Individual mode swaps the
+ * shared block for `joint_count` and six per-joint tunables.
  */
 const RESOLVABLE_KEYS: [string, string][] = [
   // Measured: shared mode.
@@ -90,13 +75,10 @@ const RESOLVABLE_KEYS: [string, string][] = [
   ['settings/0/joints/0/drag', '0.0'],
   ['settings/0/joints/0/gravity', '0.0'],
   ['settings/0/joints/0/gravity_direction', 'Vector3(0, -1, 0)'],
-  // Constructed, all four of them: each is hidden in whichever state the rows
-  // above put this setting into, so no single save can contain them beside the
-  // rest. The exclusion pair is only serialised while
-  // enable_all_child_collisions is TRUE and it is false above (:330, :333);
-  // center_node only while center_from is Node and it is Bone above (:367-369);
-  // the shared rotation_axis_vector only while rotation_axis is Custom and it
-  // is All above (:385-387). Each takes the shape its measured twin does.
+  // Constructed: each is hidden in the state the rows above set, so no single save holds them
+  // beside the rest. The exclusion pair needs enable_all_child_collisions true (:330, :333),
+  // center_node needs center_from Node (:367-369), and the shared rotation_axis_vector needs
+  // rotation_axis Custom (:385-387).
   ['settings/0/exclude_collision_count', '1'],
   ['settings/0/exclude_collisions/0', 'NodePath("Sphere")'],
   ['settings/0/center_node', 'NodePath("..")'],
@@ -126,9 +108,8 @@ describe('SpringBoneSimulator3D strict validators', () => {
   });
 
   it.each(RESOLVABLE_KEYS)('resolves and accepts %s = %s', (key, value) => {
-    // Resolution AND acceptance in one: a key that reached no validator would
-    // fail the first expectation, and one that reached the unknown-leaf branch
-    // the second.
+    // Resolution and acceptance in one: a key that reached no validator fails the first
+    // expectation, and one that reached the unknown-leaf branch fails the second.
     expect(validatorRegistry.findValidator('SpringBoneSimulator3D', key)).not.toBeNull();
     expect(check(key, value)).toBeNull();
   });
@@ -218,7 +199,7 @@ describe('SpringBoneSimulator3D strict validators', () => {
     });
 
     it('ignores whatever follows the joints dispatch segment', () => {
-      // `prop = path.get_slicec('/', 4)` (:123) takes ONE segment, so a tail
+      // `prop = path.get_slicec('/', 4)` (:123) takes one segment, so a tail
       // below it never reaches the comparison and `set_joint_radius` runs.
       expect(check('settings/0/joints/0/radius/extra', '0.5')).toBeNull();
       expect(check('settings/0/joints/0/rotation_axis/x/y', '3')).toBeNull();
@@ -249,11 +230,10 @@ describe('SpringBoneSimulator3D strict validators', () => {
     });
 
     it('claims no floor on center_bone, whose clamp never runs at load', () => {
-      // set_center_bone's rewrite to -1 (:625-627) sits inside `if (sk)`
-      // (:623), and properties apply before parenting, so there is no skeleton
-      // yet. _validate_bone_names re-runs set_root_bone and set_end_bone only,
-      // never set_center_bone, so an out-of-range index is stored and
-      // re-serialised unchanged.
+      // set_center_bone's rewrite to -1 (:625-627) sits inside `if (sk)` (:623), and properties
+      // apply before parenting, so no skeleton exists yet. _validate_bone_names re-runs only
+      // set_root_bone and set_end_bone, so an out-of-range index is stored and re-serialised
+      // unchanged.
       expect(check('settings/0/center_bone', '-5')).toBeNull();
     });
 
@@ -402,13 +382,10 @@ describe('SpringBoneSimulator3D strict validators', () => {
     });
 
     it('errors on a negative count, which LocalVector::resize cannot represent', () => {
-      // set_collision_count (:1179) and set_exclude_collision_count (:1123) hand
-      // the value to LocalVector<NodePath>::resize, whose size parameter is the
-      // default `U = uint32_t` (local_vector.h:44, :188). A negative int wraps
-      // to ~4.29 billion and the allocation trips
-      // `CRASH_COND_MSG(!data, "Out of memory")` (local_vector.h:179). Where the
-      // sibling list is the disabled one the setter returns early instead, so
-      // the value is dropped rather than stored — no round-trip either way.
+      // set_collision_count (:1179) and set_exclude_collision_count (:1123) hand the value to
+      // LocalVector<NodePath>::resize, sized `U = uint32_t` (local_vector.h:44, :188). A negative
+      // int wraps to about 4.29 billion and trips `CRASH_COND_MSG(!data, "Out of memory")`
+      // (local_vector.h:179), or the disabled list's setter drops it: no round-trip.
       expect(check('settings/0/collision_count', '-1')?.severity).toBe('error');
       expect(check('settings/0/exclude_collision_count', '-1')?.severity).toBe('error');
       expect(check('settings/0/joint_count', '-1')?.severity).toBe('error');

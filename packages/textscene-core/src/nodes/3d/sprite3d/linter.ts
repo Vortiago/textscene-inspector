@@ -1,9 +1,6 @@
 /**
- * Semantic linter rules for Sprite3D
- *
- * Note: Format validation (billboard values, pixel_size, etc.) is handled
- * by linterParser.ts during strict parsing. This file focuses on semantic validation
- * that requires full scene context (e.g., resource references exist, frame validation).
+ * Semantic linter rules for Sprite3D: the checks that need scene context, such as resource
+ * references and frame writes. linterParser.ts handles format validation during strict parsing.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -12,14 +9,10 @@ import { heldResource } from '../../../linter/resourceChecker.js';
 import { boolSlotValue } from '../../../godot/index.js';
 import { spriteFrameDiagnostics } from '../../../linter/spriteFrameGrid.js';
 
-/**
- * Validate Sprite3D semantic rules (resource references, frame validation, etc.)
- */
 function checkSprite3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
   if (heldResource(rawProps.texture) === undefined) {
@@ -46,10 +39,9 @@ function checkSprite3D(context: RuleContext): Diagnostic[] {
       ruleName: 'sprite3d-region-configuration',
     });
   } else if (rawProps.region_rect !== undefined && rawProps.region_enabled !== undefined) {
-    // Handed to the shared reader unnormalised: `VariantParser` compares the
-    // identifier case-SENSITIVELY (`id == "false"`, variant_parser.cpp:695-697),
-    // so lowercasing first made `region_enabled = FALSE` — a value Godot fails
-    // the load on — read as a boolean the file does not carry.
+    // Handed to the shared reader unnormalised: `VariantParser` compares the identifier
+    // case-sensitively (`id == "false"`, variant_parser.cpp:695-697), so `region_enabled = FALSE`,
+    // a value Godot fails the load on, is not read as a boolean.
     if (boolSlotValue(rawProps.region_enabled) === false) {
       diagnostics.push({
         severity: 'info',
@@ -64,9 +56,6 @@ function checkSprite3D(context: RuleContext): Diagnostic[] {
   return diagnostics;
 }
 
-/**
- * Sprite3D semantic validation rule
- */
 const sprite3DValidationRule: LintRule = {
   meta: {
     name: 'valid-sprite3d-resources',
@@ -112,8 +101,6 @@ const sprite3DValidationRule: LintRule = {
   check: checkSprite3D,
 };
 
-// Self-register the rule
 ruleRegistry.register(sprite3DValidationRule);
 
-// Export for testing
 export { sprite3DValidationRule };

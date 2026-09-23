@@ -1,31 +1,21 @@
 /**
- * SpringBoneCollisionCapsule3D strict validators for linting.
- *
- * Declare only SpringBoneCollisionCapsule3D's OWN members, the ones doc/classes/SpringBoneCollisionCapsule3D.xml
- * lists without an `overrides=` attribute. Everything from SpringBoneCollision3D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
- *
- * The class reaches a `.tscn` through plain `ADD_PROPERTY` alone: no
- * `PropertyListHelper`, no `ADD_ARRAY_COUNT`, no `_set`/`_get` override and no
- * `.compat.inc`. Four are bound, of which three serialise.
- *
- * Both floats hint `"0,1,0.001,or_greater,suffix:m"`. `,or_greater` opens the
- * MAX end, so only the floor is checkable, and both setters assign their own
- * argument unaltered (`radius = p_radius` at :36, `height = p_height` at :50),
- * so each floor is the inspector hint's alone and warns rather than errors
- * (ADR-0032). Neither setter refuses a non-finite value, so `inf` and `nan`
- * pass, as the shared numeric validator already allows.
- *
- * What each setter DOES alter is the OTHER property, to keep
- * `radius <= height * 0.5` (:37-38 and :51-52). That is a cross-field condition
- * no single-property validator can see; it lives in this slice's linter.ts.
+ * SpringBoneCollisionCapsule3D strict validators. It reaches a `.tscn` through `ADD_PROPERTY` alone
+ * (no `PropertyListHelper`, `ADD_ARRAY_COUNT`, `_set`/`_get` or `.compat.inc`): four are bound, and
+ * three serialise. Each setter rewrites the other float to keep `radius <= height * 0.5` (:37-38,
+ * :51-52), a cross-field condition linter.ts checks.
  */
 
+// Declare only SpringBoneCollisionCapsule3D's own members, the ones
+// doc/classes/SpringBoneCollisionCapsule3D.xml lists without `overrides=`. The NODE_BASE_TYPES
+// base-walk delivers every key from SpringBoneCollision3D up, and re-declaring one shadows it and
+// duplicates the rule.
 import '../springbonecollision3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
+// Both floats hint "0,1,0.001,or_greater,suffix:m": `,or_greater` opens the max end, and each
+// setter keeps its own argument (`radius = p_radius` at :36, `height = p_height` at :50), so the
+// floor only warns (ADR-0032). Neither refuses a non-finite value, so `inf` and `nan` pass.
 validatorRegistry.registerAll('SpringBoneCollisionCapsule3D', {
   // ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "radius", PROPERTY_HINT_RANGE, "0,1,0.001,or_greater,suffix:m"), ...)
   radius: v.float('radius', { min: 0, hinted: { min: 'spring_bone_collision_capsule_3d.cpp:101' } }),
@@ -33,9 +23,8 @@ validatorRegistry.registerAll('SpringBoneCollisionCapsule3D', {
   height: v.float('height', { min: 0, hinted: { min: 'spring_bone_collision_capsule_3d.cpp:102' } }),
   // ADD_PROPERTY(PropertyInfo(Variant::BOOL, "inside"), ...) at spring_bone_collision_capsule_3d.cpp:104
   inside: v.boolean('inside'),
-  // `mid_height` (spring_bone_collision_capsule_3d.cpp:103) is bound
-  // PROPERTY_USAGE_NONE: an inspector-side wrapper that rewrites `height`, never
-  // stored. Its `ERR_FAIL_COND_MSG(p_mid_height < 0.0f)` at :64 therefore guards
-  // a value no `.tscn` can carry, so validating the key would only ever fire on
-  // something Godot cannot write.
+  // `mid_height` (spring_bone_collision_capsule_3d.cpp:103) is PROPERTY_USAGE_NONE: an
+  // inspector-side wrapper that rewrites `height` and is never stored. Its
+  // `ERR_FAIL_COND_MSG(p_mid_height < 0.0f)` at :64 guards a value no `.tscn` carries, so it gets
+  // no validator.
 });

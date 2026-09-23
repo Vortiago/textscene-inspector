@@ -1,6 +1,8 @@
 /**
- * `settings/<i>/<leaf>` — the flat half of the hand-rolled property family,
- * keyed as `_get_property_list` spells it.
+ * `settings/<i>/<leaf>`: the flat half of the hand-rolled property family, keyed as
+ * `_get_property_list` spells it. No leaf carries `radians_as_degrees`: the angle-adjacent floats
+ * are lengths or coefficients behind a plain `PROPERTY_HINT_RANGE`, so hint numbers are stored
+ * numbers.
  */
 
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
@@ -16,24 +18,19 @@ const CENTER_FROM: Record<number, string> = {
 };
 
 /**
- * `settings/<i>/<leaf>`, keyed by the leaf path exactly as `_get_property_list`
- * spells it (spring_bone_simulator_3d.cpp:293-339), so the two-segment
- * `end_bone/direction` and `radius/value` are ordinary entries.
- *
- * The `PROPERTY_HINT_ENUM_SUGGESTION` bone names are a suggestion list rather
- * than a constraint (the skeleton supplies them at :286, and it may be absent),
- * so each name leaf is a plain quoted string.
+ * `settings/<i>/<leaf>`, keyed by the leaf path as `_get_property_list` spells it
+ * (spring_bone_simulator_3d.cpp:293-339), so `end_bone/direction` and `radius/value` are ordinary
+ * entries. The `PROPERTY_HINT_ENUM_SUGGESTION` bone names come from the skeleton (:286), which may
+ * be absent, so each name leaf is a plain quoted string.
  */
 export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // :293, Variant::STRING. set_root_bone_name (:440) assigns before resolving.
   root_bone_name: v.quotedString('root_bone_name'),
 
-  // :294, Variant::INT, PROPERTY_HINT_NONE, PROPERTY_USAGE_NO_EDITOR, which IS
-  // storage. -1 is the unset sentinel the setter itself writes: set_root_bone
-  // rewrites anything at or below -1 to -1 once a skeleton is present
-  // (:460-462), and _validate_bone_names (:1355) re-runs the same setter on the
-  // first skeleton update, so a value under -1 cannot survive as written. The
-  // upper bound is the live bone count, which no per-property rule can see.
+  // :294, Variant::INT, PROPERTY_HINT_NONE, PROPERTY_USAGE_NO_EDITOR, which is storage.
+  // set_root_bone rewrites anything at or below -1 to -1 once a skeleton exists (:460-462), and
+  // _validate_bone_names (:1355) re-runs it on the first skeleton update. The ceiling is the live
+  // bone count, which no per-property rule sees.
   root_bone: v.strictInt('root_bone', { min: -1, enforced: 'spring_bone_simulator_3d.cpp:460-462' }),
 
   // :295, same shape as root_bone_name; set_end_bone_name is :477.
@@ -74,11 +71,9 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // :302, same shape as root_bone_name; set_center_bone_name is :605.
   center_bone_name: v.quotedString('center_bone_name'),
 
-  // :303. Unbounded, unlike its root_bone and end_bone siblings: the clamp to
-  // -1 (:625-627) sits inside `if (sk)` (:623) and properties apply before
-  // parenting, so no skeleton exists yet, and _validate_bone_names
-  // (:1355-1369) re-runs set_root_bone and set_end_bone but never
-  // set_center_bone. An out-of-range index survives and re-serialises.
+  // :303. Unbounded, unlike root_bone and end_bone: the clamp to -1 (:625-627) sits inside
+  // `if (sk)` (:623), properties apply before parenting, and _validate_bone_names (:1355-1369)
+  // never re-runs set_center_bone. An out-of-range index survives and re-serialises.
   center_bone: v.strictInt('center_bone'),
 
   // :304, Variant::BOOL. set_individual_config (:870) assigns. Which of the two
@@ -114,9 +109,9 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   'drag/value': v.float('drag/value', { min: 0, hinted: 'spring_bone_simulator_3d.cpp:311' }),
   'drag/damping_curve': v.resourceReference('drag/damping_curve'),
 
-  // :313, PROPERTY_HINT_RANGE "0,1,0.01,or_greater,or_less,suffix:m/s". BOTH
-  // ends are opened, so there is no bound to report at all: gravity is a signed
-  // constant velocity and a negative one is ordinary. Format check only.
+  // :313, PROPERTY_HINT_RANGE "0,1,0.01,or_greater,or_less,suffix:m/s". Both ends are open, so
+  // there is no bound: gravity is a signed constant velocity, and a negative one is ordinary.
+  // Format check only.
   'gravity/value': v.float('gravity/value'),
   'gravity/damping_curve': v.resourceReference('gravity/damping_curve'),
 
@@ -134,21 +129,18 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
     enforced: 'spring_bone_simulator_3d.cpp:1054',
   }),
 
-  // :329, Variant::BOOL. set_enable_all_child_collisions (:1081) assigns. It
-  // selects WHICH of the two collision lists is live, which is linter.ts's.
+  // :329, Variant::BOOL. set_enable_all_child_collisions (:1081) assigns. It selects which of the
+  // two collision lists is live, which is linter.ts's.
   enable_all_child_collisions: v.boolean('enable_all_child_collisions'),
 
-  // :330 and :335, both PROPERTY_HINT_NONE, so no hint bounds them. Neither
-  // setter carries the `ERR_FAIL_COND(p_count < 0)` that setting_count (:841)
-  // and joint_count (:1054) have, but the floor is real one layer down:
-  // set_exclude_collision_count (:1123) and set_collision_count (:1179) pass
-  // the value to `LocalVector<NodePath>::resize`, whose size parameter is the
-  // default `U = uint32_t` (local_vector.h:44, :188), so a negative int wraps
-  // to ~4.29 billion and the allocation trips
-  // `CRASH_COND_MSG(!data, "Out of memory")` (local_vector.h:179). On the
-  // disabled one of the two lists the setter returns early and drops the value
-  // instead. Nothing negative round-trips either way.
+  // :330 and :335, both PROPERTY_HINT_NONE, and neither setter has the `ERR_FAIL_COND(p_count < 0)`
+  // of setting_count (:841) and joint_count (:1054). But set_exclude_collision_count (:1123) and
+  // set_collision_count (:1179) pass the value to `LocalVector<NodePath>::resize`, sized
+  // `U = uint32_t` (local_vector.h:44, :188).
   exclude_collision_count: v.int('exclude_collision_count', {
+    // A negative int wraps to about 4.29 billion and trips `CRASH_COND_MSG(!data, "Out of memory")`
+    // (local_vector.h:179), and the disabled list's setter drops it instead. Nothing negative
+    // round-trips.
     enforcedMin: { at: 0 },
     enforced: { min: 'local_vector.h:179' },
   }),

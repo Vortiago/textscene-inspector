@@ -1,28 +1,8 @@
 /**
- * Semantic linter rule for RetargetModifier3D - Godot's own configuration
- * warning, `RetargetModifier3D::get_configuration_warnings()`
- * (retarget_modifier_3d.cpp:33-39):
- *
- *     if (child_skeletons.is_empty()) {
- *         warnings.push_back(RTR("There is no child Skeleton3D!"));
- *     }
- *
- * `child_skeletons` is filled by `_update_child_skeletons`
- * (retarget_modifier_3d.cpp:175-191), which walks `get_child(i)` and keeps only
- * what `Object::cast_to<Skeleton3D>` accepts (:180). Two consequences the rule
- * has to honour: the walk is over DIRECT children alone, so a skeleton one level
- * deeper is never collected, and with the vector empty `_process_modification`
- * has nothing to write to, so the modifier retargets nothing at all.
- *
- * The tier is settled by Godot raising it as a warning itself: no setter refuses
- * anything, the scene loads, and the node is simply inert.
- *
- * This is a tree-shape claim rather than a property one, which is why it is a
- * rule and not a validator: no key on the node can be read to decide it.
- *
- * A child heading carrying `instance=` takes its type from another file, which
- * the linter does not open, so such a child could be the Skeleton3D and the rule
- * stays quiet rather than guessing.
+ * Semantic linter rule for RetargetModifier3D: Godot's own configuration warning "There is no child
+ * Skeleton3D!" (retarget_modifier_3d.cpp:33-39) when `child_skeletons` is empty. No key on the node
+ * decides this tree shape, so it is a rule, not a validator. Godot warns itself: the scene loads
+ * and the node is inert.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -37,9 +17,13 @@ function checkRetargetModifier3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const children = node.children;
 
-  // A child whose type this file does not state: an instance, an index=
-  // override, or a heading with no identifier at all.
+  // A child whose type this file does not state (an instance, an index= override, or a heading with
+  // no identifier) could be the Skeleton3D. The linter does not open another file, so the rule
+  // stays quiet.
   if (children.some(isTypeUnknowable)) return [];
+  // `_update_child_skeletons` (retarget_modifier_3d.cpp:175-191) keeps only the direct children
+  // `Object::cast_to<Skeleton3D>` accepts (:180), so a deeper skeleton is never collected and
+  // `_process_modification` retargets nothing.
   if (children.some((child) => descendsFrom(child.type, 'Skeleton3D'))) return [];
 
   const what =

@@ -1,25 +1,8 @@
 /**
- * Semantic linter rule for SplineIK3D, from Godot's own configuration warning,
- * `SplineIK3D::get_configuration_warnings()` (spline_ik_3d.cpp:109-118):
- *
- *     if (sp_settings[i]->path_3d.is_empty()) {
- *         warnings.push_back(RTR("Detecting settings with no Path3D set! "
- *                                "SplineIK3D must have a Path3D to work."));
- *
- * It is not cosmetic. `_process_ik` resolves the NodePath and abandons the
- * setting when nothing comes back (spline_ik_3d.cpp:313-316), before the curve
- * is even read, so a path-less setting poses its bones exactly never: the
- * modifier is inert for that chain while looking fully configured.
- *
- * Why this cannot be a validator: `path_3d` is empty by DEFAULT, so Godot omits
- * the key entirely when saving. The defect is an ABSENCE, and only the sibling
- * `setting_count` says how many absences to look for, which no per-property
- * validator can see (ADR-0032 leaves a bound against a sibling count to a
- * semantic rule).
- *
- * A bare `[node type="SplineIK3D"]` is silent: with no settings allocated there
- * is nothing for a path to be missing from, and Godot's own loop over
- * `sp_settings` runs zero times.
+ * Semantic linter rule for SplineIK3D: Godot's own configuration warning "Detecting settings with
+ * no Path3D set!" (spline_ik_3d.cpp:109-118). `_process_ik` skips a setting whose NodePath resolves
+ * to nothing (spline_ik_3d.cpp:313-316), so that chain is never posed. Godot omits the empty
+ * default, so only `setting_count` counts the absences: a rule, not a validator (ADR-0032).
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -38,16 +21,15 @@ function checkSplineIK3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const properties = node.properties as unknown as Record<string, string>;
 
-  // `_set_setting_count` refuses a negative count and the validator reports it,
-  // so a count that is absent, unparseable or negative allocates nothing here.
+  // `_set_setting_count` refuses a negative count and the validator reports it. A count that is
+  // absent, unparseable or negative allocates nothing, and Godot's own loop over `sp_settings` runs
+  // zero times.
   const count = ruleCount(properties['setting_count'] ?? '');
   if (count === null || count <= 0) return [];
 
-  // Grouped by the setting `_set` RESOLVES each key to, not by the text the file
-  // spells: `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
-  // and no validity gate (spline_ik_3d.cpp:37), so `settings/00/path_3d` sets
-  // setting 0's path. Reading `settings/${index}/path_3d` forward found nothing
-  // there and reported a path the engine had applied as missing.
+  // Grouped by the setting `_set` resolves each key to, not by the index text: `_set` reads the
+  // index with a bare `path.get_slicec('/', 1).to_int()` and no validity gate
+  // (spline_ik_3d.cpp:37), so `settings/00/path_3d` sets setting 0's path.
   const settings = indexedElements(properties, 'settings/', 'to_int');
   const posed = new Set<number>();
   for (const [index, leaves] of settings) {
@@ -55,8 +37,8 @@ function checkSplineIK3D(context: RuleContext): Diagnostic[] {
     const path = leaves.get('path_3d');
     if (path !== undefined && !isUnsetPath(path.trim())) posed.add(index);
   }
-  // Capped at both ends: `setting_count` has no ceiling, so the WALK is bounded
-  // as well as the message. See `reportedIndices.ts`.
+  // Capped at both ends: `setting_count` has no ceiling, so the walk is bounded as well as the
+  // message. See `reportedIndices.ts`.
   const { listed: missing, total } = unsatisfiedIndices(count, posed);
   const omitted = total - missing.length;
   const diagnostics: Diagnostic[] = missing.map((index) => ({

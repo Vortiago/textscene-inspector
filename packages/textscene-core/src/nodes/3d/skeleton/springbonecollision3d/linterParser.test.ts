@@ -1,13 +1,8 @@
 /**
- * SpringBoneCollision3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour is tested through `Linter` in linter.test.ts.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * SpringBoneCollision3D strict validators: format and range checks. Asserted through
+ * `validatorRegistry`, not by linting a `.tscn`, so a failure points at the validator and not at
+ * scene parsing. linter.test.ts tests rule behaviour through `Linter`. Quote the governing Godot
+ * source line beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -27,8 +22,8 @@ describe('SpringBoneCollision3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format. This loop is generic, and the
+    // per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('SpringBoneCollision3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -40,9 +35,9 @@ describe('SpringBoneCollision3D strict validators', () => {
       expect(check('bone_name', '"Head"')).toBeNull();
     });
 
-    // scene/3d/spring_bone_collision_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::STRING_NAME, "bone_name"), ...)
-    // — Godot writes a StringName-typed property as `&"value"`, e.g. AnimationPlayer's
-    // `autoplay = &"walk"` in the corpus, so that form must parse as valid too.
+    // scene/3d/spring_bone_collision_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::STRING_NAME,
+    // "bone_name"), ...). Godot writes a StringName property as `&"value"`, so that form parses as
+    // valid too.
     it('accepts the StringName literal form &"..."', () => {
       expect(check('bone_name', '&"Head"')).toBeNull();
     });
@@ -67,9 +62,9 @@ describe('SpringBoneCollision3D strict validators', () => {
       expect(check('bone', '3')).toBeNull();
     });
 
-    // scene/3d/spring_bone_collision_3d.cpp: ADD_PROPERTY(..., "bone", PROPERTY_HINT_NONE, "", ...) — no
-    // PROPERTY_HINT_RANGE at all, so the property system places no bound on it; anything below -1 is only
-    // ever caught at runtime against a live Skeleton3D, which the static linter cannot see.
+    // scene/3d/spring_bone_collision_3d.cpp: ADD_PROPERTY(..., "bone", PROPERTY_HINT_NONE, "",
+    // ...), with no PROPERTY_HINT_RANGE, so the property system places no bound. A value below -1
+    // fails only at runtime against a live Skeleton3D, which the static linter cannot see.
     it('accepts a value below -1 (no static bound to enforce)', () => {
       expect(check('bone', '-5')).toBeNull();
     });

@@ -1,13 +1,7 @@
 /**
- * Sprite3D parser — parses Sprite3D TSCN properties into a typed shape.
- *
- * Property surface matches the linter's strict validators (15 fields)
- * plus inherited Node3D transform. Defaults follow Godot's:
- *   - billboard = 0 (DISABLED) — matching Label3D (see label3d/types.ts
- *     for the rationale).
- *   - hframes = vframes = 1, frame = 0.
- *   - pixel_size = 0.01.
- *   - modulate = white opaque.
+ * Sprite3D parser: Sprite3D TSCN properties into a typed shape, with Godot's defaults: billboard 0
+ * (DISABLED, as for Label3D, see label3d/types.ts), hframes and vframes 1, frame 0, pixel_size
+ * 0.01, and an opaque white modulate.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
@@ -59,7 +53,7 @@ export function parseSprite3D(
     ]),
     pixel_size: floatOr(properties.pixel_size, 0.01),
     transparency: floatOr(properties.transparency, 0),
-    // The grid and frame Godot HOLDS after replaying the body in file order:
+    // The grid and frame Godot holds after replaying the body in file order:
     // a count below 1 is refused, a refused `frame` stays 0, a later `hframes`
     // re-maps one that landed (godot/spriteFrames.ts).
     hframes: frames.hframes,

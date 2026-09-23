@@ -1,10 +1,6 @@
 /**
- * Sprite3D runtime-parser tests.
- *
- * Covers defaults, every parsed property, and the bool / Vector2i / Rect2
- * formats specific to Sprite3D. Mirrors the depth of Label3D's parser
- * tests so the runtime parser is held to the same standard as the
- * strict-linter validators in linterParser.ts.
+ * Sprite3D runtime-parser tests: defaults, every parsed property, and the bool, Vector2i and Rect2
+ * formats specific to Sprite3D, to the depth of Label3D's parser tests.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -51,7 +47,7 @@ describe('parseSprite3D properties', () => {
     expect(parseSprite3D(HEADING, { billboard: '2' }).billboard).toBe(
       BillboardMode.BILLBOARD_FIXED_Y
     );
-    // 7 is out of range — falls back to default.
+    // 7 is out of range, so it falls back to the default.
     expect(parseSprite3D(HEADING, { billboard: '7' }).billboard).toBe(
       BillboardMode.BILLBOARD_DISABLED
     );
@@ -151,8 +147,8 @@ describe('frame replayed in file order (sprite_3d.cpp:938)', () => {
   });
 
   it('draws frame 0 when the frame write was refused against the 1x1 grid still in effect', () => {
-    // ERR_FAIL_INDEX(p_frame, vframes * hframes) sees the grid the lines ABOVE
-    // set — none — so `frame = 7` is refused and the later hframes finds 0.
+    // ERR_FAIL_INDEX(p_frame, vframes * hframes) sees the grid the lines above set, which is none,
+    // so `frame = 7` is refused and the later hframes finds 0.
     const props = parseSprite3D(HEADING, { frame: '7', hframes: '2' });
     expect(props.frame).toBe(0);
     expect(props.hframes).toBe(2);

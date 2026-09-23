@@ -1,13 +1,8 @@
 /**
- * XRHandModifier3D strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property (happy, malformed, and any bound) and
- * quote the governing Godot source line beside every numeric bound.
+ * XRHandModifier3D strict validators: format and range checks. Asserted through
+ * `validatorRegistry`, not by linting a `.tscn`, so a failure points at the validator and not at
+ * scene parsing. linter.test.ts tests rule behaviour through `Linter`. Quote the governing Godot
+ * source line beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,12 +18,12 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * XRHandModifier3D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * Set exactly one, from the source rather than from expectation: list the keys XRHandModifier3D
+ * binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY. Both unset is red on purpose. Do
+ * not delete an assertion to go green.
  */
 const KEYS: string[] = ['bone_update', 'hand_tracker'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 describe('XRHandModifier3D strict validators', () => {
@@ -41,16 +36,14 @@ describe('XRHandModifier3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // Runs the fixture's "zero errors and zero warnings" claim against the validators this test
+    // imports. `fixtureLint` checks the same file against the whole registry.
     expectFixtureClean('unit-xr-hand-modifier-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format. This loop is generic, and the
+    // per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('XRHandModifier3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
