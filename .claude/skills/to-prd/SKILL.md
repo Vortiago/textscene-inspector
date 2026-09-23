@@ -3,21 +3,23 @@ name: to-prd
 description: Turn the current conversation context into a PRD and publish it to the project issue tracker. Use when user wants to create a PRD from the current context.
 ---
 
-This skill takes the current conversation context and codebase understanding and produces a PRD. Do NOT interview the user — just synthesize what you already know.
+This skill writes a PRD from the conversation context and your knowledge of the codebase. Do not interview the user: combine what you already know.
 
-The issue tracker and triage label vocabulary should have been provided to you — run `/setup-matt-pocock-skills` if not.
+You should already have the issue tracker and the triage label vocabulary. If not, run `/setup-matt-pocock-skills`.
 
 ## Process
 
-1. Explore the repo to understand the current state of the codebase, if you haven't already. Use the project's domain glossary vocabulary throughout the PRD, and respect any ADRs in the area you're touching.
+1. If you have not explored the repo yet, explore it to understand the current code. Use the project's domain glossary in the whole PRD, and respect the ADRs in the area you touch.
 
-2. Sketch out the major modules you will need to build or modify to complete the implementation. Actively look for opportunities to extract deep modules that can be tested in isolation.
+2. Sketch the major modules to build or change. Look for deep modules that you can extract and test in isolation. A deep module holds a lot of function behind a simple, testable interface that rarely changes. A shallow module does not.
 
-A deep module (as opposed to a shallow module) is one which encapsulates a lot of functionality in a simple, testable interface which rarely changes.
+3. Check with the user that these modules match their expectations.
 
-Check with the user that these modules match their expectations. Check with the user which modules they want tests written for.
+4. Ask the user which modules need tests.
 
-3. Write the PRD using the template below, then publish it to the project issue tracker. Apply the `needs-triage` triage label so it enters the normal triage flow.
+5. Write the PRD from the template below.
+
+6. Publish it to the project issue tracker with the `needs-triage` label, so it enters the normal triage flow.
 
 <prd-template>
 
@@ -61,7 +63,7 @@ A list of testing decisions that were made. Include:
 
 - A description of what makes a good test (only test external behavior, not implementation details)
 - Which modules will be tested
-- Prior art for the tests (i.e. similar types of tests in the codebase)
+- Prior art for the tests (that is, similar types of tests in the codebase)
 
 ## Out of Scope
 

@@ -5,13 +5,13 @@ description: Implement a feature in the TextScene previewer end-to-end, either a
 
 # Implementing a feature completely
 
-A feature is done only when **every layer** lands. The recurring failure is a half-feature. The
-parse works but the node renders through `GenericNodeFallback` because a barrel was never
-imported. Or a property renders but nothing lints, documents or shows it. **Green unit tests do
-not mean complete.** Several layers have no unit guard (see Guards). Walk the whole checklist.
-Each layer is either done or explicitly not applicable, with the reason. Never skip one silently.
+A feature is done only when **every layer** lands. A half-feature parses but renders through
+`GenericNodeFallback` because a barrel is not imported, or it renders but nothing lints,
+documents or shows it. **Green unit tests do not mean complete**: several layers have no unit
+guard (see Guards). Walk the whole checklist. Mark each layer done, or not applicable with the
+reason. Never skip one without a word.
 
-**Identify the shape first.** The wiring differs, and a wrong shape is the main source of
+**Identify the shape first.** The wiring differs, and a wrong shape is the main cause of
 forgotten layers.
 
 - **Node type** (`[node type="X"]`): self-registering through three barrels. Scaffold it with
@@ -68,10 +68,10 @@ material property, or a recent node (`git log`). Broad monorepo orientation live
 - Scene-tree badge (optional polish): `TYPE_BADGE_CLASS` and `TYPE_SHORTHAND` in
   `r3f/components/SceneTreeViewer/TreeNode.tsx` (there is a default).
 
-## Material / mesh / resource layers (central dispatch, hand-edited — no self-registration)
+## Material / mesh / resource layers (self-registering)
 
-The heading predates ADR-0031. Resource types now self-register through `registerResourceSlice`.
-Nothing below is a central switch.
+Resource types register through `registerResourceSlice` (ADR-0031). Nothing below is a central
+switch.
 
 - **StandardMaterial3D property**: all in `resources/materials/standardmaterial3d/`. Decode it in
   `decode.ts` into `types.ts`, and map it to three's vocabulary in `scalars.ts`. Both appliers
@@ -98,7 +98,7 @@ Nothing below is a central switch.
   `linterValidators.ts` imported directly from `linter/index.ts`. A foreign format
   (`resources/formats/`) declares its real parser instead of `decode.ts`.
 
-## Guards — what goes RED if you forget a layer (and the gap)
+## Guards: what fails if you forget a layer, and the gap
 
 Conformance guards catch most forgotten layers: `linter/barrelCompleteness.test.ts` (linter
 barrel wiring), `parser/parserBarrelCompleteness.test.ts` (parser barrel wiring),
@@ -108,8 +108,8 @@ typeName), `nodes/_contracts/fixture-coverage.test.ts` (dropped fixture),
 render barrel `r3f/nodes/index.ts` has no completeness guard.** Miss that import and the node
 renders through `GenericNodeFallback` with green unit tests. `scripts/compare-docs/sheets.test.mjs`
 reads the slice's own `index.r3f.ts`, not the barrel, so it does not see it either. Only the
-visual golden or a manual run catches it. Verify that barrel by hand. Nothing sizes a test suite
-either. A co-located `parser.test.ts` holding one empty `it` is invisible to every guard above,
+visual golden or a manual run catches it, so verify that barrel by hand. Nothing sizes a test
+suite either. A co-located `parser.test.ts` holding one empty `it` is invisible to every guard above,
 so suite thoroughness is a `/code-review` question.
 
 ## Docs (the most-forgotten layer)
@@ -130,7 +130,7 @@ AnimationPlayer).
 
 ## Gate
 
-Local `core` gate: `pnpm type-check && pnpm lint && pnpm test:unit`. CI (all required, PR to
+Local `core` gate: `pnpm type-check && pnpm type-check:tests && pnpm lint && pnpm test:unit`. CI (all required, PR to
 main): `build` (lint, type-check, test:unit, build, bundle-size, package), `visual-regression` (a
 separate job: a new golden with no baseline fails here, not in the core gate),
 `integration-tests` (VS Code end-to-end, see the `e2e-testing` skill), `vsix-verification`.
