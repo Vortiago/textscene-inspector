@@ -1,31 +1,8 @@
 /**
- * Render-side contract for StandardMaterial3D anisotropy.
- *
- * Parsing anisotropy is necessary but not sufficient — the values have to reach
- * the rendered material or nothing changes on screen. three.js exposes
- * anisotropy only on `MeshPhysicalMaterial` (like clearcoat / sheen), so an
- * anisotropy-bearing StandardMaterial3D must upgrade the slot to a
- * `<meshPhysicalMaterial>` carrying:
- *   - `material.anisotropy` (strength magnitude),
- *   - `material.anisotropyRotation` (direction — π/2 for a negative Godot value), and
- *   - `material.anisotropyMap` (from `anisotropy_flowmap`), REPACKED so the
- *     effect strength lands where three.js reads it.
- *
- * The flowmap channel repack: Godot's `anisotropy_flowmap` carries direction in
- * R/G and STRENGTH in the ALPHA channel; three.js's `anisotropyMap` carries
- * direction in R/G and STRENGTH in the BLUE channel (verified in the installed
- * three@0.185 MeshPhysicalMaterial source). A faithful map therefore copies the
- * source ALPHA into the BLUE channel; passing the texture straight through would
- * feed three.js an arbitrary blue channel as "strength" and break the effect.
- * This is pinned with a `DataTexture` of known RGBA so it is asserted on the raw
- * pixel array (no canvas / WebGL needed in the test environment). A real asset
- * instead arrives image-backed and needs a canvas readback, which this
- * environment cannot do — the last test pins that it degrades to scalar-only
- * anisotropy, and the `material-anisotropy-flowmap` golden covers the readback
- * itself in a real browser.
- *
- * Every non-anisotropy material stays on the lighter `MeshStandardMaterial` —
- * the type the rest of the suite asserts on.
+ * StandardMaterial3D anisotropy upgrades the slot to `<meshPhysicalMaterial>`, the
+ * only three.js material with it: `anisotropy` is the strength, `anisotropyRotation`
+ * π/2 for a negative value, and `anisotropyMap` the repacked `anisotropy_flowmap`.
+ * Every other material stays `MeshStandardMaterial`.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -38,7 +15,7 @@ import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../..
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 
-/** Provider that never loads anything — textures are pre-cached directly. */
+/** Provider that never loads anything: textures are pre-cached directly. */
 class NoopProvider implements ResourceProvider {
   async loadResource(): Promise<string | ArrayBuffer | null> {
     return null;
@@ -55,8 +32,7 @@ function makeLoader(): ResourceLoader {
 
 /**
  * Inject a texture into the loader's cache as if the file pipeline had loaded
- * it, so `useResource` resolves it synchronously (mirrors
- * Component.material-features.test.tsx).
+ * it, so `useResource` resolves it synchronously.
  */
 function preloadTexture(loader: ResourceLoader, path: string, texture: THREE.Texture): void {
   const store = new Map<string, THREE.Texture>();
@@ -139,9 +115,8 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
   });
 
   it('keeps a material with no anisotropy on the standard (non-physical) material', async () => {
-    // GUARDRAIL: the common path must stay MeshStandardMaterial so existing
-    // behaviour — and the material type every other test asserts on — is
-    // unchanged; only an enabled anisotropy upgrades to physical.
+    // The common path stays MeshStandardMaterial, the type every other test
+    // asserts on. Only an enabled anisotropy upgrades to physical.
     const loader = makeLoader();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },
@@ -189,9 +164,9 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
   }
 
   it('wires anisotropy_flowmap onto material.anisotropyMap, repacking Godot alpha-strength into three.js blue', async () => {
-    // Known-pixel flowmap: R/G direction (128,128 = neutral), B unused (0),
-    // A = strength (200). three.js reads strength from BLUE, so a faithful map
-    // must end up with blue == the source alpha (200).
+    // Godot's flowmap holds direction in R/G (128,128 = neutral) and strength in
+    // alpha (200). three@0.185 `anisotropyMap` reads strength from blue, so the
+    // map copies alpha into blue, asserted on the raw pixels of a `DataTexture`.
     const flow = new THREE.DataTexture(new Uint8Array([128, 128, 0, 200]), 1, 1, THREE.RGBAFormat);
     flow.needsUpdate = true;
 
@@ -199,21 +174,20 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
 
     expect(material.anisotropyMap).toBeTruthy();
     const data = (material.anisotropyMap!.image as { data: Uint8Array }).data;
-    // Strength repacked from Godot ALPHA (200) into three.js BLUE.
+    // Strength repacked from Godot alpha (200) into three.js blue.
     expect(data[2]).toBe(200);
     // Direction channels pass through unchanged.
     expect(data[0]).toBe(128);
     expect(data[1]).toBe(128);
-    // The cached source texture must NOT be mutated in place (would clobber
-    // every other consumer of that flowmap) — its blue stays 0.
+    // The cached source texture is not mutated, since other consumers of that
+    // flowmap share it: its blue stays 0.
     expect((flow.image as { data: Uint8Array }).data[2]).toBe(0);
   });
 
   it('keeps scalar anisotropy when the flowmap pixels cannot be read', async () => {
-    // An image-backed texture (what THREE.TextureLoader produces for a real PNG)
-    // needs a canvas readback, and this environment has no rasterizer. The
-    // material must then carry NO map rather than a wrong-channel one: strength
-    // survives, the per-pixel modulation is simply absent.
+    // An image-backed texture (a real PNG) needs a canvas readback, which this
+    // environment lacks. The material then carries no map rather than a wrong-channel
+    // one, and keeps the strength. The `material-anisotropy-flowmap` golden covers the readback.
     const undecodable = new THREE.Texture({ width: 4, height: 4 } as HTMLImageElement);
 
     const material = await renderWithFlowmap(undecodable);
@@ -223,12 +197,10 @@ describe('<MeshInstance3D> anisotropy material (WI-68)', () => {
   });
 
   it('disposes the UV-transformed flowmap the material actually samples', async () => {
-    // A non-identity `uv1_scale` makes the UV transform hand the material a
-    // CLONE of the repack rather than the repack itself, and three keys its GPU
-    // texture on the sampler parameters the clone changes — so the clone gets an
-    // upload of its own while the original never gets one. Disposing only the
-    // original frees nothing; the texture on the material is the one that has to
-    // be released on unmount.
+    // A non-identity `uv1_scale` hands the material a clone of the repack, and
+    // three keys the GPU texture on the sampler parameters the clone changes, so
+    // only the clone is uploaded. The texture on the material is the one to
+    // release on unmount.
     const loader = makeLoader();
     const path = 'res://textures/aniso_flow.png';
     const flow = new THREE.DataTexture(new Uint8Array([128, 128, 0, 200]), 1, 1, THREE.RGBAFormat);

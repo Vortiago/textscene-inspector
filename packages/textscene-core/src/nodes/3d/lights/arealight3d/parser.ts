@@ -1,6 +1,4 @@
-/**
- * AreaLight3D parser - parses AreaLight3D nodes from TSCN.
- */
+/** AreaLight3D parser: the Light3D surface plus the area properties. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { AreaLight3DProperties } from './types';

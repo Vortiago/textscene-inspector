@@ -1,6 +1,4 @@
-/**
- * Tests for OmniLight3D parser
- */
+/** OmniLight3D parser. */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as logger from '../../../../logger';

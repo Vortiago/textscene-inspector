@@ -1,6 +1,4 @@
-/**
- * Tests for SpotLight3D parser
- */
+/** SpotLight3D parser. */
 
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import * as logger from '../../../../logger';

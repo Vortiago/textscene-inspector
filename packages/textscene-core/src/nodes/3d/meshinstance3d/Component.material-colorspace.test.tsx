@@ -1,16 +1,8 @@
 /**
- * The reactive arrival path end to end: a scene's inline StandardMaterial3D,
- * its textures fetched through the loader, and the colour space each slot ends
- * up sampling in.
- *
- * The rule itself lives at the binding seam
- * (`resources/materials/standardmaterial3d/textureBinding.ts`, which cites
- * Godot's `source_color` hints) and is tested there. What this file guards is
- * the WIRING: that this component names the right Godot slot for each of its
- * eight `useResource` results, so an albedo cannot be bound as a roughness map
- * or the reverse. That mistake is invisible to the binding module's own tests
- * and to a material-state comparison, because every value involved is
- * individually correct.
+ * The colour space each texture slot of an inline StandardMaterial3D samples in.
+ * `resources/materials/standardmaterial3d/textureBinding.ts` tests the rule. This
+ * tests that the component names the right Godot slot for each `useResource`
+ * result, a mistake that binding's own tests cannot see.
  */
 
 import { describe, expect, it } from 'vitest';

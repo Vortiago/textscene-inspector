@@ -1,10 +1,7 @@
 /**
- * GeometryInstance3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * GeometryInstance3D strict validators: format and range checks, asserted
+ * through `validatorRegistry` so a failure points at the validator, not at
+ * scene parsing. Rule-level behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,11 +21,9 @@ describe('GeometryInstance3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates, except the honestly-permissive instance_shader_parameters/* family', () => {
-    // A validator that accepts arbitrary prose is not validating a format —
-    // except `instance_shader_parameters/*`, whose whole point is that no
-    // format is checkable from the .tscn alone (the type comes from the
-    // attached shader's own uniform declarations at runtime). Same shape as
-    // ShaderGlobalsOverride's params/*.
+    // A validator that accepts arbitrary prose checks no format. The exception
+    // is `instance_shader_parameters/*`: the attached shader's uniforms give
+    // its type at runtime, as with ShaderGlobalsOverride's params/*.
     const accepted = validatorRegistry
       .getOwnKeys('GeometryInstance3D')
       .filter((property) => property !== 'instance_shader_parameters/*')

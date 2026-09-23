@@ -1,21 +1,7 @@
 /**
- * Regression test: gate light gizmos on selection.
- *
- * Previously each light gizmo (`*LightGizmo` in `lightHelpers.tsx`)
- * mounted its `THREE.*LightHelper` unconditionally on light mount.
- * `example-hallway.tscn` has 18 SpotLight3D nodes, so the viewport showed
- * 18 overlapping yellow cones that obscured the actual scene meshes —
- * a major visual-pollution regression vs main, where
- * `HelperManager.setHelper('highlight', …)` only attached a gizmo when
- * the corresponding node was the active selection.
- *
- * Now gizmos are gated through `useNodePath()` +
- * `SelectionContext.selectedNodePath`. No selection → 0 helpers, even
- * with N lights. Selection on a light's path → exactly that light's
- * helper appears. Selection on a non-light path → 0 helpers.
- *
- * Hover is intentionally NOT a trigger; the orange BoxHelper is
- * the hover affordance. Documented in `lightHelpers.tsx`.
+ * Light, camera and audio gizmos show only for the selected node: no selection
+ * gives no helpers however many lights exist, and a light's path gives that
+ * light's helper alone. Hover is not a trigger.
  */
 import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -202,10 +188,8 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
           </HierarchyProvider>,
         );
 
-        // Selection moved to the sibling same-type light: the previous
-        // selection's helper is gone, the new one's helper is present.
-        // We assert via cardinality (1 helper, somewhere) because
-        // identity-of-target lookup through the test renderer is fragile.
+        // Selection moved to the sibling light. The assertion counts helpers,
+        // since a lookup by target identity through the test renderer is fragile.
         expect(findHelpersOfType(scene, c.helperCtor)).toHaveLength(1);
       });
 
@@ -230,9 +214,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
   }
 
   it('a hallway-style scene with many spotlights renders 0 helpers when nothing is selected', async () => {
-    // Mirrors the BLOCKER ux-flow-analyst-2 found on example-hallway.tscn:
-    // 18 SpotLight3D nodes → 18 overlapping yellow cones. Verify the
-    // scaling property of the gate: N lights, no selection ⇒ 0 helpers.
+    // N lights and no selection give 0 helpers, as on example-hallway.tscn.
     const nodes = Array.from({ length: 18 }, (_, i) => spotNode(`Spot${i}`));
     const graph = createSceneGraphFromTscnScene({ nodes });
     const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
@@ -247,11 +229,8 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
     expect(findHelpersOfType(scene, THREE.SpotLightHelper)).toHaveLength(0);
-    // But the 18 SpotLight nodes themselves still mount — only the
-    // gizmos were the visual-pollution problem, not the lights. We
-    // probe via the test renderer's findAllByType because the SpotLight
-    // primitives live inside r3f-managed groups that the raw scene
-    // traversal in `findHelpersOfType` doesn't cross in this harness.
+    // The lights themselves still mount. `findAllByType`, because the raw scene
+    // traversal in `findHelpersOfType` does not cross r3f-managed groups here.
     expect(renderer.scene.findAllByType('SpotLight')).toHaveLength(18);
   });
 
@@ -283,17 +262,10 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
   });
 
   it("DirectionalLightHelper sits at the light's own world position, not squared through its parent group", async () => {
-    // THREE.DirectionalLightHelper's constructor hardcodes
-    // `matrix = light.matrixWorld` + `matrixAutoUpdate = false` (its official
-    // usage adds the helper directly to the scene root). This codebase
-    // instead renders the helper as a <primitive> SIBLING of the light
-    // inside the light's own transform group, so without the parent
-    // correction in `correctForParentGroup` the group's matrixWorld composes
-    // on top of the already-world `light.matrixWorld`, DOUBLING the
-    // translation (verified below against the light's own current position,
-    // not a hardcoded constant, since a naive fix can get the helper's
-    // absolute position "coincidentally right" while still corrupting the
-    // light itself — see that function's doc comment).
+    // THREE.DirectionalLightHelper's constructor sets `matrix = light.matrixWorld`
+    // and `matrixAutoUpdate = false`. The helper is a <primitive> sibling of the
+    // light in its transform group, so without `correctHelperForParentGroup` the
+    // group's matrixWorld composes on top and doubles the translation.
     const node: TscnNode = {
       name: 'Sun',
       type: 'DirectionalLight3D',
@@ -323,13 +295,9 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
       </HierarchyProvider>,
     );
 
-    // The parent-correction lives in the helper's wrapped `update()`, which
-    // `usePrimitiveHelper` invokes via `useFrame` — i.e. only once the
-    // gizmo has actually been committed into the scene graph with a real
-    // parent (never true yet at the point `.create()`'s promise resolves,
-    // since mounting the `<primitive>` and running the first tick are two
-    // separate steps). Advance one frame so that tick fires before we read
-    // any matrixWorld, matching what always happens before a real paint.
+    // The correction runs in the helper's wrapped `update()`, which
+    // `usePrimitiveHelper` calls from `useFrame`, after `.create()` resolves.
+    // One frame makes that tick fire before any matrixWorld is read.
     await renderer.advanceFrames(1, 16);
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -337,35 +305,16 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     const [helper] = findHelpersOfType(scene, THREE.DirectionalLightHelper);
     expect(helper).toBeDefined();
 
-    // The light primitive lives inside an r3f-managed group that the raw
-    // `scene.traverse` in `findHelpersOfType` doesn't cross in this test
-    // renderer (see `countAudioGizmoParts`'s comment below), so we look it
-    // up via the test renderer's own tree API instead, same as the
-    // 18-spotlight test does for `'SpotLight'`.
+    // The raw `scene.traverse` in `findHelpersOfType` does not cross the
+    // r3f-managed group, so the test renderer's tree API finds the light.
     const [lightNode] = renderer.scene.findAllByType('DirectionalLight');
     expect(lightNode).toBeDefined();
     const light = lightNode!.instance as unknown as THREE.DirectionalLight;
 
-    // The helper must track the light's TRUE world position exactly — not
-    // squared through the parent group (the original double-transform bug:
-    // `helper.matrix` already held a WORLD matrix, so re-applying the
-    // parent's transform on top doubled it) — and the light's OWN
-    // matrixWorld must be exactly what it always was, unperturbed by the
-    // helper's mere presence (the corruption bug: naively flipping
-    // matrixAutoUpdate on without also breaking the constructor's aliasing
-    // of `helper.matrix` to `light.matrixWorld` let the generic per-frame
-    // compose() clobber that SHARED object to identity, corrupting the
-    // light's actual illumination the instant its gizmo was selected).
-    //
-    // Comparing the helper directly against the light's own current
-    // matrixWorld — rather than only asserting a hardcoded expected Y — is
-    // what catches a subtly-wrong "fix" here. THREE.DirectionalLight's
-    // constructor defaults its OWN local position to `Object3D.DEFAULT_UP`
-    // (0, 1, 0), which used to leak into the effective shading direction —
-    // `<directionalLight>` now sets an explicit
-    // `position={[0, 0, 0]}` so only the shared parent group's authored
-    // transform determines world position, giving this fixture's true
-    // world Y of 5 (the group's origin.y), not 6.
+    // The helper tracks the light's current matrixWorld, and the helper leaves
+    // it untouched: `helper.matrix` aliases `light.matrixWorld`, which a per-frame
+    // compose() would reset. `<directionalLight>` sets `position={[0, 0, 0]}` over
+    // three's `Object3D.DEFAULT_UP`, so world Y is the group's 5, not 6.
     const helperWorldPos = new THREE.Vector3().setFromMatrixPosition(helper!.matrixWorld);
     const lightWorldPos = new THREE.Vector3().setFromMatrixPosition(light.matrixWorld);
     expect(lightWorldPos.y).toBeCloseTo(5, 5);
@@ -375,9 +324,8 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
   });
 
   it("PointLightHelper sits at the light's own world position, not squared through its parent group", async () => {
-    // THREE.PointLightHelper shares DirectionalLightHelper's
-    // `matrix = light.matrixWorld` + `matrixAutoUpdate = false` constructor
-    // pattern — same double-transform bug, same fix (see the previous test).
+    // THREE.PointLightHelper has DirectionalLightHelper's constructor aliasing,
+    // and the same correction (see the previous test).
     const node: TscnNode = {
       name: 'Lamp',
       type: 'OmniLight3D',
@@ -409,9 +357,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
       </HierarchyProvider>,
     );
 
-    // See the DirectionalLight test above: the parent-correction only
-    // applies once the gizmo's wrapped `update()` has fired via a real
-    // `useFrame` tick, which requires advancing at least one frame.
+    // The correction applies after one `useFrame` tick (see the DirectionalLight test).
     await renderer.advanceFrames(1, 16);
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -423,11 +369,8 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
     expect(lightNode).toBeDefined();
     const light = lightNode!.instance as unknown as THREE.PointLight;
 
-    // Same invariant as the DirectionalLight case above: the helper must
-    // track the light's own current matrixWorld exactly, and that
-    // matrixWorld must be unperturbed by the helper's presence.
-    // THREE.PointLight has no `DEFAULT_UP` local-position quirk, so its
-    // true world Y here is exactly the group's authored 5.
+    // The DirectionalLight invariant. THREE.PointLight has no `DEFAULT_UP`
+    // position, so its world Y is the group's authored 5.
     const helperWorldPos = new THREE.Vector3().setFromMatrixPosition(helper!.matrixWorld);
     const lightWorldPos = new THREE.Vector3().setFromMatrixPosition(light.matrixWorld);
     expect(lightWorldPos.y).toBeCloseTo(5, 5);
@@ -437,12 +380,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
   });
 });
 
-/**
- * Scope expansion: ui-designer-2's visual A/B (commit
- * `a03dedc`) found the same eager-gizmo pattern in Camera3D's
- * `THREE.CameraHelper` frustum wireframe. Same fix shape — gate via
- * `useGizmoVisible()`.
- */
+/** Camera3D's `THREE.CameraHelper` frustum is gated by `useGizmoVisible()` too. */
 function cameraNode(name: string, overrides: Partial<Camera3DProperties> = {}): TscnNode {
   const props: Camera3DProperties = {
     name,
@@ -532,16 +470,10 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
   });
 
   it("CameraHelper sits at the camera's own world transform, not squared through a transformed ancestor", async () => {
-    // THREE.CameraHelper's constructor hardcodes `matrix = camera.matrixWorld`
-    // + `matrixAutoUpdate = false`, the exact aliasing pattern
-    // `correctHelperForParentGroup` fixes for the light helpers. Unlike a
-    // light (whose OWN internal transform group is enough to trigger the
-    // bug — see the DirectionalLightHelper test above), Camera3D applies its
-    // transform directly to the `<perspectiveCamera>` primitive with no
-    // wrapping group of its own, so reproducing the double-transform
-    // requires an ANCESTOR node with a real transform: a parent Node3D's
-    // `<group position=…>` is what the camera's pickable wrapper — and the
-    // helper mounted as its sibling — both sit under.
+    // THREE.CameraHelper has the light helpers' `matrix = camera.matrixWorld`
+    // aliasing. Camera3D puts its transform on the `<perspectiveCamera>` with no
+    // group of its own, so only a transformed ancestor, whose group holds both
+    // the camera and its sibling helper, reproduces the doubling.
     const parentNode: TscnNode = {
       name: 'Rig',
       type: 'Node3D',
@@ -568,9 +500,7 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
       </HierarchyProvider>,
     );
 
-    // Same reasoning as the DirectionalLightHelper test: the correction runs
-    // inside the helper's wrapped `update()`, invoked via `useFrame` — advance
-    // one frame so it fires before reading any matrixWorld.
+    // The correction applies after one `useFrame` tick (see the DirectionalLight test).
     await renderer.advanceFrames(1, 16);
 
     const scene = renderer.scene.instance as unknown as THREE.Scene;
@@ -594,13 +524,9 @@ describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () =>
 });
 
 /**
- * AudioStreamPlayer3D's gizmo isn't a `THREE.*Helper` — it's a regular
- * wireframe cone+disk plus an optional range sphere rendered as part of
- * the audio node's group. ui-designer-2's A/B finding (commit `a03dedc`)
- * flagged these as part of the "yellow wireframe overlay" pollution.
- * The gate hides BOTH the speaker meshes AND the range sphere, leaving
- * an empty `<group>` (so descendant children of the audio node still
- * see the correct transform context).
+ * AudioStreamPlayer3D's gizmo is a wireframe cone and disk plus an optional
+ * range sphere in the node's group. The gate hides both and leaves an empty
+ * `<group>`, so the node's children keep their transform context.
  */
 function audioNode(name: string, overrides: Partial<AudioStreamPlayer3DProperties> = {}): TscnNode {
   const props: AudioStreamPlayer3DProperties = {
@@ -630,13 +556,9 @@ function audioNode(name: string, overrides: Partial<AudioStreamPlayer3DPropertie
 }
 
 /**
- * Counts the speaker-body group + the range-sphere mesh combined via
- * the test-renderer's tree API. We can't rely on `THREE.Scene.traverse`
- * + `parent.userData` here because the test renderer mounts each
- * primitive inside R3F-managed groups whose parent identity differs
- * from the production THREE.Scene's. The two markers
- * (`isAudioGizmoBody` on the speaker group, `isAudioRangeSphere` on
- * the range gizmo's group) are the production-side hooks for this.
+ * Counts speaker groups (`isAudioGizmoBody`) and range groups (`isAudioRangeSphere`)
+ * through the test renderer's tree API. `THREE.Scene.traverse` cannot serve: the
+ * test renderer mounts each primitive in R3F-managed groups with other parents.
  */
 function countAudioGizmoParts(
   renderer: { scene: { findAllByType: (t: string) => { instance: THREE.Object3D }[] } },
@@ -646,7 +568,7 @@ function countAudioGizmoParts(
     const ud = g.instance.userData as { isAudioGizmoBody?: boolean };
     return ud.isAudioGizmoBody === true;
   }).length;
-  // The audible range is a camera-facing CIRCLE of lines (what Godot's gizmo
+  // The audible range is a camera-facing circle of lines (what Godot's gizmo
   // plugin draws), so its marker sits on a group wrapping a <lineSegments>,
   // not on a mesh.
   const rangeSpheres = groups.filter((g) => {
@@ -729,6 +651,5 @@ describe('AudioStreamPlayer3D gizmo — selection gating (WI-UX-14 scope expansi
   });
 });
 
-// `SelectSeeder` reused from the lights describe block above —
-// declared at module scope so the Camera3D / Audio describe blocks
-// pick it up via hoisting.
+// `SelectSeeder` is declared at module scope, so the Camera3D and Audio blocks
+// share it through hoisting.

@@ -1,16 +1,7 @@
 /**
- * Regression contract: the Light3D linter must not be over-strict.
- *
- * The linter wrongly emitted ERROR diagnostics for valid Godot light scenes:
- *  - `light_energy = 0` (a switched-off light, e.g. a headlight that is off)
- *    was rejected as "must be greater than 0".
- *  - an omitted `omni_range` / `spot_range` / `spot_angle` was a hard
- *    "requires X" error, even though Godot supplies a sensible default.
- *
- * All of these are valid and must produce ZERO error-severity diagnostics.
- * This pins the relaxed behavior; the fix relaxes the `light_energy` validator
- * to allow 0 and drops the requires-range / requires-angle semantic rules.
- * (Warnings are not asserted on — only that no ERROR is produced.)
+ * Valid Godot light scenes produce no error diagnostic: `light_energy = 0`, a
+ * switched-off light, and an omitted `omni_range`, `spot_range` or `spot_angle`,
+ * which Godot defaults. Warnings are not asserted.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

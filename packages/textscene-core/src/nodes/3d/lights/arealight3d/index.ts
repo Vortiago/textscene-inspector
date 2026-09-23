@@ -1,6 +1,4 @@
-/**
- * AreaLight3D registration — parser + formatter.
- */
+/** AreaLight3D parser and formatter registration. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseAreaLight3D } from './parser';

@@ -1,8 +1,7 @@
 /**
- * LightmapGI registration — parsed and validated, not yet rendered.
- *
- * The slice registers a base component under `renderIntent: 'pending'`, so the
- * badge reads a gap while `visible` and the workspace split still behave.
+ * LightmapGI registration: parsed and validated, not yet rendered. The base
+ * component registers under `renderIntent: 'pending'`, so the badge reads a gap
+ * while `visible` and the workspace split still behave.
  */
 
 import { describe, expect, it } from 'vitest';

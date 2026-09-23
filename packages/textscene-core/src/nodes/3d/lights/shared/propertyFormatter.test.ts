@@ -1,6 +1,4 @@
-/**
- * Tests for shared light property formatting utilities
- */
+/** Shared light property formatting. */
 
 import { describe, it, expect } from 'vitest';
 import {

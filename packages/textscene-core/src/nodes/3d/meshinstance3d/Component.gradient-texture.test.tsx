@@ -1,12 +1,8 @@
 /**
- * Wiring test: a MeshInstance3D whose StandardMaterial3D albedo_texture is an
- * inline `SubResource(GradientTexture2D)` (the 3D-platformer coin's glow
- * sprite) must resolve the gradient SYNCHRONOUSLY and hand the rasterised
- * DataTexture to the rendered material's `map`. No file pipeline, no
- * `useResource` round trip — the gradient is fully described in the scene.
- *
- * The coin material is `shading_mode = 0` (unshaded) + `blend_mode = 1` (ADD),
- * so it renders as an additive-blended MeshBasicMaterial.
+ * An albedo_texture that is an inline `SubResource(GradientTexture2D)` resolves
+ * synchronously, with no file pipeline, into the rendered material's `map`. The
+ * material is unshaded (`shading_mode = 0`) and ADD (`blend_mode = 1`), so it
+ * renders as an additive-blended MeshBasicMaterial.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -19,7 +15,7 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 
 /** Pin traffic is invisible from outside the cache, so both entry points are
- *  wrapped — still calling through to the real implementation. */
+ *  wrapped, still calling through to the real implementation. */
 const traffic = vi.hoisted(() => ({ pinned: [] as string[], unpinned: [] as string[] }));
 
 vi.mock('../../../resources/textures/proceduralTextureCache', async (importOriginal) => {
@@ -58,7 +54,7 @@ function makeLoader(): ResourceLoader {
   return loader;
 }
 
-// Mirrors scenes/demos/3d/platformer/coin/coin.tscn's GlowSprite chain.
+// The GlowSprite chain of scenes/demos/3d/platformer/coin/coin.tscn.
 const coinResources: TscnInternalResource[] = [
   { id: 'QuadMesh_kqa4x', type: 'QuadMesh', data: { id: 'QuadMesh_kqa4x' } },
   {
@@ -126,8 +122,8 @@ describe('<MeshInstance3D> GradientTexture2D albedo (coin glow)', () => {
     expect(basic).toBeDefined();
     // The gradient DataTexture is on the map, resolved without any async load.
     expect(basic!.map).toBeInstanceOf(THREE.DataTexture);
-    // `.map` is typed `Texture<unknown> | null`; the assertion above proves it's
-    // really the DataTexture whose `.image` carries known `width`/`height`.
+    // `.map` is typed `Texture<unknown> | null`. The assertion above proves it is
+    // the DataTexture whose `.image` carries `width` and `height`.
     expect((basic!.map as THREE.DataTexture).image.width).toBe(64);
     // ADD blend + transparency carried from the material.
     expect(basic!.blending).toBe(THREE.AdditiveBlending);
@@ -136,10 +132,8 @@ describe('<MeshInstance3D> GradientTexture2D albedo (coin glow)', () => {
 });
 
 /**
- * A material's texture slots are walked ONCE, and a slot contributes a pin only
- * where it contributed a texture. The two used to be separate walks with
- * separate opinions about which references were procedural, and they disagreed:
- * any SubResource pinned a key, whether or not the cache held one for it.
+ * A material's texture slots are walked once, and a slot contributes a pin only
+ * where it contributed a texture, not for every SubResource.
  */
 describe('<MeshInstance3D> procedural texture pins', () => {
   const mixedSlotResources: TscnInternalResource[] = [

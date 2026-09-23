@@ -1,14 +1,8 @@
 /**
- * <GridMap> — renders a Godot GridMap by instancing MeshLibrary item meshes at
- * each populated cell. Cells are decoded from the packed int stream; each cell
- * places its item's ArrayMesh, oriented by one of the 24 orthogonal bases and
- * positioned at `cell · cell_size` plus Godot's per-axis centering offset
- * (`cell_center_x/y/z`, all ON by default). Cells of the same item are batched into one
- * THREE.InstancedMesh. Items whose mesh hasn't resolved fall back to a
- * cell-sized wireframe box so the level's structure is still visible.
- *
- * Material parity is first-pass: the item's primary surface material is applied
- * to the whole instanced mesh (most library tiles are single-surface).
+ * <GridMap> instances each MeshLibrary item's ArrayMesh at its populated cells,
+ * one THREE.InstancedMesh per item. An unresolved mesh draws a cell-sized
+ * wireframe box. The item's primary surface material covers the whole instanced
+ * mesh, since most library tiles are single-surface.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -35,12 +29,9 @@ import { shadowCastingEffects } from '../../../r3f/shadowCasting';
 const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
 
 /**
- * Shared fallback material for tiles whose ArrayMesh declares no material (or
- * whose material is still loading). A MeshLibrary item carries a mesh and no
- * material of its own, so a material-less tile mesh is the plain no-material
- * case and gets Godot's default 3D material. Module-level so it is never
- * per-instance allocated and never disposed — one material lives for the app's
- * lifetime.
+ * Godot's default 3D material, for a tile whose ArrayMesh declares no material
+ * or whose material is still loading: a MeshLibrary item has none of its own.
+ * Module-level, shared and never disposed.
  */
 const DEFAULT_TILE_MATERIAL = new THREE.MeshStandardMaterial({
   color: GODOT_DEFAULT_ALBEDO,
@@ -49,11 +40,9 @@ const DEFAULT_TILE_MATERIAL = new THREE.MeshStandardMaterial({
 });
 
 /**
- * A SHADOWS_ONLY tile's material. `visible = false` would also stop the tile
- * casting — three's `WebGLShadowMap.renderObject` returns on it — so writing
- * neither colour nor depth is what separates the two passes. Shared and never
- * disposed, exactly like the default above; it draws nothing, so no tile needs
- * its own.
+ * A SHADOWS_ONLY tile's material: it writes neither colour nor depth.
+ * `visible = false` would also stop the tile casting, since three's
+ * `WebGLShadowMap.renderObject` returns on it. Shared and never disposed.
  */
 const SHADOWS_ONLY_TILE_MATERIAL = new THREE.MeshBasicMaterial({
   colorWrite: false,
@@ -72,12 +61,9 @@ function transform3DToMatrix4(t: Transform3D): THREE.Matrix4 {
 
 /**
  * World matrix for one cell: translate(cell·size + centering offset) ×
- * orientation × meshTransform.
- *
- * The offset is Godot's `_get_offset()`: `cell_size * 0.5` on each axis whose
- * `cell_center_*` is on — and all three default to ON. Dropping it shifts the
- * whole grid half a cell, which is invisible in a GridMap-only scene but puts
- * the tiles half a cell off from every sibling node in a real level.
+ * orientation × meshTransform. The offset is Godot's `_get_offset()`:
+ * `cell_size * 0.5` on each axis whose `cell_center_*` is on, all three by
+ * default. Without it the tiles sit half a cell off from sibling nodes.
  */
 function cellMatrix(
   cell: GridMapCell,
@@ -154,15 +140,15 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
     [cells, cellSize, cellCenter, item?.meshTransform]
   );
 
-  // GridMap has no `cast_shadow` of its own; the setting is PER TILE, read off
+  // GridMap has no `cast_shadow` of its own. The setting is per tile, read off
   // the library (`modules/gridmap/grid_map.cpp:799-800`).
   const shadow = shadowCastingEffects(item?.castShadow);
 
   const instanced = useMemo(() => {
     const geometry = meshResult.value?.geometry;
     if (!geometry) return null;
-    // Geometry (cached ArrayMesh) and a resolved material are owned elsewhere;
-    // fall back to the shared default material when none is loaded.
+    // The resource pipeline owns the cached ArrayMesh and a resolved material.
+    // The shared default stands in when none is loaded.
     const material = shadow.shadowsOnly
       ? SHADOWS_ONLY_TILE_MATERIAL
       : (materialPath && materialResult.value) || DEFAULT_TILE_MATERIAL;
@@ -177,9 +163,8 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
     return mesh;
   }, [meshResult.value, materialPath, materialResult.value, matrices, shadow]);
 
-  // Dispose the InstancedMesh's own GPU buffers (instanceMatrix) when it is
-  // replaced or unmounts. Its geometry/material are shared/cached and owned by
-  // the resource pipeline, so InstancedMesh.dispose() leaves them intact.
+  // InstancedMesh.dispose() frees only its own instanceMatrix buffer, and leaves
+  // the geometry and material the resource pipeline owns.
   useEffect(() => {
     if (!instanced) return;
     return () => instanced.dispose();
@@ -189,8 +174,7 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
     return <primitive object={instanced} />;
   }
 
-  // Geometry not resolved yet (pending / missing item): show cell-sized
-  // wireframe boxes so the grid structure is visible.
+  // A pending or missing item draws cell-sized wireframe boxes.
   return (
     <>
       {matrices.map((m, i) => (

@@ -1,6 +1,4 @@
-/**
- * Shared property formatting utilities for light nodes.
- */
+/** Inspector sections shared by the light nodes. */
 
 import type { PropertySection } from '../../../../core/NodeRegistry';
 import type { BaseLightProperties, BaseLightWithNormalBias } from './types';
@@ -82,7 +80,7 @@ export function formatBaseShadowSection(
 /**
  * Formats shadow section including normal bias.
  *
- * Used by DirectionalLight3D and OmniLight3D which support shadow_normal_bias.
+ * For DirectionalLight3D and OmniLight3D, which have shadow_normal_bias.
  *
  * @param properties - Light properties with normal bias support
  * @param additionalItems - Optional additional shadow items to append

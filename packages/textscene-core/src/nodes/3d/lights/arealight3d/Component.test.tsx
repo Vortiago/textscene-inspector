@@ -57,9 +57,8 @@ describe('<AreaLight3D>', () => {
   });
 
   it('does not cast shadows even when shadow_enabled is true (RectAreaLight has no shadow support)', async () => {
-    // Pins the intentional lossy mapping: shadow_* is parsed + lint-validated
-    // but silently dropped at render (see Component.tsx header) — so a future
-    // edit can't quietly start wiring castShadow onto a light that can't cast.
+    // shadow_* is parsed and validated but dropped at render, since a
+    // RectAreaLight cannot cast.
     const renderer = await ReactThreeTestRenderer.create(
       <AreaLight3D node={makeNode({ shadow_enabled: true })} />
     );

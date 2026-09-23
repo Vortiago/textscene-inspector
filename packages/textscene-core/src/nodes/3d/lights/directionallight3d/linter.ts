@@ -1,8 +1,5 @@
 /**
- * Semantic linter rules for DirectionalLight3D
- *
- * Note: Format validation is handled by linterParser.ts during strict parsing.
- * This file focuses on semantic validation requiring full context (e.g., logical consistency).
+ * DirectionalLight3D semantic rules. linterParser.ts validates the format.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -11,12 +8,9 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 /**
- * Validate DirectionalLight3D semantic rules
- *
- * No range advisory here: `directional_shadow_max_distance`'s and
- * `light_energy`'s hint floors are validator bounds (light_3d.cpp:584, :389).
- * What remains is cross-field consistency (shadow mode vs. which split fields
- * the inspector still shows).
+ * Shadow mode against the split fields the inspector still shows. The hint
+ * floors of `directional_shadow_max_distance` and `light_energy` are validator
+ * bounds (light_3d.cpp:584, :389), so no range advisory is here.
  */
 function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -35,17 +29,14 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
   const split2 = Boolean(rawProps.directional_shadow_split_2);
   const split3 = Boolean(rawProps.directional_shadow_split_3);
 
-  // Godot raises no warning for this — it just hides the field. Grounded in
-  // `_validate_property` (light_3d.cpp:542-551): under `ORTHOGONAL`,
-  // `directional_shadow_split_1`/`directional_shadow_blend_splits` get
-  // `PROPERTY_USAGE_NO_EDITOR`; under `ORTHOGONAL` or `PARALLEL_2_SPLITS`,
-  // `directional_shadow_split_2`/`directional_shadow_split_3` do too — the
-  // inspector simply stops showing the now-inapplicable split fields.
-  // `ruleInt('')` is already null, so an absent key needs no third state.
+  // Godot raises no warning, it hides the field: `_validate_property`
+  // (light_3d.cpp:542-551) gives split_1 and blend_splits `PROPERTY_USAGE_NO_EDITOR`
+  // under ORTHOGONAL, and split_2 and split_3 under ORTHOGONAL or PARALLEL_2_SPLITS.
+  // `ruleInt('')` is null, so an absent key needs no third state.
   const shadowMode = ruleInt(rawProps.directional_shadow_mode ?? '');
 
   if (shadowMode !== null) {
-    // ORTHOGONAL mode (0) doesn't use splits
+    // ORTHOGONAL (0) uses no splits.
     if (shadowMode === 0) {
       if (split1 || split2 || split3) {
         diagnostics.push({
@@ -58,7 +49,7 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
       }
     }
 
-    // PARALLEL_2_SPLITS mode (1) only uses split_1
+    // PARALLEL_2_SPLITS (1) uses only split_1.
     if (shadowMode === 1) {
       if (split2 || split3) {
         diagnostics.push({
@@ -70,17 +61,11 @@ function checkDirectionalLight3D(context: RuleContext): Diagnostic[] {
         });
       }
     }
-
-    // PARALLEL_4_SPLITS mode (2) uses all splits
-    // No warnings needed for this mode
   }
 
   return diagnostics;
 }
 
-/**
- * DirectionalLight3D semantic validation rule
- */
 const directionalLight3DValidationRule: LintRule = {
   meta: {
     name: 'valid-directionallight3d-properties',
@@ -102,8 +87,6 @@ const directionalLight3DValidationRule: LintRule = {
   check: checkDirectionalLight3D,
 };
 
-// Self-register the rule
 ruleRegistry.register(directionalLight3DValidationRule);
 
-// Export for testing
 export { directionalLight3DValidationRule };

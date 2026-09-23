@@ -1,9 +1,7 @@
 /**
- * `fixed_size` — the vertex rescale `FLAG_FIXED_SIZE` emits
- * (`scene/resources/material.cpp:1357-1381`), which keeps the label the same
- * size on screen however far away it is. Driven against an explicit camera
- * per frame, the same shape `Component.billboard.test.tsx` uses for the other
- * per-frame material effect on this node.
+ * `fixed_size`: the vertex rescale `FLAG_FIXED_SIZE` emits
+ * (`scene/resources/material.cpp:1357-1381`), which keeps the label one size on
+ * screen at any distance. Driven against an explicit camera per frame.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -86,7 +84,7 @@ describe('<Label3D> fixed_size', () => {
   it('scales by the viewport half-height under an orthographic camera, not by depth', async () => {
     // `material.cpp:1361-1364`: `h = abs(1/(2*PROJECTION_MATRIX[1][1]))`, then
     // `sc = h * 2`. With top-bottom = 4, `PROJECTION_MATRIX[1][1]` is 0.5, so
-    // `h` is 1 and `sc` is 2 — the same at every depth, unlike the arm above.
+    // `h` is 1 and `sc` is 2 at every depth, unlike the arm above.
     const atOrigin = await labelAfterFrame({ fixed_size: 'true', transform: AT_ORIGIN }, orthographic());
     expect(atOrigin.scale.x).toBeCloseTo(2, 5);
 

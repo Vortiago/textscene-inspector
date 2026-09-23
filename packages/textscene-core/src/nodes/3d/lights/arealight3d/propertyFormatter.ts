@@ -1,6 +1,4 @@
-/**
- * AreaLight3D property formatter - formats area light properties for display.
- */
+/** AreaLight3D property formatter: the inspector sections for an area light. */
 
 import type { PropertySection } from '../../../../core/NodeRegistry';
 import type { AreaLight3DProperties } from './types';
@@ -12,9 +10,8 @@ import {
 
 export function formatAreaLight3DProperties(properties: AreaLight3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
-  // area_size is already parsed to {x, y} in the parser (via the canonical
-  // parseVector2), so the inspector reads the numbers directly — same source
-  // of truth as the render path, no per-consumer re-parse.
+  // The parser already reads area_size with parseVector2, so the inspector and
+  // the render path show the same numbers.
   const { x: w, y: h } = properties.area_size ?? { x: 1, y: 1 };
 
   const areaLightItems: PropertySection['items'] = [

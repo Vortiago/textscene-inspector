@@ -1,8 +1,6 @@
 /**
- * GridMap strict validators: format and bound checks.
- *
- * `data` and `baked_meshes` are the hand-rolled `_set`/`_get` route
- * propertyListRouteCoverage.test.ts tracks — see linterParser.ts's header.
+ * GridMap strict validators: format and bound checks. `data` and `baked_meshes`
+ * are the hand-rolled `_set`/`_get` route propertyListRouteCoverage.test.ts tracks.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -72,7 +70,7 @@ describe('GridMap strict validators', () => {
   });
 
   describe('bake_navigation', () => {
-    // grid_map.cpp:1265 — plain BOOL, no hint.
+    // grid_map.cpp:1265: plain BOOL, no hint.
     it('accepts "true" and "false"', () => {
       expect(check('bake_navigation', 'true')).toBeNull();
       expect(check('bake_navigation', 'false')).toBeNull();
@@ -86,10 +84,9 @@ describe('GridMap strict validators', () => {
   });
 
   describe('cell_octant_size', () => {
-    // grid_map.cpp:1253 — PROPERTY_HINT_RANGE "1,1024,1". set_octant_size
-    // (:313-317) opens with ERR_FAIL_COND(p_size == 0): an ENFORCED refusal of
-    // exactly zero. Nothing else is clamped, so a value outside [1,1024] that
-    // is not 0 (e.g. a negative octant size) only warns, per the hint.
+    // grid_map.cpp:1253: PROPERTY_HINT_RANGE "1,1024,1". set_octant_size
+    // (:313-317) opens with ERR_FAIL_COND(p_size == 0), an enforced refusal of
+    // zero only. Any other value outside [1,1024] only warns, per the hint.
     it('accepts the minimum bound', () => {
       expect(check('cell_octant_size', '1')).toBeNull();
     });
@@ -144,9 +141,9 @@ describe('GridMap strict validators', () => {
   });
 
   describe('cell_scale', () => {
-    // grid_map.cpp:1257 — plain FLOAT, no hint. set_cell_scale (:1273-1276) is
-    // a bare assignment: nothing to bound, so every finite value, plus every
-    // non-finite spelling Godot's own writer produces, is accepted.
+    // grid_map.cpp:1257: plain FLOAT, no hint. set_cell_scale (:1273-1276) is
+    // a bare assignment, so every finite value and every non-finite spelling
+    // Godot writes is accepted.
     it('accepts a positive value', () => {
       expect(check('cell_scale', '1')).toBeNull();
     });
@@ -207,10 +204,9 @@ describe('GridMap strict validators', () => {
   });
 
   describe('collision_priority', () => {
-    // grid_map.cpp:1262 — plain FLOAT, no hint. set_collision_priority
-    // (:210-213) is a bare assignment: nothing to bound, so every finite
-    // value, plus every non-finite spelling Godot's own writer produces, is
-    // accepted.
+    // grid_map.cpp:1262: plain FLOAT, no hint. set_collision_priority
+    // (:210-213) is a bare assignment, so every finite value and every
+    // non-finite spelling Godot writes is accepted.
     it('accepts a positive value', () => {
       expect(check('collision_priority', '1')).toBeNull();
     });
@@ -237,9 +233,9 @@ describe('GridMap strict validators', () => {
   });
 
   describe('physics_material', () => {
-    // grid_map.cpp:1249 — PROPERTY_HINT_RESOURCE_TYPE "PhysicsMaterial". Godot
-    // omits the key entirely when cleared, so this validator is never asked to
-    // accept an absence — only a present reference's format.
+    // grid_map.cpp:1249: PROPERTY_HINT_RESOURCE_TYPE "PhysicsMaterial". Godot
+    // omits the key when cleared, so this validator only sees a present
+    // reference's format.
     it('accepts a SubResource reference', () => {
       expect(check('physics_material', 'SubResource("PhysicsMaterial_1")')).toBeNull();
     });
@@ -261,7 +257,7 @@ describe('a fractional cell element beside a grounded error', () => {
 
   it('reports the count error, not the truncation warning', () => {
     // The warning must not short-circuit the grounded checks the caller runs
-    // afterwards: a stream that is BOTH fractional and not a whole number of
+    // afterwards: a stream that is both fractional and not a whole number of
     // triples would lose `INVALID_DATA_CELLS_COUNT` (grid_map.cpp:71) entirely.
     expect(check('{ "cells": PackedInt32Array(1.5, 2) }')?.code).toBe('INVALID_DATA_CELLS_COUNT');
   });

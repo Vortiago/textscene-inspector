@@ -1,31 +1,21 @@
-/**
- * AreaLight3D type definitions
- */
+/** AreaLight3D node data. */
 
 import type { Node3DProperties } from '../../../base/node3d/types';
 import type { BaseLightWithNormalBias } from '../shared/types';
 import type { Vector2 } from '../../../../parser/vectors';
 
-/**
- * AreaLight3D node properties
- *
- * Extends Node3D with rectangular area light capabilities
- */
+/** AreaLight3D properties: Light3D plus the rectangle. */
 export interface AreaLight3DProperties extends Node3DProperties, BaseLightWithNormalBias {
   /**
-   * Penumbra/softness of the area light (optional, defaults to 1.0).
-   * Intentionally lossy: parsed + lint-validated but NOT applied at
-   * render — three.js RectAreaLight has no penumbra/range control, so
-   * the value is carried on the parsed node yet never touches the light
-   * (mirrors how shadow_* is dropped; see Component.tsx header).
+   * Penumbra of the area light (optional, default 1.0). Parsed and validated
+   * but not applied, since three.js RectAreaLight has no penumbra or range
+   * control, as with shadow_*.
    */
   area_range?: number;
 
   /**
-   * Rectangular dimensions, parsed once from the Godot `Vector2(w, h)`
-   * string into `{x, y}` (defaults to `{x: 1, y: 1}`). Both the render
-   * (width/height) and inspector (Size) read these numbers directly, so
-   * there is no per-consumer re-parse.
+   * Rectangle size, parsed once from `Vector2(w, h)` (default `{x: 1, y: 1}`).
+   * The render and the inspector both read these numbers.
    */
   area_size?: Vector2;
 

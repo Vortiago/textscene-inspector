@@ -1,9 +1,6 @@
 /**
- * GridMap cell-stream decoder. Godot stores cells as a flat PackedInt32Array
- * in triplets: [keyLo, keyHi, cell] where the 64-bit IndexKey packs signed
- * int16 x/y/z (x=keyLo low16, y=keyLo high16, z=keyHi low16) and the cell int
- * packs item (bits 0-15) + orientation (bits 16-20). Test values are real
- * triplets from scenes/demos GridMaps plus exact-bit cases.
+ * GridMap cell-stream decoder, against real triplets from scenes/demos GridMaps
+ * and exact-bit cases. cellData.ts states the layout.
  */
 import { describe, it, expect } from 'vitest';
 import { decodeGridMapCells, ORTHO_BASES } from './cellData';
@@ -55,8 +52,8 @@ describe('ORTHO_BASES', () => {
 
 describe('an element no int32 slot can hold', () => {
   it('drops the cell rather than drawing one at the origin', () => {
-    // `toUint32(NaN)` is 0, so substituting NaN for an unstorable element put a
-    // phantom cell at (0,0,0) — the substitution `floatElements` removed.
+    // `toUint32(NaN)` is 0, so a NaN for an unstorable element would put a
+    // phantom cell at (0,0,0).
     expect(decodeGridMapCells('inf, 0, 1')).toEqual([]);
   });
 

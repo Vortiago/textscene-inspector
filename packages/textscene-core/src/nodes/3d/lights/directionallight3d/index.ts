@@ -1,6 +1,4 @@
-/**
- * DirectionalLight3D registration — parser + formatter.
- */
+/** DirectionalLight3D parser and formatter registration. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseDirectionalLight3D } from './parser';

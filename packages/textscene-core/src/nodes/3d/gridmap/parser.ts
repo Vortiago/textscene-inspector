@@ -1,8 +1,6 @@
 /**
- * GridMap parser — extends Node3D with the mesh library reference, cell size,
- * and the raw cell stream. The `data` property is a Godot dictionary
- * `{ "cells": PackedInt32Array(...) }`; we extract the PackedInt32Array body
- * for the cell decoder.
+ * GridMap parser: the Node3D surface plus the mesh library reference, cell size
+ * and the PackedInt32Array body of `data = { "cells": PackedInt32Array(...) }`.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
@@ -18,11 +16,9 @@ const CELLS_RE = new RegExp(`"cells"\\s*:\\s*${packedArrayCallAnywhere('PackedIn
 const DEFAULT_CELL_SIZE: Vector3 = { x: 2, y: 2, z: 2 };
 
 /**
- * Shared instance for the all-centered default, the same way DEFAULT_CELL_SIZE
- * is shared. Re-parsing (every debounced keystroke in the Source pane) must not
- * hand the renderer a fresh object for unchanged properties: the GridMap's
- * instance-matrix memo keys on these, and a new identity there rebuilds every
- * cell matrix and the InstancedMesh's GPU buffer.
+ * Shared all-centred default, like DEFAULT_CELL_SIZE. The instance-matrix memo
+ * keys on its identity, so a fresh object per parse (every debounced keystroke)
+ * would rebuild every cell matrix and the InstancedMesh's GPU buffer.
  */
 const DEFAULT_CELL_CENTER = Object.freeze({ x: true, y: true, z: true });
 
@@ -34,9 +30,9 @@ function extractCells(dataProperty: string | undefined): string {
 }
 
 /**
- * Godot defaults every axis to centered and only writes the property when it is
- * turned OFF, so an absent key means true. Returns the shared default instance
- * when nothing is overridden — see DEFAULT_CELL_CENTER.
+ * Godot defaults every axis to centred and writes the property only when it is
+ * off, so an absent key means true. Nothing overridden returns
+ * DEFAULT_CELL_CENTER.
  */
 function parseCellCenter(
   properties: Record<string, string>

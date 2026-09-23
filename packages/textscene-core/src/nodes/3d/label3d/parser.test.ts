@@ -1,6 +1,4 @@
-/**
- * Label3D parser tests
- */
+/** Label3D parser. */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as logger from '../../../logger';
@@ -166,8 +164,8 @@ describe('Label3D Parser', () => {
 
 describe('a billboard value the tokenizer cannot read', () => {
   it('keeps the default rather than reading a prefix of it', () => {
-    // `parseInt('2abc', 10)` is 2, so a token Godot cannot load selected the
-    // Y-fixed billboard and the label faced the wrong way.
+    // `parseInt('2abc', 10)` is 2, which would select the Y-fixed billboard
+    // for a token Godot cannot load.
     const props = parseLabel3D(heading('Label3D', { name: 'Text' }), { billboard: '2abc' });
 
     expect(props.billboard).toBe(BillboardMode.BILLBOARD_DISABLED);

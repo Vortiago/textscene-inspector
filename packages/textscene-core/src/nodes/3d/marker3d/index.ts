@@ -1,8 +1,6 @@
 /**
- * Marker3D registration — parser.
- *
- * Draws a selection-gated 3-axis cross gizmo (ADR-0018); the Node3D transform is
- * parsed plus `gizmo_extents`. Previously transform-only (ADR-0008).
+ * Marker3D parser registration: the Node3D transform plus `gizmo_extents`, for
+ * the selection-gated cross gizmo (ADR-0018).
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

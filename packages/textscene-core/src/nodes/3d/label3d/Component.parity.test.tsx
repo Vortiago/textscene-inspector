@@ -1,11 +1,7 @@
 /**
- * Parity: Label3D parser defaults vs Godot (`label_3d.h`'s field
- * initialisers). Render-time parity (tint conversion, depth/side, outline)
- * is covered by `LabelGlyphs.test.tsx` and `Component.test.tsx` — this file
- * is parser-only.
- * - billboard default is DISABLED (was ENABLED → labels wrongly tracked camera).
- * - pixel_size default 0.005; outline_size default 12 (Godot defaults).
- * - double_sided=false → FrontSide.
+ * Label3D parser defaults against `label_3d.h`'s field initialisers: billboard
+ * DISABLED, pixel_size 0.005 and outline_size 12, and double_sided=false maps to
+ * FrontSide. `LabelGlyphs.test.tsx` and `Component.test.tsx` cover render time.
  */
 import { describe, it, expect } from 'vitest';
 import { parseLabel3D } from './parser';

@@ -1,10 +1,7 @@
 /**
- * <GridMap> honours the MeshLibrary's PER-TILE `mesh_cast_shadow`.
- *
- * GridMap is a Node3D and has no `cast_shadow` of its own; it reads the setting
- * off the library and applies it to each item's instance
- * (`modules/gridmap/grid_map.cpp:799-800`), so two tiles of one grid can cast
- * differently.
+ * <GridMap> honours the MeshLibrary's per-tile `mesh_cast_shadow`. GridMap has
+ * no `cast_shadow` of its own: it applies the library's setting to each item's
+ * instance (`modules/gridmap/grid_map.cpp:799-800`).
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -19,7 +16,7 @@ import type { ResourceProvider } from '../../../resources/ResourceProvider';
 const LIBRARY_PATH = 'res://stage/tiles.tres';
 const TILE_MESH_PATH = 'res://stage/meshes/bare.tres';
 
-/** One-surface quad, no material — the tile's own material is not what is under test. */
+/** One-surface quad with no material: the tile's material is not under test. */
 const TILE_MESH_TRES = `[gd_resource type="ArrayMesh" format=4]
 
 [resource]
@@ -135,7 +132,7 @@ describe('<GridMap> per-tile mesh_cast_shadow', () => {
   });
 
   it('leaves three’s flip alone for every other value', async () => {
-    // `render_forward_clustered.cpp:395-411` — only DOUBLE_SIDED drops the cull.
+    // `render_forward_clustered.cpp:395-411`: only DOUBLE_SIDED drops the cull.
     const tile = await renderTile('item/0/mesh_cast_shadow = 1');
     expect(depthSideAfterPass(tile, tile.material as THREE.Material)).toBe(THREE.BackSide);
   });

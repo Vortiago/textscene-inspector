@@ -1,8 +1,4 @@
-/**
- * Strict-verification harness (group H) — 14 assertions covering
- * the three light components (DirectionalLight3D, OmniLight3D, SpotLight3D).
- *
- */
+/** Property mapping of the DirectionalLight3D, OmniLight3D and SpotLight3D components. */
 
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
@@ -152,8 +148,8 @@ describe('Lights — properties (assertions 67–80)', () => {
   });
 
   it('#79 SpotLight3D.spot_attenuation → SpotLight.decay (distance falloff)', async () => {
-    // Godot's spot_attenuation is the DISTANCE falloff exponent → three.js decay
-    // (cone-edge softness comes from spot_angle_attenuation → penumbra instead).
+    // Godot's spot_attenuation is the distance falloff exponent, so it maps to
+    // three.js decay. spot_angle_attenuation maps to penumbra.
     const r = await ReactThreeTestRenderer.create(
       <SpotLight3D
         node={{

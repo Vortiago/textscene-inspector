@@ -1,12 +1,7 @@
 /**
- * `<Label3D>` — the thin, eagerly-registered wrapper: node transform,
- * billboard wiring, `showLabels` gating, and the `pixel_size` scale group.
- * The glyph-drawing pass (`LabelGlyphs`) is `React.lazy`-loaded (see
- * `Component.tsx`'s own doc), so its content never resolves synchronously
- * under `@react-three/test-renderer` — exercised directly, bypassing the
- * lazy boundary, in `LabelGlyphs.test.tsx`, the same split
- * `nodes/viewport/subviewport/ControlRasterPass.test.tsx` uses for its own
- * lazy-loaded heavy component.
+ * `<Label3D>`, the eagerly registered wrapper: node transform, billboard wiring,
+ * `showLabels` gating and the `pixel_size` group. The lazy `LabelGlyphs` never
+ * resolves under `@react-three/test-renderer`, so `LabelGlyphs.test.tsx` tests it.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -42,10 +37,8 @@ function makeNode(overrides: Partial<Label3DProperties> = {}): TscnNode {
   return { name: properties.name ?? 'Label', type: 'Label3D', children: [], properties };
 }
 
-// Label3D text is gated behind the `showLabels` toggle (ON by default per the
-// ADR-0008 Label3D parity amendment). The provider defaults labels on, so a bare
-// `<Label3D>` already renders the group; wrap explicitly only to assert the
-// OFF state.
+// `showLabels` gates Label3D text and defaults on (the ADR-0008 Label3D parity
+// amendment).
 function renderLabel(node: TscnNode) {
   return ReactThreeTestRenderer.create(
     <ViewportModeProvider initialShowLabels>
@@ -99,7 +92,7 @@ describe('<Label3D>', () => {
     expect((scaled.instance as THREE.Group).scale.y).toBeCloseTo(0.02, 6);
   });
 
-  /** The proxy carries no `name`, so it's found by its own userData tag, scene-wide. */
+  /** The proxy carries no `name`, so this finds it by its userData tag, scene-wide. */
   function findProxyMesh(renderer: Awaited<ReturnType<typeof renderLabel>>): THREE.Mesh {
     return renderer.scene.find(
       (n) => (n.instance as THREE.Mesh).userData?.tscnBoundsProxy === true
@@ -107,19 +100,8 @@ describe('<Label3D>', () => {
   }
 
   it('renders an invisible, zero-size bounds-proxy mesh at the node origin, so auto-framing sees the label before the lazy glyphs mount', async () => {
-    // Regression pin, in the OTHER direction from an earlier version of this
-    // test: a text/font-sized (or billboard-cube-inflated) proxy measurably
-    // made this renderer's own auto-framing WORSE, not better — Godot's own
-    // reference camera is placed (`_place_camera`, synchronous, before any
-    // frame settles) from a scene state in which Label3D has not yet shaped
-    // any text, so it contributes only its ORIGIN, never an extent. Measured
-    // on unit-torus-mesh.tscn: a bootstrap reading `_scene_bounds()` right
-    // after `add_child()` got `size [3.0, 4.0, 3.0]` (the mesh only, each
-    // Label3D contributing a bare Y position); the SAME scene's `--emit-
-    // bounds` (read later, after `_settle()`) got the much larger
-    // `[4.938, 7.445, 4.938]` the billboard-cube inflation predicts. Only the
-    // FIRST number's camera reproduces Godot's own `--frame` picture. See
-    // `Component.tsx`'s own doc for the full citation.
+    // A point, not a text-sized box: Godot places its framing camera before
+    // Label3D shapes text, so each label adds only its origin (Component.tsx).
     const renderer = await renderLabel(
       makeNode({ text: 'A somewhat long caption for this test', font_size: 32, pixel_size: 0.02 })
     );
@@ -130,17 +112,16 @@ describe('<Label3D>', () => {
     expect(geometry.parameters.height).toBe(0);
     expect(geometry.parameters.depth).toBe(0);
 
-    // A point has no extent to be wrong about under rotation, so it needs no
-    // unrotated sibling group (unlike an earlier cube-shaped version of this
-    // proxy) — it can sit at the node's own world position directly.
+    // A point has no extent to rotate, so it sits at the node's world position
+    // inside the billboarded group.
     const worldPos = new THREE.Vector3();
     mesh.getWorldPosition(worldPos);
     expect(worldPos.length()).toBeCloseTo(0, 6);
   });
 
   it('the bounds-proxy point stays at the node origin even after useBillboard rotates the label group', async () => {
-    // A point is rotation-invariant — rotating the group it sits in must
-    // never move it away from the node's own position.
+    // A point is rotation-invariant: rotating its group never moves it off the
+    // node's position.
     const renderer = await renderLabel(
       makeNode({ billboard: BillboardMode.BILLBOARD_ENABLED, text: 'Hello' })
     );
@@ -197,9 +178,7 @@ describe('<Label3D>', () => {
     );
     const child = renderer.scene.findByProps({ name: 'Child' });
     const labelGroup = renderer.scene.findByProps({ name: 'Label' });
-    // The child's parent group is a SIBLING of the label group, not the label
-    // group itself — walk up from the child to find its own wrapping group,
-    // which must differ in identity from the label group.
+    // The child's wrapping group is a sibling of the label group.
     expect(child.parent?.instance).not.toBe(labelGroup.instance);
   });
 });

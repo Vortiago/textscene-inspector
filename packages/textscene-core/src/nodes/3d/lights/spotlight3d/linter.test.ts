@@ -1,6 +1,4 @@
-/**
- * Tests for SpotLight3D linter (strict parser + semantic rules)
- */
+/** SpotLight3D linting: strict validators and semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -159,7 +157,7 @@ describe('SpotLight3D Linter', () => {
         ],
       },
       {
-        // light_3d.cpp:674 hints "0,180,0.01,degrees" — 180, not 90 — and
+        // light_3d.cpp:674 hints "0,180,0.01,degrees" (180, not 90), and
         // set_param does not enforce it, so 91-180 is in band and both closed
         // ends warn just outside.
         prop: 'spot_angle',
@@ -200,7 +198,7 @@ describe('SpotLight3D Linter', () => {
       });
     });
 
-    // light_3d.cpp:389 — light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater":
+    // light_3d.cpp:389: light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater":
     // the high end is open, so only a negative is out of band.
     describe('light energy warnings', () => {
       it('should warn on negative light_energy', () => {
@@ -218,7 +216,7 @@ describe('SpotLight3D Linter', () => {
       });
     });
 
-    // light_3d.cpp:672 — spot_range PROPERTY_HINT_RANGE
+    // light_3d.cpp:672: spot_range PROPERTY_HINT_RANGE
     // "0,4096,0.001,or_greater,exp,suffix:m".
     describe('spot_range warnings', () => {
       it('should warn on negative spot_range', () => {
@@ -236,8 +234,8 @@ describe('SpotLight3D Linter', () => {
       });
     });
 
-    // light_3d.cpp:673 — spot_attenuation PROPERTY_HINT_RANGE
-    // "-10,10,0.01,or_greater,or_less": BOTH ends open, so nothing is out of band.
+    // light_3d.cpp:673: spot_attenuation PROPERTY_HINT_RANGE
+    // "-10,10,0.01,or_greater,or_less": both ends open, so nothing is out of band.
     describe('spot_attenuation carries no advisory', () => {
       it.each([0.05, 1.5, 7.0, -2])('says nothing about spot_attenuation %s', (attenuation) => {
         expectNoDiagnostic(scene(node('SpotLight3D', { spot_attenuation: attenuation })), {
@@ -246,7 +244,7 @@ describe('SpotLight3D Linter', () => {
       });
     });
 
-    // light_3d.cpp:675 — spot_angle_attenuation is PROPERTY_HINT_EXP_EASING, which
+    // light_3d.cpp:675: spot_angle_attenuation is PROPERTY_HINT_EXP_EASING, which
     // states no range, so it carries no advisory either.
     describe('spot_angle_attenuation carries no advisory', () => {
       it.each([0.05, 1.5, 7.0, 21.1121])(
@@ -260,7 +258,7 @@ describe('SpotLight3D Linter', () => {
       );
     });
 
-    // light_3d.cpp:674 — spot_angle PROPERTY_HINT_RANGE "0,180,0.01,degrees": both
+    // light_3d.cpp:674: spot_angle PROPERTY_HINT_RANGE "0,180,0.01,degrees": both
     // ends closed, neither enforced.
     describe('spot_angle warnings', () => {
       it('should warn below the hint', () => {

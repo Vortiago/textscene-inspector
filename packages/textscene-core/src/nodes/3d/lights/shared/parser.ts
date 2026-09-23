@@ -1,17 +1,10 @@
-/**
- * Shared parsing utilities for light nodes.
- */
+/** Parsing shared by the light nodes. */
 
 import type { BaseLightProperties, BaseLightWithNormalBias } from './types';
 import { floatOr, parseOptionalFloat } from '../../../../parser/valueParsers';
 import { boolSlotValue } from '../../../../godot/index.js';
 
-/**
- * Parses common light properties shared across all light types.
- *
- * Extracts base properties like color, energy, and shadow settings
- * that are common to DirectionalLight3D, OmniLight3D, and SpotLight3D.
- */
+/** The colour, energy and shadow properties every light type shares. */
 export function parseBaseLightProperties(
   properties: Record<string, string>
 ): BaseLightProperties {
@@ -28,12 +21,7 @@ export function parseBaseLightProperties(
   };
 }
 
-/**
- * Parses light properties including shadow_normal_bias.
- *
- * Used by DirectionalLight3D and OmniLight3D which support normal bias
- * for shadow artifact reduction.
- */
+/** The shared properties plus shadow_normal_bias, for DirectionalLight3D and OmniLight3D. */
 export function parseBaseLightWithNormalBias(
   properties: Record<string, string>
 ): BaseLightWithNormalBias {

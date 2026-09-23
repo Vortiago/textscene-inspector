@@ -1,9 +1,6 @@
 /**
- * DirectionalLight3D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- *
- * Light3D base validators (light_* / shadow_*) are inherited via the
- * base-walk: DirectionalLight3D → Light3D → Node3D.
+ * DirectionalLight3D strict validators. The base-walk DirectionalLight3D →
+ * Light3D → Node3D delivers the light_* and shadow_* validators.
  */
 
 import '../shared/linterParser.js';

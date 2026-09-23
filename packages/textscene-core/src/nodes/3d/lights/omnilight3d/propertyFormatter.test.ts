@@ -1,6 +1,4 @@
-/**
- * Tests for the OmniLight3D property formatter.
- */
+/** OmniLight3D property formatter. */
 
 import { describe, it, expect } from 'vitest';
 import { formatOmniLight3DProperties } from './propertyFormatter';

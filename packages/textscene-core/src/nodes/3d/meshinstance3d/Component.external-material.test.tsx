@@ -1,19 +1,8 @@
 /**
- * A PRIMITIVE mesh's material may be an `ExtResource` naming a `.tres`, not only
- * a `[sub_resource]` of the scene.
- *
- * Godot cannot tell the two apart. `MeshInstance3D::set_surface_override_material`
- * (`scene/3d/mesh_instance_3d.cpp:366`) takes a `Ref<Material>` and hands the
- * server nothing but `->get_rid()`; the same is true of the node-level
- * `material_override` and of `PrimitiveMesh`'s own `material`. Where the resource
- * was loaded from is not represented past that call, so every rank of the
- * precedence chain accepts either arrival.
- *
- * The baked-ArrayMesh branch already routed a `.tres` through the material
- * pipeline; the primitive branch resolved only `SubResource("id")` and let an
- * `ExtResource` fall through to the renderer's default material — which is
- * mid-grey (0.6 LINEAR) and therefore BRIGHTER than most authored albedos, so
- * the failure reads as a blown-out surface rather than as a missing one.
+ * A primitive mesh's material may be an `ExtResource` to a `.tres`, not only a
+ * `[sub_resource]`. `set_surface_override_material` (`scene/3d/mesh_instance_3d.cpp:366`),
+ * `material_override` and `PrimitiveMesh.material` pass only `->get_rid()`, so every
+ * rank takes either. A missed one shows the mid-grey default, brighter than most albedos.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -38,7 +27,7 @@ const SECOND_EXTERNAL_PATH = 'res://second.tres';
 const EXTERNALS: readonly TscnExternalResource[] = [
   { id: '1_ext', path: EXTERNAL_PATH, type: 'StandardMaterial3D' },
   { id: '2_ext', path: SECOND_EXTERNAL_PATH, type: 'StandardMaterial3D' },
-  // A material ExtResource the pipeline has no builder for — not a `.tres`.
+  // A material ExtResource the pipeline has no builder for: not a `.tres`.
   { id: '3_glb', path: 'res://packed.glb', type: 'Material' },
 ];
 
@@ -147,7 +136,7 @@ describe('<MeshInstance3D> external .tres material on a primitive mesh', () => {
 
   it('draws Godot’s default material while the .tres is still loading', async () => {
     // Nothing seeded: the load is in flight, and Godot draws its default surface
-    // for an invalid material RID — the same fallback an absent material takes.
+    // for an invalid material RID, the same fallback an absent material takes.
     const materials = await materialsOf(
       makeNode({ surfaceMaterialOverrides: new Map([[0, 'ExtResource("1_ext")']]) })
     );
@@ -171,7 +160,7 @@ describe('<MeshInstance3D> external .tres material on a primitive mesh', () => {
 describe('<MeshInstance3D> cast_shadow through an external .tres material', () => {
   /** three's own shadow pass: `result.side` first, then the per-object hook. */
   function shadowSideAfterPass(mesh: THREE.Mesh, material: THREE.Material): THREE.Side {
-    // WebGLShadowMap.js:477 — `shadowSide` wins, else the acne-mitigating flip.
+    // WebGLShadowMap.js:477: `shadowSide` wins, else the acne-mitigating flip.
     const flip: Record<number, THREE.Side> = {
       [THREE.FrontSide]: THREE.BackSide,
       [THREE.BackSide]: THREE.FrontSide,
@@ -179,7 +168,7 @@ describe('<MeshInstance3D> cast_shadow through an external .tres material', () =
     };
     const depthMaterial = new THREE.MeshDepthMaterial();
     depthMaterial.side = material.shadowSide ?? flip[material.side as number]!;
-    // WebGLShadowMap.js:535,549 — fired per mesh, per light, after the above.
+    // WebGLShadowMap.js:535,549: fired per mesh, per light, after the above.
     // three passes the scene, not the object, as the second argument.
     mesh.onBeforeShadow(
       null as never, new THREE.Scene(), null as never, null as never,
