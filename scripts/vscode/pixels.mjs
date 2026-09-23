@@ -22,8 +22,8 @@ function delta(a, ai, b, bi) {
 /**
  * Ink = pixels that differ from the image's dominant colour (its background).
  * An image that rendered nothing is one flat colour and scores 0 whatever that
- * colour is — so this reads a transparent WebGL canvas and an opaque workbench
- * screenshot with the same rule, without hardcoding either background.
+ * colour is, so one rule reads a transparent WebGL canvas and an opaque
+ * workbench screenshot without hardcoding either background.
  *
  * @param {Buffer} buffer PNG bytes
  * @param {number} [threshold] summed RGBA distance above which a pixel is ink

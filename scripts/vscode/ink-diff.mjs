@@ -1,18 +1,9 @@
 #!/usr/bin/env node
 /**
- * Differential proof helper for `drive-vscode.mjs`.
- *
- * "The canvas has ink" only proves SOMETHING painted. To attribute ink to one
- * feature, drive two scenes that differ in exactly that feature and diff the
- * captures: the surviving pixels are the feature, and their bounding box says
- * where it landed.
- *
- *   node scripts/vscode/ink-diff.mjs <a.png> <b.png> [--out diff.png] [--threshold n]
- *
- * Prints `{ diffPixels, bbox, size }` as JSON and, with `--out`, writes a
- * black/white mask of the differing pixels. Exits 1 if the two images differ in
- * size — two captures that laid out differently cannot attribute a difference
- * to one feature.
+ * Attributes ink to one feature: in two captures that differ only in it, the
+ * differing pixels are the feature. Prints `{ diffPixels, bbox, size }` as JSON,
+ * and `--out` writes a mask of them. Exits 1 when the sizes differ, since a
+ * different layout cannot attribute a difference to one feature.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
