@@ -1,80 +1,34 @@
 /**
- * The 2D canvas's texture-sampling colour space, paired: a texture tag and the
- * shader define that must accompany it.
- *
- * `rendering/viewport/hdr_2d` (default `false`, `rendering_server.cpp:3771`)
- * makes Godot's default canvas sample the PLAIN (non-sRGB-typed) GPU view of
- * a texture (`texture_storage.cpp:754`), so its hardware bilinear filter
- * blends raw sRGB bytes — unlike 3D, which always asks for the sRGB-typed
- * view (`material_storage.cpp:1067,1073`) and gets a hardware decode before
- * every sample. `resources/processing/textureProcessing.ts` tags every loaded
- * texture `SRGBColorSpace` unconditionally (one shared cache entry per path,
- * `useResource.ts`), which is right for a 3D consumer and wrong for a 2D one:
- * WebGL uploads an `SRGBColorSpace` texture as `SRGB8_ALPHA8`
- * (`WebGLTextures.js`'s `getInternalFormat`), so the hardware decodes before
- * the magnification filter runs — the opposite order from Godot's canvas.
- *
- * `useCanvas2DTexture` gives a 2D-canvas consumer its own GPU-side texture
- * (a clone retagged `NoColorSpace`, keyed off the shared cache entry's
- * identity — the clone shares the decoded `Source`, so no extra CPU decode)
- * so the hardware filter blends undecoded bytes, matching Godot. That alone
- * would feed raw sRGB bytes into the rest of a pipeline that assumes linear
- * input, so `useCanvasDecodeDefines` pairs with it: it reuses three's own
- * `DECODE_VIDEO_TEXTURE` shader define (`map_fragment.glsl.js`, precedented
- * for video textures that also can't get an `SRGB8_ALPHA8` format) to decode
- * the ALREADY-FILTERED sample — moving the decode from before the hardware
- * filter to after it, which is the one degree of freedom Godot's canvas and
- * three's default 3D-oriented pipeline disagree on.
- *
- * A define is compiled INTO the program, so the material sampling this pair has
- * to be keyed on it as well as on the map — `materialProgramInputs.ts`, which is
- * also where the reason a plain assignment cannot deliver either one is written
- * down.
- *
- * Only the 2D-canvas's own "unlit 2D material recipe" (`meshBasicMaterial` +
- * `map`) needs this pair. A texture this module never touches (a SubViewport
- * render target, PointLight2D's cookie shader, every 3D material slot) keeps
- * sampling the shared cache entry unchanged. `useIconTexture` reaches the
- * same tag through `pinNoColorSpace` directly: the vendored theme icons come
- * from their own loader, never from the `res://` resource cache this module's
- * clone is keyed off.
+ * The 2D canvas's texture colour space: a `NoColorSpace` retag and the define
+ * that decodes it, for the unlit 2D recipe (`meshBasicMaterial` + `map`) alone.
+ * A SubViewport target, a PointLight2D cookie and every 3D material slot keep
+ * sampling the shared cache entry.
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { pinNoColorSpace, useUndecodedTexture } from './undecodedTexture';
 
-// Re-exported: this module was the tag's original home, and its 2D consumers
-// still reach for it here. The definition lives in `undecodedTexture.ts`
-// because 3D material data maps need the same primitive.
+// Re-exported for the 2D consumers. It lives in `undecodedTexture.ts`, since 3D
+// material data maps need it too.
 export { pinNoColorSpace };
 
 /**
- * A 2D-canvas-only GPU texture for a shared, cache-identity texture — the
- * undecoded view (`undecodedTexture.ts`), named for the 2D-canvas reason this
- * module's own doc gives, and wrapped the way the canvas wraps.
- *
- * The shared cache entry is loaded with REPEAT wrapping, because that is what
- * a 3D material inherits (`BaseMaterial3D` constructs with
- * `FLAG_USE_TEXTURE_REPEAT` set). A canvas item inherits the opposite: its
- * `texture_repeat` defaults to `TEXTURE_REPEAT_PARENT`, which resolves at the
- * root to the VIEWPORT's default, and that is
- * `DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_DISABLED` (`scene/main/viewport.h:420`,
- * applied at `scene/main/viewport.cpp:4009`; the resolution walk is
- * `CanvasItem::_refresh_texture_repeat_cache`,
- * `scene/main/canvas_item.cpp:1686-1694`). So a UV that leaves 0..1 clamps to
- * the edge texel on the canvas where it would tile in 3D — visible wherever a
- * canvas item's UVs overrun its texture, which for `Polygon2D` is the ordinary
- * case rather than an exotic one.
- *
- * A consumer whose draw overrides the sampler (a tiled `TextureRect`, a
- * `Sprite2D` frame) clones and sets its own wrapping downstream of this.
- *
- * Returns `null` while there is nothing to show yet.
+ * A 2D-only clone of a cached texture, retagged `NoColorSpace`, sharing its
+ * `Source`. With `hdr_2d` off (`rendering_server.cpp:3771`), Godot's canvas filters
+ * raw sRGB bytes from the plain view (`texture_storage.cpp:754`), where 3D samples
+ * the sRGB view (`material_storage.cpp:1067,1073`). Returns `null` with nothing to show.
  */
 export function useCanvas2DTexture(texture: THREE.Texture | null | undefined): THREE.Texture | null {
+  // The cache tags every texture `SRGBColorSpace` (`textureProcessing.ts`), which
+  // WebGL uploads as `SRGB8_ALPHA8` (`WebGLTextures.js`), decoding before the filter.
+  // A consumer that overrides the sampler, such as a tiled `TextureRect`, clones again.
   const undecoded = useUndecodedTexture(texture);
   return useMemo(() => {
     if (!undecoded) return null;
+    // A canvas item's `texture_repeat` resolves to the viewport default, disabled
+    // (`scene/main/viewport.h:420`, `scene/main/viewport.cpp:4009`,
+    // `scene/main/canvas_item.cpp:1686-1694`). The cache loads REPEAT for 3D
+    // (`FLAG_USE_TEXTURE_REPEAT`), so a Polygon2D's overrunning UVs would tile.
     undecoded.wrapS = THREE.ClampToEdgeWrapping;
     undecoded.wrapT = THREE.ClampToEdgeWrapping;
     undecoded.needsUpdate = true;
@@ -82,21 +36,16 @@ export function useCanvas2DTexture(texture: THREE.Texture | null | undefined): T
   }, [undecoded]);
 }
 
-/** Reused across every call — `DECODE_VIDEO_TEXTURE` needs no per-consumer state. */
+/**
+ * three's `DECODE_VIDEO_TEXTURE` (`map_fragment.glsl.js`) decodes the sample after
+ * the filter, as Godot's canvas does. It needs no per-consumer state, so one object serves.
+ */
 const DECODE_DEFINES: Readonly<Record<string, string>> = { DECODE_VIDEO_TEXTURE: '' };
 
 /**
- * `defines` for a `meshBasicMaterial` sampling `texture` as `map`: the decode
- * three's `map_fragment` chunk applies only under `DECODE_VIDEO_TEXTURE`,
- * turned on exactly when `texture` is one of this module's `NoColorSpace`
- * retags, `pinNoColorSpace` included (never for a texture left in its own
- * space, so a SubViewport target sharing the same `<meshBasicMaterial>`
- * recipe is unaffected). Memoised so the object identity is stable across
- * re-renders with the same texture: R3F's `applyProps` assigns a changed
- * `defines` to the material and stops there, so a value that reaches the GPU
- * does so on a NEWLY MOUNTED material and nowhere else — which is what
- * `materialProgramInputs` arranges, and what a per-render object identity would
- * ask for pointlessly often.
+ * `defines` for a `meshBasicMaterial` sampling `texture` as `map`, set only for a
+ * `NoColorSpace` retag. A define reaches the GPU only on a newly mounted material,
+ * which `materialProgramInputs` arranges, so the identity is memoised.
  */
 export function useCanvasDecodeDefines(
   texture: THREE.Texture | null | undefined
@@ -116,14 +65,9 @@ export interface Canvas2DMap {
 }
 
 /**
- * The retag and its matching decode, taken together — the two halves of one
- * invariant, so a caller cannot apply one without the other. Half-applied,
- * the material samples raw sRGB bytes and never decodes them, which is a
- * wrong colour ramp visible only under magnification.
- *
- * A consumer that reaches the tag by another route (`composeFrameTexture`'s
- * own `colorSpace` argument, `useIconTexture`'s `pinNoColorSpace`) needs the
- * defines half alone and calls `useCanvasDecodeDefines` directly.
+ * The retag and its decode together: half-applied, the material never decodes its
+ * raw sRGB bytes. `composeFrameTexture` and `useIconTexture`, whose icons have their
+ * own loader, tag by another route and call `useCanvasDecodeDefines` alone.
  */
 export function useCanvas2DMap(texture: THREE.Texture | null | undefined): Canvas2DMap {
   const canvasTexture = useCanvas2DTexture(texture);

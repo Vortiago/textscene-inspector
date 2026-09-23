@@ -1,14 +1,7 @@
 /**
- * useAnimationDriverMount — unit tests for the shared Driver mount lifecycle.
- *
- * Tests the three combined effects:
- *  1. registerPlayer fires while active (transport registration).
- *  2. registerDriver fires when object + clips are ready (registry publication).
- *  3. Mixer + actions are built when active + loaded; teardown restores pose.
- *
- * Each test uses a minimal host harness that drives the hook and captures
- * the returned refs, so assertions verify observable side-effects on the
- * transport and registry — not internal implementation details.
+ * The shared driver mount: transport registration while active, registry
+ * publication once loaded, and a mixer built while active and loaded, whose
+ * teardown restores the pose. A host harness observes the transport and registry.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -513,8 +506,8 @@ describe('useAnimationDriverMount — combined effects', () => {
       expect(capturedResult.actionsRef.current.size).toBe(0);
       expect(onMixerBuilt).not.toHaveBeenCalled();
 
-      // Registration is independent — the Animation tab still lists the clips
-      // and the driver registry still publishes them (ADR-0019).
+      // Registration is independent: the Animation tab lists the clips and the
+      // driver registry publishes them (ADR-0019).
       expect(capturedTransport.hasPlayer).toBe(true);
       expect(capturedDriver).not.toBeNull();
 

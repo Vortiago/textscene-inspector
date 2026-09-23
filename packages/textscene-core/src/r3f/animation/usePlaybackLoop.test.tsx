@@ -1,17 +1,7 @@
 /**
- * usePlaybackLoop — the shared transport→mixer per-frame loop driving both
- * AnimationPlayer and the GLB animation driver.
- *
- * PERF: reportTime() is throttled inside AnimationTransportContext,
- * so a stale-but-throttled `time` would otherwise persist forever once
- * playback pauses (the 'paused' branch below never calls reportTime again on
- * its own). This pins that the loop flushes the mixer's exact current time
- * IMMEDIATELY on the playing → paused edge — and does NOT flush on the
- * playing → stopped edge, where transport stop()/deselection already reset
- * the playhead to 0 and a flush would overwrite that reset.
- *
- * The edge-flush contract is unit-tested at the pure reducer level in
- * stepPlayback.test.ts; these tests verify the mounted adapter behavior.
+ * The mounted playback loop. reportTime() is throttled, so the loop flushes the
+ * exact time on the pause edge. It does not flush on the stop edge, where
+ * stop() has reset the playhead to 0.
  */
 import { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -157,7 +147,7 @@ describe('usePlaybackLoop — reconfigureKey (#224 live loop-override)', () => {
     await renderer.advanceFrames(1, 0.1);
     configureAction.mockClear();
 
-    // Same reconfigureKey, same clip — no reason to reconfigure again.
+    // The same reconfigureKey and clip: no reconfigure.
     await renderer.advanceFrames(3, 0.1);
     expect(configureAction).not.toHaveBeenCalled();
   });
@@ -185,14 +175,14 @@ describe('usePlaybackLoop — reconfigureKey (#224 live loop-override)', () => {
         reportTime={() => {}}
         mixerBox={mixerBox}
         configureAction={configureAction}
-        reconfigureKey="once" // the override flipped — must re-apply now
+        reconfigureKey="once" // The override flipped, so it re-applies now.
       />
     );
     await renderer.advanceFrames(1, 0.1);
 
     expect(configureAction).toHaveBeenCalledTimes(1);
     expect(configureAction).toHaveBeenCalledWith(mixerBox.actions.get('clip'), 'clip');
-    // The clip kept playing through the reconfigure — it was not restarted.
+    // The clip kept playing through the reconfigure, not restarted.
     expect(mixerBox.actions.get('clip')!.time).toBeGreaterThan(0.2);
   });
 });

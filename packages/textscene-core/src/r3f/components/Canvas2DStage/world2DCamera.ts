@@ -1,10 +1,7 @@
 /**
- * Ortho-camera pose math for the 2D world canvas (pure module). The stage
- * CSS-transforms the overlay frame by translate(pan)·scale(zoom); the world
- * canvas must place Godot canvas pixel p at the identical screen position
- * (pan + p·zoom). Under R3F's default orthographic frustum (1 world unit =
- * 1 screen pixel at zoom 1, centered on the camera), that pins the camera:
- *   camX = (sw/2 − pan.x)/zoom,  camY = −(sh/2 − pan.y)/zoom.
+ * Ortho-camera pose for the 2D world canvas, placing canvas pixel p at the stage's
+ * screen position pan + p·zoom. R3F's default frustum is one unit per pixel at
+ * zoom 1, so camX = (sw/2 − pan.x)/zoom and camY = −(sh/2 − pan.y)/zoom.
  */
 
 export interface World2DCameraPose {

@@ -1,16 +1,7 @@
 /**
- * startAction / seekAction — shared action-level helpers for mixer drivers.
- *
- * Both helpers encode the same invariant: a freshly `play()`-ed
- * `THREE.AnimationAction` defaults its weight to 1. For single-action drivers
- * that's fine; for weighted blend programs (AnimationTree) calling play() on a
- * seek would reset all weights to 1 and over-blend the pose. The helpers
- * always re-apply `weight` and `timeScale` on the same call as `play()` so the
- * invariant lives in one place, not in every driver adapter.
- *
- * Used by:
- *   - `usePlaybackLoop` (AnimationPlayer + GLB driver)
- *   - AnimationTree's weighted-blend adapter
+ * Action helpers for mixer drivers. A freshly `play()`-ed action takes weight 1,
+ * which over-blends an AnimationTree pose on a seek, so these re-apply `weight`
+ * and `timeScale` in the same call as `play()`.
  */
 import type { AnimationAction } from 'three';
 

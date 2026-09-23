@@ -1,26 +1,8 @@
 /**
- * A canvas root draws in CANVAS space, whatever sits above it in the tree.
- *
- * `CanvasItem::get_global_transform` composes only through
- * `get_parent_item()` (`scene/main/canvas_item.cpp:176-193`), and that getter
- * answers nullptr in two cases: the direct parent fails
- * `Object::cast_to<CanvasItem>`, or the item's own `top_level` short-circuits
- * the cast before it runs (`canvas_item.cpp:565-571`). `_enter_canvas` then
- * parents the item at the CanvasLayer's or the viewport's own canvas
- * (`canvas_item.cpp:234-285`), and `_render_canvas_item_tree` culls each such
- * root from the canvas transform with a white modulate and z 0
- * (`servers/rendering/renderer_canvas_cull.cpp:70-83`).
- *
- * So the four things that compose through the parent item all restart here,
- * and the one that does not is VISIBILITY: `_handle_visibility_change` walks
- * the SCENE-tree children and propagates to a top_level child anyway
- * (`canvas_item.cpp:102-108`, "Should the top_levels stop propagation? I think
- * so, but..."). That is why a canvas root stays nested in the rendered tree
- * and cancels its ancestors' transform rather than being lifted out of it.
- *
- * The Control walk has resolved the broken-chain half of this for a while;
- * these are the Node2D world walk's counterparts, plus `top_level`, which
- * neither walk modelled.
+ * A canvas root of the Node2D walk draws in canvas space: `get_global_transform`
+ * composes through `get_parent_item()` (`scene/main/canvas_item.cpp:176-193`), null
+ * for a non-CanvasItem parent or a `top_level` item (`canvas_item.cpp:565-571`), and
+ * `_enter_canvas` parents such an item at the canvas (`canvas_item.cpp:234-285`).
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -93,6 +75,10 @@ function worldOrigin(root: THREE.Object3D | null, name: string): THREE.Vector3 {
 
 const RECT = 'polygon = PackedVector2Array(0, 0, 160, 0, 160, 80, 0, 80)';
 
+// The root is culled from the canvas transform, white and at z 0
+// (`servers/rendering/renderer_canvas_cull.cpp:70-83`). Visibility still reaches a
+// top_level child (`canvas_item.cpp:102-108`), so a root stays nested in the
+// rendered tree and cancels its ancestors' transform.
 describe('a canvas root draws in canvas space', () => {
   it('drops the transform above a broken CanvasItem chain', async () => {
     const root = await renderWorld(`[gd_scene format=3]
@@ -106,7 +92,7 @@ position = Vector2(300, 200)
 ${RECT}
 `);
     // A plain `Node` fails `Object::cast_to<CanvasItem>`, so `get_global_transform`
-    // returns the item's OWN transform and the rect sits at the canvas origin.
+    // returns the item's own transform and the rect sits at the canvas origin.
     expect(worldOrigin(root, 'Detached').toArray()).toEqual([0, 0, 0]);
   });
 
@@ -143,7 +129,7 @@ ${RECT}
   it('cancels nothing under a ParallaxBackground, which cut the chain itself', async () => {
     // `ParallaxBackground extends CanvasLayer` (`scene/2d/parallax_background.h:35`)
     // and its painter writes its own `matrixWorld`, so the ancestors are
-    // already gone; a canvas root inside it that cancelled them AGAIN would
+    // already gone; a canvas root inside it that cancelled them again would
     // land at minus the ancestor transform.
     const root = await renderWorld(`[gd_scene format=3]
 
@@ -159,11 +145,9 @@ ${RECT}
   });
 
   it('keeps a top_level child out of its parent’s y-sort, and in canvas space', async () => {
-    // `_collect_ysort_children` walks the RenderingServer's `child_items`
-    // (`renderer_canvas_cull.cpp:110-115`), and a top_level item is not among
-    // them — `_enter_canvas` parented it at the canvas
-    // (`canvas_item.cpp:234-285`). So it is drawn as a canvas root, not as a
-    // sorted sibling, and the sort root's transform never reaches it.
+    // `_collect_ysort_children` walks `child_items` (`renderer_canvas_cull.cpp:110-115`),
+    // and a top_level item is not among them, since `_enter_canvas` parented it at
+    // the canvas. It draws as a canvas root, out of reach of the sort root's transform.
     const root = await renderWorld(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
@@ -210,10 +194,9 @@ ${RECT}
   });
 
   it('still draws a top_level child of a y-sorted root the canvas never indexed', async () => {
-    // `canvasRootRanges` stops at an `instance=` node, whose real parenting the
-    // host tree cannot see — so the y-sort pass and the canvas-root pass must
-    // agree on the FLAG, not on that map, or the child is neither sorted nor
-    // drawn.
+    // `canvasRootRanges` stops at an `instance=` node, so the y-sort pass and the
+    // canvas-root pass agree on the flag, not on that map, or the child is neither
+    // sorted nor drawn.
     const root = await renderWorld(
       `[gd_scene load_steps=2 format=3]
 
@@ -270,9 +253,9 @@ ${RECT}
 [node name="Detached" type="Polygon2D" parent="Holder"]
 ${RECT}
 `);
-    // `p_z = 0` at `renderer_canvas_cull.cpp:82`, so the detached item is at
-    // z_final 0 while its authored-earlier sibling inherits the root's 5 — and
-    // z DOMINATES the walk's order, so the later node draws first.
+    // `p_z = 0` at `renderer_canvas_cull.cpp:82`: the detached item is at z_final 0,
+    // and its earlier sibling inherits the root's 5. z dominates the walk's order,
+    // so the later node draws first.
     const detached = nearestGroupOrder(drawnMeshUnder(root, 'Detached'));
     const front = nearestGroupOrder(drawnMeshUnder(root, 'Front'));
     expect(detached).toBeLessThan(front);

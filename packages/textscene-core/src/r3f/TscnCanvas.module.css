@@ -2,8 +2,7 @@
   width: 100%;
   height: 100%;
   position: relative;
-  /* Load-bearing for touch navigation: without it the browser claims the
-     gesture for scroll/pinch-zoom and no pointermove ever reaches the
-     controls. Same reason as the 2D stage and the dock splitter. */
+  /* Without it the browser claims a touch gesture for scroll or pinch-zoom,
+     and no pointermove reaches the controls. */
   touch-action: none;
 }

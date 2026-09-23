@@ -1,5 +1,5 @@
 /**
- * The scope a CANVAS ROOT draws in: the canvas itself, not the node above it.
+ * The scope a canvas root draws in: the canvas itself, not the node above it.
  *
  * `CanvasItem::get_parent_item()` answers nullptr when the direct parent fails
  * `Object::cast_to<CanvasItem>` or when the item's own `top_level`
@@ -11,8 +11,8 @@
  * (`servers/rendering/renderer_canvas_cull.cpp:70-83`) — the same four resets
  * `CanvasLayerScope` publishes for the same reason, one canvas further in.
  *
- * VISIBILITY is the one thing that still crosses: `_handle_visibility_change`
- * walks the SCENE-tree children and propagates into a top_level child anyway
+ * Visibility is the one thing that still crosses: `_handle_visibility_change`
+ * walks the scene-tree children and propagates into a top_level child anyway
  * (`canvas_item.cpp:102-108`). So the root stays nested inside its ancestors'
  * groups — where an eye toggle and a `visible = false` still reach it — and
  * cancels their accumulated transform with an inverse instead of being lifted
@@ -76,15 +76,9 @@ export function ParentIsCanvasItemProvider({
 }
 
 /**
- * Wraps a node's own rendered content, resetting the canvas scope when the node
- * parents at the canvas instead of at the node above it. A node that nests
- * normally is returned untouched — no extra group, no re-provided context — so
- * the ordinary case renders exactly as it did before this existed.
- *
- * Applied by the node ITSELF rather than by its parent, because an `instance=`
- * node without a `type=` parses as `Node` and only becomes its sub-scene root's
- * type once the PackedScene merges in (ADR-0013): a parent deciding from the
- * host tree would answer for the wrong type.
+ * Wraps a node's content, resetting the canvas scope when it parents at the
+ * canvas. A node that nests normally gets no extra group or context. The node
+ * applies it itself: an `instance=` node parses as `Node` until it merges (ADR-0013).
  */
 export function CanvasRootScope({
   node,
@@ -115,7 +109,7 @@ export function CanvasRootScope({
     </CanvasSpaceProvider>
   );
 
-  // paint-order-safe: a bare transform group OUTSIDE the item's own, which
+  // paint-order-safe: a bare transform group outside the item's own, which
   // carries the canvas key and so still decides `groupOrder` for its pixels.
   return inverse ? (
     <group matrix={inverse} matrixAutoUpdate={false}>

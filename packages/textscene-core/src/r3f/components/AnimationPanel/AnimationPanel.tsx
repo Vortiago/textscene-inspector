@@ -1,7 +1,6 @@
 /**
- * Animation dock tab — the DOM transport surface for AnimationPlayer preview.
- * Reads and drives the scene-level AnimationTransport: clip selector,
- * play/pause/stop, and a timeline scrubber with an m:ss.cc readout.
+ * The Animation dock tab, which drives the scene-level AnimationTransport: a clip
+ * selector, play, pause and stop, and a scrubber with an m:ss.cc readout.
  */
 
 import {
@@ -10,8 +9,7 @@ import {
 } from '../../contexts/AnimationTransportContext';
 import styles from './AnimationPanel.module.css';
 
-/** Discrete preview speed multipliers — enough range to spot subtle
- * timing without cluttering the dock with a free-form input. */
+/** Preview speed multipliers: enough range to spot subtle timing, with no free-form input. */
 const SPEED_OPTIONS = [0.25, 0.5, 1, 1.5, 2] as const;
 
 const LOOP_OPTIONS: { value: LoopOverride; label: string }[] = [

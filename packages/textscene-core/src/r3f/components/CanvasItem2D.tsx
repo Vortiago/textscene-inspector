@@ -1,11 +1,8 @@
 /**
- * <CanvasItem2D> — the shared CanvasItem ritual for 2D-canvas nodes: a named
- * <group> carrying the conjugated Node2D transform (see node2dTransform) with
- * the z_index draw-order offset, visibility, and the hierarchical modulate
- * context. The node's own pixels render through the `body` render-prop, which
- * receives the resolved linear-space tint (inherited modulate × self_modulate);
- * scene children render inside the inherited-modulate provider. Extracted from
- * the sprite slices (ADR-0006); TileMap/TileMapLayer are further consumers.
+ * The shared CanvasItem ritual of a 2D-canvas node (ADR-0006): a named <group>
+ * with the Node2D transform, draw order, visibility and modulate context. `body`
+ * draws the node's own pixels with the linear tint, inherited modulate ×
+ * self_modulate, and scene children render inside the modulate provider.
  */
 
 import { useMemo, type ReactNode } from 'react';
@@ -36,20 +33,17 @@ export interface CanvasItem2DProps {
   node: TscnNode;
   props: Node2DProperties;
   /**
-   * Renders this node's own pixels with the resolved own-pixel tint and the
-   * CanvasItemMaterial in force (already resolved through `use_parent_material`,
-   * `null` when there is none). A slice that ignores the material draws with
-   * Godot's default MIX blending, which is what it did before the material
-   * existed.
+   * Renders this node's own pixels with the own-pixel tint and the CanvasItemMaterial
+   * in force, resolved through `use_parent_material`, or `null`. A slice that ignores
+   * the material draws with Godot's default MIX blending.
    */
   body?: (
     tint: CanvasItemTint,
     material: CanvasItemMaterialProperties | null,
     /**
-     * Material props that make this item sample the 2D light accumulation.
-     * Spread onto the item's material like the blend state. The SAME props for
-     * every light mode and every light count — both are uniforms, not programs
-     * (`lighting2d/canvasItemLighting`) — and they declare `transparent`.
+     * Material props that sample the 2D light accumulation, spread like the blend
+     * state. They declare `transparent` and are the same for every light mode and
+     * count, both uniforms (`lighting2d/canvasItemLighting`).
      */
     lighting: CanvasItemLightingProps
   ) => ReactNode;
@@ -57,9 +51,8 @@ export interface CanvasItem2DProps {
 }
 
 export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps) {
-  // Draw order does NOT ride the group's z — it is `renderOrder` below, which
-  // three compares before camera distance. The group stays in the z=0 plane
-  // with every other canvas item, so a 2D scene occupies no depth at all.
+  // Draw order is `renderOrder` below, which three compares before distance, so
+  // every canvas item stays in the z=0 plane.
   const local = useMemo(() => node2dGroupProps(props), [props]);
   const transform = useMemo(() => node2dGroupSpread(local), [local]);
   // What a canvas root nested below this item cancels: the transform every
@@ -70,10 +63,9 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
     return ambient ? ambient.clone().multiply(own) : own;
   }, [ambient, local]);
   const material = useCanvasItemMaterial(props);
-  // The canvas tint rides this item's own pixels only, and only when its light
-  // mode admits it — never the inherited modulate its children read. The light
-  // injection divides this same value back out to recover the albedo, so the
-  // two must be resolved from the one hook.
+  // The canvas tint reaches this item's own pixels when its light mode admits it,
+  // never the modulate its children read. The light injection divides this value
+  // back out, so both come from the one hook.
   const canvasModulate = useCanvasModulateFor(material);
   const tint = useCanvasItemTint(props, canvasModulate);
   // Godot's `z_final`: the integer z_index accumulated down the tree and
@@ -83,11 +75,9 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
   const effectiveZ = accumulateCanvasItemZ(parentEffectiveZ, props);
   const lighting = useCanvasItemLighting(material, props.light_mask, effectiveZ);
 
-  // Godot's draw order, as the one integer three sorts on. It rides THIS group
-  // rather than the pixels inside it: three takes `groupOrder` from the nearest
-  // enclosing group and compares it before anything else, so the item's own
-  // meshes are free to use their `renderOrder` for the item's private layering
-  // (an atlas batch's source index) without touching its place in the canvas.
+  // Godot's draw order on this group: three compares the nearest group's order
+  // first, so the item's meshes keep their `renderOrder` for private layering,
+  // such as an atlas batch's source index.
   const renderOrder = useCanvasItemRenderOrder(node, effectiveZ);
 
   return (
@@ -99,9 +89,8 @@ export function CanvasItem2D({ node, props, body, children }: CanvasItem2DProps)
     >
       <CanvasItemKeyProvider value={renderOrder}>{body?.(tint, material, lighting)}</CanvasItemKeyProvider>
       <Modulate2DContext.Provider value={tint.inherited}>
-        {/* Descendants inherit this node's material through `use_parent_material`,
-            so the provider carries what THIS node resolved — including a null,
-            which correctly stops an inherited material at a node that clears it. */}
+        {/* Descendants inherit through `use_parent_material` what this node
+            resolved, a null included, which stops an inherited material. */}
         <EffectiveZProvider value={effectiveZ}>
           <CanvasItemMaterialProvider value={material}>
             <CanvasSpaceProvider value={canvasSpace}>{children}</CanvasSpaceProvider>

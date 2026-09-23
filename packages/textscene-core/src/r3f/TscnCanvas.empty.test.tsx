@@ -1,7 +1,6 @@
 /**
- * Gap 8: the canvas must show a grid + prompt when there is
- * no scene loaded, instead of rendering as a flat black rectangle that
- * is indistinguishable from a renderer crash.
+ * With no scene loaded, the canvas shows a grid and a prompt, since a black
+ * rectangle looks like a renderer crash.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

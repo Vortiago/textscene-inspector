@@ -1,10 +1,6 @@
 /**
- * Regression test for tree-row eye-button visibility.
- *
- * Pins the wire from `SelectionContext.hiddenNodePaths` to the
- * `visible` flag on the per-node wrapping `<group>` in `NodeDispatcher`.
- * Without this, the tree-row eye button toggles only CSS dimming and
- * the corresponding object stays rendered.
+ * The tree-row eye button: `SelectionContext.hiddenNodePaths` sets `visible` on
+ * the dispatcher's wrapper `<group>`, or the object stays rendered.
  */
 import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -44,9 +40,7 @@ function findWrappingGroup(
   scene: { findAllByType: (t: string) => { instance: WrapperInstance }[] },
   nodeName: string,
 ): WrapperInstance | null {
-  // DispatchedNode wraps each subtree in a <group>, then renders the
-  // node's Component (e.g. Node3D's <group name={node.name}>). Walk up
-  // from the named group to find the dispatcher's wrapper.
+  // The dispatcher's wrapper sits above the Component's own named group.
   const named = scene
     .findAllByType('Group')
     .map((g) => g.instance)
@@ -96,10 +90,8 @@ describe('<NodeDispatcher> visibility wire-up (WI-UX-1)', () => {
     expect(parentWrapper).not.toBeNull();
     expect(childWrapper).not.toBeNull();
     expect(parentWrapper!.visible).toBe(false);
-    // The Child's own wrapper is still `visible=true` — THREE walks
-    // the parent chain to compute effective visibility. Asserting both
-    // confirms ancestor-hide propagates through THREE without the
-    // dispatcher having to walk the path tree itself.
+    // The child's wrapper stays `visible=true`: three hides it through the
+    // parent chain, so the dispatcher walks no path tree.
     expect(childWrapper!.visible).toBe(true);
   });
 

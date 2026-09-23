@@ -1,9 +1,6 @@
 /**
- * <TileSourceMesh> — ONE batched mesh for all of a tile layer's cells that draw
- * from a single atlas source. Owns the per-source texture load (placeholder UX
- * and late-arrival recovery come from useResource), builds its merged geometry
- * from the pure tileGeometry builder, and renders with the unlit 2D material
- * recipe shared with Sprite2D.
+ * One batched mesh for the cells of a tile layer that draw from one atlas
+ * source, with the unlit 2D material of Sprite2D. It owns the source's texture load.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -23,10 +20,8 @@ export interface TileSourceMeshProps {
   cells: readonly DrawableCell[];
   grid: TileGrid;
   /**
-   * Draw order WITHIN the enclosing tile group — a legacy TileMap's layer index
-   * or an atlas source's position among the batches. The group itself carries
-   * the item's place in the canvas (`canvasPaintOrder.ts`), and three compares
-   * that `groupOrder` before this, so these need only separate siblings.
+   * Draw order within the tile group: a TileMap's layer index or the source's
+   * place among the batches. three compares the group's order first.
    */
   renderOrder: number;
   /** Own-pixel tint from the node's CanvasItem ritual (linear space). */
@@ -56,9 +51,7 @@ export function TileSourceMesh({ source, cells, grid, renderOrder, color, opacit
     geom.setIndex(new THREE.BufferAttribute(arrays.indices, 1));
     return geom;
   }, [cells, source, grid, texW, texH]);
-  // Passed via the `geometry` prop, which R3F does NOT auto-dispose (only
-  // JSX-declared geometries are managed) — release the GPU buffers ourselves
-  // when a new one replaces it / on unmount.
+  // R3F does not dispose a geometry passed as a prop, so this releases it.
   useEffect(() => {
     if (!geometry) return;
     return () => geometry.dispose();
@@ -69,12 +62,11 @@ export function TileSourceMesh({ source, cells, grid, renderOrder, color, opacit
   if (!source.texturePath || texResult.status === 'unavailable') {
     return <MissingResourcePlaceholder shape="plane" name={name} />;
   }
-  // Pending: render nothing — no placeholder flash.
+  // Pending: render nothing, so no placeholder flashes.
   if (!tex || !geometry) return null;
 
-  // The atlas is awaited above, so this holds steady for a tile layer's life —
-  // it is keyed because the material's program depends on it and nothing
-  // recompiles in place (`materialProgramInputs.ts`).
+  // Keyed, since the program depends on it and nothing recompiles in place
+  // (`materialProgramInputs.ts`). The atlas is awaited, so it holds steady.
   const program = materialProgramInputs({
     props: {
       map: tex,

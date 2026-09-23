@@ -1,7 +1,4 @@
-/**
- * applyLoopOverride — the ONE place the preview loop override maps to
- * THREE action loop config, shared by the AnimationPlayer and GLB drivers.
- */
+/** applyLoopOverride maps the preview loop override to a THREE action's loop. */
 import { describe, expect, it, vi } from 'vitest';
 import { LoopOnce, LoopPingPong, LoopRepeat, type AnimationAction } from 'three';
 import {

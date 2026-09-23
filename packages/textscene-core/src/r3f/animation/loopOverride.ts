@@ -1,10 +1,7 @@
 /**
- * Preview loop override → THREE action loop config, shared by every
- * transport driver so the override semantics cannot drift between slices:
- * 'once' forces a single clamped pass, 'loop' an infinite repeat, 'auto'
- * keeps the driver's authored settings (Godot `loop_mode` for
- * AnimationPlayer clips via its slice's `loopSettingsFor`; a GLB clip's
- * default infinite repeat).
+ * The preview loop override as a THREE action's loop, shared by every driver:
+ * 'once' is one clamped pass, 'loop' repeats, and 'auto' keeps the authored
+ * setting (Godot `loop_mode` through `loopSettingsFor`, or a GLB's repeat).
  */
 import { LoopOnce, LoopRepeat, type AnimationAction, type AnimationActionLoopStyles } from 'three';
 import type { LoopOverride } from '../contexts/AnimationTransportContext.js';
@@ -41,10 +38,8 @@ export function applyLoopOverride(
 }
 
 /**
- * Whether a clip repeats under the override — for drivers with no THREE
- * action to configure (AnimatedSprite2D steps frames from a playhead
- * itself). Same semantics as `applyLoopOverride`, collapsed to a boolean:
- * a non-repeating clip holds its last frame (the clamp behavior).
+ * Whether a clip repeats under the override, for a driver with no THREE action,
+ * such as AnimatedSprite2D. A clip that does not repeat holds its last frame.
  */
 export function loopsUnderOverride(override: LoopOverride, authoredLoop: boolean): boolean {
   return override === 'auto' ? authoredLoop : override === 'loop';

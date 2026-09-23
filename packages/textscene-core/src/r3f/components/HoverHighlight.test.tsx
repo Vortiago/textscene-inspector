@@ -1,16 +1,7 @@
 /**
- * Regression test for viewport hover feedback.
- *
- * Pins the wire from `SelectionContext.hoveredNodePath` →
- * `THREE.BoxHelper` attached to the canvas scene. Before this wire existed,
- * `hoveredNodePath` was a dead state slot — `TreeNode.tsx` populated
- * it on mouseenter/mouseleave but no viewport component consumed it.
- * Now `<HoverHighlight>` mirrors
- * `<SelectionHighlight>`'s pattern with an orange (`0xff8800`) helper
- * to match main's `HelperManager.showHoverEffect`.
- *
- * Mounts `TscnSceneContents` with a SelectionProvider so the seeder
- * component can drive `hoveredNodePath` through real provider state.
+ * Viewport hover feedback: `SelectionContext.hoveredNodePath` attaches an orange (`0xff8800`)
+ * `THREE.BoxHelper` to the canvas scene. A seeder drives the path through a real
+ * SelectionProvider around `TscnSceneContents`.
  */
 import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -181,11 +172,8 @@ describe('<HoverHighlight> (WI-UX-10)', () => {
   });
 
   it('coexists with the selection helper when hovered === selected (matches main)', async () => {
-    // Main's HelperManager keeps highlight and hover under independent
-    // map keys; both BoxHelpers attach to the scene when the same node
-    // is selected AND hovered. Pin that behavior so a future
-    // simplification that swaps to "skip hover when selected" is a
-    // conscious choice, not an accident.
+    // Hover and selection helpers are independent, so a node both selected and
+    // hovered carries both BoxHelpers.
     const graph = createSceneGraphFromTscnScene({
       nodes: [makeMeshInstance('Cube')],
     });
