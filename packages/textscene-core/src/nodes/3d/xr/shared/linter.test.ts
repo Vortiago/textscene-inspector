@@ -235,12 +235,9 @@ sort_order = -1
       expect(found).toEqual([]);
     });
 
-    // The stronger, whole-registry claim: this file already pulls the full
-    // barrel (above), so `Linter` here carries every OTHER slice's rules too
-    // (XROrigin3D/XRCamera3D/SubViewport included, since the fixture carries
-    // all three). A failure here can be another agent's in-flight file, not
-    // this slice's bug — the narrower, three-ruleName check above is the one
-    // this slice owns.
+    // The whole-registry claim: this file pulls the full barrel, so `Linter` carries every other
+    // slice's rules too, including the XROrigin3D, XRCamera3D and SubViewport ones the fixture needs.
+    // The three-ruleName check above is the one this slice owns.
     it('draws no diagnostic at all, from any registered rule', () => {
       const content = readFixture(FIXTURES[nodeType]);
       expect(new Linter().lint(content)).toEqual([]);

@@ -1,14 +1,7 @@
 /**
- * Vehicle slices contract (RED until the slices ship).
- *
- * Pins the shape of the fixture the VehicleBody3D / VehicleWheel3D slices are
- * judged against, on actual parsed values rather than file existence. The wheels
- * must sit at DISTINCT transforms: a body whose wheels all share one origin
- * would render identically whether the transform survived the parse or not, so
- * a single-wheel fixture could not tell the two apart.
- *
- * Repo root is resolved by walking up to pnpm-workspace.yaml so the test is
- * insensitive to its own depth.
+ * Vehicle contract: the shape of the VehicleBody3D/VehicleWheel3D fixture, on parsed values. The
+ * wheels sit at distinct transforms, since wheels sharing one origin render the same whether the
+ * transform survived the parse or not. The repo root is found by walking up to pnpm-workspace.yaml.
  */
 import { describe, it, expect } from 'vitest';
 import { resolve } from 'node:path';
@@ -46,7 +39,7 @@ describe('#352 fixtures contract — Truck Town vehicle types', () => {
     expect(nodes.map((n) => n.type)).toContain('MeshInstance3D');
 
     // The override is what makes this fixture exercise dangling-resource-reference
-    // at all, and VehicleBody3D reuses parseNode3D — so it survives only in the
+    // at all, and VehicleBody3D reuses parseNode3D, so it survives only in the
     // raw body, and only against a PhysicsMaterial the scene actually defines.
     const override = bodies[0]!.rawProperties?.physics_material_override;
     expect(override).toBe('SubResource("PhysicsMaterial_tyres")');

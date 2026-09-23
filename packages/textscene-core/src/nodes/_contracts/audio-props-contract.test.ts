@@ -1,20 +1,8 @@
 /**
- * AudioStreamPlayer / AudioStreamPlayer2D render parsers dropped the audio
- * properties the linter validates.  BEHAVIORAL CONTRACT (written RED before the
- * slice shipped).
- *
- * Both players registered the shared base parser (parseNode / parseNode2D), so every
- * audio property was silently discarded at parse/render time, neither slice had a
- * propertyFormatter (the Inspector showed nothing), and the plain AudioStreamPlayer
- * linter was missing the `bus`/`playing` validators its 2D/3D siblings already had —
- * a parser↔linter divergence.  AudioStreamPlayer3D was the working sibling to mirror.
- *
- * Written through STABLE public surfaces only (TscnParser, nodeRegistry, Linter) so it
- * survives refactors.  Two side-effect imports are load-bearing and MUST stay:
- *   - `../../parser/TscnParser`  transitively registers every node PARSER (nodeRegistry)
- *   - `../../linter/index`       transitively registers every node's LINTER validators
- * Without the linter barrel the bus/playing validators never load and those assertions
- * could never go green — do not remove it.
+ * AudioStreamPlayer and AudioStreamPlayer2D contract: their parsers keep the audio properties the
+ * linter validates, both slices have a propertyFormatter, and the plain player has the `bus` and
+ * `playing` validators its 2D/3D siblings have. It uses only stable public surfaces (TscnParser,
+ * nodeRegistry, Linter), so it survives refactors.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -22,6 +10,8 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
+// Two imports are load-bearing: TscnParser registers every node parser, and the linter barrel
+// registers every validator, without which the bus/playing assertions cannot pass.
 import { TscnParser } from '../../parser/TscnParser';
 import type { TscnScene, TscnNode } from '../../parser/types';
 import { nodeRegistry } from '../../core/NodeRegistry';
@@ -110,7 +100,7 @@ playing = yes
 `;
 
 describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — behavioral contract (RED until shipped)', () => {
-  // Criterion 1 — the witnessed AudioStreamPlayer form parses into typed props (no silent drop).
+  // Criterion 1: the witnessed AudioStreamPlayer form parses into typed props (no silent drop).
   it('parses AudioStreamPlayer audio properties into typed values', () => {
     const p = firstOfType(PLAIN_WITNESS, 'AudioStreamPlayer').properties as Record<string, unknown>;
     expect(p.volume_db).toBe(-3.0); // parsed float, not undefined / raw string
@@ -119,17 +109,17 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     expect(p.bus).toBe('Ambient'); // StringName &"Ambient" normalized, mirroring the AudioStreamPlayer3D sibling
   });
 
-  // Criterion 1 — the witnessed AudioStreamPlayer2D form parses into typed props.
+  // Criterion 1: the witnessed AudioStreamPlayer2D form parses into typed props.
   it('parses AudioStreamPlayer2D audio properties into typed values', () => {
     const p = firstOfType(TWO_D_WITNESS, 'AudioStreamPlayer2D').properties as Record<string, unknown>;
     expect(p.volume_db).toBe(-3.0);
     expect(p.stream).toBe('ExtResource("5")');
     // Godot AudioStreamPlayer2D.max_distance defaults to 2000 (a finite pixel
-    // distance), NOT the 3D sibling's 0/"unlimited" — guard the 3D-copied bug.
+    // distance), not the 3D sibling's 0/"unlimited".
     expect(p.max_distance).toBe(2000);
   });
 
-  // Criterion 1 / 4 — the valid witnessed forms lint clean (no false positive on the audio surface).
+  // Criteria 1 and 4: the valid witnessed forms lint clean (no false positive on the audio surface).
   it('lints the witnessed valid forms with no false positive on the audio surface', () => {
     const re = /volume_db|autoplay|bus|stream|pitch_scale|playing/i;
     for (const src of [PLAIN_WITNESS, TWO_D_WITNESS]) {
@@ -137,7 +127,7 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     }
   });
 
-  // Criterion 4 — the plain AudioStreamPlayer gains the `bus` validator (parity with 2D/3D).
+  // Criterion 4: the plain AudioStreamPlayer has the `bus` validator (parity with 2D/3D).
   it('flags an invalid bus on the plain AudioStreamPlayer, accepts a valid one', () => {
     expect(
       errorsMatching(BAD_BUS, /bus/i).length,
@@ -146,7 +136,7 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     expect(errorsMatching(GOOD_BUS, /bus/i), 'a valid quoted bus must not be flagged').toHaveLength(0);
   });
 
-  // Criterion 4 — the plain AudioStreamPlayer gains the `playing` validator (parity with 2D/3D).
+  // Criterion 4: the plain AudioStreamPlayer has the `playing` validator (parity with 2D/3D).
   it('flags an invalid playing on the plain AudioStreamPlayer', () => {
     expect(
       errorsMatching(BAD_PLAYING, /playing/i).length,
@@ -154,7 +144,7 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     ).toBeGreaterThan(0);
   });
 
-  // Criterion 1 — both slices surface their audio data in the Inspector via a propertyFormatter.
+  // Criterion 1: both slices surface their audio data in the Inspector through a propertyFormatter.
   it('registers a propertyFormatter that surfaces the audio properties for both players', () => {
     const reg = nodeRegistry.getRegistration('AudioStreamPlayer');
     const reg2 = nodeRegistry.getRegistration('AudioStreamPlayer2D');
@@ -188,7 +178,7 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     ).toBe(true);
   });
 
-  // Criterion 2 — a unit fixture reproduces the witnessed form and is wired into the generated manifest.
+  // Criterion 2: a unit fixture reproduces the witnessed form and is wired into the generated manifest.
   it('ships a unit fixture with a plain AudioStreamPlayer that parses to typed props, wired into fixtures.ts', () => {
     const dir = resolve(repoRoot(), 'scenes/fixtures');
     // trailing quote in the match keeps this to the PLAIN player (not AudioStreamPlayer2D/3D).
@@ -209,7 +199,7 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
     ).toBe(true);
   });
 
-  // Criterion 3 — co-located parser tests exist for both slices (happy + edge live there).
+  // Criterion 3: co-located parser tests exist for both slices (happy and edge cases live there).
   it('ships co-located parser tests for both audio slices', () => {
     const base = resolve(repoRoot(), 'packages/textscene-core/src/nodes/audio');
     expect(

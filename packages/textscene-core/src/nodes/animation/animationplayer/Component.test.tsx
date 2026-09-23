@@ -1,10 +1,7 @@
 /**
- * AnimationPlayer R3F component tests.
- *
- * AnimationPlayer has no viewport representation — it is purely a
- * container for clip data. Tests assert that the component mounts a
- * group with the correct userData and transform, passes children through,
- * and renders without crashing under default and edge-case props.
+ * AnimationPlayer R3F component tests. The node has no viewport representation, so these assert
+ * that it mounts a group with the correct userData and transform, passes children through, and
+ * renders under default and edge-case props.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -78,7 +75,7 @@ describe('resolveTrackTarget — root-targeting (NodePath ".")', () => {
     const sibling = new Object3D();
     sibling.name = 'Sibling';
     root.add(sibling);
-    // Named `Sibling` and present, but the path leaves the root — agreeing with
+    // Named `Sibling` and present, but the path leaves the root. Agreeing with
     // buildClip is what matters, or the snapshot covers what the mixer does not.
     expect(resolveTrackTarget(root, '../Sibling')).toBeUndefined();
     expect(resolveTrackTarget(root, '..')).toBeUndefined();

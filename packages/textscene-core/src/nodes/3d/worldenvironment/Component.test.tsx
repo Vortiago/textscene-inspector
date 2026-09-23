@@ -43,7 +43,7 @@ describe('<WorldEnvironment>', () => {
     const scene = instanceAs<THREE.Scene>(renderer.scene);
     const bg = scene.background as { getHexString(): string } | null;
     expect(bg).not.toBeNull();
-    // Godot Color is sRGB; three.js stores linear, so compare via the sRGB hex.
+    // Godot Color is sRGB and three.js stores linear, so compare the sRGB hex.
     expect(bg!.getHexString()).toBe('3366cc'); // (0.2,0.4,0.8) → 8-bit sRGB
   });
 

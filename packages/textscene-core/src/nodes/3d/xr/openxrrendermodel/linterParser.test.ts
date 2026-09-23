@@ -1,14 +1,7 @@
 /**
- * OpenXRRenderModel strict validators: declares none of its own.
- *
- * Its one member, `render_model`, is a `Variant::RID` — a runtime handle into
- * a live, per-process `RID_Owner` table (see linterParser.ts for the full
- * chain of reasoning, including why the grammar alone does not rule it out).
- * There is no `v.rid` in the validator DSL for the same reason: nothing in
- * this codebase treats an RID as a value a `.tscn` legitimately carries.
- *
- * An honest emptiness assertion, plus proof the base-walk still delivers
- * Node3D through it, exactly as HSeparator does for its zero own members.
+ * OpenXRRenderModel declares no strict validators of its own: its one member, `render_model`, is a
+ * runtime `Variant::RID` handle (linterParser.ts has the reasoning), and the DSL has no `v.rid`.
+ * This asserts the emptiness, and that the base-walk still delivers Node3D.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,10 +15,9 @@ describe('OpenXRRenderModel strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint`
+    // checks it against the whole registry through the barrel. This checks the same file
+    // against only what this test imported.
     expectFixtureClean('unit-open-xr-render-model.tscn');
   });
 

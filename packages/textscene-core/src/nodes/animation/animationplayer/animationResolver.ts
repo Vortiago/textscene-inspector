@@ -1,16 +1,8 @@
 /**
- * Render-side resolution of an AnimationPlayer's libraries into typed
- * GodotAnimations. THREE-free and React-free by design: it reads only the
- * scene's SubResource `data` strings, so it can later feed a linter rule too.
- *
- * Pipeline: AnimationLibraryRef[] -> AnimationLibrary `_data` map ->
- * Animation SubResources -> Tracks -> Keyframes. Understands `value` tracks
- * (dict-form `{ "times": …, "values": … }` keys) and Godot 4's dedicated 3D
- * transform tracks `position_3d`/`rotation_3d`/`scale_3d` (flat
- * `PackedFloat32Array(time, transition, comps…)` keys); other track types
- * resolve to zero tracks. Skeletal bone sub-paths (`Node:bone`) are skipped
- * pending Skeleton3D bone rendering. Anything unparseable is skipped rather
- * than thrown (lenient-renderer contract).
+ * Resolves an AnimationPlayer's libraries into typed GodotAnimations, THREE-free and React-free, so a
+ * linter rule can use it too. It reads `value` tracks (dict-form keys) and the 3D transform tracks
+ * `position_3d`/`rotation_3d`/`scale_3d` (flat keys). Other track types and skeletal bone sub-paths
+ * (`Node:bone`) resolve to nothing, and anything unparseable is skipped, not thrown.
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
@@ -89,16 +81,10 @@ export function resolveAnimations(
 }
 
 /**
- * Raw (unresolved) relative NodePath strings on every 'audio' track across the
- * given libraries' Animation resources. Used by the AudioStreamPlayer /
- * AudioStreamPlayer2D / AudioStreamPlayer3D linters: `AnimationMixer` builds
- * its own polyphonic playback bound to an audio track's target node and never
- * reads that node's own `stream` property (animation_mixer.cpp:891-898), so a
- * node driven this way is not silent even with no `stream` of its own.
- *
- * Deliberately separate from `resolveAnimations`/`parseTracks`, which drop
- * 'audio' tracks entirely (THREE's AnimationMixer drives transforms only) —
- * this never touches the render path.
+ * Raw relative NodePath strings on every 'audio' track, for the AudioStreamPlayer linters:
+ * `AnimationMixer` plays an audio track through its own playback and never reads the target's
+ * `stream` (animation_mixer.cpp:891-898). Separate from `resolveAnimations`, which drops 'audio'
+ * tracks, so this never touches the render path.
  */
 export function resolveAudioTrackPaths(
   libraries: readonly AnimationLibraryRef[],
@@ -134,15 +120,9 @@ function audioTrackPaths(data: Record<string, unknown>): string[] {
 }
 
 /**
- * Whether any of these libraries holds a clip {@link resolveAnimations} cannot
- * enumerate.
- *
- * `_data` maps a clip name to whichever reference the project saved: an
- * `ExtResource` when the Animation lives in its own `.tres`, which is the
- * ordinary layout once clips are shared between scenes. {@link parseLibraryData}
- * reads only the `SubResource` spelling, so such a library resolves to FEWER
- * clips than it holds — and a caller that treats the resolved set as complete
- * calls a live clip name dangling.
+ * Whether any of these libraries holds a clip {@link resolveAnimations} cannot enumerate. A clip in
+ * its own `.tres` is an `ExtResource`, which {@link parseLibraryData} does not read, so a caller that
+ * treats the resolved set as complete would call a live clip name dangling.
  */
 export function hasUnresolvableClips(
   libraries: readonly AnimationLibraryRef[],
@@ -159,7 +139,7 @@ export function hasUnresolvableClips(
 /**
  * `_data`'s `"name": SubResource(…)` clips. An empty name is skipped:
  * `add_animation` refuses it (`animation_library.cpp:35-36,48`,
- * `is_valid_animation_name` — `!(p_name.is_empty() || …)`).
+ * `is_valid_animation_name`: `!(p_name.is_empty() || …)`).
  */
 function parseLibraryData(dataStr: string): Array<[string, string]> {
   return dictSubResourceEntries(dataStr)
@@ -202,16 +182,15 @@ function parseTracks(data: Record<string, unknown>): GodotTrack[] {
     const updateMode = numberOr(data[`tracks/${i}/update`], 0);
 
     // `hasOwn` so a track type that collides with an Object.prototype key
-    // (e.g. "constructor", "toString") doesn't resolve to an inherited member.
+    // (for example "constructor", "toString") does not resolve to an inherited member.
     const transform3d = Object.hasOwn(TRANSFORM_3D_TRACKS, type)
       ? TRANSFORM_3D_TRACKS[type]
       : undefined;
     if (transform3d) {
       const inner = extractNodePathInner(rawPath);
       if (inner === null) continue;
-      // A `:` segment is a skeleton bone sub-path (e.g. `Skeleton3D:body`);
-      // binding those needs Skeleton3D bone rendering, which is deferred — skip
-      // so we don't mis-bind the whole transform onto the skeleton node.
+      // A `:` segment is a skeleton bone sub-path (for example `Skeleton3D:body`). Binding one needs
+      // Skeleton3D bone rendering, so skip it rather than bind the whole transform to the skeleton.
       if (inner.includes(':')) continue;
 
       const keys = parseFlatTransformKeys(rawKeys, transform3d.components);
@@ -271,11 +250,9 @@ function parseKeys(keysStr: string): GodotKeyframe[] {
   const values = parseValueArray(keysStr);
   if (values === null) return [];
 
-  // Paired by index, so a short list has no value at that time. `values[i] ?? 0`
-  // minted a keyframe AT ZERO instead, which for a scalar property pins the node
-  // there for the clip and for a vector one hands `clipBuilder` a mixed-shape
-  // list whose flattened length is not a multiple of `times`, so every sample is
-  // NaN.
+  // Paired by index, so a short list has no value at that time. A keyframe at zero would pin a
+  // scalar property there, and hand `clipBuilder` a mixed-shape vector list whose flattened length
+  // is not a multiple of `times`, so every sample would be NaN.
   if (values.length !== times.length) {
     info(
       `[AnimationPlayer] ${values.length} keyframe values for ${times.length} times — dropping the track`
@@ -293,11 +270,9 @@ function parseKeys(keysStr: string): GodotKeyframe[] {
 const PACKED_FLOAT_ARRAY_RE = packedArrayCallAnywhere('PackedFloat32Array');
 
 /**
- * Decode a 3D transform track's flat key array. Godot serializes these as a
- * single `PackedFloat32Array(time, transition, c0, c1, …, time, transition, …)`
- * with a fixed stride of `2 + components` per keyframe (5 for Vector3
- * position/scale, 6 for the quaternion rotation). Distinct from the `value`
- * track's `{ "times": …, "values": … }` dict form decoded by `parseKeys`.
+ * Decode a 3D transform track's flat key array, `PackedFloat32Array(time, transition, c0, c1, …)`,
+ * with a stride of `2 + components` per keyframe (5 for position/scale, 6 for the rotation
+ * quaternion). `parseKeys` decodes the `value` track's `{ "times": …, "values": … }` dict form.
  */
 function parseFlatTransformKeys(keysStr: string, components: number): GodotKeyframe[] {
   const match = PACKED_FLOAT_ARRAY_RE.exec(keysStr);
@@ -306,12 +281,9 @@ function parseFlatTransformKeys(keysStr: string, components: number): GodotKeyfr
   const nums = parseFloatList(match[1]);
   if (nums === null) return [];
   const stride = 2 + components;
-  // Arity is all-or-nothing, as it is in the engine: `Animation::_set` opens
-  // each flat-track branch with `ERR_FAIL_COND_V(vcount % *_TRACK_SIZE, false)`
-  // (`animation.cpp:163` position, `:185` rotation, `:208` scale,
-  // `:230` blend shape) BEFORE the `resize` at `:167`, so a ragged array leaves
-  // the track with no keys at all. Truncating to whole strides animated a track
-  // Godot leaves empty.
+  // Arity is all-or-nothing, as in the engine: `Animation::_set` opens each flat-track branch with
+  // `ERR_FAIL_COND_V(vcount % *_TRACK_SIZE, false)` (`animation.cpp:163` position, `:185` rotation,
+  // `:208` scale, `:230` blend shape) before the `resize` at `:167`, so a ragged array leaves no keys.
   if (nums.length === 0 || nums.length % stride !== 0) return [];
 
   const keys: GodotKeyframe[] = [];
@@ -326,18 +298,10 @@ function parseFlatTransformKeys(keysStr: string, components: number): GodotKeyfr
 }
 
 /**
- * A comma-separated float list, read the way Godot's tokenizer does.
- *
- * A comma-separated float list, or `null` when an element is not one this
- * renderer can key — the exit {@link decodeValue} takes for a keyframe value,
- * for the times, transitions and flat transform components that reach a THREE
- * `KeyframeTrack` through the same door.
- *
- * The RESULT is tested, not the spelling alone: `inf`/`-inf`/`inf_neg`/`nan`
- * are literals `rtos_fix` writes (variant_parser.cpp:2504) and `1e999`
- * overflows inside the finite grammar, and a non-finite TIME poisons every
- * sample after it — three.js divides by the span. `parseFloat` also read the
- * trailing garbage in `1abc` as 1, where Godot's tokenizer refuses the token.
+ * A comma-separated float list read as Godot's tokenizer reads it (`1abc` is refused), or `null`, as
+ * in {@link decodeValue}, when an element is not one this renderer can key. `inf`/`nan` spellings
+ * `rtos_fix` writes (variant_parser.cpp:2504) and `1e999` are non-finite, and a non-finite time
+ * poisons every later sample since three.js divides by the span, so the result is tested.
  */
 function parseFloatList(raw: string): number[] | null {
   const trimmed = raw.trim();
@@ -373,11 +337,9 @@ function asString(value: unknown): string | undefined {
 function numberOr(value: unknown, fallback: number): number {
   if (typeof value !== 'string') return fallback;
   const parsed = parseGodotFloat(value);
-  // `??` catches only null. `inf` and `nan` are legal TSCN float spellings that
-  // `parseGodotFloat` returns as real Infinity/NaN, and they reach three.js as
-  // a clip duration and a blend weight — an infinite `AnimationClip` length, or
-  // a weight that fails every `> EPSILON` test so nothing renders at all. The
-  // documented default is what a value the renderer cannot use falls back to.
+  // `??` catches only null. `inf` and `nan` are legal TSCN floats that `parseGodotFloat` returns as
+  // Infinity/NaN, and as a clip duration or blend weight they give an infinite clip or a weight that
+  // fails every `> EPSILON` test. A value the renderer cannot use falls back to the documented default.
   return parsed === null || !Number.isFinite(parsed) ? fallback : parsed;
 }
 

@@ -1,10 +1,7 @@
 /**
- * VisualInstance3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * VisualInstance3D strict validators, asserted through `validatorRegistry`, not by linting a
+ * `.tscn`, so a failure points at the validator and no fixture text needs upkeep. Rule-level
+ * behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -33,7 +30,7 @@ describe('VisualInstance3D strict validators', () => {
     });
 
     it('accepts 0 (no layers set)', () => {
-      // layerBitmask.ts: 0 is legal everywhere — "no layers" is a valid state.
+      // layerBitmask.ts: 0 is legal everywhere, since "no layers" is a valid state.
       expect(check('layers', '0')).toBeNull();
     });
 

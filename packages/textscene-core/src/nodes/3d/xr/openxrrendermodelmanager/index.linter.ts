@@ -1,5 +1,5 @@
 /**
- * openxrrendermodelmanager linter registration - imports linter components to trigger self-registration.
+ * openxrrendermodelmanager linter registration: imports linter components to trigger self-registration.
  */
 
 import './linterParser.js';

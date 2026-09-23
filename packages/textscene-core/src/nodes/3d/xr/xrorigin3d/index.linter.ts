@@ -1,5 +1,5 @@
 /**
- * xrorigin3d linter registration - imports linter components to trigger self-registration.
+ * xrorigin3d linter registration: imports linter components to trigger self-registration.
  */
 
 import './linterParser.js';

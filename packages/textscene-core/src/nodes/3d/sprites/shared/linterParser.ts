@@ -1,19 +1,8 @@
 /**
- * Validators shared by every SpriteBase3D-derived node.
- *
- * Registered under the abstract key 'SpriteBase3D', which Godot cannot
- * instantiate, so it appears in no .tscn and owns no slice. It reaches its
- * 2 subclasses (Sprite3D, AnimatedSprite3D) through the
- * NODE_BASE_TYPES base-walk.
- *
- * Declare only SpriteBase3D's OWN members: the 20 doc/classes/SpriteBase3D.xml
- * lists, none carrying an `overrides=` attribute, cross-checked against
- * `SpriteBase3D::_bind_methods` (sprite_3d.cpp:625-710) — NOT
- * `Sprite3D::_bind_methods` or `AnimatedSprite3D::_bind_methods`, both of
- * which live in the same file further down and bind only their own class's
- * members. `outline_render_priority` is Label3D's own property
- * (label_3d.cpp:147), not SpriteBase3D's, despite the visual similarity to
- * `render_priority` below — SpriteBase3D binds no such member.
+ * Validators shared by every SpriteBase3D subclass, registered under the abstract key 'SpriteBase3D',
+ * which no .tscn instantiates. Sprite3D and AnimatedSprite3D reach it through the NODE_BASE_TYPES
+ * base-walk. The members are the ones doc/classes/SpriteBase3D.xml lists, cross-checked against
+ * `SpriteBase3D::_bind_methods` (sprite_3d.cpp:625-710), not against the subclasses' own.
  */
 
 import '../../geometryinstance3d/linterParser.js';
@@ -30,16 +19,14 @@ import {
 } from '../../../../godot/index.js';
 
 // sprite_3d.cpp:685 hints only 3 labels ("Disabled,Enabled,Y-Billboard"), and
-// set_billboard_mode:597-598 `ERR_FAIL_INDEX(p_mode, 3); // Cannot use
-// BILLBOARD_PARTICLES.` explicitly excludes the 4th StandardMaterial3D
-// BillboardMode value — a 0-3 bound would accept a value Godot's own setter
-// refuses.
+// set_billboard_mode:597-598 `ERR_FAIL_INDEX(p_mode, 3); // Cannot use BILLBOARD_PARTICLES.` excludes
+// the 4th StandardMaterial3D BillboardMode value, so a 0-3 bound would accept a value it refuses.
 const BILLBOARD = { 0: 'DISABLED', 1: 'ENABLED', 2: 'FIXED_Y' };
 const AXIS = { 0: 'X_AXIS', 1: 'Y_AXIS', 2: 'Z_AXIS' };
 
 validatorRegistry.registerAll('SpriteBase3D', {
-  // set_centered:316-323 is a bare bool assignment (only guarded against a
-  // redundant set) — no format Godot enforces beyond "boolean".
+  // set_centered:316-323 is a bare bool assignment, guarded only against a
+  // redundant set, so Godot enforces no format beyond "boolean".
   centered: v.boolean('centered'),
   // sprite_3d.cpp:678 hints NONE (suffix:px only); set_offset:329-336 is a
   // bare assignment, so any Vector2 loads and runs.
@@ -49,11 +36,9 @@ validatorRegistry.registerAll('SpriteBase3D', {
   // set_modulate:368-376 is a bare assignment; the ">1.0 overbright unsupported"
   // note is renderer prose, not a setter guard or a hint, so any Color loads.
   modulate: v.color('modulate'),
-  // sprite_3d.cpp:682 hints "0.0001,128,0.0000001" (closed, no or_greater);
-  // set_pixel_size:397-403 is a bare assignment (only guarded against a
-  // redundant set), so BOTH ends are warnings rather than errors. Coded, not
-  // just cited: a `hinted:` naming numbers the validator does not carry left
-  // `pixel_size = 500.0` silent while the Label3D twin warned on it.
+  // sprite_3d.cpp:682 hints "0.0001,128,0.0000001" (closed, no or_greater); set_pixel_size:397-403 is
+  // a bare assignment, guarded only against a redundant set, so both ends warn. The validator
+  // carries the numbers, not only the cite, so `pixel_size = 500.0` warns as on the Label3D twin.
   pixel_size: v.float('pixel_size', { min: 0.0001, max: 128, hinted: 'sprite_3d.cpp:682' }),
   // set_axis:410-411, ERR_FAIL_INDEX(p_axis, 3): the setter refuses.
   axis: v.enumInt('axis', 0, 2, AXIS, { enforced: 'sprite_3d.cpp:411' }),
@@ -98,15 +83,10 @@ validatorRegistry.registerAll('SpriteBase3D', {
   texture_filter: v.enumInt('texture_filter', 0, 5, BASE_MATERIAL_TEXTURE_FILTER, {
     hinted: 'sprite_3d.cpp:696',
   }),
-  // sprite_3d.cpp:697 hints RS::MATERIAL_RENDER_PRIORITY_MIN..MAX
-  // (rendering_server.h:258-259, -128..127) with a closed range (no
-  // or_greater/or_less); set_render_priority:382-383
-  // `ERR_FAIL_COND(p_priority < MIN || p_priority > MAX)` enforces the SAME
-  // bound, so out-of-range is a real ADR-0032 error — the previous
-  // `v.int('render_priority')` on Sprite3D carried no bound at all. The
-  // identical MIN/MAX pair also grounds Label3D.outline_render_priority
-  // (label_3d.cpp:147), which suggests MATERIAL_RENDER_PRIORITY_MIN/MAX is a
-  // cross-domain engine fact rather than a sprite-specific one.
+  // sprite_3d.cpp:697 hints RS::MATERIAL_RENDER_PRIORITY_MIN..MAX (rendering_server.h:258-259,
+  // -128..127), closed, and set_render_priority:382-383 `ERR_FAIL_COND(p_priority < MIN || p_priority
+  // > MAX)` enforces the same bound, so out of range is an ADR-0032 error. `outline_render_priority`
+  // is Label3D's own (label_3d.cpp:147): SpriteBase3D binds no such member.
   render_priority: v.int('render_priority', {
     min: MATERIAL_RENDER_PRIORITY_MIN,
     max: MATERIAL_RENDER_PRIORITY_MAX,

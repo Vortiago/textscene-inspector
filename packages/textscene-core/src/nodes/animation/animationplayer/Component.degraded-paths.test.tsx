@@ -1,9 +1,7 @@
 /**
- * AnimationPlayer degraded-path render tests: the conditions the linter
- * already warns on (missing library SubResource, empty library, an
- * unresolvable root_node) must still MOUNT without throwing, pass their
- * children through untouched, and — while they'd be actively playing —
- * apply no transform to anything. Scaffold mirrors Component.playback.test.tsx.
+ * AnimationPlayer degraded paths: what the linter warns on (a missing library SubResource, an empty
+ * library, an unresolvable root_node) still mounts without throwing, passes its children through,
+ * and applies no transform while playing. The scaffold mirrors Component.playback.test.tsx.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -22,7 +20,7 @@ import type { AnimationPlayerProperties } from './types';
 import { AnimationProcessMode, MethodCallMode } from './types';
 
 // A single resolvable "slide" clip moving Target from x=0 to x=10 over 1s. It
-// is what proves a real animation is skipped when root_node can't resolve.
+// is what proves a real animation is skipped when root_node cannot resolve.
 const RESOLVABLE_INTERNAL: TscnInternalResource[] = [
   { id: 'Lib', type: 'AnimationLibrary', data: { _data: '{\n"slide": SubResource("A")\n}' } },
   {
@@ -107,7 +105,7 @@ describe('AnimationPlayer degraded paths', () => {
     // AnimationLibrary_ghost is never declared in internalResources.
     const renderer = await mountScene({ libraries }, []);
     expect(renderer.scene.findByProps({ name: 'Target' })).toBeDefined();
-    // Same pure function the Component uses to build `animations` — the
+    // The same pure function the Component uses to build `animations`: the
     // dangling SubResource id resolves to nothing.
     expect(resolveAnimations(libraries, [])).toEqual([]);
     expect(transport.clips).toEqual([]); // nothing registered to play
@@ -121,7 +119,7 @@ describe('AnimationPlayer degraded paths', () => {
 
   it('invalid root_node NodePath: mounts and tracks are skipped gracefully (no crash, no drive)', async () => {
     // Climb past the real tree (Root has no further named ancestor) so
-    // resolveAnimationRoot returns null — the mixer-build effect bails out
+    // resolveAnimationRoot returns null, and the mixer-build effect bails out
     // before ever creating a THREE.AnimationMixer.
     const renderer = await mountScene(
       { root_node: 'NodePath("../..")', autoplay: 'slide' },

@@ -1,12 +1,7 @@
 /**
- * WorldEnvironment strict validators — format checks for the three
- * Resource-reference members `_bind_methods` declares.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing. `linter.test.ts` separately covers the
- * existence/uniqueness RULES built on top of `environment` and
- * `camera_attributes`; this file is the format layer underneath them.
+ * WorldEnvironment strict validators for the three resource references `_bind_methods` declares,
+ * asserted through `validatorRegistry` so a failure points at the validator. `linter.test.ts`
+ * covers the existence and uniqueness rules built on `environment` and `camera_attributes`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,13 +17,9 @@ function check(property: string, value: string) {
 }
 
 /**
- * `compositor` is declared IDENTICALLY on WorldEnvironment
- * (world_environment.cpp:221) and Camera3D (camera_3d.cpp:676): the same
- * `ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "compositor",
- * PROPERTY_HINT_RESOURCE_TYPE, "Compositor"), "set_compositor",
- * "get_compositor")`, and both setters (world_environment.cpp:159-178,
- * camera_3d.cpp:572-580) are bare assignments once the reference itself is
- * valid, so only the reference format is checkable on either class.
+ * WorldEnvironment (world_environment.cpp:221) and Camera3D (camera_3d.cpp:676) declare `compositor`
+ * with the same `ADD_PROPERTY`. Both setters (world_environment.cpp:159-178, camera_3d.cpp:572-580)
+ * are bare assignments once the reference is valid, so only the reference format is checkable.
  */
 describe('WorldEnvironment compositor', () => {
   it('accepts a SubResource reference', () => {
@@ -44,8 +35,8 @@ describe('WorldEnvironment compositor', () => {
   });
 
   it('accepts the literal null, a cleared slot Godot loads', () => {
-    // Godot omits a cleared slot rather than writing `null`, but that is the
-    // WRITE side. variant_parser.cpp:699 reads a bare `null`, can_convert_strict
+    // Godot omits a cleared slot, not writes `null`, but that is the
+    // write side. variant_parser.cpp:699 reads a bare `null`, can_convert_strict
     // allows NIL -> OBJECT (variant.cpp:543), and the Ref setter takes it, so the
     // value loads and reporting it would be a false positive.
     expect(check('compositor', 'null')).toBeNull();
@@ -57,7 +48,7 @@ describe('WorldEnvironment compositor', () => {
 });
 
 /**
- * Every key WorldEnvironment binds via `ADD_PROPERTY`
+ * Every key WorldEnvironment binds through `ADD_PROPERTY`
  * (world_environment.cpp:213-221), matching doc/classes/WorldEnvironment.xml's
  * three members, none carrying `overrides=`.
  */

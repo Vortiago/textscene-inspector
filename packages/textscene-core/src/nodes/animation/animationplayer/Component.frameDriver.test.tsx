@@ -1,9 +1,7 @@
 /**
- * Frame-track driving (ADR-0016): an AnimationPlayer `value` track targeting
- * `Sprite2D:frame` advances a sibling sprite's sheet frame through the
- * AnimatedValue registry — the THREE mixer drives transforms only, so `frame`
- * is sampled and pushed. Observable: the Sprite2D's `map.offset.x = frame /
- * hframes` (composeFrameTexture).
+ * Frame-track driving (ADR-0016): a `value` track on `Sprite2D:frame` advances a sibling sprite's
+ * sheet frame through the AnimatedValue registry, since the THREE mixer drives transforms only. The
+ * observable is the Sprite2D's `map.offset.x = frame / hframes` (composeFrameTexture).
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';

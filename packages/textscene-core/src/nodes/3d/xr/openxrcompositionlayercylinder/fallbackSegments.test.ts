@@ -20,11 +20,9 @@ describe('fallback_segments reads the slot the engine declares', () => {
   });
 
   it('does not invent a floor of 1, which no engine line states', () => {
-    // `PROPERTY_HINT_NONE` (:75) means there is no hint tier here, and the
-    // setter names exactly one refused value. A negative literal narrows
-    // through `Variant::operator uint32_t()` before the guard runs, so it is
-    // stored rather than refused — the same reading every other uint32 slot in
-    // this codebase gets, not a bound written for this property alone.
+    // `PROPERTY_HINT_NONE` (:75) means there is no hint tier, and the setter refuses exactly one
+    // value. A negative literal narrows through `Variant::operator uint32_t()` before the guard, so
+    // it is stored, as in every other uint32 slot, not refused by a bound of this property's own.
     const negative = check('-1');
     expect(negative?.message ?? '').not.toContain('>= 1');
   });

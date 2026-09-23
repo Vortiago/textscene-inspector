@@ -1,9 +1,7 @@
 /**
- * Tests for the XRNode3D family rule (`valid-xrnode3d`): the missing-XROrigin3D
- * parent warning and the explicitly-emptied-pose warning, and that both reach
- * XRAnchor3D and XRController3D through `applicableNodeTypeMatcher` —
- * `RuleRegistry`'s exact-match default would otherwise leave both subclasses
- * unchecked, since neither overrides `get_configuration_warnings` itself.
+ * Tests for the XRNode3D family rule (`valid-xrnode3d`): the missing-XROrigin3D parent warning and
+ * the emptied-pose warning, and that both reach XRAnchor3D and XRController3D through
+ * `applicableNodeTypeMatcher`, since neither overrides `get_configuration_warnings`.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

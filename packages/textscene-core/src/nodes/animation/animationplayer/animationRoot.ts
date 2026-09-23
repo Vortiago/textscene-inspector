@@ -1,15 +1,8 @@
 /**
- * Resolves an AnimationPlayer's `root_node` to the THREE object its mixer
- * should be rooted on (ADR-0011). Track NodePaths bind relative to this
- * object via THREE.PropertyBinding's subtree search.
- *
- * The dispatcher wraps every node in an UNNAMED pickable `<group>` whose
- * child component carries `name={node.name}` and the base transform. So
- * "one node up" means "nearest named ancestor", skipping wrappers.
- *
- * Slice-1 supports the common cases `.` (the player itself) and `..` (its
- * parent node). Deeper relative paths return the nearest named ancestor as
- * a best effort.
+ * Resolves an AnimationPlayer's `root_node` to the THREE object its mixer roots on (ADR-0011).
+ * Track NodePaths bind relative to it through THREE.PropertyBinding's subtree search. The dispatcher
+ * wraps every node in an unnamed pickable `<group>`, so each `..` climbs to the nearest named
+ * ancestor. Only leading `..` segments are followed.
  */
 
 import type { Object3D } from 'three';
@@ -26,7 +19,7 @@ export function resolveAnimationRoot(
   // Each ".." segment climbs to the next named ancestor.
   let current: Object3D | null = playerObject;
   for (const segment of path.split('/')) {
-    if (segment !== '..') break; // named down-segments unsupported in slice-1
+    if (segment !== '..') break; // named down-segments are unsupported
     current = nearestNamedAncestor(current);
     if (current === null) return null;
   }

@@ -1,12 +1,7 @@
 /**
- * Tests for the XRCamera3D parent rule (`xrcamera3d-parent-not-xrorigin3d`).
- *
- * Goes through `Linter` directly rather than the barrel: `Linter.ts` imports
- * only `StrictTscnParser` and `RuleRegistry`, neither of which touches
- * `linter/index.ts` (the barrel every sibling slice's `index.linter.ts`
- * registers into), so this stays safe to run mid-wave — the same shape
- * `navigationagent3d/linter.test.ts` and `openxrvisibilitymask/linter.test.ts`
- * already use.
+ * Tests for the XRCamera3D parent rule (`xrcamera3d-parent-not-xrorigin3d`), through `Linter`
+ * directly, not the barrel: `Linter.ts` imports only `StrictTscnParser` and `RuleRegistry`, so this
+ * test loads no sibling slice's rules.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

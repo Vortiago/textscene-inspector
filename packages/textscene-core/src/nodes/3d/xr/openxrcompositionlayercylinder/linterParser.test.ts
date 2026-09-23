@@ -1,13 +1,8 @@
 /**
- * OpenXRCompositionLayerCylinder strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * OpenXRCompositionLayerCylinder strict validators, asserted through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator and no fixture text needs upkeep.
+ * Rule-level behaviour belongs in linter.test.ts. Each property gets happy, malformed and bound
+ * cases, with the governing Godot source line beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,25 +18,18 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * OpenXRCompositionLayerCylinder binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * The keys OpenXRCompositionLayerCylinder binds, read from the source. Set this or DECLARES_NOTHING,
+ * not both. Leaving both unset is red on purpose: do not delete an assertion to go green.
  */
 const KEYS: string[] = ['radius', 'aspect_ratio', 'central_angle', 'fallback_segments'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys OpenXRCompositionLayerCylinder does NOT declare, each paired with the ancestor that does.
- * Name at least one; OpenXRCompositionLayer is where to start.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives OpenXRCompositionLayerCylinder no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart, and it is red until filled for the same reason
- * KEYS is.
+ * Keys OpenXRCompositionLayerCylinder does not declare, each paired with the ancestor that does. The
+ * malformed-value check below iterates `getOwnKeys`, so on a class with no own keys it passes on
+ * an empty set. Resolving a key to the ancestor's own validator function tells "no own
+ * properties" from "slice not written", and an empty list is red for the same reason KEYS is.
  */
 const INHERITED: [owner: string, key: string][] = [
   ['OpenXRCompositionLayer', 'enable_hole_punch'],
@@ -58,17 +46,16 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint`
+    // checks it against the whole registry through the barrel. This checks the same file
+    // against only what this test imported.
     expectFixtureClean('unit-open-xr-composition-layer-cylinder.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // OpenXRCompositionLayerCylinder declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow. It is vacuous when the class declares nothing,
+    // which INHERITED covers.
     const accepted = validatorRegistry
       .getOwnKeys('OpenXRCompositionLayerCylinder')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -83,7 +70,7 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
+      // The same function, not merely some validator: a shadowing copy on
       // OpenXRCompositionLayerCylinder would answer here while drifting from the ancestor's rule.
       expect(validatorRegistry.findValidator('OpenXRCompositionLayerCylinder', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('OpenXRCompositionLayerCylinder')).not.toContain(key);
@@ -105,9 +92,9 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
 
   describe('aspect_ratio', () => {
     // openxr_composition_layer_cylinder.cpp:144, ERR_FAIL_COND(p_aspect_ratio <= 0): enforced floor.
-    // The hint's own floor (:73, "0,100") is 0 INCLUSIVE, so the setter is the
-    // stricter of the two and every value the hint would warn on is refused
-    // first — there is no warned band under the floor.
+    // The hint's own floor (:73, "0,100") is 0 inclusive, so the setter is the
+    // stricter of the two and refuses every value the hint would warn on: there
+    // is no warned band under the floor.
     it('errors at 0', () => {
       expect(check('aspect_ratio', '0')?.severity).toBe('error');
       expect(check('aspect_ratio', '-1')?.severity).toBe('error');
@@ -126,7 +113,7 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
 
   describe('central_angle', () => {
     // openxr_composition_layer_cylinder.cpp:157, ERR_FAIL_COND(p_central_angle <= 0). The hint
-    // (:74) opens both ends via or_less/or_greater, so nothing warns.
+    // (:74) opens both ends with or_less/or_greater, so nothing warns.
     it('accepts any positive radian value, however large', () => {
       expect(check('central_angle', '0.01')).toBeNull();
       expect(check('central_angle', '1000')).toBeNull();
@@ -146,9 +133,8 @@ describe('OpenXRCompositionLayerCylinder strict validators', () => {
       expect(check('fallback_segments', '0')?.severity).toBe('error');
     });
     it('does not report a floor of 1, which no engine line states', () => {
-      // The parameter is uint32_t, so `-1` narrows to 4294967295 before the
-      // `== 0` guard runs — stored, not refused. The old `min: 1` said
-      // "must be >= 1, got: -1", naming a bound the engine does not have.
+      // The parameter is uint32_t, so `-1` narrows to 4294967295 before the `== 0` guard runs:
+      // stored, not refused. A `min: 1` would name a bound the engine does not have.
       expect(check('fallback_segments', '-1')?.message ?? '').not.toContain('>= 1');
     });
 

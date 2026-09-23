@@ -1,16 +1,13 @@
 /**
- * OpenXRHand strict validators for linting.
- *
- * Declare only OpenXRHand's OWN members — the ones doc/classes/OpenXRHand.xml
- * lists without an `overrides=` attribute. Everything from Node3D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
- *
- * All five ADD_PROPERTY calls sit in one block (openxr_hand.cpp:55-59), each
- * with a non-empty setter and getter. openxr_hand.h declares no `_set`/`_get`/
- * `get_property_list` override under either spelling and no `ADD_ARRAY_COUNT`,
- * so ADD_PROPERTY is the only route a member takes here.
+ * OpenXRHand strict validators for its own members, the ones doc/classes/OpenXRHand.xml lists
+ * without `overrides=`. Keys from Node3D up arrive through the NODE_BASE_TYPES base-walk, so
+ * re-declaring one would shadow the ancestor's rule.
  */
+
+// All five ADD_PROPERTY calls sit in one block (openxr_hand.cpp:55-59), each
+// with a non-empty setter and getter. openxr_hand.h declares no `_set`/`_get`/
+// `get_property_list` override under either spelling and no `ADD_ARRAY_COUNT`,
+// so ADD_PROPERTY is the only route a member takes here.
 
 import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
