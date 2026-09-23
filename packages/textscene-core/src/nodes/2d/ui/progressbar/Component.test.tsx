@@ -1,9 +1,7 @@
 /**
- * `<ProgressBar>` — pins that the painter WIRES up `background`/`fill`
- * StyleBoxes and the percentage label the way `progress_bar.cpp`'s
- * `NOTIFICATION_DRAW` does. Exact fill-rect numbers are proved once in
- * `nativeSolver.test.ts`; this pins draw COUNT, ORDER and gating
- * (indeterminate skips the percentage; a zero ratio skips the fill).
+ * Tests the draw count, order and gating of the `<ProgressBar>` painter, as
+ * `progress_bar.cpp`'s `NOTIFICATION_DRAW`. `nativeSolver.test.ts` holds the
+ * exact fill-rect numbers.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

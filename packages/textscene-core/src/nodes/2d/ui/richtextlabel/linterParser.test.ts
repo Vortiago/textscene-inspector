@@ -1,16 +1,8 @@
 /**
- * RichTextLabel strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn` alone:
- * the unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing. `expectFixtureClean` at the bottom then runs the
- * real `StrictTscnParser` over the committed fixture to prove the claim rather
- * than merely assert it. There is no genuine cross-field rule for
- * RichTextLabel, so there is no `linter.ts` / `linter.test.ts`.
- *
- * Grouped to match linterParser.ts's own grouping (and rich_text_label.cpp's
- * ADD_GROUP structure): one `describe` per group, one `it` per property
- * covering happy + malformed + any bound, rather than 30 near-identical cases.
+ * RichTextLabel strict validators: format and range checks, asserted through
+ * `validatorRegistry` so a failure points at the validator, not at scene parsing.
+ * One `describe` per rich_text_label.cpp ADD_GROUP. `expectFixtureClean` runs
+ * the real `StrictTscnParser` over the fixture.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -82,8 +74,7 @@ describe('RichTextLabel strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property/per-group cases follow.
+    // A validator that accepts arbitrary prose is not validating a format.
     const accepted = validatorRegistry
       .getOwnKeys('RichTextLabel')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -131,8 +122,8 @@ describe('RichTextLabel strict validators', () => {
   });
 
   describe('autowrap_mode (enum 0-3, hinted)', () => {
-    // rich_text_label.cpp:7761: "Off,Arbitrary,Word,Word (Smart)", the FULL
-    // enum, unlike Button/TextEdit's hint which omits AUTOWRAP_OFF.
+    // rich_text_label.cpp:7761: "Off,Arbitrary,Word,Word (Smart)", the full
+    // enum, unlike the Button and TextEdit hints, which omit AUTOWRAP_OFF.
     it('accepts 0 (AUTOWRAP_OFF)', () => {
       expect(check('autowrap_mode', '0')).toBeNull();
     });
@@ -243,10 +234,9 @@ describe('RichTextLabel strict validators', () => {
 
     it('warns on a bit the hint does not offer, which the engine still keeps', () => {
       // servers/text/text_server.h:78-88 declares JUSTIFICATION_CONSTRAIN_ELLIPSIS
-      // = 16 and JUSTIFICATION_TRIM_EDGE_SPACES = 4; neither is named in the
-      // hint. The setter bare-assigns, so the value LOADS and RUNS: it is
-      // unreachable from the inspector, not refused, which is the hint's
-      // warning tier rather than the mask's error tier.
+      // = 16 and JUSTIFICATION_TRIM_EDGE_SPACES = 4, which the hint omits. The
+      // setter keeps them, so they are unreachable from the inspector, not
+      // refused: the hint's warning tier.
       expectWarning(check('justification_flags', '16'), 'sets a bit the inspector\'s flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor');
       expectWarning(check('justification_flags', '4'), 'sets a bit the inspector\'s flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor');
     });
@@ -314,8 +304,8 @@ describe('RichTextLabel strict validators', () => {
   });
 
   describe('progress_bar_delay (integer, no bound)', () => {
-    // rich_text_label.cpp:7779: PROPERTY_HINT_NONE, "suffix:ms" is a display
-    // unit, not a range. set_progress_bar_delay (rich_text_label.cpp:3793-3795)
+    // rich_text_label.cpp:7779: PROPERTY_HINT_NONE, and "suffix:ms" is a unit,
+    // not a range. set_progress_bar_delay (rich_text_label.cpp:3793-3795)
     // stores any int unaltered.
     it('accepts the documented default (1000)', () => {
       expect(check('progress_bar_delay', '1000')).toBeNull();
@@ -365,9 +355,9 @@ describe('RichTextLabel strict validators', () => {
   });
 
   describe('visible_ratio (float 0-1, hinted)', () => {
-    // set_visible_ratio (rich_text_label.cpp:7401-7459) clamps: >= 1.0 stores
-    // 1.0 (line 7406-7408), < 0.0 stores 0.0 (line 7409-7411): the setter
-    // alters what was written, so out of range is an error.
+    // set_visible_ratio (rich_text_label.cpp:7401-7459) clamps >= 1.0 to 1.0
+    // (line 7406-7408) and < 0.0 to 0.0 (line 7409-7411), but behind a guard
+    // that a preceding visible_characters skips, so out of range warns.
     it('accepts 0 (the floor)', () => {
       expect(check('visible_ratio', '0')).toBeNull();
     });

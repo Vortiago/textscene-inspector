@@ -1,7 +1,6 @@
 /**
- * Panel parser. Adds no fields beyond Control — its StyleBox background comes
- * from `theme_override_styles/panel`, collected by the base Control parser's
- * theme-override handling.
+ * Parses a Panel. It adds no fields beyond Control: the base Control parser
+ * collects its `theme_override_styles/panel` StyleBox.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';

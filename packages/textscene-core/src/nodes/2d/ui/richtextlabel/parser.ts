@@ -1,4 +1,4 @@
-/** RichTextLabel parser — Control + text + bbcode/fit-content flags. */
+/** Parses a RichTextLabel: Control plus text, layout and BBCode flags. */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
@@ -9,7 +9,7 @@ import { floatElements } from '../../../../resources/shapes/packedArray';
 
 const PACKED_FLOAT32_ARRAY_FORMS = packedArrayForms('PackedFloat32Array');
 
-/** `RichTextLabel.tab_stops` — a plain `PackedFloat32Array(...)` literal; anything else the lenient parser leaves undefined, matching Label's own `tab_stops` leniency. */
+/** `RichTextLabel.tab_stops` from a flat `PackedFloat32Array(...)` literal, else undefined, as Label does. */
 function parseTabStops(value: string | undefined): number[] | undefined {
   if (value === undefined) return undefined;
   const matched = packedArrayBody(PACKED_FLOAT32_ARRAY_FORMS, value);

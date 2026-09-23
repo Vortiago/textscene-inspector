@@ -1,7 +1,6 @@
 /**
- * `referenceRectBorderQuads` — `scene/gui/reference_rect.cpp:36-42` composed
- * with `scene/main/canvas_item.cpp:815-841`'s unfilled `draw_rect` (Godot
- * 4.6.3).
+ * Tests `referenceRectBorderQuads` against `scene/gui/reference_rect.cpp:36-42`
+ * and the unfilled `draw_rect` of `scene/main/canvas_item.cpp:815-841`.
  */
 import { describe, expect, it } from 'vitest';
 import { referenceRectBorderQuads } from './borderGeometry';

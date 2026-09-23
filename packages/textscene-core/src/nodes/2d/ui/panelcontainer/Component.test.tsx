@@ -1,10 +1,6 @@
 /**
- * `<PanelContainer>` — the native (WebGL canvas) painter for
- * `PanelContainer`. Draws the SAME chrome `<PanelNative>` draws (the resolved
- * `theme_override_styles/panel` override, or the default-theme `panel`
- * struct, across the node's whole solved rect) — the container BEHAVIOUR
- * (content-rect inset + minimum size) lives in `nativeSolver.ts`, wired
- * through `controlSolverRegistry`, not in this painter.
+ * Tests the native painter for `PanelContainer`: it draws the same chrome as
+ * `<Panel>`. `nativeSolver.test.ts` tests the container layout.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -71,7 +67,7 @@ describe('<PanelContainer> (isolated painter contract)', () => {
     );
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
-    // Raw sRGB — the StyleBox vertex attribute is decoded per fragment (`StyleBoxQuad.tsx`).
+    // Raw sRGB: the shader decodes the StyleBox vertex attribute per fragment.
     expect(color.getX(0)).toBeCloseTo(0.9, 4);
   });
 
@@ -82,9 +78,8 @@ describe('<PanelContainer> (isolated painter contract)', () => {
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
     // Default-theme `panel` stylebox fill is `style_normal_color` =
-    // Color(0.1, 0.1, 0.1, 0.6) — the SAME struct Panel falls back to
-    // (default_theme.cpp:134 and :1274 call make_flat_stylebox with the
-    // identical arguments for "Panel" and "PanelContainer").
+    // Color(0.1, 0.1, 0.1, 0.6), the same struct as Panel's: default_theme.cpp:134
+    // and :1274 call make_flat_stylebox with the same arguments.
     expect(color.getX(0)).toBeCloseTo(0.1, 5);
     expect(color.getW(0)).toBeCloseTo(0.6, 5);
   });

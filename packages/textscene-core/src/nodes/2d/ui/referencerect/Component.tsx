@@ -1,29 +1,7 @@
 /**
- * `<ReferenceRect>` — the native (WebGL canvas) painter for ReferenceRect: an
- * unfilled border outline in `border_color` at `border_width`
- * (`reference_rect.cpp`'s `NOTIFICATION_DRAW` → `CanvasItem::draw_rect`; see
- * `borderGeometry.ts` for the exact quads).
- *
- * `editor_only` is NOT inert here. `_notification` draws when
- * `Engine::is_editor_hint() || !editor_only` (`reference_rect.cpp:38`):
- *  - `editor_only === false` is RUNTIME content — a real running game (and
- *    `pnpm ref:godot`'s own reference render, where `is_editor_hint()` is
- *    false) shows the border unconditionally, so this painter does too.
- *  - `editor_only === true` (the default) only ever shows inside the EDITOR,
- *    which this previewer emulates. Godot's own editor draws every
- *    ReferenceRect in the open scene at once with no selection check, but
- *    ADR-0018 deliberately diverges from that for Marker2D/Path2D to avoid
- *    exactly that clutter, and the same divergence applies here: visible
- *    only while this node is the current `SelectionContext.
- *    selectedNodePath`. `useGizmoVisible()` itself is not usable — it reads
- *    `NodePathContext`, which `ControlCanvasWalker` never publishes — so
- *    this reads `solveNode.path` against `useOptionalSelection()` directly,
- *    the same path space `buildSolveTree.ts` already keys `SolveNode.hidden`
- *    against.
- *
- * Tint: the walker's `tint` prop, multiplied into `border_color` in sRGB
- * before the single sRGB→linear conversion — the ColorRect one-colour
- * shortcut, valid here because a border stroke carries only one colour.
+ * The native (WebGL canvas) painter for ReferenceRect: an unfilled border in
+ * `border_color` at `border_width`, as `reference_rect.cpp`'s `draw_rect`.
+ * `borderGeometry.ts` builds the quads.
  */
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -36,13 +14,14 @@ import { colorOr } from '../../../../utils/colorParser';
 import { referenceRectBorderQuads } from './borderGeometry';
 import type { ReferenceRectProperties } from './types';
 
-/** `reference_rect.h:33` — `Color border_color = Color(1, 0, 0)`. */
+/** `reference_rect.h:33`: `Color border_color = Color(1, 0, 0)`. */
 const DEFAULT_BORDER_COLOR = { r: 1, g: 0, b: 0, a: 1 };
 
 export function ReferenceRect({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<ReferenceRectProperties>(solveNode);
   const selection = useOptionalSelection();
 
+  // One colour, so the tint multiplies in sRGB before the one linear conversion.
   const fill = useMemo(() => colorOr(props.borderColor, DEFAULT_BORDER_COLOR), [props.borderColor]);
   const filled = useMemo(() => multiplyModulate(tint.own, fill), [tint.own, fill]);
   const color = useGodotLinearColor(filled);
@@ -52,6 +31,10 @@ export function ReferenceRect({ solveNode, tint, rect, renderOrder }: NativeCont
     [rect.w, rect.h, width]
   );
 
+  // Godot draws when `is_editor_hint() || !editor_only` (`reference_rect.cpp:38`).
+  // The editor case shows only while selected, as ADR-0018 does for Marker2D.
+  // The walker publishes no `NodePathContext`, so this compares `solveNode.path`,
+  // the path space of `SolveNode.hidden`, with the selection.
   const editorOnly = props.editorOnly ?? true;
   const visible = !editorOnly || selection?.selectedNodePath === solveNode.path;
   if (!visible) return null;

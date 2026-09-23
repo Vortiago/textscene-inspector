@@ -1,7 +1,6 @@
 /**
- * ReferenceRect registration — the native (WebGL canvas) painter,
- * self-registered on import (ADR-0001). No minimum-size solver: ReferenceRect
- * does not override `Control::get_minimum_size`.
+ * Registers the native (WebGL canvas) painter for ReferenceRect (ADR-0001). It
+ * has no minimum-size solver: ReferenceRect keeps `Control::get_minimum_size`.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

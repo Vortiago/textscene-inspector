@@ -1,18 +1,8 @@
 /**
- * `<ScrollContainer>` render contract. Geometry expectations mirror
- * `nativeSolver.test.ts`'s own header: the vertical-bar scenario is
- * `scenes/fixtures/unit-scroll-container.tscn`'s real numbers (own rect
- * 1120x616, Content min 399x800), cross-checked against
- * `pnpm ref:godot --probe` pixels (grabber/track boundary at local y in
- * (475,476), matching the formula's 476.16).
- *
- * Bounding boxes (not a specific vertex index) are asserted throughout: this
- * painter wraps `StyleBoxQuad`'s zero-origin geometry in a `scale={[1,-1,1]}`
- * group (see `Component.tsx`'s own doc for why an un-flipped
- * `styleBoxFlatGeometry` renders upside down around its own origin — masked
- * for a symmetric flat fill like `Panel`'s, but not for an off-centre
- * grabber), so a bounding-box check is what actually proves the flip is
- * correct rather than merely present.
+ * Tests the `<ScrollContainer>` painter on `scenes/fixtures/unit-scroll-container.tscn`
+ * (rect 1120x616, Content min 399x800; `pnpm ref:godot --probe` puts the grabber
+ * edge at local y (475,476), formula 476.16). Bounding boxes prove the y flip
+ * is correct: a symmetric fill masks it, an off-centre grabber does not.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -27,9 +17,8 @@ import { ScrollContainer } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-// This painter reads `gui/common/snap_controls_to_pixels` off the project
-// settings, exactly as `ControlCanvasWalker` does for a Control's own group;
-// nothing else here needs the real provider's async load.
+// Only `gui/common/snap_controls_to_pixels` comes from the project settings,
+// so no test needs the real provider's async load.
 const projectSettingsMock = vi.hoisted(() => ({
   settings: null as Record<string, string> | null,
   viewportSize: { width: 1152, height: 648 },
@@ -65,7 +54,7 @@ function scrollNode(
   return { ...solveNode(), path: 'Scroll', node, children };
 }
 
-/** World-space bounding box of a mesh's geometry, via its (fresh) matrixWorld. */
+/** World-space bounding box of a mesh's geometry, through its fresh matrixWorld. */
 function worldBounds(mesh: THREE.Mesh): THREE.Box3 {
   mesh.updateWorldMatrix(true, false);
   const geom = mesh.geometry as THREE.BufferGeometry;
@@ -112,14 +101,9 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
   });
 
   it("places the track spanning the bar's full rect, grown by the AA feather ring: world x [1111.5,1120.5], y [-616.5,0.5]", async () => {
-    // ScrollBar's track/grabber styleboxes are `flatStyleBox`'d with a
-    // rounded corner (`scrollBarCornerRadius`, `nativeTheme.ts`) and NO
-    // border, so `anti_aliased`'s default-true `aa_on` branch applies
-    // (`styleBoxFlatGeometry.ts`'s anti-aliasing describe block): with no
-    // border on any side, the whole fill gets a `aa_size/2` = 0.5px
-    // transparent feather ring OUTSIDE the base [1112,1120]x[-616,0] rect —
-    // `computeBoundingBox()` includes those alpha-0 vertices, so the box
-    // grows by 0.5 on every side (style_box_flat.cpp:584-601).
+    // The borderless, antialiased track gets an `aa_size/2` = 0.5px alpha-0
+    // feather ring outside the [1112,1120]x[-616,0] rect, and `computeBoundingBox()`
+    // counts it, so the box grows 0.5 per side (style_box_flat.cpp:584-601).
     const renderer = await mountFixtureScrollbar();
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     const track = meshes.reduce((a, b) => (worldBounds(a).max.y - worldBounds(a).min.y >
@@ -139,22 +123,16 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     const box = worldBounds(grabber);
     expect(box.min.x).toBeCloseTo(1111.5, 3);
     expect(box.max.x).toBeCloseTo(1120.5, 3);
-    // Godot-top of the track is world Y ~ 0; the grabber sits there when
-    // unscrolled, extending DOWN (negative) by its own size — the flip this
-    // painter applies is what makes this the top edge and not the bottom.
-    // Both bounds grow 0.5px outward for the same AA feather-ring reason the
-    // track's own bounding box does (see the test above).
+    // Unscrolled, the grabber starts at the track's Godot-top, world Y ~ 0, and
+    // extends to negative Y. Both bounds grow 0.5px for the feather ring.
     expect(box.max.y).toBeCloseTo(0.5, 1);
     expect(box.min.y).toBeCloseTo(-476.66, 1);
   });
 
   it('draws both bars off subtreeChromeRenderOrder — track +0.25, grabber +0.5 — strictly above every descendant and strictly below the next sibling', async () => {
-    // `scene/gui/scroll_container.cpp:919,924` adds `h_scroll`/`v_scroll` via
-    // `INTERNAL_MODE_BACK`, which paints them AFTER the whole subtree, not at
-    // this node's own paint slot. `subtreeChromeRenderOrder` is the LAST
-    // draw-sequence value in this node's own subtree run, and the next sibling
-    // starts one past it (`canvasPaintOrder.ts`), so the fractional offsets
-    // below must land strictly inside that one-wide gap.
+    // `scene/gui/scroll_container.cpp:919,924` adds the bars as `INTERNAL_MODE_BACK`,
+    // after the whole subtree. The next sibling starts one past
+    // `subtreeChromeRenderOrder` (`canvasPaintOrder.ts`), so the bars sit in that gap.
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 399, y: 800 } });
     const deepestDescendantOrder = 12; // stands in for the end of this node's draw-sequence run.
     const renderer = await ReactThreeTestRenderer.create(
@@ -174,8 +152,7 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     const allMeshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     const descendant = allMeshes.find((m) => m.name === 'deepest-descendant')!;
     const bars = allMeshes.filter((m) => m.name !== 'deepest-descendant');
-    // Read as three does — from each bar's nearest enclosing group, which is
-    // where a drawn item's place in the canvas lives (`canvasPaintOrder.ts`).
+    // Read as three does: from each bar's nearest enclosing group (`canvasPaintOrder.ts`).
     const orders = bars.map(nearestGroupOrder).sort((a, b) => a - b);
     expect(orders).toEqual([deepestDescendantOrder + 0.25, deepestDescendantOrder + 0.5]);
     // Strictly above every descendant this node ever draws...
@@ -198,38 +175,25 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
       worldBounds(b).max.y - worldBounds(b).min.y ? a : b));
     const box = worldBounds(grabber);
     // range=800, area=200-8=192; ratio=200/800=0.25; offset=48 -> top at -48,
-    // then +0.5 for the AA feather ring's outward growth (see the two tests
-    // above) -> -47.5.
+    // then +0.5 for the feather ring -> -47.5.
     expect(box.max.y).toBeCloseTo(-47.5, 1);
   });
 });
 
 /**
- * Godot's `h_scroll`/`v_scroll` are real HScrollBar/VScrollBar Controls added
- * as `INTERNAL_MODE_BACK` children (`scene/gui/scroll_container.cpp:919,924`),
- * so each is its OWN CanvasItem and `Control::_update_canvas_item_transform`
- * floors each one's translation independently of the container's.
- *
- * These assert the DRAWN group's world position rather than a bounding box:
- * the styleboxes' anti-aliasing feather grows every box by 0.5px outward (see
- * the two track/grabber tests above), which is the same magnitude as the snap
- * being measured and would swamp it.
- *
- * `scenes/fixtures/unit-scroll-container-bar-snap.tscn` carries these exact
- * numbers, arbitrated against Godot 4.6.3 at `--mode 2d`: at the container's
- * integer origin (100, 20) the horizontal bar's top edge is crisp between
- * y = 612 (rgb(242, 230, 64), the fill) and y = 613 (rgb(113, 108, 42), the
- * track), and the vertical bar's left edge between x = 992 and x = 993 — the
- * whole-pixel 593/893 below, never the solved 592.5/892.5. That render also
- * shows the feather IS live (the grabber's own fractional right edge at 765.8
- * reads the predicted 0.8-coverage blend), so those crisp edges are a snap and
- * not an absent antialiaser.
+ * Each bar is its own CanvasItem (`scene/gui/scroll_container.cpp:919,924`),
+ * so `Control::_update_canvas_item_transform` floors it apart from the
+ * container. These read the drawn group's position, since the 0.5px feather
+ * would swamp a bounding box.
  */
+
+// `scenes/fixtures/unit-scroll-container-bar-snap.tscn` at `--mode 2d`, origin
+// (100, 20): the horizontal bar's edge is crisp between y = 612 (rgb(242, 230, 64))
+// and y = 613 (rgb(113, 108, 42)), the vertical one between x = 992 and x = 993,
+// so 593/893, not 592.5/892.5. The grabber's 765.8 edge blends 0.8, so AA is live.
 describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
-  // 900.5 x 600.5: the bar thickness is a whole 8 px at every theme scale, so
-  // both bar origins land exactly half a pixel off — the largest error the
-  // snap can produce — while the container's own origin stays whole and
-  // cannot mask it.
+  // 900.5 x 600.5 with a whole 8px bar puts both bar origins half a pixel off,
+  // the largest snap error, while the container's own origin stays whole.
   const FRACTIONAL_RECT: Rect2 = { x: 0, y: 0, w: 900.5, h: 600.5 };
 
   function overflowing(props: Partial<ScrollContainerProperties> = {}): SolveNode {
@@ -274,10 +238,8 @@ describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
   });
 
   it('composes the grabber onto the SNAPPED bar origin while keeping its own fractional offset', async () => {
-    // The grabber is drawn by `ScrollBar`'s own NOTIFICATION_DRAW inside the
-    // bar's CanvasItem (`scroll_bar.cpp:326-344` — a plain `Rect2` from
-    // `get_grabber_offset()`, no cast, no rounding), so it is never snapped a
-    // second time. range 1200, area 892.5 - 8 = 884.5, ratio 100/1200 ->
+    // The grabber draws unrounded inside the bar's CanvasItem (`scroll_bar.cpp:326-344`),
+    // so it never snaps twice. range 1200, area 892.5 - 8 = 884.5, ratio 100/1200 ->
     // offset 73.7083333, on top of the snapped 593.
     const meshes = await drawnMeshes(overflowing({ scrollHorizontal: 100 }), FRACTIONAL_RECT);
     // Left-to-right: the horizontal bar's grabber sits at its own 73.7 offset,
@@ -289,10 +251,8 @@ describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
   });
 
   it('honours a snap resolved OFF by the walker — both bars stay on the solved fraction', async () => {
-    // The painter takes the walker's OWN resolved value rather than re-reading
-    // `gui/common/snap_controls_to_pixels`: that project setting is the root
-    // window's alone (`main/main.cpp`), so a painter reading it directly is
-    // wrong for every Control inside a SubViewport.
+    // `gui/common/snap_controls_to_pixels` is the root window's alone (`main/main.cpp`),
+    // so the painter takes the walker's resolved value, correct in a SubViewport.
     const [horizontal, vertical] = tracks(
       await drawnMeshes(overflowing(), FRACTIONAL_RECT, false)
     );
@@ -314,10 +274,8 @@ describe('<ScrollContainer> — tint', () => {
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     for (const mesh of meshes) {
       const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
-      // Untinted default-theme fills are never fully black; a halved sRGB
-      // channel through the linear conversion is a distinctly smaller number
-      // than the untinted equivalent — enough to prove the tint reached both
-      // meshes without needing the theme's exact literal here.
+      // Default-theme fills are never black, so a halved sRGB channel is a
+      // smaller number: the tint reached both meshes.
       expect(color.getX(0)).toBeGreaterThan(0);
     }
   });
@@ -338,7 +296,7 @@ describe('<ScrollContainer> — tint', () => {
     const track = meshes.reduce((a, b) => (worldBounds(a).max.y - worldBounds(a).min.y >
       worldBounds(b).max.y - worldBounds(b).min.y ? a : b));
     const color = (track.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
-    // Raw sRGB — the StyleBox vertex attribute is decoded per fragment (`StyleBoxQuad.tsx`).
+    // Raw sRGB: the shader decodes the StyleBox vertex attribute per fragment.
     expect(color.getX(0)).toBeCloseTo(0.025, 6);
   });
 });
@@ -375,15 +333,9 @@ describe('<ScrollContainer> — clip planes', () => {
   });
 
   it('intersects correctly when nested inside another ScrollContainer at a translated position', async () => {
-    // Outer: 400x300 own rect at the world origin (no ancestor offset in this
-    // isolated mount). Inner: mounted via a group positioned at (350, -40) —
-    // exactly how the walker places a nested Control — with its OWN 100x80
-    // rect, DELIBERATELY placed so it overhangs the outer's right edge:
-    // inner's world rect is x:[350,450], y:[-120,-40], while outer's is
-    // x:[0,400], y:[-300,0]. That asymmetry is the actual proof (mirrors the
-    // spike's widget B): the right boundary can only be enforced by the
-    // OUTER's own plane (inner's alone would allow up to x=450), while the
-    // other three sides are enforced by the INNER's tighter rect.
+    // Outer x:[0,400], y:[-300,0]. Inner, a 100x80 group at (350, -40), is
+    // x:[350,450], y:[-120,-40] and overhangs the outer's right edge. Only the
+    // outer's plane enforces the right side, and the inner's the other three.
     let captured: readonly THREE.Plane[] = [];
     await ReactThreeTestRenderer.create(
       <ScrollContainer {...painterEnv()} solveNode={scrollNode({}, [])} rect={{ x: 0, y: 0, w: 400, h: 300 }} renderOrder={0}>
@@ -402,26 +354,22 @@ describe('<ScrollContainer> — clip planes', () => {
     const insideBoth = new THREE.Vector3(380, -80, 0);
     expect(captured.every((p) => p.distanceToPoint(insideBoth) >= 0)).toBe(true);
 
-    // Outer-driven rejection: well within the INNER's own local rect (x <=
-    // 450), but past the OUTER's right edge (400) — only correct if the
-    // OUTER's own plane, not just the inner's, is still in the merged list.
+    // Inside the inner rect (x <= 450) but past the outer's right edge (400):
+    // the outer's plane is still in the merged list.
     const outerDriven = new THREE.Vector3(410, -80, 0);
     expect(captured.some((p) => p.distanceToPoint(outerDriven) < 0)).toBe(true);
 
-    // Inner-driven rejection: inside the OUTER's own rect entirely, but above
-    // the INNER's top edge (world y > -40) — only correct if the INNER's
-    // tighter plane narrowed the intersection past what the outer alone allows.
+    // Inside the outer rect but above the inner's top edge (world y > -40):
+    // the inner's plane narrowed the intersection.
     const innerDriven = new THREE.Vector3(380, -10, 0);
     expect(captured.some((p) => p.distanceToPoint(innerDriven) < 0)).toBe(true);
   });
 });
 
 /**
- * The `scroll_hint_*` TextureRects (`scroll_container.cpp:606-658,905-915`).
- * Both are `INTERNAL_MODE_BACK` children added BEFORE the scrollbars, so they
- * paint over the content and under the bars, modulated by
- * `scroll_hint_vertical_color` / `scroll_hint_horizontal_color`, which the
- * default theme sets to `Color(0, 0, 0)` (`default_theme.cpp:669-670`).
+ * The `scroll_hint_*` TextureRects (`scroll_container.cpp:606-658,905-915`)
+ * paint over the content and under the bars, modulated by `Color(0, 0, 0)`
+ * (`default_theme.cpp:669-670`).
  */
 describe('<ScrollContainer> — scroll hints', () => {
   const HINT_RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
@@ -485,9 +433,8 @@ describe('<ScrollContainer> — scroll hints', () => {
   });
 
   it('carries the chrome key on the enclosing GROUP, which three consults before the mesh\'s own order', async () => {
-    // `projectObject` sorts by `groupOrder` — the nearest enclosing Group's
-    // `renderOrder` — first, so a hint whose group kept this node's own key
-    // paints behind the very content it fades, whatever the mesh asks for.
+    // `projectObject` sorts by `groupOrder`, the nearest Group's `renderOrder`,
+    // first, so a hint group on this node's key paints behind its content.
     const meshes = hintMeshes(await mount({ scrollHintMode: 1 }, { x: 100, y: 500 }));
     expect(nearestGroupOrder(meshes[0]!)).toBe(meshes[0]!.renderOrder);
   });

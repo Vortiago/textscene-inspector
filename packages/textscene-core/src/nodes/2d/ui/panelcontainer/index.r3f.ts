@@ -1,8 +1,6 @@
 /**
- * PanelContainer registration — the native (WebGL canvas) painter, and the
- * native rect solver's minimum-size/container-layout registrations
- * `nativeSolver.ts` exports (`controlSolverRegistry`, not
- * `controlComponentRegistry` — a distinct registry keyed the same way).
+ * Registers the native (WebGL canvas) painter for PanelContainer, and its
+ * minimum-size and container-layout solvers in `controlSolverRegistry`.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

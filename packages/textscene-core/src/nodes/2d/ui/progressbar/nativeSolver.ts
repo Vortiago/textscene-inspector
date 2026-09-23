@@ -1,13 +1,9 @@
 /**
- * ProgressBar's native (WebGL canvas) rect solver — `ProgressBar::get_minimum_size`
- * (`scene/gui/progress_bar.cpp:37-48`) plus the default `background`/`fill`
- * StyleBoxes (`scene/theme/default_theme.cpp:438-449`) neither
- * `nativeTheme.ts` nor `shared/` carries, since ProgressBar is the only
- * widget in this codebase whose default flat-stylebox margin/corner-radius
- * literal (2px/6px) differs from `default_margin`/`default_corner_radius`
- * (4px/3px). Registered via `controlSolverRegistry.registerMinimumSize`.
- * `Component.tsx` imports the same builder for painting, so the box a
- * default-themed bar is floored to and the box it draws can never disagree.
+ * ProgressBar's native (WebGL canvas) rect solver
+ * (`scene/gui/progress_bar.cpp:37-48`) and draw geometry, with its
+ * default `background` and `fill` StyleBoxes (`scene/theme/default_theme.cpp:438-449`).
+ * `Component.tsx` paints with the same builder, so the minimum size and the
+ * drawn box always agree.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -38,30 +34,22 @@ import type { ControlColor } from '../control/types';
 import type { ProgressBarProperties } from './types';
 
 /**
- * `default_theme.cpp:440-441` —
- * `make_flat_stylebox(color, 2, 2, 2, 2, 6)`, a DIFFERENT margin/corner-radius
- * literal from every other flat stylebox this codebase's `nativeTheme.ts`
- * builds (`default_margin` = 4, `default_corner_radius` = 3).
+ * `default_theme.cpp:440-441`: `make_flat_stylebox(color, 2, 2, 2, 2, 6)`, not
+ * the `default_margin` = 4 and `default_corner_radius` = 3 of every other flat
+ * stylebox in `nativeTheme.ts`.
  */
 const PROGRESS_BAR_STYLE_MARGIN = 2;
 const PROGRESS_BAR_CORNER_RADIUS = 6;
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
-/** `StyleBoxFlat`'s own unset default (`style_box_flat.h:40`) — `make_flat_stylebox` never touches border colour. */
+/** `StyleBoxFlat`'s unset default (`style_box_flat.h:40`): `make_flat_stylebox` never sets the border colour. */
 const DEFAULT_BORDER_COLOR: ControlColor = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
 
 /**
- * Reconstructs the project's `gui/theme/default_theme_scale` from `theme.fontSize`
- * (`Math.round(DEFAULT_FONT_SIZE * scale)`, `godotDefaultTheme.ts`'s
- * `scaledGodotTheme`). `NativeTheme`/`SolveContext` carry every OTHER
- * scale-dependent metric already rounded to Godot's own literals
- * (`default_margin`=4, `default_corner_radius`=3, …), none of which is 2 or 6
- * — `nativeTheme.ts` is out of bounds to extend, so this is the one place in
- * this codebase that needs the raw scale back out of an already-rounded
- * theme, rather than a fresh scale-dependent constant living beside its
- * siblings. Exact for any scale that is a multiple of 1/16 (every practically
- * authored scale — 0.5, 0.75, 1.25, 1.5, 2, …); `round(16s)` only loses
- * precision at a scale finer than that.
+ * Recovers `gui/theme/default_theme_scale` from `theme.fontSize`
+ * (`Math.round(DEFAULT_FONT_SIZE * scale)`): `NativeTheme` carries its other
+ * metrics already rounded, and none of them is 2 or 6. Exact for any scale
+ * that is a multiple of 1/16.
  */
 function reconstructThemeScale(theme: Pick<NativeTheme, 'fontSize'>): number {
   return theme.fontSize / DEFAULT_FONT_SIZE;
@@ -74,7 +62,7 @@ function progressBarFlatStyleBox(bgColor: ControlColor, theme: Pick<NativeTheme,
   const cornerRadius = Math.round(PROGRESS_BAR_CORNER_RADIUS * scale);
   // `set_corner_detail(MIN(Math::ceil(1.5 * p_corner_radius), 6) * scale)`
   // (`default_theme.cpp:65`) assigns into an `int` parameter, which truncates
-  // toward zero — not `Math.round`. `MIN(ceil(1.5*6), 6)` is always exactly 6.
+  // toward zero. `MIN(ceil(1.5*6), 6)` is always 6.
   const cornerDetail = Math.trunc(6 * scale);
   return {
     bgColor,
@@ -95,12 +83,12 @@ function progressBarFlatStyleBox(bgColor: ControlColor, theme: Pick<NativeTheme,
   };
 }
 
-/** `default_theme.cpp:440` — `background` fills with `style_disabled_color` (`theme.styleFill.disabled`, `nativeTheme.ts`'s own transcription). */
+/** `default_theme.cpp:440`: `background` fills with `style_disabled_color` (`theme.styleFill.disabled`). */
 export function progressBarDefaultBackground(theme: NativeTheme): StyleBoxFlatData {
   return progressBarFlatStyleBox(theme.styleFill.disabled, theme);
 }
 
-/** `default_theme.cpp:441` — `fill` fills with `style_progress_color` (`theme.styleFill.progress`). */
+/** `default_theme.cpp:441`: `fill` fills with `style_progress_color` (`theme.styleFill.progress`). */
 export function progressBarDefaultFill(theme: NativeTheme): StyleBoxFlatData {
   return progressBarFlatStyleBox(theme.styleFill.progress, theme);
 }
@@ -111,13 +99,13 @@ export const PROGRESS_BAR_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', co
 /** `SceneStringName(font)` = `"font"` (`default_theme.cpp:283`: `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT, ProgressBar, font)`). */
 export const PROGRESS_BAR_THEME_FONT_KEY = 'font';
 
-/** `control_font_hover_color` = `Color(0.95, 0.95, 0.95)` (`default_theme.cpp:104`) — ProgressBar's own `font_color` default (`:446`). */
+/** ProgressBar's `font_color` default (`:446`) is `control_font_hover_color` = `Color(0.95, 0.95, 0.95)` (`default_theme.cpp:104`). */
 export const PROGRESS_BAR_DEFAULT_FONT_COLOR: ControlColor = { r: 0.95, g: 0.95, b: 0.95, a: 1 };
 
-/** `default_theme.cpp:447` — `font_outline_color` default `Color(0, 0, 0)`. */
+/** `default_theme.cpp:447`: `font_outline_color` default `Color(0, 0, 0)`. */
 export const PROGRESS_BAR_DEFAULT_OUTLINE_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 1 };
 
-/** `default_theme.cpp:449` — `outline_size` theme constant default `0`. */
+/** `default_theme.cpp:449`: `outline_size` theme constant default `0`. */
 export const PROGRESS_BAR_DEFAULT_OUTLINE_SIZE = 0;
 
 /** Resolves the percent label's font size/colour (override, else the ancestor Theme chain, else ProgressBar's own `Color(0.95, 0.95, 0.95)`). */
@@ -141,27 +129,10 @@ export function progressBarOutlineSize(constants: SolveNode['constants']): numbe
 }
 
 /**
- * `ProgressBar::get_minimum_size` (`progress_bar.cpp:37-48`):
- *
- *     Size2 minimum_size = theme_cache.background_style->get_minimum_size();
- *     minimum_size = minimum_size.max(theme_cache.fill_style->get_minimum_size());
- *     if (show_percentage) {
- *       ... minimum_size.height = MAX(minimum_size.height, background.height + "100%".height);
- *     } else {
- *       minimum_size = minimum_size.maxf(1);
- *     }
- *
- * `get_minimum_size()` for a flat StyleBox is its own content-margin sum
- * (`StyleBox::get_minimum_size`, `style_box.cpp`), which is IDENTICAL for
- * `background`/`fill` at their default literals (both `make_flat_stylebox(...,
- * 2, 2, 2, 2, 6)`) but can diverge once either carries a
- * `theme_override_styles/background`/`fill` of its own.
- *
- * An absent `ctx.measureText` is treated as "the percentage text contributes
- * nothing" (`solverRegistry.ts`'s own contract, `button/nativeSolver.ts`'s
- * `buttonMinimumSize` doc) — the margin floor still applies either way, and
- * `show_percentage`'s `else` branch (the plain `maxf(1)` floor) is unaffected
- * since it reads no text metric at all.
+ * `ProgressBar::get_minimum_size` (`progress_bar.cpp:37-48`): the max of the
+ * two margin sums (`style_box.cpp`), then with `show_percentage`
+ * `MAX(minimum_size.height, background.height + "100%".height)`, else
+ * `maxf(1)`. With no `ctx.measureText`, the text adds nothing.
  */
 export const progressBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ProgressBarProperties;
@@ -194,31 +165,19 @@ export const progressBarMinimumSize: MinimumSizeFn = (n, ctx) => {
 
 controlSolverRegistry.registerMinimumSize('ProgressBar', progressBarMinimumSize);
 
-// --- The percentage text's own ratio (progress_bar.cpp:149-166) ---
-// The FILL bar's own ratio is `float r = get_as_ratio();` (`:112`) —
-// `shared/range.ts`'s `rangeRatio` verbatim; `Component.tsx` imports it
-// directly, the same way `hslider`'s `resolveSliderRatio` does.
-
 /**
- * The percentage LABEL's own ratio (`progress_bar.cpp:149-166`) — separately
- * computed by Godot rather than reusing `get_as_ratio()`, and NOT quite the
- * same formula: the `exp_edit` branch adds `get_value() >= 0` on top of
- * `min() >= 0`, a guard `Range::get_as_ratio()` itself does not carry
- * (compare `range.cpp:308-325`). `allow_greater`/`allow_lesser` gate the
- * `CLAMP` calls in the source but are never parsed by this codebase
- * (`shared/range.ts`'s own doc), so both collapse to their `false` default
- * and this clamps to plain `[0, 1]` either way. That same `allow_lesser =
- * false` also makes the `value >= 0` guard unreachable-as-false whenever
- * `min >= 0`: `resolveRangeValue` re-clamps `value` to `>= min` on every
- * setter it replays (`range.cpp:191-192`'s `!allow_lesser` gate, mirrored by
- * `calcValue`), so `min >= 0` already implies `value >= 0`. Kept anyway,
- * transcribed as written, since a future `allow_lesser` port would need it.
+ * The percentage label's ratio (`progress_bar.cpp:149-166`). The fill uses
+ * `get_as_ratio()` (`:112`, `rangeRatio`), but the label's `exp_edit` branch
+ * adds a `get_value() >= 0` guard (compare `range.cpp:308-325`). Unparsed
+ * `allow_greater` and `allow_lesser` stay false, so the clamp is `[0, 1]`.
  */
 export function progressBarPercentRatio(props: RangeProperties, orderedKeys: RangeValueOrder): number {
   const min = props.minValue ?? 0;
   const max = props.maxValue ?? 100;
   const value = resolveRangeValue(props, orderedKeys);
   if (isEqualApprox(max, min)) return 1;
+  // With `allow_lesser` false, `value >= min` (range.cpp:191-192), so
+  // `min >= 0` implies `value >= 0`. The guard stays as Godot writes it.
   if (props.expEdit && min >= 0 && value >= 0) {
     const expMin = min === 0 ? 0 : Math.log2(min);
     const expMax = Math.log2(max);
@@ -230,7 +189,7 @@ export function progressBarPercentRatio(props: RangeProperties, orderedKeys: Ran
   return Math.min(Math.max(percentage, 0), 1);
 }
 
-// --- Draw-time geometry: fill_mode -> the fill StyleBox's own rect --------
+// ── Draw-time geometry: fill_mode to the fill StyleBox's rect ──
 
 export const FILL_BEGIN_TO_END = 0;
 export const FILL_END_TO_BEGIN = 1;
@@ -238,18 +197,16 @@ export const FILL_TOP_TO_BOTTOM = 2;
 export const FILL_BOTTOM_TO_TOP = 3;
 
 /**
- * `set_fill_mode` (`progress_bar.cpp:199-203`) `ERR_FAIL_INDEX` REFUSES an
- * out-of-range write, so the stored `mode` keeps its class default
- * (`FILL_BEGIN_TO_END`, `progress_bar.h:88`) rather than becoming an invalid
- * enum value — an authored `fill_mode="99"` therefore draws
- * `FILL_BEGIN_TO_END`, not nothing.
+ * `set_fill_mode`'s `ERR_FAIL_INDEX` (`progress_bar.cpp:199-203`) refuses an
+ * out-of-range write, so `mode` keeps its default `FILL_BEGIN_TO_END`
+ * (`progress_bar.h:88`) and `fill_mode="99"` draws as that.
  */
 function normalizeProgressBarFillMode(fillMode: number | undefined): number {
   const mode = fillMode ?? FILL_BEGIN_TO_END;
   return mode >= FILL_BEGIN_TO_END && mode <= FILL_BOTTOM_TO_TOP ? mode : FILL_BEGIN_TO_END;
 }
 
-/** `Rect2::intersects(p_rect, p_include_borders=false)` — edges touching only does not count. */
+/** `Rect2::intersects(p_rect, p_include_borders=false)`: touching edges do not count. */
 function rectIntersects(a: Rect2, b: Rect2): boolean {
   if (a.x >= b.x + b.w) return false;
   if (a.x + a.w <= b.x) return false;
@@ -258,7 +215,7 @@ function rectIntersects(a: Rect2, b: Rect2): boolean {
   return true;
 }
 
-/** `Rect2::intersection` — the empty `Rect2()` (all-zero) when the two do not overlap. */
+/** `Rect2::intersection`: the all-zero `Rect2()` when the two do not overlap. */
 function rectIntersection(a: Rect2, b: Rect2): Rect2 {
   if (!rectIntersects(a, b)) return { x: 0, y: 0, w: 0, h: 0 };
   const x = Math.max(a.x, b.x);
@@ -269,24 +226,10 @@ function rectIntersection(a: Rect2, b: Rect2): Rect2 {
 }
 
 /**
- * The static indeterminate bar (`progress_bar.cpp:69-110`): Godot's
- * `_indeterminate_fill_progress` advances every process frame
- * (`NOTIFICATION_INTERNAL_PROCESS`, `:52-57`), which a static previewer never
- * runs. The ONE frame Godot itself special-cases is the "centre it" branch
- * (`:73-76`, `is_part_of_edited_scene() && !editor_preview_indeterminate`) —
- * every OTHER frame, including `_indeterminate_fill_progress`'s own `0.0`
- * initial value, draws an EMPTY `intersection` (the fill rect starts exactly
- * at the control's own edge and extends outward). This previewer therefore
- * always draws the centred bar, whatever `editor_preview_indeterminate`
- * says: it is the one frame of the animation that is not simply "nothing".
- *
- * An out-of-range `fill_mode` never reaches `mode` (`normalizeProgressBarFillMode`
- * — the setter refuses the write), so it draws as `FILL_BEGIN_TO_END`. `null`
- * only for a zero-area result — a `draw_style_box` at a zero-size rect draws
- * nothing observable.
- *
- * `rtl` swaps which of the two horizontal modes counts as right-to-left
- * (`:82`), so each takes the other's band rather than the band being mirrored.
+ * The static indeterminate bar (`progress_bar.cpp:69-110`). The animation
+ * advances per process frame (`:52-57`), and its `0.0` start draws an empty
+ * intersection, so this always draws the "centre it" frame (`:73-76`), whatever
+ * `editor_preview_indeterminate` says. `null` means a zero-area rect.
  */
 export function progressBarIndeterminateFillRect(
   size: Vec2,
@@ -295,15 +238,14 @@ export function progressBarIndeterminateFillRect(
 ): Rect2 | null {
   const mode = normalizeProgressBarFillMode(fillMode);
   const fillSize = Math.min(size.x, size.y) * 2;
-  // `:75` — the "centre it" value, recomputed fresh every draw in this
-  // previewer (there is no persisted `_indeterminate_fill_progress` to
-  // animate away from).
+  // `:75`: the "centre it" value, recomputed every draw.
   let ifp = Math.max(size.x, size.y) / 2 + fillSize / 2;
   const full: Rect2 = { x: 0, y: 0, w: size.x, h: size.y };
 
   switch (mode) {
     case FILL_BEGIN_TO_END:
     case FILL_END_TO_BEGIN: {
+      // `rtl` swaps the two horizontal modes (`:82`), not the band's position.
       const rightToLeft = mode === (rtl ? FILL_BEGIN_TO_END : FILL_END_TO_BEGIN);
       if (ifp > size.x + fillSize) ifp = rightToLeft ? -fillSize : 0;
       const x = rightToLeft ? size.x - ifp : ifp - fillSize;
@@ -327,15 +269,10 @@ function clampToZeroArea(rect: Rect2): Rect2 | null {
 }
 
 /**
- * The determinate fill StyleBox's own rect (`progress_bar.cpp:112-147`),
- * `null` when nothing should draw (`p <= 0`). An out-of-range `fill_mode`
- * normalizes to `FILL_BEGIN_TO_END` (`normalizeProgressBarFillMode`), it never
- * reaches `mode` as-is. `fillMinimumSize` is
- * `theme_cache.fill_style->get_minimum_size()` on the FILL axis only —
- * `contentMarginSize(fillStyleBox)`'s `.x`/`.y`.
- *
- * `rtl` swaps which of the two horizontal modes counts as right-to-left
- * (`:121`); the two vertical modes read no layout direction at all.
+ * The determinate fill StyleBox's rect (`progress_bar.cpp:112-147`), `null`
+ * when `p <= 0`. `fillMinimumSize` is `contentMarginSize(fillStyleBox)`, read
+ * on the fill axis. `rtl` swaps the two horizontal modes (`:121`), and the
+ * vertical modes ignore it.
  */
 export function progressBarFillRect(
   size: Vec2,

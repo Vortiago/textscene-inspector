@@ -1,7 +1,6 @@
 /**
- * The ScrollBar set must reach its subclasses, which is the whole point of
- * the tier. Assert through `findValidator` on a real leaf, not just on the
- * abstract key: a tier that registers but is never imported registers nothing.
+ * Tests that the ScrollBar validators reach its subclasses, through
+ * `findValidator` on a real leaf: a tier that is never imported registers nothing.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -20,8 +19,7 @@ function check(nodeType: string, property: string, value: string) {
 
 describe('ScrollBar shared validators', () => {
   it('registers exactly what ScrollBar binds', () => {
-    // Emptiness check first: an empty KEYS against an empty registerAll would
-    // otherwise pass vacuously and ship a tier that validates nothing.
+    // An empty KEYS against an empty registerAll would pass vacuously.
     expect(validatorRegistry.getOwnKeys('ScrollBar')).not.toEqual([]);
     expect(validatorRegistry.getOwnKeys('ScrollBar').sort()).toEqual([...KEYS].sort());
   });

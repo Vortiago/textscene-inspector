@@ -1,7 +1,6 @@
 /**
- * ScrollContainer linter tests —
- * `ScrollContainer::get_configuration_warnings()` (scroll_container.cpp:768-786):
- * not exactly one sortable Control child.
+ * Tests the ScrollContainer rule from `ScrollContainer::get_configuration_warnings()`
+ * (scroll_container.cpp:768-786): not exactly one sortable Control child.
  */
 import { describe, it, expect } from 'vitest';
 import { node, scene, expectDiagnostic, expectNoDiagnostic } from '../../../../linter/testing/testkit';

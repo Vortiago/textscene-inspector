@@ -1,11 +1,7 @@
 /**
- * Range semantic rule: max_value below min_value.
- *
- * Godot does not reject this — `Range::set_max` clamps
- * (scene/gui/range.cpp:229: `double max_validated = MAX(p_max, shared->min);`)
- * — so the warning exists only because the collapse to a single-point range
- * is otherwise invisible: the .tscn keeps showing the authored (inverted)
- * numbers forever.
+ * Tests the Range semantic rules. `Range::set_max` clamps an inverted pair
+ * (scene/gui/range.cpp:229: `double max_validated = MAX(p_max, shared->min);`),
+ * while the .tscn keeps showing the authored numbers.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -149,7 +145,6 @@ describe('Range exp_edit rule (range-exp-edit-negative-min)', () => {
   });
 
   it('compares an exponent-spelled bound at its real magnitude', () => {
-    // `parseFloat` read `2e1` as 2 and called this pair correctly ordered.
     expect(namesOf(scene('min_value = 2e1\nmax_value = 4.0\n'))).toContain('range-max-below-min');
   });
 

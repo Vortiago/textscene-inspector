@@ -1,5 +1,3 @@
-/**
- * richtextlabel linter registration - imports linter components to trigger self-registration.
- */
+/** Registers the RichTextLabel validators. */
 
 import './linterParser.js';

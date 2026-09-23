@@ -1,40 +1,7 @@
 /**
- * Semantic linter rule for ScrollContainer — Godot's own configuration
- * warning, `ScrollContainer::get_configuration_warnings()`
- * (scroll_container.cpp:768-786):
- *
- *     int found = 0;
- *     for (int i = 0; i < get_child_count(); i++) {
- *         Control *c = as_sortable_control(get_child(i), SortableVisibilityMode::VISIBLE);
- *         if (!c || c == h_scroll || c == v_scroll || c == focus_panel ||
- *                 c == scroll_hint_top_left || c == scroll_hint_bottom_right) {
- *             continue;
- *         }
- *         found++;
- *     }
- *     if (found != 1) {
- *         warnings.push_back(RTR("ScrollContainer is intended to work with a
- *             single child control.\nUse a container as child (VBox, HBox,
- *             etc.), or a Control and set the custom minimum size manually."));
- *     }
- *
- * The five named exclusions (`h_scroll`, `v_scroll`, `focus_panel`,
- * `scroll_hint_top_left`, `scroll_hint_bottom_right`) are internal children
- * ScrollContainer adds itself — never serialised to a `.tscn`, so a scene's
- * own children need no matching exclusion.
- *
- * `as_sortable_control` (container.cpp:143-155) is:
- *
- *     Control *c = Object::cast_to<Control>(p_node);
- *     if (!c || c->is_set_as_top_level()) return nullptr;
- *     if (p_visibility_mode == VISIBLE && !c->is_visible()) return nullptr;
- *     return c;
- *
- * `is_visible()` reads the node's OWN `visible` flag, not
- * `is_visible_in_tree()` — an ancestor's visibility does not enter into it.
- *
- * `found != 1` fires on ZERO sortable children just as much as on two or
- * more — an empty ScrollContainer is not exempt.
+ * ScrollContainer's configuration warning, `get_configuration_warnings()`
+ * (scroll_container.cpp:768-786): `found != 1` sortable children, so zero warns
+ * too. The five internal children it skips are never serialised.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -45,7 +12,11 @@ import { isTypeUnknowable } from '../../../../linter/parentType.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 
-/** `as_sortable_control(child, VISIBLE)` is non-null, per container.cpp:143-155. */
+/**
+ * `as_sortable_control(child, VISIBLE)` is non-null, per container.cpp:143-155:
+ * a Control, not top-level, with its own `visible` set. An ancestor's
+ * visibility does not count.
+ */
 function isSortableControl(child: TscnNode): boolean {
   if (!descendsFrom(child.type, 'Control')) return false;
   const props = isValidProperties(child.properties) ? child.properties : {};
@@ -59,9 +30,7 @@ function checkScrollContainer(context: RuleContext): Diagnostic[] {
   const children = node.children ?? [];
 
   // Instance-opaque linting (CONTEXT.md): an `instance=` or typeless child's
-  // real class lives in a sub-scene this linter never opens, so it may or may
-  // not be the one sortable Control this rule is counting for. Staying silent
-  // beats guessing the count wrong in either direction.
+  // class lives in a sub-scene the linter never opens, so the count is unknown.
   if (children.some(isTypeUnknowable)) return [];
 
   const sortableCount = children.filter(isSortableControl).length;

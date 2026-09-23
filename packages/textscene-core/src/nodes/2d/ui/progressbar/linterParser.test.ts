@@ -1,13 +1,7 @@
 /**
- * ProgressBar strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * ProgressBar strict validators: format and range checks, asserted through
+ * `validatorRegistry` so a failure points at the validator, not at scene parsing.
+ * Each numeric bound quotes its governing Godot source line.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -27,16 +21,15 @@ describe('ProgressBar strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format.
     const accepted = validatorRegistry
       .getOwnKeys('ProgressBar')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
     expect(accepted).toEqual([]);
   });
 
-  // progress_bar.cpp:200 — set_fill_mode: ERR_FAIL_INDEX(p_fill, FILL_MODE_MAX)
-  // refuses the write, so out-of-range is an error.
+  // progress_bar.cpp:200: ERR_FAIL_INDEX(p_fill, FILL_MODE_MAX) refuses the
+  // write, so out-of-range is an error.
   describe('fill_mode', () => {
     it('accepts every member of the enum', () => {
       expect(check('fill_mode', '0')).toBeNull();
@@ -62,7 +55,7 @@ describe('ProgressBar strict validators', () => {
     });
   });
 
-  // progress_bar.cpp:210-217 — set_show_percentage assigns straight through.
+  // progress_bar.cpp:210-217: set_show_percentage assigns straight through.
   describe('show_percentage', () => {
     it('accepts true', () => {
       expect(check('show_percentage', 'true')).toBeNull();
@@ -77,7 +70,7 @@ describe('ProgressBar strict validators', () => {
     });
   });
 
-  // progress_bar.cpp:223-236 — set_indeterminate assigns straight through.
+  // progress_bar.cpp:223-236: set_indeterminate assigns straight through.
   describe('indeterminate', () => {
     it('accepts true', () => {
       expect(check('indeterminate', 'true')).toBeNull();
@@ -92,7 +85,7 @@ describe('ProgressBar strict validators', () => {
     });
   });
 
-  // progress_bar.cpp:242-253 — set_editor_preview_indeterminate assigns
+  // progress_bar.cpp:242-253: set_editor_preview_indeterminate assigns
   // straight through.
   describe('editor_preview_indeterminate', () => {
     it('accepts true', () => {

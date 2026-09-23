@@ -1,12 +1,6 @@
 /**
- * ScrollContainer strict validators: format and range checks.
- *
- * Covers all eleven of ScrollContainer's own members. `parser.ts` reads only
- * two of them (`horizontal_scroll_mode`, `vertical_scroll_mode`); the other
- * nine are validated here too because Godot serialises all eleven normally
- * (see the header comment in `linterParser.ts`), which makes the remaining
- * nine `linter-only` from `propertyGrammarParity.test.ts`'s point of view,
- * a real parser gap, reported rather than fixed by this validator-only slice.
+ * ScrollContainer strict validators: format and range checks for every own
+ * member, since Godot serialises all of them.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -53,12 +47,9 @@ describe('ScrollContainer strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // unit-scroll-container.tscn's "zero errors and zero warnings" claim, RUN
-    // rather than reasoned. The fixture leaves both scroll modes (the only two
-    // properties parser.ts reads) unset (comparison.md: "left unset (AUTO)"),
-    // so this exercises the base-walked Control/CanvasItem/Node validators
-    // this file imports; the per-property describe blocks below cover the
-    // eleven own keys directly.
+    // The fixture leaves both scroll modes unset (comparison.md: "left unset (AUTO)"),
+    // so this runs the base-walked Control/CanvasItem/Node validators. The
+    // describe blocks below cover the own keys.
     expectFixtureClean('unit-scroll-container.tscn');
   });
 
@@ -101,12 +92,9 @@ describe('ScrollContainer strict validators', () => {
     });
   });
 
-  // scroll_container.cpp:847, INT, PROPERTY_HINT_NONE. set_h_scroll forwards
-  // to the internal HScrollBar's Range::set_value, whose _calc_value
-  // (range.cpp:196-197) clamps below `shared->min`; min is never changed from
-  // its 0.0 default (range.h:40) on the internal scrollbars, so the floor is
-  // a permanent engine invariant. The ceiling (max - page) is content-derived
-  // at layout time, so it is not validated here.
+  // scroll_container.cpp:847, INT, PROPERTY_HINT_NONE. The internal bar's
+  // _calc_value (range.cpp:196-197) clamps below min, which stays 0.0
+  // (range.h:40). The ceiling (max - page) comes from layout, so it is unchecked.
   describe('scroll_horizontal', () => {
     it('accepts 0 (the documented default)', () => {
       expect(check('scroll_horizontal', '0')).toBeNull();
@@ -127,7 +115,7 @@ describe('ScrollContainer strict validators', () => {
     });
   });
 
-  // scroll_container.cpp:848, same shape via the internal VScrollBar.
+  // scroll_container.cpp:848, same shape through the internal VScrollBar.
   describe('scroll_vertical', () => {
     it('accepts 0 (the documented default)', () => {
       expect(check('scroll_vertical', '0')).toBeNull();
@@ -148,13 +136,10 @@ describe('ScrollContainer strict validators', () => {
     });
   });
 
-  // scroll_container.cpp:849, FLOAT, PROPERTY_HINT_RANGE "-1,4096,suffix:px".
-  // set_horizontal_custom_step forwards to ScrollBar::set_custom_step
-  // (scroll_bar.cpp:562-564), which assigns straight through with no clamp,
-  // so both ends are warnings. -1 is the documented default AND the legal
-  // sentinel for "use the default step" (scroll_bar.cpp:112, 119, 226, 232,
-  // 239, 245 read `custom_step >= 0 ? custom_step : get_step()`), so it must
-  // not be rejected.
+  // scroll_container.cpp:849 hints "-1,4096,suffix:px". ScrollBar::set_custom_step
+  // (scroll_bar.cpp:562-564) assigns straight through, so both ends warn. -1 is
+  // the default and means "use the default step" (scroll_bar.cpp:112, 119, 226,
+  // 232, 239, 245 read `custom_step >= 0 ? custom_step : get_step()`).
   describe('scroll_horizontal_custom_step', () => {
     it('accepts -1 (the documented default AND the "use default step" sentinel)', () => {
       expect(check('scroll_horizontal_custom_step', '-1')).toBeNull();
@@ -185,7 +170,7 @@ describe('ScrollContainer strict validators', () => {
     });
   });
 
-  // scroll_container.cpp:850, same shape via the internal VScrollBar.
+  // scroll_container.cpp:850, same shape through the internal VScrollBar.
   describe('scroll_vertical_custom_step', () => {
     it('accepts -1 (the documented default AND the "use default step" sentinel)', () => {
       expect(check('scroll_vertical_custom_step', '-1')).toBeNull();
@@ -282,9 +267,8 @@ describe('ScrollContainer strict validators', () => {
     });
   });
 
-  // scroll_container.cpp:853, INT, no hint at all. set_deadzone
-  // (scroll_container.cpp:729-731) assigns straight through with nothing to
-  // ground: format-only.
+  // scroll_container.cpp:853, INT, no hint. set_deadzone
+  // (scroll_container.cpp:729-731) assigns straight through. Format-only.
   describe('scroll_deadzone', () => {
     it('accepts 0 (the documented default)', () => {
       expect(check('scroll_deadzone', '0')).toBeNull();

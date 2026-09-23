@@ -1,4 +1,4 @@
-/** Panel registration — parser. */
+/** Registers the Panel parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parsePanel } from './parser';
