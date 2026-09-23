@@ -24,16 +24,9 @@ export function imageSize(image: unknown): ImageSize | undefined {
 }
 
 /**
- * Draw a decoded image (HTMLImageElement / ImageBitmap / canvas) onto a 2D
- * canvas of its own size and hand the context to `read`, which extracts
- * whatever it needs — pixel bytes, a data URL — before the canvas is dropped.
- *
- * This owns the one policy both extractions share: when is an image drawable,
- * and how does the attempt degrade? Returns `undefined` for an image that is
- * not decoded or has no size, when there is no DOM or no 2D context (node and
- * happy-dom test environments), and when the draw or the read throws because
- * the canvas is cross-origin tainted. Callers get `undefined` and fall back;
- * nothing throws out of here.
+ * Draws a decoded image onto a 2D canvas of its size and hands the context to `read`. Returns
+ * `undefined`, never throws, for an undecoded or sizeless image, no DOM or 2D context (node and
+ * happy-dom), or a draw or read that throws on a cross-origin tainted canvas.
  */
 export function withImageCanvas<T>(
   image: unknown,
@@ -53,7 +46,9 @@ export function withImageCanvas<T>(
     ctx.drawImage(image as CanvasImageSource, 0, 0);
     return read(ctx, size);
   } catch {
-    return undefined; // tainted canvas / unsupported image source
+    // A tainted canvas or an unsupported source. Textures arrive as blob URLs of bytes the host
+    // fetched, so a taint is not expected, but a caller degrades rather than breaks.
+    return undefined;
   }
 }
 
@@ -63,19 +58,9 @@ export interface ImagePixels extends ImageSize {
 }
 
 /**
- * Read a texture image's RGBA8 bytes.
- *
- * A `DataTexture` already carries them (`image.data`). Everything the resource
- * pipeline loads is decoded by `THREE.TextureLoader` into an `HTMLImageElement`
- * with no `.data`, so those go through `withImageCanvas` and come back via
- * `getImageData`. `undefined` means no pixels were readable (undecoded image,
- * no DOM, no 2D context, tainted canvas); textures reach both hosts as blob
- * URLs built from bytes the host already fetched, so a taint is not expected,
- * but every caller must degrade rather than break.
- *
- * Canvas 2D stores premultiplied alpha, so the readback loses R/G/B precision
- * where alpha is low and loses them outright where alpha is 0. What that costs
- * is the CALLER's to weigh — see each caller's own doc.
+ * Reads the RGBA8 bytes of a texture image: `image.data` for a `DataTexture`, else `getImageData`
+ * through `withImageCanvas`. `undefined` means no pixels were readable. Canvas 2D stores
+ * premultiplied alpha, so the readback loses RGB precision at low alpha and all of it at alpha 0.
  */
 export function readImagePixels(image: unknown): ImagePixels | undefined {
   const raw = (image as { data?: Uint8Array | Uint8ClampedArray } | null)?.data;

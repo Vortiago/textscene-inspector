@@ -1,12 +1,6 @@
 /**
- * Probe nodes for the conformance suites — a node of a given type carrying
- * only what its own parser produces by default.
- *
- * Every conformance suite (node-level, DOM Control, native Control) needs the
- * same thing: drive a type through the REAL `TscnParser` rather than
- * hand-building a `TscnNode`, so a parser/registry mismatch fails too. Shared
- * so the synthesised scene's shape — its header, the probe's name — is defined
- * once instead of being kept in step by hand across four suites.
+ * Probe nodes for the conformance suites: a node of a given type with only what its parser produces
+ * by default. Each probe goes through the real `TscnParser`, so a parser or registry mismatch fails.
  */
 import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnNode } from '../../../parser/types';

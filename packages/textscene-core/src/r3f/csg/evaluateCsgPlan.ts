@@ -1,13 +1,7 @@
 /**
- * Folds a `CsgPlan` into one geometry by running the booleans.
- *
- * Pure apart from the library it is handed: the module and the per-contribution geometry
- * both arrive as arguments, so this is testable directly and could move behind a worker
- * later without touching a call site.
- *
- * Contributions arrive already ordered and already carrying root-local matrices, so the
- * only work here is baking, folding, and mapping the result's material slots back onto
- * the plan's surfaces.
+ * Folds a `CsgPlan` into one geometry by running the booleans. The library and each geometry arrive
+ * as arguments, and contributions arrive ordered with root-local matrices, so the work is baking,
+ * folding and mapping material slots back onto the plan's surfaces.
  */
 
 import * as THREE from 'three';
@@ -70,10 +64,9 @@ export function evaluateCsgPlan(
     evaluator.useGroups = true;
 
     /**
-     * One node's brush: its own solid, then each child folded in by the CHILD's operation
-     * (csg_shape.cpp:472,481). A node with no own solid is seeded by its first child, whose
-     * operation has nothing to fold into — which is what makes a combiner's own operation
-     * apply to the whole fold rather than to its first child.
+     * One node's brush: its own solid, then each child folded in by the child's operation
+     * (csg_shape.cpp:472,481). A node with no solid is seeded by its first child, so a combiner's
+     * own operation applies to the whole fold, not to its first child.
      */
     const brushOf = (contribution: CsgContribution): THREE.Mesh | null => {
       let accumulator: THREE.Mesh | null = null;

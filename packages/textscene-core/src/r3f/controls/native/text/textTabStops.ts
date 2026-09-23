@@ -10,13 +10,9 @@
 import { isTabChar } from './textLayout';
 
 /**
- * Recomputes every tab glyph's own advance so its pen lands on the next stop
- * in `tabStopsPx`, cycling back to the first stop once exhausted
- * (`:5722-5737`). Every OTHER glyph's advance is returned unchanged.
- *
- * Any non-positive stop makes the whole call a no-op (`:5700-5704`) — a
- * single 0 or negative entry disables tab alignment entirely, not just that
- * one stop.
+ * Sets each tab's advance so its pen lands on the next stop in `tabStopsPx`, cycling back to the
+ * first stop (`:5722-5737`). Other advances are unchanged. One non-positive stop disables tab
+ * alignment entirely (`:5700-5704`).
  */
 export function tabAlignAdvances(entries: ReadonlyArray<{ char: string; advance: number }>, tabStopsPx: readonly number[]): number[] {
   if (tabStopsPx.length === 0 || tabStopsPx.some((stop) => stop <= 0)) {

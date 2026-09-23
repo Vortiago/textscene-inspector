@@ -1,15 +1,7 @@
 /**
- * Every CSG type must expose its solid as data, and must expose a stable key with it.
- *
- * Both halves have a specific failure mode. A CSG type registering a component but no
- * builder renders correctly on its own and silently contributes NOTHING to a boolean, so
- * a subtraction quietly stops cutting. A builder without a `geometryKey` makes the
- * evaluation cache miss on every reparse, because the parser allocates fresh property
- * objects per parse and the source pane reparses on every keystroke: correct output,
- * every boolean in the scene re-run per character typed.
- *
- * Neither shows up as a test failure anywhere else, which is why this is a contract test
- * over the live registry rather than a per-slice assertion.
+ * Every CSG type exposes its solid as data, with a stable key, over the live registry. Without a
+ * builder a type renders alone and contributes nothing to a boolean. Without a `geometryKey` the
+ * cache misses on every reparse, since the parser allocates fresh property objects per parse.
  */
 
 import { describe, expect, it } from 'vitest';

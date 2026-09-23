@@ -26,9 +26,8 @@ describe('sceneHasBloomableEmissive', () => {
   });
 
   it('gates on the PEAK channel times intensity, matching the bright pass', () => {
-    // The bright pass takes `max(r, g, b)`, so a saturated blue emissive counts by
-    // its blue channel alone — by Rec.709 luminance it would be the dimmest thing
-    // in the frame and would never be found.
+    // The bright pass takes `max(r, g, b)`, so a saturated blue emissive counts by its blue
+    // channel, where Rec.709 luminance would rank it the dimmest thing in the frame.
     const blue = emissiveMesh([0, 0, 1], 2.3);
     expect(sceneHasBloomableEmissive(sceneOf(blue), 1)).toBe(true);
   });

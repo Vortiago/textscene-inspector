@@ -1,50 +1,22 @@
 /**
- * A minimal, pure, DOM-free reader of the ONE thing a scene-authored font
- * needs from its own SFNT tables: `head`'s `unitsPerEm` and `hhea`'s
- * `ascender`/`descender` — the raw design-unit scalars `FontMetrics`
- * (`./fontMetrics.ts`) requires and this repo's build-time `fontkit`
- * dependency is not allowed to travel into the runtime bundle to provide
- * (`bake-metrics.mjs`'s own header: `fontkit` is a bake-time-only
- * devDependency, gated by `pnpm check:bundle-size`).
- *
- * Deliberately narrow: this is NOT a general SFNT/OpenType parser. It reads
- * exactly the table directory plus two fixed-layout tables and nothing else
- * (no glyph outlines, no `cmap`, no `OS/2`) — every other per-character
- * quantity (advances, kerning, the font's own "average glyph width") comes
- * from the browser's real font-shaping engine via canvas `measureText`
- * against a registered `FontFace`, never a hand-rolled read of `hmtx`/`kern`/
- * `GPOS` (`runtimeFontMetrics.ts`'s own doc has why).
- *
- * ## Format coverage
- *
- * Plain SFNT — TrueType-outline (`sfntVersion` 0x00010000 or `'true'`),
- * OpenType-CFF (`'OTTO'`), and a TrueType Collection's FIRST face (`'ttcf'`,
- * per the `ttc_header` "font 0" offset). That covers every `.ttf`/`.otf`;
- * `.woff2` is not read here.
- * WOFF2's table data is Brotli-compressed (`wOF2` container), and neither
- * `DecompressionStream` (no browser exposes a `'brotli'` format) nor a
- * bundled decompressor (the CSP blocks WASM entirely — no `unsafe-eval`) can
- * read it in this webview. `parseSfntScalars` returns `null` for a `.woff2`
- * (and any other signature it does not recognise, including a genuinely
- * malformed/truncated file); the caller's documented fallback is canvas
- * `TextMetrics.fontBoundingBoxAscent`/`.fontBoundingBoxDescent` against the
- * SAME registered `FontFace` — see `runtimeFontMetrics.ts`'s own doc for the
- * measured error that substitution carries.
- *
- * Every read is bounds-checked against the buffer's own length; a truncated
- * or corrupt file returns `null` rather than throwing — a broken font must
- * fall back to the bundled default (`fontMetrics.ts`'s contract), never crash
- * the render.
+ * Reads `head.unitsPerEm` and `hhea` ascender and descender from a scene font, the scalars the
+ * runtime bundle cannot get from `fontkit`, a bake-time-only devDependency that `pnpm check:bundle-size`
+ * keeps out. It reads the table directory and those two tables only: advances and kerning come
+ * from canvas `measureText`.
  */
 
-/** `head.unitsPerEm`, `hhea.ascender` (magnitude, upward-positive), `hhea.descender` (magnitude, downward-positive) — all design units, all as this font's own tables declare them. */
+// Reads plain SFNT only: TrueType (0x00010000 or `'true'`), OpenType-CFF (`'OTTO'`) and the first
+// face of a `'ttcf'` collection. WOFF2 tables are Brotli-compressed, and the webview can decompress
+// neither with `DecompressionStream`, which has no `'brotli'` format, nor with WASM, which the CSP blocks.
+
+/** `head.unitsPerEm` and the magnitudes of `hhea.ascender` and `hhea.descender`, in design units. */
 export interface SfntScalars {
   readonly unitsPerEm: number;
   readonly ascent: number;
   readonly descent: number;
 }
 
-/** TrueType-outline, OpenType-CFF, legacy Mac TrueType, and (unsupported here) PostScript Type 1 sfnt version tags — `OpenType spec, "OpenType Font File" §"sfntVersion"`. */
+/** The sfnt version tags of the OpenType spec, "OpenType Font File" §"sfntVersion". */
 const SFNT_VERSION_TRUETYPE = 0x00010000;
 const SFNT_VERSION_OTTO = 0x4f54544f; // 'OTTO'
 const SFNT_VERSION_TRUE = 0x74727565; // 'true' (legacy Mac TrueType)
@@ -56,7 +28,7 @@ const VALID_SFNT_VERSIONS: ReadonlySet<number> = new Set([
   SFNT_VERSION_TYPE1,
 ]);
 
-/** `'ttcf'` — TrueType Collection header tag (OpenType spec, "TrueType Collection Font File"). */
+/** `'ttcf'`, the TrueType Collection header tag (OpenType spec, "TrueType Collection Font File"). */
 const SFNT_VERSION_TTC = 0x74746366;
 
 const SFNT_HEADER_SIZE = 12; // sfntVersion(4) numTables(2) searchRange(2) entrySelector(2) rangeShift(2)
@@ -72,7 +44,7 @@ interface TableRecord {
   length: number;
 }
 
-/** Reads the table directory starting at `sfntTableDirectoryStart` (immediately after the 12-byte sfnt header at that offset), returning `null` if the directory itself doesn't fit in `dv`. */
+/** Reads the table directory after the 12-byte sfnt header at `sfntStart`, or `null` if it does not fit in `dv`. */
 function readTableDirectory(dv: DataView, sfntStart: number): Map<string, TableRecord> | null {
   if (sfntStart + SFNT_HEADER_SIZE > dv.byteLength) return null;
   const numTables = dv.getUint16(sfntStart + 4, false);
@@ -97,18 +69,15 @@ function readTableDirectory(dv: DataView, sfntStart: number): Map<string, TableR
   return tables;
 }
 
-/** `table.offset + minLength` must fit inside `dv` — guards every subsequent fixed-offset field read in that table. */
+/** Guards each fixed-offset field read in `table`: `table.offset + minLength` must fit inside `dv`. */
 function tableFits(dv: DataView, table: TableRecord, minLength: number): boolean {
   return table.offset + minLength <= dv.byteLength && table.length >= minLength;
 }
 
 /**
- * Reads `head.unitsPerEm` and `hhea.ascender`/`.descender` from raw SFNT
- * bytes. Returns `null` for anything this reader does not recognise or
- * cannot safely read in full: a compressed container (`wOFF`/`wOF2`), an
- * unrecognised `sfntVersion`, a missing `head`/`hhea` table, or any offset
- * the table directory claims that overruns the buffer (a truncated/corrupt
- * file). Never throws.
+ * Reads the scalars from raw SFNT bytes. Returns `null`, never throws, for a compressed container,
+ * an unknown `sfntVersion`, a missing `head` or `hhea`, or an offset past the buffer, so a broken
+ * font falls back to the bundled default.
  */
 export function parseSfntScalars(bytes: ArrayBuffer): SfntScalars | null {
   if (bytes.byteLength < 4) return null;
@@ -117,9 +86,8 @@ export function parseSfntScalars(bytes: ArrayBuffer): SfntScalars | null {
   let sfntStart = 0;
   const firstTag = dv.getUint32(0, false);
   if (firstTag === SFNT_VERSION_TTC) {
-    // ttc_header: ttcTag(4) majorVersion(2) minorVersion(2) numFonts(4) then
-    // numFonts * OffsetTable(4) — the FIRST face's own sfnt offset table
-    // start is the first entry.
+    // ttc_header: ttcTag(4) majorVersion(2) minorVersion(2) numFonts(4), then one offset per face.
+    // The first entry is the first face's offset table.
     const TTC_FIRST_OFFSET_FIELD = 12;
     if (TTC_FIRST_OFFSET_FIELD + 4 > dv.byteLength) return null;
     sfntStart = dv.getUint32(TTC_FIRST_OFFSET_FIELD, false);

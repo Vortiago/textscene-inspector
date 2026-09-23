@@ -51,7 +51,7 @@ export interface FitLineOptions {
 
 export interface FitLineResult {
   line: TextLineLayout;
-  /** `sd->fit_width_minimum_reached` (`:5677-5679`) — the line could not be brought down to `widthPx` (only meaningful when shrinking). */
+  /** `sd->fit_width_minimum_reached` (`:5677-5679`): a shrinking line could not reach `widthPx`. */
   fitWidthMinimumReached: boolean;
 }
 

@@ -1,15 +1,10 @@
+/**
+ * Partitions a tile layer's cells into one batch mesh per atlas source. Godot interleaves sources
+ * in scan order, so the batches take `sourceIndex` as their `renderOrder`, within the layer's one
+ * place in the canvas that its group carries (`canvasPaintOrder.ts`).
+ */
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import type { AtlasSourceModel, TileSetModel } from '../resources/tileset/types';
-
-/**
- * Partitioning a tile layer's cells into one batch per atlas source.
- *
- * Godot interleaves a layer's cells across atlas sources in scan order; we
- * batch one mesh per source, so the sources need a deterministic order among
- * themselves. That order is `sourceIndex`, applied as the batch mesh's own
- * `renderOrder` — draw order WITHIN the layer's one place in the canvas, which
- * its group carries (`canvasPaintOrder.ts`).
- */
 
 /** One atlas source's batch: its cells and its place among the drawn sources. */
 export interface DrawnSource {
@@ -17,19 +12,16 @@ export interface DrawnSource {
   source: AtlasSourceModel;
   /** The given cells that draw from this source, in their original order. */
   cells: readonly PlacedCell[];
-  /** Position among the DRAWN sources — dense, tileset order preserved. */
+  /** Position among the drawn sources: dense, in tileset order. */
   sourceIndex: number;
-  /** How many sources are drawn — the `sourceIndex` above is one of these. */
+  /** How many sources are drawn, which bounds `sourceIndex`. */
   sourceCount: number;
 }
 
 /**
- * Partition `cells` into one batch per atlas source, in the tileset's source
- * order, dropping the sources this set of cells does not draw from.
- *
- * One bucketing pass rather than a filter per source: the y-sort pass mounts one
- * batch set per tile ROW, so a filter chain costs sources × cells per row and
- * the row count grows with the map.
+ * Partitions `cells` into one batch per atlas source in tileset order, dropping sources no cell draws
+ * from. One bucketing pass, not a filter per source: the y-sort pass mounts a batch set per tile
+ * row, so a filter chain costs sources × cells per row.
  */
 export function drawnSources(
   model: Pick<TileSetModel, 'sources' | 'sourceOrder'>,
@@ -41,9 +33,8 @@ export function drawnSources(
     if (bucket) bucket.push(cell);
     else bySource.set(cell.sourceId, [cell]);
   }
-  // Walking `sourceOrder` rather than the buckets keeps the tileset's order and
-  // drops cells that name a source the tileset does not define — those have no
-  // atlas to draw from.
+  // Walking `sourceOrder`, not the buckets, keeps the tileset's order and drops cells naming a
+  // source the tileset does not define, which have no atlas.
   const drawn = model.sourceOrder.filter((id) => bySource.get(id)?.length);
   return drawn.map((sourceId, sourceIndex) => ({
     sourceId,

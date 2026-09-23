@@ -38,9 +38,9 @@ function svgSize(svg: string): { width: number; height: number } {
 }
 
 describe('CHECK_BOX_ICONS', () => {
-  // scene/theme/default_theme.cpp:288-295 — CheckBox registers exactly
+  // scene/theme/default_theme.cpp:288-295: CheckBox registers exactly
   // these eight icon keys; each maps 1:1 to `scene/theme/icons/<key>.svg`
-  // via `default_theme_icons_builders.py` (theme key == SVG filename stem).
+  // through `default_theme_icons_builders.py` (theme key == SVG filename stem).
   const ids = [
     'checked',
     'checkedDisabled',
@@ -70,7 +70,7 @@ describe('CHECK_BOX_ICONS', () => {
 
 describe('OPTION_BUTTON_ICONS', () => {
   it('arrow resolves to a data: URL whose decoded SVG has a valid, positive width/height', () => {
-    // scene/theme/default_theme.cpp:235 —
+    // scene/theme/default_theme.cpp:235:
     // `theme->set_icon("arrow", "OptionButton", icons["option_button_arrow"])`.
     // scene/theme/icons/option_button_arrow.svg is authored at 12x12.
     const svg = decodeSvg(OPTION_BUTTON_ICONS.arrow);
@@ -143,7 +143,7 @@ describe('SLIDER_TICK_ICONS', () => {
 });
 
 describe('CHECK_BUTTON_ICONS', () => {
-  // default_theme.cpp:327-330 — CheckButton's four non-mirrored draw states.
+  // default_theme.cpp:327-330: CheckButton's four non-mirrored draw states.
   const ids = ['checked', 'checkedDisabled', 'unchecked', 'uncheckedDisabled'] as const;
 
   it.each(ids)('%s resolves to a data: URL whose decoded SVG is 32x16', (id) => {
@@ -167,7 +167,7 @@ describe('CHECK_BUTTON_ICON_NATURAL_SIZE', () => {
 });
 
 describe('FOLDABLE_CONTAINER_ICONS', () => {
-  // default_theme.cpp:1329-1332 — FoldableContainer's four fold-state arrows.
+  // default_theme.cpp:1329-1332: FoldableContainer's four fold-state arrows.
   const ids = ['expandedArrow', 'expandedArrowMirrored', 'foldedArrow', 'foldedArrowMirrored'] as const;
 
   it.each(ids)('%s resolves to a data: URL whose decoded SVG is 16x16', (id) => {
@@ -269,7 +269,7 @@ describe('ColorPicker/ColorPickerButton icons', () => {
 });
 
 describe('GraphEdit/GraphEditMinimap icons', () => {
-  // scene/theme/default_theme.cpp:1279-1285 — GraphEdit registers exactly these
+  // scene/theme/default_theme.cpp:1279-1285: GraphEdit registers exactly these
   // seven toolbar icon keys; :1349 registers the minimap's own resizer.
   const ids = ['zoomOut', 'zoomIn', 'zoomReset', 'gridToggle', 'minimapToggle', 'snappingToggle', 'layout'] as const;
 
@@ -296,7 +296,7 @@ describe('GraphEdit/GraphEditMinimap icons', () => {
 });
 
 describe('SCROLL_HINT_ICONS', () => {
-  // scene/theme/default_theme.cpp:667-668 — ScrollContainer registers exactly
+  // scene/theme/default_theme.cpp:667-668: ScrollContainer registers exactly
   // these two icon keys, each 1:1 with `scene/theme/icons/<key>.svg`.
   it('vertical is the 32x24 fade `_update_scroll_hints` reads get_height() off (scroll_container.cpp:627)', () => {
     expect(svgSize(decodeSvg(SCROLL_HINT_ICONS.vertical))).toEqual({ width: 32, height: 24 });

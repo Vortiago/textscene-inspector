@@ -1,14 +1,7 @@
 /**
- * The one and only place `three-bvh-csg` is imported, and it is imported LAZILY.
- *
- * Static-importing it would put the CSG core plus `three-mesh-bvh` on the webview's
- * initial-paint path — tens of kB gzipped, spent on every scene for a feature most
- * scenes never touch. `check:bundle-size` reports the headroom of the day; the point
- * here is that this cost is avoidable entirely, not that it currently fits.
- *
- * Keeping it to a single call site is what makes that enforceable rather than aspirational:
- * `csgImportSite.contract.test.ts` asserts no other file mentions the package, so the
- * host-bundle and linter-closure guards never have to catch it later.
+ * The one place `three-bvh-csg` is imported, and lazily: a static import puts the CSG core and
+ * `three-mesh-bvh` on the webview's initial-paint path for every scene. `csgImportSite.contract.test.ts`
+ * holds the import to this file.
  */
 
 import type * as THREE from 'three';
@@ -34,12 +27,9 @@ export function loadCsgModule(): Promise<CsgModule> {
 }
 
 /**
- * Start the load without waiting for it.
- *
- * Called as soon as a parsed scene is known to contain any CSG type, because
- * `CameraFit`'s last auto-frame retry fires at 1100 ms: geometry that lands after that
- * gets framed out of the opening view, so the chunk needs to be in flight well before
- * the first CSG root mounts.
+ * Starts the load without waiting, as soon as a parsed scene holds any CSG type. The last
+ * auto-frame retry of `CameraFit` fires at 1100 ms, and geometry that lands later is framed out of
+ * the opening view.
  */
 export function prefetchCsgModule(): void {
   void loadCsgModule().catch(() => {

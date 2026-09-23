@@ -1,14 +1,7 @@
 /**
- * The single drawn mesh a CSG root produces, and the state machine around getting it.
- *
- * Owns four things a pure function cannot: loading the CSG library, memoizing the
- * evaluation across reparses, mounting one material slot per output surface, and
- * publishing the resulting status to the subtree.
- *
- * The status is PUBLISHED here rather than reported to the caller, because it is computed
- * here. Handing it up to CsgPrimitive and receiving it back through the provider would
- * re-render the whole root subtree on every load transition to move a value that never
- * left this file.
+ * The mesh a CSG root draws: it loads the library, memoises the evaluation, mounts one material slot
+ * per surface and publishes the status to the subtree. Publishing here, not through CsgPrimitive,
+ * spares the root subtree a re-render on each load transition.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -112,11 +105,9 @@ export function CsgRootMesh({ plan, shadow, fallback, children }: CsgRootMeshPro
           receiveShadow
           geometry={evaluation!.geometry as THREE.BufferGeometry}
         >
-          {/* SHADOWS_ONLY draws nothing into the colour buffer, so there is no
-              surface material to mount — and mounting one anyway would leave
-              this substitution resting on r3f's attach ORDER, which a surface
-              slot remounting later (an external `.tres` landing, a program key
-              moving) is free to undo. */}
+          {/* SHADOWS_ONLY draws no colour, so no surface material mounts: one would leave
+              this substitution resting on r3f's attach order, which a later slot remount
+              (an external `.tres` landing, a program key moving) undoes. */}
           {shadow.shadowsOnly ? (
             <meshBasicMaterial
               key={CSG_SHADOWS_ONLY_MATERIAL.key}
@@ -124,7 +115,7 @@ export function CsgRootMesh({ plan, shadow, fallback, children }: CsgRootMeshPro
             />
           ) : (
             surfaces.map((surface, index) => {
-              // A single-surface mesh keeps the SINGULAR attach key, so `mesh.material`
+              // A single-surface mesh keeps the singular attach key, so `mesh.material`
               // stays one material rather than a length-1 array.
               const attach = surfaces.length > 1 ? `material-${index}` : 'material';
               return <SurfaceMaterialSlot key={index} source={surface} attach={attach} />;

@@ -22,17 +22,14 @@ function toArrayBuffer(buf: Buffer): ArrayBuffer {
 
 describe('parseSfntScalars', () => {
   it('reads unitsPerEm (head) and ascent/descent (hhea) from a real corpus TrueType font', () => {
-    // Independently verified with fontkit 5.x against the SAME vendored file
-    // (`Xolonium-Regular.ttf`) — fontkit reports `descent` negative; this
-    // module's own contract stores the MAGNITUDE, matching `FontMetrics.descent`.
+    // Verified with fontkit 5.x against the same file. fontkit reports `descent` negative, and the
+    // parser stores the magnitude, as `FontMetrics.descent` does.
     const bytes = toArrayBuffer(readFileSync(CORPUS_TTF));
     expect(parseSfntScalars(bytes)).toEqual({ unitsPerEm: 1000, ascent: 930, descent: 270 });
   });
 
   it('reads unitsPerEm/ascent/descent from a real corpus OpenType-CFF (OTTO) font', () => {
-    // Independently verified with fontkit against the SAME vendored file
-    // (`montserrat_extra_bold.otf`) — exercises the 'OTTO' sfntVersion
-    // branch, distinct from the TrueType 0x00010000 branch above.
+    // Verified with fontkit against the same file. It covers the 'OTTO' sfntVersion branch.
     const bytes = toArrayBuffer(readFileSync(CORPUS_OTF));
     expect(parseSfntScalars(bytes)).toEqual({ unitsPerEm: 1000, ascent: 968, descent: 251 });
   });
@@ -66,7 +63,7 @@ describe('parseSfntScalars', () => {
     dv.setUint8(14, 'a'.charCodeAt(0));
     dv.setUint8(15, 'd'.charCodeAt(0));
     dv.setUint32(16, 0, false); // checksum
-    dv.setUint32(20, 1_000_000, false); // offset — WAY past the buffer
+    dv.setUint32(20, 1_000_000, false); // offset, past the buffer
     dv.setUint32(24, 54, false); // length
     expect(parseSfntScalars(buf)).toBeNull();
   });

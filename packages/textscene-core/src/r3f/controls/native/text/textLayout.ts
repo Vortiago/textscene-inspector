@@ -1,71 +1,29 @@
 /**
- * Framework-free line-breaking + glyph placement for the native (WebGL)
- * Control text engine — a port of Godot's Label shaping, against a
- * `FontMetrics` (`./fontMetrics.ts`) rather than any one font directly.
+ * Framework-free line breaking and glyph placement for the native (WebGL) Control text engine: a
+ * port of Godot's Label shaping against a `FontMetrics`.
  *
- * Two sources, two responsibilities, deliberately kept separate:
- *  - Shaping metrics — advances, kerning, ascent/descent/line-pitch — come
- *    from `options.fontMetrics`, a `FontMetrics` defaulting to
- *    `OPEN_SANS_FONT_METRICS` (`./openSansFontMetrics.ts`, an adapter over
- *    the generated `openSansMetrics.ts`). `fontMetrics.ts`'s own doc has the
- *    contract: an implementation supplies only raw design-unit data, and the
- *    shared px-quantization math (the ceiling-rounds-then-sums line-pitch
- *    rule in particular — see `getFontLinePitchPx`'s own doc for why a
- *    per-implementation copy of that rule is the bug this is structured to
- *    prevent) lives there, once, for every implementation.
- *  - `openSansAtlas.ts`'s `OPEN_SANS_ATLAS_GLYPHS` — the ONLY per-glyph
- *    atlas-bitmap table, consulted ONLY when `options.fontMetrics.kind` is
- *    `'atlas'` (the default, `OPEN_SANS_FONT_METRICS`). A `'canvas'` metrics
- *    object (`runtimeFontMetrics.ts`'s `CanvasFontMetrics` — a runtime-loaded
- *    scene font with no baked atlas) shapes through the exact same line-
- *    breaking/placement code below but every `GlyphPlacement.glyph` comes
- *    back `null`: there is no MSDF bitmap for it, and painting it is
- *    `TextRun.tsx`'s canvas-rasterisation path instead, which reads
- *    `TextLayoutResult.fontMetrics` (also carried below) to dispatch. Gating
- *    on `kind` here — rather than leaving the atlas lookup unconditional, as
- *    it used to be before a second `FontMetrics` implementation existed — is
- *    what closes the boundary this doc used to call "still open": an atlas
- *    lookup for a font the atlas was never baked from would otherwise return
- *    an Open-Sans bitmap for a DIFFERENT font's advances/kerning, silently.
+ * Shaping metrics come from `options.fontMetrics`, by default `OPEN_SANS_FONT_METRICS`, and the
+ * px-quantisation math lives once in `fontMetrics.ts`. Atlas bitmaps are looked up only for an
+ * `'atlas'` font: a `'canvas'` scene font gets `glyph: null` and `TextRun.tsx` rasterises it,
+ * because an atlas lookup would give another font's advances Open Sans ink.
  *
- * Line-breaking is a direct port of two Godot functions:
- *   scene/gui/label.cpp :: Label::_shape() (~209-225) — maps
- *     `Label.autowrap_mode` to TextServer break flags:
- *       AUTOWRAP_OFF          -> (no wrap flags; only the paragraph's own
- *                                 hard breaks apply)
+ * Line breaking ports:
+ *   scene/gui/label.cpp :: Label::_shape() (~209-225): maps `Label.autowrap_mode` to break flags:
+ *       AUTOWRAP_OFF          -> no wrap flags, only hard breaks
  *       AUTOWRAP_ARBITRARY    -> BREAK_GRAPHEME_BOUND | BREAK_MANDATORY
  *       AUTOWRAP_WORD         -> BREAK_WORD_BOUND | BREAK_MANDATORY
  *       AUTOWRAP_WORD_SMART   -> BREAK_WORD_BOUND | BREAK_ADAPTIVE | BREAK_MANDATORY
- *     ORed with `autowrap_flags_trim`, whose Label-level DEFAULT (label.h:45)
- *     is BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES — every
- *     Label trims the edge space at a break even when the scene authors no
- *     trim flags, so that default is baked in here rather than an option.
- *   servers/text/text_server.cpp :: TextServer::shaped_text_get_line_breaks()
- *     (~1024-1209) — the scalar-width overload Label::_shape() actually calls
- *     (not the multi-chunk `_adv` sibling): the width/lastSafeBreak/wordCount
- *     bookkeeping, the overflow check, the TRIM_START/END branch walking
- *     start/end back off edge spaces, and the tail rule for the remainder.
- *     `width <= 0` disables the overflow check entirely (`width > 0 &&` in
- *     the source), which is what makes AUTOWRAP_OFF fall out of the SAME
- *     function with no special-casing: pass an unconstrained width and only
- *     the (always-on) hard-break branch below can still start a new line.
- *   modules/text_server_adv/text_server_adv.cpp :: _shaped_text_update_breaks()
- *     (~6258-6420) — ICU's UAX#14 line-break iterator populates
- *     GRAPHEME_IS_BREAK_SOFT; for plain space-separated ASCII that reduces to
- *     one rule reproduced below: the space glyph itself is the soft-break
- *     candidate (BREAK_WORD_BOUND), and BREAK_GRAPHEME_BOUND instead treats
- *     every glyph position as one.
- *   text_server.cpp:1174-1176 — BREAK_ADAPTIVE: a mid-word fallback break,
- *     live only while `wordCount === 0` (no word boundary found yet on the
- *     current line) — required so a single word wider than its box still
- *     wraps under WORD_SMART instead of overflowing (that overflow IS what
- *     plain WORD, lacking this flag, does instead).
- *   core/string/char_utils.h :: is_whitespace() / is_linebreak() — exact
- *     codepoint ranges, transcribed in full for fidelity though only the
- *     ASCII space and LF/CR are reachable by this engine's glyph set.
- *   scene/theme/default_theme.cpp:392 — Label's `line_spacing` theme
- *     constant, `round(3 * scale)`; `lineSpacingPx` defaults to 3 here (UI
- *     scale 1.0), matching `getFontLinePitchPx`'s own default.
+ *     ORed with `autowrap_flags_trim`, which defaults to both edge-space trims (label.h:45).
+ *   servers/text/text_server.cpp :: TextServer::shaped_text_get_line_breaks() (~1024-1209), the
+ *     scalar-width overload Label calls. `width <= 0` disables the overflow check, so AUTOWRAP_OFF
+ *     passes an unconstrained width and only hard breaks start a line.
+ *   modules/text_server_adv/text_server_adv.cpp :: _shaped_text_update_breaks() (~6258-6420): for
+ *     space-separated text, UAX#14 soft breaks reduce to the space glyph (BREAK_WORD_BOUND), and
+ *     BREAK_GRAPHEME_BOUND makes every glyph position one.
+ *   text_server.cpp:1174-1176: BREAK_ADAPTIVE breaks mid-word while `wordCount === 0`, so under
+ *     WORD_SMART a word wider than its box wraps, where plain WORD overflows.
+ *   core/string/char_utils.h :: is_whitespace() / is_linebreak(): the full codepoint ranges.
+ *   scene/theme/default_theme.cpp:392: Label's `line_spacing` constant, `round(3 * scale)`.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -87,7 +45,7 @@ import {
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { tabAlignAdvances } from './textTabStops';
 
-/** Godot `TextServer::AutowrapMode` (`core/templates/rid.h`-adjacent enum; values match the engine's). */
+/** Godot `TextServer::AutowrapMode` (`servers/text/text_server.h:98`), with the engine's values. */
 export enum AutowrapMode {
   OFF = 0,
   ARBITRARY = 1,
@@ -96,12 +54,9 @@ export enum AutowrapMode {
 }
 
 /**
- * Narrows a parsed `autowrap_mode` to the enum, falling back when the value is
- * absent or outside it — the same silent-lenient handling `parseOptionalInt`
- * already applies at parse time.
- *
- * The fallback differs per Control and is the caller's to state: `Label`
- * defaults to `OFF`, `RichTextLabel` to `WORD_SMART` (`rich_text_label.h:557`).
+ * Narrows a parsed `autowrap_mode` to the enum, else returns `fallback`, as leniently as
+ * `parseOptionalInt`. The fallback is the caller's: `Label` uses `OFF`, `RichTextLabel` uses
+ * `WORD_SMART` (`rich_text_label.h:557`).
  */
 export function clampAutowrapMode(mode: number | undefined, fallback: AutowrapMode): AutowrapMode {
   switch (mode) {
@@ -116,102 +71,55 @@ export function clampAutowrapMode(mode: number | undefined, fallback: AutowrapMo
 }
 
 export interface ShapeTextOptions {
-  /** Target render font size, px. Atlas advances (baked at 42px) scale by `fontSizePx / 42`. Used verbatim for every character absent `fontSizePxAt`. */
+  /** Target render font size, px, for every character when `fontSizePxAt` is absent. Atlas bitmaps, baked at 42 px, scale by `fontSizePx / 42`. */
   fontSizePx: number;
-  /** Wrap width, px. `<= 0` means unconstrained — no soft wrap, only hard breaks. */
+  /** Wrap width, px. `<= 0` means unconstrained: no soft wrap, only hard breaks. */
   boxWidthPx: number;
   /**
-   * `BREAK_TRIM_INDENT` (`servers/text/text_server.cpp:1048-1062`) — measure
-   * the leading run of tabs and spaces once, cap it at `0.6 * boxWidthPx`, and
-   * break every row that starts past that run at `boxWidthPx - indent`
-   * instead. `TextEdit.indent_wrapped_lines` is the only property that sets it
-   * (`text_edit.cpp:285-287`); every other caller leaves it off.
+   * `BREAK_TRIM_INDENT` (`servers/text/text_server.cpp:1048-1062`): measures the leading tabs and
+   * spaces once, caps the run at `0.6 * boxWidthPx`, and breaks each later row at
+   * `boxWidthPx - indent`. Only `TextEdit.indent_wrapped_lines` sets it (`text_edit.cpp:285-287`).
    */
   trimIndent?: boolean;
   autowrapMode: AutowrapMode;
-  /** `Label.uppercase` — shapes `text.toUpperCase()`, not the source casing. */
+  /** `Label.uppercase`: shapes `text.toUpperCase()`, not the source casing. */
   uppercase?: boolean;
   /**
-   * The theme `line_spacing` this control shapes at, px. Required, with no
-   * default: it is a PER-CONTROL theme constant, not a property of shaping.
-   * Label's is 3 (`LABEL_LINE_SPACING_PX`); every Button-family widget and
-   * LineEdit read no such key at all and pass 0; RichTextLabel's own
-   * `line_separation` default is 0 (`default_theme.cpp:1217`); Label3D passes
-   * the node's authored `line_spacing`. A shared default here would be one
-   * widget's constant silently applied to the rest — worth an explicit value
-   * at every call site, because the miss shows only as a 1-3px vertical shift.
+   * The theme `line_spacing`, px. Required, because it is a per-control constant: Label 3
+   * (`LABEL_LINE_SPACING_PX`), Button-family and LineEdit 0, RichTextLabel `line_separation` 0
+   * (`default_theme.cpp:1217`), Label3D its authored `line_spacing`. A miss is a 1-3 px shift.
    */
   lineSpacingPx: number;
   /**
-   * Per-character font size override, keyed by index into the (post-uppercase)
-   * text — RichTextLabel's `[b]`/`[i]`/`[b][i]` bbcode spans shape at their OWN
-   * theme font-size key (`bold_font_size`/`italics_font_size`/
-   * `bold_italics_font_size`), independent of the paragraph's own
-   * `normal_font_size` (`rich_text_label.cpp:3244-3290`'s `_find_font`, one
-   * `theme_cache.*_font_size` read per `RTL_*_FONT` case — never a fallback to
-   * `normal_font_size`). Absent for every other caller (Label, Button,
-   * LineEdit — none has per-character styling), in which case every glyph
-   * advances at the flat `fontSizePx` exactly as before. Kerning between two
-   * adjacent characters is skipped when they resolve to different sizes — a
-   * proxy for "different shaped run", matching HarfBuzz shaping each
-   * RichTextLabel Item separately (no GPOS pair spans a style boundary).
+   * Per-character font size, keyed by index into the post-uppercase text: RichTextLabel `[b]`/`[i]`
+   * spans shape at their own `*_font_size` key, never `normal_font_size` (`rich_text_label.cpp:3244-3290`).
+   * Kerning is skipped between characters of different sizes, as HarfBuzz shapes each Item apart.
    */
   fontSizePxAt?: (charIndex: number) => number;
-  /**
-   * The `FontMetrics` (`./fontMetrics.ts`) to shape advances, kerning, and
-   * line pitch against. Defaults to `OPEN_SANS_FONT_METRICS` — the vendored
-   * atlas font — when omitted, matching every caller's behaviour before this
-   * option existed. Glyph PAINTING metadata (`GlyphPlacement.glyph`) is
-   * unaffected by this: it is always looked up in `OPEN_SANS_ATLAS_GLYPHS`,
-   * this module's own doc has why.
-   */
+  /** The `FontMetrics` to shape against, by default `OPEN_SANS_FONT_METRICS`. Only an `'atlas'` font gets `GlyphPlacement.glyph`. */
   fontMetrics?: FontMetrics;
   /**
-   * `Label.paragraph_separator`. When set, the text is split on it FIRST and
-   * every paragraph is shaped and line-broken on its own, each terminated with
-   * a ZERO WIDTH SPACE — `Label::_shape` (`label.cpp:158-166`), where
-   * `txt.split(ps)` keeps empty entries and `para.text = str + chr(0x200B)`.
-   * The terminator is what gives an empty paragraph a line at all: the break
-   * loop drops a range whose start equals its end (`text_server.cpp:948`), so
-   * a paragraph holding no glyph would vanish while one holding the ZWSP
-   * survives at zero width.
-   *
-   * Absent for every other caller, and that is the ported rule's own scope,
-   * not an omission: Label3D shapes the whole string in one pass
-   * (`label_3d.cpp:485,530`) and `TextParagraph` — Button's and LineEdit's
-   * path — neither splits nor terminates, so a blank line really does collapse
-   * for them. Label's own separator property is not parsed today; `'\n'` is
-   * the engine default the callers pass.
+   * `Label.paragraph_separator`, which callers pass as the engine default `'\n'`. The text splits on
+   * it first, and each paragraph ends with a ZERO WIDTH SPACE (`label.cpp:158-166`). The break loop
+   * drops an empty range (`text_server.cpp:948`), so the terminator gives a blank paragraph its line.
    */
   paragraphSeparator?: string;
   /**
-   * `Label.tab_stops` / `TextParagraph.tab_stops`, px. Applied TWICE, exactly
-   * as `Label::_shape` calls `shaped_text_tab_align` twice (`label.cpp:
-   * 196-198,228-230`): once over the WHOLE paragraph before line-breaking (so
-   * a tab's real advance — not its unaligned placeholder — decides where the
-   * line wraps), and again per EMITTED line, restarting the tab-stop cycle at
-   * that line's own pen origin (`shaped_text_tab_align`'s own `off` starts at
-   * 0 for whichever shaped text it is called on — a substring is its own
-   * text, not an offset view of the paragraph's). Undefined or empty is a
-   * no-op, matching every caller before this option existed.
+   * `Label.tab_stops` and `TextParagraph.tab_stops`, px, applied twice as `Label::_shape` does
+   * (`label.cpp:196-198,228-230`): over the paragraph before line breaking, so the aligned advance
+   * decides the wrap, then per line from its own pen origin. Undefined or empty is a no-op.
    */
   tabStopsPx?: number[];
   /**
-   * `Label.autowrap_trim_flags` — the `BREAK_TRIM_START_EDGE_SPACES` (64) /
-   * `BREAK_TRIM_END_EDGE_SPACES` (128) subset only; `BREAK_TRIM_INDENT` (32)
-   * is accepted as a bit but not ported (this module's own doc, above,
-   * already covers the two trims it replaces). Undefined defaults to BOTH
-   * trims on (`label.h:45`), matching every caller before this option existed.
+   * `Label.autowrap_trim_flags`. Only `BREAK_TRIM_START_EDGE_SPACES` (64) and
+   * `BREAK_TRIM_END_EDGE_SPACES` (128) are read, not `BREAK_TRIM_INDENT` (32). Undefined turns both
+   * trims on (`label.h:45`).
    */
   autowrapTrimFlags?: number;
   /**
-   * `TextServer::shaped_text_set_preserve_control` — keeps a control
-   * character (`isControlChar`) alive as a `draw_hex_code_box` fallback
-   * glyph (`text/hexCodeBox.ts`) instead of dropping it with zero width
-   * (`toBreakGlyphs`'s own doc). Undefined/`false` (default) matches every
-   * caller before this option existed. `LineEdit`/`TextEdit`'s own
-   * `draw_control_chars` property is the ONLY thing that sets this true
-   * today; Label/Button/RichTextLabel never do (no such property).
+   * `TextServer::shaped_text_set_preserve_control`: keeps a control character as a hex-code box glyph
+   * (`text/hexCodeBox.ts`) instead of dropping it at zero width. Only the `draw_control_chars` property
+   * of `LineEdit` and `TextEdit` sets it.
    */
   preserveControl?: boolean;
 }
@@ -224,19 +132,16 @@ const BREAK_TRIM_END_EDGE_SPACES = 1 << 7;
 export interface GlyphPlacement {
   /** The character rendered (post-uppercase-transform, if requested). */
   char: string;
-  /** Pen-origin x within the line — left edge of this glyph's ADVANCE box, not its ink. */
+  /** Pen-origin x within the line: the left edge of the glyph's advance box, not its ink. */
   x: number;
   /**
-   * This glyph's own advance to the next glyph's pen x, target px. Includes
-   * any kerning adjustment against the FOLLOWING glyph (kerning narrows or
-   * widens the gap between a pair, and is folded into the leading glyph's
-   * advance so a single running sum serves both the line-break width check
-   * and this placement pass with no second calculation to drift from it).
+   * The advance to the next glyph's pen x, target px. It includes the kerning against the following
+   * glyph, so one running sum serves the line-break width check and placement.
    */
   advance: number;
-  /** Atlas bitmap metadata for this glyph, or `null` if the atlas has none (outside the vendored ASCII set) OR the line was shaped against a non-`'atlas'` `FontMetrics` (this module's own doc has why). */
+  /** Atlas bitmap metadata, or `null` outside the baked charset or for a non-`'atlas'` `FontMetrics`. */
   glyph: OpenSansGlyph | null;
-  /** The control character this glyph draws as a hex-code box (`draw_hex_code_box`, `text/hexCodeBox.ts`) instead of atlas ink — set only when `preserveControl` kept it alive. Absent for every ordinary glyph. */
+  /** The control character this glyph draws as a hex-code box (`draw_hex_code_box`), set only when `preserveControl` kept it. */
   controlCodepoint?: number;
 }
 
@@ -245,90 +150,48 @@ export interface TextLineLayout {
   text: string;
   glyphs: GlyphPlacement[];
   /**
-   * Sum of every glyph's advance on this line, target px — the raw pen
-   * extent, Godot's `sd->width` / `TextServer::shaped_text_get_width`. A
-   * widget that wants the SIZE the engine reports for this line
-   * (`shaped_text_get_size`, a different accessor) must put it through
-   * `shapedTextSizeWidthPx`.
+   * The sum of the line's advances, target px: Godot's raw pen extent `sd->width`. The size the
+   * engine reports (`shaped_text_get_size`) goes through `shapedTextSizeWidthPx`.
    */
   widthPx: number;
 }
 
 /**
- * `TextServerAdvanced::_shaped_text_get_size`
- * (`modules/text_server_adv/text_server_adv.cpp:7524-7537`): the size a
- * shaped line reports back is `Size2(sd->width, ascent + descent).ceil()` —
- * a WHOLE number of pixels, even though the pen advance it is derived from
- * is fractional. `shaped_text_get_width` ceils the same `sd->width`
- * independently (`:7561-7570`), so a widget aligning a line against it and
- * one folding this size into a minimum read the same whole number.
- * `TextLineLayout.widthPx` and `TextLayoutResult.widthPx` are the RAW pen
- * advance, so this is the conversion at that seam rather than a rounding
- * baked into shaping.
- *
- * `Math.ceil`, matching `Vector2::ceil()`'s own `Math::ceil` per component:
- * toward POSITIVE infinity, so a degenerate negative extent rounds toward
- * zero rather than away from it.
- *
- * The ceil is not a rounding nicety — it is load-bearing at the container
- * seam. `GridContainer` folds each child's minimum into `Size2i col_minw`
- * (`grid_container.cpp:290`), truncating it; a minimum left a fraction below
- * the whole pixel therefore truncates a whole pixel DOWN, and every column
- * past it opens one pixel early.
+ * `_shaped_text_get_size` reports `Size2(sd->width, ascent + descent).ceil()`
+ * (`modules/text_server_adv/text_server_adv.cpp:7524-7537`), and `shaped_text_get_width` ceils the
+ * same width (`:7561-7570`). The ceil runs toward positive infinity, as `Vector2::ceil()` does.
  */
 export function shapedTextSizeWidthPx(widthPx: number): number {
+  // `GridContainer` truncates each minimum into `Size2i col_minw` (`grid_container.cpp:290`), so a
+  // minimum a fraction below the pixel opens every later column one pixel early.
   return Math.ceil(widthPx);
 }
 
 export interface TextLayoutResult {
   lines: TextLineLayout[];
-  /** `getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx)` — every line uses the same pitch. */
+  /** `getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx)`, one pitch for every line. */
   linePitchPx: number;
   /** The widest line's `widthPx`. */
   widthPx: number;
   /** `lines.length * linePitchPx`. */
   heightPx: number;
   /**
-   * `getFontAscentPx(fontMetrics, fontSizePx)` — where a line's own baseline
-   * sits, measured down from that line's top (`fontMetrics.ts`'s own doc:
-   * the SAME rounded value every other baseline-relative pixel quantity,
-   * e.g. the italic-shear pivot, is measured from). BOTH painters anchor a
-   * line here (`TextRun.tsx`'s `buildGlyphQuadArrays`, `canvasTextPainter.ts`'s
-   * `paintSceneFontCanvas`), so it is required rather than optional: a caller
-   * that hand-builds a `TextLayoutResult` by slicing one line back out of an
-   * already-shaped result must state which baseline that line is anchored at,
-   * and a default silently substituted for it is a whole-ascent vertical miss
-   * on the canvas path and a bake-anchor-sized one on the atlas path.
+   * `getFontAscentPx(fontMetrics, fontSizePx)`: the baseline, measured down from the line top. Both
+   * painters anchor a line here, so a hand-built result must state it: a wrong default misses by a
+   * whole ascent on the canvas path and by the bake anchor on the atlas path.
    */
   baselineOffsetPx: number;
   /**
-   * The `FontMetrics` this layout was shaped against — `options.fontMetrics`
-   * echoed back, defaulting to `OPEN_SANS_FONT_METRICS` exactly like shaping
-   * itself. `TextRun.tsx` reads `.kind` off this to dispatch between the MSDF
-   * atlas painter and the canvas-rasterisation painter, so an omitted value
-   * would silently force a scene-font layout onto the atlas path (whose
-   * bitmaps that font has none of); required for that reason.
+   * The `FontMetrics` the layout was shaped against. `TextRun.tsx` dispatches on `.kind` between the
+   * MSDF atlas and canvas painters, so an omitted value would put a scene font on the atlas path.
    */
   fontMetrics: FontMetrics;
 }
 
 /**
- * One line of an already-shaped result, re-wrapped as its own one-line
- * `TextLayoutResult`. `TextRun` computes `lineIndex * linePitchPx` internally,
- * which is 0 for a solo line, so it draws relative to y=0 with no cumulative
- * pitch of its own; the caller supplies the real cumulative Y via the wrapping
- * `<group>`'s position.
- *
- * It lives beside `TextLayoutResult` rather than in any one slice because it is
- * the ONE construction path that bypasses `shapeText`, and so the one place
- * `baselineOffsetPx` and `fontMetrics` can be dropped despite both being
- * required: `TextRun` dispatches MSDF-atlas vs. canvas-rasterised painting off
- * `fontMetrics.kind`, and anchors every glyph at `baselineOffsetPx`. Echoing
- * the parent's values is therefore the default, and a caller overrides
- * `baselineOffsetPx` only when the line genuinely sits at a different baseline
- * from the paragraph — a RichTextLabel run shaped at its own `[b]`/`[i]` theme
- * font size, where inheriting the paragraph's ascent is a whole ascent-delta
- * vertical miss.
+ * Re-wraps one shaped line as a one-line result drawn from y = 0; the caller's `<group>` supplies
+ * the cumulative Y. It bypasses `shapeText`, so it echoes the parent's `fontMetrics` and baseline.
+ * Override `baselineOffsetPx` for a RichTextLabel `[b]`/`[i]` run shaped at its own size.
  */
 export function soloLineLayout(
   line: TextLineLayout,
@@ -346,21 +209,9 @@ export function soloLineLayout(
 }
 
 /**
- * A runtime shape check for `NativeControlComponentProps.meta` — a text
- * painter (Button, Label) reading back a `MinimumSizeFn`'s cached
- * `TextLayoutResult` (ITEM C: avoiding a second `shapeText` call for text
- * the solve already shaped) casts `unknown` at that boundary exactly like
- * every other painter already casts `solveNode.node.properties`, but this
- * ONE check is cheap and the failure mode of skipping it — rendering
- * whatever `.lines`/`.widthPx` happen to be on an unrelated object — is a
- * silent wrong picture rather than a thrown error, so it is worth the five
- * property reads. Duck-typed, not `instanceof`: a `TextLayoutResult` is
- * plain data with no prototype of its own.
- *
- * `fontMetrics` is checked by PRESENCE rather than shape — it is the field
- * that decides which painter draws the result, so an object carrying the
- * four numeric/array fields but no metrics is exactly the "plausible but
- * unrelated" case this guard exists to reject.
+ * Checks a painter's cached `NativeControlComponentProps.meta` at runtime, since painting an
+ * unrelated object is a silent wrong picture. Duck-typed, because the result is plain data.
+ * `fontMetrics` is checked by presence, because it decides which painter draws.
  */
 export function isTextLayoutResult(value: unknown): value is TextLayoutResult {
   if (typeof value !== 'object' || value === null) return false;
@@ -375,11 +226,11 @@ export function isTextLayoutResult(value: unknown): value is TextLayoutResult {
 }
 
 interface BreakFlags {
-  /** BREAK_WORD_BOUND — a space glyph is a safe break point. */
+  /** BREAK_WORD_BOUND: a space glyph is a safe break point. */
   wordBound: boolean;
-  /** BREAK_GRAPHEME_BOUND — every glyph position is a safe break point. */
+  /** BREAK_GRAPHEME_BOUND: every glyph position is a safe break point. */
   graphemeBound: boolean;
-  /** BREAK_ADAPTIVE — mid-word fallback break, live only while `wordCount === 0`. */
+  /** BREAK_ADAPTIVE: a mid-word fallback break, live only while `wordCount === 0`. */
   adaptive: boolean;
 }
 
@@ -398,7 +249,7 @@ function breakFlagsForAutowrap(mode: AutowrapMode): BreakFlags {
 }
 
 // core/string/char_utils.h :: is_whitespace() / is_linebreak().
-/** Exported for `textOverrun.ts`/`textJustify.ts`: both need the same soft-break/edge-space predicate this module's own line breaker uses. */
+/** Shared with `textOverrun.ts` and `textJustify.ts`, which need the line breaker's edge-space predicate. */
 export function isWhitespace(cp: number): boolean {
   return (
     cp === 0x20 ||
@@ -418,12 +269,12 @@ function isLinebreak(cp: number): boolean {
   return (cp >= 0x000a && cp <= 0x000d) || cp === 0x0085 || cp === 0x2028 || cp === 0x2029;
 }
 
-/** `GRAPHEME_IS_TAB` — tab (U+0009) or vertical tab (U+000B) (`text_server_adv.cpp:6369-6371`). */
+/** `GRAPHEME_IS_TAB`: tab (U+0009) or vertical tab (U+000B) (`text_server_adv.cpp:6369-6371`). */
 export function isTabChar(ch: string): boolean {
   return ch === '\t' || ch === '';
 }
 
-/** `core/string/char_utils.h::is_control` — C0 controls and DEL through the C1 range. Tab and every linebreak fall inside this range too, but both are consulted (and handled) before this predicate ever runs — see `toBreakGlyphs`'s own doc. */
+/** `core/string/char_utils.h::is_control`: C0 controls and DEL through the C1 range, tab and linebreaks included. */
 export function isControlChar(cp: number): boolean {
   return cp <= 0x001f || (cp >= 0x007f && cp <= 0x009f);
 }
@@ -434,44 +285,26 @@ interface BreakGlyph {
   advance: number;
   isSpace: boolean;
   isHardBreak: boolean;
-  /** `GRAPHEME_IS_TAB` — a separate flag from `GRAPHEME_IS_SPACE` in Godot, and `BREAK_TRIM_INDENT` reads both (`text_server.cpp:1051`). */
+  /** `GRAPHEME_IS_TAB`, a flag apart from `GRAPHEME_IS_SPACE`. `BREAK_TRIM_INDENT` reads both (`text_server.cpp:1051`). */
   isTab: boolean;
-  /** The codepoint this glyph draws as a hex-code box instead of shaping normally — only set when `preserveControl` kept a control character alive (`toBreakGlyphs`'s own doc). */
+  /** The codepoint this glyph draws as a hex-code box, set only when `preserveControl` kept a control character. */
   controlCodepoint?: number;
 }
 
 /**
- * `metrics.getGlyphAdvanceUnits` (the font's own `hmtx`-style advance, design
- * units) put through `fontMetrics.ts`'s shared `getFontGlyphAdvancePx` —
- * FreeType's and HarfBuzz's own fixed-point chain to a whole number of 1/64
- * px, that function's own doc has the citations. Deliberately NOT
- * `openSansAtlas.ts`'s own `xadvance`, which is a different quantization
- * entirely: msdf-bmfont-xml rounds its OWN glyph table to whole pixels at
- * the atlas's bake size (42) before this repo's bake script ever reads it
- * back, so the error it carries is fixed in ATLAS pixels and does not shrink
- * when a caller scales down to a UI size.
- *
- * A character outside `metrics`'s own charset draws no ink (there is no
- * atlas bitmap to place — `OPEN_SANS_ATLAS_GLYPHS`'s own doc lists what IS
- * baked and why) but still occupies roughly its own width via
- * `metrics.averageAdvanceUnits`, rather than 0: a silent zero-width advance
- * is what makes an unshapeable character collapse the whole line around it
- * instead of leaving a gap where its own ink would have been.
+ * The `hmtx` advance through `getFontGlyphAdvancePx`, the fixed-point chain of FreeType and HarfBuzz.
+ * Not `xadvance` from `openSansAtlas.ts`, which is fixed at the 42 px bake size rather than
+ * quantised at the shaped size. A character outside the charset advances by `averageAdvanceUnits`,
+ * so it leaves a gap rather than collapsing the line.
  */
 function glyphAdvancePx(ch: string, fontSizePx: number, metrics: FontMetrics): number {
   return getFontGlyphAdvancePx(metrics, ch, fontSizePx);
 }
 
 /**
- * Unicode general category Zs (SPACE SEPARATOR) — ICU's `u_isblank()` is
- * exactly "Zs, or U+0009 CHARACTER TABULATION", and that is half of
- * `text_server_adv.cpp:7057`'s advance-remainder reset predicate.
- *
- * Deliberately NOT `isWhitespace()` above, which is Godot's own
- * `is_whitespace()` and a WIDER set: it also carries U+200B ZERO WIDTH SPACE
- * (category Cf, a format character with no width to reset around) and the
- * U+2028/U+2029 line/paragraph separators (Zl/Zp, which reach the reset
- * through `is_linebreak()` instead).
+ * Unicode category Zs, which with U+0009 is ICU's `u_isblank()`, half of the remainder reset at
+ * `text_server_adv.cpp:7057`. Not `isWhitespace()`, which adds U+200B (Cf, no width) and U+2028 and
+ * U+2029, which reach the reset through `is_linebreak()`.
  */
 function isSpaceSeparator(cp: number): boolean {
   return (
@@ -486,20 +319,14 @@ function isSpaceSeparator(cp: number): boolean {
 }
 
 
-/** `metrics.getKerningAdjustmentUnits`, design units, scaled to `fontSizePx` via `fontMetrics.ts`'s shared `getFontKerningAdjustmentPx`. */
+/** `metrics.getKerningAdjustmentUnits` scaled to `fontSizePx` with `getFontKerningAdjustmentPx`. */
 function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: FontMetrics): number {
   return getFontKerningAdjustmentPx(metrics, a, b, fontSizePx);
 }
 
 /**
- * One glyph per character plus the paragraph terminator Label always appends
- * (`label.cpp:164`, a zero-advance whitespace glyph — itself a trailing break
- * candidate, though it never changes visible layout since it carries no ink
- * and no advance).
- *
- * `fontSizePxAt`, when given, resolves EACH character's own size (RichTextLabel's
- * per-style-run sizing — see `ShapeTextOptions`'s own doc); absent, every
- * character uses the flat `fontSizePx`, identical to before this option existed.
+ * One glyph per character, plus the zero-advance whitespace terminator Label appends
+ * (`label.cpp:164`). `fontSizePxAt`, when given, sets the size of each character.
  */
 function toBreakGlyphs(
   text: string,
@@ -514,12 +341,8 @@ function toBreakGlyphs(
     const ch = text[i]!;
     const cp = ch.codePointAt(0)!;
     const hardBreak = isLinebreak(cp);
-    // `is_control` also covers tab and every linebreak codepoint, but both
-    // already take their OWN special-casing above/below (a hard break never
-    // reaches `_shape_run`'s font search at all; a tab is `GRAPHEME_IS_TAB`,
-    // aligned by `tabAlignAdvances`) — excluding them here keeps this branch
-    // to the "no font anywhere has a glyph for this" case those two never are
-    // (`text_server_adv.cpp:6842-6907`, this module's own doc).
+    // Tab and the linebreaks take their own branches, so this is only the "no font has a glyph"
+    // case (`text_server_adv.cpp:6842-6907`).
     const isControl = !hardBreak && !isTabChar(ch) && isControlChar(cp);
     let advance: number;
     let controlCodepoint: number | undefined;
@@ -534,9 +357,8 @@ function toBreakGlyphs(
         advance = hexCodeBoxAdvanceSize(sizeAt(i), cp).x;
         controlCodepoint = cp;
       } else {
-        // `text_server_adv.cpp:6844`: absent `preserve_invalid`/
-        // `preserve_control`, no `Glyph` is pushed for this character at
-        // all — zero width, exactly as if it were not in the string.
+        // Without `preserve_invalid` or `preserve_control`, no `Glyph` is pushed
+        // (`text_server_adv.cpp:6844`): zero width.
         advance = 0;
       }
     } else {
@@ -552,19 +374,9 @@ function toBreakGlyphs(
       controlCodepoint,
     });
   }
-  // Kerning narrows/widens the gap BETWEEN a pair; folding it into the
-  // leading glyph's own advance keeps one cumulative sum for both the
-  // line-break width check and the placement pass below. Skipped across a
-  // size boundary (see this function's own doc) — moot for the vendored
-  // Open Sans charset today (no `kern` feature, `openSansMetrics.ts`'s own
-  // doc), kept for whichever font/kerning table lands next.
-  //
-  // Folded in BEFORE the whole-pixel round below, because Godot never sees
-  // the two separately: a GPOS pair adjustment is already inside HarfBuzz's
-  // `x_advance` by the time `text_server_adv.cpp:7077` reads it. Where inside
-  // HarfBuzz's own fixed-point the pair adjustment gets quantized is not
-  // pinned here — the vendored font has no `kern` feature and no legacy
-  // `kern` table, so there is no pair to measure it against.
+  // Kerning folds into the leading advance, skipped across a size boundary, before the whole-pixel
+  // round: a GPOS pair is already inside HarfBuzz's `x_advance` when `text_server_adv.cpp:7077`
+  // reads it. Where HarfBuzz quantises the pair is not pinned, as the vendored font has no kerning.
   for (let i = 0; i + 1 < text.length; i++) {
     const sizeI = sizeAt(i);
     if (sizeI !== sizeAt(i + 1)) continue;
@@ -576,25 +388,9 @@ function toBreakGlyphs(
 }
 
 /**
- * `text_server_adv.cpp:7079-7084` — above `fontUsesSubpixelPositioning`'s
- * threshold Godot does NOT place glyphs subpixel-precisely: every advance is
- * `Math::round`ed to a whole pixel, and the rounding remainder is carried
- * into the next glyph (`fd->keep_rounding_remainders`, whose default is true
- * — `text_server_adv.h:344,618` — and which no `FontFile` in this repo's
- * scenes turns off). The carry is what keeps a long line from drifting: each
- * glyph's own advance is off by up to half a pixel, but every PREFIX sum is
- * within half a pixel of the unrounded one, so the line's total width is the
- * unrounded total rounded once.
- *
- * The carry is reset, per `:7057`, on a tab, an ICU `u_isblank()` character
- * (`isSpaceSeparator`), or a line break — so a word's rounding error never
- * leaks across the space that follows it. It is also reset at a font-size
- * change, because `adv_rem` is a local of `_shape_run` (`:7011`): a
- * RichTextLabel `[b]`/`[i]` span is its own shaped run, with its own `subpos`
- * decision and its own remainder starting at zero.
- *
- * Mutates `glyphs` in place, after kerning has been folded in — see the
- * caller's own comment for why the two cannot be rounded separately.
+ * Above the subpixel threshold Godot rounds each advance to a whole pixel and carries the remainder
+ * (`text_server_adv.cpp:7079-7084`; `keep_rounding_remainders` defaults to true,
+ * `text_server_adv.h:344,618`), so each prefix sum stays within half a pixel. Mutates `glyphs`.
  */
 function roundAdvancesToWholePixels(
   glyphs: BreakGlyph[],
@@ -604,9 +400,11 @@ function roundAdvancesToWholePixels(
   let advanceRemainder = 0;
   for (let i = 0; i < text.length; i++) {
     const sizePx = sizeAt(i);
+    // `adv_rem` is local to `_shape_run` (`:7011`), so a size change starts a new run at zero.
     if (i > 0 && sizePx !== sizeAt(i - 1)) advanceRemainder = 0;
     if (fontUsesSubpixelPositioning(sizePx)) continue;
     const cp = text[i]!.codePointAt(0)!;
+    // Resets on a tab, a `u_isblank()` character or a break (`:7057`), so a word's error stays in it.
     if (cp === 0x0009 || isSpaceSeparator(cp) || isLinebreak(cp)) advanceRemainder = 0;
     const fullAdvance = advanceRemainder + glyphs[i]!.advance;
     const rounded = godotRound(fullAdvance);
@@ -616,11 +414,9 @@ function roundAdvancesToWholePixels(
 }
 
 /**
- * Port of `TextServer::shaped_text_get_line_breaks` (the scalar-width
- * overload). Returns `[start, end)` character ranges, one pair per line, with
- * Label's default edge-space trim already applied to the emitted range (the
- * width check above still counted the trimmed space's advance — trimming
- * only narrows what gets EMITTED, never what decided the break).
+ * Port of the scalar-width `TextServer::shaped_text_get_line_breaks`. Returns `[start, end)` ranges,
+ * one per line, trimmed of edge spaces. The trim narrows only the emitted range: the width check
+ * still counts the trimmed space.
  */
 function shapedTextGetLineBreaks(
   glyphs: BreakGlyph[],
@@ -646,8 +442,8 @@ function shapedTextGetLineBreaks(
     }
     indent = Math.min(indent, 0.6 * width);
   }
-  // `l_width` (`:1064`) — `width` until a row past the indent starts, then the
-  // narrowed one. Each emitted line re-evaluates it, exactly as the source does.
+  // `l_width` (`:1064`): `width` until a row past the indent starts, then the narrowed width. Each
+  // emitted line re-evaluates it.
   let lWidth = width;
   const narrowAfterBreak = (i: number): void => {
     if (width > indent && i > indentEnd) lWidth = width - indent;
@@ -674,8 +470,7 @@ function shapedTextGetLineBreaks(
     if (lWidth > 0 && width_ + adv > lWidth && lastSafeBreak >= 0) {
       const curSafeBrk = lastSafeBreak;
 
-      // BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES (Label's
-      // always-on default) — walk start/end back off edge spaces.
+      // BREAK_TRIM_START_EDGE_SPACES and BREAK_TRIM_END_EDGE_SPACES walk start and end off edge spaces.
       let startPos = prevSafeBreak;
       let endPos = lastSafeBreak;
       while (trim.start && trimNext && startPos < endPos && isSpaceOrBreak(startPos)) startPos += 1;
@@ -697,8 +492,7 @@ function shapedTextGetLineBreaks(
       continue;
     }
 
-    // BREAK_MANDATORY — always on, independent of autowrap mode (Label
-    // paragraph-splits on a hard break regardless of wrap setting).
+    // BREAK_MANDATORY is always on, whatever the autowrap mode.
     if (g.isHardBreak) {
       const curSafeBrk = i;
       let startPos = prevSafeBreak;
@@ -770,9 +564,9 @@ interface ShapedParagraph {
 }
 
 /**
- * `txt.split(ps)` (`label.cpp:159`) — empty entries KEPT, which is the whole
- * point: a run of separators is a run of blank lines. With no separator the
- * text is one unterminated paragraph, exactly what the single-pass callers get.
+ * `txt.split(ps)` (`label.cpp:159`) keeps empty entries, so a run of separators is a run of blank
+ * lines. With no separator the text is one unterminated paragraph, as Label3D
+ * (`label_3d.cpp:485,530`) and `TextParagraph` shape it, where a blank line collapses.
  */
 function splitParagraphs(text: string, separator: string | undefined): ShapedParagraph[] {
   if (separator === undefined || separator === '') {
@@ -804,6 +598,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     preserveControl = false,
   } = options;
   const hasTabStops = !!tabStopsPx && tabStopsPx.length > 0;
+  // Uppercase before indices are assigned, so a `fontSizePxAt` keyed on the transformed text lines up.
   const transformed = uppercase ? text.toUpperCase() : text;
   const flags = breakFlagsForAutowrap(autowrapMode);
   const trim = {
@@ -815,31 +610,21 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   // start a new line (mirrors Label::_shape() never OR-ing a wrap flag in).
   const effectiveWidth = autowrapMode === AutowrapMode.OFF ? 0 : boxWidthPx;
 
-  // `uppercase` transforms the string BEFORE indices are assigned, so
-  // `fontSizePxAt` (keyed by a caller who built it off the SAME transformed
-  // text — RichTextLabel has no `uppercase` support today, but this keeps the
-  // contract honest for whichever text control adds it next) still lines up.
   const linePitchPx = getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx);
 
-  // Atlas bitmaps only exist for the ONE font `openSansAtlas.ts` bakes —
-  // looking them up for a DIFFERENT `FontMetrics` (a scene font) would
-  // return Open Sans ink for that font's own advances/kerning. See this
-  // module's own doc for the full reasoning.
+  // Atlas bitmaps exist only for the font `openSansAtlas.ts` bakes.
   const isAtlasFont = fontMetrics.kind === 'atlas';
 
   const lines: TextLineLayout[] = [];
   for (const para of splitParagraphs(transformed, paragraphSeparator)) {
-    // The terminator rides the shaped text but not the source string, so
-    // `fontSizePxAt` — keyed by index into the WHOLE text — is offset back to
-    // it, and the one index past the paragraph's end resolves to its last size.
+    // The terminator is in the shaped text but not the source, so `fontSizePxAt`, keyed into the
+    // whole text, is offset back, and the index past the paragraph's end takes its last size.
     const sizeAt = fontSizePxAt
       ? (i: number): number => fontSizePxAt(para.offset + Math.max(0, Math.min(i, para.text.length - 1)))
       : undefined;
     const paraText = para.terminated ? para.text + PARAGRAPH_TERMINATOR : para.text;
     const breakGlyphs = toBreakGlyphs(paraText, fontSizePx, fontMetrics, sizeAt, preserveControl);
-    // Paragraph-level tab alignment (`ShapeTextOptions.tabStopsPx`'s own doc,
-    // first pass) -- a tab's REAL advance, not its unaligned placeholder,
-    // must be in place before line-breaking measures against it.
+    // First tab pass: the aligned advance must be in place before line breaking measures it.
     if (hasTabStops) {
       const paragraphEntries = Array.from(paraText, (char, i) => ({ char, advance: breakGlyphs[i]!.advance }));
       const aligned = tabAlignAdvances(paragraphEntries, tabStopsPx!);
@@ -847,9 +632,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     }
     for (const [start, end] of shapedTextGetLineBreaks(breakGlyphs, effectiveWidth, flags, trim, trimIndent)) {
       const clampedEnd = Math.min(end, paraText.length);
-      // Per-line tab alignment (`ShapeTextOptions.tabStopsPx`'s own doc, second
-      // pass) -- restarts the tab-stop cycle at THIS line's own pen origin,
-      // which is what actually reaches the painter.
+      // Second tab pass: restarts the tab-stop cycle at this line's pen origin.
       const lineAdvances = hasTabStops
         ? tabAlignAdvances(
             Array.from({ length: clampedEnd - start }, (_v, i) => ({

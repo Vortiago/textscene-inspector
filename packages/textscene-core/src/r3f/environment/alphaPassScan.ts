@@ -1,14 +1,7 @@
 /**
- * Whether a live scene draws anything through the blend equation.
- *
- * Godot blends into a linear HDR buffer and tonemaps afterwards
- * (`render_forward_clustered.cpp:2389` then `:2514`); three tonemaps and encodes
- * per fragment, so blending in the drawing buffer meets two already-curved
- * operands. This says when a scene can tell the difference, and therefore when
- * the compositor has to run.
- *
- * Separate from the hook that calls it so it can be exercised against a plain
- * `THREE.Scene`, as `bloomableScan.ts` is.
+ * Whether a live scene draws anything through the blend equation, and so needs the compositor.
+ * Godot blends in linear HDR and tonemaps after (`render_forward_clustered.cpp:2389` then `:2514`),
+ * while three tonemaps per fragment and blends two curved operands.
  */
 
 import * as THREE from 'three';

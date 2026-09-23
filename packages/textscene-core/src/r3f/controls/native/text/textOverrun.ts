@@ -1,8 +1,7 @@
 /**
- * Overrun trimming for one already-broken `TextLineLayout` — a port of
- * `TextServer::shaped_text_overrun_trim_to_width`, scoped to this engine's
- * shaping: left-to-right only, one span/one font per line (no per-glyph font
- * fallback search).
+ * Overrun trimming for one broken `TextLineLayout`: a port of
+ * `TextServer::shaped_text_overrun_trim_to_width`, left to right only, with one span and one font
+ * per line and no per-glyph font fallback search.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -24,7 +23,11 @@ export enum OverrunBehavior {
   TRIM_WORD_ELLIPSIS_FORCE = 6,
 }
 
-/** `TextServer::TextOverrunFlag` bits actually reachable from an `OverrunBehavior` (`get_overrun_flags_from_behavior`, `text_server.cpp:2399-2432`) — `OVERRUN_SHORT_STRING_ELLIPSIS` is never set by that mapping and is dropped. `justificationAware` (`OVERRUN_JUSTIFICATION_AWARE`) is set by a caller directly (Label's autowrap-OFF FILL re-trim, `label.cpp:323`), not by this mapping. */
+/**
+ * The `TextServer::TextOverrunFlag` bits an `OverrunBehavior` reaches (`text_server.cpp:2399-2432`),
+ * without `OVERRUN_SHORT_STRING_ELLIPSIS`, which that mapping never sets. A caller sets
+ * `justificationAware` directly, as Label's autowrap-off FILL re-trim does (`label.cpp:323`).
+ */
 export interface OverrunTrimFlags {
   trim: boolean;
   trimWordOnly: boolean;
@@ -65,20 +68,20 @@ export function overrunFlagsForBehavior(behavior: OverrunBehavior): OverrunTrimF
 /** The default ellipsis every caller falls back to, `String::chr(0x2026)` (`label.cpp:294` et al.'s `(el_char.length() > 0) ? el_char[0] : 0x2026`). */
 export const DEFAULT_ELLIPSIS_CHAR = '…';
 
-/** `ell_min_characters` — `text_server_adv.cpp:6049`. Below this many kept characters, no ellipsis is offered; a plain cut is used instead. */
+/** `ell_min_characters` (`text_server_adv.cpp:6049`): below this many kept characters, a plain cut replaces the ellipsis. */
 const ELL_MIN_CHARACTERS = 6;
 
 export interface OverrunTrimOptions {
   fontMetrics: FontMetrics;
-  /** The trimmed line's own font size — Godot reads the LAST glyph's own `font_size` (`text_server_adv.cpp:5981`); this engine shapes one size per line unless the caller passes the line's own trailing run size. */
+  /** The font size of the last glyph, which Godot reads (`text_server_adv.cpp:5981`): the line size, or its trailing run size. */
   fontSizePx: number;
   /** `Label.ellipsis_char` / `TextParagraph.ellipsis_char`; defaults to `DEFAULT_ELLIPSIS_CHAR`. */
   ellipsisChar?: string;
-  /** `OVERRUN_JUSTIFICATION_AWARE`'s gate, `sd->fit_width_minimum_reached` — set by a prior `fitLineToWidth` call. Irrelevant unless `flags.justificationAware`. */
+  /** `sd->fit_width_minimum_reached` from a prior `fitLineToWidth`, read only when `flags.justificationAware`. */
   fitWidthMinimumReached?: boolean;
 }
 
-/** Whether `ch`'s own bitmap exists in this metrics' font — the vendored atlas charset for `'atlas'` metrics, always true for a `'canvas'` (browser) font, which carries no such fixed boundary. */
+/** Whether the font has a bitmap for `ch`: the baked charset for `'atlas'` metrics, always true for a `'canvas'` font. */
 function hasGlyphInk(fontMetrics: FontMetrics, ch: string): boolean {
   return fontMetrics.kind !== 'atlas' || ch in OPEN_SANS_ATLAS_GLYPHS;
 }
@@ -93,12 +96,9 @@ function isSoftBreakGlyph(gp: GlyphPlacement): boolean {
 }
 
 /**
- * Port of `TextServer::shaped_text_overrun_trim_to_width`
- * (`text_server_adv.cpp:5935-6154`), LTR/single-span. Returns `line`
- * unchanged when nothing needs trimming (matches the source's early `return`
- * at `:5958-5966`), otherwise a NEW `TextLineLayout` whose `glyphs`/`text`/
- * `widthPx` all reflect the cut plus any appended ellipsis — the solver reads
- * the SAME `widthPx` a caller re-measures.
+ * Port of `TextServer::shaped_text_overrun_trim_to_width` (`text_server_adv.cpp:5935-6154`). Returns
+ * `line` unchanged when nothing needs trimming (`:5958-5966`), else a new layout whose glyphs, text
+ * and `widthPx` include the cut and any ellipsis.
  */
 export function trimLineToWidth(line: TextLineLayout, widthPx: number, flags: OverrunTrimFlags, options: OverrunTrimOptions): TextLineLayout {
   const { fontMetrics, fontSizePx, ellipsisChar = DEFAULT_ELLIPSIS_CHAR, fitWidthMinimumReached = false } = options;
@@ -113,7 +113,7 @@ export function trimLineToWidth(line: TextLineLayout, widthPx: number, flags: Ov
     return line;
   }
 
-  // :5985-6046 (span/fallback-font search dropped — one font per line here).
+  // :5985-6046, without the span and fallback-font search: one font per line here.
   const foundElChar = flags.addEllipsis || flags.enforceEllipsis ? hasGlyphInk(fontMetrics, ellipsisChar) : true;
   const dotChar = foundElChar ? ellipsisChar : '.';
   const dotRepeat = foundElChar ? 1 : 3;
@@ -127,11 +127,8 @@ export function trimLineToWidth(line: TextLineLayout, widthPx: number, flags: Ov
   let width = line.widthPx;
   let trimPos = 0;
   let ellipsisPos = flags.enforceEllipsis ? 0 : -1;
-  // `last_valid_cut_witout_el` in the source: the last position that fit
-  // WITHOUT spending the ellipsis budget, kept only for the min-characters
-  // fallback below -- its own width (`width_without_el`) is not carried
-  // forward here, since this port recomputes the final width from whichever
-  // glyphs are actually kept, rather than threading a second running total.
+  // `last_valid_cut_witout_el`: the last position that fit without the ellipsis budget, for the
+  // min-characters fallback. Its width is not carried, since the final width comes from the kept glyphs.
   let lastValidCutWithoutEl = -1;
 
   // :6065-6114
@@ -175,9 +172,8 @@ export function trimLineToWidth(line: TextLineLayout, widthPx: number, flags: Ov
     return line;
   }
 
-  // `trim_pos < 0` draws every original glyph uncut (`text_server.cpp:1768-1777`) — reachable
-  // only via `enforceEllipsis` on a line that already fits, where the ellipsis is appended
-  // rather than anything being cut.
+  // `trim_pos < 0` draws every glyph uncut (`text_server.cpp:1768-1777`): only `enforceEllipsis` on a
+  // line that fits reaches it, and appends the ellipsis.
   const kept = trimPos < 0 ? glyphs : glyphs.slice(0, trimPos);
   let penX = kept.length > 0 ? kept[kept.length - 1]!.x + kept[kept.length - 1]!.advance : 0;
   const appended: GlyphPlacement[] = [];

@@ -1,20 +1,14 @@
 /**
- * The text engine's pure layer — `textLayout.ts` and `measurer.ts` — must stay
- * React/THREE-free: the Control rect solver (`../controlRectSolver.ts`)
- * imports `measureText` directly, and `../reactFree.test.ts` already asserts
- * the solver's OWN closure stays framework-free, which would be defeated if
- * the text engine it calls into pulled a framework in one level down.
- * Mirrors that guard's shape exactly (see its own header comment for why
- * type-only imports — `measurer.ts`'s `import type { TextMeasurer }` from the
- * solver registry — are correctly skipped rather than pulling that module's
- * whole closure in).
+ * `textLayout.ts` and `measurer.ts` stay React- and THREE-free, because the Control rect solver
+ * imports `measureText` and `../reactFree.test.ts` holds the solver's own closure framework-free.
+ * The guard mirrors that one, which skips type-only imports.
  */
 import { describe, expect, it } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { walkImportClosure, bareSpecifiers, tsxFiles, FRAMEWORK_BARE_RE } from '@textscene/dev-kit';
 
-const here = dirname(fileURLToPath(import.meta.url)); // .../r3f/controls/native/text
+const here = dirname(fileURLToPath(import.meta.url));
 
 const entries = ['textLayout.ts', 'measurer.ts'];
 

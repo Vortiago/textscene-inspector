@@ -1,12 +1,7 @@
 /**
- * `Transform3D` to `Matrix4`, pinned because it has already been a regression here once.
- *
- * `basis_x/y/z` are the matrix's ROWS, not its columns. Reading them the conventional
- * axes-as-columns way yields the TRANSPOSE, which is indistinguishable from correct for
- * any identity-or-translation-only transform and wrong the moment anything rotates. The
- * CSG evaluator bakes every contribution into root-local space through this function, so
- * a transpose here would corrupt every boolean result in a way that still looks like
- * geometry.
+ * `Transform3D` to `Matrix4`. `basis_x/y/z` are the matrix rows, so reading them as columns gives
+ * the transpose, which is correct for identity and translation and wrong once anything rotates.
+ * The evaluator bakes each contribution through this, so a transpose corrupts every boolean.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -55,13 +50,9 @@ describe('transform3DToMatrix', () => {
   });
 
   it('treats basis_x as a ROW, so a rotation is not silently transposed', () => {
-    // The trap: Godot's C++ `Basis(x_axis, y_axis, z_axis)` sets COLUMNS, so a reader
-    // coming from the engine API expects basis_x to be the x axis. The TSCN
-    // SERIALISATION is row-major, and basis_x is the first ROW (utils/transform.ts).
-    //
-    // That makes M * (1,0,0) the first COLUMN, `(basis_x.x, basis_y.x, basis_z.x)`,
-    // which for this transform is +Z. The transposed reading would return basis_x
-    // itself and land on -Z. Both are "a rotation"; only one matches Godot.
+    // The C++ `Basis(x_axis, y_axis, z_axis)` sets columns, but the TSCN serialisation is row-major
+    // and basis_x is the first row (utils/transform.ts). So M * (1,0,0) is the first column,
+    // `(basis_x.x, basis_y.x, basis_z.x)`, which is +Z here. The transposed reading lands on -Z.
     const m = transform3DToMatrix({ ...ROTATED, origin: { x: 0, y: 0, z: 0 } });
     const v = new THREE.Vector3(1, 0, 0).applyMatrix4(m);
     expect(v.x).toBeCloseTo(0, 5);

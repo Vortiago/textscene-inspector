@@ -1,7 +1,4 @@
-/**
- * `tabAlignAdvances` — a port of `TextServer::shaped_text_tab_align`
- * (`modules/text_server_adv/text_server_adv.cpp:5688-5742`).
- */
+/** `tabAlignAdvances` ports `TextServer::shaped_text_tab_align` (`modules/text_server_adv/text_server_adv.cpp:5688-5742`). */
 import { describe, expect, it } from 'vitest';
 import { tabAlignAdvances } from './textTabStops';
 

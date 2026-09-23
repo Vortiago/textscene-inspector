@@ -1,18 +1,7 @@
 /**
- * Only the DOM-INDEPENDENT branches of the SCENE-font arm are exercised
- * here: happy-dom (this repo's vitest environment) has neither `FontFace`
- * nor a real `CanvasRenderingContext2D` (`canvasTextPainter.ts`'s own doc —
- * `getContext('2d')` returns `null`), so the actual FontFace-registration/
- * canvas-measurement path is gated behind the SAME `IS_VITEST` short-circuit
- * `r3f/internalTextLabel.tsx` already uses for its own CDN-fetching `<Text>`,
- * and never runs under this suite. What IS fully testable without a real
- * browser: the `FontResource`-graph fallback decisions (missing font,
- * `SystemFont`, a broken `.tres` chain), the warn-once-per-resource
- * dedupe, and the synchronous peek/cache-population contract.
- *
- * The BUNDLED arm (second `describe` below) stubs `FontFace` instead, which
- * reaches the shared `registerFontFace` door for real — including its
- * no-`FontFace` branch, the one the scene arm's `IS_VITEST` guard hides.
+ * happy-dom has neither `FontFace` nor a 2D canvas context, so the scene arm's registration path
+ * sits behind `IS_VITEST`. These tests cover its fallback decisions, the warn-once dedupe and the
+ * peek contract. The bundled arm stubs `FontFace` and reaches the shared door for real.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { onSceneFontMetricsSettled, peekSceneFontMetrics, resolveSceneFontMetrics } from './sceneFontLoader';
@@ -131,18 +120,9 @@ describe('onSceneFontMetricsSettled', () => {
 });
 
 /**
- * The bundled-font arm of the same module. The gate under test is the one
- * `ctx.fillText` cannot enforce for itself: painting with an UNREGISTERED
- * family silently rasterises a system font, and those pixels are
- * frame-stable enough to sail through the visual harness's settle gate. So
- * the bundled canvas metrics may only exist once `document.fonts`
- * registration has actually resolved.
- *
- * `FontFace` is stubbed rather than skipped (contrast the `IS_VITEST`
- * short-circuit above, which exists because a SCENE font also needs a real
- * `measureText`): registration is the only DOM call on this arm, so both
- * sides of the gate — and the shared door's no-`FontFace` branch, which
- * happy-dom gives for free by simply not stubbing — are reachable here.
+ * `fillText` with an unregistered family paints a system font that passes the visual harness's
+ * settle gate, so the bundled metrics exist only once registration resolves. Registration is the
+ * only DOM call on this arm, so a stubbed `FontFace` reaches both sides of the gate.
  */
 
 class FakeFontFace {
@@ -173,9 +153,8 @@ function installFontFace(): void {
   });
 }
 
-// `resetModules` is what gives each test its own registration cache; the
-// logger has to be re-imported inside that same fresh graph or the spy would
-// sit on a different module instance than the one under test.
+// `resetModules` gives each test its own registration cache. The logger is re-imported in the same
+// graph, or the spy sits on a different module instance.
 async function freshModule() {
   vi.resetModules();
   const logger = await import('../../../../logger');
@@ -269,28 +248,21 @@ describe('bundled font registration gate', () => {
     }
   });
 
-  // The shared `registerFontFace` door read off `globalThis`, not a bare
-  // `document`/`FontFace`: happy-dom without the stub IS the non-DOM case, so
-  // this reaches the same branch a scene font takes outside a browser.
+  // happy-dom without the stub is the non-DOM case, the branch a scene font takes outside a browser.
   it('stays undefined and warns in an environment with no FontFace at all', async () => {
     const { peekBundledCanvasFontMetrics, resolveBundledCanvasFontMetrics, logger } = await freshModule();
 
     expect(await resolveBundledCanvasFontMetrics()).toBeUndefined();
     expect(peekBundledCanvasFontMetrics()).toBeUndefined();
-    // The DOOR's own diagnosis, not the catch's: an absent environment must
-    // not be reported as broken font bytes.
+    // The door's diagnosis, not the catch's: an absent environment is not broken font bytes.
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('No FontFace/document.fonts in this environment'));
   });
 });
 
 /**
- * The scene arm's own non-DOM branch, which `IS_VITEST` otherwise hides: that
- * guard is read from `process.env.VITEST` at module scope, so stubbing the
- * env and re-importing gives a graph where `loadRuntimeFont` genuinely runs.
- * happy-dom then supplies the non-DOM environment for free — no `FontFace`,
- * and `document` itself removable — which is the case a bare `new FontFace` /
- * `document.fonts` read would have hit as a ReferenceError from inside the
- * promise, warning about a broken font rather than an absent environment.
+ * `IS_VITEST` is read at module scope, so stubbing the env and re-importing runs `loadRuntimeFont`.
+ * happy-dom then supplies the non-DOM environment, where a bare global read throws a ReferenceError
+ * that reports a broken font rather than an absent environment.
  */
 describe('scene font in an environment with no font door', () => {
   afterEach(() => {
@@ -305,8 +277,7 @@ describe('scene font in an environment with no font door', () => {
     const logger = await import('../../../../logger');
     vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const mod = await import('./sceneFontLoader');
-    // From the SAME fresh graph: the statically-imported constant at the top
-    // of this file is a different module instance and would fail identity.
+    // From the same fresh graph: the static import above is a different module instance.
     const { OPEN_SANS_FONT_METRICS: bundled } = await import('./openSansFontMetrics');
     return { ...mod, logger, bundled };
   }

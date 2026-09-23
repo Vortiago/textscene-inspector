@@ -1,12 +1,7 @@
 /**
- * `three-bvh-csg` must be imported from exactly one file, and only dynamically.
- *
- * A static import anywhere puts the CSG core plus `three-mesh-bvh` on the webview's
- * initial-paint path — tens of kB gzipped, paid by every scene for a feature most
- * scenes never touch. The budget guard would eventually catch that, but only after a
- * full extension build, and it would report a size rather than the mistake.
- *
- * Scanning the source says WHICH file broke the rule, immediately.
+ * `three-bvh-csg` is imported from exactly one file, and only dynamically: a static import puts
+ * the CSG core and `three-mesh-bvh` on the webview's initial-paint path for every scene. The bundle
+ * budget would catch it only after a full build, and would name a size, not the file.
  */
 
 import { describe, expect, it } from 'vitest';
