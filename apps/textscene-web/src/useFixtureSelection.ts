@@ -1,12 +1,7 @@
 /**
- * useFixtureSelection — deep-link init, localStorage persistence, URL writeback.
- *
- * Pure selection persistence; zero buffer interaction. Owns:
- *   - first-visit default selection
- *   - `?fixture=` deep-link read at mount
- *   - localStorage read at init (useSceneSource writes the same key on a
- *     successful load, so only fixtures that actually load are remembered)
- *   - `?fixture=` URL writeback via history.replaceState on every switch
+ * The fixture selection and its persistence, apart from the buffer: the first-visit default,
+ * the `?fixture=` deep link, the localStorage choice and the URL writeback. useSceneSource
+ * writes the storage key on a successful load, so only a fixture that loads is remembered.
  */
 import { useEffect, useState } from 'react';
 
@@ -39,8 +34,7 @@ export function useFixtureSelection({
 }: UseFixtureSelectionOptions): UseFixtureSelectionResult {
   const [fixtureFile, setFixtureFile] = useState<string>(() => {
     try {
-      // Deep-link: `?fixture=<file>` opens directly on a specific scene.
-      // Unlisted demos/ and games/ subscenes are accepted without catalog check.
+      // An unlisted demos/ or games/ subscene needs no catalog entry.
       const param = new URLSearchParams(window.location.search).get('fixture');
       if (
         param &&
@@ -56,10 +50,8 @@ export function useFixtureSelection({
     }
   });
 
-  // Write `?fixture=` back on every scene switch — so reloading or sharing
-  // the URL reopens the scene actually on screen, not whatever localStorage
-  // remembered. `replaceState` (never `pushState`): switching scenes is not
-  // a navigation the user expects Back to step through.
+  // A reload or a shared URL reopens the scene on screen, not the localStorage choice.
+  // `replaceState`, not `pushState`: a scene switch is no navigation for Back to step through.
   useEffect(() => {
     try {
       const url = new URL(window.location.href);
@@ -70,7 +62,7 @@ export function useFixtureSelection({
       }
       window.history.replaceState(null, '', url);
     } catch {
-      // Best-effort — an unsupported History API must never break the app.
+      // An unsupported History API must never break the app.
     }
   }, [fixtureFile]);
 

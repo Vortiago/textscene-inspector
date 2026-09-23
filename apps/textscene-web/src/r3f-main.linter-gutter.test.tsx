@@ -1,13 +1,6 @@
 /**
- * Source pane slice 3: linter surfaced (gutter dots + hover
- * popover + toggle problem-count badge).
- *
- * Behavioral `<R3FApp>` tests reusing the `r3f-main.*.test.tsx` WebGL-mock
- * pattern (happy-dom has no WebGL; `TscnCanvas`/`TscnSceneContents` stubbed,
- * everything else real). The known-bad fixture below omits `name=` on line 3 —
- * a `StrictTscnParser` structural check that fires unconditionally, regardless
- * of which per-node-type validators/rules happen to be registered, so the test
- * doesn't depend on the linter's node-type coverage.
+ * The source pane's linter surface: gutter dots, the hover popover and the toggle's
+ * problem-count badge, through `<R3FApp>`.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -24,11 +17,9 @@ const STUB_TSCN = `[gd_scene load_steps=1 format=3]
 [node name="StubRoot" type="Node3D"]
 `;
 
-// Line 3 (1-indexed) is missing a `name=` attribute — a deterministic
-// strict-parser ERROR regardless of registered node rules. Not a typeless
-// heading: that one is legal (Godot assumes it was instantiated,
-// resource_format_text.cpp:218-221) and only warns, so it cannot drive an
-// error-severity gutter dot.
+// Line 3 (1-indexed) lacks `name=`: a `StrictTscnParser` error whatever node rules are
+// registered. A typeless heading is legal (Godot assumes it was instantiated,
+// resource_format_text.cpp:218-221) and only warns, so it cannot drive an error dot.
 const BAD_LINE_TSCN = `[gd_scene load_steps=1 format=3]
 
 [node type="Node3D"]
@@ -66,7 +57,7 @@ function resetPersistence() {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // happy-dom may throw in edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
 }
 

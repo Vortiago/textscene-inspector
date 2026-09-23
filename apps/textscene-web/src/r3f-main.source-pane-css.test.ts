@@ -1,14 +1,7 @@
 /**
- * Source pane, rendered-width regression guard.
- *
- * happy-dom does no flex layout, so the behavioral `.test.tsx` suite reads only
- * the inline `style.width` — it cannot see the real-browser bug where a
- * shrinkable pane renders narrower than its set/dragged width. The fix is a
- * CSS-only one (`.sourcePane { flex-shrink: 0 }`) that nothing in happy-dom can
- * observe, so pin it by reading the raw CSS module text. Anchor the path at
- * `import.meta.dirname` (the test file's own dir), NOT `process.cwd()`: vitest
- * runs from the package dir under `pnpm --filter` but from the repo root under
- * lint-staged / CI, and a cwd-relative path breaks there.
+ * The source pane keeps its set width in a browser. happy-dom does no flex layout, so this
+ * reads `.sourcePane { flex-shrink: 0 }` from the CSS module source. The path starts at
+ * `import.meta.dirname`, not `process.cwd()`, which is the repo root under lint-staged and CI.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

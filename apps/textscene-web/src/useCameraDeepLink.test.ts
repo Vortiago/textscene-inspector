@@ -1,7 +1,4 @@
-/**
- * Unit tests for `useCameraDeepLink` — the read-only `?camera=` deep-link that
- * asks the previewer to look through a named scene Camera3D on open.
- */
+/** Tests for `useCameraDeepLink`, the read-only `?camera=` deep link. */
 import { describe, expect, it, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useCameraDeepLink } from './useCameraDeepLink';

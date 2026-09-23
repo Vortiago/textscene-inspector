@@ -1,9 +1,6 @@
 /**
- * NodeRegistry resolves a heading to its registration by the heading's
- * `type` attribute. The match is a direct typeName lookup — slices no
- * longer author a per-type guard — but it stays scoped to `[node]`
- * headings so a `[sub_resource]` whose `type=` collides with a node name
- * can never resolve to a node registration.
+ * NodeRegistry resolves a heading to its registration by its `type` attribute, scoped to
+ * `[node]` headings, so a `[sub_resource]` whose `type=` matches a node name never resolves.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { nodeRegistry, parseNodeWithRegistry } from './NodeRegistry';
@@ -54,8 +51,7 @@ describe('NodeRegistry.findRegistration', () => {
   it('ignores a legacy typeGuard and still resolves by typeName (back-compat)', () => {
     nodeRegistry.register({
       typeName: 'Legacy3D',
-      // A guard that would REJECT this heading — proving the guard is ignored
-      // and the typeName Map lookup is authoritative.
+      // A guard that would reject this heading, so a match proves the guard is ignored.
       typeGuard: () => false,
       parser: () => ({}),
     });
@@ -71,11 +67,9 @@ describe('parseNodeWithRegistry — raw override retention', () => {
   });
 
   it('retains the raw override props on a type-less instance node', () => {
-    // An instance node has `instance=` but no `type=`, so it falls back to the
-    // base Node parser, which only extracts name/parent/transform/index. The
-    // type-specific override keys (a GridMap `data`, a light color, a camera
-    // fov, …) must be retained raw so mergeInstanceRoot can re-parse them
-    // against the instanced root's type instead of silently dropping them.
+    // An instance node has `instance=` but no `type=`, so the base Node parser reads only
+    // name, parent, transform and index. The type-specific override keys stay raw, so
+    // mergeInstanceRoot can re-parse them against the instanced root's type.
     const heading: ParsedHeading = {
       type: 'node',
       attributes: { name: 'GridMap', parent: '.', instance: 'ExtResource("1_t0f53")' },

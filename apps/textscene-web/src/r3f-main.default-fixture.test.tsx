@@ -1,7 +1,6 @@
 /**
- * First-visit default regression: a first-time visitor (empty localStorage) lands
- * on a fixture with zero `ext_resource` lines, so the first paint shows
- * a clean scene rather than a wall of missing-file warnings.
+ * A first-time visitor (empty localStorage) lands on a fixture with no `ext_resource` lines,
+ * so the first paint shows a clean scene rather than missing-file warnings.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -19,9 +18,8 @@ vi.mock('@textscene/core', async () => {
 
 import { R3FApp } from './r3f-main';
 
-// Minimal TSCN body the lenient parser can extract a Root from. The
-// content is irrelevant beyond "produces a sceneGraph"; the test
-// asserts which fixture was requested via the mocked fetch URL.
+// Any TSCN that produces a sceneGraph: the test asserts the requested fixture through the
+// mocked fetch URL.
 const STUB_TSCN = `[gd_scene load_steps=1 format=3]
 
 [node name="StubRoot" type="Node3D"]
@@ -34,12 +32,10 @@ beforeEach(() => {
   try {
     globalThis.localStorage.removeItem('tscn-web-r3f-fixture');
   } catch {
-    // happy-dom may throw in some edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
-  // A fixture switch/load now writes `?fixture=` back to the URL
-  // (history.replaceState) — reset it so one test's load doesn't leak into
-  // the next test's initial mount as a stale deep link (which would
-  // otherwise outrank the localStorage choice these tests exercise).
+  // A fixture load writes `?fixture=` to the URL, and a stale deep link would outrank the
+  // localStorage choice in the next test.
   window.history.replaceState(null, '', '/');
   fetchSpy = vi.fn().mockResolvedValue({
     ok: true,
@@ -56,15 +52,13 @@ describe('<R3FApp> default fixture on first visit (WI-UX-15)', () => {
   it('fetches the zero-externals fixture (unit-plane-mesh.tscn) on first paint', async () => {
     render(<R3FApp />);
 
-    // Wait for the scene-tree to render — confirms the fetch resolved
-    // and the shell parsed the content.
+    // The scene tree shows the fetch resolved and the shell parsed the content.
     await waitFor(() => {
       expect(screen.queryByText('StubRoot')).toBeTruthy();
     });
 
     const fetchedUrls = fetchSpy.mock.calls.map((c) => String(c[0]));
-    // First-time visitor (empty localStorage) — the requested fixture
-    // must be the no-externals scene, not Hallway or All Primitives.
+    // With empty localStorage, the requested fixture is the no-externals scene.
     expect(fetchedUrls).toContain('/fixtures/unit-plane-mesh.tscn');
   });
 

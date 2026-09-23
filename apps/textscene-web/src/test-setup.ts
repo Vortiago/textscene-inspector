@@ -1,16 +1,12 @@
 /// <reference types="vitest/globals" />
 
-/**
- * Test setup file for web app tests.
- * Configures global mocks and test environment.
- */
+/** Global setup for the web app's tests: a mocked fetch and console, reset after each test. */
 
 import { vi, afterEach } from 'vitest';
 
-// Mock global fetch for tests
 globalThis.fetch = vi.fn() as any;
 
-// Mock console methods to reduce noise during tests
+// Mocked to keep the test output quiet.
 globalThis.console = {
   ...console,
   log: vi.fn(),
@@ -19,7 +15,6 @@ globalThis.console = {
   error: vi.fn(),
 } as Console;
 
-// Reset mocks after each test
 afterEach(() => {
   vi.clearAllMocks();
 });

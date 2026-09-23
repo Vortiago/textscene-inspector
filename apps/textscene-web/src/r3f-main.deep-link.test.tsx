@@ -1,8 +1,6 @@
 /**
- * Shareable deep links: `?fixture=` was read once at mount but
- * never written back, so switching scenes and reloading (or sharing the
- * URL) reopened whatever was last persisted in localStorage, not the scene
- * actually on screen. Reuses the `r3f-main.*.test.tsx` WebGL-mock pattern.
+ * Shareable deep links: a scene switch writes `?fixture=` back to the URL, so a reload or a
+ * shared URL opens the scene on screen, not the last one persisted in localStorage.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -61,7 +59,7 @@ beforeEach(() => {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // happy-dom may throw in edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
   window.history.replaceState(null, '', '/');
   mockFetch();

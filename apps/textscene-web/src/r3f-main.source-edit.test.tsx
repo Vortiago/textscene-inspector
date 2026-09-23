@@ -1,26 +1,14 @@
 /**
- * Source pane slice 2: editable buffer drives the render (hold-last-valid gate).
- *
- * RED contract. Behavioral `<R3FApp>` tests reusing the `r3f-main.*.test.tsx` WebGL-mock
- * pattern (happy-dom has no WebGL; `TscnCanvas`/`TscnSceneContents` stubbed, everything else
- * real — the scene TREE panel is real DOM, so "the viewport updated" is asserted as "the new
- * root node's name appears in the tree").
- *
- * Each `describe` maps to one acceptance criterion of the issue (ADR-0020 §2/§3/§5):
- *   1. editing the pane updates the scene tree via the shell's `content` — after the
- *      debounce, never synchronously on the keystroke;
- *   2. a transiently broken buffer HOLDS the last valid render (the pane keeps the broken
- *      text — the buffer, not the shell, is the source of truth);
- *   3. the forward gate is the LENIENT parser — renders-but-lints-imperfectly still updates;
- *   4. native undo: the pane is editable and the app does not swallow the Ctrl+Z chord
- *      (undo itself is browser-native — unobservable under happy-dom);
- *   5. switching fixture (palette) or uploading resets the buffer to the new file's content.
+ * The editable buffer drives the render through the hold-last-valid gate (ADR-0020 §2/§3/§5).
+ * The scene tree is real DOM, so a new root name in the tree shows the viewport updated. The
+ * pane keeps a broken buffer and the render holds. The gate is the lenient parser. Native
+ * undo is unobservable under happy-dom, so the test checks the Ctrl+Z chord is not swallowed.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
-// <TscnCanvas> mounts a real WebGL <Canvas> happy-dom can't provide — stub it (and the
-// scene contents) so the rest of the shell + the pane render. Everything else is real.
+// happy-dom cannot provide the WebGL <Canvas> that <TscnCanvas> mounts, so it and the scene
+// contents are stubs. Everything else is real.
 vi.mock('@textscene/core', async () => {
   const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
   return { ...real, TscnCanvas: () => null, TscnSceneContents: () => null };
@@ -61,7 +49,7 @@ const SWITCHED_TSCN = `[gd_scene load_steps=1 format=3]
 const GARBAGE = 'mid-edit garbage, not a scene }{ ]] [[';
 
 const DEFAULT_FILE = 'unit-plane-mesh.tscn';
-/** The fixture the palette test switches TO (any leaf that isn't the app's default). */
+/** The fixture the palette test switches to: any leaf but the app's default. */
 const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find(
   (l) => l.file !== DEFAULT_FILE
 ) as Leaf;
@@ -70,11 +58,10 @@ function resetPersistence() {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // happy-dom may throw in edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
-  // A fixture switch writes `?fixture=` back to the URL
-  // (history.replaceState) — reset it so one test's switch doesn't leak
-  // into the next test's initial mount as a stale deep link.
+  // A fixture switch writes `?fixture=` to the URL, which would reach the next test's mount
+  // as a stale deep link.
   window.history.replaceState(null, '', '/');
 }
 
@@ -104,12 +91,12 @@ function paneTextarea() {
   return within(screen.getByTestId('source-pane')).getByRole('textbox') as HTMLTextAreaElement;
 }
 
-/** Type a whole buffer into the pane (single change event — the gate debounce is what matters). */
+/** Type a whole buffer into the pane in one change event: the gate debounce is what matters. */
 function typeBuffer(text: string) {
   fireEvent.change(paneTextarea(), { target: { value: text } });
 }
 
-/** Let real time pass with React kept happy about the debounce timer's state flush. */
+/** Let real time pass inside `act`, for the debounce timer's state flush. */
 async function settle(ms: number) {
   await act(async () => {
     await new Promise((r) => setTimeout(r, ms));
@@ -158,7 +145,7 @@ describe('#201 hold-last-valid — a broken buffer keeps the previous render (cr
 
     // Mid-edit wipe: empty buffer → the tree must keep showing the last valid scene.
     typeBuffer('');
-    await settle(600); // well past any ~250 ms debounce — the hold must be steady-state
+    await settle(600); // well past the 250 ms debounce, so the hold is steady-state
     expect(screen.queryByText('StubRoot')).toBeTruthy();
 
     // Garbage: pane keeps the typed text (buffer is the source of truth), tree keeps the scene.
@@ -191,8 +178,8 @@ describe('#201 native undo — the app must not swallow Ctrl+Z in the pane (crit
     const ta = paneTextarea();
     expect(ta.readOnly).toBe(false); // undo can only exist on an editable textarea
 
-    // fireEvent returns false when a handler called preventDefault — the chord must
-    // reach the browser's native undo stack untouched.
+    // fireEvent returns false when a handler called preventDefault. The chord must reach the
+    // browser's native undo stack untouched.
     const notSwallowed = fireEvent.keyDown(ta, { key: 'z', ctrlKey: true });
     expect(notSwallowed).toBe(true);
   });
@@ -200,9 +187,8 @@ describe('#201 native undo — the app must not swallow Ctrl+Z in the pane (crit
 
 describe('#201 buffer reset — switching fixture / uploading replaces the buffer (criterion 5)', () => {
   it('uploading a .tscn resets an edited buffer to the uploaded content', async () => {
-    // The edited pane triggers the discard guard on scene replacement —
-    // accept it (happy-dom has no window.confirm to spy on); the guard's own
-    // contract lives in r3f-main.edit-guard.test.tsx.
+    // The edited pane triggers the discard guard, and happy-dom has no window.confirm.
+    // r3f-main.edit-guard.test.tsx holds the guard's own contract.
     vi.stubGlobal('confirm', vi.fn(() => true));
     render(<R3FApp />);
     await waitForScene();
@@ -224,9 +210,8 @@ describe('#201 buffer reset — switching fixture / uploading replaces the buffe
   });
 
   it('switching scenes via the palette resets an edited buffer to the new fixture', async () => {
-    // The edited pane triggers the discard guard on scene replacement —
-    // accept it (happy-dom has no window.confirm to spy on); the guard's own
-    // contract lives in r3f-main.edit-guard.test.tsx.
+    // The edited pane triggers the discard guard, and happy-dom has no window.confirm.
+    // r3f-main.edit-guard.test.tsx holds the guard's own contract.
     vi.stubGlobal('confirm', vi.fn(() => true));
     render(<R3FApp />);
     await waitForScene();

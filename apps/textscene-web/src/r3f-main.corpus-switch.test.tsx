@@ -1,14 +1,7 @@
 /**
- * Corpus-scoped uploads — app-shell integration.
- *
- * Exercises the real wiring, not the provider in isolation (that contract
- * lives in WebResourceProvider.corpusScope.test.ts):
- *  - uploading a scene + companion files while a demo corpus is active must
- *    key the companions under the uploaded scene's base ('') corpus, not the
- *    demo root that was active when the upload handler ran;
- *  - switching from an uploaded scene to a demo fixture through the scene
- *    palette must stop serving the uploaded-scene corpus's files.
- * Reuses the `r3f-main.*.test.tsx` WebGL-mock pattern.
+ * Corpus-scoped uploads through the app's real wiring (WebResourceProvider.corpusScope.test.ts
+ * holds the provider's contract). Companions of an upload made under a demo corpus key under
+ * the base ('') corpus, and a switch from an upload to a demo stops serving the upload's files.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -41,7 +34,7 @@ const SCENE_WITH_TEXTURE = `[gd_scene load_steps=2 format=3]
 [node name="MultiUploadRoot" type="Node3D"]
 `;
 
-/** A vendored demo fixture — its corpus root differs from the base ('') one. */
+/** A vendored demo fixture, whose corpus root differs from the base ('') one. */
 const DEMO = fixtures.find((f) => f.root) as (typeof fixtures)[number];
 
 const DEMO_LEAF = flattenLeaves(buildFixtureTree(fixtures)).find(
@@ -52,13 +45,13 @@ function resetPersistence(path = '/') {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // happy-dom may throw in edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
   window.history.replaceState(null, '', path);
 }
 
-/** Scene fetches succeed; resource fetches lack headers and so fall through
- *  to "Resource not found" — loadResource only resolves via an upload. */
+/** Scene fetches succeed. Resource fetches lack headers and fall through to "Resource not
+ *  found", so loadResource resolves only through an upload. */
 function mockFetch() {
   globalThis.fetch = vi.fn().mockImplementation((url: unknown) => {
     const text = String(url).endsWith(`/${DEMO.file}`) ? DEMO_TSCN : STUB_TSCN;
@@ -141,10 +134,7 @@ describe('Corpus-scoped uploads — app-shell wiring', () => {
     ).rejects.toThrow('Resource not found');
   });
 
-  // `res://project.godot` is the SAME path in every corpus — only the active
-  // **Corpus root** decides which file it maps onto — so the **Project
-  // settings** must be re-read on a switch, not carried over. Covered at the
-  // provider level (not the DOM-overlay rendering this integration test used
-  // to observe it through) by
-  // `ProjectSettingsContext.test.tsx`'s "re-reads on a scene swap" case.
+  // The active **Corpus root** decides which file `res://project.godot` maps onto, so the
+  // **Project settings** are re-read on a switch. `ProjectSettingsContext.test.tsx` covers it
+  // in its "re-reads on a scene swap" case.
 });

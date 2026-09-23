@@ -1,8 +1,7 @@
 /*
- * Web previewer toolbar. Consumes the shared `--tsi-*` design tokens declared
- * in TscnPreviewShell.module.css's :root block so it matches the Split Dock
- * (J) chrome. A compact "scene chip" opens a command palette for opening a
- * .tscn from disk (primary) and switching the built-in dev fixtures.
+ * The web previewer's toolbar and source pane, on the `--tsi-*` tokens that
+ * TscnPreviewShell.module.css declares in :root. A "scene chip" opens a command palette
+ * that opens a .tscn from disk or switches the built-in dev fixtures.
  */
 .toolbar {
   position: relative;
@@ -150,7 +149,7 @@
   overflow: hidden;
 }
 
-/* Primary action — open the user's own .tscn. */
+/* Primary action: open the user's own .tscn. */
 .openDisk {
   display: flex;
   align-items: center;
@@ -287,8 +286,8 @@
   border-right: 1px solid var(--tsi-border);
   display: flex;
   flex-direction: column;
-  /* Hold the set/dragged width: don't let the flex row squeeze the pane so its
-     rendered width matches the inline width driven by paneWidth. */
+  /* Hold the set or dragged width: the flex row must not squeeze the pane below the
+     inline width. */
   flex-shrink: 0;
 }
 
@@ -348,15 +347,13 @@
   outline: none;
   background: var(--tsi-bg-panel);
   color: var(--tsi-fg-default);
-  /* Code-editor feel: don't word-wrap (textarea wrap="off"); long lines
-     scroll horizontally instead. */
+  /* No word wrap (textarea wrap="off"): long lines scroll horizontally. */
   white-space: pre;
   overflow: auto;
 }
 
-/* outline:none above drops the native ring; restore a visible focus indicator
-   for keyboard users (the pane's overflow:hidden clips an outer ring, so inset).
-   Matches the .openButton / .search focus-ring convention in this file. */
+/* outline:none above drops the native ring, so this restores a focus indicator. It is
+   inset because the pane's overflow:hidden clips an outer ring. */
 .sourceTextarea:focus-visible {
   box-shadow: inset 0 0 0 2px var(--tsi-focus-ring);
 }

@@ -92,9 +92,8 @@ describe('smoothstep', () => {
   });
 
   it('answers an inverted degenerate pair from the other side', () => {
-    // math_funcs.h:573 is `p_s <= p_to ? 1.0 : 0.0` — measured against `to`,
-    // the LOWER of the pair now, which is the branch a single `x < from`
-    // cannot express. So `x` at `from` sits above the span and reads 0.
+    // math_funcs.h:573 is `p_s <= p_to ? 1.0 : 0.0`, measured against `to`, now the lower of the
+    // pair, which a single `x < from` cannot express. So `x` at `from` sits above the span and reads 0.
     expect(smoothstep(1, 1 - 1e-9, 1)).toBe(0);
     expect(smoothstep(1, 1 - 1e-9, 0)).toBe(1);
     expect(smoothstep(1, 1 - 1e-9, 2)).toBe(0);

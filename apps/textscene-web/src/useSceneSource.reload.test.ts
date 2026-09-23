@@ -1,15 +1,13 @@
 /**
- * `useSceneSource` — `reload`: refetching at an unchanged `fixtureFile`.
- *
- * The hook owns the hold-last-valid edit-loop invariant (ADR-0020): a resolving
- * fixture load must never stomp newer keystrokes. Shared scaffolding is in
+ * `useSceneSource`'s `reload`, which refetches at an unchanged `fixtureFile`.
+ * The hook keeps the hold-last-valid invariant (ADR-0020). The shared scaffolding is in
  * `useSceneSource.testkit.ts`.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
-// Stub resolveForwardedContent: valid TSCN passes through, garbage is rejected.
-// Hoisted per module graph, so every suite in this split declares its own.
+// A stub resolveForwardedContent passes valid TSCN and rejects garbage. `vi.mock` is hoisted
+// per module graph, so every suite in this split declares its own.
 vi.mock('./sourceGate', () => ({
   resolveForwardedContent: (buffer: string, lastGood: string) =>
     buffer.trim().startsWith('[gd_scene') ? buffer : lastGood,
@@ -26,17 +24,13 @@ beforeEach(() => {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // ignore
+    // Clearing storage is optional.
   }
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-// ---------------------------------------------------------------------------
-// reload — the only way back from a failed load
-// ---------------------------------------------------------------------------
 
 describe('reload — refetch at an unchanged fixtureFile', () => {
   it('recovers the render after a failed load', async () => {
@@ -112,7 +106,7 @@ describe('reload — refetch at an unchanged fixtureFile', () => {
       result.current.reload();
     });
 
-    // An upload has no fixture to refetch — the uploaded content must survive.
+    // An upload has no fixture to refetch, so the uploaded content must survive.
     expect(result.current.forwardedContent).toBe(UPLOADED_TSCN);
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });

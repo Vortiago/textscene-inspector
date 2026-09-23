@@ -1,13 +1,7 @@
 /**
- * Copy `*.module.css` files from src/ to dist/ after the tsc build.
- * tsc itself ignores non-TS assets, but the compiled .js files retain
- * `import styles from './Foo.module.css'` relative imports that need a
- * resolvable file at runtime (Vite for the web app, esbuild for the
- * VS Code webview).
- *
- * Mirroring the directory layout is intentional: the compiled .js
- * import paths are relative to their own location, so the CSS must
- * sit alongside.
+ * Copy `*.module.css` files from src/ to dist/ after the tsc build, which ignores them. The
+ * compiled .js keeps its relative `./Foo.module.css` imports, which Vite and esbuild resolve at
+ * runtime, so the copy mirrors the directory layout.
  */
 import { promises as fs } from 'node:fs';
 import path from 'node:path';

@@ -1,9 +1,6 @@
 /**
- * Drag-and-drop: no drop handling existed today; upload was a
- * hidden file input only. Reuses the `r3f-main.*.test.tsx` WebGL-mock
- * pattern. `fireEvent.drop`/`dragOver` accept a plain object for
- * `dataTransfer` — React only reads `.files` off it, so a real
- * `DataTransfer` (unavailable in happy-dom) isn't needed.
+ * Drag-and-drop onto the app. `fireEvent.drop` and `dragOver` take a plain object for
+ * `dataTransfer`: React reads only `.files` from it, and happy-dom has no `DataTransfer`.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -29,7 +26,7 @@ function resetPersistence() {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // happy-dom may throw in edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
   window.history.replaceState(null, '', '/');
 }
@@ -110,9 +107,8 @@ describe('#221 drag-and-drop a .tscn file', () => {
     await waitForScene();
 
     const target = screen.getByTestId('app-root');
-    // Dragging a selection inside the Source textarea to move it: calling
-    // `preventDefault()` here cancels the browser's own text insertion, and
-    // routing it into the ingest raises a bogus "no .tscn" error.
+    // A selection dragged inside the Source textarea: `preventDefault()` would cancel the
+    // browser's own text insertion, and the ingest would raise a false "no .tscn" error.
     const textDrag = { dataTransfer: { files: [], types: ['text/plain'] } };
 
     // `fireEvent` returns false once a handler has prevented the default.

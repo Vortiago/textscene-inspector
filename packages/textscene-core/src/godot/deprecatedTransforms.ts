@@ -1,12 +1,7 @@
 /**
- * The value side of a deprecated `_set` arm: what the setter receives is not
- * always the literal the file carries.
- *
- * Every transform here operates on the RAW literal text and returns raw text,
- * because `canonicalPropertyName` runs while the scanner is still building the
- * property bag — before any typed decoder, and before the linter's rules read
- * the same bag. One rewrite, and parser, linter and renderer all see the value
- * the engine stores.
+ * The value side of a deprecated `_set` arm, whose setter can receive another value than the file
+ * carries. Raw text in and out: `resolveDeprecatedProperty` runs while the scanner builds the
+ * property bag, before any decoder or linter rule, so all of them see the value the engine stores.
  */
 
 import { boolSlotValue } from './variantBool.js';
@@ -19,10 +14,8 @@ import { isNilLiteral } from './variantParser.js';
 const COMPOSITE_BODY_RE = /^\s*[A-Za-z0-9_]+\s*\(([\s\S]*)\)\s*$/;
 
 /**
- * A float as `rtos_fix` (`variant_parser.cpp:1985-1999`) spells it, so the
- * rewritten literal is one Godot's own writer could have produced and every
- * grammar downstream already reads: a zero of either sign is `0`, and the three
- * non-finite spellings are the ones `stor_fix` recognises.
+ * A float as `rtos_fix` (`variant_parser.cpp:1985-1999`) spells it, so every grammar downstream
+ * reads the rewrite: a zero of either sign is `0`, and the non-finite spellings are `stor_fix`'s.
  */
 function godotFloatText(value: number): string {
   if (Number.isNaN(value)) return 'nan';
@@ -33,19 +26,10 @@ function godotFloatText(value: number): string {
 }
 
 /**
- * A transform for a `set_size((VectorN)p_value * 2)` arm — the Godot-3
- * half-extents, doubled into the modern `size`.
- *
- * The cast accepts the `i`-suffixed spelling too (`Variant::can_convert_strict`
- * lists `Vector3i` for `Vector3`), and the setter takes the float type, so the
- * result is always spelled with the canonical jacket: `Vector3i(3, 1, 3)` comes
- * out as `Vector3(6, 2, 6)`. Each component is read with the same widened
- * grammar the tokenizer applies, so `inf` doubles to `inf`.
- *
- * A literal the grammar refuses — the wrong arity, a component that is not a
- * number — is returned as written. The key is still renamed, so the slice's own
- * decoder answers for it exactly as it does for a malformed `size`: a warning
- * and the documented default.
+ * A `set_size((VectorN)p_value * 2)` arm: the Godot-3 half-extents, doubled into `size`. The cast
+ * takes the `i` spelling (`can_convert_strict`) and the setter the float type, so `Vector3i(3, 1, 3)`
+ * becomes `Vector3(6, 2, 6)`, and `inf` doubles to `inf`. A refused literal is returned as written
+ * under the renamed key, so the slice's decoder warns and uses its default, as for a bad `size`.
  */
 export function doubledVector(typeName: 'Vector2' | 'Vector3'): (raw: string) => string {
   const arity = typeName === 'Vector2' ? 2 : 3;
@@ -61,15 +45,10 @@ export function doubledVector(typeName: 'Vector2' | 'Vector3'): (raw: string) =>
 }
 
 /**
- * `p_value.operator bool()` — `Variant::booleanize`, which is `!is_zero()`
- * (`variant_op.cpp:1120-1122`) — for the spellings a property line carries.
- *
- * BOOL, INT and FLOAT go through {@link boolSlotValue}; a STRING is zero only
- * when empty (`is_zero` compares against `String()`), and `null` is the NIL
- * zero. Every other form — a composite, a resource reference — is left
- * `undefined`, which the alias table reads as "not forwarded": the key stays
- * under its own spelling, and no canonical slot is written from a value this
- * function did not read.
+ * `p_value.operator bool()`, `Variant::booleanize`, which is `!is_zero()` (`variant_op.cpp:1120-1122`).
+ * BOOL, INT and FLOAT go through {@link boolSlotValue}, a STRING is zero only when empty, and `null`
+ * is the NIL zero. Any other form is `undefined`, which the alias table reads as not forwarded, so
+ * no canonical slot is written from a value this did not read.
  */
 export function booleanized(raw: string): boolean | undefined {
   const asSlot = boolSlotValue(raw);

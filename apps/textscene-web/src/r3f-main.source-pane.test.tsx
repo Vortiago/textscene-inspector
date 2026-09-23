@@ -1,26 +1,14 @@
 /**
- * Source pane skeleton (toggle, splitter, persistence, source display).
- *
- * RED contract. Behavioral `<R3FApp>` tests (the pattern the issue prescribes:
- * reuse `r3f-main.*.test.tsx` with `TscnCanvas`/`TscnSceneContents` mocked — happy-dom has no WebGL).
- * Each `describe` maps to one acceptance criterion of the issue. These pin BEHAVIOR the slice must add,
- * not a specific implementation — but they do fix the DOM handles the pane must expose so the tests
- * are deterministic (the repo's established convention: `data-testid` on interactive elements, cf.
- * `upload-tscn-input` / `reset-camera-button`):
- *   - data-testid="source-pane"          the pane container. PRESENT when shown, ABSENT when hidden.
- *   - data-testid="source-pane-toggle"   the show/hide button, injected through the shell's `toolbar` slot.
- *   - data-testid="source-pane-splitter" the draggable resize handle between the pane and the viewport.
- * The pane's text lives in an editable, forced-monospace <textarea> (role "textbox") inside the pane.
- *
- * ADR-0007 / ADR-0020: the pane is a WEB-APP sibling that wraps <TscnPreviewShell>; the toggle rides
- * the shell's EXISTING `toolbar` slot (no shell API change) — hence "the toggle is inside the shell
- * <header>" is asserted below (the only way the web app can reach the shell's top bar is that slot).
+ * The source pane's toggle, splitter, persistence and display, through `<R3FApp>`. The DOM
+ * handles are `data-testid="source-pane"` (absent when hidden), `source-pane-toggle` and
+ * `source-pane-splitter`, around a monospace <textarea>. The pane wraps <TscnPreviewShell>
+ * (ADR-0007, ADR-0020), and its toggle rides the shell's `toolbar` slot inside the <header>.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
-// <TscnCanvas> mounts a real WebGL <Canvas> happy-dom can't provide — stub it (and the
-// scene contents) so the rest of the shell + our new pane render. Everything else is real.
+// happy-dom cannot provide the WebGL <Canvas> that <TscnCanvas> mounts, so it and the scene
+// contents are stubs. Everything else is real.
 vi.mock('@textscene/core', async () => {
   const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
   return { ...real, TscnCanvas: () => null, TscnSceneContents: () => null };
@@ -41,15 +29,14 @@ const UPLOADED_TSCN = `[gd_scene load_steps=1 format=3]
 [node name="UploadedRoot" type="Node3D"]
 `;
 
-/** Clear only the source-pane's persistence so each test starts from a clean default. We don't
- * know the impl's exact key(s) (the issue says "mirror the fixture persistence"), so wipe the
- * whole store — plus the known fixture key — to guarantee first-load defaults. */
+/** Wipe the whole store, so each test starts from first-load defaults whatever keys the
+ * pane persists under. */
 function resetPersistence() {
   try {
     globalThis.localStorage.clear();
     globalThis.localStorage.removeItem(FIXTURE_KEY);
   } catch {
-    // happy-dom may throw in edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
 }
 
@@ -73,17 +60,16 @@ function paneTextarea() {
   return within(screen.getByTestId('source-pane')).getByRole('textbox') as HTMLTextAreaElement;
 }
 
-/** A textarea is "forced monospace" if it says so in a happy-dom-visible way — inline
- * font-family, a computed font-family, or a class name mentioning "mono" (CSS modules
- * don't apply their cascade under happy-dom, so at least one of these must carry it). */
+/** Whether a textarea is monospace in a way happy-dom shows: inline or computed font-family,
+ * or a class name with "mono". happy-dom applies no CSS-module cascade. */
 function isMonospace(ta: HTMLTextAreaElement) {
   const inline = ta.getAttribute('style') ?? '';
   const computed = (globalThis.getComputedStyle?.(ta)?.fontFamily ?? '');
   return /mono/i.test(inline) || /mono/i.test(computed) || /mono/i.test(ta.className);
 }
 
-/** Drag the splitter to a new absolute x (px). Covers a handler listening on the splitter,
- * the document, or window — dispatches to all three so the test isn't coupled to that choice. */
+/** Drag the splitter to a new absolute x (px). It dispatches to the splitter, the document and
+ * window, so the test holds whichever one the handler listens on. */
 function dragSplitterTo(clientX: number) {
   const splitter = screen.getByTestId('source-pane-splitter');
   fireEvent.mouseDown(splitter, { clientX: 600 });
@@ -119,9 +105,9 @@ describe('#200 source pane — display of the loaded .tscn (criteria 1 + 6)', ()
     expect(pane).toBeTruthy();
 
     const ta = paneTextarea();
-    // The pane shows the SAME source text feeding the shell.
+    // The pane shows the same source text that feeds the shell.
     expect(ta.value).toContain('StubRoot');
-    // The pane is editable — the buffer drives the render.
+    // The pane is editable, and the buffer drives the render.
     expect(ta.readOnly).toBe(false);
     // Forced monospace.
     expect(isMonospace(ta)).toBe(true);
@@ -168,8 +154,8 @@ describe('#200 source pane — toggle in the toolbar slot (criterion 2)', () => 
     await waitForScene();
 
     const toggle = screen.getByTestId('source-pane-toggle');
-    // The web app can only reach the shell's <header> via its `toolbar` prop → this proves
-    // the toggle rides the existing slot without a shell API change (ADR-0020).
+    // The web app reaches the shell's <header> only through its `toolbar` prop, so the toggle
+    // rides that slot without a shell API change (ADR-0020).
     expect(toggle.closest('header')).toBeTruthy();
   });
 
@@ -209,7 +195,7 @@ describe('#200 source pane — draggable splitter resizes the pane (criterion 4)
     await waitForScene();
 
     const before = paneWidth();
-    expect(Number.isFinite(before)).toBe(true); // width is driven by an inline style so it's observable + resizable
+    expect(Number.isFinite(before)).toBe(true); // an inline style sets the width, so it is observable and resizable
 
     dragSplitterTo(300); // drag left from 600 → the left pane must shrink
     await waitFor(() => {
@@ -228,7 +214,7 @@ describe('#200 source pane — state persists across reloads (criterion 5)', () 
 
     render(<R3FApp />); // "reload"
     await waitForScene();
-    // No interaction — the pane stays hidden because the choice was persisted.
+    // With no interaction, the persisted choice keeps the pane hidden.
     expect(screen.queryByTestId('source-pane')).toBeNull();
   });
 
@@ -266,7 +252,7 @@ describe('#200 source pane — state persists across reloads (criterion 5)', () 
     globalThis.localStorage.setItem(SOURCE_PANE_KEY, JSON.stringify({ visible: true, width: 0 }));
     render(<R3FApp />);
     await waitForScene();
-    // width:0 would collapse the pane — it must fall back, not be honored.
+    // width:0 would collapse the pane, so it falls back instead.
     expect(paneWidth()).toBe(320);
   });
 });

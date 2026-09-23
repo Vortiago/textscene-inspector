@@ -1,8 +1,6 @@
 /**
- * useCorpusRoot — owns the root-switch sequence for the web previewer:
- * setResourceRoot, THREE URL modifier, and clearCaches on change. The switch is
- * applied explicitly at a scene swap (never derived from the selection), so
- * these cover the returned `applyCorpusRoot` — the module's only export.
+ * Tests for `applyCorpusRoot`, the module's only export: setResourceRoot, the THREE URL
+ * modifier, and clearCaches on a change.
  */
 // @vitest-environment happy-dom
 

@@ -1,15 +1,13 @@
 /**
- * `useSceneSource` — the debounced edit forward, and the gate it hands the buffer to.
- *
- * The hook owns the hold-last-valid edit-loop invariant (ADR-0020): a resolving
- * fixture load must never stomp newer keystrokes. Shared scaffolding is in
+ * `useSceneSource`: the debounced edit forward, and the gate it hands the buffer to.
+ * The hook keeps the hold-last-valid invariant (ADR-0020). The shared scaffolding is in
  * `useSceneSource.testkit.ts`.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
-// Stub resolveForwardedContent: valid TSCN passes through, garbage is rejected.
-// Hoisted per module graph, so every suite in this split declares its own.
+// A stub resolveForwardedContent passes valid TSCN and rejects garbage. `vi.mock` is hoisted
+// per module graph, so every suite in this split declares its own.
 vi.mock('./sourceGate', () => ({
   resolveForwardedContent: (buffer: string, lastGood: string) =>
     buffer.trim().startsWith('[gd_scene') ? buffer : lastGood,
@@ -29,17 +27,13 @@ beforeEach(() => {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // ignore
+    // Clearing storage is optional.
   }
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-// ---------------------------------------------------------------------------
-// Debounced edit forward, and the gate the buffer passes through
-// ---------------------------------------------------------------------------
 
 describe('debounced edit forward', () => {
   it('does not forward immediately on a keystroke', async () => {
@@ -101,7 +95,7 @@ describe('debounced edit forward', () => {
     await settle(300);
 
     expect(result.current.buffer).toBe(GARBAGE);
-    // Gate rejected the garbage — hold last valid.
+    // The gate rejected the garbage, so the last valid content holds.
     expect(result.current.forwardedContent).toBe(FIXTURE_TSCN);
   });
 

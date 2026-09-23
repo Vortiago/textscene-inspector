@@ -1,17 +1,7 @@
 /**
- * Central registry for TSCN node types.
- *
- * Each node type self-registers its parser, type-guard, and optional
- * property formatter. The parser turns raw snake_case TSCN body
- * properties into the type's strongly-typed properties shape
- * (e.g. `material_override` → `materialOverride`). The formatter is
- * consumed by the R3F `<NodeDetailsPanel>` for the details view.
- *
- * Historical note: this used to also carry a `renderer` callback that
- * returned a `THREE.Object3D` for the imperative renderer pipeline.
- * The R3F migration removed the imperative path and the `renderer` field
- * with it; rendering now happens via the parallel `nodeComponentRegistry`
- * in `r3f/NodeComponentRegistry.ts`.
+ * The registry of TSCN node types. Each type self-registers a parser, which turns snake_case
+ * body properties into its typed shape (`material_override` → `materialOverride`), and an
+ * optional formatter for `<NodeDetailsPanel>`. Rendering lives in `r3f/NodeComponentRegistry.ts`.
  */
 
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils';
@@ -34,18 +24,16 @@ export interface PropertySection {
 export type PropertyFormatter = (properties: any) => PropertySection[];
 
 export interface NodeTypeRegistration {
-  /** Node type name (e.g., 'MeshInstance3D', 'Node3D') */
+  /** Node type name, such as 'MeshInstance3D' or 'Node3D'. */
   typeName: string;
 
   /**
-   * Optional legacy type guard. The registry matches a heading by its
-   * `type` attribute against `typeName` directly, so a guard is no longer
-   * needed; the field is retained only for back-compat and is ignored by
-   * `findRegistration`.
+   * Ignored by `findRegistration`, which matches the heading's `type` attribute against
+   * `typeName`. Kept for back-compat.
    */
   typeGuard?: (heading: ParsedHeading) => boolean;
 
-  /** Parse heading and properties into node properties object */
+  /** Parse heading and properties into node properties object. */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic registry supports any node property type
   parser: (heading: ParsedHeading, properties: Record<string, string>) => any;
 
@@ -54,9 +42,8 @@ export interface NodeTypeRegistration {
 }
 
 class NodeRegistry {
-  // Backed by the shared ADR-0002 registry so all three domains (parser,
-  // 3D-render, 2D-render) share ONE tested overwrite-with-a-warn contract
-  // instead of this class carrying its own bespoke Map.
+  // The shared ADR-0002 registry, so the parser, 3D-render and 2D-render domains share one
+  // overwrite-with-a-warn contract.
   private registrations = createTypeRegistry<NodeTypeRegistration>('NodeRegistry');
 
   register(registration: NodeTypeRegistration): void {
@@ -69,10 +56,8 @@ class NodeRegistry {
   }
 
   findRegistration(heading: ParsedHeading): NodeTypeRegistration | null {
-    // Only `[node]` headings resolve to a node registration — a
-    // `[sub_resource type="BoxMesh"]` must never match a node typeName.
-    // The registry is keyed by typeName, so the lookup is O(1) and the match is
-    // exactly what the old per-type guards computed (`attributes.type === typeName`).
+    // Only a `[node]` heading resolves: a `[sub_resource type="BoxMesh"]` must never match a
+    // node typeName.
     if (heading.type !== 'node') return null;
     const type = heading.attributes.type;
     if (!type) return null;
@@ -98,7 +83,6 @@ export function parseNodeWithRegistry(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): TscnNode | null {
-  // Check if this is an instance node (has instance attribute but no type)
   const instanceRef = heading.attributes.instance || properties.instance;
   // An `instance_placeholder=` heading is an InstancePlaceholder node
   // (packed_scene.cpp:255): a node of its own, not an override.
@@ -107,13 +91,12 @@ export function parseNodeWithRegistry(
 
   const registration = nodeRegistry.findRegistration(heading);
 
-  // If no registration found, use base Node type as fallback
-  // This keeps unsupported types and instance nodes in the tree hierarchy
+  // The base Node fallback keeps unsupported types and instance nodes in the tree.
   if (!registration) {
     const originalType =
       heading.attributes.type || (placeholderPath ? INSTANCE_PLACEHOLDER_TYPE : 'Node');
 
-    // Warn for truly unsupported types, but not for instance nodes (which have no type until loaded)
+    // An instance node has no type until loaded, so only an unsupported type warns.
     if (!hasInstanceAttribute) {
       warn(`[NodeRegistry] Unsupported node type: ${originalType} - using Node fallback renderer`);
     }
@@ -132,15 +115,14 @@ export function parseNodeWithRegistry(
       children: [],
       properties: parsedProps,
       rawProperties: properties,
-      // One TscnParserCore scan built `properties` — its key order is this
-      // node's real file order (ADR-0035).
+      // One TscnParserCore scan built `properties`, so its key order is the node's file
+      // order (ADR-0035).
       rawPropertiesOrderReliable: true,
     };
 
     if (isPropertyOverrideHeading(heading)) node.overridesExistingNode = true;
     if (heading.attributes.owner) node.owner = heading.attributes.owner;
 
-    // Preserve instance attribute for external scene loading
     if (hasInstanceAttribute) {
       node.instance = instanceRef;
     }
@@ -157,15 +139,14 @@ export function parseNodeWithRegistry(
     children: [],
     properties: parsedProps,
     rawProperties: properties,
-    // One TscnParserCore scan built `properties` — its key order is this
-    // node's real file order (ADR-0035).
+    // One TscnParserCore scan built `properties`, so its key order is the node's file
+    // order (ADR-0035).
     rawPropertiesOrderReliable: true,
   };
 
   if (heading.attributes.owner) node.owner = heading.attributes.owner;
 
-  // Capture instance property for external scene references
-  // instance can be in heading attributes OR body properties
+  // `instance` can be a heading attribute or a body property.
   if (heading.attributes.instance) {
     node.instance = heading.attributes.instance;
   } else if (properties.instance) {

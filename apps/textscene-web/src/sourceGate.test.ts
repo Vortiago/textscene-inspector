@@ -1,16 +1,4 @@
-/**
- * `sourceGate.test.ts` — unit tests for the pure gate helper.
- *
- * Contract table (plan):
- *
- * | Test                                    | buffer (excerpt)                          | lastGood     | Expected   |
- * |-----------------------------------------|-------------------------------------------|--------------|------------|
- * | Header-only tscn (no nodes)            | `[gd_scene load_steps=1 format=3]`        | `"valid"`    | `"valid"`  |
- * | Comments-only                           | `; just a comment`                         | `"valid"`    | `"valid"`  |
- * | Valid buffer, empty lastGood            | valid tscn with node                      | `""`         | buffer     |
- * | Garbage buffer, empty lastGood          | garbage                                   | `""`         | `""`       |
- * | Valid buffer with sub_resource + node   | full tscn                                 | `""`         | buffer     |
- */
+/** Edge cases of the pure gate helper, beyond `sourceGate.contract.test.ts`. */
 import { describe, expect, it } from 'vitest';
 import { resolveForwardedContent } from './sourceGate';
 

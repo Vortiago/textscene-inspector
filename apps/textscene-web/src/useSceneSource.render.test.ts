@@ -1,15 +1,13 @@
 /**
- * `useSceneSource` — what the RENDER came from, and the teardown that empties it without touching the buffer.
- *
- * The hook owns the hold-last-valid edit-loop invariant (ADR-0020): a resolving
- * fixture load must never stomp newer keystrokes. Shared scaffolding is in
+ * `useSceneSource`: what the render came from, and the teardown that empties it but keeps the buffer.
+ * The hook keeps the hold-last-valid invariant (ADR-0020). The shared scaffolding is in
  * `useSceneSource.testkit.ts`.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
-// Stub resolveForwardedContent: valid TSCN passes through, garbage is rejected.
-// Hoisted per module graph, so every suite in this split declares its own.
+// A stub resolveForwardedContent passes valid TSCN and rejects garbage. `vi.mock` is hoisted
+// per module graph, so every suite in this split declares its own.
 vi.mock('./sourceGate', () => ({
   resolveForwardedContent: (buffer: string, lastGood: string) =>
     buffer.trim().startsWith('[gd_scene') ? buffer : lastGood,
@@ -30,17 +28,13 @@ beforeEach(() => {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // ignore
+    // Clearing storage is optional.
   }
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-// ---------------------------------------------------------------------------
-// renderedFixtureFile + onBeforeSwap: the corpus-boundary seam
-// ---------------------------------------------------------------------------
 
 describe('renderedFixtureFile — the fixture the RENDERED content came from', () => {
   it('stays empty while the fetch is in flight, then names the fixture once it lands', async () => {
