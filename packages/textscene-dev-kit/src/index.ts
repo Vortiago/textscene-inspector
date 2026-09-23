@@ -7,3 +7,11 @@ export {
 } from './importClosure';
 export type { ImportClosure, WalkImportClosureOptions } from './importClosure';
 export { commentSpans, stripComments } from './commentSpans';
+export {
+  commentBlocks,
+  commentViolations,
+  markdownViolations,
+  surfaceViolations,
+  tscnCommentBlocks,
+} from './proseRules';
+export type { CommentBlock, ProseViolation } from './proseRules';
