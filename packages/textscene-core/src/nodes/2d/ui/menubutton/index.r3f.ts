@@ -1,7 +1,6 @@
 /**
- * MenuButton registration — native (WebGL canvas) painter + rect solver.
- * `menu_button.cpp` draws and sizes exactly as its `Button` base does (see
- * `nativeSolver.ts`'s own doc for the one theme divergence this slice ports).
+ * Registers the MenuButton native painter and rect solver. `menu_button.cpp` draws and sizes as its
+ * `Button` base does, but for one theme colour (`nativeSolver.ts`).
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

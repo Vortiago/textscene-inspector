@@ -1,7 +1,6 @@
 /**
- * `<MarginContainer>` render contract: MarginContainer draws no chrome
- * of its own in Godot (it only insets children, `nativeSolver.ts`), so the
- * native painter must render nothing — no mesh, no line, no group of its own.
+ * Tests that `<MarginContainer>` renders nothing: no mesh, line or group. Godot's MarginContainer
+ * draws no chrome and only insets its children (`nativeSolver.ts`).
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

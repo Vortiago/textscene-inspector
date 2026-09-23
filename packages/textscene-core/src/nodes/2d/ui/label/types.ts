@@ -12,27 +12,27 @@ export interface LabelProperties extends ControlProperties {
   uppercase?: boolean;
   /** `TextServer::OverrunBehavior` (0-6). Godot default 0 (OVERRUN_NO_TRIMMING). */
   overrunBehavior?: number;
-  /** `Label.clip_text` — collapses the OFF-autowrap minimum width to 1px (label.cpp:993-995). */
+  /** `Label.clip_text`: drops the autowrap-off minimum width to 1px (label.cpp:993-995). */
   clipText?: boolean;
   /** `Label.ellipsis_char`'s first character; undefined falls back to the engine default (…). */
   ellipsisChar?: string;
-  /** `TextServer::JustificationFlag` bitmask. Godot default (`label.h:46`) applies when undefined — see `LABEL_DEFAULT_JUSTIFICATION_FLAGS`. */
+  /** `TextServer::JustificationFlag` bitmask. Undefined means the Godot default (`label.h:46`, `LABEL_DEFAULT_JUSTIFICATION_FLAGS`). */
   justificationFlags?: number;
-  /** `Label.tab_stops`, px. Undefined/empty is a no-op (no tab-stop concept applied). */
+  /** `Label.tab_stops`, px. Undefined or empty applies no tab stops. */
   tabStopsPx?: number[];
   /** `TextServer::LineBreakFlag`'s BREAK_TRIM_* subset (masked to bits 32/64/128). Godot default (`label.h:45`) applies when undefined. */
   autowrapTrimFlags?: number;
-  /** `Label.paragraph_separator`, unescaped. Godot default (`label.h:73`) applies when undefined — see `LABEL_PARAGRAPH_SEPARATOR`. */
+  /** `Label.paragraph_separator`, unquoted but not `c_unescape`d. Undefined means the Godot default (`label.h:73`, `LABEL_PARAGRAPH_SEPARATOR`). */
   paragraphSeparator?: string;
   /** `Label.lines_skipped`. Godot default 0 (`label.h:77`). */
   linesSkipped?: number;
   /** `Label.max_lines_visible`. Godot default -1, "no limit" (`label.h:78`). */
   maxLinesVisible?: number;
-  /** `Label.label_settings` — the raw resource-reference text, resolved at paint time in the node's own resource scope. */
+  /** `Label.label_settings`: the raw resource reference, resolved at paint time in the node's own resource scope. */
   labelSettings?: string;
-  /** `Label.visible_characters`, cross-derived with `visible_ratio` in FILE ORDER (label.cpp:1285-1327). Godot default -1, "show all" (`label.h:75`). */
+  /** `Label.visible_characters`, derived with `visible_ratio` in file order (label.cpp:1285-1327). Godot default -1, show all (`label.h:75`). */
   visibleCharacters?: number;
-  /** `Label.visible_ratio`, cross-derived with `visible_characters` — see `visibleCharacters`'s own doc. Godot default 1.0 (`label.h:76`). */
+  /** `Label.visible_ratio`, derived with `visible_characters` in file order. Godot default 1.0 (`label.h:76`). */
   visibleRatio?: number;
   /** `TextServer::VisibleCharactersBehavior`. Godot default 0, VC_CHARS_BEFORE_SHAPING (`label.h:74`). */
   visibleCharactersBehavior?: number;

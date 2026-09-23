@@ -1,5 +1,3 @@
-/**
- * ninepatchrect linter registration - imports linter components to trigger self-registration.
- */
+/** Registers the NinePatchRect validators by importing them. */
 
 import './linterParser.js';

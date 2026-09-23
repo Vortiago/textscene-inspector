@@ -1,14 +1,7 @@
 /**
- * LineEdit strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing. There is no genuine cross-field rule for
- * LineEdit, so there is no `linter.ts` / `linter.test.ts`.
- *
- * Grouped to match linterParser.ts's own grouping (and line_edit.cpp's
- * ADD_GROUP structure): one `describe` per group, one `it` per property
- * covering happy + malformed + any bound, rather than 36 near-identical cases.
+ * Tests the LineEdit strict validators through `validatorRegistry`, so a failure points at the
+ * validator, not at scene parsing. LineEdit has no cross-field rule, so no `linter.ts`. One `describe`
+ * per line_edit.cpp ADD_GROUP, as linterParser.ts groups them, and one `it` per property for its happy, malformed and bound cases.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -95,8 +88,8 @@ describe('LineEdit strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property/per-group cases follow.
+    // A validator that accepts arbitrary prose validates no format. Per-property and per-group cases
+    // follow this generic check.
     const accepted = validatorRegistry
       .getOwnKeys('LineEdit')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -150,7 +143,7 @@ describe('LineEdit strict validators', () => {
   });
 
   describe('alignment (enum 0-3, enforced)', () => {
-    // line_edit.cpp:1072 — ERR_FAIL_INDEX((int)p_alignment, 4): rejects >= 4.
+    // line_edit.cpp:1072: ERR_FAIL_INDEX((int)p_alignment, 4) rejects >= 4.
     it('accepts 0 (LEFT, the documented default)', () => {
       expect(check('alignment', '0')).toBeNull();
     });
@@ -173,8 +166,8 @@ describe('LineEdit strict validators', () => {
   });
 
   describe('max_length (integer >= 0)', () => {
-    // line_edit.cpp:2521 — ERR_FAIL_COND(p_max_length < 0); hint's "or_greater"
-    // opens the ceiling.
+    // line_edit.cpp:2521: ERR_FAIL_COND(p_max_length < 0). The hint's "or_greater" opens the
+    // ceiling.
     it('accepts the documented default (0, meaning unlimited)', () => {
       expect(check('max_length', '0')).toBeNull();
     });
@@ -211,9 +204,8 @@ describe('LineEdit strict validators', () => {
   });
 
   describe('caret_blink_interval (setter refuses <= 0, hint states 0.1 to 10)', () => {
-    // line_edit.cpp:2050 — ERR_FAIL_COND(p_interval <= 0). The
-    // PROPERTY_HINT_RANGE "0.1,10,0.01" (line_edit.cpp:3510) is an editor
-    // slider the setter never applies, so both of its ends warn.
+    // line_edit.cpp:2050: ERR_FAIL_COND(p_interval <= 0). The PROPERTY_HINT_RANGE "0.1,10,0.01"
+    // (line_edit.cpp:3510) is an editor slider the setter never applies, so both of its ends warn.
     it('accepts the documented default (0.65)', () => {
       expect(check('caret_blink_interval', '0.65')).toBeNull();
     });
@@ -252,8 +244,8 @@ describe('LineEdit strict validators', () => {
   });
 
   describe('caret_column (integer >= 0, floor enforced)', () => {
-    // line_edit.cpp:2277-2279 clamps below 0 up to 0; the ceiling clamps to
-    // text.length(), a sibling-property bound this validator cannot see.
+    // line_edit.cpp:2277-2279 clamps below 0 up to 0. The ceiling clamps to text.length(), a
+    // sibling-property bound this validator cannot see.
     it('accepts the documented default (0)', () => {
       expect(check('caret_column', '0')).toBeNull();
     });
@@ -272,9 +264,8 @@ describe('LineEdit strict validators', () => {
   });
 
   describe('secret_character (quoted string, at most one character, enforced)', () => {
-    // line_edit.cpp:2610-2612: length > 1 truncates to the first character
-    // after a WARN_PRINT rather than being rejected outright, so a longer
-    // literal is a value ERROR (the setter alters it) rather than a format one.
+    // line_edit.cpp:2610-2612: a longer literal truncates to its first character after a WARN_PRINT.
+    // The setter alters it, so it is a value error, not a format one.
     it('accepts the documented default bullet ("•")', () => {
       expect(check('secret_character', '"•"')).toBeNull();
     });
@@ -297,7 +288,7 @@ describe('LineEdit strict validators', () => {
   });
 
   describe('text_direction (enum -1..3, enforced)', () => {
-    // line_edit.cpp:2156 — ERR_FAIL_COND((int)p_text_direction < -1 || > 3).
+    // line_edit.cpp:2156: ERR_FAIL_COND((int)p_text_direction < -1 || > 3).
     it('accepts 0 (TEXT_DIRECTION_AUTO, the documented default)', () => {
       expect(check('text_direction', '0')).toBeNull();
     });
@@ -307,8 +298,8 @@ describe('LineEdit strict validators', () => {
     });
 
     it('warns on -1: the setter loads it, the hint does not offer it', () => {
-      // The setter allows it (its ERR_FAIL_COND opens below -1), so it loads —
-      // and the hint (0-3) does not offer it, so it warns rather than erroring.
+      // The setter allows it, since its ERR_FAIL_COND opens below -1, so it loads. The hint (0-3)
+      // does not offer it, so it warns instead of erroring.
       expect(check('text_direction', '-1')?.severity).toBe('warning');
     });
 
@@ -404,8 +395,8 @@ describe('LineEdit strict validators', () => {
   });
 
   describe('right_icon_scale (float 0.1-1.0, hinted both ends)', () => {
-    // line_edit.cpp:3528 — PROPERTY_HINT_RANGE "0.1,1.0,0.01", neither
-    // or_greater nor or_less, and the setter enforces neither end.
+    // line_edit.cpp:3528: PROPERTY_HINT_RANGE "0.1,1.0,0.01", neither or_greater nor or_less, and
+    // the setter enforces neither end.
     it('accepts the documented default (1.0)', () => {
       expect(check('right_icon_scale', '1.0')).toBeNull();
     });

@@ -1,5 +1,3 @@
-/**
- * menubar linter registration - imports linter components to trigger self-registration.
- */
+/** Registers the MenuBar validators by importing them. */
 
 import './linterParser.js';

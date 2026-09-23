@@ -1,8 +1,6 @@
 /**
- * MarginContainer self-registration: importing `index.r3f` must wire the
- * native (WebGL canvas) painter and both native rect-solver functions into
- * their respective registries — the whole point of the self-registration
- * convention (ADR-0001) is that nothing else has to.
+ * Tests that importing `index.r3f` registers the native painter and both rect-solver functions, since
+ * under self-registration (ADR-0001) nothing else does.
  */
 import { describe, expect, it } from 'vitest';
 import './index.r3f';

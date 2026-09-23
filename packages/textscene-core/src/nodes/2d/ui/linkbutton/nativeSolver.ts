@@ -1,18 +1,8 @@
 /**
- * LinkButton's native (WebGL canvas) rect solver + draw-state/underline math —
- * `LinkButton::get_minimum_size`/`_notification` (`scene/gui/link_button.cpp`)
- * and the theme defaults `scene/theme/default_theme.cpp:196-210` registers
- * under type name `"LinkButton"`. Registered via
- * `controlSolverRegistry.registerMinimumSize`.
- *
- * LinkButton draws NO StyleBox at all (no `panel`/`normal` theme entry
- * exists for it — only a `focus` StyleBox, which a static, pointer-less
- * preview never draws: `has_focus(true)` is always false, the same
- * "collapsed BaseButton::get_draw_mode" restriction every other Button-family
- * slice in this codebase carries). `Component.tsx` draws text plus, per
- * `underline_mode`, a solid-fill underline stroke — no StyleBoxQuad.
- *
- * Pure data + functions, no THREE/React — painting is `Component.tsx`'s job.
+ * LinkButton's native rect solver, draw state and underline math: `LinkButton::get_minimum_size` and
+ * `_notification` (`scene/gui/link_button.cpp`), with the defaults `scene/theme/default_theme.cpp:196-210`
+ * registers for "LinkButton". It has no StyleBox but `focus`, which a static preview never draws, so
+ * `Component.tsx` draws only text and an underline stroke.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -35,17 +25,15 @@ import { getUnderlinePositionPx, getUnderlineThicknessPx } from '../../../../r3f
 import type { ControlColor } from '../control/types';
 import type { LinkButtonProperties } from './types';
 
-/** `SceneStringName(font)` = `"font"`, `default_theme.cpp:200`: `theme->set_font(SceneStringName(font), "LinkButton", Ref<Font>());`. */
+/** `SceneStringName(font)`, registered for "LinkButton" at `default_theme.cpp:200`. */
 export const LINKBUTTON_THEME_FONT_KEY = 'font';
 
-// --- Draw state --------------------------------------------------------------
+// Draw state
 
 /**
- * `BaseButton::get_draw_mode()` (`base_button.cpp:325-358`) collapsed to what
- * a pointer-less static preview can ever select — the same collapse every
- * other Button-family slice in this codebase documents: `disabled` wins
- * outright, else `pressing = status.pressed` (== `button_pressed`)
- * unconditionally, `DRAW_HOVER`/`DRAW_HOVER_PRESSED` never fire.
+ * `BaseButton::get_draw_mode()` (`base_button.cpp:325-358`) collapsed to what a static preview can
+ * select, as in every Button-family slice: `disabled` wins, else `button_pressed`, and the hover states
+ * never fire.
  */
 export type LinkButtonDrawState = 'normal' | 'pressed' | 'disabled';
 
@@ -55,21 +43,15 @@ export function resolveLinkButtonDrawState(props: LinkButtonProperties): LinkBut
   return 'normal';
 }
 
-/** `control_font_color` (`default_theme.cpp:101`), LinkButton's own `font_color` default (`:203`). */
+/** `control_font_color` (`default_theme.cpp:101`), LinkButton's `font_color` default (`:203`). */
 export const LINKBUTTON_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
-/** `control_font_pressed_color = Color(1, 1, 1)` (`:108`), LinkButton's own `font_pressed_color` default (`:204`). */
+/** `control_font_pressed_color = Color(1, 1, 1)` (`:108`), LinkButton's `font_pressed_color` default (`:204`). */
 export const LINKBUTTON_DEFAULT_PRESSED_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 /**
- * LinkButton registers NO `font_disabled_color` of its own anywhere in
- * `default_theme.cpp` (`:196-210`), and neither does any ancestor in its
- * ClassDB chain (`LinkButton -> BaseButton -> Control -> ...` —
- * `scene/theme/theme_db.cpp`'s `get_native_type_dependencies`, the fallback
- * `ThemeOwner::get_theme_type_dependencies` walks once no owned/global Theme
- * resource carries the key). The lookup falls all the way through to
- * `ThemeOwner::get_theme_item_in_types`'s own final rung —
- * `global_context->get_fallback_theme()->get_theme_item(..., StringName())` —
- * which resolves to a default-constructed `Color()`: OPAQUE BLACK
- * `(0, 0, 0, 1)`, not `control_font_disabled_color`.
+ * Neither LinkButton's `default_theme.cpp` block (`:196-210`) nor an ancestor in its `scene/theme/theme_db.cpp`
+ * type chain registers `font_disabled_color`, so `ThemeOwner::get_theme_item_in_types` falls through to
+ * the fallback theme's `get_theme_item(..., StringName())`: a default `Color()`, opaque black, not
+ * `control_font_disabled_color`.
  */
 export const LINKBUTTON_DEFAULT_DISABLED_FONT_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 1 };
 
@@ -79,7 +61,7 @@ const LINKBUTTON_THEME_KEYS: Record<LinkButtonDrawState, TextThemeKeys> = {
   disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
 };
 
-/** Resolves LinkButton's own theme font size/colour for `state` (overrides, else the ancestor Theme chain / theme default / LinkButton's own literal — `resolveTextTheme`'s own doc). */
+/** LinkButton's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the theme default, else LinkButton's literal (`resolveTextTheme`). */
 export function linkButtonTextTheme(
   n: ShareNode,
   props: LinkButtonProperties,
@@ -102,11 +84,9 @@ const UNDERLINE_MODE_ALWAYS = 0;
 const UNDERLINE_MODE_NEVER = 2;
 
 /**
- * `LinkButton::_notification`'s `NOTIFICATION_DRAW` switch on `get_draw_mode()`
- * (`link_button.cpp:249-278`, collapsed to the three reachable states above):
- * NORMAL and DISABLED only underline on `UNDERLINE_MODE_ALWAYS`; PRESSED (and
- * the unreachable HOVER states) underline whenever the mode is not
- * `UNDERLINE_MODE_NEVER`.
+ * `NOTIFICATION_DRAW`'s switch on `get_draw_mode()` (`link_button.cpp:249-278`): NORMAL and DISABLED
+ * underline only on `UNDERLINE_MODE_ALWAYS`, and PRESSED (like the unreachable hover states) whenever
+ * the mode is not `UNDERLINE_MODE_NEVER`.
  */
 export function shouldUnderline(state: LinkButtonDrawState, underlineMode: number | undefined): boolean {
   const mode = underlineMode ?? UNDERLINE_MODE_ALWAYS;
@@ -122,21 +102,17 @@ export function linkButtonUnderlineSpacing(constants: SolveNode['constants'], ct
 }
 
 export interface UnderlineGeometry {
-  /** Downward pixel offset from the line's baseline to the underline stroke's CENTRE. */
+  /** Downward offset in px from the baseline to the centre of the underline stroke. */
   y: number;
   /** The stroke's whole-pixel thickness, floored to at least 1px. */
   thickness: number;
 }
 
 /**
- * `link_button.cpp:306-308`: `underline_spacing` (theme constant, INT) +
- * `text_buf->get_line_underline_position()` (float) summed and narrowed to
- * an `int` — C++ narrowing TRUNCATES toward zero, which for this codebase's
- * always-positive `getUnderlinePositionPx` is `Math.trunc`. `y` then adds the
- * line's own ascent (`text_buf->get_line_ascent()`, the SAME whole-pixel
- * value `getAscentPx` produces — `openSansMetrics.ts`'s own doc). Thickness
- * is `MAX(1, ...)` then narrowed the same way (`:308`); the MAX is the
- * caller's job per `getUnderlineThicknessPx`'s own doc.
+ * `link_button.cpp:306-308`: `underline_spacing` (int) plus `text_buf->get_line_underline_position()`
+ * (float), narrowed to `int`, which truncates toward zero. `y` adds the line ascent, the whole-pixel
+ * value `getAscentPx` gives. Thickness is `MAX(1, ...)` narrowed the same way (`:308`), with the MAX
+ * applied here, as `getUnderlineThicknessPx` requires.
  */
 export function linkButtonUnderlineGeometry(
   fontSizePx: number,
@@ -150,24 +126,17 @@ export function linkButtonUnderlineGeometry(
 }
 
 export interface LinkButtonTextPlacement {
-  /** The paragraph's own left edge, LOCAL Godot px. */
+  /** The paragraph's left edge, local Godot px. */
   originX: number;
-  /** `text_buf->get_line_width()` narrowed to `int` — the CEILED pen extent, and the underline stroke's own length. */
+  /** `text_buf->get_line_width()` narrowed to `int`: the ceiled pen extent, and the underline's length. */
   lineWidthPx: number;
 }
 
 /**
- * `LinkButton::_notification`'s text and underline origin
- * (`link_button.cpp:289-314`): LTR draws at `x = 0`, RTL at
- * `x = size.width - width`, and the underline spans `width` px from
- * whichever of the two it is.
- *
- * `width` is `TextParagraph::get_line_width`
- * (`scene/resources/text_paragraph.cpp:810`), i.e.
- * `TS->shaped_text_get_width` = `Math::ceil(sd->width)`
- * (`text_server_adv.cpp:7569`); LinkButton's `int width` narrowing therefore
- * removes nothing, and the stroke is a whole pixel WIDER than the raw pen
- * advance whenever that advance is fractional.
+ * The text and underline origin (`link_button.cpp:289-314`): `x = 0` under LTR, `size.width - width` under
+ * RTL, with the underline `width` px long from there. `width` is `TextParagraph::get_line_width`
+ * (`scene/resources/text_paragraph.cpp:810`), `Math::ceil(sd->width)` (`text_server_adv.cpp:7569`), so the
+ * stroke is a whole pixel wider than a fractional pen advance.
  */
 export function linkButtonTextPlacement(
   rectWidthPx: number,
@@ -178,15 +147,14 @@ export function linkButtonTextPlacement(
   return { originX: rtl ? rectWidthPx - lineWidthPx : 0, lineWidthPx };
 }
 
-// --- Minimum size --------------------------------------------------------------
+// Minimum size
 
 const OVERRUN_NO_TRIMMING = 0;
 
 /**
- * LinkButton's shaped label — the **solve handoff** share
- * (`r3f/controls/native/solveHandoff.ts`) `linkButtonMinimumSize` and
- * `Component.tsx` both call. `null` for empty text. The overrun trimming the
- * painter applies on top is NOT part of it: that reads the solved rect.
+ * LinkButton's shaped label, null for empty text: the solve-handoff share
+ * (`r3f/controls/native/solveHandoff.ts`) of `linkButtonMinimumSize` and `Component.tsx`. The painter's
+ * overrun trimming is not part of it, since it reads the solved rect.
  */
 export const linkButtonLabelShape = defineShare<TextLayoutResult | null>((n, theme) => {
   const props = n.node.properties as LinkButtonProperties;
@@ -198,12 +166,9 @@ export const linkButtonLabelShape = defineShare<TextLayoutResult | null>((n, the
 });
 
 /**
- * `LinkButton::get_minimum_size` (`link_button.cpp:193-200`):
- * `text_buf->get_size()` — the shaped paragraph's own CEILED extent — with
- * the width zeroed whenever `overrun_behavior` is anything but
- * `OVERRUN_NO_TRIMMING` (Godot then lets the control's assigned rect drive
- * the width and trims/ellipsises to fit — not modelled here, see this
- * slice's `comparison.md`).
+ * `LinkButton::get_minimum_size` (`link_button.cpp:193-200`): `text_buf->get_size()`, the ceiled shaped
+ * extent, with the width zeroed for any `overrun_behavior` but `OVERRUN_NO_TRIMMING`. The assigned rect
+ * then drives the width, and `Component.tsx` trims to it.
  */
 export const linkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LinkButtonProperties;

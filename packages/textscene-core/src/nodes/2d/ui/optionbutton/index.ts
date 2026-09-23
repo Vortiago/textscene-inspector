@@ -1,4 +1,4 @@
-/** OptionButton registration — parser. */
+/** Registers the OptionButton parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseOptionButton } from './parser';

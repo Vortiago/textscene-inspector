@@ -1,4 +1,4 @@
-/** MenuBar parser — Control plus `flat`, the one own property that changes what draws. */
+/** Parses a MenuBar: Control plus `flat`, its one property that changes what draws. */
 
 import { type ParsedHeading } from '../../../../parser/utils';
 import type { MenuBarProperties } from './types';

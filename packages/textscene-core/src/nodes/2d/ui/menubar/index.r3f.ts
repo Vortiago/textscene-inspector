@@ -1,8 +1,4 @@
-/**
- * MenuBar registration — the native (WebGL canvas) rect solve + painter.
- * `./nativeSolver` registers the minimum-size function as a side effect of
- * import.
- */
+/** Registers the MenuBar native painter and rect solver. `./nativeSolver` registers the minimum size on import. */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';

@@ -1,10 +1,7 @@
 /**
- * OpenXRBindingModifierEditor registration: parser.
- *
- * Reuses the PanelContainer parse (itself a pass-through to Control's);
- * property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
+ * Registers the OpenXRBindingModifierEditor parser, which reuses PanelContainer's. It registers no
+ * component, so the dispatcher falls back to GenericNodeFallback and the tree reports it as not
+ * implemented. Its validators live in linterParser.ts.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

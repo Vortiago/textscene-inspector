@@ -1,11 +1,9 @@
 /**
- * LineEdit's own vendored default-theme icon — `scene/theme/icons/line_edit_clear.svg`
- * (Godot 4.6.3, MIT), the `"clear"` theme icon (`default_theme.cpp:436`).
- * `native/themeIcons.ts` is out of bounds for this slice to extend, and its
- * `svgDataUrl` helper is not exported, so both are kept local here —
- * `spinbox/icons.ts` is the pattern this follows.
+ * LineEdit's vendored default-theme `"clear"` icon, `scene/theme/icons/line_edit_clear.svg`
+ * (Godot 4.6.3, `default_theme.cpp:436`). `native/themeIcons.ts` does not export `svgDataUrl`, so
+ * this keeps a local copy, as `spinbox/icons.ts` does.
  *
- * Licence: Godot Engine, MIT — see THIRD-PARTY-NOTICES.md.
+ * Licence: Godot Engine, MIT. See THIRD-PARTY-NOTICES.md.
  */
 
 function svgDataUrl(base64: string): string {
@@ -19,5 +17,5 @@ const LINE_EDIT_CLEAR_B64 =
 /** LineEdit's `clear` theme icon (`default_theme.cpp:436`). */
 export const LINE_EDIT_CLEAR_ICON = svgDataUrl(LINE_EDIT_CLEAR_B64);
 
-/** The vendored icon's own authored size — Godot's default theme registers no other. */
+/** The vendored icon's authored size. Godot's default theme registers no other. */
 export const LINE_EDIT_CLEAR_ICON_NATURAL_SIZE = { x: 16, y: 16 };

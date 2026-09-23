@@ -1,23 +1,8 @@
 /**
- * `<LinkButton>` — the native (WebGL canvas) painter for `LinkButton`: text
- * only, NO StyleBox chrome mesh (LinkButton registers none — only a `focus`
- * StyleBox, which a static pointer-less preview never draws), plus a solid
- * underline stroke when `underline_mode` calls for it at this draw state.
- * Text draws at the control's own top edge with no margin at all — unlike
- * every StyleBox-backed Button-family painter — and hugs the leading edge
- * layout direction picks (`nativeSolver.ts`'s `linkButtonTextPlacement`), the
- * underline running the same span.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`. Multiplied into the font colour BEFORE the single
- * sRGB→linear conversion, and reused as-is for the underline stroke (the
- * SAME `color` Godot's own `draw_line` call passes — `link_button.cpp:311,313`).
- *
- * `renderOrder` reaches the text `<TextRun>` and the underline `ControlQuad`
- * alike; `clippingPlanes` reaches the text material explicitly.
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * `<LinkButton>`, the native painter: text with no StyleBox chrome, since LinkButton registers only a
+ * `focus` box that a static preview never draws, plus an underline stroke when `underline_mode` calls
+ * for it. The text sits at the control's top edge with no margin and hugs the leading edge
+ * (`linkButtonTextPlacement`). `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -51,19 +36,20 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
 
   const clippingPlanes = useControlClipPlanes();
 
-  // --- Text: theme resolution + shaping ------------------------------------
+  // Text: theme resolution and shaping
+  // `tint.own` (`self_modulate` on the inherited `modulate`) multiplies the font colour before its one
+  // sRGB-to-linear conversion. The underline reuses that colour, as Godot's `draw_line` does
+  // (`link_button.cpp:311,313`). `renderOrder` reaches the text and the underline alike.
   const { fontSizePx, color: baseFontColor } = linkButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, LINKBUTTON_THEME_FONT_KEY);
-  // The solve handoff share — the SAME shaping `linkButtonMinimumSize` sized
-  // this control from. The trimming below is this painter's own, since it
-  // reads the solved rect.
+  // The solve-handoff share: the shaping `linkButtonMinimumSize` sized this control from. The trimming
+  // below is this painter's own, since it reads the solved rect.
   const unshapedLayout: TextLayoutResult | null = linkButtonLabelShape(solveNode, theme);
 
-  // link_button.cpp:286-289: `text_buf->set_width(MAX(1, size.width))` once
-  // `overrun_behavior` is anything but NO_TRIMMING -- the control's own
-  // resolved rect, no style margin (LinkButton draws no StyleBox at all).
+  // link_button.cpp:286-289: `text_buf->set_width(MAX(1, size.width))` for any `overrun_behavior` but
+  // NO_TRIMMING, at the control's own rect, with no style margin.
   const overrunFlags = useMemo(
     () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING),
     [props.overrunBehavior]
@@ -78,25 +64,23 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
     return soloLineLayout(trimmedLine, unshapedLayout);
   }, [unshapedLayout, overrunFlags, rect.w, fontMetrics, fontSizePx, props.ellipsisChar]);
 
-  // `link_button.cpp:289-303` — the paragraph's own origin, which RTL moves
-  // to the far edge; the underline below starts from the same x.
+  // `link_button.cpp:289-303`: the paragraph origin, which RTL moves to the far edge. The underline
+  // starts from the same x.
   const placement = useMemo(
     () => linkButtonTextPlacement(rect.w, layout?.widthPx ?? 0, solveNode.rtl),
     [rect.w, layout, solveNode.rtl]
   );
 
-  // --- Underline: a solid stroke, per underline_mode + draw state ----------
+  // Underline: a solid stroke, per underline_mode and draw state
   const underlineLinearColor = useGodotLinearColor(tintedFontColor);
   const underline = useMemo(() => {
     if (!layout || !shouldUnderline(state, props.underline)) return null;
-    // The SAME font this Label's own ascent draws from — a
-    // `theme_override_fonts/font` scene font shapes the text at its own
-    // ascent, and the underline must sit relative to THAT, not Open Sans's.
+    // The ascent of the font the text draws in: a `theme_override_fonts/font` scene font shapes at its
+    // own ascent, and the underline sits relative to it, not to Open Sans's.
     const ascentPx = getFontAscentPx(fontMetrics, fontSizePx);
     const spacingConstant = linkButtonUnderlineSpacing(solveNode.constants, { theme });
-    // The stroke's position/thickness stay Open Sans's own `post`-table
-    // values regardless of `fontMetrics` — no scene font this engine loads
-    // carries baked underline metrics of its own.
+    // The stroke's position and thickness stay Open Sans's `post`-table values whatever `fontMetrics`
+    // is: no scene font this engine loads carries underline metrics.
     const { y, thickness } = linkButtonUnderlineGeometry(fontSizePx, spacingConstant, ascentPx);
     return { top: y - thickness / 2, thickness, width: placement.lineWidthPx };
   }, [layout, state, props, theme, fontSizePx, fontMetrics, solveNode.constants, placement]);

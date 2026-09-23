@@ -1,11 +1,7 @@
 /**
- * OptionButton strict validators, format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Cross-field behaviour (selected vs item_count) belongs in
- * linter.test.ts, through `Linter`.
+ * Tests the OptionButton strict validators through `validatorRegistry`, so a failure points at the
+ * validator, not at scene parsing, and no fixture text needs upkeep. The cross-field `selected` against
+ * `item_count` check belongs in linter.test.ts, through `Linter`.
  */
 
 import { readFileSync } from 'node:fs';
@@ -27,8 +23,8 @@ describe('OptionButton strict validators', () => {
   });
 
   it('rejects a malformed value on every own-key validator', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases follow.
+    // A validator that accepts arbitrary prose validates no format. Per-property cases follow this
+    // generic check.
     const accepted = validatorRegistry
       .getOwnKeys('OptionButton')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -111,13 +107,9 @@ describe('OptionButton strict validators', () => {
     });
   });
 
-  // doc/classes/OptionButton.xml:10: "The Button.text and Button.icon
-  // properties are set automatically based on the selected item. They
-  // shouldn't be changed manually." That is prose, not a removal:
-  // OptionButton::_validate_property (option_button.cpp:554-558) only clears
-  // their PROPERTY_USAGE, and Button's own setters (set_text/set_button_icon,
-  // called directly by OptionButton::_select at option_button.cpp:423-424)
-  // still accept any value. Same shape as SpinBox.exp_edit / FileDialog.dialog_text.
+  // doc/classes/OptionButton.xml:10 says Button.text and Button.icon follow the selected item, which is
+  // prose, not a removal: `_validate_property` (option_button.cpp:554-558) clears their usage, and `_select`
+  // still sets them through Button's setters (option_button.cpp:423-424). As SpinBox.exp_edit and FileDialog.dialog_text.
   describe('text and icon (inherited from Button, not removed)', () => {
     it('does not register text/icon as OptionButton\'s own, and does not remove them', () => {
       expect(validatorRegistry.getOwnKeys('OptionButton')).not.toContain('text');
@@ -163,25 +155,19 @@ describe('OptionButton strict validators', () => {
     });
 
     it('rejects a key whose index is not an integer, which the engine drops', () => {
-      // `OptionButton::_set` gates on `property_helper.is_property_valid`
-      // (option_button.cpp:166), which requires is_valid_int() on the trimmed
-      // prefix (property_list_helper.cpp:126) and otherwise returns false, so
-      // Godot DROPS the write. That is the error tier, so the key has to reach
-      // the dispatcher rather than resolving to no validator.
+      // `OptionButton::_set` (option_button.cpp:166) needs `is_valid_int()` on the trimmed prefix
+      // (property_list_helper.cpp:126), else Godot drops the write. That is the error tier, so the key
+      // reaches the dispatcher instead of resolving to no validator.
       const nonNumeric = validatorRegistry.findValidator('OptionButton', 'popup/item_x/text');
       expect(nonNumeric).not.toBeNull();
       expect(nonNumeric!('popup/item_x/text', '"x"', 1)?.severity).toBe('error');
-      // A NEGATIVE index is a well-formed key Godot resolves and then refuses
-      // (is_valid_int accepts the sign, property_list_helper.cpp:52, and the
-      // index < 0 guard rejects it at :57). It must reach the dispatcher so the
-      // diagnostic fires; returning null here meant a key the engine silently
-      // drops read as clean.
+      // A negative index is well formed: is_valid_int accepts the sign (property_list_helper.cpp:52),
+      // and the index < 0 guard refuses it (:57). It must reach the dispatcher, or a dropped write reads clean.
       const negative = validatorRegistry.findValidator('OptionButton', 'popup/item_-1/text');
       expect(negative).not.toBeNull();
       expect(negative!('popup/item_-1/text', '"x"', 1)?.code).toBe('INVALID_ITEM_INDEX');
-      // An EMPTY index fails the same `is_valid_int()` gate
-      // (property_list_helper.cpp:53), so the write is dropped and the key
-      // routes to the dispatcher, which reports it as an unknown item key.
+      // An empty index fails the same `is_valid_int()` gate (property_list_helper.cpp:53), so the write
+      // is dropped and the dispatcher reports an unknown item key.
       const empty = validatorRegistry.findValidator('OptionButton', 'popup/item_/text');
       expect(empty!('popup/item_/text', '"x"', 1)?.code).toBe('INVALID_ITEM_KEY');
     });
@@ -275,11 +261,8 @@ describe('OptionButton strict validators', () => {
   });
 
   describe('the fixture, property by property', () => {
-    // The fixture is the deliverable's "zero errors and zero warnings" claim,
-    // made checkable without running the full `lint:tscn` pipeline (off limits
-    // to this slice, see AGENTS.md): every `key = value` line under the
-    // DifficultySelect node must resolve through the same `findValidator` walk
-    // this file already exercises, and return null.
+    // The fixture's zero-diagnostic claim, checked without the `lint:tscn` pipeline: every
+    // `key = value` line under DifficultySelect resolves through `findValidator` and returns null.
     const fixturePath = join(
       import.meta.dirname,
       '../../../../../../../scenes/fixtures/unit-optionbutton.tscn'

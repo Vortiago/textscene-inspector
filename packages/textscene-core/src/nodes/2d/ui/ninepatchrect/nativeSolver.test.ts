@@ -1,6 +1,5 @@
 /**
- * `ninePatchRectMinimumSize` vs Godot 4.6.3
- * (`scene/gui/nine_patch_rect.cpp:53-55`):
+ * Tests `ninePatchRectMinimumSize` against Godot 4.6.3 (`scene/gui/nine_patch_rect.cpp:53-55`):
  * `Size2(margin[LEFT] + margin[RIGHT], margin[TOP] + margin[BOTTOM])`.
  */
 import { describe, expect, it } from 'vitest';
