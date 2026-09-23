@@ -232,7 +232,6 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
         <StandardMaterialSlot
           scalars={materialScalars}
           {...maps}
-          meshType={meshResource?.type}
         />
       )}
     </MeshShell>
