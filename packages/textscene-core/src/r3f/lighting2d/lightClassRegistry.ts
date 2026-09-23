@@ -1,7 +1,6 @@
 /**
- * The bookkeeping behind the light pass's `register*` calls: which cull tuples
- * are mounted, which ordinals within each are taken, and which tuples have
- * declared a shadow tint. Pure React state — nothing here touches the GPU.
+ * The bookkeeping behind the light pass's `register*` calls: the mounted cull tuples, the ordinals
+ * taken in each, and the tuples that declared a shadow tint. React state only, no GPU.
  */
 
 import { useCallback, useRef, useState } from 'react';
@@ -31,10 +30,7 @@ function sameKeys(a: readonly LightCullKey[], b: readonly LightCullKey[]): boole
 
 const EMPTY_IDS: ReadonlySet<string> = new Set();
 
-/**
- * The same counter as `useDeclarationCount`, but per cull tuple: it publishes
- * WHICH tuples have a declaration rather than how many there are in total.
- */
+/** `useDeclarationCount` per cull tuple: it publishes which tuples have a declaration. */
 export function useKeyedDeclarationCount(): [
   ReadonlySet<string>,
   (key: LightCullKey) => () => void,
@@ -89,16 +85,9 @@ interface LiveClass {
 }
 
 /**
- * The distinct cull tuples currently mounted, in tuple order, and a slot
- * allocator within each.
- *
- * Sorted rather than mount-ordered so a class's index, and therefore its camera
- * layer, depends only on WHICH tuples are present, never on which light mounted
- * first. Keyed by the tuple's VALUE, since a light rebuilds its key object on
- * every render. The live SLOTS per tuple are what make the withdrawal of one of
- * several lights sharing a class leave the class standing, and reusing the
- * lowest free ordinal keeps the numbering dense across a scene that mounts and
- * unmounts lights — which matters because they index an 8-bit stencil.
+ * The mounted cull tuples, sorted so a class's index and layer depend only on which are present,
+ * and keyed by value, since a light rebuilds its key each render. A class stands while any slot is
+ * live. The lowest free ordinal is reused, so ordinals stay dense for the 8-bit stencil.
  */
 export function useLightClassRegistry(): [
   readonly LightCullKey[],
@@ -124,8 +113,8 @@ export function useLightClassRegistry(): [
       live.slots.add(ordinal);
       publish();
 
-      // A second release must not free the ordinal a LATER light has since been
-      // given: React's strict double-invoke replays the cleanup on its own.
+      // A second release must not free the ordinal a later light has since been given: React's
+      // strict double-invoke replays the cleanup.
       let released = false;
       return {
         ordinal,

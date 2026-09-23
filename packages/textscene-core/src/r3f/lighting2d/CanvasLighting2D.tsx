@@ -1,85 +1,10 @@
 /**
- * Godot's 2D canvas light pass, ported.
- *
- * `drivers/gles3/shaders/canvas.glsl` captures the item's albedo BEFORE the
- * canvas tint, then folds that albedo into every light term:
- *
- *   vec4 base_color = color;                     // the albedo
- *   color *= canvas_modulation;                  // unless Unshaded / Light Only
- *   light_color.rgb *= light_base_color.rgb * light_base_color.a;  // .a is energy
- *   light_color.rgb *= base_color.rgb;
- *   light_blend_compute(...)                     // ADD / SUB / MIX against color
- *
- * The albedo appears in every term, so the whole pass collapses to
- *
- *   color.rgb = albedo x S,   S = seed, then per light
- *                 ADD: S += light.rgb * light.a
- *                 SUB: S -= light.rgb * light.a
- *                 MIX: S  = mix(S, light.rgb, light.a)
- *
- * and `S` does not depend on the item — only on the SEED, which is the canvas
- * modulate for an ordinary item and an unmodulated white for a `Light Only` one,
- * and on WHICH LIGHTS REACH THE ITEM. That is the fact this module is built on:
- * `S` is accumulated ONCE per (seed, light set) into an offscreen buffer, and
- * every canvas item multiplies its own albedo by what its buffer holds beneath it.
- *
- * MIX is why the seed cannot simply be added afterwards: it INTERPOLATES the
- * accumulator toward the light, so the seed has to be present while the lights
- * are applied. The two seeds therefore mean two passes — but over the same
- * quads, the same blend state and the same layer, with only the seed quad's
- * uniform differing. The Light Only pass is allocated and run only when the
- * canvas actually holds a Light Only item.
- *
- * WHICH LIGHTS REACH AN ITEM is Godot's cull test — the item's `light_mask`
- * against the light's `range_item_cull_mask`, the item's accumulated `z_final`
- * against the light's z window, and the item's CANVAS layer against the light's
- * layer window (see `lightCullKey`). Those five light-side values are the whole
- * of it, so two lights that agree on all five are INDISTINGUISHABLE to every
- * item on the canvas: the lights partition into classes by that TUPLE, and one
- * accumulation per class covers every item exactly. An item then reads the
- * classes it is not culled from, usually exactly one, which is the accumulation
- * it would have got from a single-class canvas.
- *
- * The partition cannot be finer-grained than a class, because the buffer is a
- * screen-space SUM: once two lights land in it, no fragment can subtract one of
- * them back out. It is also no coarser for free — but every light that leaves
- * the four range properties alone carries the same tail
- * `(mask, -1024, 1024, 0, 0)`, so a scene that authors no window has exactly the
- * classes it had when the mask alone was the key.
- *
- * The buffers are half-float, which is the load-bearing part. Godot clamps only
- * after multiplying the light into the albedo; a fragment blended straight onto
- * the canvas is clamped to [0, 1] BEFORE that multiply, so a torch at
- * `energy = 2` flattens into a saturated disc with no falloff. Accumulating
- * unclamped, then multiplying, reproduces Godot's ordering exactly.
- *
- * The ALPHA channel carries a second quantity: the summed cookie coverage
- * `light_only_alpha`, which is the mask a Light Only item is drawn through
- * (`color.a *= light_only_alpha`).
- *
- * `S` is seeded by a full-screen quad rather than by a clear colour, so the seed
- * passes through no colour-management path on its way into a `NoColorSpace`
- * target, and the renderer's global clear state is never touched.
- *
- * Lights are drawn on camera layers, so collecting them needs no second scene
- * graph: each class's pre-pass points the camera at the seed layer plus that
- * class's layer and renders the tree that is already mounted.
- *
- * SHADOWS sit one level down, per light rather than per class: a
- * `LightOccluder2D` shadow is a property of ONE light's cookie, so each light
- * stamps its own shadow volumes into the STENCIL buffer immediately before its
- * quad and the quad rejects what it stamped (`ShadowVolumeMask`). Three things
- * here serve that and nothing else: the accumulators carry a stencil buffer,
- * each class pass clears it once, and `register` hands every light an ORDINAL
- * so the stamps of the lights sharing a pass cannot be confused for each other.
- *
- * The pieces live in sibling modules: the camera-layer allocation in
- * `lightPassLayers.ts`, what the pass publishes in `lightPassContext.ts`, the
- * declaring side in `lightPassDeclarations.ts`, the mounted-tuple bookkeeping in
- * `lightClassRegistry.ts`, the buffers in `lightAccumulationTargets.ts`, the
- * seed quad in `lightSeedQuad.tsx` and the per-frame render in
- * `lightAccumulationPass.ts`.
- *
+ * Godot's 2D canvas light pass (`drivers/gles3/shaders/canvas.glsl`). The albedo enters every light
+ * term, so `color.rgb = albedo × S`: S starts at a seed, then each light adds `rgb * a`, subtracts
+ * it or mixes toward `rgb` by `a`. S depends only on the seed and on which lights reach the item,
+ * so it is accumulated once per (seed, light class) offscreen, and each item multiplies by it.
+ */
+/*
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -137,10 +62,8 @@ export {
 
 export interface CanvasLighting2DProviderProps {
   /**
-   * The canvas tint in force — the value `S` starts from for an ordinary item.
-   * It comes from the same `canvasModulateColor(nodes)` the dispatcher publishes
-   * to the items, so the seed and the tint the items divide back out cannot
-   * disagree.
+   * The canvas tint, where `S` starts for an ordinary item. It is the `canvasModulateColor(nodes)`
+   * the dispatcher publishes to the items, so the seed and the tint they divide out agree.
    */
   canvasModulate: RGBA;
   children: ReactNode;
@@ -154,6 +77,10 @@ export function CanvasLighting2DProvider({
   const scene = useThree((s) => s.scene);
   const camera = useThree((s) => s.camera);
 
+  // Two lights that agree on the five-value cull tuple (`lightCullKey`) are the same to every
+  // item, so one accumulation per tuple class covers every item. An item reads the classes it is
+  // not culled from, usually one. `register` gives each light an ordinal, so the stencil stamps of
+  // lights sharing a pass stay apart.
   const [cullKeys, register] = useLightClassRegistry();
   const [lightOnlyCount, registerLightOnly] = useDeclarationCount();
   const [shadowTintKeys, registerShadowTint] = useKeyedDeclarationCount();
@@ -165,7 +92,13 @@ export function CanvasLighting2DProvider({
     .slice(0, classCount)
     .map((key) => shadowTintKeys.has(lightCullKeyId(key)));
 
+  // Half-float, since Godot clamps only after multiplying the light into the albedo: blending onto
+  // the canvas would clamp first and flatten an `energy = 2` torch into a disc with no falloff.
+  // Alpha holds the summed cookie coverage `light_only_alpha` (`color.a *= light_only_alpha`).
   const targets = useAccumulationTargets(classCount);
+  // Light Only seeds from white, and MIX interpolates toward the light, so the seed must be there
+  // while the lights apply: a second pass over the same quads with another seed uniform, run only
+  // when the canvas holds a Light Only item.
   const lightOnlyTargets = useAccumulationTargets(needsLightOnly ? classCount : 0);
   const shadowTintTargets = useSelectedAccumulationTargets(shadowTintClasses);
 
@@ -227,10 +160,8 @@ export function CanvasLighting2DProvider({
   return (
     <CanvasLighting2DContext.Provider value={value}>
       {lit && <LightAccumulatorSeed material={seedMaterial} />}
-      {/* Occluders only matter to lights, so the registry that finds them lives
-          with the pass that consumes them rather than in the stage above. The
-          light list's ORDER is the same kind of canvas-wide fact, derived once
-          here rather than by every light for itself. */}
+      {/* Occluders matter only to lights, so their registry lives with this pass. The light
+          list's order is a canvas-wide fact too, derived once here, not by each light. */}
       <CanvasLightSequenceProvider>
         <ShadowCasterStage>{children}</ShadowCasterStage>
       </CanvasLightSequenceProvider>

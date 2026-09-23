@@ -1,10 +1,7 @@
 /**
- * Walk a loaded GLB/GLTF THREE.Object3D into a display hierarchy for the scene
- * tree. The traversal is DETERMINISTIC (children in order, duplicate sibling
- * names disambiguated by an `@<n>` suffix) so the relative paths it produces are
- * identical across the two clones a GLB has at runtime — the tree's structural
- * clone and the viewport's rendered clone. That lets a tree row's
- * path line up with the rendered object registered for selection/visibility.
+ * A loaded GLB as a display hierarchy for the scene tree. The walk is deterministic: children in
+ * order, duplicate sibling names suffixed `@<n>`. So the tree's clone and the viewport's clone get
+ * the same relative paths, and a tree row lines up with the rendered object.
  */
 
 import type * as THREE from 'three';
@@ -13,9 +10,9 @@ import type { TscnNode } from '../../../parser/types.js';
 export interface GlbHierarchyNode {
   /** Display name (THREE object's name, or its type when unnamed). */
   name: string;
-  /** Path relative to the GLB root; unique + stable across structurally-equal clones. */
+  /** Relative to the GLB root, unique and stable across structurally equal clones. */
   relPath: string;
-  /** Raw THREE.Object3D.type (Mesh, SkinnedMesh, Bone, Group, …). */
+  /** THREE.Object3D.type: Mesh, SkinnedMesh, Bone, Group, … */
   threeType: string;
   /** TSCN-ish display type for the tree/inspector. */
   displayType: string;
@@ -56,24 +53,19 @@ function buildNode(object: THREE.Object3D, parentPath: string, segment: string):
   };
 }
 
-/** Build the GLB's internal hierarchy (the root itself is the GLB node; its CHILDREN are returned). */
+/** Returns the root's children: the root itself is the GLB node. */
 export function buildGlbHierarchy(root: THREE.Object3D): GlbHierarchyNode[] {
   const segments = segmentsForSiblings(root.children);
   return root.children.map((child, i) => buildNode(child, '', segments[i]!));
 }
 
-/** One GLB-internal object paired with its relPath (same scheme as buildGlbHierarchy). */
+/** A GLB object with its relPath, in `buildGlbHierarchy`'s scheme. */
 export interface GlbObjectEntry {
   relPath: string;
   object: THREE.Object3D;
 }
 
-/**
- * Flatten a GLB root into `{ relPath, object }` entries using the SAME
- * deterministic path scheme as `buildGlbHierarchy`. The viewport's GLBSceneRoot
- * walks its rendered clone with this to register each object for selection and
- * to toggle per-object visibility — relPaths line up with the tree rows.
- */
+/** `buildGlbHierarchy`'s path scheme, flat, so the viewport's objects line up with the tree rows. */
 export function flattenGlbObjects(root: THREE.Object3D): GlbObjectEntry[] {
   const out: GlbObjectEntry[] = [];
   const walk = (object: THREE.Object3D, parentPath: string, segment: string): void => {
@@ -87,7 +79,7 @@ export function flattenGlbObjects(root: THREE.Object3D): GlbObjectEntry[] {
   return out;
 }
 
-/** Synthetic TSCN node type for a GLB-internal node (all `GLB*` → treated as a supported display type). */
+/** A `GLB`-prefixed type, which counts as a supported display type. */
 export function glbInternalNodeType(displayType: string): string {
   switch (displayType) {
     case 'Mesh':
@@ -104,10 +96,8 @@ export function glbInternalNodeType(displayType: string): string {
 }
 
 /**
- * Convert the GLB hierarchy into synthetic `TscnNode`s for the scene tree. The
- * node NAME is the disambiguated relPath segment so the tree's
- * `joinPath(parent, name)` reproduces `relPath` exactly — keeping tree rows in
- * lockstep with the objects registered for selection/visibility.
+ * Synthetic `TscnNode`s for the scene tree. Each name is the disambiguated relPath segment, so
+ * `joinPath(parent, name)` reproduces `relPath` exactly.
  */
 export function glbHierarchyToTscnNodes(nodes: readonly GlbHierarchyNode[]): TscnNode[] {
   return nodes.map((n) => ({
@@ -119,22 +109,15 @@ export function glbHierarchyToTscnNodes(nodes: readonly GlbHierarchyNode[]): Tsc
 }
 
 /**
- * Tree/inspector node name + type for a GLB's animations. Godot's glTF importer
- * exposes a model's clips on an `AnimationPlayer` node *inside* the imported
- * hierarchy (a child of the root), not on the root itself — so we surface them
- * the same way. The type is `GLB`-prefixed so `rendersOwnVisual` reports it as
- * drawing; selecting this row drives the Animation tab.
+ * Godot's glTF importer puts a model's clips on an `AnimationPlayer` child of the root, and so
+ * does this tree. The type is `GLB`-prefixed so `rendersOwnVisual` reports it as drawing.
  */
 export const GLB_ANIMATION_PLAYER_NAME = 'AnimationPlayer';
 export const GLB_ANIMATION_PLAYER_TYPE = 'GLBAnimationPlayer';
 
 /**
- * The synthetic tree children of a `GLBSceneRoot`: the GLB's internal hierarchy
- * plus — when the GLB carries animation clips — an `AnimationPlayer`
- * node that surfaces those clips in the hierarchy (Godot parity) and activates
- * the Animation transport when selected. Centralised so the tree
- * (`useGlbChildren`) and the inspector resolver (`resolveLiveNode`) produce
- * the SAME children, keeping row paths and selection in lockstep.
+ * A `GLBSceneRoot`'s tree children: the GLB hierarchy, plus an `AnimationPlayer` when it has clips.
+ * One source, so `useGlbChildren` and `resolveLiveNode` produce the same children.
  */
 export function glbSceneRootChildren(root: THREE.Object3D): TscnNode[] {
   const nodes = glbHierarchyToTscnNodes(buildGlbHierarchy(root));

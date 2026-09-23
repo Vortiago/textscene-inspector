@@ -1,20 +1,8 @@
 /**
- * Godot's 2D light culling, end to end through the real dispatcher.
- *
- * A light reaches an item when its cull mask shares a bit with the item's
- * `light_mask`, the item's accumulated `z_final` is inside the light's z window,
- * and the item's CANVAS layer is inside the light's layer window. Lights
- * therefore partition into classes by that whole tuple, and each class
- * accumulates into its own buffer. What these pin is the wiring that makes that
- * true: the class a light's quad is sorted into (its camera LAYER), and the
- * class slots each item is allowed to read (its per-slot WEIGHT). The rule
- * itself is pinned by `lightCullKey.test.ts`.
- *
- * The weights are read back through `onBeforeCompile`, which is where the
- * uniform objects are handed to three. Happy-dom has no GPU, so the shader is
- * never compiled and the injection is the only place the binding is observable.
- * The pixels are measured against the engine instead, by
- * `unit-pointlight2d-cull-mask`.
+ * Godot's 2D light culling through the real dispatcher: the class a light's quad lands in (its
+ * camera layer) and the slots each item reads (its weights). `lightCullKey.test.ts` pins the rule.
+ * Happy-dom has no GPU, so the weights are read through `onBeforeCompile`, and
+ * `unit-pointlight2d-cull-mask` measures the pixels against the engine.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -218,9 +206,8 @@ describe('2D light cull masks, through the dispatcher', () => {
   });
 
   it('gives a Light Only item the unmodulated buffer of the class it selects', async () => {
-    // Two accumulations per class once a Light Only item exists, and the item
-    // has to land on its OWN class's unmodulated one. A single-class scene
-    // cannot tell a per-class index apart from a constant 0.
+    // Two accumulations per class once a Light Only item exists, and the item has to land on its
+    // own class's unmodulated one. A single-class scene cannot tell a per-class index from 0.
     const renderer = await render(
       scene(
         `${panel('Ordinary', '2', 0)}${panel('Masked', '2', 200, 'material = SubResource("lightonly")\n')}` +
@@ -229,8 +216,8 @@ describe('2D light cull masks, through the dispatcher', () => {
       )
     );
     expect(classWeights(renderer, 'Masked')).toEqual([0, 1, 0, 0]);
-    // Its buffer is the Light Only accumulation, which is a DIFFERENT texture
-    // from the one the ordinary item beside it reads out of the same class.
+    // Its buffer is the Light Only accumulation, a different texture from the one the ordinary
+    // item beside it reads from the same class.
     const lightOnlyBuffer = classBuffers(renderer, 'Masked')[1];
     const ordinaryBuffer = classBuffers(renderer, 'Ordinary')[1];
     expect(lightOnlyBuffer).toBeInstanceOf(THREE.Texture);
@@ -291,12 +278,9 @@ ${properties}texture = ExtResource("1")`;
 }
 
 /**
- * The z and layer windows, through the dispatcher.
- *
- * Measured against Godot 4.6.3 by `unit-pointlight2d-range-z.tscn` and
- * `unit-pointlight2d-range-layer.tscn`: a `range_z_max = 4` light leaves a
- * z_index-5 panel at the bare canvas tint, and a default light leaves a panel
- * inside a bare CanvasLayer at its raw albedo.
+ * The z and layer windows, through the dispatcher. On Godot 4.6.3 (`unit-pointlight2d-range-z.tscn`,
+ * `unit-pointlight2d-range-layer.tscn`) a `range_z_max = 4` light leaves a z_index-5 panel at the
+ * bare canvas tint, and a default light leaves a panel in a bare CanvasLayer at its raw albedo.
  */
 describe('2D light range windows, through the dispatcher', () => {
   it('culls an item whose z sits above the light\'s window', async () => {
@@ -343,8 +327,8 @@ describe('2D light range windows, through the dispatcher', () => {
   });
 
   it('withholds a default light from a default CanvasLayer', async () => {
-    // A CanvasLayer is its own canvas at `layer` 1, and Godot's default light
-    // window is 0..0 — so the HUD keeps its raw albedo while the world lights.
+    // A CanvasLayer is its own canvas at `layer` 1, and Godot's default light window is 0..0, so
+    // the HUD keeps its raw albedo while the world lights.
     const renderer = await render(
       scene(
         `${windowPanel('WorldPanel', '')}\n[node name="Hud" type="CanvasLayer" parent="."]\n` +

@@ -1,19 +1,8 @@
 /**
- * BUG 2 regression: Godot instance-property overrides must be applied to
- * nodes INSIDE an instanced GLB.
- *
- * ceiling_lamp.tscn instances ceiling_lamp.glb, whose internal `plafoniera`
- * node carries a large baked translation (1.11, -9.73, -9.73). The
- * .tscn declares an override `[node name="plafoniera" parent="." index=0]`
- * that keeps the 0.189 scale but resets translation to (0,0,0). Pre-fix
- * the renderer mounted the GLB as an opaque <primitive> and the baked
- * translation survived, floating the lamp mesh ~13.8 units from where
- * Godot (and its co-located OmniLight3D) places it.
- *
- * This test drives the real NodeDispatcher → InstancedSceneSubtree →
- * GLBSceneRoot path with a fake GLB whose `plafoniera` node sits at the
- * baked translation, and asserts the override zeroes it so the mesh ends
- * up at the ceiling_lamp origin — co-located with the OmniLight3D.
+ * Instance-property overrides apply to nodes inside an instanced GLB, through the real
+ * NodeDispatcher → InstancedSceneSubtree → GLBSceneRoot path. The `plafoniera` override keeps the
+ * 0.189 scale and zeroes the baked translation (1.11, -9.73, -9.73), so the mesh sits at the
+ * ceiling_lamp origin beside its OmniLight3D.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -31,8 +20,7 @@ import { initGlbModules } from '../../../resources/processing/glbProcessing';
 // Register node-type components (Node3D / OmniLight3D / GLBSceneRoot / …).
 import '../../nodes/index';
 
-// GLBSceneRoot clones Object3D via cloneWithMaterials which requires the lazy
-// GLB module cache to be initialised first.
+// GLBSceneRoot clones through cloneWithMaterials, which needs the lazy GLB module cache.
 beforeAll(async () => {
   await initGlbModules();
 });
@@ -168,7 +156,7 @@ describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () =
     const pos = findMeshWorldPosition(renderer, 'plafoniera');
 
     // Expected: ceiling_lamp origin (8.803779, 4, 0) + override origin (0,0,0).
-    // NOT ceiling_lamp origin + baked (1.11, -9.73, -9.73).
+    // Not ceiling_lamp origin + baked (1.11, -9.73, -9.73).
     expect(pos.x).toBeCloseTo(8.803779, 4);
     expect(pos.y).toBeCloseTo(4, 4);
     expect(pos.z).toBeCloseTo(0, 4);
@@ -180,8 +168,8 @@ describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () =
   it('leaves a GLB internal node untouched when the .tscn declares no override for it', async () => {
     const fake = createFakeResourceLoader();
 
-    // ceiling_lamp.tscn with NO override children — the GLB should keep its
-    // baked transform (we must not zero translations globally).
+    // With no override children the GLB keeps its baked transform: translations are not zeroed
+    // globally.
     const noOverrideScene: TscnScene = {
       nodes: [
         {
@@ -209,11 +197,9 @@ describe('GLBSceneRoot — BUG 2 instance override onto GLB-internal node', () =
   });
 
   it('keeps an override’s `visible = false` hidden after the tree’s visibility pass', async () => {
-    // Two writers, one field: the override is applied during render, while the
-    // scene tree's hidden-paths effect assigns `visible` for EVERY GLB object
-    // afterwards. Asserting on the mounted object rather than on
-    // `applyGlbNodeOverrides` in isolation is the whole point — the unit test
-    // passes either way, because the clobber only exists once both run.
+    // Two writers, one field: the override applies during render, and the hidden-paths effect
+    // then assigns `visible` for every GLB object. Only the mounted object shows the clobber, so a
+    // unit test of `applyGlbNodeOverrides` passes either way.
     const fake = createFakeResourceLoader();
     const hiddenScene = makeCeilingLampScene();
     const override = hiddenScene.nodes[0]!.children.find((c) => c.name === 'plafoniera')!;

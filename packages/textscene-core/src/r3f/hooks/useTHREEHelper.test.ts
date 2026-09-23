@@ -1,18 +1,12 @@
 /**
- * Unit tests for `correctHelperForParentGroup` — the THREE math that
- * prevents `CameraHelper`/`DirectionalLightHelper`/`PointLightHelper` from
- * double-transforming when mounted as a `<primitive>` SIBLING of their target
- * inside the target's own transform group instead of at the scene root.
- *
- * These tests exercise the pure THREE.js function in isolation (no React, no
- * R3F). The integration coverage (actual gizmo components, React lifecycle)
- * lives in `lightHelpers.test.tsx`.
+ * `correctHelperForParentGroup` without React: a helper mounted as a sibling of its target inside
+ * the target's group must not transform twice. `lightHelpers.test.tsx` covers the gizmos.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { correctHelperForParentGroup } from './useTHREEHelper';
 
-/** Minimal HelperLike stub — just the `update()` contract the function requires. */
+/** A HelperLike stub with only the `update()` contract the function needs. */
 function makeStubHelper(): THREE.Object3D & { update: () => void; updateCount: number } {
   const obj = new THREE.Object3D() as THREE.Object3D & { update: () => void; updateCount: number };
   obj.matrixAutoUpdate = false;
@@ -22,11 +16,8 @@ function makeStubHelper(): THREE.Object3D & { update: () => void; updateCount: n
 }
 
 /**
- * Builds a minimal scene graph:
- *   scene
- *   └── parent (translated by `parentPos`, optionally rotated about Y)
- *       ├── target (at identity relative to parent, world pos == parentPos)
- *       └── helper (sibling of target, placed by correctHelperForParentGroup)
+ * scene → parent (at `parentPos`, optionally rotated about Y) → target at identity, and the
+ * helper as the target's sibling.
  */
 function makeSceneGraph(parentPos: THREE.Vector3Like, parentRotationY = 0) {
   const scene = new THREE.Scene();
@@ -56,16 +47,14 @@ describe('correctHelperForParentGroup', () => {
 
   it('breaks the constructor alias: helper.matrix is no longer target.matrixWorld', () => {
     const { target, helper } = makeSceneGraph({ x: 0, y: 0, z: 0 });
-    // Before the fix the constructor aliased helper.matrix = target.matrixWorld.
+    // The constructor aliases helper.matrix = target.matrixWorld.
     expect(helper.matrix).toBe(target.matrixWorld);
     correctHelperForParentGroup(helper, target);
     expect(helper.matrix).not.toBe(target.matrixWorld);
   });
 
   it('calls through to the original update() implementation', () => {
-    // correctHelperForParentGroup wraps `update()` — the original must still
-    // be invoked once per wrapped call, verified through the counter that the
-    // stub increments.
+    // The wrapped `update()` still calls the original once per call.
     const { target, helper } = makeSceneGraph({ x: 0, y: 5, z: 0 });
     expect(helper.updateCount).toBe(0);
     correctHelperForParentGroup(helper, target);
@@ -90,12 +79,8 @@ describe('correctHelperForParentGroup', () => {
   });
 
   it('does NOT double-apply the parent transform (the core regression)', () => {
-    // Regression: before the fix, helper.matrix was aliased to target.matrixWorld
-    // (already a WORLD matrix), so three.js's parent-chain multiply squared it:
-    //   helper.matrixWorld = parent.matrixWorld * helper.matrix
-    //                      = parent.matrixWorld * target.matrixWorld   ← world * world
-    // For a parent at Y=5 with an identity-local target, the un-fixed helper
-    // would land at Y=10 (5 squared), not Y=5.
+    // An aliased helper.matrix is already a world matrix, so the parent chain applies the parent
+    // twice: parent.matrixWorld * target.matrixWorld puts the helper at Y=10, not Y=5.
     const parentPos = { x: 0, y: 5, z: 0 };
     const { scene, target, helper } = makeSceneGraph(parentPos);
     correctHelperForParentGroup(helper, target);
@@ -108,19 +93,17 @@ describe('correctHelperForParentGroup', () => {
   });
 
   it('skips the correction when helper has no parent yet (pre-mount state)', () => {
-    // During the usePrimitiveHelper factory callback the helper has not been
-    // committed to the scene yet, so helper.parent is null. The function must
-    // not crash and must leave the helper in a safe state.
+    // Inside the usePrimitiveHelper factory the helper has no parent yet.
     const target = new THREE.Object3D();
     const helper = makeStubHelper();
     const corrected = correctHelperForParentGroup(helper, target);
-    // helper has no parent — calling update() must not throw.
+    // With no parent, update() must not throw.
     expect(() => corrected.update()).not.toThrow();
   });
 
   it('does not corrupt the target matrixWorld when update() fires', () => {
-    // A naive "fix" that re-enables matrixAutoUpdate without breaking the alias
-    // would let three.js's compose() clobber target.matrixWorld to identity.
+    // Re-enabling matrixAutoUpdate without breaking the alias lets compose() write identity into
+    // target.matrixWorld.
     const parentPos = { x: 0, y: 5, z: 0 };
     const { scene, target, helper } = makeSceneGraph(parentPos);
     correctHelperForParentGroup(helper, target);

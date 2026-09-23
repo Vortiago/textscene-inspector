@@ -1,7 +1,6 @@
 /**
- * The dismissable registry, tested directly rather than only through a real
- * panel — a leaked registration silently disables Escape-to-deselect for the
- * whole page, and nothing on screen would look wrong.
+ * The dismissable registry, tested directly: a leaked registration disables Escape-to-deselect for
+ * the whole page, and nothing on screen looks wrong.
  */
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
@@ -28,9 +27,8 @@ describe('useDismissable', () => {
   });
 
   it('releases its claim when unmounted WHILE open', () => {
-    // The leak that would matter: a panel torn down without closing first —
-    // a viewport-mode switch unmounting the legend, say — would leave Escape
-    // vetoed forever, and deselect would just quietly stop working.
+    // A panel unmounted without closing first, as a viewport-mode switch unmounts the legend,
+    // must not leave Escape vetoed for ever.
     const panel = mountPanel(true);
     expect(hasOpenDismissable()).toBe(true);
     act(() => panel.unmount());
@@ -38,8 +36,7 @@ describe('useDismissable', () => {
   });
 
   it('is order-independent across several panels', () => {
-    // The reason this is a registry rather than listener ordering: the answer
-    // must not depend on which panel mounted first.
+    // A registry, not listener ordering: the answer must not depend on which panel mounted first.
     const first = mountPanel(true);
     const second = mountPanel(true);
     expect(hasOpenDismissable()).toBe(true);

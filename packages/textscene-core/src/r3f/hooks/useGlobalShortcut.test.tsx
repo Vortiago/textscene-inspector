@@ -1,8 +1,6 @@
 /**
- * useGlobalShortcut — the shared window-keydown wiring behind
- * F-to-frame and Escape-deselect. The consumers' own tests cover their
- * behavior; this covers the hook's contract: key matching (case-insensitive),
- * the isTypingTarget guard, the subscribe-once ref indirection, and cleanup.
+ * `useGlobalShortcut`'s contract: case-insensitive key matching, the `isTypingTarget` guard, one
+ * subscription per key, and cleanup. The consumers' own tests cover their behaviour.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';

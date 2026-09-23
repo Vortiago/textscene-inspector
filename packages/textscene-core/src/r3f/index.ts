@@ -58,14 +58,8 @@ export {
   type DelegatedPointerHandlers,
 } from './hooks/useViewportSelection.js';
 
-// localStorage-backed persistence: the same debounced read/write
-// contract `<TscnPreviewShell>` uses for dock layout + viewport mode,
-// available to hosts (e.g. the web app's Source pane) so they don't
-// re-implement the try/catch + JSON.parse-with-fallback pattern this
-// generalizes.
+// The debounced persistence `<TscnPreviewShell>` uses, for a host such as the web app's Source pane.
 export { usePersistedState, readPersisted, writePersisted } from './hooks/usePersistedState.js';
 
-// The shell's own parse pipeline, exposed so hosts can make the SAME
-// renderability decision the shell will make (e.g. the web app's
-// hold-last-valid source gate) instead of re-deriving the rule.
+// The shell's parse pipeline, so a host makes the same renderability decision the shell makes.
 export { parseTscnContent, type ParseResult } from './hooks/useParsedScene.js';

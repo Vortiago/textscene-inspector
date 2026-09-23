@@ -1,9 +1,8 @@
 /**
- * The GLSL a light quad is built from. Kept apart from the material factories in
- * `lightQuad.ts` so the shader source reads as one continuous port of
- * `canvas.glsl`; the reasoning for WHY each term looks like this is in that
- * file's header.
- *
+ * The GLSL a light quad is built from, apart from the material factories in `lightQuad.ts`, so the
+ * source reads as one port of `canvas.glsl`.
+ */
+/*
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -20,9 +19,8 @@ void main() {
 `;
 
 /**
- * The same quad, plus the fragment's world position — the shadow lookup needs
- * where the pixel IS, which the cookie's uv cannot say once `offset` has moved
- * the quad off the light's origin.
+ * The same quad, plus the fragment's world position: the shadow lookup needs where the pixel is,
+ * which the cookie's uv cannot say once `offset` has moved the quad off the light's origin.
  */
 export const SHADOW_VERTEX = /* glsl */ `
 varying vec2 vLightUv;
@@ -54,10 +52,9 @@ void main() {
 `;
 
 /**
- * The shadowed half of `light_shadow_compute`. The cookie is sampled for its
- * ALPHA alone — `mix` overwrites rgb outright, so the light's colour, its energy
- * and the cookie's own rgb all drop out, and the albedo multiply that the lit
- * branch applies never reaches this term either.
+ * The shadowed half of `light_shadow_compute`. The cookie is sampled for its alpha alone: `mix`
+ * overwrites rgb, so the light's colour, its energy, the cookie's rgb and the albedo multiply all
+ * drop out.
  */
 export const SHADOW_FRAGMENT = /* glsl */ `
 uniform sampler2D uCookie;
@@ -71,11 +68,9 @@ void main() {
 `;
 
 /**
- * `light_shadow_compute`'s tap loops and the quadrant block that feeds them,
- * ported from `canvas.glsl:458-503` and `canvas.glsl:819-848`. `SHADOW_FILTER`
- * selects the kernel exactly as Godot's `LIGHT_FLAGS_FILTER_MASK` branch does,
- * and the taps step along the map's ANGULAR axis — which is why the penumbra
- * widens with distance from the light instead of being a fixed screen-space band.
+ * `light_shadow_compute`'s tap loops and their quadrant block, from `canvas.glsl:458-503` and
+ * `canvas.glsl:819-848`. `SHADOW_FILTER` selects the kernel as `LIGHT_FLAGS_FILTER_MASK` does. The
+ * taps step along the map's angular axis, so the penumbra widens with distance from the light.
  */
 export const SHADOW_SAMPLE = /* glsl */ `
 uniform sampler2D uShadowMap;
@@ -147,7 +142,11 @@ float shadowFraction() {
 }
 `;
 
-/** The cookie quad's `light_color` after `mix`, split out of the sum above. */
+/**
+ * The cookie quad's share of `canvas.glsl:502`, with the albedo in `C` (line 814) and `S` the shadow
+ * colour: `C·(1−s)·cookie.a·((1−s) + S.a·s)`. At the transparent default that is a (1−s)² falloff,
+ * as Godot 4.6.3 shows: PCF5 over 0.25 steps 167/129/100/80/67/63 of 255, not (1−s)'s 167/146/…/64.
+ */
 export const SHADOWED_FRAGMENT = /* glsl */ `
 uniform sampler2D uCookie;
 uniform vec3 uColor;
@@ -166,7 +165,11 @@ void main() {
 }
 `;
 
-/** The `shadow_color` quad's share of the same sum — neat, never albedo-scaled. */
+/**
+ * The `shadow_color` quad's share, never albedo-scaled: `S.rgb·s·cookie.a·((1−s) + S.a·s)`. The sum
+ * has no cross term, so the split is exact, and at `s = 1` this is `cookie.a · S.a`, byte-identical
+ * to the stencil path.
+ */
 export const SHADOWED_TINT_FRAGMENT = /* glsl */ `
 uniform sampler2D uCookie;
 uniform vec4 uShadowColor;

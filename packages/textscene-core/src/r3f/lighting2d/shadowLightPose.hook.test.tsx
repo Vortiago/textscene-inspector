@@ -1,15 +1,7 @@
 /**
- * `useShadowLightPose`'s republish contract.
- *
- * The hook samples in `useFrame`, so it runs for every shadowed light on every
- * frame whether or not anything moved. What it must guarantee is not "a pose"
- * but WHEN a pose changes identity: the value feeds `buildShadowPolarMap` and
- * both quad materials, so a spurious republish rebuilds a light's whole shadow
- * and a missing one leaves it stale.
- *
- * These drive the real R3F loop rather than calling `sampleShadowLight`
- * directly — the pure function has its own tests, and the thing worth pinning
- * here is the early-out around it.
+ * `useShadowLightPose` samples every frame and republishes only on a change: the pose feeds
+ * `buildShadowPolarMap` and both quad materials, so a spurious republish rebuilds the shadow and a
+ * missing one leaves it stale. These drive the real R3F loop around `sampleShadowLight`.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -31,7 +23,7 @@ function Harness({
   published: Published;
   enabled?: boolean;
   x?: number;
-  /** The quad's own local offset — `Light2D.offset`, which moves the cookie. */
+  /** The quad's own local offset: `Light2D.offset`, which moves the cookie. */
   offsetX?: number;
 }) {
   const [quad, setQuad] = useState<THREE.Mesh | null>(null);
@@ -59,7 +51,7 @@ async function mount(props: Omit<Parameters<typeof Harness>[0], 'published'>) {
   return { renderer, published };
 }
 
-/** Poses that are actually a pose — the leading null is mount, not a republish. */
+/** The published poses without the leading null, which is mount, not a republish. */
 function poses(published: Published): ShadowLightPose[] {
   return published.filter((p): p is ShadowLightPose => p !== null);
 }
@@ -77,11 +69,8 @@ describe('useShadowLightPose', () => {
   });
 
   it('does no matrix inversion on a frame where nothing moved', async () => {
-    // The republish contract above holds with or without the input guard — the
-    // equality gate already suppressed the setState. What the guard buys is the
-    // WORK, and the 4x4 inverse is the expensive half of it, so that is what is
-    // asserted. Without the guard this is one inversion per light per frame,
-    // forever, on a scene that has been still since load.
+    // The equality gate alone suppresses the setState. The input guard saves the work, mostly the
+    // 4x4 inverse: without it, one inversion per light per frame on a scene still since load.
     const { renderer } = await mount({ x: 300 });
     const invert = vi.spyOn(THREE.Matrix4.prototype, 'invert');
     try {
@@ -121,9 +110,8 @@ describe('useShadowLightPose', () => {
   });
 
   it('drops the cached inputs when the light is disabled and re-enabled', async () => {
-    // The transform never changes across the toggle, so a cache that survived
-    // it would compare equal and the re-enabled light would never publish —
-    // its shadows would simply never come back, with nothing failing.
+    // The transform never changes across the toggle, so a cache that survived it would compare
+    // equal, and the re-enabled light would never publish its shadows again.
     const { renderer, published } = await mount({ x: 120 });
     expect(poses(published)).toHaveLength(1);
 
@@ -143,7 +131,7 @@ describe('useShadowLightPose', () => {
 
   it('radiates from the light NODE while the rect follows the offset cookie', async () => {
     // Godot's `offset` moves the cookie without moving the space the shadow map
-    // is stated in, so the origin comes off the PARENT's world matrix and the
+    // is stated in, so the origin comes off the parent's world matrix and the
     // rect off the quad's. Reading both from the quad would swing every shadow
     // sideways on any light that authors an offset.
     const { published } = await mount({ x: 400, offsetX: 50 });

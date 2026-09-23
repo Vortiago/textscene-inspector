@@ -1,16 +1,7 @@
 /**
- * `InternalTextLabel` wraps drei's `<Text>`, which transitively pulls in
- * troika-three-text + bidi-js + its sdf-generator worker (~312KB raw). Those
- * modules must never be part of the initial-paint static-import closure — a
- * top-level `import { Text } from '@react-three/drei/core/Text'` would put
- * them in `webview.js` itself since `InternalTextLabel` is only reachable one
- * way (`TscnCanvas.tsx` -> `EmptySceneIndicator`), so esbuild can't split it
- * into its own chunk. `React.lazy` fixes that: the dynamic `import()` is only
- * resolved the first time the component actually renders.
- *
- * This test reads the module's own source (rather than importing it) so it
- * can distinguish a *static* value import (bad — bundled eagerly) from a
- * *dynamic* `import()` inside a `lazy()` loader (good — its own chunk).
+ * drei's `<Text>` pulls in troika-three-text, bidi-js and an sdf-generator worker (~312KB raw),
+ * which a static import puts in `webview.js` itself. Only a dynamic `import()` inside `lazy()`
+ * gets its own chunk, so this reads the module source to tell the two apart.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -22,7 +13,7 @@ import { InternalTextLabel } from './internalTextLabel';
 const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(resolve(here, 'internalTextLabel.tsx'), 'utf8');
 
-/** Matches `import ... from '<spec>'` — a static ESM import statement. */
+/** A static ESM import statement: `import ... from '<spec>'`. */
 const STATIC_IMPORT_RE = /(?:^|\n)\s*import\s+(?:type\s+)?[^;'"]*?\sfrom\s*['"]([^'"]+)['"]/g;
 
 function staticImportSpecifiers(src: string): string[] {

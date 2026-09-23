@@ -1,12 +1,8 @@
 /**
- * godotColorToLinear: the single sRGB→linear seam between Godot Color
- * literals and three.js materials. Reference values are three's own sRGB
- * EOTF: linear = c/12.92 for c ≤ 0.04045, else ((c+0.055)/1.055)^2.4.
- *
- * Also verifies exponent-notation Color components end-to-end:
- * FLOAT_PATTERN_SOURCE (godot/number.ts) admits `5e-1`-style floats, so
- * parseColor → godotColorToLinear must round-trip them. parseColor's
- * non-exponent cases live in utils/colorParser.test.ts.
+ * `godotColorToLinear` against three's sRGB EOTF: c/12.92 for c ≤ 0.04045, else
+ * ((c+0.055)/1.055)^2.4. `FLOAT_PATTERN_SOURCE` admits `5e-1`-style floats, so exponent components
+ * must round-trip through `parseColor`. The other `parseColor` cases live in
+ * `utils/colorParser.test.ts`.
  */
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
@@ -96,7 +92,7 @@ describe('exponent-notation Color components, end-to-end', () => {
 
   it('signed exponents parse (5.0e-1, 5.0e+1)', () => {
     expect(parseColor('Color(5.0e-1, 0, 0, 1)').r).toBeCloseTo(0.5, 10);
-    // A leading `+` on the MANTISSA is refused by Godot's tokenizer
+    // A leading `+` on the mantissa is refused by Godot's tokenizer
     // (variant_parser.cpp:424); inside the exponent it is accepted (:467).
     expect(parseColor('Color(5.0e+1, 0, 0, 1)').r).toBeCloseTo(50, 10);
   });

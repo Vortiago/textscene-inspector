@@ -1,10 +1,7 @@
 /**
- * The light pose a shadow radiates from.
- *
- * Godot builds the occluder cull rect from the cookie
- * (`RendererCanvasCull::_light_find_shadow`: `texture_size * texture_scale`,
- * offset by `texture_offset`) and radiates the shadow from the light node's own
- * origin, which `offset` does NOT move. These pin both halves of that split.
+ * The light pose a shadow radiates from. Godot builds the occluder cull rect from the cookie
+ * (`RendererCanvasCull::_light_find_shadow`: `texture_size * texture_scale`, offset by
+ * `texture_offset`) and radiates the shadow from the node's origin, which `offset` does not move.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -65,9 +62,9 @@ describe('sampleShadowLight', () => {
   });
 
   it('reports Godot radius_cache: the cookie rect diagonal in light-local units', () => {
-    // `renderer_viewport.cpp:485` — `local_rect.size.length()`, so a 200×200
+    // `renderer_viewport.cpp:485`: `local_rect.size.length()`, so a 200×200
     // cookie gives 200√2 wherever the light sits and however it is scaled (the
-    // scale is already in `local_rect` via `texture_scale`, not in the node).
+    // scale is already in `local_rect` through `texture_scale`, not in the node).
     const pose = sampleShadowLight(quadUnder({ x: 400, y: -324 }, { x: 0, y: 0 }, 200))!;
     expect(pose.radius).toBeCloseTo(200 * Math.SQRT2, 9);
     const moved = sampleShadowLight(quadUnder({ x: 0, y: 0 }, { x: 90, y: 30 }, 200))!;

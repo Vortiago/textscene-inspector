@@ -1,22 +1,8 @@
 /**
- * A light's DRAW order is its scene-tree position, not its registration order.
- *
- * Godot applies a canvas's lights in attach order — the preorder walk of the
- * effective tree — and `light_blend_compute`'s MIX is order-dependent:
- *
- *   MIX: color.rgb = mix(color.rgb, light_color.rgb, light_color.a)
- *
- * so two overlapping MIX lights give a different colour depending which is
- * applied second. Registration order is not tree order: `freeOrdinal` hands out
- * the LOWEST free slot, and a light registers when its cookie resolves — an
- * inline `GradientTexture2D` resolves in the same tick, a `res://` PNG does not.
- * So a tree-earlier light can register second.
- *
- * These drive the LIVE-tree path the renderer actually uses, rather than a pure
- * walk over the authored tree. The two are not the same walk: the live tree
- * composes instanced sub-scenes into one path space (ADR-0013), so a light
- * inside an instance is numbered where the instance sits. Testing the authored
- * walk would pin a derivation nothing executes.
+ * A light's draw order is its tree position, not its registration order: a light registers when
+ * its cookie resolves, so a tree-earlier light can register second. These drive the live-tree
+ * path the renderer uses, which numbers a light inside an instance where the instance sits
+ * (ADR-0013).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -108,11 +94,8 @@ describe('isPositionalCanvasLight', () => {
 });
 
 /**
- * The provider is what makes the numbering a property of the CANVAS: it walks
- * once and every light reads the result. These drive it directly rather than
- * through the dispatcher, because the dispatcher cases above cannot tell a
- * sequence from an ordinal — with every cookie resolving in the same tick the
- * two numbers coincide, which is the whole reason the walk exists.
+ * The provider walks once per canvas and every light reads the result. Driven directly: with every
+ * cookie resolving in one tick, the dispatcher cases cannot tell a sequence from an ordinal.
  */
 describe('CanvasLightSequenceProvider', () => {
   const SCENE = `[gd_scene format=3]
@@ -176,11 +159,7 @@ describe('CanvasLightSequenceProvider', () => {
 
 describe('light draw order over the live tree', () => {
   it('numbers lights in preorder, so a deeper earlier light precedes a shallower later one', async () => {
-    //   Root
-    //    ├ A          seq 0
-    //    ├ Mid
-    //    │  └ B       seq 1 — deeper, but earlier in preorder than C
-    //    └ C          seq 2
+    // Root has A (seq 0), Mid with B (seq 1: deeper, but earlier in preorder than C), and C (seq 2).
     const renderer = await render(
       `${lamp('A')}
 [node name="Mid" type="Node2D" parent="."]

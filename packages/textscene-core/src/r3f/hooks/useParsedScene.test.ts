@@ -1,8 +1,6 @@
 /**
- * Unit tests for the shell's parse pipeline — exercised directly, without
- * mounting the shell. Covers the happy path, both error paths (zero-node
- * salvage + parser throw), the empty-content passive state, and the hook's
- * memoization contract.
+ * The shell's parse pipeline, without mounting the shell: the happy path, both error paths
+ * (zero-node salvage and a parser throw), empty content, and the hook's memoisation.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
