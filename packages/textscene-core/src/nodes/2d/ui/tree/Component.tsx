@@ -1,28 +1,10 @@
 /**
- * `<Tree>` — the native (WebGL canvas) painter for `Tree`: the `panel`
- * StyleBox across the whole rect, and — when `column_titles_visible` — one
- * blank-titled header cell per column (`Tree::_notification`'s
- * `NOTIFICATION_DRAW`, `tree.cpp:5091-5199`, restricted to what a `.tscn` can
- * ever populate).
- *
- * NO ROWS. `root` is always null: a Tree's `TreeItem`s are created only from
- * `create_item()` in script (`parser.ts`'s own doc), so
- * `if (root && ...) draw_item(...)` never fires for a scene-authored Tree —
- * an empty panel (plus its header, if shown) IS the whole truth of such a
- * scene, not a limitation this painter falls short of.
- *
- * NO TITLE TEXT. Column titles are equally script-only (`parser.ts`'s own
- * doc), so every header cell draws its `title_button_normal` chrome with
- * nothing inside it — never a placeholder string, which real Godot never
- * shows either.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate` — into `<StyleBoxQuad>`'s `color`, exactly like
- * `Panel`.
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * `<Tree>`: the native (WebGL canvas) painter, the `panel` box plus one blank header cell per column
+ * when `column_titles_visible` (`NOTIFICATION_DRAW`, `tree.cpp:5091-5199`). `TreeItem` rows and
+ * column titles are script-only (`parser.ts`), so an empty panel is the whole scene, as in Godot.
+ * Tint goes into `<StyleBoxQuad>` as for `Panel`. The walker owns visibility, children and transform.
  */
+
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';

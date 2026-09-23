@@ -1,8 +1,6 @@
 /**
- * VFlowContainer registration — the native (WebGL canvas) rect solve +
- * painter. `../flowcontainer/nativeSolver` registers the container-layout/
- * minimum-size functions for all three FlowContainer types as a side effect
- * of import — see its own doc.
+ * VFlowContainer registration: the native (WebGL canvas) painter and rect solver. Importing
+ * `../flowcontainer/nativeSolver` registers the layout and minimum size for all three FlowContainer types.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

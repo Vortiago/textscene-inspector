@@ -1,25 +1,7 @@
 /**
- * TextureRect strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing. `expectFixtureClean` below still runs the
- * committed fixture through the real `StrictTscnParser`, but the fixture is
- * not extended to carry every property this file validates (see below).
- *
- * No `linter.ts` exists for this slice: `texture_rect.cpp`/`.h` has no
- * `_validate_property`, no `WARN_PRINT`, and no `get_configuration_warnings`
- * override, so there is no engine-grounded cross-field rule to encode.
- *
- * `flip_h`/`flip_v` are not exercised by `unit-texture-rect.tscn`. Extending it
- * would either write `flip_h = true`, which mirrors the texture and desyncs
- * the committed `docs/comparison/images/unit-texture-rect-{godot,ours}.png`
- * pair and the comparison.md "Properties exercised" table (frozen by this
- * slice's brief, and AGENTS.md's one-variable-per-golden rule blocks a
- * re-bake this wave), or write `flip_h = false`, which is Godot's default and
- * so a line the real serializer never emits: a fixture is a claim about what
- * Godot writes, and a default-valued line would misstate that. Both booleans
- * get full happy/error coverage through direct validator calls instead.
+ * Tests the TextureRect strict validators through `validatorRegistry`, so a failure points at the
+ * validator. No `linter.ts`: `texture_rect.cpp`/`.h` has no `_validate_property`, `WARN_PRINT` or
+ * `get_configuration_warnings` override.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -46,16 +28,13 @@ describe('TextureRect strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // `fixtureLint` covers the whole registry through the barrel. This checks
+    // the fixture against only what this test imports.
     expectFixtureClean('unit-texture-rect.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases below are the real check.
+    // A validator that accepts arbitrary prose validates no format.
     const accepted = validatorRegistry
       .getOwnKeys('TextureRect')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -63,8 +42,7 @@ describe('TextureRect strict validators', () => {
   });
 
   // texture_rect.cpp:207-215, set_expand_mode: assigns straight through with
-  // no ERR_FAIL_INDEX (only an early-return on a redundant set); the
-  // ADD_PROPERTY hint at :148 only constrains the editor.
+  // no ERR_FAIL_INDEX. The ADD_PROPERTY hint at :148 only constrains the editor.
   describe('expand_mode', () => {
     it('accepts 0 (EXPAND_KEEP_SIZE, the documented default)', () => {
       expect(check('expand_mode', '0')).toBeNull();
@@ -95,7 +73,8 @@ describe('TextureRect strict validators', () => {
     });
   });
 
-  // texture_rect.cpp:234-241, set_flip_h assigns straight through
+  // texture_rect.cpp:234-241, set_flip_h assigns straight through. unit-texture-rect.tscn omits
+  // it: `true` would change the golden image pair, and `false` is a default Godot never writes.
   describe('flip_h', () => {
     it('accepts true', () => {
       expect(check('flip_h', 'true')).toBeNull();

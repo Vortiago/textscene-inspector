@@ -1,4 +1,4 @@
-/** VFlowContainer registration — parser. Render registration: `index.r3f.test.ts`. */
+/** VFlowContainer parser registration. `index.r3f.test.ts` tests the render registration. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';

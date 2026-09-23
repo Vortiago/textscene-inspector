@@ -1,5 +1,5 @@
 /**
- * `textureProgressBarMinimumSize`/`normalizeTextureProgressBarFillMode` vs
+ * `textureProgressBarMinimumSize`/`normalizeTextureProgressBarFillMode` against
  * Godot 4.6.3 (`texture_progress_bar.cpp:81-97,575-583`).
  */
 import { describe, expect, it } from 'vitest';

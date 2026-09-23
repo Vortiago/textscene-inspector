@@ -5,11 +5,11 @@ export interface TextureButtonProperties extends ControlProperties {
   textureNormal?: string;
   /** Texture2D reference drawn while pressed (falls back to hover, then normal). */
   texturePressed?: string;
-  /** Texture2D reference — never selected by a static, pointer-less preview (hover requires a live cursor); still drawn as a fallback for `texture_pressed`. */
+  /** Texture2D reference for hover, which a pointer-less preview never selects. It still draws as a fallback for `texture_pressed`. */
   textureHover?: string;
   /** Texture2D reference drawn while disabled (falls back to normal). */
   textureDisabled?: string;
-  /** Texture2D reference — never drawn: a static preview never holds keyboard focus. Parsed for completeness only. */
+  /** Texture2D reference for focus, never drawn: a static preview never holds keyboard focus. */
   textureFocused?: string;
   /** Whether the button's own size ignores every texture's natural size (default false). */
   ignoreTextureSize?: boolean;
@@ -17,7 +17,7 @@ export interface TextureButtonProperties extends ControlProperties {
   stretchMode?: number;
   flipH?: boolean;
   flipV?: boolean;
-  /** BaseButton's own disabled flag — TextureButton derives from BaseButton directly, not Button. */
+  /** BaseButton's disabled flag: TextureButton derives from BaseButton, not Button. */
   disabled?: boolean;
   /** BaseButton's own button_pressed flag. */
   buttonPressed?: boolean;

@@ -1,10 +1,9 @@
 /**
- * `textureRectMinimumSize` / `textureRectDraw` vs Godot 4.6.3
- * (`scene/gui/texture_rect.cpp`). A single non-square texture (320×160, the
- * same fixture size `Component.fit.test.ts` already uses) runs through every
- * `expand_mode` and `stretch_mode`, so a driver-axis or offset regression in
- * one mode can never hide behind a square texture's symmetry.
+ * `textureRectMinimumSize` / `textureRectDraw` against Godot 4.6.3 (`scene/gui/texture_rect.cpp`).
+ * One non-square texture (320×160) runs through every `expand_mode` and `stretch_mode`, so no
+ * driver-axis or offset regression hides behind a square texture's symmetry.
  */
+
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
@@ -12,10 +11,9 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
-// Side-effect import: registers every Control slice's solver, including this
-// type's own `registerSizeDependentMinimum` (`index.r3f.ts`) — needed for the
-// end-to-end `solveControlTree` describe below to actually exercise the real
-// second pass, not a hand-rolled stand-in for it.
+// Side-effect import: registers every Control slice's solver, including this type's
+// `registerSizeDependentMinimum` (`index.r3f.ts`), so the `solveControlTree` describe
+// below runs the real second pass.
 import '../../../../r3f/controls/index';
 import type { TextureRectProperties } from './types';
 import {
@@ -57,11 +55,9 @@ describe('textureRectMinimumSize (texture_rect.cpp:107-133)', () => {
     expect(textureRectMinimumSize(node({ expandMode: 0 }, TEXTURE), ctx())).toEqual({ x: 320, y: 160 });
   });
 
-  // A texture whose image never got dimensions caches as a REAL entry with a
-  // 0x0 size, not as an absent one, so the null check alone lets it through.
-  // The FIT_*_PROPORTIONAL branches divide by that size, and the resulting NaN
-  // does not stay local: `combinedMinimumSize` maxes it into the parent's
-  // minimum, from where a container hands NaN rects to every sibling.
+  // A texture whose image never got dimensions caches as a real 0x0 entry, so the null check
+  // lets it through. FIT_*_PROPORTIONAL divides by it, and `combinedMinimumSize` would spread
+  // the NaN into the parent's minimum and every sibling's rect.
   it('treats a degenerate 0x0 texture as no texture, in the branches that divide by it', () => {
     for (const expandMode of [2, 3, 4, 5]) {
       expect(textureRectMinimumSize(node({ expandMode }, { x: 0, y: 0 }), ctx())).toEqual({ x: 0, y: 0 });
@@ -119,8 +115,8 @@ describe('textureRectMinimumSize — SolveContext.tentativeRect closes the self-
   }
 
   it('FIT_WIDTH (2) reads get_size().y from the tentative rect\'s OWN height, not the texture\'s (:116-118)', () => {
-    // Godot: Size2(get_size().y, 0). The tentative rect's height (500) is
-    // NOT the texture's own height (160) — proves the real value wins.
+    // Godot: Size2(get_size().y, 0). The tentative rect's height (500) is not
+    // the texture's height (160), which proves the real value wins.
     const result = textureRectMinimumSize(node({ expandMode: 2 }, TEXTURE), ctxWithTentative({ x: 0, y: 0, w: 10, h: 500 }));
     expect(result).toEqual({ x: 500, y: 0 });
   });
@@ -167,16 +163,13 @@ describe('solveControlTree — the real two-pass solve closes the self-reference
   const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 
   it('registers TextureRect as size-dependent, so a lone TextureRect tree still needs no second pass to see the SAME number', () => {
-    // Zero-width anchors (raw w=0) + a real fixed height (500, via anchorBottom)
-    // — first pass floors width from the TEXTURE's own height (160), second
-    // pass re-floors it from the REAL resolved height (500) instead.
+    // Zero-width anchors (raw w=0) and a fixed height (500, from anchorBottom): the first
+    // pass floors width from the texture's height (160), the second from the real height (500).
     const root = node({ expandMode: 2, anchorBottom: 1, offsetBottom: -148 }, TEXTURE);
     const solved = solveControlTree([root], VIEWPORT, createSolveContext(nativeTheme(1)));
 
-    // FIT_WIDTH: minSize.x = get_size().y. The tree's only non-driven-axis
-    // truth is the anchored height (500), not the texture's own (160) —
-    // proves the second pass's `tentativeRect` fed the REAL value in, not
-    // the first pass's texture-size substitute.
+    // FIT_WIDTH: minSize.x = get_size().y. The anchored height (500), not the texture's
+    // (160), proves the second pass's `tentativeRect` fed the real value in.
     expect(solved.get('Portrait')?.rect).toEqual({ x: 0, y: 0, w: 500, h: 500 });
   });
 
@@ -192,7 +185,7 @@ describe('solveControlTree — the real two-pass solve closes the self-reference
 });
 
 describe('textureRectDraw (texture_rect.cpp:33-100, NOTIFICATION_DRAW)', () => {
-  const RECT = { x: 300, y: 100 }; // 3:1 — deliberately NOT the texture's own 2:1 aspect.
+  const RECT = { x: 300, y: 100 }; // 3:1, not the texture's 2:1 aspect.
 
   it('STRETCH_SCALE (0): the full control rect, no crop, no tile (:46-48)', () => {
     expect(textureRectDraw(RECT, TEXTURE, 0)).toEqual({
@@ -257,7 +250,7 @@ describe('textureRectDraw (texture_rect.cpp:33-100, NOTIFICATION_DRAW)', () => {
 
   it('STRETCH_KEEP_ASPECT TRUNCATES the fitted extent — `int tex_width`/`int tex_height` (:63-64)', () => {
     // A 100x30 texture in a 200x20 rect: tex_width = 100*20/30 = 66.67, which
-    // `int tex_width` narrows to 66. The CENTERED offset stays fractional —
+    // `int tex_width` narrows to 66. The CENTERED offset stays fractional:
     // `offset` is a `Point2` and its halving is float division (:72-73).
     expect(textureRectDraw({ x: 200, y: 20 }, { x: 100, y: 30 }, 5)).toEqual({
       offset: { x: 67, y: 0 },
@@ -387,7 +380,7 @@ describe('applyFlip (texture_rect.cpp:92-93, `size.width *= hflip ? -1 : 1`, exp
       expect(offset.x).toBeCloseTo(0.9375);
       // At the destination's right edge (u=1): unflipped samples texture column
       // (rectW mod texW) = 300 mod 320 = 300; flipped must sample column
-      // (rectW - rectW) mod texW = 0 — i.e. v(1) = offset + repeat*1 ≈ 0.
+      // (rectW - rectW) mod texW = 0, that is v(1) = offset + repeat*1 ≈ 0.
       expect(offset.x + repeat.x * 1).toBeCloseTo(0);
     }
   );

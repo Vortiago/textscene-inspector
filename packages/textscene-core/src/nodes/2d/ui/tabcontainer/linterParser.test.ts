@@ -1,13 +1,6 @@
 /**
- * TabContainer strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property, happy, malformed, and any bound, and
- * quote the governing Godot source line beside every numeric bound.
+ * Tests the TabContainer strict validators through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -30,17 +23,15 @@ describe('TabContainer strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format.
     const accepted = validatorRegistry
       .getOwnKeys('TabContainer')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
     expect(accepted).toEqual([]);
   });
 
-  // tab_container.cpp:1208, ADD_PROPERTY(..., "tab_alignment", PROPERTY_HINT_ENUM,
-  // "Left,Center,Right"); TabBar::set_tab_alignment ERR_FAIL_INDEX(p_alignment,
-  // ALIGNMENT_MAX) at tab_bar.cpp:1671, ALIGNMENT_MAX=3.
+  // tab_container.cpp:1208, PROPERTY_HINT_ENUM "Left,Center,Right". TabBar::set_tab_alignment
+  // has ERR_FAIL_INDEX(p_alignment, ALIGNMENT_MAX) at tab_bar.cpp:1671, ALIGNMENT_MAX=3.
   describe('tab_alignment', () => {
     it('accepts Left (0)', () => {
       expect(check('tab_alignment', '0')).toBeNull();
@@ -61,9 +52,8 @@ describe('TabContainer strict validators', () => {
     });
   });
 
-  // tab_container.cpp:1209, PROPERTY_HINT_RANGE "-1,4096,1". The floor is
-  // enforced through TabBar::set_current_tab's ERR_FAIL_INDEX (tab_bar.cpp:804);
-  // the ceiling is the hint's alone, so it warns.
+  // tab_container.cpp:1209, PROPERTY_HINT_RANGE "-1,4096,1". TabBar::set_current_tab's
+  // ERR_FAIL_INDEX (tab_bar.cpp:804) enforces the floor. The ceiling is the hint's, so it warns.
   describe('current_tab', () => {
     it('accepts -1, the "no tab selected" sentinel', () => {
       expect(check('current_tab', '-1')).toBeNull();
@@ -89,9 +79,8 @@ describe('TabContainer strict validators', () => {
     });
   });
 
-  // tab_container.cpp:1210, PROPERTY_HINT_ENUM "Top,Bottom"; TabContainer's own
-  // set_tabs_position ERR_FAIL_INDEX(p_tabs_position, POSITION_MAX) at
-  // tab_container.cpp:820, POSITION_MAX=2.
+  // tab_container.cpp:1210, PROPERTY_HINT_ENUM "Top,Bottom". set_tabs_position has
+  // ERR_FAIL_INDEX(p_tabs_position, POSITION_MAX) at tab_container.cpp:820, POSITION_MAX=2.
   describe('tabs_position', () => {
     it('accepts Top (0)', () => {
       expect(check('tabs_position', '0')).toBeNull();
@@ -182,8 +171,8 @@ describe('TabContainer strict validators', () => {
     });
   });
 
-  // tab_container.cpp:1216, plain INT, PROPERTY_HINT_NONE. TabBar::set_tabs_
-  // rearrange_group bare-assigns with no ERR_FAIL and no clamp.
+  // tab_container.cpp:1216, plain INT, PROPERTY_HINT_NONE.
+  // TabBar::set_tabs_rearrange_group assigns with no ERR_FAIL and no clamp.
   describe('tabs_rearrange_group', () => {
     it('accepts -1, the "no rearrange group" sentinel', () => {
       expect(check('tabs_rearrange_group', '-1')).toBeNull();

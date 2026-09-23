@@ -1,4 +1,4 @@
-/** TextEdit registration — parser. Render component wiring is `index.r3f.ts`'s job. */
+/** TextEdit registration: the parser. Render wiring lives in `index.r3f.ts`. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseTextEdit } from './parser';

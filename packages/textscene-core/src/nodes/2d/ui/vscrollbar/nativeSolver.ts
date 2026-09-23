@@ -1,8 +1,6 @@
 /**
- * VScrollBar's native (WebGL canvas) minimum-size solve — the shared
- * ScrollBar port at `vertical = true`. Registration only; the algorithm
- * itself lives once in `../shared/scrollBarSolver.ts` for both HScrollBar and
- * VScrollBar.
+ * VScrollBar's native (WebGL canvas) minimum-size solve: the shared ScrollBar port at
+ * `vertical = true`, registered here. `../shared/scrollBarSolver.ts` holds the algorithm.
  */
 
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';

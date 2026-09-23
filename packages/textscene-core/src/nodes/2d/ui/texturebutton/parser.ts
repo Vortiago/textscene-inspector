@@ -1,4 +1,8 @@
-/** TextureButton parser — Control + its own five texture slots, ignore_texture_size, stretch_mode, flip_h/flip_v, plus BaseButton's disabled/button_pressed (TextureButton derives from BaseButton directly, not Button — texture_button.h:35). */
+/**
+ * Parses a TextureButton: Control, its five texture slots, ignore_texture_size, stretch_mode,
+ * flip_h/flip_v and BaseButton's disabled/button_pressed. It derives from BaseButton, not Button
+ * (texture_button.h:35).
+ */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';

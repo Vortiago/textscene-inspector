@@ -1,27 +1,10 @@
 /**
- * `<TextureRect>` — the native (WebGL canvas) painter for TextureRect:
- * one `<ControlQuad>` (`native/controlQuad.tsx`) sized/positioned per the
- * `stretch_mode` draw-rect math in `nativeSolver.ts`, textured through
- * `useTexture2D` — so an image file and an inline procedural texture reach it
- * the same way.
- * `expand_mode`'s minimum-size contribution is a SEPARATE concern, registered
- * from `index.r3f.ts` via `controlSolverRegistry.registerMinimumSize`; this
- * component only draws.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`. Used as-is: unlike ColorRect, TextureRect has no
- * `color` property of its own to fold in before the one sRGB→linear conversion.
- *
- * Sampler: `texture_filter`/`texture_repeat` resolve through
- * `useInheritedTextureSampler` (`r3f/canvasItemTextureSampler.ts`) — PARENT_NODE
- * walks the ancestor chain to the nearest one naming a concrete value.
- *
- * The free-Control rotate/scale-about-`pivot_offset` transform is the
- * walker's job (`ControlCanvasWalker.tsx`, gated on
- * `controlSolverRegistry.containerLayout(type) === undefined`), applied
- * around every registered painter generically — this component implements no
- * transform of its own.
+ * `<TextureRect>`: the native (WebGL canvas) painter, one `<ControlQuad>` placed by the `stretch_mode`
+ * math in `nativeSolver.ts` and textured through `useTexture2D`, so an image file and a procedural
+ * texture arrive alike. Tint is the walker's `tint` as is, since TextureRect has no `color`. The
+ * walker owns the transform, and `index.r3f.ts` registers the minimum size.
  */
+
 import { useEffect, useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import * as THREE from 'three';
@@ -52,12 +35,11 @@ interface ImageLike {
 
 export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TextureRectProperties>(solveNode);
-  // Own-or-ambient. The walker folds the same way before providing the context,
-  // but the fold is idempotent (unlike modulate's), so repeating it costs
-  // nothing and keeps this painter correct mounted on its own.
+  // Walks PARENT_NODE up to the nearest ancestor naming a value. The walker folds the same
+  // way, but the fold is idempotent, so repeating it keeps this painter correct on its own.
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
 
-  // The node's OWN scope, not the ambient provider's: a TextureRect that
+  // The node's own scope, not the ambient provider's: a TextureRect that
   // arrived through an instanced sub-scene names ids from that scene.
   const { externalResources, internalResources } = solveNode.resources;
   // `useTexture2D`, not the path-only resolver: `texture` may be an inline
@@ -71,20 +53,15 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
     return { textureSize, ...textureRectDraw({ x: rect.w, y: rect.h }, textureSize, props.stretchMode) };
   }, [rawTexture, rect.w, rect.h, props.stretchMode]);
 
-  // Clone: the resolved texture is a SHARED cache entry — the loader's for an
-  // image, the procedural cache's for a rasterised one — handed to every
-  // consumer of it, and every mutation below (filter, wrap, UV
-  // repeat/offset for a crop, tile, or flip) is per-CONSUMER sampler state —
-  // the identical reason `composeFrameTexture` clones (`r3f/spriteFrame.ts`).
+  // Clone: the resolved texture is a shared cache entry (the loader's or the procedural cache's),
+  // and every mutation below (filter, wrap, UV repeat and offset for a crop, tile or flip) is
+  // per-consumer state, as in `composeFrameTexture` (`r3f/spriteFrame.ts`).
   const preparedTexture = useMemo(() => {
     if (!rawTexture || !draw) return null;
     const cloned = rawTexture.clone();
-    // NoColorSpace, pinned: the 2D canvas's hardware filter blends undecoded
-    // sRGB bytes (`canvas2DTextureDecode.ts`); `ControlQuad` decodes the
-    // already-filtered sample once it sees this tag. `pinNoColorSpace` (not a
-    // plain assignment) because this clone reaches `ControlQuad`'s `map` JSX
-    // prop, which `@react-three/fiber`'s own auto sRGB-tagging would
-    // otherwise silently overwrite on commit — see that function's doc.
+    // NoColorSpace: the 2D canvas filters undecoded sRGB bytes (`canvas2DTextureDecode.ts`), and
+    // `ControlQuad` decodes the filtered sample. Pinned, because this clone reaches the `map` JSX
+    // prop, whose `@react-three/fiber` sRGB auto-tagging would overwrite a plain assignment.
     pinNoColorSpace(cloned);
 
     const filter = FILTER[resolveTextureRectFilter(sampler.filter)];
@@ -94,24 +71,20 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
     let repeat = { x: 1, y: 1 };
     let offset = { x: 0, y: 0 };
     if (draw.tile) {
-      // STRETCH_TILE forces repeat wrapping for THIS draw regardless of the
-      // node's own texture_repeat (`draw_texture_rect(texture, rect, tile=true)`
-      // is a per-call sampler override in Godot, not a texture_repeat read).
+      // STRETCH_TILE forces repeat wrapping for this draw whatever the node's
+      // texture_repeat: `draw_texture_rect(texture, rect, tile=true)` is a per-call override.
       cloned.wrapS = cloned.wrapT = THREE.RepeatWrapping;
       repeat = { x: draw.size.x / draw.textureSize.x, y: draw.size.y / draw.textureSize.y };
-      // Godot tiles from the rect's TOP-left; three's `v` runs bottom-up, so a
-      // zero offset would anchor the pattern at the BOTTOM and leave the
-      // partial tile at the top showing the texture's bottom rows instead of
-      // its top ones. `1 - repeat.y` puts `v = 1` (the quad's top edge) exactly
-      // on the image's own top row — the same UV-Y flip the region branch below
-      // applies for a crop. `u` needs no equivalent: it is not flipped.
+      // Godot tiles from the rect's top-left, and three's `v` runs bottom-up, so a zero offset
+      // would show the texture's bottom rows in the partial top tile. `1 - repeat.y` puts `v = 1`
+      // on the image's top row, as the region branch does. `u` is not flipped.
       offset = { x: 0, y: 1 - repeat.y };
     } else {
       cloned.wrapS = cloned.wrapT = WRAP[resolveTextureRectRepeat(sampler.repeat)];
       if (draw.region) {
         // Texture-pixel-space crop (KEEP_ASPECT_COVERED) → normalized UV
-        // repeat/offset; three.js UV-Y is bottom-left, image-Y is top-left —
-        // the same flip `r3f/spriteFrame.ts`'s `applyRegionRect` documents.
+        // repeat/offset. three.js UV-Y is bottom-left and image-Y is top-left,
+        // the flip `r3f/spriteFrame.ts`'s `applyRegionRect` documents.
         repeat = { x: draw.region.w / draw.textureSize.x, y: draw.region.h / draw.textureSize.y };
         offset = {
           x: draw.region.x / draw.textureSize.x,

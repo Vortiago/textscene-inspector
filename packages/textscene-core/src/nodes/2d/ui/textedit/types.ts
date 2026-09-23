@@ -1,4 +1,4 @@
-/** TextEdit property definitions — the subset a static preview draws. */
+/** TextEdit properties: the subset a static preview draws. */
 
 import type { ControlProperties } from '../control/types';
 
@@ -11,7 +11,7 @@ export interface TextEditProperties extends ControlProperties {
   editable?: boolean;
   /** `LineWrappingMode`: 0=NONE, 1=BOUNDARY. Godot default 0 (`text_edit.h:526`). */
   wrapMode?: number;
-  /** `TextServer::AutowrapMode`: 1=ARBITRARY, 2=WORD, 3=WORD_SMART — which break rule `wrapMode` BOUNDARY uses. Godot default 3 (`text_edit.h:527`). */
+  /** `TextServer::AutowrapMode`: 1=ARBITRARY, 2=WORD, 3=WORD_SMART, the break rule `wrapMode` BOUNDARY uses. Godot default 3 (`text_edit.h:527`). */
   autowrapMode?: number;
   /** Draws the `tab` theme icon over each tab grapheme. Godot default false. */
   drawTabs?: boolean;
@@ -25,18 +25,17 @@ export interface TextEditProperties extends ControlProperties {
   caretDrawWhenEditableDisabled?: boolean;
   /** Steps every wrapped row in by the line's own leading indent, and breaks it at the narrowed width (`text_edit.cpp:285-287,1488-1494`). Godot default false. */
   indentWrappedLines?: boolean;
-  /** Grows this Control's OWN minimum width to fit its widest (wrapped) row. Godot default false. */
+  /** Grows this Control's minimum width to fit its widest (wrapped) row. Godot default false. */
   fitContentWidth?: boolean;
-  /** Grows this Control's OWN minimum height to fit every (wrapped) row. Godot default false. */
+  /** Grows this Control's minimum height to fit every (wrapped) row. Godot default false. */
   fitContentHeight?: boolean;
   /** Reserves horizontal space for the (unrendered) minimap. Godot default false. */
   minimapDraw?: boolean;
   /** The reserved minimap width, Godot px. Godot default 80. */
   minimapWidth?: number;
   /**
-   * `syntax_highlighter = ExtResource(...)` / `SubResource(...)` — raw, resolved
-   * downstream (`Component.tsx`, against THIS node's own `solveNode.resources`)
-   * rather than here, the same split `theme`/`ControlProperties` already take.
+   * `syntax_highlighter = ExtResource(...)` / `SubResource(...)`, raw. `Component.tsx`
+   * resolves it against this node's `solveNode.resources`, as with `theme`.
    */
   syntaxHighlighter?: string;
 }

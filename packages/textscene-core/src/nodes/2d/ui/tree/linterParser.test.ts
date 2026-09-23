@@ -1,15 +1,7 @@
 /**
- * Tree strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts.
- *
- * Grouped as linterParser.ts groups them, which is `_bind_methods` order: the
- * four typed members get a describe each, and the twelve booleans share one
- * parameterised block rather than twelve near-identical copies. Every numeric
- * or enum bound quotes the governing Godot source line.
+ * Tests the Tree strict validators through `validatorRegistry`, so a failure points at the
+ * validator. Rule behaviour is in linter.test.ts. Grouped in `_bind_methods` order: a describe per
+ * typed member, one parameterised block for the booleans, and a source line beside each bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -26,7 +18,7 @@ function check(property: string, value: string) {
 
 /**
  * Every plain boolean Tree binds, in `_bind_methods` order (tree.cpp:6808-6823).
- * No setter among them rejects or alters a value, so all twelve are format-only.
+ * No setter among them rejects or alters a value, so all are format-only.
  */
 const BOOLEAN_PROPERTIES = [
   'column_titles_visible',
@@ -44,9 +36,8 @@ const BOOLEAN_PROPERTIES = [
 ];
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * Tree binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * Set exactly one, from the engine source: the keys Tree binds, or
+ * DECLARES_NOTHING when it binds no ADD_PROPERTY. Both unset is red on purpose.
  */
 const KEYS: string[] = [
   'columns',
@@ -90,16 +81,13 @@ describe('Tree strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // `fixtureLint` covers the whole registry through the barrel. This checks
+    // the fixture against only what this test imports.
     expectFixtureClean('unit-tree.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format.
     const accepted = validatorRegistry
       .getOwnKeys('Tree')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -196,17 +184,15 @@ describe('Tree strict validators', () => {
     });
 
     it('warns rather than errors on a bit the flag list does not offer', () => {
-      // Tree::set_drop_mode_flags (tree.cpp:6653-6663) assigns p_flags with no
-      // `& MASK`, so 4 is STORED, not dropped. That is the whole reason this is
-      // not a maskedBitField: only the two-entry PROPERTY_HINT_FLAGS at
-      // tree.cpp:6816 excludes it, and a UI hint grounds a warning.
+      // Tree::set_drop_mode_flags (tree.cpp:6653-6663) assigns p_flags with no `& MASK`,
+      // so 4 is stored, not dropped: not a maskedBitField. Only the two-entry
+      // PROPERTY_HINT_FLAGS at tree.cpp:6816 excludes it, and a UI hint grounds a warning.
       const error = check('drop_mode_flags', '4');
       expect(error?.severity).toBe('warning');
       expect(error?.message).toContain('drop_mode_flags');
-      // The bit list, not a numeric span: this is `hintedBitField`, so the
-      // diagnostic names the two bits the hint offers. A `{ min: 0, max: 3 }`
-      // range coincides with them only because they are the two LOWEST bits,
-      // and reports a magnitude the property does not have.
+      // The bit list, not a numeric span: `hintedBitField` names the two bits the hint
+      // offers. A `{ min: 0, max: 3 }` range matches only because they are the lowest
+      // bits, and would report a magnitude the property does not have.
       expect(error?.message).toContain('DROP_MODE_ON_ITEM (1) | DROP_MODE_INBETWEEN (2)');
       expect(error?.message).not.toContain('0-3');
     });

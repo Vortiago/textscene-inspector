@@ -1,4 +1,4 @@
-/** TextureProgressBar parser — Control + Range bases plus TextureProgressBar's own members. */
+/** Parses a TextureProgressBar: the Control and Range bases plus its own members. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalFloat, parseOptionalInt, parseOptionalVector2 } from '../../../../parser/valueParsers';
@@ -13,9 +13,9 @@ export function parseTextureProgressBar(
 ): TextureProgressBarProperties {
   return {
     ...parseControl(heading, properties),
-    // TextureProgressBar sets `step = 1.0` in its constructor — measured from the engine
-    // (`ClassDB.class_get_property_default_value`, 4.6.3). `_calc_value` snaps
-    // `value` to it, so an omitted key is NOT "no snap".
+    // TextureProgressBar's constructor sets `step = 1.0` (measured with
+    // `ClassDB.class_get_property_default_value`, 4.6.3). `_calc_value` snaps
+    // `value` to it, so an omitted key still snaps.
     ...parseRange(properties, { step: 1 }),
     fillMode: parseOptionalInt(properties.fill_mode),
     ninePatchStretch: parseOptionalBool(properties.nine_patch_stretch),

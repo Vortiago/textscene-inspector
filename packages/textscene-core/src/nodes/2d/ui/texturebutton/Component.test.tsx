@@ -1,11 +1,10 @@
 /**
- * `<TextureButton>` render contract. Rig mirrors `texturerect/Component.test.tsx`
- * (`createFakeResourceLoader` + `ResourceLoaderProvider` +
- * `SceneResourcesProvider`, since `useResource` needs a live provider to ever
- * leave `pending`) — three distinctly-SIZED fake textures (normal/pressed/
- * disabled) so which one got selected is provable from the drawn mesh's own
- * geometry (STRETCH_KEEP, the Godot default, draws at natural texture size).
+ * `<TextureButton>` render contract, on `texturerect/Component.test.tsx`'s rig (a live
+ * provider, since `useResource` otherwise never leaves `pending`). Three fake textures of
+ * different sizes (normal/pressed/disabled) show which one drew: STRETCH_KEEP, the Godot
+ * default, draws at natural size.
  */
+
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -92,7 +91,7 @@ function findQuad(scene: Awaited<ReturnType<typeof render>>['scene']) {
 describe('<TextureButton> (isolated painter contract)', () => {
   it('draws nothing before any texture resolves', async () => {
     const fake = createFakeResourceLoader();
-    // No seed — texture stays pending.
+    // No seed: the texture stays pending.
     const tree = (
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider internalResources={[]} externalResources={SCOPE.externalResources}>

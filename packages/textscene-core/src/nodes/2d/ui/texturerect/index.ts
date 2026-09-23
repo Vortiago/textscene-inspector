@@ -1,4 +1,4 @@
-/** TextureRect registration — parser. */
+/** TextureRect registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseTextureRect } from './parser';

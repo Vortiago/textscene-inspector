@@ -1,8 +1,8 @@
 /**
- * `<TextEdit>` render contract — chrome, per-row text, `highlight_current_line`,
- * `draw_tabs`/`draw_spaces` glyph icons. Structure/tint/clip assertions only;
- * pixels are `pnpm ref:godot`'s job.
+ * `<TextEdit>` render contract: chrome, per-row text, `highlight_current_line` and the
+ * `draw_tabs`/`draw_spaces` icons. Structure, tint and clip only: pixels are `pnpm ref:godot`'s job.
  */
+
 import { afterEach, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -63,7 +63,7 @@ function findTextMeshes(scene: Rendered['scene']) {
     .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
-/** A plain `<ControlQuad>` (highlight rect or a tab/space icon) — `MeshBasicMaterial`, no `color` vertex attribute, no MSDF uniforms. */
+/** A plain `<ControlQuad>` (highlight rect or a tab/space icon): `MeshBasicMaterial`, no `color` vertex attribute, no MSDF uniforms. */
 function findPlainQuads(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
@@ -111,10 +111,9 @@ describe('<TextEdit> — per-line text', () => {
     const withoutBlank = await ReactThreeTestRenderer.create(
       <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'a\nc' })} rect={RECT} renderOrder={0} />
     );
-    // Every buffer line — including the empty one — draws its own TextRun mesh,
-    // so a collapsed blank line would be indistinguishable from a real one by
-    // count alone; the row Y offsets are what prove the blank line still ate a
-    // whole row of vertical space.
+    // Every buffer line, the empty one too, draws its own TextRun mesh, so the
+    // count alone cannot tell a collapsed blank line. The row Y offsets prove the
+    // blank line still takes a whole row.
     expect(findTextMeshes(withBlank.scene)).toHaveLength(3);
     const yOffsets = (scene: Rendered['scene']) =>
       scene
@@ -126,7 +125,7 @@ describe('<TextEdit> — per-line text', () => {
     const blankRows = yOffsets(withBlank.scene);
     const denseRows = yOffsets(withoutBlank.scene);
     // three's Y is negated Godot px: row 2 ('c' after the blank line) sits a
-    // whole row FURTHER down than row 1 ('c' with no blank line before it).
+    // whole row further down than row 1 ('c' with no blank line before it).
     expect(blankRows[2]).toBeLessThan(denseRows[1]!);
   });
 
@@ -265,7 +264,7 @@ describe('<TextEdit> — syntax_highlighter', () => {
       />
     );
     // "if" (keyword_color) / " " (a space is `is_symbol`, so `symbol_color`) /
-    // "x" (plain `font_color`) — three colour changes, syntax_highlighter.cpp:391-401.
+    // "x" (plain `font_color`): three colour changes, syntax_highlighter.cpp:391-401.
     const meshes = findTextMeshes(renderer.scene);
     expect(meshes).toHaveLength(3);
     const colors = meshes.map(
@@ -282,7 +281,7 @@ describe('<TextEdit> — syntax_highlighter', () => {
   });
 
   it('tints a drawn tab/space icon with the SAME per-glyph colour as the text, not a fixed font_color (text_edit.cpp:1674,1714)', async () => {
-    // A tab is `is_symbol` too, so it colours via `symbol_color` (left at its
+    // A tab is `is_symbol` too, so it colours through `symbol_color` (left at its
     // near-black default here) rather than inheriting the preceding keyword's.
     const renderer = await ReactThreeTestRenderer.create(
       <TextEdit
@@ -318,7 +317,7 @@ describe('<TextEdit> — RTL layout', () => {
 
   it('places each row by its OWN width from the trailing edge (text_edit.cpp:1490-1494)', async () => {
     // The two rows differ in length, so a single mirrored band value cannot
-    // produce both — each must step back by its own shaped width.
+    // produce both: each must step back by its own shaped width.
     const renderer = await ReactThreeTestRenderer.create(
       <TextEdit {...painterEnv()} solveNode={{ ...solveNode({ text: 'Wave rift over quiet stone\nAmber' }), rtl: true }} rect={RECT} renderOrder={0} />
     );
@@ -344,7 +343,7 @@ describe('<TextEdit> — text clip band', () => {
 
   it('clips the text to the control itself, wherever the control sits', async () => {
     // `useWorldClipPlanes` composes its argument with the anchor's own world
-    // matrix, so the band must be control-LOCAL: a rect carrying the control's
+    // matrix, so the band must be control-local: a rect carrying the control's
     // offset would clip at twice that offset and hide the text outright.
     const planesOf = async (rect: Rect2) => {
       const renderer = await ReactThreeTestRenderer.create(

@@ -1,4 +1,4 @@
-/** TextEdit parser contract — Control base plus the subset a static preview draws. */
+/** TextEdit parser contract: the Control base plus the subset a static preview draws. */
 import { describe, it, expect } from 'vitest';
 import { parseTextEdit } from './parser';
 

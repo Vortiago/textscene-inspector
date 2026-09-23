@@ -1,16 +1,7 @@
 /**
- * TextureButton strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. There is no genuine cross-field rule for TextureButton beyond
- * the shared BaseButton button-group rule (already covered by
- * `basebutton/linter.test.ts` through `descendsFrom`), so there is no
- * `linter.ts` / `linter.test.ts` of its own here.
- *
- * Grow this into one case per property (happy, malformed, and any bound), and
- * quote the governing Godot source line beside every numeric bound.
+ * Tests the TextureButton strict validators through `validatorRegistry`, not by linting a
+ * `.tscn`, so a failure points at the validator. The only cross-field rule is BaseButton's
+ * button-group rule, which `basebutton/linter.test.ts` covers, so no `linter.ts` here.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -30,8 +21,7 @@ describe('TextureButton strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases below are the real check.
+    // A validator that accepts arbitrary prose validates no format.
     const accepted = validatorRegistry
       .getOwnKeys('TextureButton')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);

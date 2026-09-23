@@ -1,35 +1,10 @@
 /**
- * `<TextureButton>` — the native (WebGL canvas) painter for TextureButton:
- * one `<ControlQuad>` sized/positioned per the `stretch_mode` draw-rect math
- * in `nativeSolver.ts`'s `textureButtonDraw`, textured through `useTexture2D`
- * from whichever of the four REACHABLE texture slots
- * (`normal`/`pressed`/`hover`/`disabled`) `resolveTextureButtonSlot`
- * resolves for this draw state — mirroring `texturerect/Component.tsx`'s own
- * clone/sampler/region/flip preparation almost exactly, since both are a
- * single textured `CanvasItem` quad underneath.
- *
- * `texture_focused` is resolved by NEITHER this component NOR its solver:
- * `TextureButton::_notification`'s `draw_focus` gate is
- * `has_focus(true) && focused.is_valid()`, and a static, pointer-less/
- * keyboard-less preview never holds focus (the same restriction every other
- * Button-family painter in this codebase carries for hover/focus draw
- * states) — so that texture can never contribute a pixel, and calling
- * `useTexture2D` for it would load a GPU resource nothing ever samples.
- * `texture_click_mask` affects hit-testing only in Godot, never pixels, and
- * this previewer has no pointer input to hit-test against — not resolved
- * either.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`. Used as-is, matching TextureRect (no own `color`
- * property to fold in).
- *
- * Sampler: `texture_filter`/`texture_repeat` resolve through
- * `useInheritedTextureSampler`, same as TextureRect — both are plain
- * `CanvasItem` properties, already generic on `ControlProperties`.
- *
- * The free-Control rotate/scale-about-`pivot_offset` transform is the
- * walker's job — this component implements no transform of its own.
+ * `<TextureButton>`: the native (WebGL canvas) painter, one `<ControlQuad>` placed by
+ * `textureButtonDraw` and textured from the slot `resolveTextureButtonSlot` picks, prepared as
+ * `texturerect/Component.tsx` prepares its quad. Tint is the walker's `tint` as is, like TextureRect,
+ * and `useInheritedTextureSampler` resolves the sampler. The walker owns the transform.
  */
+
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -71,11 +46,12 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
 
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
 
-  // The node's OWN scope, not the ambient provider's: a TextureButton that
+  // The node's own scope, not the ambient provider's: a TextureButton that
   // arrived through an instanced sub-scene names ids from that scene.
   const { externalResources, internalResources } = solveNode.resources;
-  // Every hook call is UNCONDITIONAL (hooks cannot branch on `slot`); which
-  // result feeds the draw is decided afterwards, by plain object lookup.
+  // Every hook call is unconditional, since hooks cannot branch on `slot`. A plain
+  // lookup then picks the result that draws. `texture_focused` needs focus, which a
+  // static preview never holds, and `texture_click_mask` only hit-tests, so neither loads.
   const normal = useTexture2D(props.textureNormal, externalResources, internalResources);
   const pressedTex = useTexture2D(props.texturePressed, externalResources, internalResources);
   const hoverTex = useTexture2D(props.textureHover, externalResources, internalResources);
@@ -96,17 +72,14 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
     return { textureSize, ...textureButtonDraw({ x: rect.w, y: rect.h }, textureSize, props.stretchMode) };
   }, [rawTexture, rect.w, rect.h, props.stretchMode]);
 
-  // Clone: the resolved texture is a SHARED cache entry, handed to every
-  // consumer of it, and every mutation below (filter, wrap, UV repeat/offset
-  // for a crop, tile, or flip) is per-CONSUMER sampler state.
+  // Clone: the resolved texture is a shared cache entry, and every mutation below
+  // (filter, wrap, UV repeat and offset for a crop, tile or flip) is per-consumer state.
   const preparedTexture = useMemo(() => {
     if (!rawTexture || !draw) return null;
     const cloned = rawTexture.clone();
-    // NoColorSpace, pinned: the 2D canvas's hardware filter blends undecoded
-    // sRGB bytes; `ControlQuad` decodes the already-filtered sample once it
-    // sees this tag. `pinNoColorSpace` because this clone reaches
-    // `ControlQuad`'s `map` JSX prop, which `@react-three/fiber`'s own auto
-    // sRGB-tagging would otherwise silently overwrite on commit.
+    // NoColorSpace: the 2D canvas filters undecoded sRGB bytes, and `ControlQuad` decodes
+    // the filtered sample. Pinned, because this clone reaches the `map` JSX prop, whose
+    // `@react-three/fiber` sRGB auto-tagging would overwrite it on commit.
     pinNoColorSpace(cloned);
 
     const filter = FILTER[resolveTextureRectFilter(sampler.filter)];
@@ -116,14 +89,13 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
     let repeat = { x: 1, y: 1 };
     let offset = { x: 0, y: 0 };
     if (draw.tile) {
-      // STRETCH_TILE forces repeat wrapping for THIS draw regardless of the
-      // node's own texture_repeat (`draw_texture_rect(texture, rect, tile=true)`
-      // is a per-call sampler override in Godot, not a texture_repeat read).
+      // STRETCH_TILE forces repeat wrapping for this draw whatever the node's
+      // texture_repeat: `draw_texture_rect(texture, rect, tile=true)` is a per-call override.
       cloned.wrapS = cloned.wrapT = THREE.RepeatWrapping;
       repeat = { x: draw.size.x / draw.textureSize.x, y: draw.size.y / draw.textureSize.y };
-      // Godot tiles from the rect's TOP-left; three's `v` runs bottom-up, so a
-      // zero offset would anchor the pattern at the BOTTOM. `1 - repeat.y`
-      // puts `v = 1` (the quad's top edge) exactly on the image's own top row.
+      // Godot tiles from the rect's top-left, and three's `v` runs bottom-up, so a
+      // zero offset would anchor the pattern at the bottom. `1 - repeat.y` puts
+      // `v = 1` (the quad's top edge) on the image's top row.
       offset = { x: 0, y: 1 - repeat.y };
     } else {
       cloned.wrapS = cloned.wrapT = WRAP[resolveTextureRectRepeat(sampler.repeat)];

@@ -1,19 +1,10 @@
 /**
- * `<TexturedFillMesh>` — a hand-built, textured `BufferGeometry` drawn with
- * `ControlQuad`'s own material recipe (`meshBasicMaterial`, `map`/`color`/
- * `opacity`, `useCanvasDecodeDefines`'s auto-detected decode,
- * `canvasItemFacing()`). `ControlQuad` itself only ever builds a plain
- * rectangle (`<planeGeometry>`); the nine-patch and radial-fan geometry this
- * slice needs (`ninePatchGeometry`, `radialFillGeometry`) are neither, so
- * this is `StyleBoxQuad`'s "hand-built geometry via `<primitive>`" shape
- * (`Polygon2D`'s `FilledPolygon` is the ORIGINAL precedent for that) with a
- * texture instead of vertex colours.
- *
- * Positions are Godot pixels, +Y down, SIZE-relative (0-based) — the SAME
- * convention `StyleBoxQuad` takes, flipped the SAME way (`<group scale={[1,
- * -1, 1]}>`): a caller offsets via a wrapping `<CanvasItemGroup>`, never by
- * baking a position into the geometry itself.
+ * `<TexturedFillMesh>`: a hand-built, textured `BufferGeometry` with `ControlQuad`'s material, for
+ * the nine-patch and radial-fan shapes a `<planeGeometry>` cannot draw. Positions are Godot px,
+ * +Y down, size-relative and flipped as in `StyleBoxQuad`, so a caller offsets through a wrapping
+ * `<CanvasItemGroup>`, never in the geometry.
  */
+
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -30,7 +21,7 @@ export interface TexturedFillMeshGeometry {
 export interface TexturedFillMeshProps {
   geometry: TexturedFillMeshGeometry | null;
   texture: THREE.Texture;
-  /** Already-LINEAR, matching `ControlQuad`'s own `color` prop contract. */
+  /** Already linear, as `ControlQuad`'s `color` prop expects. */
   color: THREE.Color;
   opacity: number;
   renderOrder: number;
@@ -49,7 +40,7 @@ export function TexturedFillMesh({ geometry, texture, color, opacity, renderOrde
     return geo;
   }, [geometry]);
 
-  // R3F does not auto-dispose a geometry passed via `attach` (`StyleBoxQuad`'s own doc).
+  // R3F does not auto-dispose a geometry passed through `attach`.
   useEffect(() => () => builtGeometry?.dispose(), [builtGeometry]);
 
   if (!builtGeometry) return null;

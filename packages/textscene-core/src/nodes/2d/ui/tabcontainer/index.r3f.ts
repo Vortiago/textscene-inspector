@@ -1,4 +1,4 @@
-/** TabContainer registration — native (WebGL canvas) painter + rect solver. */
+/** TabContainer registration: native (WebGL canvas) painter and rect solver. */
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { TabContainer } from './Component';
 import './nativeSolver';

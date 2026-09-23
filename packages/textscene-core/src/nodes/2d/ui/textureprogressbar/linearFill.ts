@@ -1,15 +1,10 @@
 /**
- * `TextureProgressBar`'s non-radial, non-nine-patch progress crop
- * (`texture_progress_bar.cpp:445-482`'s `draw_texture_rect_region` calls).
- * Reached only when `nine_patch_stretch` is false — a linear mode with it
- * true takes `draw_nine_patch_stretched` instead (`:452`'s own gate), so `s`
- * here is always `progress->get_size()`, never `get_size()`.
+ * `TextureProgressBar`'s non-radial, non-nine-patch progress crop (the `draw_texture_rect_region`
+ * calls in `texture_progress_bar.cpp:445-482`). With `nine_patch_stretch` a linear mode takes
+ * `draw_nine_patch_stretched` (`:452`), so `s` here is always `progress->get_size()`.
  *
- * Every branch's `region`/`source` share one SIZE (the ratio-scaled crop);
- * they differ only in position (`region` adds `progress_offset`) — an
- * unscaled crop-and-place, not a stretch.
- *
- * Pure TS, no React/THREE.
+ * Every branch's `region` and `source` share the ratio-scaled size and differ only in position
+ * (`region` adds `progress_offset`): a crop-and-place, not a stretch. Pure TS, no React or THREE.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -34,7 +29,7 @@ export interface LinearProgressDraw {
   region: Rect2;
 }
 
-/** `null` for `FILL_MODE_MAX`/a radial mode (never reached — the caller only calls this for the six linear/bilinear modes). */
+/** `null` for `FILL_MODE_MAX` or a radial mode, which never reach here: the caller passes only the six linear and bilinear modes. */
 export function linearProgressDraw(
   mode: number | undefined,
   ratio: number,

@@ -1,29 +1,16 @@
 /**
- * TabBar's native (WebGL canvas) rect solver AND draw-time tab layout —
- * `TabBar::get_minimum_size` (`scene/gui/tab_bar.cpp:44-122`),
- * `TabBar::get_tab_width` (`:1754-1804`) and `TabBar::_update_cache`
- * (`:1196-1291`). `TabContainer`'s own internal tab strip
- * (`../tabcontainer/nativeSolver.ts`) reuses `computeTabBarDrawLayout` and the
- * theme helpers below directly — one tab-layout implementation, not two that
- * could drift.
+ * TabBar's native (WebGL canvas) rect solver and draw-time tab layout:
+ * `TabBar::get_minimum_size` (`scene/gui/tab_bar.cpp:44-122`), `get_tab_width`
+ * (`:1754-1804`) and `_update_cache` (`:1196-1291`). TabContainer's internal strip
+ * reuses `computeTabBarDrawLayout` and the theme helpers, so one layout serves both.
  *
- * `right_button` (`set_tab_button_icon`) is never modelled: it is reachable
- * only from script (`tabbar/linterParser.ts`'s own doc), so a `.tscn`-sourced
- * tab never carries one and every `right_button`-guarded branch in the
- * source is dead code here.
+ * `right_button` (`set_tab_button_icon`) is script-only, so no `.tscn` tab
+ * carries one and it is not modelled.
  *
- * `nativeTheme.ts` cannot be extended from this slice (this packet's own
- * brief) — `tabBarStyleBoxes` below derives TabBar's OWN `tab_selected`/
- * `tab_unselected`/`tab_disabled`/`tab_hovered` StyleBoxFlat structs directly
- * from `default_theme.cpp:974-992`, reconstructing the project's theme scale
- * from `theme.fontSize` exactly as `spinbox/nativeSolver.ts`'s
- * `reconstructThemeScale` and `progressbar/nativeSolver.ts`'s twin already
- * do. `button_highlight`/`button_pressed` need no such reconstruction: both
- * are literally `make_flat_stylebox(style_normal_color)` /
- * `make_flat_stylebox(style_pressed_color)` (`default_theme.cpp:138-139`),
- * the SAME construction `nativeTheme.ts` already built for Button's own
- * `normal`/`pressed` (`:239,241`), so `theme.widgets.button.normal`/`.pressed`
- * stand in exactly rather than being re-derived.
+ * `tabBarStyleBoxes` derives TabBar's style boxes from `default_theme.cpp:974-992`.
+ * `button_highlight`/`button_pressed` are `make_flat_stylebox` of `style_normal_color`
+ * and `style_pressed_color` (`default_theme.cpp:138-139`), the same boxes as Button's
+ * `normal`/`pressed` (`:239,241`), so `theme.widgets.button` stands in for them.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -46,14 +33,11 @@ import type { ControlColor } from '../control/types';
 import type { TabBarProperties, TabBarTabProperties } from './types';
 import { TAB_BAR_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 
-// --- Draw state ---------------------------------------------------------------
-
 export type TabDrawState = 'selected' | 'unselected' | 'disabled';
 
 /**
- * `TabBar::get_tab_width`/`_notification(DRAW)`'s state pick, minus the
- * `hover` arm: a static previewer has no pointer, so that branch never taken
- * (`buttonBase.ts`'s own precedent for `ButtonDrawState`).
+ * `TabBar::get_tab_width`/`_notification(DRAW)`'s state pick, minus the `hover`
+ * arm: a static previewer has no pointer.
  */
 export function resolveTabDrawState(tab: Pick<TabBarTabProperties, 'disabled'>, index: number, currentTab: number): TabDrawState {
   if (tab.disabled) return 'disabled';
@@ -61,38 +45,33 @@ export function resolveTabDrawState(tab: Pick<TabBarTabProperties, 'disabled'>, 
   return 'unselected';
 }
 
-// --- Theme: TabBar's own StyleBoxes -------------------------------------------
-
-/** `Color(1, 1, 1, 0.75)` — `style_focus_color` (`default_theme.cpp:117`), `style_tab_selected`'s own top border (`:975-976`). */
+/** `Color(1, 1, 1, 0.75)`: `style_focus_color` (`default_theme.cpp:117`), `style_tab_selected`'s top border (`:975-976`). */
 const TAB_SELECTED_BORDER_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 0.75 };
-/** `Color(0.175, 0.175, 0.175, 1)` — `style_popup_border_color` (`default_theme.cpp:119`), `style_tab_unselected`'s own left/right border (`:981`), inherited by `tab_disabled`/`tab_hovered`. */
+/** `Color(0.175, 0.175, 0.175, 1)`: `style_popup_border_color` (`default_theme.cpp:119`), `style_tab_unselected`'s left and right border (`:981`), inherited by `tab_disabled`/`tab_hovered`. */
 const TAB_UNSELECTED_BORDER_COLOR: ControlColor = { r: 0.175, g: 0.175, b: 0.175, a: 1 };
-/** `style_pressed_color` (`default_theme.cpp:115`) — `style_tab_unselected`'s own fill (`:977`). */
+/** `style_pressed_color` (`default_theme.cpp:115`): `style_tab_unselected`'s fill (`:977`). */
 const TAB_UNSELECTED_FILL: ControlColor = { r: 0, g: 0, b: 0, a: 0.6 };
-/** `style_disabled_color` (`default_theme.cpp:116`) — `style_tab_disabled`'s own fill, `duplicate()`'s `set_bg_color` (`:983`). */
+/** `style_disabled_color` (`default_theme.cpp:116`): `style_tab_disabled`'s fill, set on the `duplicate()` (`:983`). */
 const TAB_DISABLED_FILL: ControlColor = { r: 0.1, g: 0.1, b: 0.1, a: 0.3 };
-/** `style_normal_color` (`default_theme.cpp:112`) — `style_tab_selected`'s own fill (`:974`). */
+/** `style_normal_color` (`default_theme.cpp:112`): `style_tab_selected`'s fill (`:974`). */
 const TAB_SELECTED_FILL: ControlColor = { r: 0.1, g: 0.1, b: 0.1, a: 0.6 };
-/** `Color(0.1, 0.1, 0.1, 0.3)` literal — `style_tab_hovered`'s own fill (`default_theme.cpp:985`), distinct from `TAB_DISABLED_FILL` even though the numbers coincide. */
+/** A `Color(0.1, 0.1, 0.1, 0.3)` literal: `style_tab_hovered`'s fill (`default_theme.cpp:985`), apart from `TAB_DISABLED_FILL` although the numbers match. */
 const TAB_HOVERED_FILL: ControlColor = { r: 0.1, g: 0.1, b: 0.1, a: 0.3 };
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /**
- * `spinbox/nativeSolver.ts`'s `reconstructThemeScale`: `theme.fontSize` is
- * `Math.round(DEFAULT_FONT_SIZE * scale)`, so dividing back out recovers the
- * project's `gui/theme/default_theme_scale` closely enough to reproduce every
- * OTHER `Math.round(literal * scale)` this slice needs — `nativeTheme.ts`
- * exposes no raw `scale` field and cannot be extended from here.
+ * `theme.fontSize` is `Math.round(DEFAULT_FONT_SIZE * scale)`, so dividing back
+ * recovers `gui/theme/default_theme_scale` closely enough for every other
+ * `Math.round(literal * scale)` here. `nativeTheme.ts` exposes no raw `scale`.
  */
 export function reconstructThemeScale(theme: Pick<NativeTheme, 'fontSize'>): number {
   return theme.fontSize / DEFAULT_FONT_SIZE;
 }
 
 /**
- * `make_flat_stylebox` restricted to what `StyleBoxFlatData` models —
- * `nativeTheme.ts`'s own private `flatStyleBox` helper, re-derived here since
- * it is not exported and this slice cannot import it.
+ * `make_flat_stylebox` restricted to what `StyleBoxFlatData` models: a copy of
+ * `nativeTheme.ts`'s private `flatStyleBox`, which is not exported.
  */
 function flatBox(
   bgColor: ControlColor,
@@ -140,16 +119,10 @@ export interface TabBarStyleBoxes {
 }
 
 /**
- * `default_theme.cpp:974-985`: `style_tab_selected` and `style_tab_unselected`
- * are both `make_flat_stylebox(color, 10, 4, 10, 4, 0)` (margins
- * left/right=10, top/bottom=4, corner radius 0), then EACH gets its own
- * border set directly (bypassing the scaled-margin helper for the border
- * WIDTH, which is scaled separately right beside it): selected's top border
- * is `round(2 * scale)` in `TAB_SELECTED_BORDER_COLOR`; unselected's
- * left+right border is `round(scale)` (i.e. `round(1 * scale)`) in
- * `TAB_UNSELECTED_BORDER_COLOR`. `tab_disabled`/`tab_hovered` are
- * `style_tab_unselected->duplicate()` with only `bg_color` overwritten
- * (`:982-985`), so they inherit unselected's margins/corner/border verbatim.
+ * `default_theme.cpp:974-985`: `tab_selected` and `tab_unselected` are
+ * `make_flat_stylebox(color, 10, 4, 10, 4, 0)`, each with a border width scaled
+ * apart from the margins: `round(2 * scale)` on selected's top, `round(scale)` on
+ * unselected's sides. `tab_disabled`/`tab_hovered` duplicate unselected and change only `bg_color` (`:982-985`).
  */
 export function tabBarStyleBoxes(scale: number): TabBarStyleBoxes {
   const selected = flatBox(TAB_SELECTED_FILL, 10, 4, 10, 4, 0, scale);
@@ -167,7 +140,7 @@ export function tabBarStyleBoxes(scale: number): TabBarStyleBoxes {
   return { selected, unselected, disabled, hovered };
 }
 
-/** `overrides['tab_<state>']` (`theme_override_styles/tab_<state>`) wins; else the default-theme struct for that state. */
+/** `overrides['tab_<state>']` (`theme_override_styles/tab_<state>`) wins over the default-theme box for that state. */
 export function pickTabStyleBox(
   overrides: Readonly<Record<string, StyleBoxFlatData>>,
   defaults: TabBarStyleBoxes,
@@ -177,14 +150,10 @@ export function pickTabStyleBox(
 }
 
 /**
- * `TabBar::get_tab_width`'s WIDTH-only style pick (`:1761-1768`) — distinct
- * from what actually draws (`pickTabStyleBox`, used by `_notification(DRAW)`
- * itself): for a non-current, non-disabled tab it ALWAYS compares
- * `tab_hovered`'s own minimum width against `tab_unselected`'s and keeps the
- * WIDER one, even though `tab_unselected` is what draws (a static previewer
- * never hovers) — Godot's own comment: "Always pick the widest style between
- * hovered and unselected, to avoid an infinite loop when switching tabs with
- * the mouse." Only WIDTH measurement (`_update_cache`) reads this.
+ * `TabBar::get_tab_width`'s width-only style pick (`:1761-1768`), apart from the
+ * drawn one (`pickTabStyleBox`): a non-current, enabled tab takes the wider of
+ * `tab_hovered` and `tab_unselected` "to avoid an infinite loop when switching tabs
+ * with the mouse" (Godot's comment). Only `_update_cache` reads it.
  */
 export function tabWidthStyleMinWidth(
   overrides: Readonly<Record<string, StyleBoxFlatData>>,
@@ -196,25 +165,23 @@ export function tabWidthStyleMinWidth(
   return Math.max(minWidth(pickTabStyleBox(overrides, defaults, 'unselected')), minWidth(overrides.tab_hovered ?? defaults.hovered));
 }
 
-// --- Theme: font + icon colour ------------------------------------------------
-
 export const TAB_BAR_THEME_FONT_KEY = 'font';
 
-/** `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT_SIZE, TabBar, font_size)` (`tab_bar.cpp:2179`) — ONE size item for every state, `default_theme.cpp:1041`. */
+/** `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT_SIZE, TabBar, font_size)` (`tab_bar.cpp:2179`): one size item for every state, `default_theme.cpp:1041`. */
 export const TAB_BAR_THEME_FONT_SIZE_KEY = 'font_size';
 
-/** `default_theme.cpp:1044-1047`: a DIFFERENT colour key per state, unlike the single size key above. */
+/** `default_theme.cpp:1044-1047`: one colour key per state, unlike the single size key. */
 const TAB_BAR_FONT_COLOR_KEYS: Record<TabDrawState, string> = {
   selected: 'font_selected_color',
   unselected: 'font_unselected_color',
   disabled: 'font_disabled_color',
 };
 
-/** `control_font_hover_color` = `Color(0.95, 0.95, 0.95)` (`default_theme.cpp:104`) — `font_selected_color`'s own default (`:1044`). */
+/** `control_font_hover_color` = `Color(0.95, 0.95, 0.95)` (`default_theme.cpp:104`), the `font_selected_color` default (`:1044`). */
 const TAB_BAR_SELECTED_FONT_COLOR: ControlColor = { r: 0.95, g: 0.95, b: 0.95, a: 1 };
-/** `control_font_low_color` = `Color(0.7, 0.7, 0.7)` (`default_theme.cpp:103`) — `font_unselected_color`'s own default (`:1046`). */
+/** `control_font_low_color` = `Color(0.7, 0.7, 0.7)` (`default_theme.cpp:103`), the `font_unselected_color` default (`:1046`). */
 const TAB_BAR_UNSELECTED_FONT_COLOR: ControlColor = { r: 0.7, g: 0.7, b: 0.7, a: 1 };
-/** `control_font_disabled_color = control_font_color * Color(1,1,1,0.5)` (`default_theme.cpp:106`) — `font_disabled_color`'s own default (`:1047`). */
+/** `control_font_disabled_color = control_font_color * Color(1,1,1,0.5)` (`default_theme.cpp:106`), the `font_disabled_color` default (`:1047`). */
 const TAB_BAR_DISABLED_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
 
 const TAB_BAR_FONT_DEFAULTS: Record<TabDrawState, ControlColor> = {
@@ -224,17 +191,10 @@ const TAB_BAR_FONT_DEFAULTS: Record<TabDrawState, ControlColor> = {
 };
 
 /**
- * The size every tab's own `text_buf` is shaped at — `TabBar::_shape`'s
- * `theme_cache.font_size` (`tab_bar.cpp:365`), resolved through
- * `Control::get_theme_font_size` so a node-local
- * `theme_override_font_sizes/font_size` wins over the theme chain
- * (`control.cpp:3113-3129`). State-independent: Godot binds one size item for
- * the whole widget.
- *
- * The solver AND the painter both call this. Godot shapes ONCE per tab and
- * reads that one buffer for both the minimum size (`:82`) and the draw pass
- * (`:677`), so a bar whose height and whose glyphs came from two different
- * sizes is a shape Godot cannot produce.
+ * The size each tab's `text_buf` is shaped at: `theme_cache.font_size` (`tab_bar.cpp:365`),
+ * where a local `theme_override_font_sizes/font_size` wins (`control.cpp:3113-3129`).
+ * The solver and the painter both call this, since Godot shapes once per tab for
+ * both the minimum size (`:82`) and the draw (`:677`).
  */
 export function tabBarFontSizePx(
   n: SolveNode,
@@ -249,7 +209,7 @@ export function tabBarFontSizePx(
   );
 }
 
-/** This tab state's own font colour — the resolved `font_<state>_color` (`n.colors`), else the default theme's own literal. */
+/** This tab state's font colour: the resolved `font_<state>_color` (`n.colors`), else the default theme's literal. */
 export function tabBarFontColor(colors: SolveNode['colors'], state: TabDrawState): ControlColor {
   return colors[TAB_BAR_FONT_COLOR_KEYS[state]] ?? TAB_BAR_FONT_DEFAULTS[state];
 }
@@ -260,25 +220,21 @@ const TAB_BAR_ICON_COLOR_KEYS: Record<TabDrawState, string> = {
   disabled: 'icon_disabled_color',
 };
 
-/** `default_theme.cpp:1051-1054`: all four icon-colour states default `Color(1, 1, 1, 1)` — TabBar never dims a tab's icon by state, unlike its font. */
+/** `default_theme.cpp:1051-1054`: all four icon-colour states default to `Color(1, 1, 1, 1)`, so no state dims the icon. */
 const TAB_BAR_DEFAULT_ICON_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 
 export function tabBarIconColor(colors: SolveNode['colors'], state: TabDrawState): ControlColor {
   return colors[TAB_BAR_ICON_COLOR_KEYS[state]] ?? TAB_BAR_DEFAULT_ICON_COLOR;
 }
 
-// --- Texture slots: one per tab icon -------------------------------------------
-
-/** TabBar's own themeable icons — `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, TabBar, <field>, "<name>")` (`tab_bar.cpp:2160-2182`). */
+/** TabBar's themeable icons: `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, TabBar, <field>, "<name>")` (`tab_bar.cpp:2160-2182`). */
 const TAB_BAR_THEME_ICON_NAMES = ['close', 'increment', 'decrement'] as const;
 type TabBarThemeIconName = (typeof TAB_BAR_THEME_ICON_NAMES)[number];
 
 /**
- * One `TextureSlotRequest` per tab whose `icon` ref is non-empty (keyed by
- * tab index — `buildSolveTree.ts`'s generic single-slot fallback only models
- * ONE texture-bearing property per node, and TabBar's icons are an indexed
- * family the generic path cannot see), plus one per THEMED close/increment/
- * decrement icon `SolveNode.icons` resolved.
+ * One `TextureSlotRequest` per tab with an `icon`, keyed by tab index, plus one per
+ * themed close/increment/decrement icon in `SolveNode.icons`. `buildSolveTree.ts`'s
+ * generic path models one texture property per node and cannot see an indexed family.
  */
 export const tabBarTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
   const tabs = (node.properties as TabBarProperties).tabs ?? [];
@@ -293,7 +249,7 @@ export const tabBarTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
   return requests;
 };
 
-/** This tab's icon natural size from `n.textureSlots` — `null` before it resolves or when the tab carries no icon. */
+/** This tab's icon natural size from `n.textureSlots`: `null` before it resolves or when the tab carries no icon. */
 export function tabIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>, index: number): Vec2 | null {
   return n.textureSlots[String(index)] ?? null;
 }
@@ -301,19 +257,16 @@ export function tabIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>, index: nu
 /** The vendored default's own size (`native/themeIcons.ts`'s `TAB_BAR_ICON_SIZE`, 16x16 square) for every close/increment/decrement icon alike. */
 const TAB_BAR_VENDORED_ICON_SIZE: Vec2 = { x: TAB_BAR_ICON_SIZE, y: TAB_BAR_ICON_SIZE };
 
-/** `close`/`increment`/`decrement`'s resolved size — themed if `SolveNode.textureSlots` resolved it, else the vendored default. */
+/** `close`/`increment`/`decrement`'s resolved size: themed if `SolveNode.textureSlots` resolved it, else the vendored default. */
 export function tabBarThemeIconSize(n: Pick<SolveNode, 'textureSlots'>, name: TabBarThemeIconName): Vec2 {
   return n.textureSlots[name] ?? TAB_BAR_VENDORED_ICON_SIZE;
 }
 
-// --- Per-tab natural width -----------------------------------------------------
-
 /**
- * `TabBar::get_tab_width` (`:1769,1799-1801`) and the per-tab body of
- * `get_minimum_size` (`:71-106`) compute this SAME formula — style's own
- * minimum width, plus icon, plus text, plus the close button, each gated by
- * presence and separated by ONE `h_separation`, with a trailing separation
- * removed when anything beyond the style's own minimum was added.
+ * `TabBar::get_tab_width` (`:1769,1799-1801`) and `get_minimum_size`'s per-tab body
+ * (`:71-106`) share this formula: the style's minimum width plus icon, text and close
+ * button, each gated by presence and separated by one `h_separation`. The trailing
+ * separation drops when anything was added.
  */
 export function tabContentWidth(input: {
   styleMinWidth: number;
@@ -339,27 +292,18 @@ export function isCloseButtonVisible(policy: number, index: number, currentTab: 
   return policy === 2 || (policy === 1 && index === currentTab);
 }
 
-// --- Shaped text (natural, untruncated) ----------------------------------------
-
-/** TabBar never wraps and sets no `line_spacing` on `text_buf` — the same shape `buttonBase.ts`'s `shapeButtonLabel` establishes, spelled out directly since TabBar is not a Button. */
+/** Natural, untruncated text: TabBar never wraps and sets no `line_spacing` on `text_buf`, like `buttonBase.ts`'s `shapeButtonLabel`, but TabBar is not a Button. */
 export function shapeTabLabel(text: string, fontSizePx: number, fontMetrics: Parameters<typeof shapeText>[1]['fontMetrics']): TextLayoutResult {
   return shapeText(text, { fontSizePx, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 0, fontMetrics });
 }
 
 export { isTextLayoutResult };
 
-// --- get_minimum_size -----------------------------------------------------------
-
 /**
- * `TabBar::get_minimum_size` (`tab_bar.cpp:44-122`). A hidden tab (`tab_bar.h`'s
- * own `Tab::hidden` — never authored on a standalone TabBar, but TabContainer's
- * OWN `tab_<idx>/hidden` override reaches this same tabs array when this
- * function is reused for its internal strip) contributes nothing at all.
- *
- * `clip_tabs` overrides the summed width entirely with the WIDEST single
- * tab's own contribution plus the scroll arrows (`:117-119`) — not the
- * `max_tab_width` PROPERTY, which this function never reads (only
- * `_update_cache`'s draw-time truncation does).
+ * `TabBar::get_minimum_size` (`tab_bar.cpp:44-122`). A hidden tab contributes nothing
+ * (only TabContainer's strip sets `Tab::hidden` in tab_bar.h). `clip_tabs` replaces the
+ * summed width with the widest tab plus the scroll arrows (`:117-119`). Only
+ * `_update_cache` reads `max_tab_width`.
  */
 export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vec2 => {
   const props = n.node.properties as TabBarProperties;
@@ -405,9 +349,8 @@ export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vec2 => {
     if (iconSize) height = Math.max(height, iconSize.y + yMargin);
 
     const hasText = tab.title.length > 0;
-    // `text_buf->get_size().y` (`:82`) folds into height UNCONDITIONALLY —
-    // even an empty title still shapes one line at the font's own metrics —
-    // while the width contribution below is gated on `!is_empty()`.
+    // `text_buf->get_size().y` (`:82`) always folds into the height, since an empty
+    // title still shapes one line. The width below is gated on `!is_empty()`.
     const layout = ctx.measureText ? shapeTabLabel(tab.title, fontSizePx, fontMetrics) : null;
     const textWidth = layout ? shapedTextSizeWidthPx(layout.widthPx) : 0;
     height = Math.max(height, (layout?.heightPx ?? 0) + yMargin);
@@ -444,12 +387,10 @@ export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vec2 => {
 controlSolverRegistry.registerMinimumSize('TabBar', tabBarMinimumSize);
 controlSolverRegistry.registerTextureSlots('TabBar', tabBarTextureSlots);
 
-// --- Draw-time layout: _update_cache -------------------------------------------
-
 export interface TabLayoutInput {
   disabled: boolean;
   hidden: boolean;
-  /** Natural (untruncated) content width — `tabContentWidth` at this tab's own state/icon/text. */
+  /** Natural (untruncated) content width: `tabContentWidth` at this tab's state, icon and text. */
   naturalWidth: number;
   /** Natural (untruncated) text width alone, 0 when this tab has no title. */
   naturalTextWidth: number;
@@ -458,15 +399,15 @@ export interface TabLayoutInput {
 export interface TabLayoutItem {
   index: number;
   ofs: number;
-  /** `size_cache` — possibly truncated by `maxTabWidthPx`. */
+  /** `size_cache`, possibly truncated by `maxTabWidthPx`. */
   width: number;
-  /** The text glyph budget after truncation, in px — equals the tab's natural text width when not truncated. */
+  /** The text glyph budget after truncation, in px. It equals the natural text width when not truncated. */
   textBudgetPx: number;
   truncated: boolean;
 }
 
 export interface TabBarDrawLayout {
-  /** Every non-hidden tab between `offset`/`maxDrawnTab` inclusive — a hidden tab is omitted entirely, matching `if (tabs[i].hidden) continue`. */
+  /** Every non-hidden tab from `offset` to `maxDrawnTab` inclusive, matching `if (tabs[i].hidden) continue`. */
   items: readonly TabLayoutItem[];
   offset: number;
   maxDrawnTab: number;
@@ -474,22 +415,16 @@ export interface TabBarDrawLayout {
   buttonsVisible: boolean;
 }
 
-/** `TabBar::AlignmentMode` (`tab_bar.h:43-47`). No `FILL`: only LEFT/CENTER/RIGHT exist on the real enum — the brief mentioning a fourth does not match the source. */
+/** `TabBar::AlignmentMode` (`tab_bar.h:43-47`): LEFT, CENTER and RIGHT, with no `FILL`. */
 export const TAB_ALIGNMENT_LEFT = 0;
 export const TAB_ALIGNMENT_CENTER = 1;
 export const TAB_ALIGNMENT_RIGHT = 2;
 
 /**
- * `TabBar::_update_cache` (`tab_bar.cpp:1196-1291`), `offset` fixed at 0 (not
- * serialised — `tab_bar.h:106`'s own member default, and nothing in this
- * previewer ever scrolls it).
- *
- * `maxTabWidthPx > 0` truncates a tab whose natural width exceeds it
- * (`:1215-1223`): `mw = max(sizeTextless, maxTabWidthPx)`, `textBudgetPx =
- * max(mw - sizeTextless, 1)`. The GLYPH-level ellipsis Godot's `TextLine`
- * then draws inside that budget (`OVERRUN_TRIM_ELLIPSIS`, its own default) is
- * not reproduced — `label/nativeSolver.ts`'s own `clip`/`overrun_behavior`
- * doc is the precedent; the painter clips the run to `textBudgetPx` instead.
+ * `TabBar::_update_cache` (`tab_bar.cpp:1196-1291`) with `offset` at 0: it is not
+ * serialised (`tab_bar.h:106`), and nothing here scrolls it. `maxTabWidthPx > 0` truncates
+ * a wider tab (`:1215-1223`) to `textBudgetPx = max(max(sizeTextless, maxTabWidthPx) - sizeTextless, 1)`.
+ * The painter clips to that budget in place of Godot's `OVERRUN_TRIM_ELLIPSIS`.
  */
 export function computeTabBarDrawLayout(
   tabs: readonly TabLayoutInput[],
@@ -499,10 +434,8 @@ export function computeTabBarDrawLayout(
   maxTabWidthPx: number,
   tabSeparation: number,
   incrementIconWidth: number,
-  // Defaults to `incrementIconWidth` — `tabcontainer/nativeSolver.ts` reuses
-  // this function (module doc) and still calls it with one scroll-icon width;
-  // TabBar's own `Component.tsx`, whose increment/decrement icons can now be
-  // themed to DIFFERENT sizes, passes both explicitly.
+  // The default serves `tabcontainer/nativeSolver.ts`, which passes one scroll-icon
+  // width. TabBar's `Component.tsx` passes both, since a theme can size them apart.
   decrementIconWidth: number = incrementIconWidth
 ): TabBarDrawLayout {
   if (tabs.length === 0) {
@@ -588,8 +521,6 @@ export { fitIconSize as fitTabIconSize };
 
 export { contentMarginSize };
 
-// --- Per-tab content placement: _draw_tab ---------------------------------------
-
 export interface TabContentLayout {
   icon: { rect: Rect2 } | null;
   text: { offset: Vec2 } | null;
@@ -597,36 +528,29 @@ export interface TabContentLayout {
 }
 
 /**
- * `TabBar::_draw_tab` (`tab_bar.cpp:643-738`), minus `right_button` (dead —
- * see this module's own header) and the hover/pressed background the close
- * button's OWN `button_hl_style`/`button_pressed_style` draws only on
- * interaction (never statically — the close ICON itself still draws
- * unconditionally, `:734`, which is what `close` below positions).
- *
- * `textAdvanceWidthPx` is `tabs[i].size_text` — the (possibly truncated) DRAW
- * width the pen advances by, distinct from the text's own NATURAL width used
- * for centring nothing (Godot centres by HEIGHT only).
- *
- * Under `rtl` the pen starts at `tabWidthPx - contentMargin.left` (`:660` —
- * the LEFT margin measured from the tab's RIGHT edge, never the right one)
- * and each element is placed at `p_x - its own width` before the pen steps
- * back by that width plus one `h_separation` (`:668,671,676,684,721`).
- * Vertical placement is direction-independent.
+ * `TabBar::_draw_tab` (`tab_bar.cpp:643-738`), minus `right_button` and the close
+ * button's hover and pressed backgrounds, which draw only on interaction. The close
+ * icon always draws (`:734`), and `close` places it. Godot centres by height only.
  */
 export function layoutTabContent(input: {
   barHeightPx: number;
   style: StyleBoxFlatData;
-  /** `tabs[p_index].size_cache` — the drawn tab's own width, the RTL pen's origin. */
+  /** `tabs[p_index].size_cache`: the drawn tab's width, the RTL pen's origin. */
   tabWidthPx: number;
   iconSize: Vec2 | null;
   hasText: boolean;
   textNaturalHeightPx: number;
+  /** `tabs[i].size_text`: the draw width the pen advances by, possibly truncated. */
   textAdvanceWidthPx: number;
   hSeparation: number;
   closeVisible: boolean;
   closeIconSize: Vec2;
   buttonHlMargin: { left: number; top: number; right: number; bottom: number };
-  /** `Control::is_layout_rtl()` (`SolveNode.rtl`) — flows the content from the tab's trailing edge. */
+  /**
+   * `Control::is_layout_rtl()` (`SolveNode.rtl`). The pen starts at `tabWidthPx - contentMargin.left`
+   * (`:660`), and each element sits at `p_x - width` before the pen steps back by that width plus
+   * one `h_separation` (`:668,671,676,684,721`). Vertical placement ignores direction.
+   */
   rtl: boolean;
 }): TabContentLayout {
   const { style, barHeightPx, hSeparation, rtl } = input;
@@ -663,17 +587,13 @@ export function layoutTabContent(input: {
 }
 
 /**
- * A drawn tab's own x inside the bar — `_notification(DRAW)`'s two
- * `_draw_tab` calls and `TabBar::get_tab_rect` (`tab_bar.cpp:552,561,1929,1931`),
- * which agree exactly. `ofsPx` is the LTR-space `ofs_cache`
- * `computeTabBarDrawLayout` produces; `_update_cache` itself never reads the
- * layout direction.
+ * A drawn tab's x inside the bar, per `_notification(DRAW)`'s `_draw_tab` calls and
+ * `TabBar::get_tab_rect` (`tab_bar.cpp:552,561,1929,1931`). `ofsPx` is the LTR
+ * `ofs_cache` from `computeTabBarDrawLayout`: `_update_cache` never reads the direction.
  */
 export function tabDrawX(ofsPx: number, tabWidthPx: number, barWidthPx: number, rtl: boolean): number {
   return rtl ? barWidthPx - ofsPx - tabWidthPx : ofsPx;
 }
-
-// --- Scroll arrows --------------------------------------------------------------
 
 export interface ScrollArrowPlacement {
   x: number;
@@ -688,17 +608,10 @@ export interface ScrollArrowsLayout {
 }
 
 /**
- * `TabBar::_notification(DRAW)`'s `buttons_visible` block
- * (`tab_bar.cpp:564-592`). `offset` never scrolls above 0 here
- * (`computeTabBarDrawLayout`'s own doc), so whichever arrow scrolls TOWARDS
- * the start is always dim and `missing_right` alone lights the other one.
- * RTL puts the pair against the LEFT edge and swaps those roles, and places
- * the increment icon at the INCREMENT icon's own width (`:575`) where LTR
- * steps by the DECREMENT icon's (`:587`) — the two differ only under a theme
- * that sizes them differently.
- *
- * `vofs` is an `int` measured off the INCREMENT icon's height for BOTH arrows
- * (`:565`), so an odd leftover truncates rather than landing on a half pixel.
+ * `TabBar::_notification(DRAW)`'s `buttons_visible` block (`tab_bar.cpp:564-592`).
+ * `offset` stays 0, so the arrow toward the start is always dim and `missing_right`
+ * lights the other. RTL puts the pair at the left edge, swaps those roles, and steps
+ * by the increment icon's width (`:575`) where LTR uses the decrement's (`:587`).
  */
 export function layoutScrollArrows(input: {
   barWidthPx: number;
@@ -709,6 +622,8 @@ export function layoutScrollArrows(input: {
   rtl: boolean;
 }): ScrollArrowsLayout {
   const { barWidthPx, incrementIconSize, decrementIconSize, missingRight, rtl } = input;
+  // `vofs` is an `int` off the increment icon's height for both arrows (`:565`),
+  // so an odd leftover truncates rather than landing on a half pixel.
   const y = Math.trunc((input.barHeightPx - incrementIconSize.y) / 2);
   if (rtl) {
     return {

@@ -1,8 +1,9 @@
 /**
- * `drawNinePatchStretched` vs Godot 4.6.3 (`texture_progress_bar.cpp:257-425`).
- * Worked by hand from the source's own formulas — texture (64, 16), stretch
- * margin 4px every side, control (100, 20 or 32) unless noted.
+ * `drawNinePatchStretched` against Godot 4.6.3 (`texture_progress_bar.cpp:257-425`), worked by
+ * hand from the source's formulas: texture (64, 16), stretch margin 4px every side, control
+ * (100, 20 or 32) unless noted.
  */
+
 import { describe, expect, it } from 'vitest';
 import {
   drawNinePatchStretched,
@@ -49,10 +50,9 @@ describe('drawNinePatchStretched (texture_progress_bar.cpp:257-425)', () => {
       srcSize: { x: 32, y: 16 },
       dstOffset: { x: 50, y: 0 },
       dstSize: { x: 50, y: 20 },
-      // The shared middle/last-section math (`:346-351`) reduces
-      // `lastSectionSize` to 0 regardless of which raw margin fed it; FILL_RIGHT_TO_LEFT's
-      // own assignment (`:366-367`) puts that reduced value on `topleft`, not
-      // `bottomright` — so `margin.left`, not `.right`, is the one that drops.
+      // The shared section math (`:346-351`) reduces `lastSectionSize` to 0 whichever margin
+      // fed it, and FILL_RIGHT_TO_LEFT (`:366-367`) puts it on `topleft`, not `bottomright`,
+      // so `margin.left`, not `.right`, drops.
       margin: { left: 0, top: 4, right: 4, bottom: 4 },
     });
   });

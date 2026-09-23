@@ -1,17 +1,10 @@
 /**
- * `TextureProgressBar::draw_nine_patch_stretched` (`texture_progress_bar.cpp:
- * 257-425`) — the source/dest rects and margins a partial nine-patch draw
- * needs, stopping short of the actual `RS::canvas_item_add_nine_patch` call
- * (`ninePatchGeometry`, `r3f/controls/native/ninePatchGeometry.ts`, turns
- * these into quads — see that module's own doc: it is written to take
- * exactly this shape of input, not a NinePatchRect-specific one).
+ * `TextureProgressBar::draw_nine_patch_stretched` (`texture_progress_bar.cpp`, `:257-425`): the rects
+ * and margins of a partial nine-patch, short of `RS::canvas_item_add_nine_patch`, which
+ * `r3f/controls/native/ninePatchGeometry.ts` turns into quads. Pure TS, no React or THREE.
  *
- * `Texture2D::get_rect_region` (`:424`) is not modelled: it is an identity
- * pass-through for every texture but `AtlasTexture` (`scene/resources/
- * texture.cpp:85-89`), and `useTexture2D` already resolves an `AtlasTexture`
- * to a plain, already-cropped image before this module ever sees it.
- *
- * Pure TS, no React/THREE.
+ * `Texture2D::get_rect_region` (`:424`) is not modelled: it passes every texture but `AtlasTexture`
+ * through (`texture.cpp:85-89` in `scene/resources`), and `useTexture2D` crops an `AtlasTexture` first.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -46,19 +39,10 @@ export const FILL_BILINEAR_TOP_AND_BOTTOM = 7;
 export const FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE = 8;
 
 /**
- * `progressOffset` is `null` for `under`/`over` (never offset, `:421` only
- * applies `if (p_texture == progress)`) and the node's own `texture_progress_offset`
- * for `progress`. `ratio` is `1.0` for `under`/`over` (always a FULL 9-patch,
- * `:439,445`'s `draw_nine_patch_stretched(under, mode, 1.0, tint_under)`) and
- * `get_as_ratio()` for `progress` — the caller's job either way, this
- * function only branches on whether `ratio < 1.0` exactly as the source does.
- *
- * `fillMode` is read only when `ratio < 1.0`; the caller never passes one of
- * the three radial modes here (`:452`'s own `nine_patch_stretch &&
- * !is_radial_mode` gate — "those modes are circular, not relevant for nine
- * patch", `:313-317,411-415`), so this function's `default` branches (radial
- * modes falling through to the plain `default:` case at `:346` and to a
- * no-op at `:411-415`) are dead in practice but kept for source fidelity.
+ * `progressOffset` is `null` for under and over (`:421` offsets only `progress`), else
+ * `texture_progress_offset`. `ratio` is `1.0` for under and over (a full nine-patch, `:439,445`),
+ * else `get_as_ratio()`. `fillMode` is read only when `ratio < 1.0`, and never a radial mode (`:452`),
+ * so the `default` arms (`:346`, `:313-317,411-415`) are kept for fidelity but never run.
  */
 export function drawNinePatchStretched(
   textureSize: Vec2,
@@ -130,8 +114,8 @@ export function drawNinePatchStretched(
     if (fillMode === FILL_BILINEAR_LEFT_AND_RIGHT || fillMode === FILL_BILINEAR_TOP_AND_BOTTOM) {
       lastSectionSize = Math.max(0, lastSectionSize - (widthTotal - widthFilled) * 0.5);
       firstSectionSize = Math.max(0, firstSectionSize - (widthTotal - widthFilled) * 0.5);
-      // `:339`: `real_middle_size` is signed, unclamped — division by
-      // `max_middle_real_size` below is exactly as unguarded as the source.
+      // `:339`: `real_middle_size` is signed and unclamped, and the division by
+      // `max_middle_real_size` below is as unguarded as the source.
       const realMiddleSize = widthFilled - firstSectionSize - lastSectionSize;
       middleSectionSize *= Math.min(maxMiddleRealSize, realMiddleSize) / maxMiddleRealSize;
       widthTexture = Math.min(widthTexture, firstSectionSize + middleSectionSize + lastSectionSize);
@@ -177,7 +161,7 @@ export function drawNinePatchStretched(
           ((widthTotal * 0.5 - topleft.x) / maxMiddleRealSize) * maxMiddleTextureSize + topleft.x;
         let drift = 0;
         // `:386` compares `bottomright.y !== topleft.y` even in this X-axis
-        // branch — transcribed as written, not "fixed".
+        // branch, transcribed as written.
         if (bottomright.y !== topleft.y) {
           drift =
             ((srcSize.x * 0.5 - centerMappedFromRealWidth) * (lastSectionSize - firstSectionSize)) /

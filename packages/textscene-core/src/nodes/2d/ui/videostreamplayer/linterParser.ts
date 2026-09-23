@@ -1,10 +1,6 @@
 /**
- * VideoStreamPlayer strict validators for linting.
- *
- * Declare only VideoStreamPlayer's OWN members, the ones doc/classes/VideoStreamPlayer.xml
- * lists without an `overrides=` attribute. Everything from Control up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * VideoStreamPlayer strict validators: only the members doc/classes/VideoStreamPlayer.xml lists
+ * without `overrides=`, since the base-walk delivers the rest and a re-declared key shadows it.
  */
 
 import '../control/linterParser.js';
@@ -34,17 +30,13 @@ validatorRegistry.registerAll('VideoStreamPlayer', {
   // means a 25x scale is legal and draws no diagnostic.
   speed_scale: v.nonNegativeFloat('speed_scale', { enforced: 'video_stream_player.cpp:437' }),
 
-  // The two ends have different authority. Below: video_stream_player.cpp:421-422
-  // (`if (p_db < -79) { set_volume(0); }`) collapses the value to silence, and
-  // get_volume_db reports -80 for it (video_stream_player.cpp:429-430), so the
-  // number does not survive. Above: the else branch, video_stream_player.cpp:424,
-  // stores db_to_linear(p_db) uncapped, so "-80,24,0.01,suffix:dB" at
-  // video_stream_player.cpp:575 is an inspector bound only.
-  //
-  // The floor is -80 rather than the setter's -79 because -80 is what Godot
-  // itself writes for silence and round-trips exactly. That leaves (-80, -79)
-  // uncaught, which under-reports rather than rejecting a value the engine keeps.
+  // Below -79, `set_volume(0)` (video_stream_player.cpp:421-422) makes silence, which
+  // get_volume_db reports as -80 (video_stream_player.cpp:429-430). Above, the else branch
+  // (video_stream_player.cpp:424) is uncapped, so "-80,24,0.01,suffix:dB" at
+  // video_stream_player.cpp:575 only warns.
   volume_db: v.float('volume_db', {
+    // -80, not -79: Godot writes -80 for silence and it round-trips. (-80, -79)
+    // goes uncaught, which under-reports rather than rejects a kept value.
     min: -80,
     max: 24,
     enforced: { min: 'video_stream_player.cpp:421' },
@@ -59,10 +51,9 @@ validatorRegistry.registerAll('VideoStreamPlayer', {
   expand: v.boolean('expand'),
   loop: v.boolean('loop'),
 
-  // Variant::STRING_NAME with an EMPTY PROPERTY_HINT_ENUM string
-  // (video_stream_player.cpp:585); _validate_property fills the choices from the
-  // live AudioServer, editor-side only (video_stream_player.cpp:510-521). The bus
-  // layout lives outside the scene, so this checks the literal and nothing else.
+  // Variant::STRING_NAME with an empty PROPERTY_HINT_ENUM (video_stream_player.cpp:585).
+  // _validate_property fills the choices from the live AudioServer in the editor only
+  // (video_stream_player.cpp:510-521), so this checks the literal alone.
   bus: v.stringName('bus'),
 
   // PROPERTY_HINT_RESOURCE_TYPE "VideoStream" (video_stream_player.cpp:574): a

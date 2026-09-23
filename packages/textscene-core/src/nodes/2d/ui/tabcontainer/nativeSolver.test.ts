@@ -150,8 +150,8 @@ describe('tabContainerMinimumSize', () => {
     const narrow = page('Narrow', { visible: false, customMinimumSize: { x: 10, y: 10 } });
     const n = tabContainer('T', { tabsVisible: false }, [narrow, wide]);
     const size = tabContainerMinimumSize(n, ctx());
-    // tabsVisible: false, so the ENTIRE header contribution is skipped —
-    // only the visible page's own minimum (`Wide`'s customMinimumSize) floors it.
+    // tabsVisible: false skips the whole header, so only the visible page's
+    // minimum (`Wide`'s customMinimumSize) floors it.
     expect(size).toEqual({ x: 300, y: 10 });
   });
 
@@ -168,8 +168,8 @@ describe('tabContainerMinimumSize', () => {
     const n = tabContainer('T', { tabsVisible: true }, [p]);
     const size = tabContainerMinimumSize(n, ctx());
     // The bar's own minimum height comes from its tab_selected/unselected
-    // style margins (tabbar/nativeSolver.test.ts covers the exact numbers);
-    // here only the ORDERING matters: taller than the bare page minimum.
+    // style margins (tabbar/nativeSolver.test.ts covers the numbers). Here only
+    // the ordering matters: taller than the bare page minimum.
     expect(size.y).toBeGreaterThan(10);
   });
 
@@ -240,7 +240,7 @@ describe('tabBarRect with an authored tabbar_background margin', () => {
 
   it('swaps the left and right margins, then mirrors the whole bar (tab_container.cpp:412, control.cpp:1785-1787)', () => {
     // Swapped: offset_left = 30 + 8 = 38, offset_right = -10 -> unmirrored x 38,
-    // w 352; mirrored x = 400 - 38 - 352 = 10. The AUTHORED left margin stays on
+    // w 352; mirrored x = 400 - 38 - 352 = 10. The authored left margin stays on
     // the left; side_margin is what moves to the trailing edge.
     expect(tabBarRect(RECT, 24, TABS_POSITION_TOP, TAB_ALIGNMENT_LEFT, 8, TABBAR_MARGIN, true)).toEqual({
       x: 10,
@@ -371,11 +371,9 @@ describe('the page band under RTL', () => {
 });
 
 describe('buildInternalTabBarNode — the theme items TabContainer pushes onto its bar', () => {
-  // `_on_theme_changed` resolves `tab_font`/`tab_font_size` on the CONTAINER
-  // (`tab_container.cpp:1264-1265` bind them under the item names "font" and
-  // "font_size") and pushes both onto the internal bar as that bar's own
-  // overrides (`tab_container.cpp:338-339`). The bar therefore never runs its
-  // own `TabBar` type chain for either.
+  // `_on_theme_changed` resolves `tab_font`/`tab_font_size` on the container (bound as "font"
+  // and "font_size", `tab_container.cpp:1264-1265`) and pushes both onto the internal bar as
+  // overrides (`tab_container.cpp:338-339`), so the bar never runs its `TabBar` type chain.
   const THEME = nativeTheme(1);
 
   function themeResource(overrides: Partial<ThemeResource>): ThemeResource {

@@ -1,5 +1,3 @@
-/**
- * vflowcontainer linter registration - imports linter components to trigger self-registration.
- */
+/** VFlowContainer linter registration: importing the modules registers them. */
 
 import './linterParser.js';

@@ -1,8 +1,9 @@
 /**
- * `texturebutton/nativeSolver.ts` vs Godot 4.6.3 (`scene/gui/texture_button.cpp`).
- * Expected numbers are hand-derived from the source, not recomputed the way
- * the implementation itself computes them.
+ * `texturebutton/nativeSolver.ts` against Godot 4.6.3 (`scene/gui/texture_button.cpp`).
+ * Expected numbers are hand-derived from the source, not recomputed the way the
+ * implementation computes them.
  */
+
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';

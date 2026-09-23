@@ -1,4 +1,4 @@
-/** VScrollBar registration — parser. */
+/** VScrollBar registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseVScrollBar } from './parser';

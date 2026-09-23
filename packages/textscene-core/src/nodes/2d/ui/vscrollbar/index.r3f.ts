@@ -1,7 +1,6 @@
 /**
- * VScrollBar registration — the native (WebGL canvas) rect solve + painter.
- * `./nativeSolver` registers the minimum-size function as a side effect of
- * import.
+ * VScrollBar registration: the native (WebGL canvas) painter and rect solver.
+ * Importing `./nativeSolver` registers the minimum-size function.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

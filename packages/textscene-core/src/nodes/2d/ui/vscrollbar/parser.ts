@@ -1,7 +1,6 @@
 /**
- * VScrollBar parser — delegates to the shared ScrollBar base (Control +
- * Range + `custom_step`). VScrollBar adds no properties of its own; only the
- * draw axis differs, which is the Component's business.
+ * Parses a VScrollBar through the shared ScrollBar base (Control, Range and `custom_step`).
+ * VScrollBar adds no properties. Only the draw axis differs, and the Component handles it.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';
