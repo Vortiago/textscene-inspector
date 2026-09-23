@@ -1,5 +1,3 @@
-/**
- * backbuffercopy linter registration - imports linter components to trigger self-registration.
- */
+/** BackBufferCopy linter registration: importing the modules registers them. */
 
 import './linterParser.js';

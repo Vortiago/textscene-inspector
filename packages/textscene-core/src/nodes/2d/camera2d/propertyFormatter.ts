@@ -1,7 +1,4 @@
-/**
- * Camera2D property formatter — formats view-framing properties for the
- * details panel.
- */
+/** Camera2D property formatter: the view-framing properties for the details panel. */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import { Camera2DAnchorMode, type Camera2DProperties } from './types';

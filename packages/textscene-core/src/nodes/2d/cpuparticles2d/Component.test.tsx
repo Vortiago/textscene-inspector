@@ -1,10 +1,8 @@
 /**
- * CPUParticles2D render component tests.
- *
- * The emitter draws ONE merged geometry for the whole frozen pose, so what
- * these pin is that geometry: its vertex count (four per live particle), its
- * per-particle vertex colours, and the two cases that must draw nothing at all
- * — `emitting = false` and a texture that never resolved.
+ * CPUParticles2D render component. The emitter draws one merged geometry for the
+ * frozen pose, so these pin its vertex count (four per live particle), its vertex
+ * colours, and the two cases that draw nothing: `emitting = false` and a texture
+ * that never resolved.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -182,11 +180,9 @@ describe('<CPUParticles2D>', () => {
     );
     const without = await render(node({ amount: '16' }));
 
-    // Measure the NARROWEST quad, not the pose's bounding box. The box is set
-    // by whichever particle reaches furthest, and the curve leaves the youngest
-    // one at full scale — so a box-width comparison only sees the curve when an
-    // old particle happens to sit at the edge, which is a property of the seed
-    // rather than of the curve.
+    // The narrowest quad, not the pose's bounding box: the furthest particle sets
+    // the box, and the curve leaves the youngest one at full scale, so the box
+    // sees the curve only when the seed puts an old particle at the edge.
     const narrowestQuad = (r: Rendered): number => {
       const position = particleMesh(r)!.geometry.getAttribute('position');
       let narrowest = Infinity;
@@ -236,9 +232,8 @@ describe('<CPUParticles2D>', () => {
   });
 
   it('cuts the quad to one flipbook cell when the material animates particles', async () => {
-    // The isometric candle's Fire emitter carries exactly this material. Without
-    // the flipbook each particle draws the WHOLE 11-frame strip, so the candle
-    // renders as a row of eleven flames rather than one.
+    // Without the flipbook each particle draws the whole 11-frame strip, a row of
+    // eleven flames instead of one.
     const material: TscnInternalResource = {
       type: 'CanvasItemMaterial',
       id: '1',
@@ -266,7 +261,7 @@ describe('<CPUParticles2D>', () => {
 
   it('renders nothing rather than an empty draw call for an emitter with no live particles', async () => {
     // A one_shot emitter whose burst has already expired leaves no particle
-    // active; the pose is empty and no mesh should exist.
+    // active. The pose is empty and no mesh should exist.
     const renderer = await render(
       node({ one_shot: 'true', lifetime: '0.1', preprocess: '5.0', amount: '4' })
     );

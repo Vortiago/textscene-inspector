@@ -1,15 +1,8 @@
 /**
- * <Camera2D> — a Node2D that defines the 2D view. Renders no geometry; it
- * positions its children via the 2D transform and tags its group with
- * `userData.camera2d`, the camera's whole parsed framing surface, so a consumer
- * holding the Object3D can frame a view on it without re-reading the scene.
- *
- * The tag carries no position: the group IS the camera, so a consumer reads the
- * position off its world matrix (`getWorldPosition`), which resolves an
- * instanced sub-scene's transform for free.
- *
- * A sub-viewport's 2D pass is the consumer (`selectViewportCamera2D`); the main
- * 2D stage still frames fit-to-content (ADR-0006).
+ * <Camera2D> renders no geometry. It tags its group with `userData.camera2d`, the
+ * parsed framing properties, for a sub-viewport's 2D pass (`selectViewportCamera2D`),
+ * which reads the position off the group's world matrix. The main 2D stage frames
+ * fit-to-content (ADR-0006).
  */
 
 import { useMemo } from 'react';

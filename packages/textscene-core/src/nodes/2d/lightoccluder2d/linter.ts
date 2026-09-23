@@ -1,24 +1,8 @@
 /**
- * Semantic linter rule for LightOccluder2D, from Godot's own configuration
- * warning, `LightOccluder2D::get_configuration_warnings()`
- * (light_occluder_2d.cpp:265-278):
- *
- *     if (occluder_polygon.is_null()) {
- *         warnings.push_back(RTR("An occluder polygon must be set (or drawn) for this occluder to take effect."));
- *     }
- *     if (occluder_polygon.is_valid() && occluder_polygon->get_polygon().is_empty()) {
- *         warnings.push_back(RTR("The occluder polygon for this occluder is empty. Please draw a polygon."));
- *     }
- *
- * The property is `occluder` (`ADD_PROPERTY(PropertyInfo(Variant::OBJECT,
- * "occluder", PROPERTY_HINT_RESOURCE_TYPE, "OccluderPolygon2D"), ...)`,
- * light_occluder_2d.cpp:298) — a resource reference that defaults to null and
- * is genuinely absent from a `.tscn` whenever unset, so an absent key IS the
- * trigger, unlike the properties this repo declines as `default-omitted`.
- *
- * The second warning (an occluder set, but its OWN polygon array empty) needs
- * the referenced `OccluderPolygon2D` resource's `polygon` VALUE, which is
- * runtime/resource content this linter does not resolve — out of scope here.
+ * Semantic linter rule for LightOccluder2D, ported from the first arm of
+ * `LightOccluder2D::get_configuration_warnings()` (light_occluder_2d.cpp:265-278):
+ * a null `occluder` (light_occluder_2d.cpp:298), which an absent key is. The empty
+ * polygon arm needs the resource's `polygon` value, which this linter does not resolve.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';

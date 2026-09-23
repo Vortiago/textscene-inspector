@@ -1,17 +1,8 @@
 /**
- * No two modules in a directory may differ only by case.
- *
- * This has bitten twice: `previewLighting.ts` beside `PreviewLighting.tsx`,
- * and `godotEditorControls.ts` beside `GodotEditorControls.tsx`. Both compile,
- * both type-check, both pass the unit suite and the visual gate — and both
- * break only when esbuild bundles the VS Code host, where the pure module's
- * specifier resolves to the component instead and every named import from it
- * disappears at once.
- *
- * A component and the pure module behind it naturally want the same name, so
- * the collision is easy to reach and expensive to diagnose from the error it
- * produces ("No matching export ..." pointing at the wrong file). Catch it in
- * the fast suite instead.
+ * No two modules in a directory may differ only by case. Such a pair compiles and
+ * passes every gate, but esbuild's VS Code host bundle resolves the pure module's
+ * specifier to the component, and every named import from it fails with
+ * "No matching export" pointing at the wrong file.
  */
 import { describe, expect, it } from 'vitest';
 import { readdirSync, statSync } from 'node:fs';

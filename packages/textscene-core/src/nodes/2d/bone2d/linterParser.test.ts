@@ -1,16 +1,8 @@
 /**
- * Bone2D strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it.
- *
- * The load-bearing case here is `bone_angle`. Godot hints it `"-360, 360, 0.01"`
- * with no `radians_as_degrees` token, and `_set`/`_get` convert
- * (`skeleton_2d.cpp:47` `deg_to_rad` in, `:69` `rad_to_deg` out), so the value a
- * `.tscn` carries is DEGREES and the hint bound applies to it unconverted. A
- * radians bound would reject `bone_angle = 70.3277`, which Godot itself wrote.
+ * Bone2D strict validators: format and range checks, asserted through
+ * `validatorRegistry`. `bone_angle` is stored in degrees: `_set`/`_get` convert
+ * (`skeleton_2d.cpp:47` `deg_to_rad` in, `:69` `rad_to_deg` out), so the hint
+ * `"-360, 360, 0.01"` applies unconverted and Godot's own `70.3277` passes.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -26,15 +18,10 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * Bone2D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
- *
- * Two routes, not one: `rest` is the single ADD_PROPERTY (skeleton_2d.cpp:380),
- * and the other four arrive through the hand-rolled `_get_property_list`
- * (`:86`, `:88`, `:89`, `:93`). `default_length`, the legacy alias for `length`
- * reached only through `_set`/`_get` (`:48-49`, `:70-71`), is resolved by
- * `godot/deprecated.ts` and registers nothing.
+ * The keys Bone2D binds, read from the source. `rest` is the one ADD_PROPERTY
+ * (skeleton_2d.cpp:380), and the other four come from `_get_property_list` (`:86`,
+ * `:88`, `:89`, `:93`). `default_length` (`:48-49`, `:70-71`) is an alias that
+ * `godot/deprecated.ts` resolves.
  */
 const KEYS: string[] = [
   'rest',
@@ -43,7 +30,7 @@ const KEYS: string[] = [
   'bone_angle',
   'editor_settings/show_bone_gizmo',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, with the source line that proves it. */
 const DECLARES_NOTHING = false;
 
 describe('Bone2D strict validators', () => {
@@ -56,16 +43,13 @@ describe('Bone2D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run against what this
+    // test imported. `fixtureLint` owns the whole-registry version through the barrel.
     expectFixtureClean('unit-bone-2d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format.
     const accepted = validatorRegistry
       .getOwnKeys('Bone2D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -79,10 +63,9 @@ describe('Bone2D strict validators', () => {
     });
 
     it('accepts the degenerate all-zero default', () => {
-      // doc/classes/Bone2D.xml gives `Transform2D(0, 0, 0, 0, 0, 0)` as the
-      // default. Godot's own configuration warning calls that "no proper REST
-      // pose" (skeleton_2d.cpp:424), but the setter stores it unaltered and it
-      // is what an untouched bone serialises, so the linter must not reject it.
+      // doc/classes/Bone2D.xml gives `Transform2D(0, 0, 0, 0, 0, 0)` as the default.
+      // The configuration warning calls it "no proper REST pose" (skeleton_2d.cpp:424),
+      // but the setter stores it unaltered, so the validator accepts it.
       expect(check('rest', 'Transform2D(0, 0, 0, 0, 0, 0)')).toBeNull();
     });
 
@@ -130,7 +113,7 @@ describe('Bone2D strict validators', () => {
 
     it('accepts nan, a literal Godot writes and reloads', () => {
       // No `ERR_FAIL_COND(!is_finite(...))` in set_length (skeleton_2d.cpp:463),
-      // so the finite guard does not apply; every comparison against nan is
+      // so the finite guard does not apply. Every comparison against nan is
       // false, so no bound fires either.
       expect(check('length', 'nan')).toBeNull();
     });
@@ -138,9 +121,8 @@ describe('Bone2D strict validators', () => {
 
   describe('bone_angle', () => {
     it.each(['70.3277', '-2.49648'])('accepts the DEGREE value %s that Godot serialised', (value) => {
-      // Straight out of the vendored player skeleton. Both are stored degrees;
-      // 70.3277 is 11 full turns as radians, so a radians bound would reject a
-      // file the engine wrote.
+      // Both are stored degrees. 70.3277 is 11 full turns as radians, so a radians
+      // bound would reject a file the engine wrote.
       expect(check('bone_angle', value)).toBeNull();
     });
 
@@ -149,7 +131,7 @@ describe('Bone2D strict validators', () => {
     });
 
     it.each(['-360.5', '360.5'])('warns rather than errors outside the hint (%s)', (value) => {
-      // skeleton_2d.cpp:89 hints "-360, 360, 0.01"; set_bone_angle (:475-481)
+      // skeleton_2d.cpp:89 hints "-360, 360, 0.01". set_bone_angle (:475-481)
       // assigns straight through, so out of range is the widget's complaint.
       const error = check('bone_angle', value);
       expect(error?.severity).toBe('warning');
@@ -176,8 +158,8 @@ describe('Bone2D strict validators', () => {
 
   describe('the base walk', () => {
     it('resolves Node2D and CanvasItem keys without Bone2D re-declaring them', () => {
-      // Both directions on purpose: a one-sided "it resolves" assertion still
-      // passes when the key was shadowed by a duplicate registration here.
+      // Both directions: a one-sided "it resolves" assertion still passes when a
+      // duplicate registration here shadows the key.
       for (const inherited of ['position', 'rotation', 'visible', 'z_index']) {
         expect(
           validatorRegistry.findValidator('Bone2D', inherited),

@@ -1,4 +1,4 @@
-/** Camera2D — defines the 2D view framing (extends Node2D). */
+/** Camera2D defines the 2D view framing (extends Node2D). */
 
 import type { Node2DProperties, Vector2 } from '../../base/node2d/types';
 
@@ -9,15 +9,15 @@ export const Camera2DAnchorMode = {
 } as const;
 
 export interface Camera2DProperties extends Node2DProperties {
-  /** View magnification (higher = more zoomed in); default (1, 1). */
+  /** View magnification (higher = more zoomed in). Default (1, 1). */
   zoom: Vector2;
   /** Pixel offset of the view from the camera's position. */
   offset: Vector2;
   /** 0 = FIXED_TOP_LEFT, 1 = DRAG_CENTER (Godot default). */
   anchor_mode: number;
   /**
-   * Scroll limits in canvas pixels. Godot's defaults are +/-10000000 — large
-   * enough to be "unlimited" in practice, but real values in real scenes.
+   * Scroll limits in canvas pixels. Godot's defaults are +/-10000000: unlimited in
+   * practice, but real values.
    */
   limitLeft: number;
   limitTop: number;

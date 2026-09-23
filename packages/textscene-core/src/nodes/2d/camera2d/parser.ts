@@ -1,7 +1,6 @@
 /**
- * Camera2D parser — Node2D transform + the framing surface (zoom, offset,
- * anchor_mode, enabled). Defaults follow Godot: zoom (1,1), anchor_mode
- * DRAG_CENTER (1), enabled true.
+ * Camera2D parser: the Node2D transform and the framing properties. Defaults
+ * follow Godot: zoom (1,1), anchor_mode DRAG_CENTER (1), enabled true.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

@@ -117,7 +117,7 @@ describe('parseCPUParticles2D', () => {
   });
 
   it('falls back to Index for an out-of-range `draw_order` (error path)', () => {
-    // The Godot 2D platformer demo ships `draw_order = 215832976`.
+    // Godot writes and reads `draw_order = 215832976`.
     const result = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), {
       draw_order: '215832976',
     });

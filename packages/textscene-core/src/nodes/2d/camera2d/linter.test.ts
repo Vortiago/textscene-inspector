@@ -1,6 +1,4 @@
-/**
- * Tests for Camera2D linter (strict parser + semantic rules)
- */
+/** Camera2D linter: strict parser and semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -68,7 +66,7 @@ describe('Camera2D Linter', () => {
       {
         // camera_2d.cpp:103-105: set_zoom only rejects a (near-)zero component
         // ("Zoom level must be different from 0 (can be negative)."), so a
-        // negative zoom is legal — it flips the view.
+        // negative zoom is legal: it flips the view.
         prop: 'zoom',
         valid: ['Vector2(2, 2)', 'Vector2(0.5, 0.5)', 'Vector2(1, -1)', 'Vector2(-2, -2)'],
         invalid: [
@@ -93,9 +91,8 @@ describe('Camera2D Linter', () => {
         invalid: [{ value: 'invalid', contains: ['limit_left', 'must be a number'] }],
       },
       {
-        // A fractional limit LOADS — the INT conversion truncates it — but the
-        // stored value is not the written one, so it draws the truncation
-        // warning and is not a clean example.
+        // A fractional limit loads, since the INT conversion truncates it, but the
+        // stored value is not the written one, so it draws the truncation warning.
         prop: 'limit_top',
         valid: [-500, 10],
       },
@@ -116,8 +113,8 @@ describe('Camera2D Linter', () => {
       },
       {
         // camera_2d.cpp:703: set_position_smoothing_speed does
-        // `position_smoothing_speed = MAX(0, p_speed)` — 0 is a legal value
-        // (it disables smoothing), only negative is out of range.
+        // `position_smoothing_speed = MAX(0, p_speed)`. 0 is legal (it disables
+        // smoothing), and only a negative speed is out of range.
         prop: 'position_smoothing_speed',
         valid: [10, 0],
         invalid: [
@@ -132,7 +129,7 @@ describe('Camera2D Linter', () => {
       },
       {
         // camera_2d.cpp:715: set_rotation_smoothing_speed does the same
-        // `MAX(0, p_speed)` clamp — 0 is legal, only negative is out of range.
+        // `MAX(0, p_speed)` clamp: 0 is legal, and only negative is out of range.
         prop: 'rotation_smoothing_speed',
         valid: [10, 0],
         invalid: [{ value: '-5.0', contains: ['rotation_smoothing_speed', 'non-negative'] }],
@@ -236,8 +233,8 @@ describe('Camera2D Linter', () => {
 
   describe('Semantic Validation', () => {
     describe('multiple enabled cameras', () => {
-      // TSCN allows only one parentless root node; sibling cameras must hang
-      // off the root via parent="." for buildSceneTree to keep them.
+      // TSCN allows only one parentless root node, so sibling cameras hang off
+      // the root through parent="." for buildSceneTree to keep them.
 
       it('reports when multiple Camera2D nodes are enabled', () => {
         expectDiagnostic(
@@ -286,9 +283,8 @@ describe('Camera2D Linter', () => {
       });
 
       // ConfirmationDialog -> AcceptDialog -> Window -> Viewport: the scope comes
-      // off the base chain, so a subclass three hops down scopes without being
-      // named. Its own cameras still contend, which is what tells this apart from
-      // a type the walk declined to classify.
+      // off the base chain, so a subclass three hops down scopes unnamed. Its own
+      // cameras still contend, unlike under a type the walk declined to classify.
       it('reports nothing across a ConfirmationDialog, three hops below Viewport', () => {
         expectNoDiagnostic(
           scene(
@@ -376,8 +372,8 @@ describe('Camera2D Linter', () => {
 
     describe('position smoothing diagnostics', () => {
       it('reports when position_smoothing_speed is zero, the value Godot keeps', () => {
-        // MAX(0, 0) is 0, so nothing is refused or altered; what the zero does
-        // is make the interpolation factor zero (camera_2d.cpp:199-200).
+        // MAX(0, 0) is 0, so nothing is refused or altered. The zero makes the
+        // interpolation factor zero (camera_2d.cpp:199-200).
         expectDiagnostic(scene(node('Camera2D', { position_smoothing_enabled: true, position_smoothing_speed: 0 })), {
           ruleName: 'camera2d-smoothing-speed-zero',
           severity: 'info',
@@ -385,11 +381,9 @@ describe('Camera2D Linter', () => {
         });
       });
 
-      // A negative speed is the VALIDATOR's job, not this rule's: `MAX(0, p_speed)`
-      // refuses it and `v.nonNegativeFloat(…, { enforced: 'camera_2d.cpp:703' })`
-      // already reports that at the same tier from the same line. A rule beside it
-      // reported the one value twice, and read it with `parseFloat`, which returns
-      // NaN for the `-inf` Godot writes and reloads.
+      // A negative speed is the validator's job: `MAX(0, p_speed)` refuses it, and
+      // `v.nonNegativeFloat(…, { enforced: 'camera_2d.cpp:703' })` reports it at the
+      // same tier. A rule beside it would report the value twice.
       it.each([-4, '-inf', 'inf_neg'])(
         'errors exactly once on position_smoothing_speed %s, from the validator',
         (speed) => {
@@ -564,7 +558,7 @@ describe('Camera2D Linter — the tokenizer float grammar', () => {
     expectClean(scene(node('Camera2D', { zoom: 'Vector2(0.5, 2.)' })));
   });
 
-  // camera_2d.cpp:102-105 fails only on `is_zero_approx`, i.e. `abs(v) <
+  // camera_2d.cpp:102-105 fails only on `is_zero_approx`, that is `abs(v) <
   // CMP_EPSILON`, which no non-finite component satisfies, so Godot assigns them.
   it('accepts a non-finite zoom component, which Godot stores as written', () => {
     expectClean(scene(node('Camera2D', { zoom: 'Vector2(inf, inf_neg)' })));

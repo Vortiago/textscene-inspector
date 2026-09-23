@@ -51,9 +51,8 @@ describe('parseCamera2D', () => {
   });
 
   it('offset parses an explicit non-default (fractional) value', () => {
-    // offset's default is {0,0}; a non-zero value distinguishes the parse path
-    // from the fallback (a zero offset collides with the default and pins nothing —
-    // the shared vec2Or zero-vector path is already covered by the zoom-zero case).
+    // offset's default is {0,0}, so a non-zero value tells the parse path from the
+    // fallback. The zoom-zero case covers the shared vec2Or zero-vector path.
     const p = parseCamera2D(heading('Camera2D', { name: 'Cam' }), {
       offset: 'Vector2(12.5, -7.25)',
     });
@@ -75,8 +74,8 @@ describe('parseCamera2D', () => {
   });
 
   it('malformed anchor_mode falls back to DRAG_CENTER (1)', () => {
-    // intOr warn-then-fallback: a present-but-unparseable value must not
-    // silently become NaN — it falls back to the Godot default (1).
+    // intOr warn-then-fallback: a present but unparseable value falls back to the
+    // Godot default (1), never NaN.
     const p = parseCamera2D(heading('Camera2D', { name: 'Cam' }), { anchor_mode: 'garbage' });
     expect(p.anchor_mode).toBe(1);
   });

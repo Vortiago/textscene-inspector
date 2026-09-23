@@ -1,13 +1,7 @@
 /**
- * NavigationAgent2D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * NavigationAgent2D strict validators: format and range checks, asserted through
+ * `validatorRegistry` so a failure points at the validator, not at scene parsing.
+ * Each numeric bound quotes its governing Godot source line.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -20,9 +14,9 @@ import './linterParser';
 const check = checkerFor('NavigationAgent2D');
 
 /**
- * Every key NavigationAgent2D binds via `ADD_PROPERTY`
+ * Every key NavigationAgent2D binds through `ADD_PROPERTY`
  * (navigation_agent_2d.cpp:143-188). None carries `overrides=` in
- * doc/classes/NavigationAgent2D.xml, so all 30 get a validator here.
+ * doc/classes/NavigationAgent2D.xml, so each gets a validator here.
  */
 const KEYS: string[] = [
   'target_position',
@@ -56,12 +50,12 @@ const KEYS: string[] = [
   'debug_path_custom_point_size',
   'debug_path_custom_line_width',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, with the source line that proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys NavigationAgent2D does NOT declare, each paired with the ancestor that does.
- * NavigationAgent2D's base is plain `Node` (nodeBaseTypes.generated.ts:145).
+ * Keys NavigationAgent2D does not declare, each paired with the ancestor that
+ * does. Its base is plain `Node` (nodeBaseTypes.generated.ts).
  */
 const INHERITED: [owner: string, key: string][] = [
   ['Node', 'process_mode'],
@@ -79,17 +73,14 @@ describe('NavigationAgent2D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run against what this
+    // test imported. `fixtureLint` owns the whole-registry version through the barrel.
     expectFixtureClean('unit-navigation-agent-2d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // NavigationAgent2D declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose validates no format. This check is
+    // vacuous when NavigationAgent2D declares nothing, which INHERITED covers.
     const accepted = validatorRegistry
       .getOwnKeys('NavigationAgent2D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -104,8 +95,8 @@ describe('NavigationAgent2D strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
-      // NavigationAgent2D would answer here while drifting from the ancestor's rule.
+      // The same function, not merely some validator: a shadowing copy on
+      // NavigationAgent2D would answer here and could disagree with the ancestor.
       expect(validatorRegistry.findValidator('NavigationAgent2D', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('NavigationAgent2D')).not.toContain(key);
     }

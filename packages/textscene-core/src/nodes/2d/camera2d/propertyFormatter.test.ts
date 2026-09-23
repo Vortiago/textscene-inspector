@@ -1,6 +1,4 @@
-/**
- * Tests for the Camera2D property formatter.
- */
+/** The Camera2D property formatter. */
 
 import { describe, it, expect } from 'vitest';
 import { formatCamera2DProperties } from './propertyFormatter';

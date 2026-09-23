@@ -1,6 +1,6 @@
 /**
- * LightOccluder2D linter tests — `LightOccluder2D::get_configuration_warnings()`
- * (light_occluder_2d.cpp:265-271): an absent `occluder` polygon is inert.
+ * LightOccluder2D linter: `LightOccluder2D::get_configuration_warnings()`
+ * (light_occluder_2d.cpp:265-271). An absent `occluder` polygon is inert.
  */
 import { describe, it, expect } from 'vitest';
 import { node, scene, lint, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';

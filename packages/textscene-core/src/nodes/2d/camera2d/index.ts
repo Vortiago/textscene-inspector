@@ -1,4 +1,4 @@
-/** Camera2D registration — parser + formatter. */
+/** Camera2D registration: parser and formatter. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseCamera2D } from './parser';

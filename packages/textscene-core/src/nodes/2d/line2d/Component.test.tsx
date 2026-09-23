@@ -1,10 +1,7 @@
 /**
- * RED contract for the <Line2D> R3F component. Pins the OBSERVABLE
- * behaviour without dictating the drawing primitive (the plan proposes whether
- * the polyline is a THREE.Line or a width-aware mesh): a valid multi-point line
- * draws a primitive carrying geometry, coloured by `default_color`, Y-negated
- * into the Godot +Y-down → three frame; a degenerate (< 2 point) line draws
- * nothing but keeps the CanvasItem2D group. Mirrors the Polygon2D component test.
+ * The <Line2D> R3F component, whatever its drawing primitive. A multi-point line
+ * draws geometry coloured by `default_color` and Y-negated into three's frame. A
+ * line of fewer than 2 points draws nothing but keeps the CanvasItem2D group.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -42,10 +39,9 @@ describe('<Line2D>', () => {
   });
 
   it('strokes each segment as a FULL quad (two triangles), not a half-ribbon', async () => {
-    // 3 points → 2 segments. A width-respecting stroke makes each segment a
-    // 4-vertex quad = 2 triangles. A non-indexed 4-vertex quad would draw only
-    // ONE triangle (a diagonal half-ribbon) — the exact defect this pins: the
-    // bbox/colour assertions alone are satisfied by broken triangle topology.
+    // 3 points → 2 segments, each a 4-vertex quad of 2 triangles. A non-indexed
+    // quad draws one triangle, a half-ribbon, which the bounding-box and colour
+    // assertions alone would accept.
     const renderer = await render(
       node({ points: 'PackedVector2Array(0, 0, 100, 0, 100, 100)', width: '20.0' })
     );

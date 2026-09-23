@@ -1,5 +1,5 @@
 /**
- * DirectionalLight2D draws nothing here YET — the badge reads "not implemented". The
+ * DirectionalLight2D draws nothing yet, and the badge reads "not implemented". The
  * Node2D base still mounts, for `visible` and the workspace split.
  */
 

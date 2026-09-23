@@ -1,5 +1,3 @@
-/**
- * canvasmodulate linter registration — validators only (no semantic linter.ts).
- */
+/** CanvasModulate linter registration: validators only, with no semantic linter.ts. */
 
 import './linterParser.js';

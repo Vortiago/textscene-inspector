@@ -1,12 +1,7 @@
 /**
- * Semantic rules for CPUParticles2D — the one setting whose result the
- * previewer's frozen pose cannot reproduce.
- *
- * Both are advisory: each is legal Godot that renders fine in the engine, and
- * the report exists because the divergence is otherwise invisible — the
- * emitter still draws particles, just not in the places the property asks for.
- *
- * Format validation lives in linterParser.ts.
+ * Semantic rules for CPUParticles2D: the two settings whose result the frozen pose
+ * cannot reproduce. Both are advisory, as each is legal Godot, and the emitter
+ * still draws particles, only not where the property puts them.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -15,17 +10,10 @@ import { isValidProperties } from '../../../linter/linterUtils.js';
 import { ruleInt, boolSlotValue} from '../../../godot/index.js';
 
 /**
- * The EMISSION_SHAPE_* ordinals whose positions come from Godot's process-wide
- * RNG rather than the per-particle one (`cpu_particles_2d.cpp:936`
- * `Math::rand()` for POINTS/DIRECTED_POINTS, `:953` and `:956` `Math::randf()`
- * for RING; the enum is at `:1586`, PROPERTY_HINT_ENUM
- * "Point,Sphere,Sphere Surface,Rectangle,Points,Directed Points,Ring"). That
- * RNG is never serialised, so the layout differs between two runs of Godot
- * itself — there is no pose a static previewer could match.
- *
- * Keyed by the stored INT, not by the file's text: the slot is Variant::INT, so
- * `4.0` and `4e0` are FLOAT tokens the write truncates to 4 and `+4` is the
- * same 4, and all three name a shape the preview cannot place.
+ * The EMISSION_SHAPE_* ordinals (enum at `cpu_particles_2d.cpp:1586`) placed by
+ * Godot's unsaved process-wide RNG: `Math::rand()` for POINTS/DIRECTED_POINTS
+ * (`cpu_particles_2d.cpp:936`) and `Math::randf()` for RING (`:953`, `:956`). Two
+ * runs of Godot itself differ, so no static pose can match.
  */
 const GLOBAL_RNG_SHAPES = new Map<number, string>([
   [4, 'POINTS'],
@@ -40,8 +28,8 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   const props = node.properties as Record<string, string>;
   const diagnostics: Diagnostic[] = [];
 
-  // A Map keyed by the stored int, so a value the engine converts is read the
-  // way the engine reads it and no prototype key can be reached from the file.
+  // Keyed by the stored int, so `4.0` and `4e0`, FLOAT tokens the write truncates
+  // to 4, read as the engine reads them. A Map reaches no prototype key.
   const shape = ruleInt(props.emission_shape);
   const shapeName = shape === null ? undefined : GLOBAL_RNG_SHAPES.get(shape);
   if (shapeName) {
@@ -54,8 +42,8 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Godot's default is TRUE, so only an explicit setting is worth reporting —
-  // reporting on every emitter that omits the property would say nothing.
+  // Godot's default is true, so only an explicit setting is reported: a report on
+  // every emitter that omits the property would say nothing.
   if (boolSlotValue(props.fract_delta) === true) {
     diagnostics.push({
       severity: 'info',

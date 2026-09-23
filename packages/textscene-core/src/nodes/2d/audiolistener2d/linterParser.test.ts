@@ -1,14 +1,8 @@
 /**
- * AudioListener2D strict validators — format checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing.
- *
- * The interesting case for this slice is that a class with an empty class
- * reference and zero ADD_PROPERTY still serialises a property. Reading either
- * of those alone concludes "nothing to validate", and that conclusion held here
- * long enough to be written into an allowlist.
+ * AudioListener2D strict validators: format checks, asserted through
+ * `validatorRegistry` so a failure points at the validator, not at scene parsing.
+ * The class has an empty class reference and no ADD_PROPERTY, yet it serialises a
+ * property.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -30,7 +24,7 @@ function check(property: string, value: string) {
  */
 const KEYS: string[] = ['current'];
 
-/** Keys AudioListener2D does NOT declare, paired with the ancestor that does. */
+/** Keys AudioListener2D does not declare, paired with the ancestor that does. */
 const INHERITED: [owner: string, key: string][] = [['Node2D', 'position']];
 
 describe('AudioListener2D strict validators', () => {
@@ -53,8 +47,8 @@ describe('AudioListener2D strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
-      // AudioListener2D would answer here while drifting from the ancestor's rule.
+      // The same function, not merely some validator: a shadowing copy on
+      // AudioListener2D would answer here and could disagree with the ancestor.
       expect(validatorRegistry.findValidator('AudioListener2D', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('AudioListener2D')).not.toContain(key);
     }

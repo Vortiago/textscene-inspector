@@ -1,27 +1,15 @@
 /**
- * The three random sources CPUParticles2D draws from, ported bit-exactly.
+ * The three random sources CPUParticles2D draws from, ported bit-exactly: the
+ * frozen pose is one specific draw from the stream, so a uniform substitute puts
+ * the sparks in the wrong places.
  *
- * Bit-exactness is not perfectionism here: the particle distribution IS the
- * visual. A merely uniform substitute puts the same number of sparks in the
- * same box but not in Godot's places, and the frozen pose we render is one
- * specific draw from the stream rather than a time-average of it.
- *
- * The three sources are genuinely different generators and are used at
- * different moments:
- *
- *  - `GodotRandomPCG` — the `RandomNumberGenerator` re-seeded per particle at
- *    birth (`cpu_particles_2d.cpp:922`). Everything decided once per particle
- *    (angle, scale, hue, emission-shape offset, initial velocity) comes from it.
- *  - `randFromSeed` — a Park–Miller/Lehmer generator threaded through the
- *    per-frame update (`cpu_particles_2d.cpp:1072-1109`), advancing a local
- *    copy of the particle's seed on every draw.
- *  - `idhash` — an integer avalanche used only by `randomness_ratio` to jitter
+ *  - `GodotRandomPCG`: the `RandomNumberGenerator` re-seeded per particle at
+ *    birth (`cpu_particles_2d.cpp:922`), for everything decided once per particle.
+ *  - `randFromSeed`: a Park–Miller/Lehmer generator threaded through the
+ *    per-frame update (`cpu_particles_2d.cpp:1072-1109`).
+ *  - `idhash`: an integer avalanche that only `randomness_ratio` uses to jitter
  *    a particle's restart phase (`cpu_particles_2d.cpp:860`).
  *
- * `GodotRandomPCG` is checked against values printed by Godot 4.6.3 itself; see
- * `godotRng.test.ts`.
- *
- * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`core/math/random_pcg.h`,
  * `thirdparty/misc/pcg.cpp`, and `scene/2d/cpu_particles_2d.cpp`). The Godot
  * portions are used under the MIT licence:
@@ -51,7 +39,6 @@
  * The PCG algorithm itself (`pcg32_random_r` / `pcg32_srandom_r`) originates
  * with pcg-random.org and is Apache-2.0 licensed; Godot vendors it under
  * `thirdparty/misc/`. See THIRD-PARTY-NOTICES.md.
- * ---------------------------------------------------------------------------
  */
 
 const PCG_MULTIPLIER = 6364136223846793005n;
@@ -73,10 +60,9 @@ export class GodotRandomPCG {
   }
 
   /**
-   * `pcg32_srandom_r(&pcg, seed, DEFAULT_INC)`: start from zero state, step
-   * once, ADD the seed, step again. The two warm-up steps are what stop a
-   * small seed (Godot hands this a particle index) from producing a
-   * near-identical first draw for every neighbouring particle.
+   * `pcg32_srandom_r(&pcg, seed, DEFAULT_INC)`: start from zero state, step once,
+   * add the seed, step again. The two warm-up steps stop a small seed (a particle
+   * index) from giving neighbouring particles a near-identical first draw.
    */
   seed(seed: number | bigint): void {
     this.state = 0n;
@@ -86,21 +72,20 @@ export class GodotRandomPCG {
   }
 
   /**
-   * `RandomPCG::randf()` — NOT `rand() / 2^32`. Godot builds the float from
-   * TWO draws: the first supplies a binary exponent via its leading-zero count,
-   * the second the mantissa. Consuming one draw instead of two desynchronises
-   * every later value a particle reads.
+   * `RandomPCG::randf()`, not `rand() / 2^32`: Godot builds the float from two
+   * draws, the first giving a binary exponent through its leading-zero count and
+   * the second the mantissa. One draw would desynchronise every later value.
    */
   randf(): number {
     const protoExponent = this.step();
     if (protoExponent === 0) return 0;
     const significand = (this.step() | 0x80000001) >>> 0;
     // `std::ldexp((float)significand, -32 - CLZ32(proto))`. The float32 cast is
-    // observable — the significand carries 32 bits and a float keeps 24.
+    // observable: the significand carries 32 bits and a float keeps 24.
     return Math.fround(significand) * 2 ** (-32 - Math.clz32(protoExponent));
   }
 
-  /** `pcg32_random_r` — advance the state, return the XSH-RR output word. */
+  /** `pcg32_random_r`: advance the state, return the XSH-RR output word. */
   private step(): number {
     const old = this.state;
     this.state = (old * PCG_MULTIPLIER + (this.inc | 1n)) & UINT64_MASK;
@@ -116,7 +101,7 @@ export interface SeedRef {
 }
 
 /**
- * `rand_from_seed` (`cpu_particles_2d.cpp:694-707`) — a Park–Miller minimal
+ * `rand_from_seed` (`cpu_particles_2d.cpp:694-707`): a Park–Miller minimal
  * standard generator using Schrage's trick to stay inside 32-bit arithmetic.
  * Advances `state.value` in place and returns the new state scaled to 0..1.
  */
@@ -131,7 +116,7 @@ export function randFromSeed(state: SeedRef): number {
 }
 
 /**
- * `idhash` (`cpu_particles_2d.cpp:687-692`) — the xor-multiply avalanche
+ * `idhash` (`cpu_particles_2d.cpp:687-692`): the xor-multiply avalanche
  * `randomness_ratio` uses to scatter restart phases.
  */
 export function idhash(x: number): number {

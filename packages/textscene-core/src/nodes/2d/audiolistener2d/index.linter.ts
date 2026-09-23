@@ -1,6 +1,3 @@
-/**
- * audiolistener2d linter registration - imports the validators to trigger
- * self-registration.
- */
+/** AudioListener2D linter registration: importing the validators registers them. */
 
 import './linterParser.js';

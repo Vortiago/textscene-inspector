@@ -1,7 +1,6 @@
 /**
- * Line2D parser — Node2D transform/modulate plus the stroked-polyline surface
- * (points, width, default_color, closed flag). Godot defaults: color = white,
- * width = 10, closed = false.
+ * Line2D parser: the Node2D transform and modulate, and the polyline properties.
+ * Godot defaults: color = white, width = 10, closed = false.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

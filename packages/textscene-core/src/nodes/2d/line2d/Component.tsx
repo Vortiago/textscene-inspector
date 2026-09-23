@@ -1,8 +1,7 @@
 /**
- * <Line2D> — a stroked polyline drawn as mesh quads. Each segment (p0→p1)
- * becomes one quad whose vertices run perpendicular to the segment direction,
- * offset by width/2 on each side. Butt caps (no extension), simple overlapping
- * joints, Z = 0. No miter or round join for v1.
+ * <Line2D> draws a stroked polyline as mesh quads: each segment becomes one quad,
+ * offset by width/2 on each side, with butt caps and Z = 0. `lineJoints.ts` fills
+ * each interior corner.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -88,13 +87,10 @@ function LineMesh({
 
   const program = materialProgramInputs({
     props: { color: fill, opacity, transparent: true, depthWrite: false },
-    // The stroke is one of the meshes `canvasItemFacing()`'s single pass
-    // genuinely protects: `lineJoints.ts` picks a corner's outward normal from
-    // the SIGN of the turn, so a left wedge and a right wedge wind opposite ways
-    // while the segment quads between them all wind the same way. Split by
-    // facing, a polyline's wedges would be drawn in a different pass from the
-    // quads they fill between — invisible only because every triangle here
-    // carries the one flat colour above.
+    // `lineJoints.ts` picks a corner's outward normal from the sign of the turn,
+    // so left and right wedges wind opposite ways while the quads all wind alike.
+    // `canvasItemFacing()` draws them in one pass. A split by facing would draw the
+    // wedges apart from their quads, hidden only by the one flat colour.
     merge: [canvasItemFacing(), blend, lighting],
   });
 
@@ -107,13 +103,9 @@ function LineMesh({
 }
 
 /**
- * Build a poly-stroke `BufferGeometry` from the flat `[x0,y0,…]` outline.
- *
- * One quad per segment plus a JOINT WEDGE at every interior corner: the quads
- * are butt-capped and independent, so without the wedges the outside of each
- * corner is an empty pie slice and the line reads as a chain of bars. Godot has
- * no "no joint" mode (`joint_mode` defaults to LINE_JOINT_SHARP), so the wedge
- * is not optional — see `lineJoints.ts` for the three modes.
+ * A poly-stroke `BufferGeometry` from the flat `[x0,y0,…]` outline: one quad per
+ * segment and a joint wedge at every interior corner. Godot has no "no joint"
+ * mode, so the wedge always fills the pie-slice gap between butt-capped quads.
  */
 export function buildLineGeometry(
   points: Float32Array,
@@ -129,7 +121,7 @@ export function buildLineGeometry(
   const totalQuads = closed ? segs + 1 : segs;
   const positions = new Float32Array(totalQuads * 4 * 3);
   // Two triangles per quad (0,1,2 + 0,2,3). Without an index a 4-vertex quad
-  // renders as a SINGLE triangle (half the ribbon), so the stroke MUST be indexed.
+  // renders as one triangle, half the ribbon, so the stroke is indexed.
   const indices: number[] = [];
 
   for (let q = 0; q < totalQuads; q++) {
@@ -173,7 +165,7 @@ function jointWedges(
   const at = (i: number) => ({ x: points[i * 2]!, y: -points[i * 2 + 1]! });
 
   const out: number[] = [];
-  // Interior corners; a closed line also turns at its first and last points.
+  // Interior corners. A closed line also turns at its first and last points.
   const first = closed ? 0 : 1;
   const last = closed ? n - 1 : n - 2;
   for (let i = first; i <= last; i++) {

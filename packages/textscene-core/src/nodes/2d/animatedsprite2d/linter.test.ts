@@ -1,6 +1,4 @@
-/**
- * Tests for AnimatedSprite2D linter (strict parser + semantic rules)
- */
+/** AnimatedSprite2D linter: strict parser and semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -19,7 +17,7 @@ import './linter';
 const spriteFrames = '[sub_resource type="SpriteFrames" id="frames_1"]';
 /** An external SpriteFrames resource. */
 const extFrames = '[ext_resource type="SpriteFrames" path="res://animations.tres" id="frames_1"]';
-/** Reference to the sub-resource above; added to accept-case nodes so they are otherwise valid. */
+/** Reference to the sub-resource above. Added to accept-case nodes so they are otherwise valid. */
 const withFrames = { sprite_frames: 'SubResource("frames_1")' };
 
 describe('AnimatedSprite2D Linter', () => {
@@ -221,8 +219,8 @@ describe('AnimatedSprite2D Linter', () => {
     });
 
     // `set_animation` returns at animated_sprite_2d.cpp:554-556 when the name equals the
-    // one already held, and animated_sprite_2d.h:43 seeds it with SceneStringName(default_)
-    // — so this scene never reaches the clearing branch the rule reports.
+    // one already held, and animated_sprite_2d.h:43 seeds it with SceneStringName(default_),
+    // so this scene never reaches the clearing branch the rule reports.
     it('stays silent on animation "default" without sprite_frames, which Godot accepts', () => {
       const diagnostics = lint(scene(node('AnimatedSprite2D', { animation: '"default"' })));
       expect(
@@ -251,7 +249,7 @@ describe('AnimatedSprite2D Linter', () => {
       });
     });
 
-    // Properties replay in FILE order (packed_scene.cpp:492), so the slot is
+    // Properties replay in file order (packed_scene.cpp:492), so the slot is
     // still null on the line above it. Measured: this body loads on frame 0.
     it('errors when sprite_frames is written below frame', () => {
       expectDiagnostic(
@@ -275,7 +273,7 @@ describe('AnimatedSprite2D Linter', () => {
       ).toHaveLength(0);
     });
 
-    // The `>= 0` floor in linterParser.ts already reports a negative frame; a
+    // The `>= 0` floor in linterParser.ts already reports a negative frame. A
     // second error on the same line is the double-report ADR-0032 forbids.
     it('leaves a negative frame to the validator alone', () => {
       const diagnostics = lint(scene(node('AnimatedSprite2D', { frame: -1 })));
@@ -386,9 +384,8 @@ describe('AnimatedSprite2D Linter', () => {
 
 describe('the pre-4.0 `frames` spelling', () => {
   // `AnimatedSprite2D::_set` forwards `frames` to `set_sprite_frames`
-  // (animated_sprite_2d.cpp:616-618), so the resource IS set and the animation
-  // name survives. Reading only the canonical key reported "Godot clears
-  // 'animation'" on 25 scenes across two shipped projects.
+  // (animated_sprite_2d.cpp:616-618), so the resource is set and the animation
+  // name survives.
   const scene = `[gd_scene load_steps=2 format=3]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_1"]

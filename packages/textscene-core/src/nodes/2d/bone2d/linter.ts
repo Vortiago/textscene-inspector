@@ -1,33 +1,8 @@
 /**
- * Semantic linter rule for Bone2D, from Godot's own configuration warnings,
- * `Bone2D::get_configuration_warnings()` (skeleton_2d.cpp:412-427):
- *
- *     if (!skeleton) {
- *         if (parent_bone) {
- *             warnings.push_back(RTR("This Bone2D chain should end at a Skeleton2D node."));
- *         } else {
- *             warnings.push_back(RTR("A Bone2D only works with a Skeleton2D or another Bone2D as parent node."));
- *         }
- *     }
- *     if (rest == Transform2D(0, 0, 0, 0, 0, 0)) {
- *         warnings.push_back(RTR("This bone lacks a proper REST pose. Go to the Skeleton2D node and set one."));
- *     }
- *
- * `skeleton`/`parent_bone` are resolved once at `NOTIFICATION_ENTER_TREE`
- * (skeleton_2d.cpp:97-119): `parent_bone` is `cast_to<Bone2D>(get_parent())`,
- * fixed at the IMMEDIATE parent only; `skeleton` then walks further up through
- * zero-or-more Bone2D links, stopping at the first Skeleton2D it finds or the
- * first ancestor that is neither Bone2D nor Skeleton2D (whichever comes
- * first). Mirrored below with a static ancestor walk; `descendsFrom` stands in
- * for `cast_to`, which also accepts subclasses.
- *
- * `rest` is declared `Transform2D rest;` (skeleton_2d.h:48), which alone would
- * be the identity — but `Bone2D::Bone2D()` zeroes all three columns
- * (skeleton_2d.cpp:496-499, "this is a clever hack so the bone knows no rest
- * has been set yet, allowing to show an error"). The all-zero matrix is
- * therefore the CLASS DEFAULT, which the serialiser omits, so an ABSENT `rest`
- * key is exactly the state the warning exists for and is the only state Godot's
- * own saver ever writes it in.
+ * Bone2D rule from `Bone2D::get_configuration_warnings()` (skeleton_2d.cpp:412-427).
+ * A missing Skeleton2D warns "chain should end at a Skeleton2D" under a Bone2D
+ * parent and "only works with a Skeleton2D or another Bone2D" otherwise. An
+ * all-zero `rest` warns that the bone lacks a rest pose.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -53,7 +28,12 @@ type AncestryVerdict =
   /** An ancestor's type is not knowable from this file (`instance=` or untyped). */
   | 'unknowable';
 
-/** Mirrors `Bone2D::_notification(NOTIFICATION_ENTER_TREE)` (skeleton_2d.cpp:99-113). */
+/**
+ * Mirrors `Bone2D::_notification(NOTIFICATION_ENTER_TREE)` (skeleton_2d.cpp:99-113),
+ * which resolves once (skeleton_2d.cpp:97-119): `parent_bone` is the immediate parent
+ * cast to Bone2D, and `skeleton` walks up through Bone2D links to the first Skeleton2D
+ * or non-bone. `descendsFrom` stands in for `cast_to`, which accepts subclasses.
+ */
 function ancestryVerdict(scene: TscnScene, node: TscnNode): AncestryVerdict {
   const parent = knownParent(scene, node);
   if (parent.kind === 'root') return 'invalid-parent'; // parent_bone and skeleton both stay null
@@ -76,10 +56,9 @@ function ancestryVerdict(scene: TscnScene, node: TscnNode): AncestryVerdict {
 const TRANSFORM2D_RE = makeFloatTupleRegex('Transform2D', 6);
 
 /**
- * `rest == Transform2D(0, 0, 0, 0, 0, 0)` — `Transform2D::operator==`
- * (transform_2d.h:158-165) compares each column with exact `!=`, not an
- * approximate tolerance, so this does too. A malformed literal is
- * `linterParser.ts`'s job, not this rule's; it just reports "not all-zero".
+ * `rest == Transform2D(0, 0, 0, 0, 0, 0)`: `Transform2D::operator==`
+ * (transform_2d.h:158-165) compares each column with exact `!=`, so this does too.
+ * A malformed literal reports "not all-zero", since `linterParser.ts` owns format.
  */
 function isAllZeroTransform2D(raw: string): boolean {
   const match = TRANSFORM2D_RE.exec(raw);
@@ -119,9 +98,9 @@ function checkBone2D(context: RuleContext): Diagnostic[] {
 
   if (isValidProperties(node.properties)) {
     const rest = node.properties.rest;
-    // An absent key IS the all-zero default (see the header), so both spellings
-    // of "no rest pose" reach this: gating on `rest !== undefined` left the rule
-    // firing only on a literal Godot's saver never writes.
+    // `rest` is declared `Transform2D rest;` (skeleton_2d.h:48), but `Bone2D::Bone2D()`
+    // zeroes all three columns (skeleton_2d.cpp:496-499). All-zero is the class default
+    // the serialiser omits, so an absent key is the state the warning exists for.
     if (rest === undefined || isAllZeroTransform2D(rest)) {
       diagnostics.push({
         severity: 'warning',

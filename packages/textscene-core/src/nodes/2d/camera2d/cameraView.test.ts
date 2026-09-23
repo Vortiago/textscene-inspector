@@ -1,6 +1,6 @@
 /**
- * camera2DView — what a Camera2D actually frames: the view center in Godot
- * canvas pixels and the magnification, honoring anchor_mode and offset.
+ * camera2DView: what a Camera2D frames, as the view centre in Godot canvas pixels
+ * and the magnification, with anchor_mode and offset applied.
  */
 import { describe, it, expect } from 'vitest';
 import { camera2DView, type Camera2DTag } from './cameraView';
@@ -51,14 +51,14 @@ describe('camera2DView limit clamping', () => {
   const LIMITS = { limitLeft: 0, limitTop: 0, limitRight: 2000, limitBottom: 2000 };
 
   it('pins the view rect to the near limit', () => {
-    // Camera far past the left/top limits: the view's LEFT edge pins to 0, so
+    // Camera far past the left/top limits: the view's left edge pins to 0, so
     // the centre is half the view extent regardless of where the camera sits.
     const view = camera2DView(props(LIMITS), { x: -5000, y: -5000 }, VIEWPORT);
     expect(view.center).toEqual({ x: 288, y: 162 });
   });
 
   it('pins the view rect to the far limit', () => {
-    // The view's RIGHT/BOTTOM edges pin to the far limits: centre = far - extent/2.
+    // The view's right and bottom edges pin to the far limits: centre = far - extent/2.
     const view = camera2DView(props(LIMITS), { x: 5000, y: 5000 }, VIEWPORT);
     expect(view.center).toEqual({ x: 2000 - 288, y: 2000 - 162 });
   });
@@ -70,8 +70,7 @@ describe('camera2DView limit clamping', () => {
 
   it('centres a view WIDER than the limit span instead of pinning an edge', () => {
     // Godot's first branch: near > far - extent. Span 100 < extent 576, so the
-    // view centres on the span's midpoint — pinning to either edge would show
-    // more out-of-limits world on one side than the other.
+    // view centres on the span's midpoint.
     const view = camera2DView(
       props({ ...LIMITS, limitRight: 100, limitBottom: 100 }),
       { x: -5000, y: 5000 },
@@ -88,9 +87,8 @@ describe('camera2DView limit clamping', () => {
 
 describe('a non-uniform zoom frames per axis, as the engine does', () => {
   // `zoom_scale = Vector2(1, 1) / zoom` (camera_2d.cpp:107) and the rect is
-  // `screen_size * zoom_scale` (:163) — both per axis. Dividing the height by
-  // `zoom.x` framed 576x324 where Godot frames 576x648, and the halved height
-  // fed the limit clamp and the returned centre as well.
+  // `screen_size * zoom_scale` (:163), both per axis: Godot frames 576x648 here,
+  // and the height feeds the limit clamp and the returned centre.
   const view = (zoom: { x: number; y: number }) =>
     camera2DView(
       {

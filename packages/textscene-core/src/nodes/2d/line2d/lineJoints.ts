@@ -1,24 +1,8 @@
 /**
- * Joint wedges for a Line2D's poly-stroke.
- *
- * The stroke is built as one independent quad per segment, which leaves a
- * pie-slice gap on the OUTSIDE of every interior corner. Godot has no "no
- * joint" mode — `joint_mode` defaults to `LINE_JOINT_SHARP` — so that gap is
- * always filled, and a polyline drawn without one reads as a broken chain of
- * bars rather than a line.
- *
- * Modes (`Line2D.LineJointMode`):
- *   SHARP (0, default) — miter to the intersection of the two outer edges,
- *                        falling back to BEVEL when the miter tip runs further
- *                        than `sharp_limit x half_width` (`line_builder.cpp`:
- *                        `corner_pos_out.distance_squared_to(pos1) / (hw_sq *
- *                        width_factor_sq) > sharp_limit_sq`).
- *   BEVEL (1)          — one triangle straight across the gap.
- *   ROUND (2)          — a fan approximating the arc, `round_precision` wide.
- *
- * Everything here is in three-space (Y already negated by the caller) and
- * returns flat triangle vertices — the stroke is not indexed across joints, so
- * a wedge is self-contained.
+ * Joint wedges for a Line2D's poly-stroke, which fill the gap outside every
+ * interior corner: Godot has no "no joint" mode (`joint_mode` defaults to
+ * `LINE_JOINT_SHARP`). In three-space, as flat self-contained triangles, since the
+ * stroke is not indexed across joints.
  */
 
 export const LINE_JOINT_SHARP = 0;
@@ -54,12 +38,12 @@ export function jointWedge(
   const outDir = normalize(next.x - corner.x, next.y - corner.y);
   if (!inDir || !outDir) return [];
 
-  // Cross product sign says which side the turn opens up on; zero means the
+  // Cross product sign says which side the turn opens up on. Zero means the
   // corner is straight and the two quads already meet flush.
   const cross = inDir.x * outDir.y - inDir.y * outDir.x;
   if (Math.abs(cross) < 1e-9) return [];
 
-  // Outward normal is the one pointing AWAY from the turn.
+  // Outward normal is the one pointing away from the turn.
   const side = cross > 0 ? -1 : 1;
   const nIn = { x: -inDir.y * side, y: inDir.x * side };
   const nOut = { x: -outDir.y * side, y: outDir.x * side };
@@ -73,7 +57,10 @@ export function jointWedge(
 
   if (options.jointMode === LINE_JOINT_SHARP) {
     const tip = miterTip(corner, nIn, nOut, halfWidth);
-    // Godot measures the miter overshoot in half-widths and bevels past the limit.
+    // SHARP (0): miter to where the outer edges meet, and bevel when the tip runs past
+    // `sharp_limit x half_width` (`line_builder.cpp`: `corner_pos_out.distance_squared_to(pos1)
+    // / (hw_sq * width_factor_sq) > sharp_limit_sq`). BEVEL (1) is one triangle across
+    // the gap, and ROUND (2) a fan of `round_precision` segments.
     if (tip && distance(tip, corner) <= options.sharpLimit * halfWidth) {
       return [...triangle(corner, a, tip), ...triangle(corner, tip, b)];
     }
@@ -103,7 +90,7 @@ function miterTip(
 function roundFan(corner: Point, a: Point, b: Point, segments: number): number[] {
   const start = Math.atan2(a.y - corner.y, a.x - corner.x);
   const end = Math.atan2(b.y - corner.y, b.x - corner.x);
-  // Sweep the SHORT way around; the gap is always less than half a turn.
+  // Sweep the short way around: the gap is always less than half a turn.
   let sweep = end - start;
   while (sweep > Math.PI) sweep -= Math.PI * 2;
   while (sweep < -Math.PI) sweep += Math.PI * 2;

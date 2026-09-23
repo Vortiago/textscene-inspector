@@ -1,7 +1,4 @@
-/**
- * AnimatedSprite2D property formatter — formats SpriteFrames playback
- * properties for the details panel.
- */
+/** AnimatedSprite2D property formatter: the SpriteFrames playback properties for the details panel. */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { AnimatedSprite2DProperties } from './types';

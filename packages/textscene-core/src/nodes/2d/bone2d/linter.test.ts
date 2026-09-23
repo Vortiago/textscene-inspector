@@ -1,8 +1,7 @@
 /**
- * Bone2D linter tests — `Bone2D::get_configuration_warnings()`
- * (skeleton_2d.cpp:412-427): the ancestor chain must reach a Skeleton2D, the
- * immediate parent must be a Skeleton2D or Bone2D, and `rest` must not be the
- * all-zero Transform2D.
+ * Bone2D linter: `Bone2D::get_configuration_warnings()` (skeleton_2d.cpp:412-427).
+ * The ancestor chain must reach a Skeleton2D, the immediate parent must be a
+ * Skeleton2D or Bone2D, and `rest` must not be the all-zero Transform2D.
  */
 import { describe, it, expect } from 'vitest';
 import { node, scene, lint, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
@@ -61,10 +60,9 @@ describe('Bone2D Linter', () => {
     });
 
     it('never raises both verdicts on the same node (the two are mutually exclusive per-node)', () => {
-      // "Leaf" has a Bone2D parent ("Mid") whose own chain never reaches a
-      // Skeleton2D, so Leaf gets ONLY chain-broken — "Mid" itself separately
-      // trips invalid-parent (its own parent, "Root", is a plain Node2D), but
-      // that is a diagnostic about Mid, not about Leaf.
+      // "Leaf" has a Bone2D parent ("Mid") whose chain never reaches a Skeleton2D,
+      // so Leaf gets only chain-broken. "Mid" trips invalid-parent, since its parent
+      // "Root" is a plain Node2D, but that diagnostic is about Mid.
       const diagnostics = lint(
         scene(
           node('Node2D', {}, { name: 'Root' }),
@@ -86,7 +84,7 @@ describe('Bone2D Linter', () => {
 
 [node name="MyBone2D" type="Bone2D" parent="Rig"]
 `;
-      // The orthogonal rest-pose warning is not this rule's subject; these
+      // The orthogonal rest-pose warning is not this rule's subject. These
       // bones set no `rest`, which is its own (correct) diagnostic.
       const diagnostics = lint(content).filter(
         (d) => d.nodeType === 'Bone2D' && d.ruleName !== 'bone2d-missing-rest-pose'
@@ -105,7 +103,7 @@ describe('Bone2D Linter', () => {
 
 [node name="Leaf" type="Bone2D" parent="Mid"]
 `;
-      // The orthogonal rest-pose warning is not this rule's subject; these
+      // The orthogonal rest-pose warning is not this rule's subject. These
       // bones set no `rest`, which is its own (correct) diagnostic.
       const diagnostics = lint(content).filter(
         (d) => d.nodeType === 'Bone2D' && d.ruleName !== 'bone2d-missing-rest-pose'
@@ -147,8 +145,7 @@ describe('Bone2D Linter', () => {
     it('warns on the padded spelling too, which Godot loads identically', () => {
       // The type name and the `(` are separate tokens (variant_parser.cpp:
       // 553-557 + :416-418), so a hand-edited `Transform2D (…)` is the all-zero
-      // rest pose. A tuple grammar requiring them adjacent misses this scene —
-      // the one the rule exists for.
+      // rest pose. A grammar that needs them adjacent misses this scene.
       expectDiagnostic(
         scene(
           node('Skeleton2D', {}, { name: 'Root' }),

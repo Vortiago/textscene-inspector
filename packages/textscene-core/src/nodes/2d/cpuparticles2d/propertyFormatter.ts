@@ -1,10 +1,7 @@
 /**
- * CPUParticles2D property formatter — the emitter surface for the Inspector,
- * above the shared Node2D sections.
- *
- * The twelve parameter slots are listed only when they are non-default: a
- * particle node has a large property surface and all but a handful are Godot's
- * defaults, so printing every range would bury the four the author changed.
+ * CPUParticles2D property formatter: the emitter properties for the Inspector,
+ * above the shared Node2D sections. A parameter slot shows only when it differs
+ * from Godot's default, so the few the author changed are not buried.
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';

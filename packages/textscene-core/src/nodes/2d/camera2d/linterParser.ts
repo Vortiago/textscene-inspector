@@ -1,11 +1,7 @@
-/**
- * Camera2D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- */
+/** Camera2D strict validators for linting. */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
+// The base chain: registration happens on import, so a test that loads only this
+// slice resolves an inherited key only through this line.
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
@@ -47,8 +43,7 @@ validatorRegistry.registerAll('Camera2D', {
   position_smoothing_enabled: v.boolean('position_smoothing_enabled'),
   // camera_2d.cpp:978 carries no numeric hint (only "suffix:px/s"). set_position_
   // smoothing_speed (camera_2d.cpp:699-706) does `position_smoothing_speed =
-  // MAX(0, p_speed)`, a clamp that makes 0 legal (it disables smoothing) —
-  // `positiveFloat` rejected 0, which Godot accepts.
+  // MAX(0, p_speed)`, a clamp that makes 0 legal: it disables smoothing.
   position_smoothing_speed: v.nonNegativeFloat('position_smoothing_speed', { enforced: 'camera_2d.cpp:703' }),
   rotation_smoothing_enabled: v.boolean('rotation_smoothing_enabled'),
   // camera_2d.cpp:982 carries no hint at all. set_rotation_smoothing_speed
@@ -64,7 +59,7 @@ validatorRegistry.registerAll('Camera2D', {
   drag_vertical_offset: v.float('drag_vertical_offset', { min: -1, max: 1, hinted: 'camera_2d.cpp:988' }),
   // camera_2d.cpp:989-992, "0,1,0.01" hard both ends on all four margins.
   // set_drag_margin (camera_2d.cpp:648-654) only ERR_FAIL_INDEXes the Side
-  // enum; the margin value itself is assigned unconditionally.
+  // enum. The margin value itself is assigned unconditionally.
   drag_left_margin: v.float('drag_left_margin', { min: 0, max: 1, hinted: 'camera_2d.cpp:989' }),
   drag_top_margin: v.float('drag_top_margin', { min: 0, max: 1, hinted: 'camera_2d.cpp:990' }),
   drag_right_margin: v.float('drag_right_margin', { min: 0, max: 1, hinted: 'camera_2d.cpp:991' }),
