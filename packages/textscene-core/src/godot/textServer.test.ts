@@ -22,7 +22,7 @@ describe('isLocaleRightToLeft', () => {
   it("standardises macOS's dash spelling and drops an @variant before slicing", () => {
     // `String univ_locale = p_locale.replace_char('-', '_');` then
     // `univ_locale.get_slicec('@', 0).split("_")`
-    // (`core/string/translation_server.cpp:171-175`) — `set_locale` stores the
+    // (`core/string/translation_server.cpp:171-175`): `set_locale` stores the
     // standardised form, which is what the table above is handed.
     expect(isLocaleRightToLeft('fa-IR')).toBe(true);
     expect(isLocaleRightToLeft('ur_PK@variant')).toBe(true);

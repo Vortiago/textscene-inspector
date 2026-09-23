@@ -1,6 +1,4 @@
-/**
- * Registry for self-registering lint rules
- */
+/** The registry lint rules add themselves to on import. */
 
 import type { LintRule } from './types';
 import * as logger from '../logger';
@@ -8,18 +6,14 @@ import * as logger from '../logger';
 export class RuleRegistry {
   private rules: Map<string, LintRule> = new Map();
   /**
-   * Memoized `getRulesForNodeType` results, keyed by node type. `Linter`
-   * calls that lookup once per node in the scene tree, and re-materializing
-   * + filtering the full rule array on every call cost O(rule count) per
-   * node — O(nodes * rules) overall. Invalidated on `register`/`clear`
-   * (registration always happens once at module-load time via
-   * self-registering imports, well before any linting starts, so the
-   * invalidation cost is never paid mid-lint).
+   * Memoised `getRulesForNodeType` results, keyed by node type: `Linter` asks for each node, and filtering every rule
+   * each time costs O(nodes * rules). `register` and `clear` invalidate it. Rules register at module load, before
+   * any lint, so no lint pays for that.
    */
   private rulesForNodeTypeCache: Map<string, LintRule[]> = new Map();
 
   /**
-   * Register a lint rule
+   * Register a lint rule.
    * @param rule - The rule to register
    */
   register(rule: LintRule): void {
@@ -31,7 +25,6 @@ export class RuleRegistry {
   }
 
   /**
-   * Get all registered rules
    * @returns Array of all registered rules
    */
   getRules(): LintRule[] {
@@ -39,18 +32,12 @@ export class RuleRegistry {
   }
 
   /**
-   * Get rules applicable to a specific node type.
-   *
-   * Applicability is exact-match by design (a rule for 'Node3D' does NOT run for
-   * MeshInstance3D) — unlike ValidatorRegistry, which walks the base-type chain.
-   * The two registries intentionally differ: format validators inherit naturally
-   * down the class hierarchy, whereas a semantic rule opts into a family via its
-   * own `applicableNodeTypeMatcher` predicate (see valid-node3d-visibility).
+   * The rules for a node type, by exact match: a rule for 'Node3D' does not run for MeshInstance3D. ValidatorRegistry
+   * walks the base-type chain because format validators inherit down the class hierarchy, while a semantic rule opts
+   * into a family through its own `applicableNodeTypeMatcher` (see valid-node3d-visibility).
    *
    * @param nodeType - The node type to filter by
-   * @returns Read-only array of rules applicable to the node type — the
-   *   cached array itself (frozen), NOT a per-call copy, since this runs once
-   *   per node in the lint hot path.
+   * @returns The cached, frozen array itself, not a per-call copy, since this runs for each node in the lint hot path.
    */
   getRulesForNodeType(nodeType: string): readonly LintRule[] {
     const cached = this.rulesForNodeTypeCache.get(nodeType);
@@ -58,15 +45,14 @@ export class RuleRegistry {
 
     const matched = this.getRules().filter(rule => {
       const { applicableNodeTypes, applicableNodeTypeMatcher } = rule.meta;
-      // A predicate matcher decides applicability on its own (takes precedence).
+      // A predicate matcher decides applicability on its own.
       if (applicableNodeTypeMatcher) {
         return applicableNodeTypeMatcher(nodeType);
       }
-      // If no applicableNodeTypes specified, rule applies to all nodes
+      // A rule with no applicableNodeTypes applies to every node.
       if (!applicableNodeTypes || applicableNodeTypes.length === 0) {
         return true;
       }
-      // Otherwise, check if this node type is in the applicable list
       return applicableNodeTypes.includes(nodeType);
     });
     Object.freeze(matched);
@@ -75,7 +61,6 @@ export class RuleRegistry {
   }
 
   /**
-   * Get a specific rule by name
    * @param name - The rule name
    * @returns The rule, or undefined if not found
    */
@@ -83,14 +68,11 @@ export class RuleRegistry {
     return this.rules.get(name);
   }
 
-  /**
-   * Clear all registered rules (useful for testing)
-   */
+  /** Clear every registered rule, for a test. */
   clear(): void {
     this.rules.clear();
     this.rulesForNodeTypeCache.clear();
   }
 }
 
-// Export singleton instance
 export const ruleRegistry = new RuleRegistry();

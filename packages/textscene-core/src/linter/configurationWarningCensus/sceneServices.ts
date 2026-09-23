@@ -1,10 +1,7 @@
 /**
- * Scene-level service nodes: multiplayer replication, shader globals, timers
- * and viewports — nodes that configure the tree rather than draw in it.
- *
- * `MultiplayerSpawner` and `MultiplayerSynchronizer` each push once over two
- * disjuncts whose verdicts differ (an unset NodePath is in the file; whether it
- * RESOLVES is not), so each becomes two rows.
+ * Scene-level service nodes that configure the tree rather than draw in it: multiplayer replication, shader globals,
+ * timers and viewports. `MultiplayerSpawner` and `MultiplayerSynchronizer` each push over two disjuncts whose verdicts
+ * differ (an unset NodePath is in the file, whether it resolves is not), so each becomes two rows.
  */
 import type { WarningRow } from './types.js';
 

@@ -1,6 +1,6 @@
 /**
- * Tests for RuleRegistry: the store — registering, reading back, and clearing.
- * Which rules a node type SELECTS is the sibling
+ * Tests for RuleRegistry: the store, registering, reading back and clearing.
+ * Which rules a node type selects is the sibling
  * `RuleRegistry.nodeTypeMatching.test.ts`.
  */
 

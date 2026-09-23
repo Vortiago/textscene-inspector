@@ -1,9 +1,6 @@
 /**
- * @textscene/core — public entry point for TextScene Inspector.
- *
- * The library parses Godot .tscn files and renders them with
- * react-three-fiber. The imperative renderer was removed;
- * all visual / UI surface lives under `r3f/`.
+ * The public entry point of `@textscene/core`, the TextScene Inspector library. It parses Godot .tscn files and renders
+ * them with react-three-fiber. All visual and UI surface lives under `r3f/`.
  */
 
 // Parser + utilities

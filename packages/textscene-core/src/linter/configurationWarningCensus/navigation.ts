@@ -1,9 +1,6 @@
 /**
- * Navigation agents, links, obstacles and regions.
- *
- * The obstacle rows are the transform-shaped ones — negative, zero or
- * non-uniform global scale, and rotation off the Y axis — which is why they
- * carry rules of their own rather than a shared "needs a resource" check.
+ * Navigation agents, links, obstacles and regions. The obstacle rows are transform-shaped (negative, zero or non-uniform
+ * global scale, and rotation off the Y axis), so they carry rules of their own, not a shared "needs a resource" check.
  */
 import type { WarningRow } from './types.js';
 

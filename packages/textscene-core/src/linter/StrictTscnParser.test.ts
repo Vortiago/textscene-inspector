@@ -1,5 +1,5 @@
 /**
- * Tests for StrictTscnParser: what a well-formed file yields — the sections,
+ * Tests for StrictTscnParser: what a well-formed file yields: the sections,
  * their types, and the properties read off each one.
  */
 
@@ -190,9 +190,8 @@ texture_filter = null
 
     it('reports at the CONVERSION tier, which ADR-0032 puts at warning', () => {
       // The binding narrows the null before the setter runs, so the setter never
-      // refuses anything and the file loads — the same tier `hframes = 5.5`
-      // gets. Reporting it as an error failed `lint:scenes` on a scene Godot
-      // opens without complaint.
+      // refuses anything and the file loads, the same tier `hframes = 5.5`
+      // gets.
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Panel" type="Control"]
@@ -205,11 +204,9 @@ visible = null
       expect(nils.map((e) => e.severity)).toEqual(['warning', 'warning']);
     });
 
-    // A key-shape refusal describes a key the class does not have, so "this
-    // slot stores the type's zero instead" names a slot that does not exist.
-    // The flag sits on the ERROR: a family dispatcher's LEAF branches really do
-    // read a value, and the registry hands the seam the dispatcher, so only the
-    // branch that refused can say which kind of verdict it made.
+    // A key-shape refusal describes a key the class does not have, so "this slot stores the type's zero" names no
+    // slot. The flag sits on the error: the registry hands the seam a family's dispatcher, and only the leaf branch
+    // that refused knows which kind of verdict it made.
     describe('leaves a key-shape refusal alone', () => {
       const parseOne = (type: string, key: string, value: string) =>
         parser.parse(

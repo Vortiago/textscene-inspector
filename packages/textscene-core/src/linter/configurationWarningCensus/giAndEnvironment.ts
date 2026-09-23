@@ -1,10 +1,7 @@
 /**
- * Scene-wide rendering nodes: baked GI, decals, volumetric fog, occlusion
- * culling and `WorldEnvironment`.
- *
- * Several rows here are renderer-conditional (`Forward+`/`Mobile`/`Compatibility`),
- * which is a project setting rather than anything a `.tscn` states — hence the
- * `runtime-only` declines clustered in this family.
+ * Scene-wide rendering nodes: baked GI, decals, volumetric fog, occlusion culling and `WorldEnvironment`. Several rows
+ * depend on the renderer (`Forward+`/`Mobile`/`Compatibility`), a project setting no `.tscn` states, so `runtime-only`
+ * declines cluster here.
  */
 import type { WarningRow } from './types.js';
 
@@ -18,14 +15,9 @@ export const giAndEnvironmentWarnings: Readonly<Record<string, readonly WarningR
         because: 'OS::get_current_rendering_method() == "gl_compatibility"/"dummy", decal.cpp:179',
       },
     },
-    // The three rows below sit AFTER the `return warnings;` the row above ends on
-    // (decal.cpp:180), so Godot raises none of them on the Compatibility renderer —
-    // it shows only that first string. Implementing them therefore assumes a
-    // Forward+/Mobile project. That is the right assumption and not a defect: the
-    // renderer is a project setting, absent from every `.tscn`, and declining these
-    // three would silence them for everyone on the default renderer. Recorded here
-    // because the decline above states the gate while these three inherit it
-    // silently.
+    // These three sit after the `return warnings;` above (decal.cpp:180), so the Compatibility renderer raises none
+    // of them. They assume a Forward+/Mobile project: the renderer is a project setting no `.tscn` states, and
+    // declining them would silence them on the default renderer.
     {
       at: 'decal.cpp:184',
       says: 'no textures loaded into any texture property, so nothing will be visible',

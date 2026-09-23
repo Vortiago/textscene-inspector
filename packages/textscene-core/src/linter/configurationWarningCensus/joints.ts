@@ -1,7 +1,7 @@
 /**
  * `Joint2D` and `Joint3D`.
  *
- * Each surfaces five mutually-exclusive strings through a SINGLE `push_back`,
+ * Each surfaces five mutually-exclusive strings through a single `push_back`,
  * which is why each has five rows: a row is one condition, not one push.
  */
 import type { WarningRow } from './types.js';

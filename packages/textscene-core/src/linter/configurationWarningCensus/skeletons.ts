@@ -1,9 +1,6 @@
 /**
- * Bone, IK and skeleton-modifier nodes.
- *
- * Most rows are parent-or-ancestor checks — a modifier with no `Skeleton3D`
- * above it, a `Bone2D` chain that never reaches a `Skeleton2D` — and the rest
- * name a per-setting target the modifier leaves unset.
+ * Bone, IK and skeleton-modifier nodes. Most rows are parent-or-ancestor checks (a modifier with no `Skeleton3D` above
+ * it, a `Bone2D` chain that never reaches a `Skeleton2D`), and the rest name a target the modifier leaves unset.
  */
 import type { WarningRow } from './types.js';
 

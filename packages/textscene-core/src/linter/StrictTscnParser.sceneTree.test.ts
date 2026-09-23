@@ -29,7 +29,7 @@ describe('StrictTscnParser', () => {
 
       expect(result.errors).toHaveLength(0);
       expect(result.scene!.nodes[0]!.children).toHaveLength(2);
-      // Children are added in the order they're processed (backward iteration)
+      // Children are added in the order they are processed (backward iteration).
       const childNames = result.scene!.nodes[0]!.children.map(c => c.name);
       expect(childNames).toContain('Child1');
       expect(childNames).toContain('Child2');

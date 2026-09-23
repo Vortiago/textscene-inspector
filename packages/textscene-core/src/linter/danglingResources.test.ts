@@ -1,14 +1,8 @@
 /**
- * One error for every registered resource slot whose id the file never
- * declares — the generic pass behind `dangling-resource-reference`.
- *
- * `resource_format_text.cpp:113`, inside `_parse_sub_resource`:
- *
- *     ERR_FAIL_COND_V(!int_resources.has(id), ERR_INVALID_PARAMETER);
- *
- * and its ext twin at `:138`, `if (!ext_resources.has(id)) { … return
- * ERR_PARSE_ERROR; }`. Both run while the VALUE is tokenised, before any
- * setter, so the slot's class is irrelevant: the whole load fails.
+ * One error for every registered resource slot whose id the file never declares: the generic pass behind
+ * `dangling-resource-reference`. `resource_format_text.cpp:113` (`ERR_FAIL_COND_V(!int_resources.has(id), ERR_INVALID_PARAMETER);`)
+ * and its ext twin at `:138` (`if (!ext_resources.has(id)) { … return ERR_PARSE_ERROR; }`) run while the value is
+ * tokenised, before any setter, so the slot's class is irrelevant: the whole load fails.
  */
 
 import { describe, expect, it } from 'vitest';

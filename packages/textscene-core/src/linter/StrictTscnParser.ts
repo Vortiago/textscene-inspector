@@ -1,11 +1,7 @@
 /**
- * Strict TSCN parser for linting
- *
- * A thin adapter over TscnParserCore's single scanning loop: it attaches a
- * ParseObserver that collects syntax/format errors as ParseError[], performs
- * strict heading checks (missing node name/identifier), and runs registered
- * property validators. The lenient renderer path uses the same loop with no
- * observer — one scanning loop, two adapters.
+ * Strict TSCN parser for linting: an adapter over TscnParserCore's scanning loop. Its ParseObserver collects syntax and
+ * format errors as ParseError[], checks headings strictly and runs the registered property validators. The lenient
+ * renderer runs the same loop with no observer.
  */
 
 import type { TscnNode } from '../parser/types.js';
@@ -20,25 +16,15 @@ import { INSTANCE_PLACEHOLDER_TYPE, isNilLiteral } from '../godot/index.js';
 import { resolveDeprecatedProperty } from '../godot/deprecated.js';
 
 /**
- * Creates a simple TscnNode without using NodeRegistry (avoids three.js dependency)
- *
- * `properties` and `rawProperties` are the SAME bag here, which is what the
- * lenient tree means by `rawProperties` too — its `properties` holds the typed
- * shape a slice parsed out, so the raw literals live only in the second field.
- * Publishing both means the raw bag has one name whichever parser produced the
- * node, and a helper the linter and the render path share needs no idea which
- * one it is holding. Pinned by `parser/rawPropertyParity.test.ts`. Same object,
- * so this costs a reference.
+ * A TscnNode built without NodeRegistry, so without three.js. `properties` and `rawProperties` are the same bag, as the
+ * lenient tree's `rawProperties` holds the raw literals too, so a helper the linter and the renderer share reads one name
+ * from either parser (`parser/rawPropertyParity.test.ts`). The shared object costs a reference.
  */
 function createSimpleNode(heading: ParsedHeading, properties: Record<string, string>): TscnNode {
   const node: TscnNode = {
     name: heading.attributes.name || '',
-    // The heading's own `type=`, else the identifier it states instead. `index=`
-    // is NOT one of those: it is the sibling position Godot restores an override
-    // at, and reading it as a type made a diagnostic on such a heading report
-    // `nodeType: "2"` while the parse-side arm on the SAME heading reported
-    // `<unknown>` from `heading.attributes.type`. An override heading states no
-    // type at all, and empty is what every reader treats as unknowable.
+    // The heading's own `type=`, else the identifier it states instead. Not `index=`: that is the sibling position
+    // Godot restores an override at. An override heading states no type, and every reader treats empty as unknowable.
     type:
       heading.attributes.type ||
       (heading.attributes.instance_placeholder ? INSTANCE_PLACEHOLDER_TYPE : '') ||
@@ -46,10 +32,9 @@ function createSimpleNode(heading: ParsedHeading, properties: Record<string, str
       '',
     properties,
     rawProperties: properties,
-    children: [], // Will be populated by buildSceneTree
+    children: [], // buildSceneTree fills it.
   };
 
-  // Only set parent if it exists (optional property)
   if (heading.attributes.parent) {
     node.parent = heading.attributes.parent;
   }
@@ -59,10 +44,7 @@ function createSimpleNode(heading: ParsedHeading, properties: Record<string, str
   }
   if (heading.attributes.owner) node.owner = heading.attributes.owner;
 
-  // Carry an instance reference on the dedicated TscnNode field rather than
-  // smuggling a `__instance` key into the property schema. (An `index=`-only
-  // editable-instance child has no consumer here; its index is already
-  // reflected in `type` via the fallback above.)
+  // The instance reference goes on the dedicated TscnNode field, not a `__instance` key in the property schema.
   if (heading.attributes.instance) {
     node.instance = heading.attributes.instance;
   }
@@ -81,33 +63,22 @@ export class StrictTscnParser {
   parse(content: string): StrictParseResult {
     const errors: ParseError[] = [];
 
-    // The SECTION whose body the scan is inside, or null between/outside the
-    // sections that own properties. Every refusal raised while it is set is
-    // ABOUT that section, and nothing else in this seam knows which one — the
-    // validator is handed a key and a value.
-    //
-    // A sub-resource counts: `onProperty` below runs the full validator set for
-    // its body, so its own diagnostics need an owner too. The fields keep the
-    // `node*` names `ParseError` publishes.
+    // The section whose body the scan is inside, or null outside the sections that own properties. Every refusal raised
+    // while it is set is about that section, and the validator knows only a key and a value. A sub-resource counts, since
+    // `onProperty` validates its body. The fields keep the `node*` names `ParseError` publishes.
     let currentOwner: { nodeName: string; nodeType: string } | null = null;
     // `[node]` headings seen so far: heading 0 is the root and takes the
     // `else` arm of `packed_scene.cpp:206-221`, every later one the `i > 0` arm.
     let nodeHeadings = 0;
-    // The node paths that instance a scene, so a type-less heading below one
-    // names content that exists. Keys are FOLDED paths, so `./Rock` and `Rock`
-    // are the one node Godot resolves them both to, and the scene's own root
-    // sits at `SCENE_ROOT_PATH`: it joins the set when heading 0 carries
-    // `instance=` and the scene therefore inherits
-    // (resource_format_text.cpp:233-240).
-    //
-    // `instance_placeholder=` is NOT one of these. Godot builds an
-    // InstancePlaceholder with no children (packed_scene.cpp:255), so a node
-    // named under one still vanishes and still deserves the warning.
+    // The node paths that instance a scene, so a type-less heading below one names content that exists. Keys are folded
+    // paths (`./Rock` and `Rock` are one node), and the root joins as `SCENE_ROOT_PATH` when heading 0 carries `instance=`
+    // (resource_format_text.cpp:233-240). Not `instance_placeholder=`: an InstancePlaceholder has no children
+    // (packed_scene.cpp:255), so a node named under one still vanishes.
     const instancedPaths = new Set<string>();
     const hasInstancedAncestor = (parent: string | undefined): boolean => {
       if (instancedPaths.has(SCENE_ROOT_PATH)) return true;
-      // The root is covered above; an absolute or empty path names nothing to
-      // walk up from at all.
+      // The root is covered above. An absolute or empty path names nothing to
+      // walk up from.
       const path = resolveParentPath(parent);
       if (!path) return false;
       return instancedPaths.has(path) || getAncestorPaths(path).some((p) => instancedPaths.has(p));
@@ -121,25 +92,17 @@ export class StrictTscnParser {
           line: error.line,
           column: error.column,
           code: error.code,
-          // A malformed HEADING is the line that would have opened a section,
-          // so it belongs to none — `currentOwner` is still the previous one
-          // and must not be borrowed. A malformed property line inside a
-          // section's body does belong to it.
+          // A malformed heading would have opened a section, so it belongs to none and must not borrow the
+          // previous `currentOwner`. A malformed property line belongs to its section.
           ...(error.code === 'INVALID_PROPERTY_FORMAT' ? currentOwner : null),
         });
       },
 
       onSectionStart: (heading, section, line) => {
         if (section !== 'node') {
-          // A sub-resource is named by its `id=`, which is what tells one
-          // `[sub_resource type="CircleShape2D"]` from the four beside it — and
-          // resource validators run over its body, so `radius = -1.0` there
-          // reported `<unknown>` and left the author to find it by eye.
-          //
-          // Every other section clears the stamp: `ext_resource` and
-          // `gd_scene`/`gd_resource` carry no validated properties, and a
-          // `[resource]` body is the file's own single resource, which no id
-          // identifies.
+          // A sub-resource is named by its `id=`, which tells one `[sub_resource type="CircleShape2D"]` from its
+          // siblings. Every other section clears the owner: `ext_resource`, `gd_scene` and `gd_resource` carry no
+          // validated properties, and a `[resource]` body is the file's own single resource, which no id identifies.
           currentOwner =
             section === 'sub_resource'
               ? {
@@ -165,51 +128,27 @@ export class StrictTscnParser {
             ...currentOwner,
           });
         }
-        // A heading without `type=` is TYPE_INSTANTIATED — `//no type? assume
-        // this was instantiated` (resource_format_text.cpp:218-221) — which is
-        // a claim, not a grammar error, and what the arms below report is
-        // whether the claim can hold.
-        //
-        // Heading 0: only `instance=` sets the base scene (:233-240; `index=`
-        // at :270-272 changes nothing), and without one the instantiate is
-        // refused — `ERR_FAIL_COND_V_MSG(n.type == TYPE_INSTANTIATED &&
-        // base_scene_idx < 0, …)` (packed_scene.cpp:220). A placeholder there
-        // is refused earlier still: "Instance Placeholder can't be used for
-        // inheritance", ERR_FILE_CORRUPT (resource_format_text.cpp:247-251).
-        //
-        // Any later heading: `instance_placeholder=` declares an
-        // InstancePlaceholder (packed_scene.cpp:239-258); otherwise the node
-        // is looked up by name under its parent (:283), which finds it only
-        // inside content some ancestor instanced — the root of an inherited
-        // scene, or a node with `instance=` above. With no such ancestor the
-        // lookup fails and Godot drops the node: `"… was modified from inside
-        // an instance, but it has vanished."` (:310). `index=` is an ordering
-        // hint and rescues nothing.
+        // A heading without `type=` is TYPE_INSTANTIATED (resource_format_text.cpp:218-221): a claim, not a grammar
+        // error, and the arms below report whether it can hold. A later heading with `instance_placeholder=` declares
+        // an InstancePlaceholder (packed_scene.cpp:239-258).
         const isRootHeading = nodeHeadings++ === 0;
         const { instance, instance_placeholder: placeholder, parent, name } = heading.attributes;
         if (instance) {
-          // An empty `parent=` reads as the root here, which is not an engine
-          // claim: it faults the LOAD itself (resource_format_text.cpp:206-207)
-          // and `empty-parent-path` carries that. Nothing is instantiated, so
-          // this parser takes the one reading that leaves every other heading
-          // checkable.
-          //
-          // The root is the exception — it is the scene root whatever it is
-          // called — and a heading with no `name=` identifies no node, so it
-          // vouches for none.
+          // An empty `parent=` reads as the root here. That is no engine claim: it faults the load itself
+          // (resource_format_text.cpp:206-207), which `empty-parent-path` reports, and it keeps every other heading
+          // checkable. The root heading is the scene root whatever its name, and a heading with no `name=` vouches for none.
           if (isRootHeading) {
             instancedPaths.add(SCENE_ROOT_PATH);
           } else if (name) {
-            // Null where the path resolves against nothing — an absolute one,
-            // or a `..` above the root: the fallback re-roots the heading under
-            // a renamed path no other heading here can spell, so it vouches for
-            // no path at all.
+            // Null where the path resolves against nothing (an absolute path, or `..` above the root): the fallback
+            // re-roots the heading under a path no other heading can spell, so it vouches for none.
             const parentPath = parent ? resolveParentPath(parent) : SCENE_ROOT_PATH;
             if (parentPath !== null) instancedPaths.add(joinPath(parentPath, name));
           }
         }
 
         if (isRootHeading && placeholder) {
+          // Refused before anything instantiates, with ERR_FILE_CORRUPT (resource_format_text.cpp:247-251).
           errors.push({
             severity: 'error',
             message:
@@ -224,6 +163,8 @@ export class StrictTscnParser {
         } else if (!isPropertyOverrideHeading(heading)) {
           // The heading declares what it is, so neither arm below applies.
         } else if (isRootHeading) {
+          // `resource_format_text.cpp` sets the base scene only for `instance=` (:233-240; `index=` at :270-272 changes
+          // nothing), so `ERR_FAIL_COND_V_MSG(n.type == TYPE_INSTANTIATED && base_scene_idx < 0, …)` refuses this (packed_scene.cpp:220).
           errors.push({
             severity: 'error',
             message:
@@ -236,6 +177,9 @@ export class StrictTscnParser {
             ...currentOwner,
           });
         } else if (!hasInstancedAncestor(parent)) {
+          // `packed_scene.cpp` looks the node up by name under its parent (:283), which finds it only inside content
+          // an ancestor instanced: the root of an inherited scene, or a node with `instance=` above. `index=` is an
+          // ordering hint and rescues nothing.
           errors.push({
             severity: 'warning',
             message:
@@ -256,9 +200,8 @@ export class StrictTscnParser {
         // ext_resource/gd_scene sections).
         if (isMultiline || !ownerType) return;
 
-        // The key as written first; where nothing claims that spelling, the
-        // pair the engine applies — `godot/deprecated.ts` resolves the alias
-        // and transforms the value — and the diagnostic then names both,
+        // The key as written first. Where nothing claims that spelling, the pair the engine applies
+        // (`godot/deprecated.ts` resolves the alias and transforms the value), and the diagnostic names both,
         // because the canonical key appears nowhere in the file.
         let lookupKey = key;
         let lookupValue = value;
@@ -285,52 +228,19 @@ export class StrictTscnParser {
                 message: `Property '${key}' is applied as '${lookupKey} = ${lookupValue}': ${found.message}`,
               };
 
-        // `null` is a legal Variant literal anywhere a value is expected
-        // (variant_parser.cpp:699), so a per-type "must be a number" / "must be
-        // a boolean" reads as a parse failure and says the wrong thing. The
-        // validator is still the authority on WHETHER this slot takes it — a
-        // resource slot does, and returns no error above — but where it does
-        // not, the accurate claim is what the engine does instead. NIL converts
-        // strictly only to OBJECT (variant.cpp:543-544), so every other slot
-        // takes the type's zero. Measured on 4.6.3, `Control`:
-        // `texture_filter = null` stores 0 and `visible = null` stores FALSE.
-        //
-        // The message does NOT contrast with the property's default, which a
-        // validator does not carry and this seam cannot look up:
-        // `CanvasItem::texture_filter` defaults to TEXTURE_FILTER_PARENT_NODE,
-        // which IS 0 (canvas_item.h:123), so the stored value there is the
-        // default.
-        //
-        // The claim is about a slot whose CONVERSION discards the null, and it
-        // is exactly as narrow as that. Two kinds of refusal answer for the
-        // null themselves and keep their message, which is what
-        // `ownsNilMessage` asks: a key-level verdict rejects every value
-        // because the class has no such slot, so "this slot stores zero
-        // instead" describes a slot that does not exist and hides the removal's
-        // own reason; and a nil verdict is an OBJECT slot whose setter refuses
-        // the null with an `ERR_FAIL_COND(...is_null())`, so nothing is stored
-        // at all and only that refusal carries the guard's `file:line`.
-        //
-        // The severity moves with the message. What is being reported is the
-        // Variant binding narrowing the literal on the way IN, which ADR-0032
-        // puts at the CONVERSION tier: the setter receives the type's zero and
-        // refuses nothing, so the file loads exactly as `hframes = 5.5` does.
-        // The validator's own tier answers a question this branch has replaced.
-        //
-        // Line, column and code stay the validator's, so the diagnostic keeps
-        // anchoring on the value.
-        //
-        // Both verdicts ride on the ERROR, because neither is knowable from the
-        // function this seam is handed: `findValidator` returns a family's
-        // dispatcher rather than the leaf branch that refused, and
-        // `withFiniteGuard` returns a wrapper rather than either. Rewriting a
-        // refusal that carries one claims a slot stores zero where none does,
-        // and reports a dropped write as a warning.
+        // `null` is legal anywhere (variant_parser.cpp:699), and NIL converts strictly only to OBJECT (variant.cpp:543-544):
+        // on 4.6.3 `Control`, `texture_filter = null` stores 0 and `visible = null` stores false. `ownsNilMessage` keeps a key
+        // verdict (no such slot) and a nil verdict (an OBJECT setter's `ERR_FAIL_COND(...is_null())`, the one refusal with
+        // a `file:line`). Both ride on the error: `findValidator` returns a dispatcher and `withFiniteGuard` a wrapper.
         if (isNilLiteral(value) && !ownsNilMessage(error)) {
           errors.push({
+            // Line, column and code stay the validator's, so the diagnostic anchors on the value.
             ...error,
             ...currentOwner,
+            // ADR-0032's conversion tier: the setter receives the zero and refuses nothing, as for `hframes = 5.5`.
             severity: 'warning',
+            // No contrast with the default, which this seam cannot look up: `CanvasItem::texture_filter` defaults to
+            // TEXTURE_FILTER_PARENT_NODE, which is 0 (canvas_item.h:123).
             message:
               `Property '${key}' is ${value.trim()}, which this slot cannot hold: Godot stores ` +
               `the type's zero value instead.`,
@@ -343,14 +253,9 @@ export class StrictTscnParser {
 
     const scene = this.core.parse(content, createSimpleNode, observer);
 
-    // The scene comes back even when a property failed, because a bad value
-    // does not invalidate the tree: the scanner still produced every node with
-    // its name, type and parent. Withholding it made `Linter` skip the whole
-    // rule phase, so ONE out-of-range property anywhere in a file silenced
-    // every semantic rule in it - a missing CollisionShape2D on an unrelated
-    // node included. It also made any rule whose condition a validator already
-    // rejects permanently unreachable, since the validator's error suppressed
-    // the phase that would have run the rule.
+    // The scene comes back even when a property failed: a bad value does not invalidate the tree. Withholding it
+    // would skip the rule phase, so one out-of-range property would silence every semantic rule in the file, and a
+    // rule whose condition a validator rejects would never run.
 
     return { errors, scene };
   }

@@ -30,8 +30,8 @@ describe('nodePathLiteral', () => {
   });
 
   it('keeps an EMPTY path as an empty string, not as "not a NodePath"', () => {
-    // An explicitly cleared key is a real serialised value, and collapsing it
-    // into null is what let it take an ABSENT key's default.
+    // An explicitly cleared key is a real serialised value. Null would give it
+    // an absent key's default.
     expect(nodePathLiteral('NodePath("")')).toBe('');
   });
 
@@ -41,7 +41,7 @@ describe('nodePathLiteral', () => {
   });
 
   // `variant.cpp:746-749`: `case NODE_PATH: valid[] = { STRING, NIL }`, and
-  // `Variant::operator NodePath()` (`:2001`) builds the path from the STRING —
+  // `Variant::operator NodePath()` (`:2001`) builds the path from the STRING,
   // so a bare `"../Body"` in a NodePath slot loads as the same path. A
   // StringName is not in that list.
   it('reads a bare quoted string as the path the slot converts it to', () => {
@@ -89,7 +89,7 @@ describe('shared instances are stateless', () => {
 
 describe('the NIL literal', () => {
   it('takes both spellings the parser reads through one arm', () => {
-    // `variant_parser.cpp:699` — `} else if (id == "null" || id == "nil") {`
+    // `variant_parser.cpp:699`: `} else if (id == "null" || id == "nil") {`
     expect(isNilLiteral('null')).toBe(true);
     expect(isNilLiteral('nil')).toBe(true);
   });

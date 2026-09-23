@@ -1,31 +1,8 @@
 /**
- * One invariant, over every resource slot a semantic rule branches on:
- *
- *   writing `key = null` must say exactly what omitting `key` says, and both
- *   must say the one thing the rule owes an empty slot.
- *
- * Every spelling reaches a `Ref<T>` setter as an invalid Ref — `variant_parser.cpp:699`
- * reads `null` and `nil` through ONE arm to `Variant()`, and `variant.cpp:543` converts
- * NIL to a null object — so every `is_null()` / `!is_valid()` check in Godot answers the
- * same for all of them. A rule that treats them differently is reporting a distinction the engine
- * does not make.
- *
- * The defect is uniform and easy to reintroduce: `'null'` is a TRUTHY string, so a
- * `!ref` or `ref === undefined` guard steps over it and the value falls through
- * every branch with nothing reported. Twenty-five sites drifted this way one rule
- * at a time, which is why the rule is asserted here once rather than per slice.
- *
- * Each row therefore pins the LITERAL diagnostics, rule name and severity alike, that
- * both spellings must produce. Comparing the two runs to each other cannot see the
- * shared predicate failing open, because that silences both arms equally and the two
- * empty results still match; comparing each to a stated answer can. Severity is part
- * of that answer, since the inverse defect is a cleared slot read as a DANGLING
- * reference by `danglingResources.ts`, which errors for a slot the author cleared
- * on purpose.
- *
- * The table's floor is derived, not declared: `SLOTS` must name every property the
- * shared predicates are asked about anywhere in `src`, so a slot cannot be swept
- * without also being answered for here.
+ * One invariant over every resource slot a semantic rule branches on: `key = null` says exactly what omitting `key` says.
+ * Both reach a `Ref<T>` setter as an invalid Ref (`variant_parser.cpp:699` reads `null` and `nil` to `Variant()`,
+ * `variant.cpp:543` converts NIL to a null object), yet `'null'` is a truthy string that steps over a `!ref` guard.
+ * Each row pins the literal diagnostics with severity, since two runs failing open alike still match each other.
  */
 
 import { readFileSync } from 'node:fs';
@@ -46,7 +23,7 @@ interface Slot {
   props?: Record<string, string | number | boolean>;
   /** A parent heading the node needs to be legal, and the node's `parent` path. */
   parent?: { block: string; path: string };
-  /** Extra scene blocks, e.g. a sub-resource the accept case would reference. */
+  /** Extra scene blocks, for example a sub-resource the accept case would reference. */
   extra?: string[];
   /**
    * `severity ruleName` per diagnostic, sorted: everything the empty slot owes,
@@ -67,9 +44,9 @@ function at(site: string, rows: Omit<Slot, 'site'>[]): Slot[] {
 }
 
 /**
- * Every slot the shared predicates are asked about, grouped by the call site that
- * asks. The expectations are measured from the rules, and the warnings among them
- * are the null-resource arm of that class's own `get_configuration_warnings()`.
+ * Every slot the shared predicates are asked about anywhere in `src`, grouped by the call site that asks, so the
+ * floor is derived, not declared. The expectations are measured from the rules, and the warnings among them are the
+ * null-resource arm of that class's own `get_configuration_warnings()`.
  */
 const SLOTS: Slot[] = [
   ...at('linter/physics/castLinterRule.ts', [
@@ -133,7 +110,7 @@ const SLOTS: Slot[] = [
   ]),
   ...at('nodes/2d/path2d/linter.ts', [
     { type: 'Path2D', prop: 'curve', expected: ['info path2d-missing-curve'] },
-    // The slot that EXCUSES the warning above, so a cleared one must not excuse
+    // The slot that excuses the warning above, so a cleared one must not excuse
     // it: the exemption is "a script assigns the curve at runtime", and
     // `script = null` carries no script to do that. Read raw, `'null'` is a
     // truthy string and silenced the warning it is listed here to preserve.
@@ -171,7 +148,7 @@ const SLOTS: Slot[] = [
     },
   ]),
   // The script slot, where the engine's own test is `get_script().is_null()`
-  // (container.cpp:210) — true for a cleared slot, so the warning is owed for
+  // (container.cpp:210): true for a cleared slot, so the warning is owed for
   // both spellings and not only for the absent key.
   ...at('nodes/2d/ui/container/linter.ts', [
     { type: 'Container', prop: 'script', expected: ['warning container-no-script'] },
@@ -296,7 +273,7 @@ function sceneFor(slot: Slot, value: 'absent' | 'null' | 'nil'): string {
   return scene(...blocks);
 }
 
-/** Rule name + severity per diagnostic, sorted — the comparable shape of a lint result. */
+/** Rule name + severity per diagnostic, sorted: the comparable shape of a lint result. */
 function shapeOf(content: string): string[] {
   return lint(content)
     .map((d) => `${d.severity} ${d.ruleName}`)
@@ -344,7 +321,7 @@ function keysBehind(source: string, identifier: string, hops = 0): string[] {
   if (initialiser !== undefined) {
     const literals = keyLiterals(initialiser);
     if (literals.length > 0) return literals;
-    // Derived from another list, e.g. `KEYS.filter(...)`: follow the receiver.
+    // Derived from another list, for example `KEYS.filter(...)`: follow the receiver.
     const receiver = /^\s*(\w+)\s*\./.exec(initialiser)?.[1];
     return receiver ? keysBehind(source, receiver, hops + 1) : [];
   }
@@ -377,7 +354,7 @@ function sweptSlots(): { slots: string[]; unreadable: string[] } {
       for (const key of keys) slots.add(`${file} ${key}`);
     }
     // Counted separately because a call whose argument nests parentheses does not
-    // match the pair above AT ALL: it would be skipped in silence rather than
+    // match the pair above at all: it would be skipped in silence rather than
     // reported unreadable, which is the one way past this floor.
     const opened = [...source.matchAll(HELPER_OPENER_RE)].length;
     if (opened !== bracketed) {
@@ -400,7 +377,7 @@ describe('an explicitly cleared resource slot reads as an empty one', () => {
     }
   );
 
-  // One sweep for both assertions: it reads every source file in the package.
+  // One scan for both assertions: it reads every source file in the package.
   const swept = sweptSlots();
 
   it('answers for every slot the shared predicates are asked about', () => {
@@ -413,8 +390,8 @@ describe('an explicitly cleared resource slot reads as an empty one', () => {
   });
 
   it('still reports a slot that names a resource nothing declares', () => {
-    // The point is not silence. A dangling id is still an error — only the
-    // deliberate `null` is exempt.
+    // A dangling id is still an error, and only the deliberate `null` is exempt:
+    // `danglingResources.ts` must not read a cleared slot as a dangling reference.
     const dangling = scene(
       staticBody3d,
       node('CollisionShape3D', { shape: 'SubResource("nope_1")' }, { parent: '.' })

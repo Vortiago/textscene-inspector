@@ -1,22 +1,8 @@
 /**
- * The sprite-sheet frame a Sprite2D/Sprite3D ends up holding, replayed in
- * FILE order — the two classes' setters are line-for-line twins
- * (sprite_2d.cpp:296-364, sprite_3d.cpp:878-943).
- *
- * `SceneState::instantiate` applies a node's stored properties in the order the
- * file lists them (packed_scene.cpp:369-492), so each setter sees only what the
- * lines above it have already applied:
- *
- *   set_frame:        ERR_FAIL_INDEX(p_frame, vframes * hframes)          — refused
- *   set_frame_coords: ERR_FAIL_INDEX per component, then set_frame        — refused
- *   set_vframes:      ERR_FAIL_COND(p_amount < 1); frame = 0 if now past the grid
- *   set_hframes:      ERR_FAIL_COND(p_amount < 1); with vframes > 1 the frame is
- *                     RE-MAPPED to keep its row and column on the new sheet
- *                     (`frame = original_row * p_amount + original_column`,
- *                     sprite_2d.cpp:358), or reset to 0 when its column is gone.
- *
- * Shared by the render parsers (what to draw) and the linter (what to report),
- * so the two cannot disagree about which frame a body loads on.
+ * The sprite-sheet frame a Sprite2D/Sprite3D ends up holding, replayed in file order
+ * (packed_scene.cpp:369-492), so each setter sees only the lines above it. The two classes'
+ * setters are line-for-line twins (sprite_2d.cpp:296-364, sprite_3d.cpp:878-943). The render
+ * parsers and the linter share this, so they cannot disagree about which frame a body loads on.
  */
 
 import { parseGodotInt } from './int.js';
@@ -36,7 +22,7 @@ export interface FrameWrite {
   /** The grid in effect when the write was applied. */
   hframes: number;
   vframes: number;
-  /** Which ERR_FAIL_INDEX refused it; both false means the write landed. */
+  /** Which ERR_FAIL_INDEX refused it. Both false means the write landed. */
   refused: { x: boolean; y: boolean };
 }
 
@@ -86,13 +72,14 @@ export function replaySpriteFrames(properties: Record<string, string>): SpriteFr
     state.frame = frame;
     stored = write;
   };
+  // `set_vframes` and `set_hframes` reset the frame to 0 when it falls past the new grid.
   const resetIfPastGrid = () => {
     if (state.frame >= state.vframes * state.hframes) state.frame = 0;
   };
 
   // The four keys this replay consumes, read by name so the parser-parity
   // scrape (linter/testing/propertyGrammarParityScan.ts) credits them to the
-  // parsers that hand the bag here; the ORDER still comes from the bag itself.
+  // parsers that hand the bag here. The order still comes from the bag itself.
   const authored: Record<string, string | undefined> = {
     hframes: properties.hframes,
     vframes: properties.vframes,
@@ -111,6 +98,9 @@ export function replaySpriteFrames(properties: Record<string, string>): SpriteFr
       }
       // ERR_FAIL_COND_MSG(p_amount < 1): refused, and the grid stands.
       if (count < 1 || count === state[key]) continue;
+      // With vframes > 1, `set_hframes` re-maps the frame to keep its row and column
+      // (`frame = original_row * p_amount + original_column`, sprite_2d.cpp:358),
+      // or resets it to 0 when its column is gone.
       if (key === 'hframes' && state.vframes > 1) {
         const column = state.frame % state.hframes;
         state.frame = column >= count ? 0 : Math.trunc(state.frame / state.hframes) * count + column;
@@ -118,6 +108,7 @@ export function replaySpriteFrames(properties: Record<string, string>): SpriteFr
       state[key] = count;
       resetIfPastGrid();
     } else if (key === 'frame') {
+      // `set_frame`: ERR_FAIL_INDEX(p_frame, vframes * hframes) refuses it.
       const frame = parseGodotInt(raw);
       if (frame === null || Number.isNaN(frame)) continue;
       const refused = frame < 0 || frame >= state.hframes * state.vframes;
@@ -128,6 +119,7 @@ export function replaySpriteFrames(properties: Record<string, string>): SpriteFr
       state.writes.push(write);
       if (!refused) land(write, frame);
     } else if (key === 'frame_coords') {
+      // `set_frame_coords`: ERR_FAIL_INDEX per component, then `set_frame`.
       const coords = readCoords(raw);
       if (!coords) continue;
       const write: FrameWrite = {

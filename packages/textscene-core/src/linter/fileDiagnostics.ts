@@ -1,27 +1,16 @@
 /**
- * The diagnostics `Linter` reports about a FILE, which no rule can own.
- *
- * A `LintRule` reaches its subject through `applicableNodeTypes`, so a claim
- * about the header — or about a heading that never entered the tree — has no
- * slice to declare it and escapes `RuleMeta.emits` entirely. They are declared
- * here in the shape an emitted rule name uses, for the reason `RangeArm.cite`
- * is required: the alternative was the citation living in a prose comment and
- * the exempt names typed out in a test file, which is the parallel roster
- * `RuleMeta.exactClassByDesign` was written to avoid.
- *
- * `emitsGrounding.test.ts` sweeps these beside the registry's own arms, so a
- * cite here is checked exactly like any other.
+ * The diagnostics `Linter` reports about a file, which no rule can own: a `LintRule` reaches its subject through
+ * `applicableNodeTypes`, so a claim about the header or a heading outside the tree escapes `RuleMeta.emits`. They take
+ * an emitted rule's shape, cite included, rather than a prose cite and a parallel roster of exempt names in a test.
+ * `emitsGrounding.test.ts` checks these cites beside the registry's own arms.
  */
 
 import type { RuleArm } from './ruleArms.js';
 
 export const FILE_DIAGNOSTICS = {
   /**
-   * A header older than the text format Godot writes today.
-   *
-   * The only one with no engine line to cite, and ADR-0032 says why: the text
-   * loader compares the header version in three places and every one is `>`,
-   * so 4.6.3 opens a `format=2` file and parses it with the current grammar.
+   * A header older than the text format Godot writes today. The only one with no engine line to cite (ADR-0032): the
+   * loader's three header-version comparisons are all `>`, so 4.6.3 parses a `format=2` file with the current grammar.
    * Declining it is a decision about this tool's scope.
    */
   legacyFormat: {
@@ -36,7 +25,7 @@ export const FILE_DIAGNOSTICS = {
   },
   /**
    * A `parent=` path that resolves against nothing. Godot warns, re-parents the
-   * node to the scene root and renames it `<path>#<name>` — so the file loads
+   * node to the scene root and renames it `<path>#<name>`, so the file loads
    * and the node exists, in the wrong place under a different name.
    */
   unresolvedParentPath: {
@@ -45,13 +34,10 @@ export const FILE_DIAGNOSTICS = {
     grounding: { kind: 'engine', at: 'packed_scene.cpp:208-215' },
   },
   /**
-   * `parent=""`, which the text loader cannot read at all. It builds the
-   * NodePath and calls `prepend_period()` on it unconditionally
-   * (`resource_format_text.cpp:206-207`), and that method dereferences `data`
-   * with no null check (`node_path.cpp:43-44`) while `NodePath("")` leaves
-   * `data` unset (`:394-397`) — so the load faults before any node is made. The
-   * error tier, and above the vanished-path warning: nothing about the file
-   * loads.
+   * `parent=""`, which the text loader cannot read: it calls `prepend_period()` on the NodePath unconditionally
+   * (`resource_format_text.cpp:206-207`), which dereferences `data` with no null check (`node_path.cpp:43-44`), and
+   * `NodePath("")` leaves `data` unset (`:394-397`). The load faults before any node is made, so this is an error and
+   * outranks the vanished-path warning.
    */
   emptyParentPath: {
     severity: 'error',
@@ -59,12 +45,9 @@ export const FILE_DIAGNOSTICS = {
     grounding: { kind: 'engine', at: 'resource_format_text.cpp:206-207' },
   },
   /**
-   * A heading declaring no `parent=` while not being the root. The text loader
-   * stores it without complaint (`resource_format_text.cpp:273`); the
-   * instantiate below refuses, so the resource loads and the scene cannot be
-   * built from it. `parent=""` is `emptyParentPath` and not this one: the
-   * loader calls `add_node_path` for any value the field carries, which never
-   * returns `-1` (`packed_scene.cpp:2307-2311`).
+   * A heading declaring no `parent=` while not being the root. The loader stores it (`resource_format_text.cpp:273`)
+   * and the instantiate refuses, so the resource loads and no scene builds from it. `parent=""` is `emptyParentPath`
+   * instead: the loader calls `add_node_path` for any value, which never returns `-1` (`packed_scene.cpp:2307-2311`).
    */
   nodeWithoutParent: {
     severity: 'error',
@@ -74,7 +57,7 @@ export const FILE_DIAGNOSTICS = {
   /**
    * The mirror of the above, on the one heading the rule is inverted for: the
    * root may not declare a `parent=`, and any value refuses the instantiate.
-   * `parent="."` reads as harmless and is not — it is the spelling a file
+   * `parent="."` reads as harmless and is not: it is the spelling a file
    * missing its root heading falls into, since every other heading declares one.
    */
   rootDeclaresParent: {
@@ -83,8 +66,8 @@ export const FILE_DIAGNOSTICS = {
     grounding: { kind: 'engine', at: 'packed_scene.cpp:218-219' },
   },
   /**
-   * A rule threw. Reported once, on the node it ran on, naming the rule and
-   * the error; every other rule still runs. Not an engine claim about the
+   * A rule threw. Reported on the node it ran on, naming the rule and the
+   * error. Every other rule still runs. Not an engine claim about the
    * file: the rule's own findings for that node are simply missing.
    */
   ruleCrashed: {
@@ -97,11 +80,9 @@ export const FILE_DIAGNOSTICS = {
     },
   },
   /**
-   * A well-formed `SubResource("id")` / `ExtResource("id")` in a registered
-   * resource slot whose id the file never declares. Not a slice's claim: the
-   * loader resolves the reference while tokenising the VALUE, before any
-   * setter, so every slot fails the same way (`danglingResources.ts`). The ext
-   * twin is `resource_format_text.cpp:138`.
+   * A well-formed `SubResource("id")` / `ExtResource("id")` in a registered resource slot whose id the file never
+   * declares. Not a slice's claim: the loader resolves it while tokenising the value, before any setter, so every slot
+   * fails the same way (`danglingResources.ts`). The ext twin is `resource_format_text.cpp:138`.
    */
   danglingResourceReference: {
     severity: 'error',

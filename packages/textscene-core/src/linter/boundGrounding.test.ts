@@ -1,19 +1,8 @@
 /**
- * Every numeric or enum bound must say where its authority comes from.
- *
- * ADR-0032: a bound is an ERROR only where Godot's setter refuses or alters the
- * value, and a WARNING where the property's `PROPERTY_HINT_RANGE` states it but
- * the setter assigns straight through. The `v` DSL records which, along with the
- * governing `file:line`, via `enforced:` / `hinted:`.
- *
- * A bound with neither is un-audited. It behaves as it always has (an error),
- * which is right for some and wrong for others, and the only way to know is to
- * read the setter. This is the ratchet over that migration: the count of
- * un-audited bounds goes down and never up, so a new slice cannot quietly add
- * one, and the number reaching zero is what finishes the audit.
- *
- * The two tiers' own behaviour — what `enforced` and `hinted` do to a
- * diagnostic's severity — is the sibling `boundGrounding.tiers.test.ts`.
+ * Every numeric or enum bound says where its authority comes from. ADR-0032: a bound is an error only where Godot's
+ * setter refuses or alters the value, and a warning where `PROPERTY_HINT_RANGE` states it but the setter assigns. The `v`
+ * DSL records which, with the governing `file:line`, through `enforced:` / `hinted:`. The unclassified count only goes
+ * down. What the two tiers do to a diagnostic's severity is in the sibling `boundGrounding.tiers.test.ts`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -31,53 +20,32 @@ import { ENGINE_CITE_RE } from './testing/engineCite.js';
 import { everyValidatorLabel, registeredKeys, registeredTypes } from './registryPopulation.js';
 
 /**
- * Types whose validators are all still unclassified.
- *
- * A validator built through the `v` DSL is classified by construction: every
- * combinator is either a `shape` (rejects only malformed input, so it needs no
- * citation) or takes a `Grounding`. A HAND-ROLLED validator is neither until
- * its author says which, and that gap is what this list holds.
- *
- * This is the whole ratchet, and one sweep is enough: `ground()` sets `bounded`
- * XOR `formatOnly`, so "bounded and ungrounded" is definitionally "neither
- * formatOnly nor grounding" — this same set, without the recursion into
- * `.leaves`.
- *
- * A hand-rolled validator in no denominator is how
- * `GPUParticles3D.visibility_aabb` came to reject a negative extent that
- * `set_visibility_aabb` assigns unaltered.
- *
- * Only ever shrinks. Classify the validator instead of adding an entry.
+ * Unclassified validators allowed, and it only shrinks: classify the validator instead. A `v` DSL validator is a `shape`
+ * (rejects only malformed input) or takes a `Grounding`; a hand-rolled one is neither until its author says which. Since
+ * `ground()` sets `bounded` or `formatOnly`, never both, "bounded and ungrounded" is exactly "neither formatOnly nor
+ * grounding", so one walk covers it.
  */
 const UNCLASSIFIED_VALIDATOR_BUDGET = 0;
 
 /**
- * A grounding whose cite names no engine location.
- *
- * Rides the shared walk rather than recursing itself: a private copy of that
- * recursion drifted from `unclassifiedKeys`' within hours of being written, one
- * carrying a cycle-safety `Set` and the other not. Reaching leaves matters here
- * because a wildcard dispatcher's own tag vouches for nothing behind it, and 93
- * of the 237 leaf validators carry a grounding of their own.
+ * A grounding whose cite names no engine location. It rides the shared walk rather than a private recursion, which
+ * would diverge from `unclassifiedKeys`'. The walk reaches leaves because a wildcard dispatcher's own tag vouches for
+ * nothing behind it.
  */
 const citesNoEngineLocation = (validator: PropertyValidator): boolean =>
   validator.grounding !== undefined && !ENGINE_CITE_RE.test(validator.grounding.cite);
 
 describe('bound grounding', () => {
   it('states an out-of-range severity wherever it states a range', () => {
-    // The two travel together into one sheet row, so a range beside an empty
-    // `Out of range` cell tells a reader the bound has no consequence. This
-    // sweep is the one `tiers` shipped without: 55 validators built from an
-    // inline arrow went untagged, three of them with an enforced floor and a
-    // hinted ceiling, and nothing said so.
+    // The two travel together into one sheet row, so a range beside an empty `Out of range` cell tells a reader the
+    // bound has no consequence. A validator built from an inline arrow can carry an enforced floor and a hinted ceiling
+    // with no tag.
     expect(rangeWithoutTiers()).toEqual([]);
   });
 
   it('classifies every validator as format-only or grounded', () => {
-    // The floor first: 1986 keys resolve to a validator today, and a budget of
-    // zero is satisfied just as well by a registry that never loaded. Covers
-    // hand-rolled validators too: one that never goes through the DSL declares
-    // neither tag, so it lands here however many real values it rejects.
+    // The floor first: a budget of zero is satisfied just as well by a registry that never loaded. It covers
+    // hand-rolled validators too: one outside the DSL declares neither tag, so it lands here.
     expect(registeredKeys().length).toBeGreaterThan(1500);
     expect(unclassifiedKeys()).toHaveLength(UNCLASSIFIED_VALIDATOR_BUDGET);
   });
@@ -90,20 +58,17 @@ describe('bound grounding', () => {
   });
 
   it('gives every grounded bound a source citation', () => {
-    // The citation is the whole point: `enforced` without a `file:line` is the
-    // unverifiable claim an invented threshold makes.
-    // The floor rides on the sweep: 2000 validators examined, none uncited.
-    // Asserted beside it, a separate key count could pass while the walk that
-    // matters examined nothing.
+    // `enforced` without a `file:line` is the unverifiable claim an invented threshold makes. The floor rides on the
+    // walk (2000 validators examined, none uncited): a separate key count could pass while the walk examined nothing.
     expect(everyValidatorLabel(citesNoEngineLocation, { atLeast: 2000 })).toEqual([]);
   });
 });
 
 describe('the classification guard bites', () => {
-  /** The predicate the registry sweep applies, on a single validator. */
-  // The SHARED predicate, not a local copy of it: a private restatement is
-  // how this guard came to prove only the half that still worked, asserting a
-  // rule the registry sweep had already stopped applying.
+  /**
+   * The predicate the registry walk applies, on a single validator. The shared one, not a local copy, so this guard
+   * tests the rule the registry applies.
+   */
   const unclassified = isUnclassified;
 
   it('catches a hand-rolled validator that declares neither', () => {
@@ -128,11 +93,8 @@ describe('the classification guard bites', () => {
   });
 
   it('treats an unbounded FLOAT combinator as format-only, but never an int one', () => {
-    // `v.float('width')` rejects only what is not a number, so there is no bound
-    // to cite. Counting it as un-audited was what inflated the ratchet to 596.
-    // An INT slot is different: it rejects a non-finite, which the parser reads
-    // perfectly well and the WRITE then converts (variant.h:369-370), so it
-    // owes a citation like any other bound.
+    // `v.float('width')` rejects only what is not a number, so there is no bound to cite. An int slot rejects a
+    // non-finite, which the parser reads and the write then converts (variant.h:369-370), so it owes a citation.
     expect(v.float('width').formatOnly).toBe(true);
     expect(v.int('count').formatOnly).toBeUndefined();
     expect(v.int('count').intSlot).toEqual({ cite: 'variant.h:360-377', width: 'int32' });
@@ -195,12 +157,9 @@ describe('the classification guard bites', () => {
   });
 
   it('names an UNGROUNDABLE label that resolves to nothing, or to a grounded bound', () => {
-    // Both ways an entry dies: its type or key goes away, and its validator
-    // gains the citation that was missing.
-    //
-    // The live control is a scratch root, not a registered key: the ungrounded
-    // population is empty by policy, so against the registry alone EVERY label
-    // is stale and the arm that must not report would pass vacuously.
+    // Both ways an entry dies: its type or key goes away, or its validator gains the missing citation. The live control
+    // is a scratch root: the ungrounded population is empty by policy, so against the registry alone every label is
+    // stale and the arm that must not report would pass vacuously.
     const stillUngrounded: PropertyValidator = () => null;
     expect(
       staleUngroundable(
@@ -211,11 +170,8 @@ describe('the classification guard bites', () => {
   });
 
   it('puts removal-only types in the swept key list, not just in the registry', () => {
-    // Every one of the four types declaring a removal registers NO validator of
-    // its own, so none appears in `registeredTypes('declaring')`. Sweeping removals
-    // as a nested loop inside that list visited zero of them while the count
-    // still read 0. This asserts the key list itself, which is what the
-    // classification test consumes.
+    // A type declaring a removal can register no validator of its own, so it is absent from
+    // `registeredTypes('declaring')`. This asserts the key list the classification test consumes.
     const swept = registeredKeys().map(({ nodeType, key }) => `${nodeType}.${key}`);
     expect(registeredTypes('declaring')).not.toContain('HBoxContainer');
     expect(swept).toContain('HBoxContainer.vertical');
@@ -223,18 +179,10 @@ describe('the classification guard bites', () => {
   });
 
   it('states the numbers wherever it states a tier', () => {
-    // `ground()` sets `tiers` and `bounds` together, so a validator carrying one
-    // without the other cannot have come from the DSL: it is hand-rolled, or it
-    // went through a wrapper that forwarded only half.
-    //
-    // The pair is not decoration. `tiers` decides the SEVERITY of a bound and
-    // `bounds` carries the NUMBERS that `hintImplementationParity` compares
-    // against Godot's own hint — so a validator with only the first enforces a
-    // range that no guard can check against the engine, and silently counts as
-    // an unimplemented end while being fully implemented.
-    // The floor rides on the sweep, for the reason the citation sweep above
-    // states: an offender filter's expected answer is `[]`, so a walk that
-    // reached nothing is indistinguishable from a clean one.
+    // `ground()` sets `tiers` and `bounds` together, so one without the other is hand-rolled or half-forwarded. `tiers`
+    // decides a bound's severity and `bounds` carries the numbers `hintImplementationParity` checks against Godot's hint,
+    // so tiers alone enforce a range no guard can check. The floor rides on the walk: an offender filter expects `[]`,
+    // so a walk that reached nothing looks clean.
     expect(
       everyValidatorLabel((val) => val.tiers !== undefined && val.bounds === undefined, {
         atLeast: 2000,
@@ -245,7 +193,7 @@ describe('the classification guard bites', () => {
   it('reaches removals, which getOwnKeys deliberately omits', () => {
     // HBoxContainer takes `vertical` away from BoxContainer. That refuses every
     // value of a key a scene can carry, so it needs the same citation a bound
-    // does, and a sweep over declarations alone would never look at it.
+    // does, and a walk over declarations alone would never look at it.
     const validator = validatorRegistry.declarationFor('HBoxContainer', 'vertical');
     expect(validatorRegistry.getOwnKeys('HBoxContainer')).not.toContain('vertical');
     expect(Object.keys(validatorRegistry.getOwnRemovals('HBoxContainer'))).toContain('vertical');
