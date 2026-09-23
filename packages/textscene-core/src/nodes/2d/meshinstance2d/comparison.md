@@ -31,7 +31,7 @@ Strict parsing format-checks these `MeshInstance2D` properties, plus 12 inherite
 <!-- lint:end -->
 
 A bare string in `mesh` or `texture`, such as `"res://quad.tres"`, is stored as-is with
-no warning. Nothing reads it back, since no render component exists yet.
+no warning. Nothing reads it back, since no render component exists.
 
 ## Known limitations
 
