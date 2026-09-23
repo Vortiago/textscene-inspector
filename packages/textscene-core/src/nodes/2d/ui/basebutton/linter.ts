@@ -1,22 +1,7 @@
 /**
- * The BaseButton dead-ButtonGroup rule, shared by every BaseButton subclass.
- *
- * Godot states it itself: `BaseButton::get_configuration_warnings`
- * (scene/gui/base_button.cpp:522-529) warns when a button carries a
- * `button_group` while `toggle_mode` is false, because a ButtonGroup only ever
- * arbitrates between toggled buttons — grouping non-toggle buttons silently
- * does nothing.
- *
- * The subtlety is the default. Godot omits a property it is serialising at its
- * default, so an absent `toggle_mode` does NOT mean false: five subclasses flip
- * it in their constructor (check_box.cpp:172, check_button.cpp:171,
- * option_button.cpp:652, menu_button.cpp:240, color_picker.cpp:2551), and
- * doc/classes/ records that as `overrides="BaseButton" default="true"`. Reading
- * absence as false would warn on every grouped CheckBox in existence.
- *
- * ONE rule on the tier rather than one per subclass: `applicableNodeTypeMatcher`
- * reaches every descendant through the base chain, so the leaf slices declare
- * nothing and a new button type is covered the day it is added.
+ * The dead-ButtonGroup rule (scene/gui/base_button.cpp:522-529): a `button_group` with `toggle_mode`
+ * false warns, since a ButtonGroup arbitrates only toggled buttons. One rule on the base tier:
+ * `applicableNodeTypeMatcher` reaches every descendant, so a new button type needs no declaration.
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
@@ -25,7 +10,11 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 
-/** Subclasses whose constructor sets toggle_mode, so absence means true. */
+/**
+ * Subclasses whose constructor sets toggle_mode (check_box.cpp:172, check_button.cpp:171,
+ * option_button.cpp:652, menu_button.cpp:240, color_picker.cpp:2551), so absence means true.
+ * doc/classes/ records each as `overrides="BaseButton" default="true"`.
+ */
 const TOGGLE_MODE_ON_BY_DEFAULT = new Set([
   'CheckBox',
   'CheckButton',

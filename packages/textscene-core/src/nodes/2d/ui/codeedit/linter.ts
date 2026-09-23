@@ -1,27 +1,8 @@
 /**
- * Semantic linter rule for CodeEdit.
- *
- * Format validation is handled by linterParser.ts, which validates
- * `delimiter_strings` and `delimiter_comments` each in isolation, including a
- * start-key repeated WITHIN one of those two properties. What it cannot see is
- * a start key repeated ACROSS the two: `CodeEdit::_set_delimiters`
- * (code_edit.cpp:3490-3508) stores BOTH string and comment delimiters in one
- * shared `delimiters` Vector (`Vector<Delimiter> delimiters;`, code_edit.h),
- * and `_add_delimiter`'s "already exists" guard
- * (`ERR_FAIL_COND_MSG(delimiters[i].start_key == p_start_key, …)`,
- * code_edit.cpp:3436) checks every entry already in that Vector regardless of
- * its `DelimiterType` — so a comment delimiter and a string delimiter sharing
- * a start key collide exactly as two string delimiters would.
- *
- * `_set_delimiters` clears only ITS OWN type before re-adding
- * (`_clear_delimiters(p_type)`, code_edit.cpp:3492), so whichever
- * `delimiter_*` property Godot applies SECOND finds the other type's entries
- * still in the Vector; the colliding start key it tries to add hits the
- * ERR_FAIL_COND_MSG and is silently dropped — the "silently dropped write"
- * case ADR-0032 grounds a diagnostic on. Property application order is not
- * something this linter can observe (it depends on Godot's own iteration of
- * the deserialized property list), so the message names the risk rather than
- * asserting which property wins.
+ * CodeEdit's delimiter-collision rule. `_set_delimiters` (code_edit.cpp:3490-3508) stores string and
+ * comment delimiters in one `delimiters` Vector (code_edit.h), and `_add_delimiter`'s "already exists"
+ * guard (code_edit.cpp:3436) checks entries of either type, so a start key shared across the two
+ * properties collides. linterParser.ts catches a repeat within one property.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -34,12 +15,9 @@ import { unquoteString } from '../../../../parser/utils.js';
 const QUOTED_ELEMENT_CAPTURE_RE = /"((?:[^"\\]|\\[\s\S])*)"/g;
 
 /**
- * The start key of each non-empty element of a `delimiter_strings` /
- * `delimiter_comments` literal, mirroring the same split linterParser.ts uses
- * (`CodeEdit::_set_delimiters`, code_edit.cpp:3501-3502). Returns an empty set
- * for a value this rule cannot parse — linterParser.ts's own validator is
- * what reports a malformed literal; this rule only reasons about start keys
- * it could actually extract.
+ * The start key of each non-empty element of a delimiter literal, split as `_set_delimiters` does
+ * (code_edit.cpp:3501-3502). An empty set for a value this rule cannot parse: linterParser.ts's
+ * validator reports a malformed literal.
  */
 function startKeysOf(raw: string | undefined): Set<string> {
   const keys = new Set<string>();
@@ -69,6 +47,9 @@ function checkCodeEdit(context: RuleContext): Diagnostic[] {
   const shared = [...stringKeys].filter((key) => commentKeys.has(key)).sort();
   if (shared.length === 0) return diagnostics;
 
+  // `_set_delimiters` clears only its own type (code_edit.cpp:3492), so the property applied second
+  // silently drops its colliding key (ADR-0032). The order is not observable here, so the message
+  // names the risk rather than the winner.
   diagnostics.push({
     severity: 'error',
     message:

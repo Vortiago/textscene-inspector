@@ -1,8 +1,6 @@
 /**
- * BaseButton registration — the native (WebGL canvas) painter. No solver:
- * BaseButton overrides neither `get_minimum_size` nor any container layout
- * in Godot, so absence is the correct port (this slice's `Component.tsx`
- * module doc).
+ * BaseButton registration: the native (WebGL canvas) painter. It has no solver,
+ * because BaseButton overrides neither `get_minimum_size` nor a container layout.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

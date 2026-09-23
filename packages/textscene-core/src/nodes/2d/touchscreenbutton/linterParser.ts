@@ -1,28 +1,19 @@
 /**
- * TouchScreenButton strict validators for linting.
- *
- * Declare only TouchScreenButton's OWN members — the ones doc/classes/TouchScreenButton.xml
- * lists without an `overrides=` attribute. Everything from Node2D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
- *
- * All nine `ADD_PROPERTY` calls in `TouchScreenButton::_bind_methods`
- * (touch_screen_button.cpp:434-442) are the whole own surface: the class binds
- * no `PropertyListHelper`, no `ADD_ARRAY_COUNT` and no `_get_property_list`.
- * It does carry a `_set` override (touch_screen_button.h:74,
- * touch_screen_button.cpp:392-402), but it is a `DISABLE_DEPRECATED`
- * compatibility shim for Godot 3.x's `normal`/`pressed` keys — load-only, with
- * no matching `_get`, so it is never something the engine SERIALISES and gets
- * no validator here.
+ * TouchScreenButton strict validators. The nine `ADD_PROPERTY` calls (touch_screen_button.cpp:434-442)
+ * are the whole own surface: no `PropertyListHelper`, `ADD_ARRAY_COUNT` or `_get_property_list`. The `_set`
+ * override (touch_screen_button.h:74, touch_screen_button.cpp:392-402) is a load-only `DISABLE_DEPRECATED`
+ * shim for Godot 3.x `normal`/`pressed` with no `_get`, so it serialises nothing and gets no validator.
  */
 
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
+// Own members only, those doc/classes/TouchScreenButton.xml lists without `overrides=`. Node2D's keys
+// arrive through the NODE_BASE_TYPES walk, and a re-declared one shadows it and duplicates the rule.
 validatorRegistry.registerAll('TouchScreenButton', {
   // touch_screen_button.cpp:434. set_texture_normal (cpp:35-47) assigns
-  // straight through past an equality guard; the rest just (dis)connects a
+  // straight through past an equality guard. The rest (dis)connects a
   // `changed` signal. PROPERTY_HINT_RESOURCE_TYPE "Texture2D" is an editor
   // picker filter only. Format-only, matching Sprite2D.texture.
   texture_normal: v.resourceReference('texture_normal'),
@@ -43,22 +34,14 @@ validatorRegistry.registerAll('TouchScreenButton', {
   // touch_screen_button.cpp:440. set_passby_press (cpp:383-385) assigns
   // unconditionally.
   passby_press: v.boolean('passby_press'),
-  // touch_screen_button.cpp:441, declared Variant::STRING_NAME with
-  // PROPERTY_HINT_INPUT_NAME "show_builtin,loose_mode", but get_action returns
-  // String (cpp:224-226), so Godot SAVES the plain quoted form; the variant
-  // text parser also reads the `&"…"` StringName literal the declared type
-  // suggests. Same getter-vs-declared-type gap as BoneAttachment3D.bone_name.
-  // The hint only names an InputMap action for the editor's picker — this
-  // linter has no project file in scope to resolve it against, so only the
-  // literal's FORMAT is checked, never whether the action exists. set_action
-  // (cpp:220-222) assigns unconditionally.
+  // touch_screen_button.cpp:441 declares STRING_NAME, but get_action returns String (cpp:224-226), so
+  // Godot saves the plain quoted form. The parser also reads `&"…"`. set_action (cpp:220-222) assigns
+  // unconditionally. The PROPERTY_HINT_INPUT_NAME "show_builtin,loose_mode" hint names an InputMap
+  // action, which needs the project file, so only the literal's format is checked.
   action: v.stringName('action'),
-  // touch_screen_button.cpp:442, PROPERTY_HINT_ENUM "Always,TouchScreen Only"
-  // (2 labels, 0-1); BIND_ENUM_CONSTANT at cpp:447-448.
-  // set_visibility_mode (cpp:374-377) assigns straight through with no
-  // ERR_FAIL_INDEX, and the header enum (touch_screen_button.h:42-45) declares
-  // no MAX sentinel — so out-of-range is only HINTED, a warning, same shape as
-  // Window.mode.
+  // touch_screen_button.cpp:442, PROPERTY_HINT_ENUM "Always,TouchScreen Only" (0-1), BIND_ENUM_CONSTANT at
+  // cpp:447-448. set_visibility_mode (cpp:374-377) has no ERR_FAIL_INDEX and the header enum
+  // (touch_screen_button.h:42-45) has no MAX sentinel, so out of range is only hinted: a warning.
   visibility_mode: v.enumInt(
     'visibility_mode',
     0,

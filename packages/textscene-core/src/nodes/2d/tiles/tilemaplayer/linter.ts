@@ -1,6 +1,6 @@
 /**
  * Semantic linter rules for TileMapLayer. Format validation (reference syntax,
- * booleans) lives in linterParser.ts; these rules use scene context and the
+ * booleans) lives in linterParser.ts. These rules use scene context and the
  * shared tile-data decoder.
  */
 

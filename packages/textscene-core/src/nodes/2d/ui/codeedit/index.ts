@@ -1,4 +1,4 @@
-/** CodeEdit registration — parser. Render component wiring is `index.r3f.ts`'s job. */
+/** CodeEdit registration: the parser. `index.r3f.ts` wires the render component. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseCodeEdit } from './parser';

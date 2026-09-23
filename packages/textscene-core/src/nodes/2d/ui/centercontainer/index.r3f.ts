@@ -1,7 +1,6 @@
 /**
- * CenterContainer registration — the native (WebGL canvas) painter + rect
- * solver, self-registered on import (ADR-0001's convention, extended to
- * `controlSolverRegistry` for the native rect solve).
+ * CenterContainer registration: the native (WebGL canvas) painter and rect
+ * solver, self-registered on import (ADR-0001), the solver in `controlSolverRegistry`.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

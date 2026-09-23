@@ -1,4 +1,4 @@
-/** CanvasLayer registration — parser. */
+/** CanvasLayer registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseCanvasLayer } from './parser';

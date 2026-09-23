@@ -1,5 +1,5 @@
 /**
- * TouchScreenButton draws nothing here YET — the badge reads "not implemented". The
+ * TouchScreenButton draws nothing yet, so the badge reads "not implemented". The
  * Node2D base still mounts, for `visible` and the workspace split.
  */
 

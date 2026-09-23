@@ -1,12 +1,7 @@
 /**
- * CanvasLayer parser. CanvasLayer is NOT a Control (it has no anchors/offsets),
- * so it does not delegate to parseControl — only the heading's hierarchy
- * attributes, visibility, and layer.
- *
- * The hierarchy attributes are what rebuild the tree: a node parsed without its
- * `parent` is not attached to one, and since a scene has exactly one root it is
- * dropped along with everything under it. That is how every HUD written the way
- * Godot writes one — a CanvasLayer under the scene root — rendered as nothing.
+ * CanvasLayer parser. CanvasLayer is not a Control, so it parses only the heading's
+ * hierarchy attributes, visibility and layer. Without its `parent` a node attaches to
+ * nothing, and a scene has one root, so the layer and its subtree would be dropped.
  */
 
 import { type ParsedHeading } from '../../../../parser/utils';

@@ -1,6 +1,6 @@
 /**
- * `auto_brace_completion_pairs` — the one Dictionary-valued property on
- * CodeEdit, and the string-keyed dictionary parse it needs.
+ * `auto_brace_completion_pairs`, the one Dictionary-valued property on CodeEdit,
+ * and the string-keyed dictionary parse it needs.
  */
 
 import { accepts, propertyError } from '../../../../linter/validators/index.js';
@@ -14,15 +14,10 @@ const DICT_PAIR_BODY_RE =
 const DICT_PAIR_CAPTURE_RE = /"((?:[^"\\]|\\[\s\S])*)"\s*:\s*"((?:[^"\\]|\\[\s\S])*)"/g;
 
 /**
- * `{ "key": "value", … }` into raw (unescaped) `[key, value]` pairs, or `null`
- * if malformed — mirrors `VariantParser::_parse_dictionary`
- * (core/variant/variant_parser.cpp:677-684), which is reached for a
- * `TK_CURLY_BRACKET_OPEN` token. Scoped to string-keyed, string-valued
- * dictionaries only (what `auto_brace_completion_pairs`'s
- * `PROPERTY_HINT_TYPE_STRING "String;String"` declares); a non-string
- * key/value is format-rejected here even though Godot's own Variant-to-String
- * coercion would tolerate one, the same pragmatic scope `v.quotedString`
- * takes over a general string literal.
+ * `{ "key": "value", … }` as raw (unescaped) `[key, value]` pairs, or `null` if malformed, after
+ * `VariantParser::_parse_dictionary` (core/variant/variant_parser.cpp:677-684). String keys and
+ * values only, as `PROPERTY_HINT_TYPE_STRING "String;String"` declares: a non-string one is
+ * rejected although Godot would coerce it, the scope `v.quotedString` takes too.
  */
 function parseStringDictionary(value: string): Array<[string, string]> | null {
   const wrapper = DICT_WRAPPER_RE.exec(value);
@@ -38,21 +33,10 @@ function parseStringDictionary(value: string): Array<[string, string]> | null {
 }
 
 /**
- * `auto_brace_completion_pairs` (code_edit.cpp:3013): `Dictionary<String,
- * String>`. `set_auto_brace_completion_pairs` (code_edit.cpp:1291-1297)
- * forwards every entry to `add_auto_brace_completion_pair`
- * (code_edit.cpp:1266-1289), whose `ERR_FAIL_COND_MSG` guards this mirrors:
- * an empty open key (code_edit.cpp:1267), an empty close key
- * (code_edit.cpp:1268), a non-symbol character in the open key
- * (code_edit.cpp:1271), or in the close key (code_edit.cpp:1274).
- *
- * No duplicate-open-key check is needed: a Dictionary LITERAL can never carry
- * two entries with the same key in the first place —
- * `VariantParser::_parse_dictionary` assigns `d[key] = value` for each pair
- * (core/variant/variant_parser.cpp:677-684), so a repeated key in the
- * `.tscn` text just overwrites in place before `set_auto_brace_completion_pairs`
- * ever runs, and `add_auto_brace_completion_pair`'s own "already exists" guard
- * (code_edit.cpp:1279) can never see a duplicate coming from this property.
+ * `auto_brace_completion_pairs` (code_edit.cpp:3013), `Dictionary<String, String>`.
+ * `set_auto_brace_completion_pairs` (code_edit.cpp:1291-1297) passes each entry to
+ * `add_auto_brace_completion_pair` (code_edit.cpp:1266-1289), whose `ERR_FAIL_COND_MSG`
+ * guards the loop below mirrors.
  */
 export function bracePairsValidator(name: string): PropertyValidator {
   const formatCode = `INVALID_${name.toUpperCase()}_FORMAT`;
@@ -67,6 +51,8 @@ export function bracePairsValidator(name: string): PropertyValidator {
         formatCode
       );
     }
+    // No duplicate-key check: `_parse_dictionary` assigns `d[key] = value`, so a repeated key
+    // overwrites before the setter runs, and the "already exists" guard (code_edit.cpp:1279) never fires.
     for (const [openKey, closeKey] of pairs) {
       if (openKey === '') {
         return propertyError(

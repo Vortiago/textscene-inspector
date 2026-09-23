@@ -1,10 +1,7 @@
 /**
- * TouchScreenButton strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * TouchScreenButton strict validators: format and range checks through `validatorRegistry`,
+ * not a linted `.tscn`, so a failure points at the validator rather than at scene parsing.
+ * Rule-level behaviour belongs in linter.test.ts, through `Linter`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -20,11 +17,8 @@ function check(property: string, value: string) {
 }
 
 /**
- * The nine `ADD_PROPERTY` calls in `TouchScreenButton::_bind_methods`
- * (touch_screen_button.cpp:434-442). They are the whole own surface: no
- * `PropertyListHelper`, no `ADD_ARRAY_COUNT`, and the `_set` override
- * (cpp:392-402) is a load-only Godot-3.x compatibility shim with no matching
- * `_get`, so it serialises nothing new.
+ * The nine `ADD_PROPERTY` calls in `TouchScreenButton::_bind_methods` (touch_screen_button.cpp:434-442),
+ * the whole own surface. The `_set` override (cpp:392-402) is a load-only Godot 3.x shim with no `_get`.
  */
 const KEYS: string[] = [
   'texture_normal',
@@ -41,7 +35,7 @@ const KEYS: string[] = [
 const DECLARES_NOTHING = false;
 
 /**
- * Keys TouchScreenButton does NOT declare, each paired with the ancestor that does.
+ * Keys TouchScreenButton does not declare, each paired with the ancestor that does.
  */
 const INHERITED: [owner: string, key: string][] = [['Node2D', 'position']];
 
@@ -55,16 +49,14 @@ describe('TouchScreenButton strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run against what this test
+    // imported. `fixtureLint` runs it against the whole registry through the barrel.
     expectFixtureClean('unit-touch-screen-button.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
     // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // sweep is generic on purpose. Per-property cases come next.
     const accepted = validatorRegistry
       .getOwnKeys('TouchScreenButton')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -171,7 +163,7 @@ describe('TouchScreenButton strict validators', () => {
     });
 
     it('accepts an action no InputMap declares, since existence is out of scope', () => {
-      // PROPERTY_HINT_INPUT_NAME (cpp:441) only feeds the editor's picker;
+      // PROPERTY_HINT_INPUT_NAME (cpp:441) only feeds the editor's picker.
       // set_action (cpp:220-222) assigns unconditionally, and this linter has
       // no project file to resolve the name against.
       expect(check('action', '"no_such_action"')).toBeNull();
@@ -192,10 +184,9 @@ describe('TouchScreenButton strict validators', () => {
     });
 
     it('warns above the hint range, since set_visibility_mode assigns unchecked', () => {
-      // touch_screen_button.cpp:374-377 has no ERR_FAIL_INDEX, and the header
-      // enum (touch_screen_button.h:42-45) declares no MAX sentinel — only the
-      // PROPERTY_HINT_ENUM at cpp:442 states the bound, so this is a warning
-      // (ADR-0032), not an error.
+      // touch_screen_button.cpp:374-377 has no ERR_FAIL_INDEX and the header enum
+      // (touch_screen_button.h:42-45) has no MAX sentinel. Only the PROPERTY_HINT_ENUM
+      // at cpp:442 states the bound, so this is a warning (ADR-0032), not an error.
       expect(check('visibility_mode', '2')?.severity).toBe('warning');
     });
 
@@ -216,7 +207,7 @@ describe('TouchScreenButton strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
+      // The same function, not merely some validator: a shadowing copy on
       // TouchScreenButton would answer here while drifting from the ancestor's rule.
       expect(validatorRegistry.findValidator('TouchScreenButton', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('TouchScreenButton')).not.toContain(key);

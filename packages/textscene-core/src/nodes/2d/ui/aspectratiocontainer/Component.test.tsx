@@ -1,7 +1,6 @@
 /**
- * `<AspectRatioContainer>` — a Container paints no chrome of its own; this
- * pins that it renders nothing into the scene graph, so a later regression
- * that accidentally adds a stray quad/outline shows up here first.
+ * `<AspectRatioContainer>` paints no chrome of its own, so it renders nothing
+ * into the scene graph.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

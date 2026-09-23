@@ -1,29 +1,8 @@
 /**
- * `checkbox/nativeSolver.ts` vs Godot 4.6.3 (`scene/gui/check_box.cpp`,
- * `scene/theme/default_theme.cpp:274-313`). Expected numbers are hand-derived
- * from the source, NOT recomputed the way the implementation itself computes
- * them (`AGENTS.md`'s test-authoring rule) — same vendored OpenSans_SemiBold
- * metrics/atlas `button/nativeSolver.test.ts` cites (`unitsPerEm=2048`,
- * `ascent=2189`, `descent=600`; `hmtx` advance width for 'A' is 1354 design
- * units — `openSansMetrics.ts`'s CONTINUOUS `advanceWidths`, not
- * `openSansAtlas.ts`'s own atlas-bake-resolution-42 `xadvance`).
- *
- * At font size 16 a CheckBox floors on `font->get_height()` = ascent +
- * descent = 23 (`ascentPx=ceil(2189*16/2048)=18`,
- * `descentPx=ceil(600*16/2048)=5`). `line_spacing` is Label's own theme
- * constant; CheckBox sets none.
- * 'A' advance at 16px = 1354*(16/2048) = 10.578125; 'AB' = (1354+1350)*(16/2048) = 21.125.
- * `textOffset` is the paragraph's own BOX TOP-LEFT — the MSDF bake's own line
- * anchor is `<TextRun>`'s to reconcile (`TextRun.test.tsx` pins it).
- *
- * A CHECKED (`button_pressed=true`), non-disabled CheckBox draws `DRAW_PRESSED`
- * per `BaseButton::get_draw_mode` (`base_button.cpp:325-358`) since a static
- * preview never sets `hovering`/`press_attempt` — verified against
- * `pnpm ref:godot scenes/fixtures/unit-checkbox.tscn --mode 2d`: the checked
- * row's label reads pure white (255,255,255) at probe (527,298), not the 0.875
- * gray a `DRAW_NORMAL` label would read; the disabled row's label reads
- * rgb(150,150,150) at probe (526,350) — `font_disabled_color` (0.875 * alpha
- * 0.5) blended over the 76,76,76 clear colour: `0.5*223 + 0.5*76 = 149.5`.
+ * `checkbox/nativeSolver.ts` against Godot 4.6.3 (`scene/gui/check_box.cpp`,
+ * `scene/theme/default_theme.cpp:274-313`), hand-derived from OpenSans SemiBold (unitsPerEm 2048,
+ * ascent 2189, descent 600). At 16px a CheckBox floors on the font height 18 + 5 = 23: it sets no
+ * `line_spacing`. `textOffset` is the paragraph's box top-left, and `<TextRun>` owns the line anchor.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -48,12 +27,9 @@ import {
 } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-// 'A's hmtx advance width is 1354 design units, 'B's is 1350 — a DIFFERENT
-// glyph, so 'AB's width is their SUM (the two only coincided at the OLD
-// atlas-bake-resolution-42 xadvance, where both rounded to the integer 28 —
-// a coincidence of that rounding, not a fact about the font).
+// 'A' advances 1354 design units and 'B' 1350, so at 16px 'A' is 10.578125 and 'AB' 21.125.
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
-// The SHAPED size of 'AB' — `TS->shaped_text_get_size(...).x` ceils the pen
+// The shaped size of 'AB': `TS->shaped_text_get_size(...).x` ceils the pen
 // advance to a whole pixel (`text_server_adv.cpp:7524-7537`), and every
 // minimum size below is built from that, not from the fractional sum.
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
@@ -79,6 +55,12 @@ function ctx(withMeasurer = true): SolveContext {
   };
 }
 
+/**
+ * `BaseButton::get_draw_mode` (`base_button.cpp:325-358`) with no hover or press attempt. Measured
+ * with `pnpm ref:godot scenes/fixtures/unit-checkbox.tscn --mode 2d`: the checked label reads
+ * (255,255,255) at (527,298), and the disabled one rgb(150,150,150) at (526,350), which is
+ * `font_disabled_color` over the 76,76,76 clear colour: `0.5*223 + 0.5*76 = 149.5`.
+ */
 describe('resolveCheckBoxDrawState', () => {
   it('is "normal" when neither pressed nor disabled', () => {
     expect(resolveCheckBoxDrawState({} as CheckBoxProperties)).toBe('normal');
@@ -219,7 +201,7 @@ describe('checkBoxIconNaturalSize (check_box.cpp:35-62) — MAX over all 8 icons
   });
 
   it('never shrinks below an unthemed icon\'s vendored default', () => {
-    // Only "checked" themed smaller; the other 7 still default to 16x16.
+    // Only "checked" themed smaller. The other 7 still default to 16x16.
     expect(checkBoxIconNaturalSize({ textureSlots: { checked: { x: 8, y: 8 } } })).toEqual({ x: 16, y: 16 });
   });
 });
@@ -289,16 +271,9 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
 });
 
 /**
- * `CheckBox::_notification`'s RTL arms:
- *
- *     ofs.x = get_size().x - theme_cache.normal_style->get_margin(SIDE_RIGHT) - get_icon_size().width;   // check_box.cpp:129
- *
- * and, from the same notification's layout-direction arm (`:98-100`),
- * `_set_internal_margin(SIDE_LEFT, 0)` / `_set_internal_margin(SIDE_RIGHT,
- * icon width)` — the reservation trades sides. CheckBox's constructor sets
- * `HORIZONTAL_ALIGNMENT_LEFT` (`:174`), which `Button::_notification`'s swap
- * (`button.cpp:271-275`) turns into RIGHT, so the label hugs the far end of
- * what is left.
+ * The RTL arms: the icon sits at `get_size().x - margin(SIDE_RIGHT) - icon width` (check_box.cpp:129),
+ * and the internal margin moves to SIDE_RIGHT (`:98-100`). The constructor's LEFT alignment (`:174`)
+ * swaps to RIGHT (`button.cpp:271-275`), so the label hugs the far end of what is left.
  */
 describe('layoutCheckBoxContent — RTL puts the check on the right and the label against it', () => {
   const BASE = {
@@ -341,8 +316,8 @@ describe('layoutCheckBoxContent — RTL puts the check on the right and the labe
 });
 
 describe(`checkBoxMinimumSize — resolves this CheckBox's own theme font key ("${CHECKBOX_THEME_FONT_KEY}", default_theme.cpp:297)`, () => {
-  // See `resolveNodeFontMetrics.test.ts`'s own doc for why an UNRESOLVABLE
-  // font's warn is the observable proof here, not a resolved FontMetrics value.
+  // An unresolvable font's warning is the observable proof here, not a resolved
+  // value (`resolveNodeFontMetrics.test.ts` gives the reason).
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
@@ -374,15 +349,9 @@ describe(`checkBoxMinimumSize — resolves this CheckBox's own theme font key ("
 });
 
 /**
- * `CheckBox::get_minimum_size` adds its icon and separation to
- * `Button::get_minimum_size`'s already-CEILED text extent
- * (`button.cpp:492` -> `text_paragraph.cpp:601-608` ->
- * `text_server_adv.cpp:7524-7537`, `Size2(sd->width, ...).ceil()`).
- *
- * Godot 4.6.3, `scenes/fixtures/complex-2d-gui.tscn` in a 1152x648
- * SubViewport:
- *
- *   SystemsGrid/Subtitles  "Transcribe squad chatter"  min = (222, 31)
+ * The icon and separation add to Button's ceiled text extent (`button.cpp:492`,
+ * `text_paragraph.cpp:601-608`, `text_server_adv.cpp:7524-7537`). Measured in Godot 4.6.3 on
+ * `scenes/fixtures/complex-2d-gui.tscn` at 1152x648: SystemsGrid/Subtitles is (222, 31).
  */
 describe('checkBoxMinimumSize — the shaped text extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
   it("'Transcribe squad chatter' reaches Godot's own whole-pixel minimum width 222", () => {

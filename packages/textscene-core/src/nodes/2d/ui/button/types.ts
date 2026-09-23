@@ -19,7 +19,7 @@ export interface ButtonProperties extends ControlProperties {
   expandIcon?: boolean;
   /** `TextServer::OverrunBehavior` (0-6). Godot default 0 (OVERRUN_NO_TRIMMING). */
   overrunBehavior?: number;
-  /** `Button.clip_text` — collapses the text's own minimum-width contribution to 0 (button.cpp:492-494), same trigger as a trimming `overrunBehavior`. */
+  /** `Button.clip_text`: collapses the text's minimum-width contribution to 0 (button.cpp:492-494), as a trimming `overrunBehavior` does. */
   clipText?: boolean;
   /** `TextServer::AutowrapMode` (0 OFF, 1 ARBITRARY, 2 WORD, 3 WORD_SMART). Godot default 0 (`button.h`). */
   autowrapMode?: number;

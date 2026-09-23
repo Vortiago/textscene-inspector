@@ -1,7 +1,6 @@
 /**
- * CodeEdit's own gutter geometry vs `scene/gui/code_edit.cpp` (Godot 4.6.3).
- * `CodeEdit::get_minimum_size` itself is TextEdit's unchanged
- * (`../textedit/nativeSolver.test.ts` already covers that shared function).
+ * CodeEdit's gutter geometry against `scene/gui/code_edit.cpp` (Godot 4.6.3). `get_minimum_size`
+ * is TextEdit's, which `../textedit/nativeSolver.test.ts` covers.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -95,12 +94,9 @@ describe('codeEditGutterBand', () => {
   });
 
   it('carries gutter_padding even with every gutter off — the latch never opens (text_edit.cpp:8969-8971)', () => {
-    // `_update_gutter_width` only ever SETS `gutter_padding = 2`; it has no
-    // `else` that clears it. `GutterInfo::draw` defaults TRUE
-    // (`text_edit.h:129`) and `add_gutter` runs the update straight away
-    // (`:6709-6718`), so each of CodeEdit's three constructor gutters latches
-    // the padding on before `set_gutter_draw(idx, false)` turns it off
-    // (`code_edit.cpp:3931-3953`) — and the padding stays for the node's life.
+    // `_update_gutter_width` sets `gutter_padding = 2` and never clears it. `GutterInfo::draw`
+    // defaults true (`text_edit.h:129`) and `add_gutter` updates at once (`:6709-6718`), so each
+    // constructor gutter latches the padding before `set_gutter_draw(idx, false)` (`code_edit.cpp:3931-3953`).
     const withGutter = codeEditGutterBand(
       { gutterDrawLineNumbers: true } as CodeEditProperties,
       rowHeightPx,
@@ -115,16 +111,13 @@ describe('codeEditGutterBand', () => {
 
 describe('codeEditLineNumberTextXPx (text_edit.cpp:1471-1476, code_edit.cpp:1583-1587)', () => {
   it('sits at the gutter region\'s own left edge under LTR', () => {
-    // `ofs.x = p_region.position.x` (:1586) — the region starts at gutter_offset.
+    // `ofs.x = p_region.position.x` (:1586): the region starts at gutter_offset.
     expect(codeEditLineNumberTextXPx(26, 40, 300, 18, false)).toBe(26);
   });
 
   it('right-aligns inside a gutter region mirrored about the control under RTL', () => {
-    // The CUSTOM gutter's own region mirrors first — `gutter_rect.position.x =
-    // size.width - gutter_rect.position.x - gutter_rect.size.x` (text_edit.cpp:1474)
-    // -> 300 - 26 - 40 = 234 — then the text right-aligns inside it,
-    // `ofs.x = p_region.get_end().x - text_size.width` (code_edit.cpp:1584) ->
-    // 234 + 40 - 18 = 256.
+    // The region mirrors first (text_edit.cpp:1474): 300 - 26 - 40 = 234. The text then
+    // right-aligns inside it (code_edit.cpp:1584): 234 + 40 - 18 = 256.
     expect(codeEditLineNumberTextXPx(26, 40, 300, 18, true)).toBe(256);
   });
 
@@ -134,19 +127,10 @@ describe('codeEditLineNumberTextXPx (text_edit.cpp:1471-1476, code_edit.cpp:1583
 });
 
 /**
- * `CodeEdit::_draw_guidelines` (`code_edit.cpp:288-313`).
- *
- *   column_pos = font->get_string_size(String("0").repeat(column)).x
- *   xoffset    = xmargin_beg + column_pos - get_h_scroll()
- *   if (xoffset > xmargin_beg && xoffset < xmargin_end)  -> draw
- *   color      = (i == 0) ? line_length_guideline_color
- *                         : line_length_guideline_color * Color(1, 1, 1, 0.5)
- *   line from (xoffset, 0) to (xoffset, size.height)     // RTL: size.width - xoffset
- *
- * Both bounds are STRICT, so column 0 — whose `column_pos` is 0 and whose
- * `xoffset` therefore equals `xmargin_beg` — draws nothing, and neither does
- * a column past the text band. `get_h_scroll()` is 0 here (`../textedit/
- * nativeSolver.ts`'s SCROLL IS INERT doc).
+ * `CodeEdit::_draw_guidelines` (`code_edit.cpp:288-313`): a line down to `size.height` at
+ * `xoffset = xmargin_beg + column_pos`, or `size.width - xoffset` under RTL, drawn only strictly
+ * inside the margins, so neither column 0 nor a column past the text band draws. The first rule
+ * takes the full colour and each later one half alpha. `get_h_scroll()` is 0.
  */
 describe('codeEditGuidelines (code_edit.cpp:288-313)', () => {
   // A stubbed 8px-per-'0' measurement, so a font-metric change can never read
@@ -154,7 +138,7 @@ describe('codeEditGuidelines (code_edit.cpp:288-313)', () => {
   const width = (column: number) => column * 8;
 
   it('places each column at xmargin_beg plus its own measured width', () => {
-    // `xoffset` is 26 + 32 and 26 + 80; the drawn column is one left of each
+    // `xoffset` is 26 + 32 and 26 + 80. The drawn column is one left of each
     // (the thin-line tie-break, this function's own doc).
     expect(codeEditGuidelines([4, 10], width, 26, 300, 320, false)).toEqual([
       { xPx: 57, dimmed: false },
@@ -181,7 +165,7 @@ describe('codeEditGuidelines (code_edit.cpp:288-313)', () => {
   });
 
   it('keeps an out-of-band column from renumbering the ones that draw', () => {
-    // The dim rule reads the AUTHORED index `i`, not the drawn one.
+    // The dim rule reads the authored index `i`, not the drawn one.
     expect(codeEditGuidelines([0, 4], width, 26, 300, 320, false)).toEqual([{ xPx: 57, dimmed: true }]);
   });
 

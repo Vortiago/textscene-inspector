@@ -1,7 +1,6 @@
 /**
- * `<CenterContainer>` render contract: CenterContainer draws no chrome
- * of its own in Godot (it only centres children, `nativeSolver.ts`), so the
- * native painter must render nothing — no mesh, no line, no group of its own.
+ * `<CenterContainer>` render contract: CenterContainer draws no chrome in Godot,
+ * so the native painter renders no mesh, no line and no group of its own.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

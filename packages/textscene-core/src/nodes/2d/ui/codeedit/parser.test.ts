@@ -1,4 +1,4 @@
-/** CodeEdit parser contract — TextEdit's own parse plus the gutter/indent members this slice draws. */
+/** CodeEdit parser contract: TextEdit's parse plus the gutter and indent members this slice draws. */
 import { describe, it, expect } from 'vitest';
 import { parseCodeEdit } from './parser';
 

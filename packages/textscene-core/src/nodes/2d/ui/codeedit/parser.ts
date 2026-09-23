@@ -1,7 +1,6 @@
 /**
- * CodeEdit parser — TextEdit's own parse plus the gutter/indent members this
- * slice draws (or, for `line_folding`/`indent_size`, parses but cannot act
- * on — see `types.ts`'s own doc for each).
+ * CodeEdit parser: TextEdit's parse plus the gutter, folding, indent, guideline and
+ * delimiter members this slice draws (`types.ts` documents each).
  */
 
 import { type ParsedHeading } from '../../../../parser/utils';
@@ -23,7 +22,7 @@ function parseIntArray(value: string | undefined): number[] | undefined {
     .map((element) => ruleInt(element) ?? 0);
 }
 
-/** The three spellings a String-array slot accepts (`arrayForms.ts`); an unreadable value reads as absent, which is the class default. */
+/** The three spellings a String-array slot accepts (`arrayForms.ts`). An unreadable value reads as absent, the class default. */
 function parseStringArray(value: string | undefined): string[] | undefined {
   if (value === undefined) return undefined;
   return parsePackedStringArray(value) ?? undefined;

@@ -1,4 +1,4 @@
-/** CheckBox registration — native (WebGL canvas) painter + rect solver. */
+/** CheckBox registration: the native (WebGL canvas) painter and rect solver. */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';

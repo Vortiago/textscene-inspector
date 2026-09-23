@@ -1,4 +1,4 @@
-/** CheckButton parser — Button's own parse, plus `button_pressed` (check_button.cpp binds none of its own; it sets toggle_mode=true in its constructor without re-declaring the property). */
+/** CheckButton parser: Button's parse plus `button_pressed`. check_button.cpp binds no property, and its constructor only sets toggle_mode=true. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseButton } from '../button/parser';

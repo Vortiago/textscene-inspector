@@ -1,14 +1,7 @@
 /**
- * Tests for CodeEdit's semantic linter rule (strict parser format checks live
- * in linterParser.test.ts and are asserted through validatorRegistry there).
- *
- * Calls `codeEditDelimiterCollisionRule.check(...)` directly with a hand-built
- * `RuleContext`, rather than through `Linter`/`ruleRegistry`/the shared
- * testkit: several other agents are editing sibling slices concurrently, and
- * both `Linter` and the testkit run every rule the GLOBAL `ruleRegistry`
- * singleton currently holds, which is whatever any other test file running in
- * the same process happened to register. Calling the exported rule object
- * directly reaches only this slice's rule.
+ * CodeEdit's semantic rule, called directly with a hand-built `RuleContext`: `Linter` and the
+ * testkit run every rule the global `ruleRegistry` holds, which depends on what other test files
+ * registered. Format checks live in linterParser.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -43,8 +36,7 @@ describe('CodeEdit semantic rules', () => {
 
   it('warns on the Array[String]([...]) form Godot actually serialises', () => {
     // Both getters are TypedArray<String> (code_edit.cpp:2036, :2065), so this
-    // is the spelling a saved scene carries. Parsing only the declared packed
-    // form made this rule silently find no start keys and never fire.
+    // is the spelling a saved scene carries.
     const diagnostics = codeEditDelimiterCollisionRule.check(
       makeContext({
         delimiter_strings: 'Array[String](["# "])',

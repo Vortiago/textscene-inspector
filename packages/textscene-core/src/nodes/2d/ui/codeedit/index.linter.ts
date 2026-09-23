@@ -1,6 +1,4 @@
-/**
- * codeedit linter registration - imports linter components to trigger self-registration.
- */
+/** Registers the CodeEdit validators and rule. */
 
 import './linterParser.js';
 import './linter.js';

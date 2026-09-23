@@ -1,16 +1,7 @@
 /**
- * CodeEdit strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour (the cross-property delimiter-key
- * collision) belongs in linter.test.ts, through the rule object directly.
- *
- * Grouped to match linterParser.ts's own grouping (CodeEdit::_bind_methods's
- * ADD_GROUP structure, code_edit.cpp:2977-3013): an ungrouped run, then
- * Gutters, Delimiters, Code Completion, Indentation, and Auto Brace
- * Completion.
+ * CodeEdit strict validators through `validatorRegistry`, so a failure points at the validator.
+ * Grouped as `CodeEdit::_bind_methods`'s ADD_GROUP structure (code_edit.cpp:2977-3013). The
+ * cross-property delimiter collision is in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -26,10 +17,8 @@ function check(property: string, value: string) {
 }
 
 /**
- * The 22 own members doc/classes/CodeEdit.xml lists without an `overrides=`
- * attribute (`layout_direction` overrides Control, `text_direction` overrides
- * TextEdit — both are default-value overrides only, never re-declared with
- * `ADD_PROPERTY` in code_edit.cpp).
+ * The own members doc/classes/CodeEdit.xml lists without `overrides=`. `layout_direction` and
+ * `text_direction` only override defaults, and code_edit.cpp never re-declares them.
  */
 const KEYS: string[] = [
   'symbol_lookup_on_click',
@@ -154,7 +143,7 @@ describe('CodeEdit strict validators', () => {
     // Both spellings narrow a float rather than refusing it: the packed form
     // through `_parse_construct<int32_t>` (variant_parser.cpp:1428-1430), the
     // typed form through `ContainerTypeValidate`, which converts an element
-    // whose type `can_convert_strict`s to the array's — and FLOAT does, to INT.
+    // whose type `can_convert_strict`s to the array's, as FLOAT does to INT.
     it('warns that a float element in the typed form is truncated', () => {
       expect(check('line_length_guidelines', 'Array[int]([80.5])')?.severity).toBe('warning');
     });
@@ -168,13 +157,9 @@ describe('CodeEdit strict validators', () => {
     });
 
     /*
-     * The width is a per-SPELLING fact here, not a per-slot one. The setter and
-     * getter are `TypedArray<int>` (code_edit.h:505-506, code_edit.cpp:2499-2506)
-     * behind `PropertyInfo(Variant::PACKED_INT32_ARRAY, …)` (code_edit.cpp:2981),
-     * so only the packed constructor narrows — the typed and bare forms reach the
-     * setter as int64 elements. Measured on 4.6.3:
-     * `Array[int]([4294967296, 1])` -> [4294967296, 1],
-     * `PackedInt32Array(4294967296, 1)` -> [0, 1].
+     * The width depends on the spelling. Setter and getter are `TypedArray<int>` (code_edit.h:505-506,
+     * code_edit.cpp:2499-2506) behind PACKED_INT32_ARRAY (code_edit.cpp:2981), so only the packed form
+     * narrows. Measured on 4.6.3: `Array[int]([4294967296, 1])` -> [4294967296, 1], packed -> [0, 1].
      */
     it('accepts a past-32-bit element in the typed and bare forms, which hold it exactly', () => {
       expect(check('line_length_guidelines', 'Array[int]([4294967296, 1])')).toBeNull();
@@ -196,11 +181,8 @@ describe('CodeEdit strict validators', () => {
   });
 
   describe('the typed-array spelling Godot writes for every string array', () => {
-    // delimiter_strings, delimiter_comments, code_completion_prefixes and
-    // indent_automatic_prefixes all declare PACKED_STRING_ARRAY but have
-    // TypedArray<String> getters (code_edit.cpp:2036, :2065, :2222, :956), and
-    // the getter is what the serializer sees. Accepting only the declared
-    // spelling would reject a scene Godot itself wrote.
+    // The four string arrays declare PACKED_STRING_ARRAY but have TypedArray<String>
+    // getters (code_edit.cpp:2036, :2065, :2222, :956), which the serializer sees.
     it.each([
       ['delimiter_strings', 'Array[String](["< >"])'],
       ['delimiter_comments', 'Array[String](["#"])'],
@@ -219,15 +201,14 @@ describe('CodeEdit strict validators', () => {
     });
 
     it('counts a \\uXXXX escape as the one character the tokenizer decodes it to', () => {
-      // `get_token` resolves the escape before any setter runs, so the prefix IS
-      // one code point. Collapsing `\\u00ab` to the letters `u00ab` made the
-      // element read as five characters and errored on a file Godot loads.
+      // `get_token` resolves the escape before any setter runs, so the prefix is
+      // one code point, not the five letters `u00ab`.
       expect(check('code_completion_prefixes', 'Array[String](["\\u00ab"])')).toBeNull();
     });
 
     it('still applies the per-element rule inside the typed form', () => {
-      // A multi-character prefix is truncated by the setter (code_edit.cpp:2218),
-      // so the new spelling must not become an escape hatch from the check.
+      // The setter truncates a multi-character prefix (code_edit.cpp:2218), so the
+      // typed spelling must not escape the check.
       expect(check('code_completion_prefixes', 'Array[String]([".."])')).not.toBeNull();
     });
 
