@@ -1,20 +1,12 @@
-/**
- * Reading exact pixels back out of a rendered reference — the step that turns
- * "close to Godot" into a number.
- */
+/** Reads exact pixels back out of a rendered reference. */
 
 import { PNG } from 'pngjs';
 
 /**
- * Read back the colour at each probe. `patch` (odd, default 1) samples a
- * square of that side centred on the coordinate and returns the per-channel
- * MEDIAN.
- *
- * A single pixel is not a safe sample across two renderers: ours composites
- * through an antialiased canvas while these references render MSAA-off, so one
- * pixel anywhere near an edge, a silhouette or a shadow boundary carries a
- * blend weight that exists on one side only. The median (not the mean) also
- * discards a stray outlier outright instead of averaging it in.
+ * The colour at each probe: the per-channel median of a `patch`-sided square
+ * (odd, default 1). Ours composites through an antialiased canvas and these
+ * references are MSAA-off, so one pixel near an edge differs. The median, not
+ * the mean, discards an outlier.
  */
 export function probePixels(buffer, probes, { patch = 1 } = {}) {
   const png = PNG.sync.read(buffer);

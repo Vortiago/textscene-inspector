@@ -1,21 +1,8 @@
 /**
- * Whether `packages/textscene-core/dist` is current enough for a ledger to be
- * read from it.
- *
- * Every ledger in this repo — coverage, engine property coverage, resource
- * property coverage, hint parity — measures the BUILT registries, because the
- * barrels use NodeNext `.js` specifiers over on-disk `.ts` and cannot be
- * imported from source. That makes an unbuilt or stale `dist/` the one failure
- * mode none of them can see: every assertion passes, about a previous revision.
- *
- * Refusing to measure is the point. `existsSync(dist)` was the earlier test and
- * it answers a weaker question: it cannot tell a fresh build from one that
- * predates the wave whose numbers the ledger is now reporting, and it SKIPS
- * rather than fails, so a contributor who has never built gets a green run over
- * guards that never executed.
- *
- * `pnpm validate` builds before it tests, so this never fires in CI — it guards
- * the local workflow alone.
+ * Whether `packages/textscene-core/dist` is current enough for a ledger to read.
+ * The ledgers measure the built registries, since the barrels' NodeNext `.js`
+ * specifiers cannot be imported from source. `pnpm validate` builds first, so
+ * this guards the local workflow alone.
  */
 
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -26,11 +13,9 @@ export const BUILD = 'pnpm --filter @textscene/core build';
 
 /**
  * `tsc` emits `src/**` minus the tests, the test kit and the ambient
- * declarations, so an edit to those is not staleness: a guard that fires on
- * work it cannot be measuring is one people learn to bypass. Mirrors the
- * package tsconfig's `exclude`, the `.testkit.ts` glob included — `tsc --build`
- * no-ops when the program is already current, so a complaint raised by a file
- * the program does not contain cannot be cleared by the build it prescribes.
+ * declarations, mirroring the package tsconfig's `exclude`. An edit to those is
+ * not staleness: `tsc --build` no-ops on it, so the prescribed build could not
+ * clear the complaint.
  */
 const COMPILED = /\.tsx?$/;
 const NOT_COMPILED = /\.d\.ts$|\.testkit\.tsx?$|\.(test|spec)\.tsx?$/;
@@ -52,12 +37,9 @@ export function stalenessMessage(core, what = 'this ledger') {
     return `packages/textscene-core/dist is not built — run \`${BUILD}\`.`;
   }
 
-  // Against tsc's OWN record of when it last evaluated the project, not against
-  // the newest emitted `.js`. An incremental build does not rewrite an output
-  // whose content did not change, so a no-op regeneration of a source file
-  // (`pnpm nodes:catalog` rewriting nodeBaseTypes.generated.ts byte-identically)
-  // left every `.js` older than it and no amount of rebuilding could clear the
-  // complaint. A guard whose prescribed remedy does not work gets bypassed.
+  // Against tsc's own record of its last run, not the newest emitted `.js`: an
+  // incremental build leaves an unchanged output untouched, so a byte-identical
+  // regeneration of a source would leave a complaint no build could clear.
   const stampPath = join(core, 'tsconfig.tsbuildinfo');
   let stamp;
   let record;
@@ -68,12 +50,9 @@ export function stalenessMessage(core, what = 'this ledger') {
     return `packages/textscene-core has no readable tsconfig.tsbuildinfo — run \`${BUILD}\`.`;
   }
 
-  // The stamp is WRITTEN BY A BUILD THAT FAILED, so its mtime alone says only
-  // that tsc ran. `semanticDiagnosticsPerFile` holds an array for each file tsc
-  // recorded errors against, and is empty on a clean build, which makes it the
-  // engine's own answer to "did this produce the outputs you are about to
-  // measure". Without it, `touch tsconfig.tsbuildinfo` also cleared the
-  // complaint outright.
+  // A failed build writes the stamp too, so its mtime says only that tsc ran.
+  // `semanticDiagnosticsPerFile` holds an array for each file tsc recorded
+  // errors against, and none on a clean build.
   const failing = (record.semanticDiagnosticsPerFile ?? []).find(Array.isArray);
   if (failing) {
     const first = record.fileNames?.[failing[0] - 1] ?? 'a source file';
@@ -83,13 +62,9 @@ export function stalenessMessage(core, what = 'this ledger') {
     );
   }
 
-  // A stamp a `--noEmit` run wrote. `tsc --noEmit` keeps the same incremental
-  // record a build does, so `pnpm type-check` refreshed the very file dist is
-  // dated against and every ledger then read the previous build as current —
-  // measured, four of them reported a stale registry as fact. tsc's own record
-  // of the distinction is `affectedFilesPendingEmit`: files it evaluated and
-  // did NOT emit, absent from a build that emitted everything. An interrupted
-  // build leaves it too, and reads as stale for the same reason.
+  // `tsc --noEmit` (`pnpm type-check`) writes the same record. Its
+  // `affectedFilesPendingEmit` lists files evaluated and not emitted, which a
+  // full build leaves empty. An interrupted build leaves it too: also stale.
   if ((record.affectedFilesPendingEmit ?? []).length > 0) {
     return (
       `packages/textscene-core/tsconfig.tsbuildinfo was written by a type-check rather than ` +
@@ -97,10 +72,8 @@ export function stalenessMessage(core, what = 'this ledger') {
     );
   }
 
-  // A DELETED source bumps no mtime under `src`, so the comparison below cannot
-  // see one and a dist still carrying the removed slice's self-registration
-  // reads fresh forever. tsc's file list is the record of what the build saw:
-  // a name in it that is no longer on disk dates the build exactly.
+  // A deleted source bumps no mtime under `src`, but a name in tsc's file list
+  // that is no longer on disk dates the build.
   const removed = (record.fileNames ?? [])
     .filter((f) => f.startsWith('./src/') && COMPILED.test(f) && !NOT_COMPILED.test(f))
     .find((f) => !existsSync(join(core, f)));
@@ -128,12 +101,9 @@ export function stalenessMessage(core, what = 'this ledger') {
 }
 
 /**
- * The `beforeAll` every dist-reading ledger needs, as one call.
- *
- * Never at module scope, and that is the whole reason this is shared rather
- * than inlined four times: the walk reads a tree a concurrent `tsc --build` may
- * still be writing, and a throw during module evaluation surfaces as a vitest
- * collection error instead of the actionable message this exists to print.
+ * The `beforeAll` every dist-reading ledger needs, never at module scope: a
+ * throw there during a concurrent `tsc --build` surfaces as a vitest collection
+ * error instead of this message.
  */
 export function requireFreshDist(core, what = 'this ledger') {
   const stale = stalenessMessage(core, what);

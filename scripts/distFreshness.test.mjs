@@ -1,13 +1,7 @@
 /**
- * The freshness gate every dist-reading ledger sits behind.
- *
- * Built from literal buildinfo JSON and synthetic package roots rather than by
- * shelling out to `tsc`: the cases that matter are the ones a real run produces
- * rarely or never, and a test that invokes the compiler would take the repo's
- * own stamp with it.
- *
- * `newest` is covered here too. It is this module's export, and every message
- * below is computed from the walk it performs.
+ * The freshness gate, from literal buildinfo JSON and synthetic package roots,
+ * not a `tsc` run: the cases that matter are rare in a real run, and invoking
+ * the compiler would move the repo's own stamp.
  */
 
 import { afterAll, describe, expect, it } from 'vitest';
@@ -104,8 +98,8 @@ describe('newest', () => {
   });
 
   it('separates a directory that does not exist from one that is empty', () => {
-    // Collapsing the two returned 0 for a tree that could not be read, and the
-    // freshness guard then compared that 0 against the stamp and passed.
+    // `failed` marks an unreadable tree, whose 0 would otherwise compare as
+    // older than the stamp and pass.
     expect(newest(join(datedCore({}), 'absent'), () => true)).toEqual({
       at: 0,
       file: '',
@@ -131,9 +125,8 @@ describe('stalenessMessage', () => {
   });
 
   it('passes on a fresh stamp even when every emitted file predates the sources', () => {
-    // The property the stamp was chosen for: incremental `tsc` leaves an output
-    // whose content did not change untouched, so comparing against the newest
-    // emitted `.js` makes the printed remedy unable to clear the complaint.
+    // Incremental `tsc` leaves an unchanged output untouched, so the newest
+    // emitted `.js` would make the printed remedy unable to clear the complaint.
     const root = datedCore({
       'dist/index.js': OLD,
       'dist/core/nodes.js': OLD,
@@ -146,9 +139,7 @@ describe('stalenessMessage', () => {
 
   it('passes on a newer test kit, which the program does not contain', () => {
     // `**/*.testkit.ts` is in the package tsconfig's `exclude`, so `tsc --build`
-    // no-ops and leaves the stamp where it is: a complaint raised by one of
-    // these could never be cleared by the remedy it prints, and every
-    // dist-reading gate would stay blocked until an unrelated source edit.
+    // no-ops and a complaint about one could never be cleared.
     const root = datedCore({
       'dist/index.js': MID,
       'tsconfig.tsbuildinfo': MID,
@@ -290,9 +281,8 @@ describe('stalenessMessage', () => {
   });
 
   it('refuses a stamp a --noEmit run wrote, however fresh its mtime', () => {
-    // `pnpm type-check` rewrites the same record a build does. Without this the
-    // stamp reads as newer than every source and dist reads as current, which
-    // is how four ledgers reported a previous revision's registries as fact.
+    // `pnpm type-check` rewrites the same record a build does, so the stamp
+    // alone reads as newer than every source.
     const message = stalenessMessage(
       currentCore({ affectedFilesPendingEmit: [[1, 1]], emitSignatures: [1] }),
       'this ledger'

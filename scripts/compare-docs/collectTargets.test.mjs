@@ -1,15 +1,7 @@
 /**
- * `collectTargets` (recapture.mjs) — what a sheet has to declare before
- * recapture has anything to render for it.
- *
- * Read against the REAL committed sheet corpus rather than synthetic fixtures:
- * this function has no seam to inject sheets through (it reads
- * `collectSheetFiles()` itself), and the corpus is exactly the thing whose
- * current, honest state this pins — every sheet with no `image:` key produces
- * no target, which is the other half of the bootstrap deadlock also pinned in
- * parseSections.test.mjs's "build() missing-image failure" (build-gallery
- * fails a build over a DECLARED image with no file, but recapture never even
- * attempts one that isn't declared).
+ * `collectTargets`: what a sheet declares before recapture renders anything for
+ * it. Read against the committed sheets, since the function reads
+ * `collectSheetFiles()` itself and has no seam for synthetic ones.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -36,9 +28,8 @@ describe('collectTargets', () => {
   });
 
   it('carries a section\u2019s particles= through, so both sides render the same instant', () => {
-    // A CPUParticles emitter with no `preprocess` settles to a window the
-    // previewer picks. Godot has to be asked for that same window explicitly,
-    // or its side of the pair is frame 0 beside our settled pose.
+    // An emitter with no `preprocess` settles to a window the previewer picks.
+    // Godot must be asked for that window, or its side shows frame 0.
     const byImage = new Map(collectTargets().map((t) => [t.image, t]));
     const declared = [...byImage.values()].filter((t) => t.particles > 0);
     expect(declared.length).toBeGreaterThan(0);
@@ -60,8 +51,6 @@ describe('collectTargets', () => {
       if (!parsed) continue;
       const { meta } = parsed;
       if (meta.image) continue;
-      // Nothing this sheet could plausibly own is a key in the target map,
-      // because there is no basename to have keyed it by.
       expect([...byImage.keys()]).not.toContain(meta.type);
       sampled++;
     }
@@ -69,10 +58,8 @@ describe('collectTargets', () => {
   });
 
   it('excludes an image basename declared ONLY by no-visual sheets (edge case)', () => {
-    // A basename can be shared: a no-visual base slice (Node2D) and a visual
-    // one (Area2D) legitimately point at the same fixture image, and the
-    // visual sheet's declaration is enough to earn it a target. What must stay
-    // excluded is a basename no VISIBLE sheet ever claims.
+    // A no-visual sheet and a visual one can share a basename, and the visual
+    // one earns it a target.
     const visualByImage = new Map();
     for (const file of collectSheetFiles()) {
       const parsed = parseFrontmatter(readFileSync(file, 'utf8'));

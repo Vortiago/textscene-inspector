@@ -1,16 +1,7 @@
 /**
- * The sheet's `Out of range` cell, which nothing else can check.
- *
- * `docs:lint-sections --check` regenerates the block and diffs it against the
- * committed sheet, so generator and expectation come from ONE code path: swap
- * the tier mapping, regenerate all 241 files, and the check stays green while
- * every sheet lies. The cell therefore needs a test that states the expected
- * text independently, which is what this file is.
- *
- * The defect it was written for: the first version read `grounding.kind`, which
- * collapses to `enforced` when EITHER end is, so `extra_cull_margin` (enforced
- * floor at visual_instance_3d.cpp:377, hinted ceiling at :602) rendered a flat
- * "error" and told a reader that exceeding the ceiling stops a build.
+ * The `Out of range` cell, stated independently: `docs:lint-sections --check`
+ * diffs against output from the same code path. `extra_cull_margin` has an
+ * enforced floor (visual_instance_3d.cpp:377) and a hinted ceiling (:602).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -34,19 +25,13 @@ describe('the Out of range cell', () => {
   });
 
   it('is blank when nothing is bounded, rather than inventing a rejection', () => {
-    // A format-only validator has no out-of-range behaviour to report; a tier
-    // here would advertise a rejection it never makes.
     expect(outOfRangeCell(undefined)).toBe('');
     expect(outOfRangeCell({})).toBe('');
   });
 
   describe('the two-tier branch, where a setter end sits beside a hint end', () => {
-    // Eight single-argument cases above never reach this branch, so the whole
-    // `enforcedMin || enforcedMax` half of the function was uncovered — the
-    // half that decides whether a warning band is describable at all.
     it('names the setter end and the band the hint still owns', () => {
-      // extra_cull_margin's shape: the refusal starts strictly below the hint's
-      // floor, so values between the two really do only warn.
+      // The refusal starts below the hint's floor, so values between warn.
       expect(
         outOfRangeCell(
           { min: 'warning', max: 'warning' },
@@ -56,18 +41,15 @@ describe('the Out of range cell', () => {
     });
 
     it('drops a band no value can land in', () => {
-      // The refusal starts AT the hint's floor, so nothing can be below the
-      // hint without being refused first; naming the band describes a warning
-      // that can never fire.
+      // The refusal starts at the hint's floor, so no value lands in the band.
       expect(
         outOfRangeCell({ min: 'warning', max: 'warning' }, { min: 0, max: 100, enforcedMin: { at: 0 } })
       ).toBe('error below 0, warning above 100');
     });
 
     it('separates `at or below` from `below` on the exclusive flag', () => {
-      // aspect_ratio: both ends at 0, only the setter's excluding it. This is
-      // the single case that distinguishes `<` from `<=` in the reachability
-      // test, and the one row where the Accepts column moves with it.
+      // aspect_ratio: both ends at 0, only the setter's excluding it, the case
+      // that separates `<` from `<=` in the reachability test.
       expect(
         outOfRangeCell(
           { min: 'warning', max: 'warning' },

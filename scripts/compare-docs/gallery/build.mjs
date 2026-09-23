@@ -1,7 +1,6 @@
 /**
- * Assembling the panels: the hand-authored sheets, the injected "not
- * implemented" cards for every Godot node without one, and the shared-notes
- * panel — sorted, grouped, and handed to the page.
+ * Assembles the panels: the hand-authored sheets, a "not implemented" card for
+ * every Godot node without one, and the shared-notes panel, sorted and grouped.
  */
 
 import { renderBody } from './markdown.mjs';
@@ -29,7 +28,7 @@ function sheetPanel(
     orphanedMarkers.push(`${meta.type}: orphaned compare marker ${marker}`);
   }
   const sectioned = sections.length > 0;
-  // Section sheets resolve their images per section; a legacy sheet uses the
+  // Section sheets resolve their images per section. A legacy sheet uses the
   // single `image:` frontmatter pair.
   const resolved = sections.map((s) => {
     const godot = imageSrc(s.image, 'godot', inlineImages);
@@ -37,27 +36,22 @@ function sheetPanel(
     if (!godot || !ours) missing.push(`${meta.type} › ${s.title} (${s.image})`);
     return { ...s, godot, ours, html: renderBody(s.body) };
   });
-  // The frontmatter pair and the section markers are BOTH sources, never
-  // either/or. A sheet that declares `image:` AND gains sections keeps its
-  // own pair, shown above them: for a whole-scene sheet that overview IS
-  // the subject, and the sections only decompose it. Dropping it when the
-  // first section landed was silent — every other image still rendered.
+  // The frontmatter pair and the section markers are both sources. A sheet
+  // with `image:` and sections shows its own pair above them: for a
+  // whole-scene sheet that overview is the subject.
   let godot = null;
   let ours = null;
   if (meta.image) {
     godot = imageSrc(meta.image, 'godot', inlineImages);
     ours = imageSrc(meta.image, 'ours', inlineImages);
-    // A DECLARED `image:` whose files are absent is a broken reference and
-    // fails the build. No `image:` at all is a sheet whose capture has not
-    // been run yet (a freshly scaffolded slice) — that renders the
-    // "not captured yet" placeholder instead of breaking every consumer.
+    // A declared `image:` with no files is reported as missing, and the corpus
+    // test fails. No `image:` at all is a sheet not captured yet: a placeholder.
     if (meta.visual !== 'false' && (!godot || !ours)) {
       missing.push(`${meta.type} (${meta.image})`);
     }
   }
-  // A node's nav badge rolls up to its worst section; a legacy sheet takes
-  // its status from frontmatter and defaults to `unreviewed` (never `done`)
-  // so a sheet that predates the status system does not falsely read green.
+  // A node's nav badge rolls up to its worst section. A legacy sheet takes its
+  // status from frontmatter and defaults to `unreviewed`, never `done`.
   const status = sectioned
     ? rollupStatus(resolved.map((s) => s.status))
     : STATUS_ORDER.includes(meta.status)
@@ -66,29 +60,24 @@ function sheetPanel(
   return {
     ...BLANK_PANEL,
     type: meta.type,
-    // Godot's own class reference and engine source, generated and verified
-    // by `pnpm nodes:catalog` — never hand-written into a sheet.
+    // Generated and verified by `pnpm nodes:catalog`, never hand-written.
     docs: catalogByType.get(meta.type)?.docs ?? '',
     source: catalogByType.get(meta.type)?.source ?? '',
     category: CATEGORY_ORDER.includes(meta.category) ? meta.category : 'Other',
-    // A node with no visual output at all (Timer, an AudioStreamPlayer, a
-    // RemoteTransform body) sets `visual: false`; the gallery then shows an
-    // explicit "no visual output" note instead of an empty image pair that
-    // would imply something should be there.
+    // A node with no visual output sets `visual: false` and gets a "no visual
+    // output" note, not an empty image pair.
     visual: meta.visual !== 'false',
     fixture: meta.fixture ?? '',
-    // Optional: a Camera3D node path to look through on open (`?camera=`), so
-    // the live link opens the SAME view as the captured image for scenes the
-    // previewer's default framing does not compose well on its own.
+    // Optional: a Camera3D path to look through on open (`?camera=`), so the
+    // live link opens the same view as the captured image.
     camera: meta.camera ?? '',
     rendersAs: meta.renders_as ?? '',
     group: groupFor(meta.type, CATEGORY_ORDER.includes(meta.category) ? meta.category : 'Other', meta.group),
     status,
     sectioned,
     sections: resolved,
-    // Only a SECTIONED sheet has an intro distinct from its body. For a
-    // legacy sheet parseSections puts the whole body in `intro`, and `html`
-    // holds it too — rendering both printed every legacy sheet twice.
+    // Only a sectioned sheet has an intro apart from its body. For a legacy
+    // sheet `intro` and `html` both hold the whole body.
     introHtml: sectioned ? renderBody(intro) : '',
     trailingHtml: renderBody(trailing ?? ''),
     godot,
@@ -99,9 +88,8 @@ function sheetPanel(
 
 export function build(sheets, inlineImages, fragment) {
   const missing = [];
-  // A DECLARED `<!-- compare: … -->` marker the section scan never consumed —
-  // same failure shape as a declared `image:` with no files on disk, reported
-  // through its own list so the two are never confused in the summary.
+  // A declared `<!-- compare: … -->` marker the section scan never consumed.
+  // Its own list keeps it apart from a missing `image:` in the summary.
   const orphanedMarkers = [];
   const catalog = loadCatalog();
   const lintCoverage = loadLintCoverage();
@@ -121,9 +109,8 @@ export function build(sheets, inlineImages, fragment) {
     sheetPanel(sheet, { catalogByType, groupFor, inlineImages, missing, orphanedMarkers })
   );
 
-  // Every Godot node the previewer does NOT support yet becomes its own
-  // "Not implemented" sheet, so the whole node surface lives in one gallery
-  // rather than a side document. A hand-authored sheet always wins.
+  // Every Godot node the previewer does not support becomes a "Not
+  // implemented" sheet. A hand-authored sheet always wins.
   const sheetTypes = new Set(sheetNodes.map((n) => n.type));
   const unimplemented = catalog.nodes
     .filter((n) => !n.supported && !sheetTypes.has(n.name))
@@ -136,9 +123,8 @@ export function build(sheets, inlineImages, fragment) {
       group: n.group,
       status: 'unimplemented',
       unimplemented: true,
-      // An unsupported node draws nothing, but the linter still has something to
-      // say about it — a universal rule, a type-family matcher, inherited
-      // validators — and that is the only real content these cards carry.
+      // An unsupported node draws nothing, but the linter still reaches it
+      // through universal rules, matchers and inherited validators.
       html: lintCoverage[n.name]
         ? renderBody(`## Linting\n\n${renderLintCoverage(n.name, lintCoverage[n.name])}`)
         : '',

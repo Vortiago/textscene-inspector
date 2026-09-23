@@ -1,12 +1,11 @@
-/** What engine headers EXIST, indexed for lookup: the input every candidate is drawn from. */
+/** Which engine headers exist, indexed for lookup: the source of every candidate. */
 
 const TREE_API =
   'https://api.github.com/repos/godotengine/godot/git/trees/master?recursive=1';
 
 /**
- * Only engine code defines nodes/resources; docs, tests and thirdparty do not.
- * `editor/` is in because a few editor-internal dialogs (ScriptCreateDialog) are
- * still ClassDB nodes and so appear in the catalog.
+ * Only engine code defines nodes and resources. `editor/` is in because a few
+ * editor dialogs (ScriptCreateDialog) are ClassDB nodes in the catalog.
  */
 const SOURCE_ROOTS = ['scene/', 'modules/', 'servers/', 'editor/'];
 
@@ -29,8 +28,6 @@ export async function fetchSourceIndex() {
     const dir = entry.path.slice(0, cut);
     if (!byBasename.has(base)) byBasename.set(base, []);
     byBasename.get(base).push(entry.path);
-    // Sweeping a directory is a prefix scan over every path otherwise; indexing
-    // it here costs one Map and turns that into a lookup.
     if (!byDir.has(dir)) byDir.set(dir, []);
     byDir.get(dir).push(entry.path);
   }

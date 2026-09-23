@@ -13,9 +13,8 @@ import { CATEGORY_ORDER } from './vocabulary.mjs';
 const COMPARE_DOCS = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
- * A screenshot as a `src` value — a data URI under `--inline`, else a relative
- * path. An animated node (AnimationPlayer) writes a `.gif`; a still writes a
- * `.png`. Prefer the gif so a motion node plays, and fall back to the png.
+ * A screenshot as a `src` value: a data URI under `--inline`, else a relative
+ * path. The `.gif` of an animated node wins over the `.png`, so motion plays.
  */
 export function imageSrc(basename, side, inlineImages) {
   const file = findImage(basename, side);
@@ -27,10 +26,8 @@ export function imageSrc(basename, side, inlineImages) {
 }
 
 /**
- * The node catalog (`pnpm nodes:catalog`) maps every Godot node type to its
- * dimension and functional group and whether the previewer supports it. It lets
- * the gallery (a) group the nav by function and (b) list the not-yet-supported
- * nodes as their own "Not implemented" sheets instead of in a side document.
+ * The node catalog (`pnpm nodes:catalog`): each Godot node type's dimension,
+ * group and support, which groups the nav and makes the "Not implemented" cards.
  */
 export function loadCatalog() {
   const file = join(COMPARE_DOCS, 'node-catalog.json');
@@ -38,12 +35,9 @@ export function loadCatalog() {
 }
 
 /**
- * Per-unsupported-node lint coverage, precomputed by `pnpm docs:lint-sections`.
- *
- * Read rather than computed: deciding whether a matcher rule reaches a node type
- * means EXECUTING its predicate, which needs the built linter — and this script
- * runs inside the web build before core is built. Absent file: the cards simply
- * omit the section.
+ * Lint coverage per unsupported node, from `pnpm docs:lint-sections`. Read, not
+ * computed: a matcher's predicate needs the built linter, and this runs in the
+ * web build before core is built. With no file, the cards omit the section.
  */
 export function loadLintCoverage() {
   const file = join(COMPARE_DOCS, 'lint-coverage.json');
@@ -51,16 +45,9 @@ export function loadLintCoverage() {
 }
 
 /**
- * The explanatory sections of `docs/comparison/README.md`, as their own panel.
- *
- * A cause that spans sheets is written there once and each sheet points at it.
- * Only `index.html` and `images/` are deployed, so on the published site that
- * pointer would otherwise be a dead end: the canonical text unreachable from the
- * very page citing it. Carrying the sections into the gallery keeps the whole
- * thing self-contained, with no link out to a private repo.
- *
- * Everything from the first category heading onward is the repo-facing file
- * index, which the nav already supersedes.
+ * The explanatory sections of `docs/comparison/README.md` as a panel, since only
+ * `index.html` and `images/` are deployed. Everything from the first category
+ * heading on is the file index, which the nav replaces.
  */
 export function loadSharedNotes() {
   const file = join(REPO_ROOT, 'docs/comparison/README.md');

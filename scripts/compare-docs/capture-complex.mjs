@@ -1,20 +1,9 @@
 #!/usr/bin/env node
 /**
- * Capture the "Complex Scenes" showcase — full demo/game scenes (dungeon, the 2D
- * and 3D platformers, a material-types scene) rendered through real Godot beside
- * this previewer, to show how feature-complete the renderer is on a whole scene
- * rather than a single node.
- *
+ * Captures the "Complex Scenes" showcase: whole demo scenes through real Godot
+ * beside this previewer, on the still-capture pipeline.
  *   node scripts/compare-docs/capture-complex.mjs --godot   # reference side
  *   node scripts/compare-docs/capture-complex.mjs --ours    # our side
- *
- * These scenes live OUTSIDE scenes/fixtures/, and the Godot path differs from
- * the previewer's `?fixture=` value, so each entry carries both. Framing per
- * scene: a 2D scene renders through the project viewport (Camera2D ignored on
- * both sides, matching the still 2D capture); a 3D scene with its own gameplay
- * camera uses that camera on both sides; a 3D scene without a useful camera is
- * fit to its bounds. Reuses the still-capture pipeline, so the previewer chrome
- * is painted out exactly as in capture.mjs.
  */
 
 import { existsSync, mkdirSync } from 'node:fs';
@@ -43,10 +32,10 @@ const IMAGES = join(REPO_ROOT, 'docs/comparison/images');
 const PORT = Number(process.env.COMPARE_PORT) || 4321;
 
 /**
- * `godot` is the scene path from the repo root; `ours` is the previewer's
- * `?fixture=` value (as apps/textscene-web/src/fixtures.ts lists it). `frame`
- * fits the 3D camera to the scene bounds; `sceneCamera` uses the scene's own
- * current camera. A 2D scene needs neither.
+ * These scenes live outside scenes/fixtures/. `godot` is the path from the repo
+ * root, `ours` the `?fixture=` value from apps/textscene-web/src/fixtures.ts.
+ * `frame` fits the 3D camera to the bounds, `sceneCamera` looks through the
+ * scene's camera. A 2D scene uses the project viewport and ignores Camera2D.
  */
 export const COMPLEX_SCENES = [
   {
@@ -58,30 +47,25 @@ export const COMPLEX_SCENES = [
   {
     slug: 'complex-2d-platformer',
     mode: '2d',
-    // This project sets a viewport property Godot hands to SceneTree's root
-    // Window and to nothing else (`default_texture_filter` — pixel art wants
-    // Nearest), so the default 2D arm nests the scene in a SubViewport that
-    // cannot observe it and REFUSES rather than answer from the class default.
-    // The root-window arm draws the same rectangle and does observe it.
+    // The project sets `default_texture_filter`, which Godot hands to the root
+    // Window only. The nested SubViewport arm refuses it, so the root-window arm
+    // draws the same rectangle and observes it.
     godotMode: '2d-root',
     godot: 'scenes/demos/2d/platformer/level/level.tscn',
     ours: 'demos/2d/platformer/level/level.tscn',
   },
   {
-    // The editor orbit on BOTH sides — the previewer does not adopt a scene's
-    // Camera3D, so opting only Godot into the game camera would mismatch. The
-    // orbit gives a level overview, which showcases the whole scene anyway.
+    // The editor orbit on both sides: the previewer does not adopt a scene's
+    // Camera3D, so the game camera on one side only would mismatch.
     slug: 'complex-3d-platformer',
     mode: '3d',
     godot: 'scenes/demos/3d/platformer/game.tscn',
     ours: 'demos/3d/platformer/game.tscn',
   },
   {
-    // The scene authors a Camera3D framing the material spheres head-on; both
-    // sides render through it (Godot adopts the scene camera, the previewer
-    // activates it via `?camera=`), so the framing matches by construction
-    // instead of relying on two independent fit-to-bounds passes — which
-    // diverge here because billboard Label3D text extents differ per engine.
+    // Both sides look through the scene's Camera3D (`?camera=` on ours), not
+    // two fit-to-bounds passes, which diverge here because billboard Label3D
+    // text extents differ per engine.
     slug: 'complex-materials',
     mode: '3d',
     sceneCamera: true,
@@ -90,28 +74,22 @@ export const COMPLEX_SCENES = [
     ours: 'integration-material-features.tscn',
   },
   {
-    // A whole game world: a glTF town model, ten instanced lamp sub-scenes, a
-    // CSG racetrack, a WorldEnvironment with sky + fog, shadows, and a Control
-    // UI over the top. Neither automatic framing works — the scene's bounds are
-    // 2048 x 1104 x 2048, so a fit shot shrinks the town to a speck, and the
-    // editor orbit opens 4 units from the origin, under the terrain — so the
-    // scene carries a PreviewCamera that both sides look through.
+    // Neither automatic framing works: a fit to the 2048 x 1104 x 2048 bounds
+    // shrinks the town to a speck, and the editor orbit opens under the
+    // terrain. Both sides look through the scene's PreviewCamera.
     slug: 'complex-truck-town',
     mode: '3d',
     sceneCamera: true,
     oursCamera: 'TownScene/PreviewCamera',
     godot: 'scenes/demos/3d/truck_town/town/town_scene.tscn',
     ours: 'demos/3d/truck_town/town/town_scene.tscn',
-    // The heaviest scene in the corpus; one software-rendered frame exceeds
-    // Playwright's default action timeout.
+    // One software-rendered frame exceeds Playwright's default action timeout.
     settleTimeout: 120000,
   },
   {
-    // A vehicle on its own, framed by a fit. The town scene shows the trucks at
-    // a distance where a wrong vertex layout reads as noise; these show the
-    // decoded mesh close enough to judge. Both carry surfaces in Godot 4.2+'s
-    // compressed attribute layout — the only place in the corpus where an
-    // ArrayMesh drives a whole vehicle body rather than a test quad.
+    // A vehicle close enough to judge its decoded mesh, which the town shows
+    // too far away. Both trucks carry surfaces in Godot 4.2+'s compressed
+    // attribute layout on a whole vehicle body.
     slug: 'complex-truck-town-trailer',
     mode: '3d',
     frame: true,
@@ -119,8 +97,8 @@ export const COMPLEX_SCENES = [
     ours: 'demos/3d/truck_town/vehicles/trailer_truck.tscn',
   },
   {
-    // The tow truck's mesh mixes compressed and uncompressed surfaces inside
-    // one file, which is what made a per-surface drop necessary.
+    // The tow truck's mesh mixes compressed and uncompressed surfaces in one
+    // file, which needs a per-surface drop.
     slug: 'complex-truck-town-tow',
     mode: '3d',
     frame: true,
@@ -152,14 +130,11 @@ async function captureGodot(scenes) {
     await renderReference({
       scene: scenePath,
       out: join(IMAGES, `${c.slug}-godot.png`),
-      // 2D scenes normally render nested; one whose project sets a root-only
-      // viewport property opts into the root-window arm (see `godotMode`).
       mode: c.godotMode ?? c.mode,
       frame: c.frame ?? false,
       sceneCamera: c.sceneCamera ?? false,
-      // The same node the previewer looks through, so both sides are pointed at
-      // one camera by name. A scene with several Camera3Ds otherwise leaves the
-      // choice to tree order on this side and to `oursCamera` on the other.
+      // Both sides name one camera, or a scene with several Camera3Ds leaves
+      // Godot to tree order and the previewer to `oursCamera`.
       sceneCameraPath: c.oursCamera ?? null,
     });
     console.log('ok');
@@ -175,15 +150,12 @@ async function captureOurs(scenes) {
   try {
     await waitForServer(`${baseUrl}/`);
     browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
-    // Burn the first-WebGL-context-lost risk before any published image is
-    // captured — see warmUpGLContext's own doc comment.
+    // Spends the first-context-lost risk before any published image.
     await warmUpGLContext(browser);
     for (const c of scenes) {
       process.stdout.write(`[complex ours] ${c.slug} (${c.mode}) … `);
-      // Match the Godot framing. A 3D scene is fit to bounds on both sides only
-      // when Godot fits it (`frame`); `oursCamera` instead looks through a
-      // named scene Camera3D (Godot's `sceneCamera`), which needs neither fit;
-      // otherwise both use the fixed editor orbit. 2D renders the project frame.
+      // A 3D scene is fit only when Godot fits it (`frame`). Otherwise both use
+      // the editor orbit, or the named `oursCamera`.
       const context = await createCaptureContext(browser, {
         frameOnOpen: c.mode === '3d' && (c.frame ?? false),
         canvas2D: c.mode === '2d',
@@ -191,9 +163,8 @@ async function captureOurs(scenes) {
       const page = await context.newPage();
       try {
         await gotoFixture(page, baseUrl, c.ours, () => {}, c.oursCamera ? { camera: c.oursCamera } : {});
-        // A scene with BOTH 3D and 2D content (e.g. the 3D platformer's touch UI)
-        // floats a "switch to 2D" hint button over the 3D canvas — chrome that
-        // must not land in the capture. It carries no testid, so target its title.
+        // A scene with both 3D and 2D content floats a "switch to 2D" button over
+        // the canvas. It carries no testid, so this hides it by its title.
         await page
           .addStyleTag({ content: 'button[title*="switch to the 2D view"]{display:none !important}' })
           .catch(() => {});

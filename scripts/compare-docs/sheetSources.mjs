@@ -1,13 +1,7 @@
 /**
- * Where the comparison sheets live, for every tool that reads them.
- *
- * A sheet is slice content — it documents the very `parser.ts` / `linterParser.ts`
- * beside it — so it sits in the slice as `<slice>/comparison.md`. The four
- * `complex-*` whole-scene showcases belong to no slice and stay in
- * `docs/comparison/sheets/`.
- *
- * Both roots are walked here so `build-gallery.mjs` and `recapture.mjs` can never
- * disagree about which files are sheets.
+ * Where the comparison sheets live, so every reader agrees on which files are
+ * sheets: `<slice>/comparison.md` in each slice, and the `complex-*` whole-scene
+ * showcases, which belong to no slice, in `docs/comparison/sheets/`.
  */
 
 import { existsSync, readdirSync } from 'node:fs';
@@ -23,7 +17,7 @@ const SLICE_ROOTS = [
   join(REPO_ROOT, 'packages/textscene-core/src/resources'),
 ];
 
-/** The sliceless residue — whole-scene showcases, read as plain `*.md`. */
+/** The whole-scene showcases, read as plain `*.md`. */
 const LOOSE_SHEETS_DIR = join(REPO_ROOT, 'docs/comparison/sheets');
 
 export const IMAGES_DIR = join(REPO_ROOT, 'docs/comparison/images');
@@ -44,9 +38,8 @@ function walkFor(dir, fileName, out) {
 export function collectSheetFiles() {
   const files = [];
   for (const root of SLICE_ROOTS) {
-    // Unconditional in a valid checkout — a missing one means a broken tree, and
-    // silently returning only the loose showcases would build a 4-sheet gallery
-    // and exit 0. Only LOOSE_SHEETS_DIR is allowed to be absent.
+    // A missing slice root is a broken tree, not a small gallery. Only
+    // LOOSE_SHEETS_DIR may be absent.
     if (!existsSync(root)) throw new Error(`Missing slice root: ${root}`);
     walkFor(root, 'comparison.md', files);
   }
@@ -63,12 +56,9 @@ export const sheetLabel = (file) =>
   file.startsWith(REPO_ROOT) ? file.slice(REPO_ROOT.length + 1) : file;
 
 /**
- * Split `--- key: value ---` frontmatter from the body, or `null` if absent.
- *
- * Callers differ on what an absent block means (the gallery throws, the
- * generators skip), so this reports rather than decides. The trailing-`#` strip
- * is load-bearing: the `new:node` scaffold ships `# image: …` commented out, and
- * SHEET-STANDARD documents inline comments on frontmatter values.
+ * Splits `--- key: value ---` frontmatter from the body, or `null` if absent,
+ * since callers differ on what that means. The trailing-`#` strip serves the
+ * inline comments SHEET-STANDARD documents on frontmatter values.
  */
 export function parseFrontmatter(text) {
   const match = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(text);
@@ -82,15 +72,9 @@ export function parseFrontmatter(text) {
 }
 
 /**
- * Frontmatter keys hidden behind a `#` comment, e.g. `# image: unit-foo`.
- *
- * `parseFrontmatter`'s key regex is anchored at the start of the (trimmed)
- * line, so a `#`-prefixed line never matches — the key is absent from `meta`
- * for every consumer (recapture, build-gallery, this module's own callers).
- * A human skimming the raw file sees what looks like an already-known value,
- * so the gap is easy to miss: nothing errors, the sheet just quietly never
- * gets a capture target. Scanned only inside the `---`-delimited block; a `#`
- * heading in the body is ordinary Markdown, not a commented-out pair.
+ * Frontmatter keys hidden behind a `#` comment, such as `# image: unit-foo`,
+ * which the `new:node` scaffold ships. `parseFrontmatter` never sees them, so
+ * the sheet silently gets no capture target. Only the `---` block is scanned.
  */
 export function findCommentedFrontmatterKeys(text) {
   const match = /^---\n([\s\S]*?)\n---\n/.exec(text);
@@ -104,12 +88,9 @@ export function findCommentedFrontmatterKeys(text) {
 }
 
 /**
- * The compare-marker syntax, as a pattern source so every reader builds its own
- * flags from ONE definition — `build-gallery.mjs` needs both a whole-line
- * anchored form (is THIS line a section's marker) and this unanchored one (is
- * there a marker here at all, junk after `-->` included). Two literals would
- * let the section walk and the orphan detector drift apart, and the detector
- * exists precisely to catch markers the walk misses.
+ * The compare-marker syntax as a pattern source, so the section walk and the
+ * orphan detector in `gallery/sheetParsing.mjs` build their anchored and
+ * unanchored forms from one definition and cannot drift apart.
  */
 export const COMPARE_MARKER_PATTERN = String.raw`<!--\s*compare:\s*(.*?)\s*-->`;
 
@@ -125,9 +106,8 @@ export function parseCompareMarkers(body) {
 }
 
 /**
- * A screenshot's path, or `null`. Extension order is load-bearing: an animated
- * node writes a `.gif` and a still writes a `.png`, and the gif must win so a
- * motion node plays.
+ * A screenshot's path, or `null`. The `.gif` of an animated node wins over the
+ * `.png`, so a motion node plays.
  */
 export function findImage(basename, side) {
   for (const ext of ['gif', 'png']) {
@@ -141,26 +121,17 @@ const SCENES_DIR = join(REPO_ROOT, 'scenes');
 let sceneIndex = null;
 
 /**
- * Resolve a `fixture:` value to an absolute path, or `null`.
- *
- * A value containing `/` names an exact path under `scenes/` and resolves ONLY
- * there, or under one of the corpus roots the web previewer flattens (below).
- * The basename index is for bare names alone: `scenes/` holds many repeated
- * basenames (`game.tscn`, `level.tscn`, `main.tscn` across the vendored demos),
- * so letting a stale `demos/…/game.tscn` fall through to it would silently
- * return an unrelated scene — and recapture would render that into the
- * committed parity baseline.
+ * Resolves a `fixture:` value to an absolute path, or `null`. A value with `/`
+ * resolves only under `scenes/` or a flattened corpus root: `scenes/` repeats
+ * basenames such as `game.tscn`, so the basename index serves bare names only.
  */
 export function findScene(fixture) {
   const direct = join(SCENES_DIR, fixture);
   if (existsSync(direct)) return direct;
   if (fixture.includes('/')) {
-    // A `fixture:` value is the previewer's `?fixture=` id, and copy-fixtures
-    // flattens these corpus roots onto the public/fixtures root so their scenes
-    // keep their own res:// subpaths as ids (`decorations/candle.tscn`). Godot
-    // needs the repo path, so undo that flattening the same way it was applied.
-    // No ambiguity to guard: two roots holding the same subpath would already
-    // have collided when copy-fixtures wrote them into one directory.
+    // copy-fixtures flattens these roots onto public/fixtures, so an id keeps
+    // its res:// subpath (`decorations/candle.tscn`). This undoes it for Godot.
+    // Two roots with one subpath would already collide in copy-fixtures.
     for (const root of FLATTENED_CORPUS_ROOTS) {
       const inCorpus = join(SCENES_DIR, root, fixture);
       if (existsSync(inCorpus)) return inCorpus;
@@ -190,16 +161,7 @@ export function findScene(fixture) {
 
 /**
  * Sheets with no single type behind them, so no generated lint block: the
- * `complex-*` whole-scene showcases.
- *
- * Resources are NOT exempt: they are validated by the same registry the
- * generator reads, and with the base-walk covering Godot's resource ancestry a
- * material sheet has a substantial table to show. Exempting them is a blank
- * page over real
- * coverage.
- *
- * Shared because the generator decides which sheets GET a block and the test
- * asserts which sheets must NOT have one; two copies would drift into either a
- * red test or a sheet that silently never gets generated.
+ * `complex-*` showcases. Resources are not exempt, since the same registry
+ * validates them. Shared by the generator and the test that checks it.
  */
 export const LINT_EXEMPT_CATEGORIES = new Set(['Complex Scenes']);

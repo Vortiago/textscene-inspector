@@ -1,8 +1,6 @@
 /**
- * The linter loader is the seam the docs generators stand on, and its failure
- * modes are environmental rather than logical: a `dist/` whose internal
- * specifier shape changed, or a Node without `registerHooks` (it arrived in
- * 22.15/23.5; `engines` requires >=24). Both are invisible to every other test.
+ * The loader the docs generators stand on fails for environmental reasons: a
+ * changed `dist/` specifier shape, or a Node without `registerHooks`.
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -11,16 +9,12 @@ import { requireFreshDist } from '../distFreshness.mjs';
 
 const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 
-// The first import pulls the whole linter barrel (every slice self-registers),
-// which comfortably exceeds vitest's 5s default; later tests hit the cache.
+// The first import pulls the whole linter barrel, which exceeds vitest's 5s
+// default. Later tests hit the cache.
 describe('loadCoreLinter', { timeout: 30_000 }, () => {
-  // Not `existsSync(dist)`: that cannot tell a fresh build from one predating
-  // the very change being measured, and it SKIPS rather than fails, so a run
-  // with no build at all reads green over a guard that never executed.
-  //
-  // In `beforeAll`, never at module scope: it walks a tree a concurrent
-  // `tsc --build` may be writing, and a throw during module evaluation surfaces
-  // as a vitest collection error instead of the actionable message.
+  // Not `existsSync(dist)`, which skips on no build and passes a stale one. In
+  // `beforeAll`, not at module scope, where a throw during a concurrent `tsc
+  // --build` surfaces as a collection error instead of this message.
   beforeAll(() => {
     requireFreshDist(CORE, 'the docs generators');
   });
@@ -37,14 +31,9 @@ describe('loadCoreLinter', { timeout: 30_000 }, () => {
     const { ruleRegistry } = await loadCoreLinter();
     const named = (type) => ruleRegistry.getRulesForNodeType(type).map((r) => r.meta.name);
 
-    // The universal rule reaches every node. The spatial matcher asks the real
-    // base chain, so it reaches every Node3D descendant whether or not Godot
-    // suffixed the name, and NO type that merely ends in "3D".
-    //
-    // A `nodeType.endsWith('3D')` matcher gets ReflectionProbe right by accident
-    // while missing the 16 spatial types Godot did not suffix, and claiming
-    // NavigationAgent3D, whose base is plain Node. The generated Linting block reports whatever this
-    // resolves to, so the asymmetry was published as fact.
+    // The universal rule reaches every node. The spatial matcher asks the base
+    // chain, so it reaches an unsuffixed Node3D such as ReflectionProbe and not
+    // NavigationAgent3D, whose base is plain Node.
     expect(named('ReflectionProbe')).toContain('binary-resource-reference');
     expect(named('ReflectionProbe')).toContain('valid-node3d-visibility');
     expect(named('GridMap')).toContain('valid-node3d-visibility');

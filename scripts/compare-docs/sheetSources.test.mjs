@@ -1,8 +1,4 @@
-/**
- * `findCommentedFrontmatterKeys` — the detector for a key hidden behind a `#`
- * comment (see the export's own doc comment for why that shape is dangerous:
- * `parseFrontmatter` cannot see it, but a human reading the raw file can).
- */
+/** `findCommentedFrontmatterKeys`, the detector for a key hidden behind a `#`. */
 
 import { describe, expect, it } from 'vitest';
 import { findCommentedFrontmatterKeys } from './sheetSources.mjs';
@@ -35,8 +31,7 @@ describe('findCommentedFrontmatterKeys', () => {
   });
 
   it('ignores an inline trailing comment on a live key (not a fully commented line)', () => {
-    // `category: 3D  # 3D | 2D | Resources | Other` — SHEET-STANDARD's own
-    // inline-comment style — is a live key with a trailing note, not a hidden one.
+    // SHEET-STANDARD's inline-comment style is a live key with a trailing note.
     const text = sheet('type: Foo\ncategory: 3D  # 3D | 2D | Resources | Other');
     expect(findCommentedFrontmatterKeys(text)).toEqual([]);
   });

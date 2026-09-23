@@ -6,9 +6,8 @@ import { JS } from './client.mjs';
 import { CSS } from './styles.mjs';
 
 /**
- * A standalone document for the repo/website, or — under `fragment` — just the
- * page content an Artifact publish expects (it supplies its own
- * doctype/head/body skeleton, so those tags must not be repeated here).
+ * A standalone document for the repo or website, or under `fragment` only the
+ * page content: an Artifact publish supplies its own doctype, head and body.
  */
 export function page(nav, panels, firstType, fragment) {
   const body = `<aside class="side">

@@ -1,43 +1,9 @@
 #!/usr/bin/env node
 /**
- * End-to-end gate for the WEB PREVIEWER APP itself — not the renderer.
- *
- * Everything else that touches a real browser drives the app without
- * asserting anything (`scripts/showcase/` records docs clips) or asserts only
- * the renderer's pixels with the app's own chrome hidden
- * (`scripts/visual/run.mjs`). That leaves the app's interaction surface —
- * outliner, inspector, mode switching, load health — with no gate at all, and
- * one of the rules it is supposed to enforce ("the camera never moves on
- * selection") has already regressed once and been reverted with nothing but
- * unit tests to show for it.
- *
- * Assertions, against two fixtures loaded through the REAL running app
- * (`?fixture=`, same navigation path a user follows):
- *
- *   3D  (`unit-box-mesh.tscn`, 4 nodes, no external resources — deterministic)
- *     - the viewport camera's GL-uploaded `viewMatrix` is byte-identical
- *       across two different tree selections (`cameraProbe.mjs`)
- *     - the outliner lists exactly the fixture's 4 node paths, in order
- *     - the inspector shows the selected Label3D's authored `text`
- *     - the scene opens in the 3D workspace, with a sized canvas AND ink
- *       checked separately (a dead GL context reads 0 ink either way)
- *     - zero console errors / pageerrors / failed requests
- *
- *   2D  (`unit-sprite2d.tscn`, references one local PNG)
- *     - the scene opens in the 2D workspace (`readViewportMode`,
- *       `previewServer.mjs` — shared with the visual-regression gate)
- *     - sized canvas + ink, same separated guard
- *     - zero console errors / pageerrors / failed requests
- *
- * Observation is from OUTSIDE the app throughout: `context.addInitScript`
- * patches `WebGL(2)RenderingContext.prototype` for the camera probe (see
- * `cameraProbe.mjs`) the same way `scripts/vscode/driveScene.mjs` patches
- * `HTMLCanvasElement.prototype.getContext` for its own canvas readback; the
- * outliner/inspector readers walk plain DOM shape, never a class name (CSS
- * Modules hash those in the built app). No production file was touched to
- * build this gate.
- *
- *   pnpm test:e2e:web
+ * `pnpm test:e2e:web`: the gate for the web app's outliner, inspector, mode
+ * switching and load health, through `?fixture=` in the real running app. It
+ * observes from outside (`cameraProbe.mjs`, DOM shape), so no production file
+ * carries a test hook.
  */
 import { launchShowcaseBrowser } from '../showcase/browser.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
@@ -57,46 +23,36 @@ import { arraysEqual, describeNodePathMismatch, expandAllTreeRows, readOutlinerP
 import { findRowValue, readInspectorPanel } from './inspector.mjs';
 
 /* global window */
-// `window` exists only inside the `page.evaluate` calls below, which
-// Playwright serialises and runs in the browser, never in this Node process.
+// `window` exists only in the browser that runs the `page.evaluate` calls.
 
 const PORT = Number(process.env.E2E_WEB_PORT) || 4321;
 
-// --- Fixtures ---------------------------------------------------------------
-
-// scenes/fixtures/unit-box-mesh.tscn: no ExtResource, no external material —
-// deterministic geometry AND deterministic node set. Node order below is the
-// fixture's authored child order (TreeNode renders children in that order).
+// No external resource, so the geometry and node set are deterministic. The
+// order is the fixture's authored child order, which TreeNode renders.
 const FIXTURE_3D = 'unit-box-mesh.tscn';
 const EXPECTED_3D_PATHS = ['Root', 'Root/Box', 'Root/Title', 'Root/Description'];
-// Label3D nodes with a distinctive authored `text` — the inspector assertion
-// reads this back through the SAME formatter path Godot-parity relies on.
+// Label3D nodes with a distinctive authored `text`, read back through the
+// formatter path Godot parity relies on. The viewMatrix must not move between
+// the two selections.
 const SELECT_A = 'Root/Title';
 const SELECT_A_TEXT = 'BoxMesh Test';
 const SELECT_B = 'Root/Description';
 
-// scenes/fixtures/unit-sprite2d.tscn: Node2D root (2D workspace, ADR-0006),
-// references one local PNG — a legitimate same-origin fetch, not a failure.
+// A Node2D root (2D workspace, ADR-0006) with one local PNG, a same-origin
+// fetch and not a failure.
 const FIXTURE_2D = 'unit-sprite2d.tscn';
 
-// Settle window after a selection click: SelectionHighlight + inspector
-// re-render synchronously off React state, no async resource load involved
-// (matches the fixed post-interaction wait `scripts/showcase/record.mjs`'s
-// `clickNode` uses).
+// A selection re-renders synchronously off React state, so a fixed wait
+// suffices, as in `clickNode` in `scripts/showcase/record.mjs`.
 const SELECT_SETTLE_MS = 400;
 
-// Measured on a passing run: 3D ~195k ink px, 2D ~28k, on a 631x756 canvas
-// (1280x800 viewport minus the dock/header chrome). Deliberately far below
-// either count, the same policy `scripts/vscode/webview-csp-gate.mjs`
-// documents for its own INK_FLOOR: the failure being guarded (nothing drawn
-// at all) reads as 0 on any display, so the floor only needs to clear noise,
-// not track the exact count.
+// Far below a passing run (3D ~195k ink px, 2D ~28k, on a 631x756 canvas), as
+// in `scripts/vscode/webview-csp-gate.mjs`: nothing drawn reads as 0 on any
+// display, so the floor only clears noise.
 const INK_FLOOR_3D = 20000;
 const INK_FLOOR_2D = 4000;
 
-// --- Diagnostics --------------------------------------------------------
-
-/** Console errors, uncaught page errors, and failed requests — offline app, so all three should stay empty. */
+/** Console errors, uncaught page errors and failed requests. The app is offline, so all stay empty. */
 function attachDiagnostics(page) {
   const consoleErrors = [];
   const pageErrors = [];
@@ -111,14 +67,9 @@ function attachDiagnostics(page) {
   return { consoleErrors, pageErrors, failedRequests };
 }
 
-// --- Scenarios ------------------------------------------------------------
-
 async function run3DScenario(browser, baseUrl) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-  // Registered before any navigation, so it is present for the FIRST paint —
-  // Playwright re-runs every addInitScript on every subsequent navigation in
-  // this context too, which matters not at all here (one goto) but matches
-  // the contract documented in cameraProbe.mjs.
+  // Registered before any navigation, so it is present for the first paint.
   await context.addInitScript(installViewMatrixProbe);
   const page = await context.newPage();
   const diagnostics = attachDiagnostics(page);
@@ -185,8 +136,6 @@ async function run2DScenario(browser, baseUrl) {
   };
 }
 
-// --- Assertions -------------------------------------------------------------
-
 class GateFailures {
   constructor() {
     this.failures = [];
@@ -199,16 +148,12 @@ class GateFailures {
   }
 }
 
-// A canvas whose WebGL context creation fails STAYS AT the browser's default
-// unsized 300x150 (three.js catches the error and never resizes it) — bigger
-// than the >50 floor `scripts/vscode/driveScene.mjs` uses for a cramped VS
-// Code editor pane, so that floor would NOT catch this here. This gate's
-// canvas is always the dominant part of a fixed 1280x800 viewport (settles at
-// ~631x756 — see the measurements comment above), so 400 sits well above the
-// dead-context default and well below every real reading.
+// three.js catches a failed WebGL context and never resizes the canvas from the
+// browser's 300x150, above the >50 floor `scripts/vscode/driveScene.mjs` uses.
+// This canvas fills most of a 1280x800 viewport (~631x756), so 400 splits them.
 const MIN_SIZED_CANVAS_DIMENSION = 400;
 
-/** Sized canvas, checked SEPARATELY from ink: a dead GL context reads 0 ink too, and must not read as "nothing drawn". */
+/** Sized canvas, checked apart from ink: a dead GL context reads 0 ink too. */
 function checkSizedCanvas(gate, label, dims) {
   gate.check(
     dims.width > MIN_SIZED_CANVAS_DIMENSION && dims.height > MIN_SIZED_CANVAS_DIMENSION,
@@ -249,8 +194,6 @@ function checkDiagnostics(gate, label, diagnostics) {
   );
 }
 
-// --- Main -------------------------------------------------------------------
-
 async function main() {
   ensureWebBuilt(console.log);
   await assertPortFree(PORT, 'E2E_WEB_PORT');
@@ -268,7 +211,6 @@ async function main() {
     console.log(`[gate] 2D scenario: ${FIXTURE_2D}`);
     const twoD = await run2DScenario(browser, baseUrl);
 
-    // --- 3D fixture ---
     checkSizedCanvas(gate, '[3D]', threeD.dims);
     checkInk(gate, '[3D]', threeD.ink, INK_FLOOR_3D);
     checkStage(gate, '[3D]', threeD.stage, '3d');
@@ -314,7 +256,6 @@ async function main() {
       );
     }
 
-    // --- 2D fixture ---
     checkSizedCanvas(gate, '[2D]', twoD.dims);
     checkInk(gate, '[2D]', twoD.ink, INK_FLOOR_2D);
     checkStage(gate, '[2D]', twoD.stage, '2d');

@@ -1,26 +1,9 @@
 #!/usr/bin/env node
 /**
- * Build the node catalog the comparison gallery uses to place EVERY Godot node —
- * supported or not — in the left menu, grouped by dimension (3D / 2D / Other) and
- * by what it does (lighting, physics, particles, UI, …). Unsupported nodes show
- * up in the gallery as "Not implemented" sheets; there is no separate list to
- * maintain.
- *
+ * Builds the catalog that puts every Godot node, supported or not, in the menu:
  *   pnpm nodes:catalog        # -> scripts/compare-docs/node-catalog.json
- *
- * The node list is Godot's own ClassDB (via enumerate-nodes.gd through the local
- * `godot` + `xvfb-run`), so re-running against a newer Godot picks up any nodes a
- * Godot update introduced. "Supported" is read from the live `nodeRegistry` in
- * the built package, so this needs `pnpm --filter @textscene/core build` first.
- * The functional grouping is derived from
- * each class's ancestor chain, so a new node auto-groups if it extends a known
- * base; a genuinely novel base falls to "Uncategorized" and wants a GROUP_RULES
- * entry.
- *
- * The parts live in `build-node-catalog/`: `classdb` (what Godot and the parser
- * each say exists), `groups` (the ancestry → menu-group table), `extraClasses`
- * (the documented classes ClassDB's node enumeration never yields), `links` (the
- * docs/source chips) and `paths`.
+ * The node list is ClassDB, read with a local `godot` and `xvfb-run`. Run
+ * `pnpm --filter @textscene/core build` first: "supported" is the live registry.
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { enumerateGodotNodes, godotVersion, supportedTypes } from './build-node-catalog/classdb.mjs';
@@ -35,10 +18,8 @@ import {
 } from './build-node-catalog/paths.mjs';
 
 const linksOnly = process.argv.includes('--links-only');
-// The engine half alone. Writing the property table needs a local godot and
-// nothing else, while the catalog also re-verifies every docs/source link over
-// the network, so refreshing the properties should not depend on the GitHub API
-// being reachable or under its rate limit.
+// The engine half alone: the property tables need a local godot, not the
+// network, so a GitHub API outage or rate limit does not block them.
 const propertiesOnly = process.argv.includes('--properties-only');
 const previous = existsSync(OUT)
   ? JSON.parse(readFileSync(OUT, 'utf8'))
@@ -50,9 +31,6 @@ const previousByName = new Map(
   ])
 );
 
-// `--links-only` refreshes the docs/source links against the existing catalog:
-// the node list itself needs a local godot + xvfb-run, the links only need the
-// network, and they go stale on different schedules.
 /** One row per class, sorted so a regenerated file diffs by content not by order. */
 function writeProperties(properties, out) {
   const sorted = Object.fromEntries(
@@ -85,6 +63,7 @@ let nodes;
 let godotVersionValue;
 if (linksOnly) {
   if (!previous.nodes?.length) throw new Error(`--links-only needs an existing ${OUT}`);
+  // The links need only the network, the node list needs a local godot.
   nodes = previous.nodes.map((n) => {
     const copy = { ...n };
     delete copy.docs;
@@ -115,9 +94,8 @@ if (linksOnly) {
   godotVersionValue = godotVersion();
 }
 
-// One pass over everything: `attachLinks` downloads the ~4 MB source tree and
-// starts a fresh header cache each time it runs, so three calls meant three
-// downloads, three slices of the 60/hour API budget, and no cache sharing.
+// One pass over everything: each `attachLinks` call downloads the source tree,
+// starts its own header cache and spends the 60/hour API budget.
 const extras = EXTRA_CLASSES.filter((e) => !nodes.some((n) => n.name === e.name));
 const linked = await attachLinks([...nodes, ...RESOURCE_CLASSES, ...extras], previousByName);
 const linkedNodes = linked.slice(0, nodes.length);

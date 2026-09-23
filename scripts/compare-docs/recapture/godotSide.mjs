@@ -17,15 +17,14 @@ export async function captureGodot(targets) {
         scene: godotScenePath(t.fixture),
         out: imgPath(t.image, 'godot'),
         sceneCamera: Boolean(t.camera),
-        // The editor animates particles; a paused reference draws frame 0. The
+        // The editor animates particles, a paused reference draws frame 0. The
         // sheet names the instant, so both sides are captured at it.
         particles: t.particles,
       });
       if (mode) {
         modes.set(t.image, mode);
-        // Beside the image, like the batch capture does: a later `--ours`-only
-        // run reads this rather than re-measuring the PNG, whose size no longer
-        // identifies the workspace.
+        // Beside the image, so a later `--ours` run reads it instead of the PNG
+        // size, which does not identify the workspace.
         writeFileSync(modePath(imgPath(t.image, 'godot')), `${mode}\n`);
       }
       console.log(`ok (${mode ?? '?'})`);

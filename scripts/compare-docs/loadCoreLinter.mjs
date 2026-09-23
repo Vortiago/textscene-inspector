@@ -1,18 +1,8 @@
 /**
- * Import the built `@textscene/core` linter from a plain Node script.
- *
- * `packages/textscene-core` is compiled with `tsc --build`, and its sources use
- * extensionless relative specifiers (`import … from '../logger'`). TypeScript
- * emits those verbatim, so `dist/` is bundler-targeted: Vite and esbuild resolve
- * it fine, but Node's ESM resolver rejects an extensionless relative path and the
- * import dies at `dist/linter/RuleRegistry.js -> '../logger'`.
- *
- * Rather than reshape the package's build for one docs generator, register a
- * resolve hook that retries a failed relative specifier with `.js` and
- * `/index.js` — exactly what a bundler does. Scoped to this process.
- *
- * Registration must happen BEFORE the linter is loaded, and static imports are
- * hoisted above statements, so the load is a dynamic import.
+ * Imports the built `@textscene/core` linter from a plain Node script. `dist/`
+ * keeps extensionless relative specifiers, which Node's ESM resolver rejects, so
+ * a process-wide resolve hook retries them with `.js` and `/index.js`. The hook
+ * registers before the load, so the load is a dynamic import.
  */
 
 import { registerHooks } from 'node:module';
@@ -25,9 +15,8 @@ const LINTER_ENTRY = join(DIST, 'linter/index.js');
 const PARSER_ENTRY = join(DIST, 'parser/TscnParser.js');
 const NODE_REGISTRY_ENTRY = join(DIST, 'core/NodeRegistry.js');
 
-// Synchronous, in-process, and available from Node 22.15/23.5. `engines` requires
-// >=24 but is advisory, so say which requirement was missed rather than dying on
-// `registerHooks is not a function`.
+// `registerHooks` arrived in Node 22.15/23.5. `engines` requires >=24 but is
+// advisory, so this names the requirement instead of `is not a function`.
 if (typeof registerHooks !== 'function') {
   throw new Error(
     `This repository requires Node >= 24 (running ${process.version}): ` +
@@ -71,17 +60,10 @@ export async function loadCoreLinter() {
 }
 
 /**
- * `nodeRegistry` with every slice's lenient parser self-registered.
- *
- * The linter barrel imports `index.linter.js` files, which register validators
- * and rules but never a parser — so `nodeRegistry` is empty unless the parser
- * barrel is loaded too. Importing `TscnParser.js` runs the `index.js` side
- * effects; the registry is then read from its own module, which ESM has already
- * cached as the same instance the barrel populated.
- *
- * Like the linter, the lenient parser is React/THREE-free (ADR-0001, pinned by
- * `reactFree.test.ts`), so this stays loadable from a plain Node script. The r3f
- * component registries are NOT — anything needing those must read source.
+ * `nodeRegistry` with every slice's lenient parser self-registered: the linter
+ * barrel registers no parser, so `TscnParser.js` runs the `index.js` side
+ * effects. The parser is React/THREE-free (ADR-0001), the r3f registries are
+ * not, so anything needing those reads source.
  */
 export async function loadCoreParser() {
   try {
@@ -98,15 +80,9 @@ export async function loadCoreParser() {
 }
 
 /**
- * `CLASS_BASE_TYPES` — the class → base-type table `findValidator` walks, node
- * and resource hierarchies both. A sheet reading the node table alone would
- * show `StandardMaterial3D` as validating nothing, since its properties are
- * declared and registered one hop up on `BaseMaterial3D`.
- *
- * Not re-exported by the linter barrel, so it is loaded from its own module
- * (the resolve hook above is process-wide, so this works the same way). It
- * lives under `godot/` — an engine fact, imported by the linter rather than
- * owned by it — so the path must track that, not the directory it left.
+ * `CLASS_BASE_TYPES`, the class to base-type table `findValidator` walks, for
+ * nodes and resources both: `StandardMaterial3D` registers its properties on
+ * `BaseMaterial3D`. The linter barrel does not re-export it.
  */
 export async function loadClassBaseTypes() {
   const mod = await import(pathToFileURL(join(DIST, 'godot/classBaseTypes.js')).href);
@@ -114,10 +90,8 @@ export async function loadClassBaseTypes() {
 }
 
 /**
- * `RADIAN_ROUNDTRIP_EPSILON` — the slack `v.radians` adds to a converted degree
- * bound, so the hint-parity ledger compares against the same number the
- * combinator applied. Read from the built module rather than retyped, since a
- * second copy would drift by exactly the amount being measured.
+ * `RADIAN_ROUNDTRIP_EPSILON`, the slack `v.radians` adds to a converted degree
+ * bound. Read from the built module, not retyped, so the ledger cannot drift.
  */
 export async function loadRadianEpsilon() {
   const mod = await import(pathToFileURL(join(DIST, 'linter/validators/v/floats.js')).href);

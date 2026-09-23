@@ -1,4 +1,4 @@
-/** WHICH images the sheets ask for, where each one lives, and who renders it. */
+/** Which images the sheets ask for, where each one lives, and who renders it. */
 
 import { closeSync, existsSync, openSync, readFileSync, readSync } from 'node:fs';
 import { join } from 'node:path';
@@ -15,9 +15,8 @@ import {
 import { readRecordedMode } from '../capture/modes.mjs';
 
 /**
- * Seconds of particle settle from a `particles=` attribute. A typo would
- * otherwise coerce to 0 and render Godot's frame 0 beside our settled pose — a
- * wrong side-by-side that reports itself as a successful capture.
+ * Seconds of particle settle from a `particles=` attribute. It throws on a typo,
+ * which would otherwise coerce to 0 and render Godot's frame 0 beside our pose.
  */
 function particleSeconds(raw, file) {
   if (raw === undefined || raw === '') return 0;
@@ -29,8 +28,8 @@ function particleSeconds(raw, file) {
 }
 
 /**
- * Every (image, fixture, camera, particles) the sheets reference — legacy pair
- * + sections.
+ * Every (image, fixture, camera, particles) the sheets reference: the legacy
+ * pair and the sections. A sheet's `camera:` is looked through on both sides.
  */
 export function collectTargets() {
   const byImage = new Map();
@@ -41,15 +40,11 @@ export function collectTargets() {
     const { meta } = parsed;
     const camera = meta.camera || '';
     const particles = particleSeconds(meta.particles, file);
-    // The frontmatter pair and the section markers are BOTH sources, never
-    // either/or: a sheet that gains its first section must not lose the image
-    // its own header still displays. Taking only the sections silently orphans
-    // that image — it stops being re-rendered, drifts from the renderer, and
-    // there is no failure to notice, because every OTHER image still updates.
-    // Sections are applied last so one may override the header for a shared
-    // name; the Map collapses the duplicate.
+    // The frontmatter pair and the section markers are both sources, or the
+    // header's image stops being re-rendered. Sections apply last, so one may
+    // override the header for a shared name.
     if (meta.visual !== 'false' && meta.image && meta.fixture) {
-      // A no-visual sheet renders a "draws nothing" note, not its image — skip it.
+      // A no-visual sheet renders a "draws nothing" note, not its image.
       byImage.set(meta.image, { fixture: meta.fixture, camera, particles });
     }
     for (const attrs of parseCompareMarkers(parsed.body)) {
@@ -65,20 +60,15 @@ export function collectTargets() {
   return [...byImage.entries()].map(([image, t]) => ({ image, ...t })).sort((a, b) => a.image.localeCompare(b.image));
 }
 
-// The Godot-side scene path for a sheet's `fixture` value (which is the ours-side
-// `?fixture=` id). Shared with the sheets test so both agree on what resolves.
+// The Godot-side scene path for a sheet's `fixture` value, the ours-side
+// `?fixture=` id. Shared with the sheets test so both agree on what resolves.
 export const godotScenePath = (fixture) => findScene(fixture) ?? join(REPO_ROOT, 'scenes/fixtures', fixture);
 export const imgPath = (image, side) => join(IMAGES, `${image}-${side}.png`);
 
 /**
- * Which workspace an already-rendered reference was captured in.
- *
- * The `.mode` sidecar first, because Godot is the side that classifies the root
- * and it writes the answer down. Measuring the PNG is only a fallback for an
- * image cached from before the sidecar existed, and it is not reliable on its
- * own: a 2D frame is now the scene's own `display/window/size/viewport_*`, so a
- * 640x400 pong capture and a 1920x1080 RTS capture both measure as '3d'. That
- * does not fail, it quietly builds the gallery against the wrong workspace.
+ * Which workspace a rendered reference was captured in: Godot's `.mode` sidecar
+ * first. The PNG size is a fallback for an image with no sidecar, and wrong for
+ * a 2D frame of any size but the capture frame's.
  */
 export function modeOfExistingGodot(image) {
   const file = imgPath(image, 'godot');
@@ -98,17 +88,10 @@ export function modeOfExistingGodot(image) {
 }
 
 /**
- * Split sheet images into the ones this script renders and the ones
- * capture-complex.mjs owns.
- *
- * Both scripts write `<image>-godot.png` into the same directory, and a complex
- * scene needs per-scene settings (`frame`, `sceneCamera`, a named `oursCamera`,
- * a forced 2D/3D mode) that live in COMPLEX_SCENES and that a sheet's
- * frontmatter cannot express. Rendering one here with this script's defaults
- * produces a WRONG frame that silently overwrites the right one — the town
- * captured from the editor orbit ends up under the terrain — and nothing fails,
- * because a picture is a picture. So ownership is decided by the slug, in one
- * place, and the owned ones are handed to their owner rather than guessed at.
+ * Splits sheet images into the ones this script renders and the ones
+ * capture-complex.mjs owns, by slug. A complex scene needs the per-scene
+ * settings in COMPLEX_SCENES, and this script's defaults would silently
+ * overwrite its frame with a wrong one.
  */
 export function partitionTargets(targets) {
   const complexSlugs = new Set(COMPLEX_SCENES.map((c) => c.slug));

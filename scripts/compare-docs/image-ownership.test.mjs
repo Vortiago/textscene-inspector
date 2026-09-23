@@ -1,17 +1,8 @@
 /**
- * One image, one owner.
- *
- * `recapture.mjs` and `capture-complex.mjs` both write
- * `docs/comparison/images/<image>-godot.png`, and they render differently: a
- * complex scene needs per-scene settings (`frame`, `sceneCamera`, a named
- * `oursCamera`, a forced 2D/3D mode) that live in COMPLEX_SCENES and that a
- * sheet's frontmatter cannot express. When `recapture` rendered one of those
- * with its own defaults it produced a WRONG frame that silently replaced the
- * right one — the town shot from the editor orbit ends up under the terrain —
- * and nothing failed, because a picture is still a picture.
- *
- * That is a bug you can only find by looking at the image, which is why it
- * survived. These tests make the overlap a failing assertion instead.
+ * One image, one owner. `recapture.mjs` and `capture-complex.mjs` both write
+ * `docs/comparison/images/<image>-godot.png`, but a complex scene needs the
+ * per-scene settings in COMPLEX_SCENES. Rendered with recapture's defaults, it
+ * silently replaces the right frame with a wrong one.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -53,17 +44,10 @@ describe('comparison image ownership', () => {
 });
 
 /**
- * The other half of "one image, one owner": HOW an owner is allowed to write.
- *
- * `settleCanvas` accepts a capture once two consecutive screenshots match, and
- * two reads of a DEAD WebGL context match just as well as two reads of a live
- * one. A comparing harness catches that for free — a blank frame diffs hugely
- * and fails. A publishing one does not: the blank image becomes the picture the
- * gallery shows and the sheet measures against, and nothing fails afterwards.
- *
- * `writeCaptureImage` is the guard, so a raw `writeFileSync` into the images
- * directory is the bypass. This asserts there is no bypass, in the scripts
- * whose whole job is to write there.
+ * How an owner writes: `settleCanvas` accepts two matching screenshots, and two
+ * reads of a dead WebGL context match too. A publishing harness has no diff to
+ * catch the blank frame, so `writeCaptureImage` guards it, and a raw
+ * `writeFileSync` into the images directory is the bypass.
  */
 describe('every published image goes through the guarded writer', () => {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -88,9 +72,8 @@ describe('every published image goes through the guarded writer', () => {
   });
 
   /**
-   * The cause, not just the detection. The first WebGL context in a fresh
-   * SwiftShader process is the one that can die under load, so whichever scene
-   * captures first absorbs the risk unless it is burned on a throwaway page.
+   * The cause: the first WebGL context in a fresh SwiftShader process can die
+   * under load, so it is spent on a throwaway page.
    */
   it.each([...WRITERS, 'animation/previewFrames.mjs'])('%s warms up GL before capturing', (file) => {
     expect(readFileSync(join(here, file), 'utf8')).toContain('await warmUpGLContext(browser)');

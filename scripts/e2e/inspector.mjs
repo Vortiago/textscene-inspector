@@ -1,17 +1,12 @@
 /**
- * Inspector (NodeDetailsPanel) reading for the web-app E2E gate.
- *
- * `NodeDetailsPanel.tsx` renders `<h3>{node.name}</h3>` followed by one
- * `<div class=section>` per `PropertySection`, each a `<h4>{title}</h4>`
- * plus `<div class=row><span>{label}:</span><span>{value}</span></div>`
- * rows. The class names are CSS-module hashes in the built app — unusable as
- * selectors — so this walks plain DOM shape (h3 → its parent → child `div`s
- * that carry an `h4`) instead of any class name.
+ * Reads the inspector (`NodeDetailsPanel.tsx`) for the web-app E2E gate. Class
+ * names are CSS-module hashes in the built app, so this walks the DOM shape:
+ * `<h3>` name, then per section a `div` with an `<h4>` title and
+ * `<span>{label}:</span><span>{value}</span>` rows.
  */
 
 /* global document */
-// `document` exists only inside the `page.evaluate` callback below, which
-// Playwright serialises and runs in the browser, never in this Node process.
+// `document` exists only in the browser that runs the `page.evaluate` callback.
 
 /** The selected node's name and every property section, read from the live DOM. */
 export async function readInspectorPanel(page) {

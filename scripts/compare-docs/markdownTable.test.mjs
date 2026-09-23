@@ -1,12 +1,6 @@
 /**
- * The pipe-table grammar, in the one shape that broke it.
- *
- * `maskedBitField` joins its constant names with ` | `, and fourteen committed
- * rows across ten sheets ended their cell at the first of them: GFM dropped
- * the tail, so `size_flags_horizontal` printed `SIZE_EXPAND (2)` where the
- * severity belongs and lost the last two bits. Neither guard beside it could
- * see it — `docs:lint-sections --check` re-runs the generator and diffs it
- * against its own output, and `sheets.test.mjs` never counted cells.
+ * The pipe-table grammar, with a `maskedBitField` value joined by ` | `. An
+ * unescaped one ends its cell early and GFM drops the tail.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,15 +16,12 @@ describe('the pipe-table grammar', () => {
     );
     const cells = splitRow(row);
     expect(cells).toHaveLength(3);
-    // The tier is what the unescaped row lost: the reader was shown a mask
-    // label in the column that says whether a value stops a build.
     expect(cells[2]).toBe('error');
     expect(cells[1]).toBe(MASK);
   });
 
   it('reads a hand-written escaped pipe as one cell too', () => {
-    // navigationagent2d's `\`7\` (Types\\|RIDs\\|Owners)` row predates the
-    // generated column and states the same convention by hand.
+    // A hand-written sheet row states the same convention.
     expect(splitRow('| `path_metadata_flags` | `7` (Types\\|RIDs\\|Owners) | none |')).toEqual([
       '`path_metadata_flags`',
       '`7` (Types|RIDs|Owners)',
@@ -39,9 +30,8 @@ describe('the pipe-table grammar', () => {
   });
 
   it('refuses a row that would render into the wrong number of columns', () => {
-    // The escape is what prevents this, so the throw only fires for a caller
-    // that hands over the wrong number of cells — the other half of the arity
-    // contract, and the one a count of the inputs can see.
+    // The escape prevents this for values, so the throw fires for a caller that
+    // hands over the wrong number of cells.
     expect(() => tableLines(['A', 'B'], [['one', 'two', 'three']])).toThrow(
       /renders 3 cell\(s\) into a 2-column table/
     );
