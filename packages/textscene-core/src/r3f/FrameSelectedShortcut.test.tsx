@@ -1,12 +1,7 @@
 /**
- * FrameSelectedShortcut (F-to-frame) — pressing "F" frames the camera
- * on the selected node (via resolveFrameTarget + the already-tested
- * frameSceneBounds); with nothing selected it frames the whole scene.
- * Guarded by isTypingTarget so it doesn't hijack "f" from a text field.
- *
- * frameSceneBounds' own math (near-plane, distance, isometric angle) is
- * pinned in TscnCanvas.test.tsx; this file only proves the NEW wiring: the
- * keydown listener resolves the right target and actually moves the camera.
+ * "F" frames the selected node through resolveFrameTarget and frameSceneBounds, or the
+ * whole scene without a selection, and isTypingTarget keeps "f" in a text field.
+ * frameSceneBounds' maths is pinned in TscnCanvas.test.tsx. This proves the wiring.
  */
 import { useEffect, useState } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -23,7 +18,7 @@ function CameraCapture() {
   return null;
 }
 
-/** Registers a real mesh at `path` and adds it to the scene via <primitive>. */
+/** Registers a real mesh at `path` and adds it to the scene through <primitive>. */
 function RegisteredMesh({
   path,
   position,
@@ -94,14 +89,9 @@ describe('<FrameSelectedShortcut> (#224)', () => {
     fireF();
     await renderer.advanceFrames(1, 0);
 
-    // Framing both meshes together centres on their midpoint (x=40) rather
-    // than "Far"'s own x=80 — but the union's much larger extent (81 units
-    // vs "Far"'s single 1-unit box) pulls the camera back much farther along
-    // Godot's oblique editor-orbit direction, which has its own +X component,
-    // so the resulting x does not land near the x=40 midpoint itself. What
-    // distinguishes this from the single-selection case is that it is
-    // measurably CLOSER to that midpoint than "Far"'s own ~80.4 (the previous
-    // test's assertion), never at or past it.
+    // Both meshes centre on x=40, but their 81-unit extent pulls the camera far back
+    // along the oblique orbit direction, which has a +X component. So x lands closer
+    // to 40 than the single selection's 80.4, not at it.
     expect(camera.position.x).toBeGreaterThan(50);
     expect(camera.position.x).toBeLessThan(80);
   });
@@ -129,9 +119,8 @@ describe('<FrameSelectedShortcut> (#224)', () => {
   });
 
   it('does nothing while an authored Camera3D is the active camera (never mutates it)', async () => {
-    // Same guard as CameraFit: with "Use This Camera" active, state.camera IS
-    // the authored Camera3D node's camera — framing would overwrite its
-    // position/near/far and corrupt the authored preview.
+    // The CameraFit guard: under "Use This Camera", state.camera is the authored
+    // Camera3D, and framing would overwrite its position, near and far.
     function ActivateAuthoredCamera() {
       const { switchToCamera } = useCameraControl();
       useEffect(() => {

@@ -1,10 +1,7 @@
 /**
- * Modulate-cascade integration coverage complementing
- * `components/CanvasItem2D.test.tsx` (which already pins the basic
- * parent→child inherit + self_modulate isolation case). This file adds the
- * gaps: three-level composition, explicit opacity inheritance, and the
- * sRGB→linear conversion applied to a grandchild's INHERITED product (not
- * just a direct child's own-pixel product).
+ * Modulate-cascade cases beyond `components/CanvasItem2D.test.tsx`: three-level
+ * composition, inherited opacity, and the sRGB-to-linear conversion of a grandchild's
+ * inherited product.
  */
 import { describe, it, expect } from 'vitest';
 import type * as THREE from 'three';
@@ -86,7 +83,7 @@ describe('modulate cascade (3-level composition)', () => {
   it('self_modulate at an intermediate level does not leak into further descendants', async () => {
     const parent = makeNode('P', {
       modulate: 'Color(0.5, 0.5, 0.5, 1)',
-      self_modulate: 'Color(0, 0, 0, 1)', // own pixels only — should not affect Child
+      self_modulate: 'Color(0, 0, 0, 1)', // Own pixels only, so Child is unaffected.
     });
     const child = makeNode('C');
     const r = await ReactThreeTestRenderer.create(

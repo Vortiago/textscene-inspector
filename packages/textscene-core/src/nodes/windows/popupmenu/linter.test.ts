@@ -1,10 +1,7 @@
 /**
- * Tests for PopupMenu's semantic linter rule. Strict-parser format checks live
- * in linterParser.test.ts and are asserted through `validatorRegistry` there.
- *
- * Uses `Linter` via testkit, not the `linter/index.ts` barrel: that barrel
- * side-effect-imports every in-flight slice, so pulling it here would fail
- * flakily on a sibling's half-written file mid-wave.
+ * PopupMenu's semantic rule. Format checks live in linterParser.test.ts. Uses `Linter`
+ * through testkit, not the `linter/index.ts` barrel: the barrel imports every slice,
+ * so a sibling's broken file would fail this test.
  */
 
 import { describe, expect, it } from 'vitest';

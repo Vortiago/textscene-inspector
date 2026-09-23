@@ -1,19 +1,8 @@
 /**
- * Contract: the ONE attribute Godot's writer emits with a space after its `=`.
- *
- * `scene/resources/resource_format_text.cpp` writes every connection attribute
- * as `key=value` with no space — `unbinds=`, `to_uid_path=`, `signal=` — except
- * the bound-argument list, which is written as `" binds= " + vars` where `vars`
- * is `VariantWriter::write_to_string` of an `Array` and therefore always starts
- * with `[`. A scanner that stops at the `=` drops `binds` entirely and then
- * re-reads its elements as keyless tokens.
- *
- * The discriminating rule is that leading `[`, not the space: a heading may also
- * carry a key whose value is genuinely absent (`type= parent="Foo"`), and there
- * the token after the space is another `key=value` pair that must stay its own
- * attribute. heading-value-scan.test.ts pins that case; this file pins the other
- * side of the same fork, so a fix that skips whitespace unconditionally fails
- * there and a fix that never skips it fails here.
+ * The one attribute Godot writes with a space after its `=`: `" binds= " + vars`
+ * (`scene/resources/resource_format_text.cpp`), an Array that opens with `[`. The `[`
+ * decides, not the space: heading-value-scan.test.ts pins `type= parent="Foo"`, so
+ * skipping whitespace always fails there and never skipping it fails here.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -58,7 +47,7 @@ describe('parseHeading captures the space-after-= binds attribute', () => {
   });
 
   it('still drops a valueless key whose next token is another attribute', () => {
-    // The other side of the fork — `p`, not `[`, follows the space.
+    // The other side of the fork: `p`, not `[`, follows the space.
     const result = parseHeading('[node name="X" type= parent="Foo" index="2"]');
     expect(result).not.toBeNull();
     expect(result!.attributes).toEqual({ name: 'X', parent: 'Foo', index: '2' });

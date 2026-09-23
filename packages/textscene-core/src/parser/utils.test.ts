@@ -1,7 +1,5 @@
 /**
- * Tests for parser utilities
- *
- * These are foundational utilities used throughout the parser
+ * The heading, property and line helpers the parser is built on.
  */
 
 import { describe, it, expect } from 'vitest';

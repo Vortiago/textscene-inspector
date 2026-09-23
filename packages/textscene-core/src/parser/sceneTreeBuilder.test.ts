@@ -212,7 +212,7 @@ describe('buildSceneTree', () => {
       for (let i = 1; i <= 10; i++) {
         let parentPath = '.';
         if (i > 1) {
-          // Build the full path to parent (e.g., "Level1/Level2" for Level3's parent)
+          // The full parent path, for example "Level1/Level2" for Level3.
           const pathParts = [];
           for (let j = 1; j < i; j++) {
             pathParts.push(`Level${j}`);
@@ -269,8 +269,7 @@ describe('buildSceneTree', () => {
       expect(player.name).toBe('Player');
       expect(player.children.map((c) => c.name)).toEqual(['Robot']);
       expect(player.children[0]!.instanceSubPath).toBe('Skeleton/Skeleton3D');
-      // The authored path is untouched — the linter and the instance re-parse
-      // both read it.
+      // The authored path is untouched: the linter and the instance re-parse read it.
       expect(player.children[0]!.parent).toBe('Player/Skeleton/Skeleton3D');
     });
 
@@ -307,9 +306,8 @@ describe('buildSceneTree', () => {
     });
 
     it('leaves a node orphaned when no ancestor on its path is an instance', () => {
-      // A malformed authored path, not an instance override. Godot drops these
-      // too, and so must we — otherwise a fixture named "deep" would silently
-      // re-root fifteen levels as siblings and stop testing depth.
+      // A malformed authored path, not an instance override, which Godot drops too.
+      // Re-rooting it would flatten a "deep" fixture's fifteen levels into siblings.
       const nodes = [node('Level0'), node('Level1', { parent: '.' }), node('Level3', { parent: 'Level2' })];
 
       const [root] = buildSceneTree(nodes);
@@ -318,9 +316,8 @@ describe('buildSceneTree', () => {
     });
 
     it('does not anchor at a plain node that merely shares the path prefix', () => {
-      // `Player` here is an ordinary node, not an instance — so nothing inside
-      // it can be addressed that we cannot already see, and an unresolvable
-      // path is a mistake rather than an override.
+      // `Player` is an ordinary node, not an instance, so everything inside it is
+      // visible here and an unresolvable path is a mistake, not an override.
       const nodes = [
         node('Main'),
         node('Player', { parent: '.' }),
@@ -333,11 +330,9 @@ describe('buildSceneTree', () => {
     });
 
     it('descends through an override heading standing between the instance and the path', () => {
-      // What Godot writes for editable children: `Inside` overrides properties
-      // on a node the base scene declares, so it carries no `type=` and its own
-      // children live in that scene, not here. Reading it as an ordinary node
-      // makes `StaticBody2D` a name this file "fails to find" and strands a
-      // heading the engine places.
+      // Godot's shape for editable children: `Inside` overrides a node the base scene
+      // declares, with no `type=`, and its children live in that scene. Read as an
+      // ordinary node, it would strand `StaticBody2D`, which the engine places.
       const nodes = [
         node('Root'),
         node('Building', { parent: '.', instance: 'ExtResource("1")' }),
@@ -423,11 +418,9 @@ describe('buildSceneTree', () => {
     });
 
     it('strands a parent= naming a node declared LATER in the file', () => {
-      // `NODE_FROM_ID` resolves against `ret_nodes[0]` as it stands at heading
-      // `i` (`packed_scene.cpp:157-165`), so only the headings above this one
-      // are reachable. Probed on 4.7.2: `Body` re-roots as `Later#Body` with
-      // the vanished-path warning, and the same two headings swapped seat it
-      // under `Later` with no warning.
+      // `NODE_FROM_ID` resolves against the tree at heading `i`
+      // (`packed_scene.cpp:157-165`), so only headings above are reachable. Probed on
+      // 4.7.2: `Body` re-roots as `Later#Body` with a warning, and swapped it seats.
       const nodes = [node('Root'), node('Body', { parent: 'Later' }), node('Later', { parent: '.' })];
 
       const [root] = buildSceneTree(nodes);
@@ -508,10 +501,9 @@ describe('buildSceneTree', () => {
 
       const result = buildSceneTree(nodes);
 
-      // Handing the flat list back as roots makes every node reachable — the set
-      // `strandedNodes` subtracts from — so the report empties on exactly the
-      // file `packed_scene.cpp:219` refuses. Heading 0 is the root here as it is in the engine, and every
-      // later heading is stranded and named.
+      // Heading 0 is the root, as in the engine, and every later heading is stranded
+      // and named. Returning the flat list as roots would empty the report on the
+      // file `packed_scene.cpp:219` refuses.
       expect(result.map((r) => r.name)).toEqual(['Node1']);
       expect(strandedNodes(origins, result).map((o) => o.node.name)).toEqual(['Node2']);
       expect(rootDeclaringParent(origins)?.node.name).toBe('Node1');

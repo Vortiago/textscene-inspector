@@ -1,10 +1,7 @@
 /**
- * Parses Godot TSCN text files into a structured format.
- *
- * Uses TscnParserCore + NodeRegistry-based node creation. Each node
- * type's `index.ts` self-registers its parser + property formatter on
- * import; this file imports each one for its side effect so the parser
- * sees the full set of registrations.
+ * Parses TSCN text through TscnParserCore and NodeRegistry. Each node type's `index.ts`
+ * self-registers its parser and formatter on import, so this file imports every one
+ * for its side effect.
  */
 
 // Side-effect imports: each module registers its parser + formatter on load.
@@ -32,7 +29,7 @@ import '../nodes/3d/worldenvironment/index.js';
 import '../nodes/physics/3d/staticbody3d/index.js';
 import '../nodes/physics/3d/area3d/index.js';
 import '../nodes/physics/3d/collisionshape3d/index.js';
-// Non-visual nodes — transform-only groups, no own geometry (ADR-0008).
+// Non-visual nodes: transform-only groups, no own geometry (ADR-0008).
 import '../nodes/physics/3d/characterbody3d/index.js';
 import '../nodes/physics/3d/rigidbody3d/index.js';
 import '../nodes/physics/3d/raycast3d/index.js';

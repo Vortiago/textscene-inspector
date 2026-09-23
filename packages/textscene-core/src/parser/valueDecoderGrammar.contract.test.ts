@@ -1,31 +1,8 @@
 /**
- * Consolidate drifted value decoders onto the canonical float grammar.
- *
- * RED contract. Pins the BEHAVIOUR the consolidation must produce, against the one source of
- * grammar truth (`FLOAT_PATTERN_SOURCE` / `parseVector2` in `parser/vectors.ts`, the `*Or`
- * family in `parser/valueParsers.ts`, and the non-throwing `parseColor` in
- * `utils/colorParser.ts`). The framing the issue is explicit about:
- *
- *   "SHARE the float-grammar leaf + keep thin per-slice wrappers", NOT "collapse to one
- *   decoder everywhere." Each slice's absent/error contract (`undefined` / `{0,0}` / skip)
- *   legitimately DIFFERS and stays; only the float grammar must unify. The residual scalar
- *   bug is the NaN-leak from *truthy garbage only* — an authored "0" (truthy string) is not
- *   lost; only an unparseable-but-present value currently leaks NaN.
- *
- * The seam this pins (each maps to an acceptance criterion of the issue):
- *   AC4  a promoted OPTIONAL Vector2 reader in valueParsers, sharing FLOAT_PATTERN_SOURCE;
- *   AC1  control + styleBox Vector2 reads go through the canonical grammar (loose-regex-only
- *        garbage no longer parses to NaN / a wrong number);
- *   AC2  the dead try/catch in control is gone — a malformed theme Color(...) is SKIPPED, not
- *        whitened to {1,1,1,1};
- *   AC3  the scalar reads (light / camera / mesh slices) no longer leak NaN on truthy garbage:
- *        concrete-default scalars warn-then-fall-back (floatOr/intOr), optional scalars fall to
- *        `undefined` — never NaN;
- *   AC6  the CONTEXT.md "Value decoder" note records that the absent/error contract may fork
- *        per slice while the grammar must not.
- *
- * These are the pinned contract cases; each converted slice keeps its own co-located parser
- * test (collapsed to "delegates to the canonical decoder" + its property→field mapping).
+ * Every value decoder shares the canonical float grammar: `FLOAT_PATTERN_SOURCE` and
+ * `parseVector2` in `parser/vectors.ts`, the `*Or` family in `parser/valueParsers.ts`,
+ * the non-throwing `parseColor` in `utils/colorParser.ts`. Each slice's absent/error
+ * contract (`undefined`, `{0,0}`, skip) may differ, but no present value leaks NaN.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -45,16 +22,14 @@ import { parseMeshInstance3D } from '../nodes/3d/meshinstance3d/parser';
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
   // The slices warn through the pluggable module logger (`import { warn } from '../logger'`),
-  // NOT console.warn — spy the module object so importers see the spy.
+  // not console.warn, so spy the module object for importers to see the spy.
   warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 });
 afterEach(() => {
   warnSpy.mockRestore();
 });
 
-// ---------------------------------------------------------------------------------------------
-// AC4 — the promoted OPTIONAL Vector2 reader shares the canonical float grammar
-// ---------------------------------------------------------------------------------------------
+// The promoted optional Vector2 reader shares the canonical float grammar
 describe('#175 parseOptionalVector2 — the promoted optional reader on the shared grammar', () => {
   it('parses a valid Vector2, including the scientific notation Godot emits', () => {
     expect(parseOptionalVector2('Vector2(3, 4)')).toEqual({ x: 3, y: 4 });
@@ -80,8 +55,8 @@ describe('#175 parseOptionalVector2 — the promoted optional reader on the shar
   });
 
   it('shares ONE grammar with the canonical parseVector2 (same accept/reject frontier)', () => {
-    // Whatever the throwing leaf rejects, the optional reader must also reject, and vice-versa —
-    // that is what "share the leaf" means. `1.2.3` is the canonical example of a malformed float.
+    // The optional reader rejects exactly what the throwing leaf rejects. `1.2.3` is the
+    // canonical malformed float.
     expect(() => parseVector2('Vector2(1.2.3, 4)')).toThrow();
     expect(parseOptionalVector2('Vector2(1.2.3, 4)')).toBeUndefined();
     expect(parseVector2('Vector2(1e-05, 2)')).toEqual({ x: 1e-5, y: 2 });
@@ -91,9 +66,7 @@ describe('#175 parseOptionalVector2 — the promoted optional reader on the shar
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// AC1 — control + styleBox Vector2 reads go through the canonical grammar
-// ---------------------------------------------------------------------------------------------
+// Control + styleBox Vector2 reads go through the canonical grammar
 describe('#175 control custom_minimum_size — canonical grammar, not the loose copy', () => {
   it('reads a valid Vector2', () => {
     const p = parseControl(heading('Control', { name: 'B' }), {
@@ -110,9 +83,7 @@ describe('#175 control custom_minimum_size — canonical grammar, not the loose 
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// AC2 — malformed theme Color is SKIPPED, not whitened (the dead try/catch is gone)
-// ---------------------------------------------------------------------------------------------
+// Malformed theme Color is skipped, not whitened
 describe('#175 control theme colors — malformed color skipped, not whitened', () => {
   it('keeps a valid theme color (including a genuine white)', () => {
     const p = parseControl(heading('Control', { name: 'L' }), {
@@ -120,7 +91,7 @@ describe('#175 control theme colors — malformed color skipped, not whitened', 
       'theme_override_colors/bg_color': 'Color(1, 1, 1, 1)',
     });
     expect(p.themeOverrideColors?.font_color?.r).toBeCloseTo(0.2, 5);
-    // A genuine white must still be stored — the skip is grammar-based, not "drop anything white".
+    // A genuine white is still stored: the skip is grammar-based, not "drop anything white".
     expect(p.themeOverrideColors?.bg_color).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 
@@ -144,9 +115,7 @@ describe('#175 control theme colors — malformed color skipped, not whitened', 
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// AC3 — scalar reads no longer leak NaN on truthy garbage
-// ---------------------------------------------------------------------------------------------
+// Scalar reads do not leak NaN on truthy garbage
 describe('#175 concrete-default scalars — warn-then-fall-back, never NaN (floatOr/intOr)', () => {
   it('light_energy: garbage falls back to the default 1.0 and warns', () => {
     const result = parseBaseLightProperties({ light_energy: 'garbage' });
@@ -209,9 +178,9 @@ describe('#175 optional scalars — fall to undefined on garbage, never NaN', ()
   });
 
   it('meshinstance converted int/float fields: garbage stays undefined, never NaN', () => {
-    // The remaining slice-converted optional reads (giLightmapScale/layers/fade_mode via
-    // parseOptionalInt; the range margins via parseOptionalFloat) must drop truthy garbage
-    // to undefined rather than leak NaN — same contract as visibility_range_begin above.
+    // The other optional reads (giLightmapScale/layers/fade_mode through parseOptionalInt,
+    // the range margins through parseOptionalFloat) drop truthy garbage to undefined, as
+    // visibility_range_begin does above.
     const h = heading('MeshInstance3D', { name: 'Mesh', parent: '.' });
     const result = parseMeshInstance3D(h, {
       gi_lightmap_scale: 'garbage',
@@ -236,9 +205,7 @@ describe('#175 optional scalars — fall to undefined on garbage, never NaN', ()
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// AC6 — the CONTEXT.md Value-decoder note records the per-slice fork of the absent/error contract
-// ---------------------------------------------------------------------------------------------
+// The CONTEXT.md Value-decoder note records the per-slice fork of the absent/error contract
 describe('#175 CONTEXT.md — the Value decoder note records the contract fork', () => {
   it('states the absent/error contract may fork per slice while the grammar is shared', () => {
     // cwd-independent read (runs under lint-staged / CI from the repo root too).

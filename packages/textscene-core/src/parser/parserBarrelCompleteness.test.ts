@@ -1,26 +1,20 @@
 /**
- * Guard: every node slice is wired into the PARSER barrel.
- *
- * `parser/TscnParser.ts` is the only place production imports a slice's
- * `index.ts`, so it is what makes the slice visible to `nodeRegistry`. Drop one
- * line from it and `parseNodeWithRegistry` falls back to `Node`, logs
- * `Unsupported node type`, and keeps `type: originalType` — the tree still looks
- * right while the slice's parser never runs. Every registry-driven sweep
- * (`ownValidatorCoverage`, `baseChainCompleteness`) stops seeing the type too.
- *
- * The generated per-slice `it('lands in the lenient parser tree with its type
- * preserved and no fallback warning')` was meant to catch exactly that and
- * could not: a slice test does `import './index'` for its own registration
- * assertions, so `findRegistration` resolves whether or not the barrel imports
- * the slice, and the fallback preserves the type anyway. 127 copies of it were
- * retired for this file, which asserts the same claim from the one position
- * that can: importing NOTHING but the barrel.
- *
- * Two halves, both needed. The static half names the missing slice, which is
- * the actionable failure. The runtime half parses a scene carrying every
- * registered type through the real `TscnParser` and pins the count against the
- * files on disk, so the sweep cannot shrink with the barrel.
+ * Every node slice is wired into `parser/TscnParser.ts`, the one production import of a
+ * slice's `index.ts`. Without it the node falls back to `Node`, logs `Unsupported node
+ * type` and keeps its type, so the tree looks right while the slice's parser never runs.
+ * Only a test that imports nothing but the barrel catches this.
  */
+
+/**
+ * A per-slice `it('lands in the lenient parser tree with its type
+ * preserved and no fallback warning')` cannot catch it: the slice test imports its own
+ * `index.ts`, so the type registers whether or not the barrel imports the slice.
+ */
+
+// The static half names the missing slice. The runtime half parses every registered
+// type through `TscnParser` and pins the count against the files on disk, so the sweep
+// cannot shrink with the barrel. A missing barrel line also hides the type from every
+// registry-driven sweep (`ownValidatorCoverage`, `baseChainCompleteness`).
 
 import { describe, it, expect, vi } from 'vitest';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -38,10 +32,9 @@ const nodesRoot = resolve(srcRoot, 'nodes');
 const barrelPath = resolve(here, 'TscnParser.ts');
 
 /**
- * Intentional exclusions: barrel specifiers for a slice `index.ts` that must
- * NOT ship in the parser bundle. Empty — every node slice registers a parser
- * and every parser belongs in the lenient tree. Add an entry with its reason
- * only when that stops being true.
+ * Barrel specifiers for a slice `index.ts` that must not ship in the parser bundle.
+ * Empty: every node slice registers a parser that belongs in the lenient tree. Add an
+ * entry, with its reason, only when that stops being true.
  */
 const ALLOWLIST: string[] = [];
 
@@ -95,12 +88,9 @@ function resolveSpecifier(spec: string): string | null {
 }
 
 /**
- * The node types one entry point registers, read from its source.
- *
- * Two shapes: the literal `typeName: 'Foo'` every scaffolded slice writes, and
- * the shorthand `typeName,` of `nodes/physics/2d/index.ts`, which loops over an
- * `as const` array of three. Reading disk rather than the registry is the whole
- * point — a population taken from `nodeRegistry` shrinks with the barrel.
+ * The node types one entry point registers, read from disk, since `nodeRegistry`
+ * shrinks with the barrel. Two shapes: `typeName: 'Foo'`, and the shorthand `typeName,`
+ * of `nodes/physics/2d/index.ts`, which loops over an `as const` array.
  */
 function registeredTypeNames(entryPoint: string): string[] {
   const src = readFileSync(entryPoint, 'utf8');
@@ -192,8 +182,8 @@ describe('parser barrel completeness', () => {
   });
 
   it('still reports a fallback for a type nothing registers (the detector is live)', () => {
-    // Without this the sweep above passes whenever the warning text, the spy or
-    // the fallback branch stops working — `[]` is its own success value.
+    // Without this the sweep above passes when the warning text, the spy or the
+    // fallback branch breaks: `[]` is its own success value.
     expect(fallbackWarnings(sceneOfEveryType(['NotARegisteredGodotType']))).toHaveLength(1);
   });
 });

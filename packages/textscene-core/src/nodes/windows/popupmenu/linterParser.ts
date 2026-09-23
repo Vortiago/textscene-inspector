@@ -1,33 +1,8 @@
 /**
- * PopupMenu strict validators for linting.
- *
- * Declare only PopupMenu's OWN members, the ones doc/classes/PopupMenu.xml
- * lists without an `overrides=` attribute, plus the per-item family Godot
- * serialises through a `PropertyListHelper`, never an `ADD_PROPERTY`
- * (popup_menu.cpp:3317-3328, the `base_property_helper.register_property`
- * calls). It is only visible by reading `_get_property_list`/`_set`/`_get`
- * directly: popup_menu.h:258-260 delegate all three to `property_helper`
- * rather than declaring any of their own.
- *
- * `transparent` and `transparent_bg` carry `overrides="Window"`/`"Viewport"`
- * (default-value overrides, not new properties) and are skipped. Everything
- * from Popup up is registered on the ancestor and delivered by the
- * NODE_BASE_TYPES base-walk, so re-declaring an inherited key shadows it and
- * duplicates the rule. Popup itself declares nothing.
- *
- * ## The per-item family is reached under the `item_#/*` pattern
- *
- * `PropertyListHelper::get_property_list` names each leaf
- * `vformat("%s%d/%s", prefix, i, name)` (property_list_helper.cpp:149), so a
- * real key looks like `item_0/text`: the index is GLUED to the prefix, with no
- * `/` between them. That is a different shape from `bones/<idx>/<sub>`, where a
- * literal `/` follows the fixed segment, so the registry matches it under the
- * `item_#/*` pattern rather than `item_/*` (ValidatorRegistry.findOwnValidator).
- *
- * The dispatcher parses the index itself and rejects a malformed one, mirroring
- * `PropertyListHelper::_get_property` (property_list_helper.cpp:47-55). It sees
- * one key at a time, so the high end of the index range — at or past
- * `item_count` — is linter.ts's rule instead.
+ * PopupMenu strict validators: its own members (doc/classes/PopupMenu.xml without
+ * `overrides=`, so not `transparent` or `transparent_bg`) and the per-item family.
+ * Members from Popup up arrive through the NODE_BASE_TYPES base walk, and
+ * re-declaring one shadows it and duplicates the rule. Popup declares nothing.
  */
 
 import '../window/linterParser.js';
@@ -38,11 +13,10 @@ import { ITEM_CHECKABLE_TYPE } from '../../../linter/validators/sharedEnumLabels
 import { v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
-// NativeMenu::SystemMenus, contiguous 0-5 (native_menu.h:59-66), each one bound
+// NativeMenu::SystemMenus, contiguous 0-5 (native_menu.h:59-66), bound
 // (native_menu.cpp:125-130) and documented (doc/classes/NativeMenu.xml:757-774).
-// popup_menu.cpp:3262's PROPERTY_HINT_ENUM "None:0,Application Menu:2,Window
-// Menu:3,Help Menu:4,Dock:5" omits MAIN_MENU_ID from the inspector dropdown, but
-// PopupMenu.xml:673 types the member as the whole enum, so 1 stays in range.
+// PopupMenu.xml:673 types the member as the whole enum, so 1 is in range, although
+// popup_menu.cpp:3262's hint omits MAIN_MENU_ID from the dropdown.
 const SYSTEM_MENU = {
   0: 'INVALID_MENU_ID',
   1: 'MAIN_MENU_ID',
@@ -53,9 +27,8 @@ const SYSTEM_MENU = {
 };
 
 /**
- * The ids `popup_menu.cpp:3262` actually offers. Derived from the enum above so
- * the constant names have one home: the hint's `:value` suffixes skip
- * MAIN_MENU_ID, and nothing else.
+ * The ids `popup_menu.cpp:3262` offers: every SYSTEM_MENU id but MAIN_MENU_ID, which
+ * the hint's `:value` suffixes skip. Derived so the constant names have one home.
  */
 const OFFERED_SYSTEM_MENUS = {
   0: SYSTEM_MENU[0],
@@ -65,35 +38,23 @@ const OFFERED_SYSTEM_MENUS = {
   5: SYSTEM_MENU[5],
 };
 
-// popup_menu.h:65-67, Item::CHECKABLE_TYPE_NONE/CHECK_BOX/RADIO_BUTTON, in
-// declaration order (0/1/2), matching the ADD_PROPERTY hint at :3323.
-
 /**
- * `item_<idx>/<leaf>` leaves, keyed by leaf name: the 7 properties
- * `base_property_helper.register_property` adds (popup_menu.cpp:3321-3327).
- * Every leaf setter is reached through `PropertyListHelper::_call_setter`,
- * which just forwards `(index, value)` to the bound method
- * (property_list_helper.cpp:66-72), so the grounding is whichever real
- * setter owns each leaf; none of them touch the index itself.
+ * The 7 `item_<idx>/<leaf>` leaves (popup_menu.cpp:3321-3327). `_call_setter` forwards
+ * `(index, value)` to each leaf's setter (property_list_helper.cpp:66-72), so each
+ * leaf is grounded in its own setter.
  */
 const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // popup_menu.cpp:3321, Variant::STRING, no hint. set_item_text
   // (popup_menu.cpp:1951) is a bare assignment past the ERR_FAIL_INDEX on
   // p_idx (an array-index guard, not a value bound).
   text: v.quotedString('text'),
-  // popup_menu.cpp:3322, Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE
-  // "Texture2D". set_item_icon (popup_menu.cpp:2024) is a bare assignment.
-  // A null icon is normally omitted rather than written literally, for want of
-  // PROPERTY_USAGE_STORE_IF_NULL (unlike GraphNode's slot icons). That is a
-  // write-side fact; the literal still loads and the combinator accepts it.
+  // popup_menu.cpp:3322, Variant::OBJECT, "Texture2D". set_item_icon
+  // (popup_menu.cpp:2024) is a bare assignment. With no STORE_IF_NULL the saver omits
+  // a null icon, but a literal null still loads.
   icon: v.resourceReference('icon'),
-  // popup_menu.cpp:3323, Variant::INT, PROPERTY_HINT_ENUM "No,As
-  // checkbox,As radio button" (values 0-2). `_set_item_checkable_type`
-  // (popup_menu.cpp:62-73) switches on exactly those 3 values with NO
-  // default case: a value outside 0-2 matches no case, so the item's
-  // checkable_type is left exactly as it was before the write, a silently
-  // dropped write (ADR-0032), not a value the setter "assigns straight
-  // through" the way a hinted bound requires. Enforced, not hinted.
+  // popup_menu.cpp:3323, INT, PROPERTY_HINT_ENUM 0-2 (popup_menu.h:65-67).
+  // `_set_item_checkable_type` (popup_menu.cpp:62-73) has no default case, so a value
+  // outside 0-2 leaves the item unchanged: a dropped write (ADR-0032), so enforced.
   checkable: v.enumInt('checkable', 0, 2, ITEM_CHECKABLE_TYPE, { enforced: 'popup_menu.cpp:62' }),
   // popup_menu.cpp:3324, Variant::BOOL, no hint.
   checked: v.boolean('checked'),
@@ -108,15 +69,21 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   separator: v.boolean('separator'),
 };
 
+/**
+ * The per-item family: `base_property_helper.register_property` (popup_menu.cpp:3317-3328)
+ * with no `ADD_PROPERTY`, since popup_menu.h:258-260 delegate `_get_property_list`,
+ * `_set` and `_get` to `property_helper`. `item_0/text` glues the index to the prefix
+ * (property_list_helper.cpp:149), hence `item_#/*` (ValidatorRegistry.findOwnValidator).
+ */
 const itemValidator = indexedFamilyValidator({
   prefix: 'item_',
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
   describes: 'item_<index>/<leaf> (see popup_menu.cpp, PropertyListHelper-backed)',
-  // `_set` routes straight to `property_helper.property_set_value`
-  // (popup_menu.cpp:3092), whose `_get_property` returns nullptr unless the
-  // index `is_valid_int()` (property_list_helper.cpp:53-55), so a non-numeric
-  // index is a DROPPED write.
+  // `_set` routes to `property_helper.property_set_value` (popup_menu.cpp:3092), whose
+  // `_get_property` (property_list_helper.cpp:47-55) returns nullptr unless the index
+  // `is_valid_int()` (property_list_helper.cpp:53-55): a dropped write. The
+  // `>= item_count` end needs a sibling, so linter.ts checks it.
   indexParse: 'is_valid_int',
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',

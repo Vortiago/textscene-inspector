@@ -1,12 +1,7 @@
 /**
- * Direct tests for parseVector2 / parseVector3.
- *
- * These pin the parsing contract: a strict anchored regex built from
- * FLOAT_PATTERN_SOURCE — scientific notation parses (Godot emits
- * `1e-05` for small values), while malformed components like `1.2.3`
- * or a lone `-` fail the whole match and throw. Callers that need
- * fallback-on-error semantics wrap these in `vec2Or`-style helpers
- * (see valueParsers.ts).
+ * parseVector2 and parseVector3 match a strict anchored regex from FLOAT_PATTERN_SOURCE:
+ * scientific notation parses (Godot emits `1e-05`), and `1.2.3` or a lone `-` throws.
+ * The `vec2Or` family in valueParsers.ts adds fallback-on-error.
  */
 import { describe, it, expect } from 'vitest';
 import { parseVector2, parseVector3 } from './vectors';
@@ -89,11 +84,9 @@ describe('parseVector3', () => {
 });
 
 /**
- * `slotTupleRegex` admits `Vector2i`/`Vector3i` into a float slot because
- * `can_convert_strict` converts them, but their arguments go through
- * `_parse_construct<int32_t>` (`variant_parser.cpp:721-733`) and are narrowed
- * to int32 BEFORE the widening runs. Reading them as plain floats put the
- * renderer 4.29e9 units from where Godot draws the node.
+ * `slotTupleRegex` admits `Vector2i`/`Vector3i` into a float slot, since
+ * `can_convert_strict` converts them, but `_parse_construct<int32_t>`
+ * (`variant_parser.cpp:721-733`) narrows their arguments to int32 before the widening.
  */
 describe('an i-suffixed spelling in a float slot', () => {
   it('narrows each component to int32 the way Godot stores it', () => {

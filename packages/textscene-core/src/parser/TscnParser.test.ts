@@ -137,10 +137,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)`;
       expect(child2!.children).toHaveLength(0);
     });
 
-    // Every node type's parser reads the heading itself, so "is this node
-    // attached to its parent" is a per-type property rather than a shared one.
-    // CanvasLayer's read no hierarchy attributes at all, which detached the
-    // layer AND everything under it — the shape every Godot HUD is written in.
+    // Each node type's parser reads the heading itself, so attachment to the parent
+    // is per type. A CanvasLayer that dropped its hierarchy attributes would detach
+    // every HUD subtree.
     it('keeps a subtree hanging off a non-Control layer node', () => {
       const parser = new TscnParser();
       const content = `[gd_scene format=3]

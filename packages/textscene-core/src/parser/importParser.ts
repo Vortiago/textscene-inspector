@@ -1,23 +1,17 @@
 /**
- * Godot `.import` sidecar parsing — the file Godot writes beside a source asset
- * recording which importer produced it and with what parameters.
- *
- * A sidecar is NOT a `.tres`: it has no `[gd_resource]` header, so `parseTresFile`
- * rejects it. It is a plain INI of `[section]` blocks and `key=value` lines, and only
- * `[params]` describes the import — `[remap]` and `[deps]` address the baked artifact
- * under `.godot/imported/`, which this previewer never reads (ADR-0028).
- *
- * Values stay raw strings; `importRootScale`, `importExternalMaterials` and
- * `importNodeLayers` are the typed readers, because `nodes/root_scale`,
- * `nodes/apply_root_scale` and, from `_subresources`, the per-material `use_external`
- * remaps and per-node `mesh_instance/layers` are the only parameters we honour;
- * everything else is either something three's GLTFLoader already does or a bake concern
- * with no visual consequence.
- *
- * A foreign-format parser OUTSIDE the resource-slice registry (ADR-0031): a
- * sidecar is found by path convention beside its asset, never named by a
- * scene, so it claims no type name and no bus slot.
+ * Parses Godot's `.import` sidecar, which records the importer and parameters of the
+ * asset beside it. A foreign-format parser outside the resource-slice registry
+ * (ADR-0031): it is found by path convention, never named by a scene, so it claims no
+ * type name and no bus slot.
  */
+
+// Not a `.tres`: with no `[gd_resource]` header, `parseTresFile` rejects it. Only
+// `[params]` describes the import. `[remap]` and `[deps]` address the baked artifact
+// under `.godot/imported/`, which this previewer never reads (ADR-0028).
+
+// Values stay raw strings. The typed readers cover the only honoured parameters:
+// `nodes/root_scale`, `nodes/apply_root_scale`, and the `_subresources` material remaps
+// and mesh layers. The rest is GLTFLoader's work or a bake concern with no visual effect.
 
 import {
   INITIAL_SCAN_STATE,
@@ -114,13 +108,9 @@ function unquote(value: string): string {
 }
 
 /**
- * How a sidecar's root scale should be applied, or null when it changes nothing.
- *
- * `bake` is Godot's `nodes/apply_root_scale`, and it is not cosmetic. When true Godot
- * applies the scale to the MESHES and leaves the root node at scale 1, so nodes a
- * `.tscn` parents to the instanced root are NOT scaled, since those are authored against
- * the final size. When false the scale multiplies the root node instead, and does carry
- * to such children.
+ * How a sidecar's root scale applies, or null when it changes nothing. `bake` is
+ * `nodes/apply_root_scale`: when true, Godot scales the meshes and leaves the root at 1,
+ * so nodes a `.tscn` parents to the root are not scaled. When false, the root scales.
  */
 export function importRootScale(
   parsed: ParsedImportFile | null
@@ -132,8 +122,7 @@ export function importRootScale(
   // A zero or negative scale would collapse or mirror the asset; Godot's editor cannot
   // produce one, so treat it as corrupt and fall back to defaults rather than render it.
   if (!Number.isFinite(scale) || scale <= 0) return null;
-  // An identity scale is the overwhelmingly common case and means there is nothing to
-  // do — returning null keeps the caller's hot path untouched.
+  // An identity scale is the common case: null keeps the caller's hot path untouched.
   if (scale === 1) return null;
 
   // `bool apply_root = p_options["nodes/apply_root_scale"]`
@@ -142,14 +131,10 @@ export function importRootScale(
 }
 
 /**
- * The sidecar's per-material **external material** remaps: glTF material name → the
- * `res://` `.tres` that replaces it.
- *
- * Godot bakes this into the imported asset itself
- * (`editor/import/3d/resource_importer_scene.cpp:1620-1645`), which is why it belongs to
- * the GLB template rather than to any scene instancing it. The uid form is tried first
- * and the `res://` fallback second (`:1625-1633`); nothing here resolves `uid://`, so the
- * fallback is what a remap resolves to in practice.
+ * The sidecar's external-material remaps, from glTF material name to the `res://` `.tres`
+ * that replaces it. Godot bakes them into the asset
+ * (`editor/import/3d/resource_importer_scene.cpp:1620-1645`), so they belong to the GLB.
+ * Godot tries the uid first (`:1625-1633`). Nothing here resolves `uid://`.
  */
 export function importExternalMaterials(
   parsed: ParsedImportFile | null
@@ -168,9 +153,8 @@ export function importExternalMaterials(
         typeof candidate === 'string' && candidate.startsWith('res://')
     );
     if (path) remaps.set(name, path);
-    // A remap with no `res://` path is a divergence Godot resolves through its uid table
-    // and we cannot, so it is announced rather than dropped — the caller draws the glTF's
-    // own material.
+    // A remap with no `res://` path resolves only through Godot's uid table, so it is
+    // announced, not dropped. The caller draws the glTF's own material.
     else logger.warn(`[ImportSidecar] material '${name}' remaps to no res:// path`);
   }
   return remaps;
@@ -201,11 +185,9 @@ export function importNodeLayers(parsed: ParsedImportFile | null): ReadonlyMap<s
 const decodedSubResources = new WeakMap<ParsedImportFile, Record<string, unknown> | null>();
 
 /**
- * One category of the `_subresources` dictionary. Godot writes the whole thing as a
- * single Variant, which is JSON for the scalar-valued import options these categories
- * hold — so the failure unit is the DICTIONARY, not the category: one value JSON cannot
- * read (`Vector3(…)`, `&"…"`, `inf`) takes every category with it. That is a divergence
- * we would otherwise render silently, so it is warned about once per parse.
+ * One category of `_subresources`. Godot writes it as one Variant, JSON for these scalar
+ * options, so one value JSON cannot read (`Vector3(…)`, `&"…"`, `inf`) loses every
+ * category. That divergence is warned about once per parse.
  */
 function subResourceCategory(
   parsed: ParsedImportFile | null,

@@ -1,8 +1,7 @@
 /**
- * Shared string helpers used by both parsers (lenient TscnParserCore + strict
- * StrictTscnParser) so they agree on string termination, and by node parsers
- * for unquoting/escape-decoding. Covers the escaped-quote edge cases the
- * docs-grill flagged (\" escaped, \\" = escaped backslash + real terminator).
+ * String helpers both parsers share, so they agree on string termination, and node
+ * parsers use for unquoting and escape decoding. Covers the escaped-quote edge cases:
+ * \" is escaped, and \\" is an escaped backslash before a real terminator.
  */
 
 import { describe, expect, it } from 'vitest';

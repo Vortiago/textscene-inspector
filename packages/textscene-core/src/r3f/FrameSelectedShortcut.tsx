@@ -1,12 +1,7 @@
 /**
- * "F" frames the camera on the selected node — Blender/Godot-style:
- * frames the selection if one exists, else the whole scene. Reuses the
- * already-tested `frameSceneBounds` and `resolveFrameTarget` for the target
- * resolution; this component is just the `useGlobalShortcut` wiring.
- *
- * Mount INSIDE `<Canvas>` (needs `useThree` for scene/camera/controls) —
- * unlike `<EscapeDeselect>`, which is viewport-mode-agnostic and lives
- * outside the canvas.
+ * "F" frames the camera on the selected node, or the whole scene without a selection,
+ * through `frameSceneBounds` and `resolveFrameTarget`. Mount inside `<Canvas>`, since it
+ * needs `useThree`, unlike the mode-agnostic `<EscapeDeselect>` outside it.
  */
 import { useThree } from '@react-three/fiber';
 import { useOptionalSelection } from './contexts/SelectionContext.js';
@@ -23,9 +18,8 @@ export function FrameSelectedShortcut() {
   const get = useThree((s) => s.get);
 
   useGlobalShortcut('f', () => {
-    // Free-orbit only — same guard as CameraFit: while "Use This Camera" is
-    // active, `state.camera` IS the authored Camera3D, and framing would
-    // overwrite that node's position/near/far (corrupting the preview).
+    // Free-orbit only, as in CameraFit: under "Use This Camera", `state.camera` is the
+    // authored Camera3D, and framing would overwrite its position, near and far.
     if (control?.activeCameraPath) return;
     const state = get();
     const target = resolveFrameTarget(state.scene, selectedNodePath, nodeObjectMap);

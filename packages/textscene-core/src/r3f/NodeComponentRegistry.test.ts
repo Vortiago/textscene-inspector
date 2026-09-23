@@ -1,7 +1,6 @@
 /**
- * The component registry's CanvasItem classification — the seam the
- * workspace-aware dispatcher uses to decide what renders in the 3D viewport
- * (Node3D content only, like Godot's editor) vs the 2D world canvas.
+ * The registry's CanvasItem classification, which the dispatcher uses to render Node3D
+ * content in the 3D viewport and CanvasItems in the 2D canvas, as Godot's editor does.
  */
 import { describe, it, expect, afterEach } from 'vitest';
 import { nodeComponentRegistry } from './NodeComponentRegistry';

@@ -80,7 +80,7 @@ _subresources={
 gltf/naming_version=2
 `;
 
-/** Godot writes a disabled remap the same way, minus the flag — no corpus sidecar has one. */
+/** Godot writes a disabled remap the same way, minus the flag. */
 const DISABLED_REMAP_IMPORT = `[params]
 
 _subresources={
@@ -216,7 +216,7 @@ describe('importRootScale', () => {
 describe('importExternalMaterials', () => {
   it('reads the glTF material name -> external .tres table', () => {
     const remaps = importExternalMaterials(parseImportFile(MANNEQUINY_IMPORT));
-    // resource_importer_scene.cpp:1625-1633 — the uid is tried first, the res:// fallback second.
+    // resource_importer_scene.cpp:1625-1633: the uid is tried first, the res:// fallback second.
     expect([...remaps]).toEqual([
       ['Azul_COLOR_0', 'res://materials/blue.tres'],
       ['Blanco_COLOR_0', 'res://materials/white.tres'],

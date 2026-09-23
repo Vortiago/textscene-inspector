@@ -1,16 +1,7 @@
 /**
- * The scene tree builder against every real `.tscn` in the repo.
- *
- * The unit tests pin the anchor rule on hand-built nodes; this pins the thing
- * that actually went wrong — that a node whose parent path descends into an
- * instanced sub-scene was silently dropped, taking a terrain's material
- * overrides and a player's coin counter with it, and announcing it only through
- * a warning nobody read.
- *
- * So the assertion is on `orphanedNodes`, the scene's own report: no corpus
- * scene may orphan a node, except the one fixture that exists to orphan one.
- * Not the console warning, which is the channel this test's own opening
- * paragraph calls "a warning nobody read".
+ * The scene tree builder against every real `.tscn` in the repo. A node whose parent
+ * path descends into an instanced sub-scene must not be dropped, so no corpus scene may
+ * report an `orphanedNodes` entry, except the one fixture that exists to orphan one.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -19,8 +10,8 @@ import { readdir } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 import { TscnParser } from './TscnParser';
 
-// `import.meta.dirname`, never `process.cwd()` — hooks and CI run from the repo
-// root while vitest resolves this file's own URL through its dev server.
+// `import.meta.dirname`, never `process.cwd()`: hooks and CI run from the repo root
+// while vitest resolves this file's own URL through its dev server.
 const SCENES = resolve(import.meta.dirname, '../../../../scenes');
 
 /** The one fixture whose whole purpose is an unresolvable parent path. */
@@ -63,9 +54,8 @@ describe('buildSceneTree over the whole corpus', () => {
   });
 
   it('reattaches the platformer player’s deep overrides to the instance', () => {
-    // The case that started this: `Robot` carries `layers = 2` and the four
-    // Parallax labels are the coin counter — all seven, or the reattachment is
-    // not doing its job.
+    // `Robot` carries `layers = 2` and the four Parallax labels are the coin counter:
+    // all seven must be reattached.
     const parsed = new TscnParser().parse(
       readFileSync(join(SCENES, 'demos/3d/platformer/player/player.tscn'), 'utf8')
     );

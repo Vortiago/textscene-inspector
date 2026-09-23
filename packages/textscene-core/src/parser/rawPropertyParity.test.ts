@@ -1,12 +1,7 @@
 /**
- * The two parsers share one scanning loop and diverge only in their NodeCreator,
- * so the RAW property bag they see is identical by construction. This pins the
- * field it lands in.
- *
- * Without it the raw bag is `rawProperties` on the lenient tree and `properties`
- * on the strict one, and a helper both halves call answers false on whichever
- * shape its author did not have in mind — silently, because both fields exist on
- * `TscnNode` and neither read is a type error.
+ * Both parsers share one scanning loop, so their raw property bag is identical. This
+ * pins the field it lands in: were it `rawProperties` on one tree and `properties` on
+ * the other, a shared helper would silently answer false on one shape.
  */
 
 import { describe, expect, it } from 'vitest';

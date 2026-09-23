@@ -1,37 +1,22 @@
 /**
- * Godot `project.godot` parsing — the engine configuration file at a project's
- * `res://` root, holding the settings a scene is authored against.
- *
- * Deliberately NOT `TscnParserCore`: that core scans `[node name="…" type="…"]`
- * headers with attribute lists and carries the `ParseObserver` lint seam, and a
- * `project.godot` has neither — bare `[section]` headings, plain `key=value`
- * lines, and nothing to diagnose. `importParser.ts` already parses this exact
- * INI shape for `.import` sidecars, so this is its sibling rather than a second
- * use of the scene core.
- *
- * Godot writes a setting's full name split across the heading and the key:
- * `gui/theme/default_theme_scale` is stored as `theme/default_theme_scale`
- * under `[gui]`. Parsing rejoins them, so callers address settings by the same
- * name `ProjectSettings.get_setting()` takes. Keys above the first heading
- * (`config_version=5`) have no prefix and keep their bare name.
- *
- * A foreign-format parser OUTSIDE the resource-slice registry (ADR-0031):
- * `project.godot` is found at the `res://` root by convention, never named by
- * a scene, so it claims no type name and no bus slot.
- *
- * Values stay raw strings, and typed readers are ENUMERATED rather than
- * general: only settings this previewer actually honours get one, so the store
- * cannot quietly become a settings grab-bag.
+ * Parses Godot's `project.godot`, the configuration at a project's `res://` root, into
+ * raw settings keyed by full name. A foreign-format parser outside the resource-slice
+ * registry (ADR-0031): no scene names it, so it claims no type name and no bus slot.
  */
+
+// Not `TscnParserCore`: this file has bare `[section]` headings, plain `key=value`
+// lines and nothing to diagnose. It is the sibling of `importParser.ts`, which parses
+// the same INI shape.
+
+// Typed readers exist only for settings this previewer honours, so the store does not
+// become a settings grab-bag.
 
 import { boolSlotValue, isLocaleRightToLeft, type LayoutDirectionEnv } from '../godot/index.js';
 import { parseOptionalInt } from './valueParsers.js';
 
 /**
- * A `key=value` line. The key admits `/` (Godot's subsection separator) and `.`
- * — a feature-tagged override like `renderer/rendering_method.mobile` is a real
- * key, and a pattern that stopped at the dot would leave the line unmatched and
- * silently skipped rather than stored under its own name.
+ * A `key=value` line. The key admits `/`, Godot's subsection separator, and `.`: a
+ * feature-tagged override like `renderer/rendering_method.mobile` is a real key.
  */
 const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/.]*)=(.*)$/;
 /** A `[section]` heading. Godot's section names are bare identifiers. */
@@ -41,17 +26,9 @@ const SECTION = /^\[([A-Za-z_][A-Za-z0-9_]*)\]$/;
 export type ProjectSettings = Readonly<Record<string, string>>;
 
 /**
- * Parse a `project.godot` into its settings, or null when the text is not one.
- *
- * Null rather than a throw because absence and malformedness are both ordinary:
- * most fixtures ship no `project.godot` at all, and a caller's only sensible
- * response either way is "use Godot's defaults".
- *
- * A quoted value spanning several lines (Godot wraps `config/description`
- * without escaping the newline) keeps only its first line: the continuation has
- * no `=` and is skipped. That is deliberate — no setting this previewer reads
- * is multi-line, and reassembling them would mean tracking quote state for no
- * gain.
+ * A `project.godot`'s settings, or null when the text is not one. Null, not a throw:
+ * absence and malformedness are both ordinary, and the caller uses Godot's defaults
+ * either way.
  */
 export function parseProjectSettings(content: string): ProjectSettings | null {
   const settings: Record<string, string> = {};
@@ -68,11 +45,14 @@ export function parseProjectSettings(content: string): ProjectSettings | null {
       continue;
     }
 
+    // A multi-line quoted value, such as `config/description`, keeps its first line: the
+    // continuation has no `=`. No setting this previewer reads is multi-line.
     const pair = KEY_VALUE.exec(line);
     if (!pair) continue;
     const [, key, rawValue] = pair;
-    // `config_version` and friends sit above the first heading and are stored
-    // under their bare name, exactly as Godot addresses them.
+    // Godot splits a name across heading and key: `theme/default_theme_scale` under
+    // `[gui]` is `gui/theme/default_theme_scale`, as `ProjectSettings.get_setting()`
+    // takes it. `config_version` above the first heading keeps its bare name.
     settings[section ? `${section}/${key!}` : key!] = unquote(rawValue!.trim());
     sawSetting = true;
   }
@@ -91,40 +71,27 @@ function unquote(value: string): string {
 export const DEFAULT_THEME_SCALE = 1.0;
 
 /**
- * `gui/theme/default_theme_scale` — the multiplier Godot applies to every
- * metric of the built-in default theme.
- *
- * `scene/theme/theme_db.cpp`, `ThemeDB::initialize_theme()`:
- *
- *     float default_theme_scale = GLOBAL_DEF(PropertyInfo(Variant::FLOAT,
- *     "gui/theme/default_theme_scale", PROPERTY_HINT_RANGE, "0.5,8,0.01",
- *     PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED), 1.0);
- *
- * and the value reaches the theme through `make_default_theme(default_theme_scale, …)`,
- * which clamps it — `scene/theme/default_theme.cpp:1369`:
- *
- *     float default_scale = CLAMP(p_scale, 0.5, 8.0);
- *
- * so the clamp is applied HERE, on read, and every metric is rounded after
- * multiplying (see {@link scaledGodotTheme}). An unparseable or non-finite
- * value falls back to 1.0 rather than rendering a collapsed UI.
+ * `gui/theme/default_theme_scale`, the multiplier on every default-theme metric
+ * (`ThemeDB::initialize_theme()` in `scene/theme/theme_db.cpp`, default 1.0). Clamped
+ * here to 0.5-8 as `make_default_theme` does (`scene/theme/default_theme.cpp:1369`).
+ * Each metric rounds after multiplying ({@link scaledGodotTheme}).
  */
 export function projectThemeScale(settings: ProjectSettings | null): number {
   const raw = settings?.['gui/theme/default_theme_scale'];
-  // An empty value is "the key says nothing", not zero — `Number('')` is 0,
-  // which is finite and would clamp to 0.5 and shrink the whole UI.
+  // An empty value says nothing, not zero: `Number('')` is 0, which would clamp to 0.5
+  // and shrink the UI.
   if (raw === undefined || raw.trim() === '') return DEFAULT_THEME_SCALE;
 
   const scale = Number(raw);
+  // An unparseable or non-finite value falls back, not a collapsed UI.
   if (!Number.isFinite(scale)) return DEFAULT_THEME_SCALE;
   return Math.min(Math.max(scale, 0.5), 8);
 }
 
 /**
- * Godot's own defaults for `display/window/size/viewport_width` / `_height`
- * (`main/main.cpp`'s `GLOBAL_DEF_BASIC` pair). A scene with no `project.godot`
- * — every loose unit fixture — is framed at these, which is what Godot does
- * for a project that sets nothing.
+ * Godot's defaults for `display/window/size/viewport_width` and `_height`
+ * (`main/main.cpp`'s `GLOBAL_DEF_BASIC` pair), which frame a scene with no
+ * `project.godot`, as Godot does.
  */
 export const DEFAULT_VIEWPORT_WIDTH = 1152;
 export const DEFAULT_VIEWPORT_HEIGHT = 648;
@@ -136,13 +103,9 @@ export interface ProjectViewportSize {
 }
 
 /**
- * `display/window/size/viewport_*` — the rect a 2D scene is composed against,
- * and what a root Control resolves its anchors to.
- *
- * Read per-axis rather than as a pair, because Godot falls back per-setting: a
- * project may set one and leave the other. A non-finite or non-positive value
- * takes the default too — a zero-width viewport is not a smaller frame, it is
- * a scene that cannot be laid out at all.
+ * `display/window/size/viewport_*`: the rect a 2D scene is composed against and a root
+ * Control anchors to. Per axis, as Godot falls back per setting. A non-finite or
+ * non-positive value takes the default: a zero-width viewport cannot be laid out.
  */
 export function projectViewportSize(settings: ProjectSettings | null): ProjectViewportSize {
   const axis = (key: string, fallback: number): number => {
@@ -161,27 +124,19 @@ export function projectViewportSize(settings: ProjectSettings | null): ProjectVi
 }
 
 /**
- * The `internationalization/*` settings `Control::is_layout_rtl()` reads,
- * reduced to the four booleans its branches produce
- * ({@link LayoutDirectionEnv}).
- *
- * Two of the three inputs are in the file. `force_right_to_left_layout_direction`
- * and `root_node_layout_direction` are plain settings
- * (`core/config/project_settings.cpp:1797-1798`), and the RTL locale table is a
- * fixed seven-code list rather than an ICU query
- * (`modules/text_server_adv/text_server_adv.cpp:534-541`). The third is not:
- * `_get_locale()` ends at `TranslationServer::get_locale()`, seeded from
- * `internationalization/locale/test` when the project sets one and from the OS
- * locale otherwise (`core/string/translation_server.cpp:592-599`). So the test
- * locale answers both application-locale arms exactly, while the system-locale
- * arm — and an application arm with no test locale — has no answer the scene
- * files contain, and stays left-to-right.
+ * The `internationalization/*` settings `Control::is_layout_rtl()` reads, as the four
+ * booleans its branches produce ({@link LayoutDirectionEnv}). Two inputs are plain
+ * settings (`core/config/project_settings.cpp:1797-1798`), and the RTL locale table is
+ * a fixed seven-code list (`modules/text_server_adv/text_server_adv.cpp:534-541`).
  */
 export function projectLayoutDirectionEnv(settings: ProjectSettings | null): LayoutDirectionEnv {
   // `GLOBAL_GET_CACHED(bool, …)` booleanizes whatever the ConfigFile holds, so
   // `1` reads as true exactly like `true` does.
   const forceRtl =
     boolSlotValue(settings?.['internationalization/rendering/force_right_to_left_layout_direction']) === true;
+  // The locale comes from `internationalization/locale/test` when set, else the OS
+  // (`core/string/translation_server.cpp:592-599`). The OS locale is in no file, so
+  // those arms stay left-to-right.
   const testLocale = settings?.['internationalization/locale/test']?.trim() ?? '';
   const applicationLocaleRtl = testLocale !== '' && isLocaleRightToLeft(testLocale);
   // The host's locale, which no scene file states.
