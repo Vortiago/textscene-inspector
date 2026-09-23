@@ -12,9 +12,9 @@ renders_as: a multi-line text box
 TextEdit is the multi-line text editor Control that CodeEdit builds on. The previewer
 draws its `normal`/`read_only` StyleBox, every buffer line shaped and wrapped per
 `wrap_mode`/`autowrap_mode`/`indent_wrapped_lines`, `highlight_current_line`'s row band,
-and the `draw_tabs`/`draw_spaces` control-character glyphs — a still frame with no
-selection or IME. The one caret a still frame can carry is the
-`caret_draw_when_editable_disabled` one, which draws without focus.
+and the `draw_tabs`/`draw_spaces` control-character glyphs. It is a still frame with no
+selection or IME (input method editor) state. The one caret a still frame can carry is
+the `caret_draw_when_editable_disabled` one, which draws without focus.
 
 ## Linting
 
@@ -80,39 +80,37 @@ Strict parsing format-checks these `TextEdit` properties, plus 53 inherited from
 |  | `control-property-order` | warning |
 <!-- lint:end -->
 
-`linterParser.ts` format-checks all 47 of TextEdit's own members. The registered lenient
-parser reads 13 of them — `text`, `placeholder_text`, `editable`, `wrap_mode`,
-`autowrap_mode`, `draw_tabs`, `draw_spaces`, `highlight_current_line`,
-`scroll_fit_content_width`, `scroll_fit_content_height`, `minimap_draw`,
-`minimap_width`, `syntax_highlighter` — the subset a static frame's picture
-depends on. A malformed `wrap_mode`/`autowrap_mode`/`minimap_width` reads as
-unset (NONE/WORD_SMART/80); a malformed boolean reads as `false`.
-`scroll_horizontal`/`scroll_vertical` are parsed by the strict linter but never
-read here: both are forced back to `(0, 0)` on the very first draw, since caret
-0 always sits at (line 0, column 0) and nothing in a `.tscn` can move it
-(`nativeSolver.ts`'s own doc has the full trace).
+`linterParser.ts` format-checks all of TextEdit's own members. The registered lenient
+parser reads only the subset a static frame's picture depends on: `text`,
+`placeholder_text`, `editable`, `wrap_mode`, `autowrap_mode`, `draw_tabs`,
+`draw_spaces`, `highlight_current_line`, `scroll_fit_content_width`,
+`scroll_fit_content_height`, `minimap_draw`, `minimap_width` and `syntax_highlighter`.
+A malformed `wrap_mode`/`autowrap_mode`/`minimap_width` reads as unset
+(NONE/WORD_SMART/80). A malformed boolean reads as `false`. The strict linter parses
+`scroll_horizontal`/`scroll_vertical`, but the previewer never reads them. The first
+draw forces both back to `(0, 0)`, since caret 0 always sits at (line 0, column 0) and
+nothing in a `.tscn` can move it (`nativeSolver.ts`'s own doc has the full trace).
 
 `syntax_highlighter` resolves in this node's own scope
-(`resources/useSubOrExtResource.ts`, `solveNode.resources` — never
-`useSceneResources()`): a `CodeHighlighter` sub-resource or `.tres` decodes
+(`resources/useSubOrExtResource.ts`, `solveNode.resources`, never
+`useSceneResources()`). A `CodeHighlighter` sub-resource or `.tres` decodes
 through `resources/styles/codehighlighter/`, and its `_get_line_syntax_highlighting_impl`
 line scanner (`highlight.ts`) colours every buffer line, one `<TextRun>` per
-colour run. Anything else the property could name — absent, unresolved, or a
-custom `SyntaxHighlighter` script — paints at the plain `font_color`.
+colour run. Anything else the property can name (absent, unresolved, or a custom
+`SyntaxHighlighter` script) paints at the plain `font_color`.
 
 `indent_size` (`CodeEdit` only, `set_tab_size`) re-aligns every tab glyph to a
 repeating stop `indent_size` space-widths wide (`nativeSolver.ts`'s
-`textEditTabStopsPx`); a bare `TextEdit` has no `.tscn` property for it and
+`textEditTabStopsPx`). A bare `TextEdit` has no `.tscn` property for it and
 always shapes at the class default of 4.
 
 ## Known limitations
 
 - **Not drawn** No selection, IME composition, brace-match underline,
-  word-highlight box, search-result box, minimap or scrollbars — every one needs
-  interaction state a static `.tscn` cannot carry, or (scrollbars) a Control type
-  that cannot itself appear in a `.tscn`. The caret draws only under
-  `caret_draw_when_editable_disabled`, which is the one path that survives an
-  unfocused frame.
+  word-highlight box, search-result box, minimap or scrollbars. Each needs
+  interaction state a static `.tscn` cannot carry or, for the scrollbars, a Control
+  type that cannot itself appear in a `.tscn`. The caret draws only under
+  `caret_draw_when_editable_disabled`, the one path that survives an unfocused frame.
 - **Approximated** `draw_tabs`/`draw_spaces` overlay the `tab`/`space` theme icons
   at an unscaled size and a row-centred vertical offset, not Godot's own
   ascent-relative one (`Component.tsx`'s own doc).

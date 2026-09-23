@@ -68,7 +68,7 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 - **Approximated** The outline is a dilated fill rather than a stroked contour, so it
   reads softer than Godot's.
 - **Approximated** `width` and `autowrap_mode` are not read, so a long label runs on one
-  line where Godot would wrap it.
+  line where Godot wraps it.
 - **Approximated** The glyph texture carries no mipmaps, so a label seen small sparkles
   where Godot's stays smooth.
 - **Approximated** `alpha_cut = OPAQUE_PREPASS` clips against a fixed threshold in the

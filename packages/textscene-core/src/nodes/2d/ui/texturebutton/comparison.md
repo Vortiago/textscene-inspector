@@ -42,13 +42,13 @@ Strict parsing format-checks these `TextureButton` properties, plus 10 inherited
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-The lenient parser reads nine of TextureButton's ten own members; `texture_click_mask`
-stays in the untyped property bag (hit-testing only, never pixels — this previewer has
-no pointer input to hit-test against). A `stretch_mode = 12` still draws (the switch's
-own `default` branch resolves it as `STRETCH_KEEP`), matching strict's warning-not-error
-severity for that key.
+The lenient parser reads each of TextureButton's own members except `texture_click_mask`,
+which stays in the untyped property bag. That mask affects hit-testing only, never
+pixels, and this previewer has no pointer input to hit-test. A `stretch_mode = 12` still
+draws, because the switch's `default` branch resolves it as `STRETCH_KEEP`. That matches
+strict's warning, not error, for that key.
 
 ## Known limitations
 
-- **Not drawn** `texture_focused` — a static, pointer-less/keyboard-less preview never
-  holds focus, so this slot can never contribute a pixel.
+- **Not drawn** `texture_focused`: a static preview with no pointer or keyboard never
+  holds focus, so this slot never contributes a pixel.
