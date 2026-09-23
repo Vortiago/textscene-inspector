@@ -1,9 +1,8 @@
 /**
- * CharacterBody3D registration — parser.
+ * CharacterBody3D registration: the parser.
  *
- * Non-visual node: renders as a transform-only group (ADR-0005, ADR-0008),
- * reusing the Node3D transform parse; the render component (index.r3f.ts)
- * reuses Node3D.
+ * A non-visual node that renders as a transform-only group (ADR-0005, ADR-0008). It reuses
+ * the Node3D transform parse, and the render component (index.r3f.ts) reuses Node3D.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

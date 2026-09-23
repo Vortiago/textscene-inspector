@@ -1,7 +1,4 @@
-/**
- * RigidBody2D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- */
+/** RigidBody2D strict validators for linting. */
 
 import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
@@ -33,13 +30,13 @@ const inertia2d: PropertyValidator = (key, value, line) => {
 inertia2d.grounding = { kind: 'enforced', cite: 'rigid_body_2d.cpp:328' };
 // Floor only, and the setter is what refuses it. There is no ceiling.
 inertia2d.tiers = { min: 'error' };
-// rigid_body_2d.cpp:643 hints "0,1000,0.01,or_greater,exp,suffix:kg⋅px²" — the
+// rigid_body_2d.cpp:643 hints "0,1000,0.01,or_greater,exp,suffix:kg⋅px²": the
 // `or_greater` opens the max, so only the floor is a bound.
 inertia2d.bounds = { min: 0 };
 
 validatorRegistry.registerAll('RigidBody2D', {
   // Two tiers on the floor. rigid_body_2d.cpp:318
-  // `ERR_FAIL_COND(p_mass <= 0)` refuses the endpoint too; the hint (:742,
+  // `ERR_FAIL_COND(p_mass <= 0)` refuses the endpoint too. The hint (:742,
   // "0.001,1000,0.001,or_greater,exp,suffix:kg") states 0.001, so the band
   // between them loads and only warns. `or_greater` leaves the ceiling open.
   mass: v.positiveFloat(
@@ -62,8 +59,7 @@ validatorRegistry.registerAll('RigidBody2D', {
   freeze: v.boolean('freeze'),
   // rigid_body_2d.cpp:754 "Static,Kinematic". set_freeze_mode (:304-310) is a
   // bare assignment (only an early-return-if-unchanged guard), so out-of-range
-  // warns. Godot has this property (unlike its absence suggested before this
-  // audit); RigidBody3D carries the same enum.
+  // warns. RigidBody3D carries the same enum.
   freeze_mode: v.enumInt('freeze_mode', 0, 1, FREEZE_MODE, { hinted: 'rigid_body_2d.cpp:754' }),
   custom_integrator: v.boolean('custom_integrator'),
   // rigid_body_2d.cpp:757 "Disabled,Cast Ray,Cast Shape". Unlike RigidBody3D's
@@ -72,13 +68,10 @@ validatorRegistry.registerAll('RigidBody2D', {
   // so out-of-range warns.
   continuous_cd: v.enumInt('continuous_cd', 0, 2, CCD_MODE, { hinted: 'rigid_body_2d.cpp:757' }),
   contact_monitor: v.boolean('contact_monitor'),
-  // rigid_body_2d.cpp:759 hints "0,64,1,or_greater": floor closed at 0, ceiling
-  // open, so 64 is only a slider extent. rigid_body_2d.cpp:501,
-  // ERR_FAIL_INDEX_MSG(p_amount, MAX_CONTACTS_REPORTED_2D_MAX) closes both ends
-  // instead — the constant is 4096 (servers/physics_2d/physics_server_2d.h:37)
-  // and ERR_FAIL_INDEX fails on `p_amount < 0 || p_amount >= p_size`, hence the
-  // exclusive ceiling. It sits in `enforcedMax` because the hint states no
-  // ceiling for it to narrow.
+  // rigid_body_2d.cpp:759 hints "0,64,1,or_greater", so 64 is only a slider extent.
+  // rigid_body_2d.cpp:501, ERR_FAIL_INDEX_MSG(p_amount, MAX_CONTACTS_REPORTED_2D_MAX), closes
+  // both ends: the constant is 4096 (servers/physics_2d/physics_server_2d.h:37) and the
+  // ceiling is exclusive. It sits in `enforcedMax`, since the hint states no ceiling to narrow.
   max_contacts_reported: v.int('max_contacts_reported', {
     min: 0,
     enforcedMax: { at: 4096, exclusive: true },
@@ -91,14 +84,14 @@ validatorRegistry.registerAll('RigidBody2D', {
     hinted: 'rigid_body_2d.cpp:762',
   }),
   // rigid_body_2d.cpp:425, ERR_FAIL_COND(p_linear_damp < -1). -1 is legal in 2D
-  // and means "use the default"; the hint at :763 starts there too.
+  // and means "use the default". The hint at :763 starts there too.
   linear_damp: v.float('linear_damp', {
     min: -1,
     message: "Property 'linear_damp' must be >= -1. Use -1 for the project default.",
     enforced: 'rigid_body_2d.cpp:425',
   }),
   // rigid_body_2d.cpp:765: Variant::FLOAT. 2D angular velocity is a scalar
-  // (rotation around Z), unlike 3D's Vector3. PROPERTY_HINT_NONE;
+  // (rotation around Z), unlike 3D's Vector3. PROPERTY_HINT_NONE.
   // set_angular_velocity (:460-463) is a bare assignment, so no bound.
   angular_velocity: v.float('angular_velocity'),
   // rigid_body_2d.cpp:766 "Combine,Replace". set_angular_damp_mode (:415-418) is
@@ -106,7 +99,7 @@ validatorRegistry.registerAll('RigidBody2D', {
   angular_damp_mode: v.enumInt('angular_damp_mode', 0, 1, DAMP_MODE, {
     hinted: 'rigid_body_2d.cpp:766',
   }),
-  // rigid_body_2d.cpp:435, ERR_FAIL_COND(p_angular_damp < -1); hint :767 starts at -1.
+  // rigid_body_2d.cpp:435, ERR_FAIL_COND(p_angular_damp < -1). Hint :767 starts at -1.
   angular_damp: v.float('angular_damp', {
     min: -1,
     message: "Property 'angular_damp' must be >= -1. Use -1 for the project default.",

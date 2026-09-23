@@ -1,10 +1,7 @@
 /**
- * PinJoint2D strict validators for linting.
- *
- * Declare only PinJoint2D's OWN members, the ones doc/classes/PinJoint2D.xml
- * lists without an `overrides=` attribute. Everything from Joint2D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * PinJoint2D strict validators: only the members doc/classes/PinJoint2D.xml lists without
+ * `overrides=`. The NODE_BASE_TYPES base-walk delivers everything from Joint2D up, and a
+ * re-declared key shadows it.
  */
 
 import '../../joints/shared/linterParser.js';
@@ -33,8 +30,7 @@ validatorRegistry.registerAll('PinJoint2D', {
   // pin_joint_2d.cpp:172, PROPERTY_HINT_GROUP_ENABLE, a plain bool field/setter.
   motor_enabled: v.boolean('motor_enabled'),
   // pin_joint_2d.cpp:173, PROPERTY_HINT_RANGE "-200,200,0.01,or_greater,or_less,radians_as_degrees,...".
-  // or_greater/or_less make both bounds soft editor extents, not an enforced
-  // range: the setter assigns the value straight through, so any finite float
-  // is valid regardless of the radians_as_degrees display hint.
+  // or_greater/or_less make both bounds soft editor extents, and the setter assigns the
+  // value straight through, so any finite float is valid.
   motor_target_velocity: v.float('motor_target_velocity'),
 });

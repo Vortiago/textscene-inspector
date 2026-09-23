@@ -1,10 +1,7 @@
 /**
- * ConeTwistJoint3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * ConeTwistJoint3D strict validators, asserted through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator and no fixture text needs upkeep.
+ * Rule-level behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,15 +21,15 @@ describe('ConeTwistJoint3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('ConeTwistJoint3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
     expect(accepted).toEqual([]);
   });
 
-  // cone_twist_joint_3d.cpp:37 — PROPERTY_HINT_RANGE "-180,180,0.1,radians_as_degrees",
+  // cone_twist_joint_3d.cpp:37: PROPERTY_HINT_RANGE "-180,180,0.1,radians_as_degrees",
   // no or_greater/or_less: hard bound of ±π radians once converted. The XML
   // default 0.7853982 is π/4 (45°), consistent with degrees, not radians, in the hint.
   describe('swing_span', () => {
@@ -50,10 +47,8 @@ describe('ConeTwistJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_SWING_SPAN_FORMAT');
     });
 
-    // Proves the radian conversion: 4.0 is nowhere near the ±180 a naive
-    // reader of the hint's raw degree numbers would expect as the bound, yet
-    // it is well past the REAL bound once the hint's degrees are converted to
-    // the radians the value is actually serialised in.
+    // Proves the radian conversion: 4.0 is far inside the hint's raw ±180, yet past
+    // the bound once the hint's degrees convert to the radians the value is serialised in.
     it('warns past ±π radians (the ±180 degree bound converted) rather than erroring (set_param index-guards only)', () => {
       const error = check('swing_span', '4.0');
       expect(error?.code).toBe('INVALID_SWING_SPAN_VALUE');
@@ -61,12 +56,11 @@ describe('ConeTwistJoint3D strict validators', () => {
     });
   });
 
-  // cone_twist_joint_3d.cpp:38 — PROPERTY_HINT_RANGE "-40000,40000,0.1,radians_as_degrees",
-  // no or_greater/or_less: the extent itself is unusually large, but its absence of
-  // or_greater/or_less still makes it the hard bound. The XML default 3.1415927 is
-  // π (180°), well inside ±40000° converted to radians.
+  // cone_twist_joint_3d.cpp:38: PROPERTY_HINT_RANGE "-40000,40000,0.1,radians_as_degrees",
+  // no or_greater/or_less, so the large extent is still the bound. The XML default 3.1415927
+  // is π (180°), well inside ±40000° converted to radians.
   describe('twist_span', () => {
-    const maxRad = (40000 * Math.PI) / 180; // cone_twist_joint_3d.cpp:38 — ±40000° converted
+    const maxRad = (40000 * Math.PI) / 180; // cone_twist_joint_3d.cpp:38: ±40000° converted
 
     it('accepts a value well inside the converted bound', () => {
       expect(check('twist_span', Math.PI.toFixed(6))).toBeNull();
@@ -82,11 +76,8 @@ describe('ConeTwistJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_TWIST_SPAN_FORMAT');
     });
 
-    // Proves the radian conversion: 1000 sits comfortably inside the raw
-    // "-40000,40000" the hint's degree numbers name, so a validator that
-    // skipped the radians_as_degrees conversion would wrongly accept it. The
-    // real bound, ±40000° converted to radians, is only ~698.13, so 1000 is
-    // actually well past it.
+    // Proves the radian conversion: 1000 is inside the hint's raw "-40000,40000", but the
+    // bound, ±40000° converted to radians, is about 698.13, so 1000 is past it.
     it('warns past the converted bound (well within the raw ±40000 degree numbers) rather than erroring', () => {
       const error = check('twist_span', '1000');
       expect(error?.code).toBe('INVALID_TWIST_SPAN_VALUE');
@@ -94,7 +85,7 @@ describe('ConeTwistJoint3D strict validators', () => {
     });
   });
 
-  // cone_twist_joint_3d.cpp:40 — PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // cone_twist_joint_3d.cpp:40: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('bias', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('bias', '0.3')).toBeNull();
@@ -117,7 +108,7 @@ describe('ConeTwistJoint3D strict validators', () => {
     });
   });
 
-  // cone_twist_joint_3d.cpp:41 — PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // cone_twist_joint_3d.cpp:41: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('softness', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('softness', '0.8')).toBeNull();
@@ -140,7 +131,7 @@ describe('ConeTwistJoint3D strict validators', () => {
     });
   });
 
-  // cone_twist_joint_3d.cpp:42 — PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // cone_twist_joint_3d.cpp:42: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('relaxation', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('relaxation', '1.0')).toBeNull();

@@ -1,6 +1,4 @@
-/**
- * Tests for RigidBody2D linter (strict parser + semantic rules)
- */
+/** RigidBody2D linter: the strict parser and the semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -95,7 +93,7 @@ max_contacts_reported = 10
         invalid: [{ value: 2, contains: ['0-1'] }],
       },
       {
-        // rigid_body_2d.cpp:435, ERR_FAIL_COND(p_angular_damp < -1); hint :767
+        // rigid_body_2d.cpp:435, ERR_FAIL_COND(p_angular_damp < -1). Hint :767
         // starts at -1 too.
         prop: 'angular_damp',
         valid: [0.0, 0.5, 5.0, 15.0, -0.5, -1.0],
@@ -140,7 +138,7 @@ physics_material_override = SubResource("mat_1")
       });
     });
 
-    // collision_layer/mask accept 0 (which legitimately warns), so use 'no-error' mode.
+    // collision_layer/mask accept 0, which warns, so use 'no-error' mode.
     runPropertyValidation({ nodeType: 'RigidBody2D', acceptChild: collisionShape2d, acceptMode: 'no-error' }, [
       {
           prop: 'collision_layer',
@@ -160,9 +158,8 @@ physics_material_override = SubResource("mat_1")
   describe('Semantic Validation (Mass and Damping Warnings)', () => {
     // rigid_body_2d.cpp:742 hints "0.001,1000,0.001,or_greater": the high end is
     // open, so only the gap between the setter's ERR_FAIL (mass <= 0, :318) and
-    // the hint's 0.001 is advisory.
-    // Reported by the validator's hinted floor rather than a rule: the two said
-    // the same thing, and only the validator's is visible to the hint ledger.
+    // the hint's 0.001 is advisory. The validator's hinted floor reports it, not a
+    // rule, since only the validator's is visible to the hint ledger.
     it('should warn about mass below the hint', () => {
       expectDiagnostic(scene(node('RigidBody2D', { mass: '0.0005' }), collisionShape2d), {
         prop: 'mass',
@@ -284,7 +281,7 @@ physics_material_override = ExtResource("ext_mat_1")
     });
 
     it('warns on a mirrored (negative) scale, since length() is unsigned', () => {
-      // scale.x = -1 has |scale.x| == 1, so it must NOT trip on x; only y does.
+      // scale.x = -1 has |scale.x| == 1, so it must not trip on x. Only y does.
       expectDiagnostic(
         scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2(-1, -2)' }), collisionShape2d),
         { ruleName: 'rigidbody2d-scale-overridden-at-runtime', severity: 'warning' }
@@ -311,12 +308,10 @@ physics_material_override = ExtResource("ext_mat_1")
     });
 
     it('quotes no number for a component narrowed at parse time', () => {
-      // `Vector2i(...)` arguments run `_parse_construct<int32_t>`, whose
-      // identifier branch takes `inf` through `stor_fix`
-      // (variant_parser.cpp:149-159, :577-586); `_to_int<int32_t>` then narrows
-      // the double, undefined behaviour outside int32 (variant.h:369-370). The
-      // engine scales by something, but by no number this rule may print — and
-      // the NaN that stood in reached the message as `scale (NaN, 5)`.
+      // `Vector2i(...)` arguments run `_parse_construct<int32_t>`, whose identifier branch
+      // takes `inf` through `stor_fix` (variant_parser.cpp:149-159, :577-586). `_to_int<int32_t>`
+      // then narrows the double, undefined behaviour outside int32 (variant.h:369-370), so the
+      // engine scales by no number this rule may print, `NaN` included.
       const diagnostics = lint(
         scene(node('RigidBody2D', { mass: 1.0, scale: 'Vector2i(inf, 5)' }), collisionShape2d)
       );
@@ -334,10 +329,9 @@ physics_material_override = ExtResource("ext_mat_1")
       );
     });
 
-    // physical_bone_2d.cpp:109: `RigidBody2D::get_configuration_warnings()`,
-    // called as the base of PhysicalBone2D's own override, unchanged — this
-    // repo's `applicableNodeTypeMatcher` mirrors that by reaching every
-    // RigidBody2D descendant, not just the exact type.
+    // physical_bone_2d.cpp:109: PhysicalBone2D's override calls
+    // `RigidBody2D::get_configuration_warnings()` unchanged, so `applicableNodeTypeMatcher`
+    // reaches every RigidBody2D descendant, not only the exact type.
     it('reaches PhysicalBone2D, which inherits this check from RigidBody2D unchanged', () => {
       expectDiagnostic(
         scene(node('PhysicalBone2D', { scale: 'Vector2(2, 2)' }), collisionShape2d),
@@ -375,8 +369,7 @@ physics_material_override = ExtResource("ext_mat_1")
 
   // No `collision_layer == 0` / `collision_mask == 0` checks: no engine
   // warning exists for either, and `collision_layer = 0` is the standard
-  // "hits things, is never hit" one-way projectile pattern (the platformer's
-  // Bullet).
+  // "hits things, is never hit" one-way projectile pattern.
   describe('Semantic Validation (Collision Layers)', () => {
     it('stays quiet when collision_layer is 0', () => {
       expectClean(scene(node('RigidBody2D', { mass: 1.0, collision_layer: 0 }), collisionShape2d));
@@ -413,10 +406,8 @@ physics_material_override = ExtResource("ext_mat_1")
       const errors = diagnostics.filter((d) => d.severity === 'error');
       expect(errors).toHaveLength(2);
       expect(diagnostics.find((d) => d.message.includes('collision_layer'))).toBeUndefined();
-      // The third is the missing physics material. It was invisible until the
-      // strict parser stopped withholding the scene: the mass error suppressed
-      // the whole rule phase, so a broken resource reference went unreported
-      // because an unrelated property had a bad value.
+      // The third is the missing physics material: the mass error does not stop the rule
+      // phase, so a broken resource reference is reported beside it.
       expect(errors.some((d) => d.ruleName === 'dangling-resource-reference')).toBe(true);
       expect(diagnostics.some(d => d.message.includes('linear_damp'))).toBe(false);
       // The body's semantic warnings arrive alongside those errors. A validator
@@ -492,8 +483,8 @@ max_contacts_reported = 10
       );
       // max_contacts without monitor. mass 0.001 sits exactly on the
       // hint's bottom (:742), linear_damp 20 is under its open top (:763), and
-      // collision_layer = 0 carries no check (RigidBody2D) — none of those
-      // contribute any more.
+      // collision_layer = 0 carries no check (RigidBody2D), so none of those
+      // contribute.
       expect(diagnostics.map(d => d.ruleName).sort()).toEqual([
         'rigidbody2d-max-contacts-without-monitor',
       ]);

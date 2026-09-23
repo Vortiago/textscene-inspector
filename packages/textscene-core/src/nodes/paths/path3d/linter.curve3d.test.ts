@@ -1,14 +1,7 @@
 /**
- * `curve3d-loadable`: does Godot actually load the Curve3D this Path3D points at?
- *
- * This rule exists because of a real mistake with a specific signature. While authoring
- * `unit-csg-polygon-path.tscn` the Curve3D was written without a `tilts` array. Our
- * lenient parser read it, the strict parser saw well-formed TSCN, `fixtureLint` passed,
- * `lint:tscn` passed, and the scene rendered a road here. Godot rendered an EMPTY FRAME,
- * because `Curve3D::_set_data` bails without `tilts` and the curve loads with zero points.
- *
- * Only a pixel comparison against a real Godot render caught it. Everything textual we
- * had said the scene was fine, which is exactly the gap this rule closes.
+ * `curve3d-loadable`: does Godot load the Curve3D this Path3D points at? A Curve3D without
+ * `tilts` parses cleanly and renders here, but `Curve3D::_set_data` bails and Godot loads it
+ * with zero points: an empty frame.
  */
 
 import { describe, expect, it, beforeEach } from 'vitest';
@@ -59,7 +52,7 @@ describe('curve3d-loadable', () => {
     const errors = curveErrors(lint(POINTS));
     expect(errors).toHaveLength(1);
     expect(errors[0]!.message).toContain('tilts');
-    // The message has to say WHY, because the symptom is silence: the scene looks fine
+    // The message says why, because the symptom is silence: the scene looks fine
     // everywhere except in Godot.
     expect(errors[0]!.message).toContain('zero points');
   });
@@ -95,7 +88,7 @@ describe('curve3d-loadable', () => {
 
   // `curve.cpp:2282` `PackedVector3Array rp = p_data["points"]` is a Variant
   // conversion, and `can_convert_strict` lists ARRAY as a source for every
-  // PACKED_* type (variant.cpp:449-478) — so the bare and typed array
+  // PACKED_* type (variant.cpp:449-478), so the bare and typed array
   // spellings load with the same point count. `:2291` reads "tilts" the same way.
   it('accepts the bare-array and typed-array spellings of points and tilts', () => {
     const bare =
@@ -117,7 +110,7 @@ describe('curve3d-loadable', () => {
   });
 
   it('stays quiet when the curve reference points at no resource in this scene', () => {
-    // A missing resource is already reported by dangling-resource-reference; this rule must
+    // A missing resource is already reported by dangling-resource-reference. This rule must
     // not pile a second, less useful error on top of it.
     const content = `[gd_scene format=3]
 

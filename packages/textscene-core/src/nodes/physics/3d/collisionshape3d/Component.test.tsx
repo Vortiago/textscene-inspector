@@ -84,11 +84,9 @@ describe('<CollisionShape3D> gizmo', () => {
     );
     const renderer = await ReactThreeTestRenderer.create(tree);
 
-    // ConvexHullWire lazy-`import()`s three's ConvexGeometry inside a
-    // useEffect; wait (inside `act`) for the import + setState to settle,
-    // then re-flush the tree so the test renderer's fiber snapshot picks up
-    // the commit — same pattern as the missing-texture async resource chain
-    // (Component.missing-texture.test.tsx).
+    // ConvexHullWire lazy-`import()`s three's ConvexGeometry inside a useEffect. Wait (inside
+    // `act`) for the import and setState to settle, then re-flush so the test renderer's fiber
+    // snapshot picks up the commit, as in Component.missing-texture.test.tsx.
     await act(async () => {
       await new Promise<void>((r) => setTimeout(r, 100));
     });

@@ -1,6 +1,4 @@
-/**
- * Tests for StaticBody2D linter (strict parser + semantic rules)
- */
+/** StaticBody2D linter: the strict parser and the semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -59,7 +57,6 @@ physics_material_override = SubResource("mat_1")
 
     describe('constant_linear_velocity validation', () => {
       it('should accept valid constant_linear_velocity format', () => {
-        // Should have warning about non-zero velocity, but no format errors
         expectNoErrors(
           scene(node('StaticBody2D', { constant_linear_velocity: 'Vector2(1.0, 0.5)' }), collisionShape2d)
         );
@@ -92,7 +89,6 @@ physics_material_override = SubResource("mat_1")
 
     describe('constant_angular_velocity validation', () => {
       it('should accept valid constant_angular_velocity format', () => {
-        // Should have warning about non-zero velocity, but no format errors
         expectNoErrors(scene(node('StaticBody2D', { constant_angular_velocity: 1.57 }), collisionShape2d));
       });
 
@@ -101,7 +97,6 @@ physics_material_override = SubResource("mat_1")
       });
 
       it('should accept negative constant_angular_velocity', () => {
-        // Should have warning about non-zero velocity, but no format errors
         expectNoErrors(scene(node('StaticBody2D', { constant_angular_velocity: -3.14 }), collisionShape2d));
       });
 
@@ -226,9 +221,7 @@ physics_material_override = ExtResource("ext_mat_1")
     });
 
     // No `collision_mask == 0` check: no engine warning exists for it, and it
-    // is the standard "only needs to BE detected" static configuration
-    // (squash-the-creeps' Ground/Walls, the platformer's PlatformStatic,
-    // dodge-the-creeps' Mob all ship with it).
+    // is the standard "only needs to be detected" static configuration.
     it('stays quiet when collision_mask is 0', () => {
       expectClean(scene(node('StaticBody2D', { collision_mask: 0 }), collisionShape2d));
     });
@@ -248,11 +241,10 @@ physics_material_override = ExtResource("ext_mat_1")
           })
         )
       );
-      // Should have at least one error (format errors may prevent semantic checks)
+      // At least one error: format errors may prevent semantic checks.
       expect(diagnostics.length).toBeGreaterThanOrEqual(1);
       const hasCollisionLayerError = diagnostics.some(d => d.message.includes('collision_layer'));
       const hasResourceError = diagnostics.some(d => d.message.includes('never declares'));
-      // At least one of these errors should be present
       expect(hasCollisionLayerError || hasResourceError).toBe(true);
     });
 
@@ -276,7 +268,6 @@ input_pickable = true
 
     it('should handle node with no properties', () => {
       const diagnostics = lint(scene(node('StaticBody2D')));
-      // Should only have warning about missing CollisionShape2D
       expect(diagnostics.length).toBe(1);
       expect(diagnostics[0]!.ruleName).toBe('collisionobject2d-needs-collision-shape');
     });
@@ -305,7 +296,7 @@ input_pickable = true
 });
 
 describe('the subclasses the matcher reaches', () => {
-  // descendsFrom pulls AnimatableBody2D in; the message must name the type the
+  // descendsFrom pulls AnimatableBody2D in. The message must name the type the
   // author can find in their file, not the base the rule factory was built for.
   it('names AnimatableBody2D, not StaticBody2D, in its own diagnostic', () => {
     const found = expectDiagnostic(

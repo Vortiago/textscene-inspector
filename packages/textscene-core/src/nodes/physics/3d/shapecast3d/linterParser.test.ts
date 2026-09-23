@@ -1,10 +1,6 @@
 /**
- * ShapeCast3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it.
+ * ShapeCast3D strict validators, asserted through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator and no fixture text needs upkeep.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -25,14 +21,14 @@ describe('ShapeCast3D strict validators', () => {
 
   it('registers no validator for collision_result: shape_cast_3d.cpp:172 binds it with an empty setter string', () => {
     // ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "collision_result", PROPERTY_HINT_NONE, "",
-    // PROPERTY_USAGE_NO_EDITOR), "", "get_collision_result") — the "" is the setter name.
+    // PROPERTY_USAGE_NO_EDITOR), "", "get_collision_result"): the "" is the setter name.
     // A `.tscn` cannot write this key at all, so there is nothing to validate.
     expect(validatorRegistry.findValidator('ShapeCast3D', 'collision_result')).toBeNull();
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('ShapeCast3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -55,7 +51,7 @@ describe('ShapeCast3D strict validators', () => {
   });
 
   describe('shape', () => {
-    // scene/3d/physics/shape_cast_3d.cpp:166 — PROPERTY_HINT_RESOURCE_TYPE, "Shape3D"
+    // scene/3d/physics/shape_cast_3d.cpp:166: PROPERTY_HINT_RESOURCE_TYPE, "Shape3D"
     it('accepts a SubResource reference', () => {
       expect(check('shape', 'SubResource("BoxShape3D_1")')).toBeNull();
     });
@@ -72,7 +68,7 @@ describe('ShapeCast3D strict validators', () => {
   });
 
   describe('target_position', () => {
-    // scene/3d/physics/shape_cast_3d.cpp:168 — PROPERTY_HINT_NONE, "suffix:m" (unit hint only, no range)
+    // scene/3d/physics/shape_cast_3d.cpp:168: PROPERTY_HINT_NONE, "suffix:m" (unit hint only, no range)
     it('accepts a Vector3 literal', () => {
       expect(check('target_position', 'Vector3(0, -1, 0)')).toBeNull();
     });
@@ -89,7 +85,7 @@ describe('ShapeCast3D strict validators', () => {
   });
 
   describe('margin', () => {
-    // scene/3d/physics/shape_cast_3d.cpp:169 — PROPERTY_HINT_RANGE, "0,100,0.01,suffix:m".
+    // scene/3d/physics/shape_cast_3d.cpp:169: PROPERTY_HINT_RANGE, "0,100,0.01,suffix:m".
     // set_margin is a bare assignment, so out-of-range warns rather than errors.
     it('accepts the minimum bound', () => {
       expect(check('margin', '0')).toBeNull();
@@ -125,7 +121,7 @@ describe('ShapeCast3D strict validators', () => {
   });
 
   describe('max_results', () => {
-    // scene/3d/physics/shape_cast_3d.cpp:170 — plain INT, no PROPERTY_HINT_RANGE
+    // scene/3d/physics/shape_cast_3d.cpp:170: plain INT, no PROPERTY_HINT_RANGE
     it('accepts the documented default', () => {
       expect(check('max_results', '32')).toBeNull();
     });
@@ -142,7 +138,7 @@ describe('ShapeCast3D strict validators', () => {
   });
 
   describe('collision_mask', () => {
-    // scene/3d/physics/shape_cast_3d.cpp:171 — PROPERTY_HINT_LAYERS_3D_PHYSICS
+    // scene/3d/physics/shape_cast_3d.cpp:171: PROPERTY_HINT_LAYERS_3D_PHYSICS
     it('accepts a single-layer mask', () => {
       expect(check('collision_mask', '1')).toBeNull();
     });
@@ -176,7 +172,7 @@ describe('ShapeCast3D strict validators', () => {
   });
 
   describe('debug_shape_custom_color', () => {
-    // scene/3d/physics/shape_cast_3d.cpp:179 (ADD_GROUP "Debug Shape") — no Shape2D counterpart
+    // scene/3d/physics/shape_cast_3d.cpp:179 (ADD_GROUP "Debug Shape"): no Shape2D counterpart
     it('accepts a 4-component Color literal', () => {
       expect(check('debug_shape_custom_color', 'Color(0, 0, 0, 1)')).toBeNull();
     });

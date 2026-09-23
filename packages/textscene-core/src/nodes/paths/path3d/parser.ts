@@ -1,6 +1,6 @@
 /**
- * Path3D parser — the Node3D transform surface plus the raw `curve` resource
- * reference (the Curve3D is resolved + tessellated in the component).
+ * Path3D parser: the Node3D transform surface plus the raw `curve` resource
+ * reference. The component resolves and tessellates the Curve3D.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

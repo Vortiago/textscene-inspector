@@ -1,6 +1,4 @@
-/**
- * Tests for CollisionShape2D linter (strict parser + semantic rules)
- */
+/** CollisionShape2D linter: the strict parser and the semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -19,9 +17,9 @@ import {
 import './linterParser';
 import './linter';
 
-/** A `[sub_resource ...]` heading block (the kit's `node`/`scene` can't express resource headings). */
+/** A `[sub_resource ...]` heading block, which the kit's `node`/`scene` cannot express. */
 const sub = (type: string, id: string): string => `[sub_resource type="${type}" id="${id}"]`;
-/** The most common fixture shape + parent body reused across accept cases. */
+/** The fixture shape and parent body the accept cases share. */
 const rectShape = sub('RectangleShape2D', 'shape_1');
 const staticBody = node('StaticBody2D', {}, { name: 'StaticBody' });
 
@@ -103,7 +101,7 @@ describe('CollisionShape2D Linter', () => {
           ],
         },
         {
-          // Margin without one_way_collision legitimately warns — accepts pair it via `with`.
+          // Margin without one_way_collision warns, so accepts pair it with `with`.
           prop: 'one_way_collision_margin',
           valid: [1.5, 0.0],
           with: { one_way_collision: true },
@@ -111,7 +109,7 @@ describe('CollisionShape2D Linter', () => {
             {
               value: -1.0,
               ruleName: 'strict-parser',
-              // Both ends share the derived message; a min-only override read
+              // Both ends share the derived message, since a min-only override reads
               // as satisfied by an over-max value.
               contains: ['one_way_collision_margin', 'between 0 and 128'],
             },
@@ -134,9 +132,9 @@ describe('CollisionShape2D Linter', () => {
           invalid: [
             { value: '"red"', ruleName: 'strict-parser', contains: ['debug_color', 'Color'] },
             { value: 'Color(1, 0)', contains: ['debug_color'] },
-            // variant_parser.cpp:913 — `args.size() != 4` is ERR_PARSE_ERROR, so
+            // variant_parser.cpp:913: `args.size() != 4` is ERR_PARSE_ERROR, so
             // the three-argument spelling GDScript allows does not load from a
-            // .tscn at all. The renderer's COLOR_RE has always required four.
+            // .tscn at all. The renderer's COLOR_RE requires four too.
             { value: 'Color(1, 0, 0)', contains: ['debug_color'] },
           ],
         },
@@ -187,11 +185,9 @@ describe('CollisionShape2D Linter', () => {
 
     it('reports nothing missing for a shape that is not a reference at all', () => {
       // `variant_parser.cpp:1089` takes only the `Resource` / `SubResource` /
-      // `ExtResource` identifiers into the resource arm, so a quoted string
-      // names no id and nothing can be absent. Its format is the strict
-      // parser's diagnostic, and a second "not found" beside it names a
-      // resource nobody wrote — while a well-formed `SubResource("nonexistent")`
-      // still errors, per the case above.
+      // `ExtResource` identifiers into the resource arm, so a quoted string names no id and
+      // nothing can be absent. The strict parser reports its format, and a "not found" beside
+      // it would name a resource nobody wrote.
       const content = scene(
         staticBody,
         node('CollisionShape2D', { shape: '"invalid_format"' }, { name: 'BadFormat', parent: '.' })
@@ -403,7 +399,6 @@ shape = SubResource("capsule_shape")
         staticBody,
         node('CollisionShape2D', { shape: 'SubResource("shape_1")', one_way_collision: false, one_way_collision_margin: 0.0 }, { name: 'ZeroMarginOk', parent: '.' })
       );
-      // Should only have warnings/errors unrelated to unused margin
       expectNoDiagnostic(content, { ruleName: 'collisionshape2d-unused-one-way-margin' });
     });
   });
@@ -506,12 +501,11 @@ shape = SubResource("capsule_shape")
         node('CollisionShape2D', { disabled: 'not_a_boolean' }, { name: 'MultipleErrors', parent: '.' })
       );
       const diagnostics = lint(content);
-      // Expect: missing shape (error), invalid parent (warning), invalid disabled format (error)
+      // Missing shape (error), invalid parent (warning), invalid disabled format (error).
       expect(diagnostics.length).toBeGreaterThanOrEqual(1);
       const hasShapeError = diagnostics.some(d => d.message.includes('missing required property'));
       const hasParentWarning = diagnostics.some(d => d.message.includes('invalid-parent') || d.message.includes('should be a child'));
       const hasDisabledError = diagnostics.some(d => d.message.includes('disabled'));
-      // At least one error should be present
       expect(hasShapeError || hasParentWarning || hasDisabledError).toBe(true);
     });
 
@@ -522,7 +516,6 @@ shape = SubResource("capsule_shape")
         node('StaticBody2D', {}, { name: 'StaticBody', parent: '.' }),
         node('CollisionShape2D', { shape: 'SubResource("shape_1")' }, { name: 'NestedCollision', parent: 'StaticBody' })
       );
-      // This should pass - StaticBody2D is the immediate parent
       expectClean(content);
     });
 
@@ -537,9 +530,8 @@ shape = SubResource("capsule_shape")
     });
 
     it('should handle all common 2D shape types', () => {
-      // Convex/ConcavePolygonShape2D are exercised separately below — Godot
-      // itself warns on them (collision_shape_2d.cpp:184-189), so they are not
-      // an "accept clean" case any more.
+      // Convex/ConcavePolygonShape2D are tested separately below: Godot
+      // warns on them (collision_shape_2d.cpp:184-189), so they are not an "accept clean" case.
       const content = `[gd_scene format=3]
 
 [sub_resource type="RectangleShape2D" id="rectangle"]
@@ -579,7 +571,6 @@ shape = SubResource("segment")
         staticBody,
         node('CollisionShape2D', {}, { name: 'EmptyCollision', parent: '.' })
       );
-      // Should have error for missing shape
       expectDiagnostic(content, { prop: 'missing required property' });
     });
 

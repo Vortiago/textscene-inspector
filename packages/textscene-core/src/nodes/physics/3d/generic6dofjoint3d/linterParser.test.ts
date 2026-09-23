@@ -1,21 +1,12 @@
 /**
- * Generic6DOFJoint3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through
- * `Linter` — this node has none: the shared `valid-joint` rule
- * (nodes/physics/joints/shared/linter.ts) already covers node_a/node_b.
- *
- * Bounds are quoted from the governing Godot source line beside every case.
- * Every group is wildcard-dispatched (`<group>_<axis>/*`) onto a per-axis
- * instance of one leaf table, because Godot's x/y/z `ADD_PROPERTYI` calls
- * carry byte-identical `PropertyInfo` per leaf — so a case exercised on axis
- * `x` proves the BOUND for `y` and `z` too, while the message and code each
- * name their own axis. Each `describe` below picks a DIFFERENT axis per group,
- * so the axis-stripping regex is exercised against all three letters.
+ * Generic6DOFJoint3D strict validators, asserted through `validatorRegistry`, not by linting a
+ * `.tscn`. This node has no rule of its own: the shared `valid-joint` rule
+ * (nodes/physics/joints/shared/linter.ts) covers node_a/node_b.
  */
+
+// Godot's x/y/z `ADD_PROPERTYI` calls share one `PropertyInfo` per leaf, so one axis proves a
+// bound for all three. Each group's `describe` picks a different axis, so the axis-stripping
+// regex meets all three letters.
 
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
@@ -34,15 +25,15 @@ describe('Generic6DOFJoint3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('Generic6DOFJoint3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
     expect(accepted).toEqual([]);
   });
 
-  // generic_6dof_joint_3d.cpp:54-59 — ADD_GROUP("Linear Limit", "linear_limit_").
+  // generic_6dof_joint_3d.cpp:54-59: ADD_GROUP("Linear Limit", "linear_limit_").
   describe('linear_limit_x/* (Linear Limit group)', () => {
     it('accepts a boolean enabled flag', () => {
       expect(check('linear_limit_x/enabled', 'true')).toBeNull();
@@ -76,7 +67,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
     );
   });
 
-  // generic_6dof_joint_3d.cpp:77-79 — ADD_GROUP("Linear Motor", "linear_motor_"), axis y.
+  // generic_6dof_joint_3d.cpp:77-79: ADD_GROUP("Linear Motor", "linear_motor_"), axis y.
   describe('linear_motor_y/* (Linear Motor group)', () => {
     it('accepts target_velocity/force_limit unbounded (PROPERTY_HINT_NONE, no range)', () => {
       expect(check('linear_motor_y/target_velocity', '-99999')).toBeNull();
@@ -90,7 +81,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
     });
   });
 
-  // generic_6dof_joint_3d.cpp:91-94 — ADD_GROUP("Linear Spring", "linear_spring_"), axis z.
+  // generic_6dof_joint_3d.cpp:91-94: ADD_GROUP("Linear Spring", "linear_spring_"), axis z.
   describe('linear_spring_z/* (Linear Spring group)', () => {
     it('accepts stiffness/damping unbounded (no PropertyInfo hint at all)', () => {
       expect(check('linear_spring_z/stiffness', '99999')).toBeNull();
@@ -101,17 +92,15 @@ describe('Generic6DOFJoint3D strict validators', () => {
       expect(check('linear_spring_z/equilibrium_point', '99999')).toBeNull();
     });
 
-    // linear_spring/damping is unbounded, unlike linear_limit/damping's
-    // 0.01-16 — the same leaf NAME, a genuinely different bound by GROUP,
-    // which is exactly why each group gets its own leaf table rather than
-    // one shared by leaf name across the whole node.
+    // linear_spring/damping is unbounded, unlike linear_limit/damping's 0.01-16: one leaf
+    // name, a different bound per group, so each group has its own leaf table.
     it('accepts a value linear_limit/damping would reject, proving the groups do not share a bound', () => {
       expect(check('linear_spring_z/damping', '0')).toBeNull();
       expect(check('linear_limit_z/damping', '0')?.code).toBe('INVALID_LINEAR_LIMIT_Z/DAMPING_VALUE');
     });
   });
 
-  // generic_6dof_joint_3d.cpp:108-115 — ADD_GROUP("Angular Limit", "angular_limit_").
+  // generic_6dof_joint_3d.cpp:108-115: ADD_GROUP("Angular Limit", "angular_limit_").
   describe('angular_limit_x/* (Angular Limit group)', () => {
     it('bounds upper_angle/lower_angle to ±π radians (±180° hint, radian-converted)', () => {
       expect(check('angular_limit_x/upper_angle', '0.5')).toBeNull();
@@ -119,9 +108,8 @@ describe('Generic6DOFJoint3D strict validators', () => {
       expect(check('angular_limit_x/lower_angle', (-Math.PI).toFixed(6))).toBeNull();
     });
 
-    // Proves the radian conversion: 4.0 radians is well past ±π yet nowhere
-    // near the ±180 a naive reader of the hint's raw degree numbers would
-    // expect as the literal bound.
+    // Proves the radian conversion: 4.0 radians is past ±π yet far inside the
+    // hint's raw ±180.
     it('warns past ±π radians (the ±180° hint converted) rather than erroring', () => {
       const upper = check('angular_limit_x/upper_angle', '4.0');
       const lower = check('angular_limit_x/lower_angle', '-4.0');
@@ -146,11 +134,10 @@ describe('Generic6DOFJoint3D strict validators', () => {
     );
 
     it('warns on an angular restitution of 0, below the hint Godot declares', () => {
-      // Godot's constructor writes 0 on every axis (:330, :360, :390), under its
-      // own hint floor of 0.01 (:112). The contradiction is the engine's: the
-      // hint is what it DECLARES, `set_param_*` guards only the param index, and
-      // 0 really is outside the range the inspector offers. A default is also
-      // omitted when serialised, so this fires only on an explicit 0.
+      // Godot's constructor writes 0 on every axis (:330, :360, :390), under its own hint
+      // floor of 0.01 (:112). The hint is what the engine declares, and `set_param_*` guards
+      // only the param index. A default is omitted when serialised, so this fires only on an
+      // explicit 0.
       for (const axis of ['x', 'y', 'z']) {
         expect(check(`angular_limit_${axis}/restitution`, '0')?.severity, axis).toBe('warning');
       }
@@ -167,11 +154,10 @@ describe('Generic6DOFJoint3D strict validators', () => {
     });
   });
 
-  // generic_6dof_joint_3d.cpp:137-139 — ADD_GROUP("Angular Motor", "angular_motor_"), axis y.
+  // generic_6dof_joint_3d.cpp:137-139: ADD_GROUP("Angular Motor", "angular_motor_"), axis y.
   describe('angular_motor_y/* (Angular Motor group)', () => {
-    // target_velocity carries a "radians_as_degrees" DISPLAY hint but rides on
-    // PROPERTY_HINT_NONE, not PROPERTY_HINT_RANGE — there is no range to
-    // convert, so it stays a plain unbounded float rather than v.radians.
+    // target_velocity carries a "radians_as_degrees" display hint on PROPERTY_HINT_NONE, not
+    // PROPERTY_HINT_RANGE, so it has no range to convert and stays an unbounded float.
     it('accepts target_velocity unbounded despite the radians_as_degrees display hint', () => {
       expect(check('angular_motor_y/target_velocity', '99999')).toBeNull();
       expect(check('angular_motor_y/target_velocity', '-99999')).toBeNull();
@@ -182,7 +168,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
     });
   });
 
-  // generic_6dof_joint_3d.cpp:151-164 — ADD_GROUP("Angular Spring", "angular_spring_"), axis z.
+  // generic_6dof_joint_3d.cpp:151-164: ADD_GROUP("Angular Spring", "angular_spring_"), axis z.
   describe('angular_spring_z/* (Angular Spring group)', () => {
     it('accepts stiffness/damping unbounded (no PropertyInfo hint at all)', () => {
       expect(check('angular_spring_z/stiffness', '99999')).toBeNull();
@@ -198,10 +184,9 @@ describe('Generic6DOFJoint3D strict validators', () => {
   });
 
   describe('the key a diagnostic names', () => {
-    // The dispatcher forwards the full key, so the message and the derived
-    // codes must too. Naming the bare leaf quoted a key the file never wrote,
-    // and collapsed six `softness` keys and four differently-bounded `damping`
-    // keys onto one code each.
+    // The dispatcher forwards the full key, so the message and the derived codes carry it.
+    // The bare leaf would quote a key the file never wrote, and merge six `softness` keys and
+    // four differently-bounded `damping` keys onto one code each.
     it('quotes the full key in the message, not the bare leaf', () => {
       const error = check('linear_limit_y/softness', '20.0');
       expect(error?.message).toContain("'linear_limit_y/softness'");
@@ -219,8 +204,8 @@ describe('Generic6DOFJoint3D strict validators', () => {
 
     it('derives a distinct code per group, so two `damping` bounds are told apart', () => {
       // linear_limit/damping is 0.01-16 and angular_limit/damping is too, while
-      // both spring groups leave it unbounded — one code for all four left a
-      // consumer unable to say which bound fired.
+      // both spring groups leave it unbounded, so one code for all four would hide
+      // which bound fired.
       expect(check('linear_limit_x/damping', '20.0')?.code).toBe(
         'INVALID_LINEAR_LIMIT_X/DAMPING_VALUE'
       );
@@ -251,10 +236,10 @@ describe('Generic6DOFJoint3D strict validators', () => {
     }
 
     it('tags groups with a real hinted bound as bounded + grounded, on every axis', () => {
-      // Pinned to the exact governing line per group (not a shape-only regex):
+      // Pinned to the exact governing line per group, not a shape-only regex:
       // softness (linear_limit), upper_angle (angular_limit) and
-      // equilibrium_point (angular_spring) are each the FIRST hinted bound in
-      // that group's leaf table above.
+      // equilibrium_point (angular_spring) are each the first hinted bound in
+      // that group's leaf table.
       const expectedCite: Record<string, string> = {
         linear_limit: 'generic_6dof_joint_3d.cpp:57',
         angular_limit: 'generic_6dof_joint_3d.cpp:109',
@@ -284,7 +269,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
 
     it('gives each axis its own dispatcher, so all 18 registrations are tagged', () => {
       // Per-axis instances, because a leaf's message and codes carry the axis.
-      // The tag is a property of the GROUP, so it must be identical across the
+      // The tag is a property of the group, so it must be identical across the
       // three instances even though they are distinct functions.
       const axes = ['x', 'y', 'z'].map((axis) => dispatcher(`linear_limit_${axis}/*`));
       expect(new Set(axes).size).toBe(3);
@@ -292,11 +277,9 @@ describe('Generic6DOFJoint3D strict validators', () => {
     });
   });
 
-  // A sweep that reads `bounds`/`tiers` off `findValidator` gets the dispatcher,
-  // which carries neither, so every bound in this slice read as UNIMPLEMENTED
-  // while being fully coded. Each bounded leaf is therefore also registered
-  // under its exact key, where the wildcard cannot hide it. Without these cases
-  // the exact registrations can be deleted with every other test still green.
+  // A sweep that reads `bounds`/`tiers` off `findValidator` gets the dispatcher, which carries
+  // neither, so each bounded leaf is also registered under its exact key. These cases fail
+  // when those exact registrations go.
   describe('bounded leaves are readable off the registry, not only behind the wildcard', () => {
     const AXES = ['x', 'y', 'z'];
     const BOTH_ENDS = { min: 0.01, max: 16 };
@@ -345,7 +328,7 @@ describe('Generic6DOFJoint3D strict validators', () => {
 
     it('returns the same verdict through the exact key as through the wildcard', () => {
       // The exact registration is a reporting change, not a behavioural one: the
-      // dispatcher forwards the FULL key to this same leaf function.
+      // dispatcher forwards the full key to this same leaf function.
       const leaf = reported('linear_limit_x/softness');
       const viaWildcard = reported('linear_limit_x/*');
       for (const value of ['0', '0.01', '8', '16', '16.01', 'fast']) {

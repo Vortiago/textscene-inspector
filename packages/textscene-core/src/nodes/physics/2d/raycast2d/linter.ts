@@ -1,4 +1,4 @@
-/** Semantic linter rules for RayCast2D — built from the shared cast factory. */
+/** Semantic linter rules for RayCast2D: built from the shared cast factory. */
 
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { makeCastLinterRule } from '../../../../linter/physics/castLinterRule.js';

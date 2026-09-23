@@ -1,12 +1,6 @@
 /**
- * Area3D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- *
- * `space_override` (bare, no `gravity_`/`linear_damp_`/`angular_damp_`
- * prefix) is deliberately absent: area_3d.cpp has no matching `ADD_PROPERTY`
- * and doc/classes/Area3D.xml has no matching member. Only
- * `gravity_space_override`, `linear_damp_space_override` and
- * `angular_damp_space_override` are real `SpaceOverride` members.
+ * Area3D strict validators for linting. A bare `space_override` is absent: area_3d.cpp has no
+ * such `ADD_PROPERTY` and doc/classes/Area3D.xml no such member.
  */
 
 import '../../shared/linterParser.js';
@@ -25,7 +19,7 @@ validatorRegistry.registerAll('Area3D', {
   gravity_point: v.boolean('gravity_point'),
   gravity_point_center: v.vector3('gravity_point_center'),
   // area_3d.cpp:780, PROPERTY_HINT_RANGE "0,1024,0.001,or_greater,exp,suffix:m":
-  // 0 is legal and IS the default (constant point gravity, no falloff); the
+  // 0 is legal and is the default (constant point gravity, no falloff). The
   // setter (:53-56) is a bare assignment, so out-of-range warns.
   gravity_point_unit_distance: v.float('gravity_point_unit_distance', {
     min: 0,
@@ -56,16 +50,13 @@ validatorRegistry.registerAll('Area3D', {
     message: "Property 'angular_damp' must be >= 0. Damping cannot be negative.",
     hinted: 'area_3d.cpp:791',
   }),
-  // `Variant::INT` with `set_priority(int)` (area_3d.cpp:775); both hint ends are
-  // opened by `or_greater,or_less`, so the slot itself is the only authority.
-  // Modelled as a float, it was the one key in the tree outside the int-slot
-  // population, so neither the truncation warning nor the unstorable-value
-  // error ever fired on it.
+  // `Variant::INT` with `set_priority(int)` (area_3d.cpp:775). `or_greater,or_less` opens
+  // both hint ends, so the int slot is the only authority.
   priority: v.strictInt('priority'),
   audio_bus_override: v.boolean('audio_bus_override'),
   // area_3d.cpp:800 declares Variant::STRING_NAME, and the getter returns
   // StringName (area_3d.cpp:601), so the serialised form is &"Master" or the
-  // plain "Master" the text parser also accepts — never a bare word.
+  // plain "Master" the text parser also accepts, never a bare word.
   audio_bus_name: v.stringName('audio_bus_name'),
   // area_3d.cpp:794, PROPERTY_HINT_RANGE "0,10,0.001,or_greater": or_greater
   // opens the max. set_wind_force_magnitude (:134-137) is a bare assignment,
@@ -87,7 +78,7 @@ validatorRegistry.registerAll('Area3D', {
   wind_source_path: v.nodePath('wind_source_path'),
   // area_3d.cpp:803, PROPERTY_HINT_GROUP_ENABLE (bool group toggle).
   reverb_bus_enabled: v.boolean('reverb_bus_enabled'),
-  // area_3d.cpp:804 declares Variant::STRING_NAME; set_reverb_bus_name
+  // area_3d.cpp:804 declares Variant::STRING_NAME. set_reverb_bus_name
   // (:618-620) is a bare assignment. The ENUM hint's option list is populated
   // dynamically in _validate_property, editor-only, so it carries no bound to
   // check against a saved value.

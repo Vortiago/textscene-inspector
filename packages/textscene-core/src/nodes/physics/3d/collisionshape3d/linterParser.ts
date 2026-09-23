@@ -1,10 +1,7 @@
-/**
- * CollisionShape3D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- */
+/** CollisionShape3D strict validators for linting. */
 
-// The base chain, so an isolated slice test resolves inherited keys too;
-// without it only the full barrel ever registers Node3D/Node.
+// The base chain, so an isolated slice test resolves inherited keys too:
+// without it only the full barrel registers Node3D/Node.
 import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';

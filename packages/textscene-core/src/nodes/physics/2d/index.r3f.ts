@@ -1,8 +1,7 @@
 /**
- * Remaining 2D physics bodies — render registration. All reuse the Node2D
- * transform-group Component (see ./index.ts for the rationale): they
- * position their children via the 2D transform and draw no geometry of their
- * own. Area2D and CollisionShape2D moved to their own slices — see ./index.ts.
+ * StaticBody2D, RigidBody2D and CharacterBody2D render registration. They reuse the Node2D
+ * transform-group Component (see ./index.ts): they position their children through the 2D
+ * transform and draw no geometry of their own.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';

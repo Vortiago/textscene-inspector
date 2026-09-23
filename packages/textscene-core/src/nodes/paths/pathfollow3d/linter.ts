@@ -1,33 +1,14 @@
 /**
- * Semantic linter rules for PathFollow3D, from Godot's own configuration
- * warnings (`path_3d.cpp:354-369`) plus the cross-field checks its properties
- * invite.
- *
- * Format validation lives in linterParser.ts; this file is the part that needs
- * the rest of the scene.
- *
- * Two things here were wrong for a long time and are worth naming, since the
- * shapes recur:
- *
- * - The placement rules reported `error`. Godot's signal is a configuration
- *   warning, which is advisory by construction, and ADR-0032 reserves `error`
- *   for a setter that refuses or alters the value. A misplaced PathFollow3D
- *   loads fine and every property in the file is well-formed.
- * - The ROTATION_ORIENTED rule fired on `rotation_mode = 4` alone. Godot's guard
- *   is `curve.is_valid() && !curve->is_up_vector_enabled() && rotation_mode ==
- *   ROTATION_ORIENTED` (path_3d.cpp:362), and `up_vector_enabled` defaults to
- *   true (curve.h:299) — so the rule warned about exactly the configuration that
- *   is correct, and stayed silent about nothing.
- *
- * `progress` and `progress_ratio` are NOT two spellings of one value at load
- * time. `PackedScene::instantiate` applies a node's stored properties BEFORE
- * adding it to its parent (packed_scene.cpp:492 sets, :541 parents), and
- * `PathFollow3D::path` is only assigned on NOTIFICATION_ENTER_TREE. So
- * `set_progress` finds `path == nullptr`, skips the wrap/clamp branch and
- * stores whatever was written; `set_progress_ratio` opens with
- * `ERR_FAIL_NULL_MSG(path)` (path_3d.cpp:503) and drops EVERY authored ratio,
- * in range or not. File order decides no contest between them.
+ * Semantic linter rules for PathFollow3D: Godot's configuration warnings
+ * (`path_3d.cpp:354-369`) plus the cross-field checks that need the rest of the scene.
+ * linterParser.ts does the format validation. The placement rules warn, since a configuration
+ * warning is advisory and a misplaced PathFollow3D loads fine (ADR-0032).
  */
+
+// `progress` and `progress_ratio` are not two spellings of one value at load time.
+// `PackedScene::instantiate` sets stored properties before parenting (packed_scene.cpp:492 sets,
+// :541 parents), and `path` is bound on NOTIFICATION_ENTER_TREE. So `set_progress` stores the raw
+// value, and `set_progress_ratio` (path_3d.cpp:503) drops every authored ratio, in range or not.
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnScene } from '../../../parser/types.js';
@@ -42,13 +23,9 @@ import { boolSlotValue } from '../../../godot/index.js';
 const ROTATION_ORIENTED = 4;
 
 /**
- * True only when the parent Path3D's curve is visible in THIS file and says
- * `up_vector_enabled = false`.
- *
- * Deliberately false for a curve behind an `ExtResource`, and for an absent
- * key: absence is Godot's default form and the default is `true`, so a missing
- * `up_vector_enabled` means up vectors ARE enabled and there is nothing to warn
- * about.
+ * True only when the parent Path3D's curve is in this file and says
+ * `up_vector_enabled = false`. False for a curve behind an `ExtResource`, and for an absent
+ * key, since the default is `true` (curve.h:299).
  */
 function parentCurveDisablesUpVector(scene: TscnScene, parent: { properties: unknown }): boolean {
   const curveRef = (parent.properties as Record<string, string>)?.curve;
@@ -57,30 +34,25 @@ function parentCurveDisablesUpVector(scene: TscnScene, parent: { properties: unk
   return enabled === false || (typeof enabled === 'string' && boolSlotValue(enabled) === false);
 }
 
-/**
- * Validate PathFollow3D semantic rules
- */
 function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
 
-  // Type guard for properties
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
 
   const rawProps = node.properties as Record<string, string>;
 
-  // path_3d.cpp:357 — both of this override's warnings sit inside
+  // path_3d.cpp:357: both of this override's warnings sit inside
   // `is_visible_in_tree() && is_inside_tree()`. The progress and dual-key
   // checks further down are this repo's own and carry no such gate.
   const gated = hiddenOrUnknowableInTree(scene, node);
 
-  // path_3d.cpp:359 — the placement Godot itself flags, at the root too, where
-  // the cast is `cast_to<Path3D>(nullptr)`. `parentTypeVerdict` supplies the
-  // instanced/untyped-parent exemption: a parent whose type lives in a
-  // sub-scene the linter never opens may well BE a Path3D.
+  // path_3d.cpp:359: the placement Godot flags, at the root too, where the cast is
+  // `cast_to<Path3D>(nullptr)`. `parentTypeVerdict` exempts a parent whose type lives in a
+  // sub-scene the linter never opens, which may be a Path3D.
   const placement = parentTypeVerdict(scene, node, 'Path3D');
   if (!gated) {
     if (placement.kind === 'root') {
@@ -102,7 +74,7 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // The value survives; what does not survive is the travel it asks for. Every
+  // The value survives, but the travel it asks for does not. Every
   // sampler clamps the offset into the curve, so the follower parks at the
   // start rather than extrapolating backwards off the end.
   if (rawProps.progress !== undefined) {
@@ -132,9 +104,8 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // path_3d.cpp:362 — all three conjuncts, not just the mode. The curve must be
-  // readable here AND say up vectors are off; a curve behind an ExtResource, or
-  // one that simply omits the key, is the default `true` and is fine.
+  // path_3d.cpp:362: all three conjuncts, not only the mode. The curve must be
+  // readable here and say up vectors are off.
   if (
     !gated &&
     ruleInt(rawProps.rotation_mode ?? '') === ROTATION_ORIENTED &&
@@ -153,9 +124,6 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   return diagnostics;
 }
 
-/**
- * PathFollow3D semantic validation rule
- */
 const pathFollow3DValidationRule: LintRule = {
   meta: {
     name: 'valid-pathfollow3d',
@@ -185,8 +153,6 @@ const pathFollow3DValidationRule: LintRule = {
   check: checkPathFollow3D,
 };
 
-// Self-register the rule
 ruleRegistry.register(pathFollow3DValidationRule);
 
-// Export for testing
 export { pathFollow3DValidationRule };

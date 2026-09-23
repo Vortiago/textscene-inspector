@@ -1,4 +1,4 @@
-/** CollisionShape2D registration — render component. `canvasItem: true`: Node2D-world content. */
+/** CollisionShape2D registration: the render component. `canvasItem: true`: Node2D-world content. */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
 import { CollisionShape2D } from './Component';

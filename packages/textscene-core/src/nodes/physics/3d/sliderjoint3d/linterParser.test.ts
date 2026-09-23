@@ -1,10 +1,7 @@
 /**
- * SliderJoint3D strict validators - format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * SliderJoint3D strict validators, asserted through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator and no fixture text needs upkeep.
+ * Rule-level behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,15 +21,15 @@ describe('SliderJoint3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('SliderJoint3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
     expect(accepted).toEqual([]);
   });
 
-  // slider_joint_3d.cpp:37 - PROPERTY_HINT_RANGE "-1024,1024,0.01,suffix:m", no or_greater/or_less: both bounds hard.
+  // slider_joint_3d.cpp:37: PROPERTY_HINT_RANGE "-1024,1024,0.01,suffix:m", no or_greater/or_less: both bounds hard.
   describe('linear_limit/upper_distance', () => {
     it('accepts a value inside -1024 to 1024', () => {
       expect(check('linear_limit/upper_distance', '1.0')).toBeNull();
@@ -55,7 +52,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:38 - same hint shape as upper_distance.
+  // slider_joint_3d.cpp:38: same hint shape as upper_distance.
   describe('linear_limit/lower_distance', () => {
     it('accepts a value inside -1024 to 1024', () => {
       expect(check('linear_limit/lower_distance', '-1.0')).toBeNull();
@@ -78,7 +75,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:39 - PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:39: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('linear_limit/softness', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('linear_limit/softness', '1.0')).toBeNull();
@@ -101,7 +98,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:40 - PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:40: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('linear_limit/restitution', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('linear_limit/restitution', '0.7')).toBeNull();
@@ -124,7 +121,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:41 - PROPERTY_HINT_RANGE "0,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:41: PROPERTY_HINT_RANGE "0,16.0,0.01", both bounds hard.
   describe('linear_limit/damping', () => {
     it('accepts a value inside 0-16.0', () => {
       expect(check('linear_limit/damping', '1.0')).toBeNull();
@@ -147,7 +144,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:42 - PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:42: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('linear_motion/softness', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('linear_motion/softness', '1.0')).toBeNull();
@@ -170,7 +167,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:43 - PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:43: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('linear_motion/restitution', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('linear_motion/restitution', '0.7')).toBeNull();
@@ -193,7 +190,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:44 - PROPERTY_HINT_RANGE "0,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:44: PROPERTY_HINT_RANGE "0,16.0,0.01", both bounds hard.
   describe('linear_motion/damping', () => {
     it('accepts a value inside 0-16.0', () => {
       expect(check('linear_motion/damping', '0.0')).toBeNull();
@@ -216,7 +213,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:45 - PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:45: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('linear_ortho/softness', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('linear_ortho/softness', '1.0')).toBeNull();
@@ -239,7 +236,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:46 - PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:46: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('linear_ortho/restitution', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('linear_ortho/restitution', '0.7')).toBeNull();
@@ -262,7 +259,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:47 - PROPERTY_HINT_RANGE "0,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:47: PROPERTY_HINT_RANGE "0,16.0,0.01", both bounds hard.
   describe('linear_ortho/damping', () => {
     it('accepts a value inside 0-16.0', () => {
       expect(check('linear_ortho/damping', '1.0')).toBeNull();
@@ -285,10 +282,9 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:49 - PROPERTY_HINT_RANGE "-180,180,0.1,radians_as_degrees",
-  // no or_less/or_greater. The hint's degrees describe the inspector slider; the
-  // value serialised into a .tscn is radians, so the hard bound is ±π radians,
-  // not ±180.
+  // slider_joint_3d.cpp:49: PROPERTY_HINT_RANGE "-180,180,0.1,radians_as_degrees",
+  // no or_less/or_greater. The hint's degrees describe the inspector slider, and the
+  // .tscn stores radians, so the bound is ±π radians, not ±180.
   describe('angular_limit/upper_angle', () => {
     it('accepts a value inside ±π radians', () => {
       expect(check('angular_limit/upper_angle', '0.5')).toBeNull();
@@ -304,10 +300,8 @@ describe('SliderJoint3D strict validators', () => {
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/UPPER_ANGLE_FORMAT');
     });
 
-    // Proves the radian conversion: 4.0 is nowhere near the ±180 a naive
-    // reader of the hint's raw degree numbers would expect as the bound, yet
-    // it is well past the REAL bound once the hint's degrees are converted to
-    // the radians the value is actually serialised in.
+    // Proves the radian conversion: 4.0 is far inside the hint's raw ±180, yet past
+    // the bound once the hint's degrees convert to the radians the value is serialised in.
     it('warns past ±π radians (the ±180 degree bound converted) rather than erroring', () => {
       const error = check('angular_limit/upper_angle', '4.0');
       expect(error?.code).toBe('INVALID_ANGULAR_LIMIT/UPPER_ANGLE_VALUE');
@@ -315,7 +309,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:50 - same hint shape as upper_angle.
+  // slider_joint_3d.cpp:50: same hint shape as upper_angle.
   describe('angular_limit/lower_angle', () => {
     it('accepts a value inside ±π radians', () => {
       expect(check('angular_limit/lower_angle', '-0.5')).toBeNull();
@@ -338,7 +332,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:51 - PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:51: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('angular_limit/softness', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('angular_limit/softness', '1.0')).toBeNull();
@@ -361,7 +355,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:52 - PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:52: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('angular_limit/restitution', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('angular_limit/restitution', '0.7')).toBeNull();
@@ -384,7 +378,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:53 - PROPERTY_HINT_RANGE "0,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:53: PROPERTY_HINT_RANGE "0,16.0,0.01", both bounds hard.
   describe('angular_limit/damping', () => {
     it('accepts a value inside 0-16.0', () => {
       expect(check('angular_limit/damping', '0.0')).toBeNull();
@@ -407,7 +401,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:54 - PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:54: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('angular_motion/softness', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('angular_motion/softness', '1.0')).toBeNull();
@@ -430,7 +424,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:55 - PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:55: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('angular_motion/restitution', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('angular_motion/restitution', '0.7')).toBeNull();
@@ -453,7 +447,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:56 - PROPERTY_HINT_RANGE "0,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:56: PROPERTY_HINT_RANGE "0,16.0,0.01", both bounds hard.
   describe('angular_motion/damping', () => {
     it('accepts a value inside 0-16.0', () => {
       expect(check('angular_motion/damping', '1.0')).toBeNull();
@@ -476,7 +470,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:57 - PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:57: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('angular_ortho/softness', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('angular_ortho/softness', '1.0')).toBeNull();
@@ -499,7 +493,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:58 - PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:58: PROPERTY_HINT_RANGE "0.01,16.0,0.01", both bounds hard.
   describe('angular_ortho/restitution', () => {
     it('accepts a value inside 0.01-16.0', () => {
       expect(check('angular_ortho/restitution', '0.7')).toBeNull();
@@ -522,7 +516,7 @@ describe('SliderJoint3D strict validators', () => {
     });
   });
 
-  // slider_joint_3d.cpp:59 - PROPERTY_HINT_RANGE "0,16.0,0.01", both bounds hard.
+  // slider_joint_3d.cpp:59: PROPERTY_HINT_RANGE "0,16.0,0.01", both bounds hard.
   describe('angular_ortho/damping', () => {
     it('accepts a value inside 0-16.0', () => {
       expect(check('angular_ortho/damping', '1.0')).toBeNull();

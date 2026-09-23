@@ -1,10 +1,7 @@
 /**
- * PhysicalBone2D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * PhysicalBone2D strict validators, asserted through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator and no fixture text needs upkeep.
+ * Rule-level behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,15 +21,15 @@ describe('PhysicalBone2D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('PhysicalBone2D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
     expect(accepted).toEqual([]);
   });
 
-  // scene/2d/physics/physical_bone_2d.cpp:282 — PROPERTY_HINT_NODE_PATH_VALID_TYPES "Bone2D".
+  // scene/2d/physics/physical_bone_2d.cpp:282: PROPERTY_HINT_NODE_PATH_VALID_TYPES "Bone2D".
   describe('bone2d_nodepath', () => {
     it('accepts a NodePath literal', () => {
       expect(check('bone2d_nodepath', 'NodePath("../Bone2D")')).toBeNull();
@@ -50,12 +47,10 @@ describe('PhysicalBone2D strict validators', () => {
     });
   });
 
-  // scene/2d/physics/physical_bone_2d.cpp:283 — PROPERTY_HINT_RANGE "-1, 1000, 1".
-  // The hint's -1 is only the in-memory default before any property assignment
-  // (physical_bone_2d.h:47); set_bone2d_index (:228-229) is
-  // `ERR_FAIL_COND_MSG(p_bone_idx < 0, ...)`, so the real floor is 0 and -1 is
-  // rejected. The 1000 ceiling is never checked at scene-load time (the only
-  // index check, :237, needs is_inside_tree()), so it only warns.
+  // scene/2d/physics/physical_bone_2d.cpp:283: PROPERTY_HINT_RANGE "-1, 1000, 1". The -1 is the
+  // in-memory default (physical_bone_2d.h:47). set_bone2d_index (:228-229) refuses
+  // `p_bone_idx < 0`, so the floor is 0. The 1000 ceiling only warns: the index check at
+  // :237 needs is_inside_tree().
   describe('bone2d_index', () => {
     it('accepts 0', () => {
       expect(check('bone2d_index', '0')).toBeNull();

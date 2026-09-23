@@ -1,5 +1,5 @@
 /**
- * PhysicalBone2D linter tests — Skeleton2D/PhysicalBone2D ancestry, an
+ * PhysicalBone2D linter: Skeleton2D/PhysicalBone2D ancestry, an
  * assigned bone2d_index, and a Joint2D child when chained under another bone.
  */
 import { describe, it, expect } from 'vitest';
@@ -31,11 +31,10 @@ describe('PhysicalBone2D Linter', () => {
     });
 
     it('says nothing when an ancestor takes its type from another scene', () => {
-      // `_find_skeleton_parent` (physical_bone_2d.cpp:79-95) stops at the first
-      // ancestor that is neither a Skeleton2D nor a PhysicalBone2D, so an
-      // ancestor whose class is declared elsewhere could be the Skeleton2D, the
-      // next bone in the chain, or the terminator. Deciding it is none of the
-      // three warns on every rig assembled by instancing one.
+      // `_find_skeleton_parent` (physical_bone_2d.cpp:79-95) stops at the first ancestor that
+      // is neither a Skeleton2D nor a PhysicalBone2D. An ancestor whose class is declared
+      // elsewhere could be the Skeleton2D, the next bone or the terminator, so ruling out all
+      // three would warn on every rig built by instancing one.
       const instancedAncestor = scene(
         packedScene,
         node('Node2D', {}, { name: 'Root' }),
@@ -117,7 +116,7 @@ describe('PhysicalBone2D Linter', () => {
 
     it('does not ALSO warn about the bone index when there is no Skeleton2D ancestor at all', () => {
       // physical_bone_2d.cpp:112-116 only checks bone2d_index once parent_skeleton
-      // was found; without an ancestor the missing-skeleton-parent warning alone fires.
+      // was found. Without an ancestor the missing-skeleton-parent warning alone fires.
       const diagnostics = lint(
         `[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n[node name="Bone" type="PhysicalBone2D" parent="."]\n`
       );

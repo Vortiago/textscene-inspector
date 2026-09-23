@@ -1,7 +1,4 @@
-/**
- * RigidBody3D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- */
+/** RigidBody3D strict validators for linting. */
 
 import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
@@ -13,7 +10,7 @@ const FREEZE_MODE = { 0: 'STATIC', 1: 'KINEMATIC' };
 
 validatorRegistry.registerAll('RigidBody3D', {
   // Two tiers on the floor. rigid_body_3d.cpp:334
-  // `ERR_FAIL_COND(p_mass <= 0)` refuses the endpoint too; the hint (:764,
+  // `ERR_FAIL_COND(p_mass <= 0)` refuses the endpoint too. The hint (:764,
   // "0.001,1000,0.001,or_greater,exp,suffix:kg") states 0.001, so the band
   // between them loads and only warns. `or_greater` leaves the ceiling open.
   mass: v.positiveFloat(
@@ -46,7 +43,7 @@ validatorRegistry.registerAll('RigidBody3D', {
     enforced: 'rigid_body_3d.cpp:444',
   }),
   // rigid_body_3d.cpp:787: Variant::VECTOR3. 3D angular velocity is a vector,
-  // unlike RigidBody2D's scalar. PROPERTY_HINT_NONE; set_angular_velocity
+  // unlike RigidBody2D's scalar. PROPERTY_HINT_NONE. set_angular_velocity
   // (:479-482) is a bare assignment, so no bound.
   angular_velocity: v.vector3('angular_velocity'),
   // rigid_body_3d.cpp:788 "Combine,Replace". set_angular_damp_mode (:434-437) is
@@ -73,13 +70,10 @@ validatorRegistry.registerAll('RigidBody3D', {
   freeze: v.boolean('freeze'),
   continuous_cd: v.boolean('continuous_cd'),
   contact_monitor: v.boolean('contact_monitor'),
-  // rigid_body_3d.cpp:781 hints "0,64,1,or_greater": floor closed at 0, ceiling
-  // open, so 64 is only a slider extent. rigid_body_3d.cpp:524,
-  // ERR_FAIL_INDEX_MSG(p_amount, MAX_CONTACTS_REPORTED_3D_MAX) closes both ends
-  // instead — the constant is 4096 (servers/physics_3d/physics_server_3d.h:36)
-  // and ERR_FAIL_INDEX fails on `p_amount < 0 || p_amount >= p_size`, hence the
-  // exclusive ceiling. It sits in `enforcedMax` because the hint states no
-  // ceiling for it to narrow.
+  // rigid_body_3d.cpp:781 hints "0,64,1,or_greater", so 64 is only a slider extent.
+  // rigid_body_3d.cpp:524, ERR_FAIL_INDEX_MSG(p_amount, MAX_CONTACTS_REPORTED_3D_MAX), closes
+  // both ends: the constant is 4096 (servers/physics_3d/physics_server_3d.h:36) and the
+  // ceiling is exclusive. It sits in `enforcedMax`, since the hint states no ceiling to narrow.
   max_contacts_reported: v.int('max_contacts_reported', {
     min: 0,
     enforcedMax: { at: 4096, exclusive: true },

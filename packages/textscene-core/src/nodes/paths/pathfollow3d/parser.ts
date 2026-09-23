@@ -1,13 +1,8 @@
 /**
- * PathFollow3D parser — the Node3D surface plus the follow controls.
- * rotation_mode defaults to Godot's XYZ.
- *
- * `progress` and `progress_ratio` stay optional (undefined when unset) so an
- * unparseable value is reported rather than silently read as 0. Nothing
- * positions from `progress_ratio` — the component samples `progress` alone,
- * because Godot binds the parent Path3D on enter-tree, after a node's
- * properties are applied — but it is still read so a bad value is diagnosed
- * instead of skipped for being unusable anyway.
+ * PathFollow3D parser: the Node3D surface plus the follow controls. rotation_mode defaults to
+ * Godot's XYZ. `progress` and `progress_ratio` stay undefined when unset, so an unparseable value
+ * is reported, not read as 0. Nothing positions from `progress_ratio`, since Godot binds the
+ * parent Path3D after it applies properties, but it is read so a bad value is diagnosed.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

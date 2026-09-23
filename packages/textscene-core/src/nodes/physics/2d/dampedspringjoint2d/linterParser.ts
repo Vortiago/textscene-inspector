@@ -1,10 +1,7 @@
 /**
- * DampedSpringJoint2D strict validators for linting.
- *
- * Declare only DampedSpringJoint2D's OWN members — the ones doc/classes/DampedSpringJoint2D.xml
- * lists without an `overrides=` attribute. Everything from Joint2D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * DampedSpringJoint2D strict validators: only the members doc/classes/DampedSpringJoint2D.xml
+ * lists without `overrides=`. The NODE_BASE_TYPES base-walk delivers everything from Joint2D up,
+ * and a re-declared key shadows it.
  */
 
 import '../../joints/shared/linterParser.js';

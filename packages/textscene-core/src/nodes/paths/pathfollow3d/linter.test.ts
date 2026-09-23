@@ -1,6 +1,4 @@
-/**
- * Tests for PathFollow3D linter (strict parser + semantic rules)
- */
+/** PathFollow3D linter: the strict parser and the semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -27,10 +25,9 @@ const follow = (props: Record<string, PropValue> = {}) =>
 const pathScene = (props: Record<string, PropValue> = {}) => scene(curveSub, path, follow(props));
 
 /**
- * The same scene, but with the parent's curve explicitly opting OUT of up
- * vectors — the only state in which Godot's ROTATION_ORIENTED warning fires
- * (path_3d.cpp:362). `curveSub` above omits the key, and the default is `true`
- * (curve.h:299), so the ordinary scene must stay silent about that mode.
+ * The same scene with the parent's curve opting out of up vectors: the only state in which
+ * Godot's ROTATION_ORIENTED warning fires (path_3d.cpp:362). `curveSub` omits the key, and the
+ * default is `true` (curve.h:299), so the ordinary scene stays silent about that mode.
  */
 const noUpVectorCurve = '[sub_resource type="Curve3D" id="curve_1"]\nup_vector_enabled = false';
 const noUpVectorScene = (props: Record<string, PropValue> = {}) =>
@@ -73,7 +70,7 @@ describe('PathFollow3D Linter', () => {
     describe('progress_ratio property validation', () => {
       // No "accepts a valid ratio" case: there is no such thing in a scene
       // file. Every stored progress_ratio is dropped, and the semantic rule
-      // below reports all of them; only the FORMAT check lives here.
+      // below reports all of them. Only the format check lives here.
       it('should reject non-numeric progress_ratio', () => {
         expectDiagnostic(pathScene({ progress_ratio: '"half"' }), {
           prop: 'progress_ratio',
@@ -124,7 +121,6 @@ describe('PathFollow3D Linter', () => {
       });
 
       it('should accept ROTATION_ORIENTED (4)', () => {
-        // Should have warning about up_vector requirement, but format is valid
         expectNoErrors(pathScene({ rotation_mode: 4 }), { ruleName: 'strict-parser' });
       });
 
@@ -346,7 +342,7 @@ describe('PathFollow3D Linter', () => {
     it('errors on progress_ratio at every value, in range or not', () => {
       // The range is beside the point. `set_progress_ratio` opens with
       // ERR_FAIL_NULL_MSG(path) (path_3d.cpp:503) and `path` is bound on
-      // enter-tree, which is after the loader applies properties — so a
+      // enter-tree, which is after the loader applies properties, so a
       // textbook 0.5 is dropped exactly as -0.5 and 1.5 are.
       for (const ratio of ['-0.5', '0.0', '0.5', '1.0', '1.5']) {
         const report = expectDiagnostic(pathScene({ progress_ratio: ratio }), {
@@ -399,7 +395,6 @@ describe('PathFollow3D Linter', () => {
 
   describe('Edge Cases', () => {
     it('should handle PathFollow3D with no properties', () => {
-      // Should only have warnings about default behavior, no errors
       expectNoErrors(pathScene());
     });
 
@@ -416,28 +411,23 @@ describe('PathFollow3D Linter', () => {
       );
       expect(diagnostics.length).toBeGreaterThan(0);
 
-      // Should have parent error
       const parentError = diagnostics.find(d => d.ruleName === 'pathfollow3d-invalid-parent');
       expect(parentError).toBeDefined();
 
-      // Should have negative progress warning
       const progressWarning = diagnostics.find(d => d.ruleName === 'pathfollow3d-negative-progress');
       expect(progressWarning).toBeDefined();
 
-      // Should have the dropped-progress_ratio error
       const ratioReport = diagnostics.find(d => d.ruleName === 'pathfollow3d-progress-ratio-ignored');
       expect(ratioReport).toBeDefined();
 
-      // But NOT the oriented-mode warning. Godot's ROTATION_ORIENTED check sits
-      // in the `else` branch of the parent test (path_3d.cpp:360-365), so a node
-      // that failed the parent test never reaches it — and with no Path3D there
-      // is no curve to ask about up vectors anyway.
+      // No oriented-mode warning: Godot's ROTATION_ORIENTED check sits in the `else` branch of
+      // the parent test (path_3d.cpp:360-365), so a node that fails the parent test never
+      // reaches it.
       const orientedWarning = diagnostics.find(d => d.ruleName === 'pathfollow3d-oriented-mode-requires-up-vector');
       expect(orientedWarning).toBeUndefined();
     });
 
     it('should handle deeply nested PathFollow3D', () => {
-      // Should pass - PathFollow3D has valid Path3D parent
       expectClean(
         scene(
           curveSub,

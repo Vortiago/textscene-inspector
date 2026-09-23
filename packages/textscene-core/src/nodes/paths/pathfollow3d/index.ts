@@ -1,8 +1,6 @@
 /**
- * PathFollow3D registration — parser.
- *
- * Positions its children along the parent Path3D's curve and draws a
- * selection-gated handle (ADR-0018). Previously transform-only (ADR-0008).
+ * PathFollow3D registration: the parser. PathFollow3D positions its children along the parent
+ * Path3D's curve and draws a selection-gated handle (ADR-0018).
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

@@ -1,4 +1,4 @@
-/** Area2D parser — parses Area2D nodes from TSCN. */
+/** Area2D parser: the Node2D transform plus monitoring, monitorable, layer and mask. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { Area2DProperties } from './types';

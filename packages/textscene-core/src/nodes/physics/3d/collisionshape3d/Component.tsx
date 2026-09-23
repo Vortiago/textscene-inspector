@@ -1,8 +1,7 @@
 /**
- * <CollisionShape3D> — a transform-only node whose collision-shape resource is
- * drawn as a toggleable wireframe gizmo (ADR-0005 / ADR-0006). The gizmo is
- * hidden unless `ViewportModeContext.showCollisions` is on (off by default),
- * mirroring Godot's "Visible Collision Shapes".
+ * <CollisionShape3D>: a transform-only node whose collision-shape resource draws as a wireframe
+ * gizmo (ADR-0005 / ADR-0006). The gizmo shows only while `ViewportModeContext.showCollisions`
+ * is on (off by default), like Godot's "Visible Collision Shapes".
  */
 
 import { useMemo } from 'react';
@@ -27,7 +26,7 @@ export function CollisionShape3D({ node, children }: NodeComponentProps) {
   );
 
   const shapeResource = useSubOrExtResource(properties.shape, internalResources, externalResources);
-  // Godot draws the shape in the node's own `debug_color`; the literal is sRGB.
+  // Godot draws the shape in the node's own `debug_color`. The literal is sRGB.
   const debugColor = useGodotLinearColor(properties.debugColor ?? DEFAULT_COLLISION_DEBUG_COLOR);
 
   return (

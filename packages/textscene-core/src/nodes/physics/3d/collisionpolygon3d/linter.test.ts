@@ -1,8 +1,7 @@
 /**
- * CollisionPolygon3D linter tests — parent must be a CollisionObject3D
- * descendant, the polygon should not be empty, and the transform's scale
- * should be uniform. All three mirror collision_polygon_3d.cpp's
- * get_configuration_warnings() (:235-252), so all three are WARNINGS.
+ * CollisionPolygon3D linter: the parent must descend from CollisionObject3D, the polygon should
+ * not be empty, and the scale should be uniform. All three mirror collision_polygon_3d.cpp's
+ * get_configuration_warnings() (:235-252), so all three warn.
  */
 import { describe, it, expect } from 'vitest';
 import { node, scene, lint, expectDiagnostic, expectNoDiagnostic, expectClean , instanced, override, packedScene} from '../../../../linter/testing/testkit';

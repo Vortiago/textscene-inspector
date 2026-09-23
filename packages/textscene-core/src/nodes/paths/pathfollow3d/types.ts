@@ -1,4 +1,4 @@
-/** PathFollow3D — positions its children along the parent Path3D's curve. */
+/** PathFollow3D: positions its children along the parent Path3D's curve. */
 
 import type { Node3DProperties } from '../../base/node3d/types';
 
@@ -14,7 +14,7 @@ export const RotationMode = {
 export interface PathFollow3DProperties extends Node3DProperties {
   /** Absolute distance along the curve, world units. Undefined when unset. */
   progress?: number;
-  /** Fraction along the curve, 0..1. Takes precedence over `progress`. Undefined when unset. */
+  /** Fraction along the curve, 0..1. Godot drops it at load, so nothing positions from it. Undefined when unset. */
   progress_ratio?: number;
   /** Offset perpendicular to the curve along the oriented right axis (Godot default 0). */
   h_offset: number;
@@ -22,7 +22,7 @@ export interface PathFollow3DProperties extends Node3DProperties {
   v_offset: number;
   /** How children are rotated to the curve (Godot default XYZ). */
   rotation_mode: number;
-  /** Cubic vs linear interpolation between baked points (Godot default true). */
+  /** Cubic (true) or linear interpolation between baked points (Godot default true). */
   cubic_interp: boolean;
   /** Wrap progress past the curve ends (Godot default true). */
   loop: boolean;

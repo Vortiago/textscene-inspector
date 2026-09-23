@@ -1,9 +1,9 @@
 /**
- * PhysicalBone2D registration — parser.
+ * PhysicalBone2D registration: the parser.
  *
- * Reuses the Node2D parse; property knowledge lives in linterParser.ts.
- * Draws nothing by design (ADR-0008), so index.r3f.ts registers Node2D
- * and its children still land in the right transform space.
+ * It reuses the Node2D parse, and property knowledge lives in linterParser.ts. It
+ * draws nothing by design (ADR-0008), so index.r3f.ts registers Node2D and its children
+ * still land in the right transform space.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

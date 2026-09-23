@@ -1,4 +1,4 @@
-/** CollisionShape2D registration — parser. */
+/** CollisionShape2D registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseCollisionShape2D } from './parser';
