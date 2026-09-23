@@ -1,15 +1,8 @@
 /**
- * Unit test for the webview-ready handshake.
- *
- * The race: the extension host posts `loadTscn` from the panel's
- * constructor, but the React effect that installs the `message`
- * listener in the webview hasn't run yet. Without the handshake,
- * the initial payload is dropped and the preview is stuck on
- * "Loading scene…".
- *
- * The handshake replays the last text read off disk on EVERY
- * `webviewReady`, so a remount — which posts a fresh ready with an
- * empty React tree — gets the current scene too.
+ * Unit test for the webview-ready handshake. The host posts `loadTscn` from the
+ * constructor, before the webview's React effect installs its `message` listener,
+ * so the payload waits for `webviewReady`. Every ready replays the last text read,
+ * so a remount, which posts ready with an empty tree, gets the current scene too.
  */
 import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
@@ -38,19 +31,16 @@ describe('TscnPreviewPanel webview-ready handshake', () => {
 
     TscnPreviewPanel.create(extensionUri, resourceUri);
 
-    // Allow the constructor's _loadTscnContent (async) to finish.
+    // Let the constructor's async _loadTscnContent finish.
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    // BEFORE the handshake, no loadTscn should have been posted.
     const loadCallsBefore = webview.postMessage.mock.calls.filter(
       (call) => (call[0] as { type: string }).type === 'loadTscn'
     );
     expect(loadCallsBefore).toHaveLength(0);
 
-    // Webview signals ready.
     triggerMessage({ type: 'webviewReady' });
 
-    // Now loadTscn should have fired exactly once with the cached payload.
     const loadCallsAfter = webview.postMessage.mock.calls.filter(
       (call) => (call[0] as { type: string }).type === 'loadTscn'
     );
@@ -76,7 +66,6 @@ describe('TscnPreviewPanel webview-ready handshake', () => {
     // Initial replay fired.
     webview.postMessage.mockClear();
 
-    // Simulate a file-save hot-reload with new content.
     const updatedContent = MINIMAL_TSCN + '\n[node name="Added" type="Node3D" parent="."]';
     (vscode.workspace.fs.readFile as Mock).mockResolvedValue(
       createMockFileData(updatedContent)
@@ -85,7 +74,7 @@ describe('TscnPreviewPanel webview-ready handshake', () => {
     panel.update(resourceUri);
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    // The second loadTscn must fire immediately — no caching this time.
+    // The second loadTscn fires at once, with no caching.
     const loadCalls = webview.postMessage.mock.calls.filter(
       (call) => (call[0] as { type: string }).type === 'loadTscn'
     );

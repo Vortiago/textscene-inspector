@@ -1,16 +1,13 @@
 /**
- * Routing for the webview-to-host protocol.
- *
- * Kept apart from the panel so the routing rule — and the untrusted-source
- * guards below — are one testable function rather than a branch of a class.
+ * Routing for the webview-to-host protocol, apart from the panel so the routing
+ * and its untrusted-source guards are one testable function.
  */
 
 import { isWebviewToHostMessage, type WebviewToHostMessage } from './protocol';
 
 /**
- * Exhaustive handler table over the webview-to-host protocol union.
- * Adding a new message type to `WebviewToHostMessage` without adding a handler
- * here is a compile error — the mapped type guarantees coverage.
+ * Exhaustive handler table over the webview-to-host union: a new
+ * `WebviewToHostMessage` type without a handler here fails to compile.
  */
 export type WebviewMessageHandlers = {
   [K in WebviewToHostMessage['type']]: (
@@ -19,37 +16,28 @@ export type WebviewMessageHandlers = {
 };
 
 /**
- * Route `msg` to the corresponding handler in `handlers`.
- * Both the production `onDidReceiveMessage` listener and tests go through
- * this function, so the two paths cannot drift.
+ * Routes `msg` to its handler. The production `onDidReceiveMessage` listener and
+ * the tests share this function.
  */
 export function dispatchWebviewMessage(
   msg: unknown,
   handlers: WebviewMessageHandlers
 ): void {
   // The webview is an untrusted runtime source, and `onDidReceiveMessage` has
-  // no catch around it: narrow the RECEIVER first, or `postMessage(null)`
+  // no catch around it: narrow the receiver first, or `postMessage(null)`
   // throws out of the listener.
   if (!isWebviewToHostMessage(msg)) {
     return;
   }
-  // Then the KEY: a `type` outside the protocol union — including inherited
-  // names like `__proto__`, `constructor` or `toString` — has no OWN entry in
-  // the handler table. Gate on hasOwnProperty rather than a truthy lookup: a
-  // bare `handlers[msg.type]` resolves those inherited members and calls them,
-  // invoking a builtin on `toString` and throwing on `__proto__`.
+  // Then the key, by hasOwnProperty: a bare `handlers[msg.type]` resolves
+  // inherited `__proto__`, `constructor` or `toString` and calls them, invoking a
+  // builtin on `toString` and throwing on `__proto__`.
   if (!Object.prototype.hasOwnProperty.call(handlers, msg.type)) {
     return;
   }
-  // Then the PAYLOAD. A `type` the union knows says nothing about the fields
-  // beside it, and the handlers read those: `relayWebviewLog` calls `args.map`
-  // and `relayMissingResource` reads `resource.path`, so a well-typed message
-  // with a missing or wrong-typed body threw out of a listener with no catch
-  // around it. The webview is an untrusted runtime source; a malformed body is
-  // dropped exactly as an unknown type is.
-  // Cast for the same reason the handler lookup below casts: indexing the
-  // per-type table with a union key narrows the parameter to `never`. The key
-  // and the value come from the same `msg`, so the pairing is sound.
+  // Then the payload, which the handlers read (`args.map`, `resource.path`), so a
+  // malformed body is dropped as an unknown type is. The cast: a union key narrows
+  // the per-type table's parameter to `never`, and key and value share one `msg`.
   const carriesPayload = CARRIES_ITS_PAYLOAD[msg.type] as (m: unknown) => boolean;
   if (!carriesPayload(msg)) {
     return;
@@ -62,12 +50,9 @@ export function dispatchWebviewMessage(
 const isString = (v: unknown): v is string => typeof v === 'string';
 
 /**
- * One payload check per message type, exhaustive over the union the same way
- * {@link WebviewMessageHandlers} is: adding a type without declaring what its
- * body must carry is a compile error, not a gap.
- *
- * Optional fields are checked only when present — `jumpToNode.parent` is absent
- * for a root node, which is a legal message and not a malformed one.
+ * One payload check per message type, exhaustive like {@link WebviewMessageHandlers},
+ * so a type without one fails to compile. An optional field is checked only when
+ * present: `jumpToNode.parent` is absent for a root node.
  */
 const CARRIES_ITS_PAYLOAD: {
   [K in WebviewToHostMessage['type']]: (msg: Record<string, unknown>) => boolean;

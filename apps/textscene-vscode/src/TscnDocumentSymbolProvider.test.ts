@@ -1,13 +1,9 @@
-/**
- * Tests for TscnDocumentSymbolProvider
- * Validates document symbol extraction for VS Code Outline view
- */
+/** Tests for TscnDocumentSymbolProvider, the symbols of the Outline view. */
 
 import { describe, it, expect, vi } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
 
-// Mock helpers
 function createMockDocument(content: string): vscode.TextDocument {
   const lines = content.split('\n');
   return {
@@ -43,10 +39,6 @@ function symbolsOf(
 }
 
 describe('TscnDocumentSymbolProvider', () => {
-  // ============================================================================
-  // Happy Path: Symbol Extraction
-  // ============================================================================
-
   describe('Symbol Extraction', () => {
     it('should provide symbols for simple scene', () => {
       const tscnContent = `[gd_scene format=3]
@@ -91,12 +83,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
       const provider = new TscnDocumentSymbolProvider();
       const symbols = symbolsOf(provider, document);
 
-      // Verify we have the root and its children
       expect(symbols).toHaveLength(1);
       expect(symbols[0]!.kind).toBe(vscode.SymbolKind.Module); // Node3D
       expect(symbols[0]!.children).toHaveLength(3);
 
-      // Check each child's symbol kind
       const meshChild = symbols[0]!.children.find(c => c.name === 'Mesh');
       const lightChild = symbols[0]!.children.find(c => c.name === 'Light');
       const camChild = symbols[0]!.children.find(c => c.name === 'Cam');
@@ -119,10 +109,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
       expect(symbols[0]!.kind).toBe(vscode.SymbolKind.Object); // Default fallback
     });
   });
-
-  // ============================================================================
-  // Edge Cases
-  // ============================================================================
 
   describe('Edge Cases', () => {
     it('should handle empty files', () => {
@@ -184,10 +170,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
     });
   });
 
-  // ============================================================================
-  // Range Calculation
-  // ============================================================================
-
   describe('Range Calculation', () => {
     it('should calculate ranges for nodes', () => {
       const tscnContent = `[gd_scene format=3]
@@ -202,7 +184,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
       const provider = new TscnDocumentSymbolProvider();
       const symbols = symbolsOf(provider, document);
 
-      // Verify symbols exist and have range information
       expect(symbols).toHaveLength(1);
       expect(symbols[0]!.name).toBe('Root');
       expect(symbols[0]!.range).toBeDefined();
@@ -223,27 +204,16 @@ visible = true
       const provider = new TscnDocumentSymbolProvider();
       const symbols = symbolsOf(provider, document);
 
-      // Verify nested nodes have ranges
       expect(symbols[0]!.children).toHaveLength(1);
       expect(symbols[0]!.children[0]!.range).toBeDefined();
       expect(symbols[0]!.children[0]!.selectionRange).toBeDefined();
     });
   });
 
-  // ============================================================================
-  // Duplicate Sibling Resolution
-  // ============================================================================
-
   describe('Duplicate Sibling Resolution', () => {
     it('resolves a duplicate child name using the exact parent, not a substring match', () => {
       // "Leaf" appears under both "AB" and "B". A loose `parentValue.includes(parentName)`
-      // match wrongly treats "AB" as matching parent "B" (since "AB".includes("B")).
-      //   0 [gd_scene ...]
-      //   1 [node name="Root" ...]
-      //   2 [node name="AB" ... parent="."]
-      //   3 [node name="B" ... parent="."]
-      //   4 [node name="Leaf" ... parent="AB"]   <- under AB
-      //   5 [node name="Leaf" ... parent="B"]    <- under B
+      // match treats "AB" as parent "B", since "AB".includes("B").
       const tscnContent = [
         '[gd_scene format=3]',
         '[node name="Root" type="Node3D"]',
@@ -267,16 +237,8 @@ visible = true
     it('resolves a nested duplicate name using the full ancestor path, not just the immediate parent', () => {
       // "Target" appears once under "Foo/X" and once under "Bar/X". The immediate
       // parent name alone ("X") is identical for both, so a resolver that only
-      // tracks the immediate parent (not the full Godot parent= path) can't tell
+      // tracks the immediate parent (not the full Godot parent= path) cannot tell
       // them apart.
-      //   0 [gd_scene ...]
-      //   1 [node name="Root" ...]
-      //   2 [node name="Foo" ... parent="."]
-      //   3 [node name="Bar" ... parent="."]
-      //   4 [node name="X" ... parent="Foo"]
-      //   5 [node name="X" ... parent="Bar"]
-      //   6 [node name="Target" ... parent="Foo/X"]   <- under Foo/X
-      //   7 [node name="Target" ... parent="Bar/X"]   <- under Bar/X
       const tscnContent = [
         '[gd_scene format=3]',
         '[node name="Root" type="Node3D"]',
@@ -301,10 +263,6 @@ visible = true
       expect(targetUnderBar.selectionRange.start).toBe(7);
     });
   });
-
-  // ============================================================================
-  // Light Node Types
-  // ============================================================================
 
   describe('Light Node Types', () => {
     it('should recognize all light types with correct symbols', () => {

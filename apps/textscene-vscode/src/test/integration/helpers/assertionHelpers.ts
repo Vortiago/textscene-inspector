@@ -1,14 +1,9 @@
-/**
- * Custom assertion helpers for VS Code extension integration tests.
- */
+/** Assertion helpers for the extension integration tests. */
 
 import * as assert from 'assert';
 import type { TscnPreviewPanel } from '../../../TscnPreviewPanel';
 import type { HostToWebviewMessage } from '../../../protocol';
 
-/**
- * Assert that a panel is active and has a resource.
- */
 export function assertPanelActive(
   panel: TscnPreviewPanel | undefined,
   message?: string,
@@ -25,9 +20,6 @@ export function assertPanelActive(
   }
 }
 
-/**
- * Assert that a panel is managing the specified resource.
- */
 export function assertPanelResource(
   panel: TscnPreviewPanel,
   resourceUri: string,
@@ -40,10 +32,7 @@ export function assertPanelResource(
   );
 }
 
-/**
- * Assert that a specific message type was sent to the webview.
- * Uses the `sentMessages` array captured by the fake panel.
- */
+/** Reads the `sentMessages` the fake panel captures. */
 export function assertMessageSent(
   sentMessages: HostToWebviewMessage[],
   messageType: string,
@@ -56,9 +45,7 @@ export function assertMessageSent(
   );
 }
 
-/**
- * Assert that a full reload (`loadTscn`) message was sent.
- */
+/** A full reload is a `loadTscn` message. */
 export function assertFullReloadSent(
   sentMessages: HostToWebviewMessage[],
   message?: string,

@@ -1,7 +1,4 @@
-/**
- * Tests for extension.ts
- * Validates extension activation, command registration, and panel management
- */
+/** Tests for extension.ts: activation, command registration and panel management. */
 
 import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { activate, deactivate } from './extension';
@@ -9,21 +6,19 @@ import { createMockUri, vscode } from './test-setup';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import * as logger from './logger';
 
-// Mock TscnPreviewPanel
 vi.mock('./TscnPreviewPanel', () => ({
   TscnPreviewPanel: {
     create: vi.fn()
   }
 }));
 
-// Mock TscnDiagnostics (covered by its own unit tests)
+// TscnDiagnostics has its own unit tests.
 vi.mock('./TscnDiagnostics', () => ({
   TscnDiagnostics: vi.fn(function (this: { dispose: ReturnType<typeof vi.fn> }) {
     this.dispose = vi.fn();
   })
 }));
 
-// Mock logger
 vi.mock('./logger', () => ({
   initLogger: vi.fn(),
   dispose: vi.fn()
@@ -45,19 +40,16 @@ describe('Extension', () => {
     resourceChangeHandlers = [];
     resourceDeleteHandlers = [];
 
-    // Mock context
     mockContext = {
       extensionUri: createMockUri('/extension'),
       subscriptions: []
     };
 
-    // Mock panel instance
     mockPanel = {
       reveal: vi.fn(),
       update: vi.fn(),
       dispose: vi.fn(),
       onDidDispose: vi.fn((callback: () => void) => {
-        // Store the callback for later invocation
         mockPanel._disposeCallback = callback;
         return { dispose: vi.fn() };
       }),
@@ -65,22 +57,19 @@ describe('Extension', () => {
       resource: createMockUri('/workspace/test.tscn')
     };
 
-    // Mock TscnPreviewPanel.create
     (TscnPreviewPanel.create as Mock).mockReturnValue(mockPanel);
 
-    // Mock vscode.commands.registerCommand
     (vscode.commands.registerCommand as Mock) = vi.fn((command: string, handler: (...args: unknown[]) => unknown) => {
       commandHandlers.set(command, handler);
       return { dispose: vi.fn() };
     });
 
-    // Mock vscode.workspace.onDidSaveTextDocument
     (vscode.workspace.onDidSaveTextDocument as Mock) = vi.fn((handler: (...args: unknown[]) => unknown) => {
       saveDocumentHandlers.push(handler);
       return { dispose: vi.fn() };
     });
 
-    // Mock the file-system watcher so we can capture the change handler.
+    // A watcher mock, so the test captures the change handler.
     (vscode.workspace.createFileSystemWatcher as Mock) = vi.fn(() => ({
       onDidChange: vi.fn((handler: (uri: unknown) => unknown) => {
         resourceChangeHandlers.push(handler);
@@ -104,10 +93,6 @@ describe('Extension', () => {
     };
     commandHandlers.get('textscene.openPreviewToSide')?.();
   }
-
-  // ============================================================================
-  // Activation Tests
-  // ============================================================================
 
   describe('activate', () => {
     it('should initialize logger on activation', () => {
@@ -148,10 +133,6 @@ describe('Extension', () => {
       );
     });
   });
-
-  // ============================================================================
-  // Command Handler Tests
-  // ============================================================================
 
   describe('openPreviewToSide command', () => {
     it('should create panel when active editor has .tscn file', () => {
@@ -325,10 +306,6 @@ describe('Extension', () => {
     });
   });
 
-  // ============================================================================
-  // Panel Lifecycle Tests
-  // ============================================================================
-
   describe('Panel Lifecycle', () => {
     it('should remove panel from tracking when disposed', () => {
       const mockDocument = {
@@ -374,10 +351,6 @@ describe('Extension', () => {
       expect(mockPanel.onDidDispose).toHaveBeenCalledWith(expect.any(Function));
     });
   });
-
-  // ============================================================================
-  // Hot-Reload Tests
-  // ============================================================================
 
   describe('Hot-Reload (onDidSaveTextDocument)', () => {
     it('should update panel when .tscn file is saved', () => {
@@ -445,10 +418,6 @@ describe('Extension', () => {
     });
   });
 
-  // ============================================================================
-  // Resource Watcher (dependency hot-reload)
-  // ============================================================================
-
   describe('Resource Watcher', () => {
     it('routes a changed dependency to the panel for re-fetch', async () => {
       activate(mockContext);
@@ -468,7 +437,7 @@ describe('Extension', () => {
       await Promise.all(resourceChangeHandlers.map((handler) => handler(mainUri)));
 
       // An external edit to the main scene fires no save event, so the watcher
-      // must refresh it via update(); it must NOT be re-fetched as a dependency.
+      // refreshes it through update(), never as a dependency.
       expect(mockPanel.update).toHaveBeenCalledWith(mainUri);
       expect(mockPanel.handleDependencyChange).not.toHaveBeenCalled();
     });
@@ -490,10 +459,9 @@ describe('Extension', () => {
       const mainUri = createMockUri('/workspace/scene.tscn');
       await Promise.all(resourceDeleteHandlers.map((handler) => handler(mainUri)));
 
-      // A deleted main scene cannot be re-read — routing it into update()
-      // would only surface a spurious load-error toast (branch switches and
-      // renames delete transiently). The panel keeps its last-loaded render;
-      // dependency propagation to OTHER panels is covered above.
+      // A deleted main scene cannot be re-read, so update() only raises a false
+      // load-error toast (a branch switch or rename deletes for a moment). The
+      // panel keeps its last render. Propagation to other panels is covered above.
       expect(mockPanel.update).not.toHaveBeenCalled();
       expect(mockPanel.handleDependencyChange).not.toHaveBeenCalled();
     });
@@ -509,10 +477,6 @@ describe('Extension', () => {
       expect(mockPanel.update).not.toHaveBeenCalled();
     });
   });
-
-  // ============================================================================
-  // Deactivation Tests
-  // ============================================================================
 
   describe('deactivate', () => {
     it('should dispose logger on deactivation', () => {

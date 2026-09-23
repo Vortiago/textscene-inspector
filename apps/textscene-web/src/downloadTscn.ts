@@ -1,9 +1,9 @@
 /**
- * "Download .tscn" — a Blob + anchor export, no write-back to disk (ADR-0020).
+ * "Download .tscn": a Blob and anchor export, with no write-back to disk (ADR-0020).
  */
 
 /**
- * Name the download after whatever is active so a batch of downloads doesn't
+ * Names the download after the active scene, so a batch of downloads does not
  * collide on a generic "scene.tscn".
  */
 export function downloadFilename(uploadedTscnName: string | null, fixtureFile: string): string {
@@ -20,12 +20,10 @@ export function downloadTscn(buffer: string, filename: string): void {
     anchor.download = filename;
     anchor.click();
   } finally {
-    // Scheduled on a later task rather than revoked inside the `finally`:
-    // `click()` only SCHEDULES the navigation, so tearing the blob URL down
-    // synchronously can beat the browser to fetching it and the download
-    // silently never happens. The `finally` is still needed — a host that
-    // refuses the synthetic click leaves the whole buffer pinned in the
-    // document's blob store for the life of the tab otherwise.
+    // On a later task: `click()` only schedules the navigation, so a synchronous
+    // revoke can beat the fetch and lose the download. In a `finally`, because a
+    // host that refuses the synthetic click otherwise pins the buffer in the blob
+    // store for the life of the tab.
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 }

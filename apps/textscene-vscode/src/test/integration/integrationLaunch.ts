@@ -1,22 +1,8 @@
 /**
- * Launch wiring for the VS Code extension-host integration suite.
- *
- * Split out of `runTests.ts` so the one ordering constraint that matters here
- * is assertable without downloading and starting VS Code: the test workspace
- * must be on disk BEFORE the host window opens.
- *
- * VS Code resolves each folder path in its launch arguments once, while the
- * window opens. A path that does not exist yet is not retried and does not
- * become a workspace folder when it later appears — the window simply opens
- * with none, and `workspace.getWorkspaceFolder` then returns `undefined` for
- * every file for the rest of the session. Any host code that maps a file back
- * to its folder, which is how a `res://` reference is resolved, fails for the
- * whole run.
- *
- * That is why `prepareWorkspace` runs out here rather than inside the suite:
- * a suite runs after the window is already open, so it is too late to affect
- * what the window opened with. Preparing it here also stops the suite from
- * deleting and recreating a directory the running window holds open.
+ * Launch wiring for the extension-host integration suite, apart from `runTests.ts`
+ * so a test asserts its ordering without starting VS Code. VS Code resolves its
+ * launch folder once, as the window opens, so the workspace is on disk before
+ * launch, never prepared inside the suite.
  */
 
 import * as os from 'os';
@@ -38,8 +24,8 @@ export interface IntegrationLaunchPaths {
 }
 
 /**
- * Resolve the launch paths relative to `runnerDir` — the directory holding the
- * runner module, `<vscode-app>/dist/test/integration` once compiled.
+ * Resolves the launch paths against `runnerDir`, the directory of the runner
+ * module: `<vscode-app>/dist/test/integration` once compiled.
  */
 export function integrationLaunchPaths(runnerDir: string): IntegrationLaunchPaths {
   const extensionDevelopmentPath = path.resolve(runnerDir, '../../../');
@@ -72,18 +58,17 @@ export interface IntegrationLaunchDeps {
   paths: IntegrationLaunchPaths;
   prepareWorkspace: (workspaceRoot: string) => void;
   /**
-   * Resolves however the launcher likes — `@vscode/test-electron`'s `runTests`
-   * resolves with the host's exit code and REJECTS on a failing run, so the
-   * value is not the signal and is deliberately not narrowed here.
+   * `@vscode/test-electron`'s `runTests` resolves with the exit code and rejects on
+   * a failing run, so the value is not the signal and stays unnarrowed.
    */
   launch: (options: IntegrationLaunchOptions) => Promise<unknown>;
 }
 
 /**
- * Populate the test workspace, then start the extension host against it.
- *
- * The order is the contract: see this module's header for what a window that
- * opened without a workspace folder does to the rest of the run.
+ * Populates the test workspace, then starts the extension host against it. A window
+ * that opens with no workspace folder answers `undefined` from
+ * `workspace.getWorkspaceFolder` for the whole run, so every `res://` read fails.
+ * Preparing here also keeps the suite from recreating a directory the window holds.
  */
 export async function launchIntegrationTests(
   deps: IntegrationLaunchDeps,

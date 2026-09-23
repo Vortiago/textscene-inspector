@@ -1,10 +1,7 @@
 /**
- * Manages TSCN preview webview panel lifecycle.
- *
- * The three things the panel does that are not lifecycle live beside it:
- * `webviewDispatch` (routing an inbound message), `jumpToNodeDefinition`
- * (the editor navigation), `hostLogRelay` (the output channel) and
- * `panelHtml` (the document the webview mounts).
+ * Manages the lifecycle of the TSCN preview webview panel. The rest lives beside it:
+ * `webviewDispatch` (routing an inbound message), `jumpToNodeDefinition` (editor
+ * navigation), `hostLogRelay` (the output channel) and `panelHtml` (the document).
  */
 
 import * as vscode from 'vscode';
@@ -32,24 +29,18 @@ export class TscnPreviewPanel {
   public readonly onDidDispose: vscode.Event<void> = this._onDidDispose.event;
 
   /**
-   * Webview-ready handshake.
-   *
-   * The HTML mounts the JS bundle asynchronously, which in turn renders the
-   * React tree; the `useEffect` installing its `message` listener does not run
-   * synchronously with `createRoot().render(...)`, so a `postMessage` sent
-   * before the effect fires is dropped. Gate the post on this flag and replay
-   * `_previousContent` when the webview posts `webviewReady`.
+   * Webview-ready handshake. The `useEffect` that installs the webview's `message`
+   * listener runs after `createRoot().render(...)`, so a post sent before it is
+   * dropped. Posts wait on this flag, and `webviewReady` replays `_previousContent`.
    */
   private _webviewReady = false;
   /** Set by `dispose()`. `_webviewReady` stays true after it, so it is not this. */
   private _disposed = false;
 
   /**
-   * Cached per-panel so `findProjectRoot`'s directory walk and the served
-   * `fsPath -> res://` map (see `VSCodeResourceProvider.getServedResPath`)
-   * survive across the many `loadResource` requests and dependency-change
-   * events a single panel handles. Discarded in `update()` only when the
-   * panel's underlying document actually changes.
+   * Cached per panel, so `findProjectRoot`'s walk and the served `fsPath -> res://`
+   * map (`VSCodeResourceProvider.getServedResPath`) survive across requests and
+   * dependency changes. `update()` discards it only when the document changes.
    */
   private _resourceProvider: VSCodeResourceProvider | null = null;
 
@@ -82,10 +73,8 @@ export class TscnPreviewPanel {
     this._extensionUri = extensionUri;
     this._currentResource = resource;
 
-    // Set HTML only once during construction
     this._panel.webview.html = buildPanelHtml(this._panel.webview, this._extensionUri);
 
-    // Load initial content
     this._loadTscnContent(resource);
 
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
@@ -93,11 +82,10 @@ export class TscnPreviewPanel {
     const handlers: WebviewMessageHandlers = {
       webviewReady: (_msg) => {
         this._webviewReady = true;
-        // Every REMOUNT posts a fresh ready with an empty React tree — moving
-        // the panel to another editor group is enough. Replay unconditionally
-        // so the invariant "a ready webview holds the current text" holds for
-        // each one; the `_previousContent` diff below swallows any later
-        // re-read otherwise, leaving the preview on "Loading scene…".
+        // Every remount, such as a move to another editor group, posts ready with
+        // an empty tree. Replay always, so a ready webview holds the current text:
+        // the `_previousContent` diff swallows a later re-read, which leaves the
+        // preview on "Loading scene…".
         if (this._previousContent !== undefined) {
           this._postMessageToWebview({ type: 'loadTscn', content: this._previousContent });
         }
@@ -130,11 +118,10 @@ export class TscnPreviewPanel {
 
   public dispose() {
     if (this._disposed) return;
-    // Set FIRST: `_onDidDispose` listeners and any load still in flight both
-    // reach `_postMessageToWebview`, and `WebviewPanel.webview` throws
-    // `Webview is disposed` from its getter. `_handleLoadResource` posts from
-    // inside its own try/catch, so the catch re-posts and throws again, escaping
-    // its `void`ed call as an unhandled rejection.
+    // Set first: `_onDidDispose` listeners and a load in flight reach
+    // `_postMessageToWebview`, and `WebviewPanel.webview` throws `Webview is
+    // disposed`. `_handleLoadResource`'s catch re-posts and throws out of its
+    // `void`ed call as an unhandled rejection.
     this._disposed = true;
     this._onDidDispose.fire();
 
@@ -155,13 +142,9 @@ export class TscnPreviewPanel {
   }
 
   public update(resource: vscode.Uri) {
-    // Only a genuine document-identity change invalidates the cached provider
-    // — its project-root cache and served-resources map (see
-    // `_getResourceProvider`) stay valid across a same-document refresh (an
-    // in-editor save, an external edit), and deliberately aren't cleared then:
-    // resources whose path didn't change won't be re-requested by the
-    // webview's own client-side cache, so clearing here would silently drop
-    // still-relevant entries and reopen the relevance gate this cache closes.
+    // Only a new document invalidates the cached provider. A same-document refresh
+    // keeps it: the webview's cache re-requests no unchanged path, so clearing the
+    // served-resources map drops live entries and reopens the relevance gate.
     if (resource.toString() !== this._currentResource.toString()) {
       this._resourceProvider = null;
     }
@@ -170,13 +153,7 @@ export class TscnPreviewPanel {
     this._loadTscnContent(resource);
   }
 
-  /**
-   * Lazily create (and reuse) this panel's `VSCodeResourceProvider`, so its
-   * `findProjectRoot` result and served-resources map persist across the many
-   * `loadResource` requests and dependency-change events a panel handles,
-   * instead of re-walking the project-root search and re-resolving every path
-   * from scratch on each call.
-   */
+  /** Lazily creates this panel's `VSCodeResourceProvider`, then reuses it. */
   private _getResourceProvider(): VSCodeResourceProvider | null {
     if (this._resourceProvider) {
       return this._resourceProvider;
@@ -190,16 +167,12 @@ export class TscnPreviewPanel {
   }
 
   /**
-   * A watched dependency (texture, `.tres`, sub-scene) changed on disk. The main
-   * scene text is unchanged, so `_loadTscnContent`'s content-diff guard would
-   * no-op; instead tell the webview to re-fetch just this resource. Looks up
-   * the file's `res://` path in the provider's served-resources map — a miss
-   * means the current scene never requested this file (irrelevant, or not yet
-   * loaded), so there is nothing to invalidate.
+   * Tells the webview to re-fetch a watched dependency that changed on disk, since
+   * the unchanged scene text makes `_loadTscnContent` no-op. A path missing from
+   * the served-resources map was never requested, so it has nothing to invalidate.
    */
   public async handleDependencyChange(fileUri: vscode.Uri): Promise<void> {
-    // A not-yet-ready webview loads everything fresh on mount — skip the
-    // lookup entirely in that window.
+    // A webview that is not ready yet loads everything fresh on mount.
     if (!this._webviewReady) {
       return;
     }
@@ -214,9 +187,8 @@ export class TscnPreviewPanel {
   }
 
   /**
-   * Ask the webview to drop its cache for a resource and re-fetch it. No-op until
-   * the webview handshake completes — a not-yet-ready webview loads everything
-   * fresh once it mounts, so there is nothing to invalidate.
+   * Asks the webview to drop its cache for a resource and re-fetch it. A no-op
+   * before the handshake, since the webview then loads everything fresh on mount.
    */
   public invalidateResource(resPath: string): void {
     if (!this._webviewReady) {
@@ -230,19 +202,15 @@ export class TscnPreviewPanel {
       const fileContent = await vscode.workspace.fs.readFile(resource);
       const textContent = new TextDecoder().decode(fileContent);
 
-      // Check if content actually changed
       if (this._previousContent === textContent) {
         return;
       }
 
-      // React reconciliation handles diffing inside the webview, so the
-      // extension host always sends the full text and lets the shell
-      // re-parse + reconcile.
+      // The host sends the full text: the webview re-parses and React reconciles.
       this._previousContent = textContent;
 
-      // Gate the post on the webview-ready handshake: a React tree that has
-      // not installed its `message` listener yet gets this text from the
-      // `webviewReady` replay instead.
+      // A tree without its `message` listener yet gets this text from the
+      // `webviewReady` replay.
       if (this._webviewReady) {
         this._postMessageToWebview({ type: 'loadTscn', content: textContent });
       }

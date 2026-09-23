@@ -1,9 +1,6 @@
 /**
- * The web previewer's toolbar, rendered through the shell's `toolbar` slot.
- *
- * Lives beside `r3f-main.tsx` rather than inside it: it is a self-contained
- * component over its props plus the shell's missing-resources context, and the
- * entry module is long enough without it.
+ * The web previewer's toolbar, rendered through the shell's `toolbar` slot. It
+ * reads only its props and the shell's missing-resources context.
  */
 
 import {
@@ -26,14 +23,13 @@ export interface ToolbarProps {
   loadError: string | null;
   onFixtureChange: (value: string) => void;
   /**
-   * One or more files picked via the file input — a scene plus, optionally,
-   * its resources. The handler matches them against the shell-reported
-   * missing-paths set.
+   * Files picked in the file input: a scene, and its resources if any. The handler
+   * matches them against the missing paths the shell reports.
    */
   onFilesSelected: (files: File[]) => void;
   paneVisible: boolean;
   onTogglePane: () => void;
-  /** Compact problem-count text (e.g. "✖ 1 / ⚠ 2"), or `null` when the buffer is clean. */
+  /** Compact problem-count text (such as "✖ 1 / ⚠ 2"), or `null` when the buffer is clean. */
   problemBadge: string | null;
 }
 
@@ -48,19 +44,10 @@ function SceneGlyph() {
 }
 
 /**
- * Web toolbar: a compact "scene chip" in the shell top bar that opens a
- * command palette (click, or Ctrl/Cmd+K) for opening a `.tscn` and switching
- * scenes. The palette LEADS with "Open a .tscn from disk…" — the real-world
- * primary action — and lists the built-in fixtures below under a "dev only"
- * heading. Those fixtures are development scaffolding slated for removal; when
- * `options` is empty the palette degrades cleanly to just the open action +
- * the current-file chip.
- *
- * Note on missing files: a scene's missing `res://` dependencies are provided
- * separately and per-path in the shell's Resources tab — deliberately kept
- * distinct from "open a scene" so a picked file always maps to a known
- * target. A compact badge nudges the user toward that tab without
- * requiring it be open first.
+ * A scene chip in the shell top bar that opens a command palette (click, or
+ * Ctrl/Cmd+K) to open a `.tscn` or switch scenes. The palette leads with "Open a
+ * .tscn from disk…" and lists the dev-only fixtures below it. With `options` empty,
+ * it keeps only the open action and the current-file chip.
  */
 export function Toolbar({
   options,
@@ -79,16 +66,13 @@ export function Toolbar({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
-  // `<Toolbar>` is rendered THROUGH the shell's `toolbar` slot, i.e. as
-  // a descendant of the shell's own `<MissingResourcesProvider>` — so this
-  // reads the SAME live missing-paths set the shell's own
-  // `<MissingResourcesPanel>` (in the Resources tab) aggregates, without any
-  // new plumbing. Surfacing it here means a missing texture/scene is visible
-  // without opening that tab first.
+  // Inside the shell's `<MissingResourcesProvider>`, this reads the live set the
+  // Resources tab aggregates. That tab takes missing files per path, apart from
+  // opening a scene, so a picked file maps to a known target. The badge points there.
   const { missingPaths } = useMissingResources();
 
-  // Built-in dev fixtures to switch between (drop the uploaded-placeholder
-  // option, whose value is the empty sentinel).
+  // The dev fixtures, without the uploaded placeholder, whose value is the empty
+  // sentinel.
   const scenes = useMemo(() => options.filter((o) => o.value !== NO_FIXTURE), [options]);
 
   const currentLabel =
@@ -147,9 +131,8 @@ export function Toolbar({
           </span>
         )}
       </button>
-      {/* Primary action — open your own .tscn from disk. Triggers the same
-          hidden input the ⌘K palette uses; kept visible because the built-in
-          fixtures are dev-only scaffolding, so this is the real entry point. */}
+      {/* The primary action: open your own .tscn through the hidden input the ⌘K
+          palette uses. Visible, since the fixtures are dev-only scaffolding. */}
       <button
         type="button"
         className={styles.openButton}
@@ -186,7 +169,7 @@ export function Toolbar({
         </span>
       </button>
 
-      {/* Opens the staged Godot-vs-ours comparison gallery (public/parity/,
+      {/* Opens the staged Godot-versus-previewer gallery (public/parity/,
           served at /parity/ in dev and on the deployed site). */}
       <a
         className={styles.openButton}
@@ -217,18 +200,15 @@ export function Toolbar({
         </span>
       )}
 
-      {/* Always rendered (visually hidden) so the open-file action — and the
-          upload tests — can reach it whether or not the palette is open. */}
+      {/* Always rendered, visually hidden, so the open-file action and the upload
+          tests reach it whether or not the palette is open. */}
       <input
         ref={tscnInputRef}
         type="file"
-        // Multi-select — a .tscn plus its resource files can be picked
-        // in one gesture. `accept` covers the file kinds handleFilesUpload's
-        // basename-matching can actually resolve: the binary resource
-        // extensions (resourceProviderUtils.isBinaryResourceType) plus the
-        // text resources the pipeline routes (.tres materials/tilesets) —
-        // missing rows are routinely .tres, and drag-and-drop already
-        // accepts them, so the picker must too.
+        // Multi-select, so a .tscn and its resources arrive in one gesture. `accept`
+        // lists what handleFilesUpload's basename matching resolves: the binary
+        // extensions (resourceProviderUtils.isBinaryResourceType) and .tres, which a
+        // missing row often is and drag-and-drop accepts.
         accept=".tscn,.tres,.glb,.gltf,.png,.jpg,.jpeg,.webp,.svg,.wav,.ogg,.mp3"
         multiple
         onChange={handleTscnFileChange}
@@ -242,7 +222,7 @@ export function Toolbar({
         <>
           <div className={styles.backdrop} onClick={() => setOpen(false)} aria-hidden />
           <div className={styles.palette} role="dialog" aria-label="Open or switch scene">
-            {/* Primary action — open the user's own .tscn. */}
+            {/* This primary action opens the user's .tscn. */}
             <button
               type="button"
               className={styles.openDisk}

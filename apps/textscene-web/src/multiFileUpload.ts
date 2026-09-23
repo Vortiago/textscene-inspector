@@ -1,19 +1,8 @@
 /**
- * Multi-file / drag-and-drop upload: pick the active `.tscn` among a batch
- * of dropped/selected files and match every other file to a `res://` external-
- * resource path by case-insensitive basename, so a scene plus its textures (or
- * a sub-scene's own dependencies) can arrive in one gesture.
- *
- * Contract:
- * 1. Root-most scene pick: the `.tscn` whose basename no other dropped `.tscn`
- *    references becomes the active scene; tie/cycle falls back to first.
- * 2. Missing-list matching: non-`.tscn` files are matched against the picked
- *    scene's direct ExtResources AND the caller-supplied set of currently-
- *    missing `res://` paths, so repeated drops can fulfill a sub-scene's own
- *    dependencies.
- * 3. No-`.tscn` batch: the caller passes an empty ext-resource list to match
- *    purely against the missing paths, fulfilling missing rows instead of
- *    erroring.
+ * Multi-file upload: pick the active `.tscn` of a dropped or selected batch, and
+ * match every other file to a `res://` path by case-insensitive basename, so a
+ * scene and its textures, or a sub-scene's dependencies, arrive in one gesture.
+ * `createFileIngest` states the contract.
  */
 import { TscnParser } from '@textscene/core';
 
@@ -36,7 +25,7 @@ export interface MatchResult {
   matches: ResourceFileMatch[];
   /** Files that matched multiple candidates (for the caller to log). First candidate used. */
   ambiguousMatches: AmbiguousMatch[];
-  /** Files that matched nothing — ignored per contract. */
+  /** Files that matched nothing, which the contract ignores. */
   unmatched: File[];
 }
 
@@ -44,13 +33,12 @@ export interface MatchResult {
 export interface RootMostTscnResult {
   file: File;
   text: string;
-  /** True when the pick was ambiguous (tie or cycle) and fell back to the first candidate — for the caller to log. */
+  /** True when the pick was ambiguous (tie or cycle) and fell back to the first candidate, for the caller to log. */
   ambiguous: boolean;
   /**
-   * The picked scene's ext-resource paths when the pick already parsed it
-   * (multi-`.tscn` batches — the pick and the subsequent resource matching
-   * share one parse). `null` when the pick needed no parse (single `.tscn`);
-   * callers that then need the paths parse lazily via `extResourcePaths`.
+   * The picked scene's ext-resource paths when a multi-`.tscn` pick parsed it, so
+   * matching shares that parse. `null` for a single `.tscn`, whose caller parses
+   * lazily through `extResourcePaths`.
    */
   extResourcePaths: readonly string[] | null;
 }
@@ -61,7 +49,7 @@ function basename(path: string): string {
   return idx === -1 ? path : path.slice(idx + 1);
 }
 
-/** All ExtResource paths of a scene text; `[]` when the text doesn't parse. */
+/** All ExtResource paths of a scene text, or `[]` when the text does not parse. */
 export function extResourcePaths(text: string): readonly string[] {
   try {
     return new TscnParser().parse(text).externalResources.map((r) => r.path);
@@ -71,13 +59,10 @@ export function extResourcePaths(text: string): readonly string[] {
 }
 
 /**
- * Picks the root-most `.tscn` from a batch: the file whose basename no other
- * file in the batch references. A tie (several unreferenced scenes) picks the
- * first of them; a cycle (every scene referenced by another) picks the first
- * file overall — both flagged `ambiguous: true`.
- *
- * `filesWithText` must contain all `.tscn` files in the batch with their
- * already-read text content.
+ * Picks the root-most `.tscn`: the file whose basename no other file references.
+ * A tie picks the first unreferenced scene, and a cycle the first file, both
+ * flagged `ambiguous: true`. `filesWithText` holds every `.tscn` of the batch with
+ * its text.
  */
 export function pickRootMostTscn(
   filesWithText: readonly { file: File; text: string }[]
@@ -90,19 +75,15 @@ export function pickRootMostTscn(
     return { ...first, ambiguous: false, extResourcePaths: null };
   }
 
-  // Parse each scene ONCE — the same parse answers "which .tscn basenames does
-  // each file reference?" for the pick AND supplies the picked file's paths
-  // for the resource matching that follows.
+  // One parse per scene serves the pick and the picked file's resource matching.
   const entries = filesWithText.map((entry) => ({
     entry,
     paths: extResourcePaths(entry.text),
   }));
 
-  // Collect all basenames of .tscn files referenced across every file in the
-  // batch. A file's reference to its OWN basename (e.g. `door.tscn` instancing
-  // `res://variants/door.tscn`) is skipped — a scene can't instance itself, so
-  // such a reference must point at a different, same-named file and must not
-  // disqualify the referencing scene from being the root.
+  // A reference to a file's own basename (`door.tscn` instancing
+  // `res://variants/door.tscn`) is skipped: a scene cannot instance itself, so it
+  // names a different file and does not disqualify the root.
   const referencedBasenames = new Set<string>();
   for (const { entry, paths } of entries) {
     const ownName = entry.file.name.toLowerCase();
@@ -123,19 +104,10 @@ export function pickRootMostTscn(
 }
 
 /**
- * Matches every file in `others` to a `res://` path by case-insensitive basename.
- *
- * Matching priority:
- * 1. Direct ExtResource path of the active scene (`extResourcePaths` — the
- *    scene's own dependencies). Pass `[]` when the batch carries no scene;
- *    matching then runs purely against `missingPaths`.
- * 2. Currently-missing `res://` paths in `missingPaths` (fulfills a sub-scene's
- *    dependencies on repeated drops).
- *
- * Ambiguous matches (multiple candidates in the winning tier share the same
- * basename) use the first candidate and record the collision in
- * `ambiguousMatches` for the caller to log. Files matching nothing are
- * collected in `unmatched`.
+ * Matches each file in `others` to a `res://` path by case-insensitive basename:
+ * first the active scene's `extResourcePaths` (`[]` with no scene), then
+ * `missingPaths`. A basename shared in the winning tier takes the first candidate
+ * and lands in `ambiguousMatches`, and a file matching nothing in `unmatched`.
  */
 export function matchResourceFiles(
   extResources: readonly string[],

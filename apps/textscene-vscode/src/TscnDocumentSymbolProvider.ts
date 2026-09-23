@@ -22,7 +22,6 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
     _token: vscode.CancellationToken
   ): vscode.ProviderResult<vscode.DocumentSymbol[]> {
     try {
-      // Parse TSCN file
       const parser = new TscnParser();
       const parsed = parser.parse(document.getText());
 
@@ -30,7 +29,6 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
         return [];
       }
 
-      // Convert each root node to DocumentSymbol
       return parsed.nodes.map(node =>
         this.convertNodeToSymbol(node, document)
       );
@@ -53,14 +51,13 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
     const symbolKind = this.getSymbolKind(node.type);
 
     const symbol = new vscode.DocumentSymbol(
-      node.name,           // Symbol name
-      node.type,           // Detail (node type)
-      symbolKind,          // Visual kind
-      range,               // Full range
-      selectionRange       // Selection range
+      node.name,
+      node.type,           // detail
+      symbolKind,
+      range,
+      selectionRange
     );
 
-    // Recursively add children
     if (node.children && node.children.length > 0) {
       symbol.children = node.children.map(child =>
         this.convertNodeToSymbol(child, document)
@@ -85,12 +82,10 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
     const text = document.getText();
     const lines = text.split('\n');
 
-    // Match by name and the exact Godot `parent=` value (root's heading omits
-    // `parent`; compare it as an empty string) — disambiguates duplicate
-    // sibling names, including nested ones sharing an immediate parent name.
+    // Match by name and the exact `parent=` value, which tells duplicate sibling
+    // names apart. The root's heading omits `parent`, so it compares as ''.
     const startLine = findNodeHeadingLine(lines, nodeName, nodeParent ?? '');
 
-    // Fallback if not found
     if (startLine === -1) {
       const fallbackRange = new vscode.Range(0, 0, 0, 0);
       return {
@@ -99,7 +94,7 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
       };
     }
 
-    // Selection range is the heading line
+    // The selection range is the heading line.
     const selectionRange = new vscode.Range(
       startLine,
       0,
@@ -107,7 +102,7 @@ export class TscnDocumentSymbolProvider implements vscode.DocumentSymbolProvider
       lines[startLine]!.length
     );
 
-    // Full range extends until next node/resource or EOF
+    // The full range runs to the next node or resource heading, or EOF.
     let endLine = lines.length - 1;
     for (let i = startLine + 1; i < lines.length; i++) {
       const line = lines[i]!;

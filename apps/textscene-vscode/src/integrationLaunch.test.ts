@@ -1,12 +1,8 @@
 /**
- * The integration suite's launch ordering.
- *
- * A cold checkout has no `.test-workspace`, and VS Code resolves its launch
- * folder argument once, as the window opens — so a workspace created after the
- * launch never becomes a workspace folder, and every `res://` resolution in
- * the run fails with "No workspace folder found". The suite passed on every
- * run after the first only because the previous run had left the directory
- * behind. These tests pin the fix: the workspace is populated first.
+ * The integration suite populates `.test-workspace` before launch. VS Code resolves
+ * its launch folder once, as the window opens, so a workspace created later never
+ * becomes a workspace folder and every `res://` read fails with "No workspace folder
+ * found".
  */
 
 import { describe, it, expect } from 'vitest';
@@ -72,8 +68,8 @@ describe('launchIntegrationTests', () => {
       rmSync(parent, { recursive: true, force: true });
     }
 
-    // A directory that appears only after this moment is invisible to the
-    // window for the rest of the run — the failure this ordering prevents.
+    // A directory that appears after this moment is invisible to the window for
+    // the rest of the run.
     expect(existedAtLaunch).toBe(true);
   });
 

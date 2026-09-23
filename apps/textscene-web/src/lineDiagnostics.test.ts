@@ -1,8 +1,5 @@
 /**
- * Pure Diagnostic[] → per-line grouping + problem-count badge
- * formatting. No WebGL, no React: this is the unit-testable seam the issue's
- * "Testing Decisions" section calls for, mirrored on the repo's existing
- * co-located pure-helper pattern (`sourceGate.ts` / `sourceGate.test.ts`).
+ * Tests for the pure `Diagnostic[]` grouping per line and the problem-count badge.
  */
 import { describe, expect, it } from 'vitest';
 import type { Diagnostic } from '@textscene/core/linter';

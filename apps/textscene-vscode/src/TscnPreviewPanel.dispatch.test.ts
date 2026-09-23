@@ -1,17 +1,8 @@
 /**
- * Unit tests for `dispatchWebviewMessage` and the exhaustive handler table
- * wired into `TscnPreviewPanel`.
- *
- * These tests verify that:
- * - `dispatchWebviewMessage` routes every protocol message type to the
- *   correct handler (happy path + all six types), and narrows the receiver
- *   before it reads, since a webview can post anything at all.
- * - The `webviewReady` handshake replay travels through the production
- *   dispatch path — the path that was previously unreachable from tests
- *   because the retired test-plumbing message simulator omitted the
- *   `webviewReady` case.
- * - The panel's `postMessage` captures let tests observe host→webview
- *   messages without any message-history plumbing in production code.
+ * Unit tests for `dispatchWebviewMessage` and the handler table `TscnPreviewPanel`
+ * wires into it. The dispatcher routes every message type and narrows the receiver
+ * first, since a webview can post anything. The tests observe host-to-webview
+ * messages through the fake panel's `postMessage`, with no plumbing in production.
  */
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
@@ -20,10 +11,6 @@ import { isWebviewToHostMessage, type WebviewToHostMessage } from './protocol';
 import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
 
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
-
-// ============================================================================
-// dispatchWebviewMessage — standalone unit tests
-// ============================================================================
 
 function makeHandlers() {
   return {
@@ -98,10 +85,6 @@ describe('dispatchWebviewMessage', () => {
   });
 });
 
-// ============================================================================
-// webviewReady handshake through the production dispatch path
-// ============================================================================
-
 function loadTscnMessages(webview: MockWebview): unknown[] {
   return webview.postMessage.mock.calls
     .map((c) => c[0])
@@ -115,15 +98,13 @@ describe('TscnPreviewPanel webviewReady through production dispatch', () => {
 
     TscnPreviewPanel.create(createMockUri('/extension'), createMockUri('/workspace/scene.tscn'));
 
-    // Allow the constructor's _loadTscnContent (async) to finish.
+    // Let the constructor's async _loadTscnContent finish.
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    // Before the handshake no loadTscn must have been posted.
     expect(loadTscnMessages(webview)).toHaveLength(0);
 
-    // The webviewReady message reaches the handler through the same
-    // dispatchWebviewMessage call used in production — the path the retired
-    // test-plumbing simulator could not reach (it omitted this case).
+    // webviewReady reaches the handler through the production
+    // dispatchWebviewMessage call.
     triggerMessage({ type: 'webviewReady' });
 
     const calls = loadTscnMessages(webview);
@@ -142,18 +123,12 @@ describe('TscnPreviewPanel webviewReady through production dispatch', () => {
     await new Promise<void>((r) => setTimeout(r, 10));
     triggerMessage({ type: 'webviewReady' });
 
-    // The single observation mechanism is the captured fake
-    // panel.webview.postMessage — no message-history plumbing is involved.
     const allMessages = webview.postMessage.mock.calls.map((c) => c[0]);
     const loadTscn = allMessages.find((m) => (m as { type: string }).type === 'loadTscn');
     expect(loadTscn).toBeDefined();
     expect((loadTscn as { content: string }).content).toBe(MINIMAL_TSCN);
   });
 });
-
-// ============================================================================
-// All message types driven through the fake panel's onDidReceiveMessage
-// ============================================================================
 
 describe('TscnPreviewPanel — all message types through fake onDidReceiveMessage', () => {
   async function makeReadyPanel(

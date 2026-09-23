@@ -1,8 +1,6 @@
 /**
- * Webview `log` messages onto the extension's output channel.
- *
- * The webview posts a level, a message and already-serialised-ish args; the
- * channel takes one string per level, so the two have to be reconciled.
+ * Webview `log` messages onto the extension's output channel. The webview posts a
+ * level, a message and args, and the channel takes one string per level.
  */
 
 import type { MissingResource } from '@textscene/core/parser';
@@ -15,7 +13,6 @@ export function relayWebviewLog(level: string, message: string, args: unknown[])
     return;
   }
 
-  // Format args for display
   const formattedArgs = args.map((arg) => {
     if (typeof arg === 'object' && arg !== null) {
       try {
@@ -53,8 +50,8 @@ export function relayWebviewLog(level: string, message: string, args: unknown[])
 }
 
 /**
- * A resource the scene needs and the host could not supply. Surfaced on the
- * channel AND raised, because the preview looks merely wrong without it.
+ * A resource the scene needs and the host could not supply. It is logged and the
+ * channel is raised, because without it the preview only looks wrong.
  */
 export function relayMissingResource(resource: MissingResource): void {
   const channel = logger.getChannel();
@@ -63,7 +60,6 @@ export function relayMissingResource(resource: MissingResource): void {
     channel.warn(`  Referenced by node: ${resource.referencedBy}`);
     channel.warn(`  Error: ${resource.error}`);
 
-    // Show the output channel so user can see the error
     logger.show();
   }
 }

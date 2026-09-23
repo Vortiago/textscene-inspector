@@ -1,7 +1,6 @@
 /**
- * Ambient type declarations for CSS Module imports in the web app.
- * Vite handles the runtime side; this file teaches TypeScript that the
- * import returns a hashed class-name lookup map.
+ * Ambient types for CSS Module imports: Vite handles the runtime, and the import
+ * returns a map of hashed class names.
  */
 declare module '*.module.css' {
   const classes: Readonly<Record<string, string>>;

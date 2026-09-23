@@ -1,14 +1,8 @@
 /**
- * Surfaces core Linter diagnostics for Godot text documents in the editor —
- * `.tscn` scenes and `.tres` resources alike.
- *
- * Owns a DiagnosticCollection: lints all open Godot text documents on
- * activation, re-lints on open/save and on change (debounced), and
- * clears entries when a document closes.
- *
- * IMPORTANT: imports the React-free `@textscene/core/linter` subpath —
- * never the root `@textscene/core` index — so the linter stays out of
- * the renderer dependency graph.
+ * Surfaces core Linter diagnostics for `.tscn` and `.tres` documents. It lints every
+ * open document on activation, re-lints on open, save and change (debounced), and
+ * clears a document's entries on close. It imports the React-free
+ * `@textscene/core/linter` subpath, never the root index, to stay renderer-free.
  */
 
 import * as vscode from 'vscode';
@@ -23,7 +17,7 @@ interface DiagnosticsConfig {
   debounceMs: number;
 }
 
-/** Read the `textscene.diagnostics.*` settings, defaulting to today's fixed behavior. */
+/** Reads the `textscene.diagnostics.*` settings, with their defaults. */
 function readDiagnosticsConfig(): DiagnosticsConfig {
   const config = vscode.workspace.getConfiguration('textscene');
   return {
@@ -39,11 +33,9 @@ const SEVERITY_MAP: Record<TscnLintDiagnostic['severity'], vscode.DiagnosticSeve
 };
 
 /**
- * The editor squiggle for a tier, an unranked one floored to Information.
- *
- * A bare index hands `undefined` to the `vscode.Diagnostic` constructor, which
- * defaults to Error — so a malformed severity reads to the author as the most
- * severe thing in the file rather than the least.
+ * The editor squiggle for a tier, an unranked one floored to Information. A bare
+ * index hands `undefined` to `vscode.Diagnostic`, which defaults to Error, so a
+ * malformed severity reads as the most severe thing in the file.
  */
 function squiggleFor(severity: TscnLintDiagnostic['severity']): vscode.DiagnosticSeverity {
   return SEVERITY_MAP[flooredSeverity(severity)];
@@ -139,8 +131,7 @@ export class TscnDiagnostics implements vscode.Disposable {
       vscode.workspace.onDidChangeConfiguration((event) => this._onConfigurationChanged(event))
     );
 
-    // Lint everything already open at activation — unless the user turned
-    // diagnostics off, in which case there is nothing to publish.
+    // Lint everything already open at activation, unless diagnostics are off.
     if (this._enabled) {
       for (const document of vscode.workspace.textDocuments) {
         this.lintDocument(document);
@@ -182,12 +173,10 @@ export class TscnDiagnostics implements vscode.Disposable {
   }
 
   /**
-   * React to `textscene.diagnostics.*` setting changes. Disabling clears every
-   * published diagnostic and cancels pending debounced lints immediately —
-   * waiting for the next edit/save would leave stale Problems-panel entries
-   * around. Re-enabling re-lints every currently-open document, matching
-   * construction-time behavior. A debounce-only change just takes effect on
-   * the next scheduled lint; nothing to do here for that case.
+   * Reacts to `textscene.diagnostics.*` changes. Disabling clears every diagnostic
+   * and cancels pending lints at once, since waiting for the next edit leaves stale
+   * Problems entries. Re-enabling re-lints every open document. A debounce change
+   * takes effect on the next scheduled lint.
    */
   private _onConfigurationChanged(event: vscode.ConfigurationChangeEvent): void {
     if (!event.affectsConfiguration('textscene.diagnostics')) {

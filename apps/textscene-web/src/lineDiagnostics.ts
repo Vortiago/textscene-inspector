@@ -1,7 +1,6 @@
 /**
- * Pure `Diagnostic[]` → per-line gutter grouping + problem-count
- * badge formatting. No React, no WebGL: the unit-testable seam the linter
- * gutter (`r3f-main.tsx`) builds on.
+ * Pure `Diagnostic[]` grouping per gutter line, and the problem-count badge. No
+ * React or WebGL: the testable seam under the linter gutter (`r3f-main.tsx`).
  */
 import { SEVERITY_ORDER, flooredSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
 
@@ -13,9 +12,8 @@ export interface LineDiagnostics {
 }
 
 /**
- * Number of lines in `text` (at least 1, even for an empty buffer) — counts
- * `\n` occurrences directly instead of `text.split('\n').length`, which
- * would materialize a full array of every line just to read its count.
+ * Number of lines in `text`, at least 1. It counts `\n` rather than taking
+ * `text.split('\n').length`, which builds an array of every line.
  */
 export function countLines(text: string): number {
   let count = 1;
@@ -27,23 +25,17 @@ export function countLines(text: string): number {
 
 /**
  * True when `a` is at least as severe as `b` (lower rank = more severe), both
- * already through `flooredSeverity`.
- *
- * Flooring first is what makes the comparison stick: `SEVERITY_ORDER` yields
- * `undefined` for a tier outside the union, and `undefined <= n` and
- * `n <= undefined` are both false, so a bogus severity on a line's FIRST
- * diagnostic would hold the row against every error after it.
+ * floored first: `SEVERITY_ORDER` gives `undefined` off the union, every comparison
+ * with it is false, and a bogus first severity holds the row against every error.
  */
 function atLeastAsSevere(a: Severity, b: Severity): boolean {
   return SEVERITY_ORDER[a] <= SEVERITY_ORDER[b];
 }
 
 /**
- * Groups diagnostics by `location.line`, collapsing multiple diagnostics on
- * the same line into one entry: the highest severity present on that line,
- * plus every message on it in the order the diagnostics were given. A
- * diagnostic with no `location.line` can't mark a gutter row, so it is
- * silently skipped rather than surfaced under a synthetic line number.
+ * Groups diagnostics by `location.line`: the line's highest severity and every
+ * message in the given order. A diagnostic with no `location.line` marks no row,
+ * so it is skipped rather than given a synthetic line.
  */
 export function groupDiagnosticsByLine(diagnostics: readonly Diagnostic[]): Map<number, LineDiagnostics> {
   const byLine = new Map<number, LineDiagnostics>();
@@ -64,7 +56,7 @@ export function groupDiagnosticsByLine(diagnostics: readonly Diagnostic[]): Map<
   return byLine;
 }
 
-/** Diagnostic counts by severity, plus a total — the toggle badge's raw input. */
+/** Diagnostic counts by severity and a total: the toggle badge's input. */
 export interface DiagnosticsSummary {
   errors: number;
   warnings: number;
@@ -102,9 +94,8 @@ export function summarizeDiagnostics(diagnostics: readonly Diagnostic[]): Diagno
 }
 
 /**
- * Compact badge text for the source-pane toggle (e.g. `"✖ 1 / ⚠ 2"`). `null`
- * when there is nothing to report, so the caller can skip rendering a badge
- * entirely rather than showing an empty one.
+ * Badge text for the source-pane toggle, such as `"✖ 1 / ⚠ 2"`. `null` when there
+ * is nothing to report, so the caller renders no badge.
  */
 export function formatProblemBadge(summary: DiagnosticsSummary): string | null {
   if (summary.total === 0) return null;

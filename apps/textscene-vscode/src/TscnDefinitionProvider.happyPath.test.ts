@@ -1,5 +1,5 @@
 /**
- * `TscnDefinitionProvider` — resolving a SubResource or ExtResource reference to its heading.
+ * `TscnDefinitionProvider`: resolving a SubResource or ExtResource reference to its heading.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
@@ -17,10 +17,6 @@ describe('TscnDefinitionProvider', () => {
       onCancellationRequested: vi.fn(),
     };
   });
-
-  // ============================================================================
-  // HAPPY PATH TESTS - SubResource
-  // ============================================================================
 
   describe('SubResource - Happy Path', () => {
     it('should find SubResource definition with double quotes', () => {
@@ -82,10 +78,6 @@ albedo_color = Color(1, 0, 0, 1)`;
       expect(definition.range.start.line).toBe(2);
     });
   });
-
-  // ============================================================================
-  // HAPPY PATH TESTS - ExtResource
-  // ============================================================================
 
   describe('ExtResource - Happy Path', () => {
     it('should find ExtResource definition', () => {

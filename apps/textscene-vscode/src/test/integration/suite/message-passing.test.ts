@@ -1,15 +1,7 @@
 /**
- * Integration tests for message passing between the extension host and the
- * webview panel.
- *
- * Panels are constructed directly using the public `TscnPreviewPanel`
- * constructor with a fake `vscode.WebviewPanel` (see `createTestPanel` in
- * panelHelpers). The fake captures every `postMessage` call and exposes a
- * `triggerMessage` helper that drives the real `onDidReceiveMessage` dispatch —
- * the same path used in production.
- *
- * `vscode.workspace` and `vscode.window` statics are the real VS Code APIs
- * provided by the extension test host.
+ * Integration tests for messages between the extension host and a panel over a
+ * fake `vscode.WebviewPanel` (`createTestPanel`). `vscode.workspace` and
+ * `vscode.window` are the real APIs of the extension test host.
  */
 
 import * as assert from 'assert';
@@ -47,14 +39,12 @@ suite('Message Passing Tests', () => {
 
     assertPanelActive(panel);
 
-    // Allow async _loadTscnContent to finish.
+    // Let the async _loadTscnContent finish.
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // Signal that the webview is ready; this replays the pending loadTscn
-    // through the production dispatchWebviewMessage path.
+    // Ready replays the pending loadTscn through dispatchWebviewMessage.
     triggerMessage({ type: 'webviewReady' });
 
-    // Verify loadTscn was sent.
     await waitForMessage(sentMessages, 'loadTscn');
     assertFullReloadSent(sentMessages);
   });
@@ -67,7 +57,7 @@ suite('Message Passing Tests', () => {
 
     const { sentMessages, triggerMessage } = createTestPanel(extensionUri, fixturePath);
 
-    // Allow async _loadTscnContent to finish — payload is pending, not yet sent.
+    // Let the async _loadTscnContent finish: the payload is pending, not sent.
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     const loadsBefore = sentMessages.filter((m) => m.type === 'loadTscn');
@@ -77,7 +67,6 @@ suite('Message Passing Tests', () => {
       'loadTscn must not fire before webviewReady',
     );
 
-    // The webviewReady message routes through the production dispatch table.
     triggerMessage({ type: 'webviewReady' });
 
     const loadsAfter = sentMessages.filter((m) => m.type === 'loadTscn');
@@ -101,7 +90,6 @@ suite('Message Passing Tests', () => {
     triggerMessage({ type: 'webviewReady' });
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // Drive jumpToNode through the production onDidReceiveMessage handler.
     triggerMessage({ type: 'jumpToNode', nodeName: 'RootNode', path: 'RootNode' });
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -130,7 +118,6 @@ suite('Message Passing Tests', () => {
     triggerMessage({ type: 'webviewReady' });
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // Drive loadResource through the production handler.
     triggerMessage({
       type: 'loadResource',
       path: 'res://some-resource.tres',
@@ -162,8 +149,7 @@ suite('Message Passing Tests', () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
     triggerMessage({ type: 'webviewReady' });
 
-    // Drive resourceNeeded through the production handler — logs to output
-    // channel but must not throw.
+    // resourceNeeded logs to the output channel and does not throw.
     triggerMessage({
       type: 'resourceNeeded',
       resource: {
@@ -190,7 +176,6 @@ suite('Message Passing Tests', () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
     triggerMessage({ type: 'webviewReady' });
 
-    // Drive error through the production handler.
     triggerMessage({ type: 'error', message: 'Test error from webview' });
 
     assertPanelActive(panel);
@@ -214,10 +199,8 @@ suite('Message Passing Tests', () => {
     const loadsBefore = sentMessages.filter((m) => m.type === 'loadTscn');
     assert.strictEqual(loadsBefore.length, 1, 'Exactly one loadTscn for the initial scene');
 
-    // Point the panel at a DIFFERENT scene. Its text differs from the first,
-    // so the content-diff guard in _loadTscnContent does NOT suppress the post
-    // and a fresh loadTscn must go out carrying the new file's text — the same
-    // text this reads straight off disk.
+    // A different scene's text passes the content-diff guard in _loadTscnContent,
+    // so a fresh loadTscn carries the new file's text as read off disk.
     const expected = new TextDecoder().decode(
       await vscode.workspace.fs.readFile(otherPath),
     );
@@ -249,8 +232,8 @@ suite('Message Passing Tests', () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
     triggerMessage({ type: 'webviewReady' });
 
-    // Unknown message types have no dispatch-table entry;
-    // dispatchWebviewMessage guards the lookup and silently ignores them.
+    // An unknown type has no dispatch-table entry, and dispatchWebviewMessage
+    // ignores it.
     assert.doesNotThrow(() =>
       triggerMessage({ type: 'unknownMessageType', data: 'test data' })
     );

@@ -2,8 +2,7 @@ import { defineConfig, mergeConfig } from 'vitest/config';
 import sharedConfig from '../../vitest.shared';
 
 /**
- * Vitest configuration for the TSCN linter CLI.
- * Pure node environment - no DOM needed for CLI testing.
+ * Vitest configuration for the linter CLI: a node environment, with no DOM.
  */
 export default mergeConfig(
   sharedConfig,

@@ -1,8 +1,6 @@
 /**
- * Standalone web application for previewing TSCN files.
- *
- * The R3F path is the only path. Mounts `<TscnPreviewShell>`
- * with the fixture-selector toolbar into the body's `#app` container.
+ * The standalone web previewer: it mounts `<TscnPreviewShell>` with the fixture
+ * toolbar into the body's `#app` container.
  */
 
 import { initLogger } from './logger';

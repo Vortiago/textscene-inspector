@@ -1,6 +1,6 @@
 /**
- * Scene fixture metadata for integration tests.
- * Copied from textscene-web/src/fixtures.ts to keep tests self-contained.
+ * Scene fixture metadata for integration tests, a copy of textscene-web/src/fixtures.ts
+ * that keeps the tests self-contained.
  */
 
 export interface Fixture {

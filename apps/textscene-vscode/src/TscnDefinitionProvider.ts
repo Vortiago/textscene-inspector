@@ -31,12 +31,10 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
     const line = document.lineAt(position).text;
     const cursorOffset = position.character;
 
-    // Match SubResource("id") or ExtResource("id")
-    // Handles: SubResource("id"), SubResource('id'), SubResource( "id" ), etc.
+    // Either quote, with optional spaces inside the parentheses.
     const subResourceRegex = /SubResource\s*\(\s*["']([^"']+)["']\s*\)/g;
     const extResourceRegex = /ExtResource\s*\(\s*["']([^"']+)["']\s*\)/g;
 
-    // Check if cursor is within a SubResource call
     let match;
     subResourceRegex.lastIndex = 0;
     while ((match = subResourceRegex.exec(line)) !== null) {
@@ -48,7 +46,6 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
       }
     }
 
-    // Check if cursor is within an ExtResource call
     extResourceRegex.lastIndex = 0;
     while ((match = extResourceRegex.exec(line)) !== null) {
       const startIndex = match.index;
@@ -70,22 +67,18 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
     const text = document.getText();
     const lines = text.split('\n');
 
-    // Determine heading prefix
     const headingPrefix =
       resourceType === 'SubResource' ? '[sub_resource' : '[ext_resource';
 
-    // Search for matching resource definition
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]!;
 
-      // Check if line starts with resource heading
       if (!line.startsWith(headingPrefix)) {
         continue;
       }
 
-      // Extract the id attribute: id="value" or id='value'. Anchored on a
-      // non-attribute-name character because `uid` ENDS in `id` — unanchored,
-      // an `uid="uid://b18l6iy"` earlier in the heading matches instead.
+      // Anchored on a non-attribute-name character because `uid` ends in `id`:
+      // unanchored, an earlier `uid="uid://b18l6iy"` matches instead.
       const idMatch = line.match(/(?:^|[^\w-])id\s*=\s*["']([^"']+)["']/);
 
       if (!idMatch) {
@@ -95,7 +88,6 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
       const definitionId = idMatch[1];
 
       if (definitionId === resourceId) {
-        // Found the definition
         const range = new vscode.Range(
           new vscode.Position(i, 0),
           new vscode.Position(i, line.length)
@@ -105,7 +97,6 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
       }
     }
 
-    // Definition not found
     return null;
   }
 }

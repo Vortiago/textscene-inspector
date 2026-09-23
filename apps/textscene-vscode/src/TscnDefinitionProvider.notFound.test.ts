@@ -1,5 +1,5 @@
 /**
- * `TscnDefinitionProvider` — the cases that resolve to nothing, and exactly where a reference stops.
+ * `TscnDefinitionProvider`: the cases that resolve to nothing, and exactly where a reference stops.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
@@ -17,10 +17,6 @@ describe('TscnDefinitionProvider', () => {
       onCancellationRequested: vi.fn(),
     };
   });
-
-  // ============================================================================
-  // ERROR CONDITIONS - Not Found
-  // ============================================================================
 
   describe('Error Conditions - Not Found', () => {
     it('should return null when resource definition not found', () => {
@@ -104,10 +100,6 @@ mesh = SubResource("BoxMesh_1")`;
       expect(definition).toBeNull();
     });
   });
-
-  // ============================================================================
-  // BOUNDARY CONDITIONS - Cursor Position
-  // ============================================================================
 
   describe('Boundary Conditions - Cursor Position', () => {
     it('should find definition when cursor is at start of SubResource keyword', () => {

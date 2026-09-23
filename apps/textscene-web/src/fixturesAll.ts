@@ -1,38 +1,22 @@
 /**
- * The full fixture set the previewer renders: the committed base manifest
- * (./fixtures, generated) PLUS any on-demand, gitignored corpora — e.g. the
- * open-source games (./fixtures.games, written by `pnpm vendor:games`) and the
- * ld-58 project (./fixtures.ld58, `pnpm vendor:ld58` — repo-external but
- * part of the deployed site, see ADR-0033).
- *
- * Optional corpora are fetched on demand, not committed, so their manifests
- * may not exist. Every manifest exports the same conventional `corpusFixtures`
- * name (written by generate-fixtures.js), so ONE wildcard glob merges them
- * all — a new corpus needs no change here. `import.meta.glob` resolves to an
- * empty set when a file is absent (fresh clone / CI), so the app simply shows
- * no vendored scenes until they're vendored — no drift in the committed
- * manifest, no broken imports.
- *
- * Runtime consumers import `fixtures` from HERE; the generated `./fixtures`
- * stays a plain base-only manifest (kept JSON-parseable for the showcase
- * tooling that reads it as text).
+ * The fixture set the previewer renders: the generated ./fixtures and the gitignored
+ * corpora, such as ./fixtures.games (`pnpm vendor:games`) and ./fixtures.ld58
+ * (ADR-0033). Runtime code imports from here, since ./fixtures stays base-only and
+ * JSON-parseable for the showcase tooling.
  */
 import { warn } from '@textscene/core';
 import { fixtures as baseFixtures, type Fixture } from './fixtures';
 
 /**
- * The games corpus is DEPLOY-ONLY (`pnpm build:deploy` sets the flag). A
- * developer who vendored it to verify against a real game should not thereby
- * get ~140 game scenes in their local scene selector, but the deployed site
- * does want them. `copy-fixtures.js` gates the matching `public/fixtures/games/`
- * mirror on the same variable, so the manifest and the files cannot drift.
- *
- * This controls VISIBILITY, not bundle size: `import.meta.glob({eager:true})`
- * imports every matching manifest regardless, and the filter below drops the
- * entries from the array rather than the module from the bundle.
+ * The games corpus is deploy-only: `pnpm build:deploy` sets the flag, and
+ * `copy-fixtures.js` gates its mirror on it too. It controls visibility, not bundle
+ * size: the eager glob imports every manifest, and the filter drops entries.
  */
 const INCLUDE_GAMES = import.meta.env.VITE_INCLUDE_GAMES === '1';
 
+// Every manifest exports `corpusFixtures` (generate-fixtures.js), so one glob merges
+// them and a new corpus needs no change here. An absent manifest (a fresh clone, CI)
+// resolves to nothing, so no import breaks.
 const corpusModules = import.meta.glob<{ corpusFixtures?: Fixture[] }>(
   ['./fixtures.*.ts', '!./*.test.ts'],
   { eager: true }
@@ -40,8 +24,8 @@ const corpusModules = import.meta.glob<{ corpusFixtures?: Fixture[] }>(
 const corpusFixtures: Fixture[] = Object.entries(corpusModules).flatMap(([path, m]) => {
   if (!INCLUDE_GAMES && path.includes('.games.')) return [];
   if (!m.corpusFixtures) {
-    // A manifest written by an older generator (different export name) would
-    // otherwise vanish silently — make the stale-manifest case loud.
+    // A manifest from an older generator, with another export name, warns rather
+    // than vanishing.
     warn(
       `[Fixtures] ${path} matched the corpus-manifest glob but exports no ` +
         "'corpusFixtures' — regenerate it with `pnpm generate:fixtures` (or re-run the vendor script)."

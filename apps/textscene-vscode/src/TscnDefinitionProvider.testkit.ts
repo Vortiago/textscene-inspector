@@ -1,8 +1,6 @@
 /**
- * A `vscode.TextDocument` over a string of TSCN, for the provider suites.
- *
- * Shared by the `TscnDefinitionProvider.*.test.ts` files, which split the
- * provider's cases by topic; a non-`.test.ts` module so vitest does not try to
+ * A `vscode.TextDocument` over a string of TSCN, for the
+ * `TscnDefinitionProvider.*.test.ts` suites. Not a `.test.ts`, so vitest does not
  * collect it.
  */
 

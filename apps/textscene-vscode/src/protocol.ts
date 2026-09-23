@@ -1,23 +1,14 @@
 /**
- * Typed host<->webview message protocol.
- *
- * Discriminated unions for every message that flows between the
- * extension host (TscnPreviewPanel) and the webview bundle
- * (r3f-webview-main / WebviewResourceProvider). These types describe
- * the EXISTING wire format exactly — changing a shape here is a
- * protocol change and must be coordinated on both sides.
- *
- * Shapes are declared as type aliases (not interfaces) so they stay
- * assignable to the loose `{ type: string; [key: string]: unknown }`
- * records used by the integration-test observability hooks.
+ * The typed host<->webview message protocol: a discriminated union for every
+ * message between TscnPreviewPanel and the webview bundle. A shape change here
+ * changes the wire, so both sides move together. Type aliases, not interfaces,
+ * stay assignable to the integration hooks' loose `{ type: string; … }` records.
  */
 
 import type { MissingResource } from '@textscene/core/parser';
 import type { WireResourcePayload } from './wireCodec';
 
-// ============================================================================
 // Host -> Webview
-// ============================================================================
 
 /** Full scene text pushed on panel open and on file-save hot-reload. */
 export type LoadTscnMessage = {
@@ -26,9 +17,8 @@ export type LoadTscnMessage = {
 };
 
 /**
- * Incremental update payload. The webview treats it as a full reload
- * using `data.sceneData.rawText` when present (React reconciliation
- * makes incremental computation redundant).
+ * Incremental update payload. The webview treats it as a full reload of
+ * `data.sceneData.rawText` when present, since React reconciliation does the diff.
  */
 export type IncrementalUpdateMessage = {
   type: 'incrementalUpdate';
@@ -52,9 +42,8 @@ export type ResourceLoadErrorMessage = {
 };
 
 /**
- * A watched dependency (texture, `.tres`, sub-scene) changed on disk. The
- * webview drops its cache for `path` and re-fetches it — used for hot-reload
- * of resources, since the main-scene `loadTscn` path is unchanged.
+ * A watched dependency (texture, `.tres`, sub-scene) changed on disk. The webview
+ * drops its cache for `path` and re-fetches it, since the main scene is unchanged.
  */
 export type ResourceChangedMessage = {
   type: 'resourceChanged';
@@ -82,16 +71,14 @@ export function isHostToWebviewMessage(data: unknown): data is HostToWebviewMess
   );
 }
 
-// ============================================================================
 // Webview -> Host
-// ============================================================================
 
 /** Handshake: the React tree installed its `message` listener. */
 export type WebviewReadyMessage = {
   type: 'webviewReady';
 };
 
-/** Surface an error to the user via `showErrorMessage`. */
+/** Surfaces an error to the user through `showErrorMessage`. */
 export type ErrorMessage = {
   type: 'error';
   message: string;
@@ -102,7 +89,7 @@ export type JumpToNodeMessage = {
   type: 'jumpToNode';
   nodeName: string;
   /**
-   * Full tree path from the root, e.g. "Root/B/Leaf" (breadcrumb identifier).
+   * Full tree path from the root, such as "Root/B/Leaf" (breadcrumb identifier).
    * Optional: a legacy webview sends `nodeName` alone, which `webviewDispatch`
    * admits and the handler answers with its first-name-match fallback.
    */
@@ -148,9 +135,8 @@ export type WebviewToHostMessage =
   | LogMessage;
 
 /**
- * A webview can post anything to its host, so the host listener narrows before
- * it reads: a message is a non-null object carrying a string `type`. Mirrors
- * `isHostToWebviewMessage` so the wire is policed the same way both directions.
+ * The host listener's guard, since a webview can post anything. Like
+ * `isHostToWebviewMessage`, a message is a non-null object carrying a string `type`.
  */
 export function isWebviewToHostMessage(data: unknown): data is WebviewToHostMessage {
   return (

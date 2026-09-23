@@ -1,10 +1,7 @@
 /**
- * Round-trip tests for the host<->webview resource wire codec.
- *
- * Each test constructs an input, encodes it, then decodes the encoded form
- * and asserts the result is byte-for-byte identical to the original.
- * Expected values are literals derived from the spec (base64 alphabet,
- * byte sequences), never recomputed the same way the codec does it.
+ * Round-trip tests for the host<->webview resource wire codec. Expected values are
+ * literals from the spec (base64 alphabet, byte sequences), never recomputed the
+ * way the codec computes them.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -13,10 +10,6 @@ import {
   decodeResourceResponse,
   type WireResourcePayload,
 } from './wireCodec';
-
-// ============================================================================
-// Text resources
-// ============================================================================
 
 describe('wireCodec — text resources', () => {
   it('encodes a plain text string as isBinary:false with the original content', () => {
@@ -44,16 +37,12 @@ describe('wireCodec — text resources', () => {
   });
 });
 
-// ============================================================================
-// Binary resources — small (sub-chunk)
-// ============================================================================
-
 describe('wireCodec — binary resources smaller than one chunk', () => {
   it('encodes a 4-byte buffer as isBinary:true', () => {
     const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
     const encoded = encodeResourceResponse(bytes.buffer);
     expect(encoded.isBinary).toBe(true);
-    // PNG magic bytes base64 → "iVBORw==" — known-good literal
+    // The PNG magic bytes in base64.
     expect(encoded.content).toBe('iVBORw==');
   });
 
@@ -82,12 +71,8 @@ describe('wireCodec — binary resources smaller than one chunk', () => {
   });
 });
 
-// ============================================================================
-// Binary resources — chunk-boundary sizes
-//
-// The codec encodes in 8 KB (8 192-byte) chunks to avoid stack overflow on
-// large buffers. These cases exercise sizes that cross one or more boundaries.
-// ============================================================================
+// The codec encodes in 8 KB (8 192-byte) chunks, which avoids a stack overflow on
+// a large buffer.
 
 describe('wireCodec — binary resources crossing 8 KB chunk boundaries', () => {
   /** Build a deterministic byte pattern (not the trivial `i % 256` ramp). */
@@ -133,10 +118,6 @@ describe('wireCodec — binary resources crossing 8 KB chunk boundaries', () => 
     expect(new Uint8Array(decoded as ArrayBuffer)).toEqual(input);
   });
 });
-
-// ============================================================================
-// Type discrimination
-// ============================================================================
 
 describe('wireCodec — type discrimination', () => {
   it('encodes a string (not ArrayBuffer) as text even when it looks like base64', () => {

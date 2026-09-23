@@ -1,9 +1,7 @@
 /**
- * Corpus-scoped uploads: a file uploaded while corpus A is active must NOT be
- * served when the provider has been switched to a different corpus root.
- * Switching corpora is the "start a new project" boundary — the user's own
- * uploads belong to whichever corpus was active when they added them, never
- * to a foreign corpus that happens to share the same res:// path.
+ * Corpus-scoped uploads: a file uploaded under corpus A is not served under another
+ * corpus root. A corpus switch starts a new project, and an upload belongs to the
+ * corpus active when it was added.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WebResourceProvider } from './WebResourceProvider';
@@ -19,7 +17,7 @@ describe('WebResourceProvider — corpus-scoped uploads', () => {
 
   beforeEach(() => {
     provider = new WebResourceProvider();
-    // Fixture fetches 404 so loadResource resolves only via an upload.
+    // Fixture fetches 404, so loadResource resolves only through an upload.
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: false,
       status: 404,
@@ -45,7 +43,7 @@ describe('WebResourceProvider — corpus-scoped uploads', () => {
     // Switch to corpus B
     provider.setResourceRoot('demos/3d/fps');
 
-    // The upload must NOT bleed into corpus B
+    // The upload does not reach corpus B.
     await expect(
       provider.loadResource('res://textures/player.png', 'Texture2D')
     ).rejects.toThrow('Resource not found');
@@ -65,7 +63,7 @@ describe('WebResourceProvider — corpus-scoped uploads', () => {
     // Corpus B serves its own file
     expect(await loadAsText(provider, 'res://textures/player.png')).toBe('content-B');
 
-    // Switch back — corpus A still serves its own file
+    // Back in corpus A, it still serves its own file.
     provider.setResourceRoot('demos/2d/platformer');
     expect(await loadAsText(provider, 'res://textures/player.png')).toBe('content-A');
   });
@@ -88,8 +86,7 @@ describe('WebResourceProvider — corpus-scoped uploads', () => {
       provider.loadResource('res://textures/player.png', 'Texture2D')
     ).rejects.toThrow('Resource not found');
 
-    // Switch back — corpus A's copy is gone too: a removed path never
-    // resurrects when its original corpus becomes active again.
+    // Back in corpus A, its copy is gone too: a removed path stays removed.
     provider.setResourceRoot('demos/2d/platformer');
     await expect(
       provider.loadResource('res://textures/player.png', 'Texture2D')
@@ -97,8 +94,8 @@ describe('WebResourceProvider — corpus-scoped uploads', () => {
   });
 
   it('removeUploadedFile after a corpus switch still removes a file uploaded under the previous root', async () => {
-    // The remove-after-switch regression: upload under the base ('') corpus,
-    // switch to a fixture corpus, then Remove — the file must actually go.
+    // Upload under the base ('') corpus, switch to a fixture corpus, then Remove:
+    // the file goes.
     provider.setResourceRoot('');
     const file = new File(['content'], 'player.png', { type: 'image/png' });
     provider.addUploadedFile('res://textures/player.png', file);

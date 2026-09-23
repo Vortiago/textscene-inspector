@@ -169,7 +169,7 @@ describe('WebResourceProvider', () => {
       const content = await provider.loadResource('res://test.tscn', 'PackedScene');
 
       expect(content).toBe(uploadedContent);
-      expect(fetchSpy).not.toHaveBeenCalled(); // Should NOT fetch
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -228,7 +228,6 @@ describe('WebResourceProvider', () => {
 
     // Error path: All resource types attempt fetch from fixtures
     it('should attempt fetch for all resource types from fixtures', async () => {
-      // Mock failed fetch
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         statusText: 'Not Found'
@@ -238,7 +237,6 @@ describe('WebResourceProvider', () => {
         provider.loadResource('res://texture.png', 'Texture2D')
       ).rejects.toThrow('Resource not found');
 
-      // Should attempt fetch for all resource types
       expect(global.fetch).toHaveBeenCalledWith('/fixtures/texture.png');
     });
   });

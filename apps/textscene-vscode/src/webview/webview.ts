@@ -1,10 +1,6 @@
 /**
- * TSCN webview entry point — runs inside the VS Code webview.
- *
- * The imperative bootstrap is gone; the webview always
- * mounts the R3F tree. The actual mount + extension-message wiring
- * lives in `r3f-webview-main.tsx` so the React surface stays out of
- * the imperative-side bundle if we ever revive code-splitting.
+ * The webview entry point: it mounts the R3F tree. `r3f-webview-main.tsx` holds
+ * the mount and the extension-message wiring.
  */
 
 import { mountR3FWebview } from './r3f-webview-main';

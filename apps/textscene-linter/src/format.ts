@@ -115,11 +115,10 @@ const SEVERITY_DISPLAY: Record<
 };
 
 /**
- * The row an off-union severity is presented by. Floored rather than absent, so
- * every surface of one run — the icon, the colour, the severity word, the JSON
- * `severity` and the workflow-command level — names the same tier for the same
- * finding. `flooredSeverity` also keeps `'constructor'` out of the table, which
- * a bare index reaches through Object.prototype.
+ * The row an off-union severity is presented by. Floored, not absent, so the icon,
+ * colour, word, JSON `severity` and workflow-command level of one finding name one
+ * tier. `flooredSeverity` also keeps out `'constructor'`, which a bare index
+ * reaches through Object.prototype.
  */
 function displayFor(severity: string): (typeof SEVERITY_DISPLAY)[Severity] {
   return SEVERITY_DISPLAY[flooredSeverity(severity)];
@@ -178,30 +177,18 @@ export function formatSeverity(severity: string, hasColor: boolean): string {
   return hasColor ? `\x1b[${SEVERITY_DISPLAY[floored].color}m${floored}\x1b[0m` : floored;
 }
 
-/**
- * Format file path
- */
 export function formatFilePath(path: string, hasColor: boolean): string {
   return hasColor ? `\x1b[1m${path}\x1b[0m` : path; // Bold
 }
 
-/**
- * Format success message
- */
 export function formatSuccess(message: string, hasColor: boolean): string {
   return hasColor ? `\x1b[32m${message}\x1b[0m` : message; // Green
 }
 
-/**
- * Format error message
- */
 export function formatError(message: string, hasColor: boolean): string {
   return hasColor ? `\x1b[31m${message}\x1b[0m` : message; // Red
 }
 
-/**
- * Format dim text
- */
 export function formatDim(text: string, hasColor: boolean): string {
   return hasColor ? `\x1b[2m${text}\x1b[0m` : text; // Dim
 }

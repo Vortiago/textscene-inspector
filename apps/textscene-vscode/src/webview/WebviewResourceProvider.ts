@@ -1,7 +1,4 @@
-/**
- * ResourceProvider implementation for VS Code webview environment.
- * Requests resources from the extension via message passing.
- */
+/** The webview ResourceProvider: it requests resources from the host by message. */
 
 import type { ResourceProvider } from '@textscene/core';
 import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
@@ -18,7 +15,6 @@ export class WebviewResourceProvider implements ResourceProvider {
   private requestCounter = 0;
 
   constructor(private vscode: VsCodeApi) {
-    // Listen for resource responses from extension
     window.addEventListener('message', (event) => {
       const message: unknown = event.data;
       if (!isHostToWebviewMessage(message)) return;
@@ -45,7 +41,6 @@ export class WebviewResourceProvider implements ResourceProvider {
     const requestId = `resource_${this.requestCounter++}`;
 
     return new Promise((resolve, reject) => {
-      // Timeout after 10 seconds
       const timeoutId = window.setTimeout(() => {
         if (this.pendingRequests.has(requestId)) {
           this.pendingRequests.delete(requestId);
@@ -55,7 +50,6 @@ export class WebviewResourceProvider implements ResourceProvider {
 
       this.pendingRequests.set(requestId, { resolve, reject, timeoutId });
 
-      // Send request to extension
       this.vscode.postMessage({
         type: 'loadResource',
         path,

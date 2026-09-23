@@ -1,10 +1,7 @@
 /**
- * fixturesAll merges the committed base manifest with the on-demand games
- * corpus (gitignored, fetched via `pnpm vendor:games`) and the optional
- * deploy-included ld-58 corpus (gitignored, vendored via `pnpm vendor:ld58`). When
- * neither has been vendored, import.meta.glob resolves to nothing and the merged
- * set equals the base — so this holds whether or not either is present on the
- * test runner.
+ * fixturesAll merges the committed base manifest with the gitignored games
+ * (`pnpm vendor:games`) and ld-58 (`pnpm vendor:ld58`) corpora. Unvendored, the glob
+ * finds nothing and the merge equals the base, so this holds on any runner.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -28,17 +25,10 @@ describe('fixturesAll', () => {
   });
 
   /**
-   * The games corpus is DEPLOY-ONLY: `pnpm build:deploy` sets
-   * `VITE_INCLUDE_GAMES=1`, `pnpm dev` and a plain build do not. This asserts
-   * the DEFAULT arm, which is the one a developer runs — and it holds whether
-   * or not the corpus happens to be vendored on this machine, which matters
-   * because verifying this feature against the real RTS scenes requires
-   * vendoring it.
-   *
-   * `copy-fixtures.js` gates the matching `public/fixtures/games/` mirror on
-   * the same variable. If these two ever disagree the selector lists scenes
-   * whose files were never copied, which reads to the user as a broken app
-   * rather than a missing corpus.
+   * Only `pnpm build:deploy` sets `VITE_INCLUDE_GAMES=1`. This asserts the default
+   * arm a developer runs, with or without the corpus vendored. `copy-fixtures.js`
+   * gates its mirror on the same variable, or the selector lists scenes whose files
+   * were never copied.
    */
   it('excludes the games corpus unless VITE_INCLUDE_GAMES is set', () => {
     expect(import.meta.env.VITE_INCLUDE_GAMES).not.toBe('1');

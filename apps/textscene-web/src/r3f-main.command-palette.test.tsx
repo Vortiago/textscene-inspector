@@ -1,18 +1,13 @@
 /**
- * Command-palette (Ctrl/⌘K scene switcher) coverage.
- *
- * `<Toolbar>`'s palette (r3f-main.tsx:640-841) had no dedicated test: other
- * `r3f-main.*.test.tsx` files (deep-link, fixture-fetch, source-edit) open it
- * only as a MEANS to switch fixtures for an unrelated assertion, never
- * pinning the palette's own mechanics — Ctrl/⌘K toggle, Escape, backdrop
- * click, search-focus/reset-on-open, query filtering, and the shared
- * disk-open file input's close-on-pick / value-reset behavior.
+ * The command palette's own mechanics (the Ctrl/⌘K scene switcher): toggle,
+ * Escape, backdrop click, search focus and reset on open, query filtering, and the
+ * disk-open input's close on pick and value reset.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
-// `<TscnCanvas>` mounts a real WebGL `<Canvas>` happy-dom can't provide —
-// stub it (and the scene contents) so the rest of the shell + toolbar render.
+// `<TscnCanvas>` mounts a WebGL `<Canvas>` that happy-dom cannot provide, so it
+// and the scene contents are stubs, and the shell and toolbar render.
 vi.mock('@textscene/core', async () => {
   const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
   return { ...real, TscnCanvas: () => null, TscnSceneContents: () => null };
@@ -43,7 +38,7 @@ const DEFAULT_FILE = 'unit-plane-mesh.tscn';
 const NON_DEFAULT_LEAVES = flattenLeaves(buildFixtureTree(fixtures)).filter(
   (l) => l.file !== DEFAULT_FILE
 );
-/** Two leaves far apart in the flattened list — minimizes any accidental label overlap. */
+/** Two leaves far apart in the flattened list, so no label overlaps by accident. */
 const TARGET_A = NON_DEFAULT_LEAVES[0] as Leaf;
 const TARGET_B = NON_DEFAULT_LEAVES[NON_DEFAULT_LEAVES.length - 1] as Leaf;
 

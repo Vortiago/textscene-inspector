@@ -1,10 +1,7 @@
 /**
- * Entry point for the VS Code extension-host integration suite.
- * Downloads VS Code, populates the test workspace, and runs the suite in an
- * Extension Development Host.
- *
- * The ordering constraint — workspace on disk before the window opens — and
- * why it is not the suite's job lives in `integrationLaunch.ts`.
+ * Entry point for the extension-host integration suite: it downloads VS Code,
+ * populates the test workspace and runs the suite in an Extension Development Host.
+ * `integrationLaunch.ts` holds the ordering constraint.
  */
 import { runTests } from '@vscode/test-electron';
 import { integrationLaunchPaths, launchIntegrationTests } from './integrationLaunch';

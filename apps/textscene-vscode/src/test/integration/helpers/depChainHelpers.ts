@@ -1,20 +1,7 @@
 /**
- * Helpers for dependency-chain hot-reload integration tests.
- *
- * Sets up a small self-contained Godot project inside `.test-workspace/dep-chain/`
- * with a three-level dependency chain:
- *
- *   main.tscn -> sub.tscn -> texture.png      (three layers)
- *   main.tscn -> material.tres -> texture.png  (second chain through material)
- *
- * The helpers here build the directory, write the fixture files with real
- * content, and expose typed paths so test files never hard-code strings.
- *
- * Also exposed: `primePanelForDepChain`, which fires the `loadResource`
- * messages that the webview sends when it encounters external resource
- * references. This is required before `handleDependencyChange` can resolve
- * a file to its `res://` path: the served-resources map inside
- * `VSCodeResourceProvider` is empty until a `loadResource` call populates it.
+ * Helpers for the dependency-chain hot-reload tests: a Godot project in
+ * `.test-workspace/dep-chain/` where main.tscn reaches texture.png through
+ * sub.tscn and through material.tres, and typed paths to its files.
  */
 
 import * as path from 'path';
@@ -22,38 +9,28 @@ import * as fs from 'fs';
 import { waitFor } from './panelHelpers';
 import type { HostToWebviewMessage } from '../../../protocol';
 
-// ---------------------------------------------------------------------------
-// Paths
-// ---------------------------------------------------------------------------
-
 /**
- * Return the absolute fsPath for the dep-chain workspace directory.
- * Resolves from `__dirname` (compiled: `dist/test/integration/helpers/`) up
- * to the vscode-app root, then into `.test-workspace/dep-chain`.
+ * The absolute fsPath of the dep-chain workspace. `__dirname` is the bundle's
+ * output directory, four levels below the app root.
  */
 export function depChainDir(): string {
   return path.resolve(__dirname, '../../../../.test-workspace/dep-chain');
 }
 
 /**
- * Absolute path to a fixture file inside the dep-chain workspace
- * (e.g. `depChainFile('main.tscn')` — see the dependency graph above).
+ * Absolute path to a fixture file in the dep-chain workspace, such as
+ * `depChainFile('main.tscn')`.
  */
 export function depChainFile(name: string): string {
   return path.join(depChainDir(), name);
 }
 
-// res:// paths (Godot canonical) — depth-layer reference keys.
 /** Deepest layer: a texture referenced by sub.tscn, material.tres, and main.tscn. */
 export const RES_TEXTURE = 'res://texture.png';
 /** Middle layer: a material file referenced by main.tscn. */
 export const RES_MATERIAL = 'res://material.tres';
 /** First layer: an instanced sub-scene referenced by main.tscn. */
 export const RES_SUB = 'res://sub.tscn';
-
-// ---------------------------------------------------------------------------
-// Workspace setup / teardown
-// ---------------------------------------------------------------------------
 
 /** Minimal valid 1x1 PNG bytes so binary resource reads succeed. */
 function fakePngBytes(): Uint8Array {
@@ -81,18 +58,10 @@ function fakePngBytes(): Uint8Array {
 }
 
 /**
- * Write fixture files for the dependency chain into `.test-workspace/dep-chain/`.
- *
- * Call once in the suite's `suiteSetup`. The directory is recreated from
- * scratch so each run is hermetic.
- *
- * Dependency graph:
- *   main.tscn       --[PackedScene]--> sub.tscn
- *                   --[Texture2D]----> texture.png
- *                   --[Material]------> material.tres
- *   sub.tscn        --[Texture2D]----> texture.png
- *   material.tres   --[Texture2D]----> texture.png
- *   unrelated.tscn  -- (no shared references)
+ * Writes the dependency chain into `.test-workspace/dep-chain/`, recreated from
+ * scratch so each run is hermetic. Call it once in `suiteSetup`. main.tscn uses
+ * sub.tscn, texture.png and material.tres. sub.tscn and material.tres use
+ * texture.png. unrelated.tscn shares nothing.
  */
 export function setupDepChainWorkspace(): void {
   const dir = depChainDir();
@@ -102,17 +71,15 @@ export function setupDepChainWorkspace(): void {
   }
   fs.mkdirSync(dir, { recursive: true });
 
-  // project.godot — presence makes findGodotProjectRoot stop here.
+  // project.godot stops findGodotProjectRoot here.
   fs.writeFileSync(
     path.join(dir, 'project.godot'),
     '; Godot Project Configuration\nconfig_version=5\n[application]\nconfig/name="DepChainTest"\n',
     'utf8',
   );
 
-  // texture.png — minimal valid PNG (deepest layer, shared by all).
   fs.writeFileSync(path.join(dir, 'texture.png'), Buffer.from(fakePngBytes()));
 
-  // material.tres — references texture.png (middle layer).
   fs.writeFileSync(
     path.join(dir, 'material.tres'),
     [
@@ -127,7 +94,6 @@ export function setupDepChainWorkspace(): void {
     'utf8',
   );
 
-  // sub.tscn — instanced sub-scene that also references texture.png.
   fs.writeFileSync(
     path.join(dir, 'sub.tscn'),
     [
@@ -144,7 +110,6 @@ export function setupDepChainWorkspace(): void {
     'utf8',
   );
 
-  // main.tscn — top-level scene referencing sub.tscn, material.tres, texture.png.
   fs.writeFileSync(
     path.join(dir, 'main.tscn'),
     [
@@ -163,7 +128,6 @@ export function setupDepChainWorkspace(): void {
     'utf8',
   );
 
-  // unrelated.tscn — no references to anything in the dep chain.
   fs.writeFileSync(
     path.join(dir, 'unrelated.tscn'),
     [
@@ -176,9 +140,7 @@ export function setupDepChainWorkspace(): void {
   );
 }
 
-/**
- * Tear down the dep-chain workspace directory. Call in `suiteTeardown`.
- */
+/** Call in `suiteTeardown`. */
 export function teardownDepChainWorkspace(): void {
   const dir = depChainDir();
   if (fs.existsSync(dir)) {
@@ -186,20 +148,11 @@ export function teardownDepChainWorkspace(): void {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Panel priming
-// ---------------------------------------------------------------------------
-
 /**
- * Fire one `loadResource` message through the fake panel and wait for its
- * response (success or error), populating `VSCodeResourceProvider`'s
- * served-resources map — the map that `handleDependencyChange` consults when
- * the watcher fires. Without priming, the relevance gate rejects every
- * dependency change because the panel never served the file.
- *
- * Count-based polling detects the NEW response rather than returning on a
- * previous one. A timeout is acceptable: path-resolution records the served
- * entry before the file-read, so even a timeout means the entry exists.
+ * Fires one `loadResource` as the webview does, so the served map that
+ * `handleDependencyChange` consults holds the file, or the relevance gate drops
+ * every change. Polling counts responses to catch the new one. A timeout is
+ * tolerated: resolution records the entry before the read.
  */
 export async function primeResource(
   triggerMessage: (msg: Record<string, unknown>) => void,
@@ -214,16 +167,13 @@ export async function primeResource(
 
   triggerMessage({ type: 'loadResource', ...resource });
 
-  // No describeFailure: a timeout is tolerated per the contract above.
   await waitFor(() => countResponses() > responseBefore, 5000);
-  // Drain any remaining async work.
   await new Promise<void>((r) => setTimeout(r, 100));
 }
 
 /**
- * Prime every resource in the three-layer dependency chain. The calls are
- * sequential so each response has settled before the next request goes out,
- * keeping the served-map population deterministic.
+ * Primes every resource in the chain, one at a time, so the served map fills in
+ * a deterministic order.
  */
 export async function primePanelForDepChain(
   triggerMessage: (msg: Record<string, unknown>) => void,
@@ -240,13 +190,9 @@ export async function primePanelForDepChain(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Assertion utilities
-// ---------------------------------------------------------------------------
-
 /**
- * Poll `sentMessages` until a `resourceChanged` entry with the given path
- * appears, or throw if `timeoutMs` elapses.
+ * Polls `sentMessages` for a `resourceChanged` with the given path, and throws
+ * after `timeoutMs`.
  */
 export async function waitForResourceChanged(
   sentMessages: HostToWebviewMessage[],
@@ -277,10 +223,9 @@ export async function waitForResourceChanged(
 }
 
 /**
- * Run `action` and assert that it posts no `resourceChanged` message, neither
- * synchronously nor within `windowMs` afterwards. The baseline count is
- * captured before the action so a synchronous post is caught too. Used for
- * negative scenarios (irrelevant file changed, unrelated panel).
+ * Runs `action` and asserts that it posts no `resourceChanged`, neither at once
+ * nor within `windowMs`. The baseline count precedes the action, so a synchronous
+ * post counts too.
  */
 export async function assertNoResourceChanged(
   sentMessages: HostToWebviewMessage[],

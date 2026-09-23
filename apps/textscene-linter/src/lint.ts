@@ -43,12 +43,10 @@ export interface CollectDiagnosticsResult {
 }
 
 /**
- * Expands directory arguments into the `.tscn`/`.tres` files they contain
- * (recursively, sorted for deterministic output); plain file paths -
- * including ones the shell already expanded from a glob - pass through
- * unchanged. A path that does not exist on disk is also passed through
- * unchanged so the existing per-file read-error handling in `lintFile`
- * reports it consistently, rather than throwing here.
+ * Expands directory arguments into the `.tscn`/`.tres` files they contain,
+ * recursively and sorted for deterministic output. A file path passes through,
+ * and so does a missing one, so `lintFile` reports it as a read error rather
+ * than this throwing.
  */
 export function expandTscnPaths(inputPaths: string[]): string[] {
   const expanded: string[] = [];
@@ -74,16 +72,10 @@ export function expandTscnPaths(inputPaths: string[]): string[] {
 }
 
 /**
- * Recursively collect the lintable FILES under `dir`, appending into `found`
- * (threaded through the recursion so nested results are never re-copied at
- * each ancestor level). Dirent-based so the file/directory distinction comes
- * for free from each readdir for ordinary entries (no extra `statSync`
- * call). A symlinked directory is left alone — not recursed into — matching
- * the previous `readdirSync(recursive)` behavior, which never follows
- * directory symlinks either. A symlinked FILE, though, is resolved with one
- * `statSync` (mirroring the previous implementation's `statSync(fullPath)
- * .isFile()` check, which follows symlinks) so a scene symlinked in from
- * elsewhere is still linted rather than silently dropped.
+ * Recursively collects the lintable files under `dir` into `found`, which the
+ * recursion threads so no level re-copies. Dirent-based: an ordinary entry costs
+ * no `statSync`. A symlinked directory is not followed. A symlinked file costs
+ * one `statSync`, so a scene linked in from elsewhere is still linted.
  */
 function collectTscnFiles(dir: string, found: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -93,7 +85,7 @@ function collectTscnFiles(dir: string, found: string[] = []): string[] {
       try {
         stats = statSync(fullPath);
       } catch {
-        continue; // broken symlink — skip rather than throw
+        continue; // A broken symlink: skip, not throw.
       }
       if (stats.isFile() && isGodotTextResourcePath(entry.name)) found.push(fullPath);
       continue;
@@ -114,7 +106,7 @@ export function lintFileDiagnostics(filePath: string): FileDiagnostics {
     const absolutePath = resolve(filePath);
     const content = readFileSync(absolutePath, 'utf-8');
 
-    // Lint the TSCN file content (two-phase: strict parsing + semantic rules)
+    // Two phases: strict parsing, then semantic rules.
     const linter = new Linter();
     return { filePath, diagnostics: linter.lint(content) };
   } catch (error) {
@@ -173,12 +165,9 @@ export function printFileResult(result: FileLintResult): void {
 }
 
 /**
- * Lint files in order. Exit code is 1 when any file has error-severity
- * diagnostics or fails to read; warning/info-only diagnostics do NOT fail
- * the run (exit 0) - this is the established CLI contract.
- *
- * The optional onResult callback fires after each file so callers can
- * stream output as files are processed (matching the original CLI behavior).
+ * Lints files in order. The exit code is 1 when any file has an error-severity
+ * diagnostic or fails to read. Warning/info-only diagnostics exit 0.
+ * `onResult` fires after each file, so a caller streams output as files finish.
  */
 export function runLint(
   filePaths: string[],
@@ -201,10 +190,8 @@ export function runLint(
 }
 
 /**
- * Lint files in order and return raw per-file diagnostics with no
- * presentation applied - the shared data source for the `json` and `github`
- * output formats. Uses the same exit-code contract as `runLint`: error
- * diagnostics or read failures fail the run, warning/info-only ones do not.
+ * Lints files in order and returns raw per-file diagnostics, the data source for
+ * the `json` and `github` formats. The exit code follows `runLint`.
  */
 export function collectFileDiagnostics(filePaths: string[]): CollectDiagnosticsResult {
   const files = filePaths.map(lintFileDiagnostics);
