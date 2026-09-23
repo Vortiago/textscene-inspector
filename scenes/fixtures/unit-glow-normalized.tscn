@@ -1,11 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://unitglownormalized"]
 
-; glow_normalized over weights that deliberately do NOT sum to 1.
-;
-; Godot sums the seven mip levels unnormalised, so glow_normalized exists to divide
-; each weight by their total. These weights sum to 3.5, which means ignoring the
-; flag renders the halo 3.5x too bright — a large enough error that this fixture
-; fails loudly rather than subtly.
+; glow_normalized over weights that do not sum to 1. Godot sums the seven mip levels
+; unnormalised, and glow_normalized divides each weight by their total. These weights sum to
+; 3.5, so ignoring the flag renders the halo 3.5x too bright.
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_dark"]
 sky_top_color = Color(0.04, 0.04, 0.07, 1)

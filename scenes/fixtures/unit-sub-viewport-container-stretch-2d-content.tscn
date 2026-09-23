@@ -1,25 +1,7 @@
-; A STRETCHING SubViewportContainer holding 2D-world content.
-;
-; The one variable against unit-sub-viewport-container-2d-content.tscn:
-; `stretch`. Identical container geometry, identical authored
-; `size = Vector2i(200, 150)`, identical content.
-;
-; With stretch on, `recalc_force_viewport_sizes` runs
-; `set_size_force(get_size() / stretch_shrink)` and the authored size is dead —
-; the sub-viewport renders at the CONTAINER's 300x200. `Outside` is what proves
-; it: the square spans x 220..280, y 160..190, which is wholly outside a
-; 200x150 target and wholly inside a 300x200 one. It is either drawn or it is
-; not; no amount of scaling turns one into the other.
-;
-; That distinction is invisible in every other container fixture. The Control
-; arm lays its children out against the SURFACE, which fills the container
-; whichever size the target is, so a ColorRect at the same coordinates appears
-; either way. Only content that goes through the render target can see which
-; rect it was laid out against.
-;
-; Band keeps the sibling fixture's authored Color(0.5, 0.5, 0.5) so the colour
-; pipeline stays pinned here too, and the bottom-left corner is left uncovered
-; for the clear colour.
+; One variable against unit-sub-viewport-container-2d-content.tscn: `stretch`, with identical
+; container geometry, authored `size = Vector2i(200, 150)` and content. With stretch on,
+; `recalc_force_viewport_sizes` runs `set_size_force(get_size() / stretch_shrink)`, so the
+; authored size is dead and the sub-viewport renders at the container's 300x200.
 
 [gd_scene format=3]
 
@@ -34,6 +16,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
+; The Control arm lays children out against the surface, which fills the container whatever the
+; target's size, so a ColorRect at the same coordinates shows either way. Only content through
+; the render target shows which rect it was laid out against, so no other container fixture can.
 [node name="Booth" type="SubViewportContainer" parent="."]
 offset_left = 100.0
 offset_top = 80.0
@@ -45,10 +30,14 @@ stretch = true
 size = Vector2i(200, 150)
 render_target_update_mode = 4
 
+; Keeps the sibling's Color(0.5, 0.5, 0.5), so the colour pipeline stays pinned. The bottom-left
+; corner stays uncovered for the clear colour.
 [node name="Band" type="Polygon2D" parent="Booth/SubViewport"]
 color = Color(0.5, 0.5, 0.5, 1)
 polygon = PackedVector2Array(0, 0, 300, 0, 300, 40, 0, 40)
 
+; Spans x 220..280, y 160..190: outside a 200x150 target and inside a 300x200 one, so it is drawn
+; or not, and no scaling turns one into the other.
 [node name="Outside" type="Polygon2D" parent="Booth/SubViewport"]
 color = Color(1, 0.4, 0, 1)
 polygon = PackedVector2Array(220, 160, 280, 160, 280, 190, 220, 190)

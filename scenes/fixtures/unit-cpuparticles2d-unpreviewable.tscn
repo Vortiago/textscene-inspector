@@ -1,10 +1,9 @@
 [gd_scene load_steps=2 format=3]
 
-; The two settings the frozen pose cannot follow, each raising an advisory
-; warning rather than an error — both are perfectly legal Godot. RING samples
-; the engine's process-wide RNG, which no scene file carries, so the previewer
-; emits from the node origin instead; `fract_delta` sub-steps a restarting
-; particle, which a fixed-rate evaluation skips.
+; The two settings the frozen pose cannot follow. Each raises an advisory warning, not an
+; error, because both are legal Godot. RING samples the engine's process-wide RNG, which no
+; scene file carries, so the previewer emits from the node origin. `fract_delta` sub-steps a
+; restarting particle, which a fixed-rate evaluation skips.
 
 [ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
 

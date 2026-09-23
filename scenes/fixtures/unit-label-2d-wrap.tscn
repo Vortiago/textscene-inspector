@@ -1,54 +1,30 @@
-; Label's line box — where autowrap breaks a line, and how far apart the lines
-; that come out of it sit.
-;
-; The one variable, as a 2x2 matrix over the two inputs that decide it. The
-; SAME sentence is set four times, in the SAME `autowrap_mode = 3`, the same
-; colour, the same alignment, against a box of one of two widths (320 / 560) at
-; one of two font sizes (20 / 28). Reading across a row changes only the box
-; width, so only the break points may move; reading down a column changes only
-; the font size, so the break points AND the pitch between baselines must both
-; move together. Each pane's grey plate is exactly the Label's own rect, so an
-; overrun or a wrong first-baseline offset is measurable against the plate edge
-; rather than against a guess.
-;
-; The corner pane is what makes the matrix a matrix: with only one row a
-; too-small pitch is indistinguishable from a too-small font, and with only one
-; column a wrapper that ignored the box entirely still produces four plausible
-; blocks of text.
-;
-; This is the only golden anywhere that renders shaped, wrapped text. The
-; Label3D fixtures are deliberately out of the set, the button golden sets one
-; unwrapped word per box, and every remaining 2D scene is untyped geometry — so
-; a line-breaking rule that fell back to "never break" (one long line running
-; out of every plate) or to breaking mid-word would move nothing else at all.
-;
-; Measured against Godot 4.6.3 at `--mode 2d` — same break points, same line
-; count, same pitch, and each line's right edge within 2 px of the engine's:
-;
-;   pane           lines  first line top  pitch  line right edges
-;   320 / size 20    4        y 55          31   347, 341, 369, 139
-;   560 / size 20    2        y 55          31   944, 843
-;   320 / size 28    5        y 344          42   353, 374, 297, 348, 259
-;   560 / size 28    3        y 344          42   950, 937, 686
-;
-; Per-line ink is within about 3% of Godot's throughout. The glyphs themselves
-; are drawn from an MSDF atlas rather than by the engine's rasteriser, so the
-; edge pixels of every stem differ; that is what the whole-frame delta is, and
-; it is why this scene's guard is the line box rather than the coverage.
+; One variable: Label's line box, where autowrap breaks and how far apart the lines sit. One
+; sentence in `autowrap_mode = 3` fills a 2x2 matrix of box width (320 / 560) and font size
+; (20 / 28). Across a row only the break points may move. Down a column the break points and
+; the baseline pitch move together.
 
 [gd_scene format=3]
 
+; Measured against Godot 4.6.3 at `--mode 2d`: same break points, line count and pitch, each right
+; edge within 2 px. Per-line ink is within about 3%. The stems' edge pixels differ because the
+; glyphs come from an MSDF atlas, so this scene guards the line box rather than the coverage.
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; The only golden with shaped, wrapped text: Label3D fixtures are out of the set, the button
+; golden sets one unwrapped word per box, and other 2D scenes are untyped geometry. A breaker
+; that never breaks, or breaks mid-word, moves nothing else.
 [node name="Backdrop" type="ColorRect" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.08, 0.09, 0.12, 1)
 
+; With one row a too-small pitch looks like a too-small font, and with one column a wrapper that
+; ignores the box still draws four plausible blocks. Each grey plate is exactly its Label's rect,
+; so an overrun or a wrong first baseline reads against the plate edge.
 [node name="NarrowSmallPlate" type="ColorRect" parent="."]
 anchors_preset = 0
 offset_left = 64.0
@@ -81,6 +57,7 @@ offset_right = 976.0
 offset_bottom = 616.0
 color = Color(0.18, 0.2, 0.26, 1)
 
+; Godot: 4 lines, first line top y 55, pitch 31, line right edges 347, 341, 369, 139.
 [node name="NarrowSmall" type="Label" parent="."]
 anchors_preset = 0
 offset_left = 64.0
@@ -91,6 +68,7 @@ text = "Wrapping happens at the box edge, and each following line sits exactly o
 autowrap_mode = 3
 theme_override_font_sizes/font_size = 20
 
+; Godot: 2 lines, first line top y 55, pitch 31, line right edges 944, 843.
 [node name="WideSmall" type="Label" parent="."]
 anchors_preset = 0
 offset_left = 416.0
@@ -101,6 +79,7 @@ text = "Wrapping happens at the box edge, and each following line sits exactly o
 autowrap_mode = 3
 theme_override_font_sizes/font_size = 20
 
+; Godot: 5 lines, first line top y 344, pitch 42, line right edges 353, 374, 297, 348, 259.
 [node name="NarrowLarge" type="Label" parent="."]
 anchors_preset = 0
 offset_left = 64.0
@@ -111,6 +90,7 @@ text = "Wrapping happens at the box edge, and each following line sits exactly o
 autowrap_mode = 3
 theme_override_font_sizes/font_size = 28
 
+; Godot: 3 lines, first line top y 344, pitch 42, line right edges 950, 937, 686.
 [node name="WideLarge" type="Label" parent="."]
 anchors_preset = 0
 offset_left = 416.0

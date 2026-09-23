@@ -1,26 +1,9 @@
 [gd_scene load_steps=4 format=3 uid="uid://unitdecalcullmask"]
 
-; Two identical floors under two identical decals. The ONE variable is the LEFT floor's
-; `layers = 2` against a `cull_mask = 1048573` (0xFFFFD — every render layer but layer 2)
-; on both decals: Godot draws a decal on an instance only where
-; `decal.cull_mask & instance.layers` is non-zero, so the left checkerboard must vanish
-; entirely while the right one — same decal, same box, same texture, default `layers` —
-; is unchanged. Everything else is held equal: same mesh, same material, same box size,
-; same albedo_mix, mirrored transforms.
-;
-; No other golden can witness this. unit-decal.tscn is the only other scene pairing a
-; decal with a receiver and it uses cull_mask = 1048575, which excludes nothing, so a
-; renderer that ignores cull_mask altogether renders it identically. The corpus scenes
-; that DO mask (Truck Town's vehicles, the decals demo) are not visual-gated.
-;
-; Failure modes: cull_mask ignored → both floors carry the checkerboard, the left one
-; wrongly. The mask inverted → the right floor loses its decal and the left keeps it.
-; The layer test written as `===` rather than a bitwise AND → the right floor (layers
-; unset, i.e. 1) fails against 1048573 and loses its decal too.
-;
-; The caption Label3Ds sit ABOVE y = 2.5, clear of both projection boxes. Inside one they
-; are receivers like any other mesh and the checkerboard lands on the text — correct, but
-; it buries the thing this scene exists to show.
+; One variable: the left floor's `layers = 2` against `cull_mask = 1048573` (0xFFFFD, every
+; render layer but 2) on both decals. Godot draws a decal only where `cull_mask & layers` is
+; non-zero, so the left checkerboard vanishes and the right one stays. unit-decal.tscn uses
+; `cull_mask = 1048575`, which excludes nothing, so it renders the same with the mask ignored.
 
 [ext_resource type="Texture2D" path="res://textures/checkerboard.svg" id="1_albedo"]
 
@@ -39,6 +22,9 @@ fov = 70.0
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 0)
 
+; Both floors and both decals match in mesh, material, box size and `albedo_mix`, with mirrored
+; transforms. The corpus scenes that mask (Truck Town's vehicles, the decals demo) are not
+; visual-gated.
 [node name="MaskedFloor" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
 layers = 2
@@ -50,6 +36,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
 mesh = SubResource("PlaneMesh_floor")
 surface_material_override/0 = SubResource("Material_floor")
 
+; Failure modes: mask ignored, both floors carry the checkerboard. Mask inverted, only the left
+; one does. The test written as `===` rather than a bitwise AND, the right floor (layers unset,
+; that is 1) fails against 1048573 and loses its decal too.
 [node name="Decal_OverMasked" type="Decal" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1, 0)
 texture_albedo = ExtResource("1_albedo")
@@ -64,6 +53,8 @@ size = Vector3(3, 3, 3)
 albedo_mix = 1.0
 cull_mask = 1048573
 
+; The captions sit above y = 2.5, clear of both projection boxes. Inside one they receive the
+; checkerboard like any other mesh, which buries what this scene shows.
 [node name="Title" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.3, 0)
 text = "Decal cull_mask vs layers"

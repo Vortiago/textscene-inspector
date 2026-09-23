@@ -1,19 +1,12 @@
 [gd_scene load_steps=3 format=3 uid="uid://unitsprite2dgradtex"]
 
-; ONE VARIABLE: a Sprite2D whose `texture` is an INLINE GradientTexture2D
-; sub-resource rather than an image file.
-;
-; Every other Sprite2D scene points `texture` at an ExtResource image (or, in
-; `unit-sprite2d-canvastexture`, at a CanvasTexture that WRAPS one), so all of
-; them resolve through the path branch. A regression that loses the inline
-; procedural branch leaves each of those pixel-identical and is invisible in
-; them; here the sprite disappears entirely and a magenta missing-resource
-; placeholder takes its place.
-;
-; Radial fill, opaque centre to fully transparent edge, so the quad's alpha
-; ramp is part of what the frame proves — a resolved-but-wrongly-oriented or
-; wrongly-decoded gradient does not read as a clean circle.
+; One variable: a Sprite2D whose `texture` is an inline GradientTexture2D sub-resource. Every
+; other Sprite2D scene resolves an ExtResource image (or, in `unit-sprite2d-canvastexture`, a
+; CanvasTexture that wraps one) through the path branch. Losing the inline branch leaves them
+; pixel-identical, and here the sprite becomes a magenta missing-resource placeholder.
 
+; Radial fill, opaque centre to transparent edge, so the frame proves the alpha ramp: a gradient
+; resolved but oriented or decoded wrongly does not read as a clean circle.
 [sub_resource type="Gradient" id="Gradient_disc"]
 offsets = PackedFloat32Array(0, 1)
 colors = PackedColorArray(0.1, 0.6, 0.9, 1, 0.1, 0.6, 0.9, 0)

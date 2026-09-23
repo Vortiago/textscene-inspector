@@ -1,41 +1,13 @@
-; ScrollContainer's clip rect and the scrollbars it draws for it.
-;
-; The one variable: what a ScrollContainer does to content that does not fit.
-; The left container is 600x500 around a 900x900 child, so every band and block
-; inside it is authored in one coordinate system and cut by exactly one
-; boundary — the container's own rect. Three of the blocks STRADDLE that
-; boundary rather than sitting wholly on one side of it (`StraddleRight` at the
-; vertical edge, `StraddleBottom` at the horizontal one, `Outside` beyond both),
-; which is what separates a real clip from a container that simply draws
-; nothing past its child's visible corner: a missing clip leaves all three
-; whole and paints them over the backdrop, and an over-eager one drops the
-; straddlers entirely instead of halving them.
-;
-; The two bands run the full 900 in each axis so the cut is a long straight
-; edge rather than a corner — a clip plane that is off by a pixel, or applied
-; in the wrong axis, shows as a visibly displaced edge over that length.
-;
-; The right container is the same node type with a child SMALLER than its box,
-; and is here for the bars: overflow is what decides whether a bar is drawn at
-; all, so with no overflow it must show none, while the left one shows both,
-; each dodging the other's reserved strip. Nothing else in the goldens draws a
-; themed ScrollBar track or grabber, and nothing else clips at all — a
-; ScrollContainer that stopped clipping, or one that drew bars unconditionally,
-; would leave every other baseline untouched.
-;
-; Measured against Godot 4.6.3 at `--mode 2d`: the clip is pixel-exact. Nothing
-; differs by more than a rounding step anywhere in the clipped content, in the
-; frame right of the clip, in the frame below it, or in the fitting container —
-; 711,360 pixels, zero disagreements. The bars land in the same 8 px strips and
-; carry the same two colours where they cross the container's own background
-; (track rgb(36, 38, 44), grabber rgb(124, 125, 128)). What differs is the order
-; they compose in where a bar crosses CONTENT: Godot draws its bars last, so its
-; grabber over the magenta block reads rgb(164, 133, 157) along y=300,
-; x=712..719, while ours leaves the block's own rgb(217, 89, 191) there. That is
-; 3,200 px and it is the whole of the disagreement; the baseline below is OURS.
+; One variable: what a ScrollContainer does to content that does not fit. The left container is
+; 600x500 around a 900x900 child, so every block inside it is cut by one boundary, the
+; container's rect. Nothing else in the goldens clips, or draws a themed ScrollBar track or
+; grabber, so a container that stopped clipping or drew bars unconditionally shows only here.
 
 [gd_scene format=3]
 
+; Measured against Godot 4.6.3 at `--mode 2d`: the clip is pixel-exact. The clipped content, the
+; frame right of and below the clip and the fitting container agree within a rounding step:
+; 711,360 pixels, zero disagreements.
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -63,6 +35,10 @@ offset_right = 1096.0
 offset_bottom = 300.0
 color = Color(0.2, 0.22, 0.28, 1)
 
+; Both bars land in the same 8 px strips as Godot's, in the same colours over the container's
+; background (track rgb(36, 38, 44), grabber rgb(124, 125, 128)). Where a bar crosses content,
+; Godot draws its bars last: its grabber over the magenta block reads rgb(164, 133, 157) along
+; y=300, x=712..719, where the previewer keeps the block's rgb(217, 89, 191).
 [node name="Overflowing" type="ScrollContainer" parent="."]
 anchors_preset = 0
 offset_left = 120.0
@@ -70,10 +46,14 @@ offset_top = 60.0
 offset_right = 720.0
 offset_bottom = 560.0
 
+; That 3,200 px compose-order gap is the whole disagreement, and the baseline is the
+; previewer's.
 [node name="Canvas" type="Control" parent="Overflowing"]
 custom_minimum_size = Vector2(900, 900)
 layout_mode = 2
 
+; The two bands run the full 900 on each axis, so the cut is a long straight edge: a clip off by
+; a pixel, or applied on the wrong axis, shows as a displaced edge along that length.
 [node name="TopBand" type="ColorRect" parent="Overflowing/Canvas"]
 anchors_preset = 0
 offset_right = 900.0
@@ -94,6 +74,9 @@ offset_right = 280.0
 offset_bottom = 280.0
 color = Color(0.35, 0.75, 0.4, 1)
 
+; Three blocks straddle the boundary: this one at the vertical edge, StraddleBottom at the
+; horizontal one, Outside beyond both. A missing clip leaves all three whole over the backdrop,
+; and an over-eager one drops them instead of halving them.
 [node name="StraddleRight" type="ColorRect" parent="Overflowing/Canvas"]
 anchors_preset = 0
 offset_left = 520.0
@@ -118,6 +101,9 @@ offset_right = 860.0
 offset_bottom = 660.0
 color = Color(0.95, 0.95, 0.9, 1)
 
+; The same node type with a child smaller than its box, here for the bars: overflow decides
+; whether a bar draws, so this one shows none while the left shows both, each dodging the other's
+; reserved strip.
 [node name="Fitting" type="ScrollContainer" parent="."]
 anchors_preset = 0
 offset_left = 776.0

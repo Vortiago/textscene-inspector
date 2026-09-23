@@ -1,41 +1,7 @@
-; A STRETCHING SubViewportContainer whose sub-viewport is framed by a Camera2D.
-;
-; The one variable against unit-sub-viewport-container-stretch-2d-content.tscn:
-; a Camera2D inside the sub-viewport. Identical container geometry, identical
-; authored `size = Vector2i(200, 150)`, identical forced 300x200 rect, identical
-; Backdrop. The content sits at different world coordinates only because the
-; camera moved the view — that displacement IS the variable, not a second one.
-;
-; Godot renders a viewport's canvas through the Camera2D that claimed it
-; (`camera_2d.cpp`, NOTIFICATION_ENTER_TREE: `enabled &&
-; !viewport->get_camera_2d()`), and the view is `size / zoom` centred on the
-; camera. With the forced rect 300x200 and the camera at (500, 400) the view is
-; world x 350..650, y 300..500, so screen = world - (350, 300).
-;
-; Decoy is what makes the framing falsifiable. It sits at world x 20..140,
-; y 20..80 — wholly outside the camera's view, and wholly inside the whole-rect
-; view (x 0..300, y 0..200) the pass falls back to when no camera is current.
-; Band and Mark sit the other way round. So the surface shows EITHER Band+Mark
-; OR Decoy; no amount of scaling or offsetting turns one set into the other, and
-; a surface showing both in horizontal bands is a paint that covered only part
-; of its canvas.
-;
-; That distinction is invisible everywhere else. This is the only fixture in the
-; repo holding a Camera2D at all, so every other sub-viewport fixture pins the
-; whole-rect fallback and nothing else; camera2DView and orthoFrameForCamera2D
-; have unit tests, but those assert the view rect without ever rendering
-; through it. No golden covers it either: this fixture has no entry in
-; `scripts/visual/scenes.mjs`.
-;
-; Deliberately asymmetric BOTH ways, like the siblings, because the readback is
-; bottom-up while a canvas is top-down:
-;
-;   Band  rows   0..39, full width  — a vertical flip moves it to rows 160..199
-;   Mark  rows  80..109, cols 10..69 — a horizontal flip moves it to cols 230..289
-;
-; Band keeps the siblings' authored Color(0.5, 0.5, 0.5) so the linear-to-sRGB
-; encode stays pinned here too, and the bottom-right corner is left uncovered
-; for the viewport's clear colour.
+; One variable against unit-sub-viewport-container-stretch-2d-content.tscn: a Camera2D inside a
+; stretching sub-viewport. Container geometry, authored `size = Vector2i(200, 150)`, the forced
+; 300x200 rect and Backdrop are identical. The content sits elsewhere only because the camera
+; moved the view: that displacement is the variable.
 
 [gd_scene format=3]
 
@@ -50,6 +16,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
+; This is the only fixture with a Camera2D, so every other sub-viewport fixture pins the
+; whole-rect fallback. camera2DView and orthoFrameForCamera2D have unit tests that never render
+; through the view rect, and no golden covers it: this fixture has no entry in
+; `scripts/visual/scenes.mjs`.
 [node name="Booth" type="SubViewportContainer" parent="."]
 offset_left = 100.0
 offset_top = 80.0
@@ -61,17 +31,30 @@ stretch = true
 size = Vector2i(200, 150)
 render_target_update_mode = 4
 
+; Godot renders a viewport's canvas through the Camera2D that claimed it (`camera_2d.cpp`,
+; NOTIFICATION_ENTER_TREE: `enabled && !viewport->get_camera_2d()`), and the view is
+; `size / zoom` centred on the camera. With the forced rect 300x200 and the camera at (500, 400)
+; the view is world x 350..650, y 300..500, so screen = world - (350, 300).
 [node name="Camera" type="Camera2D" parent="Booth/SubViewport"]
 position = Vector2(500, 400)
 
+; Asymmetric both ways, like the siblings, because the readback is bottom-up and a canvas
+; top-down: Band covers rows 0..39 at full width, which a vertical flip moves to rows 160..199.
+; It keeps the siblings' Color(0.5, 0.5, 0.5), so the linear-to-sRGB encode stays pinned. The
+; bottom-right corner stays uncovered for the clear colour.
 [node name="Band" type="Polygon2D" parent="Booth/SubViewport"]
 color = Color(0.5, 0.5, 0.5, 1)
 polygon = PackedVector2Array(350, 300, 650, 300, 650, 340, 350, 340)
 
+; Rows 80..109, cols 10..69. A horizontal flip moves it to cols 230..289.
 [node name="Mark" type="Polygon2D" parent="Booth/SubViewport"]
 color = Color(1, 0.4, 0, 1)
 polygon = PackedVector2Array(360, 380, 420, 380, 420, 410, 360, 410)
 
+; World x 20..140, y 20..80: outside the camera's view and inside the whole-rect view
+; (x 0..300, y 0..200) the pass falls back to without a current camera. Band and Mark are the
+; other way round, so the surface shows Band and Mark or Decoy, never a scaled mix. Both in
+; horizontal bands is a paint that covered only part of its canvas.
 [node name="Decoy" type="Polygon2D" parent="Booth/SubViewport"]
 color = Color(1, 0, 0, 1)
 polygon = PackedVector2Array(20, 20, 140, 20, 140, 80, 20, 80)

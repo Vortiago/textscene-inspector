@@ -1,25 +1,7 @@
-; Direct light, isolated — the fixture that pins `LIGHT_INTENSITY_SCALE`.
-;
-; A white DirectionalLight3D at energy 1.0 points straight down at a Lambertian
-; plane, so N·L is exactly 1. Godot's directional diffuse is
-; `albedo · N·L · colour · energy` (energy is multiplied by PI in
-; `light_storage.cpp` and the shader's Lambert divides by PI again), so under
-; this light the surface renders EXACTLY ITS OWN ALBEDO.
-;
-; The small square sitting on the ground is that albedo, drawn unshaded. When
-; the direct-light scale is right the square is INVISIBLE — it and the lit
-; ground are the same colour. A visible square is a wrong scale, readable
-; without a reference image or a probe.
-;
-; Everything that could contribute besides the sun is switched off: ambient is
-; DISABLED, the background is a flat colour that also serves as an sRGB
-; round-trip check, and the tonemapper is LINEAR so nothing is measured through
-; a curve. The DirectionalLight3D and the WorldEnvironment each suppress one of
-; Godot's editor previews (ADR-0025), so no preview lighting leaks in either.
-;
-; `diffuse_mode = 1` (Lambert) is deliberate: Godot defaults to Burley, which
-; diverges from three's Lambert at grazing angles and would put a
-; view-dependent term into a measurement that is supposed to be a constant.
+; Direct light, isolated: the fixture that pins `LIGHT_INTENSITY_SCALE`. A white
+; DirectionalLight3D at energy 1.0 points straight down at a Lambertian plane, so N·L is 1.
+; Godot's diffuse is `albedo · N·L · colour · energy` (energy times PI in `light_storage.cpp`,
+; divided by PI again in the Lambert), so the surface renders exactly its own albedo.
 [gd_scene load_steps=6 format=3]
 
 [sub_resource type="Environment" id="Env_1"]
@@ -34,6 +16,8 @@ size = Vector2(8, 8)
 [sub_resource type="PlaneMesh" id="Patch_1"]
 size = Vector2(2.5, 2.5)
 
+; `diffuse_mode = 1` (Lambert): Godot's default Burley diverges from three's Lambert at grazing
+; angles and would add a view-dependent term to a constant measurement.
 [sub_resource type="StandardMaterial3D" id="Lit_1"]
 albedo_color = Color(0.5, 0.5, 0.5, 1)
 metallic = 0.0
@@ -46,6 +30,9 @@ shading_mode = 0
 
 [node name="LightTransportDirect" type="Node3D"]
 
+; Nothing but the sun contributes: ambient is disabled, the background is a flat colour that
+; doubles as an sRGB round-trip check, and the tonemapper is LINEAR, so no curve applies. The
+; sun and the WorldEnvironment each suppress one of Godot's editor previews (ADR-0025).
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Env_1")
 
@@ -58,6 +45,8 @@ transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 5, 0)
 mesh = SubResource("Ground_1")
 surface_material_override/0 = SubResource("Lit_1")
 
+; The albedo, drawn unshaded. When the direct-light scale is right the square is invisible
+; against the lit ground. A visible square is a wrong scale, readable without a reference image.
 [node name="UnshadedReference" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0)
 mesh = SubResource("Patch_1")

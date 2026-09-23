@@ -1,21 +1,7 @@
-; The ONE variable: `caret_draw_when_editable_disabled` on a read-only TextEdit.
-;
-; `NOTIFICATION_DRAW` clears `draw_caret` for an unfocused node
-; (`text_edit.cpp:926-927`), and a still frame is always unfocused — but a few
-; lines later, while `editable` is false, it OVERWRITES that from
-; `is_drawing_caret_when_editable_disabled()` (`:945-947`). That one
-; assignment is the only path that puts a caret in a frame with no focus, so
-; this is the only TextEdit or CodeEdit scene that draws one at all.
-;
-; Both nodes are `editable = false`, so both wear the `read_only` stylebox and
-; `font_readonly_color`, and they differ ONLY in the flag: a regression that
-; drew the caret unconditionally, or never, moves exactly one of the two. The
-; caret is a 1px bar (`caret_width`, `default_theme.cpp:481`) in
-; `caret_color` over line 0 column 0, which is where caret 0 rests and where
-; no `.tscn` property can move it.
-;
-; The text is one short line so the bar sits against a plain stylebox fill
-; rather than inside a glyph's own antialiasing.
+; One variable: `caret_draw_when_editable_disabled` on a read-only TextEdit. `NOTIFICATION_DRAW`
+; clears `draw_caret` for an unfocused node (`text_edit.cpp:926-927`), and a still frame is
+; unfocused, but while `editable` is false it overwrites that from
+; `is_drawing_caret_when_editable_disabled()` (`:945-947`), the only path to a caret without focus.
 
 [gd_scene format=3 uid="uid://unit_text_edit_caret_readonly"]
 
@@ -24,8 +10,14 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; The only TextEdit or CodeEdit scene with a caret. Both nodes are `editable = false`, wearing the
+; `read_only` stylebox and `font_readonly_color`, and differ only in the flag, so a caret drawn
+; always or never moves exactly one of them.
 [node name="Drawn" type="TextEdit" parent="."]
 layout_mode = 1
+; The caret is a 1px bar (`caret_width`, `default_theme.cpp:481`) in `caret_color` at line 0
+; column 0, where caret 0 rests and no `.tscn` property can move it. One short line of text keeps
+; the bar against the plain stylebox fill, clear of any glyph's antialiasing.
 offset_left = 24.0
 offset_top = 24.0
 offset_right = 224.0

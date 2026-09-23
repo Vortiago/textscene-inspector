@@ -1,39 +1,7 @@
-; VBoxContainer's vertical solve, drawn as flat bands.
-;
-; The one variable: where each row's top edge lands. Two columns hold the SAME
-; four children with the SAME `custom_minimum_size` heights (60, 40, 40, 90) and
-; the SAME `theme_override_constants/separation = 24`, so the only thing that
-; can move a band is the solve itself — there is no text, no stylebox and no
-; texture in this scene to blame a wrong edge on.
-;
-; Left column pins the EXPAND path. Its four minimums plus three separations
-; come to 302 of the container's 542, and the two middle rows carry
-; `size_flags_vertical = 3` at stretch ratios 1 and 2. `_resort` does NOT split
-; the 240 leftover and add it to each minimum — it recomputes each stretcher's
-; WHOLE size as `stretch_avail * ratio / total` over a `stretch_avail` that
-; already carries their minimums (80 + 240 = 320), then truncates. Godot 4.6.3,
-; band edges read off its own render at x=300: Red 60..119, Blue 144..249 (106),
-; Green 274..486 (213), Amber 511..600 (90), with one pixel of the 320 left
-; unassigned at the bottom. Reconstructing it as "minimum plus a share of the
-; leftover" gives 120 and 200 instead, which is 14 px of drift by the third band.
-;
-; Right column pins the PITCH with nothing stretching: identical minimums, no
-; expand flags, `alignment = 1`. The stack keeps its natural 302 and Godot
-; centres it, so the first band starts 120 px down (Red 180..239, Blue 264..303,
-; Green 328..367, Amber 392..481). That case is the one a broken running-offset
-; shows up in most plainly, and it is dead in the left column — `alignment` only
-; applies when nothing stretched.
-;
-; The truncation carries a fractional-error accumulator, and the engine runs it
-; in float32 while we run it in float64: at 320/3 the two fractions sum to just
-; under 1 in float and just over it in double, so our Green is 214 rather than
-; 213 and Amber follows one pixel down. The baseline below is OURS and carries
-; that pixel; every other edge in the frame matches Godot exactly.
-;
-; Every other golden in the set draws its 2D content at authored coordinates.
-; None solves a container at all, so a row pitch that dropped `separation`, or
-; shared leftover space by count instead of by stretch ratio, would move no
-; baseline anywhere else.
+; One variable: where each row's top edge lands in VBoxContainer's vertical solve. Both columns
+; hold four children with the same minimum heights (60, 40, 40, 90) and
+; `theme_override_constants/separation = 24`, and no text, stylebox or texture, so only the solve
+; moves a band. No other golden solves a container, so this alone catches a lost `separation`.
 
 [gd_scene format=3]
 
@@ -64,6 +32,10 @@ offset_right = 996.0
 offset_bottom = 602.0
 color = Color(0.22, 0.23, 0.28, 1)
 
+; The expand path: minimums plus separations come to 302 of 542, and the middle rows carry
+; `size_flags_vertical = 3` at stretch ratios 1 and 2. `_resort` recomputes each stretcher's whole
+; size as `stretch_avail * ratio / total` over a `stretch_avail` that includes their minimums
+; (80 + 240 = 320), then truncates. "Minimum plus a share" gives 120 and 200, 14 px off by band 3.
 [node name="ExpandColumn" type="VBoxContainer" parent="."]
 anchors_preset = 0
 offset_left = 96.0
@@ -72,6 +44,9 @@ offset_right = 496.0
 offset_bottom = 602.0
 theme_override_constants/separation = 24
 
+; Godot 4.6.3, band edges at x=300: Red 60..119, Blue 144..249 (106), Green 274..486 (213), Amber
+; 511..600 (90), one pixel of the 320 unassigned at the bottom. Sharing the leftover by count
+; instead of by stretch ratio moves no other baseline.
 [node name="Red" type="ColorRect" parent="ExpandColumn"]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
@@ -83,6 +58,10 @@ layout_mode = 2
 size_flags_vertical = 3
 color = Color(0.25, 0.6, 0.85, 1)
 
+; The truncation carries a fractional-error accumulator that Godot runs in float32 and the
+; previewer in float64: at 320/3 the fractions sum to just under 1 in float, just over in double.
+; So this Green is 214, not 213, and Amber follows a pixel down. The baseline is the previewer's
+; and carries that pixel. Every other edge matches Godot.
 [node name="Green" type="ColorRect" parent="ExpandColumn"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
@@ -95,6 +74,10 @@ custom_minimum_size = Vector2(0, 90)
 layout_mode = 2
 color = Color(0.9, 0.7, 0.2, 1)
 
+; The pitch with nothing stretching: the same minimums, no expand flags, `alignment = 1`. The
+; stack keeps its natural 302 and Godot centres it, 120 px down: Red 180..239, Blue 264..303,
+; Green 328..367, Amber 392..481. A broken running offset shows most plainly here, and
+; `alignment` is dead in the left column, since it applies only when nothing stretched.
 [node name="AlignColumn" type="VBoxContainer" parent="."]
 anchors_preset = 0
 offset_left = 596.0

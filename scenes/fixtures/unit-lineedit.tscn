@@ -1,9 +1,7 @@
-; LineEdit draw states: which string is painted (placeholder vs text vs secret
-; echo) and which stylebox carries it (normal / read_only / none, when flat).
-; Every other Control fixture paints text at full opacity inside a box that
-; always has a background, so a placeholder drawn at full font colour, a
-; read-only field that keeps the editable fill, or a secret field leaking its
-; plaintext is invisible in all of them.
+; LineEdit draw states: which string paints (placeholder, text or secret echo) and which stylebox
+; carries it (normal, read_only, or none when flat). Every other Control fixture paints text at
+; full opacity in a box with a background, so a full-colour placeholder, a read-only field with
+; the editable fill, or a secret field leaking plaintext is invisible there.
 
 [gd_scene format=3 uid="uid://unitlineedit"]
 

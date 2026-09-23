@@ -2,12 +2,10 @@
 
 [ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_icon"]
 
-; The deprecated `items = [text, icon, disabled, …]` compat array
-; (`ItemList::_set`, item_list.cpp:2242-2259) in place of `item_count`/
-; `item_N/*` — the ONE variable this fixture pins away from
-; unit-item-list.tscn, which authors the same three rows through the modern
-; family. A regression that stops reading this legacy array is invisible in
-; every other ItemList fixture, none of which authors it.
+; The deprecated `items = [text, icon, disabled, …]` array (`ItemList::_set`,
+; item_list.cpp:2242-2259) in place of `item_count`/`item_N/*` is the one variable against
+; unit-item-list.tscn, which authors the same three rows the modern way. No other ItemList
+; fixture authors it.
 
 [node name="Root" type="Control"]
 anchors_preset = 15

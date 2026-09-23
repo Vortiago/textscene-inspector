@@ -1,15 +1,12 @@
-; GraphEdit with its three zoom buttons hidden. `show_zoom_buttons` hides
-; zoom-out, zoom-reset and zoom-in together (graph_edit.cpp:2830-2836), which
-; narrows the toolbar panel by three button widths and shifts every widget
-; after them. A regression that hides the wrong button, or that keeps the
-; row's width, is invisible wherever all the buttons are shown.
-; Every fixture in this family shares one GraphEdit rect and one GraphNode,
-; and `scroll_offset` is deliberately ABSENT from all but
-; unit-graph-edit-scroll-offset-clamped.tscn, which exists to move it:
-; GraphEdit's own `set_scroll_offset` clamps against min/max bounds no laid-out
-; child has widened while a scene's properties are applied (graph_edit.cpp:407),
-; so an authored offset moves the grid, the nodes AND the minimap camera at once
-; and would mask the one variable each file exists to move.
+; GraphEdit with its three zoom buttons hidden. `show_zoom_buttons` hides zoom-out, zoom-reset
+; and zoom-in together (graph_edit.cpp:2830-2836), narrowing the toolbar by three button widths
+; and shifting every later widget. Hiding the wrong button, or keeping the row width, is
+; invisible wherever all the buttons show.
+
+; Every fixture in this family shares one GraphEdit rect and one GraphNode, and only
+; unit-graph-edit-scroll-offset-clamped.tscn authors `scroll_offset`: `set_scroll_offset` clamps
+; against bounds no child has widened while properties apply (graph_edit.cpp:407), so an authored
+; offset moves the grid, the nodes and the minimap camera together and masks the one variable.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitgraphedzoombtn"]
 

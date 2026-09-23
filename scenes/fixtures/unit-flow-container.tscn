@@ -1,21 +1,18 @@
 [gd_scene format=3]
 
-; The three fixed-size ColorRect children are the ONE variable: the container
-; previously carried zero children, so its own resort loop never ran and
-; alignment/last_wrap_alignment/vertical/reverse_fill were parsed and linted
-; but never exercised by a render. A and B are each 20px on the main
-; (vertical) axis against a 32px-tall content box, so both wrap into their
-; own column. C is shorter (14px) so its trailing column does NOT read as
-; "filled" (the wrap check re-adds C's own height: 14+14=28 <= 32), which is
-; what lets last_wrap_alignment move it at all — a regression in the wrap
-; threshold, the per-column alignment, last_wrap_alignment, or reverse_fill
-; is invisible against an empty container or an always-filled trailing line.
+; The three fixed-size ColorRects are the one variable: without children the resort loop never
+; runs, and alignment, last_wrap_alignment, vertical and reverse_fill go unrendered. A and B are
+; each 20px on the vertical main axis in a 32px content box, so each wraps into its own column.
+; C (14px) leaves its trailing column not "filled" (the wrap check re-adds C: 14+14=28 <= 32).
 
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; C's short column is what lets last_wrap_alignment move it. A regression in the wrap threshold,
+; the per-column alignment, last_wrap_alignment or reverse_fill is invisible against an empty
+; container or an always-filled trailing line.
 [node name="MyFlowContainer" type="FlowContainer" parent="."]
 layout_mode = 1
 offset_left = 8.0

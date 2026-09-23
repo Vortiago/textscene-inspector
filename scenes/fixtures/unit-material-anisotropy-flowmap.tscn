@@ -1,24 +1,13 @@
 [gd_scene load_steps=5 format=3 uid="uid://test_anisotropy_flowmap"]
 
-; Moves ONE variable: `anisotropy_flowmap` present vs absent. Both spheres carry the
-; identical anisotropic material (same albedo/metallic/roughness/anisotropy) under the same
-; light; only the right-hand one has the flowmap wired.
-;
-; The flowmap (textures/anisotropy-flowmap-split.png, 64x64 RGBA) is constant R=255 G=128
-; (a +X derivative, neutral Y) with BLUE fixed at 0, and ALPHA — where Godot keeps
-; per-pixel strength — in four alternating quarter-width bands of 0 and 255, so whatever
-; part of the sphere faces the camera shows both regimes. The flowmapped sphere must
-; therefore show the anisotropic streak banded on and off around it, while the
-; scalar-only sphere is streaked all the way round.
-;
-; Why a regression here is invisible in every other scene: no other fixture sets
-; `anisotropy_flowmap` at all — they set the scalar only, which is the left-hand sphere
-; and nothing more. To reach three.js the flowmap must survive a channel repack (Godot
-; strength = ALPHA, three.js reads BLUE) fed by a canvas readback of the decoded PNG, and
-; both failure modes land only here: lose the readback and the banded sphere becomes a
-; copy of the uniform one; drop the repack and the blue-0 texture zeroes the strength,
-; flattening its highlight everywhere.
+; One variable: `anisotropy_flowmap` present or absent. Both spheres carry the same anisotropic
+; material under the same light, and only the right one has the flowmap. No other fixture sets
+; `anisotropy_flowmap`: they set the scalar only, which is the left sphere.
 
+; textures/anisotropy-flowmap-split.png (64x64 RGBA) is constant R=255 G=128 (a +X derivative,
+; neutral Y) with blue 0, and alpha, Godot's per-pixel strength, in four quarter-width bands of 0
+; and 255. Every camera-facing part shows both regimes, so the flowmapped sphere shows the streak
+; banded on and off while the scalar-only sphere is streaked all round.
 [ext_resource type="Texture2D" path="res://textures/anisotropy-flowmap-split.png" id="1_flowmap"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_1"]
@@ -44,6 +33,9 @@ anisotropy = 1.0
 
 [node name="Scene" type="Node3D"]
 
+; three.js needs a channel repack (Godot strength = alpha, three.js reads blue) fed by a canvas
+; readback of the decoded PNG. A lost readback makes this sphere a copy of the uniform one. A
+; dropped repack zeroes the strength from the blue-0 texture and flattens its highlight.
 [node name="SphereWithFlowmap" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
 mesh = SubResource("SphereMesh_1")

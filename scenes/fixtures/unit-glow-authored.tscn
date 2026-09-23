@@ -1,14 +1,9 @@
 [gd_scene load_steps=5 format=3 uid="uid://unitglowauthored"]
 
-; An authored WorldEnvironment driving glow with NON-DEFAULT values, which the
-; preview environment can never exercise: it only ever flips glow_enabled and
-; leaves every other knob alone.
-;
-; The weights move the halo off Godot's default levels 2-4 onto the two coarsest
-; ones, so the emissive spheres wear a wide soft glow rather than a tight rim —
-; a level-weighting bug shows up here as a halo of the wrong SIZE, which a
-; default-weighted scene cannot reveal. ADDITIVE blend keeps the halo readable
-; against the dark background instead of screen-blending toward it.
+; An authored WorldEnvironment with non-default glow values. The preview environment only flips
+; glow_enabled. The weights move the halo from Godot's default levels 2-4 to the two coarsest,
+; so a level-weighting bug shows as a halo of the wrong size, which a default-weighted scene
+; cannot show. ADDITIVE blend keeps the halo readable against the dark background.
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_dark"]
 sky_top_color = Color(0.02, 0.02, 0.04, 1)

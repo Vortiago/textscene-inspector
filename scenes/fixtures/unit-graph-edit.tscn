@@ -5,27 +5,10 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-; Exercises every ADD_PROPERTY GraphEdit binds: scroll/grid/snapping, the port
-; type-name dictionary, connection-line styling, the four zoom levels, the
-; minimap, and all six toolbar-menu toggles. `type_names` and `connections` are
-; written on ONE line each on purpose: the strict parser skips multi-line values,
-; so the wrapped form Godot saves would never reach their validators.
-;
-; Also exercises GraphEdit's OWN child placement — the one variable a
-; GraphNode-only fixture (unit-graph-node.tscn) cannot move: Source and Sink
-; sit at DIFFERENT position_offset values (not `offset_left`/`offset_top`,
-; which only size a GraphElement child once GraphEdit positions it), so a
-; regression that positions every child at the same spot, or that reads
-; offset_left/top as position again, is invisible in any single-node fixture
-; and only shows up once two children must land apart. Frame is a THIRD
-; sibling — never a parent of Source/Sink, per GraphFrame's own `_resort`,
-; which lays scene children into its OWN content rect and would collapse
-; position_offset entirely if Source/Sink were nested under it — whose
-; authored rect visually encloses both without GraphEdit's runtime-only
-; autoshrink ever running. Source/Sink each carry one `slot/0` (a right port
-; and a left port) over one child Label, so a regression in the port-icon
-; placement math (row y-center, `port_h_offset`) is visible here even though
-; unit-graph-node.tscn's own two slots already cover the slot geometry itself.
+; Exercises every ADD_PROPERTY GraphEdit binds: scroll, grid and snapping, the port type-name
+; dictionary, connection-line styling, the four zoom levels, the minimap and all six toolbar
+; toggles. `type_names` and `connections` sit on one line each: the strict parser skips
+; multi-line values, so Godot's wrapped form would never reach their validators.
 
 [node name="MyGraphEdit" type="GraphEdit" parent="."]
 layout_mode = 1
@@ -59,12 +42,19 @@ show_grid_buttons = false
 show_minimap_button = false
 show_arrange_button = false
 
+; A third sibling, never the parent of Source and Sink: GraphFrame's `_resort` lays scene
+; children into its own content rect and would collapse their `position_offset`. Its authored
+; rect encloses both without GraphEdit's runtime-only autoshrink running.
 [node name="Frame" type="GraphFrame" parent="MyGraphEdit"]
 offset_right = 360.0
 offset_bottom = 140.0
 position_offset = Vector2(20, 20)
 title = "Group"
 
+; GraphEdit's own child placement, which the GraphNode-only unit-graph-node.tscn cannot move:
+; Source and Sink sit at different `position_offset` values (`offset_left`/`offset_top` only size
+; a GraphElement child once GraphEdit places it), so placing every child at one spot, or reading
+; `offset_left`/`offset_top` as position, shows only once two children must land apart.
 [node name="Source" type="GraphNode" parent="MyGraphEdit"]
 offset_right = 120.0
 offset_bottom = 64.0
@@ -77,6 +67,9 @@ slot/0/right_color = Color(0.4, 0.7, 1, 1)
 layout_mode = 2
 text = "Value"
 
+; Source and Sink each carry one `slot/0` (a right port and a left port) over one Label, so the
+; port-icon placement (row y-centre, `port_h_offset`) shows here. unit-graph-node.tscn covers the
+; slot geometry itself.
 [node name="Sink" type="GraphNode" parent="MyGraphEdit"]
 offset_right = 120.0
 offset_bottom = 64.0

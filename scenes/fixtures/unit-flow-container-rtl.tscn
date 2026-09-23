@@ -1,11 +1,7 @@
-; The ONE variable: `layout_direction = 3` on an HFlowContainer. Godot mirrors
-; every wrapped row against the container's own width
-; (flow_container.cpp:248-250), leaving the wrap points and the row order
-; alone. The three children have different widths and the LTR container above
-; holds the unmirrored rows beside it, so a mirror that also reordered — or a
-; reorder that did not mirror — reads differently from the correct answer.
-; unit-h-flow-container.tscn moves alignment and reverse_fill at direction
-; LTR, so a regression in this mirror is invisible there.
+; One variable: `layout_direction = 3` on an HFlowContainer. Godot mirrors every wrapped row
+; against the container width (flow_container.cpp:248-250) and keeps wrap points and row order.
+; The children differ in width, so a mirror that also reorders, or a reorder without the
+; mirror, reads wrong against the LTR container beside it.
 
 [gd_scene format=3]
 
@@ -20,6 +16,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
+; unit-h-flow-container.tscn moves alignment and reverse_fill at direction LTR, so a regression
+; in this mirror is invisible there.
 [node name="Ltr" type="HFlowContainer" parent="."]
 layout_mode = 1
 offset_left = 40.0

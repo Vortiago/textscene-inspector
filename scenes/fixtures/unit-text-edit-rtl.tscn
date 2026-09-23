@@ -1,11 +1,7 @@
-; The ONE variable: `layout_direction = 3` (RTL) on a TextEdit. Each drawn row is
-; placed by its OWN shaped width rather than by one band value
-; (text_edit.cpp:1490-1494), so the three lines below — deliberately unequal in
-; length — must fan out from the trailing edge instead of stacking flush at the
-; leading one; and the current-line highlight quad moves to the far side while
-; keeping its band width (:1404-1409). Both TextEdits span the full viewport
-; width so their OWN rect mirror (control.cpp:1785) is the identity. No other
-; fixture pairs a TextEdit with a direction.
+; One variable: `layout_direction = 3` on a TextEdit. Each row is placed by its own shaped width
+; (text_edit.cpp:1490-1494), so the three unequal lines fan out from the trailing edge, and the
+; current-line highlight moves to the far side at its band width (:1404-1409). Full-width
+; TextEdits make the rect mirror (control.cpp:1785) the identity. No other fixture pairs the two.
 
 [gd_scene format=3]
 

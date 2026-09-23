@@ -1,7 +1,7 @@
-; Same as unit-stage-ambient-ibl.tscn but with the WorldEnvironment INSTANCED
-; (unit-instanced-environment-child.tscn) instead of authored directly. Must
-; render identically to the direct fixture — an instanced WorldEnvironment still
-; drives tonemap + ambient and yields the editor preview environment.
+; Same as unit-stage-ambient-ibl.tscn with the WorldEnvironment instanced
+; (unit-instanced-environment-child.tscn) instead of authored directly. It must render the same:
+; an instanced WorldEnvironment still drives tonemap and ambient and yields the editor preview
+; environment.
 [gd_scene load_steps=7 format=3 uid="uid://unitinstenv"]
 
 [ext_resource type="PackedScene" path="res://unit-instanced-environment-child.tscn" id="1_env"]

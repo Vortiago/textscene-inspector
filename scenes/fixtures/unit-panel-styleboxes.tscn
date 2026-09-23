@@ -1,44 +1,7 @@
-; StyleBoxFlat's raster, on four Panels of identical size over a light backdrop.
-;
-; The one variable: the shape a StyleBoxFlat draws. Same node type, same
-; 480x260 rect, same grid pitch, same fill colour on the three that draw one —
-; only the box's own geometry fields change, so a wrong ring or a wrong corner
-; can only be the geometry builder.
-;
-; Uniform is the control: one radius on all four corners, no border, so it
-; reads as a plain rounded rectangle and pins the fill arc alone.
-;
-; Asymmetric and Blended are a PAIR that differs in exactly one field,
-; `border_blend`. Both carry per-corner radii (0 / 64 / 0 / 64, so a builder
-; that applied one radius everywhere is obvious) and a uniform 16 px border in
-; a colour far from the fill. With the blend off, the border is a flat ring and
-; the fill starts at a hard edge; with it on, Godot interpolates the ring's
-; inner vertices toward the fill and the same 16 px reads as a gradient. That
-; second image is the ONLY place the blend appears anywhere in the goldens: it
-; changes no silhouette at all, so a raster that ignored the flag would leave
-; every outline in every other scene exactly where it is.
-;
-; Edges pins the two remaining fields together — four DIFFERENT border widths
-; (6 / 20 / 40 / 12) and `draw_center = false`. The widths are all unequal so a
-; ring built from one side's width mis-sizes three edges, and with no centre
-; drawn the pale backdrop shows through the middle, which is what proves the
-; ring is a ring rather than a filled box wearing a border colour.
-;
-; The backdrop is deliberately much lighter than every box: the corner arcs and
-; the hollow centre are only measurable against something they contrast with,
-; and the goldens' other 2D scenes all sit on dark ground.
-;
-; Measured against Godot 4.6.3 at `--mode 2d`: Uniform, Asymmetric and Edges
-; match to within corner-arc antialiasing (at most 0.3% of a pane's area, and
-; 95-100% of that within one radius of a corner), and the ring itself is
-; pixel-exact wherever it is not blended — a transect across
-; Asymmetric's left edge at y=178 reads rgb(242, 191, 51) for all 16 border
-; pixels then rgb(38, 76, 128) on both sides. Blended is where the two part
-; company: Godot ramps the ring toward the fill in sRGB, so its midpoint at
-; x=616, y=470 is rgb(137, 132, 90), while ours interpolates the same two
-; endpoints through the linear pipeline and reads rgb(175, 145, 101) there. Both
-; ends of the ramp agree; only its shape differs. The baseline below is OURS, so
-; that gap lives inside Blended — 15% of that pane — and nowhere else in the frame.
+; One variable: the shape StyleBoxFlat draws. Four Panels share node type, 480x260 rect, grid
+; pitch and fill colour, and only the box's geometry fields change, so a wrong ring or corner
+; can only be the geometry builder. The backdrop is much lighter than every box, so the corner
+; arcs and the hollow centre contrast with it. The other 2D goldens sit on dark ground.
 
 [gd_scene load_steps=5 format=3]
 
@@ -61,6 +24,10 @@ corner_radius_top_right = 64
 corner_radius_bottom_right = 0
 corner_radius_bottom_left = 64
 
+; Measured: Godot ramps the blended ring toward the fill in sRGB, so its midpoint at x=616, y=470
+; is rgb(137, 132, 90). The previewer interpolates the same endpoints through the linear pipeline
+; and reads rgb(175, 145, 101). Both ends agree and only the shape differs. The baseline is the
+; previewer's, so that gap lives inside Blended (15% of that pane) and nowhere else.
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_blended"]
 bg_color = Color(0.15, 0.3, 0.5, 1)
 border_width_left = 16
@@ -87,6 +54,9 @@ corner_radius_top_right = 28
 corner_radius_bottom_right = 28
 corner_radius_bottom_left = 28
 
+; Measured against Godot 4.6.3 at `--mode 2d`: Uniform, Asymmetric and Edges match within
+; corner-arc antialiasing (at most 0.3% of a pane, 95-100% of it within one radius of a corner),
+; and the unblended ring is pixel-exact.
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -98,6 +68,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.85, 0.85, 0.82, 1)
 
+; The control: one radius on all four corners and no border, a plain rounded rectangle that pins
+; the fill arc alone.
 [node name="Uniform" type="Panel" parent="."]
 anchors_preset = 0
 offset_left = 64.0
@@ -106,6 +78,10 @@ offset_right = 544.0
 offset_bottom = 308.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_uniform")
 
+; Asymmetric and Blended differ only in `border_blend`. Both carry per-corner radii
+; (0 / 64 / 0 / 64, so one radius everywhere is obvious) and a uniform 16 px border far from the
+; fill colour. A transect across this left edge at y=178 reads rgb(242, 191, 51) for all 16
+; border pixels, then rgb(38, 76, 128) on both sides.
 [node name="Asymmetric" type="Panel" parent="."]
 anchors_preset = 0
 offset_left = 608.0
@@ -114,6 +90,8 @@ offset_right = 1088.0
 offset_bottom = 308.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_asymmetric")
 
+; With the blend on, Godot interpolates the ring's inner vertices toward the fill, so the 16 px
+; read as a gradient. It changes no silhouette, and this is the only golden that shows it.
 [node name="Blended" type="Panel" parent="."]
 anchors_preset = 0
 offset_left = 608.0
@@ -122,6 +100,9 @@ offset_right = 1088.0
 offset_bottom = 600.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_blended")
 
+; Four different border widths (6 / 20 / 40 / 12) and `draw_center = false`. Unequal widths make
+; a ring built from one side's width mis-size three edges, and the backdrop showing through the
+; middle proves the ring is a ring, not a filled box in a border colour.
 [node name="Edges" type="Panel" parent="."]
 anchors_preset = 0
 offset_left = 64.0

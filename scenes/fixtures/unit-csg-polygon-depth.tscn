@@ -1,9 +1,8 @@
 [gd_scene load_steps=2 format=3 uid="uid://unitcsgpolydepth"]
 
-; CSGPolygon3D MODE_DEPTH. The extrusion runs along LOCAL -Z, front cap at z = 0
-; and back cap at z = -depth, and is NOT centred (csg_shape.cpp:2352).
-; three's ExtrudeGeometry would give [0, +depth] instead, which looks like a
-; correct solid in the wrong place.
+; CSGPolygon3D MODE_DEPTH. The extrusion runs along local -Z, front cap at z = 0 and back cap
+; at z = -depth, and is not centred (csg_shape.cpp:2352). three's ExtrudeGeometry gives
+; [0, +depth] instead, which looks like a correct solid in the wrong place.
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_poly"]
 albedo_color = Color(0.65, 0.6, 0.5, 1)
@@ -17,17 +16,16 @@ polygon = PackedVector2Array(0, -1, 0, 0, 2, -1)
 depth = 2.0
 material = SubResource("StandardMaterial3D_poly")
 
-; Vendored witness: csg.tscn:154, the Staircase. Ten vertices and CONCAVE, so the
-; caps are only right if a real triangulator runs; a convex fan places them
-; outside the outline.
+; Vendored witness: csg.tscn:154, the Staircase. Ten vertices and concave, so the caps are
+; only right if a real triangulator runs. A convex fan places them outside the outline.
 [node name="Staircase" type="CSGPolygon3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 1, 1)
 polygon = PackedVector2Array(0, -1, 0, 0, 0.5, 0, 0.5, -0.25, 1, -0.25, 1, -0.5, 1.5, -0.5, 1.5, -0.75, 2, -0.75, 2, -1)
 depth = 2.0
 material = SubResource("StandardMaterial3D_poly")
 
-; smooth_faces = true (csg.tscn:136, PolygonSmooth). The WALLS smooth; both caps
-; stay flat whatever this says (csg_shape.cpp:2334, :2489).
+; smooth_faces = true (csg.tscn:136, PolygonSmooth). The walls smooth. Both caps stay flat
+; whatever this says (csg_shape.cpp:2334, :2489).
 [node name="SmoothWall" type="CSGPolygon3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, 1, 1)
 polygon = PackedVector2Array(0, -1, 0.6, -0.8, 0.9, -0.2, 0.6, 0.4, 0, 0.6, -0.6, 0.4, -0.9, -0.2, -0.6, -0.8)
@@ -35,9 +33,9 @@ depth = 1.5
 smooth_faces = true
 material = SubResource("StandardMaterial3D_poly")
 
-; Everything omitted (csg.tscn:128 writes only a polygon). Pins the default
-; polygon PackedVector2Array(0, 0, 0, 1, 1, 1, 1, 0) and depth 1.0
-; (csg_shape.cpp:2811-2815): a unit cube spanning x,y in [0,1] and z in [-1, 0].
-; Reading the default polygon as EMPTY would make this node vanish.
+; Everything omitted (csg.tscn:128 writes only a polygon). Pins the default polygon
+; PackedVector2Array(0, 0, 0, 1, 1, 1, 1, 0) and depth 1.0 (csg_shape.cpp:2811-2815): a unit
+; cube spanning x,y in [0,1] and z in [-1, 0]. Reading the default polygon as empty would make
+; this node vanish.
 [node name="DefaultPolygon" type="CSGPolygon3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0, 0)

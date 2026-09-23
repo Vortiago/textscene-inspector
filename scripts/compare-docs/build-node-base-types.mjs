@@ -1,26 +1,8 @@
 /**
- * Derives the linter's class → base-type tables from the engine captures and
- * writes them as TypeScript modules — one for the Node hierarchy, one for the
- * Resource hierarchy.
- *
- * Usage:
- *   pnpm nodes:base-types      # -> packages/textscene-core/src/godot/{node,resource}BaseTypes.generated.ts
- *
- * The catalog stores each node's full `chain` up to `Object`, so every hop in
- * it is a fact from Godot's own ClassDB rather than a judgement call. Emitting
- * one entry per hop — including the abstract classes that are only ever seen
- * as somebody's ancestor — is what makes the base-walk reach a validator the
- * day it is registered on an intermediate, instead of the day somebody
- * remembers to re-point every leaf at it.
- *
- * The Resource side arrives already flattened to one hop per class
- * (`resource-bases.json`), because the catalog's `chain` covers instantiable
- * NODE classes only and every class that declares a material or mesh property
- * is abstract.
- *
- * Reads the committed captures, never Godot: CI has no engine, and the test
- * beside this file re-derives from the same inputs to prove both committed
- * outputs are current.
+ * Derives the linter's Node and Resource class → base-type tables from the committed engine
+ * captures (`pnpm nodes:base-types` writes
+ * packages/textscene-core/src/godot/{node,resource}BaseTypes.generated.ts). It never runs Godot:
+ * CI has no engine, and the test beside it re-derives both outputs to prove them current.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -40,13 +22,9 @@ export const OUT = godotModule('nodeBaseTypes.generated.ts');
 export const RESOURCE_OUT = godotModule('resourceBaseTypes.generated.ts');
 
 /**
- * Every table this emits must be walkable to a terminal.
- *
- * The consumers walk it: `descendsFrom`, `baseChain`, `ValidatorRegistry`, the
- * gallery's coverage. Each of those carries its own bound or `visited` set, so
- * a cycle here does not hang them — it silently truncates a class's ancestry
- * instead, which is the same "zero inherited validation" this file exists to
- * prevent. Refusing to WRITE one is the layer that answers it for all of them.
+ * Refuses to write a table a walk cannot leave. Every consumer (`descendsFrom`, `baseChain`,
+ * `ValidatorRegistry`, the gallery's coverage) bounds its own walk, so a cycle hangs none of them
+ * but truncates a class's ancestry: the "zero inherited validation" this file prevents.
  */
 function assertAcyclic(table, what) {
   for (const start of Object.keys(table)) {
@@ -60,9 +38,10 @@ function assertAcyclic(table, what) {
 }
 
 /**
- * Node-type → immediate-base map covering every class the catalog's ancestry
- * mentions. `Node` is the terminal (it gets no entry) and `Object` is dropped:
- * it is not a node, and the walk must stop somewhere concrete.
+ * Node-type → immediate-base map, one entry per ClassDB hop of each node's catalog `chain`,
+ * abstract ancestors included, so the base-walk reaches a validator on an intermediate class the
+ * day it is registered. `Node` is the terminal (it gets no entry) and `Object` is dropped: it is
+ * not a node, and the walk must stop somewhere concrete.
  *
  * @param nodes - `node-catalog.json`'s `nodes` array.
  * @returns the derived table, keys sorted so the output diff is stable.
@@ -70,10 +49,9 @@ function assertAcyclic(table, what) {
 export function deriveBaseTypes(nodes) {
   const derived = new Map();
   for (const node of nodes) {
-    // A catalogued class with no ancestry contributes no hop, so it lands in
-    // NODE_BASE_TYPES with no base and inherits nothing — the silence
-    // the scaffold's catalog check cannot see, because the name IS in the catalog.
-    // Only `Node` itself has nowhere to go.
+    // A catalogued class with no ancestry lands in NODE_BASE_TYPES with no base and inherits
+    // nothing, a silence the scaffold's catalog check cannot see, since the name is in the
+    // catalog. Only `Node` itself has nowhere to go.
     if (node.name !== 'Node' && !node.chain?.length) {
       throw new Error(
         `${node.name} has no chain in the catalog, so it would receive no base and ` +
@@ -133,11 +111,10 @@ ${entries}
 }
 
 /**
- * The module source for the Resource hierarchy.
- *
- * The engine emits this one already flattened, so there is no chain to walk and
- * nothing to derive — the value here is the same as the node module's: a table
- * the linter can import, checked in because CI has no engine.
+ * The module source for the Resource hierarchy. `resource-bases.json` arrives flattened to one
+ * hop per class, since the catalog's `chain` covers instantiable node classes only and every
+ * class declaring a material or mesh property is abstract. So nothing is derived: it becomes an
+ * importable table, checked in because CI has no engine.
  *
  * @param table - `resource-bases.json`, class → immediate base.
  * @param version - the engine both captures came from.
@@ -174,8 +151,7 @@ export function renderFromCatalog() {
  */
 export function renderFromResourceBases() {
   const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
-  // Arrives already flattened, so unlike the node side there is no chain whose
-  // shape rules a cycle out — it is asserted here instead.
+  // Flattened, so unlike the node side no chain shape rules a cycle out. It is asserted here.
   const bases = assertAcyclic(JSON.parse(readFileSync(RESOURCE_BASES, 'utf8')), 'resource-bases.json');
   return renderResourceModule(bases, catalog.godotVersion ?? 'unknown');
 }

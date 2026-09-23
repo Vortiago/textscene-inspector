@@ -1,13 +1,9 @@
 [gd_scene load_steps=4 format=3 uid="uid://unitmaterialemissionhdr"]
 
-; An emission colour with a channel ABOVE 1, from Godot's HDR colour picker.
-;
-; Godot converts the colour sRGB->linear before energy multiplies it, and its
-; conversion takes the pow branch for anything over 0.04045 — so a channel of 2.0
-; extrapolates to 4.954 rather than clipping to 1. Converting after normalising by
-; the peak instead, or clamping, lands the red channel and the hue somewhere else
-; entirely, and since the peak is what the glow bright pass gates on it also changes
-; how much of this blooms.
+; An emission colour with a channel above 1, from Godot's HDR colour picker. Godot converts
+; sRGB to linear before energy multiplies it, taking the pow branch above 0.04045, so 2.0
+; extrapolates to 4.954 rather than clipping to 1. Normalising by the peak first, or clamping,
+; moves the red channel and the hue, and changes how much blooms, since the glow gates on the peak.
 
 [sub_resource type="SphereMesh" id="SphereMesh_1"]
 radius = 0.8

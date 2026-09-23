@@ -1,13 +1,11 @@
-; Three real buffer lines (one blank), a tab character, and highlight_current_line —
-; the render properties a plain TextEdit's own NOTIFICATION_DRAW carries that no
-; other Control fixture exercises. A missing row for the blank middle line is
-; invisible in a single-line fixture, and draw_tabs's icon overlay is invisible
-; without a literal tab in the text. syntax_highlighter is a real CodeHighlighter
-; SubResource with no colour data of its own set, so it is applied but paints
-; every character at plain font_color regardless — unit-code-edit-syntax-
-; highlighter.tscn is the fixture that moves the highlighter's OWN colours.
+; Three buffer lines (one blank), a tab character and highlight_current_line: the render
+; properties of a plain TextEdit's NOTIFICATION_DRAW that no other Control fixture exercises. A
+; missing row for the blank line hides in a single-line fixture, and draw_tabs's icon overlay
+; needs a literal tab.
 [gd_scene load_steps=2 format=3]
 
+; A real CodeHighlighter with no colour data, so it is applied but paints every character at
+; plain font_color. unit-code-edit-syntax-highlighter.tscn moves the highlighter's own colours.
 [sub_resource type="CodeHighlighter" id="CodeHighlighter_1"]
 
 [node name="Root" type="Control"]

@@ -1,10 +1,7 @@
-; The ONE variable: whether a Node2D whose CanvasItem chain is BROKEN still
-; inherits the transform above the break. `get_global_transform` composes
-; through `get_parent_item()`, which casts only the direct parent
-; (canvas_item.cpp:565-571), so a plain `Node` link makes the node a canvas root
-; drawing in canvas space. No Control fixture can see the Node2D world walk at
-; all, and the flag form of the same break is `unit-node2d-top-level.tscn`.
-; The attached sibling holds the inherited position beside it.
+; One variable: whether a Node2D below a break in the CanvasItem chain still inherits the
+; transform above it. `get_global_transform` composes through `get_parent_item()`, which casts
+; only the direct parent (canvas_item.cpp:565-571), so a plain `Node` link makes a canvas root.
+; No Control fixture sees the Node2D walk. `unit-node2d-top-level.tscn` is the flag form.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitnode2ddetachxf"]
 
@@ -17,6 +14,7 @@ position = Vector2(300, 200)
 color = Color(0.9, 0.2, 0.2, 1)
 polygon = PackedVector2Array(0, 0, 160, 0, 160, 80, 0, 80)
 
+; The attached sibling holds the inherited position beside it.
 [node name="Attached" type="Polygon2D" parent="."]
 position = Vector2(0, 120)
 color = Color(0.2, 0.5, 0.9, 1)

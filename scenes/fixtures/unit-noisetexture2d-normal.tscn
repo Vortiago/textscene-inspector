@@ -1,9 +1,7 @@
-; One variable: NoiseTexture2D's as_normal_map arm as SAMPLED BY LIGHTING —
-; bump_to_normal_map's sign/packing and the NoColorSpace tagging only show up
-; when a lit material perturbs its normals with the result. The other noise
-; golden (unit-noisetexture2d.tscn) is an unlit 2D colour-ramp field, so a
-; regression here (flipped green channel, sRGB-bent normals, row order) is
-; invisible in it and in every other scene.
+; One variable: NoiseTexture2D's as_normal_map arm as lighting samples it. The sign and packing
+; of bump_to_normal_map and the NoColorSpace tagging only show when a lit material perturbs its
+; normals with the result. unit-noisetexture2d.tscn is an unlit colour-ramp field, so a flipped
+; green channel, sRGB-bent normals or a wrong row order is invisible there and everywhere else.
 [gd_scene load_steps=5 format=3]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_nrm"]

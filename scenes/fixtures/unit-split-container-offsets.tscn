@@ -1,24 +1,7 @@
-; The ONE variable: `split_offsets` with more than one entry, on a
-; SplitContainer holding more than two children.
-;
-; Two children need one dragger, and a single offset is all the deprecated
-; scalar `split_offset` could ever carry — which is what every other
-; SplitContainer fixture exercises. Three children need TWO draggers, and the
-; array is the only way to place them: `_update_dragger_positions`
-; (`split_container.cpp:651-656`) adds entry `i` to default dragger `i`, then
-; clamps it into `_get_valid_range(i)` (`:318-337`) on its own.
-;
-; The three children all carry `size_flags_horizontal = 3`, so
-; `_update_default_dragger_positions` (`:566-599`) hands each an equal share of
-; 400 - 12*2 = 376, which truncates to 125 apiece and puts the default draggers
-; at 125 and 262 (`:605-617`). The authored -30 and 20 move them to 95 and 282,
-; giving three DIFFERENT widths: 95, 175 and 106. An implementation that reads
-; only entry 0, or that applies one offset to every dragger, lands on a
-; different pair — and equal thirds would prove neither.
-;
-; `Below` is the same trio at the default offsets, so the two rows differ only
-; by the array and a regression cannot hide behind the layout being wrong for
-; both.
+; One variable: `split_offsets` with several entries, on a SplitContainer with three children.
+; Every other SplitContainer fixture has one dragger and one offset, all the deprecated scalar
+; `split_offset` carries. `_update_dragger_positions` (`split_container.cpp:651-656`) adds entry
+; `i` to default dragger `i`, then clamps it into `_get_valid_range(i)` (`:318-337`) on its own.
 
 [gd_scene format=3 uid="uid://unit_split_container_offsets"]
 
@@ -33,6 +16,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.08, 0.08, 0.12, 1)
 
+; All three children expand, so `_update_default_dragger_positions` (`:566-599`) shares
+; 400 - 12*2 = 376 equally, truncated to 125 each, with default draggers at 125 and 262
+; (`:605-617`). The authored -30 and 20 move them to 95 and 282, widths 95, 175 and 106, where
+; reading only entry 0, or applying one offset to every dragger, lands elsewhere.
 [node name="Offsets" type="HSplitContainer" parent="."]
 layout_mode = 1
 offset_left = 24.0
@@ -56,6 +43,8 @@ layout_mode = 2
 size_flags_horizontal = 3
 color = Color(0.3, 0.5, 0.95, 1)
 
+; The same trio at the default offsets, so the rows differ only by the array and a regression
+; cannot hide behind a layout wrong for both. Equal thirds would prove neither reading.
 [node name="Below" type="HSplitContainer" parent="."]
 layout_mode = 1
 offset_left = 24.0

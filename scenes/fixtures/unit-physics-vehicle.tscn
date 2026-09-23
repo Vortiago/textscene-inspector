@@ -1,28 +1,7 @@
-; A four-wheeled VehicleBody3D, for the ONE variable no other golden moves: the
-; VehicleWheel3D gizmo. Godot draws it for every wheel always (its
-; vehicle_body_3d_gizmo_plugin: a radius circle in the YZ plane, a four-section
-; spring coil, a travel line up to wheel_rest_length, axle ticks, and a forward
-; arrow); we gate it on selection per ADR-0018, so only the `select:` golden
-; captures it. No other fixture in the repo contains any of that geometry, which
-; is why a regression in it would otherwise be invisible.
-;
-; Nothing else here is new: VehicleBody3D and VehicleWheel3D both render as
-; transform-only groups (ADR-0005/0008), exactly like unit-rigidbody3d.tscn, so an
-; unselected GOLDEN of this scene would move zero variables and none is
-; registered. (The comparison sheets still capture the scene unselected — that
-; pair exists to show the two engines agreeing, not to localise a regression.)
-; `visible = false` on a fallback-bound type is likewise already pinned by
-; unit-csg-combiner.tscn's golden.
-;
-; Wheel4 carries a larger wheel_radius and Wheel1 an explicit wheel_rest_length,
-; so the gizmo's two size inputs are both exercised rather than left at defaults.
-;
-; What the golden actually shows of the gizmo is the radius circle and the
-; forward arrow: the spring coil is wound at 0.2 × radius around the suspension
-; axis, which puts it inside the wheel mesh, and the gizmo depth-tests (as
-; Godot's does), so the coil and travel line are occluded. Their geometry is
-; pinned numerically in Component.test.tsx instead — the golden is not the only
-; cover for them.
+; A four-wheeled VehicleBody3D for the one variable no other golden moves: the VehicleWheel3D
+; gizmo. Godot draws it for every wheel (vehicle_body_3d_gizmo_plugin: a radius circle in the YZ
+; plane, a four-section spring coil, a travel line up to wheel_rest_length, axle ticks and a
+; forward arrow). The previewer gates it on selection (ADR-0018), so only the `select:` golden has it.
 [gd_scene load_steps=7 format=3 uid="uid://unitphysicsvehicle"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_chassis"]
@@ -48,6 +27,10 @@ roughness = 0.9
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_tyres"]
 friction = 0.5
 
+; VehicleBody3D and VehicleWheel3D render as transform-only groups (ADR-0005/0008), like
+; unit-rigidbody3d.tscn, so an unselected golden moves nothing and none is registered. The
+; comparison sheets capture it unselected to show the engines agree. unit-csg-combiner.tscn's
+; golden already pins `visible = false` on a fallback-bound type.
 [node name="Root" type="Node3D"]
 
 [node name="Vehicle" type="VehicleBody3D" parent="."]
@@ -63,6 +46,8 @@ surface_material_override/0 = SubResource("StandardMaterial3D_chassis")
 [node name="ChassisCollision" type="CollisionShape3D" parent="Vehicle"]
 shape = SubResource("BoxShape3D_chassis")
 
+; Wheel4's larger wheel_radius and Wheel1's explicit wheel_rest_length exercise both of the
+; gizmo's size inputs.
 [node name="Wheel1" type="VehicleWheel3D" parent="Vehicle"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.573678, -0.115169, 1.10416)
 use_as_traction = true
@@ -80,6 +65,9 @@ transform = Transform3D(0, 1, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0)
 mesh = SubResource("CylinderMesh_wheel")
 surface_material_override/0 = SubResource("StandardMaterial3D_wheel")
 
+; The golden shows the radius circle and the forward arrow. The coil winds at 0.2 × radius around
+; the suspension axis, inside the wheel mesh, and the gizmo depth-tests as Godot's does, so coil
+; and travel line are hidden. Component.test.tsx pins their geometry numerically.
 [node name="Wheel2" type="VehicleWheel3D" parent="Vehicle"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.573678, -0.115169, -0.783403)
 use_as_traction = true

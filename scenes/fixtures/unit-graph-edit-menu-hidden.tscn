@@ -1,15 +1,12 @@
-; GraphEdit with its whole toolbar hidden. `show_menu` hides `menu_panel`
-; itself (graph_edit.cpp:2812-2815), taking the row's background box with it,
-; while the five other `show_*` flags only hide widgets INSIDE that box. No
-; other fixture can distinguish a renderer that hides the items but keeps the
-; panel, because the panel is drawn in every one of them.
-; Every fixture in this family shares one GraphEdit rect and one GraphNode,
-; and `scroll_offset` is deliberately ABSENT from all but
-; unit-graph-edit-scroll-offset-clamped.tscn, which exists to move it:
-; GraphEdit's own `set_scroll_offset` clamps against min/max bounds no laid-out
-; child has widened while a scene's properties are applied (graph_edit.cpp:407),
-; so an authored offset moves the grid, the nodes AND the minimap camera at once
-; and would mask the one variable each file exists to move.
+; GraphEdit with its whole toolbar hidden. `show_menu` hides `menu_panel` itself
+; (graph_edit.cpp:2812-2815) and its background box with it, while the other five `show_*` flags
+; hide only widgets inside that box. Every other fixture draws the panel, so none can catch a
+; renderer that hides the items but keeps the panel.
+
+; Every fixture in this family shares one GraphEdit rect and one GraphNode, and only
+; unit-graph-edit-scroll-offset-clamped.tscn authors `scroll_offset`: `set_scroll_offset` clamps
+; against bounds no child has widened while properties apply (graph_edit.cpp:407), so an authored
+; offset moves the grid, the nodes and the minimap camera together and masks the one variable.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitgraphedmenuoff"]
 

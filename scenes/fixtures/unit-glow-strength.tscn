@@ -1,11 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://unitglowstrength"]
 
-; Godot's default glow levels with a NON-DEFAULT glow_strength.
-;
-; glow_strength multiplies the glow buffer once per pyramid pass, so it compounds
-; with depth rather than scaling the halo uniformly. At the default 1.0 that is
-; inert and any exponent would pass, which is why this fixture exists: it is the
-; only thing that pins how many times the multiply lands.
+; Godot's default glow levels with a non-default glow_strength. glow_strength multiplies the glow
+; buffer once per pyramid pass, so it compounds with depth. At the default 1.0 any exponent
+; passes, so this fixture alone pins how many times the multiply lands.
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_dark"]
 sky_top_color = Color(0.02, 0.02, 0.04, 1)

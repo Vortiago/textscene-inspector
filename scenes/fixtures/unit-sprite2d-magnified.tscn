@@ -1,26 +1,20 @@
 [gd_scene load_steps=2 format=3]
 
-; The ONE variable: a Sprite2D that MAGNIFIES its texture, so the canvas's
-; bilinear magnification filter has a multi-pixel ramp to draw. Every other
-; Sprite2D/AnimatedSprite2D fixture draws its texture at 1:1 with no `scale`,
-; and at 1:1 a bilinear filter samples texel centres exactly — it never blends
-; two texels, so the colour space that blend happens in cannot change a single
-; pixel in any of them. The 8x8 source is half pure black, half pure white
-; across one hard vertical boundary: blending the ENCODED sRGB bytes and
-; blending after a decode to linear put that boundary's midpoint ~60/255
-; apart, the widest separation two adjacent texels can produce, so a
-; regression in the sampling colour space is a gross, unmissable shift here
-; and invisible everywhere else in the bag.
-;
-; `scale` 64 on an 8x8 texture puts texel centres 64 px apart, so the boundary
-; ramp is 64 px wide and every step on it is addressable by a whole-pixel
-; probe. The sprite is centred in the 1152x648 viewport, which puts the
-; boundary's exact midpoint at the viewport centre.
+; One variable: a Sprite2D that magnifies its texture, so bilinear filtering has a multi-pixel
+; ramp to draw. Every other Sprite2D/AnimatedSprite2D fixture draws at 1:1 with no `scale`, where
+; bilinear samples texel centres exactly and never blends, so the blend's colour space changes
+; no pixel there.
 
+; The 8x8 source is half black, half white across one vertical boundary. Blending the encoded
+; sRGB bytes and blending after a decode to linear put the midpoint about 60/255 apart, the
+; widest gap two adjacent texels can produce, so a colour-space regression is a gross shift.
 [ext_resource type="Texture2D" path="res://textures/hard-edge-split.png" id="1_split"]
 
 [node name="World" type="Node2D"]
 
+; `scale` 64 on an 8x8 texture puts texel centres 64 px apart, so the ramp is 64 px wide and
+; every step is addressable by a whole-pixel probe. Centred in the 1152x648 viewport, so the
+; boundary midpoint is the viewport centre.
 [node name="Magnified" type="Sprite2D" parent="."]
 texture = ExtResource("1_split")
 position = Vector2(576, 324)

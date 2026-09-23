@@ -1,11 +1,9 @@
 [gd_scene load_steps=2 format=3]
 
-; MyMenuButton omits `flat`, so it renders at MenuButton's own constructor default
-; (true), not Button's own (false) — the same key, two different class defaults.
-; DisabledMenuButton is the one variable against it: disabled = true, which selects
-; MenuButton's own font_disabled_color (Color(1, 1, 1, 0.3)), not Button's
-; control_font_disabled_color — a regression collapsing the two back together is
-; invisible on MyMenuButton alone.
+; MyMenuButton omits `flat`, so it renders at MenuButton's constructor default (true), not
+; Button's (false): one key, two class defaults. DisabledMenuButton sets disabled = true, which
+; selects MenuButton's font_disabled_color (Color(1, 1, 1, 0.3)), not Button's
+; control_font_disabled_color. Collapsing the two is invisible on MyMenuButton alone.
 
 [sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_1"]
 size = Vector2(16, 16)

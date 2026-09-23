@@ -1,9 +1,7 @@
-; VSlider travel direction: Godot draws a vertical slider's grabber at
-; `size.height - ratio * areasize - grabber_height`, i.e. measured up from the
-; BOTTOM, so value = min_value sits at the bottom and max_value at the top.
-; unit-hslider moves the identical value along a horizontal axis and cannot
-; catch a vertical axis that runs the wrong way; the three sliders here differ
-; only in `value`, so an inverted axis reverses their order on screen.
+; VSlider travel direction: Godot draws the grabber at
+; `size.height - ratio * areasize - grabber_height`, measured up from the bottom, so min_value
+; sits at the bottom and max_value at the top. unit-hslider cannot catch a reversed vertical axis.
+; The three sliders differ only in `value`, so an inverted axis reverses their order.
 
 [gd_scene format=3 uid="uid://unitvslider"]
 

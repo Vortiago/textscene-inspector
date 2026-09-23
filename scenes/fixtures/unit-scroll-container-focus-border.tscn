@@ -1,24 +1,6 @@
-; The ONE variable: `draw_focus_border` on a ScrollContainer.
-;
-; The focus PANEL this flag names is gated on `has_focus(true) ||
-; child_has_focus()` (`scroll_container.cpp:474-475`), which no scene file can
-; author, so the flag reaches a still frame only through `_get_margins`
-; (`:103-130`): with the flag set, each side rises from the `panel` StyleBox's
-; margin (0 — `ScrollContainer`'s panel is a StyleBoxEmpty,
-; `default_theme.cpp:655-657`) to the `focus` StyleBox's (4 at scale 1,
-; `:659` through `make_flat_stylebox`'s `default_margin`). Every layout
-; formula reads those margins: the content origin, the content extent, both
-; scrollbar rects and the container's own minimum size.
-;
-; `Inner` is a 120x60 ColorRect with no expand flag, so its top-left corner IS
-; the content origin: at the default it sits flush at the container's (24, 24),
-; and with the flag at (28, 28). `Overflow` is 0x400 tall so the vertical
-; scrollbar shows, whose strip is inset by the right and bottom margins too —
-; a second, independent witness of the same four numbers.
-;
-; Every other ScrollContainer fixture leaves `draw_focus_border` at its
-; default, so a regression that drops the margin term — or applies it without
-; the flag — moves nothing in any of them.
+; One variable: `draw_focus_border` on a ScrollContainer. Every other ScrollContainer fixture
+; leaves it at the default, so dropping the margin term, or applying it without the flag, moves
+; nothing there.
 
 [gd_scene format=3 uid="uid://unit_scroll_container_focus_border"]
 
@@ -33,7 +15,14 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.1, 0.1, 0.16, 1)
 
+; The focus panel the flag names is gated on `has_focus(true) || child_has_focus()`
+; (`scroll_container.cpp:474-475`), which no scene file can author. So the flag reaches a still
+; frame only through `_get_margins` (`:103-130`), which every layout formula reads: the content
+; origin and extent, both scrollbar rects and the container's minimum size.
 [node name="Scroll" type="ScrollContainer" parent="."]
+; With the flag set, each margin rises from the `panel` StyleBox's 0 (a StyleBoxEmpty,
+; `default_theme.cpp:655-657`) to the `focus` StyleBox's 4 at scale 1 (`:659`, through
+; `make_flat_stylebox`'s `default_margin`).
 layout_mode = 1
 offset_left = 24.0
 offset_top = 24.0
@@ -41,6 +30,8 @@ offset_right = 264.0
 offset_bottom = 184.0
 draw_focus_border = true
 
+; 120x60 with no expand flag, so its top-left corner is the content origin: flush at the
+; container's (24, 24) by default, at (28, 28) with the flag.
 [node name="Inner" type="VBoxContainer" parent="Scroll"]
 layout_mode = 2
 theme_override_constants/separation = 0
@@ -50,6 +41,8 @@ layout_mode = 2
 custom_minimum_size = Vector2(120, 60)
 color = Color(0.95, 0.35, 0.1, 1)
 
+; 0x400, so the vertical scrollbar shows. Its strip is inset by the right and bottom margins
+; too, a second witness of the same four numbers.
 [node name="Overflow" type="ColorRect" parent="Scroll/Inner"]
 layout_mode = 2
 custom_minimum_size = Vector2(120, 400)

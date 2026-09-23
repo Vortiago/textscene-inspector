@@ -1,13 +1,7 @@
-; The ONE variable: `layout_direction = 3` (RTL) on a RichTextLabel.
-; `_draw_line`'s own alignment switch (rich_text_label.cpp:987-1014) branches on
-; the PARAGRAPH direction — `l.text_buf->get_direction()`, set from
-; `_find_direction` (:599,3507-3525), which returns is_layout_rtl() only while
-; `text_direction` is INHERITED. Its default is TEXT_DIRECTION_AUTO
-; (rich_text_label.h:615), so `layout_direction` alone reaches none of those
-; arms and each RTL row must land exactly where its LTR twin does. Every label
-; spans the full viewport width so its OWN rect mirror (control.cpp:1785) is
-; the identity. No other fixture pairs a RichTextLabel with a direction, so a
-; swap wired to the layout direction instead is invisible everywhere else.
+; One variable: `layout_direction = 3` on a RichTextLabel. `_draw_line`'s alignment switch
+; (rich_text_label.cpp:987-1014) branches on the paragraph direction, `l.text_buf->get_direction()`
+; from `_find_direction` (:599,3507-3525), which returns is_layout_rtl() only while
+; `text_direction` is inherited. Its default is TEXT_DIRECTION_AUTO (rich_text_label.h:615).
 [gd_scene format=3]
 
 [node name="Root" type="Control"]
@@ -21,6 +15,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.12, 0.12, 0.2, 1)
 
+; So `layout_direction` alone reaches none of those arms, and each RTL row lands where its LTR
+; twin does. Full-width labels make the rect mirror (control.cpp:1785) the identity. No other
+; fixture pairs a RichTextLabel with a direction.
 [node name="LtrLeft" type="RichTextLabel" parent="."]
 layout_mode = 1
 anchor_right = 1.0

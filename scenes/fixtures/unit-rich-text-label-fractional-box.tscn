@@ -1,17 +1,7 @@
-; The ONE variable: a FRACTIONAL control width under an aligned
-; RichTextLabel. `_draw_line` measures the line as `get_line_size(line).x`
-; (rich_text_label.cpp:984), the CEILED shaped extent
-; (text_server_adv.cpp:7524-7537), and aligns it against `int p_width`
-; (rich_text_label.h:672,678), truncated once from the control rect. Measuring
-; the raw pen advance instead is invisible at every whole box width, because
-; flooring the whole expression absorbs the fraction — so only a fractional
-; width can tell the two apart, and every other RichTextLabel fixture is a
-; whole number of pixels wide. "Threat level" at the default 16px measures
-; 91.03125 raw and 92 ceiled, so at a width of 201.5 the RIGHT arm lands on
-; 109 rather than 110 and the CENTER arm on 54 rather than 55. Both nodes move
-; the same one variable and differ only in which arm reads it. autowrap is OFF
-; so the line cannot wrap, and the box is tall enough that no scrollbar
-; narrows it.
+; One variable: a fractional control width under an aligned RichTextLabel. `_draw_line` measures
+; `get_line_size(line).x` (rich_text_label.cpp:984), the ceiled shaped extent
+; (text_server_adv.cpp:7524-7537), and aligns it against `int p_width` (rich_text_label.h:672,678),
+; truncated once from the control rect.
 
 [gd_scene format=3]
 
@@ -26,6 +16,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.12, 0.12, 0.2, 1)
 
+; Measuring the raw pen advance is invisible at a whole width, since flooring absorbs the
+; fraction, and every other RichTextLabel fixture is whole. "Threat level" at 16px is 91.03125 raw
+; and 92 ceiled, so at width 201.5 the RIGHT arm lands on 109, not 110, and CENTER on 54, not 55.
 [node name="FractionalRight" type="RichTextLabel" parent="."]
 layout_mode = 1
 offset_left = 40.0
@@ -36,6 +29,8 @@ autowrap_mode = 0
 horizontal_alignment = 2
 text = "Threat level"
 
+; The same variable through the other arm. autowrap is off so the line cannot wrap, and the box
+; is tall enough that no scrollbar narrows it.
 [node name="FractionalCenter" type="RichTextLabel" parent="."]
 layout_mode = 1
 offset_left = 40.0

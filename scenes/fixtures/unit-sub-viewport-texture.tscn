@@ -1,21 +1,7 @@
-; ViewportTexture — a SubViewport's render target consumed as a texture.
-;
-; The one variable: what a `ViewportTexture` sample shows THROUGH the target —
-; that `viewport_path` resolves to the live target, and that the offscreen
-; pass runs Godot's per-viewport colour pipeline (the shared environment's
-; tonemap applies inside the target, then again on the consuming surface).
-; Everything else is deliberately plain — one unshaded quad, one light-free
-; setup — so a regression here is either the texture not resolving or the
-; through-target pipeline drifting, and it is invisible in every other golden
-; because no other golden consumes a ViewportTexture.
-;
-; Godot 4.6.3 draws the sphere (rendered by the SubViewport's own Camera3D)
-; onto the quad. The sphere ALSO draws in the main view, because own_world_3d
-; is unset and the world is shared — that is the ADR-0033 default, not a bug.
-;
-; The content is 3D on purpose: a Control-content viewport takes the DOM
-; rasterization path instead, which is a different mechanism and gets its own
-; browser-harness assertion rather than a golden.
+; One variable: what a `ViewportTexture` sample shows through the target: `viewport_path`
+; resolves to the live target, and the offscreen pass runs Godot's per-viewport colour pipeline
+; (the shared environment's tonemap inside the target, then again on the consuming surface). No
+; other golden consumes a ViewportTexture.
 
 [gd_scene format=3]
 
@@ -36,10 +22,16 @@ height = 1.0
 
 [node name="Root" type="Node3D"]
 
+; 3D content on purpose: a Control-content viewport takes the DOM rasterisation path, a
+; different mechanism with its own browser-harness assertion instead of a golden. Everything
+; else is plain, one unshaded quad and no lights, so a regression is the texture not resolving
+; or the through-target pipeline drifting.
 [node name="SubViewport" type="SubViewport" parent="."]
 size = Vector2i(256, 256)
 render_target_update_mode = 4
 
+; Godot 4.6.3 draws this sphere, from the SubViewport's own Camera3D, onto the quad. It also
+; draws in the main view: own_world_3d is unset and the world is shared, the ADR-0033 default.
 [node name="Subject" type="MeshInstance3D" parent="SubViewport"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4)
 mesh = SubResource("SphereMesh_1")

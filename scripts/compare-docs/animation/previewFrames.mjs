@@ -1,5 +1,5 @@
 /**
- * Our side of an animated capture: select the driver so its transport mounts,
+ * The previewer's side of an animated capture: select the driver so its transport mounts,
  * pause it, then drive the scrubber to each sampled time and screenshot.
  */
 
@@ -32,19 +32,17 @@ export async function captureOurFrames(fixture, framesDir, mode, driverText) {
   try {
     await waitForServer(`${baseUrl}/`);
     browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
-    // Burn the first-WebGL-context-lost risk before any published image is
-    // captured — see warmUpGLContext's own doc comment.
+    // Burn the first-WebGL-context-lost risk before any published image is captured (see
+    // warmUpGLContext).
     await warmUpGLContext(browser);
     const context = await createCaptureContext(browser, { frameOnOpen: false, canvas2D: mode === '2d' });
     const page = await context.newPage();
     await gotoFixture(page, baseUrl, fixture);
     await page.waitForTimeout(500);
 
-    // The Animation tab (and its transport) mounts only while the driver is
-    // selected (ADR-0012) — the AnimationPlayer (3D) or the AnimatedSprite2D
-    // (2D). Select it, then drive the scrubber. The driver is a transform-only
-    // node at the origin (3D) or the centred sprite (2D), so selecting it draws
-    // no selection box into the frame.
+    // The Animation tab and its transport mount only while the driver is selected (ADR-0012): the
+    // AnimationPlayer (3D) or the AnimatedSprite2D (2D). The driver is a transform-only node at
+    // the origin (3D) or the centred sprite (2D), so selecting it draws no selection box.
     await page.locator('[aria-label="Expand all"]').click().catch(() => {});
     await page.waitForTimeout(300);
     await page.locator(`[role="treeitem"]:has-text("${driverText}")`).first().click();
@@ -60,11 +58,9 @@ export async function captureOurFrames(fixture, framesDir, mode, driverText) {
     const duration = Number(await scrubber.getAttribute('max'));
     if (!Number.isFinite(duration) || duration <= 0) throw new Error(`bad scrubber max: ${duration}`);
 
-    // Enter the PAUSED state before scrubbing. Seeking from the initial STOPPED
-    // state restores the authored (rest) pose and ignores the time — only a
-    // paused transport applies the seeked pose. Play then Pause is how the
-    // transport reaches it; an exact-name match avoids the "Animation Player"
-    // clip dropdown, whose label also contains "Play".
+    // Enter the paused state before scrubbing: a seek from the initial stopped state restores the
+    // rest pose and ignores the time. Play then Pause reaches it, and the exact-name match avoids
+    // the "Animation Player" clip dropdown, whose label also holds "Play".
     await page.getByRole('button', { name: 'Play', exact: true }).click();
     await page.waitForTimeout(150);
     await page.getByRole('button', { name: 'Pause', exact: true }).click();
@@ -73,8 +69,8 @@ export async function captureOurFrames(fixture, framesDir, mode, driverText) {
     await mkdir(framesDir, { recursive: true });
     for (let i = 0; i < FRAMES; i++) {
       const t = (duration * i) / FRAMES;
-      // The scrubber is a React-controlled input, so set through the native
-      // value setter and fire input/change — .fill() does not drive onChange.
+      // A React-controlled input: set through the native value setter and fire input and change,
+      // since .fill() does not drive onChange.
       await page.evaluate((value) => {
         const el = document.querySelector('input[type=range]');
         const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;

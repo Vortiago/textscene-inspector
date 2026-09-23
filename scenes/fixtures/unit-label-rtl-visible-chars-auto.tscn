@@ -1,9 +1,7 @@
-; The ONE variable: `layout_direction = 3` beside VC_GLYPHS_AUTO. AUTO is the one
-; visible_characters_behavior that resolves its reveal END from the layout
-; direction (label.cpp:779-780): LTR hides the tail, RTL hides the head. The two
-; Labels below carry identical text and an identical budget, so only that
-; resolution can separate them. unit-label-visible-characters.tscn pins
-; VC_CHARS_BEFORE_SHAPING and never sets a direction, so this is invisible there.
+; One variable: `layout_direction = 3` beside VC_GLYPHS_AUTO, the one visible_characters_behavior
+; that takes its reveal end from the layout direction (label.cpp:779-780): LTR hides the tail,
+; RTL the head. Both Labels share text and budget. unit-label-visible-characters.tscn pins
+; VC_CHARS_BEFORE_SHAPING with no direction, so this is invisible there.
 
 [gd_scene format=3]
 

@@ -1,12 +1,7 @@
-; LineEdit's right_icon — the ONE variable no other LineEdit fixture sets — at
-; each of its three icon_expand_mode values, the SAME icon resource in every
-; row. A content-rect inset that forgets to account for the icon's resolved
-; width is invisible everywhere else: the text would overlap the icon instead
-; of stopping short of it, and a wrong icon_expand_mode formula would size the
-; icon itself wrong while the text still happened to clip correctly by
-; coincidence. The third row's taller rect and right_icon_scale exist only to
-; make FIT_TO_LINE_EDIT's own height-driven sizing legible, not a second
-; variable this fixture means to isolate.
+; right_icon, the one variable no other LineEdit fixture sets, at each of its three
+; icon_expand_mode values with one icon resource. A content inset that ignores the icon's width
+; lets the text overlap the icon, and a wrong icon_expand_mode formula sizes the icon wrong while
+; the text still clips right by coincidence.
 
 [gd_scene load_steps=2 format=3 uid="uid://unitlineeditrighticon"]
 
@@ -39,6 +34,8 @@ text = "Fit to text icon"
 right_icon = ExtResource("1_icon")
 icon_expand_mode = 1
 
+; The taller rect and right_icon_scale make FIT_TO_LINE_EDIT's height-driven sizing legible. They
+; are not a second variable.
 [node name="FitToLineEdit" type="LineEdit" parent="Fields"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 64)

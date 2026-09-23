@@ -1,15 +1,12 @@
-; GraphEdit with its arrange button hidden. It is the LAST widget in the
-; toolbar row (graph_edit.cpp:3316-3323), so hiding it is the only case that
-; shortens the panel without moving any other widget — a regression in how
-; the row's width is derived from its visible children shows up here and
-; nowhere else.
-; Every fixture in this family shares one GraphEdit rect and one GraphNode,
-; and `scroll_offset` is deliberately ABSENT from all but
-; unit-graph-edit-scroll-offset-clamped.tscn, which exists to move it:
-; GraphEdit's own `set_scroll_offset` clamps against min/max bounds no laid-out
-; child has widened while a scene's properties are applied (graph_edit.cpp:407),
-; so an authored offset moves the grid, the nodes AND the minimap camera at once
-; and would mask the one variable each file exists to move.
+; GraphEdit with its arrange button hidden. It is the last widget in the toolbar row
+; (graph_edit.cpp:3316-3323), so hiding it is the only case that shortens the panel without
+; moving another widget: a regression in how the row width derives from its visible children
+; shows here and nowhere else.
+
+; Every fixture in this family shares one GraphEdit rect and one GraphNode, and only
+; unit-graph-edit-scroll-offset-clamped.tscn authors `scroll_offset`: `set_scroll_offset` clamps
+; against bounds no child has widened while properties apply (graph_edit.cpp:407), so an authored
+; offset moves the grid, the nodes and the minimap camera together and masks the one variable.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitgraphedarrbtn"]
 
