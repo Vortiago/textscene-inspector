@@ -10,7 +10,7 @@ const KEPT = {
   'doc tag': /@(?:param|returns?|type|typedef|template|see|deprecated|link|example|internal)\b/g,
   directive: /\b(?:eslint-[\w-]+(?: [\w@/,-]+)?|@ts-(?:expect-error|ignore|nocheck|check)|prettier-ignore|istanbul ignore \w+|c8 ignore \w+)/g,
   'test title': /\b(?:it|test|describe)(?:\.\w+)?\(\s*(['"`])(?:(?!\1)[^\\]|\\.)*\1/g,
-  'keep marker': /keep in sync with[^\n.]*|GENERATED[^\n]*|canonical source:[^\n]*|shellcheck [^\n]*/gi,
+  'keep marker': /[Kk]eep in sync with[^\n.]*|\bGENERATED\b[^\n]*|@generated\b|canonical source:[^\n]*|shellcheck [^\n]*/g,
 };
 
 function counts(text, pattern) {

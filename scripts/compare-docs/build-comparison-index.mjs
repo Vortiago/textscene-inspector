@@ -32,7 +32,7 @@ function rows() {
     const href = relative(dirname(INDEX), file).replaceAll('\\', '/');
     const renders = (sheet.meta.renders_as ?? '').trim();
     byCategory.get(category).push(
-      `- [${sheet.meta.type}](${href})${renders ? ` — ${renders}` : ''}`
+      `- [${sheet.meta.type}](${href})${renders ? `: ${renders}` : ''}`
     );
   }
   const out = [];

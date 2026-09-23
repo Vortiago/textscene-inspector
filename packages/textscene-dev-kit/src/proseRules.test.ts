@@ -26,6 +26,10 @@ describe('surfaceViolations', () => {
     expect(rules("the user's call covers pages 1–3")).toEqual([]);
   });
 
+  it('ignores a markdown link target', () => {
+    expect(rules('See [ADR-0011](docs/adr/0011-audio-via-mixer.md).')).toEqual([]);
+  });
+
   it('ignores code spans and URLs', () => {
     expect(rules('Reads `a — b` and `e.g.` from https://example.com/via/it')).toEqual([]);
   });
@@ -93,6 +97,10 @@ describe('commentViolations', () => {
 
   it('passes a four-line comment', () => {
     expect(commentViolations('// a\n// b\n// c\n// d')).toEqual([]);
+  });
+
+  it('reads an auto-generated remark as prose', () => {
+    expect(commentViolations('// The list is auto-generated — a\n// b\n// c\n// d\n// e')).toHaveLength(2);
   });
 
   it('exempts a licence header whole', () => {

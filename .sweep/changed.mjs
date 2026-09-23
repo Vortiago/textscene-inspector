@@ -6,7 +6,12 @@ import process from 'node:process';
 import { repoRoot } from './scan.mjs';
 
 const git = (...args) =>
-  execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8', maxBuffer: 256 << 20 });
+  execFileSync('git', args, {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    maxBuffer: 256 << 20,
+    stdio: ['ignore', 'pipe', 'ignore'],
+  });
 
 export const base = JSON.parse(readFileSync(resolve(repoRoot, '.sweep/batches.json'), 'utf8')).base;
 

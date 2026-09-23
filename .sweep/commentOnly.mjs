@@ -31,8 +31,10 @@ function difference(a, b) {
 
 let changedCode = 0;
 for (const path of changedFiles()) {
-  if (path.endsWith('.md')) continue;
-  const { removed, added } = difference(codeLines(path, before(path)), codeLines(path, after(path)));
+  const old = before(path);
+  // A file the sweep added has no comments to rewrite: it is sweep tooling, reviewed on its own.
+  if (path.endsWith('.md') || old === '') continue;
+  const { removed, added } = difference(codeLines(path, old), codeLines(path, after(path)));
   if (removed.length + added.length === 0) continue;
   changedCode++;
   console.log(`\n${path}`);

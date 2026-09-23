@@ -135,6 +135,9 @@ run (`resumeFromRunId` works in the same session only).
 4. `pnpm test:unit` with a large timeout (background, never piped).
 5. Sheets wave: `test:unit` includes `scripts/compare-docs/*.test.mjs`
    (`sheets.test.mjs`, `parseSections.test.mjs`), so check them by name in its log.
+   After any change to a sheet or `docs/comparison/README.md`, run
+   `pnpm docs:index` and `pnpm docs:gallery` and commit `docs/comparison/`:
+   the index rows and the gallery's shared notes are generated from them.
 6. Fixture wave: `pnpm build:linter && pnpm lint:tscn <files>`, `pnpm lint:scenes`.
 7. Commit each batch: `docs: …` / `refactor: …`, conventional, with the
    `Sweep-Batch: <id>` trailer. Then push the branch in the background.
@@ -161,3 +164,8 @@ run (`resumeFromRunId` works in the same session only).
 - `validate` green; no golden, e2e or CSP gate is needed because no runtime
   code changes, and `commentOnly.mjs` proves that.
 - Spot read: 20 random changed files per wave by the session, for lost facts.
+
+## Running a wave
+
+Start `.sweep/wave.workflow.txt` with the Workflow tool (`scriptPath`), with
+`args: {"wave": <n>, "batches": [<ids of that wave not yet committed>]}`.

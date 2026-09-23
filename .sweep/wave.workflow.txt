@@ -1,0 +1,69 @@
+export const meta = {
+  name: 'prose-sweep-wave',
+  description: 'Prose sweep: edit then verify each batch of one wave to Clean Code + STE',
+  phases: [
+    { title: 'Edit', detail: 'one editor per batch, following .sweep/BRIEF.md' },
+    { title: 'Verify', detail: 'fresh verifier per batch: lost facts, rules, gates' },
+  ],
+}
+
+const ROOT = '/var/lib/longhorn/atle/repos/Text-Scene-.tscn-File-Previewer/jolly-coalescing-sunrise'
+const BASE = '9a495d2a26f98e8603e2b657bddddbf2aa664156'
+
+const ENTRY = {
+  type: 'object',
+  properties: { file: { type: 'string' }, detail: { type: 'string' } },
+  required: ['file', 'detail'],
+}
+const REPORT = {
+  type: 'object',
+  properties: {
+    batch: { type: 'string' },
+    changed: { type: 'integer' },
+    deadCode: { type: 'array', items: ENTRY },
+    candidates: { type: 'array', items: ENTRY },
+    unplaced: { type: 'array', items: ENTRY },
+    restoredFacts: { type: 'array', items: ENTRY },
+    checkFindings: { type: 'integer' },
+    keepListLost: { type: 'integer' },
+    codeChangedFiles: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['batch', 'changed', 'deadCode', 'candidates', 'unplaced', 'checkFindings', 'keepListLost', 'codeChangedFiles'],
+}
+
+const editPrompt = (id) => `You are the editor for prose-sweep batch "${id}".
+Working directory: ${ROOT} (a git worktree; run every command from it).
+Base commit: ${BASE}.
+
+Read ${ROOT}/.sweep/BRIEF.md and follow it exactly. Your files are the "files" array of the batch with id "${id}" in ${ROOT}/.sweep/batches.json. Edit only those files. Other agents edit other files in this worktree at the same time.
+
+Cut hard: the user asked for a hard cut of prose, war stories and information that rots. Keep every fact, cite and tool-read text as the brief says.
+
+Return the brief's report as structured output (restoredFacts: empty).`
+
+const verifyPrompt = (id, report) => `You verify prose-sweep batch "${id}".
+Working directory: ${ROOT} (a git worktree; run every command from it).
+Base commit: ${BASE}.
+
+An editor has rewritten the files of batch "${id}" (the "files" array of that id in ${ROOT}/.sweep/batches.json) by ${ROOT}/.sweep/BRIEF.md. Read the brief and both rule files it names. The same hard limits apply to you: edit only this batch's files, never commit, stash, checkout, reset or restore.
+
+The editor reported:
+${JSON.stringify(report ?? { note: 'the editor returned no report' }, null, 1)}
+
+For each file in the batch, read \`git diff ${BASE} -- <file>\` and the file as it is now. Then:
+1. Lost facts: for each removed or rewritten passage, decide whether it held a fact (a constraint, contract, number with its reason, a "not X, because" choice, a cite). Narration, history, repetition and rotting counts are correctly gone. Restore any lost fact tersely, in STE, beside the code or section it governs. List each under restoredFacts.
+2. Truth: the new text must say what the code or the system does. Fix a sentence the rewrite made wrong.
+3. Hard cut: when the editor left narration, history or repetition, cut it.
+4. Rules: run \`node .sweep/check.mjs <batch files>\`, \`node .sweep/keepList.mjs <batch files>\` and \`node .sweep/commentOnly.mjs <batch files>\`, and fix what they list. Each line commentOnly prints must be dead code that a repo-wide search proves unused; otherwise restore that code exactly as it was at the base.
+5. For code files, run \`npx eslint <changed code files of the batch>\` and fix what it lists.
+
+Return the report as structured output: the final state of the batch, with the editor's deadCode, candidates and unplaced entries carried over when they still hold.`
+
+const ids = args.batches
+log(`wave ${args.wave}: ${ids.length} batches`)
+const results = await pipeline(
+  ids,
+  (id) => agent(editPrompt(id), { label: `edit:${id}`, phase: 'Edit', schema: REPORT }),
+  (report, id) => agent(verifyPrompt(id, report), { label: `verify:${id}`, phase: 'Verify', schema: REPORT }),
+)
+return ids.map((id, i) => results[i] ?? { batch: id, failed: true })

@@ -23,9 +23,12 @@ const SURFACE_RULES: readonly { rule: string; pattern: RegExp }[] = [
   { rule: 'via', pattern: /\bvia\b/i },
 ];
 
-/** Code spans and URLs hold names and addresses, never prose. */
+/** Code spans, URLs and link targets hold names and addresses, never prose. */
 function proseOnly(text: string): string {
-  return text.replace(/`[^`\n]*`/g, ' ').replace(/https?:\/\/\S+/g, ' ');
+  return text
+    .replace(/`[^`\n]*`/g, ' ')
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/\]\([^)\s]*\)/g, ']');
 }
 
 /** Every surface rule the text breaks, once per rule. */
@@ -46,7 +49,7 @@ export const MAX_COMMENT_LINES = 4;
 const TOOL_LINE = /^(?:@|eslint-|prettier-|istanbul |c8 |#region|#endregion|<reference )/;
 
 /** A licence or generator header keeps every line its owner wrote. */
-const VERBATIM_BLOCK = /copyright|SPDX-License|GENERATED/i;
+const VERBATIM_BLOCK = /[Cc]opyright|SPDX-License|\bGENERATED\b|@generated\b/;
 
 /** The text of each comment line, with its markers removed. */
 function contentLines(comment: string): string[] {
