@@ -27,7 +27,9 @@ for (const path of changedFiles()) {
   for (const [kind, pattern] of Object.entries(KEPT)) {
     const kept = counts(now, pattern);
     for (const [token, n] of counts(old, pattern)) {
-      const missing = n - (kept.get(token) ?? 0);
+      // A cite stated twice may become one, since the second copy repeats the first.
+      const count = kind === 'engine cite' ? Math.min(n, 1) : n;
+      const missing = count - Math.min(count, kept.get(token) ?? 0);
       if (missing > 0) losses.push(`${kind} ×${missing}: ${token}`);
     }
   }

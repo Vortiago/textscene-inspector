@@ -95,11 +95,9 @@ describe('VehicleWheel3D Linter', () => {
     });
 
     it('says nothing when the parent is an override of a node inside an instance', () => {
-      // An override heading carries neither `type=` nor `instance=`, so its real
-      // class lives in the instanced scene this linter never opens — the same
-      // wall an `instance=` parent hits. `StrictTscnParser.ts:26` fills `type`
-      // from the `index` fallback, so the heading below has a TRUTHY type of
-      // "0" and only `overridesExistingNode` reveals what it is.
+      // An override heading carries neither `type=` nor `instance=`, so its class
+      // lives in the instanced scene this linter never opens. Its type is empty,
+      // and only `overridesExistingNode` shows what it is.
       const content = scene(
         packedScene,
         node('Node3D', {}, { name: 'Root' }),
