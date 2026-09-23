@@ -1,23 +1,8 @@
 /**
- * Semantic linter rule for Label — `Label::get_configuration_warnings()`
- * (label.cpp:620-635):
- *
- *     if (is_inside_tree() && get_tree()->get_edited_scene_root() != this) {
- *         Container *parent_container = Object::cast_to<Container>(get_parent_control());
- *         if (parent_container && autowrap_mode != TextServer::AUTOWRAP_OFF &&
- *                 get_custom_minimum_size() == Size2()) {
- *             warnings.push_back(RTR("Labels with autowrapping enabled must have a
- *                 custom minimum size configured to work correctly inside a container."));
- *         }
- *     }
- *
- * `get_parent_control()` is NOT an ancestor walk — it is a cached
- * `Object::cast_to<Control>(get_parent())`, set once in
- * `NOTIFICATION_PARENTED` (control.cpp:3828-3829) — so this is a direct-parent
- * check, exactly `parentTypeVerdict`'s contract. The `get_edited_scene_root()`
- * exemption for a Label at the scene root needs no separate handling either: a
- * root node has no parent, so `parentTypeVerdict` already resolves it to
- * `root`, which never satisfies the Container check.
+ * Semantic rule for Label, `Label::get_configuration_warnings()` (label.cpp:620-635):
+ * an autowrapping Label whose parent is a Container needs a non-zero
+ * `custom_minimum_size`. The scene root is exempt, and `parentTypeVerdict`
+ * resolves it to `root`, which is no Container.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -31,16 +16,14 @@ import { slotComponents } from '../../../../godot/int.js';
 // label.cpp:44/1435, TextServer::AutowrapMode: OFF=0, ARBITRARY=1, WORD=2, WORD_SMART=3.
 const AUTOWRAP_OFF = 0;
 
-/** True when `raw` is absent, or parses to exactly (0, 0) — Godot's `Size2()`. */
+/** True when `raw` is absent, or parses to exactly (0, 0): Godot's `Size2()`. */
 function isZeroOrAbsentSize(raw: string | undefined): boolean {
   if (raw === undefined) return true;
   const match = VECTOR2_REGEX.exec(raw);
   if (!match) return false;
-  // `slotComponents`, not bare `tupleComponent`: VECTOR2_REGEX admits the
-  // `Vector2i(...)` spelling `can_convert_strict` converts, whose arguments are
-  // narrowed to int32 before the widening, so `Vector2i(0.5, 0.5)` IS the zero
-  // size Godot stores. A component the engine alters reads back NaN, which
-  // fails `=== 0` and leaves the size treated as set — the quiet direction.
+  // `slotComponents`, not bare `tupleComponent`: `Vector2i(0.5, 0.5)` narrows to
+  // int32, so Godot stores a zero size. A component the engine alters reads NaN,
+  // which fails `=== 0` and counts as set: the quiet direction.
   const [x, y] = slotComponents(raw, 'Vector2', [match[1], match[2]], tupleComponent);
   return x === 0 && y === 0;
 }
@@ -60,6 +43,8 @@ function checkLabelAutowrap(context: RuleContext): Diagnostic[] {
 
   if (!isZeroOrAbsentSize(props.custom_minimum_size)) return [];
 
+  // `get_parent_control()` is the direct parent, cached in `NOTIFICATION_PARENTED`
+  // (control.cpp:3828-3829), not an ancestor walk: `parentTypeVerdict`'s contract.
   const verdict = parentTypeVerdict(scene, node, 'Container');
   if (verdict.kind !== 'satisfied') return [];
 

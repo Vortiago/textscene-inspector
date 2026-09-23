@@ -1,10 +1,10 @@
 /**
  * `RendererCanvasCull::canvas_item_add_polyline`
- * (`servers/rendering/renderer_canvas_cull.cpp:955-1216`) — what
+ * (`servers/rendering/renderer_canvas_cull.cpp:955-1216`): what
  * `CanvasItem::draw_polyline_colors` actually builds, as vertex-coloured
  * triangles.
  *
- * Godot emits up to THREE `PRIMITIVE_TRIANGLE_STRIP` polygons: the core strip,
+ * Godot emits up to three `PRIMITIVE_TRIANGLE_STRIP` polygons: the core strip,
  * plus a left and a right feather strip when antialiasing is on. Each vertex
  * pair straddles its point along `base_edge_offset`, the miter bisector
  * `compute_polyline_edge_offset_clamped` (`:932-953`) clamps to ±3 half-widths;
@@ -13,9 +13,9 @@
  * colour's alpha to zero, and both open ends get a cap one feather beyond the
  * line (`:1113-1163`).
  *
- * The three strips are merged into one indexed triangle array here — they are
- * coplanar, drawn in one pass, and never share a vertex — with the Y flip into
- * three-space baked in, matching `connectionStroke.ts`.
+ * The three strips merge into one indexed triangle array: they are coplanar,
+ * drawn in one pass, and never share a vertex. The Y flip into three-space is
+ * baked in, as in `connectionStroke.ts`.
  *
  * Pure data + functions, no React, no THREE.
  *
@@ -44,13 +44,13 @@ function scale(v: Vec2, by: number): Vec2 {
   return { x: v.x * by, y: v.y * by };
 }
 
-/** `Vector2::normalized()` — a zero-length vector stays `(0, 0)`. */
+/** `Vector2::normalized()`: a zero-length vector stays `(0, 0)`. */
 function normalized(v: Vec2): Vec2 {
   const length = Math.hypot(v.x, v.y);
   return length === 0 ? { x: 0, y: 0 } : { x: v.x / length, y: v.y / length };
 }
 
-/** `Vector2::orthogonal()` — `Vector2(y, -x)`. */
+/** `Vector2::orthogonal()`: `Vector2(y, -x)`. */
 function orthogonal(v: Vec2): Vec2 {
   return { x: v.y, y: -v.x };
 }
@@ -66,7 +66,7 @@ function segmentDir(points: readonly Vec2[], index: number, previous: Vec2): Vec
   return isZeroApproxVec(dir) ? previous : dir;
 }
 
-/** `compute_polyline_edge_offset_clamped` (`:932-953`) — the miter bisector, clamped. */
+/** `compute_polyline_edge_offset_clamped` (`:932-953`): the miter bisector, clamped. */
 function edgeOffsetClamped(dir: Vec2, previous: Vec2): Vec2 {
   const dirLength = Math.hypot(dir.x, dir.y);
   const previousLength = Math.hypot(previous.x, previous.y);
@@ -107,7 +107,7 @@ function transparent(color: StrokeRGBA): StrokeRGBA {
 
 /**
  * `p_points`/`p_colors` in Godot px (+Y down), `p_width` the polyline's own
- * width and `p_antialiased` its AA flag — `draw_polyline_colors`' four
+ * width and `p_antialiased` its AA flag: `draw_polyline_colors`' four
  * arguments. `p_colors` is expected to carry one entry per point, the only
  * shape `GraphEdit::_draw_minimap_connection_line` (`:1601-1611`) produces.
  */

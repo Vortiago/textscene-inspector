@@ -1,5 +1,5 @@
 /**
- * GraphElement registration — native (WebGL canvas) painter + rect solve.
+ * GraphElement registration: native (WebGL canvas) painter + rect solve.
  * `./nativeSolver` registers the container-layout/minimum-size functions as a
  * side effect of import.
  */

@@ -1,4 +1,4 @@
-/** HScrollBar registration — parser. */
+/** HScrollBar registration: parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseHScrollBar } from './parser';

@@ -1,5 +1,5 @@
 /**
- * HSplitContainer parser — delegates to the shared SplitContainer base
+ * HSplitContainer parser: delegates to the shared SplitContainer base
  * (Control plus `split_offset`, `collapsed`, `dragger_visibility`). The axis
  * is the only thing this slice adds, and it is a Component concern.
  */

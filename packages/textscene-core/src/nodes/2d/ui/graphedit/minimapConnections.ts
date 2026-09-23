@@ -1,19 +1,19 @@
 /**
- * The minimap's own copy of every connection —
+ * The minimap's own copy of every connection:
  * `GraphEdit::_draw_minimap_connection_line`
  * (`scene/gui/graph_edit.cpp:1592-1612`), driven by `_minimap_draw`'s
  * connection loop (`:1870-1883`).
  *
- * Godot reuses `get_connection_line` here, but feeds it positions ALREADY
- * shifted by `_get_graph_offset()` — `min_scroll_offset` (`:119`), not
+ * Godot reuses `get_connection_line` here, but feeds it positions already
+ * shifted by `_get_graph_offset()`: `min_scroll_offset` (`:119`), not
  * `scroll_offset`, which is why the minimap keeps showing the whole graph
  * however far the view has scrolled. Every tessellated point is then mapped
  * through `_convert_from_graph_position` (`:135-143`) and offset by the
  * minimap's own letterbox origin.
  *
  * The per-point colour is a plain `from.lerp(to, t)` where `t` is the point's
- * distance from the first point over the straight first-to-last distance —
- * measured AFTER the mapping, so the minimap's own aspect ratio changes the
+ * distance from the first point over the straight first-to-last distance:
+ * measured after the mapping, so the minimap's own aspect ratio changes the
  * ramp. `activity` is a runtime-only field no scene serialises, so the
  * activity lerp at `:1877-1880` is unreachable from a file.
  *
@@ -38,7 +38,7 @@ export interface MinimapConnectionLine {
   colors: ControlColor[];
 }
 
-/** `Color::lerp` — component-wise, alpha included. */
+/** `Color::lerp`: component-wise, alpha included. */
 function lerpColor(from: ControlColor, to: ControlColor, weight: number): ControlColor {
   return {
     r: lerp(from.r, to.r, weight),

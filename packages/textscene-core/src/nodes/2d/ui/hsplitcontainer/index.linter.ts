@@ -1,5 +1,5 @@
 /**
- * HSplitContainer linter registration — imports linter components to trigger
+ * HSplitContainer linter registration: imports linter components to trigger
  * self-registration.
  */
 

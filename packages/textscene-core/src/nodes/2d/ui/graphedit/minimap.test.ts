@@ -1,10 +1,8 @@
 /**
- * `minimap.ts` vs `GraphEditMinimap` (`scene/gui/graph_edit.cpp:76-215`) and
+ * `minimap.ts` versus `GraphEditMinimap` (`scene/gui/graph_edit.cpp:76-215`) and
  * the two GraphEdit members that place it (`set_minimap_size` `:2770-2780`,
- * `_update_scrollbars` `:463-510`).
- *
- * Every expected number below is worked through Godot's own arithmetic by
- * hand, never read back off this module.
+ * `_update_scrollbars` `:463-510`). Each expected number is Godot's arithmetic
+ * worked by hand, never read back off this module.
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -63,7 +61,7 @@ describe('minimapRect (graph_edit.cpp:2770-2780)', () => {
 
   it('floors each axis at the minimap\'s own custom_minimum_size of 50 (graph_edit.cpp:3332)', () => {
     // `set_size(30, 200)` is raised to (50, 200) by Control::set_size
-    // (control.cpp:1496-1503) BEFORE the offsets are read back (:2772).
+    // (control.cpp:1496-1503) before the offsets are read back (:2772).
     expect(minimapRect({ x: 400, y: 320 }, props({ minimapSize: { x: 30, y: 200 } }))).toEqual({
       x: 338,
       y: 108,
@@ -114,7 +112,7 @@ describe('minimapTransform (GraphEditMinimap::update_minimap, graph_edit.cpp:76-
 
   it('letterboxes on the axis the graph is narrower in, and centres with it', () => {
     // graph_size (960,760); target_ratio 230/150; graph_ratio 960/760 = 1.2632
-    // is NOT greater, so proportions = (760 * 230/150, 760) = (1165.3333, 760)
+    // is not greater, so proportions = (760 * 230/150, 760) = (1165.3333, 760)
     // and graph_padding.x = (1165.3333 - 960)/2 = 102.6667.
     expect(t.graphProportions.x).toBeCloseTo(1165.3333, 3);
     expect(t.graphProportions.y).toBe(760);

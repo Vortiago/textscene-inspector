@@ -1,5 +1,5 @@
 /**
- * HSlider parser — delegates to the shared Slider base (Control + Range +
+ * HSlider parser: delegates to the shared Slider base (Control + Range +
  * tick/editable properties). HSlider adds no properties of its own; only the
  * draw axis differs, which is the Component's business.
  */

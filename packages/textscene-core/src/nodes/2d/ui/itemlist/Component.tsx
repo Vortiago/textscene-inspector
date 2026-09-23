@@ -1,31 +1,8 @@
 /**
- * `<ItemList>` — the native (WebGL canvas) painter for `ItemList`: the panel
- * StyleBox, then each row's icon and label — `ItemList::_notification`'s
- * `NOTIFICATION_DRAW` (`scene/gui/item_list.cpp:1367-1729`), restricted to
- * what a static `.tscn` can ever show (`nativeSolver.ts`'s own doc has the
- * full list: no selection/hover/cursor/focus, no scroll hint, no
- * `custom_bg`/`custom_fg`/`icon_modulate`/`icon_region`/`icon_transposed` —
- * none of those five is a serialisable leaf), plus the row/column guide
- * lines, which a static file's zero scroll position always makes visible.
- *
- * A right-to-left list keeps the panel and the guide lines where they are and
- * moves each row's icon and label through their own branches
- * (`item_list.cpp:1582-1584,1639-1641,1664-1668`).
- *
- * Each row is its OWN subcomponent (`<ItemListRow>`) purely so its icon's
- * `useTexture2D` hook has a stable per-row call site — `items.length` varies
- * per node, and React forbids a variable number of hook calls in ONE
- * component body. Every OTHER per-row number (rect, shaped text, icon size)
- * is computed ONCE, up front, as plain data — `packItemListRows`'s own
- * pure packing pass — so the row component only owns the async icon load.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`. `tint.own` reaches the panel `<StyleBoxQuad>` and is
- * multiplied into each row's own font/icon colour BEFORE each item's own
- * single sRGB→linear conversion — `Button`'s established ordering.
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * `<ItemList>`, the native (WebGL canvas) painter for `NOTIFICATION_DRAW`
+ * (`scene/gui/item_list.cpp:1367-1729`): the panel, the guide lines, then each
+ * row's icon and label, limited to what a `.tscn` can show (`nativeSolver.ts`).
+ * `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
@@ -78,7 +55,7 @@ import {
 } from './nativeSolver';
 import type { ItemListItem, ItemListProperties } from './types';
 
-/** Pass 1: this row's own icon/text SIZE contribution — what `packItemListRows` needs, before rects exist. */
+/** Pass 1: this row's own icon/text size contribution: what `packItemListRows` needs, before rects exist. */
 interface RowContent {
   item: ItemListItem;
   disabled: boolean;
@@ -89,7 +66,7 @@ interface RowContent {
   textLayout: TextLayoutResult | null;
 }
 
-/** Pass 2: this row's fully-resolved, plain-data geometry — everything but the async icon load. */
+/** Pass 2: this row's fully-resolved, plain-data geometry: everything but the async icon load. */
 interface RowGeometry {
   item: ItemListItem;
   disabled: boolean;
@@ -120,6 +97,11 @@ interface ItemListRowProps {
   resources: SceneScope;
 }
 
+/**
+ * One row, a component of its own so its `useTexture2D` hook has a stable call
+ * site: React forbids a varying hook count. `tint` multiplies the font and icon
+ * colour before the one sRGB-to-linear conversion.
+ */
 function ItemListRow({ geometry, origin, tint, renderOrder, clippingPlanes, fontSizePx, resources }: ItemListRowProps) {
   const { item, disabled, hasIcon, iconDraw, textLayout, textX, textY, iconX, textWidthPx, iconMode, rect, textColor } =
     geometry;
@@ -200,6 +182,8 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const vSeparation = hSeparation;
   const iconMargin = hSeparation;
   const wraparoundItems = props.wraparoundItems !== false;
+  // Under RTL the panel and guide lines stay, and only each row's icon and label
+  // move (`item_list.cpp:1582-1584,1639-1641,1664-1668`).
   const rtl = solveNode.rtl;
 
   const clippingPlanes = useControlClipPlanes();
@@ -269,9 +253,9 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const guideColorSrgb = useMemo(() => tintColor(itemListGuideColor(solveNode), tint.own), [solveNode, tint.own]);
   const guideColorLinear = useGodotLinearColor(guideColorSrgb);
 
-  // `base_ofs = theme_cache.panel_style->get_offset()` (`item_list.cpp:1429`)
-  // — `StyleBox::get_offset()` is `Point2(get_margin(LEFT), get_margin(TOP))`
-  // (`style_box.cpp:87-89`), never `contentMarginSize`'s SUMMED pair.
+  // `base_ofs = theme_cache.panel_style->get_offset()` (`item_list.cpp:1429`):
+  // `StyleBox::get_offset()` is `Point2(get_margin(LEFT), get_margin(TOP))`
+  // (`style_box.cpp:87-89`), never `contentMarginSize`'s summed pair.
   const origin: Vec2 = { x: panelBox.contentMargin.left, y: panelBox.contentMargin.top };
 
   const rowGeometries: RowGeometry[] = useMemo(
@@ -279,7 +263,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       rows.map((r, index) => {
         const packedRect = packed.items[index]!.rect;
         // Both centring passes read `rect_cache.SIZE` (`item_list.cpp:1553,1556,1649`),
-        // never its position — and a `Rect2` satisfies `Vec2` structurally.
+        // never its position, and a `Rect2` satisfies `Vec2` structurally.
         const packedSize: Vec2 = { x: packedRect.w, y: packedRect.h };
         const naturalSize = solveNode.textureSlots[itemListIconSlotKey(index)] ?? null;
         const iconDraw = itemIconDraw(
@@ -301,7 +285,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           hSeparation,
           vSeparation
         );
-        // Every RTL branch works in CONTROL coordinates; the row group keeps
+        // Every RTL branch works in control coordinates; the row group keeps
         // its LTR origin, so each piece comes back relative to it.
         const rowOriginX = origin.x + packedRect.x;
         const wrapped = iconMode === ICON_MODE_TOP;
@@ -323,7 +307,7 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
               rtl
             );
         // A non-wrapped item is a single line (`BREAK_NONE`), so the paragraph's
-        // own width IS that line's (`item_list.cpp:1668`, alignment RIGHT).
+        // own width is that line's (`item_list.cpp:1668`, alignment RIGHT).
         const rightAlign =
           !wrapped && rtl ? itemListRightAlignOffsetPx(textWidthPx, r.textLayout?.widthPx ?? 0) : 0;
         return {

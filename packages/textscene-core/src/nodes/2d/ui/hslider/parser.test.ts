@@ -1,8 +1,7 @@
 /**
- * HSlider parser contract. HSlider declares no properties of its own — it is
- * `Range → Slider → HSlider` with only the draw axis differing — so this pins
- * that the slice really does carry the Control + Range + Slider surface
- * through, which is the failure mode of a slice wired to the wrong base.
+ * HSlider parser contract. HSlider declares no property, so this pins that the
+ * Control, Range and Slider properties pass through: a slice wired to the wrong
+ * base loses them.
  */
 import { describe, it, expect } from 'vitest';
 import { parseHSlider } from './parser';

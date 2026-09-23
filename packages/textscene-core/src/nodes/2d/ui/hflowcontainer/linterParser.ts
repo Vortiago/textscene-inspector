@@ -1,17 +1,8 @@
 /**
- * HFlowContainer strict validators.
- *
- * It declares nothing (doc/classes/HFlowContainer.xml has no members section).
- * Its only relationship to the property set it inherits is subtractive:
- * `vertical` comes from FlowContainer, and this class fixes the orientation, so
- * `set_vertical` is
- * `ERR_FAIL_COND_MSG(is_fixed, "Can't change orientation of " + get_class() + ".")`
- * (flow_container.cpp:372) and `_validate_property` clears the key to
- * `PROPERTY_USAGE_NONE`. A scene carrying it is one Godot could not have
- * written and would reject.
- *
- * Everything else, the whole FlowContainer, Container and Control set, arrives
- * through the NODE_BASE_TYPES base-walk and is not re-declared here.
+ * HFlowContainer strict validators: doc/classes/HFlowContainer.xml has no members,
+ * and FlowContainer's `vertical` is removed. `set_vertical` refuses it with
+ * `ERR_FAIL_COND_MSG(is_fixed, …)` (flow_container.cpp:372) and `_validate_property`
+ * hides it, so Godot never writes it. The NODE_BASE_TYPES walk delivers the rest.
  */
 
 import '../flowcontainer/linterParser.js';

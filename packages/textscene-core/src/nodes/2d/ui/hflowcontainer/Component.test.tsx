@@ -1,7 +1,6 @@
 /**
- * `<HFlowContainer>` — a Container paints no chrome of its own; this pins
- * that it renders nothing into the scene graph, so a later regression that
- * accidentally adds a stray quad/outline shows up here first.
+ * `<HFlowContainer>` paints nothing, as a Container has no chrome, so a stray
+ * quad or outline fails here.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

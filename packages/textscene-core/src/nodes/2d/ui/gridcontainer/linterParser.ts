@@ -1,9 +1,6 @@
 /**
- * GridContainer strict validators for linting.
- *
- * Declare only GridContainer's OWN members. `doc/classes/GridContainer.xml`
- * lists exactly one, `columns`; everything else on a grid comes from Container
- * and Control and is delivered by the NODE_BASE_TYPES base-walk.
+ * GridContainer strict validators: `doc/classes/GridContainer.xml` lists one
+ * member, `columns`. The NODE_BASE_TYPES walk delivers Container and Control.
  */
 
 // Container registers nothing of its own, so the chain is pulled in at Control,

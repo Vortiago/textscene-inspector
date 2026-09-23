@@ -1,4 +1,4 @@
-/** HSplitContainer registration — parser. */
+/** HSplitContainer registration: parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseHSplitContainer } from './parser';

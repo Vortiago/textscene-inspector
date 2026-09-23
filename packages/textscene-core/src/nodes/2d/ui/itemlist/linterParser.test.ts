@@ -1,13 +1,7 @@
 /**
- * ItemList strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * One case per property group: happy, malformed, and every bound, with the
- * governing Godot source line quoted beside each numeric one.
+ * ItemList strict validators, asserted through `validatorRegistry` so a failure
+ * points at the validator, not at scene parsing. Each property group gets a
+ * happy, a malformed and a bound case, with the Godot source line beside each bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,9 +17,9 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
+ * Set exactly one, from the source rather than from expectation: list the keys
  * ItemList binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * Leaving both unset is red on purpose. Do not delete an assertion to go green.
  */
 const KEYS: string[] = [
   // The 18 ADD_PROPERTY / ADD_ARRAY_COUNT calls at item_list.cpp:2392-2411, in
@@ -55,7 +49,7 @@ const KEYS: string[] = [
   // Not an ADD_PROPERTY either: `_set`'s deprecated fallback (item_list.cpp:2242-2259).
   'items',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 describe('ItemList strict validators', () => {
@@ -68,16 +62,15 @@ describe('ItemList strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run rather than
+    // reasoned. `fixtureLint` checks it against the whole registry through the
+    // barrel; this checks it against this test's imports alone.
     expectFixtureClean('unit-item-list.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This
+    // check is generic on purpose; per-property cases come next.
     const accepted = validatorRegistry
       .getOwnKeys('ItemList')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -232,10 +225,10 @@ describe('ItemList counts and sizes', () => {
     // `_parse_construct<int32_t>` (variant_parser.cpp:577-592) takes any number
     // token, so `32.5` loads as 32. `Vector2` is a different Variant type and
     // does not convert.
-    // Loads, but stores 32 rather than 32.5 — the truncation warning.
+    // Loads, but stores 32 rather than 32.5: the truncation warning.
     expect(check('fixed_icon_size', 'Vector2i(32.5, 24)')?.severity).toBe('warning');
     // `Vector2` converts into a `Vector2i` slot (variant.cpp:536-830), so this
-    // is a file Godot opens; only a type that does NOT convert is an error.
+    // is a file Godot opens; only a type that does not convert is an error.
     expect(check('fixed_icon_size', 'Vector2(32, 24)')).toBeNull();
     expect(check('fixed_icon_size', 'Color(1, 1, 1, 1)')?.severity).toBe('error');
   });
@@ -273,20 +266,17 @@ describe('ItemList per-item family', () => {
   });
 
   it('errors on an index that is not an integer, which the helper never resolves', () => {
-    // `ItemList::_set` routes every per-item key through
-    // `property_helper.property_set_value` (item_list.cpp:2238), whose
-    // `_get_property` returns nullptr unless the index `is_valid_int()`
-    // (property_list_helper.cpp:53-55). `_set` then returns false and Godot
-    // DROPS the write, which is the error tier: the key has to reach this
-    // dispatcher for that to be reportable at all.
+    // `ItemList::_set` routes each per-item key through
+    // `property_helper.property_set_value` (item_list.cpp:2238), whose `_get_property`
+    // returns nullptr unless the index `is_valid_int()` (property_list_helper.cpp:53-55).
+    // Godot drops the write, so this is the error tier.
     expect(check('item_x/text', '"Sword"')?.code).toBe('INVALID_ITEM_KEY');
     expect(check('item_1.5/text', '"Sword"')?.code).toBe('INVALID_ITEM_KEY');
   });
 
   it('rejects an unrecognised key shape handed straight to the dispatcher', () => {
-    // The dispatcher carries its own guard for the same case, so the pattern key
-    // itself (`item_#/*`, which the malformed-value sweep passes in verbatim)
-    // is refused rather than silently accepted.
+    // The dispatcher guards the same case, so the pattern key `item_#/*`, which
+    // the malformed-value check passes in verbatim, is refused.
     const dispatcher = validatorRegistry.findValidator('ItemList', 'item_#/*');
     expect(dispatcher).not.toBeNull();
     expect(dispatcher!('item_x/text', '"Sword"', 1)?.code).toBe('INVALID_ITEM_KEY');

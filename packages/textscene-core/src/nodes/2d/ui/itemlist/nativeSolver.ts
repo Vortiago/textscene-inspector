@@ -1,44 +1,23 @@
 /**
- * ItemList's native (WebGL canvas) rect solver — a port of
- * `ItemList::force_update_list_size` (`scene/gui/item_list.cpp:1733-1912`,
- * the row-packing pass) and `ItemList::get_minimum_size` (`:2136-2146`),
- * plus the per-item minsize contribution `force_update_list_size` computes
- * inline (`:1743-1796`) and the icon fit-into-box math `_adjust_to_max_size`
- * (`:1186-1197`, used at draw time — `Component.tsx`). Registered via
- * `controlSolverRegistry.registerMinimumSize`/`registerTextureSlots`. Pure
- * per-node math, no THREE/React.
+ * ItemList's native (WebGL canvas) rect solver: `ItemList::force_update_list_size`
+ * (`scene/gui/item_list.cpp:1733-1912`), its per-item minsize (`:1743-1796`),
+ * `ItemList::get_minimum_size` (`:2136-2146`) and the draw-time icon fit
+ * `_adjust_to_max_size` (`:1186-1197`). Pure per-node math, no THREE/React.
  *
- * NOT modelled, matching this codebase's established restrictions elsewhere:
- *  - Each item's own SHAPED direction: `_shape_text` hands `is_layout_rtl()`
- *    to the TextServer (`item_list.cpp:41-45`), and this codebase's text
- *    engine has no bidi pass, so a right-to-left script draws in logical
- *    order. Every LAYOUT branch of `is_layout_rtl()` IS ported (below).
- *  - `selected`/`hovered`/cursor/focus backgrounds — none of `selected`,
- *    `current` or a live hover/focus state is ever serialised (item_list.cpp's
- *    `PropertyListHelper` registers only `text`/`icon`/`selectable`/`disabled`,
- *    `:2461-2467` — `linterParser.ts`'s own doc has the full grounding), so
- *    `should_draw_selected_bg`/`_hovered_bg`/the cursor StyleBox and the
- *    `focus` StyleBox never have a live case to draw in a static preview.
- *  - `custom_bg`/`custom_fg` — real ItemList members, but likewise never
- *    reachable from a `.tscn` (no property-helper leaf).
- *  - The scroll-hint icon — needs a vendored icon and a live scrolled
- *    position no static file has; left as a documented gap (`comparison.md`).
- *    Row/column guide lines ARE modelled (`itemListGuideLines`, below) — a
- *    static file's own scroll position is always zero, so every separator is
- *    "visible" and none of the scroll-hint icon's reasons for staying out
- *    apply to it.
- *  - The vertical-scrollbar-driven `fit_size` adjustment
- *    (`item_list.cpp:1798-1801,1862-1864`): unreachable except when
- *    `max_columns > 1` AND `wraparound_items` is true AND `auto_width` is
- *    false all hold AT ONCE (every other combination already disables the
- *    width-overflow branch this feeds, `packItemListRows`'s own doc) — a
- *    narrow, EXPLICITLY reasoned scope cut, not an oversight.
- *  - Re-shaping each item's text at its OWN FINAL packed column width before
- *    drawing (`item_list.cpp:1628-1634,1657-1661`): this codebase shapes
- *    ONCE, at the SAME width the minsize pass used, and draws that — exact
- *    whenever `fixed_column_width`/`same_column_width` makes every item's
- *    final width equal the packing width (the common case), approximate only
- *    when a dynamically-fit column ends up wider than that.
+ * Not modelled:
+ *  - Bidi shaping: `_shape_text` hands `is_layout_rtl()` to the TextServer
+ *    (`item_list.cpp:41-45`), and the text engine has no bidi pass, so an RTL
+ *    script draws in logical order. Each layout branch of `is_layout_rtl()` is ported.
+ *  - Selected, hovered, cursor and focus backgrounds, and `custom_bg`/`custom_fg`:
+ *    item_list.cpp's helper registers only `text`/`icon`/`selectable`/`disabled`
+ *    (`:2461-2467`), so no `.tscn` reaches them.
+ *  - The scroll-hint icon, which needs a vendored icon and a scrolled position
+ *    (`comparison.md`). Guide lines are modelled: at scroll zero each separator shows.
+ *  - The scrollbar-driven `fit_size` adjustment (`item_list.cpp:1798-1801,1862-1864`),
+ *    reachable only with `max_columns > 1`, `wraparound_items` and no `auto_width`.
+ *  - Re-shaping text at the final column width (`item_list.cpp:1628-1634,1657-1661`):
+ *    text shapes once at the packing width, exact under `fixed_column_width` or
+ *    `same_column_width`, approximate when a fitted column ends up wider.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -84,10 +63,10 @@ export const ICON_MODE_LEFT = 1;
 
 // --- Theme font ----------------------------------------------------------
 
-/** ItemList's own theme font key — `SceneStringName(font)` (`default_theme.cpp:951`). */
+/** ItemList's own theme font key: `SceneStringName(font)` (`default_theme.cpp:951`). */
 export const ITEM_LIST_THEME_FONT_KEY = 'font';
 
-/** `control_font_lower_color` (`default_theme.cpp:103`) — ItemList's own `font_color` default (`:954`). */
+/** `control_font_lower_color` (`default_theme.cpp:103`): ItemList's own `font_color` default (`:954`). */
 export const ITEM_LIST_DEFAULT_FONT_COLOR: ControlColor = { r: 0.65, g: 0.65, b: 0.65, a: 1 };
 
 const ITEM_LIST_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -109,7 +88,7 @@ export function itemListIconSlotKey(index: number): string {
   return `item_${index}`;
 }
 
-/** `item_N/icon` (`item_list.cpp:2464`) — one slot request per row that names an icon. */
+/** `item_N/icon` (`item_list.cpp:2464`): one slot request per row that names an icon. */
 export const itemListTextureSlots: TextureSlotsFn = (node: TscnNode) => {
   const props = node.properties as ItemListProperties;
   const requests: TextureSlotRequest[] = [];
@@ -122,15 +101,15 @@ export const itemListTextureSlots: TextureSlotsFn = (node: TscnNode) => {
 // --- Theme constants not exposed on NativeTheme ---------------------------
 
 /**
- * Reconstructs the project's `gui/theme/default_theme_scale` from `theme.fontSize`
- * — see `spinbox/nativeSolver.ts` / `progressbar/nativeSolver.ts`'s own copy
+ * Reconstructs the project's `gui/theme/default_theme_scale` from `theme.fontSize`:
+ * see `spinbox/nativeSolver.ts` / `progressbar/nativeSolver.ts`'s own copy
  * of this same technique; `nativeTheme.ts` cannot be extended from this slice.
  */
 function reconstructThemeScale(theme: Pick<NativeTheme, 'fontSize'>): number {
   return theme.fontSize / DEFAULT_FONT_SIZE;
 }
 
-/** `default_theme.cpp:949` — `theme->set_constant(line_separation, "ItemList", round(2*scale))`. */
+/** `default_theme.cpp:949`: `theme->set_constant(line_separation, "ItemList", round(2*scale))`. */
 const ITEM_LIST_LINE_SEPARATION_BASE = 2;
 
 export function itemListLineSeparation(theme: Pick<NativeTheme, 'fontSize'>): number {
@@ -139,7 +118,7 @@ export function itemListLineSeparation(theme: Pick<NativeTheme, 'fontSize'>): nu
 
 /**
  * `h_separation`/`v_separation`/`icon_margin` (`default_theme.cpp:946-948`)
- * are ALL `Math::round(4 * scale)` — the identical formula `theme.separation`
+ * are all `Math::round(4 * scale)`: the identical formula `theme.separation`
  * (BoxContainer's own constant) already computes, so this reuses it rather
  * than re-deriving a third `round(4*scale)`.
  */
@@ -151,7 +130,7 @@ const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 /** `StyleBoxFlat`'s own unset default (`style_box_flat.h:40`). */
 const DEFAULT_BORDER_COLOR: ControlColor = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
 
-/** `theme->set_stylebox(panel, "ItemList", make_flat_stylebox(style_normal_color))` (`default_theme.cpp:944`) — every `make_flat_stylebox` default (margin 4, corner radius 3), both scaled. */
+/** `theme->set_stylebox(panel, "ItemList", make_flat_stylebox(style_normal_color))` (`default_theme.cpp:944`): every `make_flat_stylebox` default (margin 4, corner radius 3), both scaled. */
 export function itemListPanelStyleBox(theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>): StyleBoxFlatData {
   const m = theme.contentMargin;
   return {
@@ -190,8 +169,8 @@ export function pickItemListPanelStyleBox(
 
 /**
  * `Item::get_icon_size() * icon_scale`, or `fixed_icon_size * icon_scale`
- * when `fixed_icon_size` is set on BOTH axes (`item_list.cpp:1538-1542,1746-1750`).
- * `naturalSize` is `null` until the icon texture resolves — treated as "no
+ * when `fixed_icon_size` is set on both axes (`item_list.cpp:1538-1542,1746-1750`).
+ * `naturalSize` is `null` until the icon texture resolves: treated as "no
  * icon contribution yet" (`button/nativeSolver.ts`'s established convention).
  */
 export function itemIconPackedSize(
@@ -209,7 +188,7 @@ export function itemIconPackedSize(
 }
 
 /**
- * `_adjust_to_max_size` (`item_list.cpp:1186-1197`) — fits `size` inside
+ * `_adjust_to_max_size` (`item_list.cpp:1186-1197`): fits `size` inside
  * `maxSize`, preserving aspect, centred. Every `int(...)` cast in the source
  * truncates toward zero.
  */
@@ -229,12 +208,10 @@ export function adjustToMaxSize(size: Vec2, maxSize: Vec2): Rect2 {
 // --- Per-item text shaping --------------------------------------------------
 
 /**
- * `_shape_text` (`item_list.cpp:37-55`): TOP icon mode with `max_text_lines >
- * 0` wraps (word+grapheme+mandatory breaks); every other case is a single,
- * unbroken line. `AutowrapMode.WORD` (word-boundary only) stands in for
- * Godot's own word-OR-grapheme combination — this codebase's shared text
- * engine has no such combined mode — so a single unbreakable word overflows
- * its column here where Godot would break it mid-word (`comparison.md`).
+ * `_shape_text` (`item_list.cpp:37-55`): TOP icon mode with `max_text_lines > 0`
+ * wraps at word, grapheme and mandatory breaks; else one line. The text engine
+ * has only `AutowrapMode.WORD`, so an unbreakable word overflows its column where
+ * Godot breaks it mid-word (`comparison.md`).
  */
 export function itemListAutowrapMode(iconMode: number, maxTextLines: number): AutowrapMode {
   return iconMode === ICON_MODE_TOP && maxTextLines > 0 ? AutowrapMode.WORD : AutowrapMode.OFF;
@@ -261,17 +238,10 @@ export interface ItemTextShapeInput {
 }
 
 /**
- * Shapes one item's own text — `null` for an item with no text at all.
- *
- * `item_list.cpp:1763-1766`'s minsize pass and `:1621-1661`'s draw pass both
- * call `text_buf->set_width` then read back the paragraph's own (possibly
- * TRIMMED) size, so the overrun trim is applied here, once, rather than as a
- * separate step either caller repeats — the SAME "shape once, reuse the
- * result" contract this slice's own doc already establishes for the width.
- * Trims EVERY line uniformly (`TextParagraph::_shape_lines`'s own
- * autowrap-disabled branch, `text_paragraph.cpp:257-270`, does exactly this
- * absent a `max_text_lines` visible-line cap this engine does not model —
- * see this slice's own doc).
+ * Shapes one item's text, or `null` for an item with none. The minsize pass
+ * (`item_list.cpp:1763-1766`) and the draw pass (`:1621-1661`) both read the
+ * trimmed size after `text_buf->set_width`, so the overrun trim applies here, to
+ * each line, as `TextParagraph::_shape_lines` does (`text_paragraph.cpp:257-270`).
  */
 export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult | null {
   if (input.text.length === 0) return null;
@@ -300,11 +270,9 @@ export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult |
 }
 
 /**
- * `shapeText`'s `lineSpacingPx` applies BETWEEN lines only (its own doc);
- * `force_update_list_size`'s own formula (`item_list.cpp:1772`) instead adds
- * `line_separation * max_text_lines` — a FLAT addition, not a per-gap one —
- * so this shapes at `lineSpacingPx: 0` and the flat term is added separately
- * in `itemContentMinSize` below, rather than folded into the shape call.
+ * Zero: `shapeText` spaces between lines, but `force_update_list_size`
+ * (`item_list.cpp:1772`) adds a flat `line_separation * max_text_lines`, which
+ * `itemContentMinSize` adds.
  */
 function itemListLineSeparationForShaping(_input: ItemTextShapeInput): number {
   return 0;
@@ -316,7 +284,7 @@ export interface ItemContentInput {
   hasIcon: boolean;
   iconSize: Vec2;
   hasText: boolean;
-  /** The shaped text's own `{ widthPx: ceiled, heightPx }` — `shapedTextSizeWidthPx(layout.widthPx)`/`layout.heightPx`. */
+  /** The shaped text's own `{ widthPx: ceiled, heightPx }`: `shapedTextSizeWidthPx(layout.widthPx)`/`layout.heightPx`. */
   textSize: Vec2;
   iconMode: number;
   maxTextLines: number;
@@ -324,13 +292,9 @@ export interface ItemContentInput {
 }
 
 /**
- * The per-item minsize contribution BEFORE h/v separation
- * (`item_list.cpp:1743-1790`, minus the trailing `+= max(v_separation,0)`/
- * `+= max(h_separation,0)` this function's own caller adds — see
- * `itemMinimumSize` below). `icon_margin` (item_list.cpp:1754,1756) is the
- * SAME `round(4*scale)` constant as `h_separation`/`v_separation`
- * (`itemListSeparation`'s own doc), added only when BOTH an icon and text
- * are present.
+ * The per-item minsize before the separations `itemMinimumSize` adds
+ * (`item_list.cpp:1743-1790`). `icon_margin` (item_list.cpp:1754,1756) is the same
+ * `round(4*scale)` as `h_separation`/`v_separation`, added only with both an icon and text.
  */
 export function itemContentMinSize(
   input: ItemContentInput,
@@ -369,7 +333,7 @@ export function itemContentMinSize(
   return { x, y };
 }
 
-/** The FULL per-item minsize, INCLUDING h/v separation (`item_list.cpp:1789-1790`). */
+/** The full per-item minsize, including h/v separation (`item_list.cpp:1789-1790`). */
 export function itemMinimumSize(
   input: ItemContentInput,
   theme: Pick<NativeTheme, 'fontSize' | 'separation'>
@@ -382,29 +346,24 @@ export function itemMinimumSize(
 // --- Row packing: force_update_list_size's phase 2 (item_list.cpp:1798-1912) -
 
 export interface ItemListPackInput {
-  /** Per-item minsize, INCLUDING h/v separation — `itemMinimumSize`'s own output. */
+  /** Per-item minsize, including h/v separation: `itemMinimumSize`'s own output. */
   itemSizes: readonly Vec2[];
-  /** The widest item's OWN minsize.x, across every item (`item_list.cpp:1786`) — only consumed when `sameColumnWidth`. */
+  /** The widest item's own minsize.x, across every item (`item_list.cpp:1786`): only consumed when `sameColumnWidth`. */
   maxColumnWidth: number;
   sameColumnWidth: boolean;
-  /** `<= 0` means unbounded (`item_list.cpp:1804-1807`). Godot's own class default is 1, not 0 — callers pass `maxColumns ?? 1`. */
+  /** `<= 0` means unbounded (`item_list.cpp:1804-1807`). Godot's own class default is 1, not 0: callers pass `maxColumns ?? 1`. */
   maxColumns: number;
-  /**
-   * `size.x - panel_style->get_minimum_size().width` (`item_list.cpp:1798`).
-   * The vertical-scrollbar-driven adjustment to this figure
-   * (`:1798-1801,1862-1864`) is NOT ported — see this module's own header for
-   * why it is unreachable outside an already-narrow combination.
-   */
+  /** `size.x - panel_style->get_minimum_size().width` (`item_list.cpp:1798`), without the unported scrollbar adjustment (`:1798-1801,1862-1864`). */
   fitSize: number;
   wraparoundItems: boolean;
   autoWidth: boolean;
   hSeparation: number;
-  /** `MAX(0, rectSize.y - panelMinHeight)` — `Infinity` when no resolved rect exists (the minimum-size pass has none). */
+  /** `MAX(0, rectSize.y - panelMinHeight)`: `Infinity` when no resolved rect exists (the minimum-size pass has none). */
   availableHeight: number;
 }
 
 export interface ItemListPackedItem {
-  /** Relative to the packed CONTENT origin — the caller adds `base_ofs` (`item_list.cpp:1429`, the panel's own offset minus scroll). */
+  /** Relative to the packed content origin: the caller adds `base_ofs` (`item_list.cpp:1429`, the panel's own offset minus scroll). */
   rect: Rect2;
   column: number;
 }
@@ -413,21 +372,18 @@ export interface ItemListPackResult {
   items: readonly ItemListPackedItem[];
   /** Row-separator Y positions, content-relative (`item_list.cpp:1840`). */
   separators: readonly number[];
-  /** `max_w` — the packed content's own total width. */
+  /** `max_w`: the packed content's own total width. */
   contentWidth: number;
-  /** `ofs.y + max_h`, post row-height backfill — the packed content's own total height. */
+  /** `ofs.y + max_h`, post row-height backfill: the packed content's own total height. */
   contentHeight: number;
-  /** `scroll_bar_v_max > scroll_bar_v_page` (`item_list.cpp:1877-1889`) — informational; this codebase draws no scrollbar. */
+  /** `scroll_bar_v_max > scroll_bar_v_page` (`item_list.cpp:1877-1889`): informational; this codebase draws no scrollbar. */
   verticalScrollbarVisible: boolean;
 }
 
 /**
- * `force_update_list_size`'s row-packing `while (true)` loop
- * (`item_list.cpp:1809-1908`). Terminates because `current_columns` only ever
- * DECREASES (to `MAX(col, 1)`, `:1822`) and the loop's own overflow branch is
- * gated on `current_columns > 1` (`:1820`) — once it reaches 1 the branch can
- * never fire again, so `all_fit` becomes true within at most the INITIAL
- * `current_columns` many attempts, exactly as in the engine.
+ * `force_update_list_size`'s row-packing `while (true)` loop (`item_list.cpp:1809-1908`).
+ * It ends: `current_columns` only falls (to `MAX(col, 1)`, `:1822`), and the
+ * overflow branch needs `current_columns > 1` (`:1820`).
  */
 export function packItemListRows(input: ItemListPackInput): ItemListPackResult {
   const n = input.itemSizes.length;
@@ -496,23 +452,14 @@ export function packItemListRows(input: ItemListPackInput): ItemListPackResult {
 
 // --- Minimum size: ItemList::get_minimum_size (item_list.cpp:2136-2146) ----
 
-/** Godot's own class default (`item_list.h:142`) — callers pass this, not `?? 0`, when `maxColumns` is unset. */
+/** Godot's own class default (`item_list.h:142`): callers pass this, not `?? 0`, when `maxColumns` is unset. */
 export const ITEM_LIST_DEFAULT_MAX_COLUMNS = 1;
 
 /**
- * `auto_width_value`/`auto_height_value` are populated only by
- * `force_update_list_size`, itself only run from `NOTIFICATION_DRAW`/RESIZE —
- * `get_minimum_size()` never triggers a fresh layout of its own, so in real
- * Godot this reads whatever the LAST draw computed, converging over several
- * frames as a container re-lays-out (`SolveContext` offers no such loop —
- * this codebase solves every node once). This runs the SAME packer ONCE with
- * `fitSize: Infinity` and `availableHeight: Infinity` (no resolved rect to
- * measure against) — EXACT whenever `auto_width` is true (the packer's own
- * overflow branch is then unreachable regardless of `fitSize`, matching
- * Godot's real behaviour) or `max_columns > 0` (column count alone decides
- * wrapping); approximate only for `auto_height` with `max_columns` UNSET
- * (0) and `auto_width` false, a combination this previewer's single-pass
- * solve cannot converge the way Godot's multi-frame layout does.
+ * Godot's `get_minimum_size()` reads `auto_width_value`/`auto_height_value` from
+ * the last draw, converging over frames; `SolveContext` solves once, so this packs
+ * once with infinite `fitSize` and `availableHeight`. Exact under `auto_width` or
+ * `max_columns > 0`; approximate for `auto_height` with `max_columns` 0 and no `auto_width`.
  */
 export const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ItemListProperties;
@@ -568,18 +515,15 @@ controlSolverRegistry.registerTextureSlots('ItemList', itemListTextureSlots);
 // --- Draw-time per-item geometry (item_list.cpp:1536-1691) ----------------
 
 export interface ItemIconDraw {
-  /** Relative to the item's OWN rect origin. `null` when the item has no icon. */
+  /** Relative to the item's own rect origin. `null` when the item has no icon. */
   rect: Rect2 | null;
-  /** `icon_size.height + icon_margin` (TOP) or `icon_size.width + icon_margin` (LEFT) — the pen offset the text inherits. */
+  /** `icon_size.height + icon_margin` (TOP) or `icon_size.width + icon_margin` (LEFT): the pen offset the text inherits. */
   textOffsetContribution: Vec2;
 }
 
 /**
- * `item_list.cpp:1536-1566,1573-1585`, restricted to what can ever be
- * authored: `icon_region`/`icon_transposed` are real `Item` members but
- * NEITHER is a `PropertyListHelper`-registered leaf (this module's own
- * header), so `region` is always the icon's own full rect and the transpose
- * swap never applies.
+ * `item_list.cpp:1536-1566,1573-1585`. `icon_region` and `icon_transposed` are no
+ * `PropertyListHelper` leaf, so the region is the full icon and nothing transposes.
  */
 export function itemIconDraw(
   hasIcon: boolean,
@@ -642,7 +586,7 @@ export function itemTextDrawOffset(
   };
 }
 
-/** One line's own horizontal offset under `HORIZONTAL_ALIGNMENT_CENTER` (TOP icon mode only — LEFT mode never centres, `_shape_text`'s own alignment call site). */
+/** One line's own horizontal offset under `HORIZONTAL_ALIGNMENT_CENTER` (TOP icon mode only: LEFT mode never centres, `_shape_text`'s own alignment call site). */
 export function itemTextLineCenterOffset(centerWidth: number, lineWidthCeiled: number): number {
   return Math.max(0, centerWidth - lineWidthCeiled) / 2;
 }
@@ -661,7 +605,7 @@ export function itemTextColor(baseColor: ControlColor, disabled: boolean): Contr
 
 // --- Row/column guide lines: item_list.cpp:1446-1459 -----------------------
 
-/** `default_theme.cpp:959` — `theme->set_color("guide_color", "ItemList", Color(0.7, 0.7, 0.7, 0.25))`. */
+/** `default_theme.cpp:959`: `theme->set_color("guide_color", "ItemList", Color(0.7, 0.7, 0.7, 0.25))`. */
 export const ITEM_LIST_DEFAULT_GUIDE_COLOR: ControlColor = { r: 0.7, g: 0.7, b: 0.7, a: 0.25 };
 
 /** This node's own `theme_override_colors/guide_color` (already folded onto `n.colors` by the walker), else the built-in default. */
@@ -670,20 +614,16 @@ export function itemListGuideColor(n: Pick<SolveNode, 'colors'>): ControlColor {
 }
 
 export interface ItemListGuideLine {
-  /** Content-relative Y — the caller adds the panel's own offset (`origin`, `item_list.cpp:1429`). */
+  /** Content-relative Y: the caller adds the panel's own offset (`origin`, `item_list.cpp:1429`). */
   y: number;
   /** Spans the panel's own content width, from its content origin (`item_list.cpp:1455-1457`). */
   width: number;
 }
 
 /**
- * `item_list.cpp:1446-1459`'s visible-separator draw, minus the scroll-driven
- * clip (a static preview has nothing scrolled out of view, so every
- * separator is "visible"). RTL only moves a separator while the vertical
- * scrollbar is VISIBLE (`:1454-1458`), and this codebase draws no scrollbar,
- * so both directions share one span. Only `packItemListRows`'s own
- * `separators` output feeds this — every one is a real row/column boundary,
- * never invented here.
+ * `item_list.cpp:1446-1459`'s separator draw without the scroll clip: nothing is
+ * scrolled out of view. RTL moves a separator only while the vertical scrollbar
+ * shows (`:1454-1458`), and none is drawn, so both directions share one span.
  */
 export function itemListGuideLines(iconMode: number, separators: readonly number[], contentWidth: number): ItemListGuideLine[] {
   if (iconMode === ICON_MODE_TOP) return [];
@@ -693,24 +633,20 @@ export function itemListGuideLines(iconMode: number, separators: readonly number
 // --- RTL draw geometry: item_list.cpp:1582-1584,1629-1641,1657-1668 -------
 
 /**
- * Mirrors one drawn piece inside the control's own width — the icon rect
- * (`item_list.cpp:1582-1584`) and the wrapped text box (`:1639-1641`).
- *
- * The `size.width` those branches mirror against IS `get_size().width`: the
- * only thing that widens it is the `!wraparound_items` expansion by
- * `scroll_bar_h->get_max() - get_page()` (`:1438-1440`), and RTL sets that
- * max TO the page (`:1891-1893`), so the term is zero whichever way
- * `wraparound_items` goes.
+ * Mirrors the icon rect (`item_list.cpp:1582-1584`) or the wrapped text box
+ * (`:1639-1641`) inside `get_size().width`. The `!wraparound_items` widening by
+ * `scroll_bar_h->get_max() - get_page()` (`:1438-1440`) is zero under RTL, which
+ * sets that max to the page (`:1891-1893`).
  */
 export function itemListMirrorX(ltrX: number, widthPx: number, controlWidthPx: number, rtl: boolean): number {
   return rtl ? controlWidthPx - ltrX - widthPx : ltrX;
 }
 
 export interface ItemListRowTextXInput {
-  /** `base_ofs.x + rect_cache.position.x + text_ofs.x` — the LTR pen origin. */
+  /** `base_ofs.x + rect_cache.position.x + text_ofs.x`: the LTR pen origin. */
   ltrX: number;
   itemRectWidthPx: number;
-  /** `icon_size.x`, the item's own PACKED icon width — zero without an icon. */
+  /** `icon_size.x`, the item's own packed icon width: zero without an icon. */
   iconWidthPx: number;
   controlWidthPx: number;
   /** `width` (`item_list.cpp:1387`), the panel's own content width. */
@@ -720,10 +656,9 @@ export interface ItemListRowTextXInput {
 }
 
 /**
- * The single-line pen origin (`item_list.cpp:1664-1667`). The RTL arm is NOT
- * a mirror of the LTR box: it lands `h_separation/2 - icon_margin` off one,
- * so the label sits a different distance from its icon in each direction.
- * That difference is the engine's, reproduced rather than corrected.
+ * The single-line pen origin (`item_list.cpp:1664-1667`). The RTL arm lands
+ * `h_separation/2 - icon_margin` off a mirror of the LTR box, so the label sits
+ * a different distance from its icon in each direction, as in the engine.
  */
 export function itemListRowTextX(input: ItemListRowTextXInput, rtl: boolean): number {
   if (!rtl) return input.ltrX;
@@ -750,7 +685,7 @@ export function itemListLineTextWidthPx(
 }
 
 /**
- * The same width for a WRAPPED item (`item_list.cpp:1629-1632`): the row
+ * The same width for a wrapped item (`item_list.cpp:1629-1632`): the row
  * inset by the pen offset on both sides, clamped so the box cannot run past
  * the content width.
  */
@@ -769,7 +704,7 @@ export function itemListWrappedTextWidthPx(
  * `HORIZONTAL_ALIGNMENT_RIGHT`'s own per-line shift, `width - line_width`,
  * applied only while the box has a positive width
  * (`TextParagraph::draw`, `text_paragraph.cpp:888,916-921`). `lineWidthPx`
- * is the RAW pen extent (`shaped_text_get_width`), never the ceiled size.
+ * is the raw pen extent (`shaped_text_get_width`), never the ceiled size.
  */
 export function itemListRightAlignOffsetPx(textWidthPx: number, lineWidthPx: number): number {
   return textWidthPx > 0 ? textWidthPx - lineWidthPx : 0;

@@ -1,11 +1,11 @@
 /**
- * GraphElement's native (WebGL canvas) rect solve — `GraphElement::_resort`
+ * GraphElement's native (WebGL canvas) rect solve: `GraphElement::_resort`
  * and `GraphElement::get_minimum_size` (`scene/gui/graph_element.cpp:47-73`),
  * plus the shared `Container::fit_child_in_rect`
  * (`scene/gui/container.cpp:95-128`).
  *
  * `get_minimum_size` passes `SortableVisibilityMode::IGNORE` explicitly
- * (`:62`), unlike `_resort`'s default `VISIBLE_IN_TREE` (`:51`) — a hidden
+ * (`:62`), unlike `_resort`'s default `VISIBLE_IN_TREE` (`:51`): a hidden
  * child still floors this node's minimum size but is skipped when laying
  * children out. `GraphNode`/`GraphFrame` each override `_resort` with their
  * own titlebar/panel geometry (their own `nativeSolver.ts`), so this
@@ -41,7 +41,7 @@ function vFlagsOf(n: SolveNode): number {
 
 /**
  * `GraphElement::get_minimum_size` (`:59-73`): the max, per axis, of every
- * child's combined minimum size — hidden children included
+ * child's combined minimum size: hidden children included
  * (`SortableVisibilityMode::IGNORE`, `:62`).
  */
 export const graphElementMinimumSize: MinimumSizeFn = (n, ctx) => {
@@ -58,8 +58,8 @@ export const graphElementMinimumSize: MinimumSizeFn = (n, ctx) => {
 controlSolverRegistry.registerMinimumSize('GraphElement', graphElementMinimumSize);
 
 /**
- * `GraphElement::_resort` (`:47-57`): every VISIBLE child fitted into this
- * node's own full rect — no chrome, no margin. No RTL branch of its own
+ * `GraphElement::_resort` (`:47-57`): every visible child fitted into this
+ * node's own full rect: no chrome, no margin. No RTL branch of its own
  * (`graph_element.cpp` calls `is_layout_rtl()` nowhere); the container's flag
  * still reaches a child through `fit_child_in_rect`, which reads it itself.
  */

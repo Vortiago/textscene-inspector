@@ -1,5 +1,5 @@
 /**
- * GraphEdit's own two scrollbars — `h_scrollbar`/`v_scrollbar`, constructor-
+ * GraphEdit's own two scrollbars: `h_scrollbar`/`v_scrollbar`, constructor-
  * built children of `top_layer` (`scene/gui/graph_edit.cpp:3210-3216`), sized
  * and valued by `_update_scrollbars` (`:463-510`) and anchored by
  * `_notification(NOTIFICATION_READY)` (`:840-851`).
@@ -7,7 +7,7 @@
  * Both are visible in every GraphEdit with a non-zero rect: the range
  * `_update_scrollbars` builds is the graph box grown by one whole GraphEdit
  * rect on each side (`:491-492`), while the page is that rect, so
- * `max - min <= page` — the only `hide()` branch (`:499,509`) — cannot hold.
+ * `max - min <= page`, the only `hide()` branch (`:499,509`), cannot hold.
  *
  * Pure data + functions, no React, no THREE.
  *

@@ -1,51 +1,41 @@
 /**
- * What `GraphEdit`'s own setters leave behind when a scene's properties are
- * applied IN THE FILE'S OWN ORDER.
- *
- * Three of GraphEdit's setters read state an earlier key wrote, so the stored
- * value is not the authored one and cannot be recovered from an order-free
- * property bag. `SceneState::instantiate` applies every property with
- * `node->set` (`scene/resources/packed_scene.cpp:492`) and only THEN parents
- * the node (`:541`), so every setter below runs on a node that is NOT inside
- * the tree. Two consequences do all the work:
+ * What `GraphEdit`'s setters store when a scene's properties apply in file order.
+ * Three setters read state an earlier key wrote, so an order-free property bag
+ * cannot recover the stored value. `SceneState::instantiate` sets every property
+ * (`scene/resources/packed_scene.cpp:492`) before it parents the node (`:541`),
+ * so each setter below runs outside the tree:
  *
  *  - `Control::_size_changed` updates `data.size_cache` but skips
- *    `NOTIFICATION_RESIZED` outside the tree (`scene/gui/control.cpp:1812`),
- *    so the resize handler that calls `GraphEdit::_update_scrollbars` (`:867`)
- *    — the only writer of `min_scroll_offset`/`max_scroll_offset`
- *    (`graph_edit.cpp:492-493`) — never runs during load. Both bounds are
- *    therefore still `(0, 0)` when `set_scroll_offset` clamps against them
- *    (`:407`), and `CLAMP` takes the MIN branch first
- *    (`core/typedefs.h:139-141`): the range is INVERTED and every authored
- *    offset lands on `0` or on `-size`, never in between.
- *    One load-time path does reach `_update_scrollbars` first: a `zoom` write
- *    that actually moves the value calls it (`:2448`). It measures a child
- *    list that is still empty — `SceneState` parents GraphEdit's children
- *    after its own properties — so the merged rect is one size out from the
- *    origin in every direction (`:488-493`) and the clamp that follows reads
- *    the PROPER range `min_scroll_offset` to `max_scroll_offset - size`, where
- *    an authored offset inside it survives. `set_scroll_offset` reruns
- *    `_update_scrollbars` itself (`:414`), but only after its own clamp, and a
- *    file writes the key once.
+ *    `NOTIFICATION_RESIZED` outside the tree (`scene/gui/control.cpp:1812`), so
+ *    the resize handler (`:867`) never calls `GraphEdit::_update_scrollbars`,
+ *    the only writer of `min_scroll_offset`/
+ *    `max_scroll_offset` (`graph_edit.cpp:492-493`). Both bounds are still
+ *    `(0, 0)` when `set_scroll_offset` clamps (`:407`), and `CLAMP` tests the min
+ *    branch first (`core/typedefs.h:139-141`): the range is inverted and each
+ *    authored offset lands on `0` or on `-size`.
+ *    A `zoom` write that moves the value calls `_update_scrollbars` first
+ *    (`:2448`). `SceneState` parents GraphEdit's children after its own
+ *    properties, so the child list is still empty then, and the merged rect is one
+ *    size out from the origin (`:488-493`) and a later clamp reads the proper
+ *    range `min_scroll_offset` to `max_scroll_offset - size`, where an authored
+ *    offset survives. `set_scroll_offset` reruns `_update_scrollbars` (`:414`)
+ *    only after its own clamp, and a file writes the key once.
  *  - `get_parent_anchorable_rect` returns an empty `Rect2` outside the tree
- *    (`control.cpp:687-689`), so every `anchor_*` contributes zero and the
- *    size is exactly `offset_right - offset_left` by `offset_bottom -
- *    offset_top`, floored by `custom_minimum_size` (`control.cpp:1773-1797`,
- *    `:1744-1750`).
+ *    (`control.cpp:687-689`), so each `anchor_*` adds zero and the size is
+ *    `offset_right - offset_left` by `offset_bottom - offset_top`, floored by
+ *    `custom_minimum_size` (`control.cpp:1773-1797`, `:1744-1750`).
  *
- * `set_zoom` is the same mechanism on a different pair: it clamps against
- * `zoom_min`/`zoom_max` as they stand (`:2434`), and each bound's own setter
- * re-runs `set_zoom(zoom)` afterwards (`:2487`, `:2502`). `set_zoom_custom`
- * returns before touching the two buttons' disabled flags when the clamp
- * changed nothing (`:2435-2437`), so a bound written after `zoom` moves
- * neither.
+ * `set_zoom` clamps against `zoom_min`/`zoom_max` as they stand (`:2434`), and
+ * each bound's setter reruns `set_zoom(zoom)` (`:2487`, `:2502`).
+ * `set_zoom_custom` returns before it touches the buttons' disabled flags when
+ * the clamp changes nothing (`:2435-2437`), so a bound written after `zoom`
+ * moves neither.
  *
- * The replay follows `Label`'s own `resolveVisibleChars` (`../label/parser.ts`)
- * — the raw property bag's insertion order IS file order
- * (`TscnParserCore.ts`'s scanning loop). Not modelled: `anchors_preset` and
- * `layout_mode`, whose offset rewrites resolve against that same empty parent
- * rect and which Godot's own saver writes ahead of the `offset_*` keys that
- * overwrite them.
+ * The replay follows `Label`'s `resolveVisibleChars` (`../label/parser.ts`): the
+ * raw property bag's insertion order is file order (`TscnParserCore.ts`). Not
+ * modelled: `anchors_preset` and `layout_mode`, whose offset rewrites resolve
+ * against the same empty parent rect and which Godot's saver writes ahead of
+ * the `offset_*` keys that overwrite them.
  *
  * Pure data + functions, no React, no THREE.
  *
@@ -79,9 +69,9 @@ const DEFAULT_ZOOM = 1;
 const ZERO_SCROLL_BOUNDS = { x: 0, y: 0 };
 
 export interface GraphEditLoadState {
-  /** `scroll_offset` as STORED, or undefined where the file never ran the setter. */
+  /** `scroll_offset` as stored, or undefined where the file never ran the setter. */
   scrollOffset: Vec2 | undefined;
-  /** `zoom` as STORED, or undefined where neither it nor a bound was written. */
+  /** `zoom` as stored, or undefined where neither it nor a bound was written. */
   zoom: number | undefined;
   /** `zoom_minus_button->is_disabled()`. */
   zoomMinusDisabled: boolean;
@@ -187,7 +177,7 @@ export function resolveGraphEditLoadState(properties: Record<string, string>): G
       }
       case 'zoom_min': {
         const value = parseOptionalFloat(properties.zoom_min);
-        // `ERR_FAIL_COND_MSG(p_zoom_min > zoom_max)` (`:2480`) — the property is refused outright.
+        // `ERR_FAIL_COND_MSG(p_zoom_min > zoom_max)` (`:2480`): the property is refused outright.
         if (value === undefined || value > state.zoomMax || value === state.zoomMin) break;
         state.zoomMin = value;
         applySetZoom(state, state.zoom);

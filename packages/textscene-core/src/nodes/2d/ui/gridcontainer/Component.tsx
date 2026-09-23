@@ -1,11 +1,7 @@
 /**
- * GridContainer's native (WebGL canvas) painter — a Container draws no chrome
- * of its own; `ControlCanvasWalker` positions this node's group at its solved
- * rect and renders its (already-solved, self-positioning) children as
- * siblings regardless, so there is nothing left for this component to paint.
- * Registered anyway (rather than left unregistered) so `ControlCanvasWalker`
- * stops drawing the "no native painter yet" debug outline (`ControlFallback`)
- * for every GridContainer in the scene.
+ * GridContainer's native (WebGL canvas) painter draws nothing: a Container has
+ * no chrome, and `ControlCanvasWalker` places the children. It is registered so
+ * the walker draws no `ControlFallback` debug outline for a GridContainer.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 

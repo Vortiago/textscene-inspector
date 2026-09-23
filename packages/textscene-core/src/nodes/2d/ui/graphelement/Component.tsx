@@ -1,8 +1,7 @@
 /**
- * `<GraphElement>` — draws no chrome of its own: `graph_element.cpp` has no
- * `NOTIFICATION_DRAW` case. Registered anyway so `ControlCanvasWalker` stops
- * drawing the "no native painter yet" debug outline (`ControlFallback`) for a
- * bare `GraphElement` node, matching `GridContainer`'s own reasoning.
+ * `<GraphElement>` draws nothing: `graph_element.cpp` has no `NOTIFICATION_DRAW`
+ * case. It is registered so `ControlCanvasWalker` draws no `ControlFallback`
+ * debug outline for a bare `GraphElement` node.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 

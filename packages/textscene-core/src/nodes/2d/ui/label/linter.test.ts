@@ -1,5 +1,5 @@
 /**
- * Label linter tests — `Label::get_configuration_warnings()` (label.cpp:620-635):
+ * Label linter tests: `Label::get_configuration_warnings()` (label.cpp:620-635):
  * autowrap enabled under a Container parent, still at the default (0, 0)
  * custom_minimum_size.
  */

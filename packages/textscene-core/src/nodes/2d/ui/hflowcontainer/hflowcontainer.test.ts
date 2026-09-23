@@ -1,4 +1,4 @@
-/** HFlowContainer registration — parser. Render registration: `index.r3f.test.ts`. */
+/** HFlowContainer registration: parser. Render registration: `index.r3f.test.ts`. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';

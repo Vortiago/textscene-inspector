@@ -1,8 +1,6 @@
 /**
- * `hScrollBarMinimumSize` registers `../shared/scrollBarSolver.ts`'s
- * `scrollBarMinimumSize` at `vertical = false`. The geometry itself is proved
- * once in `shared/scrollBarSolver.test.ts`; this only pins the registration
- * and the axis this slice supplies.
+ * `hScrollBarMinimumSize` registers `scrollBarMinimumSize` at `vertical = false`.
+ * `shared/scrollBarSolver.test.ts` owns the geometry; this pins the registration and the axis.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';

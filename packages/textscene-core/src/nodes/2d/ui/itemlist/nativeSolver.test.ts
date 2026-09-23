@@ -1,5 +1,5 @@
 /**
- * ItemList native solver vs Godot 4.6.3 — `ItemList::force_update_list_size`
+ * ItemList native solver versus Godot 4.6.3: `ItemList::force_update_list_size`
  * (`scene/gui/item_list.cpp:1733-1912`), the per-item minsize it computes
  * inline (`:1743-1796`), `_adjust_to_max_size` (`:1186-1197`) and
  * `ItemList::get_minimum_size` (`:2136-2146`).
@@ -236,7 +236,7 @@ describe('packItemListRows', () => {
       hSeparation: 4,
       availableHeight: Number.POSITIVE_INFINITY,
     });
-    // All 4 items in ONE row, unbounded by fit_size.
+    // All 4 items in one row, unbounded by fit_size.
     expect(result.items.map((i) => i.rect.x)).toEqual([0, 20, 40, 60]);
     expect(result.contentHeight).toBe(10);
   });
@@ -305,7 +305,7 @@ describe('itemIconColor / itemTextColor', () => {
 
 describe('itemListGuideLines', () => {
   // item_list.cpp:1447-1458 -- one hairline per row-packing separator, spanning
-  // the panel's own content width, ONLY outside TOP icon mode.
+  // the panel's own content width, only outside TOP icon mode.
   it('one line per separator, spanning contentWidth, in LEFT icon mode (happy path)', () => {
     expect(itemListGuideLines(ICON_MODE_LEFT, [24, 48], 100)).toEqual([
       { y: 24, width: 100 },
@@ -369,7 +369,7 @@ describe('itemListMirrorX', () => {
 
 describe('itemListRowTextX', () => {
   // item_list.cpp:1664-1667 with base_ofs.x 4, rect_cache (x 0, w 100),
-  // icon_size.x 16, icon_margin 4, h_separation 4 — text_ofs.x 22, so the
+  // icon_size.x 16, icon_margin 4, h_separation 4: text_ofs.x 22, so the
   // LTR pen sits at 26 and RTL is `200 - 100 + 16 - 26 + 4`.
   const INPUT = {
     ltrX: 26,
@@ -396,7 +396,7 @@ describe('itemListRowTextX', () => {
 });
 
 describe('itemListLineTextWidthPx / itemListWrappedTextWidthPx', () => {
-  // item_list.cpp:1657-1660 — `text_w = rect.w - text_width_ofs`, shrunk by
+  // item_list.cpp:1657-1660: `text_w = rect.w - text_width_ofs`, shrunk by
   // the row's own overflow past `width` while wraparound_items is on.
   it('is the row width less the text pen offset', () => {
     expect(itemListLineTextWidthPx(100, 22, 192, true)).toBe(78);
@@ -407,7 +407,7 @@ describe('itemListLineTextWidthPx / itemListWrappedTextWidthPx', () => {
   it('keeps the full row width with wraparound_items off', () => {
     expect(itemListLineTextWidthPx(200, 22, 192, false)).toBe(178);
   });
-  // item_list.cpp:1629-1632 — `text_w = rect.w - text_ofs.x * 2`, clamped to
+  // item_list.cpp:1629-1632: `text_w = rect.w - text_ofs.x * 2`, clamped to
   // `width - text_ofs.x` when the box would run past the content width.
   it('insets the wrapped box by the pen offset on both sides', () => {
     expect(itemListWrappedTextWidthPx(100, 2, 192, true)).toBe(96);
@@ -421,7 +421,7 @@ describe('itemListLineTextWidthPx / itemListWrappedTextWidthPx', () => {
 });
 
 describe('itemListRightAlignOffsetPx', () => {
-  // text_paragraph.cpp:888,916-921 — HORIZONTAL_ALIGNMENT_RIGHT shifts the
+  // text_paragraph.cpp:888,916-921: HORIZONTAL_ALIGNMENT_RIGHT shifts the
   // line by `width - line_width`, and only while `width > 0`.
   it('pushes a short line to the right edge of its box', () => {
     expect(itemListRightAlignOffsetPx(78, 30)).toBe(48);
