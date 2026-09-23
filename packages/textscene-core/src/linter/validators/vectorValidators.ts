@@ -1,4 +1,4 @@
-/** Shared validator utilities for Vector types */
+/** Validator factories and regexes for the Vector, Rect2 and Transform3D literals. */
 
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
@@ -8,45 +8,29 @@ import { ruleInt } from './commonValidators.js';
 import { compositeTypeName, isConvertedSpelling } from '../../godot/variantConversion.js';
 
 /**
- * Vector3 format: Vector3(x, y, z). Re-derived from the canonical float grammar
- * and re-exported because node3d/skeleton3d/rigidbody3d linterParsers `.exec()`
- * it directly for their bespoke component checks (3 capture groups).
+ * Vector3 format: Vector3(x, y, z), for the callers that `.exec()` it to reach
+ * the three components for their own checks.
  */
 export const VECTOR3_REGEX = makeFloatTupleRegex('Vector3', 3);
 
 /**
- * Vector2 format: Vector2(x, y), for the callers that `.exec()` it directly to
- * reach the two components rather than just validating the shape.
- *
- * Exported for the same reason as VECTOR3_REGEX, and belatedly: five call sites
- * had each built their own `makeFloatTupleRegex('Vector2', 2)` — camera2d,
- * navigationlink2d, parallax2d, the Node2D base and characterBodyLinterRule.
- * Identical today, and identical only for as long as nobody edits one.
+ * Vector2 format: Vector2(x, y), for the callers that `.exec()` it to reach the
+ * two components. Use this, not a local `makeFloatTupleRegex('Vector2', 2)`.
  */
 export const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
 /**
- * `Vector2i(x, y)`, with the components Godot's parser actually takes.
- *
+ * `Vector2i(x, y)`, with the components Godot's parser takes:
  * `_parse_construct<int32_t>` (variant_parser.cpp:577-592) accepts any number
- * token and pushes it into a `Vector<int32_t>`, so a component written as a
- * float or in exponent notation loads and truncates toward zero. A `-?\d+`
- * component grammar reported a format error on `Vector2i(2e1, 0)`, which Godot
- * stores as `Vector2i(20, 0)`.
+ * token and truncates it toward zero, so `Vector2i(2e1, 0)` stores `(20, 0)`.
  */
 export const VECTOR2I_REGEX = makeFloatTupleRegex('Vector2i', 2);
 
 /**
- * The two components a `Vector2i` slot HOLDS, or `null` when no int32 holds one.
- *
- * The one reader for every phase-2 rule over a `Vector2i` property. Phase 2 runs
- * after a phase-1 error (`linter/Linter.ts:32` gates on a parsed scene, not on
- * an error-free one), so a rule that read the components itself named a number
- * no platform holds: `size = Vector2(4294967295, 1080)` reads back as
- * `Vector2i(-1, 1080)` on the int branch, where Godot stores -2147483648.
- *
- * `null` rather than a component, so the rule's block is skipped and only phase
- * 1's error stands — a value the file does not state is not a value to quote.
+ * The two components a `Vector2i` slot holds, for every phase-2 rule over one,
+ * or `null` when no int32 holds one. Phase 2 runs after a phase-1 error
+ * (`linter/Linter.ts:32`), so on `null` the rule skips and phase 1's error
+ * stands, rather than quote a value the file does not state.
  */
 export function matchVector2i(raw: string): { x: number; y: number } | null {
   const match = VECTOR2I_REGEX.exec(raw);
@@ -59,9 +43,7 @@ export function matchVector2i(raw: string): { x: number; y: number } | null {
   return x === null || y === null ? null : { x, y };
 }
 
-/**
- * Creates a Vector2 validator
- */
+/** A `Vector2(x, y)` format validator. */
 export function createVector2Validator(
   propertyName: string,
   errorCode: string = 'INVALID_FORMAT'
@@ -76,19 +58,15 @@ export function createVector2Validator(
 }
 
 /**
- * Creates a Vector2i validator with an optional per-COMPONENT minimum.
- *
- * `minComponent` was a `requireNonNegative` boolean, which could only ever say
- * "0". Real setters floor elsewhere: `Viewport::_set_size` does `p_size.maxi(2)`,
- * so a `SubViewport` sized 1 is altered exactly as a negative one is, and a
- * boolean had no way to say so.
+ * A `Vector2i(x, y)` validator with an optional per-component minimum, which
+ * need not be 0: `Viewport::_set_size` does `p_size.maxi(2)`.
  */
 export function createVector2iValidator(
   propertyName: string,
   minComponent: number | undefined = undefined,
   errorCodeFormat: string = 'INVALID_FORMAT',
   errorCodeValue: string = 'INVALID_VALUE',
-  /** Severity of the minimum branch — `warning` when only a hint backs it. */
+  /** Severity of the minimum branch: `warning` when only a hint backs it. */
   valueSeverity: ParseError['severity'] = 'error'
 ): (key: string, value: string, line: number) => ParseError | null {
   return (key, value, line) => {
@@ -97,20 +75,14 @@ export function createVector2iValidator(
       return propertyError(key, line, `Property '${propertyName}' must be Vector2i(x, y) — or the Vector2 spelling Godot converts into it — got: "${value}"`, errorCodeFormat);
     }
 
-    // A non-finite component READS but does not FIT. `_parse_construct<int32_t>`
-    // narrows at parse time (variant_parser.cpp:593), so the value Godot stores
-    // is not the one the file states — measured as -2147483648 for all four
-    // spellings on 4.6.3 x86_64, and architecture-specific in general, which is
-    // why the message names the literal rather than the result. An alteration
-    // is the error tier under ADR-0032, and this arm is independent of `min`:
-    // it applies to every Vector2i, bounded or not.
-    // Truncated toward zero, the way the int32 conversion does, so `0.9` is
-    // bounded as the 0 Godot stores rather than as the 0.9 it was written.
-    // A `Vector2(...)` in a Vector2i slot holds doubles, so both components take
-    // the `double -> int32` branch whatever the token looks like. Measured:
-    // `Vector2(4294967295, 64)` stores the UB sentinel where the `Vector2i`
-    // spelling of the same digits wraps to -1.
+    // A non-finite component reads but does not fit: `_parse_construct<int32_t>`
+    // narrows at parse time (variant_parser.cpp:593) to an architecture-specific
+    // value, so the message names the literal. An alteration errors under
+    // ADR-0032, bounded or not.
     const converted = isConvertedSpelling('Vector2i', compositeTypeName(value));
+    // Truncated toward zero, as the int32 conversion does, so `0.9` is bounded as
+    // the 0 Godot stores. A `Vector2(...)` spelling holds doubles, so
+    // `Vector2(4294967295, 64)` takes the `double -> int32` branch to the UB sentinel.
     const x = ruleInt(match[1], null, 'int32', converted);
     const y = ruleInt(match[2], null, 'int32', converted);
     if (x === null || y === null) {
@@ -129,8 +101,7 @@ export function createVector2iValidator(
 
     if (minComponent !== undefined) {
       if (x < minComponent || y < minComponent) {
-        // The 0 case keeps its long-standing wording; every per-node test that
-        // asserts a substring of it is asserting the engine's floor, not the phrasing.
+        // Per-node tests assert a substring of the 0 case's wording.
         const requirement =
           minComponent === 0 ? 'must have non-negative values' : `must have components >= ${minComponent}`;
         return propertyError(key, line, `Property '${propertyName}' ${requirement}, got: Vector2i(${x}, ${y})`, errorCodeValue, valueSeverity);
@@ -141,9 +112,7 @@ export function createVector2iValidator(
   };
 }
 
-/**
- * Creates a Vector3 validator
- */
+/** A `Vector3(x, y, z)` format validator. */
 export function createVector3Validator(
   propertyName: string,
   errorCode: string = 'INVALID_FORMAT'
@@ -157,9 +126,7 @@ export function createVector3Validator(
   );
 }
 
-/**
- * Creates a Rect2 validator
- */
+/** A `Rect2(x, y, w, h)` format validator. */
 export function createRect2Validator(
   propertyName: string,
   errorCode: string = 'INVALID_FORMAT'
@@ -173,9 +140,7 @@ export function createRect2Validator(
   );
 }
 
-/**
- * Creates a Transform3D validator
- */
+/** A `Transform3D(12 floats)` format validator. */
 export function createTransform3DValidator(
   propertyName: string,
   errorCode: string = 'INVALID_FORMAT'

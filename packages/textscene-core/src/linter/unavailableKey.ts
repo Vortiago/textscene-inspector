@@ -1,10 +1,7 @@
 /**
  * A key a concrete type takes away from its base, and the validator that
- * reports one.
- *
- * The registry stores removals beside validators and resolves them in the same
- * base walk; what a removal MEANS — that the key's presence is itself the
- * defect, at the error tier, with the guard cited — lives here.
+ * reports one. The registry resolves removals in the same base walk as
+ * validators. Here, the key's presence is the defect, at the error tier.
  */
 
 import type { PropertyValidator } from './propertyValidator.js';
@@ -22,18 +19,15 @@ export interface Removal {
 }
 
 /**
- * The validator a removed key resolves to: it rejects every value, because the
- * key's presence is itself the defect. Memoised per (type, reason) so repeated
- * lookups of the same removal return the same function, which keeps identity
- * comparisons in the tests meaningful.
+ * The validator a removed key resolves to, memoised per (type, reason, cite) so
+ * repeated lookups return the same function. Written only by `unavailableValidator`.
  */
 const unavailableValidators = new Map<string, PropertyValidator>();
 
+/** Rejects every value, because the key's presence is itself the defect. */
 export function unavailableValidator(nodeType: string, removal: Removal): PropertyValidator {
-  // The CITE is part of the identity, not just the reason: the validator now
-  // records `grounding.cite`, so two removals on one type sharing a reason but
-  // citing different lines would otherwise both get whichever was memoised
-  // first, and the second would report a citation for the wrong guard.
+  // The cite is part of the key: two removals sharing a reason but citing
+  // different lines each report their own guard.
   const cacheKey = `${nodeType}\u0000${removal.reason}\u0000${removal.cite}`;
   const cached = unavailableValidators.get(cacheKey);
   if (cached) return cached;

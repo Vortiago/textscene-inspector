@@ -1,18 +1,8 @@
 /**
- * The slice-test apparatus's own assertions.
- *
- * `expectError` / `expectWarning` are what put an ADR-0032 tier claim in a
- * second file: the tier itself is derived inside the validator from its own
- * `enforced:` / `hinted:` declaration, so a flipped one stays self-consistent
- * and every registry-wide guard agrees with it. The required message substring
- * is the part that cannot agree with itself.
- *
- * Every case below drives the helper through `toThrow`, because an `it` that
- * should have failed cannot be caught from outside — the same reason
- * `testkit.severity.test.ts` exists for the scene-level kit.
- *
- * Two honest LightmapGI diagnostics stand in for the two tiers, pinned by the
- * first case so a `toThrow` can never pass merely because nothing was rejected.
+ * The slice-test apparatus's own assertions. `expectError` and `expectWarning`
+ * state an ADR-0032 tier in a second file, since a validator derives its own
+ * tier. Each case drives the helper through `toThrow`. Two LightmapGI probes
+ * stand in for the two tiers, and the first case pins them.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -27,9 +17,9 @@ import './index.js'; // trigger all validator registrations
 
 const check = checkerFor('LightmapGI');
 
-/** `set_bounces` ERR_FAIL_CONDs past 16 (lightmap_gi.cpp) — errors. */
+/** `set_bounces` ERR_FAIL_CONDs past 16 (lightmap_gi.cpp), so it errors. */
 const ENFORCED = () => check('bounces', '17');
-/** `quality`'s enum ceiling is a bare assignment behind a hint — warns. */
+/** `quality`'s enum ceiling is a bare assignment behind a hint, so it warns. */
 const HINTED = () => check('quality', '4');
 
 describe('checkerFor', () => {
@@ -65,8 +55,8 @@ describe('tier assertions', () => {
   });
 
   it('fails when the tier matches but the message does not name the bound', () => {
-    // The whole point: a same-tier refusal from a DIFFERENT arm of the same
-    // validator must not satisfy a test titled after this bound.
+    // A same-tier refusal from a different arm of the same validator must not
+    // satisfy a test titled after this bound.
     expect(() => expectError(ENFORCED(), 'must be finite')).toThrow(/must be finite/);
   });
 

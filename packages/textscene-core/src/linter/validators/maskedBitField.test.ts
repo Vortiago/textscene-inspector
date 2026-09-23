@@ -88,21 +88,20 @@ describe('maskedBitField', () => {
     });
 
     it('rejects a value past 32 bits without wrapping into a false pass', () => {
-      // 2^32 + 32 has bits inside the mask; ToInt32 would make `& ~mask` read 32
-      // and pass it. The `num > mask` guard runs first for exactly this reason.
+      // 2^32 + 32 has bits inside the mask; an int32 `& ~mask` would read 32
+      // and pass it.
       expect(run('4294967328')?.code).toBe('INVALID_AUTOWRAP_TRIM_FLAGS_VALUE');
     });
 
     it.each(['', ' ', 'abc', '0x20'])('rejects %o as a format error', (value) => {
-      // `0x20` is not a Variant literal at all: the number tokenizer has no hex
-      // branch and READING_INT stops at `x`. `Number('0x20')` reads 32, which is
-      // why the old gate ACCEPTED a spelling Godot refuses.
+      // `0x20` is not a Variant literal: the number tokenizer has no hex branch
+      // and READING_INT stops at `x`, though `Number('0x20')` reads 32.
       expect(run(value)?.code).toBe('INVALID_AUTOWRAP_TRIM_FLAGS_FORMAT');
     });
 
     it('truncates a float rather than calling it a format error', () => {
       // A bit-field slot is an INT, so Godot reads the number token and
-      // converts: `32.5` stores 32. Whether 32 is a legal bit is the VALUE
+      // converts: `32.5` stores 32. Whether 32 is a legal bit is the value
       // question below, not a format one.
       expect(run('32.5')?.code).not.toBe('INVALID_AUTOWRAP_TRIM_FLAGS_FORMAT');
     });
@@ -136,7 +135,7 @@ describe('maskedBitField', () => {
 });
 
 describe('hintedBitField', () => {
-  // Label.justification_flags: label.cpp:1437 offers a SPARSE set, missing
+  // Label.justification_flags: label.cpp:1437 offers a sparse set, missing
   // JUSTIFICATION_TRIM_EDGE_SPACES (4) and JUSTIFICATION_CONSTRAIN_ELLIPSIS
   // (16), both of which the bare-assign setter keeps.
   const validator = hintedBitField('justification_flags', {
@@ -157,9 +156,8 @@ describe('hintedBitField', () => {
   });
 
   it.each(['4', '16', '20', '255'])('warns on %s, a bit the hint omits', (value) => {
-    // The whole reason this is not a v.int range: 4 and 16 sit INSIDE 0..235,
-    // so `{ min: 0, max: 235 }` would accept exactly the values worth
-    // reporting. Membership, not magnitude.
+    // Membership, not magnitude: 4 and 16 sit inside 0..235, so
+    // `{ min: 0, max: 235 }` would accept exactly the values worth reporting.
     expect(run(value)?.severity).toBe('warning');
   });
 
@@ -179,8 +177,7 @@ describe('hintedBitField', () => {
 
   it('keeps a value past 32 bits, because the field is int64', () => {
     // `BitField<T>` is int64 and this setter bare-assigns, so 2^32 + 1 is
-    // stored intact. Reading the slot as int32 made it unrepresentable and
-    // raised an error over what is a hint-tier warning.
+    // stored intact and only the hint warns.
     expect(run('4294967297')?.severity).toBe('warning');
   });
 
@@ -200,9 +197,8 @@ describe('a mask that keeps a bit past 32', () => {
   });
 
   it('warns on a kept bit past 32 that the hint does not offer', () => {
-    // `&` coerces through ToInt32, which reads 2^32 as 0, so the hint arm has
-    // to refuse a value wider than the bits it offers BEFORE masking — the
-    // same ordering the mask arm above uses.
+    // An int32 `&` reads 2^32 as 0, so the hint arm must refuse a value wider
+    // than the bits it offers.
     const diagnostic = wide('flags', String(2 ** 32), 5);
     expect(diagnostic?.severity).toBe('warning');
     expect(diagnostic?.code).toBe('INVALID_FLAGS_VALUE');
@@ -216,8 +212,7 @@ describe('a mask that keeps a bit past 32', () => {
 describe('a masked bit field names what the engine keeps', () => {
   it('reports the stored bits for the negative spelling too', () => {
     // `-1` and `4294967295` are the same 32 bits, and Godot's `p_flags & MASK`
-    // treats them identically. Withholding the clause on one of the two made
-    // the message depend on the spelling rather than on the value.
+    // treats them identically, so the message must not depend on the spelling.
     expect(run('-1')?.message).toContain('Godot stores 224');
     expect(run('4294967295')?.message).toContain('Godot stores 224');
   });

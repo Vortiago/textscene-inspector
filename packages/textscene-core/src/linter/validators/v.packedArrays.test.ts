@@ -1,13 +1,7 @@
 /**
- * The packed-array and string combinators.
- *
- * Both grammars are about what Godot's own serialiser WRITES rather than what
- * looks well-formed: a truncating element count, a non-finite literal, an empty
- * array, an `&`-prefixed StringName. Rejecting any of them rejects a file Godot
- * saved.
- *
- * Kept under the same outer describe as the rest of the renderer float-grammar
- * cases in `v.tuples.test.ts`, which is where the scalar/tuple halves live.
+ * The packed-array and string combinators accept what Godot loads: a truncating
+ * element count, a non-finite literal, an empty array, an `&`-prefixed
+ * StringName. The scalar and tuple halves live in `v.tuples.test.ts`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -133,11 +127,9 @@ describe('float-tuple validators accept the renderer float grammar', () => {
     });
 
     it('accepts the 3.x @ prefix on both, which the tokenizer still reads', () => {
-      // `case '@':` falls straight through to the StringName case under
+      // `case '@':` falls through to the StringName case under
       // `#ifndef DISABLE_DEPRECATED` (variant_parser.cpp:262-265), so the value
-      // loads and a rejection here would be an error on a file Godot opens.
-      // `quotedString` accepted it already; `stringName` did not, and the two
-      // grammars sit four lines apart in one file.
+      // loads.
       expect(name('@"Footsteps"')).toBeNull();
       expect(quoted('@"Footsteps"')).toBeNull();
     });
@@ -148,8 +140,7 @@ describe('float-tuple validators accept the renderer float grammar', () => {
     });
 
     it('rejects two literals glued together', () => {
-      // The previous grammar checked only the first and last character, so this
-      // read as one string.
+      // The first and last characters are quotes, but this is not one string.
       expect(quoted('"Head" junk "Tail"')).not.toBeNull();
       expect(name('"Head" junk "Tail"')).not.toBeNull();
     });

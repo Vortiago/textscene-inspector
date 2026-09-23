@@ -1,12 +1,7 @@
 /**
- * Integer combinators, including the enum one.
- *
- * They no longer differ on how strict the PARSE is. One engine behaviour gets
- * one verdict: `_to_int` truncates a fractional literal and maps a BOOL to 1/0,
- * and every int slot says so with the same `storedNotWritten` warning, after its
- * own bounds. `strictInt` earns its name on a different axis — it judges the NARROWED int, which is what a
- * setter's `ERR_FAIL_INDEX` receives — and `lenientInt` is just a bound-free
- * `int`.
+ * Integer combinators, including the enum ones. Every int slot reports
+ * `_to_int`'s truncation of a fractional literal and its BOOL-to-1/0 mapping
+ * with the same `storedNotWritten` warning, after its own bounds.
  */
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
@@ -32,9 +27,8 @@ import type { IntOpts } from './options.js';
 export const integerCombinators = {
   /** Integer in a range, parsed as base 10. */
   int(name: string, opts: IntOpts = {}): PropertyValidator {
-    // ONE declaration for the read and the tag. Deriving them separately —
-    // `slotWidth(max)` for the read, a defaulted `'int32'` for the tag —
-    // disagrees on every slot whose ceiling exceeds INT32_MAX.
+    // One width for the read and the tag, or they disagree on every slot whose
+    // ceiling exceeds INT32_MAX.
     const width = opts.width ?? slotWidth(opts.max);
     return markIntSlot(ground(
       accepts(
@@ -64,7 +58,7 @@ export const integerCombinators = {
     return integerCombinators.int(name, { ...opts, min: 1, ...(message ? { message } : {}) });
   },
 
-  /** Integer enum, e.g. `v.enumInt('cast_shadow', 0, 3, {0:'OFF', 1:'ON', 2:'DOUBLE_SIDED', 3:'SHADOWS_ONLY'})`. */
+  /** Integer enum, such as `v.enumInt('cast_shadow', 0, 3, {0:'OFF', 1:'ON', 2:'DOUBLE_SIDED', 3:'SHADOWS_ONLY'})`. */
   enumInt(
     name: string,
     min: number,
@@ -72,22 +66,15 @@ export const integerCombinators = {
     labels: Record<number, string>,
     opts: EndedGrounding = {}
   ): PropertyValidator {
-    // The labels are the point: `enum 0-3 (OFF/ON/DOUBLE_SIDED/SHADOWS_ONLY)`
-    // tells a reader what each number means without opening Godot's docs.
-    // Integer-like keys already iterate ascending, so no sort is needed.
-    //
-    // Only the ones INSIDE the window: `labels` is the engine's whole enum,
-    // while min/max is the window one class's hint opens onto it, and a message
-    // that names a constant the bound rejects reads as a contradiction. Passing
-    // a trimmed copy per class would be a second table to keep in step instead.
+    // Only the labels inside the window, or the message names a constant the
+    // bound rejects: `labels` is the engine's whole enum, and min/max the window
+    // one class's hint opens onto it. Integer-like keys iterate ascending.
     const names = Object.entries(labels)
       .filter(([value]) => Number(value) >= min && Number(value) <= max)
       .map(([, label]) => label)
       .join('/');
-    // The ends travel POSITIONALLY here while every other combinator takes them
-    // in `opts`, and `endSeverity` compares the two tiers by value — so without
-    // them folded back in it sees no hint end at all and calls a reachable
-    // warning band an error.
+    // The ends travel positionally here, and `endSeverity` compares the tiers by
+    // value, so they are folded back in or a reachable warning band errors.
     const ended = { ...opts, min, max };
     return markIntSlot(ground(
       accepts(
@@ -112,13 +99,10 @@ export const integerCombinators = {
   },
 
   /**
-   * Integer enum whose hint leaves a GAP: `v.enumSet('system_menu_id', {0: 'NONE',
-   * 2: 'APPLICATION_MENU_ID', …})`.
-   *
-   * `PROPERTY_HINT_ENUM` lets a label carry its own `:value`, and a class that
-   * uses them can offer a subset of a contiguous engine enum. The labels ARE the
-   * bound here — every key is offered and nothing between them is — so unlike
-   * {@link enumInt} there is no min/max to state separately.
+   * Integer enum whose hint leaves a gap, since a `PROPERTY_HINT_ENUM` label can
+   * carry its own `:value`: `v.enumSet('system_menu_id', {0: 'NONE',
+   * 2: 'APPLICATION_MENU_ID', …})`. The labels are the bound, with no separate
+   * min/max as {@link enumInt} has.
    */
   enumSet(name: string, labels: Record<number, string>, opts: Grounding = {}): PropertyValidator {
     const values = Object.keys(labels)
@@ -153,10 +137,9 @@ export const integerCombinators = {
   },
 
   /**
-   * An integer judged as the stored int32, which is what `int` does: it narrows
-   * through `readIntSlot` before the bound check, so `frame = 4294967295` is
-   * judged as the -1 the setter's guard receives. The name survives for its call
-   * sites; the read is `int`'s.
+   * `int` under the name its call sites use: it narrows through `readIntSlot`
+   * before the bound check, so `frame = 4294967295` is judged as the -1 the
+   * setter's guard receives.
    */
   strictInt(name: string, opts: IntOpts = {}): PropertyValidator {
     return integerCombinators.int(name, opts);

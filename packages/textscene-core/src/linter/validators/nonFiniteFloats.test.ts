@@ -1,14 +1,8 @@
 /**
- * `inf` / `-inf` / `inf_neg` / `nan` are legal TSCN float literals.
- *
- * Godot's parser reads all four (`core/variant/variant_parser.cpp:150-155` for
- * the string form, `:701-706` for the token form) and its serializer writes
- * them back, so a scene carrying one is a scene Godot produced. `parseFloat`
- * returns NaN for every one, so reading them through it makes the shared
- * numeric validator report a FORMAT error on all of them everywhere.
- *
- * That was right for exactly five properties and wrong for every other float in
- * the repo. These tests pin both halves of the split.
+ * `inf` / `-inf` / `inf_neg` / `nan` are legal TSCN float literals: Godot's
+ * parser reads all four (`core/variant/variant_parser.cpp:150-155` for the
+ * string form, `:701-706` for the token form) and its serialiser writes them
+ * back. Only a setter that guards finiteness or NaN refuses one.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -119,9 +113,7 @@ describe('a property whose setter guards is_finite', () => {
 
   it('keeps the bounds themselves, not just their citation', () => {
     // `hintImplementationParity` compares `bounds` against the engine's own
-    // PROPERTY_HINT_RANGE numbers. A wrapper that forwarded the cite but
-    // dropped the numbers took the property out of that comparison silently,
-    // and it counted as an unimplemented end while being fully implemented.
+    // PROPERTY_HINT_RANGE numbers, so a wrapper must forward the numbers too.
     const both = v.float('radial_initial_angle', {
       min: 0,
       max: 360,
@@ -155,18 +147,16 @@ describe('a property whose setter guards is_finite', () => {
 
 describe('a COMPOSITE literal with a non-finite component', () => {
   it.each(NON_FINITE)('v.vector3 accepts a %s component', (value) => {
-    // `variant_parser.cpp:577-587` — a constructor argument that is not a
+    // `variant_parser.cpp:577-587`: a constructor argument that is not a
     // number is run through `stor_fix`, which reads exactly these four; and
     // the writer puts every Vector3 component through `rtos_fix` (:2056).
     expect(v.vector3('offset')('offset', `Vector3(0, ${value}, 0)`, 1)).toBeNull();
   });
 
   // One case per composite Godot serialises through `rtos_fix`, since each is a
-  // separate arity/type registration even though they share one component
-  // grammar. `inf_neg` is the spelling the .tscn writer actually emits for
-  // negative infinity: `use_compat` is true for a text scene
-  // (`resource_format_text.cpp:1770`) and `rtos_fix` writes `inf_neg` under it
-  // (`variant_parser.cpp:1989-1991`).
+  // separate registration. The .tscn writer emits `inf_neg`: `use_compat` is true
+  // for a text scene (`resource_format_text.cpp:1770`), and `rtos_fix` writes
+  // `inf_neg` under it (`variant_parser.cpp:1989-1991`).
   it.each([
     ['vector2', 'position', 'Vector2(inf_neg, 0)'],
     ['color', 'modulate', 'Color(inf, 0, 0, 1)'],
@@ -191,7 +181,7 @@ describe('a COMPOSITE literal with a non-finite component', () => {
 
   it.each(NON_FINITE)('READS %s in an INTEGER composite, so it is no format error', (value) => {
     // Vector2i serialises through `itos` (variant_parser.cpp:2044), so Godot
-    // never WRITES one. That bounds nothing: `_parse_construct<int32_t>`
+    // never writes one. That bounds nothing: `_parse_construct<int32_t>`
     // (:577-592) runs the same identifier branch every constructor does, so the
     // file loads. What the serialiser emits never limits what the loader accepts.
     expect(v.vector2i('size')('size', `Vector2i(${value}, 8)`, 1)?.code).not.toBe(
@@ -200,13 +190,10 @@ describe('a COMPOSITE literal with a non-finite component', () => {
   });
 
   it.each(NON_FINITE)('reports %s in an INTEGER composite as altered, not as a bound', (value) => {
-    // Reading is not fitting. Measured on 4.6.3 stable: every one of the four
-    // stores `(-2147483648, 8)`, because `_parse_construct<int32_t>` narrows at
-    // PARSE time — so an integer slot never holds what the file states. That is
-    // an alteration, which is the error tier, and it applies with or without a
-    // bound. The message must not name the stored number: the C++ conversion is
-    // UB and the result is architecture-specific, so only the fact of the
-    // alteration is portable.
+    // Reading is not fitting: `_parse_construct<int32_t>` narrows at parse time,
+    // so every one of the four stores `(-2147483648, 8)`, the error tier with or
+    // without a bound. The message must not name the stored number: the C++
+    // conversion is UB, so only the alteration is portable.
     const reported = v.vector2i('size')('size', `Vector2i(${value}, 8)`, 1);
     expect(reported?.severity).toBe('error');
     expect(reported?.message).not.toContain('2147483648');
@@ -273,13 +260,10 @@ describe('a composite with a per-COMPONENT bound', () => {
   });
 
   it.each(NON_FINITE)('reports %s in the INTEGER spelling as altered, not as a bound', (value) => {
-    // The float slot's half of the verdict the `Vector2i` slot already pins.
-    // `Vector3i(...)` arguments run `_parse_construct<int32_t>`, whose
-    // identifier branch takes all four through `stor_fix`
-    // (variant_parser.cpp:149-159, :577-586), and `_to_int<int32_t>` then
-    // narrows the double before the widening into this Vector3 slot ever
-    // happens. The bound cannot see it: the component reads back NaN, and NaN
-    // is below no floor and above no ceiling, so the property said nothing.
+    // `Vector3i(...)` arguments run `_parse_construct<int32_t>`, whose identifier
+    // branch takes all four through `stor_fix` (variant_parser.cpp:149-159, :577-586),
+    // and `_to_int<int32_t>` narrows the double before the widening into this
+    // Vector3 slot. The bound cannot see it, since NaN compares false.
     const reported = bounded('size', `Vector3i(${value}, 1, 1)`, 1);
     expect(reported?.severity).toBe('error');
     expect(reported?.code).toBe('INVALID_SIZE_VALUE');
@@ -297,7 +281,7 @@ describe('a composite with a per-COMPONENT bound', () => {
   });
 
   it('leaves an integer spelling every component fits to the bound', () => {
-    // `Vector3i(4294967295, …)` is -1 to the engine, which IS below the floor.
+    // `Vector3i(4294967295, …)` is -1 to the engine, which is below the floor.
     expect(bounded('size', 'Vector3i(4294967295, 1, 1)', 1)?.severity).toBe('warning');
     expect(bounded('size', 'Vector3i(1, 1, 1)', 1)).toBeNull();
   });
@@ -332,15 +316,10 @@ describe('a PACKED array element', () => {
 });
 
 /**
- * The NaN-only tier, beside the finite one.
- *
- * `AudioStreamPlayer::set_volume_db` opens with
- * `ERR_FAIL_COND_MSG(Math::is_nan(p_volume), …)` (audio_stream_player.cpp:70)
- * and refuses nothing else. Measured on 4.6.3: after `volume_db = -12`, writing
- * NaN leaves -12 and prints the error, while `inf` and `-inf` are stored
- * unaltered. `withFiniteGuard` cannot stand in — it would reject two values the
- * setter keeps — and a range bound covers neither, since every comparison
- * against NaN is false.
+ * The NaN-only tier, beside the finite one. `AudioStreamPlayer::set_volume_db`
+ * opens with `ERR_FAIL_COND_MSG(Math::is_nan(p_volume), …)` (audio_stream_player.cpp:70)
+ * and stores `inf` and `-inf` unaltered, so `withFiniteGuard` cannot stand in,
+ * and no range bound catches NaN.
  */
 describe('a property whose setter guards is_nan alone', () => {
   const guarded = v.float('volume_db', {

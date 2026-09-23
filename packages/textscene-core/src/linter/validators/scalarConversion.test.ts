@@ -1,6 +1,6 @@
 /**
  * The BOOL/INT/FLOAT cross-spellings are values Godot stores, so no validator
- * may report one as a format ERROR. Measured on 4.6.3 rather than derived.
+ * may report one as a format error.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -38,7 +38,7 @@ describe('a numeric slot given a boolean', () => {
   });
 
   it('feeds the converted number INTO the slot bounds, never past them', () => {
-    // `false` reads as 0, which is below this slot's floor — so the bound still
+    // `false` reads as 0, which is below this slot's floor, so the bound still
     // decides, exactly as it would for a written `0`.
     const bounded = v.int('hframes', { min: 1, max: 16384 });
     expect(bounded('hframes', 'false', 1)?.severity).toBe(
@@ -48,9 +48,8 @@ describe('a numeric slot given a boolean', () => {
 });
 
 /**
- * One engine behaviour, one verdict. `_to_int` maps a BOOL to 1/0 for EVERY int
- * slot (`variant.h:361-377`), so no reader of one may take the conversion and
- * then say nothing about it — which four of the five did while `v.int` warned.
+ * One engine behaviour, one verdict: `_to_int` maps a BOOL to 1/0 for every int
+ * slot (`variant.h:361-377`), so every int reader warns about the conversion.
  */
 describe('every int reader, given a boolean', () => {
   // servers/text/text_server.h:120, the same mask `maskedBitField.test.ts` uses.
@@ -59,7 +58,7 @@ describe('every int reader, given a boolean', () => {
     labels: { 32: 'BREAK_TRIM_INDENT', 64: 'BREAK_TRIM_START', 128: 'BREAK_TRIM_END' },
   });
   type Reader = [string, ReturnType<typeof v.lenientInt>, string, string, string];
-  // The spelling each reader ACCEPTS, so the probe differs from a clean value
+  // The spelling each reader accepts, so the probe differs from a clean value
   // in nothing but the conversion: `positiveInt` refuses the 0 that `false`
   // reads as, and bit 1 is outside the trim mask.
   const readers: readonly Reader[] = [

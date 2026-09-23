@@ -1,10 +1,7 @@
 /**
  * The tuple and reference combinators: vectors, Rect2, Transform3D, resource
- * references, NodePath and Color — their shape checks, and the lenient float
- * grammar every one of them must accept.
- *
- * The scalar combinators are `v.test.ts`; the packed arrays and the string
- * grammars are `v.packedArrays.test.ts`.
+ * references, NodePath and Color, their shape checks, and the lenient float
+ * grammar every one must accept. Scalars live in `v.test.ts`.
  */
 
 import { validatorRegistry } from '../ValidatorRegistry.js';
@@ -28,8 +25,7 @@ describe('v.vector2 / v.vector2i / v.vector3', () => {
 
   // `_parse_construct<int32_t>` (variant_parser.cpp:577-592) takes any number
   // token and converts it, so a component Godot writes as a float or in
-  // exponent notation loads and truncates toward zero. A `-?\d+` component
-  // grammar reported a format error on a file Godot opens.
+  // exponent notation loads and truncates toward zero.
   it('vector2i takes the component spellings Godot converts', () => {
     // Whole-valued, however spelled: `2e1` is 20 and stores exactly.
     expect(v.vector2i('grid')('grid', 'Vector2i(2e1, 0)', 1)).toBeNull();
@@ -42,7 +38,7 @@ describe('v.vector2 / v.vector2i / v.vector3', () => {
     // Godot stores 0 here, which is below the floor; reading `-0.5` as -0 or
     // as -1 would answer differently.
     const validator = v.vector2i('size', { min: 1, enforced: 'viewport.cpp:1120' });
-    // Below the floor once truncated: the ERROR, which outranks the warning.
+    // Below the floor once truncated: the error, which outranks the warning.
     expect(validator('size', 'Vector2i(0.9, 4)', 1)?.severity).toBe('error');
     // In range once truncated: only the truncation itself is left to report.
     expect(validator('size', 'Vector2i(1.9, 4)', 1)?.severity).toBe('warning');
@@ -54,10 +50,9 @@ describe('v.vector2 / v.vector2i / v.vector3', () => {
   });
 
   it('rect2i follows the composite type, not the token, into the int32 branch', () => {
-    // A `Rect2(...)` in a Rect2i slot holds four DOUBLES, so every component
-    // narrows through `double -> int32` however it was spelled: `4294967295`
-    // reaches the UB sentinel, while the `Rect2i` spelling of the same digits
-    // wraps an int64 to -1. Measured on 4.6.3.
+    // A `Rect2(...)` in a Rect2i slot holds four doubles, so every component
+    // narrows through `double -> int32`: `4294967295` reaches the UB sentinel,
+    // while the `Rect2i` spelling of the same digits wraps an int64 to -1.
     const converted = v.rect2i('region')('region', 'Rect2(0, 0, 4294967295, 16)', 1);
     expect(converted?.severity).toBe('error');
     expect(converted?.code).toBe('INVALID_REGION_VALUE');
@@ -164,10 +159,9 @@ describe('v.resourceReference / v.nodePath / v.color', () => {
 });
 
 describe('float-tuple validators speak the tokenizer float grammar', () => {
-  // FLOAT_PATTERN_SOURCE (godot/number.ts) is transcribed from `get_token`,
-  // so linter and renderer accept exactly what Godot loads: trailing-dot (5.)
-  // and every exponent form, but NOT a leading `+` or a leading `.` — measured
-  // on 4.6.3, both fail the load outright.
+  // FLOAT_PATTERN_SOURCE (godot/number.ts) is transcribed from `get_token`, so
+  // linter and renderer accept what Godot loads: trailing-dot (5.) and every
+  // exponent form, but not a leading `+` or `.`, which fail the load.
   it('v.vector2 accepts 5. / scientific', () => {
     expect(v.vector2('offset')('offset', 'Vector2(0.5, 5.)', 1)).toBeNull();
     expect(v.vector2('offset')('offset', 'Vector2(1, -2.5e-2)', 1)).toBeNull();
@@ -222,9 +216,8 @@ describe('float-tuple validators speak the tokenizer float grammar', () => {
 
 describe('a fractional component of an integer composite', () => {
   // `_parse_construct<int32_t>` (variant_parser.cpp:577-592) takes any number
-  // token and narrows it, exactly as a scalar int slot does — so the truncation
-  // warning must reach here too. It did not: the scalar `hframes = 5.5` warned
-  // while `Vector2i(1.5, 2)` beside it said nothing.
+  // token and narrows it, as a scalar int slot does, so the truncation warning
+  // reaches here too.
   it('warns on Vector2i, as the scalar slot does', () => {
     const diagnostic = v.vector2i('size')('size', 'Vector2i(1.5, 2)', 1);
     expect(diagnostic?.severity).toBe('warning');
@@ -270,14 +263,14 @@ describe('the converted integer spelling in a float slot', () => {
   });
 
   it('takes a converted component the engine stores unchanged', () => {
-    // `Vector2i(1.5, 0)` reaches the slot as (1, 0) — narrowed, but to a number
+    // `Vector2i(1.5, 0)` reaches the slot as (1, 0), narrowed, but to a number
     // int32 round-trips, so the file and the engine agree on what is stored.
     expect(startPosition('Vector2i(1, 2)')).toBeNull();
   });
 
   it('leaves the float spelling own non-finite components alone', () => {
     // `inf` is a spelling Godot writes into every real-typed composite; only
-    // the INTEGER constructor narrows.
+    // the integer constructor narrows.
     expect(startPosition('Vector2(inf, nan)')).toBeNull();
   });
 });

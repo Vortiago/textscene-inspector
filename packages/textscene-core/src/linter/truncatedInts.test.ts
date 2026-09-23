@@ -1,15 +1,8 @@
 /**
- * No INT-slot validator may be silent about a fractional literal.
- *
- * `_to_int` truncates on the way INTO the setter (`variant.h:369-370`), so
- * `hframes = 5.5` stores 5 and the value the engine holds is not the value the
- * file states. ADR-0032 gives that its own tier, and `storedNotWritten` is the one
- * implementation of it — but it is applied by each combinator by hand, so a
- * hand-rolled int slot drops out of the tier in silence. Both bit-field
- * combinators and `GridMap.cell_octant_size` did.
- *
- * Population comes from the `intSlot` TAG, the same set `nonFiniteInts.test.ts`
- * sweeps.
+ * No INT-slot validator may be silent about a fractional literal. `_to_int`
+ * truncates on the way into the setter (`variant.h:369-370`), so `hframes = 5.5`
+ * stores 5. Each combinator applies `storedNotWritten` by hand, so this sweeps
+ * every slot tagged `intSlot`, the same set `nonFiniteInts.test.ts` sweeps.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -17,12 +10,9 @@ import { probe, taggedIntSlots } from './testing/intSlotProbe.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 /**
- * Integers to look for one the slot ACCEPTS, so the fractional probe below
- * differs from it in nothing but the fraction.
- *
- * A bit field is why this is a search rather than a constant: its legal set is
- * the subsets of a mask, so `1` is illegal where `192` is fine, and a probe of
- * `1.5` draws the mask's own error and hides the silence being tested for.
+ * Integers to search for one the slot accepts, so the fractional probe differs
+ * from it only in the fraction. A search, not a constant: a bit field accepts
+ * only subsets of its mask, so `1.5` can draw the mask's own error instead.
  */
 const BASES = [1, 0, 2, 3, 4, 8, 16, 32, 64, 96, 128, 192, 224, 255, 100, 1000, 2048];
 
@@ -49,9 +39,8 @@ describe('a fractional literal in an INT slot', () => {
   });
 
   it('warns rather than errors, and never as a format failure', () => {
-    // The tokenizer reads `5.5` perfectly well (`variant_parser.cpp:443-448`
-    // types it FLOAT), so a `_FORMAT` code here tells a reader the file is
-    // unparseable when the engine opens it without complaint.
+    // The tokenizer reads `5.5` (`variant_parser.cpp:443-448` types it FLOAT),
+    // so a `_FORMAT` code calls a file unparseable that the engine opens.
     const wrong = probed
       .flatMap(({ at, key, validator, accepts, base }) => {
         const d = validator(key, probe(accepts, `${base}.5`), 1);

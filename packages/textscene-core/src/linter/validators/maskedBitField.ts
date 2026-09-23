@@ -1,31 +1,8 @@
 /**
- * A `BitField` property whose setter keeps only the bits in a mask.
- *
- * `layerBitmask` is the sibling case and the contrast worth holding: there the
- * setter assigns straight through and only the inspector widget is 32 wide, so
- * an out-of-range mask WARNS. Here the setter writes `x = p_flags & MASK`, so
- * bits outside the mask are dropped on the way in and the stored value is not
- * the written one. `Grounding.enforced` names exactly that case ("a silently
- * dropped write"), which makes those bits the error tier.
- *
- * The distinction is not academic. `BREAK_TRIM_MASK` is
- * `BREAK_TRIM_INDENT | BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES`
- * (`servers/text/text_server.h:120`) = 224, so `autowrap_trim_flags = 4` — a
- * plausible confusion with the neighbouring `autowrap_mode` enum — stores 0 and
- * nothing anywhere reports it.
- *
- * Membership is not a range, which is why this cannot be a `v.int` with a max:
- * the legal set is the subsets of the mask, and 1 is as illegal as 4096 while
- * 224 is fine. A bound like `{ min: 0, max: 224 }` would accept every one of
- * the in-range non-subsets.
- *
- * `hinted` carries the second tier. A `PROPERTY_HINT_FLAGS` string enumerates
- * the bits the inspector offers, which is often NARROWER than the mask the
- * setter keeps: all three `autowrap_trim_flags` properties hint only
- * `BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES` (192) while
- * accepting 224. Bit 32 is therefore kept unaltered but unreachable from the
- * inspector, which is the warning tier by the same reading of a UI-control hint
- * that `layerBitmask` already applies to `PROPERTY_HINT_LAYERS_*`.
+ * `BitField` validators. A setter that writes `x = p_flags & MASK` drops bits
+ * outside the mask, the error tier, where `layerBitmask` only warns. Membership
+ * is not a range: `BREAK_TRIM_MASK` is 224 (`servers/text/text_server.h:120`),
+ * so `autowrap_trim_flags = 4` stores 0 though `{ max: 224 }` would pass it.
  */
 
 import { propertyError } from './propertyError.js';
@@ -37,12 +14,9 @@ import { markIntSlot, readIntSlot, storedNotWritten } from './intSlot.js';
 import { formatCode, valueCode } from './v/codes.js';
 
 /**
- * Bit arithmetic that survives the slot's own width.
- *
- * JS `&`/`|`/`~` coerce through ToInt32, and a `BitField<T>` is int64: a label
- * at bit 35 (`RenderingServer::ArrayFormat` has them) reduces to 0 under `|`,
- * and `num & mask` names a stored value the engine never holds once either
- * side passes 2^31. BigInt is exact over the whole slot.
+ * Bit arithmetic that survives the slot's own width. JS `&`/`|`/`~` coerce
+ * through ToInt32, and a `BitField<T>` is int64 with labels up to bit 35
+ * (`RenderingServer::ArrayFormat`). BigInt is exact over the whole slot.
  */
 const outsideMask = (num: number, bits: number): boolean =>
   (BigInt(num) & ~BigInt(bits)) !== 0n;
@@ -85,17 +59,10 @@ function bitField(
   }
 ): PropertyValidator {
   const validator = accepts((key, value, line) => {
-    // `readIntSlot`, not `IS_VALID_INT_RE`: that regex describes
-    // `String::is_valid_int()`, which is the grammar of an index inside a
-    // property KEY, not of a Variant literal. A bit-field slot is an INT, so
-    // Godot reads any number token and converts — `justification_flags = 3.0`
-    // and `= 2e1` are files it loads, and a format error on either reported on
-    // a scene the engine opens. The `${num}` an arm interpolates is the STORED
-    // int, which is what every message here should have said. It also hands
-    // back the double the int came from, which the truncation tier needs.
-    // `'int64'`: the slot is `BitField<T>`, which is int64_t. Read as int32 it
-    // reported 4294967295 as -1 and refused 2^32 + 1 outright, so a value the
-    // engine keeps intact drew an error saying the engine does not hold it.
+    // `readIntSlot`, not `IS_VALID_INT_RE`, the grammar of an index inside a key:
+    // Godot reads any number token into an INT slot, so `justification_flags =
+    // 3.0` and `= 2e1` load. `'int64'`, since `BitField<T>` is int64_t and keeps
+    // 4294967295 and 2^32 + 1 intact.
     const read = readIntSlot(value, undefined, 'int64');
     const num = read.stored;
     if (num === null) {
@@ -106,8 +73,8 @@ function bitField(
         formatCode(name)
       );
     }
-    // A non-finite READS but does not FIT, and every bit test below is false
-    // for NaN, so without this the slot said nothing at all.
+    // A non-finite reads but does not fit, and every bit test below is false
+    // for NaN.
     const refused = unrepresentableInt(name, key, value, line, valueCode(name), num, 'int64');
     if (refused) return refused;
     for (const arm of opts.arms) {
@@ -136,16 +103,14 @@ export interface MaskedBitFieldOptions {
    */
   enforced: string;
   /**
-   * Bit value to constant name, for the generated sheet's Accepts column, e.g.
-   * `{ 32: 'BREAK_TRIM_INDENT' }`. Naming the constants is what tells a reader
-   * which numbers are legal without opening Godot's headers.
+   * Bit value to constant name, for the generated sheet's Accepts column, such
+   * as `{ 32: 'BREAK_TRIM_INDENT' }`.
    */
   labels: Record<number, string>;
   /**
-   * The subset the property's `PROPERTY_HINT_FLAGS` actually enumerates, when
-   * it is narrower than the mask. Omit where the hint lists every kept bit.
-   * The citation belongs at the call site's comment, matching how every other
-   * two-tier validator here records its warning arm.
+   * The subset the property's `PROPERTY_HINT_FLAGS` enumerates, when narrower
+   * than the mask: `autowrap_trim_flags` hints 192 and keeps 224, so bit 32
+   * warns as unreachable from the inspector. Cite it in the call site's comment.
    */
   hintedBits?: number;
 }
@@ -199,26 +164,14 @@ export interface HintedBitFieldOptions {
 }
 
 /**
- * A `BitField` whose setter keeps EVERY bit, where only the inspector's flag
- * list is narrower.
- *
- * This is `maskedBitField`'s warning arm standing alone, and the two differ in
- * exactly the way ADR-0032 separates the tiers: there the setter writes
- * `p_flags & MASK`, so a bit outside the mask is DROPPED and the stored value is
- * not the written one (error). Here the setter bare-assigns, so an unlisted bit
- * is kept unaltered and is merely unreachable from the inspector (warning).
- *
- * A min/max bound cannot substitute, and not only for elegance: the hinted set
- * is often SPARSE. `Label.justification_flags` offers {1, 2, 8, 32, 64, 128}
- * (`label.cpp:1437`) while `JUSTIFICATION_TRIM_EDGE_SPACES = 4` and
- * `JUSTIFICATION_CONSTRAIN_ELLIPSIS = 16` exist and load fine
- * (`servers/text/text_server.h:78-88`), so `{ min: 0, max: 255 }` would wave
- * through the two values a reader most needs told about.
+ * A `BitField` whose setter keeps every bit, where only the inspector's flag
+ * list is narrower: `maskedBitField`'s warning arm alone. The hinted set can be
+ * sparse: `Label.justification_flags` offers {1, 2, 8, 32, 64, 128} (`label.cpp:1437`),
+ * though 4 and 16 exist and load (`servers/text/text_server.h:78-88`).
  */
 export function hintedBitField(name: string, opts: HintedBitFieldOptions): PropertyValidator {
-  // OR-ed as BigInt: JS `|` coerces to int32, and this file's slot is int64, so
-  // a label at or past bit 31 turned the whole set negative and every legal
-  // value then failed the subset test.
+  // OR-ed as BigInt: JS `|` coerces to int32, which turns a label at or past
+  // bit 31 negative.
   const hintedBits = Number(
     Object.keys(opts.labels).reduce((acc, bit) => acc | BigInt(bit), 0n)
   );

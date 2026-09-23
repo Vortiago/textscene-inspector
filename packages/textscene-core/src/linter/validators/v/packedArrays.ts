@@ -22,10 +22,9 @@ import { shape } from './grounding.js';
 /** What is wrong with one element of a packed INT array, and which element. */
 interface BadIntElement {
   /**
-   * `unreadable` — the tokenizer refuses it. `unstorable` — it reads and the
-   * slot's C++ type alters it. `beyondReader` — an int64 element the engine
-   * carries intact and this reader cannot: past 2^53 the double stops being the
-   * integer the text states, which is a limit here rather than in Godot.
+   * `unreadable`: the tokenizer refuses it. `unstorable`: the slot's C++ type
+   * alters it. `beyondReader`: an int64 element past 2^53, which Godot carries
+   * intact and this reader's double cannot.
    */
   kind: 'unreadable' | 'unstorable' | 'beyondReader';
   text: string;
@@ -39,14 +38,9 @@ interface TruncatedElement {
 }
 
 /**
- * Both verdicts a packed INT body can produce, from ONE walk.
- *
- * They are returned side by side rather than as one winner because their tiers
- * differ and the CALLER decides the order: `error` outranks everything,
- * including the grounded checks a caller runs afterwards, while `truncated` is
- * a warning that must come last. Returning the warning as if it were the single
- * answer silenced `INVALID_DATA_CELLS_COUNT` on a GridMap whose cell stream had
- * a fractional element, and stopped Polygon2D scanning its second entry.
+ * Both verdicts a packed INT body can produce, from one walk, side by side
+ * because the caller decides the order: `error` outranks everything, including
+ * the caller's later grounded checks, and the `truncated` warning comes last.
  */
 interface IntElementVerdict {
   error: BadIntElement | null;
@@ -54,32 +48,10 @@ interface IntElementVerdict {
 }
 
 /**
- * The first element of an already-extracted INT array body that Godot cannot
- * read, or reads and cannot store, or `null` when every one is usable.
- *
- * ONE pass for both questions. Asking them separately meant four call sites
- * split, trimmed and re-matched the same body twice, and `parseGodotInt` runs
- * `TSCN_FLOAT_RE` internally — the same regex the second walk re-ran on every
- * element, of which a stage's GridMap carries ~8,800.
- *
- * `PackedInt32Array` is parsed by `_parse_construct<int32_t>`
- * (`variant_parser.cpp:1428-1430`) — the SAME helper as `Vector2i` and as the
- * float arrays, which takes any number token and narrows it on assignment. The
- * five int-array validators that used `IS_VALID_INT_RE` instead reported a
- * format error on `PackedInt32Array(2e3, 0, 0)`, a file Godot opens.
- * `IS_VALID_INT_RE` describes `String::is_valid_int()`, which is the grammar of
- * an index inside a property KEY, not of a Variant literal.
- *
- * `width` is the ELEMENT's C++ type, and it is not always int32.
- * `PackedByteArray` goes through a helper of its own — `_parse_byte_array`
- * (`variant_parser.cpp:600`) pushing into a `Vector<uint8_t>` (`:650`) — so its
- * elements convert through `Variant::operator uint8_t()`
- * (`variant.cpp:1519-1521`). Read at int32 a byte slot says nothing at all
- * about `300`, `-1` or `1000000000`, each of which Godot alters (to 44, 255
- * and 0).
- *
- * Takes the raw body or already-split parts, for the callers that must strip a
- * trailing comma first.
+ * The first element of an INT array body, raw or already split, that Godot
+ * cannot read or store. `PackedInt32Array` goes through `_parse_construct<int32_t>`
+ * (`variant_parser.cpp:1428-1430`), which narrows any number token, so
+ * `PackedInt32Array(2e3, 0, 0)` loads: the grammar is not `IS_VALID_INT_RE`'s.
  */
 function scanIntElements(
   body: string | readonly string[],
@@ -88,14 +60,14 @@ function scanIntElements(
   let truncated: TruncatedElement | null = null;
   for (const part of typeof body === 'string' ? body.split(',') : body) {
     const text = part.trim();
-    // `parseGodotFloat` + `storedFromFloat`, which is what `parseGodotInt` does
-    // internally — spelled out so the float is in hand for the fractional test
-    // below. Calling `parseGodotInt` and then re-parsing added a second
-    // `TSCN_FLOAT_RE` run to every element of every CLEAN body, measured at
-    // +39% on a real 7,848-element GridMap stream, to detect a condition a
-    // clean body by definition does not have.
+    // `parseGodotInt` spelled out, so the float is in hand for the fractional
+    // test without a second `TSCN_FLOAT_RE` run on every element.
     const asFloat = parseGodotFloat(text);
     if (asFloat === null) return { error: { kind: 'unreadable', text }, truncated: null };
+    // `width` is the element's C++ type: `PackedByteArray` uses `_parse_byte_array`
+    // (`variant_parser.cpp:600`) into a `Vector<uint8_t>` (`:650`) through
+    // `Variant::operator uint8_t()` (`variant.cpp:1519-1521`), so Godot alters
+    // `300`, `-1` and `1000000000` to 44, 255 and 0.
     const stored = storedFromFloat(asFloat, text, width);
     if (Number.isNaN(stored)) {
       const kind = readerLimitedInt(asFloat, width) ? 'beyondReader' : 'unstorable';
@@ -109,18 +81,10 @@ function scanIntElements(
 }
 
 /**
- * The diagnostic for the first unusable element of a packed INT body, or `null`
- * when every element is usable — so the six call sites do not hand-maintain a
- * copy each. One function, because the finder's result never had another
- * reader: every site fed it straight back in.
- *
- * The CODE carries the distinction the two kinds make: `_FORMAT` means Godot's
- * own parser could not read the element, `_VALUE` means it read a real value
- * the slot then altered. Two sites reported the second under a `_FORMAT` code,
- * which tells a consumer the opposite of what happened.
- *
- * `width` is the element's C++ type; see {@link scanIntElements}. It also names
- * the thing the value did not fit, since `300` is an integer and is not a byte.
+ * The diagnostics for the first unusable element of a packed INT body. `_FORMAT`
+ * means Godot's parser could not read the element, and `_VALUE` means the slot
+ * altered a real value. `width` is the element's C++ type
+ * ({@link scanIntElements}), which the message names: `300` is not a byte.
  */
 export function badIntElement(
   propertyName: string,
@@ -182,7 +146,7 @@ export function badIntElement(
 function firstNonNumericElement(body: string | readonly string[]): string | null {
   for (const part of typeof body === 'string' ? body.split(',') : body) {
     const trimmed = part.trim();
-    // The component GRAMMAR, not a numeric parse: `Number()` refuses `inf`,
+    // The component grammar, not a numeric parse: `Number()` refuses `inf`,
     // which `rtos_fix` writes into these arrays too (variant_parser.cpp:2504,
     // :2519, :2534), while `parseFloat` would accept the trailing garbage in
     // `1abc` that Godot's tokenizer stops at.
@@ -192,13 +156,9 @@ function firstNonNumericElement(body: string | readonly string[]): string | null
 }
 
 /**
- * The first element of a BARE or typed array body Godot could not put in this
- * slot, or null when every one fits.
- *
- * The bare and typed spellings hold one element per comma — `Vector2(0, 0)`,
- * not the packed form's flat `0, 0` — so they are split at the TOP level and
- * each is checked whole. A tuple element must be its own constructor at the
- * slot's arity; a scalar element is just a number.
+ * The first element of a bare or typed array body Godot could not put in this
+ * slot, or null. These spellings hold one whole element per top-level comma,
+ * such as `Vector2(0, 0)`, not the packed form's flat `0, 0`.
  */
 function firstBadArrayElement(
   body: string,
@@ -213,11 +173,10 @@ function firstBadArrayElement(
       continue;
     }
     const call = elementCall.exec(trimmed);
-    // The ARITY is still the slot's own. `elementCall` carries the same-arity
-    // conversions and no others (`godot/variantConversion.ts`), so
-    // `[Vector2i(0, 0)]` in a Vector2 array is the verbatim read
-    // `Variant::operator Vector2()` performs (`variant.cpp:1751-1756`), while
-    // `[Vector3(0, 0, 0)]` stays an offender.
+    // The arity is the slot's own: `elementCall` carries only same-arity
+    // conversions (`godot/variantConversion.ts`), so `[Vector2i(0, 0)]` is the
+    // verbatim read `Variant::operator Vector2()` performs (`variant.cpp:1751-1756`),
+    // while `[Vector3(0, 0, 0)]` stays an offender.
     if (!call || splitTopLevel(call[1]!).length !== groupSize) return trimmed;
     if (firstNonNumericElement(call[1]!) !== null) return trimmed;
   }
@@ -225,26 +184,10 @@ function firstBadArrayElement(
 }
 
 /**
- * `Packed<Kind>Array(n1, n2, …)` — an arbitrary-length list of fixed-size
- * TUPLES (2 floats per Vector2, 3 per Vector3, 4 per Color), format-only.
- *
- * A count that isn't a multiple of `groupSize` is deliberately NOT rejected:
- * Godot's own `VariantParser::parse_value` builds the typed array with
- * `args.size() / groupSize` (integer division) and drops the remainder
- * (`variant_parser.cpp:1555` Vector2Array, `:1573` Vector3Array, `:1609`
- * ColorArray), so e.g. `PackedVector3Array(0, 0, 1, 0)` loads as a single
- * `Vector3(0, 0, 1)` with no error. Rejecting it refused a file Godot reads.
- *
- * Godot serialises an empty array as `Packed<Kind>Array()`, so zero values is
- * legal.
- *
- * `example` overrides the literal shown in the "must be a …" message; it
- * defaults to `groupSize` zeros (`Vector3(0, 0, 0)`). `PackedVector2Array`'s
- * historical message instead shows two coordinate pairs, so it passes one.
- *
- * `wrapper` is always one of this module's own literal type names
- * (`PackedVector2Array` / `PackedVector3Array` / `PackedColorArray`), never
- * caller-supplied free text, so embedding it directly in a `RegExp` is safe.
+ * `Packed<Kind>Array(n1, n2, …)`: a format-only list of fixed-size tuples, empty
+ * included. A count off a multiple of `groupSize` loads: `parse_value` divides
+ * with integer division (`variant_parser.cpp:1555` Vector2Array, `:1573` Vector3Array,
+ * `:1609` ColorArray). `example` overrides the message's default all-zero literal.
  */
 function packedTupleArray(
   name: string,
@@ -254,6 +197,8 @@ function packedTupleArray(
   example: string = Array(groupSize).fill('0').join(', ')
 ): PropertyValidator {
   const formatErr = formatCode(name);
+  // `wrapper` is one of this module's literal type names, never free text, so a
+  // RegExp may embed it.
   const FORMS = packedArrayForms(wrapper);
   const element = packedElementType(wrapper);
   // Per validator, not per element: the spelling is fixed by the slot, and a
@@ -261,9 +206,8 @@ function packedTupleArray(
   // spelling for the same reason the scalar tuple grammar does.
   const ELEMENT_CALL = packedArrayLiteral(compositeSpellings(element));
   return shape((key, value, line) => {
-    // The packed constructor's body is a FLAT argument list; the other two hold
-    // one ELEMENT each. Both are values Godot loads into this slot, so the form
-    // that matched decides how the body is read rather than whether it is one.
+    // The packed constructor's body is a flat argument list, and the other two
+    // forms hold one element each. The matched form decides how to read the body.
     const parsed = packedArrayBody(FORMS, value);
     if (parsed === null) {
       return propertyError(
@@ -294,23 +238,10 @@ function packedTupleArray(
 
 export const packedArrayCombinators = {
   /**
-   * `PackedVector2Array(x, y, x, y, …)`, an arbitrary-length list of coordinate PAIRS.
-   *
-   * Not built on `floatTupleValidator`, which pins an exact arity — this is
-   * {@link packedTupleArray}, the arbitrary-length combinator shared with
-   * `v.packedVector3Array` and `v.packedColorArray`. The `example` argument
-   * overrides `packedTupleArray`'s default all-zero example, so the "must be
-   * a …" message keeps showing two coordinate pairs, this validator's
-   * pre-promotion wording.
-   *
-   * Godot serialises an empty array as `PackedVector2Array()`, so zero values is legal.
-   * Godot writes signed, scientific (`4.37114e-08`), whitespace-padded and
-   * non-finite (`inf` / `inf_neg` / `nan`) numbers, all of which `TSCN_FLOAT_RE`
-   * accepts. An ODD number of values (a truncated final vertex) is likewise NOT
-   * rejected: `VariantParser::parse_value` divides the flat float count by 2 with
-   * integer division and drops the remainder (variant_parser.cpp:1555), so a
-   * scene carrying one still loads and rejecting it here would refuse a file
-   * Godot reads.
+   * `PackedVector2Array(x, y, x, y, …)`, coordinate pairs through {@link packedTupleArray},
+   * whose message shows two pairs. An odd count loads: `parse_value` drops the
+   * remainder (variant_parser.cpp:1555). `TSCN_FLOAT_RE` accepts every number
+   * Godot writes, such as `4.37114e-08` and `inf_neg`.
    */
   packedVector2Array(name: string): PropertyValidator {
     return packedTupleArray(name, 'PackedVector2Array', 2, 'PackedVector2Array(x, y, …)', '0, 0, 1, 0');
@@ -318,7 +249,7 @@ export const packedArrayCombinators = {
 
   /**
    * `PackedVector3Array(x, y, z, x, y, z, …)`, an arbitrary-length list of
-   * VERTEX triples. See {@link packedTupleArray} for the shared shape and why
+   * vertex triples. See {@link packedTupleArray} for the shared shape and why
    * a non-multiple-of-3 count is accepted rather than refused.
    */
   packedVector3Array(name: string): PropertyValidator {
@@ -335,16 +266,9 @@ export const packedArrayCombinators = {
   },
 
   /**
-   * `PackedFloat32Array(a, b, …)` — a FLAT list of scalars, no grouping.
-   *
-   * `groupSize` is 1 because there is none: it feeds only the default example
-   * string, and the body check is element-wise either way. Two slices
-   * hand-rolled this validator whole, and the shared element reader is exactly
-   * where the packed-array grammar last moved — so the copies were the two
-   * places that had to be found and edited by hand.
-   *
-   * `example` is the one thing the two differed on, and it is preserved rather
-   * than normalised: it is the wording each property's message already carries.
+   * `PackedFloat32Array(a, b, …)`, a flat list of scalars. `groupSize` is 1: it
+   * feeds only the default example, and the body check is element-wise.
+   * `example` is each property's own message wording.
    */
   packedFloat32Array(name: string, example: string): PropertyValidator {
     return packedTupleArray(name, 'PackedFloat32Array', 1, 'PackedFloat32Array(x, y, …)', example);
