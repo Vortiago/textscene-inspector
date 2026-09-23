@@ -21,7 +21,7 @@ describe('node2dGroupProps', () => {
     const r = node2dGroupProps({ position: { x: 10, y: 20 }, rotation: 0, scale: { x: 1, y: 1 }, skew }, 0.3);
     expect(r.matrix).toBeDefined();
     // Matrix4.elements is column-major. Linear part (rot=0, scale=1):
-    // [[1, sin(skew)], [0, cos(skew)]] in three.js space; translation = (10, -20, 0.3).
+    // [[1, sin(skew)], [0, cos(skew)]] in three.js space, and the translation is (10, -20, 0.3).
     const e = r.matrix!.elements;
     expect(e[0]).toBeCloseTo(1, 6); // n11 = cos(rot)*sx
     expect(e[1]).toBeCloseTo(0, 6); // n21 = -sin(rot)*sx

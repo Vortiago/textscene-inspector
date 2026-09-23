@@ -1,5 +1,3 @@
-/** Unit tests for the shared sprite-frame composition module. */
-
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
@@ -128,18 +126,10 @@ describe('composeFrameTexture', () => {
 
 describe('composeFrameTexture — region_rect larger than its texture', () => {
   /**
-   * Godot does not clip an oversized region. `Sprite2D::_get_rects` takes the
-   * region verbatim —
-   *
-   *     if (region_enabled) { ... base_rect = region_rect; }
-   *     Size2 frame_size = base_rect.size / Size2(hframes, vframes);
-   *     r_src_rect.size = frame_size;
-   *
-   * — and `Texture2D::get_rect_region` is a pass-through (`r_src_rect =
-   * p_src_rect`, scene/resources/texture.cpp), so the src rect keeps running
-   * past the image. The UV window therefore exceeds 1.0 and stays there; what
-   * fills the overrun is decided by the sampler alone, which is what
-   * `SpriteWrapMode` selects. Nothing about the WINDOW changes.
+   * Godot does not clip an oversized region: `Sprite2D::_get_rects` takes
+   * `base_rect = region_rect` and `frame_size = base_rect.size / Size2(hframes, vframes)`,
+   * and `Texture2D::get_rect_region` passes it through (scene/resources/texture.cpp).
+   * The UV window exceeds 1.0, and only the sampler decides what fills the overrun.
    */
   const oversized = () =>
     baseProps({ region_enabled: true, region_rect: { x: 0, y: 0, width: 200, height: 40 } });
@@ -166,24 +156,18 @@ describe('composeFrameTexture — region_rect larger than its texture', () => {
   });
 
   it('keeps the quad at the full region size (Godot sizes dst_rect from base_rect)', () => {
-    // `get_rect()` uses `s = region_rect.size` — the sprite does NOT shrink to
-    // the part of the region the texture actually covers.
+    // `get_rect()` uses `s = region_rect.size`: the sprite does not shrink to
+    // the part of the region the texture covers.
     expect(frameSizePx(makeTexture(100, 80), oversized())).toEqual({ width: 200, height: 40 });
   });
 });
 
 describe('spriteWrapMode — Godot\'s own texture_repeat derivation', () => {
   /**
-   * `sprite_3d.cpp:163` decides REPEAT from the FRAME's UV corners alone:
-   *
-   *     bool texture_repeat = (MIN(uvs[0].x, uvs[2].x) < 0.0) || ... || (MAX(uvs[0].y, uvs[2].y) > 1.0);
-   *
-   * Strict `< 0.0` / `> 1.0`, so a window that merely touches the edge clamps.
-   * flip_h/flip_v SWAP the uv pairs (`:154-161`) and hand the test the other
-   * diagonal, whose bounding box is the same — so flips cannot move the answer
-   * and this reads the unflipped window. Our v-window is Godot's mirrored about
-   * 0.5, and `min < 0 || max > 1` is symmetric under `v → 1 - v`, so the OR is
-   * identical either way round.
+   * `sprite_3d.cpp:163` decides repeat from the frame's UV corners alone, on strict
+   * `< 0.0` / `> 1.0` tests, so a window touching the edge clamps. Flips swap the
+   * uv pairs (`:154-161`) without moving the bounding box, and our mirrored
+   * v-window is symmetric under the test, so this reads the unflipped window.
    */
   it('clamps a plain full-image sprite — the common case', () => {
     expect(spriteWrapMode(makeTexture(), baseProps())).toBe('clamp');

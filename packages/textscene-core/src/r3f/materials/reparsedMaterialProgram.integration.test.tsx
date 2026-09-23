@@ -1,26 +1,8 @@
 /**
- * A `.tscn` re-parse mutates props on an ALREADY-MOUNTED material.
- *
- * `NodeDispatcher` keys a node on its NAME, so an edited scene re-renders the
- * SAME React element with new props rather than mounting a new one. three bakes
- * its derived program parameters at a material's FIRST compile
- * (`WebGLPrograms.js:56` `getParameters`) and re-derives only when
- * `material.version` moves or one of the fixed re-checks at
- * `WebGLRenderer.js:2388` fires — `transparent`, `blending`, `side`,
- * `vertexColors` and the texture-slot presences are on neither list. An
- * opaque→transparent edit therefore leaves `#define OPAQUE`
- * (`WebGLProgram.js:776`) baked, and `opaque_fragment` forces
- * `diffuseColor.a = 1.0` for the life of the material — opacity ignored.
- *
- * FrontSide only: a transparent DoubleSide material re-derives once per pass at
- * `WebGLRenderer.js:2133-2141`, which incidentally refreshes every stale
- * parameter at once. So does any other coincidental re-derive (a light-set
- * change, an env map arriving) — which is why the bug is flaky and no golden or
- * e2e run ever caught it.
- *
- * The test renderer never reaches `setProgram`, so these assert the
- * PRECONDITION for the recompile — a material three has never seen, or the same
- * one with its `version` moved past the compiled program's — not the recompile.
+ * A re-parse mutates props on a mounted material, as `NodeDispatcher` keys a node
+ * on its name. three bakes program parameters at first compile (`WebGLPrograms.js:56`)
+ * and re-derives on a `version` move or `WebGLRenderer.js:2388`'s re-checks, and neither
+ * covers `transparent`, `blending`, `side`, `vertexColors` or slot presence.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -124,7 +106,15 @@ double_sided = false
 alpha_cut = ${alphaCut}
 `;
 
+/**
+ * An opaque→transparent edit leaves `#define OPAQUE` (`WebGLProgram.js:776`) baked,
+ * and `opaque_fragment` forces `diffuseColor.a = 1.0`. FrontSide only: a transparent
+ * DoubleSide material re-derives once per pass (`WebGLRenderer.js:2133-2141`), as a
+ * light-set change or an arriving env map also does, so the fault shows only sometimes.
+ */
 describe('a re-parsed scene rebuilds materials whose baked program parameters moved', () => {
+  // The test renderer never reaches `setProgram`, so these assert the precondition:
+  // a new material, or the same one with its `version` past the compiled program's.
   it('MeshInstance3D: transparency 0 → 1 on an inline StandardMaterial3D', async () => {
     const fake = createFakeResourceLoader();
     const renderer = await ReactThreeTestRenderer.create(treeFor(meshScene('0'), fake.loader));

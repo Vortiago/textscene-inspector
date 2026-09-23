@@ -1,57 +1,11 @@
 /**
- * Godot's per-light 2D shadow map — a 1D POLAR depth buffer — built on the CPU.
- *
- * This is the half of `Light2D`'s shadow that a stencil cannot express. Under
- * `shadow_filter = NONE` the sampler takes ONE tap and the result is a hard
- * in/out test, which `shadowVolumes.ts` reproduces exactly with geometry. Under
- * PCF5/PCF13 the sampler takes five or thirteen taps offset along the map's
- * ANGULAR axis and averages them into a FRACTION — a penumbra a binary mask has
- * no way to represent. So a filtered light samples this map instead
- * (`lightQuad.ts`), and an unfiltered one keeps the stencil.
- *
- * WHAT A BIN HOLDS. `drivers/gles3/rasterizer_canvas_gles3.cpp:1639`
- * (`light_update_shadow`) renders the light's occluders four times through 90°
- * frusta into one atlas row of `rendering/2d/shadow_atlas/size` texels (project
- * default 2048), and `drivers/gles3/shaders/canvas_occlusion.glsl:28,56` writes
- *
- *   depth = dot(direction, vtx.xy);   out_depth = depth / z_far;
- *
- * with `direction` the quadrant's AXIS. So a bin holds the axis distance to the
- * nearest occluder in that direction, normalised by `z_far`, NOT the Euclidean
- * distance — and the item side compares against the same axis component
- * (`canvas.glsl:830-845`), so the two agree and `z_far` cancels out of the test.
- * `GL_LESS` over the four passes resolves overlapping occluders, which is a
- * `min`.
- *
- * WHICH BIN. `canvas.glsl:821-843` addresses the atlas by a BOX mapping, not by
- * angle: the direction is divided by its larger component, and the smaller one
- * indexes within the quadrant. Quadrant 0's viewport is
- * `glViewport(0, …, size / 4, 2)` and its projection maps `(x, y, 0) → (y, 0, -x)`,
- * so a rasterised column sits at `(y/x) * (size/8) + (size/8)` — the very texel
- * `tex_ofs * size` addresses. The two halves therefore share ONE indexing rule,
- * which is why this builder can write bins directly with nothing derived.
- *
- * The consequence that decides the whole design: because the in-quadrant
- * coordinate is a TANGENT, a tap offset of `Δu` moves the sample by
- * `8 · Δu · axisDistance` in world units — the penumbra is exactly LINEAR in the
- * box axis distance (the sec² of a uniform-angle map cancels). MEASURED against
- * Godot 4.6.3 on a PCF5 light at `shadow_filter_smooth = 8`: the five step
- * boundaries land at 304.6 / 314.3 / 324 / 333.7 / 343.4 px at axis distance 276
- * and at 283.5 / 303.75 / 324 / 344.25 / 364.5 px at axis distance 576 — a ramp
- * 2.087× wider for a 2.087× greater distance, matching to within a probe step.
- *
- * SPACE. Callers work in the previewer's 2D world space (Godot pixels with Y
- * negated for three.js). `worldToLocal` un-applies the light node's own
- * transform, still Y-up; the mapping negates Y itself, because Godot states the
- * quadrant rule in its own Y-DOWN convention and a half-ported sign would put
- * the penumbra on the wrong side of a rotated light.
- *
- * WHY CPU. The map is a pure function of settled inputs (light pose, occluder
- * edges, reach), so it is built once per change and the goldens see one exact
- * texture. Rasterising it on the GPU would ride the driver's line/triangle
- * fill-rule variance, which is precisely what a byte-compared baseline cannot
- * absorb.
- *
+ * Godot's per-light 2D shadow map, a 1D polar depth buffer, built on the CPU.
+ * PCF5 and PCF13 average five or thirteen angular taps into a penumbra that a
+ * binary stencil cannot represent, so a filtered light samples this map
+ * (`lightQuad.ts`) and an unfiltered one keeps `shadowVolumes.ts`.
+ */
+
+/*
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -65,34 +19,30 @@ import {
 } from './shadowVolumes';
 
 /**
- * Texels in one light's map. Godot's atlas row is
- * `rendering/2d/shadow_atlas/size` wide (project default 2048) and holds four
- * 90° quadrants, so this is both the atlas width and the bins per full turn.
+ * Texels in one light's map: the `rendering/2d/shadow_atlas/size` row (project
+ * default 2048) that `light_update_shadow` (`drivers/gles3/rasterizer_canvas_gles3.cpp:1639`)
+ * fills through four 90° frusta, so it is also the bins per full turn.
  */
 export const SHADOW_MAP_BINS = 2048;
 
 /**
- * What a bin holds where nothing occludes. Godot clears the row to `p_far` and
- * normalises stored depths by the same `z_far`, so "nothing here" is 1.0 on the
- * normalised scale a fragment's own `dist` is measured on — and a fragment
- * inside the light's rect can never reach it (its axis distance is at most half
- * the rect's diagonal, against a far plane of 1.1 diagonals).
+ * What a bin holds where nothing occludes: Godot clears the row to `p_far`,
+ * which is 1.0 once normalised by `z_far`. A fragment inside the light's rect
+ * never reaches it: its axis distance is at most half the diagonal, against a
+ * far plane of 1.1 diagonals.
  */
 export const SHADOW_MAP_FAR = 1;
 
-/** `radius_cache / 1000` — `renderer_viewport.cpp:556`'s near plane. */
+/** `radius_cache / 1000`, the near plane of `renderer_viewport.cpp:556`. */
 const NEAR_SCALE = 1 / 1000;
 
-/** `radius_cache * 1.1` — the same line's far plane, and the `z_far` divisor. */
+/** `radius_cache * 1.1`, the same line's far plane and the `z_far` divisor. */
 const FAR_SCALE = 1.1;
 
 /**
- * The reciprocal of the far plane every stored bin is normalised by.
- *
- * Exported because the fragment shader must divide its own axis distance by the
- * SAME `z_far` or the depth comparison is meaningless — and a mismatch neither
- * throws nor fails a type check, it just slides the penumbra. One derivation,
- * two readers.
+ * The reciprocal of the far plane every stored bin is normalised by. The
+ * fragment shader divides by this same value: a mismatch slides the penumbra
+ * and fails no check.
  */
 export function shadowMapZFarInv(radius: number): number {
   return 1 / (radius * FAR_SCALE);
@@ -106,36 +56,26 @@ const BINS_PER_QUADRANT = SHADOW_MAP_BINS / 4;
 
 export interface ShadowPolarLight {
   /**
-   * Previewer world → light-local, as a row-major 2×3 affine
-   * `[m00, m01, m02, m10, m11, m12]`. Godot's `xform_cache.affine_inverse()`
-   * (`renderer_viewport.cpp:556`), so the light's rotation and scale reach the
-   * map and `offset` — which moves the cookie, not the node — does not.
+   * Previewer world (Godot pixels, Y negated) to light-local, as a row-major 2×3
+   * affine. Godot's `xform_cache.affine_inverse()` (`renderer_viewport.cpp:556`):
+   * the light's rotation and scale reach the map, and `offset` does not.
    */
   readonly worldToLocal: ArrayLike<number>;
-  /**
-   * The light's `rect_cache` in previewer world space — the same occluder cull
-   * `buildShadowVolumes` applies, so both mechanisms see one occluder set.
-   */
+  /** The light's `rect_cache` in previewer world space, for the cull `buildShadowVolumes` shares. */
   rect: LightRect;
   /**
-   * Godot's `radius_cache`: `local_rect.size.length()`
-   * (`renderer_viewport.cpp:485`) — the FULL diagonal of the cookie's rect in
-   * light-local units, which is `hypot(width, height)` of the quad's geometry.
-   * Not the reach `shadowVolumes.ts` extrudes to; it only sets the near/far
-   * clips and the normalisation both sides divide by.
+   * Godot's `radius_cache`: `local_rect.size.length()` (`renderer_viewport.cpp:485`),
+   * the full diagonal of the cookie's rect in light-local units. It sets only the
+   * near and far clips and the normalisation, not the `shadowVolumes.ts` reach.
    */
   readonly radius: number;
 }
 
 /**
- * `canvas.glsl:821-843`'s `tex_ofs` for a direction given in previewer
- * light-local coordinates (Y up). Runs 0 → 1 once around the circle, wrapping at
- * the previewer direction (1, 1); returns 0 for a zero-length direction.
- *
- * Exported because it is the ONE place the mapping lives: the bin walk below and
- * the fragment shader's quadrant block are the same formula read in the two
- * directions, and a test that computes an expected bin must use this and not a
- * second copy of it.
+ * `canvas.glsl:821-843`'s `tex_ofs`, a box mapping and not an angle, for a
+ * light-local direction (Y up). Runs 0 → 1 once round, wrapping at (1, 1), and
+ * is 0 for a zero-length direction. The bin walk, the shader's quadrant block
+ * and the tests read this one formula.
  */
 export function shadowMapCoord(x: number, yUp: number): number {
   const y = 0 - yUp;
@@ -160,18 +100,21 @@ export function shadowMapCoord(x: number, yUp: number): number {
 }
 
 /**
- * Bin `index`'s ray in Godot light-local space, scaled so the quadrant's axis
- * component is exactly 1 — which makes the ray parameter itself the axis
- * distance the bin stores, with no second projection.
- *
- * The inverse of `shadowMapCoord`, quadrant by quadrant, sampled at the texel
- * CENTRE because that is where Godot's rasteriser decides coverage.
+ * Bin `index`'s ray in Godot light-local space, its axis component 1 so the ray
+ * parameter is the stored axis distance. The inverse of `shadowMapCoord`, taken
+ * at the texel centre, where the rasteriser decides coverage.
  */
 function binRay(index: number, out: { x: number; y: number }): void {
   const u = (index + 0.5) / SHADOW_MAP_BINS;
   const quadrant = Math.floor(index / BINS_PER_QUADRANT);
+  // Quadrant 0 rasterises `(x, y, 0) → (y, 0, -x)` into `glViewport(0, …, size / 4, 2)`,
+  // so a column lands at `(y/x) * (size/8) + (size/8)`: the texel `tex_ofs` addresses.
   if (quadrant === 0) {
     out.x = 1;
+    // A tangent coordinate moves a tap `Δu` by `8 · Δu · axisDistance`, so the
+    // penumbra is linear in it. Godot 4.6.3, PCF5, smooth 8, steps in px:
+    // 304.6/314.3/324/333.7/343.4 at axis distance 276, 283.5/303.75/324/344.25/364.5
+    // at 576, a ramp 2.087× wider for 2.087× the distance.
     out.y = 8 * u - 1;
   } else if (quadrant === 1) {
     out.x = 3 - 8 * u;
@@ -186,18 +129,17 @@ function binRay(index: number, out: { x: number; y: number }): void {
 }
 
 /**
- * The map for one light: `SHADOW_MAP_BINS` normalised axis distances, filled
- * with `SHADOW_MAP_FAR` where nothing casts.
- *
- * `casters` are the light's occluders in previewer WORLD space, already narrowed
- * by `shadow_item_cull_mask` — the same value `buildShadowVolumes` consumes. It
- * applies the same `casterInLightRect` cull too, so the two mechanisms cannot
- * disagree about which occluders exist for a light.
+ * The map for one light: `SHADOW_MAP_BINS` normalised axis distances, and
+ * `SHADOW_MAP_FAR` where nothing casts. `casters` are world-space occluders
+ * narrowed by `shadow_item_cull_mask`, and the shared `casterInLightRect` cull
+ * keeps this map and `buildShadowVolumes` on one occluder set.
  */
 export function buildShadowPolarMap(
   light: ShadowPolarLight,
   casters: readonly ShadowCasterEdges[]
 ): Float32Array {
+  // Built on the CPU from settled inputs, so the goldens see one exact texture.
+  // A GPU raster carries the driver's fill-rule variance into the baseline.
   const map = new Float32Array(SHADOW_MAP_BINS).fill(SHADOW_MAP_FAR);
 
   const near = light.radius * NEAR_SCALE;
@@ -233,17 +175,16 @@ export function buildShadowPolarMap(
       const lby = m10 * wbx + m11 * wby + m12;
       if (!edgeCastsShadow(lax, lay, lbx, lby, 0, 0, cullMode)) continue;
 
-      // Godot's Y-down local space, where the quadrant rule is stated.
+      // Godot's Y-down local space, where the quadrant rule is stated. A
+      // half-ported sign puts the penumbra on the wrong side of a rotated light.
       const ax = lax;
       const ay = 0 - lay;
       const ex = lbx - lax;
       const ey = lay - lby;
 
-      // The arc between the endpoints, taken the SHORT way round. A straight
-      // edge subtends less than half a turn unless it is collinear with the
-      // light, which `edgeCastsShadow` has already rejected — and the box
-      // mapping satisfies `u(θ + π) = u(θ) + 0.5`, so "less than half a turn"
-      // and "less than 0.5 of u" are the same statement.
+      // The arc between the endpoints, the short way round. A non-collinear edge
+      // subtends less than half a turn, and `u(θ + π) = u(θ) + 0.5`, so that is
+      // less than 0.5 of u.
       const uA = shadowMapCoord(lax, lay);
       const uB = shadowMapCoord(lbx, lby);
       const forward = (uB - uA + 1) % 1;
@@ -265,11 +206,14 @@ export function buildShadowPolarMap(
         const t = (ax * ray.y - ay * ray.x) / denominator;
         if (!(t >= 0) || !(t <= 1)) continue;
         const distance = (ax * ey - ay * ex) / denominator;
-        // Outside the frustum's near/far planes the occluder is CLIPPED AWAY,
-        // so the bin keeps whatever else reaches it — it is not occluded at the
-        // clip plane's depth.
+        // Outside the near and far planes the occluder is clipped away, so the
+        // bin keeps whatever else reaches it.
         if (!(distance >= near) || !(distance <= far)) continue;
 
+        // A bin holds the quadrant-axis distance over `z_far`, not the Euclidean
+        // one (`drivers/gles3/shaders/canvas_occlusion.glsl:28,56`). The item side
+        // compares the same component (`canvas.glsl:830-845`), so `z_far` cancels.
+        // `GL_LESS` over the four passes is a `min`.
         const stored = distance * zFarInv;
         if (stored < map[index]!) map[index] = stored;
       }

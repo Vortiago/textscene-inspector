@@ -1,32 +1,25 @@
 /**
- * Maps a Godot 2D (`Node2D`) local transform onto R3F `<group>` props.
- *
- * Godot 2D space is pixels, `+X` right, `+Y` **down**, rotation positive =
- * clockwise on screen. three.js is `+Y` up. We render the whole 2D subtree in
- * three.js world coordinates by **conjugating each local transform by
- * `F = diag(1, -1, 1)`** — i.e. negate the Y translation and the rotation,
- * keep the scale. Because `F·M1·F · F·M2·F = F·(M1·M2)·F` (F is its own
- * inverse), this composes correctly through arbitrary nesting and renders the
- * scene right-side-up under any camera that views the XY plane from `+Z`. No
- * global flip group is needed, and world coordinates stay readable (a node at
- * Godot `(100, 50)` sits at three.js `(100, -50)`).
- *
- * Pixels are 1 world unit, and the whole 2D scene sits in the z=0 plane: draw
- * order is `renderOrder`, not depth (`canvasPaintOrder.ts`).
+ * Maps a Godot `Node2D` local transform onto R3F `<group>` props. Godot 2D is
+ * `+Y` down with clockwise rotation, and three.js is `+Y` up, so each local
+ * transform is conjugated by `F = diag(1, -1, 1)`: Y translation and rotation
+ * negate, scale stays. One pixel is one world unit, in the z=0 plane.
  */
 
 import * as THREE from 'three';
 import type { Node2DLocalTransform } from '../nodes/base/node2d/types';
 import type { Vec3Tuple } from './nodeTransform';
 
+// F is its own inverse, so `F·M1·F · F·M2·F = F·(M1·M2)·F` composes through any
+// nesting with no global flip group: Godot `(100, 50)` sits at three.js `(100, -50)`.
+// Draw order is `renderOrder`, not depth (`canvasPaintOrder.ts`).
 export interface Node2DGroupProps {
   position: Vec3Tuple;
   rotation: Vec3Tuple;
   scale: Vec3Tuple;
   /**
-   * Set ONLY when a non-zero `skew` shear is present — a shear cannot be
-   * expressed as Euler rotation + scale, so the whole local transform is baked
-   * into a Matrix4 instead. Consumers apply it via `node2dGroupSpread`.
+   * Set only for a non-zero `skew`, which Euler rotation and scale cannot express,
+   * so the whole local transform is baked into a Matrix4. Consumers apply it
+   * through `node2dGroupSpread`.
    */
   matrix?: THREE.Matrix4;
 }
@@ -40,15 +33,10 @@ export function node2dGroupProps(t: Node2DLocalTransform, z = 0): Node2DGroupPro
   const skew = t.skew ?? 0;
   if (skew === 0) return { position, rotation, scale };
 
-  // Godot composes the 2D transform as T·R·Skew·S, where `skew` tilts the local
-  // Y axis by `skew` rad relative to X. That shear is not expressible as Euler
-  // rotation + scale, so bake the full transform into a Matrix4. We render the
-  // 2D subtree conjugated by F = diag(1, −1, 1) (see module header), so the
-  // three.js-space linear part is F·L·F:
+  // Godot composes T·R·Skew·S, where `skew` tilts local Y by `skew` rad from X.
+  // Conjugated by F, the linear part is F·L·F, with the Y-negated `position`:
   //   x' =  cos(rot)·sx · x + sin(rot+skew)·sy · y
   //   y' = −sin(rot)·sx · x + cos(rot+skew)·sy · y
-  // and the translation is the (already Y-negated) `position`. This stays
-  // composition-correct under nesting because F·M1·F · F·M2·F = F·(M1·M2)·F.
   const sx = t.scale.x;
   const sy = t.scale.y;
   const c = Math.cos(t.rotation);
@@ -65,9 +53,9 @@ export function node2dGroupProps(t: Node2DLocalTransform, z = 0): Node2DGroupPro
 }
 
 /**
- * The same local transform as a `Matrix4` — what a consumer composing this
- * item's space with another needs, rather than re-deriving it from the
- * discrete props and risking a different answer for a sheared item.
+ * The same local transform as a `Matrix4`, for a consumer composing this item's
+ * space with another. Re-deriving it from the discrete props gives a different
+ * answer for a sheared item.
  */
 export function node2dGroupMatrix(g: Node2DGroupProps): THREE.Matrix4 {
   if (g.matrix) return g.matrix.clone();

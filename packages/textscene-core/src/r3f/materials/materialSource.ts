@@ -1,21 +1,8 @@
 /**
- * Where a material a node points at actually lives, and how to render it.
- *
- * A `material` / `material_override` / `surface_material_override/N` reference is
- * one of two unrelated things: a `[sub_resource]` of the previewed `.tscn`, which
- * the renderer already holds and no resource path can address, or an
- * `ExtResource` naming a `.tres` the pipeline has to fetch. The two need
- * different slot components (`StandardMaterialSlot` vs `ExternalMaterialSlot`),
- * so the choice is made once here and the caller just switches on `kind`.
- *
- * The ONE place that choice is made. Every node type holding a material
- * reference — MeshInstance3D's own slot and its two override properties, the CSG
- * primitives, a CSG root's per-surface slots — reads this, because Godot models
- * none of them differently: every one of those setters takes a `Ref<Material>`,
- * and where that resource was loaded from is not represented past the call.
- *
- * An unresolvable reference comes back `undefined` — the same fall-through Godot
- * takes when the RID is invalid.
+ * Where a node's material lives, and how to render it. A material reference is a
+ * scene `[sub_resource]` or an `ExtResource` `.tres`, and each needs its own slot
+ * component. Every node type with a material reference reads this one choice,
+ * since each Godot setter takes a `Ref<Material>` whatever its origin.
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
@@ -29,13 +16,9 @@ export type MaterialSource =
   /** A `res://` path the material pipeline loads. */
   | { kind: 'path'; path: string }
   /**
-   * The slot names a Material this previewer cannot build — Godot's default 3D
-   * surface (ADR-0041).
-   *
-   * Distinct from `undefined`, which means the slot names NO material: a node
-   * with an empty slot keeps whatever it already had (a glTF surface its own
-   * import gave it), while one whose override resolved to this had its material
-   * REPLACED, and Godot draws the replacement.
+   * The slot names a Material this previewer cannot build: Godot's default 3D
+   * surface (ADR-0041). `undefined` names no material, as Godot's invalid RID
+   * does, so an empty slot keeps what it had while this replaces it.
    */
   | { kind: 'default' };
 
@@ -51,14 +34,9 @@ export function resolveMaterialSource(
   if (parsed.type === 'SubResource') {
     const resource = findSubResource(internalResources, parsed.id);
     if (resource?.type === 'ShaderMaterial') {
-      // Declined rather than decoded: a ShaderMaterial's body has none of the
-      // keys the StandardMaterial3D decode reads, so parsing it would yield a
-      // default-constructed material — white and matte — where the surface
-      // should be the one Godot binds for a mesh with no usable material. The
-      // `.tres` arrival draws that same surface and says so; this is the other
-      // half of saying so (ADR-0041). Repeats per reparse, where the `.tres`
-      // side warns once — the loader caches what it built, and a scene body has
-      // no such cache.
+      // Declined: the StandardMaterial3D decode would yield a white matte
+      // material, not Godot's default surface (ADR-0041). It warns on every
+      // reparse, since a scene body has no cache like the `.tres` loader's.
       warn("[material] ShaderMaterial is not compiled — rendering Godot's default 3D surface.");
       return { kind: 'default' };
     }

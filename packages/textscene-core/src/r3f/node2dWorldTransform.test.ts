@@ -1,10 +1,7 @@
 /**
- * node2dWorldPosition — composes a node's ancestor Node2D transforms (Godot
- * +Y-down pixel space, T·R·Skew·S per node, matching the parser semantics)
- * into the node's world position, over the LIVE scene tree so a Camera2D inside
- * an instanced sub-scene resolves and composes (instead of framing at origin).
- * Non-2D ancestors (plain Node, Node3D) contribute identity. Drives 2D camera
- * framing.
+ * node2dWorldPosition composes a node's ancestor Node2D transforms (Godot +Y-down,
+ * T·R·Skew·S) over the live scene tree, so a Camera2D inside an instanced
+ * sub-scene resolves. Non-2D ancestors contribute identity.
  */
 import { describe, it, expect } from 'vitest';
 import { node2dWorldPosition } from './node2dWorldTransform';
@@ -57,7 +54,7 @@ describe('node2dWorldPosition', () => {
   it('applies ancestor scale and skips non-2D ancestors as identity', () => {
     const roots = [
       tnode('Root', {}, [
-        // plain container — no 2D transform props → identity
+        // A plain container with no 2D transform props is the identity.
         tnode('A', n2d(0, 0, 0, { x: 2, y: 3 }), [tnode('B', n2d(5, 5))]),
       ]),
     ];
@@ -69,11 +66,9 @@ describe('node2dWorldPosition', () => {
   });
 
   it('composes a Camera2D inside an instanced sub-scene against the instance transform', () => {
-    // game.tscn: World → Player (instance of player.tscn, positioned at 100,50).
+    // game.tscn: World → Player (instance of player.tscn at 100,50).
     // player.tscn: PlayerRoot → Cam (at 20,10). The instance transform replaces
-    // the sub-scene root's (ADR-0013), so the camera's world pos is 120,60 — NOT
-    // the origin the old flattenedNodes walk produced (the sub-scene node is
-    // absent from flattenedNodes, so node2dWorldPosition returned null → 0,0).
+    // the sub-scene root's (ADR-0013), so the camera sits at 120,60.
     const playerScene: TscnScene = {
       nodes: [tnode('PlayerRoot', n2d(0, 0), [tnode('Cam', n2d(20, 10))])],
       externalResources: [],

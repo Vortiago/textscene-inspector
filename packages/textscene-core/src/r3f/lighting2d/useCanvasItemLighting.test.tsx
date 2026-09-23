@@ -1,12 +1,8 @@
 /**
- * What this hook returns is compile-time state, so it must never change for an
- * item that stays mounted — and a `light_mode` edit is an ordinary prop update:
- * a re-parse hands the same-keyed element a fresh `properties` bag without
- * remounting it (`NodeDispatcher`).
- *
- * Measured in real WebGL: an item compiled while shaded, then edited to
- * Unshaded, kept the light program and painted a 0.5 albedo under a 0.2
- * CanvasModulate as 255,255,255 where Godot draws 128,128,128.
+ * What this hook returns is compile-time state, so it never changes for a
+ * mounted item, and a re-parse hands a `light_mode` edit to the same element
+ * without a remount (`NodeDispatcher`). A shaded program kept after an Unshaded
+ * edit paints a 0.5 albedo under a 0.2 CanvasModulate 255, where Godot draws 128.
  */
 
 import { describe, it, expect } from 'vitest';

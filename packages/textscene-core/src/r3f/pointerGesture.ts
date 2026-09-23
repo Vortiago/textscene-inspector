@@ -1,19 +1,8 @@
 /**
- * Browser pointer input reduced to numbers a camera can use — multi-pointer
- * gesture geometry, and wheel deltas normalised to notches and CSS pixels.
- * Shared by both viewports.
- *
- * Deliberately NOT part of `godotEditorCursor.ts`: that module is Godot's own
- * editor maths with Godot's own constants, and NONE of this is Godot's. Godot's
- * editor has no touch scheme at all (ADR-0029), and a `deltaMode` is a browser
- * fact its native input events never carry — putting either in there would make
- * its "constants are Godot's own" claim false. Keeping them apart also lets the
- * 2D stage — which has no orbit camera and no editor cursor — share the lot
- * without importing the 3D navigation module.
- *
- * Pure and DOM-free, so both viewports test their gesture handling without a
- * canvas. What each viewport does with the numbers differs and stays local: 3D
- * orbits one finger and pans two, 2D pans either.
+ * Browser pointer input reduced to numbers a camera can use: gesture geometry,
+ * and wheel deltas in notches and CSS pixels, shared by both viewports. None of it
+ * is Godot's (its editor has no touch scheme, ADR-0029), so it stays apart from
+ * `godotEditorCursor.ts`. Pure and DOM-free.
  */
 
 /** A pointer position, in client pixels. */
@@ -23,35 +12,25 @@ export interface TouchPoint {
 }
 
 /**
- * Whether a pointer navigates by gesture rather than by button.
- *
- * A stylus counts. It reports `pointerType: 'pen'`, and routing it to the mouse
- * path leaves it completely inert on the device class touch was added for: a
- * pen drag is `button: 0` with no modifiers, which navigation deliberately
- * declines in favour of selection, and a detached tablet has neither a middle
- * button nor an Alt key to reach the fallbacks with. A pen is single-pointer,
- * so it orbits and taps exactly as one finger does and never pinches.
+ * Whether a pointer navigates by gesture rather than by button. A `pen` counts:
+ * on the mouse path its drag is `button: 0`, which selects, and a tablet has no
+ * middle button or Alt key. A pen orbits and taps as one finger and never pinches.
  */
 export function isGesturePointer(pointerType: string): boolean {
   return pointerType === 'touch' || pointerType === 'pen';
 }
 
 /**
- * Below this the fingers are effectively coincident and a pinch has no
- * direction to read a scale from. Client pixels — the unit both viewports
- * receive, whatever their camera model measures in.
+ * Below this the fingers are coincident and a pinch has no scale to read. In
+ * client pixels, the unit both viewports receive.
  */
 export const DEGENERATE_SPAN_PX = 1e-3;
 
 /**
- * Which navigation a touch gesture drives in the 3D viewport, from how many
- * fingers are down: one orbits, two pan (and pinch, on the same two pointers).
- * Three or more is not a gesture either viewport defines — better to ignore it
- * than to move the view by a midpoint the user is not thinking in terms of.
- *
- * A tap is not a mode: it falls out of one-finger orbit, since viewport
- * selection already discriminates a tap from a drag by distance travelled.
- * Freelook has no touch binding — it needs a held button plus WASD.
+ * Which navigation a touch gesture drives in the 3D viewport: one finger orbits,
+ * two pan and pinch, and three or more do nothing. A tap falls out of one-finger
+ * orbit, since selection tells a tap from a drag by distance. Freelook has no
+ * touch binding: it needs a held button plus WASD.
  */
 export function resolveTouchMode(pointerCount: number): 'orbit' | 'pan' | null {
   if (pointerCount === 1) return 'orbit';
@@ -71,7 +50,7 @@ export function touchCentroid(points: readonly TouchPoint[]): TouchPoint {
   return { x: x / points.length, y: y / points.length };
 }
 
-/** How far apart the first two fingers are — the quantity a pinch changes. */
+/** How far apart the first two fingers are: the quantity a pinch changes. */
 export function touchSpan(points: readonly TouchPoint[]): number {
   const [first, second] = points;
   if (!first || !second) return 0;
@@ -79,15 +58,9 @@ export function touchSpan(points: readonly TouchPoint[]): number {
 }
 
 /**
- * How much the fingers spread, as a ratio: greater than 1 when they move
- * apart. Deliberately direction-free — each viewport applies it the way ITS
- * zoom runs, and the two run opposite ways (a 2D CSS scale grows as the
- * fingers spread, a 3D orbit radius shrinks). Returning the raw ratio and
- * letting each call site invert it where needed keeps that inversion visible
- * instead of hiding it behind a name that reads the same at both.
- *
- * A degenerate span — coincident fingers, or the first move of a gesture with
- * no previous span yet — yields 1 rather than a division blow-up.
+ * How much the fingers spread, as a ratio above 1 when they move apart, or 1 for
+ * a degenerate span. Direction-free: a 2D CSS scale grows as the fingers spread
+ * and a 3D orbit radius shrinks, so each call site shows its own inversion.
  */
 export function pinchSpanRatio(previousSpan: number, span: number): number {
   if (previousSpan <= DEGENERATE_SPAN_PX || span <= DEGENERATE_SPAN_PX) return 1;
@@ -99,9 +72,8 @@ const WHEEL_NOTCH_PIXELS = 100;
 
 /**
  * Pixels per line for `deltaMode === 1`. A browser reporting lines sends
- * `deltaY = 3` for one notch, so a notch is three lines — not the ~16px of an
- * actual text line, which would make one notch read as 0.48 and zoom Firefox
- * at roughly half of Chrome's rate.
+ * `deltaY = 3` per notch, so a notch is three lines: a real ~16px line would read
+ * a notch as 0.48 and zoom Firefox at half of Chrome's rate.
  */
 const WHEEL_LINE_PIXELS = WHEEL_NOTCH_PIXELS / 3;
 
@@ -136,14 +108,9 @@ function wheelPixelsPerUnit(deltaMode: number | undefined): number {
 }
 
 /**
- * A wheel event's delta in CSS pixels. Browsers report a notch as ~100px, but
- * in lines or pages for the rarer `deltaMode`s, so every consumer has to
- * normalise before it can treat the number as a distance — zoom AND pan, in
- * both viewports, which is why this is shared rather than inlined into one.
- *
- * Both axes, always: with Shift held on a mouse wheel, Chrome and Firefox
- * deliver the notch on `deltaX` instead of `deltaY`, so a pan that read only
- * `deltaY` would silently do nothing.
+ * A wheel event's delta in CSS pixels, for zoom and pan in both viewports. Both
+ * axes: with Shift held, Chrome and Firefox deliver the notch on `deltaX`, so a
+ * pan that read only `deltaY` would do nothing.
  */
 export function wheelDeltaPixels(event: WheelEventLike): WheelDelta {
   const perUnit = wheelPixelsPerUnit(event.deltaMode);

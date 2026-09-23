@@ -1,16 +1,8 @@
 /**
- * Godot's sRGB transfer functions as GLSL, shared by every shader in the 2D
- * light pass.
- *
- * The two halves of the pass are load-bearing on each other: a light quad emits
- * `light_color` already encoded to Godot's sRGB space, and the item injection
- * decodes its own fragment to that same space before multiplying the two. They
- * are correct only while they are the SAME curve. A divergence would not throw
- * and would not fail a type check — it would put a gamma error on every lit 2D
- * pixel, with nothing in the code pointing at the second copy. So the source
- * text lives once and both sides concatenate it.
- *
- * These match three's own `sRGBTransferOETF` / `sRGBTransferEOTF`.
+ * Godot's sRGB transfer functions as GLSL, matching three's `sRGBTransferOETF`
+ * and `sRGBTransferEOTF`. A light quad encodes `light_color` and the item side
+ * decodes its fragment before multiplying the two, so both concatenate this one
+ * text: a second copy that drifted would put a gamma error on every lit pixel.
  */
 
 /** Linear → sRGB, the OETF. */

@@ -1,40 +1,8 @@
 /**
- * Upgrade guard: what `materialProgramInputs()` has to key is decided by three
- * lists inside three, and all three are pinned here.
- *
- * The hazard — a material field that bakes into the program SOURCE and never
- * re-derives — is a SUBTRACTION:
- *
- *   fields `WebGLPrograms.getParameters()` reads off the material
- *     MINUS what `WebGLRenderer.setProgram()` re-checks on its own every draw
- *     MINUS the accessors in `Material.js` that bump `material.version`
- *
- * Pinning only the first list would be a trap. An upgrade that DELETES a
- * re-check, or drops a version-bumping accessor, silently promotes a field
- * `materialProgramInputs.ts` has documented as safe into a hazard — while a
- * `getParameters`-only diff stays green, because `getParameters` did not
- * change. So all three are read, and all three are diffed.
- *
- * This is a DRIFT detector, not a proof. The lists speak different
- * vocabularies: `getParameters` reads `material.fog` and publishes it as
- * `useFog`, while `setProgram` re-checks `materialProperties.fog` — the SCENE's
- * fog object, and only while `material.fog === true`, so flipping the material
- * flag off re-derives nothing. Name-matching subtracts `fog` anyway. The
- * factory keys it regardless, which is the direction that costs nothing.
- *
- * The subtraction stops at `Material.js` and does NOT follow subclass
- * accessors, though `MeshPhysicalMaterial.js` has six more of them (the `> 0`
- * crossings of `anisotropy`, `clearcoat`, `iridescence`, `dispersion`, `sheen`,
- * `transmission`). Whether such a field self-heals depends on which CLASS the
- * props land on: `getParameters` reads `material.transmission > 0` whatever the
- * material is, and `<meshStandardMaterial>` has no setter to bump anything. A
- * key derived from a bag has to hold for whichever tag receives it, so a
- * subclass accessor cannot be subtracted — which is why `PHYSICAL_FEATURES`
- * being keyed is correct rather than merely harmless.
- *
- * three ships unminified ES source and its exports map exposes `"./src/*"`, so
- * these read the real modules rather than the bundled `dist`, where the section
- * boundaries below have been renamed away.
+ * Upgrade guard: a program hazard is the fields `WebGLPrograms.getParameters()`
+ * reads, minus what `WebGLRenderer.setProgram()` re-checks every draw, minus the
+ * `Material.js` accessors that bump `version`. An upgrade can move any of the
+ * three lists, so all three are pinned and diffed.
  */
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
@@ -43,14 +11,15 @@ import { NOT_BOUND_TEXTURE_SLOTS, TEXTURE_SLOT_GATES } from './materialProgramIn
 
 const resolve = createRequire(import.meta.url).resolve;
 
+// three's exports map exposes `"./src/*"`: the unminified modules keep the
+// section boundaries the bundled `dist` renames away.
 function threeSource(path: string): string {
   return readFileSync(resolve(`three/src/${path}`), 'utf8');
 }
 
 /**
- * The slice between two anchors. THROWS on a missing anchor: `String#search`
- * answers -1, which would silently yield the rest of the file — a parse that
- * matches everything, floors that pass, and a diff full of noise.
+ * The slice between two anchors. Throws on a missing anchor: `String#search`
+ * answers -1, which yields the rest of the file and a parse that matches everything.
  */
 function section(source: string, where: string, start: RegExp, end: RegExp): string {
   const from = source.search(start);
@@ -60,7 +29,7 @@ function section(source: string, where: string, start: RegExp, end: RegExp): str
   return source.slice(from, from + to);
 }
 
-/** Distinct capture-1 matches, sorted — the shape every list here is compared in. */
+/** Distinct capture-1 matches, sorted: the shape every list here is compared in. */
 function names(source: string, pattern: RegExp): string[] {
   return [...new Set([...source.matchAll(pattern)].map((match) => match[1]!))].sort();
 }
@@ -77,8 +46,8 @@ function bakedMaterialFields(): string[] {
 }
 
 /**
- * Every `materialProperties.<name>` the `needsProgramChange` cascade compares —
- * the state `setProgram` re-derives a program for WITHOUT a version bump.
+ * Every `materialProperties.<name>` the `needsProgramChange` cascade compares:
+ * the state `setProgram` re-derives a program for without a version bump.
  */
 function recheckedParameters(): string[] {
   const source = section(
@@ -113,7 +82,11 @@ const BAKED_MATERIAL_FIELDS = [
   'type', 'vertexColors', 'vertexShader', 'wireframe',
 ];
 
-/** three 0.185.1, `WebGLRenderer.js:2388-2494`. What re-derives without a version bump. */
+/**
+ * three 0.185.1, `WebGLRenderer.js:2388-2494`. A drift detector, not a proof: this
+ * `fog` is the scene's, re-checked only while `material.fog === true`, yet name
+ * matching subtracts it. The factory keys `fog` anyway, which costs nothing.
+ */
 const RECHECKED_PARAMETERS = [
   '__version', 'batching', 'batchingColor', 'envMap', 'fog', 'instancing', 'instancingColor',
   'instancingMorph', 'lightProbeGrid', 'lightsStateVersion', 'morphColors', 'morphNormals',
@@ -121,7 +94,11 @@ const RECHECKED_PARAMETERS = [
   'outputColorSpace', 'skinning', 'toneMapping', 'vertexAlphas', 'vertexTangents',
 ];
 
-/** three 0.185.1, `Material.js:494-502` and `:1204-1208`. What bumps `version` for us. */
+/**
+ * three 0.185.1, `Material.js:494-502` and `:1204-1208`. Subclass accessors are
+ * not subtracted: `MeshPhysicalMaterial.js`'s six `> 0` crossings bump nothing on a
+ * `<meshStandardMaterial>`, which is why `PHYSICAL_FEATURES` is keyed.
+ */
 const VERSION_BUMPING_ACCESSORS = ['alphaTest', 'needsUpdate'];
 
 function drift(expected: readonly string[], actual: readonly string[]): string {
@@ -132,8 +109,8 @@ function drift(expected: readonly string[], actual: readonly string[]): string {
 
 /**
  * The three pinned lists, each with the floor that proves its parse matched
- * something. A floor catches "the parse found nothing", the diff catches drift
- * — two jobs, and the hint is what a failure has to say to be actionable.
+ * something. The floor catches an empty parse, the diff catches drift, and the
+ * hint makes a failure actionable.
  */
 const PINNED_LISTS = [
   {
@@ -171,9 +148,8 @@ describe('material program hazards, against three itself', () => {
   });
 
   it('gives every texture slot three bakes an owner in the factory', () => {
-    // The join the factory's tables had no way to fail on: a slot three reads
-    // and `materialProgramInputs.ts` neither keys nor declines is a key that
-    // silently misses a program input the first time anything binds it.
+    // A slot three reads that `materialProgramInputs.ts` neither keys nor
+    // declines misses a program input the first time anything binds it.
     const slots = bakedMaterialFields().filter(
       (field) => /Map$/.test(field) && !RECHECKED_PARAMETERS.includes(field)
     );

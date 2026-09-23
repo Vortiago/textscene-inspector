@@ -1,11 +1,7 @@
 /**
- * The preview lighting yields to the scene, per node type, independently.
- *
- * Scenes are built through the real parser so the node shapes are the ones the
- * dispatcher actually renders, and the whole `<TscnSceneContents>` tree is
- * mounted rather than `<PreviewLighting>` alone — the question this answers is
- * "how many lights does this scene end up with", which is exactly what a
- * double-lighting bug gets wrong.
+ * The preview lighting yields to the scene, per node type, independently. Scenes
+ * go through the real parser and the whole `<TscnSceneContents>` tree mounts,
+ * since the question is how many lights the scene ends up with.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -58,7 +54,7 @@ describe('preview sun yielding', () => {
   });
 
   it('steps aside for the scene’s own DirectionalLight3D', async () => {
-    // One light, not two: the scene's. Doubling them is the bug this replaced.
+    // One light, not two: the scene's.
     expect(directionalCount(await render(scene(DIRECTIONAL)))).toBe(1);
   });
 
@@ -103,9 +99,7 @@ describe('preview environment yielding', () => {
     expect(directionalCount(await render(scene(`${DIRECTIONAL}${WORLD_ENV}`)))).toBe(1);
   });
 
-  // Whether the preview ENVIRONMENT mounted is not observable from the scene
-  // graph — it applies itself to `scene.background`/`scene.environment` through
-  // a GPU render that the headless test renderer cannot run. The decision is
-  // covered at its seam in godotPreviewLighting.test.ts, and the pixels by the
-  // `preview-lighting` visual golden.
+  // The preview environment applies itself through a GPU render the headless
+  // renderer cannot run. godotPreviewLighting.test.ts covers the decision, and
+  // the `preview-lighting` visual golden the pixels.
 });

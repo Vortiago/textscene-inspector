@@ -1,15 +1,7 @@
 /**
- * ADR-0008 rendered contract for every non-visual 3D type in the r3f barrel.
- *
- * Registry identity (each type → the shared Node3D component, AudioStreamPlayer
- * → base Node) is already pinned in nodes/physics/3d/transformBodies.test.tsx
- * and is NOT re-asserted here. This file pins what that identity MEANS when a
- * scene actually renders through the NodeDispatcher:
- *
- *   1. the node lands in the THREE scene as a plain Group (invisible intent —
- *      no gizmo, no placeholder),
- *   2. it contributes zero meshes/geometry of its own,
- *   3. its children inherit the node's Transform3D (world position = origin).
+ * ADR-0008's rendered contract for every non-visual 3D type: a plain Group with no
+ * mesh of its own, whose children inherit its Transform3D. Registry identity is
+ * pinned in nodes/physics/3d/transformBodies.test.tsx.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -25,16 +17,9 @@ import { Node3D } from '../../nodes/base/node3d/Component';
 import './index';
 
 /**
- * DERIVED, not listed: `renderIntent: 'transform-only'` is the registration's
- * own claim, so a new non-visual slice joins this contract the moment it
- * registers rather than when someone remembers to extend a literal. A
- * hand-written list had already fallen six types behind the registry.
- *
- * Narrowed to the types mounting the shared Node3D component, because the
- * assertions below are about a Transform3D: the Node-backed ones (Timer,
- * AudioStreamPlayer, AnimationPlayer) and the Node2D-backed ones carry no
- * Transform3D and are covered by their own slices' tests. Path3D / PathFollow3D
- * are absent because ADR-0018 gave them selection-gated gizmo components.
+ * Derived from `renderIntent: 'transform-only'`, so a new slice joins on
+ * registration. Only the Node3D-backed types: Node and Node2D ones carry no
+ * Transform3D, and ADR-0018 gave Path3D and PathFollow3D gizmo components.
  */
 const TRANSFORM_ONLY_3D_TYPES = nodeComponentRegistry
   .getAllTypeNames()
@@ -84,9 +69,8 @@ describe('transform-only 3D types: rendered contract (ADR-0008)', () => {
       const renderer = await renderScene([subjectNode(type)]);
       const group = renderer.scene.findByProps({ name: 'Subject' });
 
-      // 1. A plain THREE.Group — not a Mesh subclass, not the gray fallback.
-      // (Checked structurally, not via instanceof: the R3F test renderer
-      // carries its own three.js copy, so cross-copy instanceof is unreliable.)
+      // 1. A plain THREE.Group, not a Mesh or the grey fallback. Checked by type,
+      // since the test renderer carries its own three.js copy.
       expect(group.instance.type).toBe('Group');
       expect((group.instance as THREE.Group).isGroup).toBe(true);
       expect(group.instance.userData.isPlaceholder).toBeUndefined();
@@ -112,9 +96,8 @@ describe('transform-only 3D types: rendered contract (ADR-0008)', () => {
       const renderer = await renderScene([subjectNode(type, [child])]);
       const kid = renderer.scene.findByProps({ name: 'Kid' });
 
-      // The child renders inside the subject's transform group. (The
-      // dispatcher inserts an unnamed pickable <group> per node, so walk
-      // the ancestor chain rather than asserting the direct parent.)
+      // The child renders inside the subject's transform group. The dispatcher
+      // inserts an unnamed pickable <group> per node, so walk the ancestors.
       const ancestorNames: string[] = [];
       for (let p = kid.instance.parent; p; p = p.parent) ancestorNames.push(p.name);
       expect(ancestorNames).toContain('Subject');

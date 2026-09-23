@@ -1,16 +1,8 @@
 /**
  * The 2D navmesh overlay lands in three.js's +Y-up space.
- *
- * `navigation_region_2d.cpp::_update_debug_mesh()` copies the polygon's
- * vertices VERBATIM into the debug mesh and draws it under the region's Node2D
- * global transform with an identity mesh transform — so the numbers in a
- * `NavigationPolygon` are raw local canvas pixels in Godot's **+Y-down** space.
- * A vertex at local `(0, 128)` is 128 px BELOW the region's origin.
- *
- * `vector2ToPositions` copied that y straight through, so the whole navmesh —
- * fill and edge lines alike — rendered MIRRORED about the region's origin, the
- * one 2D geometry path that skipped the Y negation every other 2D slice does
- * (see `node2dGroupProps`).
+ * `navigation_region_2d.cpp::_update_debug_mesh()` copies the vertices verbatim
+ * under the region's Node2D transform, so local `(0, 128)` is 128 px below the
+ * region's origin.
  */
 import { describe, expect, it } from 'vitest';
 import { vector2ToPositions } from './navigationOverlay';

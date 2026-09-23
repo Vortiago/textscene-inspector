@@ -1,11 +1,7 @@
 /**
- * The one Godot default 3D material, and the slots that stand in for it.
- *
- * Godot binds a hardcoded shader — not a default-constructed StandardMaterial3D
- * — whenever a surface resolves to no material, so every fallback in the
- * previewer has to land on the same three numbers. Assertions read LINEAR
- * channels: `getHex()` re-encodes to sRGB and would report 0.6 linear as
- * ~0xcbcbcb.
+ * The one Godot default 3D material, and the slots that stand in for it: every
+ * fallback lands on the same three numbers. Assertions read linear channels, since
+ * `getHex()` re-encodes to sRGB and reports 0.6 linear as ~0xcbcbcb.
  */
 import type { ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -55,7 +51,7 @@ describe('Godot default 3D material constants', () => {
 
   it('builds the albedo in LINEAR space, not as an sRGB hex literal', () => {
     // A plain `new THREE.Color(0x999999)` decodes as sRGB and lands near 0.318
-    // linear — a little over half the shader constant.
+    // linear, a little over half the shader constant.
     const asSrgbLiteral = new THREE.Color(0x999999);
     expect(linear(asSrgbLiteral).r).toBeLessThan(0.4);
     expect(linear(GODOT_DEFAULT_ALBEDO).r).toBeGreaterThan(0.5);

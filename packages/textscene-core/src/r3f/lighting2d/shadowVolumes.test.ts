@@ -22,9 +22,9 @@ function lightAt(x = 0, y = 0, reach = 512): ShadowLight {
 }
 
 /**
- * Is (px, py) covered by the emitted triangles? This reads the SHIPPED buffer
- * the way the rasteriser will, rather than re-deriving the wedge — a test that
- * recomputed the maths would pass on a broken triangulation.
+ * Is (px, py) covered by the emitted triangles? It reads the shipped buffer as
+ * the rasteriser will: a test that recomputed the wedge would pass on a broken
+ * triangulation.
  */
 function covered(positions: Float32Array | null, px: number, py: number): boolean {
   if (!positions) return false;
@@ -227,7 +227,7 @@ describe('buildShadowVolumes — a single segment east of the light', () => {
 
   it('still covers the rect corner for a wedge that nearly wraps the light', () => {
     // The light sits 1 unit off the middle of a long segment, so the wedge
-    // subtends almost π — the case the bisector cap exists for.
+    // subtends almost π: the case the bisector cap exists for.
     const wide = buildShadowVolumes(light, [
       { segments: new Float32Array([1, -4000, 1, 4000]), cullMode: OCCLUDER_CULL_DISABLED },
     ]);
@@ -295,20 +295,9 @@ describe('buildShadowVolumes — open versus closed polygons', () => {
 });
 
 /**
- * Pinned against real Godot 4.6.3, from three copies of the shadow fixture that
- * differ only in `OccluderPolygon2D.cull_mode` — an 80×80 square at Godot
- * (576,324) wound (-40,-40) (40,-40) (40,40) (-40,40) in place of the segment,
- * each run through `pnpm ref:godot … --probe 560,324 --probe 576,324 --probe
- * 610,324 --probe 700,324`.
- *
- * All three probes inside the square read 63 (shadowed) under cull_mode 0 and
- * 1, and 111 / 106 / 97 (lit) under cull_mode 2 — so a winding mode really does
- * drop half the edges, and the two modes pick opposite halves. Godot (700,324),
- * behind the square, reads 63 in all three. Reversing the polygon's winding
- * swaps which mode does what, which is what makes the test below a winding
- * test rather than a hard-coded near/far rule.
- *
- * Coordinates below are the previewer's: Godot pixels with Y negated.
+ * Pinned against Godot 4.6.3: an 80×80 square at Godot (576,324) wound (-40,-40)
+ * (40,-40) (40,40) (-40,40), once per `cull_mode`, through `pnpm ref:godot … --probe 560,324
+ * --probe 576,324 --probe 610,324 --probe 700,324`. Coordinates are the previewer's, Y negated.
  */
 describe('buildShadowVolumes — cull_mode against measured Godot', () => {
   const light = lightAt(400, -324);
@@ -324,6 +313,8 @@ describe('buildShadowVolumes — cull_mode against measured Godot', () => {
     [610, -324],
   ] as const;
 
+  // Godot reads 63 (shadowed) at the three interior probes under cull_mode 0 and
+  // 1, and 111 / 106 / 97 (lit) under cull_mode 2: the modes drop opposite halves.
   function volumes(cullMode: 0 | 1 | 2) {
     return buildShadowVolumes(light, [{ segments: edges(square, true), cullMode }]);
   }
@@ -349,11 +340,13 @@ describe('buildShadowVolumes — cull_mode against measured Godot', () => {
       OCCLUDER_CULL_CLOCKWISE,
       OCCLUDER_CULL_COUNTER_CLOCKWISE,
     ] as const) {
+      // Godot (700,324) reads 63 in all three modes.
       expect(covered(volumes(mode), 700, -324)).toBe(true);
     }
   });
 
   it('reverses which interior a winding mode shadows when the polygon is reversed', () => {
+    // Reversing the winding swaps the modes: a winding test, not a near/far rule.
     const reversed = [...square].reverse();
     const v = buildShadowVolumes(light, [
       { segments: edges(reversed, true), cullMode: OCCLUDER_CULL_CLOCKWISE },
@@ -363,51 +356,42 @@ describe('buildShadowVolumes — cull_mode against measured Godot', () => {
 });
 
 /**
- * The shadow boundary, pinned against real Godot 4.6.3 via
+ * Pinned against Godot 4.6.3 (`scripts/godot-ref/reference/unit-lightoccluder2d-shadow.png`):
  *
  *   pnpm ref:godot scenes/fixtures/unit-lightoccluder2d-shadow.tscn \
  *     --probe 300,324 --probe 500,324 --probe 700,324 \
  *     --probe 620,198 --probe 620,199 --probe 620,448 --probe 620,449
- *
- * (committed render: scripts/godot-ref/reference/unit-lightoccluder2d-shadow.png).
- * That fixture is a full-frame Color(0.25,0.25,0.25) surface — byte 63 unlit —
- * a PointLight2D at Godot (400,324) with `shadow_enabled`, and an open
- * OccluderPolygon2D segment from Godot (576,224) to (576,424).
- *
- *   300,324 → 121 lit       500,324 → 118 lit       700,324 → 63 shadowed
- *   620,198 →  97 lit       620,199 →  63 shadowed
- *   620,448 →  63 shadowed  620,449 →  96 lit
- *
- * A fully shadowed pixel reads the unlit surface EXACTLY: `shadow_color`
- * defaults to `Color(0,0,0,0)`, and canvas.glsl multiplies its alpha into the
- * light's before blending, so the shadowed light contributes nothing at all.
- * Both boundaries are a one-pixel step — `shadow_filter = NONE` really is a
- * hard test — and both land exactly where the light→endpoint ray crosses the
- * pixel centres.
- *
- * Further out Godot's boundary drifts up to a pixel inside the geometric ray,
- * because its shadow map quantises by angle where extruded volumes do not: at
- * Godot (700, …) the step measures between 153 and 154 where the ray crosses at
- * 153.26. That is the whole of the divergence, and it is sub-pixel at the radii
- * the corpus lights cover.
  */
 describe('buildShadowVolumes — boundary against measured Godot', () => {
+  // The fixture: a Color(0.25,0.25,0.25) surface (byte 63 unlit), a PointLight2D at
+  // Godot (400,324) with `shadow_enabled` and an open occluder from Godot (576,224)
+  // to (576,424). Godot reads 121 lit at 300,324, 118 lit at 500,324 and 63
+  // shadowed at 700,324.
   const light = lightAt(400, -324, 512);
   const volumes = buildShadowVolumes(light, [
     { segments: new Float32Array([576, -224, 576, -424]), cullMode: OCCLUDER_CULL_DISABLED },
   ]);
 
+  // Further out Godot's boundary drifts up to a pixel inside the ray, since its map
+  // quantises by angle: at Godot (700, …) the step lies between 153 and 154 where
+  // the ray crosses at 153.26. The drift is sub-pixel at the corpus's light radii.
+
   it('puts Godot pixel (620,198) outside the shadow and (620,199) inside', () => {
+    // Godot: 620,198 → 97 lit, 620,199 → 63 shadowed. The one-pixel step lands
+    // where the light→endpoint ray crosses the pixel centres.
     expect(covered(volumes, 620.5, -198.5)).toBe(false);
     expect(covered(volumes, 620.5, -199.5)).toBe(true);
   });
 
   it('mirrors the same step on the other boundary', () => {
+    // Godot: 620,448 → 63 shadowed, 620,449 → 96 lit.
     expect(covered(volumes, 620.5, -448.5)).toBe(true);
     expect(covered(volumes, 620.5, -449.5)).toBe(false);
   });
 
   it('shadows the whole span between the boundaries', () => {
+    // A shadowed pixel reads the unlit 63 exactly: `shadow_color` defaults to
+    // `Color(0,0,0,0)`, and canvas.glsl multiplies its alpha into the light's.
     for (let y = 200; y <= 448; y += 8) expect(covered(volumes, 620.5, -y - 0.5)).toBe(true);
   });
 });

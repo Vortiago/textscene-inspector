@@ -1,21 +1,6 @@
 /**
- * Godot's editor preview lighting: what it is, and when it yields.
- *
- * `Node3DEditor::_node_added` keeps TWO INDEPENDENT counters over the edited
- * scene:
- *
- *   if (Object::cast_to<WorldEnvironment>(p_node))        world_env_count++;
- *   else if (Object::cast_to<DirectionalLight3D>(p_node)) directional_light_count++;
- *
- *   bool disable_light = directional_light_count > 0 || !sun_button->is_pressed();
- *   bool disable_env   = world_env_count > 0        || !environ_button->is_pressed();
- *
- * So the test matrix is: by node TYPE only (never visibility, never whether the
- * node emits anything), and the two previews never move together.
- *
- * The values come from `_load_default_preview_settings` and
- * `_preview_settings_changed`, which are pinned here because a wrong preview is
- * indistinguishable from a wrong renderer once it is on screen.
+ * Godot's editor preview lighting: what it is, and when it yields. A wrong
+ * preview looks like a wrong renderer on screen, so the values are pinned.
  */
 import { describe, expect, it } from 'vitest';
 import { BackgroundMode } from '../../resources/environment/types';
@@ -28,6 +13,12 @@ import {
 } from './godotPreviewLighting';
 import type { ProceduralSkyProperties } from '../../resources/sky/types';
 
+/**
+ * `Node3DEditor::_node_added` keeps two independent counters, by node type only:
+ *
+ *   if (Object::cast_to<WorldEnvironment>(p_node))        world_env_count++;
+ *   else if (Object::cast_to<DirectionalLight3D>(p_node)) directional_light_count++;
+ */
 describe('previewYield', () => {
   const on = { sun: true, environment: true };
 
@@ -68,6 +59,8 @@ describe('previewYield', () => {
   });
 
   it('honours the manual toggles independently of the scene', () => {
+    // bool disable_light = directional_light_count > 0 || !sun_button->is_pressed();
+    // bool disable_env   = world_env_count > 0        || !environ_button->is_pressed();
     expect(previewYield([], { sun: false, environment: true })).toEqual({
       sun: false,
       environment: true,
@@ -95,7 +88,7 @@ describe('previewSunDirection', () => {
 
   it('sits at the documented 60 degrees above the horizon', () => {
     // "These default rotations place the preview sun at an angular altitude of
-    // 60 degrees" — the comment in _load_default_preview_settings.
+    // 60 degrees", in _load_default_preview_settings.
     const altitude = Math.asin(-previewSunDirection().y) * (180 / Math.PI);
     expect(altitude).toBeCloseTo(60, 4);
     expect(PREVIEW_SUN_ALTITUDE_DEG).toBe(-60);
@@ -122,12 +115,10 @@ describe('previewEnvironment', () => {
   });
 
   it('derives the horizon colour by Godot’s luminance push, not by a plain blend', () => {
-    // _preview_settings_changed:
+    // _preview_settings_changed, whose push makes the horizon bright:
     //   hz     = sky.lerp(ground, 0.5)              -> (0.2925, 0.3115, 0.3415)
     //   hz_lum = hz.get_luminance() * 3.333         -> 1.0320
     //   hz     = hz.lerp(Color(lum, lum, lum), 0.5) -> (0.6623, 0.6718, 0.6868)
-    // The midpoint alone would be a muddy grey-blue; the push is what makes
-    // Godot's horizon bright.
     const sky = previewEnvironment().sky as ProceduralSkyProperties;
     expect(sky.sky_horizon_color.r).toBeCloseTo(0.6623, 3);
     expect(sky.sky_horizon_color.g).toBeCloseTo(0.6718, 3);
@@ -142,10 +133,9 @@ describe('previewEnvironment', () => {
 
 describe('preview environment — tone mapping', () => {
   it('picks FILMIC, so neither AgX property reaches its curve (invariant)', () => {
-    // The preview flows through the SAME decode/build pipeline as an authored
-    // WorldEnvironment, which means `whiteFor`'s mode gate applies to it too.
-    // Pinned because the preview is the environment most scenes actually get:
-    // an AgX default leaking in here would re-tone every scene that authors none.
+    // The preview shares an authored WorldEnvironment's pipeline, so `whiteFor`'s
+    // mode gate applies. An AgX default leaking in would re-tone every scene
+    // that authors no environment.
     expect(previewEnvironment().settings.toneMapping).toEqual({
       mode: 2,
       exposure: 1,

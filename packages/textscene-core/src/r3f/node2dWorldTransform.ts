@@ -1,12 +1,8 @@
 /**
- * 2D world-transform composition over the LIVE scene tree — resolves a node's
- * root→target chain of effective nodes (descending into instanced sub-scenes,
- * so a Camera2D inside an instance composes correctly instead of framing at the
- * origin) and multiplies each Node2D local transform (Godot +Y-down pixel space,
- * T·R·Skew·S per node, the same semantics the parser decodes and node2dTransform
- * conjugates for rendering). Non-2D ancestors (plain Node containers, Node3D…)
- * contribute identity. Pure module — used by the Cameras panel to frame the 2D
- * stage on a Camera2D's world position without touching live THREE objects.
+ * 2D world-transform composition over the live scene tree, so a Camera2D inside
+ * an instance composes correctly. Each Node2D local transform is Godot's +Y-down
+ * T·R·Skew·S, and a non-2D ancestor contributes identity. The Cameras panel frames
+ * the 2D stage with it, without touching live THREE objects.
  */
 
 import type { TscnNode } from '../parser/types';
@@ -57,10 +53,8 @@ function multiply(parent: Affine2D, child: Affine2D): Affine2D {
 }
 
 /**
- * The node's world position in Godot pixel space, or null for unknown paths.
- * Walks the live tree (so a Camera2D inside an instanced sub-scene resolves and
- * composes against the instance node's merged transform), composing each
- * effective ancestor's Node2D local transform.
+ * The node's world position in Godot pixel space, or null for an unknown path,
+ * composed from each collapsed ancestor's Node2D local transform.
  */
 export function node2dWorldPosition(
   roots: readonly TscnNode[],

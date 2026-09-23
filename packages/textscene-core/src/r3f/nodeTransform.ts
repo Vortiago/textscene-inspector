@@ -1,7 +1,6 @@
 /**
- * Shared helpers for mapping Godot Transform3D onto R3F group props.
- * Mirrors the imperative applyNode3DTransform but returns plain tuples
- * suitable for <group position={...} rotation={...} scale={...}>.
+ * Maps a Godot Transform3D onto R3F group props: the imperative
+ * applyNode3DTransform, returning tuples for `<group position rotation scale>`.
  */
 
 import type { Node3DProperties, Transform3D } from '../nodes/base/node3d/types';
@@ -31,7 +30,6 @@ export function decomposeForR3F(transform: Transform3D | undefined): NodeTransfo
   };
 }
 
-/** Narrow helper used by every node type's component. */
 export function transformFromNode3DProperties(properties: Node3DProperties): NodeTransform {
   return decomposeForR3F(properties.transform);
 }

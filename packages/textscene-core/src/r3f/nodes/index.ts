@@ -1,11 +1,7 @@
 /**
- * Barrel that imports every node-type folder for its self-registration
- * side effect. Importing this module is sufficient to populate
- * nodeComponentRegistry with the full MVS set of R3F node components.
- *
- * GenericNodeFallback is intentionally NOT registered — the recursive
- * dispatcher renders it explicitly when registry.get(typeName) returns
- * undefined.
+ * Barrel that imports every node-type folder for its self-registration, filling
+ * nodeComponentRegistry. GenericNodeFallback is not registered: the dispatcher
+ * renders it when `registry.get(typeName)` returns undefined.
  */
 
 import '../../nodes/node/index.r3f';
@@ -27,7 +23,7 @@ import '../../nodes/3d/worldenvironment/index.r3f';
 import '../../nodes/physics/3d/staticbody3d/index.r3f';
 import '../../nodes/physics/3d/area3d/index.r3f';
 import '../../nodes/physics/3d/collisionshape3d/index.r3f';
-// Non-visual nodes — transform-only groups (ADR-0008).
+// Non-visual nodes: transform-only groups (ADR-0008).
 import '../../nodes/physics/3d/characterbody3d/index.r3f';
 import '../../nodes/physics/3d/rigidbody3d/index.r3f';
 import '../../nodes/physics/3d/raycast3d/index.r3f';

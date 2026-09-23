@@ -1,29 +1,7 @@
 /**
- * One surface's material, textures and all.
- *
- * Godot binds a material PER SURFACE and `_update_shader` emits the same
- * samplers for each, so texture resolution cannot live in a node's function
- * body where only the primary material can reach it. It lives here, in a
- * component rendered once per surface, which is what keeps `useResource`
- * one-call-per-component (rules of hooks) for an arbitrary surface count.
- *
- * Two halves, deliberately separate:
- *   - `useMaterialTextures` — the per-surface resolution chain: gated slot
- *     references → loads → procedural/viewport precedence → per-material
- *     binding → the eight three maps. Everything it needs is the MATERIAL's,
- *     plus the one node-level datum a triplanar material folds in (see the
- *     `triplanarMesh` parameter).
- *   - `SurfaceMaterialSlot` — the mount: dispatches a resolved `MaterialSource`
- *     to that chain (a scene `[sub_resource]`) or to `<ExternalMaterialSlot>`
- *     (a `.tres`, whose textures the material pipeline resolves instead).
- *
- * What stays with the NODE: whether an unresolved texture diverts the whole
- * mesh to a placeholder — that decision is per-mesh, so the node calls the hook
- * itself for its primary material and reads `firstMissingPath` / `viewportCyclic`
- * off it. Calling the hook once at the node AND again through this component for
- * the same surface would bind (and later dispose) every slot twice, so the
- * primary surface of a node that needs the decision mounts
- * `<StandardMaterialSlot>` with the hook's maps directly.
+ * One surface's material, textures and all. Godot binds a material per surface,
+ * so texture resolution lives in a component rendered once per surface, which
+ * keeps `useResource` one call per component for any surface count.
  */
 
 import * as THREE from 'three';
@@ -61,25 +39,24 @@ export type { MaterialTextureMaps };
 export interface ResolvedMaterialTextures {
   maps: MaterialTextureMaps;
   /**
-   * The FIRST slot whose file could not be loaded. Listing more than one would
-   * bury the user under text. Reported rather than acted on: what an
-   * unresolvable texture does to the surface is the caller's policy.
+   * The first slot whose file could not load: more would bury the user in text.
+   * The node decides whether that diverts the mesh to a placeholder, then mounts
+   * `<StandardMaterialSlot>` with this hook's maps, since a second hook call
+   * would bind and dispose every slot twice.
    */
   firstMissingPath: string | null;
   /**
-   * The albedo slot names a ViewportTexture whose pass is cyclic — it never
+   * The albedo slot names a ViewportTexture whose pass is cyclic: it never
    * renders, the same visible fact as a missing file.
    */
   viewportCyclic: boolean;
 }
 
 /**
- * Resolve every texture slot of ONE scene-local StandardMaterial3D.
- *
- * `triplanarMesh` is the node-level datum this chain cannot derive: a triplanar
- * material tiles per WORLD unit, so a PlaneMesh's size folds into the scale.
- * Nodes with no mesh sub-resource (CSG, GridMap) pass nothing and get the
- * material's own `uv1_scale`.
+ * Resolve every texture slot of one scene-local StandardMaterial3D, from gated
+ * references through loads, precedence and binding to the eight three maps. A
+ * triplanar material tiles per world unit, so `triplanarMesh` folds in a PlaneMesh's
+ * size. CSG and GridMap pass nothing and get the material's own `uv1_scale`.
  */
 export function useMaterialTextures(
   scalars: StandardMaterial3DScalars | null,
@@ -87,7 +64,7 @@ export function useMaterialTextures(
 ): ResolvedMaterialTextures {
   const { internalResources, externalResources } = useSceneResources();
 
-  // The decode's GATED table, never the raw property bag: Godot declares and
+  // The decode's gated table, never the raw property bag: Godot declares and
   // samples a gated slot's sampler only inside its `if (features[…])` branch
   // (`scene/resources/material.cpp:1090,1745`), so a `normal_texture` without
   // `normal_enabled` reaches no shader at all.
@@ -99,7 +76,7 @@ export function useMaterialTextures(
   );
 
   // Hooks must be called unconditionally, in stable order, so every slot calls
-  // `useResource` even when it has no path — the hook treats `''` as a no-op.
+  // `useResource` even when it has no path. The hook treats `''` as a no-op.
   const albedoStatus = useResource<THREE.Texture>(textureRequests.albedo_texture ?? '', 'texture');
   const normalStatus = useResource<THREE.Texture>(textureRequests.normal_texture ?? '', 'texture');
   const roughnessStatus = useResource<THREE.Texture>(
@@ -149,9 +126,8 @@ export function useMaterialTextures(
   );
 
   // A procedural slot (`SubResource(GradientTexture2D)`) is fully described in
-  // the scene, so it rasterises here rather than loading. Not disposed: the
-  // procedural cache owns it and every node pointing at the same sub-resource
-  // shares it — pinned instead, so eviction cannot free it under this consumer.
+  // the scene, so it rasterises here. The procedural cache owns and shares it,
+  // so it is pinned against eviction rather than disposed.
   const { textures: proceduralTextures, keys: proceduralKeys } = useMemo(
     () => resolveProceduralTextures(references, internalResources),
     [references, internalResources]
@@ -159,7 +135,7 @@ export function useMaterialTextures(
   useProceduralTexturePins(proceduralKeys);
 
   // The per-material half of every binding: UV transform, sampler filter and
-  // wrapping. The per-SLOT half (which slots decode sRGB) is `bindSlotTexture`'s.
+  // wrapping. The per-slot half (which slots decode sRGB) is `bindSlotTexture`'s.
   const textureState = useMemo((): MaterialTextureState | null => {
     if (!scalars) return null;
     const scale =
@@ -170,7 +146,7 @@ export function useMaterialTextures(
     // in UV space, Godot's world-triplanar offset is in world units.
     return {
       uv: { scale, offset: scalars.uv1Offset },
-      // Only an AUTHORED filter is a divergence; passing Godot's default would
+      // Only an authored filter is a divergence, and passing Godot's default would
       // clone every texture for a sampler state no material asked for.
       filter:
         scalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT ? undefined : scalars.textureFilter,
@@ -271,16 +247,13 @@ export function useMaterialTextures(
     [repackedFlowmap, textureState]
   );
 
-  // The repack allocates its own pixel buffer, and the binding may hand back a
-  // CLONE of it that gets an upload of its own — disposing only the original
-  // frees nothing. Only the clone is this pair's second object; when nothing
-  // diverged the two are one texture and the repack effect below owns it.
+  // The binding may hand back a clone of the repack with its own upload. Only
+  // the clone is a second object: when nothing diverged the two are one texture,
+  // and the repack effect below owns it.
   const anisotropyClone = anisotropyMap === repackedFlowmap ? undefined : anisotropyMap;
 
-  // ONE EFFECT PER TEXTURE. A shared dependency list would run every cleanup
-  // the moment any single slot resolved, freeing the GPU texture of the slots
-  // that did NOT change while the mounted material still had them bound —
-  // three then re-uploads each of them on the next frame.
+  // One effect per texture: a shared dependency list runs every cleanup when any
+  // slot resolves, freeing still-bound textures that three then re-uploads.
   useDisposeTexture(repackedFlowmap);
   useDisposeTexture(anisotropyClone);
   useReleaseBoundTexture(albedoMap);
@@ -329,17 +302,16 @@ export function useMaterialTextures(
 export interface SurfaceMaterialSlotProps {
   /** The material this surface renders with; undefined = the renderer's default. */
   source: MaterialSource | undefined;
-  /** R3F attach key — `material` for a single surface, `material-N` for many. */
+  /** R3F attach key: `material` for a single surface, `material-N` for many. */
   attach?: string;
   /** The mesh sub-resource a triplanar material folds into its tiling, if any. */
   triplanarMesh?: TscnInternalResource;
 }
 
 /**
- * One surface's material slot, whichever way the material arrived — a
- * `[sub_resource]` of the scene (resolved here, textures included) or a `.tres`
- * (resolved whole by the material pipeline). The engine cannot tell the two
- * apart, so neither can a surface.
+ * One surface's material slot: a scene `[sub_resource]`, resolved here with its
+ * textures, or a `.tres` that `<ExternalMaterialSlot>` gets whole from the
+ * material pipeline. The engine cannot tell the two apart, so neither can a surface.
  */
 export function SurfaceMaterialSlot({ source, attach, triplanarMesh }: SurfaceMaterialSlotProps) {
   if (source?.kind === 'path') {
@@ -457,7 +429,7 @@ function effectiveSlot(
   return procedural ? { value: procedural } : asyncSlot;
 }
 
-/** Frees one binding-owned texture clone when THAT texture changes, and only then. */
+/** Frees one binding-owned texture clone when that texture changes, and only then. */
 function useReleaseBoundTexture(texture: THREE.Texture | undefined): void {
   useEffect(() => {
     const own = texture;
