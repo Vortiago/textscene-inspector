@@ -1,10 +1,7 @@
 /**
- * The tier each Environment bound reports, and the properties that must carry
- * NO bound.
- *
- * Environment is mostly bare-assigning setters, so the four enforced bounds are
- * the ones worth pinning in a second file — and so are the open-ended hints,
- * where inventing a floor would false-error on a scene Godot wrote.
+ * The tier each Environment bound reports, and the properties that must carry no
+ * bound. Most setters bare-assign, so this pins the four enforced bounds and the
+ * open-ended hints, where an invented floor would false-error on a Godot scene.
  */
 
 import { runResourcePropertyValidation } from '../../linter/testing/testkit.js';

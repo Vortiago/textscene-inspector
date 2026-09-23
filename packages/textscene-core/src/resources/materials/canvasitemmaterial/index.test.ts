@@ -1,7 +1,6 @@
 /**
- * The routing claim (ADR-0031). Importing the slice entry point must be enough
- * for the registry to answer for `CanvasItemMaterial` — the fix for the
- * substring routing that sent it to the material processor, which refuses it.
+ * The routing claim (ADR-0031). Importing the slice entry point must be enough for the
+ * registry to answer for `CanvasItemMaterial`, rather than the material processor.
  */
 
 import { describe, expect, it } from 'vitest';

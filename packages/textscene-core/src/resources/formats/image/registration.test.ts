@@ -1,6 +1,6 @@
 /**
- * The image slice's routing claims (ADR-0031). Importing the index registers
- * them; these assertions are what a router reads back out.
+ * The image slice's routing claims (ADR-0031). Importing the index registers them, and
+ * these assertions are what a router reads back out.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -32,8 +32,8 @@ describe('image slice registration', () => {
   });
 
   it('does not claim an image format the decoder has no path for', () => {
-    // .tga/.bmp are legal Godot imports; nothing here decodes them, so a claim
-    // would route them to a processor that then refuses them.
+    // .tga/.bmp are legal Godot imports. Nothing here decodes them, so a claim would
+    // route them to a processor that then refuses them.
     expect(resourceSliceRegistry.byExtension('.tga')).toBeNull();
     expect(resourceSliceRegistry.byExtension('.bmp')).toBeNull();
   });

@@ -1,17 +1,8 @@
 /**
- * `CanvasItemMaterial.blend_mode` → three.js blending state (the slice's build
- * half: decoded data in, renderer state out).
- *
- * Ported from `MaterialStorage::ShaderData::blend_mode_to_blend_attachment`
- * (servers/rendering/renderer_rd/storage_rd/material_storage.cpp:651-716), which
- * the canvas renderer calls for every pipeline it creates
- * (renderer_canvas_render_rd.cpp:1516). Each mode is one fixed blend attachment
- * with SEPARATE colour and alpha factors, so the alpha pair is per mode, not
- * shared. `NormalBlending` covers MIX exactly; every other mode needs
- * `CustomBlending` because three has no preset for them.
- *
- * These are the state a canvas item's material needs; applying them is the
- * caller's job so one item can combine them with its own map/tint.
+ * `CanvasItemMaterial.blend_mode` → three.js blending state, which the caller applies
+ * with its own map and tint. Ported from `blend_mode_to_blend_attachment`
+ * (servers/rendering/renderer_rd/storage_rd/material_storage.cpp:651-716), called per
+ * canvas pipeline (renderer_canvas_render_rd.cpp:1516), with separate alpha factors per mode.
  */
 
 import * as THREE from 'three';
@@ -34,16 +25,15 @@ export interface CanvasItemBlendState {
 
 /**
  * BLEND_MODE_MIX is colour `SRC_ALPHA / ONE_MINUS_SRC_ALPHA` over alpha
- * `ONE / ONE_MINUS_SRC_ALPHA`, both ADD — exactly the pair three's
- * `NormalBlending` sets for a straight-alpha material, so it needs no custom
- * state. Also the fallback for a blend mode no scene can author (DISABLED).
+ * `ONE / ONE_MINUS_SRC_ALPHA`, both ADD: the pair three's `NormalBlending` sets for a
+ * straight-alpha material. Also the fallback for DISABLED, which no scene can author.
  */
 const MIX: CanvasItemBlendState = {
   blending: THREE.NormalBlending,
   premultipliedAlpha: false,
 };
 
-/** Godot's per-mode factors, colour pair then alpha pair. */
+/** Godot's per-mode factors, colour pair then alpha pair. Three has no preset for these. */
 const CUSTOM: Partial<Record<CanvasItemBlendMode, CanvasItemBlendState>> = {
   [CanvasItemBlendMode.ADD]: {
     blending: THREE.CustomBlending,
@@ -83,11 +73,9 @@ const CUSTOM: Partial<Record<CanvasItemBlendMode, CanvasItemBlendState>> = {
     blendEquationAlpha: THREE.AddEquation,
     blendSrcAlpha: THREE.OneFactor,
     blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
-    // FALSE deliberately: Godot's premult mode sets these blend attachments and
-    // nothing else (material_storage.cpp:700-708) — its canvas shader never
-    // multiplies rgb by alpha. three's flag adds exactly that in-shader
-    // multiply, so with identical texture bytes it would premultiply TWICE
-    // against Godot. Same ruling as the 3D slice's blendState.
+    // False: Godot's premult mode sets these blend attachments and nothing else
+    // (material_storage.cpp:700-708). three's flag adds an in-shader `rgb *= a`, which
+    // would premultiply twice against Godot, as in the 3D slice's blendState.
     premultipliedAlpha: false,
   },
 };

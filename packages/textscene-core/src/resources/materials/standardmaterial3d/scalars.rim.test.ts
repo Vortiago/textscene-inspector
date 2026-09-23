@@ -1,22 +1,7 @@
 /**
- * StandardMaterial3D rim lighting handling.
- *
- * Godot's BaseMaterial3D exposes a rim-lighting feature — a Fresnel edge
- * highlight — behind a `rim_enabled` flag, with a `rim` strength scalar
- * (0..1, default 1.0) and a `rim_tint` scalar (0..1, default 0.5, blending the
- * highlight between the light colour and the albedo). three.js
- * `MeshStandardMaterial` has NO native rim property; the render side maps it to
- * `MeshPhysicalMaterial.sheen` (a Fresnel edge highlight, the closest native
- * analog). This parse exposes the scalars so that wiring has faithful values.
- *
- * Like `emission_enabled` / the sibling clearcoat feature, the rim scalars are
- * GATED on `rim_enabled`: with the flag off, Godot ignores the properties, so
- * the parse yields 0 (no rim). Following the clearcoat lesson, this
- * contract PINS the enabled-but-unset Godot defaults (the COMMON .tscn input,
- * since Godot omits default-valued properties) so no later refactor can
- * silently regress them, plus the clamp and the flag-gate guardrail.
- *
- * Godot defaults (docs.godotengine.org BaseMaterial3D): rim 1.0, rim_tint 0.5.
+ * StandardMaterial3D rim lighting, a Fresnel edge highlight the render side maps to
+ * `MeshPhysicalMaterial.sheen`. `rim` (default 1.0) and `rim_tint` (default 0.5) are 0..1
+ * and gated on `rim_enabled`.
  */
 import { describe, expect, it } from 'vitest';
 import { parseStandardMaterial3DScalars } from './scalars';
@@ -33,8 +18,8 @@ describe('parseStandardMaterial3DScalars — rim lighting flag (WI-67)', () => {
   });
 
   it('uses Godot defaults when rim_enabled is true but the scalars are omitted', () => {
-    // Clearcoat taught this: flag-on + scalars-absent is the COMMON .tscn input and must
-    // resolve to Godot's enabled defaults (rim 1.0 / rim_tint 0.5), NOT 0.
+    // Flag-on and scalars-absent is the common .tscn input and must resolve to Godot's
+    // enabled defaults (rim 1.0 / rim_tint 0.5), not 0.
     const r = parseStandardMaterial3DScalars({ rim_enabled: 'true' });
     expect(r.rim).toBe(1.0);
     expect(r.rimTint).toBe(0.5);

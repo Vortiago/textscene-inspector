@@ -1,9 +1,6 @@
 /**
- * The GLB slice's routing claims (ADR-0031).
- *
- * Registration is a side effect of importing the index, so importing it here
- * is the whole arrangement — these assertions are exactly what a router (and
- * `resourceProviderUtils`) reads back out.
+ * The GLB slice's routing claims (ADR-0031). Importing the index registers them, and
+ * these assertions are what a router and `resourceProviderUtils` read back out.
  */
 
 import { describe, expect, it } from 'vitest';

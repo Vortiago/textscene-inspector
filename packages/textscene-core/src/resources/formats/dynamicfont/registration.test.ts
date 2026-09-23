@@ -22,11 +22,9 @@ describe('dynamicfont slice registration', () => {
   });
 
   it('claims NO type name — the binary signal is the extension alone', () => {
-    // Splitting the claims is what keeps this true. A `FontFile` ExtResource
-    // just as often names a text `.tres` wrapper — one carrying `fallbacks`
-    // rather than font bytes of its own — and fetching that as bytes yields a
-    // string no parser can read. Adding `FontFile` to this slice's `typeNames`
-    // is exactly how that regression comes back.
+    // A `FontFile` ExtResource as often names a text `.tres` wrapper carrying
+    // `fallbacks`, and fetching that as bytes yields a string no parser can read.
+    // Adding `FontFile` to this slice's `typeNames` breaks it.
     expect(resourceSliceRegistry.byExtension('.ttf')?.typeNames).toEqual([]);
     expect(resourceSliceRegistry.byTypeName('FontFile')?.slice).toBe('font');
     expect(isBinaryResourceType('FontFile')).toBe(false);
@@ -34,8 +32,8 @@ describe('dynamicfont slice registration', () => {
 
   it('leaves the container formats no browser can decode unclaimed', () => {
     // Godot's own dynamic-font importer also recognises these
-    // (`resource_importer_dynamic_font.cpp:47-58`); `FontFace` does not, so a
-    // claim would promise bytes nothing can turn into a drawable face.
+    // (`resource_importer_dynamic_font.cpp:47-58`). `FontFace` does not, so a claim
+    // would promise bytes nothing can turn into a drawable face.
     for (const extension of ['.ttc', '.otc', '.pfb', '.pfm']) {
       expect(resourceSliceRegistry.byExtension(extension)).toBeNull();
     }

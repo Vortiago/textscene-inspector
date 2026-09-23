@@ -1,10 +1,8 @@
 /**
- * BaseMaterial3D's UV1, UV2, Sampling and Shadows groups
- * (`material.cpp:3717-3737`).
- *
- * The two triplanar sharpnesses are the only bound, and it is the setter's:
- * EXP_EASING states no range while `set_uv1_triplanar_blend_sharpness` stores
- * `CLAMP(p_sharpness, 0.0, 150.0)` (:2786, and :2814 for UV2).
+ * BaseMaterial3D's UV1, UV2, Sampling and Shadows groups (`material.cpp:3717-3737`). The
+ * one bound is the triplanar sharpness: EXP_EASING states no range, while
+ * `set_uv1_triplanar_blend_sharpness` stores `CLAMP(p_sharpness, 0.0, 150.0)` (:2786,
+ * and :2814 for UV2).
  */
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';

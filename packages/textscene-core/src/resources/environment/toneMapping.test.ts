@@ -1,12 +1,7 @@
 /**
- * `Environment.tonemap_mode` → three.js `WebGLRenderer.toneMapping`.
- *
- * The property was parsed and read by nothing. That is only invisible while
- * every environment uses the default: Godot's `TONE_MAPPER_LINEAR` (0) means
- * "no tone mapping", which is what we were already doing. Godot's editor
- * preview environment uses FILMIC, and rendering that as LINEAR is a measured
- * 25/255 mean channel error against a real Godot render — 20x the visual
- * goldens' threshold (`scripts/godot-ref`).
+ * `Environment.tonemap_mode` → three.js `WebGLRenderer.toneMapping`. Godot's editor
+ * preview environment uses FILMIC, and drawing it as LINEAR measures a 25/255 mean
+ * channel error against a Godot render (`scripts/godot-ref`).
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -20,9 +15,8 @@ import {
 
 describe('toneMappingFor', () => {
   it('draws Godot\u2019s own curve for the three modes we ported', () => {
-    // three's Reinhard/Cineon/ACESFilmic are DIFFERENT curves from Godot's
-    // same-named ones — they lack the exposure bias and the white
-    // normalisation — so each goes through CustomToneMapping instead.
+    // three's Reinhard, Cineon and ACESFilmic lack Godot's exposure bias and white
+    // normalisation, so each goes through CustomToneMapping instead.
     expect(toneMappingFor(1)).toBe(THREE.CustomToneMapping); // REINHARDT
     expect(toneMappingFor(2)).toBe(THREE.CustomToneMapping); // FILMIC
     expect(toneMappingFor(3)).toBe(THREE.CustomToneMapping); // ACES
@@ -57,12 +51,10 @@ describe('Godot\u2019s curves', () => {
   });
 
   it('normalises ACES at its own exposure bias of 1.8', () => {
-    // Worked by hand from Godot's constants at white = 1, x = 1.8:
+    // By hand at white = 1, x = 1.8, as the rows of Godot's ACES matrices sum to 1:
     //   num = 1.8 * (1.8 + 0.0245786) - 0.000090537            = 3.284140
     //   den = 1.8 * (0.983729 * 1.8 + 0.432951) + 0.238081     = 4.204674
     //   num / den                                              = 0.781071
-    // Both of Godot's ACES matrices have rows summing to 1, so a neutral grey
-    // passes through them as nothing but that 1.8x scale.
     expect(toneMappingWhiteParam(3, 1)).toBeCloseTo(0.781071, 5);
   });
 
@@ -72,8 +64,8 @@ describe('Godot\u2019s curves', () => {
 
   it('gives AGX its high-clip white, floored at Godot’s 2.0', () => {
     // AgX does not divide by the curve at white; white is the shoulder's
-    // high-clip point, and Godot's environment_get_white floors it at 2.0 — so
-    // a default white of 1 becomes 2, and a larger white passes through.
+    // high-clip point, and Godot's environment_get_white floors it at 2.0. So a
+    // default white of 1 becomes 2, and a larger white passes through.
     expect(toneMappingWhiteParam(4, 1)).toBe(2);
     expect(toneMappingWhiteParam(4, 5)).toBe(5);
   });
@@ -81,8 +73,8 @@ describe('Godot\u2019s curves', () => {
   it('emits a compilable CustomToneMapping body that consumes the exposure', () => {
     const chunk = toneMappingShaderChunk(2);
     expect(chunk).toMatch(/vec3 CustomToneMapping\(vec3 color\)/);
-    // three applies toneMappingExposure for its BUILT-IN curves only; a custom
-    // one that forgets it silently ignores tonemap_exposure.
+    // three applies toneMappingExposure for its built-in curves only. A custom one
+    // that forgets it ignores tonemap_exposure.
     expect(chunk).toMatch(/color \*= toneMappingExposure/);
   });
 
@@ -97,9 +89,8 @@ describe('Godot\u2019s curves', () => {
   });
 
   it('emits the same AGX curve on the glow-composer path, keyed on the mode', () => {
-    // Both paths must tone-map AGX identically: the composer path returns the
-    // ported curve (baking the floored high-clip white) rather than the old
-    // exposure-only fallback that deferred to three's AgX.
+    // Both paths must tone-map AGX identically: the composer path returns the ported
+    // curve, with the floored high-clip white baked in.
     const glsl = toneMappingEffectGlsl(4, 1);
     expect(glsl).toMatch(/0\.544814746488245/);
     expect(glsl).toMatch(/awp_crossover_point = 0\.18/);
@@ -107,8 +98,7 @@ describe('Godot\u2019s curves', () => {
   });
 
   it('LINEAR emits a real curve that applies exposure and nothing else', () => {
-    // Not a null sentinel a consumer has to substitute for — the builder owns all
-    // five modes, so the post-process path never re-invents the fifth.
+    // Not a null sentinel for a consumer to fill: the builder owns all five modes.
     const glsl = toneMappingEffectGlsl(0, 1);
     expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
     expect(glsl).toContain('color *= exposure;');
@@ -136,7 +126,7 @@ describe('applyToneMapping', () => {
     expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(/exposure_bias/);
     restore();
     // The chunk is global to three; leaving a scene's curve behind would
-    // change how the NEXT scene renders.
+    // change how the next scene renders.
     expect(THREE.ShaderChunk.tonemapping_pars_fragment).toBe(original);
   });
 
@@ -184,7 +174,7 @@ describe('applyToneMapping', () => {
 
   it('marks the materials dirty — three compiles the tonemapper into every shader', () => {
     // toneMapping is a #define, so a renderer that already has compiled
-    // programs keeps rendering the OLD curve until they are recompiled.
+    // programs keeps rendering the old curve until they are recompiled.
     // `needsUpdate` is setter-only in three; the observable effect is the
     // material's version counter, which is what drives recompilation.
     const scene = new THREE.Scene();

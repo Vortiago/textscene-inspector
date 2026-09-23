@@ -1,21 +1,15 @@
 /**
- * Environment resource types — the decoded property bag (`EnvironmentProperties`)
- * and the applied form built from it (`EnvironmentSettings`).
- *
- * Both live here rather than beside their producers so the slice's `index.ts`
- * can re-export the settings type without importing `build.ts`: the routing
- * claim must stay clear of anything the render layer pulls in.
+ * Environment resource types: the decoded property bag and the applied settings. They
+ * live here, not beside their producers, so the slice's `index.ts` re-exports the
+ * settings type without importing `build.ts`, which the render layer pulls in.
  */
 
 import type { Color } from '../../utils/colorParser';
 
 /**
- * Godot's `Environment.tonemap_agx_contrast` default (`environment.h`;
- * `ADD_PROPERTY` at `environment.cpp:1290`, hint `"1.0,2.0,0.01,or_greater"`).
- *
- * Declared with the data rather than beside the curve that reads it, because
- * both the decode and the shader builder need it — and routing a resource must
- * not drag five tone-curve bodies into its import closure to learn one default.
+ * Godot's `Environment.tonemap_agx_contrast` default (`environment.h`; `ADD_PROPERTY`
+ * at `environment.cpp:1290`, hint `"1.0,2.0,0.01,or_greater"`). It lives with the data
+ * because the decode needs it too, and routing must not import five tone-curve bodies.
  */
 export const DEFAULT_AGX_CONTRAST = 1.25;
 
@@ -35,7 +29,7 @@ export interface EnvironmentProperties {
   background_energy_multiplier: number;
 
   /**
-   * Sky SubResource reference (e.g. `SubResource("Sky_1")`). Present when
+   * Sky SubResource reference, for example `SubResource("Sky_1")`. Present when
    * background_mode is BG_SKY. Parsed for inspection/validation; full sky/IBL
    * rendering is deferred (BG_SKY falls back to a flat background).
    */
@@ -44,25 +38,24 @@ export interface EnvironmentProperties {
   // Tonemapping
   /** 0 LINEAR, 1 REINHARDT, 2 FILMIC, 3 ACES, 4 AGX. */
   tonemap_mode: number;
-  /** The white reference for every curve EXCEPT AgX. Default 1.0. */
+  /** The white reference for every curve except AgX. Default 1.0. */
   tonemap_white: number;
   /**
-   * AgX's own white reference, which Godot uses INSTEAD of `tonemap_white`
-   * whenever the mode is AGX (`Environment::_update_tonemap`). Its default is
-   * Blender's AgX white, 16.29 — an order of magnitude above `tonemap_white`'s
-   * 1.0, so reading the wrong one reshapes the whole shoulder.
+   * AgX's own white reference, which Godot uses instead of `tonemap_white` when the
+   * mode is AGX (`Environment::_update_tonemap`). Its default is Blender's AgX white,
+   * 16.29, so reading `tonemap_white`'s 1.0 instead reshapes the whole shoulder.
    */
   tonemap_agx_white: number;
   /**
-   * AgX's curve contrast, default 1.25 — dark values darker, bright values
-   * brighter. Only in effect under AGX, and folded into the curve parameters
-   * Godot computes on the CPU rather than applied as a separate stage.
+   * AgX's curve contrast, default 1.25: dark values darker, bright values brighter.
+   * Only in effect under AGX, and folded into the curve parameters Godot computes on
+   * the CPU rather than applied as a separate stage.
    */
   tonemap_agx_contrast: number;
   tonemap_exposure: number;
 
   // Ambient lighting (scene-wide constant illumination)
-  /** 0 BG (default), 1 DISABLED, 2 COLOR, 3 SKY — only 2/3 emit a flat ambient. */
+  /** 0 BG (default), 1 DISABLED, 2 COLOR, 3 SKY. Only 2 and 3 emit a flat ambient. */
   ambient_light_source: number;
   ambient_light_color: Color;
   ambient_light_energy: number;
@@ -86,23 +79,22 @@ export interface EnvironmentProperties {
   volumetric_fog_albedo: Color;
   volumetric_fog_emission: Color;
 
-  // Glow / bloom (a compositor post-process — a peak-channel bright-pass over a
-  // weighted mip pyramid, blended back around the tone curve). The editor
-  // preview environment enables it, which is why emissive materials bloom in
-  // Godot's editor.
+  // Glow, a compositor post-process: a peak-channel bright pass over a weighted mip
+  // pyramid, blended back around the tone curve. The editor preview environment
+  // enables it, which is why emissive materials bloom in Godot's editor.
   glow_enabled: boolean;
   /**
    * The seven mip weights, finest (index 0, `glow_levels/1`) to coarsest.
-   * Godot sums `mip[i] * weight[i]`, unnormalised, skipping weights <= 0.0001 —
-   * so the defaults `[0, 0.8, 0.4, 0.1, 0, 0, 0]` are what keeps a Godot halo
-   * tight: the finest mip is off and nothing past the fourth contributes.
+   * Godot sums `mip[i] * weight[i]`, unnormalised, skipping weights <= 0.0001. The
+   * defaults `[0, 0.8, 0.4, 0.1, 0, 0, 0]` keep a Godot halo tight: the finest mip
+   * is off and nothing past the fourth contributes.
    */
   glow_levels: number[];
   /** Divides every level weight by their sum. Default false. */
   glow_normalized: boolean;
   /** Multiplies the gathered glow just before the blend. Default 0.3. */
   glow_intensity: number;
-  /** Multiplies the glow buffer at EVERY pyramid pass, so it compounds. Default 1.0. */
+  /** Multiplies the glow buffer at every pyramid pass, so it compounds. Default 1.0. */
   glow_strength: number;
   /** The `color * (1 - mix) + glow` lerp factor, MIX blend only. Default 0.05. */
   glow_mix: number;
@@ -129,7 +121,7 @@ export interface EnvironmentProperties {
   ssr_enabled: boolean;
 }
 
-/** `createEnvironmentSettings`'s output — one Environment as the render layer applies it. */
+/** `createEnvironmentSettings`'s output: one Environment as the render layer applies it. */
 export interface EnvironmentSettings {
   background: {
     mode: number;
@@ -137,48 +129,44 @@ export interface EnvironmentSettings {
     energyMultiplier: number;
   };
   /**
-   * Flat ambient — null when the source emits none (DISABLED) or when the
-   * ambient is a cubemap rather than a constant (a sky background).
+   * Flat ambient. Null when the source emits none (DISABLED) or when the ambient is
+   * a cubemap rather than a constant (a sky background).
    */
   ambient: {
     color: Color;
     energy: number;
   } | null;
   /**
-   * The sky as an image-based light — an IBL, not a constant, so it both lights
-   * surfaces and is what they reflect. Present whenever a sky IBL exists to
-   * reflect (`reflection_source` defaults to the background), which under a sky
-   * background is INDEPENDENT of where the diffuse ambient comes from: a metal
-   * reflects the sky even when the flat ambient is a constant colour.
-   *
-   * `energy` is Godot's `background_energy_multiplier` — the sky's reflection
-   * strength. `contribution` is `ambient_light_sky_contribution`: how much of
-   * the DIFFUSE ambient the sky accounts for versus the flat colour (0 for
-   * `AMBIENT_SOURCE_COLOR`, so the sky is reflected but adds no diffuse). Godot
-   * scales these two separately; three.js couples them under one
-   * `environmentIntensity`, so the render layer restores the split with a
-   * per-material `envMapIntensity` keyed on metalness.
+   * The sky as an image-based light (IBL), which both lights surfaces and is what they
+   * reflect. Present whenever a sky IBL exists to reflect (`reflection_source` defaults
+   * to the background), whatever the diffuse ambient source: a metal reflects the sky
+   * even when the flat ambient is a constant colour.
    */
   skyAmbient: {
+    /** `background_energy_multiplier`, the sky's reflection strength. */
     energy: number;
+    /**
+     * `ambient_light_sky_contribution`: the sky's share of the diffuse ambient, 0 for
+     * `AMBIENT_SOURCE_COLOR`. Godot scales it apart from `energy`, and three.js couples
+     * the two, so the render layer splits them with `envMapIntensity` keyed on metalness.
+     */
     contribution: number;
   } | null;
   /**
-   * Godot's tonemapper. Always present — LINEAR (the default) is a real
-   * choice meaning "no tone mapping", not an absence, and the editor preview
-   * environment deliberately picks FILMIC instead.
+   * Godot's tonemapper. Always present: LINEAR, the default, is a real choice meaning
+   * "no tone mapping", not an absence. The editor preview environment picks FILMIC.
    */
   toneMapping: {
     mode: number;
     exposure: number;
     /**
-     * Godot's `env->white` — the input the curve maps to 1.0, already resolved
+     * Godot's `env->white`, the input the curve maps to 1.0, already resolved
      * to whichever of `tonemap_white` / `tonemap_agx_white` the mode reads
      * (`Environment::_update_tonemap`). The per-curve floors Godot applies on
      * top of it are `resolvedWhite`'s, at the point the curve is built.
      */
     white: number;
-    /** `tonemap_agx_contrast`, carried whatever the mode; only AgX reads it. */
+    /** `tonemap_agx_contrast`, carried whatever the mode. Only AgX reads it. */
     agxContrast: number;
   };
   /** Screen-space fog (Godot fog_enabled). Volumetric fog has no THREE equivalent. */
@@ -197,10 +185,9 @@ export interface EnvironmentSettings {
     enabled: boolean;
   } | null;
   /**
-   * Glow/bloom post-process — null when disabled. A compositor pass, so the
-   * render layer that consumes this owns tonemapping too: every blend mode but
-   * SOFTLIGHT composites into linear HDR before the tone curve, and SOFTLIGHT
-   * composites after it (see `godotGlow.ts`).
+   * Glow post-process, null when disabled. The render layer that consumes it owns
+   * tonemapping too: every blend mode but SOFTLIGHT composites into linear HDR before
+   * the tone curve, and SOFTLIGHT composites after it (see `godotGlow.ts`).
    */
   glow: {
     /** The seven mip weights, finest first, already normalised if asked for. */

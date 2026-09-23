@@ -1,11 +1,7 @@
 /**
- * The `.tres` arrival path: path detection, section selection (whole-file body
- * vs a named `[sub_resource]`), the uncompiled-shader and header-only surfaces,
- * and texture-slot loading through the injected loader, resolved against the
- * owning file's own `[ext_resource]` headers.
- *
- * Property DECODING is not tested here — it belongs to `decode.ts`, and
- * `arrivalParity.test.ts` proves this path and the inline one share it.
+ * The `.tres` arrival path: path detection, section selection, the uncompiled-shader and
+ * header-only surfaces, and texture loading against the owning file's `[ext_resource]`
+ * headers. Decoding belongs to `decode.ts`, which `arrivalParity.test.ts` covers.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -19,10 +15,9 @@ import {
 } from './loadMaterial';
 
 /**
- * A texture as the LOADER hands it out: tagged `SRGBColorSpace` before any slot
- * is known. A colour slot therefore needs nothing of it and gets the same
- * object back, while a raw slot binds a retagged clone — which is what makes
- * identity a meaningful assertion below.
+ * A texture as the loader hands it out: tagged `SRGBColorSpace` before any slot is
+ * known. A colour slot gets the same object back and a raw slot a retagged clone, so
+ * identity is a meaningful assertion below.
  */
 function loadedTexture(): THREE.Texture {
   const texture = new THREE.Texture();
@@ -65,10 +60,8 @@ describe('createMaterialFromContent', () => {
   });
 
   it('leaves albedo alpha < 1 OPAQUE, as Godot does with transparency disabled', async () => {
-    // This path used to force `transparent = true` from the alpha channel; the
-    // inline path never did. Godot emits `ALPHA *= albedo.a * albedo_tex.a`
-    // only when `transparency != TRANSPARENCY_DISABLED`, so the alpha is inert
-    // here — the divergence that rendered a shipped tree and glass wrongly.
+    // Godot emits `ALPHA *= albedo.a * albedo_tex.a` only when
+    // `transparency != TRANSPARENCY_DISABLED`, so the alpha is inert here.
     const material = (await createMaterialFromContent(
       tres('StandardMaterial3D', 'albedo_color = Color(0, 1, 0, 0.5)')
     )) as THREE.MeshStandardMaterial;
@@ -210,11 +203,9 @@ describe('createMaterialFromContent', () => {
   });
 
   it('renders an uncompiled ShaderMaterial as Godot\u2019s default 3D surface', async () => {
-    // The same surface the sub-resource arrival of an uncompiled shader draws,
-    // and the same one an unmaterialed mesh draws. Not a default-CONSTRUCTED
-    // StandardMaterial3D (white, fully rough, non-metallic) \u2014 a ShaderMaterial
-    // is not one of those, so the honest substitute is the hardcoded default
-    // shader every backend binds when a surface has no usable material.
+    // The surface an unmaterialed mesh draws: the hardcoded default shader every
+    // backend binds, not a default-constructed StandardMaterial3D (white, fully
+    // rough, non-metallic), which a ShaderMaterial is not.
     const material = await createMaterialFromContent(tres('ShaderMaterial', ''));
     expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
     const std = material as THREE.MeshStandardMaterial;
@@ -264,13 +255,12 @@ describe('createMaterialFromContent', () => {
 });
 
 /**
- * A material declared as a `[sub_resource]` of a mesh's own `.tres` — the third
- * kind of reference. The file's `[gd_resource type=…]` is then an ArrayMesh, so
- * the switch has to follow the SUB-RESOURCE's type, and the sub-resource's own
- * texture ExtResources resolve against that file's ext_resource table.
+ * A material declared as a `[sub_resource]` of a mesh's own `.tres`. The file's type is
+ * then ArrayMesh, so the switch follows the sub-resource's type, and its texture
+ * ExtResources resolve against that file's ext_resource table.
  */
 describe('createMaterialFromContent for a sub-resource', () => {
-  /** Shaped like scenes/demos/3d/truck_town/vehicles/meshes/wheel.tres. */
+  /** A mesh `.tres` carrying two materials. */
   const MESH_TRES = [
     '[gd_resource type="ArrayMesh" format=4 uid="uid://bqrwin8ccgptt"]',
     '',
@@ -352,15 +342,14 @@ describe('createMaterialFromContent texture-slot resolution', () => {
       ].join('\n'),
       loadTexture
     );
-    // Godot never samples an unflagged normal map, so fetching the image would
-    // be a load — and a possible missing-resources row — for nothing.
+    // Godot never samples an unflagged normal map, so fetching the image would be a
+    // load, and a possible missing-resources row, for nothing.
     expect(loadTexture).not.toHaveBeenCalled();
   });
 
   it('skips a SubResource naming a type with no rasteriser', async () => {
-    // `ice.tres` / `lava.tres` point their albedo at a NoiseTexture2D declared
-    // in the same file. Nothing rasterises those yet, so the slot stays empty —
-    // and no file is fetched for a reference that names no file.
+    // An albedo naming a NoiseTexture2D in the same file. Nothing rasterises those,
+    // so the slot stays empty, and no file is fetched for a reference that names none.
     const loadTexture = vi.fn().mockResolvedValue(loadedTexture());
     const material = (await createMaterialFromContent(
       [
@@ -378,9 +367,9 @@ describe('createMaterialFromContent texture-slot resolution', () => {
   });
 
   it('does not fetch an anisotropy_flowmap it cannot repack', async () => {
-    // Godot stores the per-pixel anisotropy strength in ALPHA and three reads it
-    // from BLUE; the repack lives in the node layer, so this path applies the
-    // anisotropy SCALARS and leaves the map alone rather than sampling garbage.
+    // Godot stores the per-pixel anisotropy strength in alpha and three reads blue.
+    // The repack lives in the node layer, so this path applies the anisotropy scalars
+    // and leaves the map alone.
     const loadTexture = vi.fn().mockResolvedValue(loadedTexture());
     const material = (await createMaterialFromContent(
       [
@@ -401,18 +390,9 @@ describe('createMaterialFromContent texture-slot resolution', () => {
 });
 
 /**
- * A material `.tres` that carries its OWN gradient: the albedo names a
- * `[sub_resource type="GradientTexture2D"]` beside the `[resource]` body, and
- * that texture is described entirely by the file — the gradient block is in
- * there too. Nothing to fetch, so it rasterises synchronously, against the
- * MATERIAL FILE's table rather than any scene's.
- *
- * The lifetime half is the load-bearing part. The rasterised texture is BORROWED
- * from a shared, capacity-bounded cache, and this path is imperative: no
- * component mounts, so nothing holds the React pin that a scene's inline
- * gradient gets from `useProceduralTexturePins`. Without a pin taken here, the
- * 65th distinct gradient evicts and DISPOSES one a cached material is still
- * sampling, and nothing re-rasterises because nothing changed.
+ * A material `.tres` with its own GradientTexture2D, which rasterises synchronously
+ * against the material file's table. No component mounts to pin it, so without a pin
+ * here the 65th distinct gradient evicts and disposes one a cached material samples.
  */
 describe('createMaterialFromContent with a procedural texture in its own .tres', () => {
   const GRADIENT_MATERIAL = [

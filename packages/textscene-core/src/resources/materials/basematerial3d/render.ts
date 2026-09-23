@@ -1,10 +1,7 @@
 /**
- * BaseMaterial3D's Billboard, Particles Anim, Grow, Transform, Proximity Fade,
- * MSDF and Distance Fade groups (`material.cpp:3739-3772`).
- *
- * `proximity_fade_distance` is the split bound tiers exist for: its setter
- * stores `MAX(p_distance, 0.01)` (:3087), so the floor alters and errors while
- * the ceiling is the inspector's alone and warns.
+ * BaseMaterial3D's Billboard to Distance Fade groups (`material.cpp:3739-3772`).
+ * `proximity_fade_distance` splits its tiers: the setter stores `MAX(p_distance, 0.01)`
+ * (:3087), so the floor errors, while the ceiling is the inspector's alone and warns.
  */
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';

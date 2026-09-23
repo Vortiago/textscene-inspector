@@ -1,13 +1,6 @@
 /**
- * `buildStandardMaterial` — the imperative adapter's contract.
- *
- * Inputs are RAW Godot property strings, the same text the inline path reads, so
- * these tests exercise decode and build together: the pair is what the resource
- * pipeline actually runs, and asserting on a hand-built scalar bag would let the
- * two drift apart again.
- *
- * Where an expectation differs from the pre-slice `createStandardMaterial`, the
- * comment says which Godot rule it now follows.
+ * `buildStandardMaterial`, the imperative adapter's contract. Inputs are raw Godot
+ * property strings, so decode and build run together, as in the resource pipeline.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -27,10 +20,9 @@ function build(
 }
 
 /**
- * A texture as the LOADER hands it out: tagged `SRGBColorSpace` before any slot
- * is known (`resources/formats/image/textureProcessing.ts`). Binding is what
- * decides the colour space each Godot slot actually samples in, so starting
- * from three's own default would let a raw slot pass without being bound.
+ * A texture as the loader hands it out: tagged `SRGBColorSpace` before any slot is known
+ * (`resources/formats/image/textureProcessing.ts`). From three's own default, a raw slot
+ * would pass without being bound.
  */
 function loadedTexture(): THREE.Texture {
   const texture = new THREE.Texture();
@@ -39,12 +31,9 @@ function loadedTexture(): THREE.Texture {
 }
 
 /**
- * What a RAW slot's binding produces. Godot samples normal / roughness /
- * metallic / AO / heightmap through samplers with no `source_color` hint
- * (`scene/resources/material.cpp:1092,1030,1024,1128,1172`), so the loader's
- * sRGB tag must come off — and it comes off a CLONE, since the loader's entry
- * is shared with every other consumer of that path. The clone keeps the
- * decoded `source`, which is what identifies it as this same image.
+ * What a raw slot's binding produces. Godot samples normal, roughness, metallic, AO and
+ * heightmap without `source_color` (`scene/resources/material.cpp:1092,1030,1024,1128,1172`),
+ * so the sRGB tag comes off a clone of the shared loader entry, which keeps its `source`.
  */
 function expectBoundRaw(map: THREE.Texture | null | undefined, from: THREE.Texture): void {
   expect(map).toBeTruthy();
@@ -65,11 +54,8 @@ describe('buildStandardMaterial — scalar base', () => {
   });
 
   it('does NOT force transparency from albedo alpha alone', () => {
-    // The divergence this slice retires. `_update_shader` emits
-    // `ALPHA *= albedo.a * albedo_tex.a` ONLY when transparency is not
-    // DISABLED, so an alpha < 1 on an opaque material never reaches Godot's
-    // blend at all — the `.tres` path used to set `transparent = true` here and
-    // rendered a material differently from the identical one written inline.
+    // `_update_shader` emits `ALPHA *= albedo.a * albedo_tex.a` only when transparency
+    // is not DISABLED, so an alpha < 1 on an opaque material never reaches Godot's blend.
     const material = build({ albedo_color: 'Color(1, 1, 1, 0.5)' });
     expect(material.transparent).toBe(false);
     expect(material.depthWrite).toBe(true);
@@ -115,8 +101,7 @@ describe('buildStandardMaterial — scalar base', () => {
   });
 
   it('converts a mid-tone albedo sRGB → linear', () => {
-    // Godot's sRGB 0.5 → linear ≈ 0.214. Asserting the CONVERSION happened
-    // (not that the channel still reads 0.5) is what pins the bright-pink fix.
+    // Godot's sRGB 0.5 → linear ≈ 0.214. This asserts the conversion happened.
     const material = build({
       albedo_color: 'Color(0.5, 0.5, 0.5, 1)',
       metallic: '0.7',
@@ -134,8 +119,7 @@ describe('buildStandardMaterial — scalar base', () => {
     expect(material.color.r).toBeCloseTo(0.25818, 3);
     expect(material.color.g).toBeCloseTo(0.05951, 3);
     expect(material.color.b).toBeCloseTo(0.00651, 3);
-    // Load-bearing: the linear values are STRICTLY below the sRGB inputs for
-    // mid-tones. Before the conversion they were EQUAL, which is the bug.
+    // The linear values are strictly below the sRGB inputs for mid-tones.
     expect(material.color.r).toBeLessThan(0.545098);
     expect(material.color.g).toBeLessThan(0.270588);
   });
@@ -149,9 +133,8 @@ describe('buildStandardMaterial — scalar base', () => {
 
   it('carries an HDR albedo past 1 instead of clamping it', () => {
     // `albedo_color` has no PROPERTY_HINT_RANGE and `Color::srgb_to_linear`
-    // extrapolates, so the corpus tracer bullet's Color(2.33575, 3.29442,
-    // 3.29442, 1) is meant to blow past the glow bright-pass. Clamping to 1 —
-    // which the inline path used to do — greys it out.
+    // extrapolates, so Color(2.33575, 3.29442, 3.29442, 1) is meant to cross the glow
+    // bright pass. Clamping to 1 greys it out.
     const material = build({ albedo_color: 'Color(2.33575, 3.29442, 3.29442, 1)' });
     expect(material.color.r).toBeGreaterThan(1);
     expect(material.color.g).toBeGreaterThan(material.color.r);
@@ -342,12 +325,12 @@ describe('buildStandardMaterial — blend modes', () => {
     expect(material.blendSrc).toBe(THREE.OneFactor);
     expect(material.blendDst).toBe(THREE.OneMinusSrcAlphaFactor);
     // three's `premultipliedAlpha` would run `gl_FragColor.rgb *= a` on a source
-    // Godot already premultiplied — a double-apply, so it stays off.
+    // Godot already premultiplied: a double-apply, so it stays off.
     expect(material.premultipliedAlpha).toBe(false);
   });
 
   it('leaves three’s own factor defaults in place for a preset mode', () => {
-    // The factor fields are OMITTED rather than passed as `undefined`, which
+    // The factor fields are omitted rather than passed as `undefined`, which
     // three would warn about and R3F would assign straight onto the material.
     const material = build({ blend_mode: '1' });
     expect(material.blendEquation).toBe(THREE.AddEquation);
@@ -371,11 +354,9 @@ describe('buildStandardMaterial — texture slots', () => {
   });
 
   it('applies every slot it is handed — the feature gates are the decode’s', () => {
-    // Godot emits the normal sampler only inside `if (features[
-    // FEATURE_NORMAL_MAPPING])`, and the decode's slot enumeration is where that
-    // gate lives (`decode.test.ts`), so an unflagged slot is never RESOLVED and
-    // never reaches here. Re-gating here would also split this adapter from the
-    // reactive one, which applies whatever prop the node component passes.
+    // Godot's `if (features[FEATURE_NORMAL_MAPPING])` gate lives in the decode's slot
+    // enumeration (`decode.test.ts`), so an unflagged slot never reaches here.
+    // Re-gating here would split this adapter from the reactive one.
     const texture = loadedTexture();
     const scalars = parseStandardMaterial3DScalars({ normal_texture: 'ExtResource("1")' });
     expect(scalars.textureSlots).toEqual({});
@@ -409,9 +390,9 @@ describe('buildStandardMaterial — texture slots', () => {
   });
 
   it('gives an emission texture over Godot’s default black colour a white emissive', () => {
-    // `hint_default_black` means ADD over a black colour reduces to `tex *
-    // energy`, which three spells as a WHITE emissive — multiplying the black
-    // through would render nothing where Godot renders the whole texture.
+    // `hint_default_black` means ADD over a black colour reduces to `tex * energy`,
+    // which three spells as a white emissive. Multiplying the black through would
+    // render nothing where Godot renders the whole texture.
     const material = build(
       { emission_enabled: 'true', emission_energy_multiplier: '2' },
       { emission_texture: loadedTexture() }
@@ -453,11 +434,9 @@ describe('buildStandardMaterial — texture slots', () => {
   });
 
   it('applies the anisotropy flowmap it is handed', () => {
-    // Godot's `texture_flowmap` (`scene/resources/material.cpp:1122`) is
-    // three's `anisotropyMap`, declared by MeshPhysicalMaterial alone. Declining
-    // to FETCH one — it needs an alpha→blue repack first — is the loader's
-    // decision, not this adapter's: a caller holding a repacked flowmap gets it
-    // applied, exactly like every other slot.
+    // Godot's `texture_flowmap` (`scene/resources/material.cpp:1122`) is three's
+    // `anisotropyMap`, on MeshPhysicalMaterial alone. The loader declines to fetch one,
+    // but a caller holding a repacked flowmap gets it applied like every other slot.
     const texture = loadedTexture();
     const material = buildStandardMaterial(
       parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '0.6' }),
@@ -540,8 +519,8 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
   });
 
   it('hands back the shared texture for an identity transform', () => {
-    // An identity scale asks for nothing, so there is nothing to clone — and a
-    // clone would also flip wrapping, which is `texture_repeat`'s business.
+    // An identity scale asks for nothing, so there is nothing to clone. A clone would
+    // also flip wrapping, which is `texture_repeat`'s business.
     const texture = loadedTexture();
     const material = build({ uv1_scale: 'Vector3(1, 1, 1)' }, { albedo_texture: texture });
     expect(material.map).toBe(texture);
@@ -614,7 +593,7 @@ describe('buildStandardMaterial — vertex colours', () => {
   }
 
   it('reads COLOR as white on a mesh that supplies none', () => {
-    // Godot's default COLOR vertex buffer is (1,1,1,1) — mesh_storage.cpp:86-97.
+    // Godot's default COLOR vertex buffer is (1,1,1,1): mesh_storage.cpp:86-97.
     const material = build({ vertex_color_use_as_albedo: 'true' });
     expect(material.vertexColors).toBe(true);
     expect(colorDefault(material)).toEqual([1, 1, 1]);

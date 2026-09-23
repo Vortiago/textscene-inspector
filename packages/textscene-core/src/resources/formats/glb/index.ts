@@ -1,15 +1,8 @@
 /**
- * GLB / glTF resource slice — foreign-format kind (ADR-0031).
- *
- * The real parser is three's `GLTFLoader`, declared openly instead of split
- * into `decode.ts` + `build.ts`: a `.glb` arrives as bytes, never as a
- * **ParsedResource** section, so that split would be a fiction here.
- *
- * The THREE-touching implementation sits beside this file — `glbProcessing.ts`
- * (lazy loader modules, parse, per-consumer clone) and `rootScale.ts` (the
- * **Import sidecar** correction, ADR-0028) — and this index imports neither:
- * the claim table must stay readable from the linter and from a host's
- * provider without pulling a renderer into the import closure.
+ * GLB / glTF resource slice, foreign-format kind (ADR-0031). The parser is three's
+ * `GLTFLoader`, since a `.glb` never arrives as a **ParsedResource** section. This index
+ * imports neither `glbProcessing.ts` nor `rootScale.ts`, so the linter and a host's
+ * provider read the claim table without pulling in a renderer.
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';

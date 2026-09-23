@@ -1,14 +1,8 @@
 /**
- * Unit tests for texture processing helpers.
- *
- * `createTextureFromBuffer` cannot be exercised end-to-end here: happy-dom
- * never fires `load` OR `error` on image elements, so the real
- * `THREE.TextureLoader` path never settles (verified empirically — the
- * promise hangs). Instead, `TextureLoader` is replaced with a controllable
- * fake (partial mock of `three`) and the tests pin the function's contract:
- * blob creation with the given MIME type, sRGB color space assignment on
- * success, the "Failed to decode texture" rejection on error, and blob-URL
- * revocation on BOTH paths.
+ * Texture processing helpers. happy-dom fires neither `load` nor `error` on an image, so
+ * a partial mock of `three` fakes `TextureLoader`, and the tests pin the contract: the
+ * blob's MIME type, sRGB on success, the "Failed to decode texture" rejection, and
+ * blob-URL revocation on both paths.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

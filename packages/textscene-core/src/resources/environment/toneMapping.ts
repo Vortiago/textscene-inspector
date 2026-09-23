@@ -1,17 +1,7 @@
 /**
- * `Environment.tonemap_mode` → three's tone mapping.
- *
- * Godot's curves are not three's. Measured against a Godot render of the same
- * fixture, mapping FILMIC onto three's nearest built-in (Cineon) left every lit
- * surface at ~0.87 of Godot's value — a flat, luminance-independent error, i.e.
- * the wrong curve rather than the wrong lighting. So the curves are ported and
- * installed through `THREE.CustomToneMapping`, three's documented hook for
- * exactly this (`godotToneMapping.ts`).
- *
- * AGX is ported too: three's own AgX is a different approximation of EaryChow's
- * (a log2 EV encoding with a polynomial sigmoid) and renders shadows visibly
- * dimmer than Godot's harder toe, so it goes through `CustomToneMapping` with
- * Godot 4.6's `allenwp_curve` like the rest (`godotToneMapping.ts`).
+ * `Environment.tonemap_mode` → three's tone mapping. Godot's curves, AgX included, are
+ * not three's, so the ports in `godotToneMapping.ts` install through
+ * `THREE.CustomToneMapping`, three's documented hook for this.
  */
 
 import * as THREE from 'three';
@@ -34,7 +24,7 @@ export interface ToneMappingSettings {
   mode: number;
   /** Godot `tonemap_exposure`, default 1.0. */
   exposure?: number;
-  /** Godot's `env->white` — the value the curve maps to 1.0. Default 1.0. */
+  /** Godot's `env->white`, the value the curve maps to 1.0. Default 1.0. */
   white?: number;
   /** Godot `tonemap_agx_contrast`, default 1.25. Read only under AGX. */
   agxContrast?: number;
@@ -54,16 +44,10 @@ export function toneMappingFor(mode: number): THREE.ToneMapping {
 }
 
 /**
- * Applies a tonemapper to the renderer and returns the undo. Restoring on
- * unmount matters because the renderer, the scene and three's shader chunks all
- * outlive any one environment: a previewer that swaps scenes would otherwise
- * keep the departed environment's curve.
- *
- * `THREE.ShaderChunk` is module-global, so this assumes ONE environment applies
- * at a time. That holds: the web app mounts a single shell, each VS Code
- * webview is its own realm, and Godot allows only one `WorldEnvironment` per
- * scene (it warns otherwise). A scene that ships two anyway gets last-mount-
- * wins, which is also what Godot's own renderer does with them.
+ * Applies a tonemapper and returns the undo, as the renderer and three's shader chunks
+ * outlive an environment. `THREE.ShaderChunk` is module-global, so one environment applies
+ * at a time: the web app mounts one shell, each VS Code webview is its own realm, and
+ * Godot allows one `WorldEnvironment` per scene. With two, last mount wins, as in Godot.
  */
 export function applyToneMapping(
   gl: ToneMappedRenderer,

@@ -1,39 +1,8 @@
 /**
- * ACCEPTANCE: one material text, three arrival paths, one material state.
- *
- * A StandardMaterial3D reaches the renderer three ways, and the three used to
- * disagree:
- *
- *   inline  — a `[sub_resource]` of the SCENE, read straight off the parsed
- *             `.tscn` and rendered by `<StandardMaterialSlot>` (the reactive
- *             adapter);
- *   .tres   — a standalone material file, fetched and built by `build.ts` (the
- *             imperative adapter);
- *   sub     — a `[sub_resource]` of some other `.tres` (a mesh's per-surface
- *             material), addressed by a Sub-resource path.
- *
- * The `.tres` path decoded eighteen properties by sniffing value shapes, ignored
- * fifteen shipped features, gated a different set of flags, and forced
- * transparency from albedo alpha. Both corpus materials below rendered wrong
- * because of it. This suite is the guard: every case's property text is decoded
- * ONCE and each path must land on the same material state.
- *
- * TWO LAYERS, because one cannot see what the other can:
- *   - a pure bag guard per case, whose comparison keys ARE the derived bag's, so
- *     every prop is covered by construction rather than by a list to maintain;
- *   - a mounted, texture-bearing snapshot per adapter, for the state that only
- *     exists AFTER the bag — what R3F's commit does to a texture, which is the
- *     axis these paths actually diverged on.
- *
- * RESIDUE this suite deliberately does not claim — each needs a file outside the
- * slice and is reported rather than hidden:
- *   - `uv1_triplanar` tiling DENSITY needs the mesh size, which only the node
- *     component has, so the `.tres` path carries the flag but nothing acts on it.
- *   - `anisotropy_flowmap` needs an alpha→blue channel repack that lives in the
- *     node layer; the `.tres` path fetches no flowmap at all.
- *   - `normal_enabled` gating over the FETCH is honoured on the `.tres` path
- *     only: the node component resolves its own texture slots and does not read
- *     the decode's slot table yet.
+ * Acceptance: one material text, three arrival paths, one material state. The paths are
+ * a scene `[sub_resource]` through `<StandardMaterialSlot>`, a standalone `.tres` through
+ * `build.ts`, and a mesh `.tres`'s `[sub_resource]` by Sub-resource path. A bag guard covers
+ * every derived prop, and a mounted snapshot per adapter covers R3F's commit.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -65,6 +34,11 @@ const NORMAL = 'res://textures/normal.png';
 const EMISSION = 'res://textures/emission.png';
 const FLOWMAP = 'res://textures/flowmap.png';
 
+/**
+ * Not claimed: `uv1_triplanar` density needs the mesh size, which only the node component
+ * has. The `.tres` path fetches no `anisotropy_flowmap`. `normal_enabled` gates the fetch
+ * on the `.tres` path only, as the node component resolves its own texture slots.
+ */
 const CASES: ParityCase[] = [
   { name: 'all Godot defaults', properties: {} },
   {
@@ -126,8 +100,8 @@ const CASES: ParityCase[] = [
     },
   },
   {
-    // scenes/fixtures/unit-material-refraction.tscn — refraction with NO
-    // transparency mode: depth-writing, opaque, and still in the alpha pass.
+    // scenes/fixtures/unit-material-refraction.tscn: refraction with no transparency
+    // mode, depth-writing, opaque, and still in the alpha pass.
     name: 'refraction with no transparency mode',
     properties: {
       albedo_color: 'Color(0.85, 0.9, 1.0, 1)',
@@ -232,9 +206,6 @@ const CASES: ParityCase[] = [
     extResources: [{ id: '1_tex', path: ALBEDO, type: 'Texture2D' }],
   },
   {
-    // scenes/demos/3d/truck_town/town/tree/Leav_material.tres — the `.tres` path
-    // used to drop BOTH properties, rendering the leaves opaque and
-    // single-sided.
     name: 'CORPUS truck_town tree leaves (transparency 4 + cull_mode 2)',
     properties: {
       resource_name: '"Leav_material"',
@@ -249,8 +220,6 @@ const CASES: ParityCase[] = [
     ],
   },
   {
-    // scenes/demos/3d/procedural_materials/materials/glass.tres — the `.tres`
-    // path used to keep only the colour and roughness.
     name: 'CORPUS procedural_materials glass (transparency + normal_scale + refraction + triplanar)',
     properties: {
       transparency: '1',
@@ -272,10 +241,9 @@ const CASES: ParityCase[] = [
 ];
 
 /**
- * Every slot bound at once, on DEFAULT sampler state — so the slots Godot binds
- * sRGB need no clone and the material is handed the loader's own cache entries.
- * That is what makes a stray retag observable; a case where every slot clones
- * cannot see one.
+ * Every slot bound at once, on default sampler state, so the sRGB slots need no clone and
+ * get the loader's own cache entries. That makes a stray retag observable, which a case
+ * where every slot clones cannot see.
  */
 const EVERY_SLOT: ParityCase = {
   name: 'every slot bound at once',
@@ -317,9 +285,8 @@ const EVERY_SLOT_TRANSFORMED: ParityCase = {
 };
 
 /**
- * Outside CASES on purpose: the `.tres` path fetches no flowmap (the alpha→blue
- * repack it needs lives in the node layer), so the two adapters cannot be
- * compared on this one — only the reactive pass-through can be.
+ * Outside CASES: the `.tres` path fetches no flowmap (its alpha→blue repack lives in the
+ * node layer), so only the reactive pass-through can be checked.
  */
 const ANISOTROPIC: ParityCase = {
   name: 'anisotropy with a flowmap',
@@ -332,13 +299,9 @@ const ANISOTROPIC: ParityCase = {
 };
 
 /**
- * One shared texture per path, as the loader's cache hands out — so the two
- * paths' texture state is comparable and both land on the same `source`.
- *
- * Tagged `SRGBColorSpace` because that is what the loader does to every decoded
- * image before any slot is known (`resources/formats/image/textureProcessing.ts`).
- * Starting from three's own default instead would let a raw slot pass without
- * anything having to bind it.
+ * One shared texture per path, as the loader's cache hands out, tagged `SRGBColorSpace` as
+ * the loader tags it (`resources/formats/image/textureProcessing.ts`). From three's own
+ * default, a raw slot would pass without being bound.
  */
 const TEXTURE_BY_PATH = new Map<string, THREE.Texture>();
 function textureFor(path: string): THREE.Texture {
@@ -392,10 +355,9 @@ function meshTresCarryingIt(testCase: ParityCase): string {
 }
 
 /**
- * The textures the inline (scene) path would hand the slot: resolved through the
- * scene's own `[ext_resource]` table, then BOUND to their slots — exactly what
- * the node component does before rendering the slot, and through the same
- * interface the imperative adapter crosses.
+ * The textures the inline path hands the slot: resolved through the scene's own
+ * `[ext_resource]` table, then bound to their slots, as the node component does, through
+ * the interface the imperative adapter crosses.
  */
 function inlineTextures(testCase: ParityCase): ResolvedTextureSlots {
   const scalars = parseStandardMaterial3DScalars(testCase.properties);
@@ -460,13 +422,9 @@ const SNAPSHOT_MAPS = [
 ] as const;
 
 /**
- * A bound texture's STATE, never its identity: each path clones the shared
- * source separately when the material diverges, so two equal clones are the
- * correct answer and two different sources are not.
- *
- * `source` is shared by `Texture.clone()`, so this pins that both paths landed
- * on the same IMAGE while allowing separate clones — `.source` identity is the
- * documented equality for that case (AGENTS.md).
+ * A bound texture's state, never its identity: each path clones the shared source
+ * separately, so two equal clones are correct. `Texture.clone()` shares `source`, so this
+ * pins the same image through `.source` identity, as AGENTS.md documents.
  */
 function textureFingerprint(texture: THREE.Texture): string {
   return [
@@ -481,9 +439,8 @@ function textureFingerprint(texture: THREE.Texture): string {
     texture.minFilter,
     texture.generateMipmaps,
     texture.anisotropy,
-    // The state the two paths silently disagreed on for as long as each decided
-    // it for itself. `''` is three's spelling of `NoColorSpace`, so it is
-    // normalised to a name a failure message can be read from.
+    // `''` is three's spelling of `NoColorSpace`, normalised to a name a failure
+    // message can be read from.
     texture.colorSpace || 'NoColorSpace',
   ].join('/');
 }
@@ -567,9 +524,8 @@ const TYPE_FOR: Readonly<Record<StandardMaterialClass, string>> = {
 };
 
 /**
- * A prop as the guard compares it. Textures compare by bound STATE: binding is
- * the imperative adapter's own step, and a second bind of an already-bound
- * texture is a fresh clone carrying the same state.
+ * A prop as the guard compares it. Textures compare by bound state: binding is the
+ * imperative adapter's own step, and a second bind is a fresh clone with the same state.
  */
 function comparable(value: unknown): unknown {
   return value instanceof THREE.Texture ? textureFingerprint(value) : value;
@@ -587,7 +543,7 @@ describe('StandardMaterial3D arrival parity', () => {
     describe(testCase.name, () => {
       it('decodes identically from inline properties and from parsed .tres text', async () => {
         // The property text survives the round trip through the `.tres`
-        // serialization, so the two paths hand the SAME bag to the same decode.
+        // serialization, so the two paths hand the same bag to the same decode.
         const { parseTresFile } = await import('../../../parser/parsedResource');
         const fromFile = parseTresFile(standaloneTres(testCase));
         const inline = parseStandardMaterial3DScalars(testCase.properties);
@@ -620,11 +576,9 @@ describe('StandardMaterial3D arrival parity', () => {
   }
 
   describe('one derivation, consumed verbatim by each adapter', () => {
-    // The cases above are crossed with a hand-maintained key list, and both real
-    // divergences hid in its blind spots. Here the comparison keys ARE the
-    // derived bag's, so a prop nobody thought to list cannot go unasserted —
-    // and each adapter is pinned to the SAME derivation rather than to the
-    // other's output.
+    // The cases above cross a hand-maintained key list. Here the comparison keys are
+    // the derived bag's, so no prop goes unasserted, and each adapter is pinned to
+    // the same derivation rather than to the other's output.
     for (const testCase of CASES) {
       it(`${testCase.name}: the reactive adapter mounts the derived bag`, () => {
         const textures = inlineTextures(testCase);
@@ -632,8 +586,8 @@ describe('StandardMaterial3D arrival parity', () => {
         const bag = standardMaterialBag(props.scalars, textures);
         const element = StandardMaterialSlot(props) as ReactElement;
         expect(element.type).toBe(TAG_FOR[bag.materialClass]);
-        // `attach` is the mount's own, and the React key is the program
-        // factory's output — neither is derived, so neither is compared.
+        // `attach` is the mount's own, and the React key is the program factory's
+        // output. Neither is derived, so neither is compared.
         expect(element.props).toEqual({ ...bag.props, attach: undefined });
       });
 
@@ -665,10 +619,8 @@ describe('StandardMaterial3D arrival parity', () => {
   });
 
   describe('mounted, with every slot bound', () => {
-    // What a bag guard is blind to: what R3F's own commit does to a texture
-    // AFTER the bag — the sRGB it reasserts on colour-map props, and the
-    // sampler state a clone carries. That is the axis these two paths actually
-    // diverged on, so one mounted, texture-bearing snapshot per adapter stays.
+    // A bag guard is blind to what R3F's commit does to a texture after the bag: the
+    // sRGB it reasserts on colour-map props, and the sampler state a clone carries.
     it('the reactive adapter lands on the state the imperative one builds', async () => {
       const fromTres = await createMaterialFromContent(
         standaloneTres(EVERY_SLOT_TRANSFORMED),
@@ -679,8 +631,8 @@ describe('StandardMaterial3D arrival parity', () => {
 
     it('passes an anisotropy flowmap through to the physical material', async () => {
       // Godot's `texture_flowmap` (`scene/resources/material.cpp:1122`) carries
-      // no `source_color` hint, so it samples raw — and only
-      // MeshPhysicalMaterial declares the slot at all.
+      // no `source_color` hint, so it samples raw, and only MeshPhysicalMaterial
+      // declares the slot.
       const material = await renderThroughSlot(ANISOTROPIC);
       expect(material.type).toBe('MeshPhysicalMaterial');
       const physical = material as THREE.MeshPhysicalMaterial;
@@ -691,15 +643,10 @@ describe('StandardMaterial3D arrival parity', () => {
   });
 
   describe('every slot samples in the colour space Godot binds it with', () => {
-    // Equality between the paths is not enough on its own: the two agreed while
-    // BOTH were wrong for as long as neither asserted an absolute value. These
-    // are Godot's, from the `source_color` hints on the samplers
-    // `BaseMaterial3D::_update_shader` writes — `texture_albedo`
+    // Equal paths can both be wrong, so these are Godot's absolute values. `texture_albedo`
     // (`scene/resources/material.cpp:969`) and `texture_emission` (:1066) carry
-    // it and are hardware-decoded; `texture_metallic` (:1024),
-    // `texture_roughness` (:1030), `texture_normal` (:1092),
-    // `texture_ambient_occlusion` (:1128) and `texture_heightmap` (:1172) do not
-    // and read stored bytes.
+    // `source_color`. `texture_metallic` (:1024), `texture_roughness` (:1030), `texture_normal`
+    // (:1092), `texture_ambient_occlusion` (:1128) and `texture_heightmap` (:1172) read raw.
     const EXPECTED: Record<string, string> = {
       map: THREE.SRGBColorSpace,
       emissiveMap: THREE.SRGBColorSpace,
@@ -740,7 +687,7 @@ describe('StandardMaterial3D arrival parity', () => {
 
     it('survives R3F reasserting sRGB on the reactive path', async () => {
       // `applyProps` force-rewrites any 8-bit RGBA texture on a colour-map prop
-      // back to `SRGBColorSpace` on EVERY commit. A raw slot's tag has to be
+      // back to `SRGBColorSpace` on every commit. A raw slot's tag has to be
       // proof against that, not merely correct on first render.
       const material = await renderThroughSlot(EVERY_SLOT);
       const raw = (material as THREE.MeshStandardMaterial).roughnessMap!;
@@ -769,9 +716,8 @@ describe('StandardMaterial3D arrival parity', () => {
         exercised.add(slot);
       }
     }
-    // `anisotropy_flowmap` is the documented exception: the `.tres` path cannot
-    // repack it, so no case can claim ARRIVAL PARITY for it — the reactive
-    // adapter's pass-through is asserted on its own instead.
+    // `anisotropy_flowmap` is the exception: the `.tres` path cannot repack it, so the
+    // reactive adapter's pass-through is asserted on its own.
     expect([...TEXTURE_SLOTS].filter((slot) => !exercised.has(slot))).toEqual([
       'anisotropy_flowmap',
     ]);
@@ -779,10 +725,8 @@ describe('StandardMaterial3D arrival parity', () => {
 });
 
 /**
- * The fourth arrival, which is not a StandardMaterial3D at all: a material whose
- * shader we do not render. It reaches the renderer as a `.tres` or as a
- * `[sub_resource]`, and Godot cannot tell those apart — so the surface must not
- * depend on which one it was (ADR-0041).
+ * The fourth arrival, a ShaderMaterial, which is not rendered. As a `.tres` or as a
+ * `[sub_resource]`, Godot cannot tell them apart, so the surface must match (ADR-0041).
  */
 describe('uncompiled ShaderMaterial arrival parity', () => {
   /** Godot's hardcoded default 3D shader, read off a built material. */
@@ -802,15 +746,14 @@ describe('uncompiled ShaderMaterial arrival parity', () => {
       '[gd_resource type="ShaderMaterial" format=3]\n\n[resource]\n'
     );
     // The scene arrival: `resolveMaterialSource` declines the sub-resource, so
-    // the slot mounts with no scalars — the derivation's "no material" input.
+    // the slot mounts with no scalars: the derivation's "no material" input.
     const fromScene = buildStandardMaterial(null);
     expect(surfaceOf(fromTres)).toEqual(surfaceOf(fromScene));
   });
 
   it('that surface is Godot’s default 3D shader, not a default StandardMaterial3D', async () => {
-    // The distinction the whole decision turns on: a default-CONSTRUCTED
-    // StandardMaterial3D is white and fully rough, which is a different surface
-    // and would look like a material that rendered.
+    // A default-constructed StandardMaterial3D is white and fully rough, a different
+    // surface that would look like a material that rendered.
     const shader = surfaceOf(await createMaterialFromContent(
       '[gd_resource type="ShaderMaterial" format=3]\n\n[resource]\n'
     ));
