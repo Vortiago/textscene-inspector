@@ -1,12 +1,8 @@
 /**
- * Reading the slices off disk: which directories are slices, and which property
- * keys each side of one names.
- *
- * The parser half of the parity guard is a SCRAPE, not a parse — `properties.X`
- * and `properties['X']` accesses in the source text — because a parser reads its
- * property bag with plain member access and nothing in the build exposes that
- * set. The consequences of scraping (a table-driven read is invisible) are what
- * the allowlist's shared-helper entries record.
+ * Reads the slices off disk: which directories are slices, and which keys each
+ * side names. The parser half is a scrape of `properties.X` and `properties['X']`,
+ * since nothing in the build exposes that set. The allowlist records the reads a
+ * scrape cannot see, such as a table-driven one.
  */
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -18,42 +14,32 @@ import { baseChain } from '../../godot/nodeBaseTypes.js';
 export { nodesRoot } from './ruleNameScrape.js';
 import { atLeast, nodesRoot, walk } from './ruleNameScrape.js';
 
-// ---------------------------------------------------------------------------
-// Base-type to parser directory mapping.
-// Used to walk the inherited parser property chain in parallel with the
-// NODE_BASE_TYPES validator chain.
-//
-// Exported so `propertyGrammarParityScan.test.ts` can hold it COMPLETE: an
-// ancestor missing here is skipped in silence, unlike a mapped one whose file
-// has moved.
-// ---------------------------------------------------------------------------
-
+/**
+ * Base type to parser file, walked beside the NODE_BASE_TYPES validator chain.
+ * Exported so `propertyGrammarParityScan.test.ts` can hold it complete: a
+ * missing ancestor is skipped in silence.
+ */
 export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   Node3D: 'base/node3d/parser.ts',
   Node2D: 'base/node2d/parser.ts',
   Light3D: '3d/lights/shared/parser.ts',
-  // Button owns a parser.ts of its own, so a Button subclass that chains through
-  // `parseButton` really does read `text`/`flat`/`alignment`/the icon trio.
-  // Leaving this hop out made every one of those look linter-only on any such
-  // subclass, which reads as a validator desync when the parser is fine.
+  // A Button subclass that chains through `parseButton` reads `text`, `flat`,
+  // `alignment` and the icon trio. Without this hop each looks linter-only.
   Button: '2d/ui/button/parser.ts',
   Control: '2d/ui/control/parser.ts',
   // ParallaxBackground is a CanvasLayer, not a Node2D, so `visible` and `layer`
   // reach it through this parser and nothing else.
   CanvasLayer: '2d/ui/canvaslayer/parser.ts',
   Node: 'node/parser.ts',
-  // The container and mesh hops, measured rather than guessed: walking
-  // NODE_BASE_TYPES for every base-parser-reusing slice shows a small fixed set
-  // of ancestors covers all of them, and the entries above resolve all but these.
+  // The container and mesh hops, measured by walking NODE_BASE_TYPES for every
+  // slice that reuses a base parser.
   VBoxContainer: '2d/ui/vboxcontainer/parser.ts',
   HBoxContainer: '2d/ui/hboxcontainer/parser.ts',
   PanelContainer: '2d/ui/panelcontainer/parser.ts',
   MeshInstance3D: '3d/meshinstance3d/parser.ts',
-  // Two family parsers that live in `shared/` rather than under a type of their
-  // own, which is why the subpath is a module and not a slice: a Range subclass
-  // reads the five Range keys `parseRange` models, and a Slider subclass its
-  // three more through `parseSlider`. Without the hops every one of those reads
-  // as linter-only on HSlider and VSlider.
+  // Two family parsers in `shared/`, so the subpath is a module, not a slice. A
+  // Range subclass reads the keys `parseRange` models, and a Slider subclass
+  // more through `parseSlider`.
   Range: '2d/ui/shared/range.ts',
   Slider: '2d/ui/shared/slider.ts',
   // Both bases are real scene types with a parser of their own, and each is
@@ -61,20 +47,16 @@ export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   // keys through.
   BoxContainer: '2d/ui/boxcontainer/parser.ts',
   SplitContainer: '2d/ui/splitcontainer/parser.ts',
-  // CodeEdit inherits the whole TextEdit surface, and GraphNode/GraphFrame the
-  // whole GraphElement one; without these hops every inherited read looks
-  // linter-only on the subclass.
+  // CodeEdit inherits the whole TextEdit surface, and GraphNode and GraphFrame
+  // the whole GraphElement one.
   TextEdit: '2d/ui/textedit/parser.ts',
   GraphElement: '2d/ui/graphelement/parser.ts',
 };
 
 /**
- * Every directory holding a `linterParser.ts`, `parser.ts` or not. The subset
- * {@link findSliceDirs} narrows, so the parity guard's blind-spot count has
- * something to measure against.
- *
- * Floored, because every consumer of both walks reports its finding as an EMPTY
- * list: a walk that matched nothing reads exactly like a clean tree.
+ * Every directory holding a `linterParser.ts`, `parser.ts` or not: the set
+ * {@link findSliceDirs} narrows, for the blind-spot count. Floored, because an
+ * empty walk reads like a clean tree to every consumer.
  */
 export function findLinterParserDirs(dir: string): string[] {
   return atLeast(walk(dir, 'linterParser.ts').map(dirname), 150, 'findLinterParserDirs');
@@ -103,12 +85,9 @@ export function scrapeParserProps(src: string): Set<string> {
 }
 
 /**
- * Every key a parser FILE reads: its own accesses, plus those of each relative
- * import it hands the whole bag to — `parseAudioBase(properties, ctx)`,
- * `parseBoxContainer(heading, properties)`, `finishCsgParse(result, properties)`
- * — followed recursively. A base parser reached this way is scraped too; the
- * base table walks the chain the type DECLARES, which need not be the one the
- * parser calls.
+ * Every key a parser file reads, following each relative import it hands the
+ * whole bag to, such as `parseAudioBase(properties, ctx)`, recursively. The base
+ * table walks the chain the type declares, which need not be the one it calls.
  */
 export function scrapeParserReads(file: string, seen = new Set<string>()): Set<string> {
   if (seen.has(file)) return new Set();
@@ -158,17 +137,9 @@ export function getInheritedParserProps(nodeType: string): Set<string> {
 }
 
 /**
- * Extract the node type name from a linterParser.ts source via
- * `registerAll('TypeName', ...)`.  Returns null for shared helpers that
- * export constants but do not call registerAll.
- */
-/**
- * The node type a linterParser.ts speaks for.
- *
- * Both spellings count. A slice that only REMOVES inherited keys
- * (`registerUnavailable`, the fixed-orientation containers) registers no
- * validator at all, and scraping `registerAll` alone dropped it silently out of
- * this whole inventory — taking its base's allowlist entry down with it.
+ * The node type a linterParser.ts speaks for, from `registerAll` or
+ * `registerUnavailable`, since a removal-only slice registers no validator.
+ * Null for a shared helper that registers nothing.
  */
 export function extractNodeType(src: string): string | null {
   const m = /register(?:All|Unavailable)\s*\(\s*'([^']+)'/.exec(src);

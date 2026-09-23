@@ -1,16 +1,8 @@
 /**
- * The comparison behind the shadow-copy meta-guard: which keys a type
- * re-declares while its base chain already carries them.
- *
- * Both halves read the LIVE registry. Scraping literal `key:` lines out of each
- * `linterParser.ts` for the own half while the inherited half reads the registry
- * is a hole: a key contributed by
- * a `...spread` inside `registerAll` has no `key:` line to scrape, so twenty
- * registrations were invisible and could shadow a base undetected.
- *
- * Kept separate from the guard that uses it so the same functions run twice,
- * once over a scratch registry (to prove the guard fires) and once over the real
- * one, and those two callers cannot drift.
+ * The shadow-copy meta-guard's comparison: which keys a type re-declares while
+ * its base chain already carries them. Both halves read the live registry, since
+ * a key from a `...spread` in `registerAll` has no `key:` line to scrape. It runs
+ * over a scratch registry, to prove the guard fires, and over the real one.
  */
 
 import type { ValidatorRegistry } from '../ValidatorRegistry.js';
@@ -25,16 +17,10 @@ export function ownKeyRegistrations(
 }
 
 /**
- * A key reduced to what it MATCHES ON, so the two spellings of one wildcard
- * family collide.
- *
- * Shadowing is an overlap of matched key SETS, not of registration strings, and
- * `settings/*` (plain prefix) matches a superset of what `settings/#/*` (glued
- * index) does. Comparing the literal strings called those two different keys and
- * saw no shadow: `SplineIK3D:settings/#/*` over `ChainIK3D:settings/*` and
- * `ConvertTransformModifier3D:settings/*` over `BoneConstraint3D:settings/#/*`
- * were both invisible, the second a TOTAL shadow. The `*:` namespace keeps a
- * reduced wildcard from ever colliding with a literal key of the same text.
+ * A key reduced to what it matches on, since shadowing is an overlap of matched
+ * key sets: `settings/*` matches a superset of `settings/#/*`, as in
+ * `ConvertTransformModifier3D` over `BoneConstraint3D`. The `*:` namespace keeps
+ * a reduced wildcard apart from a literal key of the same text.
  */
 function shadowIdentity(key: string): string {
   if (key.endsWith('#/**')) return `*:${key.slice(0, -'#/**'.length)}`;
@@ -54,13 +40,9 @@ export interface ShadowViolation {
 }
 
 /**
- * The guard itself: every key a registration re-declares while its base chain
- * already carries it is a violation, unless allowlisted as `Type:key`.
- *
- * The allowlist is keyed on the LITERAL registration string, not the reduced
- * one, so an entry is greppable from the source line it exempts — and `label`
- * hands that same unreduced string back, so a caller can ask which exemptions
- * matched without parsing `message`.
+ * Every key a registration re-declares while its base chain carries it, unless
+ * allowlisted as `Type:key`. The allowlist and `label` use the literal, unreduced
+ * registration string, so an entry is greppable from the line it exempts.
  */
 export function findShadowViolations(
   registrations: Array<{ nodeType: string; keys: string[] }>,

@@ -1,13 +1,12 @@
 /**
- * `Control`/`Window` theme overrides — six independently written
- * `theme_override_*` families each — and the `PropertyListHelper`-backed GUI
+ * `Control` and `Window` theme overrides, six independently written
+ * `theme_override_*` families each, and the `PropertyListHelper`-backed GUI
  * families beside them.
  */
 
 import type { RouteRow } from './types.js';
 
 export const controlRoutes: readonly RouteRow[] = [
-  // --- Control/Window: six independently-written theme_override_* families each ---
   {
     type: 'Control',
     at: 'control.cpp:421-425',
@@ -45,10 +44,9 @@ export const controlRoutes: readonly RouteRow[] = [
     verdict: { validated: true },
   },
   {
-    // Window is not a Control descendant (its base is Viewport): this is a
-    // SEPARATE, independently written override producing the same six
-    // families (window.cpp vs control.cpp — different storage members,
-    // different null-check macros; see themeOverrides.ts's header).
+    // Window's base is Viewport, not Control: a separate override producing the
+    // same six families. window.cpp and control.cpp differ in storage members
+    // and null-check macros (see themeOverrides.ts's header).
     type: 'Window',
     at: 'window.cpp:167-171',
     sample: 'theme_override_colors/font_color',
@@ -92,7 +90,6 @@ export const controlRoutes: readonly RouteRow[] = [
     verdict: { validated: true },
   },
 
-  // --- PropertyListHelper-backed GUI families ---
   {
     type: 'FileDialog',
     at: 'file_dialog.cpp:2199-2204',
@@ -106,22 +103,18 @@ export const controlRoutes: readonly RouteRow[] = [
     verdict: { validated: true },
   },
   {
-    // Registered under its OWN prefix "popup/item_" (menu_button.cpp:213-222),
-    // distinct from PopupMenu's bare "item_". _set/_get forward into the
-    // internal PopupMenu child's own set()/get() (menu_button.cpp:174-192), but
-    // that child is added with add_child(..., INTERNAL_MODE_FRONT) and never
-    // owned, so packed_scene.cpp's save_node test never saves it independently
-    // — "popup/item_0/text" on MenuButton is the only place this data reaches
-    // a .tscn, a real distinct family rather than duplicate/dead storage.
+    // Its own prefix "popup/item_" (menu_button.cpp:213-222), forwarded into the
+    // internal PopupMenu child (menu_button.cpp:174-192). That child is never
+    // owned, so packed_scene.cpp never saves it, and this key is the only place
+    // the data reaches a .tscn.
     type: 'MenuButton',
     at: 'menu_button.cpp:213-222',
     sample: 'popup/item_0/text',
     verdict: { validated: true },
   },
   {
-    // Same forwarding shape as MenuButton, smaller leaf set (no
-    // checkable/checked — OptionButton forces every item radio-checkable
-    // itself).
+    // Same forwarding shape as MenuButton, without checkable and checked:
+    // OptionButton makes every item radio-checkable itself.
     type: 'OptionButton',
     at: 'option_button.cpp:626-633',
     sample: 'popup/item_0/text',
@@ -140,11 +133,9 @@ export const controlRoutes: readonly RouteRow[] = [
     verdict: { validated: true },
   },
   {
-    // A SEPARATE PropertyListHelper instance from TabBar's own (own
-    // "static inline PropertyListHelper base_property_helper", tab_container.h:113),
-    // registered tab_container.cpp:1270-1276, with its own leaf set (title,
-    // icon, disabled, hidden — no tooltip). TabContainer is the only class in
-    // this batch with no registered wildcard for its own family at all.
+    // A PropertyListHelper apart from TabBar's (tab_container.h:113), registered
+    // at tab_container.cpp:1270-1276, with its own leaves: title, icon, disabled
+    // and hidden, no tooltip.
     type: 'TabContainer',
     at: 'tab_container.cpp:1270-1276',
     sample: 'tab_0/title',

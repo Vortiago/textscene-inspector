@@ -1,26 +1,8 @@
 /**
- * Property-grammar parity guard.
- *
- * For every slice that has both `parser.ts` and `linterParser.ts`, asserts
- * that the set of property names read by the parser (via `properties.X`)
- * matches the set of validator keys registered for that node type.
- *
- * Each side is augmented by the inherited set its ancestor contributes:
- *   - Validator keys: walk NODE_BASE_TYPES and collect each base type's
- *     own registered keys via `validatorRegistry.getOwnKeys()`.
- *   - Parser properties: walk NODE_BASE_TYPES and scrape each base type's
- *     `parser.ts` file for `properties.X` accesses.
- *
- * Legitimate asymmetries are recorded in ASYMMETRY_ALLOWLIST below.  Every
- * entry carries a one-line justification and doubles as the inventory that
- * feeds the descriptor-DSL pilot design.
- *
- * Desync detection:
- *   - A parser-only key not in the allowlist means a property was added to
- *     `parser.ts` but the matching validator was never registered.
- *   - A linter-only key not in the allowlist means a validator key was added
- *     to `linterParser.ts` but the parser never reads it (potential dead
- *     validator if the property is also not inherited).
+ * Property-grammar parity: for each slice with `parser.ts` and `linterParser.ts`,
+ * the keys the parser reads through `properties.X` match the validator keys, each
+ * side widened by its base types. A parser-only key lacks a validator, and a
+ * linter-only key is never read, unless `ASYMMETRY_ALLOWLIST` lists it with a reason.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -50,23 +32,9 @@ interface StaleScanInput {
 }
 
 /**
- * The allowlist entries that no longer describe a live asymmetry.
- *
- * Takes its world as arguments so the quantifier below can be pinned on seeded
- * data. On the real tree it discriminates only because some descendants close a
- * base's key while their siblings do not — an accident of today's content, not a
- * property of the guard — so `.every()` vs `.some()` is settled by the seeded
- * partial-closure cases beside this guard, never by what the tree happens to hold.
- *
- * The slices an entry answers for: its own, plus every slice below it.
- *
- * A base class validates for its descendants without parsing anything of its
- * own (it reuses the base parser), so it has no parser.ts and never appears in
- * `collectSlices`. Asking only for its own slice therefore let a `continue` skip
- * the whole entry, and 89 keys across 9 base entries — all 32 Viewport gaps
- * among them — were never checked at all: closing one of those gaps moved
- * nothing. The entry is consulted up the base chain, so the slices below it are
- * exactly the population it speaks for.
+ * The allowlist entries that no longer describe a live asymmetry. It takes its
+ * world as arguments, so the seeded partial-closure cases settle `.every()`
+ * versus `.some()`, not the tree's content.
  */
 function findStaleEntries({
   allowlist,
@@ -75,32 +43,31 @@ function findStaleEntries({
   validatorKeysOf,
 }: StaleScanInput): string[] {
   const staleSections: string[] = [];
+  // An entry answers for its own slice and every slice below it: a base class
+  // reuses the base parser, has no parser.ts, and is absent from `collectSlices`.
   const coveredSlices = (nodeType: string) =>
     slices.filter((s) => s.nodeType === nodeType || baseChainOf(s.nodeType).includes(nodeType));
 
   for (const [nodeType, entry] of Object.entries(allowlist)) {
     const covered = coveredSlices(nodeType);
     if (covered.length === 0) {
-      // Node type no longer has a slice pair — allowlist entry is stale.
+      // Node type has no slice pair, so the allowlist entry is stale.
       staleSections.push(
         `${nodeType}: no parser.ts+linterParser.ts pair found, and no slice inherits from it`
       );
       continue;
     }
 
-    // The asymmetry has closed once EVERY slice the entry answers for reads
-    // the key; one leaf reading it leaves the entry doing real work for the
-    // rest. So a base covering many slices — CanvasItem 37, VisualInstance3D
-    // 16, GeometryInstance3D 10 — only reports once the last of them closes,
-    // and narrowing such an entry to the leaves that still need it is an edit
-    // to the allowlist rather than to this guard.
+    // The asymmetry closes once every slice the entry answers for reads the
+    // key, so a base covering many slices reports only when the last closes.
+    // Narrowing it to the leaves that still need it is an allowlist edit.
     const readEverywhere = (key: string) => covered.every((s) => s.parserProps.has(key));
     // Validators resolve up the base chain with no slice needed, so this is
     // the same set a slice of this type would carry.
     const validatorKeys = validatorKeysOf(nodeType);
 
-    // parserOnly keys should NOT have a validator; linterOnly keys should
-    // NOT be read by the parser — otherwise the asymmetry has been fixed.
+    // A parserOnly key with a validator, or a linterOnly key the parser reads,
+    // is a fixed asymmetry.
     for (const key of entry.parserOnly ?? []) {
       if (validatorKeys.has(key)) {
         staleSections.push(`${nodeType}.parserOnly['${key}']: now has a validator — remove from allowlist`);
@@ -151,12 +118,8 @@ describe('property-grammar parity guard', () => {
   });
 
   /**
-   * The staleness verdict, seeded rather than borrowed.
-   *
-   * On the real tree the quantifier bites only because of a live split —
-   * MeshInstance3D closes VisualInstance3D's `layers` while its siblings do not.
-   * Close that split either way and `.every()` and `.some()` agree on every
-   * entry, so a weakening edit would pass in silence. These cases own the
+   * The staleness verdict on seeded slices. Without a live split in the tree,
+   * `.every()` and `.some()` agree on every entry, so these cases own the
    * semantics: a partly-closed key still has work to do, a fully-closed one does not.
    */
   describe('staleness verdict on seeded slices', () => {
@@ -242,17 +205,12 @@ describe('property-grammar parity guard', () => {
   });
 
   it('every allowlisted key is a key some side actually declares', () => {
-    // The honesty check above asks whether a listed key has become symmetric.
-    // It never asks whether the key EXISTS, so a typo or a leftover placeholder
-    // sits in the table forever, silently inflating the render-gap count and
-    // describing a property Godot never had. Caught for real: a placeholder
-    // string survived a full review pass in the Viewport render-gap list purely
-    // because nothing looked.
-    //
+    // The honesty check above never asks whether a listed key exists, so a
+    // typo would inflate the render-gap count with a property Godot never had.
     // Wildcards are patterns rather than keys, so they are exempt by shape.
     const unknown: string[] = [];
     for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
-      // Inherited keys count: an entry sits on the type whose PARSER is silent
+      // Inherited keys count: an entry sits on the type whose parser is silent
       // about them, which is routinely a descendant of the type that declares
       // them (Control lists CanvasItem's z_index, and rightly).
       const declared = new Set([
@@ -291,15 +249,10 @@ describe('property-grammar parity guard', () => {
     ).toEqual([]);
   });
 
-  // The render-gap surface is the previewer's honest to-do list, so it gets a
-  // number rather than a pile. Exact equality, not a ceiling: it moves only when
-  // someone deliberately adds a slice or closes a gap, and either way the diff
-  // should say which.
-  //
-  // A rise is usually the list becoming honest rather than growing. This guard
-  // can only ask "should the renderer be reading this?" about a key one side
-  // already declares, so a key the previewer never read becomes VISIBLE the
-  // moment a validator exists for it.
+  // The render-gap surface is the previewer's to-do list, pinned by exact
+  // equality: it moves only when a slice is added or a gap closes. A new
+  // validator makes an unread key visible, so a rise usually means the list
+  // became honest.
   const EXPECTED_RENDER_GAP_KEYS = 130;
 
   it('the render-gap surface matches its recorded size', () => {
@@ -313,32 +266,14 @@ describe('property-grammar parity guard', () => {
   });
 
   /**
-   * Slices this guard does NOT see, counted so the blind spot moves visibly.
-   *
-   * `findSliceDirs` admits a directory only when it holds BOTH `parser.ts` and
-   * `linterParser.ts`. Every slice that reuses a base parser has no `parser.ts`
-   * of its own — ADR-0008's transform-only shape and the whole Control-reuse
-   * pattern — so the guard's most valuable question, "is this validated key
-   * something the renderer should be reading?", is never asked of them. All 28
-   * skeleton slices are in this set.
-   *
-   * That is a real limitation, and the number is here because the alternative is
-   * worse than the limitation: an untouched `ASYMMETRY_ALLOWLIST` reads as "the
-   * new slices are symmetric" when it actually means "they were never examined".
-   * A wave that adds ten base-reusing slices now moves a number and must say so.
-   *
-   * Widening the population wholesale is not the answer. For a transform-only
-   * type Godot draws nothing, and for a `pending` one the whole type is a single
-   * declared gap `renderIntent` already carries, so the per-key "should the
-   * renderer read this?" question has nothing to answer on either — it would add
-   * one allowlist row per key saying what `renderIntent` says once. Where the
-   * question does have an answer and the slice reuses a family parser, the fix is
-   * a hop in `BASE_TYPE_TO_PARSER_SUBPATH`, not a wider population.
+   * Slices this guard does not see, counted so the blind spot moves visibly:
+   * `findSliceDirs` needs both `parser.ts` and `linterParser.ts`, and a slice
+   * that reuses a base parser has no `parser.ts`. Where the question has an
+   * answer, the fix is a hop in `BASE_TYPE_TO_PARSER_SUBPATH`.
    */
-  // Both are ratchets, not derived: computing either side would make the
-  // assertion below compare a number to itself. Moving one is a deliberate act
-  // that belongs in a commit message — a slice entering the swept set, or a new
-  // base-parser reuser entering the blind spot the docblock above sizes.
+  // Both are ratchets, not derived, or the assertion compares a number to
+  // itself. A transform-only type draws nothing, and a `pending` type is one
+  // gap `renderIntent` already declares, so neither widens the population.
   const SWEPT_SLICES = 104;
   const PARSER_REUSING_SLICES = 147;
 
@@ -346,8 +281,8 @@ describe('property-grammar parity guard', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>
       extractNodeType(readFileSync(join(dir, 'linterParser.ts'), 'utf8'))
     );
-    // Doubles as the population floor: an empty walk fails here, and again in
-    // the honesty check, which would then call every allowlist entry stale.
+    // Doubles as the population floor: an empty walk fails here, and in the
+    // honesty check, which would call every allowlist entry stale.
     expect(collectSlices()).toHaveLength(SWEPT_SLICES);
     expect(
       withLinterParser.length - collectSlices().length,

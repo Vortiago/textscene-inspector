@@ -7,14 +7,10 @@ import { PARAM_SLOTS } from '../../nodes/2d/cpuparticles2d/types.js';
 import type { AsymmetryEntry } from './types.js';
 
 /**
- * CPUParticles2D's twelve parameter slots. `parser.ts` reads every one of
- * `<prefix>_min` / `_max` / `_curve`, but through a TABLE
- * (`properties[`${prefix}_min`]`) rather than a literal access, so the
- * `properties.X` scrape sees none of them — the same blind spot as the audio
- * base helper in `animationAndAudio.ts`. Derived from the parser's OWN table, so
- * a renamed prefix or
- * a dropped slot moves both sides at once instead of leaving the allowlist
- * asserting coverage of a key nothing reads any more.
+ * CPUParticles2D's parameter slots. `parser.ts` reads each `<prefix>_min`,
+ * `_max` and `_curve` through a table (`properties[`${prefix}_min`]`), which the
+ * `properties.X` scrape cannot see. Derived from the parser's own table, so a
+ * renamed prefix or dropped slot moves both sides at once.
  */
 const PARTICLE_PARAM_KEYS: readonly string[] = PARAM_SLOTS.flatMap(({ prefix, curve }) => [
   `${prefix}_min`,
@@ -23,14 +19,10 @@ const PARTICLE_PARAM_KEYS: readonly string[] = PARAM_SLOTS.flatMap(({ prefix, cu
 ]);
 
 export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
-  // -------------------------------------------------------------------------
-  // 2D leaf slices
-  // -------------------------------------------------------------------------
-
   AnimatedSprite2D: {
     linterOnly: [
-      // Playback-state properties: valid in TSCN but the renderer reads the
-      // initial frame directly; runtime playback is not modelled.
+      // Playback state: the renderer reads the initial frame directly, and
+      // runtime playback is not modelled.
       'autoplay', 'frame_progress', 'speed_scale',
     ],
     reason:
@@ -39,8 +31,8 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Camera2D: {
     linterOnly: [
-      // Viewport behaviour / editor aids: valid TSCN keys with no effect
-      // on the static scene preview.
+      // Viewport behaviour and editor aids, with no effect on the static
+      // preview.
       'ignore_rotation', 'process_callback', 'limit_smoothed',
       'position_smoothing_enabled', 'position_smoothing_speed',
       'rotation_smoothing_enabled', 'rotation_smoothing_speed',
@@ -54,10 +46,8 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Line2D: {
     renderGap: [
-      // The whole stroke appearance beyond its centreline. Godot antialiases
-      // the edge, tiles or stretches a texture along the run, tints by a
-      // gradient, tapers by a width curve and caps each end; this draws a flat
-      // constant-width line and reads none of it.
+      // The stroke appearance beyond its centreline: antialiasing, texture,
+      // gradient, width curve and caps. This draws a flat constant-width line.
       'antialiased', 'gradient', 'texture', 'texture_mode', 'width_curve',
       'begin_cap_mode', 'end_cap_mode',
     ],
@@ -80,12 +70,11 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   CPUParticles2D: {
     linterOnly: [
       ...PARTICLE_PARAM_KEYS,
-      // Only reachable for the POINTS / DIRECTED_POINTS emission shapes, which
+      // Only reachable for the POINTS and DIRECTED_POINTS emission shapes, which
       // sample Godot's global RNG and so are deliberately not previewed.
       'emission_colors',
-      // Emission shapes the frozen pose cannot reproduce (they sample Godot's
-      // global RNG), so the parser has no reason to read their point data —
-      // but a malformed packed array is still worth reporting.
+      // The same RNG-driven shapes, so the parser does not read their point
+      // data, but a malformed packed array is still worth reporting.
       'emission_points', 'emission_normals',
       // Per-axis scale curves, not implemented; a particle scales uniformly.
       'split_scale', 'scale_curve_x', 'scale_curve_y',
@@ -117,27 +106,18 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   TileMap: {
     linterOnly: [
-      // tile_map.cpp:1023-1043's PropertyListHelper family. parser.ts (its
-      // own LAYER_KEY_RE loop over Object.keys(properties)) genuinely reads
-      // name/enabled/modulate/z_index/tile_data for rendering — the scrape's
-      // literal properties.X pattern just cannot see a loop-built key, the
-      // same blind spot as MeshInstance3D's surface_material_override/*.
-      // y_sort_enabled and navigation_enabled are the two leaves the parser
-      // truly has no use for: neither changes which tile draws where in a
-      // static frame.
+      // tile_map.cpp:1023-1043's PropertyListHelper family. parser.ts's
+      // LAYER_KEY_RE loop reads name, enabled, modulate, z_index and tile_data,
+      // which the scrape cannot see. y_sort_enabled and navigation_enabled
+      // change no tile placement in a static frame.
       'layer_#/*',
-      // Forwarded verbatim to the child layers Godot builds from this
-      // deprecated node; batching and debug-overlay concerns only, matching
-      // the TileMapLayer entry above.
+      // Forwarded to the child layers Godot builds from this deprecated node:
+      // batching and debug overlays, as on TileMapLayer.
       'collision_animatable', 'collision_visibility_mode',
       'navigation_visibility_mode', 'rendering_quadrant_size',
     ],
     reason: 'layer_<i>/* is read through a loop the scrape cannot match; parser.ts genuinely reads five of its seven leaves (name/enabled/modulate/z_index/tile_data), and y_sort_enabled/navigation_enabled have no bearing on a static frame. instance_shader_parameters/* is covered by the inherited CanvasItem entry.',
   },
-
-  // -------------------------------------------------------------------------
-  // Physics (linter-only physics properties)
-  // -------------------------------------------------------------------------
 
   // Navigation regions draw a translucent navmesh overlay here, mirroring the
   // editor's debug view, so the two keys that gate Godot's own debug draw are
@@ -163,9 +143,8 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   SubViewportContainer: {
     linterOnly: [
-      // Routes input to the child SubViewport instead of the container. Pure
-      // event plumbing, no draw effect. Control's own 25 come from the Control
-      // entry in baseTypes.
+      // Routes input to the child SubViewport instead of the container: event
+      // plumbing with no draw effect. Control's keys come from baseTypes.
       'mouse_target',
     ],
     reason: 'mouse_target decides whether the container or its SubViewport receives input events; nothing about a frozen frame changes.',
@@ -182,19 +161,16 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Area2D: {
     linterOnly: [
-      // Physics simulation properties: valid TSCN but the static renderer
-      // reads only collision_layer/collision_mask for display.
-      // (`space_override` sat here until the key-existence guard ran: it is the
-      // Godot 3 name, replaced in 4.x by the three per-force overrides below.)
+      // Physics simulation: the renderer reads only collision_layer and
+      // collision_mask.
       'gravity_space_override', 'gravity_point',
       'gravity_point_center', 'gravity_point_unit_distance',
       'gravity_direction', 'gravity', 'linear_damp_space_override',
       'linear_damp', 'angular_damp_space_override', 'angular_damp',
       'priority', 'audio_bus_override', 'audio_bus_name', 'disable_mode',
-      // Inherited from the CollisionObject2D tier, which Area2D is the only
-      // member of that has a typed parser.ts and so the only one this guard
-      // sees. Neither reaches the renderer: `collision_priority` orders solver
-      // depenetration and `input_pickable` gates mouse picking.
+      // From CollisionObject2D, whose only member with a parser.ts is Area2D.
+      // `collision_priority` orders solver depenetration and `input_pickable`
+      // gates mouse picking.
       'collision_priority', 'input_pickable',
     ],
     reason: 'Area2D physics simulation properties (gravity, damping, space-override, solver priority, input picking) are linter-validated but ignored by the static previewer which only needs collision_layer/mask.',

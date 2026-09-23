@@ -1,11 +1,7 @@
 /**
- * The scrape behind the arm-builder half of `ruleCoverage.emits.test.ts`.
- *
- * It had no test of its own, and its one consumer was structurally always
- * empty, so a bug in either was invisible from both sides: the scrape returned
- * nothing, the loop iterated over nothing, and the guard was green. These feed
- * synthetic source text so the parsing is checked without depending on which
- * builders happen to exist in the tree this week.
+ * The scrape behind the arm-builder half of `ruleCoverage.emits.test.ts`. A
+ * scrape that returns nothing leaves that guard green over an empty loop, so
+ * these feed synthetic source text, independent of which builders exist.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -27,9 +23,8 @@ describe('parameterList', () => {
   });
 
   it('survives a nested type, a default and a rest parameter', () => {
-    // The predecessor matched `(?:^|[(,])\s*(\w+)\s*[,:)]`, whose alternation
-    // consumed the separating comma, so a two-parameter signature yielded one
-    // name — and the one real builder templates its SECOND parameter.
+    // An alternation that consumes the separating comma yields one name for
+    // two parameters, and a real builder templates its second parameter.
     expect(parameterList('a: Record<string, number>, b = { x: 1, y: 2 }, ...rest: string[]')).toEqual(
       ['a', 'b', 'rest']
     );
@@ -56,8 +51,8 @@ describe('topLevelParts and balancedGroup', () => {
 
 describe('armBuilders comment and slot handling', () => {
   it('ignores a docblock between the parens', () => {
-    // An apostrophe in prose ("min's") opened a string that never closed, so
-    // the signature ran to end-of-file and the params were prose words.
+    // An apostrophe in prose ("min's") must not open a string, or the
+    // signature runs to end-of-file and the params are prose words.
     const file = fileWith(
       'export function make(\n' +
         "  /** the node's own prefix, not the parent's */\n" +
@@ -122,8 +117,8 @@ describe('armBuilders', () => {
   });
 
   it('reports a builder whose templates disagree about which parameter they use', () => {
-    // Nothing here can pin one argument position, so the names it produces are
-    // names nothing ties back to a rule — which is a defect, not a category.
+    // Nothing here pins one argument position, so nothing ties the names it
+    // produces back to a rule: a defect, not a category.
     const file = fileWith(
       "export function make(a: string, b: string) {\n" +
         '  return [{ ruleName: `${a}-one` }, { ruleName: `${b}-two` }];\n' +
@@ -135,8 +130,8 @@ describe('armBuilders', () => {
   });
 
   it('reports a builder that interpolates a LOCAL rather than a parameter', () => {
-    // The nine physics factories' shape. Nothing pins the argument position, so
-    // a scrape that `continue`s before the reporting branch loses it.
+    // The physics factories' shape. Nothing pins the argument position, so a
+    // scrape that `continue`s before the reporting branch loses it.
     const file = fileWith(
       'export function make(dim: string) {\n' +
         '  const prefix = `area${suffix(dim)}`;\n' +
@@ -151,8 +146,8 @@ describe('armBuilders', () => {
   });
 
   it('sees a rule name hoisted into a local, not only the property form', () => {
-    // Three navigation factories write it this way, and a `ruleName:` scan
-    // found no template at all — so they were dropped one step earlier still.
+    // The navigation factories write it this way, and a `ruleName:` scan finds
+    // no template at all.
     const file = fileWith(
       'export function make(suffix: string) {\n' +
         '  const ruleName = `navigationagent${suffix}-parent-not-node`;\n' +

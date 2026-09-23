@@ -1,25 +1,8 @@
 /**
- * The `settings/` seam: a contract BETWEEN slices that no per-slice test sees.
- *
- * Two Godot families build one `settings/<i>/<leaf>` property family
- * cooperatively, each class appending leaves to the prefix its base already
- * uses: `ChainIK3D` -> `IterateIK3D` -> the IK solvers, and `BoneConstraint3D`
- * -> `AimModifier3D` / `ConvertTransformModifier3D` /
- * `CopyTransformModifier3D`. None of it appears in an
- * `ADD_PROPERTY`; it is hand-rolled in `get_property_list` (unprefixed on both
- * bases, which is why a `_get_property_list` grep misses them entirely).
- *
- * `findValidator` walks the base chain and the NEAREST hop wins, with NO
- * fall-through. So every subclass that registers its own `settings/` wildcard
- * SHADOWS its base's, and the base's bounds survive only because each
- * subclass's dispatcher forwards an unrecognised leaf upward via
- * `findValidator('<Base>', key)`.
- *
- * That forwarding is a hand-written line standing in for an inheritance the
- * registry does not provide, and every per-slice test passes with it removed: a
- * scoped test loads only its own module graph, so nothing shadows anything.
- * This file loads the WHOLE barrel on purpose, and asserts the BOUND survives
- * the hop rather than merely that some validator answers.
+ * The `settings/` seam, a contract between slices: `ChainIK3D` and
+ * `BoneConstraint3D` each build `settings/<i>/<leaf>` with their descendants in
+ * an unprefixed `get_property_list`, not `ADD_PROPERTY`. The nearest hop wins in
+ * `findValidator`, so a subclass's wildcard keeps the base's bounds only by forwarding.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -28,6 +11,8 @@ import type { ParseError } from './types.js';
 import { baseChain } from '../godot/nodeBaseTypes.js';
 import { CHAIN_IK_SETTING_LEAVES } from '../nodes/3d/skeleton/chainik3d/linterParser.js';
 import { BONE_CONSTRAINT_SETTING_LEAVES } from '../nodes/3d/skeleton/boneconstraint3d/linterParser.js';
+// The whole barrel: a per-slice test loads only its own graph, where nothing
+// shadows anything and a missing forward passes.
 import './index.js';
 import { registeredTypes } from './registryPopulation.js';
 
@@ -35,9 +20,8 @@ interface Seam {
   /** The class that owns the leaves under test. */
   base: string;
   /**
-   * The base's OWN leaf table, imported rather than re-spelled, so a leaf added
-   * to the base joins the sweep instead of quietly leaving it behind. A canary
-   * of one leaf covered 1 of the 8 ChainIK3D declares; this covers all of them.
+   * The base's own leaf table, imported rather than re-spelled, so a leaf added
+   * to the base joins the sweep.
    */
   leaves: Readonly<Record<string, unknown>>;
   /** Leaves the base matches by regex rather than from the table above. */
@@ -49,10 +33,9 @@ interface Seam {
   /** A value that leaf's bound accepts. */
   accepted: string;
   /**
-   * Fewest descendants that must SHADOW the key rather than resolve to the
-   * base's own dispatcher. A plain descendant count clears just as happily when
-   * every subclass has stopped shadowing, and every row below then compares the
-   * base validator with itself.
+   * Fewest descendants that must shadow the key rather than resolve to the
+   * base's own dispatcher. A plain count clears even when no subclass shadows,
+   * and every row then compares the base validator with itself.
    */
   minShadowingDescendants: number;
 }
@@ -82,8 +65,8 @@ const SEAMS: readonly Seam[] = [
 ];
 
 /**
- * Values spanning every shape these leaves take — int, bone name, NodePath,
- * float, bool, enum edge, garbage — so a descendant that widened ANY leaf
+ * Values spanning every shape these leaves take (int, bone name, NodePath,
+ * float, bool, enum edge, garbage), so a descendant that widened any leaf
  * differs from its base on at least one of them.
  */
 const PROBES: readonly string[] = [
@@ -110,8 +93,8 @@ describe.each(SEAMS)('$base settings/ seam under the full barrel', (seam) => {
 
   it('finds descendants that SHADOW the key, so the assertions cannot pass vacuously', () => {
     // Resolution hands back the registered function itself, so a descendant
-    // that shadows nothing returns the base's own and its rows below compare
-    // the base with itself while a descendant COUNT still clears the floor.
+    // that shadows nothing returns the base's own, and its rows compare the
+    // base with itself.
     const baseValidator = validatorRegistry.findValidator(seam.base, seam.key);
     expect(baseValidator).not.toBeNull();
     expect(validatorRegistry.findValidator(seam.base, seam.key)).toBe(baseValidator);
@@ -141,11 +124,9 @@ describe.each(SEAMS)('$base settings/ seam under the full barrel', (seam) => {
     });
 
     it.each(sweptKeys)("answers %s exactly as the base does", (key) => {
-      // Every leaf, not just the anchor below. The subclass's dispatcher is a
-      // DIFFERENT function from the base's leaf — it wraps it — so identity
-      // proves nothing and equivalence of the diagnostic is the real contract.
-      // A delegation deleted for one leaf shows up here even when the anchor
-      // still passes, which is the 1-of-8 hole this replaces.
+      // Every leaf, not just the anchor below. The subclass's dispatcher wraps
+      // the base's leaf, so identity proves nothing and the diagnostic's
+      // equivalence is the contract. A delegation deleted for one leaf shows here.
       const sub = validatorRegistry.findValidator(type, key);
       const base = validatorRegistry.findValidator(seam.base, key);
       expect(sub, `${type} does not resolve ${key}`).not.toBeNull();
@@ -158,9 +139,8 @@ describe.each(SEAMS)('$base settings/ seam under the full barrel', (seam) => {
     });
 
     it("still ENFORCES the base's bound after the hop", () => {
-      // The ABSOLUTE anchor the equivalence sweep needs: two dispatchers that
-      // both went vacuous would agree with each other and pass it. This says a
-      // real bound still fires, in its own right, on at least one leaf.
+      // The absolute anchor the equivalence sweep needs: two vacuous dispatchers
+      // agree with each other. A real bound still fires on at least one leaf.
       const validator = validatorRegistry.findValidator(type, seam.key);
       const [value, severity] = seam.rejected;
       expect(validator!(seam.key, value, 1)?.severity).toBe(severity);

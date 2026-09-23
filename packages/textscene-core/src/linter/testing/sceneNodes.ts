@@ -1,10 +1,7 @@
 /**
- * Scene helpers the `parentType.*.test.ts` files share.
- *
- * Deliberately reaches only `StrictTscnParser`. The LENIENT `TscnParser` stays
- * out: it side-effect-imports every node slice, so a shared module naming it
- * would hand a 466-module graph to the two files here that only want
- * `verdictOf` — the one file that does parse leniently constructs its own.
+ * Scene helpers the `parentType.*.test.ts` files share. It reaches only
+ * `StrictTscnParser`: the lenient `TscnParser` imports every node slice, which
+ * the files that only want `verdictOf` do not need.
  */
 
 import { StrictTscnParser } from '../StrictTscnParser.js';
@@ -22,11 +19,9 @@ export function byName(nodes: readonly TscnNode[], name: string): TscnNode {
 }
 
 /**
- * `visibleInTreeVerdict` for one named node of a source string.
- *
- * The strict parser, not the lenient one: it is what feeds the rules, and it
- * keeps property values as the file's own strings, which is what
- * `isExplicitlyHidden` reads.
+ * `visibleInTreeVerdict` for one named node of a source string. The strict
+ * parser feeds the rules and keeps property values as the file's own strings,
+ * which `isExplicitlyHidden` reads.
  */
 export function verdictOf(source: string, name: string) {
   const scene = new StrictTscnParser().parse(source).scene;

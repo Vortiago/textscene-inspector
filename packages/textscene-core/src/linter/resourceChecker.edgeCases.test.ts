@@ -1,9 +1,7 @@
 /**
- * `resolveResourceSlot` and the `checkResourceExists` derived from it, where the
- * input is not a clean hit: text that is not a reference at all, and an id that
- * exists in one table but not the other.
- *
- * The happy paths are the sibling `resourceChecker.test.ts`.
+ * `resolveResourceSlot` and `checkResourceExists` on input that is not a clean
+ * hit: text that is no reference, and an id in one table but not the other.
+ * The happy paths are in `resourceChecker.test.ts`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -23,8 +21,8 @@ describe('resolveResourceSlot', () => {
   it('separates a value that is no reference from one that names nothing', () => {
     // `variant_parser.cpp:1089` takes only the `Resource` / `SubResource` /
     // `ExtResource` identifiers into the resource arm, so none of these asks
-    // for a resource. Collapsing them into the dangling arm is what reported a
-    // missing resource that nobody had named.
+    // for a resource. In the dangling arm they report a missing resource that
+    // nobody named.
     for (const value of ['mesh_1', 'SubResource(mesh_1)', 'InvalidResource("mesh_1")', 'SubResource("")']) {
       expect(resolveResourceSlot(emptyScene, value)).toEqual({ kind: 'not-a-reference' });
     }
@@ -54,8 +52,8 @@ describe('resolveResourceSlot', () => {
   });
 
   it('is the one scan `checkResourceExists` answers from', () => {
-    // The boolean is derived, so the two cannot drift into disagreeing about
-    // which state owes a "resource not found".
+    // The boolean is derived, so the two cannot disagree about which state
+    // owes a "resource not found".
     for (const value of ['', 'null', 'mesh_1', 'SubResource(mesh_1)', 'SubResource("mesh_1")']) {
       const dangling = resolveResourceSlot(emptyScene, value).kind === 'dangling';
       expect(checkResourceExists(emptyScene, value)).toBe(!dangling);
@@ -64,10 +62,9 @@ describe('resolveResourceSlot', () => {
 });
 
 describe('checkResourceExists', () => {
-  // A value that is not a reference at all is TRUE: only a well-formed
+  // A value that is not a reference at all is true: only a well-formed
   // reference can dangle, and its format is the strict parser's diagnostic.
-  // Answering false put a second, factually wrong "resource not found" beside
-  // it, naming a resource nothing had asked for.
+  // False puts a second, wrong "resource not found" beside it.
   describe('values that are not references at all', () => {
     it('is not dangling when the id is unquoted', () => {
       const scene: TscnScene = {
@@ -141,8 +138,8 @@ describe('checkResourceExists', () => {
 
       expect(checkResourceExists(scene, 'SubResource(')).toBe(true);
       expect(checkResourceExists(scene, 'SubResource()')).toBe(true);
-      // An empty id is not a well-formed reference either — `resourceRef`'s id
-      // class needs at least one character.
+      // An empty id is not a well-formed reference: `resourceRef`'s id class
+      // needs at least one character.
       expect(checkResourceExists(scene, 'SubResource("")')).toBe(true);
     });
   });

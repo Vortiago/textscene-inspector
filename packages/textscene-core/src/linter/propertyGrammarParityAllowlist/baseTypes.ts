@@ -1,54 +1,39 @@
 /**
  * The base tiers: `CanvasItem`, `Node`, `Node2D`/`Node3D`, `Control` and the
- * light bases.
- *
- * These entries carry the most weight in the table. A base has no `parser.ts`
- * of its own, so from its own perspective every key it registers is
- * linter-only, and one entry here is inherited by every leaf below it through
- * the base-walk in `checkParity` — which is what keeps forty near-identical
- * leaf entries from existing.
+ * light bases. A base has no `parser.ts`, so every key it registers is
+ * linter-only here, and `checkParity`'s base-walk hands one entry to every leaf.
  */
 
 import type { AsymmetryEntry } from './types.js';
 
 /**
- * Light3D base validators (registered once under the abstract 'Light3D' key
- * in 3d/lights/shared/linterParser.ts and inherited by every concrete light
- * via the base-walk) that the shared parser helpers never read: bake/cull and
- * fine shadow-tuning properties with no effect on the static preview.
+ * Light3D base validators, registered under 'Light3D' in
+ * 3d/lights/shared/linterParser.ts, that the shared parser helpers never read:
+ * bake, cull and fine shadow tuning with no effect on the static preview.
  */
 const LIGHT3D_LINTER_ONLY_KEYS = [
   'light_bake_mode', 'light_cull_mask', 'light_indirect_energy',
   'shadow_opacity', 'shadow_reverse_cull_face', 'shadow_transmittance_bias',
-  // The physical-light-units trio. All three are dead unless the project
-  // setting `rendering/lights_and_shadows/use_physical_light_units` is on, and
-  // a `.tscn` carries no project settings, so under the defaults this
-  // previewer reads they change nothing that is drawn. Light3D's
-  // `_validate_property` hides them for the same reason.
+  // The physical-light-units trio, dead unless the project setting
+  // `rendering/lights_and_shadows/use_physical_light_units` is on, which a
+  // `.tscn` cannot carry. Light3D's `_validate_property` hides them too.
   'light_intensity_lumens', 'light_intensity_lux', 'light_temperature',
 ] as const;
 
 /**
- * Light3D keys that DO change a frozen frame, and that the shared parser
- * helpers do not read yet.
- *
- * `editor_only` is here rather than beside the runtime-only keys above because
- * its 2D twin already made that call: Light2D disables the light outside the
- * editor, so the scene renders darker in game than in the editor, and this
- * previewer always draws it. Light3D's mechanism is the same one, and splitting
- * the pair across the two lists would be the divergence, not the consistency.
+ * Light3D keys that change a frozen frame and that the shared parser helpers
+ * do not read yet. `editor_only` sits here like its Light2D twin: the light is
+ * disabled outside the editor, and this previewer always draws it.
  */
 const LIGHT3D_RENDER_GAP_KEYS = [
   // Projects a texture through the light; nothing here samples it.
   'light_projector',
-  // Soft-shadow radius and sun angular diameter: ONE param under two names,
-  // both bound to PARAM_SIZE (light_3d.cpp:394 and :395), which is why
-  // `_validate_property` shows whichever suits the light type. It defaults to 0
-  // (light_3d.cpp:478), so a scene that never sets it has the hard shadows we
-  // already draw, and the gap opens only once a scene does set it.
+  // Soft-shadow radius and sun angular diameter: one PARAM_SIZE under two names
+  // (light_3d.cpp:394 and :395). It defaults to 0 (light_3d.cpp:478), the hard
+  // shadows already drawn, so the gap opens only once a scene sets it.
   'light_size',
   'light_angular_distance',
-  // Which render layers cast INTO this light's shadow, distinct from
+  // Which render layers cast into this light's shadow, distinct from
   // light_cull_mask's "what this light illuminates".
   'shadow_caster_mask',
   // The light LOD system: past distance_fade_begin the light fades out over
@@ -59,13 +44,7 @@ const LIGHT3D_RENDER_GAP_KEYS = [
 ] as const;
 
 export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
-  // -------------------------------------------------------------------------
-  // Base types
-  // -------------------------------------------------------------------------
-
-  // The CanvasItem tier has no parser.ts of its own, so from its perspective
-  // every key it registers is linter-only, and one entry here covers every 2D
-  // leaf and every Control instead of forty near-identical copies.
+  // One entry covers every 2D leaf and every Control.
   CanvasItem: {
     linterOnly: [
       // Culling, clipping and sampler settings with no render equivalent:
@@ -75,10 +54,8 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'visibility_layer', 'clip_children',
       'texture_filter', 'texture_repeat',
       // canvas_item.cpp:637-656: a shader-reflected instance uniform, typed by
-      // whatever GLSL the attached ShaderMaterial declares. This previewer has
-      // no ShaderMaterial resource slice at all (no custom-shader rendering
-      // surface exists), so there is nothing for any parser to reflect a
-      // uniform override onto.
+      // the attached ShaderMaterial's GLSL. This previewer has no ShaderMaterial
+      // slice, so no parser has a uniform to reflect it onto.
       'instance_shader_parameters/*',
     ],
     reason: 'The CanvasItem base has no parser of its own; these five are culling, clipping, sampler and shader-uniform settings the r3f renderer expresses per material, has no surface for, or not at all, while the keys it DOES render (visible, modulate, z_index, top_level, material…) are read by each family parser.',
@@ -86,15 +63,10 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Node: {
     parserOnly: [
-      // `parseNode` (node/parser.ts) reads `transform` for every node, but a
-      // plain Node is not spatial and registers no spatial validator, so the
-      // key is parser-only on Node and on every non-spatial type below it.
-      // Control is the same case for a different reason: Godot sometimes emits
-      // a Transform2D there and the parser reads it for compatibility, but it
-      // conflicts with the anchor/offset layout model so no validator exists.
-      // One entry here, inherited by NavigationAgent3D, WorldEnvironment, Timer,
-      // SubViewport, AnimationPlayer, AnimationTree, AudioStreamPlayer and
-      // Control rather than repeated on each.
+      // `parseNode` (node/parser.ts) reads `transform` for every node, and a
+      // non-spatial type has no validator for it. On Control, Godot sometimes
+      // writes a Transform2D that conflicts with the anchor and offset layout,
+      // so it has no validator either.
       'transform',
     ],
     linterOnly: [
@@ -105,10 +77,9 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'physics_interpolation_mode',
       // Editor and localisation metadata the renderer never consults.
       'auto_translate_mode', 'editor_description',
-      // The render path DOES consult this one, just not as a typed property:
-      // `utils/uniqueNames.ts` reads it off `rawProperties` to build the `%Name`
-      // claim table a NodePath walk needs. Nothing about the node's own frame
-      // depends on it, so node/parser.ts has no reason to carry it.
+      // `utils/uniqueNames.ts` reads it off `rawProperties` for the `%Name`
+      // table a NodePath walk needs. The node's own frame does not depend on
+      // it, so node/parser.ts does not carry it.
       'unique_name_in_owner',
     ],
     reason: 'Node is the terminal of every base chain, so its ten validators reach all 240 types; node/parser.ts reads none of them because pause/threading/localisation state has no effect on a rendered frame. One entry here rather than the same ten repeated on every leaf.',
@@ -117,18 +88,16 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   Node3D: {
     renderGap: [
       // Decides which of basis/scale/quaternion/rotation/rotation_order Godot
-      // SERIALISES (node_3d.cpp's _validate_property), so a renderer matching
+      // serialises (node_3d.cpp's _validate_property), so a renderer matching
       // Godot's transform editing needs it. Ours reads `transform` directly.
       'rotation_edit_mode',
     ],
     linterOnly: [
-      // Godot serialises spatial state as either a single `transform` matrix
-      // (what the lenient parser reads) or as discrete components; the linter
-      // validates the component form so each property is individually
-      // checkable, but the renderer only needs the matrix.
+      // Godot serialises spatial state as one `transform` matrix, which the
+      // lenient parser reads, or as components, which the linter validates.
       'position', 'rotation', 'rotation_degrees', 'scale', 'quaternion', 'basis',
-      // Global-space equivalents — Godot writes these in some export modes;
-      // the renderer ignores them (uses local transform).
+      // Global-space equivalents Godot writes in some export modes. The
+      // renderer uses the local transform.
       'global_transform', 'global_position', 'global_rotation', 'global_rotation_degrees',
       'global_basis',
       // Scene-tree / editor properties with no render effect.
@@ -150,12 +119,10 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'audio_listener_enable_3d',
     ],
     renderGap: [
-      // Everything else Viewport declares is an image-forming setting the
-      // previewer does not read: the antialiasing and scaling stack, the
-      // shadow atlas, variable-rate shading, the SDF used by 2D lighting,
-      // pixel snapping, mipmap and anisotropy control, occlusion culling, and
-      // the World3D that decides which lights and environment the viewport
-      // renders against (distinct from the `own_world_3d` flag we do parse).
+      // Image-forming settings the previewer does not read: antialiasing and
+      // scaling, the shadow atlas, VRS, the 2D-lighting SDF, snapping, mipmaps,
+      // culling, and the World3D the viewport renders against (apart from the
+      // `own_world_3d` flag, which is parsed).
       'msaa_2d', 'screen_space_aa', 'use_taa',
       'scaling_3d_mode', 'scaling_3d_scale', 'fsr_sharpness',
       'texture_mipmap_bias', 'anisotropic_filtering_level',
@@ -182,10 +149,9 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Light2D: {
     renderGap: [
-      // Godot DISABLES the light outside the editor when this is set
-      // (`_update_light_visibility`, light_2d.cpp — the non-TOOLS branch sets
-      // editor_ok = false), so a scene with an editor-only light renders darker
-      // in game than in the editor. This previewer always draws the light.
+      // Godot disables the light outside the editor when this is set
+      // (`_update_light_visibility`, light_2d.cpp: the non-TOOLS branch sets
+      // editor_ok = false). This previewer always draws the light.
       'editor_only',
     ],
     reason: 'Light2D base validators live in 2d/lights/shared/linterParser.ts and reach PointLight2D and DirectionalLight2D via the base-walk; editor_only gates the light at runtime and no parser here reads it.',
@@ -193,12 +159,9 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   PointLight2D: {
     renderGap: [
-      // The light's Z, and it is NOT inert in Godot: it reaches the canvas
-      // shader as the third light-vector component on two paths — the
-      // normal-map branch (canvas.glsl:808) and the custom-light-shader branch
-      // (LIGHT_CODE_USED, canvas.glsl:799). This previewer implements neither,
-      // so the value changes nothing HERE while changing the picture in Godot,
-      // which is a gap rather than deliberate scope.
+      // The light's Z, the third light-vector component in the normal-map
+      // branch (canvas.glsl:808) and the custom-light-shader branch
+      // (LIGHT_CODE_USED, canvas.glsl:799). This previewer implements neither.
       'height',
     ],
     reason:
@@ -207,13 +170,12 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Node2D: {
     parserOnly: [
-      // y_sort_origin only meaningful for TileMapLayer tiles; no linter
-      // validator needed (any number is valid).
+      // Meaningful only for TileMapLayer tiles, and any number is valid.
       'y_sort_origin',
     ],
     linterOnly: [
-      // Global-space equivalents — valid TSCN but the renderer ignores them
-      // (uses local transform / draw order).
+      // Global-space equivalents. The renderer uses the local transform and
+      // draw order.
       'global_position', 'global_rotation', 'global_rotation_degrees',
       'global_scale', 'global_skew', 'global_transform',
     ],
@@ -223,8 +185,7 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   OptionButton: {
     linterOnly: [
       // Read through a computed key, `properties[`popup/item_${i}/text`]`, which
-      // the guard's scrape of fixed key strings cannot match. The parser DOES
-      // read these; only the scrape is blind to how.
+      // the scrape of fixed key strings cannot match.
       'popup/item_#/*',
       // Reselecting an already-selected item is an interaction, so a frozen
       // frame cannot show it.
@@ -246,20 +207,13 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Control: {
     linterOnly: [
-      // Inherited from the CanvasItem tier and genuinely unread on this side:
-      // the UI overlay is DOM (ADR-0003), where 2D canvas draw-order and
-      // lighting have no equivalent. The Node2D family DOES render these, which
-      // is why they sit here on Control rather than on the shared tier.
+      // From the CanvasItem tier: the UI overlay is DOM (ADR-0003), with no 2D
+      // draw order or lighting. The Node2D family renders these, so they sit
+      // on Control, not the shared tier.
       'z_as_relative', 'y_sort_enabled',
       'material', 'use_parent_material',
-      // Theme-override wildcard keys — validated by pattern match in the
-      // linter; the parser uses a loop over `theme_override_*/*` keys and
-      // there is no fixed per-key scraping surface to compare against.
-      // Input routing and assistive tech, none of which touches a frozen frame:
-      // the accessibility tree is a screen-reader surface, focus order and the
-      // shortcut context steer keyboard/gamepad navigation, the mouse keys pick
-      // an OS cursor and decide who consumes an event, and a tooltip is a hover
-      // popup rather than scene content.
+      // Input routing and assistive tech touch no frozen frame: accessibility,
+      // focus order, shortcut context, the mouse keys and the tooltip.
       'accessibility_name', 'accessibility_description', 'accessibility_live',
       'accessibility_controls_nodes', 'accessibility_described_by_nodes',
       'accessibility_labeled_by_nodes', 'accessibility_flow_to_nodes',
@@ -269,18 +223,17 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'mouse_behavior_recursive', 'mouse_default_cursor_shape',
       'mouse_force_pass_scroll_events',
       'tooltip_text', 'tooltip_auto_translate_mode',
+      // The parser loops over `theme_override_*/*`, so no fixed key is scraped.
       'theme_override_colors/*', 'theme_override_constants/*',
       'theme_override_font_sizes/*', 'theme_override_styles/*',
       'theme_override_fonts/*', 'theme_override_icons/*',
-      // Input concerns with no render surface at all: nothing about which control
-      // takes keyboard focus, or how it swallows a mouse event, changes a pixel in
-      // a frozen scene, so no parser reads either while the linter still checks
-      // the values Godot enforces (control.cpp:2267, control.cpp:1923). These two
-      // entries cover every Control descendant.
+      // Keyboard focus and mouse handling change no pixel in a frozen scene,
+      // while the linter checks the values Godot enforces (control.cpp:2267,
+      // control.cpp:1923).
       'focus_mode', 'mouse_filter',
     ],
     renderGap: [
-      // Both DO change what Godot draws, for every Control below here.
+      // Both change what Godot draws, for every Control below here.
       // `clip_contents` sets the canvas clip rect, and
       // `localize_numeral_system` swaps the numeral glyphs ProgressBar,
       // SpinBox, CodeEdit and RichTextLabel draw.

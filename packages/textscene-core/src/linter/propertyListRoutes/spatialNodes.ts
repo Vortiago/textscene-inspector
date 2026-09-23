@@ -6,7 +6,6 @@
 import type { RouteRow } from './types.js';
 
 export const spatialNodeRoutes: readonly RouteRow[] = [
-  // --- 2D transform-adjacent hand-rolled keys ---
   {
     type: 'AudioListener2D',
     at: 'audio_listener_2d.cpp:61-63',
@@ -21,17 +20,15 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
   },
   {
     // auto_calculate_length_and_angle, length, bone_angle and (TOOLS_ENABLED)
-    // editor_settings/show_bone_gizmo, all pushed at skeleton_2d.cpp:86-94 and
-    // all already registered.
+    // editor_settings/show_bone_gizmo, all pushed at skeleton_2d.cpp:86-94.
     type: 'Bone2D',
     at: 'skeleton_2d.cpp:85-95',
     sample: 'length',
     verdict: { validated: true },
   },
   {
-    // set_length alias with no PropertyInfo (skeleton_2d.cpp:48-49,70-71);
-    // never appears in _get_property_list, so only a hand-edited/legacy scene
-    // reaches it.
+    // set_length alias with no PropertyInfo (skeleton_2d.cpp:48-49,70-71). It is
+    // absent from _get_property_list, so only a hand-edited scene reaches it.
     type: 'Bone2D',
     at: 'skeleton_2d.cpp:48-49',
     sample: 'default_length',
@@ -48,13 +45,10 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     verdict: { validated: true },
   },
 
-  // --- 3D skeleton/physics/tile data ---
   {
     // bones/<i>/{name,parent,rest,enabled,position,rotation,scale}, all
-    // unconditionally NO_EDITOR (storage-bearing). bone_meta/<name> is a
-    // NESTED leaf under the same bones/<i>/ prefix (skeleton_3d.cpp:203-206),
-    // not a separate top-level family, so it resolves through the same
-    // registered 'bones/*' wildcard.
+    // NO_EDITOR, so stored. bone_meta/<name> nests under the same bones/<i>/
+    // prefix (skeleton_3d.cpp:203-206) and resolves through 'bones/*'.
     type: 'Skeleton3D',
     at: 'skeleton_3d.cpp:182-208',
     sample: 'bones/0/position',
@@ -67,46 +61,37 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
     verdict: { validated: true },
   },
   {
-    // Delegated to whichever JointData subclass owns the live joint_type
-    // (physical_bone_3d.cpp:748-750); e.g. SixDOFJointData's own
-    // _get_property_list (physical_bone_3d.cpp:681 onward) for the per-axis leaves.
+    // Delegated to the JointData subclass of the live joint_type
+    // (physical_bone_3d.cpp:748-750), such as SixDOFJointData's
+    // _get_property_list (physical_bone_3d.cpp:681 onward) for per-axis leaves.
     type: 'PhysicalBone3D',
     at: 'physical_bone_3d.cpp:748-750',
     sample: 'joint_constraints/x/angular_limit_enabled',
     verdict: { validated: true },
   },
   {
-    // Flat PACKED_INT32_ARRAY, no usage argument (soft_body_3d.cpp:176) so it
-    // is PROPERTY_USAGE_DEFAULT (storage). _set_property_pinned_points_indices
-    // resizes/pins with no clamp on the indices themselves.
+    // Flat PACKED_INT32_ARRAY with no usage argument (soft_body_3d.cpp:176), so
+    // PROPERTY_USAGE_DEFAULT. _set_property_pinned_points_indices does not clamp
+    // the indices.
     type: 'SoftBody3D',
     at: 'soft_body_3d.cpp:176',
     sample: 'pinned_points',
     verdict: { validated: true },
   },
   {
-    // point_index/spatial_attachment_path/offset per pinned point
-    // (soft_body_3d.cpp:178-183). point_index writes are silently dropped:
-    // _set_property_pinned_points_attachment has no branch for it and falls to
-    // `return false` (soft_body_3d.cpp:238-239) even though the key carries
-    // storage and is read back — the same "setter refuses" shape ChainIK3D's
-    // joints/<j>/bone already has a readOnly-style validator for. (Unlike
-    // ChainIK3D's joints, which carry NO storage bit and so never actually
-    // reach a real .tscn, point_index genuinely does — every SoftBody3D with
-    // pinned points writes it, redundantly mirroring pinned_points[i], so no
-    // data is actually lost, just this one echo key.)
+    // point_index, spatial_attachment_path and offset per pinned point
+    // (soft_body_3d.cpp:178-183). A stored point_index write falls to `return
+    // false` (soft_body_3d.cpp:238-239), yet Godot writes it, mirroring
+    // pinned_points[i], so no data is lost.
     type: 'SoftBody3D',
     at: 'soft_body_3d.cpp:178-183',
     sample: 'attachments/0/spatial_attachment_path',
     verdict: { validated: true },
   },
   {
-    // Packed cell dictionary: 2 ints key + 1 int cell value per entry.
-    // ERR_FAIL_COND_V(amount % 3, false) at grid_map.cpp:71 (inside the "data"
-    // branch of _set, guarded by d.has("cells") at :67) is a real enforced
-    // whole-value bound. `at` below is the _get_property_list push (:158)
-    // that introduces the family; the enforced bound's own line is :71, not
-    // :158 as this row originally had it.
+    // Packed cells: a 2-int key and a 1-int value per entry. The enforced bound
+    // is ERR_FAIL_COND_V(amount % 3, false) at grid_map.cpp:71, in _set's "data"
+    // branch behind d.has("cells") at :67. `at` is the _get_property_list push.
     type: 'GridMap',
     at: 'grid_map.cpp:158',
     sample: 'data',
@@ -122,16 +107,15 @@ export const spatialNodeRoutes: readonly RouteRow[] = [
   {
     // Seven PropertyListHelper leaves per TileMapLayer (name, enabled,
     // modulate, y_sort_enabled, y_sort_origin, z_index, navigation_enabled)
-    // plus tile_data, registered tile_map.cpp:1030-1043. Glued-index shape
-    // ("layer_" + i + "/" + leaf).
+    // plus tile_data, registered at tile_map.cpp:1030-1043, as "layer_<i>/<leaf>".
     type: 'TileMap',
     at: 'tile_map.cpp:1023-1043',
     sample: 'layer_0/name',
     verdict: { validated: true },
   },
   {
-    // Explicitly pushed OUTSIDE the PropertyListHelper family
-    // (tile_map.cpp:747), NO_EDITOR|INTERNAL (storage-bearing).
+    // Pushed outside the PropertyListHelper family (tile_map.cpp:747),
+    // NO_EDITOR|INTERNAL, so stored.
     type: 'TileMap',
     at: 'tile_map.cpp:747',
     sample: 'format',

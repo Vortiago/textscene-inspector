@@ -6,18 +6,12 @@
 import type { AsymmetryEntry } from './types.js';
 
 export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
-  // -------------------------------------------------------------------------
-  // 3D leaf slices
-  // -------------------------------------------------------------------------
-
   GridMap: {
     linterOnly: [
-      // grid_map.cpp:84-106/:138-145/:154-156: a pre-baked ArrayMesh cache
-      // Godot writes after `make_baked_meshes()` groups identical cell
-      // instances into one draw call. Purely a rendering OPTIMISATION over the
-      // same `data` cell dictionary the parser already decodes directly — the
-      // baked meshes reproduce, not add to, what `data` already draws — so no
-      // parser needs to read this cache to render the grid correctly.
+      // grid_map.cpp:84-106/:138-145/:154-156: the ArrayMesh cache
+      // `make_baked_meshes()` writes, one draw call per group of identical
+      // cells. It reproduces what the `data` dictionary the parser decodes
+      // already draws.
       'baked_meshes',
       // Physics and navigation built from the cells, plus the octree
       // partitioning size. None of them decide what is drawn where.
@@ -34,12 +28,8 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Label3D: {
     renderGap: [
-      // Material draw ORDER. With a single label nothing moves, but two
-      // overlapping transparent materials resolve in this order, so it is a
-      // real render input rather than an editor-only concern.
-      // Everything about the label except its string and its double-sidedness.
-      // Text shaping: the font itself, the locale and bidi settings the
-      // TextServer shapes and substitutes glyphs by, and the case transform.
+      // Text shaping: the font, the locale and BiDi settings the TextServer
+      // shapes glyphs by, and the case transform.
       'font', 'language', 'text_direction', 'structured_text_bidi_override',
       'structured_text_bidi_override_options', 'uppercase',
       // Wrapping: this splits on a literal newline only, so the wrap mode, its
@@ -47,9 +37,8 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'autowrap_mode', 'autowrap_trim_flags', 'justification_flags', 'width',
       // Placement relative to the node origin.
       'offset', 'vertical_alignment',
-      // Material behaviour: lighting response, constant screen size, the alpha
-      // compositing mode with its two thresholds and its antialiasing pair,
-      // and the texture sampler.
+      // Material behaviour: lighting response, the alpha-hash scale and the
+      // alpha antialiasing pair.
       'shaded',
       'alpha_hash_scale', 'alpha_antialiasing_mode', 'alpha_antialiasing_edge',
     ],
@@ -70,9 +59,8 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Path3D: {
     renderGap: [
-      // The curve gizmo's colour. This repo draws that gizmo (ADR-0018) and
-      // the editor plugin reads this property for it, while Path3D.tsx
-      // hardcodes white.
+      // The curve gizmo's colour. This repo draws that gizmo (ADR-0018), the
+      // editor plugin reads this property for it, and Path3D.tsx hardcodes white.
       'debug_custom_color',
     ],
     reason: 'debug_custom_color tints the curve gizmo the editor draws and this previewer reproduces; the component hardcodes its colour instead.',
@@ -80,10 +68,9 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Camera3D: {
     renderGap: [
-      // Per-camera overrides of the world environment, the exposure/DOF
-      // attributes, and the post-process Compositor stack. All three change the
-      // image; none is implemented, and no Environment or Compositor resource
-      // slice exists to hang them on.
+      // Per-camera overrides of the world environment, the exposure and DOF
+      // attributes, and the Compositor stack. All three change the image, and no
+      // Environment or Compositor resource slice exists to hang them on.
       'environment', 'attributes', 'compositor',
     ],
     reason: 'A camera can override the environment, carry its own exposure and depth-of-field attributes, and run a compositor stack; the previewer implements none of the three.',
@@ -98,27 +85,11 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'compositor is the scene-wide post-process stack, declared identically to Camera3D.compositor and unimplemented in the same way.',
   },
 
-  Sprite3D: {
-    renderGap: [
-      // SpriteBase3D members the tier now validates and `parser.ts` does not
-      // read. Every one changes the rendered frame, so none of them is a
-      // deliberate scope decision: alpha cutoff/dither/AA change which texels
-      // survive, `shaded` switches lit vs unlit, `no_depth_test` draws on top,
-      // `fixed_size` holds screen size against distance, and `texture_filter`
-      // is nearest vs linear.
-    ],
-    reason:
-      'SpriteBase3D material properties the shared tier validates; the Sprite3D parser reads none of them yet, and each one changes what Godot draws.',
-  },
-
   CollisionShape3D: {
     renderGap: [
-      // The gizmo already honours `debug_color`, which `parser.ts` reads, so
-      // this sibling flag — filled vs wireframe on the same gizmo — is a gap we
-      // have not closed rather than a decision not to. Godot's own runtime frame
-      // is unchanged either way (collision debug draw is off by default), but
-      // this previewer chose to draw the gizmo, and having drawn it the flag is
-      // ours to honour.
+      // Filled or wireframe on the gizmo whose `debug_color` `parser.ts` reads.
+      // Godot's runtime frame has collision debug draw off, but this previewer
+      // draws the gizmo, so the flag is a gap.
       'debug_fill',
     ],
     reason:
@@ -127,12 +98,9 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   NavigationAgent3D: {
     linterOnly: [
-      // Every one of these is pathfinding or avoidance STATE handed to
-      // NavigationServer3D, or debug draw. None reaches a frozen frame: the
-      // agent's own path, avoidance velocity and neighbour search happen at
-      // runtime against a live navigation map the previewer does not simulate,
-      // and the `debug_*` set is gated behind DEBUG_ENABLED plus the
-      // navigation-debug flag, which is editor-gizmo territory (ADR-0018).
+      // Pathfinding and avoidance state handed to NavigationServer3D, run
+      // against a live navigation map the previewer does not simulate, and the
+      // `debug_*` set behind DEBUG_ENABLED and the navigation-debug flag (ADR-0018).
       'avoidance_priority', 'debug_enabled', 'debug_path_custom_color',
       'debug_path_custom_point_size', 'debug_use_custom', 'keep_y_velocity',
       'neighbor_distance', 'path_height_offset', 'path_max_distance',
@@ -148,11 +116,9 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   NavigationObstacle3D: {
     linterOnly: [
-      // `velocity` only feeds NavigationServer3D avoidance state. `vertices`
-      // shapes the avoidance region and carves the navigation mesh; the static
-      // obstacle's own debug draw (_update_static_obstacle_debug,
-      // navigation_obstacle_3d.cpp:632) is behind DEBUG_ENABLED plus the
-      // avoidance-debug flag. Neither changes a frozen frame.
+      // `velocity` feeds avoidance state, and `vertices` shapes the avoidance
+      // region and carves the navigation mesh. The static obstacle's debug draw
+      // (navigation_obstacle_3d.cpp:632) needs DEBUG_ENABLED and the avoidance flag.
       'velocity', 'vertices',
     ],
     reason:
@@ -167,21 +133,16 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     ],
     renderGap: [
       // csg_shape.cpp:692-694 skips MikkTSpace when false, so a normal-mapped
-      // material shades a CSG mesh differently; the previewer always derives
+      // material shades a CSG mesh differently. The previewer always derives
       // tangents.
       'calculate_tangents',
     ],
     reason: 'The CSG base has no parser; the collision keys drive physics only, and calculate_tangents = false changes normal-mapped shading the previewer does not reproduce.',
   },
 
-  // GeometryInstance3D is a transform-only slice with no parser.ts of its own,
-  // so from its perspective every key it registers is linter-only. One entry
-  // here covers the eleven leaves that inherit them — MeshInstance3D, Sprite3D,
-  // Label3D, GPUParticles3D and the seven CSG shapes — instead of eleven
-  // near-identical copies. Each leaf's parser reads whatever subset it actually
-  // renders (MeshInstance3D reads the shadow/GI/visibility set, Sprite3D reads
-  // transparency); the rest tune baking, culling and draw order, which a static
-  // preview has no equivalent for.
+  // A transform-only slice with no parser.ts, so every key is linter-only here
+  // and one entry covers every leaf. Each leaf's parser reads the subset it
+  // renders. The rest tune baking, culling and draw order.
   GeometryInstance3D: {
     linterOnly: [
       'cast_shadow', 'gi_mode', 'gi_lightmap_texel_scale', 'lod_bias',
@@ -191,11 +152,9 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'visibility_range_begin', 'visibility_range_begin_margin',
       'visibility_range_end', 'visibility_range_end_margin',
       'visibility_range_fade_mode',
-      // visual_instance_3d.cpp:301-364: the SAME InstanceUniforms engine
-      // class as CanvasItem's own instance_shader_parameters, reached via the
-      // 3D RenderingServer surface. Same reason: no ShaderMaterial resource
-      // slice exists in this previewer, so there is no surface to reflect a
-      // shader uniform override onto.
+      // visual_instance_3d.cpp:301-364: CanvasItem's InstanceUniforms class on
+      // the 3D RenderingServer. No ShaderMaterial slice exists to reflect a
+      // uniform override onto.
       'instance_shader_parameters/*',
     ],
     reason: 'The geometry base has no parser of its own, so every key it registers is linter-only there; each leaf parser reads the subset it renders, the bake/cull/draw-order settings are a static preview cannot honour, and instance_shader_parameters has no ShaderMaterial rendering surface to land on at all.',

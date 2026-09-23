@@ -6,13 +6,11 @@
 import type { RouteRow } from './types.js';
 
 export const animationRoutes: readonly RouteRow[] = [
-  // --- Animation: legacy compat keys and a fully dynamic parameter tree ---
   {
-    // #ifndef DISABLE_DEPRECATED (on by default). Never enumerated by
-    // _get_property_list, so a 3.x scene's `anims/Walk = SubResource(...)` is
-    // read by _set alone (animation_mixer.cpp:58-71). Registered under the
-    // new abstract 'AnimationMixer' tier (nodes/animation/animationmixer/),
-    // the same shared-key shape canvasitem/shared uses for CanvasItem.
+    // #ifndef DISABLE_DEPRECATED, on by default. _get_property_list never
+    // lists it, so a 3.x scene's `anims/Walk = SubResource(...)` reaches _set
+    // alone (animation_mixer.cpp:58-71). Registered under the abstract
+    // 'AnimationMixer' tier (nodes/animation/animationmixer/).
     type: 'AnimationMixer',
     at: 'animation_mixer.cpp:58-71',
     sample: 'anims/Walk',
@@ -37,14 +35,10 @@ export const animationRoutes: readonly RouteRow[] = [
     verdict: { validated: true },
   },
   {
-    // "For backward compatibility." (animation_player.cpp:38-39,71-73). Never
-    // pushed by _get_property_list, so only a hand-edited/legacy scene's
-    // playback/play key ever reaches _set — straight into set_current_animation,
-    // the SAME field `current_animation` sets. `current_animation` itself is
-    // `v.any()`, not quotedString (this row's original note was stale: no
-    // quotedString check exists on it to match), so the alias gets the SAME
-    // permissive `v.any()` rather than a stricter one — registering a tighter
-    // check on the alias than the canonical key would itself be a bug.
+    // "For backward compatibility." (animation_player.cpp:38-39,71-73). Only a
+    // hand-edited scene's playback/play reaches _set, into set_current_animation,
+    // the field `current_animation` sets. Both use `v.any()`, since a tighter
+    // check on the alias than on the canonical key would be a bug.
     type: 'AnimationPlayer',
     at: 'animation_player.cpp:38-39',
     sample: 'playback/play',
@@ -61,20 +55,17 @@ export const animationRoutes: readonly RouteRow[] = [
   },
   {
     // Flat Array of (from, to, time) triples. ERR_FAIL_COND_V(len % 3, false)
-    // (animation_player.cpp:46) is a real enforced whole-value bound: a
-    // malformed length is refused outright, not merely hinted. Only the COUNT
-    // is checked — `Variant::operator StringName()`/`operator float()` both
-    // coerce a mismatched element rather than failing (variant.cpp:1545-1553),
-    // so Godot itself loads a non-string/non-number element without complaint.
+    // (animation_player.cpp:46) refuses a malformed length. Only the count is
+    // checked: `operator StringName()` and `operator float()` coerce a
+    // mismatched element (variant.cpp:1545-1553).
     type: 'AnimationPlayer',
     at: 'animation_player.cpp:144',
     sample: 'blend_times',
     verdict: { validated: true },
   },
   {
-    // method_call_mode / playback_process_mode / playback_active — three
-    // #ifndef DISABLE_DEPRECATED aliases (animation_player.cpp:54-61,93-100),
-    // ALL already registered.
+    // method_call_mode, playback_process_mode and playback_active: three
+    // #ifndef DISABLE_DEPRECATED aliases (animation_player.cpp:54-61,93-100).
     type: 'AnimationPlayer',
     at: 'animation_player.cpp:54-61',
     sample: 'playback_active',
@@ -87,11 +78,10 @@ export const animationRoutes: readonly RouteRow[] = [
     verdict: { validated: true },
   },
   {
-    // Built recursively from each AnimationNode's own get_parameter_list
-    // (animation_tree.cpp:767-829), so the PropertyInfo for a given leaf comes
-    // from a different C++ class per graph shape — genuinely dynamic, but the
-    // KEY PREFIX ("parameters/") is fixed, same shape as ShaderGlobalsOverride's
-    // params/*, which already has a deliberately permissive validator.
+    // Built recursively from each AnimationNode's get_parameter_list
+    // (animation_tree.cpp:767-829), so a leaf's PropertyInfo varies by graph,
+    // but the "parameters/" prefix is fixed, like ShaderGlobalsOverride's
+    // permissively validated params/*.
     type: 'AnimationTree',
     at: 'animation_tree.cpp:969-977',
     sample: 'parameters/conditions/idle',

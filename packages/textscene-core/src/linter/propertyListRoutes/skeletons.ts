@@ -6,10 +6,8 @@
 import type { RouteRow } from './types.js';
 
 export const skeletonRoutes: readonly RouteRow[] = [
-  // --- Skeleton modifier tree: settings/ and chains/ hand-rolled families ---
-  // All eleven already validated; settingsFamilySeam.test.ts separately proves
-  // the ChainIK3D/BoneConstraint3D SHADOW+delegation contract these dispatchers
-  // depend on, so this file only re-confirms each family resolves.
+  // settingsFamilySeam.test.ts proves the ChainIK3D and BoneConstraint3D
+  // shadow and delegation contract, so these rows only confirm each family resolves.
   {
     type: 'AimModifier3D',
     at: 'aim_modifier_3d.cpp:84-97',

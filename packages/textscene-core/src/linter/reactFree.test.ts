@@ -1,23 +1,8 @@
 /**
- * Guard for the React-free linter boundary (ADR-0001) and the split-slice
- * invariant (a parser/linter entry point must never reach a `.tsx` render
- * component). The test walks the static *value*-import closure of each entry
- * point — type-only imports are skipped because the bundler erases them — and
- * asserts:
- *
- *   - both closures resolve every workspace specifier, so no assertion is
- *     answered over a subtree the walk never entered.
- *   - `linter/index.ts` reaches no `.tsx` and value-imports no react/three.
- *   - `parser/TscnParser.ts` reaches no `.tsx` and value-imports no react/three.
- *
- * So a future contributor who imports `./Component` from `index.ts` /
- * `index.linter.ts` (or points a barrel at `index.r3f.js`) gets a red test,
- * not a silently bloated linter bundle.
- *
- * The lenient parser earned its three-free assertion when transform
- * decomposition moved to pure math (`utils/transform.ts`, bit-equivalence
- * pinned by transform.threeEquivalence.test.ts). The parser layer is
- * pure-data end to end; `three` enters only through the r3f layer.
+ * The React-free linter boundary (ADR-0001) and the split-slice rule: neither
+ * `linter/index.ts` nor `parser/TscnParser.ts` reaches a `.tsx` or value-imports
+ * react or three. It walks each static value-import closure, skipping type-only
+ * imports, which the bundler erases. `three` enters only through the r3f layer.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -36,9 +21,8 @@ const srcRoot = resolve(here, '..'); // .../src
 const frameworkBare = (specs: string[]): string[] =>
   specs.filter((s) => FRAMEWORK_BARE_RE.some((re) => re.test(s)));
 
-// One walk per entry point, shared across assertions — the closure spans the
-// whole linter/parser surface, so walking it once per `it` doubles a full
-// synchronous fs sweep for nothing.
+// One walk per entry point, shared across assertions: the closure spans the
+// whole linter and parser surface, a full synchronous fs sweep.
 const linterClosure = walkImportClosure(resolve(here, 'index.ts'));
 const parserClosure = walkImportClosure(resolve(srcRoot, 'parser/TscnParser.ts'));
 
@@ -51,11 +35,10 @@ describe('React-free boundary (ADR-0001)', () => {
     expect(parserClosure.unresolved).toEqual([]);
   });
 
-  // The other failure mode, which `unresolved` cannot see: a walk that follows
-  // NOTHING reports no unresolved specifier either, so a closure of the entry
-  // file alone satisfies every assertion below. 749 and 475 files today; the
-  // floors sit near half that, low enough to survive a real refactor and far
-  // enough above 1 to redden on a collapse.
+  // A walk that follows nothing reports no unresolved specifier either, so a
+  // closure of the entry file alone satisfies every assertion below. The floors
+  // sit near half the real size: low enough for a refactor, high enough to
+  // fail on a collapse.
   it('walked both closures rather than stopping at the entry file', () => {
     expect(linterClosure.files.size).toBeGreaterThan(400);
     expect(parserClosure.files.size).toBeGreaterThan(250);

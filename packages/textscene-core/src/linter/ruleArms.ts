@@ -1,30 +1,16 @@
 /**
- * One reported diagnostic, declared once.
- *
- * A dimension- or kind-parameterized factory would otherwise spell each arm's
- * enabling condition TWICE — around the `push` in `check`, and again around the
- * spread in `emits`. No guard can see those two disagree: the emits cross-checks match
- * an interpolated `${prefix}-concave-shape` as a wildcard, so a name a SIBLING
- * instance still declares satisfies them. `ShapeCast2D` could emit
- * `shapecast2d-concave-shape` while its own `emits` omitted it and all 24
- * assertions stayed green, measured.
- *
- * So the arm is declared once and both halves are derived from it. The gate is
- * whether the arm EXISTS for this instance, which is a single expression, and
- * an instance whose `check` reports a name its `emits` omits is unrepresentable
- * rather than merely unlikely.
- *
- * Arms are held in a record whose values may be absent, not an array: `check`
- * keeps its own control flow — an else-if chain over one resolved resource is
- * not a list of independent predicates — and names the arm it is reporting.
+ * One reported diagnostic, declared once, so a parameterised factory derives
+ * both the `push` in `check` and its `emits` from one arm. No guard sees the two
+ * disagree, since a sibling's name satisfies the wildcard cross-check, so an
+ * instance that reports a name its `emits` omits is unrepresentable.
  */
 
 import type { Diagnostic, EmitGrounding, RuleMeta, Severity } from './types.js';
 import type { TscnNode } from '../parser/types.js';
 
 /**
- * `severity` first, deliberately: `emitsScrape` pairs the two by source order,
- * so the reverse spelling silently mispairs (see `RuleMeta.emits`).
+ * `severity` first: `emitsScrape` pairs the two by source order, so the reverse
+ * spelling mispairs (see `RuleMeta.emits`).
  */
 export interface RuleArm {
   readonly severity: Severity;
@@ -32,26 +18,22 @@ export interface RuleArm {
   readonly grounding: EmitGrounding;
 }
 
-/** Arms an instance may or may not carry, in the order they are declared. */
+/**
+ * Arms an instance may or may not carry, in declaration order. A record, not an
+ * array: `check` keeps its own control flow and names the arm it reports.
+ */
 export type RuleArms<K extends string> = Readonly<Partial<Record<K, RuleArm>>>;
 
-/** The `emits` list these arms declare — every arm this instance actually has. */
+/** The `emits` list these arms declare: every arm this instance has. */
 export function armEmits<K extends string>(arms: RuleArms<K>): NonNullable<RuleMeta['emits']> {
   return Object.values<RuleArm | undefined>(arms).filter((arm) => arm !== undefined);
 }
 
 /**
- * `arm`'s diagnostic for `node` — the one conversion from a declared arm to a
- * reported value.
- *
- * The fields are named rather than spread because an arm carries more than a
- * diagnostic does: `grounding` exists so `emitsGrounding` can check the cite,
- * and a spread ships that authoring-time record to every caller. `Diagnostic`
- * is not a closed type at a spread site, so the compiler allows it.
- *
- * `location` is optional because only the file diagnostics have one: a rule
- * reaches its subject through the tree, which no longer carries the heading's
- * line.
+ * `arm`'s diagnostic for `node`, the one conversion from arm to report. Fields
+ * are named, not spread, or the compiler lets `grounding` ship to every caller.
+ * Only a file diagnostic has a `location`: a rule reaches its subject through
+ * the tree, which carries no heading line.
  */
 export function armDiagnostic(
   arm: RuleArm,
@@ -73,10 +55,7 @@ export function armDiagnostic(
 
 /**
  * Append `arm`'s diagnostic for `node`, or nothing when this instance has no
- * such arm.
- *
- * Absent means the instance never declared it, so reporting anyway is exactly
- * the divergence this module exists to prevent — the silence is the point.
+ * such arm: it never declared that name, so it must not report it.
  */
 export function reportArm(
   into: Diagnostic[],
