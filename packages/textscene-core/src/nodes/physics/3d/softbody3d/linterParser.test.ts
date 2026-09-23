@@ -1,15 +1,8 @@
 /**
- * SoftBody3D strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * One case per property (happy, malformed, and any bound), quoting the
- * governing Godot source line beside every numeric bound. Assertions check
- * `error?.code`, not message text: the message form can't tell a malformed
- * value apart from an out-of-range one, so a lost bound would still pass.
+ * SoftBody3D strict validators, asserted through `validatorRegistry` so a failure
+ * points at the validator, not at scene parsing. Each bound quotes its Godot line.
+ * Assertions check `error?.code`, not the message: the message cannot tell a
+ * malformed value from an out-of-range one, so a lost bound would still pass.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -29,8 +22,8 @@ describe('SoftBody3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format. The
+    // per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('SoftBody3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -296,12 +289,10 @@ describe('SoftBody3D strict validators', () => {
     }
 
     it('accepts point_index: Godot writes the key itself, even though the setter drops it', () => {
-      // `_set_property_pinned_points_attachment` has no branch for it and falls
-      // to `return false` (soft_body_3d.cpp:238-239), so the write is dropped —
-      // but the PropertyInfo at :180 carries no usage argument, so it defaults
-      // to STORAGE and Godot's own exporter emits it. Rejecting it would reject
-      // the engine's own output; scenes/demos/3d/soft_body_physics/test.tscn
-      // carries four, all written by Godot.
+      // `_set_property_pinned_points_attachment` drops the write
+      // (soft_body_3d.cpp:238-239), but the PropertyInfo at :180 has no usage
+      // argument, so it defaults to STORAGE and Godot's own exporter emits it.
+      // Rejecting it rejects the engine's own output.
       expect(checkAttachment('attachments/0/point_index', '3')).toBeNull();
     });
 
@@ -323,7 +314,7 @@ describe('SoftBody3D strict validators', () => {
 
     it('resolves a non-numeric index (bare to_int, no is_valid_int gate) rather than treating it as unknown', () => {
       // soft_body_3d.cpp:137: `to_int()` skips non-digits rather than
-      // refusing them, so the index resolves to SOME attachment and the leaf
+      // refusing them, so the index resolves to some attachment and the leaf
       // lookup is the only thing left to reject.
       expect(checkAttachment('attachments/x/offset', 'Vector3(0, 0, 0)')).toBeNull();
     });

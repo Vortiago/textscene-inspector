@@ -1,9 +1,7 @@
 /**
- * Tests for ShaderGlobalsOverride's semantic rule.
- *
- * Godot gates the warning on `if (!active)` (shader_globals_override.cpp:281),
- * and `_activate()` (:231) makes the first node into the group the active one —
- * so the winner is silent and every later node warns.
+ * ShaderGlobalsOverride's semantic rule. Godot gates the warning on `if (!active)`
+ * (shader_globals_override.cpp:281), and `_activate()` (:231) activates the first
+ * node into the group, so the first is silent and every later node warns.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -46,9 +44,8 @@ describe('ShaderGlobalsOverride Linter', () => {
     });
 
     it('reads tree order, not sibling order, for the winner', () => {
-      // `firstNodeOfType` is depth-first, which is what `Node::Comparator` sorts
-      // the group by — a nested override declared above a root-level one is
-      // still second if it comes second in the tree walk.
+      // `firstNodeOfType` is depth-first, the order `Node::Comparator` sorts
+      // the group by, so a nested override that comes second in the tree walk is second.
       const content = scene(
         node('Node', {}, { name: 'Root' }),
         node('ShaderGlobalsOverride', {}, { name: 'Outer', parent: '.' }),

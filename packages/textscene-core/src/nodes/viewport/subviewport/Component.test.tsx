@@ -1,11 +1,8 @@
 /**
- * A sub-viewport is a canvas boundary, not a world boundary (ADR-0033).
- *
- * These assertions are measured Godot behaviour, not a design preference:
- * `Viewport::find_world_3d` falls through to the parent viewport unless
- * `own_world_3d` is set, while `find_world_2d` never does (the constructor
- * always instantiates one). Reference renders through Godot 4.6.3 confirm the
- * sphere present and the ColorRect absent.
+ * A sub-viewport is a canvas boundary, not a world boundary (ADR-0033), as measured
+ * in Godot: `Viewport::find_world_3d` falls through to the parent viewport unless
+ * `own_world_3d` is set, while `find_world_2d` never does. Godot's render shows the
+ * sphere and not the ColorRect.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -101,11 +98,10 @@ describe('<SubViewport> as a world boundary', () => {
   });
 
   it('3D content inside a CONTAINED sub-viewport still reaches the 3D view', async () => {
-    // The regression this exists to catch: SubViewportContainer is a Control, so
-    // the obvious registration puts it in TWO_D_UI_TYPES — and `PlainNode` then
-    // drops its WHOLE subtree in the 3D workspace, taking the contained
-    // sub-viewport's 3D content with it. Godot draws that content (shared
-    // World3D), so the drop rule subtracts viewport surfaces. ADR-0033.
+    // SubViewportContainer is a Control in TWO_D_UI_TYPES, so `PlainNode` would
+    // drop its whole subtree in the 3D workspace, the sub-viewport's 3D content
+    // included. Godot draws that content (shared World3D), so the drop rule
+    // subtracts viewport surfaces (ADR-0033).
     const r = await render(`[gd_scene format=3]
 
 [sub_resource type="BoxMesh" id="1"]

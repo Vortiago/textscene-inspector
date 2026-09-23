@@ -1,5 +1,5 @@
 /**
- * confirmationdialog linter registration - imports linter components to trigger self-registration.
+ * ConfirmationDialog linter registration: the imports self-register.
  */
 
 import './linterParser.js';

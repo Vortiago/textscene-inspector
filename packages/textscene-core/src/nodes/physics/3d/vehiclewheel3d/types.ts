@@ -1,23 +1,15 @@
 /**
- * VehicleWheel3D property surface.
- *
- * Every field is optional and stays `undefined` when unauthored: Godot's
- * defaults are applied where the value is consumed (inspector, gizmo), not at
- * parse time, so "authored the default" and "authored nothing" stay
- * distinguishable — which is what lets the linter compare only the pairs an
- * author actually set. Values are simulation inputs — a static preview runs no
- * physics (ADR-0005) — but the wheel's geometry is entirely described by them,
- * which is why they are parsed at all.
+ * VehicleWheel3D property surface. A field stays `undefined` when unauthored: the
+ * consumer (inspector, gizmo) applies Godot's default, so "authored the default"
+ * and "authored nothing" stay distinct. They are simulation inputs (ADR-0005), and
+ * they are parsed because they describe the wheel's geometry.
  */
 
 import type { Node3DProperties } from '../../../base/node3d/types';
 
 /**
- * Godot 4.6 VehicleWheel3D defaults (doc/classes/VehicleWheel3D.xml), in one
- * place because two consumers substitute them independently: the inspector
- * formatter shows the effective figure, and the gizmo sizes its circle and
- * travel line. Transcribed separately, correcting a default in one leaves the
- * other drawing the old wheel, and no test compares the two copies.
+ * Godot 4.6 VehicleWheel3D defaults (doc/classes/VehicleWheel3D.xml), shared by
+ * the inspector formatter and the gizmo so a corrected default reaches both.
  */
 export const VEHICLE_WHEEL_3D_DEFAULTS = {
   wheel_radius: 0.5,

@@ -1,13 +1,6 @@
 /**
- * The CollisionObject set must reach every body and area in both dimensions,
- * which is the whole point of the tier.
- *
- * Before it existed these keys were copied into each leaf and had drifted:
- * `collision_layer`/`collision_mask` were declared four times per dimension,
- * and `disable_mode` had four different answers across seven types — bounded
- * 0-1 on CharacterBody2D/RigidBody3D/CharacterBody3D, which rejected Godot's
- * legal `KEEP_ACTIVE` as an ERROR; 0-2 on StaticBody3D and Area2D; and absent
- * on StaticBody2D and Area3D. The last case below is that regression.
+ * The CollisionObject set reaches every body and area in both dimensions. A
+ * case pins that `disable_mode` accepts Godot's `KEEP_ACTIVE` on every type.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -52,8 +45,8 @@ describe('CollisionObject shared validators', () => {
   });
 
   it('keeps the 2D and 3D pickable spellings apart', () => {
-    // Godot names the same idea differently per dimension; inheriting the wrong
-    // one would silently accept a key that cannot appear in that dimension.
+    // Godot names the same idea differently per dimension. Inheriting the wrong
+    // one would accept a key that cannot appear in that dimension.
     expect(validatorRegistry.findValidator('StaticBody2D', 'input_ray_pickable')).toBeNull();
     expect(validatorRegistry.findValidator('StaticBody3D', 'input_pickable')).toBeNull();
     expect(validatorRegistry.findValidator('StaticBody2D', 'input_capture_on_drag')).toBeNull();
@@ -68,7 +61,7 @@ describe('CollisionObject shared validators', () => {
   });
 
   it('leaves each leaf only the keys Godot gives it', () => {
-    // The bodies keep their own physics surface; none re-declares an inherited
+    // The bodies keep their own physics surface. None re-declares an inherited
     // key, which the shadow guard in ValidatorRegistry.baseWalk.test.ts enforces.
     expect(validatorRegistry.getOwnKeys('StaticBody3D')).toContain('physics_material_override');
     expect(validatorRegistry.getOwnKeys('Area2D')).toContain('monitoring');

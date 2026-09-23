@@ -1,6 +1,6 @@
 /**
- * SpringArm3D registration — it is parsed, and it draws nothing on purpose
- * (ADR-0008) rather than for want of an implementation.
+ * SpringArm3D registration: it is parsed, and it draws nothing by design
+ * (ADR-0008), not for want of an implementation.
  */
 
 import { describe, expect, it } from 'vitest';

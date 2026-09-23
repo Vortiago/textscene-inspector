@@ -1,13 +1,7 @@
 /**
- * ShaderGlobalsOverride strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * ShaderGlobalsOverride strict validators, asserted through `validatorRegistry` so a failure
+ * points at the validator, not at scene parsing. Each numeric bound quotes its
+ * Godot source line.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,33 +17,26 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * ShaderGlobalsOverride binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * The keys ShaderGlobalsOverride binds, read from the source. Exactly one of this and
+ * DECLARES_NOTHING is set: both unset is red by design.
  */
 const KEYS: string[] = [
-  // Not an ADD_PROPERTY — shader_globals_override.cpp has none. The whole
+  // Not an ADD_PROPERTY: shader_globals_override.cpp has none. The whole
   // family comes from `_get_property_list` (:94), which enumerates the
   // project's global shader parameters at `params/<name>`.
   'params/*',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, with the source line that proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys ShaderGlobalsOverride does NOT declare, each paired with the ancestor that does.
- * Name at least one; Node is where to start.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives ShaderGlobalsOverride no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart, and it is red until filled for the same reason
- * KEYS is.
+ * Keys ShaderGlobalsOverride does not declare, each paired with the ancestor that does. The
+ * malformed-value loop below iterates `getOwnKeys`, so on a class that declares
+ * nothing it asserts nothing. Resolving a key through the base-walk to the
+ * ancestor's own validator tells "no own properties" from "slice not written".
  */
 const INHERITED: [owner: string, key: string][] = [
-  // node.cpp — enum format-only validator; ShaderGlobalsOverride declares no
+  // node.cpp: an enum format-only validator. ShaderGlobalsOverride declares no
   // Node-level key of its own.
   ['Node', 'process_mode'],
 ];
@@ -64,18 +51,15 @@ describe('ShaderGlobalsOverride strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run against what
+    // this test imported. `fixtureLint` checks the whole registry through the barrel.
     expectFixtureClean('unit-shader-globals-override.tscn');
   });
 
   it('rejects a malformed value on every property it validates, except the honestly-permissive params/* family', () => {
-    // A validator that accepts arbitrary prose is not validating a format —
-    // except `params/*`, whose whole point is that no format is checkable
-    // from the .tscn alone (see linterParser.ts). That single exemption is
-    // asserted explicitly below, not silently skipped.
+    // A validator that accepts arbitrary prose validates no format, except
+    // `params/*`: no format is checkable from the .tscn alone (linterParser.ts).
+    // A test below asserts that one exemption.
     const accepted = validatorRegistry
       .getOwnKeys('ShaderGlobalsOverride')
       .filter((property) => property !== 'params/*')
@@ -91,7 +75,7 @@ describe('ShaderGlobalsOverride strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
+      // The same function, not merely some validator: a shadowing copy on
       // ShaderGlobalsOverride would answer here while drifting from the ancestor's rule.
       expect(validatorRegistry.findValidator('ShaderGlobalsOverride', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('ShaderGlobalsOverride')).not.toContain(key);
@@ -109,9 +93,8 @@ describe('ShaderGlobalsOverride strict validators', () => {
       expect(check('params/albedo_tex', 'ExtResource("1_tex")')).toBeNull();
     });
     it('accepts prose Godot cannot type without project.godot either', () => {
-      // Not a claim that Godot accepts arbitrary text for every global — it is
-      // the claim this file can honestly make FROM THE .tscn ALONE, which is
-      // the whole point of this validator.
+      // Not a claim that Godot accepts arbitrary text for every global: it is
+      // the claim the .tscn alone supports.
       expect(check('params/anything', 'definitely-not-a-valid-value')).toBeNull();
     });
   });

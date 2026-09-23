@@ -1,10 +1,7 @@
 /**
- * <VehicleWheel3D> draws a selection-gated wheel gizmo (ADR-0018): visible only
- * while this node is the selected node; children are positioned either way.
- *
- * Godot's own gizmo (editor/scene/3d/gizmos/physics/vehicle_body_3d_gizmo_plugin.cpp)
- * is always-on for every wheel; gating it on selection is the same deliberate
- * divergence ADR-0018 records for Marker3D and Path3D.
+ * <VehicleWheel3D> draws its wheel gizmo only while the node is selected
+ * (ADR-0018), and positions its children either way. Godot's own gizmo
+ * (editor/scene/3d/gizmos/physics/vehicle_body_3d_gizmo_plugin.cpp) is always on.
  */
 import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -130,8 +127,8 @@ describe('<VehicleWheel3D> gizmo geometry', () => {
 
   it('emits the vertex count Godot’s gizmo loop produces', async () => {
     // 37 loop iterations (i = 0..360 step 10, the last overlapping the first),
-    // each pushing 1 circle segment + 4 coil segments = 2 + 8 points, then
-    // 2 travel + 4 axle + 6 arrow points appended once. 37 × 10 + 12 = 382.
+    // each pushing 1 circle segment and 4 coil segments (10 points), then
+    // 2 travel, 4 axle and 6 arrow points once: 37 × 10 + 12 = 382.
     const positions = await gizmoPositions({ wheel_radius: '0.25' });
     expect(positions.length / 3).toBe(382);
   });

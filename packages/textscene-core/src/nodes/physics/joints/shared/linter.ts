@@ -1,35 +1,8 @@
 /**
- * The joint dead-configuration rule, shared by every Joint2D and Joint3D
- * subclass.
- *
- * Godot states these itself. `Joint2D::_update_joint` walks a chain of cases
- * and stores the failure in `warning`, which `get_configuration_warnings`
- * surfaces (scene/2d/physics/joints/joint_2d.cpp:78-91, and the 3D twin at
- * joint_3d.cpp:76-88). Two of its five cases are decidable from the scene text
- * alone and are the two implemented here:
- *
- *   "Joint is not connected to …"            — a node path is missing
- *   "Node A and Node B must be different …"  — both name the same node
- *
- * The other three ("Node A must be a PhysicsBody2D", and its two variants) ask
- * what TYPE the path resolves to. That is a live-tree question: a NodePath can
- * cross into an instanced sub-scene whose contents this linter cannot see, so
- * answering it statically produces false positives on exactly the scenes people
- * write. They are deliberately not implemented rather than approximated.
- *
- * **The two dimensions disagree on the first case, and the difference is not a
- * typo to normalise away.** 2D warns on `!body_a || !body_b` — "not connected to
- * TWO PhysicsBody2Ds" (joint_2d.cpp:84-85) — so one loose end is enough. 3D
- * warns on `!body_a && !body_b` — "not connected to ANY PhysicsBody3Ds"
- * (joint_3d.cpp:82-83) — so a 3D joint anchored to the world by one body is a
- * configuration Godot accepts in silence. Reading the two as one rule is what
- * produced a warning on scenes 4.6.3 says nothing about.
- *
- * ONE rule rather than one per dimension or one per joint type. The dimension
- * changes a noun in the message and nothing else, and
- * `applicableNodeTypeMatcher` reaches every descendant the way
- * `valid-node3d-visibility` reaches every spatial node, so the eight leaf
- * slices declare nothing and a ninth joint is covered the day it is added.
+ * The joint dead-configuration rule: one rule for every Joint2D and Joint3D subclass.
+ * It ports the `_update_joint` cases the scene text decides (joint_3d.cpp:76-88,
+ * scene/2d/physics/joints/joint_2d.cpp:78-91). The "must be a PhysicsBody" cases
+ * need the target's type, which an instanced sub-scene hides, so they are not ported.
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
@@ -54,22 +27,10 @@ function checkJoint(context: RuleContext): Diagnostic[] {
   const props = node.properties as Record<string, string>;
   const bodyType = `PhysicsBody${dim}`;
 
-  // `extractNodePath` already treats an empty NodePath as absent, which is how
-  // Godot serialises "not connected".
-  //
-  // But a path being WRITTEN is not the same as a body being found. `_update_joint`
-  // derives `body_a` from `cast_to<PhysicsBody2D>(get_node_or_null(a))`
-  // (joint_2d.cpp:70-74, joint_3d.cpp:70-74), and the "not connected" arm tests
-  // `!body_a` — so a path naming nothing counts as unset. Only `missing` does:
-  // `unknowable` means the target may live in a sub-scene this file cannot open,
-  // and a wrong-type target is Godot's own "must be a PhysicsBody" string, an
-  // unimplemented census row rather than this rule's business.
-  //
-  // The resolved node is kept, not just the path: `_update_joint`'s same-body arm
-  // compares POINTERS (`body_a == body_b`, joint_2d.cpp:86), so `../Body` and
-  // `%Body` naming one node are the same body however differently they are
-  // spelled. Two identical strings always walk to the same place, which is what
-  // keeps the answer available when the target is `unknowable`.
+  // An empty NodePath, Godot's "not connected", is absent. `body_a` is
+  // `cast_to<PhysicsBody2D>(get_node_or_null(a))` (joint_2d.cpp:70-74, joint_3d.cpp:70-74),
+  // so a `missing` target is unset too. An `unknowable` one may live in a sub-scene.
+  // The resolved node is kept because the same-body arm compares pointers.
   const connected = (raw: string | undefined): { path: string; node?: TscnNode } | null => {
     const path = raw ? extractNodePath(raw) : null;
     if (path === null) return null;
@@ -79,11 +40,13 @@ function checkJoint(context: RuleContext): Diagnostic[] {
   };
   const a = connected(props.node_a);
   const b = connected(props.node_b);
+  // `body_a == body_b` (joint_2d.cpp:86) compares pointers, so `../Body` and `%Body`
+  // naming one node are one body. Identical strings match even when `unknowable`.
   const sameBody = Boolean(a && b && (a.path === b.path || (a.node !== undefined && a.node === b.node)));
 
   // Exclusive, as in Godot's own chain: an unset end is reported once, and the
-  // same-body case cannot arise while an end is unset. How many ends have to be
-  // unset differs by dimension — see the docblock.
+  // same-body case cannot arise while an end is unset. 2D warns on one unset end
+  // (joint_2d.cpp:84-85). 3D warns only when both are unset (joint_3d.cpp:82-83).
   const unconnected = dim === '2D' ? !a || !b : !a && !b;
   if (unconnected) {
     const which = !a && !b ? "'node_a' and 'node_b' are" : `'${!a ? 'node_a' : 'node_b'}' is`;

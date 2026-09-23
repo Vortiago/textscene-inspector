@@ -1,11 +1,7 @@
 /**
- * SpringArm3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. SpringArm3D registers no semantic rule, so there is no
- * linter.ts and nothing else to test.
+ * SpringArm3D strict validators, asserted through `validatorRegistry` so a failure
+ * points at the validator, not at scene parsing. SpringArm3D registers no
+ * semantic rule, so this is its only linter test.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -25,8 +21,8 @@ describe('SpringArm3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format. The
+    // per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('SpringArm3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -80,9 +76,8 @@ describe('SpringArm3D strict validators', () => {
       expect(check('spring_length', '5.5')).toBeNull();
     });
 
-    // scene/3d/physics/spring_arm_3d.cpp: ADD_PROPERTY(..., "spring_length", PROPERTY_HINT_NONE, "suffix:m") —
-    // no PROPERTY_HINT_RANGE, so the property system places no bound on it; a negative
-    // extent is only ever caught by the arm's own runtime cast, which the static linter can't see.
+    // scene/3d/physics/spring_arm_3d.cpp: ADD_PROPERTY(..., "spring_length", PROPERTY_HINT_NONE, "suffix:m"),
+    // so no bound. Only the arm's runtime cast catches a negative extent.
     it('accepts a negative value (no static bound to enforce)', () => {
       expect(check('spring_length', '-2')).toBeNull();
     });
@@ -103,8 +98,8 @@ describe('SpringArm3D strict validators', () => {
       expect(check('margin', '0')).toBeNull();
     });
 
-    // scene/3d/physics/spring_arm_3d.cpp: ADD_PROPERTY(..., "margin", PROPERTY_HINT_NONE, "suffix:m") —
-    // no PROPERTY_HINT_RANGE, so no bound; same static-linter blind spot as spring_length.
+    // scene/3d/physics/spring_arm_3d.cpp: ADD_PROPERTY(..., "margin", PROPERTY_HINT_NONE, "suffix:m"),
+    // so no bound.
     it('accepts a negative value (no static bound to enforce)', () => {
       expect(check('margin', '-0.5')).toBeNull();
     });

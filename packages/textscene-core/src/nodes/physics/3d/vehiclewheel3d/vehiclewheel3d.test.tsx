@@ -1,12 +1,8 @@
 /**
- * VehicleWheel3D draws nothing at runtime — the visible wheel is its child
- * MeshInstance3D — so it renders as a transform group like the physics bodies
- * (ADR-0005, ADR-0008), plus a selection-gated gizmo covered in Component.test.tsx.
- *
- * The child-placement case here is a REGRESSION PIN, not a fix: an unregistered
- * type already reached parseNode (which parses `transform`) and GenericNodeFallback
- * already applied it, so wheels were positioned correctly before this slice.
- * Registering the type must not take that away.
+ * VehicleWheel3D renders as a transform group (ADR-0005, ADR-0008): the visible
+ * wheel is its child MeshInstance3D. Component.test.tsx covers the gizmo. The
+ * child-placement case pins that the registration keeps the `transform`
+ * GenericNodeFallback also applies.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -22,7 +18,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Transform3D } from '../../../base/node3d/types';
 import type { VehicleWheel3DProperties } from './types';
 
-/** Wheel1 of car_base.tscn: identity basis at (0.573678, 0.115169, 1.10416). */
+/** A wheel with an identity basis at (0.573678, 0.115169, 1.10416). */
 const wheelTransform: Transform3D = {
   basis_x: { x: 1, y: 0, z: 0 },
   basis_y: { x: 0, y: 1, z: 0 },

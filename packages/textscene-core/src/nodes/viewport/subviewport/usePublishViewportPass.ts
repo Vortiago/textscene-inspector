@@ -1,20 +1,7 @@
 /**
- * Publishing a sub-viewport's rendered content is ONE act with two halves, and
- * this hook is where both live so a publisher cannot perform one without the
- * other.
- *
- * A publisher must announce its texture (so `ViewportTexture` consumers can
- * resolve it by node path) AND its pass (so the orchestrator knows what to
- * drive, and what that render samples first). Wiring those as two independent
- * effects at each call site let a publisher register a texture nothing ever
- * renders into, or a pass nothing can sample — with nothing linking the two.
- *
- * `dependsOn` is derived here rather than passed in: it is always "the viewport
- * boundaries nested inside this node", so no caller should be choosing it.
- *
- * Lives beside `nestedViewportPaths` rather than in the registry contexts
- * because it knows about the parsed node tree, and those contexts deliberately
- * do not.
+ * Publishes a sub-viewport's texture, for `ViewportTexture` consumers, and its pass,
+ * for the orchestrator, as one act: neither can exist without the other. It derives
+ * `dependsOn` from the parsed tree itself, which the registry contexts do not read.
  */
 import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';

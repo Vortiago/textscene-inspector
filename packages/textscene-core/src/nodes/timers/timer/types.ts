@@ -1,4 +1,4 @@
-/** Timer type definitions. */
+/** Timer property surface. */
 
 import type { NodeProperties } from '../../node/types';
 
@@ -7,9 +7,8 @@ export interface TimerProperties extends NodeProperties {
   wait_time?: number;
   /** Whether the timer starts automatically when the scene loads. */
   autostart?: boolean;
-  /** Whether the timer stops after firing once (vs looping). */
+  /** Whether the timer stops after firing once (rather than looping). */
   one_shot?: boolean;
-  /** Whether the timer is paused. */
   paused?: boolean;
   /** TimerProcessCallback: 0 = PHYSICS, 1 = IDLE. Godot default is 1 (IDLE). */
   process_callback?: number;

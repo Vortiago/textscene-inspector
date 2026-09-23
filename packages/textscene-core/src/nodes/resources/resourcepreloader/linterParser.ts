@@ -1,31 +1,8 @@
 /**
- * ResourcePreloader strict validators for linting.
- *
- * ResourcePreloader has exactly one `ADD_PROPERTY`, `resources`
- * (resource_preloader.cpp:147) — but its usage is
- * `PROPERTY_USAGE_NO_EDITOR | PROPERTY_USAGE_INTERNAL`, which is
- * `PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_INTERNAL` (object.h:132 aliases
- * NO_EDITOR to STORAGE alone). `PackedScene`'s node-property save loop
- * (packed_scene.cpp:108) tests only `PROPERTY_USAGE_STORAGE`, so this key DOES
- * reach a `.tscn` despite being invisible in the inspector; it is not
- * `PROPERTY_USAGE_NONE`, so the third rule (ADD_PROPERTY governs serialisation, not
- * PROPERTY_USAGE_NO_EDITOR) applies rather than the "no validator" case.
- *
- * The getter/setter are `_get_resources`/`_set_resources`
- * (resource_preloader.cpp:33-49, :51-71), which is XML's `<members>`-invisible
- * because doc/classes/ResourcePreloader.xml has none — the class is documented
- * entirely through its public methods (add_resource/get_resource/…), and
- * `resources` is the private wire format behind them.
- *
- * `_get_resources` builds `Array{ names, arr }`: an UNTYPED 2-element Array
- * (PackedStringArray of names, plain Array of resource refs), so its Godot
- * text-format serialisation (variant_parser.cpp:2338, no `Array[T](` wrapper
- * for an untyped Array, and the ARRAY branch joins elements with `", "` rather
- * than the DICTIONARY branch's `,\n` — so the whole property is one line, and
- * `StrictTscnParser`'s `isMultiline` skip never hides it) is
- * `[PackedStringArray(...), [...]]`. `_set_resources` enforces three things
- * about it, in order: a top-level 2-element shape, the two inner arrays being
- * the same length, and no null resource — each is grounded below.
+ * ResourcePreloader strict validators for its one `ADD_PROPERTY`, `resources`
+ * (resource_preloader.cpp:147). NO_EDITOR is STORAGE (object.h:132), and the save
+ * loop tests only STORAGE (packed_scene.cpp:108), so the key reaches a `.tscn`
+ * though doc/classes/ResourcePreloader.xml lists no member.
  */
 
 import '../../node/linterParser.js';
@@ -40,6 +17,12 @@ const PACKED_STRING_ARRAY_RE = packedArrayLiteral('PackedStringArray');
 const QUOTED_NAME_RE = /^"(?:[^"\\]|\\[\s\S])*"$/;
 const FORMAT_CODE = 'INVALID_RESOURCES_FORMAT';
 
+/**
+ * `_get_resources` (resource_preloader.cpp:33-49) builds an untyped 2-element Array,
+ * written on one line as `[PackedStringArray(...), [...]]` (variant_parser.cpp:2338),
+ * so `isMultiline` never skips it. `_set_resources` (:51-71) checks the shape, the
+ * equal lengths and each resource, in that order.
+ */
 const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
   const trimmed = value.trim();
   const outer = OUTER_RE.exec(trimmed);
@@ -54,7 +37,7 @@ const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
 
   const topParts = dropTrailingComma(splitTopLevel(outer[1]!));
   if (topParts.length !== 2) {
-    // resource_preloader.cpp:36, ERR_FAIL_COND(p_data.size() != 2) — the whole
+    // resource_preloader.cpp:36, ERR_FAIL_COND(p_data.size() != 2): the whole
     // write is dropped, resources cleared.
     return propertyError(
       key,
@@ -64,13 +47,9 @@ const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
     );
   }
 
-  // Godot's own writer only ever emits PackedStringArray(...) here, but
-  // `Vector<String> names = p_data[0]` (resource_preloader.cpp:37) is a
-  // `Variant::operator PackedStringArray()`, which falls back to
-  // `_convert_array_from_variant` for ANY other Variant::ARRAY
-  // (variant.cpp:2183-2189) — so a hand-written bare `["a", "b"]` loads too.
-  // Accepting only the canonical spelling would reject a value the engine
-  // itself converts.
+  // Godot writes PackedStringArray(...) here, but `names = p_data[0]`
+  // (resource_preloader.cpp:37) converts any other Variant::ARRAY
+  // (variant.cpp:2183-2189), so a hand-written bare `["a", "b"]` loads too.
   const packedNames = PACKED_STRING_ARRAY_RE.exec(topParts[0]!);
   const namesMatch = packedNames ?? OUTER_RE.exec(topParts[0]!);
   if (!namesMatch) {
@@ -91,11 +70,10 @@ const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
     );
   }
 
-  // A trailing comma closes both spellings. `_parse_array` closes on
-  // `TK_BRACKET_CLOSE` before it demands another value
-  // (variant_parser.cpp:1658-1662), and PackedStringArray has its OWN reader
-  // whose close is ungated — `if (token.type == TK_PARENTHESIS_CLOSE) break;`
-  // (:1524-1525), unlike `_parse_construct`'s `first &&` at :575.
+  // A trailing comma closes both spellings: `_parse_array` closes on
+  // `TK_BRACKET_CLOSE` first (variant_parser.cpp:1658-1662), and the
+  // PackedStringArray reader's close is ungated (:1524-1525), unlike
+  // `_parse_construct`'s `first &&` at :575.
   const names = dropTrailingComma(splitTopLevel(namesMatch[1]!));
   for (const name of names) {
     if (!QUOTED_NAME_RE.test(name)) {
@@ -110,8 +88,8 @@ const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
 
   const entries = dropTrailingComma(splitTopLevel(resourcesMatch[1]!));
   if (names.length !== entries.length) {
-    // resource_preloader.cpp:40, ERR_FAIL_COND(names.size() != resdata.size())
-    // — the whole write is dropped, resources cleared.
+    // resource_preloader.cpp:40, ERR_FAIL_COND(names.size() != resdata.size()):
+    // the whole write is dropped, resources cleared.
     return propertyError(
       key,
       line,
@@ -122,9 +100,8 @@ const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
 
   for (const entry of entries) {
     if (resourceRef(entry) === null) {
-      // resource_preloader.cpp:44, ERR_CONTINUE(resource.is_null()) — a
-      // non-resource (including the literal `null`) drops that one pair
-      // silently rather than the whole property.
+      // resource_preloader.cpp:44, ERR_CONTINUE(resource.is_null()): a
+      // non-resource, the literal `null` included, drops only that pair.
       return propertyError(
         key,
         line,

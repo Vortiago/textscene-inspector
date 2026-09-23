@@ -1,10 +1,8 @@
 /**
- * SoftBody3D registration: parsed and validated, not yet rendered.
- *
- * The Node3D base registered under `renderIntent: 'pending'` is the point:
- * `rendersOwnVisual` reports 'not-implemented' so the tree and inspector keep
- * saying so, while `visible` and the 3D-only workspace placement still work —
- * neither of which survives an absent registration.
+ * SoftBody3D registration: parsed and validated, not yet rendered. The Node3D
+ * base under `renderIntent: 'pending'` makes `rendersOwnVisual` report
+ * 'not-implemented', while `visible` and the 3D-only workspace placement still
+ * work. An absent registration keeps neither.
  */
 
 import { describe, expect, it } from 'vitest';

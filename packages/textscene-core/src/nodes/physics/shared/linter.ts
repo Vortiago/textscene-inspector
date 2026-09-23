@@ -1,23 +1,8 @@
 /**
- * Semantic linter rule shared by every CollisionObject3D-derived node.
- *
- * Registered under the abstract key `CollisionObject3D`, the same shape
- * `physics/shared/linterParser.ts` uses for its format validators, but for a
- * `LintRule` there is no base-chain walk to lean on (`RuleRegistry`
- * applicability is exact-match by design): `applicableNodeTypeMatcher` +
- * `descendsFrom` does the reaching instead.
- *
- * `CollisionObject3D::get_configuration_warnings()` (collision_object_3d.cpp:744)
- * checks the BODY'S OWN transform, not any child `CollisionShape3D`'s — a
- * different node and a different (though textually similar) test from
- * `collisionshape3d-non-uniform-scale` (collision_shape_3d.cpp:155), which
- * `collisionShapeLinterRule.ts` already covers:
- *
- *     Vector3 scale = get_transform().get_basis().get_scale();
- *     if (!(Math::is_zero_approx(scale.x - scale.y) && Math::is_zero_approx(scale.y - scale.z))) {
- *         warnings.push_back(RTR("With a non-uniform scale this node will probably not
- *             function as expected.\nPlease make its scale uniform ..."));
- *     }
+ * The non-uniform-scale rule shared by every CollisionObject3D-derived node,
+ * reached through `applicableNodeTypeMatcher` and `descendsFrom`, since
+ * `RuleRegistry` matches exact types. It checks the body's own transform
+ * (collision_object_3d.cpp:744), not a child's (collision_shape_3d.cpp:155).
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';

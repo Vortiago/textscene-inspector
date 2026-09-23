@@ -1,5 +1,5 @@
 /**
- * filedialog linter registration - imports linter components to trigger self-registration.
+ * FileDialog linter registration: the imports self-register.
  */
 
 import './linterParser.js';

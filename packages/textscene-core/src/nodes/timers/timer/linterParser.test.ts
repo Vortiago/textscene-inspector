@@ -1,7 +1,6 @@
 /**
- * Timer strict validator coverage — the type-specific property surface.
- * Timer is a plain Node (see nodeBaseTypes.ts), so there are no spatial
- * validators to exercise here.
+ * Timer strict validators: the type-specific property surface. Timer is a plain
+ * Node (nodeBaseTypes.ts), so it has no spatial validators.
  */
 
 import { describe, it } from 'vitest';
@@ -44,8 +43,8 @@ describe('Timer strict validators', () => {
   });
 
   it('warns on an out-of-range process_callback', () => {
-    // timer.cpp:163-179, set_timer_process_callback is a bare switch/assign; no
-    // engine-side range check, so out-of-range is a warning (ADR-0032).
+    // timer.cpp:163-179: set_timer_process_callback is a bare switch and assign
+    // with no range check, so out-of-range is a warning (ADR-0032).
     expectDiagnostic(scene(node('Timer', { process_callback: 5 })), {
       prop: 'process_callback',
       severity: 'warning',

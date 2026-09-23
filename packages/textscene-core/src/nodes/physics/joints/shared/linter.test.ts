@@ -1,11 +1,7 @@
 /**
- * The joint dead-configuration rule, asserted once for the whole family.
- *
- * Five agents building joint slices in one wave each found Godot's
- * `Joint2D::get_configuration_warnings` and each correctly declined to
- * implement it, because it belongs to the base rather than to any leaf. This is
- * that rule: one registration for both dimensions, reaching every subclass
- * through `applicableNodeTypeMatcher`.
+ * The joint dead-configuration rule, asserted once for the whole family: one
+ * registration for both dimensions reaches every subclass through
+ * `applicableNodeTypeMatcher`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,7 +18,7 @@ const LEAVES_3D = ['PinJoint3D', 'HingeJoint3D'] as const;
 
 describe('joint dead-configuration rule', () => {
   it('registers ONE rule for the whole family, not one per joint type', () => {
-    // Eight leaves and two dimensions share it; the dimension only changes a
+    // Every leaf in both dimensions shares it. The dimension changes only a
     // noun in the message, which `check` derives from the node's own type.
     expect(ruleRegistry.getRules().find((r) => r.meta.name === 'valid-joint')).toBe(
       jointValidationRule
@@ -92,15 +88,14 @@ describe('joint dead-configuration rule', () => {
   });
 
   it('holds each dimension to its own threshold, because Godot does', () => {
-    // 2D warns on `!body_a || !body_b` (joint_2d.cpp:84), so ONE loose end is
-    // enough. 3D warns on `!body_a && !body_b` (joint_3d.cpp:82), so a joint
-    // anchored to the world by a single body is a configuration 4.6.3 accepts in
-    // silence. Reading the two as one rule warned about scenes Godot does not.
+    // 2D warns on `!body_a || !body_b` (joint_2d.cpp:84), so one loose end is
+    // enough. 3D warns on `!body_a && !body_b` (joint_3d.cpp:82), so Godot
+    // accepts a joint anchored to the world by a single body.
     const oneEnd = { node_b: 'NodePath("../BodyB")' };
     expectDiagnostic(scene(node('PinJoint2D', oneEnd)), { ruleName: 'joint-not-connected' });
     expectNoDiagnostic(scene(node('PinJoint3D', oneEnd)), { ruleName: 'joint-not-connected' });
 
-    // With BOTH ends unset the dimensions agree again.
+    // With both ends unset the dimensions agree.
     expectDiagnostic(scene(node('PinJoint3D', {})), { ruleName: 'joint-not-connected' });
   });
 
@@ -120,7 +115,7 @@ describe('joint dead-configuration rule', () => {
     expect(d.message).toContain('../Body');
   });
 
-  // `_update_joint` compares the resolved POINTERS (`body_a == body_b`,
+  // `_update_joint` compares the resolved pointers (`body_a == body_b`,
   // joint_2d.cpp:86), so one body reached by two spellings is still one body.
   it('flags one body reached by two different paths', () => {
     const content = [
@@ -141,7 +136,7 @@ describe('joint dead-configuration rule', () => {
   });
 
   it('does not also report not-connected when both ends name one body', () => {
-    // The two cases are exclusive in Godot's own chain; reporting both would
+    // The two cases are exclusive in Godot's own chain. Reporting both would
     // double up on one defect.
     expectNoDiagnostic(
       scene(node('PinJoint2D', { node_a: 'NodePath("../B")', node_b: 'NodePath("../B")' })),

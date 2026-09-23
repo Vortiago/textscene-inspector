@@ -1,10 +1,6 @@
 /**
- * The Viewport-level validators must reach BOTH instantiable Viewports.
- *
- * Registered on `SubViewport` alone, `Window` inherits none of them: the same
- * property on the same base class then errors on one node type and is silently
- * accepted on the other. These assertions pin the shared registration and the
- * two base-walk links that deliver it.
+ * The Viewport-level validators reach both instantiable Viewports, SubViewport
+ * and Window, through the shared registration and its two base-walk links.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -99,7 +95,7 @@ describe('Viewport shared validators', () => {
 
   it.each(['SubViewport', 'Window'])('bounds msaa_3d to the four Godot modes on %s', (nodeType) => {
     // ERR_FAIL_INDEX(p_msaa, MSAA_MAX) at viewport.cpp:3763, MSAA_MAX = 4
-    // (viewport.h:119-126); the macro refuses < 0 too. Same guard and enum as
+    // (viewport.h:119-126). The macro refuses < 0 too. Same guard and enum as
     // msaa_2d below.
     const validator = validatorRegistry.findValidator(nodeType, 'msaa_3d')!;
     for (const value of ['0', '1', '2', '3']) expect(validator('msaa_3d', value, 1)).toBeNull();
@@ -109,13 +105,13 @@ describe('Viewport shared validators', () => {
 
   it('leaves SubViewport-only members off the shared set', () => {
     // `size`, `size_2d_override*` and `render_target_*` are SubViewport's own
-    // (doc/classes/SubViewport.xml); a Window has none of them.
+    // (doc/classes/SubViewport.xml). A Window has none of them.
     for (const key of ['size', 'size_2d_override', 'render_target_update_mode']) {
       expect(validatorRegistry.getOwnKeys('Viewport')).not.toContain(key);
     }
   });
 
-  /** Delivery to both node types is pinned above; these check the VALUE checks. */
+  /** Delivery to both node types is pinned above. These check the value checks. */
   function find(key: string) {
     const validator = validatorRegistry.findValidator('SubViewport', key);
     expect(validator, `no validator registered for SubViewport.${key}`).not.toBeNull();
@@ -142,8 +138,8 @@ describe('Viewport shared validators', () => {
 
     it('accepts canvas_item_default_texture_filter 4 (PARENT_NODE, added in 4.7); rejects 5 and -1, both outside DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX', () => {
       // 4.7.2: viewport.cpp:4101 ERR_FAIL_INDEX against MAX = 5
-      // (viewport.h:191-198). 4.6.3 stopped at 3, so an error here would fire on
-      // a scene the 4.7 editor writes.
+      // (viewport.h:191-198). 4.6.3 stops at 3, so bounding at 3 errors on a
+      // scene the 4.7 editor writes.
       const validator = find('canvas_item_default_texture_filter');
       for (const value of ['0', '1', '2', '3', '4']) {
         expect(validator('canvas_item_default_texture_filter', value, 1)).toBeNull();
@@ -157,7 +153,7 @@ describe('Viewport shared validators', () => {
 
     it('accepts canvas_item_default_texture_repeat 3 (PARENT_NODE, added in 4.7); rejects 4, past DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX', () => {
       // 4.7.2: viewport.cpp:4184 ERR_FAIL_INDEX against MAX = 4
-      // (viewport.h:200-206). 4.6.3 stopped at 2.
+      // (viewport.h:200-206). 4.6.3 stops at 2.
       const validator = find('canvas_item_default_texture_repeat');
       for (const value of ['0', '1', '2', '3']) {
         expect(validator('canvas_item_default_texture_repeat', value, 1)).toBeNull();
@@ -453,7 +449,7 @@ describe('Viewport shared validators', () => {
     it.each(['vrs_texture', 'world_3d'])(
       'accepts the bare literal null for %s, which Godot loads as a cleared slot',
       (key) => {
-        // Omitting a cleared key is what the WRITER does; the loader still takes
+        // The writer omits a cleared key. The loader still takes
         // a hand-written `null` (variant_parser.cpp:699, variant.cpp:543).
         const validator = find(key);
         expect(validator(key, 'null', 1)).toBeNull();

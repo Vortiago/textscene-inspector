@@ -122,9 +122,7 @@ describe('VehicleWheel3D Linter', () => {
     it('says nothing about the magnitude of suspension_travel', () => {
       // vehicle_body_3d.cpp:335 binds it PROPERTY_HINT_NONE and
       // set_suspension_travel (:198) assigns without a clamp, so the engine
-      // states no range. The class reference suggests 0.1-0.3, but that is
-      // prose advice, and Godot's own truck_town demo ships 2.0 on all eight
-      // wheels. A warning here fired on the canonical example of the node.
+      // states no range. The class reference's 0.1-0.3 is prose advice.
       for (const travel of [0.05, 0.2, 2.0, 50]) {
         const content = scene(
           vehicleBody,

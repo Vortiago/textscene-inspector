@@ -1,18 +1,8 @@
 /**
- * What kind of content a sub-viewport holds — the seam that decides HOW its
- * target is produced.
- *
- * A Godot viewport rasterises its 3D world and its 2D canvas into one target.
- * The previewer cannot: its renderer draws one workspace at a time, and a
- * Control-only sub-viewport has no WebGL SOURCE of its own (nothing in the
- * main scene renders it) — its pixels come from a SEPARATE native offscreen
- * pass instead (`ControlRasterPass.tsx`), which draws the same Control
- * subtree the on-screen native layer would, into its own detached scene. Both
- * passes publish into the same `ViewportTextureRegistry`, so the split has to
- * be decided in ONE place — here — or they race for the same key.
- *
- * The 3D/2D offscreen publisher owns `'3d'` and `'2d'`; the native
- * Control-raster pass owns `'dom'`; nobody publishes for `'empty'`.
+ * The kind of content a sub-viewport holds, which decides its one publisher: the
+ * 3D/2D offscreen pass owns `'3d'` and `'2d'`, `ControlRasterPass.tsx` owns `'dom'`,
+ * and nothing publishes `'empty'`. Both write the same `ViewportTextureRegistry`
+ * key, so the split is decided here alone.
  */
 
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
@@ -26,12 +16,9 @@ import {
 import { compositeCallPrefix } from '../../../godot/index.js';
 
 /**
- * The `i`-suffixed spellings are listed, not derived: this asks whether a value
- * is 2D or 3D, and `Vector2i` is as 2D as `Vector2`. They are also what Godot
- * NATIVELY writes for every pixel-count property — `frame_coords`,
- * `region_rect`, `size` — so leaving them out made an instance override spelled
- * `frame_coords = Vector2i(2, 1)` match neither list, which fell through to the
- * 3D publisher and sampled an empty target.
+ * The `i`-suffixed spellings are listed: `Vector2i` is as 2D as `Vector2`, and it
+ * is what Godot writes for `frame_coords`, `region_rect` and `size`. Without them
+ * such an override matches neither list and falls through to the 3D publisher.
  */
 const TWO_D_COMPOSITE = compositeCallPrefix('Vector2', 'Vector2i', 'Transform2D', 'Rect2', 'Rect2i');
 const THREE_D_COMPOSITE = compositeCallPrefix(
@@ -44,12 +31,9 @@ const THREE_D_COMPOSITE = compositeCallPrefix(
 );
 
 /**
- * CanvasItem-only property names. Each exists on `CanvasItem` or `Node2D` and
- * on no Node3D class, so finding one among an instance node's own overrides
- * names the world its sub-scene belongs to before the sub-scene has loaded.
- * (`modulate`/`self_modulate`/`show_behind_parent`/`clip_children`/
- * `texture_*`/`light_mask` are `CanvasItem`'s; `z_index`/`z_as_relative`/
- * `y_sort_enabled`/`skew` are `Node2D`'s.)
+ * CanvasItem-only property names, each on `CanvasItem` or `Node2D` and on no Node3D
+ * class. One among an instance node's own overrides names its sub-scene's world
+ * before the sub-scene loads.
  */
 const CANVAS_ITEM_ONLY_PROPERTIES: ReadonlySet<string> = new Set([
   'modulate',
@@ -66,14 +50,10 @@ const CANVAS_ITEM_ONLY_PROPERTIES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Which world an INSTANCE node's own overrides name, or null when they name
- * neither.
- *
- * A `.tscn` records an instance's overrides verbatim against the base class
- * they belong to, and the parser keeps them in `rawProperties` precisely
- * because the node has no type until its sub-scene resolves. The constructor
- * in a transform value is decisive on its own: `position = Vector2(…)` cannot
- * be a Node3D and `Transform3D(…)` cannot be a CanvasItem.
+ * Which world an instance node's own overrides name, or null when they name
+ * neither. The parser keeps them in `rawProperties`, since the node has no type
+ * yet. A transform constructor decides alone: `position = Vector2(…)` cannot be a
+ * Node3D, and `Transform3D(…)` cannot be a CanvasItem.
  */
 function instanceOverrideKind(node: TscnNode): '2d' | '3d' | null {
   const raw = node.rawProperties;
@@ -87,32 +67,18 @@ function instanceOverrideKind(node: TscnNode): '2d' | '3d' | null {
 }
 
 export type ViewportContentKind =
-  /** Node3D content — rendered through a `Camera3D` descendant. */
+  /** Node3D content, rendered through a `Camera3D` descendant. */
   | '3d'
-  /** 2D-world (CanvasItem, non-Control) content — rendered through an ortho camera framing the target. */
+  /** 2D-world (CanvasItem, non-Control) content, rendered through an ortho camera framing the target. */
   | '2d'
-  /** Controls only — rasterized from the DOM overlay, not by this subsystem. */
+  /** Controls only, drawn by the native Control-raster pass (`ControlRasterPass.tsx`). */
   | 'dom'
-  /** Nothing to draw. */
   | 'empty';
 
 /**
- * Classify a sub-viewport's subtree.
- *
- * Precedence is 3D > 2D > DOM: a viewport mixing kinds still gets a target
- * showing its 3D half, which beats one showing nothing. Only one kind is drawn
- * — a divergence from Godot, which composites all of them, and the reason
- * mixed-content viewports are called out in `comparison.md`.
- *
- * An unresolved instance is the one claim that is SPECULATIVE rather than
- * decisive. It has no type until its sub-scene loads, and Godot's own viewport
- * demos instance 3D sub-scenes, so a bare one is still read as 3D — but only
- * once nothing decisive has been found, so a positioned 2D sibling settles the
- * viewport for an untouched instance next to it. Anything with a type, and any
- * instance whose own overrides name a world, outranks it.
- *
- * Nested sub-viewports are not descended into: their subtree draws into THEIR
- * target, which is where `Viewport` rasterisation stops.
+ * Classify a sub-viewport's subtree. Precedence is 3D > 2D > DOM, and one kind is
+ * drawn where Godot composites all (`comparison.md`). A nested sub-viewport draws
+ * into its own target, so it is not descended into.
  */
 export function viewportContentKind(node: TscnNode): ViewportContentKind {
   let sawCanvasItem = false;
@@ -122,9 +88,8 @@ export function viewportContentKind(node: TscnNode): ViewportContentKind {
   const hasNode3DContent = (nodes: readonly TscnNode[]): boolean =>
     nodes.some((child) => {
       if (child.type === 'SubViewport') return false;
-      // Godot's question (`is2DUIType`), not the DOM registry's mirror: this
-      // decides whether a raster host mounts at all, so a Control with no
-      // component of its own — `Tree`, `ProgressBar` — must still reach one.
+      // Godot's question (`is2DUIType`), not the component registry's: a Control
+      // with no component of its own, such as `ProgressBar`, still gets a pass.
       if (is2DUIType(child.type)) {
         sawDom = true;
         return hasNode3DContent(child.children);
@@ -143,15 +108,13 @@ export function viewportContentKind(node: TscnNode): ViewportContentKind {
         sawUntypedInstance = true;
         return false;
       }
-      // A workspace-neutral container (`Node`, `Timer`, `AnimationPlayer`, …)
-      // decides nothing by itself — it may hold either kind, so descend rather
-      // than claim. This is a REGISTRY question, not a "is it registered" one:
-      // `Node` is registered (with `container: true`), so testing `get()` first
-      // read every plain-Node-rooted sub-scene as 3D content.
+      // A workspace-neutral container (`Node`, `Timer`, …) may hold either kind,
+      // so descend. `Node` is registered with `container: true`, so `get()` alone
+      // would read every plain-Node-rooted sub-scene as 3D.
       if (nodeComponentRegistry.isContainer(child.type)) {
         return hasNode3DContent(child.children);
       }
-      // A registered non-container type is Node3D content by elimination —
+      // A registered non-container type is Node3D content by elimination:
       // CanvasItems and Controls were both matched above.
       if (nodeComponentRegistry.get(child.type)) return true;
       return hasNode3DContent(child.children);
@@ -159,35 +122,25 @@ export function viewportContentKind(node: TscnNode): ViewportContentKind {
 
   if (hasNode3DContent(node.children)) return '3d';
   if (sawCanvasItem) return '2d';
+  // Godot's viewport demos instance 3D sub-scenes, so an untyped instance reads as
+  // 3D, but only when nothing decisive was found: anything typed, or an instance
+  // whose overrides name a world, outranks it.
   if (sawUntypedInstance) return '3d';
   return sawDom ? 'dom' : 'empty';
 }
 
 /**
  * How deep the resolver follows instances-of-instances. Godot itself has no
- * limit; this one exists so a cyclic sub-scene reference (a scene the parser
+ * limit. This one exists so a cyclic sub-scene reference (a scene the parser
  * accepts and Godot rejects at import) cannot hang the render.
  */
 const MAX_RESOLVE_DEPTH = 32;
 
 /**
- * The sub-viewport's subtree with its instances RESOLVED — the input
- * `viewportContentKind` actually wants.
- *
- * Classification has to survive the gap between parse and load. In the parsed
- * graph an `instance=` child is a childless node of type `Node`: an untouched
- * instance of a 2D sub-scene and an untouched instance of a 3D one are the same
- * three tokens, so no rule over the parsed graph can separate them. Once the
- * sub-scene is cached, Instance root merge (ADR-0013) gives the node its real
- * type and children, and the same classifier answers exactly.
- *
- * `liveChildGroups` is the seam because the resolution is not a plain tree
- * walk: each group carries the ExtResource scope its children resolve their OWN
- * instance refs against, so a sub-scene's internal instances resolve against
- * the sub-scene's pool rather than this scene's.
- *
- * A nested sub-viewport is returned untouched — its subtree draws into ITS
- * target, which is where the classifier stops looking anyway.
+ * The sub-viewport's subtree with its instances resolved, the input
+ * `viewportContentKind` wants: a parsed `instance=` child is a childless `Node`
+ * whatever its world. `liveChildGroups` gives each group the ExtResource scope its
+ * own instance refs resolve against. A nested sub-viewport is returned untouched.
  */
 export function resolveViewportSubtree(
   node: TscnNode,
@@ -201,8 +154,8 @@ export function resolveViewportSubtree(
   ): TscnNode => {
     if (depth >= MAX_RESOLVE_DEPTH || child.type === 'SubViewport') return child;
     const groups = liveChildGroups(child, scope, sceneCache);
-    // A collapsed single-root instance BECOMES its sub-scene root; every other
-    // origin leaves the node's own identity alone.
+    // A collapsed single-root instance (ADR-0013) becomes its sub-scene root.
+    // Every other origin leaves the node's own identity alone.
     const effective = groups.find((group) => group.origin === 'merged')?.mergedNode ?? child;
     const children = groups.flatMap((group) =>
       group.children.map((grandchild) => resolve(grandchild, group.scope, depth + 1))
@@ -212,9 +165,8 @@ export function resolveViewportSubtree(
 
   return {
     ...node,
-    // This resolution classifies content KIND and collapses instances; it never
-    // reads a SubResource id, so it declares an empty pool rather than pretending
-    // to carry one. See `SceneScope` for why the two travel together at all.
+    // This resolution reads no SubResource id, so it declares an empty pool
+    // rather than carry one. `SceneScope` says why the two travel together.
     children: node.children.map((child) =>
       resolve(child, { externalResources, internalResources: [] }, 0)
     ),

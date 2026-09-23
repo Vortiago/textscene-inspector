@@ -1,7 +1,6 @@
 /**
  * The pure half of the offscreen-render subsystem: which camera a sub-viewport
- * renders through and how its target is framed. Kept free of R3F so the
- * rules are asserted directly rather than inferred from a mounted tree.
+ * renders through and how its target is framed, asserted without R3F.
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -56,13 +55,10 @@ function tagOf(object: THREE.Object3D): Camera2DTag {
 
 describe('selectViewportCamera', () => {
   /**
-   * Godot renders a viewport through a Camera3D **inside** it:
-   * `scene/3d/camera_3d.cpp`, `Camera3D::_notification` /
-   * `NOTIFICATION_ENTER_WORLD`, does `viewport = get_viewport();` then
-   * `viewport->_camera_3d_add(this)` — `get_viewport()` being the nearest
-   * Viewport ancestor. A camera elsewhere in the shared World3D belongs to a
-   * different viewport and must not be picked, which matters here because the
-   * shared-world render source is the WHOLE main scene.
+   * Godot renders a viewport through a Camera3D inside it: `scene/3d/camera_3d.cpp`
+   * on `NOTIFICATION_ENTER_WORLD` calls `get_viewport()->_camera_3d_add(this)`. A
+   * camera elsewhere in the shared World3D belongs to another viewport, and the
+   * shared-world render source is the whole main scene.
    */
   it('picks a camera that is a descendant of the sub-viewport', () => {
     const scene = new THREE.Scene();
@@ -78,7 +74,7 @@ describe('selectViewportCamera', () => {
   });
 
   /**
-   * A path prefix is only a descendant when the next character is a separator —
+   * A path prefix is only a descendant when the next character is a separator:
    * `Root/SubViewportExtra/Camera3D` is a sibling, not a child.
    */
   it('does not mistake a sibling with a shared name prefix for a descendant', () => {
@@ -89,8 +85,8 @@ describe('selectViewportCamera', () => {
 
   /**
    * `camera_3d.cpp`, `NOTIFICATION_ENTER_WORLD`:
-   * `if (current || first_camera) { viewport->_camera_3d_set(this); }`
-   * — a camera marked `current` claims the viewport whatever the tree order.
+   * `if (current || first_camera) { viewport->_camera_3d_set(this); }`, so a
+   * camera marked `current` claims the viewport whatever the tree order.
    */
   it('prefers a camera with current = true over an earlier sibling', () => {
     const scene = new THREE.Scene();
@@ -101,10 +97,9 @@ describe('selectViewportCamera', () => {
   });
 
   /**
-   * `Viewport::_camera_3d_set` replaces the incumbent unconditionally (it only
-   * early-returns when the camera is ALREADY the current one), so when several
-   * cameras are marked `current` the LAST to enter the tree keeps it — not the
-   * first. Reading the rule as "first current wins" is the natural mistake.
+   * `Viewport::_camera_3d_set` replaces the incumbent unless it is already the
+   * current one, so when several cameras are marked `current` the last to enter
+   * the tree keeps it, not the first.
    */
   it('with several current cameras the last in tree order wins', () => {
     const scene = new THREE.Scene();
@@ -146,20 +141,10 @@ describe('selectViewportCamera2D', () => {
   });
 
   /**
-   * The crux, and the exact INVERSE of the 3D rule asserted above.
-   * `scene/2d/camera_2d.cpp`, `Camera2D::_notification` /
-   * `NOTIFICATION_ENTER_TREE`:
-   *
-   *     if (!_is_editing_in_editor() && enabled && !viewport->get_camera_2d()) {
-   *         make_current();
-   *     }
-   *
-   * The `!viewport->get_camera_2d()` guard admits a camera only while the slot
-   * is VACANT, so an incumbent is never displaced and the FIRST enabled camera
-   * in tree order keeps the viewport. `Camera3D` has no such guard —
-   * `Viewport::_camera_3d_set` overwrites — so there the LAST current camera
-   * wins. Two Player instances in one SubViewport (`game_splitscreen.tscn`)
-   * make the difference a visible change of framing, not a technicality.
+   * The inverse of the 3D rule: `scene/2d/camera_2d.cpp` on `NOTIFICATION_ENTER_TREE`
+   * claims the viewport only while `!viewport->get_camera_2d()`, so the first
+   * enabled camera in tree order keeps it. With two players in one SubViewport,
+   * the difference is a visible change of framing.
    */
   it('with several Camera2Ds the FIRST in tree order wins, unlike Camera3D', () => {
     const scene = new THREE.Scene();
@@ -206,8 +191,7 @@ describe('selectViewportCamera2D', () => {
 
   /**
    * Pre-order traversal is the order nodes enter the tree, so a camera nested
-   * inside an earlier instanced sub-scene beats a shallower later sibling —
-   * which is precisely the `Player/Camera` case.
+   * inside an earlier instanced sub-scene beats a shallower later sibling.
    */
   it('prefers a deeply nested earlier camera over a shallow later one', () => {
     const scene = new THREE.Scene();
@@ -232,11 +216,11 @@ describe('orthoFrameForCamera2D', () => {
     expect(frame.right).toBe(100);
     expect(frame.top).toBe(50);
     expect(frame.bottom).toBe(-50);
-    // Godot y is negated into three space, exactly as `orthoFrameForSize` does.
+    // Godot y is negated into three space, as `orthoFrameForSize` does.
     expect(frame.position).toEqual([400, -300, 1000]);
   });
 
-  /** Higher zoom is closer, so the view rect covers FEWER canvas pixels. */
+  /** Higher zoom is closer, so the view rect covers fewer canvas pixels. */
   it('shrinks the view rect as zoom magnifies', () => {
     const frame = orthoFrameForCamera2D(
       tagOf(camera2d({ zoom: { x: 2, y: 2 } })),
@@ -248,14 +232,10 @@ describe('orthoFrameForCamera2D', () => {
   });
 
   /**
-   * `game_splitscreen.tscn`'s real numbers, and the reason the players are in
-   * frame at all: Player1 sits at (100, 636.5) with the player's Camera2D at
-   * local (0, -28) — world (100, 608.5) — offset (0, 50) and limits
-   * [-715, -250, 1425, 690], in a 399x480 sub-viewport.
-   *
-   * The 480-tall view would run to y = 848.5, past `limit_bottom` 690, so Godot
-   * clamps the RECT to top 210; the centre is then 210 + 240 + 50 = 500. A real
-   * Godot 4.6 render of the scene at this size frames the identical rect.
+   * A Camera2D at world (100, 608.5), offset (0, 50), limits [-715, -250, 1425, 690],
+   * in a 399x480 sub-viewport. The view would run to y = 848.5, past `limit_bottom`
+   * 690, so Godot clamps the rect to top 210, and the centre is 210 + 240 + 50 = 500,
+   * the rect Godot 4.6 frames.
    */
   it('clamps the view rect into the scroll limits before adding offset', () => {
     const frame = orthoFrameForCamera2D(
@@ -277,9 +257,8 @@ describe('orthoFrameForCamera2D', () => {
   });
 
   /**
-   * Offset is added AFTER the clamp — the class reference's "the offsetted
-   * camera can go past the limits". Same camera as above with no offset sits 50
-   * canvas pixels higher.
+   * Offset is added after the clamp, so "the offsetted camera can go past the
+   * limits". The same camera with no offset sits 50 canvas pixels higher.
    */
   it('applies offset after the clamp, so the view may leave the limits', () => {
     const clamped = orthoFrameForCamera2D(
@@ -290,7 +269,7 @@ describe('orthoFrameForCamera2D', () => {
     expect(clamped.position[1]).toBe(-450);
   });
 
-  /** FIXED_TOP_LEFT puts the camera AT the view's top-left corner. */
+  /** FIXED_TOP_LEFT puts the camera at the view's top-left corner. */
   it('anchors the view at the camera for FIXED_TOP_LEFT', () => {
     const frame = orthoFrameForCamera2D(
       tagOf(camera2d({ anchor_mode: Camera2DAnchorMode.FIXED_TOP_LEFT })),
@@ -343,7 +322,7 @@ describe('applyOrthoFrame', () => {
   });
 
   /**
-   * The pass recomputes a frame every rendered frame; a static scene must not
+   * The pass recomputes a frame every rendered frame. A static scene must not
    * pay for a projection-matrix rebuild each time.
    */
   it('rebuilds the projection matrix only when the frustum moved', () => {
@@ -360,7 +339,7 @@ describe('applyOrthoFrame', () => {
     spy.mockRestore();
   });
 
-  /** A camera that only PANS still needs its new position, matrix rebuild or not. */
+  /** A camera that only pans still needs its new position, matrix rebuild or not. */
   it('moves the camera even when the frustum is unchanged', () => {
     const cam = new THREE.OrthographicCamera();
     const size = { x: 200, y: 100 };
@@ -386,7 +365,7 @@ describe('viewportAspect', () => {
 describe('orthoFrameForSize', () => {
   /**
    * CanvasItem content lays out against the target rect in Godot pixels with
-   * the origin top-left and +Y down; the previewer negates Y
+   * the origin top-left and +Y down. The previewer negates Y
    * (`node2dTransform`), so the rect occupies x ∈ [0, w], y ∈ [-h, 0].
    */
   it('frames exactly the target rect, centred on it', () => {
@@ -407,29 +386,10 @@ describe('orthoFrameForSize', () => {
 
 describe('createOffscreenTarget', () => {
   /**
-   * Godot tonemaps EVERY viewport render, a sub-viewport's included.
-   * `renderer_scene_render_rd.cpp`, `_render_buffers_post_process_and_tonemap`
-   * (Godot 4.4) reads the viewport's environment and runs the curve into the
-   * viewport's own target:
-   *
-   *     tonemap.tonemap_mode = environment_get_tone_mapper(p_render_data->environment);
-   *     ...
-   *     tone_mapper->tonemapper(color_texture, dest_fb, tonemap);
-   *
-   * A shared-world sub-viewport gets the SAME environment as the main view
-   * (`viewport.cpp`, `Viewport::find_world_3d()`: `return
-   * parent->find_world_3d();`), so its target stores POST-tonemap values and
-   * the main viewport tonemaps the consuming surface again — the curve applies
-   * twice to anything seen through a target. three structurally refuses the
-   * first application: `WebGLPrograms.js` grants `toneMapping =
-   * renderer.toneMapping` only when `currentRenderTarget === null ||
-   * currentRenderTarget.isXRRenderTarget === true`. The flag is the one switch
-   * that flips that decision, and it is a measured brightness contract, not a
-   * hint: without it, `unit-sub-viewport-texture.tscn` under the ADR-0025
-   * preview environment (FILMIC) sampled 0.60–0.65x of Godot in linear terms
-   * through the quad while matching the direct view exactly — and applying the
-   * ported FILMIC curve once to the previewer's own probes reproduced Godot's
-   * to within three code values (the sky sample exactly: rgb(177, 194, 212)).
+   * `renderer_scene_render_rd.cpp` tonemaps every viewport render into its own
+   * target, and a shared world (`viewport.cpp`) shares the main environment, so the
+   * curve applies twice through a target. `WebGLPrograms.js` tonemaps a target only
+   * with `isXRRenderTarget`: without it the quad measured 0.60-0.65x of Godot.
    */
   it('marks the target so three tonemaps the offscreen pass like the main pass', () => {
     const target = createOffscreenTarget(64, 64, 'Probe');
@@ -438,13 +398,9 @@ describe('createOffscreenTarget', () => {
   });
 
   /**
-   * With `isXRRenderTarget` set, three takes the pass's output space from
-   * `texture.colorSpace` (`WebGLPrograms.js`, the same decision as above), so
-   * LINEAR is load-bearing twice over: the pass writes working-space values
-   * with no encode, and a consuming material samples them back with no decode
-   * — the identity round trip. Tagging the target sRGB would install a
-   * shader-side encode ON TOP of the SRGB8 hardware encode three allocates for
-   * sRGB target textures, and everything sampled through it would darken.
+   * With `isXRRenderTarget`, three takes the output space from `texture.colorSpace`,
+   * so LINEAR writes and samples with no encode or decode. An sRGB tag would stack
+   * a shader encode on the SRGB8 hardware encode and darken every sample.
    */
   it('stores the working colour space, so write and sample round-trip exactly', () => {
     const target = createOffscreenTarget(64, 64, 'Probe');
@@ -454,7 +410,7 @@ describe('createOffscreenTarget', () => {
 
   /**
    * Linear min/mag with no mipmaps matches Godot's default
-   * `canvas_item_default_texture_filter` (1, LINEAR); depth without stencil is
+   * `canvas_item_default_texture_filter` (1, LINEAR). Depth without stencil is
    * what a 3D pass needs and nothing more.
    */
   it('samples linearly without mipmaps, and carries depth but no stencil', () => {
@@ -478,17 +434,9 @@ describe('createOffscreenTarget', () => {
 
 describe('DEFAULT_CLEAR_COLOR', () => {
   /**
-   * `servers/rendering/renderer_viewport.cpp` picks the clear colour:
-   * `Color bgcolor = p_viewport->transparent_bg ? Color(0, 0, 0, 0) :
-   * RSG::texture_storage->get_default_clear_color();`, and `main/main.cpp`
-   * seeds that with
-   * `GLOBAL_DEF_BASIC("rendering/environment/defaults/default_clear_color",
-   * Color(0.3, 0.3, 0.3))`.
-   *
-   * A Godot 4.6.3 render of an uncovered opaque target measures
-   * rgb(77, 77, 77) — so the 0.3 is the **sRGB** component, not a linear one.
-   * `new THREE.Color(0.3, 0.3, 0.3)` sets the working (linear) space instead
-   * and would clear to about rgb(149); only a probe would ever catch that.
+   * `servers/rendering/renderer_viewport.cpp` clears an opaque target to the default
+   * clear colour, which `main/main.cpp` sets to `Color(0.3, 0.3, 0.3)`. Godot renders
+   * it as rgb(77, 77, 77), so 0.3 is sRGB: a linear 0.3 would clear to about rgb(149).
    */
   it('is the sRGB colour that renders as rgb(77, 77, 77)', () => {
     const srgb = DEFAULT_CLEAR_COLOR.clone();

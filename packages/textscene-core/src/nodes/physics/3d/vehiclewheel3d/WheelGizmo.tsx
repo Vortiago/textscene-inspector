@@ -1,17 +1,8 @@
 /**
  * The VehicleWheel3D editor gizmo, ported from Godot's
- * editor/scene/3d/gizmos/physics/vehicle_body_3d_gizmo_plugin.cpp.
- *
- * Five parts, all line segments: the wheel circle in the YZ plane at
- * `wheel_radius`; a four-section spring coil wound around it at 0.2 scale; the
- * suspension travel line from the origin up to `wheel_rest_length`; an axle tick
- * at each end of that line; and a forward arrow at y = −radius pointing +Z, which
- * is what makes a mirrored or back-to-front wheel obvious.
- *
- * The loop runs i = 0…360 inclusive, so the final segment spans 360°→370° and
- * overlaps the first. That overlap is Godot's, kept deliberately: the gizmo is a
- * parity artefact, and "tidying" it would put our vertex buffer out of step with
- * the engine's for no visible gain.
+ * editor/scene/3d/gizmos/physics/vehicle_body_3d_gizmo_plugin.cpp: the wheel circle,
+ * a spring coil, the suspension travel line, an axle tick at each end, and a
+ * forward arrow (+Z) that shows a mirrored or back-to-front wheel.
  */
 
 import { useMemo } from 'react';
@@ -57,7 +48,8 @@ function buildWheelGizmo(radius: number, restLength: number): Float32Array {
     const bx = Math.sin(rb) * r;
     const by = Math.cos(rb) * r;
 
-    // The wheel circle, in the YZ plane.
+    // The wheel circle, in the YZ plane. i runs 0…360 inclusive, so the last
+    // segment overlaps the first, as in Godot: the vertex buffer stays in step.
     push(0, ax, ay);
     push(0, bx, by);
 
