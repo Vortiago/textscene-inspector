@@ -1,5 +1,5 @@
 /**
- * `parseStyleBoxTexture` — `scene/resources/style_box_texture.h`/`.cpp`
+ * `parseStyleBoxTexture` against `scene/resources/style_box_texture.h`/`.cpp`
  * (Godot 4.6.3).
  */
 import { describe, expect, it } from 'vitest';

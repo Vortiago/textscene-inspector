@@ -1,10 +1,7 @@
 /**
- * `resolveStyleBoxes` (`buildSolveTree.ts`) — the walker's own
- * `theme_override_styles/*` resolution, now covering all four concrete
- * StyleBox kinds via `native/parseStyleBox.ts`'s discriminated
- * `ResolvedStyleBox`. Previously `StyleBoxLine`/`StyleBoxTexture` overrides
- * were silently DROPPED (parsed only `StyleBoxFlat`/`StyleBoxEmpty`) — these
- * tests pin that they are kept.
+ * `resolveStyleBoxes` (`buildSolveTree.ts`), the walker's
+ * `theme_override_styles/*` resolution, keeps all four StyleBox kinds through
+ * `native/parseStyleBox.ts`'s `ResolvedStyleBox`.
  */
 import { describe, expect, it } from 'vitest';
 import { resolveStyleBoxes } from './buildSolveTree';

@@ -1,25 +1,13 @@
 /**
- * Conformance guard: a Control child of every registered type survives the
- * real walk (`ControlCanvasWalker`) and reaches the rendered scene.
- *
- * Native's contract splits child placement two ways
- * (`NativeControlComponentProps`'s own doc comment): a normal painter draws
- * fixed chrome and the walker places its Control children as SIBLINGS,
- * bypassing the painter entirely; only a `wrapsChildren` type (`CanvasLayer`,
- * `ScrollContainer`) receives them as REAL React `children` and must render
- * that prop itself. `wrapsChildren.driftguard.test.ts` guards the FLAG on the
- * registration; this guards the RUNTIME behaviour the flag promises — a
- * wrapping painter that declares the flag but forgets to render `{children}`
- * in its own JSX silently drops its whole subtree, exactly the class of bug
- * that hit `CanvasLayer` for a whole commit (that module's own doc).
- *
- * Driven through the REAL `TscnParser` and the REAL `ControlCanvasWalker` —
- * never a hand-built `SolveNode` fixture for the type under test — so a
- * parser/registry/walker mismatch is caught too, not just a hand-wired stub.
+ * Conformance guard: a Control child of every registered type survives the real
+ * `TscnParser` and `ControlCanvasWalker` and reaches the rendered scene.
  */
+// The walker places a normal painter's children as siblings. A `wrapsChildren`
+// type receives them as React `children`, and one that forgets `{children}`
+// drops its subtree. `wrapsChildren.driftguard.test.ts` guards only the flag.
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-// Side-effect import: registers all 23 Control slices' native painters.
+// Side-effect import: registers every Control slice's native painter.
 import { controlComponentRegistry } from '../index';
 import type { TscnNode } from '../../../parser/types';
 import { parseWithChild } from '../testing/probeScene';

@@ -1,27 +1,8 @@
 /**
- * `StyleBoxTexture` — a resolved `StyleBoxTexture` SubResource
- * (`style_box_texture.h`/`.cpp`), the generic parse any `theme_override_
- * styles/*` slot resolves to when it names this kind. Reuses
- * `native/ninePatchGeometry.ts` for its draw geometry — `StyleBoxTexture::
- * draw` funnels through the identical `canvas_item_add_nine_patch` call
- * `NinePatchRect` does (`style_box_texture.cpp:183`), so no separate
- * tessellator exists for it.
- *
- * `texture` stays a RAW resource ref: resolving pixels needs `useTexture2D`,
- * a hook this pure-data parser cannot call. `resources` carries the scope
- * (`SceneScope`) that ref names ids against — the node's OWN, not the ambient
- * top-level scene's, mirroring every other resource resolved off a `SolveNode`
- * — so the painter that eventually resolves it (`StyleBoxQuad.tsx`) needs no
- * separate prop threaded in from its caller.
- *
- * `margin` is the RAW `texture_margin_*` the nine-patch draw itself samples
- * with (`StyleBoxTexture::draw`'s `start_offset`/`end_offset`,
- * `style_box_texture.cpp:178-179`) — independent of the EFFECTIVE content
- * margin (`StyleBox::get_margin`'s `content_margin_*`-or-`texture_margin_*`
- * fallback), which a caller reaches through the wrapping `StyleBoxFlatData`
- * core's own `contentMargin` instead (`native/parseStyleBox.ts`). The two
- * can diverge the moment `content_margin_*` is authored, and Godot keeps them
- * that way: the drawn nine-patch margin never moves with it.
+ * A resolved `StyleBoxTexture` SubResource (`style_box_texture.h`/`.cpp`) for any
+ * `theme_override_styles/*` slot. It draws through `native/ninePatchGeometry.ts`,
+ * since `StyleBoxTexture::draw` makes the same `canvas_item_add_nine_patch` call
+ * as `NinePatchRect` (`style_box_texture.cpp:183`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -37,37 +18,41 @@ import type { ControlColor } from '../../../nodes/2d/ui/control/types';
 import { NINE_PATCH_STRETCH, type NinePatchAxisMode } from './ninePatchGeometry';
 
 export interface StyleBoxTextureData {
-  /** Raw `texture` ref (e.g. `ExtResource("id")`); `undefined` draws nothing (`StyleBoxTexture::draw`'s `texture.is_null()` guard). */
+  /**
+   * The raw `texture` ref, such as `ExtResource("id")`: pixels need `useTexture2D`,
+   * which `StyleBoxQuad.tsx` calls. `undefined` draws nothing (`texture.is_null()`).
+   */
   texture: string | undefined;
-  /** The scope `texture` resolves ids against. */
+  /** The node's own scope that `texture` resolves ids against, not the top-level scene's. */
   resources: SceneScope;
-  /** `texture_margin_*` (`style_box_texture.h`) — default `0`. The RAW nine-patch draw margin, not the effective content margin. */
+  /**
+   * `texture_margin_*` (`style_box_texture.h`), default `0`: the raw margin the
+   * nine-patch samples with (`style_box_texture.cpp:178-179`). It never moves
+   * with an authored `content_margin_*`.
+   */
   margin: { left: number; top: number; right: number; bottom: number };
   /**
    * `StyleBox::get_margin` (`style_box.cpp:78-86`): the authored
-   * `content_margin_<side>`, or — when unset (the `-1` sentinel) —
-   * `StyleBoxTexture::get_style_margin` (`style_box_texture.cpp:33-36`),
-   * which returns `texture_margin[side]` directly. Diverges from `margin`
-   * above the moment `content_margin_*` is authored; the drawn nine-patch
-   * always uses `margin`, never this.
+   * `content_margin_<side>`, or, when unset, `texture_margin[side]`
+   * (`style_box_texture.cpp:33-36`). The drawn nine-patch never uses it.
    */
   contentMargin: { left: number; top: number; right: number; bottom: number };
-  /** `expand_margin_*` — default `0`. */
+  /** `expand_margin_*`, default `0`. */
   expandMargin: { left: number; top: number; right: number; bottom: number };
-  /** `region_rect` — `undefined` (or all-zero) means the whole texture. */
+  /** `region_rect`: `undefined` or all-zero means the whole texture. */
   regionRect: Rect2Value | undefined;
   axisStretchHorizontal: NinePatchAxisMode;
   axisStretchVertical: NinePatchAxisMode;
-  /** `draw_center` — default `true`. */
+  /** `draw_center`, default `true`. */
   drawCenter: boolean;
-  /** `modulate_color` — default `Color(1, 1, 1, 1)`. */
+  /** `modulate_color`, default `Color(1, 1, 1, 1)`. */
   modulateColor: ControlColor;
 }
 
 const CONTEXT = 'StyleBoxTexture';
 const DEFAULT_MODULATE: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 
-/** `style_box.cpp:143`'s sentinel — "ask `get_style_margin`" (also `parseStyleBox.ts`'s `CONTENT_MARGIN_UNSET`). */
+/** `style_box.cpp:143`'s sentinel: "ask `get_style_margin`" (also `parseStyleBox.ts`'s `CONTENT_MARGIN_UNSET`). */
 const CONTENT_MARGIN_UNSET = -1;
 
 function toAxisMode(value: number): NinePatchAxisMode {
@@ -80,10 +65,9 @@ function contentMarginOr(raw: string | undefined, textureMarginSide: number): nu
 }
 
 /**
- * Resolve a `theme_override_styles/*` (or any StyleBox-slot) ref to a
- * `StyleBoxTextureData`, or `null` for an absent/malformed ref, a
- * non-SubResource form, an unknown id, or a resource that is not a
- * `StyleBoxTexture` at all.
+ * Resolves a StyleBox-slot ref to a `StyleBoxTextureData`, or `null` for an
+ * absent or malformed ref, a non-SubResource form, an unknown id, or a
+ * resource that is not a `StyleBoxTexture`.
  */
 export function parseStyleBoxTexture(
   ref: string | undefined,

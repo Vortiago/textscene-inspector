@@ -1,39 +1,14 @@
 /**
- * Resolve a Control's StyleBox theme override (e.g. `theme_override_styles/panel
- * = SubResource("StyleBoxFlat_x")`) to a typed `ResolvedStyleBox`, via the
- * SubResource resolution funnel `parseResourceReference` + `findSubResource`,
- * covering all four concrete StyleBox kinds Godot ships
- * (`scene/resources/style_box*.cpp`): `StyleBoxFlat`, `StyleBoxEmpty`,
- * `StyleBoxLine` and `StyleBoxTexture`.
- *
- * Degrades to `null`, never throws, for: an absent ref, a non-SubResource
- * reference (ExtResource / malformed string), an unknown id, or an id that
- * resolves to something that is not a StyleBox at all. `null` means "no
- * override" — consumers fall back to the default theme on it, so a resolved
- * `StyleBoxEmpty` must NOT take that route: Godot's local-override branch
- * returns it unconditionally and `StyleBoxEmpty::draw` has an empty body, so
- * it REPLACES the widget's chrome with nothing. It comes back as a box that
- * paints nothing and carries zero style margin. A resolved `StyleBoxFlat` with
- * absent keys fills them from Godot's documented defaults; see
- * `native/styleBoxFlat.ts` for the field-by-field citation.
- *
- * `StyleBoxLineBox`/`StyleBoxTextureBox` EXTEND `StyleBoxFlatData` rather than
- * replacing it in a bare union — `SolveNode.styleBoxes` (`native/solveTree.ts`)
- * is typed `Record<string, StyleBoxFlatData>`, and every existing consumer
- * across the codebase (`PanelChrome`, `contentMarginSize`, a dozen
- * `nativeSolver.ts`s) already reads that field assuming exactly that shape. A
- * type that ADDS fields on top of `StyleBoxFlatData` is still assignable
- * wherever a bare `StyleBoxFlatData` is expected, so `ResolvedStyleBox` (the
- * union of all three) is a drop-in `StyleBoxFlatData` for every one of those —
- * min-size math reads the WRAPPER's own `contentMargin` (kind-correct, see
- * `styleBoxLine.ts`/`styleBoxTexture.ts`) and gets the right answer without
- * knowing a wrapper exists, while `StyleBoxQuad.tsx` (which DOES know) reads
- * the extra `styleBoxKind` tag to draw the real thing. The wrapped core is
- * otherwise a NEUTRAL, no-draw `StyleBoxFlatData` (`neutralFlatCore`) — a
- * consumer that draws a `styleBoxes` entry directly, bypassing
- * `StyleBoxQuad`, silently paints nothing for a line/texture override rather
- * than the wrong thing, mirroring how `StyleBoxEmpty` already degrades.
+ * Resolves a Control's StyleBox theme override (such as
+ * `theme_override_styles/panel = SubResource("StyleBoxFlat_x")`) to a typed
+ * `ResolvedStyleBox`, for the four StyleBox kinds Godot ships
+ * (`scene/resources/style_box*.cpp`).
  */
+
+// `null`, never a throw, means "no override": an absent, non-SubResource or
+// unknown ref, or a resource that is not a StyleBox. A StyleBoxEmpty is not
+// `null`: Godot returns a local override unconditionally, so it replaces the
+// chrome with nothing.
 
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver';
@@ -45,6 +20,7 @@ import type { StyleBoxFlatData } from './styleBoxFlat';
 import { parseStyleBoxLine, type StyleBoxLineData } from './styleBoxLine';
 import { parseStyleBoxTexture, type StyleBoxTextureData } from './styleBoxTexture';
 
+// An absent StyleBoxFlat key takes Godot's default (`native/styleBoxFlat.ts` cites each field).
 const DEFAULT_BG_COLOR = { r: 0.6, g: 0.6, b: 0.6, a: 1 }; // style_box_flat.h:38
 const DEFAULT_BORDER_COLOR = { r: 0.8, g: 0.8, b: 0.8, a: 1 }; // style_box_flat.h:40
 const DEFAULT_SHADOW_COLOR = { r: 0, g: 0, b: 0, a: 0.6 }; // style_box_flat.h:39
@@ -59,11 +35,11 @@ const CONTENT_MARGIN_UNSET = -1;
 /** `StyleBoxFlat::set_aa_size`'s clamp range (`style_box_flat.cpp`), applied to every authored `aa_size`. */
 const AA_SIZE_MIN = 0.01;
 const AA_SIZE_MAX = 10;
-/** `StyleBoxFlat::set_corner_detail` (`style_box_flat.cpp:130`) — CLAMP(detail, 1, 20). */
+/** `StyleBoxFlat::set_corner_detail` (`style_box_flat.cpp:130`): CLAMP(detail, 1, 20). */
 const CORNER_DETAIL_MIN = 1;
 const CORNER_DETAIL_MAX = 20;
 
-/** A `Vector2(x, y)` property, or `fallback` when absent or ungrammatical — this resolver degrades, never throws (see the module doc). */
+/** A `Vector2(x, y)` property, or `fallback` when absent or ungrammatical. */
 function vector2Or(raw: string | undefined, fallback: Vec2): Vec2 {
   if (raw === undefined) return fallback;
   try {
@@ -82,10 +58,9 @@ function contentMarginOr(raw: string | undefined, borderWidth: number): number {
 }
 
 /**
- * A `StyleBoxLine`/`StyleBoxTexture` wrapper's `StyleBoxFlatData` core — see
- * the module doc for why one is needed at all. Every field except
- * `contentMargin` is the same no-draw neutral `StyleBoxEmpty` already uses:
- * a bare `styleBoxFlatGeometry` call against it emits zero vertices.
+ * A `StyleBoxLine`/`StyleBoxTexture` wrapper's `StyleBoxFlatData` core. Every
+ * field except `contentMargin` is the no-draw neutral `StyleBoxEmpty` uses, so
+ * `styleBoxFlatGeometry` emits zero vertices for it.
  */
 function neutralFlatCore(contentMargin: StyleBoxFlatData['contentMargin']): StyleBoxFlatData {
   return {
@@ -108,13 +83,9 @@ function neutralFlatCore(contentMargin: StyleBoxFlatData['contentMargin']): Styl
 }
 
 /**
- * A resolved `StyleBoxEmpty` as `StyleBoxFlatData`: nothing to draw
- * (`StyleBoxEmpty::draw` is empty), and `get_style_margin` is the base
- * `StyleBox`'s 0 rather than `StyleBoxFlat`'s border width, so an unset
- * `content_margin_<side>` resolves to 0. Unlike the flat core's OWN
- * `expandMargin`, which stays neutral for a line/texture WRAPPER, a
- * StyleBoxEmpty's `expand_margin_*` is real Godot state (`StyleBox`'s own
- * base property) and is kept.
+ * A resolved `StyleBoxEmpty`: `StyleBoxEmpty::draw` is empty, and the base
+ * `get_style_margin` is 0, so an unset `content_margin_<side>` resolves to 0.
+ * Its `expand_margin_*` is a base `StyleBox` property, so it is kept.
  */
 function emptyStyleBox(data: Record<string, string>): StyleBoxFlatData {
   const contentMargin = (raw: string | undefined): number => {
@@ -137,31 +108,26 @@ function emptyStyleBox(data: Record<string, string>): StyleBoxFlatData {
   };
 }
 
-/** A resolved `theme_override_styles/*` slot naming a `StyleBoxLine`. See the module doc for why this EXTENDS `StyleBoxFlatData`. */
+// A line or texture box extends `StyleBoxFlatData`, so a consumer of
+// `SolveNode.styleBoxes` reads its kind-correct `contentMargin` unchanged and
+// `StyleBoxQuad.tsx` reads `styleBoxKind`. Its core draws nothing, so a consumer
+// that bypasses `StyleBoxQuad` paints nothing rather than the wrong thing.
+/** A resolved `theme_override_styles/*` slot naming a `StyleBoxLine`. */
 export interface StyleBoxLineBox extends StyleBoxFlatData {
   styleBoxKind: 'line';
   line: StyleBoxLineData;
 }
 
-/** A resolved `theme_override_styles/*` slot naming a `StyleBoxTexture`. See the module doc for why this EXTENDS `StyleBoxFlatData`. */
+/** A resolved `theme_override_styles/*` slot naming a `StyleBoxTexture`. */
 export interface StyleBoxTextureBox extends StyleBoxFlatData {
   styleBoxKind: 'texture';
   texture: StyleBoxTextureData;
 }
 
-/** Every concrete StyleBox kind `parseStyleBox` can resolve to. A bare `StyleBoxFlatData` covers both `StyleBoxFlat` and `StyleBoxEmpty` — the two have always shared one shape (see the module doc for `StyleBoxEmpty`'s own history here). */
+/** Every StyleBox kind `parseStyleBox` resolves to. A bare `StyleBoxFlatData` covers both `StyleBoxFlat` and `StyleBoxEmpty`. */
 export type ResolvedStyleBox = StyleBoxFlatData | StyleBoxLineBox | StyleBoxTextureBox;
 
-/**
- * Wraps an already-resolved `StyleBoxLineData` (e.g. `Separator`'s own
- * default-theme box, `nodes/2d/ui/separator/styleBoxLine.ts`'s
- * `defaultSeparatorStyleBoxLine` — never itself a `theme_override_styles/*`
- * ref, so it never goes through `parseStyleBox` itself) into the same
- * `StyleBoxLineBox` shape a resolved override does, so a caller can feed
- * EITHER to `<StyleBoxQuad>`/`separatorPlacementRect` without branching on
- * which one it got.
- */
-/** Whether a resolved slot holds a `StyleBoxTexture` — the one kind whose tint is a multiply rather than a substitution. */
+/** Whether a resolved slot holds a `StyleBoxTexture`, the one kind whose tint is a multiply rather than a substitution. */
 export function isStyleBoxTexture(box: ResolvedStyleBox): box is StyleBoxTextureBox {
   return (box as StyleBoxTextureBox).styleBoxKind === 'texture';
 }
@@ -171,6 +137,11 @@ export function styleBoxTextureBox(texture: StyleBoxTextureData): StyleBoxTextur
   return { ...neutralFlatCore(texture.contentMargin), styleBoxKind: 'texture', texture };
 }
 
+/**
+ * Wraps a `StyleBoxLineData` that is not an override, such as
+ * `defaultSeparatorStyleBoxLine`, in the shape a resolved override has, so
+ * `<StyleBoxQuad>` and `separatorPlacementRect` take either.
+ */
 export function styleBoxLineBox(line: StyleBoxLineData): StyleBoxLineBox {
   return { ...neutralFlatCore(line.margin), styleBoxKind: 'line', line };
 }

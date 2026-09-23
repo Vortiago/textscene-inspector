@@ -1,16 +1,7 @@
 /**
  * Port of `TextServer::get_hex_code_box_size`/`draw_hex_code_box`/
- * `_draw_hex_code_box_number` (`servers/text/text_server.cpp:737-812`) — the
- * fallback glyph a control character draws as once `preserve_control` keeps
- * it alive (`textLayout.ts`'s `ShapeTextOptions.preserveControl`): a bordered
- * box holding the codepoint's own hex digits, each digit a 7-segment glyph.
- *
- * Pure geometry — every rectangle below is in the SAME pen-relative space
- * `TextServer::shaped_text_draw` calls `draw_hex_code_box` in: `(0, 0)` is
- * the glyph's own advance-box origin (`GlyphPlacement.x`, that line's
- * baseline), not the box's own top-left — the box extends UP and RIGHT from
- * there, per `pos = p_pos - Point2i(0, size.y * 0.85)`. `TextRun.tsx`
- * positions each rect from that same origin.
+ * `_draw_hex_code_box_number` (`servers/text/text_server.cpp:737-812`): the box of
+ * 7-segment hex digits a control character draws as under `preserve_control`.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -20,6 +11,9 @@
 import type { Vec2 } from '../rect';
 import { round as godotRound } from '../../../../godot/math';
 
+// Pure geometry in `shaped_text_draw`'s pen-relative space: `(0, 0)` is the glyph's
+// advance-box origin on the baseline, and the box extends up and right from it
+// (`pos = p_pos - Point2i(0, size.y * 0.85)`). `TextRun.tsx` places rects from there.
 export interface HexCodeBoxRect {
   x: number;
   y: number;
@@ -27,7 +21,7 @@ export interface HexCodeBoxRect {
   h: number;
 }
 
-/** `w`/`sp`/`sz` (`text_server.cpp:737-742,771-778`) — shared by the advance size and the drawn geometry, which otherwise diverge by one `sz` column (see `hexCodeBoxAdvanceSize`'s own doc). */
+/** `w`/`sp`/`sz` (`text_server.cpp:737-742,771-778`), shared by the advance size and the drawn geometry. */
 function hexCodeBoxCells(fontSizePx: number, codepoint: number): { byteWidth: number; spacer: number; cellPx: number } {
   const byteWidth = codepoint <= 0xff ? 1 : codepoint <= 0xffff ? 2 : 3;
   const spacer = Math.max(0, byteWidth - 1);
@@ -36,17 +30,16 @@ function hexCodeBoxCells(fontSizePx: number, codepoint: number): { byteWidth: nu
 }
 
 /**
- * `TextServer::get_hex_code_box_size` (`:737-742`) — what the SHAPER reserves
- * as this glyph's advance. ONE cell WIDER than `hexCodeBoxRects`' own drawn
- * frame (the `+ 1` below, absent from `draw_hex_code_box`'s own `size`) — a
- * deliberate gap Godot leaves between one hex box and the next.
+ * `TextServer::get_hex_code_box_size` (`:737-742`): the advance the shaper
+ * reserves. The `+ 1` makes it one cell wider than the drawn frame, the gap
+ * Godot leaves between one hex box and the next.
  */
 export function hexCodeBoxAdvanceSize(fontSizePx: number, codepoint: number): Vec2 {
   const { byteWidth, spacer, cellPx } = hexCodeBoxCells(fontSizePx, codepoint);
   return { x: (4 + 3 * byteWidth + spacer + 1) * cellPx, y: 15 * cellPx };
 }
 
-/** `text_server.cpp:745-767` — the bitmask of a 7-segment digit's own six rectangles (top/upper-right/lower-right/bottom/lower-left/upper-left/middle), one entry per hex nibble 0x0-0xF. */
+/** `text_server.cpp:745-767`: the bitmask of a 7-segment digit's rectangles (top/upper-right/lower-right/bottom/lower-left/upper-left/middle), one entry per hex nibble 0x0-0xF. */
 const HEX_DIGIT_SEGMENTS = [0x7e, 0x30, 0x6d, 0x79, 0x33, 0x5b, 0x5f, 0x70, 0x7f, 0x7b, 0x77, 0x1f, 0x4e, 0x3d, 0x4f, 0x47];
 
 /** `TextServer::_draw_hex_code_box_number` (`:745-767`), one digit at `(x, y)`, cell size `sz`. */
@@ -64,13 +57,9 @@ function hexDigitRects(x: number, y: number, sz: number, nibble: number): HexCod
 }
 
 /**
- * `TextServer::draw_hex_code_box` (`:771-812`) — every filled rectangle: the
- * four frame borders, then 2/4/6 digits (one/two/three codepoint bytes, each
- * TWO hex nibbles) at their own fixed cell offsets. `codepoint <= 0` draws
- * nothing (`:772-774`, the `index == 0` guard — never reachable through
- * `textLayout.ts`'s own `isControlChar`, which excludes NUL only via the
- * shaper's normal zero-width handling, kept here for parity with the source
- * guard itself).
+ * `TextServer::draw_hex_code_box` (`:771-812`): the four frame borders, then
+ * 2/4/6 digits (two nibbles per codepoint byte) at fixed cell offsets.
+ * `codepoint <= 0` draws nothing, the source's `index == 0` guard (`:772-774`).
  */
 export function hexCodeBoxRects(fontSizePx: number, codepoint: number): HexCodeBoxRect[] {
   if (codepoint <= 0) return [];

@@ -26,11 +26,9 @@ function layoutFor(text: string, lineSpacingPx = 3) {
 }
 
 /**
- * Where the raster pixel the painter draws content-box x=0 (resp. y=0) into
- * actually lands in the quad's own coordinate space — the painter draws at
- * CSS `offsetXPx`/`offsetYPx` on a canvas sized ``deviceWidthPx` x
- * `deviceHeightPx` device px, and the quad samples that whole canvas across
- * its own extent.
+ * Where the raster pixel for content-box x=0 (or y=0) lands in the quad's space:
+ * the painter draws at CSS `offsetXPx`/`offsetYPx` on a `deviceWidthPx` x
+ * `deviceHeightPx` canvas, and the quad samples that whole canvas.
  */
 function contentOriginOnQuad(
   canvasLayout: ReturnType<typeof computeCanvasTextCanvasLayout>
@@ -44,7 +42,7 @@ function contentOriginOnQuad(
   return {
     x: left + (col / deviceW) * (right - left),
     // Quad Y is negated Godot Y (`buildCanvasTextQuadArrays`), so the
-    // content-box top is the LARGEST y.
+    // content-box top is the largest y.
     y: -(top + (row / deviceH) * (bottom - top)),
   };
 }
@@ -77,11 +75,9 @@ describe('computeCanvasTextCanvasLayout', () => {
 });
 
 describe('the outline surface overlays the fill surface exactly', () => {
-  // Label3D draws two surfaces from one layout — a stroked outline
-  // (`label_3d.cpp:610-615`) and the fill — and they must line up
-  // glyph-for-glyph despite the outline's own stroke padding. Fractional
-  // line spacing makes the UNSTROKED surface fractional too, so neither side
-  // gets to be accidentally whole-pixel.
+  // Label3D draws a stroked outline (`label_3d.cpp:610-615`) and the fill from one
+  // layout, and they line up despite the stroke padding. Fractional line spacing
+  // keeps both surfaces off whole pixels.
   const layout = layoutFor('AB', 0.5);
   const stroked = computeCanvasTextCanvasLayout(layout, 0, 1.5);
   const filled = computeCanvasTextCanvasLayout(layout, 0, 0);
@@ -116,7 +112,7 @@ describe('buildCanvasTextQuadArrays', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0.3);
     const arrays = buildCanvasTextQuadArrays(canvasLayout);
-    // Vertex order TL, TR, BL, BR (matches buildGlyphQuadArrays's own convention).
+    // Vertex order TL, TR, BL, BR, as in buildGlyphQuadArrays.
     const tlX = arrays.positions[0]!;
     const tlY = arrays.positions[1]!;
     const trX = arrays.positions[3]!;

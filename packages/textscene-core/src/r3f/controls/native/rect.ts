@@ -1,12 +1,7 @@
 /**
- * Plain 2D geometry for the native Control rect solve. Godot
- * pixels throughout, +Y down — the same convention the 2D world canvas
- * already uses (`World2DCanvas.tsx`), so a solved `Rect2` needs no axis flip
- * until a component converts it to a three.js position (`[rect.x, -rect.y,
- * 0]`, done by the walker, not here).
- *
- * Pure data, no React, no THREE — every other `native/` module builds on
- * these two shapes.
+ * Plain 2D geometry for the native Control rect solve, in Godot pixels with +Y
+ * down like `World2DCanvas.tsx`. The walker, not this module, flips a solved
+ * `Rect2` to a three.js position (`[rect.x, -rect.y, 0]`). Pure data: no React, no THREE.
  */
 
 export interface Vec2 {

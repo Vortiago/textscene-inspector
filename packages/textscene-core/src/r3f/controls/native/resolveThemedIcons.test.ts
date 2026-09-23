@@ -1,11 +1,8 @@
 /**
- * `resolveThemedIcons` (`buildSolveTree.ts`) — the walker's own
- * `theme_override_icons/*` + ancestor/project-Theme `<Type>/icons/<name>`
- * resolution, `Control::get_theme_icon`'s three-level walk
- * (`scene/gui/control.cpp:3035-3055`, `ThemeOwner::get_theme_item_in_types`,
- * `scene/theme/theme_owner.cpp:227-261`): a local override wins
- * unconditionally, else the nearest ancestor/project Theme that resolves the
- * name, else nothing at all.
+ * `resolveThemedIcons` (`buildSolveTree.ts`) follows `Control::get_theme_icon`
+ * (`scene/gui/control.cpp:3035-3055`, `scene/theme/theme_owner.cpp:227-261`): a
+ * local override wins, else the nearest ancestor or project Theme that resolves
+ * `<Type>/icons/<name>`, else nothing.
  */
 import { describe, expect, it } from 'vitest';
 import { resolveThemedIcons } from './buildSolveTree';
@@ -46,7 +43,7 @@ describe('resolveThemedIcons', () => {
     const scope = themeResolutionScope('CheckBox', undefined, [ancestor], null);
     const out = resolveThemedIcons(node({ checked: 'SubResource("Local")' }), NODE_SCOPE, scope);
     expect(out.checked?.ref).toBe('SubResource("Local")');
-    // Resolved in the NODE's own scope, not the ancestor theme's.
+    // Resolved in the node's own scope, not the ancestor theme's.
     expect(out.checked?.resources).toBe(NODE_SCOPE);
   });
 
