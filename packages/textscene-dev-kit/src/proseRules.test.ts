@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   commentBlocks,
+  isGeneratedSource,
   commentViolations,
   markdownViolations,
   proseLineCount,
@@ -75,6 +76,20 @@ describe('commentBlocks', () => {
 
   it('keeps line comments apart across a blank line', () => {
     expect(commentBlocks('// a\n\n// b\n')).toHaveLength(2);
+  });
+});
+
+describe('isGeneratedSource', () => {
+  it('finds a generator header in the first comment', () => {
+    expect(isGeneratedSource('// GENERATED FILE — do not hand-edit.\nexport const a = 1;\n')).toBe(true);
+  });
+
+  it('ignores a generator marker after the first comment', () => {
+    expect(isGeneratedSource('// The atlas.\nconst a = 1;\n// GENERATED\n')).toBe(false);
+  });
+
+  it('reads a file without comments as hand-written', () => {
+    expect(isGeneratedSource('export const a = 1;\n')).toBe(false);
   });
 });
 

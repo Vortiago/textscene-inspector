@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import {
   commentBlocks,
   commentViolations,
+  isGeneratedSource,
   markdownViolations,
   tscnCommentBlocks,
   type CommentBlock,
@@ -65,7 +66,7 @@ describe('prose conventions', () => {
       /\.(?:ts|tsx|js|mjs|css)$/.test(path)
     );
     const { offenders, blocks } = scanComments(files, (source, path) =>
-      commentBlocks(source, { blockOnly: path.endsWith('.css') })
+      isGeneratedSource(source) ? [] : commentBlocks(source, { blockOnly: path.endsWith('.css') })
     );
     // An empty list also means nothing was read, so the floors prove the scan saw the tree.
     expect(files.length).toBeGreaterThan(3000);

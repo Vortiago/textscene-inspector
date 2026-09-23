@@ -27,3 +27,6 @@ and state why.
   `alignmentJustify`. Only its test calls it.
 - `packages/textscene-core/src/nodes/2d/ui/progressbar/nativeSolver.ts`: four
   `PROGRESS_BAR_*` constants are exported, but only the file itself uses them.
+- `packages/textscene-core/src/r3f/controls/native/StyleBoxQuad.tsx`:
+  `tintStyleBox` is exported (and re-exported by `buttonBase.ts`) only for
+  `buttonBase.test.ts`. The file uses it internally.

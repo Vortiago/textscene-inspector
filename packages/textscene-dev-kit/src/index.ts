@@ -10,6 +10,7 @@ export { commentSpans, stripComments } from './commentSpans';
 export {
   commentBlocks,
   commentViolations,
+  isGeneratedSource,
   markdownViolations,
   surfaceViolations,
   tscnCommentBlocks,

@@ -4,9 +4,9 @@ import console from 'node:console';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import process from 'node:process';
-import { devKit, kindOf, repoRoot } from './scan.mjs';
+import { blocksOf, devKit, kindOf, repoRoot } from './scan.mjs';
 
-const { commentBlocks, commentViolations, markdownViolations, tscnCommentBlocks } = devKit;
+const { commentViolations, markdownViolations } = devKit;
 
 function lineOf(source, index) {
   return source.slice(0, index).split('\n').length;
@@ -17,10 +17,7 @@ function findings(path) {
   if (kindOf(path) === 'md') {
     return markdownViolations(source).map(({ line, violation }) => ({ line, ...violation }));
   }
-  const blocks = path.endsWith('.tscn')
-    ? tscnCommentBlocks(source)
-    : commentBlocks(source, { blockOnly: path.endsWith('.css') });
-  return blocks.flatMap((block) =>
+  return blocksOf(path, source).flatMap((block) =>
     commentViolations(block.text).map((v) => ({ line: lineOf(source, block.index), ...v }))
   );
 }

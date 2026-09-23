@@ -81,6 +81,12 @@ export interface CommentBlock {
   text: string;
 }
 
+/** A file whose first comment names it generated keeps every comment its generator wrote. */
+export function isGeneratedSource(source: string): boolean {
+  const first = commentSpans(source)[0];
+  return first !== undefined && VERBATIM_BLOCK.test(first.text) && /\bGENERATED\b|@generated\b/.test(first.text);
+}
+
 /** Comment blocks of a source file. Line comments on consecutive lines merge. */
 export function commentBlocks(source: string, opts: { blockOnly?: boolean } = {}): CommentBlock[] {
   const blocks: CommentBlock[] = [];

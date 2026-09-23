@@ -17,7 +17,8 @@ registerHooks({
 });
 
 export const devKit = await import('../packages/textscene-dev-kit/dist/index.js');
-const { commentBlocks, commentViolations, markdownViolations, tscnCommentBlocks } = devKit;
+const { commentBlocks, commentViolations, isGeneratedSource, markdownViolations, tscnCommentBlocks } =
+  devKit;
 
 export const repoRoot = resolve(import.meta.dirname, '..');
 
@@ -48,8 +49,9 @@ export function kindOf(path) {
   return undefined;
 }
 
-function blocksOf(path, source) {
+export function blocksOf(path, source) {
   if (path.endsWith('.tscn')) return tscnCommentBlocks(source);
+  if (isGeneratedSource(source)) return [];
   return commentBlocks(source, { blockOnly: path.endsWith('.css') });
 }
 
