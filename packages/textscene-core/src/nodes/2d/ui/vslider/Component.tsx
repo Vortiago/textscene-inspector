@@ -1,11 +1,8 @@
 /**
- * `<VSlider>` — the native (WebGL canvas) painter for `VSlider`.
- * Identical reasoning to `hslider/Component.tsx` (read its module doc
- * first) at `vertical = true`: the grabber travels from the BOTTOM
- * (value = min_value) to the TOP (value = max_value), and ticks draw the
- * `vslider_tick` icon instead of `hslider_tick`. All geometry is
- * `shared/sliderSolver.ts`'s job; this component only resolves theme/state and
- * draws.
+ * `<VSlider>`: the native (WebGL canvas) painter, `hslider/Component.tsx` at `vertical = true`.
+ * The grabber travels from the bottom (value = min_value) to the top (value = max_value), and
+ * ticks draw `vslider_tick`. `shared/sliderSolver.ts` owns the geometry. This component only
+ * resolves theme and state, and draws.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';

@@ -1,5 +1,5 @@
 /**
- * Camera3D parser - parses Camera3D TSCN properties
+ * Camera3D parser: parses Camera3D TSCN properties.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
@@ -28,7 +28,7 @@ export function parseCamera3D(
     v_offset: floatOr(properties.v_offset, 0.0, 'v_offset'),
     frustum_offset: vec2Or(properties.frustum_offset, { x: 0, y: 0 }, 'frustum_offset'),
     current: boolSlotValue(properties.current) === true,
-    // class_camera3d.html: default 1048575 — the 20 editor-visible layers of
+    // class_camera3d.html: default 1048575, the 20 editor-visible layers of
     // the 32 the mask actually holds.
     cull_mask: intOr(properties.cull_mask, 1048575, 'cull_mask', 'uint32'),
     doppler_tracking: intOr(properties.doppler_tracking, 0, 'doppler_tracking'),
@@ -45,9 +45,8 @@ function parseProjectionMode(value: string | undefined): ProjectionMode {
 
 /**
  * `set_keep_aspect_mode` bare-assigns, and `_update_camera_mode` then treats
- * anything that is not KEEP_WIDTH as KEEP_HEIGHT — so an out-of-range value
- * loads and behaves as KEEP_HEIGHT rather than naming a third mode. There is no
- * third mode: `camera_3d.h:50-53` declares exactly two.
+ * anything that is not KEEP_WIDTH as KEEP_HEIGHT, so an out-of-range value loads and behaves as
+ * KEEP_HEIGHT. There is no third mode: `camera_3d.h:50-53` declares two.
  */
 function parseKeepAspectMode(value: string | undefined): KeepAspectMode {
   return ruleInt(value) === 0 ? KeepAspectMode.KEEP_WIDTH : KeepAspectMode.KEEP_HEIGHT;

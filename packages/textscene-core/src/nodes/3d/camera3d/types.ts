@@ -10,7 +10,7 @@ export enum ProjectionMode {
   PROJECTION_FRUSTUM = 2,
 }
 
-/** camera_3d.h:50-53 — exactly two members, and no third label exists. */
+/** camera_3d.h:50-53: two members, and no third label exists. */
 export enum KeepAspectMode {
   KEEP_WIDTH = 0,
   KEEP_HEIGHT = 1,

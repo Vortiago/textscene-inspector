@@ -40,8 +40,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
   });
 
   it('warns (not errors) on a non-positive radius', () => {
-    // csg_shape.cpp:1855-1859 (set_radius) is a bare assignment; the hint
-    // (:1847) is advisory only, so this is a warning, not an error (ADR-0032).
+    // csg_shape.cpp:1855-1859 (set_radius) is a bare assignment, and the hint (:1847) is
+    // advisory, so this is a warning, not an error (ADR-0032).
     const content = `[gd_scene format=3]
 
 [node name="Cylinder" type="CSGCylinder3D"]

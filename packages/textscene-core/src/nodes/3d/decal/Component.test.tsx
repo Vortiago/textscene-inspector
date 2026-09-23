@@ -1,16 +1,8 @@
 /**
- * <Decal> component tests.
- *
- * The decal PROJECTS its albedo onto scene surfaces via a post-mount scene walk;
- * the projection maths itself is covered in decalProjection.test.ts. The
- * test-renderer mounts no SIBLING meshes, so a bare decal bakes nothing — but a
- * receiver passed as a child does get projected onto (the effect calls
- * `scene.updateMatrixWorld(true)` itself, so stale world matrices are not an
- * obstacle). That makes the `cull_mask` wiring observable end to end here: two
- * otherwise-identical mounts, one masked and one not, bake different counts.
- * Also observable: the projection-box gizmo is selection-gated (ADR-0018) —
- * hidden by default, shown only when this node is selected — the node never
- * draws a standalone quad, and the Node3D transform / children pass through.
+ * <Decal> component tests. The test-renderer mounts no sibling meshes, so a bare decal bakes
+ * nothing, but a receiver child is projected onto (the effect runs `scene.updateMatrixWorld(true)`
+ * itself). That makes `cull_mask` observable end to end, beside the selection-gated gizmo
+ * (ADR-0018), the absent standalone quad and the Node3D pass-through.
  */
 
 import { useEffect, type ReactNode } from 'react';
@@ -98,8 +90,8 @@ async function render(opts: RenderOptions) {
 }
 
 /**
- * A receiver on Godot render layer 2 — the layer Truck Town's blob shadows
- * exclude. Big enough to straddle the decal's default 2x2x2 box.
+ * A receiver on Godot render layer 2, the layer Truck Town's blob shadows exclude. Big enough to
+ * straddle the decal's default 2x2x2 box.
  */
 function Receiver() {
   return (
@@ -143,8 +135,7 @@ describe('<Decal>', () => {
   });
 
   it('never draws a standalone quad — projection needs live scene geometry', async () => {
-    // Albedo loads, but no receiver meshes exist in isolation, so nothing is
-    // baked (the old floating mid-plane quad is gone).
+    // Albedo loads, but no receiver meshes exist in isolation, so nothing is baked.
     const renderer = await render({
       node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
@@ -166,8 +157,7 @@ describe('<Decal>', () => {
   it('projects nothing onto a receiver the cull_mask culls', async () => {
     // Truck Town's blob shadows: `cull_mask` clears layer 2 and every vehicle
     // mesh sets `layers = 2`, so Godot never paints the vehicle with its own
-    // shadow. Same node, same box, same albedo as the test above — only the
-    // mask differs.
+    // shadow. Same node, same box, same albedo as the test above: only the mask differs.
     const renderer = await render({
       node: makeNode({ texture_albedo: 'ExtResource("1_tex")', cull_mask: '1048573' }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
@@ -188,17 +178,15 @@ describe('<Decal>', () => {
     const projection = projections(renderer)[0];
     const color = projection!.geometry.getAttribute('color');
     expect(color).toBeDefined();
-    // itemSize 4 is what makes three read the ALPHA channel rather than just RGB.
+    // itemSize 4 is what makes three read the alpha channel, not only RGB.
     expect(color.itemSize).toBe(4);
     expect((projection!.material as THREE.MeshStandardMaterial).vertexColors).toBe(true);
   });
 
   it('keeps albedo_mix x modulate.a in opacity and the geometric fade in vertex alpha', async () => {
-    // Godot's blend weight is tex.a x modulate.a x fade x albedo_mix. Splitting
-    // it across `opacity` and the baked attribute is only correct if neither
-    // carries the other's factor — so 0.7 x 0.8 must land in opacity ALONE, and
-    // the vertex alpha must stay the near-1 depth fade of a receiver sitting
-    // just below the decal origin.
+    // Godot's blend weight is tex.a x modulate.a x fade x albedo_mix. Split across `opacity` and
+    // the baked attribute, neither may carry the other's factor: 0.7 x 0.8 lands in opacity alone,
+    // and vertex alpha stays the near-1 depth fade of a receiver just below the decal origin.
     const renderer = await render({
       node: makeNode({
         texture_albedo: 'ExtResource("1_tex")',
@@ -221,11 +209,9 @@ describe('<Decal>', () => {
   });
 
   it('restores a distance-faded decal when the fade is turned back off', async () => {
-    // The frame callback culls a decal past `begin + length` by hiding its
-    // projection group and zeroing the material's opacity. Neither is part of
-    // the rebuild effect's inputs, so a re-parse that DISABLES the fade rebuilds
-    // nothing — the callback itself has to settle back at full strength, or the
-    // decal stays invisible for the rest of the session.
+    // The frame callback culls a decal past `begin + length` by hiding its group and zeroing
+    // opacity. The rebuild effect ignores both, so after a re-parse disables the fade the callback
+    // itself must settle back at full strength, or the decal stays invisible.
     const loader = seededLoader([{ path: TEXTURE_PATH, texture: makeTexture() }]);
     const options = {
       externals: [extRef('1_tex', TEXTURE_PATH)],

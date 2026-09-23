@@ -5,9 +5,9 @@
  * Godot does not compute CSG normals the way any three.js primitive does. `smooth_faces`
  * is neither `flatShading` nor `computeVertexNormals()`:
  *
- *   - a SMOOTH face's vertex takes the normalized SUM of the unit plane normals of every
- *     smooth face touching that exact vertex POSITION;
- *   - a FLAT face's vertex takes its own face's plane normal, and neither contributes to
+ *   - a smooth face's vertex takes the normalized sum of the unit plane normals of every
+ *     smooth face touching that exact vertex position;
+ *   - a flat face's vertex takes its own face's plane normal, and neither contributes to
  *     nor reads the accumulation.
  *
  * Keying on position rather than on vertex index is the load-bearing part, and it is where
@@ -15,7 +15,7 @@
  * nine distinct vertices with nine radial normals; Godot collapses all nine into one
  * straight-up normal. On a cone that difference alone is plainly visible as shading.
  *
- * The accumulation is an UNWEIGHTED sum of unit normals, so a large face and a small one
+ * The accumulation is an unweighted sum of unit normals, so a large face and a small one
  * meeting at a vertex pull on it equally. That is deliberate on Godot's side and is not
  * what area-weighted averaging (the usual choice) would produce.
  *
@@ -81,8 +81,8 @@ function positionKey(positions: Float32Array, base: number): string {
  * `Plane(v0, v1, v2)` with Godot's default `CLOCKWISE` direction:
  * `normal = ((v0 - v2) cross (v0 - v1)).normalized()`.
  *
- * Note this is the NEGATION of the conventional CCW `(v1 - v0) cross (v2 - v0)`. Reading
- * it the usual way inverts every normal in every CSG mesh.
+ * This is the negation of the conventional CCW `(v1 - v0) cross (v2 - v0)`. Reading it the usual
+ * way inverts every normal in every CSG mesh.
  */
 function planeNormal(
   positions: Float32Array,
@@ -139,16 +139,10 @@ export function applyCsgNormals(soup: CsgFaceSoup): THREE.BufferGeometry {
   const outUvs = new Float32Array(triangles * 6);
   const normal = new THREE.Vector3();
   const flipped = invert === true;
-  // Two swaps compose here, and they cancel.
-  //
-  // Godot does `int order[3] = {0,1,2}; if (invert) SWAP(order[1], order[2]);` and
-  // writes source vertex j into destination slot order[j].
-  //
-  // On top of that, Godot's front faces are wound CLOCKWISE while three.js treats
-  // COUNTER-CLOCKWISE as front and culls the other side. Emitting Godot's order
-  // verbatim therefore back-face-culls every triangle, which renders each solid as its
-  // own interior. The normals are unaffected — we supply them explicitly — so this is
-  // purely a winding conversion.
+  // Two swaps compose here, and they cancel. Godot does `int order[3] = {0,1,2}; if (invert) SWAP(order[1],
+  // order[2]);` and writes source vertex j into slot order[j]. Godot's front faces also wind
+  // clockwise, where three.js culls clockwise, so Godot's order would render each solid as its
+  // interior. The normals are supplied explicitly, so this is purely a winding conversion.
   const order = flipped ? [0, 1, 2] : [0, 2, 1];
 
   for (let t = 0; t < triangles; t++) {

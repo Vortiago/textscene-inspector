@@ -1,13 +1,8 @@
 /**
- * The sweep's write head: a fixed-capacity triangle buffer whose head can be
- * REWOUND, which is how `path_simplify_angle` drops a near-collinear frame —
- * Godot's own `face -= extrusion_face_count` over the same arrays.
- *
- * Capacity is the worst case (every frame emitted, both caps), so the written
- * prefix is what `finish` hands on; the tail stays untouched.
- *
- * Part of the CSGPolygon3D port; the derivation notice is in
- * `polygonGeometry.ts`.
+ * The sweep's write head: a fixed-capacity triangle buffer whose head can rewind, which is how
+ * `path_simplify_angle` drops a near-collinear frame, as Godot's `face -= extrusion_face_count`
+ * does. Capacity is the worst case (every frame, both caps), so `finish` hands on the written
+ * prefix. Part of the CSGPolygon3D port, whose derivation notice is in `polygonGeometry.ts`.
  */
 
 import type * as THREE from 'three';

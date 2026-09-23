@@ -1,4 +1,4 @@
-/** CSGSphere3D registration — parser. */
+/** CSGSphere3D registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseCSGSphere3D } from './parser';

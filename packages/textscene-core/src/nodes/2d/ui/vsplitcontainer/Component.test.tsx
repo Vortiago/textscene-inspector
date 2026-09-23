@@ -1,8 +1,7 @@
 /**
- * `<VSplitContainer>` — the vertical-axis twin of
- * `hsplitcontainer/Component.test.tsx`; see that file's own doc for why
- * the grabber is invisible by default. This pins the TRANSPOSED axis: reading
- * `sizeFlagsVertical` and drawing `vsplitter` (48x8) centred on the ROW split.
+ * `<VSplitContainer>`: the vertical-axis twin of `hsplitcontainer/Component.test.tsx`, whose doc
+ * says why the grabber is invisible by default. This pins the transposed axis: reading
+ * `sizeFlagsVertical` and drawing `vsplitter` (48x8) centred on the row split.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -19,8 +18,8 @@ function solveNode(
   properties: Record<string, unknown>,
   children: SolveNode[] = []
 ): SolveNode {
-  // A local theme_override_constants/* now reaches a solver through
-  // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
+  // A local theme_override_constants/* reaches a solver through `n.constants` (the walker folds
+  // it in unconditionally), not `node.properties`.
   const constants =
     (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
   return {
@@ -100,7 +99,7 @@ describe('<VSplitContainer>', () => {
 
   it('draws the grabber icon through the walker-composed tint', async () => {
     // The icon carries no theme colour of its own (`SplitContainer` draws it
-    // with the canvas item's own modulate alone), so the linear tint IS its
+    // with the canvas item's own modulate alone), so the linear tint is its
     // material colour.
     const node = split({ themeOverrideConstants: { autohide: 0 } }, bothExpandChildren());
     const renderer = await ReactThreeTestRenderer.create(

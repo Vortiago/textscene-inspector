@@ -54,7 +54,7 @@ describe('<CSGMesh3D>', () => {
       await render(makeNode({ mesh: 'SubResource("CapsuleMesh_csg")' }), [CAPSULE_MESH])
     );
     geom.computeBoundingBox();
-    // Godot's `height` is the TOTAL including both caps.
+    // Godot's `height` is the total, including both caps.
     expect(geom.boundingBox!.max.y).toBeCloseTo(0.8, 3);
     expect(geom.boundingBox!.max.x).toBeCloseTo(0.4, 3);
   });

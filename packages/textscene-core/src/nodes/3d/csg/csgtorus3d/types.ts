@@ -8,11 +8,11 @@ export interface CSGTorus3DProperties extends Node3DProperties {
   /** Outer radius of the ring. Godot default 1.0. */
   outerRadius: number;
   /**
-   * Segments around the RING. Godot default 8. Note this is three's
-   * `tubularSegments`, not its `radialSegments`; the two names swap.
+   * Segments around the ring. Godot default 8. This is three's `tubularSegments`, not its
+   * `radialSegments`: the two names swap.
    */
   sides: number;
-  /** Segments around the TUBE cross-section. Godot default 6. */
+  /** Segments around the tube cross-section. Godot default 6. */
   ringSides: number;
   /** Smooth shading. Godot default **true** here (contrast CSGPolygon3D, which is false). */
   smoothFaces: boolean;
@@ -22,6 +22,6 @@ export interface CSGTorus3DProperties extends Node3DProperties {
   materialPath?: string;
   /** CSG boolean operation: 0 UNION, 1 INTERSECTION, 2 SUBTRACTION. */
   operation?: number;
-  /** `cast_shadow` — GeometryInstance3D state (`modules/csg/csg_shape.h:47`). */
+  /** `cast_shadow`: GeometryInstance3D state (`modules/csg/csg_shape.h:47`). */
   castShadow?: number;
 }

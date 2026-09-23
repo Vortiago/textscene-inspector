@@ -1,11 +1,8 @@
 /**
  * CSGSphere3D geometry, pinned against `CSGSphere3D::_build_brush`
- * (`modules/csg/csg_shape.cpp:1324`).
- *
- * The poles are collapsed vertices, which is where three's per-segment normals and
- * Godot's position-keyed averaging part company. That is the same failure that put the
- * CSGCylinder3D cone 0.788% out against real Godot; a sphere hides it better only because
- * its default tessellation is finer.
+ * (`modules/csg/csg_shape.cpp:1324`). The poles are collapsed vertices, where three's
+ * per-segment normals and Godot's position-keyed averaging part company, as on the CSGCylinder3D
+ * cone. A sphere hides it better only because its default tessellation is finer.
  */
 
 import { describe, expect, it } from 'vitest';

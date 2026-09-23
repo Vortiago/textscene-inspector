@@ -1,15 +1,7 @@
 /**
- * Semantic linter rules for AnimatedSprite3D.
- *
- * Format validation is handled by linterParser.ts, one property at a time.
- * This file holds only the checks a single `PropertyValidator` cannot express —
- * absence of a property, or a relationship between two properties on the same
- * node — so it stays intentionally small.
- *
- * An ABSENT `sprite_frames` is a warning: assigning one from a script at runtime
- * is valid Godot, so authoring-time absence is not itself a mistake. A present
- * but unresolvable one is the ADR-0032 error arm, and so is an `animation` named
- * with no SpriteFrames to hold it — Godot clears that name back to empty.
+ * Semantic linter rules for AnimatedSprite3D: only the checks a single `PropertyValidator` cannot
+ * express, the absence of a property or a relationship between two on one node. linterParser.ts
+ * validates format.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -22,6 +14,8 @@ function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const rawProps = node.properties as unknown as Record<string, string>;
 
+  // An absent `sprite_frames` warns, since a script may assign one at runtime. A present but
+  // unresolvable one is the ADR-0032 error arm.
   if (heldResource(rawProps.sprite_frames) === undefined) {
     diagnostics.push({
       severity: 'warning',
@@ -32,15 +26,14 @@ function checkAnimatedSprite3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // `sprite_frames` is declared ahead of `animation` (sprite_3d.cpp:1539-1540),
-  // so a null SpriteFrames at this point is the authored absence, not load order.
-  //
-  // Not `"default"`, though: `set_animation` opens with
-  // `if (animation == p_name) { return; }` (sprite_3d.cpp:1432-1434) and the field
-  // already holds that name (sprite_3d.h:234), so the clearing branch this reports is
-  // never reached and Godot loads the scene in silence.
+  // An `animation` with no SpriteFrames is also the error arm: Godot clears the name to empty.
+  // `sprite_frames` is declared ahead of `animation` (sprite_3d.cpp:1539-1540), so a null
+  // SpriteFrames here is the authored absence, not load order.
   if (
     rawProps.animation &&
+    // Not `"default"`: `set_animation` opens with `if (animation == p_name) { return; }`
+    // (sprite_3d.cpp:1432-1434) and the field already holds that name (sprite_3d.h:234), so
+    // the clearing branch is never reached and Godot loads the scene in silence.
     literalText(rawProps.animation) !== DEFAULT_ANIMATION_NAME &&
     resourceSlotIsEmpty(rawProps.sprite_frames)
   ) {

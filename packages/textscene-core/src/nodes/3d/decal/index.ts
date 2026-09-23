@@ -1,5 +1,5 @@
 /**
- * Decal registration — parser + property formatter.
+ * Decal registration: the parser and property formatter.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

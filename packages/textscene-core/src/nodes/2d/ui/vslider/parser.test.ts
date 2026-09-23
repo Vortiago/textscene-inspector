@@ -1,8 +1,7 @@
 /**
- * VSlider parser contract. VSlider declares no properties of its own — it is
- * `Range → Slider → VSlider` with only the draw axis differing — so this pins
- * that the slice really does carry the Control + Range + Slider surface
- * through, which is the failure mode of a slice wired to the wrong base.
+ * VSlider parser contract. VSlider declares no properties of its own, so this pins that the
+ * slice carries the Control, Range and Slider surface through. A slice wired to the wrong base
+ * fails here.
  */
 import { describe, it, expect } from 'vitest';
 import { parseVSlider } from './parser';

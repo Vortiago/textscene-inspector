@@ -1,24 +1,8 @@
 /**
- * CSGPolygon3D `path_node` resolution pass (Godot MODE_PATH).
- *
- * A CSGPolygon3D in PATH mode sweeps its outline along a curve that belongs to a
- * DIFFERENT node. That node is reached by a relative NodePath — a sibling or a child — and a
- * render component can reach neither.
- *
- * So this runs once over the parsed tree, right after `applyRemoteTransforms` and before
- * the SceneGraph is assembled, exactly like that pass and for the same reason: every
- * downstream consumer (3D render, bounds, selection, the tree viewer, the inspector, and
- * the boolean evaluator) then reads one resolved answer instead of each recomputing it,
- * and the resolution itself stays unit-testable without a renderer.
- *
- * It writes PLAIN SERIALISABLE data onto the node: control points, a point count and an
- * optional Transform3D. No closures and no `THREE.Matrix4`, because the inspector walks
- * `node.properties` directly. The component turns that into a sampler and a matrix.
- *
- * Scope limits, matching `applyRemoteTransforms`:
- *   - absolute paths (`/root/…`) address the live tree and are not modelled;
- *   - a `path_node` crossing an instanced sub-scene boundary is not resolved, because
- *     instances are composed later by the live scene tree (ADR-0013).
+ * CSGPolygon3D `path_node` resolution pass (Godot MODE_PATH). In PATH mode the outline sweeps
+ * along a curve on a different node, reached by a relative NodePath (a sibling or a child) that a
+ * render component cannot reach. So this runs once over the parsed tree, after
+ * `applyRemoteTransforms` and before the SceneGraph is assembled, as that pass does.
  */
 
 import type { TscnNode, TscnInternalResource } from '../../../../parser/types.js';
@@ -37,11 +21,10 @@ const MODE_PATH = 2;
 const MIN_CURVE_POINTS = 2;
 
 /**
- * Resolve every PATH-mode CSGPolygon3D's `path_node`, mutating the nodes in place.
- * Returns the same array for call-site convenience.
- *
- * Idempotent: re-running overwrites `resolvedPath` with the same value, and the parse it
- * consumes is memoized per content anyway.
+ * Resolve every PATH-mode CSGPolygon3D's `path_node` in place, so render, bounds, selection, the
+ * tree viewer, the inspector and the evaluator read one answer, testable without a renderer.
+ * Returns the same array. Idempotent: a re-run writes the same `resolvedPath`, and the parse it
+ * consumes is memoized per content.
  */
 export function resolveCsgPolygonPaths(
   nodes: TscnNode[],
@@ -70,11 +53,13 @@ export function resolveCsgPolygonPaths(
     const props = node.properties as CSGPolygon3DProperties;
     delete props.resolvedPath;
 
+    // As in `applyRemoteTransforms`, an absolute path (`/root/…`, the live tree) and a `path_node`
+    // across an instanced sub-scene boundary (composed later by the live tree, ADR-0013) stay
+    // unresolved.
     const targetPath = resolveNodePathLiteral(path, props.pathNode, uniquePaths);
     if (!targetPath) {
-      // A unique name nothing claims is a dangling reference, not a path that
-      // deliberately addresses no node — report it against the literal, since
-      // there is no resolved path to quote.
+      // A unique name nothing claims is a dangling reference, not a path that deliberately
+      // addresses no node. Report it against the literal, since there is no resolved path to quote.
       const unclaimed = unclaimedUniqueNames(props.pathNode, uniquePaths);
       if (unclaimed.length > 0) {
         warn(
@@ -105,16 +90,16 @@ export function resolveCsgPolygonPaths(
     const curvePoints = parseCurve3DPoints(sub.data['_data']);
     if (curvePoints.length < MIN_CURVE_POINTS) continue;
 
-    // `path_local` builds the sweep in the polygon's own space; otherwise Godot uses the
-    // Path3D's GLOBAL transform as the base. That combination is a Godot quirk worth
-    // knowing about rather than fixing: the brush is built in the path's global frame but
-    // consumed as the polygon's local geometry, so a non-local sweep lands
-    // doubly-transformed. Scenes in practice set path_local = true, which is why
-    // nobody trips over it.
+    // `path_local` builds the sweep in the polygon's own space. Otherwise Godot uses the Path3D's
+    // global transform as the base, builds the brush there and consumes it as local geometry, so a
+    // non-local sweep lands doubly transformed. That Godot quirk is kept for parity. Scenes in
+    // practice set path_local = true.
     const baseTransform = props.pathLocal
       ? null
       : matrixToTransform3D(globalMatrix3D(targetPath, nodeByPath));
 
+    // Plain serialisable data, no closures or `THREE.Matrix4`, because the inspector walks
+    // `node.properties` directly. The component turns it into a sampler and a matrix.
     props.resolvedPath = { curvePoints, baseTransform };
   }
 

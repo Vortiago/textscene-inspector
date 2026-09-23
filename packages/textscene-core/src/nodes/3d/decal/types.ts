@@ -1,12 +1,8 @@
 /**
- * Decal types and interfaces.
- *
- * Mirrors Godot's Decal — a VisualInstance3D that projects `texture_albedo`
- * (and optional ORM/normal/emission maps) down the node's local -Y axis onto
- * surfaces inside an axis-aligned box of dimensions `size`, centred on the
- * node origin. The v1 renderer honours `texture_albedo`, `size`, `modulate`,
- * and `albedo_mix`; the remaining fields are parsed so the Inspector and
- * linter see the full property surface.
+ * Decal types. Godot's Decal is a VisualInstance3D that projects `texture_albedo` (and optional
+ * ORM, normal and emission maps) down local -Y onto surfaces inside an origin-centred box of
+ * `size`. The renderer does not project the three maps or `emission_energy`, which are parsed
+ * so the Inspector and linter see the full property surface.
  */
 
 import type { Node3DProperties } from '../../base/node3d/types';
@@ -17,7 +13,7 @@ export interface DecalProperties extends Node3DProperties {
   /** Albedo texture projected onto surfaces (ExtResource/SubResource ref). */
   texture_albedo?: string;
 
-  /** Optional normal-map texture reference (parsed, not rendered in v1). */
+  /** Optional normal-map texture reference (parsed, not rendered). */
   texture_normal?: string;
 
   /** Optional ORM (occlusion/roughness/metallic) texture reference. */
@@ -38,7 +34,7 @@ export interface DecalProperties extends Node3DProperties {
   /** Multiplier applied to the emission texture (default: 1). */
   emission_energy: number;
 
-  /** Fade based on surface normal vs projection axis (0..1, default 0). */
+  /** Fade based on the surface normal against the projection axis (0..1, default 0). */
   normal_fade: number;
 
   /** Fade at the top of the projection box (0..1, default 0.3). */

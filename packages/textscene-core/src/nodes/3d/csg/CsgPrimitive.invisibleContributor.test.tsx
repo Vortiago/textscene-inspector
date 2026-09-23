@@ -1,13 +1,8 @@
 /**
- * An INVISIBLE CSG contributor bounds to a point, not to its solid.
- *
- * `_get_brush()` skips an invisible child before recursing into it
- * (`modules/csg/csg_shape.cpp:469`), so the skipped node's `node_aabb` is never
- * written and stays the default empty box — which the editor still merges, as a
- * point at the node's origin. Drawing nothing is not enough on its own: bounds
- * deliberately ignore `visible`, because Godot's `get_aabb()` reports an
- * invisible MeshInstance3D's full box and agreeing there is what keeps every
- * other node type framed identically.
+ * An invisible CSG contributor bounds to a point, not to its solid. `_get_brush()` skips it
+ * (`modules/csg/csg_shape.cpp:469`), so its `node_aabb` stays the default empty box, which the
+ * editor merges as a point at its origin. Bounds ignore `visible`, as Godot's `get_aabb()` does for
+ * an invisible MeshInstance3D, so drawing nothing is not enough.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -49,9 +44,9 @@ function Tree({ node, path }: { node: TscnNode; path: string }) {
 }
 
 /**
- * Two visible contributions, so the root evaluates a BOOLEAN and publishes the skipped
- * set through `CsgRootMesh` instead of through the lone-root branch. Same bounds either
- * way: a boolean result is a subset of the union of its contributions.
+ * Two visible contributions, so the root evaluates a boolean and publishes the skipped set
+ * through `CsgRootMesh`, not the lone-root branch. The bounds match either way: a boolean result
+ * is a subset of the union of its contributions.
  */
 const COMBINING_SCENE = `[gd_scene format=3]
 
@@ -86,7 +81,7 @@ describe('an invisible CSG contributor', () => {
     const controls = { target: new THREE.Vector3(), update: () => {} };
     frameSceneBounds(await renderScene(), new THREE.PerspectiveCamera(70, 1, 0.1, 4000), controls);
 
-    // `godot --emit-bounds` on this scene: position [-0.5,-0.5,-0.5], size [8.5,1,1] —
+    // `godot --emit-bounds` on this scene: position [-0.5,-0.5,-0.5], size [8.5,1,1],
     // the visible unit box plus a point at (8,0,0). Counting the hidden 4-unit solid
     // instead puts the centre at 4.75.
     expect(controls.target.x).toBeCloseTo(3.75, 5);
@@ -95,8 +90,8 @@ describe('an invisible CSG contributor', () => {
   });
 
   it('frames the same box when the root is a COMBINING one', async () => {
-    // The skipped set reaches the node through CsgRootMesh's context rather than the
-    // lone root's, which is a separate publisher and was otherwise unrendered.
+    // The skipped set reaches the node through CsgRootMesh's context, a separate publisher from
+    // the lone root's that no other case renders.
     const controls = { target: new THREE.Vector3(), update: () => {} };
     frameSceneBounds(
       await renderScene(COMBINING_SCENE),

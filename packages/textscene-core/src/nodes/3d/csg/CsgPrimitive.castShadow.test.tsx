@@ -1,7 +1,7 @@
 /**
- * `CSGShape3D : GeometryInstance3D` (`modules/csg/csg_shape.h:47`), so a CSG node
- * carries `cast_shadow` exactly as a MeshInstance3D does — on the solid it draws
- * alone AND on the mesh a boolean evaluates to.
+ * `CSGShape3D : GeometryInstance3D` (`modules/csg/csg_shape.h:47`), so a CSG node carries
+ * `cast_shadow` as a MeshInstance3D does: on the solid it draws alone and on the mesh a boolean
+ * evaluates to.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -124,7 +124,7 @@ describe('CSG cast_shadow', () => {
   });
 
   it('leaves three’s flip alone for every other cast_shadow value', async () => {
-    // `render_forward_clustered.cpp:395-411` — only DOUBLE_SIDED drops the cull.
+    // `render_forward_clustered.cpp:395-411`: only DOUBLE_SIDED drops the cull.
     expect(depthSideAfterPass(await renderLoneBox({}))).toBe(THREE.BackSide);
     expect(depthSideAfterPass(await renderLoneBox({ cast_shadow: '3' }))).toBe(THREE.BackSide);
   });
@@ -149,13 +149,10 @@ describe('CSG cast_shadow', () => {
   });
 
   it('keeps SHADOWS_ONLY once the node’s own material RESOLVES, not only at first mount', async () => {
-    // r3f's `attach` records the slot's previous value and restores it on
-    // detach, so a surface slot that REMOUNTS after this material was attached
-    // takes `mesh.material` back — and an external `.tres` slot remounts by
-    // construction, swapping its fallback for a `<primitive>` when the file
-    // lands. Mounting no surface material at all is what makes the substitution
-    // hold: Godot's SHADOWS_ONLY draws nothing into the colour buffer, so there
-    // is nothing for a surface material to be.
+    // r3f's `attach` restores the slot's previous value on detach, so a surface slot that remounts
+    // after this material attached takes `mesh.material` back. An external `.tres` slot remounts
+    // when the file lands. Mounting no surface material makes the substitution hold, and Godot's
+    // SHADOWS_ONLY draws nothing into the colour buffer.
     const parsed = parseBox({ cast_shadow: '3', material: 'ExtResource("1_mat")' });
     const node: TscnNode = { name: 'Box', type: 'CSGBox3D', children: [], properties: parsed };
     const fake = createFakeResourceLoader();

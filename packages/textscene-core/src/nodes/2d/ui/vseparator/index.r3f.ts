@@ -1,6 +1,6 @@
 /**
- * VSeparator registration — the native (WebGL canvas) painter + minimum-size
- * solver, self-registered on import (ADR-0001).
+ * VSeparator registration: the native (WebGL canvas) painter and minimum-size solver,
+ * self-registered on import (ADR-0001).
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

@@ -1,5 +1,5 @@
 /**
- * CSGTorus3D registration — parser.
+ * CSGTorus3D registration: the parser.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

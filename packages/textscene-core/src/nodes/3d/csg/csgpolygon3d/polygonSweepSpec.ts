@@ -1,9 +1,7 @@
 /**
- * What a CSGPolygon3D sweep is asked for: the three modes, the resolved path
- * plan, and the two limits the builder applies before it starts.
- *
- * Part of the CSGPolygon3D port; the derivation notice is in
- * `polygonGeometry.ts`.
+ * What a CSGPolygon3D sweep is asked for: the three modes, the resolved path plan, and the two
+ * limits the builder applies before it starts. Part of the CSGPolygon3D port, whose derivation
+ * notice is in `polygonGeometry.ts`.
  */
 
 import type * as THREE from 'three';

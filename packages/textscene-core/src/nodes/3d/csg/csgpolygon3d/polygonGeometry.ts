@@ -6,7 +6,7 @@
  * +Z where Godot starts on +X and emits no end caps at all. So the sweep is Godot's own,
  * and the three modes share one frame-walking loop exactly as they do in the engine.
  *
- * `polygonRings` from the Polygon2D slice is NOT reusable here: it works in Godot's
+ * `polygonRings` from the Polygon2D slice is not reusable here: it works in Godot's
  * +Y-down pixel space and carries hole/invert machinery CSGPolygon3D has no concept of.
  * `fanTriangulate` is not usable either, being convex-only, while a swept profile is
  * routinely concave.

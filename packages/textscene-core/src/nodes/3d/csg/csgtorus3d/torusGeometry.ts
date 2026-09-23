@@ -1,13 +1,11 @@
 /**
  * CSGTorus3D geometry, built the way Godot builds it.
  *
- * Porting the construction rather than mapping onto `THREE.TorusGeometry` settles three
- * questions that a mapping would leave open, each of which is an easy silent error:
- * Godot's ring lies in XZ with the hole on +Y while three's lies in XY with the hole on
- * +Z; Godot's `sides` counts segments around the RING while three's `radialSegments`
- * counts them around the TUBE, so the two parameters swap; and the collapsed-vertex
- * normal problem applies to any three primitive whose normals are analytic rather than
- * accumulated by position.
+ * Porting the construction rather than mapping onto `THREE.TorusGeometry` settles three easy
+ * silent errors. Godot's ring lies in XZ with the hole on +Y, where three's lies in XY with the
+ * hole on +Z. Godot's `sides` counts segments around the ring, where three's `radialSegments`
+ * counts them around the tube, so the two parameters swap. And the collapsed-vertex normal
+ * problem applies to any three primitive whose normals are analytic, not accumulated by position.
  *
  * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`modules/csg/csg_shape.cpp`, `CSGTorus3D::_build_brush`),
@@ -67,7 +65,7 @@ export function buildCsgTorusGeometry(spec: CsgTorusSpec): THREE.BufferGeometry 
 
   // Godot bails outright rather than clamping: equal radii is a zero-thickness ring.
   if (minRadius === maxRadius) return emptyGeometry();
-  // Inverted radii SWAP rather than clamp, so a torus authored the wrong way round still
+  // Inverted radii swap rather than clamp, so a torus authored the wrong way round still
   // renders the ring the user meant.
   if (minRadius > maxRadius) [minRadius, maxRadius] = [maxRadius, minRadius];
 

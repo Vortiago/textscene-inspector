@@ -57,9 +57,8 @@ describe('formatCamera3DProperties', () => {
   });
 
   it('reports an out-of-range keep_aspect as Keep Height, the mode Godot uses', () => {
-    // `camera_3d.h:50-53` declares two members; `_update_camera_mode` treats
-    // anything that is not KEEP_WIDTH as KEEP_HEIGHT. A "Disabled" label named
-    // a mode the engine has never had.
+    // `camera_3d.h:50-53` declares two members, and `_update_camera_mode` treats anything that
+    // is not KEEP_WIDTH as KEEP_HEIGHT. The engine has no "Disabled" mode.
     const camera = section(formatCamera3DProperties(props({ keep_aspect: '2' })), 'Camera')!;
     expect(camera.items).toContainEqual({ label: 'Keep Aspect', value: 'Keep Height' });
   });

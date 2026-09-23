@@ -1,12 +1,7 @@
 /**
- * Tests for AnimatedSprite3D's semantic rule.
- *
- * Deliberately does NOT go through `Linter` (`../../../linter/testing/testkit`
- * builds one, which imports the whole barrel of every registered node type —
- * unusable while 8+ sibling slices are being written concurrently this wave).
- * Instead this calls the registered rule directly with a hand-built
- * `RuleContext`, the same isolation `linterParser.test.ts` gets from
- * `validatorRegistry.findValidator` instead of parsing a `.tscn`.
+ * Tests for AnimatedSprite3D's semantic rule. They call the registered rule with a hand-built
+ * `RuleContext`, not through `Linter`, whose testkit imports the barrel of every node type. This
+ * is the isolation `linterParser.test.ts` gets from `validatorRegistry.findValidator`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -20,10 +15,8 @@ import './linter';
 const RULE_NAME = 'valid-animatedsprite3d-properties';
 
 /**
- * Build a minimal RuleContext for one AnimatedSprite3D node.
- *
- * `declared` lists the SubResource ids the scene holds, which the generic
- * dangling-resource pass resolves `sprite_frames` against.
+ * A minimal RuleContext for one AnimatedSprite3D node. `declared` lists the SubResource ids the
+ * scene holds, which the generic dangling-resource pass resolves `sprite_frames` against.
  */
 function context(properties: Record<string, string>, declared: string[] = ['frames_1']): RuleContext {
   const node: TscnNode = {
@@ -103,10 +96,8 @@ describe('AnimatedSprite3D semantic rule', () => {
       );
     });
 
-    // Godot writes a StringName with an `&` prefix, so the raw text is not the
-    // name: interpolating it printed `"&"run""`, naming a string that appears
-    // nowhere as spelled. `literalText` takes the jacket off, as the CONDITION
-    // beside it already does.
+    // Godot writes a StringName with an `&` prefix, so the raw text is not the name.
+    // `literalText` strips the prefix, as the condition beside it does.
     it('names the animation as Godot holds it, not as the literal is spelled', () => {
       const found = lint({ animation: '&"run"' }).find(
         (d) => d.ruleName === 'animatedsprite3d-animation-no-spriteframes'
@@ -123,7 +114,7 @@ describe('AnimatedSprite3D semantic rule', () => {
     });
 
     // `set_animation` returns at sprite_3d.cpp:1432-1434 when the name equals the one
-    // already held, and sprite_3d.h:234 seeds it with SceneStringName(default_) — so this
+    // already held, and sprite_3d.h:234 seeds it with SceneStringName(default_), so this
     // scene never reaches the clearing branch the rule reports. Both spellings of the
     // literal, since Godot writes a StringName with an `&` prefix.
     it.each(['&"default"', '"default"'])(

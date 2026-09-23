@@ -9,13 +9,9 @@ import { warn } from '../../../../logger';
 import type { CSGPolygon3DProperties } from './types';
 
 /**
- * Godot's own defaults (csg_shape.cpp:2808-2829).
- *
- * Two are easy to assume backwards. `polygon` defaults to a UNIT SQUARE, not an empty
- * array, so a CSGPolygon3D that writes nothing still renders a solid. And `pathRotation`
- * defaults to PATH_FOLLOW (2), not POLYGON (0).
- *
- * Note `smoothFaces` defaults FALSE here while CSGTorus3D defaults it true.
+ * Godot's defaults (csg_shape.cpp:2808-2829). `polygon` defaults to a unit square, not an empty
+ * array, so a CSGPolygon3D that writes nothing still renders a solid. `pathRotation` defaults to
+ * PATH_FOLLOW (2), not POLYGON (0), and `smoothFaces` to false, where CSGTorus3D defaults it true.
  */
 const DEFAULT_POLYGON = new Float32Array([0, 0, 0, 1, 1, 1, 1, 0]);
 const DEFAULTS = {

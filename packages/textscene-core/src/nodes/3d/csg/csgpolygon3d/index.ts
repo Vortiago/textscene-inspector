@@ -1,5 +1,5 @@
 /**
- * CSGPolygon3D registration — parser.
+ * CSGPolygon3D registration: the parser.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

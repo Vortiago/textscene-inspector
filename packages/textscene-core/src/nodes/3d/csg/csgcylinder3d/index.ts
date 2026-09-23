@@ -1,4 +1,4 @@
-/** CSGCylinder3D registration — parser. */
+/** CSGCylinder3D registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseCSGCylinder3D } from './parser';

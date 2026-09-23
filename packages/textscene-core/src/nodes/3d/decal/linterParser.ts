@@ -11,11 +11,10 @@ validatorRegistry.registerAll('Decal', {
   texture_normal: v.resourceReference('texture_normal'),
   texture_orm: v.resourceReference('texture_orm'),
   texture_emission: v.resourceReference('texture_emission'),
-  // decal.cpp:235 hints "0,1024,0.001,or_greater,suffix:m" — `or_greater` opens
-  // the 1024 ceiling. set_size (:34) is `size = p_size.maxf(0.001)`, a
-  // per-component clamp (Vector3::maxf, core/math/vector3.h:105), so the floor
-  // the engine applies is 0.001 and sits ABOVE the hint's 0: every component
-  // below it is altered on load, which is the error tier.
+  // decal.cpp:235 hints "0,1024,0.001,or_greater,suffix:m", so the ceiling is open. set_size
+  // (:34) is `size = p_size.maxf(0.001)`, a per-component clamp (core/math/vector3.h:105), so the
+  // engine's floor is 0.001, above the hint's 0: a smaller component is altered on load, the
+  // error tier.
   size: v.boundedVector3('size', { min: 0.001, enforced: 'decal.cpp:34' }),
   modulate: v.color('modulate'),
   // decal.cpp:248, "0,1,0.01"; set_albedo_mix (:79-83) is a bare assignment.
@@ -23,13 +22,12 @@ validatorRegistry.registerAll('Decal', {
   // decal.cpp:246, "0,16,0.01,or_greater"; set_emission_energy (:70-73) is a
   // bare assignment.
   emission_energy: v.nonNegativeFloat('emission_energy', { hinted: 'decal.cpp:246' }),
-  // decal.cpp:251, "0,0.999,0.001"; the ceiling stops one step short because
-  // "A Normal Fade of 1.0 causes the decal to be invisible even if fully
-  // perpendicular to a surface" (:249). set_normal_fade (:106-109) is a bare
-  // assignment.
+  // decal.cpp:251, "0,0.999,0.001". The ceiling stops one step short because "A Normal Fade of
+  // 1.0 causes the decal to be invisible even if fully perpendicular to a surface" (:249).
+  // set_normal_fade (:106-109) is a bare assignment.
   normal_fade: v.float('normal_fade', { min: 0, max: 0.999, hinted: 'decal.cpp:251' }),
-  // decal.cpp:254-255 hint these PROPERTY_HINT_EXP_EASING with NO range: an
-  // easing-curve editor, not a 0-1 bound. The setters DO clamp the low end
+  // decal.cpp:254-255 hint these PROPERTY_HINT_EXP_EASING with no range: an
+  // easing-curve editor, not a 0-1 bound. The setters do clamp the low end
   // (`upper_fade = MAX(p_fade, 0.0)`, :89; `lower_fade = MAX(p_fade, 0.0)`,
   // :98), so min 0 is a real, enforced floor and there is no maximum.
   upper_fade: v.nonNegativeFloat('upper_fade', { enforced: 'decal.cpp:89' }),
@@ -41,9 +39,8 @@ validatorRegistry.registerAll('Decal', {
   distance_fade_enabled: v.boolean('distance_fade_enabled'),
   distance_fade_begin: v.nonNegativeFloat('distance_fade_begin', { hinted: 'decal.cpp:259' }),
   distance_fade_length: v.nonNegativeFloat('distance_fade_length', { hinted: 'decal.cpp:260' }),
-  // VisualInstance3D declares `sorting_offset` PROPERTY_USAGE_NONE, so most of
-  // its subclasses never serialise it — but `Decal::_validate_property`
-  // (scene/3d/decal.cpp:169) restores PROPERTY_USAGE_DEFAULT for this one
-  // property, so a Decal really can carry it. No range hint on the binding.
+  // VisualInstance3D declares `sorting_offset` PROPERTY_USAGE_NONE, but
+  // `Decal::_validate_property` (scene/3d/decal.cpp:169) restores PROPERTY_USAGE_DEFAULT, so a
+  // Decal can carry it. No range hint on the binding.
   sorting_offset: v.float('sorting_offset'),
 });

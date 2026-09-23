@@ -1,10 +1,7 @@
 /**
- * <Camera3D> — renders a Godot Camera3D as a non-active R3F camera
- * accompanied by a CameraHelper gizmo so the camera placement is
- * visible inside the editor viewport.
- *
- * The active viewport camera lives on the host <Canvas> — this is a
- * passive scene-tree node, not the camera the user is looking through.
+ * <Camera3D>: renders a Godot Camera3D as a non-active R3F camera with a CameraHelper gizmo, so
+ * its placement shows in the editor viewport. The active viewport camera lives on the host
+ * <Canvas>. This is a passive scene-tree node.
  */
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -28,12 +25,8 @@ export function Camera3D({ node, children }: NodeComponentProps) {
     [properties]
   );
 
-  // Parity-audit fix: `h_offset` / `v_offset` shift the camera
-  // along its LOCAL right / up vectors after the base transform is
-  // applied. The pre-migration imperative renderer used
-  // `addScaledVector(localX, h)` / `addScaledVector(localY, v)` — equivalent
-  // to mixing the unnormalised basis_x / basis_y columns into the
-  // world-space position.
+  // `h_offset` / `v_offset` shift the camera along its local right / up vectors after the base
+  // transform: the unnormalised basis_x / basis_y columns mixed into the world-space position.
   const offsetPosition = useMemo<[number, number, number]>(() => {
     const t = properties.transform;
     if (!t) return position;
@@ -69,9 +62,9 @@ export function Camera3D({ node, children }: NodeComponentProps) {
     );
   }
 
-  // PROJECTION_FRUSTUM is not yet supported — fall back to perspective.
-  // With keep_aspect = KEEP_WIDTH the stored fov is the HORIZONTAL fov; three.js
-  // PerspectiveCamera.fov is vertical, so convert (Godot's get_fovy).
+  // PROJECTION_FRUSTUM is not yet supported and falls back to perspective. With keep_aspect =
+  // KEEP_WIDTH the stored fov is horizontal, and three.js PerspectiveCamera.fov is vertical, so
+  // convert (Godot's get_fovy).
   const perspectiveFov =
     properties.keep_aspect === KeepAspectMode.KEEP_WIDTH
       ? (2 * Math.atan(Math.tan((properties.fov * Math.PI) / 180 / 2) / DEFAULT_ASPECT) * 180) /
@@ -97,7 +90,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
 interface PerspectiveCamera3DProps {
   name: string;
   tscnPath: string;
-  /** Godot's `Camera3D.current` — which camera the owning viewport renders through. */
+  /** Godot's `Camera3D.current`: which camera the owning viewport renders through. */
   current: boolean;
   position: [number, number, number];
   rotation: [number, number, number];
@@ -142,7 +135,7 @@ function PerspectiveCamera3D({ name, tscnPath, current, position, rotation, scal
 interface OrthographicCamera3DProps {
   name: string;
   tscnPath: string;
-  /** Godot's `Camera3D.current` — which camera the owning viewport renders through. */
+  /** Godot's `Camera3D.current`: which camera the owning viewport renders through. */
   current: boolean;
   position: [number, number, number];
   rotation: [number, number, number];
@@ -156,7 +149,7 @@ interface OrthographicCamera3DProps {
 
 function OrthographicCamera3D({ name, tscnPath, current, position, rotation, scale, size, keepAspect, near, far, children }: OrthographicCamera3DProps) {
   const cameraRef = useRef<THREE.OrthographicCamera>(null);
-  // Godot `size` is the FULL frustum dimension (diameter), so the half-extent
+  // Godot `size` is the full frustum dimension (diameter), so the half-extent
   // is size/2 (Projection::set_orthogonal divides by 2). KEEP_HEIGHT (1,
   // default): `size` is the vertical dimension, width derived from aspect.
   // KEEP_WIDTH (0): `size` is horizontal, height derived from aspect.
@@ -197,31 +190,21 @@ interface CameraGizmoProps {
 }
 
 function CameraGizmo({ cameraRef, name }: CameraGizmoProps) {
-  // Gate on selection — same pattern as the light gizmos.
-  // Without this, every Camera3D in the scene drew a yellow CameraHelper
-  // frustum wireframe regardless of selection (ui-designer-2's A/B
-  // finding on the hallway fixture). The gizmo now only appears when
-  // the user has selected this Camera3D's tree row.
-  //
-  // Build + dispose lifecycle delegated to `usePrimitiveHelper`.
-  // `THREE.CameraHelper` shares `DirectionalLightHelper`/`PointLightHelper`'s
-  // `this.matrix = camera.matrixWorld` + `matrixAutoUpdate = false`
-  // constructor aliasing — mounted as a `<primitive>` SIBLING of the camera
-  // inside the node's own transform group (not `scene.add()`'d at the root,
-  // as the constructor's doc example assumes), a transformed ancestor would
-  // otherwise double-transform the frustum. `correctHelperForParentGroup`
-  // fixes it (see its doc comment in `r3f/hooks/useTHREEHelper.ts`); its
-  // wrapped `update()` is what applies the correction, so `tickUpdate` must
-  // stay at its default (true) even though the frustum geometry itself is
-  // static — the per-frame cost is negligible (one Matrix4 invert) and only
-  // paid while this Camera3D is the selected node.
+  // The gizmo shows only while this Camera3D's tree row is selected, as the light gizmos do.
   const visible = useGizmoVisible();
+  // `THREE.CameraHelper` aliases `this.matrix = camera.matrixWorld` with `matrixAutoUpdate = false`,
+  // as the light helpers do. Mounted as a `<primitive>` sibling inside the node's transform group,
+  // not at the scene root, it would double-transform the frustum under a transformed ancestor
+  // without `correctHelperForParentGroup`.
   const helper = usePrimitiveHelper<THREE.CameraHelper>(() => {
     if (!visible) return null;
     const camera = cameraRef.current;
     if (!camera) return null;
     const created = new THREE.CameraHelper(camera);
     created.name = name;
+    // The wrapped `update()` applies the correction (`r3f/hooks/useTHREEHelper.ts`), so
+    // `tickUpdate` stays at its default (true) though the frustum is static: one Matrix4 invert a
+    // frame, paid only while this camera is selected.
     return correctHelperForParentGroup(created, camera);
   }, [cameraRef, name, visible]);
 

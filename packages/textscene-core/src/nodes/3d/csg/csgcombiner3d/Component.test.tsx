@@ -19,7 +19,7 @@ function makeNode(overrides: Record<string, string> = {}, children: TscnNode[] =
 describe('<CSGCombiner3D>', () => {
   it('draws nothing of its own', async () => {
     // Godot's combiner has no shape: _build_brush() returns an empty brush. It is the
-    // node whose boolean fold of its CHILDREN becomes the shape.
+    // node whose boolean fold of its children becomes the shape.
     const renderer = await ReactThreeTestRenderer.create(<CSGCombiner3D node={makeNode()} />);
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
   });
@@ -43,15 +43,14 @@ describe('<CSGCombiner3D>', () => {
       </CSGCombiner3D>
     );
     expect((renderer.scene.findByType('Group').instance as THREE.Group).visible).toBe(false);
-    // The child stays MOUNTED; three hides the subtree via the group. Unmounting it
-    // instead would break the subtree-conformance contract.
+    // The child stays mounted, and three hides the subtree through the group. Unmounting it
+    // would break the subtree-conformance contract.
     expect(renderer.scene.findByProps({ name: 'child' })).toBeDefined();
   });
 
   it('is why registering the type matters: the generic fallback ignores visible', async () => {
-    // This is the behaviour difference the slice buys before boolean evaluation exists.
     // GenericNodeFallback renders a group with no `visible` prop, so a hidden combiner's
-    // children keep drawing.
+    // children keep drawing there.
     const node = makeNode({ visible: 'false' });
     const fallback = await ReactThreeTestRenderer.create(<GenericNodeFallback node={node} />);
     expect((fallback.scene.findByType('Group').instance as THREE.Group).visible).toBe(true);

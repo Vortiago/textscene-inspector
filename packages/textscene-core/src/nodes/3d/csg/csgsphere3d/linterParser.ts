@@ -18,7 +18,7 @@ validatorRegistry.registerAll('CSGSphere3D', {
   }),
   // csg_shape.cpp:1488-1489, `radial_segments = p_radial_segments > 4 ?
   // p_radial_segments : 4`: a silent clamp to a floor of 4, not the hint's
-  // (:1471, "1,100,1") displayed minimum of 1 — a value of 1-3 loads but is
+  // (:1471, "1,100,1") displayed minimum of 1. A value of 1-3 loads but is
   // coerced. Nothing clamps the top, so the hint's 100 ceiling warns.
   radial_segments: v.int('radial_segments', {
     min: 4,

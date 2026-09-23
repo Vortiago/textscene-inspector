@@ -109,7 +109,7 @@ texture_normal = ExtResource("1_n")
 
   it('warns on a fractional cull_mask, which truncates to no bits at all', () => {
     // `_parse_construct` narrows a float in an INT slot toward zero, so
-    // `cull_mask = 0.9` is stored as 0 — every layer culled.
+    // `cull_mask = 0.9` is stored as 0, every layer culled.
     for (const spelling of ['0.9', '1e-1']) {
       expectDiagnostic(
         scene(node('Decal', { size: 'Vector3(2, 2, 2)', cull_mask: spelling }, { name: 'D' })),

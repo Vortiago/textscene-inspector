@@ -146,8 +146,8 @@ describe('CSGPolygon3D strict validators', () => {
   it.each(['spin_sides = 3', 'spin_sides = 64'])('accepts the endpoint %s in silence', (line) => {
     // csg_shape.cpp:2692 ERR_FAIL_COND(p_spin_sides < 3) and the :2603 hint
     // "3,64,1": both endpoints are legal, so neither may warn. Checking
-    // warnings (not just errors) is what pins the ceiling's LOCATION — a
-    // drifted `max` still leaves the error list empty.
+    // warnings, not only errors, pins the ceiling's location: a drifted `max` still leaves the
+    // error list empty.
     const diagnostics = linter.lint(scene(line));
     expect(errorsOf(diagnostics)).toEqual([]);
     expect(warningsOf(diagnostics).some((w) => w.message.includes('spin_sides'))).toBe(false);

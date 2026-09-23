@@ -1,7 +1,6 @@
 /**
- * VSlider property-order rule — same mechanism as HSlider's (both are plain
- * `Range → Slider` leaves; see `hslider/linter.test.ts` for the full
- * `range.cpp` derivation and citations).
+ * VSlider property-order rule: the same mechanism as HSlider's, since both are plain
+ * `Range → Slider` leaves. `hslider/linter.test.ts` holds the `range.cpp` derivation and citations.
  */
 
 import { describe, it } from 'vitest';

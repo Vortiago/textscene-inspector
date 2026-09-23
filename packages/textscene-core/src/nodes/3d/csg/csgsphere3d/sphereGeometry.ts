@@ -2,7 +2,7 @@
  * CSGSphere3D geometry, built the way Godot builds it.
  *
  * Godot's sphere differs from three's `SphereGeometry` in ways that matter for parity:
- * it walks latitude from the north pole DOWNWARD so UVs map like an image, it gives sin
+ * it walks latitude from the north pole downward so UVs map like an image, it gives sin
  * to X and cos to Z (not the other way round) so UVs run counter-clockwise on +X, and it
  * emits a single triangle per quad at each pole instead of a degenerate quad. Its poles
  * are collapsed vertices, which is exactly where three's per-segment normals and Godot's

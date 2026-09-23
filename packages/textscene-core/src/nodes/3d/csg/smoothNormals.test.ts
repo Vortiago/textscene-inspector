@@ -1,17 +1,8 @@
 /**
- * Godot's CSG normal rule, pinned against Godot rather than against our own port.
- *
- * A test whose expectations came from running the transcription would agree with it while
- * both were wrong, so every number here is either hand-computed from the formula in
- * `core/math/plane.h` or forced by symmetry.
- *
- * The bug that motivated this file: `THREE.CylinderGeometry(0, 0.4, 1, 8)` gives the
- * collapsed cone apex NINE distinct radial normals, because three generates one apex
- * vertex per segment and assigns each the segment's own radial direction. Godot keys its
- * accumulation on vertex POSITION, so all nine faces average into one normal. Measured
- * against real Godot 4.6.3, that difference alone put `unit-csg-cylinder.tscn` 0.788%
- * away, 7.9x the visual gate, while its golden sat green because the golden compared us
- * to ourselves.
+ * Godot's CSG normal rule, pinned against Godot, not our own port: every number is hand-computed
+ * from the formula in `core/math/plane.h` or forced by symmetry. `THREE.CylinderGeometry(0, 0.4,
+ * 1, 8)` gives the cone apex nine radial normals, one apex vertex per segment. Godot keys its
+ * accumulation on vertex position, so all nine faces average into one normal.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -89,7 +80,7 @@ describe('applyCsgNormals', () => {
 
   describe('smooth_faces = true, at a collapsed vertex', () => {
     it('gives every face meeting at the cone apex the SAME normal', () => {
-      // This is the whole point. three.js gives nine different radial normals here.
+      // three.js gives nine different radial normals here.
       const geometry = applyCsgNormals(soupOf(coneTriangles()));
       const first = normalAt(geometry, 0);
       for (let t = 1; t < 8; t++) {
@@ -112,11 +103,10 @@ describe('applyCsgNormals', () => {
     });
 
     it('accumulates unweighted unit plane normals, not area-weighted ones', () => {
-      // Two smooth right triangles sharing the origin, deliberately very different in
-      // area: one in the XY plane, one 100x larger in the XZ plane. Godot sums the two
-      // UNIT plane normals, so the shared vertex bisects them exactly. An area-weighted
-      // average (what most engines do, and what computeVertexNormals does NOT do either)
-      // would sit almost entirely on the large triangle's normal.
+      // Two smooth right triangles sharing the origin: one in the XY plane, one 100x larger in
+      // the XZ plane. Godot sums the two unit plane normals, so the shared vertex bisects them.
+      // An area-weighted average (what most engines do, and what computeVertexNormals does not
+      // do either) would sit almost entirely on the large triangle's normal.
       const small: [THREE.Vector3, THREE.Vector3, THREE.Vector3] = [v(0, 0, 0), v(1, 0, 0), v(0, 1, 0)];
       const large: [THREE.Vector3, THREE.Vector3, THREE.Vector3] = [v(0, 0, 0), v(0, 0, 100), v(100, 0, 0)];
       const geometry = applyCsgNormals(soupOf([small, large]));
@@ -155,9 +145,8 @@ describe('applyCsgNormals', () => {
 
   describe('winding: Godot fronts are CLOCKWISE, three fronts are COUNTER-CLOCKWISE', () => {
     it('reverses the winding on the way out, so faces are not back-face culled', () => {
-      // Emitting Godot's vertex order verbatim culls every triangle and renders each
-      // solid as its own interior. Measured, that took unit-csg-cylinder from 0.788% to
-      // 4.223% against real Godot before this conversion was added.
+      // Emitting Godot's vertex order verbatim culls every triangle and renders each solid as
+      // its own interior.
       const tri: [THREE.Vector3, THREE.Vector3, THREE.Vector3] = [v(0, 0, 0), v(1, 0, 0), v(0, 0, 1)];
       const geometry = applyCsgNormals(soupOf([tri], { smooth: false }));
       expect(positionAt(geometry, 0).toArray()).toEqual([0, 0, 0]);

@@ -1,9 +1,7 @@
 /**
- * VSeparator registration — parser.
- *
- * Reuses the Control parse; property knowledge lives in linterParser.ts. The
- * native (WebGL canvas) painter and minimum-size solver register separately,
- * from `index.r3f.ts` (ADR-0001).
+ * VSeparator registration: the parser. It reuses the Control parse, and property knowledge lives
+ * in linterParser.ts. The native (WebGL canvas) painter and minimum-size solver register from
+ * `index.r3f.ts` (ADR-0001).
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

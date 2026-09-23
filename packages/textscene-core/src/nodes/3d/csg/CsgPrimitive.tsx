@@ -1,25 +1,7 @@
 /**
- * <CsgPrimitive> — the shared render scaffold for every CSG slice, and the seam where
- * boolean evaluation happens.
- *
- * A CSG node takes exactly one of four shapes, decided by where it sits:
- *
- *   A. CONTRIBUTOR. Its solid belongs to an ancestor's boolean. It draws no mesh, but
- *      stays mounted and carries an INVISIBLE bounds proxy so selection and F-to-frame
- *      still know how big it is.
- *   B. LONE ROOT. A CSG root with no surviving CSG descendants. Draws its own solid
- *      directly, touching neither the evaluator nor the CSG library.
- *   C. COMBINING ROOT. Two or more contributions. Draws the evaluated result and tells
- *      its subtree, through CsgSubtreeContext, that their solids are spoken for.
- *   D. SKIPPED. Invisible, so its CSG parent's boolean never reached it. Draws nothing
- *      and bounds to a POINT, which is all Godot has for it either.
- *
- * The seam is here rather than in NodeDispatcher for two hard reasons. `PlainNode` is the
- * only caller of `registerNodeObject`, so a dispatcher that skipped CSG children would
- * strip tree-selection, highlighting and the hidden-eye toggle from every one of them.
- * And `subtreeConformance.test.tsx` renders every registered type with a probe child and
- * asserts it survives, which a root that swallowed `children` would fail. So contributors
- * remove their own mesh from the inside, and the dispatcher is untouched.
+ * <CsgPrimitive>: the shared render scaffold for every CSG slice, and the seam where boolean
+ * evaluation happens. A CSG node takes one of four shapes by where it sits: contributor (A), lone
+ * root (B), combining root (C) or skipped (D). Each branch below states its shape.
  */
 
 import { useMemo } from 'react';
@@ -42,10 +24,10 @@ import { CSG_SHADOWS_ONLY_MATERIAL } from '../../../r3f/csg/csgShadowsOnlyMateri
 const NO_PATHS: ReadonlySet<string> = new Set();
 
 /**
- * Marks the invisible bounds proxy, which `frameSceneBounds` counts: Godot's own AABB for a
- * VISIBLE contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:470,507`). An
- * invisible one the recursion never reached gets a ZERO-SIZE proxy instead — the point
- * Godot has for it. It is also all a combiner root has to frame on while the library loads.
+ * Marks the invisible bounds proxy, which `frameSceneBounds` counts: Godot's AABB for a visible
+ * contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:470,507`). An invisible one the
+ * recursion never reached gets a zero-size proxy, the point Godot has for it. It is also all a
+ * combiner root has to frame on while the library loads.
  */
 export const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
@@ -55,6 +37,10 @@ interface CsgPrimitiveProps {
   children?: ReactNode;
 }
 
+// The seam is here, not in NodeDispatcher. `PlainNode` is the only caller of `registerNodeObject`,
+// so skipping CSG children there would strip selection, highlighting and the hidden-eye toggle,
+// and `subtreeConformance.test.tsx` fails a root that swallows `children`. So contributors remove
+// their own mesh from the inside.
 export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) {
   const { internalResources, externalResources } = useSceneResources();
   const path = useNodePath();
@@ -63,10 +49,9 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   // subtree-conformance probe, where nothing can be hidden anyway.
   const hiddenNodePaths = useOptionalSelection()?.hiddenNodePaths ?? NO_PATHS;
 
-  // `_get_brush()` skips an invisible child (csg_shape.cpp:469) BEFORE writing its
-  // node_aabb, so Godot has only a point at its origin — a root, whose own build runs
-  // whatever its visibility, still has its full box. Decided before the work below, which
-  // a skipped node would only throw away.
+  // `_get_brush()` skips an invisible child (csg_shape.cpp:469) before writing its node_aabb, so
+  // Godot has only a point at its origin. A root builds whatever its visibility, so it keeps its
+  // full box. Decided before the work below, which a skipped node would only throw away.
   const skipped = subtree !== null && path !== null && subtree.invisiblePaths.has(path);
 
   const { position, rotation, scale } = useMemo(
@@ -79,29 +64,29 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     [internalResources, externalResources]
   );
 
-  // The node's OWN solid comes from the same registered builder the evaluator calls, so a
-  // slice defines its geometry exactly once. Memoized on the registered `geometryKey`
-  // rather than on the properties object, which the parser reallocates every reparse.
+  // The node's own solid comes from the registered builder the evaluator calls, so a slice
+  // defines its geometry once. Memoized on the registered `geometryKey`, not on the properties
+  // object, which the parser reallocates every reparse.
   const registration = nodeComponentRegistry.getCsgShape(node.type);
   const builderProps = properties as unknown as Record<string, unknown>;
   const ownKey = registration?.geometryKey?.(builderProps, ctx) ?? node.type;
   const ownGeometry = useMemo(
     () => (skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` IS the builder's inputs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` is the builder's inputs.
     [ownKey, skipped]
   );
   const geometry = ownGeometry ? <primitive object={ownGeometry} attach="geometry" /> : null;
 
-  // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource, and a
-  // CSG primitive keeps only a `Ref<Material>` (`modules/csg/csg_shape.h:276,290`) — so
-  // both arrive at the same slot, which renders either, textures included.
+  // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource, and a CSG
+  // primitive keeps only a `Ref<Material>` (`modules/csg/csg_shape.h:276,290`), so both arrive at
+  // the same slot, which renders either, textures included.
   const materialSource = useMemo(
     () => resolveMaterialSource(properties.materialPath, internalResources, externalResources),
     [properties.materialPath, internalResources, externalResources]
   );
 
-  // Absorbed while the ancestor's boolean is pending or ready; NOT while it has failed,
-  // which is what makes every contributor start drawing itself again.
+  // Absorbed while the ancestor's boolean is pending or ready. Not while it has failed, which
+  // makes every contributor draw itself again.
   const absorbed =
     subtree !== null && subtree.status !== 'failed' && path !== null && subtree.absorbedPaths.has(path);
 
@@ -139,13 +124,13 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
 
   const transform = { name: node.name, position, rotation, scale, visible } as const;
 
-  // ---- A. Contributor / D. Skipped for invisibility ---------------------------------
-  // Neither draws a solid, and both stay mounted so tree-selection, highlighting and the
-  // hidden-eye toggle keep working. The proxy is invisible, so THREE's raycaster skips it
-  // and clicks resolve to the root exactly as they do in Godot's editor, but `bounds.ts`
-  // keys on `.geometry` alone and never consults `visible`. Only its SIZE differs: a
-  // contributor's own brush, against the point Godot never wrote for a skipped one.
+  // A. Contributor: its solid belongs to an ancestor's boolean. D. Skipped: invisible, so its CSG
+  // parent's boolean never reached it. Neither draws a solid, and both stay mounted so
+  // tree-selection, highlighting and the hidden-eye toggle keep working.
   if (absorbed || skipped) {
+    // The proxy is invisible, so THREE's raycaster skips it and clicks resolve to the root as in
+    // Godot's editor, but `bounds.ts` keys on `.geometry` alone. Only its size differs: a
+    // contributor's own brush, against a point for a skipped node, all Godot has for it.
     return (
       <group {...transform}>
         {skipped ? (
@@ -164,8 +149,8 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     );
   }
 
-  // The node drawing its own solid: what a lone root IS, and what a combining root falls
-  // back to while the library loads or after it failed.
+  // The node drawing its own solid: what a lone root is, and what a combining root falls back to
+  // while the library loads or after it failed.
   const ownSolid = geometry && (
     <mesh
       castShadow={shadow.castShadow}
@@ -174,8 +159,8 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     >
       {geometry}
       {/* SHADOWS_ONLY draws nothing into the colour buffer, so no surface
-          material is mounted at all — see `CsgRootMesh.tsx` for why mounting
-          one and relying on attach order is not the same thing. */}
+          material is mounted. `CsgRootMesh.tsx` says why mounting one and
+          relying on attach order is not the same thing. */}
       {shadow.shadowsOnly ? (
         <meshBasicMaterial
           key={CSG_SHADOWS_ONLY_MATERIAL.key}
@@ -187,7 +172,8 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     </mesh>
   );
 
-  // ---- C. Combining root ----------------------------------------------------------
+  // C. Combining root: two or more contributions. It draws the evaluated result and tells its
+  // subtree, through CsgSubtreeContext, that their solids are spoken for.
   if (combining) {
     return (
       <group {...transform}>
@@ -198,9 +184,8 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
     );
   }
 
-  // ---- B. Lone root ----------------------------------------------------------------
-  // No evaluator, no dynamic import, no cost. It still publishes what it skipped —
-  // absorbing nothing is not the same as skipping nothing.
+  // B. Lone root: no surviving CSG descendants, so no evaluator, dynamic import or CSG library.
+  // It still publishes what it skipped: absorbing nothing is not skipping nothing.
   return (
     <group {...transform}>
       {ownSolid}
