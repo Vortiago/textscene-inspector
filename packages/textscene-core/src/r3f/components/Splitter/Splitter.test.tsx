@@ -1,8 +1,7 @@
 /**
- * Splitter drag behavior: pointer drag reports a clamped new width through
- * setWidth, `invert` flips the direction (for a right-edge dock), and the
- * min/max clamp holds. A controlled wrapper feeds the updated width back so the
- * delta math (relative to the width at pointer-down) is exercised faithfully.
+ * A drag reports a clamped width through setWidth, and `invert` flips the
+ * direction. A controlled wrapper feeds the width back, since the delta is
+ * relative to the width at pointer-down.
  */
 
 import { useState } from 'react';
@@ -45,7 +44,7 @@ describe('Splitter', () => {
   it('inverts the direction for a right-edge dock (drag left widens)', () => {
     render(<Harness initial={300} invert />);
     fireEvent.pointerDown(handle(), { clientX: 200, pointerId: 1 });
-    fireEvent.pointerMove(handle(), { clientX: 150, pointerId: 1 }); // -50 → +50 inverted
+    fireEvent.pointerMove(handle(), { clientX: 150, pointerId: 1 }); // -50, inverted to +50
     expect(widthValue()).toBe(350);
   });
 

@@ -1,12 +1,7 @@
 /**
- * A vertical drag handle that resizes an adjacent dock column (the DCC-style
- * splitter between the shell's panels). Self-contained via pointer capture, so
- * the drag keeps tracking even when the pointer leaves the thin handle. Reports
- * the new clamped width through `setWidth`.
- *
- * `invert` flips the drag direction for a right-edge dock: for the LEFT dock the
- * handle sits on its right edge (drag right → wider, invert=false); for the
- * RIGHT dock the handle sits on its left edge (drag left → wider, invert=true).
+ * A vertical drag handle that resizes an adjacent dock column and reports the
+ * clamped width through `setWidth`. `invert` is for a right-edge dock, whose
+ * handle sits on its left edge, so a drag to the left widens it.
  */
 
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react';
@@ -26,8 +21,8 @@ export function Splitter({ width, setWidth, min = 180, max = 560, invert = false
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     drag.current = { startX: e.clientX, startW: width, active: true };
-    // Pointer capture keeps the drag tracking when the cursor leaves the thin
-    // handle. Guarded: jsdom doesn't implement it.
+    // Pointer capture keeps the drag tracking off the thin handle. The test DOM
+    // lacks it, hence the guard.
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {

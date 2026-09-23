@@ -1,19 +1,7 @@
 /**
- * Regression test: SceneTreeViewer inlines PackedScene
- * sub-scene contents.
- *
- * Previously the tree only walked the parsed root scene's
- * `node.children`. Instance nodes (carrying `instance =
- * ExtResource("...")`) appeared as leaves — the user could see the 📦
- * marker but couldn't expand the node to see what's INSIDE the
- * sub-scene. The 3D viewport handled sub-scenes correctly (via
- * NodeDispatcher's `InstancedSceneSubtree`); the tree was just blind to
- * the dynamically-loaded data.
- *
- * Now each TreeNode calls `useSubSceneChildren` (which
- * routes through `useResource('PackedScene', path)`); when the loader's
- * scene cache has the path, the sub-scene's nodes render as inline
- * children of the instance row.
+ * The outliner inlines a PackedScene's contents under its instance row. Each
+ * TreeNode calls `useSubSceneChildren`, so the sub-scene's nodes render as
+ * children once the loader's scene cache has the path.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
@@ -85,37 +73,18 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
 
     render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
-    // The instance row should now report it has children (aria-expanded
-    // attribute will be present and falsy, but the chevron should be there).
-    // We expand it by clicking the chevron... but in our test the tree
-    // auto-expands selection. Easiest assertion: the sub-scene's root
-    // node should be addressable via its path-joined data attribute.
-    // We expand programmatically by setting the expanded set via
-    // SelectionContext — simpler: assert that the sub-scene's nodes
-    // are renderable by checking the data-node-path container exists in
-    // the DOM. Without expansion, the children div is conditionally
-    // rendered, so we expand explicitly via the chevron.
     const instanceRow = screen.getByText('PhotoFrame1').closest('[data-node-path]');
     expect(instanceRow).not.toBeNull();
     expect(instanceRow!.getAttribute('aria-expanded') ?? instanceRow!.querySelector('[aria-expanded]')?.getAttribute('aria-expanded')).toBeDefined();
 
-    // The sub-scene's Frame node SHOULD be present in the DOM tree under
-    // a path-joined data attribute. The tree only renders children when
-    // the parent is expanded — verify the sub-scene loaded by asserting
-    // the children container shape rather than visibility.
-    //
-    // Simpler approach: the chevron only appears for nodes with
-    // children. If the sub-scene loaded, PhotoFrame1's row should have
-    // the expand chevron (▶), not the leaf bullet (•).
+    // Only a row with children has the chevron (▶), not the leaf bullet (•).
     expect(instanceRow!.textContent).toContain('▶');
     expect(instanceRow!.textContent).not.toBe('•');
   });
 
   it('resolves a NESTED instance using the sub-scene resources, not the outer scene (chevron on the inner row)', () => {
-    // Reproduces the platformer Player bug: game.tscn instances player.tscn,
-    // which instances player.glb via player.tscn's OWN ExtResource id (absent
-    // from game.tscn). The inner instance must resolve against the sub-scene's
-    // resource table or it dead-ends as a leaf.
+    // The inner instance uses an ExtResource id that only the sub-scene declares,
+    // so it resolves against the sub-scene's resource table.
     const fake = createFakeResourceLoader();
     const subB: TscnScene = {
       nodes: [makeNode('BRoot', 'Node3D', { children: [makeNode('Leaf', 'MeshInstance3D')] })],
@@ -128,14 +97,14 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
           children: [makeNode('Inner', 'Node3D', { instance: 'ExtResource("9_subB")' })],
         }),
       ],
-      // subA's OWN resource table — the only place "9_subB" is defined.
+      // subA's own resource table is the only place "9_subB" is defined.
       externalResources: [makeExtResource('9_subB', 'res://subB.tscn')],
       internalResources: [],
     };
     fake.scenes.seed('res://subA.tscn', subA);
     fake.scenes.seed('res://subB.tscn', subB);
 
-    // Outer scene knows only subA ("1_subA"); it has NO "9_subB".
+    // The outer scene knows only subA ("1_subA"), not "9_subB".
     const graph = createSceneGraphFromTscnScene({
       nodes: [makeNode('A', 'Node3D', { instance: 'ExtResource("1_subA")' })],
       externalResources: [makeExtResource('1_subA', 'res://subA.tscn')],
@@ -148,7 +117,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     const aRow = screen.getByText('A').closest('[data-node-path]') as HTMLElement;
     act(() => fireEvent.click(within(aRow).getByRole('button', { name: 'Expand' })));
 
-    // Inner's nested subB resolved against subA's resources → it has a chevron.
+    // Inner's nested subB resolves against subA's resources, so it has a chevron.
     const innerRow = screen.getByText('Inner').closest('[data-node-path]');
     expect(innerRow).not.toBeNull();
     expect(innerRow!.textContent).toContain('▶');
@@ -191,9 +160,8 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
     };
     fake.scenes.seed('res://sub.tscn', subScene);
 
-    // The instance node has BOTH a `children` array (inline TSCN children
-    // that override sub-scene contents) AND an `instance` ref. The tree
-    // should show both groups of children.
+    // The instance node has both inline children and an `instance` ref. The
+    // tree shows both groups.
     const graph = createSceneGraphFromTscnScene({
       nodes: [
         makeNode('Inst', 'Node3D', {
@@ -207,8 +175,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
 
     render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
 
-    // The instance row should report having children (the chevron should
-    // appear), since both inline + sub-scene children exist.
+    // Both groups exist, so the chevron appears.
     const instanceRow = screen.getByText('Inst').closest('[data-node-path]');
     expect(instanceRow).not.toBeNull();
     expect(instanceRow!.textContent).toContain('▶');
@@ -227,9 +194,7 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
       internalResources: [],
     });
 
-    // The tree should render the instance row but treat it as a leaf
-    // because the loader's scene cache misses on this path — no children
-    // appear, no exception thrown.
+    // A scene-cache miss renders the instance row as a leaf, with no exception.
     expect(() => {
       render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
     }).not.toThrow();
@@ -249,14 +214,10 @@ describe('<SceneTreeViewer> WI-HALL-1 — sub-scene inlining', () => {
 
     const row = screen.getByText('Plain').closest('[data-node-path]');
     expect(row).not.toBeNull();
-    // No chevron, just the leaf bullet, since both inline-children AND
-    // sub-scene-children evaluated empty.
+    // Both groups are empty, so the row has the leaf bullet.
     expect(row!.textContent).toContain('•');
     expect(row!.textContent).not.toContain('▶');
   });
-
-  // Avoid unused-import lint complaints in narrow test wrappers.
-  void within;
 });
 
 describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
@@ -270,8 +231,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
   it('collapses the wrapper: the instance row adopts the sub-scene root type and shows the root children directly', () => {
     const fake = createFakeResourceLoader();
 
-    // Sub-scene root is an Area3D (a different type than the instance node)
-    // holding the coin internals.
+    // The sub-scene root is an Area3D, a type other than the instance node's.
     const subScene: TscnScene = {
       nodes: [
         makeNode('Coin', 'Area3D', {
@@ -297,8 +257,7 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
 
     expandRow('Coin1');
 
-    // The interior nodes are addressed directly under the instance row — no
-    // intermediate 'Coin' wrapper segment.
+    // The interior nodes sit directly under the instance row, with no 'Coin' segment.
     expect(container.querySelector('[data-node-path="Coin1/Circle"]')).not.toBeNull();
     expect(container.querySelector('[data-node-path="Coin1/Animation"]')).not.toBeNull();
     expect(container.querySelector('[data-node-path="Coin1/Coin"]')).toBeNull();
@@ -373,10 +332,8 @@ describe('<SceneTreeViewer> Instance root merge (ADR-0013)', () => {
     expandRow('Frame');
     expect(screen.getByText('SpecialMesh')).toBeTruthy();
 
-    // Search for the sub-scene node: the old static walk hid the whole instance
-    // row (its raw children are empty), so the match was unreachable. The live
-    // walk keeps the instance row (an ancestor of the match) and the match,
-    // hiding only the unrelated sibling.
+    // The search walks the live tree: it keeps the instance row, an ancestor of
+    // the match, and hides only the unrelated sibling.
     act(() =>
       fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'special' } })
     );

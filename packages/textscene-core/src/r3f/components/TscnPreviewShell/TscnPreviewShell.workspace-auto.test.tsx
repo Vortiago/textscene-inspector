@@ -1,8 +1,7 @@
 /**
- * Godot-editor parity (ADR-0006 amendment): opening a scene selects the
- * workspace from the root node's type — CanvasItem root → 2D, Node3D root →
- * 3D, plain Node root → keep the current workspace. Switching scenes
- * re-derives; a manual toggle only lasts until the next scene switch.
+ * ADR-0006: a scene opens in the workspace its root claims. A CanvasItem root
+ * gives 2D, a Node3D root gives 3D, and a plain Node keeps the current one. A
+ * manual toggle lasts until the next scene switch.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -66,9 +65,8 @@ describe('<TscnPreviewShell> workspace auto-select (Godot parity)', () => {
   });
 
   it('opens a scene whose ROOT is itself an instance in the sub-scene workspace', async () => {
-    // Root node is an instance with no own type; only the collapsed sub-scene
-    // root (a Control) reveals the 2D workspace. The static walk read the raw
-    // instance node's (absent) type and stayed in the default 3D workspace.
+    // The root is an instance with no own type. Only the merged sub-scene root,
+    // a Control, claims the 2D workspace.
     const menu = new TscnParser().parse(`[gd_scene format=3]\n\n[node name="Menu" type="Control"]\n`);
     const loader = makeLoader({ 'res://menu.tscn': menu as TscnScene });
     const content = `[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://menu.tscn" id="m"]\n\n[node name="Menu" instance=ExtResource("m")]\n`;

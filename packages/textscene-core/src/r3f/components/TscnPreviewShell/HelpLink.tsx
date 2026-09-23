@@ -1,10 +1,7 @@
 /**
- * Help affordance — a small "?" link in the shared top bar pointing
- * at the GitHub-hosted README's Documentation section, which in turn links
- * `docs/user-guide-web.md` / `docs/user-guide-vscode.md`. A single external
- * link keeps the web app and the VS Code webview at parity: VS Code's
- * webview host intercepts http(s) anchor clicks and opens them in the
- * system browser, so no host-specific wiring is needed here.
+ * The "?" link to the README's Documentation section. The VS Code webview
+ * opens an http(s) link in the system browser, so one external link serves
+ * both hosts.
  */
 import styles from './TscnPreviewShell.module.css';
 

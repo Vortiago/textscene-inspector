@@ -1,9 +1,7 @@
 /**
- * Contract tests for MissingResourcesContext: the per-shell aggregation of
- * missing / uploaded resource paths that MissingResourcesPanel consumes.
- * Aggregation through useResource is covered in
- * resources/useResource.missing-aggregation.test.tsx — here we pin the
- * context's own state machine (report/clear/markUploaded/removeUploaded).
+ * The state machine of MissingResourcesContext: report, clear, markUploaded
+ * and removeUploaded. useResource.missing-aggregation.test.tsx covers the
+ * aggregation through useResource.
  */
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
@@ -37,8 +35,7 @@ describe('MissingResourcesContext', () => {
     const setAfterFirst = result.current.missingPaths;
     act(() => result.current.report('res://a.png'));
     expect(result.current.missingPaths.size).toBe(1);
-    // The reducer bails out on duplicates, so the Set identity is preserved —
-    // consumers depending on `missingPaths` don't re-render.
+    // A duplicate keeps the Set identity, so no consumer of `missingPaths` re-renders.
     expect(result.current.missingPaths).toBe(setAfterFirst);
   });
 
@@ -86,10 +83,8 @@ describe('MissingResourcesContext', () => {
   });
 
   it('records an upload against the owning FILE, so one file is one row', () => {
-    // The user picks one file. A `.tres` backing three surface materials heals
-    // three identities, so `markUploaded` fires three times — but they name one
-    // file, and three "✓ uploaded" rows with three Remove buttons for a single
-    // pick would be a lie about what happened.
+    // One `.tres` behind three surface materials heals three identities, so
+    // `markUploaded` fires three times, but one file gives one uploaded row.
     const { result } = renderHook(() => useMissingResources(), { wrapper: wrap });
     act(() => {
       result.current.markUploaded('res://m.tres::StandardMaterial3D_a');
@@ -101,9 +96,8 @@ describe('MissingResourcesContext', () => {
   });
 
   it('clears the reported IDENTITY from missing, not just its file', () => {
-    // `missingPaths` is keyed by what a consumer asked for, so healing an
-    // address must retire that address — clearing only the file would leave the
-    // row up forever.
+    // `missingPaths` is keyed by what a consumer asked for, so a healed address
+    // retires that address, not only the file.
     const { result } = renderHook(() => useMissingResources(), { wrapper: wrap });
     act(() => result.current.report('res://m.tres::StandardMaterial3D_a'));
     act(() => result.current.markUploaded('res://m.tres::StandardMaterial3D_a'));
@@ -151,7 +145,7 @@ describe('MissingResourcesContext', () => {
     const { result } = renderHook(() => useMissingResources());
     expect(result.current.missingPaths.size).toBe(0);
     expect(result.current.uploadedPaths.size).toBe(0);
-    // Documented no-provider contract: consumers may call unconditionally.
+    // With no provider, a consumer may still call every action.
     expect(() => {
       result.current.report('res://a.png');
       result.current.clear('res://a.png');
@@ -182,8 +176,8 @@ describe('MissingResourcesContext', () => {
   it('onMissingPathsChange does not re-fire on callback-identity changes (hosts may pass inline arrows)', () => {
     const calls: ReadonlySet<string>[] = [];
     const wrapper = ({ children }: { children: ReactNode }) => (
-      // A fresh arrow per render — the provider must still notify only on
-      // actual set changes, or an inline-callback host would loop.
+      // A fresh arrow each render: the provider notifies only on a set change, or
+      // an inline-callback host would loop.
       <MissingResourcesProvider onMissingPathsChange={(paths) => calls.push(paths)}>
         {children}
       </MissingResourcesProvider>

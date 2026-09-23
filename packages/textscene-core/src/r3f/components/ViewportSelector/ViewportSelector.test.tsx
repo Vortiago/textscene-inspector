@@ -25,7 +25,7 @@ describe('<ViewportSelector>', () => {
 
   it('groups options by category', () => {
     render(<ViewportSelector options={options} value="a.tscn" onChange={() => {}} />);
-    // optgroup has accessible name from the label attribute.
+    // An optgroup takes its accessible name from the label attribute.
     const select = screen.getByRole('combobox');
     const optgroups = select.querySelectorAll('optgroup');
     expect(optgroups).toHaveLength(2);

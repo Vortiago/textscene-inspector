@@ -1,20 +1,8 @@
 /**
- * Viewport controls, floated over the viewport: "Reset Camera" and
- * "Screenshot" (3D only), the 3D/2D segmented switch, and every display
- * overlay behind a single `<DisplayMenu>`. Writes through `useViewportMode()`
- * so the center viewport swaps between the R3F canvas and the 2D Control
- * overlay, and the gizmos show/hide. Shared by both apps via TscnPreviewShell,
- * so feature parity is automatic — including Reset Camera, which the web app
- * previously owned.
- *
- * The bar holds only what is reached for constantly. The toggles moved into
- * the menu once there were seven of them: the bar wrapped to a second row,
- * covered the top of the scene it controls, and hid the controls legend
- * beneath itself.
- *
- * Screenshot downloads the current 3D frame as a PNG via
- * `CameraControlContext`'s registered handler (`<TscnCanvas>`'s
- * `ScreenshotBridge`).
+ * The controls over the viewport: Reset Camera and Screenshot in 3D, the 3D/2D
+ * switch, and the display toggles in `<DisplayMenu>`. It writes through
+ * `useViewportMode()`. Screenshot downloads a PNG through the handler that
+ * `<TscnCanvas>`'s `ScreenshotBridge` registers.
  */
 
 import {
@@ -38,7 +26,7 @@ import styles from './ViewportToolbar.module.css';
 
 const MODES: ViewportMode[] = ['3D', '2D'];
 
-/** Everything `buildDisplayToggles` needs, so it can be exercised without a DOM. */
+/** Everything `buildDisplayToggles` needs, so a test needs no DOM. */
 export interface DisplayToggleState {
   mode: ViewportMode;
   showCollisions: boolean;
@@ -60,9 +48,8 @@ export interface DisplayToggleState {
 }
 
 /**
- * Which overlays the Display menu offers, and their current state. At module
- * scope so "which of these are 3D-only" is one readable list rather than a
- * conditional buried in a render body.
+ * The overlays the Display menu offers, and their state. At module scope, so
+ * the 3D-only ones are one readable list.
  */
 export function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[] {
   return [
@@ -124,7 +111,7 @@ export function buildDisplayToggles(state: DisplayToggleState): readonly Display
   ];
 }
 
-/** Triggers a browser download of a data URL via a throwaway anchor element. */
+/** Downloads a data URL through a throwaway anchor element. */
 function downloadDataUrl(dataUrl: string, filename: string): void {
   const link = document.createElement('a');
   link.href = dataUrl;
@@ -157,9 +144,8 @@ export function ViewportToolbar() {
   const hierarchy = useOptionalHierarchy();
   const sceneLoaded = Boolean(hierarchy?.sceneGraph);
 
-  // Godot disables each preview button outright — with the reason in its label
-  // — once the scene supplies its own, rather than letting the user re-enable a
-  // preview that would double up on the scene's lighting (ADR-0025).
+  // Godot disables a preview button, with the reason in its label, once the
+  // scene supplies its own, so no preview doubles the scene's light (ADR-0025).
   const yielding = useLiveSceneNodes(YIELDS_A_PREVIEW);
   const sceneHasSun = yielding.some((entry) => entry.node.type === PREVIEW_SUN_YIELD_TYPE);
   const sceneHasEnvironment = yielding.some(
@@ -172,10 +158,8 @@ export function ViewportToolbar() {
     downloadDataUrl(dataUrl, `tscn-preview-${Date.now()}.png`);
   }
 
-  // Persistence happens HERE, at the explicit user choice, never via a
-  // blanket context→storage sync — programmatic writers (WorkspaceAutoSelect's
-  // typed-root pick, the Cameras panel's 2D framing) must not overwrite the
-  // user's stored preference. See VIEWPORT_MODE_STORAGE_KEY's doc.
+  // Only the user's click persists: a programmatic writer, such as
+  // WorkspaceAutoSelect, must not overwrite the stored preference.
   function handleModeClick(m: ViewportMode) {
     setMode(m);
     writePersisted(VIEWPORT_MODE_STORAGE_KEY, m);
@@ -211,7 +195,7 @@ export function ViewportToolbar() {
 
   return (
     <div className={styles.toolbar} role="toolbar" aria-label="Viewport controls">
-      {/* Reset Camera is a 3D-orbit affordance; hide it in 2D overlay mode. */}
+      {/* Reset Camera orbits in 3D, so it hides in 2D. */}
       {mode === '3D' && camera && (
         <button
           type="button"

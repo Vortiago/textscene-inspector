@@ -1,13 +1,7 @@
 /**
- * The shell's narrow-viewport layout, pinned at the CSS source.
- *
- * happy-dom computes no styles inside `@media` and `matchMedia` answers a
- * static `false`, so the declarations are asserted in the stylesheet the host
- * ships verbatim: at ≤768px `.columns` stacks and `.dock` keeps a full-width,
- * definite share of that stack.
- *
- * Sister test: a render-time smoke check that the shell still mounts its body
- * element, so the responsive container exists at all.
+ * The narrow layout, pinned at the CSS source, since happy-dom computes no
+ * `@media` style and `matchMedia` answers `false`. At ≤768px `.columns` stacks
+ * and `.dock` keeps a full-width, definite share of that stack.
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -46,7 +40,7 @@ describe('<TscnPreviewShell> mobile responsive layout (WI-UX-9)', () => {
   it('gives the dock a definite share of the stack inside the narrow block', () => {
     const mediaBlock = extractMediaBlock(CSS_SOURCE, 768);
     expect(mediaBlock).not.toBeNull();
-    // The dock stays visible (NOT display:none) — it stacks under the viewport.
+    // The dock stays visible and stacks under the viewport.
     expect(mediaBlock!).not.toMatch(/\.dock[^{]*\{[^}]*display:\s*none/);
     expect(mediaBlock!).toMatch(/\.dock[^{]*\{[^}]*width:\s*100%/);
     // Definite, not content-measured: `auto` resolves to 8px here, whatever
@@ -56,9 +50,7 @@ describe('<TscnPreviewShell> mobile responsive layout (WI-UX-9)', () => {
   });
 
   it('preserves the side-by-side desktop layout outside the media query', () => {
-    // The non-media `.columns` rule keeps `display: flex` (row by default)
-    // and the dock is a flex column. We assert these exist *outside* the
-    // media block so an edit that accidentally moves them inside is caught.
+    // Outside the media block, so a move of these rules into it fails.
     const desktopBlock = stripMediaBlocks(CSS_SOURCE);
     expect(desktopBlock).toMatch(/\.columns\s*\{[^}]*display:\s*flex/);
     expect(desktopBlock).toMatch(/\.dock[^{]*\{[^}]*flex-direction:\s*column/);
@@ -77,10 +69,8 @@ describe('<TscnPreviewShell> mobile responsive layout (WI-UX-9)', () => {
     const { container } = render(
       <TscnPreviewShell panelId="p-mobile" content={MINIMAL_TSCN} />
     );
-    // Module-class hashing means we can't assert the literal `body`
-    // class name; we assert the data-panel-id host + that a single
-    // direct child carries class names — enough to know the layout
-    // tree is built.
+    // The module hashes the `body` class name, so the test checks for a direct
+    // child with a class name under the data-panel-id host.
     const shellRoot = container.querySelector('[data-panel-id="p-mobile"]');
     expect(shellRoot).toBeTruthy();
     expect(shellRoot!.children.length).toBeGreaterThan(0);
@@ -99,11 +89,7 @@ describe('<TscnPreviewShell> mobile responsive layout (WI-UX-9)', () => {
   });
 });
 
-/**
- * Pulls the body of the `@media (max-width: <px>px) { ... }` block out
- * of `source`, balancing nested braces. Returns null if no such block
- * exists.
- */
+/** The body of the `@media (max-width: <px>px)` block, or null when there is none. */
 function extractMediaBlock(source: string, px: number): string | null {
   const re = new RegExp(`@media\\s*\\(\\s*max-width:\\s*${px}px\\s*\\)\\s*\\{`);
   const match = re.exec(source);
@@ -122,10 +108,7 @@ function extractMediaBlock(source: string, px: number): string | null {
   return source.slice(start, i - 1);
 }
 
-/**
- * Removes every `@media (...) { ... }` block from `source` so callers
- * can grep only the desktop-layer rules.
- */
+/** `source` without its `@media` blocks: the desktop-layer rules only. */
 function stripMediaBlocks(source: string): string {
   let out = source;
   for (;;) {

@@ -1,7 +1,4 @@
-/**
- * Single tree row (header + recursive children container). Internal to
- * `<SceneTreeViewer>` — not exported from the package.
- */
+/** One tree row and its recursive children, internal to `<SceneTreeViewer>`. */
 import { memo, useMemo, type MouseEvent } from 'react';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
@@ -62,31 +59,23 @@ export interface TreeNodeProps {
   onToggleVisibility: (path: string) => void;
   onNodeReveal?: (path: string, node: TscnNode) => void;
   /**
-   * Open an instanced sub-scene as its own previewed scene (≈ Godot's
-   * "Open in Editor"). Receives the resolved `res://` path of the instance.
+   * Opens an instanced sub-scene as its own previewed scene, like Godot's
+   * "Open in Editor". It receives the instance's resolved `res://` path.
    */
   onOpenSubScene?: (scenePath: string) => void;
   /**
-   * Whether a row at the given full node-path should be visible under the
-   * current search — path-based (resolved over the live tree by
-   * `SceneTreeViewer`) so a match inside an instanced sub-scene keeps its
-   * ancestor rows visible.
+   * Whether the row at this node path survives the search. It is path-based,
+   * so a match inside a sub-scene keeps its ancestor rows visible.
    */
   matches: (path: string) => boolean;
   /**
-   * The host scene's externalResources, which resolve
-   * `node.instance = ExtResource("id")` references against the
-   * `res://` path of the referenced PackedScene. Threaded down from
-   * `SceneTreeViewer` so every TreeNode can attempt sub-scene
-   * resolution without re-reading HierarchyContext.
+   * The host scene's externalResources, which resolve `ExtResource("id")` to
+   * the PackedScene's `res://` path with no re-read of HierarchyContext.
    */
   externalResources: readonly TscnExternalResource[];
   /**
-   * Roving tabIndex (WAI-ARIA APG Tree View pattern): true ONLY for
-   * the first root-level row, and only while no SELECTED row is rendered
-   * (nothing selected, or the selection collapsed/filtered out of view) —
-   * `<SceneTreeViewer>` computes that condition; every recursively-rendered
-   * child defaults to false and never sets this.
+   * True only for the first root row while no selected row renders.
+   * `<SceneTreeViewer>` computes it, and a child row never sets it.
    */
   isDefaultFocusable?: boolean;
 }
@@ -109,38 +98,18 @@ function TreeNodeImpl({
     : null;
   const instanceScenePath = onOpenSubScene ? scenePath : null;
 
-  // Dynamically-loaded sub-scene children (when this node
-  // has `instance = ExtResource("...")`). Returns null for non-instance
-  // rows or while the sub-scene is still loading; treated as an empty
-  // list for rendering. The `useResource` hook inside subscribes to the
-  // scene event bus, so the tree re-renders automatically when the
-  // sub-scene arrives.
+  // Null for a non-instance row or while the sub-scene loads. The hook
+  // re-renders the row when the sub-scene arrives.
   const subScene = useSubSceneChildren(node, externalResources);
 
-  // GLB internal hierarchy: a `GLBSceneRoot` row's children are the loaded
-  // GLB's THREE.Object3D nodes, walked into synthetic TscnNodes. Returns null
-  // for non-GLB rows; the hook re-renders when the GLB arrives.
+  // Null for a non-GLB row. The hook re-renders the row when the GLB arrives.
   const glbChildren = useGlbChildren(node);
 
-  // liveChildGroups — the single origin-tagged source of truth for what lives
-  // below this node and in what resource scope. Replaces the old
-  // `mergedChildren`/`inlineChildren`/`dynamicChildren` three-way branch.
-  //
-  // The pure `liveChildGroups` function needs the loaded data the hooks
-  // already fetched:
-  //   - sub-scene: hand a singleSceneCache keyed to scenePath + the loaded
-  //     sub-scene (`subScene` already has the `{ nodes, externalResources }`
-  //     shape the cache expects).
-  //   - GLB: for GLBSceneRoot nodes, the hook already computed the synthetic
-  //     TscnNode list; return a glb group directly to avoid re-walking the
-  //     THREE.Object3D tree (glbSceneRootChildren is idempotent but the hook
-  //     result is already memoized by useGlbChildren).
-  //
-  // Memoized so a collapsed row keeps stable group identity across unrelated
-  // re-renders (selection/hover/expand) — and so the derived `effective` node
-  // below reuses this one merge instead of re-parsing on every re-render.
+  // What lives below this node, and in what resource scope. A GLB row reuses
+  // the list `useGlbChildren` already built, not a second walk. The memo keeps
+  // the groups stable across selection and hover, so `effective` reuses one merge.
   const groups: readonly LiveChildGroup[] = useMemo(() => {
-    // The tree renders rows and resolves instance refs; it never reads a
+    // The tree renders rows and resolves instance refs. It never reads a
     // SubResource id, so it declares an empty pool explicitly.
     const scope = { externalResources, internalResources: [] };
     if (node.type === GLB_SCENE_ROOT_TYPE && glbChildren) {
@@ -149,12 +118,9 @@ function TreeNodeImpl({
     return liveChildGroups(node, scope, singleSceneCache(scenePath, subScene));
   }, [node, externalResources, scenePath, subScene, glbChildren]);
 
-  // Instance root merge (ADR-0013) — the SAME decision the viewport, inspector,
-  // and panels make — used here for the row header (badge + transform icon).
-  // Derived from the `merged` group `groups` already built, so the single-root
-  // merge (a raw-property re-parse) runs ONCE per row instead of a second time in
-  // its own collapseLiveNode call. Every other origin leaves the node unchanged,
-  // matching collapseLiveNode's fallback (it returns the raw node there too).
+  // Instance root merge (ADR-0013), the same decision the viewport and inspector
+  // make, for the row header. It reads the `merged` group, so the merge runs once
+  // per row. Every other origin keeps the raw node, as `collapseLiveNode` does.
   const effective = useMemo(
     () => groups.find((g) => g.origin === 'merged')?.mergedNode ?? node,
     [groups, node]
@@ -162,12 +128,9 @@ function TreeNodeImpl({
 
   const hasChildren = groups.some((g) => g.children.length > 0);
 
-  // One child row. `keyPrefix` is the group's origin — `merged`, `inline`,
-  // `subscene`, or `glb` — keeping each group's children in its own React key
-  // namespace so a name collision (an inline child sharing a name with a
-  // sub-scene root) doesn't trip React's duplicate-key warning. `childRes` is
-  // the resource scope the child resolves its OWN instance ref against, taken
-  // directly from the group rather than re-computed.
+  // `keyPrefix` is the group's origin, so an inline child that shares a name with
+  // a sub-scene root does not trip React's duplicate-key warning. `childRes` is
+  // the scope the child resolves its own instance ref against.
   const renderChildRow = (
     child: TscnNode,
     keyPrefix: string,
@@ -199,13 +162,11 @@ function TreeNodeImpl({
   const isSelected = selectedNodePath === nodePath;
   const isHidden = hiddenNodePaths.has(nodePath);
 
-  // A parser registration alone is not evidence of a render, so ask what the
-  // viewport will actually do: only a type with no component at all is a gap.
+  // A parser registration is no evidence of a render: only a type with no
+  // component at all is a gap.
   const isUnsupported = rendersOwnVisual(effective.type) === 'not-implemented';
 
-  // Roving tabIndex: this row is the tree's ONE tab stop when it's
-  // selected, or when it's the designated fallback row (the first root row,
-  // set by SceneTreeViewer only while no selected row is rendered).
+  // This row is the tab stop when it is selected or when it is the fallback row.
   const isRovingTabStop = isSelected || isDefaultFocusable;
 
   const headerClasses = [styles.header];
@@ -238,7 +199,6 @@ function TreeNodeImpl({
     e.stopPropagation();
     onToggleVisibility(nodePath);
   }
-
 
   return (
     <div className={styles.node} data-node-path={nodePath} data-depth={depth}>

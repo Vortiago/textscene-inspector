@@ -1,10 +1,7 @@
 /**
- * Per-panel scene-graph context. Read-only for consumers — the shell owns
- * the parse and provides the resulting `SceneGraph` here.
- *
- * `sceneGraph` is null until the first successful parse. Consumers must
- * render a passive loading state on null, never throw, never partial — see
- * R3F-contracts.md §4.
+ * The panel's `SceneGraph`, which the shell parses. It is null until the first
+ * successful parse, and a consumer then renders a passive loading state,
+ * never a throw or a partial render (R3F-contracts.md §4).
  */
 import { createContext, useContext, type ReactNode } from 'react';
 import type { SceneGraph } from '../../core/SceneGraph.js';
@@ -38,9 +35,8 @@ export function useHierarchy(): HierarchyContextValue {
 }
 
 /**
- * Optional variant of `useHierarchy` — returns `null` when no provider
- * is mounted instead of throwing. Used by `<TscnSceneContents>` so the
- * canvas degrades gracefully in standalone test usage.
+ * Returns `null` instead of throwing with no provider, so a canvas mounted
+ * alone in a test still renders.
  */
 export function useOptionalHierarchy(): HierarchyContextValue | null {
   return useContext(HierarchyContext);

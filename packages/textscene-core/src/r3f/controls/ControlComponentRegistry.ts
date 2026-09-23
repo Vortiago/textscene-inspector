@@ -1,7 +1,7 @@
 /**
- * Maps Godot Control `type` strings to their native (WebGL canvas) painter —
- * the 2D-UI analogue of NodeComponentRegistry (ADR-0002). Kept separate so the
- * 3D registry stays THREE-typed; both share `createTypeRegistry`.
+ * Maps a Godot Control `type` to its native (WebGL canvas) painter, the 2D-UI
+ * twin of NodeComponentRegistry (ADR-0002). It is separate, so the 3D registry
+ * stays THREE-typed, and both share `createTypeRegistry`.
  */
 
 import type React from 'react';
@@ -15,169 +15,77 @@ import type { ControlOwnTint } from './native/controlTint';
 import type { SealedHandoff } from './native/solveHandoff';
 
 /**
- * Props a Control painter receives from `ControlCanvasWalker`. A painter
- * draws only its OWN chrome: `ControlCanvasWalker` positions this node's
- * outer `<group>` and renders its (already-solved, self-positioning)
- * children as siblings, so no child content is threaded through the
- * painter's props. `rect` is in LOCAL space — (0, 0) at this node's own
- * top-left; the walker's outer group already carries its viewport/
- * parent-relative position.
+ * The props `ControlCanvasWalker` gives a painter, which draws only its own
+ * chrome: the walker positions the node's outer `<group>` and renders its solved
+ * children as siblings.
  */
 export interface NativeControlComponentProps {
-  /** This Control's solved node — collapsed live node, its own styleBoxes/textureSize. */
+  /** The solved node: the merged live node, with its own styleBoxes and textureSize. */
   solveNode: SolveNode;
-  /** This Control's solved rect, LOCAL space (position already applied by the walker). */
+  /** The solved rect in local space, (0, 0) at the node's top-left. The walker applies the position. */
   rect: Rect2;
   /**
-   * The default theme at the active project's `gui/theme/default_theme_scale`.
-   *
-   * Supplied rather than resolved per painter: the walker already holds it (the
-   * solve needs it too), so five painters were each re-reading project settings
-   * and re-deriving the same object. Handing it down also means a painter and
-   * the solver that sized it can never see different theme metrics.
+   * The default theme at the project's `gui/theme/default_theme_scale`. The
+   * walker hands down the one the solve used, so a painter and its solver see
+   * the same metrics.
    */
   theme: NativeTheme;
   /**
-   * This Control's OWN-pixel tint: the ambient inherited modulate — which
-   * already carries this node's own `modulate` — × its `self_modulate`,
-   * composed in sRGB with the single linear conversion applied to `color`.
-   *
-   * Supplied rather than resolved per painter, for the same reason as `theme`
-   * above and by the same shape the Node2D family already has: `CanvasItem2D`
-   * hands its `body` render-prop the resolved tint, which is why that family
-   * cannot get this wrong at all. Resolving it per painter means re-entering
-   * the walker's own modulate chain from inside the provider it publishes —
-   * one composition, once per painter, each free to drift.
-   *
-   * REQUIRED. Optional would let a painter fall back to opaque white and drop
-   * the scene's tint on its own chrome: invisible in every scene that authors
-   * neither property, wrong in the ones that do, with no type error and no
-   * failing test. `painterEnv` (`native/testing/painterProps.ts`) is where a
-   * test that does not care about tint gets one.
+   * The own-pixel tint: the inherited modulate, own `modulate` included, times `self_modulate`, in
+   * sRGB with one linear conversion on `color`. The walker composes it once, as `CanvasItem2D` does.
+   * Required, since an optional tint falls back to opaque white in silence. A test gets every
+   * required prop from `painterEnv` (`native/testing/painterProps.ts`).
    */
   tint: ControlOwnTint;
   /**
-   * Whether Controls in THIS viewport snap their drawn transform to whole
-   * pixels — the walker's own resolved value, not the project setting.
-   *
-   * The two differ: `gui/common/snap_controls_to_pixels` is the ROOT window's
-   * value alone (`main/main.cpp` sets it on `sml->get_root()`), while every
-   * other Viewport keeps `= true` from its own member initialiser. A painter
-   * re-reading project settings therefore gets the wrong answer for its own
-   * subtree the moment it sits inside a SubViewport. Painters need it because
-   * a widget's SIBLING CanvasItems — a ScrollContainer's bars — are snapped
-   * on their own account, outside the walker's snap of this node's group.
+   * Whether Controls in this viewport snap to whole pixels, as the walker resolved it. The project's
+   * `gui/common/snap_controls_to_pixels` sets only the root window (`main/main.cpp`), and every other
+   * Viewport keeps `true`. A painter needs it for sibling CanvasItems that snap on their own
+   * account, such as a ScrollContainer's bars.
    */
   snapToPixels: boolean;
   /**
-   * Text measurement, or `null` before the metrics are available. The same
-   * measurer the solve used, so a painter's own layout of a string agrees with
-   * the minimum size that string produced.
+   * The solve's text measurer, or `null` before the metrics arrive, so a
+   * painter's layout of a string agrees with the minimum size it produced.
    */
   measureText: TextMeasurer | null;
   /**
-   * The SOLVED rects of this Control's direct children, keyed by node path.
-   *
-   * Chrome whose position depends on where the children ended up — a split
-   * container's grabber, a scroll container's bars — otherwise has to recompute
-   * layout the solver already did, from whatever subset of the inputs a painter
-   * can reach. That recomputation can disagree with the solver, which is a
-   * silent divergence rather than a visible bug.
+   * The solved rects of the direct children, by node path. Chrome placed by
+   * the children, such as a split container's grabber, reads the solver's
+   * layout, not a recomputation that can silently disagree.
    */
   childRects: ReadonlyMap<string, Rect2>;
   /**
-   * This Control's place in the canvas — the SAME key every Node2D canvas item
-   * takes (`canvasPaintOrder.ts`), for the painter's own mesh(es). Every 2D
-   * material in this codebase is transparent + depthWrite=false, so three's
-   * transparent sort decides paint order from this value, never from z.
-   *
-   * A painter that wraps pixels in a GROUP of its own must put this on that
-   * group as well: three reads a drawn object's position from its nearest
-   * enclosing group first, so a bare group resets everything inside it to the
-   * front of the canvas.
+   * The canvas key every Node2D canvas item takes (`canvasPaintOrder.ts`). Every 2D material is
+   * transparent without depth writes, so three sorts by this, never by z. A painter that wraps its
+   * pixels in its own group puts this on the group too, or three sorts it to the canvas front.
    */
   renderOrder: number;
   /**
-   * A SECOND draw-order key for chrome that must draw AFTER this node's
-   * ENTIRE subtree, regardless of `renderOrder` (this node's OWN paint
-   * slot — every descendant necessarily exceeds it, since a node draws at the
-   * front of the range its subtree occupies). Godot's own answer to
-   * "draw after my children" is `INTERNAL_MODE_BACK`: `Node::add_child(...,
-   * INTERNAL_MODE_BACK)` places a child AFTER every normal child regardless
-   * of when it was added, and `ScrollContainer` is exactly such a case —
-   * its `h_scroll`/`v_scroll` are added that way
-   * (`scene/gui/scroll_container.cpp:919,924`) so its scrollbars paint over
-   * the scrolled content rather than under it. `LineEdit`, `OptionButton`,
-   * `RichTextLabel`, and `SplitContainer` all use internal children for the
-   * same reason (their own source files), so this is a general capability
-   * on the contract, not a `ScrollContainer` special case.
-   *
-   * The canvas key at the LAST draw-sequence value in this node's own run —
-   * a subtree owns a CONTIGUOUS range (`canvasPaintOrder.ts`), so "after all
-   * of it" is simply that range's end. It equals the last descendant's own
-   * `renderOrder` (or this node's own, if it is a leaf), and the next sibling
-   * starts EXACTLY one past it — so a painter using this value must offset by
-   * a FRACTION strictly inside that one-wide gap (e.g. `+0.25`/`+0.5` for two
-   * layers of chrome) to draw after every descendant without ever reaching the
-   * next sibling's own slot.
-   *
-   * REQUIRED even though only `INTERNAL_MODE_BACK`-style painters read it.
-   * Making it optional would let a painter fall back to `renderOrder` when it
-   * is absent, and that fallback IS the defect this field exists to fix — a
-   * bar drawn under its own content, silently, with no type error and no
-   * failing test. `painterEnv` (`native/testing/painterProps.ts`) exists so
-   * widening this contract stays one edit rather than a quiet pressure to
-   * weaken it for test convenience.
+   * The key at the end of this node's contiguous run, for chrome that draws after the whole subtree
+   * like Godot's `INTERNAL_MODE_BACK` children: ScrollContainer's bars (`scene/gui/scroll_container.cpp:919,924`),
+   * and those of LineEdit, OptionButton, RichTextLabel and SplitContainer. The next sibling starts one
+   * past it, so add a fraction such as +0.25. Required, since a `renderOrder` fallback hides a bar.
    */
   subtreeChromeRenderOrder: number;
   /**
-   * This Control's OWN `z_final` — its `z_index` already accumulated onto its
-   * ancestors' and clamped (`lighting2d/canvasItemPlacement.tsx`'s
-   * `accumulateCanvasItemZ`). A 2D light's `range_z_min`/`range_z_max` window
-   * is tested against this, and Godot tests an item against its own accumulated
-   * value: `_cull_canvas_item` accumulates into `p_z` and only then calls
-   * `_attach_canvas_item_for_draw(ci, …, p_z, …)`
-   * (`servers/rendering/renderer_canvas_cull.cpp`).
-   *
-   * REQUIRED, and passed even though no painter reads it yet, because the way
-   * to get this wrong is silent. `useCanvasItemLighting`'s `effectiveZ`
-   * parameter is optional and falls back to `useEffectiveZ()` — and the
-   * walker publishes that context to a node's DESCENDANTS, so the ambient a
-   * painter would read is its PARENT's z, missing the painter's own
-   * `z_index`. A painter that opts into lighting must therefore hand this
-   * value in explicitly, exactly as `CanvasItem2D.tsx` does for the Node2D
-   * path. Nothing about that mistake produces a type error or a failing test:
-   * it is invisible in every scene without a `PointLight2D`, and wrong only
-   * at the z-window edge in the scenes that have one.
+   * The own clamped `z_final` (`accumulateCanvasItemZ`) that a 2D light's z window tests, since
+   * `_cull_canvas_item` passes the accumulated `p_z` on (`servers/rendering/renderer_canvas_cull.cpp`).
+   * Required though no painter reads it yet: `useCanvasItemLighting` falls back to `useEffectiveZ()`,
+   * the parent's z, so a lit painter passes this in, as `CanvasItem2D.tsx` does.
    */
   effectiveZ: number;
   /**
-   * The **solve handoff** this Control's registered `ContainerLayoutFn`
-   * sealed (`native/controlRectSolver.ts`'s `SolvedControl.meta`), or
-   * `undefined`.
-   *
-   * Opaque: the producing slice's own channel object is the only thing that
-   * can open it (`native/solveHandoff.ts`), so a painter cannot mistake
-   * another slice's value — or a props literal of the same shape — for its
-   * own. A painter whose computation is pure in `(node, theme)` reads nothing
-   * here: it calls the same share its solver calls.
-   *
-   * REQUIRED even though most painters never read it, for the same reason
-   * `subtreeChromeRenderOrder`/`effectiveZ` are: an optional field would let
-   * a painter that DOES need it silently fall back to `undefined` and
-   * re-derive its own (potentially wrong) approximation instead, with no
-   * type error marking the gap. `painterEnv()` (`native/testing/
-   * painterProps.ts`) exists so widening this contract stays one edit.
+   * The **solve handoff** the Control's `ContainerLayoutFn` sealed (`SolvedControl.meta`), or
+   * `undefined`. Only the producing slice's channel opens it (`native/solveHandoff.ts`). A painter
+   * pure in `(node, theme)` calls its solver's share instead. Required, so a painter that needs it
+   * cannot re-derive a wrong value in silence.
    */
   meta: SealedHandoff | undefined;
   /**
-   * Rendered ONLY for a passthrough host that draws no chrome of its own but
-   * must still wrap its descendants in fresh context — `CanvasLayer`'s native
-   * painter (`nodes/2d/ui/canvaslayer/Component.tsx`) is the one type
-   * that needs this. Every other registered painter draws fixed chrome and
-   * receives `undefined` here: `ControlCanvasWalker` renders a Control's
-   * children as SIBLINGS of its painter, not through this prop, except for
-   * that one passthrough case.
+   * The Control children, only for a type registered with `wrapsChildren`.
+   * Every other painter gets `undefined`, since the walker renders its
+   * children as siblings.
    */
   children?: ReactNode;
 }
@@ -189,26 +97,17 @@ export interface ControlComponentRegistration {
   /** The native (WebGL canvas) painter for this Control type. */
   Component: NativeControlComponent;
   /**
-   * Whether this type's native painter receives its Control children as React
-   * children instead of the walker rendering them as siblings.
-   *
-   * Data on the registration rather than a `node.type` comparison in the walker:
-   * the walker is generic infrastructure, and `NodeComponentRegistry` already
-   * establishes this pattern for exactly this kind of question (`canvasItem`,
-   * `container`, `csgShape`). A second wrapping type would otherwise add a
-   * second hardcoded branch, and the two could drift on which types wrap.
-   *
-   * Only a type that establishes a new ambient scope for its subtree needs it.
-   * Three do: `CanvasLayer` publishes a draw-order band and a fresh modulate
-   * scope, and `ScrollContainer` and `GraphEdit` each publish clip planes —
-   * different scopes, same structural requirement, which is why this is one
-   * flag rather than two.
+   * Whether the painter takes its Control children as React children. A type that opens an ambient
+   * scope for its subtree sets it: a CanvasLayer, ParallaxBackground included, publishes a draw-order
+   * band and a modulate scope, and ScrollContainer and GraphEdit publish clip planes.
    */
   wrapsChildren?: boolean;
 }
 
 class ControlComponentRegistryImpl {
   private readonly registry = createTypeRegistry<NativeControlComponent>('ControlComponentRegistry');
+  // Data on the registration, not a `node.type` test in the generic walker, as
+  // `NodeComponentRegistry` does for `canvasItem`, `container` and `csgShape`.
   private readonly childWrappingTypes = new Set<string>();
 
   register(registration: ControlComponentRegistration): void {

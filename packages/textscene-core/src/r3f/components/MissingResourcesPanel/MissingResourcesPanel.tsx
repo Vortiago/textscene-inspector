@@ -1,21 +1,8 @@
 /**
- * Aggregated DOM panel listing every missing-resource path the
- * dispatcher's `useResource` calls have reported, plus every path the
- * user has uploaded a file for. One row per path, uploaded rows first.
- *
- * Mirrors the pre-migration `updateResourceFilesList()` from
- * `apps/textscene-web/src/main.ts`.
- *
- * The component is host-agnostic: it only knows about paths. The host
- * supplies `onUpload(path, file)` and `onRemove(path)` callbacks, which
- * in the web app wrap `provider.addUploadedFile` + `loader.provideFile`.
- *
- * A MISSING row may name a resource INSIDE a `.tres` (a **Sub-resource path**),
- * because that is the identity a failed load is reported under — so what the
- * user picks against it is the OWNING file, and that is what the host is handed.
- * An UPLOADED row is already a file (`markUploaded` keys that set by file), so
- * the remove side needs no such translation. Either way no host learns the
- * grammar.
+ * Lists every missing-resource path that `useResource` reported and every
+ * path the user uploaded a file for, one row per path, uploaded rows first.
+ * It knows only paths: the host supplies `onUpload` and `onRemove`. An
+ * uploaded row is already a file, since `markUploaded` keys by file.
  */
 import { type ChangeEvent } from 'react';
 import { useMissingResources } from '../../contexts/MissingResourcesContext.js';
@@ -24,16 +11,13 @@ import styles from './MissingResourcesPanel.module.css';
 
 export interface MissingResourcesPanelProps {
   /**
-   * Called when the user picks a file for a specific missing-row path.
-   * The host wires the file into its resource provider and asks the
-   * loader to re-resolve dependents. Always a real file path, never a
-   * **Sub-resource path** — a host keys its provider by file.
+   * Called when the user picks a file for a missing row. The path is always a
+   * file, never a **Sub-resource path**, because a host keys its provider by file.
    */
   onUpload: (path: string, file: File) => void;
   /**
-   * Called when the user clicks "Remove" on an uploaded row. The host
-   * deletes the file from its provider's cache. Necessarily the same path
-   * `onUpload` was given, or the removal would miss the bytes it stored.
+   * Called when the user clicks "Remove" on an uploaded row. It gets the same
+   * path `onUpload` got, or the removal misses the bytes it stored.
    */
   onRemove: (path: string) => void;
 }
@@ -41,9 +25,7 @@ export interface MissingResourcesPanelProps {
 export function MissingResourcesPanel({ onUpload, onRemove }: MissingResourcesPanelProps) {
   const { missingPaths, uploadedPaths, removeUploaded } = useMissingResources();
 
-  // Hidden when nothing's missing AND nothing's been uploaded — matches
-  // main's `.visible` class toggle. The panel takes no space at all
-  // when the user has nothing to do.
+  // With nothing missing and nothing uploaded, the panel takes no space.
   if (missingPaths.size === 0 && uploadedPaths.size === 0) {
     return null;
   }
@@ -52,10 +34,8 @@ export function MissingResourcesPanel({ onUpload, onRemove }: MissingResourcesPa
   const missing = Array.from(missingPaths).sort();
 
   const handleRemove = (path: string) => {
-    // Drop the uploaded entry from the panel state first so the row
-    // disappears immediately. Then let the host invalidate its
-    // provider + loader; if `useResource` re-resolves as `missing`
-    // the path will reappear as a missing row on the next render.
+    // Drop the row first so it disappears at once. If the host's re-resolve
+    // reports the path missing again, it comes back as a missing row.
     removeUploaded(path);
     onRemove(path);
   };
@@ -110,11 +90,9 @@ interface MissingRowProps {
 }
 
 function MissingRow({ path, onUpload }: MissingRowProps) {
-  // What a picked file actually REPLACES. For a row naming a resource inside a
-  // `.tres` these differ, and the row has to say so: it identifies a material,
-  // but the only thing a provider can be keyed by is the mesh file that carries
-  // it. A user who read the row as "pick this material" and got their material
-  // installed as the mesh's bytes would watch the mesh vanish.
+  // The file a pick replaces. For a row that names a resource inside a `.tres`
+  // it differs from the row, and the row says so: a material picked against it
+  // replaces the whole mesh file.
   const filePath = resourceFilePath(path);
   const replacesOtherFile = filePath !== path;
 
@@ -148,9 +126,8 @@ function MissingRow({ path, onUpload }: MissingRowProps) {
           type="file"
           className={styles.upload}
           onChange={handleChange}
-          // Named by the ROW, so two sub-resource rows of one file stay
-          // distinguishable to assistive tech and to label queries; the title
-          // carries which file a pick actually replaces.
+          // Named by the row, so two sub-resource rows of one file stay distinct to
+          // assistive tech. The title names the file a pick replaces.
           aria-label={`Upload file for ${path}`}
           title={replacesOtherFile ? `Replaces ${filePath}, which carries it` : undefined}
         />

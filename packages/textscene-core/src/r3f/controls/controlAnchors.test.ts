@@ -1,10 +1,8 @@
 /**
- * `resolveAnchors` and `resolveGrowDirection` against the `switch` case lists
- * of the two functions `Control::_set_anchors_layout_preset` calls —
+ * `resolveAnchors` and `resolveGrowDirection` against the case lists of
  * `set_anchors_preset` (`scene/gui/control.cpp:1114-1229`) and
- * `set_grow_direction_preset` (`:1373-1428`). The expectations below restate
- * those lists, not the record literals the implementation happens to store
- * them in, so a transcription typo fails here rather than agreeing with itself.
+ * `set_grow_direction_preset` (`:1373-1428`). The tests restate those lists, not
+ * the implementation's records, so a transcription typo fails here.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../../nodes/2d/ui/control/types';
@@ -14,7 +12,7 @@ const BEGIN = 0;
 const END = 1;
 const BOTH = 2;
 
-/** `LAYOUT_MODE_ANCHORS` / `LAYOUT_MODE_UNCONTROLLED` (`control.h:147-152`) — the two `_set_anchors_layout_preset` does NOT bail on (`control.cpp:991-993`). */
+/** `LAYOUT_MODE_ANCHORS` and `LAYOUT_MODE_UNCONTROLLED` (`control.h:147-152`), the two `_set_anchors_layout_preset` does not bail on (`control.cpp:991-993`). */
 const GATED_IN = [1, 3];
 
 function props(p: Partial<ControlProperties>): ControlProperties {
@@ -104,7 +102,7 @@ describe('resolveAnchors — explicit anchor_* win', () => {
   });
 
   it('a partially authored quartet zeroes the unauthored edges rather than falling back to the preset', () => {
-    // `set_anchor` writes one edge; the others keep whatever the struct held,
+    // `set_anchor` writes one edge. The others keep whatever the struct held,
     // which for a gate-closed node is the (0, 0, 0, 0) default.
     expect(resolveAnchors(props({ anchorsPreset: 15, layoutMode: 1, anchorRight: 1 }))).toEqual([0, 0, 1, 0]);
   });
@@ -115,7 +113,7 @@ describe('resolveAnchors — explicit anchor_* win', () => {
   });
 
   it('an authored anchor of 0 is not mistaken for "unset"', () => {
-    // 0 is falsy — `??` must be what distinguishes it from absent, not `||`.
+    // 0 is falsy, so `??`, not `||`, tells it from absent.
     expect(resolveAnchors(props({ anchorsPreset: 15, layoutMode: 1, anchorLeft: 0 }))).toEqual([0, 0, 0, 0]);
   });
 });
@@ -139,15 +137,13 @@ describe('resolveAnchors — presets outside the table', () => {
 });
 
 describe('resolveOffsets — the offsets side effect (control.cpp:1007-1029 → set_offsets_preset)', () => {
-  // A stand-in for the node's minimum size AT PRESET TIME, deliberately
-  // asymmetric so a swapped axis cannot pass.
+  // A stand-in for the node's minimum size at preset time, asymmetric so a
+  // swapped axis cannot pass.
   const MIN = { x: 30, y: 12 };
 
-  // `set_offsets_preset` (control.cpp:1231-1345) with an EMPTY parent rect and
-  // `new_size` = MIN, per side. The seven wide presets take MINSIZE, so their
-  // `new_size` IS the minimum; the nine point presets take KEEP_SIZE, whose
-  // `new_size` is `get_size()` — 0 on a node that has never been in a tree —
-  // so every one of them writes four zeroes.
+  // `set_offsets_preset` (control.cpp:1231-1345) with an empty parent rect. The
+  // seven wide presets take MINSIZE, so `new_size` is the minimum. The nine point
+  // presets take KEEP_SIZE, whose `get_size()` is 0 outside a tree: four zeroes.
   const presetOffsets: Record<number, [number, number, number, number]> = {
     0: [0, 0, 0, 0], // TOP_LEFT
     1: [0, 0, 0, 0], // TOP_RIGHT
@@ -158,13 +154,13 @@ describe('resolveOffsets — the offsets side effect (control.cpp:1007-1029 → 
     6: [0, 0, 0, 0], // CENTER_RIGHT
     7: [0, 0, 0, 0], // CENTER_BOTTOM
     8: [0, 0, 0, 0], // CENTER
-    9: [0, 0, 30, 0], // LEFT_WIDE — right edge at ANCHOR_BEGIN gets `+ new_size.x`
-    10: [0, 0, 0, 12], // TOP_WIDE — bottom edge at ANCHOR_BEGIN gets `+ new_size.y`
-    11: [-30, 0, 0, 0], // RIGHT_WIDE — left edge at ANCHOR_END gets `- new_size.x`
-    12: [0, -12, 0, 0], // BOTTOM_WIDE — top edge at ANCHOR_END gets `- new_size.y`
-    13: [-15, 0, 15, 0], // VCENTER_WIDE — both horizontal edges at 0.5, split
-    14: [0, -6, 0, 6], // HCENTER_WIDE — both vertical edges at 0.5, split
-    15: [0, 0, 0, 0], // FULL_RECT — every edge at an anchor whose term vanishes
+    9: [0, 0, 30, 0], // LEFT_WIDE: right edge at ANCHOR_BEGIN gets `+ new_size.x`
+    10: [0, 0, 0, 12], // TOP_WIDE: bottom edge at ANCHOR_BEGIN gets `+ new_size.y`
+    11: [-30, 0, 0, 0], // RIGHT_WIDE: left edge at ANCHOR_END gets `- new_size.x`
+    12: [0, -12, 0, 0], // BOTTOM_WIDE: top edge at ANCHOR_END gets `- new_size.y`
+    13: [-15, 0, 15, 0], // VCENTER_WIDE: both horizontal edges at 0.5, split
+    14: [0, -6, 0, 6], // HCENTER_WIDE: both vertical edges at 0.5, split
+    15: [0, 0, 0, 0], // FULL_RECT: every edge at an anchor whose term vanishes
   };
 
   for (const [preset, expected] of Object.entries(presetOffsets)) {
@@ -189,7 +185,7 @@ describe('resolveOffsets — authored offset_* win over the side effect', () => 
   });
 
   it('a partially authored quartet overrides only the sides it states', () => {
-    // `offset_*` are serialized AFTER `anchors_preset` (control.cpp's ADD_PROPERTY
+    // `offset_*` are serialised after `anchors_preset` (control.cpp's ADD_PROPERTY
     // order), so each authored side lands on top of what the preset wrote and
     // the unauthored ones keep it.
     expect(resolveOffsets(props({ anchorsPreset: 11, layoutMode: 1, offsetTop: 7 }), () => MIN)).toEqual([-30, 7, 0, 0]);
@@ -200,11 +196,10 @@ describe('resolveOffsets — authored offset_* win over the side effect', () => 
   });
 
   it('reads the PRESET’s anchors, not an authored anchor_* that overrides them later', () => {
-    // `set_offsets_preset` reads `data.anchor[]` as `set_anchors_preset` just
-    // left it — the file's own `anchor_*` line is applied afterwards, so it
-    // changes the anchors the rect resolves against but NOT the offsets the
-    // preset wrote. RIGHT_WIDE's own left anchor is 1, so the left offset is
-    // the full `-new_size.x` even though the node ends up anchored at 0.5.
+    // `set_offsets_preset` reads the anchors `set_anchors_preset` just wrote. The
+    // file's `anchor_*` line comes later and moves the anchors, not the offsets:
+    // RIGHT_WIDE's left anchor is 1, so the left offset is the full `-new_size.x`
+    // though the node ends anchored at 0.5.
     const p = props({ anchorsPreset: 11, layoutMode: 1, anchorLeft: 0.5, anchorRight: 0.5 });
     expect(resolveOffsets(p, () => MIN)).toEqual([-30, 0, 0, 0]);
   });
@@ -240,13 +235,10 @@ describe('resolveOffsets — the same gate as the anchors half', () => {
 });
 
 describe('resolveOffsets — measured against Godot 4.6.3 get_rect()/offsets', () => {
-  // Four nodes instantiated from a .tscn into a settled 1152x648 SubViewport,
-  // read back through `Control.offset_*`. The minimum size each row passes is
-  // the one Godot's own `get_minimum_size()` reported for that type with its
-  // DEFAULT properties — the state the node is in when `anchors_preset` is
-  // applied, since `SceneState::instantiate` sets properties in the order the
-  // scene lists them and a type's own (`text`, `texture`, …) come after
-  // `Control`'s.
+  // Measured in a settled 1152x648 SubViewport through `Control.offset_*`. Each
+  // row's minimum size is Godot's `get_minimum_size()` with default properties:
+  // `SceneState::instantiate` applies `anchors_preset` before a type's own
+  // properties (`text`, `texture`), which follow `Control`'s.
   const measured: Array<[string, number, { x: number; y: number }, [number, number, number, number]]> = [
     ['a Label under TOP_WIDE', 10, { x: 1, y: 23 }, [0, 0, 0, 23]],
     ['a Label under RIGHT_WIDE', 11, { x: 1, y: 23 }, [-1, 0, 0, 0]],
@@ -305,7 +297,7 @@ describe('resolveGrowDirection — the layout_mode gate (control.cpp:991-993)', 
   });
 
   it('leaves both axes at the struct default under LAYOUT_MODE_CONTAINER (2)', () => {
-    // A container-managed child never runs the preset setter, so its serialized
+    // A container-managed child never runs the preset setter, so its serialised
     // `anchors_preset` is non-operational even when present.
     expect(resolveGrowDirection(props({ anchorsPreset: 15, layoutMode: 2 }))).toEqual([END, END]);
   });
@@ -322,7 +314,7 @@ describe('resolveGrowDirection — authored grow_horizontal/grow_vertical win', 
   });
 
   it('one authored axis overrides only that axis, the other still derives', () => {
-    // CENTER (8) implies BOTH on both axes; only horizontal is authored here.
+    // CENTER (8) implies BOTH on both axes. Only horizontal is authored here.
     const p = props({ anchorsPreset: 8, layoutMode: 1, growHorizontal: BEGIN });
     expect(resolveGrowDirection(p)).toEqual([BEGIN, BOTH]);
   });
@@ -333,16 +325,15 @@ describe('resolveGrowDirection — authored grow_horizontal/grow_vertical win', 
   });
 
   it('an authored GROW_DIRECTION_BEGIN (0) is not mistaken for "unset"', () => {
-    // 0 is falsy — `??` must be what distinguishes it from absent, not `||`.
+    // 0 is falsy, so `??`, not `||`, tells it from absent.
     const p = props({ anchorsPreset: 15, layoutMode: 1, growHorizontal: BEGIN, growVertical: BEGIN });
     expect(resolveGrowDirection(p)).toEqual([BEGIN, BEGIN]);
   });
 });
 
 describe('resolveControlLayout — no reliable order falls back to resolveAnchors/resolveOffsets/resolveGrowDirection', () => {
-  // `orderedKeys === undefined` — a hand-built node, or a merged instance
-  // root (`resources/mergeInstanceRoot.ts`, ADR-0035) — assumes the editor's
-  // own save order, matching every editor-authored scene.
+  // `orderedKeys === undefined`, for a hand-built node or a merged instance root
+  // (`resources/mergeInstanceRoot.ts`, ADR-0035), assumes the editor's save order.
   const MIN = { x: 30, y: 12 };
 
   it('an authored offset AFTER the preset (in the fallback sense) survives, matching resolveOffsets directly', () => {
@@ -356,12 +347,10 @@ describe('resolveControlLayout — no reliable order falls back to resolveAnchor
 });
 
 describe('resolveControlLayout — file-order simulation (ADR-0035, Option B)', () => {
-  // The ADR's own measured acceptance case: the SAME Control, the SAME four
-  // `offset_*` values, only the order against `anchors_preset = 15` changes.
-  // `_set_anchors_layout_preset` (control.cpp:982-1032) calls
-  // `set_anchors_preset` then `set_offsets_preset` — a later `offset_*` line
-  // (its own setter, `Control::set_offset`, control.cpp:798-805) overwrites
-  // what the preset wrote; an earlier one is overwritten BY the preset.
+  // The ADR's measured case: only the order against `anchors_preset = 15` changes.
+  // `_set_anchors_layout_preset` (control.cpp:982-1032) writes the offsets, so a
+  // later `offset_*` line (`Control::set_offset`, control.cpp:798-805) overwrites
+  // the preset, and the preset overwrites an earlier one.
   it('offsets authored BEFORE anchors_preset=15 are wiped to the preset default', () => {
     const p = props({ anchorsPreset: 15, layoutMode: 1, offsetLeft: 40, offsetTop: 40, offsetRight: 240, offsetBottom: 160 });
     const orderedKeys = ['layout_mode', 'offset_left', 'offset_top', 'offset_right', 'offset_bottom', 'anchors_preset'];
@@ -457,10 +446,9 @@ describe('resolveControlLayout — file-order simulation (ADR-0035, Option B)', 
     const orderedKeys = ['offset_left', 'offset_top', 'offset_right', 'offset_bottom', 'grow_horizontal', 'layout_mode'];
     const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));
     expect(result.anchors).toEqual([0, 0, 0, 0]);
-    // `PRESET_MODE_KEEP_SIZE` keeps `get_size()`, and the four `set_offset` calls
-    // above already gave this orphan a `size_cache` of 200x120 — `_size_changed`
-    // writes it OUTSIDE the `is_inside_tree()` guard. So the reset moves the node
-    // to the origin at its existing size, it does not collapse it.
+    // `PRESET_MODE_KEEP_SIZE` keeps `get_size()`, and `_size_changed` wrote this
+    // orphan a 200x120 `size_cache` outside its `is_inside_tree()` guard. So the
+    // reset moves the node to the origin at that size.
     expect(result.offsets).toEqual([0, 0, 200, 120]);
     expect(result.growHorizontal).toBe(1); // TOP_LEFT's own table entry, GROW_DIRECTION_END
     expect(result.growVertical).toBe(1);
@@ -481,8 +469,8 @@ describe('resolveControlLayout — file-order simulation (ADR-0035, Option B)', 
   });
 
   it('a malformed (unparsed) property at its ordered position is skipped, not applied as NaN', () => {
-    // `anchorsPreset` parsed to `undefined` (e.g. an unparseable float) — the
-    // key is still in the raw order, but there is no value to apply.
+    // `anchorsPreset` parsed to `undefined`, such as for an unparseable float: the
+    // key is in the raw order with no value to apply.
     const p = props({ layoutMode: 1, offsetLeft: 5 });
     const orderedKeys = ['layout_mode', 'anchors_preset', 'offset_left'];
     const result = resolveControlLayout(p, orderedKeys, () => ({ x: 0, y: 0 }));

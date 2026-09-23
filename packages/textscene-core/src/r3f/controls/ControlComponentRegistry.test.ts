@@ -10,8 +10,8 @@ const TYPE = 'TestRegistryProbeType';
 const NativeStub: NativeControlComponent = () => null;
 
 afterEach(() => {
-  // This file never imports the native slice barrels, so the registry holds
-  // only what this suite puts in it — a full clear is safe here.
+  // This file imports no slice barrel, so the registry holds only what this
+  // suite puts in it, and a full clear is safe.
   controlComponentRegistry.clear();
 });
 

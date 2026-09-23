@@ -1,11 +1,7 @@
 /**
- * Scene-level animation transport — the single source of truth for
- * play/pause/scrub, shared between the in-canvas AnimationPlayer Component
- * (which owns the THREE.AnimationMixer) and the DOM Animation dock tab.
- *
- * Starts STOPPED so a freshly loaded scene shows its authored pose (ADR-0011 /
- * CONTEXT "Animation transport"); play is user-initiated. Slice-1 tracks a
- * single registered player; multi-player is deferred.
+ * The scene's play, pause and scrub state, shared by the AnimationPlayer
+ * component and the Animation tab. It starts stopped, so a loaded scene shows
+ * its authored pose (ADR-0011). It tracks one registered player.
  */
 
 import {
@@ -21,12 +17,8 @@ import {
 export type PlayState = 'stopped' | 'playing' | 'paused';
 
 /**
- * Preview-only loop override: 'auto' respects each clip's authored
- * loop behavior (Godot `loop_mode` for AnimationPlayer clips; a GLB's
- * default infinite repeat). 'loop' forces an infinite repeat regardless of
- * authoring; 'once' forces a single clamped pass. Resets to 'auto' whenever
- * a new player registers so a stale override never silently applies to an
- * unrelated clip.
+ * The preview loop override: 'auto' keeps the authored `loop_mode`, or a GLB's
+ * infinite repeat. 'loop' forces an infinite repeat, 'once' one clamped pass.
  */
 export type LoopOverride = 'auto' | 'loop' | 'once';
 
@@ -35,37 +27,32 @@ export interface PlayerRegistration {
   clips: string[];
   /** Clip name → duration in seconds. */
   durations: Record<string, number>;
-  /** Clip to pre-select on registration (`autoplay`); falls back to the first. */
+  /** The clip selected on registration, else the first. */
   autoplay?: string;
 }
 
 export interface AnimationTransport {
   clips: string[];
   selectedClip: string | null;
-  /** The player's `autoplay` clip, if any — marked in the selector. */
+  /** The player's `autoplay` clip, which the selector marks. */
   autoplayClip: string | null;
   /**
-   * True while an AnimationPlayer is registered (selected). Drives Animation
-   * tab visibility — works for instanced players that aren't in the parse-time
-   * `flattenedNodes`, since registration is the render-time source of truth.
+   * True while a selected AnimationPlayer is registered. It decides the
+   * Animation tab, instanced players included.
    */
   hasPlayer: boolean;
   playState: PlayState;
   /** Playhead position in seconds. */
   time: number;
-  /** Duration of the selected clip (0 when none). */
+  /** The selected clip's duration, 0 when none. */
   duration: number;
-  /**
-   * Preview playback rate multiplier, applied ON TOP OF any
-   * authored `speed_scale` (AnimationPlayer) or GLB default (1x). Resets to
-   * 1 on player registration. Defaults to 1 (no change from authored speed).
-   */
+  /** A preview rate multiplier on top of the authored `speed_scale`. It resets to 1 on registration. */
   playbackSpeed: number;
   setPlaybackSpeed(speed: number): void;
-  /** Preview loop override; resets to 'auto' on player registration. */
+  /** The preview loop override. It resets to 'auto' on player registration. */
   loopOverride: LoopOverride;
   setLoopOverride(mode: LoopOverride): void;
-  /** Register the scene's AnimationPlayer; returns an unregister cleanup. */
+  /** Registers the scene's AnimationPlayer and returns the cleanup. */
   registerPlayer(registration: PlayerRegistration): () => void;
   play(): void;
   pause(): void;
@@ -73,26 +60,19 @@ export interface AnimationTransport {
   seek(time: number): void;
   selectClip(name: string): void;
   /**
-   * Component → transport: report the live playhead for the scrubber.
-   * Throttled to REPORT_THROTTLE_MS — the driver's useFrame loop
-   * calls this every rendered frame, and committing React state that often
-   * re-renders every AnimationTransport consumer (the mixer-owning
-   * Component included) for a value only the scrubber/timecode actually
-   * need at high frequency. Pass `{ immediate: true }` to bypass the
-   * throttle and flush the exact value now — used on the playing → paused
-   * edge so the paused readout isn't stale by up to the throttle window
-   * (the stopped edge instead relies on `stop()`'s own reset to 0).
+   * Reports the playhead for the scrubber, throttled to REPORT_THROTTLE_MS.
+   * `{ immediate: true }` flushes the exact value, so the readout on pause is
+   * not stale. The stop edge relies on `stop()` resetting to 0.
    */
   reportTime(time: number, options?: { immediate?: boolean }): void;
 }
 
-/** ~10 Hz — a scrubber/timecode redraw rate that reads as smooth without
- * re-rendering every transport consumer on every rendered animation frame. */
+/** 10 Hz reads as smooth for a scrubber without a re-render of every consumer each frame. */
 const REPORT_THROTTLE_MS = 100;
 
 const RESET_CLIP = 'RESET';
 
-/** Default selection: autoplay → first non-RESET → first clip → none. */
+/** The default clip: autoplay, else the first non-RESET clip, else the first clip, else none. */
 function defaultClip(reg: PlayerRegistration): string | null {
   if (reg.autoplay && reg.clips.includes(reg.autoplay)) return reg.autoplay;
   return reg.clips.find((c) => c !== RESET_CLIP) ?? reg.clips[0] ?? null;
@@ -142,11 +122,8 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
     (selectedClip ? registration?.durations[selectedClip] : undefined) ?? 0;
 
   const registerPlayer = useCallback((reg: PlayerRegistration) => {
-    // A freshly (re)selected player starts neutral — a 2x speed or
-    // "once" override left over from a PREVIOUS player would otherwise
-    // silently apply to a clip the user never chose that setting for. ONE
-    // shared reset for registration and unregistration, so a future
-    // per-player preference can't be reset on one edge and leak on the other.
+    // A new player starts neutral, so no override from the last player applies.
+    // Registration and unregistration share one reset, so no edge leaks.
     const resetPlayback = () => {
       setPlayState('stopped');
       setTime(0);
@@ -163,8 +140,7 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
     };
   }, []);
 
-  // Guard against 0/negative/non-finite speeds, which would silently freeze
-  // or reverse playback rather than surface as an obvious error.
+  // A zero, negative or non-finite speed would freeze or reverse playback silently.
   const setPlaybackSpeed = useCallback((speed: number) => {
     setPlaybackSpeedState(Number.isFinite(speed) && speed > 0 ? speed : 1);
   }, []);
@@ -195,11 +171,8 @@ export function AnimationTransportProvider({ children }: { children: ReactNode }
     setTime(0);
   }, []);
 
-  // reportTime is called every rendered animation frame (via
-  // usePlaybackLoop's useFrame) while playing. Throttling the React-state
-  // commit to REPORT_THROTTLE_MS keeps every OTHER AnimationTransport
-  // consumer (the mixer-owning Component in particular) from re-rendering
-  // 60x/sec for a value it doesn't need at that frequency.
+  // Called every frame while playing. The throttle keeps the other consumers,
+  // the mixer-owning component above all, from re-rendering 60 times a second.
   const lastCommitRef = useRef(0);
   const reportTime = useCallback(
     (t: number, options?: { immediate?: boolean }) => {

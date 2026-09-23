@@ -35,7 +35,7 @@ function Selector({ path }: { path: string | null }) {
 const FAKE_TYPE = '___PanelTestType___';
 
 afterEach(() => {
-  // Cleanup any registrations the tests added so they don't leak.
+  // Remove the registrations the tests added, so none leaks.
   nodeRegistry.unregister(FAKE_TYPE);
 });
 
@@ -69,7 +69,7 @@ describe('<NodeDetailsPanel>', () => {
       screen.getByTestId('select-node').click();
     });
 
-    // Title <h3> shows the node name; type row shows the registered type.
+    // The title shows the node name. The type row shows the registered type.
     expect(screen.getByRole('heading', { name: 'SelectedNode' })).toBeTruthy();
     expect(screen.getByText(FAKE_TYPE)).toBeTruthy();
   });
@@ -93,9 +93,8 @@ describe('<NodeDetailsPanel>', () => {
 
     expect(screen.getByText('Not Implemented')).toBeTruthy();
     expect(screen.getByText(/not yet drawn/i)).toBeTruthy();
-    // The banner sits above the details rather than replacing them: an
-    // unrendered node still has parsed, validated properties worth inspecting,
-    // and it is precisely the node someone opens the inspector to understand.
+    // The banner sits above the details, not in their place: an unrendered node
+    // still has parsed, validated properties to inspect.
     expect(screen.getByRole('heading', { name: 'Mystery' })).toBeTruthy();
     expect(screen.getByText('TotallyUnknownType')).toBeTruthy();
     expect(screen.getByText('Path:')).toBeTruthy();
@@ -132,7 +131,7 @@ describe('<NodeDetailsPanel>', () => {
 
     expect(screen.getByText('Stub Section')).toBeTruthy();
     expect(screen.getByText('Stub Label:')).toBeTruthy();
-    // Value renders as a plain text node (formatters emit display strings).
+    // Formatters emit display strings, so the value is a plain text node.
     expect(screen.getByText('stub-value')).toBeTruthy();
   });
 

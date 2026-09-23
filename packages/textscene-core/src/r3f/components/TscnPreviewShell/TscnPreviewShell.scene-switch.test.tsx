@@ -1,17 +1,6 @@
 /**
- * Regression test: switching fixtures clears selection
- * state instead of leaking it into the new scene.
- *
- * Before the fix: clicking "Root" in fixture A then rerendering with
- * fixture B's content left `selectedNodePath = "Root"` in
- * SelectionContext (the path happens to exist in fixture B too, but
- * even when paths differ the BoxHelper's target Object3D was already
- * unmounted, leaking a green wireframe at the previous coordinates).
- * After the fix: any non-null → non-null sceneGraph transition fires
- * `clearAll()` so the tree shows no `[aria-selected="true"]` rows.
- *
- * Uses the existing TscnCanvas mock pattern so happy-dom doesn't need
- * a WebGL context.
+ * A switch between two non-null scenes fires `clearAll()`, so no selection
+ * leaks into the new scene. A mock TscnCanvas spares happy-dom a WebGL context.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
@@ -53,7 +42,7 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
       await userEvent.click(alphaRow);
     });
 
-    // Pre-condition: AlphaRoot is selected in fixture A.
+    // AlphaRoot is selected in fixture A.
     const selectedAfterClick = container.querySelector(
       '[data-node-path="AlphaRoot"] [aria-selected="true"]'
     );
@@ -61,23 +50,15 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
 
     rerender(<TscnPreviewShell panelId="p1" content={FIXTURE_B} />);
 
-    // Post-condition: no TREE row carries [aria-selected="true"]. Scope to
-    // [data-node-path] rows — the detail pane's tab strip (role="tab", ADR-0007)
-    // legitimately carries aria-selected on the active tab, which is not tree
-    // selection.
+    // No tree row is selected. The scope is [data-node-path] rows, since the
+    // active detail tab (ADR-0007) carries aria-selected too.
     const anySelected = container.querySelector('[data-node-path] [aria-selected="true"]');
     expect(anySelected).toBeNull();
   });
 
   it('does NOT fire clearAll on the initial null → first-scene mount transition', async () => {
-    // If clearAll fired on mount, mounting with empty content (sceneGraph
-    // null) then transitioning to a real fixture would still be a no-op
-    // because there's nothing to clear. But mounting directly with a
-    // non-null first scene + a pre-set selection (via user interaction
-    // immediately after mount) is the real risk: a stray mount-time
-    // clearAll would erase that selection. Test the simpler proxy: the
-    // tree must render without throwing and selections set after mount
-    // must stick on the first fixture.
+    // A mount-time clearAll would erase a selection made right after mount, so a
+    // selection on the first scene must stick.
     const { container } = render(
       <TscnPreviewShell panelId="p1" content={FIXTURE_A} />
     );
@@ -116,12 +97,9 @@ describe('<TscnPreviewShell> scene-switch (WI-UX-5)', () => {
 
     rerender(<TscnPreviewShell panelId="p1" content={FIXTURE_B} />);
 
-    // After the swap, fixture B has only BetaRoot and no TREE row should
-    // claim either aria-selected or aria-expanded=true. (BetaRoot has
-    // no children so aria-expanded is undefined, not "false" — query
-    // explicitly for "true" so we don't false-positive on missing.)
-    // Scope to [data-node-path] rows so the detail tab strip's active
-    // role="tab" (aria-selected, ADR-0007) isn't mistaken for tree selection.
+    // No tree row is selected or expanded. BetaRoot has no children, so its
+    // aria-expanded is absent, and the query asks for "true". The scope skips
+    // the active detail tab (ADR-0007).
     const stillSelected = container.querySelector('[data-node-path] [aria-selected="true"]');
     const stillExpanded = container.querySelector('[data-node-path] [aria-expanded="true"]');
     expect(stillSelected).toBeNull();

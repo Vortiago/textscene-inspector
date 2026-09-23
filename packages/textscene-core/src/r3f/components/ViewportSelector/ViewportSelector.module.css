@@ -1,7 +1,4 @@
-/*
- * Design tokens (`--tsi-*`) are defined in TscnPreviewShell.module.css's
- * `:root` block.
- */
+/* The `--tsi-*` tokens live in the `:root` block of TscnPreviewShell.module.css. */
 .root {
   display: flex;
   align-items: center;

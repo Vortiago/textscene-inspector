@@ -1,11 +1,7 @@
 /**
- * Holds the advertised binding table to the code that actually resolves it.
- *
- * The help panel is the only place most users will ever learn the bindings
- * from, so a row that says "Orbit" for an input that pans is worse than no row
- * at all. Every row carrying a `trigger` is fed to the real resolver here, and
- * the label is checked against what came back — so changing a resolver without
- * changing the table fails, and vice versa.
+ * Holds the binding table to the code that resolves it. Each row with a
+ * `trigger` goes to the real resolver, and its label must name the outcome, so
+ * a resolver change without a table change fails, and the reverse too.
  */
 import { describe, expect, it } from 'vitest';
 import { resolveNavMode, resolveWheelMode } from '../../godotEditorCursor';
@@ -21,7 +17,7 @@ const OUTCOME_LABEL: Record<string, string> = {
   null: 'Select',
 };
 
-/** Ask the resolver that owns this row what its input really does. */
+/** What the row's input does, from the resolver that owns it. */
 function resolve(binding: Binding): BindingOutcome {
   const trigger = binding.trigger;
   if (!trigger) throw new Error('no trigger');
@@ -44,15 +40,13 @@ describe('the advertised bindings match the resolvers', () => {
   });
 
   it.each(TRIGGERED)('$mode $device — $binding.input is labelled for what it does', ({ binding }) => {
-    // The resolver agreeing is not enough: the row could resolve to 'pan' and
-    // still be captioned "Orbit". The prose has to name the outcome too.
+    // A row can resolve to 'pan' and still say "Orbit", so the prose must name the outcome.
     expect(binding.action).toContain(OUTCOME_LABEL[String(binding.resolvesTo)]);
   });
 
   it('covers every row a resolver owns, so none can quietly opt out', () => {
-    // A row with a trigger must declare what it resolves to, and the mouse
-    // table — the one wholly governed by resolveNavMode/resolveWheelMode —
-    // must be fully covered rather than partially annotated.
+    // A row with a trigger declares its outcome. The mouse table, governed wholly
+    // by resolveNavMode and resolveWheelMode, is covered in full.
     for (const { binding } of TRIGGERED) {
       expect(binding.resolvesTo === null || typeof binding.resolvesTo === 'string').toBe(true);
     }

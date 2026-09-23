@@ -1,23 +1,8 @@
 /**
- * Registry for AnimationPlayer-driven non-transform value tracks (ADR-0016, ADR-0017).
- *
- * THREE's AnimationMixer drives transforms only (ADR-0011), so an AnimationPlayer
- * `value` track targeting a React-derived property — `Sprite2D:frame` (a
- * sprite-sheet flipbook), `Decal:modulate` (a colour fade), `Decal:size` (a box
- * that grows) — can't go through the mixer. Instead the active player *pushes*
- * the sampled value to the target component: each target registers a setter
- * keyed by its node path AND the animated property, and the player calls
- * `set(path, property, value)` while playing (`null` to release).
- *
- * The key is `${nodePath}:${property}` because a single node animates several
- * properties at once (a Decal fades `modulate` and grows `size`). The payload is
- * a flat numeric tuple — `frame` = `[n]`, `modulate` = `[r,g,b,a]`, `size` =
- * `[x,y,z]` — and the consumer interprets the arity by the property it
- * registered for.
- *
- * The context value is stable (a ref-backed registry), so pushes are imperative
- * and never re-render consumers — only the target's own setter (with a
- * functional bail) re-renders, and only when its value actually changes.
+ * The registry for AnimationPlayer value tracks that are not transforms
+ * (ADR-0016, ADR-0017). The mixer drives transforms only (ADR-0011), so the
+ * player pushes each sampled value to a setter the target registered. The
+ * stable context re-renders only the target whose value changes.
  */
 
 import {
@@ -31,15 +16,21 @@ import {
 } from 'react';
 import { useNodePath } from './NodePathContext';
 
-/** Receives the animated value tuple, or `null` when the driver releases it. */
+/**
+ * Receives a flat tuple whose arity the property decides: `frame` is `[n]`,
+ * `modulate` `[r,g,b,a]`, `size` `[x,y,z]`. `null` means the driver released it.
+ */
 export type ValueSetter = (value: number[] | null) => void;
 
 export interface AnimatedValueRegistry {
-  /** A target registers its setter under its node path + animated property. */
+  /**
+   * A target registers its setter under its node path and property, since one
+   * node animates several properties.
+   */
   register(nodePath: string, property: string, setter: ValueSetter): void;
-  /** Pass the same setter so a stale cleanup can't drop a successor's entry. */
+  /** Takes the same setter, so a stale cleanup cannot drop a successor's entry. */
   unregister(nodePath: string, property: string, setter: ValueSetter): void;
-  /** The active driver pushes a sampled value tuple (or `null` to release). */
+  /** The active driver pushes a sampled tuple, or `null` to release. */
   set(nodePath: string, property: string, value: number[] | null): void;
 }
 
@@ -61,11 +52,9 @@ export function useAnimatedValueRegistry(): AnimatedValueRegistry {
 }
 
 /**
- * Subscribe this node's `property` to AnimationPlayer-pushed values: returns the
- * decoded animated value while a driver is pushing one, or `null` when none is
- * (the authored value should show). `decode` maps the pushed numeric tuple to
- * the consumer's shape (a `frame` index, a `Color`, a `Vector3`); it is read
- * through a ref so an inline lambda doesn't re-subscribe every render.
+ * The decoded pushed value of this node's `property`, or `null` when none is
+ * pushed and the authored value shows. `decode` is read through a ref, so an
+ * inline lambda does not re-subscribe every render.
  */
 export function useAnimatedValue<T>(property: string, decode: (tuple: number[]) => T): T | null {
   const nodePath = useNodePath();

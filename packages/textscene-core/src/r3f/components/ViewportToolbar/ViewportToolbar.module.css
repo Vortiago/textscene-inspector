@@ -1,20 +1,16 @@
-/* Variant J — "Split Dock": a slim, calm, VS-Code-native top bar.
-   Flat low-chroma surfaces, ghost controls, a tight segmented pill, and a
-   quiet checkbox. Everything tinted via --tsi tokens (no hardcoded color). */
+/* The viewport toolbar's styles. Every colour comes from a --tsi token. */
 
 .toolbar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap; /* in the viewport overlay, wrap to a 2nd row when the center is narrow rather than overflow */
+  flex-wrap: wrap; /* A narrow centre wraps the toolbar to a second row instead of overflowing. */
   justify-content: flex-end;
   gap: var(--tsi-space-2);
   font-family: var(--tsi-font-ui);
 }
 
-/* Ghost button: transparent by default, muted text, fills with bg-hover.
-   No heavy border or bright fill — quiet until interacted with. Shared by the
-   toolbar's plain buttons; each has its own class so restyling one cannot
-   silently restyle the others. */
+/* Shared by the plain buttons. Each has its own class too, so a restyle of one
+   leaves the others alone. */
 .resetButton,
 .displayButton {
   appearance: none;
@@ -55,12 +51,10 @@
   cursor: default;
 }
 
-/* Segmented 2D/3D pill: slim, low-chroma container on the elevated surface,
-   hairline border, fully rounded so it reads as a single control. */
 .segment {
   display: inline-flex;
   align-items: center;
-  flex-shrink: 0; /* never squeeze the pill (it was clipping the "2D" button) */
+  flex-shrink: 0; /* A squeezed pill clips the "2D" button. */
   border: 1px solid var(--tsi-border);
   border-radius: var(--tsi-radius-md);
   padding: 1px;
@@ -93,8 +87,6 @@
   box-shadow: 0 0 0 2px var(--tsi-focus-ring);
 }
 
-/* Active segment: a calm soft-accent fill (not the loud bright accent) with
-   light-accent text — clearly selected without shouting in this slim bar. */
 .active {
   background: var(--tsi-accent-soft);
   color: var(--tsi-accent-fg);
@@ -105,7 +97,6 @@
   color: var(--tsi-accent-fg);
 }
 
-/* Compact, quiet checkbox: muted label, accent-tinted input. */
 .checkbox {
   display: inline-flex;
   align-items: center;
@@ -137,8 +128,6 @@
   box-shadow: 0 0 0 2px var(--tsi-focus-ring);
   border-radius: var(--tsi-radius-sm);
 }
-/* The display toggles' button + popover. Anchored under the button and to its
-   right edge, since the toolbar itself is right-anchored in the viewport. */
 .displayMenu {
   position: relative;
 }

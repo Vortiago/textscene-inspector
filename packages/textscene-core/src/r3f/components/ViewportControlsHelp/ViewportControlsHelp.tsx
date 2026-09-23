@@ -1,14 +1,8 @@
 /**
- * The viewport's controls legend: a summary pill that is always readable, and
- * a panel behind it holding the full binding table for every input device.
- *
- * It exists because the navigation swap to Godot's editor bindings made the
- * viewport unguessable — plain left-drag is deliberately inert, orbit moved to
- * the middle button, and nothing on screen said so. The pill answers "what do
- * I press" at a glance; the panel answers "what else is there".
- *
- * Both viewport modes mount it, from `<ViewportArea>`, and it reads its rows
- * from `bindings.ts`, which `bindings.test.ts` holds to the real resolvers.
+ * The controls legend: a summary pill, and a panel with the binding table for
+ * every input device. Godot's editor bindings leave a plain left-drag inert,
+ * so the viewport says what to press. `<ViewportArea>` mounts it in both
+ * modes, and the rows come from `bindings.ts`.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDismissable } from '../../hooks/useDismissable.js';
@@ -26,10 +20,7 @@ export function ViewportControlsHelp({ mode }: ViewportControlsHelpProps) {
   const rootRef = useDismissable<HTMLDivElement>(open, close);
   const { summary, groups } = controlsFor(mode);
 
-  // `role="dialog"` promises focus lives inside it: opening from `?` otherwise
-  // announces nothing and leaves Tab order wherever it was, so reaching the
-  // close button means tabbing the whole page. Focus returns to the pill on
-  // close, so keyboard users end up where they started.
+  // `role="dialog"` promises focus inside it. Focus returns to the pill on close.
   const panelRef = useRef<HTMLDivElement>(null);
   const hintRef = useRef<HTMLButtonElement>(null);
   const wasOpenRef = useRef(false);
@@ -40,9 +31,8 @@ export function ViewportControlsHelp({ mode }: ViewportControlsHelpProps) {
   }, [open]);
 
   const toggle = useCallback(() => setOpen((wasOpen) => !wasOpen), []);
-  // `?` only. F1 is NOT bound: `useGlobalShortcut` deliberately never calls
-  // preventDefault, and in a VS Code webview F1 is Show All Commands — the
-  // palette would open over the preview every time.
+  // Not F1: `useGlobalShortcut` never calls preventDefault, and in a VS Code
+  // webview F1 opens the command palette.
   useGlobalShortcut('?', toggle);
 
   return (

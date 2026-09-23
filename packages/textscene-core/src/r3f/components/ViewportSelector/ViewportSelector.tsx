@@ -1,19 +1,15 @@
 /**
- * Categorised dropdown for switching between fixture scenes in the web
- * previewer. The host supplies the option list and the current value.
- *
- * (Distinct from the imperative `ViewportSelector.ts` mesh-picker — that
- * behaviour now lives in the `useViewportSelection` hook.)
+ * A categorised dropdown of fixture scenes for the web previewer. The host
+ * supplies the options and the current value.
  */
 import { useMemo, type ChangeEvent } from 'react';
 import styles from './ViewportSelector.module.css';
 
 export interface ViewportSelectorOption {
-  /** Stable value passed back through `onChange` (typically a filename or path). */
+  /** The value `onChange` passes back, such as a filename. */
   value: string;
-  /** Human-visible label rendered in the option. */
   label: string;
-  /** Optional category groups options into `<optgroup>` blocks. */
+  /** Groups options into `<optgroup>` blocks. */
   category?: string;
 }
 
@@ -21,9 +17,9 @@ export interface ViewportSelectorProps {
   options: readonly ViewportSelectorOption[];
   value: string;
   onChange: (value: string) => void;
-  /** Optional label shown to the left of the select. */
+  /** A label left of the select. */
   label?: string;
-  /** Optional className applied to the root `<div>` for host-side layout. */
+  /** A className on the root `<div>`, for the host's layout. */
   className?: string;
 }
 

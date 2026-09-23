@@ -1,20 +1,8 @@
 /**
- * BUG 1 regression: the inspector must resolve a node selected from
- * INSIDE an instanced PackedScene.
- *
- * Pre-fix, `NodeDetailsPanel` looked the selected path up only in
- * `SceneGraph.flattenedNodes` — which contains the inline root scene
- * but NOT the lazily-loaded sub-scene interiors the SceneTreeViewer
- * renders. So clicking a sub-scene interior row (e.g. the lamp's mesh)
- * left the inspector on the "Select a node" placeholder.
- *
- * Post-fix, the panel resolves through `useLiveNode` over the same inline +
- * sub-scene tree the tree shows (descending into sub-scenes through the
- * loader's scene cache, re-deriving on the live-tree version tick), so any
- * tree row resolves — including one selected before its sub-scene loads.
- *
- * Uses the shared `createFakeResourceLoader` fixture (as
- * SceneTreeViewer.subscene-inlining.test.tsx does).
+ * The inspector resolves a node selected inside an instanced PackedScene.
+ * `SceneGraph.flattenedNodes` lacks the lazily loaded sub-scene interiors, so
+ * the panel resolves through `useLiveNode` over the tree the outliner shows,
+ * and re-derives on the live-tree version tick when a sub-scene lands.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
@@ -76,7 +64,7 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
 
     const { loader, scenes } = createFakeResourceLoader();
 
-    // Sub-scene (e.g. ceiling_lamp.tscn): a root with an interior mesh node.
+    // The sub-scene: a root with an interior mesh node.
     const subScene: TscnScene = {
       nodes: [
         makeNode('ceiling_lamp', 'Node3D', {
@@ -101,10 +89,8 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
       internalResources: [],
     });
 
-    // The interior mesh path the tree builds. Instance root merge (ADR-0013)
-    // collapses the sub-scene root INTO the instance node, so the interior
-    // child sits directly under the instance node's path — no doubled
-    // 'ceiling_lamp' wrapper segment.
+    // Instance root merge (ADR-0013) collapses the sub-scene root into the
+    // instance node, so the interior child sits directly under its path.
     const interiorPath = 'RoomGeometry/ceiling_lamp/plafoniera';
 
     render(
@@ -115,15 +101,12 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
       { wrapper: wrap(loader, graph) }
     );
 
-    // Initially placeholder.
     expect(screen.getByText(/Select a node/i)).toBeTruthy();
 
     await act(async () => {
       screen.getByTestId('select-node').click();
     });
 
-    // Fails pre-fix (placeholder persists because flattenedNodes lacks
-    // the sub-scene interior); passes post-fix.
     expect(screen.queryByText(/Select a node/i)).toBeNull();
     expect(screen.getByRole('heading', { name: 'plafoniera' })).toBeTruthy();
     expect(screen.getByText(interiorPath)).toBeTruthy();
@@ -136,10 +119,8 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
       parser: () => ({}),
     });
 
-    // The cache is intentionally EMPTY at selection time — unlike the test
-    // above, which pre-seeds it. This exercises the version-tick path: the
-    // panel must re-resolve when the sub-scene lands, not stick on the
-    // placeholder forever (the original BUG 1).
+    // The cache is empty at selection time, so the panel must re-resolve on the
+    // version tick when the sub-scene lands.
     const { loader, scenes } = createFakeResourceLoader();
 
     const graph = createSceneGraphFromTscnScene({
@@ -169,12 +150,11 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
       screen.getByTestId('select-node').click();
     });
 
-    // Unresolvable yet → placeholder (NOT a permanent state).
+    // Unresolvable yet, so the placeholder shows for now.
     expect(screen.getByText(/Select a node/i)).toBeTruthy();
 
-    // The sub-scene lands: cache it and announce it on the bus exactly as the
-    // ResourceLoader does. The inspector must pick it up via the live-tree
-    // version tick — with no re-selection.
+    // The sub-scene lands as the ResourceLoader announces it. The inspector picks
+    // it up through the version tick, with no re-selection.
     const subScene: TscnScene = {
       nodes: [
         makeNode('ceiling_lamp', 'Node3D', {
@@ -233,9 +213,8 @@ describe('<NodeDetailsPanel> BUG 2 — instance root shows the collapsed identit
 
     const { loader, scenes } = createFakeResourceLoader();
 
-    // Single-root sub-scene → Instance root merge (ADR-0013): the instance node
-    // ADOPTS the sub-scene root's type/properties. The tree row + viewport show
-    // this collapsed identity; the inspector must agree.
+    // Instance root merge (ADR-0013): the instance node adopts the sub-scene
+    // root's type and properties, and the inspector agrees with the tree.
     const subScene: TscnScene = {
       nodes: [makeNode('CoinBody', COIN_ROOT_TYPE)],
       externalResources: [],
@@ -265,13 +244,10 @@ describe('<NodeDetailsPanel> BUG 2 — instance root shows the collapsed identit
     // The merged node keeps the instance name but adopts the root's type.
     expect(screen.getByRole('heading', { name: 'Coin1' })).toBeTruthy();
     expect(screen.getByText(COIN_ROOT_TYPE)).toBeTruthy();
-    // Pre-fix the flattenedNodes fast-path returned the RAW wrapper, so the
-    // inspector showed the wrapper type 'Node3D' instead of the collapsed type.
     expect(screen.queryByText('Node3D')).toBeNull();
-    // ...but it must STILL signal that this is an instanced external scene —
-    // parity with the tree's 📦 badge, which keys off the ORIGINATING instance
-    // ref (the merged node's own `instance` is the sub-scene root's, undefined
-    // for a plain root, so the row must come from the originating ref).
+    // It still shows the external-instance row, as the tree's 📦 badge does. The
+    // merged node's own `instance` is undefined for a plain root, so the row
+    // reads the originating instance ref.
     expect(screen.getByText(/External/i)).toBeTruthy();
     expect(screen.getByText('ExtResource("7_coin")')).toBeTruthy();
   });

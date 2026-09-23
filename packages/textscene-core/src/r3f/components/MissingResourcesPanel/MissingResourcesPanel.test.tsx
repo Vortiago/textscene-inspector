@@ -1,11 +1,7 @@
 /**
- * Regression: aggregated missing-files panel.
- *
- * Verifies the DOM-side panel mirrors `main:apps/textscene-web/src/main.ts`
- * `updateResourceFilesList`:
- *   - hidden when no missing + no uploaded paths,
- *   - one row per missing path (with per-row file input),
- *   - uploading flips a missing row to uploaded (with Remove button).
+ * The missing-files panel is hidden with no missing and no uploaded paths.
+ * It shows one row with a file input per missing path, and an upload turns
+ * that row into an uploaded row with a Remove button.
  */
 import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -110,10 +106,9 @@ describe('<MissingResourcesPanel>', () => {
   });
 
   it('hands the host the OWNING FILE when a row names a resource inside a .tres', async () => {
-    // A failed load is reported under its whole **Sub-resource path**, so a row
-    // can carry `file::id` — but a host keys its provider by file, and what the
-    // user picked IS the file. Passing the address through would store the bytes
-    // under a key nothing ever asks for.
+    // A row can carry a `file::id` **Sub-resource path**, but a host keys its
+    // provider by file. The address would store the bytes under a key that
+    // nothing reads.
     const onUpload = vi.fn();
     render(
       <MissingResourcesProvider>
@@ -133,10 +128,8 @@ describe('<MissingResourcesPanel>', () => {
   });
 
   it('shows one uploaded row per FILE and removes under that same key', async () => {
-    // An upload against an address row is recorded against the owning file, so
-    // the row the user sees — and removes — is the file. The pair has to agree on
-    // that key or the removal misses the bytes the upload stored, silently
-    // leaving it in place and breaking the "Remove → row reappears" round-trip.
+    // An upload against an address row records the owning file. Upload and
+    // removal must agree on that key, or the removal misses the stored bytes.
     const onRemove = vi.fn();
     render(
       <MissingResourcesProvider>
@@ -203,7 +196,7 @@ describe('<MissingResourcesPanel>', () => {
     const rows = Array.from(panel.querySelectorAll('[data-state]')) as HTMLElement[];
     expect(rows).toHaveLength(2);
 
-    // Uploaded row first, then missing row — matches main's ordering.
+    // Uploaded rows come first.
     expect(rows[0]?.getAttribute('data-state')).toBe('uploaded');
     expect(rows[0]?.getAttribute('data-path')).toBe('res://textures/shared.png');
     expect(rows[1]?.getAttribute('data-state')).toBe('missing');
@@ -211,10 +204,7 @@ describe('<MissingResourcesPanel>', () => {
   });
 
   it('Remove on an uploaded row clears it from the panel even when the host onRemove is a no-op', async () => {
-    // The panel must drop the uploaded entry from its own state so the
-    // row vanishes immediately. Hosts that delete the file from their
-    // provider afterwards may take longer to fire the re-resolve event,
-    // but the row should not stay frozen in the meantime.
+    // The row vanishes at once, before the host fires its slower re-resolve event.
     const onRemove = vi.fn();
     render(
       <MissingResourcesProvider>
@@ -234,8 +224,7 @@ describe('<MissingResourcesPanel>', () => {
     });
 
     expect(onRemove).toHaveBeenCalledWith('res://textures/shared.png');
-    // The uploaded entry is gone from context state; panel is empty so
-    // it returns null. With no rows the panel root unmounts.
+    // With no rows the panel root unmounts.
     expect(screen.queryByTestId('missing-resources-panel')).toBeNull();
   });
 
@@ -254,8 +243,7 @@ describe('<MissingResourcesPanel>', () => {
     ) as HTMLElement;
     expect(pathEl).toBeTruthy();
     expect(pathEl.getAttribute('title')).toBe(longPath);
-    // Text content is the full path; CSS ellipsis happens at render time
-    // and is not observable through happy-dom's measured layout.
+    // The text is the full path. happy-dom cannot observe the CSS ellipsis.
     expect(pathEl.textContent).toBe(longPath);
   });
 });

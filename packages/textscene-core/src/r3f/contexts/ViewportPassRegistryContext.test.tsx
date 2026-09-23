@@ -1,9 +1,6 @@
 /**
- * `<ViewportPassProvider>` + `<ViewportPassOrchestrator>` — the single
- * `useFrame` that drives every registered offscreen viewport pass in
- * dependency order (`passOrder.ts`), replacing each publisher's own
- * `useFrame`. Exercised through `@react-three/test-renderer` since the
- * orchestrator must actually be inside a canvas frame loop to run.
+ * The one `useFrame` that drives every offscreen viewport pass in dependency
+ * order. `@react-three/test-renderer` runs it, since it needs a canvas frame loop.
  */
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -35,7 +32,7 @@ function Registrar({ path, pass }: { path: string; pass: ViewportPass }) {
   return null;
 }
 
-/** Reports the cycle (if any) at `path` into `seen` on every render. */
+/** Reports the cycle at `path`, if any, into `seen` on every render. */
 function CycleWatch({ path, seen }: { path: string; seen: (unknown | null)[] }) {
   seen.push(useViewportPassCycle(path));
   return null;
@@ -127,11 +124,9 @@ describe('<ViewportPassOrchestrator>', () => {
 
   describe('a cycle', () => {
     /**
-     * Only the pass `orderViewportPasses` reports as the offending SAMPLER is
-     * skipped — the one whose dependency could not be satisfied. Its
-     * counterpart still renders: once the sampler stops changing, whatever it
-     * depends on has a stable (frozen, not oscillating) input to sample, which
-     * is exactly what keeps output deterministic frame over frame.
+     * Only the sampler whose dependency closes the cycle is skipped. Its
+     * counterpart still renders from a frozen input, so the output stays the
+     * same frame over frame.
      */
     it('never drives the offending sampler, but still drives its counterpart and an unrelated pass', async () => {
       let aCalls = 0;

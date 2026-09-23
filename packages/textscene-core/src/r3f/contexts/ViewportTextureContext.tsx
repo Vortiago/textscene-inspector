@@ -1,26 +1,8 @@
 /**
- * Registry of sub-viewport render targets, keyed by scene-tree node path — the
- * seam between a `SubViewport` that renders offscreen and everything that
- * displays what it rendered (ADR-0033).
- *
- * Deliberately the same shape as the **AnimationDriverRegistry**: that registry
- * exists because an AnimationTree resolves a NodePath to a driver another node
- * published, and this is the same problem — a `ViewportTexture` resolves a
- * NodePath to a target a `SubViewport` published. Two contexts for the same
- * reason: the REGISTER function is stable so a publishing sub-viewport's effect
- * doesn't re-fire every time the map changes, and the MAP is reactive so a
- * consumer re-renders when its target appears (targets arrive after first
- * paint, like async-loaded resources). Both hooks are null-safe, so the linter
- * bundle and isolated tests mount without a provider.
- *
- * Every consumer — `StandardMaterial3D.albedo_texture`, `Sprite2D`,
- * `TextureRect`, and the native `SubViewportContainer` surface — samples
- * `texture` directly, in the SAME WebGL canvas the publisher rendered it
- * into: a Control-only sub-viewport's own content is now published by a
- * native (WebGL) pass too (`nodes/viewport/subviewport/ControlRasterPass.tsx`),
- * not rasterised out to DOM/CPU pixels, so there is exactly one consumption
- * path regardless of whether the target holds 3D content, 2D-canvas content,
- * or a Control subtree.
+ * Sub-viewport render targets by node path, the seam between an offscreen
+ * `SubViewport` and what displays it (ADR-0033). As with the
+ * **AnimationDriverRegistry**, the register function is stable and the map is
+ * reactive, since targets arrive after first paint. Both work without a provider.
  */
 
 import {
@@ -42,13 +24,16 @@ import { useOptionalHierarchy } from './HierarchyContext.js';
 import type * as THREE from 'three';
 
 export interface ViewportTextureEntry {
-  /** The rendered target, sampled directly by every consumer. */
+  /**
+   * The rendered target. Every consumer samples it in the canvas that rendered
+   * it, a Control subtree's included (`nodes/viewport/subviewport/ControlRasterPass.tsx`).
+   */
   texture: THREE.Texture;
-  /** Target size in pixels — the rect the sub-viewport's content was laid out against. */
+  /** The size in pixels that the sub-viewport's content was laid out against. */
   size: { x: number; y: number };
 }
 
-/** Publish the target at `path`; returns a cleanup that unregisters it. */
+/** Publishes the target at `path` and returns the cleanup. */
 export type RegisterViewportTexture = (path: string, entry: ViewportTextureEntry) => () => void;
 
 const NO_OP_REGISTER: RegisterViewportTexture = () => () => {};
@@ -68,23 +53,10 @@ export function useRegisterViewportTexture(): RegisterViewportTexture {
 }
 
 /**
- * The resolved `%Name` table the node at `path` resolves against, or undefined
- * when no scene is in context.
- *
- * The flag on a node says it CLAIMED a name, not that it holds one — two nodes
- * may claim the same one and only the first keeps it. Resolving that needs the
- * whole authored tree, which the shell already has, so the answer is read from
- * there rather than guessed per publisher. Undefined outside the shell, where
- * there is no tree and the flag is all that is knowable.
- *
- * Per OWNER, not per scene: a name is registered on the claimant's owner
- * (node.cpp:2222-2234) and looked up through the caller's (node.cpp:1930-1938),
- * so a node inside an instanced sub-scene reads that sub-scene root's table
- * and an outer node never does. Without a path, the outer root's table — one
- * shared object per tree, so every consumer's lookup is a lookup rather than a
- * walk. With one, re-derived on the loader's version tick, since the owner of
- * a node inside a sub-scene is only knowable once that sub-scene has loaded;
- * without one there is nothing to re-derive, so no subscription either.
+ * The `%Name` table the node at `path` resolves against, or undefined with no
+ * scene. A flag says a node claimed a name, and only the first claimant keeps
+ * it, so the answer needs the whole tree. It is per owner: a name registers on
+ * the claimant's owner (node.cpp:2222-2234) and resolves through the caller's (node.cpp:1930-1938).
  */
 export function useUniqueNameClaims(
   path?: string | null
@@ -95,6 +67,9 @@ export function useUniqueNameClaims(
   return useMemo(() => {
     const live = liveTreeContext(graph, loader);
     if (!live) return undefined;
+    // Without a path, the outer root's table, one shared object per tree. A
+    // path re-derives on the version tick, since a sub-scene node's owner is
+    // known only after the load.
     if (!path) return cachedUniqueNameClaims(live.roots);
     return ownerClaims(claimOwnerOf(path, live.roots, live.ctx));
     // `version` is the cache-buster for the loader's scene cache, which the
@@ -104,12 +79,9 @@ export function useUniqueNameClaims(
 }
 
 /**
- * Publish `entry` for `node` at `path`, and at its `%UniqueName` spelling when it
- * claims one — the two keys a `viewport_path` can name the same viewport by.
- *
- * One hook rather than the same effect in each publisher: the WebGL and
- * DOM-raster hosts publish to the same registry, and a consumer is meant to stay
- * ignorant of which produced its target.
+ * Publishes `entry` at `path`, and at its `%UniqueName` spelling when it claims
+ * one: the two keys a `viewport_path` can use. One hook serves every publisher,
+ * so a consumer never knows which host produced its target.
  */
 export function usePublishViewportTexture(
   node: TscnNode,
@@ -130,7 +102,7 @@ export function usePublishViewportTexture(
   }, [register, path, alias, entry]);
 }
 
-/** Reactive lookup: the target published at `path`, or null. */
+/** The target published at `path`, or null. */
 export function useViewportTexture(path: string | null): ViewportTextureEntry | null {
   const targets = useContext(ViewportTexturesContext);
   return path === null ? null : targets.get(path) ?? null;
@@ -149,8 +121,7 @@ export function ViewportTextureProvider({ children }: { children: ReactNode }) {
     });
     return () => {
       setTargets((prev) => {
-        // Only delete if THIS entry is still the registered one, so a remount
-        // that re-registers before the old cleanup fires isn't clobbered.
+        // Only this exact entry, so a remount that re-registered first survives.
         if (prev.get(path) !== entry) return prev;
         const next = new Map(prev);
         next.delete(path);

@@ -1,8 +1,6 @@
 /**
- * composeProviders — flattens a provider-nesting pyramid into a
- * single call. Purely a JSX-shape helper: it does NOT merge contexts
- * (ADR-0002 keeps parse/3D-render/2D-render domains separate on purpose) —
- * each entry still mounts its own, independent Provider component.
+ * composeProviders flattens nested providers into one call. It merges no
+ * context (ADR-0002): each entry mounts its own Provider.
  */
 import { createContext, useContext, type ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
