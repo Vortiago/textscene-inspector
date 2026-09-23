@@ -28,7 +28,7 @@ describe('surfaceViolations', () => {
   });
 
   it('ignores a markdown link target', () => {
-    expect(rules('See [ADR-0011](docs/adr/0011-audio-via-mixer.md).')).toEqual([]);
+    expect(rules('See [ADR-0011](docs/adr/0011-animationplayer-drives-siblings-via-mixer.md).')).toEqual([]);
   });
 
   it('ignores code spans and URLs', () => {
@@ -121,6 +121,19 @@ describe('commentViolations', () => {
   it('exempts a licence header whole', () => {
     expect(commentViolations('/* Copyright — a\n b\n c\n d\n e */')).toEqual([]);
   });
+
+  it('judges the module prose above an attribution', () => {
+    const attribution = ' * Portions ported from Godot Engine (MIT).\n * Copyright (c) A — B.\n */';
+    expect(commentViolations(`/**\n * One.\n *\n${attribution}`)).toEqual([]);
+    expect(commentViolations(`/**\n * a — b\n${attribution}`).map((v) => v.rule)).toEqual(['em dash']);
+    expect(commentViolations(`/**\n * a\n * b\n * c\n * d\n * e\n${attribution}`)).toEqual([
+      { rule: 'comment over four lines', found: '5 lines' },
+    ]);
+  });
+
+  it('reads a comment that only names a generated file as prose', () => {
+    expect(commentViolations('// Reads the GENERATED `x.ts` — a').map((v) => v.rule)).toEqual(['em dash']);
+  });
 });
 
 describe('markdownViolations', () => {
@@ -137,6 +150,10 @@ describe('markdownViolations', () => {
   it('ignores a generated lint section', () => {
     const markdown = '<!-- lint:begin Area2D -->\n| `a` | any Variant — typed later |\n<!-- lint:end -->\nPlain.\n';
     expect(markdownViolations(markdown)).toEqual([]);
+  });
+
+  it('ignores a fence indented inside a list item', () => {
+    expect(markdownViolations('- Run it:\n\n  ```bash\n  echo e.g. — via\n  ```\n')).toEqual([]);
   });
 
   it('keeps line numbers after a removed block', () => {

@@ -3,8 +3,7 @@
  * mechanical subset of the prose rules in `proseRules.ts`. Vendored, legal and
  * generated files keep their owner's text.
  */
-import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -15,28 +14,15 @@ import {
   tscnCommentBlocks,
   type CommentBlock,
 } from './proseRules';
-
-const repoRoot = resolve(import.meta.dirname, '../../..');
+import { lineOf, REPO_ROOT, workingTreeFiles } from './repoFiles';
 
 /** Vendored from Godot's demo projects, legal text, or written by a generator. */
 const VERBATIM_PATH =
   /^scenes\/(?:demos|isometric)\/|(?:^|\/)(?:THIRD-PARTY-NOTICES|SECURITY)\.md$|\.generated\.ts$/;
 
-/** The working tree's files: tracked or new and not ignored, minus any deleted but not yet staged. */
-function trackedFiles(...patterns: string[]): string[] {
-  return execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', ...patterns], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-    maxBuffer: 32 * 1024 * 1024,
-  })
-    .split('\n')
-    .filter((path) => path !== '' && !VERBATIM_PATH.test(path) && existsSync(resolve(repoRoot, path)));
-}
-
-function lineOf(source: string, index: number): number {
-  let line = 1;
-  for (let i = 0; i < index; i++) if (source[i] === '\n') line++;
-  return line;
+/** The working tree's files, minus the verbatim ones. */
+function trackedFiles(...pathspecs: string[]): string[] {
+  return workingTreeFiles(...pathspecs).filter((path) => !VERBATIM_PATH.test(path));
 }
 
 /** Offenders of every block in the files, and how many blocks were read. */
@@ -47,7 +33,7 @@ function scanComments(
   const offenders: string[] = [];
   let blocks = 0;
   for (const path of files) {
-    const source = readFileSync(resolve(repoRoot, path), 'utf8');
+    const source = readFileSync(resolve(REPO_ROOT, path), 'utf8');
     for (const block of blocksOf(source, path)) {
       blocks++;
       for (const { rule, found } of commentViolations(block.text)) {
@@ -63,9 +49,7 @@ const failureMessage = (offenders: string[]): string =>
 
 describe('prose conventions', () => {
   it('code comments keep the prose rules', () => {
-    const files = trackedFiles('packages', 'apps', 'scripts').filter((path) =>
-      /\.(?:ts|tsx|js|mjs|css)$/.test(path)
-    );
+    const files = trackedFiles('*.ts', '*.tsx', '*.js', '*.mjs', '*.css');
     const { offenders, blocks } = scanComments(files, (source, path) =>
       isGeneratedSource(source) ? [] : commentBlocks(source, { blockOnly: path.endsWith('.css') })
     );
@@ -86,7 +70,7 @@ describe('prose conventions', () => {
   it('markdown keeps the prose rules', () => {
     const files = trackedFiles('*.md');
     const offenders = files.flatMap((path) =>
-      markdownViolations(readFileSync(resolve(repoRoot, path), 'utf8')).map(
+      markdownViolations(readFileSync(resolve(REPO_ROOT, path), 'utf8')).map(
         ({ line, violation }) => `${path}:${line} ${violation.rule}: "${violation.found}"`
       )
     );
