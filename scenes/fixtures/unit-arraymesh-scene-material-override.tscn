@@ -1,18 +1,7 @@
-; ONE VARIABLE: `material_override` on a MeshInstance3D whose mesh is a
-; `[sub_resource type="ArrayMesh"]` of the SCENE — the second of the two
-; ArrayMesh sources, decoded straight from the `.tscn` with no file and no
-; resource pipeline behind it. Its twin fixture unit-arraymesh-material-override
-; drives the external `.tres` source, and the override arrives there as a scene
-; sub-resource; here it arrives as an ExtResource PATH, so the pair covers both
-; mesh sources and both forms the override itself can take.
-;
-; The surfaces are the same two blue plates the sibling ArrayMesh fixtures use,
-; inlined. The LEFT instance keeps them. The RIGHT instance adds
-; `material_override`, which replaces the material on EVERY surface
-; (render_forward_clustered.cpp:4206) — both of its plates must read orange.
-;
-; This is also the only fixture in the bag with an inline ArrayMesh at all: every
-; other one loads a `.tres`, so the scene-decode path had no visual witness.
+; The one variable: `material_override`, as an ExtResource path, on a scene
+; `[sub_resource type="ArrayMesh"]`. It replaces every surface's material
+; (render_forward_clustered.cpp:4206), so the right plates read orange. The only inline
+; ArrayMesh in the bag: every other fixture loads a `.tres`.
 [gd_scene load_steps=5 format=3 uid="uid://unitarraymeshscenematoverride"]
 
 [ext_resource type="Material" path="res://unit-arraymesh-own-material-shared.tres" id="1_shared"]

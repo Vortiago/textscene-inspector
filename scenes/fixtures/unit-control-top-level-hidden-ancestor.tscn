@@ -1,16 +1,7 @@
-; The ONE variable: `visible = false` on the Node2D ABOVE a `top_level`
-; Control. Visibility is a SCENE-tree rule, not a canvas-parenting one:
-; NOTIFICATION_ENTER_TREE casts the direct parent to CanvasItem and takes
-; `ci->is_visible_in_tree()` with NO top_level test (canvas_item.cpp:311-316),
-; unlike `get_parent_item()`, which returns nullptr before its own cast
-; (canvas_item.cpp:565-571) — and `_handle_visibility_change` propagates into
-; every CanvasItem child, top_level ones included (canvas_item.cpp:103-108,
-; "Should the top_levels stop propagation? I think so, but..."). So the flag
-; still reaches a Control whose transform and tint it no longer does.
-; `unit-control-top-level.tscn` moves the flag with every ancestor visible, so
-; it cannot see this; every other hidden-ancestor fixture leaves `top_level`
-; unset, where the same rule is indistinguishable from plain nesting.
-; The lower bar's ancestor is visible and holds the contrast.
+; The one variable: `visible = false` on the Node2D above a `top_level` Control. ENTER_TREE reads the
+; parent's is_visible_in_tree() with no top_level test (canvas_item.cpp:311-316), unlike get_parent_item()
+; (canvas_item.cpp:565-571), and a change reaches top_level children (canvas_item.cpp:103-108). The
+; lower bar's visible ancestor holds the contrast.
 
 [gd_scene format=3 uid="uid://unitctrltlhidden"]
 

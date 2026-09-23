@@ -1,20 +1,15 @@
 /**
- * Bit-equivalence guard for the dependency-free decomposeTransform3D.
- *
- * The pure-math implementation replicates three.js r184's decomposition
- * path op-for-op; this suite pins that claim by running the RETIRED
- * three.js-backed implementation (reproduced verbatim below as the oracle)
- * against the new one and asserting Object.is-equality per component —
- * including ±0 and branch-sensitive gimbal cases. Importing three here is
- * fine: tests are excluded from every import-closure guard walk
- * (reactFree.test.ts, webExtensionSafe.test.ts).
+ * decomposeTransform3D is bit-identical to three.js r184's decomposition: the three.js-backed
+ * oracle below runs beside it with Object.is per component, ±0 and gimbal branches included. A
+ * test may import three, since every import-closure guard (reactFree.test.ts,
+ * webExtensionSafe.test.ts) skips tests.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
 import { decomposeTransform3D } from './transform';
 
-/** The pre-replacement implementation, verbatim — the reference oracle. */
+/** The three.js-backed reference oracle. */
 function decomposeWithThree(transform: Transform3D): DecomposedTransform {
   const { basis_x, basis_y, basis_z, origin } = transform;
   const m = new THREE.Matrix4().set(

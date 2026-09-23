@@ -1,22 +1,8 @@
 /**
- * Regression tests for the hallway wall transforms.
- *
- * These tests use the actual Transform3D values captured from a real-world
- * hallway scene (its RoomGeometry.tscn). Two regressions silently
- * broke wall rendering in the R3F migration before it was noticed:
- *
- *   1. b4ccaab rewrote the 401f8f5 Transform3D row-vector
- *      test assertions to match buggy column-major output. The visible
- *      effect: walls rendered at 1/3 to 1/6 their intended width.
- *      Restored by 99c1479 (decomposeTransform3D fix) and these tests.
- *
- *   2. 67c199b made PlaneMesh + unset cull_mode default to
- *      DoubleSide. The visible effect: walls visible from both sides
- *      so you could see "through" the corridor. Restored by the
- *      MaterialSlot revert and Component.planemesh-side.test.tsx.
- *
- * Treat the constants here as fixture data — if they get touched
- * during refactor, the refactor is almost certainly wrong.
+ * The wall transforms of a real hallway scene (its RoomGeometry.tscn). A column-major decompose
+ * draws these walls at 1/3 to 1/6 of their width. Component.planemesh-side.test.tsx covers the
+ * other wall defect, a PlaneMesh drawn double-sided. The constants are fixture data: a refactor
+ * that changes them is wrong.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -142,13 +128,8 @@ describe('hallway wall transforms — regression suite', () => {
   });
 
   describe('the regression signature', () => {
-    // If decomposeTransform3D regresses back to the b4ccaab column-major
-    // interpretation, these checks fail in a very specific way:
-    //   scale.x = 6 instead of scale.z = 6 for the ShortWall above.
-    //   That mis-assigned scale on a FACE_X plane (vertices x=0) has
-    //   zero visual effect — making the wall appear 1/6 of its true
-    //   width along world X. The test below explicitly proves we are
-    //   NOT in the buggy regime.
+    // A column-major decompose gives the ShortWall scale.x = 6 instead of scale.z = 6. On a FACE_X
+    // plane (vertices x=0) that scale does nothing, so the wall shows at 1/6 of its width.
     it('NOT the b4ccaab regression: ShortWall scale.x !== 6, scale.z === 6', () => {
       const d = decomposeTransform3D(
         parseTransform3D(

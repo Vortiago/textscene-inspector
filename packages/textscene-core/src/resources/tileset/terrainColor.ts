@@ -1,16 +1,8 @@
 /**
- * `terrain_set_<n>/terrain_<m>/color`, the one TileSet value whose SETTER
- * rewrites it.
- *
- * `set_terrain_color` replaces any alpha other than 1.0 with 1.0 and warns
- * (tile_set.cpp:866-869), so the colour the file states is not the colour the
- * terrain gets — an alteration, and an ADR-0032 error.
- *
- * Its own file because it is the only part of the terrain family that touches a
- * composite literal grammar: `godotLiteralGrammar.guard.test.ts` bans the
- * language's own numeric parsers in every file importing `makeFloatTupleRegex`,
- * and the family's index reads next door are exactly what one of them is the
- * right reader for — an `is_valid_int` capture the grammar has already vetted.
+ * `terrain_set_<n>/terrain_<m>/color`, the one TileSet value its setter rewrites: `set_terrain_color`
+ * replaces any alpha but 1.0 with 1.0 (tile_set.cpp:866-869), an ADR-0032 error. Its own file:
+ * `godotLiteralGrammar.guard.test.ts` bans the numeric parsers in a file importing
+ * `makeFloatTupleRegex`, and the family's index reads next door need one.
  */
 
 import { accepts, makeFloatTupleRegex, propertyError, tupleComponent, v } from '../../linter/validators/index.js';

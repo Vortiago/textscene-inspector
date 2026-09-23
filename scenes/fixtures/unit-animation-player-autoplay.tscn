@@ -1,10 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://unit_animation_player_autoplay"]
 
-; AnimationPlayer in Godot 4's real serialization: clips live in an AnimationLibrary
-; `_data` map keyed by StringName (`&"name"`), the player references the default
-; library via the slash form `libraries/ = SubResource(...)`, and `autoplay` is itself
-; a StringName (`&"spin"`). Exercises the linter's library-resolved existence check
-; against the StringName form — the autoplay clip resolves, so this lints clean.
+; AnimationPlayer as Godot 4 serialises it: clips in an AnimationLibrary `_data` map keyed by
+; StringName (`&"name"`), the default library through `libraries/ = SubResource(...)`, and
+; `autoplay = &"spin"`. The autoplay clip resolves against the library, so this lints clean.
 
 [sub_resource type="BoxMesh" id="BoxMesh_box"]
 

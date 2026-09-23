@@ -1,8 +1,7 @@
 [gd_scene format=3 uid="uid://edge_area2d_no_collision_shape"]
 
-; Area2D with NO CollisionShape2D children. Warning-level
-; (area2d-needs-collision-shape) — mounts and renders fine, just can't
-; detect anything.
+; Area2D with no CollisionShape2D child: a warning (area2d-needs-collision-shape).
+; It mounts and renders, and detects nothing.
 
 [node name="Root" type="Node2D"]
 

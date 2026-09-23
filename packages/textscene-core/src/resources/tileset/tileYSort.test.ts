@@ -1,6 +1,3 @@
-/**
- * Tests for `groupBySortY` (tileYSort.ts).
- */
 import { describe, it, expect } from 'vitest';
 import { groupBySortY } from './tileYSort';
 import type { TileGrid } from './types';
@@ -36,7 +33,6 @@ describe('groupBySortY', () => {
     // Low Y (far back) draws first → lowest sortY group first
     expect(groups[0]!.sortY).toBeLessThan(groups[1]!.sortY);
     expect(groups[1]!.sortY).toBeLessThan(groups[2]!.sortY);
-    // Each group has one cell
     expect(groups[0]!.cells.length).toBe(1);
     expect(groups[1]!.cells.length).toBe(1);
     expect(groups[2]!.cells.length).toBe(1);
@@ -71,14 +67,8 @@ describe('groupBySortY', () => {
   });
 
   it('isometric grid produces correct sort order', () => {
-    // Isometric: tile shape 1, layout 0 (STACKED), offsetAxis 0
-    // mapToLocalPx for isometric STACKED with offsetAxis=0:
-    //   x += posmod(y, 2) === 0 ? 0 : 0.5
-    //   y *= 0.5  (overlap ratio)
-    //   final: x = (x + 0.5) * 64, y = (y + 0.5) * 32
-    // cell(0,0): x=32, y=16
-    // cell(1,0): x=96, y=16
-    // cell(0,1): x=64, y=32
+    // Isometric STACKED, offsetAxis 0: x += 0.5 on odd rows, y *= 0.5, then (ret + 0.5) × {64, 32}.
+    // cell(0,0): x=32, y=16. cell(1,0): x=96, y=16. cell(0,1): x=64, y=32.
 
     const cells = [
       cell({ x: 0, y: 0 }, 0, 0, 0),

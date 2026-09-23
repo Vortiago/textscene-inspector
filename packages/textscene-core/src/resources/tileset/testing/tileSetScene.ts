@@ -1,16 +1,8 @@
 /**
- * The scene shape every TileSet linter test asserts against.
- *
- * A TileSet arrives as a `[sub_resource]` (or a `.tres`, which the linter reads
- * through the same validator lookup), so one sub-resource block beside a root
- * node is the whole fixture. Kept out of the test files because the family tests
- * each need the SAME line number for the property under test, and a fixture
- * spelled per file drifts on that immediately.
- *
- * Under a `testing` directory because it imports the test kit: `tsconfig.json`
- * excludes every such directory from the build but not a plain `.ts` beside a
- * test, so a helper spelled as a sibling fails `tsc --build` while every vitest
- * run stays green.
+ * The scene every TileSet linter test asserts against: one `[sub_resource]` beside a root node,
+ * shared so every family test gets the same line for the property under test. It sits under
+ * `testing/` because it imports the test kit: `tsconfig.json` excludes that directory from the
+ * build, and a sibling of a test fails `tsc --build` while vitest stays green.
  */
 
 import { expect } from 'vitest';
@@ -38,7 +30,7 @@ export function expectClean(content: string): void {
 /**
  * The scene's single diagnostic, asserted by severity and message substrings.
  *
- * By CONTENT rather than by property name: a leaf validator names the leaf
+ * By content rather than by property name: a leaf validator names the leaf
  * (`light_mask`) and never the indexed key it arrived under, so a lookup keyed
  * on the written property would miss every family diagnostic.
  */

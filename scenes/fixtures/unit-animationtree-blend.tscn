@@ -1,12 +1,8 @@
 [gd_scene load_steps=9 format=3 uid="uid://unit_animationtree_blend"]
 
-; AnimationTree playback fixture: an `active = true` tree whose
-; `tree_root` is an AnimationNodeBlendTree blending two AnimationPlayer clips
-; (spin + bob) at a 50/50 `blend_amount`. Selecting the AnimationTree row and
-; pressing play drives the Mesh from the blended program — Godot parity for an
-; AnimationTree honouring `active` and playing from its authored parameter
-; state (no clip picker). The platformer's own tree is authored `active = false`
-; (its game script flips it at runtime), so this fixture demonstrates playback.
+; An `active = true` AnimationTree whose BlendTree blends two clips (spin + bob) at `blend_amount`
+; 0.5. Selecting the tree and pressing play drives the mesh from the blend, as Godot plays an
+; active tree from its authored parameters.
 
 [sub_resource type="BoxMesh" id="BoxMesh_box"]
 

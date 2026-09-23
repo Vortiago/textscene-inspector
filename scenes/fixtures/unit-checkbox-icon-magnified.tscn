@@ -1,28 +1,9 @@
 [gd_scene format=3]
 
-; The ONE variable: a vendored default-theme icon drawn MAGNIFIED, so the
-; canvas's bilinear magnification filter has a multi-pixel ramp to draw across
-; the icon's own texels. Every other Control fixture draws its icons at their
-; natural 16x16 (or 12x12, 8x48, ...) pixel size, where a bilinear filter lands
-; on texel centres and never blends two texels — so the colour space that blend
-; happens in cannot change a pixel in any of them, and no golden in the bag can
-; see the icon loader's tag at all.
-;
-; The theme icons come from their own loader, not the `res://` resource
-; pipeline, so a 2D-canvas colour-space regression can land on them while every
-; TextureRect/Sprite2D/TileMapLayer golden stays byte-identical.
-;
-; CheckBox rather than a slider, splitter or OptionButton because `checked.svg`
-; is the only default-theme icon carrying an opaque colour boundary rather than
-; a single tint at varying alpha: its `#1a1a1a` check glyph over a white rect
-; at 0.75 opacity, and the rect's straight left/top edges landing exactly on a
-; texel boundary against the fully transparent surround. Those give ramps whose
-; two endpoints are known exactly from the SVG, so the measured midpoint says
-; which colour space produced it instead of merely differing.
-;
-; `scale` 16 puts the icon's texel centres 16 px apart, so each ramp is 16 px
-; wide and addressable by whole-pixel probes; `text` is left unset so the only
-; texture in the frame is the icon.
+; The one variable: a vendored theme icon magnified (`scale` 16), so bilinear filtering blends texels
+; and the blend's colour space shows. At natural size no golden sees the icon loader's tag.
+; `checked.svg` has an opaque #1a1a1a glyph over a 0.75 white rect with texel-aligned edges, so each
+; ramp's endpoints are known. `text` is unset, so the icon is the only texture.
 
 [node name="Root" type="Control"]
 layout_mode = 3

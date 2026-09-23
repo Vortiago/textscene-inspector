@@ -1,9 +1,7 @@
 [gd_scene load_steps=2 format=3 uid="uid://edge_collision_shape_disabled"]
 
-; CollisionShape3D with `disabled = true` and a valid shape resource — the
-; shape is inactive in physics but the gizmo still draws it (see
-; CollisionShape3D's Component.test.tsx "still renders the gizmo when
-; disabled=true"). No rule flags `disabled` at all; lints completely clean.
+; CollisionShape3D with `disabled = true` and a valid shape: inactive in physics, but the
+; gizmo still draws it. No rule reads `disabled`, so it lints clean.
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1"]
 size = Vector3(1, 1, 1)

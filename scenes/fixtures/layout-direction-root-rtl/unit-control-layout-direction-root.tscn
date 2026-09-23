@@ -1,10 +1,7 @@
-; The ONE variable: `internationalization/rendering/root_node_layout_direction`,
-; set to 2 (Right-to-Left) in this directory's own project.godot. Every node
-; here leaves `layout_direction` at INHERITED, so the climb runs off the top of
-; the tree and this setting is the only thing that answers
-; (control.cpp:3600-3608, seeded into the static by
-; register_scene_types.cpp:568-570). Invisible in every loose fixture: without a
-; project.godot the setting is 0 and the answer comes from the locale instead.
+; The one variable: `internationalization/rendering/root_node_layout_direction = 2` (Right-to-Left)
+; in this directory's project.godot. Every node inherits, so this setting answers
+; (control.cpp:3600-3608, register_scene_types.cpp:568-570). Without a project.godot the setting
+; is 0 and the locale answers, so no loose fixture sees it.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitctrlldroot"]
 

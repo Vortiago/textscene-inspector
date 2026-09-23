@@ -1,22 +1,7 @@
-; ONE VARIABLE: `material_override` on a MeshInstance3D whose mesh is an
-; EXTERNAL ArrayMesh `.tres`.
-;
-; Both instances share unit-arraymesh-own-material-quad.tres — two blue plates
-; carrying their own surface materials, one by ExtResource to a shared file and
-; one by a `[sub_resource]` of the mesh's own `.tres`. The LEFT instance is the
-; control and keeps them. The RIGHT instance adds `material_override`, which
-; Godot takes ahead of the material the surface chose
-; (render_forward_clustered.cpp:4206) and applies to EVERY surface — so both of
-; its plates must read orange.
-;
-; The two failure shapes are distinguishable on sight: an all-blue right
-; instance is the override never reaching the ArrayMesh branch, a half-orange
-; one is it reaching only surface 0.
-;
-; Nothing else in the bag sees this. `material-override` and
-; `surface-material-override` both drive a primitive BoxMesh, whose material
-; slots are built from the override map itself, and every other ArrayMesh
-; fixture leaves `material_override` unset.
+; The one variable: `material_override` on a MeshInstance3D with an external ArrayMesh `.tres`.
+; Godot puts it ahead of every surface's material (render_forward_clustered.cpp:4206), so both
+; right plates read orange: all blue means it missed the ArrayMesh, half orange only surface 0.
+; The other override fixtures drive a BoxMesh, and no other ArrayMesh fixture sets it.
 [gd_scene load_steps=3 format=3 uid="uid://unitarraymeshmatoverride"]
 
 [ext_resource type="ArrayMesh" path="res://unit-arraymesh-own-material-quad.tres" id="1_quad"]

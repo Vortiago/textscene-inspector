@@ -1,14 +1,8 @@
 /**
- * Repo convention guard (AGENTS.md): code comments carry no issue/WI tracker
- * references. The repo-wide strip that removed ~286 of them drifted back
- * within one merge wave — a one-shot mechanical sweep doesn't hold, so the
- * convention is red/green here like the repo's other boundary guards
- * (reactFree, barrelCompleteness).
- *
- * Scope mirrors the sweep's letter: COMMENTS in source files (line + block,
- * plus CSS block comments). String literals — describe()/it() names, template
- * output such as generated READMEs — are deliberately out of scope, as are
- * `docs/` and other non-code material.
+ * The AGENTS.md convention that a code comment carries no issue or WI tracker reference, as a
+ * red/green guard, since a one-off sweep drifts back. It reads comments in source files, CSS
+ * block comments included. String literals such as test titles, `docs/` and other non-code
+ * material are out of scope.
  */
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -32,7 +26,7 @@ const SKIP_DIRS = new Set([
   'public',
 ]);
 
-/** The reference shapes the sweep removed — keep in sync with AGENTS.md. */
+/** The tracker reference shapes: keep in sync with AGENTS.md. */
 const TRACKER_REF = [
   /\bWI-\d+\b/, // WI-<n>
   /\b(?:issue|fixes|closes|resolves|pr)s?\s*#\d+/i, // issue #<n>, closes #<n>
@@ -85,10 +79,8 @@ describe('code-comment conventions (AGENTS.md)', () => {
       }
     }
 
-    // `offenders` comes back empty both when the convention holds and when
-    // nothing was read: a widened SKIP_DIRS, a moved root, or a lexer that
-    // stops returning spans for a file class all report clean. 3,649 files
-    // today, so neither floor is near a legitimate shrink.
+    // `offenders` is empty both when the convention holds and when nothing was read: a widened
+    // SKIP_DIRS, a moved root or a lexer that stops returning spans all report clean.
     expect(scanned).toBeGreaterThan(3000);
     expect(spans).toBeGreaterThan(10000);
     expect(

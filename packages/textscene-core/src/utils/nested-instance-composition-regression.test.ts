@@ -1,29 +1,8 @@
 /**
- * Regression tests for ceiling-lamp nested-instance composition.
- *
- * The three ceiling_lamp instances are declared in the room scene with
- * `parent="RoomGeometry"` — i.e. they are injected as children of the
- * RoomGeometry *instance*, so RoomGeometry's (near-identity) offset
- * must compose ON TOP of each lamp origin. This locks in:
- *   - the child-injected-into-a-sub-instance world position, and
- *   - the inner ceiling_lamp.tscn composition (glb root + OmniLight3D at the
- *     lamp origin; the plafoniera's uniform scale does not move the origin).
- *
- * Every basis here is identity (pure translation), so these lamps were never
- * affected by the b4ccaab row-vs-column transpose bug — but the 2026-05-29
- * positioning hunt confirmed their world positions are correct, and this
- * suite guards the nested-composition path against future regressions.
- *
- * Ground truth captured from a real-world hallway scene (its Node3D root plus
- * the ceiling_lamp sub-scene it instances):
- *   Room (Node3D root)
- *    └─ RoomGeometry (instance)
- *         T = Transform3D(1,0,0, 0,1,0, 0,0,1, -0.0010881424, 0.0035161972, 0.0035357475)
- *         ├─ ceiling_lamp  origin ( 8.803779, 4, 0)
- *         ├─ ceiling_lamp3 origin (-2.14916,  4, 0)
- *         └─ ceiling_lamp5 origin ( 9,        4, 5.594346)
- *   ceiling_lamp.tscn: root glb (identity), plafoniera (uniform scale 0.18924935,
- *   no translation), OmniLight3D (identity).
+ * The three ceiling_lamp instances declare `parent="RoomGeometry"`, so RoomGeometry's
+ * near-identity offset composes on top of each lamp origin. In ceiling_lamp.tscn the glb root and
+ * OmniLight3D are identity, and the plafoniera's uniform scale (0.18924935) does not move the
+ * origin. Every basis is a pure translation, taken from a real hallway scene.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';

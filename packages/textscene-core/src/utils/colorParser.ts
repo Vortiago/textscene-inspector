@@ -1,5 +1,5 @@
 /**
- * Parses Godot Color format to three.js hex color.
+ * Reads a Godot `Color(r, g, b, a)` literal as channels or as a three.js hex colour.
  */
 
 import { COLOR_RE } from '../parser/vectors';
@@ -13,12 +13,9 @@ export interface Color {
 }
 
 /**
- * Parse Color from Godot format: `Color(r, g, b, a)`. Values are 0-1, but
- * negatives and values > 1 are accepted. Returns `undefined` when absent or
- * when the grammar does not match — the optional reader that callers who want
- * to SKIP a malformed color (rather than substitute white) build on.
- * Matches against the single shared `COLOR_RE` so the parse and every guard
- * run one grammar.
+ * A `Color(r, g, b, a)` literal, channels below 0 and above 1 included. Undefined when absent or
+ * malformed, for a caller that skips a bad colour rather than substitute white. The shared
+ * `COLOR_RE` keeps the parse and every guard on one grammar.
  */
 export function parseColorOrUndefined(value: string | undefined): Color | undefined {
   if (!value) return undefined;
@@ -40,30 +37,19 @@ export function parseColorOrUndefined(value: string | undefined): Color | undefi
 }
 
 /**
- * Parse a Color, falling back to `fallback` when the value is absent or the
- * grammar does not match. The color member of the `floatOr` / `intOr` /
- * `boolOr` / `enumOr` / `vec2Or` decoder family: a warn-free
- * `parseColorOrUndefined(value) ?? fallback` so every typed field carrying a
- * per-field default reads uniformly instead of open-coding the `?? default`.
+ * A Color, or `fallback` when absent or malformed: the colour member of the `floatOr`, `intOr`,
+ * `boolOr`, `enumOr` and `vec2Or` decoder family, so a field with a default reads uniformly.
  */
 export function colorOr(value: string | undefined, fallback: Color): Color {
   return parseColorOrUndefined(value) ?? fallback;
 }
 
-/**
- * Parse Color from Godot format: Color(r, g, b, a)
- * Values are in range 0-1, but negative values and values > 1 are accepted
- * Returns white color { r: 1, g: 1, b: 1, a: 1 } if parsing fails
- */
+/** A Color, or opaque white when absent or malformed. */
 export function parseColor(value: string | undefined): Color {
   return colorOr(value, { r: 1, g: 1, b: 1, a: 1 });
 }
 
-/**
- * Convert Godot Color string to three.js hex color number.
- * Example: "Color(1, 0.5, 0, 1)" -> 0xff8000
- * Returns white (0xffffff) if parsing fails
- */
+/** A Color as a three.js hex number: "Color(1, 0.5, 0, 1)" is 0xff8000. White when malformed. */
 export function parseColorToHex(value: string | undefined): number {
   const color = parseColor(value);
 

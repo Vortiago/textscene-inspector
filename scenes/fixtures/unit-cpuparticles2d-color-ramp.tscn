@@ -1,9 +1,8 @@
 [gd_scene load_steps=4 format=3]
 
-; Both Gradient slots at once. `color_ramp` is sampled by AGE, so the same
-; particle changes colour as it travels; `color_initial_ramp` is sampled ONCE
-; at birth, so it varies particle to particle and never within one. The two
-; emitters differ only in which slot the gradient is plugged into.
+; Both Gradient slots. `color_ramp` is sampled by age, so one particle changes colour as it travels.
+; `color_initial_ramp` is sampled once at birth, so it varies between particles. The two emitters
+; differ only in the slot.
 
 [ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
 

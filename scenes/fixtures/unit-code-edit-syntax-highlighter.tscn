@@ -1,17 +1,9 @@
 [gd_scene load_steps=2 format=3]
 
-; syntax_highlighter is the ONE variable this fixture moves: an otherwise-bare
-; CodeEdit (no gutters, no wrap) gets one CodeHighlighter, and the four buffer
-; lines are chosen so each hits a DIFFERENT branch of
-; _get_line_syntax_highlighting_impl (syntax_highlighter.cpp:118-411) — "if"
-; a keyword, "1" a number, "hi" a quoted string region, "# trailing" a
-; line-only comment region, "position" a bare member keyword, and
-; ".position" the SAME member keyword disqualified by its leading dot,
-; falling through to the general member-variable colour instead
-; (syntax_highlighter.cpp:339-356, :375-384). A wrong branch paints the wrong
-; span the wrong colour and is invisible without this fixture's five distinct
-; hues; a broken region carry-over would bleed the string colour into the
-; comment line that follows it.
+; The one variable: one CodeHighlighter on a bare CodeEdit. Each line hits a different branch
+; (syntax_highlighter.cpp:118-411): keyword, number, string, comment, member keyword, and ".position",
+; which its dot disqualifies (syntax_highlighter.cpp:339-356, :375-384). A wrong branch paints the
+; wrong hue, and a broken region carry-over bleeds the string colour into the comment line.
 
 [sub_resource type="CodeHighlighter" id="CodeHighlighter_1"]
 number_color = Color(0.639216, 0.858824, 0.933333, 1)

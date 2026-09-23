@@ -1,7 +1,4 @@
-/**
- * Regression: useResource reports missing paths to the
- * MissingResourcesContext, so the DOM panel can aggregate them.
- */
+/** useResource reports missing paths to the MissingResourcesContext, which the panel aggregates. */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import * as THREE from 'three';
@@ -48,8 +45,6 @@ describe('useResource → MissingResourcesContext aggregation', () => {
 
   it('reports the path to MissingResourcesContext when the resource resolves to missing', () => {
     const Wrapper = makeWrappers(loader);
-    // Combined hook that reads both the resource status and the
-    // aggregated missing-paths set under the same provider tree.
     const { result } = renderHook(
       () => {
         const res = useResource<THREE.Texture>('res://textures/missing.png', 'texture');
@@ -81,10 +76,8 @@ describe('useResource → MissingResourcesContext aggregation', () => {
   it('clears the path from the missing set when the consuming hook unmounts', () => {
     const Wrapper = makeWrappers(loader);
 
-    // Switch the hook's path between the test path and empty (no-op) so
-    // mounting/unmounting is modeled via path swap. Empty path returns
-    // pending and triggers the unmount cleanup of the prior missing
-    // report effect.
+    // A swap to the empty path models an unmount: it returns pending and runs the cleanup of the
+    // missing report.
     const { result, rerender } = renderHook(
       ({ path }: { path: string }) => {
         useResource<THREE.Texture>(path, 'texture');
@@ -116,14 +109,12 @@ describe('useResource → MissingResourcesContext aggregation', () => {
       { wrapper: Wrapper }
     );
 
-    // Initial: resolved synchronously to missing via the seeded null cache.
+    // The seeded null resolves it to missing at once.
     expect(result.current.missingPaths.has('res://textures/missing.png')).toBe(true);
     expect(result.current.uploadedPaths.has('res://textures/missing.png')).toBe(false);
 
-    // Simulate the host providing the file: clear the failure cache and
-    // emit a `loaded` event for the same path. `useResource` should pick
-    // it up via the bus subscription and transition status to `loaded`,
-    // which calls `markUploaded(path)`.
+    // The host provides the file: the failure cache clears and a `loaded` event arrives, so the
+    // hook turns `loaded` and calls `markUploaded(path)`.
     act(() => {
       textures.clearCache('res://textures/missing.png');
       textures._resolve('res://textures/missing.png', new THREE.Texture());
@@ -154,7 +145,7 @@ describe('useResource → MissingResourcesContext aggregation', () => {
       textures._resolve('res://textures/never-missing.png', new THREE.Texture());
     });
 
-    // Normal fixture resource — shouldn't show up in either panel set.
+    // A resource that loads on first request shows in neither panel set.
     expect(result.current.missingPaths.size).toBe(0);
     expect(result.current.uploadedPaths.size).toBe(0);
   });

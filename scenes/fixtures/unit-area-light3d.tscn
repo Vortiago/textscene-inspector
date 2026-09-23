@@ -1,11 +1,6 @@
-; AreaLight3D lighting a surface, so what the light DOES is visible rather than
-; only that it parses. The ground and marker mirror unit-omni-light-3d and
-; unit-spot-light-3d, which makes the light fixtures directly comparable: the
-; same geometry under a different lamp.
-;
-; A rectangular lamp is why the geometry matters — `area_size` is wider than it
-; is tall, so its falloff across the ground is elongated and the box catches the
-; near edge. A light with nothing to light shows none of that, in either engine.
+; AreaLight3D over the ground and marker of unit-omni-light-3d and unit-spot-light-3d: the same
+; geometry under a different lamp. `area_size` is wider than tall, so the falloff on the ground
+; is elongated and the box catches the near edge.
 [gd_scene load_steps=4 format=3]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]

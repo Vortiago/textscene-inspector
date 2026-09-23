@@ -1,17 +1,8 @@
 /**
- * useResource(path, type) — the single surface API for loading any
- * external resource inside an R3F node component. Wraps the event
- * bus internals so callers only see a status machine: pending → loaded
- * | unavailable → loaded (late-arrival).
- *
- * The hook never suspends. Components must branch on `status` directly.
- *
- * Identity semantics (per R3F-contracts.md §1):
- *   - Texture2D, StandardMaterial3D, PackedScene  → identity equality
- *     across calls (same cached reference returned).
- *   - GLBMesh (THREE.Object3D)                    → a fresh clone per
- *     call via cloneWithMaterials(template). THREE.Object3D allows only
- *     one parent, so two consumers must not share the same instance.
+ * useResource(path, type) loads an external resource for an R3F node component as a status machine:
+ * pending, then loaded or unavailable, and a late arrival turns unavailable loaded. It never
+ * suspends. A texture or material keeps its identity across calls, and an Object3D is cloned per
+ * consumer, since THREE.Object3D allows one parent.
  */
 import { useContext, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
@@ -24,41 +15,24 @@ import { resourceRef } from '../godot/index.js';
 import { resourceSliceRegistry, type ResourceBusType } from './sliceRegistration';
 
 /**
- * - `pending`     — still loading.
- * - `loaded`      — value present.
- * - `unavailable` — the value can't be shown: the load failed (resource
- *   not resolvable, or previously failed) OR the hook was used outside a
- *   `<ResourceLoaderProvider>`. Every consumer renders the same placeholder
- *   in this state, so the two causes share one status; the `error` string
- *   carries the human-readable detail (including the programming-error case)
- *   for diagnostics.
+ * `unavailable` covers a failed load and a hook used outside a `<ResourceLoaderProvider>`. Every
+ * consumer renders the same placeholder for both, so they share one status, and `error` tells
+ * them apart.
  */
 export type ResourceStatus = 'pending' | 'loaded' | 'unavailable';
 
 export interface ResourceResult<T> {
   value: T | undefined;
   status: ResourceStatus;
-  /**
-   * Human-readable error message. Present when status is 'unavailable'.
-   * Callers branch on `status`, not on `error` content.
-   */
+  /** Present when status is 'unavailable'. Callers branch on `status`, not on this text. */
   error?: string;
 }
 
-
-
-/**
- * Internal: read the loader from context, returning null outside the
- * provider. Exposed so the type-narrowing in `getProcessorAccess` is
- * self-documenting; not part of the public API.
- */
+/** The loader from context, or null outside the provider. */
 export function useResourceLoader() {
   return useContext(ResourceLoaderContext);
 }
 
-/**
- * The hook. See file-level docstring for behavioral contract.
- */
 export function useResource<T>(path: string, type: ResourceBusType): ResourceResult<T> {
   const loader = useResourceLoader();
   const missingResources = useMissingResources();
@@ -67,34 +41,24 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
     status: 'pending',
   }));
 
-  // Track the *current* (path, type) so a stale event for a previous
-  // request can't overwrite state after the consumer changed its
-  // arguments. The ref is the source of truth; the deps array on the
-  // effect captures the same identity but a closure can outlive a render.
+  // A ref, not the effect's closure: a closure outlives its render, so a stale event for an
+  // earlier (path, type) would overwrite the state.
   const currentRef = useRef<{ path: string; type: ResourceBusType }>({ path, type });
   currentRef.current = { path, type };
 
-  // The ONE clone this hook instance currently holds (GLBMesh only — stays
-  // null for every other resource type). Persists across effect re-runs so
-  // a path/type swap or unmount can dispose the outgoing clone's materials
-  // before the ref is replaced or the hook goes away.
+  // The clone this hook holds, for a cloned-per-consumer bus only. It outlives an effect run, so a
+  // path swap or an unmount can dispose the outgoing clone's materials.
   const clonedRef = useRef<THREE.Object3D | null>(null);
 
   useEffect(() => {
-    // Empty path: short-circuit. Callers use the empty string to signal
-    // "no request" when they need to keep the hook-call count stable
-    // (rules of hooks) but the slot isn't actually populated. Stay in
-    // `pending` with no subscription — nothing will ever resolve it,
-    // which is what the caller wants.
+    // An empty path means no request: a caller keeps its hook count stable for an empty slot.
+    // It stays `pending` with no subscription.
     if (path === '') {
       setResult({ value: undefined, status: 'pending' });
       return;
     }
 
     if (!loader) {
-      // Used outside a provider — a programming error. It surfaces as
-      // `unavailable` (callers render their placeholder) but the error
-      // string spells out the cause so it's diagnosable.
       setResult({
         value: undefined,
         status: 'unavailable',
@@ -114,22 +78,14 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
       return;
     }
 
-    // Pin the entry so LRU eviction never disposes it while this hook
-    // instance is mounted; the cleanup's matching unpin releases it. Safe
-    // under StrictMode's mount -> cleanup -> mount: unpin-to-zero does not
-    // eagerly dispose, so the remount re-pins the still-cached entry.
+    // The pin keeps LRU eviction off the entry while mounted. StrictMode's mount, cleanup, mount is
+    // safe: an unpin to zero does not dispose, so the remount re-pins the cached entry.
     access.pin(path);
 
-    // Fresh subscription per (path, type) pair — keeps cleanup simple
-    // and prevents stale handlers from accumulating when the consumer
-    // remounts with a different path.
     const isCurrent = () =>
       currentRef.current.path === path && currentRef.current.type === type;
 
-    // Dispose this hook instance's currently-held clone's cloned materials
-    // (never its geometry — shared with the template/siblings, see
-    // disposeClonedMaterials' docstring). Called before replacing the
-    // clone with a fresh one and on unmount/path-swap cleanup.
+    // Materials only: the geometry is shared with the template and the sibling clones.
     const disposePreviousClone = () => {
       if (clonedRef.current) {
         disposeClonedMaterials(clonedRef.current);
@@ -137,16 +93,8 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
       }
     };
 
-    /**
-     * For Object3D resources (GLBMesh) clone the cached template so each
-     * consumer gets its own attachable instance, tracking the clone so a
-     * later replacement/unmount can dispose its materials. Every other
-     * resource type passes the raw value through unchanged.
-     */
     const toConsumerValue = (rawValue: unknown): unknown => {
-      // The slice that claims the bus says whether its cached value is shared
-      // scene graph state (an Object3D has one parent, so every consumer needs
-      // its own); the flag is read off the value, never `instanceof` across realms.
+      // The flag, not `instanceof`: a second three.js copy fails `instanceof` across realms.
       if (clonePerConsumer && (rawValue as { isObject3D?: boolean })?.isObject3D === true) {
         disposePreviousClone();
         const cloned = cloneWithMaterials(rawValue as THREE.Object3D);
@@ -156,13 +104,7 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
       return rawValue;
     };
 
-    /**
-     * Apply a successfully-loaded value to the hook state (via
-     * `toConsumerValue`, which owns the per-consumer GLB cloning). The ONE
-     * loaded-state writer — both the synchronous cache hit below and the
-     * async `loaded` event land here, so the clone/dispose lifecycle can't
-     * drift between the two paths.
-     */
+    /** The one writer of the loaded state, so a cache hit and a `loaded` event clone alike. */
     const applyValue = (rawValue: unknown) => {
       if (!isCurrent()) return;
       const value = toConsumerValue(rawValue) as T;
@@ -171,18 +113,11 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
 
     const applyFailure = (errMessage: string) => {
       if (!isCurrent()) return;
-      // The processor bus reports every load failure as a single `failed`
-      // event with no machine-readable reason, so a failed load is uniformly
-      // `unavailable` — the error string carries the human-readable detail.
+      // The bus reports every failure as one `failed` event with no reason code.
       setResult({ value: undefined, status: 'unavailable', error: errMessage });
     };
 
-    // 1. Synchronous fast path: if the resource is already cached we can
-    //    skip the event subscription entirely. Three possible cache
-    //    states from createResourceProcessor:
-    //      - undefined: never requested → kick off a request.
-    //      - null:      previously failed → report missing.
-    //      - <value>:   loaded → report loaded.
+    // The cache holds undefined for never requested, null for failed, and the value once loaded.
     const cached = access.getCached(path);
     if (cached === null) {
       setResult({
@@ -190,17 +125,14 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
         status: 'unavailable',
         error: `Resource not available: ${path}`,
       });
-      // Still subscribe — the host may later call resourceLoader.provideFile()
-      // and we want to react.
+      // It still subscribes: the host may provide the file later.
     } else if (cached !== undefined) {
-      applyValue(cached); // isCurrent() is trivially true this synchronously
-      // Still subscribe — the host may invalidate (clearCache) and
-      // re-load.
+      applyValue(cached);
+      // It still subscribes: the host may clear the cache and reload.
     } else {
       setResult({ value: undefined, status: 'pending' });
     }
 
-    // 2. Subscribe to future loaded/failed events for this path/type.
     const onLoaded = (eventPath: string, data?: unknown) => {
       if (eventPath !== path) return;
       applyValue(data);
@@ -209,15 +141,9 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
       if (eventPath !== path) return;
       applyFailure(error?.message ?? 'Unknown error');
     };
-    // A FULL cache clear (corpus switch) dropped this path with no
-    // replacement on the way. The value in this hook's state belongs to the
-    // cleared era — re-request under the new provider/corpus state; the
-    // resulting loaded/failed event lands in the handlers above. The last
-    // value stays on screen while the reload is in flight; when the path
-    // doesn't exist in the new corpus (the common case for an outgoing
-    // scene's consumers) the reload FAILS and this flips to unavailable —
-    // an accepted one-off burst of doomed refetches per switch, bounded by
-    // the mounted working set.
+    // A full cache clear (a corpus switch) dropped this path, so it is requested again and the old
+    // value stays on screen meanwhile. A path absent from the new corpus fails to unavailable: one
+    // burst of doomed refetches per switch, bounded by the mounted working set.
     const onInvalidated = (eventPath: string) => {
       if (eventPath !== path) return;
       if (!isCurrent()) return;
@@ -228,9 +154,7 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
     eventBus.on<Error>(busType, 'failed', onFailed);
     eventBus.on(busType, 'invalidated', onInvalidated);
 
-    // 3. If we had no cache entry yet, drive the request now. This is
-    //    intentionally after subscribing so we don't miss a synchronous
-    //    cache-hit emit from `request()`.
+    // After subscribing, so a synchronous emit from `request()` is not missed.
     if (cached === undefined) {
       access.request(path);
     }
@@ -244,27 +168,14 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
     };
   }, [loader, path, type]);
 
-  // Aggregate missing-path reporting. Runs on every
-  // status transition for the current path. The context's default value
-  // is a no-op when no provider is mounted, so consumers outside a shell
-  // (e.g. linter callers, isolated unit tests) pay no cost.
-  //
-  // Pull the action callbacks out of the context object — they're
-  // useCallback'd inside the provider and so are stable across re-renders.
-  // Depending on the whole `missingResources` object would re-run this
-  // effect on every state change inside the provider (the missingPaths
-  // set itself), creating an infinite render loop.
+  // The callbacks, not the context object: the object changes with every missing-path update, so
+  // depending on it loops the render. Outside a provider the context is a no-op.
   const reportMissing = missingResources.report;
   const clearMissing = missingResources.clear;
   const markUploaded = missingResources.markUploaded;
 
-  // Track whether THIS hook instance has ever reported its current path
-  // as missing. When status flips missing → loaded the user just
-  // uploaded the file, and the panel should keep the row visible (with
-  // the uploaded ✓ state) so they know what they fixed. But paths that
-  // load on first request (normal fixture resources) never went through
-  // `missing`, and should NOT appear as uploaded rows. The ref keeps the
-  // distinction per-(path) inside the hook.
+  // A path that loads after this hook reported it missing was uploaded, so its row stays, marked
+  // uploaded. A path that loads on first request never shows a row.
   const reportedMissingForPathRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -276,8 +187,7 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
     }
     if (result.status === 'loaded') {
       if (reportedMissingForPathRef.current === path) {
-        // User-uploaded path — leave it visible in the panel as
-        // `uploaded ✓` so the Remove affordance stays reachable.
+        // The row stays, so its Remove control stays reachable.
         markUploaded(path);
         reportedMissingForPathRef.current = null;
       } else {
@@ -287,9 +197,8 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
     return undefined;
   }, [path, result.status, reportMissing, clearMissing, markUploaded]);
 
-  // Publish this consumer's wait to the loader so something outside can tell
-  // when loading has genuinely finished rather than guessing with a timer.
-  // Keyed on `path` too: swapping paths re-enters `pending` for the new one.
+  // The loader counts pending consumers, so a caller knows when loading has finished without a
+  // timer. Keyed on `path` too: a path swap re-enters `pending`.
   useEffect(() => {
     if (!loader || !path || result.status !== 'pending') return undefined;
     return loader.beginPending();
@@ -299,14 +208,8 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
 }
 
 /**
- * Resolve a resource path that may originate from a TSCN `ExtResource("id")`
- * reference. The hook is the most common consumer; this helper is exposed
- * so node components that receive raw TSCN property strings can pass them
- * through without duplicating the parse logic.
- *
- * If `idOrPath` is already a `res://` path, returns it unchanged. If it
- * matches `ExtResource("id")`, looks the id up in the loader's metadata
- * and returns the resolved path. Returns `null` if the id is unknown.
+ * The `res://` path for a raw property string: a `res://` path unchanged, or the path of an
+ * `ExtResource("id")`. Null for an unknown id or any other form.
  */
 export function resolveResourcePath(
   scene: TscnScene,

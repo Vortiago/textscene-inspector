@@ -1,12 +1,8 @@
 [gd_scene load_steps=4 format=3 uid="uid://unit_animtree_instanced"]
 
-; Regression fixture: an AnimationTree whose anim_player NodePath uses "../" to
-; reach an AnimationPlayer that lives inside an instanced sub-scene the static
-; linter cannot see. Mirrors scenes/demos/3d/platformer/player/player.tscn:
-; a root "Player" (CharacterBody3D) alongside an instanced child also named
-; "Player". The old `path.endsWith(node.name)` matched the sibling Player and
-; false-flagged it as the wrong type; the resolver now suppresses checks that
-; escape the authored scope.
+; An AnimationTree whose anim_player path uses "../" to reach an AnimationPlayer inside an instanced
+; sub-scene the linter cannot see, beside a root node of the same name ("Player"). The resolver
+; skips checks that escape the authored scope, so the sibling is not flagged as the wrong type.
 
 [ext_resource type="PackedScene" path="res://child_animated_player.tscn" id="1_char"]
 

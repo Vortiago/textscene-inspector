@@ -1,23 +1,7 @@
-; The ONE variable: `line_length_guidelines` on a CodeEdit.
-;
-; `_draw_guidelines` (`code_edit.cpp:288-313`) rules the whole control height
-; at each authored column, under the text (`text_edit.cpp:1319-1322`). The
-; column's own x is `xmargin_beg + get_string_size("0".repeat(column)).x`, and
-; both band tests are STRICT, so a column at 0 lands exactly on `xmargin_beg`
-; and draws nothing while one past `xmargin_end` is dropped.
-;
-; `Ruled` authors four columns: 0 (drawn nowhere, the strict lower bound), 8
-; and 16 (both inside the band), and 400 (past `xmargin_end`, the strict upper
-; one). That array also pins the colour rule — `i == 0` keeps the full
-; `line_length_guideline_color` and every later one halves its alpha
-; (`:305`) — which the two visible rules show as two DIFFERENT intensities,
-; since the full-colour one is the dropped column's successor, not the first
-; drawn.
-;
-; `Plain` is the same CodeEdit with no array at all, so a regression that
-; ruled unconditionally shows there and nowhere else. The alpha is 0.1 before
-; the halving, so the fixture's own dark backdrop is what makes either rule
-; readable at all.
+; The one variable: `line_length_guidelines`. Each column rules the full height under the text
+; (code_edit.cpp:288-313, text_edit.cpp:1319-1322), strictly inside the band, so 0 and 400 draw
+; nothing. The first column keeps full colour and later ones halve alpha (:305), so the rules at 8
+; and 16 differ. Plain has no array, so an unconditional rule shows only there.
 
 [gd_scene format=3 uid="uid://unit_code_edit_guidelines"]
 

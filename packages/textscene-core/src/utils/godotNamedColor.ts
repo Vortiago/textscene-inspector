@@ -1,19 +1,10 @@
 /**
- * Godot's X11 named-colour table — `core/math/color_names.inc`, transcribed
- * verbatim — and the `Color::find_named_color` lookup over it
- * (`core/math/color.cpp:412-431`).
+ * Godot's X11 named-colour table, `core/math/color_names.inc` transcribed verbatim, and the
+ * `Color::find_named_color` lookup over it (`core/math/color.cpp:412-431`). `Color::from_string`
+ * (`color.cpp:450-456`) consults it for a string that is not valid hex, as `[color=red]` does.
  *
- * A name reaches here through `Color::from_string` (`color.cpp:450-456`),
- * which tries `Color::html` first and only consults this table when the
- * string is not valid hex. `[color=red]` in a RichTextLabel is the path that
- * matters in this codebase: without the table every one of these 146 names
- * silently resolved to the caller's fallback colour.
- *
- * Keys are the table's own names with underscores removed, exactly as
- * `find_named_color` builds its hash map (`color.cpp:422`); a lookup
- * normalizes the query the same way before matching. Values are the source's
- * own `0xRRGGBBAA` literals, so a channel here can be diffed against the
- * engine by eye.
+ * Keys drop underscores, as `find_named_color` builds its hash map (`color.cpp:422`), and a query
+ * normalises the same way. Values are the source's own `0xRRGGBBAA` literals, to diff by eye.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

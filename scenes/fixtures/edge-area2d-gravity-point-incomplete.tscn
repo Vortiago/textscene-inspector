@@ -1,8 +1,7 @@
 [gd_scene load_steps=2 format=3 uid="uid://edge_area2d_gravity_point_incomplete"]
 
-; Point gravity with `gravity_point_center` omitted: Area2D falls back to the
-; default center, like every omitted property takes Godot's default. Lints
-; clean.
+; Point gravity with `gravity_point_center` omitted: Area2D falls back to the default centre, as
+; every omitted property takes Godot's default. Lints clean.
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1"]
 radius = 30.0

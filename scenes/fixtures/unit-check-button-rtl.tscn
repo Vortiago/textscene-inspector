@@ -1,14 +1,6 @@
-; ONE VARIABLE: `layout_direction = 3` (RTL) on the lower CheckButton.
-;
-; CheckButton is the only Button-family type with its own `_mirrored` icon
-; table: under RTL it draws `toggle_on_mirrored` rather than `toggle_on`
-; (check_button.cpp:109-120), a separately authored SVG whose knob sits on the
-; opposite end, and it moves the toggle to the LEFT content margin (:135).
-; Both rows are `button_pressed` so the knob is on the far side of its track
-; and a missed icon swap cannot hide behind a moved one.
-;
-; `unit-check-button` is LTR and carries no text; no other scene pairs a
-; CheckButton with a layout direction.
+; The one variable: `layout_direction = 3` (RTL) on the lower CheckButton. Under RTL it draws the
+; separate `toggle_on_mirrored` icon (check_button.cpp:109-120) at the left content margin (:135).
+; Both rows are pressed, so a missed swap cannot hide behind a moved icon. unit-check-button is LTR.
 
 [gd_scene format=3 uid="uid://unitcheckbuttonrtl"]
 

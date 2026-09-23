@@ -1,11 +1,8 @@
 /**
- * The `terrain_set_<n>/` family, which is the one TileSet family that nests: a
- * flat `mode` leaf beside a whole second indexed level, `terrain_<m>/name` and
- * `terrain_<m>/color` (tile_set.cpp:3893-3927, :4190-4194).
- *
- * Both index positions are gated on `is_valid_int()` (:3893, :3904) and each has
- * its own `ERR_FAIL_COND_V(… < 0, false)` (:3896, :3905), so a rejected or
- * negative index at either level drops the write.
+ * The `terrain_set_<n>/` family, TileSet's one nesting family: a flat `mode` beside a second
+ * indexed level, `terrain_<m>/name` and `/color` (tile_set.cpp:3893-3927, :4190-4194). Each index
+ * is gated on `is_valid_int()` (:3893, :3904) and its own `ERR_FAIL_COND_V(… < 0, false)` (:3896,
+ * :3905), so a refused or negative index at either level drops the write.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,7 +19,7 @@ const CASES: KeyCase[] = [
   {
     // tile_set.cpp:4190, PROPERTY_HINT_ENUM "Match Corners and Sides,Match
     // Corners,Match Sides". set_terrain_set_mode (:773) casts the int into the
-    // enum and assigns; only the terrain-set INDEX has an ERR_FAIL.
+    // enum and assigns. Only the terrain-set index has an ERR_FAIL.
     key: 'terrain_set_0/mode',
     valid: ['0', '1', '2'],
     invalid: [
@@ -38,7 +35,7 @@ const CASES: KeyCase[] = [
     invalid: [{ value: 'Grass', severity: 'error', contains: ['name'] }],
   },
   {
-    // tile_set.cpp:4194, Variant::COLOR. set_terrain_color (:866-869) OVERWRITES
+    // tile_set.cpp:4194, Variant::COLOR. set_terrain_color (:866-869) overwrites
     // an alpha that is not 1.0, so the stored colour differs from the written one.
     key: 'terrain_set_0/terrain_0/color',
     valid: ['Color(0.5, 0.34375, 0.25, 1)', 'Color(0, 0, 0, 1)'],
@@ -52,7 +49,7 @@ const CASES: KeyCase[] = [
     invalid: [{ value: '0', severity: 'error', contains: ['index -1', 'tile_set.cpp:3896'] }],
   },
   {
-    // The OUTER guard runs first in `_set`, so it is what reports.
+    // The outer guard runs first in `_set`, so it is what reports.
     key: 'terrain_set_-1/terrain_0/name',
     invalid: [{ value: '"a"', severity: 'error', contains: ['index -1', 'tile_set.cpp:3896'] }],
   },
@@ -86,8 +83,7 @@ const CASES: KeyCase[] = [
   },
   {
     // tile_set.cpp:4191 pushes `terrain_set_<n>/terrains` as
-    // PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_ARRAY — no storage bit, and `_set`
-    // has no case for it either.
+    // PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_ARRAY: no storage bit, and no `_set` case.
     key: 'terrain_set_0/terrains',
     invalid: [{ value: '1', severity: 'error', contains: ['Unknown', 'terrain_set_0/terrains'] }],
   },

@@ -1,16 +1,7 @@
 /**
- * Borrowing a procedural texture for as long as a component is mounted.
- *
- * A procedural texture is rasterised once and shared by every node pointing at
- * the same sub-resource, so `proceduralTextureCache` owns its lifetime and
- * consumers only borrow. The cache can honour a borrow only if it knows the
- * borrow exists: an unpinned entry is disposed outright once the cache
- * overflows, leaving the consumer sampling a dead texture with no reason to
- * re-rasterise — its memo deps never changed. Resolving and pinning are
- * therefore one operation, not two things a caller must remember to pair.
- *
- * This is the React side of the cache; `proceduralTextureCache` itself stays
- * React-free.
+ * The React side of `proceduralTextureCache`: a mounted component borrows a shared procedural
+ * texture by pinning it. Resolving and pinning are one operation, since an overflowing cache
+ * disposes an unpinned entry and the consumer, whose memo deps never changed, samples a dead texture.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -23,22 +14,10 @@ import {
 } from './textures/proceduralTextureCache.js';
 
 /**
- * The procedural texture `ref` names — a `SubResource` naming an inline
- * `GradientTexture2D` or `NoiseTexture2D` — held resident for as long as the
- * caller is mounted. Null for every other reference form (an `ExtResource`
- * image, a `res://` path, a sub-resource of some other type, nothing at all),
- * leaving the caller's async path to handle it.
- *
- * Which slices those are is `resolveProceduralTexture`'s business, not this
- * hook's: this is the React half (memo + pin), and the walk is shared with the
- * React-free material paths.
- *
- * "Shared" reaches a consumer only if the consumer comes through here or
- * through `useTexture2D`. `resolveTexture2DSource` answers with a PATH, and a
- * procedural texture has none, so four consumers that called the resolver
- * directly — the Decal albedo, the panorama sky, the Button icon and the
- * TextureRect image — resolved such a reference to nothing and drew untextured.
- * A Texture2D slot is read through the hook for that reason.
+ * The procedural texture a `SubResource` ref names, held resident while the caller is mounted.
+ * Null for every other form, which the caller's async path handles. `resolveProceduralTexture`
+ * decides which types count. A Texture2D slot reads through here or `useTexture2D`, since a
+ * path resolver finds no path for a procedural texture.
  */
 export function useProceduralTexture(
   ref: string | undefined,
@@ -53,14 +32,9 @@ export function useProceduralTexture(
 }
 
 /**
- * Hold every key in `keys` resident while the caller is mounted, for consumers
- * that resolve several procedural textures at once (a material's texture slots)
- * and so cannot use `useProceduralTexture` per slot.
- *
- * The effect re-runs when the SET of keys changes, not when a caller happens to
- * rebuild the array: an unpin/pin cycle per render would flush disposals that a
- * pinned replace deliberately deferred. Keys are `token:subResourceId`, so no
- * key can contain the joining newline.
+ * Holds every key resident while the caller is mounted, for a consumer with several procedural
+ * slots. Keyed on the joined keys, not the array: an unpin and pin per render would flush the
+ * disposals a pinned replace deferred. A key is `token:subResourceId`, so it holds no newline.
  */
 export function useProceduralTexturePins(keys: readonly string[]): void {
   const pinnedKeys = keys.join('\n');

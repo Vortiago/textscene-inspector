@@ -1,40 +1,8 @@
 /**
- * "Give me a THREE.Texture for this Texture2D-valued property."
- *
- * A Texture2D slot can hold quite different things, and until this module
- * existed every 2D caller had to know which one it had:
- *
- *   `res://…` / `ExtResource` — an image file, loaded asynchronously through
- *                               the resource pipeline
- *   `SubResource(CanvasTexture)` — a wrapper; resolves to its diffuse texture,
- *                               which is itself any of these forms
- *   `SubResource(AtlasTexture)` — a sprite-sheet cell: an image file windowed
- *                               to a region, and the size of that region
- *   `ExtResource(AtlasTexture)` — the same cell, saved as its OWN `.tres`
- *                               instead of inline (every Kenney input-prompt
- *                               icon ships this way); fetched and parsed
- *                               through the `resource` bus, not the image one
- *   `SubResource(GradientTexture2D)` — fully described inside the scene, so it
- *                               rasterises synchronously with no file at all
- *
- * The path-based `resolveTexture2DPath` + `useResource` pair covers the first
- * two and returns nothing for the others: a `SubResource` survives it only when
- * it happens to CARRY a path, so every inline procedural texture and every
- * sheet cell resolved to a missing-resource placeholder.
- *
- * The wrapping forms are peeled off to a fixed point and the remainder goes
- * through the same three branches, so a cell of a sheet, a wrapped gradient and
- * a plain image all reach a consumer as one thing: a texture whose OWN size is
- * the size Godot reports for the slot.
- *
- * This hook hides the distinction: callers ask for a texture and get one (or a
- * status explaining why not). It is the ONE resolver every Texture2D-valued
- * slot should go through; `resolveTexture2DPath` is the path-only half of it,
- * correct only where the caller genuinely wants a file path.
- *
- * `inlineTexture2DSize` answers the sibling question — how big is it — for the
- * one caller that cannot use a hook, and lives here so the two answers cannot
- * drift apart again.
+ * The one resolver for a Texture2D slot: an image path or `ExtResource`, a `CanvasTexture`, an
+ * `AtlasTexture` inline or as a `.tres`, or an inline `GradientTexture2D`. Wrappers peel to a fixed
+ * point, and the texture's size is Godot's size for the slot. `resolveTexture2DPath` suits only a
+ * caller that wants a file path. `inlineTexture2DSize` sits here so the size cannot drift.
  */
 
 import { useMemo } from 'react';
@@ -70,11 +38,8 @@ export function useTexture2D(
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[]
 ): Texture2DResult {
-  // An AtlasTexture does not hold pixels, it windows another texture's — so the
-  // slot's own reference is replaced by the sheet's for the resolution below,
-  // and the window is applied to whatever that yields.
-  // Unwrapped BEFORE the atlas lookup: a CanvasTexture may wrap an AtlasTexture,
-  // and testing the raw ref would see only the wrapper and lose the window.
+  // An AtlasTexture windows the sheet it names, so the sheet's ref resolves below. Unwrapped before
+  // the atlas lookup: a CanvasTexture may wrap an AtlasTexture, and the raw ref loses the window.
   const unwrapped = useMemo(
     () => unwrapCanvasTextureRef(ref, internalResources),
     [ref, internalResources]
@@ -84,10 +49,8 @@ export function useTexture2D(
     [unwrapped, internalResources]
   );
 
-  // The same cell, saved as its own `.tres` instead of an inline sub-resource.
-  // The outer ExtResource's declared `type=` says so before anything is
-  // fetched; the file is then fetched + parsed on the `resource` bus, never
-  // the image one, which cannot decode text.
+  // An AtlasTexture `.tres`, known from the ExtResource's `type=` before any fetch. It loads on the
+  // `resource` bus, since the image bus cannot decode text.
   const extAtlasPath = useMemo(
     () => (inlineAtlas ? null : resolveExtAtlasTexturePath(unwrapped, externalResources)),
     [inlineAtlas, unwrapped, externalResources]
@@ -102,27 +65,22 @@ export function useTexture2D(
   );
 
   const atlas = inlineAtlas ?? extAtlas;
-  // A `.tres` file's ids are foreign to the scene referencing it, so its OWN
-  // `atlas` ref resolves against ITS OWN ext/sub-resource tables — never the
-  // referencing scene's, which the inline form uses instead.
+  // A `.tres` file's ids are its own, so its `atlas` ref resolves against its own resource tables.
   const externalResourcesForAtlas =
     extAtlas && extAtlasFile.value ? extAtlasFile.value.extResources : externalResources;
   const internalResourcesForAtlas =
     extAtlas && extAtlasFile.value ? extAtlasFile.value.subResources : internalResources;
 
-  // The sheet a window names is an ordinary Texture2D slot, so it gets the same
-  // unwrap; `unwrapped` is already at its fixed point. Still resolving the
-  // `.tres` file itself names nothing yet to peel or load.
+  // The sheet is an ordinary Texture2D slot, so it gets the same unwrap. A `.tres` still loading
+  // names nothing yet.
   const sourceRef = useMemo(() => {
     if (extAtlasPath && !extAtlas) return undefined;
     if (atlas) return unwrapCanvasTextureRef(atlas.texture.atlas, internalResourcesForAtlas);
     return unwrapped;
   }, [extAtlasPath, extAtlas, atlas, internalResourcesForAtlas, unwrapped]);
 
-  // Procedural first: it is described entirely by the scene, so it needs no
-  // file and resolves in the same tick the property is read. Shared and owned
-  // by the procedural cache, like any loader-supplied texture — borrowed here
-  // (pinned by the hook while mounted), never disposed.
+  // Procedural first: the scene describes it, so it resolves in the same tick. The procedural cache
+  // owns it, and this hook pins it while mounted and never disposes it.
   const procedural = useProceduralTexture(sourceRef, internalResourcesForAtlas);
 
   // `resolveExtResourcePath`, not `resolveTexture2DPath`: `sourceRef` is already
@@ -134,11 +92,8 @@ export function useTexture2D(
   const loaded = useResource<THREE.Texture>(path ?? '', 'texture');
   const source = procedural ?? loaded.value ?? null;
 
-  // Same borrow contract as the procedural branch: the crop is cache-owned and
-  // pinned for as long as this consumer is mounted. Keyed off the PARENT
-  // scene regardless of which form `atlas` came from — a re-parse of the
-  // scene being previewed is what should invalidate the crop, not a reload of
-  // an ext atlas's own (unrelated) `.tres`.
+  // The crop is cache-owned and pinned while mounted, like the procedural texture. Keyed on the
+  // previewed scene's resources: its re-parse invalidates the crop, a `.tres` reload does not.
   const cropped = useMemo(
     () => (atlas ? resolveAtlasTexture(atlas, source, internalResources) : null),
     [atlas, source, internalResources]
@@ -148,17 +103,14 @@ export function useTexture2D(
   if (!ref) return { texture: null, missing: false };
 
   if (extAtlasPath && !extAtlas) {
-    // The `.tres` itself hasn't resolved yet: nothing to show, not an error.
-    // A genuine failure — the file is missing, or is some other resource
-    // type — settles once `extAtlasFile` leaves 'pending'.
+    // Missing only once `extAtlasFile` leaves 'pending': the file is absent or another type.
     return { texture: null, missing: extAtlasFile.status !== 'pending' };
   }
 
   const sourceMissing = !procedural && (!path || loaded.status === 'unavailable');
   if (atlas) {
-    // A cell whose sheet is still loading shows nothing yet; a crop that could
-    // not be cut (a zero-area region) draws nothing, exactly as Godot's own
-    // `get_rect_region` decline does — neither is a resource error.
+    // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,
+    // draws nothing and is no resource error.
     return { texture: cropped?.texture ?? null, missing: sourceMissing };
   }
   if (procedural) return { texture: procedural, missing: false };
@@ -173,63 +125,36 @@ export interface Texture2DSize {
 }
 
 /**
- * The pixel size of a Texture2D slot whose answer is written in the SCENE —
- * without rasterising anything, without loading anything and without React: the
- * answer a Control's minimum-size solve needs, which runs outside any component
- * and so cannot call `useTexture2D`. Null for every reference form whose size
- * only the loader knows (an image path, an `ExtResource` image, a
- * `CanvasTexture` wrapping one) — an `ExtResource(AtlasTexture)` `.tres` among
- * them, since its region lives in a file this function does not load;
- * `extResourceAtlasTextureSize` below is its sibling for a caller that already
- * has that file parsed. Leaves the caller's cache lookup to answer the rest.
- *
- * Two forms carry their own size:
- *
- *  - `GradientTexture2D` — read from the DECLARED `width`/`height` rather than
- *    from a rasterised texture, for two reasons.
- *    `GradientTexture2D::get_width`/`get_height`
- *    (`scene/resources/gradient_texture.cpp`) return the authored members
- *    directly and never consult `gradient`, so a texture whose gradient does
- *    not resolve still occupies its full declared size in a container. And
- *    rasterising here would mint a `proceduralTextureCache` entry with no
- *    mounted consumer to pin it, so capacity eviction could dispose it out
- *    from under a component that IS holding it.
- *  - `AtlasTexture` — `get_width`/`get_height`
- *    (`scene/resources/atlas_texture.cpp:33-53`) report the REGION plus the
- *    margin, so a sheet cell reserves the cell's size and not the sheet's. Null
- *    when a region axis is zero, the one case Godot answers from the sheet.
+ * The pixel size of a Texture2D slot that the scene states, for a Control's minimum-size solve,
+ * which runs outside React. Null for a form only the loader can size: an image, a wrapper of one,
+ * or an AtlasTexture `.tres` (see `extResourceAtlasTextureSize`).
  */
 export function inlineTexture2DSize(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
 ): Texture2DSize | null {
-  // Unwrapped BEFORE the atlas lookup, exactly as the hook above does it: a
-  // CanvasTexture may wrap an AtlasTexture, and testing the raw ref would see
-  // only the wrapper and answer with the whole sheet's size.
+  // Unwrapped before the atlas lookup, as in the hook: the raw ref would answer the sheet's size.
   const unwrapped = unwrapCanvasTextureRef(ref, internalResources);
   const atlas = resolveAtlasTextureRef(unwrapped, internalResources);
   if (atlas) {
+    // Region plus margin (`scene/resources/atlas_texture.cpp:33-53`), so a cell reserves the
+    // cell's size. Null when a region axis is zero, where Godot uses the sheet.
     const layout = atlasTextureLayout(atlas.texture, null);
     return layout ? { x: layout.width, y: layout.height } : null;
   }
 
   const resource = resolveSubResourceRef(unwrapped, internalResources);
   if (resource?.type !== 'GradientTexture2D') return null;
+  // The declared size: Godot's getters (`scene/resources/gradient_texture.cpp`) never consult
+  // `gradient`, and rasterising here mints a cache entry no consumer pins, open to eviction.
   const { width, height } = decodeGradientTexture2D(resource.data as Record<string, string>);
   return { x: width, y: height };
 }
 
 /**
- * The pixel size of an `ExtResource(AtlasTexture)` `.tres` slot, once the file
- * itself is parsed — `inlineTexture2DSize`'s sibling for that one reference
- * form, which needs a load and so cannot answer from the scene alone. A
- * caller with a synchronous `ParsedResource`/texture cache instead of hooks
- * (`buildSolveTree.ts`'s minimum-size solve, in place of `useTexture2D`) can
- * pass `tres` once `loader.resources.getCached(path)` has it, and `sheetSize`
- * once `loader.textures.getCached(sheetPath)` does — both still to be wired
- * in there, since that solve has no access to either cache's OTHER entries
- * today. Null for a `.tres` whose own header names something other than
- * `AtlasTexture`, exactly like `decodeExtAtlasTextureRef`.
+ * The pixel size of an `ExtResource(AtlasTexture)` slot from its parsed `.tres`, for a caller with
+ * a synchronous cache instead of hooks. `sheetSize` answers a zero region axis, and null leaves it
+ * unanswered. Null for a `.tres` of another type, like `decodeExtAtlasTextureRef`.
  */
 export function extResourceAtlasTextureSize(
   tres: ParsedResource,

@@ -1,18 +1,9 @@
 [gd_scene load_steps=2 format=3]
 
-; `local_coords` under a SCALED emitter, the one place the flag is visible in a
-; still frame. Both emitters carry the same scale = Vector2(3, 3) and the same
-; particle settings; the global-coords one (Godot's default) draws its quads at
-; the texture's own pixel size because Godot spawns in canvas space and draws
-; the item with an identity transform, while the local-coords one is scaled up
-; by its node like any other CanvasItem.
-;
-; `preprocess = 0.95`, not `1.0`: with `lifetime = 1.0` a preprocess of exactly
-; one lifetime lands the settle right on the cycle's own wrap instant, where
-; the whole stream has just recycled back toward the origin — a degenerate
-; instant for ANY emitter, not something this fixture's own variable
-; (`local_coords`) produces. 0.95 is the same window the other unauthored-
-; preprocess fixture in this slice settles to, off that boundary.
+; `local_coords` under a scale = Vector2(3, 3) emitter, where a still frame shows it. Global coords
+; (the default) spawn in canvas space and draw at texture size. Local coords scale with the node.
+; `preprocess = 0.95`, not 1.0: one full lifetime lands on the cycle's wrap, where every emitter has
+; just recycled to the origin.
 
 [ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
 

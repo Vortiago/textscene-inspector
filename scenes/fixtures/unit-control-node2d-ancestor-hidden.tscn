@@ -1,8 +1,6 @@
-; A Control subtree under a HIDDEN Node2D ancestor — the ONE variable no other
-; fixture moves. A non-Control ancestor contributes no node of its own and its
-; Control descendants promote up, so a promoted Control that never consults the
-; ancestor's `visible` draws a panel Godot hides entirely. The visible sibling
-; exists only to prove the frame is not blank for some unrelated reason.
+; The one variable: a hidden Node2D ancestor over a Control subtree. The Control promotes past the
+; Node2D, so one that ignores the ancestor's `visible` draws a panel Godot hides. The visible sibling
+; proves the frame is not blank for another reason.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitctrlnode2dhidden"]
 

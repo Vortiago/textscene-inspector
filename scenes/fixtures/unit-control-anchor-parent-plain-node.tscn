@@ -1,10 +1,6 @@
-; The ONE variable: which rect a Control anchors against when the CanvasItem
-; chain BREAKS at its direct parent. A plain `Node` fails `get_parent_item()`'s
-; cast, so `data.parent_canvas_item` is null and `get_parent_anchorable_rect`
-; falls through to the viewport's own visible rect (control.cpp:685-711) —
-; the Control escapes the enclosing Panel and anchors to the screen. The
-; sibling fixture moves the same variable to a Node2D link, where the fallback
-; is the zero rect instead.
+; The one variable: the rect a Control anchors to when a plain Node breaks the CanvasItem chain. With
+; no parent item, get_parent_anchorable_rect falls back to the viewport rect (control.cpp:685-711), so
+; the Control escapes the Panel. The Node2D sibling fixture gets the zero rect instead.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitctrlanchorplain"]
 

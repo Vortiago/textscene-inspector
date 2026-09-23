@@ -1,11 +1,8 @@
 [gd_scene format=3 uid="uid://edge_navigation_region_3d_missing_mesh"]
 
-; `navigation_mesh` omitted entirely, while the region stays visible in the
-; tree. Demonstrates `navigationregion3d-requires-navigation-mesh`, a port of
-; `navigation_region_3d.cpp:252-260`'s own get_configuration_warnings(): with no
-; NavigationMesh set, Godot itself warns "A NavigationMesh resource must be set
-; or created for this node to work." One warning, zero errors; renders with no
-; baked navmesh geometry.
+; `navigation_mesh` omitted on a visible region. navigationregion3d-requires-navigation-mesh
+; ports Godot's own warning (navigation_region_3d.cpp:252-260). One warning, zero errors. It
+; renders no navmesh geometry.
 
 [node name="Root" type="Node3D"]
 

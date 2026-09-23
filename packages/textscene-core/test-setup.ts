@@ -1,13 +1,8 @@
 /// <reference types="vitest/globals" />
 
 /**
- * Test setup for @textscene/core.
- *
- * CI runners are slow and contended: full-shell mount tests (R3F canvas +
- * tree + inspector under happy-dom) can legitimately take longer than
- * testing-library's 1 s default `waitFor`/`findBy*` timeout there. Give CI
- * headroom; keep the strict 1 s locally so genuine slowdowns still surface
- * during development.
+ * Test setup for @textscene/core. A full-shell mount can outlast testing-library's 1 s async
+ * timeout on a contended CI runner, so CI gets 5 s. Local runs keep 1 s, so a real slowdown shows.
  */
 
 import { configure } from '@testing-library/react';

@@ -1,10 +1,7 @@
 [gd_scene load_steps=2 format=3 uid="uid://edge_animation_empty_library"]
 
-; A real (resolvable) AnimationLibrary SubResource with an empty `_data`
-; dict — zero clips, but not a dangling reference. No autoplay/current_animation
-; is set, so this lints completely clean (hasLibraries=true suppresses the
-; 'no animations' warning; there is no clip reference to flag as missing).
-; Render side: resolveAnimations returns [] — the player mounts, drives
+; A resolvable AnimationLibrary with an empty `_data`: zero clips, not a dangling reference.
+; No autoplay or current_animation is set, so it lints clean. The player mounts, drives
 ; nothing, and its sibling renders normally.
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_empty"]

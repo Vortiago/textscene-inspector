@@ -1,21 +1,8 @@
 /**
- * Static import-closure walker shared by the repo's boundary guards.
- *
- * Several packages assert that a given entry point never *value*-imports a
- * forbidden module (react/three, a Node builtin in a web worker, a `.tsx`
- * render component). Each guard walks the same thing — the transitive
- * static-import graph of an entry file, with type-only imports skipped because
- * the bundler erases them — so the walker lives here once. The guards keep
- * their own entry points, allowed lists, and assertions; they differ only in
- * the options below (which specifiers count as workspace, which files to skip,
- * how to label importers).
- *
- * The walker reads source text and matches import/export statements with a
- * regex rather than a full parser on purpose: it must agree with what the
- * bundler keeps in the runtime graph (statement-level `import`/`export … from`,
- * bare side-effect imports, and literal dynamic `import('…')` expressions;
- * `import type` erased), and a regex pins that contract without an AST
- * dependency.
+ * The static value-import closure of an entry file, for the boundary guards that keep react, three,
+ * a Node builtin or a `.tsx` component out of an entry point. A regex, not a parser: it matches what
+ * the bundler keeps (statements, side-effect imports, literal dynamic `import('…')`, but no
+ * `import type`) without an AST dependency.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -23,24 +10,16 @@ import { dirname, extname, relative, resolve } from 'node:path';
 import { stripComments } from './commentSpans';
 
 /**
- * Captures the specifier of any `import`/`export … from` statement and bare
- * side-effect imports. Group 2 is present for the type-only form
- * (`import type` / `export type`), which the bundler erases. Statement-level
- * only by design — inline `import { type X }` is deliberately not special-cased
- * so the walker keeps agreeing with the bundler's runtime graph.
+ * The specifier of an `import`/`export … from` statement or a side-effect import. Group 2 marks
+ * the erased `import type` / `export type` form. Statement level only: an inline
+ * `import { type X }` stays, as it does in the bundler's runtime graph.
  */
 const SPEC_RE = /(?:^|\n)\s*(import|export)\s+(type\s+)?(?:[^;'"]*?\sfrom\s*)?['"]([^'"]+)['"]/g;
 
 /**
- * Dynamic `import('…')` expressions with a literal specifier. The bundler
- * keeps these in the runtime graph (as lazy chunks), so a boundary guard that
- * ignored them would pass green while `await import('three')` ships the
- * forbidden module anyway. Computed specifiers can't be followed statically
- * and are out of contract. Group 1 captures a preceding `typeof` — the
- * `typeof import('…')` type-annotation form is erased by the compiler and
- * must be skipped, matching the `import type` handling above. Comments are
- * blanked before this scan (see stripComments) so prose mentioning
- * `import('x')` never enters the closure.
+ * A dynamic `import('…')` with a literal specifier, which the bundler keeps as a lazy chunk. A
+ * computed specifier is out of contract. Group 1 marks the erased `typeof import('…')` type form.
+ * The scan runs over stripComments output, so prose naming `import('x')` never enters.
  */
 const DYNAMIC_RE = /\b(typeof\s+)?import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
@@ -65,22 +44,16 @@ export const NODE_BUILTIN_RE =
 
 export interface WalkImportClosureOptions {
   /**
-   * Map a bare package specifier to an on-disk source root, so imports of a
-   * sibling workspace package resolve into its `src/`. A spec equal to the
-   * prefix resolves to `<root>/index`; `<prefix>/sub` resolves to `<root>/sub`.
+   * A bare package specifier to its on-disk source root, so a sibling workspace package resolves
+   * into its `src/`: the prefix alone is `<root>/index`, and `<prefix>/sub` is `<root>/sub`.
    */
   packageAliases?: Record<string, string>;
   /**
-   * Skip a resolved file entirely — it is neither recorded nor scanned for
-   * imports. Evaluated when the file is popped, so an excluded file's own
-   * imports never enter the closure.
+   * Skips a resolved file: it is neither recorded nor scanned, so its own imports never enter the
+   * closure.
    */
   exclude?: (absolutePath: string) => boolean;
-  /**
-   * Base directory for the importer labels in `bareValueImports` and
-   * `unresolved`. When set, labels are made relative to it; otherwise the
-   * absolute path is used.
-   */
+  /** The base directory importer labels are relative to. Unset, a label is the absolute path. */
   relativeTo?: string;
 }
 
@@ -93,13 +66,13 @@ export interface ImportClosure {
   unresolved: string[];
 }
 
-/** True when `spec` is expected to resolve to a workspace file (relative or aliased). */
+/** Whether `spec` should resolve to a workspace file, relative or aliased. */
 function isWorkspaceSpecifier(spec: string, aliases: Record<string, string>): boolean {
   if (spec.startsWith('.')) return true;
   return Object.keys(aliases).some((prefix) => spec === prefix || spec.startsWith(prefix + '/'));
 }
 
-/** Resolve a relative or aliased specifier to an on-disk source file, or null. */
+/** The on-disk source file of a relative or aliased specifier, or null. */
 function resolveSpecifier(
   fromFile: string,
   spec: string,
@@ -135,7 +108,7 @@ function resolveSpecifier(
   return candidates.find((c) => existsSync(c)) ?? null;
 }
 
-/** Walk the static *value*-import closure of `entry`. */
+/** The static value-import closure of `entry`. */
 export function walkImportClosure(
   entry: string,
   options: WalkImportClosureOptions = {}
@@ -172,14 +145,14 @@ export function walkImportClosure(
     const re = new RegExp(SPEC_RE.source, 'g');
     let m: RegExpExecArray | null;
     while ((m = re.exec(src)) !== null) {
-      const isTypeOnly = m[2] !== undefined; // `import type` / `export type` — erased by the bundler
+      const isTypeOnly = m[2] !== undefined; // the bundler erases `import type` and `export type`
       if (isTypeOnly) continue;
       follow(m[3]!);
     }
     const dyn = new RegExp(DYNAMIC_RE.source, 'g');
     const dynSrc = stripComments(src);
     while ((m = dyn.exec(dynSrc)) !== null) {
-      if (m[1] !== undefined) continue; // `typeof import('…')` — type-only, erased
+      if (m[1] !== undefined) continue; // `typeof import('…')` is type-only and erased
       follow(m[2]!);
     }
   }
@@ -191,7 +164,7 @@ export function bareSpecifiers(closure: ImportClosure): string[] {
   return [...closure.bareValueImports.keys()].sort();
 }
 
-/** The `.tsx` files reached by a closure — a render component leaking past a boundary. */
+/** The `.tsx` files reached by a closure: render components leaking past a boundary. */
 export function tsxFiles(closure: ImportClosure): string[] {
   return [...closure.files].filter((f) => f.endsWith('.tsx'));
 }

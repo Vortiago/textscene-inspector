@@ -1,9 +1,8 @@
 [gd_scene format=3]
 
-; Bone2D's five own properties at valid values, in the parent chain Godot
-; requires: a bone reaches its skeleton by walking up through Bone2D parents.
-; auto_calculate_length_and_angle = false is what makes length and bone_angle
-; serialise at all (skeleton_2d.cpp:87); bone_angle is stored in DEGREES.
+; Bone2D's five own properties at valid values, in the parent chain Godot requires: a bone reaches
+; its skeleton by walking up through Bone2D parents. auto_calculate_length_and_angle = false makes
+; length and bone_angle serialise at all (skeleton_2d.cpp:87). bone_angle is stored in degrees.
 
 [node name="Root" type="Node2D"]
 

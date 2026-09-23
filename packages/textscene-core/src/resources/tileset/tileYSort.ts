@@ -1,9 +1,6 @@
 /**
- * tileYSort.ts — pure functions for Godot Y-sort on TileMapLayer cells.
- *
- * `groupBySortY` groups placed cells into per-sort-Y buckets, sorted low-Y
- * (far back) to high-Y (front). Used by the y-sort collector when it
- * encounters a y-sorted TileMapLayer child.
+ * Godot's Y-sort for TileMapLayer cells. `groupBySortY` buckets placed cells by sort Y, from low
+ * (back) to high (front), for the y-sort collector's y-sorted TileMapLayer children.
  */
 
 import type { TileGrid } from './types';

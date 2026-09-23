@@ -1,10 +1,7 @@
 [gd_scene load_steps=2 format=3 uid="uid://edge_negative_scale"]
 
-; Parent Node3D with a negative-X basis (Godot's "scale_x = -1", a common
-; mirroring trick) and a plain BoxMesh child. Exercises decomposeTransform3D's
-; reflection handling (negative determinant folds into scale.x, three.js
-; convention) all the way through the render path: the box should render
-; mirrored on X with an otherwise-identity rotation, not skewed or missing.
+; A parent Node3D with a negative-X basis (scale_x = -1) over a BoxMesh child. decomposeTransform3D
+; folds the negative determinant into scale.x, so the box renders mirrored on X, not skewed.
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]
 size = Vector3(1, 1, 1)

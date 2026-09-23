@@ -1,15 +1,6 @@
-; An AnimatedSprite2D whose SpriteFrames are AtlasTexture regions of one sheet.
-;
-; The one variable: whether a SpriteFrames frame that is an AtlasTexture draws
-; the region it names. The sheet's four quadrants differ, so a frame reading the
-; wrong window — or the whole sheet — is a different picture rather than a
-; shifted one.
-;
-; A regression here is invisible in every other scene because this is the only
-; golden whose texture reaches the atlas decode through SpriteFrames rather than
-; a plain Texture2D slot. The two paths share the decode but not the pools the
-; reference resolves against, so the shared path can be exact while this one
-; resolves to nothing and still leave every other capture untouched.
+; The one variable: whether a SpriteFrames frame that is an AtlasTexture draws the region it names.
+; The sheet's quadrants differ, so a wrong window is a different picture. No other golden reaches
+; the atlas decode through SpriteFrames, whose pools differ from a plain Texture2D slot's.
 
 [gd_scene load_steps=7 format=3 uid="uid://unit_animatedsprite2d_atlas"]
 

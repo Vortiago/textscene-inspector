@@ -1,11 +1,7 @@
-; The ONE variable: `internationalization/rendering/force_right_to_left_layout_direction`,
-; which lives in this directory's own project.godot because no .tscn can carry
-; a project setting. Both rows say `layout_direction = 1` (APPLICATION_LOCALE);
-; `Control::is_layout_rtl` reads the force flag ahead of the locale on that arm
-; (control.cpp:3610-3614), so the flag alone decides the answer and the locale —
-; which this previewer cannot read off the host — never enters. Invisible in
-; every loose fixture: without a project.godot the flag is false and this scene
-; renders exactly like its left-to-right neighbour.
+; The one variable: `internationalization/rendering/force_right_to_left_layout_direction`, set in
+; this directory's project.godot. Both rows use `layout_direction = 1` (APPLICATION_LOCALE), where
+; `Control::is_layout_rtl` reads the flag ahead of the locale (control.cpp:3610-3614). Without a
+; project.godot the flag is false, so a loose fixture renders this like its LTR neighbour.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitctrlldforce"]
 
