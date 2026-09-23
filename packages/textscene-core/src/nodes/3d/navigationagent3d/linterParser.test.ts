@@ -1,13 +1,8 @@
 /**
- * NavigationAgent3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * NavigationAgent3D strict validators, asserted through `validatorRegistry` so a
+ * failure points at the validator rather than at scene parsing. Rule-level
+ * behaviour belongs in linter.test.ts. Quote the governing Godot source line
+ * beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -20,10 +15,9 @@ import './linterParser';
 const check = checkerFor('NavigationAgent3D');
 
 /**
- * Every key NavigationAgent3D binds via `ADD_PROPERTY`, across the
- * Pathfinding (navigation_agent_3d.cpp:154-168), Avoidance (:171-184) and
- * Debug (:203-206) groups. None carries `overrides=` in
- * doc/classes/NavigationAgent3D.xml, so all 33 get a validator here.
+ * Every key NavigationAgent3D binds with `ADD_PROPERTY`: Pathfinding
+ * (navigation_agent_3d.cpp:154-168), Avoidance (:171-184) and Debug (:203-206).
+ * None carries `overrides=` in doc/classes/NavigationAgent3D.xml.
  */
 const KEYS: string[] = [
   'target_position',
@@ -60,12 +54,12 @@ const KEYS: string[] = [
   'debug_path_custom_color',
   'debug_path_custom_point_size',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys NavigationAgent3D does NOT declare, each paired with the ancestor that does.
- * NavigationAgent3D's base is plain `Node` (nodeBaseTypes.generated.ts:146).
+ * Keys NavigationAgent3D inherits, each with the ancestor that declares it. Its
+ * base is plain `Node` (nodeBaseTypes.generated.ts:146).
  */
 const INHERITED: [owner: string, key: string][] = [
   ['Node', 'process_mode'],
@@ -83,17 +77,14 @@ describe('NavigationAgent3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // Runs the fixture's zero-diagnostic claim against what this test imports.
+    // `fixtureLint` covers the whole registry but needs the barrel.
     expectFixtureClean('unit-navigation-agent-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // NavigationAgent3D declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose is not validating a format. Vacuous
+    // when NavigationAgent3D declares nothing, which INHERITED covers.
     const accepted = validatorRegistry
       .getOwnKeys('NavigationAgent3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -108,14 +99,14 @@ describe('NavigationAgent3D strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
+      // The same function, not merely some validator: a shadowing copy on
       // NavigationAgent3D would answer here while drifting from the ancestor's rule.
       expect(validatorRegistry.findValidator('NavigationAgent3D', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('NavigationAgent3D')).not.toContain(key);
     }
   });
 
-  // --- Pathfinding ---
+  // Pathfinding group.
 
   describe('target_position', () => {
     it('accepts a Vector3 literal', () => {
@@ -292,7 +283,7 @@ describe('NavigationAgent3D strict validators', () => {
     });
   });
 
-  // --- Avoidance ---
+  // Avoidance group.
 
   describe('avoidance_enabled', () => {
     it('accepts true and false', () => {
@@ -481,7 +472,7 @@ describe('NavigationAgent3D strict validators', () => {
     });
   });
 
-  // --- Debug ---
+  // Debug group.
 
   describe('debug_enabled', () => {
     it('accepts true and false', () => {

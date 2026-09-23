@@ -1,6 +1,4 @@
-/**
- * Tests for the MeshInstance3D property formatter.
- */
+/** MeshInstance3D property formatter tests. */
 
 import { describe, it, expect } from 'vitest';
 import { formatMeshInstance3DProperties } from './propertyFormatter';

@@ -1,10 +1,7 @@
 /**
- * CPUParticles3D semantic rule: the `mesh` reference must resolve, and its
- * absence is a warning (renders nothing per get_configuration_warnings,
- * cpu_particles_3d.cpp:233-235), not an error — a meshless CPUParticles3D is
- * legal Godot, just invisible. Mirrors GridMap's `mesh_library` rule
- * (nodes/3d/gridmap/linter.ts) and MeshInstance3D's `mesh` rule
- * (nodes/3d/meshinstance3d/linter.ts). Format validation lives in
+ * CPUParticles3D semantic rule: the `mesh` reference must resolve, and a missing
+ * one warns (get_configuration_warnings, cpu_particles_3d.cpp:233-235), since a
+ * meshless CPUParticles3D is legal but invisible. Format validation lives in
  * linterParser.ts.
  */
 

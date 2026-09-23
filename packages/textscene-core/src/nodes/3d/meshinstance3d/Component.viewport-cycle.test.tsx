@@ -1,10 +1,7 @@
 /**
- * A MeshInstance3D whose StandardMaterial3D `albedo_texture` is a
- * `ViewportTexture` naming a viewport stuck in an unrenderable pass cycle
- * (`ViewportPassRegistryContext`'s cycle fallback) must not sample the
- * published-but-never-written GPU texture — it must take the SAME
- * magenta-placeholder fallback a missing texture takes, routed through the
- * shared choke point, `useViewportTextureSlot`
+ * An `albedo_texture` `ViewportTexture` whose viewport sits in a pass cycle
+ * never samples the unwritten GPU texture. It takes the missing-texture magenta
+ * placeholder through `useViewportTextureSlot`
  * (`resources/textures/viewporttexture/useViewportTextureSlot.ts`).
  */
 import { describe, expect, it, vi } from 'vitest';
@@ -62,7 +59,7 @@ const INTERNAL_RESOURCES: TscnInternalResource[] = [
   },
 ];
 
-/** Publishes an entry at `path` — proving a cyclic target's stale texture is never sampled. */
+/** Publishes an entry at `path`, so the test proves a cyclic target's texture is never sampled. */
 function Publisher({ path, texture }: { path: string; texture: THREE.Texture }) {
   const register = useRegisterViewportTexture();
   useEffect(

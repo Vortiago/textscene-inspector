@@ -1,6 +1,4 @@
-/**
- * MeshInstance3D property formatter - formats mesh and material properties for display.
- */
+/** Formats a MeshInstance3D's mesh and material properties for display. */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { MeshInstance3DProperties } from './types';
@@ -51,7 +49,6 @@ export function formatMeshInstance3DProperties(properties: MeshInstance3DPropert
     });
   }
 
-  // Include inherited Node3D transform properties
   sections.push(...formatNode3DProperties(properties));
 
   return sections;

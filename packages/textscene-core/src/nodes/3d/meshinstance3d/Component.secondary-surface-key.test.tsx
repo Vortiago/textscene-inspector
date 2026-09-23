@@ -1,10 +1,8 @@
 /**
- * The `material-N` (N > 0) slot is mounted like any other React element, so a
- * `.tscn` re-parse mutates props on the material three already compiled. It
- * re-derives its baked program parameters (`WebGLPrograms.js:56`
- * `getParameters`) only on a `material.version` bump or one of
- * `WebGLRenderer.js:2388`'s fixed re-checks, so the slot's key must carry every
- * parameter an edit can move — here the `opaque` composite and the side flags.
+ * A `material-N` (N > 0) slot's key carries every baked program parameter an edit
+ * can move, here the `opaque` composite and the side flags. A re-parse mutates the
+ * compiled material, and three re-derives parameters (`WebGLPrograms.js:56`) only on
+ * a `material.version` bump or `WebGLRenderer.js:2388`'s fixed re-checks.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -26,7 +24,7 @@ function makeNode(): TscnNode {
   return { name: 'Panel', type: 'MeshInstance3D', children: [], properties: props };
 }
 
-/** Whether surface 1 got a DIFFERENT THREE.Material after the edit. */
+/** Whether surface 1 got a different THREE.Material after the edit. */
 async function rebuilds(
   before: Record<string, string>,
   after: Record<string, string>

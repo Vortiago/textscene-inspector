@@ -16,7 +16,7 @@ import {
 import './linterParser';
 import './linter';
 
-/** Sub-resource heading the kit can't model; appended so accept cases have a valid process_material. */
+/** A sub-resource heading the kit cannot model, so accept cases have a valid process_material. */
 const PROCESS_MATERIAL = '[sub_resource type="ParticleProcessMaterial" id="process_1"]';
 /** A mesh sub-resource so accept cases also carry a draw_pass_1, quieting gpuparticles3d-no-draw-pass-mesh. */
 const DRAW_PASS_MESH = '[sub_resource type="QuadMesh" id="mesh_1"]';
@@ -128,8 +128,8 @@ describe('GPUParticles3D Linter', () => {
         ],
       },
       {
-        // gpu_particles_3d.cpp:834 hints "0,1000,1,suffix:FPS" (closed
-        // ceiling 1000, not 120); set_fixed_fps:309-312 is a bare assignment.
+        // gpu_particles_3d.cpp:834 hints "0,1000,1,suffix:FPS". set_fixed_fps:309-312 is a
+        // bare assignment.
         prop: 'fixed_fps',
         valid: [0, 30, 60, 90, 120, 150, 1000],
         invalid: [{ value: -1, contains: ['between 0 and 1000'] }],
@@ -229,7 +229,7 @@ draw_pass_1 = SubResource("mesh_1")
       });
 
       it('should reject invalid resource reference format', () => {
-        // Will have 2 errors: format error + missing valid process_material
+        // The missing-material warning fires beside the format error.
         expectDiagnostic(createTestScene('process_material = "invalid_format"'), {
           prop: 'resource reference',
         });
@@ -257,11 +257,9 @@ draw_pass_1 = SubResource("mesh_1")
       });
 
       it('should accept the literal null (an empty pass) as a format', () => {
-        // Godot writes `null` for a draw_pass_N index its own
-        // `_validate_property` makes newly visible with no mesh assigned
-        // (scenes/demos/3d/particles/test.tscn ships `draw_pass_2 = null`).
-        // `gpuparticles3d-no-draw-pass-mesh` still warns separately (no mesh
-        // set anywhere) — that is the semantic rule, not the format check.
+        // Godot writes `null` for a draw_pass_N index that `_validate_property` exposes
+        // with no mesh. `gpuparticles3d-no-draw-pass-mesh` still warns: that is the
+        // semantic rule, not the format check.
         expectNoDiagnostic(createTestScene('draw_pass_1 = null'), {
           ruleName: 'strict-parser',
         });
@@ -270,7 +268,7 @@ draw_pass_1 = SubResource("mesh_1")
 
     describe('sub_emitter validation', () => {
       it('should accept valid NodePath format', () => {
-        // Will have 1 semantic error (node not found) but NO format error
+        // The missing target is an info from the semantic rule, never a format error.
         expectNoDiagnostic(createTestScene('sub_emitter = NodePath("SubEmitter")'), {
           ruleName: 'strict-parser',
         });
@@ -526,10 +524,9 @@ sub_emitter = NodePath("../SubEmitter")
 `);
     });
 
-    // `_attach_sub_emitter` casts the node it walked to and then drops it when
-    // it IS this node: `if (sen && sen != this)` (gpu_particles_3d.cpp:485-486).
-    // The path resolves and is stored, so nothing is refused — the emitter just
-    // never becomes its own sub-emitter.
+    // `_attach_sub_emitter` drops a node that is this one: `if (sen && sen != this)`
+    // (gpu_particles_3d.cpp:485-486). The path is stored and nothing is refused, but the
+    // emitter never becomes its own sub-emitter.
     it.each(['NodePath(".")', 'NodePath("../Particles")'])(
       'reports when sub_emitter %s points back at the node itself',
       (path) => {
@@ -698,7 +695,7 @@ interp_to_end = 0.3
     });
 
     it('should handle node with no properties', () => {
-      // Should error because process_material is missing
+      // The missing process_material warns.
       expectDiagnostic(
         `[gd_scene format=3]
 

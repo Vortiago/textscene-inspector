@@ -1,27 +1,21 @@
 /**
- * MultiMeshInstance3D strict validators for linting.
- *
- * Declare only MultiMeshInstance3D's OWN members — the ones doc/classes/MultiMeshInstance3D.xml
- * lists without an `overrides=` attribute. Everything from GeometryInstance3D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
- *
- * This class binds exactly one property. Confirmed via all four routes:
- * `_bind_methods` in scene/3d/multimesh_instance_3d.cpp has a single ADD_PROPERTY;
- * no PropertyListHelper/register_property, no ADD_ARRAY_COUNT, no `_set`/`_get`/
- * `get_property_list` override (grepped both spellings) anywhere in
- * multimesh_instance_3d.cpp or .h, and there is no `.compat.inc` for this class.
+ * MultiMeshInstance3D strict validators for linting: only its own members, the ones
+ * doc/classes/MultiMeshInstance3D.xml lists without `overrides=`. The NODE_BASE_TYPES
+ * base-walk delivers everything from GeometryInstance3D up, so re-declaring an inherited key
+ * shadows it and duplicates the rule.
  */
+
+// The class binds one property: scene/3d/multimesh_instance_3d.cpp has one ADD_PROPERTY, and
+// neither multimesh_instance_3d.cpp nor its header has a PropertyListHelper,
+// `register_property`, ADD_ARRAY_COUNT, `_set`/`_get` or `get_property_list`. No
+// `.compat.inc` exists.
 
 import '../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('MultiMeshInstance3D', {
-  // scene/3d/multimesh_instance_3d.cpp:57, ADD_PROPERTY(PropertyInfo(Variant::OBJECT,
-  // "multimesh", PROPERTY_HINT_RESOURCE_TYPE, "MultiMesh"), "set_multimesh",
-  // "get_multimesh"). set_multimesh (:66-74) is a bare assignment — no clamp, no
-  // ERR_FAIL — so only the reference SHAPE is checked, same as GeometryInstance3D's
-  // material_overlay/material_override.
+  // scene/3d/multimesh_instance_3d.cpp:57, PROPERTY_HINT_RESOURCE_TYPE "MultiMesh".
+  // set_multimesh (:66-74) is a bare assignment, so only the reference shape is checked.
   multimesh: v.resourceReference('multimesh'),
 });

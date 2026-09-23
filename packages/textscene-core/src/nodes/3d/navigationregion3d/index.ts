@@ -1,5 +1,5 @@
 /**
- * NavigationRegion3D registration — parser.
+ * NavigationRegion3D registration: parser.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

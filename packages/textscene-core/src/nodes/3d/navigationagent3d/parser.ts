@@ -1,6 +1,6 @@
 /**
- * NavigationAgent3D parser — extends the Node base parse with the
- * avoidance/path property surface.
+ * NavigationAgent3D parser: the Node base parse plus the avoidance and path
+ * properties.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

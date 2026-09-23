@@ -1,9 +1,7 @@
 /**
- * Tests for the missing-texture chain.
- *
- * Verifies that `<MeshInstance3D>` walks `material_override → SubResource
- * StandardMaterial3D → ExtResource Texture2D` and renders a magenta
- * placeholder when the texture comes back missing from `useResource`.
+ * `<MeshInstance3D>` walks `material_override → SubResource StandardMaterial3D →
+ * ExtResource Texture2D` and renders a magenta placeholder when `useResource`
+ * reports the texture missing.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -94,10 +92,8 @@ describe('<MeshInstance3D> missing-texture chain (WI-R3F-7 / WEB-03/04/05)', () 
 
     const renderer = await renderInLoader(node, internalResources, externalResources, loader);
 
-    // Let the synchronous chain settle: useResource fires `request()`
-    // which routes through FileEventBus.loadAsync (Promise) which
-    // returns null and emits `texture:failed`. The hook flips to
-    // `missing`, and a React re-render swaps to the magenta material.
+    // `request()` resolves through FileEventBus.loadAsync to null and emits
+    // `texture:failed`, so the hook turns `missing` and a re-render swaps in magenta.
     await new Promise<void>((r) => setTimeout(r, 50));
     await renderer.update(
       <ResourceLoaderProvider loader={loader}>
@@ -113,7 +109,7 @@ describe('<MeshInstance3D> missing-texture chain (WI-R3F-7 / WEB-03/04/05)', () 
     const materials = renderer.scene.findAllByType('MeshStandardMaterial');
     const magenta = materials.find((m) => {
       const color = materialInstanceAs<THREE.MeshStandardMaterial>(m).color;
-      // "magenta" in CSS is the same as r=1, g=0, b=1 in linear-ish space.
+      // CSS "magenta" is r=1, g=0, b=1 in linear space too.
       return color.r > 0.9 && color.g < 0.1 && color.b > 0.9;
     });
     expect(magenta).toBeDefined();
@@ -126,8 +122,7 @@ describe('<MeshInstance3D> missing-texture chain (WI-R3F-7 / WEB-03/04/05)', () 
     const loader = new ResourceLoader(bus);
     loader.setProvider(provider);
 
-    // Spy on the texture processor's request() so we can confirm
-    // the hook resolved the ExtResource("1") chain to the path.
+    // The spy confirms the hook resolved the ExtResource("1") chain to the path.
     let requestedPath: string | undefined;
     const originalRequest = loader.textures.request.bind(loader.textures);
     loader.textures.request = (path: string) => {

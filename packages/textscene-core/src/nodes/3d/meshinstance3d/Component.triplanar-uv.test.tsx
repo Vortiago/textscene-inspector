@@ -1,10 +1,7 @@
 /**
- * World-triplanar planar tiling. Hallway floor/ceiling planes
- * use `uv1_world_triplanar = true`, where Godot tiles the texture once per
- * world unit × uv1_scale. We don't run a triplanar shader, but for a PlaneMesh
- * the tiling density is reproduced exactly by setting `repeat = size × scale`.
- * Before this, the floor texture stretched a single copy across the whole
- * 12×3.5 plane and read as "too big".
+ * World-triplanar tiling on a PlaneMesh. With `uv1_world_triplanar = true`, Godot
+ * tiles the texture once per world unit × uv1_scale. No triplanar shader runs
+ * here, but `repeat = size × scale` reproduces the density exactly.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -77,8 +74,7 @@ describe('MeshInstance3D — triplanar planar tiling (WI-HALL-5)', () => {
   });
 
   it('NON-triplanar plane keeps uv1_scale as the literal repeat (no size multiply)', async () => {
-    // Regression guard: the size-multiply must only fire for triplanar
-    // materials, or every existing uv1_scale assertion (40–47) would break.
+    // The size multiply applies only to a triplanar material.
     const mat = await renderFloor(
       { albedo_texture: 'ExtResource("1")', uv1_scale: 'Vector3(2, 2, 1)' },
       'Vector2(12, 3.5)'

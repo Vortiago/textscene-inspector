@@ -1,12 +1,7 @@
 /**
- * Strict-verification harness (group C) — 14 assertions covering
- * StandardMaterial3D scalar properties (color, metallic, roughness,
- * opacity, emission, transparency, blend_mode, cull_mode).
- *
- *
- * Several of these test for properties Godot exposes but our R3F port may
- * not have wired up yet. Failures here are the inventory of silent
- * feature-misses.
+ * StandardMaterial3D scalar properties on the rendered material: colour,
+ * metallic, roughness, opacity, emission, transparency, blend_mode and
+ * cull_mode.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -62,11 +57,8 @@ async function renderWithMaterial(
 describe('StandardMaterial3D scalars (assertions 18–31)', () => {
   it('#18 albedo_color RGB → material.color matches (sRGB → linear, WI-HALL-2)', async () => {
     const mat = await renderWithMaterial({ albedo_color: 'Color(0.5, 0.25, 0.75, 1)' });
-    // Godot encodes colors in sRGB; we convert to linear so
-    // three.js's sRGB output transform doesn't double-encode and the
-    // user sees the true mid-tone (not bright-pink). Assert the
-    // sRGB → linear conversion happened: 0.5 → ~0.214, 0.25 → ~0.0508,
-    // 0.75 → ~0.523. Strictly different from the original sRGB inputs.
+    // Godot stores colours in sRGB, converted to linear so three's sRGB output does not
+    // encode them twice: 0.5 → ~0.214, 0.25 → ~0.0508, 0.75 → ~0.523.
     expect(mat.color.r).toBeCloseTo(0.21404, 4);
     expect(mat.color.g).toBeCloseTo(0.05088, 4);
     expect(mat.color.b).toBeCloseTo(0.52252, 4);

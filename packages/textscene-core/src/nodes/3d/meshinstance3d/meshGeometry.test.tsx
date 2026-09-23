@@ -1,11 +1,8 @@
 /**
- * Unit tests for `MeshGeometry` — the sub_resource-type → three.js geometry
- * dispatch, rendered in isolation (a bare `<mesh>` wrapper, no
- * SceneResourcesProvider). Complements `Component.mesh-primitives.test.tsx`,
- * which goes through the full MeshInstance3D component; here the focus is
- * the dispatch table itself plus the parameter math NOT covered there:
- * hemisphere theta, cylinder cap semantics, capsule height clamping, torus
- * segment mapping, and prism radius/subdivision mapping.
+ * `MeshGeometry`'s dispatch from sub-resource type to three.js geometry, in a bare
+ * `<mesh>`, plus the parameter math `Component.mesh-primitives.test.tsx` leaves out:
+ * hemisphere theta, cylinder caps, capsule height clamping and the torus and prism
+ * mappings.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -215,10 +212,9 @@ describe('TorusMesh radii mapping', () => {
   });
 
   it('lies flat in the XZ plane (hole facing +Y), matching Godot — not three\'s upright default', async () => {
-    // inner=1, outer=3 → center radius 2, tube 1. three's unrotated TorusGeometry
-    // stands upright (thin in Z, tall in Y); Godot's TorusMesh lies flat. The π/2
-    // rotateX bakes that in, so the ring spans XZ (max.z ≈ radius+tube = 3) and is
-    // thin along Y (max.y ≈ tube = 1). If the rotation were missing these swap.
+    // inner=1, outer=3 → centre radius 2, tube 1. three's TorusGeometry stands upright
+    // and Godot's TorusMesh lies flat, so a π/2 rotateX lays the ring in XZ
+    // (max.z ≈ 3) and thin along Y (max.y ≈ 1).
     const geometry = await renderGeometry(sub('TorusMesh', { inner_radius: '1', outer_radius: '3' }));
     geometry.computeBoundingBox();
     const box = geometry.boundingBox!;
@@ -230,7 +226,7 @@ describe('TorusMesh radii mapping', () => {
 });
 
 describe('PrismMesh', () => {
-  /** X of every vertex on the prism's top plane — its apex line. */
+  /** X of every vertex on the prism's top plane, its apex line. */
   function apexXs(geometry: THREE.BufferGeometry, topY: number): number[] {
     const position = geometry.getAttribute('position');
     const xs: number[] = [];

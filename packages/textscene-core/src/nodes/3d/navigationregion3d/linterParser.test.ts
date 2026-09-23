@@ -1,15 +1,8 @@
 /**
- * NavigationRegion3D strict validators — format and bound checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * NavigationRegion2D carries the SAME five keys and answers identically here,
- * except `navigation_layers`' hint index (2D_NAVIGATION vs 3D_NAVIGATION,
- * navigation_region_2d.cpp:350 vs this file's :301) — the verdict (hinted
- * 32-bit mask, warning) does not change, only the cited line.
+ * NavigationRegion3D strict validators, asserted through `validatorRegistry` so a
+ * failure points at the validator rather than at scene parsing. NavigationRegion2D
+ * answers the same keys identically, citing navigation_region_2d.cpp:350 for
+ * `navigation_layers` where this slice cites :301.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -25,7 +18,7 @@ function check(property: string, value: string) {
 
 describe('NavigationRegion3D strict validators', () => {
   describe('enabled', () => {
-    // navigation_region_3d.cpp:299 — plain BOOL, no hint.
+    // navigation_region_3d.cpp:299: plain BOOL, no hint.
     it('accepts "true" and "false"', () => {
       expect(check('enabled', 'true')).toBeNull();
       expect(check('enabled', 'false')).toBeNull();
@@ -39,7 +32,7 @@ describe('NavigationRegion3D strict validators', () => {
   });
 
   describe('use_edge_connections', () => {
-    // navigation_region_3d.cpp:300 — plain BOOL, no hint.
+    // navigation_region_3d.cpp:300: plain BOOL, no hint.
     it('accepts "true" and "false"', () => {
       expect(check('use_edge_connections', 'true')).toBeNull();
       expect(check('use_edge_connections', 'false')).toBeNull();
@@ -53,9 +46,8 @@ describe('NavigationRegion3D strict validators', () => {
   });
 
   describe('navigation_layers', () => {
-    // navigation_region_3d.cpp:301 — PROPERTY_HINT_LAYERS_3D_NAVIGATION.
-    // set_navigation_layers (:95-103) only short-circuits on an unchanged
-    // value; otherwise it is a bare assignment, so out-of-range warns.
+    // navigation_region_3d.cpp:301: PROPERTY_HINT_LAYERS_3D_NAVIGATION.
+    // set_navigation_layers (:95-103) is a bare assignment, so out-of-range warns.
     it('accepts a single-layer mask', () => {
       expect(check('navigation_layers', '1')).toBeNull();
     });
@@ -87,17 +79,15 @@ describe('NavigationRegion3D strict validators', () => {
     });
   });
 
-  // Both are plain FLOATs with NO PROPERTY_HINT_RANGE, yet both setters open with
-  // ERR_FAIL_COND_MSG(cost < 0.0) — navigation_region_3d.cpp:132 and :147 — so the floor is
-  // ENFORCED and comes from the setter guard rather than from ADD_PROPERTY. The
-  // ADD_PROPERTY cite and the negative sample stay columns.
+  // Both are plain FLOATs with no range hint, but both setters refuse cost < 0.0
+  // (navigation_region_3d.cpp:132 and :147), so the setter guard enforces the floor.
   describe.each([
     ['enter_cost', 'navigation_region_3d.cpp:302', 'ENTER_COST', '-0.01'],
     ['travel_cost', 'navigation_region_3d.cpp:303', 'TRAVEL_COST', '-1'],
   ])('%s — %s, plain FLOAT with NO PROPERTY_HINT_RANGE', (property, _cite, code, negative) => {
     it('accepts zero, a positive float, and the non-finite spellings Godot writes', () => {
-      // `nan < 0.0` is false in both C++ and JS, so the setter's guard lets
-      // `nan` through; there is no ceiling for `inf` to trip.
+      // `nan < 0.0` is false in C++ and JS, so the guard lets `nan` through, and `inf`
+      // has no ceiling to trip.
       expect(check(property, '0')).toBeNull();
       expect(check(property, '1000')).toBeNull();
       expect(check(property, 'inf')).toBeNull();

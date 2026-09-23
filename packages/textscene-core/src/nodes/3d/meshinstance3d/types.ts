@@ -1,55 +1,49 @@
-/**
- * MeshInstance3D-specific type definitions
- */
+/** MeshInstance3D type definitions. */
 
 import type { Node3DProperties } from '../../base/node3d/types';
 
-/**
- * MeshInstance3D node properties
- *
- * Extends Node3D with mesh rendering capabilities
- */
+/** MeshInstance3D node properties. */
 export interface MeshInstance3DProperties extends Node3DProperties {
-  /** Reference to mesh resource (SubResource or ExtResource) */
+  /** The mesh resource reference, a SubResource or an ExtResource. */
   mesh?: string;
 
-  /** Material overrides indexed by surface number */
+  /** Material overrides by surface index. */
   surfaceMaterialOverrides: Map<number, string>;
 
-  /** Material that overrides all surface materials */
+  /** The material that overrides every surface material. */
   materialOverride?: string;
 
-  /** Material applied on top of surface materials */
+  /** The material drawn on top of the surface materials. */
   materialOverlay?: string;
 
-  /** Shadow casting behavior (0=OFF, 1=ON, 2=DOUBLE_SIDED, 3=SHADOWS_ONLY) */
+  /** Shadow casting (0=OFF, 1=ON, 2=DOUBLE_SIDED, 3=SHADOWS_ONLY). */
   castShadow?: number;
 
-  /** Path to Skeleton3D node for skeletal animation */
+  /** The Skeleton3D node path for skeletal animation. */
   skeleton?: string;
 
-  /** Reference to Skin resource for skeletal animation */
+  /** The Skin resource reference for skeletal animation. */
   skin?: string;
 
-  /** Global illumination mode (0=DISABLED, 1=STATIC, 2=DYNAMIC) */
+  /** Global illumination mode (0=DISABLED, 1=STATIC, 2=DYNAMIC). */
   giMode?: number;
 
-  /** Lightmap detail scale (0=1x, 1=2x, 2=4x, 3=8x) */
+  /** Lightmap detail scale (0=1x, 1=2x, 2=4x, 3=8x). */
   giLightmapScale?: number;
 
-  /** Visibility range start distance (LOD) */
+  /** Visibility range start distance, for LOD. */
   visibilityRangeBegin?: number;
 
-  /** Fade margin at visibility range start */
+  /** Fade margin at the visibility range start. */
   visibilityRangeBeginMargin?: number;
 
-  /** Visibility range end distance (LOD) */
+  /** Visibility range end distance, for LOD. */
   visibilityRangeEnd?: number;
 
-  /** Fade margin at visibility range end */
+  /** Fade margin at the visibility range end. */
   visibilityRangeEndMargin?: number;
 
-  /** Visibility range fade mode (0=DISABLED, 1=SELF, 2=DEPENDENCIES) */
+  /** Visibility range fade mode (0=DISABLED, 1=SELF, 2=DEPENDENCIES). */
   visibilityRangeFadeMode?: number;
 
   /** Render layer bitmask (32 bits; the editor exposes the first 20). */

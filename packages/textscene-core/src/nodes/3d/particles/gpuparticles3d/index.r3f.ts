@@ -1,5 +1,5 @@
 /**
- * No particles are drawn yet, so the intent is `pending` and the badge reads
+ * No particles are drawn, so the intent is `pending` and the badge reads
  * "not implemented". The Node3D base still mounts: it carries `visible` and
  * keeps the emitter's subtree in the 3D workspace, neither of which survives
  * falling through to `GenericNodeFallback`.

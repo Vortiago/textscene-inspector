@@ -1,13 +1,8 @@
 /**
- * NavigationLink3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * NavigationLink3D strict validators, asserted through `validatorRegistry` so a
+ * failure points at the validator rather than at scene parsing. Rule-level
+ * behaviour belongs in linter.test.ts. Quote the governing Godot source line
+ * beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,9 +18,8 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * NavigationLink3D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * The keys NavigationLink3D binds, read from the source. Set this or DECLARES_NOTHING:
+ * both unset fails on purpose. Never delete an assertion to pass.
  */
 const KEYS: string[] = [
   'enabled',
@@ -36,20 +30,14 @@ const KEYS: string[] = [
   'enter_cost',
   'travel_cost',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys NavigationLink3D does NOT declare, each paired with the ancestor that does.
- * Name at least one; Node3D is where to start.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives NavigationLink3D no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart, and it is red until filled for the same reason
- * KEYS is.
+ * At least one key NavigationLink3D inherits, with the ancestor that declares it.
+ * The malformed-value sweep iterates `getOwnKeys`, so it passes vacuously on a
+ * class that declares nothing. Resolving a key to the ancestor's own validator
+ * tells "declares nothing" apart from "not written yet".
  */
 const INHERITED: [owner: string, key: string][] = [
   ['Node3D', 'transform'],
@@ -66,17 +54,14 @@ describe('NavigationLink3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // Runs the fixture's zero-diagnostic claim against what this test imports.
+    // `fixtureLint` covers the whole registry but needs the barrel.
     expectFixtureClean('unit-navigation-link-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // NavigationLink3D declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose is not validating a format. Vacuous
+    // when NavigationLink3D declares nothing, which INHERITED covers.
     const accepted = validatorRegistry
       .getOwnKeys('NavigationLink3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -91,7 +76,7 @@ describe('NavigationLink3D strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
+      // The same function, not merely some validator: a shadowing copy on
       // NavigationLink3D would answer here while drifting from the ancestor's rule.
       expect(validatorRegistry.findValidator('NavigationLink3D', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('NavigationLink3D')).not.toContain(key);
@@ -105,8 +90,8 @@ describe('NavigationLink3D strict validators', () => {
     });
 
     it('rejects a non-boolean literal', () => {
-      // A capitalised spelling is not a Variant literal at all, so nothing
-      // converts it — unlike the int spelling, which the slot does convert.
+      // A capitalised spelling is no Variant literal, so nothing converts it, unlike
+      // the int spelling, which the slot converts.
       expect(check('enabled', 'True')?.severity).toBe('error');
     });
   });
@@ -129,8 +114,8 @@ describe('NavigationLink3D strict validators', () => {
     });
 
     it('rejects a non-integer as a format error', () => {
-      // navigation_link_3d.cpp:366-374 is a bare uint32_t assignment; the
-      // FORMAT branch is unconditionally an error (ADR-0032).
+      // navigation_link_3d.cpp:366-374 is a bare uint32_t assignment. A format failure
+      // always errors (ADR-0032).
       expect(check('navigation_layers', 'not-a-number')?.severity).toBe('error');
     });
 
@@ -189,9 +174,8 @@ describe('NavigationLink3D strict validators', () => {
     });
 
     it('accepts positive infinity and nan, rejects negative infinity', () => {
-      // `inf < 0.0` and `nan < 0.0` are both false in the ERR_FAIL_COND
-      // comparison, so those pass through; `-inf < 0.0` is true, so it is
-      // refused exactly like any other negative value.
+      // `inf < 0.0` and `nan < 0.0` are false, so those pass. `-inf < 0.0` is true, so it
+      // is refused like any other negative value.
       expect(check('enter_cost', 'inf')).toBeNull();
       expect(check('enter_cost', 'nan')).toBeNull();
       expect(check('enter_cost', 'inf_neg')?.severity).toBe('error');

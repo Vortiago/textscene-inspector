@@ -1,10 +1,8 @@
 /**
- * <NavigationRegion3D> — draws its NavigationMesh as a translucent debug
- * overlay (filled green faces + edge lines), mirroring Godot's editor
- * "Visible Navigation". This is NOT solid scene geometry: it's unlit,
- * transparent, double-sided, and doesn't write depth. Gated on the
- * `showNavigation` viewport toggle (on by default). Children (e.g. the level
- * MeshInstance3D) render normally inside the Node3D transform.
+ * Draws a NavigationRegion3D's NavigationMesh as Godot's editor "Visible
+ * Navigation" overlay: green faces and edge lines, unlit, transparent,
+ * double-sided and without depth writes. The `showNavigation` viewport toggle
+ * gates it. Children render normally inside the Node3D transform.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -40,8 +38,7 @@ export function NavigationRegion3D({ node, children }: NodeComponentProps) {
   const { externalResources, internalResources } = useSceneResources();
   const { showNavigation } = useViewportMode();
 
-  // A NavigationMesh is as often an inline `[sub_resource]` as a `.tres`;
-  // resolving only one form drew no navmesh for the other.
+  // A NavigationMesh is as often an inline `[sub_resource]` as a `.tres`.
   const resource = useSubOrExtResource(
     properties.navigationMesh,
     internalResources,
@@ -58,9 +55,8 @@ export function NavigationRegion3D({ node, children }: NodeComponentProps) {
     };
   }, [resource]);
 
-  // These geometries are built per-component (not cached), and R3F does not
-  // auto-dispose geometry passed via the `geometry`/`primitive` attach. Dispose
-  // them when the overlay is rebuilt (resource reload) or the node unmounts.
+  // R3F never disposes geometry passed through the `geometry` or `primitive` attach, and
+  // these are built per component, so dispose them on a rebuild or an unmount.
   useEffect(() => {
     if (!overlay) return;
     return () => {

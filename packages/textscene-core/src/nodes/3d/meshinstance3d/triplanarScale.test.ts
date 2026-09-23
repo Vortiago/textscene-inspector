@@ -10,8 +10,7 @@ const mesh = (type: string, data: Record<string, string>): TscnInternalResource 
 
 describe('triplanarPlaneScale', () => {
   it('PlaneMesh tiles per world unit: repeat = size × uv1_scale (default scale)', () => {
-    // The hallway floor: 12×3.5 plane, world triplanar, uv1_scale default (1,1).
-    // Godot tiles the texture 12×3.5 times; previously we stretched one copy.
+    // A 12×3.5 plane, world triplanar, default uv1_scale: Godot tiles it 12×3.5 times.
     const s = triplanarPlaneScale(mesh('PlaneMesh', { size: 'Vector2(12, 3.5)' }), { x: 1, y: 1 });
     expect(s).toEqual({ x: 12, y: 3.5 });
   });

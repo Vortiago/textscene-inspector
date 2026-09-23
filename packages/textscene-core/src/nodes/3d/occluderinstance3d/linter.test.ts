@@ -1,13 +1,8 @@
 /**
- * Tests for OccluderInstance3D's semantic linter rule (strict-parser format
- * checks live in linterParser.test.ts and are asserted through
- * validatorRegistry there).
- *
- * Calls `occluderInstance3DConfigurationWarningsRule.check(...)` directly with
- * a hand-built `RuleContext` rather than going through `Linter` or
- * `ruleRegistry`: both run every rule the GLOBAL registry singleton happens to
- * hold, which during a concurrent wave is whatever sibling slices another test
- * file has imported. The exported rule object reaches only this slice.
+ * OccluderInstance3D's semantic rule, called through its `check` with a
+ * hand-built `RuleContext`: `Linter` and `ruleRegistry` run every rule the global
+ * registry holds, which depends on what other test files import. Format checks
+ * live in linterParser.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -86,8 +81,7 @@ describe('OccluderInstance3D semantic rules', () => {
   });
 
   it('stays quiet on the committed fixture, which the rule is part of the clean claim for', () => {
-    // Parsed through StrictTscnParser rather than a hand-built context, because
-    // the thing under test here is the fixture's real property bag.
+    // Parsed through StrictTscnParser: the fixture's real property bag is under test.
     const { scene } = new StrictTscnParser().parse(readFixture('unit-occluder-instance-3d.tscn'));
     if (!scene) throw new Error('fixture failed to parse');
     const occluderInstance = findByType(scene.nodes, 'OccluderInstance3D');

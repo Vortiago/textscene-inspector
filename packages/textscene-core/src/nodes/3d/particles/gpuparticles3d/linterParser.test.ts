@@ -1,15 +1,8 @@
 /**
- * GPUParticles3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through the
- * `valid-gpuparticles3d-resources` rule.
- *
- * Assertions check `error?.code` rather than message text, per the property
- * error codes the `v` DSL auto-derives (`INVALID_<NAME>_FORMAT` /
- * `INVALID_<NAME>_VALUE`, or `_REFERENCE` for resource references).
+ * GPUParticles3D strict validators, asserted through `validatorRegistry` so a
+ * failure points at the validator rather than at scene parsing. Assertions read
+ * the `v` DSL's `error?.code` (`INVALID_<NAME>_FORMAT`, `_VALUE` or `_REFERENCE`).
+ * Rule-level behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -29,8 +22,7 @@ describe('GPUParticles3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format.
     const accepted = validatorRegistry
       .getOwnKeys('GPUParticles3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -38,10 +30,9 @@ describe('GPUParticles3D strict validators', () => {
   });
 
   describe('amount', () => {
-    // gpu_particles_3d.cpp:821 hints "1,1000000,1,exp" — no or_greater, so
-    // 1,000,000 is a real ceiling and `exp` is slider scaling, not a bound.
-    // set_amount:76 opens `ERR_FAIL_COND_MSG(p_amount < 1, ...)`, so the floor is
-    // an ERROR and the unenforced ceiling a WARNING (ADR-0032).
+    // gpu_particles_3d.cpp:821 hints "1,1000000,1,exp", where `exp` is slider scaling.
+    // set_amount:76 refuses p_amount < 1, so the floor errors and the unenforced
+    // ceiling warns (ADR-0032).
     it('accepts the enforced floor 1 and the hinted ceiling 1000000', () => {
       expect(check('amount', '1')).toBeNull();
       expect(check('amount', '1000000')).toBeNull();
@@ -69,19 +60,15 @@ describe('GPUParticles3D strict validators', () => {
   });
 
   describe('amount_ratio', () => {
-    // gpu_particles_3d.cpp:822, ADD_PROPERTY hints PROPERTY_HINT_RANGE
-    // "0,1,0.0001" — no or_greater/or_less, so both ends are hint-only.
-    // set_amount_ratio (:730-733) is `amount_ratio = p_ratio;`, a bare
-    // assignment with no ERR_FAIL and no CLAMP, so exceeding either end
-    // is a WARNING, not an error (ADR-0032).
+    // gpu_particles_3d.cpp:822 hints "0,1,0.0001". set_amount_ratio (:730-733) is a bare
+    // assignment, so either end only warns (ADR-0032).
     it('accepts the hint floor 0 and ceiling 1 (gpu_particles_3d.cpp:822)', () => {
       expect(check('amount_ratio', '0')).toBeNull();
       expect(check('amount_ratio', '1')).toBeNull();
     });
 
     it('accepts the real value scenes/fixtures/unit-gpu-particles-2d.tscn:21 writes for the sibling property', () => {
-      // GPUParticles3D has no fixture of its own (it renders nothing yet);
-      // GPUParticles2D's amount_ratio is the identical FLOAT format.
+      // GPUParticles2D's amount_ratio has the identical FLOAT format.
       expect(check('amount_ratio', '0.8')).toBeNull();
     });
 
@@ -122,11 +109,9 @@ describe('GPUParticles3D strict validators', () => {
       expect(check('use_fixed_seed', 'maybe')?.code).toBe('INVALID_USE_FIXED_SEED_FORMAT');
     });
 
-    // gpu_particles_3d.cpp:833, PROPERTY_HINT_RANGE "0,4294967295,1"
-    // (0..UINT32_MAX, no or_greater/or_less). set_seed (:115-118) is
-    // `seed = p_seed;` where p_seed is uint32_t — the bind layer coerces an
-    // out-of-range Variant int rather than the setter refusing it, so both
-    // ends are warnings (ADR-0032).
+    // gpu_particles_3d.cpp:833, PROPERTY_HINT_RANGE "0,4294967295,1". set_seed (:115-118)
+    // takes a uint32_t, so the bind layer coerces an out-of-range int and both ends warn
+    // (ADR-0032).
     it('accepts the hint floor 0 and ceiling UINT32_MAX (gpu_particles_3d.cpp:833)', () => {
       expect(check('seed', '0')).toBeNull();
       expect(check('seed', '4294967295')).toBeNull();
@@ -164,11 +149,9 @@ describe('GPUParticles3D strict validators', () => {
   });
 
   describe('transform_align', () => {
-    // 4.7.2 dropped the setter's guard: gpu_particles_3d.cpp:652-656 assigns
-    // bare, where 4.6.3's :629-630 opened with
-    // `ERR_FAIL_INDEX(uint32_t(p_align), 4);`. No supported release refuses a
-    // value now, so the bound is the hint's alone — 4.7.2: :894 lists five
-    // labels, adding LOCAL_BILLBOARD.
+    // 4.7.2's gpu_particles_3d.cpp:652-656 assigns bare, where 4.6.3's :629-630 refused
+    // with `ERR_FAIL_INDEX(uint32_t(p_align), 4)`. The newer release wins, so only the
+    // hint bounds this: 4.7.2's :894 lists five labels.
     it('accepts every labelled value 0-4, LOCAL_BILLBOARD included', () => {
       expect(check('transform_align', '0')).toBeNull();
       expect(check('transform_align', '1')).toBeNull();
@@ -199,13 +182,9 @@ describe('GPUParticles3D strict validators', () => {
   });
 
   describe('draw_passes', () => {
-    // gpu_particles_3d.cpp:851, ADD_PROPERTY hints PROPERTY_HINT_RANGE
-    // "0,4,1" — the hint's OWN floor (0) disagrees with the setter.
-    // set_draw_passes:265-266 opens `ERR_FAIL_COND(p_count < 1);`, refusing
-    // 0 outright, so the real enforced floor is 1, not the hint's 0. The
-    // ceiling MAX_DRAW_PASSES=4 only sizes the static draw_pass_N
-    // properties `_bind_methods` registers (gpu_particles_3d.h:56) — no
-    // ERR_FAIL_COND bounds it in the setter — so the ceiling is a warning.
+    // gpu_particles_3d.cpp:851 hints "0,4,1", but set_draw_passes:265-266 refuses
+    // p_count < 1, so the enforced floor is 1. MAX_DRAW_PASSES=4 (gpu_particles_3d.h:56)
+    // only sizes the draw_pass_N properties, so the ceiling warns.
     it('accepts the enforced floor 1 and hinted ceiling 4', () => {
       expect(check('draw_passes', '1')).toBeNull();
       expect(check('draw_passes', '4')).toBeNull();
@@ -233,11 +212,9 @@ describe('GPUParticles3D strict validators', () => {
   });
 
   describe('draw_pass_1..4', () => {
-    // gpu_particles_3d.cpp:853, PROPERTY_HINT_RESOURCE_TYPE "Mesh", for i in
-    // 1..MAX_DRAW_PASSES. `_validate_property:462-467` hides draw_pass_N
-    // above `draw_passes`, so raising the count exposes an index with no
-    // valid default to diff against, and packed_scene.cpp always writes
-    // it — as the literal `null` for the still-empty Ref<Mesh>.
+    // gpu_particles_3d.cpp:853, PROPERTY_HINT_RESOURCE_TYPE "Mesh". `_validate_property:462-467`
+    // hides draw_pass_N above `draw_passes`, so packed_scene.cpp writes an exposed
+    // empty pass as the literal `null`.
     it.each(['draw_pass_1', 'draw_pass_2', 'draw_pass_3', 'draw_pass_4'])(
       '%s accepts a SubResource reference',
       (property) => {
@@ -256,9 +233,8 @@ describe('GPUParticles3D strict validators', () => {
       expect(check('draw_pass_1', 'SubResource("TubeTrailMesh_slq55")')).toBeNull();
     });
 
-    // `danglingResources.ts` reads a literal `null` as an empty slot, never as
-    // a dangling reference; the FORMAT validator here accepts the spelling on
-    // its own, so no pass routed through `findValidator` can reject it.
+    // `danglingResources.ts` reads a literal `null` as an empty slot, and the format
+    // validator accepts it, so no pass through `findValidator` rejects it.
     it.each(['draw_pass_1', 'draw_pass_2', 'draw_pass_3', 'draw_pass_4'])(
       '%s accepts the literal null — the empty-pass spelling scenes/demos/3d/particles/test.tscn:903 ships (`draw_pass_2 = null`)',
       (property) => {
@@ -277,11 +253,8 @@ describe('GPUParticles3D strict validators', () => {
   });
 
   describe('draw_skin', () => {
-    // gpu_particles_3d.cpp:855, PROPERTY_HINT_RESOURCE_TYPE "Skin". Always
-    // visible (no `_validate_property` conditioning, unlike draw_pass_N), so
-    // a cleared skin diffs equal to the class default and packed_scene.cpp
-    // OMITS it rather than writing `null` — no fixture in scenes/ carries
-    // this key at all, consistent with that.
+    // gpu_particles_3d.cpp:855, PROPERTY_HINT_RESOURCE_TYPE "Skin". Always visible, so a
+    // cleared skin equals the class default and packed_scene.cpp omits it.
     it('accepts a SubResource reference (gpu_particles_3d.cpp:855)', () => {
       expect(check('draw_skin', 'SubResource("Skin_1")')).toBeNull();
     });
@@ -291,8 +264,8 @@ describe('GPUParticles3D strict validators', () => {
     });
 
     it('accepts the literal null, which loads even though Godot omits a cleared skin', () => {
-      // Whether the SERIALISER writes `null` is a separate question from whether
-      // the loader takes one, and only the second decides what a file may hold.
+      // Only what the loader takes decides what a file may hold, not what the
+      // serialiser writes.
       expect(check('draw_skin', 'null')).toBeNull();
     });
 

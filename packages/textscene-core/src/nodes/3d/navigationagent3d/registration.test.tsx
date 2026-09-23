@@ -1,7 +1,7 @@
 /**
- * NavigationAgent3D render contract: no component of its own — the registry
- * reuses the base Node group, registered `container: true` so the non-spatial
- * helper passes through both the 2D and 3D workspaces.
+ * NavigationAgent3D render contract: it reuses the base Node group, registered
+ * `container: true` so the non-spatial helper passes through both the 2D and 3D
+ * workspaces.
  */
 
 import { describe, expect, it } from 'vitest';

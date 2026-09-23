@@ -236,10 +236,9 @@ describe('<MeshInstance3D>', () => {
       ];
       const renderer = await render(node, resources);
       const material = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
-      // Godot binds a hardcoded shader for an unmaterialed mesh —
-      // `ALBEDO = vec3(0.6); ROUGHNESS = 0.8; METALLIC = 0.2;` — rather than
-      // instantiating a StandardMaterial3D, so this is mid-grey and slightly
-      // metallic, not the white matte a default-constructed one would give.
+      // Godot binds a hardcoded shader for an unmaterialed mesh, `ALBEDO = vec3(0.6);
+      // ROUGHNESS = 0.8; METALLIC = 0.2;`, not a default StandardMaterial3D, so it is
+      // mid-grey and slightly metallic.
       const linear = material.color.getRGB(
         { r: 0, g: 0, b: 0 } as THREE.Color,
         THREE.LinearSRGBColorSpace

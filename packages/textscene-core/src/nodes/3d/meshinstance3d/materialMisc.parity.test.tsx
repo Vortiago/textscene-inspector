@@ -1,10 +1,7 @@
 /**
- * Parity for lower-frequency StandardMaterial3D features:
- * - vertex_color_use_as_albedo → three.js vertexColors
- * - emission HDR (channel > 1) preserved by folding the peak into intensity
- *   (three.js emissive is [0,1]; brightness rides on emissiveIntensity)
- * - ao_enabled gate: aoMap only applies when the feature flag is on (Godot
- *   samples ao_texture only when ao_enabled).
+ * StandardMaterial3D parity: vertex_color_use_as_albedo as three's
+ * vertexColors, HDR emission folded into emissiveIntensity since three's
+ * emissive is [0,1], and aoMap only while ao_enabled, as Godot samples it.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -38,11 +35,10 @@ describe('material misc scalar parity', () => {
       emission: 'Color(2, 0.5, 0, 1)',
       emission_energy_multiplier: '1',
     });
-    // Godot converts the `source_color` uniform sRGB→linear BEFORE energy, and
-    // its `pow` branch extrapolates past 1 rather than clipping:
-    //   ((2 + 0.055) / 1.055) ^ 2.4     = 4.9538457…
-    //   ((0.5 + 0.055) / 1.055) ^ 2.4   = 0.2140411…
-    // The peak goes into the intensity, so the colour keeps its ratio.
+    // Godot converts `source_color` to linear before energy, and its `pow` branch
+    // extrapolates past 1: ((2 + 0.055) / 1.055) ^ 2.4 = 4.9538457… and
+    // ((0.5 + 0.055) / 1.055) ^ 2.4 = 0.2140411…. The peak goes into the intensity, so
+    // the colour keeps its ratio.
     expect(s.emissiveIntensity).toBeCloseTo(4.9538458, 6);
     expect(s.emissive[0]).toBeCloseTo(1, 5);
     expect(s.emissive[1]).toBeCloseTo(0.2140411 / 4.9538458, 5);
@@ -87,9 +83,8 @@ describe('StandardMaterialSlot vertexColors', () => {
   });
 
   it('unshaded drops emission entirely, as Godot does', async () => {
-    // Godot's unshaded branch writes `vec4(albedo, alpha)` and never reads the
-    // emission term, so a bright emissive unshaded material is unlit in Godot
-    // too. Pinned so the missing emissive here is not mistaken for a gap.
+    // Godot's unshaded branch writes `vec4(albedo, alpha)` and never reads emission, so
+    // an emissive unshaded material is unlit in Godot too.
     const scalars = parseStandardMaterial3DScalars({
       shading_mode: '0',
       emission_enabled: 'true',

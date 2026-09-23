@@ -10,9 +10,9 @@ export interface NavigationAgent3DProperties extends NodeProperties {
   height?: number;
   /** Whether avoidance is enabled for this agent. Godot default is false. */
   avoidance_enabled?: boolean;
-  /** 32-bit layer bitmask other avoidance agents/obstacles see this agent on. */
+  /** 32-bit bitmask of the layers other avoidance agents and obstacles see this agent on. */
   avoidance_layers?: number;
-  /** 32-bit mask bitmask of avoidance layers this agent reacts to. */
+  /** 32-bit bitmask of the avoidance layers this agent reacts to. */
   avoidance_mask?: number;
   /** Max avoidance neighbors considered. Godot default is 10. */
   max_neighbors?: number;
@@ -22,7 +22,7 @@ export interface NavigationAgent3DProperties extends NodeProperties {
   navigation_layers?: number;
   /** Distance from the target at which the agent is considered arrived. */
   target_desired_distance?: number;
-  /** Distance from each path point at which it's considered reached. */
+  /** Distance from each path point at which it counts as reached. */
   path_desired_distance?: number;
   /** The agent's movement target. */
   target_position?: Vector3;

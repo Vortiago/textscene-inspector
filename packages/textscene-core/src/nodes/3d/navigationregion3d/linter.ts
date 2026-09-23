@@ -1,4 +1,4 @@
-/** Semantic linter rules for NavigationRegion3D — built from the shared 2D/3D factory. */
+/** Semantic linter rules for NavigationRegion3D, built from the shared 2D/3D factory. */
 
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { makeNavigationRegionLinterRule } from '../../../linter/physics/navigationRegionLinterRule.js';
