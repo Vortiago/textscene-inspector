@@ -1,10 +1,7 @@
 /**
- * Path2D linter tests — curve resource validation + the missing-curve
- * divergence from Path3D (warning, not error; suppressed when a script is set).
- *
- * No PathFollow2D-child check: `path_2d.h`/`path_2d.cpp` declare a
- * `get_configuration_warnings()` override only on `PathFollow2D`, never on
- * `Path2D` itself, so a followerless Path2D carries no diagnostic.
+ * Tests the Path2D rules: the curve reference, and the missing-curve info, which
+ * a script suppresses. A followerless Path2D carries no diagnostic: only
+ * `PathFollow2D` overrides `get_configuration_warnings()` in `path_2d.h`/`path_2d.cpp`.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -68,8 +65,8 @@ describe('Path2D missing-curve, and the script slot that excuses it', () => {
   const path2d = (props: Record<string, string>) => scene(node('Path2D', props));
 
   it('still reports when the script slot is explicitly cleared', () => {
-    // `'null'` is a truthy string: read raw, a cleared slot claimed a script
-    // that could assign the curve at runtime, and the warning vanished.
+    // `'null'` is a truthy string, so a raw read would count a cleared slot as
+    // a script that could assign the curve.
     expectDiagnostic(path2d({ script: 'null' }), { ruleName: 'path2d-missing-curve' });
   });
 

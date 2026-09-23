@@ -227,10 +227,8 @@ describe('Sprite2D Linter', () => {
     });
 
     it('stays loud when hframes is a value no int slot holds', () => {
-      // `1e20` cleared the old `min: 1` bound and made `maxFrame` 1e20, so
-      // phase 1 said nothing and the rule approved every frame index. The grid
-      // is unknowable, so the rule is right to stay quiet — but the property
-      // must not be.
+      // No int slot holds `1e20`, so the grid is unknowable and the rule stays
+      // quiet, but the property itself must report.
       expectDiagnostic(scene(node('Sprite2D', { hframes: '1e20', frame: 5 })), {
         contains: ['cannot be stored in an integer slot'],
       });
@@ -252,9 +250,9 @@ describe('Sprite2D Linter', () => {
       );
     });
 
-    // Godot replays a node's properties in FILE order (packed_scene.cpp:492), so
+    // Godot replays a node's properties in file order (packed_scene.cpp:492), so
     // a grid written below `frame` is still 1x1 when set_frame's ERR_FAIL_INDEX
-    // runs. Measured on 4.6.3: this body loads on frame 0.
+    // runs, and this body loads on frame 0.
     it('errors when hframes is written below frame', () => {
       expectDiagnostic(scene(node('Sprite2D', { frame: 3, hframes: 4, vframes: 1 })), {
         ruleName: 'sprite2d-frame-range',
@@ -273,7 +271,7 @@ describe('Sprite2D Linter', () => {
     });
 
     it('stays loud when the unusable grid literal is written below frame', () => {
-      // Only the keys ABOVE `frame` decide the grid, so a literal phase 1
+      // Only the keys above `frame` decide the grid, so a literal phase 1
       // already reports does not silence the rule from below it.
       expectDiagnostic(scene(node('Sprite2D', { frame: 5, hframes: '1e20' })), {
         ruleName: 'sprite2d-frame-range',
@@ -310,8 +308,8 @@ describe('Sprite2D Linter', () => {
       expect(coordErrors).toHaveLength(2);
     });
 
-    // Same replay order, same guard (sprite_2d.cpp:312). Measured on 4.6.3:
-    // this body raises ERR_FAIL_INDEX and keeps frame_coords at (0, 0).
+    // Same replay order, same guard (sprite_2d.cpp:312): this body raises
+    // ERR_FAIL_INDEX and keeps frame_coords at (0, 0).
     it('errors when hframes is written below frame_coords', () => {
       expectDiagnostic(
         scene(node('Sprite2D', { frame_coords: 'Vector2i(3, 0)', hframes: 4 })),
@@ -577,9 +575,7 @@ describe('a grid count the setter refuses', () => {
 describe('a fractional frame_coords component', () => {
   it('warns that Godot truncates it, matching the verdict `frame` gets', () => {
     // `_parse_construct<int32_t>` (variant_parser.cpp:577-592) converts it, so
-    // Godot stores (1, 2) — the file loads, but not with the written value.
-    // `frame = 1.5` and `frame_coords = Vector2i(1.5, 2.5)` disagreed until the
-    // truncation tier reached composite components.
+    // Godot stores (1, 2): the file loads, but not with the written value.
     const validator = validatorRegistry.findValidator('Sprite2D', 'frame_coords')!;
     const diagnostic = validator('frame_coords', 'Vector2i(1.5, 2.5)', 1);
 
@@ -589,13 +585,10 @@ describe('a fractional frame_coords component', () => {
 });
 
 /**
- * Phase 2 runs after a phase-1 error (`linter/Linter.ts:32` gates on a parsed
- * scene, not an error-free one), so a converted spelling whose component no
- * int32 holds reaches this rule. `Vector2` holds DOUBLES: `4294967295` narrows
- * through `double -> int32` to the UB sentinel, not the -1 the `Vector2i`
- * spelling of the same digits wraps to. Measured on 4.6.3. The rule owes
- * silence on the whole literal — the sibling component is no more authored
- * than the unstorable one — and phase 1 reports the value itself.
+ * Phase 2 runs after a phase-1 error, so a `Vector2` spelling whose component no
+ * int32 holds reaches this rule. `Vector2` holds doubles, so `4294967295` narrows
+ * to the UB sentinel, not the -1 `Vector2i` wraps to. The rule stays silent on
+ * the whole literal, and phase 1 reports the value.
  */
 describe('Sprite2D frame_coords with a converted component no int32 holds', () => {
   it('says nothing about the sibling row, and phase 1 still errors', () => {
@@ -616,8 +609,8 @@ describe('Sprite2D frame_coords with a converted component no int32 holds', () =
 
 describe('Sprite2D frame re-mapped by a later hframes write (sprite_2d.cpp:358)', () => {
   // `set_hframes` with `vframes > 1` keeps the frame's row and column on the
-  // new sheet: `frame = original_row * p_amount + original_column`. Probed on
-  // 4.6.3: this body loads on frame 2, not the authored 1.
+  // new sheet: `frame = original_row * p_amount + original_column`, so this
+  // body loads on frame 2, not the authored 1.
   it('warns that the authored frame is stored as another', () => {
     expectDiagnostic(scene(node('Sprite2D', { vframes: 2, frame: 1, hframes: 2 })), {
       ruleName: 'sprite2d-frame-remapped',

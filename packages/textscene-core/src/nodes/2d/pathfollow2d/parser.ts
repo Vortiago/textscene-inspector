@@ -1,13 +1,7 @@
 /**
- * PathFollow2D parser — the Node2D surface plus the follow controls. The
- * booleans default to Godot's true.
- *
- * `progress` and `progress_ratio` stay optional (undefined when unset) so an
- * unparseable value is reported rather than silently read as 0. Nothing
- * positions from `progress_ratio` — the component samples `progress` alone,
- * because Godot binds the parent Path2D on enter-tree, after a node's
- * properties are applied — but it is still read so a bad value is diagnosed
- * instead of skipped for being unusable anyway.
+ * Parses a PathFollow2D: the Node2D surface plus the follow controls, whose
+ * booleans default to Godot's true. `progress` and `progress_ratio` stay
+ * undefined when unset, so a bad value is reported, not read as 0.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

@@ -29,11 +29,10 @@ describe('parseTileMap', () => {
     ]);
   });
 
-  // `TileMap::_set` routes the family through `property_helper.is_property_valid`
-  // (tile_map.cpp:700), which gates the index on `String::is_valid_int()`
-  // (property_list_helper.cpp:125) — one optional sign, `+` as readily as `-`
-  // (ustring.cpp:4752). `property_set_value` then refuses a negative index at
-  // `_get_property`'s `if (index < 0 …) return nullptr` (:58).
+  // `is_property_valid` (tile_map.cpp:700) gates the index on
+  // `String::is_valid_int()` (property_list_helper.cpp:125), which takes `+` as
+  // readily as `-` (ustring.cpp:4752). `_get_property` then refuses a negative
+  // index (:58).
   it('resolves a layer index the way is_valid_int does', () => {
     const result = parseTileMap(heading('TileMap', { name: 'Map', parent: '.' }), {
       'layer_0/name': '"Ground"',
@@ -48,10 +47,9 @@ describe('parseTileMap', () => {
     expect(result.layers[1]).toMatchObject({ name: 'Walls' });
   });
 
-  // `TileMap::_set` GROWS the vector until the written index exists —
-  // `while (index >= layers.size()) { … set_name(vformat("Layer%d", index)); }`
-  // (tile_map.cpp:701-710) — so the layers below the highest one written load
-  // at TileMapLayer's own defaults, under the engine's own names.
+  // `TileMap::_set` grows the vector until the written index exists
+  // (tile_map.cpp:701-710), so the layers below the highest one written load at
+  // TileMapLayer's defaults, named `vformat("Layer%d", index)`.
   it('fills the layers below the highest index written, at their defaults', () => {
     const result = parseTileMap(heading('TileMap', { name: 'Map', parent: '.' }), {
       format: '2',

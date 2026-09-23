@@ -1,7 +1,4 @@
-/**
- * RemoteTransform2D parser — extends the Node2D base parse with the
- * remote_path + update-flag property surface.
- */
+/** Parses a RemoteTransform2D: the Node2D surface plus `remote_path` and the update flags. */
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';

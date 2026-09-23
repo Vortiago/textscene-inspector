@@ -1,20 +1,7 @@
 /**
- * <Polygon2D> — a filled convex/simple polygon in the 2D canvas. A CanvasItem2D
- * (carrying the Node2D transform + modulate ritual) whose body is a
- * `BufferGeometry` built from the `polygon` PackedVector2Array. Each Godot-local
- * vertex (px, py) is placed at three-local (px, -py) inside the conjugated
- * (diag(1,-1,1)) Node2D group, matching Sprite2D's Y-negation convention.
- *
- * The mesh keeps Godot's vertex identity: one three vertex per polygon point,
- * triangulated by index. `uv` and `vertex_colors` are paired with the polygon
- * positionally in Godot, so anything that renumbered or duplicated vertices
- * (as a generated `ShapeGeometry` does) would silently mismatch them.
- *
- * The fill is the flat `color` — first quantized to the byte Godot's mesh
- * upload actually stores (`vertexColorQuantize.ts`) — composited with the
- * inherited modulate in sRGB (via the tint's `own` product) and converted to
- * linear once, then drawn with an unlit, double-sided, alpha-blended material
- * — Godot's 2D canvas model — modulated by `texture` where one is set.
+ * Draws a Polygon2D as a CanvasItem2D whose body keeps one vertex per `polygon`
+ * point, triangulated by index: `uv` and `vertex_colors` pair with points by
+ * position, so a renumbering mesh such as `ShapeGeometry` would mismatch them.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -67,15 +54,14 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
   );
 
   // Godot divides the transformed UV by the texture's pixel size, so the
-  // geometry genuinely depends on the resolved texture: it must rebuild when a
-  // late-arriving load changes the dimensions.
+  // geometry rebuilds when a late load changes the dimensions.
   const textureSize = useMemo(() => imageSize(texture), [texture]);
 
   const geometry = useMemo(
     () => buildPolygonGeometry(rings, props, textureSize),
     [rings, props, textureSize]
   );
-  // R3F won't auto-dispose a geometry passed via `attach`; release on rebuild.
+  // R3F does not dispose a geometry passed through `attach`, so release it on rebuild.
   useEffect(() => () => geometry?.dispose(), [geometry]);
 
   return (
@@ -121,43 +107,35 @@ function FilledPolygon({
   lighting: CanvasItemLightingProps;
   decodeDefines: Record<string, string> | undefined;
 }) {
-  // Godot multiplies fill × modulate × self_modulate in one space, then converts
-  // once: compose with the tint's sRGB `own` product before sRGB→linear.
-  //
-  // `color` is quantized FIRST, replicating the 8-bit vertex-colour cast
-  // Godot's mesh upload applies to it (see `vertexColorQuantize.ts`) — the
-  // node's inherited tint (`tint.own`) is a separate, unquantized float
-  // multiply Godot applies per draw call, so it composes AFTER.
+  // Godot multiplies fill × modulate × self_modulate in sRGB, then converts once.
+  // `color` is quantized first, as Godot's 8-bit mesh upload stores it
+  // (`vertexColorQuantize.ts`). The inherited tint (`tint.own`) is an
+  // unquantized per-draw multiply, so it composes after.
   const { fill, tintOnlyFill, opacity, tintOnlyOpacity } = useMemo(() => {
     const composed = multiplyModulate(tint.own, quantizeVertexColor(color));
     return {
       fill: godotColorToLinear(composed),
-      // The same tint WITHOUT the node's own `color`, for the per-vertex path
+      // The same tint without the node's own `color`, for the per-vertex path
       // where Godot replaces `color` rather than combining with it.
       tintOnlyFill: godotColorToLinear(tint.own),
       opacity: composed.a,
-      // `color` drops WHOLE — alpha included — on the vertex-color path
-      // (`polygon_2d.cpp:310-314` assigns the vertex Color outright, and
-      // `canvas_item_add_mesh` gets a bare `Color(1, 1, 1)` for its own
-      // modulate parameter, `polygon_2d.cpp:401`), so that branch must not
-      // carry `color.a` into the material opacity either.
+      // `color` drops whole, alpha included, on the vertex-colour path:
+      // `polygon_2d.cpp:310-314` assigns the vertex Color outright, and
+      // `canvas_item_add_mesh` gets a bare `Color(1, 1, 1)` (`polygon_2d.cpp:401`).
       tintOnlyOpacity: tint.own.a,
     };
   }, [tint.own, color]);
 
   const blend = canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX);
 
-  // A texture resolving AFTER this material first compiled would never reach the
-  // shader — `USE_MAP` is baked into the program source, and nothing re-derives
-  // it (`materialProgramInputs.ts`).
+  // `USE_MAP` is baked into the program source, so without
+  // `materialProgramInputs` a texture resolving after the first compile would
+  // never reach the shader.
   const program = materialProgramInputs({
     props: {
-      // Godot's draw picks ONE of the two: `if (vertex_colors.size() ==
-      // points.size()) colors[i] = vertex_colors[i]; else colors.push_back(color)`.
-      // three multiplies whatever is here into vColor, so passing the fill as
-      // well would render `color x vertexColor` — invisible while `color` is
-      // its white default, and a darkened or hue-shifted fill the moment it
-      // is not. The node tint still applies; only the node's own `color` drops.
+      // Godot's draw picks one: `vertex_colors[i]` when the sizes match, else
+      // `color`. three multiplies this into vColor, so passing the fill too would
+      // render `color x vertexColor`. The node tint still applies.
       color: vertexColors ? tintOnlyFill : fill,
       map: texture,
       vertexColors,
@@ -166,13 +144,10 @@ function FilledPolygon({
       depthWrite: false,
       defines: decodeDefines,
     },
-    // The one canvas mesh where a facing split would be VISIBLE rather than
-    // merely wasteful, since every vertex carries its own colour and alpha.
-    // It is safe today only because `THREE.ShapeUtils.triangulateShape`
-    // (earcut) re-links a contour to a fixed orientation before fanning it,
-    // so every ring here comes out wound the same way whichever way the
-    // author wrote its points — not a property `triangulateRing` asks for,
-    // and not one to depend on.
+    // The one canvas mesh where a facing split would be visible, since every
+    // vertex carries its own colour and alpha. It is safe only because earcut
+    // (`THREE.ShapeUtils.triangulateShape`) winds every ring one way, a property
+    // `triangulateRing` does not ask for.
     merge: [canvasItemFacing(), blend, lighting],
   });
 
@@ -192,14 +167,9 @@ function imageSize(texture: THREE.Texture | null): { width: number; height: numb
 }
 
 /**
- * Build the filled mesh from the resolved rings: one vertex per Godot point
- * (offset applied, Y negated), triangulated by index so `uv` and
- * `vertex_colors` stay aligned with the vertices Godot authored them against.
- * No fillable ring → null.
- *
- * `polygons` yields several independent rings (Godot triangulates each on its
- * own); `invert_enabled` yields the grown bounds with the polygon as a hole.
- * Winding is irrelevant: the material is double-sided.
+ * Builds the mesh from the resolved rings, or null with no fillable ring.
+ * `polygons` yields independent rings, and `invert_enabled` the grown bounds with
+ * the polygon as a hole. Winding is irrelevant: the material is double-sided.
  */
 function buildPolygonGeometry(
   rings: PolygonRings,
@@ -209,7 +179,7 @@ function buildPolygonGeometry(
   if (rings.outlines.length === 0) return null;
 
   // Godot's `points[i] = polygon[i] + offset`, and the UV fallback reads those
-  // offset points — so offset is folded in before anything else looks at them.
+  // offset points, so the offset is folded in first.
   const points = rings.points.map((p) => ({
     x: p.x + props.offset.x,
     y: p.y + props.offset.y,
@@ -243,14 +213,9 @@ function buildPolygonGeometry(
 }
 
 /**
- * Godot's per-vertex UV, ported from `polygon_2d.cpp`:
- *
- *   Transform2D texmat(tex_rot, tex_ofs);  texmat.scale(tex_scale);
- *   uvs[i] = texmat.xform(uv.size() == points.size() ? uv[i] : points[i]) / tex_size;
- *
- * `Transform2D::scale` scales the origin along with the basis, so the offset is
- * multiplied by the scale too — expanded here rather than built as a matrix so
- * that stays visible.
+ * Godot's per-vertex UV (`polygon_2d.cpp`): `texmat.xform(uv[i] or points[i]) /
+ * tex_size`, with `texmat = Transform2D(tex_rot, tex_ofs).scale(tex_scale)`.
+ * `scale` scales the origin too, which the expanded form keeps visible.
  */
 function buildUvs(
   points: Vector2[],
@@ -271,32 +236,26 @@ function buildUvs(
     const vx = authored ? authored[i * 2]! : points[i]!.x;
     const vy = authored ? authored[i * 2 + 1]! : points[i]!.y;
     out[i * 2] = (sx * (cos * vx - sin * vy + ox)) / textureSize.width;
-    // Godot's texel space runs +Y DOWN from the texture's top-left; three
-    // samples a `flipY` texture with v = 1 at the top row. Flipping here (after
-    // the whole Godot-side transform, never inside it) is what keeps the image
-    // upright — a raw pass-through renders it mirrored top-to-bottom.
+    // Godot's texel space runs +Y down from the top-left, and three samples a
+    // `flipY` texture with v = 1 at the top row. The flip comes after the whole
+    // Godot-side transform, never inside it, to keep the image upright.
     out[i * 2 + 1] = 1 - (sy * (sin * vx + cos * vy + oy)) / textureSize.height;
   }
   return out;
 }
 
 /**
- * Per-vertex colors, but only when there is exactly one per vertex — Godot
- * falls back to the flat `color` for any other length, rather than padding.
- *
- * RGBA, not RGB: alpha is per-vertex in Godot, and a gradient fade or a soft
- * edge is the ordinary reason to author `vertex_colors` at all. itemSize 4 is
- * what makes three define `USE_COLOR_ALPHA` and multiply `vColor.a` into the
- * fragment, so a three-wide attribute renders the fade at flat opacity.
+ * Per-vertex RGBA, only when there is exactly one per vertex: Godot falls back to
+ * the flat `color` otherwise. itemSize 4 makes three define `USE_COLOR_ALPHA`, so
+ * an authored alpha fade renders, where a three-wide attribute would not.
  */
 function buildVertexColors(vertexCount: number, vertexColors: Float32Array): Float32Array | null {
   if (vertexCount === 0 || vertexColors.length / 4 !== vertexCount) return null;
   const out = new Float32Array(vertexCount * 4);
   for (let i = 0; i < vertexCount; i++) {
-    // Every `vertex_colors` entry travels through the SAME truncating 8-bit
-    // mesh upload as the flat `color` fallback (`polygon_2d.cpp:310-314`
-    // reads `vertex_colors` into the identical `Vector<Color>` the flat-fill
-    // branch fills) — quantize before the linear conversion.
+    // Each entry passes the same truncating 8-bit upload as the flat `color`
+    // (`polygon_2d.cpp:310-314` fills the same `Vector<Color>`), so quantize
+    // before the linear conversion.
     const linear = godotColorToLinear({
       r: quantizeVertexColorChannel(vertexColors[i * 4]!),
       g: quantizeVertexColorChannel(vertexColors[i * 4 + 1]!),
@@ -312,7 +271,7 @@ function buildVertexColors(vertexCount: number, vertexColors: Float32Array): Flo
 
 /**
  * Triangulate one ring (with optional holes) and append the triangles to
- * `index`, in the ORIGINAL point numbering. `ShapeUtils.triangulateShape`
+ * `index`, in the original point numbering. `ShapeUtils.triangulateShape`
  * returns triples indexing the contour arrays it was given, so they are mapped
  * back through the ring's own indices.
  */

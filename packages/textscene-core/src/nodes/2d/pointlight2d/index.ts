@@ -1,4 +1,4 @@
-/** PointLight2D registration — parser + formatter. */
+/** Registers the PointLight2D parser and property formatter. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parsePointLight2D } from './parser';

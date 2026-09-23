@@ -1,9 +1,6 @@
 /**
- * Semantic linter rules for Sprite2D
- *
- * Note: Format validation (texture references, Vector2, Rect2, etc.) is handled
- * by linterParser.ts during strict parsing. This file focuses on semantic validation
- * that requires full scene context (e.g., resource references exist, frame validation).
+ * Sprite2D semantic rules: the ones that need the whole node, such as the
+ * texture, the frame grid and the region pair. linterParser.ts checks formats.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -12,14 +9,11 @@ import { heldResource } from '../../../linter/resourceChecker.js';
 import { boolSlotValue } from '../../../godot/index.js';
 import { spriteFrameDiagnostics } from '../../../linter/spriteFrameGrid.js';
 
-/**
- * Validate Sprite2D semantic rules (resource references, frame validation, etc.)
- */
+/** Checks the Sprite2D semantic rules. */
 function checkSprite2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
   if (heldResource(rawProps.texture) === undefined) {
@@ -49,10 +43,9 @@ function checkSprite2D(context: RuleContext): Diagnostic[] {
       ruleName: 'sprite2d-region-configuration',
     });
   } else if (rawProps.region_rect !== undefined && rawProps.region_enabled !== undefined) {
-    // Handed to the shared reader unnormalised: `VariantParser` compares the
-    // identifier case-SENSITIVELY (`id == "false"`, variant_parser.cpp:695-697),
-    // so lowercasing first made `region_enabled = FALSE` — a value Godot fails
-    // the load on — read as a boolean the file does not carry.
+    // Not lowercased: `VariantParser` compares the identifier case-sensitively
+    // (`id == "false"`, variant_parser.cpp:695-697), so `region_enabled = FALSE`
+    // fails Godot's load and is no boolean.
     if (boolSlotValue(rawProps.region_enabled) === false) {
       diagnostics.push({
         severity: 'info',

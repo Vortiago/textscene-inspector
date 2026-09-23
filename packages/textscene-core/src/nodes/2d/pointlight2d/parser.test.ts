@@ -48,7 +48,7 @@ describe('parsePointLight2D', () => {
   });
 
   it('warns and falls back on invalid blend_mode (non-integer)', () => {
-    // '1.5' → parseInt → 1 which IS in [0,1,2], so it resolves to 1 (not a fallback)
+    // '1.5' → parseInt → 1 which is in [0,1,2], so it resolves to 1 (not a fallback)
     const p = parsePointLight2D(nodeHeading, { blend_mode: '1.5' });
     expect(p.blend_mode).toBe(1);
   });
@@ -127,9 +127,8 @@ describe('parsePointLight2D', () => {
   });
 
   it('defaults the range windows to Godot\'s own', () => {
-    // `scene/2d/light_2d.h:50-53` — z_min = -1024, z_max = 1024, layer_min = 0,
-    // layer_max = 0 — and a fresh PointLight2D in 4.6.3 reports the same four.
-    // The layer pair is what stops a default light reaching a default
+    // `scene/2d/light_2d.h:50-53`: z_min = -1024, z_max = 1024, layer_min = 0,
+    // layer_max = 0. The layer pair stops a default light reaching a default
     // CanvasLayer, whose `layer` is 1.
     const p = parsePointLight2D(nodeHeading, {});
     expect(p.range_z_min).toBe(-1024);
@@ -139,12 +138,9 @@ describe('parsePointLight2D', () => {
   });
 
   it('keeps a window value Godot itself would keep, unclamped', () => {
-    // `Light2D::set_z_range_min` in `scene/2d/light_2d.cpp` is
-    //     z_min = p_min_z;
-    //     RS::get_singleton()->canvas_light_set_z_range(canvas_light, z_min, z_max);
-    // with no CLAMP and no swap of an inverted pair, and its three siblings match.
-    // 4.6.3 agrees: setting -99999 leaves -99999 on the node. Only the ITEM's
-    // accumulated z is clamped, at +/-4096, so nothing here may narrow the window.
+    // `Light2D::set_z_range_min` in `scene/2d/light_2d.cpp`, like its three
+    // siblings, assigns with no CLAMP and no swap. Only the item's accumulated z
+    // is clamped, at +/-4096, so nothing here may narrow the window.
     const p = parsePointLight2D(nodeHeading, { range_z_min: '-99999' });
     expect(p.range_z_min).toBe(-99999);
   });

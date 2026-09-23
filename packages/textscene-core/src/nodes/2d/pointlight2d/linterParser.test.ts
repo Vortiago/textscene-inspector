@@ -1,13 +1,8 @@
 /**
- * PointLight2D linterParser validators — exercises the validators through
- * the Linter class (source includes /Linter to satisfy ruleCoverage).
- *
- * `enabled`, `color`, `energy`, `blend_mode`, the range/shadow family — all
- * Light2D's OWN properties — moved to `nodes/2d/lights/shared/linterParser.ts`
- * and reach PointLight2D through the base-walk. The behavioural cases below
- * are kept because a leaf's `Linter` output is the same either way; the block
- * at the bottom is the extra proof that the base-walk, not a shadow copy on
- * PointLight2D, is what delivers them now.
+ * Tests the PointLight2D validators through the Linter class (ruleCoverage reads
+ * /Linter in the source). Light2D's own properties live in
+ * `nodes/2d/lights/shared/linterParser.ts`, and the last block proves the
+ * base-walk, not a shadow copy, delivers them.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -157,8 +152,8 @@ describe('PointLight2D linterParser validators', () => {
   });
 
   it('refuses a shadow_item_cull_mask past 32 bits, where a bit is dropped', () => {
-    // light_2d.cpp:152-154 assigns unconditionally, so the SETTER refuses
-    // nothing — but the int slot cannot carry 2^32, and Godot stores 0.
+    // light_2d.cpp:152-154 assigns unconditionally, so the setter refuses
+    // nothing, but the int slot cannot carry 2^32, and Godot stores 0.
     expect(
       lintErrors(
         `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\nshadow_item_cull_mask = 4294967296`
@@ -176,11 +171,9 @@ describe('PointLight2D linterParser validators', () => {
   });
 
   it('warns but never errors past the z hint, and stays silent on the layer hint (int32 span)', () => {
-    // `Light2D::set_z_range_min` assigns and forwards, with no CLAMP and no
-    // reordering (`scene/2d/light_2d.cpp`), which 4.6.3 confirms, so -99999 past
-    // the closed -4096..4096 hint loads and runs — a warning under ADR-0032, not
-    // an error. The layer hint spans the whole of int32, so 2147483647 excludes
-    // nothing and adds no warning of its own.
+    // `Light2D::set_z_range_min` assigns with no CLAMP (`scene/2d/light_2d.cpp`),
+    // so -99999 past the closed -4096..4096 hint loads: a warning (ADR-0032). The
+    // layer hint spans all of int32, so 2147483647 adds no warning.
     const scene =
       `[gd_scene format=3]\n[ext_resource type="Texture2D" path="res://light.png" id="1"]\n[node name="L" type="PointLight2D"]\n` +
       `range_z_min = -99999\nrange_layer_max = 2147483647`;
@@ -227,7 +220,7 @@ describe('PointLight2D keys hoisted to the Light2D tier', () => {
   it.each(HOISTED)("resolves '%s' to Light2D's own validator through the base-walk", (key) => {
     const owned = validatorRegistry.findValidator('Light2D', key);
     expect(owned, `Light2D does not declare '${key}'`).not.toBeNull();
-    // The SAME function, not a shadowing copy that could drift from the tier's rule.
+    // The same function, not a shadowing copy that could drift from the tier's rule.
     expect(validatorRegistry.findValidator('PointLight2D', key)).toBe(owned);
   });
 });

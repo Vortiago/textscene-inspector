@@ -1,5 +1,5 @@
 /**
- * Tests for ParallaxBackground strict validators (format validation).
+ * Tests the ParallaxBackground strict validators.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

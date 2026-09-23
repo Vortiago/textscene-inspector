@@ -1,5 +1,3 @@
-/**
- * parallaxbackground linter registration - imports linter components to trigger self-registration.
- */
+/** Imports the ParallaxBackground linter modules so they self-register. */
 
 import './linterParser.js';

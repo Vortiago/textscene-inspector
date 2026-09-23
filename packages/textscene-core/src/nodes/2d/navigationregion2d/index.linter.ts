@@ -1,6 +1,4 @@
-/**
- * NavigationRegion2D linter registration - imports linter components to trigger self-registration.
- */
+/** Imports the NavigationRegion2D linter modules so they self-register. */
 
 import './linterParser.js';
 import './linter.js';

@@ -1,10 +1,7 @@
 /**
- * A Sprite2D whose `texture` is a `ViewportTexture` naming a viewport stuck
- * in an unrenderable pass cycle (`ViewportPassRegistryContext`'s cycle
- * fallback) must not sample the published-but-never-written GPU texture —
- * it must take the SAME fallback `SubViewportContainer` already takes,
- * routed through the shared choke point, `useViewportTextureSlot`
- * (`resources/textures/viewporttexture/useViewportTextureSlot.ts`).
+ * A Sprite2D whose `ViewportTexture` names a viewport in an unrenderable pass
+ * cycle must not sample the never-written GPU texture. It takes the fallback
+ * `SubViewportContainer` takes, through `useViewportTextureSlot`.
  */
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -55,7 +52,7 @@ function spriteNode(): TscnNode {
   };
 }
 
-/** Publishes an entry at `path` — proving a cyclic target's stale texture is never sampled. */
+/** Publishes an entry at `path`, so the test can prove a cyclic target's stale texture is never sampled. */
 function Publisher({ path, texture }: { path: string; texture: THREE.Texture }) {
   const register = useRegisterViewportTexture();
   useEffect(

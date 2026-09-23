@@ -94,8 +94,8 @@ describe('TileMap degradation (ADR-0008)', () => {
       makeMapNode({
         tile_set: 'SubResource("ts")',
         'layer_0/tile_data': 'PackedInt32Array(0, 0, 0)',
-        // Not a whole number of int32 triplets — decodeLegacyTileData returns
-        // null, so this layer is skipped (no crash, no partial geometry).
+        // Not a whole number of int32 triplets, so decodeLegacyTileData returns
+        // null and the layer is skipped, with no partial geometry.
         'layer_1/tile_data': 'PackedInt32Array(1, 0)',
       })
     );

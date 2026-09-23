@@ -1,21 +1,8 @@
 /**
- * Polygon2D's `polygons` index lists and `invert_enabled`.
- *
- * `polygon_2d.cpp` NOTIFICATION_DRAW:
- *
- *   if (invert || polygons.is_empty()) triangulate(points)
- *   else  for each entry in `polygons`: triangulate points[src_indices[j]]
- *
- * so a non-empty `polygons` means Godot does NOT use the stored vertex order —
- * it builds one sub-polygon per index list. We always stroked `polygon` in
- * order, which for a multi-part shape draws a garbled blob rather than the
- * parts. The same block also drops the last `internal_vertex_count` vertices
- * ONLY when `polygons` is empty (or invert is on), because internal vertices
- * are UV/skinning helpers that are not part of the outline.
- *
- * `invert_enabled` (default false) fills the polygon's AABB grown by
- * `invert_border` (default 100) with the polygon punched out as a hole —
- * the photographic negative of what we drew.
+ * Tests Polygon2D's `polygons` index lists and `invert_enabled`. In
+ * `polygon_2d.cpp` NOTIFICATION_DRAW a non-empty `polygons` builds one
+ * sub-polygon per index list, and `invert_enabled` (default false) fills the
+ * AABB grown by `invert_border` (default 100) with the polygon as a hole.
  */
 import { describe, expect, it } from 'vitest';
 import { polygonRings } from './polygonShapes';
@@ -36,7 +23,7 @@ describe('polygonRings', () => {
   it('builds one ring per `polygons` entry, indexing into `polygon`', () => {
     const rings = polygonRings(TWO_SQUARES, [[0, 1, 2, 3], [4, 5, 6, 7]], 0, false, 100);
     expect(rings.outlines).toHaveLength(2);
-    // Rings are INDICES into the shared vertex pool, so a caller can carry
+    // Rings are indices into the shared vertex pool, so a caller can carry
     // `uv` / `vertex_colors` through unchanged.
     expect(rings.outlines[0]).toEqual([0, 1, 2, 3]);
     expect(rings.outlines[1]).toEqual([4, 5, 6, 7]);
@@ -51,7 +38,7 @@ describe('polygonRings', () => {
   it('drops internal vertices only when `polygons` is empty', () => {
     // Last two vertices are internal → the outline is the first square alone.
     expect(polygonRings(TWO_SQUARES, [], 4, false, 100).outlines[0]).toHaveLength(4);
-    // With `polygons` present, Godot keeps them — the index lists decide.
+    // With `polygons` present, Godot keeps them: the index lists decide.
     expect(polygonRings(TWO_SQUARES, [[0, 1, 2, 3]], 4, false, 100).outlines[0]).toHaveLength(4);
   });
 
@@ -78,8 +65,8 @@ describe('polygonRings', () => {
 
   it('trims internal vertices when inverted — Godot trims on that branch too', () => {
     // `if ((invert || polygons.is_empty()) && internal_vertices > 0) len -= internal_vertices;`
-    // — the trim is NOT skipped by invert, so the punched-out hole is the
-    // outline alone and the grown bounds are measured from it.
+    // Invert does not skip the trim, so the hole is the outline alone and the
+    // grown bounds are measured from it.
     const rings = polygonRings(TWO_SQUARES, [], 4, true, 5);
     expect(rings.hole).toEqual([0, 1, 2, 3]);
     expect(rings.hole!.map((i) => rings.points[i])).toEqual([
@@ -88,7 +75,7 @@ describe('polygonRings', () => {
       { x: 10, y: 10 },
       { x: 0, y: 10 },
     ]);
-    // Bounds grown from the FIRST square only; the trimmed second square
+    // Bounds grown from the first square only; the trimmed second square
     // (x up to 30) must not widen them.
     expect(rings.outlines[0]!.map((i) => rings.points[i])).toEqual([
       { x: -5, y: -5 },

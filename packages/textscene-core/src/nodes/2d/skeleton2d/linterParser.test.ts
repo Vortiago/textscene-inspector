@@ -1,10 +1,6 @@
 /**
- * Skeleton2D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * Tests the Skeleton2D strict validators through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -20,16 +16,13 @@ function check(property: string, value: string) {
 }
 
 /**
- * Skeleton2D binds ZERO `ADD_PROPERTY`: `_bind_methods`
- * (skeleton_2d.cpp:817-831) is seven `bind_method`s and one `ADD_SIGNAL`. Its
- * one serialised key arrives through the fourth route instead — a hand-rolled
- * property-list override, `_set`/`_get`/`_get_property_list`
- * (skeleton_2d.cpp:514/522/530), whose single `PropertyInfo` is
- * `modification_stack`. No `PropertyListHelper`, no `register_property`, no
- * `ADD_ARRAY_COUNT`.
+ * Skeleton2D binds no `ADD_PROPERTY` (skeleton_2d.cpp:817-831). Its one key,
+ * `modification_stack`, comes from the `_set`/`_get`/`_get_property_list`
+ * override (skeleton_2d.cpp:514/522/530). No `PropertyListHelper`,
+ * `register_property` or `ADD_ARRAY_COUNT` exists.
  */
 const KEYS: string[] = ['modification_stack'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 describe('Skeleton2D strict validators', () => {
@@ -42,16 +35,13 @@ describe('Skeleton2D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // `fixtureLint` covers the whole registry through the barrel. This checks
+    // the fixture against only what this test imports.
     expectFixtureClean('unit-skeleton-2d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format.
     const accepted = validatorRegistry
       .getOwnKeys('Skeleton2D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -60,11 +50,8 @@ describe('Skeleton2D strict validators', () => {
 
   describe('modification_stack', () => {
     it('accepts the SubResource form Godot writes for an in-scene stack', () => {
-      // Measured through Godot 4.6.3: a Skeleton2D holding a
-      // SkeletonModificationStack2D packs and saves as
-      // `modification_stack = SubResource("SkeletonModificationStack2D_mwfi1")`,
-      // hash-suffixed id and all. A bare one writes the key not at all, which
-      // is why the fixture has to carry a stack.
+      // Godot saves an in-scene stack as a hash-suffixed SubResource id. A bare
+      // Skeleton2D writes no key, so the fixture carries a stack.
       expect(check('modification_stack', 'SubResource("SkeletonModificationStack2D_mwfi1")')).toBeNull();
     });
 
@@ -88,10 +75,8 @@ describe('Skeleton2D strict validators', () => {
     });
 
     it('checks format only, because set_modification_stack assigns straight through', () => {
-      // skeleton_2d.cpp:748-763 releases the previous stack, assigns
-      // `modification_stack = p_stack`, and sets the new one up. No ERR_FAIL,
-      // no clamp, no null guard — so under ADR-0032 there is no bound to
-      // ground and nothing beyond the serialised shape to reject.
+      // skeleton_2d.cpp:748-763 assigns `modification_stack = p_stack` with no
+      // ERR_FAIL, clamp or null guard, so ADR-0032 leaves only the shape.
       const validator = validatorRegistry.declarationFor('Skeleton2D', 'modification_stack');
       expect(validator!.formatOnly).toBe(true);
       expect(validator!.grounding).toBeUndefined();

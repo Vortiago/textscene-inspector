@@ -21,9 +21,8 @@ describe('<Polygon2D>', () => {
       node({ polygon: 'PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)' })
     );
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
-    // Exactly the authored vertices, triangulated by index — vertex identity is
-    // what keeps `uv` / `vertex_colors` aligned with the points Godot paired
-    // them against.
+    // Exactly the authored vertices, triangulated by index: vertex identity keeps
+    // `uv` and `vertex_colors` aligned with the points Godot paired them against.
     expect(geom.attributes.position!.count).toBe(4);
     expect(geom.getIndex()!.count).toBe(6);
   });

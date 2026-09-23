@@ -1,10 +1,7 @@
 /**
- * TileMap parser — the Node2D base plus the legacy multi-layer surface:
- * `layer_N/...` property groups rebuilt into the layer VECTOR Godot loads
- * (`tileMapLayerVector`, shared with the linter). Each layer's
- * `tile_data` is decoded through the shared legacy decoder (TSCN `format`
- * property selects the encoding; only format 2 = TILE_MAP_DATA_FORMAT_3
- * renders, see tileData.ts).
+ * Parses a TileMap: the Node2D base plus the `layer_N/...` groups, rebuilt into
+ * the layer vector Godot loads (`tileMapLayerVector`). Each `tile_data` decodes
+ * under `format`, and only format 2 (TILE_MAP_DATA_FORMAT_3) renders.
  */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
@@ -20,9 +17,8 @@ export function parseTileMap(
   properties: Record<string, string>
 ): TileMapProperties {
   const baseProperties = parseNode2D(heading, properties);
-  // Absent means the current format, not the oldest one: the member initialises
-  // to TILE_MAP_DATA_FORMAT_3, which is 2 (tile_map.h:64). Defaulting to 0 read
-  // an unversioned TileMap as Godot 3 data and drew none of its tiles.
+  // Absent means the current format, not the oldest: the member initialises to
+  // TILE_MAP_DATA_FORMAT_3, which is 2 (tile_map.h:64).
   const format = intOr(properties.format, 2);
 
   const layers = tileMapLayerVector(properties).map(([index, leaves]) =>
@@ -39,7 +35,7 @@ function parseLayer(
   props: ReadonlyMap<string, string>,
   format: number
 ): TileMapLayerData {
-  // `layer_0/name = "Ground"` — the raw value keeps its quotes. An empty one
+  // `layer_0/name = "Ground"`: the raw value keeps its quotes. An empty one
   // never lands: `set_name` opens with `ERR_FAIL_COND(p_name.is_empty())`
   // (node.cpp:1432), leaving the name `_set` gave the layer when it built it,
   // `vformat("Layer%d", index)` (tile_map.cpp:706).

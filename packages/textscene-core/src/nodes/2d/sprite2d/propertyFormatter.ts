@@ -1,7 +1,4 @@
-/**
- * Sprite2D property formatter — formats sprite properties for the
- * details panel. Mirrors the Sprite3D formatter for the 2D surface.
- */
+/** Formats Sprite2D properties for the details panel, as the Sprite3D formatter does for 3D. */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { Sprite2DProperties } from './types';

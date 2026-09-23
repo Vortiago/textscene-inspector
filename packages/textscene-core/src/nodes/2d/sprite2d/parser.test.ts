@@ -51,8 +51,8 @@ describe('parseSprite2D', () => {
   });
 
   it('refuses a malformed region_rect instead of storing NaN or truncated components', () => {
-    // The retired loose grammar matched `1.2.3` (truncating to 1.2) and `--1`
-    // (landing as NaN) — a NaN region is an invisible sprite.
+    // A loose grammar would read `1.2.3` as 1.2 and `--1` as NaN, and a NaN
+    // region is an invisible sprite.
     for (const bad of ['Rect2(--1, 0, 8, 8)', 'Rect2(1.2.3, 0, 8, 8)', 'Rect2(+1, 0, 8, 8)']) {
       const p = parseSprite2D(heading('Sprite2D', { name: 'S' }), {
         region_enabled: 'true',
@@ -75,16 +75,16 @@ describe('parseSprite2D', () => {
 describe('frame replayed in file order (sprite_2d.cpp:358)', () => {
   // Properties apply in the order the file lists them (packed_scene.cpp:369-492).
   // `set_hframes` with `vframes > 1` re-maps a frame that already landed onto the
-  // new sheet: `frame = original_row * p_amount + original_column`. Probed on
-  // 4.6.3: this body holds frame 2, and draws it.
+  // new sheet: `frame = original_row * p_amount + original_column`, so this body
+  // holds frame 2, and draws it.
   it('draws the re-mapped frame when hframes is written below frame', () => {
     const props = parseSprite2D(heading('Sprite2D', { name: 'S' }), { vframes: '2', frame: '1', hframes: '2' });
     expect(props.frame).toBe(2);
   });
 
   it('draws frame 0 when the frame write was refused against the 1x1 grid still in effect', () => {
-    // ERR_FAIL_INDEX(p_frame, vframes * hframes) sees the grid the lines ABOVE
-    // set — none — so `frame = 7` is refused and the later hframes finds 0.
+    // ERR_FAIL_INDEX(p_frame, vframes * hframes) sees the grid the lines above
+    // set, none, so `frame = 7` is refused and the later hframes finds 0.
     const props = parseSprite2D(heading('Sprite2D', { name: 'S' }), { frame: '7', hframes: '2' });
     expect(props.frame).toBe(0);
     expect(props.hframes).toBe(2);

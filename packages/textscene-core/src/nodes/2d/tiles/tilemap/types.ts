@@ -1,4 +1,4 @@
-/** Legacy TileMap (Godot ≤4.2) — a multi-layer tile node with per-layer data. */
+/** The legacy TileMap (Godot ≤4.2) property shape: a multi-layer tile node with per-layer data. */
 
 import type { Color, Node2DProperties } from '../../../base/node2d/types';
 import type { PlacedCell } from '../shared/tileData';
@@ -17,7 +17,7 @@ export interface TileMapLayerData {
 }
 
 export interface TileMapProperties extends Node2DProperties {
-  /** TileSet reference — `SubResource("...")` or `ExtResource("...")`, verbatim. */
+  /** TileSet reference, `SubResource("...")` or `ExtResource("...")`, verbatim. */
   tile_set?: string;
   /** Godot's layer vector: index 0 through the highest index the file writes. */
   layers: TileMapLayerData[];

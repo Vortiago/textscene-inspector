@@ -1,4 +1,4 @@
-/** Polygon2D registration — parser + formatter. */
+/** Registers the Polygon2D parser and property formatter. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parsePolygon2D } from './parser';

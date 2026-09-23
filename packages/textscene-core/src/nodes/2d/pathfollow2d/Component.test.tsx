@@ -87,7 +87,7 @@ describe('<PathFollow2D>', () => {
 
   it('clamps rather than wrapping a progress past the end, whatever loop says', async () => {
     // The sampler clamps (curve.cpp:1079) and nothing wraps a scene-loaded
-    // progress, so 150 on a 100 px curve is the END, not 50 in from the start.
+    // progress, so 150 on a 100 px curve is the end, not 50 in from the start.
     const renderer = await render(STRAIGHT, { progress: '150', loop: 'true' });
     expect(namedGroup(renderer)!.position.x).toBeCloseTo(100, 3);
   });

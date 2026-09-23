@@ -1,5 +1,5 @@
 /**
- * PathFollow2D linter tests — parent must be Path2D + progress range checks.
+ * Tests the PathFollow2D rules: the parent must be a Path2D, and the progress checks.
  */
 import { describe, it, expect } from 'vitest';
 import { node, scene, lint, expectDiagnostic, expectNoDiagnostic, expectNoErrors } from '../../../linter/testing/testkit';
@@ -23,7 +23,7 @@ progress = 50.0
   });
 
   // path_2d.cpp:385 is a get_configuration_warnings() entry, so it is advisory
-  // (ADR-0032) — the same tier the Path3D sibling reports at.
+  // (ADR-0032), the same tier as the Path3D sibling.
   it('warns when the parent is not a Path2D', () => {
     expectDiagnostic(
       scene(
@@ -102,8 +102,7 @@ progress = 50.0
   it('errors on progress_ratio even at a perfectly in-range value', () => {
     // The range is beside the point. `set_progress_ratio` opens with
     // ERR_FAIL_NULL_MSG(path) (path_2d.cpp:472) and `path` is bound on
-    // enter-tree, which is after the loader applies properties — so 0.5 is
-    // dropped exactly as 1.5 is.
+    // enter-tree, after the loader applies properties, so 0.5 drops as 1.5 does.
     expectDiagnostic(
       scene(node('Path2D'), node('PathFollow2D', { progress_ratio: 0.5 }, { parent: '.' })),
       { ruleName: 'pathfollow2d-progress-ratio-ignored', severity: 'error' }

@@ -1,7 +1,4 @@
-/**
- * pathfollow2d linter registration — imports validators + semantic rules to
- * trigger self-registration.
- */
+/** Imports the PathFollow2D validators and semantic rules so they self-register. */
 
 import './linterParser.js';
 import './linter.js';
