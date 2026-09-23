@@ -30,3 +30,14 @@ and state why.
 - `packages/textscene-core/src/r3f/controls/native/StyleBoxQuad.tsx`:
   `tintStyleBox` is exported (and re-exported by `buttonBase.ts`) only for
   `buttonBase.test.ts`. The file uses it internally.
+- `packages/textscene-core/src/resources/processing/index.ts` and
+  `materialProcessing.ts`: a barrel and a re-export shim that nothing imports.
+  `rootScale.ts` and `textureProcessing.ts` are shims whose only users are tests
+  that import them as `processingShim`. `glbProcessing.ts` and `fixAlphaEdges.ts`
+  are live.
+- `scripts/visual/scenes/*.mjs`: 67 `maxDiffPct` fields and
+  `DEFAULT_MAX_DIFF_PCT` (already removed) have no reader, since the visual gate
+  compares pixels exactly. `scripts/visual/scenes.mjs:26-30` still calls the
+  field a relaxed threshold.
+- `scripts/visual/preview/server.mjs`: `registerPreviewGroupTeardown` (re-exported
+  by `previewServer.mjs`). Only `previewServer.test.mjs` calls it.
