@@ -1,11 +1,7 @@
 /**
- * `<ColorRect>` — the native (WebGL canvas) painter for ColorRect: one
- * `<ControlQuad>` sized to the solved rect, filled with the parsed `color`.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`. The parsed fill `color` is multiplied into `tint.own`
- * while both are still sRGB, so the single sRGB→linear conversion happens once,
- * on the product.
+ * The native (WebGL canvas) painter for ColorRect: one `<ControlQuad>` of the
+ * solved rect, filled with `color`. The fill multiplies `tint.own` while both
+ * are sRGB, so the one linear conversion runs on the product.
  */
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';

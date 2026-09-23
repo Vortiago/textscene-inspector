@@ -1,9 +1,7 @@
 /**
- * Linter entry point for the base Control slice: registers the Control property
- * validators inherited by the whole 2D UI family via the base-walk, plus the
- * semantic property-order rule (`linter.ts`) that reaches the same family through
- * `NODE_BASE_TYPES`. Imports only `.ts` — never `Component.tsx` — to keep the
- * linter bundle React/THREE-free.
+ * Linter entry point for the base Control slice: the property validators and the
+ * semantic rules, which reach the whole 2D UI family through `NODE_BASE_TYPES`.
+ * Imports only `.ts`, never `Component.tsx`, to keep the linter bundle React-free and THREE-free.
  */
 import './linterParser.js';
 import './linter.js';

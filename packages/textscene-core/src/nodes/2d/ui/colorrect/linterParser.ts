@@ -1,18 +1,12 @@
-/**
- * ColorRect strict validators for linting.
- */
+/** ColorRect strict validators. */
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('ColorRect', {
-  // color_rect.cpp:65, ADD_PROPERTY(PropertyInfo(Variant::COLOR, "color"), ...)
-  // carries no PROPERTY_HINT at all. set_color (color_rect.cpp:33-40) only
-  // short-circuits on an unchanged value; any other Color is assigned straight
-  // through, no clamp, no ERR_FAIL. PROPERTY_HINT_NONE means no numeric bound
-  // exists to ground a diagnostic on (ADR-0032 "nothing"), so this is a format
-  // check only: an HDR component outside 0-1 is exactly as legal here as
-  // everywhere else in Godot.
+  // color_rect.cpp:65 declares no hint, and set_color (color_rect.cpp:33-40) assigns
+  // any Color with no clamp or ERR_FAIL. That is the "nothing" tier of ADR-0032, so
+  // this checks the format only, and an HDR component is legal.
   color: v.color('color'),
 });

@@ -1,5 +1,5 @@
 /**
- * flowcontainer linter registration - imports linter components to trigger self-registration.
+ * FlowContainer linter registration: importing the validators registers them.
  */
 
 import './linterParser.js';

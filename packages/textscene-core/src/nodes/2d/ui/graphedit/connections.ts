@@ -19,7 +19,7 @@ import type { GraphEditConnection } from './types';
 /** One `{...}` Dictionary block; connection entries hold only scalar fields, so no nested brace ever occurs. */
 const DICT_BLOCK_RE = /\{[^{}]*\}/g;
 
-/** A Dictionary field whose value is a quoted string, optionally StringName-jacketed (`d[key]` written as a `StringName` — `variant_writer.cpp`'s `&"…"`). */
+/** A Dictionary field with a quoted string value, which may carry the StringName prefix `&"…"` (`variant_writer.cpp`). */
 function dictStringField(key: string): RegExp {
   return new RegExp(`"${key}"\\s*:\\s*([&@]?"(?:[^"\\\\]|\\\\[\\s\\S])*")\\s*(?=[,}])`);
 }

@@ -1,6 +1,6 @@
 /**
- * ColorPicker registration — native (WebGL canvas) painter and minimum-size
- * solver (`./nativeSolver`'s own doc for what it does and does not model).
+ * ColorPicker registration: the native (WebGL canvas) painter and the
+ * minimum-size solver.
  */
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';

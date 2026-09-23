@@ -30,7 +30,7 @@ interface GridExtent {
   fromY: number;
   lenX: number;
   lenY: number;
-  /** `offset * zoom` — the per-axis screen-space shift every cell position subtracts. */
+  /** `offset * zoom`: the screen-space shift each cell position subtracts, per axis. */
   offsetX: number;
   offsetY: number;
 }

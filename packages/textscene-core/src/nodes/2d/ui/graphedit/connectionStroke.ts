@@ -1,34 +1,16 @@
 /**
- * A connection line's stroked ribbon, as vertex-coloured triangle geometry —
- * `default_connections_shader`'s fragment stage (`scene/gui/graph_edit.cpp:
- * 217-238`), ported as three fixed-width RINGS rather than a per-fragment
- * shader (`styleBoxFlatGeometry.ts`'s own precedent for `border_blend`/AA):
+ * A connection's stroked ribbon as vertex-coloured triangles: the fragment stage of
+ * `default_connections_shader` (`scene/gui/graph_edit.cpp:
+ * 217-238`) ported as fixed-width rings, as `styleBoxFlatGeometry.ts` does for AA:
  *
  *   dist = abs(UV.y - 0.5)                              // 0 at the centreline, 0.5 at the edge
  *   fake_aa_width = rim_width = 1.5 / line_width         // UV units; 1.5px in SCREEN space either way
  *   alpha       = smoothstep(0.5, 0.5 - fake_aa_width, dist)
  *   final_color = mix(rim_color, COLOR, smoothstep(0.5 - rim_width, 0.5 - fake_aa_width - rim_width, dist))
  *
- * so, measuring inward from each edge: the outer 1.5px fades `rim_color`'s
- * alpha to 0, the next 1.5px blends from `rim_color` to the gradient COLOR,
- * and everything inside that is solid gradient COLOR. Both bands are FIXED
- * pixel widths — the `1.5 / line_width` UV fraction always maps back to
- * 1.5px once multiplied by the ribbon's own `line_width` — so a thin ribbon
- * clamps its inner ring rather than growing the bands.
- *
- * Vertex-colour interpolation is linear, not `smoothstep`'s ease curve —
- * the same approximation `styleBoxFlatGeometry.ts`'s own AA rings make, for
- * the same reason: three's triangle rasterizer has no other option without a
- * custom fragment shader.
- *
- * The core colour is Godot's per-connection `Gradient` (`from_color` at 0,
- * `to_color` at 1, `graph_edit.cpp:1705-1707`), sampled here by CUMULATIVE
- * LENGTH fraction along the polyline — `Line2D`'s own `LINE_TEXTURE_STRETCH`
- * gradient sampling. The two rim rings stay the theme's flat
- * `connection_rim_color`, never gradient-blended.
- *
- * Positions are Godot pixels (+Y down) IN; the Y flip into three-space
- * happens here, once, matching `Line2D`'s own `buildLineGeometry`.
+ * From each edge inward: 1.5px fades `rim_color` to alpha 0, 1.5px blends `rim_color` into
+ * the core colour, and the rest is the core. A thin ribbon clamps its inner ring. The rings
+ * interpolate linearly, not with `smoothstep`, which needs a custom fragment shader.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -51,10 +33,10 @@ export interface GeometryBuffers {
   colors: number[];
 }
 
-/** `fake_aa_width`/`rim_width`'s common numerator, `1.5` — `graph_edit.cpp:232-233`. */
+/** The numerator `1.5` of `fake_aa_width` and `rim_width` (`graph_edit.cpp:232-233`). */
 const FADE_BAND_PX = 1.5;
 const RIM_BAND_PX = 1.5;
-/** Six cross-section vertices per sample point: outer fade × 2, rim × 2, core × 2. */
+/** Six cross-section vertices per sample point: two each for the outer fade, the rim and the core. */
 const RINGS_PER_POINT = 6;
 
 function lerpColor(a: StrokeRGBA, b: StrokeRGBA, t: number): StrokeRGBA {
@@ -67,9 +49,10 @@ function lerpColor(a: StrokeRGBA, b: StrokeRGBA, t: number): StrokeRGBA {
 }
 
 /**
- * `points` in Godot px (+Y down), already resolved to the destination space.
- * `lineWidth` is `_get_shader_line_width()`'s result — Godot px, not zoom-scaled
- * (this module's own callers apply that upstream).
+ * `points` in Godot px (+Y down), in the destination space. The Y flip into three space
+ * happens here, as in `buildLineGeometry` of `Line2D`. `lineWidth` is `_get_shader_line_width()`
+ * in Godot px, not zoom-scaled. The core samples the `from_color` to `to_color` gradient
+ * (`graph_edit.cpp:1705-1707`) by cumulative length, and the rim stays `connection_rim_color`.
  */
 export function connectionStrokeGeometry(
   points: readonly Vec2[],
@@ -110,7 +93,7 @@ export function connectionStrokeGeometry(
       tx /= len;
       ty /= len;
     }
-    // Perpendicular to the tangent — the cross-section axis.
+    // Perpendicular to the tangent: the cross-section axis.
     const nx = -ty;
     const ny = tx;
 

@@ -1,8 +1,6 @@
 /**
- * ColorPicker registration: parser.
- *
- * Parses VBoxContainer's own properties plus `color`/`picker_shape`; the
- * rest of ColorPicker's own members live in linterParser.ts only.
+ * ColorPicker registration: the parser, which reads the VBoxContainer
+ * properties and the ColorPicker members that change a drawn row.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

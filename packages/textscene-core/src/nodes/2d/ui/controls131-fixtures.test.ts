@@ -1,7 +1,7 @@
 /**
- * Fixtures contract: the slice ships unit-*.tscn fixtures for OptionButton and
- * CheckBox under scenes/fixtures (named `unit-*` so generate:fixtures categorizes them
- * as "Unit - 2D UI Controls"). Resolves the repo root by walking up to pnpm-workspace.yaml.
+ * The unit-*.tscn fixtures for OptionButton and CheckBox exist under scenes/fixtures.
+ * The `unit-*` name puts them under "Unit - 2D UI Controls" in generate:fixtures. The
+ * repo root is the nearest folder with pnpm-workspace.yaml.
  */
 import { describe, it, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';

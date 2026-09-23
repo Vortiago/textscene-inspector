@@ -1,4 +1,4 @@
-/** `computeGridLines`/`computeGridDots` vs `GraphEdit::_draw_grid` (`scene/gui/graph_edit.cpp:1895-1964`). */
+/** `computeGridLines` and `computeGridDots` against `GraphEdit::_draw_grid` (`scene/gui/graph_edit.cpp:1895-1964`). */
 import { describe, expect, it } from 'vitest';
 import { computeGridDots, computeGridLines } from './grid';
 

@@ -57,7 +57,7 @@ function bezierPoint(cp: ConnectionCurveControlPoints, t: number): Vec2 {
   };
 }
 
-/** `Vector2::normalized()` — a zero-length vector stays `(0, 0)` rather than being skipped (`core/math/vector2.h`). */
+/** `Vector2::normalized()`: a zero-length vector stays `(0, 0)` (`core/math/vector2.h`). */
 function normalized(v: Vec2): Vec2 {
   const len = Math.hypot(v.x, v.y);
   return len === 0 ? { x: 0, y: 0 } : { x: v.x / len, y: v.y / len };
@@ -93,8 +93,8 @@ function bakeSegment(
 
 /**
  * `curve.tessellate(5, 2.0)` for `curvature > 0`, else `curve.tessellate(1)`
- * (`graph_edit.cpp:1538-1541`) — the polyline points `Line2D::set_points`
- * receives, anchors included.
+ * (`graph_edit.cpp:1538-1541`): the polyline points `Line2D::set_points` receives,
+ * anchors included.
  */
 export function tessellateConnectionLine(cp: ConnectionCurveControlPoints, curvature: number): Vec2[] {
   const maxDepth = curvature > 0 ? MAX_STAGES : 1;

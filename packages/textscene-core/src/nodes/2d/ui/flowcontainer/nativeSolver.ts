@@ -1,63 +1,11 @@
 /**
- * FlowContainer's native (WebGL canvas) rect solve — a port of
- * `FlowContainer::_resort`'s two passes and `FlowContainer::get_minimum_size`
- * (`scene/gui/flow_container.cpp`), plus the shared
- * `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`) the
- * second pass calls per child.
+ * FlowContainer's native rect solve: a port of `FlowContainer::_resort` and
+ * `FlowContainer::get_minimum_size` (`scene/gui/flow_container.cpp`), with the
+ * `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`) each child passes through.
  *
- * One solver, registered three times: `HFlowContainer`/`VFlowContainer` fix
- * `vertical` in their C++ constructors and hide the property
- * (`flow_container.h:99-113`), so `orientationOf` below resolves it from the
- * node's own type name for those two, falling back to the parsed `vertical`
- * property only for a plain `FlowContainer`.
- *
- * `get_minimum_size`'s cross-axis component is `cached_size`
- * (`flow_container.h:52`, member default `0`) — a value `_resort` last wrote
- * against WHATEVER `current_container_size` (this node's own main-axis size)
- * happened to be at that time. That is genuinely self-referential exactly
- * like `TextureRect`'s `EXPAND_FIT_WIDTH`/`FIT_HEIGHT`
- * (`texturerect/nativeSolver.ts`'s own doc) — this solver's minimum-size pass
- * runs bottom-up, before any rect is assigned, so "this node's own current
- * main-axis size" does not exist on a tree's first pass. Closed the same way:
- * `HFlowContainer`/`VFlowContainer`/`FlowContainer` are all registered via
- * `controlSolverRegistry.registerSizeDependentMinimum` (below, alongside the
- * minimum-size registration itself), so `solveControlTree` runs a bounded second pass feeding
- * `SolveContext.tentativeRect`'s main-axis dimension back in here. On the
- * FIRST pass (`tentativeRect` undefined) `current_container_size` substitutes
- * `Infinity` — never wrap, matching the least-circular estimate available
- * (mirroring `textureRectMinimumSize`'s own substitution, which uses the
- * texture's own natural size for the same reason) — rather than Godot's
- * literal pre-resort `0`, which would floor this container to a degenerate
- * rect on the very first pass instead of converging to the correct wrapped
- * size on the second.
- *
- * The `ContainerLayoutFn` needs no such substitution: `contentRect` is
- * already this node's REAL resolved rect on both passes (Phase 2 runs after
- * Phase 1 in each pass), so `_resort`'s own `get_size()` reads translate
- * directly.
- *
- * Integer truncation matters throughout `_resort`: `current_container_size`,
- * every child's cached combined minimum size, `ofs`, `line_height`,
- * `line_length`, `alignment_ofs` and the EXPAND `stretch` amount are all
- * `int`/`Size2i`/`Vector2i` in the source, so a float intermediate (an
- * alignment split, a stretch-ratio division) is truncated TOWARD ZERO before
- * use — `Math.trunc`, never `Math.floor` (`stretch_avail` goes negative on an
- * overflowing line, where the two diverge). AspectRatioContainer, by
- * contrast, is all-float `Size2` with no truncation anywhere — do not carry
- * this pattern there.
- *
- * The multiline `TextureRect` "Fit" special case (`flow_container.cpp:207-
- * 222`, itself a documented "Temporary fix for editor crash") reads the
- * child's OWN PRE-EXISTING rect from a previous frame — genuinely
- * unavailable to a deterministic single solve — and is deliberately not
- * ported; such a child is sized like any other.
- *
- * `reverse_fill` flips the CROSS axis and `rtl` flips X, but on a VERTICAL
- * flow both flips land on the same axis and Godot XORs them
- * (`(rtl != reverse_fill) && vertical`, `flow_container.cpp:248`) — two flips
- * cancel, leaving the columns unmoved.
- *
- * Pure data + functions, no React, no THREE.
+ * `_resort` works in `int`, `Size2i` and `Vector2i`, so each float intermediate is
+ * truncated toward zero: `Math.trunc`, not `Math.floor`, which differs where
+ * `stretch_avail` goes negative on an overflowing line.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -89,7 +37,7 @@ const LAST_WRAP_ALIGNMENT_BEGIN = 1;
 const LAST_WRAP_ALIGNMENT_CENTER = 2;
 const LAST_WRAP_ALIGNMENT_END = 3;
 
-// Control's own stretch-ratio default (control.cpp:1868-1878, "1.0").
+// Control's stretch-ratio default (control.cpp:1868-1878, "1.0").
 const DEFAULT_STRETCH_RATIO = 1;
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 
@@ -109,7 +57,10 @@ function stretchRatioOf(n: SolveNode): number {
   return (n.node.properties as ControlProperties).sizeFlagsStretchRatio ?? DEFAULT_STRETCH_RATIO;
 }
 
-/** `HFlowContainer`/`VFlowContainer` fix `vertical` in their C++ constructor; see module doc. */
+/**
+ * One solver serves all three types. `HFlowContainer` and `VFlowContainer` fix `vertical` in
+ * their constructors and hide the property (`flow_container.h:99-113`), so their type name decides.
+ */
 function orientationOf(n: SolveNode): boolean {
   if (n.node.type === 'HFlowContainer') return false;
   if (n.node.type === 'VFlowContainer') return true;
@@ -120,12 +71,12 @@ function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation', theme:
   return n.constants[key] ?? theme.separation;
 }
 
-// --- The shared line-wrap pass (flow_container.cpp:65-129) -------------------
+// The shared line-wrap pass (flow_container.cpp:65-129).
 
 interface ChildMsc {
   /** Combined minimum size, truncated to `Size2i` (`:72`). */
   msc: Vec2;
-  /** Whether this child's size flag on the MAIN axis (`v`/`h_size_flags`) has `SIZE_EXPAND`. */
+  /** The child's size flags on the main axis have `SIZE_EXPAND`. */
   mainExpand: boolean;
   stretchRatio: number;
 }
@@ -140,19 +91,10 @@ interface LineData {
 }
 
 /**
- * `FlowContainer::_resort`'s first pass (`flow_container.cpp:65-129`): builds
- * one `LineData` per wrapped line/column and returns `cached_size`
- * (`:262`). Shared by the minimum-size function (which needs only
- * `cachedSize`) and the layout function (which needs the full `lines` array
- * for its second pass).
- *
- * The wrap check (`ofs + child_msc > current_container_size`) runs even when
- * `children_in_current_line === 0` — so a FIRST child alone wider than
- * `current_container_size` still pushes an initial EMPTY line (count 0,
- * height 0, length `-separation`) before its own line starts; only the very
- * first child can trigger this (every later over-wide child instead lands
- * alone in whatever line it starts). Transcribed as-is: guarding the wrap on
- * a non-empty line would silently diverge from Godot here.
+ * The first pass of `FlowContainer::_resort` (`flow_container.cpp:65-129`): one `LineData`
+ * per wrapped line, and `cached_size` (`:262`). The wrap check also runs on an empty line,
+ * so a first child wider than the container pushes an empty line before its own, as
+ * Godot does.
  */
 function computeLines(
   children: readonly ChildMsc[],
@@ -235,15 +177,10 @@ function buildChildMscs(entries: readonly { node: SolveNode; minSize: Vec2 }[], 
   }));
 }
 
-// --- get_minimum_size ---------------------------------------------------------
-
 /**
- * `FlowContainer::get_minimum_size` (`flow_container.cpp:267-289`): the
- * MAIN-axis component is the plain max of every visible child's own combined
- * minimum size on that axis (no wrap dependency at all); the CROSS-axis
- * component is `cached_size` (see module doc for the two-pass closure). Both
- * are `(0, 0)` with no sortable children — the loop that would assign either
- * never runs.
+ * `FlowContainer::get_minimum_size` (`flow_container.cpp:267-289`): the main axis is
+ * the widest child minimum, and the cross axis is `cached_size`. With no sortable
+ * child both are 0.
  */
 export const flowContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const vertical = orientationOf(n);
@@ -266,6 +203,9 @@ export const flowContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
     });
   }
 
+  // `cached_size` (`flow_container.h:52`, default 0) depends on the node's own size, so the
+  // size-dependent registration below runs a second pass with `tentativeRect`. The first
+  // pass has no size and uses Infinity, which never wraps: Godot's 0 would collapse the rect.
   const tentative = ctx.tentativeRect?.(n);
   const currentContainerSize = tentative
     ? Math.trunc(vertical ? tentative.h : tentative.w)
@@ -283,15 +223,10 @@ controlSolverRegistry.registerSizeDependentMinimum('FlowContainer');
 controlSolverRegistry.registerSizeDependentMinimum('HFlowContainer');
 controlSolverRegistry.registerSizeDependentMinimum('VFlowContainer');
 
-// --- _resort's second pass ----------------------------------------------------
-
 /**
- * The per-line alignment offset applied to the FIRST child of a line whose
- * `stretch_ratio_total` is zero-approx (`flow_container.cpp:159-205`) — a
- * line with an expanding child fills the whole main axis, making alignment
- * moot. `last_wrap_alignment` only ever applies to the trailing line, since
- * every OTHER line's `is_filled` is hardcoded `true` when it is pushed
- * (`computeLines` above) — only the final line's `is_filled` is computed.
+ * The alignment offset of the first child of a line with no expanding child
+ * (`flow_container.cpp:159-205`). `last_wrap_alignment` applies only to the last line:
+ * every other line is pushed with `is_filled = true`.
  */
 function alignmentOffset(
   alignment: number,
@@ -341,13 +276,10 @@ function alignmentOffset(
 }
 
 /**
- * `FlowContainer::_resort` (`flow_container.cpp:45-265`): the shared wrap
- * pass above, then a second pass walking every child in the SAME order to
- * assign its rect — advancing to the next line, applying that line's
- * alignment offset to its first child, stretching a cross-axis-filled child
- * to the line's own thickness, stretching an `EXPAND` child's main-axis size
- * by its proportional share of the line's leftover space, and finally
- * `reverse_fill` + `fit_child_in_rect`.
+ * `FlowContainer::_resort` (`flow_container.cpp:45-265`): the wrap pass, then a
+ * second pass that places each child: line alignment, cross-axis fill, `EXPAND`
+ * share, `reverse_fill` and `fit_child_in_rect`. `contentRect` is the real rect on
+ * both solve passes, so no size needs a stand-in.
  */
 export const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const vertical = orientationOf(n);
@@ -398,8 +330,9 @@ export const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect,
     let childW = msc.x;
     let childH = msc.y;
 
-    // flow_container.cpp:207-222's multiline TextureRect "Fit" special case
-    // deliberately not ported — see module doc.
+    // Not ported: the TextureRect "Fit" case (flow_container.cpp:207-222) reads the child's rect
+    // from a previous frame. Godot calls it a "Temporary fix for editor crash" (flow_container.cpp:207-
+    // 222).
     if (vertical) {
       const hFlags = hFlagsOf(child);
       if (hasFlag(hFlags, SIZE_FILL) || hasFlag(hFlags, SIZE_SHRINK_CENTER) || hasFlag(hFlags, SIZE_SHRINK_END)) {
@@ -420,8 +353,8 @@ export const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect,
 
     let rectX = ofsX;
     let rectY = ofsY;
-    // flow_container.cpp:245-250 — the cross-axis flip, then the X flip whose
-    // condition XORs the two on a vertical flow (module doc).
+    // flow_container.cpp:245-250: `reverse_fill` flips the cross axis and `rtl` flips X. On a
+    // vertical flow both land on X, and `(rtl != reverse_fill) && vertical` (flow_container.cpp:248) cancels them.
     if (reverseFill && !vertical) rectY = contentRect.h - ofsY - childH;
     if ((rtl && !vertical) || (rtl !== reverseFill && vertical)) rectX = contentRect.w - ofsX - childW;
 

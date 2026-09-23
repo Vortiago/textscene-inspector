@@ -1,6 +1,6 @@
 /**
- * Container linter tests — `Container::get_configuration_warnings()`
- * (container.cpp:207-214): exact-class `Container` with no script attached.
+ * Container linter tests: `Container::get_configuration_warnings()`
+ * (container.cpp:207-214), exact-class `Container` with no script attached.
  */
 import { describe, it, expect } from 'vitest';
 import { node, scene, expectDiagnostic, expectNoDiagnostic } from '../../../../linter/testing/testkit';
@@ -21,9 +21,8 @@ describe('Container Linter (container-no-script)', () => {
     });
   });
 
-  // `script = null` is a legal literal (variant_parser.cpp:699 reads it to
-  // `Variant()`), and it leaves `get_script().is_null()` true exactly as an
-  // absent key does — so the engine warns for both and so must this rule.
+  // `script = null` is legal (variant_parser.cpp:699 reads it to `Variant()`) and leaves
+  // `get_script().is_null()` true, as an absent key does, so the engine warns for both.
   it.each(['null', 'nil', ''])('warns on a Container whose script slot is cleared with "%s"', (cleared) => {
     expectDiagnostic(scene(node('Container', { script: cleared })), {
       ruleName: 'container-no-script',

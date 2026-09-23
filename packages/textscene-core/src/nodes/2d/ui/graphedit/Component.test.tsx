@@ -1,7 +1,6 @@
 /**
- * `<GraphEdit>` render contract — background panel + grid. Structure/tint
- * assertions only (pixels are a golden-image concern via `pnpm ref:godot`,
- * not this suite).
+ * `<GraphEdit>` draws the background panel and the grid. The tests assert
+ * structure and tint, not pixels.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -80,10 +79,9 @@ function graphNode(name: string, slots: Map<number, GraphNodeSlot>, children: So
 }
 
 /**
- * The four meshes GraphEdit's own two scrollbars always add — a track and a
- * grabber each. `_update_scrollbars` grows the range past the page in every
- * GraphEdit with a non-zero rect (`graph_edit.cpp:491-492`), so no property
- * and no fixture can take them away.
+ * The four meshes of GraphEdit's two scrollbars, a track and a grabber each.
+ * `_update_scrollbars` grows the range past the page in every GraphEdit with a
+ * non-zero rect (`graph_edit.cpp:491-492`), so no property can remove them.
  */
 const SCROLL_BAR_MESHES = 4;
 
@@ -94,7 +92,7 @@ function chromeMeshes(scene: Rendered['scene']) {
     .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
 }
 
-/** Every mesh a `<ControlQuad>` (line/dot) draws — no `color` attribute, unlike a `StyleBoxQuad`. */
+/** Every mesh a `<ControlQuad>` line or dot draws: it has no `color` attribute, unlike a `StyleBoxQuad`. */
 function quadMeshes(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
@@ -202,9 +200,8 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
     );
   }
 
-  // Chrome draws strictly past `subtreeChromeRenderOrder` — top_layer is
-  // INTERNAL_MODE_BACK (graph_edit.cpp:3183) — and within that band in
-  // top_layer's own child order: scrollbars, toolbar, minimap.
+  // Chrome draws past `subtreeChromeRenderOrder`, because top_layer is INTERNAL_MODE_BACK
+  // (graph_edit.cpp:3183), in top_layer child order: scrollbars, toolbar, minimap.
   const TOOLBAR_BAND = 9.4;
   const MINIMAP_BAND = 9.7;
 
@@ -257,10 +254,9 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
 });
 
 /**
- * `set_clip_contents(true)` (`graph_edit.cpp:3342`) — a constructor fact, so
- * every GraphEdit clips, whatever the scene says. It is load-bearing rather
- * than cosmetic: `set_scroll_offset`'s own load-time clamp (`loadOrder.ts`)
- * routinely parks the whole graph outside the widget's rect.
+ * The constructor calls `set_clip_contents(true)` (`graph_edit.cpp:3342`), so every
+ * GraphEdit clips, whatever the scene says. The load-time clamp of `set_scroll_offset`
+ * (`loadOrder.ts`) often parks the whole graph outside the rect.
  */
 describe('<GraphEdit> — clip_contents', () => {
   it("publishes exactly 4 world-space planes matching this node's own rect", async () => {
@@ -305,9 +301,9 @@ describe('<GraphEdit> — clip_contents', () => {
 });
 
 /**
- * `GraphEdit::_draw_minimap_connection_line` (`graph_edit.cpp:1592-1612`) —
- * `draw_polyline_colors(points, colors, 0.5, lines_antialiased)`, the only
- * reader of `connection_lines_antialiased` anywhere in the engine.
+ * `GraphEdit::_draw_minimap_connection_line` (`graph_edit.cpp:1592-1612`):
+ * `draw_polyline_colors(points, colors, 0.5, lines_antialiased)`, the only engine
+ * reader of `connection_lines_antialiased`.
  */
 describe('<GraphEdit> minimap connection polylines', () => {
   const connections: GraphEditConnection[] = [{ fromNode: 'Source', fromPort: 0, toNode: 'Sink', toPort: 0 }];
@@ -369,11 +365,9 @@ describe('<GraphEdit> minimap connection polylines', () => {
 });
 
 /**
- * `Button::_notification(NOTIFICATION_DRAW)` (`button.cpp:321-329`): a
- * disabled button modulates its icon with `icon_disabled_color`. The stylebox
- * does NOT change — `FlatButton`'s `disabled` box is the same empty box as its
- * `normal` one (`default_theme.cpp:370`) — so the icon's alpha is the whole
- * visible difference.
+ * `Button::_notification(NOTIFICATION_DRAW)` (`button.cpp:321-329`): a disabled button
+ * modulates its icon with `icon_disabled_color`. The `disabled` box of `FlatButton` is the
+ * empty `normal` box (`default_theme.cpp:370`), so the icon alpha is the only difference.
  */
 describe('<GraphEdit> disabled zoom buttons (graph_edit.cpp:2445-2446)', () => {
   function render(properties: Partial<GraphEditProperties>) {

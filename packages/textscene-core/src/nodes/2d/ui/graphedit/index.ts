@@ -1,4 +1,4 @@
-/** GraphEdit registration — parser. */
+/** GraphEdit registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseGraphEdit } from './parser';

@@ -1,7 +1,6 @@
 /**
- * Container registration — the native (WebGL canvas) painter. No solver:
- * Container registers neither a minimum size nor a container layout, since
- * absence is the correct port (this slice's `Component.tsx` module doc).
+ * Container registration: the native (WebGL canvas) painter. Container sorts
+ * no children and has no minimum size of its own, so it registers no solver.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

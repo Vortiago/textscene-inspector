@@ -1,18 +1,7 @@
 /**
- * <Control> — the native (WebGL canvas) painter for a plain `Control`.
- * `Control` overrides no `_draw`, so it contributes no chrome of its own; the
- * seam under test is therefore twofold:
- *
- *  - in ISOLATION (the `NativeControlComponentProps` contract this component
- *    actually receives — `solveNode`/`rect`, no `children`, no parent-layout
- *    info): it must draw nothing, whatever its own transform properties say.
- *  - through `ControlCanvasWalker` (real `controlComponentRegistry`
- *    registration, the actual production wiring this file adds): children
- *    still render as the walker's siblings, and the free-Control rotate/
- *    scale-about-pivot transform (`Container::fit_child_in_rect`'s rule,
- *    applied by the walker around EVERY registered painter) reaches a real
- *    `Control` node once one is registered — proving the walker's plumbing
- *    end to end for the simplest possible painter.
+ * <Control>: alone it draws nothing, whatever its transform says.
+ * Through `ControlCanvasWalker` and the real registry, its children still render,
+ * and the walker's rotate and scale about the pivot reaches the node.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

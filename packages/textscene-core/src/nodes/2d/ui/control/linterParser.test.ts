@@ -1,9 +1,7 @@
 /**
- * Control base validators. Control is the root of the 2D UI family; its
- * layout/anchor/offset + theme-override validators are inherited by every
- * Control subclass through the ValidatorRegistry base-walk. Scalar props run
- * through the shared accept/reject table; the `theme_override_*` wildcard groups
- * are asserted explicitly because their diagnostic is keyed by the group name.
+ * Control base validators, which every Control subclass inherits through the
+ * base-walk. Scalar props run through the accept/reject table. The `theme_override_*`
+ * groups are asserted apart, because their diagnostic is keyed by the group name.
  */
 
 import { describe, it } from 'vitest';
@@ -43,10 +41,8 @@ describe('Control Linter', () => {
       invalid: [{ value: 'x', contains: ['must be a number'] }],
     },
     {
-      // control.cpp:861, ERR_FAIL_INDEX((int)p_direction, 3) — enforced at both
-      // ends. The early return above it (control.cpp:857) compares against
-      // data.h_grow, which only ever holds a value that already cleared the
-      // guard, so an out-of-range write can never take it.
+      // control.cpp:861, ERR_FAIL_INDEX((int)p_direction, 3), enforced at both ends. The early
+      // return (control.cpp:857) compares with data.h_grow, which holds only values that passed the guard.
       prop: 'grow_horizontal',
       valid: [0, 1, 2],
       invalid: [
@@ -56,12 +52,9 @@ describe('Control Linter', () => {
       ],
     },
     {
-      // control.cpp:4275, PROPERTY_HINT_FLAGS "Fill:1,Expand:2,Shrink Center:4,
-      // Shrink End:8" — SIZE_FILL|SIZE_EXPAND|SIZE_SHRINK_CENTER|SIZE_SHRINK_END
-      // (control.h:80-83), so 15 is the widest reachable value and
-      // SIZE_SHRINK_BEGIN = 0 (control.h:79) is the empty set. set_h_size_flags
-      // bare-assigns at control.cpp:1845 with no mask and no ERR_FAIL, so bit 16
-      // is KEPT rather than dropped: a warning, never an error.
+      // control.cpp:4275, PROPERTY_HINT_FLAGS "Fill:1,Expand:2,Shrink Center:4,Shrink End:8"
+      // (control.h:80-83): 15 is the widest value, and 0 is SIZE_SHRINK_BEGIN (control.h:79).
+      // set_h_size_flags (control.cpp:1845) has no mask, so bit 16 is kept: a warning.
       prop: 'size_flags_horizontal',
       valid: [0, 1, 3, 4, 8, 15],
       invalid: [
@@ -71,11 +64,8 @@ describe('Control Linter', () => {
       ],
     },
     {
-      // control.cpp:4276 states the same four bits as :4275 — the vertical hint
-      // is not the narrower one. The `get_allowed_size_flags_vertical()` filter
-      // (control.cpp:555-562) narrows nothing here: it is `is_editor_hint()`-gated
-      // and reads the live parent Container. set_v_size_flags bare-assigns at
-      // control.cpp:1859.
+      // control.cpp:4276 states the four bits of :4275. The filter at control.cpp:555-562 is
+      // editor-only and reads the live parent. set_v_size_flags assigns at control.cpp:1859.
       prop: 'size_flags_vertical',
       valid: [0, 2, 15],
       invalid: [{ value: 16, contains: ["inspector's flag list"], severity: 'warning' }],
@@ -87,9 +77,8 @@ describe('Control Linter', () => {
     },
     {
       prop: 'z_index',
-      // `CanvasItem::set_z_index` (canvas_item.cpp:666-673) ERR_FAIL_CONDs on
-      // either side of CANVAS_ITEM_Z_MIN/MAX, so the bound is the SETTER's, not
-      // just the inspector hint's, and a value past it never reaches the item.
+      // `CanvasItem::set_z_index` (canvas_item.cpp:666-673) ERR_FAIL_CONDs outside
+      // CANVAS_ITEM_Z_MIN/MAX, so the setter refuses a value past the bound.
       valid: [0, -10, 4096, -4096],
       invalid: [
         { value: 1.5, contains: ['integer'] },
@@ -119,8 +108,7 @@ describe('Control Linter', () => {
   ]);
 
   describe('theme reference', () => {
-    // Both ids are DECLARED: an undeclared one is a dangling reference Godot
-    // refuses the whole scene for, which is a different rule's report.
+    // Both ids are declared. An undeclared one is a dangling reference, another rule's report.
     it('accepts an ExtResource theme', () => {
       expectClean(
         scene(
@@ -198,10 +186,8 @@ describe('Control Linter', () => {
     });
   });
 
-  // Every registered property must actually be wired under its exact key — a
-  // typo in a registration key (e.g. `anchor_lft`) would silently disable that
-  // validator. Feed each one a malformed value and assert it is rejected. Covers
-  // the axis variants and props the accept/reject table above only spot-checks.
+  // A typo in a registration key, for example `anchor_lft`, disables that validator
+  // without a sound, so each registered key gets a malformed value it must reject.
   describe('every registered Control property is validated', () => {
     const MALFORMED: ReadonlyArray<readonly [string, string]> = [
       ['theme', 'res://theme.tres'],
@@ -258,12 +244,12 @@ describe('Control Linter', () => {
     }
   });
 
-  // Bounded enums (ADR-0032): pin the last accepted constant AND the first
-  // rejected value, from the engine's own count, not the label-list length.
+  // Bounded enums (ADR-0032): pin the last accepted constant and the first
+  // rejected value, from the engine's count, not the label-list length.
   runPropertyValidation({ nodeType: 'Control' }, [
     {
-      // control.cpp:1923, ERR_FAIL_INDEX(p_filter, 3) — enforced at both ends,
-      // and it precedes the redundant-set early return, so nothing shadows it.
+      // control.cpp:1923, ERR_FAIL_INDEX(p_filter, 3), enforced at both ends. It comes
+      // before the early return for an unchanged value.
       prop: 'mouse_filter',
       valid: [0, 2],
       invalid: [
@@ -272,8 +258,8 @@ describe('Control Linter', () => {
       ],
     },
     {
-      // control.cpp:2267, ERR_FAIL_INDEX((int)p_focus_mode, 4) — enforced;
-      // FOCUS_ACCESSIBILITY=3 is the last constant (control.h:65-70).
+      // control.cpp:2267, ERR_FAIL_INDEX((int)p_focus_mode, 4). FOCUS_ACCESSIBILITY=3 is
+      // the last constant (control.h:65-70).
       prop: 'focus_mode',
       valid: [0, 3],
       invalid: [
@@ -282,9 +268,8 @@ describe('Control Linter', () => {
       ],
     },
     {
-      // control.cpp:878, ERR_FAIL_INDEX((int)p_direction, 3) — enforced. The
-      // early return at control.cpp:874 compares against data.v_grow, which
-      // only holds values that already cleared the guard, so it never shadows it.
+      // control.cpp:878, ERR_FAIL_INDEX((int)p_direction, 3). The early return at control.cpp:874
+      // compares with data.v_grow, which holds only values that passed the guard.
       prop: 'grow_vertical',
       valid: [0, 2],
       invalid: [
@@ -300,31 +285,31 @@ describe('Control Linter', () => {
       invalid: [{ value: 3, contains: ['0-2'] }],
     },
     {
-      // control.cpp:2295, ERR_FAIL_INDEX(x, 3) — enforced, so 3 is an error.
+      // control.cpp:2295, ERR_FAIL_INDEX(x, 3): enforced, so 3 is an error.
       prop: 'focus_behavior_recursive',
       valid: [0, 2],
       invalid: [{ value: 3, contains: ['0-2'] }],
     },
     {
-      // control.cpp:1953, ERR_FAIL_INDEX(x, 3) — enforced.
+      // control.cpp:1953, ERR_FAIL_INDEX(x, 3): enforced.
       prop: 'mouse_behavior_recursive',
       valid: [0, 2],
       invalid: [{ value: 3, contains: ['0-2'] }],
     },
     {
-      // control.cpp:2877, ERR_FAIL_INDEX(x, CURSOR_MAX=17) — enforced.
+      // control.cpp:2877, ERR_FAIL_INDEX(x, CURSOR_MAX=17): enforced.
       prop: 'mouse_default_cursor_shape',
       valid: [0, 16],
       invalid: [{ value: 17, contains: ['0-16'] }],
     },
     {
-      // control.cpp:3539, ERR_FAIL_INDEX(x, LAYOUT_DIRECTION_MAX=5) — enforced.
+      // control.cpp:3539, ERR_FAIL_INDEX(x, LAYOUT_DIRECTION_MAX=5): enforced.
       prop: 'layout_direction',
       valid: [0, 4],
       invalid: [{ value: 5, contains: ['0-4'] }],
     },
     {
-      // control.cpp:3657-3660, no ERR_FAIL — hinted, matching Node::AutoTranslateMode's
+      // control.cpp:3657-3660 has no ERR_FAIL, so hinted: Node::AutoTranslateMode has
       // 3 BIND_ENUM_CONSTANTs (node.cpp:4032-4034).
       prop: 'tooltip_auto_translate_mode',
       valid: [0, 2],

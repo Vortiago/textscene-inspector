@@ -1,25 +1,8 @@
 /**
- * `<ColorPickerButton>` — the native (WebGL canvas) painter for
- * ColorPickerButton. Godot's own `_notification` chain runs BOTH levels for
- * `NOTIFICATION_DRAW` (`GDCLASS`'s `_notification_forwardv` walks base to
- * derived): `Button::_notification` paints the button's chrome first, then
- * `ColorPickerButton::_notification` (`color_picker.cpp:2426-2434`) paints
- * the checkerboard + colour swatch OVER it. This component reuses `<Button>`
- * for the first pass and adds its own swatch after — the SAME structure, not
- * a re-derivation of Button's chrome.
- *
- * The swatch rect is `Rect2(theme_cache.normal_style->get_offset(), get_size()
- * - theme_cache.normal_style->get_minimum_size())` — the "normal" StyleBox's
- * own content margins, regardless of the button's CURRENT draw state
- * (disabled or not). `theme_cache.normal_style` is bound to the same
- * StyleBoxFlat as Button's own "normal" (`default_theme.cpp:1134`), so
- * `theme.widgets.button` already has it.
- *
- * The checkerboard is drawn UNCONDITIONALLY (`color_picker.cpp:2428` has no
- * alpha gate, unlike `ColorPresetButton::_notification`'s `preset_color.a < 1`
- * check) — an opaque swatch simply covers it.
- *
- * Its `PopupPanel` is a `Window` and never draws here.
+ * The native (WebGL canvas) painter for ColorPickerButton. `NOTIFICATION_DRAW`
+ * runs from base to derived: `<Button>` paints the chrome, then the checkerboard
+ * and the colour swatch go over it (`color_picker.cpp:2426-2434`). The `PopupPanel`
+ * is a `Window` and never draws here.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -45,6 +28,8 @@ export function ColorPickerButton(props: NativeControlComponentProps) {
   const filled = useMemo(() => multiplyModulate(tint.own, fill), [tint.own, fill]);
   const swatchColor = useGodotLinearColor(filled);
 
+  // `Rect2(normal_style->get_offset(), get_size() - normal_style->get_minimum_size())`: the
+  // margins of "normal" in every draw state. `normal_style` binds Button's "normal" (`default_theme.cpp:1134`).
   const normalStyle = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, 'normal');
   const swatch = {
     x: normalStyle.contentMargin.left,
@@ -53,19 +38,14 @@ export function ColorPickerButton(props: NativeControlComponentProps) {
     h: rect.h - normalStyle.contentMargin.top - normalStyle.contentMargin.bottom,
   };
 
-  // `overbright_indicator` is `BIND_THEME_ITEM_EXT(Theme::DATA_TYPE_ICON,
-  // ColorPickerButton, overbright_indicator, "overbright_indicator",
-  // "ColorPicker")` (`color_picker.cpp:2546`) — a FOREIGN type lookup:
-  // Godot resolves it under "ColorPicker", never this node's own
-  // "ColorPickerButton" (and `get_theme_icon`'s local-override guard, which
-  // tests `p_theme_type == get_class_name()`, therefore skips even a local
-  // `theme_override_icons/overbright_indicator` authored on this very node).
-  // `SolveNode.icons` is resolved under the node's OWN type chain, so it
-  // cannot answer this without a second, foreign-scoped theme walk — left
-  // vendored-only, not modelled by the theme-icon mechanism this pass adds.
+  // `BIND_THEME_ITEM_EXT` looks `overbright_indicator` up under "ColorPicker" (`color_picker.cpp:2546`),
+  // so even a local override on this node is skipped. `SolveNode.icons` walks the node's own
+  // type chain, so the vendored icon stands in.
   const overbrightTexture = useIconTexture(COLOR_PICKER_OVERBRIGHT_ICON);
   const overbright = isColorOverbright(fill);
 
+  // The checkerboard has no alpha gate (`color_picker.cpp:2428`), unlike the `preset_color.a < 1`
+  // check of `ColorPresetButton`: an opaque swatch covers it.
   return (
     <>
       <Button {...props} />
