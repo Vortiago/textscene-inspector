@@ -1,10 +1,9 @@
 /**
- * One-command showcase regeneration — the visual progress-tracking step run
- * after any UI change. Starts a preview server on a free port, records EVERY
- * scenario (.webm + poster), then shuts the server down. Assumes the web app
- * is already built (`pnpm --filter @textscene/web-previewer build`); the
- * `showcase:regen` root script builds first.
+ * Regenerates the showcase after a UI change: it starts a preview server, records every scenario
+ * (.webm and poster) and stops the server. It needs a built web app
+ * (`pnpm --filter @textscene/web-previewer build`), which the `showcase:regen` root script does first.
  *
+ * @example
  *   node scripts/showcase/regenerate.mjs
  */
 
@@ -18,17 +17,14 @@ import {
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
 
-// Uncommon fixed port so we know the URL without parsing stdout, overridable
-// because `assertPortFree` tells the user to override it — a caller that names
-// no variable prints the shared default and sends them round the loop again.
+// A fixed, uncommon port gives the URL without parsing stdout. `assertPortFree` names
+// SHOWCASE_PORT as the override, so the port reads it.
 const PORT = Number(process.env.SHOWCASE_PORT) || 4188;
 
 
-// Before the spawn, never after: `--strictPort` plus `stdio: 'ignore'` means our
-// own server fails silently on a taken port, and `waitForServer` then gets its
-// 200 from the stranger — every .webm, poster and 2D screenshot below would be
-// recorded against a foreign build, exiting 0. Every other `startPreview` caller
-// checks first.
+// Before the spawn: with `--strictPort` and `stdio: 'ignore'` the server fails silently on a
+// taken port, and `waitForServer` gets its 200 from the stranger, so every clip would record a
+// foreign build and exit 0.
 await assertPortFree(PORT, 'SHOWCASE_PORT');
 const { proc, baseUrl } = startPreview(PORT);
 let exitCode = 0;
@@ -37,7 +33,7 @@ try {
   process.env.SHOWCASE_URL = baseUrl;
   console.log(`[regenerate] preview at ${baseUrl}`);
 
-  // Record every scenario (resolve its fixture file from the generated manifest).
+  // Each scenario's fixture file comes from the generated manifest.
   const fixturesTs = readFileSync('apps/textscene-web/src/fixtures.ts', 'utf8');
   const arr = fixturesTs.match(/export const fixtures[^=]*=\s*(\[[\s\S]*?\]);/);
   const FIXTURES = arr ? JSON.parse(arr[1]) : [];
@@ -45,7 +41,7 @@ try {
 
   const names = Object.keys(scenarios);
   console.log(`[regenerate] recording ${names.length} scenarios…`);
-  // One broken scenario must not abort the sweep — record the rest, fail at the end.
+  // One broken scenario does not stop the others: the run fails at the end.
   const failures = [];
   for (const name of names) {
     const scenario = scenarios[name];
@@ -68,8 +64,8 @@ try {
   console.error('[regenerate] failed:', err.message);
   exitCode = 1;
 } finally {
-  // The whole group: `proc` is the shell, not the pnpm→vite grandchild holding
-  // the port, and an orphaned grandchild keeps this script's event loop open.
+  // The whole group: `proc` is the shell, not the pnpm-to-vite grandchild that holds the port, and
+  // an orphaned grandchild keeps this script's event loop open.
   killPreviewGroup(proc);
 }
 process.exit(exitCode);

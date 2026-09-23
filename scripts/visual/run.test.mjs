@@ -1,19 +1,8 @@
 /**
- * Unit tests for the pure/testable pieces of the visual-regression harness.
- *
- * The harness's correctness is mostly "did the browser render the right
- * pixels", which only a real Chromium + SwiftShader can answer — covered by
- * `pnpm test:visual` itself, not here. What IS testable in isolation:
- *
- * - `captureScene`'s seam selection: a `mode: '2d'` scene must route through
- *   the canvas2D page/context and target, never the default 3D one, and a
- *   console error logged during any scene's capture must fail it even when
- *   its pixels settled and look plausible.
- *
- * `previewServer.mjs` is mocked throughout so these run with no browser at
- * all — the module's OWN correctness (does `findCaptureTarget` actually find
- * the right element in a real page) is covered by the real-browser gate
- * (`pnpm test:visual`), not duplicated here.
+ * Tests the visual harness without a browser, with `previewServer.mjs` mocked: a `mode: '2d'`
+ * scene routes through the canvas2D page and target, and a console error fails a settled capture.
+ * The rendered pixels and `previewServer.mjs` itself need a real Chromium with SwiftShader, which
+ * `pnpm test:visual` provides.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { PNG } from 'pngjs';
@@ -119,9 +108,8 @@ describe('captureScene console-error gate', () => {
       default: { page: {}, errors: [] },
       canvas2D: null,
     };
-    // Simulate a console/pageerror listener firing DURING the settle — after
-    // captureScene has already cleared the array for this scene, exactly as a
-    // real page event would.
+    // A console or pageerror listener fires during the settle, after captureScene has cleared the
+    // array for this scene, as a real page event would.
     settleCanvas.mockImplementation(async () => {
       pages.default.errors.push('TypeError: something.broke is not a function');
       return { buffer: Buffer.from('captured'), reason: null };
@@ -167,11 +155,8 @@ describe('captureScene console-error gate', () => {
 });
 
 /**
- * `--update` writes every scene, so without this guard a rebaseline that moved
- * four images arrives as thirteen changed binaries and "eyeball the rebaselined
- * images" turns into finding the four that mean something. Measured on the
- * cpuparticles2d rebaseline: seven of the nine collateral scenes read 0 px
- * differ in the very same run — identical pixels, different PNG bytes.
+ * `--update` captures every scene, and an unchanged render can re-encode to new PNG bytes, so
+ * without this guard the images that moved would hide among rewritten ones.
  */
 describe('pixelsMatchBaseline', () => {
   it('sees through an encode that changed the bytes but not the pixels', () => {
@@ -183,8 +168,8 @@ describe('pixelsMatchBaseline', () => {
       png.data[i + 3] = 255;
     }
     const original = PNG.sync.write(png);
-    // Same pixels, different row filter — the cheap byte compare calls these
-    // different files, which is the wrong answer for a baseline.
+    // Same pixels, different row filter: a byte compare calls these different files, which is the
+    // wrong answer for a baseline.
     const reencoded = PNG.sync.write(PNG.sync.read(original), { filterType: 0 });
     expect(reencoded.equals(original)).toBe(false);
     expect(pixelsMatchBaseline(original, reencoded)).toBe(true);
@@ -206,8 +191,8 @@ describe('pixelsMatchBaseline', () => {
   });
 
   it('writes when the existing baseline cannot be decoded (error case)', () => {
-    // A truncated or non-PNG baseline must not throw mid-run and must not be
-    // mistaken for a match — anything unprovable gets rewritten.
+    // A truncated or non-PNG baseline neither throws mid-run nor counts as a match: anything
+    // unprovable gets rewritten.
     expect(pixelsMatchBaseline(Buffer.from('not a png'), uniformPngBuffer(8, 8))).toBe(false);
   });
 });

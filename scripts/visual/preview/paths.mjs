@@ -1,8 +1,6 @@
 /**
- * The one place the preview harness resolves the repo layout. Every sibling
- * imports from here rather than deriving its own `import.meta.url` offset: the
- * depth is then a property of this file alone, and moving a module cannot
- * silently repoint a path at the wrong tree.
+ * The one place the preview harness resolves the repo layout, so moving a sibling module cannot
+ * repoint a path at the wrong tree.
  */
 
 import { join } from 'node:path';

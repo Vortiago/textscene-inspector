@@ -1,8 +1,6 @@
 /**
- * `pnpm -r <script>` SKIPS a package that does not define the script, and says
- * nothing about it. So a package with no `type-check:tests` drops out of the
- * gate silently — the failure mode is not a red test but a quiet gap, which is
- * what this asserts against.
+ * Asserts that every package with tests defines `type-check:tests`: `pnpm -r <script>` skips a
+ * package without the script and says nothing, so the package would drop out of the gate.
  */
 
 import { describe, it, expect } from 'vitest';

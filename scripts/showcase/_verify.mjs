@@ -1,3 +1,7 @@
+/**
+ * Opens the running web previewer on one scene (argv label, default 'Csg Box') and saves
+ * docs/showcase/_verify.png, to check a scene switch by eye.
+ */
 import { join } from 'node:path';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { launchShowcaseBrowser } from './browser.mjs';

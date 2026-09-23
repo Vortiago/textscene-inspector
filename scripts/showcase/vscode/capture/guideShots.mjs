@@ -1,10 +1,7 @@
 /**
- * The shot recipes behind `docs/user-guide-vscode.md`.
- *
- * Each key is the image the guide embeds; each `run` leaves the workbench in
- * the state that image's caption claims, and the caller shoots the window. The
- * recipes always start from `closeAllEditors`, because an editor left over from
- * the previous shot is what put an extra .tscn pane in every guide image.
+ * The shot recipes behind `docs/user-guide-vscode.md`. Each key is an image the guide embeds, and
+ * each `run` leaves the workbench in the state its caption claims. A recipe starts from
+ * `closeAllEditors`, since an editor left from the previous shot adds a .tscn pane to the image.
  */
 
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
@@ -30,11 +27,9 @@ function restore(file) {
 }
 
 /**
- * Rewrite one scene in the throwaway workspace and let the preview catch up.
- *
- * The extension watches the file system, so writing the bytes is the same event
- * a human's Ctrl+S produces — and unlike typing into Monaco it cannot land the
- * edit in the wrong editor group.
+ * Rewrites one scene in the throwaway workspace and lets the preview catch up. The extension
+ * watches the file system, so the write is the same event as a Ctrl+S, and unlike typing into
+ * Monaco it cannot land in the wrong editor group.
  */
 async function editScene(file, replace, withText) {
   const path = `${WS}/${file}`;
@@ -42,16 +37,13 @@ async function editScene(file, replace, withText) {
   const after = before.replace(replace, withText);
   if (after === before) throw new Error(`edit did not apply to ${file}: ${replace}`);
   writeFileSync(path, after);
-  await sleep(3500); // watcher → extension host → webview reparse
+  await sleep(3500); // Watcher, extension host, then webview reparse.
 }
 
 /**
- * Ctrl+click the first `res://` link in the focused editor.
- *
- * Monaco renders a document link as a `.detected-link` span only once the
- * pointer has been over its line, so the hover is part of the act, not a
- * flourish: without it the wait below times out on an editor that does in fact
- * offer the link.
+ * Ctrl+clicks the first `res://` link in the focused editor. Monaco renders a document link as a
+ * `.detected-link` span only after the pointer has been over its line, so without the hover the
+ * wait below times out.
  */
 async function followResourceLink(page) {
   const line = page.locator('.view-line', { hasText: 'res://' }).first();
@@ -84,13 +76,11 @@ const moveBoxX = (x) =>
   editScene(BOX_SCENE, BOX_IDENTITY, `Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${x}, 0, 0)`);
 
 /**
- * A scene's preview, settled, with its tree expanded.
- *
- * The tree is the panel a reader is looking for, and a collapsed root shows one
- * row whatever the scene holds.
+ * A scene's preview, settled, with its tree expanded: the reader looks for the tree, and a
+ * collapsed root shows one row whatever the scene holds.
  */
 const scene = (file, opts) => async (page) => {
-  restore(file); // an earlier shot may have edited it
+  restore(file); // An earlier shot may have edited it.
   const painted = await openScenePreview(page, file, opts);
   await settle();
   await expandAllTrees(page);
@@ -115,10 +105,10 @@ const SOLO_SHOTS = {
 };
 
 export const GUIDE_SHOTS = {
-  // VSCODE-01 — the preview opens beside the source, nothing selected yet.
+  // VSCODE-01: the preview opens beside the source, with nothing selected.
   'vscode-01-a': { desc: 'preview opens beside the source file', run: boxBesideSource },
 
-  // VSCODE-02 — hot reload. The pair must differ ONLY by the saved edit.
+  // VSCODE-02: hot reload. The pair differs only by the saved edit.
   'vscode-02-a': { desc: 'before edit — Box at origin', run: boxBesideSource },
   'vscode-02-b': {
     desc: 'after edit — Box translated, details panel shows Position X: 3.000',
@@ -131,7 +121,7 @@ export const GUIDE_SHOTS = {
     },
   },
 
-  // VSCODE-03 — two panels, each with its own scene and its own selection.
+  // VSCODE-03: two panels, each with its own scene and its own selection.
   'vscode-03-a': {
     desc: 'two preview panels side-by-side, each showing a different fixture',
     run: async (page) => {
@@ -153,7 +143,7 @@ export const GUIDE_SHOTS = {
     },
   },
 
-  // VSCODE-04 — a res:// path is a document link, and following it opens the file.
+  // VSCODE-04: a res:// path is a document link, and following it opens the file.
   'vscode-04-a': {
     desc: 'unit-external-material.tscn with the caret on its res:// path',
     run: async (page) => {
@@ -174,22 +164,20 @@ export const GUIDE_SHOTS = {
     },
   },
 
-  // VSCODE-05 — the Outline view, not the preview, is the subject.
+  // VSCODE-05: the Outline view, not the preview, is the subject.
   'vscode-05-a': {
     desc: 'Outline lists the nested Level0 → Level1 → Level2 hierarchy',
     run: async (page) => {
       const painted = await openScenePreview(page, 'example-hierarchy-deep.tscn', { split: true });
-      // The Outline answers for the ACTIVE editor, and opening the preview made
-      // that the webview — which provides no symbols, so the view reports it
-      // cannot. Put the .tscn back in front first.
+      // The Outline answers for the active editor, which is now the webview, and a webview
+      // provides no symbols. So the .tscn comes back in front first.
       await palette(page, 'View: Focus First Editor Group');
       await palette(page, 'Outline: Focus on Outline View');
       await sleep(1200);
-      await page.keyboard.press('ArrowDown'); // land on Level0; focusing the view focuses no row
+      await page.keyboard.press('ArrowDown'); // Lands on Level0: focusing the view focuses no row.
       await sleep(400);
-      // Two levels, so the row the walk ends on is Level2: the Outline section
-      // shows about six rows, and a deeper walk scrolls Level0 off the top of
-      // this 15-deep chain.
+      // Two levels, so the walk ends on Level2: the Outline shows about six rows, and a deeper
+      // walk scrolls Level0 off the top of this 15-deep chain.
       for (let i = 0; i < 2; i++) {
         await page.keyboard.press('ArrowRight');
         await sleep(250);
@@ -199,12 +187,11 @@ export const GUIDE_SHOTS = {
       await settle(3000);
       return painted;
     },
-    // Every later shot would otherwise carry an expanded Outline reporting that
-    // the preview provides no symbols.
+    // Otherwise every later shot carries an expanded Outline that says the preview has no symbols.
     after: collapseOutline,
   },
 
-  // VSCODE-06 — tree click populates the details panel.
+  // VSCODE-06: a tree click fills the details panel.
   'vscode-06-a': {
     desc: 'CenterCube selected via tree click — details panel shows its properties',
     run: async (page) => {
@@ -215,14 +202,14 @@ export const GUIDE_SHOTS = {
     },
   },
 
-  // VSCODE-07 — the magenta placeholder for an unresolvable texture.
+  // VSCODE-07: the magenta placeholder for an unresolvable texture.
   'vscode-07-a': {
     desc: 'TestMesh renders as a magenta placeholder cube',
     run: scene('test-missing-texture.tscn'),
   },
 
-  // VSCODE-08 — the panel survives a content-only save. Preview alone, so the
-  // camera the flow is about is what fills the frame.
+  // VSCODE-08: the panel survives a content-only save. The preview is alone, so the camera the
+  // flow is about fills the frame.
   'vscode-08-a': { desc: 'preview before a content edit', run: scene(BOX_SCENE) },
   'vscode-08-b': {
     desc: 'after edit (transform X 0 → 1.5) — same panel instance, scene re-rendered',
@@ -234,7 +221,7 @@ export const GUIDE_SHOTS = {
     },
   },
 
-  // BOTH-01..04 — one fixture per shot: primitives, lights, environments.
+  // BOTH-01..04: one fixture per shot, for primitives, lights and environments.
   ...Object.fromEntries(
     Object.entries(SOLO_SHOTS).map(([key, file]) => [key, { desc: file, run: scene(file) }])
   ),

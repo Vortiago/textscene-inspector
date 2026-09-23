@@ -1,18 +1,13 @@
 /**
- * The .tscn script-strip, kept side-effect-free and separate from the vendoring
- * flow: the entry point runs on import, so a pure helper that lives beside it
- * cannot be exercised on its own.
+ * The .tscn script-strip, apart from the vendoring flow: the entry point runs on import, so a
+ * helper beside it could not be run on its own.
  */
 
 /**
- * Deterministic, mechanical script-strip for a single .tscn text. Removes every
- * `[ext_resource type="Script" …]` header and every `script = ExtResource(…)`
- * property line, then recomputes the header's `load_steps`
- * (= 1 + remaining ext_resources + sub_resources; Godot omits it when it is 1).
- * Everything else is preserved verbatim, so the transform is idempotent on an
- * already-stripped scene. Known limitation: the filter is line-based — a
- * multiline string VALUE whose continuation line happens to match these
- * patterns would be munged. No such content exists in the curated corpus.
+ * Removes every `[ext_resource type="Script" …]` header and `script = ExtResource(…)` line, since
+ * no .cs or .gd is vendored, and recomputes `load_steps` (1 + ext_resources + sub_resources). The
+ * rest stays byte for byte, so it is idempotent. The filter is line-based, so a multiline string
+ * whose continuation matches would be damaged, and the curated corpus holds none.
  * @param {string} text
  * @returns {string}
  */

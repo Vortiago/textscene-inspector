@@ -1,6 +1,6 @@
 /**
- * Scaffold a node-type vertical slice: its files, its fixture, its sheet and
- * the three aggregation imports that make the registrations reachable.
+ * Scaffolds a node-type vertical slice: its files, its fixture, its sheet and the three
+ * aggregation imports that make the registrations reachable.
  */
 
 import { execSync } from 'node:child_process';
@@ -19,11 +19,8 @@ import { kebab, wireImport } from './wiring.mjs';
 
 export function scaffoldSlice({ typeName, category, base: baseKey, intent, linter, dryRun }) {
   const { parent: chain, note: chainNote } = checkChain(typeName);
-  // `draws` is the only intent that gets its own types/parser/Component; the
-  // other two reuse the base parser, so the render half is deferred to whoever
-  // implements it (decision: property knowledge lives in linterParser.ts).
-  // True for BOTH `transform-only` and `pending` — it says "reuses the base
-  // parser", not "draws nothing", which is why it is not named for either.
+  // Only `draws` gets its own types, parser and Component: property knowledge lives in
+  // linterParser.ts. True for both `transform-only` and `pending`, so it names the reuse.
   const reusesBaseParser = intent !== 'draws';
   const base = BASES[baseKey];
   const lower = typeName.toLowerCase();
@@ -32,40 +29,34 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
 
   const sliceRel = `nodes/${category}/${lower}`;
   const sliceDir = join(CORE_SRC, sliceRel);
-  // A dry run writes nothing, so an already-scaffolded slice is no obstacle to
-  // printing its plan — and the contract tests below name real Godot types, all
-  // of which get scaffolded eventually.
+  // A dry run writes nothing, so it prints the plan of an existing slice too: the contract tests
+  // name real Godot types, which get scaffolded in time.
   if (!dryRun && existsSync(sliceDir)) fail(`slice already exists: ${sliceDir}`);
-  // Beside it, not down at the write: bailing after the slice files land leaves
-  // a directory nothing wired, no fixture, and `generate:fixtures` never run —
-  // a half-scaffold the next invocation then refuses as "slice already exists".
+  // Checked before any write: a failure after the slice files land would leave a half-scaffold
+  // that the next run refuses as "slice already exists".
   const fixtureName = `unit-${kebabName}.tscn`;
   const fixturePath = join(REPO_ROOT, 'scenes/fixtures', fixtureName);
   if (!dryRun && existsSync(fixturePath)) fail(`fixture already exists: ${fixturePath}`);
 
   const catDepth = category.split('/').length;
-  const toSrc = '../'.repeat(catDepth + 2); // slice dir → src/
-  const toBase = '../'.repeat(catDepth + 1) + base.dir; // slice dir → base slice
+  const toSrc = '../'.repeat(catDepth + 2);
+  const toBase = '../'.repeat(catDepth + 1) + base.dir;
 
-  // Reuse the nearest ancestor's typed parser, not the --base flag's: they
-  // differ whenever a Godot ancestor owns a parser.ts, and taking the flag
-  // silently discards every property that ancestor reads. Every intent, `draws`
-  // included: its own parser DELEGATES to the reused one and its `types.ts`
-  // aliases what that returns, so the flag would lose the same properties one
-  // layer down (SoftBody3D under MeshInstance3D).
+  // The nearest ancestor's parser, not the --base flag's, for every intent: a `draws` parser
+  // delegates to it and its `types.ts` aliases what it returns, so the flag would lose the
+  // ancestor's properties one layer down (SoftBody3D under MeshInstance3D).
   const reusedParser = parentParser(typeName, sliceDir, {
     importPath: `${toBase}/parser`,
     fn: base.parser,
     propsType: base.propsType,
     typesPath: `${toBase}/types`,
   });
-  // Resolved once: the same answer feeds the generated import and the plan line
-  // below, and finding it walks the whole nodes/ tree.
+  // Resolved once for the generated import and the plan line, since it walks the whole nodes/ tree.
   const parentLinterImport = linter
     ? parentLinterParser(typeName, chain, sliceDir, `${toBase}/linterParser.js`)
     : null;
 
-  // relative-to-slice name → content, in the order the plan prints them.
+  // Slice-relative name to content, in the order the plan prints them.
   const files = reusesBaseParser
     ? reusedParserFiles({ typeName, lower, camel, intent, base, toSrc, toBase, reusedParser })
     : drawsFiles({ typeName, lower, camel, base, toSrc, toBase, reusedParser });
@@ -87,9 +78,8 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
       `'../nodes/${category}/`
     ),
   ];
-  // The badge is kept honest by `renderIntent`, not by the absent registration,
-  // so a `pending` slice still wires its base — unless the base is `control`,
-  // whose component lays out rather than passing through.
+  // The badge reads `renderIntent`, not an absent registration, so a `pending` slice still wires
+  // its base, keeping `visible` and the workspace split. A `control` base lays out, so it does not.
   if (files.has('index.r3f.ts')) {
     wirings.push(
       wireImport(

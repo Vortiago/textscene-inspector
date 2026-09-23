@@ -1,27 +1,29 @@
 /**
- * The scaffold's command line. Every rule here exists because the mistake it
- * catches is otherwise SILENT: a missing `--intent` leaves the sheet status and
- * the render registration disagreeing, and a type name Godot does not know
- * leaves the type with no base and therefore no inherited validation.
+ * The scaffold's command line. Each rule catches a mistake that is otherwise silent: a missing
+ * `--intent` leaves the sheet status and the render registration disagreeing.
  */
 
 import { BASES, INTENTS } from './bases.mjs';
 import { fail } from './paths.mjs';
 
+/**
+ * `<TypeName>` is a PascalCase Godot type (Marker3D), and `<category-dir>` a directory under
+ * src/nodes/ (3d, physics/3d, paths). `--base` defaults to node3d, `--intent` is required,
+ * `--linter` generates strict validators and their wiring, and `--dry-run` prints the plan only.
+ */
 export function parseArgs(argv) {
   const positional = [];
   const opts = { base: 'node3d', intent: '', linter: false, dryRun: false, tier: false, rule: false };
-  // `--base` carries a default, so its presence is tracked rather than read
-  // off `opts`: the tier branch below refuses flags that were PASSED.
+  // `--base` carries a default, so its presence is tracked apart from `opts`: the tier branch
+  // below refuses flags that were passed.
   let baseGiven = false;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--base') { opts.base = argv[++i]; baseGiven = true; }
     else if (a === '--intent') opts.intent = argv[++i];
     else if (a === '--transform-only') {
-      // Replaced by `--intent transform-only`, which also settles the render
-      // registration and the sheet status. Kept as a hard error rather than an
-      // alias so a stale invocation cannot quietly skip that classification.
+      // A hard error, not an alias of `--intent transform-only`, so a stale invocation cannot skip
+      // the render registration and the sheet status that the intent settles.
       fail('--transform-only is gone: pass `--intent transform-only` instead.');
     } else if (a === '--linter') opts.linter = true;
     else if (a === '--tier') opts.tier = true;
@@ -42,9 +44,8 @@ export function parseArgs(argv) {
   if (!/^[a-z0-9/]+$/.test(category)) fail(`category-dir must be lowercase path segments, got: ${category}`);
 
   if (opts.tier) {
-    // A tier is a validator set for an abstract Godot class: no parser, no
-    // component, no fixture, no sheet, because the class cannot appear in a
-    // .tscn. So --intent and --base are both meaningless here.
+    // A tier is the validator set of an abstract Godot class, which cannot appear in a .tscn, so
+    // it has no parser, component, fixture or sheet, and --intent and --base do not apply.
     for (const [flag, value] of [
       ['--intent', opts.intent],
       ['--base', baseGiven],

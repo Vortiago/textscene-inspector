@@ -1,6 +1,6 @@
 /**
- * Building the previewer, and refusing to capture from a bundle that does not
- * contain the sources under test.
+ * Builds the previewer, and refuses to capture from a bundle that does not contain the sources
+ * under test.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -12,10 +12,8 @@ import { REPO_ROOT, WEB_DIST_INDEX } from './paths.mjs';
 const SKIP_BUILD_VALUES = new Set(['1', 'true', 'yes']);
 
 /**
- * Only files that can actually end up in the bundle count. Tests, comparison
- * sheets and fixtures live inside `src/` but vite never sees them, so treating
- * them as staleness would make the guard cry wolf after a test-only edit — and a
- * guard that fires on work it cannot be measuring is one people learn to bypass.
+ * Only files that can reach the bundle count. Tests, sheets and fixtures in `src/` never reach
+ * vite, and a guard that fires after a test-only edit is one people learn to bypass.
  */
 const BUNDLED_FILE = /\.(ts|tsx|js|jsx|css|json)$/;
 const NOT_BUNDLED = /\.(test|spec|contract)\.[jt]sx?$/;
@@ -23,40 +21,27 @@ const NOT_BUNDLED = /\.(test|spec|contract)\.[jt]sx?$/;
 /** Reaches the bundle, so an edit to it must reach `dist/` too. */
 const isBundled = (name) => BUNDLED_FILE.test(name) && !NOT_BUNDLED.test(name);
 
-/** A scene, resource, texture or script the corpus ships — anything but docs. */
+/** A scene, resource, texture or script the corpus ships: anything but docs. */
 const isCorpusInput = (name) => !name.endsWith('.md');
 
 /** The test kit vite never bundles, excluded the way `distFreshness.mjs` does. */
 const notTesting = (name) => name !== 'testing';
 
-/**
- * Every tree whose edits must reach `dist/`, with what counts as an input.
- *
- * The app bundles `@textscene/core` from its BUILT `dist/`, so a core edit needs
- * core rebuilt AND the app re-bundled — two steps, either of which can be
- * skipped without any error.
- *
- * `scenes/` is where every golden's scene actually lives: `copy-fixtures` stages
- * it into `apps/textscene-web/public/fixtures/` at `prebuild`, and vite copies
- * `public/` into `dist/` verbatim. Edit a `.tscn`, skip the build, and the deep
- * link still resolves — the fixture NAME is unchanged — while the bundle serves
- * the PREVIOUS scene, so every golden passes and `--update` commits that render
- * as the new baseline. `public/` itself is deliberately NOT walked: it is a copy
- * whose mtimes are stage times, so `pnpm dev`'s `predev` restage alone would
- * make the guard demand a rebuild for content that never changed.
- *
- * `scenes/games/` is deploy-only (`VITE_INCLUDE_GAMES`) and never in the bundle
- * this harness captures from.
- */
+/** Every tree whose edits must reach `dist/`, with what counts as an input. */
 const BUNDLED_TREES = [
+  // The app bundles core from its built `dist/`, so a core edit needs two builds, and either can be
+  // skipped without an error.
   { dir: 'packages/textscene-core/src', keep: isBundled, enterDir: notTesting },
   { dir: 'apps/textscene-web/src', keep: isBundled, enterDir: notTesting },
+  // `copy-fixtures` stages `scenes/` into `public/fixtures/` at `prebuild`. After an unbuilt edit
+  // the deep link still resolves, so the old scene passes and `--update` commits it. `public/` is
+  // not walked: its mtimes are stage times, which `predev` moves. `scenes/games/` is deploy-only.
   { dir: 'scenes', keep: isCorpusInput, enterDir: (name) => name !== 'games' },
 ];
 
 /**
- * Single-file inputs: vite's entry document, the config that shapes the build,
- * and the script that decides which of `scenes/` reaches `public/`.
+ * Single-file inputs: vite's entry document, the build config, and the script that decides which
+ * of `scenes/` reaches `public/`.
  */
 const BUNDLED_FILES = [
   'apps/textscene-web/index.html',
@@ -64,7 +49,7 @@ const BUNDLED_FILES = [
   'apps/textscene-web/scripts/copy-fixtures.js',
 ];
 
-/** Refuse the capture, naming the input the bundle predates. */
+/** Refuses the capture, naming the input the bundle predates. */
 function refuseStale(file) {
   console.error(
     `[preview] dist/ predates ${relative(REPO_ROOT, file)} — this capture would ` +
@@ -76,13 +61,9 @@ function refuseStale(file) {
 }
 
 /**
- * Refuse to capture from a bundle older than the sources it claims to contain.
- *
- * `prebuild` chains core's build into the app's, so the happy path is covered —
- * but a build that no-ops, one skipped via VISUAL_SKIP_BUILD, or a source edited
- * after it all yield a harness that measures the PREVIOUS revision and reports it
- * as fact. That failure is invisible: every scene still passes and a fix under
- * test looks like it changed nothing, which is exactly how it wastes an hour.
+ * Refuses to capture from a bundle older than its sources. `prebuild` chains core's build into the
+ * app's, but a build that does nothing, one skipped with VISUAL_SKIP_BUILD, or a later edit leaves
+ * the previous revision in `dist/`: every scene passes, and a fix under test seems to do nothing.
  */
 export function assertWebBuildFresh() {
   if (!existsSync(WEB_DIST_INDEX)) {
@@ -92,9 +73,8 @@ export function assertWebBuildFresh() {
   const builtAt = statSync(WEB_DIST_INDEX).mtimeMs;
   for (const { dir, keep, enterDir } of BUNDLED_TREES) {
     const { at, file, failed } = newestMtime(join(REPO_ROOT, dir), keep, enterDir);
-    // A walk that could not complete reports a LOW mtime, so `at > builtAt` is
-    // false and the guard reads fresh over a directory it never saw — the one
-    // answer a freshness guard must never give.
+    // An incomplete walk reports a low mtime, so `at > builtAt` would read fresh over a directory
+    // it never saw.
     if (failed) {
       console.error(`[preview] could not read every source under ${dir}; freshness is unproven`);
       process.exit(1);
@@ -112,12 +92,9 @@ export function assertWebBuildFresh() {
 }
 
 /**
- * Build the previewer every run. Reusing an existing `dist/` is how this
- * harness silently captured a build that predated the change under test —
- * every scene "passed" against stale code, and a newly added fixture was
- * missing from the bundle entirely, so its deep link fell back and baked a
- * bogus baseline. A stale-green visual suite is worse than a slow one; set
- * VISUAL_SKIP_BUILD=1 to reuse `dist/` while iterating locally.
+ * Builds the previewer every run: a reused `dist/` passes every scene against stale code, and a
+ * new fixture missing from it falls back and bakes a bogus baseline. Set VISUAL_SKIP_BUILD=1 to
+ * reuse `dist/` while iterating locally.
  */
 export function ensureWebBuilt(log = console.log) {
   const skip = process.env.VISUAL_SKIP_BUILD;
@@ -125,8 +102,7 @@ export function ensureWebBuilt(log = console.log) {
     console.warn(`[preview] VISUAL_SKIP_BUILD="${skip}" not recognised — building anyway`);
   } else if (skip !== undefined && existsSync(WEB_DIST_INDEX)) {
     log('[preview] VISUAL_SKIP_BUILD set — reusing existing dist/');
-    // Opting out of the BUILD is fine; opting out of measuring the right
-    // revision is not, so the freshness check still runs.
+    // Skipping the build still checks that `dist/` holds the revision under test.
     assertWebBuildFresh();
     return;
   }
@@ -140,7 +116,6 @@ export function ensureWebBuilt(log = console.log) {
     console.error('[preview] web previewer build failed');
     process.exit(1);
   }
-  // A build that exits 0 has not necessarily produced a bundle carrying the
-  // sources — an incremental step can no-op. Verify rather than assume.
+  // A build that exits 0 can still leave the old bundle, since an incremental step can do nothing.
   assertWebBuildFresh();
 }

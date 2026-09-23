@@ -1,27 +1,8 @@
 /**
- * Contract tests for the slice scaffold, driven through `--dry-run`.
- *
- * The scaffold is about to run ~150 times, and three of its decisions are the
- * ones a subagent cannot recover from on its own:
- *
- *   - `--intent` must settle the render registration and the sheet status
- *     TOGETHER, because `sheets.test.mjs` asserts they agree and a mismatch
- *     fails the wave rather than the slice.
- *   - the parent class is derived from ClassDB, never typed. `NODE_BASE_TYPES`
- *     is derived from the catalog, so a type name Godot does not know receives
- *     zero inherited validation — no error, no warning.
- *   - a `pending` slice must wire NO render barrel, since the absence of a
- *     component is exactly what keeps the "Not implemented" badge honest.
- *
- * `--dry-run` prints the full plan and writes nothing, so these assert the plan
- * without touching the tree. The plan is file NAMES, so the one case about
- * generated CONTENT — the node2d `canvasItem` flag — renders that template
- * directly instead.
- *
- * Every case writes nothing and shares no state, so all of them are launched at
- * module scope and awaited together: each run is ~100ms of Node cold start and
- * vitest runs `it` blocks in a file serially, so running them inline would make
- * the file ten cold starts long instead of one.
+ * Contract tests for the slice scaffold through `--dry-run`, which prints the plan's file names
+ * and writes nothing. A case about generated content renders the template directly. The runs
+ * share no state, so they start together at module scope: each is about 100 ms of Node cold
+ * start, and vitest runs a file's `it` blocks serially.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -38,7 +19,7 @@ const execFileAsync = promisify(execFile);
 const SCRIPT = join(import.meta.dirname, 'new-node-slice.mjs');
 const REPO_ROOT = join(import.meta.dirname, '..');
 
-/** Run the scaffold as a dry run; resolves to `{ ok, out }`, stdout+stderr merged. */
+/** Runs the scaffold as a dry run. Resolves to `{ ok, out }`, with stdout and stderr merged. */
 async function dry(args) {
   try {
     const { stdout } = await execFileAsync('node', [SCRIPT, ...args, '--dry-run'], {
@@ -67,8 +48,8 @@ const INVOCATIONS = {
     'ProgressBar', '2d/ui', '--base', 'control', '--intent', 'pending', '--linter',
   ],
   draws: ['ShapeCast3D', '3d', '--intent', 'draws'],
-  // The memorialised case: MeshInstance3D owns a parser.ts, so `--base node3d`
-  // and the real ancestry disagree about what a SoftBody3D slice reuses.
+  // MeshInstance3D owns a parser.ts, so `--base node3d` and the real ancestry disagree about what
+  // a SoftBody3D slice reuses.
   drawsUnderTypedAncestor: ['SoftBody3D', '3d', '--intent', 'draws'],
   controlPending: [
     'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', ],
@@ -80,12 +61,8 @@ const INVOCATIONS = {
   inheritsFromImmediateParent: [
     'CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending', '--linter',
   ],
-  // A category dir NO real slice occupies. These are dry runs so nothing is
-  // written, and the path only has to be free: the scaffold falls back from the
-  // canonical `shared/` to a type-named dir when `shared/` is already taken, so
-  // pointing these at a real family made the assertions depend on that family
-  // being unimplemented — which stopped being true the day SpriteBase3D got its
-  // tier.
+  // A category dir no real slice occupies. The scaffold falls back from `shared/` to a type-named
+  // dir when `shared/` is taken, so a real family would make the assertions depend on its state.
   tierValidatorsOnly: ['SpriteBase3D', '3d/scaffoldcheck', '--tier'],
   tierWithRule: ['SpriteBase3D', '3d/scaffoldcheck', '--tier', '--rule'],
   tierInstantiable: ['PinJoint2D', 'physics/2d', '--tier'],
@@ -96,10 +73,8 @@ const INVOCATIONS = {
 };
 
 /**
- * Every case names a REAL Godot type, because the parent is derived from
- * ClassDB. Real types get scaffolded as the coverage waves reach them, so
- * nothing here may assume its type is still unscaffolded — hence the
- * before/after snapshot rather than a bare `not.toExist`.
+ * Every case names a real Godot type, since the parent comes from ClassDB, and a real type can be
+ * scaffolded at any time. So the dry-run check compares before and after, not `not.toExist`.
  */
 const PROGRESSBAR_SLICE = join(REPO_ROOT, 'packages/textscene-core/src/nodes/2d/ui/progressbar');
 const existedBefore = existsSync(PROGRESSBAR_SLICE);
@@ -111,9 +86,8 @@ const results = Object.fromEntries(
 
 describe('new-node-slice tier chaining', () => {
   it('chains a validators-only tier to the registration above it', () => {
-    // A tier that registers without importing its parent's linterParser fails
-    // baseChainImport's "every slice REACHES the ancestor the base chain names",
-    // and the cheapest wrong fix is to import any sibling that silences it.
+    // Without its parent's linterParser import a tier fails baseChainImport's reachability check,
+    // and the cheapest wrong fix imports any sibling that silences it.
     expect(results.tierValidatorsOnly.ok).toBe(true);
     expect(results.tierValidatorsOnly.out).toMatch(/inherit\s+\S*linterParser\.js/);
   });
@@ -131,18 +105,15 @@ describe('new-node-slice argument contract', () => {
   });
 
   it('refuses a type name Godot does not know', () => {
-    // The base table is derived from the catalog, so an invented or misspelled
-    // type gets no entry and no inherited validator — silently. `Widget3D` is
-    // the shape of that mistake: plausible, and absent from ClassDB.
+    // An invented or misspelled type gets no base entry and so, silently, no inherited validator.
+    // `Widget3D` is plausible and absent from ClassDB.
     expect(results.unknownType.ok).toBe(false);
     expect(results.unknownType.out).toMatch(/Widget3D is not in .*node-catalog\.json/);
   });
 
   it('inherits from the nearest ancestor that registers, not the --base flag', () => {
-    // `Container` sits between AspectRatioContainer and Control and registers
-    // nothing (Godot binds it no properties), so stopping at the immediate
-    // parent would skip Control's whole set. Three agents in one wave
-    // disagreed about this import; the scaffold now settles it.
+    // `Container` sits between AspectRatioContainer and Control and registers nothing (Godot binds
+    // it no properties), so the immediate parent alone would skip Control's whole set.
     const { ok, out } = results.inheritsSkippingEmpty;
     expect(ok).toBe(true);
     expect(out).toMatch(/inherit \.\.\/control\/linterParser\.js/);
@@ -162,10 +133,8 @@ describe('new-node-slice argument contract', () => {
   });
 
   it('refuses a rendering Control, which needs the overlay registry it cannot wire', () => {
-    // The scaffold emits nodeComponentRegistry + r3f/nodes/index.ts. A Control
-    // that draws belongs to controlComponentRegistry, r3f/controls/index.ts and
-    // TWO_D_UI_TYPES (ADR-0003) — so it must refuse rather than register a DOM
-    // component into the THREE registry.
+    // The scaffold emits nodeComponentRegistry and r3f/nodes/index.ts, but a Control that draws
+    // belongs to controlComponentRegistry, r3f/controls/index.ts and TWO_D_UI_TYPES (ADR-0003).
     expect(results.controlRendering.ok).toBe(false);
     expect(results.controlRendering.out).toMatch(/--base control supports only --intent pending/);
   });
@@ -173,8 +142,8 @@ describe('new-node-slice argument contract', () => {
 
 describe('new-node-slice tier mode', () => {
   it('scaffolds a validators-only tier with no barrel entry', () => {
-    // A validators-only tier is pulled in by whichever leaf imports its
-    // linterParser, so wiring the barrel would be redundant.
+    // A leaf that imports its linterParser pulls in a validators-only tier, so a barrel entry is
+    // redundant.
     const { ok, out } = results.tierValidatorsOnly;
     expect(ok).toBe(true);
     expect(out).toMatch(/create {2}nodes\/3d\/scaffoldcheck\/shared\/linterParser\.ts/);
@@ -183,8 +152,8 @@ describe('new-node-slice tier mode', () => {
   });
 
   it('wires the barrel only when the tier carries a rule', () => {
-    // A rule has no leaf importer, so without the barrel entry ruleCoverage
-    // reports it as declared-but-never-registered.
+    // A rule has no leaf importer, so without the barrel entry ruleCoverage reports it as never
+    // registered.
     const { ok, out } = results.tierWithRule;
     expect(ok).toBe(true);
     expect(out).toMatch(/create {2}nodes\/3d\/scaffoldcheck\/shared\/linter\.ts/);
@@ -249,11 +218,8 @@ describe('new-node-slice intent shapes', () => {
   });
 
   it('gives a draws slice the registration test the other shapes carry', () => {
-    // It proves the slice's OWN self-registration: both entry points imported,
-    // both registries answered. It cannot see a dropped aggregation import —
-    // the imports above register the slice regardless — which is why
-    // `parserBarrelCompleteness` exists and why the round-trip block that
-    // claimed to catch one is no longer emitted.
+    // It proves the slice's own self-registration through both entry points and registries. It
+    // cannot see a dropped aggregation import, which `parserBarrelCompleteness` checks.
     expect(results.draws.out).toMatch(/create {2}nodes\/3d\/shapecast3d\/shapecast3d\.test\.ts/);
 
     const emitted = drawsFiles({
@@ -275,18 +241,14 @@ describe('new-node-slice intent shapes', () => {
     expect(test).toContain("import './index.r3f';");
     expect(test).toContain("nodeRegistry.getRegistration('ShapeCast3D')");
     expect(test).toContain("nodeComponentRegistry.get('ShapeCast3D')");
-    // Retired: it spied for this warning through a parser that had already been
-    // handed the registration by the import above, so the branch was unreachable.
+    // The import above registers the slice, so a spy for this warning could never fire.
     expect(test).not.toContain('Unsupported node type');
   });
 
   it('points a `draws` slice at the nearest typed ancestor, not the --base flag', () => {
-    // `draws` was the one intent that took the flag, so a SoftBody3D slice was
-    // scaffolded against `parseNode3D` while its linter side inherited every
-    // MeshInstance3D validator: `mesh`, `skin` and the material overrides were
-    // validated and then discarded. The plan settles the resolution; the
-    // template is rendered directly for the CALL and the props alias, which
-    // `--dry-run` does not print.
+    // With `parseNode3D`, a SoftBody3D slice would validate `mesh`, `skin` and the material
+    // overrides and then discard them. The plan settles the resolution, and the template renders
+    // directly for the call and the props alias, which `--dry-run` does not print.
     const { ok, out } = results.drawsUnderTypedAncestor;
     expect(ok).toBe(true);
     expect(out).toMatch(/parser {2}parseMeshInstance3D from \.\.\/meshinstance3d\/parser/);
@@ -305,8 +267,8 @@ describe('new-node-slice intent shapes', () => {
         typesPath: '../meshinstance3d/types',
       },
     });
-    // Importing the ancestor parse and then calling the base one is the shape
-    // that compiled only because slice.mjs pinned the two equal.
+    // An import of the ancestor parse beside a call of the base one compiles only while
+    // slice.mjs pins the two equal.
     expect(emitted.get('parser.ts')).toContain('parseMeshInstance3D(heading, properties)');
     expect(emitted.get('parser.ts')).not.toContain('parseNode3D');
     expect(emitted.get('types.ts')).toContain(
@@ -323,11 +285,9 @@ describe('new-node-slice intent shapes', () => {
   });
 
   it('marks a node2d slice canvasItem, so it lands in the 2D workspace', () => {
-    // Without the flag the dispatcher renders the slice in the 3D viewport, and
-    // `canvasItemRegistry.guard.test.ts` catches it only once the slice is
-    // built. The flag lives in generated CONTENT and `--dry-run` prints only
-    // names, so the plan settles the routing and the template is rendered
-    // directly for the emit.
+    // Without the flag the dispatcher renders the slice in the 3D viewport, which
+    // `canvasItemRegistry.guard.test.ts` catches only once the slice is built. `--dry-run` prints
+    // only names, so the template renders directly for the flag.
     expect(results.transformOnly2D.ok).toBe(true);
     expect(results.transformOnly2D.out).toMatch(/base: node2d, intent: transform-only/);
     expect(results.transformOnly2D.out).toMatch(/create {2}nodes\/2d\/raycast2d\/index\.r3f\.ts/);
@@ -346,11 +306,9 @@ describe('new-node-slice intent shapes', () => {
   });
 
   it('routes a `draws` slice to the same workspace its base declares', () => {
-    // The flag is the base's, not the intent's, and the two templates emit it
-    // independently. A `draws` slice missing it fails differently per base:
-    // node2d turns canvasItemRegistry.guard red immediately, while node drops
-    // `container` and the subtree silently vanishes from the 2D canvas with no
-    // guard to notice.
+    // The flag is the base's, and the two templates emit it independently. Without it a node2d
+    // slice fails canvasItemRegistry.guard, while a node slice drops `container` and its subtree
+    // vanishes from the 2D canvas with no guard to notice.
     for (const [baseKey, flag] of [
       ['node2d', /^\s*canvasItem: true,$/m],
       ['node', /^\s*container: true,$/m],
@@ -373,9 +331,8 @@ describe('new-node-slice intent shapes', () => {
   });
 
   it('mounts a `pending` slice on its base rather than dropping to the fallback', () => {
-    // A gap still needs `visible` and the workspace split, and
-    // `GenericNodeFallback` carries neither. `renderIntent: 'pending'` is what
-    // keeps the badge honest instead of the absent registration.
+    // A gap still needs `visible` and the workspace split, which `GenericNodeFallback` lacks. The
+    // badge reads `renderIntent: 'pending'`, not an absent registration.
     const emitted = reusedParserFiles({
       typeName: 'ReflectionProbe',
       lower: 'reflectionprobe',
@@ -390,9 +347,8 @@ describe('new-node-slice intent shapes', () => {
   });
 
   it('leaves a `pending` Control on the passthrough fallback', () => {
-    // Deliberately not symmetric. The Node bases mount an invisible transform
-    // group, but mounting `Control` swaps `display: contents` passthrough for
-    // positioned anchor-laid-out divs — a render change, not a badge fix.
+    // The Node bases mount an invisible transform group, but a mounted `Control` swaps the
+    // `display: contents` passthrough for positioned divs, which changes the render.
     const emitted = reusedParserFiles({
       typeName: 'ProgressBar',
       lower: 'progressbar',
@@ -407,8 +363,8 @@ describe('new-node-slice intent shapes', () => {
   });
 
   it('writes nothing on a dry run', () => {
-    // Asserted against the filesystem, not just the message: the ProgressBar run
-    // above prints a full create/wire plan, so a leaked write would land here.
+    // Asserted against the filesystem: the ProgressBar run prints a full plan, so a leaked write
+    // would land here.
     expect(results.transformOnly.out).toMatch(/dry run — nothing written/);
     expect(existsSync(PROGRESSBAR_SLICE)).toBe(existedBefore);
   });

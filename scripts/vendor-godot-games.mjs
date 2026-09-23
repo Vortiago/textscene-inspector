@@ -1,25 +1,13 @@
 #!/usr/bin/env node
 /**
- * Vendor a curated set of open-source Godot 4 *games* into scenes/games/.
+ * Vendors curated open-source Godot 4 games into scenes/games/<dir>/, a corpus of real-world
+ * scene graphs beside the scenes/demos/ breadth corpus, which vendor-godot-demos.mjs wipes on each
+ * run. Each game is fetched at a pinned commit, pruned, and recorded with its licence in
+ * scenes/games/README.md. Each keeps its own res:// namespace (a `root` per game in the manifest).
  *
- * Unlike scenes/demos/ (the breadth corpus from godot-demo-projects) this is
- * the "proper games" corpus: full community game projects copied in so the
- * previewer can be exercised against real-world scene graphs — for feature-
- * completeness checks and bug hunting — instead of only tiny fixtures.
- *
- * Usage:
+ * @example
  *   node scripts/vendor-godot-games.mjs
- *
- * Self-contained and re-runnable: shallow-fetches each game at a PINNED commit
- * into a temp dir, prunes Godot editor artifacts and source art the previewer
- * never reads, copies the result into scenes/games/<dir>/, and records the
- * pinned commits + licenses in scenes/games/README.md. Each game keeps its own
- * res:// namespace (the fixture manifest carries a `root` per game). After
- * running:
  *   pnpm generate:fixtures
- *
- * Kept SEPARATE from scenes/demos/ on purpose: vendor-godot-demos.mjs wipes
- * scenes/demos/ on every run, which would otherwise clobber these.
  */
 
 import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';

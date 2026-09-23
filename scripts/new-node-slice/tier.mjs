@@ -1,17 +1,8 @@
 /**
- * Scaffold a shared validator tier for an abstract Godot class.
- *
- * A tier is not a slice: the class cannot be instantiated, so there is no
- * parser, no component, no fixture and no comparison sheet. It exists because
- * `NODE_BASE_TYPES` carries every hop of Godot's ancestry, so validators
- * registered on an intermediate reach its subclasses.
- *
- * `--rule` decides the wiring, and the distinction is the one the guards
- * already enforce: a tier carrying only validators is pulled in by whichever
- * leaf imports its linterParser, so it needs no barrel entry. A tier carrying a
- * RULE has no such consumer, so it needs `index.linter.ts` and a line in
- * `linter/index.ts`, or `ruleCoverage` reports the rule as declared-but-never-
- * registered.
+ * Scaffolds the shared validator tier of an abstract Godot class, which `NODE_BASE_TYPES` passes
+ * on to its subclasses. A leaf that imports its linterParser pulls in a validators-only tier. A
+ * `--rule` tier has no such consumer, so it needs `index.linter.ts` and a line in
+ * `linter/index.ts`, or `ruleCoverage` reports the rule as never registered.
  */
 
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -25,13 +16,9 @@ import { wireImport } from './wiring.mjs';
 export function scaffoldTier({ typeName, category, rule, dryRun }) {
   const heirs = checkTier(typeName);
 
-  // `<category>/shared` is the home when the category has exactly one tier, as
-  // 3d/lights and canvasitem do. It does not generalise: 2d/ui/shared already
-  // holds parser helpers for four different bases, so a `linterParser.ts`
-  // dropped in there would speak for one of them with nothing saying which, and
-  // the next tier in the category would have nowhere to go. When the directory
-  // is taken, the tier gets one named after the class instead — unambiguous,
-  // and as many tiers per category as Godot has abstract classes.
+  // `<category>/shared` holds a category's only tier, as in 3d/lights and canvasitem. When it is
+  // taken (2d/ui/shared holds parser helpers for four bases), the tier gets a directory named
+  // after the class, so a category holds as many tiers as Godot has abstract classes.
   const sharedRel = `nodes/${category}/shared`;
   const taken = existsSync(join(CORE_SRC, sharedRel));
   const sliceRel = taken ? `nodes/${category}/${typeName.toLowerCase()}` : sharedRel;
@@ -39,9 +26,8 @@ export function scaffoldTier({ typeName, category, rule, dryRun }) {
   if (!dryRun && existsSync(sliceDir)) fail(`tier already exists: ${sliceDir}`);
   const toSrc = '../'.repeat(sliceRel.split('/').length);
 
-  // Same resolution the leaf scaffold uses: walk Godot's ancestry to the
-  // nearest class that actually registers something. Without it a scaffolded
-  // tier registers unchained and fails baseChainImport's reachability arm.
+  // The leaf scaffold's resolution. Without it a tier registers unchained and fails
+  // baseChainImport's reachability arm.
   const parentLinterImport = parentLinterParser(typeName, tierParent(typeName), sliceDir, null);
 
   const files = tierFiles({ typeName, heirs, toSrc, rule, parentLinterImport });

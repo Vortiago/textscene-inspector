@@ -1,18 +1,12 @@
 #!/usr/bin/env node
 /**
- * Vendor the visual godot-demo-projects categories into scenes/demos/.
+ * Vendors every godot-demo-projects project under 2d/, 3d/, gui/ and viewport/ into
+ * scenes/demos/<top>/<project>/, without the editor artefacts and source art the previewer never
+ * reads. It wipes scenes/demos/ first and records the source commit in its README.md. `2d/isometric`
+ * lives at scenes/isometric/, the TileMapLayer corpus that tests there pin.
  *
- * Usage:
+ * @example
  *   node scripts/vendor-godot-demos.mjs <path-to-godot-demo-projects-checkout>
- *
- * Copies every project under 2d/, 3d/, gui/, viewport/ into
- * scenes/demos/<top>/<project>/, pruning Godot editor artifacts and source
- * art that the previewer never reads. `2d/isometric` is skipped — it is
- * vendored standalone at scenes/isometric/ as the TileMapLayer integration
- * corpus and pinned by tests there.
- *
- * Re-runnable: wipes scenes/demos/ first, then copies fresh, and records the
- * source commit in scenes/demos/README.md. After running:
  *   pnpm generate:fixtures
  */
 
@@ -37,7 +31,7 @@ let commit = 'unknown';
 try {
   commit = execSync('git rev-parse HEAD', { cwd: source }).toString().trim();
 } catch {
-  // Not a git checkout — record as unknown.
+  // Not a git checkout, so the commit is unknown.
 }
 
 rmSync(TARGET, { recursive: true, force: true });

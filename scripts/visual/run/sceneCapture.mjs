@@ -1,10 +1,7 @@
 /**
- * One golden scene, driven to its settled frame: navigate, apply whatever
- * display toggle or selection the scene declares, then hand off to the
- * stabilization gate.
- *
- * Every wait in here is load-bearing against a race that has produced a wrong
- * baseline before; the comments say which.
+ * Drives one golden scene to its settled frame: navigate, apply the display toggle or selection
+ * the scene declares, then hand off to the stabilisation gate. Each wait prevents a race that
+ * gives a wrong baseline, and its comment names the race.
  */
 
 import {
@@ -14,28 +11,15 @@ import {
   settleCanvas,
 } from '../previewServer.mjs';
 
-// Strictly greater than CameraFit's last load-time fit timer (1100ms after
-// the scene mounts), with a comfortable margin for render-loop latency under
-// host contention. See the wait in `captureScene`.
+// Greater than CameraFit's last load-time fit timer (1100 ms after mount), with margin for
+// render-loop latency under host contention.
 const PRE_SELECT_FIT_QUIESCENCE_MS = 1500;
 
 /**
- * Navigate to a scene and capture its target once it is provably settled: two
- * consecutive byte-identical screenshots. Returns the PNG buffer, or null with
- * a reason when the scene never stabilizes or logs a console error.
- *
- * `pages` holds one page per capture context — `pages.default` (the fixed Godot
- * editor orbit, ADR-0025) and `pages.canvas2D` (the 2D parity frame: zoom 1,
- * chrome hidden, Godot clear colour — created only when the run includes a
- * `mode: '2d'` scene). A scene's `mode: '2d'` field routes it through the
- * LATTER, both for navigation and for which element is screenshotted, so a 2D
- * scene is never measured against the 3D canvas by construction.
- *
- * When `scene.select` is set, the harness drives a real tree selection first
- * (expand the tree, click that node's row) so a selection-gated gizmo
- * (Marker/Path/PathFollow, ADR-0018) renders — exercising the full
- * tree-click → SelectionContext → NodeDispatcher → useGizmoVisible path in the
- * browser, not just the component's gating logic in isolation.
+ * Navigates to a scene and captures its target after two byte-identical screenshots. Returns the
+ * PNG buffer, or null with a reason when the scene never settles or logs a console error.
+ * `pages.default` holds the framed 3D view and `pages.canvas2D` the 2D parity frame, which exists
+ * only when a scene sets `mode: '2d'` and which such a scene both navigates and screenshots.
  */
 export async function captureScene(pages, baseUrl, scene) {
   const canvas2D = scene.mode === '2d';
@@ -46,11 +30,10 @@ export async function captureScene(pages, baseUrl, scene) {
     );
   }
   const { page, errors } = pageState;
-  // Cleared here, not by the caller, so a leftover error from the PREVIOUS
-  // scene captured on this same page can never be blamed on this one.
+  // Cleared here, so an error left from the previous scene on this page is not blamed on this one.
   errors.length = 0;
 
-  // Silence here is how a stalled resource chain becomes a baseline, so say so.
+  // A silent stalled resource chain would become a baseline, so it is logged.
   await gotoFixture(page, baseUrl, scene.file, (ms) =>
     console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`)
   );
@@ -58,9 +41,7 @@ export async function captureScene(pages, baseUrl, scene) {
   if (!canvas) return { buffer: null, reason: canvasReason };
 
   if (scene.navigation) {
-    // The navmesh overlay defaults ON, but drive it explicitly so the scene's
-    // state does not depend on a default a future change could flip out from
-    // under the baseline.
+    // The navmesh overlay defaults on, but is set explicitly, so the baseline rests on no default.
     const reason = await setDisplayToggle(page, 'Navigation', true);
     if (reason) return { buffer: null, reason };
     await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
@@ -68,9 +49,8 @@ export async function captureScene(pages, baseUrl, scene) {
   }
 
   if (scene.collisions) {
-    // "Visible Collision Shapes" is OFF by default (ADR-0005/0006), so a
-    // CollisionShape gizmo is invisible to every other golden — which is how
-    // capsule/sphere/cylinder shapes drew a unit box unnoticed.
+    // "Visible Collision Shapes" is off by default (ADR-0005/0006), so every other golden hides a
+    // CollisionShape gizmo.
     const reason = await setDisplayToggle(page, 'Collisions', true);
     if (reason) return { buffer: null, reason };
     // Let CameraFit's load-time timers finish before changing what is on
@@ -79,6 +59,8 @@ export async function captureScene(pages, baseUrl, scene) {
     await page.mouse.move(0, 0);
   }
 
+  // A real tree selection makes a selection-gated gizmo (Marker/Path/PathFollow, ADR-0018) render,
+  // through the whole tree-click, SelectionContext, NodeDispatcher and useGizmoVisible path.
   if (scene.select) {
     // Expand the whole tree so nested nodes are reachable, then click the row.
     await page.locator('[aria-label="Expand all"]').click();
@@ -88,35 +70,22 @@ export async function captureScene(pages, baseUrl, scene) {
     } catch {
       return { buffer: null, reason: `select target not found in tree: ${scene.select}` };
     }
-    // Click only after CameraFit's load-time fit timers (150/500/1100ms after
-    // the scene mounts) have ALL fired. Selection never moves the camera (by
-    // design; see CameraFit in packages/textscene-core/src/r3f/TscnCanvas.tsx),
-    // so a click that lands BEFORE the 1100ms timer lets that timer see the
-    // just-mounted gizmo and widen the frame, while a click AFTER it leaves
-    // the tight pre-selection framing: two individually stable equilibria
-    // whose winner depends on host load. The tree row's presence
-    // above is our scene-ready signal: rows render from the same scene-graph
-    // state whose arrival starts CameraFit's timers, so waiting comfortably
-    // past the last timer from here guarantees the timers are spent and pins
-    // every `-selected` capture to the single tight equilibrium.
+    // After CameraFit's fit timers (150/500/1100 ms after mount) have all fired: a click before the
+    // last one lets it see the new gizmo and widen the frame, and host load picks the winner. The
+    // row renders from the state that starts those timers, so this wait from it spends them all.
+    // Selection never moves the camera (CameraFit in packages/textscene-core/src/r3f/TscnCanvas.tsx).
     await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
     await row.click();
-    // `.click()` moves the mouse over the row first, which fires a real
-    // `mouseenter` and leaves that row's hover-highlight engaged (since the
-    // mouse never moves away afterward) — an accidental artifact of driving
-    // a real click, not something these `-selected` scenes intend to capture
-    // (this harness exercises the selection path, per the doc comment above;
-    // hover is a separate, untested-here affordance). Move the pointer off
-    // the tree entirely so only true selection state renders.
+    // `.click()` hovers the row first and leaves its hover highlight on, so the pointer moves off
+    // the tree and only the selection renders.
     await page.mouse.move(0, 0);
   }
 
   const result = await settleCanvas(page, canvas);
   if (!result.buffer) return result;
   if (errors.length > 0) {
-    // A console error during a settled, otherwise-plausible capture is still
-    // a broken render — pixels alone cannot see e.g. a caught-and-swallowed
-    // resource failure that leaves the previous frame on screen.
+    // A console error in a settled, plausible capture is still a broken render: pixels cannot see a
+    // swallowed resource failure that leaves the previous frame on screen.
     return {
       buffer: null,
       reason: `console error(s) logged during capture: ${errors.join(' | ')}`,
@@ -127,12 +96,9 @@ export async function captureScene(pages, baseUrl, scene) {
 }
 
 /**
- * Fail-on-console-error gate, attached to every capture page. A scene that
- * logs a console error or throws is a broken render even when its pixels
- * happen to settle and look plausible — every golden scene gets this
- * assertion, not just a hand-picked few. Returns the mutable array
- * `captureScene` checks and clears per scene, so errors from one scene never
- * bleed into the next.
+ * The fail-on-console-error gate of every capture page: a scene that logs an error or throws is a
+ * broken render, however plausible its pixels. Returns the mutable array `captureScene` checks and
+ * clears per scene.
  */
 export function attachConsoleGate(page) {
   const errors = [];
