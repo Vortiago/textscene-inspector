@@ -1,23 +1,8 @@
 /**
- * Semantic linter rule for LookAtModifier3D, its one cross-field condition.
- *
- * `LookAtModifier3D::get_configuration_warnings()` (look_at_modifier_3d.cpp:70-76)
- * emits "Forward axis and primary rotation axis must not be parallel." when
- * `get_axis_from_bone_axis(forward_axis) == primary_rotation_axis`
- * (look_at_modifier_3d.cpp:72). Godot raises it itself, as a warning, so the
- * tier is settled: neither setter refuses the value, and the two properties are
- * only wrong together.
- *
- * It bites at runtime. `look_at_with_axes` projects the bone's forward vector
- * onto the plane of `primary_rotation_axis` (look_at_modifier_3d.cpp:719-721),
- * and `get_projection_vector` (:654-669) builds that 2D vector from the two
- * components the axis does NOT own. When the forward axis IS the rotation axis
- * both components are zero, so the projection is the zero vector, the angle it
- * measures is always 0, and the modifier never rotates about that axis.
- *
- * Not checkable per property, which is why it is a rule rather than a
- * validator: `forward_axis` and `primary_rotation_axis` are two keys, and each
- * is individually legal.
+ * LookAtModifier3D's cross-field condition, from `get_configuration_warnings()`
+ * (look_at_modifier_3d.cpp:70-76): a forward axis parallel to the primary rotation axis warns
+ * (look_at_modifier_3d.cpp:72). Neither setter refuses a value, and each of the two keys is legal
+ * alone, so it is a rule, not a validator.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -42,8 +27,8 @@ function axisNumber(
   const raw = properties[key];
   if (raw === undefined) return fallback;
   const parsed = ruleInt(raw);
-  // A malformed value is the validator's to report; NaN here would compare
-  // false against everything and quietly suppress the rule instead.
+  // A malformed value is the validator's to report. NaN here would compare false against
+  // everything and suppress the rule.
   return parsed ?? fallback;
 }
 
@@ -58,6 +43,9 @@ function checkLookAtModifier3D(context: RuleContext): Diagnostic[] {
     'primary_rotation_axis',
     DEFAULT_PRIMARY_ROTATION_AXIS
   );
+  // `look_at_with_axes` projects the forward vector onto the primary axis's plane
+  // (look_at_modifier_3d.cpp:719-721), and `get_projection_vector` (:654-669) uses the two components
+  // the axis does not own. A parallel pair projects to zero, so the modifier never rotates about it.
   if (axisFromBoneAxis(forwardAxis) !== primaryAxis) return [];
 
   const forwardLabel = BONE_AXIS[forwardAxis] ?? String(forwardAxis);

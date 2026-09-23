@@ -1,15 +1,7 @@
 /**
- * LookAtModifier3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Every numeric bound below quotes the governing Godot source line. The six
- * angle properties are the interesting ones: their hints read in DEGREES and
- * the `.tscn` stores RADIANS, so each carries an explicit conversion case that
- * a degree-unit bound would pass and a radian-unit bound would not.
+ * LookAtModifier3D strict validators, asserted through `validatorRegistry`, not by linting a `.tscn`.
+ * Every numeric bound quotes its Godot source line. The six angle hints read in degrees while the
+ * `.tscn` stores radians, so each has a case a degree-unit bound would pass and a radian one would not.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -25,13 +17,9 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * LookAtModifier3D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
- *
- * All thirty come from the `ADD_PROPERTY` block at look_at_modifier_3d.cpp:468-508,
- * the class's only route into a `.tscn`: it declares no `_set`/`_get`, no
- * `get_property_list`, no `PropertyListHelper` and no `ADD_ARRAY_COUNT`.
+ * The keys LookAtModifier3D binds, read from the source. Set this or DECLARES_NOTHING, not both.
+ * Leaving both unset is red on purpose: do not delete an assertion to go green. All thirty come from
+ * the `ADD_PROPERTY` block at look_at_modifier_3d.cpp:468-508, the class's only route into a `.tscn`.
  */
 const KEYS: string[] = [
   'target_node',
@@ -65,7 +53,7 @@ const KEYS: string[] = [
   'secondary_negative_limit_angle',
   'secondary_negative_damp_threshold',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 
 /** The four angle properties Godot hints `"0,180,0.01,radians_as_degrees"`. */
@@ -99,16 +87,15 @@ describe('LookAtModifier3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint`
+    // checks it against the whole registry through the barrel. This checks the same file
+    // against only what this test imported.
     expectFixtureClean('unit-look-at-modifier-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('LookAtModifier3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -247,7 +234,7 @@ describe('LookAtModifier3D strict validators', () => {
 
   describe('origin_offset', () => {
     it('accepts a Vector3 and rejects anything else', () => {
-      // look_at_modifier_3d.cpp:482, a bare Variant::VECTOR3 with no hint;
+      // look_at_modifier_3d.cpp:482, a bare Variant::VECTOR3 with no hint, and
       // set_origin_offset (:215-217) assigns, so no component is bounded.
       expect(check('origin_offset', 'Vector3(0, 0, 0)')).toBeNull();
       expect(check('origin_offset', 'Vector3(-1000.5, 2, 3e4)')).toBeNull();
@@ -280,7 +267,7 @@ describe('LookAtModifier3D strict validators', () => {
   describe('damp thresholds', () => {
     it.each(DAMP_THRESHOLDS)('%s accepts 0 to 1 and warns outside it', (property) => {
       // look_at_modifier_3d.cpp:495, :498, :500, :503, :506 and :508 all hint
-      // "0,1,0.01" with no `or_greater`; every setter (:291-377) assigns.
+      // "0,1,0.01" with no `or_greater`, and every setter (:291-377) assigns.
       expect(check(property, '0')).toBeNull();
       expect(check(property, '0.5')).toBeNull();
       expect(check(property, '1')).toBeNull();
@@ -291,22 +278,17 @@ describe('LookAtModifier3D strict validators', () => {
 
   describe('radians_as_degrees angles', () => {
     it.each(HALF_TURN_ANGLES)('%s bounds RADIANS, not the hint\'s degrees', (property) => {
-      // Hint "0,180,0.01,radians_as_degrees" (look_at_modifier_3d.cpp:497, :499,
-      // :505, :507): the inspector shows 0 to 180 DEGREES, the .tscn stores
-      // RADIANS, so the stored ceiling is 180 * PI / 180 = PI ≈ 3.14159265.
-      //
-      // 3.5 is the discriminating value: comfortably inside the degree number
-      // 180 and outside the radian ceiling PI. A bound written on the degree
-      // numbers accepts it, which is the whole failure mode this pins.
+      // Hint "0,180,0.01,radians_as_degrees" (look_at_modifier_3d.cpp:497, :499, :505, :507): the
+      // inspector shows 0-180 degrees, the .tscn stores radians, so the ceiling is PI ≈ 3.14159265.
+      // 3.5 discriminates: inside the degree number 180, outside PI, so a degree bound accepts it.
       expect(check(property, '3.5')?.severity).toBe('warning');
       expect(check(property, '3.5')?.message).toContain('radians');
       expect(check(property, '180')).not.toBeNull();
     });
 
     it.each(HALF_TURN_ANGLES)('%s accepts the PI default Godot itself writes', (property) => {
-      // look_at_modifier_3d.h:77-85 default all four to `Math::PI`, which
-      // serialises as the float32 literal 3.1415927 — just OVER PI in double
-      // precision, so the epsilon in `v.radians` is what keeps Godot's own
+      // look_at_modifier_3d.h:77-85 default all four to `Math::PI`, which serialises as the float32
+      // 3.1415927, just over PI in double precision, so the epsilon in `v.radians` keeps Godot's own
       // output legal.
       expect(check(property, '3.1415927')).toBeNull();
       expect(check(property, '0')).toBeNull();
@@ -315,11 +297,8 @@ describe('LookAtModifier3D strict validators', () => {
     });
 
     it.each(FULL_TURN_ANGLES)('%s bounds a full turn in radians', (property) => {
-      // Hint "0,360,0.01,radians_as_degrees" (look_at_modifier_3d.cpp:494, :502):
-      // the stored ceiling is 360 * PI / 180 = TAU ≈ 6.28318531.
-      //
-      // 7 is the discriminating value: inside the degree number 360, outside
-      // the radian ceiling TAU.
+      // Hint "0,360,0.01,radians_as_degrees" (look_at_modifier_3d.cpp:494, :502): the stored ceiling
+      // is TAU ≈ 6.28318531. 7 discriminates: inside the degree number 360, outside TAU.
       expect(check(property, '7')?.severity).toBe('warning');
       expect(check(property, '7')?.message).toContain('radians');
       expect(check(property, '360')).not.toBeNull();
@@ -371,7 +350,7 @@ describe('LookAtModifier3D strict validators', () => {
     it('treats inf as out of a closed range and lets an open end through', () => {
       // `inf` is a legal TSCN float literal (variant_parser.cpp:150-155) and no
       // setter here guards `is_finite`, so it is never a format error. A closed
-      // hint still puts it outside the inspector's range, which is a warning;
+      // hint still puts it outside the inspector's range, which is a warning, and
       // `duration`'s `or_greater` end leaves it alone.
       expect(check('primary_limit_angle', 'inf')?.severity).toBe('warning');
       expect(check('duration', 'inf')).toBeNull();

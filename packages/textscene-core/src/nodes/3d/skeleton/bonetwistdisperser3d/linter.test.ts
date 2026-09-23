@@ -1,11 +1,7 @@
 /**
- * Tests for BoneTwistDisperser3D's semantic linter rules (strict-parser format
- * checks live in linterParser.test.ts and are asserted through
- * validatorRegistry there).
- *
- * Uses `Linter` directly (via testkit), not the `linter/index.ts` barrel: that
- * barrel side-effect-imports every in-flight slice, so pulling it here would
- * fail flakily on a sibling's half-written file mid-wave.
+ * BoneTwistDisperser3D's semantic rules. linterParser.test.ts covers the format checks. It uses
+ * `Linter` through testkit, not the `linter/index.ts` barrel, which imports every slice and so fails
+ * on a half-written sibling.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -91,8 +87,7 @@ describe('BoneTwistDisperser3D semantic rules', () => {
   });
 
   it('leaves a negative setting index to the validator that already errors on it', () => {
-    // Both would cite the same ERR_FAIL_INDEX_V; reporting twice is one defect
-    // counted twice.
+    // Both would cite the same ERR_FAIL_INDEX_V, and reporting twice counts one defect twice.
     expectNoDiagnostic(
       scene(
         node('BoneTwistDisperser3D', {
@@ -140,8 +135,7 @@ describe('BoneTwistDisperser3D semantic rules', () => {
     // `settings/00/…` addresses setting 0, because _set reads the index with a
     // bare `to_int` (bone_twist_disperser_3d.cpp:37). Its joints vector is the
     // one `settings/0/joint_count` sized, so joint 2 of 3 lands and nothing is
-    // dropped. Matching the sibling on the index TEXT warned here, contradicting
-    // the same to_int reasoning the validators are built on.
+    // dropped.
     expectClean(
       scene(
         node('BoneTwistDisperser3D', {
@@ -242,8 +236,7 @@ describe('BoneTwistDisperser3D index grammar', () => {
   it('errors on a setting written under a non-numeric index, which _set resolves', () => {
     // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()` and
     // no validity gate (bone_twist_disperser_3d.cpp:37), and `to_int` skips a
-    // character it cannot use rather than stopping at it
-    // (ustring.cpp:2280-2293), so `settings/x1/…` is setting 1 — past a
+    // character it cannot use (ustring.cpp:2280-2293), so `settings/x1/…` is setting 1: past a
     // setting_count of 1, and dropped by the ERR_FAIL_INDEX_V at :39.
     expectDiagnostic(
       scene(

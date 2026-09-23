@@ -1,25 +1,8 @@
 /**
- * Semantic linter rule for IterateIK3D, from Godot's own configuration
- * warning, `IterateIK3D::get_configuration_warnings()` (iterate_ik_3d.cpp:158-167):
- *
- *     for (uint32_t i = 0; i < iterate_settings.size(); i++) {
- *         if (iterate_settings[i]->target_node.is_empty()) {
- *             warnings.push_back(RTR("Detecting settings with no target set! "
- *                                    "IterateIK3D must have a target to work."));
- *             break;
- *         }
- *     }
- *
- * Registered under the abstract key `IterateIK3D`, which Godot cannot
- * instantiate (no `.tscn` ever names it — see `iterateik3d/linterParser.ts`'s
- * docblock), so `applicableNodeTypeMatcher` + `descendsFrom` reaches its 3
- * concrete subclasses: CCDIK3D, FABRIK3D, JacobianIK3D. None of them override
- * `get_configuration_warnings`, so all 3 inherit this check unchanged.
- *
- * Not cosmetic: `_process_ik` resolves `target_node` and abandons the setting
- * when nothing comes back (iterate_ik_3d.cpp:509-511, `if (!target || ...)
- * continue; // Abort.`), so a target-less setting iterates never — the modifier
- * looks configured while doing nothing for that chain.
+ * IterateIK3D's `get_configuration_warnings()` (iterate_ik_3d.cpp:158-167): a setting with an empty
+ * `target_node` warns. `_process_ik` abandons such a setting (iterate_ik_3d.cpp:509-511), so the
+ * modifier looks configured while doing nothing for that chain. The abstract key reaches CCDIK3D,
+ * FABRIK3D and JacobianIK3D through `descendsFrom`, and none of them overrides the warnings.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -45,15 +28,13 @@ function checkIterateIK3D(context: RuleContext): Diagnostic[] {
   // non-finite one is altered at parse.
   if (count === null) return [];
 
-  // Grouped by the setting `_set` RESOLVES each key to, not by the text the file
-  // spells: `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
-  // and no validity gate (iterate_ik_3d.cpp:37), so `settings/x0/target_node`
-  // sets setting 0's target. Reading `settings/${index}/target_node` forward
-  // found nothing there and reported a target the engine had applied as missing.
+  // Grouped by the setting `_set` resolves each key to: it reads the index with a bare
+  // `path.get_slicec('/', 1).to_int()` and no validity gate (iterate_ik_3d.cpp:37), so
+  // `settings/x0/target_node` sets setting 0's target.
   const settings = indexedElements(rawProps, 'settings/', 'to_int');
 
   // The walk is bounded as well as the message: `setting_count` is an INT slot
-  // with no ceiling, so `0..count` really can be two billion iterations. See
+  // with no ceiling, so `0..count` can be two billion iterations. See
   // `reportedIndices.ts`.
   const targeted = new Set<number>();
   for (const [index, leaves] of settings) {

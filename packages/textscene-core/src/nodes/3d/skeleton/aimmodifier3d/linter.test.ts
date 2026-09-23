@@ -1,11 +1,7 @@
 /**
- * Tests for the AimModifier3D axis rule (`aimmodifier3d-parallel-rotation-axes`).
- *
- * Driven through `StrictTscnParser` and the rule's own `check`, not through
- * `Linter`: `Linter` imports the linter barrel, which loads every slice in the
- * repo and so cannot run while sibling slices are being written. The parse is
- * still the real one, so the properties the rule reads are the ones a scene
- * really produces.
+ * The AimModifier3D axis rule (`aimmodifier3d-parallel-rotation-axes`), driven through
+ * `StrictTscnParser` and the rule's own `check`, not `Linter`, whose barrel loads every slice. The
+ * parse is the real one, so the rule reads the properties a real scene produces.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -107,7 +103,7 @@ settings/0/use_euler = true
   });
 
   it('warns when only one of the two keys is written and the default matches it', () => {
-    // primary_rotation_axis absent, so AXIS_X; forward -X (1) resolves to AXIS_X.
+    // primary_rotation_axis absent, so AXIS_X. Forward -X (1) resolves to AXIS_X.
     const warnings = warningsFor(
       scene(`setting_count = 1
 settings/0/forward_axis = 1
@@ -155,7 +151,7 @@ settings/0/primary_rotation_axis = 0
   });
 
   it('falls back to the engine default when an axis value is malformed', () => {
-    // The format is the validator's to report; the rule must not read NaN and
+    // The format is the validator's to report, and the rule must not read NaN and
     // silently stop checking. Default forward +Y is not parallel to X.
     const warnings = warningsFor(
       scene(`setting_count = 1
@@ -176,11 +172,9 @@ settings/0/primary_rotation_axis = 0
 
 describe('AimModifier3D index grammar', () => {
   it('reads a setting written under a non-numeric index, which _set resolves', () => {
-    // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
-    // (aim_modifier_3d.cpp:38) and `to_int` skips what it cannot use
-    // (ustring.cpp:2280-2293), so every `settings/x/…` key below lands on
-    // setting 0 — +Z (4) maps to AXIS_Z (2), the parallel pair
-    // aim_modifier_3d.cpp:102 warns about.
+    // `_set` reads the index with `path.get_slicec('/', 1).to_int()` (aim_modifier_3d.cpp:38), and
+    // `to_int` skips what it cannot use (ustring.cpp:2280-2293), so each `settings/x/…` key lands on
+    // setting 0. +Z (4) maps to AXIS_Z (2), the parallel pair aim_modifier_3d.cpp:102 warns about.
     const warnings = warningsFor(
       scene(`setting_count = 1
 settings/x/forward_axis = 4

@@ -1,24 +1,8 @@
 /**
- * Semantic linter rule for RemoteTransform3D, from Godot's own
- * `RemoteTransform3D::get_configuration_warnings()` (remote_transform_3d.cpp:206-211):
- *
- *     PackedStringArray warnings = Node3D::get_configuration_warnings();
- *     if (!has_node(remote_node) || !Object::cast_to<Node3D>(get_node(remote_node))) {
- *         warnings.push_back(RTR("The \"Remote Path\" property must point to a valid Node3D or Node3D-derived node to work."));
- *     }
- *     return warnings;
- *
- * `remote_node` (serialised key `remote_path`) field-initialises to `NodePath()`
- * (remote_transform_3d.h:38, no constructor override), which IS the trigger —
- * unlike `MultiplayerSpawner`, this single Godot condition was not split into a
- * default-omitted half and a dangling half, so the honest implementation covers
- * all three of "absent", "present but resolves to nothing in this file", and
- * "present and resolves, but not to a Node3D".
- *
- * `resolveNodePath` stays silent only on `unknowable` — an instanced ancestor,
- * an instanced target, or a walk into content another file declares puts the
- * answer outside what this linter can see. A `..` segment is not one of those:
- * it climbs, the way `get_node_or_null` does.
+ * RemoteTransform3D's `get_configuration_warnings()` (remote_transform_3d.cpp:206-211): it warns
+ * unless `remote_node` (key `remote_path`) resolves to a Node3D. `remote_node` defaults to
+ * `NodePath()` (remote_transform_3d.h:38, no constructor override), which triggers it, so the rule
+ * covers an absent path, a path to nothing in this file and a path to a node that is no Node3D.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -35,8 +19,7 @@ function checkRemoteTransform3D(context: RuleContext): Diagnostic[] {
 
   const path = properties.remote_path ? extractNodePath(properties.remote_path) : null;
 
-  // Absent key, or an explicit empty NodePath("") — both are `NodePath()`,
-  // Godot's own default and the trigger itself.
+  // Absent key, or an explicit empty NodePath(""): both are `NodePath()`, the default and the trigger.
   if (!path) {
     return [
       {
@@ -49,6 +32,8 @@ function checkRemoteTransform3D(context: RuleContext): Diagnostic[] {
     ];
   }
 
+  // Silent only on `unknowable`: an instanced ancestor, an instanced target or a walk into content
+  // another file declares. A `..` segment climbs, as `get_node_or_null` does.
   const target = resolveNodePath(scene, node, path);
 
   if (target.status === 'missing') {
@@ -63,8 +48,7 @@ function checkRemoteTransform3D(context: RuleContext): Diagnostic[] {
     ];
   }
 
-  // `descendsFrom` is reflexive (nodeBaseTypes.ts), so it already answers the
-  // exact-match case; spelling that out separately only reads as extra work.
+  // `descendsFrom` is reflexive (nodeBaseTypes.ts), so it also answers the exact-match case.
   if (target.status === 'found' && !descendsFrom(target.node.type, 'Node3D')) {
     return [
       {

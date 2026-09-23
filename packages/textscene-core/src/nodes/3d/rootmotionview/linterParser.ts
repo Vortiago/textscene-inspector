@@ -1,16 +1,8 @@
 /**
- * RootMotionView strict validators for linting.
- *
- * Declare only RootMotionView's OWN members — the ones doc/classes/RootMotionView.xml
- * lists without an `overrides=` attribute. Everything from VisualInstance3D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
- *
- * All five of RootMotionView's own ADD_PROPERTY calls sit in one block
- * (root_motion_view.cpp:189-193), each with a non-empty setter and getter, so
- * every one of them serialises. root_motion_view.h declares no `_get`/`_set`/
- * `get_property_list` override and no `ADD_ARRAY_COUNT`, so ADD_PROPERTY is the
- * only route a member takes here — nothing else to grep for.
+ * RootMotionView strict validators: only its own members, which doc/classes/RootMotionView.xml lists
+ * without `overrides=`. The NODE_BASE_TYPES base-walk delivers VisualInstance3D and up, and a
+ * re-declared inherited key shadows it. All five ADD_PROPERTY calls (root_motion_view.cpp:189-193)
+ * serialise, and root_motion_view.h has no `_get`/`_set`/`get_property_list` or `ADD_ARRAY_COUNT`.
  */
 
 import '../visualinstance3d/linterParser.js';
@@ -18,13 +10,10 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('RootMotionView', {
-  // root_motion_view.cpp:189, PROPERTY_HINT_NODE_PATH_VALID_TYPES "AnimationMixer".
-  // The hint narrows the editor's node-path PICKER to AnimationMixer subclasses;
-  // it names no format or range this linter can check statically (a target that
-  // is missing, or the wrong type, is invisible without the live tree — see
-  // "Linter can't see instance internals"). set_animation_mixer
-  // (root_motion_view.cpp:38-41) assigns straight through with no validation,
-  // so only the NodePath grammar itself is checked here.
+  // root_motion_view.cpp:189, PROPERTY_HINT_NODE_PATH_VALID_TYPES "AnimationMixer", which narrows
+  // only the editor's picker. A missing or wrong-type target is invisible without the live tree,
+  // and set_animation_mixer (root_motion_view.cpp:38-41) assigns with no validation, so only the
+  // NodePath grammar is checked.
   animation_path: v.nodePath('animation_path'),
   // root_motion_view.cpp:190, PROPERTY_HINT_NONE (no hint argument at all).
   // set_color (root_motion_view.cpp:47-50) assigns straight through with no

@@ -1,11 +1,7 @@
 /**
- * Tests for the LookAtModifier3D axis rule (`lookatmodifier3d-parallel-rotation-axes`).
- *
- * Driven through `StrictTscnParser` and the rule's own `check`, not through
- * `Linter`: `Linter` imports the linter barrel, which loads every slice in the
- * repo and so cannot run while sibling slices are being written. The parse is
- * still the real one, so the properties the rule reads are the ones a scene
- * really produces.
+ * The LookAtModifier3D axis rule (`lookatmodifier3d-parallel-rotation-axes`), driven through
+ * `StrictTscnParser` and the rule's own `check`, not `Linter`, whose barrel loads every slice. The
+ * parse is the real one, so the rule reads the properties a real scene produces.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -105,7 +101,7 @@ primary_rotation_axis = ${primary}
   });
 
   it('applies the default to whichever key is absent', () => {
-    // Only forward_axis is written, and it is set to the Y axis the DEFAULT
+    // Only forward_axis is written, and it is set to the Y axis the default
     // primary_rotation_axis already uses.
     expect(warningsFor(scene('forward_axis = 2\n'))).toHaveLength(1);
     // Only primary_rotation_axis is written, matching the default +Z forward.
@@ -115,7 +111,7 @@ primary_rotation_axis = ${primary}
   it('folds an out-of-range forward axis onto X, as Godot does', () => {
     // The switch in get_axis_from_bone_axis has no default case and seeds `ret`
     // with AXIS_X, so a value outside 0-5 compares as X rather than as nothing.
-    // The bad value is the validator's to report; the rule still models what
+    // The bad value is the validator's to report, and the rule still models what
     // Godot would compare.
     expect(
       warningsFor(
@@ -139,7 +135,7 @@ primary_rotation_axis = 1
   });
 
   it('leaves the committed fixture warning-free', () => {
-    // `expectFixtureClean` runs validators only; rules never reach it. This is
+    // `expectFixtureClean` runs validators only, and rules never reach it. This is
     // the half of the fixture's "zero warnings" claim nothing else checks.
     expect(warningsFor(readFixture('unit-look-at-modifier-3d.tscn'))).toEqual([]);
   });

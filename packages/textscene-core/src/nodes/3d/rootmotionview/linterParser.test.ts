@@ -1,13 +1,8 @@
 /**
- * RootMotionView strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * RootMotionView strict validators, asserted through `validatorRegistry`, not by linting a `.tscn`, so
+ * a failure points at the validator and no fixture text needs upkeep. Rule-level behaviour
+ * belongs in linter.test.ts. Each property gets happy, malformed and bound cases, with the
+ * governing Godot source line beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -28,20 +23,14 @@ function check(property: string, value: string) {
  * cell_size, color, radius, zero_y.
  */
 const KEYS: string[] = ['animation_path', 'cell_size', 'color', 'radius', 'zero_y'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys RootMotionView does NOT declare, each paired with the ancestor that does.
- * Name at least one; VisualInstance3D is where to start.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives RootMotionView no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart, and it is red until filled for the same reason
- * KEYS is.
+ * Keys RootMotionView does not declare, each paired with the ancestor that does. The malformed-value
+ * check below iterates `getOwnKeys`, so on a class with no own keys it passes on an empty set.
+ * Resolving a key to the ancestor's own validator function tells "no own properties" from "slice
+ * not written", and an empty list is red for the same reason KEYS is.
  */
 const INHERITED: [owner: string, key: string][] = [['VisualInstance3D', 'layers']];
 
@@ -55,17 +44,16 @@ describe('RootMotionView strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint`
+    // checks it against the whole registry through the barrel. This checks the same file
+    // against only what this test imported.
     expectFixtureClean('unit-root-motion-view.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // RootMotionView declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow. It is vacuous when the class declares nothing,
+    // which INHERITED covers.
     const accepted = validatorRegistry
       .getOwnKeys('RootMotionView')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -80,7 +68,7 @@ describe('RootMotionView strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
+      // The same function, not merely some validator: a shadowing copy on
       // RootMotionView would answer here while drifting from the ancestor's rule.
       expect(validatorRegistry.findValidator('RootMotionView', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('RootMotionView')).not.toContain(key);
@@ -106,7 +94,7 @@ describe('RootMotionView strict validators', () => {
   });
 
   // root_motion_view.cpp:190: ADD_PROPERTY(PropertyInfo(Variant::COLOR, "color"),
-  // "set_color", "get_color"); PROPERTY_HINT_NONE, and set_color
+  // "set_color", "get_color"). PROPERTY_HINT_NONE, and set_color
   // (root_motion_view.cpp:47-50) assigns straight through.
   describe('color', () => {
     it('accepts a typical value', () => {
@@ -153,7 +141,7 @@ describe('RootMotionView strict validators', () => {
   // root_motion_view.cpp:192: ADD_PROPERTY(PropertyInfo(Variant::FLOAT,
   // "radius", PROPERTY_HINT_RANGE, "0.1,16,0.01,or_greater,suffix:m"),
   // "set_radius", "get_radius"). set_radius (root_motion_view.cpp:65-68) assigns
-  // straight through with no clamp — the same shape as cell_size.
+  // straight through with no clamp, the same shape as cell_size.
   describe('radius', () => {
     it('accepts a typical value', () => {
       expect(check('radius', '10.0')).toBeNull();
@@ -175,7 +163,7 @@ describe('RootMotionView strict validators', () => {
   });
 
   // root_motion_view.cpp:193: ADD_PROPERTY(PropertyInfo(Variant::BOOL,
-  // "zero_y"), "set_zero_y", "get_zero_y"); PROPERTY_HINT_NONE, and set_zero_y
+  // "zero_y"), "set_zero_y", "get_zero_y"). PROPERTY_HINT_NONE, and set_zero_y
   // (root_motion_view.cpp:74-76) assigns straight through.
   describe('zero_y', () => {
     it('accepts true', () => {

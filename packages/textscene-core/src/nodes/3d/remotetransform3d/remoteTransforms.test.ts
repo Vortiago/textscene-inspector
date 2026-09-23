@@ -1,8 +1,7 @@
 /**
- * RemoteTransform resolution, asserted through the PUBLIC build
- * (`parseTscnContent` → SceneGraph → flattened target transform), not the
- * pass's internals. Numbers are cross-checked against real Godot 4.6.3 via the
- * ref harness (see the fixtures unit-remote-transform-3d/2d.tscn).
+ * RemoteTransform resolution, asserted through the public build (`parseTscnContent` → SceneGraph →
+ * flattened target transform), not the pass's internals. The numbers match real Godot 4.6.3 in the
+ * ref harness (fixtures unit-remote-transform-3d/2d.tscn).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -81,7 +80,7 @@ remote_path = NodePath("../TargetCube")
   });
 
   it('with update_rotation/scale disabled, pushes only position and keeps the target rotation & scale', () => {
-    // Relay at (5,0,0) with a Y rotation & scale that must NOT reach the target.
+    // Relay at (5,0,0) with a Y rotation & scale that must not reach the target.
     // Target authored at (1,2,3) with scale 2 and no rotation.
     const content = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
@@ -105,7 +104,7 @@ update_scale = false
   });
 
   it('global coordinates use the relay WORLD transform under a translated parent', () => {
-    // Parent translated +3 X; relay local +2 X ⇒ relay global +5 X.
+    // Parent translated +3 X, relay local +2 X ⇒ relay global +5 X.
     const content = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 [node name="Offset" type="Node3D" parent="."]
@@ -120,10 +119,9 @@ remote_path = NodePath("../../Target")
   });
 
   it('with use_global_coordinates = false, leaves the target untouched (static-render no-op)', () => {
-    // Measured against Godot 4.6.3 (matched pair, flag-only difference): the
-    // local-coordinate relay does NOT reposition its target on a static load —
-    // only the default global mode does. The target keeps its authored transform
-    // (identity here), so it stays at the origin, not the relay's +2.
+    // Measured on Godot 4.6.3 (a matched pair, only the flag differs): the local-coordinate relay
+    // does not reposition its target on a static load. The target keeps its authored identity
+    // transform, so it stays at the origin, not the relay's +2.
     const content = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 [node name="Offset" type="Node3D" parent="."]
@@ -139,8 +137,8 @@ use_global_coordinates = false
   });
 
   it('resolves a relay chain in document order (A drives B, B drives C)', () => {
-    // Relay A at +4 drives B; B (itself a relay at authored +1) is driven to +4,
-    // then B drives C ⇒ C ends at +4.
+    // Relay A at +4 drives B. B, itself a relay at authored +1, is driven to +4, then B drives C,
+    // so C ends at +4.
     const content = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 [node name="A" type="RemoteTransform3D" parent="."]
@@ -208,11 +206,9 @@ update_rotation = false
 
 describe('the %Name table this module builds inline', () => {
   it('answers what the shared claim walk answers', () => {
-    // The inline collection is fused into a walk `applyRemoteTransforms` needs
-    // anyway, so it is a second APPLICATION of one rule rather than a second
-    // copy of it. This is what holds the two together: Godot's claim is
-    // owner-scoped and first-one-wins (node.cpp:2222-2231), and a change to
-    // either half has to move both.
+    // The inline collection applies the shared rule a second time rather than copying it. Godot's
+    // claim is owner-scoped and first-one-wins (node.cpp:2222-2231), and a change to either half
+    // has to move both.
     const content = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 [node name="Rig" type="Node3D" parent="."]
@@ -227,8 +223,8 @@ remote_path = NodePath("%Target")
 `;
     const nodes = new TscnParser().parse(content).nodes;
     const shared = uniqueNamePaths(nodes);
-    // The deeper claim wins on document order, and the later sibling does not
-    // take the key from it — the property both halves have to agree on.
+    // The deeper claim wins on document order, and the later sibling does not take the key from
+    // it. Both halves have to agree on this.
     expect(shared.get('%Target')).toBe('Root/Rig/Target');
     expect(shared.get('%Rig')).toBe('Root/Rig');
 

@@ -1,14 +1,8 @@
 /**
- * The ChainIK3D set must reach its subclasses, which is the whole point of
- * the tier. Assert through `findValidator` on a real leaf, not just on the
- * abstract key: a tier that registers but is never imported registers nothing.
- *
- * Only this file's own module graph is loaded, so nothing shadows the
- * ChainIK3D registration here. Under the full linter barrel IterateIK3D
- * registers its own `settings/` wildcard at a nearer hop and delegates the
- * leaves it does not own back to `findValidator('ChainIK3D', key)`; that
- * delegation is IterateIK3D's contract to keep, not something this file can
- * observe.
+ * The ChainIK3D set must reach its subclasses, so assert through `findValidator` on a real leaf, not
+ * only the abstract key: a tier that is never imported registers nothing. Only this file's module
+ * graph loads, so nothing shadows ChainIK3D here. Under the barrel, IterateIK3D's nearer `settings/`
+ * wildcard delegates foreign leaves back to `findValidator('ChainIK3D', key)`, its contract to keep.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -16,16 +10,13 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import './linterParser.js';
 
 /**
- * Every key ChainIK3D registers. ChainIK3D has NO `ADD_PROPERTY` call at all;
- * its whole serialised surface is the `settings/<i>/` family built by hand in
- * `_set` (chain_ik_3d.cpp:33), `_get` (:69) and `get_property_list` (:115,
- * unprefixed, so a `_get_property_list` grep misses it). One plain `settings/*`
- * wildcard carries the family, because its leaves are two and three segments
- * deep (`end_bone/length`, `joints/<j>/bone`) and the glued-index `settings/#/*`
- * shape reaches only one.
+ * Every key ChainIK3D registers. It has no `ADD_PROPERTY`: `_set` (chain_ik_3d.cpp:33), `_get` (:69)
+ * and the unprefixed `get_property_list` (:115) build the `settings/<i>/` family. One plain
+ * `settings/*` wildcard carries it, since leaves are two and three segments deep (`end_bone/length`,
+ * `joints/<j>/bone`) and the glued-index `settings/#/*` reaches only one.
  */
 const KEYS: string[] = ['settings/*'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 const LEAVES = [
   'IterateIK3D',
@@ -92,7 +83,7 @@ describe('ChainIK3D settings index', () => {
   it('reads a non-integer index as the setting to_int resolves it to', () => {
     // `_to_int` skips non-digits rather than stopping at them
     // (ustring.cpp:2278-2294), so chain_ik_3d.cpp:37 resolves "x" to setting 0
-    // and the write LANDS there. The key is not refused, and the leaf bound
+    // and the write lands there. The key is not refused, and the leaf bound
     // still applies to the value that lands.
     expect(check('settings/x/root_bone_name', '"Head"')).toBeNull();
     expect(check('settings/x/root_bone', '-5')?.severity).toBe('error');

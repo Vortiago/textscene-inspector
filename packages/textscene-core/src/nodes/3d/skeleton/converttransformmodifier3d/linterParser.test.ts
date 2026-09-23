@@ -1,10 +1,7 @@
 /**
- * ConvertTransformModifier3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * ConvertTransformModifier3D strict validators, asserted through `validatorRegistry`, not by linting
+ * a `.tscn`, so a failure points at the validator and no fixture text needs upkeep. Rule-level
+ * behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -20,14 +17,9 @@ function check(property: string, value: string) {
 }
 
 /**
- * `setting_count` is the class's one ADD_ARRAY_COUNT
- * (convert_transform_modifier_3d.cpp:329); everything else it serialises is the
- * hand-rolled `settings/<i>/` family from `_get_property_list` (:125-167), which
- * appears in no macro at all.
- *
- * The family registers under the PLAIN `settings/*` wildcard. Eight of its ten
- * leaves are two segments (`apply/transform_mode`); the dispatcher, not the
- * registry's matcher, reads that depth.
+ * `setting_count` is the class's one ADD_ARRAY_COUNT (convert_transform_modifier_3d.cpp:329). The rest
+ * is the hand-rolled `settings/<i>/` family from `_get_property_list` (:125-167), under the plain
+ * `settings/*` wildcard, since eight of its ten leaves are two segments (`apply/transform_mode`).
  */
 const KEYS: string[] = ['setting_count', 'settings/*'];
 
@@ -92,8 +84,8 @@ describe('ConvertTransformModifier3D strict validators', () => {
     ])('%s claims no magnitude bound, because the hint depends on a sibling', (key) => {
       // Which of HINT_POSITION / HINT_ROTATION / HINT_SCALE applies is chosen
       // from the sibling transform_mode (convert_transform_modifier_3d.cpp:134-140),
-      // and HINT_POSITION opens BOTH ends. The mode-conditional bound is
-      // linter.ts's; only the float format is checkable here.
+      // and HINT_POSITION opens both ends. The mode-conditional bound is
+      // linter.ts's, and only the float format is checkable here.
       for (const value of ['-1000', '0', '1000', 'inf', '-inf', 'nan']) {
         expect(check(key, value)).toBeNull();
       }
@@ -123,7 +115,7 @@ describe('ConvertTransformModifier3D strict validators', () => {
     });
 
     it('keeps apply_bone apart from the apply/ group despite the shared prefix', () => {
-      // `apply_bone` is BoneConstraint3D's flat leaf; `apply/axis` is this
+      // `apply_bone` is BoneConstraint3D's flat leaf, and `apply/axis` is this
       // class's nested one. The index split must not merge them.
       expect(check('settings/0/apply_bone', '4')).toBeNull();
       expect(check('settings/0/apply_bone', 'not-an-int')?.severity).toBe('error');
@@ -156,24 +148,22 @@ describe('ConvertTransformModifier3D strict validators', () => {
     });
 
     it('leaves a non-numeric index alone, because to_int resolves it and the write lands', () => {
-      // `_set` reads `path.get_slicec('/', 1).to_int()`
-      // (convert_transform_modifier_3d.cpp:41) with no is_valid_int gate, and
-      // `_to_int` skips non-digits (ustring.cpp:2268-2298), so "x" is 0 and
-      // set_relative(0, true) really runs. Nothing refuses it, so ADR-0032
-      // grounds nothing. This is NOT the PropertyListHelper parse.
+      // `_set` reads `path.get_slicec('/', 1).to_int()` (convert_transform_modifier_3d.cpp:41) with
+      // no is_valid_int gate, and `_to_int` skips non-digits (ustring.cpp:2268-2298), so "x" is 0 and
+      // set_relative(0, true) runs. Nothing refuses it: this is not the PropertyListHelper parse.
       expect(check('settings/x/relative', 'true')).toBeNull();
     });
 
     it('leaves a BASE leaf under a non-numeric index alone too', () => {
-      // The delegation hop must not re-introduce the false positive the direct
-      // path just lost. BoneConstraint3D's `settings/#/*` routes the key, and
+      // The delegation hop must not report what the direct path accepts. BoneConstraint3D's
+      // `settings/#/*` routes the key, and
       // its `to_int` parse resolves `x` to setting 0 (bone_constraint_3d.cpp:37),
       // so the write lands and the value is judged as any other.
       expect(check('settings/x/amount', '0.5')).toBeNull();
     });
 
     it('still rejects an unknown leaf under a non-numeric index', () => {
-      // The index resolves; the leaf does not, so `_set` falls to its
+      // The index resolves, the leaf does not, so `_set` falls to its
       // `return false` (convert_transform_modifier_3d.cpp:74-76) and the write
       // is dropped.
       expect(check('settings/x/made_up', '1')?.code).toBe('INVALID_SETTING_KEY');

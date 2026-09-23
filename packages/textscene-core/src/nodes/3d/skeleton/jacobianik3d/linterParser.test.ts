@@ -1,22 +1,8 @@
 /**
- * JacobianIK3D strict validators.
- *
- * The slice declares none, and that is the finding rather than an omission:
- * `jacobian_ik_3d.h:35-40` is the whole class, one protected `_solve_iteration`
- * override with no `_bind_methods` to hold an `ADD_PROPERTY`, no
- * `_get_property_list` / `get_property_list` override to add a `settings/<i>/`
- * leaf, and no `<members>` block in `doc/classes/JacobianIK3D.xml`.
- *
- * So the assertions worth making here are about the ABSENCE. A slice that
- * declares nothing and a slice that quietly shadows its base read identically
- * from the outside, and only the second one breaks the linter: it answers for
- * an inherited key with a validator that knows none of the ancestor's bounds.
- * These pin that JacobianIK3D owns no key, and that the ancestry the real keys
- * arrive along is walkable from here.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`, so a
- * failure points at the registration instead of at scene parsing, and never
- * through `Linter`, which would pull the barrel and every in-flight sibling.
+ * JacobianIK3D strict validators: none, by finding (`jacobian_ik_3d.h:35-40`, no `_bind_methods`, no
+ * property-list override, no `<members>` in `doc/classes/JacobianIK3D.xml`). An empty slice and one
+ * that shadows its base look alike from outside, so these pin that it owns no key and that its
+ * ancestry is walkable. Asserted through `validatorRegistry`, never `Linter`, which pulls the barrel.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -30,19 +16,10 @@ import { expectFixtureClean, readFixture } from '../../../../linter/testing/fixt
 import { checkerFor } from '../../../../linter/testing/validatorCheck';
 import './linterParser';
 
-// A slice test sees only the registrations it pulled in itself, so every
-// base-walk case below names an ancestor it imports here: otherwise it observes
-// a null it would also have observed with the walk broken, and passes vacuously.
-//
-// `./linterParser` now reaches four of the six tiers on its own, because the
-// chain got stitched mid-wave (iterateik3d -> chainik3d -> shared ->
-// skeletonmodifier3d). The first three imports below are therefore redundant
-// TODAY and are kept anyway: that stitching is one line per file, it did not
-// exist when this slice was written, and dropping these would make this test's
-// coverage contingent on an edge in someone else's slice with nothing going red
-// if it were removed. The `node3d` import is not redundant at all, since
-// `skeletonmodifier3d/linterParser.ts` imports no tier and the chain dead-ends
-// there.
+// A slice test sees only the registrations it imports, so each base-walk case names an ancestor
+// imported here, or it passes vacuously on a null. `./linterParser` reaches the first three
+// transitively, and they stay so a dropped line in another slice cannot cut this coverage. The chain
+// dead-ends at `skeletonmodifier3d/linterParser.ts`, so the `node3d` import is needed outright.
 import '../chainik3d/linterParser';
 import '../shared/linterParser';
 import '../skeletonmodifier3d/linterParser';
@@ -53,13 +30,9 @@ import { registeredTypes } from '../../../../linter/registryPopulation.js';
 const check = checkerFor('JacobianIK3D');
 
 /**
- * JacobianIK3D binds no `ADD_PROPERTY` anywhere, so KEYS is empty by fact.
- *
- * The proof is the header: `jacobian_ik_3d.h:35-40` is the entire class body and
- * declares one method, which leaves nowhere for a `_bind_methods` to be. Its
- * only definition is `jacobian_ik_3d.cpp:33`, and
- * `scene/register_scene_types.cpp:686` registering the class is the extent of
- * what the engine says about it.
+ * JacobianIK3D binds no `ADD_PROPERTY`, so KEYS is empty. `jacobian_ik_3d.h:35-40` is the whole class
+ * body with one method, its only definition is `jacobian_ik_3d.cpp:33`, and
+ * `scene/register_scene_types.cpp:686` registers it.
  */
 const KEYS: string[] = [];
 const DECLARES_NOTHING = true;
@@ -74,19 +47,14 @@ const INHERITED: Readonly<Record<string, string>> = {
   mutable_bone_axes: 'IKModifier3D', // ik_modifier_3d.cpp:64
 };
 
-/** A stand-in validator, matched by IDENTITY so no equivalent one can pass for it. */
+/** A stand-in validator, matched by identity so no equivalent one can pass for it. */
 const probe: PropertyValidator = () => null;
 
 /**
- * A registry on the REAL ancestry table, seeded by hand with `probe`.
- *
- * The live singleton cannot carry this check: IterateIK3D and IKModifier3D are
- * separate slices, so until each declares its own validators a lookup through
- * them resolves to null and any assertion on it passes vacuously. What is
- * JacobianIK3D's business is whether its ancestry is WALKABLE from here, and
- * seeding a private registry with `NODE_BASE_TYPES` tests exactly that, using
- * the real key names and the real hops, without depending on when a sibling
- * slice lands.
+ * A registry on the real ancestry table, seeded by hand with `probe`. On the singleton, a lookup
+ * through an ancestor slice that declares nothing resolves to null and passes vacuously. A private
+ * registry seeded with `NODE_BASE_TYPES` tests that the ancestry is walkable from here, with the real
+ * key names and hops, independent of sibling slices.
  */
 function seededChain(): ValidatorRegistry {
   const registry = new ValidatorRegistry(NODE_BASE_TYPES);
@@ -113,21 +81,15 @@ describe('JacobianIK3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
-    //
-    // With no own keys that is the INHERITED validators only — `linterParser`
-    // imports the parent chain — so it covers what IterateIK3D up declares and
-    // becomes this slice's own claim the moment KEYS gains an entry.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned, against only what this
+    // test imported. With no own keys, that is the validators IterateIK3D and up declare, and it
+    // becomes this slice's own claim once KEYS gains an entry.
     expectFixtureClean('unit-jacobian-ik-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
     // A validator that accepts arbitrary prose is not validating a format.
-    // Empty here, and deliberately kept: it is what turns any future own-key
-    // declaration into a checked one the day it appears.
+    // Empty here, and kept: it checks any own key declared later.
     const accepted = validatorRegistry
       .getOwnKeys('JacobianIK3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -137,14 +99,11 @@ describe('JacobianIK3D strict validators', () => {
 
 describe('JacobianIK3D inherited validators', () => {
   it('reaches every tier that declares a key for it', () => {
-    // JacobianIK3D < IterateIK3D < ChainIK3D < IKModifier3D < SkeletonModifier3D.
-    // A missing hop silently drops a whole tier's validators, and nothing in
-    // this slice would look any different for it.
-    //
-    // The nearest hop is pinned exactly, the rest by membership: the table is
+    // JacobianIK3D < IterateIK3D < ChainIK3D < IKModifier3D < SkeletonModifier3D. A missing hop
+    // drops a whole tier's validators in silence. The nearest hop is pinned exactly, the rest by
+    // membership. The ancestry table is
     // GENERATED from the node catalog, and `baseChainCompleteness` already owns
-    // the whole-table claim, so re-asserting the tail here would only couple
-    // this slice to a regeneration that has nothing to do with JacobianIK3D.
+    // the whole-table claim.
     expect(baseChain('JacobianIK3D')[0]).toBe('IterateIK3D');
     for (const tier of ['ChainIK3D', 'IKModifier3D', 'SkeletonModifier3D', 'Node3D']) {
       expect(baseChain('JacobianIK3D')).toContain(tier);
@@ -160,10 +119,9 @@ describe('JacobianIK3D inherited validators', () => {
   });
 
   it('shadows neither key, so the live registry can only answer upward', () => {
-    // Both sides are the ancestor's real validator now that the tiers above are
-    // imported, so this is the live counterpart of the seeded probes: the key
-    // resolves, and it resolves to the SAME function the base does, which is
-    // what rules out this slice answering with bounds the ancestor never derived.
+    // Both sides are the ancestor's real validator, since the tiers above are imported: the live
+    // counterpart of the seeded probes. The key resolves to the same function the base does, which
+    // rules out this slice answering with bounds the ancestor never derived.
     for (const key of Object.keys(INHERITED)) {
       const resolved = validatorRegistry.findValidator('JacobianIK3D', key);
       expect(resolved, `${key} resolves to nothing on JacobianIK3D`).not.toBeNull();
@@ -173,11 +131,9 @@ describe('JacobianIK3D inherited validators', () => {
   });
 
   it('leaves no fixture key silently unchecked', () => {
-    // What stops the fixture being decorative. `StrictTscnParser` skips a
-    // property no validator matches (`if (!validator) return;`), so a file full
-    // of inherited keys can lint clean precisely BECAUSE nothing is registered
-    // for them. Asserting each one resolves is what turns the clean result above
-    // into evidence that the five-deep base-walk delivers.
+    // What stops the fixture being decorative: `StrictTscnParser` skips a property no validator
+    // matches (`if (!validator) return;`), so a file of inherited keys lints clean when nothing is
+    // registered. Asserting each resolves makes the clean result evidence that the base-walk delivers.
     const section = readFixture('unit-jacobian-ik-3d.tscn').split('type="JacobianIK3D"')[1] ?? '';
     const keys = [...section.matchAll(/^([\w/]+) = /gm)].map((m) => m[1]!);
 

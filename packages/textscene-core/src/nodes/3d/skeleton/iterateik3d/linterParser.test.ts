@@ -10,15 +10,9 @@ import type { ParseError } from '../../../../linter/types.js';
 import './linterParser.js';
 
 /**
- * Every key IterateIK3D binds, read from its ADD_PROPERTY calls.
- *
- * Set exactly ONE of these two, from the source rather than from expectation:
- * fill KEYS, or set DECLARES_NOTHING when the class binds no ADD_PROPERTY at all
- * (Godot has many: a themed spacer whose whole surface is theme items, an
- * orientation subclass that only fixes an inherited default). Leaving both unset
- * is red on purpose. Do NOT delete an assertion to go green: an empty KEYS
- * against an empty registerAll passes vacuously, which is what the pairing
- * below exists to prevent.
+ * Every key IterateIK3D binds, read from its ADD_PROPERTY calls. Set this or DECLARES_NOTHING, not
+ * both. Leaving both unset is red on purpose: do not delete an assertion to go green, since an empty
+ * KEYS against an empty registerAll passes vacuously.
  */
 const KEYS: string[] = [
   // iterate_ik_3d.cpp:394-398, the four ADD_PROPERTY calls plus ADD_ARRAY_COUNT.
@@ -31,7 +25,7 @@ const KEYS: string[] = [
   // which appears in no ADD_PROPERTY but is serialised all the same.
   'settings/*',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 const LEAVES = ['CCDIK3D', 'FABRIK3D', 'JacobianIK3D'] as const;
 
@@ -65,7 +59,7 @@ describe('IterateIK3D shared validators', () => {
 
 describe('max_iterations', () => {
   it.each(['0', '4', '100', '5000'])('accepts %s', (value) => {
-    // "0,100,or_greater" (iterate_ik_3d.cpp:394): `or_greater` opens the MAX
+    // "0,100,or_greater" (iterate_ik_3d.cpp:394): `or_greater` opens the max
     // end, so 5000 is as legal as the documented default of 4.
     expect(check('max_iterations', value)).toBeNull();
   });
@@ -102,23 +96,20 @@ describe('min_distance', () => {
 describe('angular_delta_limit', () => {
   it('accepts the documented default, which is 2 degrees expressed in radians', () => {
     // IterateIK3D.xml default="0.034906585" == deg_to_rad(2), matching
-    // iterate_ik_3d.h:255. The proof that the STORED unit is radians.
+    // iterate_ik_3d.h:255. The proof that the stored unit is radians.
     expect(check('angular_delta_limit', '0.034906585')).toBeNull();
   });
 
   it('pins the bound in radians, not in the degrees the hint names', () => {
-    // "0,180,0.001,radians_as_degrees" (iterate_ik_3d.cpp:396). The
-    // radians_as_degrees flag means the inspector SHOWS 0-180 degrees while
-    // the .tscn STORES radians, so the real ceiling is 180 * PI / 180 = PI
-    // (3.14159...). 3.0 rad is 171.9 degrees and legal; 3.2 rad is 183.3
-    // degrees and past the hint. Bounding on 0-180 instead would accept 3.2
-    // and every other nonsense value up to 180 radians.
+    // "0,180,0.001,radians_as_degrees" (iterate_ik_3d.cpp:396): the inspector shows 0-180 degrees
+    // while the .tscn stores radians, so the ceiling is PI. 3.0 rad (171.9 degrees) is legal and 3.2
+    // rad (183.3 degrees) is past the hint. A 0-180 bound would accept anything up to 180 radians.
     expect(check('angular_delta_limit', '3.0')).toBeNull();
     expect(check('angular_delta_limit', '3.2')).not.toBeNull();
   });
 
   it('accepts pi itself as Godot serialises it', () => {
-    // Godot writes 3.1415927; a bare `<= Math.PI` would reject what the engine
+    // Godot writes 3.1415927, and a bare `<= Math.PI` would reject what the engine
     // produced.
     expect(check('angular_delta_limit', '3.1415927')).toBeNull();
   });
@@ -130,7 +121,7 @@ describe('angular_delta_limit', () => {
 
   it('accepts a zero-degree float32 round-trip that lands just under the floor', () => {
     // The stored value is float32 and written back in decimal, so 0 degrees can
-    // reload a hair negative; a floor at exactly 0 is one epsilon tighter than
+    // reload a hair negative, so a floor at exactly 0 is one epsilon tighter than
     // the hint permits.
     expect(check('angular_delta_limit', '-0.00005')).toBeNull();
   });
@@ -157,7 +148,7 @@ describe('setting_count', () => {
 
   it('errors below zero, because the setter refuses it', () => {
     // ADD_ARRAY_COUNT carries PROPERTY_HINT_NONE (class_db.cpp:1492), so there
-    // is no hint to fall back on; the floor comes from the ERR_FAIL_COND in the
+    // is no hint to fall back on. The floor comes from the ERR_FAIL_COND in the
     // shared template _set_setting_count (ik_modifier_3d.h:98) and is therefore
     // an error, not a warning.
     const diagnostic = check('setting_count', '-1');
@@ -253,11 +244,9 @@ describe('the settings/ family IterateIK3D adds', () => {
 });
 
 describe('the settings/ keys ChainIK3D owns', () => {
-  // This registration shadows ChainIK3D's own `settings/` wildcard for every
-  // IterateIK3D descendant, because the base-walk stops at the first matching
-  // wildcard. A key IterateIK3D does not add is therefore handed BACK to
-  // ChainIK3D rather than reported unknown, and `linterParser.ts` imports that
-  // tier so the hand-back has something to reach.
+  // This registration shadows ChainIK3D's `settings/` wildcard for every IterateIK3D descendant,
+  // since the base-walk stops at the first match. A key IterateIK3D does not add goes back to
+  // ChainIK3D, and `linterParser.ts` imports that tier so the hand-back reaches it.
   it.each([
     ['settings/0/root_bone_name', '"Root"'],
     ['settings/0/joint_count', '3'],
@@ -274,10 +263,8 @@ describe('the settings/ keys ChainIK3D owns', () => {
   });
 
   it("keeps ChainIK3D's root_bone bound alive after the hop", () => {
-    // `linter/ikSettingsSeam.test.ts` uses this exact leaf as its canary under
-    // the full barrel, where the shadow is real. Pinning it here too means a
-    // regression in the hand-back shows up in this scoped run rather than only
-    // in the cross-slice guard. root_bone is clamped to -1
+    // `linter/ikSettingsSeam.test.ts` uses this leaf as its canary under the full barrel, and pinning
+    // it here shows a hand-back regression in this scoped run too. root_bone is clamped to -1
     // (chain_ik_3d.cpp:186-188), so -2 is an error and 3 is clean.
     expect(check('settings/0/root_bone', '-2', 'CCDIK3D')?.severity).toBe('error');
     expect(check('settings/0/root_bone', '3', 'CCDIK3D')).toBeNull();
