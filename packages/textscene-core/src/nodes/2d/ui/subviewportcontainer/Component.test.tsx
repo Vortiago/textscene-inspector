@@ -1,10 +1,7 @@
 /**
- * `<SubViewportContainer>` — the native (WebGL canvas) painter for
- * `SubViewportContainer` (Godot-parity table in
- * `../../viewport/subviewport/comparison.md`). Samples the published
- * `ViewportTextureEntry.texture` directly — every sub-viewport kind (3D,
- * 2D-world, and the native Control-raster pass) publishes a WebGL texture,
- * so there is exactly one consumption path.
+ * `<SubViewportContainer>`, the native painter (parity table in
+ * `../../viewport/subviewport/comparison.md`). It samples `ViewportTextureEntry.texture` directly:
+ * every sub-viewport kind publishes a WebGL texture, so there is one consumption path.
  */
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -22,8 +19,8 @@ vi.mock('../../../../logger.js', async (importOriginal) => {
   };
 });
 
-// `gui/common/snap_controls_to_pixels` is the ROOT window's setting; this
-// painter's Controls live in a SubViewport, which never receives it.
+// `gui/common/snap_controls_to_pixels` is the root window's setting, and this painter's
+// Controls live in a SubViewport, which never receives it.
 const projectSettingsMock = vi.hoisted(() => ({
   settings: null as Record<string, string> | null,
   viewportSize: { width: 1152, height: 648 },
@@ -137,24 +134,16 @@ describe('<SubViewportContainer>', () => {
   });
 
   /**
-   * `scene/main/viewport.h` initialises `snap_controls_to_pixels` to `true` on
-   * every Viewport, and `main/main.cpp` hands the project setting to
-   * `sml->get_root()` alone — so a project that opts out leaves a
-   * SubViewport's own Controls snapped.
-   *
-   * Measured through Godot 4.6.3 on
-   * `scenes/fixtures/subviewport-snap-off/unit-subviewport-snap-off.tscn`
-   * (root window reporting `is_snap_controls_to_pixels_enabled() == false`,
-   * its SubViewport reporting `true`): a four-deep chain of 0.5 offsets draws
-   * its leaf at (102, 62) in the root window and at (104, 64) inside the
-   * sub-viewport.
+   * `scene/main/viewport.h` sets `snap_controls_to_pixels = true` on every Viewport, and
+   * `main/main.cpp` hands the project setting to `sml->get_root()` alone. Godot 4.6.3 on
+   * `scenes/fixtures/subviewport-snap-off/unit-subviewport-snap-off.tscn` draws a four-deep chain of
+   * 0.5 offsets at (102, 62) in the unsnapped root and at (104, 64) inside the sub-viewport.
    */
   it('snaps its sub-viewport’s own Controls even when the project opts out', async () => {
     projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'false' };
     try {
-      // MIXED, so this container's LIVE arm is the one under test — a
-      // Control-only viewport is drawn by `ControlRasterPass`, whose own suite
-      // asserts the same rule for that route.
+      // Mixed, so this container's live arm is under test. `ControlRasterPass` draws a
+      // Control-only viewport, and its suite asserts the same rule for that route.
       const mesh = node('Mesh', 'MeshInstance3D', {});
       const bar = node('Bar', 'ColorRect', {
         anchorLeft: 0,
@@ -188,11 +177,9 @@ describe('<SubViewportContainer>', () => {
 
   describe('a cyclic pass', () => {
     /**
-     * A registry state where "Booth/View" and "Other" depend on each other.
-     * "Other" registers FIRST so `orderViewportPasses`' DFS (which visits in
-     * registration order) reports "Booth/View" — the pass this test cares
-     * about — as the offending sampler; see `passOrder.ts`'s own tests for
-     * why registration order decides which of a cycle's two nodes that is.
+     * A registry where "Booth/View" and "Other" depend on each other. "Other" registers first, so
+     * `orderViewportPasses`' DFS, which visits in registration order (`passOrder.ts`'s tests),
+     * reports "Booth/View" as the offending sampler.
      */
     function CyclicRegistration() {
       return (
@@ -250,14 +237,10 @@ describe('<SubViewportContainer>', () => {
 });
 
 /**
- * A sub-viewport's Controls reach the canvas by exactly ONE route.
- *
- * `viewportContentKind` (`viewport/subviewport/viewportContent.ts`) already
- * decides which rasterizer owns a target: a Control-only (`'dom'`) viewport is
- * drawn by `ControlRasterPass` into the texture this quad samples, so drawing
- * the same subtree live alongside it composites it twice — and only the quad
- * copy carries the container's `self_modulate`. The live arm exists for a MIXED
- * viewport, whose offscreen pass renders the non-Control half alone.
+ * A sub-viewport's Controls reach the canvas by one route. `viewportContentKind`
+ * (`viewport/subviewport/viewportContent.ts`) sends a Control-only (`'dom'`) viewport to
+ * `ControlRasterPass`, whose texture alone carries `self_modulate`, so a live draw would composite
+ * it twice. The live arm serves a mixed viewport, whose offscreen pass renders the non-Control half.
  */
 describe('<SubViewportContainer> — one route per sub-viewport', () => {
   /** Every named group the walk emitted, so a live-drawn Control is visible by name. */
@@ -303,10 +286,9 @@ describe('<SubViewportContainer> — one route per sub-viewport', () => {
 });
 
 /**
- * `SubViewportContainer::recalc_force_viewport_sizes` (`:94`) hands
- * `get_size() / shrink` to `set_size_force`, which takes a `Size2i` — and
- * `Vector2::operator Vector2i` (`core/math/vector2.cpp:213`) truncates. A
- * container 200 px wide at shrink 3 forces 66, not the 67 a round would give.
+ * `SubViewportContainer::recalc_force_viewport_sizes` (`:94`) hands `get_size() / shrink` to
+ * `set_size_force`, which takes a `Size2i`, and `Vector2::operator Vector2i`
+ * (`core/math/vector2.cpp:213`) truncates: 200 px at shrink 3 forces 66, not 67.
  */
 describe('<SubViewportContainer> — the forced sub-viewport size truncates', () => {
   function RectProbe({ path, onRect }: { path: string; onRect: (r: ViewportRect | null) => void }) {

@@ -1,15 +1,8 @@
 /**
- * SplitContainer strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`
- * — SplitContainer has none: no genuine cross-field defect was found (see
- * comparison.md), so there is no linter.ts.
- *
- * One case per property — happy, malformed, and any bound — quoting the
- * governing Godot source line beside every numeric bound.
+ * SplitContainer strict validators, asserted through `validatorRegistry` rather than a linted
+ * `.tscn`, so a failure points at the validator. SplitContainer has no cross-field rule
+ * (comparison.md), so it has no linter.ts. Each property gets a happy, a malformed and a bound
+ * case, with the governing Godot line beside each bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -59,7 +52,7 @@ describe('SplitContainer strict validators', () => {
     expect(validatorRegistry.getOwnKeys('SplitContainer')).not.toContain('size_flags_horizontal');
   });
 
-  // split_container.cpp:1295 — ADD_PROPERTY(PropertyInfo(Variant::PACKED_INT32_ARRAY,
+  // split_container.cpp:1295: ADD_PROPERTY(PropertyInfo(Variant::PACKED_INT32_ARRAY,
   // "split_offsets", PROPERTY_HINT_NONE, "suffix:px"), "set_split_offsets", "get_split_offsets");
   describe('split_offsets', () => {
     it('accepts the Godot default', () => {
@@ -81,8 +74,7 @@ describe('SplitContainer strict validators', () => {
     it('accepts the typed and bare spellings the slot converts', () => {
       // `can_convert_strict` lists ARRAY as a valid source for
       // PACKED_INT32_ARRAY (variant.cpp:467-473) and `set_split_offsets`
-      // (split_container.cpp:1071) takes a `PackedInt32Array`, so both load —
-      // reading only the constructor reported a legal file as broken.
+      // (split_container.cpp:1071) takes a `PackedInt32Array`, so both load.
       expect(check('split_offsets', 'Array[int]([3, 7])')).toBeNull();
       expect(check('split_offsets', '[3, 7]')).toBeNull();
       expect(check('split_offsets', '[]')).toBeNull();
@@ -93,11 +85,9 @@ describe('SplitContainer strict validators', () => {
     });
 
     it('accepts a fractional or exponent element, which Godot narrows on load', () => {
-      // `_parse_construct<int32_t>` takes any number token and narrows it.
-      // Measured on 4.6.3: `PackedInt32Array(1.5, 0)` loads as `[1, 0]` and
-      // `(2e3, 0)` as `[2000, 0]`, so refusing either is a false positive.
-      // Fractional loads and truncates, so it warns rather than erroring;
-      // `2e3` is whole-valued and stores exactly, so it says nothing.
+      // `_parse_construct<int32_t>` narrows any number token. Measured on 4.6.3,
+      // `PackedInt32Array(1.5, 0)` loads as `[1, 0]` (truncated, so a warning) and
+      // `(2e3, 0)` as `[2000, 0]` (stored exactly, so nothing).
       expect(check('split_offsets', 'PackedInt32Array(1.5)')?.severity).toBe('warning');
       expect(check('split_offsets', 'PackedInt32Array(2e3, 0)')).toBeNull();
     });
@@ -122,7 +112,7 @@ describe('SplitContainer strict validators', () => {
     );
   });
 
-  // split_container.cpp:1296 — ADD_PROPERTY(PropertyInfo(Variant::BOOL, "collapsed"), ...)
+  // split_container.cpp:1296: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "collapsed"), ...)
   describe('collapsed', () => {
     it('accepts true', () => {
       expect(check('collapsed', 'true')).toBeNull();
@@ -137,7 +127,7 @@ describe('SplitContainer strict validators', () => {
     });
   });
 
-  // split_container.cpp:1297 — ADD_PROPERTY(PropertyInfo(Variant::BOOL, "dragging_enabled"), ...)
+  // split_container.cpp:1297: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "dragging_enabled"), ...)
   describe('dragging_enabled', () => {
     it('accepts true', () => {
       expect(check('dragging_enabled', 'true')).toBeNull();
@@ -152,7 +142,7 @@ describe('SplitContainer strict validators', () => {
     });
   });
 
-  // split_container.cpp:1298 — BIND_ENUM_CONSTANT DRAGGER_VISIBLE=0, DRAGGER_HIDDEN=1,
+  // split_container.cpp:1298: BIND_ENUM_CONSTANT DRAGGER_VISIBLE=0, DRAGGER_HIDDEN=1,
   // DRAGGER_HIDDEN_COLLAPSED=2 (cpp:1308-1310).
   describe('dragger_visibility', () => {
     it('accepts 0 (DRAGGER_VISIBLE)', () => {
@@ -176,7 +166,7 @@ describe('SplitContainer strict validators', () => {
     });
   });
 
-  // split_container.cpp:1299 — ADD_PROPERTY(PropertyInfo(Variant::BOOL, "vertical"), ...)
+  // split_container.cpp:1299: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "vertical"), ...)
   describe('vertical', () => {
     it('accepts true', () => {
       expect(check('vertical', 'true')).toBeNull();
@@ -191,7 +181,7 @@ describe('SplitContainer strict validators', () => {
     });
   });
 
-  // split_container.cpp:1300 — ADD_PROPERTY(PropertyInfo(Variant::BOOL, "touch_dragger_enabled"), ...)
+  // split_container.cpp:1300: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "touch_dragger_enabled"), ...)
   describe('touch_dragger_enabled', () => {
     it('accepts true', () => {
       expect(check('touch_dragger_enabled', 'true')).toBeNull();
@@ -206,7 +196,7 @@ describe('SplitContainer strict validators', () => {
     });
   });
 
-  // split_container.cpp:1303 — set_drag_area_margin_begin (cpp:1186) assigns with no clamp.
+  // split_container.cpp:1303: set_drag_area_margin_begin (cpp:1186) assigns with no clamp.
   describe('drag_area_margin_begin', () => {
     it('accepts the Godot default', () => {
       expect(check('drag_area_margin_begin', '0')).toBeNull();
@@ -221,7 +211,7 @@ describe('SplitContainer strict validators', () => {
     });
   });
 
-  // split_container.cpp:1304 — set_drag_area_margin_end (cpp:1198) assigns with no clamp.
+  // split_container.cpp:1304: set_drag_area_margin_end (cpp:1198) assigns with no clamp.
   describe('drag_area_margin_end', () => {
     it('accepts a typical value', () => {
       expect(check('drag_area_margin_end', '8')).toBeNull();
@@ -236,7 +226,7 @@ describe('SplitContainer strict validators', () => {
     });
   });
 
-  // split_container.cpp:1305 — set_drag_area_offset (cpp:1210) assigns with no clamp.
+  // split_container.cpp:1305: set_drag_area_offset (cpp:1210) assigns with no clamp.
   describe('drag_area_offset', () => {
     it('accepts a positive shift', () => {
       expect(check('drag_area_offset', '4')).toBeNull();
@@ -251,7 +241,7 @@ describe('SplitContainer strict validators', () => {
     });
   });
 
-  // split_container.cpp:1306 — ADD_PROPERTY(PropertyInfo(Variant::BOOL, "drag_area_highlight_in_editor"), ...)
+  // split_container.cpp:1306: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "drag_area_highlight_in_editor"), ...)
   describe('drag_area_highlight_in_editor', () => {
     it('accepts true', () => {
       expect(check('drag_area_highlight_in_editor', 'true')).toBeNull();
@@ -266,7 +256,7 @@ describe('SplitContainer strict validators', () => {
     });
   });
 
-  // split_container.cpp:1330 — deprecated compat property (PROPERTY_USAGE_NO_EDITOR, not
+  // split_container.cpp:1330: deprecated compat property (PROPERTY_USAGE_NO_EDITOR, not
   // PROPERTY_USAGE_NONE, so it still reaches a .tscn). set_split_offset (cpp:1056) has no
   // clamp on the offset value.
   describe('split_offset', () => {

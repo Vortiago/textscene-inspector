@@ -1,28 +1,8 @@
 /**
- * `<TabBar>` — the native (WebGL canvas) painter for `TabBar`:
- * `TabBar::_notification(NOTIFICATION_DRAW)` (`tab_bar.cpp:511-597`). Draws
- * every tab's own StyleBox (unselected tabs first, the current tab last, so
- * it overlaps its neighbours exactly like the source's two-pass draw — same
- * `renderOrder`, submission order settles it), its icon and title, the close
- * icon where `tab_close_display_policy` calls for it, and the scroll arrows
- * when the tabs overflow `clip_tabs`'s bar width.
- *
- * Under `is_layout_rtl()` (`SolveNode.rtl`) every tab is mirrored inside the
- * bar and its own icon/title/close flow back from the trailing edge
- * (`nativeSolver.ts`'s `tabDrawX`/`layoutTabContent`), and the scroll arrows
- * move to the opposite edge.
- *
- * A static previewer has no pointer: `hover`/`rb_hover`/`cb_hover`/drag state
- * are never modelled (`buttonBase.ts`'s own precedent), so this never draws
- * `tab_hovered`, `tab_focus`, the close/right button's hover background, or
- * the drag drop-mark. `right_button` is dead code here (`nativeSolver.ts`'s
- * own header) and `all_tabs_in_front` is interaction-adjacent — TabContainer
- * is the only consumer of the "front" ordering (see its own painter).
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate` — composed into every colour this painter reads BEFORE
- * that colour's own sRGB→linear conversion, `PanelChrome.tsx`'s established
- * ordering.
+ * `<TabBar>`: the native painter for `TabBar::_notification(NOTIFICATION_DRAW)` (`tab_bar.cpp:511-597`),
+ * drawing each tab's StyleBox, icon, title and close icon, and the scroll arrows on overflow. The
+ * current tab draws last at the same `renderOrder`, so it overlaps its neighbours as in the
+ * source's two-pass draw.
  */
 import { useMemo } from 'react';
 import type { Plane } from 'three';
@@ -81,6 +61,11 @@ interface ComputedTab {
   layout: TextLayoutResult;
 }
 
+/**
+ * No pointer exists, so `tab_hovered`, `tab_focus`, the close and right buttons' hover background
+ * and the drag drop-mark never draw (`buttonBase.ts`). `right_button` is dead code (`nativeSolver.ts`),
+ * and only TabContainer consumes `all_tabs_in_front`'s front ordering.
+ */
 export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TabBarProperties>(solveNode);
   const tabs = props.tabs ?? EMPTY_TABS;
@@ -118,6 +103,8 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
     [tabs, currentTab, iconMaxWidth, fontSizePx, fontMetrics, solveNode]
   );
 
+  // Under `SolveNode.rtl` each tab mirrors in the bar and its content flows from the trailing
+  // edge (`nativeSolver.ts`'s `tabDrawX`/`layoutTabContent`).
   const drawInputs: TabLayoutInput[] = useMemo(
     () =>
       computed.map(({ tab, state, iconSize, layout }, i) => {
@@ -256,6 +243,8 @@ function TabBarTabChrome({
   const iconTexture = useCanvas2DTexture(iconSource);
 
   const fontColor = tabBarFontColor(solveNode.colors, state);
+  // `tint`, `self_modulate` folded onto `modulate`, composes into every colour before its
+  // sRGB-to-linear conversion, as in `PanelChrome.tsx`.
   const tintedFontColor = tintColor(fontColor, tint.own);
   const baseIconColor = tabBarIconColor(solveNode.colors, state);
   const tintedIconColor = tintColor(baseIconColor, tint.own);
@@ -336,7 +325,7 @@ interface ScrollArrowsProps {
   renderOrder: number;
 }
 
-/** `tab_bar.cpp:564-592` through `layoutScrollArrows` — which edge the pair sits against, and which of the two `missing_right` lights up, both follow the layout direction. */
+/** `tab_bar.cpp:564-592` through `layoutScrollArrows`: which edge the pair sits against, and which of the two `missing_right` lights up, both follow the layout direction. */
 function ScrollArrows({
   rect,
   rtl,

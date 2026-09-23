@@ -1,12 +1,7 @@
 /**
- * `Separator::_notification(NOTIFICATION_DRAW)`'s placement rect
- * (`scene/gui/separator.cpp:47-56`) — the sub-rect Separator hands its own
- * `separator_style` to draw, centred on the CROSS axis by the style's own
- * `get_minimum_size()` (`StyleBox::get_minimum_size`, the summed effective
- * margins ANY StyleBox kind resolves to — `contentMarginSize`). Generic over
- * every StyleBox kind for exactly that reason: this placement math never
- * inspects which kind it got, only its margins — `Separator` is the only
- * caller of it in this codebase.
+ * `Separator::_notification(NOTIFICATION_DRAW)`'s placement rect (`scene/gui/separator.cpp:47-56`):
+ * the sub-rect Separator hands `separator_style`, centred on the cross axis by
+ * `StyleBox::get_minimum_size` (`contentMarginSize`). It reads only margins, so it serves every kind.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -23,7 +18,7 @@ function truncHalf(n: number): number {
   return Math.trunc(n / 2);
 }
 
-/** `separator.cpp:48-56`: `Size2i size`/`Size2i ssize` are both truncated BEFORE the centring divide. */
+/** `separator.cpp:48-56`: `Size2i size`/`Size2i ssize` are both truncated before the centring divide. */
 export function separatorPlacementRect(
   orientation: SeparatorOrientation,
   rect: Rect2,
@@ -31,7 +26,7 @@ export function separatorPlacementRect(
 ): Rect2 {
   const size = { x: Math.trunc(rect.w), y: Math.trunc(rect.h) };
   // `StyleBox::get_minimum_size` (style_box.cpp:35-36) sums the four resolved
-  // margins as FLOATS first, truncating only the sum.
+  // margins as floats first, truncating only the sum.
   const margin = contentMarginSize(box);
   const ssize = { x: Math.trunc(margin.x), y: Math.trunc(margin.y) };
 

@@ -1,7 +1,6 @@
 /**
- * ScrollContainer parser — Control layout + per-axis scroll modes
- * (`horizontal_scroll_mode` / `vertical_scroll_mode`, Godot ScrollMode enum),
- * the authored scroll offsets, `draw_focus_border` and `scroll_hint_mode`.
+ * ScrollContainer parser: Control layout, the per-axis scroll modes (`horizontal_scroll_mode`/
+ * `vertical_scroll_mode`), the authored scroll offsets, `draw_focus_border` and `scroll_hint_mode`.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';

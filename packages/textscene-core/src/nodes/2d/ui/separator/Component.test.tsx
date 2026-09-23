@@ -1,11 +1,8 @@
 /**
- * `<SeparatorChrome>` (isolated painter contract) — `scene/gui/separator.cpp`
- * composed with whichever concrete StyleBox kind resolves
- * (`scene/resources/style_box_line.cpp`/`style_box_flat.cpp`, Godot 4.6.3).
- * Placement numbers are cross-checked in `separatorPlacement.test.ts`, the
- * line-draw transform in `native/styleBoxLineGeometry.test.ts`; this file
- * asserts the PAINTER wires the resolved StyleBox, the placement rect, and
- * the tint into the scene correctly, all now through `<StyleBoxQuad>`.
+ * `<SeparatorChrome>`'s painter contract: `scene/gui/separator.cpp` with whichever StyleBox kind
+ * resolves (`scene/resources/style_box_line.cpp`/`style_box_flat.cpp`, Godot 4.6.3). This file asserts
+ * the wiring of the StyleBox, the placement rect and the tint through `<StyleBoxQuad>`; the
+ * numbers are pinned in `separatorPlacement.test.ts` and `native/styleBoxLineGeometry.test.ts`.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -72,9 +69,8 @@ describe('<SeparatorChrome>', () => {
       { themeOverrideStyles: { separator: 'SubResource("Line_1")' } },
       resources
     );
-    // `SeparatorChrome` reads ONLY `solveNode.styleBoxes.separator` now —
-    // resolved the same way the real walk resolves it, `resolveStyleBoxes`
-    // itself (`buildSolveTree.ts`), not re-derived by hand.
+    // `SeparatorChrome` reads only `solveNode.styleBoxes.separator`, resolved here by the walk's own
+    // `resolveStyleBoxes` (`buildSolveTree.ts`), not by hand.
     node.styleBoxes = resolveStyleBoxes(node.node, node.resources);
     const renderer = await ReactThreeTestRenderer.create(
       <SeparatorChrome {...painterEnv()} orientation="vertical" solveNode={node} rect={RECT} renderOrder={0} />

@@ -1,24 +1,8 @@
 /**
- * SubViewportContainer's native minimum size — the port of
- * `SubViewportContainer::get_minimum_size`
- * (`scene/gui/subviewport_container.cpp`).
- *
- * Two layers, deliberately:
- *
- * 1. The function in isolation, driven with hand-built `SolveNode`s whose RAW
- *    `node.children` carry the sub-viewports. That is the only place they
- *    exist — `buildSolveTree` strips a viewport boundary out of `SolveNode.
- *    children` — so a test that seeded `children` instead would pass against
- *    an implementation that reads the wrong list and measures nothing.
- * 2. The whole solve over `scenes/fixtures/unit-sub-viewport-container-
- *    centred.tscn`, asserting the absolute rect Godot 4.6.3 draws the surface
- *    at. A minimum size that never reaches a parent CONSUMING it is
- *    indistinguishable from no minimum size at all, and that consumption is
- *    the fault this whole slice exists to pin.
- *
- * Every expected number is either the Godot source formula (cited inline) or a
- * pixel measured off `pnpm ref:godot <fixture> --mode 2d`, never re-derived
- * the way the implementation derives it.
+ * SubViewportContainer's native minimum size, `SubViewportContainer::get_minimum_size`
+ * (`scene/gui/subviewport_container.cpp`), tested alone and through a whole solve. Each expected
+ * number is the cited source formula or a pixel from `pnpm ref:godot <fixture> --mode 2d`, never
+ * re-derived as the implementation does.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -40,15 +24,14 @@ import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/tes
 import type { SubViewportContainerProperties } from './types';
 import { subViewportContainerMinimumSize } from './nativeSolver';
 
-// Registers every Control painter AND every solver — the fixture solve below
-// needs CenterContainer's layout as much as this slice's own minimum size.
+// Registers every Control painter and every solver: the fixture solve below needs
+// CenterContainer's layout as much as this slice's minimum size.
 import '../../../../r3f/controls/index';
 
 /**
- * A parsed SubViewport. `size` defaults to Godot's own `Size2i(512, 512)`
- * (`scene/main/viewport.h`) because `subviewport/parser.ts` applies it to
- * EVERY parsed SubViewport — a node reaching the solver without one does not
- * exist, so a factory that omitted it would test an unreachable branch.
+ * A parsed SubViewport. `size` defaults to Godot's `Size2i(512, 512)` (`scene/main/viewport.h`)
+ * because `subviewport/parser.ts` gives every parsed SubViewport one, so omitting it would test
+ * an unreachable branch.
  */
 function subViewport(name: string, size: { x: number; y: number } = { x: 512, y: 512 }): TscnNode {
   return {
@@ -59,6 +42,9 @@ function subViewport(name: string, size: { x: number; y: number } = { x: 512, y:
   };
 }
 
+// The sub-viewports go on the raw `node.children`, the only place they exist: `buildSolveTree`
+// strips a viewport boundary out of `SolveNode.children`, so seeding that list would let an
+// implementation that reads the wrong list pass.
 function container(properties: Partial<SubViewportContainerProperties>, children: TscnNode[]): SolveNode {
   const node: TscnNode = {
     name: 'Booth',
@@ -133,14 +119,10 @@ describe('subViewportContainerMinimumSize (scene/gui/subviewport_container.cpp::
 });
 
 /**
- * The minimum size reaching a rect, through the same `solveControlTree`
- * the walker runs.
- *
- * Expected pixels measured through Godot 4.6.3 on
- * `scenes/fixtures/unit-sub-viewport-container-centred.tscn` at the 1152x648
- * project viewport (`pnpm ref:godot … --mode 2d`): the orange surface spans
- * x 350..649, y 230..409, i.e. a 300x180 rect at (350, 230); the green mark at
- * the sub-viewport's right edge spans x 610..639, y 240..269.
+ * The minimum size reaching a rect through the walker's `solveControlTree`, which a minimum
+ * size needs to matter. Godot 4.6.3 on `scenes/fixtures/unit-sub-viewport-container-centred.tscn`
+ * at 1152x648: the orange surface is a 300x180 rect at (350, 230), and the green mark at the
+ * sub-viewport's right edge spans x 610..639, y 240..269.
  */
 describe('a CenterContainer places a SubViewportContainer at its minimum size', () => {
   const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
@@ -161,20 +143,15 @@ describe('a CenterContainer places a SubViewportContainer at its minimum size', 
     const booth = solved.get(BOOTH)?.rect;
 
     expect(centre).toEqual({ x: 100, y: 80, w: 800, h: 480 });
-    // Parent-relative: 350 - 100, 230 - 80. A zero minimum size would leave
-    // (400, 240) here — the container's own half-extent, which is exactly the
-    // half-of-the-sub-viewport displacement this fixture exists to catch.
+    // Parent-relative: 350 - 100, 230 - 80. A zero minimum size would leave (400, 240), the
+    // half-of-the-sub-viewport displacement this fixture catches.
     expect(booth).toEqual({ x: 250, y: 150, w: 300, h: 180 });
   });
 
   /**
-   * The other side of the same coin, and the reason every pre-existing
-   * SubViewportContainer fixture is blind to the minimum size: an anchored
-   * Control's rect comes from `Control::_size_changed`'s edge solve, and the
-   * minimum size only enters as a FLOOR (`if (minimum_size.width >
-   * new_size_cache.width)`). An authored 300x200 already exceeds the 200x150
-   * this container reports, so the floor is inert and the rect is the
-   * authored one either way.
+   * An anchored Control's rect comes from `Control::_size_changed`'s edge solve, where the minimum
+   * size is only a floor (`if (minimum_size.width > new_size_cache.width)`). An authored 300x200
+   * exceeds the 200x150 this container reports, so the rect is the authored one either way.
    */
   it('leaves an offset-pinned container exactly where its own offsets put it', () => {
     const source = readFileSync(resolve(fixturesDir(), 'unit-sub-viewport-container.tscn'), 'utf8');

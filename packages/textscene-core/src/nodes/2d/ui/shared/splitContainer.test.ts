@@ -1,23 +1,8 @@
 /**
- * SplitContainer's one number, `computed_split_offset`.
- *
- * Every expectation is a Godot 4.6.3 render of
- * `scenes/fixtures/unit-split-container.tscn`, whose rows are 400 px wide with
- * ColorRect children so the boundary is a hard colour edge. Measured widths
- * (first child | gap | second child):
- *
- *   Both        194 | 12 | 194     both expand, split_offset 0
- *   Offset      254 | 12 | 134     both expand, split_offset 60
- *   Ratio       294 | 12 |  94     both expand, stretch_ratio 3 : 1
- *   FirstOnly   388 | 12 |   0     only the first expands
- *   Neither     120 | 12 | 268     neither expands, split_offset 120
- *   SepZero     196 |  8 | 196     theme separation overridden to 0
- *   Collapsed   194 | 12 | 194     collapsed, split_offset 60 ignored
- *   DragColl    200 |  0 | 200     dragger_visibility = HIDDEN_COLLAPSED
- *
- * `SepZero` is what measures `GRABBER_EXTENT`: `_get_separation` returns
- * `MAX(theme_cache.separation, grabber width)`, so overriding the constant to
- * 0 leaves the grabber's own 8 px behind.
+ * SplitContainer's one number, `computed_split_offset`, against a Godot 4.6.3 render of
+ * `scenes/fixtures/unit-split-container.tscn`: 400 px rows of ColorRects, and each test title names
+ * its row and measured first-child width. The gap is 12 px, 0 in `DragColl`, and 8 in `SepZero`,
+ * where `MAX(theme_cache.separation, grabber width)` leaves the grabber's 8 px (`GRABBER_EXTENT`).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -59,7 +44,7 @@ describe('splitSeparation', () => {
     expect(DEFAULT_SEPARATION).toBe(12);
   });
 
-  /** `MAX(theme_cache.separation, grabber)` — the override cannot go below the icon. */
+  /** `MAX(theme_cache.separation, grabber)`: the override cannot go below the icon. */
   it('floors an override at the grabber’s own extent', () => {
     expect(
       splitSeparation({ name: 'S', themeOverrideConstants: { separation: 0 } })

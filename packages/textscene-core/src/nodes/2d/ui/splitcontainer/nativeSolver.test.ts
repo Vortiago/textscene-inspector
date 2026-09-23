@@ -1,12 +1,8 @@
 /**
- * A `SplitContainer` must lay out identically to a fixed-axis sibling given
- * the same `vertical` and the same children — that IS the base/subclass
- * relationship (`split_container.h`'s `HSplitContainer()`/`VSplitContainer()`
- * each just call `SplitContainer(bool)`). Verified two ways: exact numbers
- * derived from `SplitContainer::_get_valid_range`/`_update_dragger_positions`/
- * `_resort` (`split_container.cpp:305-338,527-618,710-782`), and a
- * differential check against the REAL registered HSplitContainer/
- * VSplitContainer solvers.
+ * A `SplitContainer` lays out as its fixed-axis sibling with the same `vertical`, since
+ * `split_container.h`'s `HSplitContainer()`/`VSplitContainer()` only call `SplitContainer(bool)`.
+ * Checked against numbers from `split_container.cpp:305-338,527-618,710-782` and against the
+ * registered HSplitContainer/VSplitContainer solvers.
  */
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../../parser/types';

@@ -1,9 +1,6 @@
 /**
- * Shared BoxContainer base for the HBox/VBox slices (the `lights/shared/`
- * pattern for a slice family). `alignment` is a property of Godot's
- * BoxContainer base class, so its type, parsing, and CSS mapping live ONCE
- * here — the two slices keep only their own wiring and axis. Pure `.ts`
- * (no React/THREE) so both parsers can import it inside the linter graph.
+ * Shared BoxContainer base for the HBox/VBox slices: `alignment` belongs to Godot's BoxContainer, so
+ * its type, parse and CSS mapping live here, in pure `.ts` for the linter graph.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';
@@ -26,7 +23,7 @@ export function parseBoxContainer(
   return result;
 }
 
-/** AlignmentMode → main-axis packing; absent/out-of-range = BEGIN (Godot default). */
+/** AlignmentMode to main-axis packing. Absent or out of range is BEGIN, Godot's default. */
 export function alignmentJustify(
   alignment: number | undefined
 ): 'flex-start' | 'center' | 'flex-end' {

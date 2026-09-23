@@ -1,4 +1,4 @@
-/** SpinBox registration — native (WebGL canvas) painter + rect solver. */
+/** SpinBox registration: native painter and rect solver. */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';

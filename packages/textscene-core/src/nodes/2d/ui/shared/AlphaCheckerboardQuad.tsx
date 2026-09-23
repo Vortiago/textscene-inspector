@@ -1,14 +1,8 @@
 /**
- * `<AlphaCheckerboardQuad>` — the tiled `mini_checkerboard.svg` backdrop
- * `ColorPickerButton`/`ColorPicker` draw under a translucent colour swatch
- * (`draw_texture_rect(theme_cache.background_icon, r, true)` — the `true` is
- * `p_tile`). Drawn at (0, 0) in its own local space; wrap the caller's
- * `<CanvasItemGroup>` around it to place the swatch rect.
- *
- * Tiling matches `nodes/2d/ui/texturerect/Component.tsx`'s `STRETCH_TILE`
- * branch: `RepeatWrapping`, `repeat = size / textureSize`, and a `1 - repeat.y`
- * V offset so the pattern anchors at the rect's TOP edge (three's V axis runs
- * bottom-up; Godot tiles from the top-left).
+ * `<AlphaCheckerboardQuad>`: the tiled `mini_checkerboard.svg` backdrop under a translucent
+ * ColorPicker swatch (`draw_texture_rect(theme_cache.background_icon, r, true)`, `p_tile` true), drawn
+ * at local (0, 0). It tiles as `texturerect/Component.tsx`'s `STRETCH_TILE` does, with a `1 - repeat.y`
+ * V offset: three's V axis runs bottom-up, and Godot tiles from the top-left.
  */
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
@@ -24,27 +18,23 @@ export interface AlphaCheckerboardQuadProps {
   opacity: number;
   renderOrder: number;
   /**
-   * This node's OWN themed answer for its background icon — the theme item
-   * NAME differs per caller (`"bg"` for ColorPickerButton, `"sample_bg"` for
-   * ColorPicker, `"preset_bg"` for ColorPresetButton), so the key is read
-   * from `SolveNode.icons` at the CALL SITE, never here.
+   * This node's themed background icon. The item name differs per caller (`"bg"` for
+   * ColorPickerButton, `"sample_bg"` for ColorPicker, `"preset_bg"` for ColorPresetButton), so the
+   * call site reads it from `SolveNode.icons`.
    */
   themed?: ThemedIconRef;
 }
 
 export function AlphaCheckerboardQuad({ width, height, color, opacity, renderOrder, themed }: AlphaCheckerboardQuadProps) {
-  // `useNodeIcon` clones (a themed ref) or freshly loads (the vendored
-  // fallback) on every distinct input, so this instance is already
-  // exclusively ours to mutate — no further `.clone()` needed before tiling.
+  // `useNodeIcon` clones a themed ref or loads the vendored fallback per input, so this instance
+  // is ours to mutate without a `.clone()`.
   const texture = useNodeIcon(themed, MINI_CHECKERBOARD_ICON);
 
   const tiled = useMemo(() => {
     if (!texture) return null;
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    // A themed background icon need not share the vendored tile's own size —
-    // its OWN pixel dimensions set the tiling repeat, falling back to the
-    // vendored constant only while a themed texture is still loading (no
-    // `.image` yet) or when nothing themed it at all.
+    // A themed icon's own size sets the repeat. The vendored size stands in while it loads (no
+    // `.image` yet) or when nothing themed it.
     const tileSize = {
       x: (texture.image as { width?: number } | undefined)?.width || MINI_CHECKERBOARD_SIZE,
       y: (texture.image as { height?: number } | undefined)?.height || MINI_CHECKERBOARD_SIZE,

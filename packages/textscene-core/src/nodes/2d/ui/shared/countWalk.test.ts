@@ -1,9 +1,6 @@
 /**
- * A `*_count` property has no ceiling, so nothing may walk `0..count`.
- *
- * The linter mechanised this in `reportedIndices.ts`; the render side did not,
- * and a legal `.tscn` could hang or OOM the webview and the VS Code preview
- * with no diagnostic, because the linter clears the value.
+ * A `*_count` property has no ceiling, so no render walk may run `0..count`: the linter clears the
+ * value (`reportedIndices.ts`), and an uncapped walk hangs the webview with no diagnostic.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -46,7 +43,7 @@ describe('OptionButton item_count', () => {
   });
 
   it('reads the highest declared index without spreading the key set', () => {
-    // `Math.max(-1, ...declared.keys())` passes one ARGUMENT per index and
+    // `Math.max(-1, ...declared.keys())` passes one argument per index and
     // throws `RangeError: Maximum call stack size exceeded` at this size.
     const properties: Record<string, string> = { item_count: '200000' };
     for (let i = 0; i < 200_000; i++) properties[`popup/item_${i}/text`] = `"item ${i}"`;

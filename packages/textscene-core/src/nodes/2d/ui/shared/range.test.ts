@@ -1,17 +1,8 @@
 /**
- * Godot-parity contract for the shared Range base. `rangeRatio` transcribes
- * `Range::get_as_ratio()` (scene/gui/range.cpp):
- *
- *     if (Math::is_equal_approx(get_max(), get_min())) { return 1.0; }
- *     ...
- *     double value = CLAMP(get_value(), shared->min, shared->max);
- *     return CLAMP((value - get_min()) / (get_max() - get_min()), 0, 1);
- *
- * Defaults come from doc/classes/Range.xml: value 0, min_value 0,
- * max_value 100. That combination is what both sliders in
- * `scenes/demos/viewport/gui_in_3d/gui_panel_3d.tscn` carry, and real Godot
- * draws their grabbers hard against the low end of the travel — so ratio 0 for
- * an all-default Range is measured, not assumed.
+ * Godot-parity contract for the shared Range base: `rangeRatio` transcribes `Range::get_as_ratio()`
+ * (scene/gui/range.cpp). Defaults come from doc/classes/Range.xml (value 0, min_value 0, max_value
+ * 100). Both sliders in `scenes/demos/viewport/gui_in_3d/gui_panel_3d.tscn` carry them, and Godot
+ * draws their grabbers at the low end, so ratio 0 for an all-default Range is measured.
  */
 import { describe, it, expect } from 'vitest';
 import { parseRange, rangeRatio, resolveRangeValue, RANGE_DEFAULT_MAX } from './range';
@@ -45,14 +36,10 @@ describe('parseRange', () => {
 
 describe('the step default is the SUBCLASS\'s, not Range\'s', () => {
   /**
-   * `Range` itself records no default at all; each subclass sets its own in its
-   * constructor, and `_calc_value` snaps to whatever that is. Measured from the
-   * engine (`ClassDB.class_get_property_default_value`, Godot 4.6.3): HSlider,
-   * VSlider, SpinBox and TextureProgressBar are 1.0, ProgressBar is 0.01, and
-   * the scrollbars are 0.0 — which disables the snap entirely.
-   *
-   * So a scene that omits `step` does NOT skip snapping, and reading the key as
-   * "absent means no snap" draws an HSlider at a value Godot never holds.
+   * Each Range subclass sets its own `step`, and `_calc_value` snaps to it. Measured with
+   * `ClassDB.class_get_property_default_value` (Godot 4.6.3): HSlider, VSlider, SpinBox and
+   * TextureProgressBar 1.0, ProgressBar 0.01, the scrollbars 0.0 (no snap). A scene that omits
+   * `step` still snaps.
    */
   it('takes the caller\'s default when the scene omits step', () => {
     expect(parseRange({}, { step: 1 }).step).toBe(1);
@@ -76,8 +63,8 @@ describe('the step default is the SUBCLASS\'s, not Range\'s', () => {
 });
 
 describe('Range::_calc_value gates (range.cpp:182-200)', () => {
-  // `if (!shared->allow_lesser && p_val < shared->min)` (`:197-199`) — the
-  // clamp is CONDITIONAL, so an authored value below min survives.
+  // `if (!shared->allow_lesser && p_val < shared->min)` (`:197-199`): the clamp is conditional,
+  // so an authored value below min survives.
   it('keeps a value below min when allow_lesser is set', () => {
     expect(resolveRangeValue({ value: -50, minValue: 0, maxValue: 100, allowLesser: true }, undefined)).toBe(-50);
     expect(resolveRangeValue({ value: -50, minValue: 0, maxValue: 100 }, undefined)).toBe(0);
@@ -152,18 +139,14 @@ describe('rangeRatio', () => {
 });
 
 /**
- * `resolveRangeValue` — file-order simulation of `Range::set_min`/`set_max`/
- * `set_page`/`set_value` (ADR-0035, Option B). Every one of the four ends by
- * touching `shared->val` (directly, or via `set_value(shared->val)`), so a
- * `.tscn`'s file order among `min_value`/`max_value`/`page`/`value` decides
- * which bounds `value`'s own clamp actually sees, and whether a later
- * `min_value`/`max_value`/`page` re-clamps it.
+ * `resolveRangeValue`: a file-order simulation of `Range::set_min`/`set_max`/`set_page`/`set_value`
+ * (ADR-0035, Option B). Each ends by touching `shared->val`, directly or with `set_value(shared->val)`,
+ * so the `.tscn` order decides which bounds `value`'s clamp sees and whether a later bound re-clamps it.
  */
 describe('resolveRangeValue — no reliable order assumes editor-save order (bounds authored before value)', () => {
   it('clamps against the FINAL min/max/page directly — under that assumption they never change again after value’s own setter runs', () => {
-    // 150 exceeds the default max (100), so this is clamped here, not left
-    // for rangeRatio's own downstream CLAMP to catch — resolveRangeValue
-    // models Range::get_value() itself, not merely a ratio input.
+    // 150 exceeds the default max (100), so this clamps here, not in rangeRatio's CLAMP:
+    // resolveRangeValue models Range::get_value() itself, not a ratio input.
     expect(resolveRangeValue({ value: 150 }, undefined)).toBe(100);
     expect(resolveRangeValue({}, undefined)).toBe(0);
   });
@@ -176,8 +159,8 @@ describe('resolveRangeValue — no reliable order assumes editor-save order (bou
 });
 
 describe('resolveRangeValue — file-order simulation (ADR-0035, Option B)', () => {
-  // The ADR's own hand-traced example: `value = 150`, `min_value = 0`,
-  // `max_value = 200` — same three lines, only the order changes.
+  // The ADR's hand-traced example: `value = 150`, `min_value = 0`, `max_value = 200`, the same
+  // three lines in different orders.
   it('value BEFORE min_value/max_value clamps against the still-default max=100, and the later bounds cannot recover it (range.cpp:182-200,211-241)', () => {
     const props = { value: 150, minValue: 0, maxValue: 200 };
     const orderedKeys = ['value', 'min_value', 'max_value'];
@@ -191,9 +174,8 @@ describe('resolveRangeValue — file-order simulation (ADR-0035, Option B)', () 
   });
 
   it('set_min(0) is a no-op against the struct default (range.cpp:212-214) — the early return is load-bearing', () => {
-    // min_value = 0 authored between value and max_value: since shared->min
-    // is ALREADY 0.0 (the struct default), set_min returns before calling
-    // set_value again — value stays whatever the 'value' line alone produced.
+    // min_value = 0 between value and max_value: shared->min is already 0.0 (the struct default),
+    // so set_min returns before set_value, and value stays what the 'value' line produced.
     const props = { value: 150, minValue: 0, maxValue: 200 };
     const orderedKeys = ['value', 'min_value', 'max_value'];
     expect(resolveRangeValue(props, orderedKeys)).toBe(100); // same as the "before" case above
@@ -214,8 +196,8 @@ describe('resolveRangeValue — file-order simulation (ADR-0035, Option B)', () 
   });
 
   it('set_max validates against min (max_validated = MAX(p_max, shared->min), range.cpp:229)', () => {
-    // max_value = -10 authored while min is still the struct default 0 — Godot
-    // raises it to 0, not -10, so a value of 5 clamps to that raised max.
+    // max_value = -10 while min is still the struct default 0: Godot raises it to 0, so a value
+    // of 5 clamps to that raised max.
     const props = { value: 5, maxValue: -10 };
     const orderedKeys = ['max_value', 'value'];
     expect(resolveRangeValue(props, orderedKeys)).toBe(0);
