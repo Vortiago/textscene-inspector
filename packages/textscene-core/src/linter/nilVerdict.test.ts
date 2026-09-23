@@ -1,17 +1,8 @@
 /**
- * Which validator owns the message for a bare `null`.
- *
- * The strict parser rewrites a validator's message when the value is a nil
- * literal, because a per-type "must be a number" reads as a parse failure and
- * says the wrong thing: `NIL` converts strictly only to OBJECT
- * (variant.cpp:543-544), so every other slot silently stores the type's zero.
- *
- * That is false for a slot whose setter REFUSES the null outright — nothing is
- * stored at all — and such a refusal says so itself, with the `file:line` of
- * the guard. `nilShapeError` is how it keeps its own message.
- *
- * Both directions are asserted. The rewrite still owning every untagged
- * refusal is what stops the tag being widened into a no-op.
+ * Which validator owns the message for a bare `null`. The strict parser rewrites
+ * it, since `NIL` converts strictly only to OBJECT (variant.cpp:543-544) and every
+ * other slot stores the type's zero. A setter that refuses the null keeps its own
+ * message through `nilShapeError`. Both directions are asserted.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -53,9 +44,9 @@ describe('nil-literal verdicts', () => {
   });
 
   it('declares the verdict on the ERROR, so a forwarder keeps the message', () => {
-    // The registry hands the seam a family's DISPATCHER, and a wrapper such as
+    // The registry hands the seam a family's dispatcher, and a wrapper such as
     // `withFiniteGuard` hands it a different function again. Neither is the
-    // validator that refused, so a tag on the validator never arrives; the
+    // validator that refused, so a tag on the validator never arrives. The
     // error travels.
     const source = validatorRegistry.findValidator('TileSet', 'sources/0')!;
     expect(ownsNilMessage(source('sources/0', 'null', 1)!)).toBe(true);

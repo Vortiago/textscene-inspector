@@ -1,29 +1,8 @@
 /**
- * A node type must declare validators for its own properties.
- *
- * The coverage ledger counts **parser** registrations, so a slice that parses a
- * type but declares no validators reads as fully covered while
- * `StrictTscnParser` (`if (!validator) return;`) silently accepts every value
- * on it. That is the same silent shape `baseChainCompleteness` exists to
- * prevent, one level down: there the inherited keys go unchecked, here the
- * type's own ones do.
- *
- * It is not hypothetical. This guard was written after finding twenty
- * registered types in exactly that state, among them `Button` (13 own members),
- * `LineEdit` (36) and `RichTextLabel` (30) — all reading green in the ledger.
- *
- * The swept set is the registry PLUS every ancestor reachable from it. The
- * registry alone would be blind to exactly the types that carry the most
- * leverage: Godot's non-instantiable tiers (`Light3D`, `CollisionObject2D/3D`,
- * `Slider`, `Joint2D/3D`, `CanvasItem`, `Viewport`) appear in no `.tscn`, so
- * they register no parser, so a registry-driven sweep can never see one emptied
- * by a refactor. Closing over the base chain reaches them for free and keeps
- * reaching each new tier the day it is scaffolded.
- *
- * Two lists, and the difference between them matters. `NO_OWN_PROPERTIES` is a
- * statement of fact about Godot and is permanent. `UNDECLARED` is a defect
- * list: every entry is a type whose properties are currently unchecked, and it
- * only ever shrinks. A type may join neither by accident.
+ * A node type must declare validators for its own properties: the coverage ledger
+ * counts parser registrations, while `StrictTscnParser` (`if (!validator) return;`)
+ * accepts every value on a type with none. `NO_OWN_PROPERTIES` is a permanent fact
+ * about Godot, and `UNDECLARED` is a defect list that only shrinks.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -37,12 +16,10 @@ import '../parser/TscnParser.js'; // side-effect: every slice registers its pars
 import './index.js'; // side-effect: every slice registers its validators
 
 /**
- * Types Godot gives no serialisable properties of their own, so declaring none
- * is correct and complete. Verified as `doc/classes/<T>.xml` members without an
- * `overrides=` attribute, cross-checked against `ADD_PROPERTY` in the class's
- * `.cpp` — both zero. These are themed, layout-only or orientation-only
- * refinements of an ancestor, and everything they serialise arrives through the
- * base-walk.
+ * Types Godot gives no serialisable properties of their own: `doc/classes/<T>.xml` lists
+ * no member without `overrides=`, and the class's `.cpp` has no `ADD_PROPERTY`. Each is a
+ * themed, layout-only or orientation-only refinement of an ancestor, and everything it
+ * serialises arrives through the base-walk.
  */
 const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
   CCDIK3D:
@@ -103,29 +80,16 @@ const NO_OWN_PROPERTIES: Readonly<Record<string, string>> = {
 };
 
 /**
- * Types with own properties in Godot that this repo has not declared yet. Each
- * is a live gap: those properties are accepted unchecked today.
- *
- * Empty. The list is kept because it is the ratchet: a type can be added only
- * by lengthening the pinned count below, and removing an entry (by declaring
- * its validators) is the only correct edit.
- *
- * `AnimationMixer` left this list once `anims/<name>`, `libraries` and
- * `libraries/<name>` were declared (propertyListRouteCoverage.test.ts) — but
- * that closes only the hand-rolled route. Its TEN `ADD_PROPERTY` members
- * (`active`, `deterministic`, `root_motion_track`, `reset_on_save`,
- * `root_motion_local`, `callback_mode_process`, `callback_mode_method`,
- * `callback_mode_discrete`, `audio_max_polyphony`, `root_node` — all currently
- * declared only on `AnimationTree`, never on `AnimationMixer` itself, so
- * `AnimationPlayer` inherits none of them) are a real, separate, still-open gap
- * this coarser guard cannot see once ANY own key exists: it counts types with
- * zero own validators, not missing members by name.
+ * Types with own properties in Godot that are not declared yet, each a live gap. Empty,
+ * but kept as the ratchet: adding a type means raising the pinned count below, and
+ * declaring its validators is the only correct removal.
  */
 const UNDECLARED: readonly string[] = [];
 
 /**
- * Every type this guard holds to account: the registry, closed over the base
- * chain so non-instantiable tiers are included.
+ * Every type this guard holds to account: the registry, closed over the base chain,
+ * so it reaches the non-instantiable tiers (`Light3D`, `CollisionObject2D/3D`, `Slider`,
+ * `CanvasItem`) that appear in no `.tscn` and register no parser.
  */
 function typesUnderGuard(): string[] {
   const all = new Set(nodeRegistry.getAllTypeNames());
@@ -135,26 +99,21 @@ function typesUnderGuard(): string[] {
   return [...all].sort();
 }
 
-/** Types under guard that declare no validators of their own. */
+/**
+ * Types under guard with no own validators. It counts types, not missing members:
+ * `AnimationMixer`'s `ADD_PROPERTY` members (`active`, `deterministic`, `root_motion_track`,
+ * `reset_on_save`, `root_motion_local`, `callback_mode_*`, `audio_max_polyphony`, `root_node`)
+ * are declared only on `AnimationTree`, so `AnimationPlayer` inherits none, unseen here.
+ */
 function typesWithoutOwnValidators(): string[] {
   return typesUnderGuard().filter((type) => validatorRegistry.getOwnKeys(type).length === 0);
 }
 
 /**
- * Resource classes this previewer CLAIMS a slice for that declare no validators
- * of their own.
- *
- * The node guard above seeds from `nodeRegistry` closed over the NODE base
- * chain, so the whole Resource hierarchy sat outside the only zero-own-validator
- * ratchet: `BoxShape3D.size = Vector3(-1, -2, -3)` drew no diagnostic at all
- * though `box_shape_3d.cpp:100` is an `ERR_FAIL_COND_MSG`, and the node list's
- * pinned length read "three known gaps" while these went uncounted.
- *
- * The population is the claim table intersected with Godot's own resource
- * classes, so the previewer's file-format pseudo-types (`GLB`, `GLTF`) are not
- * held to a ClassDB standard they were never in.
- *
- * Removing an entry (by declaring its validators) is the only correct edit.
+ * Claimed resource classes with no own validators, a ratchet of its own since the node
+ * base chain never reaches a Resource (`box_shape_3d.cpp:100` refuses a negative size).
+ * Pseudo-types outside ClassDB (`GLB`, `GLTF`) are excluded. Declaring its validators is
+ * the only correct removal.
  */
 const UNDECLARED_RESOURCES: readonly string[] = [
   'ArrayMesh', 'AtlasTexture', 'BoxMesh', 'BoxShape3D', 'CanvasItemMaterial', 'CapsuleMesh',
@@ -162,35 +121,28 @@ const UNDECLARED_RESOURCES: readonly string[] = [
   'ConcavePolygonShape3D', 'ConvexPolygonShape3D', 'Curve', 'Curve2D', 'Curve3D', 'CylinderMesh',
   'FastNoiseLite', 'Gradient', 'GradientTexture2D', 'ImageTexture',
   'NavigationMesh', 'NavigationPolygon',
-  // `Noise` and `Texture` are abstract tiers with ZERO `ADD_PROPERTY` calls in
+  // `Noise` and `Texture` are abstract tiers with zero `ADD_PROPERTY` calls in
   // 4.6.3, so there is nothing of their own to validate; they are listed to
   // record that, not as work.
   'Noise', 'NoiseTexture2D', 'PackedScene', 'PanoramaSkyMaterial',
   'PhysicalSkyMaterial', 'PrismMesh', 'ProceduralSkyMaterial', 'QuadMesh', 'RectangleShape2D',
   'ShaderMaterial', 'Sky', 'SphereMesh', 'SpriteFrames', 'StandardMaterial3D',
   'StyleBoxEmpty', 'StyleBoxFlat', 'Texture', 'Texture2D', 'TorusMesh', 'ViewportTexture',
-  // The font and theme slices, which arrived with the native Control painters:
-  // they decode enough to DRAW (a `.tres` wrapper's fallbacks, a variation's
-  // base font, a theme's type chain) and validate none of it yet. `Font` is the
-  // abstract tier the other three descend from.
+  // The font and theme slices decode enough to draw (a `.tres` wrapper's fallbacks,
+  // a variation's base font, a theme's type chain) and validate none of it. `Font`
+  // is the abstract tier the other three descend from.
   'Font', 'FontFile', 'FontVariation', 'SystemFont', 'Theme',
-  // The highlighter and label-settings slices, which arrived with syntax
-  // highlighting and Label's content window: both decode enough to DRAW and
-  // validate none of it yet. `SyntaxHighlighter` is the abstract tier
-  // `CodeHighlighter` descends from and declares zero `ADD_PROPERTY` of its
-  // own in 4.6.3, so it is listed to record that rather than as work.
+  // The highlighter and label-settings slices decode enough to draw and validate
+  // none of it. `SyntaxHighlighter`, the abstract tier `CodeHighlighter` descends
+  // from, declares zero `ADD_PROPERTY` of its own in 4.6.3: listed as a record.
   'CodeHighlighter', 'LabelSettings', 'SyntaxHighlighter',
 ];
 
 /**
- * Claimed resource types Godot's ClassDB also declares, closed over the resource
- * base chain — the same closure the node half is given, and for the same reason.
- *
- * No slice CLAIMS an abstract tier, so the bare intersection could never reach
- * one: `BaseMaterial3D` (131 own keys), `PrimitiveMesh`, `Material`, `Shape2D`,
- * `Shape3D` and `Mesh` all sat outside every zero-own-validator ratchet, and
- * emptying one of them would have stopped hundreds of keys validating with
- * `unaccounted` and `stale` both still reading `[]`.
+ * Claimed resource types Godot's ClassDB also declares, closed over the resource base
+ * chain like the node half. No slice claims an abstract tier, so without the closure
+ * `BaseMaterial3D`, `PrimitiveMesh`, `Material`, `Shape2D`, `Shape3D` or `Mesh` could
+ * empty while `unaccounted` and `stale` both read `[]`.
  */
 function claimedResourceClasses(): string[] {
   const claimed = new Set(resourceSliceRegistry.all().flatMap((r) => r.typeNames));
@@ -226,10 +178,9 @@ describe('own-validator coverage for resource slices', () => {
   });
 
   it('never lets the undeclared resource list grow', () => {
-    // The ratchet, exact rather than a ceiling: a ceiling above the current
-    // length is a free slot for the next silently-unvalidated slice. Moving it
-    // UP is a deliberate act that records three more slices drawing without
-    // validating; the only correct edit afterwards is moving it back down.
+    // The ratchet, exact rather than a ceiling: a ceiling above the current length is
+    // a free slot for the next unvalidated slice. Raising it records slices that draw
+    // without validating, and the only correct edit afterwards is lowering it.
     expect(UNDECLARED_RESOURCES.length).toBe(47);
   });
 
@@ -261,10 +212,8 @@ describe('own-validator coverage', () => {
 
   it('never lets the undeclared list grow', () => {
     // The ratchet: a new gap cannot be waved through by appending to the list.
-    // Each decrement is a type whose properties stopped being silently accepted.
-    // Exact equality, not a ceiling — a ceiling above the current length is a
-    // free slot, and an appended gap that moves no constant is exactly what this
-    // is here to stop.
+    // Exact equality, not a ceiling: a ceiling above the current length is a free
+    // slot for an appended gap that moves no constant.
     expect(UNDECLARED.length).toBe(0);
   });
 

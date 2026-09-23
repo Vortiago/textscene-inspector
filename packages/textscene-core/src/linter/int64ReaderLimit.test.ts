@@ -1,16 +1,7 @@
 /**
- * An int64 slot past 2^53 is THIS reader's limit, never an engine alteration.
- *
- * `storedFromFloat` answers both refusals with the same NaN, and both
- * diagnostics built on it said Godot could not hold the value. At uint8/int32/
- * uint32 that is true — the C++ type really is narrower than a double. At int64
- * it is false: `_to_int` carries `9007199254740993` intact and `String::to_int`
- * saturates rather than refusing (`ustring.cpp:2650-2658`), so the file states
- * what Godot stores and only this reader loses it.
- *
- * It shipped at ERROR severity, which fails `lint:scenes`, on a file the engine
- * opens unaltered. Both surfaces are pinned here because they are separate
- * code paths that made the identical claim: the scalar one through
+ * An int64 slot past 2^53 is this reader's limit, never an engine alteration:
+ * `_to_int` carries `9007199254740993` intact and `String::to_int` saturates
+ * (`ustring.cpp:2650-2658`). Both code paths are pinned: the scalar one through
  * `unrepresentableInt`, the packed-element one through `badIntElement`.
  */
 
@@ -46,24 +37,23 @@ describe('int64 slots past the reader’s range', () => {
     expect(error?.message).toContain('this linter reads exactly');
   });
 
-  // The other half of the split: a narrower slot IS altered by the engine, so
-  // the error tier there is earned and must not have been widened away.
+  // A uint8, int32 or uint32 slot is narrower than a double, so the engine
+  // alters the value and the error tier is earned.
   it('still errors where the C++ type really is narrower than the value', () => {
     const error = check('Node2D', 'z_index', '4294967296');
     expect(error?.severity).toBe('error');
   });
 
-  // The boundary the split turns on, and the easy thing to get wrong: "finite"
-  // is not the test. Past 2^63 the value leaves int64's OWN range, where a
-  // FLOAT literal is undefined behaviour (`variant.h:369-370`) and an INT one
-  // saturates (`ustring.cpp:2650-2658`) — both real alterations, both errors.
+  // "Finite" is not the test. Past 2^63 the value leaves int64's own range: a
+  // float literal is undefined behaviour (`variant.h:369-370`) and an int one
+  // saturates (`ustring.cpp:2650-2658`). Both are alterations, so both error.
   it('still errors past int64 itself, where the engine does alter the value', () => {
     expect(check('CodeEdit', 'line_length_guidelines', '[1e20]')?.severity).toBe('error');
     expect(check('Label', 'autowrap_trim_flags', '1e20')?.severity).toBe('error');
   });
 
   it('still errors on a non-finite literal in an int64 slot', () => {
-    // `inf` READS (`variant_parser.cpp:701-707`) and is then altered on the
+    // `inf` reads (`variant_parser.cpp:701-707`) and is then altered on the
     // write, so this one is a genuine alteration at every width.
     const error = check('Label', 'autowrap_trim_flags', 'inf');
     expect(error?.severity).toBe('error');

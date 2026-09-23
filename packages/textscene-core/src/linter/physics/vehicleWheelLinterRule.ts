@@ -1,14 +1,7 @@
 /**
- * Dimension-parameterized semantic linter rule for VehicleWheel3D.
- *
- * Godot has no 2D vehicle wheel, so `dim` is always '3D' today; the factory
- * shape matches the sibling physics rules and is what ruleCoverage derives the
- * rule name from.
- *
- * Format validation lives in the slice's linterParser.ts. This rule covers the
- * one thing only full scene context can decide: whether the wheel is where
- * Godot needs it. It is a WARNING, since a detached wheel still parses and
- * renders.
+ * The VehicleWheel3D placement warning; a detached wheel still parses and renders.
+ * Godot has no 2D vehicle wheel, but the factory shape matches the sibling physics
+ * rules, and ruleCoverage derives the rule name from it.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
@@ -25,21 +18,13 @@ export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
     const diagnostics: Diagnostic[] = [];
     const { node, scene } = context;
 
-    // Godot: "VehicleWheel3D serves to provide a wheel system to a VehicleBody3D.
-    // Please use it as a child of a VehicleBody3D." It is a DIRECT-child
-    // requirement — a wheel under an intermediate Node3D is not picked up.
-    //
-    // An instanced sub-scene's root carries `instance=` instead of `type=`, so
-    // its real class lives in a file this linter never opens: whether it is a
-    // vehicle body is unanswerable, and guessing "no" flags a wheel added as an
-    // editable child of an instanced vehicle. Same caution as
-    // nodes/2d/parallaxlayer/linter.ts and physics/joints/shared/linter.ts.
-    //
-    // `root` stays a warning while `unknowable` does not: this rule WARNS at
-    // the scene root, and collapsing the two arms would silence it there.
-    // `cast_to<VehicleBody3D>` (vehicle_body_3d.cpp:147) accepts subclasses,
-    // which is the comparison `parentTypeVerdict` makes.
+    // Godot: "Please use it as a child of a VehicleBody3D", and only a direct child
+    // is picked up. `cast_to<VehicleBody3D>` (vehicle_body_3d.cpp:147) accepts
+    // subclasses, the comparison `parentTypeVerdict` makes.
     const placement = parentTypeVerdict(scene, node, bodyType);
+    // An instanced parent's class is in a file this linter never opens, so
+    // `unknowable` stays silent, as in nodes/2d/parallaxlayer/linter.ts and
+    // physics/joints/shared/linter.ts. `root` still warns.
     if (placement.kind === 'root' || placement.kind === 'mismatch') {
       diagnostics.push({
         severity: 'warning',
@@ -50,7 +35,7 @@ export function makeVehicleWheelLinterRule(dim: PhysicsDim): LintRule {
       });
     }
 
-    // No damping_relaxation vs damping_compression check: both are
+    // No check between damping_relaxation and damping_compression: both are
     // PROPERTY_HINT_NONE with plain setters, and the "relaxation should be
     // slightly higher" relationship exists only in class-reference prose.
 

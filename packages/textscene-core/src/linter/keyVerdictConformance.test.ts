@@ -1,20 +1,8 @@
 /**
- * A refusal that never looked at the value must say so on the ERROR.
- *
- * `StrictTscnParser` rewrites a validator's message when the value is a bare
- * `null`, because NIL converts strictly only to OBJECT and every other slot
- * takes the type's zero. That claim is false for a refusal of the KEY: there is
- * no slot to store a zero in, so the rewrite replaces the real reason and
- * downgrades a dropped write to a warning.
- *
- * The flag rides on the ERROR, because `findValidator` returns a family's
- * dispatcher rather than the leaf that refused. This guard asks the population
- * directly rather than trusting a grep: key refusals are spelled as raw object
- * literals and behind leaves, where no `propertyError(` search reaches them.
- *
- * A refusal counts as value-independent when a diverse value set draws the
- * identical message and code. A validator that echoes the offending value —
- * every `v` bound does — varies its message and is never considered here.
+ * A refusal that never looked at the value must say so on the error. The strict
+ * parser rewrites a bare `null`'s message as a stored zero, since NIL converts
+ * strictly only to OBJECT. For a refused key no slot stores it, so the rewrite
+ * would hide the reason and downgrade a dropped write to a warning.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -46,11 +34,10 @@ const NIL = VALUES.indexOf('null');
 const BOGUS = '__guard_bogus__';
 
 /**
- * Segments a family's `_set` matches BELOW its own index. A synthesised key
- * cannot guess a literal, so the branches that refuse a joint or a per-terrain
- * key are unreachable without naming them, and a bogus segment lands on the
- * enclosing family's unknown-leaf arm instead. The `every nested segment still
- * reaches a refusal` case fails when one goes stale.
+ * Segments a family's `_set` matches below its own index. A synthesised key cannot
+ * guess a literal, so a bogus segment lands on the family's unknown-leaf arm, not
+ * the joint or per-terrain branch. The `every nested segment still reaches a
+ * refusal` case fails when one goes stale.
  */
 const NESTED_SEGMENTS = ['joints/0', 'joints/-1', 'terrain_0', 'terrain_-1'];
 
@@ -76,7 +63,7 @@ function probeKeys(pattern: string): string[] {
   if (pattern.endsWith('#/**')) return indexedProbes(pattern.slice(0, -4));
   if (pattern.endsWith('#/*')) return indexedProbes(pattern.slice(0, -3));
   if (pattern.endsWith('/*')) {
-    // A `prefix/*` family often carries its index BELOW the wildcard
+    // A `prefix/*` family often carries its index below the wildcard
     // (`bones/0/position`), so the bare leaf probe alone never reaches the
     // branch that resolves an index.
     const p = pattern.slice(0, -2);
@@ -96,10 +83,10 @@ interface Offender {
 }
 
 /**
- * Whether `probe` refuses `key` the same way whatever the value, and if so
- * whether that refusal declares itself. The verdict is read off the ERROR, the
- * one object that survives a dispatcher and a wrapper alike, so a leaf is
- * judged on what it actually returns.
+ * Whether `probe` refuses `key` with one message and code for every value, and if
+ * so whether that refusal declares itself. A validator that echoes the value, as
+ * every `v` bound does, never counts. The verdict is read off the error, since
+ * `findValidator` returns a dispatcher, not the leaf that refused.
  */
 function offence(nodeType: string, key: string, probe: PropertyValidator): Offender | null {
   const errors = VALUES.map((value) => probe(key, value, 1));
@@ -113,25 +100,26 @@ function offence(nodeType: string, key: string, probe: PropertyValidator): Offen
   return { nodeType, key, message: first.message };
 }
 
-/** Offenders, and the subject counts that say the sweep had subjects. */
+/**
+ * Offenders, and the subject counts that say the sweep had subjects. It asks the
+ * population, not a grep: key refusals hide in raw object literals and behind
+ * leaves, where no `propertyError(` search reaches them.
+ */
 function sweep(): { offenders: Offender[]; probes: number; exempt: number } {
   const offenders: Offender[] = [];
   let probes = 0;
   let exempt = 0;
 
-  // One walk per PROBE KEY, each with its own dedupe scope. That scope is the
-  // whole difference from every other sweep here: the question is what
-  // `ParseError` a KEY produces, so a leaf instance shared between dispatchers
-  // must be revisited under each key that reaches it, not reported once.
-  // `everyValidator`'s injected-roots seam gives exactly that — one execution,
-  // one set — without a hand-rolled recursion that can drift from the shared one.
-  //
   // `registeredKeys`, not `getOwnKeys`: removals are the third population and a
   // removal-only type never appears in the validator map at all.
   for (const { nodeType, key: pattern } of registeredKeys()) {
     for (const key of probeKeys(pattern)) {
       const validator = validatorRegistry.findValidator(nodeType, key);
       if (!validator) continue;
+      // One walk per probe key, each with its own dedupe scope: the question is
+      // what `ParseError` a key produces, so a leaf shared between dispatchers is
+      // revisited under each key. `everyValidator`'s injected-roots seam gives
+      // that without a hand-rolled recursion.
       for (const { validator: reached } of everyValidator(() => true, {
         roots: [{ label: `${nodeType}.${key}`, validator }],
       })) {

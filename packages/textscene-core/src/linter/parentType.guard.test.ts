@@ -1,39 +1,8 @@
 /**
- * Who may hold a raw parent node, and the guard that keeps it to one file.
- *
- * The unknowable-type test is three arms — an instanced node, a typeless
- * heading, an override of a node inside an instance — and a copy that drops one
- * is invisible: it compiles, it reads plausibly, and it only goes wrong on a
- * scene shape the corpus happens not to contain. A copy that drops ALL THREE is
- * worse still, because there is no re-spelling to recognise: `collisionPolygon`
- * and `collisionShape` simply asked `descendsFrom(parent.type, …)` and warned
- * about parents whose type is in another file.
- *
- * So this guards the ACCESS, not the spelling. `findParentNode` is the only way
- * to reach a node's parent, and only `parentType.ts` may call it; every other
- * file asks `parentType.ts`, whose primitives gate `isTypeUnknowable` before
- * they hand an ancestor back. The test itself lives in
- * `parser/typeUnknowable.ts`, since `buildSceneTree` asks it at every descent
- * of a `parent=` path and the parser cannot import the linter. A rule that cannot hold a raw parent cannot spell
- * the test wrongly, cannot spell it partially, and cannot omit it — the three
- * failures are one invariant.
- *
- * Source text rather than behaviour, deliberately: the failure is a rule that
- * never runs on a shape nobody wrote a fixture for, so there is nothing to
- * observe until someone writes one.
- *
- * That is also why the sweep reads only the ACCESSOR line and never the arm
- * beside it. `const unknowable = parent.instance ? true : !parent.type`, a
- * destructured `const { instance, type } = parent`, a bracketed
- * `parent['instance']`, and a `descendsFrom(parent.type, wanted)` with no test
- * at all are four plausible copies with four different shapes — and the last
- * has nothing to recognise. All of them need a parent first, so matching that
- * one line catches every re-spelling without enumerating any.
- *
- * Every sweep here reads comment-stripped source, like its sibling guards: prose
- * naming the accessor or the flag is not a use of either, and a docblock that
- * explains why a rule must not hold a raw parent is the likeliest place for the
- * words to appear.
+ * Who may hold a raw parent node. The unknowable-type test has three arms (an instanced
+ * node, a typeless heading, an override inside an instance), and a copy that drops one
+ * compiles and reads plausibly. So this guards the access, not the spelling: only
+ * `parentType.ts` calls `findParentNode`, and its primitives gate `isTypeUnknowable`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -46,44 +15,39 @@ import { allSourceFiles, linterDir, nodesRoot, srcRoot } from './testing/ruleNam
 const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
 
 /**
- * The files that may name the raw parent accessor.
- *
- * `linterUtils.ts` DECLARES `findParentNode` and never calls it, which the test
- * below checks rather than trusts; `parentType.ts` is its only caller, and
- * every primitive it exports applies `isTypeUnknowable` to an ancestor before
- * returning it. Nothing else has a reason: a rule that wants the parent wants a
- * verdict about it, and a rule that wants an ancestor chain wants one that
- * stops where the file stops describing the tree.
+ * The files that may name the raw parent accessor. `linterUtils.ts` declares
+ * `findParentNode` and never calls it, which a test below checks. A rule that wants
+ * the parent wants a verdict about it, or an ancestor chain that stops where the file
+ * stops describing the tree.
  */
 const PARENT_ACCESS_ALLOWED = new Set(['linter/linterUtils.ts', 'linter/parentType.ts']);
 
 /**
- * The files that may read the raw `overridesExistingNode` flag.
- *
- * `StrictTscnParser.ts` SETS it, and nothing in the linter reads it: the one
- * decision it feeds is `parser/typeUnknowable.ts`, which both trees ask
- * through. Scoped to the linter's own tree below, because the flag answers a
- * second, unrelated question outside it — `NodeRegistry.ts` sets it too, and
- * `graftInstanceChildren.ts` and `glbNodeOverrides.ts` read it to decide
- * whether an instanced child REPLACES one or is appended beside it, which has
- * nothing to do with whether a type is knowable.
+ * The linter files that may read the raw `overridesExistingNode` flag. `StrictTscnParser.ts`
+ * sets it for `parser/typeUnknowable.ts`, a parser file since `buildSceneTree` asks it and
+ * cannot import the linter. `NodeRegistry.ts`, `graftInstanceChildren.ts` and
+ * `glbNodeOverrides.ts` use it outside the linter for an unrelated question.
  */
 const OVERRIDE_FLAG_ALLOWED = new Set(['linter/StrictTscnParser.ts']);
 
-/** The raw parent accessor, under any spelling of the call around it. */
+/**
+ * The raw parent accessor, under any spelling of the call around it. A copy of the
+ * test can be a ternary, a destructure, a bracketed read or no test at all, but each
+ * needs a parent first, so this one line catches every re-spelling.
+ */
 const RAW_PARENT_ACCESS = /\bfindParentNode\b/;
 /**
- * The same, counting occurrences rather than answering yes/no.
- *
- * DERIVED, not re-spelled. The `linterUtils.ts` assertion below is the only
- * place either constant meets real source text, so it is the positive control
- * for both — and it can only be that while the two cannot drift. A separately
- * written literal here would let the sweep's regex be mutated to match nothing
- * and stay green, which is the exact defect class this file exists to catch.
+ * The same, counting occurrences. Derived, not re-spelled: the `linterUtils.ts`
+ * assertion below is the positive control for both, and a separate literal could be
+ * mutated to match nothing and stay green.
  */
 const RAW_PARENT_ACCESS_ALL = new RegExp(RAW_PARENT_ACCESS.source, 'g');
 
-/** The files, minus the allowlist, whose CODE satisfies `predicate`. */
+/**
+ * The files, minus the allowlist, whose code satisfies `predicate`. Source text, not
+ * behaviour: the failure is a rule that never runs on a shape no fixture holds. Comments
+ * are stripped, since a docblock explaining the rule is where the words appear.
+ */
 function offenders(
   predicate: (source: string) => boolean,
   allowed: Set<string>,
@@ -99,11 +63,9 @@ function offenders(
 
 describe('only parentType.ts holds a raw parent', () => {
   it('walks the whole package, .tsx and non-linter subtrees included', () => {
-    // Containment, not a size floor: a floor proves the walk is big, and a walk
-    // can be big while missing every directory a helper would be moved INTO.
-    // One known path per subtree the earlier `[nodesRoot, linterDir]` pair
-    // skipped, plus both allowlisted files, so an exemption cannot name a file
-    // the walk never reaches.
+    // Containment, not a size floor: a big walk can still miss the directory a
+    // helper moves into. One known path per subtree, plus both allowlisted files,
+    // so an exemption cannot name a file the walk never reaches.
     const scanned = allSourceFiles().map(label);
     for (const known of [
       'linter/parentType.ts',
@@ -126,11 +88,9 @@ describe('only parentType.ts holds a raw parent', () => {
   });
 
   it('lets linterUtils.ts declare the accessor without using it', () => {
-    // The weaker half of the allowlist, made checkable. A blanket exemption
-    // would let a second caller appear inside the file that owns the
-    // definition, which is the one place the invariant could rot unobserved.
-    // Comment-stripped like the sweeps: the two constants are one spelling, so a
-    // control that counted prose would red on a mention the sweeps ignore.
+    // A blanket exemption would let a second caller appear inside the file that
+    // owns the definition. Comment-stripped like the sweeps: the two constants are
+    // one spelling, so a count of prose would fail on a mention the sweeps ignore.
     const source = stripComments(readFileSync(resolve(linterDir, 'linterUtils.ts'), 'utf8'));
     expect(source.match(RAW_PARENT_ACCESS_ALL) ?? []).toHaveLength(1);
     expect(source).toContain('export function findParentNode(');

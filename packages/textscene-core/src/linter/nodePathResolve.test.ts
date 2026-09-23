@@ -1,11 +1,7 @@
 /**
  * The resolver is a port, so every case here quotes the line it reproduces.
- *
- * The bug it was written against: matching a path's final segment against every
- * name in the scene. `Node::get_node_or_null` walks `data.children.getptr(name)`
- * from the referencing node (node.cpp:1941), so a bare name can only ever reach
- * that node's OWN child — which makes the name-anywhere form wrong in both
- * directions at once, silent on a dangling path and loud on a working one.
+ * `Node::get_node_or_null` walks `data.children.getptr(name)` from the referencing
+ * node (node.cpp:1941), so a bare name reaches only that node's own child.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -54,9 +50,9 @@ describe('resolveNodePath', () => {
       });
     });
 
-    // The case the old name-anywhere match got backwards: `ParentNode` exists in
-    // the file, but not as a child of the node doing the referencing, so
-    // `data.children.getptr` returns null and the engine's ERR_FAIL fires.
+    // `ParentNode` exists in the file, but not as a child of the node doing the
+    // referencing, so `data.children.getptr` returns null and the engine's
+    // ERR_FAIL fires.
     it('does NOT reach the referencing node’s own parent', () => {
       const tree = node('ParentNode', [node('ChildNode')]);
       const scene = sceneOf(tree);
@@ -116,9 +112,9 @@ describe('resolveNodePath', () => {
 
     it('climbs ".." past a parent whose own type this file never states', () => {
       // `..` is `get_parent()` (node.cpp:1920) and never reads the parent's
-      // class, so a property-override heading is a node this file names
-      // perfectly well. Declining here stopped the walk and silenced every rule
-      // that would have judged where the path finally lands.
+      // class, so a property-override heading is a node this file names. Declining
+      // here would stop the walk and silence every rule that judges where the
+      // path lands.
       const target = node('Target');
       const tree = node('Root', [
         node('Mid', [node('Leaf'), target], { type: '', overridesExistingNode: true }),
@@ -177,10 +173,10 @@ describe('resolveNodePath', () => {
       });
     });
 
-    // `owned_unique_nodes` is read on the node the walk has REACHED before the
-    // owner's table is consulted (node.cpp:1930-1933). Below an instance that
-    // first table is the sub-scene's own claims, which this file cannot see, so
-    // a hit in the outer table may be shadowed by one we cannot read.
+    // `owned_unique_nodes` is read on the node the walk has reached before the
+    // owner's table (node.cpp:1930-1933). Below an instance that first table is
+    // the sub-scene's own claims, which this file cannot see, so a hit in the
+    // outer table may be shadowed.
     it('declines a %name reached THROUGH an instance, whose own claims are elsewhere', () => {
       const tree = node('Root', [
         node('Weapon', [], { instance: 'ExtResource("1_gun")' }),
@@ -231,7 +227,7 @@ describe('resolveNodePath', () => {
     });
 
     // A heading with neither `type=` nor `instance=` overrides a node declared
-    // inside the instance, so ITS children are in the other file too.
+    // inside the instance, so its children are in the other file too.
     it('declines a miss below a property-override heading', () => {
       const tree = node('Root', [
         node('Enemy', [node('Body', [], { type: '', overridesExistingNode: true })], {
@@ -281,7 +277,7 @@ describe('resolveNodePath', () => {
       });
     });
 
-    // `is_empty()` is `!data`, so a subname-only path is NOT empty: the loop runs
+    // `is_empty()` is `!data`, so a subname-only path is not empty: the loop runs
     // zero times and `current` is still the referencing node.
     it('resolves a subname-only path to the referencing node', () => {
       const tree = node('Root', [node('A')]);

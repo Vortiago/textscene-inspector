@@ -1,19 +1,12 @@
 /**
- * Linter entry point - imports all lint rules and validators to trigger registration
- *
- * IMPORTANT: Uses index.linter.ts for all nodes to keep bundle size minimal.
- * This pattern prevents bundling THREE.js and renderer code in the linter CLI.
+ * Linter entry point: imports every lint rule and validator so each registers.
+ * Every node enters through its index.linter.ts, so the linter CLI bundles no
+ * THREE.js or renderer code.
  */
 
-// Import linter registration for all nodes via index.linter.ts
-// This pattern is consistent for ALL nodes (with or without renderers)
-//
-// The base Control slice (nodes/2d/ui/control) registers the layout/anchor/
-// offset + theme-override validators shared by the whole 2D UI family; every
-// Control subclass inherits them through the ValidatorRegistry base-walk
-// (see godot/nodeBaseTypes.ts). A Control subclass slice carries its own
-// index.linter.ts once it has type-specific validators or semantic rules, which
-// most now do.
+// The base Control slice (nodes/2d/ui/control) registers the layout, anchor,
+// offset and theme-override validators that every Control subclass inherits
+// through the ValidatorRegistry base-walk (godot/nodeBaseTypes.ts).
 import '../nodes/node/index.linter.js';
 import '../nodes/canvasitem/shared/index.linter.js';
 import '../nodes/2d/ui/canvaslayer/index.linter.js';
@@ -242,10 +235,9 @@ import '../nodes/3d/rootmotionview/index.linter.js';
 import '../nodes/3d/navigationlink3d/index.linter.js';
 import '../nodes/3d/visibleonscreenenabler3d/index.linter.js';
 import '../nodes/3d/audiolistener3d/index.linter.js';
-// Registered by hand, both scaffolded without --linter on the belief that they
-// declare nothing. XRCamera3D genuinely does, and its lint surface is a rule
-// alone; AudioListener2D serialises `current` through _get_property_list, which
-// neither its class reference nor an ADD_PROPERTY grep shows.
+// Registered by hand, since neither slice has the --linter scaffold. XRCamera3D's lint
+// surface is a rule alone. AudioListener2D serialises `current` through
+// _get_property_list, which neither its class reference nor an ADD_PROPERTY grep shows.
 import '../nodes/3d/xr/xrcamera3d/index.linter.js';
 import '../nodes/3d/xr/shared/index.linter.js';
 import '../nodes/3d/xr/openxrcompositionlayerquad/index.linter.js';
@@ -285,11 +277,10 @@ import '../nodes/os/statusindicator/index.linter.js';
 export { Linter } from './Linter.js';
 export { StrictTscnParser } from './StrictTscnParser.js';
 export { validatorRegistry } from './ValidatorRegistry.js';
-// Re-exported because four `.mjs` ledgers under `scripts/` load the built
-// package and scope their coverage by it: `coverage-report/collect.mjs`,
-// `compare-docs/loadCoreLinter.test.mjs`, `enginePropertyCoverage.test.mjs` and
-// `resourcePropertyCoverage.test.mjs`. The rest of the module is reachable by
-// direct import in-package and stays off the published surface.
+// Re-exported for the `scripts/` ledgers that scope their coverage by the built
+// package: `coverage-report/collect.mjs`, `compare-docs/loadCoreLinter.test.mjs`,
+// `enginePropertyCoverage.test.mjs` and `resourcePropertyCoverage.test.mjs`. The
+// rest of the module stays off the published surface.
 export { registeredTypes } from './registryPopulation.js';
 export { ruleRegistry } from './RuleRegistry.js';
 export { SEVERITY_ORDER, flooredSeverity, isSeverity } from './types.js';

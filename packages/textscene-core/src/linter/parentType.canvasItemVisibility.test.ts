@@ -1,10 +1,7 @@
 /**
- * `visibleInTreeVerdict` down the CanvasItem chain.
- *
- * Separate from the Node3D cases (`parentType.visibility.test.ts`) because the
- * chain is a different shape: a contiguous CanvasItem run, then an immediate
- * CanvasLayer parent, then a Viewport search that climbs past anything else —
- * three stopping rules where Node3D has one.
+ * `visibleInTreeVerdict` down the CanvasItem chain: a contiguous CanvasItem run,
+ * then an immediate CanvasLayer parent, then a Viewport search that climbs past
+ * anything else. Node3D has one stopping rule (`parentType.visibility.test.ts`).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -61,7 +58,7 @@ visible = false
         )
       ).toBe('hidden');
 
-      // canvas_item.cpp:324-328 casts the IMMEDIATE parent only, so one plain
+      // canvas_item.cpp:324-328 casts the immediate parent only, so one plain
       // Node between them and the layer contributes nothing.
       expect(
         verdictOf(
@@ -131,7 +128,7 @@ visible = false
     it('cannot rule out a hidden Window behind an uncataloged ancestor', () => {
       // `descendsFrom` is false for "not a Window" and for a class this build
       // has never heard of alike, so the search has to decline on the second.
-      // A GDExtension type in this position may BE a Window, and then its own
+      // A GDExtension type in this position may be a Window, and then its own
       // `visible` is what decides.
       expect(
         verdictOf(
