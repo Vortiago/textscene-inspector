@@ -1,16 +1,8 @@
 /**
- * Render-side resolution of an AnimationTree's `tree_root` into a typed
- * `AnimNode` graph. THREE-free / React-free by design: it reads only the
- * scene's SubResource `data` strings (the same `internalResources` the
- * AnimationPlayer slice consumes via `resolveAnimations`), so the result can
- * be evaluated to a blend program by `evaluateTree` and later feed a linter.
- *
- * A `tree_root` is always a container node — an `AnimationNodeBlendTree`
- * (named sub-nodes wired by `node_connections`) or an
- * `AnimationNodeStateMachine` (named states) — whose leaves are
- * `AnimationNodeAnimation` clips. Blend/add/timescale nodes carry their
- * BlendTree-local NAME so `evaluateTree` can look up the matching
- * `parameters/<name>/…` value authored on the AnimationTree node.
+ * Render-side resolution of an AnimationTree's `tree_root` into a typed `AnimNode` graph for
+ * `evaluateTree`. THREE-free and React-free: it reads only the SubResource `data` strings, the
+ * `internalResources` that `resolveAnimations` also reads. A `tree_root` is a BlendTree (sub-nodes
+ * wired by `node_connections`) or a StateMachine, whose leaves are `AnimationNodeAnimation` clips.
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
@@ -48,7 +40,7 @@ export interface Blend2Node {
   name: string;
   in0: AnimNode | null;
   in1: AnimNode | null;
-  /** `filter_enabled` — recorded but not modelled per-bone (clip-weight approximation). */
+  /** `filter_enabled`: recorded, but the clip-weight approximation does not model it per bone. */
   filtered: boolean;
 }
 
@@ -82,9 +74,8 @@ export interface StateMachineNode {
 }
 
 /**
- * Any single-input AnimationNode we don't model precisely (OneShot,
- * Transition, BlendSpace, nested unknown). Evaluation passes its input
- * through unchanged so the tree degrades gracefully rather than going blank.
+ * A single-input AnimationNode this does not model precisely (OneShot, Transition, BlendSpace,
+ * nested unknown). Evaluation passes its input through unchanged, so the tree does not go blank.
  */
 export interface PassthroughNode {
   kind: 'passthrough';
@@ -110,15 +101,10 @@ function extractSubResourceId(ref: string): string | null {
 }
 
 /**
- * The ONE door from a sub-resource id to a node, so the cycle guard covers every
- * recursion path. A BlendTree may hold another BlendTree and nothing in the
- * engine stops that chain closing on itself — `add_node` guards only the name,
- * null and `/` (animation_blend_tree.cpp:1489-1493), `connect_node` only a node
- * feeding itself (:1615-1619) — and this runs in a render-phase `useMemo` with
- * no error boundary above it, so an unguarded re-entry blanks the whole preview.
- *
- * `visiting` is the path, not the visited set: the copy is per-branch, so one
- * sub-resource wired into two ports still resolves on both.
+ * The one door from a sub-resource id to a node, so the cycle guard covers every recursion path.
+ * Godot allows a cycle (animation_blend_tree.cpp:1489-1493 and :1615-1619 refuse neither), and a
+ * re-entry in this render-phase `useMemo` would blank the preview. `visiting` is the per-branch
+ * path, not a visited set, so one sub-resource wired into two ports resolves on both.
  */
 function resolveNodeById(
   id: string,
@@ -219,22 +205,18 @@ function parseBlendTreeNodes(data: Record<string, unknown>): Map<string, string>
  * `"toNode:port" → fromNode` map.
  */
 function parseConnections(raw: string): Map<string, string> {
-  // Split the array, don't scavenge tokens out of it. A `&"…"|-?\d+` scan read
-  // the port `1e1` as the two tokens `1` and `1` — shifting every triple after
-  // it — and skipped a plain `"Blend"`, which `Variant::operator StringName()`
-  // converts and Godot therefore wires.
+  // Split the array rather than scanning tokens: a `&"…"|-?\d+` scan reads the port `1e1` as two
+  // tokens, shifting every later triple, and skips a plain `"Blend"`, which
+  // `Variant::operator StringName()` converts and Godot therefore wires.
   const body = ARRAY_LITERAL_RE.exec(raw.trim());
   if (!body) return new Map();
   const tokens = dropTrailingComma(splitTopLevel(body[1]!));
   const out = new Map<string, string>();
   for (let i = 0; i + 2 < tokens.length; i += 3) {
     const to = stripStringName(tokens[i]!);
-    // `connect_node`'s port is an int slot (animation_blend_tree.cpp:1766), so
-    // it reads the way every other int slot does — including a STRING, which
-    // `Variant::_to_int` routes through `String::to_int()` (variant.h:372), the
-    // same conversion that lets a plain `"Blend"` reach the StringName slots
-    // beside it. Reading `"0"` as unreadable dropped the whole triple and left
-    // the tree with no root.
+    // `connect_node`'s port is an int slot (animation_blend_tree.cpp:1766), read like every int
+    // slot, including a string, which `Variant::_to_int` routes through `String::to_int()`
+    // (variant.h:372). An unreadable `"0"` would drop the triple and leave the tree with no root.
     const port = ruleInt(stripStringName(tokens[i + 1]!));
     const from = stripStringName(tokens[i + 2]!);
     if (port === null) continue;
@@ -246,7 +228,7 @@ function parseConnections(raw: string): Map<string, string> {
 /**
  * Resolve an `AnimationNodeStateMachine`: read its `states/<name>/node`
  * sub-resources and pick a start state. With no runtime `travel`, the start
- * state is the target of a transition FROM the implicit `Start` node, falling
+ * state is the target of a transition from the implicit `Start` node, falling
  * back to the first authored state.
  */
 function resolveStateMachine(

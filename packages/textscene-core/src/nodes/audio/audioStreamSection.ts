@@ -1,8 +1,7 @@
 /**
- * Shared audio property-formatter sections — the "Stream" panel (byte-identical
- * across AudioStreamPlayer / 2D / 3D) and the base "Mixing" panel (shared by the
- * non-spatial and 2D formatters; the 3D formatter interleaves extra rows and
- * keeps its own). Consumes the shared boolean formatter `yesNo`.
+ * Shared audio property-formatter sections: the "Stream" panel, identical across AudioStreamPlayer,
+ * 2D and 3D, and the base "Mixing" panel of the non-spatial and 2D formatters. The 3D formatter
+ * interleaves extra rows and keeps its own.
  */
 
 import type { PropertySection } from '../../core/NodeRegistry';

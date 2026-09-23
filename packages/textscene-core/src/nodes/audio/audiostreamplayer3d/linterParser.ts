@@ -1,14 +1,10 @@
 /**
- * AudioStreamPlayer3D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- *
- * `bus` uses the shared `busValidator`, which accepts both plain `"..."`
- * strings and Godot's StringName literal form `&"..."`.
+ * AudioStreamPlayer3D strict validators. `bus` uses the shared `busValidator`, which accepts both
+ * plain `"..."` strings and Godot's StringName literal form `&"..."`.
  */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
+// The base chain. Registration happens on import, so a test that loads only this slice resolves
+// an inherited key only when the ancestor is imported too.
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
@@ -29,10 +25,9 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   // delegates to AudioStreamPlayerInternal::set_stream
   // (audio_stream_player_internal.cpp:254-263), a bare assignment: format-only.
   stream: v.resourceReference('stream'),
-  // audio_stream_player_3d.cpp:883, PROPERTY_HINT_RANGE "-80,80,suffix:dB" — a
-  // wider ceiling than the 2D/base players' 24. set_volume_db assigns straight
-  // through, so both ends warn. Its one refusal is
-  // ERR_FAIL_COND_MSG(Math::is_nan(p_volume), ...): `nan` is dropped, `inf` and
+  // audio_stream_player_3d.cpp:883, PROPERTY_HINT_RANGE "-80,80,suffix:dB", a wider ceiling than
+  // the 2D and base players' 24. set_volume_db assigns straight through, so both ends warn. Its
+  // one refusal is ERR_FAIL_COND_MSG(Math::is_nan(p_volume), ...): `nan` is dropped, `inf` and
   // `-inf` are stored unaltered.
   volume_db: v.float('volume_db', {
     min: -80,
@@ -42,7 +37,7 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   }),
   // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0),
   // against a hint (audio_stream_player_3d.cpp:887) of
-  // "0.01,4,0.01,or_greater" — `or_greater` opens the ceiling. The two floors
+  // "0.01,4,0.01,or_greater", where `or_greater` opens the ceiling. The two floors
   // sit apart, so (0, 0.01) loads into Godot and only warns.
   pitch_scale: v.positiveFloat(
     'pitch_scale',
@@ -56,12 +51,10 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   playing: v.boolean('playing'),
   autoplay: v.boolean('autoplay'),
   stream_paused: v.boolean('stream_paused'),
-  // audio_stream_player_3d.cpp:896, PROPERTY_HINT_ENUM "Default,Stream,Sample".
-  // set_playback_type (:789-791) forwards to
-  // AudioStreamPlayerInternal::set_playback_type (audio_stream_player_internal.cpp:337-339),
-  // the SAME setter and SAME AudioServer::PlaybackType enum AudioStreamPlayer's
-  // validator of the same name grounds against: a bare assignment, out-of-range
-  // only warns.
+  // audio_stream_player_3d.cpp:896, PROPERTY_HINT_ENUM "Default,Stream,Sample". set_playback_type
+  // (:789-791) forwards to AudioStreamPlayerInternal::set_playback_type
+  // (audio_stream_player_internal.cpp:337-339), the setter and enum AudioStreamPlayer's
+  // `playback_type` grounds against: a bare assignment, so out of range only warns.
   playback_type: v.enumInt('playback_type', 0, 2, PLAYBACK_TYPE, {
     hinted: 'audio_stream_player_3d.cpp:896',
   }),
@@ -99,7 +92,7 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   }),
   // audio_stream_player_3d.cpp:777, ERR_FAIL_COND_MSG(p_panning_strength < 0, ...)
   // enforces the floor only. The hint (:893) is "0,3,0.01,or_greater": or_greater
-  // opens the ceiling, so a prior max:1 here rejected legal values above 1.
+  // opens the ceiling, so values above 1 are legal.
   panning_strength: v.float('panning_strength', {
     min: 0,
     enforced: { min: 'audio_stream_player_3d.cpp:777' },
@@ -107,14 +100,10 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   // Bare uint32_t assignment (:669): the parameter type is the ceiling.
   area_mask: layerBitmask('area_mask', { hinted: 'audio_stream_player_3d.cpp:895', width: 'uint32' /* audio_stream_player_3d.h:175 */ }),
   emission_angle_enabled: v.boolean('emission_angle_enabled'),
-  // Two tiers, because the setter and the hint disagree at the floor.
-  // audio_stream_player_3d.cpp:687 ERR_FAIL_CONDs `p_angle < 0 || p_angle > 90`,
-  // while the hint at :899 reads "0.1,90,0.1,degrees". That is a bare `degrees`
-  // unit LABEL on a value already stored in degrees, not `radians_as_degrees`,
-  // so nothing is converted. The setter's floor sits BELOW the hint's, leaving
-  // [0, 0.1) reachable: the engine loads it, the inspector excludes it, so it
-  // warns while anything under 0 errors. Both agree at 90, so that end is one
-  // tier, the setter's.
+  // Two tiers: audio_stream_player_3d.cpp:687 ERR_FAIL_CONDs `p_angle < 0 || p_angle > 90`, while
+  // the hint at :899 reads "0.1,90,0.1,degrees", a unit label, not `radians_as_degrees`. So [0, 0.1)
+  // loads, the inspector excludes it and it warns, while anything under 0 errors. Both agree at 90,
+  // so that end is one tier, the setter's.
   emission_angle_degrees: v.float('emission_angle_degrees', {
     enforcedMin: { at: 0 },
     min: 0.1,

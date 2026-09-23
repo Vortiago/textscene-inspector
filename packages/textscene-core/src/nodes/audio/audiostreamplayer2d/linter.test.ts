@@ -30,15 +30,10 @@ function bare(props: Record<string, PropValue> = {}): string {
 }
 
 /**
- * An AnimationMixer with one Animation carrying a single 'audio' track whose
- * NodePath targets `targetName`, plus an AudioStreamPlayer2D of that name with
- * no `stream` of its own — the `coin.tscn` `Pickup` shape (its stream arrives
- * through the track's `clips`, not the node's own `stream`). Uses the
- * empty-name default library (`libraries/ =`), the form Godot actually writes.
- *
- * `mixerType` is a parameter because `libraries`, `root_node` and the audio
- * track cache are all AnimationMixer's, so an AnimationTree feeds the target
- * exactly as an AnimationPlayer does.
+ * An AnimationMixer whose one 'audio' track targets `targetName`, an AudioStreamPlayer2D with no
+ * `stream` of its own, in the empty-name default library (`libraries/ =`) Godot writes. `mixerType`
+ * varies because `libraries`, `root_node` and the audio track cache are AnimationMixer's, so an
+ * AnimationTree feeds the target as an AnimationPlayer does.
  */
 function drivenByAudioTrack(
   targetName: string,
@@ -120,12 +115,10 @@ describe('AudioStreamPlayer2D Linter', () => {
           ],
         },
         {
-          // audio_stream_player_2d.cpp:210,
-          // ERR_FAIL_COND_MSG(Math::is_nan(p_volume), "Volume can't be set to NaN.")
-          // is the setter's only refusal. Measured on 4.6.3: after
-          // `volume_db = -12`, writing NaN leaves -12 and prints the error, while
-          // `inf` and `-inf` are stored unaltered — so this is a NaN-only tier,
-          // not the finite guard, and a range bound covers neither end of it.
+          // audio_stream_player_2d.cpp:210, ERR_FAIL_COND_MSG(Math::is_nan(p_volume), ...), is the
+          // setter's only refusal. Measured on 4.6.3: after `volume_db = -12`, writing NaN leaves
+          // -12, while `inf` and `-inf` are stored unaltered. So this is a NaN-only tier, not the
+          // finite guard, and a range bound covers neither end of it.
           prop: 'volume_db',
           invalid: [
             { value: 'nan', contains: ['volume_db', 'must not be NaN'], severity: 'error' },
@@ -171,7 +164,7 @@ describe('AudioStreamPlayer2D Linter', () => {
           ],
         },
         {
-          // audio_stream_player_2d.cpp:437 is PROPERTY_HINT_EXP_EASING — no range —
+          // audio_stream_player_2d.cpp:437 is PROPERTY_HINT_EXP_EASING, with no range,
           // and set_attenuation (:308) is a bare assignment, so nothing is invalid.
           prop: 'attenuation',
           valid: [0, 0.05, 0.5, 1.0, 2.0, 5.0, 15, -1.0],
@@ -259,9 +252,8 @@ describe('AudioStreamPlayer2D Linter', () => {
       });
 
       it('stays silent for an AnimationTree too, which shares that cache', () => {
-        // The suppression is grounded on AnimationMixer, so it must ask the
-        // chain: an exact `AnimationPlayer` test warned about a node the engine
-        // does feed.
+        // The suppression is grounded on AnimationMixer, so it asks the whole
+        // chain, not an exact `AnimationPlayer` type.
         expectClean(drivenByAudioTrack('Pickup', { autoplay: true }, 'AnimationTree'));
       });
 
@@ -274,7 +266,7 @@ describe('AudioStreamPlayer2D Linter', () => {
       });
     });
 
-    // audio_stream_player_2d.cpp:436 — max_distance PROPERTY_HINT_RANGE
+    // audio_stream_player_2d.cpp:436: max_distance PROPERTY_HINT_RANGE
     // "1,4096,1,or_greater,exp,suffix:px": the top end is open, and <= 0 is the
     // setter's own error (:300), so only 0 < x < 1 warns. Both ends live on the
     // validator, which carries the setter's floor and the hint's separately.
@@ -300,7 +292,7 @@ describe('AudioStreamPlayer2D Linter', () => {
       });
     });
 
-    // audio_stream_player_2d.cpp:437 — attenuation is PROPERTY_HINT_EXP_EASING,
+    // audio_stream_player_2d.cpp:437: attenuation is PROPERTY_HINT_EXP_EASING,
     // which states no range at all.
     describe('attenuation carries no advisory', () => {
       it.each([0.05, 1.0, 15])('says nothing about attenuation %s', (attenuation) => {
@@ -308,8 +300,8 @@ describe('AudioStreamPlayer2D Linter', () => {
       });
     });
 
-    // volume_db's band is the validator's (linterParser.ts), not a rule's — the
-    // accept/reject table above covers it.
+    // volume_db's band is the validator's (linterParser.ts), not a rule's, and the
+    // accept and reject table above covers it.
 
     // audio_stream_player_internal.cpp:314 rejects pitch_scale <= 0; the hint
     // (:432, "0.01,4,0.01,or_greater") leaves the top open, so only 0 < x < 0.01 warns.

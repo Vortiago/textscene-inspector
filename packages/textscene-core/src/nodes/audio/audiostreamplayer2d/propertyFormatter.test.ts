@@ -1,10 +1,7 @@
 /**
- * AudioStreamPlayer2D property-formatter tests.
- *
- * Guards the 2D-specific spatial semantics that differ from the 3D sibling:
- * max_distance is a finite pixel distance (default 2000), never the 3D-only
- * "Unlimited", and playback_type labels follow Godot's AudioServer.PlaybackType
- * (0=Default, 1=Stream, 2=Sample).
+ * AudioStreamPlayer2D property formatter, where it differs from the 3D sibling: max_distance is a
+ * finite pixel distance (default 2000), never the 3D-only "Unlimited", and playback_type labels
+ * follow Godot's AudioServer.PlaybackType (0=Default, 1=Stream, 2=Sample).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -33,7 +30,7 @@ describe('formatAudioStreamPlayer2DProperties', () => {
     expect(valueOf(sections, 'Bus')).toBe('Master');
     expect(valueOf(sections, 'Autoplay')).toBe('false');
     expect(valueOf(sections, 'Volume (dB)')).toBe('0.00');
-    // 2D default max_distance is 2000 (a finite pixel distance), NOT 3D's 0/"Unlimited".
+    // 2D default max_distance is 2000 (a finite pixel distance), not 3D's 0/"Unlimited".
     expect(valueOf(sections, 'Max Distance')).toBe('2000.00');
     expect(valueOf(sections, 'Playback Type')).toBe('Default');
   });

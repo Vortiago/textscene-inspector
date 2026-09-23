@@ -1,7 +1,7 @@
 /**
- * Tests for Node2D linter (strict parser validators). Node2D registers no
- * semantic rule — it is a base class; semantic validation lives in the
- * subclasses (see index.linter.ts).
+ * Tests for the Node2D linter (strict parser validators). Node2D is a base class
+ * and registers no semantic rule. Semantic validation lives in the subclasses
+ * (see index.linter.ts).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -134,10 +134,8 @@ describe('Node2D Linter', () => {
       });
     });
 
-    // Extreme-but-nonzero scales are valid Godot (the renderer draws them; real
-    // scenes use near-zero "hide" scales), so they must lint clean — erroring
-    // would re-introduce parser/linter divergence now that every Node2D subclass
-    // inherits this validator via the base-walk.
+    // Extreme but nonzero scales are valid Godot: the renderer draws them and
+    // scenes use near-zero "hide" scales, so they lint clean.
     it('tolerates a very large (but finite) scale', () => {
       expectClean(scene(node('Node2D', { scale: 'Vector2(10000, 1)' })));
     });
@@ -156,7 +154,7 @@ describe('Node2D Linter', () => {
       });
     });
 
-    // node_2d.cpp:194-198's guard is `is_zero_approx`, i.e. `abs(v) <
+    // node_2d.cpp:194-198's guard is `is_zero_approx`, that is `abs(v) <
     // CMP_EPSILON`, which is false for an infinite component and false for a
     // `nan` one, so Godot assigns both unaltered.
     it('tolerates a non-finite scale component, which Godot stores as written', () => {
@@ -402,7 +400,7 @@ describe('Node2D Linter', () => {
     });
 
     it('accepts z_index across the whole range Godot allows', () => {
-      // scene/main/canvas_item.cpp:668-669 — set_z_index ERR_FAIL_CONDs on both
+      // scene/main/canvas_item.cpp:668-669: set_z_index ERR_FAIL_CONDs on both
       // sides of CANVAS_ITEM_Z_MIN/MAX (±4096, rendering_server.h:103-104), so
       // these are hard bounds and not an editor convenience.
       expectClean(scene(node('Node2D', { z_index: 4096 })));
@@ -424,7 +422,7 @@ describe('Node2D Linter', () => {
   });
 
   describe('Scale magnitude tolerance', () => {
-    // Any nonzero magnitude is valid Godot and lints clean — only a zero axis
+    // Any nonzero magnitude is valid Godot and lints clean. Only a zero axis
     // (a collapsed transform) errors. There is no extreme-magnitude threshold,
     // and negative components are valid mirrors/flips (matching Node3D).
     it('tolerates tiny, huge, and negative (mirror) nonzero scales', () => {
@@ -443,7 +441,7 @@ describe('Node2D Linter', () => {
 });
 
 describe('Node2D Linter: light_mask, inherited by every CanvasItem', () => {
-  // canvas_item.cpp:1477, PROPERTY_HINT_LAYERS_2D_RENDER — not a
+  // canvas_item.cpp:1477, PROPERTY_HINT_LAYERS_2D_RENDER, not a
   // PROPERTY_HINT_RANGE. set_light_mask (canvas_item.cpp:589-596) assigns
   // unconditionally, no ERR_FAIL, no clamp, so ADR-0032's verdict is "none":
   // no 0..2^32-1 `layerBitmask` bound, only the integer format.
@@ -456,7 +454,7 @@ describe('Node2D Linter: light_mask, inherited by every CanvasItem', () => {
   it('accepts a negative mask, which is how Godot spells all layers on', () => {
     // canvas_item.cpp:1477 hints PROPERTY_HINT_LAYERS_2D_RENDER; set_light_mask
     // (:589-596) assigns unconditionally, and measured on 4.6.3 `light_mask =
-    // -1` stores -1 — a pattern the 32 checkboxes render exactly.
+    // -1` stores -1, a pattern the 32 checkboxes render exactly.
     expectClean(scene(node('Node2D', { light_mask: '-1' })));
   });
 

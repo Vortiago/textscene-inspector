@@ -1,8 +1,6 @@
 /**
- * Strict-verification harness — 10 assertions covering
- * Node3D's transform decomposition. Each assertion exercises ONE property
- * to ground truth on the resulting THREE.Group instance.
- *
+ * Node3D transform decomposition: each assertion checks one property against ground truth on the
+ * resulting THREE.Group.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -60,8 +58,7 @@ describe('Node3D transform (assertions 1–10)', () => {
   });
 
   it('#4 rotation.x decoded from basis (radians)', async () => {
-    // Pure rotation around X by 90°. Godot Basis is `Vector3 rows[3]`;
-    // basis_x = row 0. Rx(+90°) matrix:
+    // Rx(+90°); Godot Basis is `Vector3 rows[3]`, so basis_x is row 0:
     //   | 1  0  0 |
     //   | 0  0 -1 |
     //   | 0  1  0 |

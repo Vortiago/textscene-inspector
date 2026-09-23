@@ -1,6 +1,6 @@
 /**
- * Shared audio-stream base properties — the fields common to
- * AudioStreamPlayer / 2D / 3D. Each node's property interface extends this
+ * Shared audio-stream base properties: the fields common to
+ * AudioStreamPlayer, 2D and 3D. Each node's property interface extends this
  * alongside its node-base (Node / Node2D / Node3D) properties. The parse-side
  * counterpart is `parseAudioBase`.
  */

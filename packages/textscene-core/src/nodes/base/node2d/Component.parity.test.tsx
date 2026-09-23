@@ -1,9 +1,8 @@
 /**
- * Parity: CanvasItem.show_behind_parent — the node draws BEFORE the parent it
- * hangs under, which `_cull_canvas_item` does by visiting the behind-children
- * ahead of attaching the parent itself (`renderer_canvas_cull.cpp:477-490`).
- * That is a position in the draw sequence, so it reaches the renderer as the
- * child's `renderOrder` (`canvasPaintOrder.ts`), not as a depth offset.
+ * CanvasItem.show_behind_parent draws the node before its parent: `_cull_canvas_item` visits the
+ * behind-children before it attaches the parent (`renderer_canvas_cull.cpp:477-490`). That is a
+ * draw-sequence position, so it reaches the renderer as the child's `renderOrder`
+ * (`canvasPaintOrder.ts`), not as a depth offset.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -20,8 +19,8 @@ import {
 import { PaintRangeProvider } from '../../../r3f/contexts/PaintOrderContext';
 import type { TscnNode } from '../../../parser/types';
 
-/** The world canvas's rank — derived, never hardcoded: only a rank's ORDER
-  * is meaningful, and spacing them for undeclared layers moved the value. */
+/** The world canvas's rank, derived, never hardcoded: only the order of the
+  * ranks carries meaning. */
 const WORLD_RANK = layerRankOf(layerRanks([]), 0);
 
 const heading = { type: 'node', attributes: { type: 'Node2D', name: 'N' } };
@@ -37,12 +36,12 @@ describe('Node2D show_behind_parent parity (#36)', () => {
   });
 
   it('show_behind_parent=true draws the child BEFORE the parent it hangs under', async () => {
-    // Needs the parent: the flag decides where the PARENT places this child in
+    // Needs the parent: the flag decides where the parent places this child in
     // its own run, so a node rendered on its own cannot express it.
     const child = node({ show_behind_parent: 'true' });
     const parent: TscnNode = { ...node(), name: 'P', children: [child] };
     // The range the dispatcher would hand this child, from the production
-    // allocator — a literal here would just restate what it computes.
+    // allocator: a literal here would only restate what it computes.
     const childRange = allocatePaintRange(WHOLE_CANVAS_RANGE, parent.children).children[0]!;
     const r = await ReactThreeTestRenderer.create(
       <Node2D node={parent}>

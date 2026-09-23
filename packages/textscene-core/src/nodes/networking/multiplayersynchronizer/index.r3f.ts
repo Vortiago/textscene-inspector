@@ -1,6 +1,6 @@
 /**
- * MultiplayerSynchronizer draws nothing of its own (ADR-0008) — reuse the Node
- * component so its children still land in the right transform space.
+ * MultiplayerSynchronizer draws nothing of its own (ADR-0008), so it reuses the Node
+ * component and its children still land in the right transform space.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';

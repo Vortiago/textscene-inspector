@@ -1,7 +1,7 @@
 /**
  * Semantic linter rules for AudioStreamPlayer (non-positional).
  *
- * A streamless player is VALID — the stream can be set at runtime — so only
+ * A streamless player is valid, since the stream can be set at runtime, so only
  * autoplay over an empty slot is reported.
  */
 
@@ -23,12 +23,9 @@ function checkAudioStreamPlayer(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // Autoplay is on but no stream is set. Godot raises no warning for
-  // this: `play_basic()` (audio_stream_player_internal.cpp:137-141) returns a
-  // null playback the instant `stream` is null and never logs anything, so
-  // autoplay silently does nothing. Suppressed when some AnimationPlayer
-  // audio track drives this node instead (its own `stream` is then beside
-  // the point).
+  // Autoplay with no stream. Godot raises no warning: `play_basic()`
+  // (audio_stream_player_internal.cpp:137-141) returns a null playback when `stream` is null and
+  // logs nothing. Suppressed when an AnimationPlayer audio track drives this node instead.
   if (
     boolSlotValue(rawProps.autoplay) === true &&
     resourceSlotIsEmpty(rawProps.stream) &&
@@ -68,7 +65,6 @@ const audioStreamPlayerValidationRule: LintRule = {
   check: checkAudioStreamPlayer,
 };
 
-// Self-register the rule
 ruleRegistry.register(audioStreamPlayerValidationRule);
 
 export { audioStreamPlayerValidationRule };

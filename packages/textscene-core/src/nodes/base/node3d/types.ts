@@ -1,20 +1,9 @@
-/**
- * Node3D-specific type definitions
- *
- * Implements vertical slicing for Node3D parsing and rendering
- */
+/** Node3D type definitions. */
 
 /**
- * Represents a 3D transformation matrix
- *
- * Transform3D(basis_x.x, basis_x.y, basis_x.z, basis_y.x, basis_y.y, basis_y.z, basis_z.x, basis_z.y, basis_z.z, origin.x, origin.y, origin.z)
- *
- * Godot stores Basis as `Vector3 rows[3]`: basis_x / basis_y / basis_z are the
- * ROWS of the 3×3 matrix (not columns — see utils/transform.ts for the full
- * convention note). So the matrix is:
- * [ basis_x.x  basis_x.y  basis_x.z  origin.x ]
- * [ basis_y.x  basis_y.y  basis_y.z  origin.y ]
- * [ basis_z.x  basis_z.y  basis_z.z  origin.z ]
+ * A 3D transform, written `Transform3D(basis_x.xyz, basis_y.xyz, basis_z.xyz, origin.xyz)`.
+ * Godot stores Basis as `Vector3 rows[3]`: basis_x, basis_y and basis_z are the rows of the 3×3
+ * matrix, not the columns (utils/transform.ts has the convention), and origin is the fourth column.
  */
 export interface Transform3D {
   /** Basis X vector (right) */
@@ -48,7 +37,7 @@ export interface Node3DProperties {
   transform?: Transform3D;
   /** Whether this is an instanced scene */
   instance?: string;
-  /** Child index for editable instance overrides (e.g., parent="." index="0") */
+  /** Child index for editable instance overrides (for example parent="." index="0") */
   index?: number;
   /** Whether the node and its subtree are rendered. Defaults to true. */
   visible?: boolean;

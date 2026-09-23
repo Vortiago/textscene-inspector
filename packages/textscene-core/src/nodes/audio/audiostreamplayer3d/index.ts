@@ -1,5 +1,5 @@
 /**
- * AudioStreamPlayer3D registration — parser + property formatter.
+ * AudioStreamPlayer3D registration: parser and property formatter.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

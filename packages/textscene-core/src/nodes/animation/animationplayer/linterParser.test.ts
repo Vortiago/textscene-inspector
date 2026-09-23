@@ -1,10 +1,7 @@
 /**
- * AnimationPlayer strict validators — the "Playback Options" ADD_PROPERTY
- * group (animation_player.cpp:1042-1049), not yet covered by linter.test.ts.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing. Rule-level behaviour belongs in linter.test.ts.
+ * AnimationPlayer strict validators for the "Playback Options" ADD_PROPERTY group
+ * (animation_player.cpp:1042-1049). Asserted through `validatorRegistry`, not by linting a
+ * `.tscn`, so a failure points at the validator. Rule-level behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -50,7 +47,7 @@ describe('AnimationPlayer strict validators: Playback Options group', () => {
   describe('playback_auto_capture_duration', () => {
     it('accepts any float, positive or negative (no hint bound, only "suffix:s")', () => {
       // -1.0 is the engine's own default (animation_player.h:61), a sentinel
-      // meaning "use the animation's own length" — not an error value.
+      // meaning "use the animation's own length", not an error value.
       expect(check('playback_auto_capture_duration', '-1.0')).toBeNull();
       expect(check('playback_auto_capture_duration', '0.0')).toBeNull();
       expect(check('playback_auto_capture_duration', '2.5')).toBeNull();

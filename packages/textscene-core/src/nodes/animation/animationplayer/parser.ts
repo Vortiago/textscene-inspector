@@ -1,12 +1,8 @@
 /**
- * AnimationPlayer parser — lenient parser for the renderer.
- *
- * Extracts playback configuration and clip names from the raw TSCN
- * properties map. Clips are stored as `anims/<name> = SubResource(...)` keys.
- *
- * A plain Node: a Node3D below it finds no Node3D parent
- * (node_3d.cpp:150, `data.parent = Object::cast_to<Node3D>(get_parent())`),
- * so the chain is `parseNode`, which carries no `visible` or placement fields.
+ * AnimationPlayer lenient parser for the renderer: playback configuration and clip names from the
+ * raw properties. A plain Node: a Node3D below it finds no Node3D parent (node_3d.cpp:150,
+ * `data.parent = Object::cast_to<Node3D>(get_parent())`), so the chain is `parseNode`, which
+ * carries no `visible` or placement fields.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
@@ -32,12 +28,10 @@ export function parseAnimationPlayer(
     ...baseProps,
     speed_scale: floatOr(properties.speed_scale, 1.0),
     playback_default_blend_time: floatOr(properties.playback_default_blend_time, 0.0),
-    // Three `#ifndef DISABLE_DEPRECATED` keys forward straight into the
-    // canonical setter (animation_player.cpp:54-61,93-100), so each pair below
-    // is ONE field, not two. `_get_property_list` never pushes the deprecated
-    // spelling, so only a 3.x scene carries it; Godot resolves a file holding
-    // both by line order, and preferring the canonical key is our choice for a
-    // shape Godot never writes.
+    // Three `#ifndef DISABLE_DEPRECATED` keys forward into the canonical setter
+    // (animation_player.cpp:54-61,93-100), so each pair below is one field. Only a 3.x scene
+    // carries the deprecated spelling. Godot resolves a file holding both by line order, and this
+    // prefers the canonical key.
     callback_mode_process: enumOr(
       properties.callback_mode_process ?? properties.playback_process_mode,
       AnimationProcessMode.IDLE,
@@ -59,12 +53,10 @@ export function parseAnimationPlayer(
 }
 
 /**
- * Godot's `AnimationMixer::is_active()` — whether the mixer applies anything at
- * all (animation_mixer.cpp:2458, defaulting to true at animation_mixer.h:137,
- * so Godot omits the key unless it is false). `playback_active` is the same
- * field, per the deprecated-alias note above.
- *
- * Exported so the semantic rule reads the field the same way the renderer does.
+ * Godot's `AnimationMixer::is_active()`: whether the mixer applies anything at all
+ * (animation_mixer.cpp:2458). It defaults to true (animation_mixer.h:137), so Godot omits the key
+ * unless it is false. `playback_active` is the same field. The semantic rule reads it through
+ * this export, as the renderer does.
  */
 export function isActive(properties: Record<string, string>): boolean {
   return boolOr(properties.active ?? properties.playback_active, true);
@@ -83,10 +75,10 @@ export function extractLibraries(properties: Record<string, string>): AnimationL
     libraries.push({ name: key.slice('libraries/'.length), subResourceId: parsed.id });
   }
 
-  // Dictionary form (Godot 4's actual serialization), possibly multi-line:
+  // Dictionary form (Godot 4's serialisation), possibly multi-line:
   //   libraries = { "": SubResource("AnimationLibrary_x"), "combat": SubResource("…") }
   // Only inline SubResource libraries are captured; ExtResource entries point to
-  // external (often binary .res) libraries the previewer can't resolve.
+  // external (often binary .res) libraries the previewer cannot resolve.
   const dict = properties.libraries;
   if (dict !== undefined) {
     for (const { key, id } of dictSubResourceEntries(dict)) {

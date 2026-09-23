@@ -1,15 +1,6 @@
 /**
- * The CanvasItem set must reach BOTH families, which is the whole point of the
- * tier.
- *
- * Before it existed these fifteen keys had no owner and were split across
- * `Node2D` and `Control` by whoever needed one first. Measured at the time: not
- * one of the fifteen was validated on both, and six — including all three
- * bounded enums — were validated on neither, so `texture_filter = 99` was
- * silently accepted everywhere in the 2D world and the whole UI overlay.
- *
- * `Sprite2D` and `Label` stand in for the two families: one leaf per side,
- * neither of which declares any of these itself.
+ * The CanvasItem set reaches both families, which is the point of the tier. `Sprite2D` and `Label`
+ * stand in for the two families: one leaf per side, and neither declares any of these itself.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -94,8 +85,7 @@ describe('CanvasItem shared validators', () => {
 
   it.each(['Sprite2D', 'Label'])('warns rather than errors on the wide spelling of -1 (%s)', (nodeType) => {
     // Godot's own serialiser writes `clip_children = 4294967295` for -1, and
-    // the value clips. Erroring on it contradicted the canvasgroup rule, which
-    // narrows the same key and warns that the ancestor DOES clip.
+    // the value clips, as the canvasgroup rule, which narrows the same key, says.
     const validator = validatorRegistry.findValidator(nodeType, 'clip_children')!;
     expect(validator('clip_children', '4294967295', 1)?.severity).toBe('warning');
   });
@@ -111,11 +101,9 @@ describe('CanvasItem shared validators', () => {
   });
 
   it('takes every 32-bit mask, and refuses only what no 32-bit slot holds', () => {
-    // canvas_item.cpp:1477/:1478 hint PROPERTY_HINT_LAYERS_2D_RENDER, a
-    // 32-checkbox widget, so every 32-bit pattern is expressible and there is
-    // no numeric bound to warn about. Measured on 4.6.3: `light_mask = -1`
-    // stores -1, and Godot writes `visibility_layer = -1` back as 4294967295 —
-    // the same bits, two spellings, and the old bound rejected both.
+    // canvas_item.cpp:1477/:1478 hint PROPERTY_HINT_LAYERS_2D_RENDER, a 32-checkbox widget, so every
+    // 32-bit pattern is expressible and no numeric bound warns. Measured on 4.6.3: `light_mask = -1`
+    // stores -1, and Godot writes `visibility_layer = -1` back as 4294967295, the same bits.
     const lightMask = validatorRegistry.findValidator('Sprite2D', 'light_mask')!;
     const visibilityLayer = validatorRegistry.findValidator('Sprite2D', 'visibility_layer')!;
     expect(lightMask('light_mask', '-1', 1)).toBeNull();

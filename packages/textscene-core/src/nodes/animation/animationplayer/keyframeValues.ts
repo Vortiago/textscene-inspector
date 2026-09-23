@@ -1,12 +1,7 @@
 /**
- * The `"values": [...]` half of a value track's key dict.
- *
- * A sibling of `animationResolver.ts`: this is the Variant grammar one keyframe
- * is written in, not how a track or a library is assembled. The whole module is
- * one question — can this renderer key this text — and `null` is its answer for
- * no.
- *
- * Pure `.ts`, no THREE.
+ * The `"values": [...]` half of a value track's key dict: the Variant grammar one keyframe is
+ * written in. `animationResolver.ts` assembles tracks and libraries. `null` answers that this
+ * renderer cannot key the text. Pure `.ts`, no THREE.
  */
 
 import { variantTupleRegex, parseGodotFloat, allFinite } from '../../../godot/number.js';
@@ -17,17 +12,9 @@ import { info } from '../../../logger';
 export type GodotKeyframeValue = number[] | number | boolean;
 
 /**
- * The decoded `"values": [...]` array (paren-aware), or `null` when the array is
- * absent, unterminated, or holds a key that is not a value this renderer can
- * key — each of which drops the whole track, since there is nothing to
- * interpolate through at that key's time. `[]` therefore means the one thing it
- * can legitimately mean: a `"values": []` that is genuinely empty.
- *
- * `info` rather than `warn`: the common causes — an unmodelled Variant
- * (`Transform3D`, a dict) and a non-finite component — are both legal in a
- * sound scene, so only the preview is short a track. Text Godot's own tokenizer
- * cannot read lands here too; `parseFloatList` below reports that class at
- * `warn` where it appears in a packed array.
+ * The decoded `"values": [...]` array (paren-aware), or `null` when the array is absent,
+ * unterminated or holds a key this renderer cannot key. Each drops the whole track, since nothing
+ * is left to interpolate through at that key's time, so `[]` means only a genuinely empty array.
  */
 export function parseValueArray(keysStr: string): GodotKeyframeValue[] | null {
   const start = keysStr.indexOf('"values":');
@@ -54,6 +41,9 @@ export function parseValueArray(keysStr: string): GodotKeyframeValue[] | null {
   for (const part of splitKeyframeParts(keysStr.slice(open + 1, end))) {
     const value = decodeValue(part);
     if (value === null) {
+      // `info`, not `warn`: an unmodelled Variant (`Transform3D`, a dict) and a non-finite
+      // component are legal in a sound scene. Unreadable text lands here too, and
+      // `parseFloatList` in animationResolver.ts warns on it in a packed array.
       info(`[AnimationPlayer] keyframe value "${part}" is not one this renderer can key — dropping the track`);
       return null;
     }
@@ -81,29 +71,17 @@ function splitKeyframeParts(body: string): string[] {
   return parts.map((p) => p.trim()).filter((p) => p.length > 0);
 }
 
-// NaN, not 0: a component the reader refuses has no value, and `0` is a legal
-// finite one that `allFinite` waves through — `Vector3i(99999999999999999999,
-// 0, 0)` then keys the node at the origin. NaN takes `decodeValue`'s null exit.
+// NaN, not 0: a component the reader refuses has no value, and `0` is a legal finite one that
+// `allFinite` passes, so `Vector3i(99999999999999999999, 0, 0)` would key the node at the origin.
+// NaN takes `decodeValue`'s null exit.
 const keyInt = (text: string | undefined): number => storedInt(text) ?? NaN;
 const keyFloat = (text: string | undefined): number => parseGodotFloat(text ?? '') ?? NaN;
 
 /**
- * The composite literals a keyframe can hold, each matched WHOLE.
- *
- * A prefix test cannot tell these apart: `'Vector2i(…)'.startsWith('Vector2')`
- * is true, so an integer literal reached `parseVector2`, missed its float
- * grammar and THREW — discarding the whole scene rather than one keyframe. A
- * keyframe stores an arbitrary Variant and plenty of animated properties are
- * declared with an `i`-suffixed one: `SubViewport.size` is `Variant::VECTOR2I`
- * (viewport.cpp:5579).
- *
- * `exact` on every entry: a keyframe is a Variant stored as the type the file
- * spells, not a value written into a typed slot, so `can_convert_strict` does
- * not apply. Without it the widened `Vector3i` arm matched a `Vector3` rotation
- * key and truncated it to whole degrees.
- *
- * Anchored regexes rather than prefixes, so no two entries can match the same
- * text and order carries no meaning.
+ * Composite keyframe literals, each matched whole by an anchored regex, not a prefix: `Vector2i(…)`
+ * starts with `Vector2`, and `SubViewport.size` is `Variant::VECTOR2I` (viewport.cpp:5579).
+ * `variantTupleRegex`, not the slot grammar: a keyframe keeps the type the file spells, and the
+ * widened `Vector3i` slot grammar truncates a `Vector3` rotation key to whole degrees.
  */
 const COMPOSITE_KEYS: ReadonlyArray<{
   re: RegExp;
@@ -126,18 +104,13 @@ const COMPOSITE_KEYS: ReadonlyArray<{
 ];
 
 /**
- * One keyframe value, or `null` when the text is not one this renderer can key.
- *
- * `null` and not NaN: NaN IS a `number`, so it passes every `typeof value ===
- * 'number'` shape check in `clipBuilder`/`valueTracks` and becomes a keyframe
- * that samples NaN for the rest of the clip.
- *
- * A non-finite READ is `null` too — `Color(1e999, 0, 0, 1)` is inside the
- * finite grammar and overflows — since three.js draws an Infinity as NaN
- * geometry. `inf` stays a legal literal; it is simply not renderable here.
+ * One keyframe value, or `null` when this renderer cannot key the text. `null`, not NaN: NaN is a
+ * `number`, passes every shape check in `clipBuilder` and `valueTracks`, and samples NaN for the
+ * rest of the clip. A non-finite read (`Color(1e999, 0, 0, 1)` overflows) is `null` too, since
+ * three.js draws Infinity as NaN geometry. `inf` stays a legal literal that this cannot render.
  */
 function decodeValue(raw: string): GodotKeyframeValue | null {
-  // The two literals only, NOT `boolSlotValue`: a keyframe value is an untyped
+  // The two literals only, not `boolSlotValue`: a keyframe value is an untyped
   // Variant, so there is no BOOL slot to convert toward and `1` is the number
   // one. Booleanizing here turns every scalar track into a constant `true`.
   if (raw === 'true') return true;

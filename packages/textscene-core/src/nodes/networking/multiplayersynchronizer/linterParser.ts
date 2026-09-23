@@ -1,10 +1,7 @@
 /**
- * MultiplayerSynchronizer strict validators for linting.
- *
- * Declare only MultiplayerSynchronizer's OWN members — the ones doc/classes/MultiplayerSynchronizer.xml
- * lists without an `overrides=` attribute. Everything from Node up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * MultiplayerSynchronizer strict validators: only its own members, the ones
+ * doc/classes/MultiplayerSynchronizer.xml lists without `overrides=`. The NODE_BASE_TYPES base walk
+ * delivers everything from Node up, so a re-declared inherited key shadows it and duplicates the rule.
  */
 
 import '../../node/linterParser.js';
@@ -12,15 +9,13 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('MultiplayerSynchronizer', {
-  // multiplayer_synchronizer.cpp:270, NODE_PATH, PROPERTY_HINT_NONE. Default
-  // is NodePath("..") (XML default), not empty — see linter.ts for what that
-  // means for the get_configuration_warnings mirror.
+  // multiplayer_synchronizer.cpp:270, NODE_PATH, PROPERTY_HINT_NONE. The default
+  // is NodePath("..") (XML default), not empty. linter.ts says what that means
+  // for the get_configuration_warnings mirror.
   root_path: v.nodePath('root_path'),
-  // multiplayer_synchronizer.cpp:271, PROPERTY_HINT_RANGE "0,5,0.001,suffix:s"
-  // (both ends closed). set_replication_interval (:312-315)
-  // ERR_FAIL_COND_MSG(p_interval < 0, …) — the floor is setter-enforced, the
-  // 5-second ceiling is only the hint's, so the two ends carry different
-  // severities.
+  // multiplayer_synchronizer.cpp:271, PROPERTY_HINT_RANGE "0,5,0.001,suffix:s" (both ends
+  // closed). set_replication_interval (:312-315) ERR_FAIL_COND_MSG(p_interval < 0, …) enforces the
+  // floor, while the 5-second ceiling is only the hint's, so the two ends differ in severity.
   replication_interval: v.float('replication_interval', {
     min: 0,
     max: 5,
@@ -36,8 +31,8 @@ validatorRegistry.registerAll('MultiplayerSynchronizer', {
     hinted: { max: 'multiplayer_synchronizer.cpp:272' },
   }),
   // multiplayer_synchronizer.cpp:273, OBJECT, PROPERTY_HINT_RESOURCE_TYPE
-  // "SceneReplicationConfig" (PROPERTY_USAGE_NO_EDITOR keeps STORAGE — see
-  // object.h:132 — so it is still serialised, just hidden from the inspector).
+  // "SceneReplicationConfig". PROPERTY_USAGE_NO_EDITOR keeps STORAGE (object.h:132),
+  // so it is serialised but hidden from the inspector.
   replication_config: v.resourceReference('replication_config'),
   // multiplayer_synchronizer.cpp:274, PROPERTY_HINT_ENUM "Idle,Physics,None"
   // matching BIND_ENUM_CONSTANT VISIBILITY_PROCESS_IDLE/PHYSICS/NONE (:277-279).

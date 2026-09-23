@@ -40,8 +40,7 @@ describe('parseNode2D', () => {
   });
 
   it('parses light_mask, the CanvasItem side of Godot 2D light culling', () => {
-    // The isometric dungeon's painted shadow polygons carry 512, which shares no
-    // bit with a torch's default range_item_cull_mask of 1.
+    // 512 shares no bit with a light's default range_item_cull_mask of 1.
     expect(parseNode2D(heading('Node2D', { name: 'N' }), { light_mask: '512' }).light_mask).toBe(512);
     // 0 is legal and means "no light reaches me".
     expect(parseNode2D(heading('Node2D', { name: 'N' }), { light_mask: '0' }).light_mask).toBe(0);
@@ -139,8 +138,8 @@ describe('decomposeTransform2D', () => {
 
 describe('an int scalar the engine narrows', () => {
   it('reads z_index as the int32 Godot stores, so the linter agrees', () => {
-    // Unnarrowed, the previewer put the node at z = 4.29e8 — behind the camera
-    // — while the linter, reading -1, found it in range and said nothing.
+    // Unnarrowed, the previewer would put the node at z = 4.29e8, behind the
+    // camera, while the linter reads -1 and finds it in range.
     const p = parseNode2D(heading('Node2D', { name: 'N' }), { z_index: '4294967295' });
 
     expect(p.z_index).toBe(-1);

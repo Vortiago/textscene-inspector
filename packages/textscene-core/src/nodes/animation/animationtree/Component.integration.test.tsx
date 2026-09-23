@@ -1,13 +1,8 @@
 /**
- * End-to-end AnimationTree integration: parses the real `unit-animation-tree-*`
- * fixtures via the actual TscnParser (not hand-typed property objects — the
- * gap `Component.playback.test.tsx`/`Component.test.tsx` don't close) and
- * mounts BOTH the AnimationPlayer and AnimationTree components together,
- * wired exactly as production does: AnimationPlayer registers itself as a
- * driver at its own NodePath; AnimationTree resolves `anim_player` to that
- * same path and drives it. Proves tree_root resource resolution AND
- * anim_player NodePath resolution together — if either failed, nothing
- * would move.
+ * End-to-end AnimationTree: parses the `unit-animation-tree-*` fixtures through the TscnParser and
+ * mounts AnimationPlayer and AnimationTree wired as production does. AnimationPlayer registers as
+ * a driver at its NodePath and AnimationTree resolves `anim_player` to it, so nothing moves unless
+ * both the `tree_root` and the `anim_player` resolution work.
  */
 import { describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';

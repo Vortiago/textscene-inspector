@@ -1,8 +1,6 @@
 /**
- * Semantic linter rules for AudioStreamPlayer2D
- *
- * Note: Format validation is handled by linterParser.ts during strict parsing.
- * This file focuses on semantic validation requiring full context (e.g., logical consistency).
+ * Semantic linter rules for AudioStreamPlayer2D. linterParser.ts validates the format during strict
+ * parsing. These rules need the full scene.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -20,7 +18,6 @@ function checkAudioStreamPlayer2D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
 
 
-  // Type guard for properties
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
@@ -76,7 +73,6 @@ const audioStreamPlayer2DValidationRule: LintRule = {
   check: checkAudioStreamPlayer2D,
 };
 
-// Self-register the rule
 ruleRegistry.register(audioStreamPlayer2DValidationRule);
 
 // Export for testing

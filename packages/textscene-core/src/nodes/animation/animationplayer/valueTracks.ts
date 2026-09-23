@@ -1,18 +1,15 @@
 /**
- * Non-transform value-track support for AnimationPlayer — currently `frame`
- * (sprite-sheet flipbook). THREE's AnimationMixer drives transforms only
- * (ADR-0011), so discrete property values like `frame` are sampled here and
- * pushed to the target component through the AnimatedValue registry (ADR-0016),
- * the scoped "value-push" path ADR-0011 deferred.
+ * Non-transform value-track support for AnimationPlayer. THREE's AnimationMixer drives transforms
+ * only (ADR-0011), so property values like `frame` are sampled here and pushed to the target
+ * component through the AnimatedValue registry (ADR-0016).
  */
 
 import { extractNodePathInner, type GodotKeyframe } from './animationResolver';
 
 /**
- * The value held at `time` by a stepped (discrete) value track: the last
- * keyframe at or before `time` — Godot holds a discrete value (like a sprite
- * `frame`) until the next key. Returns the first key's value before the track
- * starts, and 0 for an empty track.
+ * The value a stepped (discrete) value track holds at `time`: the last keyframe at or before
+ * `time`, since Godot holds a discrete value until the next key. Returns the first key's value
+ * before the track starts, and 0 for an empty track.
  */
 export function sampleSteppedValue(keys: readonly GodotKeyframe[], time: number): number {
   if (keys.length === 0) return 0;
@@ -31,12 +28,10 @@ function numericValue(value: unknown): number {
 }
 
 /**
- * The value of a *continuous* value track at `time` (ADR-0017): component-wise
- * linear interpolation between the two bracketing keyframes. `interp` honours
- * Godot's mode — 0 (nearest) holds the earlier key, anything else lerps; cubic
- * (2) is approximated as linear in v1, and keyframe `transition` easing is
- * ignored. Keyframe values are flat tuples (Color = `[r,g,b,a]`, Vector3 =
- * `[x,y,z]`); before the track starts / after it ends the endpoint key is held.
+ * The value of a continuous value track at `time` (ADR-0017): component-wise lerp between the two
+ * bracketing keys, holding the endpoint key outside the track. `interp` 0 (nearest) holds the
+ * earlier key and any other mode lerps: cubic (2) is approximated as linear, and keyframe
+ * `transition` easing is ignored. Values are flat tuples (Color `[r,g,b,a]`, Vector3 `[x,y,z]`).
  */
 export function sampleInterpolatedValue(
   keys: readonly GodotKeyframe[],
@@ -86,7 +81,7 @@ export const VALUE_PUSH_PROPERTIES: Record<string, boolean> = {
 };
 
 /**
- * Resolve a value track's relative target (e.g. `Sprite2D`) to an absolute node
+ * Resolve a value track's relative target (for example `Sprite2D`) to an absolute node
  * path, given the player's own path and its `root_node` (default `..` = the
  * player's parent), so it can be matched against the target node's own path.
  */

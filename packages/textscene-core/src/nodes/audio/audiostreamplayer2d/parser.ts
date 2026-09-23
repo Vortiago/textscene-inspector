@@ -1,10 +1,6 @@
 /**
- * AudioStreamPlayer2D parser — parses 13 properties from the linter's
- * authoritative surface plus inherited Node2D transform.
- *
- * Godot defaults follow the engine's @export var declarations. The
- * parser tolerates missing values (uses defaults) and malformed numbers
- * (logs a warn through the shared logger and falls back to default).
+ * AudioStreamPlayer2D parser for the linter's property surface plus the inherited Node2D transform.
+ * A missing value takes Godot's default, and a malformed number logs a warning and falls back to it.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

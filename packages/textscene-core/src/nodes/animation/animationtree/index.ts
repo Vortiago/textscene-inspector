@@ -1,5 +1,5 @@
 /**
- * AnimationTree registration — parser + property formatter.
+ * AnimationTree registration: parser and property formatter.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

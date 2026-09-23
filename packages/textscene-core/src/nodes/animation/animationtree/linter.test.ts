@@ -104,7 +104,7 @@ describe('AnimationTree Linter', () => {
 
     // anim_player + active both need a valid tree_root (with its resource) to be
     // otherwise-valid, so the shared props are lifted to baseProps + acceptChild.
-    // Valid values legitimately emit warnings/info (e.g. active=false), so accept
+    // Valid values can emit warnings or info (for example active=false), so accept
     // is asserted as "no error" rather than fully clean.
     runPropertyValidation(
       {
@@ -288,12 +288,10 @@ describe('AnimationTree Linter', () => {
       });
     });
 
-    // Regression: the anim_player validator matched `path.endsWith(node.name)`,
-    // so `../Player/AnimationPlayer` grabbed the FIRST node named "Player"
-    // (a sibling CharacterBody3D) and reported its type. The real AnimationPlayer
-    // lives inside an instanced sub-scene the linter cannot see. A relative ("..")
-    // segment or an instance ancestor means the target may resolve into sub-scene
-    // internals, so wrong-type / not-found assertions must be suppressed.
+    // `../Player/AnimationPlayer` must not match the first node named "Player" (a sibling
+    // CharacterBody3D): the AnimationPlayer lives inside an instanced sub-scene the linter cannot
+    // see. A `..` segment or an instance ancestor may resolve into sub-scene internals, so the
+    // wrong-type and not-found claims are suppressed.
     describe('anim_player instanced sub-scene resolution', () => {
       it('should not false-flag wrong-type when anim_player traverses ".." into an instanced sibling', () => {
         const content = scene(
@@ -442,9 +440,8 @@ describe('AnimationTree Linter', () => {
 
     describe('audio_max_polyphony', () => {
       it('carries no advisory of its own, only the two bounds', () => {
-        // The old "very low" (< 8) and "very high" (> 128) arms were invented
-        // thresholds. Godot states neither, so inside the hint band there is
-        // nothing to say and 4 is a legal value.
+        // Godot states no "very low" or "very high" threshold, so inside the hint
+        // band there is nothing to say and 4 is a legal value.
         for (const value of [1, 4, 8, 32, 127]) {
           expectNoDiagnostic(scene(node('AnimationTree', { audio_max_polyphony: value })), {
             prop: 'audio_max_polyphony',
@@ -498,8 +495,7 @@ describe('AnimationTree Linter', () => {
         scene(
           blendTree,
           // Both nodes state `parent="."`. Without it the second heading is a
-          // second ROOT, which the tree build drops — so every rule below ran
-          // on nothing at all.
+          // second root, which the tree build drops, so no rule below would run.
           node('Node3D', {}, { name: 'Root' }),
           node('AnimationPlayer', {}, { name: 'Player', parent: '.' }),
           node('AnimationTree', {
@@ -529,8 +525,7 @@ describe('AnimationTree Linter', () => {
             anim_player: 'invalid',
             active: 'maybe',
             process_callback: 10,
-            // -1, not 0: animation_mixer.cpp:542 permits 0, so the old value
-            // stopped contributing a diagnostic once the bound was corrected.
+            // -1, not 0: animation_mixer.cpp:542 permits 0.
             audio_max_polyphony: -1,
           })
         )
@@ -562,10 +557,9 @@ describe('AnimationTree Linter', () => {
       expectClean(
         scene(
           '[sub_resource type="AnimationNodeStateMachine" id="StateMachine_1"]',
-          // A real root, and `parent="."` on both children: as two parentless
-          // headings the tree kept only the player and the AnimationTree under
-          // test was never linted. `anim_player` is a path FROM the tree, so
-          // reaching a sibling spells `../`.
+          // A real root, and `parent="."` on both children: two parentless headings
+          // keep only the player, so the AnimationTree would never be linted.
+          // `anim_player` is a path from the tree, so a sibling is `../`.
           node('Node3D', {}, { name: 'Root' }),
           node('AnimationPlayer', {}, { name: 'CharacterPlayer', parent: '.' }),
           node(

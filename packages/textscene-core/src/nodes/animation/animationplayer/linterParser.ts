@@ -1,26 +1,14 @@
 /**
- * AnimationPlayer strict validators for linting.
- * Migrated to the declarative `v` namespace.
- *
- * `autoplay` and `root_node` reject no empty string:
- * animation_player.cpp:775 (`set_autoplay`) and animation_mixer.cpp:484
- * (`set_root_node`) are both bare assignments, and an empty StringName/NodePath
- * is Godot's own "nothing set" state (autoplay: line 150's `animation_set.has(autoplay)`
- * guard; root_node: animation_mixer.cpp:2499 defaults it to `NodePath("..")`, not
- * empty, but nothing refuses an empty one either) — rejecting it was a false
- * positive. Both are now plain `v` combinators matching their real Variant type.
- *
- * `playback/play`, `next/<name>` and `blend_times` are three more hand-rolled
- * `_set`/`_get` keys (animation_player.cpp:36-66), none `ADD_PROPERTY`-declared:
- * see propertyListRouteCoverage.test.ts, which tracks exactly this class of gap.
+ * AnimationPlayer strict validators. `set_root_node` (animation_mixer.cpp:484) is a bare
+ * assignment and nothing refuses an empty NodePath, though animation_mixer.cpp:2499 defaults it to
+ * `NodePath("..")`. `playback/play`, `next/<name>` and `blend_times` are hand-rolled `_set`/`_get`
+ * keys (animation_player.cpp:36-66), a class propertyListRouteCoverage.test.ts tracks.
  */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it. AnimationMixer, not
-// Node directly: `anims/<name>`/`libraries`/`libraries/<name>` are its own
-// hand-rolled route, and AnimationMixer's own linterParser.ts already chains to
-// Node in turn.
+// The base chain. Registration happens on import, so a test that loads only this slice resolves
+// an inherited key only when the ancestor is imported too. AnimationMixer, not Node:
+// `anims/<name>`, `libraries` and `libraries/<name>` are its own hand-rolled route, and its
+// linterParser.ts chains to Node.
 import '../animationmixer/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../linter/validators/index.js';
@@ -51,17 +39,10 @@ const AUTO_CAPTURE_EASE_TYPE = { 0: 'IN', 1: 'OUT', 2: 'IN_OUT', 3: 'OUT_IN' };
 
 
 /**
- * `blend_times`: a flat Array of (from: StringName, to: StringName, time:
- * float) triples (animation_player.cpp:79-92 builds it, :43-53 reads it back).
- * `ERR_FAIL_COND_V(len % 3, false)` (:46) is a REAL enforced bound: a
- * malformed length drops the whole write.
- *
- * Only the COUNT is checked, not each element's shape. `StringName from =
- * array[i*3+0]` goes through `Variant::operator StringName()`
- * (variant.cpp:1545-1553), which returns an EMPTY StringName for a non-string
- * rather than failing, and `float time = array[i*3+2]` coerces the same
- * permissive way — so Godot loads a non-string/non-number element without
- * complaint, and rejecting one here would refuse a value the engine accepts.
+ * `blend_times`: a flat Array of (from: StringName, to: StringName, time: float) triples
+ * (animation_player.cpp:79-92 builds it, :43-53 reads it). A length not a multiple of 3 drops the
+ * write (`ERR_FAIL_COND_V(len % 3, false)`, :46). Only the count is checked: a non-string name
+ * reads as empty (variant.cpp:1545-1553) and `time` coerces too, so Godot loads any element.
  */
 const blendTimesValidator: PropertyValidator = accepts((key, value, line) => {
   const match = ARRAY_LITERAL_RE.exec(value.trim());
@@ -74,8 +55,7 @@ const blendTimesValidator: PropertyValidator = accepts((key, value, line) => {
     );
   }
   // `dropTrailingComma`: `[a, b, 0.5,]` loads as three elements
-  // (variant_parser.cpp:1643-1677), so counting the empty tail made a legal
-  // literal fail the multiple-of-3 check.
+  // (variant_parser.cpp:1643-1677).
   const count = dropTrailingComma(splitTopLevel(match[1]!)).length;
   if (count % 3 !== 0) {
     return propertyError(
@@ -145,8 +125,9 @@ validatorRegistry.registerAll('AnimationPlayer', {
     hinted: 'animation_mixer.cpp:2472',
   }),
   playback_active: v.boolean('playback_active'),
-  // animation_player.cpp:1037, Variant::STRING_NAME, PROPERTY_HINT_NONE.
-  // set_autoplay (:770-776) is a bare assignment; empty is "no autoplay".
+  // animation_player.cpp:1037, Variant::STRING_NAME, PROPERTY_HINT_NONE. set_autoplay (:770-776)
+  // is a bare assignment (animation_player.cpp:775), and empty means no autoplay: line 150 guards
+  // on `animation_set.has(autoplay)`.
   autoplay: v.stringName('autoplay'),
   current_animation: v.any(),
   // current_animation_length/current_animation_position (animation_player.cpp:1038-1039)
@@ -154,24 +135,16 @@ validatorRegistry.registerAll('AnimationPlayer', {
   // ("", "get_current_animation_length"/"get_current_animation_position"): getter-only
   // and never serialised, so they can never appear in a real .tscn. No validator to carry.
 
-  // animation_player.cpp:38-39,71-73, "For backward compatibility.": `_set`
-  // matches on `name.begins_with("playback/play")` and forwards straight into
-  // `set_current_animation`, the SAME field `current_animation` above sets —
-  // so it gets the SAME (deliberately permissive) treatment, not a stricter
-  // one: registering a tighter check on the alias than on the canonical key
-  // would be its own kind of bug. Never pushed by `_get_property_list`, so
-  // only a hand-edited/legacy scene ever reaches it.
+  // animation_player.cpp:38-39,71-73, "For backward compatibility.": `_set` forwards any
+  // `playback/play*` name into `set_current_animation`, the field `current_animation` sets, so it
+  // gets the same permissive check. `_get_property_list` never pushes it, so only a hand-edited or
+  // legacy scene reaches it.
   'playback/play': v.any(),
 
-  // animation_player.cpp:130-138: conditionally pushed only for an animation
-  // with a "next" override set, usage NO_EDITOR|INTERNAL — still
-  // storage-bearing (object.h:132).
-  //
-  // `stringName`, not `quotedString`, even though the PropertyInfo declares
-  // Variant::STRING: the GETTER decides the serialised form, and
-  // `animation_get_next` returns a StringName (animation_player.h:181), so
-  // Godot writes `&"idle"`. A quoted-string check rejected the engine's own
-  // output — `unit-animation-player.tscn` carries exactly that form.
+  // animation_player.cpp:130-138: pushed only for an animation with a "next" override, usage
+  // NO_EDITOR|INTERNAL, still storage-bearing (object.h:132). `stringName`, not `quotedString`:
+  // the getter `animation_get_next` returns a StringName (animation_player.h:181), so Godot writes
+  // `&"idle"` though the PropertyInfo declares Variant::STRING (`unit-animation-player.tscn`).
   'next/*': v.stringName('next'),
 
   // animation_player.cpp:144 (_get_property_list) / :43-53 (_get) / :79-92

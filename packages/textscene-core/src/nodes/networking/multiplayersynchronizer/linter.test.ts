@@ -1,12 +1,7 @@
 /**
- * Tests for the MultiplayerSynchronizer root_path rule
- * (`multiplayersynchronizer-root-path-dangling`).
- *
- * Driven through `StrictTscnParser` and the rule's own `check`, not through
- * `Linter`: `Linter` imports the linter barrel, which loads every slice in the
- * repo and so cannot run while sibling slices are being written. The parse is
- * still the real one, so the properties the rule reads are the ones a scene
- * really produces.
+ * The MultiplayerSynchronizer root_path rule (`multiplayersynchronizer-root-path-dangling`), driven
+ * through `StrictTscnParser` and the rule's own `check`, not `Linter`, which loads every slice
+ * through the linter barrel. The parse is the real one, so the rule reads what a scene produces.
  */
 
 import { describe, expect, it } from 'vitest';

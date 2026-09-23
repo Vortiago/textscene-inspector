@@ -1,4 +1,4 @@
-/** Node2D — the base of Godot's 2D (CanvasItem) world hierarchy. */
+/** Node2D: the base of Godot's 2D (CanvasItem) world hierarchy. */
 
 export interface Vector2 {
   x: number;
@@ -33,7 +33,7 @@ export interface Node2DProperties {
   /** Radians. */
   rotation: number;
   scale: Vector2;
-  /** Radians; rarely set, applied as a shear in Godot (deferred — see parser). */
+  /** Radians; applied as a shear, as in Godot. */
   skew: number;
 
   /** Draw-order index (CanvasItem.z_index). */
@@ -43,7 +43,7 @@ export interface Node2DProperties {
   /** When true, the node draws behind its parent (CanvasItem, default false). */
   show_behind_parent: boolean;
   /**
-   * CanvasItem `top_level`: the item parents at the CANVAS rather than at the
+   * CanvasItem `top_level`: the item parents at the canvas rather than at the
    * node above it, so nothing from above the break composes onto it
    * (`canvas_item.cpp:565-571` returns nullptr before the parent cast runs).
    */
@@ -57,7 +57,7 @@ export interface Node2DProperties {
    * CanvasItem `light_mask`: which 2D lights may reach this item. A light
    * applies iff `light_mask & light.range_item_cull_mask != 0`, so the Godot
    * default of `1` is what makes an ordinary item take an ordinary light.
-   * Per-item and NOT inherited by children.
+   * Per-item and not inherited by children.
    */
   light_mask: number;
 
@@ -67,12 +67,12 @@ export interface Node2DProperties {
   y_sort_origin: number;
 
   /**
-   * CanvasItem `material` — an `ExtResource`/`SubResource` reference to a
+   * CanvasItem `material`: an `ExtResource`/`SubResource` reference to a
    * `CanvasItemMaterial` (or a ShaderMaterial, which is not implemented).
    */
   materialPath?: string;
   /**
-   * When true the node draws with its PARENT's material instead of its own,
+   * When true the node draws with its parent's material instead of its own,
    * inherited up the chain until a node supplies one (CanvasItem, default false).
    */
   use_parent_material: boolean;
