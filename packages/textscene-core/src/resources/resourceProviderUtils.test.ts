@@ -1,15 +1,14 @@
 /**
- * `isBinaryResourceType` derives its answer from the resource-slice claim
- * table (ADR-0031) instead of two hardcoded lists. This suite enumerates every
- * name and extension those lists carried, so the migration is provably
- * behaviour-preserving rather than plausibly so.
+ * `isBinaryResourceType` derives its answer from the resource-slice claim table
+ * (ADR-0031). This suite enumerates every binary type name and extension, so
+ * the derivation provably keeps each answer.
  */
 
 import { describe, expect, it } from 'vitest';
 import { isBinaryResourceType, stripResPrefix } from './resourceProviderUtils';
 import { resourceSliceRegistry } from './sliceRegistration';
 
-/** The type names the pre-registry list carried. */
+/** The binary type names a provider must fetch as bytes. */
 const BINARY_TYPES = [
   'Texture2D',
   'CompressedTexture2D',
@@ -21,10 +20,10 @@ const BINARY_TYPES = [
 ];
 
 /**
- * The extensions the pre-registry list carried, dot-prefixed, plus the raw font
+ * The binary extensions, dot-prefixed, plus the raw font
  * containers. `FontFile` is deliberately absent from the type list above: the
- * type name is not a binary signal, because a `FontFile` ExtResource just as
- * often names a text `.tres` wrapper — the extension is.
+ * type name is not a binary signal, because a `FontFile` ExtResource as often
+ * names a text `.tres` wrapper. The extension is.
  */
 const BINARY_EXTENSIONS = [
   '.glb',
@@ -60,8 +59,8 @@ describe('isBinaryResourceType', () => {
   });
 
   it('takes the image and GLB answers from the slice claims, not a list', () => {
-    // The derivation the rewrite exists for: unregister-and-retest is not
-    // possible, so pin that the registry actually carries these claims.
+    // Unregister-and-retest is not possible, so pin that the registry carries
+    // these claims.
     expect(resourceSliceRegistry.byExtension('.png')?.slice).toBe('image');
     expect(resourceSliceRegistry.byExtension('.glb')?.slice).toBe('glb');
     expect(resourceSliceRegistry.byTypeName('Texture2D')?.binaryBytes).toBe(true);
@@ -91,8 +90,7 @@ describe('isBinaryResourceType', () => {
   });
 
   it('does not treat a query-suffixed extension as one', () => {
-    // Unchanged from the hardcoded lists, which matched "glb?v=2" against
-    // neither list either.
+    // "glb?v=2" is not the `.glb` extension.
     expect(isBinaryResourceType('Unknown', 'res://models/rock.glb?v=2')).toBe(false);
   });
 

@@ -1,20 +1,8 @@
 /**
- * CapsuleMesh decode — property bag in, radius/height/segment counts out.
- *
- * Radius and height are linked (`primitive_meshes.cpp` ADD_LINKED_PROPERTY
- * :628-629): `set_radius` (:638) RAISES height to `radius * 2` once the radius
- * passes the half height, `set_height` (:655) LOWERS radius to `height * 0.5` in
- * the same situation, and the loader assigns in property order — radius (:623)
- * then height (:624) — so an authored height stands and the radius clamps.
- *
- * Both setters also early-return on an `is_equal_approx` match with the current
- * value, which cannot change the outcome here: the only skippable radius is the
- * default 0.5, whose raise would need a height below 1 that no earlier
- * assignment can have produced, and a skippable height equals whatever the
- * radius step just left, whose clamp is then a no-op by construction.
- *
- * Neither float setter rejects a negative (unlike CapsuleShape3D), so a negative
- * radius is stored as authored.
+ * CapsuleMesh decode. The loader assigns radius (:623), then height (:624), the
+ * pair `primitive_meshes.cpp` links (ADD_LINKED_PROPERTY :628-629), so an authored
+ * height stands and the radius clamps. Neither float setter rejects a negative
+ * (unlike CapsuleShape3D), so a negative radius is stored as authored.
  */
 
 import { warn } from '../../../logger';
@@ -35,14 +23,19 @@ export function decodeCapsuleMesh(properties: Record<string, string>): CapsuleMe
   const authoredRadius = authored(properties.radius, 'CapsuleMesh radius');
   const authoredHeight = authored(properties.height, 'CapsuleMesh height');
 
+  // Both setters return early on an `is_equal_approx` match, which cannot change
+  // the outcome: skipping the default radius 0.5 needs a height below 1 that no
+  // earlier assignment made, and a skipped height makes its clamp a no-op.
   let radius = 0.5;
   let height = 2;
   if (authoredRadius !== undefined) {
     radius = authoredRadius;
+    // `set_radius` (:638) raises height to `radius * 2` past the half height.
     if (radius > height * 0.5) height = radius * 2;
   }
   if (authoredHeight !== undefined) {
     height = authoredHeight;
+    // `set_height` (:655) lowers radius to `height * 0.5` in the same case.
     if (radius > height * 0.5) radius = height * 0.5;
   }
 

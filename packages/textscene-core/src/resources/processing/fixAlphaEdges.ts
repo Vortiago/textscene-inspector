@@ -1,24 +1,13 @@
 /**
- * Godot's import-time "fix alpha border" pass, on RGBA8 bytes.
- *
- * A PNG's fully-transparent texels carry arbitrary RGB — a paletted image
- * routinely stores black, or a leftover key colour, behind alpha 0. Nothing
- * shows it until a bilinear sample straddles the alpha boundary: the filter
- * blends RGB and alpha independently, so that hidden colour bleeds into the
- * visible fringe, darkest where the texture is magnified most.
- *
- * Godot never renders those bytes. `ResourceImporterTexture` runs
- * `Image::fix_alpha_edges()` on every texture whose import preset is not the 3D
- * one (`editor/import/resource_importer_texture.cpp:253,862` — the generated
- * `.import` for an unattended texture carries `process/fix_alpha_border=true`),
- * rewriting each below-threshold texel's RGB with its nearest opaque texel's,
- * so the bleed is the sprite's own colour. Reading a `res://` PNG straight off
- * disk skips the importer, so this reproduces that one pass.
+ * Godot's import-time "fix alpha border" pass on RGBA8 bytes, which reading a raw
+ * PNG skips: a bilinear sample bleeds transparent texels' arbitrary RGB into the
+ * fringe. `ResourceImporterTexture` runs `Image::fix_alpha_edges()` for every non-3D
+ * preset (`editor/import/resource_importer_texture.cpp:253,862`, `process/fix_alpha_border=true`).
  */
 
 /**
  * `core/io/image.cpp Image::fix_alpha_edges`: a texel with alpha at or above
- * this is left alone AND is a source of replacement colour; everything below it
+ * this is left alone and is a source of replacement colour. Everything below it
  * is rewritten.
  */
 const ALPHA_THRESHOLD = 20;
@@ -27,12 +16,10 @@ const ALPHA_THRESHOLD = 20;
 const MAX_RADIUS = 4;
 
 /**
- * Rewrite each below-threshold texel's RGB in place with the RGB of the nearest
- * opaque texel within `MAX_RADIUS`, leaving every alpha byte untouched. Returns
- * whether any byte changed, so a caller can keep the original image when the
- * pass is a no-op.
- *
- * `data` is RGBA8, row-major, first row = top row.
+ * Rewrite each below-threshold texel's RGB in place with the nearest opaque
+ * texel's within `MAX_RADIUS`, leaving alpha untouched. `data` is RGBA8,
+ * row-major, top row first. Returns whether any byte changed, so a caller can
+ * keep the original image.
  */
 export function fixAlphaEdges(data: Uint8Array, width: number, height: number): boolean {
   const opaque = opaqueCounts(data, width, height);
@@ -51,11 +38,10 @@ export function fixAlphaEdges(data: Uint8Array, width: number, height: number): 
       const fromX = Math.max(0, x - MAX_RADIUS);
       const toX = Math.min(width - 1, x + MAX_RADIUS);
 
-      // The C++ leaves a texel untouched when its whole neighbourhood is
-      // transparent, and in a large transparent region that is every texel —
-      // the case that dominates the cost. The summed-area table answers "is
-      // there an opaque texel in this box" in constant time, so only texels
-      // that will actually find a source pay for the full scan below.
+      // A texel with an all-transparent neighbourhood stays untouched, and in a
+      // large transparent region that is every texel. The summed-area table
+      // answers "any opaque texel in this box" in constant time, so only texels
+      // that find a source pay for the full scan.
       if (boxSum(opaque, width, fromX, fromY, toX, toY) === 0) continue;
 
       let closestDist = Infinity;
@@ -90,23 +76,10 @@ export function fixAlphaEdges(data: Uint8Array, width: number, height: number): 
 }
 
 /**
- * Summed-area table of the at-or-above-threshold texels, one row and one column
- * of zeroes wider than the image so `boxSum` needs no bounds tests. Returns
- * `null` when the image has no below-threshold texel at all — there is nothing
- * for the pass to rewrite, and the table would be built for nobody.
- */
-/**
- * Whether every below-threshold texel has an opaque texel within `MAX_RADIUS`,
- * i.e. whether the pass rewrites ALL of them and leaves none carrying its
- * original RGB.
- *
- * Godot runs on the image's real bytes, so a transparent texel with no opaque
- * neighbour simply keeps whatever RGB it had. We cannot reproduce that: our
- * pixels arrive from a premultiplied canvas store, where alpha 0 has already
- * forced RGB to zero, so an unrewritten texel would end up black instead of
- * its original colour. When any such texel exists the substituted image is
- * therefore wrong in a way the pass cannot repair, and the caller keeps the
- * decoded texture instead.
+ * Whether every below-threshold texel has an opaque texel within `MAX_RADIUS`.
+ * In Godot an unreached texel keeps its RGB, but the premultiplied canvas store
+ * has already zeroed it here, so it would turn black. When one exists, the
+ * caller keeps the decoded texture.
  */
 export function everyTransparentTexelHasASource(
   data: Uint8Array | Uint8ClampedArray,
@@ -130,6 +103,11 @@ export function everyTransparentTexelHasASource(
   return true;
 }
 
+/**
+ * Summed-area table of the at-or-above-threshold texels, one row and one column
+ * of zeroes wider than the image so `boxSum` needs no bounds tests. `null` when
+ * no texel is below the threshold, so the pass has nothing to rewrite.
+ */
 function opaqueCounts(
   data: Uint8Array | Uint8ClampedArray,
   width: number,

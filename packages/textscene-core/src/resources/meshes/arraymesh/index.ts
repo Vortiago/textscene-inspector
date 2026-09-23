@@ -1,12 +1,8 @@
 /**
- * ArrayMesh resource slice entry point (ADR-0031): the routing claim plus the
- * decode surface.
- *
- * THREE-free — `build.ts` is the only file here that imports three, and nothing
- * routing-side may pull it in. The claim's `arraymesh` bus slot is its own
- * because the cached artifact is a BufferGeometry plus per-surface material
- * paths, not a ParsedResource; `failureLabel` names the consumer rather than the
- * type because a missing mesh is reported against the node that wanted it.
+ * ArrayMesh slice entry (ADR-0031): the routing claim and the decode, THREE-free.
+ * The `arraymesh` bus slot is its own: the artifact is a BufferGeometry plus
+ * material paths. `failureLabel` names the consumer, since a missing mesh is
+ * reported against the node that wanted it.
  */
 
 import { registerResourceSlice } from '../../sliceRegistration.js';

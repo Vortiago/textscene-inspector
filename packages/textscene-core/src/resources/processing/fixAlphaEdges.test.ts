@@ -16,7 +16,7 @@ function texel(data: Uint8Array, width: number, x: number, y: number): number[] 
 
 describe('fixAlphaEdges', () => {
   it('gives a transparent texel the RGB of its nearest opaque neighbour', () => {
-    // scene/2d — irrelevant; core/io/image.cpp Image::fix_alpha_edges: a texel
+    // core/io/image.cpp Image::fix_alpha_edges: a texel
     // below the alpha threshold takes the closest opaque texel's RGB, and its
     // own alpha is never written.
     const data = rgba(2, 1, [
@@ -47,7 +47,7 @@ describe('fixAlphaEdges', () => {
 
   it('treats alpha 20 as a source and alpha 19 as a target', () => {
     // core/io/image.cpp Image::fix_alpha_edges: `alpha_threshold = 20`, and the
-    // guard is `rptr[3] >= alpha_threshold` — at the threshold exactly, a texel
+    // guard is `rptr[3] >= alpha_threshold`: at the threshold exactly, a texel
     // is skipped by the rewrite and eligible as replacement colour.
     const data = rgba(2, 1, [
       [40, 50, 60, 19],
@@ -62,7 +62,7 @@ describe('fixAlphaEdges', () => {
   it('leaves RGB alone when no opaque texel is within the four-texel radius', () => {
     // core/io/image.cpp Image::fix_alpha_edges: `max_radius = 4` bounds the
     // scan, and `closest_dist == max_dist` leaves the texel untouched. The
-    // opaque texel five columns away is out of range; the one four away is not.
+    // opaque texel five columns away is out of range, and the one four away is not.
     const near = rgba(5, 1, [
       [9, 9, 9, 0],
       [0, 0, 0, 0],
@@ -86,9 +86,9 @@ describe('fixAlphaEdges', () => {
   });
 
   it('reports no change for an image whose transparent texels already match', () => {
-    // A fully opaque image has no target at all, and a transparent texel that
-    // already carries its neighbour's colour is rewritten to the same bytes —
-    // both must read as "nothing changed" so a caller can keep the original.
+    // A fully opaque image has no target, and a transparent texel that already
+    // carries its neighbour's colour is rewritten to the same bytes. Both read
+    // as "nothing changed" so a caller can keep the original.
     const opaque = rgba(2, 1, [
       [1, 2, 3, 255],
       [4, 5, 6, 255],
@@ -103,14 +103,10 @@ describe('fixAlphaEdges', () => {
   });
 
   it('flattens a paletted sprite whose transparent corners hold two leftover key colours', () => {
-    // A white octagon on an 8x8 grid: the four corner blocks are transparent
-    // and carry black on the top rows, magenta on the bottom ones — the shape
-    // a paletted PNG produces, and the one that makes a magnified bilinear
-    // sample fringe dark at the top and purple at the bottom.
-    //
-    // core/io/image.cpp Image::fix_alpha_edges: every corner texel has a white
-    // texel within four, so the whole image comes back white with the alpha
-    // untouched — byte-for-byte what Godot's importer hands the renderer.
+    // A white octagon on an 8x8 grid whose transparent corners carry black on top
+    // and magenta below, as a paletted PNG does. core/io/image.cpp
+    // Image::fix_alpha_edges: every corner texel has a white texel within four, so
+    // the image comes back white with alpha untouched, as Godot's importer does.
     const white = [255, 255, 255, 255] as const;
     const black = [0, 0, 0, 0] as const;
     const magenta = [255, 0, 255, 0] as const;
@@ -148,11 +144,10 @@ describe('fixAlphaEdges', () => {
 });
 
 /**
- * Not a property of Godot's pass — a precondition on OUR readback. Godot runs on
- * the image's real bytes, so a transparent texel it cannot reach keeps its own
- * RGB; our pixels come from a premultiplied store that already zeroed that RGB,
- * so such a texel would be published black. The caller checks this before it is
- * willing to substitute the image at all.
+ * A precondition on the previewer's readback, not a property of Godot's pass: a
+ * transparent texel out of reach keeps its RGB in Godot, but the premultiplied
+ * store has already zeroed it here, so the caller checks this before it
+ * substitutes the image.
  */
 describe('everyTransparentTexelHasASource', () => {
   it('is true when every transparent texel has an opaque one within the radius', () => {
@@ -164,7 +159,7 @@ describe('everyTransparentTexelHasASource', () => {
   });
 
   it('is false when a transparent texel sits beyond the radius-4 search', () => {
-    // 7x1: only texel 1 is opaque, so texel 6 is five apart — out of reach.
+    // 7x1: only texel 1 is opaque, so texel 6 is five apart, out of reach.
     const data = rgba(7, 1, [
       [255, 0, 255, 0],
       [10, 20, 30, 255],

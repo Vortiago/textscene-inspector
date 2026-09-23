@@ -1,11 +1,8 @@
 /**
- * Tests for the CapsuleShape2D decode.
- *
- * Same linked-property clamp as the 3D capsule, from Godot
- * `capsule_shape_2d.cpp`: `set_radius` (:61-75) raises height to `radius * 2`,
- * `set_height` (:77-91) lowers radius to `height * 0.5`, both ERR_FAIL on a
- * negative argument (:62 / :78). Property order is radius (:134) then height
- * (:135). Defaults from `capsule_shape_2d.h:38-39` (height 30, radius 10).
+ * CapsuleShape2D decode, the 3D capsule's clamp from `capsule_shape_2d.cpp`: `set_radius`
+ * (:61-75) raises height to `radius * 2`, `set_height` (:77-91) lowers radius to
+ * `height * 0.5`, both ERR_FAIL on a negative (:62 / :78), and radius (:134) loads
+ * before height (:135). Defaults: `capsule_shape_2d.h:38-39` (height 30, radius 10).
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

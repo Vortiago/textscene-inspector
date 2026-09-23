@@ -1,10 +1,7 @@
 /**
- * The primitive collision shapes validate their own radius/height.
- *
- * Every one has an `ERR_FAIL_COND_MSG(... < 0)` setter and a
- * `PROPERTY_HINT_RANGE` whose max is `or_greater` — so the floor is two tiers
- * and the ceiling is open. They declared nothing at all before, so every value
- * on them was silently accepted.
+ * The primitive collision shapes validate their own radius/height: each has an
+ * `ERR_FAIL_COND_MSG(... < 0)` setter and a `PROPERTY_HINT_RANGE` whose max is
+ * `or_greater`, so the floor is two tiers and the ceiling is open.
  */
 
 import { describe, it, expect } from 'vitest';

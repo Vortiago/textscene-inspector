@@ -1,4 +1,4 @@
-/** PlaneMesh resource slice — claims the type name, re-exports its decode. */
+/** PlaneMesh resource slice: claims the type name, re-exports its decode. */
 
 import { registerMeshSlice } from '../registerMeshSlice.js';
 

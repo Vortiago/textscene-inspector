@@ -10,11 +10,10 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('CircleShape2D', {
-  // circle_shape_2d.cpp:62 hints "0.01,1024,…,or_greater", so the ceiling is OPEN and
-  // never warns. The floor is two tiers: `set_radius` (circle_shape_2d.cpp:46) is
-  // `ERR_FAIL_COND_MSG(p_radius < 0)`, so a negative is refused outright, while
-  // the band between 0 and the hint's own floor is stored but unreachable from
-  // the inspector.
+  // circle_shape_2d.cpp:62 hints "0.01,1024,…,or_greater", so the ceiling is open and
+  // never warns. The floor has two tiers: `set_radius` (circle_shape_2d.cpp:46) is
+  // `ERR_FAIL_COND_MSG(p_radius < 0)`, refusing a negative, while the band between 0 and
+  // the hint's floor is stored but unreachable from the inspector.
   radius: v.float('radius', {
     min: 0.01,
     enforcedMin: { at: 0 },

@@ -1,13 +1,7 @@
 /**
- * Tests for the PrismMesh geometry build, ported from Godot
- * `PrismMesh::_create_mesh_array` (`primitive_meshes.cpp:1610-1873`).
- *
- * The prism's cross-section is a TRIANGLE in the XY plane — apex at the top, base
- * at the bottom, the apex's X placed by `left_to_right` (`:1670`) — extruded
- * along Z. Its five surfaces are the front and back triangular caps (`:1663`),
- * the two slanted sides (`:1746`) and the base (`:1822`).
- *
- * Vertex counts come from Godot's own `num_points` (`:1636`):
+ * PrismMesh build, from `PrismMesh::_create_mesh_array` (`primitive_meshes.cpp:1610-1873`):
+ * caps (`:1663`) with the apex X set by `left_to_right` (`:1670`), slanted sides
+ * (`:1746`) and base (`:1822`). Vertex counts are Godot's `num_points` (`:1636`):
  * `(sh+2)(sw+2)·2 + (sh+2)(sd+2)·2 + (sd+2)(sw+2)`.
  */
 
@@ -62,7 +56,7 @@ describe('buildPrismMeshGeometry', () => {
   it('builds Godot\'s vertex and triangle counts for an unsubdivided prism', () => {
     const geometry = buildPrismMeshGeometry(prism());
 
-    // (0+2)(0+2)·2 + (0+2)(0+2)·2 + (0+2)(0+2) = 20 vertices; 8 triangles =
+    // (0+2)(0+2)·2 + (0+2)(0+2)·2 + (0+2)(0+2) = 20 vertices, and 8 triangles =
     // 2 caps + 2 slanted quads + 1 base quad.
     expect(geometry.getAttribute('position').count).toBe(20);
     expect(geometry.getIndex()!.count).toBe(24);
@@ -95,14 +89,14 @@ describe('buildPrismMeshGeometry', () => {
     const top = p.filter((v) => Math.abs(v[1]! - 0.5) < 1e-6);
     const bottom = p.filter((v) => Math.abs(v[1]! + 0.5) < 1e-6);
 
-    // The whole top row collapses onto the apex line; the base spans size.x.
+    // The whole top row collapses onto the apex line. The base spans size.x.
     for (const v of top) expect(v[0]).toBeCloseTo(0, 6);
     expect(Math.min(...bottom.map((v) => v[0]!))).toBeCloseTo(-0.5, 6);
     expect(Math.max(...bottom.map((v) => v[0]!))).toBeCloseTo(0.5, 6);
   });
 
   it('places the apex by left_to_right rather than ignoring it', () => {
-    // start_x = start_pos.x + (1 - scale) * size.x * left_to_right (:1670); the
+    // start_x = start_pos.x + (1 - scale) * size.x * left_to_right (:1670). The
     // apex row is scale 0, so the apex sits at -size.x/2 + size.x * ltr.
     const apexX = (leftToRight: number, sizeX = 1) => {
       const p = positionsOf(
@@ -124,7 +118,7 @@ describe('buildPrismMeshGeometry', () => {
 
   it('winds every triangle so its front face agrees with its stored normal', () => {
     // Godot fronts triangles clockwise and three expects counter-clockwise, so
-    // each triple is reversed on the way out; if it were not, every face would be
+    // each triple is reversed on the way out. Otherwise every face would be
     // back-culled while its normal still pointed outward.
     const geometry = buildPrismMeshGeometry(prism());
 

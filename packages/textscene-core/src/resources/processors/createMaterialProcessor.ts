@@ -1,11 +1,7 @@
 /**
- * Factory for creating material processors.
- * Uses createResourceProcessor with material-specific processing logic.
- *
- * The path may be a whole `.tres` that IS a material, or a **Sub-resource
- * path** into a `.tres` that merely carries one (a mesh's own surface
- * materials). `shouldProcess` is asked about the owning file either way, so the
- * extension check reads the same; only the body to build differs.
+ * The material processor. The path is a `.tres` that is a material, or a
+ * **Sub-resource path** into a `.tres` that carries one (a mesh's surface
+ * materials). `shouldProcess` sees the owning file either way.
  */
 
 import * as THREE from 'three';
@@ -22,7 +18,6 @@ import { parseSubResourcePath } from '../subResourcePath';
 import { releaseBoundTexture } from '../materials/standardmaterial3d/textureBinding';
 
 /**
- * Create a material processor that handles loading and caching materials.
  * @param loadTexture - Function to load textures by resolved res:// path (for materials with texture references)
  */
 export function createMaterialProcessor(
@@ -45,20 +40,14 @@ export function createMaterialProcessor(
 }
 
 /**
- * `Material.dispose()` does NOT dispose its maps, and this material's maps may
- * include per-material clones that nothing else owns — so without this every
- * clone leaks its GPU upload for the life of the session. Only clones are
- * freed: the shared source belongs to the loader's cache and may still be in
- * use by other materials.
- *
- * Its BORROWED textures are handed back rather than freed. A procedural texture
- * (a `GradientTexture2D` the material's own `.tres` declares) belongs to the
- * procedural cache and may still be lent to another material or a mounted
- * component; releasing the pin is what lets capacity eviction reclaim it once
- * the last borrower is gone, and holding the pin until here is what stops an
- * eviction from disposing a texture this material is still sampling.
+ * `Material.dispose()` does not dispose its maps, and the per-material clones
+ * among them have no other owner, so each would leak its GPU upload. Only clones
+ * are freed: the shared source belongs to the loader's cache.
  */
 function disposeMaterialAndOwnedTextures(material: THREE.Material): void {
+  // A borrowed procedural texture (a `GradientTexture2D` the `.tres` declares) may
+  // be lent elsewhere, so its pin is released, not the texture: eviction reclaims
+  // it after the last borrower, and never while this material samples it.
   releaseProceduralTextures(material);
   // Walk the material's own values rather than a hand-listed set of slot names:
   // three assigns every map in its constructor, so this cannot go stale the day

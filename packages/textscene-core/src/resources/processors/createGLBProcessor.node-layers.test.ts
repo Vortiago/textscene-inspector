@@ -37,7 +37,7 @@ _subresources={
 `;
 
 /**
- * The vendored lamp's node chain, leaf-mesh included, under a NAMED scene — the scene
+ * The vendored lamp's node chain, leaf-mesh included, under a named scene: the scene
  * name is what a first-segment lookup that admitted the root could latch onto.
  */
 function nestedGltf(): ArrayBuffer {

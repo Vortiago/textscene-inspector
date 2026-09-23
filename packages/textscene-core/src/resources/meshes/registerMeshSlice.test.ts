@@ -1,9 +1,7 @@
 /**
  * The primitive-mesh slices' routing claims (ADR-0031), one table over the eight.
- *
- * Registration is a side effect of importing a slice index, so the imports below
- * are the whole arrangement. ArrayMesh is deliberately absent: it claims its own
- * `arraymesh` bus slot and is asserted in `arraymesh/registration.test.ts`.
+ * Importing a slice index registers it. ArrayMesh claims its own `arraymesh` bus
+ * slot and is asserted in `arraymesh/registration.test.ts`.
  */
 
 import { describe, expect, it } from 'vitest';

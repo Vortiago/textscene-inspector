@@ -1,27 +1,8 @@
 /**
- * Factory for the font resource processor — fifth peer of texture / material /
- * GLB / scene, over the SAME `createResourceProcessor` cache/inflight/event
- * loop. Mirrors the material processor's shape most closely: both fetch
- * through `FileEventBus`, both address a **Sub-resource path**
- * (`res://file.tres::SubId`), and both need to load OTHER resources — a
- * material loads its textures, a font loads its `base_font`/`fallbacks`.
- *
- * The recursion is self-contained: `loadFont` requests through THIS
- * processor (closing over it once construction finishes) rather than taking
- * an injected loader, since a Font's dependencies are always other Fonts.
- *
- * `shouldProcess` deliberately accepts every loaded file rather than
- * pre-filtering by extension. `FileEventBus` only ever hands it the bare
- * FILE path — never whether one of the addresses awaiting that file carries
- * a `::SubId` — so an extension gate here (e.g. rejecting anything that
- * isn't `.tres`) would make a sub-resource address into a `.tscn` (a scene's
- * own inline `FontFile`/`FontVariation`, a real shape this corpus has)
- * decline `shouldProcess` and sit in `inflight` forever: no `loaded`, no
- * `failed`, a `useResource` consumer stuck in `pending` permanently.
- * Accepting everything here and letting `buildFontResource` throw for
- * content that turns out not to be a font — a mistyped raw file, or
- * `parseTresFile`'s own `[gd_resource]`-header check — turns every such
- * address into a clean, prompt `failed` event instead.
+ * The font resource processor, on the shared `createResourceProcessor` loop.
+ * Like the material processor it fetches through `FileEventBus`, addresses a
+ * **Sub-resource path** (`res://file.tres::SubId`) and loads other resources:
+ * a font's `base_font`/`fallbacks`.
  */
 
 import type { FileEventBus } from '../FileEventBus';
@@ -38,27 +19,18 @@ export function createFontProcessor(
   fileEventBus: FileEventBus | undefined,
   eventBus: ResourceEventBus
 ): ResourceProcessor<FontResource> {
-  // Assigned once `createResourceProcessor` returns, below; `process()` only
+  // Assigned once `createResourceProcessor` returns, below. `process()` only
   // ever runs after a `.request()` call, always after this function has
   // returned, so the closure over the not-yet-assigned binding is safe.
   let processor: ResourceProcessor<FontResource>;
 
-  // Who is waiting on whom: address → the addresses its own `process` is
-  // currently parked on. `base_font`/`fallbacks` are ordinary paths, so two
-  // files can name each other, and the leg that closes such a ring would park
-  // on a `once` only its own waiter can settle — wedging every address on it.
-  //
-  // A DEPENDENCY EDGE, not a "currently loading" flag: a flag cannot tell a
-  // real ring from two independent loads that merely overlap in time, and
-  // would resolve a perfectly ordinary shared base font to null whenever its
-  // dependent happened to be in flight beside it.
-  //
-  // COUNTED, not a set: two waits can park on one address at once — the byte
-  // bus re-broadcasts a cached file to every address still in flight for it —
-  // and a set would let the first to settle sever the other's live edge.
+  // Address → the addresses its `process` is parked on. Two files can name each
+  // other, and the leg closing that ring would park on a `once` only its own
+  // waiter settles. An edge, not a "loading" flag, which cannot tell a ring from
+  // two overlapping loads and would null an ordinary shared base font.
   const waitingFor = new Map<string, Map<string, number>>();
 
-  /** Would `parent` waiting on `address` close a ring — is `parent` already downstream of it? */
+  /** Would `parent` waiting on `address` close a ring: is `parent` already downstream of it? */
   const wouldCycle = (parent: string, address: string): boolean => {
     if (parent === address) return true;
     const seen = new Set<string>();
@@ -73,7 +45,10 @@ export function createFontProcessor(
     return false;
   };
 
-  /** `ResourceLoader.peerLoad` plus the cycle check, which is why it is not that method. */
+  /**
+   * `ResourceLoader.peerLoad` plus the cycle check, which is why it is not that
+   * method. It requests through this processor, since a Font depends only on Fonts.
+   */
   const loadFont = async (parent: string, address: string): Promise<FontResource | null> => {
     const cached = processor.getCached(address);
     if (cached !== undefined) return cached;
@@ -83,6 +58,9 @@ export function createFontProcessor(
       edges = new Map<string, number>();
       waitingFor.set(parent, edges);
     }
+    // Counted, not a set: the byte bus re-broadcasts a cached file to every
+    // address in flight for it, so two waits can park on one address, and the
+    // first to settle must not sever the other's edge.
     edges.set(address, (edges.get(address) ?? 0) + 1);
     processor.request(address);
     try {
@@ -90,10 +68,10 @@ export function createFontProcessor(
     } catch {
       return null;
     } finally {
-      // A settled wait is nobody's deadlock: leaving the edge would let a LATER
-      // wait walk a dependency nothing is parked on. Only THIS wait's count
-      // goes; the entry goes with the last of them, which is also the moment
-      // nothing else can still be holding this map.
+      // A settled wait is nobody's deadlock: leaving the edge would let a later
+      // wait walk a dependency nothing is parked on. Only this wait's count
+      // goes, and the entry goes with the last of them, when nothing else can
+      // still hold this map.
       const remaining = (edges.get(address) ?? 1) - 1;
       if (remaining > 0) edges.set(address, remaining);
       else edges.delete(address);
@@ -105,6 +83,10 @@ export function createFontProcessor(
     fileEventBus,
     eventBus,
     resourceType: 'font',
+    // Every loaded file: the bus hands over only the bare file path, so an
+    // extension gate would leave a `::SubId` address into a `.tscn` in `inflight`
+    // forever. `buildFontResource` throws on content that is not a font, which
+    // turns such an address into a prompt `failed` event.
     shouldProcess: (_path, data) => data instanceof ArrayBuffer || typeof data === 'string',
     addressesSubResources: true,
     // The peer loader is bound to the address being built, so every wait it

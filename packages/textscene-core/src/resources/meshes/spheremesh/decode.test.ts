@@ -1,9 +1,7 @@
 /**
- * Tests for the SphereMesh decode.
- *
- * Defaults from Godot `primitive_meshes.h:339-343`. `set_radial_segments`
- * (`primitive_meshes.cpp:2137-2147`) floors at 4; `set_rings` (:2149-2160)
- * ERR_FAILs below 1, which keeps the default rather than storing the value.
+ * SphereMesh decode. Defaults: `primitive_meshes.h:339-343`. `set_radial_segments`
+ * (`primitive_meshes.cpp:2137-2147`) floors at 4, and `set_rings` (:2149-2160)
+ * ERR_FAILs below 1, which keeps the default.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

@@ -1,4 +1,4 @@
-/** ConvexPolygonShape3D decode — `points` in, a flat hull point cloud out. */
+/** ConvexPolygonShape3D decode: `points` in, a flat hull point cloud out. */
 
 import { parsePackedVector3Array } from '../packedArray';
 import { warn } from '../../../logger';

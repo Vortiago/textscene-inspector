@@ -1,15 +1,8 @@
 /**
- * FastNoiseLite slice types — Godot's `Noise` resource as decoded data.
- *
- * The enum ORDINALS are Godot's, which are in turn the upstream FastNoiseLite
- * C++ enum values (`modules/noise/fastnoise_lite.h:44-87` defines each constant
- * as its `_FastNoiseLite::` counterpart). The JS port names the same constants
- * with strings, so the ordinal is what a `.tres` carries and what this slice
- * stores; `build.ts` maps it to the library's string at configure time.
- *
- * Defaults are the engine's own (`fastnoise_lite.h:97-124`) — a `.tres` omits
- * most properties, so a wrong default is indistinguishable from a wrong
- * generator.
+ * Godot's `Noise` resource as decoded data. The enum ordinals are the upstream
+ * C++ values (`modules/noise/fastnoise_lite.h:44-87`), which a `.tres` carries and
+ * this slice stores. `build.ts` maps them to the JS port's strings. Defaults are
+ * the engine's (`fastnoise_lite.h:97-124`), since a `.tres` omits most properties.
  */
 
 /** `FastNoiseLite::NoiseType` (fastnoise_lite.h:44-51). */
@@ -57,7 +50,7 @@ export enum DomainWarpType {
 }
 
 /**
- * `FastNoiseLite::DomainWarpFractalType` (fastnoise_lite.h:83-87) — Godot's own
+ * `FastNoiseLite::DomainWarpFractalType` (fastnoise_lite.h:83-87): Godot's own
  * enum, mapped onto the upstream fractal types by
  * `_convert_domain_warp_fractal_type_enum` (fastnoise_lite.cpp:35-50).
  */

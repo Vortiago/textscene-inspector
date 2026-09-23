@@ -1,5 +1,5 @@
 /**
- * Tests for `resolveResourcePath` — the helper that lets node components
+ * Tests for `resolveResourcePath`, the helper that lets node components
  * pass a raw TSCN property string (either an already-resolved `res://`
  * path or an `ExtResource("id")` reference) through to `useResource`
  * without duplicating the id → path lookup.

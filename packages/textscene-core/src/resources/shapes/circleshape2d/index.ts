@@ -1,4 +1,4 @@
-/** CircleShape2D resource slice — claims the type name, re-exports its decode. */
+/** CircleShape2D resource slice: claims the type name, re-exports its decode. */
 
 import { registerShapeSlice } from '../registerShapeSlice';
 

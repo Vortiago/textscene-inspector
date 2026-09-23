@@ -1,4 +1,4 @@
-/** Tests for the RectangleShape2D decode — canonical parseVector2 contract. */
+/** Tests for the RectangleShape2D decode: the canonical parseVector2 contract. */
 
 import { describe, expect, it } from 'vitest';
 import { decodeRectangleShape2D } from './decode';

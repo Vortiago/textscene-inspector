@@ -14,8 +14,8 @@ import {
 
 describe('decodeFastNoiseLite', () => {
   it('applies Godot\'s constructor defaults to an empty resource', () => {
-    // fastnoise_lite.h:97-124 — the corpus leans on these far more than on what
-    // it authors, so a wrong default is a wrong generator.
+    // fastnoise_lite.h:97-124. A `.tres` omits most properties, so a wrong
+    // default is a wrong generator.
     expect(decodeFastNoiseLite({})).toEqual({
       noiseType: NoiseType.SIMPLEX_SMOOTH,
       seed: 0,
@@ -50,7 +50,7 @@ describe('decodeFastNoiseLite', () => {
     expect(decoded.frequency).toBeCloseTo(0.003, 6);
     expect(decoded.fractalType).toBe(NoiseFractalType.RIDGED);
     expect(decoded.fractalLacunarity).toBeCloseTo(2.5, 6);
-    // Everything else stays default — including the SIMPLEX_SMOOTH generator.
+    // Everything else stays default, including the SIMPLEX_SMOOTH generator.
     expect(decoded.noiseType).toBe(NoiseType.SIMPLEX_SMOOTH);
     expect(decoded.fractalOctaves).toBe(5);
   });

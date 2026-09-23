@@ -1,11 +1,7 @@
 /**
- * CapsuleShape2D decode — property bag in, radius/height out.
- *
- * Same linked pair as the 3D capsule: `set_radius` RAISES a too-short height to
- * `radius * 2` (`capsule_shape_2d.cpp:67`), `set_height` LOWERS an oversized
- * radius to `height * 0.5` (`:83`), and both reject a negative argument
- * (`ERR_FAIL_COND_MSG`, `:62` / `:78`). Property order is radius (`:134`) then
- * height (`:135`), so with both authored the height stands and radius clamps.
+ * CapsuleShape2D decode, the 3D capsule's linked pair. Both setters reject a negative
+ * (`ERR_FAIL_COND_MSG`, `capsule_shape_2d.cpp:62` / `:78`), and radius (`:134`) loads
+ * before height (`:135`), so with both authored the height stands and radius clamps.
  */
 
 import { settableNonNegative } from '../../../parser/valueParsers';
@@ -21,10 +17,12 @@ export function decodeCapsuleShape2D(
   let height = 30;
   if (authoredRadius !== undefined) {
     radius = authoredRadius;
+    // `set_radius` raises a too-short height to `radius * 2` (`capsule_shape_2d.cpp:67`).
     if (height < radius * 2) height = radius * 2;
   }
   if (authoredHeight !== undefined) {
     height = authoredHeight;
+    // `set_height` lowers an oversized radius to `height * 0.5` (`:83`).
     if (radius > height * 0.5) radius = height * 0.5;
   }
   return { radius, height };

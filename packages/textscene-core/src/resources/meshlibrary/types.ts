@@ -1,7 +1,7 @@
 /**
  * The MeshLibrary slice's types: a map from item id to the ArrayMesh it points
- * at plus that item's library-local mesh transform. Pure data — the GridMap
- * component turns `meshPath` into geometry (via the ArrayMesh pipeline) and
+ * at plus that item's library-local mesh transform. Pure data: the GridMap
+ * component turns `meshPath` into geometry (through the ArrayMesh pipeline) and
  * `meshTransform` into a THREE.Matrix4.
  */
 
@@ -22,7 +22,7 @@ export interface MeshLibraryItem {
   meshPath: string | null;
   /** Library-local transform applied to the mesh, or null (= identity). */
   meshTransform: Transform3D | null;
-  /** Per-tile shadow casting; GridMap applies it per instance (`modules/gridmap/grid_map.cpp:799`). */
+  /** Per-tile shadow casting, which GridMap applies per instance (`modules/gridmap/grid_map.cpp:799`). */
   castShadow: ShadowCastingSetting;
 }
 

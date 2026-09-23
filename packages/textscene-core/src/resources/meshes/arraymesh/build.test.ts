@@ -1,7 +1,6 @@
 /**
- * arrayMeshGeometry — turns decoded ArrayMesh surfaces into a single
- * THREE.BufferGeometry (one group per surface so each can take its own
- * material). Tested against the byte-exact wall.tres decode.
+ * arrayMeshGeometry: decoded ArrayMesh surfaces into one THREE.BufferGeometry,
+ * one group per surface, tested against the byte-exact wall.tres decode.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -32,7 +31,7 @@ blend_shape_mode = 0
 /**
  * The wall quad (uncompressed) followed by truck_cab.tres's `headlights` surface
  * (ARRAY_FLAG_COMPRESS_ATTRIBUTES). Godot writes both layouts into one mesh, and
- * every surface merges into one geometry — so a surface read at the wrong stride
+ * every surface merges into one geometry, so a surface read at the wrong stride
  * does not merely draw wrong, it takes the merged bounds down with it.
  */
 const MIXED_LAYOUT_TRES = WALL_TRES.replace(
@@ -89,7 +88,7 @@ describe('buildArrayMeshGeometry', () => {
           format: 0, // no NORMAL bit → surface.normals undefined
           vertexCount: 3,
           indexCount: 3,
-          // Godot-style CW winding from +Z; the builder reverses it to CCW so
+          // Godot-style CW winding from +Z. The builder reverses it to CCW so
           // computeVertexNormals() yields the outward +Z normal.
           positions: new Float32Array([0, 0, 0, 0, 1, 0, 1, 0, 0]),
           indices: new Uint16Array([0, 1, 2]),
@@ -102,26 +101,23 @@ describe('buildArrayMeshGeometry', () => {
   });
 
   it("flips V so Godot's top-left-origin UVs match the app's flipY=true textures", () => {
-    // Godot writes V from the image TOP; three.js uploads textures bottom-up by
-    // default (the convention spriteFrame.ts / tileGeometry.ts also target), so
-    // a pass-through V samples an atlas mirrored — the whole texture reads off
-    // by one row. V=0 (Godot's top edge) must become V=1 here.
+    // Godot writes V from the image top. three.js uploads textures bottom-up by
+    // default (as spriteFrame.ts and tileGeometry.ts assume), so a pass-through V
+    // samples an atlas mirrored. V=0 (Godot's top edge) must become V=1 here.
     const uv = buildArrayMeshGeometry({
       surfaces: [triangle({ uvs: new Float32Array([0, 0, 1, 0.25, 0.5, 1]) })],
     }).getAttribute('uv');
 
-    // U is untouched; only V is mirrored.
+    // U is untouched. Only V is mirrored.
     expect([uv.getX(0), uv.getY(0)]).toEqual([0, 1]);
     expect([uv.getX(1), uv.getY(1)]).toEqual([1, 0.75]);
     expect([uv.getX(2), uv.getY(2)]).toEqual([0.5, 0]);
   });
 
   it('converts a UV-less surface too, so one geometry never holds two V spaces', () => {
-    // Godot allows per-surface vertex formats: only some surfaces may declare
-    // TEX_UV. `hasUV` is `some`, so the merged buffer covers the UV-less ones
-    // as zeros — and Godot samples those at UV (0,0), the image TOP, which is
-    // V=1 here. Leaving them at 0 would point them at the opposite edge from
-    // their textured neighbours.
+    // Only some surfaces may declare TEX_UV. `hasUV` is `some`, so the merged
+    // buffer covers the UV-less ones, and Godot samples those at UV (0,0), the
+    // image top, which is V=1 here. At 0 they would point at the opposite edge.
     const uv = buildArrayMeshGeometry({
       surfaces: [triangle(), triangle({ uvs: undefined })],
     }).getAttribute('uv');
@@ -139,9 +135,8 @@ describe('buildArrayMeshGeometry', () => {
   });
 
   it('computes a finite bounding sphere for a mesh mixing compressed and uncompressed surfaces', () => {
-    // Reading a compressed surface at the uncompressed stride produced NaN
-    // positions, and THREE reported "computeBoundingSphere(): Computed radius is
-    // NaN" for the whole geometry — which also left the camera unable to frame it.
+    // A compressed surface read at the uncompressed stride gives NaN positions,
+    // a NaN bounding sphere for the whole geometry, and a camera that cannot frame it.
     const geo = buildArrayMeshGeometry(decodeArrayMesh(MIXED_LAYOUT_TRES, 'res://mesh.tres'));
 
     geo.computeBoundingSphere();

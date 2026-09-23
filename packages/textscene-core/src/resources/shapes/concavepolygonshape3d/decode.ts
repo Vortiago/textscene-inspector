@@ -1,4 +1,4 @@
-/** ConcavePolygonShape3D decode — `data` in, a flat triangle soup out. */
+/** ConcavePolygonShape3D decode: `data` in, a flat triangle soup out. */
 
 import { parsePackedVector3Array } from '../packedArray';
 import { warn } from '../../../logger';

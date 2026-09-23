@@ -1,4 +1,4 @@
-/** RectangleShape2D resource slice — claims the type name, re-exports its decode. */
+/** RectangleShape2D resource slice: claims the type name, re-exports its decode. */
 
 import { registerShapeSlice } from '../registerShapeSlice';
 

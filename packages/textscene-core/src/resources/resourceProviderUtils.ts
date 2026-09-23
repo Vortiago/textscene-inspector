@@ -1,12 +1,8 @@
 /**
- * Shared utilities for ResourceProvider implementations.
- *
- * The binary question is answered from the resource-slice claim table
- * (ADR-0031), not from a hand-kept list: a slice that declares
- * `binaryBytes: true` says its files must be fetched as bytes, and importing
- * the slice indexes below is what puts those claims in the registry. The
- * indexes are deliberately THREE-free, so a host's provider (the VS Code
- * extension imports this module directly) pulls no renderer.
+ * Shared utilities for ResourceProvider implementations. A slice claiming
+ * `binaryBytes: true` (ADR-0031) is fetched as bytes once its index, imported
+ * below, registers. The indexes are THREE-free, so a host's provider (the VS
+ * Code extension imports this module) pulls no renderer.
  */
 
 // The full aggregation barrel rather than the three format slices alone: the
@@ -16,10 +12,9 @@ import './sliceRegistrations.js';
 import { resourceSliceRegistry } from './sliceRegistration';
 
 /**
- * Binary types no slice owns yet — audio, which this previewer neither decodes
- * nor renders. Kept verbatim from the list this function used before the
- * registry existed so a provider keeps fetching them as bytes; each moves out
- * of here when its slice lands.
+ * Binary types no slice owns: audio, which this previewer neither decodes nor
+ * renders, so a provider still fetches them as bytes. Each moves out when its
+ * slice lands.
  */
 const UNOWNED_BINARY_TYPES: readonly string[] = [
   'AudioStream',
@@ -33,7 +28,7 @@ const UNOWNED_BINARY_EXTENSIONS: readonly string[] = ['.wav', '.ogg', '.mp3'];
 
 /**
  * The file extension of a path, dot-prefixed and lowercased, or null when the
- * path has none. A dot inside a DIRECTORY name is not an extension.
+ * path has none. A dot inside a directory name is not an extension.
  */
 function fileExtension(path: string): string | null {
   const dot = path.lastIndexOf('.');
@@ -42,15 +37,11 @@ function fileExtension(path: string): string | null {
 }
 
 /**
- * Determine if a resource should be loaded as binary data.
- * Text resources (scenes, scripts) are loaded as strings; binary ones
- * (images, GLB/GLTF, audio, fonts) as ArrayBuffers.
+ * Whether a resource loads as an ArrayBuffer (images, GLB/GLTF, audio, fonts)
+ * rather than a string (scenes, scripts). Type and path are independent: a
+ * `PackedScene` at a `.glb` is binary, so a text type never skips the extension check.
  *
- * Type and path are INDEPENDENT signals: a `PackedScene` pointing at a `.glb`
- * is binary even though the type itself is text, so a claimed-but-text type
- * never short-circuits the extension check.
- *
- * @param type - Godot resource type (e.g., "Texture2D", "PackedScene")
+ * @param type - Godot resource type (for example "Texture2D", "PackedScene")
  * @param path - Optional resource path to check file extension
  */
 export function isBinaryResourceType(type: string, path?: string): boolean {

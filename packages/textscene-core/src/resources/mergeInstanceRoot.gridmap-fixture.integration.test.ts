@@ -1,16 +1,8 @@
 /**
- * Acceptance — instanced GridMap type-specific override, end-to-end on the real
- * platformer fixtures.
- *
- * `stage.tscn` instances `stage/grid_map.tscn` and overrides its GridMap `data`
- * with a larger cell layout. Before the fix, the type-less instance node was
- * parsed by the base Node parser, which drops `data`, so we rendered the base
- * sub-scene's 2616-cell layout instead of the stage's 2921-cell override — the
- * "coins outside the map" symptom (the extra cells extend the level edges where
- * the far coins sit).
- *
- * This drives the REAL parser + `mergeInstanceRoot` over the committed fixtures
- * (no stubs) and asserts the merged GridMap carries the OVERRIDE layout.
+ * A type-specific override on an instanced GridMap, end to end on the real
+ * platformer fixtures and parser. `stage.tscn` overrides the `data` of
+ * `stage/grid_map.tscn`, so the merged GridMap carries the stage's 2921-cell
+ * layout, not the sub-scene's 2616-cell one.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -72,11 +64,10 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
     expect(merged!.type).toBe('GridMap');
 
     const mergedCells = gridMapCells(merged);
-    // The OVERRIDE layout wins, end-to-end — the fix's headline effect.
+    // The override layout wins.
     expect(mergedCells).toHaveLength(2921);
 
-    // And it extends the level outward past the base layout — the edge cells the
-    // base lacked, which is why the far coins previously sat outside the map.
+    // And it extends the level past the base layout's edge cells.
     const baseBox = bbox(baseCells);
     const mergedBox = bbox(mergedCells);
     const extendsOutward =
@@ -88,11 +79,10 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
   });
 
   it('delivers the override layout through the real render-path resolver (loader cache → merge)', () => {
-    // Drives the PRODUCTION path the tree/viewport/inspector use: resolveLiveNode
-    // finds the instance node, resolves its ExtResource against the scene's external
-    // resources, reads the sub-scene from the loader cache (exactly what the real
-    // ResourceLoader's getCached returns — a TscnParser-parsed scene with raw props),
-    // and merges. This proves the fix isn't isolated to a direct mergeInstanceRoot call.
+    // The production path the tree, viewport and inspector use: resolveLiveNode
+    // resolves the instance's ExtResource, reads the sub-scene from the loader
+    // cache (a TscnParser-parsed scene with raw props, as `getCached` returns it)
+    // and merges.
     const stage = parseFixture('stage/stage.tscn');
     const gridMapScene = parseFixture('stage/grid_map.tscn');
 
@@ -112,12 +102,10 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
   });
 
   it('delivers the override two instance levels deep (game.tscn → Stage → GridMap)', () => {
-    // The real acceptance scenario: game.tscn instances stage.tscn
-    // (node "Stage"), which itself instances grid_map.tscn (node "GridMap") with
-    // the `data` override. The override must survive BOTH collapse levels —
-    // resolveLiveNode descends into Stage (switching to stage.tscn's resource
-    // scope) and then collapses the nested GridMap instance. A regression here
-    // would re-render the base 2616-cell layout, putting the far coins outside it.
+    // game.tscn instances stage.tscn ("Stage"), which instances grid_map.tscn
+    // ("GridMap") with the `data` override. The override survives both collapse
+    // levels: resolveLiveNode descends into Stage, switching to stage.tscn's
+    // resource scope, then collapses the nested GridMap instance.
     const game = parseFixture('game.tscn');
     const stage = parseFixture('stage/stage.tscn');
     const gridMapScene = parseFixture('stage/grid_map.tscn');

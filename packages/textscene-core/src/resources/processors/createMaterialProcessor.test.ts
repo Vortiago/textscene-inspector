@@ -1,8 +1,8 @@
 /**
- * Material processor — the join between the **Sub-resource path** grammar and
+ * Material processor: the join between the **Sub-resource path** grammar and
  * the `.tres` → THREE.Material builder. A surface material declared inside a
  * mesh's own `.tres` is requested by the same `request(path)` call as a
- * standalone material file; nothing above this line knows the difference.
+ * standalone material file, so nothing above this line knows the difference.
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';

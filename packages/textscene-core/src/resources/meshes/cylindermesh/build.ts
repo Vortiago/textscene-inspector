@@ -10,8 +10,8 @@ export function buildCylinderMeshGeometry(p: CylinderMeshProperties): THREE.Buff
     p.height,
     p.radial_segments ?? 64,
     p.rings ?? 4,
-    // three can only drop BOTH caps, so Godot's single-cap removal is not
-    // representable; open the ends only when both caps are off.
+    // three can only drop both caps, so Godot's single-cap removal is not
+    // representable. The ends open only when both caps are off.
     p.capTop === false && p.capBottom === false
   );
 }

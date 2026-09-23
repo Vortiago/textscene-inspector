@@ -1,14 +1,8 @@
 /**
- * What Godot declares on `Resource` itself, so every resource in a `.tscn`
- * validates it.
- *
- * The widest registration in the linter — the base-walk reaches it from every
- * resource class — which is why both entries are format checks with no bound:
- * `set_name` (resource.cpp:180) and `set_local_to_scene` (:643) bare-assign.
- *
- * `resource_path` and `resource_scene_unique_id` are declared beside them and
- * deliberately absent: EDITOR without STORAGE (:763) and USAGE_NONE (:765), so
- * neither is ever serialised.
+ * What Godot declares on `Resource`, reached from every resource class. Both are
+ * format checks: `set_name` (resource.cpp:180) and `set_local_to_scene` (:643)
+ * bare-assign. Never serialised, so absent: `resource_path` (EDITOR without
+ * STORAGE, :763) and `resource_scene_unique_id` (USAGE_NONE, :765).
  */
 
 import { validatorRegistry } from '../../linter/ValidatorRegistry.js';
