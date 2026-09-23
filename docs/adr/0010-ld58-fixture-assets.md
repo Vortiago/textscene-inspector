@@ -1,79 +1,21 @@
 # Commit the ld-58 fixture closure in the private repo; strip it before going public
 
-**Superseded by ADR-0033: the corpus is deployed, never committed.** This record describes the period when this was a private repository, and its two amendments below invert its own decision. ADR-0033 states what holds now. Kept for the reasoning behind the `res://`-mirrored layout and the script-strip.
+**Superseded by ADR-0033: the corpus is deployed, never committed.** ADR-0033 states what holds now. This record keeps the reasoning behind the `res://`-mirrored layout and the script-strip. Its two amendments below invert its own decision.
 
-A curated subset of ld-58 scenes plus their transitive `res://` resource closure
-is committed under `scenes/ld58/` (mirroring the `res://` tree so paths resolve)
-as visual-regression fixtures and showcase progress clips for both apps.
+A curated subset of ld-58 scenes plus their transitive `res://` resource closure was committed under `scenes/ld58/`, mirroring the `res://` tree so paths resolve, as visual-regression fixtures and showcase clips for both apps. The repository was private, and the step that made it public had to strip `scenes/ld58/`, the ld-58 showcase clips and any ld-58-specific fixtures. Asset licensing was therefore no blocker, and texture downscaling was a repo-size choice, not a licensing requirement. The music track is omitted: the visual previewer does not need it.
 
-**Repo plan (load-bearing):** this is a PRIVATE development repository. When the
-feature set and architecture are ready, the code will be moved to a PUBLIC repo
-**with all ld-58 references and assets removed**. So while developing here we
-commit the ld-58 scenes and assets as-is for fidelity and progress tracking. The
-public-move step is responsible for stripping `scenes/ld58/`, the ld-58 showcase
-clips, and any ld-58-specific fixtures. Asset redistribution licensing is
-therefore NOT a blocker now (private), and downscaling textures is an optional
-repo-size choice rather than a licensing requirement. The music track is still
-omitted (not needed for the visual previewer).
+Only raw `res://`-resolvable files are vendored. No Godot `.import` files and no `.godot/` remap directory are needed, because every `ext_resource` carries a direct `path="res://…"` that the renderer resolves itself. The web app resolves `res://x` to `/fixtures/x`, so the closure mirrors that structure under `scenes/ld58/` and is copied to `public/fixtures/` with its subpaths.
 
-Only raw `res://`-resolvable files are committed. No Godot `.import` files and
-no `.godot/` remap directory are needed, because every `ext_resource` carries a
-direct `path="res://…"` the renderer resolves itself. The web app resolves
-`res://x` to `/fixtures/x`, so the closure is committed under `scenes/ld58/`
-mirroring that structure and copied to `public/fixtures/` preserving subpaths.
+**Scripts are stripped.** A vendored `.tscn` file has every `[ext_resource type="Script" …]` entry and every `script = ExtResource(…)` property line removed, and `load_steps` recomputed (`1 + ext_resources + sub_resources`). The renderer ignores GDScript. The strip keeps game *code* out while it keeps the scene graph, meshes, materials and transforms verbatim. Editor metadata such as `metadata/_custom_type_script` stays: it carries no resource reference and is not a load step.
 
-**Scripts are stripped.** Vendored `.tscn` files have every
-`[ext_resource type="Script" …]` entry and every `script = ExtResource(…)`
-property line removed, and `load_steps` recomputed (`1 + ext_resources +
-sub_resources`). The renderer ignores GDScript anyway. Stripping keeps game
-*code* out of the (eventually public) repo while preserving the scene graph,
-meshes, materials, and transforms verbatim. Harmless editor metadata such as
-`metadata/_custom_type_script` is left as-is (it carries no resource reference
-and is not a load step). The full `Hallway.tscn` closure (286 nodes across 31
-sub-scenes, 11 GLBs, 3 materials, and about 25 downscaled images) was vendored
-this way and rendered end-to-end from the in-repo fixtures with no upload cascade.
+## Amendment: the strip is done
 
-Recorded because the private-now / strip-before-public lifecycle is a deliberate
-decision a future contributor must know (do not publish ld-58 assets), and the
-`res://`-mirrored fixture layout is non-obvious.
+`scenes/ld58/` is not committed. It is gitignored. A contributor who wants the vendored corpus locally, for example to re-derive a fixture, runs `pnpm vendor:ld58` (`scripts/vendor-ld58.mjs`). That is a manual, opt-in step against the public source repository, not part of `pnpm install` or CI. The showcase clips and screenshots that used `scenes/ld58/` content were removed or recorded again against synthetic and public fixtures.
 
-## Amendment (2026-07-15): the strip has been executed
+The wall-transform, instance-composition and 2D-UI-overlay regression tests rest on synthetic fixtures in `scenes/examples/` and `scenes/fixtures/`. They reproduce the same structural shapes (nested instance transforms, rotated planes, Control-heavy UI trees) with no vendored asset or content. The `res://`-mirrored layout above does not describe the current tree.
 
-The public-move step described above has run. `scenes/ld58/` is no longer
-committed. It is gitignored. A contributor who wants the original vendored
-corpus locally (for example to re-derive a fixture) can re-vendor it with
-`pnpm vendor:ld58` (`scripts/vendor-ld58.mjs`). That is a manual, opt-in step
-against the (public) source repo, not part of `pnpm install` or CI. The showcase
-clips and screenshots that depended on `scenes/ld58/` content were removed or
-re-recorded against synthetic and public fixtures.
+## Amendment: deployed, not committed
 
-Committed regression coverage that used to run against the vendored corpus
-(wall-transform, instance-composition, and 2D-UI-overlay regression tests) now
-rests on synthetic fixtures checked into `scenes/examples/` and
-`scenes/fixtures/`. They reproduce the same structural shapes (nested instance
-transforms, rotated planes, Control-heavy UI trees) without carrying any
-vendored asset or content. The `res://`-mirrored fixture layout described above
-is the historical record of how the closure was committed while this was a
-private repository. It no longer describes the current tree.
+The strip governs the repository only. The public web deployment (Cloudflare Pages, or whatever hosts `apps/textscene-web/dist`) carries the ld-58 corpus beside the vendored open-source games corpora. The hosted previewer is the showcase, and ld-58 is its richest real-world content. The decision rests on ownership: ld-58 is the author's own project, so its script-stripped, music-omitted, texture-downscaled assets on the author's own deployment need no third-party licence. The rule is: do not commit ld-58 assets, and do not ship them in any artefact other than the web deployment. The repository, the npm packages, the VS Code extension and the CI artefacts stay clean.
 
-## Amendment (2026-07-18): deployed, not committed
-
-The strip above governs the REPOSITORY only. The public web DEPLOYMENT
-(Cloudflare Pages today, or whatever hosts `apps/textscene-web/dist` tomorrow)
-DOES carry the ld-58 corpus, alongside the vendored open-source games corpora.
-The hosted previewer is the showcase, and ld-58 is its richest real-world
-content. The decision rests on ownership. ld-58 is the author's own project, so
-redistributing its (script-stripped, music-omitted, texture-downscaled) assets
-on the author's own deployment needs no third-party licence. The earlier
-"do not publish ld-58 assets" note therefore narrows to: do not COMMIT them, and
-do not ship them in any artefact other than the web deployment. The repo, the
-npm packages, the VS Code extension and the CI artefacts all stay clean.
-
-Mechanics: `pnpm build:site` vendors both corpora (`vendor:games` and
-`vendor:ld58`, both public sources, anonymous fetch), regenerates the fixture
-manifests, and produces the deployable `apps/textscene-web/dist`. Everything
-vendored stays gitignored. The ld-58 SOURCE repo being public does not change
-this repo's stance. The corpus stays repo-external here (curated whitelist,
-script-strip) and reaches users only through the web deployment. Old
-deployments made while the corpus was committed UNSTRIPPED should still be
-purged. The replacement deploy carries the script-stripped vendored form.
+Mechanics: `pnpm build:site` vendors both corpora (`vendor:games` and `vendor:ld58`, both public sources, anonymous fetch), regenerates the fixture manifests, and produces the deployable `apps/textscene-web/dist`. Everything vendored stays gitignored. The public ld-58 source repository does not change this stance: the corpus stays outside this repository (curated whitelist, script-strip) and reaches users only through the web deployment. A deployment made while the corpus was committed unstripped should be purged. Its replacement carries the script-stripped vendored form.
