@@ -9,7 +9,7 @@ renders_as: a toggle-switch icon followed by a text run
 
 # CheckButton
 
-CheckButton is a labelled on-off switch. The previewer draws the theme's own
+CheckButton is a labelled on-off switch. The previewer draws the theme's
 toggle-switch icon flush against the right edge and the label to its left, with no
 StyleBox chrome (CheckButton's own StyleBoxes are all a `StyleBoxEmpty`).
 
@@ -28,10 +28,9 @@ Strict parsing format-checks the inherited set (13 inherited from Button, 10 inh
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-CheckButton binds no NEW property of its own beyond Button's, only theme items, so the
-strict and lenient parsers agree on every key Button's own parser already reads. The
-lenient parser additionally reads `button_pressed` (a BaseButton property) for the
-switch's own on/off state.
+CheckButton binds no new property beyond Button's, only theme items, so the strict and
+lenient parsers agree on every key Button's parser reads. The lenient parser also reads
+`button_pressed` (a BaseButton property) for the on/off state of the switch.
 
 ## Known limitations
 
@@ -39,5 +38,5 @@ switch's own on/off state.
   parsed but never drawn.
 - **Approximated** The label's paragraph direction is not applied, so under
   `layout_direction = 3` or `text_direction = 2` a right-to-left script, or a label
-  ending in punctuation, keeps left-to-right glyph order. Which SIDE the label, the
+  ending in punctuation, keeps left-to-right glyph order. Which side the label, the
   icon and the chrome sit on does follow the layout direction.

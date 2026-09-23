@@ -10,32 +10,37 @@ renders_as: the sample row, the RGB/HSV/Linear mode row, the channel slider grid
 # ColorPicker
 
 ColorPicker is the widget for choosing a colour through sliders, a wheel, hex input and
-presets. It builds its whole widget as internal children in its C++ constructor, none of
-which a `.tscn` ever serialises, so this previewer's painter draws the composite
-directly from `color`/`picker_shape`/every row-visibility property rather than a subtree
-it could walk. It draws the pick/shape buttons (with their own `screen_picker`/`shape_rect`
-icons) and colour sample (checkerboard + swatch), the RGB/HSV/Linear mode row (OKHSL has
-no button of its own — only the dropdown reaches it; the CURRENT mode's button draws
-`TabContainer`'s own `tab_selected` box and white `font_pressed_color` text,
-`BIND_THEME_ITEM_EXT`'d in from `color_picker.cpp:2060-2062`, every other mode button
-`tab_unselected`, plus `btn_mode`'s own `menu_option` icon), the channel slider grid for
-the current `color_mode` (with the
-alpha/intensity rows `edit_alpha`/`edit_intensity` add) — every channel/alpha row draws
-the stock `HSlider` chrome underneath its gradient band and the `bar_arrow` grabber
-`_reset_sliders_theme` overrides it to (`color_picker.cpp:628-651`); intensity alone
-keeps the default circle grabber, since that override skips it. Each row's own value
-`SpinBox` draws only its `LineEdit` field's real width (`spin_box.cpp:82-86`), with the
-`up`/`down` stepper icons in the buttons block beside it — the hex/expression
-field, and
-the swatches rows — a collapsed "Swatches" toggle (with its own `folded_arrow`, always
-the state since neither ever toggles) + menu button and a "Recent Colors" toggle, which
-is the true content of a `.tscn`-loaded picker: presets only ever arrive
-through `add_preset()` at runtime, never a serialised property, and Godot itself leaves
-the swatches grid collapsed until a viewer expands it, so there is no grid to draw.
-Every row-visibility flag also moves this node's minimum size, matching
-`real_vbox`'s own combined minimum. At the default `picker_shape` (the HSV rectangle) it
-also draws the SV square and hue slider with their cursor/indicator. Everything else is
-a documented gap — see "Known limitations".
+presets. Its C++ constructor builds the whole widget as internal children, and a `.tscn`
+never serialises them. So the previewer's painter draws the composite directly from
+`color`, `picker_shape` and every row-visibility property, not from a subtree it could
+walk. It draws these parts:
+
+- The pick and shape buttons, with their `screen_picker` and `shape_rect` icons, and the
+  colour sample (checkerboard and swatch).
+- The RGB/HSV/Linear mode row. OKHSL has no button, and only the dropdown reaches it.
+  The current mode's button draws `TabContainer`'s `tab_selected` box and white
+  `font_pressed_color` text, which `BIND_THEME_ITEM_EXT` brings in from
+  `color_picker.cpp:2060-2062`. Every other mode button draws `tab_unselected`, and
+  `btn_mode` adds its `menu_option` icon.
+- The channel slider grid for the current `color_mode`, with the alpha and intensity rows
+  that `edit_alpha` and `edit_intensity` add. Every channel and alpha row draws the stock
+  `HSlider` chrome under its gradient band, with the `bar_arrow` grabber that
+  `_reset_sliders_theme` sets (`color_picker.cpp:628-651`). Intensity keeps the default
+  circle grabber, since that override skips it.
+- The value `SpinBox` of each row, drawn at the real width of its `LineEdit` field
+  (`spin_box.cpp:82-86`), with the `up`/`down` stepper icons in the buttons block beside
+  it.
+- The hex/expression field.
+- The swatches rows: a collapsed "Swatches" toggle with its `folded_arrow` and a menu
+  button, and a "Recent Colors" toggle. Neither toggle changes state. This is all a
+  `.tscn`-loaded picker holds: presets arrive only through `add_preset()` at runtime,
+  never as a serialised property. Godot leaves the swatches grid collapsed until a viewer
+  expands it, so there is no grid to draw.
+- At the default `picker_shape` (the HSV rectangle), the SV square and the hue slider
+  with their cursor and indicator.
+
+Every row-visibility flag also moves this node's minimum size, to match the combined
+minimum of `real_vbox`. "Known limitations" lists everything else.
 
 ## Linting
 
@@ -69,35 +74,32 @@ Strict parsing format-checks these `ColorPicker` properties, plus 1 inherited fr
 
 `index.ts` reads `color`, `picker_shape`, `color_mode`, `color_modes_visible`,
 `sliders_visible`, `hex_visible`, `presets_visible`, `sampler_visible`, `edit_alpha` and
-`edit_intensity` alongside VBoxContainer's own properties. `can_add_swatches` and
-`deferred_mode` stay unread — see the allowlist's own citation for why (a
-never-visible button, and signal timing). A `picker_shape` of `7` or a malformed
-`color` loads and renders the same as a well-formed value; an absent `color` renders
-opaque WHITE (`ColorPicker::ColorPicker()` calls `set_pick_color(Color(1, 1, 1))`,
-`color_picker.cpp:2289`), not the raw `Color()` member default.
+`edit_intensity` with VBoxContainer's properties. `can_add_swatches` and `deferred_mode`
+stay unread, and the allowlist's citation gives the reason: a button that is never
+visible, and signal timing. A `picker_shape` of `7` or a malformed `color` loads and
+renders the same as a well-formed value. An absent `color` renders opaque white, not the
+raw `Color()` member default, because `ColorPicker::ColorPicker()` calls
+`set_pick_color(Color(1, 1, 1))` (`color_picker.cpp:2289`).
 
 ## Known limitations
 
-- **Shader missing** `picker_shape` values other than `0` (HSV Rectangle) select a
-  shader-backed shape (wheel, VHS/OKHSL circle, either OK rectangle) this previewer does
-  not reproduce; only the sample row and the shape row's own (zero-height) stacking slot
-  draw. `SHAPE_NONE` (4) draws nothing in Godot too, so it is not a gap.
-- **Not drawn** `text_type`'s own `script` icon (`theme_cache.color_script`,
-  `color_picker.cpp:1324`) — only reachable once `text_is_constructor` flips true (an HDR
-  or negative `color`, `hexFieldText`'s own doc), which no shipped fixture exercises; its
-  box (`StyleBoxEmpty`, drawn but invisible) and its `""` text still render correctly
-  either way.
+- **Shader missing** A `picker_shape` other than `0` (HSV Rectangle) selects a
+  shader-backed shape (wheel, VHS/OKHSL circle, either OK rectangle) that this previewer
+  does not reproduce. Only the sample row and the zero-height stacking slot of the shape
+  row draw. `SHAPE_NONE` (4) draws nothing in Godot too, so it is not a gap.
+- **Not drawn** The `script` icon of `text_type` (`theme_cache.color_script`,
+  `color_picker.cpp:1324`). It is reachable only once `text_is_constructor` turns true,
+  for an HDR or negative `color` (see the doc of `hexFieldText`). Its box (`StyleBoxEmpty`, drawn but invisible) and its `""` text still
+  render correctly.
 - **Approximated** The HSV hue channel row (`color_mode = MODE_HSV`, slider index 0)
-  draws a flat grey base at full opacity instead of `ColorModeHSV::slider_draw`'s own
-  rainbow-texture overlay blended in at `alpha = saturation` (`color_mode.cpp:218-221`);
-  no shipped fixture selects `MODE_HSV`.
-- **Approximated** `colorPickerMinimumSize`'s own slider-row width term still floors the
-  channel-label column to `label_width` (10px) rather than the widest label's own shaped
-  text (`colorPickerLabelColumnWidth`'s own doc) — deriving the right label SET there
-  needs `colorPickerSliderLabels` (`colorModes.ts`), which already imports THIS module,
-  so pulling it in would cycle. The RENDERED slider grid (`Component.tsx`, which already
-  knows the current row set) uses the real widened column; only the minimum-size
-  calculation keeps the floor, and the shape row's own 290px floor still dominates this
-  node's real minimum width in every case any shipped fixture exercises.
-- **Not drawn** Focus rings (`draw_focus_rect`/`draw_focus_circle`) — a static previewer
+  draws a flat grey base at full opacity. `ColorModeHSV::slider_draw` blends a
+  rainbow-texture overlay in at `alpha = saturation` (`color_mode.cpp:218-221`).
+- **Approximated** The slider-row width term of `colorPickerMinimumSize` floors the
+  channel-label column to `label_width` (10px), not to the shaped width of the widest
+  label (see the doc of `colorPickerLabelColumnWidth`). The right label set comes from
+  `colorPickerSliderLabels` (`colorModes.ts`), which imports this module, so using it
+  there makes an import cycle. The rendered slider grid (`Component.tsx`) uses the real
+  widened column. Only the minimum-size calculation keeps the floor, and the 290px floor
+  of the shape row sets this node's minimum width in every shipped fixture.
+- **Not drawn** Focus rings (`draw_focus_rect`/`draw_focus_circle`): a static previewer
   has no focus.

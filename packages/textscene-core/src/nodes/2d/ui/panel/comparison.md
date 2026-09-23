@@ -10,8 +10,8 @@ renders_as: a StyleBox quad
 # Panel
 
 Panel is a bare rectangular Control that paints its `theme_override_styles/panel`
-StyleBox and holds free-anchored children. The previewer draws that StyleBox — fill,
-corner arcs and border ring — onto the canvas.
+StyleBox and holds free-anchored children. The previewer draws that StyleBox (fill,
+corner arcs and border ring) onto the canvas.
 
 ## Linting
 

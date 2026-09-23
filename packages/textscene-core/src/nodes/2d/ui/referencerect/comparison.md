@@ -10,9 +10,8 @@ renders_as: a coloured border outline
 # ReferenceRect
 
 ReferenceRect draws a plain coloured border around its rect as a design-time aid.
-`editor_only = false` draws it unconditionally, matching a real running game; the
-default (`true`) draws only while the node is selected, since Godot's own editor shows
-it always.
+`editor_only = false` draws it unconditionally, as a running game does. The default
+(`true`) draws it only while the node is selected, where Godot's editor shows it always.
 
 ## Linting
 

@@ -10,7 +10,7 @@ renders_as: a Button with a checkerboard + colour swatch over its face
 # ColorPickerButton
 
 ColorPickerButton is a Button that opens a ColorPicker popup and shows the chosen
-`color` on its face. The previewer draws the button's own chrome, then the
+`color` on its face. The previewer draws the button's chrome, then the
 checkerboard and colour swatch on top, inset by the "normal" StyleBox's content
 margins.
 
@@ -35,10 +35,10 @@ Strict parsing format-checks these `ColorPickerButton` properties, plus 13 inher
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-`index.ts` reads `color` (defaulting to Godot's own opaque black) alongside Button's
-own properties; it still never reads `edit_alpha`/`edit_intensity`, so a malformed
-value for either loads and renders the same as a well-formed one. A malformed
-`color = Color(1, 1)` fails `COLOR_RE` and falls back to `parseColor`'s own white.
+`index.ts` reads `color` (default: Godot's opaque black) with Button's properties. It
+never reads `edit_alpha` or `edit_intensity`, so a malformed value for either loads and
+renders the same as a well-formed one. A malformed `color = Color(1, 1)` fails `COLOR_RE`
+and falls back to the white of `parseColor`.
 
 ## Known limitations
 
