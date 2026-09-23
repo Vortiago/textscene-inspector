@@ -1,10 +1,7 @@
 /**
- * Environment slice DECODE (ADR-0031): one `Environment` body's raw Godot-text
- * property strings in, `EnvironmentProperties` out.
- *
- * Pure and THREE-free. Every default is the one Godot's own `Environment`
- * constructor installs (`scene/resources/environment.h`), because a property a
- * scene omits is the common case rather than the exception.
+ * Environment slice decode (ADR-0031): one `Environment` body's property strings in,
+ * `EnvironmentProperties` out. THREE-free. Every default is the one Godot's
+ * `Environment` constructor installs (`scene/resources/environment.h`).
  */
 
 import type { EnvironmentProperties } from './types';
@@ -40,9 +37,9 @@ export function decodeEnvironment(
     background_energy_multiplier: floatOr(properties.background_energy_multiplier, 1.0, 'background_energy_multiplier'),
     sky: properties.sky,
 
-    // Tonemapping. AGX reads its OWN two properties rather than `tonemap_white`
+    // Tonemapping. AgX reads its own two properties rather than `tonemap_white`
     // (`Environment::_update_tonemap`), and their defaults are Blender's AgX
-    // values — 16.29 and 1.25 (`environment.h`), not the other curve's 1.0.
+    // values, 16.29 and 1.25 (`environment.h`), not the other curve's 1.0.
     tonemap_mode: intOr(properties.tonemap_mode, 0, 'tonemap_mode'),
     tonemap_white: floatOr(properties.tonemap_white, 1.0, 'tonemap_white'),
     tonemap_agx_white: floatOr(properties.tonemap_agx_white, 16.29, 'tonemap_agx_white'),
@@ -53,7 +50,7 @@ export function decodeEnvironment(
     ),
     tonemap_exposure: floatOr(properties.tonemap_exposure, 1.0, 'tonemap_exposure'),
 
-    // Ambient lighting (Godot default ambient_light_color is BLACK / no ambient)
+    // Ambient lighting: Godot's default ambient_light_color is black, no ambient.
     ambient_light_source: intOr(properties.ambient_light_source, 0, 'ambient_light_source'),
     ambient_light_color: colorOr(properties.ambient_light_color, { r: 0, g: 0, b: 0, a: 1 }),
     ambient_light_energy: floatOr(properties.ambient_light_energy, 1.0, 'ambient_light_energy'),
@@ -63,7 +60,7 @@ export function decodeEnvironment(
       'ambient_light_sky_contribution'
     ),
 
-    // Screen-space fog (Godot defaults: density 0.01, light_color ~bluish-grey)
+    // Screen-space fog.
     fog_enabled: boolSlotValue(properties.fog_enabled) === true,
     fog_density: floatOr(properties.fog_density, 0.01, 'fog_density'),
     fog_light_color: colorOr(properties.fog_light_color, { r: 0.518, g: 0.553, b: 0.608, a: 1 }),
@@ -75,7 +72,7 @@ export function decodeEnvironment(
     volumetric_fog_albedo: colorOr(properties.volumetric_fog_albedo, { r: 1, g: 1, b: 1, a: 1 }),
     volumetric_fog_emission: colorOr(properties.volumetric_fog_emission, { r: 0, g: 0, b: 0, a: 1 }),
 
-    // Glow / bloom (Godot Environment defaults)
+    // Glow.
     glow_enabled: boolSlotValue(properties.glow_enabled) === true,
     glow_levels: parseGlowLevels(properties),
     glow_normalized: boolSlotValue(properties.glow_normalized) === true,

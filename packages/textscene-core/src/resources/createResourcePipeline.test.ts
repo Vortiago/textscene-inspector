@@ -1,8 +1,4 @@
-/**
- * createResourcePipeline wires a host ResourceProvider into the resource
- * pipeline (FileEventBus → ResourceLoader → setProvider) in one place, so the
- * web and VS Code hosts stop hand-rolling the same three-step construction.
- */
+/** createResourcePipeline wires a host ResourceProvider in: FileEventBus, then ResourceLoader, then setProvider. */
 import { describe, it, expect } from 'vitest';
 import { createResourcePipeline } from './createResourcePipeline';
 import { ResourceLoader } from './ResourceLoader';

@@ -1,7 +1,4 @@
-/**
- * Tests for MetadataStore — the id ↔ path registry consulted by the scene
- * processor's metadata resolution and ResourceLoader's path/type lookups.
- */
+/** MetadataStore: the id-to-path registry behind the scene processor's and ResourceLoader's lookups. */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MetadataStore } from './MetadataStore';
 import type { ExtResource } from '../parser/types';

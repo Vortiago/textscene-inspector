@@ -1,16 +1,12 @@
 /**
- * Godot's `tonemap.glsl` `main()` — the pass that assembles a glow blend and a tone
- * curve into one fragment shader.
- *
- * Its own module because it is neither of the two things it composes. `godotGlow.ts`
- * describes Godot's glow and `godotToneMapping.ts` its tone curves; putting the
- * assembly in either would make that one import the other, and then nothing could
- * ask "does this environment glow?" without pulling in all five tone-curve bodies.
- * The arrow cannot be reversed either: the in-material tonemap path already imports
- * the curves and has no business acquiring glow.
- *
+ * Godot's `tonemap.glsl` `main()`: one fragment shader from a glow blend and a tone
+ * curve. Its own module, so asking "does this environment glow?" pulls in no tone
+ * curve, and the in-material tonemap path pulls in no glow.
+ */
+
+/*
  * Ported from Godot 4.6's `servers/rendering/renderer_rd/shaders/effects/tonemap.glsl`,
- * used under the MIT licence — see THIRD-PARTY-NOTICES.md.
+ * used under the MIT licence: see THIRD-PARTY-NOTICES.md.
  */
 
 import { blendGlsl, blendsAfterToneMapping, type GlowParams } from './godotGlow';
@@ -18,17 +14,10 @@ import { glslFloat } from './glslLiterals';
 import { resolvedWhite, toneMappingEffectGlsl } from './godotToneMapping';
 
 /**
- * The whole composite, in `tonemap.glsl`'s order — the glow gather, the blend, and
- * the tone curve in one shader, which is how Godot ships it.
- *
- * Exposure is the subtle part. Godot applies it to the SCENE colour once, before
- * the blend (`color.rgb *= exposure` near the top of `main()`), while the GLOW
- * buffer was already exposed by the bright pass. So the tone curve here is invoked
- * with an exposure of 1.0: it is the curve alone, and each operand has been exposed
- * exactly once. Multiplying by exposure again would double it on the glow and, on
- * the pre-tonemap path, scale the blended sum instead of its operands.
- *
- * A null `params` is the same shader with `FLAG_USE_GLOW` clear.
+ * The whole composite in `tonemap.glsl`'s order: glow gather, blend and tone curve.
+ * Godot exposes the scene once before the blend (`color.rgb *= exposure`), and the
+ * bright pass already exposed the glow, so the curve runs at exposure 1.0. A null
+ * `params` is the same shader with `FLAG_USE_GLOW` clear.
  */
 export function compositeGlsl(
   params: GlowParams | null,
@@ -42,11 +31,9 @@ export function compositeGlsl(
     : /* glsl */ `  vec3 color = godotGlowBlend(max(inputColor.rgb, 0.0) * godotExposure, glow);
   color = godotToneMap(color, 1.0);`;
 
-  // SCREEN normalises against Godot's `params.white`, which the renderer fills
-  // from `environment_get_white` — the FLOORED white, not the authored property
+  // SCREEN normalises against `params.white`, the floored white, not the authored one
   // (`renderer_scene_render_rd.cpp`: `tonemap.white = environment_get_white(...)`).
-  // Godot's own comment on the clamp inside `apply_glow` says as much: "white
-  // cannot be smaller than the maximum output value".
+  // Godot's comment in `apply_glow`: "white cannot be smaller than the maximum output value".
   return /* glsl */ `
 uniform sampler2D godotGlowBuffer;
 uniform float godotExposure;

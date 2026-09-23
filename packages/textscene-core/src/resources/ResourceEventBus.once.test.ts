@@ -1,12 +1,7 @@
 /**
- * Focused tests for `ResourceEventBus.once()` — live infrastructure, not a
- * legacy shim: `ResourceLoader` awaits inline material textures through it
- * (see the `loadTexture` closure in ResourceLoader's constructor).
- *
- * Complements `ResourceEventBus.test.ts`: this file pins the settle-once
- * contract, the synthesized default failure error, the eventType==='failed'
- * waiting mode, and post-settlement listener cleanup observed by emitting
- * again after resolution.
+ * `ResourceEventBus.once()`, through which `ResourceLoader` awaits a peer processor:
+ * it settles once, synthesises a default failure error, can wait on `failed` itself,
+ * and removes its listeners after settling.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ResourceEventBus } from './ResourceEventBus';

@@ -1,19 +1,7 @@
 /**
- * Regression contract: Color decoders must accept scientific-notation channels.
- *
- * The material/Environment `parseColor` and the Environment linter's colour check
- * matched channels with `[\d.]+`, which excludes `e`/`E`/`+`/`-`. So a normal Godot
- * color like `Color(1.8771e-06, 0.751954, 0.25936, 1)` fails: the material silently
- * drops albedo to default (try/catch), Environment's parse throws outright, and the
- * Environment linter reports a bogus colour-format error. The decoders must accept
- * Godot's full float grammar (sci-notation + sign) — WITHOUT loosening to accept
- * garbage and WITHOUT changing the throw-on-invalid contract.
- *
- * The linter half of this now rides on the shared `v.color` combinator, so the
- * guard lives in one float grammar rather than a per-resource regex.
- *
- * Also pins acceptance criterion 4: the StandardMaterial3D linter must actually
- * validate albedo_color (today no validator is registered).
+ * Colour decoders and validators accept Godot's full float grammar, scientific
+ * notation and sign included, as in `Color(1.8771e-06, 0.751954, 0.25936, 1)`. They
+ * still reject garbage and keep the throw-on-invalid contract.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -52,8 +40,6 @@ describe('#141 scientific-notation color channels', () => {
     expect(validator!('albedo_color', MAT_SCI, 1)).toBeNull();
   });
 
-  // --- regression guards: must keep passing after the fix ---
-
   it('still decodes a plain decimal color', () => {
     expect(parseColor('Color(0.5, 0.25, 0.125, 1)')).toEqual({ r: 0.5, g: 0.25, b: 0.125, a: 1 });
   });
@@ -61,8 +47,6 @@ describe('#141 scientific-notation color channels', () => {
   it('still throws on a genuinely invalid color (grammar not loosened to garbage)', () => {
     expect(() => parseColor('Color(not, a, color, x)')).toThrow();
   });
-
-  // --- hardening (added on the /code-review pass; the green gate did not pin these) ---
 
   it('decodes Godot signed and HDR (>1) channels (the full grammar the fix enables)', () => {
     expect(parseColor('Color(-0.5, 1.0, 2.5, 1)')).toEqual({ r: -0.5, g: 1, b: 2.5, a: 1 });
@@ -99,9 +83,9 @@ describe('#141 scientific-notation color channels', () => {
   it(
     'rejects a pathological long-digit Color in linear time (no ReDoS backtracking)',
     () => {
-      // The non-matching `!` tail makes `\d+\.?\d*` backtrack O(n^2); the linear `\d+(?:\.\d*)?`
-      // grammar fails fast. 100_000 is the regression-detection threshold: the linear form runs
-      // in <1ms, a revert to the backtracking form takes seconds and blows the 2s timeout.
+      // The non-matching `!` tail makes `\d+\.?\d*` backtrack O(n^2), while the linear
+      // `\d+(?:\.\d*)?` fails fast. At 100_000 digits the linear form runs in <1ms and the
+      // backtracking form takes seconds, past the 2s timeout.
       const adversarial = `Color(${'9'.repeat(100_000)}!, 0, 0, 1)`;
       expect(() => parseColor(adversarial)).toThrow();
     },

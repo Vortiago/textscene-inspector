@@ -1,9 +1,7 @@
 /**
- * Environment's Fog and Volumetric Fog groups (`environment.cpp:1491-1548`).
- *
- * Several fog properties hint `or_less,or_greater` — both ends open, so they
- * carry no bound at all: fog below the horizon and negative height density are
- * things scenes really set.
+ * Environment's Fog and Volumetric Fog groups (`environment.cpp:1491-1548`). Several
+ * hint `or_less,or_greater`, both ends open, so they carry no bound: scenes set fog
+ * below the horizon and negative height density.
  */
 
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';

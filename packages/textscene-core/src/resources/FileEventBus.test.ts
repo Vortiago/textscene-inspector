@@ -22,7 +22,6 @@ describe('FileEventBus', () => {
 
       eventBus.request('res://test.tscn');
 
-      // Wait for async load
       await vi.waitFor(() => {
         expect(handler).toHaveBeenCalledWith('res://test.tscn', 'file content');
       });
@@ -68,19 +67,16 @@ describe('FileEventBus', () => {
 
       vi.mocked(mockProvider.loadResource).mockResolvedValue('cached content');
 
-      // First request
       eventBus.request('res://cached.tscn');
       await vi.waitFor(() => {
         expect(handler).toHaveBeenCalledTimes(1);
       });
 
-      // Second request - should hit cache
       eventBus.request('res://cached.tscn');
       await vi.waitFor(() => {
         expect(handler).toHaveBeenCalledTimes(2);
       });
 
-      // Provider should only be called once
       expect(mockProvider.loadResource).toHaveBeenCalledTimes(1);
     });
 
@@ -93,19 +89,16 @@ describe('FileEventBus', () => {
         () => new Promise((resolve) => { resolveLoad = resolve; })
       );
 
-      // Multiple simultaneous requests
       eventBus.request('res://slow.tscn');
       eventBus.request('res://slow.tscn');
       eventBus.request('res://slow.tscn');
 
-      // Resolve the single load
       resolveLoad!('content');
 
       await vi.waitFor(() => {
         expect(handler).toHaveBeenCalledTimes(1);
       });
 
-      // Provider should only be called once
       expect(mockProvider.loadResource).toHaveBeenCalledTimes(1);
     });
   });
@@ -122,7 +115,6 @@ describe('FileEventBus', () => {
         expect(handler).toHaveBeenCalledTimes(1);
       });
 
-      // Unsubscribe
       eventBus.off('loaded', handler);
       eventBus.clearCache('res://test2.tscn');
 
@@ -131,7 +123,6 @@ describe('FileEventBus', () => {
         expect(mockProvider.loadResource).toHaveBeenCalledTimes(2);
       });
 
-      // Handler should not be called again
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
@@ -213,7 +204,7 @@ describe('FileEventBus', () => {
 
       eventBus.request('res://tex.png'); // stale flight
       eventBus.clearCache();
-      eventBus.request('res://tex.png'); // must NOT dedupe into the stale flight
+      eventBus.request('res://tex.png'); // must not dedupe into the stale flight
       releaseStale('old-corpus bytes');
 
       await vi.waitFor(() => {
@@ -233,7 +224,7 @@ describe('FileEventBus', () => {
 
       eventBus.request('res://tex.png'); // original flight (file about to change)
       eventBus.clearCache('res://tex.png'); // provideFile's per-path clear
-      eventBus.request('res://tex.png'); // must be a FRESH fetch, not a dedupe
+      eventBus.request('res://tex.png'); // must be a fresh fetch, not a dedupe
       releaseStale('pre-provide bytes');
 
       await vi.waitFor(() => {

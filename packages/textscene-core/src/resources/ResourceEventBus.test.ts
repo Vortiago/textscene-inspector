@@ -82,10 +82,8 @@ describe('ResourceEventBus', () => {
       eventBus.on('texture', 'loaded', errorHandler);
       eventBus.on('texture', 'loaded', normalHandler);
 
-      // Should not throw
       expect(() => eventBus.emit('texture', 'loaded', 'tex1')).not.toThrow();
 
-      // Both handlers should have been called
       expect(errorHandler).toHaveBeenCalled();
       expect(normalHandler).toHaveBeenCalled();
     });
@@ -132,10 +130,9 @@ describe('ResourceEventBus', () => {
 
       const promise = eventBus.once<string>('texture', 'loaded', 'tex1');
 
-      // Emit for different id - should not resolve our promise
+      // Another id does not resolve the promise.
       eventBus.emit('texture', 'loaded', 'tex2', 'wrong');
 
-      // Emit for correct id
       setTimeout(() => eventBus.emit('texture', 'loaded', 'tex1', 'correct'), 10);
 
       const result = await promise;
@@ -172,7 +169,7 @@ describe('ResourceEventBus', () => {
       try {
         await promise;
       } catch {
-        // Expected
+        // The rejection is the expected outcome.
       }
 
       expect(eventBus.getHandlerCount('texture', 'loaded')).toBe(initialCount);
@@ -296,23 +293,19 @@ describe('ResourceEventBus', () => {
     it('does not accumulate handlers with repeated once calls', async () => {
       const initialCount = eventBus.getTotalHandlerCount();
 
-      // Simulate 100 resource loads
       const promises: Promise<string>[] = [];
       for (let i = 0; i < 100; i++) {
         promises.push(eventBus.once<string>('texture', 'loaded', `tex${i}`));
       }
 
-      // Each once adds handlers
       expect(eventBus.getTotalHandlerCount()).toBeGreaterThan(initialCount);
 
-      // Resolve all
       for (let i = 0; i < 100; i++) {
         eventBus.emit('texture', 'loaded', `tex${i}`, `data${i}`);
       }
 
       await Promise.all(promises);
 
-      // All handlers should be cleaned up
       expect(eventBus.getTotalHandlerCount()).toBe(initialCount);
     });
   });

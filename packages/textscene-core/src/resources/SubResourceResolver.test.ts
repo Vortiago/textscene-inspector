@@ -1,12 +1,4 @@
-/**
- * Tests for the resource-reference helpers: `parseResourceReference`
- * (raw `SubResource("id")` / `ExtResource("id")` parsing), `resolveInstancePath`
- * (a Node's instance ref → `res://` path, the single resolver shared by
- * NodeDispatcher, useSubSceneChildren, and the live-tree resolver
- * `resolveLiveNode`), and `resolveSubResourceRef` (a raw `SubResource("id")`
- * property string → its internal resource, shared by the CollisionShape2D/3D
- * R3F components).
- */
+/** The resource-reference helpers in `SubResourceResolver.ts`. */
 import { describe, it, expect } from 'vitest';
 import {
   parseResourceReference,
@@ -146,8 +138,7 @@ describe('unwrapCanvasTextureRef', () => {
   });
 
   it('peels a chain of wrappers to the first reference that is not one', () => {
-    // THREE levels: two peels is what the callers used to spell out by hand, so
-    // only a third distinguishes a fixed point from a fixed count.
+    // Three levels: only a third distinguishes a fixed point from a count of two.
     expect(unwrapCanvasTextureRef('SubResource("CanvasTexture_outer")', internals)).toBe(
       'ExtResource("5")'
     );
@@ -167,14 +158,9 @@ describe('unwrapCanvasTextureRef', () => {
 
 describe('resolveExtAtlasTexturePath — the declared type is the SLOT\'s', () => {
   /**
-   * Godot writes an `[ext_resource]`'s `type=` from the property SLOT, not from
-   * the target's own class: an AtlasTexture in a `texture` slot is written
-   * `type="Texture2D"`. Measured across a real corpus — of every `.tres`
-   * ext_resource there, the declared types were Texture2D, StyleBox,
-   * SpriteFrames, Theme and TileSet, and `AtlasTexture` appeared exactly zero
-   * times, while the files' own `[gd_resource type=]` headers said otherwise.
-   *
-   * So the declared type cannot gate this, and the file has to be read.
+   * Godot writes an `[ext_resource]`'s `type=` from the property slot, not the
+   * target's class: an AtlasTexture in a `texture` slot is `type="Texture2D"`. So
+   * the declared type cannot gate this, and the file has to be read.
    */
   it('matches a .tres the scene declares as the slot type Texture2D', () => {
     const ext = [{ id: '1', type: 'Texture2D', path: 'res://icons/arrow_left.tres' }];

@@ -1,9 +1,4 @@
-/**
- * Curve3D slice types.
- *
- * Godot 3D space is right-handed Y-up, matching three.js, so these coordinates
- * map directly to render space (no conjugation, unlike the 2D twin).
- */
+/** Curve3D slice types. Godot 3D space is right-handed Y-up, as three.js is, so coordinates map directly. */
 
 export interface Vec3 {
   x: number;

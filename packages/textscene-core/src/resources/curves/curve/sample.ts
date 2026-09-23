@@ -43,9 +43,9 @@ import { CMP_EPSILON } from '../../../godot/index.js';
 
 
 /**
- * `Curve::sample` — the value at `offset`. Out-of-range offsets clamp to the
- * first/last point's value; an empty curve answers 0, which is what a caller
- * that treats a missing curve as "no curve" must NOT confuse with a flat 1.
+ * `Curve::sample`: the value at `offset`. An out-of-range offset clamps to the first
+ * or last point's value. An empty curve answers 0, which a caller must not confuse
+ * with a flat 1.
  */
 export function sampleCurve(curve: Curve, offset: number): number {
   const points = curve.points;
@@ -62,12 +62,9 @@ export function sampleCurve(curve: Curve, offset: number): number {
 }
 
 /**
- * `Curve::get_index` — a lower-bound binary search for the span containing
- * `offset`. Answers the LAST index when the offset is past the end and 0 when
- * it is before the start, so `sample` can clamp on both sides.
- *
- * Exported because `decode.ts` seats a padded point through the same search
- * `Curve::_add_point` uses.
+ * `Curve::get_index`: a lower-bound binary search for the span containing `offset`.
+ * It answers the last index past the end and 0 before the start. Exported for
+ * `pointCount.ts`, which seats a padded point through it, as `Curve::_add_point` does.
  */
 export function curveIndex(points: readonly CurvePoint[], offset: number): number {
   let imin = 0;
@@ -86,7 +83,7 @@ export function curveIndex(points: readonly CurvePoint[], offset: number): numbe
 }
 
 /**
- * `Curve::sample_local_nocheck` — the span between `index` and `index + 1`,
+ * `Curve::sample_local_nocheck`: the span between `index` and `index + 1`,
  * `localOffset` measured from the left point in curve units (not normalised).
  */
 function sampleLocalNoCheck(
@@ -110,7 +107,7 @@ function sampleLocalNoCheck(
   return bezierInterpolate(a.position.y, yac, ybc, b.position.y, t);
 }
 
-/** `Math::bezier_interpolate` — the scalar cubic Bézier. */
+/** `Math::bezier_interpolate`: the scalar cubic Bézier. */
 function bezierInterpolate(
   start: number,
   control1: number,

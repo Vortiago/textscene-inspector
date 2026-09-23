@@ -1,10 +1,7 @@
 /**
- * `glslFloat` is a codegen guard, not a parity constant: its contract is the
- * GLSL ES grammar's floating-point literal, which has no int→float coercion in
- * a constant initialiser and no spelling at all for `NaN` / `Infinity`. A value
- * this emits wrong does not render wrong — the shader fails to compile and the
- * whole frame is lost, which is why the malformed cases matter as much as the
- * ordinary ones.
+ * `glslFloat` emits a GLSL ES floating-point literal, which has no int→float
+ * coercion in a constant initialiser and no spelling for `NaN` or `Infinity`. A
+ * wrong literal fails to compile and loses the whole frame.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -31,8 +28,7 @@ describe('glslFloat — ordinary values', () => {
   });
 
   it('emits the Godot glow defaults these builders actually bake', () => {
-    // The default level weights and knee width, i.e. the values every generated
-    // glow shader carries.
+    // The default level weights and knee width, which every generated glow shader carries.
     expect(glslFloat(0.8)).toBe('0.8');
     expect(glslFloat(2)).toBe('2.0');
     expect(glslFloat(12)).toBe('12.0');
@@ -49,9 +45,8 @@ describe('glslFloat — values GLSL cannot spell', () => {
   });
 
   it('lets the exponent carry the type past the point JS switches notation', () => {
-    // `String(1e21)` is `1e+21`, and `1e+21.0` is not a literal — the exponent
-    // form is already a float, so the decimal must NOT be appended. The `+` goes
-    // because GLSL accepts it but Godot's own generated shaders omit it.
+    // `String(1e21)` is `1e+21`, and `1e+21.0` is not a literal: the exponent form is
+    // already a float. The `+` goes, since Godot's own generated shaders omit it.
     expect(glslFloat(1e21)).toBe('1e21');
     expect(glslFloat(1.5e22)).toBe('1.5e22');
   });

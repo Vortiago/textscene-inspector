@@ -1,17 +1,8 @@
 /**
- * AMBIENT_SOURCE_BG — the DEFAULT `ambient_light_source` — lights the scene
- * from the background colour.
- *
- * Both Godot renderers agree (render_scene_data_rd.cpp / rasterizer_scene_gles3.cpp):
- *
- *   source == BG && (bg == CLEAR_COLOR || bg == COLOR):
- *     colour  = bg == CLEAR_COLOR ? project default_clear_color : background_color
- *     ambient = srgbToLinear(colour) * background_energy_multiplier
- *
- * We emitted flat ambient only for sources COLOR(2)/SKY(3), so an Environment
- * that never names a source — the common case, and what
- * scenes/demos/3d/graphics_settings/control.tscn does with a 0.6 grey
- * background — got no ambient at all.
+ * AMBIENT_SOURCE_BG, the default source, lights the scene from the background colour
+ * over CLEAR_COLOR or COLOR: `srgbToLinear(colour) * background_energy_multiplier`,
+ * with the project `default_clear_color` for CLEAR_COLOR. Both renderers agree
+ * (render_scene_data_rd.cpp, rasterizer_scene_gles3.cpp).
  */
 import { describe, expect, it } from 'vitest';
 import { decodeEnvironment } from './decode';
@@ -45,10 +36,9 @@ describe('ambient from the background source', () => {
   });
 
   it('emits no flat ambient for a sky background — that path is a cubemap', () => {
-    // The flat term survives with zero energy rather than vanishing: Godot
-    // blends `mix(flat, sky, sky_contribution)`, so the colour is still the
-    // other end of a blend that a contribution below 1.0 would reopen.
-    // See renderer.sky-ambient.test.ts for the cubemap side.
+    // The flat term survives with zero energy: Godot blends `mix(flat, sky,
+    // sky_contribution)`, which a contribution below 1.0 reopens. The cubemap
+    // side is in build.sky-ambient.test.ts.
     expect(ambientFor({ background_mode: '2' })?.energy).toBe(0);
   });
 
