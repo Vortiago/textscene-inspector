@@ -1,56 +1,8 @@
 /**
- * `<ControlCanvasWalker>` — solves `tree` (from `buildSolveTree`) against
- * `viewport`/`theme` and emits one named `<group>` per Control at its solved
- * rect, in Godot pixels with +Y down converted to three's `-y` (`rect.ts`'s
- * convention: negate Y at the point of positioning — a plain per-axis negate,
- * not the whole-subtree conjugation Node2D needs (`node2dTransform.ts`),
- * because nothing about a Control's OWN rect solve shears).
- *
- * A node that promoted past a skipped Node2D-descended ancestor
- * (`buildSolveTree.ts`'s `SolveNode.skippedAncestors`) DOES need that
- * conjugation, for that ancestor's transform alone: `ancestorGroupMatrix`
- * bakes it into an extra outer `<group>`, wrapping this node's own — never
- * decomposed back to rotation/scale, since several composed ancestors can
- * shear even when none individually did.
- *
- * A Control whose `CanvasItem` chain BROKE needs no branch here: `buildSolveTree`
- * hoists it to the canvas it really parents to, so it arrives as a sibling of
- * the ancestor rather than a descendant, and no ancestor group, modulate
- * provider or `EffectiveZProvider` encloses it in the first place. Its
- * VISIBILITY still comes from the solve, because Godot's own conjunction
- * crosses breaks this nesting does not (`SolveNode.parentVisibleInTree`).
- *
- * That emitted origin is SNAPPED to whole pixels (`controlPixelSnap.ts`, the
- * port of `Control::_update_canvas_item_transform`) while the solved rect it
- * comes from stays fractional — Godot rounds the canvas item, never
- * `get_rect()`, and the solve's own arithmetic depends on the full-precision
- * value.
- *
- * A registered painter (`ControlComponentRegistry`) draws the node's own
- * chrome; `<ControlFallback>` draws an outline instead when none is
- * registered yet. Children render as siblings of the painter, not passed
- * through it as React children — the rect solver already gave every child an
- * absolute (parent-relative) rect, so no painter needs to arrange them the
- * way a DOM container's CSS does.
- *
- * Free-Control rotation/scale/pivot (`Container::fit_child_in_rect`'s rule: a
- * Container resets its children's transform, ending with
- * `set_rotation(0)`/`set_scale(Vector2(1,1))`) go on an inner group about the
- * pivot, applied ONLY when this node's PARENT imposes no registered
- * `ContainerLayoutFn` — i.e. the same free/anchored-vs-container split
- * `controlRectSolver.ts`'s own `dispatchChildren` already made when it solved
- * this node's rect, read from the SAME registry so the two paths cannot
- * disagree about which nodes are "free".
- *
- * Also publishes `EffectiveZProvider` for every node's own children — Controls
- * are CanvasItems too, and the whole native layer mounts inside
- * `CanvasLighting2DProvider` so a `PointLight2D`'s `range_z_min`/`range_z_max`
- * culling can reach them. Each node accumulates its OWN `z_index` onto the
- * ambient it read (`accumulateCanvasItemZ` — the ONE accumulation rule this
- * codebase has, shared with `CanvasItem2D.tsx`'s Node2D path and
- * `canvaslayer/Component.tsx`'s reset to 0), never the other way around —
- * preceded by one step per skipped ancestor, which mounts no group of its own
- * to publish from (`SkippedAncestors.z`).
+ * Solves `tree` against `viewport` and `theme`, and emits one named `<group>` per
+ * Control at its solved rect, Y negated per axis (`rect.ts`): a Control's own rect
+ * never shears. A registered painter draws the chrome, `<ControlFallback>` otherwise.
+ * Children render beside the painter, since the solve has already placed them.
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
@@ -78,16 +30,15 @@ import {
 
 export interface ControlCanvasWalkerProps {
   tree: readonly SolveNode[];
-  /** Bumps when a sub-scene/texture resolves (see `buildSolveTree`) — a dep the memo below can see. */
+  /** Bumps when a sub-scene or texture resolves (`buildSolveTree`), so the memo below re-solves. */
   generation: number;
   viewport: Rect2;
   theme: NativeTheme;
   measurer: TextMeasurer | null;
   /**
-   * `Viewport::is_snap_controls_to_pixels_enabled()` for the viewport THIS
-   * walk draws into. Omitted means "the root window's", i.e. the project
-   * setting — see the walker's own body for why a caller that owns a
-   * different viewport must state it.
+   * `Viewport::is_snap_controls_to_pixels_enabled()` for the viewport this walk
+   * draws into. Omitted means the root window's, the project setting. A caller
+   * that owns another viewport must state it.
    */
   snapToPixels?: boolean;
 }
@@ -95,14 +46,10 @@ export interface ControlCanvasWalkerProps {
 const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
 
 /**
- * `t`, conjugated by `F = diag(1, -1, 1)` (`node2dTransform.ts`'s own
- * convention) into a three.js `Matrix4`. `t` is a general affine — possibly
- * the PRODUCT of several ancestors' transforms, which can shear even when
- * none individually did — so this never decomposes back into rotation/scale
- * the way a single Node2D's own group does; it bakes the whole 2x3 straight
- * in, matching `node2dGroupProps`'s own skew branch when `t` is exactly one
- * transform (F·M·F expands to `[a, -c, tx; -b, d, -ty]` for Godot's
- * `columns[0]=(a,b)`, `columns[1]=(c,d)`, `columns[2]=(tx,ty)`).
+ * The skipped Node2D ancestors' transform `t`, conjugated by `F = diag(1, -1, 1)`
+ * (`node2dTransform.ts`). A product of ancestors can shear, so the 2x3 is baked in,
+ * never decomposed: F·M·F is `[a, -c, tx; -b, d, -ty]` for Godot's
+ * `columns[0]=(a,b)`, `columns[1]=(c,d)`, `columns[2]=(tx,ty)`.
  */
 export function ancestorGroupMatrix(t: Affine2D): THREE.Matrix4 {
   return new THREE.Matrix4().set(
@@ -121,27 +68,17 @@ export function ControlCanvasWalker({
   measurer,
   snapToPixels,
 }: ControlCanvasWalkerProps) {
-  // Resolved once for the whole tree: the flag is per-VIEWPORT in Godot
-  // (`Viewport::snap_controls_to_pixels`, `scene/main/viewport.h`), not
-  // per-node, so every node below answers to the same value.
-  //
-  // The project setting is the ROOT window's value and nothing else's:
-  // `main/main.cpp` does `sml->get_root()->set_snap_controls_to_pixels(
-  // GLOBAL_GET("gui/common/snap_controls_to_pixels"))`, while every other
-  // Viewport keeps the member's own `= true` initialiser. So a project that
-  // opts out turns the snap off for the root viewport ALONE, and a caller
-  // walking into a viewport of its own states the flag rather than inheriting
-  // a value that was never propagated there.
+  // Per viewport in Godot (`Viewport::snap_controls_to_pixels`,
+  // `scene/main/viewport.h`). `main/main.cpp` applies the project setting to the
+  // root window alone, and every other Viewport keeps its `= true` initialiser.
   const projectSnapToPixels = snapControlsToPixelsEnabled(useProjectSettings().settings);
   const snapEnabled = snapToPixels ?? projectSnapToPixels;
 
   const solved = useMemo(() => {
     const ctx = createSolveContext(theme, measurer);
     return solveControlTree(tree, viewport, ctx);
-    // `generation` is an intentional cache-buster (see `buildSolveTree.ts`):
-    // a StyleBox/texture inside `tree` can change value without `tree`'s own
-    // reference necessarily doing so from this memo's point of view, so the
-    // bump forces a re-solve. Not read inside the callback.
+    // `generation` is a cache-buster, not read inside: a StyleBox or texture in
+    // `tree` can change while `tree` keeps its reference.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tree, generation, measurer, viewport, theme]);
 
@@ -165,11 +102,11 @@ export function ControlCanvasWalker({
 interface ControlNodeGroupProps {
   solveNode: SolveNode;
   solved: ReadonlyMap<string, SolvedControl>;
-  /** Whether THIS node's parent imposes no container layout — see module doc. */
+  /** Whether this node's parent imposes no container layout. */
   isFreeParent: boolean;
   theme: NativeTheme;
   measureText: TextMeasurer | null;
-  /** `Viewport::is_snap_controls_to_pixels_enabled()` — see `controlPixelSnap.ts`. */
+  /** `Viewport::is_snap_controls_to_pixels_enabled()` (`controlPixelSnap.ts`). */
   snapToPixels: boolean;
 }
 
@@ -183,83 +120,57 @@ function ControlNodeGroup({
 }: ControlNodeGroupProps) {
   const props = controlProps(solveNode);
   const inheritedModulate = useInheritedModulate(props.modulate, solveNode.skippedAncestors?.modulate);
-  // The painter's own pixels continue the SAME chain one `self_modulate`
-  // further. Resolved here, not in the painter: the fold above is the walker's,
-  // and a painter reading it back from the provider is sixteen re-entries into
-  // one composition (`NativeControlComponentProps.tint`).
+  // The painter's pixels continue the chain one `self_modulate` further. Resolved
+  // here, so no painter re-enters the composition from the provider
+  // (`NativeControlComponentProps.tint`).
   const tint = useControlOwnTint(inheritedModulate, solveNode);
-  // Same shape as `inheritedModulate` above, but "own-or-ambient" rather than
-  // multiplicative: neither property has a self-only layer, so the ONE fold
-  // is both what this node's own painter samples with and what its
-  // descendants inherit.
+  // Own-or-ambient, not multiplicative: neither property has a self-only layer,
+  // so one fold serves this painter and the descendants.
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
-  // `solveNode.hidden` rather than a second read of `hiddenNodePaths`: the
-  // SOLVE already consulted it (`buildSolveTree.ts`), and two reads of one
-  // toggle could disagree about which node the container laid out.
-  // `CanvasItem::is_visible_in_tree()` is `visible && parent_visible_in_tree`
-  // (`canvas_item.cpp:62-64`). The second half arrives through the solve
-  // rather than through this walk's own group nesting, because the two
-  // disagree wherever Godot's conjunction crosses a break the nesting does
-  // not: a skipped Node2D mounts no group, and a `top_level` or chain-broken
-  // Control is emitted as a SIBLING of the ancestor whose flag still reaches
-  // it (`SolveNode.parentVisibleInTree`).
+  // `is_visible_in_tree()` is `visible && parent_visible_in_tree` (`canvas_item.cpp:62-64`).
+  // Both halves come from the solve, which read `hiddenNodePaths`: a skipped
+  // Node2D mounts no group, and a hoisted `top_level` or chain-broken Control is a
+  // sibling of the ancestor whose flag still reaches it.
   const isVisible = !solveNode.hidden && props.visible !== false && solveNode.parentVisibleInTree;
 
-  // Structurally guaranteed present (the solve walks this exact tree); the
-  // fallback only guards a mismatched tree/solved pair from ever crashing.
+  // Always present, since the solve walks this tree. The fallback guards a
+  // mismatched pair.
   const solvedEntry = solved.get(solveNode.path);
   const rect = solvedEntry?.rect ?? ZERO_RECT;
 
-  // `useCanvasLayerIndex` reads whichever CanvasLayer band is ambient at this
-  // position — `WORLD_CANVAS_LAYER` (0) with none, or the value a `CanvasLayer`
-  // ancestor's own painter published — see the `wrapsChildren` branch
-  // below, which the registration declares rather than the walker testing a
-  // type name.
+  // `WORLD_CANVAS_LAYER` (0), or what a `CanvasLayer` ancestor's painter published.
   const layer = useCanvasLayerIndex();
   const layerRank = useLayerRank(layer);
-  // Godot's `z_final`: this Control's own `z_index` accumulated onto the
-  // ambient a CanvasItem2D ancestor (or an enclosing CanvasLayer's painter,
-  // which resets it to 0 — a fresh canvas) published, clamped exactly as
-  // `CanvasItem2D.tsx` clamps it for Node2D — the ONE accumulation rule
-  // (`accumulateCanvasItemZ`), not a parallel one for Controls. Controls have
-  // no parsed `z_as_relative` override (`ControlProperties`), so this always
-  // takes Godot's own default of relative-true. `show_behind_parent` never
-  // enters this: `renderer_canvas_cull.cpp`'s `_cull_canvas_item` calls both
-  // its behind-children and front-children loops with the SAME `p_z` — the
-  // flag reorders draw order, not z accumulation.
+  // Godot's `z_final`, by the one rule `accumulateCanvasItemZ` shares with
+  // Node2D, relative as Controls parse no `z_as_relative`. `show_behind_parent`
+  // never enters: `_cull_canvas_item` runs both child loops with one `p_z`
+  // (`renderer_canvas_cull.cpp`).
   const parentEffectiveZ = useEffectiveZ();
-  // Every skipped Node2D ancestor is an item the cull walk descends through
-  // too, so its own step runs first — one `accumulateCanvasItemZ` per step,
-  // outermost first, never a pre-summed total (`SkippedAncestors.z`).
+  // The cull walk descends through each skipped Node2D ancestor too: one step
+  // each, outermost first, never a pre-summed total (`SkippedAncestors.z`).
   const ancestorZ = (solveNode.skippedAncestors?.z ?? []).reduce(
     (z, step) => accumulateCanvasItemZ(z, { z_index: step.zIndex, z_as_relative: step.zAsRelative }),
     parentEffectiveZ
   );
   const effectiveZ = accumulateCanvasItemZ(ancestorZ, { z_index: props.zIndex ?? 0 });
 
-  // This Control's place in the canvas — the SAME key, from the same function,
-  // that every Node2D canvas item takes (`canvasPaintOrder.ts`). Its sequence
-  // comes from the node's position among ALL its live siblings, which is what
-  // lets it interleave with them rather than sitting in a band of its own.
+  // The key every Node2D canvas item takes (`canvasPaintOrder.ts`). The sequence
+  // counts all live siblings, so Controls interleave with them.
   const renderOrder = canvasRenderOrder({
     layerRank,
     zFinal: effectiveZ,
     sequence: solveNode.paintSequence,
   });
-  // Second key, for chrome that must draw after this node's WHOLE subtree
-  // (Godot's `INTERNAL_MODE_BACK` — see `NativeControlComponentProps.
-  // subtreeChromeRenderOrder`'s own doc). The subtree owns a CONTIGUOUS run, so
-  // "after all of it" is simply the run's last value.
+  // For chrome drawn after the whole subtree (Godot's `INTERNAL_MODE_BACK`). The
+  // subtree owns a contiguous run, so this is its last value.
   const subtreeChromeRenderOrder = canvasRenderOrder({
     layerRank,
     zFinal: effectiveZ,
     sequence: solveNode.paintRange.base + solveNode.paintRange.size - 1,
   });
 
-  // `Container::fit_child_in_rect` resets a container child's transform, so a
-  // node whose parent imposes a layout has an EFFECTIVE rotation of 0 and an
-  // effective scale of 1 whatever it authored — which the pixel snap's own
-  // rotation gate must see too, not just the inner group below.
+  // `Container::fit_child_in_rect` resets a container child to rotation 0 and
+  // scale 1, and the snap's rotation gate must see that too.
   const rotation = isFreeParent ? (props.rotation ?? 0) : 0;
   const scaleX = isFreeParent ? (props.scale?.x ?? 1) : 1;
   const scaleY = isFreeParent ? (props.scale?.y ?? 1) : 1;
@@ -267,10 +178,9 @@ function ControlNodeGroup({
   const pivotX = (props.pivotOffset?.x ?? 0) + (props.pivotOffsetRatio?.x ?? 0) * rect.w;
   const pivotY = (props.pivotOffset?.y ?? 0) + (props.pivotOffsetRatio?.y ?? 0) * rect.h;
 
-  // Godot floors the CANVAS ITEM's translation to whole pixels, leaving
-  // `get_rect()` — everything the solve above consumed — at full precision.
-  // The inner pivot/rotation/scale groups contribute their own translation to
-  // the same composite, so this is the outer half of an origin snapped as one.
+  // Godot snaps the canvas item, leaving `get_rect()` at full precision. The inner
+  // pivot groups add their own translation, so this is the outer half of one
+  // snapped origin.
   const origin = snappedControlOrigin(
     rect,
     { rotation, scale: { x: scaleX, y: scaleY }, pivot: { x: pivotX, y: pivotY } },
@@ -278,17 +188,13 @@ function ControlNodeGroup({
   );
 
   const Painter = controlComponentRegistry.get(solveNode.node.type) ?? ControlFallback;
-  // Whether THIS node's own children are free — mirrors dispatchChildren's
-  // exact registry read so the walker and the solver never disagree.
+  // The registry read `dispatchChildren` makes, so walker and solver agree on
+  // which children are free.
   const childIsFreeParent = controlSolverRegistry.containerLayout(solveNode.node.type) === undefined;
 
-  // The CONTEXT carries this node's z to its DESCENDANTS, matching
-  // `CanvasItem2D.tsx`'s `EffectiveZProvider` placement. This node's own
-  // painter gets the same value by prop instead, because Godot tests an item
-  // against its own accumulated z, not its parent's — and the ambient a
-  // painter would read here is the parent's. See
-  // `NativeControlComponentProps.effectiveZ` for why that asymmetry is a prop
-  // rather than something a painter is trusted to re-derive.
+  // The context carries this z to the descendants, for `PointLight2D`'s
+  // `range_z_*` cull. The painter gets it by prop: Godot tests an item against
+  // its own z, and the ambient here is the parent's.
   const childElements = (
     <EffectiveZProvider value={effectiveZ}>
       {solveNode.children.map((child) => (
@@ -314,14 +220,9 @@ function ControlNodeGroup({
     return out;
   }, [solveNode.children, solved]);
 
-  // A `CanvasLayer` is not chrome, it is a passthrough canvas boundary — its
-  // painter (`canvaslayer/Component.tsx`) needs to WRAP its
-  // descendants in fresh `CanvasLayerIndexProvider`/modulate context, which
-  // only works if they are its React children rather than its siblings. Every
-  // other registered painter draws fixed chrome unrelated to its descendants'
-  // own React subtree, so it keeps the sibling shape (`NativeControlComponentProps`'s
-  // own doc comment). The registration declares this rather than the walker
-  // testing a type name, so a second such type adds no branch here.
+  // A canvas boundary such as `CanvasLayer` wraps its descendants in fresh
+  // context, so they must be its React children. The registration declares it,
+  // so a second such type adds no branch here.
   const wrapsChildren = controlComponentRegistry.wrapsChildren(solveNode.node.type);
   const content = wrapsChildren ? (
     <Painter
@@ -359,10 +260,8 @@ function ControlNodeGroup({
   );
 
   const ownGroup = (
-    // Every group this node emits carries the key, not just the outermost:
-    // three takes `groupOrder` from the NEAREST enclosing group, so a bare
-    // transform group in between would reset the item's place in the canvas to
-    // zero for the pixels inside it.
+    // Every group here carries the key: three takes `groupOrder` from the nearest
+    // enclosing group, so a bare one would reset the pixels inside to zero.
     <group
       name={`${solveNode.node.type}:${solveNode.node.name}`}
       position={[origin.x, -origin.y, 0]}
@@ -391,10 +290,8 @@ function ControlNodeGroup({
 
   if (!solveNode.skippedAncestors) return ownGroup;
 
-  // paint-order-safe: OUTSIDE this node's own keyed group (`ownGroup`
-  // already carries `renderOrder`, and is its own nearest enclosing group),
-  // never between it and a mesh — the ancestor Node2D chain this node
-  // promoted past (`buildSolveTree.ts`'s `SolveNode.skippedAncestors`).
+  // paint-order-safe: outside the keyed `ownGroup`, never between it and a mesh.
+  // The skipped Node2D chain this node promoted past (`SolveNode.skippedAncestors`).
   return (
     <group matrix={ancestorGroupMatrix(solveNode.skippedAncestors.transform)} matrixAutoUpdate={false}>
       {ownGroup}

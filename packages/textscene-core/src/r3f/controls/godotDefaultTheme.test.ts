@@ -1,8 +1,7 @@
 /**
- * The Godot default-theme constants are transcribed from
- * `scene/theme/default_theme.cpp` — this pins each to the exact Godot 4.6 value
- * and, for the fills, ties the CSS string to a local `controlColorToCss` of the
- * source `Color(...)` literal so a wrong rounding/format can't slip through.
+ * Pins each default-theme constant to its Godot 4.6 value in
+ * `scene/theme/default_theme.cpp`, and each fill's CSS to an independent format
+ * of its `Color(...)` literal.
  */
 import { describe, expect, it } from 'vitest';
 import type { ThemeFill } from './godotDefaultTheme';
@@ -28,7 +27,7 @@ import {
   scaledGodotTheme,
 } from './godotDefaultTheme';
 
-/** Format an already-parsed {r,g,b,a} (0..1) color as a CSS rgba() string — an independent ground truth, not a re-derivation of `godotDefaultTheme.ts`'s own `fillCss`. */
+/** An independent ground truth, not a copy of `godotDefaultTheme.ts`'s own `fillCss`. */
 function controlColorToCss(c: ThemeFill): string {
   const ch = (v: number) => Math.max(0, Math.min(255, Math.round(v * 255)));
   const alpha = Math.max(0, Math.min(1, c.a));
@@ -55,7 +54,6 @@ describe('godotDefaultTheme', () => {
   });
 
   it('spells out the normal fill as translucent near-black (not pre-composited)', () => {
-    // Kept at alpha 0.6 so it blends over the overlay backdrop like Godot does.
     expect(STYLE_NORMAL_FILL).toBe('rgba(26, 26, 26, 0.6)');
   });
 
@@ -72,25 +70,13 @@ describe('godotDefaultTheme', () => {
 });
 
 /**
- * `gui/theme/default_theme_scale`. Godot builds the default theme once from the
- * scale and rounds each product independently — `scene/theme/default_theme.cpp`,
- * `fill_default_theme`:
- *
- *     theme->set_default_font_size(Math::round(default_font_size * scale));
- *
- * `make_flat_stylebox`:
- *
- *     style->set_content_margin_individual(Math::round(p_margin_left * scale), …);
- *     style->set_corner_radius_all(Math::round(p_corner_radius * scale));
- *
- * and `default_theme.cpp:1249`:
- *
- *     theme->set_constant("separation", "BoxContainer", Math::round(4 * scale));
+ * `gui/theme/default_theme_scale`. Godot rounds each product on its own:
+ * `fill_default_theme` and `make_flat_stylebox` in `scene/theme/default_theme.cpp`,
+ * and the BoxContainer separation at `default_theme.cpp:1249`.
  */
 describe('scaledGodotTheme', () => {
   it('returns exactly the scale-1 constants at scale 1', () => {
-    // The un-scaled path must stay byte-identical to the constants every
-    // `.ts`-only consumer still imports.
+    // `.ts`-only consumers import the constants, so scale 1 must equal them.
     expect(scaledGodotTheme(1)).toEqual({
       scale: 1,
       fontSize: DEFAULT_FONT_SIZE,
@@ -131,9 +117,7 @@ describe('scaledGodotTheme', () => {
   });
 
   it('rounds each metric independently, never the scale', () => {
-    // At 1.5 the font is round(16·1.5) = 24 while the corner radius is
-    // round(3·1.5) = 5 — a pre-rounded scale (1 or 2) could produce neither
-    // pairing, which is why the rounding is per metric.
+    // A pre-rounded scale (1 or 2) could produce neither 24 nor 5.
     const theme = scaledGodotTheme(1.5);
     expect(theme.fontSize).toBe(24);
     expect(theme.cornerRadius).toBe(5);

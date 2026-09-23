@@ -1,9 +1,6 @@
 /**
- * `<ControlQuad>` is the shared quad primitive every Control painter draws
- * chrome with — the Control-space analogue of Sprite2D's `QuadMesh`
- * (`nodes/2d/sprite2d/Component.tsx`): centred at `[w/2, -h/2, 0]` so a
- * caller sizes/positions it purely from the solved rect's `(w, h)`, with the
- * same transparent / no-depth-write / double-sided material contract.
+ * The quad every Control painter draws chrome with: centred at `[w/2, -h/2, 0]`,
+ * transparent, double-sided and without depth writes, like Sprite2D's `QuadMesh`.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -42,10 +39,8 @@ describe('<ControlQuad>', () => {
   });
 
   it('replaces the material when a map arrives after the quad is already drawn', async () => {
-    // An icon, a TextureRect image, a SubViewport that has not published yet:
-    // the quad is drawn from the first render and the map lands on a later one.
-    // `USE_MAP` is baked at the material's first compile, so the material that
-    // ends up holding the texture must not be the one compiled without it.
+    // `USE_MAP` is baked at the first compile, so the material holding the
+    // texture must not be the one compiled without it.
     const renderer = await ReactThreeTestRenderer.create(
       <ControlQuad width={10} height={10} color={new THREE.Color(1, 1, 1)} opacity={1} renderOrder={0} />
     );
@@ -64,10 +59,8 @@ describe('<ControlQuad>', () => {
   });
 
   it('stops decoding when the map is replaced by one that keeps its own colour space', async () => {
-    // The converse, and it cannot be fixed by assignment: `applyProps` IGNORES
-    // an undefined prop value (fiber 9.6.1 dist), so the decode define can be
-    // added to a material but never removed from one. A Sprite2D swapping a
-    // `res://` file for a ViewportTexture makes exactly this transition.
+    // `applyProps` ignores an undefined prop value (fiber 9.6.1 dist), so a
+    // decode define can be added to a material but never removed from it.
     const undecoded = new THREE.Texture();
     undecoded.colorSpace = THREE.NoColorSpace;
     const renderer = await ReactThreeTestRenderer.create(

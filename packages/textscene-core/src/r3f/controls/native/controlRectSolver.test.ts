@@ -1,9 +1,7 @@
 /**
- * The Control rect solve, tested against `SolveNode` literals — no React, no
- * scene cache, no mocking. Every expected number is either a Godot source
- * citation (the preset table, `_size_changed`'s formula/floor) or a
- * hand-worked example from that same formula; none are re-derived the way
- * the implementation derives them.
+ * The Control rect solve against `SolveNode` literals, with no React, cache or
+ * mock. Each expected number cites Godot source or is hand-worked from it, never
+ * re-derived the way the code does.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../parser/types';
@@ -38,13 +36,9 @@ function ctx(): SolveContext {
 }
 
 /**
- * A `SolveNode` built the way the real render path builds one: raw
- * snake_case `.tscn` property keys, run through the real `parseControl`, with
- * `rawProperties`/`rawPropertiesOrderReliable` set exactly as
- * `core/NodeRegistry.ts` sets them for a genuinely single-file-scanned node
- * (ADR-0035) — so `resolveControlLayout`'s file-order simulation reads the
- * SAME `Object.keys(rawProperties)` order a real parse would produce, not a
- * hand-picked array a bug in the plumbing could silently disagree with.
+ * A `SolveNode` built as the render path builds one: raw `.tscn` keys through the
+ * real `parseControl`, with `rawProperties` and `rawPropertiesOrderReliable` set as
+ * `core/NodeRegistry.ts` sets them (ADR-0035), so the file order is a real parse's.
  */
 function orderedNode(path: string, type: string, rawProperties: Record<string, string>): SolveNode {
   const name = path.split('/').pop()!;
@@ -61,12 +55,10 @@ function orderedNode(path: string, type: string, rawProperties: Record<string, s
 }
 
 describe('solveControlTree — LayoutPreset table (control.cpp::set_anchors_preset)', () => {
-  // scene/gui/control.cpp :: Control::set_anchors_preset (:1114-1229) — the four
-  // per-edge switches this table transcribes. No offsets/custom minimum size, so
-  // the resolved rect IS the anchor fraction times the 1152x648 viewport.
-  // `layout_mode` is UNCONTROLLED (3) throughout: a parentless Control's stored
-  // mode, and one of the two `_set_anchors_layout_preset` does not bail on
-  // (control.cpp:990-993), so the preset is operational here.
+  // scene/gui/control.cpp :: Control::set_anchors_preset (:1114-1229). With no
+  // offsets or minimum, the rect is the anchors times the 1152x648 viewport.
+  // `layout_mode` is UNCONTROLLED (3), a parentless Control's stored mode, which
+  // `_set_anchors_layout_preset` does not bail on (control.cpp:990-993).
   const presetRects: Record<number, Rect2> = {
     0: { x: 0, y: 0, w: 0, h: 0 }, // TOP_LEFT
     1: { x: 1152, y: 0, w: 0, h: 0 }, // TOP_RIGHT
@@ -134,12 +126,9 @@ describe('solveControlTree — explicit anchor_* + offset_* (incl. negative offs
 
 describe('solveControlTree — size floored at custom_minimum_size', () => {
   it('clamps size up to custom_minimum_size, position unchanged under the default GROW_DIRECTION_END', () => {
-    // control.cpp:1773-1797. Raw rect from centred anchors and a 10x10 offset
-    // box: x=571,y=319,w=10,h=10. custom_minimum_size (80,24) > (10,10) on
-    // both axes; GROW_DIRECTION_END (control.h:209-210, the default) leaves
-    // position alone and only grows the size. The anchors are the explicit
-    // four floats rather than the CENTER preset so that grow really is at that
-    // default — the preset would have implied BOTH on both axes.
+    // control.cpp:1773-1797. Raw rect x=571,y=319,w=10,h=10, minimum (80,24).
+    // GROW_DIRECTION_END (control.h:209-210, the default) keeps the position.
+    // Explicit anchors, not the CENTER preset, which implies BOTH.
     const root = node('Root', 'Control', {
       anchorLeft: 0.5,
       anchorTop: 0.5,
@@ -181,13 +170,10 @@ describe('solveControlTree — grow direction derived from anchors_preset', () =
     controlSolverRegistry.clear();
   });
 
-  // `Control::_set_anchors_layout_preset` (control.cpp:982-1032) ends by calling
-  // `set_grow_direction_preset` (:1373-1428), so a scene that authors only
-  // `anchors_preset` still gets a non-END grow — Godot's editor does not
-  // re-serialize the implied value, it re-derives it on load. Every expected
-  // rect in this block was measured through real Godot 4.6.3 (`Control::get_rect()`
-  // on a settled SubViewport of exactly this VIEWPORT size), not derived from
-  // this solver.
+  // `Control::_set_anchors_layout_preset` (control.cpp:982-1032) ends with
+  // `set_grow_direction_preset` (:1373-1428), so a preset alone implies its grow.
+  // Each expected rect is Godot 4.6.3's `Control::get_rect()` in a SubViewport of
+  // this VIEWPORT size.
 
   // One 10x10 raw box per preset, floored against a 40x40 custom_minimum_size so
   // the grow branch fires on BOTH axes for every row. The two WIDE-preset offsets
@@ -200,18 +186,18 @@ describe('solveControlTree — grow direction derived from anchors_preset', () =
     offsets: [number, number, number, number];
     expected: Rect2;
   }> = [
-    // TOP_LEFT: (END, END) — the corpus's most common preset, and the guard that
-    // the table's first entry did not shift: END already leaves position alone.
+    // TOP_LEFT: (END, END), the most common preset, guarding the table's first
+    // entry: END leaves the position alone.
     { preset: 0, label: 'TOP_LEFT', anchors: [0, 0, 0, 0], offsets: [-5, -5, 5, 5], expected: { x: -5, y: -5, w: 40, h: 40 } },
-    // TOP_RIGHT: (BEGIN, END) — x shifts back by the full 30px shortfall.
+    // TOP_RIGHT: (BEGIN, END): x shifts back by the full 30px shortfall.
     { preset: 1, label: 'TOP_RIGHT', anchors: [1, 0, 1, 0], offsets: [-5, -5, 5, 5], expected: { x: 1117, y: -5, w: 40, h: 40 } },
-    // BOTTOM_RIGHT: (BEGIN, BEGIN) — both axes shift back.
+    // BOTTOM_RIGHT: (BEGIN, BEGIN): both axes shift back.
     { preset: 3, label: 'BOTTOM_RIGHT', anchors: [1, 1, 1, 1], offsets: [-5, -5, 5, 5], expected: { x: 1117, y: 613, w: 40, h: 40 } },
-    // CENTER_TOP: (BOTH, END) — x splits the shortfall (571 - 15), y holds.
+    // CENTER_TOP: (BOTH, END): x splits the shortfall (571 - 15), y holds.
     { preset: 5, label: 'CENTER_TOP', anchors: [0.5, 0, 0.5, 0], offsets: [-5, -5, 5, 5], expected: { x: 556, y: -5, w: 40, h: 40 } },
     // CENTER_BOTTOM: (BOTH, BEGIN).
     { preset: 7, label: 'CENTER_BOTTOM', anchors: [0.5, 1, 0.5, 1], offsets: [-5, -5, 5, 5], expected: { x: 556, y: 613, w: 40, h: 40 } },
-    // LEFT_WIDE: (END, BOTH) — the only row whose vertical anchors span the
+    // LEFT_WIDE: (END, BOTH), the one row whose vertical anchors span the
     // viewport, so its offsets pull the raw box back to 10px tall (319..329).
     { preset: 9, label: 'LEFT_WIDE', anchors: [0, 0, 0, 1], offsets: [-5, 319, 5, -319], expected: { x: -5, y: 304, w: 40, h: 40 } },
   ];
@@ -237,11 +223,10 @@ describe('solveControlTree — grow direction derived from anchors_preset', () =
   }
 
   it('a CENTER-preset node taller than its anchored box centres on the half-pixel', () => {
-    // The shape a themed Button takes when its StyleBox content margins push its
-    // combined minimum height past its anchored height. Raw box:
-    // x = -60 + 0.5*1152 = 516, w = 120; y = -16 + 0.5*648 = 308, h = 32.
-    // CENTER (8) implies v_grow = BOTH, so y += 0.5*(32 - 35) = -1.5 → 306.5,
-    // a genuine half-pixel top. Real Godot's own get_rect() for this shape.
+    // A themed Button whose margins push its minimum height past its anchored
+    // height. Raw box x = 516, w = 120, y = 308, h = 32. CENTER (8) implies
+    // v_grow = BOTH, so y += 0.5*(32 - 35) → 306.5, a half-pixel top Godot's
+    // get_rect() also gives.
     const root = node('Root', 'Control', {
       layoutMode: 1,
       anchorsPreset: 8,
@@ -256,8 +241,8 @@ describe('solveControlTree — grow direction derived from anchors_preset', () =
   });
 
   it('the same CENTER-preset node is untouched when its minimum fits inside the anchored box', () => {
-    // Grow direction is inert unless the floor branch fires — the raw anchored
-    // rect stands whatever the preset implies.
+    // Grow direction is inert unless the floor fires: the raw anchored rect
+    // stands whatever the preset implies.
     const root = node('Root', 'Control', {
       layoutMode: 1,
       anchorsPreset: 8,
@@ -272,12 +257,10 @@ describe('solveControlTree — grow direction derived from anchors_preset', () =
   });
 
   it('the same CENTER-preset node is wholly non-operational when layout_mode is absent', () => {
-    // `_set_anchors_layout_preset` bails outside ANCHORS/UNCONTROLLED before
-    // `set_anchors_preset` AND before `set_grow_direction_preset`
-    // (control.cpp:990-993), and `stored_layout_mode` defaults to POSITION
-    // (control.h:201), so a scene authoring no `layout_mode` line gets neither
-    // half: anchors stay (0,0,0,0), so the raw box is the offsets themselves at
-    // (-60,-16,120,32), and grow stays END, so the 35 minimum grows downward.
+    // `_set_anchors_layout_preset` bails outside ANCHORS or UNCONTROLLED
+    // (control.cpp:990-993), and the mode defaults to POSITION (control.h:201). So
+    // with no `layout_mode` the raw box is the offsets (-60,-16,120,32), and grow
+    // stays END: the 35 minimum grows downward.
     const root = node('Root', 'Control', {
       anchorsPreset: 8,
       offsetLeft: -60,
@@ -373,12 +356,10 @@ describe('solveControlTree — a promoted Control anchors against its DIRECT par
   });
 
 
-  // `Control::get_parent_anchorable_rect` (control.cpp:685-711) reads
-  // `data.parent_canvas_item`, and `CanvasItem::get_parent_item()` casts only
-  // the DIRECT parent (canvas_item.cpp:565-571). `Control` alone overrides
-  // `get_anchorable_rect` (control.cpp:1563-1566); `CanvasItem`'s own answer is
-  // `Rect2(0, 0, 0, 0)` (canvas_item.h:414). So a Control whose direct parent is
-  // a Node2D — the `skippedAncestors` case — anchors against nothing at all.
+  // `Control::get_parent_anchorable_rect` (control.cpp:685-711) casts only the
+  // direct parent (canvas_item.cpp:565-571). Only `Control` overrides
+  // `get_anchorable_rect` (control.cpp:1563-1566), and `CanvasItem`'s is a zero
+  // rect (canvas_item.h:414), so a Control under a Node2D anchors against nothing.
   const NODE2D_PARENT: SkippedAncestors = {
     transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
     modulate: { r: 1, g: 1, b: 1, a: 1 },
@@ -491,9 +472,8 @@ describe('solveControlTree — a registered ContainerLayoutFn overrides its chil
   });
 
   it("gives children rects from the container's fn instead of the free/anchor path", () => {
-    // A minimal stack: each child gets the full container width and a fixed
-    // 10px-tall row, one after another — deliberately NOT what the children's
-    // own (unused) anchors would produce, to prove the container fn wins.
+    // A minimal stack of full-width 10px rows, unlike what the children's own
+    // anchors give, so the container function visibly wins.
     const stack: ContainerLayoutFn = (_n, children, contentRect) => {
       const out = new Map<string, Rect2>();
       children.forEach((c, i) => {
@@ -503,12 +483,12 @@ describe('solveControlTree — a registered ContainerLayoutFn overrides its chil
     };
     controlSolverRegistry.registerContainerLayout(TYPE, stack);
 
-    // This child's own anchors say FULL_RECT — if honoured, it would be
+    // This child's anchors say FULL_RECT: honoured, it would be
     // (0,0,1152,648), not the container's (0,0,1152,10).
     const child0 = node('Stack/Child0', 'Control', { layoutMode: 1, anchorsPreset: 15 });
     const child1 = node('Stack/Child1', 'Control', { layoutMode: 1, anchorsPreset: 15 });
-    // The container itself still solves as a free Control — FULL_RECT so its
-    // own rect (and so contentRect) is the 1152x648 viewport.
+    // The container solves as a free Control, FULL_RECT, so its rect and
+    // contentRect are the 1152x648 viewport.
     const root = node('Stack', TYPE, { layoutMode: 3, anchorsPreset: 15 }, [child0, child1]);
 
     const solved = solveControlTree([root], VIEWPORT, ctx());
@@ -517,14 +497,10 @@ describe('solveControlTree — a registered ContainerLayoutFn overrides its chil
   });
 
   it("re-floors a container-assigned rect against the child's FULL-PRECISION minimum", () => {
-    // `Container::fit_child_in_rect` ends by calling `Control::set_rect`, and
-    // `Control::_size_changed` (control.cpp:1531-1541,1760-1797 — a third file
-    // neither container.cpp nor any container's own source names) re-floors the
-    // rect against the child's own minimum. Containers that truncate their cell
-    // bookkeeping to integers therefore hand out a cell SMALLER than a child
-    // whose minimum is fractional, and the child still renders at its minimum.
-    // Every real text minimum is fractional, so a solver that trusts the cell
-    // verbatim is wrong for any Control carrying font metrics.
+    // `fit_child_in_rect` ends in `Control::set_rect`, whose `_size_changed`
+    // (control.cpp:1531-1541,1760-1797, named in no container.cpp) re-floors at the
+    // child's own minimum. A cell truncated to integers is smaller than a fractional
+    // text minimum, and the child still renders at its minimum.
     const tinyCell: ContainerLayoutFn = (_n, children) => {
       const out = new Map<string, Rect2>();
       // Deliberately smaller than the child's minimum, and integer-truncated
@@ -617,12 +593,10 @@ describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () =
   });
 
   it('takes the VIEWPORT rect, not its parent Control\'s, and sits at the viewport origin', () => {
-    // `Control::get_parent_anchorable_rect` (`control.cpp:685-711`) falls back
-    // to `get_viewport()->get_visible_rect()` when `data.parent_canvas_item` is
-    // null, and a CanvasLayer — a `Node`, not a `CanvasItem` — is exactly that
-    // null. So a full-screen HUD under an offset 200x100 Panel covers the
-    // SCREEN, not the panel. The boundary's own rect is stated relative to its
-    // parent, so its negative origin is what puts it back at (0, 0).
+    // A CanvasLayer is a `Node`, so `Control::get_parent_anchorable_rect`
+    // (`control.cpp:685-711`) falls back to the viewport, and a full-screen HUD
+    // under an offset Panel covers the screen. The boundary's parent-relative
+    // rect has a negative origin that puts it back at (0, 0).
     controlSolverRegistry.registerCanvasBoundary(BOUNDARY);
     const hud = node('Root/Panel/HUD/Hud', 'Control', { anchorsPreset: 15, anchorRight: 1, anchorBottom: 1 });
     const layer = node('Root/Panel/HUD', BOUNDARY, {}, [hud]);
@@ -742,10 +716,9 @@ describe('solveControlTree — a second pass for a size-dependent MinimumSizeFn 
     });
     controlSolverRegistry.registerSizeDependentMinimum(TYPE);
 
-    // Zero-width anchors (left=right=0) but a bottom anchor of 1 floors this
-    // node's HEIGHT to 100 independent of its own (width-only) minimum — the
-    // width starts at 0, so the height-derived floor is the only thing that
-    // can ever widen it.
+    // A bottom anchor of 1 sets the height to 100 whatever the width-only
+    // minimum is. The width starts at 0, so only the height-derived floor
+    // widens it.
     const root = node('Leaf', TYPE, { anchorBottom: 1, offsetBottom: -548 });
     const solved = solveControlTree([root], VIEWPORT, ctx());
 
@@ -774,13 +747,10 @@ describe('solveControlTree — a second pass for a size-dependent MinimumSizeFn 
 });
 
 describe('solveControlTree — file-order-aware Control layout (ADR-0035, Option B)', () => {
-  // The ADR's own measured acceptance case, exercised end-to-end through the
-  // solver (`SolveNode.node.rawProperties` → `resolveControlLayout` →
-  // `computeAnchoredRect`'s formula), not just against the resolver directly.
-  // `Control::_set_anchors_layout_preset` (control.cpp:982-1032) calls
-  // `set_anchors_preset` then `set_offsets_preset`; a later `offset_*` line
-  // (its own setter, `Control::set_offset`, control.cpp:798-805) overwrites
-  // what the preset wrote, and an earlier one is wiped BY the preset.
+  // ADR-0035's measured case, end to end through the solver.
+  // `Control::_set_anchors_layout_preset` (control.cpp:982-1032) sets anchors then
+  // offsets. A later `offset_*` (`Control::set_offset`, control.cpp:798-805)
+  // overwrites the preset's, and the preset wipes an earlier one.
   it('offsets authored BEFORE anchors_preset=15 are wiped to (0, 0, 1152, 648)', () => {
     const root = orderedNode('Root', 'Control', {
       layout_mode: '3',
@@ -813,16 +783,14 @@ describe('solveControlTree — file-order-aware Control layout (ADR-0035, Option
       layout_mode: '3',
     });
     const solved = solveControlTree([root], VIEWPORT, ctx());
-    // The preset never ran, so anchors/offsets/grow direction stay at the
-    // struct default — the same (0,0,0,0) rect as TOP_LEFT (preset 0).
+    // The preset never ran, so anchors, offsets and grow direction stay at the
+    // struct default: the (0,0,0,0) rect of TOP_LEFT (preset 0).
     expect(solved.get('Root')?.rect).toEqual({ x: 0, y: 0, w: 0, h: 0 });
   });
 
   it('a merged-instance-root node (rawPropertiesOrderReliable: false) falls back to the editor-save-order assumption', () => {
-    // Same raw bag as the "before" case above, but flagged unreliable — the
-    // solver must NOT simulate file order for it, so the explicit offsets
-    // (authored second in `resolveOffsets`'s per-side `??` sense) still win,
-    // exactly like `resolveAnchors`/`resolveOffsets` did before this change.
+    // The "before" bag, flagged unreliable: no file-order replay, so the
+    // explicit offsets win per side, as `resolveOffsets` gives.
     const heading: ParsedHeading = { type: 'node', attributes: { name: 'Root', type: 'Control' } };
     const rawProperties = {
       layout_mode: '3',
@@ -847,10 +815,8 @@ describe('solveControlTree — file-order-aware Control layout (ADR-0035, Option
   });
 
   it('a hand-built node with no rawProperties at all also falls back (no order to read)', () => {
-    // The pre-existing `node()` helper never sets rawProperties/
-    // rawPropertiesOrderReliable — this is the SAME shape every OTHER test in
-    // this file already uses, so it doubles as a regression guard: those 700+
-    // lines of pre-existing assertions must keep passing unchanged.
+    // `node()` sets neither rawProperties nor rawPropertiesOrderReliable, the
+    // shape every other test in this file uses.
     const root = node('Root', 'Control', {
       layoutMode: 3,
       offsetLeft: 40,
@@ -866,15 +832,8 @@ describe('solveControlTree — file-order-aware Control layout (ADR-0035, Option
 
 /**
  * `Control::_size_changed`'s RTL mirror (`scene/gui/control.cpp:1785-1787`):
- *
- *     if (is_layout_rtl()) {
- *       new_pos_cache.x = parent_rect.size.x + 2 * parent_rect.position.x
- *                         - new_pos_cache.x - new_size_cache.x;
- *     }
- *
- * `parent_rect` is `get_parent_anchorable_rect()`, and `get_anchorable_rect`
- * is `Rect2(Point2(), get_size())` (`control.cpp:1563-1566`), so the position
- * term is zero for every parent a scene can state.
+ * `x = parent_rect.size.x + 2 * parent_rect.position.x - x - w`. The anchorable
+ * rect starts at the origin (`control.cpp:1563-1566`), so the position term is zero.
  */
 describe('solveControlTree — RTL mirrors a free Control inside its parent', () => {
   afterEach(() => {
@@ -986,10 +945,8 @@ describe('solveControlTree — RTL round-trips a container-assigned rect', () =>
 
   it('mirrors the grow direction when the child outgrows its cell', () => {
     // Container 400 wide, cell (10, 50) wide, child minimum 80.
-    // `_compute_offsets` stores x' = 400 - 10 - 50 = 340; the GROW_END floor
-    // leaves it and widens to 80; the mirror gives 400 - 340 - 80 = -20 — the
-    // child's RIGHT edge stays at the cell's right edge, the mirror image of
-    // the LTR case below.
+    // `_compute_offsets` stores x' = 340, the GROW_END floor widens to 80, and the
+    // mirror gives 400 - 340 - 80 = -20: the right edge stays at the cell's.
     registerCell({ x: 10, y: 0, w: 50, h: 20 });
     const rtlChild: SolveNode = {
       ...node('Box/Child', 'Control', { customMinimumSize: { x: 80, y: 20 } }),

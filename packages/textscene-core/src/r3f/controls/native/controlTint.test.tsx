@@ -1,14 +1,7 @@
 /**
- * `controlTint.ts` adapts a Control's `modulate`/`self_modulate`
- * (`ControlColor`, plain 0..1 channels) onto the existing 2D CanvasItem tint
- * chain (`Modulate2DContext`'s arithmetic), the same one Sprite2D and every
- * other CanvasItem already uses — composing in sRGB and converting to linear
- * ONCE, per that module's own rule. These tests pin the adaptation and the
- * SPLIT (one hook sees only `modulate`, the other only `self_modulate`), not
- * the underlying chain's math (already covered by `canvasItemModulate.test.ts`).
- *
- * Both hooks are the walker's; that they compose correctly IN it is
- * `ControlCanvasWalker.test.tsx`'s own tint suite.
+ * Pins the adaptation of a Control's `modulate` and `self_modulate` onto the 2D
+ * CanvasItem tint chain, and the split: one hook sees only `modulate`, the other
+ * only `self_modulate`. `canvasItemModulate.test.ts` covers the chain's math.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';

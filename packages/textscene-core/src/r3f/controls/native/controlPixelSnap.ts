@@ -1,5 +1,5 @@
 /**
- * Godot's whole-pixel snap for a Control's DRAWN transform.
+ * Godot's whole-pixel snap for a Control's drawn transform.
  *
  * `scene/gui/control.cpp`, `Control::_update_canvas_item_transform()`:
  *
@@ -10,30 +10,20 @@
  *         xform[2] = (xform[2] + Vector2(0.5, 0.5)).floor();
  *     }
  *
- * Three facts that shape this module:
+ * 1. The snap lands on the canvas item, never on the rect. `get_rect()` and the
+ *    layout above it, such as the `GROW_DIRECTION_BOTH` halving
+ *    (`control.cpp:1789-1797`), stay unsnapped, so the solve never reads a
+ *    rounded number.
+ * 2. It snaps the composite translation, the internal transform's column plus
+ *    the position. Godot 4.6.3 draws a ColorRect at (100, 100) with
+ *    `pivot_offset = (10.25, 10.25)` and `scale = (2, 2)` at exactly 90,
+ *    `floor(100 + (10.25 - 20.5) + 0.5)`, not at 89.75.
+ * 3. `sin(rotation * 4)` vanishes only at multiples of 45°, so any other angle
+ *    draws unsnapped.
  *
- * 1. The snap lands on the CANVAS ITEM, never on the rect. `get_rect()` keeps
- *    full precision, and the layout arithmetic above it — anchor resolution,
- *    the minimum-size floor's `GROW_DIRECTION_BOTH` halving
- *    (`control.cpp:1789-1797`) — runs on that unsnapped value. Snapping the
- *    solved rect instead would feed rounded numbers back into the solve.
- * 2. It snaps the translation of the COMPOSITE transform — the internal
- *    pivot/rotation/scale transform's own translation column PLUS the
- *    position — not the position alone. Measured against Godot 4.6.3: a
- *    ColorRect at position (100, 100) with `pivot_offset = (10.25, 10.25)`
- *    and `scale = (2, 2)` draws its top-left at exactly 90, i.e.
- *    `floor(100 + (10.25 - 20.5) + 0.5)`, with no half-pixel blend — not at
- *    the 89.75 a position-only snap would leave.
- * 3. The rotation gate is load-bearing. `sin(rotation * 4)` vanishes only at
- *    multiples of 45°, so a Control at any other angle is drawn UNSNAPPED.
- *
- * The transform is parent-relative, exactly like the rect: Godot snaps each
- * CanvasItem's own transform independently, so a Control under a fractionally
- * placed parent still draws at a fractional absolute position. Nested groups
- * reproduce that without any accumulation here.
- *
- * Pure data + functions, no React, no THREE. Godot pixels, +Y down — the
- * caller negates Y once, after this module is done (`rect.ts`'s convention).
+ * Each CanvasItem snaps its own parent-relative transform, so a fractionally
+ * placed parent leaves its child fractional. Nested groups reproduce that.
+ * No React, no THREE. Godot pixels, +Y down: the caller negates Y (`rect.ts`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -55,59 +45,35 @@ export const SNAP_CONTROLS_TO_PIXELS_SETTING = 'gui/common/snap_controls_to_pixe
 const SNAP_ROTATION_EPSILON = 0.00001;
 
 /**
- * Whether the project enables the snap.
- *
- * `core/config/project_settings.cpp:1808`:
- *
- *     GLOBAL_DEF_BASIC("gui/common/snap_controls_to_pixels", true);
- *
- * so the default is ON, and `main/main.cpp:4577-4578`'s
- *
- *     bool snap_controls = GLOBAL_GET("gui/common/snap_controls_to_pixels");
- *     sml->get_root()->set_snap_controls_to_pixels(snap_controls);
- *
- * is the only thing that ever turns it off. `_GLOBAL_DEF` leaves an
- * already-loaded value at whatever type the file wrote
- * (`project_settings.cpp:1320-1325`), so the `bool` conversion on that first
- * line is `Variant::booleanize`, `!is_zero()` (`variant_op.cpp:1114-1122`):
- * `=0` disables the snap exactly as `=false` does, and every non-zero number
- * enables it. A missing key, an empty value or a spelling no numeric slot
- * converts keeps Godot's default.
+ * Whether the project enables the snap. It defaults on
+ * (`core/config/project_settings.cpp:1808`), and only the `GLOBAL_GET` read in
+ * `main/main.cpp:4577-4578` turns it off.
  */
 export function snapControlsToPixelsEnabled(settings: ProjectSettings | null): boolean {
+  // `_GLOBAL_DEF` keeps the type the file wrote (`project_settings.cpp:1320-1325`),
+  // so the read is `!is_zero()` (`variant_op.cpp:1114-1122`): `=0` disables it as
+  // `=false` does. A missing, empty or unconvertible value keeps the default.
   return boolSlotValue(settings?.[SNAP_CONTROLS_TO_PIXELS_SETTING]) !== false;
 }
 
 /**
- * A Control's own pivot/rotation/scale, AFTER a Container's reset — a
- * container child's transform is not its authored one
- * (`Container::fit_child_in_rect` ends with `set_rotation(0)` /
- * `set_scale(Vector2(1, 1))`), and both the gate and the composite origin
- * must see the effective values.
+ * A Control's pivot, rotation and scale after a Container's reset:
+ * `Container::fit_child_in_rect` ends with `set_rotation(0)` and
+ * `set_scale(Vector2(1, 1))`, and the gate and the origin see the effective values.
  */
 export interface ControlDrawTransform {
   /** Radians, Godot's `data.rotation`. */
   rotation: number;
   scale: Vec2;
-  /** `Control::get_combined_pivot_offset()` — `pivot_offset + pivot_offset_ratio * size`. */
+  /** `Control::get_combined_pivot_offset()`: `pivot_offset + pivot_offset_ratio * size`. */
   pivot: Vec2;
 }
 
 /**
- * The translation column of `Control::_get_internal_transform()`
- * (`control.cpp:720-725`):
- *
- *     Transform2D xform(data.rotation, data.scale, 0.0f, get_combined_pivot_offset());
- *     xform.translate_local(-get_combined_pivot_offset());
- *
- * `Transform2D(rotation, scale, skew, origin)` puts `origin` in the third
- * column, and `translate_local(v)` adds `basis * v`, leaving
- * `pivot - basis * pivot`. With a zero skew the basis columns are
- * `(cos r, sin r) * scale.x` and `(-sin r, cos r) * scale.y`.
- *
- * Zero whenever the basis is the identity — the overwhelmingly common case of
- * an unrotated, unscaled Control, where the composite origin is just the
- * position.
+ * The translation column of `Control::_get_internal_transform()` (`control.cpp:720-725`):
+ * the pivot as origin, then `translate_local(-pivot)`, leaves `pivot - basis * pivot`.
+ * With zero skew the basis columns are `(cos r, sin r) * scale.x` and
+ * `(-sin r, cos r) * scale.y`. Zero for an unrotated, unscaled Control.
  */
 export function internalTransformTranslation(transform: ControlDrawTransform): Vec2 {
   const { rotation, scale, pivot } = transform;
@@ -119,27 +85,17 @@ export function internalTransformTranslation(transform: ControlDrawTransform): V
 }
 
 /**
- * The origin to draw a Control's own transform at, given its solved
- * (parent-relative, full-precision) rect position.
- *
- * Returns the origin of the OUTER placement, i.e. what remains once the
- * internal pivot/rotation/scale transform will have contributed its own
- * translation downstream: the snap applies to their SUM, so the difference
- * the snap introduced is what this hands back. With an identity basis that
- * sum is the position itself and this is a plain
- * `floor(position + 0.5)`.
- *
- * `is_inside_tree()` — the gate's first term — holds for everything that
- * reaches a renderer at all, so only the rotation gate and the project
- * setting are tested here. A non-finite rotation fails the `< epsilon`
- * comparison and therefore does not snap, which is the same answer Godot's
- * float comparison gives.
+ * The outer placement's origin for a solved, parent-relative rect position. The
+ * snap applies to the sum with the internal translation, so this returns that
+ * snapped sum less the internal part: `floor(position + 0.5)` for an identity basis.
  */
 export function snappedControlOrigin(
   position: Vec2,
   transform: ControlDrawTransform,
   snapEnabled: boolean
 ): Vec2 {
+  // `is_inside_tree()` holds for all that renders. A non-finite rotation fails the
+  // `<` and does not snap, as in Godot.
   if (!snapEnabled || !(Math.abs(Math.sin(transform.rotation * 4)) < SNAP_ROTATION_EPSILON)) {
     return { x: position.x, y: position.y };
   }
