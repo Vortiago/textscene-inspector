@@ -18,3 +18,12 @@ and state why.
   the `SceneIndex.byName` map that serves it. Only its test calls it.
 - Kept as test infrastructure or public entry exports: `everyValidatorLabel`,
   `UNCATALOGUED_BASE_TYPES`, `canonicalPropertyName`, `isDeprecatedPropertyName`.
+- `packages/textscene-core/src/nodes/2d/ui/shared/splitContainerSolver.ts`:
+  `computeSplitDraggerPosition`. Only its test calls it.
+- `packages/textscene-core/src/nodes/2d/ui/shared/splitContainer.ts`:
+  `splitFirstExtent`, with `splitSeparation`, `DEFAULT_SEPARATION` and
+  `GRABBER_EXTENT` behind it. Only its test reaches them.
+- `packages/textscene-core/src/nodes/2d/ui/shared/boxContainer.ts`:
+  `alignmentJustify`. Only its test calls it.
+- `packages/textscene-core/src/nodes/2d/ui/progressbar/nativeSolver.ts`: four
+  `PROGRESS_BAR_*` constants are exported, but only the file itself uses them.
