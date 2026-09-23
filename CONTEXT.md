@@ -148,7 +148,7 @@ The three thin registration files per slice.
 _Avoid_: "barrel" for these. Reserve "barrel" for the aggregating files that collect them: `parser/TscnParser.ts`, `r3f/nodes/index.ts`, `linter/index.ts` and `resources/sliceRegistrations.ts`.
 
 **NodeRegistry**:
-The parser-domain singleton mapping `typeName` to `{typeGuard, parser, propertyFormatter}`.
+The parser-domain singleton mapping `typeName` to `{parser, propertyFormatter}`.
 Side-effect imports in `TscnParser.ts` populate it.
 _Avoid_: "parser registry" loosely.
 

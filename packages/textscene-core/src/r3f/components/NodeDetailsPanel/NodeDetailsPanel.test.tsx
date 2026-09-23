@@ -49,7 +49,6 @@ describe('<NodeDetailsPanel>', () => {
     // Register a stub so the type is treated as supported.
     nodeRegistry.register({
       typeName: FAKE_TYPE,
-      typeGuard: () => false,
       parser: () => ({}),
     });
 
@@ -103,7 +102,6 @@ describe('<NodeDetailsPanel>', () => {
   it('renders propertyFormatter sections from the registry', async () => {
     nodeRegistry.register({
       typeName: FAKE_TYPE,
-      typeGuard: () => false,
       parser: () => ({}),
       propertyFormatter: () => [
         {
@@ -138,7 +136,6 @@ describe('<NodeDetailsPanel>', () => {
   it('renders external scene instance row when node.instance is set', async () => {
     nodeRegistry.register({
       typeName: FAKE_TYPE,
-      typeGuard: () => false,
       parser: () => ({}),
     });
 

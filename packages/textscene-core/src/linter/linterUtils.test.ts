@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types.js';
-import { findNodesByName, firstNodeOfType } from './linterUtils.js';
+import { firstNodeOfType } from './linterUtils.js';
 
 function node(
   name: string,
@@ -52,19 +52,5 @@ describe('firstNodeOfType', () => {
   it('is null when nothing of that type joins the group', () => {
     const root = node('Root', 'Node3D', [node('Bare', 'WorldEnvironment')]);
     expect(firstNodeOfType([root], 'WorldEnvironment', () => false)).toBeNull();
-  });
-});
-
-describe('findNodesByName', () => {
-  it('collects every match depth-first', () => {
-    const a = node('X', 'Node3D');
-    const b = node('X', 'Label3D');
-    const root = node('Root', 'Node3D', [a, node('G', 'Node3D', [b])]);
-
-    expect(findNodesByName([root], 'X')).toEqual([a, b]);
-  });
-
-  it('returns an empty array when nothing matches', () => {
-    expect(findNodesByName([node('Root', 'Node3D')], 'Nope')).toEqual([]);
   });
 });

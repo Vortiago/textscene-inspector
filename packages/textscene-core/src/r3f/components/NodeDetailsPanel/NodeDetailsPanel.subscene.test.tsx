@@ -58,7 +58,6 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
   it('resolves a node INSIDE an instanced PackedScene (not just flattenedNodes)', async () => {
     nodeRegistry.register({
       typeName: LAMP_MESH_TYPE,
-      typeGuard: () => false,
       parser: () => ({}),
     });
 
@@ -115,7 +114,6 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
   it('resolves a sub-scene interior selected BEFORE the sub-scene loads (late arrival, no pre-seed)', async () => {
     nodeRegistry.register({
       typeName: LAMP_MESH_TYPE,
-      typeGuard: () => false,
       parser: () => ({}),
     });
 
@@ -177,7 +175,6 @@ describe('<NodeDetailsPanel> BUG 1 — sub-scene interior selection', () => {
   it('still resolves an inline node', async () => {
     nodeRegistry.register({
       typeName: LAMP_MESH_TYPE,
-      typeGuard: () => false,
       parser: () => ({}),
     });
 
@@ -207,7 +204,6 @@ describe('<NodeDetailsPanel> BUG 2 — instance root shows the collapsed identit
   it('shows the merged sub-scene root type for a selected instance ROOT, not the wrapper', async () => {
     nodeRegistry.register({
       typeName: COIN_ROOT_TYPE,
-      typeGuard: () => false,
       parser: () => ({}),
     });
 

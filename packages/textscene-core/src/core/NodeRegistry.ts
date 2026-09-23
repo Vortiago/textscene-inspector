@@ -27,12 +27,6 @@ export interface NodeTypeRegistration {
   /** Node type name, such as 'MeshInstance3D' or 'Node3D'. */
   typeName: string;
 
-  /**
-   * Ignored by `findRegistration`, which matches the heading's `type` attribute against
-   * `typeName`. Kept for back-compat.
-   */
-  typeGuard?: (heading: ParsedHeading) => boolean;
-
   /** Parse heading and properties into node properties object. */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic registry supports any node property type
   parser: (heading: ParsedHeading, properties: Record<string, string>) => any;

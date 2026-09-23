@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { applyRootScale } from './rootScale';
-import * as processingShim from '../../processing/rootScale';
 
 /** A GLB-shaped root: a scene root with one transformed child holding a mesh. */
 function loadedGlb(): THREE.Object3D {
@@ -88,11 +87,5 @@ describe('applyRootScale', () => {
   it('does not throw on a childless root', () => {
     const root = new THREE.Object3D();
     expect(() => applyRootScale(root, { scale: 0.01, bake: true })).not.toThrow();
-  });
-});
-
-describe('processing/ re-export shim', () => {
-  it('still serves applyRootScale from its old module path', () => {
-    expect(processingShim.applyRootScale).toBe(applyRootScale);
   });
 });

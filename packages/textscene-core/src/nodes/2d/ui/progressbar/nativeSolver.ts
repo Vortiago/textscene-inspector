@@ -94,19 +94,19 @@ export function progressBarDefaultFill(theme: NativeTheme): StyleBoxFlatData {
 }
 
 /** ProgressBar reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color` (`default_theme.cpp:283,285`). */
-export const PROGRESS_BAR_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
+const PROGRESS_BAR_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 
 /** `SceneStringName(font)` = `"font"` (`default_theme.cpp:283`: `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT, ProgressBar, font)`). */
 export const PROGRESS_BAR_THEME_FONT_KEY = 'font';
 
 /** ProgressBar's `font_color` default (`:446`) is `control_font_hover_color` = `Color(0.95, 0.95, 0.95)` (`default_theme.cpp:104`). */
-export const PROGRESS_BAR_DEFAULT_FONT_COLOR: ControlColor = { r: 0.95, g: 0.95, b: 0.95, a: 1 };
+const PROGRESS_BAR_DEFAULT_FONT_COLOR: ControlColor = { r: 0.95, g: 0.95, b: 0.95, a: 1 };
 
 /** `default_theme.cpp:447`: `font_outline_color` default `Color(0, 0, 0)`. */
-export const PROGRESS_BAR_DEFAULT_OUTLINE_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 1 };
+const PROGRESS_BAR_DEFAULT_OUTLINE_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 1 };
 
 /** `default_theme.cpp:449`: `outline_size` theme constant default `0`. */
-export const PROGRESS_BAR_DEFAULT_OUTLINE_SIZE = 0;
+const PROGRESS_BAR_DEFAULT_OUTLINE_SIZE = 0;
 
 /** Resolves the percent label's font size/colour (override, else the ancestor Theme chain, else ProgressBar's own `Color(0.95, 0.95, 0.95)`). */
 export function progressBarTextTheme(

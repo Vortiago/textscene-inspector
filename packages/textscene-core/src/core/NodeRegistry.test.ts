@@ -14,7 +14,7 @@ function nodeHeading(type: string): ParsedHeading {
 describe('NodeRegistry.findRegistration', () => {
   beforeEach(() => nodeRegistry.clear());
 
-  it('resolves a registration that declares NO typeGuard, by its typeName', () => {
+  it('resolves a registration by its typeName', () => {
     nodeRegistry.register({
       typeName: 'Widget3D',
       parser: (_h, props) => ({ name: props.name ?? 'X' }),
@@ -46,17 +46,6 @@ describe('NodeRegistry.findRegistration', () => {
     nodeRegistry.register({ typeName: 'Widget3D', parser: () => ({}) });
 
     expect(nodeRegistry.findRegistration({ type: 'node', attributes: {} })).toBeNull();
-  });
-
-  it('ignores a legacy typeGuard and still resolves by typeName (back-compat)', () => {
-    nodeRegistry.register({
-      typeName: 'Legacy3D',
-      // A guard that would reject this heading, so a match proves the guard is ignored.
-      typeGuard: () => false,
-      parser: () => ({}),
-    });
-
-    expect(nodeRegistry.findRegistration(nodeHeading('Legacy3D'))?.typeName).toBe('Legacy3D');
   });
 });
 

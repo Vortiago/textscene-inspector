@@ -268,6 +268,10 @@ fail on a mis-shaped slice.
 - Logging: verbose `logger.info` with `[Category]` prefixes in core. Host apps filter.
   `error` and `warn` are for real problems.
 - Comments: non-obvious information only. No issue or work-item references in code.
+  `proseConventions.test.ts` (dev-kit) fails on an em dash, a contraction, a Latin
+  abbreviation or `via` in a comment, a `.tscn` comment or markdown, and on a comment of
+  more than four prose lines. A fact that needs more room goes in a `.md` beside the code.
+  Generated files and `lint:begin` sections keep their generator's text.
 - Implement completely: no stubs, placeholders or TODOs. Do every numbered item,
   including doc-only edits.
 - Commits: conventional, technical.

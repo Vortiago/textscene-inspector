@@ -19,7 +19,7 @@ export const LIGHTING_SCENES = [
   { name: 'glow-exposure', file: 'unit-glow-exposure.tscn' },
   // A 4x4 checkerboard on two quads carries far more edge than a
   // silhouette-only scene.
-  { name: 'material-emission-texture', file: 'unit-material-emission-texture.tscn', maxDiffPct: 0.6 },
+  { name: 'material-emission-texture', file: 'unit-material-emission-texture.tscn' },
   { name: 'material-emission-hdr', file: 'unit-material-emission-hdr.tscn' },
   // A local greyscale height SVG drives displacementMap on a finely subdivided
   // sphere. A normal map, or a missing displacementMap, reads as a flat ball.
@@ -28,7 +28,7 @@ export const LIGHTING_SCENES = [
   // Godot's editor preview sun and environment on a scene that declares neither
   // (ADR-0025). Godot's render of it is at
   // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing.
-  { name: 'preview-lighting', file: 'unit-preview-lighting.tscn', maxDiffPct: 0.5 },
+  { name: 'preview-lighting', file: 'unit-preview-lighting.tscn' },
   // The light-transport pair, one per way energy reaches a surface. Each puts
   // an unshaded patch of the surface's albedo on the lit plane. Godot renders a
   // white energy-1.0 source as exactly that albedo, so a correct
@@ -43,22 +43,22 @@ export const LIGHTING_SCENES = [
   // Scene-owned skies, authored away from Godot's defaults so the gradient and
   // the sun disc are legible. Both carry their own light and environment, so
   // they also pin that both previews yield.
-  { name: 'sky-procedural', file: 'unit-sky-procedural.tscn', maxDiffPct: 0.5 },
-  { name: 'sky-physical', file: 'unit-sky-physical.tscn', maxDiffPct: 0.5 },
+  { name: 'sky-procedural', file: 'unit-sky-procedural.tscn' },
+  { name: 'sky-physical', file: 'unit-sky-physical.tscn' },
   // Locks the equirect V/U orientation, measured against Godot. The black grid
   // lines antialias.
-  { name: 'sky-panorama', file: 'unit-sky-panorama.tscn', maxDiffPct: 0.5 },
+  { name: 'sky-panorama', file: 'unit-sky-panorama.tscn' },
   // BG_SKY over a gold sky with AMBIENT_SOURCE_COLOR (grey 0.6, sky_contribution
   // 0) and AgX. The shadowed grass stays grey, with no sky IBL in diffuse, while
   // the metallic sphere reflects the gold sky in full. Matches Godot to ≤6/255,
   // the reflection to 1/255.
-  { name: 'stage-ambient-ibl', file: 'unit-stage-ambient-ibl.tscn', maxDiffPct: 0.5 },
+  { name: 'stage-ambient-ibl', file: 'unit-stage-ambient-ibl.tscn' },
   // The same environment with the WorldEnvironment instanced one level down. It
   // renders like `stage-ambient-ibl`: an instanced WorldEnvironment still drives
   // tonemap and ambient and makes the editor preview environment yield.
-  { name: 'instanced-environment', file: 'unit-instanced-environment.tscn', maxDiffPct: 0.5 },
+  { name: 'instanced-environment', file: 'unit-instanced-environment.tscn' },
   // The same environment with an unsupported custom-shader sky, which must not
   // collapse it: AgX and flat ambient still apply, the background falls back to
   // mid-blue, and the metallic sphere, with no sky to reflect, reads near-black.
-  { name: 'shader-sky-env', file: 'unit-shader-sky-env.tscn', maxDiffPct: 0.5 },
+  { name: 'shader-sky-env', file: 'unit-shader-sky-env.tscn' },
 ];

@@ -12,7 +12,6 @@ import {
   getMimeType,
   isTexturePath,
 } from './textureProcessing';
-import * as processingShim from '../../processing/textureProcessing';
 
 const fakeLoader = vi.hoisted(() => ({
   mode: 'success' as 'success' | 'error',
@@ -162,13 +161,5 @@ describe('createTextureFromBuffer', () => {
   it('constructs the TextureLoader without a manager when none is given', async () => {
     await createTextureFromBuffer(data, 'image/png');
     expect(fakeLoader.lastManager).toBeUndefined();
-  });
-});
-
-describe('processing/ re-export shim', () => {
-  it('still serves the texture helpers from their old module path', () => {
-    expect(processingShim.createTextureFromBuffer).toBe(createTextureFromBuffer);
-    expect(processingShim.getMimeType).toBe(getMimeType);
-    expect(processingShim.isTexturePath).toBe(isTexturePath);
   });
 });

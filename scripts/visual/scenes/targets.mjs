@@ -13,12 +13,12 @@ export const TILE_AND_TARGET_SCENES = [
 
   // A wrong composition order moves only the four transposed cells, 0.21% of
   // the frame.
-  { name: 'tile-map-layer-flips', file: 'unit-tile-map-layer-flips.tscn', maxDiffPct: 0.02, mode: '2d' },
+  { name: 'tile-map-layer-flips', file: 'unit-tile-map-layer-flips.tscn', mode: '2d' },
   { name: 'tile-map-layer-isometric', file: 'unit-tile-map-layer-isometric.tscn', mode: '2d' },
   // Y-sort: sibling y-sort subtrees (Floor, Walls, Decorations under a
   // non-y-sorted root) layer in disjoint tree-ordered z-bands, and each layer's
   // tiles interleave with decorations by Y. No decoration hides behind the floor.
-  { name: 'isometric-dungeon', file: 'dungeon.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'isometric-dungeon', file: 'dungeon.tscn', mode: '2d' },
   // Hexagon grid (shape=3, vertical offset axis): odd columns stagger by half a
   // tile.
   { name: 'tile-map-layer-hexagon', file: 'unit-tile-map-layer-hexagon.tscn', mode: '2d' },
@@ -31,7 +31,7 @@ export const TILE_AND_TARGET_SCENES = [
   { name: 'remote-transform-3d', file: 'unit-remote-transform-3d.tscn' },
   // The pentagon is authored at the grey ghost and driven to the relay's
   // upper right.
-  { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', mode: '2d' },
 
   // ViewportTexture: the only golden that samples through a render target. The
   // offscreen pass tonemaps like Godot's: the shared environment applies inside

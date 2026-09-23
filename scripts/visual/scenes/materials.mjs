@@ -11,16 +11,16 @@ export const MATERIAL_SCENES = [
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
   // Multi-property guard, one row each: basic PBR, emission and normal,
   // advanced PBR, transparency and glass.
-  { name: 'material-features', file: 'integration-material-features.tscn', maxDiffPct: 0.5 },
+  { name: 'material-features', file: 'integration-material-features.tscn' },
   // StandardMaterial3D `billboard_mode = ENABLED` on a QuadMesh: the left quad
   // turns to face the camera while the DISABLED right quad foreshortens at the
   // editor orbit. The only golden with mesh billboarding. Sprite edges
   // antialias against the ground.
-  { name: 'material-billboard', file: 'unit-material-billboard.tscn', maxDiffPct: 0.5 },
+  { name: 'material-billboard', file: 'unit-material-billboard.tscn' },
   // An additive, unshaded, billboarded QuadMesh with a radial GradientTexture2D
   // reads as a soft gold ring beside a metallic, emissive body. Pins the
   // additive billboard gradient glow. Additive edges are AA-sensitive.
-  { name: 'coin-glow', file: 'unit-coin-glow.tscn', maxDiffPct: 0.5 },
+  { name: 'coin-glow', file: 'unit-coin-glow.tscn' },
 
   // The noise rasterisation pipeline on a Sprite2D: seeded FastNoiseLite
   // ridged fBm → normalise → seamless blend skirt → Gradient ramp. These two are

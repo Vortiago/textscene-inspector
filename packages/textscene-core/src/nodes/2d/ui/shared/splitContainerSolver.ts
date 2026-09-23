@@ -213,24 +213,6 @@ export function computeSplitDraggerPositions(
   return positions.map(invert);
 }
 
-/**
- * The two-child case of {@link computeSplitDraggerPositions}: one boundary and the deprecated
- * singular `split_offset`. Returns `computed_split_offset`, the split-axis position from this
- * container's top-left where the separation band starts. `rtl` is axis-scoped, as on the
- * N-child function.
- */
-export function computeSplitDraggerPosition(
-  size: number,
-  separation: number,
-  first: SplitAxisChild,
-  second: SplitAxisChild,
-  splitOffset: number,
-  collapsed: boolean,
-  rtl = false
-): number {
-  return computeSplitDraggerPositions(size, separation, [first, second], [splitOffset], collapsed, rtl)[0]!;
-}
-
 /** A `SplitChildInput`'s split-axis subset. `makeSplitContainerLayout` shares it, so the axis-selection rule has one implementation. */
 export function toSplitAxisChild(vertical: boolean, c: SplitChildInput): SplitAxisChild {
   const flags = vertical ? c.vSizeFlags : c.hSizeFlags;

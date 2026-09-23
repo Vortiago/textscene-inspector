@@ -5,54 +5,54 @@
  */
 
 export const CANVAS_2D_SCENES = [
-  { name: 'polygon-2d', file: 'unit-polygon2d.tscn', maxDiffPct: 0.5, mode: '2d' },
-  { name: 'line-2d', file: 'unit-line2d.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'polygon-2d', file: 'unit-polygon2d.tscn', mode: '2d' },
+  { name: 'line-2d', file: 'unit-line2d.tscn', mode: '2d' },
   // A y-sorted node's own body, between the two children it merges into the
   // same sort. Godot probes: (200,330) yellow, the bar over the red block, and
   // (700,330) blue, the blue block over the bar. Without the body the first is
   // red, which no other golden notices.
-  { name: 'ysort-own-body', file: 'unit-ysort-own-body.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'ysort-own-body', file: 'unit-ysort-own-body.tscn', mode: '2d' },
   // The 2D light surface: ADD/SUB/MIX applied against a lit surface, and an
   // inline gradient cookie under a canvas tint with an unshaded item beside it.
-  { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn', maxDiffPct: 0.5, mode: '2d' },
-  { name: 'pointlight2d-gradient', file: 'unit-pointlight2d-gradient.tscn', maxDiffPct: 0.5, mode: '2d' },
-  { name: 'pointlight2d-lightonly', file: 'unit-pointlight2d-lightonly.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn', mode: '2d' },
+  { name: 'pointlight2d-gradient', file: 'unit-pointlight2d-gradient.tscn', mode: '2d' },
+  { name: 'pointlight2d-lightonly', file: 'unit-pointlight2d-lightonly.tscn', mode: '2d' },
   // Godot's light culling: `light.range_item_cull_mask & item.light_mask != 0`.
   // Four panels under two lights take the warm light, the cool one, both, and
   // neither, the last right under the cool light. No other golden sets either
   // mask, so a light that reached everything moves no other baseline.
-  { name: 'pointlight2d-cull-mask', file: 'unit-pointlight2d-cull-mask.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'pointlight2d-cull-mask', file: 'unit-pointlight2d-cull-mask.tscn', mode: '2d' },
   // The two range windows of the same cull test. `range_z_max = 4` over z_index
   // 0, 4 and 5 pins the per-item z window and its inclusive top. A default light
   // over a world panel and a bare CanvasLayer panel pins the per-canvas layer
   // window, whose 0..0 default is why Godot never lights an untouched HUD.
-  { name: 'pointlight2d-range-z', file: 'unit-pointlight2d-range-z.tscn', maxDiffPct: 0.5, mode: '2d' },
-  { name: 'pointlight2d-range-layer', file: 'unit-pointlight2d-range-layer.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'pointlight2d-range-z', file: 'unit-pointlight2d-range-z.tscn', mode: '2d' },
+  { name: 'pointlight2d-range-layer', file: 'unit-pointlight2d-range-layer.tscn', mode: '2d' },
   // LightOccluder2D shadows, one behaviour per fixture. A shadow withholds a
   // light from the geometry behind the occluder; it never darkens what the
   // light did not reach, so an unlit surface is the same grey either way.
-  { name: 'lightoccluder2d-shadow-closed', file: 'unit-lightoccluder2d-shadow-closed.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'lightoccluder2d-shadow-closed', file: 'unit-lightoccluder2d-shadow-closed.tscn', mode: '2d' },
   // `unit-lightoccluder2d-shadow` is the single-edge case the LightOccluder2D
   // sheet leads with.
-  { name: 'lightoccluder2d', file: 'unit-lightoccluder2d.tscn', maxDiffPct: 0.5, mode: '2d' },
-  { name: 'lightoccluder2d-shadow', file: 'unit-lightoccluder2d-shadow.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'lightoccluder2d', file: 'unit-lightoccluder2d.tscn', mode: '2d' },
+  { name: 'lightoccluder2d-shadow', file: 'unit-lightoccluder2d-shadow.tscn', mode: '2d' },
   // `cull_mode` 0/1/2: which winding of an occluder's edges casts. The reversed
   // pair winds the polygons the other way, so CLOCKWISE and COUNTER_CLOCKWISE
   // swap and DISABLED stays put. A winding-blind cull test leaves one of the two
   // baselines flat.
-  { name: 'lightoccluder2d-cull-mode', file: 'unit-lightoccluder2d-cull-mode.tscn', maxDiffPct: 0.5, mode: '2d' },
-  { name: 'lightoccluder2d-cull-mode-reversed', file: 'unit-lightoccluder2d-cull-mode-reversed.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'lightoccluder2d-cull-mode', file: 'unit-lightoccluder2d-cull-mode.tscn', mode: '2d' },
+  { name: 'lightoccluder2d-cull-mode-reversed', file: 'unit-lightoccluder2d-cull-mode-reversed.tscn', mode: '2d' },
   // `shadow_color` is the light's, not the occluder's, and it replaces the light
   // term rather than withholding it. Godot does not multiply it by the item's
   // albedo, so it rides its own accumulator: folded into the ordinary one, it
   // sits a whole albedo out.
-  { name: 'lightoccluder2d-shadow-color', file: 'unit-lightoccluder2d-shadow-color.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'lightoccluder2d-shadow-color', file: 'unit-lightoccluder2d-shadow-color.tscn', mode: '2d' },
   // `shadow_item_cull_mask & occluder.light_mask`: one occluder casts, its twin
   // is culled by the same light.
-  { name: 'lightoccluder2d-shadow-mask', file: 'unit-lightoccluder2d-shadow-mask.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'lightoccluder2d-shadow-mask', file: 'unit-lightoccluder2d-shadow-mask.tscn', mode: '2d' },
   // Two shadowed lights in one accumulation pass: each must clear the stencil
   // before it stamps, or the first light's volume also cuts the second's.
-  { name: 'lightoccluder2d-two-lights', file: 'unit-lightoccluder2d-two-lights.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'lightoccluder2d-two-lights', file: 'unit-lightoccluder2d-two-lights.tscn', mode: '2d' },
   // `shadow_filter`: the boundary is a stepped penumbra, and every occluder
   // fixture above leaves the filter at NONE. The occluder's upper endpoint sits
   // at the light's y, so a vertical probe crosses the umbra boundary
@@ -61,37 +61,37 @@ export const CANVAS_2D_SCENES = [
   // Godot 4.6.3 transect at x=676: 167 / 129 / 100 / 80 / 67 / 63 of 255, the
   // five PCF5 levels under the (1-s)^2 falloff, with the step boundaries 19.4 px
   // either side of the geometric edge.
-  { name: 'pointlight2d-shadow-pcf5', file: 'unit-pointlight2d-shadow-pcf5.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'pointlight2d-shadow-pcf5', file: 'unit-pointlight2d-shadow-pcf5.tscn', mode: '2d' },
   // PCF13 spreads the same ramp over the wider kernel.
-  { name: 'pointlight2d-shadow-pcf13', file: 'unit-pointlight2d-shadow-pcf13.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'pointlight2d-shadow-pcf13', file: 'unit-pointlight2d-shadow-pcf13.tscn', mode: '2d' },
   // The colour fixture pins the fractional tint the two accumulators split.
-  { name: 'pointlight2d-shadow-pcf-color', file: 'unit-pointlight2d-shadow-pcf-color.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'pointlight2d-shadow-pcf-color', file: 'unit-pointlight2d-shadow-pcf-color.tscn', mode: '2d' },
   // CPUParticles2D renders a frozen pose: a live emitter never gives two
   // identical frames, so the harness fails it as unstable, not as changed. Each
   // fixture pins `use_fixed_seed`/`seed`/`fixed_fps`/`preprocess` so the pose
   // is one exact draw.
-  { name: 'cpuparticles2d', file: 'unit-cpuparticles2d.tscn', maxDiffPct: 0.5, mode: '2d' },
-  { name: 'cpuparticles2d-emission-shapes', file: 'unit-cpuparticles2d-emission-shapes.tscn', maxDiffPct: 0.5, mode: '2d' },
-  { name: 'cpuparticles2d-curves', file: 'unit-cpuparticles2d-curves.tscn', maxDiffPct: 0.5, mode: '2d' },
-  { name: 'cpuparticles2d-color-ramp', file: 'unit-cpuparticles2d-color-ramp.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'cpuparticles2d', file: 'unit-cpuparticles2d.tscn', mode: '2d' },
+  { name: 'cpuparticles2d-emission-shapes', file: 'unit-cpuparticles2d-emission-shapes.tscn', mode: '2d' },
+  { name: 'cpuparticles2d-curves', file: 'unit-cpuparticles2d-curves.tscn', mode: '2d' },
+  { name: 'cpuparticles2d-color-ramp', file: 'unit-cpuparticles2d-color-ramp.tscn', mode: '2d' },
   // A scaled emitter whose particles must not scale with it: Godot's default
   // `local_coords = false` emits into world space.
-  { name: 'cpuparticles2d-local-coords', file: 'unit-cpuparticles2d-local-coords.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'cpuparticles2d-local-coords', file: 'unit-cpuparticles2d-local-coords.tscn', mode: '2d' },
   // `emitting = false` draws nothing. Script-triggered one-shot emitters ship
   // this way, so a regression that started drawing them would be widespread.
-  { name: 'cpuparticles2d-not-emitting', file: 'unit-cpuparticles2d-not-emitting.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'cpuparticles2d-not-emitting', file: 'unit-cpuparticles2d-not-emitting.tscn', mode: '2d' },
   // A NavigationPolygon's vertices are Godot canvas pixels (+Y down). Without
   // the negation, the navmesh draws above the region origin instead of below.
-  { name: 'navigation-region-2d', file: 'unit-navigation-region-2d.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'navigation-region-2d', file: 'unit-navigation-region-2d.tscn', mode: '2d' },
   // A ParallaxBackground is a CanvasLayer: its subtree hangs off the viewport,
   // so the blue bar stays at the canvas origin while the red reference bar moves
   // with the displaced parent. Every other 2D golden composes transforms the
   // ordinary way.
-  { name: 'parallax-background', file: 'unit-parallax-background.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'parallax-background', file: 'unit-parallax-background.tscn', mode: '2d' },
   // `motion_mirroring` draws the layer a second time, 200 px right: the only
   // repeated canvas subtree, and the only ParallaxLayer property a camera-less
   // still frame shows.
-  { name: 'parallax-layer', file: 'unit-parallax-layer.tscn', maxDiffPct: 0.5, mode: '2d' },
+  { name: 'parallax-layer', file: 'unit-parallax-layer.tscn', mode: '2d' },
   // The one emitter with no `preprocess`, so the previewer substitutes its
   // instant. Its lifetime is not a multiple of the step, so the settle's
   // whole-frame overshoot is in the picture. Compare with Godot through

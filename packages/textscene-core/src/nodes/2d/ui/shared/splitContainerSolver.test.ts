@@ -17,7 +17,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 import {
-  computeSplitDraggerPosition,
+  computeSplitDraggerPositions,
   isSplitGrabberVisible,
   makeSplitContainerLayout,
   splitContainerBoundaryChannel,
@@ -35,6 +35,22 @@ import {
 } from './splitContainerSolver';
 import type { SplitContainerProperties } from './splitContainer';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+
+/**
+ * The two-child case of `computeSplitDraggerPositions`: one boundary and the deprecated singular
+ * `split_offset`. Returns `computed_split_offset`, where the separation band starts on the split axis.
+ */
+function computeSplitDraggerPosition(
+  size: number,
+  separation: number,
+  first: SplitAxisChild,
+  second: SplitAxisChild,
+  splitOffset: number,
+  collapsed: boolean,
+  rtl = false
+): number {
+  return computeSplitDraggerPositions(size, separation, [first, second], [splitOffset], collapsed, rtl)[0]!;
+}
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const FILL = 1;

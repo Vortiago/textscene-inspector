@@ -20,8 +20,6 @@ export function isValidProperties(props: unknown): props is Record<string, strin
 interface SceneIndex {
   /** node -> its parent, or `null` for a root. Absent key = node not in this tree. */
   parentOf: Map<TscnNode, TscnNode | null>;
-  /** name -> every node with that name, in depth-first order. */
-  byName: Map<string, TscnNode[]>;
   /** Nodes that have an ancestor (not themselves) with `instance` set. */
   underInstanceAncestor: Set<TscnNode>;
   /**
@@ -42,17 +40,12 @@ const sceneIndexCache = new WeakMap<TscnNode[], SceneIndex>();
 
 function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   const parentOf = new Map<TscnNode, TscnNode | null>();
-  const byName = new Map<string, TscnNode[]>();
   const underInstanceAncestor = new Set<TscnNode>();
   const nodesByType = new Map<string, TscnNode[]>();
 
   const walk = (nodes: TscnNode[], parent: TscnNode | null, ancestorIsInstance: boolean): void => {
     for (const node of nodes) {
       parentOf.set(node, parent);
-
-      const named = byName.get(node.name);
-      if (named) named.push(node);
-      else byName.set(node.name, [node]);
 
       const ofType = nodesByType.get(node.type);
       if (ofType) ofType.push(node);
@@ -65,13 +58,11 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   };
   walk(roots, null, false);
 
-  // Freeze each bucket: `findNodesByName` and `nodesOfType` hand these arrays
-  // straight to callers with no per-call copy, matching `RuleRegistry`'s hot-path
-  // contract, and the freeze enforces it.
-  for (const matches of byName.values()) Object.freeze(matches);
+  // Freeze each bucket: `nodesOfType` hands these arrays straight to callers with no
+  // per-call copy, matching `RuleRegistry`'s hot-path contract, and the freeze enforces it.
   for (const ofType of nodesByType.values()) Object.freeze(ofType);
 
-  return { parentOf, byName, underInstanceAncestor, nodesByType };
+  return { parentOf, underInstanceAncestor, nodesByType };
 }
 
 /**
@@ -147,15 +138,6 @@ export function extractNodePath(value: string): string | null {
   // path" to a rule resolving a reference, where a display formatter still has
   // an empty string to show.
   return nodePathLiteral(value) || null;
-}
-
-/**
- * Every node named `name` anywhere in the scene, depth-first, since Godot allows a
- * name to repeat across parents. It returns the cached index's frozen array, not a
- * per-call copy, matching `RuleRegistry.getRulesForNodeType`'s hot-path contract.
- */
-export function findNodesByName(nodes: TscnNode[], name: string): readonly TscnNode[] {
-  return getSceneIndex(nodes).byName.get(name) ?? NO_MATCHES;
 }
 
 /**

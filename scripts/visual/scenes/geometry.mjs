@@ -11,7 +11,7 @@ export const GEOMETRY_SCENES = [
   { name: 'all-meshes', file: 'integration-all-meshes.tscn' },
   // Shadow-bearing: the shadow map is the most GPU-sensitive content in the set,
   // since soft-edge PCF sampling differs across drivers.
-  { name: 'all-primitives', file: 'integration-all-primitives.tscn', maxDiffPct: 0.5 },
+  { name: 'all-primitives', file: 'integration-all-primitives.tscn' },
   // Every CSG dimension omitted, so the render depends on our parser defaults
   // matching Godot's (CSGBox3D 1,1,1). The other CSG fixtures set every
   // dimension. The 1x1 ruler plate underneath gives the eye a scale.
@@ -24,7 +24,7 @@ export const GEOMETRY_SCENES = [
   // its shadow lands and the sphere under it renders. `visible = false` cannot
   // do it: three skips an invisible object in the shadow pass and its subtree.
   // Soft-shadow edges are GPU-sensitive.
-  { name: 'shadows-only', file: 'unit-shadows-only.tscn', maxDiffPct: 0.5 },
+  { name: 'shadows-only', file: 'unit-shadows-only.tscn' },
   // CSG `material` as an ExtResource .tres beside an inline SubResource one. A
   // resolver of the inline form alone draws the external one white, and the
   // other CSG fixtures declare theirs inline. The left box is green, the right red.
@@ -40,8 +40,7 @@ export const GEOMETRY_SCENES = [
   {
     name: '2d-geometry-parity',
     file: 'unit-2d-geometry-parity.tscn',
-    navigation: true,
-    maxDiffPct: 0.5, mode: '2d' },
+    navigation: true, mode: '2d' },
   // Two AreaLight3D panels of the same light_energy and different area_size.
   // Godot normalises the colour by the area (area_normalize_energy, default
   // true), so both plates read the same. Without it the 4 x 0.05 strip is 5x
