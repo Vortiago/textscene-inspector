@@ -116,11 +116,15 @@ export function commentViolations(comment: string): ProseViolation[] {
   return violations;
 }
 
-/** Markdown prose: fenced blocks, HTML comments and frontmatter removed, lines kept. */
+/**
+ * Markdown prose: frontmatter, fenced blocks, generated lint sections and HTML comments
+ * removed, lines kept. `pnpm docs:lint-sections` writes each lint section from validator text.
+ */
 export function markdownProse(markdown: string): string {
   const blank = (block: string): string => block.replace(/[^\n]/g, ' ');
   return markdown
     .replace(/^---\n[\s\S]*?\n---\n/, blank)
+    .replace(/<!-- lint:begin [\s\S]*?<!-- lint:end -->/g, blank)
     .replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[^\n]*$/gm, blank)
     .replace(/<!--[\s\S]*?-->/g, blank);
 }

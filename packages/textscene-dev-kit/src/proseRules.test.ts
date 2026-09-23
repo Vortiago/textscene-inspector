@@ -119,6 +119,11 @@ describe('markdownViolations', () => {
     expect(markdownViolations(markdown)).toEqual([]);
   });
 
+  it('ignores a generated lint section', () => {
+    const markdown = '<!-- lint:begin Area2D -->\n| `a` | any Variant — typed later |\n<!-- lint:end -->\nPlain.\n';
+    expect(markdownViolations(markdown)).toEqual([]);
+  });
+
   it('keeps line numbers after a removed block', () => {
     const found = markdownViolations('```\na\nb\n```\nvia here\n');
     expect(found.map((f) => f.line)).toEqual([5]);

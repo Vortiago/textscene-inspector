@@ -92,6 +92,8 @@ most four lines. Cut everything else.
   is data that `scripts/compare-docs/*.test.mjs` parses. Keep the frontmatter,
   every heading, every table column and row, every status value and every
   property name exactly. Tighten only the free prose in cells and paragraphs.
+  Never edit between `<!-- lint:begin … -->` and `<!-- lint:end -->`:
+  `pnpm docs:lint-sections` writes that block from the validators.
   Read `scripts/compare-docs/SHEET-STANDARD.md` first.
 - `AGENTS.md`, `CLAUDE.md` and `.claude/**` are briefs that agents follow:
   keep every rule, command and gate. Cut the narration around them.
