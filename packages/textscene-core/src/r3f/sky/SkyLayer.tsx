@@ -5,14 +5,12 @@
  * its real world transform.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { useThree } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import type { SkyProperties } from '../../resources/sky/types';
-import { useResourceLoader } from '../../resources/useResource';
 import { useTexture2D } from '../../resources/useTexture2D';
 import { useSceneResources } from '../SceneResourcesContext';
-import { useLiveTreeVersion } from '../useLiveSceneTree';
 import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 
@@ -48,7 +46,6 @@ export function SkyLayer({
 }: SkyLayerProps) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
-  const loader = useResourceLoader();
   const { externalResources, internalResources } = useSceneResources();
 
   // `useTexture2D`, not the path-only resolver: a PanoramaSkyMaterial's
@@ -61,21 +58,12 @@ export function SkyLayer({
       externalResources,
       internalResources
     ).texture ?? null;
-  // The live tree grows as sub-scenes and GLBs load, and a light arriving late
-  // changes the sky. This is the same tick every other live-tree reader uses.
-  const treeVersion = useLiveTreeVersion(loader);
-
-  // Re-render once after mount so the first pass sees sibling lights: child
-  // effects run before the parent's, but the very first paint happens before
-  // any of them.
-  const [pass, setPass] = useState(0);
-  useEffect(() => setPass(1), []);
+  const lightsKey = useSkyLightsKey(scene);
 
   useEffect(() => {
-    // Nothing built on the first pass is seen: the corrective pass follows in
-    // the same tick. Skipping it saves a six-face cube render and a PMREM
-    // prefilter per mount.
-    if (pass === 0) return undefined;
+    // No frame has read the lights yet. A bake now would be replaced before it
+    // is seen, and each bake costs a six-face cube render and a PMREM prefilter.
+    if (lightsKey === null) return undefined;
 
     const built = buildSkyEnvironment(gl, {
       sky,
@@ -113,11 +101,36 @@ export function SkyLayer({
     panorama,
     asBackground,
     backgroundIntensity,
-    treeVersion,
-    pass,
+    lightsKey,
   ]);
 
   return null;
+}
+
+/**
+ * Changes whenever the lights the sky draws change, read every frame, as Godot re-renders the sky
+ * on a change of light count, direction, energy, colour or size (`sky.cpp:1104-1142`). A sub-scene
+ * or GLB brings a light late, and the preview sun unmounts for the scene's own (ADR-0025). Null
+ * until the first frame.
+ */
+function useSkyLightsKey(scene: THREE.Scene): string | null {
+  const [key, setKey] = useState<string | null>(null);
+  const latest = useRef<string | null>(null);
+  useFrame(() => {
+    const next = skyLightsKey(directionalLights(scene));
+    if (next === latest.current) return;
+    latest.current = next;
+    setKey(next);
+  });
+  return key;
+}
+
+function skyLightsKey(lights: readonly SkyLight[]): string {
+  return lights
+    .map(({ direction: d, color: c, energy, angularRadius }) =>
+      [d.x, d.y, d.z, c.r, c.g, c.b, energy, angularRadius].join(',')
+    )
+    .join(';');
 }
 
 /**

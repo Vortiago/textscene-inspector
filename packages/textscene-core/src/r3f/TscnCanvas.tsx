@@ -22,7 +22,11 @@ import { frameSceneBounds, type OrbitLike } from './frameSceneBounds.js';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
+import { installGodotDiffuse } from './godotDiffuse.js';
 import styles from './TscnCanvas.module.css';
+
+// At import, before any program compiles: a program reads three's chunks only when it compiles.
+installGodotDiffuse();
 
 /**
  * The contents of the `<Canvas>`, exported so `@react-three/test-renderer`,
