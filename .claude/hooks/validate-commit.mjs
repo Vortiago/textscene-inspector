@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * PreToolUse hook for `mcp__github_file_ops__commit_files`, the tool that commits through the
- * GitHub API, where no git hook runs. It runs the Husky pre-commit checks from
+ * GitHub API, where no git hook runs. It runs the pre-commit checks from
  * `lint-staged.config.mjs` on the files the tool commits. It exits 2 when a check fails, else 0.
  */
 

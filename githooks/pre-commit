@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# Fast pre-commit: lint and type-aware tests on the staged files only.
+# The full `pnpm validate` gate runs on pre-push and in CI.
+
+# HUSKY=0 skips the hook: the switch that existing callers already set.
+[ "${HUSKY-}" = "0" ] && exit 0
+
+pnpm exec lint-staged
