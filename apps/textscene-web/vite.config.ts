@@ -1,8 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { isPublicSiteBuild } from './scripts/siteEdition.mjs';
+
+const isPublicSite = isPublicSiteBuild();
 
 export default defineConfig({
   plugins: [react()],
+  // Relative asset URLs: GitHub Pages serves the public edition under /<repo>/, not at
+  // the root. The dev edition keeps `/`, as its `/fixtures/` fetches are root-absolute too.
+  base: isPublicSite ? './' : '/',
   server: {
     // All interfaces, so other hosts on the LAN or tailnet reach the dev server.
     host: '0.0.0.0',
@@ -13,7 +19,9 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // The public edition ships no source maps: only a debugger reads them, and they
+    // more than double the size of dist/.
+    sourcemap: !isPublicSite,
     rollupOptions: {
       // three.js gets its own cacheable chunk, as it changes only on a dependency bump. Only
       // three, which is self-contained ESM: a split react ecosystem forms a CJS-interop init

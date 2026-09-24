@@ -1,0 +1,68 @@
+name: GitHub Pages
+
+# Deploys the public edition of the web previewer: no built-in scenes, no parity
+# gallery and no source maps. Cloudflare Pages builds the dev edition apart from this,
+# with `pnpm build:deploy`. Only a main commit that CI passed deploys here.
+on:
+  workflow_run:
+    workflows: ['CI/CD']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, and never cancel one halfway: a newer commit waits its turn.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The commit CI passed, not whatever main holds by the time this runs.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build the public site
+        run: pnpm build:pages
+
+      - name: Check the public site holds no dev-edition content
+        run: pnpm check:public-site
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: apps/textscene-web/dist/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

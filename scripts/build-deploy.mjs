@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * The deployed-site build: the previewer plus the games corpus (`scenes/games/**`, gitignored).
- * The corpus is deploy-only, so a local `pnpm vendor:games` keeps it out of the local selector,
- * and this is the one entry point that vendors it and sets `VITE_INCLUDE_GAMES=1`. Point the
- * Cloudflare Pages build command at `pnpm build:deploy`.
+ * The dev-edition site build: the previewer plus the games corpus (`scenes/games/**`,
+ * gitignored). The corpus is deploy-only, so a local `pnpm vendor:games` keeps it out of the
+ * local selector, and this is the one entry point that vendors it and sets
+ * `VITE_INCLUDE_GAMES=1`. Point the Cloudflare Pages build command at `pnpm build:deploy`.
+ * `pnpm build:pages` builds the public edition for GitHub Pages.
  */
 import { spawnSync } from 'node:child_process';
 

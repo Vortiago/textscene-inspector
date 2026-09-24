@@ -8,9 +8,6 @@ on:
 
 permissions:
   contents: read
-  # GitHub Pages (disabled for private repo)
-  # pages: write
-  # id-token: write
 
 jobs:
   build:
@@ -105,6 +102,14 @@ jobs:
         with:
           name: tscn-linter-cli
           path: apps/textscene-linter/dist/cli.js
+
+      # After the uploads: the public edition builds into the same dist/ the
+      # dev-edition artifact above comes from. pages.yml deploys this build from main.
+      - name: Build the public site
+        run: pnpm build:pages
+
+      - name: Check the public site holds no dev-edition content
+        run: pnpm check:public-site
 
   visual-regression:
     name: Visual Regression (goldens + raster)
@@ -309,20 +314,3 @@ jobs:
 
           echo "✓ VSIX package structure is valid"
 
-      # GitHub Pages deployment (disabled for private repo)
-      # - if: github.ref == 'refs/heads/main'
-      #   uses: actions/upload-pages-artifact@v3
-      #   with:
-      #     path: apps/textscene-web/dist/
-
-  # GitHub Pages deployment (disabled for private repo)
-  # deploy:
-  #   if: github.ref == 'refs/heads/main'
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   environment:
-  #     name: github-pages
-  #     url: ${{ steps.deployment.outputs.page_url }}
-  #   steps:
-  #     - id: deployment
-  #       uses: actions/deploy-pages@v4

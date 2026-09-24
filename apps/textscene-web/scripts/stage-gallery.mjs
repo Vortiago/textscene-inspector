@@ -1,10 +1,12 @@
 // Stages the Godot-versus-previewer comparison gallery under public/parity/, which
-// Vite copies into dist/ for Cloudflare Pages, so it is served at /parity/ and
-// linked from the toolbar. Images are referenced, not inlined, and sit beside the HTML.
+// Vite copies into dist/ for the dev site on Cloudflare Pages, so it is served at
+// /parity/ and linked from the toolbar. The public edition stages nothing. Images are
+// referenced, not inlined, and sit beside the HTML.
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isPublicSiteBuild } from './siteEdition.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../../..');
@@ -16,6 +18,10 @@ const imagesTarget = join(outDir, 'images');
 const MAX_DEPLOY_FILE_BYTES = 25 * 1024 * 1024;
 
 rmSync(outDir, { recursive: true, force: true });
+if (isPublicSiteBuild()) {
+  console.log('Public site edition: no parity gallery staged');
+  process.exit(0);
+}
 mkdirSync(imagesTarget, { recursive: true });
 
 // The generator's <img> src values are `images/…`, relative to index.html, so

@@ -28,6 +28,7 @@ import { createFileIngest } from './fileIngest';
 import { useFileDrop } from './useFileDrop';
 import { useUploadError } from './useUploadError';
 import { Toolbar } from './R3FToolbar';
+import { IS_PUBLIC_SITE } from './siteEdition';
 import styles from './r3f-main.module.css';
 
 export function R3FApp() {
@@ -48,7 +49,10 @@ export function R3FApp() {
 
   // One provider, bus and loader for the app's lifetime, so an uploaded texture survives a
   // fixture switch.
-  const pipeline = useMemo(() => createResourcePipeline(new WebResourceProvider()), []);
+  const pipeline = useMemo(
+    () => createResourcePipeline(new WebResourceProvider({ hasFixturesMirror: !IS_PUBLIC_SITE })),
+    []
+  );
   const { provider, loader } = pipeline;
 
   // Each vendored demo project keeps its own res:// namespace. The root switches at the

@@ -2,11 +2,20 @@ import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FLATTENED_CORPUS_ROOTS } from '../../../scripts/corpusRoots.mjs';
+import { isPublicSiteBuild } from './siteEdition.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const scenesRoot = join(__dirname, '../../../scenes');
 const fixturesSource = join(scenesRoot, 'fixtures');
 const fixturesTarget = join(__dirname, '../public/fixtures');
+
+// Vite copies public/ into dist/ whole, so the public edition removes a mirror an
+// earlier dev build left rather than only skipping the copy.
+if (isPublicSiteBuild()) {
+  rmSync(fixturesTarget, { recursive: true, force: true });
+  console.log('Public site edition: no fixtures mirrored');
+  process.exit(0);
+}
 
 // Cloudflare Pages rejects a deployment holding a file over 25 MiB, such as an
 // uncompressed .hdr sky in the godot demos. Such a file is not copied, and the

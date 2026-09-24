@@ -14,6 +14,7 @@ import { useMissingResources, type ViewportSelectorOption } from '@textscene/cor
 import { fixtures } from './fixturesAll';
 import { FixtureTreeView } from './FixtureTree';
 import { NO_FIXTURE } from './sceneSelection';
+import { IS_PUBLIC_SITE } from './siteEdition';
 import styles from './r3f-main.module.css';
 
 export interface ToolbarProps {
@@ -170,19 +171,21 @@ export function Toolbar({
       </button>
 
       {/* Opens the staged Godot-versus-previewer gallery (public/parity/,
-          served at /parity/ in dev and on the deployed site). */}
-      <a
-        className={styles.openButton}
-        href="parity/index.html"
-        target="_blank"
-        rel="noopener"
-        title="Open the Godot ⇄ ours render-comparison gallery"
-      >
-        <span className={styles.openIcon} aria-hidden>
-          ⇄
-        </span>
-        Parity
-      </a>
+          served at /parity/ in dev and on the dev site). The public edition stages none. */}
+      {!IS_PUBLIC_SITE && (
+        <a
+          className={styles.openButton}
+          href="parity/index.html"
+          target="_blank"
+          rel="noopener"
+          title="Open the Godot ⇄ ours render-comparison gallery"
+        >
+          <span className={styles.openIcon} aria-hidden>
+            ⇄
+          </span>
+          Parity
+        </a>
+      )}
 
       {missingPaths.size > 0 && (
         <span
