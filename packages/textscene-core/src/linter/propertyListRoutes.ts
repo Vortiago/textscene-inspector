@@ -15,14 +15,10 @@ import { spatialNodeRoutes } from './propertyListRoutes/spatialNodes.js';
 
 export type { RouteRow } from './propertyListRoutes/types.js';
 
-// `MultiplayerSpawner` is absent: its `scenes/<i>/…` keys carry no storage bit
-// (`multiplayer_spawner.cpp:72,83`), and `SceneState::save` skips such a key
-// (`packed_scene.cpp:865-867`).
-
-// `PROPERTY_USAGE_NO_EDITOR` is `STORAGE` alone (`object.h:132`), so its key is
-// serialised. `PROPERTY_USAGE_DEFAULT` is `STORAGE | EDITOR` (`object.h:131`) and
-// applies with no usage argument. Only an explicit usage list without the storage
-// bit excludes a key, and one function can mix both shapes.
+// A key without the storage bit gets no row: `SceneState::save` skips it (`packed_scene.cpp:865-867`), as it
+// does `MultiplayerSpawner`'s `scenes/<i>/…` (`multiplayer_spawner.cpp:72,83`). `NO_EDITOR` is `STORAGE` alone
+// (`object.h:132`), and `DEFAULT`, `STORAGE | EDITOR` (`object.h:131`), applies with no usage argument. Only an
+// explicit usage list without the bit excludes a key, and one function can mix both shapes.
 export const ROWS: readonly RouteRow[] = [
   ...skeletonRoutes,
   ...animationRoutes,

@@ -1,13 +1,9 @@
 /**
- * Godot default-theme SVG icons the native (WebGL) Control painters need, as base64 `data:` URLs,
- * so the source bytes round-trip without escaping `<`, `"` and `#`. Each is an unmodified copy from
- * Godot 4.6.3's `scene/theme/icons/`. Licence: Godot Engine, MIT, see THIRD-PARTY-NOTICES.md.
+ * Godot default-theme SVG icons the native (WebGL) Control painters need, as base64 `data:` URLs, so the source
+ * bytes round-trip without escaping `<`, `"` and `#`. Each is an unmodified copy from Godot 4.6.3's `scene/theme/icons/`,
+ * keyed by its filename without the extension (`default_theme_icons_builders.py`), as `scene/theme/default_theme.cpp`
+ * binds it per control with `set_icon`. Licence: Godot Engine, MIT, see THIRD-PARTY-NOTICES.md.
  */
-
-// A theme key is the SVG filename without its extension (`default_theme_icons_builders.py`), and
-// `scene/theme/default_theme.cpp` binds the keys per control with `set_icon`. Hover variants, such as
-// the slider `grabber_highlight` (`default_theme.cpp:589-592,604-607`) and the TabBar `_highlight` pair
-// (`:1035,1037`), are not vended, since a static previewer draws no hover state.
 
 function svgDataUrl(base64: string): string {
   return `data:image/svg+xml;base64,${base64}`;
@@ -116,7 +112,11 @@ const HSLIDER_TICK_B64 =
 const VSLIDER_TICK_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjQiPjxwYXRoIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjI1IiBkPSJNMCAzVjFoMTZ2MnoiLz48L3N2Zz4K';
 
-/** HSlider/VSlider's `grabber`/`grabber_disabled` icons: identical for both orientations (`default_theme.cpp:589-591,604-606`). */
+/**
+ * HSlider/VSlider's `grabber`/`grabber_disabled` icons: identical for both orientations (`default_theme.cpp:589-591,604-606`).
+ * The `grabber_highlight` hover variant
+ * (`default_theme.cpp:589-592,604-607`) is not vended, since a static previewer draws no hover state.
+ */
 export interface SliderGrabberIcons {
   grabber: string;
   grabberDisabled: string;
@@ -304,7 +304,10 @@ const TAB_BAR_SCROLL_RIGHT_B64 =
 const TAB_BAR_SCROLL_LEFT_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjYiIGZpbGw9IiNmZWZmZmUiIGZpbGwtb3BhY2l0eT0iLjc1Ii8+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWExYTFhIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNjUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTkgNS0zIDMgMyAzIi8+PC9zdmc+Cg==';
 
-/** TabBar's close and scroll-arrow icons (`default_theme.cpp:1034,1036,1039`). `TabContainer` reuses the TabBar painter. */
+/**
+ * TabBar's close and scroll-arrow icons (`default_theme.cpp:1034,1036,1039`). `TabContainer` reuses the TabBar painter.
+ * The `_highlight` hover pair (`default_theme.cpp:1035,1037`) is not vended, since a static previewer draws no hover state.
+ */
 export interface TabBarIcons {
   close: string;
   incrementScroll: string;

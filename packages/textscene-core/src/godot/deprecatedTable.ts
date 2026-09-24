@@ -98,20 +98,7 @@ const DEPRECATED_PROPERTY_NAMES = toLookup({
   // Declared on the base, so every GeometryInstance3D descendant carries it.
   GeometryInstance3D: { use_in_baked_light: giMode('1'), use_dynamic_gi: giMode('2') }, // visual_instance_3d.cpp:323-330
 
-  // Not listed, as the slice owns them: `AnimationPlayer`'s three callback-mode arms and
-  // `AnimationTree`'s `process_callback` validate the deprecated spelling and read
-  // `current ?? deprecated`, so canonicalising would change which value wins.
-  // `deprecated.test.ts` pins each.
-
-  // Not listed, as no single property receives it: `ItemList` and `PopupMenu` read `items`
-  // three elements at a time into `add_item` calls (item_list.cpp:2244-2258).
-
-  // Not listed, as nothing assigns it: `AnimationPlayer`'s `_get`-only `playback/play`
-  // (animation_player.cpp:71).
-
-  // No row yet on the resource side: `Environment.background_sky*`, `BaseMaterial3D`'s
-  // `flags_*`/`params_*`, `Animation.loop`, `NavigationMesh.polygon_verts_per_poly` and
-  // `VisualShaderNodeParameter.uniform_name`.
+  // `deprecatedTable.md` lists the deprecated spellings with no row here, and why.
 });
 
 /**

@@ -5,14 +5,13 @@
  * shadows it and duplicates the rule.
  */
 
-// `sorting_offset` and `sorting_use_aabb_center` get no validator: OccluderInstance3D has
-// no `_validate_property` override, unlike GeometryInstance3D and Decal, so they stay
-// PROPERTY_USAGE_NONE and never reach a `.tscn`.
-
 import '../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 
+// `sorting_offset` and `sorting_use_aabb_center` get no validator: OccluderInstance3D has
+// no `_validate_property` override, unlike GeometryInstance3D and Decal, so they stay
+// PROPERTY_USAGE_NONE and never reach a `.tscn`.
 validatorRegistry.registerAll('OccluderInstance3D', {
   // occluder_instance_3d.cpp:744, PROPERTY_HINT_RESOURCE_TYPE "Occluder3D". set_occluder
   // (:434-461) is a bare Ref<> assignment, so only the reference shape is checked.

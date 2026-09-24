@@ -5,11 +5,6 @@
  * `overrides=` belong here, with the governing source line beside every non-obvious bound.
  */
 
-// `_get_property_list` (:705-719) adds keys from the OpenXR extension wrappers registered at runtime,
-// and `_set` (:730-737) stores any name. The list drops a name with no `/` (:713-716), and a
-// `WildcardEntry` needs a fixed prefix, so no validator can name these keys. None is needed:
-// StrictTscnParser.onProperty accepts an unregistered key silently, and linterParser.test.ts guards it.
-
 import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
@@ -25,15 +20,15 @@ const WRAP_LABELS = {
 };
 const SWIZZLE_LABELS = { 0: 'RED', 1: 'GREEN', 2: 'BLUE', 3: 'ALPHA', 4: 'ZERO', 5: 'ONE' };
 
+// `_get_property_list` (:705-719) adds keys from the OpenXR extension wrappers registered at runtime,
+// and `_set` (:730-737) stores any name. The list drops a name with no `/` (:713-716), and a
+// `WildcardEntry` needs a fixed prefix, so no validator can name these keys. None is needed:
+// StrictTscnParser.onProperty accepts an unregistered key silently, and linterParser.test.ts guards it.
 validatorRegistry.registerAll('OpenXRCompositionLayer', {
-  // PackedScene::_parse_node (packed_scene.cpp:884-891) writes this OBJECT + NODE_TYPE slot as a
-  // NodePath and omits it when cleared. Whether the target is a SubViewport is a semantic-rule
-  // concern, since it needs the tree.
-
-  // openxr_composition_layer.cpp:151, OBJECT + PROPERTY_HINT_NODE_TYPE "SubViewport". A bare `null`
-  // loads: variant_parser.cpp:699 reads it, NIL converts to OBJECT (variant.cpp:543-545), and both
-  // set_layer_viewport guards read `p_viewport != nullptr` (openxr_composition_layer.cpp:295-305).
-  // The engine passes nullptr itself at :345.
+  // openxr_composition_layer.cpp:151, OBJECT + PROPERTY_HINT_NODE_TYPE "SubViewport", which `_parse_node` writes as
+  // a NodePath and omits when cleared (packed_scene.cpp:884-891). Whether it names a SubViewport needs the tree, a
+  // semantic rule's concern. A bare `null` loads: variant_parser.cpp:699 reads it, NIL converts to OBJECT
+  // (variant.cpp:543-545), both set_layer_viewport guards read `p_viewport != nullptr` (:295-305), and :345 passes nullptr.
   layer_viewport: v.nodePath('layer_viewport', { orNull: true }),
   // :152-157, all BOOL/VECTOR2I/INT with PROPERTY_HINT_NONE, and every setter
   // (:337-432) either bare-assigns or early-returns on equality: no ERR_FAIL

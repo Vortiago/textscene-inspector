@@ -5,9 +5,6 @@
 ; `Ref<Material>` whatever its source, so a GLB mesh honours a sub-resource as it honours an
 ; ExtResource `.tres`. Resolving only the path form drops this one silently.
 
-; `unit-cube.glb` carries no glTF material, so a dropped override shows Godot's default 3D
-; surface (mid-grey) and an applied one this scene's orange. Neither looks like a missing mesh:
-; a dropped override still draws the cube.
 [ext_resource type="PackedScene" uid="uid://ctscnglbmatovr0" path="res://meshes/unit-cube.glb" id="1_glb"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_paint"]
@@ -22,4 +19,7 @@ metallic = 0.1
 ; Type-less with `parent="Cube"`: Godot's form for "override the node already at this path", the
 ; only shape that reaches the GLB override path. A typed node adds a new child instead.
 [node name="Cube" parent="Cube" index="0"]
+; `unit-cube.glb` carries no glTF material, so a dropped override shows Godot's default 3D
+; surface (mid-grey) and an applied one this scene's orange. Neither looks like a missing mesh:
+; a dropped override still draws the cube.
 surface_material_override/0 = SubResource("StandardMaterial3D_paint")

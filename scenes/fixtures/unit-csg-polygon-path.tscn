@@ -5,11 +5,11 @@
 ; `path_node` after parse. Both corpus shapes appear: a sibling (csg.tscn:365, the Road) and a
 ; child (racetrack_csg.tscn:60). A resolver that assumed either one drops the other's geometry.
 
+[sub_resource type="Curve3D" id="Curve3D_road"]
 ; `_data.points` packs nine floats per control point: in.xyz, out.xyz, position.xyz. Every
 ; handle is zero, so each span is straight. `tilts` is required, one entry per point:
 ; `Curve3D::_set_data` bails without it and the curve loads with zero points, so the sweep
 ; vanishes in Godot while the lenient parser still renders it.
-[sub_resource type="Curve3D" id="Curve3D_road"]
 _data = {
 "points": PackedVector3Array(0, 0, 0, 0, 0, 0, -3, 0, -2, 0, 0, 0, 0, 0, 0, 0, 0, -3, 0, 0, 0, 0, 0, 0, 3, 0, -2, 0, 0, 0, 0, 0, 0, 3, 0, 2),
 "tilts": PackedFloat32Array(0, 0, 0, 0)

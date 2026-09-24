@@ -1,12 +1,9 @@
 /**
- * HingeJoint3D strict validators: the ten members doc/classes/HingeJoint3D.xml lists without
- * `overrides=`, each an `ADD_PROPERTYI` with a setter and a getter in `hinge_joint_3d.cpp`'s
- * `_bind_methods`. The NODE_BASE_TYPES base-walk delivers everything from Joint3D up, and a
- * re-declared key shadows it.
+ * HingeJoint3D strict validators: the ten members doc/classes/HingeJoint3D.xml lists without `overrides=`, each an
+ * `ADD_PROPERTYI` with a setter and a getter in `hinge_joint_3d.cpp`'s `_bind_methods`. The NODE_BASE_TYPES base-walk
+ * delivers everything from Joint3D up, and a re-declared key shadows it. The `angular_limit/*` and `motor/*` groups
+ * are small and fixed, so their keys are listed directly, not routed through a wildcard dispatch table.
  */
-
-// The `angular_limit/*` and `motor/*` groups are small and fixed, so their keys are listed
-// directly, not routed through a wildcard dispatch table.
 
 import '../../joints/shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';

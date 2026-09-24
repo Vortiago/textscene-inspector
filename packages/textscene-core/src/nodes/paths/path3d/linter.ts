@@ -1,11 +1,9 @@
 /**
  * Semantic linter rules for Path3D: the checks that need the whole scene, such as whether the
- * curve resource exists. linterParser.ts checks the reference format.
+ * curve resource exists. linterParser.ts checks the reference format. There is no "no PathFollow3D
+ * children" check: `path_3d.h`/`path_3d.cpp` declare `get_configuration_warnings()` only on
+ * `PathFollow3D`, and a CSGPolygon3D in PATH mode or a SplineIK3D can consume a bare Path3D.
  */
-
-// No "no PathFollow3D children" check: `path_3d.h`/`path_3d.cpp` declare
-// `get_configuration_warnings()` only on `PathFollow3D`. A CSGPolygon3D in PATH mode or a
-// SplineIK3D can consume a Path3D with no PathFollow3D at all.
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnInternalResource } from '../../../parser/types.js';

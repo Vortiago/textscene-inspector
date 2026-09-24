@@ -20,16 +20,15 @@ type SkeletonAncestry = 'found' | 'absent' | 'unknowable';
  * ancestors to a Skeleton2D. Any other type stops the walk. The casts are `cast_to`, so
  * subclasses count (`descendsFrom`).
  */
-
-// `unknowable` is not `absent`: an ancestor whose class its instanced scene declares could be
-// the Skeleton2D, the next bone or the terminator, and ruling all three out warns on every
-// rig built that way.
 function skeletonAncestry(scene: TscnScene, node: TscnNode): SkeletonAncestry {
   const search = searchAncestors<'found' | 'absent'>(scene, node, (ancestor) => {
     if (descendsFrom(ancestor.type, 'Skeleton2D')) return 'found';
     if (!descendsFrom(ancestor.type, 'PhysicalBone2D')) return 'absent';
     return undefined;
   });
+  // `unknowable` is not `absent`: an ancestor whose class its instanced scene declares could be
+  // the Skeleton2D, the next bone or the terminator, and ruling all three out warns on every
+  // rig built that way.
   if (search.kind === 'unknowable') return 'unknowable';
   return search.kind === 'found' ? search.value : 'absent';
 }

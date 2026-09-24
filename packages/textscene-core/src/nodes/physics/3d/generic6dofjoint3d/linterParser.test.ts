@@ -4,10 +4,6 @@
  * (nodes/physics/joints/shared/linter.ts) covers node_a/node_b.
  */
 
-// Godot's x/y/z `ADD_PROPERTYI` calls share one `PropertyInfo` per leaf, so one axis proves a
-// bound for all three. Each group's `describe` picks a different axis, so the axis-stripping
-// regex meets all three letters.
-
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import './linterParser';
@@ -19,6 +15,9 @@ function check(property: string, value: string) {
   return validator!(property, value, 1);
 }
 
+// Godot's x/y/z `ADD_PROPERTYI` calls share one `PropertyInfo` per leaf, so one axis proves a
+// bound for all three. Each group's `describe` picks a different axis, so the axis-stripping
+// regex meets all three letters.
 describe('Generic6DOFJoint3D strict validators', () => {
   it('registers validators of its own', () => {
     expect(validatorRegistry.getOwnKeys('Generic6DOFJoint3D')).not.toEqual([]);

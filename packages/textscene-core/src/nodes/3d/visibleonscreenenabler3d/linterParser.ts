@@ -4,15 +4,14 @@
  * would shadow the ancestor's rule.
  */
 
-// The whole own surface is the two `ADD_PROPERTY` calls at visible_on_screen_notifier_3d.cpp:198-199.
-// The class binds no `PropertyListHelper`, no `ADD_ARRAY_COUNT`, no `_set`/`_get`/property-list
-// override in either spelling, and has no `.compat.inc`.
-
 import '../visibleonscreennotifier3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 import { ENABLE_MODE } from '../../../linter/validators/sharedEnumLabels.js';
 
+// The whole own surface is the two `ADD_PROPERTY` calls at visible_on_screen_notifier_3d.cpp:198-199.
+// The class binds no `PropertyListHelper`, no `ADD_ARRAY_COUNT`, no `_set`/`_get`/property-list
+// override in either spelling, and has no `.compat.inc`.
 validatorRegistry.registerAll('VisibleOnScreenEnabler3D', {
   // visible_on_screen_notifier_3d.cpp:198, PROPERTY_HINT_ENUM
   // "Inherit,Always,When Paused", values 0-2. set_enable_mode (:114-119) is a

@@ -5,15 +5,16 @@
  * rather than setting a CSS `rgba(...)` background.
  */
 
-// Colours are not scaled: `scene/theme/default_theme.cpp::fill_default_theme`
-// scales every length it passes to `make_flat_stylebox`, never a `Color` literal.
-
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';
 import { flatStyleBox as makeFlatStyleBox } from './styleBoxFlat';
 import { LINE_EDIT_BORDER_BOTTOM_WIDTH, scaledGodotTheme, STYLE_FILL, type ScaledGodotTheme } from '../godotDefaultTheme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 
-/** The default flat stylebox's fill by draw state, from `scene/theme/default_theme.cpp`'s `fill_default_theme`. */
+/**
+ * The default flat stylebox's fill by draw state, from `scene/theme/default_theme.cpp`'s `fill_default_theme`.
+ * Colours are not scaled: `fill_default_theme` scales every length it passes to `make_flat_stylebox`, never a
+ * `Color` literal.
+ */
 export interface NativeThemeStyleFill {
   /** `style_normal_color` = `Color(0.1, 0.1, 0.1, 0.6)`. */
   normal: ControlColor;

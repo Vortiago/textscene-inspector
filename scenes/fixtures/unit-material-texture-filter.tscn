@@ -1,14 +1,10 @@
 [gd_scene load_steps=5 format=3 uid="uid://unitmaterialtexfilter"]
 
-; Two quads sample one image through two StandardMaterial3D sub-resources that differ only in
-; `texture_filter`: left 0 (NEAREST, no mipmaps), right 3 (LINEAR_WITH_MIPMAPS, Godot's default).
-; The 8x8 texture, authored without antialiasing, magnifies about 25x, so magFilter dominates:
-; left shows hard 2px-cell blocks, right a smooth gradient. A 256px source would be near 1:1.
+; One variable: `texture_filter`, left 0 (NEAREST, no mipmaps), right 3 (LINEAR_WITH_MIPMAPS, Godot's default), on two
+; quads that sample one image. The only scene that witnesses per-material texture cloning, as no other fixture pairs one
+; image with two filter states: the filter is a material property in Godot but lives on the Texture in three, and the
+; loader caches one THREE.Texture per path, so filter state on it renders both quads with the material built last.
 
-; The only scene that witnesses per-material texture cloning: `texture_filter` is a material
-; property in Godot but lives on the Texture in three, and the loader caches one THREE.Texture
-; per path. Writing filter state onto the shared texture renders both quads with whichever
-; material built last. No other fixture pairs one image with two filter states.
 [ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_tex"]
 
 ; Inline sub-resources, not external .tres: the two material construction paths are independent,
@@ -18,6 +14,8 @@
 size = Vector2(2.6, 2.6)
 
 [sub_resource type="StandardMaterial3D" id="Material_nearest"]
+; The 8x8 texture, authored without antialiasing, magnifies about 25x, so magFilter dominates:
+; left shows hard 2px-cell blocks, right a smooth gradient. A 256px source would be near 1:1.
 albedo_texture = ExtResource("1_tex")
 texture_filter = 0
 roughness = 1.0

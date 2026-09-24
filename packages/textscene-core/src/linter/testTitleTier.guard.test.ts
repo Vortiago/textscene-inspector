@@ -5,10 +5,6 @@
  * roster. `validatorCheck.test.ts` titles name both tiers, since its subject is the helper.
  */
 
-// Scope is `it` and `test` blocks under this package's `src`: a `describe` may
-// cover children that disagree, a negative assertion naming no severity asserts
-// no tier, and the host apps sit outside the walk. A block that builds a
-// `LintRule` fixture is skipped, since its `severity:` is the value under test.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -207,6 +203,12 @@ const SELF = 'linter/testTitleTier.guard.test.ts';
 
 const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
 
+/**
+ * Scope is `it` and `test` blocks under this package's `src`: a `describe` may
+ * cover children that disagree, a negative assertion naming no severity asserts
+ * no tier, and the host apps sit outside the walk. A block that builds a
+ * `LintRule` fixture is skipped, since its `severity:` is the value under test.
+ */
 const allBlocks = (): Block[] => {
   const files = atLeast(walk(srcRoot, isTestFile), 500, 'test files').map(label);
   // A renamed file drops silently out of an exclusion by path, and the pins

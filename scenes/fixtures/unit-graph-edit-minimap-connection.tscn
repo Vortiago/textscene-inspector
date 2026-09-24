@@ -3,10 +3,6 @@
 ; (graph_edit.cpp:1611), the only reader of `connection_lines_antialiased` (graph_edit.h:254,
 ; default true).
 
-; Every fixture in this family shares one GraphEdit rect and one GraphNode, and only
-; unit-graph-edit-scroll-offset-clamped.tscn authors `scroll_offset`: `set_scroll_offset` clamps
-; against bounds no child has widened while properties apply (graph_edit.cpp:407), so an authored
-; offset moves the grid, the nodes and the minimap camera together and masks the one variable.
 [gd_scene load_steps=1 format=3 uid="uid://unitgraphedminiconn"]
 
 [node name="Root" type="Control"]
@@ -19,6 +15,7 @@ anchor_bottom = 1.0
 ; unit-graph-edit.tscn, the only other scene with a connection, sets the property false, so no
 ; other fixture draws the feathered branch.
 [node name="Graph" type="GraphEdit" parent="."]
+; No `scroll_offset`, as in the whole family: unit-graph-edit-family.md says why.
 layout_mode = 1
 offset_left = 8.0
 offset_top = 8.0

@@ -68,14 +68,9 @@ export function buildGlyphQuadArrays(
 ): GlyphQuadArrays {
   const scale = fontSizePx / OPEN_SANS_ATLAS_INFO.fontSize;
   const baselineOffsetPx = layout.baselineOffsetPx;
-  // How far the bake's line-top reference sits above the baseline, at the target size.
-  // A run smaller than its line's size reads a few tenths of a pixel low: Godot's
-  // FreeType light hinting (`scene/theme/default_theme.h`'s `font_hinting`) snaps each
-  // size independently, which no rescale of one bake matches (richtextlabel's sheet).
-
-  // Not a per-size whole-pixel ceiling: that regresses a run at its line's own size,
-  // exact against Godot, by most of a pixel, and three glyphs on one run show three
-  // residuals. Do not retry a closed-form fix without porting the hinter.
+  // How far the bake's line-top reference sits above the baseline, at the target size. A run smaller
+  // than its line's size reads a few tenths of a pixel low, from Godot's per-size FreeType hinting.
+  // `textRun.md` says why, and why no closed-form fix works without porting the hinter.
   const bakeAnchorPx = OPEN_SANS_ATLAS_INFO.base * scale;
 
   let glyphCount = 0;
@@ -267,17 +262,9 @@ function buildTextRun(
 
     const canvas = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, strokeWidthPx);
     const texture = new THREE.CanvasTexture(canvas);
-    // `SRGBColorSpace`, not the 2D-canvas rule's `NoColorSpace` (`canvas2DTextureDecode.ts`,
-    // `rendering/viewport/hdr_2d` off, `rendering_server.cpp:3771`/`texture_storage.cpp:754`):
-    // measured, `NoColorSpace` dips 5/255 below the backdrop at a glyph edge, where Godot
-    // draws a monotonic ramp.
-
-    // Godot's glyph texture is `FORMAT_LA8`, constant 255 colour with coverage in alpha
-    // (`modules/text_server_adv/text_server_adv.cpp` `rasterize_bitmap`, ~:1170-1174), so no
-    // RGB pair blends in the wrong order. This raster bakes ink into RGB, and at 3x an
-    // `(0,0)` texel sits beside `(ink,255)`: the pre-filter decode hides that fringe.
-
-    // A raster split into coverage plus a modulated colour would reopen this choice.
+    // `SRGBColorSpace`, not the 2D-canvas rule's `NoColorSpace`: measured, `NoColorSpace` dips
+    // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
+    // gives the engine lines, and why a raster split into coverage plus colour would reopen this.
     texture.colorSpace = THREE.SRGBColorSpace;
     // `generateMipmaps` stays off for every filter: Godot's own default asks
     // for mipmaps, but a per-label raster rebuilt on every text/size change

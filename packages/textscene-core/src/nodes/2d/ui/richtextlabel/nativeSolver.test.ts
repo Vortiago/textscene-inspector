@@ -1186,11 +1186,6 @@ describe('richTextLabelMinimumSize — the shaped extent is ceiled (text_server_
  * `TextParagraph::draw` (`scene/resources/text_paragraph.cpp:989-1023`), and
  * floors where Label truncates. Synthetic line widths keep this off font metrics.
  */
-
-// In Godot, "Hello" in a 300x150 RichTextLabel inks x 1..38, 131..168 and 261..298
-// for LEFT, CENTER and RIGHT: `floor((300-40)/2)` and `300-40`. TOP, CENTER and
-// BOTTOM ink rows 6, 69 and 133: `vbegin` 63.5 and 127, and 63.5 + 6 = 69.5 draws
-// on row 69, so these return floats and the line top floors once, downstream.
 describe('RichTextLabel paragraph alignment', () => {
   describe('resolveParagraphAlignment (rich_text_label.cpp:3492-3505)', () => {
     it('falls back to the node property when no paragraph tag is open', () => {
@@ -1215,6 +1210,8 @@ describe('RichTextLabel paragraph alignment', () => {
     });
   });
 
+  // In Godot, "Hello" in a 300x150 RichTextLabel inks x 1..38, 131..168 and 261..298
+  // for LEFT, CENTER and RIGHT: `floor((300-40)/2)` and `300-40`.
   describe('richTextHorizontalOffsetPx (rich_text_label.cpp:1000-1014)', () => {
     it('leaves LEFT at the box origin', () => {
       expect(richTextHorizontalOffsetPx(70, 200, 0)).toBe(0);
@@ -1268,6 +1265,9 @@ describe('RichTextLabel paragraph alignment', () => {
     });
   });
 
+  // In the same label, TOP, CENTER and BOTTOM ink rows 6, 69 and 133: `vbegin` 63.5 and 127,
+  // and 63.5 + 6 = 69.5 draws on row 69, so these return floats and the line top floors once,
+  // downstream.
   describe('richTextVerticalOffsets (rich_text_label.cpp:1619-1652)', () => {
     it('leaves TOP untouched', () => {
       expect(richTextVerticalOffsets(100, 300, 0, 3)).toEqual({ vbeginPx: 0, vsepPx: 0 });

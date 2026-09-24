@@ -4,9 +4,6 @@
  * THREE-free `Linter`, and `src/**\/testing/**` keeps it out of the build.
  */
 
-// String values render verbatim, so the author owns the literal form. A
-// rejection finds its diagnostic by property name, and by rule name when an
-// `InvalidCase` sets one, plus every required substring, never a bare count.
 import { describe, it, expect } from 'vitest';
 import { Linter } from '../Linter.js';
 import type { Diagnostic, Severity } from '../types.js';
@@ -238,8 +235,10 @@ export interface InvalidCase {
 }
 
 /**
- * Assert one invalid case's diagnostic: the whole body of every generated reject `it`.
- * Exported so a test drives it directly and every declared field is proven to still bite.
+ * Assert one invalid case's diagnostic: the whole body of every generated reject `it`. It finds the
+ * diagnostic by property name, and by rule name when the case sets one, plus every required
+ * substring, never a bare count. Exported so a test drives it directly and every declared field is
+ * proven to still bite.
  */
 export function expectInvalidCase(content: string, prop: string, invalid: InvalidCase): Diagnostic {
   return expectDiagnostic(content, {

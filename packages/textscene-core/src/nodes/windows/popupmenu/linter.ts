@@ -19,11 +19,6 @@ import { listIndices } from '../../../linter/reportedIndices.js';
  */
 const ITEM_PREFIX = 'item_';
 
-// `p_allow_oob` is false: `enable_out_of_bounds_assign()` (property_list_helper.h:92)
-// has one caller, tab_container.cpp:1294. `PopupMenu::_set` (popup_menu.cpp:3091-3094)
-// goes through `property_set_value` (property_list_helper.cpp:166-175), which drops
-// the write with no log: the dropped write ADR-0032 grounds a diagnostic on.
-
 // Godot's saver never writes this: `item_count` (`ADD_ARRAY_COUNT`, popup_menu.cpp:3267)
 // precedes the item leaves, and `items.resize(p_count)` (popup_menu.cpp:2718) keeps
 // them in step. Only a hand-edited scene fires it.
@@ -53,6 +48,10 @@ function checkPopupMenu(context: RuleContext): Diagnostic[] {
   if (offending.length === 0) return diagnostics;
 
   const indices = listIndices(offending);
+  // `p_allow_oob` is false: `enable_out_of_bounds_assign()` (property_list_helper.h:92)
+  // has one caller, tab_container.cpp:1294. `PopupMenu::_set` (popup_menu.cpp:3091-3094)
+  // goes through `property_set_value` (property_list_helper.cpp:166-175), which drops
+  // the write with no log: the dropped write ADR-0032 grounds a diagnostic on.
   diagnostics.push({
     severity: 'error',
     message:

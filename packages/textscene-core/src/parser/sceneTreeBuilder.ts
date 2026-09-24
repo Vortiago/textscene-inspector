@@ -53,11 +53,10 @@ export function buildSceneTree(nodes: TscnNode[]): TscnNode[] {
 
     // A path into instanced content names nodes in the sub-scene or GLB, so the
     // nearest enclosing instance anchors it and the content matches the rest.
-
+    const anchor = findInstanceAnchor(parentPath, tables);
     // Without an instance anchor the path is malformed. Godot re-roots such a node
     // and renames it `Level2#Name` (`:208-215`, `:561-563`). `strandedNodes` is the
     // only report of it, since a node absent from the tree is invisible to a walk.
-    const anchor = findInstanceAnchor(parentPath, tables);
     if (!anchor) continue;
 
     anchor.node.children.push(node);

@@ -17,11 +17,7 @@ validatorRegistry.registerAll('BoneAttachment3D', {
   // bone_attachment_3d.cpp:377, INT, no hint. `strictInt`: `v.int` reads `2.5` as 2. -1 is the
   // default, which `_check_bind` (cpp:117) reads as "unset, resolve from bone_name", so it stays
   // legal. The ceiling is the live bone count, which no per-property validator sees.
-
-  // Cited on `_check_bind`, not the setter: set_bone_idx (cpp:190-214) has no ERR_FAIL, and its guard
-  // (cpp:199) and rewrite (`:201`) sit inside `if (sk)` (`:198`), dead at load, as `get_skeleton()`
-  // reads `get_parent()` (`:139`) and PackedScene sets properties at `packed_scene.cpp:492`, before
-  // parenting (`:541`). On ENTER_TREE (`:275`), `_check_bind` rewrites -2 to `find_bone(bone_name)`.
+  // `boneAttachment3D.md` says why the cite is `_check_bind`, not the setter.
   bone_idx: v.strictInt('bone_idx', { min: -1, enforced: 'bone_attachment_3d.cpp:117-118' }),
   // bone_attachment_3d.cpp:378, plain Variant::BOOL. set_override_pose
   // (cpp:220-236) assigns past an equality guard and then only reconfigures

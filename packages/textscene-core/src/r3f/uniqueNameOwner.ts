@@ -1,13 +1,9 @@
 /**
- * The owner whose `%Name` table a rendered node resolves against, and that table
- * composed over instanced content. Pure: it walks the composed live tree over a
- * cache snapshot, like `liveSceneTree.ts`, and the React hook supplies reactivity.
+ * The owner whose `%Name` table a rendered node resolves against, and that table composed over instanced content.
+ * `_acquire_unique_name_in_owner` registers a name on the node's owner (node.cpp:2222-2234), and `get_node` reads the
+ * caller's own table, else its owner's (node.cpp:1930-1938), so each instance root has a table no outer consumer sees.
+ * Pure: it walks the composed live tree over a cache snapshot, like `liveSceneTree.ts`, and the React hook supplies reactivity.
  */
-
-// `_acquire_unique_name_in_owner` registers a name on the node's owner
-// (node.cpp:2222-2234), and `get_node` reads the caller's own table, else its owner's
-// (node.cpp:1930-1938). So each instance root has a table of its own, which an outer
-// consumer never sees.
 
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';

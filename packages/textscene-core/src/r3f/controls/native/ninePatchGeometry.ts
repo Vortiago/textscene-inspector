@@ -4,11 +4,6 @@
  * `StyleBoxTexture::draw` (`scene/resources/style_box_texture.cpp:165-184`).
  */
 
-// The RD backend draws one quad with a per-fragment UV remap
-// (`servers/rendering/renderer_rd/shaders/canvas.glsl`'s `map_ninepatch_axis`,
-// `:435-467`, called per axis at `:587-588`). This ports it as flat quads, exact
-// because each branch is a 1:1 copy or an affine map (`solveAxisCells`).
-
 export const NINE_PATCH_STRETCH = 0;
 export const NINE_PATCH_TILE = 1;
 export const NINE_PATCH_TILE_FIT = 2;
@@ -66,9 +61,10 @@ interface AxisCell {
 }
 
 /**
- * `map_ninepatch_axis` (`canvas.glsl:435-467`) as dest-space cells along one
- * axis, each carrying the absolute source-pixel span it samples. The arguments
- * are this axis's slice of `NinePatchInput`.
+ * `map_ninepatch_axis` (`servers/rendering/renderer_rd/shaders/canvas.glsl:435-467`, called per axis at `:587-588`),
+ * the RD backend's per-fragment UV remap of one quad, as dest-space cells along one axis, each carrying the absolute
+ * source-pixel span it samples. Flat quads port it exactly, since each branch is a 1:1 copy or an affine map. The
+ * arguments are this axis's slice of `NinePatchInput`.
  */
 function solveAxisCells(
   drawSize: number,

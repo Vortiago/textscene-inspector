@@ -5,11 +5,6 @@
  * warning is advisory and a misplaced PathFollow3D loads fine (ADR-0032).
  */
 
-// `progress` and `progress_ratio` are not two spellings of one value at load time.
-// `PackedScene::instantiate` sets stored properties before parenting (packed_scene.cpp:492 sets,
-// :541 parents), and `path` is bound on NOTIFICATION_ENTER_TREE. So `set_progress` stores the raw
-// value, and `set_progress_ratio` (path_3d.cpp:503) drops every authored ratio, in range or not.
-
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
@@ -93,7 +88,10 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Unconditional: the guard is on the missing parent, not on the value.
+  // Not a second spelling of `progress`: `PackedScene::instantiate` sets stored properties before parenting
+  // (packed_scene.cpp:492 sets, :541 parents) and `path` is bound on NOTIFICATION_ENTER_TREE, so `set_progress`
+  // stores the raw value and `set_progress_ratio` (path_3d.cpp:503) drops every authored ratio. Unconditional,
+  // since the guard is on the missing parent, not on the value.
   if (rawProps.progress_ratio !== undefined) {
     diagnostics.push({
       severity: 'error',

@@ -3,9 +3,6 @@
  * collision overlay. Component.tsx mounts it only when `showCollisions` is on.
  */
 
-// Polyline segments (`GizmoLine`, a `<lineSegments>`), not a `wireframe` mesh, which shows the
-// triangulation diagonals of a circle or capsule.
-
 import { useMemo } from 'react';
 import type { TscnInternalResource } from '../../../../parser/types';
 import { decodeRectangleShape2D } from '../../../../resources/shapes/rectangleshape2d';
@@ -128,5 +125,7 @@ export function CollisionGizmo2D({
 
   const positions = useMemo(() => loopToSegments(points), [points]);
 
+  // Polyline segments (`GizmoLine`, a `<lineSegments>`), not a `wireframe` mesh, which shows the
+  // triangulation diagonals of a circle or capsule.
   return <GizmoLine positions={positions} color={color} />;
 }

@@ -5,10 +5,6 @@
  * in scope it keeps the authored Node3D transform. A selection-gated cross marks the point (ADR-0018).
  */
 
-// Approximation: every non-NONE rotation_mode aligns the model front (-Z, or +Z with
-// `use_model_front`) to the tangent, so Y/XY/XYZ/ORIENTED look alike, and the curve's per-point
-// tilt (roll) is not applied.
-
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -84,6 +80,9 @@ function computeFollowTransform(
   const quaternion = new THREE.Quaternion();
   const right = new THREE.Vector3(1, 0, 0);
   const up = new THREE.Vector3(0, 1, 0);
+  // Approximation: every non-NONE rotation_mode aligns the model front (-Z, or +Z with
+  // `use_model_front`) to the tangent, so Y/XY/XYZ/ORIENTED look alike, and the curve's per-point
+  // tilt (roll) is not applied.
   if (props.rotation_mode !== RotationMode.NONE && forward.lengthSq() > 0) {
     // setFromUnitVectors gives the minimal rotation onto the tangent, leaving roll free.
     const modelFront = new THREE.Vector3(0, 0, props.use_model_front ? 1 : -1);

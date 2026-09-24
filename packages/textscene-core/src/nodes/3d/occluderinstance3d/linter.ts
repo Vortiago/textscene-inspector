@@ -4,17 +4,16 @@
  * `occluder`. A missing optional resource warns and never errors.
  */
 
-// Not ported: the `use_occlusion_culling` project setting needs `project.godot`. The
-// occluder vertex-count warnings need the referenced resource, usually an external
-// `.occ` or `.tres` this repo never reads, and occlusion culling only affects
-// performance, which the previewer never simulates.
-
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 
+// Not ported: the `use_occlusion_culling` project setting needs `project.godot`. The
+// occluder vertex-count warnings need the referenced resource, usually an external
+// `.occ` or `.tres` this repo never reads, and occlusion culling only affects
+// performance, which the previewer never simulates.
 function checkOccluderInstance3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   if (!isValidProperties(node.properties)) return [];

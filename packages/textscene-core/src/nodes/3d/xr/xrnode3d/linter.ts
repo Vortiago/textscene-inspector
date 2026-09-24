@@ -5,10 +5,6 @@
  * `applicableNodeTypes` by exact name. Godot's wording says "XRNode3D" for both subclasses.
  */
 
-// Not modelled: "No tracker name is set" fires only at `tracker`'s default `&""`
-// (doc/classes/XRNode3D.xml), which Godot omits, and a missing key is not a defect. The
-// physics-interpolation warning needs `SceneTree::is_fti_enabled_in_project()`, a project setting.
-
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
@@ -18,6 +14,9 @@ import { literalText } from '../../../../godot/index.js';
 const PARENT_RULE = 'xrnode3d-parent-not-xrorigin3d';
 const NO_POSE_RULE = 'xrnode3d-no-pose-set';
 
+// Not modelled: "No tracker name is set" fires only at `tracker`'s default `&""`
+// (doc/classes/XRNode3D.xml), which Godot omits, and a missing key is not a defect. The
+// physics-interpolation warning needs `SceneTree::is_fti_enabled_in_project()`, a project setting.
 function checkXRNode3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
   const properties = node.properties as unknown as Record<string, string>;

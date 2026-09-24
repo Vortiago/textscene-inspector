@@ -1,12 +1,9 @@
 /**
- * SliderJoint3D strict validators: the 22 members doc/classes/SliderJoint3D.xml lists without
- * `overrides=`, each an `ADD_PROPERTYI` with a setter and a getter in `slider_joint_3d.cpp`'s
- * `_bind_methods`. The NODE_BASE_TYPES base-walk delivers everything from Joint3D up, and a
- * re-declared key shadows it.
+ * SliderJoint3D strict validators: the 22 members doc/classes/SliderJoint3D.xml lists without `overrides=`, each an
+ * `ADD_PROPERTYI` with a setter and a getter in `slider_joint_3d.cpp`'s `_bind_methods`. The NODE_BASE_TYPES base-walk
+ * delivers everything from Joint3D up, and a re-declared key shadows it. The six `linear_*` and `angular_*` groups
+ * are small and fixed, so their keys are listed directly, as in HingeJoint3D, not through a wildcard dispatch table.
  */
-
-// The six `linear_*/*` and `angular_*/*` groups are small and fixed, so their keys are listed
-// directly, as in HingeJoint3D, not routed through a wildcard dispatch table.
 
 import '../../joints/shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
