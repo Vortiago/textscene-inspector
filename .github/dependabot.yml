@@ -4,6 +4,9 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
+    # The typings floor must equal engines.vscode, or vsce refuses to package. Raise both by hand.
+    ignore:
+      - dependency-name: '@types/vscode'
     groups:
       minor-and-patch:
         update-types:
