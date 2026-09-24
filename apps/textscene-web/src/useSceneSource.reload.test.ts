@@ -91,6 +91,30 @@ describe('reload — refetch at an unchanged fixtureFile', () => {
     });
   });
 
+  it('reports a retry that fails the same way as a new failure', async () => {
+    const notFound = { ok: false, statusText: 'Not Found' } as Response;
+    globalThis.fetch = vi.fn().mockResolvedValue(notFound) as unknown as typeof fetch;
+
+    const { result } = renderHook(() =>
+      useSceneSource({ fixtureFile: 'unit-plane-mesh.tscn', uploadedTscnName: null })
+    );
+    await waitFor(() => {
+      expect(result.current.loadError).toBeTruthy();
+    });
+    const firstFailure = result.current.loadError;
+
+    await act(async () => {
+      result.current.reload();
+    });
+
+    // The banner orders its channels by failure, so an equal message must not read as the same one.
+    await waitFor(() => {
+      expect(result.current.loadError).not.toBeNull();
+      expect(result.current.loadError).not.toBe(firstFailure);
+    });
+    expect(result.current.loadError?.message).toBe(firstFailure?.message);
+  });
+
   it('is a no-op for the render when there is no fixture selected', async () => {
     globalThis.fetch = mockFetchOk(FIXTURE_TSCN);
 

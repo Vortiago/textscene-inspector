@@ -225,6 +225,28 @@ describe('error-banner supersession — stale errors do not outlive the next act
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  it('shows a retry that fails the same way over the upload error before it', async () => {
+    mockFetch('fail');
+    render(<R3FApp />);
+    await waitForScene();
+
+    await switchToTarget();
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')?.textContent).toContain('Failed to load fixture');
+    });
+    dropFiles([new File(['not a scene'], 'texture.png', { type: 'image/png' })]);
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')?.textContent).toContain('No .tscn file found');
+    });
+
+    // Picking the failed fixture again is the retry, and it fails with the same message.
+    await switchToTarget();
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')?.textContent).toContain('Failed to load fixture');
+    });
+  });
+
   it('shows the fixture error, not the stale upload error, when the switch fetch fails after a bad drop', async () => {
     // The switch target's fetch stays in flight until the test fails it, so an upload error
     // lands before the fetch error. The banner shows the most recent one, the fetch error.
