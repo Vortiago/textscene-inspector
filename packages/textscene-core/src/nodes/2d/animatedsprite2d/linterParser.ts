@@ -36,7 +36,7 @@ validatorRegistry.registerAll('AnimatedSprite2D', {
 // `playing = true` would be silently accepted.
 validatorRegistry.registerUnavailable('AnimatedSprite2D', {
   playing: {
-    reason: `it is a method, not a property — playback is started with play(), and only 'autoplay' is serialised`,
+    reason: `it is a method, not a property: play() starts playback, and only 'autoplay' is serialised`,
     cite: 'animated_sprite_2d.cpp:615-622',
   },
 });
