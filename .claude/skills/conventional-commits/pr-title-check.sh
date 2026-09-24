@@ -1,5 +1,5 @@
 #!/bin/sh
-# canonical source: conventional-commits/pr-title-check.sh@fd23d58b1fa7 sha256:edf72e35382d804bf44b7909d86d692b4ff36d42f72eba3efae61199492afe00 - vendored copy, do not edit here
+# canonical source: conventional-commits/pr-title-check.sh@fff2432fb5f3 sha256:6dab16966524ad081391d6967268742e303c014e3d0fbdff4186537b5ee3eee2 - vendored copy, do not edit here
 # Claude Code PreToolUse(Bash) hook — validates a PR open/edit command
 # (`gh pr create`/`gh pr edit`, `az repos pr create`/`az repos pr update`): the
 # title must be a Conventional Commit, the body must be non-empty (it
@@ -48,7 +48,7 @@ if [ -n "$title" ] && ! cc_header_valid "$title"; then
 ✗ PR title is not a Conventional Commit:
     $title
   expected: <type>[(scope)][!]: <subject>
-  → skill: conventional-commits (~/.claude/skills/conventional-commits/SKILL.md)
+  → skill: conventional-commits ($dir/SKILL.md)
 EOF
   exit 2
 fi
@@ -58,7 +58,7 @@ if pr_body_missing "$cmd" "$cli" "$mode"; then
   cat >&2 <<EOF
 ✗ PR body is empty — it squash-merges into the commit body.
   Add a one-line why: gh --body "<why>" (or --body-file/--fill); az --description "<why>".
-  → skill: conventional-commits (~/.claude/skills/conventional-commits/SKILL.md)
+  → skill: conventional-commits ($dir/SKILL.md)
 EOF
   exit 2
 fi
@@ -84,7 +84,7 @@ if [ -n "$brk" ]; then
   or (b) the breaking commit was reverted/superseded and is not in the net diff
          → rewrite branch history (git rebase -i $base: reword/squash/drop the
            stale "!" commit) so none remains, then retry.
-  → skill: conventional-commits (~/.claude/skills/conventional-commits/SKILL.md)
+  → skill: conventional-commits ($dir/SKILL.md)
 EOF
   exit 2
 fi

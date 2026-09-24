@@ -1,5 +1,5 @@
 #!/bin/sh
-# canonical source: conventional-commits/validate.sh@fd23d58b1fa7 sha256:a5518ec35c28dc5d8bf018f630c5602e3b2bdecf58f2c2f37853df65c2b2ddf4 - vendored copy, do not edit here
+# canonical source: conventional-commits/validate.sh@fff2432fb5f3 sha256:a5518ec35c28dc5d8bf018f630c5602e3b2bdecf58f2c2f37853df65c2b2ddf4 - vendored copy, do not edit here
 # Conventional Commits validation core — POSIX sh, meant to be SOURCED by the
 # commit-msg and PR-title hooks (never run directly). No deps beyond grep/sed.
 #

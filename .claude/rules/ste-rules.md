@@ -1,4 +1,4 @@
-<!-- canonical source: simplified-technical-english/ste-rules.md@fd23d58b1fa7 sha256:8c2978ae264cebda7116471d6504306be459e8a4ae73af23a3cec6aa77699f2d - vendored copy, do not edit here -->
+<!-- canonical source: simplified-technical-english/ste-rules.md@fff2432fb5f3 sha256:8c2978ae264cebda7116471d6504306be459e8a4ae73af23a3cec6aa77699f2d - vendored copy, do not edit here -->
 # Simplified Technical English
 
 Apply these rules to all text you write for a reader: a markdown file, a plan

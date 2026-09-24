@@ -2,7 +2,7 @@
 name: conventional-commits
 description: Conventional Commits ruleset and the reflow workflow behind this machine's commit-msg and PR-title hooks. Use when a commit-msg or PR-title hook rejects a message, when choosing a commit type or PR-title moniker (feat / fix / feat! / …), or when a branch carries a stale breaking-change commit that must be reflowed before a squash-merge.
 ---
-<!-- canonical source: conventional-commits/SKILL.md@fd23d58b1fa7 sha256:6de1ada008a76b325f9c2345b08f7d643e708bc36332d4b3b011a98478c065a2 - vendored copy, do not edit here -->
+<!-- canonical source: conventional-commits/SKILL.md@fff2432fb5f3 sha256:6de1ada008a76b325f9c2345b08f7d643e708bc36332d4b3b011a98478c065a2 - vendored copy, do not edit here -->
 
 # Conventional Commits
 

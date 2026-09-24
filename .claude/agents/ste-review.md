@@ -4,7 +4,7 @@ description: Review prose against the Simplified Technical English rules and rep
 tools: Read, Grep, Glob, Bash
 model: inherit
 ---
-<!-- canonical source: simplified-technical-english/ste-review.md@fd23d58b1fa7 sha256:fe091019473928c5fee3fed4509a782add6a389e47295de909c17d0358fefe96 - vendored copy, do not edit here -->
+<!-- canonical source: simplified-technical-english/ste-review.md@fff2432fb5f3 sha256:fe091019473928c5fee3fed4509a782add6a389e47295de909c17d0358fefe96 - vendored copy, do not edit here -->
 
 Read the rules first, with the Read tool, from `~/.claude/rules/ste-rules.md`, or
 from `.claude/rules/ste-rules.md` when the project has its own copy. That file

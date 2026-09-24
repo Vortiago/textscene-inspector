@@ -1,5 +1,5 @@
 #!/bin/sh
-# canonical source: conventional-commits/commit-msg.sh@fd23d58b1fa7 sha256:4fcfcce176428e27407f6fc051bc51b93821358c0f112602f019e435b4841c2b - vendored copy, do not edit here
+# canonical source: conventional-commits/commit-msg.sh@fff2432fb5f3 sha256:913a306512129a29b351cff8fc4de96338fda078d10dffcfe13cb1add084bf93 - vendored copy, do not edit here
 # git commit-msg hook — rejects commits whose header is not a Conventional
 # Commit. Wired globally (git >= 2.54 config-based hooks) by install.sh:
 #   git config --global hook.conventional-commits.event   commit-msg
@@ -22,7 +22,7 @@ if ! cc_header_valid "$header"; then
     $header
   expected: <type>[(scope)][!]: <subject>
   types:    feat fix perf refactor docs test build ci style chore revert
-  → skill: conventional-commits (~/.claude/skills/conventional-commits/SKILL.md)
+  → skill: conventional-commits ($dir/SKILL.md)
 EOF
   exit 1
 fi

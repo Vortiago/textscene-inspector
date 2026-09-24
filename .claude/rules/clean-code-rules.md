@@ -1,4 +1,4 @@
-<!-- canonical source: clean-code/clean-code-rules.md@fd23d58b1fa7 sha256:0714d3d97dfc97e1a2943a8277c83f322b61687566dc7a2344cf0465a62166ae - vendored copy, do not edit here -->
+<!-- canonical source: clean-code/clean-code-rules.md@fff2432fb5f3 sha256:0714d3d97dfc97e1a2943a8277c83f322b61687566dc7a2344cf0465a62166ae - vendored copy, do not edit here -->
 # Clean code
 
 Apply these rules to every line of code you write or change, as you write it,

@@ -1,5 +1,5 @@
 #!/bin/sh
-# canonical source: conventional-commits/selftest.sh@fd23d58b1fa7 sha256:50386d5a388828c6b3f932bcce1a4ee2c458a6127c5004c1fd1face42efc658a - vendored copy, do not edit here
+# canonical source: conventional-commits/selftest.sh@fff2432fb5f3 sha256:50386d5a388828c6b3f932bcce1a4ee2c458a6127c5004c1fd1face42efc658a - vendored copy, do not edit here
 # Self-test for validate.sh. Run: sh selftest.sh   (no git/repo needed)
 set -u
 dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
