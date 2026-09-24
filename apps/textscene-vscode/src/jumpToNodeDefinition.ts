@@ -7,9 +7,22 @@ import * as vscode from 'vscode';
 import { findNodeHeadingLine } from './nodeHeadingResolver';
 
 /**
- * Open `resource` beside the preview and put the cursor on `nodeName`'s
- * heading. A name the file does not carry is a warning, not an error: the
- * webview's tree can outlive an edit that removed the node.
+ * The column of an editor tab that already holds `resource`, so the jump focuses
+ * that editor instead of opening a duplicate. A tab on screen wins over one behind
+ * another tab. Undefined when no tab holds it.
+ */
+function columnHolding(resource: vscode.Uri): vscode.ViewColumn | undefined {
+  const key = resource.toString();
+  const holding = vscode.window.tabGroups.all
+    .flatMap((group) => group.tabs)
+    .filter((tab) => tab.input instanceof vscode.TabInputText && tab.input.uri.toString() === key);
+  return (holding.find((tab) => tab.isActive) ?? holding[0])?.group.viewColumn;
+}
+
+/**
+ * Open `resource` and put the cursor on `nodeName`'s heading, in the column that
+ * already shows the scene, or else column one. A name the file does not carry is a
+ * warning, not an error: the webview's tree can outlive an edit that removed the node.
  */
 export async function jumpToNodeDefinition(
   resource: vscode.Uri,
@@ -29,7 +42,7 @@ export async function jumpToNodeDefinition(
     }
 
     const editor = await vscode.window.showTextDocument(document, {
-      viewColumn: vscode.ViewColumn.One,
+      viewColumn: columnHolding(resource) ?? vscode.ViewColumn.One,
       preserveFocus: false,
     });
 
