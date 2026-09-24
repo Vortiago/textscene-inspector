@@ -4,7 +4,7 @@
  * Each restores what it found on unmount, because the renderer and scene outlive an environment.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import { BackgroundMode, type EnvironmentSettings } from '../../resources/environment/types';
@@ -18,10 +18,10 @@ import {
 import type { SkyProperties } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
-import { useOptionalHierarchy } from '../contexts/HierarchyContext';
 import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { sceneHasBloomableEmissive } from './bloomableScan';
 import { sceneHasBlendedSurface } from './alphaPassScan';
+import { useLatchedSceneScan } from './useLatchedSceneScan';
 import { SkyLayer } from '../sky/SkyLayer';
 import { ToneMapLayer } from './ToneMapLayer';
 
@@ -164,32 +164,6 @@ function useSceneHasBloomableEmissive(threshold: number | null): boolean {
 /** Whether the live scene draws anything through the blend equation. */
 function useSceneHasBlendedSurface(): boolean {
   return useLatchedSceneScan(sceneHasBlendedSurface);
-}
-
-/**
- * Re-runs a scene predicate over a short window, so async content (GLB, instanced sub-scenes) is
- * seen, and latches: mounting the composer flips `gl.toneMapping`, which recompiles every
- * tone-mapped material. A null predicate skips the scan.
- */
-function useLatchedSceneScan(scan: ((scene: THREE.Object3D) => boolean) | null): boolean {
-  const scene = useThree((s) => s.scene);
-  const hierarchy = useOptionalHierarchy();
-  const rootKey = hierarchy?.sceneGraph?.rootScene ?? '';
-  const [found, setFound] = useState(false);
-
-  useEffect(() => {
-    // A different scene must not inherit the previous one's latch.
-    setFound(false);
-    if (scan === null) return undefined;
-    const check = () => {
-      if (scan(scene)) setFound(true);
-    };
-    check();
-    const timers = [150, 500, 1100].map((delay) => setTimeout(check, delay));
-    return () => timers.forEach(clearTimeout);
-  }, [scene, rootKey, scan]);
-
-  return found;
 }
 
 /**
