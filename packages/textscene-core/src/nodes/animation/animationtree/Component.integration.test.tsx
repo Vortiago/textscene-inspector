@@ -9,7 +9,7 @@ import { resolve } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../parser/TscnParser';
-import { fixturesDir } from '../../../parser/testing/parserKit';
+import { fixturesDir, flatten } from '../../../parser/testing/parserKit';
 import type { TscnNode, TscnScene } from '../../../parser/types';
 import { AnimationPlayer } from '../animationplayer/Component';
 import { AnimationTree } from './Component';
@@ -31,16 +31,6 @@ function parseFixture(file: string): TscnScene {
   const f = resolve(fixturesDir(), file);
   if (!existsSync(f)) throw new Error(`fixture missing: scenes/fixtures/${file}`);
   return new TscnParser().parse(readFileSync(f, 'utf8'));
-}
-
-function flatten(scene: TscnScene): TscnNode[] {
-  const out: TscnNode[] = [];
-  const walk = (n: TscnNode): void => {
-    out.push(n);
-    n.children.forEach(walk);
-  };
-  scene.nodes.forEach(walk);
-  return out;
 }
 
 function findByType(scene: TscnScene, type: string): TscnNode {

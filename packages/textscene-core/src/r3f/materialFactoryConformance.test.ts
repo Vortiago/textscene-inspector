@@ -5,6 +5,8 @@
  * Test files are out of scope: they build materials to drive an assertion.
  */
 import { describe, expect, it } from 'vitest';
+import { resolve } from 'node:path';
+import { repoRoot } from '../parser/testing/parserKit';
 import type { JsxTag } from './testing/sourceScan';
 import {
   callSites,
@@ -12,14 +14,13 @@ import {
   jsxTags,
   offendingLines,
   repoPath,
-  repoRoot,
   walkSources,
 } from './testing/sourceScan';
 
 /** The whole repo's own source. `scripts/` counts: it renders too. */
 const SCANNED_ROOTS = ['apps', 'packages', 'scripts'];
 const SOURCES = walkSources(
-  SCANNED_ROOTS.map((dir) => repoRoot(dir)),
+  SCANNED_ROOTS.map((dir) => resolve(repoRoot(), dir)),
   isProductionSource
 );
 

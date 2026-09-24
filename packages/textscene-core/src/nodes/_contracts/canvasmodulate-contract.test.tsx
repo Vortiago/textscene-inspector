@@ -6,13 +6,13 @@
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { TscnParser } from '../../parser/TscnParser';
-import type { TscnScene, TscnNode } from '../../parser/types';
+import type { TscnNode } from '../../parser/types';
+import { fixturesDir, flatten, repoRoot } from '../../parser/testing/parserKit';
 import { nodeRegistry } from '../../core/NodeRegistry';
 import { Linter } from '../../linter/Linter';
 import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry';
@@ -25,25 +25,6 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { godotColorToLinear } from '../../r3f/godotColor';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
-
-function repoRoot(): string {
-  let dir = dirname(fileURLToPath(import.meta.url));
-  for (let i = 0; i < 12; i += 1) {
-    if (existsSync(resolve(dir, 'pnpm-workspace.yaml'))) return dir;
-    dir = dirname(dir);
-  }
-  throw new Error('repo root (pnpm-workspace.yaml) not found above this test');
-}
-
-function flatten(scene: TscnScene): TscnNode[] {
-  const out: TscnNode[] = [];
-  const walk = (n: TscnNode): void => {
-    out.push(n);
-    n.children.forEach(walk);
-  };
-  scene.nodes.forEach(walk);
-  return out;
-}
 
 function parseCMNode(tscn: string): TscnNode {
   const cm = flatten(new TscnParser().parse(tscn)).find((n) => n.type === 'CanvasModulate');
@@ -245,7 +226,7 @@ color = Color(0.4, 0.6, 0.9, 1)
   });
 
   it('ships a fixture containing a CanvasModulate that the linter passes', () => {
-    const dir = resolve(repoRoot(), 'scenes/fixtures');
+    const dir = fixturesDir();
     const withCM = readdirSync(dir)
       .filter((f) => f.endsWith('.tscn'))
       .filter((f) => readFileSync(resolve(dir, f), 'utf8').includes('type="CanvasModulate"'));

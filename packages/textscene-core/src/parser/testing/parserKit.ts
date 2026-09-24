@@ -1,13 +1,14 @@
 /**
  * Shared test kit for parser slice tests: the node `heading()` factory, the formatter
- * `valueOf()` lookup and the repo-root resolver. Build-excluded through the
- * `src/**\/testing/**` tsconfig rule, like the linter test kit.
+ * `valueOf()` lookup, the repo-root and fixture resolvers and the scene `flatten()`.
+ * Build-excluded through the `src/**\/testing/**` tsconfig rule, like the linter test kit.
  */
 
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ParsedHeading } from '../utils';
+import type { TscnNode, TscnScene } from '../types';
 import type { PropertySection } from '../../core/NodeRegistry';
 import type { Node3DProperties, Transform3D } from '../../nodes/base/node3d/types';
 
@@ -48,6 +49,17 @@ export function repoRoot(): string {
 /** Absolute path to the shared `scenes/fixtures` corpus at the repo root. */
 export function fixturesDir(): string {
   return resolve(repoRoot(), 'scenes/fixtures');
+}
+
+/** Every node of a parsed scene, depth first, each parent before its children. */
+export function flatten(scene: TscnScene): TscnNode[] {
+  const out: TscnNode[] = [];
+  const walk = (node: TscnNode): void => {
+    out.push(node);
+    node.children.forEach(walk);
+  };
+  scene.nodes.forEach(walk);
+  return out;
 }
 
 /**

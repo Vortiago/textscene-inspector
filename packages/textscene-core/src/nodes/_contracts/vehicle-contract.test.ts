@@ -1,27 +1,17 @@
 /**
  * Vehicle contract: the shape of the VehicleBody3D/VehicleWheel3D fixture, on parsed values. The
  * wheels sit at distinct transforms, since wheels sharing one origin render the same whether the
- * transform survived the parse or not. The repo root is found by walking up to pnpm-workspace.yaml.
+ * transform survived the parse or not.
  */
 import { describe, it, expect } from 'vitest';
 import { resolve } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import { TscnParser } from '../../parser/TscnParser';
-import { fixturesDir } from '../../parser/testing/parserKit';
-import type { TscnScene, TscnNode } from '../../parser/types';
+import { fixturesDir, flatten } from '../../parser/testing/parserKit';
+import type { TscnScene } from '../../parser/types';
 import type { Node3DProperties } from '../base/node3d/types';
 
 const FIXTURE = 'unit-physics-vehicle.tscn';
-
-function flatten(scene: TscnScene): TscnNode[] {
-  const out: TscnNode[] = [];
-  const walk = (n: TscnNode): void => {
-    out.push(n);
-    n.children.forEach(walk);
-  };
-  scene.nodes.forEach(walk);
-  return out;
-}
 
 function parseFixture(): TscnScene {
   const f = resolve(fixturesDir(), FIXTURE);
