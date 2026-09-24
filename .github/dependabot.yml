@@ -4,6 +4,11 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
+    ignore:
+      # vsce refuses a VSIX whose @types/vscode is newer than engines.vscode, so the
+      # types move only with a deliberate engine bump.
+      - dependency-name: '@types/vscode'
+        update-types: ['version-update:semver-minor', 'version-update:semver-major']
     groups:
       minor-and-patch:
         update-types:

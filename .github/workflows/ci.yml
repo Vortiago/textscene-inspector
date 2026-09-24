@@ -301,6 +301,12 @@ jobs:
           # The manifest must declare the browser (web extension) entry point
           unzip -p "$VSIX_FILE" extension/package.json | grep '"browser"' || { echo "Error: browser entry missing from packaged package.json"; exit 1; }
 
+          # Build-only files must stay out of what users install.
+          if unzip -l "$VSIX_FILE" | grep -E '\.meta\.json$|\.map$|tsconfig[^/]*\.json$|\.test\.js$|/dist/test/'; then
+            echo "Error: the VSIX ships build-only files (listed above)"
+            exit 1
+          fi
+
           echo "✓ VSIX package structure is valid"
 
       # GitHub Pages deployment (disabled for private repo)
