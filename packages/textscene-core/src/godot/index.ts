@@ -42,6 +42,7 @@ export {
   CANVAS_LAYER_MIN,
   CANVAS_LAYER_MAX,
 } from './rendering.js';
+export { IMAGE_MAX_PIXELS, MAX_TEXTURE_EXTENT } from './texture.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export {
   CURSOR_ARROW,

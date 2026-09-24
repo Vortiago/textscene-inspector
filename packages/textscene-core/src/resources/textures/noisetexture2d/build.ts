@@ -6,31 +6,51 @@
  */
 
 import * as THREE from 'three';
+import { IMAGE_MAX_PIXELS, MAX_TEXTURE_EXTENT } from '../../../godot/index.js';
 import type { Gradient } from '../gradienttexture2d/types';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import type { NoiseTexture2DData } from './types';
 import { grayToRgba, modulateWithGradient } from './gradientModulation';
 import { noiseSampler } from './noiseGenerator';
-import { noiseImage, seamlessNoiseImage } from './noiseImage';
+import { noiseImage, seamlessNoiseImage, seamlessSkirt } from './noiseImage';
 import { bumpMapToNormalMap } from './normalMap';
 
 export { grayToRgba, modulateWithGradient } from './gradientModulation';
 export { noiseSampler } from './noiseGenerator';
 export type { NoiseSampler } from './noiseGenerator';
-export { noiseImage, seamlessNoiseImage } from './noiseImage';
+export { noiseImage, seamlessNoiseImage, seamlessSkirt } from './noiseImage';
 export { bumpMapToNormalMap } from './normalMap';
 
 /**
+ * Whether Godot draws this texture at all. An axis past the device's ceiling fails the upload
+ * (`rendering_device.cpp:973`), and a seamless source past `Image::MAX_PIXELS` is never built
+ * (`noise.cpp:43`, `image.cpp:2421`), which leaves the seamless pass nothing to read.
+ */
+export function noiseTextureFits({
+  width,
+  height,
+  seamless,
+  seamlessBlendSkirt,
+}: NoiseTexture2DData): boolean {
+  if (width > MAX_TEXTURE_EXTENT || height > MAX_TEXTURE_EXTENT) return false;
+  if (!seamless) return true;
+  const sourceWidth = width + seamlessSkirt(width, seamlessBlendSkirt);
+  const sourceHeight = height + seamlessSkirt(height, seamlessBlendSkirt);
+  return sourceWidth * sourceHeight <= IMAGE_MAX_PIXELS;
+}
+
+/**
  * The whole pipeline as a `THREE.DataTexture`, written bottom-up: `flipY` skips a
- * typed-array source, and every UV path assumes a file texture's flipY layout.
+ * typed-array source, and every UV path assumes a file texture's flipY layout. Null
+ * where Godot draws no texture ({@link noiseTextureFits}), and the previewer draws none.
  */
 export function rasterizeNoiseTexture2D(
   tex: NoiseTexture2DData,
   noise: FastNoiseLiteData,
   colorRamp: Gradient | null
-): THREE.DataTexture {
-  const width = Math.max(1, Math.trunc(tex.width));
-  const height = Math.max(1, Math.trunc(tex.height));
+): THREE.DataTexture | null {
+  if (!noiseTextureFits(tex)) return null;
+  const { width, height } = tex;
   // Domain warp is not applied (`fastnoise_lite.cpp:318-325`): the JS port's
   // `DomainWrap` checks `instanceof Vector2` against a class it does not export,
   // so a plain `{x, y}` comes back unchanged (1.1.1). The field renders unwarped.

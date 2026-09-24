@@ -37,3 +37,4 @@ The lenient parser never rejects a texture property. An unreadable value falls b
 - **Approximated** An AtlasTexture's `margin` is not applied, so a trimmed-atlas layout sits off by the margin.
 - **Approximated** An AtlasTexture's `filter_clip` is not applied, so a filtered cell edge can bleed one texel from its neighbour.
 - **Approximated** A NoiseTexture2D's domain warp is decoded but not applied, so the palette and scale match while the swirl does not.
+- **Not drawn** A NoiseTexture2D wider or taller than 16384 pixels draws no texture, where Godot draws one on a GPU that uploads larger textures.

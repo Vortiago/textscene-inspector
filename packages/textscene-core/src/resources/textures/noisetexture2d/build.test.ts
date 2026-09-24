@@ -12,12 +12,17 @@ import {
   modulateWithGradient,
   noiseImage,
   noiseSampler,
+  noiseTextureFits,
   rasterizeNoiseTexture2D,
   seamlessNoiseImage,
+  seamlessSkirt,
 } from './build';
 import { decodeNoiseTexture2D } from './decode';
+import type { NoiseTexture2DData } from './types';
 import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
+import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import { GradientInterpolationMode, type Gradient } from '../gradienttexture2d/types';
+import { IMAGE_MAX_PIXELS, MAX_TEXTURE_EXTENT } from '../../../godot/index.js';
 
 /** A deterministic ramp: value 0 → black, value 1 → red. */
 const RAMP: Gradient = {
@@ -187,8 +192,19 @@ describe('bumpMapToNormalMap', () => {
 describe('rasterizeNoiseTexture2D', () => {
   const noise = decodeFastNoiseLite({ frequency: '0.05' });
 
+  /** A texture within the ceilings, which always rasterises. */
+  function rasterized(
+    tex: NoiseTexture2DData,
+    fastNoise: FastNoiseLiteData,
+    colorRamp: Gradient | null
+  ): THREE.DataTexture {
+    const texture = rasterizeNoiseTexture2D(tex, fastNoise, colorRamp);
+    if (!texture) throw new Error(`expected a texture for ${tex.width}x${tex.height}, got null`);
+    return texture;
+  }
+
   it('produces a DataTexture of the declared size', () => {
-    const texture = rasterizeNoiseTexture2D(
+    const texture = rasterized(
       decodeNoiseTexture2D({ width: '16', height: '8' }),
       noise,
       null
@@ -203,7 +219,7 @@ describe('rasterizeNoiseTexture2D', () => {
     // flipY does not apply to a typed-array source, so Godot's top row lands last
     // in the buffer.
     const tex = decodeNoiseTexture2D({ width: '1', height: '2' });
-    const texture = rasterizeNoiseTexture2D(tex, noise, null);
+    const texture = rasterized(tex, noise, null);
     const data = texture.image.data as Uint8Array;
     const topRowValue = noiseImage(noiseSampler(noise), 1, 2, false, true)[0]!;
     // The buffer's first row is Godot's last row, so the top row's value is at the end.
@@ -213,7 +229,7 @@ describe('rasterizeNoiseTexture2D', () => {
   it('runs colour ramp then bump conversion, in Godot\'s order', () => {
     // noise_texture_2d.cpp:170-175: modulate first, then bump_map_to_normal_map,
     // so the normal map comes from the ramped red channel.
-    const texture = rasterizeNoiseTexture2D(
+    const texture = rasterized(
       decodeNoiseTexture2D({ width: '8', height: '8', as_normal_map: 'true' }),
       noise,
       RAMP
@@ -228,39 +244,108 @@ describe('rasterizeNoiseTexture2D', () => {
   });
 
   it('keeps a normal map out of sRGB, and a colour texture in it', () => {
-    const normal = rasterizeNoiseTexture2D(
+    const normal = rasterized(
       decodeNoiseTexture2D({ width: '4', height: '4', as_normal_map: 'true' }),
       noise,
       null
     );
-    const albedo = rasterizeNoiseTexture2D(decodeNoiseTexture2D({ width: '4', height: '4' }), noise, RAMP);
+    const albedo = rasterized(decodeNoiseTexture2D({ width: '4', height: '4' }), noise, RAMP);
     expect(normal.colorSpace).toBe(THREE.NoColorSpace);
     expect(albedo.colorSpace).toBe(THREE.SRGBColorSpace);
   });
 
   it('tiles a seamless texture and clamps a plain one', () => {
-    const seamless = rasterizeNoiseTexture2D(
+    const seamless = rasterized(
       decodeNoiseTexture2D({ width: '8', height: '8', seamless: 'true' }),
       noise,
       null
     );
-    const plain = rasterizeNoiseTexture2D(decodeNoiseTexture2D({ width: '8', height: '8' }), noise, null);
+    const plain = rasterized(decodeNoiseTexture2D({ width: '8', height: '8' }), noise, null);
     expect(seamless.wrapS).toBe(THREE.RepeatWrapping);
     expect(plain.wrapS).toBe(THREE.ClampToEdgeWrapping);
   });
 
   it('is deterministic for the same settings and seed', () => {
     const tex = decodeNoiseTexture2D({ width: '8', height: '8' });
-    const a = rasterizeNoiseTexture2D(tex, noise, null).image.data as Uint8Array;
-    const b = rasterizeNoiseTexture2D(tex, noise, null).image.data as Uint8Array;
+    const a = rasterized(tex, noise, null).image.data as Uint8Array;
+    const b = rasterized(tex, noise, null).image.data as Uint8Array;
     expect([...a]).toEqual([...b]);
   });
 
   it('produces a different field for a different seed', () => {
     const tex = decodeNoiseTexture2D({ width: '8', height: '8' });
-    const a = rasterizeNoiseTexture2D(tex, noise, null).image.data as Uint8Array;
-    const b = rasterizeNoiseTexture2D(tex, decodeFastNoiseLite({ frequency: '0.05', seed: '99' }), null)
+    const a = rasterized(tex, noise, null).image.data as Uint8Array;
+    const b = rasterized(tex, decodeFastNoiseLite({ frequency: '0.05', seed: '99' }), null)
       .image.data as Uint8Array;
     expect([...a]).not.toEqual([...b]);
+  });
+
+  it('draws a texture whose axis sits exactly at the device ceiling', () => {
+    const texture = rasterized(
+      decodeNoiseTexture2D({ width: String(MAX_TEXTURE_EXTENT), height: '1' }),
+      noise,
+      null
+    );
+    expect(texture.image.width).toBe(MAX_TEXTURE_EXTENT);
+  });
+
+  it('draws no texture, and allocates nothing, for an int32-sized axis Godot opens', () => {
+    // The hint is `1,2048,1,or_greater`, so the inspector accepts this width.
+    const tex = decodeNoiseTexture2D({ width: '2147483647', height: '512' });
+    expect(rasterizeNoiseTexture2D(tex, noise, null)).toBeNull();
+  });
+
+  it('draws no texture for a seamless one whose skirted source Godot cannot build', () => {
+    const side = String(MAX_TEXTURE_EXTENT);
+    const tex = decodeNoiseTexture2D({ width: side, height: side, seamless: 'true' });
+    expect(rasterizeNoiseTexture2D(tex, noise, null)).toBeNull();
+  });
+});
+
+describe('noiseTextureFits', () => {
+  const size = (width: number, height: number, seamless = false): NoiseTexture2DData =>
+    decodeNoiseTexture2D({
+      width: String(width),
+      height: String(height),
+      seamless: String(seamless),
+    });
+
+  it("fits Godot's default 512x512 texture", () => {
+    expect(noiseTextureFits(size(512, 512))).toBe(true);
+    expect(noiseTextureFits(size(512, 512, true))).toBe(true);
+  });
+
+  it('fits an axis at the device ceiling and refuses one pixel past it, on either axis', () => {
+    expect(noiseTextureFits(size(MAX_TEXTURE_EXTENT, 1))).toBe(true);
+    expect(noiseTextureFits(size(MAX_TEXTURE_EXTENT + 1, 1))).toBe(false);
+    expect(noiseTextureFits(size(1, MAX_TEXTURE_EXTENT + 1))).toBe(false);
+  });
+
+  it('fits a full-size plain texture, whose image is exactly Image::MAX_PIXELS', () => {
+    expect(noiseTextureFits(size(MAX_TEXTURE_EXTENT, MAX_TEXTURE_EXTENT))).toBe(true);
+  });
+
+  it('refuses a seamless texture whose skirted source passes Image::MAX_PIXELS', () => {
+    const tex = size(MAX_TEXTURE_EXTENT, MAX_TEXTURE_EXTENT, true);
+    const source =
+      (tex.width + seamlessSkirt(tex.width, tex.seamlessBlendSkirt)) *
+      (tex.height + seamlessSkirt(tex.height, tex.seamlessBlendSkirt));
+    expect(source).toBeGreaterThan(IMAGE_MAX_PIXELS);
+    expect(noiseTextureFits(tex)).toBe(false);
+  });
+});
+
+describe('seamlessSkirt', () => {
+  it('generates the blend fraction of the size, truncated', () => {
+    expect(seamlessSkirt(512, 0.1)).toBe(51);
+  });
+
+  it('generates at least one pixel, however small the fraction', () => {
+    expect(seamlessSkirt(4, 0.1)).toBe(1);
+    expect(seamlessSkirt(512, 0)).toBe(1);
+  });
+
+  it('doubles the size at the largest skirt the setter accepts', () => {
+    expect(seamlessSkirt(512, 1)).toBe(512);
   });
 });

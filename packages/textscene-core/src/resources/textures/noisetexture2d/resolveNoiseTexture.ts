@@ -26,8 +26,9 @@ export function resolveNoiseTexture2D(
 
 /**
  * Texture properties and the table their `noise` and `color_ramp` refs resolve in,
- * to pixels. Null for an unusable `noise`: `_generate_texture` returns an empty
- * image for a null noise (noise_texture_2d.cpp:159-161).
+ * to pixels. Null where Godot ends with no texture: an unusable `noise`, for which
+ * `_generate_texture` returns an empty image (noise_texture_2d.cpp:159-161), or a
+ * size Godot cannot build or upload (`noiseTextureFits`).
  */
 function rasterize(
   properties: Record<string, string>,
