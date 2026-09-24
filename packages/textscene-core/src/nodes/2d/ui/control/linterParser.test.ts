@@ -4,7 +4,8 @@
  * groups are asserted apart, because their diagnostic is keyed by the group name.
  */
 
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import {
   node,
   scene,
@@ -105,7 +106,40 @@ describe('Control Linter', () => {
       valid: [0, 1, 3],
       invalid: [{ value: 4, contains: ['0-3'] }],
     },
+    {
+      // control.cpp:4208 binds it PROPERTY_HINT_NONE, so no finite size is out of range.
+      // set_custom_minimum_size returns before storing a size with a non-finite component
+      // (control.cpp:1729-1732), which drops the whole write: the error tier.
+      prop: 'custom_minimum_size',
+      valid: ['Vector2(0, 0)', 'Vector2(120, 40)', 'Vector2(-8, 1e+06)'],
+      invalid: [
+        { value: 'Vector2(nan, 0)', contains: ['finite', 'Vector2(nan, 0)'], severity: 'error' },
+        { value: 'Vector2(0, inf)', contains: ['finite'], severity: 'error' },
+        { value: 'Vector2(-inf, inf_neg)', contains: ['finite'], severity: 'error' },
+      ],
+    },
   ]);
+
+  // Registered on Control, so every Control leaf inherits the guard through the base walk.
+  describe('custom_minimum_size finite guard on a Control leaf', () => {
+    it('refuses a non-finite component on Button and Label as on Control', () => {
+      for (const leaf of ['Button', 'Label']) {
+        const validator = validatorRegistry.findValidator(leaf, 'custom_minimum_size');
+        expect(validator, `${leaf} does not resolve custom_minimum_size`).toBe(
+          validatorRegistry.findValidator('Control', 'custom_minimum_size')
+        );
+        expect(validator!('custom_minimum_size', 'Vector2(nan, 0)', 1)?.severity).toBe('error');
+        expect(validator!('custom_minimum_size', 'Vector2(64, 32)', 1)).toBeNull();
+      }
+    });
+
+    it('cites the setter guard as an enforced grounding', () => {
+      expect(validatorRegistry.declarationFor('Control', 'custom_minimum_size')?.grounding).toEqual({
+        kind: 'enforced',
+        cite: 'control.cpp:1729',
+      });
+    });
+  });
 
   describe('theme reference', () => {
     // Both ids are declared. An undeclared one is a dangling reference, another rule's report.
