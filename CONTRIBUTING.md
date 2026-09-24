@@ -25,13 +25,12 @@ project conventions. [ARCHITECTURE.md](ARCHITECTURE.md) explains the structure.
 
 ## Check it
 
-Run the gates that AGENTS.md lists for your change. Before a push, run:
+Run the gates that AGENTS.md lists for your change. The pre-push hook runs the checks that match
+the pushed files, and CI runs the full gate. To run the full gate yourself:
 
 ```bash
 pnpm validate
 ```
-
-The pre-push hook and CI run the same gates.
 
 ## Open the pull request
 

@@ -15,7 +15,7 @@ Godot `.tscn` parser, linter and renderer (react-three-fiber over three.js). pnp
   checking, so a test can be green and untyped. `pnpm -r` silently skips a package that
   does not define the script, so every package that ships tests must define it.
   `scripts/typeCheckTestsCoverage.test.mjs` keeps that true. `pnpm type-check:tests` is
-  part of `validate` (so the pre-push hook and `release.yml`) and is its own CI step. Run
+  part of `validate` (so `release.yml`) and is its own CI step. Run
   it locally with the other gates, not only at push time.
 - `pnpm test:unit` is the full vitest suite and takes minutes. On a shell-tool timeout,
   re-run the same command with a larger `timeout` (ms). A subset never proves the gate.

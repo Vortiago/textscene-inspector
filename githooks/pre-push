@@ -1,7 +1,8 @@
 #!/usr/bin/env sh
-# The full gate before code leaves the machine: the same checks as CI.
+# Run the checks that match the pushed changes. CI runs the full gate on every push.
+# `FULL_VALIDATE=1 git push` runs the full `pnpm validate` here too.
 
 # HUSKY=0 skips the hook. Existing tools already set that name.
 [ "${HUSKY-}" = "0" ] && exit 0
 
-pnpm validate
+exec node "$(git rev-parse --show-toplevel)/scripts/githooks/prePush.mjs"
