@@ -1,6 +1,6 @@
 # Claude Code commit hooks
 
-These `PreToolUse` hooks make every commit that Claude Code makes pass the Husky pre-commit checks.
+These `PreToolUse` hooks make every commit that Claude Code makes pass the checks of the git pre-commit hook.
 Each hook is an ES module that `node` runs. Claude Code sends the tool input to the hook as JSON on
 stdin.
 
@@ -16,7 +16,7 @@ A hook that cannot read its input exits 0. A hook that crashes exits 1. Neither 
 
 ### `check-no-verify.mjs`
 
-Blocks a `git commit` that skips the Husky pre-commit hook. It runs for every Bash command.
+Blocks a `git commit` that skips the pre-commit hook. It runs for every Bash command.
 
 1. Reads the Bash command from `tool_input.command`.
 2. Removes the quoted text, so a commit message that holds `-n` is not a flag.
@@ -28,18 +28,18 @@ Blocks a `git commit` that skips the Husky pre-commit hook. It runs for every Ba
 
 ### `validate-commit.mjs`
 
-Runs the Husky pre-commit checks for `mcp__github_file_ops__commit_files`. That tool commits
+Runs the pre-commit checks for `mcp__github_file_ops__commit_files`. That tool commits
 through the GitHub API, so no git hook runs for it.
 
 1. Reads the committed paths from `tool_input.files`.
-2. Loads `lint-staged.config.mjs`, the configuration of the Husky pre-commit hook.
+2. Loads `lint-staged.config.mjs`, the configuration of the pre-commit hook.
 3. Gets the commands of each task whose glob matches a committed path.
 4. Runs the commands in order in `$CLAUDE_PROJECT_DIR`. Their output goes to stderr.
 5. If a command fails, exits with code 2 and names the command.
 6. Exits with code 0 when all commands pass, or when no path matches a glob.
 
-A Bash `git commit` does not need this hook. Husky runs the same checks in the pre-commit hook, and
-`pnpm install` installs Husky in every checkout.
+A Bash `git commit` does not need this hook. The git pre-commit hook runs the same checks, and
+`pnpm install` points git at `githooks/` in every checkout.
 
 ## Configuration
 
@@ -96,17 +96,17 @@ echo '{"tool_name":"mcp__github_file_ops__commit_files","tool_input":{"files":["
 `README.md` matches no lint-staged glob, so the exit code is 0. A path to a `.mjs` file with an
 ESLint error gives exit code 2.
 
-## Comparison with Husky
+## Comparison with the git hooks
 
-| Feature | Husky (`.husky/`) | Claude Code (`.claude/hooks/`) |
-|---------|-------------------|--------------------------------|
+| Feature | Git hooks (`githooks/`) | Claude Code (`.claude/hooks/`) |
+|---------|-------------------------|--------------------------------|
 | **Runs for** | A local `git commit` or `git push` | A Claude Code tool call |
 | **Commit checks** | `lint-staged` on the staged files | The same `lint-staged` tasks on the files of a GitHub API commit |
-| **Push checks** | `pnpm validate` | None. Husky runs them. |
+| **Push checks** | `pnpm validate` | None. The git pre-push hook runs them. |
 | **--no-verify** | Allowed | Blocked for Claude Code |
 
 ## More information
 
-- `.husky/README.md` documents the Husky hooks.
+- `githooks/README.md` documents the git hooks.
 - `AGENTS.md` documents the gates.
 - The Claude Code hooks reference: https://code.claude.com/docs/en/hooks

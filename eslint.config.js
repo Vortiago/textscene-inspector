@@ -148,7 +148,13 @@ export default [
 
   // Config files and scripts - Node.js environment
   {
-    files: ['**/*.config.js', '**/*.config.mjs', '**/scripts/**/*.js', '**/scripts/**/*.mjs'],
+    files: [
+      '**/*.config.js',
+      '**/*.config.mjs',
+      '**/scripts/**/*.js',
+      '**/scripts/**/*.mjs',
+      'githooks/*.mjs',
+    ],
     languageOptions: {
       globals: {
         ...globals.node,

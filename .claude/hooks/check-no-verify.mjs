@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * PreToolUse hook for the Bash tool: refuses a `git commit` that skips the Husky pre-commit hook
+ * PreToolUse hook for the Bash tool: refuses a `git commit` that skips the pre-commit hook
  * with `--no-verify` or its short form `-n`. It exits 2 to block, and 0 for every other command.
  */
 
@@ -41,7 +41,7 @@ function skipsHooks(option) {
 const refused = commitOptions(readCommand()).flat().find(skipsHooks);
 if (refused) {
   console.error(
-    `Blocked: \`git commit ${refused}\` skips the Husky pre-commit hook. ` +
+    `Blocked: \`git commit ${refused}\` skips the pre-commit hook. ` +
       'This project requires the pre-commit checks on every commit. Commit without the flag.'
   );
   process.exit(BLOCK);

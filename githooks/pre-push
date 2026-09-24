@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# The full gate before code leaves the machine: the same checks as CI.
+
+# HUSKY=0 skips the hook. Existing tools already set that name.
+[ "${HUSKY-}" = "0" ] && exit 0
+
+pnpm validate

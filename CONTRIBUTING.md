@@ -5,7 +5,8 @@ checks each kind of change must pass.
 
 ## Set up
 
-Follow [Quick start](README.md#quick-start) in the README.
+Follow [Quick start](README.md#quick-start) in the README. `pnpm install` also points git at
+the hooks in `githooks/`. [githooks/README.md](githooks/README.md) explains them.
 
 ## Pick the work
 
