@@ -1,8 +1,7 @@
 /**
- * Parses Godot's `project.godot`, the configuration at a project's `res://` root, into raw settings keyed
- * by full name. A foreign-format parser outside the resource-slice registry (ADR-0031): no scene names it,
- * so it claims no type name and no bus slot. Not `TscnParserCore`: the file has bare `[section]` headings,
- * plain `key=value` lines and nothing to diagnose, the INI shape its sibling `importParser.ts` parses too.
+ * Parses Godot's `project.godot`, the configuration at a project's `res://` root, into raw settings
+ * keyed by full name. A foreign-format parser outside the resource-slice registry (ADR-0031): no
+ * scene names it, so it claims no type name and no bus slot.
  */
 
 import { boolSlotValue, isLocaleRightToLeft, type LayoutDirectionEnv } from '../godot/index.js';
@@ -23,9 +22,10 @@ const SECTION = /^\[([A-Za-z_][A-Za-z0-9_]*)\]$/;
 export type ProjectSettings = Readonly<Record<string, string>>;
 
 /**
- * A `project.godot`'s settings, or null when the text is not one. Null, not a throw:
- * absence and malformedness are both ordinary, and the caller uses Godot's defaults
- * either way.
+ * A `project.godot`'s settings, or null when the text is not one. Null, not a throw: absence and
+ * malformedness are both ordinary, and the caller uses Godot's defaults either way. Not
+ * `TscnParserCore`: bare `[section]` headings and plain `key=value` lines, the INI shape of
+ * `importParser.ts`, leave nothing to diagnose.
  */
 export function parseProjectSettings(content: string): ProjectSettings | null {
   const settings: Record<string, string> = {};

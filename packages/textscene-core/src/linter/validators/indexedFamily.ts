@@ -67,10 +67,9 @@ export interface IndexedFamilyOptions {
 }
 
 /**
- * Build the dispatcher, with `leaves` exposed so `boundGrounding`'s sweep recurses past it: a tag on the
- * dispatcher says nothing about the bounds behind it. A leaf with its own index is a nested family (`ChainIK3D`'s
- * `settings/<i>/joints/<j>/bone`, chain_ik_3d.cpp), left to its slice's regex through {@link toIntIndex}. Absorbing
- * one needs a sub-path ending in an index (`SpringBoneSimulator3D`'s `collisions/<j>`) and a `negativeIndex` per index.
+ * Build the dispatcher, with `leaves` exposed so `boundGrounding`'s sweep
+ * recurses past it: a tag on the dispatcher says nothing about the bounds behind
+ * it.
  */
 export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyValidator {
   const { prefix, leaves, unknownCode, describes, negativeIndex } = opts;
@@ -151,6 +150,10 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
     if (!Object.prototype.hasOwnProperty.call(leaves, resolved)) return unknown(key, line);
     const leaf = leaves[resolved];
     if (!leaf) return unknown(key, line);
+    // A leaf whose own path carries an index is a nested family (`ChainIK3D`'s
+    // `settings/<i>/joints/<j>/bone`, chain_ik_3d.cpp), matched by its slice's own regex through
+    // {@link toIntIndex}. Absorbing one needs a sub-path that ends in an index
+    // (`SpringBoneSimulator3D`'s `collisions/<j>`) and a `negativeIndex` per index position.
     return leaf(key, value, line);
   }, opts.accepts ?? describes);
 

@@ -1,7 +1,7 @@
 /**
- * The removal half of `ValidatorRegistry`: what a type takes away, and the rule that a key is declared
- * or removed, never both. Free functions over the registry's tables, so the class file holds the
- * storage and this one the walk. `removalKeys.md` says what a removal is and what is not one.
+ * The removal half of `ValidatorRegistry`: what a type takes away, and the rule that a key is
+ * declared or removed, never both. Free functions over the registry's tables, so the class file
+ * holds the storage and this one the walk. `removalKeys.md` defines a removal.
  */
 
 import type { RegistryTables } from './validatorResolution.js';

@@ -11,9 +11,9 @@ import { LINE_EDIT_BORDER_BOTTOM_WIDTH, scaledGodotTheme, STYLE_FILL, type Scale
 import type { StyleBoxFlatData } from './styleBoxFlat';
 
 /**
- * The default flat stylebox's fill by draw state, from `scene/theme/default_theme.cpp`'s `fill_default_theme`.
- * Colours are not scaled: `fill_default_theme` scales every length it passes to `make_flat_stylebox`, never a
- * `Color` literal.
+ * The default flat stylebox's fill by draw state, from `scene/theme/default_theme.cpp`'s
+ * `fill_default_theme`, which scales every length it passes to `make_flat_stylebox` but never a
+ * `Color` literal, so the colours are not scaled.
  */
 export interface NativeThemeStyleFill {
   /** `style_normal_color` = `Color(0.1, 0.1, 0.1, 0.6)`. */

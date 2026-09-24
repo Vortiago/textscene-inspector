@@ -14,11 +14,14 @@ import { keyMatcher, unvalidatedByClass } from './registryKeys.mjs';
 
 const PROPS = join(import.meta.dirname, 'node-properties.json');
 const CORE = join(import.meta.dirname, '../../packages/textscene-core');
-// A ledger, not a pass mark: it only goes down, counted per declaring class with no base-walk, since a `Control`
-// validator belongs in `Control`'s slice. Each of the four left has a `findValidator` null test. Three pass an empty
-// setter string to ADD_PROPERTY, so `ClassDB::set_property` drops the write (`ShapeCast2D`/`ShapeCast3D.collision_result`,
-// `LimitAngularVelocityModifier3D.joint_count`), and `OpenXRRenderModel.render_model` is a runtime `Variant::RID`.
+// A ledger, not a pass mark: it only goes down, counted per declaring class
+// with no base-walk, since a `Control` validator belongs in `Control`'s slice.
+// The four left stay unvalidated, each pinned by a `findValidator` null test.
 const EXPECTED_UNVALIDATED = 4;
+// Three pass an empty setter string to ADD_PROPERTY, so `ClassDB::set_property`
+// drops the write: `ShapeCast2D`/`ShapeCast3D.collision_result` and
+// `LimitAngularVelocityModifier3D.joint_count`. `OpenXRRenderModel.render_model`
+// is a `Variant::RID`, a runtime handle with no literal a scene can write.
 
 /**
  * The classes this ledger measures: the ones this repo claims, closed over the

@@ -20,15 +20,14 @@ const WRAP_LABELS = {
 };
 const SWIZZLE_LABELS = { 0: 'RED', 1: 'GREEN', 2: 'BLUE', 3: 'ALPHA', 4: 'ZERO', 5: 'ONE' };
 
-// `_get_property_list` (:705-719) adds keys from the OpenXR extension wrappers registered at runtime,
-// and `_set` (:730-737) stores any name. The list drops a name with no `/` (:713-716), and a
-// `WildcardEntry` needs a fixed prefix, so no validator can name these keys. None is needed:
-// StrictTscnParser.onProperty accepts an unregistered key silently, and linterParser.test.ts guards it.
+// `_get_property_list` (:705-719) adds keys from the OpenXR extension wrappers registered at
+// runtime, and `_set` (:730-737) stores any name. The list drops a name with no `/` (:713-716),
+// and a `WildcardEntry` needs a fixed prefix, so no validator can name these keys. None is needed:
+// StrictTscnParser.onProperty accepts an unregistered key silently, as linterParser.test.ts pins.
 validatorRegistry.registerAll('OpenXRCompositionLayer', {
-  // openxr_composition_layer.cpp:151, OBJECT + PROPERTY_HINT_NODE_TYPE "SubViewport", which `_parse_node` writes as
-  // a NodePath and omits when cleared (packed_scene.cpp:884-891). Whether it names a SubViewport needs the tree, a
-  // semantic rule's concern. A bare `null` loads: variant_parser.cpp:699 reads it, NIL converts to OBJECT
-  // (variant.cpp:543-545), both set_layer_viewport guards read `p_viewport != nullptr` (:295-305), and :345 passes nullptr.
+  // openxr_composition_layer.cpp:151, OBJECT + PROPERTY_HINT_NODE_TYPE "SubViewport", saved as a
+  // NodePath, or as a bare `null`, which loads. `openXRCompositionLayer.md` gives the engine lines,
+  // and why a SubViewport target is a semantic rule's concern.
   layer_viewport: v.nodePath('layer_viewport', { orNull: true }),
   // :152-157, all BOOL/VECTOR2I/INT with PROPERTY_HINT_NONE, and every setter
   // (:337-432) either bare-assigns or early-returns on equality: no ERR_FAIL

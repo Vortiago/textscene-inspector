@@ -1,8 +1,8 @@
 /**
  * Every node slice is wired into `parser/TscnParser.ts`, the one production import of a slice's
- * `index.ts`. Without it the node falls back to `Node`, logs `Unsupported node type` and keeps its type,
- * so the tree looks right while the slice's parser never runs. Only a test that imports nothing but the
- * barrel catches this: a slice's own test imports its `index.ts`, so the type registers either way.
+ * `index.ts`. Without it the node falls back to `Node`, logs `Unsupported node type` and keeps its
+ * type, so the tree looks right while the slice's parser never runs. Only a test that imports
+ * nothing but the barrel catches this.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -158,6 +158,8 @@ describe('parser barrel completeness', () => {
     expect(typeNamesOnDisk().length).toBeGreaterThan(200);
   });
 
+  // A slice's own test cannot catch a missing barrel line: it imports its own `index.ts`, so the
+  // type registers whether or not the barrel imports the slice.
   it('the barrel alone registers every type name a slice declares', () => {
     // Independent of the specifier comparison above: this one fails on an
     // import that is present but no longer reaches the registration.

@@ -13,10 +13,10 @@ export interface SfntScalars {
 }
 
 /**
- * The sfnt version tags of the OpenType spec, "OpenType Font File" §"sfntVersion". Only plain SFNT reads: TrueType
- * (0x00010000 or `'true'`), OpenType-CFF (`'OTTO'`) and the first face of a `'ttcf'` collection. WOFF2 tables are
- * Brotli-compressed, and the webview can decompress neither with `DecompressionStream`, which has no `'brotli'`
- * format, nor with WASM, which the CSP blocks.
+ * The sfnt version tags of the OpenType spec, "OpenType Font File" §"sfntVersion". Only plain SFNT
+ * reads: TrueType (0x00010000 or `'true'`), OpenType-CFF (`'OTTO'`) and the first face of a
+ * `'ttcf'` collection. WOFF2 tables are Brotli-compressed, and the webview can decompress neither
+ * with `DecompressionStream`, which has no `'brotli'` format, nor with WASM, which the CSP blocks.
  */
 const SFNT_VERSION_TRUETYPE = 0x00010000;
 const SFNT_VERSION_OTTO = 0x4f54544f; // 'OTTO'

@@ -53,8 +53,8 @@ describe('OpenXRVisibilityMask strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint` checks it
-    // against the whole registry through the barrel. This checks it against only what this test
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint` checks
+    // it against the whole registry through the barrel. This checks it against only what this test
     // imported: with no own keys, the inherited validators, since `linterParser` imports the parent
     // chain, so it covers what GeometryInstance3D up declares until KEYS gains an entry.
     expectFixtureClean('unit-open-xr-visibility-mask.tscn');

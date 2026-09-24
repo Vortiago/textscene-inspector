@@ -53,10 +53,10 @@ export const CANVAS_2D_SCENES = [
   // Two shadowed lights in one accumulation pass: each must clear the stencil
   // before it stamps, or the first light's volume also cuts the second's.
   { name: 'lightoccluder2d-two-lights', file: 'unit-lightoccluder2d-two-lights.tscn', mode: '2d' },
-  // `shadow_filter`: the boundary is a stepped penumbra, and every occluder fixture above leaves the filter at NONE.
-  // The occluder's upper endpoint sits at the light's y, so a vertical probe crosses the umbra boundary perpendicular.
-  // Godot 4.6.3 transect at x=676: 167 / 129 / 100 / 80 / 67 / 63 of 255, the five PCF5 levels under the (1-s)^2
-  // falloff, with the step boundaries 19.4 px either side of the geometric edge.
+  // `shadow_filter`, which every occluder fixture above leaves at NONE, gives a stepped penumbra.
+  // The occluder's top sits at the light's y, so a vertical probe crosses the umbra edge square on.
+  // Godot 4.6.3 transect at x=676: 167 / 129 / 100 / 80 / 67 / 63 of 255, the five PCF5 levels
+  // under the (1-s)^2 falloff, with step boundaries 19.4 px either side of the geometric edge.
   { name: 'pointlight2d-shadow-pcf5', file: 'unit-pointlight2d-shadow-pcf5.tscn', mode: '2d' },
   // PCF13 spreads the same ramp over the wider kernel.
   { name: 'pointlight2d-shadow-pcf13', file: 'unit-pointlight2d-shadow-pcf13.tscn', mode: '2d' },

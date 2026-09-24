@@ -1,9 +1,9 @@
 [gd_scene load_steps=5 format=3 uid="uid://unittexrectatlastex"]
 
-; One variable: a TextureRect whose `texture` is an inline AtlasTexture sub-resource, a sprite-sheet cell, which Godot
-; presents at its region's size (`AtlasTexture::get_width`/`get_height`), so the slot feeds the pixels and the minimum
-; size. Other TextureRect fixtures use a whole image or a GradientTexture2D, and the only other AtlasTextures are
-; SpriteFrames frames in an AnimatedSprite2D, a different consumer with no golden.
+; One variable: a TextureRect whose `texture` is an inline AtlasTexture, a sprite-sheet cell Godot
+; presents at its region's size (`AtlasTexture::get_width`/`get_height`), so it feeds the pixels and
+; the minimum size. Other TextureRect fixtures use a whole image or a GradientTexture2D. The other
+; AtlasTextures are SpriteFrames frames in an AnimatedSprite2D, another consumer, with no golden.
 
 [ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_sheet"]
 
@@ -39,7 +39,8 @@ color = Color(0.15, 0.6, 0.3, 1)
 
 ; 64x64 of flat red. The whole sheet instead shows all four colours. Nothing shows the background.
 [node name="TopLeftCell" type="TextureRect" parent="Column"]
-; Each rect shrinks to its minimum size, so a wrong size moves every sibling below: layout and paint both.
+; Each rect shrinks to its minimum size, so a wrong size moves every sibling below: layout and paint
+; both.
 size_flags_horizontal = 0
 texture = SubResource("AtlasTexture_topleft")
 

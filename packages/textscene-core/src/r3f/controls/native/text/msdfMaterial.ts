@@ -26,7 +26,8 @@ void main() {
 
 // FRAGMENT ends with `<tonemapping_fragment>` and `<colorspace_fragment>`, which a `ShaderMaterial`
 // does not inherit, but not their `_pars_` chunks, which `WebGLProgram` injects into the prefix. It
-// has no `#extension` directive, which ESSL3 rejects. `msdfMaterial.md` gives the failure behind each.
+// has no `#extension` directive, which ESSL3 rejects. `msdfMaterial.md` gives the failure behind
+// each.
 const FRAGMENT = /* glsl */ `
 uniform sampler2D uMap;
 uniform vec3 uColor;
