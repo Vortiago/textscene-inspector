@@ -18,7 +18,14 @@ import styles from './TscnPreviewShell.module.css';
 /** A stable prune, so the memo of `useLiveSceneNodes` does not recompute each render. */
 const NOT_A_VIEWPORT = (node: TscnNode): boolean => !isViewportBoundary(node.type);
 
-export function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
+export function ViewportArea({
+  sceneGraph,
+  scenePath,
+}: {
+  sceneGraph: SceneGraph | null;
+  /** The path the host opened the scene under, whatever its parse gave. */
+  scenePath: string;
+}) {
   const { mode, setMode } = useViewportMode();
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
   // The live tree finds 2D content inside a sub-scene too. The walk stops at a
@@ -33,6 +40,7 @@ export function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) 
           nodes={rootScene?.nodes ?? []}
           internalResources={rootScene?.internalResources ?? []}
           externalResources={rootScene?.externalResources ?? []}
+          scenePath={scenePath}
         />
         <ViewportControlsHelp mode="2D" />
       </>

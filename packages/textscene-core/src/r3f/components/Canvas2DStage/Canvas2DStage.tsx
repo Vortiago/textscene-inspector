@@ -70,12 +70,18 @@ export interface Canvas2DStageProps {
   internalResources: readonly TscnInternalResource[];
   /** ExtResources for texture refs inside the Control canvas (ADR-0009: explicit props). */
   externalResources: readonly TscnExternalResource[];
+  /**
+   * The path the host opened the scene under. A new one is a scene opening, which starts
+   * load time again. An edit or a failed parse of the open scene keeps it.
+   */
+  scenePath: string;
 }
 
 export function Canvas2DStage({
   nodes,
   internalResources,
   externalResources,
+  scenePath,
 }: Canvas2DStageProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View2D>({ pan: { x: 0, y: 0 }, zoom: 1 });
@@ -118,12 +124,30 @@ export function Canvas2DStage({
     });
   }, [applyView, canvasWidth, canvasHeight]);
 
-  // Fit on mount unless the view is pinned. Read once: the preference decides how
-  // the scene opens, and the Fit button stays live either way.
+  // Load time runs from a scene opening (mount, or a new `scenePath`) to the user's first
+  // pan, zoom or Camera2D framing. Within it, each new viewport size refits, since
+  // `project.godot` resolves after the scene does. After it, the view is the user's until
+  // the next scene opens. Written by `moveView`, cleared by a scene opening.
+  const userMovedViewRef = useRef(false);
+
+  /** A view change the user asked for. It ends load time. */
+  const moveView = useCallback(
+    (next: View2D) => {
+      userMovedViewRef.current = true;
+      applyView(next);
+    },
+    [applyView]
+  );
+
+  // Fit on open unless the view is pinned. Read once: the preference decides how a
+  // scene opens, and the Fit button stays live either way.
   const [fitOnOpen] = useState(() => readPersisted(FIT_ON_OPEN_2D_STORAGE_KEY, true, isBoolean));
   useEffect(() => {
-    if (fitOnOpen) fit();
-  }, [fit, fitOnOpen]);
+    userMovedViewRef.current = false;
+  }, [scenePath]);
+  useEffect(() => {
+    if (fitOnOpen && !userMovedViewRef.current) fit();
+  }, [fit, fitOnOpen, scenePath]);
 
   // "View through" a Camera2D: a one-shot request that centres the camera's view
   // point at its magnification. Pan and zoom stay free afterwards.
@@ -135,14 +159,14 @@ export function Canvas2DStage({
     const r = el.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) return;
     const zoom = clampZoom(frame2D.zoom);
-    applyView({
+    moveView({
       zoom,
       pan: {
         x: r.width / 2 - frame2D.center.x * zoom,
         y: r.height / 2 - frame2D.center.y * zoom,
       },
     });
-  }, [frame2D, applyView]);
+  }, [frame2D, moveView]);
 
   // Wheel-to-zoom, anchored to the cursor. Added as a non-passive native
   // listener so preventDefault actually suppresses page scroll.
@@ -157,7 +181,7 @@ export function Canvas2DStage({
       const notches = clampWheelNotches(wheelNotches(e));
       if (notches === 0) return;
       const r = el.getBoundingClientRect();
-      applyView(
+      moveView(
         zoomViewAround(
           viewRef.current,
           e.clientX - r.left,
@@ -168,7 +192,7 @@ export function Canvas2DStage({
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [applyView]);
+  }, [moveView]);
 
   // Drag-to-pan through pointer capture, not window listeners, so an unmount
   // mid-drag cannot set state on an unmounted component.
@@ -266,11 +290,11 @@ export function Canvas2DStage({
     // spread, where an orbit radius shrinks.
     const zoom = clampZoom(origin.startZoom * pinchSpanRatio(origin.startSpan, span));
     if (zoom === view.zoom) {
-      applyView(panned);
+      moveView(panned);
       return;
     }
     const r = touchRect.current ?? e.currentTarget.getBoundingClientRect();
-    applyView(
+    moveView(
       zoomViewAround(panned, centroid.x - r.left, centroid.y - r.top, zoom / view.zoom)
     );
   };
@@ -282,7 +306,7 @@ export function Canvas2DStage({
     }
     const d = pan2dDrag.current;
     if (!d.active) return;
-    applyView({
+    moveView({
       pan: { x: d.ox + (e.clientX - d.startX), y: d.oy + (e.clientY - d.startY) },
       zoom: viewRef.current.zoom,
     });
@@ -309,7 +333,7 @@ export function Canvas2DStage({
     const el = stageRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    applyView(zoomViewAround(viewRef.current, r.width / 2, r.height / 2, factor));
+    moveView(zoomViewAround(viewRef.current, r.width / 2, r.height / 2, factor));
   }
 
   return (
