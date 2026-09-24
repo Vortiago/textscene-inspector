@@ -2,16 +2,11 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash(*git commit*)",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-no-verify.js"
-          },
-          {
-            "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/validate-commit.js",
-            "timeout": 120
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-no-verify.mjs"
           }
         ]
       },
@@ -20,8 +15,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/validate-commit.js",
-            "timeout": 120
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/validate-commit.mjs",
+            "timeout": 300
           }
         ]
       }
