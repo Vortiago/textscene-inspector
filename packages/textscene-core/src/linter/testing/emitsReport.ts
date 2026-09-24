@@ -5,13 +5,13 @@
  * loop variable of `for (const x of TABLE)`, whose column is the reportable set.
  */
 
-// This module holds no `ruleName: '…'` literal: it is inside the population its
-// callers scrape.
 import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
 import { balancedGroup } from './emitsReach.js';
 
 const REPORT_CALL = /\b(?:diagnostics\.push|push|report|reportArm|armDiagnostic)\s*\(/g;
+// This module holds no `ruleName: '…'` literal: it is inside the population its
+// callers scrape.
 const NAME_LITERAL = /ruleName:\s*(?:'([^']+)'|`([^`]+)`)/g;
 /** `ruleName: window.ruleName`: the loop variable and the column it reads. */
 const NAME_MEMBER = /ruleName:\s*([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)/g;

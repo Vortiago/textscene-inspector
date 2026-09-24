@@ -1,17 +1,15 @@
 [gd_scene load_steps=5 format=3 uid="uid://unittexrectatlastex"]
 
-; One variable: a TextureRect whose `texture` is an inline AtlasTexture sub-resource, a cell of a
-; sprite sheet. Godot presents it at its region's size (`AtlasTexture::get_width`/`get_height`),
-; so the slot feeds the pixels and the minimum size. Each rect shrinks to that minimum
-; (`size_flags_horizontal = 0`), so a wrong size moves every sibling below: layout and paint both.
+; One variable: a TextureRect whose `texture` is an inline AtlasTexture sub-resource, a sprite-sheet cell, which Godot
+; presents at its region's size (`AtlasTexture::get_width`/`get_height`), so the slot feeds the pixels and the minimum
+; size. Other TextureRect fixtures use a whole image or a GradientTexture2D, and the only other AtlasTextures are
+; SpriteFrames frames in an AnimatedSprite2D, a different consumer with no golden.
 
-; res://textures/atlas-quadrants.png is 128x128 in four flat 64x64 quadrants: red top-left, green
-; top-right, blue bottom-left, yellow bottom-right, so each cell is unmistakable. Other
-; TextureRect fixtures use a whole image or a GradientTexture2D, and the only other AtlasTextures
-; are SpriteFrames frames in an AnimatedSprite2D, a different consumer with no golden.
 [ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_sheet"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_topleft"]
+; res://textures/atlas-quadrants.png is 128x128 in four flat 64x64 quadrants: red top-left, green
+; top-right, blue bottom-left, yellow bottom-right, so each cell is unmistakable.
 atlas = ExtResource("1_sheet")
 region = Rect2(0, 0, 64, 64)
 
@@ -41,6 +39,7 @@ color = Color(0.15, 0.6, 0.3, 1)
 
 ; 64x64 of flat red. The whole sheet instead shows all four colours. Nothing shows the background.
 [node name="TopLeftCell" type="TextureRect" parent="Column"]
+; Each rect shrinks to its minimum size, so a wrong size moves every sibling below: layout and paint both.
 size_flags_horizontal = 0
 texture = SubResource("AtlasTexture_topleft")
 

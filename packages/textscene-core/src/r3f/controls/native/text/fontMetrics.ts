@@ -5,11 +5,6 @@
  * the type never pulls Open Sans's baked data into its closure.
  */
 
-// No rule is a plain float scale: ascent and descent ceil to whole pixels, and an
-// advance goes through FreeType's and HarfBuzz's fixed-point chain to whole 1/64 px.
-// The whole-pixel advance round above the subpixel threshold carries a remainder
-// between glyphs, so it lives in the shaper, `textLayout.ts`.
-
 /**
  * Which glyph-painting path a `FontMetrics` pairs with, since shaping is
  * font-agnostic but rasterisation is not. `'atlas'` is a baked MSDF atlas
@@ -39,7 +34,12 @@ export interface FontMetrics {
   readonly averageAdvanceUnits: number;
 }
 
-/** `units` scaled to `fontSizePx` as `units * (fontSizePx / unitsPerEm)`. `units * fontSizePx / unitsPerEm` is bit-identical only at a power-of-two `unitsPerEm`. */
+/**
+ * `units` scaled to `fontSizePx` as `units * (fontSizePx / unitsPerEm)`. `units * fontSizePx / unitsPerEm` is
+ * bit-identical only at a power-of-two `unitsPerEm`. No rule stops at this float: ascent and descent ceil to whole
+ * pixels, and an advance goes through FreeType's and HarfBuzz's fixed-point chain to whole 1/64 px. The whole-pixel
+ * advance round above the subpixel threshold carries a remainder between glyphs, so it lives in `textLayout.ts`.
+ */
 function unitsToPx(units: number, metrics: Pick<FontMetrics, 'unitsPerEm'>, fontSizePx: number): number {
   return units * (fontSizePx / metrics.unitsPerEm);
 }

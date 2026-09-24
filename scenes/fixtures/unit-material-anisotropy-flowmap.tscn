@@ -4,10 +4,6 @@
 ; material under the same light, and only the right one has the flowmap. No other fixture sets
 ; `anisotropy_flowmap`: they set the scalar only, which is the left sphere.
 
-; textures/anisotropy-flowmap-split.png (64x64 RGBA) is constant R=255 G=128 (a +X derivative,
-; neutral Y) with blue 0, and alpha, Godot's per-pixel strength, in four quarter-width bands of 0
-; and 255. Every camera-facing part shows both regimes, so the flowmapped sphere shows the streak
-; banded on and off while the scalar-only sphere is streaked all round.
 [ext_resource type="Texture2D" path="res://textures/anisotropy-flowmap-split.png" id="1_flowmap"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_1"]
@@ -22,6 +18,10 @@ metallic = 0.6
 roughness = 0.35
 anisotropy_enabled = true
 anisotropy = 1.0
+; textures/anisotropy-flowmap-split.png (64x64 RGBA) is constant R=255 G=128 (a +X derivative,
+; neutral Y) with blue 0, and alpha, Godot's per-pixel strength, in four quarter-width bands of 0
+; and 255. Every camera-facing part shows both regimes, so the flowmapped sphere shows the streak
+; banded on and off while the scalar-only sphere is streaked all round.
 anisotropy_flowmap = ExtResource("1_flowmap")
 
 [sub_resource type="StandardMaterial3D" id="Material_scalar_only"]

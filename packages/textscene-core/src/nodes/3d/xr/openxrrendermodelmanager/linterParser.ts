@@ -4,15 +4,14 @@
  * through the NODE_BASE_TYPES base-walk, so re-declaring one would shadow the ancestor's rule.
  */
 
-// Both ADD_PROPERTY calls sit in `_bind_methods` (openxr_render_model_manager.cpp:41-57), each with
-// a non-empty setter and getter. openxr_render_model_manager.h declares no `_set`/`_get`/
-// `get_property_list` override in either spelling and no `ADD_ARRAY_COUNT`, so ADD_PROPERTY is the
-// only route a member takes here.
-
 import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
+// Both ADD_PROPERTY calls sit in `_bind_methods` (openxr_render_model_manager.cpp:41-57), each with
+// a non-empty setter and getter. openxr_render_model_manager.h declares no `_set`/`_get`/
+// `get_property_list` override in either spelling and no `ADD_ARRAY_COUNT`, so ADD_PROPERTY is the
+// only route a member takes here.
 validatorRegistry.registerAll('OpenXRRenderModelManager', {
   // openxr_render_model_manager.cpp:44, PROPERTY_HINT_ENUM "Any,None set,Left Hand,Right Hand".
   // set_tracker (cpp:228-266) assigns `tracker = p_tracker` before any check. Its only guard, the

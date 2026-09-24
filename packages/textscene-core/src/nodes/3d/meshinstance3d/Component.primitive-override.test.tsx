@@ -5,10 +5,6 @@
  * over `:4264`, restated at `scene/3d/mesh_instance_3d.cpp:384`).
  */
 
-// Only a node setting both of the top two tells the order from its inverse. A PrimitiveMesh
-// has one surface, and `_set` (`scene/3d/mesh_instance_3d.cpp:65-73`) refuses a higher
-// override against the array `_mesh_changed` (`:407`) sizes, so the multi-surface half
-// lives in `Component.arraymesh-override.test.tsx`.
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -54,7 +50,11 @@ function whichMaterial(m: THREE.MeshStandardMaterial): 'node' | 'surface' | 'mes
   return 'mesh';
 }
 
+// A PrimitiveMesh has one surface, and `_set` (`scene/3d/mesh_instance_3d.cpp:65-73`) refuses a
+// higher override against the array `_mesh_changed` (`:407`) sizes, so the multi-surface half
+// lives in `Component.arraymesh-override.test.tsx`.
 describe('<MeshInstance3D> primitive-mesh material precedence', () => {
+  // Only a node setting both of the top two tells the order from its inverse.
   it('ranks material_override above surface_material_override/0', async () => {
     const materials = await materialsOf(
       makeNode({

@@ -47,14 +47,10 @@ export const MATERIAL_SCENES = [
   // the content is the child box or capsule mesh, not a grey placeholder.
   { name: 'rigidbody3d', file: 'unit-rigidbody3d.tscn' },
   { name: 'characterbody3d', file: 'unit-characterbody3d.tscn' },
-  // `material_overlay`, which no other fixture sets: a second draw of the
-  // surface over the first (`render_forward_clustered.cpp:4228-4241`), on the
-  // right box. Green means it never drew, opaque red that it replaced the
-  // surface, and muddied red over green that it composited, which is correct.
-
-  // The overlay is transparent, since an opaque one looks the same composited
-  // or replaced. That puts it in the alpha pass, where its draw order relative
-  // to its own surface is most likely to regress.
+  // `material_overlay`, which no other fixture sets: a second draw of the surface over the first
+  // (`render_forward_clustered.cpp:4228-4241`), on the right box. Green means it never drew, opaque red that it
+  // replaced the surface, and muddied red over green that it composited, which is correct. It is transparent, as
+  // an opaque one looks the same either way: the alpha pass, where its order against its surface most likely regresses.
   { name: 'meshinstance3d-material-overlay', file: 'unit-meshinstance3d-material-overlay.tscn' },
   // A `surface_material_override/0` as a scene `[sub_resource]` on a mesh
   // inside an instanced `.glb`, the only .glb scene. `unit-cube.glb` has no glTF

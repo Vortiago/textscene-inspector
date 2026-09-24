@@ -20,9 +20,6 @@ const EXPAND_MODE = {
   5: 'EXPAND_FIT_HEIGHT_PROPORTIONAL',
 };
 
-// texture_rect.h:48-56: enum StretchMode, 7 values, bound at texture_rect.cpp:160-166.
-// The labels come from the ADD_PROPERTY hint string at texture_rect.cpp:149.
-
 // The deprecated `_set` (texture_rect.cpp:171-173) maps Godot 3's `expand`/`ignore_texture_size`
 // to EXPAND_IGNORE_SIZE when true and drops them otherwise. `godot/deprecated.ts` resolves both
 // into `expand_mode`, and neither refuses anything, so neither gets a validator.
@@ -39,6 +36,8 @@ validatorRegistry.registerAll('TextureRect', {
   flip_v: v.boolean('flip_v'),
   // texture_rect.cpp:221-228: set_stretch_mode has no ERR_FAIL_INDEX, like TextureButton's.
   // The 7-label PROPERTY_HINT_ENUM at :149 only hints the range, so out of range warns.
+  // texture_rect.h:48-56: enum StretchMode, 7 values, bound at texture_rect.cpp:160-166,
+  // labelled from that hint string.
   stretch_mode: v.enumInt('stretch_mode', 0, 6, TEXTURE_STRETCH_MODE, { hinted: 'texture_rect.cpp:149' }),
   // texture_rect.cpp:184-201: set_texture assigns straight through. ADD_PROPERTY at
   // :147 is PROPERTY_HINT_RESOURCE_TYPE "Texture2D", editor-picker only. Format-only.

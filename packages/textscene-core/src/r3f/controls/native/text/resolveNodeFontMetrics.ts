@@ -1,12 +1,10 @@
 /**
- * Joins theme resolution (`resolveThemeFontIn`, `resolveThemeFontSizeIn`) to each Control's solver
- * and painter. Both call these functions with the same `themeKey`, so the box a widget is floored
- * to and the glyphs it draws resolve to one font and one size.
+ * Joins theme resolution (`resolveThemeFontIn`, `resolveThemeFontSizeIn`) to each Control's solver and painter.
+ * Both pass the same `themeKey`, Godot's own `set_font` key in `default_theme.cpp` (`"font"` for Label, Button,
+ * CheckBox, OptionButton and LineEdit, `"normal_font"` for RichTextLabel at `:1194`), so a widget's floored box and
+ * its glyphs share one font and size. The size key appends `_size`, and each `nativeSolver.ts` cites its pair.
  */
 
-// The font `themeKey` is Godot's own key from the `set_font` calls in `default_theme.cpp`: `"font"`
-// for Label, Button, CheckBox, OptionButton and LineEdit, `"normal_font"` for RichTextLabel
-// (`default_theme.cpp:1194`). The size key appends `_size`, and each `nativeSolver.ts` cites its pair.
 import { controlProps, type ShareNode } from '../solveTree';
 import {
   resolveThemeFontIn,

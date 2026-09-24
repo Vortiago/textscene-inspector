@@ -4,15 +4,14 @@
  * re-declaring one would shadow the ancestor's rule.
  */
 
-// Both ADD_PROPERTY calls sit in `_bind_methods` (xr_face_modifier_3d.cpp:495-503),
-// each with a non-empty setter and getter. xr_face_modifier_3d.h declares no
-// `_set`/`_get`/`get_property_list` override under either spelling and no
-// `ADD_ARRAY_COUNT`, so ADD_PROPERTY is the only route a member takes here.
-
 import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
+// Both ADD_PROPERTY calls sit in `_bind_methods` (xr_face_modifier_3d.cpp:495-503),
+// each with a non-empty setter and getter. xr_face_modifier_3d.h declares no
+// `_set`/`_get`/`get_property_list` override under either spelling and no
+// `ADD_ARRAY_COUNT`, so ADD_PROPERTY is the only route a member takes here.
 validatorRegistry.registerAll('XRFaceModifier3D', {
   // xr_face_modifier_3d.cpp:498, Variant::STRING with PROPERTY_HINT_ENUM_SUGGESTION
   // "/user/face_tracker", a picker default. get_face_tracker returns `StringName` (cpp:505-515), so

@@ -5,9 +5,6 @@
  * the whole check ports.
  */
 
-// `bake_mask` defaults to 4294967295, all layers (gpu_particles_collision_3d.cpp:557), and
-// the serialiser omits a default, so only an explicit `bake_mask = 0` fires.
-
 import type { LintRule, Diagnostic, RuleContext } from '../../../../../linter/types.js';
 import { ruleRegistry } from '../../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../../linter/linterUtils.js';
@@ -19,6 +16,8 @@ function checkGPUParticlesCollisionSDF3D(context: RuleContext): Diagnostic[] {
   if (!isValidProperties(node.properties)) return [];
 
   const rawProps = node.properties as Record<string, string>;
+  // `bake_mask` defaults to 4294967295, all layers (gpu_particles_collision_3d.cpp:557), and
+  // the serialiser omits a default, so only an explicit `bake_mask = 0` fires.
   if (rawProps.bake_mask === undefined) return [];
 
   // uint32_t setter (gpu_particles_collision_3d.h:183).

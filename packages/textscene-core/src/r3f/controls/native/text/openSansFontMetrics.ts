@@ -3,12 +3,12 @@
  * scene with no `Theme` or `font` override shapes against.
  */
 
-// Every field reads through to the GENERATED `openSansMetrics.ts` (`OPEN_SANS_METRICS` and its
-// accessors) with getters, not a snapshot, so a live mutation (as `textLayout.test.ts` makes to
-// `.kerning`) stays visible.
 import type { FontMetrics } from './fontMetrics';
 import { OPEN_SANS_METRICS, getGlyphAdvanceUnits, getKerningAdjustmentUnits } from './openSansMetrics';
 
+// Every field reads through to the GENERATED `openSansMetrics.ts` (`OPEN_SANS_METRICS` and its
+// accessors) with getters, not a snapshot, so a live mutation (as `textLayout.test.ts` makes to
+// `.kerning`) stays visible.
 export const OPEN_SANS_FONT_METRICS: FontMetrics = {
   kind: 'atlas',
   get unitsPerEm() {

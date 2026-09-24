@@ -1,13 +1,10 @@
 /**
- * Feeds a Control's `modulate` and `self_modulate` into the 2D CanvasItem tint
- * chain (`multiplyModulate`, then `useGodotLinearColor`), so a Control composes
- * with an ancestor's `Modulate2DContext` like any other 2D node. Colours
- * compose in sRGB and convert to linear once, at the end of the chain.
+ * Feeds a Control's `modulate` and `self_modulate` into the 2D CanvasItem tint chain (`multiplyModulate`, then
+ * `useGodotLinearColor`), so a Control composes with an ancestor's `Modulate2DContext` like any other 2D node.
+ * Colours compose in sRGB and convert to linear once, at the end of the chain. `ControlCanvasWalker` owns both
+ * hooks, never a painter: `useInheritedModulate` feeds every descendant, `useControlOwnTint` this node's pixels only.
  */
 
-// Both hooks belong to `ControlCanvasWalker`, never to a painter.
-// `useInheritedModulate` gives the hierarchical value every descendant reads.
-// `useControlOwnTint` adds `self_modulate` for this node's own pixels only.
 import { useMemo } from 'react';
 import type * as THREE from 'three';
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';

@@ -186,11 +186,6 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
  * container. These read the drawn group's position, since the 0.5px feather
  * would swamp a bounding box.
  */
-
-// `scenes/fixtures/unit-scroll-container-bar-snap.tscn` at `--mode 2d`, origin
-// (100, 20): the horizontal bar's edge is crisp between y = 612 (rgb(242, 230, 64))
-// and y = 613 (rgb(113, 108, 42)), the vertical one between x = 992 and x = 993,
-// so 593/893, not 592.5/892.5. The grabber's 765.8 edge blends 0.8, so AA is live.
 describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
   // 900.5 x 600.5 with a whole 8px bar puts both bar origins half a pixel off,
   // the largest snap error, while the container's own origin stays whole.
@@ -223,6 +218,10 @@ describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
     return meshes.filter((m) => m.renderOrder === 0.25).sort((a, b) => a.position.x - b.position.x);
   }
 
+  // `scenes/fixtures/unit-scroll-container-bar-snap.tscn` at `--mode 2d`, origin
+  // (100, 20): the horizontal bar's edge is crisp between y = 612 (rgb(242, 230, 64))
+  // and y = 613 (rgb(113, 108, 42)), the vertical one between x = 992 and x = 993,
+  // so 593/893, not 592.5/892.5.
   it('floors each bar origin to whole pixels — horizontal top 592.5 -> 593, vertical left 892.5 -> 893', async () => {
     const [horizontal, vertical] = tracks(await drawnMeshes(overflowing(), FRACTIONAL_RECT));
     expect(horizontal!.position.x).toBeCloseTo(0, 6);
@@ -237,6 +236,7 @@ describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
     expect(vertical!.position.x).toBeCloseTo(592, 6);
   });
 
+  // In the same capture, the grabber's 765.8 edge blends 0.8, so AA is live.
   it('composes the grabber onto the SNAPPED bar origin while keeping its own fractional offset', async () => {
     // The grabber draws unrounded inside the bar's CanvasItem (`scroll_bar.cpp:326-344`),
     // so it never snaps twice. range 1200, area 892.5 - 8 = 884.5, ratio 100/1200 ->

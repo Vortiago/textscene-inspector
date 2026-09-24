@@ -4,10 +4,6 @@
  * (`scene/main/canvas_item.cpp:815-841`), without antialiasing.
  */
 
-// Godot strokes a closed polyline centred on the edge (`canvas_item.cpp:830-840`).
-// At 90° corners a miter equals per-edge rectangles, so four quads draw the
-// same pixels.
-
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 
 /** `canvas_item.cpp:827-828`: `p_width >= rect.size.width || p_width >= rect.size.height` draws a filled rect grown by `0.5 * p_width` on every side instead. */
@@ -24,6 +20,9 @@ export function referenceRectBorderQuads(w: number, h: number, width: number): r
   if (width <= 0) return [];
   if (width >= w || width >= h) return grownFilledRect(w, h, width);
 
+  // Godot strokes a closed polyline centred on the edge (`canvas_item.cpp:830-840`).
+  // At 90° corners a miter equals per-edge rectangles, so four quads draw the
+  // same pixels.
   const half = width / 2;
   return [
     // Top and bottom carry the corners: full width, straddling each edge.

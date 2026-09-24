@@ -5,11 +5,6 @@
  * (`scene/resources/style_box*.cpp`).
  */
 
-// `null`, never a throw, means "no override": an absent, non-SubResource or
-// unknown ref, or a resource that is not a StyleBox. A StyleBoxEmpty is not
-// `null`: Godot returns a local override unconditionally, so it replaces the
-// chrome with nothing.
-
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver';
 import { colorOr } from '../../../utils/colorParser';
@@ -146,6 +141,12 @@ export function styleBoxLineBox(line: StyleBoxLineData): StyleBoxLineBox {
   return { ...neutralFlatCore(line.margin), styleBoxKind: 'line', line };
 }
 
+/**
+ * `null`, never a throw, means "no override": an absent, non-SubResource or
+ * unknown ref, or a resource that is not a StyleBox. A StyleBoxEmpty is not
+ * `null`: Godot returns a local override unconditionally, so it replaces the
+ * chrome with nothing.
+ */
 export function parseStyleBox(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],

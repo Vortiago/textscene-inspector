@@ -1,11 +1,10 @@
 /**
- * The `FontMetrics` for a runtime-loaded scene font, as pure arithmetic. The DOM calls arrive as
- * the injected `measureWidthUnits`, so the module runs under happy-dom with a fake measurer.
+ * The `FontMetrics` for a runtime-loaded scene font, as pure arithmetic. The DOM calls arrive as the injected
+ * `measureWidthUnits`, so the module runs under happy-dom with a fake measurer. Advances and kerning come from canvas,
+ * not a hand-parsed `hmtx` or `kern`: `measureText` carries the real `hmtx` table and the OpenType `GPOS` kerning a
+ * `kern` reader misses, though a measured float can differ by one 1/64 step from the integer `hmtx` value.
  */
 
-// Advances and kerning come from canvas, not a hand-parsed `hmtx` or `kern`: `measureText` carries
-// the real `hmtx` table and the OpenType `GPOS` kerning, which a `kern` reader misses. A measured
-// float can differ by one 1/64 step from the integer `hmtx` value after quantisation.
 import type { FontMetrics } from './fontMetrics';
 
 /** A width in design units for a string of one or more characters. `sceneFontLoader.ts` binds it to canvas. */

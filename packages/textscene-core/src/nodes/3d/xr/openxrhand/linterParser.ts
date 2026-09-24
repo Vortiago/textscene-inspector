@@ -4,15 +4,14 @@
  * re-declaring one would shadow the ancestor's rule.
  */
 
-// All five ADD_PROPERTY calls sit in one block (openxr_hand.cpp:55-59), each
-// with a non-empty setter and getter. openxr_hand.h declares no `_set`/`_get`/
-// `get_property_list` override under either spelling and no `ADD_ARRAY_COUNT`,
-// so ADD_PROPERTY is the only route a member takes here.
-
 import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
+// All five ADD_PROPERTY calls sit in one block (openxr_hand.cpp:55-59), each
+// with a non-empty setter and getter. openxr_hand.h declares no `_set`/`_get`/
+// `get_property_list` override under either spelling and no `ADD_ARRAY_COUNT`,
+// so ADD_PROPERTY is the only route a member takes here.
 validatorRegistry.registerAll('OpenXRHand', {
   // openxr_hand.cpp:55, PROPERTY_HINT_ENUM "Left,Right". set_hand
   // (cpp:83-87) opens with ERR_FAIL_INDEX(p_hand, HAND_MAX), which returns

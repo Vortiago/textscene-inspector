@@ -2,11 +2,6 @@
 ; button alone (graph_edit.cpp:2854-2857), while `minimap_enabled` decides the panel. A renderer
 ; that conflates the two draws the right picture wherever neither moves, and the wrong one here.
 
-; Every fixture in this family shares one GraphEdit rect and one GraphNode, and only
-; unit-graph-edit-scroll-offset-clamped.tscn authors `scroll_offset`: `set_scroll_offset` clamps
-; against bounds no child has widened while properties apply (graph_edit.cpp:407), so an authored
-; offset moves the grid, the nodes and the minimap camera together and masks the one variable.
-
 [gd_scene load_steps=1 format=3 uid="uid://unitgraphedminbtn"]
 
 [node name="Root" type="Control"]
@@ -14,6 +9,7 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; No `scroll_offset`, as in the whole family: unit-graph-edit-family.md says why.
 [node name="Graph" type="GraphEdit" parent="."]
 layout_mode = 1
 offset_left = 8.0

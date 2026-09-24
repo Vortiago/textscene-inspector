@@ -5,6 +5,10 @@
  * `../window/linterParser.ts`.
  */
 
+// Window's `_get_property_list` (window.cpp:155, styleboxes at window.cpp:222-233)
+// walks the class's styleboxes (window.cpp:224), and default_theme.cpp:726 registers
+// "panel" for "PopupPanel". Window's `theme_override_styles/*` wildcard
+// (themeOverrides.ts) resolves that key, as `linterParser.test.ts` asserts.
 import '../window/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 
@@ -12,9 +16,4 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 // registration, not `ADD_PROPERTY`. PopupPanel.xml's `transparent` and
 // `transparent_bg` override Window and Viewport. popup.h:78-108 overrides no `_set`,
 // `_get` or `_get_property_list`.
-
-// Window's `_get_property_list` (window.cpp:155, styleboxes at window.cpp:222-233)
-// walks the class's styleboxes (window.cpp:224), and default_theme.cpp:726 registers
-// "panel" for "PopupPanel". Window's `theme_override_styles/*` wildcard
-// (themeOverrides.ts) resolves that key, as `linterParser.test.ts` asserts.
 validatorRegistry.registerAll('PopupPanel', {});

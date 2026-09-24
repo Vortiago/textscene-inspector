@@ -4,10 +4,6 @@
  * curve as a white polyline gizmo only while selected, like Godot's 3D editor (ADR-0018).
  */
 
-// Godot 3D space is three.js space (right-handed Y-up), so curve points need no conjugation,
-// unlike the 2D twin. A missing, ExtResource (.tres) or unfound curve gives a null sampler:
-// no gizmo, and children keep their authored transform.
-
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
@@ -31,6 +27,9 @@ export function Path3D({ node, children }: NodeComponentProps) {
   const { internalResources } = useSceneResources();
   const gizmoVisible = useGizmoVisible();
 
+  // Godot 3D space is three.js space (right-handed Y-up), so curve points need no conjugation,
+  // unlike the 2D twin. A missing, ExtResource (.tres) or unfound curve gives a null sampler:
+  // no gizmo, and children keep their authored transform.
   const sampler = useMemo<Curve3DSampler | null>(() => {
     if (!props.curve) return null;
     const ref = parseResourceReference(props.curve);

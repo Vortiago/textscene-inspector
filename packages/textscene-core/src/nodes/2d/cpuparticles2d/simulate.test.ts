@@ -121,12 +121,11 @@ describe('particleExpired (cpu_particles_2d.cpp:971 `p.time > p.lifetime`)', () 
   });
 });
 
+// Godot integrates `p.transform[2] += p.velocity * local_delta` for every
+// particle, restart included (`cpu_particles_2d.cpp:1151`). With `fract_delta`
+// (default on, `cpu_particles_2d.h:138`) a mid-frame restart gets only the
+// remainder of the frame, which spreads same-step births into a solid bar.
 describe('a restarting particle’s partial first step (comb vs. bar)', () => {
-  // Godot integrates `p.transform[2] += p.velocity * local_delta` for every
-  // particle, restart included (`cpu_particles_2d.cpp:1151`). With `fract_delta`
-  // (default on, `cpu_particles_2d.h:138`) a mid-frame restart gets only the
-  // remainder of the frame, which spreads same-step births into a solid bar.
-
   // Particle i restarts at i/100. At the first step (time = 1/30) only i=0..3
   // restart, each with local_delta = time - i/100, and a restarting particle
   // spawns at the origin, so ox is exactly `120 * local_delta`.

@@ -5,15 +5,14 @@
  * shadows it and duplicates the rule.
  */
 
-// `enabled` and `bidirectional` are bare-assignment bools with no hint
-// (navigation_link_3d.cpp:307-320, :350-363), so they are format-only.
-// A `DISABLE_DEPRECATED` `_set`/`_get` (navigation_link_3d.cpp:221-245) forwards the legacy
-// `start_location`/`end_location`, which an older scene still loads, so both register below.
-
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 
+// `enabled` and `bidirectional` are bare-assignment bools with no hint
+// (navigation_link_3d.cpp:307-320, :350-363), so they are format-only.
+// A `DISABLE_DEPRECATED` `_set`/`_get` (navigation_link_3d.cpp:221-245) forwards the legacy
+// `start_location`/`end_location`, which an older scene still loads, so both register below.
 validatorRegistry.registerAll('NavigationLink3D', {
   enabled: v.boolean('enabled'),
   bidirectional: v.boolean('bidirectional'),

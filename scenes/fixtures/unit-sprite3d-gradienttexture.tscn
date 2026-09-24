@@ -5,10 +5,10 @@
 ; the 2D canvas. A procedural texture right for Sprite2D can be tagged wrongly here, and every
 ; other Sprite3D scene uses an ExtResource image whose colour space the loader sets.
 
-; Linear fill left to right across a saturated pair, so a colour-space or row-order regression
-; changes the ramp visibly, not just removes the quad.
 [sub_resource type="Gradient" id="Gradient_ramp"]
 offsets = PackedFloat32Array(0, 1)
+; Linear fill left to right across a saturated pair, so a colour-space or row-order regression
+; changes the ramp visibly, not just removes the quad.
 colors = PackedColorArray(0.9, 0.2, 0.1, 1, 0.1, 0.3, 0.9, 1)
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_ramp"]

@@ -5,9 +5,6 @@
 ; bilinear samples texel centres exactly and never blends, so the blend's colour space changes
 ; no pixel there.
 
-; The 8x8 source is half black, half white across one vertical boundary. Blending the encoded
-; sRGB bytes and blending after a decode to linear put the midpoint about 60/255 apart, the
-; widest gap two adjacent texels can produce, so a colour-space regression is a gross shift.
 [ext_resource type="Texture2D" path="res://textures/hard-edge-split.png" id="1_split"]
 
 [node name="World" type="Node2D"]
@@ -16,6 +13,9 @@
 ; every step is addressable by a whole-pixel probe. Centred in the 1152x648 viewport, so the
 ; boundary midpoint is the viewport centre.
 [node name="Magnified" type="Sprite2D" parent="."]
+; The 8x8 source is half black, half white across one vertical boundary. Blending the encoded
+; sRGB bytes and blending after a decode to linear put the midpoint about 60/255 apart, the
+; widest gap two adjacent texels can produce, so a colour-space regression is a gross shift.
 texture = ExtResource("1_split")
 position = Vector2(576, 324)
 scale = Vector2(64, 64)

@@ -9,10 +9,8 @@ export const TILE_AND_TARGET_SCENES = [
   { name: 'tile-map-layer', file: 'unit-tile-map-layer.tscn', mode: '2d' },
   // Six cells of one atlas tile at six orientations, with the flip and transpose
   // bits in the alternative id as Godot paints them. Every other tile fixture
-  // uses alternativeId 0. The marker glyph is asymmetric on both axes.
-
-  // A wrong composition order moves only the four transposed cells, 0.21% of
-  // the frame.
+  // uses alternativeId 0. The marker glyph is asymmetric on both axes, and a wrong
+  // composition order moves only the four transposed cells, 0.21% of the frame.
   { name: 'tile-map-layer-flips', file: 'unit-tile-map-layer-flips.tscn', mode: '2d' },
   { name: 'tile-map-layer-isometric', file: 'unit-tile-map-layer-isometric.tscn', mode: '2d' },
   // Y-sort: sibling y-sort subtrees (Floor, Walls, Decorations under a

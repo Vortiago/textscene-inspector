@@ -5,8 +5,6 @@
  * the source is the only way to hold `meta.emits` honest.
  */
 
-// This module is in the population it scrapes, so every `ruleName` or `severity`
-// here sits inside a regex, followed by a backslash no alternative can match.
 import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
 import { SEVERITIES } from '../types.js';
@@ -138,9 +136,10 @@ export function scrapePairs(file: string): EmittedPair[] {
   for (const m of src.matchAll(/const\s+(\w+)\s*=\s*(?:'([^']+)'|`([^`]+)`)/g)) {
     bindings.set(m[1]!, m[2] ?? m[3]!);
   }
-  // `(?<!:\s*)` keeps the meta's own `name: ruleName,`, the registry key, out of
-  // the scrape. The severity alternation derives from the union, so a new tier
-  // cannot drop out of the scrape.
+  // `(?<!:\s*)` keeps the meta's own `name: ruleName,`, the registry key, out of the scrape. The
+  // severity alternation derives from the union, so a new tier cannot drop out. This module is in
+  // the population it scrapes, so every `ruleName` or `severity` here sits inside a regex, followed
+  // by a backslash no alternative can match.
   const token = new RegExp(
     `severity:\\s*'(${SEVERITIES.join('|')})'` +
       "|ruleName:\\s*(?:'([^']+)'|`([^`]+)`|(\\w+))" +

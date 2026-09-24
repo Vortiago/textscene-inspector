@@ -5,10 +5,6 @@
  * in linterParser.ts.
  */
 
-// `_validate_property` (reflection_probe.cpp:203-212) only sets PROPERTY_USAGE_NO_EDITOR,
-// which equals PROPERTY_USAGE_STORAGE (object.h:132), so the keys still serialise. The
-// class doc's prose is no basis (ADR-0032).
-
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
@@ -19,6 +15,9 @@ const AMBIENT_COLOR = 2;
 /** reflection_probe.h:60, `AmbientMode ambient_mode = AMBIENT_ENVIRONMENT;` (1): the default for an absent key. */
 const AMBIENT_MODE_DEFAULT = 1;
 
+// `_validate_property` (reflection_probe.cpp:203-212) only sets PROPERTY_USAGE_NO_EDITOR,
+// which equals PROPERTY_USAGE_STORAGE (object.h:132), so the keys still serialise. The
+// class doc's prose is no basis (ADR-0032).
 const AMBIENT_ONLY_KEYS = ['ambient_color', 'ambient_color_energy'] as const;
 
 function checkAmbientMode(context: RuleContext): Diagnostic[] {

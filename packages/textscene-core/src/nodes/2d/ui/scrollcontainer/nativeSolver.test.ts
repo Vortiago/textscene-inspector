@@ -418,14 +418,13 @@ describe('ScrollContainer under RTL', () => {
  * `focus_border_is_drawn = draw_focus_border && (has_focus(true) || child_has_focus())`),
  * which no `.tscn` can author.
  */
-
-// The margins feed `get_minimum_size` (`:74-75`), `_update_scrollbars` (`:583-585`),
-// `_update_scrollbar_position` (`:289-306`) and `_reposition_children` (`:344-348`).
-// `panel` is a `StyleBoxEmpty` (`default_theme.cpp:655-657`), and `focus`
-// (`:659`, `:60`, `default_margin = 4` at `:54`) gives 4 per side at scale 1.
 describe('ScrollContainer.draw_focus_border (scroll_container.cpp::_get_margins)', () => {
   const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
 
+  // The margins feed `get_minimum_size` (`:74-75`), `_update_scrollbars` (`:583-585`),
+  // `_update_scrollbar_position` (`:289-306`) and `_reposition_children` (`:344-348`).
+  // `panel` is a `StyleBoxEmpty` (`default_theme.cpp:655-657`), and `focus`
+  // (`:659`, `:60`, `default_margin = 4` at `:54`) gives 4 per side at scale 1.
   it('insets the content rect by the focus style margin on all four sides (scroll_container.cpp:344-348)', () => {
     const child = leaf('Scroll/Child', {
       customMinimumSize: { x: 50, y: 50 },
@@ -478,14 +477,13 @@ describe('ScrollContainer.draw_focus_border (scroll_container.cpp::_get_margins)
  * fade the edge the content continues past. Each branch is gated on the other
  * axis showing no hint (`:623,633,641,651`), so overflow on both axes draws none.
  */
-
-// `v_scroll_below_max` holds on overflow of more than a pixel, and
-// `v_scroll_value > 1` when `scroll_vertical` is authored. `scene/theme/icons/`:
-// `scroll_hint_vertical.svg` is 32x24 and `scroll_hint_horizontal.svg` 24x32,
-// read only across the fade (`get_height()` at `:627,636`, `get_width()` at `:643,652`).
 describe('ScrollContainer.scroll_hint_mode (scroll_container.cpp::_update_scroll_hints)', () => {
   const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
 
+  // `v_scroll_below_max` holds on overflow of more than a pixel, and
+  // `v_scroll_value > 1` when `scroll_vertical` is authored. `scene/theme/icons/`:
+  // `scroll_hint_vertical.svg` is 32x24 and `scroll_hint_horizontal.svg` 24x32,
+  // read only across the fade (`get_height()` at `:627,636`, `get_width()` at `:643,652`).
   function hints(props: Partial<ScrollContainerProperties>, minSize: { x: number; y: number }) {
     const child = leaf('Scroll/Child', { customMinimumSize: minSize });
     return scrollContainerScrollBars(scrollContainer(props, [child]), ctx(), RECT).hints;

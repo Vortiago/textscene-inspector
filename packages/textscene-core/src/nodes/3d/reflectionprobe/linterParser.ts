@@ -5,10 +5,6 @@
  * inherited key shadows it and duplicates the rule.
  */
 
-// `_bind_methods` (reflection_probe.cpp:214-284) has one `ADD_PROPERTY` per member below,
-// and the class has no `PropertyListHelper`, `register_property`, `ADD_ARRAY_COUNT` or
-// `.compat.inc`.
-
 import '../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
@@ -28,6 +24,9 @@ const AMBIENT_MODE = {
   2: 'AMBIENT_COLOR',
 };
 
+// `_bind_methods` (reflection_probe.cpp:214-284) has one `ADD_PROPERTY` per member below,
+// and the class has no `PropertyListHelper`, `register_property`, `ADD_ARRAY_COUNT` or
+// `.compat.inc`.
 validatorRegistry.registerAll('ReflectionProbe', {
   // reflection_probe.cpp:260, PROPERTY_HINT_ENUM. set_update_mode (:187-190) is a bare
   // assignment, so an out-of-range int warns.

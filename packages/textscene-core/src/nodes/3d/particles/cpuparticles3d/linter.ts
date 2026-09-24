@@ -5,13 +5,12 @@
  * spheres. Format validation lives in linterParser.ts.
  */
 
-// Not ported: the Particle Billboard material case needs the referenced mesh's
-// materials, resource internals this linter reads nowhere, CPUParticles2D included.
-
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../../linter/resourceChecker.js';
 
+// Not ported: the Particle Billboard material case needs the referenced mesh's
+// materials, resource internals this linter reads nowhere, CPUParticles2D included.
 function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
 

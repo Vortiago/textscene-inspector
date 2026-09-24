@@ -1,20 +1,9 @@
 /**
- * Every node slice is wired into `parser/TscnParser.ts`, the one production import of a
- * slice's `index.ts`. Without it the node falls back to `Node`, logs `Unsupported node
- * type` and keeps its type, so the tree looks right while the slice's parser never runs.
- * Only a test that imports nothing but the barrel catches this.
+ * Every node slice is wired into `parser/TscnParser.ts`, the one production import of a slice's
+ * `index.ts`. Without it the node falls back to `Node`, logs `Unsupported node type` and keeps its type,
+ * so the tree looks right while the slice's parser never runs. Only a test that imports nothing but the
+ * barrel catches this: a slice's own test imports its `index.ts`, so the type registers either way.
  */
-
-/**
- * A per-slice `it('lands in the lenient parser tree with its type
- * preserved and no fallback warning')` cannot catch it: the slice test imports its own
- * `index.ts`, so the type registers whether or not the barrel imports the slice.
- */
-
-// The static half names the missing slice. The runtime half parses every registered
-// type through `TscnParser` and pins the count against the files on disk, so the sweep
-// cannot shrink with the barrel. A missing barrel line also hides the type from every
-// registry-driven sweep (`ownValidatorCoverage`, `baseChainCompleteness`).
 
 import { describe, it, expect, vi } from 'vitest';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -125,6 +114,10 @@ function fallbackWarnings(content: string): string[] {
   }
 }
 
+// The static half names the missing slice. The runtime half parses every registered
+// type through `TscnParser` and pins the count against the files on disk, so the sweep
+// cannot shrink with the barrel. A missing barrel line also hides the type from every
+// registry-driven sweep (`ownValidatorCoverage`, `baseChainCompleteness`).
 describe('parser barrel completeness', () => {
   it('finds the slice parser entry points (sanity: the walk is not empty)', () => {
     // Near the real count, not at 1: `missing` below is computed over this

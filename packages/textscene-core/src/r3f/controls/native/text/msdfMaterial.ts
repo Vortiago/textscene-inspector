@@ -11,11 +11,6 @@
 import * as THREE from 'three';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 
-// No `#extension GL_OES_standard_derivatives`: three promotes a `ShaderMaterial` to
-// `#version 300 es`, where `fwidth` and `textureSize` are core, and prepends function
-// bodies, so the directive no longer precedes every token and ESSL3 rejects it. Under a
-// real WebGL2 context the pragma failed the compile and every glyph drew nothing.
-
 // The `clipping_planes_*` chunks hold the `discard`. A `ShaderMaterial` needs them and
 // `clipping: true`, or it accepts the planes and ignores them without an error.
 const VERTEX = /* glsl */ `
@@ -29,18 +24,9 @@ void main() {
 }
 `;
 
-// A `ShaderMaterial` inherits neither `<tonemapping_fragment>` nor `<colorspace_fragment>`,
-// so FRAGMENT ends with both. Without the encode, Godot's font colour 223 renders as 188.
-// Without the curve, `Color(1, 1, 0.7)` under FILMIC fills rgb(255, 255, 179), not Godot
-// 4.6.3's rgb(255, 255, 210). Both errors vanish at 0 and 1, so white text hides them.
-
-// The curve is unconditional: the 2D canvas is mounted `flat` (`NoToneMapping`,
-// `r3f/components/Canvas2DStage/World2DCanvas.tsx`), since Godot composites canvas items
-// after tone mapping, so three compiles the chunk out there. Without `flat`, every
-// glyph in the 2D stage would be tone-mapped.
-
-// `WebGLProgram` injects `tonemapping_pars_fragment` and `colorspace_pars_fragment` into
-// the prefix, so a copy here would be a redefinition.
+// FRAGMENT ends with `<tonemapping_fragment>` and `<colorspace_fragment>`, which a `ShaderMaterial`
+// does not inherit, but not their `_pars_` chunks, which `WebGLProgram` injects into the prefix. It
+// has no `#extension` directive, which ESSL3 rejects. `msdfMaterial.md` gives the failure behind each.
 const FRAGMENT = /* glsl */ `
 uniform sampler2D uMap;
 uniform vec3 uColor;

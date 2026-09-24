@@ -1,12 +1,9 @@
 /**
- * The `CSGShape3D` half of every CSG parse: `operation` and `cast_shadow`, the properties a
- * CSGCombiner3D shares with the primitives. Pure TS, so the parser closure stays React-free, and
- * the render scaffold lives in CsgPrimitive.tsx.
+ * The `CSGShape3D` half of every CSG parse: `operation` and `cast_shadow`, which a CSGCombiner3D shares with
+ * the primitives. Pure TS, so the parser closure stays React-free. Not an export beside `finishCsgParse`: the
+ * parity guard scrapes property reads per file, so a combiner importing from a file that reads `material` gets a
+ * key its type lacks (`csg_shape.h:194-202`: a combiner is not a CSGPrimitive3D). CsgPrimitive.tsx renders.
  */
-
-// Its own module, not an export beside `finishCsgParse`: the parity guard scrapes property reads
-// file by file, so a combiner importing from a file that reads the material slot would be credited
-// with a key its type lacks (`csg_shape.h:194-202`: a combiner is not a CSGPrimitive3D).
 
 import { parseOptionalInt } from '../../../parser/valueParsers';
 

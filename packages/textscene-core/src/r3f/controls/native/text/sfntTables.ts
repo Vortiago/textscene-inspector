@@ -5,10 +5,6 @@
  * from canvas `measureText`.
  */
 
-// Reads plain SFNT only: TrueType (0x00010000 or `'true'`), OpenType-CFF (`'OTTO'`) and the first
-// face of a `'ttcf'` collection. WOFF2 tables are Brotli-compressed, and the webview can decompress
-// neither with `DecompressionStream`, which has no `'brotli'` format, nor with WASM, which the CSP blocks.
-
 /** `head.unitsPerEm` and the magnitudes of `hhea.ascender` and `hhea.descender`, in design units. */
 export interface SfntScalars {
   readonly unitsPerEm: number;
@@ -16,7 +12,12 @@ export interface SfntScalars {
   readonly descent: number;
 }
 
-/** The sfnt version tags of the OpenType spec, "OpenType Font File" §"sfntVersion". */
+/**
+ * The sfnt version tags of the OpenType spec, "OpenType Font File" §"sfntVersion". Only plain SFNT reads: TrueType
+ * (0x00010000 or `'true'`), OpenType-CFF (`'OTTO'`) and the first face of a `'ttcf'` collection. WOFF2 tables are
+ * Brotli-compressed, and the webview can decompress neither with `DecompressionStream`, which has no `'brotli'`
+ * format, nor with WASM, which the CSP blocks.
+ */
 const SFNT_VERSION_TRUETYPE = 0x00010000;
 const SFNT_VERSION_OTTO = 0x4f54544f; // 'OTTO'
 const SFNT_VERSION_TRUE = 0x74727565; // 'true' (legacy Mac TrueType)

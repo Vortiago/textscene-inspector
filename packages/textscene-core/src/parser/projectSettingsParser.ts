@@ -1,15 +1,9 @@
 /**
- * Parses Godot's `project.godot`, the configuration at a project's `res://` root, into
- * raw settings keyed by full name. A foreign-format parser outside the resource-slice
- * registry (ADR-0031): no scene names it, so it claims no type name and no bus slot.
+ * Parses Godot's `project.godot`, the configuration at a project's `res://` root, into raw settings keyed
+ * by full name. A foreign-format parser outside the resource-slice registry (ADR-0031): no scene names it,
+ * so it claims no type name and no bus slot. Not `TscnParserCore`: the file has bare `[section]` headings,
+ * plain `key=value` lines and nothing to diagnose, the INI shape its sibling `importParser.ts` parses too.
  */
-
-// Not `TscnParserCore`: this file has bare `[section]` headings, plain `key=value`
-// lines and nothing to diagnose. It is the sibling of `importParser.ts`, which parses
-// the same INI shape.
-
-// Typed readers exist only for settings this previewer honours, so the store does not
-// become a settings grab-bag.
 
 import { boolSlotValue, isLocaleRightToLeft, type LayoutDirectionEnv } from '../godot/index.js';
 import { parseOptionalInt } from './valueParsers.js';
@@ -22,7 +16,10 @@ const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/.]*)=(.*)$/;
 /** A `[section]` heading. Godot's section names are bare identifiers. */
 const SECTION = /^\[([A-Za-z_][A-Za-z0-9_]*)\]$/;
 
-/** Raw `project.godot` settings, keyed by full setting name. */
+/**
+ * Raw `project.godot` settings, keyed by full setting name. Typed readers exist only for settings
+ * this previewer honours, so the store does not become a settings grab-bag.
+ */
 export type ProjectSettings = Readonly<Record<string, string>>;
 
 /**
