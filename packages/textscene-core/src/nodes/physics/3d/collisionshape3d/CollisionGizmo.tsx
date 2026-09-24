@@ -62,9 +62,9 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
       );
     }
     case 'ConcavePolygonShape3D':
-      return <TriangleSoupWire data={decodeConcavePolygonShape3D(data).data} color={color} />;
+      return <TriangleSoupWire shapeData={data} color={color} />;
     case 'ConvexPolygonShape3D':
-      return <ConvexHullWire points={decodeConvexPolygonShape3D(data).points} color={color} />;
+      return <ConvexHullWire shapeData={data} color={color} />;
     default:
       warn(`[CollisionShape3D] Unsupported shape type "${shape.type}" — drawing a unit wireframe box.`);
       return (
@@ -76,16 +76,37 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
   }
 }
 
+interface PolygonWireProps {
+  /**
+   * The shape resource's property bag, whose identity holds across renders. A decode per render
+   * hands back a new array, and each new array would rebuild the geometry.
+   */
+  shapeData: Record<string, string>;
+  color: THREE.Color;
+}
+
+/**
+ * Disposes `geometry` once a newer one has replaced it, or on unmount. R3F disposes only what it
+ * constructs, never a geometry handed over through the `geometry` prop.
+ */
+function useDisposeOnReplace(geometry: THREE.BufferGeometry | null): void {
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+}
+
 /** A concave shape is already a triangle soup, bound as a non-indexed BufferGeometry. */
-function TriangleSoupWire({ data, color }: { data: Float32Array; color: THREE.Color }) {
+function TriangleSoupWire({ shapeData, color }: PolygonWireProps) {
   const geometry = useMemo(() => {
+    const { data } = decodeConcavePolygonShape3D(shapeData);
+    // Three vertices, one triangle, is the least a soup can draw.
+    if (data.length < 9) return null;
     const geom = new THREE.BufferGeometry();
     geom.setAttribute('position', new THREE.BufferAttribute(data, 3));
     geom.computeVertexNormals();
     return geom;
-  }, [data]);
+  }, [shapeData]);
+  useDisposeOnReplace(geometry);
   const wire = wireGizmoProgram(color);
-  if (data.length < 9) return null;
+  if (!geometry) return null;
   return (
     <mesh geometry={geometry}>
       <meshBasicMaterial key={wire.key} {...wire.props} />
@@ -94,8 +115,10 @@ function TriangleSoupWire({ data, color }: { data: Float32Array; color: THREE.Co
 }
 
 /** Convex hull from a point cloud, through the lazy-loaded ConvexGeometry. */
-function ConvexHullWire({ points, color }: { points: Float32Array; color: THREE.Color }) {
+function ConvexHullWire({ shapeData, color }: PolygonWireProps) {
+  const points = useMemo(() => decodeConvexPolygonShape3D(shapeData).points, [shapeData]);
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
+  useDisposeOnReplace(geometry);
 
   useEffect(() => {
     let cancelled = false;
