@@ -1,9 +1,7 @@
 #!/usr/bin/env sh
-# Full validation gate before code leaves the machine: build, type-check, lint,
-# all tests and bundle size. It mirrors CI, so nothing reaches a shared branch
-# unvalidated. The fast per-file checks already ran on pre-commit.
+# The full gate before code leaves the machine: the same checks as CI.
 
-# HUSKY=0 skips the hook: the switch that existing callers already set.
+# HUSKY=0 skips the hook. Existing tools already set that name.
 [ "${HUSKY-}" = "0" ] && exit 0
 
 pnpm validate
