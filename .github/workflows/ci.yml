@@ -91,10 +91,16 @@ jobs:
           path: apps/textscene-linter/dist/cli.js
 
   visual-regression:
-    name: Visual regression (goldens)
+    name: Visual regression (${{ matrix.shard }}/6)
     runs-on: ubuntu-latest
     needs: build
-    timeout-minutes: 30
+    timeout-minutes: 20
+    # The harness captures one scene at a time with software GL, and the whole set takes more
+    # than 30 minutes on one runner.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -116,14 +122,14 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - run: npx playwright install chromium --with-deps
 
-      - run: pnpm test:visual
+      - run: pnpm test:visual --shard ${{ matrix.shard }}/6
         env:
           VISUAL_SKIP_BUILD: '1'
 
       - if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: visual-diffs
+          name: visual-diffs-${{ matrix.shard }}
           path: scripts/visual/output/
 
   e2e-web:
