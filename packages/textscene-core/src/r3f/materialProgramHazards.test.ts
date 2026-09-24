@@ -66,7 +66,7 @@ function versionBumpingAccessors(): string[] {
   return [...new Set(setters.filter(([, , body]) => /this\.version\s*\+\+/.test(body!)).map(([, name]) => name!))].sort();
 }
 
-/** three 0.185.1, `WebGLPrograms.js:60-382`. Every field the program's identity is decided from. */
+/** three 0.186.0, `WebGLPrograms.js:56-400`. Every field the program's identity is decided from. */
 const BAKED_MATERIAL_FIELDS = [
   'alphaHash', 'alphaMap', 'alphaTest', 'alphaToCoverage', 'anisotropy', 'anisotropyMap',
   'aoMap', 'blending', 'bumpMap', 'clearcoat', 'clearcoatMap', 'clearcoatNormalMap',
@@ -76,10 +76,10 @@ const BAKED_MATERIAL_FIELDS = [
   'iridescence', 'iridescenceMap', 'iridescenceThicknessMap', 'isMeshLambertMaterial',
   'isMeshPhongMaterial', 'isMeshPhysicalMaterial', 'isMeshStandardMaterial',
   'isRawShaderMaterial', 'lightMap', 'map', 'matcap', 'metalnessMap', 'name', 'normalMap',
-  'normalMapType', 'precision', 'premultipliedAlpha', 'roughnessMap', 'sheen', 'sheenColorMap',
-  'sheenRoughnessMap', 'side', 'sizeAttenuation', 'specularColorMap', 'specularIntensityMap',
-  'specularMap', 'thicknessMap', 'toneMapped', 'transmission', 'transmissionMap', 'transparent',
-  'type', 'vertexColors', 'vertexShader', 'wireframe',
+  'normalMapType', 'precision', 'premultipliedAlpha', 'retroreflectivity', 'roughnessMap',
+  'sheen', 'sheenColorMap', 'sheenRoughnessMap', 'side', 'sizeAttenuation', 'specularColorMap',
+  'specularIntensityMap', 'specularMap', 'thicknessMap', 'toneMapped', 'transmission',
+  'transmissionMap', 'transparent', 'type', 'vertexColors', 'vertexShader', 'wireframe',
 ];
 
 /**

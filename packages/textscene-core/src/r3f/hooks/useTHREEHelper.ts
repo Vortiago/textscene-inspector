@@ -11,8 +11,6 @@ import { useAnimationTransport } from '../contexts/AnimationTransportContext.js'
 interface HelperLike extends THREE.Object3D {
   /** Most THREE helpers (BoxHelper, *LightHelper) expose this. */
   update?: () => void;
-  /** THREE helpers expose this when they own GPU resources. */
-  dispose?: () => void;
 }
 
 interface HelperHookOptions {
@@ -54,7 +52,7 @@ function useHelperLifecycle<H extends HelperLike>(
 
     return () => {
       unmount?.();
-      created.dispose?.();
+      created.dispose();
       helperRef.current = null;
     };
     // `factory` and `mount` are new arrow functions on each render, so listing them re-runs the

@@ -4,7 +4,7 @@
  * root_node, gated by the scene-level AnimationTransport.
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AnimationPlayer } from './Component';
@@ -78,6 +78,13 @@ function makeAP(overrides: Partial<AnimationPlayerProperties> = {}): TscnNode {
 
 const AP_PATH = 'Root/AnimationPlayer';
 
+// Every mounted root is torn down after its test. A root left alive can still re-render its
+// Capture after the next test mounts, pointing `transport` at the stale scene.
+const mounted: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>[] = [];
+afterEach(async () => {
+  for (const renderer of mounted.splice(0)) await renderer.unmount();
+});
+
 let transport: AnimationTransport;
 let selection: SelectionContextValue | null;
 function Capture() {
@@ -118,6 +125,7 @@ async function mountScene(
       </SelectionProvider>
     </SceneResourcesProvider>
   );
+  mounted.push(renderer);
   await setSelection(select);
   return renderer;
 }
