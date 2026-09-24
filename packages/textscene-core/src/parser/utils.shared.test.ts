@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isIncompleteValue,
   stripLineComment,
+  unquoteLiteral,
   unquoteString,
 } from './utils';
 
@@ -108,5 +109,46 @@ describe('unquoteString', () => {
     // 0x10FFFF, and one such literal would abort the whole scene parse.
     expect(unquoteString('"x \\U110000 y"')).toBe('x \\U110000 y');
     expect(unquoteString('"x \\U10FFFF y"')).toBe('x \u{10FFFF} y');
+  });
+  // `scanQuoted` decides where the string ends: in `"a\"` the last quote is escaped,
+  // so the literal never closes and keeps its opening quote.
+  it('strips no quotes from a literal whose trailing quote is escaped', () => {
+    expect(unquoteString('"a\\"')).toBe('"a"');
+  });
+  it('strips the quotes when an escaped backslash precedes the closing one', () => {
+    expect(unquoteString('"a\\\\"')).toBe('a\\');
+  });
+  it('decodes the escapes of text that arrives already out of its quotes', () => {
+    expect(unquoteString('say \\"hi\\"')).toBe('say "hi"');
+  });
+});
+
+describe('unquoteLiteral', () => {
+  it('reads a string literal as a STRING slot does', () => {
+    expect(unquoteLiteral('"GUI in 3D"')).toBe('GUI in 3D');
+    // `c_escape_multiline` (`ustring.cpp:4493-4499`) escapes only `\` and `"`.
+    expect(unquoteLiteral('"say \\"hi\\" to C:\\\\dir"')).toBe('say "hi" to C:\\dir');
+    expect(unquoteLiteral('"a\\tb"')).toBe('a\tb');
+    expect(unquoteLiteral('&"ui_accept"')).toBe('ui_accept');
+  });
+  it('keeps a raw newline, which the writer leaves unescaped', () => {
+    expect(unquoteLiteral('"line one\nline two"')).toBe('line one\nline two');
+  });
+  it('reads an empty literal as the empty string', () => {
+    expect(unquoteLiteral('""')).toBe('');
+  });
+  it('leaves every value that is not one string literal as written', () => {
+    for (const value of ['2.0', 'true', 'Vector3(1, 1, 1)', '[1, 2]', '"a" "b"', '']) {
+      expect(unquoteLiteral(value), value).toBe(value);
+    }
+  });
+  it('leaves the escapes inside a Dictionary to the literals that hold them', () => {
+    const dictionary = '{"Mat \\"x\\"": {"path": "res://a\\\\b.tres"}}';
+    expect(unquoteLiteral(dictionary)).toBe(dictionary);
+  });
+  it('leaves an unclosed literal as written', () => {
+    expect(unquoteLiteral('"a\\"')).toBe('"a\\"');
+    expect(unquoteLiteral('"')).toBe('"');
+    expect(unquoteLiteral('"never closes')).toBe('"never closes');
   });
 });
