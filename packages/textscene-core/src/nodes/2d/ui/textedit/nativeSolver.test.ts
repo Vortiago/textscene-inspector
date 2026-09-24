@@ -1,5 +1,5 @@
 /**
- * TextEdit's native rect solver vs `scene/gui/text_edit.cpp` (Godot 4.6.3).
+ * TextEdit's native rect solver against `scene/gui/text_edit.cpp` (Godot 4.6.3).
  * Expected numbers are cited beside each assertion.
  */
 import { describe, expect, it } from 'vitest';
@@ -226,19 +226,10 @@ describe('textEditCurrentLineXPx (text_edit.cpp:1404-1409)', () => {
 });
 
 /**
- * Where a drawn row actually starts down the control
- * (`text_edit.cpp:1376-1378,1626,1631`).
- *
- *   ofs_y  = style->get_margin(SIDE_TOP) + i * row_height + line_spacing / 2
- *   ofs_y += (row_height - text_height) / 2      // the row's TEXT top
- *   ofs_y += ascent                              // the glyph baseline
- *
- * Default theme at scale 1: TextEdit's `normal` is `style_line_edit`
- * (`default_theme.cpp:453`), a `make_flat_stylebox` whose content margins are
- * `default_margin` = 4 on every side (`:57-60,54`), and `line_spacing` is 4
- * (`:479`). So row 0's band starts 6px down and its text 8px down — which is
- * exactly the gap a `pnpm ref:godot` render shows against a painter that
- * started every row at the control's own top edge.
+ * Where a drawn row starts down the control (`text_edit.cpp:1376-1378,1626,1631`): the band top,
+ * then the text top `(row_height - text_height) / 2` lower, then the baseline one ascent lower.
+ * At scale 1, TextEdit's `normal` (`default_theme.cpp:453`) has content margins of 4 (`:57-60,54`)
+ * and `line_spacing` is 4 (`:479`), so row 0's band starts 6px down and its text 8px down.
  */
 describe('textEditRowBandTopPx / textEditRowTextTopPx (text_edit.cpp:1376-1378,1626)', () => {
   it('puts row 0\'s band at the top margin plus half the line spacing', () => {
@@ -256,20 +247,10 @@ describe('textEditRowBandTopPx / textEditRowTextTopPx (text_edit.cpp:1376-1378,1
 });
 
 /**
- * `caret_draw_when_editable_disabled` (`text_edit.cpp:945-947`).
- *
- * `NOTIFICATION_DRAW` clears `draw_caret` when the node is unfocused
- * (`:926-927`) and then, further down, OVERWRITES it from
- * `is_drawing_caret_when_editable_disabled()` whenever `editable` is false
- * (`:945-947`) — so this one property draws a caret in a frame that has no
- * focus at all, which is the only kind a `.tscn` can produce.
- *
- * The caret itself is the "normal caret" arm (`:1858-1877`): a
- * `caret_width`-wide rect (`caret_width` = 1, `default_theme.cpp:481`) at
- * `char_margin + l_caret.position.x`, spanning the row's own text box
- * (`_shaped_text_get_carets` reports `-ascent` with height ascent+descent).
- * Caret 0 rests at line 0, column 0, so `l_caret.position.x` is 0 and the
- * caret lands on `xmargin_beg`.
+ * `caret_draw_when_editable_disabled` (`text_edit.cpp:945-947`) restores the caret that an
+ * unfocused frame, the only kind a `.tscn` makes, clears (`:926-927`). The "normal caret" arm
+ * (`:1858-1877`) draws `caret_width` (1, `default_theme.cpp:481`) at `xmargin_beg` for caret 0,
+ * over the row's text box (`-ascent`, ascent + descent tall).
  */
 describe('textEditCaretRect (text_edit.cpp:926-927,945-947,1858-1877)', () => {
   it('draws nothing while the node is editable — an unfocused caret is cleared at :926', () => {
@@ -290,15 +271,10 @@ describe('textEditCaretRect (text_edit.cpp:926-927,945-947,1858-1877)', () => {
 });
 
 /**
- * `indent_wrapped_lines` (`text_edit.cpp:1360-1364,1488-1494,4107-4131`).
- *
- * The flag has two halves. The break half is `BREAK_TRIM_INDENT` on the
- * paragraph (`:285-287`), covered by `textLayout.test.ts`. The DRAW half is
- * here: every row past `first_indent_line` starts one `indent_ofs` further
- * in, where `indent_ofs = MIN(Text::get_indent_offset(line), wrap_at_column *
- * 0.6)` (`:1363`) and `get_indent_offset` (`:190-217`) is the shaped width of
- * the line's leading run of tabs and spaces — counted over `line_length - 1`,
- * so a line that is ENTIRELY whitespace never counts its last character.
+ * The draw half of `indent_wrapped_lines` (`text_edit.cpp:1360-1364,1488-1494,4107-4131`). Each row
+ * past `first_indent_line` starts `indent_ofs = MIN(get_indent_offset(line), wrap_at_column * 0.6)`
+ * (`:1363`) further in: the shaped leading run over `line_length - 1` (`:190-217`). `textLayout.test.ts`
+ * covers the `BREAK_TRIM_INDENT` half (`:285-287`).
  */
 describe('textEditWrapIndentPx (text_edit.cpp:190-217,1363)', () => {
   const ROW = {
@@ -345,10 +321,8 @@ describe('textEditWrapIndentPx (text_edit.cpp:190-217,1363)', () => {
 });
 
 /**
- * `_get_wrapped_indent_level`'s `r_first_wrap` out-parameter
- * (`text_edit.cpp:4107-4131`): how many wrap ranges the leading whitespace run
- * spans. Rows at or before it take no indent; rows past it take `indent_ofs`
- * (`:1488`).
+ * `_get_wrapped_indent_level`'s `r_first_wrap` (`text_edit.cpp:4107-4131`): how many wrap ranges the
+ * leading whitespace spans. Rows at or before it take no indent, and later rows take `indent_ofs` (`:1488`).
  */
 describe('textEditFirstIndentRow (text_edit.cpp:4107-4131)', () => {
   it('is row 0 whenever the indent ends inside the first row', () => {

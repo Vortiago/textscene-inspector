@@ -1,13 +1,9 @@
 [gd_scene load_steps=5 format=3 uid="uid://unitglowmix"]
 
-; MIX blend, with a NON-DEFAULT glow_mix.
-;
-; MIX is the one mode that reads glow_mix where the others read glow_intensity —
-; Godot fills a single shader uniform from whichever the mode uses, so getting the
-; substitution wrong shows up as the glow being 6x too strong at the defaults
-; (0.3 against 0.05) and nowhere else. The lerp darkens the scene toward the glow
-; buffer rather than adding to it, so the ground is mid-grey: against black, a
-; lerp and an add are indistinguishable.
+; MIX blend with a non-default glow_mix. MIX reads glow_mix where the other modes read
+; glow_intensity: Godot fills one shader uniform from whichever the mode uses, so a wrong
+; substitution makes the glow 6x too strong at the defaults (0.3 against 0.05). The lerp darkens
+; toward the glow buffer, so the ground is mid-grey: against black a lerp and an add look the same.
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_mid"]
 sky_top_color = Color(0.3, 0.32, 0.36, 1)

@@ -1,22 +1,8 @@
 /**
- * The hook side of `canvasItemLightingProps`.
- *
- * It owns ONE set of uniform objects per item for the item's whole life and
- * mutates their `.value` as the light state changes. That is not an
- * optimisation: three captures whatever `onBeforeCompile` assigns at first
- * compile, and R3F never bumps `material.needsUpdate` when the prop changes, so
- * a freshly-built uniform object would never reach the GPU. Replacing the
- * uniforms is exactly the bug that left every item on a stock shader once a
- * light appeared after mount.
- *
- * The buffers' textures and the resolution vector are bound by REFERENCE to the
- * ones the provider owns, so a resize or a reallocation reaches every item
- * without a re-render.
- *
- * Godot's cull test — the item's `light_mask`, its accumulated `z_final` and its
- * canvas's layer against the light class's window (`lightCullKey`) — runs HERE,
- * once per item per frame, and reaches the shader as a per-slot weight. See
- * `canvasItemLighting.ts` for why it cannot run per fragment.
+ * The hook side of `canvasItemLightingProps`. It owns one set of uniform objects
+ * per item for its whole life and mutates their `.value`: three captures what
+ * `onBeforeCompile` assigns at first compile, and R3F never sets `needsUpdate`,
+ * so a fresh uniform object never reaches the GPU.
  */
 
 import { useMemo, useRef } from 'react';
@@ -83,7 +69,7 @@ export function useCanvasItemLighting(
   const inheritedZ = useEffectiveZ();
   const itemZ = effectiveZ ?? inheritedZ;
   const canvasLayer = useCanvasLayerIndex();
-  // The RAW canvas tint, not the light-mode-gated one: the shader divides out
+  // The raw canvas tint, not the light-mode-gated one: the shader divides out
   // exactly what the CPU folded in, and the floor is applied on both sides.
   const canvasModulate = useCanvasModulate();
   const lightMode = material?.lightMode ?? CanvasItemLightMode.NORMAL;
@@ -97,12 +83,15 @@ export function useCanvasItemLighting(
   uniforms.current ??= createUniforms(resolution);
   const bound = uniforms.current;
 
-  // Mutating in render keeps the GPU in step without a recompile; these are
-  // plain value writes, so re-running them is harmless.
+  // Mutating in render keeps the GPU in step without a recompile, and re-running
+  // plain value writes is harmless.
   const weights = bound.classWeights.value as number[];
   for (let slot = 0; slot < MAX_LIGHT_CLASSES; slot += 1) {
     const lightClass = classes[slot];
     const accumulation = lightOnly ? lightClass?.lightOnlyBuffer : lightClass?.buffer;
+    // Godot's cull test (`light_mask`, `z_final` and the canvas layer against
+    // `lightCullKey`) runs here, once per item per frame, as a per-slot weight.
+    // `canvasItemLighting.ts` says why it cannot run per fragment.
     const lights =
       !!accumulation &&
       lightClass !== undefined &&
@@ -114,13 +103,15 @@ export function useCanvasItemLighting(
     bound.shadowTintBuffers[slot]!.value =
       (lights ? lightClass?.shadowTintBuffer : null) ?? EMPTY_LIGHT_BUFFER;
   }
+  // The provider owns these textures and this vector, so a resize or a
+  // reallocation reaches every item without a re-render.
   bound.resolution.value = resolution;
   (bound.canvasModulate.value as THREE.Vector3).set(
     canvasModulate.r,
     canvasModulate.g,
     canvasModulate.b
   );
-  // The MODE rides the uniforms too: a re-parse changes `light_mode` under a
+  // The mode rides the uniforms too: a re-parse changes `light_mode` under a
   // mounted item, and three would keep the program it first compiled.
   bound.lightMode.value = lightMode;
 

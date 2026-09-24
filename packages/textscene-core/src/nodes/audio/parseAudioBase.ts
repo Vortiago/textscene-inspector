@@ -1,9 +1,7 @@
 /**
- * Shared audio-stream base parser — decodes the fields common to
- * AudioStreamPlayer / 2D / 3D (volume/pitch/playing/autoplay/stream_paused +
- * bus + max_polyphony, plus the optional stream reference). Each node parser
- * spreads the result and adds its own spatial fields. Pass `context` to label
- * malformed-value warnings; omit it to keep the shared decoders' default label.
+ * Shared audio-stream base parser for the fields common to AudioStreamPlayer, 2D and 3D. Each node
+ * parser spreads the result and adds its own spatial fields. `context` labels malformed-value
+ * warnings. Without it the shared decoders keep their default label.
  */
 
 import { boolOr, floatOr, intOr } from '../../parser/valueParsers';

@@ -1,11 +1,7 @@
 /**
- * BoneAttachment3D strict validators: format checks, and one bound that is
- * deliberately absent.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * BoneAttachment3D strict validators: format checks, and one bound that is deliberately absent.
+ * Asserted through `validatorRegistry`, not by linting a `.tscn`, so a failure points at the
+ * validator and no fixture text needs upkeep. Rule-level behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -21,16 +17,10 @@ function check(property: string, value: string) {
 }
 
 /**
- * The five `ADD_PROPERTY` calls in `BoneAttachment3D::_bind_methods`
- * (bone_attachment_3d.cpp:376-380). They are the whole own surface: the class
- * binds no `PropertyListHelper`, no `ADD_ARRAY_COUNT` and no `_set`/`_get`/
- * property-list override, and `bone_attachment_3d.compat.inc` (included at
- * cpp:32) binds only compatibility METHODS. `_validate_property`
- * (cpp:34-58) only re-hints `bone_name` and hides `external_skeleton`; it
- * declares nothing new.
- *
- * `physics_interpolation_mode` is Node's, carrying `overrides=` in the XML, so
- * it arrives through the base-walk and is not re-declared here.
+ * The five `ADD_PROPERTY` calls (bone_attachment_3d.cpp:376-380) are the whole own surface: no
+ * `PropertyListHelper`, `ADD_ARRAY_COUNT` or property-list override, `bone_attachment_3d.compat.inc`
+ * (cpp:32) binds only methods, and `_validate_property` (cpp:34-58) only re-hints and hides keys.
+ * Node's `physics_interpolation_mode` (`overrides=` in the XML) arrives through the base-walk.
  */
 const KEYS: string[] = [
   'bone_name',
@@ -39,7 +29,7 @@ const KEYS: string[] = [
   'use_external_skeleton',
   'external_skeleton',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 
 describe('BoneAttachment3D strict validators', () => {
@@ -52,16 +42,15 @@ describe('BoneAttachment3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint`
+    // checks it against the whole registry through the barrel. This checks the same file
+    // against only what this test imported.
     expectFixtureClean('unit-bone-attachment-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('BoneAttachment3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -104,12 +93,9 @@ describe('BoneAttachment3D strict validators', () => {
     });
 
     it('errors below -1, because the setter rewrites it rather than keeping it', () => {
-      // set_bone_idx (bone_attachment_3d.cpp:190-214) assigns first, then, once a
-      // Skeleton3D resolves, rewrites anything `<= -1` or past the bone count back
-      // to -1 (cpp:201). The question is not whether -1 is swallowed but whether
-      // -2 is ALTERED, and it is: it comes back as -1. That is ADR-0032's enforced
-      // tier. ChainIK3D, ModifierBoneTarget3D and LimitAngularVelocityModifier3D
-      // all ground the byte-identical setter the same way.
+      // set_bone_idx (bone_attachment_3d.cpp:190-214), once a Skeleton3D resolves, rewrites anything
+      // `<= -1` or past the bone count to -1 (cpp:201). -2 is altered to -1: ADR-0032's enforced tier,
+      // as ChainIK3D, ModifierBoneTarget3D and LimitAngularVelocityModifier3D ground the same setter.
       expect(check('bone_idx', '-2')?.severity).toBe('error');
     });
 
@@ -165,7 +151,7 @@ describe('BoneAttachment3D strict validators', () => {
 
     it('accepts a path to a node that is not a Skeleton3D', () => {
       // The PROPERTY_HINT_NODE_PATH_VALID_TYPES "Skeleton3D" at cpp:380 filters
-      // the inspector's node picker; set_external_skeleton (cpp:259-263) stores
+      // the inspector's node picker. set_external_skeleton (cpp:259-263) stores
       // whatever it is handed, and the type check happens later, on the
       // resolved node (cpp:88-89).
       expect(check('external_skeleton', 'NodePath("../NotASkeleton")')).toBeNull();

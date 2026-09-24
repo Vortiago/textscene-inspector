@@ -1,8 +1,6 @@
-; PhysicalSkyMaterial — Godot's Preetham atmospheric scattering sky, with the
-; sun low enough that the Rayleigh term reddens the horizon.
-;
-; The scene supplies its own DirectionalLight3D (the shader's LIGHT0, without
-; which a physical sky has no sun to scatter and renders black) and its own
+; PhysicalSkyMaterial, Godot's Preetham atmospheric scattering sky, with the sun low enough that
+; the Rayleigh term reddens the horizon. The scene brings its own DirectionalLight3D (the
+; shader's LIGHT0: without it a physical sky has no sun and renders black) and its own
 ; WorldEnvironment, so no editor preview applies.
 [gd_scene load_steps=6 format=3]
 

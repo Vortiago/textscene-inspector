@@ -1,9 +1,7 @@
 /**
- * The shape PROVIDERS — `CollisionShape2D`/`3D`, `CollisionPolygon2D`/`3D` — and
- * the shape casts that carry the same "no shape assigned" condition.
- *
- * The bodies these hang under are in `physicsBodies.ts`; the split follows the
- * declaring class, since that is what a row's reach is computed from.
+ * The shape providers (`CollisionShape2D`/`3D`, `CollisionPolygon2D`/`3D`) and the shape casts with the same "no shape
+ * assigned" condition. Their bodies are in `physicsBodies.ts`: the split follows the declaring class, which a row's
+ * reach comes from.
  */
 import type { WarningRow } from './types.js';
 

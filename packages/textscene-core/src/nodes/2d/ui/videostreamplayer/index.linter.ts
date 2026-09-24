@@ -1,5 +1,3 @@
-/**
- * videostreamplayer linter registration - imports linter components to trigger self-registration.
- */
+/** VideoStreamPlayer linter registration: importing the modules registers them. */
 
 import './linterParser.js';

@@ -1,15 +1,8 @@
 /**
- * MeshLibrary property validation.
- *
- * One family, `item/<i>/<leaf>`, and nothing else: MeshLibrary declares no
- * `ADD_PROPERTY` at all. `_get_property_list` (mesh_library.cpp:143-156) builds
- * nine keys per live item by hand, so no sweep over declared properties can see
- * this family and every value on it was silently accepted.
- *
- * The leaves are what `_set` APPLIES (mesh_library.cpp:46-96), which is three
- * keys wider than what `_get_property_list` writes — `shape`, `navmesh` and
- * `navmesh_transform` land without ever being saved. Registering only the saved
- * nine would report a write the engine performs.
+ * MeshLibrary's one property family, `item/<i>/<leaf>`, which `_get_property_list`
+ * (mesh_library.cpp:143-156) builds by hand, nine keys per live item, with no
+ * `ADD_PROPERTY`. The leaves are what `_set` applies (mesh_library.cpp:46-96),
+ * three keys wider than what it saves.
  */
 
 // Registers Resource, so the inherited keys resolve when this module loads alone.
@@ -21,23 +14,19 @@ import { dropTrailingComma, splitTopLevel } from '../../godot/index.js';
 
 /**
  * `RS::ShadowCastingSetting`, the same four constants `GeometryInstance3D`
- * binds — and a different TIER there, because that setter bare-assigns.
+ * binds, and a different tier there, because that setter bare-assigns.
  */
 const CAST_SHADOW = { 0: 'OFF', 1: 'ON', 2: 'DOUBLE_SIDED', 3: 'SHADOWS_ONLY' };
 
 /**
- * `item/<i>/shapes`: a FLAT array pairing each Shape3D with its Transform3D,
- * the form `_get_item_shapes` writes (mesh_library.cpp:355-364).
- *
- * The count is the one thing `_set_item_shapes` does not take as given. It
- * refuses nothing: an odd array gains a `Transform3D()` of its own where the
- * item is fresh — and a `BoxShape3D` where the last element is null — and loses
- * its last element where the item already holds shapes (:319-338). Either way
- * what is stored is not what was written, which is ADR-0032's error row.
+ * `item/<i>/shapes`: a flat array of Shape3D, Transform3D pairs, as
+ * `_get_item_shapes` writes it (mesh_library.cpp:355-364). `_set_item_shapes`
+ * completes an odd count (:319-338): a fresh item gains a `Transform3D()` (a
+ * `BoxShape3D` for a null last element), and an item with shapes loses the last.
  */
 function shapePairs(): PropertyValidator {
   // `_set` forwards to `_set_item_shapes(int, const Array &)` (mesh_library.cpp:78,
-  // :316), which takes an Array of any element type — so `Array[T]([…])` loads
+  // :316), which takes an Array of any element type, so `Array[T]([…])` loads
   // here as readily as the bare literal Godot writes.
   const literal = v.arrayLiteral('shapes', { anyElementType: true });
   const validator: PropertyValidator = (key, value, line) => {
@@ -53,7 +42,8 @@ function shapePairs(): PropertyValidator {
     );
   };
   validator.accepts = 'Array literal ([...]) of Shape3D, Transform3D pairs';
-  // The `push_back(Transform3D())` arm; the other one resizes at :337.
+  // Stored is not written: ADR-0032's error row. This cites the
+  // `push_back(Transform3D())` arm. The other one resizes at :337.
   validator.grounding = { kind: 'enforced', cite: 'mesh_library.cpp:333' };
   return validator;
 }
@@ -89,9 +79,10 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // :154, PROPERTY_HINT_RESOURCE_TYPE "Texture2D". :217-221 assigns.
   preview: v.resourceReference('preview'),
 
-  // Applied but never saved. `shape` wraps ONE Shape3D into a one-element shape
-  // list (:71-76); `navmesh` and `navmesh_transform` were renamed in 4.0 beta 9
-  // and still forward to the current setters (:87-90).
+  // Applied but never saved, so leaving them out would report a write the engine
+  // performs. `shape` wraps one Shape3D into a one-element shape list (:71-76).
+  // `navmesh` and `navmesh_transform`, renamed in 4.0 beta 9, forward to the
+  // current setters (:87-90).
   shape: v.resourceReference('shape'),
   navmesh: v.resourceReference('navmesh'),
   navmesh_transform: v.transform3d('navmesh_transform'),
@@ -107,8 +98,8 @@ const itemValidator = indexedFamilyValidator({
   accepts:
     'item/(index)/(leaf) — name, mesh, mesh_transform, mesh_cast_shadow, shapes, navigation_mesh, navigation_mesh_transform, navigation_layers, preview',
   // `_set` reads the index with a bare `get_slicec('/', 1).to_int()` and no
-  // validity gate (mesh_library.cpp:40), so `item/x/name` names item 0 and the
-  // write lands.
+  // validity gate (mesh_library.cpp:40), so `item/x/name` names item 0. The leaf
+  // cut resolves `item/0/name/extra` to `name` and keeps `item/0/bogus/extra` whole.
   indexParse: 'to_int',
   negativeIndex: {
     cite: 'mesh_library.cpp:159',
@@ -118,12 +109,8 @@ const itemValidator = indexedFamilyValidator({
   },
 });
 
-// The index follows a `/`, not glued to the prefix, so the plain wildcard is
-// what `findOwnValidator` matches — `item#/*` addresses `item0/name`.
-//
-// The dispatcher already reads the leaf the way `_set` does: under
-// `indexParse: 'to_int'` it cuts the remainder from the RIGHT until a declared
-// leaf appears, which is `get_slicec('/', 2)` restated (mesh_library.cpp:40-41),
-// so `item/0/name/extra` resolves to `name` and `item/0/bogus/extra` stays
-// whole in the unknown-key message.
+// The index follows a `/`, so the plain wildcard is what `findOwnValidator`
+// matches (`item#/*` addresses `item0/name`). Under `indexParse: 'to_int'` the
+// dispatcher cuts the remainder from the right until a declared leaf appears:
+// `get_slicec('/', 2)` restated (mesh_library.cpp:40-41).
 validatorRegistry.registerAll('MeshLibrary', { 'item/*': itemValidator });

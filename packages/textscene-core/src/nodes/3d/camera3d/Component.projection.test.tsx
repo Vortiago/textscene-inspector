@@ -1,7 +1,5 @@
 /**
- * Strict-verification harness (group G) — 7 assertions covering
- * Camera3D projection-related properties.
- *
+ * Strict-verification harness for Camera3D's projection-related properties.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -90,11 +88,8 @@ describe('Camera3D projection (assertions 60–66)', () => {
   });
 
   it('#66 keep_aspect KEEP_WIDTH vs KEEP_HEIGHT → aspect correction applied', async () => {
-    // KEEP_WIDTH should change the framing relative to KEEP_HEIGHT. The
-    // current implementation uses a fixed 16:9 aspect and does not branch
-    // on keep_aspect. This assertion catches that gap by rendering both
-    // modes and expecting a different left/right value when KEEP_WIDTH is
-    // requested at the same size.
+    // KEEP_WIDTH changes the framing relative to KEEP_HEIGHT: at the same size the two modes
+    // render different left/right values.
     const widthRenderer = await ReactThreeTestRenderer.create(
       <Camera3D
         node={makeNode({

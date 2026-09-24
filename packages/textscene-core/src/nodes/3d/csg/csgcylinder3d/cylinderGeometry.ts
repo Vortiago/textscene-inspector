@@ -1,15 +1,9 @@
 /**
- * CSGCylinder3D geometry, built the way Godot builds it.
+ * CSGCylinder3D geometry, built the way Godot builds it. three's `CylinderGeometry` starts the
+ * ring on +Z where Godot starts on +X, and gives a cone's apex one radial normal per segment where
+ * Godot averages them, visibly. So the faces follow Godot's construction and the normals come from
+ * `applyCsgNormals`, the one normal rule every CSG builder shares.
  *
- * three's `CylinderGeometry` is close but not the same shape: it starts the ring on +Z
- * where Godot starts on +X, and it gives a cone's collapsed apex one radial normal per
- * segment where Godot averages them into one. The second difference is plainly visible on
- * a cone.
- *
- * So the faces come from Godot's own construction and the normals from
- * `applyCsgNormals`, which is the single normal rule every CSG builder here shares.
- *
- * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`modules/csg/csg_shape.cpp`, `CSGCylinder3D::_build_brush`),
  * used under the MIT licence:
  *
@@ -36,7 +30,6 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * See THIRD-PARTY-NOTICES.md.
- * ---------------------------------------------------------------------------
  */
 
 import type * as THREE from 'three';
@@ -91,9 +84,8 @@ export function buildCsgCylinderGeometry(spec: CsgCylinderSpec): THREE.BufferGeo
 
   for (let i = 0; i < sides; i++) {
     const inc = i / sides;
-    // Godot snaps the last segment back to 0 so the ring closes on the exact same float.
-    // That matters here beyond tidiness: the normal accumulation keys on vertex position,
-    // so a seam that missed by one ulp would break smoothing at the seam.
+    // Godot snaps the last segment back to 0 so the ring closes on the same float. The normal
+    // accumulation keys on vertex position, so a seam that missed by one ulp would break smoothing.
     const incN = i === sides - 1 ? 0 : (i + 1) / sides;
 
     const ang = inc * Math.PI * 2;
@@ -121,16 +113,15 @@ export function buildCsgCylinderGeometry(spec: CsgCylinderSpec): THREE.BufferGeo
       put([fp[2]!, fp[3]!, fp[0]!], [u[2]!, u[3]!, u[0]!], smoothFaces);
     }
 
-    // Caps are ALWAYS flat, whatever `smooth_faces` says (csg_shape.cpp:1795, :1810);
-    // smoothing them would round the rim over and lose the silhouette edge.
+    // Caps are always flat, whatever `smooth_faces` says (csg_shape.cpp:1795, :1810). Smoothing
+    // them would round the rim over and lose the silhouette edge.
     const capUv = (p: [number, number, number]): [number, number] => [p[0] * 0.5 + 0.5, p[1] * 0.5 + 0.5];
 
     put([fp[1]!, fp[0]!, [0, -1, 0]], [capUv(fp[1]!), capUv(fp[0]!), [0.5, 0.5]], false);
 
     if (!cone) {
-      // Reproduced verbatim including Godot's own slip: the TOP cap's UVs are derived
-      // from face_points[1] and [0] (the BOTTOM ring, y = -1) rather than [3] and [2].
-      // It is wrong in the same way in Godot, so matching it is the parity-correct move.
+      // Godot's own slip, reproduced for parity: the top cap's UVs come from face_points[1] and
+      // [0] (the bottom ring, y = -1), not [3] and [2].
       put([fp[3]!, fp[2]!, [0, 1, 0]], [capUv(fp[1]!), capUv(fp[0]!), [0.5, 0.5]], false);
     }
   }

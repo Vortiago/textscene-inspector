@@ -1,6 +1,4 @@
-/**
- * Parity: SpriteBase3D flip/offset/centered/double_sided/transparent vs Godot.
- */
+/** Parity: SpriteBase3D flip, offset, centered, double_sided and transparent against Godot. */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -117,8 +115,8 @@ describe('Sprite3D render parity', () => {
   });
 
   it('opaque sprite (transparent=false, alpha_cut DISABLED) writes depth', async () => {
-    // An opaque quad must write depth so it sorts/occludes correctly against
-    // other opaque geometry — the DISABLED alpha-cut otherwise leaves it false.
+    // An opaque quad must write depth to sort and occlude correctly against other opaque geometry,
+    // which the disabled alpha-cut otherwise leaves false.
     const r = await render({ transparent: 'false' });
     expect((findMesh(r.scene).material as THREE.Material).depthWrite).toBe(true);
   });

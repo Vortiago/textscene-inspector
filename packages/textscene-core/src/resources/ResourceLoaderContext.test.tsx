@@ -1,9 +1,6 @@
 /**
- * Contract tests for ResourceLoaderContext + useResourceLoader.
- *
- * Pins the implemented no-provider behavior: the hook returns `null` (it does
- * NOT throw) — `useResource` is the layer that turns a null loader into a
- * user-facing error status (covered in useResource.test.tsx).
+ * ResourceLoaderContext and useResourceLoader. With no provider the hook returns
+ * `null` and does not throw: `useResource` turns a null loader into an error status.
  */
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';

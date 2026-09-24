@@ -19,11 +19,9 @@ function check(nodeType: string, property: string, value: string) {
 
 describe('AnimationMixer strict validators', () => {
   it('owns both the property-list families and AnimationMixer\'s ordinary members', () => {
-    // The three `*`-patterned keys arrive through the property-list route that
-    // no ADD_PROPERTY sweep can see; the other ten are ordinary ADD_PROPERTY
-    // members (animation_mixer.cpp:2458-2473), registered HERE rather than on
-    // AnimationPlayer and AnimationTree separately so the base-walk gives both
-    // the same set, rather than one of them validating a subset.
+    // Three keys arrive through the property-list route no ADD_PROPERTY sweep sees. The other ten
+    // are ordinary ADD_PROPERTY members (animation_mixer.cpp:2458-2473), registered here so the
+    // base-walk gives AnimationPlayer and AnimationTree the same set.
     expect(validatorRegistry.getOwnKeys('AnimationMixer').sort()).toEqual(
       [
         'active',
@@ -53,8 +51,8 @@ describe('AnimationMixer strict validators', () => {
   it('accepts every value the AnimationPlayer fixture carries (only single-line properties reach this)', () => {
     // `unit-animation-player.tscn` carries `libraries/ = SubResource(...)` on
     // one line. `unit-animation-player-libraries.tscn` carries the dict form
-    // multi-line, which StrictTscnParser skips before any validator sees it —
-    // this fixture is the one that actually exercises the live code path.
+    // multi-line, which StrictTscnParser skips before any validator sees it, so
+    // this fixture is the one that exercises the live code path.
     expectFixtureClean('unit-animation-player.tscn');
   });
 

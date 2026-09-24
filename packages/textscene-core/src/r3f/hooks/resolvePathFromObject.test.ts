@@ -17,9 +17,9 @@ describe('resolvePathFromObject', () => {
 
   it('walks up through unregistered ancestors to find the nearest registered one', () => {
     const root = new THREE.Object3D();
-    const wrapper = new THREE.Object3D(); // node wrapper — registered
-    const inner = new THREE.Object3D(); // component-internal group — NOT registered
-    const mesh = new THREE.Mesh(); // the actually-hit geometry — NOT registered
+    const wrapper = new THREE.Object3D(); // node wrapper, registered
+    const inner = new THREE.Object3D(); // component-internal group, not registered
+    const mesh = new THREE.Mesh(); // the hit geometry, not registered
     root.add(wrapper);
     wrapper.add(inner);
     inner.add(mesh);

@@ -1,12 +1,8 @@
 /**
- * GridMap cell-stream decoding (pure, THREE-free).
- *
- * Godot serializes a GridMap's populated cells as `data = { "cells":
- * PackedInt32Array(...) }`, a flat list of int32 triplets `[keyLo, keyHi,
- * cell]`. The 64-bit IndexKey overlays a `struct { int16 x, y, z; }`
- * (little-endian): x = keyLo low-16, y = keyLo high-16, z = keyHi low-16. The
- * cell int packs the MeshLibrary item id (bits 0-15) and an orientation index
- * 0-23 (bits 16-20).
+ * GridMap cell-stream decoding, pure and THREE-free. `data = { "cells":
+ * PackedInt32Array(...) }` holds int32 triplets `[keyLo, keyHi, cell]`: the IndexKey
+ * packs int16 x/y/z (x = keyLo low 16, y = keyLo high 16, z = keyHi low 16), and
+ * the cell int packs the item id (bits 0-15) and an orientation 0-23 (bits 16-20).
  */
 
 import { warn } from '../../../logger.js';
@@ -38,10 +34,9 @@ export function decodeGridMapCells(packedInt32: string): GridMapCell[] {
   const cells: GridMapCell[] = [];
   for (let i = 0; i + 2 < ints.length; i += INTS_PER_CELL) {
     const record = ints.slice(i, i + INTS_PER_CELL);
-    // The whole RECORD is skipped, not the element. `toUint32(NaN)` is 0, so
-    // substituting for one unstorable element drew a phantom cell at the
-    // origin; the stream is fixed-stride, so dropping the cell it belongs to
-    // costs that cell and no other.
+    // Skip the whole record, not the element: `toUint32(NaN)` is 0, which
+    // would draw a phantom cell at the origin. The stream is fixed-stride, so
+    // this costs that cell and no other.
     if (record.some((n) => n === null)) {
       warn(`[GridMap] cell data element "${record.join(', ')}" is not a cell Godot can place`);
       continue;
@@ -62,7 +57,7 @@ export function decodeGridMapCells(packedInt32: string): GridMapCell[] {
 
 /**
  * Godot's 24 orthogonal cell orientations (`grid_map.cpp` `_ortho_bases`), each
- * a row-major 3×3 rotation. A cell's `rot` indexes this table; the component
+ * a row-major 3×3 rotation. A cell's `rot` indexes this table. The component
  * turns the chosen basis into a THREE.Matrix4.
  */
 export const ORTHO_BASES: readonly (readonly number[])[] = [

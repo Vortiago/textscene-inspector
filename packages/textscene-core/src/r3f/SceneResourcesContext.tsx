@@ -1,14 +1,7 @@
 /**
- * Synchronous access to a scene's SubResources from node components.
- *
- * Used by MeshInstance3D (and any future node that consumes inline TSCN
- * SubResources like primitive meshes or StandardMaterial3D) to look up
- * resources by SubResource id without going through the async useResource
- * hook — primitive resolution is purely synchronous.
- *
- * Provided either directly by tests, or by HierarchyContext consumers
- * once that wiring lands. Defaults to empty so components rendered
- * without a provider degrade to placeholder paths instead of throwing.
+ * Synchronous access to a scene's resources by id from node components, without
+ * the async useResource hook. With no provider it is empty, so a component
+ * renders its placeholder instead of throwing.
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
@@ -42,12 +35,8 @@ export interface SceneResourcesProviderProps {
 }
 
 /**
- * Stable empty defaults, module-scoped.
- *
- * A `= []` default parameter allocates a new array on every render, and both
- * arrays are `useMemo` dependencies below — so a provider given only one of the
- * two published a fresh context value every render and re-fired every
- * `useSceneResources()` consumer beneath it.
+ * Stable empty defaults. A `= []` default is a new array every render, and as a
+ * `useMemo` dependency it re-fires every `useSceneResources()` consumer.
  */
 const NO_INTERNAL: readonly TscnInternalResource[] = [];
 const NO_EXTERNAL: readonly TscnExternalResource[] = [];
@@ -57,18 +46,9 @@ export function SceneResourcesProvider({
   externalResources = NO_EXTERNAL,
   children,
 }: SceneResourcesProviderProps) {
-  // Inherit the ambient (parent-scene) pool, with this scene's own resources
-  // taking precedence — `findSubResource`/`resolveExtResourcePath` use
-  // first-match, so prepending own resources wins on a duplicate id.
-  //
-  // Why inherit: an instanced sub-scene COLLAPSES into its instance node
-  // (Instance root merge, ADR-0013) and re-dispatches under this provider.
-  // Children the HOST added under that instance node (e.g. a room's
-  // `ceiling_lamp`/`Door` instances parented to a `RoomGeometry` instance)
-  // carry HOST `ExtResource` ids; without inheritance they'd resolve against
-  // the sub-scene's pool and fail to load. A node only ever references ids
-  // from its own scene, so the fallback is exercised only by such host-scoped
-  // children — sub-scene interior nodes still resolve their own ids first.
+  // Prepended to the parent pool, so this scene's own id wins on first match.
+  // A merged sub-scene (ADR-0013) re-dispatches under this provider, and the
+  // children the host added under its instance node carry host `ExtResource` ids.
   const parent = useContext(SceneResourcesContext);
   const value = useMemo<SceneResources>(
     () => ({

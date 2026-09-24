@@ -55,10 +55,8 @@ describe('nilShapeError', () => {
   });
 
   it('is the other verdict, not the same one under a second name', () => {
-    // A key refusal rejects every value; this one rejects the null a real slot
-    // was handed. `ownsNilMessage` takes both, but only a key refusal is
-    // value-independent, so collapsing them would misreport what the
-    // conformance guard sweeps for.
+    // A key refusal rejects every value, and this one rejects only the null a
+    // real slot was handed. The conformance guard sweeps for the first.
     expect(nilShapeError('sources/0', 1, 'nope', 'CODE')).not.toHaveProperty('keyVerdict');
     expect(keyShapeError('item_0/bogus', 1, 'nope', 'CODE')).not.toHaveProperty('nilVerdict');
   });

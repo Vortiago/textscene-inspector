@@ -1,16 +1,8 @@
 /**
- * Layer a type-less override's raw properties onto the node it names.
- *
- * Godot writes an override as raw text with no `type=`, so the properties that
- * matter arrive in `rawProperties`. Merging only those is not enough: every
- * component reads the TYPED `properties`, so a node whose raw map says one thing
- * and whose typed properties still say the sub-scene's original renders as
- * though the override were never authored.
- *
- * So the merged raw map is re-parsed ONCE through the target type's registered
- * parser. Extracted from `mergeInstanceRoot`, which needs the same thing for a
- * collapsing instance root, so the two cannot drift into different answers for
- * "what does an override do to a node".
+ * Layer a type-less override's raw properties onto the node it names, then re-parse
+ * the merged map once through the target type's parser, as components read the typed
+ * `properties`. `mergeInstanceRoot` shares it, so both answer alike what an override
+ * does to a node.
  */
 
 import { canonicalisePropertyBag } from '../godot/deprecated.js';

@@ -1,6 +1,4 @@
-/**
- * `separatorPlacementRect` — `scene/gui/separator.cpp:47-56` (Godot 4.6.3).
- */
+/** `separatorPlacementRect`: `scene/gui/separator.cpp:47-56` (Godot 4.6.3). */
 import { describe, expect, it } from 'vitest';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { separatorPlacementRect } from './separatorPlacement';
@@ -47,8 +45,8 @@ describe('separatorPlacementRect', () => {
   });
 
   it('truncates a fractional content margin sum before the divide (StyleBox::get_minimum_size sums as float)', () => {
-    // Horizontal placement uses the box's TOP+BOTTOM margin (the cross axis),
-    // not left/right — see the "horizontal" case above.
+    // Horizontal placement uses the box's top and bottom margins (the cross axis), not left and
+    // right, as in the "horizontal" case above.
     const rect = separatorPlacementRect('horizontal', { x: 0, y: 0, w: 100, h: 25 }, boxWithMargin({ left: 0, top: 0.5, right: 0, bottom: 0.5 }));
     expect(rect.h).toBe(1);
   });

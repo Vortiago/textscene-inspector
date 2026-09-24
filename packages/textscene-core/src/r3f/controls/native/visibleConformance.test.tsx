@@ -1,22 +1,11 @@
 /**
- * Conformance guard: `visible = false` hides every registered Control type.
- *
- * `ControlCanvasWalker`'s own `<ControlNodeGroup>` sets `visible={isVisible}`
- * on the outer `<group>` it emits for EVERY solved node, uniformly — three.js
- * skips an invisible object's whole subtree at render time (`Object3D.visible`),
- * so this is the one place native gets Godot's "`visible = false` hides the
- * node AND its subtree" (class_canvasitem.html) for free. A `wrapsChildren`
- * painter (`CanvasLayer`) ALSO guards its own `children`/context internally
- * as a belt-and-braces measure (its own module doc) — this test only needs
- * to check the walker's outer group, since that alone is sufficient for
- * every type, wrapping or not.
- *
- * Driven through the REAL `TscnParser` and the REAL `ControlCanvasWalker`,
- * never a hand-built stub, so a parser/registry mismatch is caught too.
+ * `visible = false` hides every registered Control type. The walker's outer `<group>` carries
+ * `visible` for each solved node, and three.js skips an invisible subtree, which gives Godot's rule
+ * (class_canvasitem.html) for every type. It runs through the real parser and walker, so a registry mismatch fails too.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-// Side-effect import: registers all 23 Control slices' native painters.
+// Side-effect import: registers every Control slice's native painter.
 import { controlComponentRegistry } from '../index';
 import type { TscnNode } from '../../../parser/types';
 import { parseHiddenNode } from '../testing/probeScene';

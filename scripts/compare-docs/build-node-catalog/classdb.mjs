@@ -1,4 +1,4 @@
-/** What GODOT says exists, and what this previewer says it parses. */
+/** What Godot says exists, and what this previewer says it parses. */
 
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
@@ -8,15 +8,9 @@ import { loadCoreParser } from '../loadCoreLinter.mjs';
 import { ENUM_GD } from './paths.mjs';
 
 /**
- * The types the lenient parser actually recognises, read from the live registry
- * in the built package.
- *
- * This was a `typeName: '…'` scrape of the slice sources, which silently
- * undercounted: `StaticBody2D`, `RigidBody2D` and `CharacterBody2D` are
- * registered by a loop over `TWO_D_PHYSICS_TYPES` with no string literal to
- * match, so the catalog called three shipped types "not implemented". Reading
- * the registry cannot drift from what the parser does, and it is the same
- * source `coverage-report.mjs` uses, so the two agree by construction.
+ * The types the lenient parser recognises, read from the live registry, not
+ * scraped from source: a loop over `TWO_D_PHYSICS_TYPES` registers types with
+ * no string literal to match. `coverage-report.mjs` reads the same registry.
  */
 export async function supportedTypes() {
   const { nodeRegistry } = await loadCoreParser();
@@ -31,13 +25,9 @@ function blobAfter(out, marker, what) {
 }
 
 /**
- * One engine run, all four answers: the instantiable classes, every Node
- * class's own serialised properties, the same rows for every Resource class,
- * and the Resource hierarchy those rows are declared against.
- *
- * Kept as one spawn because starting Godot under xvfb dominates the cost, and
- * because two runs could straddle a version change and disagree about the same
- * engine.
+ * One engine run, four answers: the instantiable classes, the Node and Resource
+ * property rows, and the Resource hierarchy. One spawn, since Godot start-up
+ * dominates the cost and two runs could straddle a version change.
  */
 export function enumerateGodotNodes() {
   const proj = mkdtempSync(join(tmpdir(), 'godot-nodes-'));
@@ -45,11 +35,9 @@ export function enumerateGodotNodes() {
     encoding: 'utf8',
     timeout: 120_000,
   });
-  // `error` carries a spawn failure — ENOENT when godot/xvfb-run is missing, a
-  // timeout, or ENOBUFS once the four blobs outgrow Node's default stdout cap —
-  // that `status` alone (null in those cases) does not say. Without this the
-  // marker search below reports it as "Godot did not emit ...", blaming the
-  // engine for a spawn that never produced output.
+  // `error` carries a spawn failure that a null `status` does not name: ENOENT,
+  // a timeout, or ENOBUFS past Node's stdout cap. Without it the marker search
+  // blames the engine for a spawn that produced no output.
   if (res.error) {
     throw new Error(`Could not run Godot to build the catalog: ${res.error.message}`);
   }

@@ -1,11 +1,8 @@
 /**
- * The scrape's own blind spots.
- *
- * `stripEmits` removes each `emits: [ … ]` block so the guard reads what
- * `check` REPORTS rather than what the rule DECLARES. The two sets are then
- * compared, so a strip that ends at the wrong offset makes them agree by
- * construction: the declaration is scraped as if it were an emission, and an
- * invented or dead row stops being catchable.
+ * The scrape's own blind spots. `stripEmits` removes each `emits: [ … ]` block
+ * so the guard reads what `check` reports, not what the rule declares. A strip
+ * that ends at the wrong offset scrapes the declaration as an emission, so an
+ * invented or dead row can no longer be caught.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -26,7 +23,7 @@ describe('stripEmits', () => {
 
   it('removes a block whose grounding prose closes a bracket', () => {
     // `]` in a `because`/`unused` clause is ordinary prose. Counted as a
-    // bracket it ends the strip early, leaving the rest of the DECLARATIONS in
+    // bracket it ends the strip early, leaving the rest of the declarations in
     // the text the scrape reads back.
     const src = [
       '{ emits: [',

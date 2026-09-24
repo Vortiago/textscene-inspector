@@ -1,12 +1,7 @@
 /**
- * OKHSL <-> sRGB conversion, ported from `thirdparty/misc/ok_color.h`
- * (Björn Ottosson, MIT) via `core/math/color.cpp`'s `set_ok_hsl`/
- * `get_ok_hsl_h`/`get_ok_hsl_s`/`get_ok_hsl_l`. `MODE_OKHSL`
- * (`color_mode.cpp`'s `ColorModeOKHSL`) is the only caller: its slider
- * values and gradient stops both go through this pair.
- *
- * Only the OKHSL half of `ok_color.h` is ported — `srgb_to_okhsv`/
- * `okhsv_to_srgb` and the `gamut_clip_*` variants have no caller here.
+ * OKHSL to and from sRGB, ported from `thirdparty/misc/ok_color.h` through the
+ * `set_ok_hsl` and `get_ok_hsl_*` of `core/math/color.cpp`, for `MODE_OKHSL` (`color_mode.cpp`).
+ * Only the OKHSL half is ported: OKHSV and `gamut_clip_*` have no caller.
  *
  * Portions ported from Godot Engine (MIT) and `thirdparty/misc/ok_color.h`
  * (MIT, Copyright (c) 2021 Björn Ottosson).
@@ -35,7 +30,7 @@ interface ST {
   T: number;
 }
 
-/** `srgb_transfer_function` (`ok_color.h:57-60`) — `Color::linear_to_srgb`'s own curve, restated here to match the thirdparty file's own constants exactly. */
+/** `srgb_transfer_function` (`ok_color.h:57-60`): the curve of `Color::linear_to_srgb`, with the constants of `ok_color.h`. */
 function srgbTransferFunction(a: number): number {
   return 0.0031308 >= a ? 12.92 * a : 1.055 * Math.pow(a, 1 / 2.4) - 0.055;
 }
@@ -79,7 +74,7 @@ function oklabToLinearSrgb(c: Lab): RGB {
   };
 }
 
-/** `compute_max_saturation` (`ok_color.h:104-166`) — `a`/`b` normalised so `a^2 + b^2 == 1`. */
+/** `compute_max_saturation` (`ok_color.h:104-166`). `a` and `b` are normalised so `a^2 + b^2 == 1`. */
 function computeMaxSaturation(a: number, b: number): number {
   let k0: number, k1: number, k2: number, k3: number, k4: number, wl: number, wm: number, ws: number;
 
@@ -153,8 +148,8 @@ function findCusp(a: number, b: number): LC {
 }
 
 /**
- * `find_gamut_intersection` (`ok_color.h:187-270`), the cusp-taking overload
- * only — `get_Cs` (the only caller here) always has one already.
+ * `find_gamut_intersection` (`ok_color.h:187-270`), the overload that takes a
+ * cusp. Its only caller, `get_Cs`, has one.
  */
 function findGamutIntersection(a: number, b: number, L1: number, C1: number, L0: number, cusp: LC): number {
   let t: number;
@@ -286,7 +281,7 @@ function getCs(L: number, a_: number, b_: number): Cs {
   return { C_0, C_mid, C_max };
 }
 
-/** `Color::from_ok_hsl`/`Color::set_ok_hsl` (`core/math/color.cpp:236-247`) via `okhsl_to_srgb` (`ok_color.h:484-540`). Result clamped 0..1 per component, as `Color(...).clamp()` does. */
+/** `Color::from_ok_hsl` and `Color::set_ok_hsl` (`core/math/color.cpp:236-247`) through `okhsl_to_srgb` (`ok_color.h:484-540`), each component clamped to 0..1 as `Color(...).clamp()` does. */
 export function okhslToSrgb(h: number, s: number, l: number): ControlColor {
   if (l === 1) return { r: 1, g: 1, b: 1, a: 1 };
   if (l === 0) return { r: 0, g: 0, b: 0, a: 1 };
@@ -331,9 +326,9 @@ export interface Okhsl {
 }
 
 /**
- * `Color::get_ok_hsl_h/s/l` (`core/math/color.cpp:498-534`) via
- * `srgb_to_okhsl` (`ok_color.h:542-593`) — one call computing all three,
- * each clamped 0..1 and NaN-guarded to 0 as the three getters do individually.
+ * `Color::get_ok_hsl_h/s/l` (`core/math/color.cpp:498-534`) through
+ * `srgb_to_okhsl` (`ok_color.h:542-593`) in one call. Each value is clamped
+ * to 0..1, and NaN becomes 0, as each getter does.
  */
 export function srgbToOkhsl(color: Pick<ControlColor, 'r' | 'g' | 'b'>): Okhsl {
   if (color.r === 0 && color.g === 0 && color.b === 0) return { h: 0, s: 0, l: 0 };

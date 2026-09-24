@@ -59,11 +59,9 @@ describe('buildStyleBoxCss', () => {
   });
 
   it('says "no fill" out loud rather than omitting the property', () => {
-    // StyleBoxFlat::draw (style_box_flat.cpp:455-460) paints nothing at all when
-    // there is no border, no centre and no shadow. An ABSENT backgroundColor
-    // would let a consumer's own default fill show through underneath, which is
-    // the opposite of what Godot draws — so a box that paints no fill says
-    // `transparent`, and only an unresolved box says nothing at all.
+    // StyleBoxFlat::draw (style_box_flat.cpp:455-460) paints nothing with no border,
+    // centre or shadow. An absent backgroundColor would show a consumer default,
+    // so a box with no fill says `transparent`. Only an unresolved box says nothing.
     expect(css({ draw_center: 'false' })).toEqual({ backgroundColor: 'transparent' });
   });
 
@@ -98,8 +96,7 @@ describe('buildStyleBoxCss', () => {
   });
 
   it('takes decoded data straight, with no property bag in sight', () => {
-    // The build half's contract: data in, CSS out — a hand-built box needs no
-    // Godot text.
+    // The build half's contract: data in, CSS out, with no Godot text.
     const data: StyleBoxFlatData = {
       kind: 'flat',
       bgColor: { r: 1, g: 0, b: 0, a: 1 },

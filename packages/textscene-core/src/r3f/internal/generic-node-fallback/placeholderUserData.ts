@@ -1,9 +1,7 @@
 /**
- * The `userData` marker a node that draws nothing of its own carries, for
- * tooling and tests. Two sites publish it and they must publish the same
- * shape: `GenericNodeFallback` for an unregistered type, and `PlainNode` for a
- * `renderIntent: 'pending'` type, whose base component runs instead of the
- * fallback.
+ * The `userData` marker of a node that draws nothing of its own, for tooling and tests. Its two
+ * publishers share this shape: `GenericNodeFallback` for an unregistered type, and `PlainNode` for
+ * a `renderIntent: 'pending'` type, whose base component runs instead of the fallback.
  */
 
 import type { TscnNode } from '../../../parser/types';

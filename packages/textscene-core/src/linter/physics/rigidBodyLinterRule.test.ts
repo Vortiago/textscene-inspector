@@ -1,6 +1,6 @@
 /**
  * The contact-monitor arm, at the rule seam: `max_contacts_reported` is a
- * COUNT, and its default is 0 (`rigid_body_2d.h:85`, `rigid_body_3d.h:82`),
+ * count, and its default is 0 (`rigid_body_2d.h:85`, `rigid_body_3d.h:82`),
  * so a written 0 asks the server for no contacts and leaves nothing behind
  * the `if (contact_monitor)` guard to report.
  */

@@ -1,23 +1,8 @@
 /**
- * `RendererCanvasCull::canvas_item_add_polyline`
- * (`servers/rendering/renderer_canvas_cull.cpp:955-1216`) — what
- * `CanvasItem::draw_polyline_colors` actually builds, as vertex-coloured
- * triangles.
- *
- * Godot emits up to THREE `PRIMITIVE_TRIANGLE_STRIP` polygons: the core strip,
- * plus a left and a right feather strip when antialiasing is on. Each vertex
- * pair straddles its point along `base_edge_offset`, the miter bisector
- * `compute_polyline_edge_offset_clamped` (`:932-953`) clamps to ±3 half-widths;
- * the two end points use the plain orthogonal of their own segment instead
- * (`:1076-1082`). The feather runs one `FEATHER_SIZE` further out, fading the
- * colour's alpha to zero, and both open ends get a cap one feather beyond the
- * line (`:1113-1163`).
- *
- * The three strips are merged into one indexed triangle array here — they are
- * coplanar, drawn in one pass, and never share a vertex — with the Y flip into
- * three-space baked in, matching `connectionStroke.ts`.
- *
- * Pure data + functions, no React, no THREE.
+ * What `CanvasItem::draw_polyline_colors` builds, as vertex-coloured triangles:
+ * `RendererCanvasCull::canvas_item_add_polyline` (`servers/rendering/renderer_canvas_cull.cpp:955-1216`).
+ * A core triangle strip, and when antialiased a left and a right feather strip that fade the alpha
+ * to zero one `FEATHER_SIZE` further out, with a cap beyond each open end (`:1113-1163`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -44,13 +29,13 @@ function scale(v: Vec2, by: number): Vec2 {
   return { x: v.x * by, y: v.y * by };
 }
 
-/** `Vector2::normalized()` — a zero-length vector stays `(0, 0)`. */
+/** `Vector2::normalized()`: a zero-length vector stays `(0, 0)`. */
 function normalized(v: Vec2): Vec2 {
   const length = Math.hypot(v.x, v.y);
   return length === 0 ? { x: 0, y: 0 } : { x: v.x / length, y: v.y / length };
 }
 
-/** `Vector2::orthogonal()` — `Vector2(y, -x)`. */
+/** `Vector2::orthogonal()`: `Vector2(y, -x)`. */
 function orthogonal(v: Vec2): Vec2 {
   return { x: v.y, y: -v.x };
 }
@@ -66,7 +51,7 @@ function segmentDir(points: readonly Vec2[], index: number, previous: Vec2): Vec
   return isZeroApproxVec(dir) ? previous : dir;
 }
 
-/** `compute_polyline_edge_offset_clamped` (`:932-953`) — the miter bisector, clamped. */
+/** `compute_polyline_edge_offset_clamped` (`:932-953`): the miter bisector, clamped. */
 function edgeOffsetClamped(dir: Vec2, previous: Vec2): Vec2 {
   const dirLength = Math.hypot(dir.x, dir.y);
   const previousLength = Math.hypot(previous.x, previous.y);
@@ -107,7 +92,7 @@ function transparent(color: StrokeRGBA): StrokeRGBA {
 
 /**
  * `p_points`/`p_colors` in Godot px (+Y down), `p_width` the polyline's own
- * width and `p_antialiased` its AA flag — `draw_polyline_colors`' four
+ * width and `p_antialiased` its AA flag: `draw_polyline_colors`' four
  * arguments. `p_colors` is expected to carry one entry per point, the only
  * shape `GraphEdit::_draw_minimap_connection_line` (`:1601-1611`) produces.
  */
@@ -150,6 +135,8 @@ export function polylineStrokeGeometry(
     if (isFirst && loop) previousDir = lastSegmentDir;
     else if (isLast && loop) previousDir = firstSegmentDir;
 
+    // Each vertex pair straddles its point along the clamped miter bisector, but the two ends of an
+    // open line take their own segment's orthogonal (`:1076-1082`).
     let baseEdgeOffset: Vec2;
     if (isFirst && !loop) baseEdgeOffset = orthogonal(firstSegmentDir);
     else if (isLast && !loop) baseEdgeOffset = orthogonal(lastSegmentDir);
@@ -236,6 +223,8 @@ export function polylineStrokeGeometry(
   const positions: number[] = [];
   const flatColors: number[] = [];
   const indices: number[] = [];
+  // One indexed array for the three strips: they are coplanar, draw in one pass and share no
+  // vertex. The Y flip into three space happens here, as in `connectionStroke.ts`.
   for (const strip of [core, left, right]) {
     if (!strip) continue;
     const base = positions.length / 3;

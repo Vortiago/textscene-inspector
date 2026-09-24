@@ -1,9 +1,6 @@
 /**
- * Tests for the BaseMaterial3D linter validators.
- *
- * Deliberately asked for through `StandardMaterial3D`, the leaf a scene names:
- * the properties are registered one hop up, so every lookup here also asserts
- * that the resource base-walk delivers them. The last block pins that directly.
+ * The BaseMaterial3D linter validators, asked for through `StandardMaterial3D`, the leaf
+ * a scene names, so every lookup also asserts the resource base-walk delivers them.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -345,14 +342,14 @@ describe('BaseMaterial3D Linter Validators', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'uv1_scale');
       const result = validator!('uv1_scale', 'Vector3(0, 1, 1)', 1);
 
-      expect(result).toBeNull(); // Format is valid, semantic check could be a separate lint rule
+      expect(result).toBeNull();
     });
 
     it('should accept Vector3 with all zero components (format is valid)', () => {
       const validator = validatorRegistry.findValidator('StandardMaterial3D', 'uv1_scale');
       const result = validator!('uv1_scale', 'Vector3(0, 0, 0)', 1);
 
-      expect(result).toBeNull(); // Format is valid
+      expect(result).toBeNull();
     });
 
     it('should reject Vector2 format', () => {
@@ -422,7 +419,6 @@ uv1_scale = Vector3(0.5, 0.5, 0.5)
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      // Should have no errors for valid uv1_scale
       const uv1ScaleErrors = diagnostics.filter(d =>
         d.message.includes('uv1_scale')
       );
@@ -441,7 +437,6 @@ uv1_scale = Invalid
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      // Should have error for invalid uv1_scale format
       const uv1ScaleErrors = diagnostics.filter(d =>
         d.message.includes('uv1_scale') && d.message.includes('Vector3')
       );
@@ -486,7 +481,6 @@ roughness = 0.3
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      // Should have no errors - all properties are valid
       expect(diagnostics.filter(d => d.severity === 'error')).toHaveLength(0);
     });
 
@@ -502,7 +496,6 @@ uv1_scale = Vector3(0, 0, 0)
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      // Format is valid, no parse errors
       const parseErrors = diagnostics.filter(d =>
         d.message.includes('uv1_scale') && d.severity === 'error'
       );
@@ -532,16 +525,14 @@ uv1_scale = Vector3(0.5 0.5 0.5)
   describe('registered where Godot declares them', () => {
     it('registers on BaseMaterial3D, so a lookup on it resolves directly', () => {
       // The class the engine declares them on, and the key a guard reading
-      // `class_get_property_list('BaseMaterial3D', true)` looks up. It resolved
-      // to null while these sat on the leaf, so nothing could check them.
+      // `class_get_property_list('BaseMaterial3D', true)` looks up.
       expect(validatorRegistry.getOwnKeys('BaseMaterial3D')).toContain('albedo_color');
       expect(validatorRegistry.getOwnKeys('StandardMaterial3D')).toEqual([]);
     });
 
     it('reaches ORMMaterial3D, the sibling leaf that inherits the same set', () => {
       // ORMMaterial3D declares nothing of its own: everything it can carry is
-      // BaseMaterial3D's, and it validated none of it before the base-walk
-      // covered the Resource hierarchy.
+      // BaseMaterial3D's.
       const validator = validatorRegistry.findValidator('ORMMaterial3D', 'albedo_color');
       expect(validator).not.toBeNull();
       expect(validator!('albedo_color', 'Color(1, 0)', 1)?.severity).toBe('error');

@@ -1,6 +1,4 @@
-/**
- * Tests for DirectionalLight3D parser
- */
+/** DirectionalLight3D parser. */
 
 import { describe, it, expect } from 'vitest';
 import { parseDirectionalLight3D } from './parser';

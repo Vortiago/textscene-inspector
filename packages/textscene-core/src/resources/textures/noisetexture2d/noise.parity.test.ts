@@ -1,21 +1,8 @@
 /**
- * Generator parity against REAL Godot 4.6.3, measured rather than derived.
- *
- * Every expected number below came out of `godot --headless --script` calling
- * `FastNoiseLite.get_noise_2d` on the engine's own vendored copy of the library.
- * The dependency is the official JS port of that same upstream library, so the
- * fields agree to float32 rounding — which is why every case asserts 6 decimal
- * digits (|diff| < 5e-7): a drift to a different generator jumps by orders of
- * magnitude and cannot hide. But they agree ONLY when every parameter is set
- * explicitly.
- *
- * That caveat is the whole reason this file exists. The raw library's defaults
- * are NOT Godot's: upstream starts at 3 fractal octaves where Godot starts at 5,
- * and upstream's default cellular distance function is EuclideanSq where Godot's
- * is Euclidean. Leaving one parameter unset does not shift the field slightly —
- * measured at (100, 250) with Godot's ridged settings, "unset octaves" reads
- * 0.2498 against the engine's 0.6092. `noiseSampler` therefore configures every
- * knob from the decoded data, and these cases fail the moment one is dropped.
+ * Generator parity against Godot 4.6.3: every expected number is measured with
+ * `godot --headless --script` calling `FastNoiseLite.get_noise_2d`. The JS port
+ * agrees to float32 rounding (6 digits, |diff| < 5e-7) only when every parameter
+ * is set, since upstream's defaults differ (3 octaves, EuclideanSq).
  */
 import { describe, expect, it } from 'vitest';
 import { noiseSampler } from './build';
@@ -23,9 +10,8 @@ import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
 
 describe('FastNoiseLite parity with Godot 4.6.3', () => {
   it('matches the engine for a resource that authors nothing (pure defaults)', () => {
-    // The case the corpus hits most: a `[sub_resource type="FastNoiseLite"]`
-    // with few or no properties, where every value comes from Godot's own
-    // constructor rather than the library's.
+    // A bare `[sub_resource type="FastNoiseLite"]`: every value comes from Godot's
+    // constructor, not the library's.
     const sample = noiseSampler(decodeFastNoiseLite({}));
     expect(sample(0, 0)).toBeCloseTo(0.0, 9);
     expect(sample(3, 7)).toBeCloseTo(0.1378282607, 6);
@@ -40,15 +26,14 @@ describe('FastNoiseLite parity with Godot 4.6.3', () => {
     expect(sample(0, 0)).toBeCloseTo(1.0, 9);
     expect(sample(1, 0)).toBeCloseTo(0.9455099106, 6);
     expect(sample(7, 13)).toBeCloseTo(0.5454525948, 6);
-    // The sample that exposes a dropped octave count: the library's own default
-    // of 3 reads 0.2498 here.
+    // A dropped octave count shows here: the library's default of 3 reads 0.2498.
     expect(sample(100, 250)).toBeCloseTo(0.6091706157, 6);
     expect(sample(511, 511)).toBeCloseTo(0.5919112563, 6);
   });
 
   it('matches the engine for cellular noise with a non-default return type', () => {
-    // Also pins the distance-function default: the library's EuclideanSq would
-    // miss these, Godot's Euclidean hits them.
+    // Pins the distance-function default: the library's EuclideanSq misses these,
+    // Godot's Euclidean hits them.
     const sample = noiseSampler(
       decodeFastNoiseLite({
         noise_type: '2',

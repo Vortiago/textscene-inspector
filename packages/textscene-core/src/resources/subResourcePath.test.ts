@@ -1,9 +1,7 @@
 /**
- * The Sub-resource path grammar: `res://file.tres::SubId` addresses one
- * `[sub_resource]` inside a resource file, and a plain `res://` path addresses
- * the file itself. Every layer keyed on a resource path (processor caches,
- * `useResource`, `materialPaths`) round-trips both forms through here, so the
- * split has to be exact and a plain path has to survive untouched.
+ * The Sub-resource path grammar: `res://file.tres::SubId` or a plain `res://`
+ * path. Processor caches, `useResource` and `materialPaths` round-trip both forms
+ * through here, so the split must be exact and a plain path must survive untouched.
  */
 
 import { describe, expect, it } from 'vitest';

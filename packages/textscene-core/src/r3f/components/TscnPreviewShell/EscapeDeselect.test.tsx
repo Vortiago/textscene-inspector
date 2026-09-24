@@ -1,7 +1,6 @@
 /**
- * EscapeDeselect — a global Escape key clears the current selection,
- * regardless of viewport mode (2D/3D). Guarded against firing while the
- * user is typing (the web app's Source pane, ADR-0020, or any input).
+ * A global Escape clears the selection in 2D and 3D, except while the user
+ * types in an input or the web app's Source pane (ADR-0020).
  */
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, render } from '@testing-library/react';
@@ -63,9 +62,8 @@ describe('<EscapeDeselect> (#224)', () => {
   });
 
   it('leaves the selection alone when Escape is dismissing a floating panel', () => {
-    // Both live on window, so without arbitration one Escape did both: the
-    // legend closed AND the node the user had selected before opening it was
-    // silently cleared.
+    // Both listen on window, so without arbitration one Escape closes the legend
+    // and also clears the selection.
     const { getByText, getByTestId } = render(
       <SelectionProvider>
         <Harness />

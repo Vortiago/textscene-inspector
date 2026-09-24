@@ -1,5 +1,5 @@
 /**
- * Tests for the Sprite2D property formatter.
+ * Tests the Sprite2D property formatter.
  */
 
 import { describe, it, expect } from 'vitest';

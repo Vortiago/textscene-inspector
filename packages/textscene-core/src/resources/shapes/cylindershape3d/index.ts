@@ -1,4 +1,4 @@
-/** CylinderShape3D resource slice — claims the type name, re-exports its decode. */
+/** CylinderShape3D resource slice: claims the type name, re-exports its decode. */
 
 import { registerShapeSlice } from '../registerShapeSlice';
 

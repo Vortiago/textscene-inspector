@@ -1,16 +1,11 @@
 /**
- * A header older than the format these rules are written against.
- *
- * The linter's subject is the text format Godot writes today. Version 3 gave
- * ext/subresources their string ids (resource_format_text.h:44), so on a
- * `format=2` file every reference rule reads integer ids as dangling and every
- * bound is judged against a grammar the file predates. The engine does not draw
- * this line — it has no less-than comparison at all — so the diagnostic reports
- * OUR scope and says so, rather than claiming the file is invalid.
+ * A header older than the format these rules are written against. Version 3 gave ext/subresources their string ids
+ * (resource_format_text.h:44), so on a `format=2` file every other diagnostic would be wrong. The engine has no
+ * less-than comparison on the version, so the diagnostic reports the linter's scope, not an invalid file.
  */
 
 import { describe, expect, it } from 'vitest';
-// The BARREL, not `./Linter.js`: the slices self-register their validators and
+// The barrel, not `./Linter.js`: the slices self-register their validators and
 // rules on import, so a direct import lints every scene into silence and the
 // suppression assertions below would pass against nothing.
 import { Linter } from './index.js';
@@ -42,7 +37,7 @@ describe('a legacy format header', () => {
   it('names the observed version and never a single current one', () => {
     const message = linter.lint(`[gd_scene format=1]\n${BODY}`)[0]?.message ?? '';
     expect(message).toContain('format=1');
-    // Godot 4.6.3 writes BOTH 3 and 4 from one saver, so the text must not
+    // Godot 4.6.3 writes both 3 and 4 from one saver, so the text must not
     // enshrine either as "the" current format.
     expect(message).toContain('3 or 4');
   });
@@ -61,7 +56,7 @@ describe('a legacy format header', () => {
 
   it('suppresses the [resource] body a standalone .tres validates', () => {
     // The body is validated against the header's type, so a legacy `.tres`
-    // has diagnostics of its own to withhold — an empty `[resource]` would
+    // has diagnostics of its own to withhold: an empty `[resource]` would
     // pass this whether the suppression worked or not.
     const body = '\n[resource]\nbackground_mode = 99\n';
     expect(linter.lint(`[gd_resource type="Environment" format=3]\n${body}`)).toHaveLength(1);

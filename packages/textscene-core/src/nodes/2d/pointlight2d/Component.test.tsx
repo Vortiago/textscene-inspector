@@ -1,11 +1,7 @@
 /**
- * PointLight2D render component tests.
- *
- * A PointLight2D draws nothing on the canvas, as Godot's lights do not: it
- * contributes its cookie to the accumulation buffer every lit canvas item
- * multiplies its albedo against. So what these pin is the quad it feeds into
- * that pre-pass — its camera layer, its blend, and the light term its shader
- * emits — not a colour on the visible canvas.
+ * Tests the quad a PointLight2D feeds the light accumulation pre-pass: its camera
+ * layer, its blend and its shader's light term. The light draws nothing on the
+ * visible canvas.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -44,7 +40,7 @@ async function render(rootNode: TscnNode) {
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
   fake.textures.seed(TEX, tex);
 
-  // The lighting provider is mounted because the light's camera LAYER is the
+  // The lighting provider is mounted because the light's camera layer is the
   // layer of its cull-mask class, which only the provider can assign: an
   // unclassified light deliberately draws nowhere.
   return ReactThreeTestRenderer.create(
@@ -107,7 +103,7 @@ describe('PointLight2D Component', () => {
     expect(mat.blendEquation).toBe(THREE.ReverseSubtractEquation);
     expect(mat.blendSrc).toBe(THREE.SrcAlphaFactor);
     expect(mat.blendDst).toBe(THREE.OneFactor);
-    // Alpha still SUMS: light_only_alpha is a plain sum whatever the rgb mode.
+    // Alpha still sums: light_only_alpha is a plain sum whatever the rgb mode.
     expect(mat.blendEquationAlpha).toBe(THREE.AddEquation);
     expect(mat.blendSrcAlpha).toBe(THREE.OneFactor);
     expect(mat.blendDstAlpha).toBe(THREE.OneFactor);
@@ -115,15 +111,15 @@ describe('PointLight2D Component', () => {
 
   it('accumulates MIX by interpolating toward the light, not by adding it', async () => {
     const mat = lightMaterial(await render(node({ blend_mode: '2' })));
-    // mix(dst, src, srcAlpha) IS src×srcAlpha + dst×(1−srcAlpha). Reusing ADD's
-    // OneFactor here is what made MIX render identically to ADD.
+    // mix(dst, src, srcAlpha) is src×srcAlpha + dst×(1−srcAlpha). ADD's OneFactor
+    // here would render MIX identically to ADD.
     expect(mat.blendSrc).toBe(THREE.SrcAlphaFactor);
     expect(mat.blendDst).toBe(THREE.OneMinusSrcAlphaFactor);
     expect(mat.blendEquation).toBe(THREE.AddEquation);
   });
 
   it('sorts with the transparent list, so MIX lights replay in canvas order', async () => {
-    // The opaque list sorts nearest-first, which reverses canvas order — and MIX
+    // The opaque list sorts nearest-first, which reverses canvas order, and MIX
     // is the one mode whose result depends on that order.
     expect(lightMaterial(await render(node({ blend_mode: '2' }))).transparent).toBe(true);
   });
@@ -168,7 +164,7 @@ describe('PointLight2D Component', () => {
   });
 
   it('shows missing resource placeholder when no texture resolves', async () => {
-    // Use no texture property → texturePath is null → placeholder shown.
+    // No texture property, so the placeholder shows.
     const r = await render(node({ texture: 'ExtResource("missing")' }));
     const groups = r.scene.findAllByType('Group');
     expect(groups.length).toBeGreaterThan(0);

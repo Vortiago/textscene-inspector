@@ -12,8 +12,8 @@ export interface CSGCylinder3DProperties extends Node3DProperties {
   /** When true the top radius collapses to 0 (a cone). Godot default false. */
   cone: boolean;
   /**
-   * Smooth shading on the WALLS. Godot default **true**; the caps are always flat
-   * whatever this says (csg_shape.cpp:1795, :1810).
+   * Smooth shading on the walls. Godot default **true**. The caps are always flat whatever this
+   * says (csg_shape.cpp:1795, :1810).
    */
   smoothFaces: boolean;
   /** Reverse winding and negate normals (CSGPrimitive3D). Godot default false. */
@@ -22,6 +22,6 @@ export interface CSGCylinder3DProperties extends Node3DProperties {
   materialPath?: string;
   /** CSG boolean operation: 0 UNION, 1 INTERSECTION, 2 SUBTRACTION. */
   operation?: number;
-  /** `cast_shadow` — GeometryInstance3D state (`modules/csg/csg_shape.h:47`). */
+  /** `cast_shadow`: GeometryInstance3D state (`modules/csg/csg_shape.h:47`). */
   castShadow?: number;
 }

@@ -1,26 +1,7 @@
 /**
- * BoxContainer's native (WebGL canvas) rect solve — shared by HBoxContainer
- * and VBoxContainer, whose whole difference is `vertical`. Port of Godot
- * 4.6.3's `scene/gui/box_container.cpp` (`BoxContainer::_resort`,
- * `BoxContainer::get_minimum_size`) plus the both-axes clamp every Container
- * child goes through, `scene/gui/container.cpp`'s `Container::fit_child_in_rect`.
- *
- * `fit_child_in_rect` runs on BOTH axes for every child, always — not only the
- * cross axis. On the MAIN axis it is a no-op exactly when the child stretched
- * (`_resort` already sized that axis to the stretched amount, which IS its
- * "fill" size), but a child with EXPAND and no FILL never has its `willStretch`
- * cleared by `_resort`, so it still reserves stretch space there — and then
- * `fit_child_in_rect` claws that space back down to the child's own minimum
- * and shrink-positions it inside the reservation, on the SAME axis `_resort`
- * just sized. `alignment` only ever applies when NOTHING stretched
- * (`has_stretched` false) — the instant any child expands, the offset switch
- * below is skipped entirely and `alignment` becomes dead.
- *
- * `rtl` is the CONTAINER's own `is_layout_rtl()` (`SolveNode.rtl`, resolved by
- * `native/buildSolveTree.ts`), which is what both `_resort` and
- * `fit_child_in_rect` read — never the child's.
- *
- * Pure data + functions, no React, no THREE.
+ * BoxContainer's native rect solve, shared by HBoxContainer and VBoxContainer, which differ only
+ * in `vertical`. Port of Godot 4.6.3's `scene/gui/box_container.cpp` (`BoxContainer::_resort`,
+ * `BoxContainer::get_minimum_size`) plus `Container::fit_child_in_rect` (`scene/gui/container.cpp`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -45,12 +26,12 @@ import {
   SIZE_FILL,
 } from './fitChildInRect';
 
-/** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`); a type whose own parser overrides the flag (e.g. Label's `v_size_flags`) has already baked that override into its parsed properties by the time this module reads them. */
+/** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`). A type whose parser overrides the flag (Label's `v_size_flags`, for example) has already baked the override into its properties. */
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 /** `Control::stretch_ratio` default (`control.h:231`). */
 const DEFAULT_STRETCH_RATIO = 1;
 
-/** One child's inputs to the box solve — its combined minimum size plus the three `Control` fields `_resort`/`fit_child_in_rect` read. */
+/** One child's inputs to the box solve: its combined minimum size and the three `Control` fields `_resort`/`fit_child_in_rect` read. */
 export interface BoxChildInput {
   minSize: Vec2;
   hSizeFlags: number;
@@ -66,9 +47,9 @@ interface MinSizeCache {
 }
 
 /**
- * `BoxContainer::_resort` (`box_container.cpp:41-235`), returning each
- * child's final `Rect2` in the SAME order as `children` — relative to the
- * box's own top-left, `fit_child_in_rect` already applied.
+ * `BoxContainer::_resort` (`box_container.cpp:41-235`): each child's final `Rect2` in `children`
+ * order, relative to the box's top-left, with `fit_child_in_rect` applied. `rtl` is the container's
+ * `is_layout_rtl()` (`SolveNode.rtl`), which `_resort` and `fit_child_in_rect` both read.
  */
 export function resortBoxContainer(
   vertical: boolean,
@@ -80,19 +61,15 @@ export function resortBoxContainer(
 ): Rect2[] {
   if (children.length === 0) return [];
 
-  // Size2i new_size = get_size(); (box_container.cpp:47) — truncated toward zero on
-  // assignment to Size2i. Every rect this solve produces, on BOTH axes, is built from
-  // this truncated pair (not the full-precision content rect `resortBoxContainer` was
-  // called with) — including the CROSS axis, which the final placement loop reads
-  // straight off it below.
+  // Size2i new_size = get_size(); (box_container.cpp:47) truncates toward zero. Every rect on
+  // both axes, the cross axis included, is built from this pair, not the full-precision rect.
   const size = { width: Math.trunc(containerSize.width), height: Math.trunc(containerSize.height) };
 
   // First pass (:57-84): combined minimum size + which children want to stretch.
   const cache: MinSizeCache[] = children.map((c) => {
-    // Size2i size = c->get_combined_minimum_size(); (:60) — same Size2i truncation, scoped
-    // to this stretch bookkeeping only. `fit_child_in_rect`'s later re-floor (this codebase's
-    // `native/controlRectSolver.ts` `dispatchChildren`, which already documents why) reads the
-    // child's OWN full-precision `minSize` instead, so `c.minSize` itself is never mutated.
+    // Size2i size = c->get_combined_minimum_size(); (:60): the same truncation, for this stretch
+    // bookkeeping only. `fit_child_in_rect`'s re-floor (`native/controlRectSolver.ts`
+    // `dispatchChildren`) reads the child's full-precision `minSize`, so `c.minSize` stays intact.
     const minSize = Math.trunc(vertical ? c.minSize.y : c.minSize.x);
     const willStretch = vertical ? hasFlag(c.vSizeFlags, SIZE_EXPAND) : hasFlag(c.hSizeFlags, SIZE_EXPAND);
     return { minSize, willStretch, finalSize: minSize };
@@ -101,29 +78,27 @@ export function resortBoxContainer(
   const stretchMin = cache.reduce((sum, m) => sum + m.minSize, 0);
   let stretchAvail = cache.filter((m) => m.willStretch).reduce((sum, m) => sum + m.minSize, 0);
   // float stretch_ratio_total = 0.0; accumulated by `stretch_ratio_total +=
-  // c->get_stretch_ratio();` inside the SAME first-pass loop (:73) — a running float32
-  // total, not a float64 sum-then-cast; `Math.fround` after each addition reproduces the
-  // per-step 32-bit rounding.
+  // c->get_stretch_ratio();` in the first-pass loop (:73): a running float32 total, not a
+  // float64 sum then cast, so `Math.fround` follows each addition.
   let stretchRatioTotal = 0;
   children.forEach((c, i) => {
     if (cache[i]!.willStretch) stretchRatioTotal = Math.fround(stretchRatioTotal + c.stretchRatio);
   });
 
-  // Stretch range (:90-97) — both int, built from the truncated Size2i above.
+  // Stretch range (:90-97): both int, built from the truncated Size2i above.
   const mainAxisSize = vertical ? size.height : size.width;
   const stretchMax = mainAxisSize - (children.length - 1) * separation;
   const stretchDiff = Math.max(0, stretchMax - stretchMin);
   stretchAvail += stretchDiff;
 
-  // Discard/refit loop (:101-145): evict a stretching child whose fair share
-  // would undercut its own minimum, then redistribute among the survivors —
-  // repeating until every remaining stretcher fits, or none are left.
+  // Discard/refit loop (:101-145): evict a stretching child whose share would undercut its
+  // minimum, then redistribute among the rest, until every stretcher fits or none is left.
   let hasStretched = false;
   while (stretchRatioTotal > 0) {
     hasStretched = true;
     let refitSuccessful = true;
-    // float error = 0.0; (:114) — accumulated fractional pixels, carried into whichever
-    // child crosses a whole pixel; float32 throughout, same as `stretch_ratio_total`.
+    // float error = 0.0; (:114): fractional pixels carried into whichever child crosses a
+    // whole pixel, in float32 as `stretch_ratio_total` is.
     let error = 0;
 
     for (let i = 0; i < cache.length; i++) {
@@ -131,16 +106,13 @@ export function resortBoxContainer(
       if (!m.willStretch) continue;
 
       const ratio = children[i]!.stretchRatio;
-      // float final_pixel_size = stretch_avail * c->get_stretch_ratio() /
-      // stretch_ratio_total; (:120-121) — `stretch_avail`(int) promotes to float32 on the
-      // multiply, `stretch_ratio_total` is itself `float`; both operations round to the
-      // nearest float32 value, exactly what a real_t build's FPU does. This single-step
-      // rounding is load-bearing: three 1/3-ish shares sum to just OVER 1 in float64 and
-      // just UNDER it in float32, so which one this port uses decides whether the carry
-      // below fires.
+      // float final_pixel_size = stretch_avail * c->get_stretch_ratio() / stretch_ratio_total;
+      // (:120-121): both operations round to float32, as a real_t build does. Three 1/3-ish
+      // shares sum just over 1 in float64 and just under it in float32, so the precision
+      // decides whether the carry below fires.
       const finalPixelSize = Math.fround(Math.fround(stretchAvail * ratio) / stretchRatioTotal);
-      // error += final_pixel_size - (int)final_pixel_size; (:123) — `(int)` truncates
-      // toward zero; `finalPixelSize` is always >= 0 here, so trunc and floor agree.
+      // error += final_pixel_size - (int)final_pixel_size; (:123): `(int)` truncates toward
+      // zero, and `finalPixelSize` is never negative, so trunc and floor agree.
       error = Math.fround(error + (finalPixelSize - Math.trunc(finalPixelSize)));
 
       if (finalPixelSize < m.minSize) {
@@ -162,7 +134,8 @@ export function resortBoxContainer(
     if (refitSuccessful) break;
   }
 
-  // Alignment offset (:149-179) — ONLY when nothing stretched.
+  // Alignment offset (:149-179), only when nothing stretched: once a child expands,
+  // `alignment` has no effect.
   let ofs = 0;
   if (!hasStretched) {
     if (!vertical) {
@@ -175,8 +148,8 @@ export function resortBoxContainer(
     }
   }
 
-  // Final placement (:181-235). RTL walks children back-to-front on the
-  // horizontal axis only — a vertical box never reorders.
+  // Final placement (:181-235). RTL walks children back to front on the horizontal axis
+  // only, and a vertical box never reorders.
   const rects: Rect2[] = new Array(cache.length);
   const order = !rtl || vertical ? cache.map((_, i) => i) : cache.map((_, i) => cache.length - 1 - i);
 
@@ -187,16 +160,19 @@ export function resortBoxContainer(
     const from = ofs;
     let to = ofs + m.finalSize;
     if (m.willStretch && idx === cache.length - 1) {
-      // Compensates for accumulated rounding: the last STILL-stretching child snaps to the far edge.
+      // Compensates for accumulated rounding: the last still-stretching child snaps to the far edge.
       to = mainAxisSize;
     }
     const extent = to - from;
 
-    // `new_size` (the truncated Size2i, :182-186) supplies the CROSS-axis extent too.
+    // `new_size` (the truncated Size2i, :182-186) supplies the cross-axis extent too.
     const placed: Rect2 = vertical
       ? { x: 0, y: from, w: size.width, h: extent }
       : { x: from, y: 0, w: extent, h: size.height };
 
+    // `fit_child_in_rect` runs on both axes. A child with EXPAND and no FILL keeps `willStretch`,
+    // so it reserves stretch space on the main axis and the fit shrinks it to its minimum
+    // inside that space. For a stretched child the main-axis fit is a no-op.
     const child = children[childIndex]!;
     rects[childIndex] = fitChildInRect(placed, child.minSize, child.hSizeFlags, child.vSizeFlags, rtl);
     ofs = to;
@@ -221,7 +197,7 @@ export function boxContainerMinimumSize(
   childMinSizes.forEach((size, i) => {
     const sep = i === 0 ? 0 : separation;
     // `Size2i size = c->get_combined_minimum_size()` (`box_container.cpp`):
-    // the child's minimum is TRUNCATED before it is accumulated, and the
+    // the child's minimum is truncated before it is accumulated, and the
     // accumulator is a `Size2i` too. Every real text minimum is fractional.
     const w = Math.trunc(size.x);
     const h = Math.trunc(size.y);
@@ -236,8 +212,6 @@ export function boxContainerMinimumSize(
 
   return vertical ? { x: crossAxis, y: mainAxis } : { x: mainAxis, y: crossAxis };
 }
-
-// --- Registry adapters ------------------------------------------------------
 
 function separationOf(n: SolveNode, ctx: SolveContext): number {
   return n.constants.separation ?? ctx.theme.separation;
@@ -260,19 +234,10 @@ function toChildInput(node: SolveNode, minSize: Vec2): BoxChildInput {
 }
 
 /**
- * Builds the `ContainerLayoutFn` for a box axis. BoxContainer has no chrome
- * of its own, so the content rect IS the full rect the walker solved for
- * this node — only its width/height are read; `contentRect.x`/`.y` describe
- * this node's OWN offset within ITS parent, which is irrelevant to where its
- * children sit within IT (every returned rect is relative to this node's own
- * top-left, i.e. local (0, 0), exactly like `resortBoxContainer`'s output
- * already is).
- *
- * Only SORTABLE children take part (`Container::as_sortable_control`,
- * `isSortableControl` — the filter `_resort` applies before anything else):
- * an invisible child claims no slot, no separation and no stretch share, and
- * is simply absent from the returned map, which `controlRectSolver.ts` floors
- * to a zero rect it never paints.
+ * Builds the `ContainerLayoutFn` for a box axis. BoxContainer has no chrome, so only the content
+ * rect's width and height are read: its `x`/`y` place this node in its parent, and every rect is
+ * local. An invisible child (`isSortableControl`, `_resort`'s first filter) claims no slot,
+ * separation or stretch share, and `controlRectSolver.ts` floors it to an unpainted zero rect.
  */
 export function makeBoxContainerLayout(vertical: boolean): ContainerLayoutFn {
   return (n, children, contentRect, ctx) => {
@@ -296,7 +261,7 @@ export function makeBoxContainerLayout(vertical: boolean): ContainerLayoutFn {
   };
 }
 
-/** Builds the `MinimumSizeFn` for a box axis — this container's OWN contribution to `Control::get_combined_minimum_size` when it is itself a child. Same sortable-child filter as the layout above (`BoxContainer::get_minimum_size` skips invisible children too). */
+/** Builds the `MinimumSizeFn` for a box axis: this container's own contribution to `Control::get_combined_minimum_size` when it is itself a child. The same sortable-child filter as the layout (`BoxContainer::get_minimum_size` skips invisible children too). */
 export function makeBoxContainerMinimumSize(vertical: boolean): MinimumSizeFn {
   return (n, ctx) => {
     const separation = separationOf(n, ctx);

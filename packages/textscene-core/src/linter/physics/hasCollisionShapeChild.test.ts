@@ -1,12 +1,7 @@
 /**
- * A CollisionPolygon provides a body's shapes exactly as a CollisionShape does.
- *
- * Checking the `CollisionShape<dim>` type literal alone is a FALSE POSITIVE on
- * scenes Godot itself ships:
- * `scenes/demos/2d/physics_platformer/tileset_edit.tscn` has a StaticBody2D
- * whose only child is a CollisionPolygon2D, and it was warned about. It stayed
- * invisible because `fixtureLint` sweeps `scenes/fixtures/` and not
- * `scenes/demos/`.
+ * A CollisionPolygon provides a body's shapes exactly as a CollisionShape does,
+ * so checking the `CollisionShape<dim>` type alone is a false positive on a body
+ * whose only child is a CollisionPolygon2D.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -49,7 +44,7 @@ describe('hasCollisionShapeChild', () => {
   // the shape off this body entirely and Godot's `shapes.is_empty()` warning
   // (`collision_object_2d.cpp:587`) still fires.
   it.each(['2D', '3D'] as const)('does NOT count a shape one level deeper (%s)', (dim) => {
-    // A CATALOGED intervening type: an unreadable one is declined outright, the
+    // A catalogued intervening type: an unreadable one is declined outright, the
     // same call `knownParent` makes on the parent side.
     const tree = node('Body', [node(`Node${dim}`, [node(`CollisionPolygon${dim}`)])]);
     expect(hasCollisionShapeChild(tree, dim)).toBe(false);
@@ -73,9 +68,8 @@ describe('hasCollisionShapeChild', () => {
     expect(collisionShapeTypesPhrase('2D')).toBe('CollisionShape2D or CollisionPolygon2D');
   });
 
-  // The message and the check read one set. A third shape provider added to
-  // `collisionShapeTypes` alone would otherwise be offered by every warning while
-  // the predicate kept ignoring it.
+  // The message and the check read one set, so a shape provider added to
+  // `collisionShapeTypes` reaches both.
   it.each(['2D', '3D'] as const)('accepts exactly the types it names (%s)', (dim) => {
     for (const type of collisionShapeTypes(dim)) {
       expect(hasCollisionShapeChild(node('Body', [node(type)]), dim)).toBe(true);

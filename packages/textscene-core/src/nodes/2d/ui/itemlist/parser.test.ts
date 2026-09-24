@@ -1,4 +1,4 @@
-/** ItemList parser contract — Control base, ItemList's own members and the `item_N/*` family. */
+/** ItemList parser contract: Control base, ItemList's own members and the `item_N/*` family. */
 import { describe, it, expect } from 'vitest';
 import { parseItemList } from './parser';
 

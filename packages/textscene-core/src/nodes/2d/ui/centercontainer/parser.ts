@@ -1,8 +1,6 @@
 /**
- * CenterContainer parser. Adds one field beyond Control — `use_top_left`
- * (`center_container.h:38`) — everything else about centering its child(ren)
- * is a layout concern handled by the solver/Component, so the base Control
- * parser does the rest of the work.
+ * CenterContainer parser: Control plus `use_top_left` (`center_container.h:38`).
+ * Centring is the solver's concern.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';

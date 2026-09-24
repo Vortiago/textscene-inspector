@@ -1,18 +1,8 @@
 /**
- * The MeshLibrary slice's decode (ADR-0031): a MeshLibrary **ParsedResource**
- * in, the `MeshLibraryModel` out. One arrival: every MeshLibrary a GridMap
- * names is its own `.tres` file, so there is no scene-embedded adapter beside
- * this one.
- *
- * Lenient: silent on absent fields, warn-then-skip on malformed ones, never
- * throws. Mirrors the TileSet decode's contract.
- *
- * Item properties look like:
- *   item/7/name = "Floor"
- *   item/7/mesh = ExtResource("8_v1wcb")        // → an ArrayMesh .tres
- *   item/7/mesh = SubResource("ArrayMesh_x")    // → embedded in THIS .tres
- *   item/7/mesh_transform = Transform3D(1,0,0, 0,1,0, 0,0,1, 0,0,0)
- *   item/7/mesh_cast_shadow = 2                 // RS::ShadowCastingSetting ordinal
+ * MeshLibrary decode (ADR-0031): a **ParsedResource** in, `MeshLibraryModel` out,
+ * from `item/<n>/name`, `mesh` (an ExtResource, or a SubResource in this `.tres`),
+ * `mesh_transform` and `mesh_cast_shadow`. Every library is its own `.tres`. Like
+ * the TileSet decode: silent on absent fields, warn-then-skip on malformed, no throw.
  */
 
 import { warn } from '../../logger';
@@ -24,14 +14,10 @@ import { unquoteString } from '../../parser/utils';
 import { ShadowCastingSetting, type MeshLibraryModel, type MeshLibraryItem } from './types';
 
 /**
- * `MeshLibrary::_set` reads FIXED slices — `get_slicec('/', 1)` for the index
- * and `get_slicec('/', 2)` for the leaf (mesh_library.cpp:40-41) — with no
- * validity gate on either.
- *
- * So the index grammar is the whole path segment and {@link toIntIndex} decides
- * the number (`+7` is item 7, `x` is item 0); the leaf is one segment and
- * anything below it is ignored, because `get_slicec` returns that slice alone
- * (ustring.cpp:941-964) — `item/7/name/extra` sets item 7's name.
+ * `MeshLibrary::_set` reads fixed slices with no validity gate, `get_slicec('/', 1)`
+ * for the index and `get_slicec('/', 2)` for the leaf (mesh_library.cpp:40-41). So
+ * {@link toIntIndex} decides the number (`+7` is 7, `x` is 0), and anything below the
+ * leaf is ignored (ustring.cpp:941-964): `item/7/name/extra` sets item 7's name.
  */
 const ITEM_KEY_RE = indexedKeyRegex('^item/(#)/([^/]+)', 'to_int');
 
@@ -113,11 +99,9 @@ export function meshLibraryFromTres(
 }
 
 /**
- * A library written from a scene can embed a PRIMITIVE mesh (`BoxMesh`,
- * `CylinderMesh`, …) as its own `[sub_resource]`. Addressing one would hand the
- * ArrayMesh processor something with no `_surfaces`; leaving it unresolved is what
- * makes GridMap draw its placeholder cell rather than an empty instanced mesh that
- * looks like nothing is there.
+ * A library written from a scene can embed a primitive mesh (`BoxMesh`, …) as a
+ * `[sub_resource]`, which has no `_surfaces` for the ArrayMesh processor. Left
+ * unresolved, GridMap draws its placeholder cell rather than an empty mesh.
  */
 const ADDRESSABLE_ITEM_MESH_TYPES: ReadonlySet<string> = new Set(['ArrayMesh']);
 

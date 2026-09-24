@@ -1,19 +1,12 @@
 /**
- * Validators shared by every GPUParticlesAttractor3D-derived node.
- *
- * Registered under the abstract key 'GPUParticlesAttractor3D', which Godot cannot
- * instantiate, so it appears in no .tscn and owns no slice. It reaches its
- * 3 subclasses through the
- * NODE_BASE_TYPES base-walk.
- *
- * Declare only GPUParticlesAttractor3D's OWN members: the ones doc/classes/GPUParticlesAttractor3D.xml
- * lists without an `overrides=` attribute, cross-checked against ADD_PROPERTY
- * in the .cpp. Quote the governing source line beside every non-obvious bound.
+ * Validators shared by every GPUParticlesAttractor3D-derived node, under the abstract key
+ * 'GPUParticlesAttractor3D', which appears in no .tscn. The NODE_BASE_TYPES base-walk
+ * delivers them. Only its own members: doc/classes/GPUParticlesAttractor3D.xml
+ * without `overrides=`, checked against ADD_PROPERTY.
  */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
+// Registration happens on import, so a test that loads only this slice resolves an
+// inherited key only when this line pulls the ancestor in.
 import '../../../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../../../linter/validators/index.js';
@@ -23,12 +16,10 @@ validatorRegistry.registerAll('GPUParticlesAttractor3D', {
   // "-128,128,0.01,or_greater,or_less": both ends soft, so no bound. A negative
   // strength repels rather than attracts.
   strength: v.float('strength'),
-  // :901, PROPERTY_HINT_EXP_EASING: no range is stated, so no bound. The hint
-  // text "0,8,0.01" is read only for the `attenuation`/`positive_only` flag
-  // tokens and its numbers are discarded (editor_properties.cpp:3944-3953), so
-  // `positive_only` stays false and the inspector offers the Ease In-Out /
-  // Ease Out-In presets (:1905-1907), which write NEGATIVE values.
-  // set_attenuation:868-871 is a bare assignment.
+  // :901, PROPERTY_HINT_EXP_EASING. Its "0,8,0.01" numbers are discarded
+  // (editor_properties.cpp:3944-3953), and without `positive_only` the inspector's
+  // Ease In-Out and Ease Out-In presets (:1905-1907) write negative values.
+  // set_attenuation:868-871 is a bare assignment, so there is no bound.
   attenuation: v.float('attenuation'),
   // :902, PROPERTY_HINT_RANGE "0,1,0.01", no or_greater: a hard 0-1.
   // set_directionality:877-881 is a bare assignment.

@@ -1,33 +1,8 @@
 /**
- * Perf regression test for the NodePath-resolution helpers.
- *
- * Semantic lint rules call `findParentNode` / `resolveNodePath` (which
- * itself calls `findNodesByName` and `isUnderInstance`) once per matching
- * node. Re-walking the ENTIRE scene tree per call costs O(N) per lookup *
- * O(N) nodes = O(N^2) total on a scene with N nodes — the "per-node rule
- * filtering + O(N^2) NodePath helpers" half of the throughput regression.
- *
- * This test simulates that call pattern directly (one lookup per node, over
- * a large/wide tree) and asserts the cost scales close to linearly with node
- * count rather than quadratically. Unlike the multiline-parser perf test
- * (whose blowup is dramatic enough for an absolute wall-clock ceiling), this
- * blowup is milder at test-friendly sizes, so a scaling-ratio assertion
- * across two sizes is the more robust discriminator: quadratic predicts a
- * ~16x slowdown for a 4x size increase, linear predicts ~4x — a threshold in
- * between cleanly tells them apart without being sensitive to absolute timer
- * noise. Each side takes the MIN of several trials (filters transient
- * scheduler/GC hiccups rather than being skewed by them), matching the
- * timing-test convention used for the RuleRegistry perf test.
- *
- * Robustness: a single ratio measurement still flakes under heavy parallel
- * machine load (observed 8.2-13.7 against the 8x threshold when the big side
- * absorbed a sustained scheduler stall that outlived all of its trials), so
- * the assertion takes the BEST ratio across several independent measurements,
- * stopping early once one lands under the threshold. A genuinely quadratic
- * implementation (~16x) cannot pass: per-side best-of already filters
- * inflation, so beating the threshold would require the small side alone to
- * be inflated ~2x across ALL of its trials in the same measurement where the
- * big side runs clean — the exact pattern the per-side min removes.
+ * Semantic rules call `findParentNode` and `resolveNodePath` once per matching node,
+ * so a full-tree walk per call costs O(N^2). This asserts the cost scales close to
+ * linearly, with a ratio across two sizes: the blow-up is too mild at test sizes for
+ * an absolute wall-clock ceiling.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -36,9 +11,8 @@ import { findParentNode } from './linterUtils.js';
 import { resolveNodePath } from './nodePathResolve.js';
 
 /**
- * A wide, shallow tree (root -> groups -> leaves) so the traversal-depth cost
- * of the tree-building helper itself doesn't dominate — the perf question
- * under test is repeated FULL-TREE walks per lookup, not stack depth.
+ * A wide, shallow tree (root -> groups -> leaves), so the cost under test is
+ * repeated full-tree walks per lookup, not stack depth.
  */
 function buildWideTree(leafCount: number): TscnNode[] {
   const groupSize = 50;
@@ -93,14 +67,16 @@ function runLookupsForEveryNode(roots: TscnNode[], leaves: TscnNode[]): void {
 }
 
 /**
- * Repetitions per timed sample. One pass over the small tree costs ~0.7ms, and
- * a sub-millisecond denominator makes the ratio below a measure of the big side
- * alone rather than of scaling. Ten puts the small side around 7ms, clear of
- * timer resolution and scheduler granularity, without paying for more.
+ * Repetitions per timed sample. One pass over the small tree is sub-millisecond, and
+ * a denominator that small makes the ratio measure the big side alone, not scaling.
+ * Ten puts the small side clear of timer resolution and scheduler granularity.
  */
 const REPEATS = 10;
 
-/** Best-of-`trials` timing for repeated lookups against the SAME tree. */
+/**
+ * Best-of-`trials` timing for repeated lookups against the same tree. The minimum
+ * filters transient scheduler and GC stalls, like the RuleRegistry perf test.
+ */
 function bestOf(roots: TscnNode[], leaves: TscnNode[], trials: number): number {
   let best = Infinity;
   for (let t = 0; t < trials; t++) {
@@ -122,14 +98,9 @@ describe('NodePath helper lookup performance', () => {
     const bigTree = buildWideTree(BIG);
     const bigLeaves = collectLeaves(bigTree);
 
-    // Warm up JIT (and, for the fixed implementation, the per-tree scene
-    // index) so measured timings reflect steady-state cost, not one-time
-    // compilation/build. The unfixed implementation has no such warm state
-    // to benefit from — every call costs the same O(N) walk regardless.
-    // Built ONCE (not once per argument): `roots` and `leaves` must come
-    // from the SAME tree, or every lookup misses the scene index (the
-    // leaves aren't part of the tree the index was built from) and the
-    // warmup never exercises the cache-hit path it's meant to warm.
+    // Warm the JIT and the per-tree scene index, so timings reflect steady state.
+    // Built once: `roots` and `leaves` must come from the same tree, or every
+    // lookup misses the scene index and the warm-up never reaches the cache hit.
     const warmupTree = buildWideTree(200);
     runLookupsForEveryNode(warmupTree, collectLeaves(warmupTree));
     runLookupsForEveryNode(smallTree, smallLeaves);
@@ -139,10 +110,10 @@ describe('NodePath helper lookup performance', () => {
     // A generous threshold well below quadratic still clearly rejects it
     // while tolerating shared-machine noise.
     const THRESHOLD = 8;
-    // Best-of-N on the ratio itself: one measurement can straddle a load
-    // spike long enough to defeat the per-side best-of (see header comment);
-    // three independent measurements cannot all do so, while a real
-    // quadratic regression fails every one of them.
+    // Best of several ratios: one measurement can straddle a load spike longer than
+    // all its trials. A quadratic implementation (~16x) still fails every one: it
+    // would need the small side inflated ~2x across all trials while the big side
+    // runs clean, the pattern the per-side minimum removes.
     const RATIO_MEASUREMENTS = 3;
 
     let bestRatio = Infinity;

@@ -1,6 +1,4 @@
-/**
- * SpotLight3D parser - parses SpotLight3D nodes from TSCN.
- */
+/** SpotLight3D parser: the Light3D surface plus the cone properties. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { SpotLight3DProperties } from './types';

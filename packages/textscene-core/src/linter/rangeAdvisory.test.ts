@@ -1,8 +1,7 @@
 /**
- * Unit tests for the Range advisory combinator. Deliberately SYNTHETIC — no real
- * slice's data — so this covers the mechanics (presence, parse, NaN, direction,
- * floor, shared/distinct names) once, decoupled from any node type's bounds. Each
- * slice's own accept/reject tables keep asserting its real messages and rule names.
+ * The Range advisory combinator on synthetic tables, so the mechanics (presence,
+ * parse, NaN, direction, floor, shared and distinct names) are covered once. Each
+ * slice's own tables assert its real messages and rule names.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -33,8 +32,8 @@ describe('rangeAdvisories', () => {
     const table: RangeAdvisoryTable = { x: [{ over: 10, ruleName: 'x-over', message: (v) => `x is ${v}`, cite: 'light_3d.cpp:389' }] };
 
     // `inf` is a legal literal Godot stores unaltered (variant_parser.cpp:150-155),
-    // and it is above every bound. `parseFloat` read it as NaN, which the
-    // non-numeric guard then dropped, so the advisory silently stopped applying.
+    // and it is above every bound. `parseFloat` reads it as NaN, which the
+    // non-numeric guard drops.
     it('trips on inf, which is above every bound', () => {
       expect(rangeAdvisories(nodeWith({ x: 'inf' }), table)).toHaveLength(1);
     });

@@ -1,11 +1,8 @@
 /**
  * Diagnostics for a sprite sheet's frame keys, from the file-order replay in
- * `godot/spriteFrames.ts` — the same replay the render parsers draw from, so
- * what the linter reports and what the previewer shows never disagree.
- *
- * A refused write (ERR_FAIL_INDEX) is an error; a landed write a later
- * `hframes` line re-mapped is stored, so it is a warning. A grid literal no int
- * slot holds is phase 1's diagnostic: nothing at or below it is judged here.
+ * `godot/spriteFrames.ts` that the render parsers also draw from. A refused
+ * write (ERR_FAIL_INDEX) is an error, and a write a later `hframes` re-maps is
+ * a warning. A grid literal no int slot holds is phase 1's diagnostic.
  */
 
 import type { Diagnostic } from './types.js';

@@ -1,15 +1,8 @@
 /**
- * `buttonBase.ts` — the shared composite (StyleBox chrome + text + icon)
- * logic `nodes/2d/ui/button/nativeSolver.ts` and `Component.tsx` build
- * on. Expected numbers below are hand-derived from `Button::_notification`'s
- * `NOTIFICATION_DRAW` (`scene/gui/button.cpp:203-465`) and
- * `Button::_fit_icon_size` (`:469-479`), NOT recomputed the way the
- * implementation itself computes them — an independent worked example per
- * `AGENTS.md`'s test-authoring rule.
- *
- * `text.offset` is the paragraph's own BOX TOP-LEFT, straight out of the
- * source's formula — the MSDF bake's own line anchor is `<TextRun>`'s to
- * reconcile (`TextRun.test.tsx` pins it), never something this layout adds.
+ * Expected numbers are hand-derived from `Button::_notification`
+ * (`scene/gui/button.cpp:203-465`) and `Button::_fit_icon_size` (`:469-479`), not
+ * recomputed as the code does. `text.offset` is the paragraph box's top-left: the
+ * line anchor is `<TextRun>`'s (`TextRun.test.tsx`).
  */
 import { describe, expect, it } from 'vitest';
 import type { StyleBoxFlatData } from './styleBoxFlat';
@@ -181,13 +174,10 @@ describe('layoutButtonContent — text only, no icon', () => {
 });
 
 /**
- * `button.cpp:437-441` sets the paragraph's own width to
- * `Math::ceil(MAX(1.0f, drawable_size_remained.width))` and hands the
- * alignment to the TextServer, which measures every arm against THAT width
- * and floors its own half (`text_paragraph.cpp:887-922`, the block
- * `TextParagraph::draw` runs). Only the CENTER arm carries the box's own
- * `(drawable - text_buf_width) / 2`, and it is the only arm that does not
- * shift at all once the line is wider than the box (`:902`).
+ * `button.cpp:437-441` sets the paragraph width to
+ * `Math::ceil(MAX(1.0f, drawable_size_remained.width))`, and every arm measures
+ * against it (`text_paragraph.cpp:887-922`). Only CENTER adds
+ * `(drawable - text_buf_width) / 2`, and stops shifting once the line overflows (`:902`).
  */
 describe('layoutButtonContent — the paragraph box the alignment measures against', () => {
   it('CENTER floors its own half (text_paragraph.cpp:904)', () => {
@@ -363,18 +353,10 @@ describe('layoutButtonContent — no icon at all', () => {
 });
 
 /**
- * `Button::_notification`'s RTL side swap (`scene/gui/button.cpp:262-276`):
- *
- *     if (is_layout_rtl()) {
- *       if (horizontal_icon_alignment == HORIZONTAL_ALIGNMENT_RIGHT) { icon_align_rtl_checked = LEFT; }
- *       else if (horizontal_icon_alignment == HORIZONTAL_ALIGNMENT_LEFT) { icon_align_rtl_checked = RIGHT; }
- *       if (alignment == HORIZONTAL_ALIGNMENT_RIGHT) { align_rtl_checked = LEFT; }
- *       else if (alignment == HORIZONTAL_ALIGNMENT_LEFT) { align_rtl_checked = RIGHT; }
- *     }
- *
- * CENTER is absent from both ladders, so it never moves. Everything below the
- * swap (`:277-456`) then reads the swapped values and nothing else, so the
- * expected pixels are the LTR ones of the OPPOSITE alignment.
+ * `Button::_notification` swaps LEFT and RIGHT for icon and text under RTL
+ * (`scene/gui/button.cpp:262-276`), and CENTER never moves. The rest (`:277-456`)
+ * reads only the swapped values, so the expected pixels are the LTR ones of the
+ * opposite alignment.
  */
 describe('layoutButtonContent — RTL swaps the text alignment side', () => {
   it('lays LEFT-aligned text out at the RIGHT edge of the drawable box', () => {

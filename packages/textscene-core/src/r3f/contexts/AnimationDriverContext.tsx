@@ -1,20 +1,8 @@
 /**
- * Registry of animation DRIVERS keyed by scene-tree node path. A driver is an
- * AnimationPlayer or GLB animation driver that owns playable clips bound to a
- * THREE object; it publishes `{ object, clips }` here whenever its clips are
- * available (independent of selection — availability, not the transport).
- *
- * The point of indirection is the AnimationTree: it resolves its `anim_player`
- * NodePath to a node path, then looks that path up here to find the object to
- * root its blended mixer on and the clips to play. This unifies the two clip
- * sources — a GLB's ready-made glTF clips and an AnimationPlayer's clips built
- * from text Animation SubResources — behind one path → driver lookup.
- *
- * Two contexts on purpose: the REGISTER function is stable (its identity never
- * changes) so a publishing driver's effect doesn't re-fire — and re-register —
- * every time the map changes; the DRIVERS map is reactive so a consuming
- * AnimationTree re-renders when its target appears. Both hooks are null-safe
- * (like `useOptionalSelection`): no provider → no-op register / always null.
+ * Animation drivers by node path: an AnimationPlayer or a GLB driver publishes
+ * its object and clips whenever they are available, whatever the selection.
+ * An AnimationTree resolves its `anim_player` here. Without a provider,
+ * register does nothing and the lookup gives null.
  */
 
 import {
@@ -27,13 +15,13 @@ import {
 import type * as THREE from 'three';
 
 export interface AnimationDriverEntry {
-  /** Object to root a `THREE.AnimationMixer` on; clips bind to its descendants by name. */
+  /** The object a `THREE.AnimationMixer` roots on. Clips bind to its descendants by name. */
   object: THREE.Object3D;
   /** Ready-to-play clips this driver owns. */
   clips: THREE.AnimationClip[];
 }
 
-/** Publish a driver at `path`; returns a cleanup that unregisters it. */
+/** Publishes a driver at `path` and returns the cleanup. */
 export type RegisterDriver = (path: string, entry: AnimationDriverEntry) => () => void;
 
 const NO_OP_REGISTER: RegisterDriver = () => () => {};
@@ -46,12 +34,12 @@ const DriversContext =
   createContext<ReadonlyMap<string, AnimationDriverEntry>>(EMPTY_DRIVERS);
 DriversContext.displayName = 'AnimationDriversContext';
 
-/** Stable publisher for drivers (AnimationPlayer / GLB animation driver). */
+/** Stable, so a publishing driver's effect does not re-fire on every map change. */
 export function useRegisterDriver(): RegisterDriver {
   return useContext(RegisterDriverContext);
 }
 
-/** Reactive lookup for consumers (AnimationTree): the driver at `path`, or null. */
+/** Reactive, so an AnimationTree re-renders when its target appears. */
 export function useAnimationDriver(path: string | null): AnimationDriverEntry | null {
   const drivers = useContext(DriversContext);
   return path === null ? null : drivers.get(path) ?? null;
@@ -70,8 +58,7 @@ export function AnimationDriverProvider({ children }: { children: ReactNode }) {
     });
     return () => {
       setDrivers((prev) => {
-        // Only delete if this exact entry is still registered, so a remount
-        // that re-registers before the old cleanup fires isn't clobbered.
+        // Only this exact entry, so a remount that re-registered first survives.
         if (prev.get(path) !== entry) return prev;
         const next = new Map(prev);
         next.delete(path);

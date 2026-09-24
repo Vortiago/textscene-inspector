@@ -1,12 +1,8 @@
 /**
- * `menuButtonMinimumSize`/`menuButtonTextTheme` vs Godot 4.6.3. Sizing shares
- * `button/nativeSolver.test.ts`'s worked example (`unitsPerEm=2048`,
- * `ascent=2189`, `descent=600`, 'A' hmtx advance 1354 design units,
- * `content_margin`=4 all sides — MenuButton's own StyleBoxes are the SAME
- * `button_normal`/`button_disabled` objects, `default_theme.cpp:255-258`).
- * The one dedicated case below is the genuine divergence: MenuButton's own
- * `font_disabled_color` literal, `Color(1, 1, 1, 0.3)` (`:268`), not Button's
- * `control_font_disabled_color` (`:161`).
+ * Tests `menuButtonMinimumSize` and `menuButtonTextTheme` against Godot 4.6.3. Sizing reuses
+ * `button/nativeSolver.test.ts`'s example, since MenuButton's StyleBoxes are Button's objects
+ * (`default_theme.cpp:255-258`). The dedicated case is MenuButton's `font_disabled_color`,
+ * `Color(1, 1, 1, 0.3)` (`:268`), not Button's `control_font_disabled_color` (`:161`).
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -26,8 +22,8 @@ function node(props: Partial<MenuButtonProperties>): SolveNode {
     ...solveNode(),
     path: 'M',
     node: { name: 'M', type: 'MenuButton', children: [], properties: { name: 'M', ...props } as MenuButtonProperties },
-    // A local theme_override_colors/* reaches `resolveTextTheme` through
-    // `n.colors` (the walker folds it in unconditionally), not props.
+    // A local theme_override_colors/* reaches `resolveTextTheme` through `n.colors`, which the walker
+    // fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},
   };
 }

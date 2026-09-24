@@ -1,13 +1,7 @@
-; The ONE variable: `layout_direction = 3` (RTL) on the SubViewportContainer,
-; read by a container INSIDE the sub-viewport. `Control::is_layout_rtl`'s climb
-; casts each ancestor to `Control`, then to `Window`, then takes `get_parent()`
-; (control.cpp:3584-3598); a SubViewport is a `Viewport` and neither, so the
-; climb steps over it onto the container and `BoxContainer::_resort` lays the
-; bars out from the opposite edge (box_container.cpp:48). Every other RTL
-; fixture puts the flag on an ancestor in the SAME canvas, where no viewport
-; boundary is crossed, so a climb that stopped at one would still pass them.
-; The three bars have different widths so a reversal cannot be mistaken for a
-; mirror of equal blocks.
+; One variable: `layout_direction = 3` on the SubViewportContainer, read by a container inside the
+; sub-viewport. `Control::is_layout_rtl` casts each ancestor to `Control`, then `Window`, then
+; takes `get_parent()` (control.cpp:3584-3598). A SubViewport is neither, so the climb steps onto
+; the container and `BoxContainer::_resort` lays the bars from the other edge (box_container.cpp:48).
 
 [gd_scene format=3 uid="uid://unitsvpinheritrtl"]
 
@@ -16,6 +10,9 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; Every other RTL fixture sets the flag in the same canvas, crossing no viewport boundary, so a
+; climb that stopped at one would pass them. The bars differ in width, so a reversal is not a
+; mirror of equal blocks.
 [node name="Booth" type="SubViewportContainer" parent="."]
 layout_direction = 3
 offset_left = 64.0

@@ -1,8 +1,7 @@
 /**
- * MeshLibrary resolver — parses item/N/mesh, name, mesh_transform, and
- * mesh_cast_shadow out of a MeshLibrary .tres into the normalized model,
- * resolving mesh ExtResource ids to res:// paths against the file's own
- * ext_resources.
+ * MeshLibrary decode: item/N/mesh, name, mesh_transform and mesh_cast_shadow into
+ * the model, with mesh ExtResource ids resolved to res:// paths against the
+ * file's own ext_resources.
  */
 import { describe, it, expect } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
@@ -38,12 +37,10 @@ describe('meshLibraryFromTres', () => {
     expect(wall.meshTransform).toBeNull(); // no mesh_transform line
   });
 
-  // `MeshLibrary::_set` reads the index with a bare
-  // `prop_name.get_slicec('/', 1).to_int()` and no validity gate
-  // (mesh_library.cpp:40), and `to_int` SKIPS a character it cannot use
-  // (ustring.cpp:2280-2293), so `+7` is item 7 and `x` is item 0. A negative one
-  // dies in `create_item`'s `ERR_FAIL_COND(p_item < 0)` (:159) and the
-  // `set_item_*` that follows finds no item.
+  // `MeshLibrary::_set` reads the index with `prop_name.get_slicec('/', 1).to_int()`
+  // and no validity gate (mesh_library.cpp:40). `to_int` skips a character it cannot
+  // use (ustring.cpp:2280-2293): `+7` is item 7, `x` is item 0. A negative one dies in
+  // `create_item`'s `ERR_FAIL_COND(p_item < 0)` (:159), so `set_item_*` finds no item.
   it('resolves an item index the way to_int does', () => {
     const model = meshLibraryFromTres(
       parseTresFile(`[gd_resource type="MeshLibrary" format=3]
@@ -61,8 +58,8 @@ item/-1/name = "Dropped"
     expect(model.get(0)!.name).toBe('Zero');
   });
 
-  // `_set` reads FIXED slices — `get_slicec('/', 1)` for the index and
-  // `get_slicec('/', 2)` for the leaf (mesh_library.cpp:40-41) — and
+  // `_set` reads fixed slices, `get_slicec('/', 1)` for the index and
+  // `get_slicec('/', 2)` for the leaf (mesh_library.cpp:40-41), and
   // `get_slicec` returns that slice alone (ustring.cpp:941-964), so
   // `item/7/name/extra` sets item 7's name.
   it('applies a leaf carrying a trailing segment', () => {

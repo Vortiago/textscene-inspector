@@ -1,11 +1,7 @@
 /**
- * `toolbar.ts` vs the `menu_panel`/`menu_hbox` assembly GraphEdit's own
- * constructor builds (`scene/gui/graph_edit.cpp:3229-3324`) and the six
- * `show_*` setters that hide parts of it (`:2812-2870`).
- *
- * Every expected number is worked through Godot's own arithmetic by hand at
- * theme scale 1, against the fake measurer below — never read back off this
- * module.
+ * `toolbar.ts` versus GraphEdit's `menu_panel`/`menu_hbox` (`scene/gui/graph_edit.cpp:3229-3324`)
+ * and the six `show_*` setters (`:2812-2870`). Each expected number is Godot's
+ * arithmetic worked by hand at theme scale 1 against the fake measurer below.
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -17,7 +13,7 @@ function props(p: Partial<GraphEditProperties> = {}): GraphEditProperties {
   return { name: 'G', connections: [], ...p } as GraphEditProperties;
 }
 
-/** 8px per character, an 18px run height and a 19px font line pitch — round numbers so every expectation below is arithmetic, not measurement. */
+/** 8px per character, an 18px run height and a 19px font line pitch: round numbers so every expectation below is arithmetic, not measurement. */
 const metrics: ToolbarTextMetrics = {
   measure: (text) => ({ x: text.length * 8, y: 18 }),
   fontHeightPx: 19,
@@ -39,7 +35,7 @@ describe('zoomLabelText (GraphEdit::_update_zoom_label, graph_edit.cpp:2620-2624
 
 describe('graphEditToolbar item set (graph_edit.cpp:2812-2870)', () => {
   it('shows the zoom, grid, minimap and arrange controls by default, and no zoom label', () => {
-    // graph_edit.h:191-196 — every show_* but show_zoom_label defaults true.
+    // graph_edit.h:191-196: every show_* but show_zoom_label defaults true.
     expect(idsOf({})).toEqual([
       'zoom_minus',
       'zoom_reset',
@@ -104,11 +100,9 @@ describe('graphEditToolbar geometry (PanelContainer + HBoxContainer at scale 1)'
   });
 
   it('sizes the panel to the hbox minimum plus graph_toolbar_style\'s (4,2,4,2) margins', () => {
-    // Icon-only FlatButton: 2*4 margin + a 16px icon = 24x24 (button.cpp:481-526,
-    // default_theme.cpp:360-362). SpinBox: 8 + 4*8 em + an 18px buttons block
-    // wide, 8 + 19 tall (spin_box.cpp:82-86, line_edit.cpp:2443-2477).
-    // Label: max(4*8, 48) wide, max(18, 19) tall (label.cpp:973-997 + the
-    // 48*base_scale custom minimum, graph_edit.cpp:836).
+    // Icon-only FlatButton: 2*4 margin + a 16px icon = 24x24 (button.cpp:481-526, default_theme.cpp:360-362).
+    // SpinBox: 8 + 4*8 em + an 18px buttons block wide, 8 + 19 tall (spin_box.cpp:82-86, line_edit.cpp:2443-2477).
+    // Label: max(4*8, 48) by max(18, 19) (label.cpp:973-997, 48*base_scale at graph_edit.cpp:836).
     // 48 + 7*24 + 58 = 274, plus 8 separations of 4 = 306; tallest is 27.
     expect(bar.panelRect.w).toBe(306 + 8);
     expect(bar.panelRect.h).toBe(27 + 4);

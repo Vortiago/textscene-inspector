@@ -1,13 +1,7 @@
 /**
- * MenuBar strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts.
- *
- * One case per property (happy, malformed, and any bound), with the governing
- * Godot source line quoted beside every numeric bound.
+ * Tests the MenuBar strict validators through `validatorRegistry`, so a failure points at the
+ * validator, not at scene parsing, and no fixture text needs upkeep. One case per property, with the
+ * Godot source line beside every numeric bound. Rule behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,14 +17,12 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * MenuBar binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * Set exactly one, from the source: the keys MenuBar binds, or DECLARES_NOTHING when it binds no
+ * ADD_PROPERTY. Both unset is red on purpose. Never delete an assertion to go green.
  */
 const KEYS: string[] = [
-  // The six ADD_PROPERTY calls in MenuBar::_bind_methods (menu_bar.cpp:751-758).
-  // `focus_mode` is not among them: doc/classes/MenuBar.xml:103 marks it
-  // overrides="Control", a default-value change only, so Control owns it.
+  // The six ADD_PROPERTY calls in MenuBar::_bind_methods (menu_bar.cpp:751-758). `focus_mode` is not
+  // among them: doc/classes/MenuBar.xml:103 marks it overrides="Control", a default change only.
   'flat',
   'start_index',
   'switch_on_hover',
@@ -38,7 +30,7 @@ const KEYS: string[] = [
   'text_direction',
   'language',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 describe('MenuBar strict validators', () => {
@@ -51,10 +43,8 @@ describe('MenuBar strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // Runs the fixture's zero-diagnostic claim against what this test imports. `fixtureLint` runs the
+    // whole registry but needs the barrel, which imports every slice.
     expectFixtureClean('unit-menu-bar.tscn');
   });
 
@@ -91,9 +81,8 @@ describe('MenuBar strict validators', () => {
   });
 
   describe('start_index', () => {
-    // menu_bar.cpp:752 `PropertyInfo(Variant::INT, "start_index")` carries no
-    // hint at all, so no end is bounded, and set_start_index
-    // (menu_bar.cpp:836-844) stores whatever it is given.
+    // menu_bar.cpp:752 `PropertyInfo(Variant::INT, "start_index")` has no hint, so no end is bounded,
+    // and set_start_index (menu_bar.cpp:836-844) stores whatever it is given.
     it('accepts the -1 default and any non-negative position', () => {
       expect(check('start_index', '-1')).toBeNull();
       expect(check('start_index', '0')).toBeNull();
@@ -101,8 +90,8 @@ describe('MenuBar strict validators', () => {
     });
 
     it('accepts a value far outside any plausible menu count, because nothing bounds it', () => {
-      // A large index is not clamped: bind_global_menu (menu_bar.cpp:229-244)
-      // simply finds no earlier MenuBar and appends at the end.
+      // A large index is not clamped: bind_global_menu (menu_bar.cpp:229-244) finds no earlier MenuBar
+      // and appends at the end.
       expect(check('start_index', '100000')).toBeNull();
       expect(check('start_index', '-9999')).toBeNull();
     });
@@ -125,16 +114,15 @@ describe('MenuBar strict validators', () => {
     });
 
     it('warns on -1: the setter loads it, the hint does not offer it', () => {
-      // The setter allows it (its ERR_FAIL_COND opens below -1), so it loads —
-      // and the hint (0-3) does not offer it, so it warns rather than erroring.
+      // The setter allows it, since its ERR_FAIL_COND opens below -1, so it loads. The hint (0-3)
+      // does not offer it, so it warns instead of erroring.
       expect(check('text_direction', '-1')?.severity).toBe('warning');
     });
 
     it('errors below the enforced floor', () => {
       const error = check('text_direction', '-2');
       expect(error).not.toBeNull();
-      // The setter refuses the write outright, so this is the error tier, not
-      // the hint's warning tier.
+      // The setter refuses the write, so this is the error tier, not the hint's warning tier.
       expect(error!.severity).toBe('error');
     });
 
@@ -151,8 +139,8 @@ describe('MenuBar strict validators', () => {
 
   describe('language', () => {
     it('accepts a quoted locale id and the empty default', () => {
-      // menu_bar.cpp:758 PROPERTY_HINT_LOCALE_ID with an empty hint string;
-      // set_language (menu_bar.cpp:813-819) assigns any string.
+      // menu_bar.cpp:758 PROPERTY_HINT_LOCALE_ID with an empty hint string. set_language
+      // (menu_bar.cpp:813-819) assigns any string.
       expect(check('language', '"en"')).toBeNull();
       expect(check('language', '"nb_NO"')).toBeNull();
       expect(check('language', '""')).toBeNull();
@@ -172,8 +160,8 @@ describe('MenuBar strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose, and catches a key added above without one.
+    // A validator that accepts arbitrary prose validates no format. This generic check also catches a
+    // key added above without one.
     const accepted = validatorRegistry
       .getOwnKeys('MenuBar')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);

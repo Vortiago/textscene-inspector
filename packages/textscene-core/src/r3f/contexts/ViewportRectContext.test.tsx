@@ -1,16 +1,7 @@
 /**
- * The forced-rect registry. Its behaviour is the same shape as
- * `ViewportTextureContext`'s, but two properties are load-bearing here in a way
- * they are not there, because the publisher is a `ResizeObserver`:
- *
- *  - an unchanged measurement must not produce a new map, or every layout pass
- *    re-renders the sub-viewport and re-allocates its render target;
- *  - "no rect" must stay distinguishable from "a rect of zero", because the
- *    consumer falls back to the authored `size` on the former;
- *  - a departing mount's cleanup must not clobber a remount's registration,
- *    which the sibling registries' entry-identity guard cannot catch here: the
- *    unchanged-measurement bail leaves the old mount's object in the map, so
- *    the two registrations are indistinguishable by entry alone.
+ * The forced-rect registry, whose publisher is a `ResizeObserver`. An unchanged
+ * measurement keeps the map, "no rect" differs from a zero rect, and a
+ * departing mount's cleanup leaves a remount's registration alone.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -33,7 +24,7 @@ function Reader({ path, onRender }: { path: string; onRender?: (r: ViewportRect 
   return <span data-testid="rect">{rect ? `${rect.x}x${rect.y}` : 'none'}</span>;
 }
 
-/** Exposes the register function so a test can drive it like an observer would. */
+/** Exposes the register function, so a test drives it as an observer does. */
 function Publisher({ onReady }: { onReady: (fn: ReturnType<typeof useRegisterViewportRect>) => void }) {
   const register = useRegisterViewportRect();
   useEffect(() => onReady(register), [register, onReady]);
@@ -79,9 +70,8 @@ describe('ViewportRectContext', () => {
   });
 
   /**
-   * The one that matters for the ResizeObserver: it fires on every layout
-   * pass, and a fresh Map per call would re-render the sub-viewport and
-   * re-create its render target each time.
+   * The ResizeObserver fires on every layout pass, and a fresh Map would
+   * re-render the sub-viewport and re-create its render target each time.
    */
   it('does not re-render a consumer when the measurement is unchanged', () => {
     let register!: ReturnType<typeof useRegisterViewportRect>;
@@ -170,9 +160,8 @@ describe('ViewportRectContext', () => {
   });
 
   /**
-   * The same race with an unchanged measurement, which an entry-identity guard
-   * cannot see: the fast path leaves the map holding the object the departing
-   * mount registered, so only ownership distinguishes the two registrations.
+   * The same race with an unchanged measurement: the map keeps the departing
+   * mount's object, so only ownership tells the two registrations apart.
    */
   it('a stale cleanup does not delete a successor’s equal rect', () => {
     let register!: ReturnType<typeof useRegisterViewportRect>;
@@ -221,9 +210,8 @@ describe('ViewportRectContext', () => {
   });
 
   /**
-   * The publisher's identity is load-bearing: the container holds it in its
-   * effect deps, so a churning one would release and re-register on every
-   * render. Reading the map here is what makes this component re-render at all.
+   * The container holds the publisher in its effect deps, so a new identity
+   * would re-register on every render. The map read makes this component re-render.
    */
   it('keeps the register function identity stable across map changes', () => {
     let register!: ReturnType<typeof useRegisterViewportRect>;
@@ -286,10 +274,8 @@ describe('ViewportRectContext', () => {
 
 describe('a sub-viewport sized by a forced rect', () => {
   /**
-   * The consumer's whole contract, stated where both halves are visible: the
-   * forced rect wins when there is one, and the authored `size` stands when
-   * there is not — which is Godot's early return for a non-stretching
-   * container, and the only behaviour for a sub-viewport with no container.
+   * The forced rect wins when there is one, else the authored `size` stands, as
+   * in Godot's early return for a non-stretching container.
    */
   function Sized({ path, authored }: { path: string; authored: ViewportRect }) {
     const forced = useViewportRect(path);

@@ -1,8 +1,6 @@
 /**
- * `StyleBox` — the theme resource a Control paints its box with. Godot has a
- * family of them; this slice decodes the two the 2D overlay can express in CSS:
- * `StyleBoxFlat` (fill, border, corner radius, content margins, drop shadow) and
- * `StyleBoxEmpty` (paints nothing).
+ * `StyleBox`: the theme resource a Control paints its box with. This slice
+ * decodes the two that CSS can express: `StyleBoxFlat` and `StyleBoxEmpty`.
  */
 
 import type { Color } from '../../../utils/colorParser';

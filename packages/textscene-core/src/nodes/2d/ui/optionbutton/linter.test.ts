@@ -1,9 +1,6 @@
 /**
- * OptionButton selected-vs-item_count cross-field advisory.
- *
- * See linter.ts for why this is a warning rather than an error: the outcome
- * of an out-of-range `selected` depends on the file's own property order,
- * which this rule (like the engine's property bag) cannot observe.
+ * Tests the OptionButton advisory on `selected` against `item_count`. It warns, not errors, since the
+ * outcome depends on property order, which the rule cannot see (linter.ts).
  */
 
 import { readFileSync } from 'node:fs';
@@ -13,14 +10,9 @@ import { node, scene, lint } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
-// Every assertion below filters by THIS rule's own `ruleName` rather than
-// asserting a scene is clean overall (`expectClean`/zero total diagnostics):
-// `lint()` shares one process-wide rule registry, and a full test-suite run
-// loads every slice's `linter.ts` into it, including sibling slices under
-// concurrent edit in this same wave. A rule-scoped assertion only depends on
-// what THIS rule reports; an unscoped "clean" assertion would also depend on
-// every other rule that happens to match OptionButton (e.g. anything
-// reaching it via BaseButton/Control) never firing on the same fixture.
+// Each assertion filters by this rule's `ruleName`: `lint()` shares one process-wide rule registry that
+// holds every slice's rules, so a whole-scene "clean" check would depend on every other rule that reaches
+// OptionButton, for example through BaseButton or Control.
 describe('optionbutton-selected-out-of-range', () => {
   const findings = (content: string) =>
     lint(content).filter((d) => d.ruleName === 'optionbutton-selected-out-of-range');
@@ -73,10 +65,8 @@ describe('optionbutton-selected-out-of-range', () => {
   });
 
   it('stays silent on the real fixture (selected = 1 within item_count = 3)', () => {
-    // This rule's own share of the "zero errors and zero warnings" claim; the
-    // full per-line sweep (every validator, every property) lives in
-    // linterParser.test.ts, which goes through `findValidator` directly and
-    // touches no shared rule registry at all.
+    // This rule's share of the zero-diagnostic claim. linterParser.test.ts checks every validator
+    // through `findValidator`, with no shared rule registry.
     const fixturePath = join(
       import.meta.dirname,
       '../../../../../../../scenes/fixtures/unit-optionbutton.tscn'

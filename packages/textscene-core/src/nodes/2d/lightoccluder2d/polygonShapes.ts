@@ -6,15 +6,10 @@ import {
 } from '../../../r3f/lighting2d/shadowVolumes';
 
 /**
- * Utility: convert a flat `PackedVector2Array` `[x0,y0, x1,y1, …]` + `closed`
- * flag into flat `[ax,ay,0, bx,by,0, …]` segment positions for <lineSegments>.
- *
- * Closed polygon: N segments (v0→v1, v1→v2, …, vN-1→v0).
- * Open polygon: N-1 segments (v0→v1, …, vN-2→vN-1).
- *
- * A dangling odd trailing coordinate is ignored (whole points only, via
- * `floor(length / 2)`) rather than read past the end as a NaN. Returns null
- * for fewer than 2 whole points.
+ * A flat `PackedVector2Array` `[x0,y0, x1,y1, …]` as flat `[ax,ay,0, bx,by,0, …]`
+ * segment positions: N segments when `closed` (vN-1→v0 wraps), N-1 when open.
+ * A dangling odd coordinate is ignored, not read as NaN. Null for fewer than 2
+ * whole points.
  */
 export function polygonToSegments(points: ArrayLike<number>, closed: boolean): Float32Array | null {
   const n = Math.floor(points.length / 2);
@@ -24,11 +19,11 @@ export function polygonToSegments(points: ArrayLike<number>, closed: boolean): F
   const out = new Float32Array(segCount * 2 * 3);
 
   for (let i = 0; i < segCount; i++) {
-    // For the open case (segCount = n-1) i+1 is always < n, so the modulo
-    // yields i+1 — one expression covers both closed wrap and open chain.
+    // Open (segCount = n-1), i+1 is always < n, so the modulo covers both the
+    // closed wrap and the open chain.
     const j = (i + 1) % n;
     const o = i * 6;
-    // Godot Y is down; three Y is up → negate. `0 - v` (not `-v`) keeps a zero
+    // Godot Y is down. Three Y is up → negate. `0 - v` (not `-v`) keeps a zero
     // input at +0, matching the repo's node2dTransform / navigationOverlay idiom.
     out[o] = points[i * 2]!;
     out[o + 1] = 0 - points[i * 2 + 1]!;
@@ -42,12 +37,9 @@ export function polygonToSegments(points: ArrayLike<number>, closed: boolean): F
 }
 
 /**
- * `OccluderPolygon2D.cull_mode`, read from the raw sub-resource property.
- *
- * Godot's default is CULL_DISABLED, and the value is written as the bare enum
- * ordinal. Anything outside 0..2 falls back to DISABLED — the mode that casts
- * from every edge, so a scene with a garbled value still shadows rather than
- * silently going transparent.
+ * `OccluderPolygon2D.cull_mode` from the raw sub-resource property, a bare enum
+ * ordinal. Anything outside 0..2 falls back to Godot's default CULL_DISABLED,
+ * which casts from every edge, so a garbled value still shadows.
  */
 export function parseOccluderCullMode(raw: string | undefined): OccluderCullMode {
   const value = intOr(raw, OCCLUDER_CULL_DISABLED, 'OccluderPolygon2D.cull_mode');

@@ -1,9 +1,7 @@
 /**
- * ColorPickerButton registration — native (WebGL canvas) painter. Its
- * minimum size is Button's own (`Button::get_minimum_size_for_text_and_icon`
- * unmodified — ColorPickerButton overrides no minimum-size method), reused
- * rather than re-derived so its text-shaping `meta` (`nativeSolver.ts`'s own
- * doc) reaches this node's re-used `<Button>` chrome too.
+ * ColorPickerButton registration: the native (WebGL canvas) painter and
+ * Button's minimum size, since ColorPickerButton overrides no minimum-size method.
+ * Reusing it also hands the text-shaping `meta` to the `<Button>` chrome.
  */
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';

@@ -1,11 +1,8 @@
 /**
- * Core TSCN parsing logic - the single scanning loop shared by renderer and linter
- *
- * This module contains the shared parsing loop logic without any three.js dependencies.
- * It accepts a node creator callback to allow different implementations for rendering vs.
- * linting, plus an optional ParseObserver so the strict (linting) path can collect
- * errors and run validators without duplicating the loop. With no observer, the loop
- * behaves exactly like the lenient renderer path always has (skip-and-continue recovery).
+ * The one TSCN scanning loop, shared by renderer and linter, with no three.js
+ * dependency. A node-creator callback builds each node. An optional ParseObserver lets
+ * the strict path collect errors and run validators. With no observer the loop keeps
+ * the lenient skip-and-continue recovery.
  */
 
 import { resolveDeprecatedProperty } from '../godot/deprecated.js';
@@ -40,10 +37,8 @@ import * as logger from '../logger.js';
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
 
 /**
- * Callback function to create a TscnNode from parsed heading and properties
- * Different implementations:
- * - Renderer: Uses NodeRegistry with three.js
- * - Linter: Creates simple node without three.js dependency
+ * Builds a TscnNode from a parsed heading and its properties. The renderer uses
+ * NodeRegistry. The linter builds a plain node with no three.js dependency.
  */
 export type NodeCreator = (
   heading: ParsedHeading,
@@ -60,12 +55,9 @@ export interface ParseObserver {
   /** A heading parsed successfully and a new section begins. */
   onSectionStart?(heading: ParsedHeading, section: SectionType, line: number): void;
   /**
-   * A property value completed (after any multiline accumulation). `line` is the
-   * property's STARTING line; `ownerType` is the type the section's properties
-   * belong to — the heading's own `type=` for node/sub_resource, the
-   * `[gd_resource type="…"]` header's for a `[resource]` body, undefined
-   * elsewhere; `isMultiline` is true when the value spans multiple physical
-   * lines.
+   * A property value completed, after any multiline accumulation. `line` is its
+   * starting line. `ownerType` is the heading's `type=` for node/sub_resource, the
+   * `[gd_resource type="…"]` header's for a `[resource]` body, else undefined.
    */
   onProperty?(
     section: SectionType,
@@ -78,9 +70,8 @@ export interface ParseObserver {
 }
 
 /**
- * Core TSCN parser without three.js dependencies.
- * The ONE scanning loop: lenient rendering uses it bare; strict linting attaches
- * a ParseObserver (see StrictTscnParser) to collect errors and run validators.
+ * Lenient rendering uses the loop bare. Strict linting attaches a ParseObserver (see
+ * StrictTscnParser) to collect errors and run validators.
  */
 export class TscnParserCore {
   /**
@@ -92,17 +83,13 @@ export class TscnParserCore {
    */
   parse(content: string, nodeCreator: NodeCreator, observer?: ParseObserver): TscnScene {
     logger.info('[Parser] Starting TSCN parsing');
-    // Split on CRLF or LF so Windows-authored .tscn files don't leave a
-    // trailing \r on each line (which would otherwise corrupt accumulated
-    // multi-line string values).
+    // Split on CRLF or LF: a trailing \r on each line of a Windows-authored file
+    // would corrupt accumulated multi-line string values.
     const lines = content.split(/\r?\n/);
 
-    // Every node beside the line its heading is on, in scan order. The line
-    // lives here rather than on `TscnNode` because only the orphan report below
-    // reads it, and every node in the tree would otherwise carry a field
-    // nothing else uses. One array, not two: a parallel `nodes` list is an
-    // invariant two push sites have to keep, and a missed push yields an orphan
-    // with no line.
+    // Every node beside its heading's line, in scan order. The line lives here, not on
+    // `TscnNode`, because only the orphan report reads it. One array, not a parallel
+    // `nodes` list, which two push sites would have to keep in step.
     const origins: NodeOrigin[] = [];
     const externalResources: TscnExternalResource[] = [];
     const internalResources: TscnInternalResource[] = [];
@@ -110,20 +97,16 @@ export class TscnParserCore {
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
     let currentHeadingLine = 0;
-    // The type a standalone `.tres` declares once, in its file header. Its
-    // `[resource]` body carries no type of its own — `res_type` comes from the
-    // header (resource_format_text.cpp:1166) and is what
-    // `ClassDB::instantiate(res_type)` builds when the `resource` tag opens
-    // (:741). A `.tscn` has no such header, so this stays undefined there.
+    // The type a `.tres` header declares. Its `[resource]` body has no type:
+    // `res_type` comes from the header (resource_format_text.cpp:1166) and
+    // `ClassDB::instantiate(res_type)` builds it when the tag opens (:741). A `.tscn`
+    // has no such header, so this stays undefined there.
     let headerResourceType: string | undefined;
     let currentProperties: Record<string, string> = {};
-    // Accumulator for a string value whose opening quote isn't closed on its
-    // own line (Godot multi-line text). Subsequent raw lines are appended
-    // until the quote balances. Tracks the starting line for the observer.
-    // Lines accumulate in an array (joined only once, when the value closes)
-    // and `scanState` carries the string/bracket-balance scan forward one
-    // chunk at a time — both O(total length) overall, not O(length^2) (a
-    // naive `+=` re-copy plus a full rescan from index 0 on every new line).
+    // A string value whose quote does not close on its own line. Raw lines append
+    // until the quote balances. The array is joined once, and `scanState` carries
+    // the balance scan forward one chunk at a time: O(total length), where a `+=`
+    // plus a full rescan per line is O(length^2).
     let pendingMultiline: {
       key: string;
       lines: string[];
@@ -171,8 +154,7 @@ export class TscnParserCore {
 
     const storePending = () => {
       if (pendingMultiline && currentHeading) {
-        // Join happens exactly once per value, here — O(total length), not
-        // per appended line.
+        // The one join per value: O(total length), not one per appended line.
         const value = pendingMultiline.lines.join('\n');
         const resolved = resolveDeprecatedProperty(currentOwnerType(), pendingMultiline.key, value);
         currentProperties[resolved.key] = resolved.value;
@@ -194,23 +176,17 @@ export class TscnParserCore {
       const line = stripLineComment(lines[i]!, pendingMultiline?.scanState.inString ?? false);
       const lineNumber = i + 1;
 
-      // Inside an open multi-line string: append raw lines (preserving blank
-      // lines within the string) until the quote balances. Only a REAL section
-      // heading (`[node …]`, `[ext_resource …]`, …) means the string was never
-      // closed — salvage it and fall through so the heading is still processed.
-      // Lines that merely look like headings — BBCode tags (`[u]…[/u]`,
-      // `[center]`) and bracketed array/dict content — are string CONTENT and
-      // must keep accumulating; `isSectionHeading` (not `isHeading`) draws that
-      // line.
+      // Inside an open string, append raw lines, blank ones included. Only a real
+      // section heading means the string never closed: salvage it and process the
+      // heading. BBCode tags and bracketed content are string content, so
+      // `isSectionHeading`, not `isHeading`, decides.
       if (pendingMultiline) {
         if (isSectionHeading(line)) {
           storePending();
         } else {
-          // Append the line (not a re-concatenated string) and advance the
-          // scan by just this chunk — a `\n` line separator affects neither
-          // `inString` nor `depth`, so scanning `line` alone (without joining
-          // it in first) yields the identical state as scanning the joined
-          // string would.
+          // Scan only this chunk: a `\n` separator affects neither `inString` nor
+          // `depth`, so scanning `line` alone yields the state the joined string
+          // would.
           pendingMultiline.lines.push(line);
           pendingMultiline.scanState = scanValueChunk(line, pendingMultiline.scanState);
           if (!isIncompleteState(pendingMultiline.scanState)) storePending();
@@ -244,9 +220,9 @@ export class TscnParserCore {
           });
         }
       } else {
-        // A line that opens a bracket but never parses as a heading is a
-        // malformed heading (e.g. missing the closing ']'). The lenient path
-        // keeps its historical recovery below; strict consumers get the error.
+        // A line that opens a bracket but never parses as a heading is malformed,
+        // for example a missing ']'. The lenient path recovers below. Strict
+        // consumers get the error.
         const malformedHeading = line.trim().startsWith('[');
         if (malformedHeading) {
           observer?.onError?.({
@@ -280,13 +256,10 @@ export class TscnParserCore {
               scanState,
             };
           } else {
-            // Stored under the name the SETTER writes and with the literal it
-            // receives: a pre-4.0 alias like `frames` is the same field as
-            // `sprite_frames` to the engine, and `extents` is `size` doubled, so
-            // every reader downstream — typed parser, render component and
-            // rule alike — sees one key and one value. The observer still
-            // receives both as written, because a diagnostic must name what is
-            // in the file.
+            // Stored under the name and literal the setter receives: a pre-4.0 alias like
+            // `frames` is `sprite_frames`, and `extents` is `size` doubled, so every
+            // reader sees one key and one value. The observer gets both as written,
+            // since a diagnostic names what is in the file.
             const resolved = resolveDeprecatedProperty(
               currentOwnerType(),
               property.key,

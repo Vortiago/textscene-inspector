@@ -1,10 +1,7 @@
 /**
- * Nodes that drive another node's transform or animation state: `AnimationTree`,
- * the `PathFollow` pair and the `RemoteTransform` pair.
- *
- * Both `PathFollow` classes reach the same `push_back` from two placements —
- * `cast_to<Path2D>(get_parent())` is null at the scene root too — and this repo
- * gives the parentless case its own rule name, so each placement is its own row.
+ * Nodes that drive another node's transform or animation state: `AnimationTree`, the `PathFollow` pair and the
+ * `RemoteTransform` pair. Each `PathFollow` reaches one `push_back` from two placements (`cast_to<Path2D>(get_parent())`
+ * is null at the scene root too), and the parentless case has its own rule name, so each placement is its own row.
  */
 import type { WarningRow } from './types.js';
 

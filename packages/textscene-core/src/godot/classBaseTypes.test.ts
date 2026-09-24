@@ -1,9 +1,6 @@
 /**
- * The merged ancestry table, and the two ways merging it could go wrong.
- *
- * A spread keeps the last of a colliding pair silently, and a filtered capture
- * drops a hop silently. Both would show up as a property that stops being
- * validated in scenes nobody runs a test over, so each is pinned here.
+ * The merged ancestry table. A spread keeps the last of a colliding pair and a filtered capture drops
+ * a hop, both in silence, and either stops a property being validated, so each is pinned here.
  */
 
 import { describe, expect, it } from 'vitest';

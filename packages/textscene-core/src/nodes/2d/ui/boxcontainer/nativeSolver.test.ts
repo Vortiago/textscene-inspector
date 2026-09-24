@@ -1,11 +1,8 @@
 /**
- * A `BoxContainer` must lay out identically to a fixed-axis sibling given the
- * same `vertical` and the same children — that IS the base/subclass
- * relationship (`box_container.h`'s `HBoxContainer()`/`VBoxContainer()` each
- * just call `BoxContainer(bool)`). Verified two ways: exact numbers derived
- * from `BoxContainer::_resort`/`get_minimum_size` (`box_container.cpp:41-235`,
- * `:238-271`), and a differential check against the REAL registered
- * HBoxContainer/VBoxContainer solvers.
+ * A `BoxContainer` lays out like its fixed-axis sibling at the same `vertical`, since
+ * `HBoxContainer()` and `VBoxContainer()` call `BoxContainer(bool)` (`box_container.h`).
+ * Checked against numbers from `box_container.cpp:41-235` and `:238-271`, and against
+ * the registered HBoxContainer and VBoxContainer solvers.
  */
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../../parser/types';
@@ -54,7 +51,7 @@ describe('BoxContainer native layout — exact numbers', () => {
     const ctx = createSolveContext(THEME);
     const solved = solveControlTree([root], VIEWPORT, ctx);
 
-    // box_container.cpp:181-235 — neither child stretches (SIZE_FILL only, no
+    // box_container.cpp:181-235: neither child stretches (SIZE_FILL only, no
     // SIZE_EXPAND), so each takes its own minimum on the main axis and the
     // full cross axis (fit_child_in_rect only shrinks when FILL is absent).
     expect(solved.get('Box/A')?.rect).toEqual({ x: 0, y: 0, w: 20, h: 50 });
@@ -73,10 +70,8 @@ describe('BoxContainer native layout — exact numbers', () => {
   });
 
   it('BoxContainer::get_minimum_size (box_container.cpp:238-271) — main axis sums plus one separation', () => {
-    // Two contexts: the minimum-size cache is keyed by PATH, and both roots
-    // reuse path 'Box' — sharing one context would return the FIRST call's
-    // cached answer for the second (see the sibling-comparison tests' own
-    // note for the same hazard).
+    // Two contexts: the minimum-size cache is keyed by path, and both roots
+    // use path 'Box', so one context would return the first call's answer twice.
     const rootH = boxRoot('BoxContainer', false, [child('A', { x: 20, y: 10 }), child('B', { x: 30, y: 15 })]);
     const rootV = boxRoot('BoxContainer', true, [child('A', { x: 20, y: 10 }), child('B', { x: 30, y: 15 })]);
     expect(createSolveContext(THEME).combinedMinimumSize(rootH)).toEqual({ x: 20 + 4 + 30, y: 15 });
@@ -86,10 +81,8 @@ describe('BoxContainer native layout — exact numbers', () => {
 
 describe('BoxContainer at vertical=X matches its fixed-axis sibling', () => {
   it('vertical=true produces the SAME child rects as VBoxContainer given the same children', () => {
-    // Separate contexts: `createSolveContext`'s minimum-size cache is keyed by
-    // PATH alone, and both trees reuse path 'Box/A'/'Box/B' on purpose (same
-    // children) — sharing one context would let the second solve silently
-    // read back the first's cached values instead of genuinely recomputing.
+    // Separate contexts: the minimum-size cache is keyed by path alone, and both
+    // trees use 'Box/A' and 'Box/B', so one context would return the first solve's values.
     const boxKids = [child('A', { x: 20, y: 10 }), child('B', { x: 30, y: 15 })];
     const vboxKids = [child('A', { x: 20, y: 10 }), child('B', { x: 30, y: 15 })];
     const boxSolved = solveControlTree([boxRoot('BoxContainer', true, boxKids)], VIEWPORT, createSolveContext(THEME));

@@ -1,33 +1,8 @@
 /**
- * The parallax scroll model — pure math, no THREE and no React, so every branch
- * is asserted directly instead of being inferred from a rendered frame.
- *
- * Godot drives it from the CURRENT Camera2D of the background's own viewport
- * (`ParallaxBackground::_notification` joins `"__cameras_" + viewport id`, the
- * group `Camera2D::_update_scroll` calls). `_camera_moved` takes the camera's
- * CANVAS transform and reads two numbers off it:
- *
- *     set_scroll_scale(p_transform.get_scale().dot(Vector2(0.5, 0.5)));
- *     set_scroll_offset(p_transform.get_origin());
- *
- * That transform is `Camera2D::get_camera_transform()`, which builds
- * `scale_basis(1/zoom)` + `set_origin(screen_rect.position)` and returns its
- * `affine_inverse()` — so its basis is `zoom` and its origin is
- * `-zoom * view_top_left`. Hence `scrollOffset = -zoom * topLeft`, and
- * `scrollScale` is that basis dotted with `(0.5, 0.5)`, i.e. the mean of the two
- * zoom axes. A single axis is read here instead, matching `camera2DView`, which
- * frames on `zoom.x` alone: no camera in the corpus has a non-uniform zoom, and
- * splitting the two readings would put the parallax on a different zoom from the
- * view it is anchored to.
- *
- * **With no current Camera2D nothing here runs at all.** `_update_scroll` and
- * `set_base_offset_and_scale` both early-return while the node is outside the
- * tree, and a `.tscn` applies every property before `add_child`, so a scene that
- * loads without a camera never repositions its layers: they keep the authored
- * `position`/`scale` and `scroll_base_offset` / `motion_scale` / `motion_offset`
- * are all inert. Measured through Godot 4.6.3 — a ParallaxBackground with
- * `scroll_base_offset = Vector2(0, 200)` and a layer at `motion_offset =
- * Vector2(300, 0)` drew both layers at the origin.
+ * The parallax scroll model, as pure math so every branch is tested directly.
+ * Godot drives it from the current Camera2D of the background's own viewport
+ * (the `"__cameras_" + viewport id` group). With none, nothing runs: the layers
+ * keep their authored pose, and every scroll and motion key is inert.
  */
 
 import type { Vector2 } from '../../base/node2d/types';
@@ -60,7 +35,7 @@ export interface ParallaxScrollProperties {
 export interface ParallaxScroll {
   /** `set_base_offset_and_scale`'s `p_offset`. */
   offset: Vector2;
-  /** `set_base_offset_and_scale`'s `p_scale` — a scalar, not a Vector2. */
+  /** `set_base_offset_and_scale`'s `p_scale`: a scalar, not a Vector2. */
   scale: number;
 }
 
@@ -72,28 +47,22 @@ export interface ParallaxLayerMotion {
 }
 
 /**
- * The pose a ParallaxLayer is FORCED to, overwriting its authored one:
- * `set_position(new_ofs)` and `set_scale(Vector2(1, 1) * p_scale * orig_scale)`
- * both assign rather than compose, so `orig_offset` / `orig_scale` (the values
- * recorded on `NOTIFICATION_ENTER_TREE`) are inputs to the formula, never a
- * transform it stacks onto.
+ * The pose a ParallaxLayer is forced to. `set_position` and `set_scale` assign,
+ * not compose, so `orig_offset` and `orig_scale` (recorded on
+ * `NOTIFICATION_ENTER_TREE`) are inputs to the formula, not a transform below it.
  */
 export interface ParallaxLayerPose {
   /** Godot canvas pixels, relative to the ParallaxBackground's canvas. */
   position: Vector2;
-  /** Uniform factor applied ON TOP of the layer's authored scale. */
+  /** Uniform factor applied on top of the layer's authored scale. */
   scale: number;
 }
 
 /**
- * Turn an orthographic view rect into the framing `parallaxScroll` needs.
- *
- * `left`/`right`/`top`/`bottom`/`x`/`y` describe the three.js camera (Y up);
- * the 2D world canvas negates Y (`node2dTransform`), so the Godot-space top edge
- * is the three-space `+Y` one. `cameraZoom` is the Camera2D's own magnification,
- * which is what separates "how many world pixels the view spans" (the frustum)
- * from "how many device pixels the viewport has" (frustum × zoom) — the
- * distinction `_update_scroll`'s limit clamp turns on.
+ * Turns a three.js orthographic view rect (Y up) into Godot framing: the canvas
+ * negates Y, so the Godot top edge is three's `+Y` one. `cameraZoom` separates
+ * the world span (the frustum) from the device pixels (frustum × zoom), which
+ * `_update_scroll`'s limit clamp needs.
  */
 export function parallaxViewFraming(
   rect: { left: number; right: number; top: number; bottom: number; x: number; y: number; zoom?: number },
@@ -113,17 +82,18 @@ export function parallaxViewFraming(
 }
 
 /**
- * `ParallaxBackground::_update_scroll()`, in its own order: build the scroll,
- * NEGATE it, clamp the negated value into the limits (which is why the limits
- * read as screen-space bounds rather than offsets), negate back.
- *
- * A limit pair only bites when `begin < end` on that axis — Godot's own guard,
- * and the reason the default `Vector2(0, 0)` / `Vector2(0, 0)` pair is inert.
+ * `ParallaxBackground::_update_scroll()` in its own order: build the scroll,
+ * negate it, clamp it into the limits (so they are screen-space bounds), negate
+ * back. A limit pair applies only when `begin < end` on that axis, as in Godot.
  */
 export function parallaxScroll(
   props: ParallaxScrollProperties,
   view: ParallaxViewFraming
 ): ParallaxScroll {
+  // `_camera_moved` reads the inverse of `get_camera_transform()`: basis `zoom`,
+  // origin `-zoom * view_top_left`. Godot's scroll scale is the mean of both zoom
+  // axes. This reads one, as `camera2DView` frames on `zoom.x` alone, so the
+  // parallax and the view it anchors to share one zoom.
   const scrollOffset = { x: 0 - view.zoom * view.topLeft.x, y: 0 - view.zoom * view.topLeft.y };
   const scale = view.zoom;
 
@@ -144,11 +114,9 @@ export function parallaxScroll(
   const offset: Vector2 = { x: 0 - x, y: 0 - y };
   if (!props.scroll_ignore_camera_zoom) return { offset, scale };
 
-  // `l->set_base_offset_and_scale((scroll_ofs + screen_offset * (scale - 1)) / scale, 1.0)`.
-  // `screen_offset` is `_camera_moved`'s third-from-last argument, which
-  // `Camera2D::_update_scroll` builds as `screen_size * 0.5` — UNZOOMED, unlike
-  // the `screen_size * 0.5 * zoom_scale` used twice inside
-  // `get_camera_transform()`.
+  // `set_base_offset_and_scale((scroll_ofs + screen_offset * (scale - 1)) / scale, 1.0)`.
+  // `Camera2D::_update_scroll` builds `screen_offset` as `screen_size * 0.5`:
+  // unzoomed, unlike the `screen_size * 0.5 * zoom_scale` in `get_camera_transform()`.
   const screenX = view.centered ? view.size.x * 0.5 : 0;
   const screenY = view.centered ? view.size.y * 0.5 : 0;
   return {
@@ -161,13 +129,10 @@ export function parallaxScroll(
 }
 
 /**
- * `ParallaxLayer::set_base_offset_and_scale()`:
- *
- *     Point2 new_ofs = p_offset * motion_scale + motion_offset * p_scale + orig_offset * p_scale;
- *     if (mirroring.x) { real_t den = mirroring.x * p_scale; new_ofs.x -= den * ceil(new_ofs.x / den); }
- *
- * The mirroring wrap pulls the layer into `(-den, 0]` so the pair of drawn
- * instances (see `parallaxMirrorOffsets`) straddles the view's left edge.
+ * `ParallaxLayer::set_base_offset_and_scale()`: `p_offset * motion_scale` plus
+ * `(motion_offset + orig_offset) * p_scale`. A mirrored axis then wraps into
+ * `(-den, 0]`, `den = mirroring * p_scale`, so the two drawn instances straddle
+ * the view's left edge.
  */
 export function parallaxLayerPose(
   motion: ParallaxLayerMotion,
@@ -191,16 +156,9 @@ export function parallaxLayerPose(
 }
 
 /**
- * The scroll expressed as a DELTA on top of the layer's authored transform, so
- * the renderer can keep one `<Node2D>` carrying the authored pose (with its
- * modulate, z-index and skew handling intact) and wrap it in a group holding
- * only what the scroll changed.
- *
- * Godot's forced transform is `T(new_ofs) · R · Skew · S(p · orig_scale)` and the
- * authored one is `T(orig_offset) · R · Skew · S(orig_scale)`; `p` is a scalar so
- * it commutes with the rotation/shear, and the quotient collapses to
- * `T(new_ofs) · S(p) · T(-orig_offset)` — a translation and a uniform scale, with
- * the authored rotation and skew cancelling out exactly.
+ * The scroll as a delta on the layer's authored transform, so one `<Node2D>`
+ * keeps the authored pose. The scalar `p` commutes with rotation and skew, so
+ * the forced transform over the authored one is `T(new_ofs) · S(p) · T(-orig_offset)`.
  */
 export function parallaxLayerDelta(
   pose: ParallaxLayerPose,
@@ -216,25 +174,16 @@ export function parallaxLayerDelta(
 }
 
 /**
- * Where `motion_mirroring` repeats a layer, in the layer's OWN local space.
- *
- * `ParallaxLayer::_update_mirroring` hands the server
- * `mirror_scale = mirroring * orig_scale` through `canvas_set_item_mirroring`,
- * which sets `repeat_size = p_mirroring` with **`repeat_times = 1`** — so the
- * item is drawn twice per mirrored axis, at 0 and at `+repeat_size`, not tiled
- * across the view. `ParallaxLayer.xml` says the same thing in prose ("the
- * parallax layer only draws 2 instances of the layer at any given time"), and a
- * Godot 4.6.3 render of a layer mirrored every 100 px into a 1152 px viewport
- * put copies at x = 0 and x = 100 and nothing beyond.
- *
- * The offsets are returned with the un-mirrored copy LAST: it is the one whose
- * selection registration must win, and `registerNodeObject` keeps the last
- * writer for a path.
+ * Where `motion_mirroring` repeats a layer, in its own local space.
+ * `canvas_set_item_mirroring` sets `repeat_times = 1`, so a mirrored axis draws
+ * twice, at 0 and `+repeat_size`, not tiled (ParallaxLayer.xml agrees). The
+ * unmirrored copy comes last: `registerNodeObject` keeps a path's last writer.
  */
 export function parallaxMirrorOffsets(
   mirroring: Vector2,
   originScale: Vector2
 ): readonly Vector2[] {
+  // `_update_mirroring` hands the server `mirroring * orig_scale`.
   const dx = mirroring.x * originScale.x;
   const dy = mirroring.y * originScale.y;
   if (!dx && !dy) return EMPTY_MIRROR;

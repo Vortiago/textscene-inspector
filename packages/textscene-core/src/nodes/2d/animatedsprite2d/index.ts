@@ -1,4 +1,4 @@
-/** AnimatedSprite2D registration — parser + formatter. */
+/** AnimatedSprite2D registration: parser and formatter. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseAnimatedSprite2D } from './parser';

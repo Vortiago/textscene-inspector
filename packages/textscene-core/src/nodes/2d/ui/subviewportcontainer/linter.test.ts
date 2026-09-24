@@ -1,10 +1,6 @@
 /**
- * SubViewportContainer linting — the first Control slice to carry lint code
- * (`barrelCompleteness` documents which Controls carry one).
- *
- * It earns one because the container is the only Control whose correctness
- * depends on its CHILDREN: with no SubViewport child it draws nothing at all,
- * which no format check can see.
+ * SubViewportContainer linting. Its correctness depends on its children: with no SubViewport child
+ * it draws nothing, which no format check can see (`barrelCompleteness` lists the Controls with lint code).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -25,18 +21,15 @@ ${children}`;
 }
 
 describe('SubViewportContainer cursor shape — only a shape the node can hold', () => {
-  // This rule and Control's `mouse_default_cursor_shape` validator read the same
-  // enum and must end it in the same place: the rule warns strictly BELOW
-  // CURSOR_MAX and the validator errors at or above it, so a sentinel wider than
-  // the label list double-reports and a narrower one goes silent on a legal
-  // shape. Godot binds one BIND_ENUM_CONSTANT per shape (control.cpp:4347-4363).
+  // This rule warns below CURSOR_MAX and Control's `mouse_default_cursor_shape` validator errors at
+  // or above it, so a wider sentinel double-reports and a narrower one misses a legal shape.
+  // Godot binds one BIND_ENUM_CONSTANT per shape (control.cpp:4347-4363).
   it('ends the shape list exactly where CURSOR_MAX does', () => {
     expect(Object.keys(CURSOR_SHAPES)).toHaveLength(CURSOR_MAX);
   });
 
   it('says nothing about a non-finite or out-of-enum cursor', () => {
-    // `Control::CursorShape` runs 0-16 (control.h:100-119). A value outside it
-    // is not "a shape other than Arrow", it is not a shape.
+    // `Control::CursorShape` runs 0-16 (control.h:100-119). A value outside it is no shape at all.
     for (const shape of ['inf', 'nan', '99', '2e1']) {
       expectNoDiagnostic(
         scene(node('SubViewportContainer', { mouse_default_cursor_shape: shape })),
@@ -156,9 +149,8 @@ size = Vector2i(200, 150)
     });
 
     it('stays silent when a child is an instance — the file cannot see inside it', () => {
-      // Instance-opaque linting (CONTEXT.md): the instanced sub-scene's root may
-      // well BE a SubViewport, and the linter never resolves across an instance
-      // boundary. Warning here would false-positive on a normal Godot idiom.
+      // Instance-opaque linting (CONTEXT.md): the instanced sub-scene's root may be a SubViewport,
+      // and the linter never resolves across an instance boundary.
       expectNoDiagnostic(
         `[gd_scene format=3]
 

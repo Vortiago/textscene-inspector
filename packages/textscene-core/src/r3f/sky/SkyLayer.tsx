@@ -1,12 +1,8 @@
 /**
- * `<SkyLayer>` — mounts a Godot sky as the scene's background and IBL.
- *
- * Godot's sky shader takes the scene's first four DirectionalLights as
- * `LIGHT0..3` and draws their discs into the sky itself, so the sky depends on
- * the lighting rather than the other way round. The lights are read from the
- * rendered three.js scene (not from parsed nodes) so that a light's real world
- * transform is used, whatever produced it — an authored node, an instanced
- * sub-scene, or a GLB.
+ * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL. Godot's sky
+ * shader draws the first four DirectionalLights' discs as `LIGHT0..3`, so the lights
+ * are read from the rendered three.js scene, where an instanced or GLB light has
+ * its real world transform.
  */
 
 import { useEffect, useState } from 'react';
@@ -23,11 +19,9 @@ import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 export interface SkyLayerProps {
   sky: SkyProperties;
   /**
-   * The sky's REFLECTION strength (Godot `background_energy_multiplier`) →
-   * `scene.environmentIntensity`. This is the full reflection energy, not the
-   * diffuse-scaled one: a metal reflects the whole sky whatever the ambient
-   * source, and `EnvironmentLayer` restores the diffuse share per-material via
-   * `envMapIntensity`.
+   * The sky's full reflection strength (`background_energy_multiplier`), as
+   * `scene.environmentIntensity`: a metal reflects the whole sky whatever the
+   * ambient source. `EnvironmentLayer` restores the diffuse share with `envMapIntensity`.
    */
   intensity?: number;
   /**
@@ -37,15 +31,13 @@ export interface SkyLayerProps {
    */
   asBackground?: boolean;
   /**
-   * Godot's `background_energy_multiplier` applied to the DRAWN sky. It scales
-   * what the sky lights (through `intensity`) and what it looks like alike, so
-   * without this a doubled multiplier brightened every surface while the sky
-   * behind them stayed put.
+   * Godot's `background_energy_multiplier` applied to the drawn sky, so a doubled
+   * multiplier brightens the sky as well as the surfaces it lights.
    */
   backgroundIntensity?: number;
 }
 
-/** Godot's sky shader has four light slots; the rest of the scene's lights don't reach it. */
+/** Godot's sky shader has four light slots. The other lights do not reach it. */
 const LIGHT_SLOTS = 4;
 
 export function SkyLayer({
@@ -69,7 +61,7 @@ export function SkyLayer({
       externalResources,
       internalResources
     ).texture ?? null;
-  // The live tree GROWS as sub-scenes and GLBs load, and a light arriving late
+  // The live tree grows as sub-scenes and GLBs load, and a light arriving late
   // changes the sky. This is the same tick every other live-tree reader uses.
   const treeVersion = useLiveTreeVersion(loader);
 
@@ -80,10 +72,9 @@ export function SkyLayer({
   useEffect(() => setPass(1), []);
 
   useEffect(() => {
-    // Nothing built on the first pass would ever be seen: the corrective pass
-    // below follows in the same tick and disposes it. Building anyway cost a
-    // six-face cube render and a PMREM prefilter on every mount, and the
-    // preview environment puts a SkyLayer in nearly every 3D scene.
+    // Nothing built on the first pass is seen: the corrective pass follows in
+    // the same tick. Skipping it saves a six-face cube render and a PMREM
+    // prefilter per mount.
     if (pass === 0) return undefined;
 
     const built = buildSkyEnvironment(gl, {
@@ -131,7 +122,7 @@ export function SkyLayer({
 
 /**
  * The scene's directional lights, as Godot's sky shader wants them: the
- * direction TOWARDS the light (where its disc appears), its colour, and its
+ * direction towards the light (where its disc appears), its colour, and its
  * energy. three's `DirectionalLight` shines from its own world position toward
  * its target's, so the sky direction is that vector reversed.
  */
@@ -143,9 +134,8 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
   scene.traverse((object) => {
     if (lights.length >= LIGHT_SLOTS) return;
     if (!(object as THREE.DirectionalLight).isDirectionalLight) return;
-    // `traverse` descends into hidden subtrees, but three's renderer skips them
-    // when lighting — and Godot's sky only sees lights in the render list, so a
-    // `visible = false` light draws no disc there either.
+    // `traverse` descends into hidden subtrees, which three skips when lighting.
+    // Godot's sky sees only the render list, so a hidden light draws no disc.
     if (!isRendered(object)) return;
     const light = object as THREE.DirectionalLight;
 
@@ -157,18 +147,13 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
     lights.push({
       direction: direction.normalize(),
       color: light.color.clone(),
-      // Back to Godot's `light_energy`. The sky is the one consumer that must
-      // NOT see three's scaled intensity: Godot's sky shader is fed the raw
-      // energy (`sky.cpp` sets `sky_light_data.energy` from LIGHT_PARAM_ENERGY
-      // with no PI), while the scene shader gets the PI-multiplied one. Passing
-      // `light.intensity` straight through made the sun disc PI times too
-      // bright, and PMREM then fed that error back into the IBL.
+      // Back to Godot's `light_energy`: `sky.cpp` sets `sky_light_data.energy`
+      // from LIGHT_PARAM_ENERGY with no PI, unlike the scene shader. Every light
+      // this renderer creates goes through the scale. A GLB `KHR_lights_punctual`
+      // light does not, so its disc reads 1/PI dim.
       energy: light.intensity / LIGHT_INTENSITY_SCALE,
-      // Assumes the light came through `LIGHT_INTENSITY_SCALE`, which every
-      // light this renderer creates does. A light arriving inside a GLB
-      // (KHR_lights_punctual) never did, and its disc would read 1/PI dim.
-      // `light_angular_distance` defaults to 0 — a point sun with only the
-      // soft falloff `sun_curve` gives it.
+      // `light_angular_distance` defaults to 0: a point sun with only the soft
+      // falloff `sun_curve` gives it.
       angularRadius: 0,
     });
   });

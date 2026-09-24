@@ -1,19 +1,7 @@
 /**
- * Tests for PackedScene instance rendering.
- *
- * `<NodeDispatcher>` walks a TSCN scene; nodes with `instance =
- * ExtResource("scene_id")` need to load the referenced external scene
- * and render its nodes as additional children, inheriting the
- * instancing node's transform. These tests pin:
- *   1. Happy path — loaded scene's nodes appear as children of the
- *      instancing Node3D, with the instance's transform applied.
- *   2. Missing path — magenta placeholder + label when the referenced
- *      scene isn't available; no crash.
- *   3. Nested instancing — A instances B instances C; all three levels
- *      render.
- *   4. Multiple instances — one PackedScene referenced from multiple
- *      instancing nodes, each at its own position.
- *   5. Inline children + instance children co-exist on the same node.
+ * PackedScene instance rendering: a node with `instance = ExtResource(...)`
+ * renders the loaded scene with its own transform, a placeholder when the scene
+ * is missing, nested and repeated instances, and inline children beside them.
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -27,8 +15,7 @@ import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 
-// All node-type components self-register on import. Pull in the barrel
-// so MeshInstance3D / Node3D / etc. dispatch through to their components.
+// The barrel registers every node-type component.
 import './nodes/index';
 
 function makeNode(
@@ -114,9 +101,8 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
     );
 
-    // The wrapper level is gone: the instance node IS the sub-scene root's
-    // MeshInstance3D, named after the instance node and carrying its
-    // transform — there is no intermediate 'TheBox' node anymore.
+    // No wrapper level: the instance node is the sub-scene root's MeshInstance3D,
+    // with the instance node's name and transform, and no 'TheBox' node.
     const meshes = renderer.scene.findAllByType('Mesh');
     const merged = meshes.find((m) => m.instance.name === 'LeftCube');
     expect(merged).toBeDefined();
@@ -222,7 +208,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     expect(sphere).toBeDefined();
     const geom = (sphere!.instance as THREE.Mesh).geometry as { type: string };
     expect(geom.type).toBe('SphereGeometry');
-    // The intermediate root names are gone — no wrapper levels survive.
+    // No intermediate root name survives.
     expect(meshes.find((m) => m.instance.name === 'Inner')).toBeUndefined();
   });
 
@@ -290,7 +276,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     };
     fake.scenes.seed('res://inner.tscn', innerScene);
 
-    // Parent instances inner.tscn AND declares an added child of its own.
+    // Parent instances inner.tscn and declares an added child of its own.
     const parentNode: TscnNode = {
       name: 'Parent',
       type: 'Node3D',
@@ -339,9 +325,9 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
   it('falls back to the nested form when the loaded scene has multiple roots', async () => {
     const fake = createFakeResourceLoader();
 
-    // A scene with TWO top-level nodes cannot collapse into one instance node,
-    // so it keeps the historical nesting: the instance node's own group holds
-    // both loaded roots as children, addressed under the instance path.
+    // A scene with two top-level nodes cannot merge into one instance node, so
+    // the instance node's own group holds both loaded roots as children,
+    // addressed under the instance path.
     const multiRootScene: TscnScene = {
       nodes: [
         makeNode('RootA', 'MeshInstance3D', {
@@ -390,22 +376,18 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
   });
 
   it('REGRESSION (hallway): a host-added child of a collapsed instance still resolves HOST ExtResources', async () => {
-    // The marquee Hallway shape: an instance node ('Wrapper') whose sub-scene
-    // collapses in, but which the HOST also gave an added child ('Gadget')
-    // that instances ANOTHER host resource. After the merge the added child is
-    // dispatched under the sub-scene's resource pool; it must still resolve its
-    // host-scoped ExtResource id (via SceneResourcesProvider inheritance) or it
-    // silently fails to load and vanishes — exactly the lamps/doors regression.
+    // 'Wrapper' merges its sub-scene, and the host gives it a child 'Gadget' that
+    // instances another host resource. Under the sub-scene's pool, 'Gadget' must
+    // still resolve its host-scoped ExtResource id, or it does not load.
     const fake = createFakeResourceLoader();
 
-    // Sub-scene the Wrapper instances — its own pool does NOT contain the
-    // gadget ref.
+    // The Wrapper's sub-scene, whose own pool does not hold the gadget ref.
     const wrapperScene: TscnScene = {
       nodes: [makeNode('WrapperRoot', 'Node3D', { properties: { name: 'WrapperRoot' } as Record<string, unknown> })],
       externalResources: [],
       internalResources: [],
     };
-    // The gadget sub-scene (a sphere), referenced only by a HOST ExtResource id.
+    // The gadget sub-scene (a sphere), referenced only by a host ExtResource id.
     const gadgetScene: TscnScene = {
       nodes: [
         makeNode('GadgetRoot', 'MeshInstance3D', {
@@ -427,7 +409,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       type: 'Node3D',
       instance: 'ExtResource("wrapper_ref")',
       children: [
-        // Host-added child that instances a HOST resource id.
+        // Host-added child that instances a host resource id.
         { name: 'Gadget', type: 'Node3D', instance: 'ExtResource("gadget_ref")', children: [], properties: { name: 'Gadget' } as Record<string, unknown> },
       ],
       properties: { name: 'Wrapper' } as Record<string, unknown>,
@@ -442,24 +424,20 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
       ]
     );
 
-    // The added Gadget collapses to its sphere and renders — it resolved the
-    // HOST 'gadget_ref' even though it lives under the collapsed Wrapper.
+    // Gadget merges to its sphere and renders: it resolved the host 'gadget_ref'
+    // under the merged Wrapper.
     const sphere = renderer.scene.findAllByType('Mesh').find((m) => m.instance.name === 'Gadget');
     expect(sphere).toBeDefined();
     expect(((sphere!.instance as THREE.Mesh).geometry as { type: string }).type).toBe('SphereGeometry');
   });
 
   it('REGRESSION (ADR-0013): the outermost instance transform REPLACES the nested root transforms', async () => {
-    // Restored from main's deleted SceneManager.nested-external.test.ts, which
-    // asserted COMPOSED world positions (2,0,3) for a 3-level nested chain.
-    // Under Instance root merge that is the wrong model: each instance node's
-    // transform overrides — does not compose with — the root it instances
-    // (Godot parity). TopRoot's x=2 replaces MiddleWrapper's z=3, so the fully
-    // collapsed leaf lands at (2,0,0). This pins the replace-not-compose
-    // behavior and guards against re-introducing the double-transform.
+    // An instance node's transform replaces the transform of the root it
+    // instances, as in Godot, and does not compose with it. TopRoot's x=2
+    // replaces MiddleWrapper's z=3, so the merged leaf lands at (2,0,0).
     const fake = createFakeResourceLoader();
 
-    // Level 3 (leaf): a single box mesh, NO transform.
+    // Level 3 (leaf): a single box mesh, no transform.
     const leafScene: TscnScene = {
       nodes: [
         makeNode('LeafBox', 'MeshInstance3D', {
@@ -539,11 +517,8 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     const leaf = meshes.find((m) => m.instance.name === 'TopRoot');
     expect(leaf).toBeDefined();
 
-    // Force-update the world matrix from the root down. Calling
-    // `leaf.updateMatrixWorld(true)` alone updates only the leaf's
-    // branch, which leaves parent local matrices unrecomputed in the
-    // test renderer. R3F in production does this automatically per
-    // frame; the test must do it manually.
+    // From the root down: `leaf.updateMatrixWorld(true)` leaves the parent
+    // matrices stale in the test renderer, which has no per-frame update.
     let root: THREE.Object3D = leaf!.instance;
     while (root.parent) root = root.parent;
     root.updateMatrixWorld(true);
@@ -559,10 +534,8 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
   });
 
   it('PERF (WI-213): does not re-merge an instance subtree on an unrelated re-render', async () => {
-    // collapseLiveNode/mergeInstanceRoot must be memoized per instance so an
-    // unrelated re-render elsewhere in the tree (selection, hover, an
-    // unrelated sibling's state) doesn't re-walk this instance's merge every
-    // render — the same fix TreeNode.tsx already applies on the tree side.
+    // The merge is memoized per instance, so a re-render elsewhere in the tree
+    // does not re-walk it.
     const fake = createFakeResourceLoader();
     fake.scenes.seed('res://child_cube.tscn', makeBoxScene('TheBox'));
 
@@ -576,11 +549,8 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
 
     const mergeSpy = vi.spyOn(mergeInstanceRootModule, 'mergeInstanceRoot');
 
-    // Hoisted OUTSIDE the component so the reference stays stable across
-    // re-renders — mirroring production, where these come from a
-    // once-per-parse SceneGraph, not a fresh literal per render (a fresh
-    // array/node every render would defeat ANY memoization strategy, not
-    // just this one).
+    // Outside the component, so the references stay stable across re-renders,
+    // as they do from a once-per-parse SceneGraph.
     const internalResources: TscnScene['internalResources'] = [];
     const externalResources: TscnScene['externalResources'] = [
       { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
@@ -609,7 +579,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     const callsAfterFirstRender = mergeSpy.mock.calls.length;
     expect(callsAfterFirstRender).toBeGreaterThan(0);
 
-    // Re-render with a prop change that does NOT touch this instance's own
+    // Re-render with a prop change that does not touch this instance's own
     // memo deps.
     await renderer.update(<Harness tick={1} />);
     await renderer.update(<Harness tick={2} />);

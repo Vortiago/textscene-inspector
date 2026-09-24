@@ -1,30 +1,14 @@
 /**
- * Material precedence on a PRIMITIVE mesh, where the mesh is a `[sub_resource]`
- * of the scene rather than a baked ArrayMesh `.tres`.
- *
- * The order is the same one the ArrayMesh path follows, because it is decided in
- * the renderer and not per mesh type. `_geometry_instance_add_surface`
- * (`servers/rendering/renderer_rd/forward_clustered/render_forward_clustered.cpp:4206`)
- * puts the node-level `material_override` in front of whatever the surface loop
- * resolved, on EVERY surface:
- *   `m_src = material_override.is_valid() ? material_override : p_material;`
- * and the surface loop (`:4264`) had already preferred `inst_materials[j]` —
- * what `surface_material_override/N` writes — over the mesh's own `materials[j]`.
- * `MeshInstance3D::get_active_material` (`scene/3d/mesh_instance_3d.cpp:384`)
- * restates it.
- *
- * So per surface: material_override > surface_material_override/N > mesh-own.
- * Only a node setting BOTH of the top two can tell the difference, which is why
- * ranking them the other way round survived: the far commoner scenes that set
- * exactly one resolve identically under either order.
- *
- * Surface 0 is the whole of it here: a PrimitiveMesh has one surface, so
- * `MeshInstance3D::_set` (`scene/3d/mesh_instance_3d.cpp:65-73`) refuses every
- * higher `surface_material_override/N` against the array `_mesh_changed`
- * (`:407`) sized to `get_surface_count()`. The per-surface half of the same
- * order is asserted on a real multi-surface mesh in
- * `Component.arraymesh-override.test.tsx`.
+ * Material precedence on a primitive mesh: material_override >
+ * surface_material_override/N > mesh-own, as the renderer decides it for every
+ * mesh type (`servers/rendering/renderer_rd/forward_clustered/render_forward_clustered.cpp:4206`
+ * over `:4264`, restated at `scene/3d/mesh_instance_3d.cpp:384`).
  */
+
+// Only a node setting both of the top two tells the order from its inverse. A PrimitiveMesh
+// has one surface, and `_set` (`scene/3d/mesh_instance_3d.cpp:65-73`) refuses a higher
+// override against the array `_mesh_changed` (`:407`) sizes, so the multi-surface half
+// lives in `Component.arraymesh-override.test.tsx`.
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

@@ -1,10 +1,10 @@
 /**
- * `<TextureProgressBar>` — pins that the painter WIRES up `texture_under`,
- * `texture_progress`, `texture_over` in that order (`texture_progress_bar.cpp:
- * 439-482`), and dispatches to the right geometry SHAPE per
- * `fill_mode`/`nine_patch_stretch`. Exact numbers for each shape are proved
- * once in `linearFill.test.ts`/`ninePatchProgress.test.ts`/`radialFill.test.ts`.
+ * `<TextureProgressBar>`: pins that the painter draws `texture_under`, `texture_progress` and
+ * `texture_over` in that order (`texture_progress_bar.cpp`, `:439-482`) and picks the right shape per
+ * `fill_mode`/`nine_patch_stretch`. `linearFill.test.ts`, `ninePatchProgress.test.ts` and
+ * `radialFill.test.ts` prove the exact numbers.
  */
+
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';

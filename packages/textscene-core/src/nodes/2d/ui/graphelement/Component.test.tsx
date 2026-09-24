@@ -1,7 +1,6 @@
 /**
- * `<GraphElement>` draws no chrome of its own (`graph_element.cpp` has no
- * `NOTIFICATION_DRAW` case) — pinned so a later regression that accidentally
- * adds a stray quad/outline shows up here first.
+ * `<GraphElement>` draws nothing (`graph_element.cpp` has no `NOTIFICATION_DRAW`
+ * case), so a stray quad or outline fails here.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

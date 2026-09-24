@@ -1,11 +1,4 @@
-/**
- * Tests for the pure "resolve initial viewport mode" logic
- * `r3f-webview-main.tsx` uses to turn the host-embedded
- * `window.__TEXTSCENE_CONFIG__` (see `webviewHtml.ts`) into the
- * `initialViewportMode` prop `<TscnPreviewShell>` expects — split out so it's
- * testable without mounting React in this package's node-environment vitest
- * config (the webview itself only ever runs inside a real VS Code webview).
- */
+/** Tests for resolving `window.__TEXTSCENE_CONFIG__` into `initialViewportMode`. */
 import { describe, it, expect, afterEach } from 'vitest';
 import { readInitialConfig, resolveInitialViewportMode } from './initialConfig';
 

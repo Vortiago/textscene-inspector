@@ -1,16 +1,9 @@
 [gd_scene format=3]
 
-; Label's HORIZONTAL_ALIGNMENT_FILL justification — `horizontal_alignment`'s
-; FILL value is the ONE variable, held against the same box and the same
-; short sentence a Left-aligned sibling shapes unstretched. Neither
-; unit-label-2d.tscn (no FILL label at all) nor unit-label-2d-wrap.tscn (FILL
-; is never set there either) exercises the word-gap-stretching path this
-; fixture is for, so a regression that stopped stretching spaces, or started
-; stretching a Left/Center/Right label, moves only this scene.
-;
-; The box (700px) is far wider than the sentence's own natural width at
-; either font size, so the slack every word gap absorbs is large and the
-; stretch is unmistakable rather than a rounding-sized nudge.
+; HORIZONTAL_ALIGNMENT_FILL is the one variable, against a Left-aligned sibling with the same
+; box and sentence. No other Label fixture sets FILL, so a regression that stops stretching word
+; gaps, or stretches a Left/Center/Right label, moves only this scene. The 700px box far exceeds
+; the sentence at either size, so the stretch is large rather than a rounding-sized nudge.
 
 [node name="Root" type="Control"]
 anchors_preset = 15

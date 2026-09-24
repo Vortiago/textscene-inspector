@@ -1,8 +1,6 @@
 /**
- * Semantic linter rules for AnimationPlayer
- *
- * Note: Format validation is handled by linterParser.ts during strict parsing.
- * This file focuses on semantic validation requiring full context.
+ * Semantic linter rules for AnimationPlayer. linterParser.ts validates the format during strict
+ * parsing. These rules need the full scene.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -20,7 +18,6 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
 
 
-  // Type guard for properties
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
@@ -28,20 +25,20 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as Record<string, string>;
 
   // `speed_scale` gets no diagnostic at all: animation_player.cpp:1048 hints
-  // "-4,4,0.001,or_less,or_greater", so BOTH ends are open, and set_speed_scale
+  // "-4,4,0.001,or_less,or_greater", so both ends are open, and set_speed_scale
   // (:648) is a bare assignment. Negative is reverse playback; 0 pauses.
 
   // Which clip sources the file declares, and in which form: pre-4.0 files put
   // clips in an `anims/<name>` section, Godot 4 references AnimationLibraries
-  // via `libraries/<name>` keys (the empty-name default library is written
-  // `libraries/`), and older 4.x files used a single `libraries` dict.
+  // through `libraries/<name>` keys (the empty-name default library is written
+  // `libraries/`), and older 4.x files use a single `libraries` dict.
   const hasAnimations = Object.keys(rawProps).some(key => key.startsWith('anims/'));
   const hasLibraries = Object.keys(rawProps).some(
     key => key === 'libraries' || key.startsWith('libraries/')
   );
 
   // Build the set of known clip names. Godot references a clip in the default
-  // (empty-name) library bare ("walk") but a clip in a NAMED library prefixed
+  // (empty-name) library bare ("walk") but a clip in a named library prefixed
   // ("combat/walk"), so resolve each library separately and prefix accordingly
   // (resolveAnimations flattens the library name away, hence the per-ref loop).
   const knownClips = new Set<string>();
@@ -56,33 +53,22 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
     if (key.startsWith('anims/')) knownClips.add(key.slice('anims/'.length));
   }
 
-  // Only assert a clip is MISSING when the clip set is FULLY enumerable. An
-  // ExtResource-backed library is external (often binary .res) and unresolvable
-  // here, so its clips are invisible — flagging then would false-positive (the
-  // renderer is deliberately lenient about external libraries). A file that
-  // declares no clip source at all is equally unenumerable: the clips may be
-  // added by script, so there is nothing here to call the reference dangling.
-  // Both spellings of "external": the library resource itself may be an
-  // ExtResource, and an INLINE library may map a clip name to one. The second is
-  // the ordinary layout once clips are saved as their own `.tres`, and
-  // `resolveAnimations` reads only the SubResource entries, so a library that
-  // carries one enumerates fewer clips than it holds.
+  // A clip is claimed missing only when the clip set is fully enumerable. An ExtResource library,
+  // or an inline library mapping a clip to its own `.tres`, holds clips `resolveAnimations`
+  // cannot see (it reads only SubResource entries), so a claim there would false-positive.
   const hasUnresolvableLibrary =
     Object.entries(rawProps).some(
       ([key, value]) =>
         (key === 'libraries' || key.startsWith('libraries/')) &&
         EXT_RESOURCE_CALL_ANYWHERE_RE.test(value)
     ) || hasUnresolvableClips(extractLibraries(rawProps), scene.internalResources);
-  // A resolvable-but-empty library is still enumerable (a missing clip IS caught); only an
-  // unresolvable ExtResource library, or no clip source at all, suppresses the check.
+  // A resolvable but empty library is still enumerable. A file with no clip source is not: a
+  // script may add the clips, so nothing here can call a reference dangling.
   const canCheckExistence = (hasAnimations || hasLibraries) && !hasUnresolvableLibrary;
 
-  // WARNING: autoplay references animation that may not exist (an empty StringName `&""` means
-  // "no autoplay" — guard on the STRIPPED name, like current_animation below, not the raw value).
-  // Godot raises no warning for this: `NOTIFICATION_READY`
-  // (animation_player.cpp:149-155) gates the whole autoplay dispatch on
-  // `animation_set.has(autoplay)`, so a name that resolves to nothing simply
-  // never calls `play()` — no error, no log, nothing.
+  // An empty StringName `&""` means no autoplay, so the guard reads the stripped name. Godot raises
+  // no warning: `NOTIFICATION_READY` (animation_player.cpp:149-155) gates the autoplay dispatch on
+  // `animation_set.has(autoplay)`, so a name that resolves to nothing never calls `play()`.
   if (canCheckExistence && rawProps.autoplay !== undefined) {
     const autoplayName = literalText(rawProps.autoplay);
     if (autoplayName.length > 0 && !knownClips.has(autoplayName)) {
@@ -116,11 +102,9 @@ function checkAnimationPlayer(context: RuleContext): Diagnostic[] {
   // `playback_default_blend_time` gets no advisory: linterParser.ts carries the
   // hint's 0..4096 as a warning-tier bound on the validator.
 
-  // The mixer is switched off. Godot raises no configuration warning
-  // for this — AnimationMixer declares no get_configuration_warnings() override
-  // — but it is not a style opinion either: seek_internal returns immediately
-  // on `!active` (animation_player.cpp:664), so nothing this node declares can
-  // ever reach the scene.
+  // Godot raises no configuration warning (AnimationMixer declares no
+  // get_configuration_warnings() override), but seek_internal returns at once on `!active`
+  // (animation_player.cpp:664), so nothing this node declares reaches the scene.
   if (!isActive(rawProps)) {
     diagnostics.push({
       severity: 'info',
@@ -176,7 +160,6 @@ const animationPlayerValidationRule: LintRule = {
   check: checkAnimationPlayer,
 };
 
-// Self-register the rule
 ruleRegistry.register(animationPlayerValidationRule);
 
 // Export for testing

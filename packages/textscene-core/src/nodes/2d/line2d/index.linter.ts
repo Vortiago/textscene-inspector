@@ -1,5 +1,3 @@
-/**
- * line2d linter registration — validators only (no semantic linter.ts).
- */
+/** Line2D linter registration: validators only, with no semantic linter.ts. */
 
 import './linterParser.js';

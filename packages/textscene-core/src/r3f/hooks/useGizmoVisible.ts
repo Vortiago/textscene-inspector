@@ -1,15 +1,7 @@
 /**
- * Selection gate for editor-only gizmos (light cones, camera frusta, audio
- * ranges, 2D marker/path helpers): a gizmo is visible only when its owning
- * TSCN node is the currently selected node in the panel's SelectionContext.
- *
- * Without this gate a scene with many decorated nodes (e.g. example-hallway's
- * 18 spotlights) renders a thicket of overlapping helpers that
- * obscure the actual scene. Hover does NOT show the gizmo — the orange
- * HoverHighlight BoxHelper is the hover affordance.
- *
- * Outside a NodeDispatcher (standalone-test usage), `useNodePath()` returns
- * null and the gate evaluates to false, so gizmos stay hidden.
+ * An editor-only gizmo (light cone, camera frustum, 2D helper) shows only while its node is
+ * selected, so many decorated nodes do not bury the scene in helpers. Hover does not show it:
+ * `HoverHighlight` is the hover cue. Outside a NodeDispatcher the path is null and gizmos hide.
  */
 
 import { useNodePath } from '../contexts/NodePathContext';

@@ -1,16 +1,8 @@
 /**
- * Every class → base hop the linter resolves a property against, both of
- * Godot's hierarchies in one table.
- *
- * A `.tscn` names types from both, and `StrictTscnParser` sends every property
- * of both through one `findValidator`. With the node table alone, a Resource's
- * validators had to sit on the leaf a scene happens to name, where they reached
- * neither the sibling inheriting the same set (`ORMMaterial3D` beside
- * `StandardMaterial3D`) nor a guard asking what `BaseMaterial3D` declares.
- *
- * The two hierarchies are disjoint branches under `Object`, so the merge cannot
- * lose an entry — asserted rather than assumed, since a spread would silently
- * keep the last of a colliding pair.
+ * Every class → base hop the linter resolves a property against, the node and resource
+ * hierarchies in one table, so a Resource's validators sit on the class that declares them
+ * (`BaseMaterial3D`). The hierarchies are disjoint under `Object`, and a test asserts it, since
+ * a spread keeps the last of a colliding pair.
  */
 
 import { MAX_BASE_CHAIN_HOPS, NODE_BASE_TYPES } from './nodeBaseTypes.js';
@@ -22,16 +14,9 @@ export const CLASS_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze(
 });
 
 /**
- * Does `className` descend from (or equal) `ancestor`, over BOTH hierarchies?
- *
- * `descendsFrom` walks the node table alone, so it answers false for every
- * resource: `StandardMaterial3D` reaches `Material` only through the merged
- * one. A caller asking what a `[ext_resource type="…"]` heading names — the
- * type is a Resource, never a Node — needs this.
- *
- * `Object.hasOwn` and a hop bound for the same reasons `descendsFrom` states:
- * the key is a type name the `.tscn` chooses, and the bound only stops a
- * malformed table from spinning.
+ * Whether `className` descends from or equals `ancestor`, over both hierarchies. `descendsFrom`
+ * answers false for every resource, so an `[ext_resource type="…"]` heading needs this.
+ * `Object.hasOwn`, as the `.tscn` chooses the key, and a hop bound against a malformed table.
  */
 export function descendsFromClass(className: string, ancestor: string): boolean {
   let current: string | undefined = className;

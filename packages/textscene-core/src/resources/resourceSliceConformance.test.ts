@@ -1,19 +1,6 @@
 /**
- * Guard: the Resource-slice contract (ADR-0031) holds for every slice.
- *
- * Two layers, in the barrelCompleteness / ruleCoverage idiom:
- *  1. BARREL ⟷ DISK — every `index.ts` under `src/resources/**` that registers
- *     a slice is imported by `sliceRegistrations.ts`, and every barrel
- *     specifier resolves to a file on disk.
- *  2. REGISTRY ⟷ DISK — importing the barrel, every registration resolves to
- *     a slice folder carrying the entry points its KIND requires: a
- *     `godot-text` slice has a pure `decode.ts` (`build.ts` only where THREE
- *     construction exists — P5/P7's shapes and curves legitimately have none);
- *     a `foreign-format` slice declares its real parser instead (no hollow
- *     decode). Every slice has a co-located registration test, no two slices
- *     claim one type name, `.tres` is never claimed as an extension (it is the
- *     shared Godot-text container), and each bus tag carries ONE failure label
- *     matching the loader's.
+ * Guard: the Resource-slice contract (ADR-0031) holds for every slice, in the
+ * barrelCompleteness / ruleCoverage idiom.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -49,6 +36,8 @@ function specifierToDisk(spec: string): string {
   return resolve(here, spec.replace(/\.js$/, '.ts'));
 }
 
+// Barrel and disk: every registering `index.ts` under `src/resources/**` is
+// imported by `sliceRegistrations.ts`, and every barrel specifier resolves.
 describe('resource-slice barrel completeness', () => {
   const onDisk = findRegisteringIndexes(here).sort();
   const inBarrel = barrelSpecifiers().map(specifierToDisk).sort();
@@ -68,6 +57,10 @@ describe('resource-slice barrel completeness', () => {
   });
 });
 
+// Registry and disk: each registration has a slice folder with its kind's entry
+// points. A `godot-text` slice has a pure `decode.ts` (`build.ts` only where THREE
+// construction exists, so shapes and curves have none). A `foreign-format` slice
+// declares its real parser instead of a hollow decode.
 describe('resource-slice claim coverage', () => {
   const all = resourceSliceRegistry.all();
   const sliceDirs = new Map<string, string>();
@@ -80,10 +73,9 @@ describe('resource-slice claim coverage', () => {
   });
 
   it('every registration has a slice folder, its kind-required entry points, and a registration test', () => {
-    // A slice registered through a family helper (the nine shapes, the eight
-    // primitive meshes) keeps its claims table in the HELPER's co-located
-    // test — one table over the family instead of seventeen near-identical
-    // files. The helper's test is the registration test.
+    // A slice registered through a family helper (the shapes, the primitive
+    // meshes) keeps its claims table in the helper's co-located test, one table
+    // over the family. The helper's test is the registration test.
     const FAMILY_TESTS: Record<string, string> = {
       registerShapeSlice: join(here, 'shapes/shapes.test.ts'),
       registerMeshSlice: join(here, 'meshes/registerMeshSlice.test.ts'),
@@ -96,8 +88,8 @@ describe('resource-slice claim coverage', () => {
         continue;
       }
       // busType null means the loader never serves it and no ParsedResource
-      // section reaches it (ViewportTexture decodes a NodePath) — there is
-      // nothing for a decode.ts to consume, so the requirement is void.
+      // section reaches it (ViewportTexture decodes a NodePath), so a decode.ts
+      // would have nothing to consume.
       if (reg.kind === 'godot-text' && reg.busType !== null && !existsSync(join(dir, 'decode.ts'))) {
         failures.push(`${reg.slice}: godot-text slice without decode.ts`);
       }
@@ -134,7 +126,7 @@ describe('resource-slice claim coverage', () => {
 
   it("each bus tag carries one failure label, and it is the loader's", () => {
     // The loader's per-bus labels (ResourceLoader.setupFailureCallbacks), as
-    // literals so the routing replacement can move that map freely (P9's rule).
+    // literals so that map can move freely.
     const LOADER_LABELS: Record<string, string> = {
       texture: 'Material using texture',
       material: 'Node using material',

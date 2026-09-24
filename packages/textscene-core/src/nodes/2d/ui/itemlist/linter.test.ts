@@ -1,10 +1,7 @@
 /**
- * Tests for ItemList's semantic linter rule. Strict-parser format checks live
- * in linterParser.test.ts and are asserted through `validatorRegistry` there.
- *
- * Uses `Linter` via testkit, not the `linter/index.ts` barrel: that barrel
- * side-effect-imports every in-flight slice, so pulling it here would fail
- * flakily on a sibling's half-written file mid-wave.
+ * Tests for ItemList's semantic rule; linterParser.test.ts covers the formats.
+ * They use `Linter` through testkit, not the `linter/index.ts` barrel, which
+ * imports every slice and so fails on a sibling's half-written file.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -139,10 +136,8 @@ describe('ItemList semantic rules', () => {
 describe('ItemList index grammar', () => {
   it('errors on a `+`-signed index past item_count', () => {
     // `PropertyListHelper::_get_property` gates on `String::is_valid_int()`
-    // (property_list_helper.cpp:53), which skips ONE leading sign, `+` as
-    // readily as `-` (ustring.cpp:4752). `item_+2/text` therefore resolves to
-    // item 2 and is dropped for being past the count, exactly as `item_2/text`
-    // would be.
+    // (property_list_helper.cpp:53), which skips one leading `+` or `-`
+    // (ustring.cpp:4752), so `item_+2/text` is item 2, past the count.
     expectDiagnostic(
       scene(node('ItemList', { item_count: 1, 'item_+2/text': '"Autosave"' })),
       {

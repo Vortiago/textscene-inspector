@@ -1,50 +1,8 @@
 /**
- * `<GraphEdit>` — the native (WebGL canvas) painter for `GraphEdit`:
- * `GraphEdit::_notification(NOTIFICATION_DRAW)` (`scene/gui/graph_edit.cpp:853-865`)
- * — background panel, then the grid, then every resolvable `connections`
- * entry (`GraphEdit::_update_connections`, `:1614-1660` — this painter draws
- * them at ITS OWN `renderOrder`, same as the grid, so they sit BEHIND every
- * GraphElement child; Godot instead moves `connections_layer` to just above
- * the grid and below every GraphFrame/GraphNode, `graph_edit.cpp:717` — a
- * known draw-order divergence, `comparison.md`'s own note). `panel_focus`
- * (`has_focus(true)`) is never drawn: a static, pointer-less preview never
- * holds focus, the same restriction every other Control painter in this
- * codebase carries.
- *
- * CLIP. `set_clip_contents(true)` in the constructor (`graph_edit.cpp:3342`)
- * makes every GraphEdit scissor its own rect, chrome and GraphElement children
- * alike. That is not cosmetic here: `set_scroll_offset`'s load-time clamp
- * (`loadOrder.ts`) routinely parks the whole graph outside the widget.
- *
- * CHROME. The two scrollbars (`scrollBars.ts`), the toolbar (`Toolbar.tsx`,
- * geometry in `toolbar.ts`) and the minimap (`Minimap.tsx`, geometry in
- * `minimap.ts`) are `INTERNAL_MODE_*` children of `top_layer`, itself
- * `INTERNAL_MODE_BACK` (`graph_edit.cpp:3183`), so all three paint after
- * every GraphElement child — off `subtreeChromeRenderOrder`, not this node's
- * own slot, and among themselves in `top_layer`'s own child order
- * (`:3210,3229,3329`): bars, toolbar, minimap. The scene describes none of
- * their geometry, only which parts participate.
- *
- * NOT DRAWN, and why:
- *
- *  - `zoom`'s visual scale on a GraphElement's own drawn pixels:
- *    `ControlCanvasWalker.tsx`'s `isFreeParent` gate (`:210-216`) forces
- *    every child of a registered container to scale 1 — `nativeSolver.ts`'s
- *    own doc. A connection endpoint still ports the full `* zoom` formula
- *    (`connectionEndpoints.ts`), so at a non-1 zoom the line lands where
- *    Godot's port actually is, not on this previewer's unscaled node icon —
- *    a visible mismatch between the two, and a known, cited gap outside this
- *    packet's reach rather than something bent to hide it.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`; every grid colour, and every connection colour
- * (`ConnectionLine.tsx`), is composed with it while both are still sRGB,
- * matching every other two-colour chrome in this codebase.
- *
- * This component never checks `props.visible` and never applies a transform —
- * both are `ControlCanvasWalker`'s job. It does render `children`, which the
- * walker hands over (`wrapsChildren`) because the clip above only reaches
- * them from inside the provider.
+ * The native painter for `GraphEdit`: `_notification(NOTIFICATION_DRAW)`
+ * (`scene/gui/graph_edit.cpp:853-865`) draws the panel and the grid, then each resolvable
+ * connection (`_update_connections`, `:1614-1660`). `panel_focus` is never drawn: a static
+ * preview never has focus.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -79,7 +37,7 @@ import { graphEditScrollBars, type GraphEditScrollBar } from './scrollBars';
 import { snappedControlOrigin, type ControlDrawTransform } from '../../../../r3f/controls/native/controlPixelSnap';
 import type { GraphEditProperties } from './types';
 
-/** `default_theme.cpp:1287` — `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, an asymmetric bottom margin. */
+/** `default_theme.cpp:1287`: `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, with a larger bottom margin. */
 function defaultPanel(theme: NativeControlComponentProps['theme']): StyleBoxFlatData {
   const scale = theme.contentMargin / 4;
   return {
@@ -111,22 +69,23 @@ function defaultPanel(theme: NativeControlComponentProps['theme']): StyleBoxFlat
   };
 }
 
-/** `default_theme.cpp:1293` — `Color(1, 1, 1, 0.05)`. */
+/** `default_theme.cpp:1293`: `Color(1, 1, 1, 0.05)`. */
 const GRID_MINOR_DEFAULT: ControlColor = { r: 1, g: 1, b: 1, a: 0.05 };
-/** `default_theme.cpp:1294` — `Color(1, 1, 1, 0.2)`. */
+/** `default_theme.cpp:1294`: `Color(1, 1, 1, 0.2)`. */
 const GRID_MAJOR_DEFAULT: ControlColor = { r: 1, g: 1, b: 1, a: 0.2 };
 
-/** Every internal Label/LineEdit this painter draws reads Godot's plain "font" theme key, exactly as `Label`/`Button` themselves do. */
+/** Every internal Label and LineEdit reads the plain "font" theme key, as `Label` and `Button` do. */
 const GRAPH_EDIT_THEME_FONT_KEY = 'font';
 
-/** `snapping_distance_spinbox->set_step(1)` (`graph_edit.cpp:3292`) — `_update_text`'s own digit budget. */
+/** `snapping_distance_spinbox->set_step(1)` (`graph_edit.cpp:3292`): the digit budget of `_update_text`. */
 const SNAPPING_SPINBOX_STEP = 1;
 
-/** Thickness of one grid LINE, Godot px — `draw_line`'s own default width is a single hairline pixel. */
+/** The thickness of a grid line in Godot px: the default width of `draw_line` is one hairline pixel. */
 const LINE_THICKNESS_PX = 1;
-/** `graph_edit.cpp:1945,1957` — `Rect2(x - 1, y - 1, 3, 3)`. */
+/** `graph_edit.cpp:1945,1957`: `Rect2(x - 1, y - 1, 3, 3)`. */
 const DOT_SIZE_PX = 3;
 
+/** Grid and connection colours take the tint while both are sRGB, before the one linear conversion. */
 function useColorQuad(base: ControlColor, tintOwn: NativeControlComponentProps['tint']['own']) {
   const combined = useMemo(() => multiplyModulate(tintOwn, base), [tintOwn, base]);
   const color = useGodotLinearColor(combined);
@@ -174,7 +133,7 @@ function GridDotQuad({
   );
 }
 
-/** Neither bar ever carries an authored rotation, scale or pivot — each is placed by `set_anchor_and_offset` alone (`graph_edit.cpp:844-851`). */
+/** No bar has an authored rotation, scale or pivot: `set_anchor_and_offset` alone places each (`graph_edit.cpp:844-851`). */
 const SCROLL_BAR_DRAW_TRANSFORM: ControlDrawTransform = { rotation: 0, scale: { x: 1, y: 1 }, pivot: { x: 0, y: 0 } };
 
 /** One of GraphEdit's own scrollbars: `ScrollBar::_notification(NOTIFICATION_DRAW)`'s track then grabber (`scroll_bar.cpp:295-344`). */
@@ -195,7 +154,7 @@ function ScrollBarChrome({
 }) {
   if (!bar.visible) return null;
   // Each bar is its own CanvasItem, so its translation is floored on its own
-  // account — `scrollcontainer/Component.tsx`'s PIXEL SNAP doc for why.
+  // (the PIXEL SNAP doc of `scrollcontainer/Component.tsx`).
   const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
   return (
     <CanvasItemGroup position={[origin.x, -origin.y, 0]}>
@@ -230,15 +189,18 @@ export function GraphEdit({
   const snappingDistance = props.snappingDistance ?? 20;
   const scrollOffset = useMemo(() => ({ x: scrollOffsetX, y: scrollOffsetY }), [scrollOffsetX, scrollOffsetY]);
 
-  // `graph_edit.h:253`/`:252` — `lines_curvature = 0.5f`, `lines_thickness = 4.0f`.
+  // `graph_edit.h:253`/`:252`: `lines_curvature = 0.5f`, `lines_thickness = 4.0f`.
   const curvature = props.connectionLinesCurvature ?? 0.5;
   const thickness = props.connectionLinesThickness ?? 4;
   // `_get_shader_line_width` (`graph_edit.cpp:2632-2634`): `lines_thickness * base_scale + 4.0`,
-  // `base_scale` recovered from `theme.contentMargin` the same way every other GraphNode/GraphEdit scale is.
+  // with `base_scale` recovered from `theme.contentMargin`.
   const lineWidth = thickness * (theme.contentMargin / DEFAULT_CONTENT_MARGIN) + 4;
-  // `connection_rim_color`'s default is `style_normal_color` (`default_theme.cpp:1301`),
-  // the same literal `theme.styleFill.normal` already carries.
+  // The default `connection_rim_color` is `style_normal_color` (`default_theme.cpp:1301`),
+  // which `theme.styleFill.normal` holds.
   const rimColor = solveNode.colors.connection_rim_color ?? theme.styleFill.normal;
+  // The walker draws each GraphElement at scale 1 (`isFreeParent` in `ControlCanvasWalker.tsx`),
+  // but an endpoint keeps the full `* zoom` (`connectionEndpoints.ts`). At a zoom other than 1,
+  // the line ends where Godot's port is, away from the unscaled node.
   const connections = useMemo(
     () => resolveGraphEditConnections(solveNode, childRects, props, theme, measureText),
     [solveNode, childRects, props, theme, measureText]
@@ -266,8 +228,7 @@ export function GraphEdit({
     [showGrid, gridPattern, rectSize, scrollOffset, zoom, snappingDistance]
   );
 
-  // --- Constructor-built chrome (`Toolbar.tsx` / `Minimap.tsx`) -----------
-  // Read INSIDE the render body, not a `useMemo` (`Label`'s own `Component.tsx` for why).
+  // Read in the render body, not a `useMemo` (`Label`'s `Component.tsx` says why).
   const fontMetrics = resolveNodeFontMetrics(solveNode, GRAPH_EDIT_THEME_FONT_KEY);
   const layoutCache = useMemo(() => new Map<string, TextLayoutResult>(), []);
   const shape = (text: string): TextLayoutResult => {
@@ -293,13 +254,23 @@ export function GraphEdit({
   const minimapEnabled = isMinimapEnabled(props);
   const graphEditSize = rectSize;
   const { bounds, minimapElements } = graphEditElements(solveNode, childRects, zoom, graphEditSize, theme);
+  // The chrome is `INTERNAL_MODE_*` children of `top_layer`, which is `INTERNAL_MODE_BACK`
+  // (`graph_edit.cpp:3183`), so it paints after every GraphElement, in `top_layer`
+  // child order (`:3210,3229,3329`): scrollbars, toolbar, minimap.
   const scrollBars = graphEditScrollBars(graphEditSize, bounds, scrollOffset, theme);
   const minimapPanelRect = minimapRect(graphEditSize, props);
   const minimapXform = minimapTransform({ x: minimapPanelRect.w, y: minimapPanelRect.h }, bounds);
 
+  // The constructor calls `set_clip_contents(true)` (`graph_edit.cpp:3342`), so every GraphEdit
+  // clips its chrome and children. The load-time clamp of `set_scroll_offset` (`loadOrder.ts`)
+  // often parks the whole graph outside the rect.
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  // The walker hands the children over (`wrapsChildren`): the clip reaches them only inside the provider.
   const { anchorRef, clip } = useWorldClipPlanes(ownRect);
 
+  // Connections draw at this node's `renderOrder`, behind every GraphElement. Godot puts
+  // `connections_layer` above the grid and below the GraphFrames and GraphNodes
+  // (`graph_edit.cpp:717`): see `comparison.md`.
   return (
     <CanvasItemGroup ref={anchorRef}>
       <ControlClipProvider value={clip}>

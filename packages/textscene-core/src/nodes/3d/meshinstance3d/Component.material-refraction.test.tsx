@@ -1,16 +1,8 @@
 /**
- * Render-side contract for StandardMaterial3D refraction.
- *
- * Parsing transmission/thickness is necessary but not sufficient — the values
- * have to reach the rendered material. three.js exposes transmission only on
- * `MeshPhysicalMaterial` (like clearcoat / sheen / anisotropy), so a
- * refraction-bearing StandardMaterial3D must upgrade the slot to a
- * `<meshPhysicalMaterial>` carrying `transmission` + `thickness` (with `ior` at
- * three's glass default 1.5). Every non-refraction material stays on the
- * lighter `MeshStandardMaterial` — the type the rest of the suite asserts on.
- *
- * (No texture is involved: `refraction_texture` is a documented follow-up, out
- * of this slice's scope — see the parse test's PARITY note.)
+ * StandardMaterial3D refraction reaches the rendered material. three.js has
+ * transmission only on `MeshPhysicalMaterial`, so a refracting material upgrades
+ * the slot to one carrying `transmission` and `thickness`. Every other material
+ * stays a `MeshStandardMaterial`. `refraction_texture` is out of scope here.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -23,7 +15,7 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 
-/** Provider that never loads anything — these materials carry no textures. */
+/** A provider that never loads anything: these materials carry no textures. */
 class NoopProvider implements ResourceProvider {
   async loadResource(): Promise<string | ArrayBuffer | null> {
     return null;
@@ -82,16 +74,13 @@ describe('<MeshInstance3D> refraction material (WI-69)', () => {
     const material = materialInstanceAs<THREE.MeshPhysicalMaterial>(physical[0]!);
     expect(material.transmission).toBeCloseTo(1, 5);
     expect(material.thickness).toBeCloseTo(0.2, 5);
-    // ior is left unset so it stays at three's MeshPhysicalMaterial glass
-    // default (1.5) — Godot exposes no ior, so a hallucinated override would
-    // silently diverge. Pin the invariant, not just the mechanism the diff set.
+    // Godot exposes no ior, so it stays at three's glass default of 1.5.
     expect(material.ior).toBe(1.5);
   });
 
   it('keeps a material with no refraction on the standard (non-physical) material', async () => {
-    // GUARDRAIL: the common path must stay MeshStandardMaterial so existing
-    // behaviour — and the material type every other test asserts on — is
-    // unchanged; only an enabled refraction upgrades to physical.
+    // Only an enabled refraction upgrades to physical. The common path stays the
+    // MeshStandardMaterial every other test asserts on.
     const loader = makeLoader();
     const internal: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },

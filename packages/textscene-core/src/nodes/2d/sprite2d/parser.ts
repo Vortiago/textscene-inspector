@@ -1,7 +1,6 @@
 /**
- * Sprite2D parser — Node2D transform + the textured-quad surface (texture,
- * centering/offset, flip, region, sprite-sheet frames, modulate). Defaults
- * follow Godot: centered = true, hframes = vframes = 1, modulate = white.
+ * Parses a Sprite2D: the Node2D surface plus the textured-quad surface. Godot's
+ * defaults: centered = true, hframes = vframes = 1, modulate = white.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
@@ -24,13 +23,12 @@ export function parseSprite2D(
     flip_h: boolOr(properties.flip_h, false),
     flip_v: boolOr(properties.flip_v, false),
     region_enabled: boolOr(properties.region_enabled, false),
-    // The grid and frame Godot HOLDS after replaying the body in file order —
-    // a refused `frame` stays 0, a later `hframes` re-maps one that landed
+    // The grid and frame Godot holds after replaying the body in file order: a
+    // refused `frame` stays 0, and a later `hframes` re-maps one that landed
     // (godot/spriteFrames.ts).
     hframes: frames.hframes,
     vframes: frames.vframes,
     frame: frames.frame,
-    // `modulate` is parsed by parseNode2D (CanvasItem property) — inherited via ...base.
   };
 
   if (properties.texture) result.texture = properties.texture;

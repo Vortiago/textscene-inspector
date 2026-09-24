@@ -1,15 +1,7 @@
 /**
- * Area2D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- *
- * The space-override family goes through `v.enumInt`, matching Area3D, rather
- * than a hand-rolled validator, which cannot carry an ADR-0032 citation.
- *
- * `space_override` (bare, no `gravity_`/`linear_damp_`/`angular_damp_`
- * prefix) is deliberately absent: area_2d.cpp has no matching `ADD_PROPERTY`
- * and doc/classes/Area2D.xml has no matching member. Only
- * `gravity_space_override`, `linear_damp_space_override` and
- * `angular_damp_space_override` are real `SpaceOverride` members.
+ * Area2D strict validators for linting. The space-override family uses `v.enumInt`, like Area3D,
+ * since a hand-rolled validator cannot carry an ADR-0032 citation. A bare `space_override` is
+ * absent: area_2d.cpp has no such `ADD_PROPERTY` and doc/classes/Area2D.xml no such member.
  */
 
 import '../../shared/linterParser.js';
@@ -29,7 +21,7 @@ validatorRegistry.registerAll('Area2D', {
   gravity_point: v.boolean('gravity_point'),
   gravity_point_center: v.vector2('gravity_point_center'),
   // area_2d.cpp:655, PROPERTY_HINT_RANGE "0,1024,0.001,or_greater,exp,suffix:px":
-  // 0 is legal and IS the default (constant point gravity, no falloff); the
+  // 0 is legal and is the default (constant point gravity, no falloff). The
   // setter (:53-56) is a bare assignment, so out-of-range warns.
   gravity_point_unit_distance: v.float('gravity_point_unit_distance', {
     min: 0,
@@ -60,15 +52,12 @@ validatorRegistry.registerAll('Area2D', {
     message: "Property 'angular_damp' must be >= 0. Damping cannot be negative.",
     hinted: 'area_2d.cpp:666',
   }),
-  // `Variant::INT` with `set_priority(int)` (area_2d.cpp:650); both hint ends are
-  // opened by `or_greater,or_less`, so the slot itself is the only authority.
-  // Modelled as a float, it was the one key in the tree outside the int-slot
-  // population, so neither the truncation warning nor the unstorable-value
-  // error ever fired on it.
+  // `Variant::INT` with `set_priority(int)` (area_2d.cpp:650). `or_greater,or_less` opens
+  // both hint ends, so the int slot is the only authority.
   priority: v.strictInt('priority'),
   audio_bus_override: v.boolean('audio_bus_override'),
   // area_2d.cpp:670 declares Variant::STRING_NAME, and the getter returns
   // StringName (area_2d.cpp:534), so the serialised form is &"Master" or the
-  // plain "Master" the text parser also accepts — never a bare word.
+  // plain "Master" the text parser also accepts, never a bare word.
   audio_bus_name: v.stringName('audio_bus_name'),
 });

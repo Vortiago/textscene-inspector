@@ -1,19 +1,7 @@
 /**
- * <PathFollow2D> — positions its children along the parent Path2D's curve.
- *
- * It reads the nearest ancestor Path2D's curve via Path2DCurveContext, samples
- * the point at absolute `progress` — the only one of the two position keys a
- * scene file can carry, and unwrapped whatever `loop` says, for the reason
- * `computeFollowTransform` gives —
- * nudges it by `h_offset` (along the tangent) / `v_offset` (perpendicular),
- * and rotates children to the tangent when `rotates`. That computed transform —
- * conjugated by diag(1,-1,1) like every Node2D — drives the group (Godot derives
- * the follower's transform from the curve, overriding the authored position).
- *
- * With no curve in scope it falls back to its authored Node2D transform (matching
- * PathFollow3D / ADR-0008) — e.g. godot-open-rpg's gamepiece.tscn sets the curve
- * at runtime, so nothing to follow statically. A small selection-gated dot marks
- * the follow point (ADR-0018).
+ * Places a PathFollow2D's children on the parent Path2D's curve, overriding the
+ * authored position as Godot does. With no curve in scope it keeps its authored
+ * Node2D transform (ADR-0008). A selection-gated dot marks the point (ADR-0018).
  */
 
 import { useMemo } from 'react';
@@ -78,9 +66,8 @@ export function PathFollow2D({ node, children }: NodeComponentProps) {
   }
 
   return (
-    // This branch replaces `<Node2D>`'s group with one at the sampled curve
-    // position, so it has to carry the canvas draw-order key `<CanvasItem2D>`
-    // would have put there — three reads a drawn object's place from its
+    // This group replaces `<Node2D>`'s, so it carries the canvas draw-order key
+    // `<CanvasItem2D>` would have set. three reads a drawn object's place from its
     // nearest enclosing group, and a bare one sinks the dot behind the canvas.
     <group
       name={node.name}
@@ -95,9 +82,9 @@ export function PathFollow2D({ node, children }: NodeComponentProps) {
 }
 
 /**
- * Sample the curve and build the conjugated group transform, or null when there
- * is no usable curve. Coordinates are Path2D-local Godot pixels; node2dGroupProps
- * applies the +Y-down → three conjugation (negate Y, negate rotation).
+ * Samples the curve and builds the group transform, or null when no curve is
+ * usable. Coordinates are Path2D-local Godot pixels. `h_offset` moves along the
+ * tangent, `v_offset` along the normal, and `rotates` turns to the tangent.
  */
 function computeFollowTransform(
   sampler: Curve2DSampler | null,
@@ -108,15 +95,11 @@ function computeFollowTransform(
   | null {
   if (!sampler || sampler.length <= 0) return null;
 
-  // `progress` alone, unwrapped. Godot applies a node's stored properties
-  // BEFORE parenting it (packed_scene.cpp:492 sets, :541 parents) and binds
-  // `PathFollow2D::path` only on enter-tree, so `set_progress_ratio` refuses
-  // every authored ratio (path_2d.cpp:472) and `set_progress`'s own wrap/clamp
-  // branch is skipped for want of a curve. What is left is the raw value and
-  // the sampler's clamp (curve.cpp:1079) — which is why `loop` does not wrap a
-  // scene-loaded progress either, measured both ways against 4.6.3.
+  // `progress` alone, unwrapped, whatever `loop` says. Properties apply before
+  // parenting (packed_scene.cpp:492 sets, :541 parents), so `set_progress_ratio`
+  // refuses every ratio (path_2d.cpp:472) and `set_progress` skips its wrap. The
+  // sampler's clamp (curve.cpp:1079) is all that is left.
   const sample = sampler.sampleAt(props.progress ?? 0);
-  // Tangent + perpendicular (Godot space): h_offset along tangent, v_offset normal.
   const cos = Math.cos(sample.angle);
   const sin = Math.sin(sample.angle);
   const x = sample.x + cos * props.h_offset - sin * props.v_offset;

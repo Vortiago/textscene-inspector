@@ -1,6 +1,4 @@
-/**
- * NavigationRegion2D registration — parser.
- */
+/** Registers the NavigationRegion2D parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseNavigationRegion2D } from './parser';

@@ -1,5 +1,5 @@
 /**
- * Types for representing incremental changes to TSCN scenes.
+ * The incremental changes to a TSCN scene.
  */
 
 import type { TscnNode, TscnScene } from '../parser/types';

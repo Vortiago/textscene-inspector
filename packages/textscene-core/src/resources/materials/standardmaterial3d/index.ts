@@ -1,20 +1,8 @@
 /**
- * StandardMaterial3D resource slice — Godot's default 3D surface (ADR-0031).
- *
- * Claims `ShaderMaterial` too: one we do not render resolves to Godot's own
- * default 3D surface (ADR-0041) rather than to a permanent missing-resources
- * row.
- *
- * No `extensions` claim. `.tres` is Godot's one text-resource container and
- * several slices read it (TileSet, MeshLibrary, SpriteFrames, ArrayMesh), so
- * routing a `.tres` by extension would hand every one of them to this slice.
- * Its files are recognised by their `[gd_resource type=…]` instead.
- *
- * Deliberately renderer-free: this module and everything it re-exports
- * value-import neither `three` nor React, so a linter entry point can read the
- * claim table and the decoded shape without pulling a renderer into its bundle.
- * `build.ts` / `scalars.ts` / `loadMaterial.ts` are the three-facing halves and
- * are NOT reachable from here.
+ * StandardMaterial3D resource slice, Godot's default 3D surface (ADR-0031). It claims
+ * `ShaderMaterial` too, which resolves to that surface (ADR-0041). No extension claim:
+ * several slices read `.tres`, so its files are recognised by `[gd_resource type=…]`.
+ * Renderer-free for the linter: `build.ts`, `scalars.ts` and `loadMaterial.ts` sit outside.
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';

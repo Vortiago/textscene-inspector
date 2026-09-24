@@ -1,16 +1,7 @@
 /**
- * Grafting a host scene's deep children into an instanced sub-scene's tree.
- *
- * `sceneTreeBuilder` attaches a node whose parent path descends into an
- * instance to the INSTANCE, recording the remainder as `instanceSubPath`. That
- * is as far as the parser can get: only the loaded sub-scene knows what
- * `ColorRect/CenterContainer/VBoxContainer` refers to. This is where the two
- * halves meet.
- *
- * The highest-value test here is the purity one. The loaded sub-scene is a
- * SHARED cache entry — `pause_menu.tscn` is instanced by two different scenes —
- * so a graft that mutated it in place would corrupt every other instance, and
- * would do it in a way that only shows up when a second consumer renders.
+ * Grafting a host scene's deep children into an instanced sub-scene's tree. The purity
+ * test matters most: the sub-scene is a shared cache entry, so a graft that wrote into
+ * it would corrupt every other instance, visibly only when a second consumer renders.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -46,7 +37,7 @@ describe('graftInstanceChildren', () => {
     const pivot = grafted[0]!.children[0]!;
     expect(pivot.name).toBe('Pivot');
     expect(pivot.children.map((c) => c.name)).toEqual(['Body']);
-    // The root gains nothing — the child went inside, not alongside.
+    // The root gains nothing: the child went inside, not alongside.
     expect(grafted.map((c) => c.name)).toEqual(['Sprite2D']);
   });
 
@@ -77,13 +68,10 @@ describe('graftInstanceChildren', () => {
   });
 
   it('stamps the outer scene BOTH resource tables onto grafted nodes', () => {
-    // A grafted node's ids index the OUTER scene's tables, but it now renders
-    // under the sub-scene's provider — where the same id means a different
-    // resource, or nothing at all. Both KINDS of id: a node names
-    // `ExtResource("3")` and `SubResource("1")` in the same property block, and
-    // both mean "in the scene I was authored in". Carrying only one resolves
-    // half of them against the right scene, which is the failure `SceneScope`
-    // exists to make unrepresentable.
+    // A grafted node's ids index the outer scene's tables, but it renders under the
+    // sub-scene's provider, where the same id means another resource. A node names
+    // `ExtResource("3")` and `SubResource("1")` in one block, so `SceneScope` carries
+    // both kinds of id.
     const outer: SceneScope = {
       externalResources: [{ id: '3', type: 'Texture2D', path: 'res://a.png' }],
       internalResources: [{ id: '1', type: 'StandardMaterial3D', data: {} }],
@@ -98,7 +86,7 @@ describe('graftInstanceChildren', () => {
   it('re-anchors at a nested instance rather than failing to descend into it', () => {
     // `Sprite2D` is itself an instance, so `Pivot` lives one scene deeper and
     // is not in this tree yet. Handing the remainder down means the same graft
-    // resolves it when THAT node collapses.
+    // resolves it when that node collapses.
     const loaded = [node('Sprite2D', { instance: 'ExtResource("3")' })];
     const child = node('Body', { instanceSubPath: 'Sprite2D/Pivot' });
 

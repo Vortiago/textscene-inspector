@@ -1,13 +1,7 @@
 /**
- * Curve resource slice — entry point (ADR-0031).
- *
- * Claims Godot's 1-D `Curve` (the scalar `f(offset) -> value` resource particle
- * parameters and the editor's curve widget use), decoded from either arrival
- * path by `decode.ts`. A Curve resolves to no THREE object at all, so the slice
- * has no `build.ts`: `sample.ts` is the internal consumer-facing evaluator.
- *
- * THREE-free and React-free, so claim consumers can read the registration
- * without pulling a renderer into their import closure.
+ * Curve resource slice entry point (ADR-0031): claims Godot's scalar `Curve`. It
+ * builds no THREE object, so `sample.ts` evaluates it and there is no `build.ts`.
+ * THREE-free and React-free, so a claim consumer pulls in no renderer.
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';

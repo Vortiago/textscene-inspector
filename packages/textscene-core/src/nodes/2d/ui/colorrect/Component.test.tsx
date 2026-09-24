@@ -1,11 +1,7 @@
 /**
- * <ColorRect> — the native (WebGL canvas) painter for ColorRect: one
- * quad, sized to the solved rect, filled with the parsed `color` multiplied
- * by the inherited tint. Colour composition is asserted at exact LINEAR
- * values via the same `THREE.Color().setRGB(..., THREE.SRGBColorSpace)`
- * conversion `useGodotLinearColor` uses (`r3f/godotColor.ts`) — an
- * independent ground truth computed from known literal inputs, not a
- * re-derivation of the component's own arithmetic.
+ * <ColorRect>: one quad of the solved rect, filled with `color` times the tint.
+ * Colours are asserted as exact linear values from literal inputs, through the
+ * conversion `useGodotLinearColor` makes (`r3f/godotColor.ts`).
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -35,7 +31,7 @@ function solveNode(
   return { ...emptySolveNode(), path, node: tscnNode, children };
 }
 
-/** Ground-truth linear conversion — the exact call `useGodotLinearColor` makes. */
+/** The linear conversion `useGodotLinearColor` makes. */
 function expectedLinear(r: number, g: number, b: number): THREE.Color {
   return new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace);
 }
@@ -135,10 +131,9 @@ describe('<ColorRect> registered through <ControlCanvasWalker> (end-to-end walke
   it('folds the node’s OWN modulate in exactly once — ambient × self_modulate = 0.25, never 0.125', async () => {
     controlComponentRegistry.register({ typeName: 'ColorRect', Component: ColorRect });
     controlSolverRegistry.clear();
-    // BOTH authored on the SAME node, which is what the isolated painter
-    // tests above cannot express: the walker folds them in sequence and the
-    // painter multiplies only its own `color` onto the result. A painter that
-    // read `modulate` off the node again would square it to 0.125.
+    // Both on one node: the walker folds them and the painter multiplies only
+    // its `color` onto the result. A painter that read `modulate` again would
+    // square it to 0.125.
     const root = solveNode('Root', 'ColorRect', {
       color: 'Color(1, 1, 1, 1)',
       modulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 },

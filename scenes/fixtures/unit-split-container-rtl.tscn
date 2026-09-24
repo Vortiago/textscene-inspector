@@ -1,11 +1,7 @@
-; The ONE variable: `layout_direction = 3` on an HSplitContainer. Godot
-; inverts the dragger position against the container width
-; (split_container.cpp:703-707) and then gives the FIRST child the band above
-; it instead of below (`:738-751`), so the pair swaps sides and the boundary
-; mirrors. `split_offset = 60` makes the two bands unequal, which is what
-; separates a real mirror from a plain child swap; the LTR row above holds the
-; unmirrored boundary. unit-split-container.tscn moves the offset branches at
-; direction LTR, so a regression in the inversion is invisible there.
+; One variable: `layout_direction = 3` on an HSplitContainer. Godot inverts the dragger position
+; against the container width (split_container.cpp:703-707), then gives the first child the band
+; above it instead of below (`:738-751`), so the pair swaps sides and the boundary mirrors.
+; unit-split-container.tscn moves the offset branches at LTR, so the inversion is invisible there.
 
 [gd_scene format=3]
 
@@ -20,6 +16,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
+; `split_offset = 60` makes the bands unequal, which separates a mirror from a plain child swap.
+; This LTR row holds the unmirrored boundary.
 [node name="Ltr" type="HSplitContainer" parent="."]
 layout_mode = 1
 offset_left = 40.0

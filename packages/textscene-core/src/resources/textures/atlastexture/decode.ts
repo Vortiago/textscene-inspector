@@ -1,19 +1,8 @@
 /**
- * AtlasTexture decode — an `AtlasTexture` section's raw properties into "which
- * sheet, which window", plus the one piece of geometry every consumer needs:
- * the atlas rectangle it samples and the size it reports.
- *
- * `atlas = ExtResource("2")` names the sheet and `region = Rect2(x, y, w, h)`
- * the cell. The atlas REF STAYS RAW here, the same rule SpriteFrames' frame refs
- * follow: resolving it needs the owning file's ExtResource table, and keeping
- * that out makes this a leaf module — which is what lets the shared Texture2D
- * resolvers call the decode without an import cycle.
- *
- * The Rect2 grammar is the shared canonical reader's, so a malformed component
- * (`1.2.3`, `1e-`, a double sign) fails the whole match and leaves the rect at
- * Godot's own zero default, instead of the NaN a loose `[\d.eE+-]+` copy stores.
- *
- * Pure `.ts`, no THREE — `build.ts` composes the layout into a texture.
+ * AtlasTexture decode: which sheet, which window, the rectangle it samples and
+ * the size it reports. The atlas ref stays raw, so this is a leaf module that the
+ * Texture2D resolvers import with no cycle. A malformed Rect2 component leaves
+ * Godot's zero default, not NaN. No THREE.
  */
 
 import { boolSlotValue } from '../../../godot/index.js';
@@ -40,21 +29,16 @@ export function decodeAtlasTexture(properties: Record<string, unknown>): AtlasTe
 
 /**
  * The atlas rectangle `tex` samples and the size it reports, or null when it
- * describes nothing drawable.
- *
- * `atlasSize` is only consulted for an axis whose region size rounds to zero,
- * which is where Godot substitutes the atlas's own dimension
- * (`get_width`/`get_height` :34-38/:45-49, `_get_region_rect` :126-137). Pass
- * null when the atlas image has not loaded — the answer is then null on exactly
- * the axes that need it, and available on every fully-authored region without
- * loading anything at all.
+ * describes nothing drawable. `atlasSize` is read only for a zero axis, where
+ * Godot uses the atlas's dimension (`get_width`/`get_height` :34-38/:45-49,
+ * `_get_region_rect` :126-137). Null `atlasSize` answers null only on such an axis.
  */
 export function atlasTextureLayout(
   tex: AtlasTextureData,
   atlasSize: { width: number; height: number } | null
 ): AtlasTextureLayout | null {
-  // `set_region` stores `Rect2(position, size.floor())` (:97) — the SIZE is
-  // rounded because an image rectangle is whole texels; the position is not.
+  // `set_region` stores `Rect2(position, size.floor())` (:97): the size is whole
+  // texels, the position is not.
   const roundedW = Math.floor(tex.region.width);
   const roundedH = Math.floor(tex.region.height);
 
@@ -69,8 +53,8 @@ export function atlasTextureLayout(
   return {
     width,
     height,
-    // The position is floored here rather than in `set_region`: Godot samples it
-    // as a float UV, a pixel crop has to start on a whole texel.
+    // The position is floored here, not in `set_region`: Godot samples a float
+    // UV, and a pixel crop starts on a whole texel.
     source: {
       x: Math.floor(tex.region.x),
       y: Math.floor(tex.region.y),

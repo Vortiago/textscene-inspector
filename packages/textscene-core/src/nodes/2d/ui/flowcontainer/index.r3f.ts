@@ -1,10 +1,7 @@
 /**
- * FlowContainer registration — the native (WebGL canvas) rect solve +
- * painter. `./nativeSolver` registers the container-layout/minimum-size
- * functions for FlowContainer, HFlowContainer AND VFlowContainer as a side
- * effect of import (one solver, parameterised by orientation — see its own
- * doc) — `hflowcontainer`/`vflowcontainer`'s own `index.r3f.ts` import it too
- * so either one alone still wires all three.
+ * FlowContainer registration: the native rect solve and painter. Importing
+ * `./nativeSolver` registers its functions for all three flow types, and the
+ * `hflowcontainer` and `vflowcontainer` entries import it too.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

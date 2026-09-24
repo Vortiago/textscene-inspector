@@ -32,9 +32,8 @@ describe('standardmaterial3d slice registration', () => {
   });
 
   it('claims ShaderMaterial too, so it reaches the uncompiled-shader fallback', () => {
-    // A shader we do not render draws Godot's default surface (ADR-0041).
-    // Without the claim, routing would find no slice and a shipped window-glass
-    // shader would sit in the missing-resources panel forever.
+    // A shader this previewer does not render draws Godot's default surface (ADR-0041).
+    // Without the claim, routing finds no slice and the shader shows as missing.
     expect(resourceSliceRegistry.byTypeName('ShaderMaterial')?.slice).toBe(
       'standardmaterial3d'
     );
@@ -56,8 +55,8 @@ describe('standardmaterial3d slice registration', () => {
   it('reaches no renderer, so a claim reader pulls in no bundle', () => {
     // The reason `decode.ts` stops at Godot's own enums and `scalars.ts` /
     // `build.ts` hold every three constant. `walkImportClosure` skips erased
-    // imports, so the type-only `import type * as THREE` in `types.ts` is free —
-    // this asserts it, rather than assuming erasure.
+    // imports, so the type-only `import type * as THREE` in `types.ts` is free. This
+    // asserts it, rather than assuming erasure.
     const closure = walkImportClosure(resolve(here, 'index.ts'));
     expect(tsxFiles(closure)).toEqual([]);
     expect(

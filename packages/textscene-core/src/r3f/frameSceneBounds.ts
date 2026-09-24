@@ -1,9 +1,6 @@
 /**
- * Camera-framing math shared by `<TscnCanvas>`'s auto-fit (`CameraFit`) and
- * the F-to-frame shortcut (`FrameSelectedShortcut`). A leaf module (THREE +
- * bounds only) so both consumers can import it without a module cycle —
- * `TscnCanvas` mounts `FrameSelectedShortcut`, so the shortcut must never
- * import back from `TscnCanvas` itself.
+ * Camera-framing math shared by the auto-fit (`CameraFit`) and the F-to-frame shortcut. A leaf
+ * module, since `TscnCanvas` mounts `FrameSelectedShortcut`, which must not import back from it.
  */
 import * as THREE from 'three';
 import { EDITOR_CAMERA_FOV, editorCameraDirection } from './godotEditorCamera.js';
@@ -16,7 +13,7 @@ import { computeWorldBoundingBox } from './bounds.js';
  */
 export const FRAME_MARGIN = 1.6;
 
-/** Largest side of a box — 0 for a point, which a bounds proxy legitimately is. */
+/** Largest side of a box: 0 for a point, which a bounds proxy can be. */
 function maxExtent(box: THREE.Box3): number {
   const size = box.getSize(new THREE.Vector3());
   return Math.max(size.x, size.y, size.z);
@@ -29,11 +26,9 @@ export interface OrbitLike {
 }
 
 /**
- * Frame the camera so the whole scene fits the viewport. Unions the bounding
- * boxes of every rendered Mesh (skipping the empty-state grid), then pulls the
- * camera back along an isometric-ish direction far enough that the largest
- * dimension fits the vertical FOV, and re-points the controls at the centre.
- * No-op for empty scenes or non-finite bounds.
+ * Frames the camera on the union of every rendered mesh, back along the editor direction until the
+ * largest dimension fits the vertical FOV, and re-points the controls at the centre. A no-op for an
+ * empty scene or non-finite bounds.
  */
 export function frameSceneBounds(
   scene: THREE.Object3D,
@@ -49,12 +44,8 @@ export function frameSceneBounds(
   let hasGizmo = false;
   scene.traverse((obj) => {
     if (obj.userData?.tscnEmptyState) return;
-    // A Label3D's own real glyph mesh (`LabelGlyphs.tsx`'s own doc has the
-    // measurement) — skipped so an incidental async-mount timing accident
-    // can never change the frame. Label3D's contribution to auto-framing is
-    // its zero-size bounds proxy (`nodes/3d/label3d/Component.tsx`'s
-    // `LABEL3D_BOUNDS_PROXY`) ALONE, matching what Godot's own reference
-    // camera is placed from.
+    // A Label3D glyph mesh is skipped, so async mount timing cannot change the frame. Label3D frames
+    // by its zero-size `LABEL3D_BOUNDS_PROXY` alone, as Godot's reference camera does.
     if (obj.userData?.tscnFrameExcluded) return;
     // CSG contributor bounds proxies are INCLUDED: Godot counts a contributor's own
     // unevaluated brush too (modules/csg/csg_shape.cpp:470,507, reached recursively), so a
@@ -72,9 +63,8 @@ export function frameSceneBounds(
       hasGizmo = true;
     }
   });
-  // A POINT union is reachable: a bounds proxy stands in for a node Godot never sized,
-  // and every mesh in the scene can be one. Such a union is not a mesh to frame FROM, so
-  // it must not win over the gizmo box and defeat the fallback above.
+  // A point union is reachable, since every mesh can be a bounds proxy for a node Godot never
+  // sized. It is not a mesh to frame from, so it must not win over the gizmo box.
   const box = hasMesh && maxExtent(meshBox) > 0 ? meshBox : hasGizmo ? gizmoBox : hasMesh ? meshBox : null;
   if (!box) return;
 
@@ -93,25 +83,19 @@ export function frameSceneBounds(
     return;
   }
 
-  // The only orthographic camera framing ever sees is the editor camera in its
-  // Numpad-5 projection, whose frustum is sized from the SAME 70-degree field
-  // of view (`GodotEditorControls`); framing it at three's unrelated 50-degree
-  // default would leave it zoomed out by half again.
+  // The only orthographic camera here is the editor camera's Numpad-5 projection, sized from the same
+  // 70-degree field of view; three's 50-degree default would zoom it out by half again.
   const persp = camera as THREE.PerspectiveCamera;
   const fov = ((persp.isPerspectiveCamera ? persp.fov : EDITOR_CAMERA_FOV) * Math.PI) / 180;
   const distance = (maxDim / 2 / Math.tan(fov / 2) || maxDim) * FRAME_MARGIN;
 
-  // Godot's own editor viewing angle, so a framed scene presents the same face
-  // it does in the editor (godotEditorCamera.ts) — including a scene that is
-  // dimensionally flat (all its geometry coplanar): Godot's own reference
-  // camera still frames it obliquely, never head-on.
+  // Godot's editor viewing angle, so a scene presents the face it does in the editor, a coplanar
+  // scene included: Godot's reference camera frames it obliquely, never head-on.
   const dir = editorCameraDirection();
   camera.position.copy(center.clone().add(dir.multiplyScalar(distance)));
   if (persp.isPerspectiveCamera) {
-    // Keep the near plane below the framing distance so microscopic scenes
-    // (e.g. a Decal authored at size 0.001) aren't clipped entirely: the 0.01
-    // floor must never exceed `distance`, or the content sits inside the near
-    // plane and the viewport renders black.
+    // The 0.01 near floor must never exceed `distance`, or a microscopic scene (a Decal at size
+    // 0.001) sits inside the near plane and renders black.
     persp.near = Math.min(Math.max(0.01, distance / 200), distance / 10);
     persp.far = distance * 200;
     persp.updateProjectionMatrix();

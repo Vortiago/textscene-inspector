@@ -1,9 +1,7 @@
 /**
- * BoxContainer's native (WebGL canvas) rect solve — the shared BoxContainer
- * port at whichever `vertical` THIS node authored (`box_container.cpp:380`),
- * unlike HBoxContainer/VBoxContainer, whose axis is fixed by TYPE and baked
- * into their own `nativeSolver.ts` as a literal. The algorithm itself lives
- * once in `../shared/boxContainerSolver.ts`, shared by all four.
+ * BoxContainer's native (WebGL canvas) rect solve: `../shared/boxContainerSolver.ts`
+ * at the `vertical` this node authored (`box_container.cpp:380`). HBoxContainer
+ * and VBoxContainer fix the axis by type instead.
  */
 
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';

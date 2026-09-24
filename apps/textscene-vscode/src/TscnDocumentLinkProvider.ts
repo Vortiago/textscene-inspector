@@ -1,30 +1,6 @@
 /**
- * Turns `res://` references in a `.tscn` document into clickable links that
- * open the referenced file — resolved project-root-relative, matching
- * Godot's own `res://` convention (never relative to the current file).
- *
- * `provideDocumentLinks` only computes ranges: a synchronous regex scan, no
- * IO. `resolveDocumentLink` fills in the target `Uri` lazily, only for the
- * link the user actually hovers/clicks, via the shared
- * `findGodotProjectRoot` walk (also used by `VSCodeResourceProvider`) so
- * this agrees with how the preview panel resolves the same paths. A
- * document outside any workspace folder has no project root to resolve
- * against, so its links stay unresolved (VS Code just won't offer to open
- * them) rather than guessing.
- *
- * The provider is registered once for the extension's lifetime (a single
- * instance in `extension.ts`), so the resolved root is cached on the
- * instance, keyed by the document's OWN DIRECTORY — otherwise every
- * `res://` link in a document (and every re-hover/re-click) repeats the
- * same upward filesystem walk. Keyed per-directory rather than per-
- * workspace-folder: `findGodotProjectRoot` walks upward from the
- * DOCUMENT's directory, and a single workspace folder can contain more
- * than one Godot project (e.g. sibling `game1/`/`game2/` subdirectories
- * each with their own `project.godot`) — caching by workspace folder alone
- * would return the first-resolved project's root for every OTHER project
- * in the same folder. `VSCodeResourceProvider.findProjectRoot` caches
- * per-panel instance instead (one document per instance), so it doesn't
- * need this per-directory granularity.
+ * Turns `res://` references in a `.tscn` document into links, resolved against the
+ * project root as Godot does, never against the current file.
  */
 
 import * as vscode from 'vscode';
@@ -48,11 +24,10 @@ export class TscnDocumentLinkProvider
   implements vscode.DocumentLinkProvider<TscnResourceDocumentLink>
 {
   /**
-   * `findGodotProjectRoot` result, keyed by the document's own directory —
-   * every document in the SAME directory shares one walk, but two documents
-   * in different directories (even under the same workspace folder) always
-   * resolve independently, so a nested/sibling Godot project never reuses
-   * another project's cached root.
+   * `findGodotProjectRoot` result, keyed by the document's own directory, so one
+   * walk serves every link and re-hover. Not keyed by workspace folder: one folder
+   * can hold several Godot projects, and each must get its own root.
+   * `VSCodeResourceProvider` caches per panel instead, one document each.
    */
   private readonly _projectRootCache = new Map<string, vscode.Uri>();
 
@@ -69,6 +44,7 @@ export class TscnDocumentLinkProvider
     return root;
   }
 
+  /** Computes ranges only: a synchronous regex scan with no IO. */
   provideDocumentLinks(
     document: vscode.TextDocument,
     _token: vscode.CancellationToken
@@ -94,6 +70,11 @@ export class TscnDocumentLinkProvider
     return links;
   }
 
+  /**
+   * Resolves the link the user hovers or clicks through the `findGodotProjectRoot`
+   * walk the preview panel shares. A document outside every workspace folder has no
+   * project root, so its link stays unresolved rather than guessed.
+   */
   async resolveDocumentLink(
     link: TscnResourceDocumentLink,
     _token: vscode.CancellationToken

@@ -1,10 +1,7 @@
 /**
- * `<HScrollBar>` — pins the two parts `ScrollBar::_notification(NOTIFICATION_DRAW)`
- * paints under this codebase's theme scope (`scene/gui/scroll_bar.cpp`): the
- * `scroll` track and the `grabber`. Exact numbers are proved once in
- * `shared/scrollBarSolver.test.ts`; this pins that the painter WIRES them up —
- * draws exactly two meshes, at the grabber rect its OWN `Range` properties
- * produce.
+ * `<HScrollBar>` draws the `scroll` track and the `grabber`
+ * (`scene/gui/scroll_bar.cpp`): exactly two meshes, the grabber at its `Range`'s
+ * rect. `shared/scrollBarSolver.test.ts` owns the exact numbers.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -24,18 +21,18 @@ function solveNode(properties: Record<string, unknown>): SolveNode {
 }
 
 const RECT = { x: 0, y: 0, w: 300, h: 40 };
-const AREA_SIZE = 300 - 8; // 292 — barLength minus the grabber's along-axis minimum (2*contentMargin at scale 1).
+const AREA_SIZE = 300 - 8; // 292: barLength minus the grabber's along-axis minimum (2*contentMargin at scale 1).
 // `styleBoxFlatGeometry.ts` grows the drawn quad by `aaSize/2` (0.5px) past
-// EACH edge for the anti-aliasing feather ring, so a mesh's raw bounding box
+// each edge for the anti-aliasing feather ring, so a mesh's raw bounding box
 // reads 1px wider/taller than the logical rect on every axis it spans.
 const AA_FEATHER = 1;
 
-/** A `<StyleBoxQuad>`'s own OUTER `CanvasItemGroup` — its mesh sits inside a SECOND, inner flip-`<group>` of `StyleBoxQuad`'s own (`scale={[1,-1,1]}`, no position), so the group carrying this part's OFFSET is the one BEFORE its own trailing flip-group. */
+/** A `<StyleBoxQuad>`'s own outer `CanvasItemGroup`: its mesh sits inside a second, inner flip-`<group>` of `StyleBoxQuad`'s own (`scale={[1,-1,1]}`, no position), so the group carrying this part's offset is the one before its own trailing flip-group. */
 function chromePartGroup(groups: readonly { instance: THREE.Object3D }[], fromEnd: number): THREE.Object3D {
   return groups[groups.length - 1 - fromEnd]!.instance;
 }
 
-/** A `<StyleBoxQuad>` mesh's own LOCAL geometry width/height, minus the AA feather (see `AA_FEATHER`). */
+/** A `<StyleBoxQuad>` mesh's own local geometry width/height, minus the AA feather (see `AA_FEATHER`). */
 function meshSize(mesh: THREE.Mesh): { w: number; h: number } {
   const geom = mesh.geometry as THREE.BufferGeometry;
   geom.computeBoundingBox();

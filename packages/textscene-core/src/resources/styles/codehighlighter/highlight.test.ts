@@ -1,7 +1,6 @@
 /**
  * `CodeHighlighter::_get_line_syntax_highlighting_impl` (`syntax_highlighter.cpp:118-411`),
- * one branch per test — every expected span hand-traced against that
- * function, never against this module's own implementation.
+ * one branch per test. Every expected span is traced by hand against that function.
  */
 import { describe, expect, it } from 'vitest';
 import { resolveLineColors } from './highlight';

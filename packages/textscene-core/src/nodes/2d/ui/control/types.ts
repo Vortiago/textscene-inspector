@@ -7,10 +7,7 @@ export interface ControlColor {
   a: number;
 }
 
-/**
- * Layout/positioning + theme-override properties shared by every Control.
- * Type-specific Controls (Label, Button, …) extend this.
- */
+/** The layout and theme-override properties of every Control. Each Control type extends it. */
 export interface ControlProperties {
   name: string;
   parent?: string;
@@ -18,7 +15,7 @@ export interface ControlProperties {
   index?: number;
   visible?: boolean;
 
-  /** 0 = position (free), 1 = anchors, 2 = container-managed. */
+  /** 0 = position (free), 1 = anchors, 2 = container-managed, 3 = uncontrolled. */
   layoutMode?: number;
   /** LayoutPreset 0..15, or undefined/-1 for custom anchors. */
   anchorsPreset?: number;
@@ -35,107 +32,93 @@ export interface ControlProperties {
 
   /**
    * `Control::LayoutDirection` (`scene/gui/control.h:155-160`): 0 INHERITED,
-   * 1 APPLICATION_LOCALE, 2 LTR, 3 RTL, 4 SYSTEM_LOCALE. Resolved to a single
-   * boolean per node by the solve-tree walk (`SolveNode.rtl`).
+   * 1 APPLICATION_LOCALE, 2 LTR, 3 RTL, 4 SYSTEM_LOCALE. The solve-tree walk
+   * resolves it to one boolean per node (`SolveNode.rtl`).
    */
   layoutDirection?: number;
 
   /** Container child sizing bitmask (1=FILL, 2=EXPAND, 4=SHRINK_CENTER, 8=SHRINK_END). */
   sizeFlagsHorizontal?: number;
   sizeFlagsVertical?: number;
-  /** Proportion of EXPAND space this child claims among its siblings (default 1.0). */
+  /** The share of EXPAND space this child takes among its siblings (default 1.0). */
   sizeFlagsStretchRatio?: number;
   customMinimumSize?: { x: number; y: number };
 
   /**
-   * CanvasItem tint applied to this node AND its CanvasItem children.
-   * Godot default `Color(1, 1, 1, 1)`; absent means "no tint".
+   * CanvasItem tint of this node and its CanvasItem children. Default
+   * `Color(1, 1, 1, 1)`: absent means no tint.
    */
   modulate?: ControlColor;
-  /** CanvasItem tint applied to this node ONLY, not its children. */
+  /** CanvasItem tint of this node only, not its children. */
   selfModulate?: ControlColor;
 
-  /** Rotation about the pivot, in RADIANS (the inspector shows degrees). */
+  /** Rotation about the pivot, in radians. The inspector shows degrees. */
   rotation?: number;
-  /** Scale about the pivot; a negative axis mirrors. */
+  /** Scale about the pivot. A negative axis mirrors. */
   scale?: { x: number; y: number };
   /** Pivot offset in pixels from the node's top-left. */
   pivotOffset?: { x: number; y: number };
   /**
-   * Pivot offset as a fraction of the node's own size — `(1, 1)` is the
-   * bottom-right corner. The effective pivot is this PLUS `pivotOffset`.
+   * Pivot offset as a fraction of the node's size: `(1, 1)` is the bottom-right
+   * corner. The pivot is this plus `pivotOffset`.
    */
   pivotOffsetRatio?: { x: number; y: number };
 
   /**
-   * CanvasItem draw-order index (`z_index`). Godot default `0`
-   * (`scene/main/canvas_item.h:101`). The hint range is `[-4096, 4096]`
-   * (`CANVAS_ITEM_Z_MIN`/`CANVAS_ITEM_Z_MAX`,
-   * `servers/rendering/rendering_server.h:103-104`) but that is only a
-   * `PROPERTY_HINT_RANGE` for the inspector slider, not a setter guard —
-   * `CanvasItem::set_z_index` never clamps or rejects an out-of-range value.
+   * CanvasItem draw-order index (`z_index`), default `0` (`scene/main/canvas_item.h:101`),
+   * in `[-4096, 4096]` (`CANVAS_ITEM_Z_MIN`/`CANVAS_ITEM_Z_MAX`,
+   * `servers/rendering/rendering_server.h:103-104`).
    */
   zIndex?: number;
   /**
-   * CanvasItem `show_behind_parent` — when true this Control draws behind
-   * its parent instead of in front. Godot default `false`
-   * (`scene/main/canvas_item.h:113`, the backing `behind` field).
+   * CanvasItem `show_behind_parent`: the Control draws behind its parent. Default
+   * `false` (`scene/main/canvas_item.h:113`, the `behind` field).
    */
   showBehindParent?: boolean;
   /**
-   * CanvasItem `top_level`: the Control is a canvas root whatever sits above
-   * it — `Control`'s own `NOTIFICATION_ENTER_CANVAS` climb never starts
-   * (`control.cpp:3876`), and no Container lays it out
-   * (`container.cpp:143-146`).
+   * CanvasItem `top_level`: the Control is a canvas root. The `NOTIFICATION_ENTER_CANVAS`
+   * climb does not start (`control.cpp:3876`), and no Container lays it out (`container.cpp:143-146`).
    */
   topLevel?: boolean;
   /**
-   * CanvasItem `light_mask`: which 2D lights may reach this Control (ANDed
-   * against a light's `range_item_cull_mask`). Godot default `1`
-   * (`scene/main/canvas_item.h:98`). Per-item, NOT inherited by children.
+   * CanvasItem `light_mask`: the 2D lights that reach this Control, ANDed with a light's
+   * `range_item_cull_mask`. Default `1` (`scene/main/canvas_item.h:98`). Children do not inherit it.
    */
   lightMask?: number;
   /**
-   * CanvasItem `texture_filter` (`CanvasItem::TextureFilter`,
-   * `scene/main/canvas_item.h:52-60`). Godot default `0` =
-   * `TEXTURE_FILTER_PARENT_NODE` — inherit the ancestor's (eventually the
-   * viewport's) filter rather than naming one of its own
-   * (`scene/main/canvas_item.h:123`).
+   * CanvasItem `texture_filter` (`scene/main/canvas_item.h:52-60`). Default `0` is
+   * `TEXTURE_FILTER_PARENT_NODE` (`scene/main/canvas_item.h:123`): the ancestor's filter,
+   * and at the top the viewport's.
    */
   textureFilter?: number;
   /**
-   * CanvasItem `texture_repeat` (`CanvasItem::TextureRepeat`,
-   * `scene/main/canvas_item.h:63-69`). Godot default `0` =
-   * `TEXTURE_REPEAT_PARENT_NODE` — inherit rather than name a repeat mode of
-   * its own (`scene/main/canvas_item.h:124`).
+   * CanvasItem `texture_repeat` (`scene/main/canvas_item.h:63-69`). Default `0` is
+   * `TEXTURE_REPEAT_PARENT_NODE` (`scene/main/canvas_item.h:124`): the ancestor's mode.
    */
   textureRepeat?: number;
 
-  /** `theme_override_constants/<name>` → number (e.g. separation, margin_left). */
+  /** `theme_override_constants/<name>` to a number, for example separation. */
   themeOverrideConstants?: Record<string, number>;
-  /** `theme_override_colors/<name>` → color (e.g. font_color). */
+  /** `theme_override_colors/<name>` to a colour, for example font_color. */
   themeOverrideColors?: Record<string, ControlColor>;
-  /** `theme_override_font_sizes/<name>` → number. */
+  /** `theme_override_font_sizes/<name>` to a number. */
   themeOverrideFontSizes?: Record<string, number>;
-  /** `theme_override_styles/<name>` → resource ref (e.g. panel → StyleBox). */
+  /** `theme_override_styles/<name>` to a resource reference, for example a StyleBox. */
   themeOverrideStyles?: Record<string, string>;
-  /** `theme_override_icons/<name>` → resource ref (e.g. checked → Texture2D). */
+  /** `theme_override_icons/<name>` to a resource reference, for example a Texture2D. */
   themeOverrideIcons?: Record<string, string>;
-  /** `theme_override_fonts/<name>` → resource ref (e.g. font → FontFile/FontVariation/SystemFont). */
+  /** `theme_override_fonts/<name>` to a resource reference: a FontFile, FontVariation or SystemFont. */
   themeOverrideFonts?: Record<string, string>;
 
   /**
-   * `theme = ExtResource(...)` / `SubResource(...)` — this Control's own
-   * Theme resource, raw reference string (resolved downstream, the same way
-   * `themeOverrideStyles`' refs are). Undefined when unset — most Controls
-   * inherit their theme from an ancestor rather than carrying one.
+   * The raw reference of this Control's own Theme, resolved later as
+   * `themeOverrideStyles` is. Undefined when unset: the Control inherits an ancestor's theme.
    */
   theme?: string;
   /**
-   * `theme_type_variation` — the StringName this Control's theme items are
-   * looked up under instead of its own class name (`Control::get_theme_type_variation`,
-   * `scene/gui/control.h`). Godot writes it as a StringName literal
-   * (`&"HeaderLabel"`); the parser strips the `&` and quotes.
+   * `theme_type_variation`: the name theme items are looked up under in place of
+   * the class name (`scene/gui/control.h`). Godot writes `&"HeaderLabel"`, and the
+   * parser strips the `&` and the quotes.
    */
   themeTypeVariation?: string;
 }

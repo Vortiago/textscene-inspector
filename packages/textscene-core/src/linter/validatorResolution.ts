@@ -1,10 +1,8 @@
 /**
  * The resolution walk of `ValidatorRegistry`: removals and validators resolved
- * in ONE pass up the base chain, exact key before wildcard at every hop.
- *
- * This is the hottest path in the linter, reached for every property of every
- * node, so it takes the registry's tables by reference and allocates nothing
- * on a miss.
+ * in one pass up the base chain, exact key before wildcard at every hop. It is
+ * the linter's hottest path, so it reads the tables by reference and allocates
+ * nothing on a miss.
  */
 
 import type { PropertyValidator } from './propertyValidator.js';
@@ -36,16 +34,11 @@ export function resolveDeclaration(
   nodeType: string,
   propertyKey: string
 ): PropertyValidator | null {
-  // A hop counter, not a visited Set: this runs for every property of every
-  // node, and the Set was an allocation on every call including every miss.
-  // The table is derived from ClassDB ancestry, so it is acyclic by
-  // construction; the bound only stops a malformed hand-built registry from
-  // spinning, which is what the Set was really guarding.
+  // A hop counter, not a visited Set, which allocates on every call. ClassDB
+  // ancestry is acyclic, so the bound only stops a malformed hand-built
+  // registry from spinning.
   let type: string | undefined = nodeType;
   for (let hops = 0; type !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
-
-    // Removals and validators resolve in ONE walk: this is the hottest path
-    // in the linter, reached for every property of every node.
     const removals = tables.unavailable.get(type);
     const removal =
       removals && Object.prototype.hasOwnProperty.call(removals, propertyKey)
@@ -53,7 +46,7 @@ export function resolveDeclaration(
         : undefined;
     if (removal !== undefined) return unavailableValidator(nodeType, removal);
 
-    // Checked after the removal at the SAME hop, and before moving up: a
+    // Checked after the removal at the same hop, and before moving up: a
     // removal is not inherited past a descendant that re-declares the key.
     const validator = findOwnValidator(tables, type, propertyKey);
     if (validator) return validator;
@@ -64,11 +57,9 @@ export function resolveDeclaration(
 }
 
 /**
- * Exact-then-wildcard lookup among a single type's own validators.
- *
- * Four wildcard shapes, spelled out in `wildcardIndex.ts`. Which one a
- * registration is is settled at registration time and read here as
- * `entry.kind`, so a miss walks a short array and allocates nothing.
+ * Exact-then-wildcard lookup among a single type's own validators. The four
+ * wildcard shapes live in `wildcardIndex.ts`, settled at registration as
+ * `entry.kind`.
  */
 function findOwnValidator(
   tables: RegistryTables,
@@ -80,18 +71,16 @@ function findOwnValidator(
     return null;
   }
 
-  // Exact match first. `hasOwnProperty`, not a bare index: a node carrying
-  // `toString = 5` would otherwise resolve `Object.prototype.toString`, which
-  // is truthy, and the caller would push its return value into the diagnostic
-  // list in place of a ParseError.
+  // `hasOwnProperty`, not a bare index: a node carrying `toString = 5` would
+  // otherwise resolve `Object.prototype.toString` and report its return value
+  // in place of a ParseError.
   if (Object.prototype.hasOwnProperty.call(nodeValidators, propertyKey)) {
     const exact = nodeValidators[propertyKey];
     if (exact) return exact;
   }
 
-  // Then the wildcards, over a list that holds ONLY wildcards with their
-  // prefixes already sliced, so a miss walks a short array and allocates
-  // nothing.
+  // The list holds only wildcards with their prefixes already sliced, so a
+  // miss walks a short array and allocates nothing.
   const wildcards = tables.wildcards.get(nodeType);
   if (wildcards === undefined) return null;
   for (const entry of wildcards) {

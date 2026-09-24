@@ -8,8 +8,7 @@ import { Modulate2DContext, useParentModulate, type RGBA } from '../../../r3f/ca
 import { PaintRangeProvider } from '../../../r3f/contexts/PaintOrderContext';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../../../r3f/canvasPaintOrder';
 
-/** The world canvas's rank — derived, never hardcoded: only a rank's ORDER
-  * is meaningful, and spacing them for undeclared layers moved the value. */
+/** The world canvas's rank, derived: only a rank's order is meaningful, not its value. */
 const WORLD_RANK = layerRankOf(layerRanks([]), 0);
 
 function cmNode(name = 'CM', props: Record<string, string> = {}): TscnNode {
@@ -22,9 +21,9 @@ function cmNode(name = 'CM', props: Record<string, string> = {}): TscnNode {
 }
 
 /**
- * Reads the Modulate2DContext value from within a CanvasModulate subtree and
- * parks it on a mesh's `userData` — scene-scoped capture (no module globals),
- * read back via `findByProps({ name: 'modulate-reader' })`.
+ * Reads the Modulate2DContext value inside a CanvasModulate subtree and parks it on
+ * a mesh's `userData`, with no module globals. `findByProps({ name:
+ * 'modulate-reader' })` reads it back.
  */
 function ModulateReader() {
   const modulate = useParentModulate();
@@ -61,12 +60,10 @@ describe('<CanvasModulate>', () => {
     renderer.unmount();
   });
 
-  // The tint is a property of the CANVAS, not of this subtree: `NodeDispatcher`
-  // seeds it from `canvasModulateColor` so a childless CanvasModulate still
-  // tints the scene. Rendered in isolation the node therefore passes its parent
-  // modulate straight through — folding `color` in here too would square it
-  // over its own descendants. `canvasModulate.test.ts` pins the collection, and
-  // the slice contract pins the end-to-end tint through the dispatcher.
+  // The tint belongs to the canvas: `NodeDispatcher` seeds it from
+  // `canvasModulateColor`, so in isolation the node passes its parent modulate
+  // through. `canvasModulate.test.ts` pins the collection, and the slice contract
+  // pins the end-to-end tint.
   it('passes the inherited modulate through untouched — the tint is canvas-level', async () => {
     const renderer = await renderCM({ color: 'Color(0.5, 0.5, 1, 1)' });
     const captured = readModulate(renderer);
@@ -107,9 +104,8 @@ describe('<CanvasModulate>', () => {
     renderer.unmount();
   });
 
-  // Base-Node2D parity — visibility inherits down the CanvasItem tree (Godot
-  // is_visible_in_tree ANDs the parent chain), so a hidden CanvasModulate hides
-  // its subtree (and disables its tint with it), not just its own drawing.
+  // Base-Node2D parity: Godot's is_visible_in_tree ANDs the parent chain, so a
+  // hidden CanvasModulate hides its subtree and withdraws its tint.
   it('visible=false hides the subtree group', async () => {
     const renderer = await renderCM({ visible: 'false' });
     expect(cmGroup(renderer).visible).toBe(false);
@@ -122,7 +118,7 @@ describe('<CanvasModulate>', () => {
     renderer.unmount();
   });
 
-  // Base-Node2D parity — draw order participates via the shared canvas key.
+  // Base-Node2D parity: draw order uses the shared canvas key.
   it('z_index places the subtree in its own draw-order bucket, not a hardcoded 0', async () => {
     const renderer = await renderCM({ z_index: '5' });
     expect(cmGroup(renderer).renderOrder).toBe(
@@ -131,8 +127,8 @@ describe('<CanvasModulate>', () => {
     renderer.unmount();
   });
 
-  // Base-Node2D parity — the draw sequence a CanvasModulate is handed is the
-  // one every canvas item takes, so it sorts like a sprite sibling would.
+  // Base-Node2D parity: a CanvasModulate takes the draw sequence every canvas item
+  // takes, so it sorts like a sprite sibling.
   it('draws at the sequence its enclosing paint range gives it, like any sibling', async () => {
     const renderer = await renderCM({ z_index: '5' }, (kid) => (
       <PaintRangeProvider value={{ base: 37, size: 4 }}>{kid}</PaintRangeProvider>

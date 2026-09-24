@@ -1,8 +1,6 @@
 /**
- * SplitContainer parser — the shared SplitContainer base (Control +
- * `split_offset`/`collapsed`/`dragger_visibility`) plus `vertical`, which
- * this base — unlike its fixed-axis HSplitContainer/VSplitContainer
- * subclasses — genuinely serialises (`types.ts`'s own doc).
+ * SplitContainer parser: the shared SplitContainer base plus `vertical`, which this base serialises
+ * and its fixed-axis subclasses do not (`types.ts`).
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';

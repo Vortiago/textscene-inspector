@@ -1,8 +1,7 @@
 /**
- * Unit tests for the pure pieces of the parity differ. Rendering a scene needs
- * a real Godot and a real browser, so what is testable here is how the tool
- * reads its arguments, how it addresses a fixture, and what it reports about a
- * pair of images — the last one being the whole point of the tool.
+ * The parity differ's pure pieces: its arguments, how it addresses a fixture,
+ * and what it reports about a pair of images. Rendering needs Godot and a
+ * browser.
  */
 import { describe, expect, it } from 'vitest';
 import { PNG } from 'pngjs';
@@ -120,11 +119,9 @@ describe('comparePngs', () => {
 
 describe('diffOne', () => {
   /**
-   * The engine decides which of the two frames a scene IS — `run.mjs` reports
-   * it back as the mode it rendered in. Our side has to capture the same one:
-   * a 2D scene captured off the 3D canvas is a different rectangle, which the
-   * differ can only report as SIZE MISMATCH, so every Control scene measured
-   * through this tool returned no number at all.
+   * `run.mjs` reports the mode it rendered in, and our side captures the same
+   * frame: a 2D scene off the 3D canvas is a different rectangle, a SIZE
+   * MISMATCH with no number.
    */
   async function askedCanvas2D(mode) {
     const dir = await mkdtemp(join(tmpdir(), 'refdiff-'));
@@ -188,11 +185,9 @@ describe('diffOne', () => {
   });
 
   /**
-   * A project that sets one of the root-window-only viewport settings cannot be
-   * answered from the nested capture, and `run.mjs` refuses rather than
-   * returning the class default — naming `--mode 2d-root` as the arm that CAN
-   * answer. Taking the refusal at its word is the whole remedy, so the differ
-   * follows it instead of dropping the scene out of a batch.
+   * `run.mjs` refuses a root-window-only viewport setting in the nested arm and
+   * names `--mode 2d-root`, so the differ retries there instead of dropping the
+   * scene from a batch.
    */
   it('re-renders through the root window when the nested capture refuses', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'refdiff-'));

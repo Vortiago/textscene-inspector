@@ -1,7 +1,6 @@
 /**
- * MarginContainer parser. Adds no fields beyond Control — its padding comes
- * from `theme_override_constants/margin_{left,top,right,bottom}`, collected by
- * the base Control parser's theme-override handling.
+ * Parses a MarginContainer. It adds no fields to Control: its padding comes from
+ * `theme_override_constants/margin_{left,top,right,bottom}`, which the Control parser collects.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';

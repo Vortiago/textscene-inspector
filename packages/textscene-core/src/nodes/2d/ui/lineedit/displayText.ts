@@ -1,28 +1,8 @@
 /**
- * What a LineEdit actually paints, transcribed from `LineEdit::_shape()`
- * (scene/gui/line_edit.cpp):
- *
- *     String t;
- *     if (text.is_empty() && ime_text.is_empty()) {
- *       t = placeholder_translated;
- *     } else if (pass) {
- *       String s = secret_character.is_empty() ? U"•" : secret_character.left(1);
- *       t = s.repeat(text.length() + ime_text.length());
- *     } else {
- *       t = text;
- *     }
- *
- * The branch ORDER is the load-bearing part: an empty `text` shows the
- * placeholder even when `secret` is set, so a secret field never echoes bullets
- * for a string it does not have. There is no IME composition in a static
- * preview, so `ime_text` is always empty here.
- *
- * `max_length` is applied to `text` first: `set_max_length` re-runs
- * `set_text`, which truncates through `insert_text_at_caret`'s
- * `available_chars` check (`line_edit.cpp:2409-2412`) — code points, not
- * UTF-16 units. 0 (the Godot default) means unlimited.
- *
- * Pure `.ts` — the Component only renders what this returns.
+ * What a LineEdit paints, from `LineEdit::_shape()` (scene/gui/line_edit.cpp): the placeholder when
+ * `text` and `ime_text` are empty, else with `secret` one `secret_character` (default "•") per character,
+ * else `text`. The empty test runs first, so a secret field with no text shows its placeholder. A static
+ * preview has no IME composition, so `ime_text` is always empty.
  */
 
 import type { LineEditProperties } from './types';
@@ -37,7 +17,7 @@ export interface LineEditDisplayText {
   isPlaceholder: boolean;
 }
 
-/** `insert_text_at_caret`'s truncation (`line_edit.cpp:2409-2412`) — code points, not UTF-16 units; `maxLength <= 0` is unlimited. */
+/** `set_max_length` re-runs `set_text`, which truncates in `insert_text_at_caret` (`line_edit.cpp:2409-2412`) by code points, not UTF-16 units. `maxLength <= 0` is unlimited. */
 function truncateToMaxLength(text: string, maxLength: number | undefined): string {
   if (!maxLength || maxLength <= 0) return text;
   const codePoints = [...text];
@@ -50,9 +30,8 @@ export function lineEditDisplayText(props: LineEditProperties): LineEditDisplayT
 
   if (props.secret) {
     const raw = props.secretCharacter ?? DEFAULT_SECRET_CHARACTER;
-    // `secret_character.left(1)` takes ONE character, and an empty override
-    // falls back to the bullet rather than erasing the echo. Both sides count
-    // code points, not UTF-16 units, so a surrogate pair echoes once.
+    // `secret_character.left(1)` takes one character, and an empty override falls back to the bullet
+    // instead of erasing the echo. Both sides count code points, so a surrogate pair echoes once.
     const echo = raw === '' ? DEFAULT_SECRET_CHARACTER : [...raw][0]!;
     return { text: echo.repeat([...text].length), isPlaceholder: false };
   }

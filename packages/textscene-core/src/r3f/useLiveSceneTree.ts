@@ -1,16 +1,7 @@
 /**
- * `useLiveSceneNodes` — the React reactive adapter over the pure
- * **live scene tree** (`liveSceneTree.ts`).
- *
- * The core walk is pure over a cache snapshot; this hook supplies the two things
- * React consumers need: the loader's cache snapshots (scene + GLB), and a
- * re-render when the live tree GROWS — i.e. when an instance sub-scene or GLB
- * finishes loading after the parsed SceneGraph was built. Panels (cameras, stats,
- * future search/outline) call this instead of each re-deriving the context and
- * re-subscribing to the resource event bus.
- *
- * Pass a STABLE `predicate` (module-level or memoized) so the memo doesn't
- * recompute every render; the optional `descend` prune must be stable too.
+ * React hooks over the pure **live scene tree** (`liveSceneTree.ts`). They supply the
+ * loader's scene and GLB cache snapshots, and re-render when the tree grows because an
+ * instance sub-scene or GLB finishes loading after the parsed SceneGraph was built.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useHierarchy, useOptionalHierarchy } from './contexts/HierarchyContext.js';
@@ -27,11 +18,9 @@ import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 
 /**
- * Build the live-tree roots + context from the parsed SceneGraph and the loader
- * cache snapshots — the shared bridge both the reactive `useLiveSceneNodes` hook
- * and one-shot callers (e.g. the Cameras panel's 2D framing) use, so the
- * SceneGraph/loader → LiveTreeContext mapping lives in one place. Returns `null`
- * when the root scene isn't available yet.
+ * Build the live-tree roots and context from the parsed SceneGraph and the loader
+ * cache snapshots, for the hooks and for one-shot callers. `null` while the root
+ * scene is not available.
  */
 export function liveTreeContext(
   sceneGraph: SceneGraph | null | undefined,
@@ -53,12 +42,9 @@ export function liveTreeContext(
 }
 
 /**
- * A counter that increments whenever a scene/GLB finishes loading — the
- * reactivity bridge for live-tree reads. The live tree GROWS as instance
- * sub-scenes / GLBs load after the parsed SceneGraph was built, and the loader
- * caches are mutated externally, so consumers depend on this tick to re-derive.
- * Shared by every live-tree React reader (`useLiveSceneNodes`, the workspace
- * auto-select, the scene tree's search/expand).
+ * A counter that increments whenever a scene or GLB finishes loading. The loader
+ * caches mutate outside React, so every live-tree reader depends on this tick to
+ * re-derive.
  */
 export function useLiveTreeVersion(loader: ResourceLoader | null | undefined): number {
   const [version, setVersion] = useState(0);
@@ -76,6 +62,7 @@ export function useLiveTreeVersion(loader: ResourceLoader | null | undefined): n
   return version;
 }
 
+/** The live nodes matching `predicate`. Pass a stable `predicate` (module-level or memoised), or the memo recomputes every render. */
 export function useLiveSceneNodes(
   predicate: (node: TscnNode) => boolean,
   /** Stable, like `predicate`: return false to skip a node's children. */
@@ -91,21 +78,16 @@ export function useLiveSceneNodes(
     const lt = liveTreeContext(sceneGraph, loader);
     if (!lt) return [];
     return collectLiveNodes(lt.roots, lt.ctx, predicate, descend);
-    // `version` is an intentional cache-buster: it increments each time a
-    // sub-scene or GLB finishes loading so the live-node list re-derives.
-    // The value itself is not read inside the callback.
+    // `version` is a cache-buster: the callback never reads it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneGraph, loader, version, predicate, descend]);
 }
 
 /**
- * The single live-tree node at `path` — its EFFECTIVE (collapsed) identity
- * (Instance root merge, ADR-0013) plus its originating `instanceRef`, descending
- * into instanced sub-scenes and GLB internals via the loader's cache snapshots.
- * The single-node sibling of `useLiveSceneNodes`, for the inspector. Re-derives
- * on the version tick, so a node selected inside a not-yet-loaded sub-scene
- * resolves the moment that sub-scene lands instead of sticking on the
- * placeholder. Returns `null` for a null/empty path or any unresolvable segment.
+ * The live-tree node at `path`: its effective (collapsed) identity (Instance root
+ * merge, ADR-0013) and its `instanceRef`, descending into sub-scenes and GLBs.
+ * A node inside a sub-scene resolves the moment that sub-scene lands. `null` for an
+ * empty path or an unresolvable segment.
  */
 export function useLiveNode(path: string | null | undefined): ResolvedLiveNode | null {
   const { sceneGraph } = useHierarchy();
@@ -117,9 +99,7 @@ export function useLiveNode(path: string | null | undefined): ResolvedLiveNode |
     const lt = liveTreeContext(sceneGraph, loader);
     if (!lt) return null;
     return resolveLiveEntry(path, lt.roots, lt.ctx);
-    // `version` is an intentional cache-buster: it increments each time a
-    // resource finishes loading so a node inside an unresolved sub-scene
-    // re-derives the moment that sub-scene lands.
+    // `version` is a cache-buster: the callback never reads it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneGraph, loader, version, path]);
 }

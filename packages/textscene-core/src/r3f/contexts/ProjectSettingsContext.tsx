@@ -1,25 +1,8 @@
 /**
- * The active scene's **Project settings** — `project.godot` at its `res://`
- * root, parsed and exposed to the render tree.
- *
- * Found by CONVENTION at `res://project.godot`, so absence is an ordinary
- * outcome, not a fault: most fixtures are loose scenes with no project around
- * them, and a scene without one renders at Godot's defaults — which is exactly
- * what Godot itself does (`ThemeDB::initialize_theme_noproject()` builds the
- * default theme at scale 1.0). That is why the file is fetched through
- * `FileEventBus.tryLoad`, the same seam ADR-0028 uses for an **Import
- * sidecar**, and never through `useResource`: the latter reports every
- * unavailable path to the Missing Resources panel, and 78 of the corpus's
- * projects having one would still leave every unit fixture reporting a false
- * miss.
- *
- * The context has a SAFE DEFAULT (no settings, theme scale 1.0), so every
- * consumer renders correctly with no provider mounted — which is what keeps the
- * scale-1 path, and the tests that exercise it, byte-identical to before.
- *
- * Only ENUMERATED settings are exposed. `themeScale` is the one this previewer
- * honours today; the raw `settings` record is here so the next one is a reader,
- * not a re-plumbing.
+ * The active scene's **Project settings**, from `res://project.godot`. A scene
+ * without one renders at Godot's defaults, so the file loads through
+ * `FileEventBus.tryLoad` (ADR-0028), never `useResource`, which reports a miss.
+ * The default (no settings, theme scale 1.0) needs no provider.
  */
 
 import {
@@ -47,11 +30,11 @@ import * as logger from '../../logger.js';
 export const PROJECT_SETTINGS_PATH = 'res://project.godot';
 
 export interface ProjectSettingsValue {
-  /** Raw settings by full name (`gui/theme/default_theme_scale`), or null. */
+  /** Raw settings by full name, such as `gui/theme/default_theme_scale`, or null. */
   settings: ProjectSettings | null;
-  /** `gui/theme/default_theme_scale`, clamped; 1.0 without a project. */
+  /** `gui/theme/default_theme_scale`, clamped, or 1.0 without a project. */
   themeScale: number;
-  /** `display/window/size/viewport_*`; Godot's 1152x648 without a project. */
+  /** `display/window/size/viewport_*`, or Godot's 1152x648 without a project. */
   viewportSize: ProjectViewportSize;
 }
 
@@ -70,14 +53,9 @@ ProjectSettingsContext.displayName = 'ProjectSettingsContext';
 export interface ProjectSettingsProviderProps {
   children: ReactNode;
   /**
-   * Changes when the previewer swaps scenes. The settings are re-read on a new
-   * key because `res://project.godot` is the SAME path in every corpus — the
-   * web previewer maps it through the active **Corpus root**, so the bytes
-   * behind it differ per project. A corpus switch already drops the byte layer
-   * (`useCorpusRoot`'s `applyCorpusRoot` → `loader.clearCaches()` →
-   * `runClearCachesSequence`'s `clearFileBus`), so the re-read here hits a
-   * cleared cache and fetches the incoming project's file rather than serving
-   * the outgoing one's.
+   * Changes on a scene swap. `res://project.godot` is one path in every corpus,
+   * mapped through the active **Corpus root**, so a new key re-reads it. A
+   * corpus switch clears the byte layer first (`loader.clearCaches()`).
    */
   sceneKey?: string;
 }
@@ -94,9 +72,8 @@ export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsP
     }
 
     let cancelled = false;
-    // Cleared before the fetch, never after it resolves: leaving the previous
-    // project's settings up while the new one loads would render one scene at
-    // another's theme scale for a frame.
+    // Cleared before the fetch, or one frame renders the scene at the previous
+    // project's theme scale.
     setSettings(null);
 
     void (async () => {
@@ -131,7 +108,7 @@ export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsP
   );
 }
 
-/** Read the active scene's project settings. Safe without a provider. */
+/** The active scene's project settings. Safe without a provider. */
 export function useProjectSettings(): ProjectSettingsValue {
   return useContext(ProjectSettingsContext);
 }

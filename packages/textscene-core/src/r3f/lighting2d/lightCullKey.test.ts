@@ -1,36 +1,8 @@
 /**
- * Godot's whole 2D light-cull test, and the class key it implies.
- *
- * The item-side half is one condition, in
- * `drivers/gles3/rasterizer_canvas_gles3.cpp`, `_record_item_commands` (line
- * 1347 on master):
- *
- *   if (light->render_index_cache >= 0 && p_item->light_mask & light->item_mask &&
- *       p_item->z_final >= light->z_min && p_item->z_final <= light->z_max &&
- *       p_item->global_rect_cache.intersects(light->rect_cache)) {
- *
- * and the canvas-side half is `servers/rendering/renderer_viewport.cpp`,
- * `_draw_viewport`'s per-canvas loop (line 1220):
- *
- *   if (E.value->layer >= ptr->layer_min && E.value->layer <= ptr->layer_max) {
- *
- * The defaults are `scene/2d/light_2d.h:50-55` (`z_min = -1024`, `z_max = 1024`,
- * `layer_min = 0`, `layer_max = 0`, `item_mask = 1`).
- *
- * Both comparisons are inclusive on both ends, which is also MEASURED rather
- * than only read: Godot 4.6.3, `unit-pointlight2d-range-z.tscn` with
- * `range_z_max = 4` lights the z_index-4 panel (rgb(213, 173, 165)) and
- * withholds the z_index-5 one (rgb(55, 62, 106) = albedo x CanvasModulate); the
- * same scene with `range_z_min = 4` lights z_index 4 and withholds z_index 0.
- *
- * Godot ships no unit test for Light2D or for canvas-item z accumulation
- * (`tests/scene` has `test_node_2d.cpp` but it never touches `z_index`), so
- * there were no engine cases to port — these are the source lines plus probes.
- *
- * The consequence for the accumulator: the light-side operands are exactly
- * these five constants, so two lights that agree on all five are
- * indistinguishable to every item and may share one accumulation buffer. The
- * class key is therefore the whole tuple, not the mask alone.
+ * Godot's 2D light cull: `_record_item_commands` in `drivers/gles3/rasterizer_canvas_gles3.cpp`
+ * (line 1347 on master) per item, and `_draw_viewport` in `servers/rendering/renderer_viewport.cpp`
+ * (line 1220) per canvas. Godot has no unit test for either (`test_node_2d.cpp` never touches
+ * `z_index`), so these are the source lines plus probes.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -93,6 +65,9 @@ describe('lightReachesItem', () => {
   });
 
   it('holds the z window at both ends, inclusively', () => {
+    // Godot 4.6.3, `unit-pointlight2d-range-z.tscn`: `range_z_max = 4` lights the z_index-4 panel,
+    // rgb(213, 173, 165), and withholds z_index 5, rgb(55, 62, 106) = albedo × CanvasModulate.
+    // `range_z_min = 4` lights z_index 4 and withholds z_index 0.
     const window = key({ zMin: -2, zMax: 4 });
     expect(lightReachesItem(window, 1, -2, 0)).toBe(true);
     expect(lightReachesItem(window, 1, 0, 0)).toBe(true);
@@ -102,11 +77,9 @@ describe('lightReachesItem', () => {
   });
 
   it('still excludes an item past the DEFAULT window, wide as it is', () => {
-    // -1024..1024 is why the property goes unnoticed on scenes whose z stays
-    // small, but it is a window like any other and the bound is real. Nothing
-    // stops a `.tscn` authoring `z_index = 5000`, or a nested tree accumulating
-    // past it: `z_index`'s own -4096..4096 is a PROPERTY_HINT_RANGE, not a
-    // setter guard.
+    // -1024..1024 goes unnoticed while z stays small, but the bound is real. A `.tscn` may author
+    // `z_index = 5000` or accumulate past it: `z_index`'s -4096..4096 is a PROPERTY_HINT_RANGE, not
+    // a setter guard.
     expect(lightReachesItem(key(), 1, -1024, 0)).toBe(true);
     expect(lightReachesItem(key(), 1, 1024, 0)).toBe(true);
     expect(lightReachesItem(key(), 1, 1025, 0)).toBe(false);
@@ -139,8 +112,8 @@ describe('lightReachesItem', () => {
   });
 
   it('reaches nothing at all through an inverted window', () => {
-    // Godot does not swap the bounds, so `min > max` is an empty interval.
-    // The linter warns; the renderer simply obeys.
+    // Godot does not swap the bounds, so `min > max` is an empty interval. The linter warns, and
+    // the renderer obeys.
     expect(lightReachesItem(key({ zMin: 5, zMax: 4 }), 1, 4, 0)).toBe(false);
     expect(lightReachesItem(key({ zMin: 5, zMax: 4 }), 1, 5, 0)).toBe(false);
     expect(lightReachesItem(key({ layerMin: 1, layerMax: 0 }), 1, 0, 0)).toBe(false);

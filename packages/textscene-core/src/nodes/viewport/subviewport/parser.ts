@@ -1,9 +1,7 @@
 /**
- * SubViewport parser — extends the Node base parse.
- *
- * Every default here is Godot's, read from `doc/classes/SubViewport.xml` and
- * `Viewport.xml` rather than inferred: unset properties dominate this corpus, so
- * a wrong default is a rendering bug no fixture would reveal.
+ * SubViewport parser: extends the Node base parse. Every default is Godot's, from
+ * `doc/classes/SubViewport.xml` and `Viewport.xml`, since a wrong default is a
+ * rendering bug no fixture reveals.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
@@ -31,10 +29,10 @@ const UPDATE_MODES = [
 
 const CLEAR_MODES = [CLEAR_MODE_ALWAYS, CLEAR_MODE_NEVER, CLEAR_MODE_ONCE] as const;
 
-/** `Viewport.MSAA` — DISABLED, 2X, 4X, 8X. */
+/** `Viewport.MSAA`: DISABLED, 2X, 4X, 8X. */
 const MSAA_MODES = [0, 1, 2, 3] as const;
 
-/** `Viewport.DefaultCanvasItemTextureFilter` — NEAREST, LINEAR, + mipmap variants. */
+/** `Viewport.DefaultCanvasItemTextureFilter`: NEAREST, LINEAR and the mipmap variants. */
 const TEXTURE_FILTERS = [0, 1, 2, 3] as const;
 
 export function parseSubViewport(

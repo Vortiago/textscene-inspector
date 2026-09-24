@@ -1,22 +1,8 @@
 /**
- * ImporterMeshInstance3D strict validators for linting.
- *
- * Declare only ImporterMeshInstance3D's OWN members — the ones doc/classes/ImporterMeshInstance3D.xml
- * lists without an `overrides=` attribute. Everything from Node3D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
- *
- * This class inherits plain Node3D, NOT GeometryInstance3D — so despite the
- * familiar names, `cast_shadow`, `layer_mask` and the four `visibility_range_*`
- * properties are its OWN `ADD_PROPERTY` calls (importer_mesh_instance_3d.cpp:
- * 164-176), not a shadow of GeometryInstance3D's/VisualInstance3D's same-shaped
- * (and for layer_mask/layers, differently-named) properties. All 10 XML members
- * are declared here; none carry `overrides=`.
- *
- * `set_surface_material`/`get_surface_material(idx)` exist on the C++ class but
- * bind no `ADD_PROPERTY`/`ADD_ARRAY_COUNT` and appear nowhere in the XML members
- * list — the import pipeline calls them directly, so no key ever reaches a
- * `.tscn` and there is nothing to validate.
+ * ImporterMeshInstance3D strict validators: every member doc/classes/ImporterMeshInstance3D.xml
+ * lists, none with `overrides=`. The class inherits plain Node3D, so `cast_shadow`,
+ * `layer_mask` and `visibility_range_*` are its own ADD_PROPERTY calls (importer_mesh_instance_3d.cpp:
+ * 164-176). `set_surface_material` binds no property, so no key reaches a `.tscn`.
  */
 
 import '../../base/node3d/linterParser.js';
@@ -36,7 +22,7 @@ validatorRegistry.registerAll('ImporterMeshInstance3D', {
   // set_skin (:42-44) is a bare Ref<> assignment.
   skin: v.resourceReference('skin'),
   // importer_mesh_instance_3d.cpp:166, PROPERTY_HINT_NODE_PATH_VALID_TYPES
-  // "Skeleton" — a filter on the inspector's node picker, not on the stored
+  // "Skeleton": a filter on the inspector's node picker, not on the stored
   // value. set_skeleton_path (:65-67) is a bare assignment.
   skeleton_path: v.nodePath('skeleton_path'),
   // importer_mesh_instance_3d.cpp:167, PROPERTY_HINT_LAYERS_3D_RENDER.
@@ -49,7 +35,7 @@ validatorRegistry.registerAll('ImporterMeshInstance3D', {
     hinted: 'importer_mesh_instance_3d.cpp:169',
   }),
   // importer_mesh_instance_3d.cpp:172, PROPERTY_HINT_RANGE
-  // "0.0,4096.0,0.01,or_greater,suffix:m" — `or_greater`: no cap.
+  // "0.0,4096.0,0.01,or_greater,suffix:m". `or_greater`: no cap.
   // set_visibility_range_begin (:88-91) is a bare assignment.
   visibility_range_begin: v.nonNegativeFloat('visibility_range_begin', {
     hinted: 'importer_mesh_instance_3d.cpp:172',

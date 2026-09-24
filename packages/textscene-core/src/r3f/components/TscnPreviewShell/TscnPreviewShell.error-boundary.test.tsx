@@ -1,14 +1,7 @@
 /**
- * PreviewErrorBoundary — wraps <ViewportArea> in the shell so a thrown
- * render exception there doesn't blank the whole shell (tree/inspector/toolbar
- * stay usable), and clears the moment a fresh parse hands it a new sceneGraph
- * (the file was fixed) — via resetKeys, NOT a key-driven remount. The
- * "no-regression" half of that contract (the REAL <TscnCanvas> instance
- * surviving a content change) is already pinned by the existing
- * "preserves the same TscnCanvas instance across content changes" test in
- * TscnPreviewShell.test.tsx, which exercises the real (unmocked) ViewportArea
- * — this file only needs to prove PreviewErrorBoundary itself doesn't
- * defeat that by remounting on every scene change.
+ * A render error in <ViewportArea> leaves the rest of the shell usable, and a
+ * new sceneGraph clears it through resetKeys, not a remount. TscnPreviewShell.test.tsx
+ * pins that <TscnCanvas> survives a content change.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -47,8 +40,7 @@ describe('<TscnPreviewShell> PreviewErrorBoundary (#216)', () => {
 
     render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
 
-    // The viewport crashed, but the shell chrome around it survived —
-    // the panel-id root and the top bar are still there.
+    // The viewport crashed, but the panel-id root and the top bar survive.
     expect(globalThis.document.querySelector('[data-panel-id="p1"]')).toBeTruthy();
     expect(screen.queryByTestId('viewport-stub')).toBeNull();
     expect(screen.getByRole('alert')).toBeTruthy();
@@ -64,8 +56,7 @@ describe('<TscnPreviewShell> PreviewErrorBoundary (#216)', () => {
     const { rerender } = render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
     expect(screen.getByRole('alert')).toBeTruthy();
 
-    // The "fix": the viewport stops crashing AND the content changes (a new
-    // sceneGraph reference), mirroring the user editing the file.
+    // The user fixes the file: the viewport stops crashing and sceneGraph changes.
     shouldCrash.current = false;
     rerender(<TscnPreviewShell panelId="p1" content={OTHER_TSCN} />);
 
@@ -82,8 +73,7 @@ describe('<TscnPreviewShell> PreviewErrorBoundary (#216)', () => {
     const { rerender } = render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
     expect(screen.getByRole('alert')).toBeTruthy();
 
-    // Still crashing, same content — an unrelated prop changes (toolbar);
-    // the boundary must stay on the fallback since sceneGraph didn't change.
+    // Only an unrelated prop changes, so the boundary stays on the fallback.
     rerender(
       <TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} toolbar={<span>hi</span>} />
     );

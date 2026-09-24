@@ -1,7 +1,6 @@
 /**
- * `<GraphFrame>` render contract — panel/titlebar chrome, title text,
- * resizer. Structure/tint assertions only (pixels are a golden-image
- * concern via `pnpm ref:godot`, not this suite).
+ * `<GraphFrame>` render contract: panel/titlebar chrome, title text and
+ * resizer. Structure and tint only: the golden images own the pixels.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -78,15 +77,10 @@ function texturePanel(properties: Partial<GraphFrameProperties> = {}): SolveNode
 
 describe('<GraphFrame> — the two tint arms (graph_frame.cpp:113-126)', () => {
   /**
-   * `:126` — the untinted arm draws `sb_panel_flat` alone, so a `panel` slot
-   * holding a StyleBoxTexture is not drawn at all. That is the engine's own
-   * behaviour rather than a gap here: the titlebar still draws, so the frame
-   * does not vanish.
-   *
-   * With tinting ON the other arm (`:120-124`) draws it, MODULATED by
-   * `tint_color` — a multiply, where the flat arm substitutes `bg_color`. That
-   * arm is not asserted here: it needs a resolved texture, so it belongs to
-   * `StyleBoxQuad`'s own loader-backed tests rather than to this painter's.
+   * `:126`: the untinted arm draws `sb_panel_flat` alone, so a StyleBoxTexture
+   * `panel` is not drawn, as in the engine, but the titlebar still is. The tinted
+   * arm (`:120-124`) multiplies the texture by `tint_color`, where the flat arm
+   * substitutes `bg_color`. It needs a resolved texture, so `StyleBoxQuad`'s tests own it.
    */
   it('draws no body panel for a texture slot when tinting is off', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -156,7 +150,7 @@ describe('<GraphFrame> chrome placement', () => {
 
   it('draws the body panel BELOW the titlebar, not over it (graph_frame.cpp:106-110)', async () => {
     // `Rect2 body_rect(Point2(0, titlebar_rect.size.height), body_size)`.
-    // `StyleBoxQuad` takes only a SIZE, so the offset has to come from the
+    // `StyleBoxQuad` takes only a size, so the offset has to come from the
     // group around it.
     const renderer = await ReactThreeTestRenderer.create(
       <GraphFrame {...painterEnv()} solveNode={graphFrame({ title: 'F' })} rect={RECT} renderOrder={0} />

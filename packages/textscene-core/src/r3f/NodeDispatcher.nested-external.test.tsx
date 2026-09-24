@@ -1,18 +1,8 @@
 /**
- * Multi-level nested external scenes (TopScene → MiddleScene → LeafScene)
- * through the R3F pipeline, using the fake loader pattern from
- * NodeDispatcher.instance.test.tsx. `InstancedNode` resolves ExtResource refs
- * recursively, and Instance root merge (ADR-0013) collapses each single-root
- * sub-scene INTO its instance node: the instance node `MiddleInstance` *becomes*
- * the loaded root `NestedMiddle` (adopting its type + children), so the wrapper
- * level disappears. Each instance node keeps its own local transform.
- *
- * Error resilience: when a sub-scene is absent the loader returns null for that
- * path, `InstancedNode` keeps the instance node visible with a placeholder, and
- * the deeper level's nodes must not appear in the tree.
- *
- * NOTE: the legacy pipeline's `userData.instanceRoot` tagging was removed
- * with SceneManager; the DELETED_FEATURE test below pins that removal.
+ * Three levels of nested external scenes through the R3F pipeline. Each
+ * single-root sub-scene merges into its instance node (ADR-0013), which keeps
+ * its own transform. A missing sub-scene leaves the instance node with a
+ * placeholder and none of the deeper nodes.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -38,7 +28,7 @@ function makeNode(name: string, type: string, overrides: Partial<TscnNode> = {})
   };
 }
 
-// Level 3 (leaf): Orange sphere — no dependencies
+// Level 3 (leaf): an orange sphere with no dependencies.
 function makeLeafScene(): TscnScene {
   return {
     nodes: [
@@ -180,9 +170,8 @@ describe('NodeDispatcher — nested external scenes (3+ levels)', () => {
       // Level 1: Top scene node.
       expect(groupNames).toContain('NestedTop');
 
-      // Level 2: the instance node 'MiddleInstance' collapsed INTO the loaded
-      // root 'NestedMiddle' — so 'MiddleInstance' survives and 'NestedMiddle'
-      // does not. Its own child 'LeafInstance' is preserved.
+      // Level 2: 'NestedMiddle' merged into the instance node 'MiddleInstance',
+      // which keeps its child 'LeafInstance'.
       expect(groupNames).toContain('MiddleInstance');
       expect(groupNames).not.toContain('NestedMiddle');
       expect(groupNames).toContain('LeafInstance');
@@ -210,22 +199,13 @@ describe('NodeDispatcher — nested external scenes (3+ levels)', () => {
       const nestedMiddleGroup = groups.find((g) => g.instance.name === 'MiddleInstance');
       expect(nestedMiddleGroup?.instance.isObject3D).toBe(true);
 
-      // Level 3 object: likewise collapsed onto 'LeafInstance' — KEY TEST.
+      // Level 3 merged into 'LeafInstance' too.
       const nestedLeafGroup = groups.find((g) => g.instance.name === 'LeafInstance');
       expect(nestedLeafGroup?.instance.isObject3D).toBe(true);
 
       const meshes = renderer.scene.findAllByType('Mesh');
       const leafSphere = meshes.find((m) => m.instance.name === 'LeafSphere');
       expect((leafSphere?.instance as THREE.Mesh | undefined)?.isMesh).toBe(true);
-    });
-
-    it('DELETED_FEATURE: userData.instanceRoot not set in R3F pipeline', () => {
-      // Original checked:
-      //   middleRoot.userData.instanceRoot === 'NestedTop/MiddleInstance'
-      //   leafRoot.userData.instanceRoot === 'NestedTop/MiddleInstance/NestedMiddle/LeafInstance'
-      // R3F InstancedSceneSubtree does not propagate instanceRoot metadata.
-      // This feature is not present in the current R3F implementation.
-      expect(true).toBe(true);
     });
 
     it('applies transforms correctly across nested levels', async () => {
@@ -263,10 +243,10 @@ describe('NodeDispatcher — nested external scenes (3+ levels)', () => {
       expect(groupNames).toContain('NestedTop');
       expect(groupNames).toContain('MiddleInstance');
 
-      // Level 2 should NOT exist (middle scene failed to load)
+      // Level 2 should not exist (middle scene failed to load)
       expect(groupNames).not.toContain('NestedMiddle');
 
-      // Level 3 should NOT exist
+      // Level 3 should not exist
       expect(groupNames).not.toContain('NestedLeaf');
     });
 
@@ -282,10 +262,10 @@ describe('NodeDispatcher — nested external scenes (3+ levels)', () => {
 
       // Level 1 exists
       expect(groupNames).toContain('NestedTop');
-      // Level 2 exists — collapsed onto its instance node 'MiddleInstance'.
+      // Level 2 exists, merged into its instance node 'MiddleInstance'.
       expect(groupNames).toContain('MiddleInstance');
       expect(groupNames).not.toContain('NestedMiddle');
-      // Level 3 does NOT exist (leaf scene missing); its instance node stays.
+      // Level 3 does not exist (leaf scene missing); its instance node stays.
       expect(groupNames).toContain('LeafInstance');
       expect(groupNames).not.toContain('NestedLeaf');
     });

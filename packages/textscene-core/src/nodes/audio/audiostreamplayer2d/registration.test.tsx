@@ -1,8 +1,7 @@
 /**
- * AudioStreamPlayer2D registration contract: the parser is `parseAudioStreamPlayer2D`
- * (audio properties parsed + Node2D transform) and the render component reuses the
- * Node2D transform group (ADR-0008 — invisible group that positions children, not a
- * placeholder cube).
+ * AudioStreamPlayer2D registration: the parser is `parseAudioStreamPlayer2D` (audio properties and
+ * the Node2D transform), and the render component reuses the Node2D transform group (ADR-0008),
+ * an invisible group that positions its children.
  */
 
 import { describe, it, expect } from 'vitest';

@@ -1,4 +1,4 @@
-/** LinkButton registration: parser. */
+/** Registers the LinkButton parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseLinkButton } from './parser';

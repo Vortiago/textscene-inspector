@@ -1,27 +1,8 @@
 /**
- * <ParallaxBackground> — a CanvasLayer, so its subtree is laid out in the
- * VIEWPORT's screen space, not under its parent node's transform.
- *
- * Two things follow, and both are what the plain-Node2D fallback got wrong:
- *
- * 1. **The ancestor transform chain is cut.** Godot attaches a CanvasLayer's
- *    canvas to the viewport and gives it `get_final_transform()` — its own
- *    offset/rotation/scale and nothing else — so a background under a displaced
- *    `Level` node does not inherit that displacement. Here that is
- *    `matrixWorldAutoUpdate = false` plus a world matrix written directly:
- *    three then leaves this object's `matrixWorld` alone and still recomputes
- *    the subtree from it.
- * 2. **The subtree anchors to the view, not the origin,** whenever the viewport
- *    draws through a Camera2D. That anchor is the view rect's top-left, which is
- *    exactly what makes a background cover the screen wherever the camera moves;
- *    without it the art stays at a fixed world position and the view slides off
- *    its bottom edge.
- *
- * `layer` (which `ParallaxBackground` defaults to -100, "behind all by default")
- * becomes `renderOrder` on the subtree. Every 2D canvas material in the repo is
- * `transparent` with `depthWrite = false`, so three orders them by `renderOrder`
- * first and depth second — which is the same precedence Godot gives a canvas
- * layer over a canvas item's `z_index`.
+ * Draws a ParallaxBackground, a CanvasLayer, in viewport screen space: the subtree
+ * ignores ancestor transforms and, under a Camera2D, anchors to the view's top-left
+ * so it covers the screen. The cut is a hand-written `matrixWorld` with
+ * `matrixWorldAutoUpdate` off: three keeps it and still recomputes the subtree.
  */
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -57,9 +38,9 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
   const props = node.properties as ParallaxBackgroundProperties;
   const path = useNodePath() ?? node.name;
   const scene = useThree((state) => state.scene);
-  // The camera the R3F store renders this canvas through. A render that uses a
-  // DIFFERENT one is a sub-viewport's offscreen pass, which is the only surface
-  // here that carries a Godot canvas transform.
+  // A render through a camera other than the store's is a sub-viewport's
+  // offscreen pass, the only surface here with a Godot canvas transform. The 2D
+  // stage draws through a free camera with none, as Godot's editor does.
   const storeCamera = useThree((state) => state.camera);
 
   const groupRef = useRef<THREE.Group>(null);
@@ -76,8 +57,8 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
   );
   const registry = useMemo(() => ({ parentPath: path, register }), [path, register]);
 
-  // The CanvasLayer's own placement, in three space. Rebuilt only when the
-  // parsed surface changes — it depends on nothing dynamic.
+  // The CanvasLayer's own placement, in three space. Godot gives the layer's
+  // canvas `get_final_transform()`, its own offset, rotation and scale only.
   const canvasMatrix = useMemo(() => {
     const t = node2dGroupProps({
       position: props.offset,
@@ -102,8 +83,8 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
       const ortho = camera as THREE.OrthographicCamera;
       const viewportPass = camera !== storeCamera && ortho.isOrthographicCamera === true;
 
-      // Godot's `__cameras_<viewport>` group scope: the current Camera2D of THIS
-      // viewport, which for an offscreen pass is exactly the scene being drawn.
+      // Godot's `__cameras_<viewport>` group scope: the current Camera2D of this
+      // viewport, which for an offscreen pass is the scene being drawn.
       const camera2d = viewportPass ? selectViewportCamera2D(scene) : null;
       const tag = camera2d?.userData.camera2d as Camera2DTag | undefined;
 
@@ -126,16 +107,16 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
 
       // `follow_viewport_enabled` re-parents the layer's canvas onto the world
       // canvas (`canvas_set_parent`), which cancels the screen anchor: the
-      // subtree then lands at the scroll offset in WORLD space.
+      // subtree then lands at the scroll offset in world space.
       const anchorX = props.follow_viewport_enabled ? 0 : view.topLeft.x;
       const anchorY = props.follow_viewport_enabled ? 0 : view.topLeft.y;
       anchor.makeTranslation(anchorX, 0 - anchorY, 0);
       world.multiplyMatrices(anchor, canvasMatrix);
       group.matrixWorld.copy(world);
 
-      // No current Camera2D means `set_base_offset_and_scale` never runs and the
-      // layers keep the pose they were authored with — Godot's own load-time
-      // behaviour, not an approximation of it.
+      // With no current Camera2D, `set_base_offset_and_scale` never runs and the
+      // layers keep their authored pose: `_update_scroll` early-returns outside the
+      // tree, and a `.tscn` applies properties before `add_child`.
       const scroll = tag ? parallaxScroll(props, view) : null;
       for (const layer of layers.values()) {
         if (!scroll) {
@@ -149,19 +130,16 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
       }
 
       // Written before the renderer builds its list, so the poses above and the
-      // cut chain both take effect in THIS frame rather than the next.
+      // cut chain take effect in this frame, not the next.
       group.updateMatrixWorld(true);
     });
   }, [scene, storeCamera, props, canvasMatrix, layers]);
 
   return (
     <ParallaxScrollProvider value={registry}>
-      {/* paint-order-safe: `ParallaxBackground extends CanvasLayer`, so its
-          `layer` is a CANVAS, not a draw order within one — it reaches the key
-          as a layer RANK via `isCanvasLayerType` (`canvasPaintOrder.ts`), and
-          each canvas item inside carries its own key on its own wrapper. This
-          used to be a per-frame `traverse` writing `props.layer` onto every
-          object in the subtree, which flattened all of them onto one value. */}
+      {/* paint-order-safe: `layer` (default -100) is a canvas, not a draw order
+          within one. It reaches the key as a layer rank through `isCanvasLayerType`
+          (`canvasPaintOrder.ts`), and each canvas item carries its own key. */}
       <group
         ref={groupRef}
         name={node.name}

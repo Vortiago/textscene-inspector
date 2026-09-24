@@ -1,16 +1,8 @@
 /**
- * The "Cameras" detail tab: lists the scene's camera nodes and lets the user
- * look through one. Camera3D rows swap the 3D viewport's camera
- * (`CameraControlContext.switchToCamera`); Camera2D rows frame the 2D stage
- * on the camera's view — world position composed statically over the scene
- * graph, anchored per the Camera2D surface — and open the 2D workspace.
- * Mirrors the per-node "Use This Camera" action in the Inspector, surfaced
- * as a flat list so cameras are discoverable without hunting the tree.
- *
- * Cameras are gathered from the **live scene tree** (`collectLiveNodes`), not
- * `SceneGraph.flattenedNodes` — so cameras INSIDE instanced sub-scenes (e.g. a
- * player's follow-camera) appear. The list recomputes as sub-scenes / GLBs
- * stream in (the live tree grows after the parsed SceneGraph is built).
+ * The "Cameras" detail tab lists the camera nodes of the **live scene tree**,
+ * so a camera inside a sub-scene appears. A Camera3D row swaps the 3D viewport
+ * camera. A Camera2D row frames the 2D stage on the camera's view and opens
+ * the 2D workspace.
  */
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useOptionalCameraControl } from '../../contexts/CameraControlContext.js';
@@ -25,7 +17,7 @@ import { useProjectSettings } from '../../contexts/ProjectSettingsContext.js';
 import { isCamera2DType, isCamera3DType } from '../../cameraNodeTypes.js';
 import styles from './TscnPreviewShell.module.css';
 
-/** Stable predicate so `useLiveSceneNodes`' memo doesn't recompute each render. */
+/** A stable predicate, so the memo of `useLiveSceneNodes` does not recompute each render. */
 const isCameraNode = (n: TscnNode): boolean => isCamera3DType(n.type) || isCamera2DType(n.type);
 
 export function CamerasPanel() {
@@ -35,7 +27,6 @@ export function CamerasPanel() {
   const loader = useResourceLoader();
   const { viewportSize } = useProjectSettings();
 
-  // From the LIVE scene tree, so cameras inside instanced sub-scenes appear.
   const cameras = useLiveSceneNodes(isCameraNode);
   const cameras3d = cameras.filter((c) => isCamera3DType(c.node.type));
   const cameras2d = cameras.filter((c) => isCamera2DType(c.node.type));
@@ -45,14 +36,12 @@ export function CamerasPanel() {
   }
 
   function lookThrough2D(path: string, properties: Camera2DProperties) {
-    // World position over the LIVE tree, so a Camera2D inside an instanced
-    // sub-scene composes against the instance transform instead of framing at
-    // the origin (the sub-scene node is absent from the static SceneGraph).
+    // Over the live tree, a Camera2D inside a sub-scene composes against the
+    // instance transform instead of framing at the origin.
     const lt = liveTreeContext(sceneGraph, loader);
     if (!lt) return;
     const worldPosition = node2dWorldPosition(lt.roots, lt.ctx, path) ?? { x: 0, y: 0 };
-    // The project's own viewport rect — the same frame `<Canvas2DStage>`
-    // draws, so "look through" lands the camera where the stage shows it.
+    // The frame `<Canvas2DStage>` draws, so the camera lands where the stage shows it.
     cam?.requestFrame2D(
       camera2DView(properties, worldPosition, { x: viewportSize.width, y: viewportSize.height })
     );

@@ -1,11 +1,8 @@
 /**
- * Tests for the TorusMesh geometry build.
- *
- * Godot resolves the radius pair when it builds the surface, not when it stores
- * it (`primitive_meshes.cpp:2232-2241`): equal radii ERR_FAIL the whole mesh
- * array (nothing is drawn) and a swapped pair is SWAPped before use. Handing the
- * raw pair to three's TorusGeometry instead yields a NEGATIVE tube radius, which
- * renders an inside-out ring.
+ * TorusMesh build. Godot resolves the radius pair at surface build
+ * (`primitive_meshes.cpp:2232-2241`): equal radii ERR_FAIL the whole mesh array,
+ * and a reversed pair is swapped. The raw pair in three's TorusGeometry gives a
+ * negative tube radius and an inside-out ring.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

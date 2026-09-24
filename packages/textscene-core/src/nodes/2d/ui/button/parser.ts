@@ -1,4 +1,4 @@
-/** Button parser — Control + text + disabled/flat flags + alignment. */
+/** Button parser: Control plus text, the disabled and flat flags, and alignment. */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';

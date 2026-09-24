@@ -1,4 +1,4 @@
-/** Marker3D — a transform anchor drawn as a small 3-axis cross gizmo. */
+/** Marker3D: a transform anchor drawn as a small 3-axis cross gizmo. */
 
 import type { Node3DProperties } from '../../base/node3d/types';
 

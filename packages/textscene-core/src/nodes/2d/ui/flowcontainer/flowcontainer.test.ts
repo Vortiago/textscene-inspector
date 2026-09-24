@@ -1,4 +1,4 @@
-/** FlowContainer registration — parser. Render registration: `index.r3f.test.ts`. */
+/** FlowContainer registration: the parser. `index.r3f.test.ts` covers the render registration. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';

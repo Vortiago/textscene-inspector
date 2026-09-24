@@ -1,4 +1,4 @@
-/** RichTextLabel registration — native (WebGL canvas) painter. */
+/** Registers the native (WebGL canvas) painter and solvers for RichTextLabel. */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
@@ -10,12 +10,11 @@ controlComponentRegistry.register({
   Component: RichTextLabel,
 });
 controlSolverRegistry.registerMinimumSize('RichTextLabel', richTextLabelMinimumSize);
-// Declares every `[img]` ref THIS node's own BBCode needs the natural pixel
-// size of — see `nativeSolver.ts`'s `richTextLabelTextureSlots` doc.
+// Declares every `[img]` ref whose natural pixel size this node's BBCode needs.
 controlSolverRegistry.registerTextureSlots('RichTextLabel', richTextLabelTextureSlots);
-// With `fit_content` and autowrap ON the minimum HEIGHT is the text wrapped at
-// this control's own width, which only a completed pass knows — read through
-// `SolveContext.tentativeRect`, exactly as Label does.
+// With `fit_content` and autowrap on, the minimum height is the text wrapped at
+// this control's width, which only a completed pass knows: it reads
+// `SolveContext.tentativeRect`, as Label does.
 controlSolverRegistry.registerSizeDependentMinimum('RichTextLabel');
 
 export { RichTextLabel };

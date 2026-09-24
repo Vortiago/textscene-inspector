@@ -1,9 +1,6 @@
 /**
- * StaticBody3D registration — parser.
- *
- * A physics body is a transform-only group (ADR-0005): no simulation, no own
- * geometry. It reuses the Node3D transform parse; the render component
- * (registered in index.r3f.ts) reuses Node3D.
+ * StaticBody3D parser registration. A physics body is a transform-only group
+ * (ADR-0005), with no simulation and no own geometry, so it reuses the Node3D parse.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

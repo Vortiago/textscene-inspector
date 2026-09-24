@@ -1,12 +1,7 @@
 /**
- * CheckButton strict validators: format and range checks.
- *
- * CheckButton declares no member of its own (see linterParser.ts for the
- * source citations), so the real content of this slice's test is that the
- * base-walk still resolves every inherited key a scene author can set on a
- * CheckButton: `alignment` and `text` from Button, `toggle_mode` and
- * `button_pressed` from BaseButton, `anchor_right` from Control, `modulate`
- * from CanvasItem.
+ * CheckButton declares no member of its own, so this tests that the base-walk resolves the
+ * inherited keys: `alignment` and `text` from Button, `toggle_mode` and `button_pressed` from
+ * BaseButton, `anchor_right` from Control and `modulate` from CanvasItem.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -26,13 +21,11 @@ describe('CheckButton strict validators', () => {
   });
 
   it('resolves Button keys, the nearest ancestor that declares any', () => {
-    // linterParser.ts imports ../button, not ../basebutton: the scaffold's rule
-    // is to import the nearest ancestor that registers, and Button declares 13
-    // members. Importing past it would leave these unresolved in this graph.
+    // linterParser.ts imports ../button, the nearest ancestor that registers.
+    // Importing past it would leave these unresolved in this graph.
     expect(check('alignment', '1')).toBeNull();
-    // 3 (FILL) is in-range since button.cpp:737-741 bare-assigns with no
-    // ERR_FAIL; -1 stays out of range, so it is the one that still proves the
-    // base-walk delivers Button's real bound rather than a bare format check.
+    // -1 is out of range, so it proves the base-walk delivers Button's bound rather than
+    // a format check. 3 (FILL) only warns: button.cpp:737-741 bare-assigns with no ERR_FAIL.
     expect(check('alignment', '-1')?.code).toBe('INVALID_ALIGNMENT_VALUE');
     expect(check('text', '"Sound"')).toBeNull();
   });

@@ -1,10 +1,7 @@
 /**
- * End-to-end validator inheritance: the base transform/visible/layout
- * validators must reach subclasses through the full Linter, so the render and
- * linter pipelines agree on which nodes get checked. Each case is a real-Godot
- * witness from the parser/linter divergence audit (demo-corpus line refs in the
- * issue): a malformed value on a subclass now errors, and the valid form the
- * corpus actually uses stays clean.
+ * End-to-end validator inheritance: the base transform/visible/layout validators reach subclasses through the full
+ * Linter, so the render and linter pipelines agree on which nodes get checked. Each case is a real-Godot witness: a
+ * malformed value on a subclass errors, and the valid form scenes use stays clean.
  */
 
 import { describe, it } from 'vitest';

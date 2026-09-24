@@ -1,4 +1,4 @@
-/** GraphEdit parser — Control + the own members the renderer reads (`types.ts`'s own doc for why the rest are not parsed here). */
+/** GraphEdit parser: Control plus the members the renderer reads (`types.ts`). */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalFloat, parseOptionalInt, parseOptionalVector2 } from '../../../../parser/valueParsers';
@@ -13,7 +13,7 @@ export function parseGraphEdit(
 ): GraphEditProperties {
   const result: GraphEditProperties = { ...parseControl(heading, properties), connections: [] };
 
-  // `scroll_offset` and `zoom` are what their setters STORED, not what the
+  // `scroll_offset` and `zoom` are what their setters stored, not what the
   // file wrote: each clamps against state an earlier key left behind.
   const loadState = resolveGraphEditLoadState(properties);
   result.scrollOffset = loadState.scrollOffset;

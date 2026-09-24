@@ -1,12 +1,8 @@
 /**
- * Dimension-parameterized semantic linter rule for CollisionShape2D / CollisionShape3D.
- *
- * Genuine dimension-specific seams: the valid parent-body types (3D adds
- * VehicleBody3D), a 2D-only `one_way_collision_margin` check, and a 3D-only
- * non-uniform-scale check — collision_shape_3d.cpp:153-156 has no 2D
- * equivalent (collision_shape_2d.cpp's get_configuration_warnings() carries
- * no scale check at all). Format validation stays in each slice's
- * linterParser.ts.
+ * The CollisionShape2D/3D rules. Only 2D checks the one-way pair, and only 3D checks
+ * scale (collision_shape_3d.cpp:153-156), since collision_shape_2d.cpp's
+ * get_configuration_warnings() carries no scale check. Format validation stays in
+ * each slice's linterParser.ts.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
@@ -124,9 +120,6 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     const { node, scene } = context;
     const report = (arm: RuleArm | undefined, message: string) =>
       reportArm(diagnostics, arm, node, message);
-
-
-    // Access raw properties from the node (Record<string, string>)
     const rawProps = node.properties as unknown as Record<string, string>;
 
     // One scan of the scene's resource tables for every question below: the
@@ -137,12 +130,10 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       report(arms.requiresShape, `${type} '${node.name}' is missing required property 'shape'. A collision shape needs a shape resource to define its collision geometry.`);
     }
 
-    // WARNING: Check if parent is a valid physics body type. Through the
-    // verdict for its `unknowable` arm: an instanced or override parent takes
-    // its class from a scene this linter never opens, so its `type` here is an
-    // ExtResource ref or the index fallback's "0", and comparing either against
-    // a CollisionObject warns on every body assembled by instancing one. Every
-    // later check below reads the same parent, and each is silent without one.
+    // Through the verdict for its `unknowable` arm: an instanced or override parent's
+    // class is in a scene this linter never opens, so its `type` here is an
+    // ExtResource ref or the index fallback's "0". Every later check reads this
+    // parent, and each is silent without one.
     const placement = parentTypeVerdict(scene, node, collisionObject);
     const parent = verdictParent(placement);
     if (placement.kind === 'mismatch') {
@@ -151,19 +142,14 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       report(arms.noParent, `${type} '${node.name}' has no parent node. ${advice}`);
     }
 
-    // WARNING: ConcavePolygonShape3D / WorldBoundaryShape3D under a body they
-    // do not suit (3D only — collision_shape_2d.cpp has no equivalent check).
-    // collision_shape_3d.cpp:135-149: `Object::cast_to<RigidBody3D>(col_object)`
-    // succeeds for VehicleBody3D too (it extends RigidBody3D), which is why
-    // Godot's own message picks `body_type` from a nested VehicleBody3D cast.
-    // The push is UNCONDITIONAL on freeze/freeze_mode — "except when frozen" in
-    // Godot's own string is message prose, not part of the guard.
-    // `descendsFromClass` on the shape side too: `cast_to<ConcavePolygonShape3D>`
-    // (:140, :142) succeeds for a subclass, and only the merged node+resource
-    // table holds a Shape's ancestry.
+    // 3D only, as collision_shape_2d.cpp has no equivalent. collision_shape_3d.cpp:135-149:
+    // `cast_to<RigidBody3D>(col_object)` passes for VehicleBody3D too, so Godot's message
+    // picks `body_type` from a nested cast. The push ignores freeze and freeze_mode.
     if (arms.concaveUnderRigidBody && parent && shape.kind === 'resolved') {
       if (descendsFrom(parent.type, 'RigidBody3D')) {
         const bodyType = descendsFrom(parent.type, 'VehicleBody3D') ? 'VehicleBody3D' : 'RigidBody3D';
+        // `descendsFromClass`: `cast_to<ConcavePolygonShape3D>` (:140, :142) passes for
+        // a subclass, and only the merged node and resource table holds a Shape's ancestry.
         if (descendsFromClass(shape.type, 'ConcavePolygonShape3D')) {
           report(arms.concaveUnderRigidBody, `${type} '${node.name}' uses a ConcavePolygonShape3D under a ${bodyType} ('${parent.name}'). ` +
               `ConcavePolygonShape3D is intended for static bodies like StaticBody3D and will likely not ` +
@@ -185,8 +171,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       }
     }
 
-    // WARNING: non-uniform scale (3D only — collision_shape_2d.cpp's
-    // get_configuration_warnings() has no equivalent check)
+    // Non-uniform scale, 3D only: collision_shape_2d.cpp has no equivalent.
     if (arms.nonUniformScale && rawProps.transform !== undefined) {
       const scales = basisColumnScales(rawProps.transform);
       if (scales) {
@@ -200,19 +185,17 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
       }
     }
 
-    // WARNING: One Way Collision is ignored under an Area2D (2D only —
+    // One Way Collision is ignored under an Area2D, which has no solid faces (2D only,
     // collision_shape_2d.cpp:182, `one_way_collision && cast_to<Area2D>(col_object)`).
-    // Distinct from the `unused-one-way-margin` check below: that one fires
-    // regardless of parent type when the margin is set without the flag; this
-    // one fires on the flag itself, gated on the PARENT being an Area2D, which
-    // ignores one-way collision entirely (it has no solid faces to be one-way about).
+    // This fires on the flag under an Area2D parent. `unused-one-way-margin` fires on a
+    // margin without the flag, whatever the parent.
     if (boolSlotValue(rawProps.one_way_collision) === true && parent && descendsFrom(parent.type, 'Area2D')) {
       report(arms.oneWayIgnoredUnderArea2D, `${type} '${node.name}' has 'one_way_collision' enabled under an Area2D ('${parent.name}'). One Way Collision is ignored when the collision object is an Area2D.`);
     }
 
-    // WARNING: shape resolves to a polygon-based Shape2D with limited editing
-    // (2D only — collision_shape_2d.cpp:185-187 assigns the slot into a
-    // `Ref<...PolygonShape2D>` and tests `is_valid()`, a cast a subclass passes).
+    // A polygon-based Shape2D has limited editing (2D only: collision_shape_2d.cpp:185-187
+    // assigns the slot into a `Ref<...PolygonShape2D>` and tests `is_valid()`, a cast a
+    // subclass passes).
     if (
       shape.kind === 'resolved' &&
       (descendsFromClass(shape.type, 'ConvexPolygonShape2D') ||
@@ -224,7 +207,6 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // one_way_collision_margin set but one_way_collision is false (2D only)
     if (rawProps.one_way_collision_margin && boolSlotValue(rawProps.one_way_collision) !== true) {
       const margin = parseGodotFloat(rawProps.one_way_collision_margin);
-      // Only report if margin is non-zero and one_way_collision is explicitly false or not set
       if (margin !== null && margin > 0) {
         report(arms.unusedOneWayMargin, `${type} '${node.name}' has 'one_way_collision_margin' set to ${margin}, but 'one_way_collision' is ${rawProps.one_way_collision || 'not set (defaults to false)'}. The margin will have no effect unless 'one_way_collision' is true.`);
       }

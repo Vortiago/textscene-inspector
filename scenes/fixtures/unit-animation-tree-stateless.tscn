@@ -1,11 +1,7 @@
 [gd_scene load_steps=7 format=3 uid="uid://unit_animation_tree_stateless"]
 
-; AnimationTree with `active = false` — the authored-OFF counterpart to
-; unit-animationtree-blend.tscn. tree_root is a trivial single-clip
-; BlendTree (no Blend2/parameters needed). Mounts without crashing and drives
-; nothing: an inactive AnimationTree never registers with the transport, even
-; when selected, and even if playback is forced (Component.playback.test.tsx
-; "gating and restore").
+; AnimationTree with `active = false` over a single-clip BlendTree. It mounts and drives nothing:
+; an inactive tree never registers with the transport, even when selected or when play is forced.
 
 [sub_resource type="BoxMesh" id="BoxMesh_box"]
 

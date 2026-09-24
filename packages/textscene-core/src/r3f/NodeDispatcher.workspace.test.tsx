@@ -1,8 +1,6 @@
 /**
- * Workspace-aware dispatch (Godot editor split): the 3D viewport renders
- * Node3D content only — CanvasItems are invisible there; the 2D world canvas
- * renders CanvasItems only — 3D subtrees are absent. Plain Node containers
- * pass children through in both.
+ * Workspace-aware dispatch: the 3D viewport renders no CanvasItem, and the 2D
+ * world canvas no 3D subtree. A plain Node container passes children through in both.
  */
 import { describe, it, expect } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

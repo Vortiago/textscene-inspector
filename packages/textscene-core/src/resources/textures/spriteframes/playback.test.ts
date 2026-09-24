@@ -1,5 +1,5 @@
 /**
- * SpriteFrames playback lookup: playhead → displayed frame, including the
+ * SpriteFrames playback lookup: playhead to displayed frame, including the
  * degenerate animations a lenient parser can produce.
  */
 import { describe, it, expect } from 'vitest';
@@ -25,25 +25,25 @@ describe('frameAtTime', () => {
   });
 
   it('advances one frame per 1/fps seconds', () => {
-    const a = make(4, 5, true); // 0.2s per frame
+    const a = make(4, 5, true); // 0.2 s per frame.
     expect(frameAtTime(a, 0.1)).toBe(0);
     expect(frameAtTime(a, 0.25)).toBe(1);
     expect(frameAtTime(a, 0.45)).toBe(2);
   });
 
   it('loops back to the start after the last frame when loop=true', () => {
-    const a = make(2, 5, true); // total 0.4s
-    expect(frameAtTime(a, 0.41)).toBe(0); // wrapped
+    const a = make(2, 5, true); // 0.4 s in total.
+    expect(frameAtTime(a, 0.41)).toBe(0); // Wrapped.
     expect(frameAtTime(a, 0.61)).toBe(1);
   });
 
   it('holds the final frame when loop=false', () => {
-    const a = make(3, 5, false); // total 0.6s
+    const a = make(3, 5, false); // 0.6 s in total.
     expect(frameAtTime(a, 5)).toBe(2);
   });
 
   it('honours per-frame durations', () => {
-    const a = make(2, 1, true, [2, 1]); // frame0 shows 2s, frame1 shows 1s
+    const a = make(2, 1, true, [2, 1]); // Frame 0 shows 2 s, frame 1 shows 1 s.
     expect(frameAtTime(a, 1.5)).toBe(0);
     expect(frameAtTime(a, 2.5)).toBe(1);
   });

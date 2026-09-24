@@ -1,5 +1,5 @@
 /**
- * RayCast2D registration — it is parsed, and it draws nothing on purpose
+ * RayCast2D registration: it is parsed, and it draws nothing on purpose
  * (ADR-0008) rather than for want of an implementation.
  */
 

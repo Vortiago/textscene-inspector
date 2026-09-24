@@ -1,5 +1,5 @@
 /**
- * XRCamera3D IS a Camera3D, so it reuses that component rather than the coarse
+ * XRCamera3D is a Camera3D, so it reuses that component rather than the coarse
  * Node3D base: the slice already parses with `parseCamera3D`, so the node
  * carries Camera3DProperties and the same selection-gated frustum gizmo draws.
  */

@@ -1,13 +1,8 @@
 /**
- * `gridContainerMinimumSize`/`gridContainerLayout` vs Godot 4.6.3
- * (`scene/gui/grid_container.cpp`, `scene/gui/container.cpp`,
- * `scene/gui/control.cpp`). Every expected rect below was cross-checked
- * against the real engine: a scratch project instantiated the equivalent
- * scene tree in a `SubViewport` and printed `Control.get_rect()` /
- * `get_combined_minimum_size()` per node (`s9-gridcontainer/probe-project`
- * scenarios a-i). Children are synthetic
- * `custom_minimum_size` Controls, never Labels, so a font-metric regression
- * and a `_resort` regression can never present as the same test failure.
+ * `gridContainerMinimumSize`/`gridContainerLayout` versus `scene/gui/grid_container.cpp`,
+ * `scene/gui/container.cpp` and `scene/gui/control.cpp`. Each expected rect is Godot 4.6.3's
+ * `get_rect()` for the same tree in a `SubViewport`, one `scenario_*.tscn` per oracle. Children
+ * are `custom_minimum_size` Controls, not Labels, so a font fault never looks like a `_resort` one.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
@@ -20,7 +15,7 @@ import { gridContainerMinimumSize, gridContainerLayout } from './nativeSolver';
 import { solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-/** `gridContainerLayout`'s `rects` half only — see `ContainerLayoutResult`'s own doc for why the union is here at all. */
+/** `gridContainerLayout`'s `rects` half only: see `ContainerLayoutResult`'s own doc for why the union is here at all. */
 function asMap(
   result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
 ): ReadonlyMap<string, Rect2> {
@@ -77,7 +72,7 @@ function solveViaGrid(gridNode: SolveNode, rect: { x: number; y: number; w: numb
     offsetRight: rect.x + rect.w,
     offsetBottom: rect.y + rect.h,
   };
-  // The slice self-registers on import, so nothing to wire here — and clearing
+  // The slice self-registers on import, so nothing to wire here. Clearing
   // the registry would undo that.
   const solved = solveControlTree([gridNode], { x: 0, y: 0, w: 1152, h: 648 }, ctx());
   return new Map([...solved].map(([path, s]) => [path, s.rect]));
@@ -207,11 +202,9 @@ describe('gridContainerLayout', () => {
   });
 
   it('dilutes an EXPAND column by a phantom trailing column on an incomplete row (oracle: scenario_d.tscn)', () => {
-    // columns=3 but only 2 children: "consider all empty columns expanded"
-    // (grid_container.cpp:79-82) adds phantom col 2 to col_expanded even
-    // though no child ever occupies it, so the ONE real expanded column (0)
-    // shares the division with it and gets only HALF of the remaining space
-    // (80, not the 160 it would get alone) — the other half is never rendered.
+    // columns=3 with 2 children: "consider all empty columns expanded"
+    // (grid_container.cpp:79-82) adds an empty col 2 to col_expanded, so col 0
+    // gets half the remaining space (80, not 160) and the other half is never drawn.
     const c0 = leaf('C0', { customMinimumSize: { x: 20, y: 15 }, sizeFlagsHorizontal: 3 });
     const c1 = leaf('C1', { customMinimumSize: { x: 30, y: 15 } });
     const children = [c0, c1];
@@ -251,7 +244,7 @@ describe('gridContainerLayout', () => {
   it('claws an EXPAND-without-FILL child back to its own minimum, pinned to the cell origin (oracle: scenario_f.tscn)', () => {
     // columns=1, R0 has SIZE_EXPAND only (no FILL) on the vertical axis: the
     // row still reserves the full expanded height (280 of a 300 px column),
-    // but fit_child_in_rect claws R0's OWN rect back down to its 10px minimum
+    // but fit_child_in_rect claws R0's own rect back down to its 10px minimum
     // instead of filling the reservation.
     const r0 = leaf('R0', { customMinimumSize: { x: 50, y: 10 }, sizeFlagsVertical: 2 });
     const r1 = leaf('R1', { customMinimumSize: { x: 50, y: 20 } });
@@ -293,7 +286,7 @@ describe('gridContainerLayout', () => {
       'ends in `Control::set_rect`, which re-derives and re-floors unconditionally) (oracle: scenario_h.tscn)',
     () => {
       // col_minw truncates both to 10, so the container hands each row a
-      // 10px-wide cell — but each child's OWN combined minimum size (kept at
+      // 10px-wide cell, but each child's own combined minimum size (kept at
       // full precision, unlike the bookkeeping) is larger than that, so the
       // final rect grows past the cell to the child's own float minimum.
       const r0 = leaf('R0', { customMinimumSize: { x: 10.7, y: 5 } });
@@ -327,12 +320,9 @@ describe('gridContainerLayout', () => {
     const rects = solveViaGrid(n, { x: 0, y: 0, w: 50, h: 50 });
 
     // Cell width truncates to 10; shortfall = 10.7-10 = 0.7.
-    // BEGIN: pos.x += (10 - 10.7) = -0.7. BOTH: pos.x += 0.5*(10-10.7) = -0.35.
-    // Compared with `closeTo`, not `toEqual`: floating-point subtraction of
-    // 10.7 (itself inexact in binary) makes the raw JS result
-    // -0.6999999999999993, not the literal -0.7 — a precision artifact of the
-    // SAME kind the engine's own float32 print showed (scenario_i.tscn:
-    // rect=[-0.69999980926514,...]), not a bug in the port.
+    // BEGIN: pos.x += (10 - 10.7) = -0.7. Both: pos.x += 0.5*(10-10.7) = -0.35.
+    // `closeTo`, not `toEqual`: 10.7 is inexact in binary, so JS yields
+    // -0.6999999999999993, as Godot's float32 gives -0.69999980926514.
     const begin = rects.get('R0Begin')!;
     expect(begin.x).toBeCloseTo(-0.7, 9);
     expect(begin.y).toBe(0);

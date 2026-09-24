@@ -1,9 +1,6 @@
 /**
- * `parseBBCodeRuns`/`hasOpenTag`/`lastTagValue`/`resolveBBColor`/`parseImgTag`
- * — the framework-free half of the BBCode subset (ADR-0003's [b]/[i]/[u]/[s]/
- * [color]/[center]/[code]/[img]), extracted so both the DOM `<RichTextLabel>`
- * (`bbcode.tsx`) and the native painter can tokenize the SAME tag stack
- * without either depending on React.
+ * Tests the framework-free BBCode tokenizer: `parseBBCodeRuns`, `hasOpenTag`,
+ * `lastTagValue`, `resolveBBColor` and `parseImgTag`.
  */
 import { describe, expect, it } from 'vitest';
 import { IMAGE_OBJECT_CHAR, hasOpenTag, lastTagValue, parseBBCodeRuns, parseImgTag, resolveBBColor } from './bbcode';
@@ -11,7 +8,7 @@ import { IMAGE_OBJECT_CHAR, hasOpenTag, lastTagValue, parseBBCodeRuns, parseImgT
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 const CENTER_CENTER = { imagePoint: 'center', textPoint: 'center' } as const;
 
-/** A `ParsedImgTag` with every field at its Godot default but `path`/whichever fields the test overrides. */
+/** A `ParsedImgTag` with every field at its Godot default but `path` and the overrides. */
 function img(path: string, overrides: Partial<ReturnType<typeof parseImgTag>> = {}) {
   return {
     path,
@@ -57,28 +54,25 @@ describe('parseBBCodeRuns', () => {
   });
 
   it('drops a tag Godot RECOGNISES but this painter does not style, keeping it on the stack and keeping the inner text', () => {
-    // `[wave]` is a real `rich_text_label.cpp:6412` tag — Godot consumes it and
-    // paints `keep`. Engine-checked: `get_parsed_text()` is "keep".
+    // `[wave]` is a real `rich_text_label.cpp:6412` tag: Godot consumes it, and
+    // `get_parsed_text()` is "keep".
     const runs = parseBBCodeRuns('[wave amp=50]keep[/wave]');
     expect(runs).toEqual([{ text: 'keep', tags: [{ name: 'wave' }] }]);
   });
 
   it('renders a tag Godot does NOT recognise as literal text, brackets and all', () => {
-    // `rich_text_label.cpp:6526-6545`'s final else: an identifier that is
-    // neither a built-in tag nor a registered custom effect emits a literal
-    // "[" and re-scans from the next character, so the whole tag survives as
-    // text. Its close does too — the stack is empty, so `:5385`'s close branch
-    // is never entered. Engine-checked: `[nosuchtag]keep[/nosuchtag]` parses
-    // to exactly itself.
+    // `rich_text_label.cpp:6526-6545`'s final else emits a literal "[" for an
+    // unknown identifier and re-scans from the next character. The close
+    // survives too, since `:5385` needs a non-empty stack. In Godot,
+    // `[nosuchtag]keep[/nosuchtag]` parses to itself.
     expect(parseBBCodeRuns('[nosuchtag]keep[/nosuchtag]')).toEqual([
       { text: '[nosuchtag]keep[/nosuchtag]', tags: [] },
     ]);
   });
 
   it('re-scans from just past the "[" of an unrecognised tag, so a real tag INSIDE one still opens', () => {
-    // `pos = brk_pos + 1`, not `brk_end + 1` — Godot gives back everything but
-    // the bracket. Engine-checked: `[foo[b]bar[/b]` parses to "[foobar", with
-    // `bar` bold.
+    // `pos = brk_pos + 1`, not `brk_end + 1`: in Godot `[foo[b]bar[/b]` parses
+    // to "[foobar", with `bar` bold.
     expect(parseBBCodeRuns('[foo[b]bar[/b]')).toEqual([
       { text: '[foo', tags: [] },
       { text: 'bar', tags: [{ name: 'b' }] },
@@ -96,18 +90,16 @@ describe('parseBBCodeRuns', () => {
   });
 
   it('renders a close tag that is not the INNERMOST open tag as literal text, leaving the stack alone', () => {
-    // `rich_text_label.cpp:5386,5398-5404`: `tag_ok` compares against
-    // `tag_stack.front()` ONLY. `[/b]` while `i` is innermost fails that
-    // check, so Godot appends "[" + "/b" as text and resumes at the "]" —
-    // and both `b` and `i` stay open, which is why `y` is still styled by
-    // both. Engine-checked: `[b][i]x[/b]y[/i]` parses to "x[/b]y".
+    // `rich_text_label.cpp:5386,5398-5404`: `tag_ok` compares only against
+    // `tag_stack.front()`, so `[/b]` under `i` is text and both tags stay open.
+    // In Godot, `[b][i]x[/b]y[/i]` parses to "x[/b]y".
     const runs = parseBBCodeRuns('[b][i]x[/b]y[/i]');
     expect(runs).toEqual([{ text: 'x[/b]y', tags: [{ name: 'b' }, { name: 'i' }] }]);
   });
 
   it('renders a close tag with nothing open as literal text', () => {
-    // `:5385` requires a non-empty `tag_stack` to even consider a close tag.
-    // Engine-checked: `a[/b]b` parses to itself.
+    // `:5385` requires a non-empty `tag_stack` to consider a close tag. In
+    // Godot, `a[/b]b` parses to itself.
     expect(parseBBCodeRuns('a[/b]b')).toEqual([{ text: 'a[/b]b', tags: [] }]);
   });
 
@@ -115,9 +107,8 @@ describe('parseBBCodeRuns', () => {
     expect(parseBBCodeRuns('')).toEqual([]);
   });
 
-  // `rich_text_label.cpp:5623-5680,5743-5745,5955`: these arms `add_text(...)`
-  // and set `pos = brk_end + 1` WITHOUT reaching `tag_stack.push_front(tag)`,
-  // so they never become an open tag and never need a close.
+  // `rich_text_label.cpp:5623-5680,5743-5745,5955`: these arms add text and
+  // never reach `tag_stack.push_front(tag)`, so they need no close.
   describe('self-closing tags', () => {
     it('leaves the stack untouched, so a later close still matches its opener', () => {
       expect(parseBBCodeRuns('[b]bold[br]more[/b]')).toEqual([
@@ -133,9 +124,8 @@ describe('parseBBCodeRuns', () => {
       expect(parseBBCodeRuns('[lb]b[rb]')).toEqual([{ text: '[b]', tags: [] }]);
     });
 
-    // A surrogate code point is inside 0..0x10FFFF but is not a scalar value:
-    // `String.fromCodePoint` would emit a lone surrogate, which is exactly the
-    // ill-formed output the range guard exists to suppress.
+    // A surrogate code point is not a scalar value, so `String.fromCodePoint`
+    // would emit a lone surrogate.
     it('emits nothing for a surrogate [char=], which is in range but has no scalar value', () => {
       expect(parseBBCodeRuns('[char=D800]')).toEqual([]);
       expect(parseBBCodeRuns('[char=DFFF]')).toEqual([]);
@@ -167,13 +157,9 @@ describe('parseBBCodeRuns', () => {
   });
 
   /**
-   * `[img]`'s payload is the image's resource path, and `:6026-6031,6145` read
-   * it as one and resume at the `[` that ends it — so it never becomes text.
-   * Drawing it as text is worse than drawing nothing: a credits screen full of
-   * `[img]` prints a column of `res://` paths where the logos belong. It also
-   * never becomes an ORDINARY run: it stands in for `ItemImage`, one
-   * `IMAGE_OBJECT_CHAR` run carrying the parsed tag, same as real Godot's own
-   * `String::chr(0xfffc)` placeholder glyph.
+   * `[img]`'s payload is a resource path (`:6026-6031,6145`), never text. It
+   * becomes one `IMAGE_OBJECT_CHAR` run carrying the parsed tag, as Godot's
+   * `String::chr(0xfffc)` placeholder stands in for `ItemImage`.
    */
   describe('[img]', () => {
     it('reads its payload as the image path, captured on the run rather than printed as text', () => {
@@ -224,8 +210,8 @@ describe('parseImgTag', () => {
   });
 
   it('the value form and the width=/height= options are mutually exclusive — a present value form leaves the options unread even when both are written', () => {
-    // `"top".to_int()` is 0 (`String::to_int` skips non-digits) — real Godot
-    // leaves width/height at 0 here rather than falling through to `width=`.
+    // `"top".to_int()` is 0 (`String::to_int` skips non-digits), so width and
+    // height stay 0 rather than falling through to `width=`.
     expect(parseImgTag('img=top width=999', 'a.png')).toEqual(img('a.png', { alignment: { imagePoint: 'top', textPoint: 'top' } }));
   });
 
@@ -348,12 +334,11 @@ describe('resolveBBColor', () => {
   });
 
   it('resolves an X11 colour NAME through the same table Color::named reads', () => {
-    // `Color::from_string` (`color.cpp:450-456`) tries `html` first, then
-    // `named`. Engine-checked: `[color=red]R[/color]` paints red, not the
-    // theme's default colour.
+    // `Color::from_string` (`color.cpp:450-456`) tries `html`, then `named`.
+    // In Godot, `[color=red]R[/color]` paints red.
     expect(resolveBBColor('red', FALLBACK)).toEqual({ r: 1, g: 0, b: 0, a: 1 });
-    // A name whose normalization matters — `find_named_color` strips spaces
-    // and underscores and upper-cases before matching (`color.cpp:414-415`).
+    // `find_named_color` strips spaces and underscores and upper-cases before
+    // matching (`color.cpp:414-415`).
     expect(resolveBBColor('Dark Orange', FALLBACK)).toEqual({ r: 1, g: 0x8c / 255, b: 0, a: 1 });
   });
 

@@ -1,7 +1,6 @@
 /**
- * Reference values captured from Godot 4.6.3 itself (a headless GDScript that
- * seeds a `RandomNumberGenerator` and prints `randf()`), so these pin a
- * bit-exact port rather than a plausible-looking one.
+ * Reference values from Godot 4.6.3 itself (a headless GDScript that seeds a
+ * `RandomNumberGenerator` and prints `randf()`), so these pin a bit-exact port.
  */
 
 import { describe, expect, it } from 'vitest';

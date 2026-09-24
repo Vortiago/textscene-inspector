@@ -1,10 +1,7 @@
-; The ONE variable: `layout_direction = 3` on a LinkButton. Godot draws the
-; paragraph at `size.width - text_buf->get_line_width()` instead of 0, and
-; runs the underline over the same span (link_button.cpp:289-314). Both
-; controls are fixed at 320px, far wider than the label, so the origin the
-; direction picks is the only thing that can move the text or the stroke.
-; `unit-link-button` is LTR; no other fixture pairs a LinkButton with a
-; direction, so a regression in either edge is invisible everywhere else.
+; One variable: `layout_direction = 3` on a LinkButton. Godot draws the paragraph at
+; `size.width - text_buf->get_line_width()` instead of 0 and runs the underline over the same span
+; (link_button.cpp:289-314). Both controls are 320px, far wider than the label, so only the
+; origin moves. `unit-link-button` is LTR, and no other fixture pairs a LinkButton with a direction.
 
 [gd_scene format=3 uid="uid://unitlinkbuttonrtl"]
 

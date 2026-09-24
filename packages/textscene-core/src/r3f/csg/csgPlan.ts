@@ -1,12 +1,7 @@
 /**
- * What a CSG root's boolean is made of, without evaluating anything. Pure and React-free;
- * `evaluateCsgPlan` turns a plan into geometry.
- *
- * A tree, not a list, because Godot folds each node's whole subtree before its parent
- * combines that one result by the child's own operation (`csg_shape.cpp:472,481`).
- *
- * Root detection descends only into CSG-typed children, matching `parent_shape` being set
- * for a DIRECT CSG parent alone: `CSGBox3D > Node3D > CSGSphere3D` is two roots.
+ * What a CSG root's boolean is made of, pure and React-free. A tree, since Godot folds each subtree
+ * before its parent combines it by the child's operation (`csg_shape.cpp:472,481`). Only CSG children
+ * count, as `parent_shape` is set for a direct CSG parent: `CSGBox3D > Node3D > CSGSphere3D` is two roots.
  */
 
 import * as THREE from 'three';
@@ -40,7 +35,7 @@ export interface CsgPlan {
   rootPath: string;
   /** The root of the fold, or null when nothing survives. */
   root: CsgContribution | null;
-  /** How many nodes in that tree carry a solid — one is a lone root, more is a boolean. */
+  /** How many nodes in the tree carry a solid: one is a lone root, more is a boolean. */
   geometryCount: number;
   /**
    * Distinct material paths in first-seen order, with `undefined` for "no material".
@@ -68,7 +63,7 @@ export interface CsgPlanShape {
 }
 
 interface BuildOptions {
-  /** Paths hidden via the scene-tree eye toggle; treated exactly like `visible = false`. */
+  /** Paths hidden with the scene-tree eye toggle, treated like `visible = false`. */
   hiddenPaths?: ReadonlySet<string>;
   /**
    * The one thing the plan asks about a node type; null means "not a CSG shape". Injected
@@ -123,7 +118,7 @@ export function buildCsgPlan(
   const absorbedPaths = new Set<string>();
   const invisiblePaths = new Set<string>();
 
-  /** The skipped node and every CSG node under it — the recursion stopped at all of them. */
+  /** The skipped node and every CSG node under it, where the recursion stopped. */
   const markInvisible = (node: TscnNode, path: string): void => {
     invisiblePaths.add(path);
     for (const [child, childPath] of csgChildren(node, path, lookup)) markInvisible(child, childPath);
@@ -145,8 +140,8 @@ export function buildCsgPlan(
     parentMatrix: THREE.Matrix4,
     isRoot: boolean
   ): CsgContribution | null => {
-    // A ROOT builds whatever its own visibility — update_shape() is gated on
-    // is_root_shape() alone (csg_shape.cpp:568-570) — so only a CHILD stops the walk.
+    // A root builds whatever its visibility, since update_shape() is gated on is_root_shape()
+    // alone (csg_shape.cpp:568-570), so only a child stops the walk.
     if (!isRoot && !isVisible(node, path, hiddenPaths)) {
       markInvisible(node, path);
       return null;

@@ -25,7 +25,7 @@ describe('targetsBeforeLatestTrigger', () => {
 
   it('flags a target sandwiched between two triggers — one still ran after it', () => {
     // Range::set_max (range.cpp:228-241) re-clamps `value` after `min_value`
-    // has already been applied — a target between two triggers is still at risk.
+    // has already applied, so a target between two triggers is still at risk.
     expect(
       targetsBeforeLatestTrigger(
         bag('min_value', 'value', 'max_value'),
@@ -46,7 +46,7 @@ describe('targetsBeforeLatestTrigger', () => {
   });
 
   it('only considers triggers that are actually present', () => {
-    // `page` is a trigger but absent here — must not phantom-flag `value`
+    // `page` is a trigger but absent here, so it must not flag `value`
     // against a key that never fires.
     expect(
       targetsBeforeLatestTrigger(bag('value', 'min_value'), ['value'], ['min_value', 'max_value', 'page'])

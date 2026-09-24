@@ -1,32 +1,11 @@
 /**
- * Drift guard: the three things `solveHandoff.ts` promises that neither the
- * type checker nor any per-slice test can see.
- *
- * 1. A **share**'s callback reads only the node and the theme. `ShareNode`
- *    already makes `n.children` a type error and the callback is handed no
- *    `SolveContext` at all — this scan is what closes the ways around both: a
- *    cast back to `SolveNode`, and a `ctx` captured from an enclosing scope.
- *    The memo is only safe while this holds, because a share computed for the
- *    SOLVER is handed straight back to the PAINTER.
- *
- * 2. No painter hand-rolls an opener. Before this, ten painters carried an
- *    `isFooShape(meta)` guard plus a fallback arm, and no painter test ever
- *    set `meta` — so every unit test exercised the fallback while production
- *    took the other arm. A shape guard also cannot tell a value this slice
- *    produced from any object of the same shape; a channel's opener compares
- *    the channel by reference, so provenance is what it answers.
- *
- * 3. Every value that actually reaches `SolvedControl.meta` in a real solve is
- *    sealed. `SealedHandoff` makes a raw one a type error at the producer, and
- *    this is the runtime half — it also proves the two class-B producers
- *    attach unconditionally, which is what lets their painters take the cached
- *    arm in production.
- *
- * Deliberately NOT asserted: a hit rate, or that a share ran once. The solver
- * is handed `sortableView(n)` (`solveTree.ts:336-339`), a FRESH object wherever
- * a child is promoted, and `presetTimeMinimumSize`/`buildInternalTabBarNode`
- * mint nodes no painter ever sees. A miss is a recompute, never a wrong answer.
+ * Drift guard: the three promises of `solveHandoff.ts` that neither the type
+ * checker nor a per-slice test can see.
  */
+// Not asserted: a hit rate, or that a share ran once. The solver gets `sortableView(n)`
+// (`solveTree.ts:336-339`), a fresh object wherever a child is promoted, and
+// `presetTimeMinimumSize`/`buildInternalTabBarNode` mint nodes no painter sees. A miss
+// is a recompute, never a wrong answer.
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
@@ -53,19 +32,21 @@ const HANDOFF_FILES = ['nativeSolver.ts', 'Component.tsx'];
 /** Read once: the tree cannot change mid-run, and each scan reads all of it. */
 const HANDOFF_SOURCES: SourceFile[] = walkSources([UI_ROOT], (name) => HANDOFF_FILES.includes(name));
 
-/** Code only — a match inside prose is not a read, on its own line or trailing one. */
+/** Code only: a match inside prose is not a read, on its own line or trailing one. */
 function codeLines(source: string): (string | null)[] {
   return source
     .split('\n')
     .map((line) => (isCommentLine(line) ? null : line.replace(/\/\/.*$/, '').replace(/\/\*.*?\*\//g, '')));
 }
 
-// --- Guard 1: what a share's callback may read -------------------------------
+// Guard 1: a share's callback reads only the node and the theme. The scan closes
+// the ways around `ShareNode`: a cast back to `SolveNode`, and a captured `ctx`.
+// The memo is safe only while this holds, since the painter reuses the solver's value.
 
 /**
  * Every `defineShare(` callback's source, paired with the 1-based line it
- * starts on. Read to its OWN closing paren by depth so a callback spanning a
- * hundred lines is scanned whole and the code after it is not.
+ * starts on. Read to its own closing paren by depth, so a long callback is
+ * scanned whole and the code after it is not.
  */
 function shareCallbacks(source: string): { line: number; body: string }[] {
   const found: { line: number; body: string }[] = [];
@@ -91,9 +72,8 @@ function shareCallbacks(source: string): { line: number; body: string }[] {
 
 /**
  * `n.children` (the SolveNode list `sortableView` rewrites), or any spelling of
- * a `SolveContext` read. `.node.children` is the RAW child list, untouched by
- * `sortableView` and identical for the solver and the painter, so it is
- * excluded by name.
+ * a `SolveContext` read. `.node.children`, the raw child list, is the same for
+ * the solver and the painter, so it is excluded by name.
  */
 const FORBIDDEN_IN_SHARE =
   /(?<!\.node)\.children\b|\bctx\b|\bcombinedMinimumSize\b|\btentativeRect\b|\bmeasureText\b/;
@@ -108,15 +88,14 @@ function shareInvariantOffenders(source: string): number[] {
   return offenders;
 }
 
-// --- Guard 2: nobody hand-rolls an opener ------------------------------------
+// Guard 2: no painter hand-rolls an `isFooShape(meta)` opener. A shape guard cannot
+// tell this slice's value from any object of the same shape.
 
 /**
  * The four spellings of `meta` that are not a read: taking it off the painter's
- * props, handing it to a channel's opener, sealing one in a solver, and the two
- * JSX sites that pass `undefined` to a painter they render themselves
- * (`tabcontainer`, `subviewportcontainer`).
- *
- * `import.meta` is stripped first — `\bmeta\b` matches inside it.
+ * props, handing it to a channel's opener, sealing one in a solver, and the JSX
+ * sites that pass `undefined` to a painter they render (`tabcontainer`,
+ * `subviewportcontainer`). `import.meta` is stripped first: `\bmeta\b` matches in it.
  */
 function stripAllowedMeta(code: string): string {
   return code
@@ -135,17 +114,17 @@ function handRolledOpenerLines(source: string): number[] {
   return offenders;
 }
 
-// --- Guard 3: what actually reaches `SolvedControl.meta` ---------------------
+// Guard 3: every value that reaches `SolvedControl.meta` in a real solve is sealed,
+// and the class-B producers attach one unconditionally.
 
 function tscn(name: string, type: string, properties: Record<string, unknown>, children: TscnNode[] = []): TscnNode {
   return { name, type, properties, children };
 }
 
 /**
- * A two-child container of `type` at the viewport origin — the shape both
- * class-B producers need before they compute anything (a split reports no
- * boundary below two sortable children, and a scroll container needs content
- * to overflow).
+ * A two-child container of `type` at the viewport origin, the shape both class-B
+ * producers need: a split reports no boundary below two sortable children, and a
+ * scroll container needs content to overflow.
  */
 function containerTree(type: string): SolveNode[] {
   const childNodes = ['A', 'B'].map((name) =>
@@ -182,11 +161,9 @@ describe('solve handoff conformance', () => {
     const shares = HANDOFF_SOURCES.flatMap(({ file, source }) =>
       shareCallbacks(source).map(({ line }) => `${repoPath(file)}:${line}`)
     );
-    // Five, not six: Button's label shaping left `defineShare` when
-    // `autowrap_mode` gave it a THIRD input, the wrap width, which the memo's
-    // `(node, theme)` key cannot express (`button/nativeSolver.ts`'s own doc).
-    // It is still one function both its solver and its painter call — the
-    // invariant this file exists for — just not a memoised one.
+    // Button's label shaping is not a share: its wrap width is a third input the
+    // `(node, theme)` key cannot express. Its solver and painter still call one
+    // function, just not a memoised one.
     expect(shares.length).toBeGreaterThanOrEqual(5);
   });
 
@@ -233,12 +210,12 @@ describe('solve handoff conformance', () => {
     expect(read('  const min = ctx.combinedMinimumSize(n);')).toEqual([2]);
     expect(read('  if (!outer.measureText) return null;')).toEqual([2]);
     expect(read('  const w = outer.tentativeRect?.(n)?.w;')).toEqual([2]);
-    // The RAW child list is not the sortable one — MenuBar's titles come from it.
+    // The raw child list is not the sortable one: MenuBar's titles come from it.
     expect(read('  const popups = n.node.children.filter(isPopup);')).toEqual([]);
     expect(read('  return shapeText(text, { fontSizePx, fontMetrics });')).toEqual([]);
     // Prose inside a callback is not a read.
     expect(read('  // `ctx.measureText` is the gate, and stays in the solver.')).toEqual([]);
-    // Code AFTER the callback is out of scope.
+    // Code after the callback is out of scope.
     expect(
       shareInvariantOffenders('const s = defineShare((n) => n.path);\nconst m = ctx.measureText;')
     ).toEqual([]);

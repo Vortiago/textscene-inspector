@@ -1,18 +1,14 @@
 /**
- * The engine-side constants the reference harness renders at. They are here
- * rather than beside their use because BOTH sides of a parity comparison read
- * them: a one-sided edit leaves `ref:godot` and `ref:ours` framing different
- * pictures while both appear to work.
+ * The engine-side constants the reference harness renders at, read by both
+ * sides of a parity comparison: a one-sided edit frames two different pictures.
  */
 
 import { CANVAS_CAPTURE } from '../visual/previewServer.mjs';
 
 /**
- * The frame `capture-ours.mjs` produces, taken from the one definition of it.
- * Matching it is what makes the two harnesses' probe coordinates address the
- * same surface point with no arguments — differing aspect ratios alone would
- * break that, since at a shared vertical fov the wider frame covers a wider
- * horizontal frustum and no rescaling maps probes 1:1.
+ * The frame `capture-ours.mjs` produces, from its one definition, so probe
+ * coordinates address one surface point: at a shared vertical fov, a wider
+ * frame covers a wider frustum and no rescaling maps probes 1:1.
  */
 export const DEFAULT_WIDTH = CANVAS_CAPTURE.width;
 export const DEFAULT_HEIGHT = CANVAS_CAPTURE.height;
@@ -21,14 +17,9 @@ export const DEFAULT_HEIGHT = CANVAS_CAPTURE.height;
 export const EDITOR_FOV = 70;
 
 /**
- * `Node3DEditorViewport::Cursor()` — where the editor opens EVERY scene,
- * whatever is in it. Mirrors `godotEditorCamera.ts`, which is what the
- * previewer opens at, so a bare `ref:godot` and a bare `ref:ours` frame the
- * same picture with no arguments. This file generates GDScript and runs under
- * plain node, so it cannot import the TypeScript — `run.test.mjs` asserts these
- * against `godotEditorCamera.ts` instead, because a one-sided edit here would
- * leave both harnesses "working" while framing different pictures, and every
- * probe measured after that would be quietly wrong.
+ * `Node3DEditorViewport::Cursor()`, where the editor opens every scene. Mirrors
+ * the previewer's `godotEditorCamera.ts`, which plain node cannot import, so
+ * `run.test.mjs` asserts the two agree.
  */
 export const EDITOR_CAMERA_DIRECTION = [0.4207355, 0.4794255, 0.7701512];
 export const EDITOR_CAMERA_DISTANCE = 4;

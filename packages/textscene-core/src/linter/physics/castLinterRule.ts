@@ -1,16 +1,8 @@
 /**
- * Dimension- and kind-parameterized semantic rule for the four physics casts:
- * `RayCast2D`, `RayCast3D`, `ShapeCast2D`, `ShapeCast3D`.
- *
- * All four take the same three properties into the same space-state query, so
- * the two dead-configuration checks below are one piece of knowledge, not four.
- * The same reasoning already backs `areaLinterRule.ts`, whose Area2D/Area3D pair
- * is built from a single factory.
- *
- * The shape casts additionally carry a check Godot itself makes — one of the
- * few nodes with a `get_configuration_warnings` override, so the engine names
- * the defect rather than us inferring it. The ray casts have no such override,
- * which is exactly why they get the shared two and nothing more.
+ * The rule for `RayCast2D`, `RayCast3D`, `ShapeCast2D` and `ShapeCast3D`. All four
+ * take the same three properties into the same space-state query, so they share two
+ * dead-configuration checks. The shape casts add the missing-shape warning from their
+ * own `get_configuration_warnings` override, which the ray casts lack.
  */
 
 import { ruleInt } from '../validators/commonValidators.js';
@@ -21,7 +13,7 @@ import { resolveResourceSlot } from '../resourceChecker.js';
 import { dimSuffix } from './dim.js';
 import { boolSlotValue, descendsFromClass } from '../../godot/index.js';
 
-/** Which of the two cast families — they differ only by the `shape` property. */
+/** Which of the two cast families, which differ only by the `shape` property. */
 export type CastKind = 'Ray' | 'Shape';
 
 export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
@@ -29,13 +21,10 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
   const prefix = `${kind.toLowerCase()}cast${dimSuffix(dim)}`;
   const shapeType = `Shape${dim}`;
 
-  // `_can_collide_with` filters every space-state query result. Keyed on `dim`
-  // alone, not on `kind`: one function serves the ray and the shape query in a
-  // dimension, and the two dimensions have their own copy of it.
-  // The BODY clause specifically — `get_type() == TYPE_BODY && !p_collide_with_bodies`
-  // — since a cite names a construct, not a function signature. Its area twin sits
-  // four lines above it, and 3D adds a TYPE_SOFT_BODY clause below that gates on the
-  // same `collide_with_bodies` flag, so the two dimensions still decide alike.
+  // `_can_collide_with` filters every query result, one copy per dimension for both
+  // kinds. The cite names its body clause, `get_type() == TYPE_BODY && !p_collide_with_bodies`.
+  // Its area twin sits four lines above, and 3D's TYPE_SOFT_BODY clause below gates
+  // on the same `collide_with_bodies` flag, so the two dimensions decide alike.
   const canCollideCite = dim === '2D' ? 'godot_space_2d.cpp:52' : 'godot_space_3d.cpp:52';
   // Its first clause, the mask test against each candidate's collision_layer.
   const maskCite = dim === '2D' ? 'godot_space_2d.cpp:44' : 'godot_space_3d.cpp:44';
@@ -89,12 +78,10 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
     const report = (arm: RuleArm | undefined, message: string) =>
       reportArm(diagnostics, arm, node, message);
 
-    // Defaults per doc/classes/{Ray,Shape}Cast{2D,3D}.xml — identical across all
-    // four: collide_with_areas false, collide_with_bodies true. The default
-    // stands in for an UNREADABLE value as much as for an absent one: a spelling
-    // `can_convert_strict` refuses never reaches the slot, so the flag keeps the
-    // class default and phase 1 already reports the text. Collapsing that to
-    // false accused a `RayCast2D` whose `collide_with_bodies` is still on.
+    // Defaults per doc/classes/{Ray,Shape}Cast{2D,3D}.xml, the same for all four:
+    // collide_with_areas false, collide_with_bodies true. The default also stands
+    // for an unreadable value: a spelling `can_convert_strict` refuses never reaches
+    // the slot, so the flag keeps the class default and phase 1 reports the text.
     const withAreas = boolSlotValue(props.collide_with_areas) ?? false;
     const withBodies = boolSlotValue(props.collide_with_bodies) ?? true;
     if (!withAreas && !withBodies) {
@@ -112,7 +99,7 @@ export function makeCastLinterRule(dim: PhysicsDim, kind: CastKind): LintRule {
 
     if (arms.missingShape) {
       // "This node cannot interact with other objects unless a Shape2D is
-      // assigned." — scene/2d/physics/shape_cast_2d.cpp:407, and its 3D twin.
+      // assigned.": scene/2d/physics/shape_cast_2d.cpp:407, and its 3D twin.
       const shape = resolveResourceSlot(context.scene, props.shape);
       if (shape.kind === 'empty') {
         report(arms.missingShape, `${type} '${node.name}' has no 'shape'. It cannot interact with other objects until a ${shapeType} is assigned.`);

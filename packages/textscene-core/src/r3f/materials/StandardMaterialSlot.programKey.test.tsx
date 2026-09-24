@@ -1,13 +1,8 @@
 /**
- * `<StandardMaterialSlot>` keys its material on the parameters three BAKES into
- * the program at first compile (`WebGLPrograms.js:56` `getParameters`), not on
- * the raw scalars. Anything on that list must rebuild the material when it
- * moves, because a `.tscn` re-parse feeds new props to the same mounted element
- * and three re-derives only on a `material.version` bump or one of
- * `WebGLRenderer.js:2388`'s fixed re-checks.
- *
- * The controls matter as much as the cases: a plain uniform must NOT rebuild,
- * or every edit throws away a compiled program for nothing.
+ * `<StandardMaterialSlot>` keys its material on what three bakes into the program
+ * (`WebGLPrograms.js:56` `getParameters`): a re-parse feeds new props to the same
+ * element, and three re-derives only on a `version` bump or `WebGLRenderer.js:2388`'s
+ * re-checks. A plain uniform must not rebuild.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -25,7 +20,7 @@ function slot(data: Record<string, string>, maps: Maps) {
   );
 }
 
-/** Whether the slot handed the mesh a DIFFERENT THREE.Material after the edit. */
+/** Whether the slot handed the mesh a different THREE.Material after the edit. */
 async function rebuilds(
   before: Record<string, string>,
   after: Record<string, string>,
@@ -41,11 +36,9 @@ async function rebuilds(
 }
 
 /**
- * Seven of the eight slots this component fans out to. `anisotropyMap` is the
- * eighth and is asserted separately: three gates it on `HAS_ANISOTROPY`
- * (`WebGLPrograms.js:147`), and only `MeshPhysicalMaterial` declares
- * `anisotropy` at all (`MeshPhysicalMaterial.js:353`), so on this branch it is
- * provably not a program input.
+ * Seven of the eight slots. `anisotropyMap` is asserted separately: three gates it
+ * on `HAS_ANISOTROPY` (`WebGLPrograms.js:147`), and only `MeshPhysicalMaterial`
+ * declares `anisotropy` (`MeshPhysicalMaterial.js:353`).
  */
 const TEXTURE_SLOTS: Array<keyof Maps> = [
   'albedoMap',
@@ -65,9 +58,8 @@ const RIM = { rim_enabled: 'true', rim: '0.5' };
 describe('<StandardMaterialSlot> rebuilds when a baked program parameter moves', () => {
   it.each([
     ['transparency 0 → 1 (the `opaque` composite)', {}, ALPHA],
-    // ADD both joins the alpha pass and leaves NormalBlending, so it flips two
-    // of the composite's three terms at once — Godot admits no way to move the
-    // blending term alone.
+    // ADD joins the alpha pass and leaves NormalBlending, two of the composite's
+    // three terms at once. Godot cannot move the blending term alone.
     ['blend_mode MIX → ADD (the same composite)', {}, { blend_mode: '1' }],
     ['vertex_color_use_as_albedo', {}, { vertex_color_use_as_albedo: 'true' }],
     ['cull_mode BACK → DISABLED (doubleSided/flipSided)', {}, { cull_mode: '2' }],
@@ -87,8 +79,8 @@ describe('<StandardMaterialSlot> rebuilds when a baked program parameter moves',
     // to cross zero against.
     ['clearcoat', RIM, { clearcoat_enabled: 'true', clearcoat: '0.5' }],
   ])('physical feature crosses zero: %s', async (_case, base, feature) => {
-    // Still a MeshPhysicalMaterial on both sides — the base feature holds the
-    // upgrade — so nothing but the key can force the rebuild.
+    // A MeshPhysicalMaterial on both sides, since the base feature holds the
+    // upgrade, so only the key can force the rebuild.
     expect(await rebuilds(base, { ...base, ...feature })).toBe(true);
   });
 
@@ -119,15 +111,15 @@ describe('<StandardMaterialSlot> keeps the compiled material for a plain uniform
   });
 
   it('blend_mode on a material already in the alpha pass', async () => {
-    // `blending` reaches a program ONLY through `opaque` (`WebGLPrograms.js:262`,
+    // `blending` reaches a program only through `opaque` (`WebGLPrograms.js:262`,
     // its sole reference). With `transparent` already true the composite is
     // false either way; the blend equation itself is per-draw GL state.
     expect(await rebuilds(ALPHA, { ...ALPHA, blend_mode: '1' })).toBe(false);
   });
 
   it('alpha_scissor_threshold: three bumps `version` itself on the zero crossing', async () => {
-    // `Material.js:494-502` — the accessor makes alphaTest self-healing, so it
-    // is deliberately absent from the key.
+    // `Material.js:494-502`: the accessor makes alphaTest self-healing, so it is
+    // absent from the key.
     expect(await rebuilds({}, { transparency: '2', alpha_scissor_threshold: '0.3' })).toBe(false);
   });
 
@@ -135,13 +127,13 @@ describe('<StandardMaterialSlot> keeps the compiled material for a plain uniform
     // Not an omission: `MeshStandardMaterial` has no `anisotropy`
     // (`MeshPhysicalMaterial.js:353`), so `HAS_ANISOTROPY` is false and the slot
     // (`WebGLPrograms.js:147`) cannot be a program input here. Crossing zero
-    // switches the ELEMENT type, which remounts on its own.
+    // switches the element type, which remounts on its own.
     expect(await rebuilds({}, {}, {}, { anisotropyMap: new THREE.Texture() })).toBe(false);
   });
 
   it('a texture slot swapping IDENTITY is presence-unchanged', async () => {
-    // three bakes `USE_MAP`, not which texture — a fresh material here would
-    // throw away a compiled program for a uniform assignment.
+    // three bakes `USE_MAP`, not which texture, so a fresh material would waste a
+    // compiled program on a uniform assignment.
     const first = { albedoMap: new THREE.Texture() };
     const second = { albedoMap: new THREE.Texture() };
     expect(await rebuilds({}, {}, first, second)).toBe(false);

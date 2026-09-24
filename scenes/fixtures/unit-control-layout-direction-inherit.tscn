@@ -1,13 +1,7 @@
-; The ONE variable: `layout_direction` on a CHILD of a right-to-left Control —
-; absent (INHERITED) on one bar, `2` (LTR) on the other. `Control::is_layout_rtl`
-; climbs to the nearest ancestor Control for INHERITED (control.cpp:3584-3593)
-; while an explicit LTR answers from the value alone (control.cpp:3619), so the
-; first bar is mirrored inside its parent by `Control::_size_changed`
-; (control.cpp:1785-1787) and the second is not. Both bars are FREE children,
-; not container children: a container owns its children's rects, so it hides the
-; per-child mirror that this scene is here to show. The parent is the same
-; offset and width in both rows, and the bars are identical apart from the one
-; property, so a mirror that fired on the wrong one is a visible swap.
+; The one variable: `layout_direction` on a free child of an RTL Control: inherited on one bar, LTR (2)
+; on the other. Inherited climbs to the parent (control.cpp:3584-3593) and LTR answers alone
+; (control.cpp:3619), so only the first mirrors (control.cpp:1785-1787). A container owns its children's
+; rects and would hide the mirror.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitctrlldinherit"]
 

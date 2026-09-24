@@ -1,8 +1,7 @@
 /**
- * The resolution step alone — which of the two arrivals a material reference
- * names, and when it names neither. What the resolved material then LOOKS like
- * is the derivation's, covered by the materialBag and meshinstance3d material
- * tests.
+ * The resolution step alone: which of the two arrivals a material reference names,
+ * and when it names neither. The materialBag and meshinstance3d material tests cover
+ * what the resolved material looks like.
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as logger from '../../logger';
@@ -54,7 +53,7 @@ describe('resolveMaterialSource', () => {
   });
 
   it('answers with the default surface for a Material it cannot build', () => {
-    // A ShaderMaterial IS a material and the slot holding it was filled, so the
+    // A ShaderMaterial is a material and the slot holding it was filled, so the
     // surface is Godot's default one rather than whatever the mesh already wore
     // (ADR-0041). A sub-resource that is no material at all leaves the slot
     // empty instead.
@@ -66,16 +65,15 @@ describe('resolveMaterialSource', () => {
 
   it('says so when it declines a shader, as the .tres arrival does', () => {
     // Both arrivals draw Godot's default surface, so the warning is the only
-    // thing telling the user a shader was skipped. Silent on one side and not
-    // the other is the asymmetry, in a different coat.
+    // sign a shader was skipped, and both arrivals give it.
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     try {
       resolveMaterialSource('SubResource("Shader_fx")', INTERNAL, EXTERNAL);
       expect(warn).toHaveBeenCalledTimes(1);
       expect(warn.mock.calls[0]?.[0]).toContain('ShaderMaterial');
 
-      // A sub-resource that is not a material at all names a defect in the
-      // scene, not a capability we lack — nothing to report from here.
+      // A sub-resource that is not a material names a defect in the scene, not
+      // a missing capability, so nothing is reported.
       warn.mockClear();
       resolveMaterialSource('SubResource("Mesh_box")', INTERNAL, EXTERNAL);
       expect(warn).not.toHaveBeenCalled();

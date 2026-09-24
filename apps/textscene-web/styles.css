@@ -1,19 +1,7 @@
 /*
- * Global base for the web previewer.
- *
- * The UI is built entirely from scoped CSS Modules — `TscnPreviewShell`
- * (the shared shell) and `r3f-main.module.css` (the web toolbar), both on
- * the `--tsi-*` design tokens. So this global sheet is intentionally tiny:
- * a reset plus the body / #app frame.
- *
- * It replaced a large legacy stylesheet from the pre-React vanilla app.
- * That sheet's broad element and #id rules (`button`, `header`, `main`,
- * `input[type=file]`, `#controls`, `.tree-*`, …) were leaking onto React's
- * DOM — e.g. `button { width: 100%; margin-top: 1rem }` silently bloated
- * every toolbar control and broke the top-bar alignment. `mountR3F()`
- * clears `#app` and mounts React, so none of that legacy markup exists at
- * runtime; the rules targeting it were dead, and the generic ones were
- * harmful. Components own their styling through their modules.
+ * The web previewer's global base: a reset and the body and #app frame. Components own their
+ * styling through CSS Modules on the `--tsi-*` tokens, since a broad element rule here (such
+ * as `button { width: 100% }`) leaks onto every React control.
  */
 
 *,

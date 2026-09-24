@@ -1,29 +1,8 @@
 /**
- * Semantic linter rule for MultiplayerSpawner, from Godot's own configuration
- * warning (multiplayer_spawner.cpp:88-95):
- *
- *     if (spawn_path.is_empty() || !has_node(spawn_path)) {
- *         warnings.push_back(RTR("A valid NodePath must be set in the \"Spawn
- *         Path\" property in order for MultiplayerSpawner to be able to spawn
- *         Nodes."));
- *     }
- *
- * `spawn_path` defaults to `NodePath("")` (multiplayer_spawner.cpp:58 XML
- * `default="NodePath(&quot;&quot;)"`), which is exactly the value the
- * `is_empty()` disjunct fires on — an absent key IS Godot's own default, so
- * flagging its absence would demand a key the serialiser omits
- * (default-omitted, per the repo's "absence is Godot's default form" rule).
- *
- * The `!has_node(spawn_path)` disjunct is a different, checkable condition: a
- * PRESENT, non-empty `spawn_path` that names no node in this file is a real
- * dangling reference, resolved the same way MeshInstance3D's `skeleton`
- * NodePath is. `extractNodePath` already returns null for `NodePath("")`, so
- * an explicit empty override falls out of this check for free too.
- *
- * `warning`, not the `error` the dangling-skeleton rule uses. Godot raises this
- * as a configuration warning, and ADR-0032 reserves `error` for a setter that
- * refuses or alters a value — the scene loads and every property here is
- * well-formed.
+ * Semantic linter rule for MultiplayerSpawner, from Godot's configuration warning on
+ * `spawn_path.is_empty() || !has_node(spawn_path)` (multiplayer_spawner.cpp:88-95). An absent key
+ * is Godot's default `NodePath("")` (multiplayer_spawner.cpp:58), so only a present, non-empty path
+ * that names no node in this file warns. A warning, not an error: the scene loads (ADR-0032).
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';

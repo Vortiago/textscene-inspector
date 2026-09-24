@@ -1,12 +1,7 @@
 /**
- * Cell-placement math — Godot's `map_to_local`: grid coordinates → the CENTER
- * of the cell in local pixels (Godot 2D space, +Y down). Pure module.
- *
- * The arms are transcribed verbatim from Godot's TileSet::map_to_local
- * (scene/resources/2d/tile_set.cpp): every non-square shape shares one
- * layout-dependent remap of the grid coordinates, then an overlap ratio applied
- * to the offset axis (0.5 isometric, 0.75 hexagon, 1.0 half-offset square), then
- * `(ret + 0.5) * tile_size`. Square placement is the untouched default.
+ * Godot's `map_to_local` (scene/resources/2d/tile_set.cpp): grid coordinates to the centre of the
+ * cell in local pixels, +Y down. Every non-square shape shares one layout remap, then an overlap
+ * ratio on the offset axis, then `(ret + 0.5) * tile_size`. Square placement is the default.
  */
 
 import {
@@ -17,7 +12,7 @@ import {
   type Vec2i,
 } from './types';
 
-/** Positive modulo (Godot's Math::posmod) — posmod(-1, 2) === 1. */
+/** Godot's Math::posmod: posmod(-1, 2) === 1. */
 function posmod(a: number, b: number): number {
   return ((a % b) + b) % b;
 }
@@ -35,7 +30,7 @@ function isStaggered(shape: number): boolean {
 function overlapRatio(shape: number): number {
   if (shape === TILE_SHAPE_ISOMETRIC) return 0.5;
   if (shape === TILE_SHAPE_HEXAGON) return 0.75;
-  return 1; // half-offset square — staggered but no overlap
+  return 1; // half-offset square: staggered, no overlap
 }
 
 export function mapToLocalPx(grid: TileGrid, cell: Vec2i): { x: number; y: number } {

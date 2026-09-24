@@ -1,6 +1,4 @@
-/**
- * ParallaxLayer registration — parser.
- */
+/** Registers the ParallaxLayer parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseParallaxLayer } from './parser';

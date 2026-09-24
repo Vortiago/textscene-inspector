@@ -1,14 +1,7 @@
 /**
- * Reading source as TEXT, for the drift guards that assert over spelling rather
- * than over behaviour.
- *
- * The guards grew the same pieces independently — a comment skip, an exemption
- * lookup, a `{…}`-aware tag reader. They are all defending the same thing: a
- * match inside a doc comment is prose, not a use, and a scan that cannot tell
- * the two apart is either noisy or silenced. So each piece lives once.
- *
- * Test-only: the `testing/` directories under `src` are excluded from the
- * build, like `parser/testing` and `resources/testing`.
+ * Source read as text, for the drift guards that assert over spelling rather than
+ * behaviour. A match inside a comment is prose, not a use. Test-only: the `testing/`
+ * directories under `src` are excluded from the build.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -21,9 +14,8 @@ export interface SourceFile {
 
 /**
  * Never walked: generated output and installed packages are nobody's source.
- * `.vscode-test` is a DOWNLOADED VS Code plus its bundled `.d.ts` files — it is
- * gitignored, so walking it makes every corpus depend on whether the machine
- * has run the extension gate.
+ * `.vscode-test` is a downloaded, gitignored VS Code, so walking it makes every
+ * corpus depend on whether the machine has run the extension gate.
  */
 const SKIPPED_DIRECTORIES = new Set([
   'node_modules',
@@ -61,13 +53,9 @@ function hasExemptionAbove(lines: string[], index: number, marker: string): bool
 }
 
 /**
- * Whether any of the `window` lines above `index` carries `marker`.
- *
- * Both spellings exist because a JSX exemption cannot be read by the block
- * walk: a braced JSX comment's continuation lines start with plain prose, which
- * `isCommentLine` reads as CODE, and the marker as often as not sits above an
- * intervening `return (`. The walk would miss every one of those, so a scan
- * over JSX takes the window and one over plain statements takes the walk.
+ * Whether any of the `window` lines above `index` carries `marker`. A scan over JSX
+ * uses this, not the block walk: a braced JSX comment's continuation lines read as
+ * code to `isCommentLine`, and the marker often sits above a `return (`.
  */
 export function hasExemptionWithin(
   lines: string[],
@@ -105,14 +93,9 @@ export interface JsxTag {
 }
 
 /**
- * Every JSX opener matching `opener`, read to ITS OWN `>` — not the first one
- * on the line: a prop value may hold a `>`, and a tag may neither start nor end
- * at a line boundary. Every match on a line is read, so a second tag cannot
- * hide behind the first.
- *
- * A comment line BETWEEN two props drops out: prose there is not part of the
- * tag, and a `>` or a lone brace inside it would otherwise end the read early
- * and hand the caller a tag missing everything after it.
+ * Every JSX opener matching `opener`, read to its own `>` across lines, since a prop
+ * value may hold a `>`. Every match on a line is read. A comment line between two
+ * props drops out, since a `>` or brace in it would end the read early.
  */
 export function jsxTags(source: string, opener: RegExp): JsxTag[] {
   const lines = source.split('\n');
@@ -191,12 +174,9 @@ export interface CallSite {
 }
 
 /**
- * Every call matching `opener` — which must match up to and including the `(` —
- * read to ITS OWN `)`, across as many lines as that takes. The counterpart of
- * `jsxTags` for a rule whose unit is an ARGUMENT POSITION rather than a prop:
- * an argument names nothing, so only where it sits can be read.
- *
- * A comment line between two arguments drops out, on the same terms as there.
+ * Every call matching `opener` (up to and including the `(`), read to its own `)`
+ * across lines. The `jsxTags` counterpart for a rule over argument positions. A
+ * comment line between two arguments drops out.
  */
 export function callSites(source: string, opener: RegExp): CallSite[] {
   const lines = source.split('\n');
@@ -234,8 +214,7 @@ export function offendingLines(source: string, pattern: RegExp, marker?: string)
   for (let i = 0; i < lines.length; i++) {
     if (isCommentLine(lines[i]!)) continue;
     if (!pattern.test(lines[i]!.replace(/\/\/.*$/, ''))) continue;
-    // Consulted only for a line that already matched — an exemption can never
-    // do anything but suppress a would-be offender.
+    // Consulted only for a line that already matched: an exemption only suppresses.
     if (marker !== undefined && hasExemptionAbove(lines, i, marker)) continue;
     offenders.push(i + 1);
   }
@@ -257,7 +236,7 @@ export function walkSources(roots: readonly string[], accept: (name: string) => 
   return found.map((file) => ({ file, source: readFileSync(file, 'utf8') }));
 }
 
-/** `.ts`/`.tsx` that is not a test — the shape every guard here scans. */
+/** `.ts` or `.tsx` that is not a test: the shape every guard here scans. */
 export const isProductionSource = (name: string): boolean =>
   /\.tsx?$/.test(name) && !/\.(test|spec)\.tsx?$/.test(name);
 

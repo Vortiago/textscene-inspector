@@ -1,9 +1,7 @@
 /**
- * CameraControlContext exposes a `resetCamera`
- * callback that, when fired, drives a registered handler (the canvas's
- * `<GodotEditorControls>` handle's `reset()`). Also pins the pre-existing camera-switch
- * surface (`switchToCamera` / `returnToFreeView` / `activeCameraPath`)
- * so the reset-camera additions don't drift it.
+ * `resetCamera` drives the registered handler, the `reset()` of the canvas's
+ * `<GodotEditorControls>`. The camera switch (`switchToCamera`,
+ * `returnToFreeView`, `activeCameraPath`) is pinned too.
  */
 import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -45,7 +43,7 @@ describe('CameraControlContext', () => {
     // The canvas looks through this camera on open without any user action.
     expect(result.current.activeCameraPath).toBe('Root/Camera3D');
 
-    // Returning to free view still clears it — the seed is only the initial value.
+    // Free view still clears it, since the seed is only the initial value.
     act(() => {
       result.current.returnToFreeView();
     });
@@ -89,7 +87,7 @@ describe('CameraControlContext', () => {
 
   it('resetCamera() is a no-op when no handler is registered', () => {
     const { result } = renderHook(() => useCameraControl(), { wrapper });
-    // Should not throw even with no canvas mounted yet.
+    // No throw with no canvas mounted yet.
     expect(() =>
       act(() => {
         result.current.resetCamera();
@@ -131,13 +129,13 @@ describe('CameraControlContext', () => {
     });
     expect(handler).toHaveBeenCalledTimes(1);
 
-    // Unmount the registrar — the cleanup should drop the handler.
+    // The registrar's unmount drops the handler.
     rerender(<App showRegistrar={false} />);
 
     act(() => {
       getByTestId('trigger').click();
     });
-    // Still 1 — the handler was unregistered so no additional calls.
+    // Still 1, since the handler is unregistered.
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
@@ -184,7 +182,7 @@ describe('CameraControlContext', () => {
   });
 
   it('useCameraControl throws without a provider', () => {
-    // Suppress React's error log for this test — we expect a throw.
+    // The throw is expected, so React's error log is silenced.
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => renderHook(() => useCameraControl())).toThrow(/CameraControlProvider/);
     consoleErrorSpy.mockRestore();

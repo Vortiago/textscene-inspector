@@ -1,34 +1,14 @@
 [gd_scene load_steps=5 format=3 uid="uid://unittexrectatlastex"]
 
-; ONE VARIABLE: a TextureRect whose `texture` is an INLINE AtlasTexture
-; sub-resource — a windowed cell of a sprite sheet — instead of a whole image.
-;
-; An AtlasTexture is a first-class Texture2D that Godot presents at the size of
-; its REGION (`AtlasTexture::get_width`/`get_height`), so the slot feeds TWO
-; things: the pixels drawn, and the node's minimum size. Each rect here shrinks
-; to that minimum (`size_flags_horizontal = 0`), so a wrong size shows as a
-; wrong RECT, and every sibling below moves — this scene reports a layout
-; regression as well as a paint one, in both axes.
-;
-; res://textures/atlas-quadrants.png is 128x128 in four flat 64x64 quadrants:
-; red top-left, green top-right, blue bottom-left, yellow bottom-right. So the
-; three cells are each unmistakable, and each fails differently:
-;   TopLeftCell  — 64x64 of flat RED. The whole sheet instead of the cell shows
-;                  all four colours; nothing at all shows the background.
-;   CentreCell   — 64x64 straddling the quadrant join: a 2x2 of red/green/blue/
-;                  yellow. Only the exact region origin (32, 32) produces it, so
-;                  an offset read at the wrong corner is visible immediately.
-;   MarginedCell — a 32x32 GREEN square inset 8 px into a 48x48 box, the rest of
-;                  the box transparent: `margin` widens what the texture reports
-;                  and moves where the region lands inside it, and those are
-;                  separate reads.
-;
-; Every other TextureRect fixture uses a whole ExtResource image or an inline
-; GradientTexture2D — neither goes near the sheet-windowing branch, and the only
-; other AtlasTextures in the fixture bag are SpriteFrames frames inside an
-; AnimatedSprite2D, which is a different consumer with no golden at all. So a
-; regression here is invisible in every other scene.
+; One variable: a TextureRect whose `texture` is an inline AtlasTexture sub-resource, a cell of a
+; sprite sheet. Godot presents it at its region's size (`AtlasTexture::get_width`/`get_height`),
+; so the slot feeds the pixels and the minimum size. Each rect shrinks to that minimum
+; (`size_flags_horizontal = 0`), so a wrong size moves every sibling below: layout and paint both.
 
+; res://textures/atlas-quadrants.png is 128x128 in four flat 64x64 quadrants: red top-left, green
+; top-right, blue bottom-left, yellow bottom-right, so each cell is unmistakable. Other
+; TextureRect fixtures use a whole image or a GradientTexture2D, and the only other AtlasTextures
+; are SpriteFrames frames in an AnimatedSprite2D, a different consumer with no golden.
 [ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_sheet"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_topleft"]
@@ -59,14 +39,19 @@ offset_bottom = 600.0
 custom_minimum_size = Vector2(0, 24)
 color = Color(0.15, 0.6, 0.3, 1)
 
+; 64x64 of flat red. The whole sheet instead shows all four colours. Nothing shows the background.
 [node name="TopLeftCell" type="TextureRect" parent="Column"]
 size_flags_horizontal = 0
 texture = SubResource("AtlasTexture_topleft")
 
+; 64x64 across the quadrant join: a 2x2 of red, green, blue and yellow. Only the region origin
+; (32, 32) produces it, so an offset read at the wrong corner shows at once.
 [node name="CentreCell" type="TextureRect" parent="Column"]
 size_flags_horizontal = 0
 texture = SubResource("AtlasTexture_centre")
 
+; A 32x32 green square inset 8 px in a 48x48 box, the rest transparent: `margin` widens what the
+; texture reports and moves where the region lands in it, two separate reads.
 [node name="MarginedCell" type="TextureRect" parent="Column"]
 size_flags_horizontal = 0
 texture = SubResource("AtlasTexture_margined")

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { applyRootScale } from './rootScale';
-import * as processingShim from '../../processing/rootScale';
 
 /** A GLB-shaped root: a scene root with one transformed child holding a mesh. */
 function loadedGlb(): THREE.Object3D {
@@ -30,10 +29,9 @@ describe('applyRootScale', () => {
   });
 
   it('leaves the ROOT at scale 1 when baking, so later children are untouched', () => {
-    // Godot's apply_root_scale = true applies the scale to the meshes and leaves the
-    // root node alone. The truck town's tree depends on it: the .tscn parents a
-    // StaticBody3D/CollisionShape3D to the instanced root, authored against the FINAL
-    // size. Scaling the root instead would shrink that collision shape 100x too.
+    // Godot's apply_root_scale = true scales the meshes and leaves the root node alone.
+    // A .tscn can parent a CollisionShape3D to the instanced root, authored against the
+    // final size, and scaling the root would shrink it too.
     const root = loadedGlb();
     applyRootScale(root, { scale: 0.01, bake: true });
     expect(root.scale.toArray()).toEqual([1, 1, 1]);
@@ -54,7 +52,7 @@ describe('applyRootScale', () => {
   });
 
   it('scales child OFFSETS as well as sizes when baking', () => {
-    // A child 10 units up must end up 0.1 units up, not 10 — otherwise the parts of a
+    // A child 10 units up must end up 0.1 units up, not 10, or the parts of a
     // multi-node asset shrink in place and fly apart.
     const root = loadedGlb();
     applyRootScale(root, { scale: 0.01, bake: true });
@@ -89,11 +87,5 @@ describe('applyRootScale', () => {
   it('does not throw on a childless root', () => {
     const root = new THREE.Object3D();
     expect(() => applyRootScale(root, { scale: 0.01, bake: true })).not.toThrow();
-  });
-});
-
-describe('processing/ re-export shim', () => {
-  it('still serves applyRootScale from its old module path', () => {
-    expect(processingShim.applyRootScale).toBe(applyRootScale);
   });
 });

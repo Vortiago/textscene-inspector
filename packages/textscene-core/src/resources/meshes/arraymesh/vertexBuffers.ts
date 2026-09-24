@@ -1,26 +1,18 @@
 /**
- * Per-vertex buffer readers: the bytes of one surface's `vertex_data`,
- * `attribute_data` and `index_data` back into typed arrays holding the same
- * values Godot's own `ArrayMesh.surface_get_arrays()` returns.
- *
- * Dequantising through `aabb` / `uv_scale` is decoding, not conversion: it
- * recovers Godot's own values. The Godot → three.js conversions (V flip,
- * triangle winding) live in `build.ts`.
+ * Reads a surface's `vertex_data`, `attribute_data` and `index_data` into typed
+ * arrays holding what Godot's `ArrayMesh.surface_get_arrays()` returns, so
+ * dequantising through `aabb` / `uv_scale` belongs here. The conversions to
+ * three.js (V flip, triangle winding) live in `build.ts`.
  */
 
 import type { SurfaceAabb } from './surfaceFields.js';
 import type { SurfaceLayout } from './surfaceFormat.js';
 
 /**
- * Read a surface's positions, or undefined when the surface cannot be read at
- * all: `vertex_data` too short for the vertices it declares, a compressed
- * surface with no `aabb` to dequantise against, or a component that is not
- * finite. A non-finite position is not a local defect — surfaces merge into one
- * THREE.BufferGeometry, so one NaN poisons the whole mesh's bounding sphere, and
- * with it the camera framing.
- *
- * A compressed position is a uint16 per axis spanning the surface's own `aabb`,
- * so the aabb is the scale, not just metadata.
+ * A surface's positions, or undefined for `vertex_data` too short for its count,
+ * a compressed surface with no `aabb` (its uint16 axes span that aabb), or a
+ * non-finite component: surfaces merge into one geometry, so one NaN poisons the
+ * whole mesh's bounding sphere and the camera framing.
  */
 export function decodePositions(
   bytes: Uint8Array,
@@ -66,17 +58,10 @@ export function decodePositions(
 }
 
 /**
- * Read UV1 out of `attribute_data`, whose record Godot orders COLOR, UV1, UV2 —
- * so a surface with vertex colours puts 4 RGBA8 bytes ahead of UV1.
- *
- * Uncompressed UV1 is 2×float32. Compressed is 2×uint16 spanning the unit range,
- * unless the surface declares a non-zero `uv_scale`: Godot normalises UVs that
- * leave the unit range into the uint16 range and keeps the divisor there, so the
- * stored value has to be re-expanded around 0.5.
- *
- * Returns undefined when the record is not the width the format implies — an
- * unmodelled CUSTOM0..3 channel puts UV1 somewhere this cannot find, and wrong
- * UVs are worse than none.
+ * UV1 from `attribute_data`, or undefined when the record is narrower than the
+ * format implies: wrong UVs are worse than none. Compressed UV1 is 2×uint16 over
+ * the unit range. A non-zero `uv_scale` is the divisor Godot normalised
+ * out-of-range UVs by, so the value is re-expanded around 0.5.
  */
 export function decodeUVs(
   bytes: Uint8Array,
@@ -88,11 +73,10 @@ export function decodeUVs(
   const { uvOffset } = layout;
   if (uvOffset < 0 || vertexCount === 0 || bytes.byteLength === 0) return undefined;
 
-  // Godot orders the record COLOR, UV1, UV2, CUSTOM0..3, so UV1 sits at its
-  // offset no matter what TRAILS it. A record WIDER than the format models is an
-  // unmodelled CUSTOM channel and reads fine at the actual stride; only a record
-  // too narrow, or one that does not divide evenly, means UV1 is not where this
-  // thinks and the UVs have to go.
+  // Godot orders the record COLOR, UV1, UV2, CUSTOM0..3, so vertex colours put 4
+  // RGBA8 bytes ahead of UV1 and a wider record (an unmodelled CUSTOM channel)
+  // reads fine at its stride. A record too narrow or not dividing evenly puts
+  // UV1 somewhere else, so the UVs go.
   const actualStride = bytes.byteLength / vertexCount;
   if (!Number.isInteger(actualStride) || actualStride < layout.attributeStride) {
     onMismatch(actualStride);
@@ -112,7 +96,7 @@ export function decodeUVs(
     return out;
   }
 
-  // A zero `uv_scale` means the stored value already IS the UV; otherwise Godot
+  // A zero `uv_scale` means the stored value already is the UV. Otherwise Godot
   // normalised UVs that left the unit range into the uint16 range against that
   // divisor, so they re-expand around 0.5.
   const [scaleU, scaleV] = uvScale ?? [0, 0];
@@ -140,19 +124,10 @@ function octToVec3(ex: number, ey: number): [number, number, number] {
 }
 
 /**
- * Decode Godot's packed normals from `vertex_data`, which lays the position
- * region first and the normal/tangent region after it.
- *
- * Uncompressed stores the normal directly: a 2×uint16 octahedral pair, followed
- * by the tangent's own pair.
- *
- * Compressed stores no normal at all. It keeps a rotation AXIS as the octahedral
- * pair and the rotation ANGLE as the 4th uint16 of the position record (in
- * half-turns), and the whole tangent frame follows from Godot's
- * `axis_angle_to_tbn` — the normal is that rotation matrix's third row. Reading
- * the pair as if it were a normal gives a direction unrelated to the surface.
- *
- * Returns undefined when there is no normal region, so the caller can recompute.
+ * Normals from the region after the positions, or undefined when there is none,
+ * so the caller recomputes. Uncompressed stores a 2×uint16 octahedral normal.
+ * Compressed stores a rotation axis there and the angle (half-turns) in the 4th
+ * uint16 of the position record: the normal is row 3 of `axis_angle_to_tbn`.
  */
 export function decodeNormals(
   bytes: Uint8Array,
@@ -191,10 +166,9 @@ export function decodeNormals(
     // rotation (Godot's `axis_angle_to_tbn`).
     const [ex, ey] = oct(normalBlock + i * stride);
     const [ax, ay, az] = octToVec3(ex, ey);
-    // ABSOLUTE value, as Godot's own `abs(angle * 2.0 - 1.0) * PI`: the stored
-    // value's sign carries the binormal's handedness, not the rotation's
-    // direction. Reading it signed rotates the frame the wrong way for every
-    // vertex below the midpoint, flipping the normal's x and y.
+    // Absolute value, as Godot's `abs(angle * 2.0 - 1.0) * PI`: the sign carries
+    // the binormal's handedness, not the rotation's direction. Read signed, it
+    // flips the normal's x and y for every vertex below the midpoint.
     const angle = Math.abs((view.getUint16(i * positionStride + 6, true) / 65535) * 2 - 1) * Math.PI;
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
@@ -211,7 +185,7 @@ export function decodeNormals(
 }
 
 /**
- * uint16 when ≤ 65535 vertices, uint32 otherwise — detected from byte width.
+ * uint16 when ≤ 65535 vertices, uint32 otherwise, detected from byte width.
  * Undefined when `index_data` is too short for the count it declares, so the
  * surface is dropped like any other unreadable one rather than throwing a
  * RangeError that would take the whole mesh down.

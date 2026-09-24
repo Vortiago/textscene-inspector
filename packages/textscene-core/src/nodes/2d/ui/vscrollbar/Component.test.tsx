@@ -1,11 +1,9 @@
 /**
- * `<VScrollBar>` — pins the two parts `ScrollBar::_notification(NOTIFICATION_DRAW)`
- * paints under this codebase's theme scope (`scene/gui/scroll_bar.cpp`): the
- * `scroll` track and the `grabber`. Exact numbers are proved once in
- * `shared/scrollBarSolver.test.ts`; this pins that the painter WIRES them up —
- * draws exactly two meshes, at the grabber rect its OWN `Range` properties
- * produce, along the Y axis.
+ * `<VScrollBar>`: pins that the painter draws the `scroll` track and the `grabber` of
+ * `ScrollBar::_notification(NOTIFICATION_DRAW)` (`scene/gui/scroll_bar.cpp`), two meshes, with the
+ * grabber placed by its own `Range` along Y. `shared/scrollBarSolver.test.ts` proves the numbers.
  */
+
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -24,13 +22,15 @@ function solveNode(properties: Record<string, unknown>): SolveNode {
 }
 
 const RECT = { x: 0, y: 0, w: 40, h: 300 };
-const AREA_SIZE = 300 - 8; // 292 — barLength minus the grabber's along-axis minimum (2*contentMargin at scale 1).
-// `styleBoxFlatGeometry.ts` grows the drawn quad by `aaSize/2` (0.5px) past
-// EACH edge for the anti-aliasing feather ring, so a mesh's raw bounding box
-// reads 1px wider/taller than the logical rect on every axis it spans.
+const AREA_SIZE = 300 - 8; // barLength minus the grabber's minimum length (2*contentMargin at scale 1).
+// `styleBoxFlatGeometry.ts` grows the drawn quad by `aaSize/2` (0.5px) past each edge
+// for the anti-aliasing feather, so a raw bounding box is 1px larger on each axis.
 const AA_FEATHER = 1;
 
-/** A `<StyleBoxQuad>`'s own OUTER `CanvasItemGroup` — its mesh sits inside a SECOND, inner flip-`<group>` of `StyleBoxQuad`'s own (`scale={[1,-1,1]}`, no position), so the group carrying this part's OFFSET is the one BEFORE its own trailing flip-group. */
+/**
+ * A `<StyleBoxQuad>`'s outer `CanvasItemGroup`. Its mesh sits in an inner flip-`<group>`
+ * (`scale={[1,-1,1]}`, no position), so the group carrying the offset is the one before it.
+ */
 function chromePartGroup(groups: readonly { instance: THREE.Object3D }[], fromEnd: number): THREE.Object3D {
   return groups[groups.length - 1 - fromEnd]!.instance;
 }
@@ -72,7 +72,7 @@ describe('<VScrollBar>', () => {
     );
     const groups = renderer.scene.findAllByType('Group');
     const grabberGroup = chromePartGroup(groups, 1);
-    // Godot Y grows down; the walker converts to three's +Y-up via `-y`, so a
+    // Godot Y grows down, and the walker converts to three's +Y-up with `-y`, so a
     // grabber offset by AREA_SIZE downward lands at world y = -AREA_SIZE.
     expect(grabberGroup.position.y).toBeCloseTo(-AREA_SIZE);
   });

@@ -1,8 +1,6 @@
 /**
- * Tests for GeometryInstance3D linter (semantic rules).
- *
- * Format validation is covered by linterParser.test.ts; this file drives the
- * three cross-field visibility-range checks through the full `Linter`.
+ * GeometryInstance3D semantic rules: the three cross-field visibility-range
+ * checks, through the full `Linter`. linterParser.test.ts covers the format.
  */
 
 import { describe, it } from 'vitest';

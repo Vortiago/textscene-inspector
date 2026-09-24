@@ -1,4 +1,4 @@
-/** MarginContainer registration — parser. */
+/** Registers the MarginContainer parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseMarginContainer } from './parser';

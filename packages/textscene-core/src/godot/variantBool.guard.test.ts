@@ -1,28 +1,8 @@
 /**
- * Guard: nothing reads a boolean Godot stores in a Variant by comparing its
- * raw text.
- *
- * `.tscn` is the common case, and not the boundary. A `project.godot` or
- * `.import` field is parsed into a Variant of whatever type the file wrote
- * (`_GLOBAL_DEF` leaves an already-loaded value alone, `project_settings.cpp:
- * 1320-1325`) and read into a `bool`, which is `Variant::booleanize`
- * (`variant_op.cpp:1114-1122`) — so `=0` disables a setting exactly as `=false`
- * does. "It is a ConfigFile field, not a node property" is therefore not an
- * exemption; only a value Godot never puts in a BOOL context is.
- *
- * `visible = 0` is a file Godot loads, hiding the node — `can_convert_strict`
- * lists INT and FLOAT as valid sources for a BOOL target (`variant.cpp:550-558`)
- * and the write booleanizes. A raw comparison against `'true'`/`'false'` misses
- * that, and the two spellings of the miss fail in OPPOSITE directions: a rule
- * written `=== 'true'` silently stops firing, while a renderer written
- * `!== 'false'` draws a node Godot hides. Neither shows up as a failure
- * anywhere, which is how this survived across all three phases at once.
- *
- * So the readers move together with the fact: {@link boolSlotValue} is the only
- * place the spelling is decided, and this scrapes for anyone rebuilding it.
- *
- * The allowlist is short and each entry is a value that is NOT a boolean
- * property slot — the one case a raw comparison is right.
+ * Guard: nothing reads a boolean Godot stores in a Variant by comparing its raw text. {@link boolSlotValue} decides it.
+ * `.tscn` is not the boundary: a `project.godot` or `.import` field keeps the type the file wrote (`project_settings.cpp:
+ * 1320-1325`) and reads into a `bool` through `Variant::booleanize` (`variant_op.cpp:1114-1122`), so `=0` disables a setting.
+ * `visible = 0` hides a node (`variant.cpp:550-558`). A raw comparison misses it silently, in opposite directions per spelling.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -33,13 +13,9 @@ import { fileURLToPath } from 'node:url';
 const src = resolve(dirname(fileURLToPath(import.meta.url)), '..'); // .../src
 
 /**
- * Files whose comparison is not about a value Godot ever booleanizes.
- *
- * Each is a different KIND of value, which is why none of them can share the
- * property reader: a DOM attribute this code wrote itself, an environment
- * variable, an untyped Variant keyframe where `1` is the number one and
- * booleanizing it would turn every scalar track into a constant `true`, and a
- * BBCode option the engine itself matches as text.
+ * Files whose comparison is about a value that is not a boolean slot, the one case a raw comparison is right. Each is a
+ * different kind: a DOM attribute this code wrote, an environment variable, an untyped Variant keyframe where booleanizing
+ * `1` would make every scalar track a constant `true`, and a BBCode option the engine matches as text.
  */
 const NOT_A_BOOL_SLOT: Record<string, string> = {
   'r3f/components/SceneTreeViewer/SceneTreeViewer.tsx': 'aria-expanded, a DOM attribute',
@@ -87,7 +63,7 @@ describe('boolean properties are read through the engine conversion', () => {
 
   it('sweeps a population that cannot quietly empty', () => {
     // The filter above is a path match, so a moved file would silently drop out
-    // of the sweep rather than failing it.
+    // of the scan rather than failing it.
     expect(sourceFiles().length).toBeGreaterThan(800);
     for (const file of Object.keys(NOT_A_BOOL_SLOT)) {
       expect(sourceFiles(), `allowlisted ${file} is no longer a source file`).toContain(file);

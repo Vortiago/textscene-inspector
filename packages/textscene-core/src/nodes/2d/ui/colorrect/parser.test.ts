@@ -25,16 +25,14 @@ describe('parseColorRect', () => {
 
   it('defaults to Godot opaque white when the property is absent entirely', () => {
     // Godot omits a property at its default, so an absent `color` means
-    // Color(1, 1, 1, 1) — not "no fill". Rendering nothing here made a
-    // ColorRect that Godot fills solid white invisible in the overlay.
+    // Color(1, 1, 1, 1), not "no fill".
     const p = parseColorRect(heading('ColorRect', { name: 'Bg' }), {});
     expect(p.color).toBe('Color(1, 1, 1, 1)');
   });
 
   it('passes a non-Color-syntax string through raw (parser does not validate syntax)', () => {
-    // ColorRect keeps `color` as a raw string — Component.tsx's colorToCss
-    // is the consumer that would degrade a bad value, not the parser. This
-    // pins the CURRENT lenient pass-through, not a validation contract.
+    // The parser keeps `color` as a raw string, and the painter's colour parse
+    // handles a bad value. This pins the lenient pass-through, not a validation contract.
     const p = parseColorRect(heading('ColorRect', { name: 'Bg' }), { color: 'not-a-color' });
     expect(p.color).toBe('not-a-color');
   });

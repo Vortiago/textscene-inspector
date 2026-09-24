@@ -1,12 +1,8 @@
 /**
- * Tests for NavigationRegion3D semantic linter rules.
- *
- * Two concerns, the same pair its 2D sibling carries: a `navigation_mesh`
- * reference must resolve, and an ABSENT one is Godot's own configuration
- * warning (navigation_region_3d.cpp:255-259) whenever the region is visible in
- * the tree — `bake_navigation_mesh` opens with
- * `ERR_FAIL_COND_MSG(navigation_mesh.is_null(), ...)`, so nothing bakes one at
- * runtime.
+ * NavigationRegion3D semantic rules: a `navigation_mesh` reference must resolve,
+ * and an absent one is Godot's configuration warning while the region is visible
+ * (navigation_region_3d.cpp:255-259). `bake_navigation_mesh` refuses a null mesh,
+ * so nothing bakes one at runtime.
  */
 
 import { describe, it } from 'vitest';

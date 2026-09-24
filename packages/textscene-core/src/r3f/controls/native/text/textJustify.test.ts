@@ -1,13 +1,7 @@
 /**
- * `fitLineToWidth` — a port of `TextServer::shaped_text_fit_to_width`
- * (`modules/text_server_adv/text_server_adv.cpp:5531-5686`), scoped per
- * `textJustify.ts`'s own doc.
- *
- * Lines are hand-built (`mkLine`) rather than shaped from real text: the
- * function under test operates purely on a `TextLineLayout`'s own glyph
- * advances, so a fixture with round numbers keeps every expected value a
- * one-line arithmetic check against the cited source lines, independent of
- * font-metric quantization.
+ * `fitLineToWidth` ports `TextServer::shaped_text_fit_to_width`
+ * (`modules/text_server_adv/text_server_adv.cpp:5531-5686`). Lines are hand-built, so each expected
+ * value is one arithmetic step from the cited lines, apart from font-metric quantisation.
  */
 import { describe, expect, it } from 'vitest';
 import type { GlyphPlacement, TextLineLayout } from './textLayout';

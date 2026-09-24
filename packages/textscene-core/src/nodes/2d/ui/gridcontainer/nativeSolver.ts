@@ -1,38 +1,8 @@
 /**
- * GridContainer's native (WebGL canvas) rect solve — a port of
- * `GridContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN` handler and
- * `GridContainer::get_minimum_size` (`scene/gui/grid_container.cpp`), plus
- * the shared `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`)
- * every container child goes through.
- *
- * A second floor applies on top of `fit_child_in_rect`, ported here from a
- * THIRD file neither of the two above calls out:
- * `Control::set_rect`/`Control::_size_changed` (`scene/gui/control.cpp:1531-
- * 1541,1760-1797`). `fit_child_in_rect` ends by calling `set_rect`, and
- * `set_rect` unconditionally re-derives the child's rect and re-floors it
- * against the child's OWN full-precision `get_combined_minimum_size()` — the
- * SAME floor `native/controlRectSolver.ts` already ports for the free/anchored
- * path (`GROW_DIRECTION_*`). This double floor is invisible whenever a
- * `custom_minimum_size` is integral (this container's own `col_minw`/`row_minh`
- * bookkeeping casts every child minimum to `Size2i`, `grid_container.cpp:290`,
- * losing nothing), but a FRACTIONAL minimum size — which is what any
- * font-metric-derived minimum actually is — makes the container's truncated
- * cell smaller than the child's own true minimum, and the child's final rect
- * grows past that cell rather than clipping to it. Confirmed against the live
- * engine (`s9-gridcontainer/probe-project`, scenarios h/i):
- * `custom_minimum_size = Vector2(10.7, 5)` in a column whose bookkeeping
- * truncates to width 10 renders at width 10.7, and with
- * `grow_horizontal = 0` (`GROW_DIRECTION_BEGIN`) shifts its own x by exactly
- * `-0.7` to grow toward the cell's leading edge instead of overflowing its
- * trailing one.
- *
- * Under RTL each row starts at the container's trailing edge and walks back
- * (`grid_container.cpp:157,190-194,220-228`); `fit_child_in_rect` gets the
- * container's own flag too. Column INDEXING is unchanged — only the offset
- * each column's cell is measured from moves, so the phantom expanded columns
- * past the last used one still sit at the high indices.
- *
- * Pure data + functions, no React, no THREE.
+ * GridContainer's native (WebGL canvas) rect solve: a port of `NOTIFICATION_SORT_CHILDREN` and
+ * `get_minimum_size` (`scene/gui/grid_container.cpp`), with the `Container::fit_child_in_rect`
+ * (`scene/gui/container.cpp:95-128`) every container child goes through. Pure data and functions,
+ * no React, no THREE.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -52,9 +22,7 @@ import {
 } from '../../../../r3f/controls/native/solverRegistry';
 import { SIZE_EXPAND, SIZE_FILL, fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
 
-/** `Control::SizeFlags` (`control.h:79-85`). */
-
-/** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`); a type whose own parser overrides the flag (e.g. Label's `v_size_flags`) has already baked that override into its parsed properties by the time this module reads them. */
+/** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`, flags at `control.h:79-85`). A parser that overrides a flag, as Label's `v_size_flags`, bakes it into the parsed properties. */
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 
 
@@ -83,15 +51,10 @@ function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation', theme:
 // --- get_minimum_size ---------------------------------------------------------
 
 /**
- * `GridContainer::get_minimum_size` (`grid_container.cpp:273-320`): sum of
- * per-column max widths plus one `h_separation` per column USED past the
- * first, same for rows/`v_separation`. `max_col`/`max_row` there are the
- * 0-based INDEX of the last used column/row, so multiplying directly by the
- * separation already yields "count − 1" — unlike `_resort`'s OWN
- * `max_col`/`max_row` below, which are COUNTS; the two Godot functions name
- * the same shape of value differently. Each child's own combined minimum size
- * is truncated to integer (`Size2i ms = ...`, `:290`) before folding into the
- * column/row maximum.
+ * `GridContainer::get_minimum_size` (`grid_container.cpp:273-320`): the per-column
+ * max widths plus `h_separation` times `max_col`, the 0-based last used column
+ * (a count in `_resort`), and the same for rows. Each child minimum truncates to
+ * `Size2i` (`:290`) first.
  */
 export const gridContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const columns = columnsOf(n);
@@ -134,14 +97,10 @@ controlSolverRegistry.registerMinimumSize('GridContainer', gridContainerMinimumS
 
 
 /**
- * Evicts the expanded index (column or row) with the largest own minimum
- * whenever an equal division of `remaining` among the survivors can't
- * satisfy every one of them, repeating until it can or none are left
- * (`grid_container.cpp:100-119`/`:121-140`, the column and row copies of the
- * SAME loop shape). Ties keep the LOWEST index — ascending iteration order,
- * `front()`'s initial candidate, and a strict `>` comparison that never
- * displaces it on an exact tie, mirroring the RBSet/RBMap iteration order the
- * C++ relies on.
+ * Evicts the expanded column or row with the largest minimum until an equal
+ * share of `remaining` fits each survivor (`grid_container.cpp:100-119`/`:121-140`).
+ * A tie keeps the lowest index, as the C++ RBSet's ascending order, `front()` and
+ * a strict `>` do.
  */
 function evictUnfittable(expanded: Set<number>, minOf: ReadonlyMap<number, number>, remaining: number): number {
   let space = remaining;
@@ -165,7 +124,7 @@ function evictUnfittable(expanded: Set<number>, minOf: ReadonlyMap<number, numbe
   return space;
 }
 
-/** How many of the leading `usedCount` expanded indices absorb one extra pixel of `remainingPixel` (`grid_container.cpp:162-182`). Returns the count, not a set — every index below it gets +1. */
+/** How many of the leading `usedCount` expanded indices absorb one extra pixel of `remainingPixel` (`grid_container.cpp:162-182`). Returns the count, not a set: every index below it gets +1. */
 function remainingPixelIndex(expanded: ReadonlySet<number>, usedCount: number, remainingPixel: number): number {
   let index = 0;
   let remaining = remainingPixel;
@@ -180,17 +139,10 @@ function remainingPixelIndex(expanded: ReadonlySet<number>, usedCount: number, r
 }
 
 /**
- * `GridContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN`
- * (`grid_container.cpp:36-230`): computes each column's max width and each
- * row's max height, decides which columns/rows expand (any child with the
- * `SIZE_EXPAND` flag on that axis — plus, for columns only, every column past
- * the last one actually used when there are fewer children than `columns`,
- * "consider all empty columns expanded", `:79-82` — rows have no such phantom
- * since a grid's row count is never fixed independent of its content the way
- * `columns` is), evicts any expanded column/row whose own minimum can't fit
- * an equal share of the remaining space, then walks every child assigning its
- * cell and running it through `fit_child_in_rect` + the minimum-size floor
- * above.
+ * `NOTIFICATION_SORT_CHILDREN` (`grid_container.cpp:36-230`). A column or row
+ * expands when a child sets `SIZE_EXPAND` on that axis. Each column past the last
+ * used one expands too ("consider all empty columns expanded", `:79-82`); rows
+ * have no fixed count, so none do. Then `evictUnfittable`, then `fit_child_in_rect`.
  */
 export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const columns = columnsOf(n);
@@ -239,7 +191,7 @@ export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect,
   let colRemainingPixel = 0;
   if (colExpanded.size > 0) {
     colExpand = Math.trunc(remainingWidth / colExpanded.size);
-    // `int col_remaining_pixel` (`grid_container.cpp:147`) — the remainder of a
+    // `int col_remaining_pixel` (`grid_container.cpp:147`): the remainder of a
     // FLOAT `remaining_space` truncates too, so a fractional leftover never
     // becomes an extra distributed pixel.
     colRemainingPixel = Math.trunc(remainingWidth - colExpanded.size * colExpand);
@@ -264,8 +216,9 @@ export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect,
     const col = index % columns;
 
     if (col === 0) {
-      // `col_ofs = get_size().width` under RTL (`grid_container.cpp:190-194`);
-      // this container insets nothing, so its content rect IS its own size.
+      // Under RTL a row starts at `col_ofs = get_size().width` and walks back
+      // (`grid_container.cpp:157,190-194,220-228`). This container insets nothing, so its content rect
+      // is its own size. Column indices do not mirror, so the empty expanded columns keep the high ones.
       colOfs = rtl ? contentRect.w : 0;
       if (row > 0) {
         const prevRow = row - 1;
@@ -280,9 +233,10 @@ export const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect,
     if (rowExpanded.has(row) && row < rowRemainingPixelIndex) h += 1;
 
     const cell: Rect2 = { x: rtl ? colOfs - w : colOfs, y: rowOfs, w, h };
-    // No local minimum re-floor: the solver core applies `Control::set_rect`'s
-    // floor (grow direction included) to every rect a container returns, so
-    // doing it here too would be a second copy of the same rule to keep in sync.
+    // The solver core applies `Control::set_rect`'s floor (`control.cpp:1531-1541,1760-1797`) at the
+    // full-precision minimum, grow direction included, so a local re-floor would copy that rule. The
+    // cell uses the `Size2i` minimum (`grid_container.cpp:290`): `Vector2(10.7, 5)` in a 10-wide column
+    // is 10.7 wide, and `grow_horizontal = 0` (`GROW_DIRECTION_BEGIN`) shifts x by -0.7.
     rects.set(child.path, fitChildInRect(cell, minSize, hFlagsOf(child), vFlagsOf(child), rtl));
 
     colOfs += rtl ? -(w + hSep) : w + hSep;

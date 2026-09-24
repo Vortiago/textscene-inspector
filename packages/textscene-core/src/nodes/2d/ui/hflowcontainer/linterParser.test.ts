@@ -1,11 +1,7 @@
 /**
- * HFlowContainer narrows exactly one inherited key and declares none of its own.
- *
- * The base-walk can only ever widen what a leaf accepts, so a fixed-orientation
- * container needs its own removal to take `vertical` back - Godot's setter
- * refuses it outright on this class. These assertions pin the removal and its
- * citation, that the type declares no member of its own, and that the removal
- * did not cost the inherited set.
+ * HFlowContainer declares no member and takes back one inherited key, `vertical`,
+ * which Godot's setter refuses on this class; the base-walk can only widen a leaf.
+ * These tests pin the removal, its citation and the inherited set it leaves.
  */
 
 import { describe, expect, it } from 'vitest';

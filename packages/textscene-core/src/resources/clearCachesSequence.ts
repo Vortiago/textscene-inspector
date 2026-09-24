@@ -1,19 +1,7 @@
 /**
- * The ONE owner of the full-clear choreography shared by
- * `ResourceLoader.clearCaches` and the test fake (which must mirror it
- * exactly — order is the contract here, and a comment-synced copy would
- * drift):
- *
- *   1. snapshot each processor's cached AND in-flight paths — in-flight
- *      completions are dropped as cleared-era flights, so without an
- *      announcement a consumer waiting on one would hang `pending` forever;
- *   2. clear the byte layer (when present) and every processor cache;
- *   3. announce every snapshotted path via `invalidated` — after the cache
- *      resets, so synchronous re-requests from handlers observe only
- *      fully-reset caches;
- *   4. clear metadata LAST — scene re-requests validate their registration
- *      synchronously during step 3, and the consumers being healed are
- *      exactly the ones whose register effects will not re-run.
+ * The full-clear sequence shared by `ResourceLoader.clearCaches` and the test fake.
+ * The order is the contract: snapshot, clear the caches, announce `invalidated`, then
+ * clear the metadata.
  */
 import type { ResourceEventBus, ResourceType } from './ResourceEventBus';
 
@@ -33,6 +21,8 @@ export function runClearCachesSequence(opts: {
   log?: () => void;
 }): void {
   const entries = [...opts.processors];
+  // In-flight paths too: their completions are dropped, so a consumer waiting on one
+  // would hang `pending` without the announcement.
   const cleared: [ResourceType, string[]][] = entries.map(([type, proc]) => [
     type,
     [...new Set([...proc.cachedPaths(), ...proc.inflightPaths()])],
@@ -42,10 +32,13 @@ export function runClearCachesSequence(opts: {
     proc.clearCache();
   }
   opts.log?.();
+  // After the resets, so a handler's synchronous re-request sees reset caches.
   for (const [type, paths] of cleared) {
     for (const path of paths) {
       opts.eventBus.emit(type, 'invalidated', path);
     }
   }
+  // Metadata last: scene re-requests validate their registration during the
+  // announcement, and these consumers' register effects do not re-run.
   opts.metadata.clear();
 }

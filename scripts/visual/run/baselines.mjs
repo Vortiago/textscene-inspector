@@ -1,11 +1,7 @@
 /**
- * The committed baselines and the pixel arithmetic against them: read one,
- * diff it, write a new one, or drop the failure artifacts a reviewer needs.
- *
- * This module also owns where those two directories are, so the depth is a
- * property of this file alone — deriving `import.meta.url` offsets in each
- * consumer is how a moved module silently repoints the baselines at an empty
- * directory and reports every scene as missing.
+ * The committed baselines and the pixel arithmetic against them: read, diff, write, and the
+ * failure artefacts a reviewer needs. Only this module locates the two directories, since a moved
+ * consumer with its own offset would point at an empty directory and report every scene missing.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -20,26 +16,10 @@ const BASELINE_DIR = join(VISUAL_DIR, 'baselines');
 const OUTPUT_DIR = join(VISUAL_DIR, 'output');
 
 /**
- * A scene passes when its capture decodes to the baseline's pixels exactly.
- *
- * The tolerance this replaces was perceptual (a YIQ distance), and a perceptual
- * tolerance answers the wrong question for a golden: it is calibrated to what
- * an eye would notice on an edge, while what a golden guards is whether the
- * renderer still produces the same frame. Between those two, a flat luminance
- * shift of ~26/255 and a chroma shift of any size scored as ZERO differing
- * pixels — not "inside the budget", zero, so the budget was never consulted
- * (`imageDelta.mjs` carries the arithmetic). Everything a per-scene budget was
- * held for — antialiasing on a gizmo line, a soft shadow edge — is
- * bit-reproducible here by construction: the same pinned Chromium, the same
- * software rasterizer, and a settle gate that already refuses a capture until
- * two consecutive frames are byte-identical. A scene that cannot reproduce its
- * own baseline is telling us something, and no budget size makes that a better
- * report than the measurement.
- *
- * Failures print area, worst channel excursion and mean channel error, so the
- * SHAPE of a difference is readable without opening the diff image: a broad,
- * low-magnitude shift and a few strong edge pixels are the same percentage and
- * different findings.
+ * A scene passes when its capture decodes to the baseline's pixels exactly, with no perceptual
+ * tolerance (`imageDelta.mjs`): the pinned Chromium, the software rasterizer and the settle gate
+ * reproduce antialiased edges bit for bit. A failure prints area, worst channel and mean error,
+ * since a broad faint shift and a few strong edge pixels can share one percentage.
  */
 export function compareToBaseline(scene, actualBuffer) {
   const baselinePath = join(BASELINE_DIR, `${scene.name}.png`);
@@ -54,21 +34,10 @@ export function compareToBaseline(scene, actualBuffer) {
 }
 
 /**
- * Whether two PNG buffers decode to the same pixels — the same question
- * `compareToBaseline` asks, deliberately routed through the same measurement so
- * the compare path and the `--update` write guard can never disagree about what
- * "unchanged" means.
- *
- * A byte compare answers a different question. Re-encoding an unchanged render
- * routinely produces different PNG bytes, and `--update` writes every scene
- * unconditionally — so a rebaseline that moved four images arrives as thirteen
- * changed binaries, and "eyeball the rebaselined images" turns into finding the
- * four that mean something. An unintended baseline rides along unnoticed in
- * that noise, which is the whole failure mode baselines-are-committed exists to
- * prevent.
- *
- * Returns false for a missing or unreadable baseline, so anything we cannot
- * prove identical gets written.
+ * Whether two PNG buffers decode to the same pixels, through `compareToBaseline`'s measurement so
+ * compare and `--update` agree on "unchanged". Not a byte compare: an unchanged render re-encodes
+ * to new PNG bytes, which would hide the moved images among rewritten ones. Returns false for a
+ * missing or unreadable baseline, so anything not proven identical gets written.
  */
 export function pixelsMatchBaseline(baselineBuffer, actualBuffer) {
   if (!baselineBuffer) return false;
@@ -82,12 +51,9 @@ export function pixelsMatchBaseline(baselineBuffer, actualBuffer) {
 }
 
 /**
- * Write a baseline, refusing the two writes that quietly disarm the gate.
- *
- * A uniform capture is a lost WebGL context or an unrendered scene, and once
- * committed it makes every later compare pass however badly the renderer
- * breaks. An unchanged one re-encodes to different PNG bytes, burying the
- * images that did move in a diff nobody can read.
+ * Writes a baseline, refusing the two writes that disarm the gate: a uniform capture (a lost WebGL
+ * context or an unrendered scene), which would pass every later compare, and an unchanged one,
+ * whose new PNG bytes would bury the images that moved.
  */
 export function writeBaseline(scene, buffer) {
   if (isUniformImage(buffer)) {

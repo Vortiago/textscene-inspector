@@ -1,9 +1,7 @@
 [gd_scene load_steps=5 format=3 uid="uid://unit_animation_player_libraries"]
 
-; AnimationPlayer whose clips are declared via Godot 4's dictionary-form
-; `libraries = { "": SubResource(...) }` (the real serialization Godot writes),
-; as opposed to the expanded slash form in unit-animation-player.tscn. Exercises
-; the dict-form path in the AnimationPlayer parser's extractLibraries.
+; AnimationPlayer with the dictionary form `libraries = { "": SubResource(...) }` that Godot
+; writes, against the slash form in unit-animation-player.tscn. Exercises extractLibraries.
 
 [sub_resource type="BoxMesh" id="BoxMesh_box"]
 
@@ -68,8 +66,8 @@ libraries = {
 }
 autoplay = "spin"
 speed_scale = 1.0
-; The one fixture left on the deprecated 3.x spelling of `active`, so the alias
-; keeps end-to-end coverage; every other AnimationPlayer fixture uses `active`.
+; The one fixture on the deprecated 3.x spelling of `active`, so the alias keeps end-to-end
+; coverage. Every other AnimationPlayer fixture uses `active`.
 playback_active = true
 
 [node name="Title" type="Label3D" parent="."]

@@ -1,8 +1,7 @@
 /**
- * SceneStats chips: node count is the AUTHORED count (instances collapsed,
- * matching Godot's scene dock); camera count comes from the LIVE scene tree, so
- * cameras inside instanced sub-scenes are included (consistent with the Cameras
- * panel and the live tree).
+ * The node count is the authored count, instances collapsed as in Godot's
+ * scene dock. The camera count comes from the live scene tree, so it includes
+ * cameras inside sub-scenes.
  */
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -69,13 +68,11 @@ describe('<SceneStats>', () => {
 
     // Live camera count includes the sub-scene FollowCam.
     expect(screen.getByText('1 camera')).toBeTruthy();
-    // Node count is authored (Game + the collapsed Player instance) — not the
-    // expanded live tree.
+    // Authored: Game and the collapsed Player instance.
     expect(screen.getByTestId('scene-info-nodes').textContent).toBe('2 nodes');
   });
 
-  // The chip counts by Godot's class tree, not the literal type name: an
-  // XRCamera3D is a Camera3D and draws through that component.
+  // The chip counts by Godot's class tree: an XRCamera3D is a Camera3D.
   it('counts a Camera3D subclass (XRCamera3D)', () => {
     const parsed = new TscnParser().parse(`[gd_scene format=3]
 

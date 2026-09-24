@@ -194,8 +194,8 @@ describe('decodeEnvironment', () => {
 
 describe('decodeEnvironment — AgX carries its own white', () => {
   it('defaults tonemap_agx_white to Blender’s 16.29, not tonemap_white’s 1.0', () => {
-    // `Environment::tonemap_agx_white = 16.29` — an order of magnitude above the
-    // other white, and AGX is the only curve that reads it.
+    // `Environment::tonemap_agx_white = 16.29`: an order of magnitude above the
+    // other white, and AgX is the only curve that reads it.
     const r = decodeEnvironment({});
     expect(r.tonemap_agx_white).toBeCloseTo(16.29, 6);
     expect(r.tonemap_white).toBe(1);

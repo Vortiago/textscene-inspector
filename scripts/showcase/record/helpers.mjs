@@ -1,10 +1,7 @@
 /**
- * The interaction primitives a showcase scenario receives as `helpers`.
- *
- * Each drives the REAL control a viewer would use — the command palette, a tree
- * row, an inspector button — so a clip demonstrates actual feature behavior.
- * The boolean-returning ones degrade instead of throwing: a missing or covered
- * control shortens the clip rather than failing the run.
+ * The interaction primitives a showcase scenario receives as `helpers`. Each drives the real
+ * control a viewer uses (the command palette, a tree row, an inspector button). A boolean helper
+ * returns false on a missing or covered control, which shortens the clip instead of failing it.
  */
 
 // Fail-fast actionability budget, applied context-wide in recordShowcase and
@@ -40,10 +37,8 @@ export async function orbit(page, { dx = 230, dy = 35, steps = 55 } = {}) {
 }
 
 /**
- * Switch scenes through the command-palette scene switcher (the native <select>
- * dropdown was retired for it): open the scene chip, filter by the fixture's
- * label, click the matching row, then settle. Exported for the standalone
- * verify harness (_verify.mjs).
+ * Switches scenes in the command-palette scene switcher: it opens the scene chip, filters by the
+ * fixture's label, clicks the matching row and settles. `_verify.mjs` uses it too.
  */
 export async function selectScene(page, label) {
   await page.locator('button[aria-haspopup="dialog"]').first().click();
@@ -57,7 +52,7 @@ export async function selectScene(page, label) {
   await page.waitForTimeout(1300); // parse + resource load + CameraFit settle
 }
 
-/** Expand every collapsed tree row so deep nodes (cameras, etc.) are reachable. */
+/** Expands every collapsed tree row, so deep nodes such as cameras are reachable. */
 export async function expandTree(page) {
   for (let i = 0; i < 60; i++) {
     const collapsed = page.locator('[aria-label="Expand"]');
@@ -128,9 +123,9 @@ export async function openDetailTab(page, name) {
 }
 
 /**
- * Upload a local file for a specific missing-resource path via the
- * Resources-tab panel's per-row `<input type="file">`. Drives the
- * late-arrival pipeline (provideFile → useResource 'loaded' → re-render).
+ * Uploads a local file for one missing-resource path through the Resources tab's per-row
+ * `<input type="file">`, which drives the late-arrival pipeline (provideFile, then useResource
+ * 'loaded', then a re-render).
  */
 export async function uploadResource(page, resPath, diskPath) {
   const input = page.locator(`div[data-path="${resPath}"] input[type="file"]`);

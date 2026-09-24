@@ -1,9 +1,8 @@
 /**
- * Integration against the vendored isometric dungeon (scenes/isometric/,
- * godot-demo-projects, MIT): the real dungeon.tscn parses, its real
- * tileset.tres resolves (5 atlas sources, ISOMETRIC DIAMOND_DOWN 128×64),
- * known cells decode to hand-computed map_to_local centers, and a layer
- * renders batched meshes end-to-end.
+ * End-to-end against the vendored isometric dungeon (scenes/isometric/):
+ * dungeon.tscn parses, tileset.tres resolves (5 atlas sources, ISOMETRIC
+ * DIAMOND_DOWN 128×64), known cells decode to hand-computed `map_to_local`
+ * centres, and a layer renders batched meshes.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';

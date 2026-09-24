@@ -1,26 +1,9 @@
 [gd_scene load_steps=2 format=3 uid="uid://unittexturerectfilterinherit"]
 
-; Three 200x200 TextureRects sampling the SAME 8x8 checkerboard, 25x
-; magnified so magFilter is the dominant term (the technique
-; unit-material-texture-filter.tscn uses for the same texture on the 3D
-; side). None of the three TextureRects itself names a texture_filter — the
-; ONE variable is how that PARENT_NODE default resolves through the Control
-; ancestor chain:
-;
-;   - Nearest: its immediate parent names texture_filter=1 (NEAREST) — hard
-;     checker edges.
-;   - NearestThroughChain: its GRANDPARENT names NEAREST; the intermediate
-;     parent re-states PARENT_NODE (0) explicitly — still hard edges, proving
-;     a non-naming ancestor is transparent rather than a wall that stops the
-;     walk at the viewport default.
-;   - LinearBaseline: no ancestor anywhere names a filter — soft edges, the
-;     viewport default (CANVAS_ITEM_TEXTURE_FILTER_LINEAR).
-;
-; A regression that resolves PARENT_NODE straight to the viewport default
-; instead of walking the ancestor chain is invisible in every OTHER
-; TextureRect fixture in this corpus: none puts a naming ancestor above an
-; inheriting one, so Nearest and NearestThroughChain would silently render
-; exactly like LinearBaseline instead of matching Nearest's own hard edges.
+; Three 200x200 TextureRects sample one 8x8 checkerboard, magnified 25x so magFilter dominates
+; (as unit-material-texture-filter.tscn does in 3D). None names a texture_filter: the one
+; variable is how PARENT_NODE resolves through the Control ancestor chain. No other TextureRect
+; fixture puts a naming ancestor above an inheriting one.
 
 [ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_tex"]
 
@@ -34,6 +17,7 @@ offset_right = 200.0
 offset_bottom = 200.0
 texture_filter = 1
 
+; Its parent names texture_filter=1 (NEAREST): hard checker edges.
 [node name="Nearest" type="TextureRect" parent="NearestAncestor"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -52,12 +36,16 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 texture_filter = 0
 
+; Its grandparent names NEAREST and its parent re-states PARENT_NODE (0): still hard edges, so
+; a non-naming ancestor is transparent, not a wall that stops the walk at the viewport default.
 [node name="NearestThroughChain" type="TextureRect" parent="ChainRoot/TransparentMiddle"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 texture = ExtResource("1_tex")
 
+; No ancestor names a filter: soft edges, the viewport default (CANVAS_ITEM_TEXTURE_FILTER_LINEAR).
+; Resolving PARENT_NODE straight to that default makes the other two look like this one.
 [node name="LinearBaseline" type="TextureRect" parent="."]
 offset_left = 500.0
 offset_right = 700.0

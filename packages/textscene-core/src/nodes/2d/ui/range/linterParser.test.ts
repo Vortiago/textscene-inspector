@@ -1,15 +1,7 @@
 /**
- * Range strict validators — format checks for Range's OWN members.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it.
- *
- * No member carries a `PROPERTY_HINT_RANGE` (that hint appears only on `ratio`,
- * which is `PROPERTY_USAGE_NONE` and never reaches a `.tscn`), so no bound here
- * is hint-tier. `page` still has one: its SETTER clamps, which is the error
- * tier whatever the hint says.
+ * Range strict validators: format checks, asserted through `validatorRegistry`
+ * so a failure points at the validator, not at scene parsing. No bound is
+ * hint-tier. `page` has a setter clamp, which is the error tier.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -25,9 +17,8 @@ function check(property: string, value: string) {
 
 describe('Range strict validators', () => {
   it('does not tell the reader a clamping setter refused the write', () => {
-    // `set_page` CLAMPs into [0, max - min] (range.cpp:254-255). The value does
-    // not survive either way, which is what the error tier asserts, but it is
-    // stored as 0 rather than dropped.
+    // `set_page` clamps into [0, max - min] (range.cpp:254-255): it stores 0
+    // rather than refusing the write.
     const message = check('page', '-1')?.message ?? '';
     expect(message).toContain('must be at least 0');
     expect(message).not.toContain('refuses the write');
@@ -38,15 +29,14 @@ describe('Range strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases below are specific.
+    // A validator that accepts arbitrary prose is not validating a format.
     const accepted = validatorRegistry
       .getOwnKeys('Range')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
     expect(accepted).toEqual([]);
   });
 
-  // scene/gui/range.cpp:405 — ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "min_value"), "set_min", "get_min");
+  // scene/gui/range.cpp:405: ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "min_value"), "set_min", "get_min");
   describe('min_value', () => {
     it('accepts a typical value', () => {
       expect(check('min_value', '0')).toBeNull();
@@ -61,7 +51,7 @@ describe('Range strict validators', () => {
     });
   });
 
-  // scene/gui/range.cpp:406 — ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_value"), "set_max", "get_max");
+  // scene/gui/range.cpp:406: ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "max_value"), "set_max", "get_max");
   describe('max_value', () => {
     it('accepts a typical value', () => {
       expect(check('max_value', '100')).toBeNull();
@@ -76,7 +66,7 @@ describe('Range strict validators', () => {
     });
   });
 
-  // scene/gui/range.cpp:407 — ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "step"), "set_step", "get_step");
+  // scene/gui/range.cpp:407: ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "step"), "set_step", "get_step");
   describe('step', () => {
     it('accepts a typical value', () => {
       expect(check('step', '0.01')).toBeNull();
@@ -91,7 +81,7 @@ describe('Range strict validators', () => {
     });
   });
 
-  // scene/gui/range.cpp:408 — ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "page"), "set_page", "get_page");
+  // scene/gui/range.cpp:408: ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "page"), "set_page", "get_page");
   describe('page', () => {
     it('accepts a typical value', () => {
       expect(check('page', '25')).toBeNull();
@@ -106,7 +96,7 @@ describe('Range strict validators', () => {
     });
   });
 
-  // scene/gui/range.cpp:409 — ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "value"), "set_value", "get_value");
+  // scene/gui/range.cpp:409: ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "value"), "set_value", "get_value");
   describe('value', () => {
     it('accepts a typical value', () => {
       expect(check('value', '42.5')).toBeNull();
@@ -121,7 +111,7 @@ describe('Range strict validators', () => {
     });
   });
 
-  // scene/gui/range.cpp:411 — ADD_PROPERTY(PropertyInfo(Variant::BOOL, "exp_edit"), "set_exp_ratio", "is_ratio_exp");
+  // scene/gui/range.cpp:411: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "exp_edit"), "set_exp_ratio", "is_ratio_exp");
   describe('exp_edit', () => {
     it('accepts true', () => {
       expect(check('exp_edit', 'true')).toBeNull();
@@ -136,7 +126,7 @@ describe('Range strict validators', () => {
     });
   });
 
-  // scene/gui/range.cpp:412 — ADD_PROPERTY(PropertyInfo(Variant::BOOL, "rounded"), "set_use_rounded_values", "is_using_rounded_values");
+  // scene/gui/range.cpp:412: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "rounded"), "set_use_rounded_values", "is_using_rounded_values");
   describe('rounded', () => {
     it('accepts true', () => {
       expect(check('rounded', 'true')).toBeNull();
@@ -151,7 +141,7 @@ describe('Range strict validators', () => {
     });
   });
 
-  // scene/gui/range.cpp:413 — ADD_PROPERTY(PropertyInfo(Variant::BOOL, "allow_greater"), "set_allow_greater", "is_greater_allowed");
+  // scene/gui/range.cpp:413: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "allow_greater"), "set_allow_greater", "is_greater_allowed");
   describe('allow_greater', () => {
     it('accepts true', () => {
       expect(check('allow_greater', 'true')).toBeNull();
@@ -166,7 +156,7 @@ describe('Range strict validators', () => {
     });
   });
 
-  // scene/gui/range.cpp:414 — ADD_PROPERTY(PropertyInfo(Variant::BOOL, "allow_lesser"), "set_allow_lesser", "is_lesser_allowed");
+  // scene/gui/range.cpp:414: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "allow_lesser"), "set_allow_lesser", "is_lesser_allowed");
   describe('allow_lesser', () => {
     it('accepts true', () => {
       expect(check('allow_lesser', 'true')).toBeNull();

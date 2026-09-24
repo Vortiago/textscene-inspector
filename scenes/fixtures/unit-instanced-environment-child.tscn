@@ -1,8 +1,8 @@
 [gd_scene load_steps=4 format=3 uid="uid://unitinstenvchild"]
 
-; The WorldEnvironment for unit-instanced-environment.tscn, in its own scene so
-; the parent can INSTANCE it. A WorldEnvironment one instance level down must
-; still drive the scene's tonemap + ambient and yield the editor preview env.
+; The WorldEnvironment for unit-instanced-environment.tscn, in its own scene so the parent can
+; instance it. One instance level down it must still drive the tonemap and ambient and yield
+; the editor preview environment.
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat_gold"]
 sky_top_color = Color(0.85, 0.5, 0.15, 1)

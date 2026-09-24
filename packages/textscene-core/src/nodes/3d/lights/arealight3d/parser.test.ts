@@ -1,6 +1,4 @@
-/**
- * Tests for AreaLight3D parser
- */
+/** AreaLight3D parser. */
 
 import { describe, it, expect } from 'vitest';
 import { parseAreaLight3D } from './parser';
@@ -51,9 +49,8 @@ describe('AreaLight3D Parser', () => {
     it('should reject malformed area_size and fall back to 1×1', () => {
       const h = heading('AreaLight3D', { name: 'Area', parent: '.' });
 
-      // Junk the loose hand-rolled regex used to silently coerce (e.g.
-      // "Vector2(4abc, 3)" -> [4, 3]) is now rejected by the strict shared
-      // parseVector2 and falls back to the 1×1 default — render/lint agree.
+      // The shared parseVector2 rejects junk such as "Vector2(4abc, 3)", which
+      // falls back to the 1×1 default, so render and lint agree.
       for (const bad of ['Vector2(4abc, 3)', 'Vector2(4 5, 3)', 'not a vector']) {
         const result = parseAreaLight3D(h, { area_size: bad });
         expect(result.area_size).toEqual({ x: 1, y: 1 });

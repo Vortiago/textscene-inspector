@@ -1,21 +1,7 @@
 /**
- * `TextureProgressBar`'s radial fill (`FILL_CLOCKWISE`/`FILL_COUNTER_CLOCKWISE`/
- * `FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE`) — `unit_val_to_uv`
- * (`texture_progress_bar.cpp:181-224`), `get_relative_center` (`:245-256`)
- * and the `draw_polygon` point/UV build inside `NOTIFICATION_DRAW`
- * (`:483-524`).
- *
- * `points`' own vertex order is a boundary walk from `from` to `to` along the
- * unit square, with the CENTRE point appended LAST. Every vertex's Godot-px
- * POSITION is `offset + uv * size` — the SAME affine map for the boundary AND
- * the centre — so the polygon's UV-to-pixel mapping is one global affine
- * function, and ANY triangulation of it (this module fans around the
- * appended centre) reproduces `draw_polygon`'s own general triangulator
- * pixel-for-pixel: they can only disagree on which diagonal splits a
- * quadrilateral, and an affine map interpolates identically no matter which
- * triangle of a shared quad a pixel falls in.
- *
- * Pure TS, no React/THREE.
+ * `TextureProgressBar`'s radial fill modes: `unit_val_to_uv` (`texture_progress_bar.cpp:181-224`),
+ * `get_relative_center` (`:245-256`) and the `draw_polygon` build in `NOTIFICATION_DRAW`
+ * (`:483-524`). Pure TS, no React or THREE.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -28,13 +14,13 @@ export const FILL_CLOCKWISE = 4;
 export const FILL_COUNTER_CLOCKWISE = 5;
 export const FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE = 8;
 
-/** `Math::fposmodp` (`core/math/math_funcs.h:296-302`) — `fmod`, folded non-negative. */
+/** `Math::fposmodp` (`core/math/math_funcs.h:296-302`): `fmod`, folded non-negative. */
 function fposmodp(x: number, y: number): number {
   const value = x % y;
   return value < 0 ? value + y : value;
 }
 
-/** `set_fill_degrees` (`texture_progress_bar.cpp:610-619`) — `CLAMP(p_angle, 0, 360)`, always applied. */
+/** `set_fill_degrees` (`texture_progress_bar.cpp:610-619`): `CLAMP(p_angle, 0, 360)`, always applied. */
 export function clampRadialFillDegrees(radialFillDegrees: number | undefined): number {
   const degrees = radialFillDegrees ?? 360;
   if (!Number.isFinite(degrees)) return 360;
@@ -43,9 +29,9 @@ export function clampRadialFillDegrees(radialFillDegrees: number | undefined): n
 
 /**
  * `set_radial_initial_angle` (`texture_progress_bar.cpp:591-604`):
- * `ERR_FAIL_COND_MSG(!is_finite)` REFUSES a non-finite write, keeping the
- * class default (`0`, `texture_progress_bar.h:107`); an in-range write passes
- * through; anything else wraps with `fposmodp`.
+ * `ERR_FAIL_COND_MSG(!is_finite)` refuses a non-finite write, keeping the
+ * class default (`0`, `texture_progress_bar.h:107`). An in-range write passes
+ * through, and anything else wraps with `fposmodp`.
  */
 export function normalizeRadialInitialAngle(radialInitialAngle: number | undefined): number {
   const angle = radialInitialAngle ?? 0;
@@ -54,7 +40,7 @@ export function normalizeRadialInitialAngle(radialInitialAngle: number | undefin
   return angle;
 }
 
-/** `get_relative_center` (`:245-256`) — `null` mirrors `progress.is_null()` (`:246-248`, and `:181-183`'s equivalent guard for `unit_val_to_uv`). */
+/** `get_relative_center` (`:245-256`). `null` mirrors `progress.is_null()` (`:246-248`, and the same guard in `unit_val_to_uv`, `:181-183`). */
 export function radialRelativeCenter(textureSize: Vec2, radialCenterOffset: Vec2): Vec2 {
   if (textureSize.x <= 0 || textureSize.y <= 0) return { x: 0, y: 0 };
   const px = textureSize.x / 2 + radialCenterOffset.x;
@@ -66,12 +52,9 @@ export function radialRelativeCenter(textureSize: Vec2, radialCenterOffset: Vec2
 }
 
 /**
- * `unit_val_to_uv` (`:181-224`) — a minimal Liang-Barsky clip of the ray from
- * `center` at angle `val*TAU - PI/2` against the unit square, ported with the
- * source's own single mutable `dir`: each of the four edge branches may
- * rewrite `dir.x`/`dir.y` in place, and a LATER branch's own gate
- * (`dir.x < 0`, etc.) reads whatever a PRIOR branch left there — collapsing
- * the branches into independent per-axis clamps changes which edges fire.
+ * `unit_val_to_uv` (`:181-224`): a Liang-Barsky clip of the ray from `center` at `val*TAU - PI/2`
+ * against the unit square, with the source's single mutable `dir`. A later edge branch's gate reads
+ * what an earlier branch wrote, so independent per-axis clamps would fire different edges.
  */
 export function unitValToUv(val: number, center: Vec2): Vec2 {
   let v = val;
@@ -123,7 +106,7 @@ export function radialFillValue(ratio: number, radMaxDegrees: number): number {
 }
 
 export interface RadialFillGeometry {
-  /** xyz triples, Godot pixels, +Y down — a caller flips/offsets, matching `ninePatchGeometry`'s own convention. */
+  /** xyz triples, Godot pixels, +Y down. The caller flips and offsets, as for `ninePatchGeometry`. */
   positions: number[];
   /** uv pairs, three's convention (v=1 at the texture's top row). */
   uvs: number[];
@@ -131,12 +114,10 @@ export interface RadialFillGeometry {
 }
 
 /**
- * The triangle-fan geometry for `0 < val < 1` (`:487-522`) — `null` when
- * `draw_polygon`'s own `points.size() >= 2` guard (`:518`) fails, which this
- * module's own doc explains cannot lose area versus Godot's general
- * triangulator. The `val === 1` (full rect) and `val === 0` (nothing) cases
- * are the CALLER's job (`:485-486`) — this function is never reached for
- * either.
+ * The triangle-fan geometry for `0 < val < 1` (`:487-522`), or `null` when `draw_polygon`'s
+ * `points.size() >= 2` guard (`:518`) fails. The caller handles `val === 1` (full rect) and `val === 0`
+ * (nothing) (`:485-486`). Every vertex is `offset + uv * size`, one affine map, so the fan matches
+ * `draw_polygon`'s triangulator pixel for pixel: the two differ only in which diagonal splits a quad.
  */
 export function radialFillGeometry(
   mode: number,
@@ -163,7 +144,7 @@ export function radialFillGeometry(
   const points: Vec2[] = [];
   for (const f of angles) {
     const uv = unitValToUv(f, center);
-    // `Vector<Point2>::has` — exact per-component equality, not approximate.
+    // `Vector<Point2>::has`: exact per-component equality, not approximate.
     if (uvs.some((u) => u.x === uv.x && u.y === uv.y)) continue;
     points.push({ x: offset.x + uv.x * size.x, y: offset.y + uv.y * size.y });
     uvs.push(uv);
@@ -179,7 +160,7 @@ export function radialFillGeometry(
   const uvOut: number[] = [];
   for (let i = 0; i < points.length; i++) {
     positions.push(points[i]!.x, points[i]!.y, 0);
-    // three's V is bottom-up; Godot's UV Y (this module's own `uv.y`) is top-down.
+    // three's V is bottom-up, and Godot's UV Y (`uv.y` here) is top-down.
     uvOut.push(uvs[i]!.x, 1 - uvs[i]!.y);
   }
   const indices: number[] = [];

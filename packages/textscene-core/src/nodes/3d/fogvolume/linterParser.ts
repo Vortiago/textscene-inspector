@@ -1,18 +1,7 @@
 /**
- * FogVolume strict validators for linting.
- *
- * Declare only FogVolume's OWN members — the ones doc/classes/FogVolume.xml
- * lists without an `overrides=` attribute. Everything from VisualInstance3D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
- *
- * fog_volume.cpp:46-48 (`FogVolume::_bind_methods`) is the only ADD_PROPERTY
- * site; no PropertyListHelper, ADD_ARRAY_COUNT, or hand-rolled `_set`/`_get`/
- * property-list override exists for this class beyond the `_validate_property`
- * override below (which only ever hides `size`, never adds a key), and the
- * `#ifndef DISABLE_DEPRECATED` `_set`/`_get` pair (fog_volume.cpp:56-70), whose
- * Godot-3 `extents` arm `godot/deprecated.ts` resolves to the doubled `size`
- * in the property bag.
+ * FogVolume strict validators. Declare only FogVolume's own members, the ones
+ * doc/classes/FogVolume.xml lists without `overrides=`. The NODE_BASE_TYPES
+ * base-walk delivers every inherited key, so a re-declared one shadows it.
  */
 
 import '../visualinstance3d/linterParser.js';
@@ -20,37 +9,25 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
 /**
- * `size`'s floor is genuinely TWO different numbers, not one bound at two
- * severities: the setter clamps a negative component up to 0
- * (`size = size.maxf(0);`, fog_volume.cpp:78 — Vector3::maxf is a
- * per-component MAX against the scalar, core/math/vector3.h:105) — an
- * ENFORCED floor — while the ADD_PROPERTY hint separately asks for every
- * component to be >= 0.01 (fog_volume.cpp:46, `"0.01,1024,0.01,or_greater"`)
- * with nothing in the setter enforcing THAT floor, so a component in
- * [0, 0.01) loads unaltered — a merely HINTED floor. `or_greater` opens the
- * 1024 ceiling, so there is no warning on the high end.
- *
- * `v.boundedVector3` (linter/validators/v.ts) carries one numeric value per
- * end, with severity chosen by which citation was given for that end — it
- * cannot express two different thresholds sharing one end, so this is
- * hand-rolled rather than forced through it.
- *
- * `nan`/`inf`/`-inf` components: every comparison against `nan` here is
- * false, so a `nan` component is accepted silently, matching how every other
- * float validator in this codebase treats a MAX()-based clamp (e.g. Decal's
- * `upper_fade`/`lower_fade`, decal.cpp:89/:98, the same `MAX(p, 0.0)` shape) —
- * only an explicit `ERR_FAIL_COND(!is_finite(...))` earns the `finite` guard,
- * and `set_size` has none. `-inf` IS caught by the `< 0` branch below: Godot's
- * `MAX(-inf, 0)` returns `0`, the same alteration a negative finite value gets.
+ * Hand-rolled: `size` has two floors, 0 enforced and 0.01 hinted, and
+ * `v.boundedVector3` (linter/validators/v.ts) holds one threshold per end.
+ * `set_size` has no `ERR_FAIL_COND(!is_finite(...))`, so a `nan` component
+ * passes, as with Decal's `MAX(p, 0.0)` fades (decal.cpp:89/:98).
  */
 const sizeValidator = v.vector3('size', {
   components: (parts) => {
     const written = `Vector3(${parts.join(', ')})`;
+    // `size = size.maxf(0);` (fog_volume.cpp:78) clamps each component, since
+    // Vector3::maxf is per-component (core/math/vector3.h:105). `-inf` lands
+    // here too: `MAX(-inf, 0)` is 0.
     if (parts.some((component) => component < 0)) {
       return {
         message: `Property 'size' components must be >= 0; Godot's setter clamps a negative component up to 0 (fog_volume.cpp:78), got: ${written}`,
       };
     }
+    // The hint `"0.01,1024,0.01,or_greater"` (fog_volume.cpp:46) floors at 0.01,
+    // but nothing enforces it, so [0, 0.01) loads unaltered. `or_greater` opens
+    // the 1024 ceiling.
     if (parts.some((component) => component < 0.01)) {
       return {
         message: `Property 'size' components should be >= 0.01 per the editor's range hint (fog_volume.cpp:46); Godot's setter accepts a smaller non-negative value unaltered, got: ${written}`,
@@ -64,19 +41,21 @@ const sizeValidator = v.vector3('size', {
   enforced: 'fog_volume.cpp:78',
   hinted: 'fog_volume.cpp:46',
 });
-// The hinted floor is the OUTER end the sheet shows; the setter's own floor at
-// 0 reports as an error from further out (see the components rule).
+// The sheet shows the hinted floor, the outer end. The setter's floor at 0
+// reports as an error from the components rule.
 sizeValidator.bounds = { min: 0.01 };
 sizeValidator.tiers = { min: 'warning' };
 
+// fog_volume.cpp:46-48 is the only ADD_PROPERTY site, with no PropertyListHelper,
+// ADD_ARRAY_COUNT or other property-list route. `_validate_property` only
+// hides `size`. The deprecated `_set`/`_get` pair (fog_volume.cpp:56-70) maps
+// Godot 3 `extents`, which `godot/deprecated.ts` resolves to the doubled `size`.
 validatorRegistry.registerAll('FogVolume', {
   size: sizeValidator,
-  // fog_volume.cpp:47, PROPERTY_HINT_ENUM with 5 values (Ellipsoid/Cone/
-  // Cylinder/Box/World). set_shape (:87-93) is a bare assignment — no
-  // ERR_FAIL_INDEX on p_type, and neither Fog::fog_volume_set_shape
-  // (servers/rendering/renderer_rd/environment/fog.cpp:97-105) — so an
-  // out-of-range value is stored and simply never matches any shape branch
-  // the renderer checks for; the hint is editor-only.
+  // fog_volume.cpp:47, PROPERTY_HINT_ENUM with 5 values. set_shape (:87-93) and
+  // Fog::fog_volume_set_shape (servers/rendering/renderer_rd/environment/fog.cpp:97-105)
+  // have no ERR_FAIL_INDEX, so an out-of-range value is stored and matches no
+  // shape branch. The hint is editor-only.
   shape: v.enumInt(
     'shape',
     0,
@@ -85,8 +64,7 @@ validatorRegistry.registerAll('FogVolume', {
     { hinted: 'fog_volume.cpp:47' }
   ),
   // fog_volume.cpp:48, PROPERTY_HINT_RESOURCE_TYPE "FogMaterial,ShaderMaterial".
-  // set_material (:99-106) takes any Ref<Material> and assigns it straight
-  // through — the hint only filters the editor's resource picker, so this is
-  // a format check on the reference syntax, not a bound.
+  // set_material (:99-106) assigns any Ref<Material>. The hint only filters the
+  // editor's resource picker, so this is a format check, not a bound.
   material: v.resourceReference('material'),
 });

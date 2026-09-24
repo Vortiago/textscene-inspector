@@ -1,14 +1,9 @@
 [gd_scene load_steps=4 format=3 uid="uid://unitcsgmesh"]
 
-; CSGMesh3D has ZERO occurrences in the vendored corpus, so unlike every other
-; CSG fixture here this one has no witness to copy. It is authored from the class
-; reference (csg_shape.cpp:1125-1300, CSGMesh3D.xml): `mesh` is any Mesh resource,
-; and `material` REPLACES the mesh's own surface material (csg_shape.cpp:1167-1172)
-; rather than layering per-surface overrides the way MeshInstance3D does.
-;
-; PlaneMesh and QuadMesh are deliberately absent: Godot's own property hint
-; excludes them (csg_shape.cpp:1298) because they are not manifold and so cannot
-; take part in a boolean.
+; CSGMesh3D has no witness in the vendored corpus, so this fixture follows the class reference
+; (csg_shape.cpp:1125-1300, CSGMesh3D.xml): `mesh` is any Mesh, and `material` replaces the
+; mesh's own surface material (csg_shape.cpp:1167-1172) rather than overriding per surface.
+; PlaneMesh and QuadMesh are absent: the property hint excludes them as not manifold (csg_shape.cpp:1298).
 
 [sub_resource type="BoxMesh" id="BoxMesh_csg"]
 size = Vector3(1.5, 1, 1.5)

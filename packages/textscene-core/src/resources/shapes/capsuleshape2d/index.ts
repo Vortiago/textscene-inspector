@@ -1,4 +1,4 @@
-/** CapsuleShape2D resource slice — claims the type name, re-exports its decode. */
+/** CapsuleShape2D resource slice: claims the type name, re-exports its decode. */
 
 import { registerShapeSlice } from '../registerShapeSlice';
 

@@ -1,14 +1,7 @@
 /**
- * `GraphEdit::_draw_grid` (`scene/gui/graph_edit.cpp:1895-1964`) — the pure
- * cell-position math, split from colour/alpha (the painter's job: it alone
- * holds the resolved `grid_major`/`grid_minor` theme colours the alpha gates
- * below read).
- *
- * `GRID_PATTERN_LINES` uses `GRID_MINOR_STEPS_PER_MAJOR_LINE` (10);
- * `GRID_PATTERN_DOTS` uses the DIFFERENT `GRID_MINOR_STEPS_PER_MAJOR_DOT` (5)
- * — two distinct constants, not one reused (`:55-56`).
- *
- * Pure data + functions, no React, no THREE.
+ * The cell-position math of `GraphEdit::_draw_grid` (`scene/gui/graph_edit.cpp:1895-1964`). Colour
+ * and alpha belong to the painter, which alone holds the resolved `grid_major` and `grid_minor`
+ * theme colours that the alpha gates read.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -18,6 +11,7 @@
 
 import type { Vec2 } from '../../../../r3f/controls/native/rect';
 
+// Two constants, not one: lines take a major every 10 minor steps and dots every 5 (`:55-56`).
 const GRID_MINOR_STEPS_PER_MAJOR_LINE = 10;
 const GRID_MINOR_STEPS_PER_MAJOR_DOT = 5;
 
@@ -30,7 +24,7 @@ interface GridExtent {
   fromY: number;
   lenX: number;
   lenY: number;
-  /** `offset * zoom` — the per-axis screen-space shift every cell position subtracts. */
+  /** `offset * zoom`: the screen-space shift each cell position subtracts, per axis. */
   offsetX: number;
   offsetY: number;
 }

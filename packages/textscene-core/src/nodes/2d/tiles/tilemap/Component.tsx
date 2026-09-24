@@ -1,22 +1,7 @@
 /**
- * <TileMap> (deprecated multi-layer node, superseded by TileMapLayer) —
- * renders each enabled layer's cells as batched textured quads, one mesh per
- * (layer × atlas source).
- *
- * DRAW ORDER. Godot's TileMap is a wrapper that `add_child`s a real
- * `TileMapLayer` CanvasItem per layer and forwards `set_z_index` straight to it
- * (`scene/2d/tile_map.cpp:279,376`), so a layer is a canvas item in its OWN
- * right: its `z_index` interleaves with the TileMap's SIBLINGS, not merely with
- * the other layers. Each layer therefore takes its own canvas key
- * (`canvasPaintOrder.ts`) from the run this node reserves, and the atlas
- * batches within a layer order among themselves on their meshes' own
- * `renderOrder` — a batching artifact, since Godot interleaves a layer's cells
- * across sources in scan order.
- *
- * A layer's
- * `modulate` multiplies onto its pixels (composed in sRGB like the rest of
- * the CanvasItem chain). Unresolvable TileSet or undecodable layer data
- * degrades to the transform-only group with children intact (ADR-0008).
+ * Draws a TileMap, the deprecated multi-layer node: one batched mesh per layer and
+ * atlas source. An unresolvable TileSet or undecodable layer data leaves the
+ * transform-only group with its children (ADR-0008).
  */
 
 import { useMemo } from 'react';
@@ -46,17 +31,16 @@ export function TileMap({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapProperties;
   const { model, status } = useTileSetModel(props.tile_set);
 
-  // The pieces of this node's own canvas key, so each LAYER can compose one of
-  // its own. Read here rather than inside `body`: `<CanvasItem2D>` publishes
-  // its accumulated z to its CHILDREN, so the ambient here is still the
-  // parent's — which is exactly what this node's own `z_final` accumulates on.
+  // Godot's TileMap `add_child`s a TileMapLayer CanvasItem per layer and forwards
+  // `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so each layer takes
+  // its own canvas key. Read outside `body`, where the ambient z is still the
+  // parent's, which this node's own `z_final` accumulates on.
   const layerRank = useLayerRank(useCanvasLayerIndex());
   const ownZFinal = accumulateCanvasItemZ(useEffectiveZ(), props);
   const paintRange = usePaintRange();
-  // Layer sequences come from the run `reservesRoom` held back for exactly
-  // them (`canvasPaintOrder.ts`), which no authored child can be allocated
-  // into — the layers are internal children in Godot and appear in no
-  // `.tscn` child list, so nothing else can claim these values.
+  // Layer sequences come from the run `reservesRoom` holds back for them
+  // (`canvasPaintOrder.ts`). The layers are internal children in Godot, in no
+  // `.tscn` child list, so no authored child can claim these values.
   const layerSequences = useMemo(
     () => allocatePaintRange(paintRange, node.children).tail.base,
     [paintRange, node.children]
@@ -109,9 +93,9 @@ export function TileMap({ node, children }: NodeComponentProps) {
       body={(tint, material, lighting) =>
         status === 'loaded' && model && layerGroups
           ? layerGroups.map((group) => (
-              // Each layer draws at its OWN place in the canvas, so its key
-              // rides its group — three reads a drawn object's position from
-              // the nearest enclosing group before the object's own order.
+              // Each layer draws at its own place in the canvas, so its key rides
+              // its group: three reads the nearest enclosing group first. Within
+              // a layer, sources order by mesh `renderOrder`, a batching artifact.
               <CanvasItemGroup key={group.layerIndex} renderOrder={group.renderOrder}>
                 {group.entries.map((entry) => {
                   const { color, opacity } = layerTint(tint, entry.layer);

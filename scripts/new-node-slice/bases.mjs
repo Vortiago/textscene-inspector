@@ -10,15 +10,18 @@ import {
   NODE3D_PARSER_TEST_CASES,
 } from './templates/parserTests.mjs';
 
-/** What the viewport does with the type — see the CLI header for what each implies. */
+/**
+ * What the viewport does with the type, which settles the slice shape, render registration and
+ * sheet status together (`sheets.test.mjs`). `draws`: own types, parser and Component, status
+ * `unreviewed`. `transform-only` (ADR-0008): the base's parser and component, `linter-only`.
+ * `pending`: the base's parser, the base component under `renderIntent: 'pending'`, `unimplemented`.
+ */
 export const INTENTS = ['draws', 'transform-only', 'pending'];
 
 /**
- * `hasLinterParser` drives the side-effect import a generated `linterParser.ts`
- * puts at the top. Without it the module registers only its OWN keys, so a test
- * that imports `./linterParser` directly sees `findValidator` return null for
- * every inherited one — the exact breakage `viewport/subviewport` had to be
- * repaired for by hand. 18 hand-written slices already carry this import.
+ * `hasLinterParser` drives the side-effect import at the top of a generated `linterParser.ts`.
+ * Without it a test that imports `./linterParser` directly sees `findValidator` return null for
+ * every inherited key.
  */
 export const BASES = {
   node3d: {
@@ -49,14 +52,12 @@ export const BASES = {
     parser: 'parseControl',
     component: 'Control',
     propsType: 'ControlProperties',
-    // Control has no `transform`: layout comes from anchors/offsets, and the
-    // whole set is validated on `Control` itself and inherited via the chain.
-    // A leaf declares only its OWN members.
+    // Control has no `transform`: layout comes from anchors and offsets, validated on `Control`
+    // and inherited through the chain. A leaf declares only its own members.
     parserTestCases: CONTROL_PARSER_TEST_CASES,
     hasLinterParser: true,
-    // The one base a `pending` slice must NOT mount: `Control` lays out anchors
-    // and offsets into positioned divs, where the others are invisible groups.
-    // Mounting it to fix a badge would be a render change.
+    // The one base a `pending` slice does not mount: `Control` lays out positioned divs, where the
+    // others are invisible groups, so mounting it to fix a badge would change the render.
     invisibleBase: false,
   },
   node: {

@@ -1,50 +1,7 @@
-; A composition fixture, and the only one in the bag. Every OTHER Control scene
-; here isolates one type against a flat backdrop; this one wires 23 of them into
-; a single settings/HUD panel and therefore moves many variables at once ON
-; PURPOSE. It can never localise a regression — a shifted pixel here could be
-; the split solve, the box flow, a stylebox content margin, a font metric or the
-; canvas snap, and the frame cannot say which. That is not a defect of the
-; scene, it is its subject: the interactions BETWEEN containers have no other
-; witness, because a single-variable scene has, by construction, nothing to
-; interact with. A regression seen here is localised in the unit-* fixture that
-; owns the type, and that is still where a fix is pinned.
-;
-; What only composition can reach:
-;
-;   * a chain of containers solving one after another — MarginContainer feeds
-;     HSplitContainer feeds VBoxContainer feeds ScrollContainer feeds
-;     PanelContainer feeds MarginContainer feeds GridContainer, and each link
-;     passes down a rect the next one has to re-solve. A minimum-size that
-;     propagates the wrong way up shows only when there is something above it.
-;   * a widget sized by a container instead of by its own offsets — the sliders,
-;     the OptionButton and the LineEdit here have no rect of their own at all.
-;   * modulate multiplying down a nesting chain: Actions carries alpha, Back
-;     inside it carries a tint, and the button must show the product.
-;   * stylebox content margins nesting inside container separations, which is
-;     the pair that double-counts.
-;   * a ScrollContainer that actually overflows, so the clip edge and the
-;     scrollbar exist. Everything above the fold is deliberate; only Keybinds
-;     runs past it, and it carries no type that is not already visible.
-;   * a CanvasLayer drawing OVER the whole Control tree rather than beside it.
-;   * a SubViewportContainer sampling a Control subtree — Controls inside a
-;     render target, not world content.
-;   * wrapped text in two engines (Label autowrap, RichTextLabel BBCode spans)
-;     inside containers whose width the layout decides, so the wrap point is a
-;     layout output rather than an authored constant.
-;
-; Deterministic by construction: no animation, no particles, no timers, no
-; random seed, nothing time-dependent — the picture at settle 0 is the only
-; picture this scene has.
-;
-; Theme overrides are here because the composition needs them, not for coverage:
-; the styleboxes give the cards their plates and their content margins (the
-; thing that has to nest correctly against the separations), the separation and
-; margin constants set the rhythm the flow has to reproduce, and the font size
-; and colour overrides on the title, the subtitle and the brief are what make
-; the panel readable as a hierarchy. No Theme resource is applied, so every
-; unstyled widget resolves through the bundled default theme.
-;
-; Control itself draws no ink: the root and Actions/Spacer are pure layout.
+; A composition fixture: 23 Control types in one panel, so it moves many variables on purpose
+; and localises nothing. It witnesses what no one-type scene can: nested container solves,
+; container-sized widgets, modulate down a chain, stylebox margins inside separations, scroll
+; overflow, wrapped text and a CanvasLayer on top. Localise a regression in the unit-* fixture.
 
 [gd_scene load_steps=6 format=3 uid="uid://complex2dgui"]
 

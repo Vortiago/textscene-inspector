@@ -1,29 +1,8 @@
 /**
- * `<ControlQuad>` — the shared quad geometry every native Control painter
- * draws its chrome with (a flat StyleBox fill, a TextureRect image, …). The
- * Control-space twin of Sprite2D's `QuadMesh`
- * (`nodes/2d/sprite2d/Component.tsx`): unlike a CanvasItem2D quad (whose
- * `centered`/`offset` properties can put its centre anywhere), a Control's
- * rect is always measured from its own top-left, so this quad is unconditionally
- * centred at `[w/2, -h/2, 0]` — Y negated once, same convention `rect.ts`
- * documents for the walker's own outer-group placement.
- *
- * Unlit (`meshBasicMaterial`, matching Godot's 2D canvas), transparent and
- * non-depth-writing so overlapping/alpha-edged Control chrome composites the
- * same way a CanvasItem2D quad does. Facing comes from `canvasItemFacing()`,
- * the one definition of the double-sided/single-pass pair every flat canvas
- * painter shares — see that module for why the two cannot be spelled apart.
- * Spreads `useControlClipPlanes()` — clip planes are per-MATERIAL state, so
- * every leaf material must carry them even while the list stays empty (see
- * `controlClipping.tsx`).
- *
- * `map`'s decode is auto-detected (`useCanvasDecodeDefines`,
- * `canvas2DTextureDecode.ts`): a `NoColorSpace`-retagged 2D-canvas texture
- * (TextureRect's image, Button's icon, a vendored theme icon) gets the
- * post-filter decode; a SubViewport render target — which keeps its
- * publisher's own colour space — does not, so this one recipe serves every
- * kind of `map` ControlQuad's many callers pass without each caller having
- * to know which kind it has.
+ * The quad every native Control painter draws its chrome with. A Control's rect is
+ * measured from its top-left, so the quad centres at `[w/2, -h/2, 0]` (Y negated
+ * once, as in `rect.ts`). Unlit, transparent and depth-free like a CanvasItem2D
+ * quad, and every leaf material carries the clip planes (`controlClipping.tsx`).
  */
 import * as THREE from 'three';
 import { useControlClipPlanes } from './controlClipping';
@@ -38,11 +17,9 @@ export interface ControlQuadProps {
   opacity: number;
   map?: THREE.Texture | null;
   /**
-   * Paint order within the 2D transparent bucket. Load-bearing rather than
-   * cosmetic: nothing here writes depth, so three's transparent sort — which
-   * reads `renderOrder` before camera distance — is the *only* thing deciding
-   * which Control covers which. A quad that drops it paints in traversal order
-   * and silently ignores both `z_index` and `CanvasLayer.layer`.
+   * Paint order in the 2D transparent bucket. Nothing writes depth, so three's sort,
+   * which reads `renderOrder` before distance, alone decides which Control covers
+   * which. Without it, `z_index` and `CanvasLayer.layer` are ignored.
    */
   renderOrder: number;
 }
@@ -56,12 +33,13 @@ export function ControlQuad({
   renderOrder,
 }: ControlQuadProps) {
   const clippingPlanes = useControlClipPlanes();
+  // A `NoColorSpace`-retagged canvas texture gets the post-filter decode, and a
+  // SubViewport target, which keeps its own colour space, does not.
   const decodeDefines = useCanvasDecodeDefines(map);
 
-  // Most callers hand over a `map` that is null on the first render and a
-  // texture on a later one — an icon, an image, a viewport that has not
-  // published yet — and the quad is drawn throughout, so this material must be
-  // replaced rather than mutated (`materialProgramInputs.ts`).
+  // A `map` is often null on the first render and a texture later, while the quad
+  // draws throughout, so the material is replaced, not mutated
+  // (`materialProgramInputs.ts`).
   const program = materialProgramInputs({
     props: {
       map,
@@ -72,6 +50,7 @@ export function ControlQuad({
       defines: decodeDefines,
       clippingPlanes: clippingPlanes as THREE.Plane[],
     },
+    // The double-sided, single-pass pair every flat canvas painter shares.
     merge: [canvasItemFacing()],
   });
 

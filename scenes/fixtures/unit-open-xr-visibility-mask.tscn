@@ -1,18 +1,13 @@
 [gd_scene format=3]
 
-; OpenXRVisibilityMask binds no property of its own — GDCLASS plus an empty
-; _bind_methods (openxr_visibility_mask.cpp:37-38) — so layers is the sole
-; key VisualInstance3D adds worth exercising here, at a non-default value:
-; the default (1) Godot omits on save would exercise nothing.
-;
-; Parented under an XRCamera3D: Godot's own get_configuration_warnings
-; (openxr_visibility_mask.cpp:70-75) warns a visible mask elsewhere, so this
-; placement is what keeps the fixture's "zero warnings" claim honest rather
-; than accidental. The camera is the ROOT because Godot warns about an
-; XRCamera3D whose parent is not an XROrigin3D (xr_nodes.cpp:98-103) and
-; exempts a parentless one, so this is the only placement that satisfies both
-; classes at once.
+; OpenXRVisibilityMask binds no property of its own (GDCLASS and an empty _bind_methods,
+; openxr_visibility_mask.cpp:37-38), so layers is the one VisualInstance3D key worth exercising,
+; at a non-default value: the default (1) Godot omits would exercise nothing.
 
+; Godot warns about a visible mask outside an XRCamera3D (openxr_visibility_mask.cpp:70-75), so
+; this placement keeps the "zero warnings" claim honest. The camera is the root: Godot warns about
+; an XRCamera3D whose parent is not an XROrigin3D (xr_nodes.cpp:98-103) and exempts a parentless
+; one, so only this placement satisfies both classes.
 [node name="XRCamera3D" type="XRCamera3D"]
 
 [node name="MyOpenXRVisibilityMask" type="OpenXRVisibilityMask" parent="."]

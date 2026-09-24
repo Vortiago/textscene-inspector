@@ -1,11 +1,8 @@
 /**
- * Nothing reaches the webview after `dispose()`.
- *
- * `WebviewPanel.webview` THROWS `Webview is disposed` from its getter, and the
- * panel keeps posting after the user closes the preview: `_webviewReady` stays
- * true, so `invalidateResource` still fires, and a resource load in flight posts
- * from inside its own try/catch — whose catch posts again and throws out of a
- * `void`ed call as an unhandled rejection.
+ * Nothing reaches the webview after `dispose()`: `WebviewPanel.webview` throws
+ * `Webview is disposed` from its getter. `_webviewReady` stays true, so
+ * `invalidateResource` still posts, and a load in flight posts from its try/catch,
+ * whose catch posts again and throws out of a `void`ed call as an unhandled rejection.
  */
 import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
@@ -36,7 +33,7 @@ describe('a disposed preview panel', () => {
 
   it('disposes every subscription it registered with the host panel', async () => {
     // Both registrations pass `this._disposables`; drop either argument and the
-    // array stays empty, so `dispose()`'s teardown loop silently does nothing
+    // array stays empty, so `dispose()`'s teardown loop does nothing
     // and the listener outlives the closed panel.
     const { messageSubscription, didDisposeSubscription, panel } = await readyPanel();
 
@@ -51,8 +48,8 @@ describe('a disposed preview panel', () => {
 
   it('is idempotent, so the close event and a holder both disposing runs teardown once', async () => {
     // The real close path: VS Code fires `onDidDispose`, which calls `dispose()`.
-    // A caller still holding the panel calls it too, and that second run would
-    // fire `_onDidDispose` after the emitter was disposed.
+    // A caller still holding the panel calls it too, and a second run fires
+    // `_onDidDispose` after the emitter is disposed.
     const { hostPanel, panel, fireDidDispose } = await readyPanel();
 
     fireDidDispose();

@@ -1,21 +1,9 @@
 [gd_scene format=3 uid="uid://edge_csg_invalid_operation"]
 
-; `operation = 2` on a node whose parent is NOT a CSG node.
-;
-; This fixture used to document the ADR-0004 limitation: booleans were parsed and
-; dropped, so a SUBTRACTION box rendered identically to a UNION box. Booleans are
-; evaluated now (ADR-0026) and the two boxes STILL render identically, but for
-; the opposite reason. Both are CSG ROOTS, because each one's parent is a plain
-; Node3D, and a root's own operation is inert: Godot has nothing to fold it into
-; (is_root_shape / _get_brush). So this is a PARITY assertion, not a degradation.
-;
-; The NestedSubtraction group below is the contrast that makes that meaningful:
-; the same operation = 2 on a node whose parent IS a CSG node really does cut. If
-; the two ever stop differing, root detection has broken.
-;
-; The original issue asked for `operation = 5`, which is out of the enumInt(0,2)
-; range and a hard format error that would break the fixtureLint gate. Lints
-; completely clean as written.
+; `operation = 2` (subtraction) on two CSG roots, whose parent is a plain Node3D. A root's own
+; operation is inert (is_root_shape / _get_brush), so both boxes render whole, as in Godot.
+; NestedSubtraction is the contrast: the same operation under a CSG parent cuts. If the two
+; stop differing, root detection has broken. Lints clean.
 
 [node name="Scene" type="Node3D"]
 
@@ -24,7 +12,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
 size = Vector3(1, 1, 1)
 operation = 0
 
-; A root, so its SUBTRACTION is ignored and it draws a whole box.
+; A root, so its subtraction is ignored and it draws a whole box.
 [node name="SubtractionBox" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
 size = Vector3(1, 1, 1)
@@ -36,8 +24,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
 [node name="Block" type="CSGBox3D" parent="NestedSubtraction"]
 size = Vector3(1, 1, 1)
 
-; Identical operation to SubtractionBox above, but its parent IS a CSG node, so
-; this one genuinely cuts a corner out of Block.
+; Its parent is a CSG node, so unlike SubtractionBox this one cuts a corner out of Block.
 [node name="Cut" type="CSGSphere3D" parent="NestedSubtraction/Block"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.5, 0.5)
 operation = 2

@@ -1,8 +1,7 @@
 /**
- * AnimatedSprite2D parser — Node2D transform + the SpriteFrames playback
- * surface (sprite_frames ref, current animation name, frame index, centering,
- * flip). The SpriteFrames resource itself is parsed lazily at render time
- * (see spriteFrames.ts) from the resolved sub/ext resource.
+ * AnimatedSprite2D parser: the Node2D transform and the SpriteFrames playback
+ * properties. The SpriteFrames resource itself decodes at render time, from the
+ * resolved sub- or ext-resource.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

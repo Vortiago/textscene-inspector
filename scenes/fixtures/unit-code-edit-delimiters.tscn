@@ -1,23 +1,7 @@
-; The ONE variable: `delimiter_comments` / `delimiter_strings` on a CodeEdit.
-;
-; Neither table colours anything — `scene/resources/syntax_highlighter.cpp`
-; names no delimiter at all, and a `CodeHighlighter` carries its own
-; `color_regions`. What they reach is the FOLD GUTTER: `can_fold_line`
-; (`code_edit.cpp:1662-1735`) asks `is_in_comment`/`is_in_string` whether a
-; line opens a region that continues, and draws the `can_fold` arrow beside
-; the ones that do.
-;
-; All four nodes carry `gutters_draw_fold_gutter` and `line_folding`, so the
-; gutter is there and folding is on in every one; only the tables differ.
-; `Comments` and `NoComments` hold the SAME three-line comment buffer and
-; differ by nothing but `delimiter_comments`, which is the pair Godot itself
-; draws differently: an arrow beside line 0 with `PackedStringArray("#")` and
-; nothing at all with `PackedStringArray()`. `Block` folds a multi-line
-; comment the same way through a start/end pair, and `Strings` does it through
-; `delimiter_strings` instead, which no other key can reach.
-;
-; No other CodeEdit fixture authors either table or the fold gutter, so a
-; regression in the region scan is invisible in all of them.
+; The one variable: `delimiter_comments` and `delimiter_strings`. They colour nothing
+; (scene/resources/syntax_highlighter.cpp) but feed the fold gutter, where can_fold_line
+; (code_edit.cpp:1662-1735) draws an arrow on a line that opens a region. Comments and NoComments
+; differ only in the table. No other CodeEdit fixture authors either table.
 
 [gd_scene format=3 uid="uid://unit_code_edit_delimiters"]
 

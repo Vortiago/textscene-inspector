@@ -1,7 +1,6 @@
 /**
- * Resolving what a new slice INHERITS, from Godot's own ancestry rather than
- * from the coarse `--base` flag. The two diverge whenever a real ancestor owns
- * a parser or a validator set, and taking the flag silently discards it.
+ * Resolves what a new slice inherits from Godot's own ancestry, not the coarse `--base` flag. The
+ * two diverge whenever a real ancestor owns a parser or a validator set, which the flag discards.
  */
 
 import { readFileSync, readdirSync } from 'node:fs';
@@ -9,12 +8,8 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { CORE_SRC, REPO_ROOT, fail } from './paths.mjs';
 
 /**
- * Every slice file of one basename, read once.
- *
- * The lookups below ask about one ancestor at a time and there are five to eight
- * of them per scaffold, so a walk per question re-read all ~240 slices each
- * time. The tree is a constant for the length of one invocation, so it is read
- * once and both `ownerOf` lookups scan the same in-memory list.
+ * Every slice file of one basename, read once per invocation. A scaffold asks about five to eight
+ * ancestors, and a walk per question would re-read every slice each time.
  */
 const sliceSources = new Map();
 function slicesNamed(basename) {
@@ -54,34 +49,21 @@ function catalogChain(typeName, fallback = []) {
 }
 
 /**
- * Path from `sliceDir` to the linterParser that registers `parentType`.
- *
- * A generated `linterParser.ts` side-effect-imports its parent's so that a test
- * importing only `./linterParser` sees the inherited keys through
- * `findValidator`. The parent is a Godot class, not the `--base` flag: chaining
- * to `base/node3d` when the real parent is `RigidBody3D` skips every validator
- * between them, which is invisible until someone writes such a test. Resolved
- * by scanning for the `registerAll('<Parent>'` that owns the type, so abstract
- * tiers (`physics/shared` for CollisionObject3D) resolve like any other.
- *
- * Falls back to the `--base` slice when the parent registers nothing yet, which
- * is correct: there is no tier to reach.
+ * Path from `sliceDir` to the linterParser that registers the nearest registering Godot ancestor,
+ * so a test that imports only `./linterParser` sees inherited keys. Chaining to `base/node3d` past
+ * a `RigidBody3D` parent would skip its validators. A scan for `registerAll('<Parent>'` also finds
+ * an abstract tier (`physics/shared`). With no registering ancestor, it returns the `--base` slice.
  */
 export function parentLinterParser(typeName, parentType, sliceDir, fallback) {
   /**
-   * Directory of the linterParser that registers anything for `<type>`.
-   *
-   * `registerUnavailable` counts. A class whose whole relationship to its base
-   * is subtractive, like `HBoxContainer` fixing the orientation `BoxContainer`
-   * exposes, calls ONLY that: matching `registerAll` alone stepped past it and
-   * the generated slice never loaded the removal.
+   * Directory of the linterParser that registers anything for `<type>`. `registerUnavailable`
+   * counts: `HBoxContainer`, which only fixes the orientation `BoxContainer` exposes, calls only it.
    */
   const ownerOf = (type) =>
     soleOwner('linterParser.ts', [`registerAll('${type}'`, `registerUnavailable('${type}'`]);
 
-  // Walk up Godot's chain to the NEAREST ancestor that registers something.
-  // `PhysicsBody3D` and `Button` bind nothing and own no slice, so stopping at
-  // the immediate parent would skip the tier above them.
+  // `PhysicsBody3D` and `Button` bind nothing and own no slice, so the immediate parent alone
+  // would skip the tier above them.
   const chain = catalogChain(typeName, [parentType]);
   for (const ancestor of chain) {
     const dir = ownerOf(ancestor);
@@ -92,11 +74,8 @@ export function parentLinterParser(typeName, parentType, sliceDir, fallback) {
 }
 
 /**
- * The module specifier `src` imports the name `local` from, if it does.
- *
- * Both spellings: a whole-clause `import type { X }` and the inline modifier
- * inside a value import (`import { Mode, type XProperties }`), which eight
- * slices use and a `type`-only pattern misses.
+ * The module specifier `src` imports the name `local` from, if it does. It reads both
+ * `import type { X }` and the inline modifier in a value import (`import { Mode, type X }`).
  */
 function importSourceOf(src, local) {
   for (const [, names, from] of src.matchAll(/import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*'([^']+)'/g)) {
@@ -110,14 +89,10 @@ function importSourceOf(src, local) {
 }
 
 /**
- * The props type `parse<ancestor>` RETURNS, and where a slice imports it from.
- *
- * Read from the signature rather than assumed to be `<ancestor>Properties`:
- * `parseCenterContainer` returns `ControlProperties`, and `HBoxContainer`'s own
- * alias is a re-export of `BoxContainerProperties`. A generated `types.ts`
- * aliasing a name its ancestor never exports does not compile, and one aliasing
- * the `--base` type instead is the type-level half of the same property loss
- * `parentParser` exists to stop.
+ * The props type `parse<ancestor>` returns and where a slice imports it from, read from the
+ * signature: `parseCenterContainer` returns `ControlProperties`, and `HBoxContainer`'s alias
+ * re-exports `BoxContainerProperties`. An alias of a name the ancestor does not export does not
+ * compile, and one of the `--base` type loses the same properties `parentParser` keeps.
  */
 function parentPropsType(ownerDir, ancestor, sliceDir) {
   const src = readFileSync(join(ownerDir, 'parser.ts'), 'utf8');
@@ -133,18 +108,9 @@ function parentPropsType(ownerDir, ancestor, sliceDir) {
 }
 
 /**
- * The parse function a slice should reuse, and the props type it returns.
- *
- * The sibling of `parentLinterParser`, and needed for the same reason: `--base`
- * is a coarse flag (node3d/node2d/node/control) while the catalog's parent is
- * the real Godot parent. They diverge whenever an ancestor has its OWN typed parser, and
- * the split is silent - `SoftBody3D` registered `parseNode3D` while its linter
- * side inherited every MeshInstance3D validator, so `mesh`, `skin` and the
- * material overrides were validated and then discarded, leaving the inspector
- * blank for exactly the properties the sheet advertises.
- *
- * Walks the catalog ancestry to the nearest ancestor that owns a `parser.ts`,
- * falling back to the `--base` slice when none does.
+ * The parse function of the nearest catalog ancestor that owns a `parser.ts`, else the `--base`
+ * slice's. With `parseNode3D`, a `SoftBody3D` slice would validate the MeshInstance3D keys
+ * (`mesh`, `skin`) and then discard them, leaving the inspector blank for them.
  *
  * @returns `{ importPath, fn, propsType, typesPath }` relative to the slice directory.
  */

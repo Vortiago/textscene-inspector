@@ -1,26 +1,16 @@
 /**
- * PhysicalBoneSimulator3D registers no validator, because Godot gives it no
- * property to validate.
- *
- * The interesting assertions here are therefore about ABSENCE, and absence is
- * cheap to assert by accident: an empty own-key set is also what a slice that
- * never got written looks like. So the suite pins the absence at both ends. It
- * asserts the own-key set is empty, and it asserts that the keys a real scene
- * DOES carry on this node still resolve, through the base-walk, to the
- * ancestor's validators. A regression that dropped the base-walk, or one that
- * re-declared an inherited key here, breaks the second half while the first
- * half stays green.
- *
- * Node3D's registrations are imported for the fixture check alone. Without them
- * `transform` reaches no validator in a scoped run and `expectFixtureClean`
- * would pass without reading the only line the fixture's geometry claim rests
- * on. `linterParser.ts` itself imports only its direct ancestor.
+ * PhysicalBoneSimulator3D registers no validator, since Godot gives it no property. An empty
+ * own-key set also looks like an unwritten slice, so the suite also asserts that the keys a real
+ * scene carries still resolve to the ancestor's validators through the base-walk.
  */
 
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import { checkerFor } from '../../../../linter/testing/validatorCheck';
+// For the fixture check alone: without Node3D, `transform` reaches no validator in a scoped run and
+// `expectFixtureClean` skips the line the fixture's geometry claim rests on. `linterParser.ts`
+// imports only its direct ancestor.
 import '../../../base/node3d/linterParser';
 import './linterParser';
 
@@ -28,16 +18,15 @@ import './linterParser';
 const check = checkerFor('PhysicalBoneSimulator3D');
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * PhysicalBoneSimulator3D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * Set exactly one, from the source rather than from expectation: list the keys
+ * PhysicalBoneSimulator3D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY. Both unset
+ * is red on purpose. Do not delete an assertion to go green.
  */
 const KEYS: string[] = [];
 /**
- * True: `_bind_methods` (physical_bone_simulator_3d.cpp:386-393) binds five
- * methods and zero `ADD_PROPERTY`, and no other route into a `.tscn` is taken
- * either. See `linterParser.ts` for the full four-route check and the measured
- * storage-list comparison against SkeletonModifier3D.
+ * True: `_bind_methods` (physical_bone_simulator_3d.cpp:386-393) binds five methods and no
+ * `ADD_PROPERTY`, and no other route into a `.tscn` exists. `linterParser.ts` has the four-route
+ * check.
  */
 const DECLARES_NOTHING = true;
 
@@ -51,21 +40,15 @@ describe('PhysicalBoneSimulator3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
-    //
-    // With no own keys that is the INHERITED validators only — `linterParser`
-    // imports the parent chain — so it covers what SkeletonModifier3D up declares and
-    // becomes this slice's own claim the moment KEYS gains an entry.
+    // Runs the fixture's "zero errors and zero warnings" claim against the validators this test
+    // imports. `fixtureLint` checks the same file against the whole registry. With no own keys,
+    // that is the inherited validators from SkeletonModifier3D up.
     expectFixtureClean('unit-physical-bone-simulator-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. With
-    // no own keys this sweeps an empty set, which is the correct outcome and
-    // evidence of nothing; the assertions below carry the weight instead.
+    // A validator that accepts arbitrary prose validates no format. With no own keys this loop
+    // checks an empty set, so the assertions below carry the weight.
     const accepted = validatorRegistry
       .getOwnKeys('PhysicalBoneSimulator3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -73,12 +56,11 @@ describe('PhysicalBoneSimulator3D strict validators', () => {
   });
 
   describe('the inherited keys a scene writes on this node', () => {
-    // scene/3d/skeleton_modifier_3d.cpp binds both; PhysicalBoneSimulator3D
-    // adds nothing to them and must not re-declare them.
+    // scene/3d/skeleton_modifier_3d.cpp binds both. PhysicalBoneSimulator3D must not re-declare
+    // them.
     it.each(['active', 'influence'])('resolves %s through the base-walk', (key) => {
-      // Non-null says it resolves; the empty own-key set says it resolved on an
-      // ANCESTOR. A shadowing re-declaration would need an own registration, so
-      // the pair rules one out without reaching into how the walk resolves.
+      // Non-null says it resolves, and the empty own-key set says it resolved on an ancestor. A
+      // shadowing re-declaration needs an own registration, so the pair rules one out.
       expect(validatorRegistry.findValidator('PhysicalBoneSimulator3D', key)).not.toBeNull();
       expect(validatorRegistry.getOwnKeys('PhysicalBoneSimulator3D')).not.toContain(key);
     });

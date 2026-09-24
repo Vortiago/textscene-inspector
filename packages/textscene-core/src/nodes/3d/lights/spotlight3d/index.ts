@@ -1,6 +1,4 @@
-/**
- * SpotLight3D registration — parser + formatter.
- */
+/** SpotLight3D parser and formatter registration. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseSpotLight3D } from './parser';

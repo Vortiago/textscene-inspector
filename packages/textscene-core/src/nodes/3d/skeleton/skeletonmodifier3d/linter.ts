@@ -1,24 +1,8 @@
 /**
- * Semantic linter rule for SkeletonModifier3D, from Godot's own configuration
- * warning, `SkeletonModifier3D::get_configuration_warnings()`
- * (skeleton_modifier_3d.cpp:32-38):
- *
- *     PackedStringArray warnings = Node3D::get_configuration_warnings();
- *     if (skeleton_id.is_null()) {
- *         warnings.push_back(RTR("Skeleton3D node not set! SkeletonModifier3D
- *             must be child of Skeleton3D."));
- *     }
- *     return warnings;
- *
- * `skeleton_id` is set ONLY from the DIRECT parent
- * (`_update_skeleton_path`, :47-55: `Object::cast_to<Skeleton3D>(get_parent())`),
- * never an ancestor further up — a grandparent Skeleton3D leaves it null, the
- * same as no parent at all.
- *
- * The largest reach in this batch: every concrete SkeletonModifier3D descendant
- * this repo registers inherits the check unchanged (none override
- * `get_configuration_warnings` without calling the base — verified against
- * every `.cpp` in the chain), which is 19 leaves plus SkeletonModifier3D itself.
+ * Semantic linter rule for SkeletonModifier3D: Godot's own configuration warning "Skeleton3D node
+ * not set! SkeletonModifier3D must be child of Skeleton3D." (skeleton_modifier_3d.cpp:32-38) when
+ * `skeleton_id` is null. `_update_skeleton_path` (:47-55) sets it only from
+ * `Object::cast_to<Skeleton3D>(get_parent())`, so a grandparent Skeleton3D leaves it null.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -53,6 +37,8 @@ const skeletonModifier3DParentRule: LintRule = {
     description:
       'Warns when a SkeletonModifier3D-family node has no direct Skeleton3D parent, so it resolves no skeleton and does nothing',
     category: 'validation',
+    // Every descendant inherits the check unchanged: none overrides `get_configuration_warnings`
+    // without calling the base.
     applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SkeletonModifier3D'),
     emits: [{ ruleName: RULE_NAME, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
   },

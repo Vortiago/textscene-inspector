@@ -1,26 +1,8 @@
 /**
- * Part 2 of the value-decoder sweep — finish the residual NaN-leak / crash sites the earlier
- * pass did not reach.
- *
- * RED contract. Part 1 shared the canonical grammar leaf and converted control / camera3d /
- * directionallight3d / lights-shared / meshinstance3d + the promoted helpers
- * (`floatOr` / `intOr` / `vec2Or` / `parseOptionalFloat` / `parseOptionalInt` /
- * `parseColorOrUndefined`). This pins the sibling PARSER slices that still carry the same drift,
- * so the sweep is finished — not a representative subset (an earlier pass under-pinned and shipped a
- * partial sweep). Every case below fails against the current (unfixed) sibling slices.
- *
- * The contract (same framing as part 1):
- *   - a concrete-default scalar (a numeric literal default) routes through floatOr/intOr —
- *     warn-then-fall-back on truthy garbage, never NaN;
- *   - an optional scalar (absent means "unset") falls to `undefined`, never NaN;
- *   - a malformed vector/color falls back to the slice's OWN default and never throws /
- *     never stores NaN;
- *   - an authored value and an absent value are both honoured unchanged.
- *
- * These are the pinned cases; each converted slice keeps its co-located parser test (its
- * property->field mapping). The NaN-safe re-declared-decoder consolidation (csgcylinder /
- * mesh parsers) is driven by the plan + verified by /code-review, not pinned here (a
- * behaviour-preserving refactor has no meaningful RED pin).
+ * The sibling parser slices keep the canonical grammar too: a concrete-default scalar
+ * warns and falls back through floatOr/intOr, an optional scalar falls to `undefined`,
+ * a malformed vector or colour falls back to the slice's own default without throwing,
+ * and authored and absent values are honoured. None ever stores NaN.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../logger';
@@ -43,9 +25,7 @@ const spotHeading = () => heading('SpotLight3D', { name: 'Spot', parent: '.' });
 const omniHeading = () => heading('OmniLight3D', { name: 'Omni', parent: '.' });
 const labelHeading = () => heading('Label3D', { name: 'Label', parent: '.' });
 
-// ---------------------------------------------------------------------------------------------
-// SpotLight3D — concrete-default scalars: warn-then-fall-back, never NaN
-// ---------------------------------------------------------------------------------------------
+// SpotLight3D concrete-default scalars warn and fall back, never NaN
 describe('#175 spotlight3d — scalar reads stop leaking NaN', () => {
   it('honours authored values', () => {
     const r = parseSpotLight3D(spotHeading(), {
@@ -82,9 +62,7 @@ describe('#175 spotlight3d — scalar reads stop leaking NaN', () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// OmniLight3D — concrete scalars + the optional omni_shadow_mode (undefined, never NaN)
-// ---------------------------------------------------------------------------------------------
+// OmniLight3D: concrete scalars + the optional omni_shadow_mode (undefined, never NaN)
 describe('#175 omnilight3d — scalars + optional shadow mode', () => {
   it('honours authored values', () => {
     const r = parseOmniLight3D(omniHeading(), {
@@ -113,9 +91,7 @@ describe('#175 omnilight3d — scalars + optional shadow mode', () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// Label3D — pixel_size / outline_size
-// ---------------------------------------------------------------------------------------------
+// Label3D: pixel_size / outline_size
 describe('#175 label3d — pixel_size / outline_size stop leaking NaN', () => {
   it('honours authored values', () => {
     const r = parseLabel3D(labelHeading(), { pixel_size: '0.01', outline_size: '20' });
@@ -132,9 +108,7 @@ describe('#175 label3d — pixel_size / outline_size stop leaking NaN', () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// Environment — 13 concrete scalars (float + int) AND the present-but-malformed COLOR CRASH
-// ---------------------------------------------------------------------------------------------
+// Environment: 13 concrete scalars (float and int), and a malformed colour that must not crash
 describe('#175 environment — scalar reads stop leaking NaN', () => {
   it('honours authored values', () => {
     const r = decodeEnvironment({
@@ -196,16 +170,14 @@ describe('#175 environment — a malformed color must NOT crash the whole parse'
   });
 
   it('preserves each color field its own (non-black) default when malformed', () => {
-    // fog_light_color's Godot default is a bluish grey — the fallback must be per-field,
-    // not a generic white/black.
+    // fog_light_color's Godot default is a bluish grey, so the fallback is per field,
+    // not a generic white or black.
     const r = decodeEnvironment({ fog_light_color: 'garbage' });
     expect(r.fog_light_color).toEqual({ r: 0.518, g: 0.553, b: 0.608, a: 1 });
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// BoxShape3D — the local loose-regex Vector3 leaks NaN on double-sign / dangling-exp input
-// ---------------------------------------------------------------------------------------------
+// BoxShape3D: a double sign or dangling exponent in a Vector3 never leaks NaN
 describe('#175 boxshape3d — size uses the canonical anchored grammar', () => {
   it('honours a valid size', () => {
     expect(parseBoxShape3D({ size: 'Vector3(2, 3, 4)' }).size).toEqual({ x: 2, y: 3, z: 4 });

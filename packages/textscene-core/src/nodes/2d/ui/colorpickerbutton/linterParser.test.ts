@@ -1,14 +1,7 @@
 /**
- * ColorPickerButton strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through
- * `Linter` (ColorPickerButton ships none of its own: see comparison.md).
- *
- * Grow this into one case per property (happy, malformed, and any bound) and
- * quote the governing Godot source line beside every numeric bound.
+ * ColorPickerButton strict validators, asserted through `validatorRegistry` so
+ * a failure points at the validator and not at scene parsing.
+ * ColorPickerButton has no rules (comparison.md).
  */
 
 import { readFileSync } from 'node:fs';
@@ -41,8 +34,7 @@ describe('ColorPickerButton strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format.
     const accepted = validatorRegistry
       .getOwnKeys('ColorPickerButton')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -122,11 +114,8 @@ describe('ColorPickerButton strict validators', () => {
   });
 
   describe('the fixture, property by property', () => {
-    // The fixture is the deliverable's "zero errors and zero warnings" claim,
-    // made checkable without running the full `lint:tscn` pipeline (off limits
-    // to this slice, see AGENTS.md): every `key = value` line under the
-    // MyColorPickerButton node must resolve through the same `findValidator`
-    // walk this file already exercises, and return null.
+    // Every `key = value` line under the MyColorPickerButton node resolves through
+    // `findValidator` and returns null: the fixture lints clean without `lint:tscn`.
     const fixturePath = join(
       import.meta.dirname,
       '../../../../../../../scenes/fixtures/unit-color-picker-button.tscn'

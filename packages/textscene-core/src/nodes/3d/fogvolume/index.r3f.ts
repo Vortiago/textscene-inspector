@@ -1,6 +1,6 @@
 /**
- * FogVolume draws nothing here YET — the badge reads "not implemented". The
- * Node3D base still mounts, for `visible` and the workspace split.
+ * FogVolume draws nothing here yet, so the badge reads "not implemented". The Node3D base still
+ * mounts, for `visible` and the workspace split.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';

@@ -1,10 +1,8 @@
 [gd_scene load_steps=2 format=3]
 
-; The four emission shapes the previewer reproduces, side by side, frozen one
-; frame after birth (preprocess = 1/30) so each cloud still has the shape it was
-; born in rather than the shape gravity dragged it into. POINTS,
-; DIRECTED_POINTS and RING are deliberately absent: they sample Godot's global
-; RNG, which the scene file never carries.
+; The four emission shapes the previewer reproduces, frozen one frame after birth (preprocess = 1/30)
+; so each cloud keeps its birth shape. POINTS, DIRECTED_POINTS and RING are absent: they sample
+; Godot's global RNG, which the scene file does not carry.
 
 [ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
 

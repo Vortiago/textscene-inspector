@@ -1,5 +1,3 @@
-/**
- * textedit linter registration - imports linter components to trigger self-registration.
- */
+/** TextEdit linter registration: importing the modules registers them. */
 
 import './linterParser.js';

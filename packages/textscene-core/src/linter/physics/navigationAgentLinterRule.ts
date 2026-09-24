@@ -1,24 +1,7 @@
 /**
- * Dimension-parameterized semantic linter rule for NavigationAgent2D / NavigationAgent3D,
- * from Godot's own configuration warning, `get_configuration_warnings()`
- * (navigation_agent_2d.cpp:722-730):
- *
- *     if (!Object::cast_to<Node2D>(get_parent())) {
- *         warnings.push_back(RTR("The NavigationAgent2D can be used only under a Node2D inheriting parent node."));
- *     }
- *
- * The 3D form (navigation_agent_3d.cpp:789-797) substitutes Node3D/NavigationAgent3D
- * throughout and is otherwise identical: same guard, same message shape.
- *
- * Not cosmetic: `set_agent_parent` casts the parent to the dimension's Node type and,
- * when the cast fails, clears the agent's navigation map instead of ever placing it
- * (`agent_set_map(get_rid(), RID())`) — the whole node is inert, with no position to
- * report and no map to path through. 2D: cpp:385-410, clear at cpp:408. 3D: cpp:422-447,
- * clear at cpp:445. Advisory, hence a warning: the scene loads and every property is
- * well-formed.
- *
- * NavigationAgent2D/3D have no subclasses of their own, so this matches the exact type
- * rather than walking `descendsFrom` the way a rule mirroring a base class's warning would.
+ * The NavigationAgent2D/3D configuration warning for a parent that is not a
+ * Node2D/Node3D: `get_configuration_warnings()` (navigation_agent_2d.cpp:722-730,
+ * navigation_agent_3d.cpp:789-797), the same guard and message shape in both.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
@@ -35,6 +18,10 @@ export function makeNavigationAgentLinterRule(dim: PhysicsDim): LintRule {
   function check(context: RuleContext): Diagnostic[] {
     const { node, scene } = context;
 
+    // `set_agent_parent` clears the agent's map when the parent cast fails
+    // (`agent_set_map(get_rid(), RID())`), so the node is inert. 2D: cpp:385-410,
+    // clear at cpp:408. 3D: cpp:422-447, clear at cpp:445. A warning: the scene
+    // loads and every property is well-formed.
     const verdict = parentTypeVerdict(scene, node, parentType);
     if (verdict.kind === 'satisfied' || verdict.kind === 'unknowable') return [];
 
@@ -54,6 +41,7 @@ export function makeNavigationAgentLinterRule(dim: PhysicsDim): LintRule {
       name: `valid-navigationagent${suffix}`,
       description: `Warns when a ${type} is not a child of a ${parentType}-inheriting node, where Godot never places it on the navigation map`,
       category: 'validation',
+      // No subclasses, so the exact type, not `descendsFrom`.
       applicableNodeTypes: [type],
       emits: [{ ruleName, severity: 'warning', grounding: { kind: 'configuration-warning' } }],
     },

@@ -1,22 +1,17 @@
-**Superseded by ADR-0027 (2026-07-25): the booleans are really evaluated now.** The
-record below is kept for two reasons. It states WHY the divergence was accepted and
-what it cost. Its terminal behaviour also survives as the degradation fallback when
-the CSG library cannot load.
+**Superseded by ADR-0027: the booleans are evaluated.** This record keeps why the
+divergence was accepted and what it cost. Its terminal behaviour is also the degradation
+fallback when the CSG library cannot load.
 
 # CSG nodes render as their base primitive; boolean operations ignored
 
-`CSGBox3D`, `CSGCylinder3D`, and `CSGSphere3D` render the corresponding three.js geometry from their own inline `size`/`radius`/`radial_segments`/`rings`/`height` properties. The `operation` (union, subtraction, intersection) is parsed but not applied. We do not perform real constructive solid geometry.
+`CSGBox3D`, `CSGCylinder3D` and `CSGSphere3D` render the matching three.js geometry from their own inline `size`/`radius`/`radial_segments`/`rings`/`height` properties. The `operation` (union, subtraction, intersection) is parsed but not applied. The previewer performs no constructive solid geometry.
 
-This is a real, visible divergence, **not** a corpus-safe one. The vendored corpus carries **36** nodes with `operation = 1` (intersection) or `2` (subtraction), across five scenes: `demos/3d/csg/csg.tscn` (which exists to demonstrate the operations), `demos/3d/particles/test.tscn`, `demos/3d/soft_body_physics/test.tscn`, `demos/3d/ragdoll_physics/ragdoll_physics.tscn` and `demos/3d/volumetric_fog/volumetric_fog.tscn`.
+This is a real, visible divergence, not a corpus-safe one. A subtraction or intersection node rendered as a solid primitive is visually wrong: a hole shows as a solid block. Every scene with `operation = 1` (intersection) or `2` (subtraction) renders wrong under this fallback: `demos/3d/csg/csg.tscn` (which exists to show the operations), `demos/3d/particles/test.tscn`, `demos/3d/soft_body_physics/test.tscn`, `demos/3d/ragdoll_physics/ragdoll_physics.tscn` and `demos/3d/volumetric_fog/volumetric_fog.tscn`. When `operation != 0`, the parser logs a warning and the node renders its base primitive rather than failing silently.
 
-A subtraction or intersection node rendered as a solid primitive is visually wrong (a hole shows as a solid block), so those scenes DO render wrong here. When `operation != 0` the parser logs a warning and the node renders its base primitive rather than failing silently. That is the honest failure mode for a previewer that performs no boolean geometry.
+Scope is the three trivial CSG primitives. The other CSG types are deferred: no fixture demands them (the repo's "no fixtures for unimplemented features" rule), and each needs more than a primitive mapping:
 
-Scope covers the three trivial CSG primitives that appear in the real Godot demo corpus (`CSGBox3D`, `CSGCylinder3D`, `CSGSphere3D`). The remaining CSG types are explicitly deferred. They have no fixture demanding them (per the repo's "no fixtures for unimplemented features" rule) and each needs more than a primitive mapping:
+- **`CSGPolygon3D`**: an extruded or swept 2D polygon (modes: depth, spin, path-follow). No single three.js primitive matches it.
+- **`CSGCombiner3D`**: a pure boolean-grouping container with no geometry of its own. It has meaning only with real CSG.
+- **`CSGTorus3D`**, **`CSGMesh3D`**: no fixture yet. `CSGTorus3D` would map to `TorusGeometry`.
 
-- **`CSGPolygon3D`** (18 corpus occurrences): an extruded or swept 2D polygon (modes: depth, spin, path-follow). No single three.js primitive matches it.
-- **`CSGCombiner3D`** (1): a pure boolean-grouping container with no geometry of its own. Meaningful only once real CSG is performed.
-- **`CSGTorus3D`** (1), **`CSGMesh3D`**: deferred for the same "no fixture yet" reason. `CSGTorus3D` would map to `TorusGeometry` when one is added.
-
-Until then these fall through to `GenericNodeFallback` (an empty container) rather than a wrong primitive.
-
-Recorded because rendering CSG as a plain primitive is a surprising deviation a future reader would otherwise try to "fix" with a boolean-mesh library.
+These fall through to `GenericNodeFallback` (an empty container) rather than a wrong primitive.

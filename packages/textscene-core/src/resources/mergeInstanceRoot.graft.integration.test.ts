@@ -1,10 +1,7 @@
 /**
- * The `.tscn` half of the deep-override fix, end to end on real scenes.
- *
- * These three are the flavour that needs no renderer changes at all: once the
- * parser anchors the node at its instance and `mergeInstanceRoot` grafts it at
- * the recorded sub-path, the result is an ordinary `TscnNode` tree from that
- * point on. All three previously lost a VISIBLE node.
+ * Deep overrides in `.tscn` sub-scenes, end to end on real scenes. The parser
+ * anchors the node at its instance and `mergeInstanceRoot` grafts it at the
+ * recorded sub-path, so the result is an ordinary `TscnNode` tree from there on.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -40,15 +37,14 @@ describe('deep overrides through mergeInstanceRoot', () => {
     const merged = mergeInstanceRoot(instanceNode, sub)!;
     const box = find([merged], 'VBoxContainer')!;
     expect(box.children.map((c) => c.name)).toContain('SplitscreenButton');
-    // And it is NOT also sitting at the root, which is where it used to land
-    // when the sub-path was ignored.
+    // And it is not also at the root, where an ignored sub-path would put it.
     expect(merged.children.map((c) => c.name)).not.toContain('SplitscreenButton');
   });
 
   it('carries the RPG opponent’s Body override through TWO nested instances', () => {
-    // `Body` targets `Sprite2D/Pivot`, but `Sprite2D` is itself an instance, so
-    // `Pivot` lives one scene deeper again. The first merge cannot resolve it —
-    // it re-anchors with the remainder, and the second merge finishes the job.
+    // `Body` targets `Sprite2D/Pivot`, and `Sprite2D` is itself an instance, so
+    // `Pivot` lives one scene deeper. The first merge re-anchors with the
+    // remainder, and the second merge resolves it.
     const host = parse('demos/2d/role_playing_game/combat/combatants/opponent.tscn');
     const combatant = parse('demos/2d/role_playing_game/combat/combatants/combatant.tscn');
     const sprite = parse('demos/2d/role_playing_game/combat/combatants/sprites/sprite.tscn');
@@ -64,12 +60,12 @@ describe('deep overrides through mergeInstanceRoot', () => {
 
     const inner = mergeInstanceRoot(spriteNode, sprite)!;
     const pivot = find([inner], 'Pivot')!;
-    // One Body carrying the host's authored texture — not two of the same name.
+    // One Body carrying the host's authored texture, not two of the same name.
     const bodies = pivot.children.filter((c) => c.name === 'Body');
     expect(bodies).toHaveLength(1);
     expect(bodies[0]!.rawProperties?.texture).toBe(body.rawProperties?.texture);
-    // And the TYPED properties too, which is what components actually read —
-    // merging the raw map alone would render as if the override never existed.
+    // And the typed properties, which components read: merging the raw map alone
+    // renders as if the override never existed.
     expect((bodies[0]!.properties as { texture?: string }).texture).toBe(
       body.rawProperties?.texture
     );
@@ -86,9 +82,8 @@ describe('deep overrides through mergeInstanceRoot', () => {
     const merged = mergeInstanceRoot(host.nodes[0]!, sub, scope)!;
     const body = find([merged], 'Body')!;
 
-    // Its `texture = ExtResource(...)` id belongs to the OUTER table — and so
-    // would a `SubResource(...)` beside it, which is why the whole scope rides
-    // along rather than one pool of it.
+    // Its `texture = ExtResource(...)` id belongs to the outer table, and so would
+    // a `SubResource(...)` beside it, so the whole scope rides along.
     expect(body.authoredScope).toBe(scope);
   });
 });

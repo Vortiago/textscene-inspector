@@ -1,17 +1,17 @@
 /**
- * Record a showcase clip by scenario name (see scenarios.mjs):
- *   node scripts/showcase/run.mjs <scenario-name>
- *   node scripts/showcase/run.mjs all          # record every scenario
+ * Records a showcase clip by scenario name (scenarios.mjs), or every clip with `all`. It opens the
+ * app on each scenario's fixture (?fixture=<file>) and needs the preview server at SHOWCASE_URL
+ * (default :4173).
  *
- * Opens the app directly on each scenario's fixture (?fixture=<file>), resolving
- * the label → file from the generated manifest. Requires the preview server at
- * SHOWCASE_URL (default :4173).
+ * @example
+ *   node scripts/showcase/run.mjs <scenario-name>
+ *   node scripts/showcase/run.mjs all
  */
 import { readFileSync } from 'node:fs';
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
 
-// Parse the label → file map out of the generated fixtures manifest.
+// The label-to-file map of the generated fixtures manifest.
 const fixturesTs = readFileSync('apps/textscene-web/src/fixtures.ts', 'utf8');
 const arrMatch = fixturesTs.match(/export const fixtures[^=]*=\s*(\[[\s\S]*?\]);/);
 const FIXTURES = arrMatch ? JSON.parse(arrMatch[1]) : [];

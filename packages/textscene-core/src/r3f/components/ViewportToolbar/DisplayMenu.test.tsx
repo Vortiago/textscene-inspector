@@ -56,8 +56,8 @@ describe('<DisplayMenu>', () => {
   });
 
   it('does not count a toggle the scene has disabled', () => {
-    // A preview that yielded to the scene's own light reads as checked-but-
-    // disabled; counting it would claim the user turned something on.
+    // A preview that yielded to the scene's light is checked but disabled, and
+    // does not count.
     render(<DisplayMenu toggles={[toggle('Preview Sun', { checked: true, disabled: true })]} />);
     expect(screen.getByTestId('display-menu-button').textContent).toBe('Display');
   });

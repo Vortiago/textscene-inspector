@@ -1,8 +1,7 @@
 /**
- * `<LineEdit>` render contract — chrome (StyleBox) + one clipped run of
- * text (placeholder/text/secret echo), no caret/selection/IME. Structure/
- * tint/clip/render-order assertions only (pixels are a golden-image concern
- * via `pnpm ref:godot`, not this suite).
+ * Tests the `<LineEdit>` render contract: StyleBox chrome and one clipped run of placeholder, text or
+ * secret echo, with no selection or IME. It asserts structure, tint, clip and render order only:
+ * pixels belong to the golden images and `pnpm ref:godot`.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -80,12 +79,9 @@ function findChromeMesh(scene: Rendered['scene']) {
 }
 
 /**
- * The FILL colour of a chrome mesh — NOT necessarily vertex 0: LineEdit's own
- * stylebox draws a border ring (its bottom border) BEFORE the centre fill
- * (`styleBoxFlatGeometry.ts`'s `drawRoundedRectangle` call order), so vertex 0
- * is the border colour whenever one is present. The fill's `r` channel is
- * never exactly 0 in this suite's fixtures (unlike the border, always black),
- * so the first non-zero-`r` vertex is unambiguously the fill.
+ * The fill colour of a chrome mesh. LineEdit's stylebox draws its bottom border before the fill
+ * (`styleBoxFlatGeometry.ts`'s `drawRoundedRectangle`), so vertex 0 can be the border. The fixtures'
+ * borders are black and their fills never have `r` = 0, so the first non-zero-`r` vertex is the fill.
  */
 function findFillColor(mesh: THREE.Mesh): { r: number; g: number; b: number; a: number } {
   const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
@@ -105,7 +101,7 @@ function findTextMesh(scene: Rendered['scene']) {
     .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
-/** The `<group position=[x,-y,0]>` directly wrapping the text mesh — its own local x/y give the pen offset. */
+/** The `<group position=[x,-y,0]>` wrapping the text mesh, whose local x and y give the pen offset. */
 function findTextGroup(scene: Rendered['scene']) {
   return scene
     .findAllByType('Group')
@@ -130,8 +126,8 @@ describe('<LineEdit> — chrome (StyleBoxQuad)', () => {
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const fill = findFillColor(mesh);
-    // style_normal_color = Color(0.1, 0.1, 0.1, 0.6), read raw — the StyleBox
-    // vertex attribute is decoded per fragment (`StyleBoxQuad.tsx`).
+    // style_normal_color = Color(0.1, 0.1, 0.1, 0.6), read raw: the StyleBox vertex attribute is
+    // decoded per fragment (`StyleBoxQuad.tsx`).
     expect(fill.r).toBeCloseTo(0.1, 5);
     expect(fill.a).toBeCloseTo(0.6, 5);
   });
@@ -268,10 +264,8 @@ describe('<LineEdit> — text: placeholder vs text vs secret echo', () => {
       );
       const mesh = findTextMesh(renderer.scene)!;
       const indexAttr = (mesh.geometry as THREE.BufferGeometry).index!;
-      // The un-overridden path must not be the degenerate one: an atlas missing
-      // this glyph drew ZERO quads here while every ASCII override drew the full
-      // run, so the default — the only spelling most scenes ever use — was the
-      // one spelling that rendered nothing.
+      // The default bullet, the spelling most scenes use, must not be the degenerate path: an atlas
+      // missing this glyph draws zero quads while an ASCII override draws the full run.
       expect(indexAttr.count).toBe(7 * 6);
     }
   );
@@ -312,7 +306,7 @@ describe('<LineEdit> — tint composition', () => {
       expect(chromeColor.getX(0)).toBeCloseTo(0.25, 4);
 
       const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-      // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, THEN linearised.
+      // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
       expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
     }
   );
@@ -331,7 +325,7 @@ describe('<LineEdit> — content-rect clipping', () => {
     // Inside the margin-inset content box.
     const inside = new THREE.Vector3(100, -15, 0);
     expect(planes.every((p) => p.distanceToPoint(inside) >= 0)).toBe(true);
-    // Inside the OUTER rect (200x30) but past the 4px right content margin.
+    // Inside the outer rect (200x30) but past the 4px right content margin.
     const pastContentRight = new THREE.Vector3(199, -15, 0);
     expect(planes.some((p) => p.distanceToPoint(pastContentRight) < 0)).toBe(true);
   });
@@ -372,12 +366,9 @@ describe('<LineEdit> registered through <ControlCanvasWalker> (end-to-end walker
 });
 
 /**
- * The SCENE-FONT (canvas-kind `FontMetrics`) path end to end. LineEdit's own
- * text placement is `line_edit.cpp:1392-1427`'s `x_ofs`/`y_ofs`, with NOTHING
- * font-kind-specific in it — this pins that, since an atlas-bake anchor
- * leaking back into the placement would be invisible on the atlas path (where
- * it would read as the correct total) and wrong here by
- * `ascentPx - base*fontSizePx/42` px.
+ * The scene-font path (canvas-kind `FontMetrics`) end to end. LineEdit's placement
+ * (`line_edit.cpp:1392-1427`'s `x_ofs`/`y_ofs`) has nothing font-kind-specific, so an atlas-bake anchor
+ * leaking into it reads correct on the atlas path and is `ascentPx - base*fontSizePx/42` px off here.
  */
 describe('<LineEdit> — scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
@@ -392,7 +383,7 @@ describe('<LineEdit> — scene-font (canvas-kind FontMetrics) text path', () => 
     );
   }
 
-  /** The canvas painter's mesh — a plain `MeshBasicMaterial` over a `CanvasTexture`, never the MSDF `ShaderMaterial` `findTextMesh` looks for. */
+  /** The canvas painter's mesh: a plain `MeshBasicMaterial` over a `CanvasTexture`, never the MSDF `ShaderMaterial` `findTextMesh` looks for. */
   function findCanvasTextMesh(scene: Rendered['scene']) {
     return scene
       .findAllByType('Mesh')
@@ -411,11 +402,9 @@ describe('<LineEdit> — scene-font (canvas-kind FontMetrics) text path', () => 
   it('places the text at the pure line_edit.cpp offset — no atlas-bake anchor anywhere in it', async () => {
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene)!;
-    // Scene font at 16px: ascentPx = ceil(800*16/1000) = 13, descentPx =
-    // ceil(200*16/1000) = 4; LineEdit sets no line_spacing, so linePitchPx =
-    // 17 and textHeightPx = 17. contentMargin 4 -> y_area = trunc(30-4-4) = 22,
-    // y_ofs = trunc(4 + (22-17)/2) = trunc(6.5) = 6; x_ofs = 4 (LEFT).
-    // three's Y is negated Godot px.
+    // Scene font at 16px: ascentPx = ceil(800*16/1000) = 13, descentPx = ceil(200*16/1000) = 4, and
+    // LineEdit sets no line_spacing, so textHeightPx = 17. With contentMargin 4, y_area = 22,
+    // y_ofs = trunc(4 + (22-17)/2) = 6 and x_ofs = 4 (LEFT). three's Y is negated Godot px.
     const group = mesh.parent as THREE.Object3D;
     expect(group.position.x).toBe(4);
     expect(group.position.y).toBe(-6);
@@ -430,10 +419,9 @@ describe('<LineEdit> — scene-font (canvas-kind FontMetrics) text path', () => 
 });
 
 /**
- * A plain-colour `<ControlQuad>` mesh: `meshBasicMaterial` (matched by
- * `.type`, not `instanceof` — the test renderer's own THREE module instance
- * differs from this file's import), no vertex `color` attribute (unlike
- * chrome) and no MSDF `uColor` uniform (unlike text).
+ * A plain-colour `<ControlQuad>` mesh: `meshBasicMaterial`, matched by `.type` because the test
+ * renderer's THREE instance differs from this file's import, with no vertex `color` (unlike chrome)
+ * and no MSDF `uColor` (unlike text).
  */
 function findControlQuadMeshes(scene: Rendered['scene']) {
   return scene
@@ -494,8 +482,8 @@ describe('<LineEdit> — right_icon', () => {
         .map((x) => x.instance as THREE.Mesh)
         .find((x) => ((x.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined))!
         .material as THREE.ShaderMaterial & { clippingPlanes?: THREE.Plane[] };
-    // Just past the icon-narrowed content edge (200 - 4 margin - 32 icon = 164):
-    // inside the OLD (icon-unaware) content rect, outside the new one.
+    // Just past the icon-narrowed content edge (200 - 4 margin - 32 icon = 164): inside a content rect
+    // that ignored the icon, outside this one.
     const probe = new THREE.Vector3(170, -15, 0);
     const iconPlanes = material(withIcon).clippingPlanes!;
     const plainPlanes = material(without).clippingPlanes!;
@@ -527,8 +515,8 @@ describe('<LineEdit> — clear_button_enabled', () => {
   });
 
   it('puts the clear icon at the LEFT margin under RTL (line_edit.cpp:1455-1460)', async () => {
-    // `icon_pos = Point2(width - icon_w - margin_right, …); if (rtl) icon_pos.x =
-    // style->get_margin(SIDE_LEFT);` — the RTL arm replaces the x outright.
+    // `icon_pos = Point2(width - icon_w - margin_right, ...); if (rtl) icon_pos.x =
+    // style->get_margin(SIDE_LEFT);`: the RTL arm replaces the x outright.
     const iconXFor = async (rtl: boolean) => {
       const renderer = await ReactThreeTestRenderer.create(
         <LineEdit

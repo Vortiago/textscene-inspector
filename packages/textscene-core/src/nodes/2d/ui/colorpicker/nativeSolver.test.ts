@@ -104,8 +104,8 @@ const ALL_ROWS_HIDDEN = {
   presetsVisible: false,
 };
 
-// A deterministic stand-in for `ctx.measureText`/`TextWidthMeasurer` — 10px
-// per character, 20px tall, so every expected number below is hand-checkable.
+// A stand-in for `ctx.measureText`: 10px per character and 20px tall, so each
+// expected number can be checked by hand.
 const measure = (text: string) => ({ x: text.length * 10, y: 20 });
 const measureText: SolveContext['measureText'] = (text) => measure(text);
 
@@ -170,9 +170,8 @@ describe('colorPickerRows', () => {
   });
 
   it('swatches row 1 floors to menu_btn\'s own 16px icon height even with no text measurer', () => {
-    // `palette_box`'s row height is max(btn_preset text, menu_btn icon) — the
-    // icon still sits in that row when `measure` cannot size the text beside
-    // it; `btn_recent_preset`'s own row still follows, separation and all.
+    // The `palette_box` row is as tall as max(btn_preset text, menu_btn icon), also
+    // with no `measure`. The `btn_recent_preset` row and its separation still follow.
     const rows = colorPickerRows(400, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 4, presetsVisible: true }, null);
     expect(rows.swatches!.h).toBe(28); // 24 (row1, menu_btn nat: icon(16)+button.normal margin(8)) + 4 (separation) + 0 (row2, text contributes nothing)
   });
@@ -282,7 +281,7 @@ describe('colorPickerValueColumnWidth', () => {
 });
 
 describe('colorPickerHexFieldMinWidth', () => {
-  // line_edit.cpp:2443-2477, a plain LineEdit — no SpinBox buttons block.
+  // line_edit.cpp:2443-2477: a plain LineEdit, with no SpinBox buttons block.
   it('is the LineEdit style margin(8) + 4*em("W")(10), no buttons block', () => {
     expect(colorPickerHexFieldMinWidth(THEME, measure)).toBe(48); // 8 + 40
   });
@@ -333,8 +332,7 @@ describe('colorPickerSliderBoxRect', () => {
     expect(colorPickerSliderBoxRect({ x: 0, y: 0, w: 400, h: 28 }, THEME, { x: 16, y: 16 })).toEqual({ x: 0, y: 6, w: 400, h: 16 }); // (28-16)/2
   });
 
-  // control.h fit_child_in_rect: Math::floor, not a bare /2 — an odd
-  // remainder floors DOWN, it does not round to the nearest pixel.
+  // control.h fit_child_in_rect uses Math::floor, so an odd remainder floors down.
   it('floors an odd remainder — control.h fit_child_in_rect', () => {
     expect(colorPickerSliderBoxRect({ x: 0, y: 0, w: 400, h: 29 }, THEME, { x: 16, y: 16 }).y).toBe(6); // floor(13/2)=6, not 7
   });
@@ -353,7 +351,7 @@ describe('colorPickerIntensityRatio', () => {
 });
 
 describe('colorPickerChannelGrabberRect', () => {
-  // slider.cpp:322-334,363, center_grabber=true branch: areasize is the FULL
+  // slider.cpp:322-334,363, center_grabber=true branch: areasize is the full
   // width, grabber_shift = -grabber_width/2 centres the icon ON the ratio point.
   it('centres the 16px grabber on the ratio point, offset down by grabber_offset', () => {
     const r = colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0.5, { x: 16, y: 16 }, 8);
@@ -371,8 +369,7 @@ describe('colorPickerChannelGrabberRect', () => {
 
 describe('sliderGridRowRects', () => {
   it('splits label(10)/slider(fill)/value(48) per row, stacked with the grid\'s own v_separation — color_picker.cpp:2172-2180', () => {
-    // labelWidth/valueWidth are the caller's own (colorPickerLabelColumnWidth/
-    // colorPickerValueColumnWidth) — this test exercises the column SPLIT only.
+    // The caller supplies labelWidth and valueWidth. This test covers the column split only.
     const rows = sliderGridRowRects({ x: 0, y: 0, w: 400, h: 156 }, 5, THEME, 10, 48);
     expect(rows).toHaveLength(5);
     expect(rows[0]).toEqual({
@@ -386,20 +383,10 @@ describe('sliderGridRowRects', () => {
 });
 
 /**
- * `layout_direction = RTL` on a ColorPicker. `color_picker.cpp` never calls
- * `is_layout_rtl()` at all: the whole widget tree is built from ordinary
- * containers in the constructor, and each one mirrors its OWN row.
- * `BoxContainer::_resort` walks an RTL horizontal box's children in REVERSE
- * and lays them out left to right (`box_container.cpp:184-192`);
- * `GridContainer` starts `col_ofs` at the grid's right edge and walks left
- * (`grid_container.cpp:193-197,218-223`). `Container::fit_child_in_rect` is
- * not a second mirror — `Control::set_rect` pre-mirrors through
- * `_compute_offsets` (`control.cpp:904-915`) exactly as much as
- * `_size_changed` mirrors back (`:1785-1787`), so a child lands where its
- * container put it either way.
- *
- * Every expectation below is that reverse walk done by hand, never the
- * implementation's own mirror applied twice.
+ * `layout_direction = RTL`: `color_picker.cpp` never calls `is_layout_rtl()`, and each container mirrors its row
+ * (`box_container.cpp:184-192`, `grid_container.cpp:193-197,218-223`), with no second mirror
+ * (`control.cpp:904-915`, `:1785-1787`). Each expectation is the reverse walk done by
+ * hand, not the implementation's mirror.
  */
 describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-223)', () => {
   it('svAndHueRects puts hue_slider first, at the left edge', () => {
@@ -464,7 +451,7 @@ describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-22
   });
 
   it('colorPickerChannelGrabberRect reads the ratio from the right — slider.cpp:363', () => {
-    // `(rtl ? 1 - ratio : ratio) * areasize + grabber_shift`, the SAME branch
+    // `(rtl ? 1 - ratio : ratio) * areasize + grabber_shift`, the same branch
     // the stock grabber already takes (`shared/sliderSolver.ts`).
     expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0, { x: 16, y: 16 }, 8, true).x).toBe(392);
     expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 1, { x: 16, y: 16 }, 8, true).x).toBe(-8);

@@ -1,5 +1,5 @@
 /**
- * Factory for creating texture processors — the image slice's loader-facing
+ * Factory for creating texture processors, the image slice's loader-facing
  * adapter (`resources/formats/image/`, ADR-0031). Stays here because the
  * `ResourceLoader` constructs it alongside its peer factories.
  */

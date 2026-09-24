@@ -1,17 +1,8 @@
 /**
- * Curve3D decode: `_data` property → control points, plus polyline tessellation
- * for Path3D / PathFollow3D / CSGPolygon3D's PATH mode.
- *
- * The 3D twin of the curve2d slice. Godot stores a Curve3D as
- * `_data = { "points": PackedVector3Array(...), "tilts": PackedFloat32Array(...) }`
- * with **nine floats per control point** in the order
- * `in.xyz, out.xyz, position.xyz` — the in/out tangents are cubic-Bézier handles
- * relative to the point's position. The per-point `tilts` (roll) array is not
- * needed for the polyline or position-follow and is ignored.
- *
- * Pure module (no THREE), so the slice has no `build.ts`. Godot 3D space is
- * right-handed Y-up, matching three.js, so coordinates map directly (no
- * conjugation, unlike the 2D twin).
+ * Curve3D decode: `_data = { "points": PackedVector3Array(...), "tilts": ... }`, nine
+ * floats per point (`in.xyz, out.xyz, position.xyz`, handles relative to the
+ * position), to control points and a tessellated polyline. `tilts` is ignored. No
+ * THREE: Godot 3D space is right-handed Y-up, as three.js is.
  */
 
 import { parsePackedVector3Array } from '../../shapes/packedArray';

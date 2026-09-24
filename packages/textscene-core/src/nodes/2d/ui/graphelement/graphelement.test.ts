@@ -1,4 +1,4 @@
-/** GraphElement registration — parser wiring. */
+/** GraphElement registration: parser wiring. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';

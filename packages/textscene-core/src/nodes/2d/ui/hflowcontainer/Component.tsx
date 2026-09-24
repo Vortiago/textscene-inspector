@@ -1,5 +1,5 @@
 /**
- * HFlowContainer's native (WebGL canvas) painter — a Container draws no
+ * HFlowContainer's native (WebGL canvas) painter: a Container draws no
  * chrome of its own; see `flowcontainer/Component.tsx`'s doc for why this is
  * registered anyway.
  */

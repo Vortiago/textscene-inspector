@@ -70,7 +70,7 @@ describe('colorModeChannels', () => {
   it('MODE_OKHSL reads get_ok_hsl_h/s/l * 360/100/100 off color_normalized — color_mode.cpp:349-370', () => {
     const [h, s, l] = colorModeChannels(MODE_OKHSL, RED);
     // ok_color.h's srgb_to_okhsl for sRGB red: h=0.0812052366, s=1, l=0.5680846525
-    // (an independent Python transcription of the same cited algorithm; see okhsl.test.ts).
+    // (from a separate Python transcription of the same algorithm).
     expect(h.value).toBeCloseTo(29.2338852, 4);
     expect(s.value).toBeCloseTo(100, 4);
     expect(l.value).toBeCloseTo(56.8084653, 4);
@@ -101,8 +101,8 @@ describe('formatSliderValue', () => {
     expect(formatSliderValue(255, 0)).toBe('255');
   });
 
-  // ustring.cpp:1467-1481 "Destroy trailing zeroes, except one after period" —
-  // 0.500 trims to 0.5, not the naively padded 0.500 a plain toFixed(3) gives.
+  // ustring.cpp:1467-1481 "Destroy trailing zeroes, except one after period":
+  // 0.500 trims to 0.5, where toFixed(3) gives 0.500.
   it('trims trailing zeroes past the decimal point, keeping at least one digit', () => {
     expect(formatSliderValue(0.5, 3)).toBe('0.5');
     expect(formatSliderValue(0, 3)).toBe('0.0');

@@ -1,8 +1,6 @@
 /**
- * Contract tests for the AnimatedValue push registry (ADR-0016, ADR-0017):
- * the value-push seam for non-transform animation tracks. The end-to-end
- * frame/modulate/size driving is covered by the AnimationPlayer driver tests;
- * here we pin the registry's keying (node path + property) and release contract.
+ * The AnimatedValue push registry (ADR-0016, ADR-0017) keys by node path and
+ * property, and releases with `null`. The driver tests cover the end-to-end push.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';

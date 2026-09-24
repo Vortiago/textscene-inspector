@@ -1,4 +1,4 @@
-/** ItemList registration — parser. */
+/** ItemList registration: parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseItemList } from './parser';

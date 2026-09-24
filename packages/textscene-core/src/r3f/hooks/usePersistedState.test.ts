@@ -1,11 +1,6 @@
 /**
- * usePersistedState — the shared localStorage-backed state hook
- * `TscnPreviewShell` uses for dock layout + viewport mode, mirroring the
- * web app's existing inline pattern (r3f-main.tsx) so both hosts get it for
- * free (VS Code webviews are a browser context too — localStorage works the
- * same way there). Writes are trailing-debounced (a splitter drag calls the
- * setter per pointermove) and flushed on unmount, so timing-sensitive cases
- * run under fake timers.
+ * `usePersistedState`. Writes are trailing-debounced and flushed on unmount, so timing-sensitive
+ * cases run under fake timers.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
@@ -22,7 +17,6 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-/** Let the trailing debounce fire. */
 function flushDebounce() {
   act(() => {
     vi.runAllTimers();

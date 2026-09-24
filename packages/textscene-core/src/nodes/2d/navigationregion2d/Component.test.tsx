@@ -94,7 +94,7 @@ describe('<NavigationRegion2D>', () => {
   });
 
   it('draws nothing when the polygon is unreadable, instead of faulting the render', async () => {
-    // The decode totalizes what used to throw straight out of a render pass.
+    // The decode is total, so an unreadable polygon cannot throw out of a render pass.
     const renderer = await render(true, {
       ...NAVPOLY_TRES,
       properties: { vertices: 'PackedVector2Array(0, oops)', polygons: '[PackedInt32Array(0, 1, 2)]' },

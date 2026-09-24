@@ -1,23 +1,6 @@
 /**
- * Font decode — one Font resource body (a `.tres`'s own `[resource]`, one of
- * its `[sub_resource]`s, or a scene's own inline `[sub_resource]`) in, a
- * `FontResource` out.
- *
- * Two entry points over one property-bag shape, because a Font arrives from
- * two scopes with two different ways of reaching its dependencies:
- *
- *   - `decodeFont` — the FILE-BACKED path. A Font-valued property resolves to
- *     a **Sub-resource path** address that the caller `await`s through the
- *     font loader, so this one is async.
- *   - `resolveInlineFontResource` — the SCENE-SCOPE path. A scene's own inline
- *     FontFile/SystemFont/FontVariation is never addressed through the loader
- *     (`parseTresFile` requires a `[gd_resource]` header, which a `.tscn`'s
- *     `[gd_scene]` is not): its `SubResource` refs name SIBLINGS of the same
- *     scene, decoded directly here, and its `ExtResource` refs are read off the
- *     already-populated font cache. Synchronous, because the solve walk that
- *     calls it cannot `await` mid-walk.
- *
- * Both keep every non-identity property raw — see `types.ts` for that contract.
+ * Font decode: one Font resource body in, a `FontResource` out, from a file or from a
+ * scene's own scope. Both paths keep every non-identity property raw (see `types.ts`).
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
@@ -25,7 +8,7 @@ import { findSubResource, parseResourceReference } from '../../SubResourceResolv
 import { resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { FontCacheReader, FontLoaderFn, FontResource } from './types';
 
-/** The three type names this slice claims — the gate both decode paths apply to a `SubResource` ref. */
+/** The three type names this slice claims: the gate both decode paths apply to a `SubResource` ref. */
 export const FONT_SUB_RESOURCE_TYPES: ReadonlySet<string> = new Set([
   'FontFile',
   'SystemFont',
@@ -33,9 +16,9 @@ export const FONT_SUB_RESOURCE_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Every `ExtResource(...)`/`SubResource(...)` reference literal inside a value —
- * covers both `fallbacks = Array[Font]([ExtResource("a"), ExtResource("b")])`
- * and a bare single reference the same regex matches as a one-element list.
+ * Every `ExtResource(...)`/`SubResource(...)` reference literal inside a value, from
+ * `fallbacks = Array[Font]([ExtResource("a"), ExtResource("b")])` or a bare single
+ * reference, which comes back as a one-element list.
  */
 export function extractResourceRefs(value: string): string[] {
   const refs: string[] = [];
@@ -64,10 +47,9 @@ export function parsePackedStringArray(value: string): string[] {
 }
 
 /**
- * Decode one file-backed Font resource body, recursing through `loadFont` for
- * any Font-valued property. `selfPath` is the address `SubResource`-valued
- * refs resolve against (`resolveRefToResourcePath`'s `res://file.tres::SubId`
- * form) — always the OWNING file, never the address currently being built.
+ * Decode one file-backed Font resource body, awaiting `loadFont` for each Font-valued
+ * property. `selfPath` is the owning file that `SubResource` refs resolve against
+ * (`resolveRefToResourcePath`'s `res://file.tres::SubId` form), never the address being built.
  */
 export async function decodeFont(
   selfPath: string,
@@ -120,18 +102,10 @@ export async function decodeFont(
 }
 
 /**
- * Resolve a Font-valued reference found in THIS document's OWN scope —
- * `ExtResource` through the (possibly still-loading) font cache, `SubResource`
- * by decoding the sibling sub-resource directly, recursing for its own
- * `base_font`/`fallbacks` exactly as `decodeFont` does for a file-backed Font,
- * just synchronously instead of `await`ing. Both a Control's
- * `theme_override_fonts/<name>` and an inline Theme's `<Type>/fonts/<name>`
- * commonly reference one.
- *
- * An address not yet cached is pushed onto `pending` and treated as unresolved
- * for THIS pass; the caller requests it and the next pass — triggered once the
- * `font` processor's `loaded`/`failed` event bumps the generation — sees the
- * real value.
+ * Resolve a Font reference in a scene's own scope, synchronously, since the solve walk
+ * cannot await: `ExtResource` through the font cache, and `SubResource` by decoding the
+ * sibling as `decodeFont` does. The loader cannot serve it: `parseTresFile` requires a
+ * `[gd_resource]` header, which a `.tscn` lacks.
  */
 export function resolveInlineFontResource(
   ref: string | undefined,
@@ -140,10 +114,9 @@ export function resolveInlineFontResource(
   fontCache: FontCacheReader,
   pending: Set<string>,
   /**
-   * SubResource ids already on this walk. `base_font`/`fallbacks` can name a
-   * sibling that names them back, and this resolver runs synchronously inside
-   * the Control rect solve — an unguarded cycle blows the stack out of a React
-   * render rather than degrading.
+   * SubResource ids already on this walk. `base_font`/`fallbacks` can name a sibling
+   * that names them back, and this resolver runs inside the Control rect solve, so an
+   * unguarded cycle blows the stack out of a React render.
    */
   visiting: ReadonlySet<string> = new Set()
 ): FontResource | null {
@@ -156,6 +129,8 @@ export function resolveInlineFontResource(
     if (!path) return null;
     const cached = fontCache.getCached(path);
     if (cached === undefined) {
+      // Unresolved for this pass. The caller requests it, and the pass after the
+      // `font` processor's `loaded`/`failed` event sees the value.
       pending.add(path);
       return null;
     }
@@ -166,8 +141,8 @@ export function resolveInlineFontResource(
   const sub = findSubResource(internalResources, parsed.id);
   if (!sub) return null;
   const nowVisiting = new Set(visiting).add(parsed.id);
-  // `parseInternalResource` echoes the heading's own `id` into `data` — strip
-  // it back out, or it leaks into `properties` as a fake declared property.
+  // `parseInternalResource` echoes the heading's own `id` into `data`. Strip it, or
+  // it leaks into `properties` as a fake declared property.
   const { id: _id, ...properties } = sub.data as Record<string, string>;
   const resolveNested = (nestedRef: string | undefined): FontResource | null =>
     resolveInlineFontResource(
@@ -199,9 +174,8 @@ export function resolveInlineFontResource(
       return { kind: 'file', bytes: undefined, mimeType: undefined, fallbacks: resolved, properties: rest };
     }
     default:
-      // Not one of the three Font sub-resource types — the same gate
-      // `subResourceTypeGate(FONT_SUB_RESOURCE_TYPES)` applies to the
-      // file-backed path.
+      // Not a Font sub-resource type: the gate the file-backed path applies through
+      // `subResourceTypeGate(FONT_SUB_RESOURCE_TYPES)`.
       return null;
   }
 }

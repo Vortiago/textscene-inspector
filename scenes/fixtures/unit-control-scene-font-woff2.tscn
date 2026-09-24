@@ -1,42 +1,9 @@
 [gd_scene load_steps=2 format=3]
 
-; Same Theme/ancestor-walk wiring as unit-control-scene-font-theme.tscn — root
-; Control, `theme = ExtResource(...)`, two Labels with no local font/size —
-; but the Theme's `default_font` is a `.woff2` (Recursive, a variable Latin
-; text face already vendored in the demos corpus, copied byte-for-byte —
-; one of exactly two `.woff2` references anywhere in the corpus; the other is
-; an icon font with no Latin glyphs to render). WOFF2's table data is
-; Brotli-compressed and nothing in this webview can decompress it (no browser
-; `DecompressionStream` brotli format, and the CSP blocks WASM), so
-; `sfntTables.ts` returns null for it and the font's ascent/descent fall back
-; to canvas
-; `TextMetrics.fontBoundingBoxAscent`/`.fontBoundingBoxDescent`, measured
-; against the SAME registered `FontFace` at a fixed 1000px reference size —
-; a wholly different code path from the real `head`/`hhea` table read the
-; sibling `.otf` fixture exercises. That fallback previously rested on a
-; single scratch-probe measurement with no golden at all.
-;
-; The typeface is NOT the same as the sibling fixture's: no `.otf`/`.woff2`
-; pair of the same face exists anywhere in the corpus, and vendoring one
-; solely to make the pair match would be adding a font this repo does not
-; already ship. So this scene is arbitrated on its OWN terms, directly
-; against Godot's render of this exact scene — not by pixel comparison
-; against unit-control-scene-font-theme.tscn's baseline, which proves nothing
-; about a font neither renders.
-;
-; Godot 4.6.3, `--mode 2d`, arbitrated directly against this scene's own
-; Godot render (never against the sibling's baseline — see above). Ink
-; rows/columns measured off both renders (DirectLabel / NestedLabel, against
-; the 64..700 plate each sits in):
-;
-;   DirectLabel  rows  Godot 56-85   ours 55-86    (1 px either edge)
-;                cols  Godot 67-596  ours 67-596     exact
-;   NestedLabel  rows  Godot 256-295 ours 255-295   (1 px)
-;                cols  Godot 67-604  ours 67-604      exact
-;
-; Column extents match exactly; rows are within 1 px — the canvas-fallback
-; ascent/descent this scene exists to guard lands within the same AA/
-; rasteriser slack the sibling `.otf` fixture's header documents.
+; The one variable: a `.woff2` `default_font`. No Brotli decoder runs in the webview, so sfntTables.ts
+; returns null and ascent and descent come from TextMetrics at a 1000px reference size, not the
+; head/hhea read the `.otf` sibling covers. The typeface differs, so Godot arbitrates it directly:
+; columns exact, rows within 1 px.
 
 [ext_resource type="Theme" path="res://unit-control-scene-font-woff2.tres" id="1"]
 

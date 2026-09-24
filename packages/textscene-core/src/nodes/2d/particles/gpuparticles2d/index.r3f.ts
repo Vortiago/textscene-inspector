@@ -1,5 +1,5 @@
 /**
- * GPUParticles2D draws nothing here YET — the badge reads "not implemented". The
+ * GPUParticles2D is not drawn yet, so the badge reads "not implemented". The
  * Node2D base still mounts, for `visible` and the workspace split.
  */
 

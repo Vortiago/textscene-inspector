@@ -1,5 +1,5 @@
 /**
- * AnimationTree property formatter — sections shown in the details panel.
+ * AnimationTree property formatter: the sections the details panel shows.
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';

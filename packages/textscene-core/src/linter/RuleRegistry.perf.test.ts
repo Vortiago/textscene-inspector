@@ -1,26 +1,8 @@
 /**
- * Perf regression test for `getRulesForNodeType`.
- *
- * `Linter.lintNode` calls `getRulesForNodeType(node.type)` once per node in
- * the scene. The unfixed implementation re-materializes the FULL registered-
- * rule array (`Array.from(this.rules.values())`) and re-filters it on every
- * single call, so its cost per call is proportional to the total number of
- * REGISTERED rules (R) regardless of how many times it's been called before
- * for that same type. Real scenes call this many times (M, once per node)
- * for the same handful of node types, so the fix caches the filtered result
- * per node type: the first lookup for a type still costs O(R), every
- * subsequent lookup for that SAME type is O(matches), independent of R.
- *
- * The discriminating axis here is registered-rule COUNT (R), not node count:
- * with M (call count) held fixed, growing R should barely move the cached
- * total time (dominated by the constant M lookups plus one O(R) build),
- * whereas the unfixed per-call re-filter scales M*R directly with R.
- *
- * This measures real (but tiny) per-call costs, so — matching the timing-test
- * convention used for the linter-tree-walk perf test — it takes the MIN of
- * several trials per side (filters out one-off scheduler/GC hiccups rather
- * than being skewed by them) and uses a generous ratio threshold well below
- * the ~10x an uncached, rule-count-proportional lookup would show.
+ * Perf regression test for `getRulesForNodeType`, which `Linter.lintNode` calls for each node. Without the per-type cache
+ * each call re-filters every registered rule, O(R). The test grows the registered-rule count R with the call count M
+ * fixed: the cached time barely moves, while an uncached lookup scales M*R. It takes the minimum of several trials per
+ * side, against scheduler and GC hiccups, and a ratio threshold well below the ~10x an uncached lookup shows.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -29,9 +11,8 @@ import type { LintRule } from './types.js';
 
 function registerManyRules(registry: RuleRegistry, count: number): void {
   for (let i = 0; i < count; i++) {
-    // Each rule targets its OWN distinct node type, so none of them match
-    // the 'MeshInstance3D' type queried below — growing this count grows
-    // the registry without growing the match count for our target type.
+    // Each rule targets its own node type, so none match the 'MeshInstance3D'
+    // queried below: this count grows the registry, not the match count.
     const rule: LintRule = {
       meta: {
         name: `generated-rule-${i}`,
@@ -44,11 +25,8 @@ function registerManyRules(registry: RuleRegistry, count: number): void {
     registry.register(rule);
   }
 
-  // A handful of rules that DO match 'MeshInstance3D' (a universal rule plus
-  // a couple of exact-type rules), independent of `count`, so each cached
-  // lookup copies a small-but-real array — representative of a real registry
-  // where several rules apply per node type, and large enough that the
-  // per-call cost isn't dwarfed by pure loop/timer overhead.
+  // Rules that do match 'MeshInstance3D', independent of `count`, so each cached lookup copies a small real array,
+  // large enough that the per-call cost is not lost in loop and timer overhead.
   for (let i = 0; i < 3; i++) {
     registry.register({
       meta: {

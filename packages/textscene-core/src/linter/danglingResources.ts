@@ -1,25 +1,8 @@
 /**
- * One error per registered resource slot whose reference names an id the
- * file never declares.
- *
- * The text loader resolves `SubResource("id")` / `ExtResource("id")` while it
- * tokenises the VALUE, before any setter sees it, and fails the whole load on
- * a miss: `resource_format_text.cpp:113`
- * `ERR_FAIL_COND_V(!int_resources.has(id), ERR_INVALID_PARAMETER)` and the
- * ext twin at `:138`. The slot's class never enters into it, so the fact is
- * stated once here for every `v.resourceReference` registration rather than
- * per slice.
- *
- * Which keys are resource slots is the registry's answer, not a text scrape:
- * `createResourceReferenceValidator` marks every validator it builds. A
- * value phase 1 refused is not a reference and is skipped — its format is the
- * strict parser's diagnostic, and a second error naming a missing resource
- * would be wrong.
- *
- * `[sub_resource]` bodies are swept in file order because `int_resources[id]
- * = res` lands as each heading is read (`:629`), ahead of that body's own
- * properties: a body sees the ids above it and its own, and a forward
- * reference dangles.
+ * One error per registered resource slot whose reference names an id the file never declares. The loader resolves the
+ * reference while it tokenises the value, before any setter, and fails the whole load on a miss:
+ * `resource_format_text.cpp:113` `ERR_FAIL_COND_V(!int_resources.has(id), ERR_INVALID_PARAMETER)` and the ext twin at `:138`.
+ * So the fact lives here once, and the registry says which keys are slots (`createResourceReferenceValidator` marks them).
  */
 
 import type { TscnNode, TscnScene } from '../parser/types.js';
@@ -37,13 +20,9 @@ interface Declared {
 }
 
 /**
- * Whether the declaration for `key` is a resource slot.
- *
- * An indexed family registers ONE dispatcher for `item_<i>/<leaf>`, so the
- * declaration is the dispatcher and the leaf it routes to is not named. The
- * dispatcher forwards to exactly one leaf, so it accepting a reference literal
- * means that leaf did — and only a resource leaf accepts one: no family that
- * declares a resource leaf declares a `v.any()` leaf beside it.
+ * Whether the declaration for `key` is a resource slot. An indexed family registers one dispatcher for
+ * `item_<i>/<leaf>`, which forwards to exactly one leaf. So its accepting a reference literal means a resource leaf did:
+ * no family that declares a resource leaf declares a `v.any()` leaf beside it.
  */
 function isResourceSlot(declaration: PropertyValidator, key: string, value: string): boolean {
   if (isResourceSlotValidator(declaration)) return true;
@@ -63,6 +42,8 @@ function sweep(
   for (const [key, value] of Object.entries(properties)) {
     if (typeof value !== 'string') continue;
     const ref = resourceRef(value.trim());
+    // Not a well-formed reference: its format is the strict parser's diagnostic, and a second error naming a
+    // missing resource would be wrong.
     if (ref === null) continue;
     const table = ref.kind === 'SubResource' ? declared.int : declared.ext;
     if (table.has(ref.id)) continue;
@@ -88,6 +69,8 @@ export function danglingResourceDiagnostics(scene: TscnScene): Diagnostic[] {
   const int = new Set<string>();
   const all = new Set((scene.internalResources ?? []).map((r) => r.id));
 
+  // File order: `int_resources[id] = res` lands as each heading is read (`:629`), ahead of its body, so a body sees
+  // the ids above it and its own, and a forward reference dangles.
   for (const resource of scene.internalResources ?? []) {
     int.add(resource.id);
     // `id` sits in `data` beside the properties (`parseInternalResource`).

@@ -1,10 +1,7 @@
 /**
- * The discovery half of the Control-raster publisher: which sub-viewports need
- * an off-screen DOM host, where they sit in the path space, and — the part that
- * is easy to get quietly wrong — which resource scope their Controls resolve in.
- *
- * Pure, so every case is asserted directly. The rasterisation half needs real
- * layout and a real rasteriser and is gated in the browser (ADR-0024).
+ * The discovery half of the Control-raster publisher: which sub-viewports it
+ * renders, where they sit in the path space, and which resource scope their
+ * Controls resolve in. The rendering half is gated in the browser (ADR-0024).
  */
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
@@ -20,7 +17,7 @@ function parse(source: string): TscnScene {
 }
 
 /**
- * Walked up from THIS file, never `process.cwd()`: the suite runs from the repo
+ * Walked up from this file, never `process.cwd()`: the suite runs from the repo
  * root under `pnpm test:unit` and from the package dir under
  * `pnpm --filter @textscene/core test`.
  */
@@ -98,17 +95,17 @@ size = Vector2i(320, 240)
 
 [node name="Label" type="Label" parent="Outer/Panel/Inner"]
 `);
-    // Both: Godot rasterises each viewport into its OWN target, and
+    // Both: Godot rasterises each viewport into its own target, and
     // `ControlDispatcher` stops at the inner boundary, so the outer host would
     // otherwise draw nothing where the inner one belongs.
     expect(collect(scene).map((v) => v.path)).toEqual(['Root/Outer', 'Root/Outer/Panel/Inner']);
   });
 
   it('scopes Controls inside a collapsed single-root instance to the SUB-SCENE resources', () => {
-    // ADR-0013: a single-root `.tscn` instance collapses INTO its sub-scene
+    // ADR-0013: a single-root `.tscn` instance collapses into its sub-scene
     // root, so the host's ExtResource ids never apply below it. `gui_in_3d`
-    // instances `gui_panel_3d`, whose TextureRect names ExtResource("2") —
-    // an id the host scene does not even define.
+    // instances `gui_panel_3d`, whose TextureRect names ExtResource("2"),
+    // an id the host scene does not define.
     const sub = parse(`[gd_scene format=3]
 
 [ext_resource type="Texture2D" path="res://icon.webp" id="2"]
@@ -138,7 +135,7 @@ texture = ExtResource("2")
   it('keeps the OUTER scope for a host-authored child of an instance node', () => {
     // A multi-root sub-scene does not collapse: the instance node stays, its
     // authored children keep the outer scope, and the loaded roots get the
-    // sub-scene's — the same split `liveChildGroups` documents.
+    // sub-scene's, the split `liveChildGroups` documents.
     const authored = parse(`[gd_scene format=3]
 
 [ext_resource type="Texture2D" path="res://inner.png" id="9"]
@@ -149,10 +146,9 @@ texture = ExtResource("2")
 
 [node name="Label" type="Label" parent="Deep"]
 `);
-    // Two roots, so `mergeInstanceRoot` refuses the collapse. Built here rather
-    // than parsed because a `.tscn` on disk always has exactly one root — the
-    // multi-root shape reaches the walk from the loader's cache (a GLB, a
-    // composed scene), which is what this stands in for.
+    // Two roots, so `mergeInstanceRoot` refuses the collapse. Built rather than
+    // parsed: a `.tscn` has one root, and the multi-root shape reaches the walk
+    // from the loader's cache (a GLB, a composed scene).
     const sub = {
       nodes: [{ ...authored.nodes[0]!, children: [] }, authored.nodes[0]!.children[0]!],
       internalResources: authored.internalResources,
@@ -182,15 +178,10 @@ texture = ExtResource("2")
   });
 
   it("keeps the HOST internalResources pool for a host-authored SubViewport under a multi-root instance, not the sub-scene's", () => {
-    // Regression guard for `liveChildGroups`' 5th (optional) `internalResources`
-    // argument: dropping it at this call site defaults to an empty pool, and
-    // every OTHER test in this file stays green — the collapsed single-root
-    // test above reads the sub-scene's own cached pool regardless of this
-    // argument, and 'keeps the OUTER scope for a host-authored child of an
-    // instance node' only checks externalResources. So a wrong or missing pool
-    // here is silent everywhere else in this file. Host and sub-scene both
-    // declare id "1" for a DIFFERENT StyleBoxFlat, so a wrong-pool resolution
-    // reads as a loud (wrong colour) mistake rather than a quiet (absent) one.
+    // Pins `liveChildGroups`' optional `internalResources` argument, which no
+    // other test here reads. Host and sub-scene both declare id "1" for a
+    // different StyleBoxFlat, so a wrong pool shows as a wrong colour, not as
+    // an absent one.
     const authored = parse(`[gd_scene format=3]
 
 [sub_resource type="StyleBoxFlat" id="1"]
@@ -233,7 +224,7 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
     expect(hostOwned.internalResources).toBe(host.internalResources);
     expect(hostOwned.internalResources[0]!.data.bg_color).toBe('Color(0.9, 0.9, 0.9, 1)');
 
-    // The sub-scene's own SubViewport keeps resolving against ITS pool.
+    // The sub-scene's own SubViewport keeps resolving against its own pool.
     const subOwned = byPath['World/Multi/Deep']!;
     expect(subOwned.internalResources).toBe(sub.internalResources);
     expect(subOwned.internalResources[0]!.data.bg_color).toBe('Color(0.1, 0.2, 0.3, 1)');
@@ -273,19 +264,17 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
     );
     const found = collect(scene);
     expect(found.map((v) => v.path)).toEqual(['GUIPanel3D/SubViewport']);
-    // `viewportTextureRegistryKey('GUIPanel3D/Quad', 'SubViewport')` — what the
+    // `viewportTextureRegistryKey('GUIPanel3D/Quad', 'SubViewport')`: what the
     // quad's ViewportTexture asks the registry for.
     expect(found[0]!.size).toEqual({ x: 560, y: 360 });
   });
 });
 
 /**
- * `viewportContentKind` classifies a PARSED subtree, where an `instance=` child
- * is an untyped childless `Node` — its `sawUntypedInstance` arm then reads the
- * viewport as 3D. `resolveViewportSubtree` exists to close that gap, and both
- * owners of a viewport's registry key have to cross it or they disagree: the
- * SubViewport component classifies the resolved subtree, so a walk classifying
- * the raw one leaves a key nobody publishes and a consumer permanently blank.
+ * In a parsed subtree an `instance=` child is an untyped childless `Node`, which
+ * `viewportContentKind` reads as 3D. Both owners of a registry key classify the
+ * subtree `resolveViewportSubtree` returns, or a key goes unpublished and its
+ * consumer stays blank.
  */
 describe('collectControlRasterViewports — an instanced Control sub-scene', () => {
   const PANEL_SCENE = 'res://control_panel.tscn';
@@ -335,11 +324,10 @@ text = "hi"
     expect(collect(scene, cache({ [PANEL_SCENE]: world }))).toHaveLength(0);
   });
 
-  // `Control::is_layout_rtl()`'s climb casts each ancestor to `Control`, then
-  // to `Window`, then takes `get_parent()` (`control.cpp:3584-3598`). A
-  // `SubViewport` is a `Viewport` and neither, so the climb STEPS OVER it onto
-  // the `SubViewportContainer`, which is a Control — the sub-viewport's own
-  // Controls inherit that container's direction rather than starting fresh.
+  // `Control::is_layout_rtl()` climbs through ancestors that are a `Control` or
+  // a `Window` (`control.cpp:3584-3598`). A `SubViewport` is neither, so the climb
+  // steps over it onto the `SubViewportContainer`, whose direction the
+  // sub-viewport's Controls inherit.
   it('carries the direction of the nearest Control ABOVE the sub-viewport', () => {
     const scene = parse(`[gd_scene format=3]
 

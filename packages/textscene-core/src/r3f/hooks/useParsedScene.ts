@@ -1,9 +1,6 @@
 /**
- * Parse pipeline for the preview shell: TSCN text → `SceneGraph` (or error).
- *
- * `parseTscnContent` is a pure function so the pipeline can be unit-tested
- * without mounting any React tree; `useParsedScene` is the thin memoizing
- * hook the shell consumes.
+ * The preview shell's parse pipeline: TSCN text → `SceneGraph` or an error. `parseTscnContent` is
+ * pure, so it is tested without a React tree.
  */
 import { useMemo } from 'react';
 import { TscnParser } from '../../parser/TscnParser.js';
@@ -20,10 +17,9 @@ export interface ParseResult {
 }
 
 export function parseTscnContent(content: string, rootScenePath: string): ParseResult {
-  // A .glb/.gltf opened as the top-level scene isn't TSCN text — the fetched
-  // bytes are irrelevant. Synthesise the same single GLBSceneRoot the instanced
-  // path uses, so it loads + renders standalone (the node re-fetches the bytes
-  // via useResource('GLBMesh')). Matches createSceneProcessor's instanced path.
+  // A top-level .glb/.gltf is not TSCN text. Synthesise the single GLBSceneRoot that
+  // createSceneProcessor's instanced path uses. The node fetches the bytes through
+  // useResource('GLBMesh').
   if (isGLBPath(rootScenePath)) {
     return toParseResult(rootScenePath, synthesiseGLBScene(rootScenePath));
   }
@@ -34,11 +30,8 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
     const parser = new TscnParser();
     const tscnScene = parser.parse(content);
 
-    // The lenient `TscnParser` recovers from most malformed input by
-    // returning whatever nodes it could salvage. If the body had any
-    // text at all but the parser produced zero root nodes, the file is
-    // probably broken — surface that as an error rather than letting
-    // the user stare at "No nodes to display".
+    // The lenient `TscnParser` salvages what it can. Text that yields zero nodes is probably a
+    // broken file, so it is an error rather than "No nodes to display".
     if (tscnScene.nodes.length === 0 && content.trim().length > 0) {
       return {
         sceneGraph: null,
@@ -55,11 +48,9 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
   }
 }
 
-/** Wrap a parsed/synthesised TscnScene into a single-scene SceneGraph result. */
 function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult {
-  // Every registered scene pass, transforms before paths: a pass rewrites the
-  // freshly parsed tree so render, gizmos, bounds, selection, tree and inspector
-  // all read its result uniformly. See `NodeComponentRegistration.scenePass`.
+  // Every registered `NodeComponentRegistration.scenePass`, transforms before paths, rewrites the
+  // parsed tree, so render, gizmos, bounds, selection, tree and inspector read one result.
   let nodes = tscnScene.nodes;
   for (const pass of nodeComponentRegistry.scenePasses()) {
     nodes = pass(nodes, tscnScene.internalResources);

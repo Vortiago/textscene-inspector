@@ -1,10 +1,6 @@
 /**
- * Button strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing. There is no genuine cross-field rule for Button,
- * so there is no `linter.ts` / `linter.test.ts`.
+ * Button strict validators: format and range checks through `validatorRegistry`,
+ * not a linted `.tscn`, so a failure points at the validator rather than at scene parsing.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -69,7 +65,7 @@ describe('Button strict validators', () => {
   });
 
   describe('alignment', () => {
-    // button.cpp:814 — PROPERTY_HINT_ENUM "Left,Center,Right" only labels 0-2.
+    // button.cpp:814, PROPERTY_HINT_ENUM "Left,Center,Right", labels only 0-2.
     it('accepts 1 (CENTER), the value the corpus uses most', () => {
       expect(check('alignment', '1')).toBeNull();
     });
@@ -80,8 +76,8 @@ describe('Button strict validators', () => {
 
     it('warns on HORIZONTAL_ALIGNMENT_FILL (3), which the hint does not offer', () => {
       // The bound is the hint, and the hint stops at RIGHT. `set_text_alignment`
-      // (button.cpp:737-741) bare-assigns, so the value reaches the engine — that
-      // is what keeps this a warning instead of an error, not a reason to accept it.
+      // (button.cpp:737-741) bare-assigns, so the value reaches the engine. That
+      // keeps this a warning instead of an error, and is no reason to accept it.
       expect(check('alignment', '3')).not.toBeNull();
     });
 
@@ -163,7 +159,7 @@ describe('Button strict validators', () => {
 
     it('warns on 3 (FILL), which the hint does not name', () => {
       // set_icon_alignment (button.cpp:749-756) bare-assigns, so the value reaches the engine
-      // and the tier is a warning — the hint is still what bounds it.
+      // and the tier is a warning. The hint still bounds it.
       expect(check('icon_alignment', '3')).not.toBeNull();
     });
   });
@@ -179,7 +175,7 @@ describe('Button strict validators', () => {
 
     it('warns on 3 (FILL), which the hint does not name', () => {
       // set_vertical_icon_alignment (button.cpp:759-770) bare-assigns, so the value reaches the engine
-      // and the tier is a warning — the hint is still what bounds it.
+      // and the tier is a warning. The hint still bounds it.
       expect(check('vertical_icon_alignment', '3')).not.toBeNull();
     });
   });
@@ -206,8 +202,8 @@ describe('Button strict validators', () => {
     });
 
     it('warns on -1: the setter loads it, the hint does not offer it', () => {
-      // The setter allows it (its ERR_FAIL_COND opens below -1), so it loads —
-      // and the hint (0-3) does not offer it, so it warns rather than erroring.
+      // The setter allows it (its ERR_FAIL_COND opens below -1), so it loads.
+      // The hint (0-3) does not offer it, so it warns rather than erroring.
       expect(check('text_direction', '-1')?.severity).toBe('warning');
     });
 

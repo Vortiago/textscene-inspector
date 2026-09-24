@@ -1,30 +1,20 @@
 /**
- * Asking the running app about itself: which workspace it opened a scene in,
- * where its 2D comparison frame is, and driving its display toggles.
- *
- * App-structure knowledge lives here rather than at the call site for the
- * reason this family exists: a second copy does not fail when the app changes,
- * it silently measures the wrong pixels.
+ * Asks the running app which workspace it opened a scene in and where its 2D comparison frame is,
+ * and drives its display toggles. This knowledge lives in one place: a second copy would not fail
+ * when the app changes, it would measure the wrong pixels.
  */
 
 import { CANVAS_2D_TESTIDS } from './appContract.mjs';
 
 /**
- * Set one of the viewport's display toggles, driving the real UI.
- *
- * The toggles moved behind a menu once already.
- *
- * ATTACHED, not visible, and `dispatchEvent` rather than `click()`: the capture
- * context paints the whole toolbar overlay out with `display: none` so it
- * cannot composite into `canvas.screenshot()`. The controls are fully
- * functional, just unpainted, and Playwright refuses to click a hidden target.
- *
- * Returns null on success, or a reason string for the caller to fail with.
+ * Sets one of the viewport's display toggles through the real UI. It waits for attached, not
+ * visible, and uses `dispatchEvent`, not `click()`: the capture context hides the toolbar with
+ * `display: none`, and Playwright refuses to click a hidden target. Returns null on success, or a
+ * reason for the caller to fail with.
  */
 export async function setDisplayToggle(page, label, wanted) {
   const popover = page.locator('[data-testid="display-menu-popover"]');
-  // Idempotent: a scene may ask for two toggles, and a second click would shut
-  // the menu again.
+  // Idempotent: a scene may ask for two toggles, and a second click would shut the menu.
   if ((await popover.count()) === 0) {
     const button = page.locator('[data-testid="display-menu-button"]');
     try {
@@ -35,8 +25,7 @@ export async function setDisplayToggle(page, label, wanted) {
     await button.dispatchEvent('click');
     await popover.waitFor({ state: 'attached', timeout: 10000 });
   }
-  // By testid, so a re-layout fails loudly on a missing node instead of
-  // quietly substring-matching a different label.
+  // By testid, so a re-layout fails on a missing node instead of matching a different label.
   const toggle = page.locator(`[data-testid="display-toggle-${label}"]`);
   try {
     await toggle.waitFor({ state: 'attached', timeout: 10000 });
@@ -47,19 +36,16 @@ export async function setDisplayToggle(page, label, wanted) {
   return null;
 }
 
-/** Which workspace the app itself opened the scene in — its own decision, asked, not re-derived. */
+/** Which workspace the app opened the scene in, asked of the app, not re-derived. */
 export async function readViewportMode(page) {
   const stage = page.locator(`[data-testid="${CANVAS_2D_TESTIDS.stage}"]`);
   return (await stage.count()) > 0 ? '2d' : '3d';
 }
 
 /**
- * The 2D comparison frame: the project-viewport rectangle inside the stage, or
- * a reason it cannot be captured. Checked rather than assumed, because every
- * way this goes wrong produces an image that still looks plausible — a stage
- * too small to hold the frame at zoom 1 clips it (the shell's chrome creeps in
- * at the edges), and a fractional origin resamples every pixel of the scene
- * against a reference that was rendered on the integer grid.
+ * The 2D comparison frame inside the stage, or a reason it cannot be captured. Each failure still
+ * gives a plausible image: a stage too small clips the frame and lets the shell's chrome in, and a
+ * fractional origin resamples every pixel against a reference rendered on the integer grid.
  */
 export async function findCanvas2DFrame(page) {
   const stage = page.locator(`[data-testid="${CANVAS_2D_TESTIDS.stage}"]`);
@@ -72,10 +58,8 @@ export async function findCanvas2DFrame(page) {
   const box = await frame.boundingBox();
   const stageBox = await stage.boundingBox();
   if (!box || !stageBox) return { frame: null, reason: '2D stage frame has no layout box' };
-  // What the frame IS, from the stage itself, rather than a constant here: the
-  // rect is the scene's `display/window/size/viewport_*`, so 23 of the corpus's
-  // projects are not 1152x648. The invariant this guards is still zoom 1 — the
-  // frame's laid-out box must equal its own declared size.
+  // The frame's size comes from the stage, not a constant: the rect is the scene's
+  // `display/window/size/viewport_*`, which is not always 1152x648.
   const declared = await frame.getAttribute('data-viewport-size');
   const [width, height] = (declared ?? '').split('x').map(Number);
   if (!Number.isFinite(width) || !Number.isFinite(height)) {
@@ -84,13 +68,9 @@ export async function findCanvas2DFrame(page) {
       reason: `2D frame declares no usable viewport size (data-viewport-size=${declared})`,
     };
   }
-  // Zoom 1 is the goal, not the rule. Godot's own 2D editor zooms to fit a
-  // project rect larger than the window, and `games/godot-open-rts` is
-  // 1920x1080 against a stage of about 950x750 — so a fixed zoom-1 assumption
-  // is OURS, not Godot's, and would report a working capture as broken. What
-  // must hold is that the frame is the project's rect at a UNIFORM scale: both
-  // axes at the same factor, and never magnified (which would resample the
-  // scene up and compare it against a reference rendered at 1:1).
+  // Zoom 1 is the goal, not the rule: Godot's 2D editor zooms to fit a project rect larger than the
+  // window (`games/godot-open-rts` is 1920x1080). The frame holds the project's rect at one scale
+  // on both axes, and never magnified, which would resample it against a 1:1 reference.
   const scale = box.width / width;
   if (scale > 1.001 || Math.abs(box.height / height - scale) > 0.002) {
     return {

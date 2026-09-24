@@ -1,11 +1,8 @@
 /**
- * Tests for the PlaneMesh decode.
- *
- * Defaults from Godot `primitive_meshes.h:252-256`: `size = Size2(2, 2)`,
+ * PlaneMesh decode. Defaults: `primitive_meshes.h:252-256`, `size = Size2(2, 2)`,
  * `subdivide_w/d = 0`, `center_offset` zero, `orientation = FACE_Y` (1).
- * `set_subdivide_width` / `_depth` (`primitive_meshes.cpp:1539-1561`) floor at 0
- * (`p_divisions > 0 ? p_divisions : 0`), so a negative subdivision is a flat 0
- * rather than a negative segment count three.js cannot build.
+ * `set_subdivide_width` / `_depth` (`primitive_meshes.cpp:1539-1561`) floor at 0,
+ * not at a negative segment count three.js cannot build.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

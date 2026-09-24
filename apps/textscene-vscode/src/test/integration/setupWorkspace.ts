@@ -1,19 +1,15 @@
 /**
- * Sets up the test workspace by mirroring the fixtures res:// root.
- * Mirrors the web app's copy-fixtures.js pattern.
+ * Sets up the test workspace as a mirror of the fixtures res:// root, like the web
+ * app's copy-fixtures.js.
  */
 import { copyFileSync, mkdirSync, readdirSync, rmSync } from 'fs';
 import { join } from 'path';
 
 /**
- * Copy a source tree verbatim into the workspace.
- *
- * No filter at all: what the directory contains IS the res:// namespace, and
- * the extension resolves res:// against the workspace root, so anything left
- * out would make VS Code disagree with Godot and the web previewer about what
- * a fixture's references mean. (copy-fixtures.js drops files over Cloudflare
- * Pages' 25 MiB ceiling; nothing deploys from a test workspace, so that one
- * deployment-limit skip has no counterpart here.)
+ * Copies a source tree into the workspace with no filter: the directory is the
+ * res:// namespace, so a file left out makes VS Code disagree with Godot. The
+ * 25 MiB Cloudflare Pages skip in copy-fixtures.js has no counterpart, since
+ * nothing deploys from here.
  */
 function copyRecursive(src: string, dest: string): void {
   for (const entry of readdirSync(src, { withFileTypes: true })) {
@@ -35,18 +31,15 @@ function copyRecursive(src: string, dest: string): void {
 export function setupTestWorkspace(workspaceRoot: string): void {
   console.log('Setting up test workspace at:', workspaceRoot);
 
-  // Clean and create workspace directory
   try {
     rmSync(workspaceRoot, { recursive: true, force: true });
   } catch {
-    // Ignore if doesn't exist
+    // A workspace that does not exist yet needs no cleaning.
   }
   mkdirSync(workspaceRoot, { recursive: true });
 
-  // Derive the repo root from the workspace path, not from __dirname: this
-  // module is inlined into whichever test bundle imports it, so __dirname
-  // would point at the importer's output directory, not this file's.
-  // workspaceRoot is <repo>/apps/textscene-vscode/.test-workspace.
+  // From the workspace path, <repo>/apps/textscene-vscode/.test-workspace, not
+  // from __dirname: this module is inlined into its importer's bundle.
   const projectRoot = join(workspaceRoot, '../../..');
   const fixturesSource = join(projectRoot, 'scenes', 'fixtures');
   const fixturesTarget = join(workspaceRoot, 'fixtures');

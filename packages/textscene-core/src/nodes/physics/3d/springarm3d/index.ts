@@ -1,9 +1,6 @@
 /**
- * SpringArm3D registration — parser.
- *
- * Reuses the Node3D parse; property knowledge lives in linterParser.ts.
- * Draws nothing by design (ADR-0008), so index.r3f.ts registers Node3D
- * and its children still land in the right transform space.
+ * SpringArm3D parser registration: reuses the Node3D parse. Property knowledge
+ * lives in linterParser.ts. It draws nothing by design (ADR-0008).
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

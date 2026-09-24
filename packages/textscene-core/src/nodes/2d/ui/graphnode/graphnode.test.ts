@@ -1,4 +1,4 @@
-/** GraphNode registration — parser wiring. */
+/** GraphNode registration: parser wiring. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';

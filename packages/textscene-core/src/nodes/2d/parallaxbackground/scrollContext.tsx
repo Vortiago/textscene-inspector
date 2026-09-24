@@ -1,16 +1,8 @@
 /**
- * The seam between `<ParallaxBackground>` and its `<ParallaxLayer>` children.
- *
- * Godot's `_update_scroll` walks `get_child(i)` and pushes a pose onto every
- * direct `ParallaxLayer`, so the background is the writer and the layers are
- * written to. The same shape here: a layer REGISTERS the group its scroll delta
- * belongs on, and the background poses it once per rendered frame. Nothing flows
- * back up through React, because the scroll is recomputed inside the render that
- * consumes it and a per-frame `setState` would be a re-render per frame.
- *
- * `parentPath` is what keeps the walk to DIRECT children: React context reaches
- * a `ParallaxLayer` nested under an intervening `Node2D` too, and Godot would
- * never pose that one.
+ * The seam between `<ParallaxBackground>` and its `<ParallaxLayer>` children. As
+ * in Godot's `_update_scroll`, a layer registers its group and the background
+ * poses it once per frame, outside React: a per-frame `setState` would re-render
+ * every frame.
  */
 
 import { createContext, useContext, type ReactNode } from 'react';
@@ -23,12 +15,16 @@ export interface RegisteredParallaxLayer {
   /** The wrapper the scroll delta is written to (never the authored `<Node2D>`). */
   group: THREE.Object3D;
   motion: ParallaxLayerMotion;
-  /** `orig_offset` — the authored position, recorded on ENTER_TREE in Godot. */
+  /** `orig_offset`: the authored position, recorded on ENTER_TREE in Godot. */
   origin: { position: Vector2 };
 }
 
 export interface ParallaxScrollRegistry {
-  /** The ParallaxBackground's own node path; a layer registers only if it is a direct child. */
+  /**
+   * The ParallaxBackground's own node path. A layer registers only as a direct
+   * child: context also reaches a layer under an intervening Node2D, which Godot
+   * never poses.
+   */
   parentPath: string;
   /** Returns its own disposer, so a layer can register straight from an effect. */
   register: (path: string, layer: RegisteredParallaxLayer) => () => void;

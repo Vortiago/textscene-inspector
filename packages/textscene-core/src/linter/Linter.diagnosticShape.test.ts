@@ -1,16 +1,7 @@
 /**
- * Every diagnostic `Linter` hands back carries the `Diagnostic` surface and
- * nothing else.
- *
- * The file diagnostics are declared as `RuleArm`s so `emitsGrounding` can check
- * their cites, which puts an authoring-time `grounding` object one spread away
- * from the reported value. `armDiagnostic` is the only conversion for exactly
- * that reason; this asks the question at the output, where a second conversion
- * written later would also be caught.
- *
- * The observed-name assertion is what stops the sweep passing over an empty
- * set: a source that stopped producing its diagnostic would otherwise make the
- * key check vacuous rather than red.
+ * Every diagnostic `Linter` hands back carries the `Diagnostic` surface and nothing else. A file diagnostic is a
+ * `RuleArm`, one spread away from leaking its `grounding`, so this checks the output where a second conversion beside
+ * `armDiagnostic` would show. The observed-name assertion keeps the key check from passing over an empty set.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -38,8 +29,8 @@ const SOURCES: Record<string, string> = {
   'collisionobject2d-needs-collision-shape': scene(node('StaticBody2D', {}, { name: 'Root' })),
   'strict-parser': scene(node('Node2D', { position: 'Vector2(nope)' }, { name: 'Root' })),
   // A rule that hand-builds its diagnostic rather than taking one from an arm:
-  // its `nodeName` came off the typed property bag, which carries no `name` —
-  // the heading's attribute is not a property — so every report named `undefined`.
+  // its `nodeName` came off the typed property bag, which carries no `name`
+  // (the heading's attribute is not a property), so every report named `undefined`.
   'valid-node3d-visibility': scene(
     node('Node3D', { visibility_parent: 'NodePath("Nope")' }, { name: 'Root' })
   ),

@@ -1,11 +1,7 @@
 /**
- * The load-bearing property here is NEGATIVE: these metrics must NOT come
- * from `runtimeFontMetrics.ts`'s `measureText` path. A canvas measurement is
- * a float; the baked table is the font's own integer `hmtx` value, which
- * `fontMetrics.ts` then quantizes exactly as FreeType/HarfBuzz do. Shaping
- * against measured advances would drift from every 2D Control caller and
- * from Godot, so every advance below is pinned to the baked table AND to
- * independently-read `hmtx` literals.
+ * These metrics must not come from the `measureText` path of `runtimeFontMetrics.ts`: a canvas
+ * measurement is a float, and the baked table is the font's integer `hmtx` value. Each advance
+ * is pinned to the baked table and to independently read `hmtx` literals.
  */
 import { describe, expect, it } from 'vitest';
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
@@ -16,11 +12,9 @@ import { getFontGlyphAdvancePx } from './fontMetrics';
 const BAKED_CHARSET = Object.keys(OPEN_SANS_METRICS.advanceWidths);
 
 /**
- * `hmtx` advance widths, design units, read independently of this repo's
- * bake: `fontkit` over the vendored `.woff2` (decompressed with `wawoff2`),
- * exactly as `scripts/fonts/bake-metrics.mjs` reads the font but through a
- * separate read, so this asserts against the FONT rather than against
- * whatever the generated module happens to say.
+ * `hmtx` advance widths in design units, read with `fontkit` over the vendored `.woff2`
+ * (decompressed with `wawoff2`) apart from the bake, so the test asserts against the font,
+ * not the generated module.
  */
 const INDEPENDENT_HMTX_UNITS: Record<string, number> = {
   ' ': 532,

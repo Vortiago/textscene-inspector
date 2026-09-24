@@ -1,20 +1,7 @@
 /**
- * BUG 3 regression / composition guard for PhotoFrame instances.
- *
- * Investigation finding: the renderer is NOT at fault for
- * PhotoFrameA appearing too high. The transform/instance composition
- * places each PhotoFrame's Canvas mesh at EXACTLY the origin authored in
- * the room scene. PhotoFrameA's authored origin
- * `(8.548, 3.008, -1.625)` simply carries an anomalous Y=3.008 (its
- * wall-mates hang at Y≈2.0–2.5) — the origins below are captured verbatim
- * from the real-world scene that surfaced the bug, outlier included.
- *
- * The previewer's job is to reproduce what Godot shows, so the outlier
- * must be reproduced, not "corrected" (that would make the previewer
- * DIVERGE from Godot). We pin the invariant that broke the diagnosis: an
- * instanced sub-scene's mesh inherits the instancing node's transform
- * exactly. This catches any future composition regression across every
- * PhotoFrame, and documents that the outlier's height is data, not a bug.
+ * An instanced sub-scene's mesh inherits the instancing node's transform exactly. PhotoFrameA's
+ * authored Y=3.008 sits above its wall-mates at Y≈2.0–2.5, and the previewer reproduces it, as
+ * Godot does.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -60,15 +47,11 @@ function makePhotoFrameScene(canvasName: string): TscnScene {
 }
 
 /**
- * A Hallway-level PhotoFrame instancing node carrying the authored transform
- * basis + origin. `_scenePath` is unused here — the instance's ExtResource id
- * is derived from `name` alone; the actual path resolution is wired through
- * `renderFrame`'s separate `ref` argument — kept as a parameter so every call
- * site still reads the scene path it seeds alongside the node it builds.
+ * A PhotoFrame instancing node with the authored origin. Its ExtResource id derives from `name`,
+ * and `renderFrame`'s `ref` argument resolves the path.
  */
 function makeFrameInstanceNode(
   name: string,
-  _scenePath: string,
   origin: { x: number; y: number; z: number }
 ): TscnNode {
   return {
@@ -78,9 +61,7 @@ function makeFrameInstanceNode(
     children: [],
     properties: {
       name,
-      // The PhotoFrames all use a 180°-ish Y-rotation basis; identity
-      // here is sufficient to pin origin inheritance, which is the
-      // load-bearing invariant.
+      // The PhotoFrames use a Y-rotation basis. Identity is enough to pin origin inheritance.
       transform: {
         basis_x: { x: 1, y: 0, z: 0 },
         basis_y: { x: 0, y: 1, z: 0 },
@@ -139,7 +120,7 @@ describe('PhotoFrame composition — Canvas mesh inherits the authored instance 
 
       const renderer = await renderFrame(
         fake.loader,
-        makeFrameInstanceNode(name, scenePath, origin),
+        makeFrameInstanceNode(name, origin),
         { id: `${name}_ref`, path: scenePath }
       );
 
@@ -157,13 +138,12 @@ describe('PhotoFrame composition — Canvas mesh inherits the authored instance 
 
     const renderer = await renderFrame(
       fake.loader,
-      makeFrameInstanceNode('PhotoFrameA', 'res://PhotoFrameA.tscn', origin),
+      makeFrameInstanceNode('PhotoFrameA', origin),
       { id: 'PhotoFrameA_ref', path: 'res://PhotoFrameA.tscn' }
     );
 
     const pos = canvasWorldPosition(renderer, 'Canvas');
-    // The previewer matches Godot: it reproduces Y=3.008 verbatim. It does
-    // NOT silently "correct" the data to the wall height (~2.0).
+    // The previewer matches Godot: it reproduces Y=3.008 and does not "correct" it to ~2.0.
     expect(pos.y).toBeCloseTo(3.008, 4);
     expect(pos.y).not.toBeCloseTo(2.0, 1);
   });

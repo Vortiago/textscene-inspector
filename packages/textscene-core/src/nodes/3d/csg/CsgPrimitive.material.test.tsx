@@ -1,10 +1,7 @@
 /**
- * A CSG `material` reaches the same slot whichever way it arrives — an
- * ExtResource `.tres` or an inline `[sub_resource]` — because the node holds only
- * a `Ref<Material>` and cannot tell them apart.
- *
- * Every CSG fixture in the golden bag declares its material inline, so no golden
- * can see the external arrival at all; this is the only thing that gates it.
+ * A CSG `material` reaches the same slot as an ExtResource `.tres` or an inline `[sub_resource]`,
+ * since the node holds only a `Ref<Material>`. Every CSG golden fixture declares its material
+ * inline, so this test alone gates the external arrival.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -84,8 +81,8 @@ describe('<CsgPrimitive> material resolution', () => {
 
   it('shows the unresolved-resource placeholder while the .tres has not loaded', async () => {
     const renderer = await render('ExtResource("1_blue")');
-    // The pending placeholder IS the default material — an unresolved path is the
-    // same case as no material at all, so it must not be a distinct colour.
+    // The pending placeholder is the default material: an unresolved path is the same case as no
+    // material at all, so it must not be a distinct colour.
     const linear = materialOf(renderer).color.getRGB(
       { r: 0, g: 0, b: 0 } as THREE.Color,
       THREE.LinearSRGBColorSpace

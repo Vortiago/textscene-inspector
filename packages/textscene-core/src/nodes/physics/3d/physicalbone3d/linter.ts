@@ -11,17 +11,10 @@ import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { JOINT_DATA, jointConstraintOwners, type JointType } from './jointConstraints.js';
 
 /**
- * `joint_constraints/*` writes, judged against the JointData live when each
- * line is applied.
- *
- * `PhysicalBone3D::_set` (physical_bone_3d.cpp:715-724) forwards a key
- * `if (joint_data)` and otherwise returns false; `joint_data` is null until
- * `set_joint_type` builds the subclass for a type in 1..5 (:1094-1113 — NONE,
- * and any value outside the switch, leave it null). Each subclass's `_set`
- * compares the whole key against its own leaves and ends `else { return
- * false; }` (JOINT_DATA.refusedAt). Properties apply in file order, so a
- * `joint_type` below a constraint line does not help it. A leaf no subclass
- * declares is the phase-1 dispatcher's refusal and is skipped here.
+ * `joint_constraints/*` writes, judged against the JointData live when each line applies.
+ * `PhysicalBone3D::_set` (physical_bone_3d.cpp:715-724) forwards a key only `if (joint_data)`, which
+ * `set_joint_type` builds for a type in 1..5 (:1094-1113), never for NONE or a value outside the switch.
+ * Each subclass refuses a leaf not its own (JOINT_DATA.refusedAt). Properties apply in file order.
  */
 function jointConstraintDiagnostics(node: TscnNode, rawProps: Record<string, string>): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -38,6 +31,7 @@ function jointConstraintDiagnostics(node: TscnNode, rawProps: Record<string, str
     }
     if (live === undefined || !key.startsWith('joint_constraints/')) continue;
     const owners = jointConstraintOwners(key);
+    // A leaf no subclass declares is the phase-1 dispatcher's refusal.
     if (owners === null) continue;
     if (live === null) {
       const below = !seenJointType && rawProps.joint_type !== undefined;

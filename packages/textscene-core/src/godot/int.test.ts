@@ -14,15 +14,15 @@ describe('an INT-typed literal', () => {
   // `T(_data._int)` (variant.h:367-368) is an integral conversion: it wraps,
   // in both directions, on every platform Godot ships.
   it('reads the opposite spelling of a pattern the slot holds', () => {
-    // The band is every 32-bit pattern spelled BOTH ways, because Godot's
+    // The band is every 32-bit pattern spelled both ways, because Godot's
     // getters write either signedness for the same bits.
     expect(parseGodotInt('3000000000')).toBe(-1294967296);
     expect(parseGodotInt('-1', 'uint32')).toBe(4294967295);
   });
 
   it('refuses a value outside that band, in either direction', () => {
-    // Nothing serialises these, and the engine wraps them to a number the file
-    // does not state — the alteration ADR-0032 calls an error.
+    // Nothing serialises these, and the engine wraps them to a number the file does not state:
+    // the alteration ADR-0032 calls an error.
     expect(parseGodotInt('4294967296')).toBeNaN();
     expect(parseGodotInt('-3000000000')).toBeNaN();
   });
@@ -51,7 +51,7 @@ describe('an INT-typed literal', () => {
 
 describe('a FLOAT-typed literal', () => {
   // `T(_data._float)` (variant.h:369-370) is undefined when the truncated
-  // value is outside T's range, so the storable band is the SLOT's, not int32's.
+  // value is outside T's range, so the storable band is the slot's, not int32's.
   it('truncates toward zero inside the slot', () => {
     expect(parseGodotInt('5.9')).toBe(5);
     expect(parseGodotInt('-5.9')).toBe(-5);
@@ -82,23 +82,15 @@ describe('a FLOAT-typed literal', () => {
 
 describe('a byte slot', () => {
   /*
-   * `_parse_byte_array` (variant_parser.cpp:600) pushes each element into a
-   * `Vector<uint8_t>` (:650), so the conversion is
-   * `Variant::operator uint8_t()` (variant.cpp:1519-1521). Measured on 4.6.3:
-   * `PackedByteArray(0, 0, 300, 0)` -> [0, 0, 44, 0],
-   * `PackedByteArray(-1, 0)` -> [255, 0],
-   * `PackedByteArray(300.5, 0)` -> [44, 0],
-   * `PackedByteArray(1000000000, 0)` -> [0, 0],
-   * `PackedByteArray(1.5, 0)` -> [1, 0],
-   * `PackedByteArray(-0.5, 0)` -> [0, 0],
-   * `PackedByteArray(-1.5, 0)` -> [255, 0],
-   * `PackedByteArray(2e3, 0)` -> [208, 0].
+   * `_parse_byte_array` (variant_parser.cpp:600) pushes each element into a `Vector<uint8_t>` (:650),
+   * through `Variant::operator uint8_t()` (variant.cpp:1519-1521). Measured on 4.6.3, element to
+   * byte: 300 → 44, -1 → 255, 300.5 → 44, 1000000000 → 0, 1.5 → 1, -0.5 → 0, -1.5 → 255, 2e3 → 208.
    */
   it('holds the byte range and truncates a fraction inside it', () => {
     expect(parseGodotInt('0', 'uint8')).toBe(0);
     expect(parseGodotInt('255', 'uint8')).toBe(255);
     expect(parseGodotInt('1.5', 'uint8')).toBe(1); // uint8_t(1.5) is defined
-    // The band applies to the TRUNCATED value: measured, -0.5 stores 0 while
+    // The band applies to the truncated value: measured, -0.5 stores 0 while
     // -1.5 stores 255, so the first is defined and the second is not.
     expect(parseGodotInt('-0.5', 'uint8')).toBe(0);
   });
@@ -163,9 +155,8 @@ describe('slotComponentsAltered — a composite in a FLOAT slot', () => {
 
   it('reports the non-finite the int spelling narrows, which no bound can see', () => {
     // `_parse_construct<int32_t>` accepts the identifier through `stor_fix`
-    // (variant_parser.cpp:149-159, :577-586) and `_to_int<int32_t>` then
-    // converts the double (variant.h:369-370) — undefined outside int32, so the
-    // engine stores a number the file does not state.
+    // (variant_parser.cpp:149-159, :577-586) and `_to_int<int32_t>` then converts the double
+    // (variant.h:369-370), undefined outside int32, so the engine stores a number the file lacks.
     for (const spelling of ['inf', '-inf', 'inf_neg', 'nan']) {
       expect(altered(`Vector3i(${spelling}, 0, 0)`)).toBe(true);
     }
@@ -181,8 +172,8 @@ describe('slotComponentsAltered — a composite in a FLOAT slot', () => {
 
   it('is false for the legal non-finite FLOAT component, which is the whole point', () => {
     // Godot writes `inf`/`nan` into every real-typed composite and reloads them
-    // (variant_parser.cpp:149-159), so the slot's own spelling alters nothing —
-    // the conflation this predicate exists to break.
+    // (variant_parser.cpp:149-159), so the slot's own spelling alters nothing: the conflation this
+    // predicate exists to break.
     for (const spelling of ['inf', '-inf', 'inf_neg', 'nan']) {
       expect(altered(`Vector3(${spelling}, 0, 0)`)).toBe(false);
     }

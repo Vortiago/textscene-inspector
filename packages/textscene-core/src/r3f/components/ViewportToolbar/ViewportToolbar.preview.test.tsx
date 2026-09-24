@@ -1,13 +1,7 @@
 /**
- * The preview sun / preview sky toggles, and the state Godot puts them in when
- * the scene supersedes a preview:
- *
- *   sun_button->set_disabled(directional_light_count > 0);
- *   sun_state->set_text(TTRC("Scene contains\nDirectionalLight3D.\nPreview disabled."));
- *
- * A user looking at a dark scene needs to know whether they are seeing their
- * own lighting or ours, which is why the two are separate controls and why the
- * disabled one says why.
+ * The preview sun and sky toggles, which Godot disables when the scene
+ * supplies its own: `sun_button->set_disabled(directional_light_count > 0);`
+ * The two are separate controls, and the disabled one says why.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -83,8 +77,7 @@ describe('preview lighting toggles', () => {
         <ViewportToolbar />
       </ViewportModeProvider>
     );
-    // Opened, so this asserts they are absent from the MENU rather than merely
-    // absent from a closed popover — which would pass either way.
+    // Open, since a closed popover lacks them either way.
     openDisplayMenu();
     expect(screen.queryByLabelText('Preview Sun')).toBeNull();
     expect(screen.queryByLabelText('Preview Sky')).toBeNull();

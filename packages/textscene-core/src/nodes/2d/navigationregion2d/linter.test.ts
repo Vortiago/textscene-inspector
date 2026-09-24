@@ -1,12 +1,8 @@
 /**
- * Tests for NavigationRegion2D semantic linter rules.
- *
- * NavigationRegion2D has two semantic concerns: if a `navigation_polygon`
- * reference is provided, it must resolve to a declared resource; and if it is
- * ABSENT while the node is visible in the tree, that is itself Godot's own
- * configuration warning (navigation_region_2d.cpp:302-306) — `bake_navigation_mesh`
- * opens with `ERR_FAIL_COND_MSG(navigation_mesh.is_null(), ...)`, so Godot does
- * NOT bake one at runtime.
+ * Tests the NavigationRegion2D rules: a `navigation_polygon` reference must
+ * resolve, and an absent one on a visible node is Godot's configuration warning
+ * (navigation_region_2d.cpp:302-306). Godot bakes none at runtime:
+ * `bake_navigation_mesh` opens with `ERR_FAIL_COND_MSG(navigation_mesh.is_null(), ...)`.
  */
 
 import { describe, it } from 'vitest';
@@ -74,7 +70,7 @@ navigation_polygon = ExtResource("1_nav")
 
     it('still warns when a plain Node breaks the CanvasItem chain below the hidden ancestor', () => {
       // canvas_item.cpp:311-317 reads `parent_visible_in_tree` off the
-      // IMMEDIATE parent, so the run ends at the plain Node and the hidden
+      // immediate parent, so the run ends at the plain Node and the hidden
       // Node2D above it never enters the answer.
       expectDiagnostic(
         scene(

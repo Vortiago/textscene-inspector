@@ -1,17 +1,8 @@
 [gd_scene load_steps=4 format=3 uid="uid://unitbtnicongradtex"]
 
-; ONE VARIABLE: a Button whose `icon` is an INLINE GradientTexture2D
-; sub-resource rather than an image file.
-;
-; The icon slot is resolved separately from every other Texture2D slot in the
-; UI stack, and it feeds the Button's minimum size — so the sibling ColorRect
-; below the button in the VBoxContainer moves by the icon's height when the
-; inline texture fails to resolve. `unit-button` and `unit-button-states` carry
-; no icon at all, and no other Control scene puts an inline procedural texture
-; in an icon slot, so a regression here shows up in nothing else.
-;
-; The StyleBoxFlat override pins the button's own box so the frame's only
-; unpinned contributor is the icon.
+; The one variable: a Button `icon` that is an inline GradientTexture2D. The icon slot resolves apart
+; from every other Texture2D slot and feeds the minimum size, so the ColorRect below moves when it
+; fails. No other Control scene puts an inline texture in an icon slot. The StyleBoxFlat pins the box.
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
 bg_color = Color(0.2, 0.5, 0.35, 1)

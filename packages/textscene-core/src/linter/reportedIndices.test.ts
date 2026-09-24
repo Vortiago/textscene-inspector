@@ -1,5 +1,5 @@
 /**
- * The two halves of one cap: what a message NAMES, and what the rule WALKS.
+ * The two halves of one cap: what a message names, and what the rule walks.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -28,10 +28,9 @@ describe('unsatisfiedIndices', () => {
   });
 
   it('stops the walk at the cap while still counting the whole range', () => {
-    // The assertion that matters is that this RETURNS. `setting_count` is an
-    // int slot with no ceiling, so this value passes its own validator; the
-    // predecessor built one entry per index and spent minutes and gigabytes
-    // reaching a message it then truncated to 32 entries.
+    // The assertion that matters is that this returns. `setting_count` is an
+    // int slot with no ceiling, so this value passes its own validator, and a
+    // walk of every index takes minutes and gigabytes.
     const { listed, total } = unsatisfiedIndices(2_147_483_647, new Set());
     expect(listed).toEqual(Array.from({ length: 32 }, (_, i) => i));
     expect(total).toBe(2_147_483_647);

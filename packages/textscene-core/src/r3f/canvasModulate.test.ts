@@ -1,9 +1,6 @@
 /**
- * `canvasModulateColor` — which CanvasModulate governs a canvas.
- *
- * The case that matters is the one the isometric dungeon authors: a CHILDLESS
- * CanvasModulate sitting beside the level, which a subtree-scoped reading turns
- * into a no-op.
+ * `canvasModulateColor`: which CanvasModulate governs a canvas, including a
+ * childless one beside the level, which a subtree-scoped reading ignores.
  */
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser';
@@ -25,7 +22,7 @@ describe('canvasModulateColor', () => {
   });
 
   it('finds a CHILDLESS CanvasModulate declared as a sibling of the content', () => {
-    // Exactly the dungeon's shape, and the reason a subtree modulate was inert.
+    // A subtree-scoped modulate would tint nothing here.
     const c = colorOf(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]

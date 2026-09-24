@@ -1,25 +1,8 @@
 /**
- * Test-only fixture: a fake `ResourceLoader` whose cache state and event
- * emissions a test can drive deterministically, without spinning up a
- * FileEventBus + provider.
- *
- * Concentrates the assembly that every resource-consuming test used to
- * hand-roll: a real `ResourceEventBus` + `MetadataStore` plus Map-backed
- * processors for every slot the real loader carries (texture / material /
- * glb / scene / resource / arraymesh / font) implementing the public
- * `ResourceProcessor` surface, wired with `register()`, `clear()` and
- * `provideFile()`. Each processor handle adds a small driving API:
- *
- *   - `_resolve(path, value)` — cache + emit `<type>:loaded` (event-driven tests)
- *   - `_fail(path, message)`  — cache null + emit `<type>:failed`
- *   - `seed(path, value)`     — cache only, no emit (cache-seeding tests; null = sentinel miss)
- *   - `setRequestImpl(fn)`    — override what `request()` does (e.g. a spy or no-op)
- *   - `cache`                 — the backing Map, for direct seeding/deletion
- *
- * Pure: imports only THREE + the real bus/metadata, never `vitest`, so a
- * test asserts request behaviour with its own spy via `setRequestImpl`.
- * Lives under `testing/` (excluded from the package build) so it never
- * reaches dist or the linter graph.
+ * Test-only fixture: a fake `ResourceLoader` whose cache and events a test drives,
+ * with a real `ResourceEventBus` and `MetadataStore` and a Map-backed processor
+ * per slot. It never imports `vitest`, and `testing/` is outside the package
+ * build, so it never reaches dist or the linter graph.
  */
 
 import * as THREE from 'three';
@@ -34,9 +17,9 @@ import type { FontResource } from '../fonts/font/types';
 import type { ThemeResource } from '../styles/theme/types';
 
 export interface FakeProcessor<T> {
-  /** Backing cache — `undefined` = never requested, `null` = failed/sentinel-miss, value = loaded. */
+  /** Backing cache: `undefined` = never requested, `null` = failed or sentinel miss, value = loaded. */
   readonly cache: Map<string, T | null>;
-  /** Pin counts — for asserting that useResource wires pin/unpin correctly. */
+  /** Pin counts, to assert that useResource wires pin and unpin. */
   readonly pinCounts: Map<string, number>;
   // Public ResourceProcessor<T> surface consumed by useResource:
   request(path: string): void;
@@ -49,24 +32,22 @@ export interface FakeProcessor<T> {
   getCacheSize(): number;
   pin(path: string): void;
   unpin(path: string): void;
-  /** Override what `request()` does — pass a spy to assert calls, or a no-op. */
+  /** Overrides what `request()` does: a spy to assert calls, or a no-op. */
   setRequestImpl(impl: (path: string) => void): void;
   /** Seed the cache without emitting. `null` seeds a sentinel miss. */
   seed(path: string, value: T | null): void;
   /**
-   * Simulate a successful load: cache the value + emit `<type>:loaded`.
-   * Always a NEW-era completion — the real pipeline DROPS completions whose
-   * flight departed before a clear (flight tokens), which a manually-driven
-   * fake cannot represent; don't use `_resolve`/`_fail` to model a load that
-   * was in flight when a clear happened.
+   * Simulates a successful load: caches the value and emits `<type>:loaded`.
+   * Always a new-era completion: the real pipeline drops a flight that departed
+   * before a clear, so do not model that case with `_resolve` or `_fail`.
    */
   _resolve(path: string, value: T): void;
-  /** Simulate a failure: cache `null` + emit `<type>:failed`. See `_resolve`'s era note. */
+  /** Simulates a failure: caches `null` and emits `<type>:failed`. See `_resolve`'s era note. */
   _fail(path: string, message: string): void;
 }
 
 export interface FakeResourceLoader {
-  /** The fake typed as the real `ResourceLoader` — pass to `ResourceLoaderProvider`. */
+  /** The fake typed as the real `ResourceLoader`, for `ResourceLoaderProvider`. */
   readonly loader: ResourceLoader;
   readonly eventBus: ResourceEventBus;
   readonly metadata: MetadataStore;
@@ -78,7 +59,7 @@ export interface FakeResourceLoader {
   readonly arrayMeshes: FakeProcessor<ArrayMeshResource>;
   readonly fonts: FakeProcessor<FontResource>;
   readonly themes: FakeProcessor<ThemeResource>;
-  /** Every ExtResource passed to `loader.register`, in call order — for assertions. */
+  /** Every ExtResource passed to `loader.register`, in call order. */
   readonly registerCalls: ExtResource[];
 }
 
@@ -108,8 +89,7 @@ function makeFakeProcessor<T>(eventBus: ResourceEventBus, type: ResourceType): F
     cachedPaths(): string[] {
       return [...cache.keys()];
     },
-    // The fake has no async flights — loads are driven manually via
-    // `_resolve`/`_fail` — so nothing is ever "in flight".
+    // Loads are driven by `_resolve` and `_fail`, so nothing is ever in flight.
     inflightPaths(): string[] {
       return [];
     },
@@ -179,16 +159,15 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     arrayMeshes,
     fonts,
     themes,
-    // Mirror ResourceLoader.register (metadata bookkeeping) and record the
-    // call so tests can assert registration without a vitest spy.
+    // Mirrors ResourceLoader.register and records the call, so a test asserts
+    // registration without a vitest spy.
     register(resource: ExtResource): void {
       registerCalls.push(resource);
       metadata.register(resource);
     },
-    // Mirror the real ResourceLoader.provideFile: clear the path everywhere,
-    // then re-route — metadata-typed processor when known, the same .tres and
-    // texture+material fan-outs otherwise. Re-requests land in each
-    // processor's `requestImpl`, so `setRequestImpl` spies observe them.
+    // Mirrors ResourceLoader.provideFile: clear the path everywhere, then re-route
+    // to the metadata-typed processor, else the .tres and texture+material fan-outs.
+    // Re-requests land in `requestImpl`, so `setRequestImpl` spies observe them.
     provideFile(path: string): void {
       for (const proc of all) proc.clearCache(path);
       const busType = busTypeFor(metadata.get(path)?.type);
@@ -209,8 +188,8 @@ export function createFakeResourceLoader(): FakeResourceLoader {
       eventBus.clear();
       metadata.clear();
     },
-    // The real clearCaches choreography, via its single owner — order is
-    // the contract, so the fake runs the SAME sequence rather than a copy.
+    // The real clearCaches sequence through its single owner: order is the
+    // contract, so the fake runs the same sequence, not a copy.
     clearCaches(): void {
       runClearCachesSequence({
         processors: Object.entries(byType) as [ResourceType, FakeProcessor<unknown>][],
@@ -218,10 +197,9 @@ export function createFakeResourceLoader(): FakeResourceLoader {
         metadata,
       });
     },
-    // The pending-resource activity the real loader tracks for `CameraFit`.
-    // Mirrored rather than stubbed to no-ops: every mounted `useResource`
-    // registers here, so a fake that silently dropped the count would let a
-    // leak through unnoticed.
+    // The pending-resource count the real loader tracks for `CameraFit`. Mirrored,
+    // not stubbed: every mounted `useResource` registers here, so a dropped count
+    // would hide a leak.
     pendingCount: 0,
     pendingListeners: new Set<() => void>(),
     beginPending(): () => void {

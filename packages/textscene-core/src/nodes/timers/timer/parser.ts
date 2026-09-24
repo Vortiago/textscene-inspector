@@ -1,5 +1,5 @@
 /**
- * Timer parser — extends the Node base parse with the Timer property surface.
+ * Timer parser: extends the Node base parse with the Timer property surface.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

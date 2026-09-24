@@ -1,12 +1,9 @@
 [gd_scene load_steps=5 format=3 uid="uid://unitglowbloomfloor"]
 
-; glow_bloom above zero, which FLOORS the bright-pass feedback.
-;
-; Every pixel then enters the glow buffer however dark it is — glow_bloom is not a
-; lowered threshold, it is a `max()` on the feedback, so the dim albedo-only ground
-; here blooms as much as the emissive sphere does. That also makes this the fixture
-; that pins the composer-mount rule: a scene can need the pass with nothing in it
-; bright enough to cross the threshold.
+; glow_bloom above zero floors the bright-pass feedback: it is a `max()` on the feedback, not a
+; lowered threshold, so every pixel enters the glow buffer and the dim albedo-only ground blooms
+; as much as the emissive sphere. This fixture also pins the composer-mount rule: a scene can
+; need the pass with nothing bright enough to cross the threshold.
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_dim"]
 sky_top_color = Color(0.1, 0.12, 0.16, 1)

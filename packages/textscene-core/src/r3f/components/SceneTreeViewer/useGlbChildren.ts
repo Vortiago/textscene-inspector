@@ -1,10 +1,7 @@
 /**
- * Tree children for a `GLBSceneRoot` node: load the GLB via the same
- * useResource('GLBMesh') flow the viewport uses, then walk its THREE.Object3D
- * into synthetic `TscnNode`s. Mirrors `useSubSceneChildren` — returns null for
- * non-GLB rows or while the GLB is still loading, and the hook re-renders the
- * tree when the GLB arrives. (The clone this incurs is one-time per loaded GLB;
- * a shared structural cache could dedupe it against the viewport clone later.)
+ * Tree children for a `GLBSceneRoot` node: the GLB, loaded as the viewport
+ * loads it, walked into synthetic `TscnNode`s. Null for a non-GLB row or while
+ * the GLB loads. The walk clones each loaded GLB once.
  */
 
 import { useMemo } from 'react';

@@ -1,8 +1,7 @@
 /**
- * Properties pane for the currently-selected scene node. Reads selection from
- * `<SelectionContext>` and resolves the node through `useLiveNode` over the
- * shared live scene tree (Instance root merge + sub-scene/GLB descent), so the
- * inspector shows the same effective identity as the tree and viewport.
+ * The properties pane for the selected node. It resolves the node through
+ * `useLiveNode` over the live scene tree, so it shows the same identity as
+ * the outliner and the viewport.
  */
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
@@ -17,10 +16,8 @@ export function NodeDetailsPanel() {
   const { selectedNodePath } = useSelection();
   const cameraControl = useOptionalCameraControl();
 
-  // The EFFECTIVE (collapsed) node at the selected path plus its originating
-  // instance ref, resolved over the same live tree the SceneTreeViewer and
-  // viewport render — so the inspector agrees with them for instance roots and
-  // sub-scene interiors, and re-derives when a lazily-loaded sub-scene lands.
+  // The merged node and its originating instance ref. It re-derives when a
+  // lazily loaded sub-scene lands.
   const entry = useLiveNode(selectedNodePath);
 
   if (!entry || !selectedNodePath) {
@@ -50,11 +47,8 @@ export function NodeDetailsPanel() {
       <h3 className={styles.title}>{node.name}</h3>
 
       {/*
-        A banner rather than a replacement for the panel: the node is parsed and
-        its properties are known and validated even when nothing is drawn, and
-        hiding all of that behind the warning would make the inspector useless
-        for exactly the node types someone is most likely inspecting. The type
-        itself is not repeated here — the Type row below states it.
+        A banner, not a replacement: an undrawn node still has parsed and
+        validated properties. The Type row below states the type.
       */}
       {isNotRendered && (
         <div className={`${styles.section} ${styles.warningSection}`}>

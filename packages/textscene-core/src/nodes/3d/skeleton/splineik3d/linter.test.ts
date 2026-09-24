@@ -1,10 +1,6 @@
 /**
- * Tests for the SplineIK3D path rule
- * (`splineik3d-setting-without-path-3d`).
- *
- * Driven through `Linter`, which registers nothing of its own, so only this
- * slice's rule and validators are live: a diagnostic here can have come from
- * nowhere else.
+ * Tests for the SplineIK3D path rule (`splineik3d-setting-without-path-3d`). Driven through
+ * `Linter`, which registers nothing of its own, so only this slice's rule and validators are live.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

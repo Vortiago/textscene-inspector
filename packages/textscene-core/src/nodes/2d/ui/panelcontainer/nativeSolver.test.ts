@@ -1,14 +1,8 @@
 /**
- * PanelContainer's native (WebGL canvas) container solve — ported from
- * `scene/gui/panel_container.cpp` (`PanelContainer::get_minimum_size`,
- * `PanelContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN` inset) and
- * `scene/gui/container.cpp` (`Container::fit_child_in_rect`, the size-flags
- * half of placing a child inside that inset rect). Driven with synthetic
- * `custom_minimum_size` children — never Labels — so a font-metric regression
- * elsewhere could never masquerade as a layout regression here. Every
- * expected value is either the Godot source formula (cited inline) or a
- * hand-worked example from it, never re-derived the way the implementation
- * derives it.
+ * Tests PanelContainer's native container solve against `panel_container.cpp`
+ * and `scene/gui/container.cpp`'s `fit_child_in_rect`. Children use `custom_minimum_size`, not
+ * Labels, so a font-metric regression cannot show as a layout one. Expected
+ * values come from the Godot formula, never from the implementation.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../../parser/types';
@@ -22,7 +16,7 @@ import type { ControlProperties } from '../control/types';
 import { panelContainerLayout, panelContainerMinimumSize } from './nativeSolver';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-/** `panelContainerLayout`'s `rects` half only — see `ContainerLayoutResult`'s own doc for why the union is here at all. */
+/** The `rects` half of a `ContainerLayoutResult`. */
 function rects(
   result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
 ): ReadonlyMap<string, Rect2> {
@@ -108,8 +102,8 @@ describe("panelContainerLayout (PanelContainer::_notification's NOTIFICATION_SOR
     const out = rects(panelContainerLayout(n, children, rect, ctx()));
     // ofs = style->get_offset() = (margin_left, margin_top) = (10, 6) (style_box.cpp:88-89).
     // size = get_size() - style->get_minimum_size() = (200-20, 100-12) = (180, 88).
-    // Default size flags (SIZE_FILL) take the whole content rect
-    // (container.cpp:103,114 — the shrink branch never runs).
+    // Default size flags (SIZE_FILL) take the whole content rect: the shrink
+    // branch never runs (container.cpp:103,114).
     expect(out.get('Panel/Child')).toEqual({ x: 10, y: 6, w: 180, h: 88 });
   });
 
@@ -215,9 +209,8 @@ describe('panelContainerLayout wired through the registry + full solve', () => {
 
 describe('panelContainerLayout under RTL', () => {
   it('hands its own rtl to fit_child_in_rect, so a non-FILL child sits at the content rect trailing edge (container.cpp:99,109)', () => {
-    // PanelContainer has no RTL branch of its own (`panel_container.cpp` calls
-    // `is_layout_rtl()` nowhere); the flag reaches the child through
-    // `Container::fit_child_in_rect`.
+    // `panel_container.cpp` calls `is_layout_rtl()` nowhere. The flag reaches
+    // the child through `Container::fit_child_in_rect`.
     const child = solveNode('Panel/Child', {
       customMinimumSize: { x: 40, y: 20 },
       sizeFlagsHorizontal: 0,

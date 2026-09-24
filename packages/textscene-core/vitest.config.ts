@@ -2,9 +2,8 @@ import { defineConfig, mergeConfig } from 'vitest/config';
 import sharedConfig from '../../vitest.shared';
 
 /**
- * Vitest configuration for the textscene-core package
- * Extends the shared configuration from the root
- * Uses happy-dom environment for DOM API support (canvas, WebGL, etc.)
+ * Vitest configuration for textscene-core: the shared root configuration under happy-dom, which
+ * supplies the DOM APIs.
  */
 export default mergeConfig(
   sharedConfig,

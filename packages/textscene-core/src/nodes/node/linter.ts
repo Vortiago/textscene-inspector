@@ -1,10 +1,7 @@
 /**
- * Node-universal semantic rule (no applicableNodeTypes — runs for every
- * node): flag references to BINARY Godot resources. The previewer can only
- * load text formats (.tscn scenes, .tres resources); a binary .scn / .res
- * reference degrades to a missing-resource placeholder in the viewport, so
- * the linter marks it as "not previewable" instead of leaving the gap
- * silent — e.g. a Godot level packed as grid_map.scn + meshes/*.res.
+ * Node-universal semantic rule (no applicableNodeTypes, so it runs for every node): a reference to
+ * a binary Godot resource (`.scn`, `.res`) is marked "not previewable", since the previewer loads
+ * only text formats (`.tscn`, `.tres`) and the content degrades to a missing-resource placeholder.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../linter/types.js';

@@ -1,8 +1,7 @@
 /**
- * Parity: primitive-mesh feature properties that were parsed/applied wrong or
- * not at all — PlaneMesh/BoxMesh subdivisions (Godot N extra loops = N+1
- * segments), CylinderMesh end-caps, SphereMesh hemisphere. Geometry-arg checks
- * render <MeshGeometry> and read the resulting THREE geometry parameters.
+ * Primitive-mesh feature parity: PlaneMesh and BoxMesh subdivisions (N extra
+ * loops are N+1 segments), CylinderMesh caps and the SphereMesh hemisphere,
+ * read from the THREE geometry <MeshGeometry> renders.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';

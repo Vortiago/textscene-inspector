@@ -4,16 +4,15 @@ export interface ParsedHeading {
 }
 
 /**
- * Whitespace, enumerated as `\s` matches it. Godot itself accepts none of the
- * non-ASCII tail: a heading key is an identifier, `[A-Za-z_][A-Za-z0-9_]*`
- * (variant_parser.cpp:493), and an NBSP is neither whitespace to skip
- * (`cchar <= 32`) nor an identifier character, so it raises "Unexpected
- * character" (:508) and the file does not load. Splitting is the lenient
- * reading: it keeps the attribute, and so the node, rather than gluing the
- * space into the next key and dropping a node the tree needs.
+ * Whitespace, as `\s` matches it. Splitting on the non-ASCII tail is the lenient
+ * reading: it keeps the attribute, and so the node, where gluing the space into the
+ * next key would drop a node the tree needs.
  */
 function isSpaceCode(code: number): boolean {
   if (code === 32 || (code >= 9 && code <= 13)) return true;
+  // Godot rejects this tail: a heading key is `[A-Za-z_][A-Za-z0-9_]*`
+  // (variant_parser.cpp:493), and an NBSP is neither whitespace (`cchar <= 32`) nor
+  // an identifier character, so it raises "Unexpected character" (:508).
   if (code < 0xa0) return false;
   return (
     code === 0xa0 ||
@@ -28,7 +27,7 @@ function isSpaceCode(code: number): boolean {
   );
 }
 
-/** `[A-Za-z0-9_]` — the characters a constructor name is built from. */
+/** `[A-Za-z0-9_]`: the characters a constructor name is built from. */
 function isIdentCode(code: number): boolean {
   return (
     (code >= 97 && code <= 122) ||
@@ -46,17 +45,13 @@ function skipToSpace(str: string, pos: number): number {
 }
 
 /**
- * Index just past the quote closing the string whose OPENING quote is at `pos`;
- * -1 if it never closes. Godot's escape rule: `\` consumes the next character,
- * and the next unescaped `"` ends the string.
- *
- * Three scans in this file walk that rule, because each asks a different
- * question and none can answer another's: this one takes an opening quote and
- * returns where it closes, {@link scanValueChunk} resumes mid-string across
- * chunks and so has no opening quote to anchor on, and
- * {@link stripLineComment} needs the first `;` that is NOT inside a string.
- * A change to the escape convention has to land in all three.
+ * Index just past the quote closing the string opened at `pos`, or -1 if it never
+ * closes. Godot's escape rule: `\` consumes the next character, and the next unescaped
+ * `"` ends the string.
  */
+// {@link scanValueChunk} and {@link stripLineComment} walk the same rule, since each
+// asks a different question: one resumes mid-string, the other finds the first `;`
+// outside a string. A change to the escape convention lands in all three.
 function scanQuoted(str: string, pos: number): number {
   for (let i = pos + 1; i < str.length; i++) {
     if (str[i] === '\\') i++; // skip the escaped character
@@ -66,15 +61,10 @@ function scanQuoted(str: string, pos: number): number {
 }
 
 /**
- * Index just past the `close` that matches the `open` at `start`, counting
- * nesting and ignoring delimiters inside quoted strings; -1 if it never closes.
- *
- * An unquoted `=` ends the search unmatched. It cannot be content: constructor
- * arguments are values, dictionaries key on `:`, and a quoted string is
- * skipped whole — so an `=` is the next attribute, reached because this value's
- * delimiter never closed. Stopping there is what keeps a stray `(` from
- * swallowing the attributes behind it, and bounds the scan to one attribute
- * instead of re-reading to end-of-line for every attribute on the line.
+ * Index just past the `close` matching the `open` at `start`, counting nesting and
+ * skipping quoted strings, or -1 if it never closes. An unquoted `=` is the next
+ * attribute, so it ends the search: a stray `(` cannot swallow the attributes behind
+ * it, and the scan stays within one attribute.
  */
 function scanBalanced(str: string, start: number, open: string, close: string): number {
   let depth = 0;
@@ -93,20 +83,10 @@ function scanBalanced(str: string, start: number, open: string, close: string): 
 }
 
 /**
- * Scan one attribute value starting at `pos` in `str`, returning it verbatim
- * (quotes and escapes intact) plus the index just past it. A quoted string, a
- * `[...]` array and a `Name(...)` constructor are delimiter-balanced so a space
- * or a nested delimiter inside them doesn't end the value; anything else — and
- * any value whose delimiter never closes — runs to the next whitespace, which
- * is where the next attribute can start.
- */
-/**
- * Can the token at `i` only be a VALUE, never the start of the next attribute?
- *
- * Every attribute begins `identifier =`, so a quoted string, a `[…]` array, a
- * number and a constructor (an identifier glued to its `(`) are unambiguous.
- * A BARE identifier is not: Godot rejects one as a value, so reading it as the
- * next attribute is the lenient recovery a heading with a missing value needs.
+ * Whether the token at `i` can only be a value. Every attribute begins `identifier =`,
+ * so a string, an array, a number and a constructor are unambiguous. A bare identifier
+ * is not: Godot rejects it as a value, so reading it as the next attribute recovers a
+ * heading with a missing value.
  */
 function opensAValue(str: string, i: number): boolean {
   const char = str[i];
@@ -118,15 +98,17 @@ function opensAValue(str: string, i: number): boolean {
   return end > i && str[end] === '(';
 }
 
+/**
+ * One attribute value from `pos`, verbatim, plus the index just past it. A quoted
+ * string, a `[...]` array and a `Name(...)` constructor are delimiter-balanced. Anything
+ * else, and any value whose delimiter never closes, runs to the next whitespace.
+ */
 function scanHeadingValue(str: string, pos: number): { value: string; nextPos: number } {
   const len = str.length;
 
-  // Godot skips whitespace before a value: `_parse_tag` calls `get_token`
-  // straight after `TK_EQUAL` (`variant_parser.cpp:1861-1863`) and that token
-  // loop breaks on `cchar <= 32` (`:415-417`), so `name= "Root"` really is
-  // `name="Root"`. Cross the space for every form that can only be a value;
-  // a bare identifier is the one that cannot be told from the next attribute,
-  // and leaving it behind is what recovers `type= parent="Foo"`.
+  // Godot skips whitespace before a value (`variant_parser.cpp:1861-1863`, `:415-417`),
+  // so `name= "Root"` is `name="Root"`. A bare identifier stays behind, since it
+  // cannot be told from the next attribute: that recovers `type= parent="Foo"`.
   let start = pos;
   while (start < len && isSpaceCode(str.charCodeAt(start))) start++;
   if (start !== pos && !opensAValue(str, start)) start = pos;
@@ -139,7 +121,7 @@ function scanHeadingValue(str: string, pos: number): { value: string; nextPos: n
   } else if (first === '[') {
     end = scanBalanced(str, start, '[', ']');
   } else {
-    // A constructor is an identifier IMMEDIATELY followed by `(` — a space
+    // A constructor is an identifier immediately followed by `(`: a space
     // before the paren belongs to the next attribute, not to this value.
     let i = start;
     while (i < len && isIdentCode(str.charCodeAt(i))) i++;
@@ -154,11 +136,9 @@ function scanHeadingValue(str: string, pos: number): { value: string; nextPos: n
 }
 
 /**
- * Drop a property value's surrounding quotes: a value quoted at BOTH ends, and
- * long enough for the two quotes to be distinct. Anything else passes through.
+ * Drop a literal's `&` or `@` sigil and surrounding quotes, when it is quoted at both
+ * ends by two distinct quotes. Anything else passes through.
  */
-
-/** Drop the surrounding quotes of a quoted literal; pass anything else through. */
 function stripQuotes(value: string): string {
   const bare = value.startsWith('&') || value.startsWith('@') ? value.slice(1) : value;
   return bare.length >= 2 && bare.startsWith('"') && bare.endsWith('"')
@@ -167,23 +147,18 @@ function stripQuotes(value: string): string {
 }
 
 /**
- * Unwrap a quoted heading value: strip the surrounding quotes and decode `\"`.
- * Both steps together or neither — decoding a value whose quote never closed
- * would destroy the `\"` that keeps the raw text re-parseable. Heading
- * attributes are carried as source text, so a structured value stays verbatim
- * and the rest of Godot's escapes are a node parser's business
- * ({@link unquoteString}).
+ * Strip a heading value's quotes and decode `\"`, both or neither: decoding an
+ * unclosed value destroys the `\"` that keeps it re-parseable. Other escapes are a node
+ * parser's business ({@link unquoteString}), and a structured value stays verbatim.
  */
 function unquoteHeadingValue(value: string): string {
   // An opening quote and nothing else carries no content, and the empty string
   // is what says so: `name` has to stay falsy for the strict parser to go on
   // reporting it missing.
   if (value === '"') return '';
-  // `scanQuoted`, not `endsWith('"')`: a trailing quote can be an ESCAPED one,
-  // so `"a\"b\"` ends in a quote while its string never closes. Unwrapping it
-  // decoded the `\"` that keeps the raw text re-parseable and handed back
-  // `a"b\`. The scanner is the same rule the value was captured with, so the
-  // two cannot disagree about where the string ends.
+  // `scanQuoted`, not `endsWith('"')`: in `"a\"b\"` the trailing quote is escaped
+  // and the string never closes. The value was captured with the same scanner, so
+  // the two agree on where the string ends.
   if (value[0] !== '"' || scanQuoted(value, 0) !== value.length) return value;
   const inner = value.slice(1, -1);
   return inner.includes('\\') ? inner.replace(/\\"/g, '"') : inner;
@@ -215,7 +190,7 @@ export function parseHeading(line: string): ParsedHeading | null {
     const keyStart = pos;
     while (pos < len && attributesStr[pos] !== '=' && !isSpaceCode(attributesStr.charCodeAt(pos))) pos++;
 
-    // An empty key means `pos` sits on a stray `=`: step over that ONE
+    // An empty key means `pos` sits on a stray `=`: step over that one
     // character, so a `=key="v"` typo costs the `=` and not the attribute
     // behind it.
     if (pos === keyStart) {
@@ -225,12 +200,9 @@ export function parseHeading(line: string): ParsedHeading | null {
 
     const key = attributesStr.slice(keyStart, pos);
 
-    // The `=` may sit any distance past the key: `_parse_tag` reads it through
-    // its own `get_token` (`variant_parser.cpp:1855-1858`), whose loop breaks on
-    // `cchar <= 32` (`:415-417`), so `[node name = "Root"]` is a heading Godot
-    // loads — the same whitespace rule `scanHeadingValue` already crosses on the
-    // other side of the `=`. Stopping the key scan at the space and then
-    // demanding `=` at that exact index dropped every attribute of such a line.
+    // The `=` may sit any distance past the key: `get_token`
+    // (`variant_parser.cpp:1855-1858`) skips `cchar <= 32` (`:415-417`), so Godot loads
+    // `[node name = "Root"]`. `scanHeadingValue` crosses the same whitespace after it.
     let equals = pos;
     while (equals < len && isSpaceCode(attributesStr.charCodeAt(equals))) equals++;
 
@@ -242,12 +214,10 @@ export function parseHeading(line: string): ParsedHeading | null {
     }
     pos = equals + 1; // skip '='
 
-    // Godot writes exactly one attribute with a space after its `=`:
-    // `scene/resources/resource_format_text.cpp` stores `" binds= " + vars`,
-    // where `vars` is an Array written by `VariantWriter` and so always opens
-    // with `[`. That bracket is what tells this apart from a key with no value
-    // at all, whose next token is another `key=value` pair and has to stay one —
-    // so the whitespace is skipped only when a bracketed value follows it.
+    // Godot writes one attribute with a space after its `=`: `" binds= " + vars`
+    // (`scene/resources/resource_format_text.cpp`), an Array that opens with `[`.
+    // Skip the space only before a `[`, or a key with no value swallows the
+    // `key=value` pair after it.
     const afterEquals = pos;
     while (pos < len && isSpaceCode(attributesStr.charCodeAt(pos))) pos++;
     if (attributesStr[pos] !== '[') pos = afterEquals;
@@ -288,12 +258,9 @@ export function isHeading(line: string): boolean {
 }
 
 /**
- * The TSCN section keywords that open a real `[…]` heading. A line is only a
- * genuine section heading if its first token is one of these — unlike
- * {@link isHeading}, which also matches BBCode tags (`[center]`, `[u]…[/u]`)
- * and bracketed array/dict content that legitimately appear ON THEIR OWN LINE
- * inside a multi-line value. Used to decide when an unterminated multi-line
- * value should be salvaged because a new section has actually begun.
+ * The section keywords that open a real heading. Unlike {@link isHeading}, this skips
+ * BBCode tags and bracketed content on their own line inside a multi-line value, so
+ * only a new section salvages an unterminated value.
  */
 const SECTION_HEADING_RE =
   /^\[(gd_scene|gd_resource|ext_resource|sub_resource|node|resource|connection|editable)\b/;
@@ -307,16 +274,14 @@ export function isEmpty(line: string): boolean {
 }
 
 /**
- * Running state of the string/bracket-balance scan, carried forward across
- * chunks so a growing multi-line value can be scanned incrementally (each new
- * chunk visited exactly once) instead of rescanned from the start every time
- * a line is appended. `depth` counts `[`/`{`/`(` outstanding over `]`/`}`/`)`:
- * Godot's reader is token-based and takes a newline as whitespace, and its own
- * writer ends every nested `Object(…)` with `)\n` (variant_parser.cpp:2234),
- * so a paren closes on a later line as readily as a bracket does.
+ * The string/bracket-balance scan state, carried across chunks so a growing
+ * multi-line value visits each chunk once instead of rescanning from the start.
  */
 export interface ValueScanState {
   inString: boolean;
+  // Open `[`/`{`/`(` over closers. Godot's reader takes a newline as whitespace and
+  // its writer ends every nested `Object(…)` with `)\n` (variant_parser.cpp:2234), so
+  // a paren closes on a later line as readily as a bracket.
   depth: number;
 }
 
@@ -324,13 +289,9 @@ export interface ValueScanState {
 export const INITIAL_SCAN_STATE: ValueScanState = { inString: false, depth: 0 };
 
 /**
- * Advance a string/bracket-balance scan by one chunk, given the state left
- * off by the previous chunk. Scans ONLY `chunk` — O(chunk length), not the
- * length of whatever came before — so a caller accumulating a multi-line
- * value line-by-line can call this once per new line and stay O(total length)
- * overall instead of O(length^2). A `\n` line separator has no effect on
- * either `inString` or `depth`, so it is safe to scan each raw line on its own
- * without the joining newline present.
+ * Advance the balance scan over `chunk` alone, from the previous chunk's state: one
+ * call per appended line keeps a multi-line value O(total length). A `\n` separator
+ * changes neither field, so each raw line scans without its joining newline.
  */
 export function scanValueChunk(chunk: string, state: ValueScanState): ValueScanState {
   let { inString, depth } = state;
@@ -349,16 +310,13 @@ export function scanValueChunk(chunk: string, state: ValueScanState): ValueScanS
 }
 
 /**
- * The line without its `;` comment: VariantParser skips from an unquoted `;`
- * to the end of the line (variant_parser.cpp:214), so what follows one is never
- * part of a value or a heading. `#` is left alone — it opens a colour literal
- * (`:241`), not a comment. `inString` is the scan state at the start of the
- * line, so a `;` on the continuation line of an open string stays.
+ * The line without its `;` comment: VariantParser skips from an unquoted `;` to the
+ * line end (variant_parser.cpp:214). `#` opens a colour literal (`:241`), not a comment.
+ * `inString` is the state at the line start, so a `;` inside an open string stays.
  */
 export function stripLineComment(line: string, inString = false): string {
-  // Every line of every parsed file reaches this, and 98% of them hold no `;`
-  // at all: without the native pre-scan the interpreted loop below costs ~28%
-  // of total parse time for a result it always throws away.
+  // Every parsed line reaches this and almost none holds a `;`: the native pre-scan
+  // skips the loop below, which otherwise costs about 28% of total parse time.
   if (!line.includes(';')) return line;
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
@@ -377,22 +335,10 @@ export function isIncompleteState(state: ValueScanState): boolean {
 }
 
 /**
- * True when a property value isn't complete on this line. Godot writes
- * multi-line values as unterminated strings (label text), as bracketed
- * arrays/dicts spanning lines — packed arrays and especially `SpriteFrames`
- * `animations = [{ … }]` — and as nested `Object(…)` calls, and reads a
- * hand-written `PackedVector2Array(` continued below. The line-based parsers
- * must keep accumulating until quotes, brackets and parens all balance, or the
- * value is truncated to its first fragment. Single string-aware scan:
- * incomplete if a string is still open, or openers outnumber closers outside
- * strings.
- *
- * A thin wrapper over {@link scanValueChunk} — full-string callers (tests,
- * and the single-line check on a property's first line) don't need to carry
- * scan state across calls, so this scans `value` from {@link INITIAL_SCAN_STATE}
- * in one shot. The multi-line accumulation hot path in `TscnParserCore`
- * carries the state forward itself instead of calling this repeatedly on a
- * growing string (that would reintroduce the O(length^2) rescan).
+ * True while a value's string is open or its brackets or parens are unbalanced.
+ * Godot spans lines with strings, arrays such as `SpriteFrames` `animations`, and
+ * nested `Object(…)` calls. One {@link scanValueChunk} from {@link INITIAL_SCAN_STATE}: the
+ * hot path in `TscnParserCore` carries the state itself to avoid an O(length^2) rescan.
  */
 export function isIncompleteValue(value: string): boolean {
   return isIncompleteState(scanValueChunk(value, INITIAL_SCAN_STATE));
@@ -408,29 +354,23 @@ const ESCAPE_MAP: Record<string, string> = {
 };
 
 /**
- * Strip a value's surrounding quotes (and the `&"…"` StringName jacket a STRING
- * slot converts from) and decode Godot's string escapes the way the tokenizer
- * does: `\b \t \n \f \r` to their control characters, `\uXXXX` / `\UXXXXXX`
- * to the code point, and every other escaped character to itself
- * (`variant_parser.cpp:350-351`, `default: res = next` — so `\"`, `\\` and
- * `\'` all yield the character). Non-quoted values pass through unchanged.
- * A single left-to-right pass so an escaped backslash (`\\u1234`) is decoded as
- * `\` + literal `u1234`, not as a Unicode escape. Used wherever a node parser
- * reads a string property (label/button text, …).
- *
- * A `\u` without its hex digits is left as written: the tokenizer's `case 'u'`
- * reads exactly four hex digits and errors otherwise, never falling through
- * to the pass-through arm.
+ * Strip a value's quotes, and the `&"…"` jacket a STRING slot converts from, and decode
+ * escapes as the tokenizer does: `\b \t \n \f \r`, `\uXXXX` and `\UXXXXXX`, and any
+ * other escaped character to itself (`variant_parser.cpp:350-351`). An unquoted value
+ * passes through.
  */
 export function unquoteString(value: string): string {
   const unquoted = stripQuotes(value);
   if (!unquoted.includes('\\')) return unquoted;
+  // One left-to-right pass, so `\\u1234` is `\` plus literal `u1234`. A `\u` without
+  // four hex digits stays as written: the tokenizer's `case 'u'` errors there rather
+  // than passing the character through.
   return unquoted.replace(
     /\\(u[0-9a-fA-F]{4}|U[0-9a-fA-F]{6}|[^uU])/g,
     (_match, seq: string) => {
       if (seq[0] === 'u' || seq[0] === 'U') {
         const code = parseInt(seq.slice(1), 16);
-        // `\UXXXXXX` accepts six hex digits, past the Unicode maximum — a
+        // `\UXXXXXX` accepts six hex digits, past the Unicode maximum, and a
         // literal beyond it would throw and abort the whole scene parse.
         return code <= 0x10ffff ? String.fromCodePoint(code) : `\\${seq}`;
       }
@@ -440,31 +380,19 @@ export function unquoteString(value: string): string {
 }
 
 /**
- * A StringName-typed property value: Godot's text saver writes it with a `&`
- * sigil — `&"HeaderLabel"`, `&"Panel"` — where a plain String has none
- * (`core/variant/variant_utility.cpp`'s StringName stringify path). Strips
- * the sigil, then unquotes. A bare quoted string passes through unchanged,
- * so a scene that omits the sigil still parses.
+ * A StringName value: the saver writes a `&` sigil, `&"Panel"`, where a String has
+ * none (`core/variant/variant_utility.cpp`). Strips the sigil, then unquotes. A bare
+ * quoted string passes through, so a scene without the sigil still parses.
  */
 export function unquoteStringName(value: string): string {
   return unquoteString(value.startsWith('&') ? value.slice(1) : value);
 }
 
 /**
- * Whether a `[node]` heading OVERRIDES the node already at its path rather than
- * declaring a new one.
- *
- * Godot writes an override with neither `type=` nor `instance=` — the node it
- * names already exists inside instanced content, so there is nothing to declare,
- * only properties to change. An `instance_placeholder=` heading declares a node
- * of its own, an InstancePlaceholder (packed_scene.cpp:255). `[node name="Robot" parent="Player/Skeleton/Skeleton3D"]`
- * retextures a mesh inside a GLB; `[node name="CoinCount" type="Label3D" parent="..."]`
- * beside it adds a genuinely new child.
- *
- * Lives here rather than in either node creator because BOTH of them build
- * nodes from a heading — the renderer's registry and the linter's strict parser
- * — and the two disagreeing about what an override is would be a silent
- * divergence between what renders and what lints.
+ * Whether a `[node]` heading overrides a node inside instanced content: Godot writes
+ * one with neither `type=` nor `instance=`. An `instance_placeholder=` heading declares
+ * an InstancePlaceholder (packed_scene.cpp:255). Both node creators call this, so what
+ * renders and what lints agree on an override.
  */
 export function isPropertyOverrideHeading(heading: ParsedHeading): boolean {
   return (

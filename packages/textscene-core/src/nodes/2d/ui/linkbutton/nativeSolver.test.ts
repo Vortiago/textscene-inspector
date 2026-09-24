@@ -1,16 +1,8 @@
 /**
- * `linkbutton/nativeSolver.ts` vs Godot 4.6.3 (`scene/gui/link_button.cpp`,
- * `scene/theme/default_theme.cpp:196-210`). Expected numbers are
- * hand-derived from the source, not recomputed the way the implementation
- * itself computes them — same vendored OpenSans_SemiBold metrics other
- * Button-family slices cite (`unitsPerEm=2048`, `ascent=2189`, `descent=600`;
- * 'A' hmtx advance 1354 design units).
- *
- * At font size 16: ascentPx=ceil(2189*16/2048)=18, descentPx=ceil(600*16/2048)=5,
- * linePitchPx (lineSpacingPx 0, LinkButton reads no `line_spacing` key) = 23.
- * 'A' advance = 1354*(16/2048) = 10.578125, shaped (ceiled) width = 11.
- * `getUnderlinePositionPx(16)` = 0.9765625, `getUnderlineThicknessPx(16)` =
- * 0.390625 — `openSansMetrics.ts`'s own worked examples.
+ * Tests `linkbutton/nativeSolver.ts` against Godot 4.6.3 (`scene/gui/link_button.cpp`,
+ * `scene/theme/default_theme.cpp:196-210`) with numbers derived by hand from OpenSans_SemiBold. At size 16:
+ * ascent 18, descent 5 and no `line_spacing`, so the pitch is 23. 'A' (1354 units) is 10.578125, shaped 11.
+ * Underline position 0.9765625 and thickness 0.390625 are `openSansMetrics.ts`'s worked examples.
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -37,8 +29,8 @@ function node(props: Partial<LinkButtonProperties>): SolveNode {
     ...solveNode(),
     path: 'L',
     node: { name: 'L', type: 'LinkButton', children: [], properties: { name: 'L', ...props } as LinkButtonProperties },
-    // A local theme_override_colors/* reaches `resolveTextTheme` through
-    // `n.colors` (the walker folds it in unconditionally), not props.
+    // A local theme_override_colors/* reaches `resolveTextTheme` through `n.colors`, which the walker
+    // fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},
   };
 }
@@ -175,18 +167,10 @@ describe('linkButtonMinimumSize — with text', () => {
 });
 
 /**
- * `LinkButton::_notification` (`link_button.cpp:289-314`):
- *
- *     int width = text_buf->get_line_width();
- *     if (is_layout_rtl()) { text_buf->draw(ci, Vector2(size.width - width, 0), color); }
- *     else                 { text_buf->draw(ci, Vector2(0, 0), color); }
- *
- * and the underline runs `(size.width - width) .. size.width` on the RTL arm,
- * `0 .. width` on the LTR one. `width` is `TextParagraph::get_line_width`
- * (`scene/resources/text_paragraph.cpp:810`) narrowed to `int` — that
- * accessor is `TS->shaped_text_get_width`, already
- * `Math::ceil(sd->width)` (`text_server_adv.cpp:7569`), so the narrowing
- * never removes a fraction and the line width is the CEILED pen extent.
+ * `LinkButton::_notification` (`link_button.cpp:289-314`) draws at `(size.width - width, 0)` under RTL and
+ * `(0, 0)` under LTR, with the underline over the same `width`. `width` is `TextParagraph::get_line_width`
+ * (`scene/resources/text_paragraph.cpp:810`), already `Math::ceil(sd->width)` (`text_server_adv.cpp:7569`),
+ * so the `int` narrowing removes nothing and the line width is the ceiled pen extent.
  */
 describe('linkButtonTextPlacement', () => {
   it('ceils the pen extent to Godot\'s own int line width', () => {

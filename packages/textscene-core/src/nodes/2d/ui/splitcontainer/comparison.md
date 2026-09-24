@@ -10,11 +10,11 @@ renders_as: two children split at a computed offset, along the `vertical`-chosen
 # SplitContainer
 
 SplitContainer is the base that arranges its children along one axis with a draggable
-split between each pair, and `split_offsets` displaces each of those splits from the rest
-position the children's expand flags give it. HSplitContainer and VSplitContainer fix the
-axis; this type reads `vertical` itself to pick it. A right-to-left `layout_direction`
-mirrors a horizontal split — the first child takes the right band — and leaves a vertical
-one stacked the same way.
+split between each pair. `split_offsets` moves each split from the rest position that the
+children's expand flags give it. HSplitContainer and VSplitContainer fix the axis. This
+type reads `vertical` to pick it. A right-to-left `layout_direction` mirrors a horizontal
+split, so the first child takes the right band. A vertical split stays stacked the same
+way.
 
 ## Linting
 
@@ -46,10 +46,10 @@ Strict parsing format-checks these `SplitContainer` properties, plus 53 inherite
 
 Strict format-checks all eleven of SplitContainer's own members. `dragger_visibility` is
 the one enum, and it warns outside `0..2`, since the setter assigns unconditionally. No
-setter clamps, so strict and lenient agree on every value Godot itself writes. The
-lenient parser reads `split_offset`, `collapsed`, `dragger_visibility` and `vertical`
-beyond their scalar type only; an unparseable `split_offset` or `dragger_visibility`
-leaves the property `undefined` and Godot's default applies, an unparseable `collapsed`
-or `vertical` reads as `false` (a bool slot stores what it can, never unset), and an
-out-of-range `dragger_visibility` behaves as VISIBLE.
+setter clamps, so strict and lenient agree on every value Godot writes. The lenient
+parser reads `split_offset`, `collapsed`, `dragger_visibility` and `vertical` for their
+scalar type only. An unparseable `split_offset` or `dragger_visibility` leaves the
+property `undefined`, and Godot's default applies. An unparseable `collapsed` or
+`vertical` reads as `false`, because a bool slot stores what it can and is never unset.
+An out-of-range `dragger_visibility` behaves as VISIBLE.
 

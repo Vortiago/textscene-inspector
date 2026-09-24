@@ -1,14 +1,8 @@
 /**
- * Batched tile geometry — one merged quad set per atlas source, as plain typed
- * arrays (no THREE): 4 vertices / 6 indices per cell, positions in three-local
- * space (Godot pixels with Y negated once — the node group is conjugated, see
- * node2dTransform), per-cell UVs windowed to the atlas region.
- *
- * UV convention matches r3f/spriteFrame.ts: textures load with flipY=true, so
- * image-Y (top-left origin) maps to UV-Y (bottom-left) via v = 1 − y/texH.
- * spriteFrame windows by mutating texture.repeat/offset (one window per cloned
- * texture); here windows live in geometry attributes because every cell shares
- * one identity-cached texture.
+ * Batched tile geometry: one merged quad set per atlas source as plain typed arrays, 4 vertices and
+ * 6 indices per cell. Positions are Godot pixels with Y negated once (the node group is conjugated,
+ * see node2dTransform). UVs follow r3f/spriteFrame.ts's flipY convention, v = 1 − y/texH, but
+ * window through geometry, not texture.repeat, since every cell shares one cached texture.
  */
 
 import { mapToLocalPx } from './tilePlacement';
@@ -86,8 +80,7 @@ export function buildTileGeometryArrays(
     // Quad center = map_to_local − texture_origin (Godot's draw_tile anchor).
     const cx = center.x - info.textureOrigin.x;
     const cy = center.y - info.textureOrigin.y;
-    // Corner order TL, TR, BL, BR — positions in three-local space (Y negated;
-    // `0 - v` so a zero stays +0, never -0).
+    // Corner order TL, TR, BL, BR, with Y negated as `0 - v` so a zero stays +0, never -0.
     const left = cx - w / 2;
     const right = cx + w / 2;
     const top = 0 - (cy - h / 2);

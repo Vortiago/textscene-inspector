@@ -1,18 +1,8 @@
 /**
- * The TileSet slice's decode (ADR-0031): properties of a TileSet resource in,
- * the normalized `TileSetModel` out. Pure and context-independent.
- *
- * ONE decode, two arrival adapters — `tileSetFromScene` (embedded in the scene
- * as a `[sub_resource]`) and `tileSetFromTres` (an external file's
- * **ParsedResource**) — differing only in which tables resolve a reference.
- * The decode may not fork between them.
- *
- * `TileSetAtlasSource` and its alternative tiles stay internal here: nothing in
- * the corpus declares one as an `ext_resource`, so they only ever arrive
- * nested inside a TileSet.
- *
- * Lenient contract: silent on absent properties, warn-then-skip on malformed
- * ones; never throws.
+ * The TileSet slice's decode (ADR-0031): a TileSet's properties to the
+ * `TileSetModel`. `tileSetFromScene` and `tileSetFromTres` differ only in which
+ * tables resolve a reference, and the decode never forks. Lenient: silent on
+ * absent properties, warn-then-skip on malformed ones, never throws.
  */
 
 import { warn } from '../../logger';
@@ -35,7 +25,7 @@ export interface TileSetSourceData {
   /** The TileSet resource's own properties (raw value strings). */
   properties: Record<string, unknown>;
   findSubResource(id: string): TscnInternalResource | undefined;
-  /** `ExtResource("id")` (or raw res:// path) → res:// path, or null. */
+  /** `ExtResource("id")` or a raw res:// path to a res:// path, or null. */
   resolveTexturePath(ref: string): string | null;
 }
 
@@ -50,11 +40,9 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   const sources = new Map<number, AtlasSourceModel>();
   const sourceOrder: number[] = [];
 
-  // Two spellings of one id (`sources/1`, `sources/01`, `sources/+1`) are one
-  // source: `_set` drops whatever sits at the id before re-adding
-  // (tile_set.cpp:3965-3968), so the last spelling's value wins — what
-  // `Map.set` already does. The id keeps its first-seen place, which is this
-  // previewer's batching order rather than the engine's; see `types.ts`.
+  // `sources/1`, `sources/01` and `sources/+1` are one source: `_set` drops the id
+  // before re-adding (tile_set.cpp:3965-3968), so the last value wins, as `Map.set`
+  // does. The first-seen place is the previewer's batching order (see `types.ts`).
   const seat = (id: number, source: AtlasSourceModel): void => {
     if (!sources.has(id)) sourceOrder.push(id);
     sources.set(id, source);
@@ -64,10 +52,9 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
     const sourceMatch = SOURCE_KEY_RE.exec(key);
     if (!sourceMatch) continue;
     const sourceId = Number(sourceMatch[1]);
-    // A negative override never names itself: `add_source` re-seats -1 at the
-    // auto-assigned `next_source_id` (tile_set.cpp:481) and refuses anything
-    // below it (:479). Which id -1 landed on depends on every other source in
-    // the file, so the source is dropped rather than misplaced.
+    // `add_source` re-seats -1 at the auto-assigned `next_source_id` (tile_set.cpp:481)
+    // and refuses anything below (:479). The landing id depends on every other
+    // source, so the source is dropped, not misplaced.
     if (sourceId < 0) {
       warn(`[TileSet] source ${key}: Godot re-assigns a negative source id — skipped`);
       continue;
@@ -116,7 +103,7 @@ function intEnumOr(value: unknown, fallback: number, label: string): number {
   return n;
 }
 
-/** Adapter: a TileSet loaded from an external .tres file. Null = not a TileSet. */
+/** Adapter: a TileSet from an external .tres file, or null for another type. */
 export function tileSetFromTres(parsed: ParsedResource): TileSetModel | null {
   if (parsed.resourceType !== 'TileSet') return null;
   return resolveTileSetModel({
@@ -126,7 +113,10 @@ export function tileSetFromTres(parsed: ParsedResource): TileSetModel | null {
   });
 }
 
-/** Adapter: a TileSet embedded in the scene as a SubResource. Null = ref unresolvable. */
+/**
+ * Adapter: a TileSet embedded in the scene as a SubResource, or null for an
+ * unresolvable ref. `TileSetAtlasSource` stays internal: it arrives only nested.
+ */
 export function tileSetFromScene(
   tileSetRef: string,
   internalResources: readonly TscnInternalResource[],
@@ -159,16 +149,10 @@ function resolveAtlasSource(
 }
 
 /**
- * Per-tile key grammar in a TileSetAtlasSource:
- *   `x:y/size_in_atlas` — per-tile (oversized tiles spanning several cells)
- *   `x:y/<altId>`       — declares an alternative tile (0 = base)
- *   `x:y/<altId>/prop`  — alternative properties (flip_h/flip_v/transpose/texture_origin)
- * Everything else (next_alternative_id, physics/custom-data layers, …) is ignored.
- *
- * `x` and `y` are a Vector2i atlas COORDINATE, not a family index, but the
- * spelling is the same fact: `TileSetAtlasSource::_set` splits `components[0]`
- * on `:` and gates each half on `is_valid_int()` (tile_set.cpp:4754), which
- * skips one leading sign either way (ustring.cpp:4752).
+ * Per-tile keys: `x:y/size_in_atlas`, `x:y/<altId>` (0 = base) and
+ * `x:y/<altId>/prop`. Others are ignored. `TileSetAtlasSource::_set` splits the
+ * coordinate on `:` and gates each half on `is_valid_int()` (tile_set.cpp:4754),
+ * which skips one leading sign (ustring.cpp:4752).
  */
 const TILE_KEY_RE = indexedKeyRegex('^(#):(#)/(.+)$', 'is_valid_int');
 
@@ -213,10 +197,9 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
     const alt = ALT_KEY_RE.exec(rest);
     if (!alt) continue;
     const altId = Number(alt[1]);
-    // -1 is `INVALID_TILE_ALTERNATIVE` and `_set` refuses it outright
-    // (tile_set.cpp:4799); below that `create_alternative_tile` re-seats the
-    // entry at the auto-assigned `next_alternative_id`. Neither names an
-    // alternative a cell can address.
+    // -1 is `INVALID_TILE_ALTERNATIVE`, which `_set` refuses (tile_set.cpp:4799).
+    // Below that, `create_alternative_tile` re-seats at `next_alternative_id`.
+    // Neither names an alternative a cell can address.
     if (altId < 0) continue;
     const prop = alt[2];
     const alternative = alternativeAt(tileAt(m[1]!, m[2]!), altId);

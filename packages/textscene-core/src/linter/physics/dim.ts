@@ -2,7 +2,7 @@
 
 export type PhysicsDim = '2D' | '3D';
 
-/** Lowercase suffix used in rule names, e.g. `area2d`, `rigidbody3d`. */
+/** Lowercase suffix used in rule names, for example `area2d` and `rigidbody3d`. */
 export function dimSuffix(dim: PhysicsDim): string {
   return dim.toLowerCase();
 }

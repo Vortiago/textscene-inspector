@@ -1,19 +1,13 @@
 /**
- * Checking a name against ClassDB, which is the one thing the derivation cannot
- * do for itself: a type Godot does not know gets no base and therefore no
- * inherited validation, silently.
+ * Checks a name against ClassDB, which the base derivation cannot do for itself: a type Godot does
+ * not know gets no base and so, silently, no inherited validation.
  */
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { REPO_ROOT, fail } from './paths.mjs';
 
-/**
- * The node catalog `pnpm nodes:catalog` derived from Godot's own ClassDB.
- *
- * Read once: three checks below ask it questions and the file does not change
- * inside one invocation.
- */
+/** The node catalog `pnpm nodes:catalog` derived from ClassDB, read once per invocation. */
 let cached;
 function loadCatalog() {
   cached ??= JSON.parse(
@@ -23,13 +17,9 @@ function loadCatalog() {
 }
 
 /**
- * Check a `--tier` name against ClassDB, and report who inherits from it.
- *
- * The opposite check from `checkChain`: an abstract class is by definition NOT
- * instantiable, so it is absent from the catalog's node list and present only
- * inside other types' `chain` arrays. A tier keyed on a name Godot never had
- * registers validators nothing can inherit, and nothing fails, so the spelling
- * check matters more here than for a leaf.
+ * Checks a `--tier` name against ClassDB. An abstract class is absent from the catalog's node list
+ * and present only in other types' `chain` arrays. A tier on a name Godot never had registers
+ * validators nothing inherits, and nothing else fails.
  *
  * @returns the concrete catalogued types that would inherit the tier.
  */
@@ -52,12 +42,8 @@ export function checkTier(typeName) {
 }
 
 /**
- * The tier's OWN parent: the hop after it in any heir's catalogued chain.
- *
- * An abstract class is absent from `catalog.nodes` — `checkTier` asserts as
- * much — so it has no chain of its own to read. Its heirs do, and every one of
- * them passes through it, so the entry after `typeName` in any of their chains
- * is the class directly above the tier.
+ * The tier's own parent: the hop after it in any heir's catalogued chain. An abstract class has no
+ * chain of its own in `catalog.nodes`, but every heir's chain passes through it.
  */
 export function tierParent(typeName) {
   const catalog = loadCatalog();
@@ -70,15 +56,9 @@ export function tierParent(typeName) {
 }
 
 /**
- * The type's parent, from Godot's own answer in the node catalog.
- *
- * `NODE_BASE_TYPES` is derived from that catalog, so nothing needs writing —
- * the entry for a real Godot type is already there. What the lookup still buys
- * is the one failure the derivation cannot catch: a type name that is not a
- * Godot type at all. A misspelled `Raycast3D` gets no catalog entry, so it gets
- * no base, so the validator walk terminates instantly and the slice is silently
- * unvalidated. Refusing the name here turns that into an error rather than a
- * green scaffold with zero inherited validation.
+ * The type's parent from the node catalog, which `NODE_BASE_TYPES` already derives. The lookup
+ * refuses a name that is not a Godot type: a misspelled `Raycast3D` would get no base, and the
+ * slice would be scaffolded green with zero inherited validation.
  */
 export function checkChain(typeName) {
   const catalog = loadCatalog();

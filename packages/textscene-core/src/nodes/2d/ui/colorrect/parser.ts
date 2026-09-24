@@ -1,10 +1,6 @@
-/** ColorRect parser — Control + a solid fill color. */
+/** ColorRect parser: the Control parse plus a solid fill colour. */
 
-/**
- * Godot's own default (class_colorrect): `color = Color(1, 1, 1, 1)`. Godot
- * omits a property at its default, so an absent `color` means opaque WHITE —
- * defaulting to "no fill" renders a ColorRect that Godot fills as invisible.
- */
+/** The Godot default of `color` (class_colorrect). Godot omits a property at its default, so an absent `color` is opaque white. */
 const DEFAULT_COLOR = 'Color(1, 1, 1, 1)';
 
 import type { ParsedHeading } from '../../../../parser/utils';

@@ -1,25 +1,12 @@
 /**
- * Drift guard: a native Control painter may not re-apply its own node's
- * `modulate`, and may not reach the two fields that would let it.
- *
- * `ControlCanvasWalker` folds a node's `modulate` into the ambient
- * `Modulate2DContext` it wraps the painter in, so a painter that applies it
- * again SQUARES it — invisible at the default opaque white, wrong at anything
- * else. `painterView` (`solveTree.ts`) hands a painter the node's properties
- * MINUS `modulate`/`selfModulate`, and the walker resolves the own-pixel tint
- * itself (`NativeControlComponentProps.tint`), so a conforming painter cannot
- * name either — and must not resolve a tint of its own to get at them.
- *
- * `painterView` narrows for real — a cached shallow copy with both keys
- * rest-destructured out — so a solver helper handed `props` (`buttonIconColor`,
- * `resolveCheckBoxDrawState`, `labelTextTheme`) can no longer see either. This
- * is still a SOURCE check because the BAG keeps both, and
- * `solveNode.node.properties` is reachable from any file under `nodes/2d/ui`:
- * the scans below are what close that way around.
- *
- * The gate FORBIDS patterns, it does not require `painterView` to be
- * present: eight painters read no properties at all.
+ * Drift guard: a native Control painter never re-applies its own node's
+ * `modulate`, and never reaches `modulate` or `selfModulate`. The walker already
+ * folds `modulate` into the context, so a second application squares it.
  */
+// `painterView` (`solveTree.ts`) drops both keys, but the property bag keeps
+// them and any file under `nodes/2d/ui` can reach it, so this scans source.
+// The gate forbids patterns and does not require `painterView`: a painter may
+// read no properties at all.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -37,28 +24,23 @@ const UI_ROOT = join(import.meta.dirname, '../../../nodes/2d/ui');
 const EXEMPT_MARKER = 'painter-view-exempt:';
 
 /**
- * Painters that live outside a `nodes/2d/ui` slice — the shared panel chrome
- * two of them delegate their whole body to. Scanned as a painter AND as a
- * launderer, since it is where a `panel` read would land.
+ * Painters outside a `nodes/2d/ui` slice: the shared panel chrome some slices
+ * delegate their whole body to. Scanned as a painter and as a launderer,
+ * since a `panel` read lands there.
  */
 const LOOSE_PAINTERS = [join(import.meta.dirname, 'PanelChrome.tsx')];
 
 /**
  * Directories under `nodes/2d/ui` that are not a slice and so have no painter.
- * Named rather than swallowed: a RENAMED painter must fail this file loudly
- * rather than quietly take itself out of scope.
+ * Named rather than inferred, so a renamed painter fails here instead of
+ * leaving the scope.
  */
 const NO_PAINTER = new Set(['shared']);
 
 /**
  * Every native Control painter: the `Component.tsx` of each `nodes/2d/ui` slice
- * that ships one, plus the loose ones.
- *
- * A slice with no `Component.tsx` is parsed and validated but not drawn — the
- * linter covers every Godot Control type, while a painter exists only where the
- * previewer renders one. `has2DUIContent.driftguard.test.ts` is what holds the
- * painted set to the component registry; this file only asks how the painters
- * that DO exist read their view.
+ * that ships one, plus the loose ones. A slice without one is parsed, not drawn.
+ * `has2DUIContent.driftguard.test.ts` holds the painted set to the registry.
  */
 function painterSources(): SourceFile[] {
   const found = readdirSync(UI_ROOT, { withFileTypes: true })
@@ -72,10 +54,10 @@ function painterSources(): SourceFile[] {
 }
 
 /**
- * Every source file under `nodes/2d/ui`, walked RECURSIVELY (`shared/` holds
- * the container solvers), minus the three places the property legitimately
- * exists by name: `parser.ts` and its strict-parser twin `linterParser.ts`
- * produce it, `types.ts` declares it, and a test may author it.
+ * Every source file under `nodes/2d/ui`, walked recursively (`shared/` holds
+ * the container solvers), minus the files that name the property legitimately:
+ * `parser.ts` and `linterParser.ts` produce it, `types.ts` declares it, and a
+ * test may author it.
  */
 function uiSources(): SourceFile[] {
   const NOT_A_PAINTER_READ = ['parser.ts', 'linterParser.ts', 'types.ts'];
@@ -87,21 +69,18 @@ function uiSources(): SourceFile[] {
 }
 
 /**
- * Reaching the raw property bag. Anchored on `.node.properties`, NOT
- * `.properties as`: `subviewportcontainer` legitimately casts a DIFFERENT
- * node's properties (its child SubViewport's), which carries no Control tint
- * at all.
+ * Reaching the raw property bag. Anchored on `.node.properties`, not
+ * `.properties as`: `subviewportcontainer` casts its child SubViewport's
+ * properties, which carry no Control tint.
  */
 function rawPropertyLines(source: string): number[] {
   return offendingLines(source, /\.node\.properties|\bcontrolProps\b/, EXEMPT_MARKER);
 }
 
 /**
- * Resolving a tint at all. A painter is HANDED its own-pixel tint
- * (`NativeControlComponentProps.tint`); every hook that would compute one
- * instead sits above it in the chain, `useControlOwnTint` included — it takes
- * the walker's inherited value, which a painter can only reach by re-reading
- * the provider it renders inside.
+ * Resolving a tint at all. A painter is handed its own-pixel tint
+ * (`NativeControlComponentProps.tint`). Every hook that computes one sits above
+ * it, `useControlOwnTint` included, since only the walker holds its input.
  */
 function wideTintLines(source: string): number[] {
   return offendingLines(source, /\buseCanvasItemTint\b|\buseControlTint\b|\buseControlOwnTint\b/, EXEMPT_MARKER);
@@ -110,8 +89,7 @@ function wideTintLines(source: string): number[] {
 /**
  * Naming `modulate` in code at all. Case-sensitive and word-bounded, so
  * `selfModulate`, `self_modulate`, `multiplyModulate`, `canvasModulate`,
- * `Modulate2DContext` and `WHITE_MODULATE` — none of them a node's own
- * hierarchical tint — all pass untouched.
+ * `Modulate2DContext` and `WHITE_MODULATE` all pass.
  */
 function launderedModulateLines(source: string): number[] {
   return offendingLines(source, /\bmodulate\b/);
@@ -150,7 +128,7 @@ describe('Control painter view conformance', () => {
     expect(rawPropertyLines('  const props = solveNode.node.properties as LabelProperties;')).toEqual([1]);
     expect(rawPropertyLines('  const props = controlProps(solveNode);')).toEqual([1]);
     expect(rawPropertyLines('  const props = painterView<LabelProperties>(solveNode);')).toEqual([]);
-    // A DIFFERENT node's properties — `subviewportcontainer`'s child SubViewport.
+    // Another node's properties: `subviewportcontainer`'s child SubViewport.
     expect(rawPropertyLines('  const props = viewport.properties as SubViewportProperties;')).toEqual([]);
     expect(rawPropertyLines(' * `solveNode.node.properties` in a comment is not a read')).toEqual([]);
     expect(rawPropertyLines('// painter-view-exempt: not a Control\nconst p = n.node.properties as X;')).toEqual([]);
@@ -159,11 +137,10 @@ describe('Control painter view conformance', () => {
   it('would catch a painter resolving a tint — the check is not vacuous', () => {
     expect(wideTintLines('  const tint = useCanvasItemTint({ modulate: WHITE, self_modulate: s });')).toEqual([1]);
     expect(wideTintLines('  const tint = useControlTint(a, b);')).toEqual([1]);
-    // The hook the walker still calls: reintroducing it in a painter is the
-    // arrangement `tint` replaced, not a variant of it.
+    // The walker calls this hook. A painter never does.
     expect(wideTintLines('  const tint = useControlOwnTint(inherited, solveNode);')).toEqual([1]);
     expect(wideTintLines('  const { tint } = props;')).toEqual([]);
-    // The MODULE stays importable — `richtextlabel` needs `multiplyModulate`.
+    // The module stays importable: `richtextlabel` needs `multiplyModulate`.
     expect(wideTintLines("import { multiplyModulate } from '../../canvasItemModulate';")).toEqual([]);
     expect(wideTintLines(' * `useCanvasItemTint` in a comment is not a call')).toEqual([]);
   });
@@ -177,7 +154,7 @@ describe('Control painter view conformance', () => {
     expect(launderedModulateLines('  const canvasModulate = canvasModulateColor(n.children);')).toEqual([]);
     expect(launderedModulateLines(' * this node`s own `modulate` in prose is not a read')).toEqual([]);
     expect(launderedModulateLines('  const x = 1; // modulate lives on the walker')).toEqual([]);
-    // No escape hatch: an exemption marker does NOT silence this one.
+    // No escape hatch: an exemption marker does not silence this one.
     expect(launderedModulateLines('// painter-view-exempt: nope\nconst m = props.modulate;')).toEqual([2]);
   });
 

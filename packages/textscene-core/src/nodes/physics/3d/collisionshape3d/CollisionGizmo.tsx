@@ -1,12 +1,6 @@
 /**
- * Wireframe gizmo for a collision-shape resource. Renders the shape's geometry
- * as a wireframe in the node's `debug_color` (mirrors Godot's editor collision
- * overlay). Only mounted when `showCollisions` is on (see CollisionShape3D), so
- * it costs nothing by default.
- *
- * `ConvexPolygonShape3D` builds a `ConvexGeometry`, which lives in three's
- * examples bundle — it is lazy-`import()`ed so it stays OFF the static-paint
- * closure and out of the VS Code webview budget until collisions are toggled on.
+ * Wireframe gizmo for a collision-shape resource, drawn in the node's `debug_color` like
+ * Godot's editor collision overlay. CollisionShape3D mounts it only when `showCollisions` is on.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -82,7 +76,7 @@ export function CollisionGizmo({ shape, color }: CollisionGizmoProps) {
   }
 }
 
-/** Concave shapes are already a triangle soup — bind it as a non-indexed BufferGeometry. */
+/** A concave shape is already a triangle soup, bound as a non-indexed BufferGeometry. */
 function TriangleSoupWire({ data, color }: { data: Float32Array; color: THREE.Color }) {
   const geometry = useMemo(() => {
     const geom = new THREE.BufferGeometry();
@@ -99,7 +93,7 @@ function TriangleSoupWire({ data, color }: { data: Float32Array; color: THREE.Co
   );
 }
 
-/** Convex hull from a point cloud — ConvexGeometry is lazy-loaded (bundle budget). */
+/** Convex hull from a point cloud, through the lazy-loaded ConvexGeometry. */
 function ConvexHullWire({ points, color }: { points: Float32Array; color: THREE.Color }) {
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
 
@@ -113,6 +107,8 @@ function ConvexHullWire({ points, color }: { points: Float32Array; color: THREE.
       setGeometry(null);
       return;
     }
+    // `ConvexGeometry` lives in three's examples bundle, so it is lazy-`import()`ed: it stays off
+    // the static-paint closure and out of the VS Code webview budget until collisions show.
     void import('three/addons/geometries/ConvexGeometry.js')
       .then(({ ConvexGeometry }) => {
         if (!cancelled) setGeometry(new ConvexGeometry(verts));

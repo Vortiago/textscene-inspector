@@ -1,7 +1,4 @@
-/**
- * Confirms each MVS node type's index.ts self-registers in nodeComponentRegistry.
- * Side effect-only import populates the registry.
- */
+/** Each node type's index.ts self-registers in nodeComponentRegistry through a side-effect import. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';

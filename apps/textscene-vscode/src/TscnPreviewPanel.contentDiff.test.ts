@@ -1,12 +1,8 @@
 /**
- * Unit tests for `TscnPreviewPanel._loadTscnContent`'s content-diff guard and
- * error path. The dependency hot-reload suite
- * (`TscnPreviewPanel.hotReload.test.ts`) and the handshake suite
- * (`TscnPreviewPanel.handshake.test.ts`) exercise `update()` for a resource-
- * provider cache switch and for a genuine content change respectively, but
- * neither pins the guard's actual NO-OP: calling `update()` again with
- * identical file content must not re-post `loadTscn`. Nor is `readFile`
- * rejecting (the "Failed to load TSCN file" error surface) covered anywhere.
+ * Unit tests for `TscnPreviewPanel._loadTscnContent`: an `update()` with identical
+ * file content re-posts no `loadTscn`, and a rejecting `readFile` surfaces
+ * "Failed to load TSCN file". `TscnPreviewPanel.hotReload.test.ts` and
+ * `TscnPreviewPanel.handshake.test.ts` cover a provider switch and a real change.
  */
 import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
@@ -34,15 +30,15 @@ describe('TscnPreviewPanel update() content-diff guard', () => {
     expect(loadTscnMessages(webview)).toHaveLength(1);
     webview.postMessage.mockClear();
 
-    // Same resource, same on-disk content (e.g. a save that changed nothing,
-    // or a duplicate file-watcher event) — the content-diff guard must no-op.
+    // Same resource, same on-disk content (a save that changed nothing, or a
+    // duplicate watcher event): the content-diff guard no-ops.
     panel.update(resourceUri);
     await new Promise<void>((r) => setTimeout(r, 10));
 
     expect(loadTscnMessages(webview)).toHaveLength(0);
 
-    // A THIRD identical call must still no-op — the guard compares against
-    // the latest cached content, not just "the first call after ready".
+    // A third identical call still no-ops: the guard compares against the latest
+    // cached content, not only the first call after ready.
     panel.update(resourceUri);
     await new Promise<void>((r) => setTimeout(r, 10));
 
@@ -59,12 +55,12 @@ describe('TscnPreviewPanel update() content-diff guard', () => {
     await new Promise<void>((r) => setTimeout(r, 10));
     webview.postMessage.mockClear();
 
-    // No-op update first (guard should swallow it)...
+    // A no-op update first, which the guard swallows.
     panel.update(resourceUri);
     await new Promise<void>((r) => setTimeout(r, 10));
     expect(loadTscnMessages(webview)).toHaveLength(0);
 
-    // ...then a real change must still come through.
+    // A real change still comes through.
     const changed = MINIMAL_TSCN + '\n[node name="Child" type="Node3D" parent="."]';
     (vscode.workspace.fs.readFile as Mock).mockResolvedValue(createMockFileData(changed));
     panel.update(resourceUri);

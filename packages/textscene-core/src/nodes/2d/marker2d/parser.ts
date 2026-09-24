@@ -1,6 +1,6 @@
 /**
- * Marker2D parser — the Node2D transform/modulate surface plus `gizmo_extents`
- * (the cross-gizmo arm length; Godot default 10).
+ * Marker2D parser: the Node2D transform and modulate, and `gizmo_extents`, the
+ * cross-gizmo arm length (Godot default 10).
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

@@ -32,8 +32,8 @@ describe('decodeQuadMesh', () => {
   });
 
   it('falls back to the QuadMesh FACE_Z (2) default on an out-of-range orientation', () => {
-    // Regression: the invalid-orientation branch must honor the caller's default,
-    // not revert to PlaneMesh's FACE_Y (1).
+    // The invalid-orientation branch honours the caller's default, not
+    // PlaneMesh's FACE_Y (1).
     expect(decodeQuadMesh({ orientation: '7' }).orientation).toBe(2);
     expect(decodeQuadMesh({ orientation: 'foo' }).orientation).toBe(2);
   });

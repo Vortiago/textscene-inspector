@@ -1,10 +1,8 @@
 /**
- * `ninePatchGeometry` vs Godot 4.6.3's `map_ninepatch_axis`
+ * `ninePatchGeometry` against Godot 4.6.3's `map_ninepatch_axis`
  * (`servers/rendering/renderer_rd/shaders/canvas.glsl:435-467`, called once
- * per axis at `:587-588`). Every expected number below is worked BY HAND from
- * that function's own branches (see `ninePatchGeometry.ts`'s header for the
- * piecewise-linear equivalence argument) — never from this codebase's own
- * renderer or a screenshot.
+ * per axis at `:587-588`). Every expected number is worked by hand from that
+ * function's branches, never from this renderer or a screenshot.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -92,8 +90,8 @@ describe('ninePatchGeometry — STRETCH', () => {
     expect(buf.positions).toHaveLength(9 * 12);
     expect(buf.indices).toHaveLength(9 * 6);
 
-    // Row-major emission order: y-cells outer, x-cells inner (see the
-    // module's own nested loop) — top-left corner is quad 0.
+    // Row-major emission order: y-cells outer, x-cells inner, so the top-left
+    // corner is quad 0.
     expectQuadCloseTo(q[0]!, { x0: 0, x1: 4, y0: 0, y1: 4, u0: 0, u1: 0.2, v0: 1, v1: 0.8 });
     // Centre: x-middle (dest [4,36) ⇐ src [4,16)) × y-middle (dest [4,26) ⇐ src [4,16)).
     expectQuadCloseTo(q[4]!, { x0: 4, x1: 36, y0: 4, y1: 26, u0: 0.2, u1: 0.8, v0: 0.8, v1: 0.2 });
@@ -125,12 +123,12 @@ describe('ninePatchGeometry — TILE', () => {
       [35, 40],
       [40, 45],
     ]);
-    // Every full tile shows the SAME middle strip.
+    // Every full tile shows the same middle strip.
     for (const tile of q.slice(1, 4)) {
       expect(tile.u0).toBeCloseTo(0.25);
       expect(tile.u1).toBeCloseTo(0.75);
     }
-    // The partial tile is cropped from the strip's own START, not its end.
+    // The partial tile is cropped from the strip's start, not its end.
     expect(q[4]!.u0).toBeCloseTo(0.25);
     expect(q[4]!.u1).toBeCloseTo(0.5);
     // Corners stay at native size, unstretched.
@@ -140,8 +138,8 @@ describe('ninePatchGeometry — TILE', () => {
 
   it('draw_center = false hides every middle-on-both-axes cell, never an edge or corner', () => {
     const q = quads(ninePatchGeometry({ ...TILE_INPUT, drawCenter: false }));
-    // The Y axis carries no margin, so every X cell is ALSO middle on Y —
-    // only the two X corners (never middle) survive.
+    // The Y axis carries no margin, so every X cell is also middle on Y, and
+    // only the two X corners survive.
     expect(q).toHaveLength(2);
     expect(q.map((c) => [c.x0, c.x1])).toEqual([
       [0, 5],
@@ -168,7 +166,7 @@ describe('ninePatchGeometry — TILE_FIT', () => {
       [50, 75],
       [75, 100],
     ]);
-    // Every repeat shows the WHOLE source strip.
+    // Every repeat shows the whole source strip.
     for (const cell of q) {
       expect(cell.u0).toBe(0);
       expect(cell.u1).toBe(1);

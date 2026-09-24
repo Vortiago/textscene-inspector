@@ -2,9 +2,8 @@ import { describe, expect, it } from 'vitest';
 import * as curve2dSlice from './index';
 import { resourceSliceRegistry } from '../../sliceRegistration';
 
-// Importing the entry point is what registers the claim; the assertions read the
-// registry, never `all()` — that array's contents depend on which other slice
-// indexes a given test file happens to pull in.
+// Importing the entry point registers the claim. The assertions read the registry,
+// never `all()`, whose contents depend on which slice indexes a test file imports.
 describe('curve2d slice registration', () => {
   it('claims the `Curve2D` type name for the curve2d slice (happy path)', () => {
     const registration = resourceSliceRegistry.byTypeName('Curve2D');

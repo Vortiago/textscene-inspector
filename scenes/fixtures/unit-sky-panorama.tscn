@@ -1,9 +1,7 @@
-; A scene-owned PanoramaSkyMaterial over a recognizable equirect texture: four
-; azimuth bands (distinct hues) split into a top and bottom hemisphere, with a
-; black horizon line and black meridians. The camera sits at the origin looking
-; -Z with a wide FOV, so the frame spans from below the horizon to above it —
-; enough to read which hemisphere is up and which band faces forward, i.e. to
-; pin the equirectangular projection's V and U orientation against Godot.
+; A scene-owned PanoramaSkyMaterial over a recognisable equirect texture: four azimuth bands in
+; distinct hues, split into top and bottom hemispheres by a black horizon, with black meridians.
+; The camera at the origin looks -Z with a wide FOV across the horizon, which pins the
+; projection's V (which hemisphere is up) and U (which band faces forward) against Godot.
 [gd_scene load_steps=5 format=3]
 
 [ext_resource type="Texture2D" path="res://textures/panorama-equirect.png" id="1_pano"]

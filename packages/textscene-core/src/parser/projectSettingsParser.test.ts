@@ -1,20 +1,8 @@
 /**
- * `project.godot` parsing, pinned against the real file this feature exists for
- * (`scenes/demos/viewport/gui_in_3d/project.godot`) and against Godot's own
- * declaration of the one setting the previewer honours.
- *
- * `scene/theme/theme_db.cpp`, `ThemeDB::initialize_theme()`:
- *
- *     float default_theme_scale = GLOBAL_DEF(PropertyInfo(Variant::FLOAT,
- *     "gui/theme/default_theme_scale", PROPERTY_HINT_RANGE, "0.5,8,0.01",
- *     PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED), 1.0);
- *
- * — hence the 1.0 default, and `scene/theme/default_theme.cpp:1369`
- * (`make_default_theme`):
- *
- *     float default_scale = CLAMP(p_scale, 0.5, 8.0);
- *
- * — hence the clamp.
+ * `project.godot` parsing, pinned against `scenes/demos/viewport/gui_in_3d/project.godot`
+ * and Godot's declaration of `gui/theme/default_theme_scale`: default 1.0
+ * (`ThemeDB::initialize_theme()` in `scene/theme/theme_db.cpp`), clamped to 0.5-8 by
+ * `make_default_theme` (`scene/theme/default_theme.cpp:1369`).
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -27,7 +15,7 @@ import {
   projectViewportSize,
 } from './projectSettingsParser';
 
-/** The head of the real demo project, verbatim — comments, wrap and all. */
+/** The head of the real demo project, verbatim, comments and wrap included. */
 const GUI_IN_3D = `; Engine configuration file.
 ; It's best edited using the editor UI and not directly,
 ; since the parameters that go here are not all obvious.
@@ -79,8 +67,8 @@ describe('parseProjectSettings', () => {
 
   it('keeps only the first line of a wrapped quoted value, and does not crash on it', () => {
     // Godot wraps `config/description` without escaping the newline. The
-    // continuation has no `=`, so it is skipped — deliberate: no setting this
-    // previewer reads is multi-line.
+    // continuation has no `=`, so it is skipped: no setting this previewer reads is
+    // multi-line.
     const settings = parseProjectSettings(GUI_IN_3D);
     expect(settings?.['application/config/description']).toBe(
       '"A demo showing a GUI instanced within a 3D scene using viewports,'
@@ -129,10 +117,8 @@ describe('projectThemeScale', () => {
 });
 
 /**
- * `display/window/size/viewport_*` — the rect a 2D scene is composed against,
- * and what a root Control resolves its anchors to. 23 of the corpus's 81
- * projects set it: `demos/2d/platformer` is 800x480 and `demos/2d/pong` is
- * 640x400, both of which were being composed against a hardcoded 1152x648.
+ * `display/window/size/viewport_*`: the rect a 2D scene is composed against and a root
+ * Control anchors to. `demos/2d/platformer` sets 800x480 and `demos/2d/pong` 640x400.
  */
 describe('projectViewportSize', () => {
   it('reads both axes', () => {
@@ -163,8 +149,7 @@ describe('projectViewportSize', () => {
   });
 
   /**
-   * A zero-width viewport is not a smaller frame — it is a scene that cannot be
-   * laid out at all, and it divides by zero in the stage's fit.
+   * A zero-width viewport cannot be laid out, and it divides by zero in the stage's fit.
    */
   it('rejects a non-positive or non-finite value', () => {
     const width = (raw: string) =>
@@ -190,11 +175,9 @@ describe('projectViewportSize', () => {
 
 describe('projectLayoutDirectionEnv', () => {
   it('answers Godot\'s own defaults without a project file', () => {
-    // `GLOBAL_DEF_RST(".../force_right_to_left_layout_direction", false)` and
-    // `GLOBAL_DEF_BASIC(PropertyInfo(INT, ".../root_node_layout_direction", …), 0)`
-    // (`core/config/project_settings.cpp:1797-1798`); arm 0 is "Based on
-    // Application Locale", and no `internationalization/locale/test` means the
-    // OS locale, which this previewer cannot read.
+    // Both default off and 0 (`core/config/project_settings.cpp:1797-1798`). Arm 0 is
+    // "Based on Application Locale", and with no `internationalization/locale/test`
+    // that is the OS locale, which this previewer cannot read.
     expect(projectLayoutDirectionEnv(null)).toEqual({
       forceRtl: false,
       rootRtl: false,

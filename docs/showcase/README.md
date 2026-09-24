@@ -1,12 +1,12 @@
 # Feature Showcase
 
-A living visual record of what TextScene Inspector renders today. Every clip below is a real `.webm` screen recording of the actual renderer — not a mockup — paired with a `.png` poster frame. Each recording opens directly on its own scene, so the feature is framed and lit from the first frame.
+The showcase is the visual record of what TextScene Inspector renders. Each clip is a `.webm` screen recording of the real renderer with a `.png` poster frame. Each recording opens on its own scene, so the feature is framed and lit from the first frame.
 
-Regenerate the whole set after any UI change with one command — **`pnpm showcase:regen`** (see [Regenerate](#regenerate)). These clips are how we track progress, so re-run it whenever the renderer or chrome changes and commit the refreshed `.webm`/`.png` alongside the code.
+When the renderer or the chrome changes, run **`pnpm showcase:regen`** (see [Regenerate](#regenerate)). Commit the new `.webm` and `.png` files with the code.
 
 ## Hallway progress
 
-A self-contained hallway scene is the yardstick for "can it render a full scene". Triplanar (`uv1_world_triplanar`) tiling matches Godot's world-unit density on planar meshes (floor/walls/ceiling tile `size × uv1_scale` instead of stretching one copy); non-planar triplanar geometry remains approximate.
+A self-contained hallway scene tests whether the renderer draws a full scene. Triplanar (`uv1_world_triplanar`) tiling matches Godot's world-unit density on planar meshes: the floor, walls and ceiling tile `size × uv1_scale` instead of stretching one copy. Non-planar triplanar geometry is approximate.
 
 ### CSG hallway mockup
 
@@ -14,7 +14,7 @@ A self-contained hallway scene is the yardstick for "can it render a full scene"
 
 [▶ web/hallway.webm](web/hallway.webm)
 
-The hallway mockup: CSG corridor (floor / walls / ceiling), portrait frames, and Label3D name plates — self-contained, tracks 3D-rendering progress.
+The hallway mockup: a CSG corridor (floor, walls, ceiling), portrait frames and Label3D name plates.
 
 ## Split Dock chrome + 2D UI
 
@@ -24,7 +24,9 @@ The hallway mockup: CSG corridor (floor / walls / ceiling), portrait frames, and
 
 [▶ web/dcc-layout.webm](web/dcc-layout.webm)
 
-The shipped chrome is a 2-column **Split Dock** (ADR-0007): the viewport alongside a single right dock holding the scene tree on top and the tabbed detail panel (**Inspector** / **Resources** / **Cameras**) directly below — no left rail. The top bar carries the brand, the scene chip + Ctrl/Cmd+K palette, and the Reset Camera / 3D-2D / Collisions controls. The clip orbits the textured hallway mockup, then switches to a 2D-UI example scene and flips to **2D** mode so the native Control canvas renders the dialog UI — note that it was recorded against the earlier 3-column layout and needs a re-run (`pnpm showcase:regen`) to show the Split Dock. Until then, this still captures the current toolbar:
+The chrome is a 2-column **Split Dock** (ADR-0007): the viewport beside one right dock, with the scene tree on top and the tabbed detail panel (**Inspector**, **Resources**, **Cameras**) below it. There is no left rail. The top bar holds the brand, the scene chip with the Ctrl/Cmd+K palette, and the Reset Camera, 3D/2D and Collisions controls. The clip orbits the textured hallway mockup, then opens a 2D-UI example scene in **2D** mode, where the native Control canvas renders the dialog.
+
+The clip shows the earlier 3-column layout. Run `pnpm showcase:regen` to record it with the Split Dock. This still shows the current toolbar:
 
 ![Current toolbar with the scene chip's Ctrl/Cmd+K command palette open](../screenshots/j-integration/web-toolbar-palette.png)
 
@@ -34,7 +36,7 @@ The shipped chrome is a 2-column **Split Dock** (ADR-0007): the viewport alongsi
 
 [▶ web/ui-hint.webm](web/ui-hint.webm)
 
-ADR-0006 discoverability: a Control-only scene (`example-ui-dialog`) opens in the default 3D viewport, so the shell floats a **"Contains 2D UI — switch to 2D"** hint over the canvas. Clicking it flips to 2D mode, which renders the dialog.
+ADR-0006 discoverability: a Control-only scene (`example-ui-dialog`) opens in the default 3D viewport, so the shell floats a hint over the canvas that offers **switch to 2D**. Clicking it flips to 2D mode, which renders the dialog.
 
 ## Feature clips
 
@@ -54,7 +56,7 @@ A green ground plane holds primitive meshes (prism, torus, capsule), each with i
 
 [▶ web/all-meshes.webm](web/all-meshes.webm)
 
-Every primitive mesh type — cube, sphere, cylinder, capsule, plane, torus, prism — rendered together with distinct materials.
+Every primitive mesh type (cube, sphere, cylinder, capsule, plane, torus, prism) rendered together with distinct materials.
 
 ### csg-box
 
@@ -86,7 +88,7 @@ A high-metallic, low-roughness StandardMaterial3D sphere with a tight specular h
 
 [▶ web/material-emissive.webm](web/material-emissive.webm)
 
-An emissive material self-illuminates uniformly regardless of light direction.
+An emissive material lights itself uniformly, whatever the light direction.
 
 ### world-environment
 
@@ -118,7 +120,7 @@ A mixed node hierarchy of multiple mesh instances rendered together with correct
 
 [▶ web/physics-bodies.webm](web/physics-bodies.webm)
 
-StaticBody3D / Area3D render as transform groups positioning their child meshes; AudioStreamPlayer renders nothing visible.
+StaticBody3D and Area3D render as transform groups that position their child meshes. AudioStreamPlayer draws nothing.
 
 ### multi-camera
 
@@ -126,7 +128,7 @@ StaticBody3D / Area3D render as transform groups positioning their child meshes;
 
 [▶ web/multi-camera.webm](web/multi-camera.webm)
 
-Selecting each Camera3D node and clicking "Use This Camera" switches the viewport between the cameras' points of view (perspective, top-down, side, orthographic), then resets to free orbit. The video actively switches the active camera between the Camera3D nodes.
+Selecting each Camera3D node and clicking "Use This Camera" switches the viewport between the cameras' points of view (perspective, top-down, side, orthographic), then resets to free orbit.
 
 ### missing-upload
 
@@ -136,15 +138,15 @@ Selecting each Camera3D node and clicking "Use This Camera" switches the viewpor
 
 [▶ web/missing-upload.webm](web/missing-upload.webm)
 
-Request-missing-resources, then upload them and watch them get used — end to end. A small room whose floor, walls, and crate reference textures that are **not** bundled loads flat-shaded in **magenta** (the missing-texture marker), and the shell's **Resources** tab lists all three `res://demo/missing/*` paths as missing (⚠). Uploading a file for each path drives the late-arrival pipeline (`provideFile` → `useResource` `'loaded'` → re-render): the rows flip to uploaded (✓) and the surfaces gain their textures **live, on camera**. The two posters above are the before (missing/magenta) and after (uploaded/textured) frames.
+The clip requests the missing resources, uploads them and shows the renderer use them. A small room whose floor, walls, and crate reference textures that are **not** bundled loads flat-shaded in **magenta** (the missing-texture marker), and the shell's **Resources** tab lists all three `res://demo/missing/*` paths as missing (⚠). Uploading a file for each path drives the late-arrival pipeline (`provideFile` → `useResource` `'loaded'` → re-render): the rows flip to uploaded (✓) and the surfaces gain their textures **live, on camera**. The two posters above are the before (missing/magenta) and after (uploaded/textured) frames.
 
 ## VS Code extension
 
-Both editions render through the same `@textscene/core` library, so every clip above is also the VS Code 3D rendering output — the web previewer and the extension share one renderer. On top of that shared rendering, VS Code adds a command-opened `.tscn` Preview panel (**TextScene: Open Preview to the Side** from the command palette or the editor-title button) with the scene tree and inspector. The screenshots below prove the integration runs inside the full VS Code UI: title bar, activity bar, editor tabs, the `.tscn` text editor, the Preview panel, and the status bar.
+The web previewer and the extension render through the same `@textscene/core` library, so every clip above is also what VS Code draws. VS Code adds a `.tscn` Preview panel with the scene tree and inspector, opened with **TextScene: Open Preview to the Side** from the command palette or the editor-title button. The screenshots below show the preview inside the full VS Code UI: title bar, activity bar, editor tabs, the `.tscn` text editor, the Preview panel and the status bar.
 
-![VS Code: the Preview webview rendering a CSG hallway mockup — floor, walls, portrait frames — beside the Explorer and scene tree](../screenshots/vscode/vscode-hallway.png)
+![VS Code: the Preview webview rendering a CSG hallway mockup (floor, walls, portrait frames) beside the Explorer and scene tree](../screenshots/vscode/vscode-hallway.png)
 
-The **TextScene: Open Preview to the Side** webview fills the editor area, rendering `example-hallway-mockup.tscn` in 3D (63 nodes: floor, walls, portrait frames) with the searchable scene tree, the Inspector/Resources/Cameras panel, and the viewport toolbar (Reset Camera, 2D/3D toggle, Collisions/Labels/Navigation/Grid) — all inside the standard VS Code layout.
+The **TextScene: Open Preview to the Side** webview fills the editor area, rendering `example-hallway-mockup.tscn` in 3D (floor, walls, portrait frames) with the searchable scene tree, the Inspector/Resources/Cameras panel and the viewport toolbar (Reset Camera, 2D/3D toggle, Collisions/Labels/Navigation/Grid), inside the standard VS Code layout.
 
 ![VS Code: the Preview webview in 2D mode rendering a Control-node "Field Journal" dialog](../screenshots/vscode/vscode-main.png)
 
@@ -162,31 +164,20 @@ The same preview in 2D mode renders `example-ui-dialog.tscn`: a Godot `Control` 
 
 `example-hierarchy-deep.tscn` with the Outline expanded beside the source and the preview. The document symbols mirror the scene's own `[node name=…]` nesting, so an outline click jumps the editor to that declaration.
 
-Every VS Code screenshot in this repo, the two above and the 22 in
+Every VS Code screenshot in this repo, including those in
 [docs/user-guide-vscode.md](../user-guide-vscode.md), is regenerated by
-`node scripts/showcase/vscode/capture.mjs`. It drives the extension dev-host
-cross-platform, headless under `xvfb-run` on Linux (software GL), or against an
-installed or `$VSCODE_BIN` build elsewhere, and drives the workbench into each
-shot's state rather than shooting whatever the last one left open.
-
-## Coming soon (re-run to capture)
-
-Planned or in flight; re-run the showcase to capture them once they land:
-
-- A furnished hallway variant — photo frames and props — as a stretch goal for scene-corpus breadth.
-- A dedicated lit-scene lighting demo.
-- A re-recorded `dcc-layout` clip showing the 2-column Split Dock chrome (the current clip predates ADR-0007).
-
-(Shipped since the last revision: multiline-quoted-string joining — two-line labels now render both lines (`parser/TscnParserCore.ts`, guarded by `multilineStrings.test.ts`) — plus the 2D-UI overlay + 2D/3D toggle and the collision-shape wireframe toggle, both visible in the `dcc-layout` clip above.)
+`node scripts/showcase/vscode/capture.mjs`. It drives the extension
+dev-host headless under `xvfb-run` on Linux (software GL), or an installed or `$VSCODE_BIN` build
+elsewhere. It drives the workbench into each shot's state before it captures the shot.
 
 ## Regenerate
 
-Run the whole pipeline with **one command** — do this after any UI change, since these clips are how we track progress:
+Run the whole pipeline after any UI change:
 
 ```bash
 pnpm showcase:regen
 ```
 
-It builds the web previewer, starts a preview server, records every scenario in `scripts/showcase/scenarios.mjs` to `web/*.webm` (+ poster `.png`), then shuts the server down. Add a scenario to `scenarios.mjs` for each new feature so it gets its own clip.
+It builds the web previewer, starts a preview server, records every scenario in `scripts/showcase/scenarios.mjs` to `web/*.webm` with a poster `.png`, and stops the server. Add a scenario to `scenarios.mjs` for each new feature, so it gets its own clip.
 
-During iteration, with a preview server already running, capture a single clip: `node scripts/showcase/run.mjs <name>`.
+To capture one clip while a preview server runs, use `node scripts/showcase/run.mjs <name>`.

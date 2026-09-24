@@ -1,22 +1,8 @@
 /**
- * `<ControlFallback>` — the native (WebGL) counterpart of the DOM
- * `GenericControlFallback`, but with the opposite visibility contract: the
- * DOM fallback is `display: contents` (invisible, for a truly non-Control
- * passthrough node), while a `SolveNode` reaching this component IS a real
- * Control (`buildSolveTree` never emits one for a non-Control type — see its
- * module doc) that simply has no `Native` painter registered yet. Drawing an
- * outline sized to its solved rect is what makes the native path eyeball-able
- * — every registered Control's position/size is visible on the canvas —
- * before any real chrome exists for it.
- *
- * An outline, never a filled quad: a quad would read as actual content, which
- * this deliberately is not.
- *
- * Forwards `children` unchanged (only ever non-empty for a passthrough type
- * like `CanvasLayer` — `ControlCanvasWalker`'s `isCanvasLayer` branch, `
- * NativeControlComponentProps`'s own doc comment): if that type has no real
- * `Native` painter registered yet, its descendants must still reach the
- * scene, just without the fresh context a real one would have provided.
+ * Outlines the solved rect of a real Control that has no `Native` painter, so its
+ * position and size still show. An outline, not a fill: a fill reads as content.
+ * It forwards `children`, non-empty only for a passthrough type like `CanvasLayer`,
+ * so descendants still draw, without the context a real painter would provide.
  */
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
@@ -24,11 +10,7 @@ import type { NativeControlComponentProps } from '../ControlComponentRegistry';
 import { materialProgramInputs } from '../../materialProgramInputs';
 import { useControlClipPlanes } from './controlClipping';
 
-/**
- * Distinguishable from Godot's own chrome without reading as an error — the
- * codebase's "missing resource" magenta (`MissingResourcePlaceholder.tsx`)
- * already means "broken"; this means "not painted yet", a different signal.
- */
+/** "Not painted yet": not the "broken" magenta of `MissingResourcePlaceholder.tsx`. */
 const FALLBACK_COLOR = new THREE.Color(0x38bdf8);
 
 export function ControlFallback({ rect, renderOrder, children }: NativeControlComponentProps) {
@@ -42,8 +24,8 @@ export function ControlFallback({ rect, renderOrder, children }: NativeControlCo
   }, [rect.w, rect.h]);
   useEffect(() => () => geometry.dispose(), [geometry]);
 
-  // Constant today — nothing here is a program input — so the outline never
-  // remounts; the key is what makes a later prop key itself.
+  // No program input here, so the outline never remounts. The key lets a later
+  // prop key itself.
   const program = materialProgramInputs({
     props: { color: FALLBACK_COLOR, clippingPlanes: clippingPlanes as THREE.Plane[] },
   });

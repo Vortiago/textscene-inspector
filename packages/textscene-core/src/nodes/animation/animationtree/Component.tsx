@@ -1,24 +1,8 @@
 /**
- * <AnimationTree> — an invisible node that DRIVES another driver's clips
- * through a blend tree / state machine (ADR-0019).
- *
- * It renders an empty group (no geometry) so it appears in the scene tree and
- * its children keep their transforms. When it is the selected node AND
- * `active = true` (Godot only processes an active tree), it:
- *   1. resolves `tree_root` into an `AnimNode` graph,
- *   2. evaluates that graph at the authored `parameters/*` state into a blend
- *      program — a static previewer has no game script driving the params,
- *   3. resolves `anim_player` to a registered driver (a GLB animation driver or
- *      AnimationPlayer) and drives its object with weighted actions.
- *
- * Godot's Animation panel has no clip picker for an AnimationTree — it plays
- * from the parameter state — so the transport registers a single read-only
- * entry (the dominant clip) rather than a selectable list. Loads STOPPED;
- * play is user-initiated; stop / deselect restores the authored pose.
- *
- * The per-frame transport-actuation decision is delegated to the pure
- * `stepPlayback` reducer; this component is a thin adapter that actuates the
- * returned command on N weighted actions (the blend program) at once.
+ * <AnimationTree>: an invisible node that drives another driver's clips through a blend tree or
+ * state machine (ADR-0019). It renders an empty group, so it appears in the scene tree and its
+ * children keep their transforms. It loads stopped, the user starts play, and stop or deselect
+ * restores the authored pose.
  */
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -43,15 +27,10 @@ import { resolveAnimPlayerPath } from './resolveAnimPlayer';
 import type { AnimationTreeProperties } from './types';
 
 /**
- * The dominant clip's live playhead, used by the adapter to provide the
- * `liveTime` for `stepPlayback`: `null` means "no live playhead to flush,"
- * never a fabricated `0`. An authored blend program can name a clip absent
- * from the resolved driver's clips — the mount effect's `clips.find` skips
- * it, so `dominant` is set (from `program`, independent of the driver) but
- * `actions` never gained an entry for it. Falling back to `0` there would
- * force the paused readout to snap to zero on the very next playing→paused
- * edge instead of skipping the flush, as if the playhead had actually reached
- * the start.
+ * The dominant clip's live playhead, the `liveTime` for `stepPlayback`. `null` means no live
+ * playhead to flush, never a fabricated `0`: a blend program can name a clip the driver lacks, so
+ * `dominant` is set but `actions` has no entry. A `0` there would snap the paused readout to zero
+ * on the next playing-to-paused edge.
  */
 export function dominantActionTime(
   dominant: { clip: string } | null,
@@ -73,9 +52,9 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
     [properties]
   );
 
-  // Resolve the tree and evaluate it at the authored parameter state. Both are
-  // pure and depend only on stable inputs, so the blend program is stable
-  // across renders unless the scene/parameters change.
+  // Resolve the tree and evaluate it at the authored `parameters/*` state, since a static
+  // previewer has no game script driving the parameters. Both are pure, so the blend program is
+  // stable across renders unless the scene or the parameters change.
   const program = useMemo(() => {
     const root = resolveTreeRoot(properties.tree_root, internalResources);
     return evaluateTree(root, properties.parameters);
@@ -88,13 +67,13 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
   );
   const driver = useAnimationDriver(targetPath);
 
-  // Honour `active` (Godot only processes an active tree) AND selection-driven
+  // Honour `active` (Godot only processes an active tree) and selection-driven
   // transport (ADR-0012): drive only while this is the selected, active node.
   const isActive =
     properties.active && nodePath !== null && nodePath === selectedNodePath;
 
-  // No clip picker (Godot parity): surface the dominant clip as the single
-  // transport entry so the Animation tab + scrubber appear while selected.
+  // Godot's Animation panel has no clip picker for an AnimationTree, so the dominant clip is the
+  // single read-only transport entry, and the Animation tab and scrubber appear while selected.
   const dominant = useMemo(
     () => program.reduce<(typeof program)[number] | null>(
       (best, c) => (best === null || c.weight > best.weight ? c : best),
@@ -102,7 +81,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
     ),
     [program]
   );
-  // Scrubber length = the LONGEST active clip (a blend can mix clips of
+  // Scrubber length = the longest active clip (a blend can mix clips of
   // different lengths; clamping to the dominant's would cut seeks short).
   // Memoised: the transport re-renders this component every frame while playing
   // (reportTime → setTime), so avoid re-scanning the clip list then.
@@ -126,8 +105,8 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
   }, [isActive, dominant, scrubberDuration, registerPlayer]);
 
   // Build a mixer rooted on the driver's object with one weighted action per
-  // program clip — only while active (so a deselected tree never builds a mixer
-  // or touches the scene). Snapshot the subtree so stop / deselect restores it.
+  // program clip, only while active, so a deselected tree never touches the scene.
+  // Snapshot the subtree so stop or deselect restores it.
   const mixerRef = useRef<AnimationMixer | null>(null);
   const actionsRef = useRef<Map<string, AnimationAction>>(new Map());
   const snapshotRef = useRef<ReturnType<typeof snapshotSubtree>>([]);
@@ -153,11 +132,9 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
     };
   }, [isActive, driver, program]);
 
-  // Thin adapter: build stepPlayback input from refs, call the reducer, then
-  // actuate the returned command on N weighted actions (the blend program).
-  // Blend weighting stays here — this does NOT merge into usePlaybackLoop
-  // (its "kept separate until a second weighted driver" stance stands,
-  // per ADR-0011/0014/0015/0019).
+  // Thin adapter: build the stepPlayback input from refs, call the pure reducer, then actuate
+  // its command on N weighted actions. Blend weighting stays here, out of usePlaybackLoop, until
+  // a second weighted driver exists (ADR-0011/0014/0015/0019).
   const prevStateRef = useRef<PlayState>('stopped');
   const prevTimeRef = useRef(0);
   useFrame((_, delta) => {
@@ -194,17 +171,15 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
             startAction(action, { weight, timeScale });
           }
         }
-        // The preview speed multiplier applies here too (it's a global
-        // playback-rate control). The loop OVERRIDE does not: a blend program
-        // drives N weighted actions at once with per-action timeScale/weight,
-        // and Godot itself has no single "loop mode" for a state-machine/blend
-        // tree preview to override — there's no one loop setting to force.
+        // The global preview speed multiplier applies here too. The loop override does not: a
+        // blend program drives N weighted actions with their own timeScale and weight, and Godot
+        // has no single loop mode for a blend tree or state machine preview.
         mixer.update(delta * transport.playbackSpeed);
         if (dominant) transport.reportTime(actions.get(dominant.clip)?.time ?? 0);
         break;
       }
       case 'seek': {
-        // Re-apply each clip's blend weight on seek — a freshly play()-ed
+        // Re-apply each clip's blend weight on seek: a freshly play()-ed
         // action defaults to weight 1, which would over-blend the pose.
         for (const { clip, weight, timeScale } of program) {
           const action = actions.get(clip);

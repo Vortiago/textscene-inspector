@@ -1,9 +1,7 @@
 /**
- * RigidBody3D strict validators: the physics-state quartet
- * (linear_velocity/angular_velocity/constant_force/constant_torque), all
- * Vector3 unlike RigidBody2D's scalar torque and angular velocity. Asserted
- * through validatorRegistry rather than a full scene lint: the unit under
- * test is the validator, not scene parsing.
+ * RigidBody3D strict validators: the physics-state quartet (linear_velocity, angular_velocity,
+ * constant_force, constant_torque), all Vector3, unlike RigidBody2D's scalar torque and angular
+ * velocity. Asserted through validatorRegistry, not a full scene lint.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -39,7 +37,7 @@ describe('RigidBody3D strict validators (physics state)', () => {
 
   describe('angular_velocity', () => {
     // rigid_body_3d.cpp:787: Variant::VECTOR3. 3D angular velocity is a
-    // vector, unlike RigidBody2D's scalar. PROPERTY_HINT_NONE;
+    // vector, unlike RigidBody2D's scalar. PROPERTY_HINT_NONE.
     // set_angular_velocity (:479-482) is a bare assignment, so no bound.
     it('accepts a Vector3', () => {
       expect(check('angular_velocity', 'Vector3(1.5, 0, -2.5)')).toBeNull();

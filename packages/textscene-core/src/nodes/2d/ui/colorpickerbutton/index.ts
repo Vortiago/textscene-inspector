@@ -1,8 +1,6 @@
 /**
- * ColorPickerButton registration: parser.
- *
- * Parses Button's own properties plus `color`; property knowledge otherwise
- * lives in linterParser.ts.
+ * ColorPickerButton registration: the parser, which reads the Button
+ * properties plus `color`.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

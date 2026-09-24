@@ -1,13 +1,6 @@
-; A scene that supplies NO DirectionalLight3D and NO WorldEnvironment, so both
-; of Godot's editor previews apply (ADR-0025): the preview sun casts the
-; shadow, the preview sky is the background and the only ambient there is.
-;
-; The rough and metallic spheres are the reason the ambient is an IBL rather
-; than a constant — a flat ambient leaves the metal black, since a metal has no
-; diffuse response and can only show what it reflects.
-;
-; scripts/godot-ref/reference/preview-lighting.png is the same lighting rendered
-; by Godot itself.
+; A scene with no DirectionalLight3D and no WorldEnvironment, so both of Godot's editor previews
+; apply (ADR-0025): the preview sun casts the shadow, and the preview sky is the background and
+; the only ambient. scripts/godot-ref/reference/preview-lighting.png is Godot's render of it.
 [gd_scene load_steps=5 format=3]
 
 [sub_resource type="PlaneMesh" id="Plane_1"]
@@ -30,6 +23,8 @@ roughness = 0.15
 [node name="Ground" type="MeshInstance3D" parent="."]
 mesh = SubResource("Plane_1")
 
+; The rough and metallic spheres need the ambient to be an IBL: a flat ambient leaves the metal
+; black, since a metal has no diffuse response and only shows what it reflects.
 [node name="RoughBall" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 1, 0)
 mesh = SubResource("Sphere_1")

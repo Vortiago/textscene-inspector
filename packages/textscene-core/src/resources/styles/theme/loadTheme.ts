@@ -1,9 +1,7 @@
 /**
- * The Theme slice's whole-file loader — the seam between a fetched `.tres` and
- * `decode.ts`, and the one entry point `processors/createThemeProcessor.ts`
- * calls. Mirrors the Font slice's `loadFont.ts` and the StandardMaterial3D
- * slice's `loadMaterial.ts`: whole-file CONTENT (`parseTresFile`) and
- * sub-resource addressing here, a pure property-bag decode next door.
+ * The Theme slice's whole-file loader, between a fetched `.tres` and `decode.ts`,
+ * called by `processors/createThemeProcessor.ts`. It owns `parseTresFile` and
+ * sub-resource addressing, like `loadFont.ts` and `loadMaterial.ts`.
  */
 
 import { parseTresFile, type ParsedResource } from '../../../parser/parsedResource';
@@ -14,10 +12,9 @@ import { decodeThemeAddresses } from './decode';
 import type { ThemeAddresses, ThemeResource } from './types';
 
 /**
- * Resolve `ThemeAddresses` into a `ThemeResource` by awaiting `loadFont` for
- * every address — the file-backed path, which already runs inside an async
- * `process()` step. A Theme's font refs resolve through a DIFFERENT processor
- * than its own, so the loader is injected rather than self-referential.
+ * Resolves `ThemeAddresses` into a `ThemeResource` by awaiting `loadFont` for each
+ * address, inside an async `process()` step. Font refs resolve through another
+ * processor, so the loader is injected.
  */
 export async function resolveThemeResource(
   addresses: ThemeAddresses,
@@ -58,10 +55,9 @@ export async function resolveThemeResource(
 }
 
 /**
- * Build a `ThemeResource` from a `.tres`'s text content — either its own
- * `[resource]` body (`subResourceId` absent) or a named `[sub_resource]`
- * inside it. `content` must carry a `[gd_resource]` header (`parseTresFile`'s
- * requirement).
+ * A `ThemeResource` from a `.tres`'s `[resource]` body, or from a named
+ * `[sub_resource]` when `subResourceId` is set. `content` must carry a
+ * `[gd_resource]` header (`parseTresFile`'s requirement).
  */
 export async function createThemeResourceFromContent(
   filePath: string,
@@ -81,8 +77,8 @@ export async function createThemeResourceFromContent(
     if (sub.type !== 'Theme') {
       throw new Error(`Not a Theme resource: ${sub.type} (${filePath})`);
     }
-    // `parseInternalResource` echoes the heading's own `id` into `data` — strip
-    // it back out, or it leaks into `properties` as a fake declared property.
+    // `parseInternalResource` echoes the heading's `id` into `data`. Strip it, or
+    // it leaks into `properties` as a fake declared property.
     const { id: _id, ...rest } = sub.data as Record<string, string>;
     properties = rest;
   } else {
@@ -97,9 +93,9 @@ export async function createThemeResourceFromContent(
 }
 
 /**
- * Unlike a Font, a Theme is ALWAYS `.tres` text — never raw bytes — so there is
- * no ArrayBuffer branch; `shouldProcess` gates on that upstream. `path` is the
- * full requested ADDRESS (may carry a `::SubId`).
+ * A Theme is always `.tres` text, so there is no ArrayBuffer branch:
+ * `shouldProcess` gates on that upstream. `path` is the full requested address,
+ * which may carry a `::SubId`.
  */
 export async function buildThemeResource(
   path: string,

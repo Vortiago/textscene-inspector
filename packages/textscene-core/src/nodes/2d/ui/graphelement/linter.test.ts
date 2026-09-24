@@ -1,12 +1,8 @@
 /**
- * GraphElement semantic rule: selected = true authored with selectable = false.
- *
- * Godot does not reject this at parse time — both values are individually
- * legal — but `GraphElement::set_selectable(false)` always forces
- * `set_selected(false)` (scene/gui/graph_element.cpp), regardless of which
- * property a text-resource loader applies first, so the warning exists only
- * because the forced deselection is otherwise invisible: the .tscn keeps
- * showing `selected = true` forever.
+ * GraphElement semantic rule: `selected = true` authored with `selectable = false`.
+ * `GraphElement::set_selectable(false)` forces `set_selected(false)` in either
+ * load order (scene/gui/graph_element.cpp), so the .tscn shows a selection
+ * that never loads.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -48,7 +44,7 @@ describe('GraphElement selection rule', () => {
 
   it('reports exactly one error and nothing else (severity contract)', () => {
     // `set_selectable(false)` calls `set_selected(false)` unconditionally
-    // (graph_element.cpp:207), so the authored `selected` is overwritten — the
+    // (graph_element.cpp:207), so the authored `selected` is overwritten: the
     // ADR-0032 error tier, and the only diagnostic this scene should produce.
     const diagnostics = linter.lint(scene('selectable = false\nselected = true\n'));
     expect(diagnostics.map((d) => [d.ruleName, d.severity])).toEqual([

@@ -1,17 +1,11 @@
 /**
- * Canonical node-type → base-type table for the linter's validator inheritance.
- * `ValidatorRegistry.findValidator` walks this chain so the Node3D /
- * Node2D / Control base validator sets apply to every subclass automatically,
- * instead of each subclass silently escaping validation.
- *
- * Six levels carry validators today — `Node3D`, `Light3D`, `RigidBody3D`,
- * `Node2D`, `Control`, and the terminal `Node` — so leaves map straight to their
- * nearest validator-bearing ancestor rather than modelling every intermediate
- * Godot class. Every chain terminates at `Node` (which has no entry). Pure data:
- * React/THREE-free, so it stays on the linter side of the bundle boundary.
+ * Node-type to base-type table for validator inheritance: `ValidatorRegistry.findValidator`
+ * walks it so a base's validator set applies to every subclass. A leaf maps straight to
+ * its nearest validator-bearing ancestor, and every chain ends at `Node`, which has no
+ * entry. Pure data, React- and THREE-free, so it stays on the linter side of the bundle.
  */
 
-/** Light3D-derived concrete nodes — each maps to `Light3D` then `Node3D`. */
+/** Light3D-derived concrete nodes, each mapping to `Light3D`, then `Node3D`. */
 const LIGHT3D_LEAVES = [
   'DirectionalLight3D',
   'OmniLight3D',
@@ -19,7 +13,7 @@ const LIGHT3D_LEAVES = [
   'AreaLight3D',
 ] as const;
 
-/** Base for every spatial (3D) node — Node3D carries the transform/visible set. */
+/** Spatial (3D) nodes: Node3D carries the transform and visible set. */
 const NODE3D_LEAVES = [
   'MeshInstance3D',
   'Camera3D',
@@ -51,7 +45,7 @@ const NODE3D_LEAVES = [
   'VehicleWheel3D',
 ] as const;
 
-/** Base for every canvas (2D) node — Node2D carries the transform/skew set. */
+/** Canvas (2D) nodes: Node2D carries the transform and skew set. */
 const NODE2D_LEAVES = [
   'Sprite2D',
   'AnimatedSprite2D',
@@ -79,9 +73,9 @@ const NODE2D_LEAVES = [
 ] as const;
 
 /**
- * Base for the Control (2D UI) family — Control carries the layout/anchor/offset
- * + theme-override set. `Control` and `CanvasLayer` are NOT in here: Control is
- * itself the base, and CanvasLayer descends from Node (not CanvasItem/Control).
+ * The Control (2D UI) family: Control carries the layout, anchor, offset and
+ * theme-override set. `Control` is itself the base, and `CanvasLayer` descends from
+ * Node, not CanvasItem, so neither is listed.
  */
 const CONTROL_LEAVES = [
   'Label',
@@ -109,9 +103,8 @@ const CONTROL_LEAVES = [
   // authorable, so the leaves link straight to Control.
   'HSplitContainer',
   'VSplitContainer',
-  // Displays its SubViewport children's targets (ADR-0033). Needs the Control
-  // chain like any other: without it every anchor/offset/layout validator
-  // silently skips this type while erroring on every sibling Control.
+  // Displays its SubViewport children's targets (ADR-0033). Without the Control
+  // chain, every anchor, offset and layout validator would skip it.
   'SubViewportContainer',
 ] as const;
 
@@ -128,8 +121,8 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   // validator set instead of duplicating it here.
   VehicleBody3D: 'RigidBody3D',
   // SubViewport < Viewport < Node. `Viewport` is not modelled as its own link
-  // because SubViewport is the only authorable subclass we support (`Window` is
-  // not), so its Viewport-level properties are validated on the leaf itself.
+  // because SubViewport is the only authorable subclass supported here (`Window`
+  // is not), so its Viewport-level properties are validated on the leaf itself.
   SubViewport: 'Node',
   // Base classes and non-spatial nodes collapse to the terminal Node.
   Node3D: 'Node',

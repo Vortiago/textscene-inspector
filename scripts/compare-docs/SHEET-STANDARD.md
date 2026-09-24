@@ -1,22 +1,23 @@
 # Comparison sheet standard
 
-One sheet per Godot node type, or per resource type (StandardMaterial3D,
-Environment, …). Resource sheets sit under `category: Resources` in the left menu
-beside the nodes. A sheet shows how this previewer renders its type against real
-Godot. The **screenshots are produced by a script** (`scripts/compare-docs/capture.mjs`)
-and committed under `docs/comparison/images/`. A sheet NEVER creates or edits an
-image. It only references the two the script already made, by fixed path. Re-running
-the capture script refreshes every screenshot without touching a single sheet.
+A comparison sheet shows how this previewer renders one Godot node type, or one
+resource type (StandardMaterial3D, Environment, …), against real Godot. Resource
+sheets sit under `category: Resources` in the left menu beside the nodes.
 
-A sheet is slice content. It documents the very `parser.ts` / `linterParser.ts`
-beside it, so it lives **in the slice** as
+A script makes the screenshots (`scripts/compare-docs/capture.mjs`) and commits
+them under `docs/comparison/images/`. A sheet never creates or edits an image. It
+only references the two images the script made, by fixed path. A new run of the
+capture script refreshes every screenshot and changes no sheet.
+
+A sheet is slice content. It documents the `parser.ts` / `linterParser.ts`
+beside it, so it lives in the slice as
 `packages/textscene-core/src/nodes/<category>/<type>/comparison.md` (resources:
 `src/resources/<...>/comparison.md`). The only exceptions are the `complex-*`
 whole-scene showcases, which belong to no slice and stay at
 `docs/comparison/sheets/<slug>.md`. A separate generator
-(`scripts/compare-docs/build-gallery.mjs`) turns the whole folder plus the images
-into one browsable HTML gallery, for previewing as an artefact and for the website.
-So author plain, strict Markdown. Styling is not your concern.
+(`scripts/compare-docs/build-gallery.mjs`) turns the sheets and the images into
+one HTML gallery, for preview as an artefact and for the website. Write plain,
+strict Markdown. The generator owns the styling.
 
 ## The shape: exactly this, in this order, nothing extra
 
@@ -49,22 +50,22 @@ Name the property and the concrete fallback value.
 - **Approximated** One sentence on what a viewer sees differently.
 ```
 
-The comparison images need no markup. They come from the `image:` frontmatter and
+The comparison images need no markup. They come from the `image:` frontmatter, and
 the gallery lays out the Godot-versus-previewer pair.
 
 ## Sections beyond the three
 
-There are three: the intro under the `#` heading, `## Linting`, and
-`## Known limitations`. A sectioned sheet (below) adds one per feature. Nothing
-else. A sheet does not carry a hand-kept property table, a pixel-by-pixel
-comparison, or an explanation of how the engine works.
+A sheet has three sections: the intro under the `#` heading, `## Linting`, and
+`## Known limitations`. A sectioned sheet (below) adds one per feature, and nothing
+else. A sheet carries no hand-kept property table, no pixel-by-pixel comparison
+and no explanation of how the engine works.
 
 ## Known limitations
 
-Only when something real differs. Omit the section entirely when nothing does.
+Write this section only when something real differs. Omit it when nothing does.
 
-One bullet per limitation. Open with a tag from the fixed set below, in bold,
-then one sentence naming what a viewer sees differently. The tag is what makes
+Write one bullet per limitation. Open it with a tag from the fixed set below, in
+bold, then one sentence that names what a viewer sees differently. The tag makes
 the sheets comparable, so use one of these and no other:
 
 | Tag | Means |
@@ -85,23 +86,23 @@ the sheets comparable, so use one of these and no other:
   full strength.
 ```
 
-Never explain the engine here. A sheet says what a reader sees. Why the engine
-behaves that way belongs in the code that implements it, in one place, and only
-in a docblock when the reason is not already plain from the code.
+Do not explain the engine here. A sheet says what a reader sees. The reason the
+engine behaves that way belongs in the code that implements it, in one place, and
+in a docblock only when the code does not already make it plain.
 
 ## Sectioned sheets: one sheet, many per-property comparisons
 
 A node or resource with several visually distinct features (a StandardMaterial3D
-has metallic, emission, clearcoat, rim, …) gives each its OWN fixture and
-comparison as a **section**. A section is a `##` heading followed — immediately,
-or after a blank line — by a `<!-- compare: … -->` marker; the generator lays
-out that section's Godot-vs-ours pair, status badge, and prose (which runs
-until the next such heading).
+has metallic, emission, clearcoat, rim, …) gives each feature its own fixture and
+comparison as a **section**. A section is a `##` heading followed by a
+`<!-- compare: … -->` marker, directly or after a blank line. The generator lays
+out that section's Godot-versus-previewer pair, status badge and prose. The prose
+runs until the next such heading.
 
-A `<!-- compare: … -->` marker that is not attached to a heading this way —
-stray prose above it, a `###` sub-heading, or no heading at all — fails the
-build rather than rendering silently as plain text. Attach every marker to its
-own `##` heading, with only blank lines (if any) between them.
+A `<!-- compare: … -->` marker that is not attached to a heading this way (stray
+prose above it, a `###` sub-heading, or no heading at all) fails the build. It
+never renders silently as plain text. Attach every marker to its own `##`
+heading, with only blank lines, if any, between them.
 
 ```markdown
 ---
@@ -125,30 +126,29 @@ What the fixture sets and what the two images show; fold any limitation in here.
 …
 ```
 
-- Marker attributes: `image=` (required — the basename), `status=` (see below),
-  `fixture=` (optional — the live `?fixture=` deep link), `particles=` (optional
-  — seconds).
+- Marker attributes: `image=` (required, the basename), `status=` (see below),
+  `fixture=` (optional, the live `?fixture=` deep link), `particles=` (optional,
+  seconds).
 - `particles=` is for a section whose subject is a CPUParticles emitter that
   authors no `preprocess`. The Godot editor animates particles, so a paused
   reference render draws frame 0 while the previewer draws its substituted
-  settle, and the pair would show two different instants. The value is handed to
-  `pnpm ref:godot --particles`, which advances the emitters through Godot's own
-  settle loop. Set it to the seconds the previewer settles to (one `lifetime`,
-  half for a `one_shot`) and say the number in the prose — an instant nobody
-  names is not a measurement.
-- A sectioned sheet needs NO top-level `image:` frontmatter; each section supplies
-  its own. Legacy single-pair sheets (one `image:`, no markers) still work unchanged.
-- A sectioned sheet carries NO top-level `status:` frontmatter either — forbidden,
-  not just optional. Its nav badge and header always roll up from its sections'
-  own `status=` (worst-first: `unimplemented` > `limitation` > `unreviewed` >
-  `done`); a frontmatter `status:` is never read for it, so it is dead the moment
-  it is written and only invites drifting away from what the sections actually say.
-  The sheets test enforces this.
+  settle. Without the key, the pair shows two different instants. The value goes
+  to `pnpm ref:godot --particles`, which advances the emitters through Godot's
+  own settle loop. Set it to the seconds the previewer settles to (one
+  `lifetime`, half for a `one_shot`) and state the number in the prose. An
+  instant that the prose does not name is not a measurement.
+- A sectioned sheet needs no top-level `image:` frontmatter. Each section
+  supplies its own. A single-pair sheet (one `image:`, no markers) is also valid.
+- A sectioned sheet must not carry a top-level `status:` frontmatter. Its nav
+  badge and header roll up from its sections' own `status=` (worst first:
+  `unimplemented` > `limitation` > `unreviewed` > `done`). The generator never
+  reads a frontmatter `status:` for it, so the key is dead on arrival and drifts
+  from what the sections say. The sheets test enforces this.
 
 ## Optional frontmatter keys
 
-Beyond the six in the template, three keys are accepted. They are optional, and a
-sheet that needs none of them should carry none of them.
+Beyond the six in the template, the generator accepts three keys. They are
+optional, and a sheet that needs none of them carries none of them.
 
 | Key | Use |
 | --- | --- |
@@ -156,31 +156,32 @@ sheet that needs none of them should carry none of them.
 | `group: Lighting` | Overrides the nav grouping the catalog derives from the ancestor chain. |
 | `camera: 4,3,6` | The capture's camera position, for a scene the default framing suits badly. |
 
-`visual: false` is about the IMAGE, not about the node. A Marker2D draws a real
-gizmo but a plain capture shows nothing, so it sets the key. A RigidBody3D draws
-nothing itself yet its capture usefully shows the child mesh it carries, so it does
-not. That is why `visual:` is deliberately independent of `status: linter-only`,
-which is a claim about the node and is machine-checked against the registration.
+`visual: false` is about the image, not about the node. A Marker2D draws a real
+gizmo, but a plain capture shows nothing, so it sets the key. A RigidBody3D draws
+nothing itself, but its capture usefully shows the child mesh it carries, so it
+does not. That is why `visual:` is independent of `status: linter-only`, which is
+a claim about the node and is machine-checked against the registration.
 
 ## What the generator supplies: never hand-write these
 
 - **The Godot docs and source links** in the sheet header. Both are generated from
-  `node-catalog.json` (`pnpm nodes:catalog`), and the source URL is verified
-  against the engine's `GDCLASS` macro before it ships.
+  `node-catalog.json` (`pnpm nodes:catalog`), and the generator verifies the
+  source URL against the engine's `GDCLASS` macro before it ships.
 - **The `## Linting` block** between `<!-- lint:begin … -->` and
   `<!-- lint:end -->`, from the live linter registries (`pnpm docs:lint-sections`,
-  checked in CI). Editing inside the markers is destroyed on the next run and
-  fails the check. The hand-written lenient-parser prose goes BELOW `lint:end`.
-- **ADR links.** Write `ADR-0025` as plain text and the generator links it. A relative
-  path is wrong from a slice, wrong in the gallery, and broken on the deployed site.
-- **Shared causes.** A divergence explained in `docs/comparison/README.md` (the
-  RemoteTransform relay limits) is written there once. Report your own measured
-  pixels and point at it.
+  checked in CI). The next run destroys an edit inside the markers, and the check
+  fails on it. The hand-written lenient-parser prose goes below `lint:end`.
+- **ADR links.** Write `ADR-0025` as plain text and the generator links it. A
+  relative path is wrong from a slice, wrong in the gallery, and broken on the
+  deployed site.
+- **Shared causes.** `docs/comparison/README.md` explains a divergence that spans
+  sheets (the RemoteTransform relay limits) once. Report your own measured pixels
+  and point at it.
 
-One sheet kind carries no `## Linting` block, and `sheets.test.mjs` asserts it has
-no markers: the `complex-*` whole-scene showcases, which name no single node type.
-Every other sheet carries exactly one block naming its frontmatter `type`,
-`category: Resources` sheets included.
+One sheet kind carries no `## Linting` block: the `complex-*` whole-scene
+showcases, which name no single node type. `sheets.test.mjs` asserts they have no
+markers. Every other sheet carries exactly one block that names its frontmatter
+`type`, `category: Resources` sheets included.
 
 ## Status: never claim more than you have verified
 
@@ -196,74 +197,74 @@ dot and a header or section badge. A node's badge **rolls up to its worst sectio
 | `unreviewed` | Not yet assessed against Godot. Grey. **The default.** |
 
 `done` is the strong claim. Reserve it for a feature you have looked at and found
-matches. An unassessed sheet stays `unreviewed`. A whole-scene showcase with gaps is
-`limitation`, not `done`. When in doubt, do not go green.
+to match. An unassessed sheet stays `unreviewed`. A whole-scene showcase with gaps
+is `limitation`, not `done`. When in doubt, do not go green.
 
-`linter-only` is the other finished state, for a Timer, a joint, an XR tracker. There
-is no render to assess, so red would be wrong and grey would imply someone still has
-to look. It is **checked, not trusted**. The sheet must be backed by a
-`renderIntent: 'transform-only'` registration in the slice's `index.r3f.ts`, and
-`sheets.test.mjs` asserts that. Judge by RUNTIME output only. An editor-only or
-selection-gated gizmo (ADR-0018) does not make a node visual, and a node that should
-draw but does not yet is `unimplemented`, never this.
+`linter-only` is the other finished state, for a Timer, a joint, an XR tracker.
+There is no render to assess, so red is wrong and grey implies that someone still
+has to look. The status is **checked, not trusted**. A
+`renderIntent: 'transform-only'` registration in the slice's `index.r3f.ts` must
+back the sheet, and `sheets.test.mjs` asserts that. Judge by runtime output only.
+An editor-only or selection-gated gizmo (ADR-0018) does not make a node visual,
+and a node that should draw but does not yet is `unimplemented`, never this.
 
-An `unimplemented` slice MAY still register its base component, under
-`renderIntent: 'pending'`. The status follows the declared intent, not the presence of
-a file. Registering nothing would also cost the node its `visible` flag and put it in
-both workspaces, so the two questions are kept apart.
+An `unimplemented` slice may still register its base component, under
+`renderIntent: 'pending'`. The status follows the declared intent, not the
+presence of a file. A slice that registers nothing also loses the node's
+`visible` flag and puts the node in both workspaces, so the two questions stay
+apart.
 
 **"Draws nothing" is not the same as "nothing to compare."** A driver (an
 AnimationPlayer, an AnimationTree, a RemoteTransform3D) has no geometry of its own
-yet moves something you can watch. It belongs on the normal `done`/`limitation`
-scale and its sheet should compare that effect. The registry flag stays
-`transform-only` (it is a claim about the node's own geometry). Only the status
-differs. Reserve `linter-only` for a node whose runtime effect is nil.
+but moves something you can watch. It belongs on the normal `done`/`limitation`
+scale, and its sheet compares that effect. The registry flag stays
+`transform-only`, because it is a claim about the node's own geometry. Only the
+status differs. Reserve `linter-only` for a node whose runtime effect is nil.
 
-## Current state only — a sheet is not a changelog
+## Current state only: a sheet is not a changelog
 
-A sheet describes how the previewer renders this type **right now**, against Godot.
-It carries no history. The reader wants to know what the two images show today, not
-how they got there.
+A sheet describes how the previewer renders this type **now**, against Godot. It
+carries no history. The reader wants to know what the two images show today.
 
 Never write, in any form:
 
-- **Fix narration** — "(FIXED)", "flagged here, fixed subsequently", "closed in a
+- **Fix narration**: "(FIXED)", "flagged here, fixed subsequently", "closed in a
   later pass", "not this component's to fix", "recorded as a follow-up".
-- **Discovery narration** — "two bugs found while building this", "the point-fix
+- **Discovery narration**: "two bugs found while building this", "the point-fix
   exposed", "measured directly, it turned out that…", "my first attempt".
-- **Before/after** — what a value used to be, what a previous implementation did,
-  what a baseline encoded before it was corrected. Arbitration tables comparing an
-  old render to a new one are history by definition.
+- **Before and after**: what a value used to be, what a previous implementation
+  did, what a baseline encoded before it was corrected. A table that compares an
+  old render to a new one is history by definition.
 - **Dates, commits, agent or packet names, issue or WI numbers.**
 
-If a divergence is **open**, state the divergence in present tense with its measured
-numbers. If it is **closed**, delete the row — a fixed divergence is simply not a
-divergence, and leaving it "closed with numbers" is the changelog creeping back.
+If a divergence is **open**, state it in the present tense with its measured
+numbers. If it is **closed**, delete the row. A fixed divergence is not a
+divergence, and a row "closed with numbers" is a changelog entry.
 
-That history is not lost; it lives where history belongs — git, the ADRs, the issue.
-A sheet that reads as a diary is stale the moment the code moves again, and it buries
-the one thing it exists to say.
+History lives in git, the ADRs and the issue.
 
-Applies to prose, headings and tables alike. A heading like
-`## Auto-framing (two bugs found while building this)` is the same violation as the
-sentence would be.
+The rule applies to prose, headings and tables alike. A heading like
+`## Auto-framing (two bugs found while building this)` breaks it as much as the
+sentence does.
 
 ## Rules
 
 - **Look at both images.** Read `docs/comparison/images/<image>-godot.png` and
-  `-ours.png` with your own eyes. The prose and limitations must describe what is
-  on screen. A sheet written from the code alone is worthless. Looking is the one
-  thing only a viewer can do.
-- **Terse.** This is a reference to skim, not an essay. No restating the code, no
-  explaining what three.js is.
-- **No visual of its own?** A Timer, a RemoteTransform, an AudioStreamPlayer draws
-  nothing. Say so in one line under the heading. That absence IS the useful fact.
+  `-ours.png` yourself. The prose and limitations must describe what is on
+  screen. A sheet written from the code alone is worthless, because only a
+  viewer can look.
+- **Terse.** A sheet is a reference to skim, not an essay. Do not restate the
+  code or explain what three.js is.
+- **No visual of its own?** A Timer, a RemoteTransform or an AudioStreamPlayer
+  draws nothing. Say so in one line under the heading. That absence is the
+  useful fact.
 - **Selection-gated gizmos** (Marker3D, Path3D, PathFollow3D, ADR-0018) and
   **toggle-gated** overlays (collision shapes, ADR-0005/0006) do not appear in a
   plain capture. Say the gizmo is gated, not missing.
-- **Editor-only gizmos** (light bulbs, camera frustums) appear in neither image. The
-  reference renders the game, not the editor. Never report their absence as a bug.
-- **The frontmatter is load-bearing.** The generator reads it to place the images and
-  group the sheet. `image` is the fixture's basename without `.tscn`, and without the
-  `-godot.png`/`-ours.png` suffix or a directory. Do not invent one.
+- **Editor-only gizmos** (light bulbs, camera frustums) appear in neither image.
+  The reference renders the game, not the editor. Never report their absence as a
+  bug.
+- **The frontmatter is load-bearing.** The generator reads it to place the images
+  and group the sheet. `image` is the fixture's basename without `.tscn`, and
+  without the `-godot.png`/`-ours.png` suffix or a directory. Do not invent one.
 - No AI-attribution lines, no TODOs, no placeholders.

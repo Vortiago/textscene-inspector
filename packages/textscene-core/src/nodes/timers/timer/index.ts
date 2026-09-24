@@ -1,9 +1,6 @@
 /**
- * Timer registration — parser + property formatter.
- *
- * Timer extends Node (non-spatial), so it has no visual representation; the
- * render component (index.r3f.ts) reuses the base Node component so it
- * renders nothing visible.
+ * Timer parser and property formatter. Timer extends Node, so it has no
+ * visual representation.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

@@ -1,10 +1,6 @@
 /**
- * Tests for the Light3D shared validator registration (shared/linterParser.ts).
- *
- * Verifies that `light_*` and `shadow_*` validators are registered under the
- * abstract 'Light3D' key and therefore reach every concrete light subclass via
- * the base-walk (DirectionalLight3D / OmniLight3D / SpotLight3D / AreaLight3D
- * → Light3D → Node3D).
+ * The `light_*` and `shadow_*` validators register under the abstract 'Light3D'
+ * key, so the base-walk delivers them to every concrete light.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -28,9 +24,8 @@ function check(property: string, value: string) {
 
 /**
  * Every `ADD_PROPERTY`/`ADD_PROPERTYI` key in `Light3D::_bind_methods`
- * (light_3d.cpp:385-418), in source order. Pins the coverage gap shut: a key
- * dropped from `linterParser.ts` fails this list rather than silently
- * reopening the gap.
+ * (light_3d.cpp:385-418), in source order, so a key dropped from
+ * `linterParser.ts` fails this list.
  */
 const KEYS: string[] = [
   'light_intensity_lumens',
@@ -88,7 +83,7 @@ describe('Light3D shared validators', () => {
       [
       {
         // light_3d.cpp:389 hints "0,16,0.001,or_greater", and Light3D::set_param:36
-        // guards the param INDEX rather than the value, so a negative energy is
+        // guards the param index rather than the value, so a negative energy is
         // loaded as written: it warns, it does not error. `or_greater` opens the
         // ceiling, so 150 is in band.
         prop: 'light_energy',
@@ -138,7 +133,7 @@ describe('Light3D shared validators', () => {
         },
       {
         // light_3d.cpp:385 hints "0,100000.0,0.01,or_greater,suffix:lm", and
-        // Light3D::set_param:36 guards the param INDEX rather than the value,
+        // Light3D::set_param:36 guards the param index rather than the value,
         // so a negative reading loads and warns rather than errors.
         prop: 'light_intensity_lumens',
         valid: [0, 100000, '-5'],
@@ -153,7 +148,7 @@ describe('Light3D shared validators', () => {
         invalid: [{ value: 'bad', contains: ['must be a number'] }],
       },
       {
-        // light_3d.cpp:387 hints "1000,15000.0,1.0,suffix:k" — both ends closed
+        // light_3d.cpp:387 hints "1000,15000.0,1.0,suffix:k", both ends closed
         // (no or_greater/or_less). set_temperature (light_3d.cpp:257) is a bare
         // assignment, so out-of-hint is a warning, not an error.
         prop: 'light_temperature',
@@ -178,7 +173,7 @@ describe('Light3D shared validators', () => {
         invalid: [{ value: 'bad', contains: ['must be a number'] }],
       },
       {
-        // light_3d.cpp:395 hints "0,90,0.01,degrees" — both ends closed. The
+        // light_3d.cpp:395 hints "0,90,0.01,degrees", both ends closed. The
         // bare "degrees" token is a display-only suffix, not "radians_as_degrees",
         // so the stored value is already degrees and the hint bound applies
         // unconverted.
@@ -196,7 +191,7 @@ describe('Light3D shared validators', () => {
         invalid: [{ value: 'bad', contains: ['must be a number'] }],
       },
       {
-        // light_3d.cpp:412, PROPERTY_HINT_GROUP_ENABLE — a checkable-group
+        // light_3d.cpp:412, PROPERTY_HINT_GROUP_ENABLE: a checkable-group
         // marker for the inspector, not a value constraint (object.h:93).
         prop: 'distance_fade_enabled',
         valid: [true, false],
@@ -239,7 +234,7 @@ describe('Light3D shared validators', () => {
   describe('shadow_bias / shadow_normal_bias / shadow_blur: hint bound tightened to "0,10,0.001"', () => {
     // All three share PROPERTY_HINT_RANGE "0,10,0.001" (light_3d.cpp:403,
     // :404, :408) with neither or_greater nor or_less, so both ends are
-    // closed. set_param:36 guards the param INDEX only, so out-of-hint warns.
+    // closed. set_param:36 guards the param index only, so out-of-hint warns.
     it.each(['shadow_bias', 'shadow_normal_bias', 'shadow_blur'])(
       'accepts the inclusive bounds 0 and 10 on %s',
       (property) => {

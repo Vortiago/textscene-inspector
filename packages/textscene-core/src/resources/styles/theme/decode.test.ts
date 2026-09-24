@@ -58,7 +58,7 @@ describe('decodeThemeAddresses', () => {
       []
     );
     expect(addresses.constants?.Button?.h_separation).toBe(4);
-    // `int constant_map` (`theme.h`) — a fractional literal truncates towards zero.
+    // `int constant_map` (`theme.h`): a fractional literal truncates towards zero.
     expect(addresses.constants?.Button?.outline_size).toBe(-1);
   });
 

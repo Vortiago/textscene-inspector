@@ -1,15 +1,8 @@
 /**
- * VehicleWheel3D property formatter.
- *
- * A wheel draws nothing itself, so the inspector is the only place its
- * configuration is legible. Godot's defaults are substituted here rather than at
- * parse time (types.ts), so the panel always shows the EFFECTIVE value — a wheel
- * that authors nothing still reads as the 0.5m/10.5-slip wheel Godot would
- * simulate.
- *
- * `engine_force` / `brake` / `steering` are runtime inputs a scene file rarely
- * authors; they appear only when actually set, so a static preview does not
- * imply a vehicle is accelerating.
+ * VehicleWheel3D property formatter. It substitutes Godot's defaults (types.ts),
+ * so the panel shows the effective value Godot would simulate. `engine_force`,
+ * `brake` and `steering` are runtime inputs, shown only when set, so a static
+ * preview does not imply a vehicle is accelerating.
  */
 
 import type { PropertySection, PropertyItem } from '../../../../core/NodeRegistry';

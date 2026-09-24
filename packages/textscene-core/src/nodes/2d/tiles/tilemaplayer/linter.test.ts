@@ -45,7 +45,7 @@ describe('TileMapLayer lint rules', () => {
   });
 
   it('reports a malformed base64 body once, not once per layer that reads it', () => {
-    // The literal cannot be PARSED (`CryptoCore::b64_decode` failing is an
+    // The literal cannot be parsed (`CryptoCore::b64_decode` failing is an
     // ERR_PARSE_ERROR for the whole file, variant_parser.cpp:618-622), so the
     // semantic decode never gets a value to judge and must stay quiet.
     const diagnostics = lint(

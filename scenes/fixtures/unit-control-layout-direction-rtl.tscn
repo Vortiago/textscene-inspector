@@ -1,9 +1,6 @@
-; The ONE variable: `layout_direction = 3` (RTL). `Control::is_layout_rtl`
-; resolves an explicit RTL with no locale and no TextServer lookup, and
-; `BoxContainer::_resort` reads it (box_container.cpp:48) to lay its children
-; out from the opposite edge. The three bars have different widths so a
-; reversal cannot be mistaken for a mirror of equal blocks, and the LTR row
-; above holds the unmirrored order beside it.
+; The one variable: `layout_direction = 3` (RTL). BoxContainer::_resort reads it (box_container.cpp:48)
+; and lays children out from the opposite edge. The bars differ in width, so a reversal is not a
+; mirror, and the LTR row above holds the plain order.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitctrllayoutrtl"]
 

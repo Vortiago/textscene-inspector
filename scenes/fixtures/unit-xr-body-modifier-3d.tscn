@@ -1,10 +1,9 @@
 [gd_scene format=3]
 
-; XRBodyModifier3D under the Skeleton3D it poses: SkeletonModifier3D only finds a
-; skeleton in its DIRECT parent. body_tracker names a tracker registered by hand
-; rather than the default one, body_update is the Upper Body | Lower Body subset of
-; the three flags its inspector offers, hands left out, and bone_update = 1 rotates
-; the bones without moving them so the mesh keeps its own bone lengths.
+; XRBodyModifier3D under the Skeleton3D it poses: SkeletonModifier3D finds a skeleton only in its
+; direct parent. body_tracker names a hand-registered tracker, not the default. body_update is the
+; Upper Body | Lower Body subset of the three inspector flags, without hands, and bone_update = 1
+; rotates the bones without moving them, so the mesh keeps its own bone lengths.
 
 [node name="Root" type="Node3D"]
 

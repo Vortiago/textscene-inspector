@@ -1,8 +1,8 @@
-/** CanvasLayer property definitions — a passthrough layer hosting Control children, not a Control itself. */
+/** CanvasLayer properties: a passthrough layer hosting Control children, not a Control itself. */
 
 export interface CanvasLayerProperties {
   name: string;
-  /** Owning node's path, straight off the heading — how the tree is rebuilt. */
+  /** Owning node's path, straight off the heading: how the tree is rebuilt. */
   parent?: string;
   /** `instance=` on the heading: a CanvasLayer can be an instanced sub-scene too. */
   instance?: string;

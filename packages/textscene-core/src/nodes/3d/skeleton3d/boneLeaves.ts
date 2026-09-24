@@ -1,14 +1,8 @@
 /**
- * `bones/<i>/<leaf>` — every leaf `Skeleton3D::_set` has an arm for, with the
- * check that arm's setter justifies.
- *
- * The KEYS are the whitelist: `_set` dispatches on
- * `what = path.get_slicec('/', 2)` (skeleton_3d.cpp:83) and closes
- * `} else { return false; }` (:135), so a leaf absent here is a dropped write.
- *
- * Format checks key off the `Variant::` type `_get_property_list` declares
- * (:195-201). `bone_meta`, `pose` and `bound_children` appear in no property
- * list and no setter of theirs refuses a value, so they carry no check.
+ * `bones/<i>/<leaf>`: every leaf `Skeleton3D::_set` has an arm for, with the check its setter
+ * justifies. The keys are the whitelist: `_set` dispatches on `what = path.get_slicec('/', 2)`
+ * (skeleton_3d.cpp:83) and closes `} else { return false; }` (:135), so a leaf absent here is a
+ * dropped write.
  */
 
 import { addBoneRefusal, boneNameText } from './boneNameOrder.js';
@@ -26,17 +20,10 @@ import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 const QUATERNION_REGEX = makeFloatTupleRegex('Quaternion', 4);
 
 /**
- * `name` reaches `add_bone` (skeleton_3d.cpp:86), which opens
- * `ERR_FAIL_COND_V_MSG(p_name.is_empty() || p_name.contains_char(':') ||
- * p_name.contains_char('/'), -1, …)` (:605): the bone is never added.
- *
- * Measured on the DECODED text, because the tokenizer resolves `\uXXXX` before
- * the setter sees it. No format check sits in front of it: the parameter is
- * a `const String &`, so `Variant::operator String()` stringifies whatever the
- * file carries and an unquoted `5` names a bone `5` rather than being refused.
- *
- * `set_bone_name` (:632) refuses a duplicate too, but `_set` never reaches it —
- * `name` has no arm below :90, so `add_bone` is the only setter this leaf hits.
+ * `name` reaches `add_bone` (skeleton_3d.cpp:86), which refuses an empty name or one holding ':' or
+ * '/' (`ERR_FAIL_COND_V_MSG`, :605) and never adds the bone. Measured on the decoded text, after
+ * the tokenizer resolves `\uXXXX`. No format check: the `const String &` parameter makes an
+ * unquoted `5` the name `5`. `set_bone_name` (:632) is never reached.
  */
 const boneName: PropertyValidator = (key, value, line) => {
   const refused = addBoneRefusal(boneNameText(value));
@@ -56,15 +43,16 @@ boneName.grounding = { kind: 'enforced', cite: 'skeleton_3d.cpp:605' };
 /** A leaf whose value no setter of its own refuses. */
 const unchecked = (accepts: string): PropertyValidator => shape(() => null, accepts);
 
+// Format checks key off the `Variant::` type `_get_property_list` declares (:195-201). `bone_meta`,
+// `pose` and `bound_children` appear in no property list, and no setter of theirs refuses a value,
+// so they carry no check.
 export const BONE_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   name: boneName,
 
-  // :196, Variant::INT. set_bone_parent refuses anything below -1 outright
-  // (`ERR_FAIL_COND(p_parent != -1 && (p_parent < 0))`, :721); the hint on the
-  // same line states that identical floor, so it grounds nothing further. The
-  // ceiling is the live bone count, which no per-property validator can see.
-  // The `p_bone == p_parent` refusal beside it (:722) needs the key's index and
-  // lives in the dispatcher.
+  // :196, Variant::INT. set_bone_parent refuses anything below -1 (`ERR_FAIL_COND(p_parent != -1 &&
+  // (p_parent < 0))`, :721), the floor the hint also states. The ceiling is the live bone count,
+  // which no per-property validator sees. The dispatcher checks the `p_bone == p_parent` refusal
+  // (:722), which needs the index.
   parent: v.strictInt('parent', { min: -1, enforced: 'skeleton_3d.cpp:721' }),
 
   // :197, Variant::TRANSFORM3D. set_bone_rest (:774) guards the bone index and

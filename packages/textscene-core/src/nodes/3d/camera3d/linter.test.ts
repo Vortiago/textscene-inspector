@@ -1,5 +1,5 @@
 /**
- * Tests for Camera3D linter (strict parser + semantic rules)
+ * Tests for the Camera3D linter: the strict parser and the semantic rules.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -46,9 +46,8 @@ describe('Camera3D Linter', () => {
       );
     });
 
-    // Every accept-case camera is otherwise valid (perspective, sane clipping)
-    // via baseProps; per-case `with` overrides where the property needs another
-    // projection mode.
+    // baseProps makes every accept-case camera otherwise valid (perspective, sane clipping).
+    // A per-case `with` overrides where the property needs another projection mode.
     runPropertyValidation(
       {
         nodeType: 'Camera3D',
@@ -66,7 +65,7 @@ describe('Camera3D Linter', () => {
         {
           // camera_3d.cpp:725, ERR_FAIL_COND(p_fov < 1 || p_fov > 179): the setter
           // refuses, and the hint at :682 states the same 1-179, so there is no
-          // advisory band left around it — every legal fov is silent.
+          // advisory band left around it: every legal fov is silent.
           prop: 'fov',
           valid: [1, 10, 45, 75, 90, 120, 150, 179],
           invalid: [
@@ -132,10 +131,9 @@ describe('Camera3D Linter', () => {
           with: { near: 0.001 },
         },
         {
-          // camera_3d.h:50-52: `KeepAspect` has exactly 2 members, so "2" names
-          // no constant in Godot 4.6.3. A warning, not an error
-          // (camera_3d.cpp:672's hint is unenforced — set_keep_aspect_mode is a
-          // bare assignment).
+          // camera_3d.h:50-52: `KeepAspect` has 2 members, so "2" names no constant in Godot
+          // 4.6.3. A warning, not an error: set_keep_aspect_mode is a bare assignment, so
+          // camera_3d.cpp:672's hint is unenforced.
           prop: 'keep_aspect',
           valid: [0, 1],
           invalid: [
@@ -206,25 +204,9 @@ describe('Camera3D Linter', () => {
       });
     });
 
-    // Each mode reaches a different `Projection` setter (camera_3d.cpp:104-114
-    // stores, and `_get_camera_projection` at :272-282 builds), so each licenses
-    // a different tier:
-    //
-    //   frustum      `ERR_FAIL_COND(p_far <= p_near)` (projection.cpp:367)
-    //                refuses BOTH cells, and 4.6.3 prints that condition once
-    //                per frame on such a scene — an error.
-    //   perspective  returns at projection.cpp:263 when `deltaZ == 0`, BEFORE
-    //                the `set_identity()` at :268 — a dropped write, and only at
-    //                that cell. `near > far` merely inverts a written matrix.
-    //                Rendering it prints NOTHING, and both properties keep the
-    //                value written, so this is the warning tier, not the error
-    //                one.
-    //   orthogonal   projection.cpp:344 has no guard at all: it writes inf at
-    //                :351 and says nothing. No ERR_FAIL, no clamp, no dropped
-    //                write, and both hints end in `or_greater`
-    //                (camera_3d.cpp:685-686) so no warning tier either. Camera3D
-    //                declares no `get_configuration_warnings`, so nothing is
-    //                licensed and nothing is reported.
+    // Each mode reaches a different `Projection` setter (camera_3d.cpp:104-114 stores, and
+    // `_get_camera_projection` at :272-282 builds), so each licenses a different tier: frustum
+    // errors, perspective warns, orthogonal reports nothing.
     describe('clipping planes relationship', () => {
       /** Both clipping-plane rule names, so a split cannot make an assertion vacuous. */
       const clipping = (content: string) =>
@@ -248,7 +230,8 @@ describe('Camera3D Linter', () => {
       });
 
       it('should error when near equals far under the frustum projection', () => {
-        // One ERR_FAIL_COND covers both cells, so frustum reports one reason.
+        // One ERR_FAIL_COND (projection.cpp:367) covers both cells, so frustum reports one reason.
+        // 4.6.3 prints that condition once per frame on such a scene.
         expectDiagnostic(
           scene(node('Camera3D', { projection: 2, size: 1.0, near: 100.0, far: 100.0 })),
           {
@@ -286,6 +269,8 @@ describe('Camera3D Linter', () => {
         // value is dropped and the camera stays on its camera_3d.h:66 default.
         ['an out-of-enum projection, dropped back to perspective', { projection: 5, fov: 75.0 }],
       ])('warns on near == far under %s', (_label, props) => {
+        // projection.cpp:263 returns on `deltaZ == 0` before the `set_identity()` at :268. The
+        // dropped write prints nothing and both properties keep the value written: a warning.
         expectDiagnostic(scene(node('Camera3D', { ...props, near: 100.0, far: 100.0 })), {
           prop: 'clipping',
           severity: 'warning',
@@ -296,9 +281,9 @@ describe('Camera3D Linter', () => {
       });
 
       it('stays silent on near == far under the orthogonal projection', () => {
-        // projection.cpp:344 writes -2.0/(zfar - znear) as inf and returns. The
-        // value is stored untouched and no hint end is crossed, so ADR-0032
-        // licenses neither tier.
+        // projection.cpp:344 writes -2.0/(zfar - znear) as inf at :351 and returns. The value is
+        // stored untouched, both hints end in `or_greater` (camera_3d.cpp:685-686), and Camera3D
+        // declares no `get_configuration_warnings`, so ADR-0032 licenses neither tier.
         expect(
           clipping(scene(node('Camera3D', { projection: 1, size: 10.0, near: 100.0, far: 100.0 })))
         ).toHaveLength(0);
@@ -308,7 +293,7 @@ describe('Camera3D Linter', () => {
       // the two modes part company on them because the conditions differ.
       it('stays silent on near == far == inf under perspective, where deltaZ is nan', () => {
         // projection.cpp:260 computes `inf - inf` as nan, and `nan == 0` is
-        // false, so :263 does NOT return and the matrix is written.
+        // false, so :263 does not return and the matrix is written.
         expect(
           clipping(scene(node('Camera3D', { projection: 0, fov: 75.0, near: 'inf', far: 'inf' })))
         ).toHaveLength(0);
@@ -377,7 +362,7 @@ describe('Camera3D Linter', () => {
 
     describe('fov carries no advisory', () => {
       // camera_3d.cpp:725 ERR_FAILs outside 1-179 and the hint at :682 states the
-      // same bounds, so the only fov diagnostic is that error — no warning band.
+      // same bounds, so the only fov diagnostic is that error, with no warning band.
       it.each([1, 10, 45, 75, 90, 150, 179])('says nothing about fov %s', (fov) => {
         expectNoDiagnostic(
           scene(node('Camera3D', { projection: 0, fov, near: 0.1, far: 100.0 })),
@@ -452,7 +437,7 @@ describe('Camera3D Linter', () => {
     });
 
     it('should validate mixed warnings and errors', () => {
-      // Test case 1: Only warnings (values below their hints)
+      // Only warnings: values below their hints.
       let diagnostics = lint(
         scene(node('Camera3D', { projection: 0, fov: 10, near: 0.0005, far: 0.005 }))
       );
@@ -460,7 +445,7 @@ describe('Camera3D Linter', () => {
       const hasWarnings = diagnostics.some(d => d.severity === 'warning');
       expect(hasWarnings).toBe(true);
 
-      // Test case 2: Errors from invalid values
+      // Errors from invalid values.
       diagnostics = lint(
         scene(node('Camera3D', { projection: 5, fov: 200, near: -0.1 }))
       );

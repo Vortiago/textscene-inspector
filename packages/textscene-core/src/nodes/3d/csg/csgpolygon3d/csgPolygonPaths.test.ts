@@ -90,7 +90,7 @@ curve = SubResource("Curve3D_road")`;
     const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     resolvedOf(parse(UNIQUE_SCENE), 'Racetrack');
     expect(warn).toHaveBeenCalledTimes(1);
-    // The literal as written — a resolved path would be a name no node can hold.
+    // The literal as written: a resolved path would be a name no node can hold.
     expect(warn.mock.calls[0]![0]).toContain('%Track');
     expect(warn.mock.calls[0]![0]).not.toContain('Holder/Racetrack/%Track');
   });

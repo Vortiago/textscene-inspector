@@ -1,13 +1,7 @@
 /**
- * NavigationLink2D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * Tests the NavigationLink2D strict validators through `validatorRegistry`, not
+ * by linting a `.tscn`, so a failure points at the validator. Rule behaviour is
+ * in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,9 +17,8 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * NavigationLink2D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * Set exactly one, from the engine source: the keys NavigationLink2D binds, or
+ * DECLARES_NOTHING when it binds no ADD_PROPERTY. Both unset is red on purpose.
  */
 const KEYS: string[] = [
   'enabled',
@@ -36,20 +29,14 @@ const KEYS: string[] = [
   'enter_cost',
   'travel_cost',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys NavigationLink2D does NOT declare, each paired with the ancestor that does.
- * Name at least one; Node2D is where to start.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives NavigationLink2D no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart, and it is red until filled for the same reason
- * KEYS is.
+ * Keys NavigationLink2D inherits, each with the ancestor that declares it. The
+ * malformed-value sweep iterates `getOwnKeys`, so on a class that declares
+ * nothing it passes vacuously. Resolving an inherited key to the ancestor's own
+ * validator tells an empty class from an unwritten slice.
  */
 const INHERITED: [owner: string, key: string][] = [
   ['Node2D', 'position'],
@@ -66,17 +53,14 @@ describe('NavigationLink2D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // `fixtureLint` covers the whole registry through the barrel. This checks
+    // the fixture against only what this test imports.
     expectFixtureClean('unit-navigation-link-2d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // NavigationLink2D declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose validates no format. Vacuous when
+    // the class declares nothing, which INHERITED covers.
     const accepted = validatorRegistry
       .getOwnKeys('NavigationLink2D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -91,8 +75,8 @@ describe('NavigationLink2D strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
-      // NavigationLink2D would answer here while drifting from the ancestor's rule.
+      // The same function, not merely some validator: a shadowing copy would
+      // answer here while it drifts from the ancestor's rule.
       expect(validatorRegistry.findValidator('NavigationLink2D', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('NavigationLink2D')).not.toContain(key);
     }
@@ -127,8 +111,7 @@ describe('NavigationLink2D strict validators', () => {
     });
 
     it('rejects a non-numeric value as a format error', () => {
-      // The FORMAT branch is always an error, hinted or not: unparsable input
-      // is malformed whatever severity the range check would carry.
+      // The format branch is always an error, hinted or not.
       const result = check('navigation_layers', 'not-a-number');
       expect(result).not.toBeNull();
       expect(result!.severity).toBe('error');
@@ -137,7 +120,7 @@ describe('NavigationLink2D strict validators', () => {
     it('takes -1, and errors only past the 32-bit mask', () => {
       // navigation_link_2d.cpp:205-213, set_navigation_layers is a bare
       // uint32_t assignment with no ERR_FAIL, and PROPERTY_HINT_LAYERS_2D_NAVIGATION
-      // (:75) renders every 32-bit pattern — including this one.
+      // (:75) renders every 32-bit pattern, this one included.
       expect(check('navigation_layers', '-1')).toBeNull();
       expect(check('navigation_layers', '4294967296')?.severity).toBe('error');
     });

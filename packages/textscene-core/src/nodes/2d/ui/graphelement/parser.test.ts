@@ -35,7 +35,7 @@ describe('parseGraphElement', () => {
   });
 
   it('forces selected=false when selectable=false, regardless of an authored selected=true', () => {
-    // graph_element.cpp:205-210 — GraphElement::set_selectable(false) calls
+    // graph_element.cpp:205-210: GraphElement::set_selectable(false) calls
     // set_selected(false) unconditionally, whatever load order gave `selected`.
     const p = parseGraphElement(h({ name: 'G', type: 'GraphElement' }), {
       selectable: 'false',

@@ -10,10 +10,9 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import './linterParser';
 
 /**
- * The error a validator returns for a value, or null when it accepts it.
- * Used for `mix_target`/`playback_type`: unlike the rest of this file, these
- * assert directly through `validatorRegistry` rather than the full `Linter`,
- * since the unit under test is the validator itself.
+ * The error a validator returns for a value, or null when it accepts it. `mix_target` and
+ * `playback_type` assert through `validatorRegistry` rather than the full `Linter`, since the
+ * unit under test is the validator.
  */
 function check(property: string, value: string) {
   const validator = validatorRegistry.findValidator('AudioStreamPlayer', property);
@@ -99,12 +98,9 @@ stream = "res://sound.ogg"
       }
     });
 
-    // audio_stream_player.cpp:70,
-    // ERR_FAIL_COND_MSG(Math::is_nan(p_volume), "Volume can't be set to NaN.").
-    // Measured on 4.6.3: after `volume_db = -12`, writing NaN leaves -12 and
-    // prints the error, while `inf` and `-inf` are stored unaltered. A range
-    // bound cannot cover it — every comparison against NaN is false, so the
-    // refusal produced no diagnostic at all.
+    // audio_stream_player.cpp:70, ERR_FAIL_COND_MSG(Math::is_nan(p_volume), ...). Measured on
+    // 4.6.3: after `volume_db = -12`, writing NaN leaves -12 and prints the error, while `inf` and
+    // `-inf` are stored unaltered. A range bound cannot cover it: every comparison against NaN is false.
     it('errors on nan, which the setter refuses', () => {
       const error = check('volume_db', 'nan');
       expect(error?.severity).toBe('error');

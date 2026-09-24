@@ -43,14 +43,14 @@ Strict parsing format-checks these `FoldableContainer` properties, plus 53 inher
 |  | `control-property-order` | warning |
 <!-- lint:end -->
 
-`parser.ts` reads `folded`, `title`, `title_alignment`, `title_position` and
-`title_text_overrun_behavior` — the five own keys that change what draws.
-`foldable_group`/`title_text_direction`/`language` are behaviour, not pixels, and stay
-unread. A malformed `folded` becomes `false`; a malformed `title_alignment`/
-`title_position`/`title_text_overrun_behavior` becomes `undefined` and the render
+`parser.ts` reads the own keys that change what draws: `folded`, `title`,
+`title_alignment`, `title_position` and `title_text_overrun_behavior`.
+`foldable_group`, `title_text_direction` and `language` are behaviour, not pixels, and
+stay unread. A malformed `folded` becomes `false`. A malformed `title_alignment`,
+`title_position` or `title_text_overrun_behavior` becomes `undefined`, and the render
 default (LEFT / TOP / no trimming) applies.
 
 ## Known limitations
 
-- **Approximated** A right-to-left title keeps its glyphs in the written order; the
+- **Approximated** A right-to-left title keeps its glyphs in the written order. The
   previewer shapes no bidirectional text, so `title_text_direction` changes nothing.

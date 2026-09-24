@@ -1,72 +1,9 @@
 /**
- * The quad a PointLight2D contributes to the canvas light accumulator.
- *
- * It emits Godot's `light_color` and nothing else:
- *
- *   rgb = cookie.rgb * light.color * energy      (sRGB, unclamped)
- *   a   = cookie.a
- *
- * `energy` is applied HERE, in sRGB, which is the space Godot's canvas works in
- * — scaling a linear colour instead raises it by only `energy^(1/2.2)` once
- * re-encoded, which is why lights read dim when the multiply is folded into a
- * linear material colour.
- *
- * The alpha is emitted RAW rather than pre-multiplied into rgb, because the
- * accumulator needs it twice over: as the blend factor that reproduces
- * `light_blend_compute` (below) and, summed across lights, as the coverage mask
- * a `light_mode = Light Only` item is drawn through.
- *
- * `light_blend_compute` in `canvas.glsl` is
- *
- *   ADD: S += light_color.rgb * light_color.a
- *   SUB: S -= light_color.rgb * light_color.a
- *   MIX: S  = mix(S, light_color.rgb, light_color.a)
- *
- * SHADOWS replace the whole term rather than dimming it. `canvas.glsl` does
- *
- *   shadow_color.a *= light_color.a;                  // .a is the cookie's
- *   light_color = mix(light_color, shadow_color, shadow);
- *
- * so a fully shadowed pixel takes `vec4(shadow_color.rgb, shadow_color.a *
- * cookie.a)`. At `Light2D`'s default `shadow_color = Color(0, 0, 0, 0)` the
- * whole term vanishes, which is why withholding the quad — a stencil test — IS
- * the shadow for almost every scene.
- *
- * An authored `shadow_color` is the same `mix` from its other side, so it is the
- * same quad drawn through the complementary stencil test: `createLightQuadMaterial`
- * covers where the volumes did NOT stamp, `createShadowColorQuadMaterial` covers
- * where they did. Together they partition the light's rect exactly once. The
- * second quad is skipped unless `shadowColorContributes`, so the default costs
- * nothing.
- *
- * UNDER `shadow_filter = PCF5/PCF13` the `mix` factor is a FRACTION and there is
- * no in/out to stencil, so both quads instead sample the light's polar shadow map
- * (`shadowPolarMap.ts`), cover the whole rect, and each emit their own share.
- * Expanding `canvas.glsl:502` with the albedo already folded into `C` (line 814
- * runs first) and `S = shadow_color`:
- *
- *   out += (C·(1−s) + S.rgb·s) · cookie.a·((1−s) + S.a·s)
- *        = C·(1−s)·cookie.a·((1−s) + S.a·s)      ← albedo-MULTIPLIED, the cookie quad
- *        + S.rgb·s·cookie.a·((1−s) + S.a·s)      ← albedo-FREE, the tint quad
- *
- * — no cross term, so the split across the two accumulators is exact rather than
- * approximate. At `s = 1` the tint term is `cookie.a · S.a`, byte-identical to
- * what the stencil path emits, and at Godot's transparent default the cookie term
- * collapses to the (1−s)² falloff MEASURED on Godot 4.6.3 (a PCF5 light over a
- * 0.25 surface steps 167/129/100/80/67/63 of 255, against the 167/146/…/64 a
- * plain (1−s) would give).
- *
- * and each of the three is exactly one fixed-function blend against the
- * accumulator, which is why all three are reproduced rather than approximated:
- * SrcAlpha/One with add, SrcAlpha/One with reverse-subtract, and
- * SrcAlpha/OneMinusSrcAlpha with add. Alpha always accumulates One/One, since
- * `light_only_alpha` is a plain sum (measured against Godot 4.6.3: one, two and
- * three overlapping cookies of alpha 0.3 mask to 0.3, 0.6 and 0.9, not to the
- * 0.51/0.657 a screen combination would give).
- *
- * The GLSL itself is in `lightQuadShaders.ts` and the filtered path's per-light
- * inputs in `shadowSampling.ts`; this module is the material assembly.
- *
+ * The quad materials a PointLight2D adds to the canvas light accumulator: Godot's `light_color`,
+ * `rgb = cookie.rgb * color * energy` in sRGB and unclamped, and `a = cookie.a` raw, since the alpha
+ * is both the blend factor and, summed, the Light Only mask. The GLSL is in `lightQuadShaders.ts`.
+ */
+/*
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -106,17 +43,15 @@ export const SHADOW_FILTER_PCF5 = 1;
 export const SHADOW_FILTER_PCF13 = 2;
 
 /**
- * One fixed-function blend per `Light2D.BlendMode`, against an accumulator whose
- * rgb holds `S` and whose alpha holds the summed cookie coverage.
- *
- * `transparent` is load-bearing rather than cosmetic: it is what puts the quads
- * in three's transparent list, which sorts farthest-first and so replays them in
- * canvas draw order. In the opaque list they would sort nearest-first, and MIX —
- * the one mode whose result depends on the order lights are applied — would come
- * out reversed.
+ * `light_blend_compute`'s modes are one fixed-function blend each: ADD is SrcAlpha/One with add,
+ * SUB the same with reverse-subtract, and MIX SrcAlpha/OneMinusSrcAlpha with add. Alpha adds
+ * One/One: Godot 4.6.3 sums `light_only_alpha`, so one, two and three 0.3 cookies mask to 0.3, 0.6
+ * and 0.9, not a screen blend's 0.51 and 0.657.
  */
 function accumulationBlend(blendMode: number): Partial<THREE.ShaderMaterialParameters> {
   return {
+    // The transparent list sorts farthest-first, replaying canvas draw order. The opaque list
+    // sorts nearest-first and would reverse MIX, whose result depends on light order.
     transparent: true,
     blending: THREE.CustomBlending,
     blendEquation:
@@ -147,14 +82,9 @@ export function shadowColorContributes(shadowColor: Color): boolean {
 }
 
 /**
- * The `shadow_color` quad: one light's albedo-free term.
- *
- * The two mechanisms name the colour in different places, and the union is what
- * stops a light's two quads being built from two different colours. A FILTERED
- * light's colour rides its `ShadowSampling`, which the cookie quad reads for the
- * same light — one carrier, so the tint quad's rgb and the cookie quad's alpha
- * term are provably the same value rather than two that happen to agree. An
- * unfiltered light has no sampling, so it names the colour directly.
+ * The `shadow_color` quad: one light's albedo-free term. A filtered light's colour rides its
+ * `ShadowSampling`, which the cookie quad reads too, so both quads provably use one value. An
+ * unfiltered light has no sampling and names the colour directly.
  */
 export type ShadowColorQuadOptions = {
   readonly cookie: THREE.Texture;
@@ -167,13 +97,19 @@ export type ShadowColorQuadOptions = {
     }
   | {
       readonly shadow?: undefined;
-      /** `Light2D.shadow_color` — the whole colour, this quad's entire output. */
+      /** `Light2D.shadow_color`: this quad's entire output. */
       readonly shadowColor: Color;
       /** The stencil test that confines it to where the volumes stamped. */
       readonly stencil?: LightQuadStencil;
     }
 );
 
+/**
+ * `canvas.glsl` replaces the term: `light_color = mix(light_color, shadow_color, shadow)`, after
+ * `shadow_color.a *= light_color.a`. The default transparent colour makes withholding the lit quad
+ * the whole shadow. An authored colour draws this quad through the complementary stencil test, so
+ * the pair covers the rect once. It is skipped unless `shadowColorContributes`.
+ */
 export function createShadowColorQuadMaterial(
   options: ShadowColorQuadOptions
 ): THREE.ShaderMaterial {
@@ -210,7 +146,11 @@ export interface LightQuadOptions {
   readonly blendMode: number;
   /** The stencil test that withholds it where the volumes stamped. */
   readonly stencil?: LightQuadStencil;
-  /** Set for a filtered light, whose fraction replaces the stencil. */
+  /**
+   * Set for a PCF5/PCF13 light: its shadow is a fraction with no in or out to stencil, so both quads
+   * sample the polar map (`shadowPolarMap.ts`) over the whole rect, each emitting its share of
+   * `canvas.glsl:502`.
+   */
   readonly shadow?: ShadowSampling;
 }
 
@@ -230,9 +170,11 @@ export function createLightQuadMaterial({
     uniforms: {
       uCookie: { value: cookie },
       uColor: { value: new THREE.Vector3(color.r, color.g, color.b) },
+      // Applied in sRGB, Godot's canvas space: scaling a linear colour raises it only by
+      // `energy^(1/2.2)` once re-encoded.
       uEnergy: { value: energy },
-      // Only `.a` is read on this side — it is what carries the shadowed half of
-      // the alpha the accumulator sums for `light_only_alpha`.
+      // Only `.a` is read on this side: the shadowed half of the alpha the accumulator sums for
+      // `light_only_alpha`.
       ...(shadow
         ? {
             uShadowColor: {
@@ -249,9 +191,8 @@ export function createLightQuadMaterial({
     },
     depthWrite: false,
     depthTest: false,
-    // Single pass is load-bearing rather than a saving here: `accumulationBlend`
-    // SUMS into the accumulator (`blendDst: OneFactor` for ADD/SUB), so any
-    // fragment both facing passes covered would count this light twice.
+    // One pass, since `accumulationBlend` sums into the accumulator (`blendDst: OneFactor` for
+    // ADD/SUB), so a fragment both facing passes covered would count this light twice.
     ...canvasItemFacing(),
     ...accumulationBlend(blendMode),
     ...stencil,

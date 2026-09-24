@@ -84,28 +84,10 @@ describe('layoutLabel3DLines', () => {
 });
 
 /**
- * Label3D is the ONE text painter with no golden image behind it
- * (`scripts/visual/scenes.mjs` excludes its fixture â€” it renders blank in
- * that harness), so the composed number this describe pins is the only thing
- * standing in for one: where a glyph's ink actually lands is
- * `layoutLabel3DLines`'s own placement Y PLUS the quad top
- * `buildGlyphQuadArrays` produces for the same line, and only the SUM is
- * observable. Either half may move as long as the sum does not; asserting
- * either half alone would let a change to one silently cancel against the
- * other, or worse, not cancel at all.
- *
- * Hand-derived at `font_size` 32, `line_spacing` 0, one line ('Hi'):
- *   ascentPx  = ceil(2189*32/2048) = ceil(34.203125) = 35
- *   descentPx = ceil(600*32/2048)  = ceil(9.375)     = 10
- *   linePitchPx = 45 -> heightPx = 45, contentHeightPx = 45
- *   placement.y = -45/2 = -22.5, so the wrapping group sits at three-local
- *     y = +22.5 (`rect.ts`'s negate-once convention)
- *   'H' bake metrics (`openSansAtlas.ts`): yoffset 13, bake `base` 45, bake
- *     `fontSize` 42 -> scale 32/42
- *   quad top, Godot px below the line's box top
- *     = baselineOffsetPx - base*scale + yoffset*scale
- *     = 35 - 45*(32/42) + 13*(32/42) = 35 - 32*(32/42) = 10.61904761...
- *   composed three-local Y = 22.5 - 10.61904761... = 11.88095238...
+ * Label3D has no golden image (`scripts/visual/scenes.mjs` excludes its blank
+ * fixture), so this pins the composed ink position: the placement Y of
+ * `layoutLabel3DLines` plus the quad top of `buildGlyphQuadArrays`. Only the sum
+ * is observable, so either half may move while the sum holds.
  */
 describe('layoutLabel3DLines + buildGlyphQuadArrays (the composed ink position â€” Label3D has no golden)', () => {
   function composedTopY(text: string, lineSpacingPx: number, lineIndex: number): number {
@@ -117,6 +99,10 @@ describe('layoutLabel3DLines + buildGlyphQuadArrays (the composed ink position â
   }
 
   it("a single line's first glyph lands at three-local y = 11.880952... (the worked example above)", () => {
+    // At font_size 32: ascent ceil(2189*32/2048) = 35 and descent ceil(600*32/2048)
+    // = 10, so the group sits at +22.5 (`rect.ts` negates once). 'H' in `openSansAtlas.ts`
+    // has yoffset 13, base 45 and bake fontSize 42, so the quad top is
+    // 35 - 32*(32/42) = 10.619... below the box top, and 22.5 - 10.619... = 11.880...
     const contentHeightPx = 45;
     const scale = FONT_SIZE / OPEN_SANS_ATLAS_INFO.fontSize;
     const quadTopBelowBoxTop = 35 - (OPEN_SANS_ATLAS_INFO.base - OPEN_SANS_ATLAS_GLYPHS.H!.yoffset) * scale;
@@ -137,12 +123,10 @@ describe('layoutLabel3DLines + buildGlyphQuadArrays (the composed ink position â
 });
 
 describe('the outline stroke (FreeType stroker, text_server_adv.cpp:1383)', () => {
-  // `FT_Stroker_Set(stroker, (int)(fd->size.y * 16.0), ...)` takes a 26.6
-  // fixed-point radius and `fd->size.y` is the RAW `outline_size`
-  // (`text_server_adv.h:406-414` puts `p_size.y` in unscaled), so
-  // `outline_size` 12 is 12 * 16 = 192 in 26.6, i.e. 192 / 64 = 3 px of
-  // one-sided reach. Godot's own default `outline_size` is 12
-  // (`label_3d.h:126`).
+  // `FT_Stroker_Set(stroker, (int)(fd->size.y * 16.0), ...)` takes a 26.6 radius,
+  // and `fd->size.y` is the raw `outline_size` (`text_server_adv.h:406-414`). So
+  // Godot's default `outline_size` 12 (`label_3d.h:126`) is 192 in 26.6, 3 px of
+  // one-sided reach.
   it('gives Label3D\'s default outline_size a 3 px one-sided radius', () => {
     expect(outlineRadiusPx(12)).toBe(3);
   });
@@ -150,7 +134,7 @@ describe('the outline stroke (FreeType stroker, text_server_adv.cpp:1383)', () =
   it('scales linearly with outline_size and never with font_size (outline_size is an absolute pixel quantity)', () => {
     expect(outlineRadiusPx(4)).toBe(1);
     expect(outlineRadiusPx(32)).toBe(8);
-    // No font_size parameter exists to pass â€” the C++ keys the stroker off
+    // No font_size parameter exists to pass: the C++ keys the stroker off
     // `fd->size.y` alone.
     expect(outlineRadiusPx.length).toBe(1);
   });

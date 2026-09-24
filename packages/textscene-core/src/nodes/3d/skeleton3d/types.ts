@@ -1,15 +1,8 @@
-/**
- * Skeleton3D-specific type definitions
- */
+/** Skeleton3D property types. */
 
 import type { Node3DProperties } from '../../base/node3d/types';
 
-/**
- * Skeleton3D node properties
- *
- * Manages skeletal animation bones for 3D models.
- * Used for character animation, procedural animation, and ragdoll physics.
- */
+/** Skeleton3D node properties: the bones behind skeletal, procedural and ragdoll animation. */
 export interface Skeleton3DProperties extends Node3DProperties {
   /** Animation motion scale multiplier (default: 1.0) */
   motion_scale?: number;
@@ -21,14 +14,11 @@ export interface Skeleton3DProperties extends Node3DProperties {
   animate_physical_bones?: boolean;
 
   /**
-   * When skeleton modifier processing occurs
-   * 0 = MODIFIER_CALLBACK_MODE_PROCESS_PHYSICS
-   * 1 = MODIFIER_CALLBACK_MODE_PROCESS_IDLE
-   * 2 = MODIFIER_CALLBACK_MODE_PROCESS_MANUAL
-   * (default: 1 = IDLE)
+   * When skeleton modifiers process: 0 = MODIFIER_CALLBACK_MODE_PROCESS_PHYSICS, 1 =
+   * MODIFIER_CALLBACK_MODE_PROCESS_IDLE (default), 2 = MODIFIER_CALLBACK_MODE_PROCESS_MANUAL.
    */
   modifier_callback_mode_process?: number;
 
-  /** Indexed bone properties (e.g., bones/0/position) */
+  /** Indexed bone properties, such as bones/0/position. */
   bones: Map<string, string>;
 }

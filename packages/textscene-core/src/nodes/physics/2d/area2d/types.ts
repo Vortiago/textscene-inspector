@@ -1,5 +1,3 @@
-/** Area2D type definitions. */
-
 import type { Node2DProperties } from '../../../base/node2d/types';
 
 export interface Area2DProperties extends Node2DProperties {

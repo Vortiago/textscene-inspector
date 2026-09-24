@@ -1,12 +1,7 @@
 /**
- * The reactive half of `collectControlRasterViewports`: re-walks the scene on
- * every live-tree tick, the same cache-buster `useViewportContentKind` and
- * `useBuildSolveTree` both key their own re-derivation on — an instanced
- * sub-scene lands after the parse, and only then can the walk see whether it
- * holds a Control-only sub-viewport.
- *
- * Kept out of `controlRasterViewports.ts` so the walk itself stays pure and
- * framework-free; only the wiring needs React.
+ * The reactive half of `collectControlRasterViewports`: re-walks the scene on every
+ * live-tree tick, as `useViewportContentKind` and `useBuildSolveTree` do, since an
+ * instanced sub-scene lands after the parse and may hold a Control-only sub-viewport.
  */
 import { useMemo } from 'react';
 
@@ -28,9 +23,8 @@ export function useControlRasterViewports(
   const loader = useResourceLoader();
   const liveTreeVersion = useLiveTreeVersion(loader);
   // `internationalization/*`, reduced to the booleans `is_layout_rtl` branches
-  // on — the same env `useBuildSolveTree` resolves its own Controls against,
-  // so the direction this walk hands a sub-viewport and the one its Controls
-  // resolve below it come from one source.
+  // on: the env `useBuildSolveTree` resolves its Controls against, so the
+  // direction handed to a sub-viewport and its Controls' come from one source.
   const projectSettings = useProjectSettings().settings;
   const layoutDirectionEnv = useMemo(() => projectLayoutDirectionEnv(projectSettings), [projectSettings]);
 

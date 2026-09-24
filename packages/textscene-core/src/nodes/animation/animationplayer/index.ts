@@ -1,5 +1,5 @@
 /**
- * AnimationPlayer registration — parser + property formatter.
+ * AnimationPlayer registration: parser and property formatter.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

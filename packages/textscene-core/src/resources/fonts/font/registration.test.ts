@@ -15,8 +15,8 @@ describe('font slice registration', () => {
   it('claims exactly the type names the decode gate accepts', () => {
     // The claim is a promise the processor can serve the type. A name claimed
     // here but missing from the decode's `SubResource` gate routes to the font
-    // processor, which then throws `Not a font resource type` — a
-    // missing-resources row for a type the table said it would serve.
+    // processor, which then throws `Not a font resource type`: a missing-resources
+    // row for a type the table said it would serve.
     expect(resourceSliceRegistry.byTypeName('FontFile')?.typeNames).toEqual(FONT_TYPES);
   });
 

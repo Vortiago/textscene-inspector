@@ -1,4 +1,4 @@
-/** Tree parser contract — Control base plus columns/column_titles_visible. */
+/** Tree parser contract: the Control base plus columns/column_titles_visible. */
 import { describe, it, expect } from 'vitest';
 import { parseTree } from './parser';
 

@@ -29,8 +29,8 @@ describe('glowParamsFor', () => {
 
   it('carries Godot 4.6 Environment defaults', () => {
     const params = glowOn();
-    // `Environment`'s own constructor values — the editor preview environment
-    // only flips `glow_enabled`, so these are what every previewed scene gets.
+    // `Environment`'s own constructor values: the editor preview environment
+    // only flips `glow_enabled`, so every previewed scene gets these.
     expect(params.levels).toEqual([0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0]);
     expect(params.intensity).toBeCloseTo(0.3, 6);
     expect(params.strength).toBeCloseTo(1.0, 6);
@@ -50,9 +50,8 @@ describe('glowParamsFor', () => {
   });
 
   it('is null when every weight is zero, whatever else is set', () => {
-    // An empty pyramid produces nothing, so it reads as "no glow" rather than as
-    // params a consumer must re-check — that is what lets a non-null result carry
-    // a real `maxLevel` instead of a promise made across files.
+    // An empty pyramid reads as "no glow", not as params a consumer must re-check,
+    // so a non-null result always carries a real `maxLevel`.
     const off: Record<string, string> = { glow_bloom: '1', glow_intensity: '4' };
     for (let level = 1; level <= GLOW_LEVEL_COUNT; level++) off[`glow_levels/${level}`] = '0';
     expect(glowParamsFor(settings({ glow_enabled: 'true', ...off }))).toBeNull();
@@ -238,7 +237,7 @@ describe('blendGlsl', () => {
 
   it('never divides by a zero white point', () => {
     // SCREEN is the default blend, and `tonemap_white` is only linted as
-    // non-negative — a literal 0.0 divisor makes every pixel NaN.
+    // non-negative: a literal 0.0 divisor makes every pixel NaN.
     const glsl = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), 0);
     expect(glsl).not.toMatch(/\/ 0\.0\s*\)/);
     expect(glsl).toContain('/ 0.0001');
@@ -276,22 +275,19 @@ describe('blendGlsl', () => {
     //   color.r + glow.r * ((color.r <= 0.25
     //     ? ((16.0 * color.r - 12.0) * color.r + 4.0) * color.r
     //     : sqrt(color.r)) - color.r)
-    // The trailing constant is 4.0. The widely-published Photoshop form factors
-    // the same curve differently and lands on 3.0, which is a plausible thing to
-    // copy from a blog post and is wrong here — it changes the low end of every
-    // soft-light halo. Pinned character-exact for that reason.
     const glsl = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }), 1);
     for (const channel of ['r', 'g', 'b']) {
       expect(glsl).toContain(`(16.0 * color.${channel} - 12.0) * color.${channel} + 4.0`);
       // The other branch of D(), above 0.25.
       expect(glsl).toContain(`sqrt(color.${channel})`);
     }
+    // The Photoshop form lands on 3.0, not 4.0, and changes the low end of every halo.
     expect(glsl).not.toContain('+ 3.0)');
   });
 
   it('skips soft light above 1.0, where Godot leaves the colour alone', () => {
-    // `color.r > 1.0 ? color.r : ...` — the polynomial inverts past 1, and Godot's
-    // own comment says the discontinuity there is deliberate and unavoidable.
+    // `color.r > 1.0 ? color.r : ...`: the polynomial inverts past 1, and Godot's
+    // own comment calls the discontinuity there deliberate and unavoidable.
     const glsl = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }), 1);
     for (const channel of ['r', 'g', 'b']) {
       expect(glsl).toContain(`color.${channel} = color.${channel} > 1.0`);
@@ -323,8 +319,7 @@ describe('blendGlsl', () => {
   });
 
   it('emits only the constants the chosen mode reads', () => {
-    // An ADDITIVE shader used to carry a white point and a mix factor it never
-    // touched, which left a reader working out that both were inert.
+    // An ADDITIVE shader carries no white point or mix factor it never reads.
     const additive = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.ADDITIVE) }), 2);
     expect(additive).not.toContain('2.0');
     const screen = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), 2);

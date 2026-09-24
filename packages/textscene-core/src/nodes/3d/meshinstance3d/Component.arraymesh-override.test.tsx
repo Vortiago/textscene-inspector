@@ -1,19 +1,8 @@
 /**
- * A MeshInstance3D's material overrides against a baked ArrayMesh.
- *
- * Godot resolves a surface's material in `_geometry_instance_update`
- * (`servers/rendering/renderer_rd/forward_clustered/render_forward_clustered.cpp:4264`):
- * `inst_materials[j]` — what `surface_material_override/N` writes — wins over
- * `materials[j]`, the mesh's own, per surface `j`. `_geometry_instance_add_surface`
- * (`:4206`) then puts the node-level `material_override` in front of whichever of
- * the two arrived, on EVERY surface, and falls back to the renderer's default
- * material (`:4221`) when nothing valid is left. `MeshInstance3D::get_active_material`
- * (`scene/3d/mesh_instance_3d.cpp:384`) states the same order.
- *
- * The override index is Godot's ORIGINAL surface index: `MeshInstance3D::_set`
- * (`scene/3d/mesh_instance_3d.cpp:65`) writes into an array `_mesh_changed`
- * (`:407`) sized to the mesh's surface count, so an index past that count is
- * dropped rather than stored.
+ * A MeshInstance3D's material overrides against a baked ArrayMesh. Per surface,
+ * `surface_material_override/N` beats the mesh's own (`servers/rendering/renderer_rd/forward_clustered/render_forward_clustered.cpp:4264`),
+ * `material_override` beats both on every surface (`:4206`), and the default
+ * material is the fallback (`:4221`), as `scene/3d/mesh_instance_3d.cpp:384` states.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -32,7 +21,7 @@ import type { MeshInstance3DProperties } from './types';
 const MESH_PATH = 'res://stage/meshes/wheel.tres';
 const OVERRIDE_MATERIAL_PATH = 'res://stage/materials/paint.tres';
 
-/** A quad's worth of surface bytes — the same four vertices every surface here uses. */
+/** A quad's worth of surface bytes: the four vertices every surface here uses. */
 const QUAD_BODY = `"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
 "attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
 "format": 34359742487,
@@ -218,9 +207,8 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
   });
 
   it('indexes overrides by the original surface index when a surface is dropped', async () => {
-    // Surface 0 is undecodable, so the mesh renders one draw group — Godot's
-    // surface 1. `surface_material_override/1` names that surface, and an
-    // override keyed on the compacted draw group would put it on nothing.
+    // Surface 0 is undecodable, so the one draw group is Godot's surface 1. The
+    // override index is Godot's original surface index, not the compacted group.
     const loader = makeLoader({ [MESH_PATH]: twoSurfaceTres(BROKEN_QUAD_BODY) });
     const materials = await renderSettled(
       loader,
@@ -233,8 +221,9 @@ describe('<MeshInstance3D> ArrayMesh material overrides', () => {
   });
 
   it('ignores an override naming a surface index the mesh does not have', async () => {
-    // `MeshInstance3D::_set` refuses an index past the mesh's surface count, so
-    // the slot is never stored and the mesh keeps exactly its own surfaces.
+    // `MeshInstance3D::_set` (`scene/3d/mesh_instance_3d.cpp:65`) refuses an index
+    // past the surface count `_mesh_changed` (`:407`) sizes the array to, so the
+    // mesh keeps exactly its own surfaces.
     const loader = makeLoader({ [MESH_PATH]: twoSurfaceTres() });
     const materials = await renderSettled(
       loader,

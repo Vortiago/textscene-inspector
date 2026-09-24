@@ -82,8 +82,8 @@ describe('formatVehicleWheel3DProperties', () => {
   });
 
   it('omits the runtime drive inputs unless authored (edge)', () => {
-    // engine_force / brake / steering are set from GDScript at runtime and are
-    // never authored in the corpus; a static preview should not imply otherwise.
+    // engine_force, brake and steering are runtime inputs from GDScript. A
+    // static preview does not imply them.
     expect(itemsOf(frontWheel, 'Drive')['Engine Force']).toBeUndefined();
 
     const driven: VehicleWheel3DProperties = { ...frontWheel, engine_force: 40, brake: 25 };

@@ -1,9 +1,6 @@
 /**
- * Tests for LRUCache — the bounded cache backing `createResourceProcessor`'s
- * per-type resource cache. Pins recency tracking, eviction, and the
- * `onEvict` disposal hook contract independent of any resource-loading
- * concern. Also covers the pin/unpin reference-counting API that prevents
- * eviction of mounted consumers.
+ * LRUCache, the cache behind `createResourceProcessor`: recency, eviction, the
+ * `onEvict` disposal contract and the pin counts that protect mounted consumers.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { LRUCache } from './LRUCache';
@@ -72,7 +69,7 @@ describe('LRUCache', () => {
     const cache = new LRUCache<string>(3, onEvict);
     cache.set('a', 'A');
 
-    cache.set('a', 'A2'); // replaces 'A' — the old reference is dropped here, not via capacity eviction
+    cache.set('a', 'A2'); // replaces 'A': the old reference drops here, not through capacity eviction
 
     expect(cache.get('a')).toBe('A2');
     expect(onEvict).toHaveBeenCalledTimes(1);
@@ -85,7 +82,7 @@ describe('LRUCache', () => {
     const cache = new LRUCache<typeof shared>(3, onEvict);
     cache.set('a', shared);
 
-    cache.set('a', shared); // identical reference — nothing was actually replaced
+    cache.set('a', shared); // identical reference: nothing was replaced
 
     expect(onEvict).not.toHaveBeenCalled();
   });
@@ -154,9 +151,6 @@ describe('LRUCache', () => {
     expect(onEvict).toHaveBeenCalledWith('a', 'A');
   });
 
-  // -------------------------------------------------------------------
-  // Reference-counting: pin / unpin
-  // -------------------------------------------------------------------
   describe('pin / unpin', () => {
     it('a pinned entry is skipped by evictOverflow — zero-count entries are evicted first', () => {
       const onEvict = vi.fn();
@@ -165,7 +159,7 @@ describe('LRUCache', () => {
       cache.set('b', 'B');
       cache.pin('a'); // 'a' is now pinned (count = 1)
 
-      // Adding 'c' would evict 'a' (LRU) but it's pinned, so 'b' goes instead.
+      // Adding 'c' would evict 'a' (LRU), but it is pinned, so 'b' goes instead.
       cache.set('c', 'C');
 
       expect(cache.has('a')).toBe(true);
@@ -181,7 +175,7 @@ describe('LRUCache', () => {
       cache.set('a', 'A');
       cache.set('b', 'B');
       cache.pin('a');
-      cache.unpin('a'); // count back to 0 — evictable
+      cache.unpin('a'); // count back to 0: evictable
 
       cache.set('c', 'C'); // over capacity -> 'a' is now the LRU zero-count entry
       expect(cache.has('a')).toBe(false);
@@ -189,16 +183,15 @@ describe('LRUCache', () => {
     });
 
     it('multiple pins require the same number of unpins before the entry becomes evictable', () => {
-      // Use capacity 2 so we have room for the pinned entry plus one
-      // "other" — only 'a' is pinned, there are no other zero-count
-      // candidates, so the cache must temporarily exceed capacity.
+      // Capacity 2 holds the pinned entry plus one other. With no other
+      // zero-count candidate, the cache must grow past capacity.
       const onEvict = vi.fn();
       const cache = new LRUCache<string>(2, onEvict);
       cache.set('a', 'A');
       cache.pin('a');
       cache.pin('a'); // count = 2
 
-      // Only 'a' is in the cache and it is pinned — adding 'b' makes size=2 (at capacity, no overflow).
+      // Only 'a' is in the cache and it is pinned: adding 'b' makes size=2 (at capacity, no overflow).
       cache.set('b', 'B');
       expect(cache.has('a')).toBe(true);
       expect(cache.has('b')).toBe(true);
@@ -212,7 +205,7 @@ describe('LRUCache', () => {
       expect(onEvict).toHaveBeenCalledWith('b', 'B');
       onEvict.mockClear();
 
-      cache.unpin('a'); // count = 1 — still pinned
+      cache.unpin('a'); // count = 1: still pinned
       // No other zero-count entries present; adding 'd' can only evict 'c'.
       cache.set('d', 'D');
       expect(cache.has('a')).toBe(true);
@@ -220,7 +213,7 @@ describe('LRUCache', () => {
       expect(cache.has('d')).toBe(true);
       onEvict.mockClear();
 
-      cache.unpin('a'); // count = 0 — evictable now
+      cache.unpin('a'); // count = 0: evictable now
 
       // 'a' is the LRU zero-count entry (oldest, never re-touched after insertion).
       cache.set('e', 'E');
@@ -236,7 +229,7 @@ describe('LRUCache', () => {
       cache.pin('a');
       cache.pin('b');
 
-      // Both entries pinned — no eviction candidate.
+      // Both entries pinned: no eviction candidate.
       cache.set('c', 'C');
 
       expect(cache.size).toBe(3); // temporarily over capacity
@@ -247,7 +240,7 @@ describe('LRUCache', () => {
 
       // Releasing 'a' pin makes it evictable; 'c' is also unpinned.
       cache.unpin('a');
-      // Eviction happens lazily on next set — trigger it.
+      // Eviction happens lazily on the next set, so trigger it.
       cache.set('d', 'D');
 
       // After insertion size=4 > maxEntries=2. In LRU order: 'a' (unpinned,
@@ -269,7 +262,7 @@ describe('LRUCache', () => {
       cache.pin('a');
       cache.unpin('a'); // count back to 0
 
-      // Entry is still present — unpin is not delete.
+      // Entry is still present: unpin is not delete.
       expect(cache.has('a')).toBe(true);
       expect(cache.get('a')).toBe('A');
       expect(onEvict).not.toHaveBeenCalled();
@@ -287,12 +280,12 @@ describe('LRUCache', () => {
       cache.set('a', 'A');
       cache.pin('a');
       cache.unpin('a');
-      cache.unpin('a'); // extra unpin — clamped at zero
+      cache.unpin('a'); // extra unpin: clamped at zero
 
       // A single pin must protect again: if the count had gone to -1, this
       // pin would only bring it back to 0 and 'a' would be evicted below.
       cache.pin('a');
-      cache.set('b', 'B'); // overflow — 'a' is the LRU candidate but pinned
+      cache.set('b', 'B'); // overflow: 'a' is the LRU candidate but pinned
       expect(cache.has('a')).toBe(true);
       expect(onEvict).not.toHaveBeenCalled();
     });
@@ -303,13 +296,13 @@ describe('LRUCache', () => {
       cache.set('a', 'A');
       cache.pin('a'); // mounted consumer
       cache.delete('a'); // host invalidation (clearCache / provideFile)
-      cache.set('a', 'A2'); // reload lands — must still be pinned
+      cache.set('a', 'A2'); // reload lands: must still be pinned
 
-      cache.set('b', 'B'); // overflow — 'a' is the LRU candidate but pinned
+      cache.set('b', 'B'); // overflow: 'a' is the LRU candidate but pinned
       expect(cache.has('a')).toBe(true);
       expect(onEvict).not.toHaveBeenCalledWith('a', expect.anything());
 
-      cache.unpin('a'); // consumer unmounts — accounting stays balanced
+      cache.unpin('a'); // consumer unmounts: accounting stays balanced
       cache.set('c', 'C');
       expect(cache.has('a')).toBe(false);
     });
@@ -322,7 +315,7 @@ describe('LRUCache', () => {
       cache.clear();
       cache.set('a', 'A2');
 
-      cache.set('b', 'B'); // overflow — 'a' is the LRU candidate but pinned
+      cache.set('b', 'B'); // overflow: 'a' is the LRU candidate but pinned
       expect(cache.has('a')).toBe(true);
       expect(onEvict).not.toHaveBeenCalledWith('a', expect.anything());
     });
@@ -339,7 +332,7 @@ describe('LRUCache', () => {
       // The unpinned value is released now; the pinned one is held back.
       expect(onEvict.mock.calls).toEqual([['loose', 'L']]);
 
-      cache.unpin('pinned'); // consumer unmounts — 'P' released exactly once
+      cache.unpin('pinned'); // consumer unmounts: 'P' released exactly once
       expect(onEvict.mock.calls).toEqual([
         ['loose', 'L'],
         ['pinned', 'P'],
@@ -391,7 +384,7 @@ describe('LRUCache', () => {
             c.set('a', 'A');
             c.pin('a');
             c.set('a', 'A2');
-            c.unpin('a'); // consumer unmounts — nothing holds 'A' any more
+            c.unpin('a'); // consumer unmounts: nothing holds 'A' any more
           },
           expectedDisposals: [['a', 'A']],
           expectedCurrent: 'A2',
@@ -429,13 +422,13 @@ describe('LRUCache', () => {
             c.set('a', 'A');
             c.pin('a');
             c.set('a', 'A2'); // defers 'A'
-            c.set('a', 'A'); // defers 'A2' ('A' is live again — kept)
+            c.set('a', 'A'); // defers 'A2' ('A' is live again, so kept)
             c.set('a', 'A3'); // defers 'A'; the capped backlog releases 'A2' here
             c.unpin('a'); // flushes the remaining 'A'
           },
-          // The backlog cap releases a superseded pending value at the NEXT
-          // defer, so 'A2' goes before 'A' — each still disposed exactly
-          // once, never while it is the key's current value.
+          // The backlog cap releases a superseded pending value at the next
+          // defer, so 'A2' goes before 'A': each disposed exactly once,
+          // never while it is the key's current value.
           expectedDisposals: [
             ['a', 'A2'],
             ['a', 'A'],
@@ -490,7 +483,7 @@ describe('LRUCache', () => {
             c.set('a', 'A');
             c.pin('a');
             c.set('a', 'A2'); // defers 'A'
-            c.delete('a'); // pinned — defers the current 'A2' too; pins survive
+            c.delete('a'); // pinned: defers the current 'A2' too, and pins survive
             c.unpin('a'); // consumer unmounts: 'A' and 'A2' finally released
           },
           expectedDisposals: [
@@ -504,7 +497,7 @@ describe('LRUCache', () => {
           script: (c) => {
             c.set('a', 'A');
             c.pin('a');
-            c.clear(); // pinned — defers 'A'; pins survive the clear
+            c.clear(); // pinned: defers 'A', and pins survive the clear
             c.unpin('a'); // consumer unmounts: 'A' released
           },
           expectedDisposals: [['a', 'A']],
@@ -547,7 +540,7 @@ describe('LRUCache', () => {
       expect(cache.has('a')).toBe(true);
       expect(onEvict).not.toHaveBeenCalled();
 
-      // Should NOT be evictable yet (pin count is 1).
+      // Not evictable yet (pin count is 1).
       cache.set('b', 'B'); // would evict 'a' if it were unpinned
       expect(cache.has('a')).toBe(true);
       expect(onEvict).not.toHaveBeenCalled();
@@ -562,7 +555,7 @@ describe('LRUCache', () => {
         cache.set(k, k.toUpperCase());
         cache.pin(k);
       }
-      // All pinned, over capacity — streaming more pinned sets never evicts.
+      // All pinned, over capacity: streaming more pinned sets never evicts.
       cache.set('d', 'D');
       cache.pin('d');
       expect(cache.size).toBe(4);
@@ -588,7 +581,7 @@ describe('LRUCache', () => {
       cache.delete('a'); // removed while pinned (hot-reload shape)
       cache.unpin('a'); // key absent from the map at unpin time
 
-      cache.set('a', 'A2'); // re-set unpinned — must be a normal candidate
+      cache.set('a', 'A2'); // re-set unpinned: must be a normal candidate
       cache.set('b', 'B'); // over capacity: 'a' must evict
       expect(cache.has('a')).toBe(false);
       expect(cache.has('b')).toBe(true);

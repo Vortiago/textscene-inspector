@@ -1,11 +1,8 @@
 /**
- * `graphFrameMinimumSize`/`graphFrameLayout` vs `scene/gui/graph_frame.cpp`
- * (Godot 4.6.3). `title: ''` throughout, so the titlebar band floors to
- * `GRAPH_FRAME_TITLE_FONT_SIZE_PX`(22)'s own `fontHeightPx` — hand-derived
- * from the vendored OpenSans_SemiBold metrics (`unitsPerEm=2048, ascent=2189,
- * descent=600`): ascentPx = ceil(2189*22/2048) = 24, descentPx =
- * ceil(600*22/2048) = 7, `get_line_height()` (no `line_spacing` folded in) =
- * 31.
+ * `graphFrameMinimumSize`/`graphFrameLayout` versus `scene/gui/graph_frame.cpp`.
+ * `title: ''` throughout, so the titlebar floors to the 22px font's height from
+ * OpenSans_SemiBold (unitsPerEm 2048, ascent 2189, descent 600): ceil(2189*22/2048)
+ * = 24 plus ceil(600*22/2048) = 7 gives `get_line_height()` 31, no `line_spacing`.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
@@ -107,11 +104,10 @@ describe('graphFrameLayout (graph_frame.cpp:145-169)', () => {
 
 describe('graphFrameLayout under RTL', () => {
   it('hands the container rtl to fit_child_in_rect (container.cpp:99,109)', () => {
-    // `graph_frame.cpp` calls `is_layout_rtl()` nowhere; the flag reaches a
-    // child only through `Container::fit_child_in_rect`. The panel StyleBox is
-    // `make_flat_stylebox(..., 18, 12, 18, 12, ...)` (`default_theme.cpp:830`),
-    // so the content rect is x 18, width 200 - 18 - 18 = 164, and a 10-wide
-    // child lands at 18 + 164 - 10.
+    // `graph_frame.cpp` never calls `is_layout_rtl()`: the flag reaches a child
+    // only through `Container::fit_child_in_rect`. The
+    // panel's margins (18, 12, 18, 12) (`default_theme.cpp:830`) give a content rect
+    // at x 18, width 200 - 18 - 18 = 164, so a 10-wide child lands at 18 + 164 - 10.
     const a = leaf('a', { customMinimumSize: { x: 10, y: 10 }, sizeFlagsHorizontal: 0, sizeFlagsVertical: 0 });
     const n = { ...graphFrame('F', { title: '' }, [a]), rtl: true };
     const rects = asMap(

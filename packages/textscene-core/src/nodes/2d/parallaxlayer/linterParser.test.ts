@@ -1,9 +1,6 @@
 /**
- * Tests for ParallaxLayer strict validators (format validation).
- *
- * Only the slice's OWN keys: `transform` / `position` and the rest of the Node2D
- * surface reach a ParallaxLayer through the base walk, so re-declaring (or
- * re-testing) them here would be the shadow copy the registry meta-guard bans.
+ * Tests the ParallaxLayer strict validators, for the slice's own keys only. The
+ * Node2D surface arrives through the base walk.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

@@ -1,25 +1,7 @@
 /**
- * GraphNode strict validators for linting.
- *
- * Declare only GraphNode's OWN members — the ones doc/classes/GraphNode.xml
- * lists without an `overrides=` attribute — plus one family the XML omits but
- * the .cpp genuinely serialises, only visible by reading `_get_property_list`/
- * `_set`/`_get` rather than `ADD_PROPERTY` (the same shape PhysicalBone3D's
- * `joint_constraints/...` already established in this repo):
- *
- *   - `slot/<index>/<leaf>`: 9 leaves per child Control (graph_node.cpp:38-151),
- *     never an `ADD_PROPERTY` and absent from the XML's `<members>`. Every leaf
- *     `PropertyInfo` defaults to `PROPERTY_USAGE_DEFAULT` (object.h:131), which
- *     carries `PROPERTY_USAGE_STORAGE`, and `SceneState::_parse_node` walks
- *     `Object::get_property_list()` — which `_get_property_list` extends —
- *     gated only on that flag (packed_scene.cpp:859,865). So these DO reach a
- *     `.tscn`; the "set_slot is a runtime method API with no serialised state"
- *     read is only true of the *bind_methods* surface, not of this override.
- *
- * `focus_mode` and `mouse_filter` carry `overrides="Control"` (default-value
- * overrides, not new properties) and are skipped. Everything from GraphElement
- * up is registered on the ancestor and delivered by the NODE_BASE_TYPES
- * base-walk, so re-declaring an inherited key shadows it and duplicates the rule.
+ * GraphNode strict validators: only the members doc/classes/GraphNode.xml lists
+ * without `overrides=` (so not `focus_mode` or `mouse_filter`), since the
+ * NODE_BASE_TYPES walk delivers inherited keys and a re-declared key shadows one.
  */
 
 import '../graphelement/linterParser.js';
@@ -29,47 +11,41 @@ import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 /**
- * The 9 `slot/<index>/<leaf>` leaves (graph_node.cpp:140-148, in
- * `_get_property_list`'s per-child loop). `_set` (graph_node.cpp:38-88) copies
- * each leaf into a local `Slot` and forwards the whole struct to `set_slot()`
- * unconditionally — no leaf value itself is ever range-checked or clamped, so
- * every leaf below is a plain format check, format-only by construction (the `v`
- * combinators with no bound auto-tag themselves; only `left_icon`/`right_icon`
- * are hand-rolled and tagged explicitly above).
+ * The 9 `slot/<index>/<leaf>` leaves per child Control (graph_node.cpp:140-148), declared
+ * only by `_get_property_list` (graph_node.cpp:38-151), never `ADD_PROPERTY` or the XML.
+ * Each defaults to `PROPERTY_USAGE_DEFAULT` (object.h:131), which carries STORAGE, and
+ * `SceneState::_parse_node` saves by that flag (packed_scene.cpp:859,865), so they reach a `.tscn`.
  */
 const SLOT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
-  // graph_node.cpp:140,144 — Variant::BOOL, no hint.
+  // `_set` (graph_node.cpp:38-88) forwards each leaf to `set_slot()` unchecked, so each is format-only.
+  // graph_node.cpp:140,144: Variant::BOOL, no hint.
   left_enabled: v.boolean('left_enabled'),
   right_enabled: v.boolean('right_enabled'),
-  // graph_node.cpp:141,145 — Variant::INT, no hint. `set_slot_type_left`'s doc
-  // ("negative disallows user-made connections") describes port-connection
-  // BEHAVIOUR, not a bound `_set`/`set_slot` enforce — both assign straight
-  // through, so this stays unbounded rather than floored at 0.
+  // graph_node.cpp:141,145: Variant::INT, no hint. `set_slot_type_left`'s doc
+  // ("negative disallows user-made connections") describes connections, not a
+  // bound: `_set` and `set_slot` assign straight through, so no floor at 0.
   left_type: v.int('left_type'),
   right_type: v.int('right_type'),
-  // graph_node.cpp:142,146 — Variant::COLOR, no hint.
+  // graph_node.cpp:142,146: Variant::COLOR, no hint.
   left_color: v.color('left_color'),
   right_color: v.color('right_color'),
-  // graph_node.cpp:143,147 — Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE "Texture2D".
+  // graph_node.cpp:143,147: Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE "Texture2D".
   left_icon: v.resourceReference('left_icon'),
   right_icon: v.resourceReference('right_icon'),
-  // graph_node.cpp:148 — Variant::BOOL, no hint.
+  // graph_node.cpp:148: Variant::BOOL, no hint.
   draw_stylebox: v.boolean('draw_stylebox'),
 };
 
-/** `slot/<index>/<leaf>`, e.g. `slot/0/left_enabled`. Index may be negative in
- * the text (nothing stops an author from writing one); the leaf name is
- * whatever follows the second slash. */
+/** `slot/<index>/<leaf>`, for example `slot/0/left_enabled`. The text may hold a
+ * negative index; the leaf is whatever follows the second slash. */
 const slotValidator = indexedFamilyValidator({
   prefix: 'slot/',
   leaves: SLOT_LEAVES,
   unknownCode: 'INVALID_SLOT_KEY',
   describes: 'slot',
-  // `_set` is hand-rolled (`graph_node.cpp:130` declares the list) and reads the
-  // index with a bare `str.get_slicec('/', 1).to_int()` (`:45`) — no
-  // `is_valid_int` gate — so `slot/x/left_enabled` resolves to slot 0 and the
-  // write lands. Stated rather than defaulted: taking the default is
-  // indistinguishable from never having checked.
+  // `_set` (list declared at `graph_node.cpp:130`) reads the index with a bare
+  // `str.get_slicec('/', 1).to_int()` (`:45`) and no `is_valid_int` gate, so
+  // `slot/x/left_enabled` writes slot 0. Stated, since a default cannot show the check.
   indexParse: 'to_int',
   negativeIndex: {
     cite: 'graph_node.cpp:706',
@@ -80,18 +56,16 @@ const slotValidator = indexedFamilyValidator({
 });
 
 validatorRegistry.registerAll('GraphNode', {
-  // graph_node.cpp:1299 — Variant::STRING, no hint. set_title (:1171-1174) assigns
+  // graph_node.cpp:1299: Variant::STRING, no hint. set_title (:1171-1174) assigns
   // straight through.
   title: v.quotedString('title'),
-  // graph_node.cpp:1300 — Variant::BOOL, no hint. set_ignore_invalid_connection_type
+  // graph_node.cpp:1300: Variant::BOOL, no hint. set_ignore_invalid_connection_type
   // (:969-971) assigns straight through.
   ignore_invalid_connection_type: v.boolean('ignore_invalid_connection_type'),
-  // graph_node.cpp:1301 — PROPERTY_HINT_ENUM "Click:1,All:2,Accessibility:3", so the
-  // hint itself only names 1-3. set_slots_focus_mode's ERR_FAIL_COND at
-  // graph_node.cpp:1223 (`(int)p_focus_mode < 1 || (int)p_focus_mode > 3`) refuses
-  // the write outside that same range, including Control's own FOCUS_NONE=0 — so
-  // both ends are enforced, not merely hinted. The constructor default,
-  // FOCUS_ACCESSIBILITY=3 (graph_node.h:90), sits inside the range.
+  // graph_node.cpp:1301: PROPERTY_HINT_ENUM "Click:1,All:2,Accessibility:3". The
+  // ERR_FAIL_COND at graph_node.cpp:1223 (`(int)p_focus_mode < 1 || (int)p_focus_mode > 3`)
+  // refuses anything else, FOCUS_NONE=0 included, so both ends are enforced. The
+  // default, FOCUS_ACCESSIBILITY=3 (graph_node.h:90), is inside.
   slots_focus_mode: v.enumInt(
     'slots_focus_mode',
     1,

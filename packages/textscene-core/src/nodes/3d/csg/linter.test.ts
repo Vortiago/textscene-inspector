@@ -1,14 +1,8 @@
 /**
- * Tests for the CSG own-geometry-degenerate rule
- * (`valid-csgshape3d-own-geometry`).
- *
- * A value-add rule, NOT a port of `CSGShape3D::get_configuration_warnings()`
- * (csg_shape.cpp:982, see linter.ts's docblock) — full port needs live CSG
- * boolean geometry no `.tscn` carries.
- *
- * Driven through `StrictTscnParser` and the rule's own `check`, not through
- * `Linter`: `Linter` imports the linter barrel, which loads every slice in the
- * repo and so cannot run while sibling slices are being written.
+ * Tests for the CSG own-geometry-degenerate rule (`valid-csgshape3d-own-geometry`), not a port of
+ * `CSGShape3D::get_configuration_warnings()` (csg_shape.cpp:982, see linter.ts). Driven through
+ * `StrictTscnParser` and the rule's own `check`, not through `Linter`, which imports the linter
+ * barrel of every slice.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -83,10 +77,9 @@ describe('CSG own-geometry-degenerate rule', () => {
     });
 
     it('reports on a 2-point polygon carrying a non-finite component', () => {
-      // Counted, not decoded: `inf` is a component Godot loads and `rtos_fix`
-      // writes, so this is the same 2-point polygon as the case above — but the
-      // renderer decoder throws on it, and a rule routed through that decoder
-      // loses the warning to the throw.
+      // Counted, not decoded: `inf` is a component Godot loads and `rtos_fix` writes, so this is
+      // the same 2-point polygon as the case above. The renderer decoder throws on it, and a rule
+      // routed through that decoder loses the warning to the throw.
       const reports = reportsFor(
         csgScene('CSGPolygon3D', 'polygon = PackedVector2Array(inf, 0, 1, 1)\n')
       );
@@ -120,7 +113,7 @@ describe('CSG own-geometry-degenerate rule', () => {
   describe('CSGSphere3D / CSGCylinder3D / CSGTorus3D', () => {
     // csg_shape.cpp:1478 (Sphere, enforced-error) and each's own hinted-positive
     // linterParser.ts bounds (Cylinder radius/height, Torus inner/outer radius)
-    // already cover a non-positive value — this rule stays quiet, not doubled up.
+    // already cover a non-positive value, so this rule stays quiet rather than report it twice.
     it.each(['CSGSphere3D', 'CSGCylinder3D', 'CSGTorus3D'])(
       '%s: never emits from this rule regardless of its own radius/height properties',
       (type) => {

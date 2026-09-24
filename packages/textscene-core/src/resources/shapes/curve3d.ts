@@ -1,10 +1,8 @@
 /**
- * Re-export shim over the Curve3D slice (`resources/curves/curve3d/`).
- *
- * Kept so import sites outside this slice's ownership — the CSGPolygon3D slice
- * reaches `tessellateCurve3D` / `parseCurve3DPoints` / the point types through
- * this path — keep resolving; new code imports the slice entry point, which also
- * registers its type claim.
+ * Re-export of the Curve3D slice (`resources/curves/curve3d/`) for import sites
+ * outside it, such as the CSGPolygon3D slice's `tessellateCurve3D`,
+ * `parseCurve3DPoints` and point types. New code imports the slice entry point,
+ * which also registers its type claim.
  */
 
 export { parseCurve3DPoints, tessellateCurve3D } from '../curves/curve3d/decode';

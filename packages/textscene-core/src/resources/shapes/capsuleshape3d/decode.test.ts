@@ -1,14 +1,8 @@
 /**
- * Tests for the CapsuleShape3D decode.
- *
- * Ported from Godot `capsule_shape_3d.cpp`: `set_radius` (:101-110) RAISES
- * height to `radius * 2` when it is shorter, `set_height` (:115-124) LOWERS
- * radius to `height * 0.5` when it exceeds the half-height, and each rejects a
- * negative argument outright (`ERR_FAIL_COND_MSG`, :102 / :116) leaving the
- * property at its prior value. The loader assigns in class-property order —
- * ADD_PROPERTY radius (:148) then height (:149) — so with both authored,
- * height wins and radius is the one that clamps down. Defaults come from
- * `capsule_shape_3d.h:39-40` (0.5 / 2.0).
+ * CapsuleShape3D decode, from `capsule_shape_3d.cpp`: `set_radius` (:101-110) raises
+ * height to `radius * 2`, `set_height` (:115-124) lowers radius to `height * 0.5`,
+ * each refuses a negative (`ERR_FAIL_COND_MSG`, :102 / :116), and the loader assigns
+ * radius (:148) then height (:149), so with both authored the height wins.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -28,6 +22,7 @@ describe('decodeCapsuleShape3D', () => {
     expect(decodeCapsuleShape3D({ radius: '1', height: '4' })).toEqual({ radius: 1, height: 4 });
   });
 
+  // Defaults: `capsule_shape_3d.h:39-40`.
   it('falls back to the Godot defaults (0.5 / 2) when both are absent, silently', () => {
     expect(decodeCapsuleShape3D({})).toEqual({ radius: 0.5, height: 2 });
     expect(warnSpy).not.toHaveBeenCalled();
@@ -39,7 +34,7 @@ describe('decodeCapsuleShape3D', () => {
 
   it('clamps RADIUS down when both are authored and the capsule is too short', () => {
     // set_radius(1) leaves height (2 is not < 2), then set_height(1) lowers
-    // radius to 0.5 — height authored last wins.
+    // radius to 0.5: the height authored last wins.
     expect(decodeCapsuleShape3D({ radius: '1', height: '1' })).toEqual({ radius: 0.5, height: 1 });
   });
 

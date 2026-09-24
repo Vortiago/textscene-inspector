@@ -1,25 +1,8 @@
 /**
- * TileSet property validation.
- *
- * TileSet hand-builds its property list (`_get_property_list`,
- * tile_set.cpp:4143-4232) and hand-rolls `_set` (:3665-4008), so `ADD_PROPERTY`
- * covers only the five scalars here; every other serialised key belongs to one
- * of six indexed families, which live in sibling modules.
- *
- * The scalar tiers split cleanly. The three grid enums are
- * `PROPERTY_HINT_ENUM` over setters that assign straight through, so an
- * out-of-enum value warns; `set_tile_size` opens with an `ERR_FAIL_COND`, so a
- * component below 1 errors.
- *
- * The five `ADD_ARRAY` declarations (:4370-4378) add no key of their own:
- * `add_property_array` pushes `PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_ARRAY`
- * with no storage bit (class_db.cpp:1500), so each family's length is implied by
- * the indices present rather than serialised as a count.
- *
- * `terrain_set_<n>/mode` is the one branch of `_set` with no `return true`
- * (:3897-3902): `set_terrain_set_mode` applies the value and control then falls
- * to the closing `return false` (:4007). The write lands, so nothing is
- * reported.
+ * TileSet property validation. TileSet hand-builds `_get_property_list`
+ * (tile_set.cpp:4143-4232) and `_set` (:3665-4008), so `ADD_PROPERTY` covers only
+ * the five scalars here. Every other key belongs to one of six indexed families
+ * in sibling modules.
  */
 
 // Registers Resource, so the inherited keys resolve when this module loads alone.
@@ -69,16 +52,19 @@ validatorRegistry.registerAll('TileSet', {
   // tile_set.cpp:4369. set_uv_clipping (:567) assigns past an equality early-out.
   uv_clipping: v.boolean('uv_clipping'),
 
+  // The five `ADD_ARRAY`s (:4370-4378) add no key: `add_property_array` sets no
+  // storage bit (class_db.cpp:1500), so a family's length is its indices, never a count.
   ...layerFamilyKeys,
 
-  // A glued index over a leaf that may nest one level further
-  // (`terrain_set_0/mode` beside `terrain_set_0/terrain_1/name`), which is the
-  // `#/**` routing shape.
+  // A glued index over a leaf that may nest one level further (`terrain_set_0/mode`
+  // beside `terrain_set_0/terrain_1/name`): the `#/**` routing shape. The `mode`
+  // branch of `_set` (:3897-3902) falls to `return false` (:4007), but the write
+  // lands, so nothing is reported.
   'terrain_set_#/**': terrainSetValidator,
-  // `sources/<id>` is a `/`-separated prefix whose index ENDS the key, so the
+  // `sources/<id>` is a `/`-separated prefix whose index ends the key, so the
   // plain path wildcard routes it and the validator reads the index itself.
   'sources/*': sourceValidator,
   'tile_proxies/*': tileProxyValidator,
-  // `pattern_<n>` has no leaf at all — the terminal-index routing shape.
+  // `pattern_<n>` has no leaf at all: the terminal-index routing shape.
   'pattern_#': patternValidator,
 });

@@ -1,25 +1,17 @@
 /**
- * A minimal ref-based external store: a single mutable value plus a
- * subscriber set, read via `useSyncExternalStore` so only the component that
- * actually subscribes re-renders on a change — unlike a value carried on a
- * broader React Context, where EVERY consumer of that context re-renders on
- * ANY change to it regardless of which field it reads.
- *
- * Used for state that changes at high frequency but has few (often exactly
- * one) real readers — e.g. `hoveredNodePath`, which `TreeNode.tsx` and the
- * viewport's pointer handlers only ever WRITE, while `<HoverHighlight>` is
- * the sole reader. Putting it on `SelectionContext` directly meant every
- * selection consumer (every node wrapper, every tree row) re-rendered on
- * every hover change.
+ * One mutable value and its subscribers, read through `useSyncExternalStore`, so a change
+ * re-renders only the components that subscribe. On a React Context, every consumer re-renders on
+ * any change. It holds high-frequency state with few readers, such as `hoveredNodePath`, which
+ * only `<HoverHighlight>` reads.
  */
 import { useSyncExternalStore } from 'react';
 
 export interface ExternalStore<T> {
-  /** Current value. Safe to call during render. */
+  /** Safe to call during render. */
   get(): T;
-  /** Update the value; no-ops (and skips notifying subscribers) if `Object.is`-equal to the current value. */
+  /** A value `Object.is`-equal to the current one is a no-op and notifies nobody. */
   set(value: T): void;
-  /** Register a change listener; returns an unsubscribe function. */
+  /** Returns the unsubscribe function. */
   subscribe(onStoreChange: () => void): () => void;
 }
 

@@ -1,7 +1,6 @@
 /**
- * Timer property formatter — surfaces wait_time/autostart/one_shot/paused/
- * process_callback/ignore_time_scale (Godot defaults when the TSCN omits
- * them). Timer is non-spatial (extends Node), so no transform section.
+ * Timer property formatter: shows each Timer property, with Godot's default
+ * when the TSCN omits it. Timer extends Node, so it has no transform section.
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';

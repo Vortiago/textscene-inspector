@@ -7,8 +7,7 @@ describe('srgbToOkhsl', () => {
   });
 
   it('pure red matches an independent transcription of ok_color.h:542-593', () => {
-    // h*360 = 29.23deg, the OKHSL hue every ok_color reference implementation
-    // reports for sRGB red — s and l follow the same cited algorithm.
+    // h*360 = 29.23deg, the OKHSL hue that ok_color reports for sRGB red.
     const { h, s, l } = srgbToOkhsl({ r: 1, g: 0, b: 0 });
     expect(h).toBeCloseTo(0.0812052366, 6);
     expect(s).toBeCloseTo(1, 6);

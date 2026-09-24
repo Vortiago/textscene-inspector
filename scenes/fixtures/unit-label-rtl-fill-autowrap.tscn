@@ -1,13 +1,7 @@
-; The ONE variable: HORIZONTAL_ALIGNMENT_FILL on an RTL Label. FILL's own RTL
-; arm (label.cpp:472-478) reads the shaped PARAGRAPH direction (:470), not
-; `rtl_layout` (:471), and `text_direction` decides that. Its default is
-; TEXT_DIRECTION_AUTO (label.h:70), NOT inherited, so a Latin paragraph infers
-; LTR and the arm never fires: the wrapped Label's LAST line — the one the
-; jst_flags skip, so the one that keeps its natural width — must still start at
-; x 0. unit-label-rtl-alignment.tscn moves the alignment through the arms that
-; DO read the layout direction, so it cannot catch a FILL arm wired to the
-; wrong one. Both Labels are 500 wide and centred, so each one's OWN rect
-; mirror (control.cpp:1785) is the identity.
+; One variable: HORIZONTAL_ALIGNMENT_FILL on an RTL Label. FILL's RTL arm (label.cpp:472-478)
+; reads the shaped paragraph direction (:470), not `rtl_layout` (:471), and `text_direction`
+; defaults to TEXT_DIRECTION_AUTO (label.h:70), not inherited. So a Latin paragraph infers LTR,
+; the arm never fires, and the wrapped Label's last line must still start at x 0.
 
 [gd_scene format=3]
 
@@ -22,6 +16,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.1, 0.16, 0.12, 1)
 
+; The last line is the one the jst_flags skip, so it keeps its natural width.
+; unit-label-rtl-alignment.tscn moves the arms that read the layout direction, so it cannot
+; catch a FILL arm wired to it. Both Labels are 500 wide and centred, so the rect mirror
+; (control.cpp:1785) is the identity.
 [node name="RtlFillNoWrap" type="Label" parent="."]
 layout_mode = 1
 layout_direction = 3

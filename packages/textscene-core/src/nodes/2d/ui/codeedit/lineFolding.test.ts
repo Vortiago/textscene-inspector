@@ -1,16 +1,8 @@
 /**
- * `delimiter_comments`/`delimiter_strings` vs the fold gutter
- * (`scene/gui/code_edit.cpp:1662-1735,3210-3415,3490-3508`).
- *
- * These two tables do NOT colour anything: `scene/resources/syntax_highlighter.cpp`
- * names no delimiter at all, and `CodeHighlighter` carries its own
- * `color_regions`. Their still-frame surface is `can_fold_line`, whose arrow
- * the fold gutter draws — measured against real Godot on a probe scene: three
- * CodeEdits with the SAME buffer `"# one\n# two\n# three"` and the same
- * `gutters_draw_fold_gutter`/`line_folding`, differing only in
- * `delimiter_comments`, draw an arrow beside line 0 for `PackedStringArray("#")`
- * and for a block-comment pair on a block comment, and nothing at all
- * for `PackedStringArray()`.
+ * The delimiter tables against the fold gutter (`scene/gui/code_edit.cpp:1662-1735,3210-3415,3490-3508`).
+ * They colour nothing (`scene/resources/syntax_highlighter.cpp` names no delimiter). Measured in Godot,
+ * `"# one\n# two\n# three"` draws an arrow beside line 0 for `PackedStringArray("#")` and for a
+ * block-comment pair on a block comment, and none for `PackedStringArray()`.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -54,9 +46,8 @@ describe('buildDelimiters (code_edit.cpp:3418-3508)', () => {
   });
 
   it("keeps the constructor's own quote pair when delimiter_strings is unauthored (:3920-3922)", () => {
-    // Reversed: `_add_delimiter` breaks out of its insertion scan the moment
-    // the new key is not SHORTER than the one it is looking at (:3437-3441),
-    // so an equal-length key lands in front of the ones already there.
+    // Reversed: `_add_delimiter` stops its insertion scan once the new key is not
+    // shorter than the one it looks at (:3437-3441), so an equal-length key lands in front.
     expect(buildDelimiters(undefined, undefined).map((d) => d.startKey)).toEqual(["'", '"']);
   });
 

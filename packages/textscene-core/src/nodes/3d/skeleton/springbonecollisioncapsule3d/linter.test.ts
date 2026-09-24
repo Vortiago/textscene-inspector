@@ -36,10 +36,9 @@ describe('SpringBoneCollisionCapsule3D shape rule', () => {
   });
 
   it('leaves the committed fixture with no diagnostic at all', () => {
-    // The fixture's "zero errors AND zero warnings" claim on the rule side.
-    // `expectFixtureClean` in linterParser.test.ts runs validators only, so it
-    // cannot see a rule firing, including the ancestor's parent check, which
-    // is why the fixture parents its capsule under a SpringBoneSimulator3D.
+    // The fixture's "zero errors and zero warnings" claim on the rule side. `expectFixtureClean` in
+    // linterParser.test.ts runs validators only and cannot see a rule, the ancestor's parent check
+    // included, so the fixture parents its capsule under a SpringBoneSimulator3D.
     expect(linter.lint(readFixture('unit-spring-bone-collision-capsule-3d.tscn'))).toEqual([]);
   });
 

@@ -1,9 +1,8 @@
 /**
- * `vScrollBarMinimumSize` registers `../shared/scrollBarSolver.ts`'s
- * `scrollBarMinimumSize` at `vertical = true`. The geometry itself is proved
- * once in `shared/scrollBarSolver.test.ts`; this only pins the registration
- * and the axis this slice supplies.
+ * `vScrollBarMinimumSize` registers `scrollBarMinimumSize` at `vertical = true`.
+ * `shared/scrollBarSolver.test.ts` proves the geometry. This pins the registration and the axis.
  */
+
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';

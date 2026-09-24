@@ -1,11 +1,7 @@
 /**
- * FlowContainer strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. There is no genuine cross-field rule for FlowContainer, so
- * there is no `linter.ts` / `linter.test.ts`.
+ * FlowContainer strict validators, asserted through `validatorRegistry` so a
+ * failure points at the validator and not at scene parsing. FlowContainer has
+ * no cross-field rule, so it has no `linter.ts`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -25,8 +21,7 @@ describe('FlowContainer strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases below are the real check.
+    // A validator that accepts arbitrary prose is not validating a format.
     const accepted = validatorRegistry
       .getOwnKeys('FlowContainer')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -35,8 +30,7 @@ describe('FlowContainer strict validators', () => {
 
   it('validates exactly its own 4 members — no more, no fewer', () => {
     // doc/classes/FlowContainer.xml lists 4 own members, none `overrides=`.
-    // HFlowContainer/VFlowContainer (a later wave) chain through this base,
-    // so a widened set here would leak into both leaves.
+    // HFlowContainer and VFlowContainer inherit this set.
     expect(new Set(validatorRegistry.getOwnKeys('FlowContainer'))).toEqual(
       new Set(['alignment', 'last_wrap_alignment', 'vertical', 'reverse_fill'])
     );

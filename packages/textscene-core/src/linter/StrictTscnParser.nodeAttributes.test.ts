@@ -1,6 +1,6 @@
 /**
  * StrictTscnParser: a heading whose syntax is fine but whose required
- * attributes are not — no `name`, and no `type`/`instance` to identify the node
+ * attributes are not: no `name`, and no `type`/`instance` to identify the node
  * by.
  */
 
@@ -41,12 +41,10 @@ describe('StrictTscnParser', () => {
       const result = parser.parse(content);
 
       expect(result.errors).toHaveLength(1);
-      // The loader takes the absence as TYPE_INSTANTIATED
-      // (resource_format_text.cpp:218-221) and sets `base_scene` only under
-      // `if (next_tag.fields.has("instance"))` (:236-239), so heading 0 hits
-      // `ERR_FAIL_COND_V_MSG(n.type == TYPE_INSTANTIATED && base_scene_idx < 0,
-      // nullptr, "Invalid scene: root node %s in an instance, but there's no
-      // base scene.")` (packed_scene.cpp:220): the instantiate is refused.
+      // The loader takes the absence as TYPE_INSTANTIATED (resource_format_text.cpp:218-221) and sets `base_scene`
+      // only under `if (next_tag.fields.has("instance"))` (:236-239), so heading 0 hits
+      // `ERR_FAIL_COND_V_MSG(n.type == TYPE_INSTANTIATED && base_scene_idx < 0, nullptr, "Invalid scene: root node %s in an instance, but there's no base scene.")`
+      // (packed_scene.cpp:220): the instantiate is refused.
       expect(result.errors[0]!.severity).toBe('error');
       expect(result.errors[0]!.code).toBe('MISSING_NODE_IDENTIFIER');
       expect(result.errors[0]!.line).toBe(3);
@@ -79,7 +77,7 @@ describe('StrictTscnParser', () => {
 
       expect(result.errors).toHaveLength(1);
       // The `i > 0` arm: Godot only warns at load if nothing instantiates the
-      // node — "was modified from inside an instance, but it has vanished."
+      // node: "was modified from inside an instance, but it has vanished."
       // (packed_scene.cpp:310).
       expect(result.errors[0]!.severity).toBe('warning');
       expect(result.errors[0]!.code).toBe('MISSING_NODE_IDENTIFIER');
@@ -175,7 +173,7 @@ position = Vector2(5, 5)
     });
 
     it('refuses instance_placeholder on the root heading', () => {
-      // "Instance Placeholder can't be used for inheritance" — ERR_FILE_CORRUPT
+      // `"Instance Placeholder can't be used for inheritance"`, ERR_FILE_CORRUPT
       // (resource_format_text.cpp:247-251).
       const result = parser.parse(`[gd_scene format=3]
 
@@ -187,11 +185,9 @@ position = Vector2(5, 5)
     });
 
     it('still warns under an instance_placeholder: the placeholder has no children', () => {
-      // packed_scene.cpp:255 builds an InstancePlaceholder, and it is childless
-      // until something replaces it, so the lookup at :283 fails exactly as it
-      // does with no instance at all. Verified against Godot: the child is
-      // dropped with "was modified from inside an instance, but it has
-      // vanished."
+      // packed_scene.cpp:255 builds an InstancePlaceholder, childless until something replaces it, so the lookup at
+      // :283 fails as it does with no instance. Verified against Godot: the child is dropped with "was modified from
+      // inside an instance, but it has vanished."
       const result = parser.parse(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
@@ -226,8 +222,8 @@ position = Vector2(5, 5)
     });
 
     it('lets no nameless instance heading vouch for an absolute parent path', () => {
-      // An absolute path resolves to nothing at all — instantiate refuses one
-      // off-tree (node.cpp:1898) — so it reaches no ancestor walk, and the
+      // An absolute path resolves to nothing, since instantiate refuses one
+      // off-tree (node.cpp:1898), so it reaches no ancestor walk, and the
       // nameless heading it names has no path to vouch with either.
       const result = parser.parse(`[gd_scene load_steps=2 format=3]
 
@@ -266,11 +262,9 @@ position = Vector2(5, 5)
     });
 
     it('places an empty parent= at the root, the one reading that lints the rest', () => {
-      // Not an engine claim: `parent=""` faults the LOAD itself
-      // (`resource_format_text.cpp:206-207`), which `empty-parent-path`
-      // carries. Nothing about the file is instantiated, so this parser reads
-      // the path the one way that leaves every other heading checkable — the
-      // instance at `Rock`, and a heading naming that path inside it.
+      // Not an engine claim: `parent=""` faults the load itself (`resource_format_text.cpp:206-207`), which
+      // `empty-parent-path` carries. Nothing is instantiated, so this parser reads the path the one way that keeps
+      // every other heading checkable: the instance at `Rock`, and a heading naming that path inside it.
       const result = parser.parse(`[gd_scene load_steps=2 format=3]
 
 [ext_resource type="PackedScene" path="res://rock.tscn" id="1"]

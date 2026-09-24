@@ -1,19 +1,13 @@
 /// <reference types="vitest/globals" />
 
 /**
- * The value-carrying halves of the `vscode` module mock: its constructible
- * classes and its enums.
- *
- * Nothing here holds a module-level spy — the stateful namespaces `afterEach`
- * clears live in `vscodeMocks.testkit.ts`. Both are assembled into the module mock by
- * `test-setup.ts`, which is the file vitest actually loads.
+ * The constructible classes and enums of the `vscode` module mock. Nothing here
+ * holds a spy: the namespaces `afterEach` clears live in `vscodeMocks.testkit.ts`,
+ * and `test-setup.ts` assembles both.
  */
 
 import { vi } from 'vitest';
 
-/**
- * Mock vscode.Range class
- */
 export class MockRange {
   constructor(
     public start: any,
@@ -21,9 +15,6 @@ export class MockRange {
   ) {}
 }
 
-/**
- * Mock vscode.Position class
- */
 export class MockPosition {
   constructor(
     public line: number,
@@ -31,9 +22,6 @@ export class MockPosition {
   ) {}
 }
 
-/**
- * Mock vscode.Selection class
- */
 export class MockSelection {
   constructor(
     public start: any,
@@ -41,14 +29,11 @@ export class MockSelection {
   ) {}
 }
 
-/**
- * Mock vscode.EventEmitter class
- */
 export class MockEventEmitter {
   private listeners: Array<(...args: any[]) => void> = [];
 
   // The real `vscode.Event` is `(listener, thisArgs?, disposables?)` and pushes
-  // the subscription it returns into `disposables`; a one-argument mock leaves
+  // the subscription it returns into `disposables`. A one-argument mock leaves
   // every `_disposables` array a caller passes empty.
   event = (
     listener: (...args: any[]) => void,
@@ -76,9 +61,6 @@ export class MockEventEmitter {
   }
 }
 
-/**
- * Mock vscode.DocumentSymbol class
- */
 export class MockDocumentSymbol {
   children: MockDocumentSymbol[] = [];
 
@@ -91,9 +73,6 @@ export class MockDocumentSymbol {
   ) {}
 }
 
-/**
- * Mock vscode.Location class
- */
 export class MockLocation {
   constructor(
     public uri: any,
@@ -101,9 +80,6 @@ export class MockLocation {
   ) {}
 }
 
-/**
- * Mock vscode.DocumentLink class
- */
 export class MockDocumentLink {
   target?: unknown;
   tooltip?: string;
@@ -116,9 +92,6 @@ export class MockDocumentLink {
   }
 }
 
-/**
- * Mock vscode.Diagnostic class
- */
 export class MockDiagnostic {
   code?: string | number;
   source?: string;
@@ -130,9 +103,6 @@ export class MockDiagnostic {
   ) {}
 }
 
-/**
- * Mock vscode.DiagnosticSeverity enum
- */
 export const MockDiagnosticSeverity = {
   Error: 0,
   Warning: 1,

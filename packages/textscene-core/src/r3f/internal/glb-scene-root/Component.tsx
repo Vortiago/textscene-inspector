@@ -1,32 +1,8 @@
 /**
- * Synthesised root for a PackedScene that's actually a GLB/GLTF.
- *
- * Godot PackedScene refs can point at .glb / .gltf files (a single scene
- * can reference props/chest.glb, props/lamp.glb, props/clock.glb,
- * etc.). Previously the `createSceneProcessor` threw
- * "Scene must be text content" when handed an ArrayBuffer and the user
- * saw a magenta placeholder cube via `<MissingResourcePlaceholder shape="box">`.
- *
- * Fix shape: when the processor detects a `.glb` / `.gltf` path it
- * synthesises a TscnScene with a single root node of type
- * `GLBSceneRoot`, whose `properties.glbPath` carries the resource path.
- * This component does the actual GLB load via the existing
- * `useResource('GLBMesh', path)` flow and renders the resulting
- * THREE.Object3D inline via `<primitive>`. Identical lifecycle to a
- * standalone .glb mesh — the consumer (NodeDispatcher.InstancedSceneSubtree
- * after the synthesised scene loads) sees a normal scene with one
- * dispatched node.
- *
- * Beyond rendering, a GLB carries its own animation clips. Godot's glTF import
- * exposes them on an `AnimationPlayer` node inside the imported hierarchy (a
- * child of the root), so the tree synthesises that node (`glbSceneRootChildren`)
- * when the GLB has clips. This component is the **GLB animation driver**: when
- * that AnimationPlayer child row is the selected node it registers the clips
- * with the selection-driven Animation transport (ADR-0012) and drives a
- * `THREE.AnimationMixer` rooted on the loaded GLB object — the GLB counterpart
- * to the AnimationPlayer slice (ADR-0011). The clips arrive already bound to the
- * GLB's own node names, so the mixer roots on the object itself rather than on
- * an Animation root / `root_node`.
+ * The root `createSceneProcessor` synthesises for a `.glb` or `.gltf` PackedScene. It loads the
+ * GLB through `useResource('GLBMesh', path)`, renders it as a `<primitive>`, and drives its clips
+ * (ADR-0012) through a `THREE.AnimationMixer` rooted on the GLB object, since the clips bind to
+ * the GLB's own node names.
  */
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
@@ -55,56 +31,39 @@ import { resolveMaterialSource } from '../../materials/materialSource';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
 import { boolSlotValue } from '../../../godot/index.js';
 
-/**
- * Reserved node type the createSceneProcessor synthesises for binary
- * (GLB/GLTF) PackedScene content. Not a user-authorable TSCN type —
- * created programmatically; the linter never sees it.
- */
+/** Reserved for a synthesised GLB root: no `.tscn` declares it, and the linter never sees it. */
 export const GLB_SCENE_ROOT_TYPE = 'GLBSceneRoot';
 
 interface GLBSceneRootProperties {
-  /** `res://` path to the .glb / .gltf file (carried verbatim from the
-   *  ExtResource that triggered the synthesis). */
+  /** The ExtResource's `res://` path to the .glb or .gltf file, verbatim. */
   glbPath: string;
 }
 
 
 export function GLBSceneRoot({ node, children }: NodeComponentProps) {
-  // The synthesised node's `properties` slot is a Record<string, unknown>
-  // populated by createSceneProcessor; cast through unknown so it
-  // satisfies the Node3DProperties union the dispatcher carries.
+  // createSceneProcessor fills `properties` as a Record, so cast through unknown.
   const props = node.properties as unknown as GLBSceneRootProperties;
   const result = useResource<THREE.Object3D>(props.glbPath ?? '', 'glb');
 
-  // BUG 2: the instancing scene's inline override children (e.g.
-  // ceiling_lamp.tscn's `plafoniera`) target nodes INSIDE this GLB. Apply
-  // their transforms onto the matching GLB-internal nodes by name, so a
-  // GLB node's large baked translation is overridden as Godot does.
+  // The instancing scene's inline override children target nodes inside this GLB, by name, so
+  // a baked translation is overridden as in Godot.
   const overrides = useGlbOverrides();
   const object = result.value;
 
-  // ONE flattening of the loaded clone, shared by everything below: selection
-  // registration, visibility, override resolution and the material slots all
-  // ask the same question of the same graph.
+  // One flattening of the clone, shared by selection, visibility, overrides and material slots.
   const entries = useMemo(() => (object ? flattenGlbObjects(object) : []), [object]);
 
-  // BUG 2 (cont.): apply the overrides' transforms / layers / visibility.
+  // The clone is per consumer and stable, so re-applying on a change of its inputs is enough.
   useMemo(() => {
     if (object) applyGlbNodeOverrides(object, overrides, entries);
-    // The clone is per-consumer and stable, so re-applying when the
-    // resolved object or override set changes is sufficient and cheap.
   }, [object, overrides, entries]);
 
-  // `surface_material_override/0` on an override node needs an ExtResource
-  // resolved and a `.tres` loaded, which the synchronous mutation above cannot
-  // do — so each one mounts its own slot component instead. This is what
-  // retextures the Truck Town landscape.
+  // A `surface_material_override/0` needs an ExtResource resolved and a `.tres` loaded, which
+  // the synchronous mutation above cannot do, so each one mounts its own slot component.
   const materialOverrides = useGlbMaterialOverrides(object, entries, overrides);
 
-  // Tie each internal GLB object to a tree path so the SceneTreeViewer
-  // can select (gizmo) + hide individual nodes. We walk THIS rendered clone
-  // with the same relPath scheme the tree uses, then register each object and
-  // drive its visibility from the hidden-paths set.
+  // Registers each GLB object under the tree's relPath scheme, so the SceneTreeViewer can select
+  // and hide it.
   const selection = useOptionalSelection();
   const nodePath = useNodePath();
 
@@ -120,11 +79,9 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     };
   }, [entries, nodePath, registerNodeObject, unregisterNodeObject]);
 
-  // The objects an override node hides. `applyGlbNodeOverrides` writes
-  // `visible` during render, but the tree's hidden-paths effect below assigns
-  // EVERY entry's `visible` unconditionally and runs after it — so an authored
-  // `visible = false` would be switched straight back on. The two write the
-  // same field, so they have to be resolved in one place.
+  // `applyGlbNodeOverrides` writes `visible` during render, and the hidden-paths effect below then
+  // assigns every entry's `visible`. Both write one field, so it resolves here, or an authored
+  // `visible = false` is switched back on.
   const overrideHidden = useMemo(() => {
     const hidden = new Set<THREE.Object3D>();
     if (!object) return hidden;
@@ -146,11 +103,8 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     }
   }, [entries, nodePath, hiddenNodePaths, overrideHidden]);
 
-  // --- GLB animation driver (selection-driven, ADR-0012) ---------------
-  // Godot parity: a GLB's clips live on an `AnimationPlayer` node in the
-  // hierarchy (a child of the imported root), not on the root itself. The tree
-  // synthesises that node (glbSceneRootChildren) when the GLB carries clips, so
-  // the driver activates when THAT child path — not the GLB root — is selected.
+  // As in Godot, a GLB's clips live on an `AnimationPlayer` child that `glbSceneRootChildren`
+  // synthesises, so selecting that child, not the GLB root, activates the driver.
   const transport = useAnimationTransport();
   const selectedNodePath = selection?.selectedNodePath ?? null;
   const animationPlayerPath =
@@ -165,23 +119,19 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     };
   }, [object]);
 
-  // Per-driver: GLB uses a full-subtree snapshot (poseSnapshot.ts) because
-  // skeletal/blended clips touch arbitrary bones. AnimationPlayer uses a
-  // track-derived snapshot with Euler-order reorder instead.
+  // A full-subtree snapshot (poseSnapshot.ts), since skeletal and blended clips touch any bone.
+  // AnimationPlayer snapshots only its tracks.
   const snapshotRef = useRef<PoseSnapshot[]>([]);
   const restore = useCallback(() => restoreSnapshot(snapshotRef.current), []);
 
   const { mixerRef, actionsRef } = useAnimationDriverMount({
-    // Pass the loaded object always so the AnimationDriverRegistry entry is
-    // published whenever clips are available — regardless of selection — and
-    // an AnimationTree whose `anim_player` resolves here can root its blended
-    // mixer without requiring the user to have selected the player first.
-    // The mixer build is separately gated on isActive inside the hook.
+    // Always passed, so the AnimationDriverRegistry entry exists whatever the selection, and an
+    // AnimationTree whose `anim_player` resolves here can root its mixer. The hook gates the
+    // mixer build on isActive.
     object: object ?? null,
     clips,
-    // The driver's registry key is the synthesised AnimationPlayer path, not
-    // the GLB root — so an AnimationTree resolving `anim_player` to this path
-    // finds the correct object + clips.
+    // The synthesised AnimationPlayer path, not the GLB root, so an AnimationTree resolving
+    // `anim_player` here finds the object and its clips.
     nodePath: animationPlayerPath,
     isActive,
     durations,
@@ -194,10 +144,8 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     restore,
   });
 
-  // An inactive driver is forced to 'stopped' so it never touches the scene
-  // (and restores the authored pose when it loses selection). Native glTF
-  // clips just loop by default — no Godot loop_mode to honour — unless the
-  // preview loop override forces a single clamped pass instead.
+  // An inactive driver is 'stopped', so it never touches the scene and restores the authored
+  // pose when it loses selection.
   const effectiveState: PlayState = isActive ? transport.playState : 'stopped';
   usePlaybackLoop({
     playState: effectiveState,
@@ -206,8 +154,8 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     speedScale: transport.playbackSpeed,
     mixerRef,
     actionsRef,
-    // Native glTF clips have no Godot loop_mode — their authored default is
-    // an infinite repeat, so that's what 'auto' (and 'loop') resolve to.
+    // Native glTF clips have no loop_mode and repeat for ever, so 'auto' and 'loop' repeat. The
+    // preview loop override can force one clamped pass.
     configureAction: (action) =>
       applyLoopOverride(action, transport.loopOverride, LOOP_REPEAT_SETTINGS),
     reconfigureKey: transport.loopOverride,
@@ -215,10 +163,9 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     restore,
   });
 
-  // `children` is the dispatched subtree the host scene parents under this
-  // GLB root (Godot parents an instanced scene's extra nodes to its root
-  // node). It does not depend on the GLB resolving, so every branch renders
-  // it — otherwise a slow or missing .glb silently deletes those nodes too.
+  // `children` is the subtree the host scene parents under this root, as Godot parents an
+  // instanced scene's extra nodes to its root node. Every branch renders it,
+  // or a slow or missing .glb deletes those nodes too.
   if (result.status === 'unavailable') {
     return (
       <>
@@ -230,9 +177,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   if (result.status === 'pending' || !object) {
     return <>{children}</>;
   }
-  // useResource already clones GLB Object3D per consumer to satisfy
-  // three.js's "Object3D can only have one parent" invariant, so we
-  // mount the returned ref directly via <primitive>.
+  // useResource clones the Object3D per consumer, so the value mounts directly.
   return (
     <primitive object={object}>
       {materialOverrides}
@@ -242,12 +187,9 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
 }
 
 /**
- * One `<GlbSurfaceMaterialOverride>` per override node that carries a
- * `surface_material_override/0`, targeted at the GLB object its path names.
- *
- * The path resolution is `matchGlbTarget`'s, the same one the transform/layers
- * overrides use, so a Godot path and a three path that disagree about
- * importer-synthesised levels still land on the same mesh.
+ * One `<GlbSurfaceMaterialOverride>` per override node with a `surface_material_override/0`. The
+ * path resolves through `matchGlbTarget`, as the transform overrides do, so a Godot path and a
+ * three path that disagree about importer-synthesised levels land on one mesh.
  */
 function useGlbMaterialOverrides(
   object: THREE.Object3D | undefined,
@@ -264,11 +206,9 @@ function useGlbMaterialOverrides(
       const ref = override.rawProperties?.['surface_material_override/0'];
       if (!ref || !isApplicableGlbOverride(override)) continue;
 
-      // A grafted override's ids belong to the scene that AUTHORED it, which is
-      // the outer one — not the sub-scene whose provider it now renders under.
-      // Both pools travel together, so a SubResource material override resolves
-      // there too rather than against whatever the ambient scope happens to
-      // hold — see `AuthoredResourceScope`.
+      // A grafted override's ids belong to the outer scene that authored it, not the sub-scene it
+      // renders under. Both pools travel together (`AuthoredResourceScope`), so a SubResource
+      // override resolves there too.
       const source = resolveMaterialSource(
         ref,
         override.authoredScope?.internalResources ?? internalResources,

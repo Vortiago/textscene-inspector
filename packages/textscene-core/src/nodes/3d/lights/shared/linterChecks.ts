@@ -1,11 +1,7 @@
 /**
- * The semantic check OmniLight3D and SpotLight3D share, from Godot's own
- * `get_configuration_warnings()`.
- *
- * Range bands live in the validators, not here: `light_energy`, `omni_range`,
- * `spot_range`, `spot_angle` and `directional_shadow_max_distance` all carry
- * their hint bound in the slice's `linterParser.ts`, and an advisory beside one
- * reports the same value twice.
+ * The `get_configuration_warnings()` check OmniLight3D and SpotLight3D share.
+ * Range bands live in each slice's `linterParser.ts`, since an advisory beside a
+ * validator bound reports one value twice.
  */
 
 import type { Diagnostic } from '../../../../linter/types.js';
@@ -13,29 +9,18 @@ import type { TscnNode } from '../../../../parser/types.js';
 import { resourceRef, boolSlotValue} from '../../../../godot/index.js';
 
 /**
- * OmniLight3D's and SpotLight3D's shared `light_projector` check — the SAME
- * `RTR` text at both sites:
- *
- *     if (!has_shadow() && get_projector().is_valid()) {
- *         warnings.push_back(RTR("Projector texture only works with shadows active."));
- *     }
- *
- * (light_3d.cpp:623-625 for OmniLight3D, :659-661 for SpotLight3D — `has_shadow()`
- * reads the `shadow_enabled` property, light_3d.cpp:402). `light_projector` is the
- * serialised key (light_3d.cpp:393), not the C++ member `projector`.
- *
- * `rulePrefix` is the node-type slug, so each light keeps its own
- * `<prefix>-projector-without-shadow` rule name.
+ * "Projector texture only works with shadows active." (light_3d.cpp:623-625, :659-661):
+ * `has_shadow()` reads `shadow_enabled` (light_3d.cpp:402), and `light_projector` is
+ * the serialised key (light_3d.cpp:393). `rulePrefix` is the node-type slug, so each
+ * light keeps its own `<prefix>-projector-without-shadow` rule.
  */
 export function projectorWithoutShadowDiagnostic(
   node: TscnNode,
   rulePrefix: string
 ): Diagnostic | null {
   const properties = node.properties as unknown as Record<string, string>;
-  // A PARSEABLE reference, not merely a present key. Godot's reader rejects a
-  // malformed value outright, so no projector is set and there is nothing to
-  // warn about; keying off presence reported this beside the format error the
-  // validator already raises, two diagnostics for one defect.
+  // A parseable reference, not merely a present key: Godot's reader rejects a
+  // malformed value, so no projector is set, and the validator already reports it.
   if (!resourceRef(properties.light_projector ?? '')) return null;
   if (boolSlotValue(properties.shadow_enabled) === true) return null;
 

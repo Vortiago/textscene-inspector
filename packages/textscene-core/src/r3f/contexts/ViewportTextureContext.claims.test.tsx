@@ -1,7 +1,6 @@
 /**
  * The `%Name` claim table is built once per scene tree and shared by every hook
- * instance over it — every Sprite2D and MeshInstance3D asks for it on each
- * re-parse, and a per-instance memo walked the whole tree per node.
+ * over it, since every Sprite2D and MeshInstance3D asks on each re-parse.
  */
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';

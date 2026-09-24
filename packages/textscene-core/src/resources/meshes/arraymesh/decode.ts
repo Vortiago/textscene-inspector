@@ -1,13 +1,8 @@
 /**
- * Decodes a Godot 4 text ArrayMesh (`.tres`, format=4) into per-surface typed
- * arrays for a THREE.BufferGeometry. Godot stores geometry as base64
- * `PackedByteArray` blobs laid out per the surface's uint64 `format`
- * bitfield — `surfaceFormat.ts` names that layout, `vertexBuffers.ts` reads it,
- * and `surfaceFields.ts` reads the surrounding dict fields. This file is the
- * surface loop and the material resolution around them.
- *
- * Scope: triangle primitive (non-triangle surfaces are skipped, see the loop).
- * Blend shapes / LODs / skins are ignored.
+ * Decodes a text ArrayMesh (`.tres`, format=4) into per-surface typed arrays:
+ * the surface loop and its material resolution. Only triangle surfaces decode.
+ * Blend shapes, LODs and skins are ignored. The byte layout lives in
+ * `surfaceFormat.ts`, `vertexBuffers.ts` and `surfaceFields.ts`.
  */
 
 import { warn } from '../../../logger.js';
@@ -35,12 +30,9 @@ import type { ArrayMeshData, ArrayMeshSurface } from './types.js';
 import { decodeIndices, decodeNormals, decodePositions, decodeUVs } from './vertexBuffers.js';
 
 /**
- * Resolve a surface's `"material"` to the resource path that addresses it.
- * Godot writes either form: an `ExtResource` when the surface points at a shared
- * material file, or a `SubResource` when the mesh carries its own — in which
- * case the material lives inside THIS file and is addressed by a **Sub-resource
- * path** (`selfPath::id`). Both come back as one path string, so nothing
- * downstream has to distinguish them.
+ * Resolve a surface's `"material"` to one path string: an `ExtResource` to its
+ * shared file, a `SubResource` to a **Sub-resource path** (`selfPath::id`) in
+ * this file.
  */
 function readMaterialPath(
   block: string,
@@ -59,12 +51,10 @@ function readMaterialPath(
 }
 
 /**
- * The `_surfaces` value of the mesh this path addresses: the file's own
- * `[resource]` body, or a `[sub_resource type="ArrayMesh"]` inside it.
- *
- * An addressed sub-resource that is absent, or present but carrying no surfaces,
- * would otherwise decode to an empty mesh — a node rendering nothing with nothing
- * said about why. The material path fails loudly for the same class of error.
+ * The `_surfaces` of the mesh this path addresses: the file's `[resource]` body,
+ * or a `[sub_resource type="ArrayMesh"]` inside it. An addressed sub-resource
+ * that is absent or has no surfaces throws, rather than decode to an empty mesh
+ * that renders nothing without a word.
  */
 function readSurfacesRaw(
   parsed: ParsedResource,
@@ -105,12 +95,10 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
   const { filePath, subResourceId } = parseSubResourcePath(selfPath);
   const surfacesRaw = readSurfacesRaw(parsed, filePath, subResourceId);
   if (!surfacesRaw) {
-    // Godot writes `_surfaces` only for a mesh that HAS surfaces, so its absence
-    // is ambiguous — and the answer is the resource's TYPE, not the address form.
-    // An ArrayMesh without surfaces is a legitimately empty mesh and draws
-    // nothing, exactly as Godot does. Anything else is not a mesh at all
-    // (a BoxMesh `.tres`, a MeshLibrary) and must fail rather than cache an empty
-    // geometry as a success, which renders an invisible node with no diagnostic.
+    // Godot writes `_surfaces` only for a mesh that has surfaces, so the type
+    // decides: an ArrayMesh without it is legitimately empty, as in Godot. Any
+    // other type (a BoxMesh `.tres`, a MeshLibrary) fails, rather than cache an
+    // empty geometry that renders an invisible node with no diagnostic.
     const addressed =
       subResourceId === undefined
         ? parsed.resourceType
@@ -130,15 +118,10 @@ export function decodeArrayMesh(content: string, selfPath: string): ArrayMeshDat
 }
 
 /**
- * Decode an ArrayMesh declared as a `[sub_resource]` of a SCENE rather than of a
- * `.tres` — the third kind of reference, and the one no path can address: its
- * surface bytes are inline in the `.tscn`, so there is no file to fetch.
- *
- * Its `_surfaces` is the same dict format, so only the material lookup differs.
- * A surface's `ExtResource` material resolves against the SCENE's table; a
- * `SubResource` one names a material of the scene, which no resource PATH can
- * reach — so it comes back as an id for the renderer to resolve against the
- * scene's own resources, which it already holds.
+ * Decode an ArrayMesh that is a `[sub_resource]` of a scene: its bytes are inline
+ * in the `.tscn`, so no path addresses it. An `ExtResource` material resolves
+ * against the scene's table. A `SubResource` one comes back as an id for the
+ * renderer to resolve against the scene's own resources.
  */
 export function decodeSceneArrayMesh(
   resource: TscnInternalResource,
@@ -149,10 +132,9 @@ export function decodeSceneArrayMesh(
   if (typeof surfacesRaw !== 'string') return { surfaces: [] };
 
   const extById = extResourcePathsById(externalResources);
-  // Both halves per BLOCK, inside the one walk. `decodeSurfaces` compacts — a
-  // non-triangle primitive or an undecodable one is skipped — so the surface at
-  // index `i` is not the block at index `i`, and a second pass pairing them by
-  // position put a surface's material on whichever surface outlived it.
+  // Both halves per block, inside the one walk. `decodeSurfaces` skips a
+  // non-triangle or undecodable surface, so surface `i` is not block `i`, and
+  // pairing them by position gives a material to the wrong surface.
   return decodeSurfaces(surfacesRaw, `SubResource("${resource.id}")`, (block) => {
     const raw = readMaterialRef(block);
     const materialPath =
@@ -166,9 +148,9 @@ export function decodeSceneArrayMesh(
 
 /**
  * First-wins id → path, matching `Array.find` over the same list.
- * `SceneResourcesContext` orders its resources own-scene-first precisely so a
- * duplicate id resolves to the nearer scene; a plain `new Map` is last-wins and
- * would silently hand back the PARENT's resource instead.
+ * `SceneResourcesContext` orders its resources own-scene-first so a duplicate id
+ * resolves to the nearer scene. A plain `new Map` is last-wins and would hand
+ * back the parent's resource.
  */
 function extResourcePathsById(
   resources: readonly TscnExternalResource[]
@@ -179,7 +161,7 @@ function extResourcePathsById(
 }
 
 /**
- * The shared surface loop. `label` names the mesh in diagnostics and errors;
+ * The shared surface loop. `label` names the mesh in diagnostics and errors.
  * `resolveMaterial` is the one thing that differs between a mesh read out of a
  * `.tres` and one inlined in a scene.
  */
@@ -197,10 +179,9 @@ function decodeSurfaces(
     const vertexCount = readInt(block, 'vertex_count');
     const indexCount = readInt(block, 'index_count');
 
-    // A LINES/POINTS/STRIP surface indexes its vertices under different rules,
-    // so reading it as triangles fabricates faces nobody authored. `readInt`
-    // defaults an absent key to 0, but Godot always writes `primitive` for a
-    // saved surface, so treat only a DECLARED non-triangle value as one.
+    // A LINES/POINTS/STRIP surface read as triangles fabricates faces. `readInt`
+    // defaults an absent key to 0, and Godot always writes `primitive` for a
+    // saved surface, so only a declared non-triangle value skips it.
     const primitive = block.includes('"primitive"')
       ? readInt(block, 'primitive')
       : PRIMITIVE_TRIANGLES;
@@ -264,10 +245,8 @@ function decodeSurfaces(
     });
   }
 
-  // Dropping SOME surfaces keeps the mesh; dropping ALL of them means nothing
-  // was readable, and that has to fail rather than cache an empty geometry as a
-  // success — otherwise the node renders invisibly with no placeholder and the
-  // user gets no signal at all.
+  // Dropping some surfaces keeps the mesh. Dropping all of them fails, rather
+  // than cache an empty geometry that renders invisibly with no placeholder.
   if (declared > 0 && surfaces.length === 0) {
     // Naming the non-triangle count keeps a LINES-only mesh from reading as a
     // byte defect: nothing was corrupt, the geometry just is not triangles.

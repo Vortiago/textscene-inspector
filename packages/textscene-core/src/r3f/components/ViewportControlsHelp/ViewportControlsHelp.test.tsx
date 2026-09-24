@@ -1,11 +1,7 @@
 /**
- * The controls legend: the pill always states the three bindings worth reading
- * at a glance, the panel opens on click or ? and closes every way a floating
- * panel over a drag surface has to, and each mode advertises its own bindings.
- *
- * The CSS that makes it not eat viewport drags is asserted against the module
- * source — happy-dom has no cascade and no layout, so a `pointer-events` rule
- * that regressed would pass every behavioural test in here.
+ * The pill states three bindings, the panel opens on click or ? and closes
+ * every way a popover must, and each mode lists its own bindings. happy-dom has
+ * no cascade, so the `pointer-events` CSS is read from the module source.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -38,9 +34,7 @@ describe('<ViewportControlsHelp>', () => {
   it('lists every binding for the 3D viewport, grouped by device', () => {
     open('3D');
     for (const group of controlsFor('3D').groups) {
-      // Scoped to the group: "Pinch" is deliberately listed under both
-      // Trackpad and Touch, since they are different devices doing the same
-      // thing and a user looks under the one they are holding.
+      // Scoped to the group, since "Pinch" is under both Trackpad and Touch.
       const section = screen.getByText(group.device).closest('section');
       expect(section).toBeTruthy();
       for (const binding of group.bindings) {
@@ -52,7 +46,7 @@ describe('<ViewportControlsHelp>', () => {
   it('advertises the 2D bindings in 2D, not the 3D ones', () => {
     open('2D');
     expect(screen.getByText('One-finger drag')).toBeTruthy();
-    // Orbit is a 3D-only idea; the 2D stage has no camera to swing.
+    // The 2D stage has no camera to orbit.
     expect(screen.queryByText('Middle-drag')).toBeNull();
     expect(screen.getByRole('dialog', { name: '2D viewport controls' })).toBeTruthy();
   });
@@ -66,8 +60,8 @@ describe('<ViewportControlsHelp>', () => {
   });
 
   it('leaves F1 alone — in a VS Code webview it is Show All Commands', () => {
-    // `useGlobalShortcut` never calls preventDefault, so binding F1 would open
-    // the command palette over the preview every time rather than instead of.
+    // `useGlobalShortcut` never calls preventDefault, so F1 would also open the
+    // command palette.
     render(<ViewportControlsHelp mode="3D" />);
     fireEvent.keyDown(window, { key: 'F1' });
     expect(screen.queryByTestId('viewport-controls-panel')).toBeNull();
@@ -109,8 +103,7 @@ describe('<ViewportControlsHelp>', () => {
   });
 
   it('moves focus into the panel, and back to the pill on close', () => {
-    // role="dialog" promises this. Without it, opening from ? announces
-    // nothing and Tab continues from wherever focus happened to be.
+    // role="dialog" promises focus inside the panel.
     render(<ViewportControlsHelp mode="3D" />);
     const hint = screen.getByTestId('viewport-controls-hint');
     fireEvent.click(hint);
@@ -121,9 +114,8 @@ describe('<ViewportControlsHelp>', () => {
   });
 
   it('lets viewport drags through everywhere except the pill and the panel', () => {
-    // Read from source: the root is a full-width positioned box over a canvas
-    // whose entire surface is draggable, so `pointer-events: none` on it — and
-    // `auto` back on only the two interactive children — is load-bearing.
+    // The root is a full-width box over a draggable canvas, so it takes
+    // `pointer-events: none` and only the two interactive children take `auto`.
     const css = readFileSync(
       path.join(import.meta.dirname, 'ViewportControlsHelp.module.css'),
       'utf8'
@@ -136,11 +128,8 @@ describe('<ViewportControlsHelp>', () => {
   });
 
   it('sits clear of the toolbar overlay, which grows leftward and outranks it', () => {
-    // It shipped top-centre and was invisible: the toolbar is top-RIGHT but
-    // `max-width: calc(100% - …)`, so ten toggles wrap it to two rows across
-    // most of the top edge, at z-index 6. Bottom-left is the only corner
-    // nothing claims — bottom-centre holds the "switch to 2D" hint and the 2D
-    // zoom HUD. happy-dom has no layout, so this is asserted on the source.
+    // Bottom-left is the one free corner: a wrapped toolbar covers the top edge,
+    // and bottom-centre holds the 2D hint and the zoom HUD.
     const css = readFileSync(
       path.join(import.meta.dirname, 'ViewportControlsHelp.module.css'),
       'utf8'
@@ -162,9 +151,7 @@ describe('<ViewportControlsHelp>', () => {
 
 describe('controlsFor', () => {
   it('gives every binding a unique input WITHIN its device, so panel keys cannot collide', () => {
-    // Across devices they may repeat — a trackpad pinch and a touchscreen
-    // pinch are both "Pinch" — and that is fine, because the React keys are
-    // scoped to their own group's list.
+    // A label may repeat across devices, since each group's list scopes its React keys.
     for (const mode of ['2D', '3D'] as const) {
       for (const group of controlsFor(mode).groups) {
         const inputs = group.bindings.map((b) => b.input);

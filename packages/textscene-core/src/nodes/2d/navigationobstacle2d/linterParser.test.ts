@@ -1,13 +1,6 @@
 /**
- * NavigationObstacle2D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * Tests the NavigationObstacle2D strict validators through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,16 +16,10 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * NavigationObstacle2D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
- *
- * doc/classes/NavigationObstacle2D.xml lists seven members, none carrying
- * `overrides=`: affect_navigation_mesh, avoidance_enabled, avoidance_layers,
- * carve_navigation_mesh, radius, velocity, vertices. Each has a real
- * ADD_PROPERTY in navigation_obstacle_2d.cpp:72-80 (velocity is
- * PROPERTY_USAGE_NO_EDITOR, which is also PROPERTY_USAGE_STORAGE and so still
- * serialises).
+ * Set exactly one, from the engine source: the keys NavigationObstacle2D binds, or
+ * DECLARES_NOTHING when it binds no ADD_PROPERTY. Both unset is red on purpose.
+ * doc/classes/NavigationObstacle2D.xml lists these seven, none with `overrides=`,
+ * each an ADD_PROPERTY in navigation_obstacle_2d.cpp:72-80.
  */
 const KEYS: string[] = [
   'radius',
@@ -43,20 +30,13 @@ const KEYS: string[] = [
   'velocity',
   'avoidance_layers',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys NavigationObstacle2D does NOT declare, each paired with the ancestor that does.
- * Name at least one; Node2D is where to start.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives NavigationObstacle2D no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart, and it is red until filled for the same reason
- * KEYS is.
+ * Keys NavigationObstacle2D inherits, each with the ancestor that declares it. The
+ * malformed-value sweep iterates `getOwnKeys`, so it passes vacuously on a class
+ * that declares nothing. This tells an empty class from an unwritten slice.
  */
 const INHERITED: [owner: string, key: string][] = [
   ['Node2D', 'position'],
@@ -73,17 +53,14 @@ describe('NavigationObstacle2D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // `fixtureLint` covers the whole registry through the barrel. This checks
+    // the fixture against only what this test imports.
     expectFixtureClean('unit-navigation-obstacle-2d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // NavigationObstacle2D declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose validates no format. Vacuous when
+    // the class declares nothing, which INHERITED covers.
     const accepted = validatorRegistry
       .getOwnKeys('NavigationObstacle2D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -98,8 +75,8 @@ describe('NavigationObstacle2D strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
-      // NavigationObstacle2D would answer here while drifting from the ancestor's rule.
+      // The same function, not merely some validator: a shadowing copy would
+      // answer here while it drifts from the ancestor's rule.
       expect(validatorRegistry.findValidator('NavigationObstacle2D', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('NavigationObstacle2D')).not.toContain(key);
     }
@@ -124,24 +101,23 @@ describe('radius', () => {
     expect(result?.severity).toBe('warning');
   });
 
-  // Both endpoints, from both sides: a mid-range accept plus a wildly
-  // out-of-range reject pins the TIER of each bound but not its LOCATION.
+  // Both endpoints, from both sides: a mid-range accept plus a far
+  // out-of-range reject pins the tier of each bound but not its location.
   it('accepts the floor 0 itself (ERR_FAIL_COND_MSG at :247 refuses only below it)', () => {
     expect(check('radius', '0.0')).toBeNull();
   });
 
   it('rejects one hint step below the floor as an error', () => {
     // navigation_obstacle_2d.cpp:72 hints step 0.01, so -0.01 is the first
-    // value the :247 `p_radius < 0.0` guard refuses. The VALUE code separates
-    // this from the FORMAT branch, which also reports 'error' and so would
-    // satisfy the severity assertion while pinning no bound at all.
+    // value the :247 `p_radius < 0.0` guard refuses. The value code separates
+    // this from the format branch, which also reports 'error'.
     const result = check('radius', '-0.01');
     expect(result?.code).toBe('INVALID_RADIUS_VALUE');
     expect(result?.severity).toBe('error');
   });
 
   it('accepts the hinted ceiling 500 itself', () => {
-    // navigation_obstacle_2d.cpp:72, "0.0,500,0.01,suffix:px" — closed, no or_greater.
+    // navigation_obstacle_2d.cpp:72, "0.0,500,0.01,suffix:px": closed, no or_greater.
     expect(check('radius', '500.0')).toBeNull();
   });
 
@@ -216,7 +192,7 @@ describe('avoidance_enabled', () => {
 });
 
 describe('velocity', () => {
-  // navigation_obstacle_2d.cpp:79, PROPERTY_USAGE_NO_EDITOR is ALSO
+  // navigation_obstacle_2d.cpp:79, PROPERTY_USAGE_NO_EDITOR is also
   // PROPERTY_USAGE_STORAGE (object.h:132), so it serialises and is validated
   // despite hiding from the inspector.
   it('accepts a well-formed Vector2', () => {

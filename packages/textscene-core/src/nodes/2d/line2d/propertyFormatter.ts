@@ -1,6 +1,6 @@
 /**
- * Line2D property formatter — surfaces the polyline surface (vertex count,
- * width, color, closed), then delegates to formatNode2DProperties.
+ * Line2D property formatter: vertex count, width, colour and closed, then the
+ * formatNode2DProperties sections.
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';

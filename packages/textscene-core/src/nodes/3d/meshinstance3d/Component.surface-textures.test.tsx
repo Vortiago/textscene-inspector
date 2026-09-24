@@ -1,16 +1,8 @@
 /**
- * A scene-local StandardMaterial3D resolves its texture slots on EVERY surface,
- * not just surface 0. Godot binds one material per surface and `_update_shader`
- * emits the same samplers for each (`scene/resources/material.cpp`), so the same
- * `[sub_resource]` cannot render textured at `surface_material_override/0` and
- * untextured at `/1`.
- *
- * Slot gating is Godot's too: a sampler is emitted only inside the matching
- * `if (features[FEATURE_…])` branch, so `normal_texture` without
- * `normal_enabled` reaches no shader at all.
- *
- * On a real multi-surface mesh, because a PrimitiveMesh has exactly one surface
- * and Godot drops every higher override (`testing/twoSurfaceMesh.ts`).
+ * A scene-local StandardMaterial3D resolves its texture slots on every surface:
+ * `_update_shader` emits the same samplers for each (`scene/resources/material.cpp`).
+ * It runs on a multi-surface mesh, since a PrimitiveMesh has one surface
+ * (`testing/twoSurfaceMesh.ts`).
  */
 
 import { describe, expect, it } from 'vitest';

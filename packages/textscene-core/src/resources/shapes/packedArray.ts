@@ -15,16 +15,10 @@ const PACKED_VECTOR2_ARRAY_FORMS = packedArrayForms('PackedVector2Array');
 const PACKED_COLOR_ARRAY_FORMS = packedArrayForms('PackedColorArray');
 
 /**
- * Elements of a packed FLOAT body, as Godot's tokenizer reads them.
- *
- * `parseFloat` stops at the first unusable character, so `1.2.3` became 1.2 —
- * a vertex the file does not contain — and `+1` / `.5` slipped through as
- * numbers Godot refuses to load at all.
- *
- * A non-finite is a LEGAL element the writer emits (`rtos_fix`) and still
- * throws: every caller catches and falls back to drawing nothing, and
- * substituting 0 would put a vertex at the origin that the scene never asked
- * for. Undrawable and unreadable take the same exit deliberately.
+ * Elements of a packed float body as Godot's tokenizer reads them, so `1.2.3`,
+ * `+1` and `.5` throw, not `parseFloat`'s prefix. A non-finite is a legal element
+ * the writer emits (`rtos_fix`) and still throws: callers catch and draw nothing,
+ * where 0 would put an unasked-for vertex at the origin.
  */
 export function floatElements(inner: string, wrapper: string, value: string): number[] {
   return inner.split(',').map((s) => {
@@ -37,14 +31,10 @@ export function floatElements(inner: string, wrapper: string, value: string): nu
 }
 
 /**
- * A packed TUPLE slot in any of the three spellings it takes, flattened to the
- * components the packed constructor would have listed.
- *
- * The packed body is one FLAT argument list; the bare and typed bodies hold one
- * `Vector2(…)` / `Vector3(…)` / `Color(…)` element per top-level comma, so they
- * are split and each element's own body is read at the slot's arity. An element
- * of another arity is a conversion Godot does not make, so it throws with the
- * rest of the malformed text rather than contributing a short vertex.
+ * A packed tuple slot in any of its three spellings, as the packed constructor's
+ * flat components. The bare and typed bodies hold one `Vector2(…)` / `Vector3(…)` /
+ * `Color(…)` per top-level comma, read at the slot's arity. Another arity throws
+ * rather than add a short vertex: Godot makes no such conversion.
  */
 function packedTupleFloats(
   value: string,
@@ -56,12 +46,9 @@ function packedTupleFloats(
 }
 
 /**
- * The same read, at DOUBLE precision.
- *
- * Split out because the geometry callers want the `Float32Array` a buffer
- * attribute takes, while a caller that groups the components into typed values
- * — `Gradient`'s colour stops — must not round them: the `.tres` states
- * `0.6` and a float32 round-trip reports `0.6000000238418579`.
+ * The same read at double precision, for a caller grouping components into
+ * typed values: `Gradient`'s colour stops must not round the `.tres`'s `0.6` to
+ * float32's `0.6000000238418579`. Geometry callers take the `Float32Array`.
  */
 export function packedTupleNumbers(
   value: string,
@@ -112,21 +99,10 @@ export function parsePackedColorArray(value: string): Float32Array {
 const BARE_INNER_ARRAY_RE = /\[([^[\]]*)\]/g;
 
 /**
- * Extract every sub-array of indices from a value, in any spelling Godot loads:
- * the bare 3D form `[PackedInt32Array(...), ...]`, the 2D
- * `Array[PackedInt32Array]([PackedInt32Array(...), ...])` form, and the plain
- * `[[0, 1, 2], [0, 2, 3]]` form. Each becomes a `number[]`.
- *
- * The plain form is not a variant of the others, it is the untyped ARRAY the
- * property is actually declared as: `polygon_2d.cpp:720` is
- * `PropertyInfo(Variant::ARRAY, "polygons")` and `set_polygons` takes a
- * `const Array &`, so nothing converts and nothing refuses. Measured on 4.6.3,
- * `polygons = [[0, 1, 2], [0, 2, 3]]` loads as two sub-polygons.
- *
- * Scanning for the CONSTRUCTOR alone made that value yield zero iterations and
- * return `[]` without throwing — so the caller read "no sub-polygons" and
- * fan-triangulated the whole outline, while the strict parser (widened for this
- * same spelling) reported the file clean. Neither layer said anything.
+ * Every sub-array of indices, in each spelling Godot loads: `[PackedInt32Array(...), ...]`,
+ * `Array[PackedInt32Array]([PackedInt32Array(...), ...])`, and `[[0, 1, 2], [0, 2, 3]]`.
+ * The last is the declared untyped ARRAY (`polygon_2d.cpp:720`, and `set_polygons`
+ * takes a `const Array &`), measured on 4.6.3 as two sub-polygons.
  */
 export function parsePackedInt32Arrays(value: string): number[][] {
   const result: number[][] = [];
@@ -135,14 +111,10 @@ export function parsePackedInt32Arrays(value: string): number[][] {
   let re = constructor;
   let scanned = value;
   if (!constructor.test(value)) {
-    // The OUTER brackets are stripped first: scanning `[...]` over the whole
-    // value matches them too, so `[]` — no sub-polygons — read as one empty
-    // sub-polygon and the caller drew a degenerate triangle fan.
-    //
-    // `Array[T]([…])` is the third spelling that loads. `can_convert_strict`
-    // lists ARRAY as a source for every PACKED_* type, so a typed array of bare
-    // element arrays converts element-wise; unwrapping it here and then
-    // stripping its inner brackets leaves the same body the bare form scans.
+    // The outer brackets go first: a `[...]` scan over the whole value matches
+    // them, so `[]` would read as one empty sub-polygon. `Array[T]([…])` loads too
+    // (`can_convert_strict` lists ARRAY for every PACKED_* type), and unwrapping
+    // it leaves the body the bare form scans.
     const outer = arrayLiteralBody(value);
     if (outer === null) return [];
     scanned = outer;
@@ -159,10 +131,9 @@ export function parsePackedInt32Arrays(value: string): number[][] {
     result.push(
       body.split(',').map((s) => {
         const num = parseGodotInt(s);
-        // The guard its three float siblings already have. Without it a body
-        // Godot's tokenizer refuses became a silent NaN index, and `2e1` — a
-        // file Godot loads as 20 — became 2. A non-finite reads as NaN, which
-        // clears every range check and would index arbitrary geometry.
+        // A body Godot's tokenizer refuses throws rather than become a NaN
+        // index, and `2e1` reads as the 20 Godot loads. A non-finite would clear
+        // every range check and index arbitrary geometry.
         if (num === null || !Number.isFinite(num)) {
           throw new Error(`Invalid number in PackedInt32Array: ${value}`);
         }

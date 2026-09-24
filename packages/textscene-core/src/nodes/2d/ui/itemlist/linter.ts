@@ -1,38 +1,8 @@
 /**
- * Semantic linter rule for ItemList.
- *
- * Format validation lives in linterParser.ts, which does check each
- * `item_<N>/<leaf>` in isolation. This file holds the one thing that cannot
- * see: the index is only meaningful relative to a SIBLING property. The four
- * per-item leaves are served through a `PropertyListHelper`
- * (item_list.cpp:2461-2466), and `PropertyListHelper::_get_property`
- * (property_list_helper.cpp:46-64) refuses to resolve any `item_<N>/…` key
- * whose index is negative or `>=` the list's current `item_count`:
- *
- *   int index = index_string.to_int();
- *   if (index < 0 || (!p_allow_oob && index >= _call_array_length_getter())) {
- *     return nullptr;
- *   }
- *
- * `p_allow_oob` is always false here: `enable_out_of_bounds_assign()` has
- * exactly one caller in the engine (tab_container.cpp:1294) and ItemList is not
- * it. `ItemList::_set` (item_list.cpp:2237-2240) starts with
- * `property_helper.property_set_value(...)`, and `property_set_value`
- * (property_list_helper.cpp:166-175) returns false for an unresolved index, so
- * the write never reaches `set_item_text` / `set_item_icon` /
- * `set_item_selectable` / `set_item_disabled`. Nothing is logged: it is the
- * silently dropped write ADR-0032 grounds a diagnostic on.
- *
- * Only the HIGH end is checked here. The negative end is already reported by
- * the family dispatcher in linterParser.ts, which has everything it needs to
- * see it, and reporting it twice would double the diagnostic for one mistake.
- *
- * Godot's own saver can never produce this: `item_count` is a ClassDB-bound
- * property (`ADD_ARRAY_COUNT` at item_list.cpp:2403), so
- * `Object::get_property_list` always places it ahead of the
- * `_get_property_list`-appended `item_<N>/…` leaves, and `items.resize(p_count)`
- * (item_list.cpp:542) keeps the two in lockstep at runtime. It fires only
- * against a hand-edited scene where an `item_<N>/…` line outran the count.
+ * Semantic rule for ItemList: an `item_<N>/…` index at or past `item_count`.
+ * linterParser.ts checks each leaf alone; this rule reads the sibling count.
+ * Godot's saver never writes it: `item_count` (`ADD_ARRAY_COUNT`, item_list.cpp:2403)
+ * precedes the leaves, and `items.resize(p_count)` (item_list.cpp:542) keeps them in step.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -50,6 +20,10 @@ import { indexedKeyRegex } from '../../../../godot/index.js';
  */
 const ITEM_KEY_RE = indexedKeyRegex('^item_(#)/', 'is_valid_int');
 
+// The leaves go through a `PropertyListHelper` (item_list.cpp:2461-2466), whose
+// `_get_property` (property_list_helper.cpp:46-64) returns null when
+// `index < 0 || (!p_allow_oob && index >= _call_array_length_getter())`. Only
+// TabContainer enables `p_allow_oob` (tab_container.cpp:1294).
 function checkItemList(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
@@ -70,11 +44,15 @@ function checkItemList(context: RuleContext): Diagnostic[] {
     const match = ITEM_KEY_RE.exec(key);
     if (!match) continue;
     const index = Number(match[1]);
-    // Negative indices belong to the dispatcher; see the header.
+    // The family dispatcher in linterParser.ts reports a negative index, so
+    // reporting it here would double the diagnostic.
     if (index >= 0 && index >= count) offending.add(index);
   }
   if (offending.size === 0) return diagnostics;
 
+  // `ItemList::_set` (item_list.cpp:2237-2240) calls `property_set_value`, which returns
+  // false for that index (property_list_helper.cpp:166-175), so no `set_item_*` setter
+  // runs and nothing is logged: the silently dropped write ADR-0032 grounds on.
   const indices = listIndices([...offending].sort((a, b) => a - b));
   diagnostics.push({
     severity: 'error',

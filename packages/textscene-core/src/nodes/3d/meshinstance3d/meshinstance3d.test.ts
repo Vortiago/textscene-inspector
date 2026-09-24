@@ -1,6 +1,4 @@
-/**
- * Tests for MeshInstance3D parser
- */
+/** MeshInstance3D parser tests. */
 
 import { describe, it, expect } from 'vitest';
 import { parseMeshInstance3D } from './parser';

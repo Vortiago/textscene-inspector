@@ -1,16 +1,7 @@
 /**
- * R3F webview entry point. Mounted by `webview.ts` when the
- * `textscene.useR3F` workspace setting is true.
- *
- * Listens for `loadTscn` messages from the extension host (sent on
- * panel-open and on file-save hot-reload). When the user double-clicks
- * a node in the scene-tree, we forward a `jumpToNode` postMessage back
- * to the host so the editor can jump to the source line.
- *
- * Single-panel scope: this React tree owns its own `<TscnPreviewShell>`
- * which provides Selection / Hierarchy / CameraControl contexts. Two
- * panels open simultaneously will each instantiate their own webview,
- * each running this file independently — no shared state.
+ * The R3F webview app `webview.ts` mounts. It renders the host's `loadTscn` text
+ * and posts `jumpToNode` when the user double-clicks a scene-tree node. Each panel
+ * has its own webview and `<TscnPreviewShell>`, so panels share no state.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -27,10 +18,8 @@ import { WebviewResourceProvider } from './WebviewResourceProvider';
 import { readInitialConfig, resolveInitialViewportMode } from './initialConfig';
 
 // Read once at module load: `webviewHtml.ts` embeds `window.__TEXTSCENE_CONFIG__`
-// in a script tag placed BEFORE this module's own `<script type="module">`
-// entry, so the global is guaranteed to be set by the time this line runs.
-// `undefined` (the "auto" case, or no host config at all) leaves Godot-parity
-// auto-select in control, exactly like today.
+// in a script tag before this module's entry, so the global is set by now.
+// `undefined` ("auto", or no host config) keeps Godot-parity auto-select.
 const INITIAL_VIEWPORT_MODE = resolveInitialViewportMode(readInitialConfig());
 
 declare const acquireVsCodeApi: () => {
@@ -67,10 +56,8 @@ class WebviewLogAdapter implements LogAdapter {
 function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   const [content, setContent] = useState<string>('');
 
-  // Wire the resource pipeline. The extension host services the
-  // provider's `loadResource` calls by responding to `loadResource`
-  // postMessages with the file bytes; the FileEventBus + ResourceLoader
-  // sit between that provider and `useResource` in node components.
+  // The host answers the provider's `loadResource` posts with the file bytes.
+  // FileEventBus and ResourceLoader sit between it and `useResource`.
   const loader = useMemo(
     () => createResourcePipeline(new WebviewResourceProvider(vscode)).loader,
     [vscode]
@@ -83,29 +70,24 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
       if (message.type === 'loadTscn') {
         setContent(message.content);
       } else if (message.type === 'incrementalUpdate') {
-        // For now, treat incremental updates as a full reload because
-        // React reconciliation makes incremental computation redundant.
-        // The host still ships a `sceneData.rawText` payload when
-        // available; if not, this is a no-op and the next loadTscn
-        // wins.
+        // A full reload, since React reconciliation does the diff. Without a
+        // `sceneData.rawText` this is a no-op, and the next loadTscn wins.
         const raw = message.data.sceneData?.rawText;
         if (typeof raw === 'string' && raw.length > 0) {
           setContent(raw);
         }
       } else if (message.type === 'resourceChanged') {
-        // A dependency (texture, .tres, sub-scene) changed on disk. Drop its
-        // cache and re-fetch — nodes subscribed via useResource transition
-        // missing/loaded → loaded and re-render with no remount.
+        // A dependency (texture, .tres, sub-scene) changed on disk. Re-fetching it
+        // moves its useResource subscribers to loaded with no remount.
         loader.provideFile(message.path);
       }
     }
 
     window.addEventListener('message', onMessage);
 
-    // Signal handshake-ready to the extension host: the initial open is a race,
-    // since the host posts `loadTscn` from its constructor while this effect
-    // runs async. The host replays the current scene text on every ready, so a
-    // REMOUNT — which lands here with `content` empty again — is refilled too.
+    // The host posts `loadTscn` from its constructor before this effect runs, and
+    // replays the scene text on every ready, so a remount with empty `content` is
+    // refilled too.
     vscode.postMessage({ type: 'webviewReady' } satisfies WebviewToHostMessage);
 
     return () => {

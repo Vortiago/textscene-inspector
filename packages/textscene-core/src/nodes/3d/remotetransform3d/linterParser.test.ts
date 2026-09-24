@@ -1,8 +1,6 @@
 /**
- * RemoteTransform3D strict validator coverage — the remote_path/update-flag
- * property surface, plus one probe that the spatial set arrives via the
- * Node3D base-chain walk (the slice registers no transform validator of its
- * own).
+ * RemoteTransform3D strict validators: remote_path and the update flags, plus one probe that the
+ * spatial set arrives through the Node3D base-chain walk. The slice registers no transform validator.
  */
 
 import { describe, it } from 'vitest';

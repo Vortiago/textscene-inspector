@@ -1,10 +1,6 @@
 /**
- * Dimension-parameterized semantic linter rule for CharacterBody2D / CharacterBody3D.
- *
- * The two slices were ~85% identical; what remains dimension-specific is the
- * collision-shape family, one engine citation, and the GROUNDED-mode arm only
- * 2D carries. Format validation, and every per-property bound, stays in each
- * slice's linterParser.ts.
+ * The CharacterBody2D/3D motion-mode rules. Format validation and every
+ * per-property bound stay in each slice's linterParser.ts.
  */
 
 import { ruleInt } from '../validators/commonValidators.js';
@@ -85,11 +81,8 @@ export function makeCharacterBodyLinterRule(dim: PhysicsDim): LintRule {
     // (:631 / :831) that linterParser.ts already reports as an error.
 
     // `up_direction` gets no advisory: `set_up_direction` refuses only the zero
-    // vector, which linterParser.ts reports as an error (:648 / :848), and
-    // normalises everything else, so "standard is the screen-space or
-    // world-space up vector" is a preference with nothing behind it. The
-    // FLOATING branch strips it beside the keys below, but it is NOT inert —
-    // `move_and_slide` reads it before either mode branch
+    // vector (:648 / :848, an error in linterParser.ts) and normalises the rest.
+    // FLOATING strips it, but `move_and_slide` reads it before either branch
     // (character_body_2d.cpp:106-107, character_body_3d.cpp:127-128).
 
     // `max_slides` gets no advisory: character_body_2d.cpp:741 /

@@ -1,19 +1,6 @@
 /**
- * Unit tests for `useSceneSource` — the hook that owns the hold-last-valid
- * edit-loop invariant (ADR-0020).
- *
- * Invariant: a resolving fixture load must never stomp newer keystrokes.
- * Tested paths:
- *   - Fixture load: fetch resolves → buffer + forwardedContent set together
- *   - Fetch failure: buffer cleared, forwardedContent HELD (last valid render preserved)
- *   - Late fetch after keystroke: editedSinceLoad guard, load resolution ignored
- *   - Upload (replace): supersedes any pending debounce, sets both buffer + forwardedContent
- *   - Debounced edit forward: keystroke arms a timer, resolveForwardedContent called after delay
- *   - Fixture switch: fetches new content, resets editedSinceLoad so stale prior fetch is dropped
- *   - renderedFixtureFile: what the RENDER came from, and clearRender's
- *     buffer-preserving teardown
- *   - onBeforeSwap: fires once per authoritative fixture swap, in the same turn
- *     as the content replace — the seam the corpus root is re-pointed on
+ * Tests for `useSceneSource` and its hold-last-valid invariant (ADR-0020): a resolving
+ * fixture load never overwrites newer keystrokes.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
@@ -85,17 +72,13 @@ beforeEach(() => {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // ignore
+    // Clearing storage is optional.
   }
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-// ---------------------------------------------------------------------------
-// Fixture load: happy path
-// ---------------------------------------------------------------------------
 
 describe('fixture load — happy path', () => {
   it('sets buffer and forwardedContent to fetched text on successful load', async () => {
@@ -153,10 +136,6 @@ describe('fixture load — happy path', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Fetch failure: buffer cleared, forwardedContent held (last valid render)
-// ---------------------------------------------------------------------------
-
 describe('fixture load — fetch failure', () => {
   it('clears the buffer, sets loadError, and holds forwardedContent on fetch failure', async () => {
     // First load succeeds to establish a valid forwardedContent baseline.
@@ -200,13 +179,9 @@ describe('fixture load — fetch failure', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Hold-last-valid invariant: late fetch resolution after a keystroke is dropped
-// ---------------------------------------------------------------------------
-
 describe('hold-last-valid invariant — late fetch after keystroke', () => {
   it('drops a fetch resolution that arrives after the user has edited the buffer', async () => {
-    // Hold the fetch open so we can resolve it manually AFTER the edit.
+    // The fetch stays open, to resolve after the edit.
     const fetchText = deferred<string>();
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -221,7 +196,7 @@ describe('hold-last-valid invariant — late fetch after keystroke', () => {
       expect(result.current.isFetching).toBe(true);
     });
 
-    // User edits before the fetch resolves — sets editedSinceLoad.
+    // The user edits before the fetch resolves, which sets editedSinceLoad.
     act(() => {
       result.current.onBufferChange(VALID_EDIT_TSCN);
     });
@@ -232,7 +207,7 @@ describe('hold-last-valid invariant — late fetch after keystroke', () => {
     expect(result.current.buffer).toBe(VALID_EDIT_TSCN);
     expect(result.current.forwardedContent).toBe(VALID_EDIT_TSCN);
 
-    // Now the fetch resolves — it must NOT stomp the user's edit.
+    // The fetch resolves and must not overwrite the user's edit.
     await act(async () => {
       fetchText.resolve(FIXTURE_TSCN);
     });
@@ -242,10 +217,6 @@ describe('hold-last-valid invariant — late fetch after keystroke', () => {
     expect(result.current.forwardedContent).toBe(VALID_EDIT_TSCN);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Debounced edit forward
-// ---------------------------------------------------------------------------
 
 describe('debounced edit forward', () => {
   it('does not forward immediately on a keystroke', async () => {
@@ -307,7 +278,7 @@ describe('debounced edit forward', () => {
     await settle(300);
 
     expect(result.current.buffer).toBe(GARBAGE);
-    // Gate rejected the garbage — hold last valid.
+    // The gate rejected the garbage, so the last valid content holds.
     expect(result.current.forwardedContent).toBe(FIXTURE_TSCN);
   });
 
@@ -331,10 +302,6 @@ describe('debounced edit forward', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Upload (replace): authoritative — supersedes pending debounce
-// ---------------------------------------------------------------------------
-
 describe('replace — upload supersedes pending debounce', () => {
   it('sets buffer and forwardedContent immediately, cancels any pending debounce', async () => {
     globalThis.fetch = mockFetchOk(FIXTURE_TSCN);
@@ -352,7 +319,7 @@ describe('replace — upload supersedes pending debounce', () => {
       result.current.onBufferChange(GARBAGE);
     });
 
-    // Upload arrives before the debounce fires — replace must win.
+    // The upload arrives before the debounce fires, and replace must win.
     act(() => {
       result.current.replace(UPLOADED_TSCN);
     });
@@ -361,7 +328,7 @@ describe('replace — upload supersedes pending debounce', () => {
     expect(result.current.buffer).toBe(UPLOADED_TSCN);
     expect(result.current.forwardedContent).toBe(UPLOADED_TSCN);
 
-    // Advance past the debounce window — the garbage timer must not fire.
+    // Past the debounce window, the garbage timer must not fire.
     await settle(500);
 
     expect(result.current.buffer).toBe(UPLOADED_TSCN);
@@ -411,8 +378,8 @@ describe('replace — upload supersedes pending debounce', () => {
     });
     rerender({ fixtureFile: '', uploadedTscnName: 'uploaded.tscn' });
 
-    // The cancelled fetch's finally() skips its reset — the effect's
-    // empty-fixture branch must clear the flag instead.
+    // The cancelled fetch's finally() skips its reset, so the effect's empty-fixture branch
+    // must clear the flag.
     expect(result.current.isFetching).toBe(false);
 
     // The abandoned fetch resolving later must not stomp the upload.
@@ -424,10 +391,6 @@ describe('replace — upload supersedes pending debounce', () => {
     expect(result.current.isFetching).toBe(false);
   });
 });
-
-// ---------------------------------------------------------------------------
-// No fixture + no upload: empty state
-// ---------------------------------------------------------------------------
 
 describe('empty state — no fixtureFile and no uploadedTscnName', () => {
   it('starts with empty buffer and forwardedContent when fixtureFile is empty', () => {
@@ -441,10 +404,6 @@ describe('empty state — no fixtureFile and no uploadedTscnName', () => {
     expect(result.current.loadError).toBeNull();
   });
 });
-
-// ---------------------------------------------------------------------------
-// Fixture switch: fetches new content, replaces buffer
-// ---------------------------------------------------------------------------
 
 describe('fixture switch — loads new fixture content into buffer', () => {
   it('fetches the second fixture and replaces the buffer when fixtureFile changes', async () => {
@@ -491,8 +450,7 @@ describe('fixture switch — loads new fixture content into buffer', () => {
       expect(result.current.buffer).toBe(SECOND_TSCN);
     });
 
-    // Resolving the first fixture's fetch must not stomp the second
-    // (the effect was already cancelled via the `cancelled` flag).
+    // The first fetch resolving must not overwrite the second: its `cancelled` flag is set.
     await act(async () => {
       first.resolve(FIXTURE_TSCN);
     });
@@ -521,7 +479,7 @@ describe('editedSinceLoad — the discard-guard predicate', () => {
     });
     expect(result.current.editedSinceLoad()).toBe(true);
 
-    // Authoritative replace (upload) — pane holds known content again.
+    // An upload's replace: the pane holds known content again.
     act(() => {
       result.current.replace(UPLOADED_TSCN);
     });
@@ -538,10 +496,6 @@ describe('editedSinceLoad — the discard-guard predicate', () => {
     });
   });
 });
-
-// ---------------------------------------------------------------------------
-// renderedFixtureFile + onBeforeSwap: the corpus-boundary seam
-// ---------------------------------------------------------------------------
 
 describe('renderedFixtureFile — the fixture the RENDERED content came from', () => {
   it('stays empty while the fetch is in flight, then names the fixture once it lands', async () => {
@@ -637,8 +591,8 @@ describe('onBeforeSwap — the only moment resource resolution may be re-pointed
       text: () => text.promise,
     } as unknown as Response) as unknown as typeof fetch;
 
-    // Records what the hook had rendered at the instant the callback ran — the
-    // swap must be announced while the OUTGOING content is still in place.
+    // Records what the hook had rendered when the callback ran: the swap is announced while
+    // the outgoing content is still in place.
     const calls: { file: string; forwardedAtCall: string }[] = [];
     const { result } = renderHook(() =>
       useSceneSource({
@@ -680,8 +634,7 @@ describe('onBeforeSwap — the only moment resource resolution may be re-pointed
     expect(onBeforeSwap).not.toHaveBeenCalled();
     failed.unmount();
 
-    // A load the user superseded by typing — the resolution is dropped, and a
-    // dropped resolution must not re-point resolution either.
+    // A load the user superseded by typing is dropped, and must not re-point resolution.
     const text = deferred<string>();
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -711,8 +664,7 @@ describe('onBeforeSwap — the only moment resource resolution may be re-pointed
     globalThis.fetch = mockFetchOk(FIXTURE_TSCN);
 
     const { result, rerender } = renderHook(() =>
-      // A fresh identity every render — if it landed in the effect's deps this
-      // would refetch on each one.
+      // A fresh identity every render, which would refetch each time if it reached the deps.
       useSceneSource({
         fixtureFile: 'unit-plane-mesh.tscn',
         uploadedTscnName: null,
@@ -734,10 +686,6 @@ describe('onBeforeSwap — the only moment resource resolution may be re-pointed
     ).toBe(callsAfterLoad);
   });
 });
-
-// ---------------------------------------------------------------------------
-// reload — the only way back from a failed load
-// ---------------------------------------------------------------------------
 
 describe('reload — refetch at an unchanged fixtureFile', () => {
   it('recovers the render after a failed load', async () => {
@@ -813,7 +761,7 @@ describe('reload — refetch at an unchanged fixtureFile', () => {
       result.current.reload();
     });
 
-    // An upload has no fixture to refetch — the uploaded content must survive.
+    // An upload has no fixture to refetch, so the uploaded content must survive.
     expect(result.current.forwardedContent).toBe(UPLOADED_TSCN);
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });

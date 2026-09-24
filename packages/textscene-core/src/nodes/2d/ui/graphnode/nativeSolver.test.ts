@@ -1,13 +1,8 @@
 /**
- * `graphNodeMinimumSize`/`graphNodeLayout` vs `scene/gui/graph_node.cpp`
- * (Godot 4.6.3). Every scenario uses `title: ''` (or omits it) so the
- * titlebar band floors to `fontHeightPx` alone — the SAME hand-derived
- * OpenSans_SemiBold constant `label/nativeSolver.test.ts` already
- * establishes: at font size 16 (scale 1), ascentPx=18, descentPx=5,
- * `get_line_height()` with no shaped lines = 23 (`label.cpp:125-134`, no
- * `line_spacing` folded in). Children are synthetic `customMinimumSize`
- * Controls, never Labels, so a text-shaping regression and a `_resort`
- * regression can never present as the same test failure.
+ * `graphNodeMinimumSize`/`graphNodeLayout` versus `scene/gui/graph_node.cpp`. An
+ * empty title floors the titlebar to OpenSans_SemiBold at 16px: 18 + 5 = 23, no
+ * `line_spacing` (`label.cpp:125-134`). Children are `customMinimumSize` Controls,
+ * never Labels, so a text-shaping fault never looks like a `_resort` fault.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
@@ -37,7 +32,7 @@ function hiddenLeaf(name: string, props: Partial<ControlProperties> = {}): Solve
   return { ...leaf(name, props), hidden: true };
 }
 
-/** A Control the walker promoted past a Node2D — a grandchild, so no slot of its own. */
+/** A Control the walker promoted past a Node2D: a grandchild, so no slot of its own. */
 function promotedLeaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
   return {
     ...leaf(name, props),
@@ -77,7 +72,7 @@ function ctx(): SolveContext {
   };
 }
 
-/** A fully-populated `StyleBoxFlatData` with only `contentMargin` set — for a `theme_override_styles/slot` fixture. */
+/** A fully-populated `StyleBoxFlatData` with only `contentMargin` set: for a `theme_override_styles/slot` fixture. */
 function marginBox(margin: { left: number; top: number; right: number; bottom: number }): StyleBoxFlatData {
   return {
     bgColor: { r: 0, g: 0, b: 0, a: 1 },
@@ -224,7 +219,7 @@ describe('graphNodeDrawRows — slot indices over `get_child(i)`', () => {
     const rows = graphNodeDrawRows(n, n.node.properties as GraphNodeProperties, childRects, 0, 40);
     const withPort = rows.filter((r) => r.slot.rightEnabled);
     expect(withPort.map((r) => r.rawIndex)).toEqual([1]);
-    // `B`'s own centre, not `A`'s — index 1 must name `B`.
+    // `B`'s own centre, not `A`'s: index 1 must name `B`.
     expect(withPort[0]!.slotY).toBe(25);
   });
 });

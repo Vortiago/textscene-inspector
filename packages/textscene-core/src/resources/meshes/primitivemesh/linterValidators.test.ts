@@ -1,5 +1,5 @@
 /**
- * The `PrimitiveMesh` and `Mesh` base validators, asked for through PlaneMesh —
+ * The `PrimitiveMesh` and `Mesh` base validators, asked for through PlaneMesh,
  * the leaf a scene names, one and two hops below the classes that declare them.
  */
 
@@ -39,7 +39,7 @@ runResourcePropertyValidation('PlaneMesh', [
   {
     prop: 'lightmap_size_hint',
     valid: ['Vector2i(64, 64)'],
-    // `Vector2` converts into this Vector2i slot (variant.cpp:536-830); a
+    // `Vector2` converts into this Vector2i slot (variant.cpp:536-830), and a
     // type that does not convert is the error.
     invalid: [{ value: 'Color(1, 1, 1, 1)', contains: ['lightmap_size_hint'], severity: 'error' }],
   },

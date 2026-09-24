@@ -1,10 +1,7 @@
 /**
- * Tests for the SphereShape3D decode.
- *
- * Defaults ported from Godot: `sphere_shape_3d.cpp:105` constructs with
- * `set_radius(0.5)`, and the property is a plain float
- * (`sphere_shape_3d.cpp:100` ADD_PROPERTY, hint range `0.001,100`) with no
- * linked property, so radius is read and used as authored.
+ * SphereShape3D decode. `sphere_shape_3d.cpp:105` constructs with `set_radius(0.5)`,
+ * and the property is a plain float (`sphere_shape_3d.cpp:100` ADD_PROPERTY, hint
+ * range `0.001,100`) with no linked property, so radius is used as authored.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

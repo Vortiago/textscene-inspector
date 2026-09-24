@@ -1,9 +1,7 @@
 /**
- * Source pane linter gutter: one row per source line, an
- * error/warning/info dot on lines with diagnostics (highest severity per
- * line — see `lineDiagnostics.ts`), and a hover/focus popover listing that
- * line's message(s). Scroll-synced with the textarea via the `scrollTop`
- * prop so the dots track the visible lines as the pane scrolls.
+ * The source pane's linter gutter: a row per line, a dot for the highest severity
+ * on the line (`lineDiagnostics.ts`), and a hover or focus popover of its messages.
+ * The `scrollTop` prop keeps it in step with the textarea.
  */
 import { memo, useMemo, useState } from 'react';
 import type { Severity } from '@textscene/core/linter';

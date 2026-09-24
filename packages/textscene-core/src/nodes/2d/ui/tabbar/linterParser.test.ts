@@ -1,13 +1,7 @@
 /**
- * TabBar strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property (happy, malformed, and any bound) and
- * quote the governing Godot source line beside every numeric bound.
+ * Tests the TabBar strict validators through `validatorRegistry`, not by linting
+ * a `.tscn`, so a failure points at the validator. Rule behaviour is in
+ * linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,9 +17,8 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * TabBar binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * Set exactly one, from the engine source: the keys TabBar binds, or
+ * DECLARES_NOTHING when it binds no ADD_PROPERTY. Both unset is red on purpose.
  */
 const KEYS: string[] = [
   // The 13 ADD_PROPERTY calls, tab_bar.cpp:2123-2135.
@@ -61,16 +54,13 @@ describe('TabBar strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // `fixtureLint` covers the whole registry through the barrel. This checks
+    // the fixture against only what this test imports.
     expectFixtureClean('unit-tab-bar.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format.
     const accepted = validatorRegistry
       .getOwnKeys('TabBar')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -241,9 +231,8 @@ describe('TabBar strict validators', () => {
       expect(check('tab_0/disabled', 'yes')).not.toBeNull();
     });
     it('rejects a leaf TabBar never registered', () => {
-      // `metadata`, `hidden`, `language`, `text_direction`, `button_icon` and
-      // `icon_max_width` all have bound setters (tab_bar.cpp:2060-2079) but no
-      // `register_property` call, so no such key ever reaches a setter.
+      // These leaves have bound setters (tab_bar.cpp:2060-2079) but no
+      // `register_property` call, so no such key reaches a setter.
       const error = check('tab_0/metadata', '"anything"');
       expect(error?.code).toBe('INVALID_TAB_KEY');
     });
@@ -254,10 +243,8 @@ describe('TabBar strict validators', () => {
       expect(error?.severity).toBe('error');
     });
     it('rejects a non-integer index, which the helper never resolves', () => {
-      // `TabBar::_set` is `property_helper.property_set_value` verbatim
-      // (tab_bar.h:208) and `_get_property` returns nullptr unless the index
-      // `is_valid_int()` (property_list_helper.cpp:53-55), so `_set` returns
-      // false and Godot DROPS the write.
+      // `TabBar::_set` is `property_helper.property_set_value` (tab_bar.h:208), which
+      // drops an index that fails `is_valid_int()` (property_list_helper.cpp:53-55).
       expect(check('tab_x/title', '"Ghost"')?.code).toBe('INVALID_TAB_KEY');
       expect(check('tab_1.5/title', '"Ghost"')?.severity).toBe('error');
     });
@@ -265,8 +252,7 @@ describe('TabBar strict validators', () => {
       expect(check('tab_99/title', '"Far"')).toBeNull();
     });
     it('leaves the plain tab_-prefixed scalars to their exact registrations, not the wildcard', () => {
-      // The prefix `tab_` collides with `tab_alignment`, `tab_count` and
-      // `tab_close_display_policy`; the exact match must win.
+      // The `tab_` prefix collides with the scalar keys. The exact match must win.
       expect(check('tab_alignment', '1')).toBeNull();
       expect(check('tab_count', '3')).toBeNull();
       expect(check('tab_close_display_policy', '2')).toBeNull();

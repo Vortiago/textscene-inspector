@@ -1,11 +1,7 @@
 /**
- * AnimationTree playback tests (ADR-0019).
- *
- * A selected, `active = true` AnimationTree resolves its `anim_player` to a
- * registered driver, evaluates its blend tree at the authored parameter state,
- * and drives the driver's object with weighted actions — Godot parity for an
- * AnimationTree honouring `active` and playing from its parameter state (no
- * clip picker). Gating: it drives ONLY while selected AND active.
+ * AnimationTree playback (ADR-0019): a selected, `active = true` tree resolves `anim_player` to a
+ * registered driver, evaluates its blend tree at the authored parameter state and drives the
+ * driver's object with weighted actions. It drives only while selected and active.
  */
 
 import { useEffect } from 'react';
@@ -63,7 +59,7 @@ function moverX(object: THREE.Object3D): number {
   return mover.position.x;
 }
 
-// A Blend2(in0='left', in1='right') BlendTree, blendable via parameters/mix/blend_amount.
+// A Blend2(in0='left', in1='right') BlendTree, blendable through parameters/mix/blend_amount.
 const RESOURCES: TscnInternalResource[] = [
   { id: 'left', type: 'AnimationNodeAnimation', data: { animation: '&"left"' } },
   { id: 'right', type: 'AnimationNodeAnimation', data: { animation: '&"right"' } },
@@ -215,7 +211,7 @@ describe('AnimationTree — weighted blend playback', () => {
   it('preserves blend weights when paused and seeked (not over-blended)', async () => {
     const driver = makeDriver();
     // Stopped → pause → seek (no prior playing frame). Weights must be applied:
-    // at t=0.5 the 0.25/0.75 blend gives 2.5, NOT the unweighted average 0.
+    // at t=0.5 the 0.25/0.75 blend gives 2.5, not the unweighted average 0.
     const renderer = await mountTree(
       driver,
       makeTreeNode({ parameters: { 'mix/blend_amount': '0.75' } })

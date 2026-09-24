@@ -1,10 +1,7 @@
 /**
  * The processor's load lane: the cache/inflight/event transitions a load makes,
- * and the FileEventBus arrival handlers that drive them.
- *
- * Split out of `createResourceProcessor.ts`, which still owns the cache, the
- * inflight map and the public surface — this takes both by reference, so the
- * two halves see exactly the same state the single closure did.
+ * and the FileEventBus arrival handlers that drive them. `createResourceProcessor.ts`
+ * owns the cache, the inflight map and the public surface, and passes both by reference.
  */
 
 import type { FileEventBus, FileData } from './FileEventBus';
@@ -61,8 +58,8 @@ export function createLoadLane<T>(ctx: LoadLaneContext<T>): LoadLane<T> {
     try {
       const result = await work();
       if (inflight.get(path) !== flight) {
-        // Cleared-era completion — dispose and drop; caching or announcing
-        // it would resurrect what the clear removed. See `inflight`.
+        // Cleared-era completion: dispose and drop. Caching or announcing it
+        // would resurrect what the clear removed. See `inflight`.
         if (result && dispose) dispose(result);
         logger.info(`[${resourceType}Processor] Dropped stale load: ${path}`);
         return;
@@ -84,19 +81,10 @@ export function createLoadLane<T>(ctx: LoadLaneContext<T>): LoadLane<T> {
       logger.error(`[${resourceType}Processor] Failed: ${path} (${elapsed.toFixed(2)}ms)`, err);
       eventBus.emit<Error>(resourceType, 'failed', path, err);
     } finally {
-      // Raw bytes have now been materialised into `result` (or the attempt
-      // failed and is cached as a permanent `null` sentinel) — FileEventBus's
-      // copy is redundant from here on. Dropping it now prevents a large GLB
-      // (etc.) from being retained twice: once as raw bytes, once as the
-      // decoded resource. `loadDirectly` mode has no `fileEventBus` (scenes
-      // fetch text directly), so this is a no-op there.
-      //
-      // But ONLY once nothing else still wants that file. `clearCache` drops the
-      // byte bus's in-flight token too, and a fetch whose token has gone is
-      // abandoned silently — neither `loaded` nor `failed`. Several
-      // **Sub-resource path**s of one file are separate resources that each
-      // request it, so clearing on the first one to finish would strand a
-      // sibling in `pending` for good.
+      // The bytes are now materialised or cached as a `null` failure, so the byte
+      // bus's copy would hold a large GLB twice (a no-op in `loadDirectly` mode).
+      // Only once no other address awaits the file: `clearCache` drops its in-flight
+      // token too, which would strand a sibling **Sub-resource path** in `pending`.
       const file = resourceFilePath(path);
       if (awaitingFile(file).length === 0) fileEventBus?.clearCache(file);
     }
@@ -110,26 +98,23 @@ export function createLoadLane<T>(ctx: LoadLaneContext<T>): LoadLane<T> {
 
   // Bound handler for FileEventBus events (stored once to allow proper unsubscription)
   const handleFileLoaded = async (filePath: string, data: FileData): Promise<void> => {
-    // Only process if this processor should handle this file's data. Asked
-    // about the FILE, never a sub-resource path — the question is what these
-    // bytes are, which is exactly what an extension check can answer.
+    // Only process if this processor handles this file's data. Asked about
+    // the file, never a sub-resource path: the question is what these bytes are.
     if (shouldProcess && !shouldProcess(filePath, data)) return;
 
-    // Concurrently, not in sequence: each address owns its own flight token and
-    // cache slot, so their transitions are independent — while `process` for a
-    // material ends in awaiting its textures, which is real network I/O. Serial
-    // iteration made surface 2's textures wait for surface 1's to land.
+    // Concurrently: each address owns its flight token and cache slot, and a
+    // material's `process` ends awaiting its textures, network I/O that serial
+    // iteration would queue behind the previous surface's.
     await Promise.all(
       awaitingFile(filePath).map(async (path) => {
-        // Already cached - skip
         if (cache.has(path)) {
           inflight.delete(path);
           return;
         }
 
         if (!process) {
-          // File-event-bus mode requires a `process` function; without it
-          // the processor can't materialise the resource. Treat as failure.
+          // File-event-bus mode requires a `process` function. Without it
+          // the processor cannot materialise the resource. Treat as failure.
           fail(path, new Error(`${resourceType} processor missing process() handler`));
           return;
         }

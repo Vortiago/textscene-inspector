@@ -1,19 +1,7 @@
 /**
- * Drift guard: the types whose native painter establishes an ambient scope for
- * its subtree must declare `wrapsChildren` on their REAL registration.
- *
- * Written after that flag went missing from `CanvasLayer`'s registration for a
- * whole commit without a single test failing. The walker's own tests register a
- * local stub and set the flag on THAT, so they proved the walker honours the
- * flag while saying nothing about whether any shipped registration sets it —
- * and each painter's own test passes children in directly, so it never exercises
- * the walker's placement at all. The consequence was silent and total: a
- * CanvasLayer's descendants rendered as siblings, so the draw-order band and
- * modulate scope it publishes reached nothing, and `visible = false` on the
- * layer stopped hiding its subtree.
- *
- * This asserts against the barrel-registered types, in both directions, so
- * losing the flag fails and adding it to a type that does not wrap fails too.
+ * A type whose painter scopes its subtree declares `wrapsChildren` on its real registration. The
+ * walker's tests use a stub, so only this guard sees a lost flag, which renders descendants as
+ * siblings outside the scope. It checks both directions against the barrel-registered types.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -21,12 +9,9 @@ import { describe, expect, it } from 'vitest';
 import { controlComponentRegistry } from '../index';
 
 /**
- * A painter wraps its children only to give them a scope they must inherit:
- * `CanvasLayer` and `ParallaxBackground` (a `CanvasLayer` subclass,
- * `parallax_background.h:34`) publish a draw-order band plus a fresh modulate
- * scope, and `ScrollContainer` and `GraphEdit` publish clip planes (both set
- * `clip_contents` — one from the property, one from its own constructor).
- * Chrome-only painters must not — the walker places their children as siblings.
+ * `CanvasLayer` and its subclass `ParallaxBackground` (`parallax_background.h:34`) publish a draw-order
+ * band and a modulate scope. `ScrollContainer` and `GraphEdit` publish clip planes, as both set
+ * `clip_contents`. A chrome-only painter does not wrap, so the walker places its children as siblings.
  */
 const WRAPS_CHILDREN = new Set([
   'CanvasLayer',

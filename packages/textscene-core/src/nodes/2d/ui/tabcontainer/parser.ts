@@ -1,4 +1,4 @@
-/** TabContainer parser — Control + scalar properties + the sparse `tab_<idx>/*` override family. */
+/** Parses a TabContainer: Control, the scalar properties and the sparse `tab_<idx>/*` override family. */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
@@ -25,8 +25,7 @@ export function parseTabContainer(
   result.tabFocusMode = parseOptionalInt(properties.tab_focus_mode);
   result.deselectEnabled = boolSlotValue(properties.deselect_enabled);
 
-  // Sparse, keyed by the raw index — see `types.ts`'s own doc for why this
-  // family has no dense-array sizing the way TabBar's own `tab_count` gives.
+  // Sparse, keyed by the raw index: `types.ts` says why no `tab_count` sizes this family.
   const declared = indexedElements(properties, 'tab_', 'is_valid_int');
   if (declared.size > 0) {
     const overrides: Record<number, TabContainerTabOverride> = {};

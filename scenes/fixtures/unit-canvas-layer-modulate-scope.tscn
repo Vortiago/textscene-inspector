@@ -1,17 +1,9 @@
 [gd_scene format=3]
 
-; Whether an ancestor's `modulate` crosses a CanvasLayer boundary is the ONE variable:
-; every square below is authored pure white, and each family's two squares differ only in
-; whether a CanvasLayer sits between the square and the tinted ancestor. In Godot both
-; layer squares render UNtinted white while both non-layer squares render at 0.25 grey —
-; CanvasLayer derives from Node, so `CanvasItem::get_parent_item()` returns null under it
-; and the child parents to the layer's own canvas, whose root items start at pure white.
-; Both families are here because the Control walk and the Node2D dispatch publish that
-; scope through separate code paths, and a leak in one is invisible in the other.
-; unit-canvas-layer.tscn tints nothing, so a leak there reads as plain white text; the
-; modulate-cascade fixtures carry no CanvasLayer at all, so a leak there cannot appear.
-; Colours are white and the tint is a hard 0.25, so a leak is a four-fold error, not a
-; shade nobody notices.
+; The one variable: whether an ancestor's `modulate` crosses a CanvasLayer. In Godot the layer squares
+; stay white and the others go 0.25 grey: CanvasItem::get_parent_item() returns null under a layer.
+; The Control walk and the Node2D dispatch publish that scope apart, so both are here.
+; unit-canvas-layer tints nothing, and the modulate-cascade fixtures have no layer.
 
 [node name="Root" type="Control"]
 anchors_preset = 15

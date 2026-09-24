@@ -1,10 +1,6 @@
 /**
- * Builds a single THREE.BufferGeometry from decoded ArrayMesh surfaces.
- *
- * All surfaces are merged into one geometry; each contributes a draw group
- * (`addGroup`) so the MeshInstance3D can attach a material per surface. Godot's
- * decoded per-vertex normals are used when every surface carries them;
- * otherwise three.js recomputes them (`computeVertexNormals`) as a fallback.
+ * Builds one THREE.BufferGeometry from decoded ArrayMesh surfaces, with a draw
+ * group per surface so the MeshInstance3D can attach a material to each.
  */
 
 import * as THREE from 'three';
@@ -16,8 +12,8 @@ export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometr
   const totalVertices = mesh.surfaces.reduce((n, s) => n + s.vertexCount, 0);
   const totalIndices = mesh.surfaces.reduce((n, s) => n + s.indexCount, 0);
   const hasUV = mesh.surfaces.some((s) => s.uvs);
-  // Use Godot's baked normals only when every surface has them — mixing decoded
-  // and recomputed normals across groups would look inconsistent.
+  // Godot's baked normals only when every surface has them, else
+  // `computeVertexNormals`: mixing the two across groups looks inconsistent.
   const useDecodedNormals = mesh.surfaces.length > 0 && mesh.surfaces.every((s) => s.normals);
 
   const positions = new Float32Array(totalVertices * 3);
@@ -30,27 +26,23 @@ export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometr
   let indexBase = 0;
   mesh.surfaces.forEach((surface, surfaceIndex) => {
     positions.set(surface.positions, vertexBase * 3);
-    // Godot's UV origin is the image's TOP-left; textures load here with THREE's
-    // default flipY=true (the convention `spriteFrame.ts` and `tileGeometry.ts`
-    // build their UVs for), which uploads the image bottom-up. Handing Godot's V
-    // through unchanged therefore samples the texture vertically mirrored —
-    // every tile of an atlas lands on the wrong row.
+    // Godot's UV origin is the image's top-left. Textures load with THREE's
+    // default flipY=true (as `spriteFrame.ts` and `tileGeometry.ts` assume), which
+    // uploads the image bottom-up, so Godot's V unchanged samples it mirrored.
     if (uvs) {
       if (surface.uvs) uvs.set(surface.uvs, vertexBase * 2);
-      // Flip this surface's whole range, including a surface that carries no
-      // UVs of its own — `hasUV` is `some`, so the buffer spans those too, and
-      // Godot samples them at UV (0,0), the image's TOP-left. Flipping only the
-      // written surfaces would leave one geometry in two V spaces.
+      // Flip the whole range, including a surface with no UVs of its own: `hasUV`
+      // is `some`, so the buffer spans it, and Godot samples it at UV (0,0), the
+      // image's top-left. Flipping only the written surfaces mixes two V spaces.
       for (let i = 0; i < surface.vertexCount; i++) {
         const v = (vertexBase + i) * 2 + 1;
         uvs[v] = 1 - uvs[v]!;
       }
     }
     if (normals && surface.normals) normals.set(surface.normals, vertexBase * 3);
-    // Re-base each surface's indices into the merged vertex array AND reverse
-    // each triangle's winding: Godot fronts triangles clockwise, three.js
-    // expects counter-clockwise, so without this swap every face is back-culled
-    // (flat meshes vanish; closed meshes render inside-out).
+    // Re-base each surface's indices into the merged vertex array and reverse
+    // each triangle's winding: Godot fronts triangles clockwise and three.js
+    // counter-clockwise, so without the swap every face is back-culled.
     for (let i = 0; i + 2 < surface.indexCount; i += 3) {
       indices[indexBase + i] = surface.indices[i]! + vertexBase;
       indices[indexBase + i + 1] = surface.indices[i + 2]! + vertexBase;

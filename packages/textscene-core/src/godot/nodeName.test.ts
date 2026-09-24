@@ -1,9 +1,8 @@
 /**
- * Every expectation a `set_name` can reach is the name Godot ends up with, read
- * off a headless instantiate rather than derived from `ustring.cpp` alone. The
- * empty name is the one that cannot be: `ERR_FAIL_COND(p_name.is_empty())`
- * (`node.cpp:1432`) returns eleven lines before `validate_node_name()`, so that
- * row cites the port instead.
+ * Each expectation is the name Godot ends up with, read off a headless instantiate rather than
+ * derived from `ustring.cpp` alone. The empty name
+ * cannot be: `ERR_FAIL_COND(p_name.is_empty())` (`node.cpp:1432`) returns before
+ * `validate_node_name()`, so that row cites the port.
  */
 
 import { describe, expect, it } from 'vitest';

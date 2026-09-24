@@ -1,14 +1,8 @@
 [gd_scene format=3]
-; LookAtModifier3D: no visuals, exercises the whole ADD_PROPERTY set that can
-; co-exist in one serialised node.
-; Angles are RADIANS even though the inspector hints degrees: 3.1415927 is the
-; 180-degree ceiling, 6.2831855 the 360-degree one.
-; Forward +Z (axis Z) against primary rotation Y, the non-parallel pairing this
-; slice's linter.ts requires.
-; symmetry_limitation is false, so the positive/negative family is what Godot
-; serialises here; _validate_property drops primary_limit_angle and
-; secondary_limit_angle in this branch, and those two are covered in
-; linterParser.test.ts instead.
+; LookAtModifier3D: no visuals, the whole ADD_PROPERTY set that can co-exist in one node. Angles
+; are radians although the inspector hints degrees: 3.1415927 is the 180-degree ceiling,
+; 6.2831855 the 360-degree one. Forward +Z (axis Z) against primary rotation Y is the non-parallel
+; pairing this slice's linter.ts requires.
 
 [node name="Root" type="Node3D"]
 
@@ -17,6 +11,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -3)
 
 [node name="Skeleton3D" type="Skeleton3D" parent="."]
 
+; symmetry_limitation is false, so Godot serialises the positive/negative family. In this branch
+; _validate_property drops primary_limit_angle and secondary_limit_angle, which
+; linterParser.test.ts covers instead.
 [node name="MyLookAtModifier3D" type="LookAtModifier3D" parent="Skeleton3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 influence = 0.75

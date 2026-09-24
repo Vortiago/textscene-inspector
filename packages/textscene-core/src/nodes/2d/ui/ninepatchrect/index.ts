@@ -1,4 +1,4 @@
-/** NinePatchRect registration: parser. The render side is `index.r3f.ts`. */
+/** Registers the NinePatchRect parser. `index.r3f.ts` registers the render side. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseNinePatchRect } from './parser';

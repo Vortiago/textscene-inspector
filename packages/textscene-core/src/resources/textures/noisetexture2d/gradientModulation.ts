@@ -8,15 +8,13 @@ import type { Gradient } from '../gradienttexture2d/types';
 import { sampleGradientColor } from '../gradienttexture2d/sample';
 
 /**
- * `NoiseTexture2D::_modulate_with_gradient` (noise_texture_2d.cpp:183-198):
- * each pixel's LUMINANCE is the offset into the ramp. A grayscale pixel's
- * luminance is its own value (Godot's weights sum to 1 over equal channels), so
- * the byte maps straight to the 0..1 ramp offset.
+ * `NoiseTexture2D::_modulate_with_gradient` (noise_texture_2d.cpp:183-198): each
+ * pixel's luminance is its ramp offset. Godot's weights sum to 1, so a grayscale
+ * byte maps straight to the 0..1 offset.
  */
 export function modulateWithGradient(gray: Uint8Array, gradient: Gradient): Uint8Array {
-  // The offset domain is a byte / 255 — 256 distinct values — so the ramp is
-  // evaluated once per value, not once per pixel (a megapixel field would
-  // otherwise pay a binary search and a colour allocation per pixel).
+  // The offset is a byte / 255, 256 values, so the ramp is evaluated once per
+  // value, not per pixel with a binary search and an allocation each.
   const lut = new Uint8Array(256 * 4);
   for (let v = 0; v < 256; v++) {
     const color = sampleGradientColor(gradient, v / 255);

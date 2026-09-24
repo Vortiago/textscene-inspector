@@ -1,18 +1,8 @@
 /**
- * StandardMaterial3D height mapping handling.
- *
- * Godot's BaseMaterial3D exposes a height-mapping / parallax feature
- * (FEATURE_HEIGHT_MAPPING) behind a `heightmap_enabled` flag, with a
- * `heightmap_scale` depth scalar (default 5.0). The render side maps it to
- * three.js `MeshStandardMaterial.displacementScale` + a `displacementMap` (the
- * `heightmap_texture`) — a vertex-displacement approximation of Godot's
- * texture-space parallax.
- *
- * Unlike clearcoat/rim, `heightmap_scale` is a SCALE FACTOR, NOT a 0..1 value:
- * it may exceed 1 and may be negative (inverting the displacement), so the
- * parse must NOT clamp it. Gated on `heightmap_enabled`: off → 0 (no
- * displacement). The enabled-but-unset Godot default (5.0) is PINNED — it is
- * the common .tscn input, since Godot omits default-valued properties.
+ * StandardMaterial3D height mapping, which the render side approximates with
+ * `displacementScale` and a `displacementMap`. `heightmap_scale` is a scale factor, not
+ * 0..1: it may exceed 1 or be negative, so it is not clamped. Gated on
+ * `heightmap_enabled`, with Godot's default 5.0 when omitted.
  */
 import { describe, expect, it } from 'vitest';
 import { parseStandardMaterial3DScalars } from './scalars';
@@ -25,14 +15,14 @@ describe('parseStandardMaterial3DScalars — height mapping flag', () => {
   });
 
   it('uses the Godot default (5.0) when heightmap_enabled is true but the scale is omitted', () => {
-    // Flag-on + scale-absent is the COMMON .tscn input and must resolve to
-    // Godot's enabled default (5.0), NOT 0.
+    // Flag-on and scale-absent is the common .tscn input and must resolve to
+    // Godot's enabled default (5.0), not 0.
     expect(parseStandardMaterial3DScalars({ heightmap_enabled: 'true' }).heightmapScale).toBe(5.0);
   });
 
   it('does NOT clamp the scale — values >1 and negative pass through', () => {
-    // DISCRIMINATOR: heightmap_scale is a depth scale, not a 0..1 factor.
-    // A clamp01 (correct for clearcoat/rim) would be WRONG here.
+    // heightmap_scale is a depth scale, not a 0..1 factor.
+    // A clamp01, correct for clearcoat and rim, would be wrong here.
     expect(
       parseStandardMaterial3DScalars({ heightmap_enabled: 'true', heightmap_scale: '10' }).heightmapScale
     ).toBe(10);

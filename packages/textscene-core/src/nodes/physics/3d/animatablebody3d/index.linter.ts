@@ -1,6 +1,4 @@
-/**
- * animatablebody3d linter registration - imports linter components to trigger self-registration.
- */
+/** AnimatableBody3D linter registration: importing the modules registers them. */
 
 import '../../shared/linter.js';
 import './linterParser.js';

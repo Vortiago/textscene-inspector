@@ -1,21 +1,7 @@
 /**
- * Godot-space sky properties → shader uniforms.
- *
- * The engine does not upload what the inspector shows: `sky_curve` becomes
- * `0.6 / sky_curve`, `sun_angle_max` becomes its cosine, `sun_curve` becomes
- * `1.6 / pow(sun_curve, 1.4)`, and the colours are pre-multiplied by their
- * energy. Each conversion is an "ad hoc adjustment" (Godot's own comment) with
- * no derivation to check it against — so the assertions here are pinned to the
- * DEFAULT VALUES DECLARED IN THE SHADER SOURCE, which the engine's constructor
- * must reproduce through these formulas:
- *
- *   uniform float inv_sky_curve    = 4.0;      // from sky_curve    0.15
- *   uniform float inv_ground_curve = 30.0;     // from ground_curve 0.02
- *   uniform float sun_angle_max    = 0.877;    // from 30 degrees
- *   uniform float inv_sun_curve    = 22.78;    // from sun_curve    0.15
- *
- * That makes them a genuine independent source of truth: a wrong formula that
- * happens to round-trip our own parser still misses these numbers.
+ * Godot-space sky properties to shader uniforms. The "ad hoc" conversions have
+ * no derivation, so the curve assertions pin the defaults the shader source
+ * declares, listed in the first test.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -33,6 +19,10 @@ const value = (uniforms: Record<string, { value: unknown }>, name: string) =>
 
 describe('skyUniforms — ProceduralSkyMaterial curve conversions', () => {
   it('reproduces the shader’s declared defaults from Godot’s authored defaults', () => {
+    // uniform float inv_sky_curve    = 4.0;      // from sky_curve    0.15
+    // uniform float inv_ground_curve = 30.0;     // from ground_curve 0.02
+    // uniform float sun_angle_max    = 0.877;    // from 30 degrees
+    // uniform float inv_sun_curve    = 22.78;    // from sun_curve    0.15
     const u = skyUniforms(procedural(), []);
     expect(value(u, 'inv_sky_curve')).toBeCloseTo(4.0, 5);
     expect(value(u, 'inv_ground_curve')).toBeCloseTo(30.0, 5);

@@ -1,6 +1,4 @@
-/**
- * OmniLight3D registration — parser + formatter.
- */
+/** OmniLight3D parser and formatter registration. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseOmniLight3D } from './parser';

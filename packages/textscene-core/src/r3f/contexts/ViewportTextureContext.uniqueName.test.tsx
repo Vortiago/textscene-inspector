@@ -1,10 +1,7 @@
 /**
- * Two `<SubViewport>`s claiming the same `%Name`, and which one `%Name` reaches.
- *
- * `_acquire_unique_name_in_owner` registers the FIRST claimant on the owner and
- * clears the later node's own flag (node.cpp:2225-2231). Publishing the alias
- * from the node's raw flag instead let both publish `Root/%View`, so the
- * registry kept whichever mounted last and a consumer sampled the wrong target.
+ * Two `<SubViewport>`s claim one `%Name`. `_acquire_unique_name_in_owner` keeps
+ * the first claimant and clears the later node's flag (node.cpp:2225-2231), so
+ * only the first publishes `Root/%View`.
  */
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
@@ -44,9 +41,8 @@ const roots: TscnNode[] = (() => {
   return [root];
 })();
 
-// Built by the real builder, not a literal behind a cast: a hand-shaped graph
-// keeps compiling after `SceneGraph` gains a field, and stops matching what
-// `useUniqueNameClaims` reads.
+// The real builder, not a cast literal, which keeps compiling after
+// `SceneGraph` gains a field and stops matching what `useUniqueNameClaims` reads.
 const graph = createSceneGraphFromTscnScene({ nodes: roots });
 
 const entry = (id: string): ViewportTextureEntry => ({
@@ -81,7 +77,7 @@ describe('a %Name two sub-viewports both claim', () => {
   });
 
   it('still reaches the later one by its own path', () => {
-    // Its flag is cleared, not the node: `Root/Hud/View` addresses it as ever.
+    // Only its flag is cleared, so `Root/Hud/View` still addresses it.
     const { result } = renderHook(() => useViewportTexture('Root/Hud/View'), { wrapper });
     expect(result.current).toBe(loser);
   });

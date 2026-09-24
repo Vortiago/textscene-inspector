@@ -1,25 +1,10 @@
 /**
- * `<TextureProgressBar>` — the native (WebGL canvas) painter for
- * `TextureProgressBar`: `texture_under`, `texture_progress`, `texture_over`
- * in that order (`texture_progress_bar.cpp:439-482`'s `NOTIFICATION_DRAW`).
- * Each layer is one of three shapes:
- *
- *  - a plain full-texture quad (`draw_texture`/the radial `val === 1`
- *    shortcut and `nine_patch_stretch`-less `under`/`over`);
- *  - a cropped quad (`draw_texture_rect_region`, the six non-radial fill
- *    modes without `nine_patch_stretch`, `linearFill.ts`);
- *  - a hand-built textured mesh — a 3x3 nine-patch grid
- *    (`ninePatchGeometry.ts`, `r3f/controls/native/` — see that module's own
- *    doc: it takes no NinePatchRect-shaped input) or a radial
- *    triangle fan (`radialFill.ts`) — both via `<TexturedFillMesh>`.
- *
- * Tint: `tint_under`/`tint_progress`/`tint_over` (raw sRGB) multiply into
- * `tint.own` BEFORE the one sRGB->linear conversion, exactly like `Button`'s
- * icon (`buttonBase.ts`'s `tintColor` + `useGodotLinearColor`).
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * `<TextureProgressBar>`: the native (WebGL canvas) painter, drawing under, progress and over in
+ * that order (`texture_progress_bar.cpp:439-482`). A layer is a full-texture quad, a cropped quad
+ * (`linearFill.ts`), or a `<TexturedFillMesh>` of a nine-patch grid or a radial fan. The walker owns
+ * visibility, children and transform.
  */
+
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -73,7 +58,7 @@ function naturalSize(texture: THREE.Texture | null): Vec2 | null {
   return texture && w > 0 && h > 0 ? { x: w, y: h } : null;
 }
 
-/** One decoded, sampler-configured texture — `TextureRect`'s own load path, once per slot. */
+/** One decoded, sampler-configured texture: `TextureRect`'s load path, once per slot. */
 function useLayerTexture(
   ref: string | undefined,
   externalResources: NativeControlComponentProps['solveNode']['resources']['externalResources'],
@@ -93,7 +78,7 @@ function useLayerTexture(
   }, [decoded, filter]);
 }
 
-/** `Texture2D::get_rect_region`'s cropped clone (`linearFill.ts`'s own doc — identity except the UV window). */
+/** `Texture2D::get_rect_region`'s cropped clone: identity except the UV window (`linearFill.ts`). */
 function useCroppedTexture(
   texture: THREE.Texture | null,
   region: { x: number; y: number; w: number; h: number } | undefined,
@@ -138,6 +123,8 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
   );
   const controlSize: Vec2 = useMemo(() => ({ x: rect.w, y: rect.h }), [rect.w, rect.h]);
 
+  // `tint_under`/`tint_progress`/`tint_over` (raw sRGB) multiply into `tint.own` before the one
+  // sRGB-to-linear conversion, as Button's icon does (`buttonBase.ts`).
   const underColorSrgb = useMemo(() => multiplyModulate(props.tintUnder ?? WHITE, tint.own), [props.tintUnder, tint.own]);
   const progressColorSrgb = useMemo(
     () => multiplyModulate(props.tintProgress ?? WHITE, tint.own),
@@ -154,7 +141,6 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
   const ratio = rangeRatio(props, controlLayoutOrder(solveNode));
   const progressOffset = props.textureProgressOffset ?? ZERO;
 
-  // --- under -----------------------------------------------------------
   const underNinePatch = useMemo(() => {
     if (!underTexture || !underSize || !ninePatchStretch) return null;
     const draw = drawNinePatchStretched(underSize, stretchMargin, fillMode, 1.0, controlSize, null);
@@ -173,7 +159,6 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
     };
   }, [underTexture, underSize, ninePatchStretch, stretchMargin, fillMode, controlSize]);
 
-  // --- over --------------------------------------------------------------
   const overNinePatch = useMemo(() => {
     if (!overTexture || !overSize || !ninePatchStretch) return null;
     const draw = drawNinePatchStretched(overSize, stretchMargin, fillMode, 1.0, controlSize, null);
@@ -192,7 +177,6 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
     };
   }, [overTexture, overSize, ninePatchStretch, stretchMargin, fillMode, controlSize]);
 
-  // --- progress ------------------------------------------------------------
   const progressNinePatch = useMemo(() => {
     if (!progressTexture || !progressSize || !ninePatchStretch || isRadialMode) return null;
     const draw = drawNinePatchStretched(progressSize, stretchMargin, fillMode, ratio, controlSize, progressOffset);

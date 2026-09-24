@@ -1,18 +1,7 @@
 /**
- * Whether a live scene holds anything the glow bright-pass would catch.
- *
- * Separate from the hook that calls it so the traversal can be exercised against a
- * plain `THREE.Scene`: the decision it feeds — whether to mount the compositor at
- * all — is one of the more consequential in the render layer, and through a React
- * hook it is only reachable by rendering a canvas.
- *
- * The predicate has to agree with `godotGlow.ts`'s bright pass or the gate is wrong
- * in one direction or the other. Godot gates on the PEAK RGB channel, so a
- * saturated blue emissive counts by its blue channel alone even though its Rec. 709
- * luminance is the lowest in the frame. Diffuse-only brightness — a lit white floor,
- * unshaded text near 1.0 — stays below the threshold and does not count, which is
- * what Godot does too. The threshold passed in must already be in the same space as
- * the material values being read: see `unexposedBrightPassThreshold`.
+ * Whether a live scene holds anything the glow bright pass catches, agreeing with `godotGlow.ts`.
+ * Godot gates on the peak RGB channel, so a saturated blue emissive counts by its blue alone, and
+ * diffuse-only brightness does not. The threshold is in material space (`unexposedBrightPassThreshold`).
  */
 
 import type * as THREE from 'three';
@@ -29,20 +18,10 @@ function isBloomable(material: THREE.Material, threshold: number): boolean {
 }
 
 /**
- * Walked with an explicit stack rather than `Object3D.traverse`, for two reasons
- * measured on the largest bundled scene (~6,000 objects after r3f wraps every node
- * in a group). `traverse` cannot stop: returning from its callback skips the body
- * but three still visits every remaining descendant, so a hit on the second object
- * costs the same as no hit at all. And the answer is usually found near the root,
- * because emissive meshes are authored content — so the early exit is worth two
- * orders of magnitude when it lands, and skipping non-mesh objects without
- * allocating an empty array for each is worth about half the remaining time when it
- * does not.
- *
- * Children are pushed in REVERSE so that popping yields preorder document order,
- * the same order `traverse` visits in. Pushing them forward inverts it and finds a
- * shallow first-child emissive last, which measures no faster than `traverse` at
- * all — the early exit only pays if the order is right.
+ * An explicit stack, not `Object3D.traverse`, which cannot stop early: on the largest bundled scene
+ * the early exit is worth two orders of magnitude, as emissive meshes sit near the root. Children
+ * push in reverse so popping yields preorder, and the early exit pays only in that order. Skipping
+ * a non-mesh object without allocating an empty array halves the time when no hit lands.
  */
 export function sceneHasBloomableEmissive(scene: THREE.Object3D, threshold: number): boolean {
   const stack: THREE.Object3D[] = [scene];

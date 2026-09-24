@@ -1,6 +1,4 @@
-/**
- * Tests for MeshInstance3D parser
- */
+/** MeshInstance3D parser tests. */
 
 import { describe, it, expect } from 'vitest';
 import { parseMeshInstance3D } from './parser';
@@ -85,10 +83,9 @@ describe('MeshInstance3D Parser', () => {
       expect(result.surfaceMaterialOverrides.get(2)).toBe('SubResource("Material_2")');
     });
 
-    // `_set` reads a FIXED slice for the index — `get_slicec('/', 1)`
-    // (mesh_instance_3d.cpp:66) — and `get_slicec` returns that slice alone
-    // (ustring.cpp:941-964), so `surface_material_override/0/extra` names
-    // surface 0 and the override lands on it.
+    // `_set` reads the index from `get_slicec('/', 1)` (mesh_instance_3d.cpp:66), which
+    // returns that slice alone (ustring.cpp:941-964), so
+    // `surface_material_override/0/extra` names surface 0.
     it('parses an override key carrying a trailing segment', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
 
@@ -300,11 +297,10 @@ describe('MeshInstance3D Parser', () => {
       expect(result.surfaceMaterialOverrides.has(2)).toBe(false);
     });
 
-    // `MeshInstance3D::_set` reads the index with a bare
-    // `get_slicec('/', 1).to_int()` and no validity gate
-    // (mesh_instance_3d.cpp:66). `to_int` SKIPS a character it cannot use
-    // (ustring.cpp:2280-2293), so `+2` names surface 2 and `abc` names surface
-    // 0; `:68` returns false for a negative index.
+    // `_set` reads the index with a bare `get_slicec('/', 1).to_int()`
+    // (mesh_instance_3d.cpp:66). `to_int` skips a character it cannot use
+    // (ustring.cpp:2280-2293), so `+2` names surface 2 and `abc` surface 0. `:68`
+    // returns false for a negative index.
     it('resolves a surface index the way to_int does', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
 

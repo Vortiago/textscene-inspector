@@ -1,28 +1,8 @@
 /**
- * Contract for the heading-attribute scanner arms the two structured-value
- * contracts beside it leave unpinned: the bare token, malformed input, and the
- * boundary between raw source text and a decoded value.
- *
- * Four axes, all asserted at `parseHeading`'s own boundary:
- *
- *  1. BARE TOKEN AT ITS WIDEST. An unquoted value runs to the next whitespace,
- *     punctuation included (`res://art/icon.png`, `-1`, `1.5`). Narrowing it to
- *     an identifier class truncates the value AND, because the scan then stops
- *     mid-token, drops every attribute after it.
- *  2. SEPARATOR IS `\s`, NOT `' '`. A tab or a non-breaking space between
- *     attributes — or between the section keyword and its first attribute —
- *     must separate them, not become part of a key. This parser's job is
- *     leniency toward hand-edited and pasted input; Godot's own writer emits
- *     single spaces, so the corpus cannot pin this.
- *  3. RECOVERY, NOT ABANDONMENT. A stray token, an empty value or an
- *     unterminated delimiter costs at most its own attribute: the scan resyncs
- *     and the REMAINING attributes still parse. Each rung asserts the complete
- *     surviving attribute set, so "give up here" cannot pass.
- *  4. RAW-TEXT BOUNDARY. A structured value is captured verbatim, escapes
- *     intact, so it stays re-parseable; only a QUOTED scalar — quoted at BOTH
- *     ends — is unwrapped, and it decodes `\"` alone. Decoding a heading value
- *     further is the node parsers' business (`unquoteString` on a property),
- *     not the scanner's.
+ * The heading scanner arms the structured-value contracts leave unpinned, at
+ * `parseHeading`: a bare token runs to the next whitespace, `\s` separates (tab, NBSP),
+ * a bad attribute costs only itself, and only a scalar quoted at both ends is unwrapped,
+ * decoding `\"` alone. Each case asserts the complete surviving attribute set.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -128,8 +108,7 @@ describe('parseHeading recovers from a malformed attribute', () => {
 
   // `get_token` breaks on `cchar <= 32` (`variant_parser.cpp:415-417`) and
   // `_parse_tag` calls it straight after `TK_EQUAL` (`:1861-1863`), so the
-  // space is consumed before the value token is read. Reading these as a
-  // missing value cost the heading its `name=` — an ERROR on a file that loads.
+  // space is consumed before the value token is read. Godot loads these files.
   it.each([
     ['a quoted string', '[node name= "Root" type="Node2D"]', { name: 'Root', type: 'Node2D' }],
     ['the type', '[node name="Root" type= "Node2D"]', { name: 'Root', type: 'Node2D' }],
@@ -163,11 +142,9 @@ describe('parseHeading recovers from a malformed attribute', () => {
     expect(result!.attributes).toEqual({ name: 'Root', type: 'Node2D' });
   });
 
-  // `resource_format_text.cpp:2127` stores `" binds= " + vars`, so every
-  // connection carrying bound arguments puts a space between the `=` and the
-  // array. Reading that as an empty value dropped the binds from scenes Godot
-  // itself wrote, and the array is the ONLY form allowed to open across the
-  // space — the test above still pins that a bare token does not.
+  // `resource_format_text.cpp:2127` stores `" binds= " + vars`, a space before the
+  // array. The array is the only form that opens across the space: the test above
+  // pins that a bare token does not.
   it('reads a bound-argument array across the space Godot writes after "binds="', () => {
     const result = parseHeading(
       '[connection signal="pressed" from="B" to="." method="_on" binds= [1, 2]]'

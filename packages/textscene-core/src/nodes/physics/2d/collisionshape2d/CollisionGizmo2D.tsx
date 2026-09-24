@@ -1,14 +1,10 @@
 /**
- * Outline gizmo for a 2D collision-shape resource. Renders the shape's outline
- * as a green line loop (mirrors Godot's editor collision overlay). Only
- * mounted when `showCollisions` is on (see Component.tsx), so it costs
- * nothing by default.
- *
- * Built from explicit polyline segments (`GizmoLine`, a `<lineSegments>`)
- * rather than a filled mesh with `wireframe` — a wireframe mesh shows the
- * triangulation diagonals for curved shapes (circle/capsule), which a plain
- * outline avoids.
+ * Outline gizmo for a 2D collision-shape resource, drawn as a line loop like Godot's editor
+ * collision overlay. Component.tsx mounts it only when `showCollisions` is on.
  */
+
+// Polyline segments (`GizmoLine`, a `<lineSegments>`), not a `wireframe` mesh, which shows the
+// triangulation diagonals of a circle or capsule.
 
 import { useMemo } from 'react';
 import type { TscnInternalResource } from '../../../../parser/types';
@@ -27,7 +23,7 @@ interface Point2D {
   y: number;
 }
 
-/** Godot-local (x, y) → three-local (x, -y), matching Sprite2D/Polygon2D's Y-negation convention. */
+/** Godot-local (x, y) to three-local (x, -y), matching Sprite2D/Polygon2D's Y-negation. */
 function toThreeLocal(points: Point2D[]): Float32Array {
   const out = new Float32Array(points.length * 3);
   for (let i = 0; i < points.length; i++) {
@@ -38,7 +34,7 @@ function toThreeLocal(points: Point2D[]): Float32Array {
   return out;
 }
 
-/** Closed polygon vertices → line-SEGMENT pairs (v0,v1),(v1,v2),…,(vN-1,v0) for `<lineSegments>`. */
+/** Closed polygon vertices to line-segment pairs (v0,v1),(v1,v2),…,(vN-1,v0) for `<lineSegments>`. */
 function loopToSegments(points: Point2D[]): Float32Array {
   const vertices = toThreeLocal(points);
   const n = points.length;
@@ -72,31 +68,30 @@ function circlePoints(radius: number): Point2D[] {
 }
 
 /**
- * Vertical capsule: two semicircle caps joined by straight sides. Exported
- * for direct unit testing of the point sequence (the shape a rendered
- * `<lineSegments>` buffer doesn't expose without re-deriving it).
+ * Vertical capsule: two semicircle caps joined by straight sides. Exported so a test can
+ * assert the point sequence, which a rendered `<lineSegments>` buffer does not expose.
  */
 export function capsulePoints(radius: number, height: number): Point2D[] {
   const halfHeight = Math.max(0, height / 2 - radius);
   const points: Point2D[] = [];
 
-  // Right side, bottom → top.
+  // Right side, bottom to top.
   points.push({ x: radius, y: -halfHeight });
   points.push({ x: radius, y: halfHeight });
 
-  // Top cap: 0°..180° around (0, halfHeight) — right connection point, over
-  // the top, to the left connection point.
+  // Top cap: 0°..180° around (0, halfHeight), from the right connection point over
+  // the top to the left connection point.
   for (let i = 1; i < CAPSULE_CAP_SEGMENTS; i++) {
     const t = (i / CAPSULE_CAP_SEGMENTS) * Math.PI;
     points.push({ x: radius * Math.cos(t), y: halfHeight + radius * Math.sin(t) });
   }
 
-  // Left side, top → bottom.
+  // Left side, top to bottom.
   points.push({ x: -radius, y: halfHeight });
   points.push({ x: -radius, y: -halfHeight });
 
-  // Bottom cap: 180°..360° around (0, -halfHeight) — left connection point,
-  // under the bottom, back to the right connection point (closing the loop).
+  // Bottom cap: 180°..360° around (0, -halfHeight), from the left connection point
+  // under the bottom back to the right connection point, closing the loop.
   for (let i = 1; i < CAPSULE_CAP_SEGMENTS; i++) {
     const t = Math.PI + (i / CAPSULE_CAP_SEGMENTS) * Math.PI;
     points.push({ x: radius * Math.cos(t), y: -halfHeight + radius * Math.sin(t) });

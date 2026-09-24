@@ -10,12 +10,6 @@ import type { ParsedHeading } from '../../../parser/utils.js';
 import type { WorldEnvironmentProperties } from './types.js';
 import { parseNode } from '../../node/parser.js';
 
-/**
- * Parse WorldEnvironment properties
- *
- * WorldEnvironment nodes configure global rendering environment via
- * an Environment SubResource reference.
- */
 export function parseWorldEnvironment(
   heading: ParsedHeading,
   properties: Record<string, string>

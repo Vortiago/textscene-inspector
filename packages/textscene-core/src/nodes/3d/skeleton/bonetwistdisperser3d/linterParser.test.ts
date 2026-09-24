@@ -1,16 +1,8 @@
 /**
- * BoneTwistDisperser3D strict validators, format, range and tier checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * No radian pair is pinned here because the class has no angle property:
- * `_get_property_list` emits only `"0,1,0.001"` (bone_twist_disperser_3d.cpp:155)
- * and `"0,1,0.001,or_greater,or_less"` (:163) and no `radians_as_degrees`
- * anywhere. The twist is computed from bone poses at process time (:773) and
- * never serialised.
+ * BoneTwistDisperser3D strict validators, asserted through `validatorRegistry`, not by linting a
+ * `.tscn`. No radian pair is pinned: the only range hints are `"0,1,0.001"`
+ * (bone_twist_disperser_3d.cpp:155) and `"0,1,0.001,or_greater,or_less"` (:163), with no
+ * `radians_as_degrees`, and the twist is computed from bone poses at process time (:773).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -26,13 +18,11 @@ function check(property: string, value: string) {
 }
 
 /**
- * The keys BoneTwistDisperser3D registers, which is what `getOwnKeys` returns:
- * two ClassDB properties plus ONE wildcard covering the whole hand-rolled
- * family. The 13 setting leaves and 3 joint leaves live behind the dispatcher
- * and are deliberately not registered individually.
+ * The keys `getOwnKeys` returns: two ClassDB properties plus one wildcard for the hand-rolled
+ * family. The 13 setting leaves and 3 joint leaves live behind the dispatcher.
  */
 const KEYS: string[] = ['mutable_bone_axes', 'setting_count', 'settings/*'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 
 describe('BoneTwistDisperser3D strict validators', () => {
@@ -45,16 +35,15 @@ describe('BoneTwistDisperser3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint`
+    // checks it against the whole registry through the barrel. This checks the same file
+    // against only what this test imported.
     expectFixtureClean('unit-bone-twist-disperser-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('BoneTwistDisperser3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -64,7 +53,7 @@ describe('BoneTwistDisperser3D strict validators', () => {
 
 describe('BoneTwistDisperser3D inherits rather than re-declares', () => {
   it('resolves influence through the base walk without owning the key', () => {
-    // SkeletonModifier3D registers `active` and `influence`; re-declaring
+    // SkeletonModifier3D registers `active` and `influence`, and re-declaring
     // either here would shadow the ancestor and duplicate the rule.
     expect(validatorRegistry.findValidator('BoneTwistDisperser3D', 'influence')).not.toBeNull();
     expect(validatorRegistry.findValidator('BoneTwistDisperser3D', 'active')).not.toBeNull();
@@ -73,7 +62,7 @@ describe('BoneTwistDisperser3D inherits rather than re-declares', () => {
   });
 
   it('routes a nested joints key, which the glued-index wildcard could not', () => {
-    // `settings/#/*` matches ONE leaf segment, so registering it would leave
+    // `settings/#/*` matches one leaf segment, so registering it would leave
     // this key unvalidated. The plain `settings/*` wildcard is what reaches it.
     expect(
       validatorRegistry.findValidator('BoneTwistDisperser3D', 'settings/0/joints/0/twist_amount')
@@ -207,7 +196,7 @@ describe('the end-bone tail leaves', () => {
   });
 
   it('warns rather than errors outside the enum hint', () => {
-    // :149 is PROPERTY_HINT_ENUM; set_end_bone_direction (:333-336) stores the
+    // :149 is PROPERTY_HINT_ENUM. set_end_bone_direction (:333-336) stores the
     // static_cast unchecked, so the value loads and only the dropdown refuses it.
     expect(check('settings/0/end_bone_direction', '7')?.severity).toBe('warning');
     expect(check('settings/0/end_bone_direction', '-1')?.severity).toBe('warning');
@@ -231,7 +220,7 @@ describe('the twist-source leaves', () => {
   });
 
   it('accepts a Quaternion literal, normalised or not', () => {
-    // The setter (:354-357) assigns; normalisation happens at process time (:770).
+    // The setter (:354-357) assigns, and normalisation happens at process time (:770).
     expect(check('settings/0/twist_from', 'Quaternion(0, 0, 0, 1)')).toBeNull();
     expect(check('settings/0/twist_from', 'Quaternion(0, 0.7071068, 0, 0.7071068)')).toBeNull();
     expect(check('settings/0/twist_from', 'Quaternion(0, 2, 0, 5)')).toBeNull();
@@ -250,7 +239,7 @@ describe('the disperse-mode leaves', () => {
   });
 
   it('warns rather than errors outside the enum hint', () => {
-    // :154 is PROPERTY_HINT_ENUM "Even,Weighted,Custom"; set_disperse_mode
+    // :154 is PROPERTY_HINT_ENUM "Even,Weighted,Custom". set_disperse_mode
     // (:411-415) stores the static_cast unchecked.
     expect(check('settings/0/disperse_mode', '3')?.severity).toBe('warning');
   });
@@ -263,7 +252,7 @@ describe('the disperse-mode leaves', () => {
 
   it('warns at BOTH ends of weight_position, since neither is open', () => {
     // :155 is PROPERTY_HINT_RANGE "0,1,0.001" with no or_greater and no
-    // or_less; set_weight_position (:422-425) assigns straight through.
+    // or_less. set_weight_position (:422-425) assigns straight through.
     expect(check('settings/0/weight_position', '-0.5')?.severity).toBe('warning');
     expect(check('settings/0/weight_position', '1.5')?.severity).toBe('warning');
   });
@@ -277,7 +266,7 @@ describe('damping_curve', () => {
   it('accepts the bare null Godot writes for an unset Ref', () => {
     // The leaf is outside ClassDB, so the packer cannot recognise a default and
     // writes it on every Custom-mode save (property_utils.cpp:182-198,
-    // packed_scene.cpp:982); VariantWriter stores `null` for a null OBJECT
+    // packed_scene.cpp:982). VariantWriter stores `null` for a null OBJECT
     // (variant_parser.cpp:2184-2185).
     expect(check('settings/0/damping_curve', 'null')).toBeNull();
   });
@@ -324,7 +313,7 @@ describe('joints/<j>/twist_amount', () => {
   });
 
   it('accepts the non-finite float literals Godot writes and reloads', () => {
-    // variant_parser.cpp:150-155; no setter here opens with
+    // variant_parser.cpp:150-155. No setter here opens with
     // ERR_FAIL_COND(!is_finite(...)), so neither is refused.
     expect(check('settings/0/joints/0/twist_amount', 'inf')).toBeNull();
     expect(check('settings/0/joints/0/twist_amount', 'nan')).toBeNull();
@@ -375,7 +364,7 @@ describe('grounding metadata', () => {
   });
 
   it('classifies every leaf behind the dispatcher', () => {
-    // `boundGrounding` recurses through `.leaves`; a leaf declaring neither tag
+    // `boundGrounding` recurses through `.leaves`, and a leaf declaring neither tag
     // would be counted as un-audited there, so catch it in the slice instead.
     const validator = validatorRegistry.declarationFor('BoneTwistDisperser3D', 'settings/*');
     const unclassified: string[] = [];

@@ -1,10 +1,7 @@
 /**
- * Which Godot editor workspace a render canvas hosts (ADR-0006, Godot-parity
- * amendment): '3d' — the spatial viewport, renders Node3D content only;
- * '2d' — the 2D world canvas inside the Canvas2DStage, renders CanvasItem
- * content only. The dispatcher reads this to drop the other kind's subtrees,
- * mirroring how Godot's 3D editor never draws CanvasItems and its 2D editor
- * never draws Node3Ds. Default is '3d' (the primary TscnCanvas).
+ * The Godot editor workspace a canvas hosts (ADR-0006): '3d' draws only Node3D
+ * content, '2d' only CanvasItem content, as in Godot's editor. The dispatcher
+ * drops the other kind's subtrees. The default is '3d'.
  */
 import { createContext, useContext, type ReactNode } from 'react';
 

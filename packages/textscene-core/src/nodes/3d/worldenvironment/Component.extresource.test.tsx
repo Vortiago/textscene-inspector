@@ -1,17 +1,8 @@
 /**
- * An Environment, a Sky, or a sky material can each live in a standalone `.tres` rather
- * than inline. Godot treats the two forms identically; resolving only `SubResource`
- * dropped the external one silently.
- *
- * The witness is `scenes/demos/3d/truck_town/town/town_scene.tscn`, whose Sky holds
- * `sky_material = ExtResource("…")` → `res://town/sky_day.tres`. That cost more than a
- * backdrop: the Environment draws half its ambient from the sky
- * (`ambient_light_sky_contribution = 0.5`), so with no sky resolved every surface the
- * sun did not reach went black.
- *
- * The seam under test is the resolver hook rather than the rendered sky, because the
- * question is "does the reference get followed?" — what happens once a `SkyProperties`
- * exists is `SkyLayer`'s business and already covered.
+ * An Environment, a Sky or a sky material can each live in a standalone `.tres`, and Godot treats
+ * that form as it treats the inline one. The seam under test is the resolver hook, not the rendered
+ * sky, because the question is whether the reference is followed. A resolved `SkyProperties` is
+ * `SkyLayer`'s business.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

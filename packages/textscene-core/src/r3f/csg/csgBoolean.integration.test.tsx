@@ -1,10 +1,7 @@
 /**
- * End to end: a CSG subtree really does become ONE mesh with a hole in it.
- *
- * Every other CSG test checks a piece. This one renders through the real component tree
- * and asserts the three things that only compose at this level: contributors stop drawing
- * their own solids, the root draws the evaluated result, and the contributors are still
- * MOUNTED so selection and bounds keep working.
+ * End to end, through the real component tree, a CSG subtree becomes one mesh: contributors stop
+ * drawing their own solids, the root draws the evaluated result, and the contributors stay mounted
+ * so selection and bounds keep working.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -38,13 +35,9 @@ function parse(body: string) {
 }
 
 /**
- * Render, then wait until the evaluated result has actually landed.
- *
- * The CSG library arrives through a dynamic import and the component publishes its
- * status from a `.then`, so a single macrotask tick is not enough: under load (a
- * concurrent visual run, a cold CI box) the assertions raced the evaluation and saw the
- * un-subtracted box. Settling on an observable condition rather than a fixed delay
- * removes the flake without inventing a timeout to tune.
+ * Renders, then waits until the evaluated result lands. The library arrives through a dynamic
+ * import and the status publishes from a `.then`, so one macrotask tick races the evaluation
+ * under load. An observable condition, not a fixed delay, ends the wait.
  */
 async function render(body: string, expectSettled = true) {
   clearEvaluationCache();
@@ -93,10 +86,9 @@ size = Vector3(2, 2, 2)
 `;
 
 /**
- * A nested combiner carrying its own `operation`.
- *
- * csg_shape.cpp:472,481 — the parent calls `child->_get_brush()`, which folds the
- * child's WHOLE subtree, then combines that one result by `child->get_operation()`.
+ * A nested combiner carrying its own `operation`. The parent calls `child->_get_brush()`, which
+ * folds the child's whole subtree, then combines that result by `child->get_operation()`
+ * (csg_shape.cpp:472,481).
  */
 const NESTED_COMBINER_OP = `[node name="Root" type="Node3D"]
 

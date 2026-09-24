@@ -1,40 +1,8 @@
 /**
- * Semantic linter rules for ConvertTransformModifier3D.
- *
- * Format validation is linterParser.ts's, which checks each `settings/<i>/<leaf>`
- * in isolation. This file holds the one claim that needs a SIBLING property to be
- * decidable, so no per-property validator can make it.
- *
- * ## The range hint is picked at runtime from the neighbouring transform_mode
- *
- * `_get_property_list` chooses the `PROPERTY_HINT_RANGE` string for a setting's
- * `range_min` / `range_max` pair from that same setting's `transform_mode`, once
- * for the `apply/` group (convert_transform_modifier_3d.cpp:133-140) and again
- * for `reference/` (:146-153):
- *
- *   Position (0) -> HINT_POSITION "-10,10,0.01,or_greater,or_less,suffix:m" (:33)
- *   Rotation (1) -> HINT_ROTATION "-180,180,0.01,radians_as_degrees"        (:34)
- *   anything else -> HINT_SCALE   "0,10,0.01,or_greater"                    (:35)
- *
- * The third arm really is `else`, not a test for Scale, so a mode outside the
- * enum lands there too; the mode value itself is the validator's warning.
- *
- * Under ADR-0032 each arm reads differently:
- *
- * - Position opens BOTH ends (`or_greater` AND `or_less`), so it grounds nothing.
- *   This is also the struct default (convert_transform_modifier_3d.h:46, :51),
- *   which is why an absent `transform_mode` produces no diagnostic.
- * - Rotation is `radians_as_degrees`: the inspector shows degrees while the
- *   `.tscn` stores radians, so the hint's -180..180 is a stored -PI..PI. The
- *   value is read back as an angle in radians (`Quaternion(rot_axis, point)`,
- *   :407), which confirms the unit.
- * - Scale opens only the max end, leaving a floor of 0.
- *
- * Every setter is a bare assignment past an `ERR_FAIL_INDEX` on the setting
- * index (:208, :220, :257, :269), so nothing here is ever an error: the value
- * loads and runs, and only the inspector's spinner cannot reach it. The `CLAMP`
- * at :405 is applied to the interpolated result during processing, not to the
- * stored property, so it grounds nothing either.
+ * ConvertTransformModifier3D's rule that needs a sibling: `_get_property_list` picks the
+ * `PROPERTY_HINT_RANGE` for a setting's `range_min`/`range_max` from that setting's `transform_mode`,
+ * for `apply/` (convert_transform_modifier_3d.cpp:133-140) and `reference/` (:146-153). Every setter
+ * assigns past an `ERR_FAIL_INDEX` on the index (:208, :220, :257, :269), so each arm only warns.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -49,11 +17,9 @@ import { indexedElements, indexedKeyRegex, toIntIndex } from '../../../../godot/
 const RULE_NAME = 'converttransformmodifier3d-range-outside-mode-hint';
 
 /**
- * `settings/<i>/apply|reference/range_min|range_max`, the four mode-dependent
- * leaves. `_set` reads the index with a bare
- * `path.get_slicec('/', 1).to_int()` and no validity gate
- * (convert_transform_modifier_3d.cpp:41), so the grammar is the whole segment
- * and {@link toIntIndex} is what turns it into a number.
+ * `settings/<i>/apply|reference/range_min|range_max`, the four mode-dependent leaves. `_set` reads the
+ * index with a bare `path.get_slicec('/', 1).to_int()` and no validity gate
+ * (convert_transform_modifier_3d.cpp:41), so {@link toIntIndex} turns the whole segment into a number.
  */
 const RANGE_KEY_RE = indexedKeyRegex('^settings/(#)/(apply|reference)/(range_min|range_max)$', 'to_int');
 
@@ -67,7 +33,10 @@ const TRANSFORM_MODE_ROTATION = 1;
  */
 const ROTATION_LIMIT = Math.PI + RADIAN_ROUNDTRIP_EPSILON;
 
-/** Arms for HINT_ROTATION: both ends closed, in radians rather than the hint's degrees. */
+/**
+ * Arms for HINT_ROTATION "-180,180,0.01,radians_as_degrees" (:34): both ends closed, in radians. The
+ * `.tscn` stores radians, and `Quaternion(rot_axis, point)` (:407) reads the value as an angle.
+ */
 function rotationArms(key: string): RangeArm[] {
   const explain =
     'the hint is radians_as_degrees, so the inspector shows -180..180 while the .tscn stores radians. ' +
@@ -90,7 +59,10 @@ function rotationArms(key: string): RangeArm[] {
   ];
 }
 
-/** Arms for HINT_SCALE: a floor of 0, with `or_greater` leaving the ceiling open. */
+/**
+ * Arms for HINT_SCALE "0,10,0.01,or_greater" (:35): a floor of 0, the ceiling open. It is the `else`
+ * arm, so a mode outside the enum lands here too, and the mode itself is the validator's warning.
+ */
 function scaleArms(key: string): RangeArm[] {
   return [
     {
@@ -108,10 +80,8 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
   if (!isValidProperties(node.properties)) return [];
   const props = node.properties as Record<string, string>;
 
-  // Grouped by the setting `_set` RESOLVES each key to, so `settings/00/…` and
-  // `settings/0/…` are one setting and a range finds the mode written beside it
-  // under either spelling. Keying on the index TEXT split them in two and read
-  // the default Position for a mode the file states.
+  // Grouped by the setting `_set` resolves each key to, so `settings/00/…` and `settings/0/…` are
+  // one setting and a range finds the mode written beside it under either spelling.
   const settings = indexedElements(props, 'settings/', 'to_int');
 
   const table: Record<string, RangeArm[]> = {};
@@ -120,7 +90,7 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
     if (!match) continue;
     const index = toIntIndex(match[1]!);
     // A negative index is the validator's error, against the ERR_FAIL_INDEX_V
-    // in `_set`; reporting it again here would double up on one defect.
+    // in `_set`. Reporting it again here would double up on one defect.
     if (!(index >= 0)) continue;
 
     const modeRaw = settings.get(index)?.get(`${match[2]!}/transform_mode`);
@@ -128,13 +98,16 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
     // (convert_transform_modifier_3d.h:46, :51), which Godot omits when unchanged.
     const mode = ruleInt(modeRaw, TRANSFORM_MODE_POSITION);
     // A malformed mode is already reported by its own validator, and a
-    // non-finite one is altered at parse; neither selects an arm here.
+    // non-finite one is altered at parse. Neither selects an arm here.
     if (mode === null) continue;
+    // HINT_POSITION "-10,10,0.01,or_greater,or_less,suffix:m" (:33) opens both ends: no bound.
     if (mode === TRANSFORM_MODE_POSITION) continue;
 
     table[key] = mode === TRANSFORM_MODE_ROTATION ? rotationArms(key) : scaleArms(key);
   }
 
+  // The `CLAMP` at :405 applies to the interpolated result during processing, not the stored
+  // property, so it grounds no error.
   return rangeAdvisories(node, table);
 }
 

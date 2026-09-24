@@ -1,13 +1,6 @@
 /**
- * `progressBarMinimumSize`/`progressBarPercentRatio` vs Godot 4.6.3
- * (`scene/gui/progress_bar.cpp:37-48,149-166`).
- *
- * Font metrics at size 16 (vendored OpenSans_SemiBold, `unitsPerEm=2048`,
- * `ascent=2189`, `descent=600`): ascentPx = ceil(2189*16/2048) = 18,
- * descentPx = ceil(600*16/2048) = 5, fontHeightPx (no line_spacing, matching
- * `label/nativeSolver.test.ts`'s own worked value) = 23. At size 32:
- * ascentPx = ceil(2189*32/2048) = 35, descentPx = ceil(600*32/2048) = 10,
- * fontHeightPx = 45.
+ * Tests `progressBarMinimumSize` and `progressBarPercentRatio` against
+ * `scene/gui/progress_bar.cpp:37-48,149-166`.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
@@ -49,6 +42,9 @@ function minSize(props: Partial<ProgressBarProperties>, styleBoxes?: Record<stri
   return progressBarMinimumSize(node(props, styleBoxes), ctx());
 }
 
+// OpenSans_SemiBold (`unitsPerEm=2048`, `ascent=2189`, `descent=600`), no
+// line_spacing: size 16 gives ceil(2189*16/2048) = 18 + ceil(600*16/2048) = 5
+// = 23px. Size 32 gives 35 + 10 = 45px.
 describe('progressBarMinimumSize (progress_bar.cpp:37-48)', () => {
   it('defaults to the default-theme background/fill content margin (2px each side, scale 1) maxed with "100%" height', () => {
     // background/fill get_minimum_size() = (4, 4) each (content margin 2+2);
@@ -180,8 +176,7 @@ describe('progressBarFillRect (progress_bar.cpp:112-147)', () => {
 
 describe('is_layout_rtl() — the fill DIRECTION swap (progress_bar.cpp:82,121)', () => {
   // `right_to_left = mode == (is_layout_rtl() ? FILL_BEGIN_TO_END : FILL_END_TO_BEGIN)`:
-  // RTL does not mirror the rect, it swaps which of the two horizontal fill
-  // modes counts as "from the right", so each mode takes the OTHER mode's rect.
+  // RTL swaps the two horizontal fill modes, so each takes the other's rect.
   it('RTL fills FILL_BEGIN_TO_END from the right — the LTR FILL_END_TO_BEGIN rect', () => {
     expect(progressBarFillRect({ x: 100, y: 20 }, 0, 0.5, { x: 4, y: 4 }, true)).toEqual({
       x: 48,
@@ -216,12 +211,9 @@ describe('is_layout_rtl() — the fill DIRECTION swap (progress_bar.cpp:82,121)'
   });
 
   it('swaps the indeterminate bar too, on a bar TALLER than it is wide (progress_bar.cpp:82)', () => {
-    // 20x60: fill_size = min(20,60)*2 = 40; the centred `_indeterminate_fill_progress`
-    // is max(20,60)/2 + 40/2 = 50. LTR FILL_BEGIN_TO_END puts the band at
-    // `ifp - fill_size` = 10, so only its first 10px land inside the bar; RTL
-    // puts it at `size.width - ifp` = -30, so only its LAST 10px do. A bar
-    // WIDER than it is tall cannot show this: there `ifp` is w/2 + fill_size/2,
-    // which makes both expressions the same number.
+    // 20x60: fill_size = 40 and the centred ifp = 60/2 + 40/2 = 50. LTR puts
+    // the band at `ifp - fill_size` = 10 and RTL at `size.width - ifp` = -30.
+    // A bar wider than tall makes both expressions equal, so it cannot show this.
     expect(progressBarIndeterminateFillRect({ x: 20, y: 60 }, 0, false)).toEqual({
       x: 10,
       y: 0,

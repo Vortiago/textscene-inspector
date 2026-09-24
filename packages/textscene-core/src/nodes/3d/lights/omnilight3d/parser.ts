@@ -1,6 +1,4 @@
-/**
- * OmniLight3D parser - parses OmniLight3D nodes from TSCN.
- */
+/** OmniLight3D parser: the Light3D surface plus range, attenuation and shadow mode. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { OmniLight3DProperties } from './types';

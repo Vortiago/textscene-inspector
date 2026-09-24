@@ -1,10 +1,7 @@
 /**
- * `<HSplitContainer>` — a SplitContainer draws no chrome beyond the
- * grabber icon, and the icon itself is invisible by default (`autohide`
- * theme default `true`, matching real Godot's own static-render behaviour —
- * see the component's own module doc). These pin: nothing draws with fewer
- * than two sortable children or the default theme, and the icon appears at
- * the expected rect the instant a scene overrides `autohide`.
+ * `<HSplitContainer>` draws only the grabber icon, hidden by the `autohide`
+ * default as in a `pnpm ref:godot` render. Nothing draws below two sortable
+ * children or under the default theme; an `autohide` override draws the icon.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -36,7 +33,7 @@ function solveNode(
 
 const EXPAND_FILL = 3;
 
-/** Two FILL|EXPAND children — the "Both" fixture row's own shape. */
+/** Two FILL|EXPAND children: the "Both" fixture row's own shape. */
 function bothExpandChildren(): SolveNode[] {
   return [
     solveNode('Left', 'ColorRect', { sizeFlagsHorizontal: EXPAND_FILL, sizeFlagsVertical: EXPAND_FILL }),
@@ -136,7 +133,7 @@ describe('<HSplitContainer>', () => {
 
   it('draws the grabber icon through the walker-composed tint', async () => {
     // The icon carries no theme colour of its own (`SplitContainer` draws it
-    // with the canvas item's own modulate alone), so the linear tint IS its
+    // with the canvas item's own modulate alone), so the linear tint is its
     // material colour.
     const node = split({ themeOverrideConstants: { autohide: 0 } }, bothExpandChildren());
     const renderer = await ReactThreeTestRenderer.create(

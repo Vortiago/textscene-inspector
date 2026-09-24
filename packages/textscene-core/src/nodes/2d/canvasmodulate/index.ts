@@ -1,4 +1,4 @@
-/** CanvasModulate registration — parser. */
+/** CanvasModulate registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseCanvasModulate } from './parser';

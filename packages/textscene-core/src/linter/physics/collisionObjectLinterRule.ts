@@ -1,9 +1,8 @@
 /**
- * The one configuration warning every collision object shares: no shape child,
- * so nothing to collide with. `CollisionObject2D::get_configuration_warnings`
- * (collision_object_2d.cpp:588) and `CollisionObject3D`'s (:739) push it for
- * every subclass, so one rule per dimension reaches the whole family through
- * `descendsFrom`, the way the non-uniform-scale warning does.
+ * The configuration warning every collision object shares: no shape child.
+ * `CollisionObject2D::get_configuration_warnings` (collision_object_2d.cpp:588)
+ * and `CollisionObject3D`'s (:739) push it for every subclass, so one rule per
+ * dimension reaches the whole family through `descendsFrom`.
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../types.js';

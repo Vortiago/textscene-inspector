@@ -1,11 +1,8 @@
 /**
- * `csgPolygon3DGeometryKey` must be a stable string over EXACTLY what
- * `csgPolygon3DGeometry` reads, because it is the boolean evaluation cache's key.
- *
- * Every "keys differ" assertion is paired with a "geometry differs" one: a key test alone
- * passes under any serialisation change, including a wrong one, whereas the pair pins the
- * contract that a shape change can never reuse a cached boolean. The pairs run in PATH
- * mode deliberately — that is the only mode in which `pathPlan` reads the curve at all.
+ * `csgPolygon3DGeometryKey` must be a stable string over what `csgPolygon3DGeometry` reads: it is
+ * the boolean cache's key. Each "keys differ" assertion pairs with a "geometry differs" one, since
+ * a key test alone passes under any serialisation change, so a shape change never reuses a cached
+ * boolean. The pairs run in PATH mode, the only mode in which `pathPlan` reads the curve.
  */
 
 import { describe, expect, it } from 'vitest';

@@ -1,13 +1,8 @@
 /**
- * `flowContainerMinimumSize`/`flowContainerLayout` vs Godot 4.6.3
- * (`scene/gui/flow_container.cpp`, `scene/gui/container.cpp`). Every
- * expected rect below is hand-derived from that source, transcribing
- * `_resort`'s two passes exactly (cited beside each assertion). Children are
- * synthetic `custom_minimum_size` Controls, never Labels, so a font-metric
- * regression and a `_resort` regression can never present as the same test
- * failure. `h_separation`/`v_separation` are set via
- * `theme_override_constants` on the flow node itself so every test's
- * arithmetic is independent of the theme's own scale.
+ * `flowContainerMinimumSize` and `flowContainerLayout` against Godot 4.6.3
+ * (`scene/gui/flow_container.cpp`, `scene/gui/container.cpp`), each rect derived by hand.
+ * Children are `custom_minimum_size` Controls, not Labels, so a font regression cannot
+ * look like a `_resort` one. The separations are overrides, so no test depends on the theme scale.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
@@ -47,8 +42,7 @@ function flow(
       properties: { name: 'F', ...rest, themeOverrideConstants } as FlowContainerProperties,
     },
     children,
-    // A local theme_override_constants/* now reaches `separationOf` through
-    // `n.constants` (the walker folds it in unconditionally), not props.
+    // A local theme_override_constants/* reaches `separationOf` through `n.constants`, not props.
     constants: themeOverrideConstants,
   };
 }
@@ -70,11 +64,9 @@ function childEntries(children: SolveNode[]): { node: SolveNode; minSize: { x: n
 }
 
 /**
- * Solves `flowNode` and its children through the real solver core (the same
- * two-pass `solveControlTree` production uses), so a test can assert the
- * `SizeDependentMinimum` closure end to end rather than a slice-local
- * simulation of it. Explicit offsets pin the flow container's OWN rect,
- * exactly like `gridcontainer/nativeSolver.test.ts`'s `solveViaGrid`.
+ * Solves `flowNode` and its children through `solveControlTree`, so a test covers
+ * the `SizeDependentMinimum` closure end to end. Explicit offsets pin the container's
+ * rect, as `solveViaGrid` does in `gridcontainer/nativeSolver.test.ts`.
  */
 function solveViaFlow(flowNode: SolveNode, rect: { x: number; y: number; w: number; h: number }) {
   const p = flowNode.node.properties as FlowContainerProperties;
@@ -123,9 +115,8 @@ describe('flowContainerMinimumSize', () => {
 
   it('HFlowContainer/VFlowContainer resolve orientation from the node TYPE, ignoring a stray `vertical` property (flow_container.h:99-113)', () => {
     const children = [leaf('c1', { customMinimumSize: { x: 30, y: 10 } })];
-    // `vertical: true` on an HFlowContainer is a property Godot's own editor
-    // could never write (it is hidden/USAGE_NONE); the solver must still
-    // treat it as horizontal.
+    // The Godot editor cannot write `vertical: true` on an HFlowContainer (USAGE_NONE),
+    // and the solver still treats the node as horizontal.
     const result = flowContainerMinimumSize(flow('HFlowContainer', { vertical: true }, children), ctx());
     expect(result).toEqual({ x: 30, y: 10 });
   });
@@ -210,7 +201,7 @@ describe('flowContainerLayout', () => {
 
   it('last_wrap_alignment CENTER, trailing line tighter than the one before it: negative half truncates toward zero, not down (flow_container.cpp:175-185)', () => {
     // line0: one child width 14 (length 14, stretch_avail 20-14=6), then wraps
-    // (14+16=30 > 20). line1 (last): 16+1=17 (stretch_avail 20-17=3); NOT
+    // (14+16=30 > 20). line1 (last): 16+1=17 (stretch_avail 20-17=3); not
     // filled since ofs(17) + last child width(1) = 18 <= 20.
     const c0 = leaf('c0', { customMinimumSize: { x: 14, y: 10 } });
     const c1 = leaf('c1', { customMinimumSize: { x: 16, y: 10 } });
@@ -291,8 +282,8 @@ describe('flowContainerLayout', () => {
 describe('flowContainerLayout under RTL', () => {
   it('mirrors X on a horizontal flow, leaving the wrap order and Y alone (flow_container.cpp:51,248-250)', () => {
     // `if ((rtl && !vertical) || ...) child_rect.position.x = get_rect().size.x
-    // - child_rect.position.x - child_rect.size.width`. Same wrap as the
-    // reverse_fill case: LTR x's are 0, 30, 0 in a 55-wide box, so 55 - x - 20.
+    // - child_rect.position.x - child_rect.size.width`. The reverse_fill wrap:
+    // LTR x's are 0, 30, 0 in a 55-wide box, so 55 - x - 20.
     const children = [
       leaf('c1', { customMinimumSize: { x: 20, y: 10 } }),
       leaf('c2', { customMinimumSize: { x: 20, y: 10 } }),

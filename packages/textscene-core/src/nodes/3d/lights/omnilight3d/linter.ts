@@ -1,8 +1,5 @@
 /**
- * Semantic linter rules for OmniLight3D
- *
- * Note: Format validation is handled by linterParser.ts during strict parsing.
- * This file focuses on semantic validation requiring full context (e.g., logical consistency).
+ * OmniLight3D semantic rules. linterParser.ts validates the format.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -10,13 +7,9 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
 
 /**
- * Validate OmniLight3D semantic rules
- *
- * No range advisory here: `omni_range`'s and `light_energy`'s hint floors are
- * validator bounds (light_3d.cpp:639, :389), and `omni_attenuation` hints
- * "-10,10,0.001,or_greater,or_less" (light_3d.cpp:640) so BOTH ends are open.
- *
  * light_3d.cpp:623-625: `light_projector` set while `shadow_enabled` is not true.
+ * No range advisory: `omni_range` and `light_energy` floors are validator bounds
+ * (light_3d.cpp:639, :389), and `omni_attenuation` (light_3d.cpp:640) is open at both ends.
  */
 function checkOmniLight3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -25,9 +18,6 @@ function checkOmniLight3D(context: RuleContext): Diagnostic[] {
   return projectorDiagnostic ? [projectorDiagnostic] : [];
 }
 
-/**
- * OmniLight3D semantic validation rule
- */
 const omniLight3DValidationRule: LintRule = {
   meta: {
     name: 'valid-omnilight3d-properties',
@@ -41,8 +31,6 @@ const omniLight3DValidationRule: LintRule = {
   check: checkOmniLight3D,
 };
 
-// Self-register the rule
 ruleRegistry.register(omniLight3DValidationRule);
 
-// Export for testing
 export { omniLight3DValidationRule };

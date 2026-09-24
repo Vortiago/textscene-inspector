@@ -16,7 +16,7 @@ function check(property: string, value: string) {
 
 describe('CanvasLayer validators', () => {
   describe('layer', () => {
-    // canvas_layer.cpp:340 — PROPERTY_HINT_RANGE bound to int32 min/max
+    // canvas_layer.cpp:340, PROPERTY_HINT_RANGE bound to int32 min/max
     // (RS::CANVAS_LAYER_MIN/MAX, rendering_server.h:105-106).
     it('accepts real corpus values (0, 1, 100)', () => {
       expect(check('layer', '0')).toBeNull();
@@ -30,17 +30,12 @@ describe('CanvasLayer validators', () => {
     });
 
     // set_layer (canvas_layer.cpp:37-43) is a bare assignment, no ERR_FAIL
-    // or clamp, so past the hint is a warning, not an error.
-    it('warns, not errors, just past either int32 extreme', () => {
-      // `2147483648` is the unsigned spelling of the int32 floor, so it lands
-      // ON the hint's own minimum rather than outside it.
+    // or clamp, so the hint is a warning tier. The int32 slot refuses these two first.
+    it('errors just past either int32 extreme', () => {
       const above = check('layer', '4294967296');
       const below = check('layer', '-2147483649');
-      // Asserting the VALUE code (not just severity) proves the range branch
-      // ran, rather than a format rejection landing on the right severity by
-      // coincidence.
-      // Both are outside the 32-bit band, so the slot refuses them before the
-      // range branch is reached.
+      // The value code, not only the severity, proves the slot refused the value
+      // rather than a format rejection landing on the same severity.
       expect(above?.code).toBe('INVALID_LAYER_VALUE');
       expect(above?.severity).toBe('error');
       expect(below?.code).toBe('INVALID_LAYER_VALUE');
@@ -49,7 +44,7 @@ describe('CanvasLayer validators', () => {
   });
 
   describe('visible', () => {
-    // canvas_layer.cpp:49-65 — set_visible is a bare assignment (plus an
+    // canvas_layer.cpp:49-65: set_visible is a bare assignment (plus an
     // early-return no-op check), no hint on the BOOL property.
     it('accepts true and false', () => {
       expect(check('visible', 'true')).toBeNull();
@@ -64,7 +59,7 @@ describe('CanvasLayer validators', () => {
   });
 
   describe('offset', () => {
-    // canvas_layer.cpp:118-125 — set_offset is a bare assignment. Hint is
+    // canvas_layer.cpp:118-125: set_offset is a bare assignment. Hint is
     // PROPERTY_HINT_NONE with "suffix:px" only (canvas_layer.cpp:343), not a
     // bound, so format-only.
     it('accepts a Vector2', () => {
@@ -79,7 +74,7 @@ describe('CanvasLayer validators', () => {
   });
 
   describe('rotation', () => {
-    // canvas_layer.cpp:344 — PROPERTY_HINT_RANGE "-1080,1080,0.1,or_less,
+    // canvas_layer.cpp:344, PROPERTY_HINT_RANGE "-1080,1080,0.1,or_less,
     // or_greater,radians_as_degrees": both ends carry their open flag, so
     // neither ever warns (ADR-0032). set_rotation (canvas_layer.cpp:135-142)
     // is a bare assignment, no is_finite guard either.
@@ -102,7 +97,7 @@ describe('CanvasLayer validators', () => {
   });
 
   describe('scale', () => {
-    // canvas_layer.cpp:152-159 — set_scale is a bare assignment, no zero
+    // canvas_layer.cpp:152-159: set_scale is a bare assignment, no zero
     // guard (unlike Node2D's, which substitutes CMP_EPSILON). Hint is
     // PROPERTY_HINT_LINK (canvas_layer.cpp:345), an inspector display hint
     // pairing the two components, not a bound.
@@ -123,7 +118,7 @@ describe('CanvasLayer validators', () => {
   });
 
   describe('transform', () => {
-    // canvas_layer.cpp:79-85 — set_transform is a bare assignment. Hint is
+    // canvas_layer.cpp:79-85: set_transform is a bare assignment. Hint is
     // PROPERTY_HINT_NONE with "suffix:px" only (canvas_layer.cpp:346).
     it('accepts a Transform2D', () => {
       expect(check('transform', 'Transform2D(1, 0, 0, 1, 0, 0)')).toBeNull();
@@ -139,7 +134,7 @@ describe('CanvasLayer validators', () => {
   });
 
   describe('follow_viewport_enabled', () => {
-    // canvas_layer.cpp:273-280 — set_follow_viewport is a bare assignment
+    // canvas_layer.cpp:273-280: set_follow_viewport is a bare assignment
     // (plus an equal-check). Hint is PROPERTY_HINT_GROUP_ENABLE
     // (canvas_layer.cpp:350), which only makes the group checkable in the
     // inspector and carries no bound for a BOOL.
@@ -156,7 +151,7 @@ describe('CanvasLayer validators', () => {
   });
 
   describe('follow_viewport_scale', () => {
-    // canvas_layer.cpp:351 — PROPERTY_HINT_RANGE "0.001,1000,0.001,
+    // canvas_layer.cpp:351, PROPERTY_HINT_RANGE "0.001,1000,0.001,
     // or_greater,or_less": both ends open, same shape as `rotation`, so no
     // bound applies. set_follow_viewport_scale (canvas_layer.cpp:286-289) is
     // a bare assignment.

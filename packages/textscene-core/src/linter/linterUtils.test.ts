@@ -1,12 +1,9 @@
 /** Tests for the shared scene-index helpers used by the semantic linters.
- *
- * NodePath RESOLUTION lives in `nodePathResolve.test.ts`, beside the port of
- * `Node::get_node_or_null` that replaced the name-matching form this file used
- * to cover. */
+ * NodePath resolution is tested in `nodePathResolve.test.ts`. */
 
 import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types.js';
-import { findNodesByName, firstNodeOfType } from './linterUtils.js';
+import { firstNodeOfType } from './linterUtils.js';
 
 function node(
   name: string,
@@ -19,7 +16,7 @@ function node(
 
 describe('firstNodeOfType', () => {
   // `Node::Comparator` sorts a group in tree order (node.h:132-134), which is
-  // depth-first pre-order — NOT the order the headings appear in the file.
+  // depth-first pre-order, not the order the headings appear in the file.
   it('takes the first in DEPTH-FIRST order, not in file order', () => {
     const deep = node('Deep', 'WorldEnvironment');
     const shallow = node('Shallow', 'WorldEnvironment');
@@ -55,19 +52,5 @@ describe('firstNodeOfType', () => {
   it('is null when nothing of that type joins the group', () => {
     const root = node('Root', 'Node3D', [node('Bare', 'WorldEnvironment')]);
     expect(firstNodeOfType([root], 'WorldEnvironment', () => false)).toBeNull();
-  });
-});
-
-describe('findNodesByName', () => {
-  it('collects every match depth-first', () => {
-    const a = node('X', 'Node3D');
-    const b = node('X', 'Label3D');
-    const root = node('Root', 'Node3D', [a, node('G', 'Node3D', [b])]);
-
-    expect(findNodesByName([root], 'X')).toEqual([a, b]);
-  });
-
-  it('returns an empty array when nothing matches', () => {
-    expect(findNodesByName([node('Root', 'Node3D')], 'Nope')).toEqual([]);
   });
 });

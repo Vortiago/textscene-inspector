@@ -1,15 +1,7 @@
 /**
- * TextEdit strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. There is no genuine cross-field rule for TextEdit, so there
- * is no `linter.ts` / `linter.test.ts`.
- *
- * Grouped to match linterParser.ts's own grouping (and text_edit.cpp's
- * ADD_GROUP structure): one `describe` per group, one `it` per property
- * covering happy + malformed + any bound, rather than 47 near-identical cases.
+ * Tests the TextEdit strict validators through `validatorRegistry`, not by linting a `.tscn`,
+ * so a failure points at the validator. TextEdit has no cross-field rule, so no `linter.ts`.
+ * One `describe` per ADD_GROUP in text_edit.cpp, one `it` per property: happy, malformed and bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -68,8 +60,7 @@ describe('TextEdit strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property/per-group cases follow.
+    // A validator that accepts arbitrary prose validates no format.
     const accepted = validatorRegistry
       .getOwnKeys('TextEdit')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -140,7 +131,7 @@ describe('TextEdit strict validators', () => {
     // text_server.h:98-102: AUTOWRAP_OFF=0, AUTOWRAP_ARBITRARY=1, AUTOWRAP_WORD=2,
     // AUTOWRAP_WORD_SMART=3. TextEdit's PROPERTY_HINT_ENUM offers only 1-3
     // (text_edit.cpp:7559), and set_autowrap_mode has no clamp
-    // (text_edit.cpp:6354-6360) — which makes 0 a warning rather than an error.
+    // (text_edit.cpp:6354-6360), which makes 0 a warning rather than an error.
     it('warns on 0 (AUTOWRAP_OFF), which this class does not offer', () => {
       expect(check('autowrap_mode', '0')).not.toBeNull();
     });
@@ -334,8 +325,8 @@ describe('TextEdit strict validators', () => {
     });
 
     it('warns on -1: the setter loads it, the hint does not offer it', () => {
-      // The setter allows it (its ERR_FAIL_COND opens below -1), so it loads —
-      // and the hint (0-3) does not offer it, so it warns rather than erroring.
+      // The setter allows it (its ERR_FAIL_COND opens below -1), so it loads.
+      // The hint (0-3) does not offer it, so it warns rather than errors.
       expect(check('text_direction', '-1')?.severity).toBe('warning');
     });
 

@@ -1,11 +1,8 @@
 /**
- * The three families whose keys do NOT end in a leaf: `sources/<id>` and
- * `pattern_<n>` are an index and nothing else, and `tile_proxies/<level>` is a
- * fixed three-key set (tile_set.cpp:3961-4006, :4218-4230).
- *
- * All three are OBJECT or ARRAY slots whose guard sits in the method `_set`
- * forwards to — `add_source` (:476-479), `add_pattern` (:1358-1359) — rather
- * than in `_set` itself.
+ * The three families whose keys end in no leaf: `sources/<id>` and `pattern_<n>` are an index,
+ * and `tile_proxies/<level>` is a fixed three-key set (tile_set.cpp:3961-4006, :4218-4230). Each
+ * is an OBJECT or ARRAY slot guarded in the method `_set` forwards to: `add_source` (:476-479) and
+ * `add_pattern` (:1358-1359).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,9 +20,8 @@ const PATTERN = 'SubResource("TileMapPattern_1")';
 
 const CASES: KeyCase[] = [
   {
-    // tile_set.cpp:4218, an OBJECT slot hinted `TileSetAtlasSource`, carrying
-    // PROPERTY_USAGE_NO_EDITOR — which is the storage bit alone, so it IS
-    // written.
+    // tile_set.cpp:4218, an OBJECT slot hinted `TileSetAtlasSource`, with PROPERTY_USAGE_NO_EDITOR:
+    // the storage bit alone, so it is written.
     key: 'sources/0',
     valid: [ATLAS],
     invalid: [
@@ -36,9 +32,8 @@ const CASES: KeyCase[] = [
     ],
   },
   {
-    // `INVALID_SOURCE` is -1 (tile_set.h:214), so this one passes :479 and is
-    // then RE-SEATED at `next_source_id` (:481): the id in the file is not the
-    // id the source gets.
+    // `INVALID_SOURCE` is -1 (tile_set.h:214), so this one passes :479 and is re-seated at
+    // `next_source_id` (:481): the id in the file is not the id the source gets.
     key: 'sources/-1',
     invalid: [{ value: ATLAS, severity: 'error', contains: ['-1', 'tile_set.cpp:481'] }],
   },
@@ -59,15 +54,15 @@ const CASES: KeyCase[] = [
   },
   { key: 'sources/+3', valid: [ATLAS] },
   {
-    // tile_set.cpp:3971 demands Variant::ARRAY and :3973 an EVEN element count,
+    // tile_set.cpp:3971 demands Variant::ARRAY and :3973 an even element count,
     // because each pair is one from/to mapping.
     key: 'tile_proxies/source_level',
-    // The typed spelling loads: :3971 tests the Variant TYPE, and a typed Array
-    // IS `Variant::ARRAY`. What the SAVER emits bounds none of it.
+    // The typed spelling loads: :3971 tests the Variant type, and a typed Array is
+    // `Variant::ARRAY`. What the saver emits bounds none of it.
     valid: ['[]', '[0, 1]', '[0, 1, 2, 3]', 'Array[int]([0, 4, 2, 4])', 'Array[int]([])'],
     invalid: [
       { value: '[0]', severity: 'error', contains: ['even', 'tile_set.cpp:3973'] },
-      // And the pair count is read out of the WRAPPED body, not off the head of
+      // The pair count is read out of the wrapped body, not off the head of
       // the value: `slice(1, -1)` here yields `rray[int]([0, 4, 2` and counts 3.
       { value: 'Array[int]([0])', severity: 'error', contains: ['even', 'got 1'] },
       { value: 'Array[int]([0, 4, 2])', severity: 'error', contains: ['even', 'got 3'] },
@@ -115,13 +110,9 @@ const CASES: KeyCase[] = [
   },
   { key: 'pattern_+2', valid: [PATTERN] },
   {
-    // `components.size() == 1` (:3995), so a leaf below the index matches no
-    // branch and the write is dropped — but nothing reports it: the terminal-
-    // index routing shape claims a key with NO `/` past the prefix, and the
-    // glued `pattern_` prefix cannot be spelled as a path wildcard. Godot never
-    // writes this key, so the family is registered as the engine declares it
-    // and this shape falls through unclaimed, exactly as any key no type
-    // declares does.
+    // `components.size() == 1` (:3995), so the write is dropped, and nothing reports it: the
+    // terminal-index routing claims no key with a `/` past the glued `pattern_` prefix. Godot never
+    // writes this key, so it falls through unclaimed, as any key no type declares does.
     key: 'pattern_0/cells',
     valid: [PATTERN],
   },

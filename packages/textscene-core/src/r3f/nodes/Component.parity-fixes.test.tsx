@@ -1,17 +1,6 @@
 /**
- * Properties a node once parsed and then silently dropped before it reached
- * THREE. Each test pins one of them to its expected value on the primitive.
- * Co-located rather than per-node, so the whole set reads as one block:
- *
- *   surface_material_override slot N>0 → mesh.material[N]
- *   cast_shadow=2 → the depth pass draws both faces
- *   cast_shadow=3 → castShadow === true, colour write suppressed
- *   ao_texture → material.aoMap is a THREE.Texture
- *   PrismMesh rotateY(π/6) aligns the triangular face with +X
- *   PlaneMesh flip_faces=true → mirrored geometry (negative scale on X)
- *   Camera3D h_offset → position shifted along local X
- *   Camera3D v_offset → position shifted along local Y
- *   Label3D billboard=ENABLED → mesh rotates to face camera (post useFrame)
+ * Node properties, each pinned to its expected value on the THREE primitive.
+ * Co-located rather than per node, so the set reads as one block.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -102,7 +91,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
 
     // `cast_shadow` is GeometryInstance3D state, never material state
     // (`servers/rendering/renderer_scene_cull.cpp:732`), so it lands on the
-    // depth material three built for this mesh — `getDepthMaterial` assigns the
+    // depth material three built for this mesh: `getDepthMaterial` assigns the
     // side, then the per-object hook runs (`WebGLShadowMap.js:477,535,549`).
     const depthMaterial = new THREE.MeshDepthMaterial();
     depthMaterial.side = material.shadowSide ?? THREE.BackSide;
@@ -134,10 +123,9 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const material = mesh.material as THREE.Material;
     expect(mesh.castShadow).toBe(true);
-    // NOT `visible = false`: three's shadow pass bails on an invisible object
-    // and stops walking its subtree, so that spelling cost both the shadow and
-    // every descendant. Suppressing the colour write leaves both intact — see
-    // meshinstance3d/Component.shadows-only.test.tsx.
+    // Not `visible = false`: three's shadow pass skips an invisible object and
+    // its subtree. Suppressing the colour write keeps both, as
+    // meshinstance3d/Component.shadows-only.test.tsx shows.
     expect(mesh.visible).toBe(true);
     expect(material.colorWrite).toBe(false);
   });
@@ -181,7 +169,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const geom = mesh.geometry;
     // After geometry.scale(-1, 1, 1), the position attribute's X values
     // are mirrored compared to a default PlaneGeometry. Sample a corner:
-    // a (2,2) plane's default first vertex is at X=-1; after mirror it's X=+1.
+    // a (2,2) plane's default first vertex is at X=-1, and after mirror at X=+1.
     const pos = geom.attributes.position!;
     expect(pos.getX(0)).toBeGreaterThan(0);
   });
@@ -199,12 +187,9 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
   });
 
   it('audit slot 59a — PrismMesh fills its size box with the apex placed by left_to_right', async () => {
-    // The real port (primitive_meshes.cpp PrismMesh::_create_mesh_array): a
-    // triangular cross-section in the XY plane — apex on top, its X placed by
-    // left_to_right (default 0.5 = centred) — extruded along Z, filling the
-    // size box exactly. The retired approximation was a 3-segment cylinder
-    // rotated π/6, inscribed in a circle and extruded along Y; this pin is
-    // what replaced that contract.
+    // primitive_meshes.cpp PrismMesh::_create_mesh_array: a triangular XY
+    // cross-section, apex on top at X set by left_to_right (0.5 centres it),
+    // extruded along Z to fill the size box exactly.
     const renderer = await renderMesh(
       { albedo_color: 'Color(1, 1, 1, 1)' },
       'PrismMesh',
@@ -226,8 +211,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       minZ = Math.min(minZ, pos.getZ(i));
       maxZ = Math.max(maxZ, pos.getZ(i));
     }
-    // Fills the size box on every axis (the approximation inscribed a circle,
-    // so its X/Z extent fell short of ±1).
+    // Fills the size box on every axis.
     expect(minX).toBeCloseTo(-1, 5);
     expect(maxX).toBeCloseTo(1, 5);
     expect(minY).toBeCloseTo(-1, 5);
@@ -372,11 +356,9 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
         />
       </SceneResourcesProvider>
     );
-    // A BoxMesh is a PrimitiveMesh with one surface
-    // (primitive_meshes.cpp:141-147), so `_set` refuses slot 1
-    // (mesh_instance_3d.cpp:68) and the box draws slot 0 on all six of its
-    // groups. Splitting it into a length-2 array left four faces unrendered,
-    // because three skips a group whose `material[materialIndex]` is undefined.
+    // A BoxMesh has one surface (primitive_meshes.cpp:141-147), so `_set` refuses
+    // slot 1 (mesh_instance_3d.cpp:68) and slot 0 draws all six groups. three
+    // skips a group whose `material[materialIndex]` is undefined.
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const materials = mesh.material as THREE.MeshStandardMaterial[];
     expect(Array.isArray(materials)).toBe(true);
@@ -421,19 +403,16 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     expect(groupInstance.userData.isLabel3D).toBe(true);
     expect(groupInstance.userData.billboardMode).toBe(BillboardMode.BILLBOARD_ENABLED);
 
-    // Snapshot the quaternion before any frame ticks (initial render
-    // sets it via the JSX `rotation` prop = [0, 0, 0] → identity quaternion).
+    // Before any frame ticks, the JSX `rotation` prop [0, 0, 0] gives the
+    // identity quaternion.
     const qBefore = groupInstance.quaternion.clone();
 
     // Advance enough frames that useFrame runs at least once.
     await renderer.advanceFrames(2, 16);
 
-    // After useFrame ticks, the quaternion should still be set; with the
-    // default test-renderer camera (also pointing forward) the value
-    // equals the initial identity, so we can't assert it CHANGED.
-    // What we CAN assert: the quaternion is a valid normalized quaternion
-    // (sum of squares ≈ 1), proving useFrame ran without throwing and
-    // left the group in a renderable state.
+    // The default test camera also points forward, so the quaternion stays the
+    // identity. A normalised quaternion proves useFrame ran without throwing
+    // and left the group renderable.
     const q = groupInstance.quaternion;
     const norm = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
     expect(norm).toBeCloseTo(1, 4);
@@ -478,7 +457,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const groupInstance = renderer.scene.findByProps({ name: 'L' }).instance as THREE.Group;
     const qBefore = groupInstance.quaternion.clone();
 
-    // Tick frames — billboard DISABLED should be a no-op.
+    // Billboard DISABLED makes the frames a no-op.
     await renderer.advanceFrames(2, 16);
 
     // Quaternion identical to pre-frame value.

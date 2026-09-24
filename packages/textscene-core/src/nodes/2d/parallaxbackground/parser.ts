@@ -1,18 +1,7 @@
 /**
- * ParallaxBackground parser.
- *
- * A CanvasLayer, so it does NOT delegate to `parseNode2D`: the placement props
- * are the CanvasLayer set (`offset`/`rotation`/`scale`, or the composite
- * `transform`), and there is no `z_index`/`modulate`/`y_sort_enabled` surface at
- * all. `transform` wins when present — `CanvasLayer::_bind_methods` registers it
- * after offset/rotation/scale, so Godot's serializer writes it last and the last
- * property applied is the one that survives (`set_transform` stores the matrix
- * directly; `set_offset`/`set_scale` rebuild it from loc/rot/scale).
- *
- * `layer` defaults to **-100**, not 0: `ParallaxBackground::ParallaxBackground()`
- * runs `set_layer(-100)` ("behind all by default"), and a `.tscn` omits any
- * property equal to the class default — so the corpus's five ParallaxBackgrounds
- * all leave it out.
+ * Parses a ParallaxBackground, a CanvasLayer, so not through `parseNode2D`: the
+ * placement is `offset`, `rotation` and `scale`, or `transform`, and no
+ * `z_index`, `modulate` or `y_sort_enabled` exists.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
@@ -22,7 +11,10 @@ import type { Vector2 } from '../../base/node2d/types';
 import type { ParallaxBackgroundProperties } from './types';
 import { boolSlotValue } from '../../../godot/index.js';
 
-/** `ParallaxBackground::ParallaxBackground()` — `set_layer(-100)`. */
+/**
+ * `ParallaxBackground::ParallaxBackground()` runs `set_layer(-100)`, and a
+ * `.tscn` omits a value equal to the class default, so `layer` is often absent.
+ */
 export const PARALLAX_BACKGROUND_LAYER = -100;
 
 export function parseParallaxBackground(
@@ -35,6 +27,8 @@ export function parseParallaxBackground(
   let offset: Vector2 = { x: 0, y: 0 };
   let rotation = 0;
   let scale: Vector2 = { x: 1, y: 1 };
+  // `_bind_methods` registers `transform` after offset, rotation and scale, so
+  // Godot writes it last and it wins: `set_transform` stores the matrix directly.
   const matrix = properties.transform ? decomposeTransform2D(properties.transform, name) : null;
   if (matrix) {
     offset = matrix.position;

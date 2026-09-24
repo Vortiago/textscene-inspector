@@ -1,46 +1,8 @@
 /**
- * How two renders of the same frame are compared — the one definition of
- * "different" shared by the golden gate and the Godot parity tool.
- *
- * ## Why this is not a perceptual metric
- *
- * The obvious library for this (pixelmatch) counts a pixel only when its
- * YIQ-space distance exceeds `35215 * threshold^2`, and it additionally drops
- * pixels its neighbourhood heuristic classifies as antialiasing. Both are
- * wrong for a golden gate:
- *
- *   - The YIQ distance weights luminance 0.5053, in-phase 0.299 and
- *     quadrature 0.114, so at the customary `threshold: 0.1` a FLAT grey shift
- *     of up to ~26/255 scores under the cutoff and is counted as zero pixels —
- *     not "within budget", zero, so no budget is ever consulted. A shift along
- *     a chroma direction stays under it at ANY magnitude, because the distance
- *     depends on the direction of the colour change and not on its size.
- *   - A pixel the antialiasing heuristic claims is an edge is skipped outright,
- *     however far it moved.
- *
- * A gate that cannot see a uniform luminance or chroma shift cannot see the
- * class of regression that moves a whole surface at once — exactly what a
- * colour-space, tonemap, or lighting-scale change does.
- *
- * ## What this measures instead
- *
- * Per-channel, per-pixel, with no perceptual weighting and no heuristics:
- *
- *   - `changedPixels` — pixels differing in ANY channel by ≥ 1/255. This is
- *     the count a golden gate should reason about: it is direction-blind and
- *     magnitude-blind, so a 1/255 chroma shift over a whole fill counts as the
- *     whole fill.
- *   - `maxChannelDelta` — the largest single-channel excursion anywhere.
- *   - `meanChannelError` — mean |Δ| per COLOUR channel over the whole frame,
- *     the statistic Godot-parity arbitration is written in. Alpha is left out
- *     of this one on purpose: our captures are opaque, so averaging a channel
- *     that is identical in both images by construction would quietly report
- *     three quarters of the colour error the two frames actually carry.
- *
- * Alpha IS counted for detection — `changedPixels` and `maxChannelDelta` scan
- * all four channels, so a capture that turned partly transparent while keeping
- * its RGB is reported rather than blended away (which is what a perceptual
- * metric does to it).
+ * The one definition of "different" that the golden gate and the Godot parity tool share: per
+ * channel and per pixel, with no perceptual weighting. pixelmatch's YIQ distance scores a flat grey
+ * shift up to about 26/255 as zero pixels at `threshold: 0.1`, and a chroma shift at any size, and
+ * it skips pixels it calls antialiasing. So it misses a colour-space, tonemap or lighting change.
  */
 
 import { PNG } from 'pngjs';
@@ -49,28 +11,17 @@ import { PNG } from 'pngjs';
 const DIFF_BACKDROP_ALPHA = 0.1;
 
 /**
- * Highlight saturation floor, and the excursion that reaches full red.
- *
- * A binary highlight is unreadable for the comparison this module also serves —
- * two different renderers disagree on nearly every pixel, so an all-or-nothing
- * mask paints the whole frame and says nothing about where the real difference
- * is. Saturation carries the magnitude instead; the floor keeps a 1/255 pixel
- * visible, so the picture still shows exactly the set `changedPixels` counts.
+ * Highlight saturation floor, and the excursion that reaches full red. Two renderers disagree on
+ * nearly every pixel, so a binary mask would paint the whole frame: saturation carries the
+ * magnitude, and the floor keeps a 1/255 pixel visible.
  */
 const DIFF_MIN_SATURATION = 0.35;
 const DIFF_FULL_DELTA = 32;
 
 /**
- * Compare two PNG buffers.
- *
- * Returns `{ sizeMismatch }` when the two frames are not the same rectangle —
- * a comparison of differently sized images has no meaning, and the caller
- * reports the shapes rather than a number.
- *
- * `diff: true` also renders the highlight image: every changed pixel painted
- * red over a faded copy of the baseline, saturated by how far it moved. It
- * highlights exactly the pixels `changedPixels` counts, so the picture and the
- * number can never disagree about which pixels moved.
+ * Compares two PNG buffers. Returns `{ sizeMismatch }` for two different rectangles, whose caller
+ * reports the shapes. `diff: true` also paints each pixel `changedPixels` counts red over a faded
+ * baseline, saturated by how far it moved, so the picture and the number always agree.
  */
 export function compareImages(expectedBuffer, actualBuffer, { diff = false } = {}) {
   const expected = PNG.sync.read(expectedBuffer);
@@ -109,9 +60,15 @@ export function compareImages(expectedBuffer, actualBuffer, { diff = false } = {
     width,
     height,
     pixels,
+    // Pixels that differ in any channel, alpha included, by 1/255 or more. The count is blind to
+    // direction and size, so a 1/255 chroma shift over a whole fill counts the whole fill.
     changedPixels,
     changedPct: pixels === 0 ? 0 : (changedPixels / pixels) * 100,
+    // The largest single-channel excursion, alpha included, so a capture that turned partly
+    // transparent is reported.
     maxChannelDelta,
+    // Mean |Δ| per colour channel, the statistic of Godot-parity arbitration. It leaves out alpha:
+    // the captures are opaque, and an identical channel would hide a quarter of the colour error.
     meanChannelError: pixels === 0 ? 0 : channelErrorSum / (pixels * 3),
     diff: diffImage,
   };

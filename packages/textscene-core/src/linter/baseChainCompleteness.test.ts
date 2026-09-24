@@ -1,18 +1,8 @@
 /**
- * Every registered node type must reach the terminal `Node` through
- * `NODE_BASE_TYPES`.
- *
- * `findValidator` walks that table to deliver the Node3D / Node2D / Control /
- * Light3D base validator sets to subclasses. A type missing from it terminates
- * the walk immediately: `findValidator` returns null, `StrictTscnParser` does
- * `if (!validator) return;`, and the type escapes **every** inherited check
- * while its siblings are validated normally. Nothing fails, nothing warns — the
- * linter simply goes quiet on that node, which is the worst possible shape for a
- * bug in a linter.
- *
- * `baseInheritance.test.ts` witnesses that inheritance works, using a handful of
- * named types. It cannot notice a type nobody thought to add. This does: it is
- * driven by the registry, so a new slice is covered the moment it registers.
+ * Every registered node type reaches the terminal `Node` through `NODE_BASE_TYPES`. A type missing from it ends the
+ * `findValidator` walk at once, so it escapes every inherited check with no failure and no warning.
+ * `baseInheritance.test.ts` shows inheritance works for named types. This is driven by the registry, so a new slice
+ * is covered the moment it registers.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -28,7 +18,7 @@ import { registeredTypes } from './registryPopulation.js';
 
 /**
  * Godot's real class hierarchy, from the committed catalog. This is the
- * generated artifact, not the engine checkout — nothing here reads a Godot
+ * generated artifact, not the engine checkout: nothing here reads a Godot
  * source tree (see scripts/godot-source-decoupling.test.mjs).
  */
 const CATALOG_CHAINS: ReadonlyMap<string, readonly string[]> = new Map(
@@ -40,12 +30,8 @@ const CATALOG_CHAINS: ReadonlyMap<string, readonly string[]> = new Map(
 );
 
 /**
- * Types that legitimately terminate the walk on their own.
- *
- * `Node` is the terminal itself, and every other chain reaches it. Add to this
- * list ONLY for a type with genuinely no ancestor to inherit from, and say why;
- * an entry added to silence a failure re-creates exactly the silent gap this
- * guard exists to close.
+ * Types that legitimately end the walk on their own. `Node` is the terminal itself. Add a type only when it has no
+ * ancestor to inherit from, and say why: an entry that silences a failure re-creates the gap this guard closes.
  */
 const TERMINAL: ReadonlySet<string> = new Set(['Node']);
 
@@ -73,16 +59,9 @@ function resolveIn(
 const resolveChain = (type: string) => resolveIn(NODE_BASE_TYPES, TERMINAL, type);
 
 /**
- * The table the registry is actually BUILT with, and its terminals.
- *
- * A `.tscn` names types from both of Godot's hierarchies and `findValidator`
- * resolves them through `CLASS_BASE_TYPES`, so a sweep over the node table
- * alone leaves every Resource class outside the guard: 34 types register
- * validators without appearing in `nodeRegistry`, and the resource tiers among
- * them carry hundreds of inherited key registrations that ride entirely on
- * `RESOURCE_BASE_TYPES_GENERATED` hops. Drop one of those hops and the silence
- * this file exists to prevent — "nothing fails, nothing warns" — returns for
- * every leaf under it.
+ * The table the registry is built with, and its terminals. A `.tscn` names types from both of Godot's hierarchies and
+ * `findValidator` resolves them through `CLASS_BASE_TYPES`, so the node table alone leaves every Resource class
+ * outside the guard. Resource tiers carry inherited registrations that ride on `RESOURCE_BASE_TYPES_GENERATED` hops.
  */
 const CLASS_TERMINAL: ReadonlySet<string> = new Set(['Node', 'Resource']);
 
@@ -126,20 +105,16 @@ describe('NODE_BASE_TYPES covers every registered node type', () => {
   });
 
   it('keeps the terminal list minimal — every entry must still be unresolvable', () => {
-    // A type that gained a real base should leave TERMINAL rather than linger as
+    // A type that gained a real base should leave `TERMINAL` rather than linger as
     // a permanent exemption.
     const nowResolvable = [...TERMINAL].filter((type) => NODE_BASE_TYPES[type] !== undefined);
     expect(nowResolvable).toEqual([]);
   });
 
   /**
-   * The table is Godot's ancestry verbatim, so "is this the right parent?" is
-   * answered by the generator and needs no assertion here. What the generator
-   * cannot answer is whether a *registered* type is in the catalog at all: a
-   * slice that registers `Sprite2d`, or a type only Godot 4.7 knows, gets no
-   * entry, no inherited validators, and — because the walk stops instantly —
-   * not a single diagnostic. That is the same silence the reachability check
-   * above catches for a broken chain, arriving through a different door.
+   * The table is Godot's ancestry verbatim, so the generator answers "is this the right parent?". It cannot answer
+   * whether a registered type is in the catalog: a slice registering `Sprite2d`, or a type only Godot 4.7 knows, gets
+   * no entry and so no diagnostic at all.
    */
   it('registers no type the catalog and the exception list both fail to name', () => {
     const unknown = registered

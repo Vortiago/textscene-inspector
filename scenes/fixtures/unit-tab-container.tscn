@@ -1,22 +1,18 @@
 [gd_scene format=3]
 
-; Three pages, one disabled, current_tab pointing at the SECOND page (not 0)
-; — the one variable a regression here is invisible without: current_tab=0
-; would still show a strip and a page even if the current-tab INDEXING were
-; broken (e.g. always showing page 0). "General" carries a tab_0/title
-; override so its strip label differs from its own node name; "Locked" and
-; "Journal" fall back to their own child node names, exercising both title
-; sources the brief calls out. Every non-current page is authored
-; visible = false, exactly as the Godot editor itself saves a TabContainer
-; scene (TabContainer::add_child_notify hides every page but the current one
-; on add), so this scene cannot tell whether the container writes that flag
-; itself — unit-tab-container-current-page.tscn authors none and does.
+; Three pages, one disabled, current_tab on the second page: at current_tab=0 a strip and page
+; show even with broken indexing (for example always page 0). "General" has a tab_0/title
+; override, so its label differs from its node name, while "Locked" and "Journal" use their node
+; names, covering both title sources.
 
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; Every non-current page authors visible = false, as the editor saves a TabContainer
+; (TabContainer::add_child_notify hides every page but the current one), so this scene cannot
+; tell whether the container writes that flag. unit-tab-container-current-page.tscn authors none.
 [node name="MyTabContainer" type="TabContainer" parent="."]
 layout_mode = 1
 offset_left = 8.0

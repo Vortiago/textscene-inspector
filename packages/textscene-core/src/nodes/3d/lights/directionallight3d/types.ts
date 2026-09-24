@@ -1,17 +1,11 @@
-/**
- * DirectionalLight3D type definitions
- */
+/** DirectionalLight3D node data. */
 
 import type { Node3DProperties } from '../../../base/node3d/types';
 import type { BaseLightWithNormalBias } from '../shared/types';
 
-/**
- * DirectionalLight3D node properties
- *
- * Extends Node3D with parallel light (sunlight) capabilities
- */
+/** DirectionalLight3D properties: Light3D plus the directional shadow. */
 export interface DirectionalLight3DProperties extends Node3DProperties, BaseLightWithNormalBias {
-  /** Directional shadow mode - cascade configuration (optional) */
+  /** Cascade configuration (optional). */
   directional_shadow_mode?: number;
 
   /** Maximum shadow distance (optional) */

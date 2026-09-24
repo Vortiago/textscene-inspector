@@ -1,19 +1,14 @@
 /**
- * `Basis::get_scale()` over a serialised `Transform3D`, in both the unsigned
- * pairwise form and the signed rigid-body one.
- *
- * The non-finite cases are the reason this file exists. `get_scale` is
- * `SIGN(determinant()) * get_scale_abs()` (basis.cpp:321-322), so ONE `nan`
- * component reaches all three axes: `SIGN` fails both of its comparisons on a
- * NaN determinant and returns 0 (typedefs.h:123-126), which leaves the `nan`
- * axis NaN and collapses the other two to exact 0. Reading the columns
- * independently gets every one of those wrong.
+ * `Basis::get_scale()` over a serialised `Transform3D`, unsigned pairwise and
+ * signed rigid-body. `get_scale` is `SIGN(determinant()) * get_scale_abs()`
+ * (basis.cpp:321-322), so one `nan` component reaches all three axes: `SIGN(NaN)`
+ * is 0 (typedefs.h:123-126), leaving the `nan` axis NaN and zeroing the other two.
  */
 
 import { describe, expect, it } from 'vitest';
 import { basisColumnScales, basisColumnScalesGodotFloat } from './basisColumnScales.js';
 
-/** A row-major `Transform3D` literal — the order `variant_parser.cpp:2114-2121` writes. */
+/** A row-major `Transform3D` literal, in the order `variant_parser.cpp:2114-2121` writes. */
 function t(...rows: (number | string)[]): string {
   return `Transform3D(${[...rows, 0, 0, 0].join(', ')})`;
 }
@@ -36,8 +31,8 @@ describe('basisColumnScales', () => {
   });
 
   it('reads a non-finite component, which Godot reads a scale off too', () => {
-    // The finite grammar refused these, so the non-uniform-scale rules went
-    // silent on a basis the engine warns about.
+    // A finite-only grammar would silence the non-uniform-scale rules on a basis
+    // the engine warns about.
     expect(basisColumnScales(t('inf', 0, 0, 0, 1, 0, 0, 0, 1))).toEqual([Infinity, 1, 1]);
     // Unsigned, so the `nan` axis stays NaN where `get_scale`'s SIGN(NaN) == 0
     // zeroes the other two. Both readings are non-uniform, which is the only
@@ -75,20 +70,18 @@ describe('basisColumnScalesGodotFloat', () => {
   });
 
   it('zeroes the OTHER two axes for a `nan` component, because SIGN(nan) is 0', () => {
-    // The whole point of the signed form. `SIGN` takes neither comparison on a
-    // NaN determinant (typedefs.h:123-126), so `det_sign` is 0 and
-    // `det_sign * get_scale_abs()` is (nan, 0, 0) — the nan axis compares false
-    // against 1.0 and the two zeroed ones compare true, so
-    // `rigidbody3d-scale-overridden-at-runtime` still fires.
+    // `SIGN` takes neither comparison on a NaN determinant (typedefs.h:123-126),
+    // so `det_sign * get_scale_abs()` is (nan, 0, 0). The zeroed axes compare
+    // true against the tolerance, so `rigidbody3d-scale-overridden-at-runtime`
+    // still fires.
     expect(basisColumnScalesGodotFloat(t('nan', 0, 0, 0, 1, 0, 0, 0, 1))).toEqual([NaN, 0, 0]);
   });
 
   it('signs the determinant with Godot’s own grouping, which `inf` can tell apart', () => {
-    // `Basis::determinant()` (basis.h:350-354) expands along the first COLUMN.
-    // Expanding along the first ROW is the same number for every finite basis
-    // and NOT for this one: the column form reaches `1 - 0*inf + 1*inf` = NaN,
-    // signing to 0, while the row form reaches `1 + inf` = inf, signing to +1
-    // and reporting magnitudes Godot never holds.
+    // `Basis::determinant()` (basis.h:350-354) expands along the first column,
+    // reaching `1 - 0*inf + 1*inf` = NaN and signing to 0. The first row, equal
+    // for every finite basis, reaches `1 + inf` = inf and signs to +1, reporting
+    // magnitudes Godot never holds.
     expect(basisColumnScalesGodotFloat(t(1, 'inf', 0, 0, 1, 1, 1, 0, 1))).toEqual([0, NaN, 0]);
   });
 

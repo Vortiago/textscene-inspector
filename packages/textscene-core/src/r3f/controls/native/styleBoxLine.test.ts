@@ -1,5 +1,5 @@
 /**
- * `parseStyleBoxLine` — `style_box_line.h`/`.cpp` (Godot 4.6.3).
+ * `parseStyleBoxLine` against `style_box_line.h`/`.cpp` (Godot 4.6.3).
  */
 import { describe, expect, it } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';

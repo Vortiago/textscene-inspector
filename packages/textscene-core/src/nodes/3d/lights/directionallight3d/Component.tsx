@@ -1,6 +1,6 @@
 /**
- * <DirectionalLight3D> — parallel light source (sunlight) with optional shadow.
- * Wrapped in a transform group; light points at a target placed at local -Z.
+ * <DirectionalLight3D>: a parallel light with optional shadow, in a transform
+ * group, aimed at a target at local -Z.
  */
 
 import { useMemo, useRef } from 'react';

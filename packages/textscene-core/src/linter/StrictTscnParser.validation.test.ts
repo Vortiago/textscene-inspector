@@ -1,5 +1,5 @@
 /**
- * StrictTscnParser: the ValidatorRegistry hand-off — which nodes get their
+ * StrictTscnParser: the ValidatorRegistry hand-off: which nodes get their
  * properties validated, and which are skipped for want of a known type.
  */
 
@@ -70,12 +70,8 @@ size = Vector3(1, 2, 3)
   });
 
   /**
-   * Which of a file's sub-resources a refusal is about.
-   *
-   * `[sub_resource]` bodies run the full validator set, so the resource slices'
-   * bounds fire here — and a scene routinely carries several sub-resources of
-   * ONE type, which only the heading's `id=` tells apart. Reporting every one
-   * of those as `<unknown>` left the author to find the offending block by eye.
+   * Which of a file's sub-resources a refusal is about. `[sub_resource]` bodies run the full validator set, and a scene
+   * often carries several sub-resources of one type, which only the heading's `id=` tells apart.
    */
   describe('sub-resource attribution', () => {
     const content = `[gd_scene load_steps=3 format=3]
@@ -118,7 +114,7 @@ background_mode = 99
 
   /**
    * A standalone `.tres` puts its properties in a bare `[resource]` section and
-   * declares their type once, in the file header: `res_type = tag.fields["type"]`
+   * declares their type in the file header: `res_type = tag.fields["type"]`
    * (resource_format_text.cpp:1166) is what `ClassDB::instantiate(res_type)`
    * builds when the `resource` tag opens (:741).
    */
@@ -170,7 +166,7 @@ background_mode = 99
 
     it('leaves a scene file\'s own sections judged by their own headings', () => {
       // A `[gd_scene]` header carries no `type=`, so nothing leaks into the
-      // nodes below it — the index-only child is judged by its own heading.
+      // nodes below it: the index-only child is judged by its own heading.
       const content = `[gd_scene load_steps=2 format=3]
 
 [ext_resource type="PackedScene" path="res://base.tscn" id="1"]
@@ -210,11 +206,9 @@ terrain_set_0/mode = 0
   });
 
   describe('an indexed key with no leaf, a nested leaf, or no index', () => {
-    // `PropertyListHelper::_get_property` splits at the LAST `/`
-    // (property_list_helper.cpp:47): `item_0/` and `item_/text` hand it an
-    // index half it refuses — `!index_string.is_valid_int()` on `""` (:53) —
-    // and `item_0/text/extra` an index half of `0/text`, refused the same
-    // way. Each is a dropped write, so each must reach the family dispatcher.
+    // `PropertyListHelper::_get_property` splits at the last `/` (property_list_helper.cpp:47): `item_0/` and
+    // `item_/text` hand it an index half `!index_string.is_valid_int()` refuses (:53), and `item_0/text/extra` an index
+    // half of `0/text`. Each is a dropped write, so each must reach the family dispatcher.
     it('reports each of the three shapes Godot drops, once', () => {
       const content = `[gd_scene format=3]
 

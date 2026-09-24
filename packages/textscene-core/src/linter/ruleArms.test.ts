@@ -26,8 +26,8 @@ describe('armEmits', () => {
   });
 
   it('declares nothing for an arm this instance does not carry', () => {
-    // The conditional spread that omits an arm is the ONLY gate; `emits` cannot
-    // disagree with `check` about it because both read this same record.
+    // The conditional spread that omits an arm is the only gate. `emits` cannot
+    // disagree with `check` about it, because both read this same record.
     const arms: RuleArms<'a' | 'b'> = { a: present };
     expect(armEmits(arms).map((e) => e.ruleName)).toEqual(['shapecast2d-zero-mask']);
   });
@@ -49,8 +49,8 @@ describe('reportArm', () => {
   });
 
   it('says nothing for an arm this instance does not carry', () => {
-    // The silence is the fix: an undeclared arm reported anyway is exactly the
-    // divergence no emits guard can see.
+    // An undeclared arm reported anyway is the divergence no emits guard can
+    // see.
     const into: Diagnostic[] = [];
     reportArm(into, undefined, node, 'the mask is zero');
     expect(into).toEqual([]);
@@ -58,29 +58,10 @@ describe('reportArm', () => {
 });
 
 /**
- * Every arm a table declares must be reported somewhere.
- *
- * This is the direction `ruleCoverage.emits.test.ts` loses for the `armEmits`
- * form. Its "declares no ruleName its own code cannot emit" test reads the
- * names back off the source, and an arm table spells them where `stripEmits`
- * does not reach — so the name is scraped as reachable whether or not anything
- * reports it. Measured: deleting the `concaveShape` report site left all 26 of
- * those assertions green.
- *
- * A table is recognised by the TYPE it claims, not by the syntax that claims
- * it. TypeScript spells the same contract four ways — an annotation, a
- * `satisfies` tail, either with or without `as const` — and enumerating
- * spellings meant each new one silently left its table unguarded: reading only
- * the annotation missed `FILE_DIAGNOSTICS`, and adding
- * `satisfies Record<string, RuleArm>` for it still missed
- * `satisfies RuleArms<…>`. Measured on the one that slipped through: replacing
- * both report sites in `node3d/linter.ts` with no-ops left all four emits
- * guards green while no Node3D descendant reported its visibility parent.
- *
- * A module-private table must be reported in its own file; an EXPORTED one may
- * be reported by an importer, which is where `FILE_DIAGNOSTICS` is used. The
- * reference is looked for anywhere in a report call's argument list rather than
- * directly after the paren, since one call may pick its arm with a ternary.
+ * Every arm a table declares is reported somewhere. `ruleCoverage.emits.test.ts`
+ * misses this for `armEmits`, since `stripEmits` does not reach an arm table.
+ * A table is found by the type it claims, annotation or `satisfies`, with or
+ * without `as const`: matching one spelling leaves the others unguarded.
  */
 const OBJECT_LITERAL = /(export\s+)?const\s+([A-Za-z_$][\w$]*)\s*(?::([^=]*?))?=\s*\{/g;
 /** The contract, in either place TypeScript lets it be stated. */
@@ -146,6 +127,9 @@ function armTables(): ArmTable[] {
 describe('an arm table', () => {
   it('reports every arm it declares', () => {
     const unreported: string[] = [];
+    // A private table is reported in its own file, an exported one anywhere
+    // (`FILE_DIAGNOSTICS`). The reference may sit anywhere in the argument
+    // list, since one call can pick its arm with a ternary.
     for (const { file, binding, exported, keys } of armTables()) {
       const scope = exported ? allSourceFiles() : [file];
       for (const key of keys) {

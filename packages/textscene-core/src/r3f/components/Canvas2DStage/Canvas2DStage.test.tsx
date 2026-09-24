@@ -8,15 +8,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 /**
- * Renders of the stubbed world canvas — the stage re-rendering re-renders it, so
- * a delta of 0 across an event is how "that event committed no state update" is
- * observable here. Module-global and never reset, so always compare deltas.
+ * Renders of the stubbed world canvas. A delta of 0 across an event shows the
+ * event committed no state update. It is never reset, so compare deltas.
  */
 const worldRenders = vi.hoisted(() => ({ count: 0 }));
 
-// The 2D-world R3F canvas needs WebGL — stub it, recording the pan/zoom it
-// receives so the transform-sync and mount-seam contracts are assertable in
-// jsdom.
+// The 2D-world canvas needs WebGL, so a stub records the pan and zoom it receives.
 vi.mock('./World2DCanvas', () => ({
   World2DCanvas: ({
     pan,
@@ -47,10 +44,7 @@ import {
 import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d';
 import type { TscnNode } from '../../../parser/types';
 
-/**
- * happy-dom reports a zero-sized rect for everything, and `fit()` early-returns
- * on one — so an opening view can only be observed once the stage has a size.
- */
+/** happy-dom reports a zero-sized rect, and `fit()` returns early on one. */
 function sizeEveryElement(width: number, height: number) {
   return vi
     .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
@@ -68,7 +62,7 @@ function sizeEveryElement(width: number, height: number) {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  // Read once at mount, so a leaked value silently changes the NEXT test's
+  // Read once at mount, so a leaked value silently changes the next test's
   // opening view.
   window.localStorage.removeItem(FIT_ON_OPEN_2D_STORAGE_KEY);
 });
@@ -82,8 +76,8 @@ function renderStage(nodes: TscnNode[] = []) {
     <Canvas2DStage nodes={nodes} internalResources={[]} externalResources={[]} />
   );
   const stage = screen.getByLabelText('2D canvas');
-  // The frame is the dimension badge's parent — module-class hashing makes
-  // class-name queries brittle, the DOM relationship is the stable contract.
+  // The frame is the dimension badge's parent: module-class hashing makes a
+  // class-name query brittle.
   const frame = screen.getByText('1152 × 648').parentElement as HTMLElement;
   return { ...utils, stage, frame };
 }
@@ -93,10 +87,8 @@ function zoomLabel(): string {
 }
 
 /**
- * happy-dom drops the MouseEvent fields on a `WheelEvent` — `clientX`/`clientY`
- * read back `undefined` however the init is spelled — which would silently make
- * the zoom anchor `NaN`. Define them onto the instance so cursor-anchored zoom
- * is actually exercised rather than accidentally skipped.
+ * happy-dom drops `clientX`/`clientY` from a `WheelEvent`, which makes the zoom
+ * anchor `NaN`. They are defined on the instance instead.
  */
 function wheelAt(
   target: Element,
@@ -231,8 +223,8 @@ describe('<Canvas2DStage>', () => {
     touch(stage, 'move', 1, 380, 300);
     touch(stage, 'move', 2, 420, 300);
 
-    // Spread from 40px apart to 160px — four times, so four times the zoom,
-    // clamped at ZOOM_MAX = 4 from an opening fit below 1.
+    // Spread from 40px apart to 160px: four times the zoom, clamped at
+    // ZOOM_MAX = 4 from an opening fit below 1.
     touch(stage, 'move', 1, 320, 300);
     touch(stage, 'move', 2, 480, 300);
     const spread = Number.parseFloat(zoomLabel());
@@ -245,11 +237,9 @@ describe('<Canvas2DStage>', () => {
   });
 
   it('leaves the zoom where it was after a pan whose pinch nets out', () => {
-    // The same mixed-time span excursion the 3D viewport sees, but this clamp
-    // is far tighter (ZOOM_MAX = 4), so an ordinary two-finger pan trips it:
-    // both fingers slide 200px left, and between the two per-pointer moves the
-    // span reads 300px instead of 100px. Accumulated, that 3x clamps at 4 and
-    // the 1/3 back leaves the stage at 133% instead of where it started.
+    // Both fingers slide 200px left, and between the two per-pointer moves the
+    // span reads 300px instead of 100px. Accumulated, that 3x clamps at
+    // ZOOM_MAX = 4, and the 1/3 back leaves the stage at 133%.
     window.localStorage.setItem(FIT_ON_OPEN_2D_STORAGE_KEY, 'false');
     sizeEveryElement(800, 600);
     const { stage } = renderStage();
@@ -308,9 +298,8 @@ describe('<Canvas2DStage>', () => {
     const settled = frame.style.transform;
     const renders = worldRenders.count;
 
-    // A browser fires one pointermove PER POINTER, so a two-finger gesture also
-    // delivers events in which nothing moved: nothing to apply, nothing to
-    // re-render — and a re-render here also re-renders the Control overlay.
+    // One pointermove per pointer: a two-finger gesture delivers events in which
+    // nothing moved, and a re-render re-renders the Control overlay too.
     touch(stage, 'move', 1, 100, 300);
     touch(stage, 'move', 2, 200, 300);
 
@@ -392,7 +381,7 @@ describe('<Canvas2DStage>', () => {
       </CameraControlProvider>
     );
     const stage = screen.getByLabelText('2D canvas');
-    // jsdom rects are 0×0 — give the stage a real size for the centering math.
+    // happy-dom rects are 0×0, so the stage gets a real size for the centring.
     stage.getBoundingClientRect = () =>
       ({ width: 800, height: 600, left: 0, top: 0, right: 800, bottom: 600, x: 0, y: 0 }) as DOMRect;
 
@@ -453,9 +442,8 @@ describe('<Canvas2DStage>', () => {
     render(
       <Canvas2DStage nodes={[makeNode('A')]} internalResources={[]} externalResources={[]} />
     );
-    // The capture frame itself is the parity-capture contract (see
-    // `scripts/godot-ref/capture-ours.mjs`) — the Control canvas draws inside
-    // `<World2DCanvas>` above it, not into this div.
+    // The capture frame is the parity-capture contract
+    // (`scripts/godot-ref/capture-ours.mjs`). Nothing draws into it.
     expect(screen.getByTestId('canvas-2d-capture-frame')).toBeTruthy();
   });
 

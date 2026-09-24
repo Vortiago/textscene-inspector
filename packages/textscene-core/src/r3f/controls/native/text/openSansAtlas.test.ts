@@ -2,11 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO, OPEN_SANS_ATLAS_PNG_DATA_URL } from './openSansAtlas';
 
 /**
- * Reads a PNG's `IHDR` width/height without a decoder library: the 8-byte
- * PNG signature is followed by a 4-byte chunk length + 4-byte `IHDR` tag
- * (offsets 0-15), then the IHDR payload's first two big-endian uint32s are
- * width (offset 16) and height (offset 20). See the PNG spec, "Chunk
- * layout"/"IHDR".
+ * Reads a PNG's `IHDR` width and height without a decoder: after the 8-byte
+ * signature, a 4-byte chunk length and the `IHDR` tag (offsets 0-15), the payload
+ * starts with big-endian uint32 width (offset 16) and height (offset 20).
  */
 function readPngDimensions(bytes: Uint8Array): { width: number; height: number } {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -55,9 +53,8 @@ describe('OPEN_SANS_ATLAS_GLYPHS', () => {
   });
 
   it('places the space glyph at zero visible size but with a nonzero advance', () => {
-    // msdf-bmfont-xml emits an empty (0x0) bitmap for whitespace and warns
-    // "No bitmap for character ' '" — verified in the bake run —
-    // but xadvance still carries its hmtx-derived width.
+    // msdf-bmfont-xml emits an empty (0x0) bitmap for whitespace ("No bitmap for
+    // character ' '"), but xadvance still carries its hmtx-derived width.
     expect(OPEN_SANS_ATLAS_GLYPHS[' ']?.width).toBe(0);
     expect(OPEN_SANS_ATLAS_GLYPHS[' ']?.height).toBe(0);
     expect(OPEN_SANS_ATLAS_GLYPHS[' ']?.xadvance).toBeGreaterThan(0);

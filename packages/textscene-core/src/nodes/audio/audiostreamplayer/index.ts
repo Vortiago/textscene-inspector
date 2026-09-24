@@ -1,10 +1,7 @@
 /**
- * AudioStreamPlayer registration — parser + property formatter.
- *
- * Non-spatial audio node (extends Node, not Node3D). It has no visual
- * representation, so the render component (index.r3f.ts) reuses the base
- * Node component so it renders nothing visible (rather than the gray
- * GenericNodeFallback cube).
+ * AudioStreamPlayer registration: parser and property formatter. A non-spatial audio node (extends
+ * Node) with no visual representation, so index.r3f.ts reuses the base Node component rather than
+ * the grey GenericNodeFallback cube.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

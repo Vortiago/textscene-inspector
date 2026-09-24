@@ -1,4 +1,4 @@
-/** TextEdit registration — native (WebGL canvas) painter + rect solver. */
+/** TextEdit registration: native (WebGL canvas) painter and rect solver. */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
@@ -7,9 +7,8 @@ import { textEditMinimumSize } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'TextEdit', Component: TextEdit });
 controlSolverRegistry.registerMinimumSize('TextEdit', textEditMinimumSize);
-// `scroll_fit_content_height` at `wrap_mode` BOUNDARY needs this node's OWN
-// resolved width to know how many rows its wrapped text occupies — see
-// `nativeSolver.ts`'s own doc and `solverRegistry.ts`'s `tentativeRect`.
+// `scroll_fit_content_height` under `wrap_mode` BOUNDARY needs this node's resolved width
+// to count its wrapped rows (`nativeSolver.ts`, `solverRegistry.ts`'s `tentativeRect`).
 controlSolverRegistry.registerSizeDependentMinimum('TextEdit');
 
 export { TextEdit };

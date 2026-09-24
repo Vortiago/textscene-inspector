@@ -1,8 +1,6 @@
 /**
- * A GLBSceneRoot row surfaces the loaded GLB's internal THREE.Object3D
- * hierarchy as expandable child rows, and is NOT flagged "Not implemented"
- * (it renders). Mirrors the sub-scene inlining test's loader-cache harness,
- * but stages a THREE.Object3D in the glb cache.
+ * A GLBSceneRoot row shows the loaded GLB's THREE.Object3D hierarchy as
+ * expandable child rows, and is not flagged "Not implemented".
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -61,8 +59,7 @@ function glbGraph() {
   });
 }
 
-// SceneTreeViewer resolves GLB Object3D via cloneWithMaterials which requires
-// the lazy GLB module cache to be initialised first.
+// `cloneWithMaterials` needs the lazy GLB module cache initialised first.
 beforeAll(async () => {
   await initGlbModules();
 });
@@ -76,7 +73,7 @@ describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
 
     const row = screen.getByText('player').closest('[data-node-path]');
     expect(row).not.toBeNull();
-    expect(row!.textContent).toContain('▶'); // has children → expandable
+    expect(row!.textContent).toContain('▶'); // It has children, so it expands.
     expect(screen.queryByText(/not implemented/i)).toBeNull();
   });
 

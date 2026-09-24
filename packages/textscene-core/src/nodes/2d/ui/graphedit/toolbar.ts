@@ -1,13 +1,8 @@
 /**
- * GraphEdit's toolbar — the `menu_panel`/`menu_hbox` row its own CONSTRUCTOR
- * builds (`scene/gui/graph_edit.cpp:3229-3324`), so every GraphEdit carries
- * one whatever the scene file says. Its geometry is described by nothing in
- * the file: a hardcoded `set_position(Vector2(10, 10))` (`:3232`), one
- * `PanelContainer` sized to its own minimum, and an `HBoxContainer` of nine
- * widgets. Only WHICH of the nine participate, and which toggles read
- * pressed, comes from the scene (`:2812-2870`).
- *
- * Pure data + functions, no React, no THREE.
+ * GraphEdit's toolbar, the `menu_panel` and `menu_hbox` row its constructor builds
+ * (`scene/gui/graph_edit.cpp:3229-3324`), so every GraphEdit carries one whatever the file says. Its
+ * geometry is hardcoded: `set_position(Vector2(10, 10))` (`:3232`) and a minimum-size panel of nine
+ * widgets. The scene decides only which widgets take part and which toggles read pressed (`:2812-2870`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -27,7 +22,7 @@ import { GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons
 import { isMinimapEnabled } from './minimap';
 import type { GraphEditProperties } from './types';
 
-/** `menu_panel->set_position(Vector2(10, 10))` (`graph_edit.cpp:3232`) — unscaled. */
+/** `menu_panel->set_position(Vector2(10, 10))` (`graph_edit.cpp:3232`): unscaled. */
 export const GRAPH_EDIT_MENU_POSITION: Vec2 = { x: 10, y: 10 };
 
 /** `zoom_label->set_custom_minimum_size(Size2(48, 0) * base_scale)` (`graph_edit.cpp:836`). */
@@ -56,7 +51,7 @@ export type ToolbarItemKind = 'label' | 'button' | 'spinBox';
 export interface ToolbarItem {
   id: ToolbarItemId;
   kind: ToolbarItemKind;
-  /** Relative to the toolbar PANEL's own origin — the content offset is already applied. */
+  /** Relative to the toolbar panel's own origin: the content offset is already applied. */
   rect: Rect2;
   /** `BaseButton::is_pressed()`; always false for the two non-toggles and for every non-button. */
   pressed: boolean;
@@ -67,16 +62,16 @@ export interface ToolbarItem {
 export interface GraphEditToolbar {
   /** `menu_panel`'s rect in GraphEdit's own local space. */
   panelRect: Rect2;
-  /** `menu_hbox`'s rect inside that panel — `PanelContainer::_notification(NOTIFICATION_SORT_CHILDREN)`. */
+  /** `menu_hbox`'s rect inside that panel: `PanelContainer::_notification(NOTIFICATION_SORT_CHILDREN)`. */
   contentRect: Rect2;
   items: ToolbarItem[];
 }
 
 /** The two text measurements the row's minimum size depends on, at the toolbar's own font. */
 export interface ToolbarTextMetrics {
-  /** One shaped run's size — `TextParagraph::get_size` as every caller here consumes it. */
+  /** One shaped run's size: `TextParagraph::get_size` as every caller here consumes it. */
   measure: (text: string) => Vec2;
-  /** `font->get_height(font_size)` — `Label`'s and `LineEdit`'s own minimum-height floor. */
+  /** `font->get_height(font_size)`: `Label`'s and `LineEdit`'s own minimum-height floor. */
   fontHeightPx: number;
 }
 
@@ -116,7 +111,7 @@ export function graphEditMenuPanelStyleBox(theme: NativeTheme): StyleBoxFlatData
 }
 
 /**
- * One icon-only `FlatButton`'s minimum size —
+ * One icon-only `FlatButton`'s minimum size:
  * `Button::get_minimum_size_for_text_and_icon` (`button.cpp:481-526`) with
  * empty text, plus `flat_button_normal`'s content margins, which
  * `default_theme.cpp:360-362` copies verbatim off `button_normal`.
@@ -127,11 +122,10 @@ function toolbarButtonMinSize(theme: NativeTheme): Vec2 {
 }
 
 /**
- * `snapping_distance_spinbox`'s minimum size — `SpinBox::get_minimum_size`
+ * `snapping_distance_spinbox`'s minimum size: `SpinBox::get_minimum_size`
  * (`spin_box.cpp:82-86`) over `LineEdit::get_minimum_size`
- * (`line_edit.cpp:2443-2477`). The field is internal to the SpinBox, so no
- * per-node theme override can reach it and the plain theme boxes are the
- * whole input.
+ * (`line_edit.cpp:2443-2477`). No per-node theme override reaches the
+ * SpinBox's internal field, so the plain theme boxes are the whole input.
  */
 function toolbarSpinBoxMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics): Vec2 {
   const normal = contentMarginSize(theme.widgets.lineEdit.normal);
@@ -144,7 +138,7 @@ function toolbarSpinBoxMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics):
   };
 }
 
-/** `zoom_label`'s minimum size — `Label::get_minimum_size` (`label.cpp:973-997`) over an empty stylebox, floored by its own `custom_minimum_size`. */
+/** `zoom_label`'s minimum size: `Label::get_minimum_size` (`label.cpp:973-997`) over an empty stylebox, floored by its own `custom_minimum_size`. */
 function zoomLabelMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics, zoom: number): Vec2 {
   const text = metrics.measure(zoomLabelText(zoom));
   return {

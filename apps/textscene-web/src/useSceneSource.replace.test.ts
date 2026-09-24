@@ -1,15 +1,13 @@
 /**
- * `useSceneSource` — the two authoritative content swaps — an upload, and a fixture switch.
- *
- * The hook owns the hold-last-valid edit-loop invariant (ADR-0020): a resolving
- * fixture load must never stomp newer keystrokes. Shared scaffolding is in
+ * `useSceneSource`: the two authoritative content swaps, an upload and a fixture switch.
+ * The hook keeps the hold-last-valid invariant (ADR-0020). The shared scaffolding is in
  * `useSceneSource.testkit.ts`.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
-// Stub resolveForwardedContent: valid TSCN passes through, garbage is rejected.
-// Hoisted per module graph, so every suite in this split declares its own.
+// A stub resolveForwardedContent passes valid TSCN and rejects garbage. `vi.mock` is hoisted
+// per module graph, so every suite in this split declares its own.
 vi.mock('./sourceGate', () => ({
   resolveForwardedContent: (buffer: string, lastGood: string) =>
     buffer.trim().startsWith('[gd_scene') ? buffer : lastGood,
@@ -31,17 +29,13 @@ beforeEach(() => {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // ignore
+    // Clearing storage is optional.
   }
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-// ---------------------------------------------------------------------------
-// Upload (replace): authoritative — supersedes pending debounce
-// ---------------------------------------------------------------------------
 
 describe('replace — upload supersedes pending debounce', () => {
   it('sets buffer and forwardedContent immediately, cancels any pending debounce', async () => {
@@ -60,7 +54,7 @@ describe('replace — upload supersedes pending debounce', () => {
       result.current.onBufferChange(GARBAGE);
     });
 
-    // Upload arrives before the debounce fires — replace must win.
+    // The upload arrives before the debounce fires, and replace must win.
     act(() => {
       result.current.replace(UPLOADED_TSCN);
     });
@@ -69,7 +63,7 @@ describe('replace — upload supersedes pending debounce', () => {
     expect(result.current.buffer).toBe(UPLOADED_TSCN);
     expect(result.current.forwardedContent).toBe(UPLOADED_TSCN);
 
-    // Advance past the debounce window — the garbage timer must not fire.
+    // Past the debounce window, the garbage timer must not fire.
     await settle(500);
 
     expect(result.current.buffer).toBe(UPLOADED_TSCN);
@@ -119,8 +113,8 @@ describe('replace — upload supersedes pending debounce', () => {
     });
     rerender({ fixtureFile: '', uploadedTscnName: 'uploaded.tscn' });
 
-    // The cancelled fetch's finally() skips its reset — the effect's
-    // empty-fixture branch must clear the flag instead.
+    // The cancelled fetch's finally() skips its reset, so the effect's empty-fixture branch
+    // must clear the flag.
     expect(result.current.isFetching).toBe(false);
 
     // The abandoned fetch resolving later must not stomp the upload.
@@ -132,10 +126,6 @@ describe('replace — upload supersedes pending debounce', () => {
     expect(result.current.isFetching).toBe(false);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Fixture switch: fetches new content, replaces buffer
-// ---------------------------------------------------------------------------
 
 describe('fixture switch — loads new fixture content into buffer', () => {
   it('fetches the second fixture and replaces the buffer when fixtureFile changes', async () => {
@@ -182,8 +172,7 @@ describe('fixture switch — loads new fixture content into buffer', () => {
       expect(result.current.buffer).toBe(SECOND_TSCN);
     });
 
-    // Resolving the first fixture's fetch must not stomp the second
-    // (the effect was already cancelled via the `cancelled` flag).
+    // The first fetch resolving must not overwrite the second: its `cancelled` flag is set.
     await act(async () => {
       first.resolve(FIXTURE_TSCN);
     });

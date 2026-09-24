@@ -1,16 +1,8 @@
 /**
- * <CPUParticles2D> — Godot's CPU particle emitter, drawn as a FROZEN POSE.
- *
- * The emitter is evaluated once at mount (`simulate.ts`) and the resulting
- * quads are merged into a single geometry (`particleGeometry.ts`). There is no
- * clock and no `useFrame`: Godot's own `preprocess` is a fixed-step settle that
- * runs only at `time == 0`, the golden-image harness fails a scene that never
- * settles, and the animation transport is selection-driven and starts stopped
- * (ADR-0012). See simulate.ts for the full argument.
- *
- * `emitting = false` draws nothing — Godot's `_update_internal` returns before
- * it touches the multimesh buffer — while the node still positions its
- * children, which is what a script-triggered one-shot emitter relies on.
+ * <CPUParticles2D> draws Godot's CPU particle emitter as a frozen pose: evaluated
+ * once at mount (`simulate.ts`, which says why there is no clock) and merged into
+ * one geometry (`particleGeometry.ts`). `emitting = false` draws nothing, as
+ * Godot's `_update_internal` returns early, but the node still positions children.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -64,10 +56,9 @@ export function CPUParticles2D({ node, children }: NodeComponentProps) {
 }
 
 /**
- * The emitter's flipbook, or null when its material has none. `particles_anim`
- * is the one CanvasItemMaterial setting only a particles node can drive: it
- * makes the texture a sheet of cells rather than one image, and a particle
- * picks its cell from the anim value the simulation carries.
+ * The emitter's flipbook, or null when its material has none. `particles_anim`,
+ * a CanvasItemMaterial setting only a particles node drives, makes the texture a
+ * sheet of cells, and a particle picks its cell from its simulated anim value.
  */
 function particleFlipbook(material: CanvasItemMaterialProperties | null): ParticleFlipbook | null {
   if (!material?.particlesAnimation) return null;
@@ -104,8 +95,8 @@ function ParticleField({
   );
   const { texture, defines: decodeDefines } = useCanvas2DMap(resolvedTexture);
 
-  // A callback ref (not useRef) so the emission-transform sample runs once the
-  // container is actually in the tree — its world matrix does not exist before.
+  // A callback ref, not useRef: the emission-transform sample runs once the
+  // container is in the tree, since its world matrix does not exist before.
   const [container, setContainer] = useState<THREE.Group | null>(null);
   const emissionTransform = useEmissionTransform(container, props.local_coords);
 
@@ -139,13 +130,10 @@ function ParticleField({
   );
   useEffect(() => () => geometry?.dispose(), [geometry]);
 
-  // The field is drawn from the first frame, on a 1x1 quad, while the particle
-  // texture is still loading — so this material is compiled mapless unless a
-  // fresh one replaces it (`materialProgramInputs.ts`).
-  //
-  // Called from the drawing arm rather than derived above the branch: the group
-  // has to mount before a geometry can exist (`useEmissionTransform` samples its
-  // world matrix), so there is no early return to hang the merge off.
+  // The field draws from the first frame on a 1x1 quad while the texture loads, so
+  // this material compiles mapless unless a fresh one replaces it
+  // (`materialProgramInputs.ts`). Called from the drawing arm: the group mounts
+  // before a geometry can exist, as `useEmissionTransform` samples its world matrix.
   const particleMesh = (geom: THREE.BufferGeometry) => {
     const program = materialProgramInputs({
       props: {
@@ -157,11 +145,10 @@ function ParticleField({
         depthWrite: false,
         defines: decodeDefines,
       },
-      // One mesh, N particles, each with its OWN vertex colour and alpha and each
-      // quad wound by the determinant of its own particle transform
-      // (`particleGeometry.ts`). Splitting that array by facing would composite
-      // overlapping particles out of emission order the moment a transform
-      // mirrors — `canvasItemFacing()` draws it once, in index order.
+      // Each particle has its own vertex colour and alpha, and each quad is wound
+      // by its own transform's determinant (`particleGeometry.ts`). A split by
+      // facing would composite a mirrored particle out of emission order, so
+      // `canvasItemFacing()` draws the mesh once, in index order.
       merge: [canvasItemFacing(), blend, lighting],
     });
     return (
@@ -175,8 +162,7 @@ function ParticleField({
     <CanvasItemGroup ref={setContainer} name={`${name}_Particles`}>
       {missing ? (
         // One marker for the emitter, not one per particle: the Resources tab
-        // is where the path is named, and N overlapping magenta quads would
-        // bury the scene rather than explain it.
+        // names the path, and overlapping magenta quads would bury the scene.
         <MissingResourcePlaceholder shape="plane" name={name} />
       ) : geometry ? (
         particleMesh(geometry)

@@ -1,15 +1,7 @@
-; The ONE variable: `layout_direction = 3` on an OptionButton. Godot draws the
-; chevron `arrow_margin` in from the LEADING edge rather than the trailing one
-; (option_button.cpp:124-130), moves Button's internal margin to the opposite
-; side (:139-147), and swaps the constructor's LEFT text alignment to RIGHT
-; (button.cpp:271-275), so the selected item's label hugs the far margin. Both
-; controls select the same item and are the same width, so only the direction
-; can move either piece. `unit-optionbutton` is LTR and no other fixture pairs
-; an OptionButton with a direction, so a regression in the arrow side or the
-; label side is invisible everywhere else.
-;
-; The popup itself is never drawn here — this fixture covers the button's own
-; chrome only.
+; One variable: `layout_direction = 3` on an OptionButton. Godot draws the chevron `arrow_margin`
+; in from the leading edge (option_button.cpp:124-130), moves Button's internal margin to the
+; other side (:139-147), and swaps the constructor's LEFT text alignment to RIGHT
+; (button.cpp:271-275), so the selected label hugs the far margin.
 
 [gd_scene format=3 uid="uid://unitoptionbuttonrtl"]
 
@@ -18,6 +10,9 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; Both controls select the same item at the same width, so only the direction moves either piece.
+; `unit-optionbutton` is LTR, and no other fixture pairs an OptionButton with a direction. The
+; popup is never drawn: this covers the button's own chrome.
 [node name="Ltr" type="OptionButton" parent="."]
 offset_left = 64.0
 offset_top = 48.0

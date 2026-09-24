@@ -1,13 +1,7 @@
-; The ONE variable: `layout_direction = 3` on a MarginContainer. This class
-; has no RTL branch of its own — `margin_container.cpp` never calls
-; `is_layout_rtl()` — so the whole effect comes from
-; `Container::fit_child_in_rect`, which reads the CONTAINER's flag and swaps
-; the begin/end edges a child without SIZE_FILL shrinks to
-; (container.cpp:99,109). The child therefore needs `size_flags_horizontal = 0`
-; for the swap to show at all: a filling child covers the inset rect either
-; way. Every other RTL fixture pairs the flag with a container that mirrors
-; its own arrangement, so this one is what proves the flag still reaches the
-; shared fit step where the container itself does nothing.
+; One variable: `layout_direction = 3` on a MarginContainer, which has no RTL branch
+; (`margin_container.cpp` never calls `is_layout_rtl()`). `Container::fit_child_in_rect` reads the
+; container's flag and swaps the edges a child without SIZE_FILL shrinks to (container.cpp:99,109),
+; so the child needs `size_flags_horizontal = 0`: a filling child covers the inset either way.
 
 [gd_scene format=3]
 
@@ -22,6 +16,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
+; Every other RTL fixture pairs the flag with a container that mirrors its own arrangement. This
+; one proves the flag reaches the shared fit step where the container does nothing.
 [node name="Ltr" type="MarginContainer" parent="."]
 layout_mode = 1
 offset_left = 40.0

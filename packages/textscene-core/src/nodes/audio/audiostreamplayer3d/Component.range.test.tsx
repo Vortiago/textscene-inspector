@@ -1,17 +1,8 @@
 /**
- * The audible-range gizmo follows Godot's editor rule, and the emission cone
- * is drawn.
- *
- * Godot's `AudioStreamPlayer3DGizmoPlugin::redraw` draws the range whenever
- * `attenuation_model != DISABLED || max_distance > 0` — it never looks at
- * `unit_size`. We suppressed it at exactly the default `unit_size` of 10, which
- * is the value nearly every corpus node carries, so the gizmo was almost always
- * absent; when it did draw, it used `unit_size` raw as the radius instead of
- * `unit_size x soft_multiplier[attenuation_model]` clamped by `max_distance`,
- * making it 3.25-12x too small.
- *
- * Multiplier table (gizmo plugin source): INVERSE_DISTANCE 12, INVERSE_SQUARE 4,
- * LOGARITHMIC 3.25, DISABLED 10000.
+ * The audible-range gizmo follows Godot's editor rule, and the emission cone is drawn.
+ * `AudioStreamPlayer3DGizmoPlugin::redraw` draws the range whenever `attenuation_model != DISABLED
+ * || max_distance > 0`, at `unit_size x soft_multiplier[model]` clamped by `max_distance`. The
+ * multipliers: INVERSE_DISTANCE 12, INVERSE_SQUARE 4, LOGARITHMIC 3.25, DISABLED 10000.
  */
 import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -73,8 +64,8 @@ function gizmoGroup(
 /** Largest vertex distance from the gizmo's own origin, in its local space. */
 function gizmoExtent(object: THREE.Object3D): number {
   // Found by traversal, not by index: `<GizmoLine>` wraps its line in a group
-  // carrying the gizmo's draw order (`GIZMO_GROUP_ORDER`), so the line is no
-  // longer a direct child.
+  // carrying the gizmo's draw order (`GIZMO_GROUP_ORDER`), so the line is not
+  // a direct child.
   let line: THREE.Line | undefined;
   object.traverse((o) => {
     if (!line && (o as THREE.Line).isLine) line = o as THREE.Line;
@@ -96,7 +87,7 @@ function rangeRadius(renderer: { scene: { findAllByType: (t: string) => unknown[
 
 describe('<AudioStreamPlayer3D> audible-range gizmo', () => {
   it('draws the range at Godot defaults — unit_size 10, inverse-distance', async () => {
-    // 10 x 12 = 120, not the raw 10 we used to draw (and used to suppress).
+    // 10 x 12 = 120, not the raw `unit_size`.
     expect(rangeRadius(await render())).toBeCloseTo(120, 5);
   });
 

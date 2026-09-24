@@ -1,8 +1,6 @@
 /**
- * <GridMap> rendering. The component decodes the cell stream and places a mesh
- * per cell; with no resolvable MeshLibrary it falls back to cell-sized
- * wireframe boxes so the grid structure is still visible. Wrapped in the
- * resource + scene-resource providers the component depends on.
+ * <GridMap> rendering: a mesh per decoded cell, or cell-sized wireframe boxes
+ * when no MeshLibrary resolves.
  */
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
@@ -77,10 +75,9 @@ describe('<GridMap>', () => {
   });
 
   it('offsets each cell by half a cell — Godot centers all three axes by default', async () => {
-    // One cell at the grid origin. Godot's _get_offset() puts it at
-    // cell_size * 0.5 on every axis whose cell_center_* is on, and all three
-    // default to on — so (0,0,0) renders at (1,1,1) with the default 2-unit
-    // cell, NOT at the origin.
+    // One cell at the grid origin. Godot's _get_offset() adds cell_size * 0.5
+    // on every axis whose cell_center_* is on, and all three default to on, so
+    // (0,0,0) renders at (1,1,1) with the default 2-unit cell.
     const renderer = await render(
       gridMapNode({ data: '{"cells": PackedInt32Array(0, 0, 0)}' })
     );

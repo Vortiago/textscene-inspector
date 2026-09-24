@@ -64,7 +64,7 @@ describe('parseGraphNode', () => {
     const p = parseGraphNode(h({ name: 'N', type: 'GraphNode' }), {
       // erases slot 0 (draw_stylebox is not tested by the erase condition)
       'slot/0/draw_stylebox': 'false',
-      // then re-creates it from a fresh Slot() default: drawStylebox is TRUE again
+      // then re-creates it from a fresh Slot() default: drawStylebox is true again
       'slot/0/left_enabled': 'true',
     });
     expect(p.slots.get(0)).toEqual({

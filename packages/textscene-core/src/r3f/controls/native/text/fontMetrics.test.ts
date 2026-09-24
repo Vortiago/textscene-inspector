@@ -1,25 +1,11 @@
 /**
- * `fontMetrics.ts` — the shared units→pixels quantization every `FontMetrics`
- * implementation goes through. Expected values below are derived from the
- * FreeType/HarfBuzz sources Godot vendors, never from this repo's own
- * arithmetic fed back at itself:
- *
- *   thirdparty/freetype/src/base/ftobjs.c:3257-3320,3350-3361 --
- *     FT_SIZE_REQUEST_TYPE_NOMINAL: x_scale = FT_DivFix(size * 64, upem),
- *     x_ppem = (size * 64 + 32) >> 6.
- *   thirdparty/freetype/src/base/ftadvanc.c:52 --
- *     FT_MulFix(1024 * hmtx_advance, x_scale), 16.16, rounded half up.
- *   thirdparty/harfbuzz/src/hb-ft.cc:519,523 -- FT_Get_Advance then
- *     (v + (1<<9)) >> 10, quantizing to 26.6 (whole 1/64 px).
- *   modules/text_server_adv/text_server_adv.cpp:6936 -- `subpos`, and
- *     servers/text/text_server.h:172's SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE.
- *
- * Corroborated against the running engine: at `unitsPerEm` 2048 and size 16,
- * `ThemeDB.fallback_font.get_char_size(c, 16).x` reports 15.125 for 'W'
- * (1936 units), 10.578125 for 'A' (1354) and 14.75 for 'M' (1888) — every one
- * of them `ceil(units / 2) / 64`, which is what this chain reduces to at that
- * size.
+ * The shared units-to-pixels quantisation of `fontMetrics.ts`, against the sources
+ * Godot vendors (`thirdparty/freetype/src/base/ftobjs.c:3257-3320,3350-3361`,
+ * `thirdparty/freetype/src/base/ftadvanc.c:52`, `thirdparty/harfbuzz/src/hb-ft.cc:519,523`,
+ * `modules/text_server_adv/text_server_adv.cpp:6936`, `servers/text/text_server.h:172`).
  */
+// Godot's `ThemeDB.fallback_font.get_char_size(c, 16).x` reports 15.125 for 'W' (1936
+// units), 10.578125 for 'A' (1354) and 14.75 for 'M' (1888): each `ceil(units / 2) / 64`.
 import { describe, expect, it } from 'vitest';
 import {
   fontUsesSubpixelPositioning,
@@ -30,7 +16,7 @@ import {
   type FontMetrics,
 } from './fontMetrics';
 
-/** Open Sans SemiBold's own scalars, with a hand-picked advance table — an ODD advance and an EVEN one, since only the odd ones move under 26.6 quantization at size 16. */
+/** Open Sans SemiBold's scalars with an odd and an even advance, since only an odd one moves under 26.6 quantisation at size 16. */
 const METRICS: FontMetrics = {
   kind: 'atlas',
   unitsPerEm: 2048,
@@ -44,8 +30,8 @@ const METRICS: FontMetrics = {
 describe('getFontGlyphAdvancePx', () => {
   it('quantizes an ODD design-unit advance UP to the next 1/64 px, where a continuous scale would land between two', () => {
     // 'l', 571 units. x_scale is 0.5 in 16.16 at size 16, so the chain reduces
-    // to ceil(571/2)/64 = 286/64 = 4.46875 — the advance real Godot reports —
-    // against a continuous 571*16/2048 = 4.4609375.
+    // to ceil(571/2)/64 = 286/64 = 4.46875, the advance Godot reports, against a
+    // continuous 571*16/2048 = 4.4609375.
     expect(getFontGlyphAdvancePx(METRICS, 'l', 16)).toBe(4.46875);
     expect(getFontGlyphAdvancePx(METRICS, 'T', 16)).toBe(9.046875);
   });
@@ -59,7 +45,7 @@ describe('getFontGlyphAdvancePx', () => {
     // Size 18: x_scale 0.5625, 16.16 advance 779904, (779904 + 512) >> 10 =
     // 762 -> 11.90625, where a continuous scale gives 11.900390625.
     expect(getFontGlyphAdvancePx(METRICS, 'A', 18)).toBe(762 / 64);
-    // Size 32: x_scale is exactly 1.0, so the 26.6 advance IS the design
+    // Size 32: x_scale is exactly 1.0, so the 26.6 advance is the design
     // units and the quantization is again a no-op.
     expect(getFontGlyphAdvancePx(METRICS, 'A', 32)).toBe(1354 / 64);
   });
@@ -76,8 +62,7 @@ describe('getFontGlyphAdvancePx', () => {
     // rather than vanishing.
     expect(getFontGlyphAdvancePx(hairline, 'A', 16)).toBe(1 / 64);
     // At size 1 the same unit is 1/2048 px, well under half the grid step, so
-    // FreeType really does report zero — the grid is the engine's, not an
-    // approximation this module introduces.
+    // FreeType reports zero: the grid is the engine's, not an approximation.
     expect(getFontGlyphAdvancePx(hairline, 'A', 1)).toBe(0);
     expect(getFontGlyphAdvancePx({ ...METRICS, getGlyphAdvanceUnits: () => 0 }, 'A', 16)).toBe(0);
   });

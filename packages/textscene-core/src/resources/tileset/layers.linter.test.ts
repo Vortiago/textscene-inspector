@@ -1,20 +1,8 @@
 /**
- * The four flat indexed layer families, through the full Linter.
- *
- * Each is gated on `components[0].trim_prefix(<prefix>).is_valid_int()`
- * (tile_set.cpp:3839, :3859, :3928, :3942), so an index the gate rejects yields
- * no element and the write is dropped; each then has its own
- * `ERR_FAIL_COND_V(index < 0, false)` (:3842, :3862, :3932, :3945).
- *
- * The leaf tiers come from `_get_property_list` (:4148-4212) over setters that
- * assign straight through: the layer masks are `PROPERTY_HINT_LAYERS_2D_*`, a
- * UI-control hint that states no numeric bound at all, and
- * `custom_data_layer_<n>/type` is the one closed `PROPERTY_HINT_ENUM`.
- *
- * Asserted through `tileSetKey` rather than `runResourcePropertyValidation`,
- * whose lookup finds a diagnostic by the property name in its MESSAGE: a leaf
- * validator names the leaf (`light_mask`), never the whole indexed key, so the
- * generated lookup would miss every one of them.
+ * The four flat indexed layer families, through the full Linter. Each gates on
+ * `trim_prefix(<prefix>).is_valid_int()` (tile_set.cpp:3839, :3859, :3928, :3942)
+ * and `ERR_FAIL_COND_V(index < 0, false)` (:3842, :3862, :3932, :3945). Leaf tiers
+ * come from `_get_property_list` (:4148-4212).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -31,6 +19,7 @@ const CASES: KeyCase[] = [
   {
     // tile_set.cpp:4148, PROPERTY_HINT_LAYERS_2D_RENDER over a bare assignment
     // (:622): 32 checkboxes express every pattern, so no value is out of range.
+    // This hint states no numeric bound.
     key: 'occlusion_layer_0/light_mask',
     valid: ['1', '0', '-1', '2147483647'],
     invalid: [{ value: 'true', severity: 'warning', contains: ['light_mask'] }],
@@ -78,7 +67,8 @@ const CASES: KeyCase[] = [
   },
   {
     // tile_set.cpp:4212's hint is built from Variant::VARIANT_MAX, so it names
-    // 0..38; set_custom_data_layer_type (:1141) casts straight into the enum.
+    // 0..38, the one closed PROPERTY_HINT_ENUM. set_custom_data_layer_type (:1141)
+    // casts straight into the enum.
     key: 'custom_data_layer_0/type',
     valid: ['0', '2', '38'],
     invalid: [
@@ -105,15 +95,14 @@ const CASES: KeyCase[] = [
     ],
   },
   {
-    // `is_valid_int()` skips ONE leading sign (ustring.cpp:4752), so this one
-    // resolves to layer 5 and the write lands.
+    // `is_valid_int()` skips one leading sign (ustring.cpp:4752), so this resolves
+    // to layer 5 and the write lands.
     key: 'occlusion_layer_+5/light_mask',
     valid: ['1'],
   },
   {
-    // Each family owns only its OWN leaves: `name` is a custom-data leaf
-    // (:3946) and `_set` has no case for it under `physics_layer_`, so it falls
-    // past every branch to the closing `return false` (:4007).
+    // Each family owns only its own leaves: `name` is a custom-data leaf (:3946),
+    // so under `physics_layer_` it falls to the closing `return false` (:4007).
     key: 'physics_layer_0/name',
     invalid: [
       { value: '"nope"', severity: 'error', contains: ['Unknown', 'physics_layer_0/name'] },
@@ -133,8 +122,9 @@ describe('TileSet layer families', () => {
             contains: bad.contains,
             severity: bad.severity,
           });
-          // The property's own line, so the diagnostic is pinned to the key
-          // under test rather than to anything else in the scene.
+          // The property's own line pins the diagnostic to the key under test. A
+          // leaf validator names the leaf, so `runResourcePropertyValidation`'s
+          // message lookup would miss it.
           expect(found.location?.line).toBe(4);
         });
       }

@@ -1,5 +1,5 @@
 /**
- * CSGCombiner3D registration — parser.
+ * CSGCombiner3D registration: the parser.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

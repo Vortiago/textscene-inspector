@@ -1,16 +1,7 @@
 /**
- * Regression: on big fixtures with many missing externals
- * (`example-hallway.tscn` has 9+), the panel must NOT grow unbounded
- * and push the SceneTreeViewer + NodeDetailsPanel out of the sidebar.
- *
- * happy-dom does not run layout, so we can't measure real pixel heights.
- * Two-layer assertion instead:
- *   1. Many rows still render correctly (no regression on the row-per-
- *      path contract) — this is a behavior assertion.
- *   2. The panel's CSS rule declares `max-height` + `overflow: auto` +
- *      `flex-shrink: 0` — this is the load-bearing cap that prevents
- *      the BLOCKER. Asserting the source file keeps the test honest
- *      against accidental regression.
+ * With many missing files the panel must not grow and push the scene tree
+ * and the details panel out of the sidebar. happy-dom runs no layout, so
+ * the tests check that every row renders and that the CSS rule caps the height.
  */
 import { useEffect } from 'react';
 import { readFileSync } from 'node:fs';
@@ -55,8 +46,7 @@ describe('<MissingResourcesPanel> scale behavior (WI-UX-13)', () => {
 
     const panel = await screen.findByTestId('missing-resources-panel');
     const missingRows = panel.querySelectorAll('[data-state="missing"]');
-    // All 12 rows exist in the DOM — the cap is visual (overflow + scroll),
-    // not behavioural (no row-dropping).
+    // The cap scrolls the rows. It drops none.
     expect(missingRows).toHaveLength(12);
 
     const paths_rendered = Array.from(missingRows).map((r) =>
@@ -66,14 +56,8 @@ describe('<MissingResourcesPanel> scale behavior (WI-UX-13)', () => {
   });
 
   it('panel CSS declares max-height, overflow-y: auto, and flex-shrink: 0', () => {
-    // `.panel` is the load-bearing class. Its source declaration must
-    // include all three properties so the BLOCKER (panel pushes tree
-    // off-screen on `example-hallway.tscn`) cannot regress silently.
-    //
-    // We assert the source file rather than runtime computed style
-    // because happy-dom doesn't compute layout. Reading the .module.css
-    // directly gives us a CI-stable assertion that survives CSS
-    // Modules hash-mangling of class names.
+    // The source, not the computed style: happy-dom computes no layout, and the
+    // source survives the CSS Modules hash on class names.
     const panelRule = extractRule(panelCss, '.panel');
     expect(panelRule).toMatch(/max-height\s*:/);
     expect(panelRule).toMatch(/overflow-y\s*:\s*auto/);
@@ -81,10 +65,7 @@ describe('<MissingResourcesPanel> scale behavior (WI-UX-13)', () => {
   });
 });
 
-/**
- * Extract the body of a top-level CSS rule (no nesting traversal —
- * `.panel` is a simple top-level selector in this file).
- */
+/** The body of a top-level CSS rule. It does not walk nested rules. */
 function extractRule(css: string, selector: string): string {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));

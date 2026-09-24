@@ -124,17 +124,16 @@ describe('parseLabel', () => {
     });
 
     it('visible_ratio alone clamps at 1.0 and resets visible_characters to -1', () => {
-      // Measured on 4.6.3 (linterParser.ts's own doc): visible_ratio = 3.0 alone -> clamped to 1.0.
+      // Measured on 4.6.3 (linterParser.ts): visible_ratio = 3.0 alone clamps to 1.0.
       const p = parseLabel(heading('Label', { name: 'T' }), { text: '"0"', visible_ratio: '3.0' });
       expect(p.visibleRatio).toBe(1);
       expect(p.visibleCharacters).toBe(-1);
     });
 
     it('visible_characters THEN visible_ratio in file order: the later setter is a no-op once it matches the already-derived ratio, leaving the OVER-1 value unclamped', () => {
-      // Measured on 4.6.3 (linterParser.ts's own doc): text = "0", visible_characters = 3,
-      // visible_ratio = 3.0 (in that file order) -> stores 3.0, un-clamped, because
-      // `set_visible_ratio`'s whole body is gated on `visible_ratio != p_ratio`
-      // (label.cpp:1306) and visible_characters already left visible_ratio at 3.0.
+      // Measured on 4.6.3: text = "0", visible_characters = 3, then visible_ratio = 3.0 stores 3.0
+      // unclamped. `set_visible_ratio` runs only when `visible_ratio != p_ratio` (label.cpp:1306), and
+      // visible_characters already left visible_ratio at 3.0.
       const p = parseLabel(heading('Label', { name: 'T' }), {
         text: '"0"',
         visible_characters: '3',

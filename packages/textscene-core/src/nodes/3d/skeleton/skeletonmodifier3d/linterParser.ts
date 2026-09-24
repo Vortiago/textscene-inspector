@@ -1,30 +1,20 @@
 /**
- * SkeletonModifier3D strict validators for linting.
- *
- * Declare only SkeletonModifier3D's OWN members — the ones doc/classes/SkeletonModifier3D.xml
- * lists without an `overrides=` attribute. Everything from Node3D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * SkeletonModifier3D strict validators. Declare only SkeletonModifier3D's own members, the ones
+ * doc/classes/SkeletonModifier3D.xml lists without `overrides=`. The NODE_BASE_TYPES base-walk
+ * delivers every key from Node3D up, and re-declaring one shadows it and duplicates the rule.
  */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
+// The base chain. Registration happens on import, so a test that loads only this slice resolves an
+// inherited key only when the ancestor is imported too.
 import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
 /*
- * The enum label tables below are SkeletonModifier3D's own: its header declares
- * all three, and its `get_hint_*()` helpers build the very hint strings the
- * subclasses' `get_property_list` overrides pass to `PROPERTY_HINT_ENUM`. Six
- * descendant slices had copied one or more of them byte-identically.
- *
- * They live here rather than in `sharedEnumLabels.ts`, whose docblock bars a
- * table with a common ancestor: this IS the ancestor, and every descendant
- * already imports this module for the base-walk chain, so sharing costs no new
- * edge. `Vector3::Axis` is core's, not this class's, so it stays in the shared
- * module.
+ * The enum label tables below are SkeletonModifier3D's own: its header declares them, and its
+ * `get_hint_*()` helpers build the hint strings the subclasses pass to `PROPERTY_HINT_ENUM`. They
+ * live here, not in `sharedEnumLabels.ts`, which takes only tables with no common ancestor, and
+ * every descendant already imports this module. `Vector3::Axis` is core's, so it stays there.
  */
 
 /** `SkeletonModifier3D::BoneAxis` declaration order (skeleton_modifier_3d.h:45-50). */
@@ -38,13 +28,10 @@ export const BONE_AXIS: Readonly<Record<number, string>> = {
 };
 
 /**
- * `SkeletonModifier3D::BoneDirection`, skeleton_modifier_3d.h:55-62, in the
- * order of `get_hint_bone_direction()` (skeleton_modifier_3d.h:64).
- *
- * Spelled out rather than derived from {@link BONE_AXIS}. The two agree on 0-5
- * today, but they are two separate C++ enums, and deriving one from the other
- * would assert a relationship the engine does not declare — the day Godot
- * reorders either, the derived table would silently follow the wrong one.
+ * `SkeletonModifier3D::BoneDirection`, skeleton_modifier_3d.h:55-62, in the order of
+ * `get_hint_bone_direction()` (skeleton_modifier_3d.h:64). Spelled out, not derived from {@link
+ * BONE_AXIS}: the two agree on 0-5, but they are separate C++ enums and either can be reordered
+ * alone.
  */
 export const BONE_DIRECTION: Readonly<Record<number, string>> = {
   0: '+X',
@@ -57,9 +44,9 @@ export const BONE_DIRECTION: Readonly<Record<number, string>> = {
 };
 
 /**
- * `SkeletonModifier3D::SecondaryDirection`, skeleton_modifier_3d.h:67-75, in the
- * order of `get_hint_secondary_direction()` — PROPERTY_HINT_ENUM
- * "None,+X,-X,+Y,-Y,+Z,-Z,Custom" (skeleton_modifier_3d.h:77).
+ * `SkeletonModifier3D::SecondaryDirection`, skeleton_modifier_3d.h:67-75, in the order of
+ * `get_hint_secondary_direction()`: PROPERTY_HINT_ENUM "None,+X,-X,+Y,-Y,+Z,-Z,Custom"
+ * (skeleton_modifier_3d.h:77).
  */
 export const SECONDARY_DIRECTION: Readonly<Record<number, string>> = {
   0: 'None',
@@ -73,7 +60,7 @@ export const SECONDARY_DIRECTION: Readonly<Record<number, string>> = {
 };
 
 /**
- * `SkeletonModifier3D::RotationAxis` — PROPERTY_HINT_ENUM "X,Y,Z,All,Custom"
+ * `SkeletonModifier3D::RotationAxis`: PROPERTY_HINT_ENUM "X,Y,Z,All,Custom"
  * (skeleton_modifier_3d.h:87).
  */
 export const ROTATION_AXIS: Readonly<Record<number, string>> = {
@@ -85,13 +72,10 @@ export const ROTATION_AXIS: Readonly<Record<number, string>> = {
 };
 
 /**
- * `SkeletonModifier3D::get_axis_from_bone_axis` (skeleton_modifier_3d.cpp:244-260):
- * a `BoneAxis` reduced to the `Vector3::Axis` it lies along, so `+X` and `-X`
- * both give 0.
- *
- * The switch has NO default case and seeds `ret` with `AXIS_X`, so a value
- * outside 0-5 resolves to X rather than to nothing, and Godot compares that X
- * against the primary axis exactly as it would a legal one.
+ * `SkeletonModifier3D::get_axis_from_bone_axis` (skeleton_modifier_3d.cpp:244-260): a `BoneAxis`
+ * reduced to the `Vector3::Axis` it lies along, so `+X` and `-X` both give 0. The switch has no
+ * default case and seeds `ret` with `AXIS_X`, so a value outside 0-5 resolves to X, and Godot
+ * compares it as it would a legal one.
  */
 export function axisFromBoneAxis(boneAxis: number): number {
   if (boneAxis < 0 || boneAxis > 5) return 0;

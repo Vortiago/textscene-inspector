@@ -1,14 +1,8 @@
 /**
- * Godot CanvasItem tint, in two flavours:
- *  - `modulate` is hierarchical: a node's modulate multiplies onto all of its
- *    descendants' colors (and its own). We carry the accumulated parent modulate
- *    down the 2D subtree via context.
- *  - `self_modulate` multiplies onto the node's OWN pixels only and is NOT
- *    inherited by children.
- * `useCanvasItemTint` resolves both: it returns the `inherited` product to hand
- * to the child context, plus the linear-space `color`/`opacity` for this node's
- * material. TSCN colours are authored in sRGB → converted to the linear working
- * space before reaching the (unlit) 2D material, matching Godot's canvas.
+ * Godot's CanvasItem tint. `modulate` multiplies onto the node and every
+ * descendant through context, and `self_modulate` onto the node's own pixels.
+ * `useCanvasItemTint` resolves both, with the material colour converted from the
+ * authored sRGB to linear, as Godot's canvas does.
  */
 
 import { createContext, useContext, useMemo } from 'react';
@@ -36,12 +30,12 @@ export function multiplyModulate(a: RGBA, b: RGBA): RGBA {
 }
 
 export interface CanvasItemTint {
-  /** Ancestor modulate × this node's `modulate` — propagate to the child context. */
+  /** Ancestor modulate × this node's `modulate`, for the child context. */
   inherited: RGBA;
   /**
-   * The sRGB-space own-pixel product (`inherited` × `self_modulate`) — for
-   * bodies that compose a further tint (e.g. a TileMap layer's modulate)
-   * before the single sRGB→linear conversion.
+   * The sRGB own-pixel product, `inherited` × `self_modulate`, for a body that
+   * composes a further tint, such as a TileMap layer's, before the one conversion
+   * to linear.
    */
   own: RGBA;
   /** Linear-space own-pixel tint (`inherited` × `self_modulate`). */
@@ -54,9 +48,8 @@ export interface CanvasItemTint {
 export function useCanvasItemTint(
   props: { modulate: RGBA; self_modulate: RGBA },
   /**
-   * A tint applied to this item's OWN pixels and not passed on — the canvas
-   * modulate, which Godot multiplies in per item during the base pass rather
-   * than inheriting down the tree.
+   * A tint on this item's own pixels that is not passed on: the canvas modulate,
+   * which Godot multiplies in per item in the base pass.
    */
   ownMultiplier: RGBA = WHITE_MODULATE
 ): CanvasItemTint {

@@ -1,13 +1,8 @@
 /**
- * OpenXRVisibilityMask strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * OpenXRVisibilityMask strict validators, asserted through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator and no fixture text needs upkeep.
+ * Rule-level behaviour belongs in linter.test.ts. Each property gets happy, malformed and bound
+ * cases, with the governing Godot source line beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -26,34 +21,22 @@ import '../../camera3d/linter';
 const check = checkerFor('OpenXRVisibilityMask');
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * OpenXRVisibilityMask binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * The keys OpenXRVisibilityMask binds, read from the source. Set this or DECLARES_NOTHING,
+ * not both. Leaving both unset is red on purpose: do not delete an assertion to go green.
  */
 const KEYS: string[] = [];
 /**
- * True: OpenXRVisibilityMask binds nothing. `openxr_visibility_mask.h:35-53` is
- * the entire class body — GDCLASS, `_bind_methods`/`_notification` overrides, two
- * session-signal handlers, `get_configuration_warnings`, `get_aabb`, ctor/dtor —
- * and `openxr_visibility_mask.cpp:37-38` shows `_bind_methods` is an empty body,
- * so there is no `ADD_PROPERTY` and no `ADD_ARRAY_COUNT`. No `_get_property_list`
- * and no unprefixed `get_property_list` either, so no hand-rolled leaf family.
- * `doc/classes/OpenXRVisibilityMask.xml` carries no `<members>` block, which is
- * the doc side of the same fact.
+ * True: OpenXRVisibilityMask binds nothing. `openxr_visibility_mask.h:35-53` is the whole class
+ * body, with an empty `_bind_methods` (`openxr_visibility_mask.cpp:37-38`) and no property-list
+ * override in either spelling. `doc/classes/OpenXRVisibilityMask.xml` carries no `<members>` block.
  */
 const DECLARES_NOTHING = true;
 
 /**
- * Keys OpenXRVisibilityMask does NOT declare, each paired with the ancestor that does.
- * Name at least one; VisualInstance3D is where to start.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives OpenXRVisibilityMask no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart, and it is red until filled for the same reason
- * KEYS is.
+ * Keys OpenXRVisibilityMask does not declare, each paired with the ancestor that does. The
+ * malformed-value check below iterates `getOwnKeys`, so on a class with no own keys it passes on
+ * an empty set. Resolving a key to the ancestor's own validator function tells "no own
+ * properties" from "slice not written", and an empty list is red for the same reason KEYS is.
  */
 const INHERITED: [owner: string, key: string][] = [
   // visual_instance_3d.cpp:182, one hop up.
@@ -70,21 +53,19 @@ describe('OpenXRVisibilityMask strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
-    //
-    // With no own keys that is the INHERITED validators only — `linterParser`
-    // imports the parent chain — so it covers what GeometryInstance3D up declares and
-    // becomes this slice's own claim the moment KEYS gains an entry.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint`
+    // checks it against the whole registry through the barrel. This checks the same file
+    // against only what this test imported.
+
+    // With no own keys that is the inherited validators only, since `linterParser` imports the
+    // parent chain, so it covers what GeometryInstance3D up declares until KEYS gains an entry.
     expectFixtureClean('unit-open-xr-visibility-mask.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // OpenXRVisibilityMask declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow. It is vacuous when the class declares nothing,
+    // which INHERITED covers.
     const accepted = validatorRegistry
       .getOwnKeys('OpenXRVisibilityMask')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -99,7 +80,7 @@ describe('OpenXRVisibilityMask strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
+      // The same function, not merely some validator: a shadowing copy on
       // OpenXRVisibilityMask would answer here while drifting from the ancestor's rule.
       expect(validatorRegistry.findValidator('OpenXRVisibilityMask', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('OpenXRVisibilityMask')).not.toContain(key);

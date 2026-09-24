@@ -1,26 +1,7 @@
 /**
- * `GodotToneMapEffect` — Godot's tonemap pass: the tone curve, plus the glow
- * gather and blend when the environment has one.
- *
- * ONE effect rather than a bloom-then-tonemap pair, because that is Godot's own
- * shape: `tonemap.glsl` gathers the glow pyramid, blends it, and applies the tone
- * curve in a single shader whose glow lines are guarded by `FLAG_USE_GLOW`.
- * Mirroring that is what makes the two blend orderings expressible at all — Godot
- * composites SOFTLIGHT AFTER the tone curve (with the glow buffer itself
- * tonemapped) and every other mode into linear HDR BEFORE it, and a fixed pass
- * order can only ever be one of the two.
- *
- * The pyramid is built in `update()` from buffers this effect owns, which is how
- * `BloomEffect` is built too. It cannot BE a `BloomEffect`: Godot weights its
- * seven mip levels independently (`[0, 0.8, 0.4, 0.1, 0, 0, 0]` by default, which
- * is what keeps a Godot halo tight) and `MipmapBlurPass` exposes only one global
- * radius shared by every level, so an equal-weighted pyramid is the closest it
- * can get — a haze over the whole frame instead of a halo.
- *
- * Godot's own downsample kernel is written against integer pixel coordinates and
- * does not transplant onto a normalised-UV fullscreen pass, so the chain uses the
- * standard 13-tap pyramid downsample instead. What decides the halo's SHAPE is
- * the per-level weighting, and that is ported exactly.
+ * Godot's tonemap pass as one effect: the tone curve, plus the glow gather and blend under
+ * `FLAG_USE_GLOW`, as in `tonemap.glsl`. One shader lets SOFTLIGHT composite after the curve, with
+ * the glow buffer tonemapped, and every other mode before it, which a fixed pass order cannot express.
  */
 
 import { BlendFunction, Effect } from 'postprocessing';
@@ -34,13 +15,13 @@ import { compositeGlsl } from '../../resources/environment/godotCompositor';
 import { glslFloat } from '../../resources/environment/glslLiterals';
 
 export interface GodotToneMapOptions {
-  /** Null when the environment has no glow — `FLAG_USE_GLOW` clear. */
+  /** Null when the environment has no glow: `FLAG_USE_GLOW` clear. */
   glow: GlowParams | null;
   /** Godot `tonemap_mode`: 0 LINEAR, 1 REINHARDT, 2 FILMIC, 3 ACES, 4 AGX. */
   toneMapMode: number;
   /**
-   * Godot's `env->white` — the value the curve maps to 1.0, and (after the
-   * per-curve floor) the point SCREEN normalises the glow against.
+   * Godot's `env->white`: the value the curve maps to 1.0, and, after the per-curve floor, the
+   * point SCREEN normalises the glow against.
    */
   toneMapWhite: number;
   /**
@@ -49,10 +30,8 @@ export interface GodotToneMapOptions {
    */
   toneMapExposure: number;
   /**
-   * Godot `tonemap_agx_contrast`. Only AgX reads it, but it is threaded here
-   * rather than defaulted, because this path and the in-material one must draw
-   * the SAME curve — a default that diverged between them would show up only
-   * when glow happened to be mounted.
+   * Godot `tonemap_agx_contrast`, read only by AgX. Threaded, not defaulted, so this path and the
+   * in-material one draw the same curve.
    */
   toneMapAgxContrast?: number;
 }
@@ -91,9 +70,8 @@ export class GodotToneMapEffect extends Effect {
         agxContrast: toneMapAgxContrast,
       }),
       {
-        // This effect writes the finished frame — the glow blend and the tone
-        // curve are both already applied — so the composer must not blend it
-        // into the scene a second time.
+        // The effect writes the finished frame, glow and curve applied, so the composer must not
+        // blend it into the scene again.
         blendFunction: BlendFunction.SRC,
         uniforms,
       }
@@ -118,7 +96,11 @@ export class GodotToneMapEffect extends Effect {
   }
 }
 
-/** The glow buffers and the passes that fill them; a no-glow pass owns none of it. */
+/**
+ * The glow buffers and passes, owned as `BloomEffect` owns its own. Not a `BloomEffect`: Godot
+ * weights its seven levels apart (`[0, 0.8, 0.4, 0.1, 0, 0, 0]` by default), while `MipmapBlurPass`
+ * has one radius for every level, which gives a haze instead of a halo.
+ */
 class GlowPyramid {
   private readonly levelTargets: THREE.WebGLRenderTarget[] = [];
   private readonly accumulationTargets: THREE.WebGLRenderTarget[] = [];
@@ -168,9 +150,8 @@ class GlowPyramid {
     }
 
     this.pyramidCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    // Spans NDC exactly, so `vUv = position.xy * 0.5 + 0.5` covers 0..1. Rendered
-    // as its own root — `WebGLRenderer.render` takes any `Object3D`, so a `Scene`
-    // wrapper around a single fullscreen quad would buy nothing.
+    // Spans NDC exactly, so `vUv = position.xy * 0.5 + 0.5` covers 0..1. Rendered as its own root,
+    // since `WebGLRenderer.render` takes any `Object3D`.
     this.screen = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.brightPassMaterial);
     this.screen.frustumCulled = false;
   }
@@ -184,13 +165,9 @@ class GlowPyramid {
   }
 
   /**
-   * Builds the pyramid and returns the weighted sum the composite shader gathers.
-   *
-   * Godot's `gather_glow` reads every level at the SAME uv and sums
-   * `weight[i] * level[i]`. Accumulating coarse-to-fine — upsample what is
-   * already summed, add the next finer level at its weight — computes that same
-   * sum while only ever holding two textures live, instead of binding all seven
-   * as samplers at full resolution.
+   * Builds the pyramid and returns the sum `weight[i] * level[i]` that Godot's `gather_glow` reads at
+   * one uv. Accumulating coarse to fine, upsampling the sum and adding the next level, holds two
+   * textures live instead of binding all seven as samplers.
    */
   gather(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): THREE.Texture {
     const previousTarget = renderer.getRenderTarget();
@@ -214,10 +191,9 @@ class GlowPyramid {
     const uniforms = this.accumulateMaterial.uniforms;
     for (let level = this.maxLevel; level >= 0; level--) {
       const coarser = level === this.maxLevel ? null : this.accumulationTargets[level + 1]!;
-      // The coarsest rung has nothing summed below it. `coarserFactor` zeroes the
-      // contribution, so this only has to be a VALID binding — sampling an unbound
-      // sampler2D is undefined behaviour, not zero. Its own level serves, and
-      // cannot alias: this pass writes an accumulation target, never a level one.
+      // On the coarsest rung `coarserFactor` zeroes the contribution, but the binding must be valid:
+      // an unbound sampler2D is undefined, not zero. Its own level serves, and cannot alias, since
+      // this pass writes an accumulation target.
       uniforms['coarserBuffer']!.value = (coarser ?? this.levelTargets[level]!).texture;
       uniforms['coarserFactor']!.value = coarser ? 1 : 0;
       uniforms['levelBuffer']!.value = this.levelTargets[level]!.texture;
@@ -288,14 +264,9 @@ function createTarget(name: string): THREE.WebGLRenderTarget {
 }
 
 /**
- * Level 0 skips a rung — it goes straight from the frame to a quarter of it — so
- * this is a 4x reduction where every later level does 2x.
- *
- * Godot ships two glow implementations that filter this step differently — the
- * raster path takes four bilinear taps per 4x4 block, the compute path a separable
- * gaussian — and it runs the compute one wherever storage buffers are supported,
- * which is every desktop target. Neither transplants onto a normalised-UV pass, so
- * this shares the 13-tap downsample; the sheet records which measured closer.
+ * Level 0 goes from the frame to a quarter of it, a 4x reduction where later levels do 2x. Godot's
+ * raster glow takes four bilinear taps per 4x4 block, and its compute glow, run on every desktop
+ * target, a separable gaussian. Neither transplants to normalised UV, so this uses the 13-tap one.
  */
 function brightPassFragmentShader(glow: GlowParams): string {
   return /* glsl */ `
@@ -308,13 +279,9 @@ void main() {
 }
 
 /**
- * The standard 13-tap pyramid downsample: four inner diagonals carry half the
- * weight, a 3×3 ring at twice the spacing plus the centre carry the other half.
- * Its whole job is to halve resolution without the aliasing a single tap leaves,
- * which is what would otherwise make a small bright object flicker as it moves.
- *
- * Declares the three uniforms it reads, so a pass that includes it cannot forget
- * one and fail at shader-compile time rather than type-check time.
+ * The standard 13-tap pyramid downsample, since Godot's integer-pixel kernel does not transplant to
+ * normalised UV; the ported per-level weights decide the halo shape. It halves resolution without
+ * the aliasing that makes a small bright object flicker, and declares the uniforms it reads.
  */
 const DOWNSAMPLE_TAPS = /* glsl */ `
 uniform sampler2D inputBuffer;
@@ -338,9 +305,8 @@ vec3 downsample13() {
 `;
 
 /**
- * Godot multiplies the glow buffer by `glow_strength` at every pyramid pass, and
- * the bright pass has already applied its own — so each downsample carries one
- * more factor, reaching `strength^(i+1)` at level `i` in the order Godot does it.
+ * Godot multiplies the glow buffer by `glow_strength` at every pyramid pass, after the bright pass
+ * applied its own, so each downsample carries one more factor: `strength^(i+1)` at level `i`.
  */
 function downsampleFragmentShader(glow: GlowParams): string {
   return /* glsl */ `

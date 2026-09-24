@@ -1,8 +1,7 @@
 /**
- * HBoxContainer parser — delegates to the shared BoxContainer base (Control
- * plus `alignment`); the horizontal stacking itself and
- * `theme_override_constants/separation` are handled by the Component + the
- * base Control parser's theme-override collection.
+ * HBoxContainer parser: the shared BoxContainer parse (Control plus `alignment`).
+ * `nativeSolver.ts` stacks the children, and the Control parser collects
+ * `theme_override_constants/separation`.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';

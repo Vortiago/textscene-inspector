@@ -73,9 +73,9 @@ describe('CSGSphere3D strict validators', () => {
     ['rings = 1', 'rings'],
   ])('accepts the endpoint %s in silence', (line, property) => {
     // Each clamp leaves its own floor untouched (`> 4` and `> 1` are false at
-    // 4 and 1, so the else branch returns the same number), and 4 sits ABOVE
-    // the :1471 hint's displayed minimum of 1. Checking warnings too is what
-    // pins the floor's LOCATION — a drifted `min` still leaves errors empty.
+    // 4 and 1, so the else branch returns the same number), and 4 sits above
+    // the :1471 hint's displayed minimum of 1. Checking warnings too pins the floor's location:
+    // a drifted `min` still leaves errors empty.
     const diagnostics = linter.lint(scene(line));
     expect(errorsOf(diagnostics)).toEqual([]);
     expect(warningsOf(diagnostics).some((w) => w.message.includes(property))).toBe(false);

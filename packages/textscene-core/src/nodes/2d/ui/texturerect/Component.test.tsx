@@ -1,11 +1,9 @@
 /**
- * `<TextureRect>` render contract. `nodes/2d/marker2d/Component.test.tsx`
- * is the canonical `@react-three/test-renderer` shape this follows; the
- * texture-loading rig mirrors `sprite2d/Component.parity.test.tsx`
- * (`createFakeResourceLoader` + `ResourceLoaderProvider` +
- * `SceneResourcesProvider`, since `useResource` needs a live provider to ever
- * leave `pending`).
+ * `<TextureRect>` render contract, in the `@react-three/test-renderer` shape of
+ * `nodes/2d/marker2d/Component.test.tsx`, with `sprite2d/Component.parity.test.tsx`'s texture
+ * rig (a live provider, since `useResource` otherwise never leaves `pending`).
  */
+
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -39,7 +37,7 @@ function textureRectNode(raw: Record<string, string> = {}): TscnNode {
   };
 }
 
-/** The scene scope a painter resolves its own refs in — id `1` is the sheet. */
+/** The scene scope a painter resolves its own refs in: id `1` is the sheet. */
 const SCOPE = {
   externalResources: [{ id: '1', type: 'Texture2D', path: TEX }],
   internalResources: [],
@@ -49,7 +47,7 @@ function solveNode(node: TscnNode): SolveNode {
   return { ...emptySolveNode(), path: node.name, node, resources: SCOPE };
 }
 
-/** A 320x160 texture — the same non-square size `nativeSolver.test.ts` uses. */
+/** A 320x160 texture, the same non-square size `nativeSolver.test.ts` uses. */
 function fakeTexture(): THREE.Texture {
   const tex = new THREE.Texture();
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 320, height: 160 };
@@ -83,11 +81,9 @@ async function renderIsolated(raw: Record<string, string> = {}, rect: Rect2, opt
 
 describe('<TextureRect> resolves its texture in its OWN scene scope', () => {
   /**
-   * A node that arrived through an instanced sub-scene carries that scene's
-   * resource pools, not the host's — `buildSolveTree` already resolves each
-   * node's own scope, and the ambient `SceneResourcesProvider` holds the TOP
-   * scene's. Reading the ambient one resolves `ExtResource("1")` against the
-   * wrong pool, so the instance's texture silently never draws.
+   * An instanced node carries its sub-scene's resource pools, which `buildSolveTree` resolves,
+   * while the ambient `SceneResourcesProvider` holds the top scene's. Reading the ambient one
+   * resolves `ExtResource("1")` against the wrong pool, and the texture never draws.
    */
   it('draws a texture the ambient provider does not carry', async () => {
     const fake = createFakeResourceLoader();
@@ -143,9 +139,8 @@ describe('<TextureRect> (isolated painter contract)', () => {
     expect(meshes).toHaveLength(1);
     const material = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
     expect(material.map).not.toBeNull();
-    // Cloned, not the same cached instance `useResource` handed out — mutating
-    // filter/wrap/repeat/offset per-consumer must never bleed into siblings
-    // sharing the SAME cached texture (the reason `composeFrameTexture` clones).
+    // Cloned, not the cached instance `useResource` handed out: per-consumer filter, wrap,
+    // repeat and offset must never reach siblings sharing that texture.
     expect(material.map).not.toBe(cached);
   });
 
@@ -293,8 +288,8 @@ describe('<TextureRect> registered through <ControlCanvasWalker> (end-to-end wal
     const fake = createFakeResourceLoader();
     fake.textures.seed(TEX, fakeTexture());
 
-    // This TextureRect names NO texture_filter of its own (PARENT_NODE, the
-    // parsed default) — same leaf node reused under three different ancestors.
+    // This TextureRect names no texture_filter (PARENT_NODE, the parsed default).
+    // The same leaf sits under three different ancestors.
     const leaf = textureRectNode();
     function ancestorSolveNode(
       path: string,
@@ -311,11 +306,8 @@ describe('<TextureRect> registered through <ControlCanvasWalker> (end-to-end wal
     }
     const fullRect = { anchorLeft: 0, anchorTop: 0, anchorRight: 1, anchorBottom: 1 };
 
-    // Grandparent NAMES NearestFilter (1) AND repeat ENABLED (2); the
-    // intermediate parent re-states PARENT_NODE (0) explicitly for both
-    // rather than omitting them, so a walk that stops at the immediate
-    // parent (instead of continuing past a non-naming one) would still fail
-    // this, for either property.
+    // The grandparent names NearestFilter (1) and repeat enabled (2), and the parent
+    // re-states PARENT_NODE (0) for both, so a walk that stops at the parent fails either.
     const parent = ancestorSolveNode(
       'Grandparent/Parent',
       'Control',

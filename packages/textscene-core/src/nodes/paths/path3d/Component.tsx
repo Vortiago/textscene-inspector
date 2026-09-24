@@ -1,17 +1,12 @@
 /**
- * <Path3D> — a Node3D that holds a Curve3D. It resolves + tessellates the curve
- * and ALWAYS provides it to descendants via Path3DCurveProvider (so a
- * PathFollow3D child can follow it regardless of selection), and draws the curve
- * as a **selection-gated** white polyline gizmo (ADR-0018) — visible only while
- * this node is selected, mirroring Godot's 3D editor path line.
- *
- * Godot 3D space maps directly to three.js (right-handed Y-up), so curve points
- * are used as-is (no conjugation, unlike the 2D twin).
- *
- * Degrades gracefully: a missing curve, an ExtResource (.tres) curve, or a
- * SubResource that isn't found yields a null sampler → no gizmo, and children
- * fall back to their authored transform.
+ * <Path3D>: a Node3D that holds a Curve3D. It always provides the tessellated curve through
+ * Path3DCurveProvider, so a PathFollow3D child follows it whatever the selection. It draws the
+ * curve as a white polyline gizmo only while selected, like Godot's 3D editor (ADR-0018).
  */
+
+// Godot 3D space is three.js space (right-handed Y-up), so curve points need no conjugation,
+// unlike the 2D twin. A missing, ExtResource (.tres) or unfound curve gives a null sampler:
+// no gizmo, and children keep their authored transform.
 
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -28,7 +23,7 @@ import {
 import { Path3DCurveProvider } from '../../../r3f/contexts/Path3DCurveContext';
 import type { Path3DProperties } from './types';
 
-/** Godot editor path line color (white). */
+/** Godot editor path line colour. */
 const PATH_COLOR = 0xffffff;
 
 export function Path3D({ node, children }: NodeComponentProps) {

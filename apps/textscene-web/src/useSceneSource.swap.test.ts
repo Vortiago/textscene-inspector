@@ -1,15 +1,13 @@
 /**
- * `useSceneSource` — `onBeforeSwap`: the single moment resource resolution may be re-pointed.
- *
- * The hook owns the hold-last-valid edit-loop invariant (ADR-0020): a resolving
- * fixture load must never stomp newer keystrokes. Shared scaffolding is in
+ * `useSceneSource`'s `onBeforeSwap`, the single moment resource resolution may be re-pointed.
+ * The hook keeps the hold-last-valid invariant (ADR-0020). The shared scaffolding is in
  * `useSceneSource.testkit.ts`.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
-// Stub resolveForwardedContent: valid TSCN passes through, garbage is rejected.
-// Hoisted per module graph, so every suite in this split declares its own.
+// A stub resolveForwardedContent passes valid TSCN and rejects garbage. `vi.mock` is hoisted
+// per module graph, so every suite in this split declares its own.
 vi.mock('./sourceGate', () => ({
   resolveForwardedContent: (buffer: string, lastGood: string) =>
     buffer.trim().startsWith('[gd_scene') ? buffer : lastGood,
@@ -29,7 +27,7 @@ beforeEach(() => {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // ignore
+    // Clearing storage is optional.
   }
 });
 
@@ -45,8 +43,8 @@ describe('onBeforeSwap — the only moment resource resolution may be re-pointed
       text: () => text.promise,
     } as unknown as Response) as unknown as typeof fetch;
 
-    // Records what the hook had rendered at the instant the callback ran — the
-    // swap must be announced while the OUTGOING content is still in place.
+    // Records what the hook had rendered when the callback ran: the swap is announced while
+    // the outgoing content is still in place.
     const calls: { file: string; forwardedAtCall: string }[] = [];
     const { result } = renderHook(() =>
       useSceneSource({
@@ -88,8 +86,7 @@ describe('onBeforeSwap — the only moment resource resolution may be re-pointed
     expect(onBeforeSwap).not.toHaveBeenCalled();
     failed.unmount();
 
-    // A load the user superseded by typing — the resolution is dropped, and a
-    // dropped resolution must not re-point resolution either.
+    // A load the user superseded by typing is dropped, and must not re-point resolution.
     const text = deferred<string>();
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -119,8 +116,7 @@ describe('onBeforeSwap — the only moment resource resolution may be re-pointed
     globalThis.fetch = mockFetchOk(FIXTURE_TSCN);
 
     const { result, rerender } = renderHook(() =>
-      // A fresh identity every render — if it landed in the effect's deps this
-      // would refetch on each one.
+      // A fresh identity every render, which would refetch each time if it reached the deps.
       useSceneSource({
         fixtureFile: 'unit-plane-mesh.tscn',
         uploadedTscnName: null,

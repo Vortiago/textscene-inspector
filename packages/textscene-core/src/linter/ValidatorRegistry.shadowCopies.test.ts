@@ -1,6 +1,6 @@
 /**
- * Meta-guard: no type may re-declare a key that its base chain already carries —
- * a shadow copy silently drifts from the base validator.
+ * Meta-guard: no type may re-declare a key that its base chain already carries,
+ * since a shadow copy silently diverges from the base validator.
  *
  * The comparison is `testing/shadowCopyScan.ts`; what lives here is the
  * inventory of deliberate exceptions and the run against the real registry.
@@ -13,53 +13,31 @@ import { findShadowViolations, ownKeyRegistrations } from './testing/shadowCopyS
 import './index.js'; // trigger all validator registrations
 
 /**
- * Keys a subclass re-declares on purpose, as `Type:key`.
- *
- * Add here only for a subclass that genuinely re-declares a base key and
- * accepts something DIFFERENT, not less; a leaf that accepts less belongs in
- * `registerUnavailable`, which removes the key rather than shadowing it.
- *
- * Every entry must still suppress a shadow the live registry has — the sweep
- * below pins the set to exactly the shadows that exist, from both directions.
+ * Keys a subclass re-declares on purpose, as `Type:key`: it accepts something different, not less (a leaf that accepts
+ * less belongs in `registerUnavailable`). The set is an inventory of every cooperative pair, however each spells the
+ * wildcard, since `shadowIdentity` reduces both spellings to the prefix they match. Every entry must suppress a live
+ * shadow: the check below pins the set to the shadows that exist, from both directions.
  */
 const INTENTIONAL_OVERRIDES = new Set<string>([
-  // Godot builds ONE `settings/<i>/…` family cooperatively: each class's
-  // property-list override calls its base's and then appends its own leaves
-  // (`iterate_ik_3d.cpp:129`, `aim_modifier_3d.cpp:85`,
-  // `copy_transform_modifier_3d.cpp:84`). `findValidator` resolves one wildcard
-  // per key with no fall-through, so the subclass MUST re-register the prefix
-  // to answer for the leaves it adds; letting the base-walk deliver it would
-  // mean the subclass's own leaves reach no validator at all.
-  //
-  // This is the one shape where re-declaring is correct rather than drift, and
-  // it is not a licence to accept less: each of these dispatchers hands an
-  // unrecognised leaf back to its base via `findValidator('<Base>', key)`, and
-  // `settingsFamilySeam.test.ts` asserts under the full barrel that the base's
-  // BOUND still fires through the hop. Delete a delegation and that file goes
-  // red, so the exemption cannot quietly become a hole.
-  //
-  // The list is an INVENTORY, so every cooperative pair appears here even when
-  // the two classes spell the wildcard differently — `shadowIdentity` reduces
-  // both spellings to the prefix they match on precisely so a differently-spelled
-  // shadow cannot hide. `ConvertTransformModifier3D:settings/*` over
-  // `BoneConstraint3D:settings/#/*` is a TOTAL shadow (the plain prefix matches a
-  // superset), and `SplineIK3D:settings/#/*` over `ChainIK3D:settings/*` is a
-  // partial one: the glued-index form routes a single leaf segment only, so
-  // ChainIK3D's nested `settings/<i>/joints/<j>/bone` keys reach the base by
-  // base-walk rather than through the subclass at all.
+  // Godot builds one `settings/<i>/…` family cooperatively: each property-list override calls its base's, then appends
+  // its leaves (`iterate_ik_3d.cpp:129`, `aim_modifier_3d.cpp:85`, `copy_transform_modifier_3d.cpp:84`). `findValidator`
+  // resolves one wildcard per key, so the subclass re-registers the prefix, and each dispatcher hands an unknown leaf to
+  // `findValidator('<Base>', key)`. `settingsFamilySeam.test.ts` asserts the base's bound still fires through the hop.
   'AimModifier3D:settings/#/*',
+  // A total shadow of `BoneConstraint3D:settings/#/*`: the plain prefix matches a superset.
   'ConvertTransformModifier3D:settings/*',
   'CopyTransformModifier3D:settings/#/*',
   'IterateIK3D:settings/*',
+  // A partial shadow of `ChainIK3D:settings/*`: the glued-index form routes one leaf segment, so ChainIK3D's nested
+  // `settings/<i>/joints/<j>/bone` keys reach the base by base-walk.
   'SplineIK3D:settings/#/*',
 ]);
 
 /**
  * Collect all keys registered for a type by walking up its base chain.
  *
- * The registry's own chain, not the node table: those were the same thing until
- * the walk gained Godot's resource ancestry, and reading the narrower one made
- * every resource shadow invisible.
+ * The registry's own chain, not the node table, which would hide every resource
+ * shadow.
  */
 function baseChainKeys(nodeType: string): Set<string> {
   return new Set(
@@ -68,15 +46,9 @@ function baseChainKeys(nodeType: string): Set<string> {
 }
 
 /**
- * Entries that suppress nothing: no shadow the open sweep finds is spelled that
- * way.
- *
- * An exemption whose slice stopped shadowing, or whose key was renamed away,
- * keeps sitting in the set waving the NEXT real shadow of that same string
- * through. Exact rather than leave-one-out because the set is consulted only as
- * `has(label)`, so dropping one entry can un-suppress only the violation
- * labelled with it. Reading the guard's own labels means this cannot drift from
- * what the guard allows.
+ * Entries that suppress nothing: no shadow the open check finds is spelled that way. A stale exemption would wave the
+ * next real shadow of that string through. Exact, not leave-one-out, since the set is read only as `has(label)`, so
+ * dropping an entry un-suppresses only its own label. It reads the guard's own labels, so it matches what the guard allows.
  */
 function deadOverrides(
   registrations: Array<{ nodeType: string; keys: string[] }>,

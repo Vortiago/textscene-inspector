@@ -1,27 +1,7 @@
 /**
- * Viewport hover feedback. Sibling of `<SelectionHighlight>` mounted
- * inside `<TscnCanvas>`; reads `hoveredNodePath` + the dispatcher's
- * path → Object3D ref-map from `SelectionContext`. When a tree row is
- * hovered, attaches an orange `THREE.BoxHelper` (color `0xff8800`,
- * matching main's `HelperManager.showHoverEffect`) to the hovered
- * Object3D.
- *
- * `hoveredNodePath` was populated by `TreeNode.tsx` mouseenter/mouseleave
- * but no viewport component consumed it: dead state.
- *
- * Behavior matches main's HelperManager: the hover and selection
- * helpers live under independent keys, so hovering the already-selected
- * node stacks an orange BoxHelper on top of the green one rather than
- * either replacing the other. That's intentional — main shipped this
- * way (`HelperManager.showHoverEffect` does not touch the 'highlight'
- * map; `highlightNode` clears 'hover' first because clicking removes
- * the hover state, but a fresh hover after a click does NOT clear
- * the highlight).
- *
- * Lifecycle delegated to `useSceneHelper`.
- *
- * Renders no DOM. Outside a SelectionProvider (standalone canvas
- * tests) the component is a no-op via `useOptionalSelection`.
+ * Viewport hover feedback: an orange `THREE.BoxHelper` (`0xff8800`) on the Object3D
+ * of the hovered tree row. It is independent of the selection helper, so a hovered
+ * selected node shows both. Renders no DOM, and does nothing outside a SelectionProvider.
  */
 import * as THREE from 'three';
 import { useHoveredNodePath, useOptionalSelection } from '../contexts/SelectionContext.js';
@@ -33,8 +13,8 @@ import { WorldBoxHelper } from './WorldBoxHelper.js';
 const HOVER_COLOR = 0xff8800;
 
 export function HoverHighlight() {
-  // Hover lives in a ref-based external store, not SelectionContext's
-  // React state — this is the ONE component that reads it.
+  // Hover lives in a ref-based external store, not SelectionContext's React
+  // state, and this is the one component that reads it.
   const hoveredNodePath = useHoveredNodePath();
   const selection = useOptionalSelection();
   const nodeObjectMap = selection?.nodeObjectMap ?? null;

@@ -1,11 +1,7 @@
 /**
- * Tests for the IterateIK3D target-node rule
- * (`iterateik3d-setting-missing-target-node`), iterate_ik_3d.cpp:162.
- *
- * Driven through `Linter`, which registers nothing of its own, so only this
- * file's rule (plus whatever `linterParser.js` a scene needs to parse clean)
- * is live — not the whole barrel, since that cannot run while sibling slices
- * are mid-write.
+ * The IterateIK3D target-node rule (`iterateik3d-setting-missing-target-node`), iterate_ik_3d.cpp:162,
+ * driven through `Linter`, which registers nothing itself, so only this rule and the
+ * `linterParser.js` modules a scene needs are live, not the whole barrel.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -37,9 +33,8 @@ function scene(type: string, properties: string): string {
 ${properties}`;
 }
 
-// Every concrete IterateIK3D descendant this repo registers — none override
-// get_configuration_warnings, so iterate_ik_3d.cpp:162 reaches all 3 via
-// virtual dispatch. This is the reach assertion.
+// Every concrete IterateIK3D descendant this repo registers. None overrides
+// get_configuration_warnings, so iterate_ik_3d.cpp:162 reaches each through virtual dispatch.
 const REACHED_TYPES = ['CCDIK3D', 'FABRIK3D', 'JacobianIK3D'];
 
 describe('IterateIK3D target-node rule', () => {
@@ -111,12 +106,9 @@ describe('IterateIK3D target-node rule', () => {
 
 describe('IterateIK3D index grammar', () => {
   it('credits a target written under a non-numeric index, which _set resolves', () => {
-    // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()` and
-    // no validity gate (iterate_ik_3d.cpp:37), and `to_int` skips a character it
-    // cannot use rather than stopping at it (ustring.cpp:2280-2293), so
-    // `settings/x0/target_node` sets setting 0's target. Walking `0..count` and
-    // reading `settings/0/target_node` found nothing and reported the setting
-    // target-less.
+    // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()` and no validity gate
+    // (iterate_ik_3d.cpp:37), and `to_int` skips a character it cannot use (ustring.cpp:2280-2293),
+    // so `settings/x0/target_node` sets setting 0's target.
     const content = scene('CCDIK3D', 'setting_count = 1\nsettings/x0/target_node = NodePath("../../Target")\n');
     expect(warningsOf(new Linter().lint(content))).toEqual([]);
   });

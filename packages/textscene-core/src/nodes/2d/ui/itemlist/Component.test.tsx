@@ -1,8 +1,7 @@
 /**
- * `<ItemList>` render contract — the panel StyleBox, then each row's icon
- * and label, packed per `packItemListRows`. Structure/tint/render-order
- * assertions only (pixels are a golden-image concern via `pnpm ref:godot`,
- * not this suite).
+ * `<ItemList>` render contract: the panel, then each row's icon and label as
+ * `packItemListRows` packs them. Structure, tint and render order only: the
+ * golden images own the pixels.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -40,7 +39,7 @@ function solveNode(properties: Partial<ItemListProperties>, rtl = false, iconSlo
   return { ...emptySolveNode(), path: 'MyItemList', node, resources: SCOPE, rtl, textureSlots: iconSlots };
 }
 
-/** A `<StyleBoxQuad>` mesh — the only kind carrying a `color` vertex attribute. */
+/** A `<StyleBoxQuad>` mesh: the only kind carrying a `color` vertex attribute. */
 function findChromeMeshes(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
@@ -56,7 +55,7 @@ function findTextMeshes(scene: Rendered['scene']) {
     .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
-/** `<ControlQuad>` (an item's icon) — a `PlaneGeometry`, identified by its own `.parameters.width`. */
+/** `<ControlQuad>` (an item's icon): a `PlaneGeometry`, identified by its own `.parameters.width`. */
 function findIconMeshes(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
@@ -87,14 +86,14 @@ async function renderWithIconLoaded(properties: Partial<ItemListProperties>, rtl
   );
 }
 
-/** Sums `position.x` up the parent chain — the control-relative x a mesh actually lands at. */
+/** Sums `position.x` up the parent chain: the control-relative x a mesh actually lands at. */
 function absoluteX(object: THREE.Object3D): number {
   let x = 0;
   for (let node: THREE.Object3D | null = object; node; node = node.parent) x += node.position.x;
   return x;
 }
 
-/** The same, down the y axis — negated back into Godot's own downward-y. */
+/** The same, down the y axis: negated back into Godot's own downward-y. */
 function absoluteY(object: THREE.Object3D): number {
   let y = 0;
   for (let node: THREE.Object3D | null = object; node; node = node.parent) y += node.position.y;
@@ -203,7 +202,7 @@ describe('<ItemList> — RTL', () => {
     fixedColumnWidth: 100,
   };
 
-  // item_list.cpp:1582-1584 — the icon draws at 4 + h_separation/2 = 6 under
+  // item_list.cpp:1582-1584: the icon draws at 4 + h_separation/2 = 6 under
   // LTR, mirrored to `200 - 6 - 16` under RTL.
   it('mirrors the row icon inside the control own width', async () => {
     const ltr = await renderWithIconLoaded(RTL_ITEMS);
@@ -213,7 +212,7 @@ describe('<ItemList> — RTL', () => {
     expect(absoluteX(findIconMeshes(rtl.scene)[0]!)).toBeCloseTo(178 + 8, 5);
   });
 
-  // item_list.cpp:1664-1668 — the LTR pen is 4 + (16 + 4) + 2 = 26; the RTL
+  // item_list.cpp:1664-1668: the LTR pen is 4 + (16 + 4) + 2 = 26; the RTL
   // pen is `200 - 104 + 16 - 26 + 4` = 90, and the line is then right-aligned
   // inside its own `104 - 22` wide box (text_paragraph.cpp:916-921).
   it('moves the row label to Godot own RTL pen, right-aligned in its box', async () => {
@@ -234,7 +233,7 @@ describe('<ItemList> — RTL', () => {
 });
 
 describe('<ItemList> — row-relative vertical placement', () => {
-  // item_list.cpp:1556 centres the icon against the row's own HEIGHT. An
+  // item_list.cpp:1556 centres the icon against the row's own height. An
   // icon-only row is `16 + v_separation` tall, so the icon sits 2px down from
   // the row top and 4 + 0 + 2 from the list's own top.
   it('centres a row icon against the row height, not its y position', async () => {

@@ -1,17 +1,9 @@
 [gd_scene load_steps=4 format=3 uid="uid://unitdecalgradtex"]
 
-; ONE VARIABLE: a Decal whose `texture_albedo` is an INLINE GradientTexture2D
-; sub-resource rather than an image file.
-;
-; The decal's albedo is the only thing it projects — with the slot unresolved
-; the node contributes nothing at all to the frame and the floor reads as an
-; undecorated plane, which is exactly what an unlit missing texture looks like
-; from above, so nothing else flags it. `unit-decal` and
-; `unit-animation-player-decal` both use an ExtResource image and are untouched
-; by a regression in the inline branch.
-;
-; Radial fill so the projection's footprint is legible against the flat floor
-; and its centre is a single unambiguous probe point.
+; One variable: a Decal whose `texture_albedo` is an inline GradientTexture2D sub-resource.
+; With the slot unresolved the decal projects nothing and the floor reads as a plain plane,
+; which nothing else flags. `unit-decal` and `unit-animation-player-decal` use an ExtResource
+; image, so a regression in the inline branch leaves them untouched.
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
 size = Vector2(8, 8)
@@ -20,6 +12,8 @@ size = Vector2(8, 8)
 offsets = PackedFloat32Array(0, 1)
 colors = PackedColorArray(0.9, 0.25, 0.1, 1, 0.1, 0.2, 0.7, 1)
 
+; Radial fill, so the footprint is legible against the flat floor and its centre is one
+; unambiguous probe point.
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_stain"]
 gradient = SubResource("Gradient_stain")
 width = 128

@@ -1,14 +1,8 @@
 /**
- * The shared **Range advisory** combinator: warns when a single numeric property
- * falls outside a plausible `[low, high]` band. It owns the mechanics every
- * threshold check would otherwise hand-repeat — presence check, `parseFloat`, NaN guard,
- * and the direction comparison — so each rule is a declarative table of **arms**
- * rather than branching code.
- *
- * A range advisory is ALWAYS a warning: an out-of-band value is suspicious, never
- * objectively invalid. Error-severity checks (a zero/negative `zoom`) and
- * cross-field consistency checks (`limit_right` below `limit_left`) are a
- * different family and stay hand-written — see CONTEXT.md, "Range advisory".
+ * The shared **Range advisory** combinator: a warning, never an error, when one
+ * numeric property leaves a plausible band. It owns presence, parse, NaN guard and
+ * direction, so each rule is a table of **arms**. Error and cross-field checks stay
+ * hand-written (CONTEXT.md, "Range advisory").
  */
 
 import type { Diagnostic } from './types.js';
@@ -22,16 +16,10 @@ interface ArmBase {
   /** Build the warning message from the parsed numeric value. */
   message: (value: number) => string;
   /**
-   * `file:line` in the Godot source that states this threshold — the
-   * `ADD_PROPERTY`'s `PROPERTY_HINT_RANGE`, since an arm is always a warning and
-   * ADR-0032 grounds warnings in the inspector hint.
-   *
-   * Required, and checked by `rangeAdvisoryGrounding.test.ts`. An arm is a
-   * value-based diagnostic exactly like a validator bound, but it lived outside
-   * `boundGrounding`'s sweep entirely, so a threshold could be invented here
-   * while the bound ratchet read zero. Class-reference prose is not a citation:
-   * "try a value between 0.1 and 0.3" is advice to a level designer, not a
-   * statement about what the engine accepts.
+   * `file:line` of the `ADD_PROPERTY`'s `PROPERTY_HINT_RANGE`, since ADR-0032
+   * grounds a warning in the inspector hint. `rangeAdvisoryGrounding.test.ts`
+   * checks it, as `boundGrounding` checks a validator bound. Class-reference
+   * prose is advice to a designer, not a citation.
    */
   cite: string;
 }
@@ -41,8 +29,8 @@ type OverArm = ArmBase & { over: number };
 
 /**
  * Warn when the parsed value is strictly less than `under`. An optional `floor`
- * suppresses the warning at/below that value (e.g. a "very small angle" advisory
- * that should ignore a non-positive angle: `{ under: 1, floor: 0 }`).
+ * suppresses the warning at or below that value, such as a "very small angle"
+ * advisory that ignores a non-positive angle: `{ under: 1, floor: 0 }`.
  */
 type UnderArm = ArmBase & { under: number; floor?: number };
 

@@ -40,8 +40,7 @@ describe('parsePackedFloat32Array', () => {
   });
 
   it('refuses the spellings Godot cannot read, instead of taking a prefix', () => {
-    // `parseFloat` read `1.2.3` as 1.2 and `0x10` as 0, and let `+1` / `.5`
-    // through, all of which fail Godot's own tokenizer.
+    // Godot's tokenizer refuses each of these, which `parseFloat` would accept.
     for (const bad of ['1.2.3', '+1', '.5', '0x10']) {
       expect(() => parsePackedFloat32Array(`PackedFloat32Array(0, ${bad}, 1)`)).toThrow(
         'Invalid number in PackedFloat32Array'
@@ -71,9 +70,7 @@ describe('parseColorStops', () => {
   it('reads the typed and bare spellings, whose bodies hold Color() elements', () => {
     // `can_convert_strict` lists ARRAY as a valid source for PACKED_COLOR_ARRAY
     // (variant.cpp:467-473) and `Gradient::set_colors` (gradient.cpp:81) takes
-    // the converted array, so both load. Reading only the constructor threw,
-    // `safeColors` swallowed the throw, and the gradient sampled opaque black
-    // with nothing reported.
+    // the converted array, so both load.
     const expected = [
       { r: 1, g: 0, b: 0, a: 1 },
       { r: 0, g: 0, b: 1, a: 1 },

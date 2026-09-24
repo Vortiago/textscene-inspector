@@ -10,9 +10,8 @@ import {
 } from './proceduralTextureCache';
 
 /**
- * Mirrors `MAX_ENTRIES`. The bound is the contract — a scene pointing 65 nodes
- * at 65 distinct gradients must not keep 65 uploads resident — so the number
- * lives in the assertions rather than being probed for.
+ * Mirrors `MAX_ENTRIES`. The bound is the contract: 65 distinct gradients must
+ * not keep 65 uploads resident. So the number lives in the assertions.
  */
 const CAPACITY = 64;
 
@@ -21,7 +20,7 @@ function fakeTexture(): THREE.Texture {
   return { dispose: vi.fn() } as unknown as THREE.Texture;
 }
 
-/** A distinct `internalResources` array — the cache's per-parse identity. */
+/** A distinct `internalResources` array: the cache's per-parse identity. */
 function scene(): TscnInternalResource[] {
   return [];
 }

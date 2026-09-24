@@ -1,21 +1,14 @@
 /**
- * Unit tests for the pure token-scanning logic behind the VS Code extension
- * HOST-bundle guard: `dist/extension.js` and
- * `dist/extension.web.js` must never contain `react`/`three` — a host file
- * that reaches for the root `@textscene/core` barrel (instead of the
- * React-free `/parser`, `/linter`, `/logger` subpaths) balloons the bundle
- * ~4x (see ARCHITECTURE.md, "Bundle Size Target").
- *
- * `findHostBundleViolations` is exercised directly against synthetic bundle
- * content so the test doesn't need a real esbuild run, and — per the TDD
- * anti-pattern warning against tautological string-includes tests — each
- * case is chosen so a naive `content.includes('react')` would give the
- * WRONG answer: common English/code words containing "react"/"three" as a
- * substring (but not as a whole word) must NOT trip the guard.
+ * Tests the token scan and the metafile check behind the extension host-bundle guard:
+ * `dist/extension.js` and `dist/extension.web.js` must never contain `react` or `three`. A host
+ * file that reaches the root `@textscene/core` barrel, not the React-free `/parser`, `/linter`
+ * and `/logger` subpaths, grows the bundle about 4x (ARCHITECTURE.md, "Bundle Size Target").
  */
 import { describe, expect, it } from 'vitest';
 import { findForbiddenHostInputs, findHostBundleViolations } from './check-bundle-size/hostBundles.mjs';
 
+// Synthetic bundle text, so no esbuild run is needed. Each case defeats a naive
+// `content.includes('react')`: a word holding "react" or "three" as a substring must not trip it.
 describe('findHostBundleViolations (host-bundle react/three guard)', () => {
   it('returns no violations for clean Node/host bundle content', () => {
     const content = 'const vscode=require("vscode");function activate(ctx){return ctx}';
@@ -38,8 +31,8 @@ describe('findHostBundleViolations (host-bundle react/three guard)', () => {
   });
 
   it('does NOT flag words that merely contain "react" or "three" as a substring', () => {
-    // "reactive"/"reaction"/"overreacted" contain "react"; "threefold"/
-    // "threescore" contain "three" — none of these are the bundled packages.
+    // "reactive", "reaction" and "overreacted" hold "react", and "threefold" and "threescore"
+    // hold "three". None is a bundled package.
     const content =
       'function onReactiveChange(){}\n' +
       '// in reaction to a file change, overreacted and rebuilt\n' +
@@ -79,9 +72,8 @@ describe('findForbiddenHostInputs (metafile-based host-bundle guard — the prim
   });
 
   it('is immune to the token scan\'s false-positive class: source files whose STRINGS contain "three"', () => {
-    // A linter message like "expected three arguments" lives in a SOURCE
-    // input — its path is not a node_modules react/three module, so the
-    // metafile check passes where the raw token scan would hard-fail CI.
+    // A linter message like "expected three arguments" lives in a source input, whose path is no
+    // node_modules react/three module, so the metafile check passes where the token scan fails CI.
     const metafile = {
       inputs: { 'packages/textscene-core/src/linter/someRule.ts': { bytes: 100 } },
     };

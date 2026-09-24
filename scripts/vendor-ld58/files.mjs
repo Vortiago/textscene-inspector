@@ -1,14 +1,9 @@
-/**
- * The vendoring manifest, alone in its own file so the flow that consumes it
- * stays readable next to a list this long.
- */
+/** The vendoring manifest, in its own file so the flow that reads it stays short. */
 
 /**
- * The exact source-relative paths to vendor (the res:// closure as curated at
- * the pre-strip commit). Kept verbatim so each scene's `res://…` references
- * resolve once mirrored under public/fixtures/. This is a deliberate curated
- * whitelist — never derive it by walking the source, or newly added game
- * assets would be vendored silently. To re-list the original closure:
+ * The exact source-relative paths to vendor, the curated res:// closure, so each `res://…`
+ * reference resolves under public/fixtures/. A walk of the source would vendor new game assets
+ * silently. To list the original closure:
  *   git ls-tree -r --name-only d7cc1791 scenes/ld58 | sed 's|^scenes/ld58/||'
  */
 export const FILES = [

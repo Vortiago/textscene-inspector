@@ -117,7 +117,7 @@ polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7)]
     // `null` is a legal element of any untyped Array, and `set_polygons`
     // assigns one bare (polygon_2d.cpp:435-437). `_draw` reads the entry into
     // an empty `Vector<int>` and skips it at `ic < 3` (:328-330), so it draws
-    // nothing and refuses nothing. Four scraped-corpus files carry one.
+    // nothing and refuses nothing.
     it('accepts a null entry, which the untyped Array setter stores', () => {
       const content = `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\npolygons = [PackedInt32Array(0, 1, 2), null]\n`;
       expect(errorsOf(linter.lint(content))).toEqual([]);
@@ -160,7 +160,7 @@ polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7)]
   });
 
   describe('invert_border', () => {
-    // polygon_2d.cpp:714, PROPERTY_HINT_RANGE "0.1,16384,0.1,suffix:px" —
+    // polygon_2d.cpp:714, PROPERTY_HINT_RANGE "0.1,16384,0.1,suffix:px",
     // closed both ends. set_invert_border (polygon_2d.cpp:516-517) is a bare
     // assignment, so out-of-hint warns and never errors.
     function diagnose(value: string) {
@@ -184,11 +184,10 @@ polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 6, 7)]
   });
 
   describe('internal_vertex_count', () => {
-    // polygon_2d.cpp:722, PROPERTY_HINT_RANGE "0,1000" — closed both ends, no
-    // or_greater. set_internal_vertex_count (polygon_2d.cpp:418-420) is a bare
-    // assignment, so out-of-hint warns and never errors. The endpoint-accept
-    // cases below have to check WARNINGS, not just errors: a drifted ceiling
-    // would still leave the error list empty.
+    // polygon_2d.cpp:722, PROPERTY_HINT_RANGE "0,1000", closed both ends.
+    // set_internal_vertex_count (polygon_2d.cpp:418-420) only assigns, so out of
+    // range warns. The endpoint cases check warnings: a drifted ceiling would
+    // still leave the error list empty.
     function diagnose(value: string) {
       return linter.lint(
         `[gd_scene format=3]\n\n[node name="P" type="Polygon2D"]\ninternal_vertex_count = ${value}\n`
@@ -268,8 +267,7 @@ describe('Polygon2D.polygons in the typed-array spelling', () => {
 
   it('takes the typed wrapper, which is an Array like any other', () => {
     // polygon_2d.cpp:720 declares `polygons` Variant::ARRAY and :435-437 assigns
-    // it bare, so `Array[PackedInt32Array]([…])` loads unchanged — and this
-    // repo's own reader already renders those holes.
+    // it bare, so `Array[PackedInt32Array]([…])` loads unchanged.
     expect(polygons('Array[PackedInt32Array]([PackedInt32Array(0, 1, 2)])')).toBeNull();
     expect(polygons('Array[PackedInt32Array]([[0, 1, 2], [0, 2, 3]])')).toBeNull();
   });

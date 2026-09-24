@@ -1,11 +1,7 @@
 /**
- * The extension dev-host as a process: find a VS Code binary, launch it (under
- * xvfb when there is no X server), wait for its CDP endpoint, and kill the
- * whole tree afterwards.
- *
- * Every function here exists for a failure mode that otherwise leaves an
- * orphaned Electron holding the user-data-dir, or a capture that silently
- * shoots the wrong window.
+ * The extension dev-host as a process: it finds a VS Code binary, launches it (under xvfb when
+ * there is no X server), waits for its CDP endpoint and kills the whole tree afterwards, so no
+ * orphaned Electron holds the user-data-dir and no capture shoots the wrong window.
  */
 
 import { spawn, execSync } from 'node:child_process';
@@ -16,7 +12,7 @@ import { THROWAWAY_USER_SETTINGS } from '../../../vscode/userSettings.mjs';
 import { HEADLESS, IS_LINUX, IS_WIN, sleep } from './platform.mjs';
 import { EXT, PORT, UD, VSCODE_CACHE, WS } from './paths.mjs';
 
-/** Kill only OUR dev-host instances (matched by the user-data-dir marker), never the user's VS Code. */
+/** Kills only our dev-host instances, matched by the user-data-dir marker, never the user's VS Code. */
 export function killStaleHost(udMarker) {
   try {
     if (IS_WIN) {
@@ -26,34 +22,27 @@ export function killStaleHost(udMarker) {
       );
       return;
     }
-    // List first, then signal from node. A `pkill -f <marker>` would match the
-    // shell running it, because the marker is in that shell's own command line,
-    // and kill the caller instead of the host. By the time we signal, that
-    // shell has exited and its pid simply fails with ESRCH.
+    // List first, then signal from node: `pkill -f <marker>` would match its own shell, whose
+    // command line holds the marker, and kill the caller. By the signal, that shell has exited
+    // and its pid fails with ESRCH.
     const matched = execSync(`pgrep -f -- ${JSON.stringify(udMarker)} || true`, { stdio: ['ignore', 'pipe', 'ignore'] })
       .toString().trim().split('\n').filter(Boolean).map(Number);
     for (const pid of matched) {
       if (pid === process.pid || pid === process.ppid) continue;
-      // SIGKILL (mirrors the Windows -Force above): the dev-host's Electron main
-      // catches SIGTERM and shuts down slowly under xvfb, so a plain signal
-      // leaks orphans.
+      // SIGKILL, like the Windows -Force above: the dev-host's Electron main catches SIGTERM and
+      // shuts down slowly under xvfb, so a plain signal leaks orphans.
       try { process.kill(pid, 'SIGKILL'); } catch { /* already gone */ }
     }
   } catch { /* nothing matched */ }
 }
 
 /**
- * Kill an ORPHAN still holding the CDP port, so the next run is not refused.
- *
- * A dev-host's helper process (dconf, a GTK shim) inherits the debugging
- * socket and can outlive the host it was forked from. It carries no
- * user-data-dir marker, so `killStaleHost` cannot see it, and the port guard
- * then blocks every later run until somebody frees the port by hand. Only a
- * re-parented process (`PPid: 1`) holding this exact port is touched: nothing
- * a user runs listens there.
+ * Kills an orphan that holds the CDP port, which would block every later run. A dev-host helper
+ * (dconf, a GTK shim) inherits the socket, outlives its host and has no user-data-dir marker. Only
+ * a re-parented process (`PPid: 1`) on this exact port is touched: nothing a user runs listens there.
  */
 export function killPortOrphan(port) {
-  if (IS_WIN) return; // no /proc to confirm the re-parenting on
+  if (IS_WIN) return; // No /proc to confirm the re-parenting on.
   let holders;
   try {
     holders = execSync(`ss -ltnpH 'sport = :${port}' 2>/dev/null || true`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString();
@@ -70,13 +59,9 @@ export function killPortOrphan(port) {
 }
 
 /**
- * Seed the throwaway user-data-dir before the dev-host reads it.
- *
- * The window's size is not among the things these settings decide. It comes up
- * 1440x900 on the 1920x1080 Xvfb screen, and neither `window.newWindowDimensions`
- * nor CDP moves it headless: Electron exposes no `Browser.setWindowBounds`, and
- * there is no window manager to resize against. The editor-area split is the
- * only lever on how wide the preview itself lands (`widenPreview`).
+ * Seeds the throwaway user-data-dir before the dev-host reads it. The window comes up 1440x900 on
+ * the 1920x1080 Xvfb screen whatever `window.newWindowDimensions` says: Electron has no
+ * `Browser.setWindowBounds` and Xvfb no window manager. The editor split (`widenPreview`) is the lever.
  */
 export function seedUserData(userDataDir) {
   const userDir = `${userDataDir}/User`;
@@ -84,22 +69,20 @@ export function seedUserData(userDataDir) {
   writeFileSync(`${userDir}/settings.json`, JSON.stringify(THROWAWAY_USER_SETTINGS, null, 2));
 }
 
-/** SIGKILL the launched process group — xvfb-run + Xvfb + the dev-host it wraps. */
+/** Kills the launched process group: xvfb-run, Xvfb and the dev-host it wraps. */
 export function killProcessTree(proc) {
   try {
-    // Negative PID targets the whole process group. `detached` made the spawned
-    // command a group leader (pgid === proc.pid), so this reaches the Xvfb that
-    // xvfb-run started — it carries no user-data-dir marker for killStaleHost to
-    // match, and xvfb-run's own cleanup trap does not fire on a killed parent.
+    // A negative PID targets the group that `detached` made (pgid === proc.pid). It reaches the Xvfb,
+    // which has no user-data-dir marker, and xvfb-run's cleanup trap does not fire on a killed parent.
     if (IS_WIN) proc.kill();
-    else if (proc.pid) process.kill(-proc.pid, 'SIGKILL'); // no pid ⇒ launch never started
+    else if (proc.pid) process.kill(-proc.pid, 'SIGKILL'); // No pid means the launch never started.
   } catch { /* already gone */ }
 }
 
 /** Remove the throwaway user-data-dir, retrying while a dying host still holds a lock. */
 export async function rmRetry(dir) {
   for (let i = 0; i < 12; i++) {
-    try { rmSync(dir, { recursive: true, force: true }); return; } catch { /* locked — host still dying */ }
+    try { rmSync(dir, { recursive: true, force: true }); return; } catch { /* Locked: the host is dying */ }
     await sleep(500);
   }
 }
@@ -111,7 +94,7 @@ function execInDir(dir) {
   return `${dir}/code`;
 }
 
-/** Numeric version tuple from a `vscode-<platform>-<a.b.c>` cache dir (missing → -Infinity). */
+/** Numeric version tuple from a `vscode-<platform>-<a.b.c>` cache dir, with -Infinity when missing. */
 function cacheDirVersion(dir) {
   const m = /(\d+)\.(\d+)\.(\d+)\b/.exec(dir);
   return m ? Number(m[1]) * 1e6 + Number(m[2]) * 1e3 + Number(m[3]) : -Infinity;
@@ -122,7 +105,7 @@ function cachedVscode() {
   if (!existsSync(VSCODE_CACHE)) return null;
   const dirs = readdirSync(VSCODE_CACHE)
     .filter((d) => d.startsWith('vscode-') && existsSync(`${VSCODE_CACHE}/${d}/is-complete`))
-    // Highest semver first — a lexical sort would rank 1.99.0 above 1.128.1.
+    // Highest semver first: a lexical sort ranks 1.99.0 above 1.128.1.
     .sort((a, b) => cacheDirVersion(b) - cacheDirVersion(a));
   for (const d of dirs) {
     const exe = execInDir(`${VSCODE_CACHE}/${d}`);
@@ -140,12 +123,11 @@ function codeOnPath() {
   } catch { return null; }
 }
 
-/** Resolve a VS Code binary: $VSCODE_BIN → PATH (non-headless) → shared cache → download. */
+/** Resolves a VS Code binary: $VSCODE_BIN, then PATH (not headless), the shared cache, a download. */
 async function resolveVscodeBin() {
   if (process.env.VSCODE_BIN) return { bin: process.env.VSCODE_BIN, viaPath: false };
-  // Skip a PATH `code` under xvfb: it's a launcher that detaches the real
-  // Electron and returns, so xvfb-run tears down Xvfb before the webview paints.
-  // The cached/downloaded build is the direct binary that stays in the foreground.
+  // A PATH `code` is a launcher that detaches Electron and returns, so xvfb-run would tear down
+  // Xvfb before the webview paints. The cached build stays in the foreground.
   if (!HEADLESS) {
     const onPath = codeOnPath();
     if (onPath) return { bin: onPath, viaPath: true };
@@ -175,9 +157,8 @@ function buildLaunchCommand(bin, viaPath) {
     '--skip-welcome', '--skip-release-notes',
   ];
   if (IS_LINUX) {
-    // Sandbox flags: the cached chrome-sandbox is not setuid, so the namespace
-    // sandbox may be unavailable under xvfb — @vscode/test-electron passes these
-    // for exactly this reason.
+    // The cached chrome-sandbox is not setuid, so @vscode/test-electron passes these sandbox flags
+    // under xvfb too. SwiftShader GL makes the webview's WebGL canvas paint headless.
     vscodeArgs.push('--no-sandbox', '--disable-gpu-sandbox', ...SWIFTSHADER_GL_ARGS);
   }
   vscodeArgs.push(WS);
@@ -186,10 +167,8 @@ function buildLaunchCommand(bin, viaPath) {
   let spawnArgs = vscodeArgs;
   if (HEADLESS) {
     cmd = 'xvfb-run';
-    // -a: pick a free display. 24-bit depth is required for GL. The screen only
-    // bounds the window, which comes up 1440x900 inside it (see `seedUserData`).
-    // The -screen string is ONE argv element (no shell) — spawn passes it
-    // verbatim to xvfb-run's getopt.
+    // -a picks a free display, and GL needs 24-bit depth. The window comes up 1440x900 inside the
+    // screen (`seedUserData`). The -screen string is one argv element, passed verbatim to getopt.
     spawnArgs = ['-a', '--server-args=-screen 0 1920x1080x24', bin, ...vscodeArgs];
   }
   // On Windows a `code` resolved from PATH is code.cmd, which needs a shell to run.
@@ -197,19 +176,16 @@ function buildLaunchCommand(bin, viaPath) {
 }
 
 /**
- * Spawn the dev-host. Returns the child plus a promise that REJECTS on a
- * failed launch: a missing launcher (no xvfb-run, bad $VSCODE_BIN) emits an
- * async 'error' with no pid, and surfacing it as a rejection is what lets
- * catch/finally run instead of an uncaughtException crashing the process past
- * cleanup. A late error after CDP is up settles this already-resolved race
- * harmlessly (the listener prevents a throw either way).
+ * Spawns the dev-host. Returns the child and a promise that rejects on a failed launch: a missing
+ * launcher emits an async 'error' with no pid, which as an uncaughtException would skip cleanup.
+ * A late error after CDP is up settles the resolved race harmlessly.
  */
 export async function launchDevHost() {
   const { bin, viaPath } = await resolveVscodeBin();
   const { cmd, spawnArgs, useShell } = buildLaunchCommand(bin, viaPath);
   console.log(`[vscode] launching dev-host (${cmd === 'xvfb-run' ? `xvfb-run → ${bin}` : bin})…`);
-  // detached (POSIX): make the launch a process-group leader so cleanup can
-  // SIGKILL the whole tree — xvfb-run, the Xvfb it spawns, and the dev-host.
+  // On POSIX `detached` makes the launch a process-group leader, so cleanup can kill the whole
+  // tree: xvfb-run, its Xvfb and the dev-host.
   const proc = spawn(cmd, spawnArgs, { shell: useShell, stdio: 'ignore', detached: !IS_WIN });
   const launchFailed = new Promise((_resolve, reject) => {
     proc.on('error', (err) => reject(new Error(`failed to launch "${cmd}": ${err.message}`)));

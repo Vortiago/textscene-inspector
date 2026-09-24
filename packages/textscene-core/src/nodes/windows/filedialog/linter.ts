@@ -1,41 +1,8 @@
 /**
- * Semantic linter rule for FileDialog.
- *
- * Format validation is handled by linterParser.ts, which does validate each
- * `option_<N>/<leaf>` in isolation. This file holds what that cannot see: the
- * index itself is only meaningful relative to a SIBLING property. Each leaf is
- * served through a `PropertyListHelper`
- * (file_dialog.cpp:169-170, 2199-2204, 2627), and
- * `PropertyListHelper::_get_property` (property_list_helper.cpp:46-64) refuses
- * to resolve ANY `option_<N>/…` key whose index is negative or `>=` the
- * dialog's current `option_count`:
- *
- *   int index = index_string.to_int();
- *   if (index < 0 || (!p_allow_oob && index >= _call_array_length_getter())) {
- *     return nullptr;
- *   }
- *
- * FileDialog never calls `PropertyListHelper::enable_out_of_bounds_assign()`,
- * so `p_allow_oob` is always false here. `FileDialog::_set` (file_dialog.h:386)
- * is `return property_helper.property_set_value(p_name, p_value);`, and
- * `property_set_value` (property_list_helper.cpp:166-175) returns false for an
- * out-of-range index: the write never reaches `set_option_name`/
- * `set_option_values`/`set_option_default`, with no error surfaced anywhere,
- * exactly the "silently dropped write" case ADR-0032 grounds a diagnostic on.
- *
- * Only the `>= option_count` half is this rule's, because only that half needs a
- * sibling property to state. The negative half is the dispatcher's own branch in
- * linterParser.ts, as it is on PopupMenu — claiming it here reported one refusal
- * twice, once under a message saying the leaf name was unknown.
- *
- * Godot's own saver can never produce this: `option_count` is a ClassDB-bound
- * property (`ADD_ARRAY_COUNT`), so `Object::get_property_list` always places
- * it ahead of the `_get_property_list`-appended `option_<N>/…` leaves
- * (object.h's GDCLASS-generated `_get_property_listv`: the class's own
- * `_get_property_list_from_classdb` call precedes its `_get_property_list`
- * override), and `options.resize(p_count)` keeps the two in lockstep at
- * runtime, so this only ever fires against a hand-edited scene where an
- * `option_<N>/…` line outran (or was never matched by) `option_count`.
+ * FileDialog's rule: an `option_<N>/…` index at or past `option_count`. The leaves
+ * go through a `PropertyListHelper` (file_dialog.cpp:169-170, 2199-2204, 2627) with no
+ * out-of-bounds assign, so `_get_property` (property_list_helper.cpp:46-64) resolves none and
+ * `_set` (file_dialog.h:386, property_list_helper.cpp:166-175) drops the write silently.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -60,24 +27,26 @@ function checkFileDialog(context: RuleContext): Diagnostic[] {
   const rawProps = node.properties as Record<string, string>;
 
   const countRaw = rawProps.option_count;
-  // Godot's own default (no ADD_PROPERTY default listed beyond the XML's
-  // `default="0"`, matching the empty `Vector<Option> options` the class
-  // constructs with) is 0 when the property never serialised at all.
+  // An absent `option_count` is Godot's default 0 (the XML's `default="0"`, the
+  // empty `Vector<Option> options` the class constructs with).
   const count = ruleCount(countRaw);
   // A malformed option_count is already reported by its own validator
   // (linterParser.ts), and a non-finite one is altered at parse to a number the
-  // file does not state; neither is a count this rule can name in a message.
+  // file does not state. Neither is a count this rule can name in a message.
   if (count === null) return diagnostics;
 
-  // `indexedElements`, not a hand-rolled key scan: it resolves the index the way
-  // `_get_property` does and skips a key with no leaf, which `option_3/` is —
-  // the twin rule on PopupMenu already reads its family through it. Negative
-  // indices belong to the dispatcher's own branch; see linterParser.ts.
+  // `indexedElements` resolves the index as `_get_property` does and skips a key
+  // with no leaf, such as `option_3/`. Only the `>= option_count` half is this
+  // rule's: a negative index is the dispatcher's branch in linterParser.ts, so
+  // one refusal is not reported twice.
   const offending = [...indexedElements(rawProps, OPTION_PREFIX, 'is_valid_int').keys()]
     .filter((index) => index >= count)
     .sort((a, b) => a - b);
   if (offending.length === 0) return diagnostics;
 
+  // Godot's saver never writes this: `option_count` (`ADD_ARRAY_COUNT`) precedes
+  // the leaves (object.h, `_get_property_listv`) and `options.resize(p_count)`
+  // keeps them in step, so only a hand edit reaches here.
   const indices = listIndices(offending);
   diagnostics.push({
     severity: 'error',

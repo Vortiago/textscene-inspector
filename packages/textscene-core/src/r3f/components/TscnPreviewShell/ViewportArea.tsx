@@ -1,17 +1,8 @@
 /**
- * The center viewport. Reads `useViewportMode()` and renders either the R3F
- * canvas (3D) or the pannable 2D canvas stage (2D). In 2D mode it feeds the
- * stage the root scene's nodes + resources so Control nodes lay out and
- * StyleBox/Texture refs resolve — kept as explicit props per ADR-0009 (the
- * two-mount SceneResources pattern; do NOT lift to an ambient provider).
- * Must live below `<ViewportModeProvider>` so it can read the mode the
- * toolbar writes.
- *
- * A Control-only sub-viewport's own native offscreen pass is mounted INSIDE
- * whichever canvas is active (`TscnCanvas`/`Canvas2DStage`'s
- * `World2DCanvas`), not here — unlike the DOM `ControlRasterHost` this
- * replaced, it is WebGL and needs an R3F root to render into, and it must
- * follow the mode switch since only one canvas is ever mounted at a time.
+ * The centre viewport: the R3F canvas in 3D, the 2D stage in 2D. The stage
+ * gets the scene's nodes and resources as explicit props, not an ambient
+ * provider (ADR-0009). A sub-viewport's offscreen pass mounts inside the
+ * active canvas, since it needs an R3F root.
  */
 import type { SceneGraph } from '../../../core/SceneGraph.js';
 import { useViewportMode } from '../../contexts/ViewportModeContext.js';
@@ -24,19 +15,15 @@ import { Canvas2DStage } from '../Canvas2DStage/Canvas2DStage.js';
 import { ViewportControlsHelp } from '../ViewportControlsHelp/ViewportControlsHelp.js';
 import styles from './TscnPreviewShell.module.css';
 
-/** Stable prune so `useLiveSceneNodes`' memo doesn't recompute each render. */
+/** A stable prune, so the memo of `useLiveSceneNodes` does not recompute each render. */
 const NOT_A_VIEWPORT = (node: TscnNode): boolean => !isViewportBoundary(node.type);
 
 export function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) {
   const { mode, setMode } = useViewportMode();
   const rootScene = sceneGraph?.scenes.get(sceneGraph.rootScene);
-  // From the LIVE scene tree, so 2D content INSIDE an instanced sub-scene (a
-  // HUD, embedded sprites) is detected too — not just inline CanvasItems. Grows
-  // when a sub-scene loads, so the hint appears once the instance resolves.
-  // Stops at a sub-viewport: its Controls are visible only through a viewport
-  // surface, so counting them would offer "switch to 2D" for a scene whose 2D
-  // workspace shows nothing. A SubViewportContainer is itself a Control and
-  // still counts, which is right — it DOES draw something there (ADR-0033).
+  // The live tree finds 2D content inside a sub-scene too. The walk stops at a
+  // sub-viewport, whose Controls show only through a viewport surface. A
+  // SubViewportContainer still counts, since it draws in 2D (ADR-0033).
   const has2DContent = useLiveSceneNodes(isCanvasItemNode, NOT_A_VIEWPORT).length > 0;
 
   if (mode === '2D') {
@@ -52,9 +39,7 @@ export function ViewportArea({ sceneGraph }: { sceneGraph: SceneGraph | null }) 
     );
   }
 
-  // 3D workspace (Node3D content only, like Godot's editor). When the scene
-  // ALSO carries CanvasItem content — a HUD, embedded sprites/tilemaps — that
-  // content only renders in the 2D workspace, so surface a hint.
+  // CanvasItem content renders only in the 2D workspace, so the 3D one shows a hint.
   return (
     <>
       <TscnCanvas />

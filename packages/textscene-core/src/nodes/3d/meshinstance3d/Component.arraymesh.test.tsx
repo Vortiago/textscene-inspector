@@ -1,11 +1,7 @@
 /**
- * ArrayMesh: a MeshInstance3D whose `mesh` is an ExtResource pointing
- * at an external ArrayMesh `.tres` renders the decoded BufferGeometry — not
- * the magenta placeholder box that every ExtResource mesh produced before.
- *
- * The decoded geometry is injected into the loader's `arrayMeshes` cache so it
- * resolves synchronously on first render (the decode itself is covered by
- * arrayMeshDecode.test.ts); these tests assert the COMPONENT wiring.
+ * A MeshInstance3D whose `mesh` is an ExtResource to an ArrayMesh `.tres` renders
+ * the decoded BufferGeometry. The geometry is injected into the `arrayMeshes` cache,
+ * so these tests assert the component wiring; arrayMeshDecode.test.ts covers the decode.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -57,9 +53,8 @@ blend_shape_mode = 0
 `;
 
 /**
- * The `_surfaces` value of an ArrayMesh a `.tscn` declares inline — the wall
- * quad's bytes, minus the file wrapper. `trailer_truck.tscn` writes its trailer
- * body exactly this way, which is why the trailer rendered as nothing.
+ * The `_surfaces` value of an ArrayMesh a `.tscn` declares inline: the wall
+ * quad's bytes, without the file wrapper, as `trailer_truck.tscn` writes its body.
  */
 const INLINE_SURFACES = `[{
 "aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
@@ -209,10 +204,9 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
   });
 
   it('renders an ArrayMesh the SCENE declares as its own sub_resource', async () => {
-    // A scene can inline baked surfaces instead of pointing at a `.tres`. There is
-    // no file to fetch, so nothing asks the resource pipeline — and because
-    // `resolveMeshSubResource` DOES find the sub-resource, the unresolved-mesh
-    // placeholder never fired either, so the node drew nothing with no diagnostic.
+    // A scene can inline baked surfaces instead of pointing at a `.tres`. No file
+    // is fetched, and `resolveMeshSubResource` finds the sub-resource, so the
+    // unresolved-mesh placeholder does not fire either.
     const loader = makeLoader();
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={loader}>
@@ -241,9 +235,8 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
 
   it("applies the scene's own sub_resource material to an inline mesh surface", async () => {
     // The scene's materials are in `internalResources`, which this component
-    // already holds — but no resource PATH can address them, so a surface naming
-    // one used to fall through to the neutral default and draw flat white. Every
-    // corpus scene that inlines a mesh names its materials this way.
+    // holds, but no resource path can address them. A scene that inlines a mesh
+    // names its materials this way.
     const loader = makeLoader();
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={loader}>
@@ -272,7 +265,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
       .findAllByType('MeshStandardMaterial')
       .map((m) => materialInstanceAs<THREE.MeshStandardMaterial>(m));
     expect(materials.length).toBeGreaterThan(0);
-    // The sub_resource's own albedo — a near-black blue at roughness 0.6 — not
+    // The sub_resource's own albedo, a near-black blue at roughness 0.6, not
     // the mid-grey 0.6/0.8/0.2 Godot binds for a surface with no material.
     for (const material of materials) {
       const rgb = material.color.getRGB(
@@ -287,7 +280,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
 
   it('shows the placeholder when a scene ArrayMesh sub_resource carries no surfaces', async () => {
     // `buildPrimitiveMeshGeometry` has no ArrayMesh case, so falling through would
-    // draw nothing and say nothing — how the missing trailer went unnoticed.
+    // draw nothing and report nothing.
     const loader = makeLoader();
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={loader}>
@@ -330,11 +323,9 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
 });
 
 /**
- * The mesh's own surface materials — `[sub_resource type="StandardMaterial3D"]`
- * blocks inside the mesh's `.tres`, the form Godot writes for every Truck Town
- * vehicle. Nothing is preloaded here: the whole path runs, from the provider
- * handing over one file's bytes to two distinct materials attached at
- * `material-0` / `material-1`.
+ * The mesh's own surface materials: `[sub_resource type="StandardMaterial3D"]`
+ * blocks inside its `.tres`. Nothing is preloaded, so the whole path runs, from
+ * one file's bytes to two materials at `material-0` and `material-1`.
  */
 const OWN_MATERIALS_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://ownmats"]
 

@@ -1,14 +1,8 @@
 /**
- * Sprite3D's material is mounted, so a `.tscn` re-parse feeds new props to the
- * same `THREE.MeshBasicMaterial`. three baked its program parameters at the
- * first compile (`WebGLPrograms.js:56` `getParameters`) and re-derives only on a
- * `material.version` bump or one of `WebGLRenderer.js:2388`'s fixed re-checks —
- * so the element's key has to carry what a sprite can actually change:
- * the `opaque` composite and the side flags.
- *
- * FrontSide throughout, since Godot's `double_sided` default renders a
- * transparent sprite twice (`WebGLRenderer.js:2133-2141`) and that per-pass
- * `needsUpdate` would mask the staleness.
+ * Sprite3D's material is mounted, so a `.tscn` re-parse feeds new props to the same
+ * `THREE.MeshBasicMaterial`. three bakes program parameters at the first compile
+ * (`WebGLPrograms.js:56`) and re-derives only on a `material.version` bump or a fixed re-check
+ * (`WebGLRenderer.js:2388`), so the key carries the `opaque` composite and the side flags.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -53,8 +47,9 @@ function makeNode(overrides: Partial<Sprite3DProperties>): TscnNode {
     centered: true,
     flip_h: false,
     flip_v: false,
-    // Single-sided: the DoubleSide default would self-heal via three's
-    // transparent double-pass and hide the staleness these cases pin.
+    // Single-sided: Godot's `double_sided` default renders a transparent sprite twice
+    // (`WebGLRenderer.js:2133-2141`), and that per-pass `needsUpdate` would hide the staleness
+    // these cases pin.
     double_sided: false,
     transparent: true,
     ...overrides,
@@ -62,7 +57,7 @@ function makeNode(overrides: Partial<Sprite3DProperties>): TscnNode {
   return { name: 'Sprite', type: 'Sprite3D', children: [], properties: props };
 }
 
-/** Whether the sprite handed the mesh a DIFFERENT THREE.Material after the edit. */
+/** Whether the sprite handed the mesh a different THREE.Material after the edit. */
 async function rebuilds(
   before: Partial<Sprite3DProperties>,
   after: Partial<Sprite3DProperties>
@@ -102,8 +97,8 @@ describe('<Sprite3D> rebuilds its material when a baked program parameter moves'
   });
 
   it('alpha_cut DISCARD → HASH, which nothing in three re-derives for us', async () => {
-    // The isolating case: the sprite is opaque either side, so `alphaHash` is
-    // the only parameter that moves — and `Material.js:134` is a plain field.
+    // The isolating case: the sprite is opaque either side, so `alphaHash` is the only parameter
+    // that moves, and `Material.js:134` is a plain field.
     expect(await rebuilds(OPAQUE_CUT, { alpha_cut: AlphaCutMode.ALPHA_CUT_HASH })).toBe(true);
   });
 
@@ -126,8 +121,8 @@ describe('<Sprite3D> keeps the compiled material for a plain uniform', () => {
   });
 
   it('alpha_scissor_threshold 0 → 0.5: three bumps `version` itself', async () => {
-    // Only `alphaTest` moves here, and `Material.js:494-502` bumps `version` on
-    // that zero crossing — which is why it is not in the key.
+    // Only `alphaTest` moves here, and `Material.js:494-502` bumps `version` on that zero crossing,
+    // which is why it is not in the key.
     expect(
       await rebuilds({ ...OPAQUE_CUT, alpha_scissor_threshold: 0 }, OPAQUE_CUT)
     ).toBe(false);

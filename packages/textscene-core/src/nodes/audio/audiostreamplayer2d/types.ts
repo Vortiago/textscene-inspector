@@ -28,7 +28,7 @@ export interface AudioStreamPlayer2DProperties
   /** Attenuation amount (default: 1). */
   attenuation: number;
 
-  /** Panning strength 0..1 (default: 1.0). */
+  /** Panning strength, at least 0 (default: 1.0). */
   panning_strength: number;
 
   /** Area mask bitmask for Area2D overrides (default: 1). */

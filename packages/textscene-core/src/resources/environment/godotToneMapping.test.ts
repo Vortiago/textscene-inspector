@@ -1,23 +1,8 @@
 /**
- * The tone-curve port's CPU half, against Godot 4.6.3's own source.
- *
- * Every expectation below is transcribed from
- * `servers/rendering/storage/environment_storage.cpp`:
- *
- *   - `environment_get_white` (l. 226) FLOORS the authored white per curve
- *     before anything reads it — LINEAR returns `output_max_value` (1.0),
- *     FILMIC/ACES return `MAX(1.0, white)`, AGX returns `MAX(2.0, white)` on
- *     the desktop path, and Reinhard returns `MAX(output_max_value, white)`.
- *     Godot's stated reason: "Glow with screen blend mode does not work when
- *     white < 1.0, so make sure it is at least 1.0 for all tonemappers".
- *   - `environment_get_tonemap_parameters` (l. 274) then computes the shader's
- *     normalisation FROM that floored white: `white * white` for Reinhard, the
- *     curve evaluated at white for FILMIC and ACES, and for AgX the high-clip
- *     point itself rather than a divisor.
- *
- * The numeric expectations are the curve arithmetic worked out to full double
- * precision, not a re-derivation through the module's own helpers — a test that
- * recomputes the formula it is checking only proves the formula equals itself.
+ * The tone-curve port's CPU half, against Godot 4.6.3's
+ * `servers/rendering/storage/environment_storage.cpp`: `environment_get_white` (l. 226)
+ * floors the authored white per curve, and `environment_get_tonemap_parameters` (l. 274)
+ * normalises from it. Numbers are worked to full precision, not through the helpers.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -56,7 +41,7 @@ describe('resolvedWhite — Godot’s environment_get_white floors', () => {
 
   it('lands an out-of-range mode in Godot’s own else-branch (error path)', () => {
     // `environment_get_white` tests LINEAR, then FILMIC/ACES, then AGX, and
-    // falls through to Reinhard — so anything unrecognised gets `max(1, white)`.
+    // falls through to Reinhard, so anything unrecognised gets `max(1, white)`.
     // `tonemap_mode` is decoded leniently, so a hand-edited scene reaches this.
     expect(resolvedWhite(99, 0.25)).toBe(1);
     expect(resolvedWhite(-1, 4)).toBe(4);
@@ -92,7 +77,7 @@ describe('toneMappingWhiteParam — the shader’s tonemapper_params.x', () => {
   });
 
   it('applies the floor before the curve, not after (regression)', () => {
-    // A white under 1.0 must produce the SAME parameter as white = 1.0: Godot
+    // A white under 1.0 must produce the same parameter as white = 1.0: Godot
     // floors in `environment_get_white`, upstream of every curve. Taking the
     // curve at the raw value instead would normalise against a divisor smaller
     // than 1 and blow the whole image out.
@@ -194,8 +179,8 @@ describe('toneMappingEffectGlsl — the same curves for the glow composer', () =
   });
 
   it('agrees with the per-material chunk about which curve a mode gets', () => {
-    // The two paths must draw the same scene identically; the composer only
-    // moves WHERE the curve runs, never which one.
+    // The two paths must draw the same scene identically. The composer moves where
+    // the curve runs, never which one.
     for (const mode of [0, 1, 2, 3, 4]) {
       const shared = toneMappingShaderChunk(mode).includes('rec709_to_rec2020_agx_inset');
       expect(toneMappingEffectGlsl(mode, 1).includes('rec709_to_rec2020_agx_inset')).toBe(shared);
@@ -204,12 +189,10 @@ describe('toneMappingEffectGlsl — the same curves for the glow composer', () =
 });
 
 describe('AgX contrast — Godot’s tonemap_agx_contrast reaches the curve', () => {
-  // `ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "tonemap_agx_contrast",
-  //   PROPERTY_HINT_RANGE, "1.0,2.0,0.01,or_greater"), ...)` at
-  // `scene/resources/environment.cpp:1290`, default 1.25 (`environment.h:119`).
-  // Godot folds it into `environment_get_tonemap_parameters`'s AgX branch —
-  // `awp_toe_a`, `awp_slope` and `awp_w` are all functions of it — so it has to
-  // reach the curve, not sit beside it.
+  // `tonemap_agx_contrast` is `PROPERTY_HINT_RANGE, "1.0,2.0,0.01,or_greater"` at
+  // `scene/resources/environment.cpp:1290`, default 1.25 (`environment.h:119`). The AgX
+  // branch of `environment_get_tonemap_parameters` derives `awp_toe_a`, `awp_slope` and
+  // `awp_w` from it, so it has to reach the curve.
   it('defaults to Godot’s 1.25 on both paths (happy path)', () => {
     expect(toneMappingShaderChunk(GodotToneMapper.AGX)).toContain('awp_contrast = 1.25;');
     expect(toneMappingEffectGlsl(GodotToneMapper.AGX, 16.29)).toContain('awp_contrast = 1.25;');
@@ -220,9 +203,9 @@ describe('AgX contrast — Godot’s tonemap_agx_contrast reaches the curve', ()
   });
 
   it('bakes the SAME authored contrast into the composer path', () => {
-    // The two paths differ only in WHERE the curve runs. A contrast that
-    // reached one and not the other would change the picture the moment glow
-    // mounted, which is exactly the class of divergence ADR-0031 exists for.
+    // The two paths differ only in where the curve runs. A contrast that reached one
+    // and not the other would change the picture the moment glow mounted, the class
+    // of divergence ADR-0031 exists for.
     expect(toneMappingEffectGlsl(GodotToneMapper.AGX, 16.29, 1.8)).toContain(
       'awp_contrast = 1.8;'
     );

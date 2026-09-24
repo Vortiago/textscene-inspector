@@ -1,6 +1,6 @@
 /**
- * AnimationPanel tests (G) — the Animation dock tab. Behavior is exercised
- * through the rendered controls, reading state back from the shared transport.
+ * The Animation dock tab, driven through its rendered controls, with state read
+ * back from the shared transport.
  */
 
 import { describe, expect, it } from 'vitest';

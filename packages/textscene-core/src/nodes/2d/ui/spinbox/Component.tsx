@@ -1,24 +1,8 @@
 /**
- * `<SpinBox>` — the native (WebGL canvas) painter for `SpinBox`: the internal
- * field's LineEdit-style chrome and ONE clipped run of text (`value` formatted
- * with `prefix`/`suffix` and `step`'s own decimal precision), plus the up/down
- * stepper arrows — `SpinBox::_notification(NOTIFICATION_DRAW)`
- * (`scene/gui/spin_box.cpp:429-500`), restricted to what a static preview can
- * ever reach: no hover/pressed/drag state, and both button backgrounds plus
- * the field/buttons separator are EMPTY in the default theme
- * (`nativeSolver.ts`'s own doc), so they draw only when this node's own
- * `theme_override_styles/*` provides one. `up_down_buttons_separator` is
- * never drawn: its own rect is permanently zero-height (`nativeSolver.ts`'s
- * `SpinBoxLayout` doc).
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`. `tint.own` (raw sRGB) feeds every `<StyleBoxQuad>`'s
- * `color` prop and is multiplied into the field's font colour and each arrow's
- * icon colour before their own single sRGB→linear conversion — `Button`'s
- * established ordering.
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * `<SpinBox>`: the native painter for `SpinBox::_notification(NOTIFICATION_DRAW)`
+ * (`scene/gui/spin_box.cpp:429-500`) without hover, pressed or drag state: the field's LineEdit
+ * chrome, one clipped run of text and the stepper arrows. `ControlCanvasWalker` owns `visible`,
+ * children and the transform.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -63,7 +47,6 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
     [rect.w, rect.h, widestIconWidth, solveNode.rtl]
   );
 
-  // --- Field chrome + text ---------------------------------------------------
   const styleState = resolveLineEditStyleState(props.editable);
   const fieldBox = pickLineEditStyleBox({}, theme.widgets.lineEdit, styleState);
 
@@ -72,6 +55,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   const text = spinBoxDisplayText(props, resolvedValue);
 
   const { fontSizePx, fontMetrics, color: baseFontColor } = spinBoxFieldTextTheme(solveNode, { theme }, editable);
+  // `tint.own` is raw sRGB, `self_modulate` folded onto `modulate`: it feeds each `<StyleBoxQuad>`
+  // and multiplies into the font and arrow colours before their one sRGB-to-linear conversion.
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
   const textLayout: TextLayoutResult = useMemo(
@@ -92,15 +77,14 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
     [layout.fieldRect.w, layout.fieldRect.h, fieldBox.contentMargin, props.alignment, textLayout, solveNode.rtl]
   );
 
-  // `content` is field-LOCAL; the field itself only sits at the control origin
-  // while the layout is LTR (`spinBoxLayout`'s own doc).
+  // `content` is field-local, and the field sits at the control origin only in LTR
+  // (`spinBoxLayout`).
   const clipRect = useMemo(
     () => ({ ...content.contentRect, x: content.contentRect.x + layout.fieldRect.x }),
     [content.contentRect, layout.fieldRect.x]
   );
   const { anchorRef, clippingPlanes } = useWorldClipPlanes(clipRect);
 
-  // --- Stepper arrows ---------------------------------------------------------
   const upState = spinBoxUpButtonState(props, resolvedValue);
   const downState = spinBoxDownButtonState(props, resolvedValue);
   const upIconTexture = useNodeIcon(solveNode.icons.up, SPIN_BOX_ICONS.up);
@@ -119,8 +103,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   const upIconLinear = useGodotLinearColor(upIconColorSrgb);
   const downIconLinear = useGodotLinearColor(downIconColorSrgb);
 
-  // `Point2i up_icon_left/top` (`spin_box.cpp:475-476`) — centred within the
-  // button's own rect, at the icon's native (unscaled, see `nativeSolver.ts`) size.
+  // `Point2i up_icon_left/top` (`spin_box.cpp:475-476`): centred in the button's rect at the
+  // icon's native, unscaled size.
   const upIconPos = {
     x: layout.upRect.x + (layout.upRect.w - upIconSize.x) / 2,
     y: layout.upRect.y + (layout.upRect.h - upIconSize.y) / 2,
@@ -130,9 +114,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
     y: layout.downRect.y + (layout.downRect.h - downIconSize.y) / 2,
   };
 
-  // `theme_override_styles/*` authored on THIS node — SpinBox's own item
-  // names, empty in the default theme (`nativeSolver.ts`'s own doc), so
-  // there is nothing to draw absent an override.
+  // SpinBox's own `theme_override_styles/*` items, empty in the default theme, so each draws only
+  // under an override. `up_down_buttons_separator` has zero height (`SpinBoxLayout`) and never draws.
   const upBox = solveNode.styleBoxes[upState === 'disabled' ? 'up_background_disabled' : 'up_background'];
   const downBox = solveNode.styleBoxes[downState === 'disabled' ? 'down_background_disabled' : 'down_background'];
   const fieldSeparatorBox = solveNode.styleBoxes['field_and_buttons_separator'];

@@ -1,5 +1,5 @@
 /**
- * GridContainer registration — the native (WebGL canvas) rect solve + painter.
+ * GridContainer registration: the native (WebGL canvas) rect solve + painter.
  * `./nativeSolver` registers the container-layout/minimum-size functions as a
  * side effect of import.
  */

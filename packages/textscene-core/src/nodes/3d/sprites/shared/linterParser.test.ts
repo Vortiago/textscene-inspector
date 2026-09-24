@@ -15,15 +15,9 @@ import '../../sprite3d/linterParser.js';
 import '../../animatedsprite3d/linterParser.js';
 
 /**
- * Every key SpriteBase3D binds, read from its ADD_PROPERTY calls.
- *
- * Set exactly ONE of these two, from the source rather than from expectation:
- * fill KEYS, or set DECLARES_NOTHING when the class binds no ADD_PROPERTY at all
- * (Godot has many: a themed spacer whose whole surface is theme items, an
- * orientation subclass that only fixes an inherited default). Leaving both unset
- * is red on purpose. Do NOT delete an assertion to go green: an empty KEYS
- * against an empty registerAll passes vacuously, which is what the pairing
- * below exists to prevent.
+ * Every key SpriteBase3D binds, read from its ADD_PROPERTY calls. Set exactly one of KEYS and
+ * DECLARES_NOTHING, from the source rather than from expectation. Both unset is red on purpose. Do
+ * not delete an assertion to go green: an empty KEYS against an empty registerAll passes vacuously.
  */
 const KEYS: string[] = [
   'alpha_antialiasing_edge',
@@ -47,7 +41,7 @@ const KEYS: string[] = [
   'texture_filter',
   'transparent',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 const LEAVES = ["AnimatedSprite3D","Sprite3D"] as const;
 
@@ -78,7 +72,7 @@ describe('SpriteBase3D shared validators', () => {
       for (const key of KEYS) {
         const owned = validatorRegistry.findValidator('SpriteBase3D', key);
         expect(owned, `SpriteBase3D does not declare '${key}'`).not.toBeNull();
-        // The SAME function, not merely some validator: a shadowing copy on the
+        // The same function, not merely some validator: a shadowing copy on the
         // leaf would answer here while drifting from the tier's rule.
         expect(validatorRegistry.findValidator(nodeType, key)).toBe(owned);
         expect(validatorRegistry.getOwnKeys(nodeType)).not.toContain(key);
@@ -87,10 +81,8 @@ describe('SpriteBase3D shared validators', () => {
   );
 
   it('AnimatedSprite3D and Sprite3D resolve every shared key to the identical function', () => {
-    // The concrete regression this tier closes: before it existed,
-    // findValidator('AnimatedSprite3D', 'centered') was null while Sprite3D's
-    // linterParser.ts inlined several of these keys as its own, so the two
-    // leaves disagreed about every one of them.
+    // The regression this tier closes: `findValidator('AnimatedSprite3D', 'centered')` resolves,
+    // and both leaves agree on every SpriteBase3D key.
     for (const key of KEYS) {
       const sprite3d = validatorRegistry.findValidator('Sprite3D', key);
       expect(sprite3d, `Sprite3D does not resolve '${key}'`).not.toBeNull();

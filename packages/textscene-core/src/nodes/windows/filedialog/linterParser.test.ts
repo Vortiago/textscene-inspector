@@ -1,10 +1,6 @@
 /**
- * FileDialog strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * FileDialog strict validators, asserted through `validatorRegistry` so a failure
+ * points at the validator, not at scene parsing. Rule behaviour is in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,8 +20,8 @@ describe('FileDialog strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format. The
+    // per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('FileDialog')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -194,7 +190,7 @@ describe('FileDialog strict validators', () => {
       // `FileDialog::_set` is `property_helper.property_set_value` verbatim
       // (file_dialog.h:386) and `_get_property` returns nullptr unless the
       // index `is_valid_int()` (property_list_helper.cpp:53-55), so `_set`
-      // returns false and Godot DROPS the write.
+      // returns false and Godot drops the write.
       expect(check('option_x/name', '"Format"')?.code).toBe('INVALID_OPTION_KEY');
       expect(check('option_1.5/name', '"Format"')?.severity).toBe('error');
     });
@@ -203,7 +199,7 @@ describe('FileDialog strict validators', () => {
       // `set_option_default` CLAMPs to (0, 1) when the option has no values and
       // to (0, values.size() - 1) when it has (file_dialog.cpp:2011-2015). The
       // ceiling depends on the sibling `values`, which a per-key validator
-      // cannot see; the floor of 0 does not.
+      // cannot see. The floor of 0 does not.
       expect(check('option_0/default', '-1')?.severity).toBe('error');
       expect(check('option_0/default', '0')).toBeNull();
     });
@@ -214,10 +210,9 @@ describe('FileDialog strict validators', () => {
     });
 
     it('names the INDEX, not the leaf, for a negative one', () => {
-      // `_get_property` refuses `index < 0` (property_list_helper.cpp:58) with
-      // the leaf perfectly well known, so `INVALID_OPTION_KEY`'s "unknown
-      // property" wording would describe the wrong half of the key — and the
-      // semantic rule beside it deliberately leaves this band here.
+      // `_get_property` refuses `index < 0` (property_list_helper.cpp:58) with the
+      // leaf known, so `INVALID_OPTION_KEY`'s "unknown property" wording would name
+      // the wrong half of the key. The semantic rule leaves this band here.
       const error = check('option_-1/name', '"Extra"');
       expect(error?.severity).toBe('error');
       expect(error?.code).toBe('INVALID_OPTION_INDEX');

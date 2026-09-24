@@ -1,9 +1,7 @@
-; HSlider grabber travel: where `value` puts the grabber along the horizontal
-; track, how far the grabber_area fills behind it, and when tick marks appear.
-; This is the only fixture whose geometry is driven by a Range value rather
-; than by anchors or offsets, so a grabber pinned to one end whatever the value
-; — or ticks drawn on a slider that never set tick_count — is invisible in
-; every other scene. unit-vslider moves the same value along the other axis.
+; HSlider grabber travel: where `value` puts the grabber on the track, how far grabber_area fills
+; behind it, and when tick marks appear. It is the only fixture whose geometry follows a Range
+; value, so a grabber pinned to one end, or ticks without tick_count, is invisible elsewhere.
+; unit-vslider moves the same value along the other axis.
 
 [gd_scene format=3 uid="uid://unithslider"]
 

@@ -1,6 +1,4 @@
-/**
- * LightOccluder2D parser tests.
- */
+/** The LightOccluder2D parser. */
 
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';

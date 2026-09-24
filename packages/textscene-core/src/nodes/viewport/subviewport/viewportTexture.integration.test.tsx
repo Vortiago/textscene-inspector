@@ -1,14 +1,8 @@
 /**
- * Publisher → registry → consumer, end to end through the real dispatcher, on
- * the two scenes the offscreen subsystem is measured against.
- *
- * The unit tests either side of this one can both pass while the seam is still
- * broken: the publisher keys on the dispatcher-absolute path while
- * `viewport_path` counts from the local scene root
- * (`ViewportTexture::_setup_local_to_scene` resolves it against
- * `get_local_scene()`, and the property carries
- * `PROPERTY_USAGE_NODE_PATH_FROM_SCENE_ROOT`). Only a whole-scene mount proves
- * the two coordinate systems actually meet.
+ * Publisher, registry and consumer, end to end through the real dispatcher. The
+ * publisher keys on the dispatcher-absolute path, while `viewport_path` counts from
+ * the local scene root (`PROPERTY_USAGE_NODE_PATH_FROM_SCENE_ROOT`). Only a
+ * whole-scene mount proves the two meet.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -104,10 +98,8 @@ describe('ViewportTexture end to end', () => {
   });
 
   /**
-   * Shared `World3D` (`Viewport::find_world_3d` walks up to the parent unless
-   * `own_world_3d`), so Godot draws the sphere BOTH on the quad and in the main
-   * view. A reference render through Godot 4.6.3 shows exactly that — it is the
-   * documented default, not a bug.
+   * A shared `World3D` (`Viewport::find_world_3d` walks up unless `own_world_3d`),
+   * so Godot draws the sphere both on the quad and in the main view.
    */
   it('the sub-viewport subject still draws in the main view (shared World3D)', async () => {
     const renderer = await renderScene(UNIT_FIXTURE);
@@ -115,8 +107,8 @@ describe('ViewportTexture end to end', () => {
   });
 
   /**
-   * `3d_in_2d.tscn`: a `Node2D` root, so the 2D workspace — where 3D content
-   * never reaches the canvas — yet the Sprite2D must still show the target.
+   * A `Node2D` root opens the 2D workspace, where 3D content never reaches the
+   * canvas, yet the Sprite2D still shows the target.
    */
   it('a Sprite2D in the 2D workspace shows the target of a 3D sub-viewport', async () => {
     const renderer = await renderScene(
@@ -151,8 +143,8 @@ texture = SubResource("ViewportTexture_1")
   });
 
   /**
-   * The sprite's quad is sized from the TARGET rect, not from a loaded image —
-   * a render target reports its size through the same `image` shape.
+   * The sprite's quad is sized from the target rect: a render target reports its
+   * size through the same `image` shape as a loaded image.
    */
   it('the sprite quad is sized to the sub-viewport target', async () => {
     const renderer = await renderScene(
@@ -186,10 +178,9 @@ texture = SubResource("ViewportTexture_1")
   });
 
   /**
-   * A ViewportTexture naming a node that is not there resolves to nothing. It
-   * must not fall through to the file loader and paint a missing-resource
-   * placeholder over a scene whose only fault is a stale path — Godot's own
-   * `get_node_or_null` + `ERR_FAIL_NULL_MSG` is likewise non-fatal.
+   * A ViewportTexture naming a missing node resolves to nothing, not to the file
+   * loader's missing-resource placeholder. Godot's `get_node_or_null` and
+   * `ERR_FAIL_NULL_MSG` are likewise non-fatal.
    */
   it('a ViewportTexture naming a missing viewport leaves the slot empty', async () => {
     const renderer = await renderScene(`[gd_scene format=3]

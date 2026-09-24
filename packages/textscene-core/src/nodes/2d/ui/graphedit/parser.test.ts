@@ -17,7 +17,7 @@ describe('parseGraphEdit', () => {
       grid_pattern: '1',
       snapping_distance: '25',
     });
-    // `set_scroll_offset` clamps against bounds still at (0, 0) — `loadOrder.ts`.
+    // `set_scroll_offset` clamps against bounds still at (0, 0): `loadOrder.ts`.
     expect(p.scrollOffset).toEqual({ x: -400, y: -320 });
     expect(p.zoom).toBe(1.5);
     expect(p.showGrid).toBe(false);

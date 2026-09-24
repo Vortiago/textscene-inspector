@@ -1,22 +1,8 @@
 /**
- * `<GraphNode>` — the native (WebGL canvas) painter for `GraphNode`:
- * `GraphNode::_notification(NOTIFICATION_DRAW)` (`scene/gui/graph_node.cpp:621-703`),
- * in source order — body panel, titlebar, title text, per-row ports/slot
- * boxes, resizer.
- *
- * `selected_slot` (the port-highlight `sb_slot_selected` box) is never drawn:
- * it carries no `ADD_PROPERTY` and is mutated only by keyboard/mouse input
- * (`graph_node.cpp:409-538`), so a loaded `.tscn` always has it at its
- * constructor default (-1) — the `if (slot_index == selected_slot)` branch
- * (`:670-683`) can never fire for a static scene.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`. Each port/resizer colour is `tint.own` composed with
- * its OWN Godot colour (`slot.color_left`/`right`, `resizer_color`) while
- * both are still sRGB, matching `PanelChrome`'s two-colour composition.
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * `<GraphNode>`, the native (WebGL canvas) painter for `GraphNode::_notification(NOTIFICATION_DRAW)`
+ * (`scene/gui/graph_node.cpp:621-703`) in source order: body panel, titlebar, title text, per-row
+ * ports and slot boxes, resizer. Each colour composes with the walker's `tint` in sRGB, as in
+ * `PanelChrome`, and `ControlCanvasWalker` owns `visible`, `children` and the transform.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -60,7 +46,7 @@ interface ImageLike {
   height?: number;
 }
 
-/** Composes `own` (raw sRGB) with a widget's own base colour, converted once — `PanelChrome`'s own pattern. */
+/** Composes `own` (raw sRGB) with a widget's base colour, then converts the result to linear. */
 function useTintedColor(own: RGBA, base: ControlColor): { color: THREE.Color; opacity: number } {
   const combined = useMemo(() => multiplyModulate(own, base), [own, base]);
   const color = useGodotLinearColor(combined);
@@ -143,6 +129,8 @@ export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRect
     [titlePlacements, titleLayout]
   );
 
+  // `selected_slot` has no `ADD_PROPERTY` and only input changes it (`graph_node.cpp:409-538`), so
+  // it stays -1 on load and the `slot_index == selected_slot` branch (`:670-683`) never draws.
   const rows = useMemo(
     () =>
       graphNodeDrawRows(
@@ -162,14 +150,14 @@ export function GraphNode({ solveNode, tint, rect, theme, renderOrder, childRect
     props.resizable === true ? solveNode.icons.resizer : undefined,
     props.resizable === true ? RESIZER_SE_ICON : null
   );
-  // `resizer_color`'s default (`default_theme.cpp:800`) is `control_font_color` —
-  // the SAME literal `GRAPH_NODE_TITLE_DEFAULT_COLOR` already names.
+  // `resizer_color`'s default (`default_theme.cpp:800`) is `control_font_color`:
+  // the same literal `GRAPH_NODE_TITLE_DEFAULT_COLOR` already names.
   const resizerTint = useTintedColor(tint.own, GRAPH_NODE_TITLE_DEFAULT_COLOR);
 
   return (
     <>
-      {/* `StyleBoxQuad` consumes only the SIZE of the rect it is given (its own
-          doc), so a box drawn at an offset INSIDE this control needs that
+      {/* `StyleBoxQuad` consumes only the size of the rect it is given (its own
+          doc), so a box drawn at an offset inside this control needs that
           offset from the group around it. */}
       <CanvasItemGroup position={[bodyRect.x, -bodyRect.y, 0]}>
         <StyleBoxQuad styleBox={panelStyle} color={tint.own} rect={bodyRect} renderOrder={renderOrder} />

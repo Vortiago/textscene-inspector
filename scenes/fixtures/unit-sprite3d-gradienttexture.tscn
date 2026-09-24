@@ -1,16 +1,12 @@
 [gd_scene load_steps=3 format=3 uid="uid://unitsprite3dgradtex"]
 
-; ONE VARIABLE: a Sprite3D whose `texture` is an INLINE GradientTexture2D
-; sub-resource rather than an image file.
-;
-; Sprite3D draws through the 3D pipeline, which decodes sRGB in hardware before
-; filtering — the opposite convention to the 2D canvas. So a procedural texture
-; that resolves correctly for Sprite2D can still be tagged wrongly here, and
-; every existing Sprite3D scene uses an ExtResource image whose colour space is
-; set by the loader rather than by the rasteriser. Linear fill left-to-right
-; across a saturated pair, so a colour-space or row-order regression is a
-; visible change in the ramp, not just a missing quad.
+; One variable: a Sprite3D whose `texture` is an inline GradientTexture2D sub-resource. Sprite3D
+; draws through the 3D pipeline, which decodes sRGB in hardware before filtering, the opposite of
+; the 2D canvas. A procedural texture right for Sprite2D can be tagged wrongly here, and every
+; other Sprite3D scene uses an ExtResource image whose colour space the loader sets.
 
+; Linear fill left to right across a saturated pair, so a colour-space or row-order regression
+; changes the ramp visibly, not just removes the quad.
 [sub_resource type="Gradient" id="Gradient_ramp"]
 offsets = PackedFloat32Array(0, 1)
 colors = PackedColorArray(0.9, 0.2, 0.1, 1, 0.1, 0.3, 0.9, 1)

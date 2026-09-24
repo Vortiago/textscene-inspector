@@ -1,8 +1,6 @@
 /**
- * The pre-4.0 property names Godot's `_set` overrides still accept.
- *
- * Each entry names the property the setter actually writes, and — where the
- * arm gates or transforms — the value it receives.
+ * The pre-4.0 property names Godot's `_set` overrides still accept. Each entry names the property
+ * the setter writes and, where the arm gates or transforms, the value it receives.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -30,9 +28,8 @@ describe('canonicalPropertyName', () => {
   });
 
   it('does not apply one type’s alias to another', () => {
-    // `_set` is a virtual on the declaring class, so `Label.align` says nothing
-    // about any other Control — and `frames` is a real, current property name
-    // on SpriteFrames-adjacent types that do not alias it.
+    // `_set` is a virtual on the declaring class, so `Label.align` says nothing about any other
+    // Control, and `frames` is a current property name on types that do not alias it.
     expect(canonicalPropertyName('Button', 'align', '1')).toBe('align');
     expect(canonicalPropertyName('Sprite2D', 'frames', '1')).toBe('frames');
   });
@@ -44,10 +41,8 @@ describe('canonicalPropertyName', () => {
 });
 
 describe('a property key that collides with Object.prototype', () => {
-  // A `.tscn` chooses these strings, and a plain object literal answers
-  // `constructor`/`__proto__`/`toString` from the prototype chain — so the
-  // declared `: string` return handed back a FUNCTION and the linter threw
-  // `propertyKey.startsWith is not a function` on a four-line scene.
+  // A `.tscn` chooses these strings, and a plain object literal answers `constructor`,
+  // `__proto__` or `toString` from its prototype chain with a function.
   it.each(['constructor', '__proto__', 'toString', 'valueOf', 'hasOwnProperty'])(
     'returns %s unchanged rather than a prototype member',
     (key) => {
@@ -67,10 +62,8 @@ describe('a property key that collides with Object.prototype', () => {
 });
 
 describe('the Godot-3 navigation vocabulary', () => {
-  // The first table was grepped for `p_name == SNAME(...)` and missed every
-  // override that compares against a bare string — which is most of them, and
-  // all of these. The false positive this table exists to remove was still
-  // shipping on NavigationRegion2D.
+  // Most overrides compare against a bare string, not `p_name == SNAME(...)`, and all of
+  // these do.
   it.each([
     ['NavigationRegion2D', 'navpoly', 'navigation_polygon'],
     ['NavigationRegion3D', 'navmesh', 'navigation_mesh'],
@@ -171,12 +164,10 @@ describe('the half-extents family', () => {
 });
 
 /**
- * `_set` gated on `bool(p_value)` and writing a fixed enum member. Measured on
- * 4.6.3 against a non-default baseline: `gi_mode = 0` then
- * `use_in_baked_light = true` loads as 1, `use_dynamic_gi = true` as 2, and a
- * false or `0` value leaves the slot where it was; `expand_mode = 3` then
- * `expand = false` stays 3, while `expand = true`, `ignore_texture_size = 2`
- * and `expand = "yes"` all load as 1.
+ * `_set` gated on `bool(p_value)`, writing a fixed enum member. Measured on 4.6.3 from a
+ * non-default baseline: after `gi_mode = 0`, `use_in_baked_light = true` loads 1, `use_dynamic_gi`
+ * 2, a false or `0` nothing. After `expand_mode = 3`, `expand = false` stays 3, while `expand = true`,
+ * `ignore_texture_size = 2` and `expand = "yes"` load as 1.
  */
 describe('a bool-gated arm that writes an enum member', () => {
   it('TextureRect.expand / ignore_texture_size write EXPAND_IGNORE_SIZE (texture_rect.cpp:171-173)', () => {
@@ -237,8 +228,8 @@ describe('an alias declared on an ancestor', () => {
 
 describe('pure renames measured on 4.6.3', () => {
   it('TileMap.cell_quadrant_size is rendering_quadrant_size (tile_map.cpp:695-697)', () => {
-    // 32 loads as rendering_quadrant_size 32; 0 is refused by the setter
-    // (tile_map.cpp:224) and stays 16, which is the canonical validator's floor.
+    // 32 loads as rendering_quadrant_size 32. The setter refuses 0 (tile_map.cpp:224), which
+    // stays 16, the canonical validator's floor.
     expect(resolveDeprecatedProperty('TileMap', 'cell_quadrant_size', '32')).toEqual({
       key: 'rendering_quadrant_size',
       value: '32',
@@ -287,20 +278,19 @@ describe('canonicalisePropertyBag', () => {
 });
 
 /**
- * Two `_set` arms gate on the VALUE and return false for the rest. `_setv` then
- * finds no property under the deprecated name, so Godot drops the write — it
- * does not apply it to the canonical slot.
+ * Two `_set` arms gate on the value and return false for the rest. `_setv` then finds no
+ * property under the deprecated name, so Godot drops the write rather than apply it.
  */
 describe('an alias whose _set arm refuses the value', () => {
   it('keeps an empty bbcode_text off RichTextLabel.text', () => {
-    // rich_text_label.cpp:7563 — `!((String)p_value).is_empty()`.
+    // rich_text_label.cpp:7563: `!((String)p_value).is_empty()`.
     expect(canonicalPropertyName('RichTextLabel', 'bbcode_text', '""')).toBe('bbcode_text');
     expect(canonicalPropertyName('RichTextLabel', 'bbcode_text', '"Hello"')).toBe('text');
   });
 
   it('keeps a non-numeric PointLight2D.mode off blend_mode', () => {
-    // light_2d.cpp:456-458 — `p_value.is_num()`. A quoted value is a STRING and
-    // `true` is a BOOL; neither is num.
+    // light_2d.cpp:456-458: `p_value.is_num()`. A quoted value is a STRING and `true` a BOOL,
+    // and neither is num.
     expect(canonicalPropertyName('PointLight2D', 'mode', '"add"')).toBe('mode');
     expect(canonicalPropertyName('PointLight2D', 'mode', 'true')).toBe('mode');
     expect(canonicalPropertyName('PointLight2D', 'mode', '1')).toBe('blend_mode');
@@ -308,11 +298,9 @@ describe('an alias whose _set arm refuses the value', () => {
   });
 
   it('keeps a `+`-signed PointLight2D.mode off blend_mode, since no file loads it', () => {
-    // `get_token` consumes only `-` before the digit test
-    // (variant_parser.cpp:420-424); `+` falls through to "Unexpected character"
-    // (:508-510), so `mode = +5` is a parse error for the whole file and never
-    // becomes a num. Renaming the key hid the deprecated spelling's own
-    // validator and named a property the file does not contain.
+    // `get_token` consumes only `-` before the digit test (variant_parser.cpp:420-424), and `+`
+    // falls to "Unexpected character" (:508-510), so `mode = +5` fails the file's parse. A rename
+    // would hide the deprecated spelling's validator and name a property the file lacks.
     expect(canonicalPropertyName('PointLight2D', 'mode', '+5')).toBe('mode');
     expect(canonicalPropertyName('PointLight2D', 'mode', '+1.5')).toBe('mode');
   });

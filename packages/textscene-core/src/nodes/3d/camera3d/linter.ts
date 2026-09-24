@@ -1,8 +1,6 @@
 /**
- * Semantic linter rules for Camera3D
- *
- * Note: Format validation is handled by linterParser.ts during strict parsing.
- * This file focuses on semantic validation requiring full context (e.g., logical consistency).
+ * Semantic linter rules for Camera3D: checks that need more than one property. linterParser.ts
+ * validates format during strict parsing.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -21,12 +19,9 @@ const NEAR_DEFAULT = 0.05;
 const FAR_DEFAULT = 4000.0;
 
 /**
- * The mode `Camera3D::mode` actually holds after the key is applied.
- *
- * `set_projection` (camera_3d.cpp:341) assigns only for the three enum members,
- * so an out-of-enum value is dropped and the field keeps its camera_3d.h:66
- * default of `PROJECTION_PERSPECTIVE` — which is also what an absent key means,
- * since Godot omits a property at its default.
+ * The mode `Camera3D::mode` holds after the key is applied. `set_projection` (camera_3d.cpp:341)
+ * assigns only for the three enum members, so an out-of-enum value keeps the camera_3d.h:66
+ * default of `PROJECTION_PERSPECTIVE`, which an absent key also means.
  */
 function projectionMode(raw: string | undefined): number {
   const mode = ruleInt(raw, null);
@@ -35,15 +30,11 @@ function projectionMode(raw: string | undefined): number {
     : PROJECTION_PERSPECTIVE;
 }
 
-/**
- * Validate Camera3D semantic rules
- */
 function checkCamera3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
 
-  // Type guard for properties
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
@@ -54,39 +45,21 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
   // omits defaults when serialising, and camera3d/parser.ts defaults it the
   // same way, so an absent key means 75 rather than missing.
 
-  // The pair per PROJECTION MODE. `Camera3D::set_near`/`set_far`
-  // (camera_3d.cpp:736, :746) are bare assignments and both hints end in
-  // `or_greater` (camera_3d.cpp:685-686), so neither plane's own bound says
-  // anything about the other; the tier comes entirely from which `Projection`
-  // setter the mode reaches (camera_3d.cpp:272-282), and the three differ:
-  //
-  //   frustum      projection.cpp:367's `ERR_FAIL_COND(p_far <= p_near)`
-  //                refuses outright, at BOTH `far < near` and `far == near`.
-  //   perspective  projection.cpp:263 returns when `deltaZ == 0`, BEFORE the
-  //                `set_identity()` at :268 — the whole write is dropped, and
-  //                only at that one cell. `near > far` leaves deltaZ negative,
-  //                so the matrix is written and depth is merely inverted.
-  //   orthogonal   projection.cpp:344 has no guard: it divides by
-  //                `zfar - znear` at :351 and stores inf. Nothing is refused,
-  //                clamped or dropped, no hint end is crossed, and Camera3D
-  //                declares no `get_configuration_warnings`, so ADR-0032
-  //                licenses no tier at all and this reports nothing.
-  //
-  // An ABSENT plane is a defaulted one, not a missing one: Godot omits a
-  // property sitting at its default, so the pair is still a pair and
-  // `far = 0.05` alone is the same zero depth range as writing both.
-  //
-  // `parseGodotFloat`, not `parseFloat`: `inf` / `-inf` / `inf_neg` are float
-  // literals Godot writes and reloads (variant_parser.cpp:150-155), and
-  // `parseFloat` reads every one of them as NaN — which makes `far <= near`
-  // false and silently skips the pair the ERR_FAIL_COND does refuse.
+  // `parseGodotFloat`, not `parseFloat`, which reads Godot's `inf` / `-inf` / `inf_neg` literals
+  // (variant_parser.cpp:150-155) as NaN and skips the pair the ERR_FAIL_COND refuses. An absent
+  // plane is defaulted, not missing, since Godot omits a property at its default, so `far = 0.05`
+  // alone is the same zero depth range as writing both.
   const near = rawProps.near === undefined ? NEAR_DEFAULT : parseGodotFloat(rawProps.near);
   const far = rawProps.far === undefined ? FAR_DEFAULT : parseGodotFloat(rawProps.far);
 
+  // set_near/set_far (camera_3d.cpp:736, :746) are bare assignments and both hints end in
+  // `or_greater` (camera_3d.cpp:685-686), so the pair's tier comes from the `Projection` setter
+  // each mode reaches (camera_3d.cpp:272-282).
   if (near !== null && far !== null) {
     const mode = projectionMode(rawProps.projection);
-    // A `nan` plane needs no guard of its own: every comparison below is false
-    // for it, exactly as the C++ ones are.
+    // Frustum: projection.cpp:367's `ERR_FAIL_COND(p_far <= p_near)` refuses both `far < near`
+    // and `far == near`. A `nan` plane needs no guard: every comparison below is false for it,
+    // as the C++ ones are.
     if (mode === PROJECTION_FRUSTUM && far <= near) {
       diagnostics.push({
         severity: 'error',
@@ -96,16 +69,10 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
         ruleName: 'camera3d-invalid-clipping-planes',
       });
     }
-    // `far - near`, not `near === far`: projection.cpp:260 forms deltaZ and
-    // :263 tests it against zero, so two infinities give nan and do NOT return
-    // early the way two equal finite planes do.
-    //
-    // A warning, not an error, and the two are separated by measurement rather
-    // than by reading: rendering this pair on 4.6.3 prints nothing at all,
-    // where the frustum pair above prints `Condition "p_far <= p_near" is true`
-    // once per frame. The early return drops the matrix write silently and
-    // leaves both properties stored as written, which is neither of the error
-    // row's two forms.
+    // Perspective: projection.cpp:263 returns when deltaZ (`far - near`, projection.cpp:260) is
+    // zero, before `set_identity()` at :268. Not `near === far`: two infinities give nan and do
+    // not return early. `near > far` leaves deltaZ negative, so the matrix is written with depth
+    // inverted.
     if (mode === PROJECTION_PERSPECTIVE && far - near === 0) {
       diagnostics.push({
         severity: 'warning',
@@ -115,14 +82,14 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
         ruleName: 'camera3d-zero-depth-range',
       });
     }
+    // Orthogonal: projection.cpp:344 has no guard and divides by `zfar - znear` at :351, storing
+    // inf. Nothing is refused, clamped or dropped, no hint end is crossed, and Camera3D declares
+    // no `get_configuration_warnings`, so ADR-0032 licenses no tier and this reports nothing.
   }
 
   return diagnostics;
 }
 
-/**
- * Camera3D semantic validation rule
- */
 const camera3DValidationRule: LintRule = {
   meta: {
     name: 'valid-camera3d-properties',
@@ -139,8 +106,9 @@ const camera3DValidationRule: LintRule = {
       {
         ruleName: 'camera3d-zero-depth-range',
         severity: 'warning',
-        // The perspective early return on `deltaZ == 0`, before set_identity:
-        // the write is dropped in silence, so the engine reports nothing.
+        // The perspective early return on `deltaZ == 0` drops the write in silence and leaves
+        // both properties stored: a 4.6.3 render prints nothing, where the frustum pair prints
+        // `Condition "p_far <= p_near" is true` once per frame. Neither error form applies.
         grounding: { kind: 'engine', at: 'projection.cpp:263' },
       },
     ],
@@ -149,7 +117,6 @@ const camera3DValidationRule: LintRule = {
   check: checkCamera3D,
 };
 
-// Self-register the rule
 ruleRegistry.register(camera3DValidationRule);
 
 // Export for testing

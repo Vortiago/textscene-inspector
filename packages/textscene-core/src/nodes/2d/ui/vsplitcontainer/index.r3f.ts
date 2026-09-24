@@ -1,7 +1,6 @@
 /**
- * VSplitContainer registration — the native (WebGL canvas) rect solve +
- * painter. `./nativeSolver` registers the container-layout/minimum-size
- * functions as a side effect of import.
+ * VSplitContainer registration: the native (WebGL canvas) rect solve and painter.
+ * `./nativeSolver` registers the container-layout and minimum-size functions on import.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

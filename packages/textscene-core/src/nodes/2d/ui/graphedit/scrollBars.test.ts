@@ -1,16 +1,14 @@
 /**
- * `scrollBars.ts` vs `GraphEdit::_update_scrollbars` (`graph_edit.cpp:463-510`)
- * and `_notification(NOTIFICATION_READY)`'s own anchors (`:840-852`).
- *
- * Every expected number is worked through Godot's own arithmetic by hand at
- * theme scale 1 — never read back off this module.
+ * `scrollBars.ts` versus `GraphEdit::_update_scrollbars` (`graph_edit.cpp:463-510`)
+ * and `_notification(NOTIFICATION_READY)`'s own anchors (`:840-852`). Each
+ * expected number is Godot's arithmetic worked by hand at theme scale 1.
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { graphEditScrollBars } from './scrollBars';
 
 const theme = nativeTheme(1);
-// One 120x64 GraphNode at (40, 56), zoom 1, in a 400x320 GraphEdit — the same
+// One 120x64 GraphNode at (40, 56), zoom 1, in a 400x320 GraphEdit: the same
 // box `minimap.test.ts` derives: min (-400, -320), max (560, 440).
 const bounds = { min: { x: -400, y: -320 }, max: { x: 560, y: 440 } };
 const size = { x: 400, y: 320 };

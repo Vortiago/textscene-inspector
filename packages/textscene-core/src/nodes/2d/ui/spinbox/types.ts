@@ -1,4 +1,4 @@
-/** SpinBox property definitions — Control + Range plus SpinBox's own members. */
+/** SpinBox property definitions: Control and Range plus SpinBox's own members. */
 
 import type { ControlProperties } from '../control/types';
 import type { RangeProperties } from '../shared/range';

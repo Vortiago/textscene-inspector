@@ -1,4 +1,4 @@
-/** GridContainer parser — Control + column count. */
+/** GridContainer parser: Control + column count. */
 
 import { type ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';

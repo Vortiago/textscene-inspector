@@ -1,11 +1,6 @@
 /**
- * `<ControlCanvasWalker>` solves `tree` (from `buildSolveTree`, but this
- * suite feeds it `SolveNode` literals directly — the same isolation
- * `controlRectSolver.test.ts` uses — so it stays a seam test of the WALKER,
- * not a re-test of the solve or the live-tree walk) and emits one named
- * `<group>` per Control, positioned at its solved rect. Assertions read only
- * scene-graph structure (names/positions/visibility/rotation), never pixels —
- * this is a happy-dom-free but still non-visual test.
+ * A seam test of the walker: it feeds `SolveNode` literals, not `buildSolveTree`,
+ * and reads only scene-graph names, positions, visibility and rotation, never pixels.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -24,15 +19,12 @@ import { CanvasLayerIndexProvider, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN, useEffe
 import { Modulate2DContext, useParentModulate } from '../../canvasItemModulate';
 import { solveNode as emptySolveNode } from './testing/solveNode';
 
-/** The world canvas's rank — derived, never hardcoded: only a rank's ORDER
-  * is meaningful, and spacing them for undeclared layers moved the value. */
+/** The world canvas's rank, derived, never hardcoded: only a rank's order means
+  * anything, and the spacing for undeclared layers moves the value. */
 const WORLD_RANK = layerRankOf(layerRanks([]), 0);
 
-// A stand-in for the real `canvaslayer/Component.tsx` (a different
-// slice's file, not this suite's concern): just enough to prove the WALKER
-// threads `children` through the painter and republishes
-// `CanvasLayerIndexProvider` for a `CanvasLayer` type, without depending on
-// that slice's own implementation.
+// A stand-in for `canvaslayer/Component.tsx`, enough to show the walker threads
+// `children` through the painter and republishes `CanvasLayerIndexProvider`.
 const StubCanvasLayerNative: NativeControlComponent = ({ solveNode, children }) => {
   const layer = (solveNode.node.properties as { layer?: number }).layer ?? 1;
   return <CanvasLayerIndexProvider value={layer}>{children}</CanvasLayerIndexProvider>;
@@ -137,11 +129,10 @@ describe('<ControlCanvasWalker>', () => {
   });
 
   it("honours `parent_visible_in_tree` — the Control's own `visible` is only half of `is_visible_in_tree`", async () => {
-    // `visible && parent_visible_in_tree` (canvas_item.cpp:62-64). A node this
-    // walk emits at the TOP of the forest — promoted past a skipped Node2D
-    // that mounts no group, or hoisted out of the ancestor whose flag still
-    // reaches it (canvas_item.cpp:103-108, 311-316) — has no enclosing group
-    // to inherit the flag from, so the solve's own value is the only carrier.
+    // `visible && parent_visible_in_tree` (canvas_item.cpp:62-64). A node promoted
+    // past a skipped Node2D, or hoisted out of the ancestor whose flag still
+    // reaches it (canvas_item.cpp:103-108, 311-316), has no enclosing group, so
+    // only the solve carries the flag.
     const promoted: SolveNode = {
       ...solveNode('Promoted', 'TestType', { anchorsPreset: 15 }),
       parentVisibleInTree: false,
@@ -157,10 +148,8 @@ describe('<ControlCanvasWalker>', () => {
   });
 
   it('skips a node the tree marks hidden', async () => {
-    // The eye toggle reaches this walk as `SolveNode.hidden`, stamped by
-    // `buildSolveTree` so the SOLVE sees the same value — a second read of
-    // `SelectionContext` here could disagree with the rect the container laid
-    // out. `buildSolveTree.test.tsx` covers the stamping itself.
+    // The eye toggle arrives as `SolveNode.hidden`, so the solve sees the same
+    // value. `buildSolveTree.test.tsx` covers the stamping.
     const child = { ...solveNode('Root/Box', 'TestType', { anchorsPreset: 15 }), hidden: true };
     const root = solveNode('Root', 'TestType', { anchorsPreset: 15 }, [child]);
 
@@ -205,13 +194,13 @@ describe('<ControlCanvasWalker>', () => {
     );
 
     const groups = renderer.scene.findAllByType('Group').map((g) => g.instance);
-    // Godot's rotation is conjugated (negated) the same way Node2D's is
-    // (node2dTransform.ts) — clockwise-positive in Y-down space.
+    // Godot's rotation is negated as Node2D's is (node2dTransform.ts):
+    // clockwise-positive in Y-down space.
     expect(groups.some((g) => Math.abs(g.rotation.z - -(Math.PI / 2)) < 1e-9)).toBe(true);
   });
 
   it('composes a promoted Control’s OWN rotation with its `skippedAncestors` transform — never double-applying, never disagreeing on direction/origin', async () => {
-    // Node2D ancestor: rotation=PI/2 at (100,0) — core/math/transform_2d.h:
+    // Node2D ancestor: rotation=PI/2 at (100,0). core/math/transform_2d.h:
     // 249-254 (rot=PI/2, scale=(1,1), skew=0): a=0,b=1,c=-1,d=0.
     const ancestorTransform = {
       a: Math.cos(Math.PI / 2),
@@ -222,8 +211,8 @@ describe('<ControlCanvasWalker>', () => {
       ty: 0,
     };
     // rect (10,0,20,20): anchors 0, offsets (10,0,30,20). The Control's own
-    // rotation=PI/2 turns about its pivot (default (0,0), i.e. its own
-    // top-left) BEFORE the ancestor's transform is applied outside it.
+    // rotation=PI/2 turns about its pivot (default (0,0), its own top-left)
+    // before the ancestor's transform applies outside it.
     const root: SolveNode = {
       ...solveNode('Root', 'TestType', {
         anchorLeft: 0,
@@ -243,22 +232,10 @@ describe('<ControlCanvasWalker>', () => {
       <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
     );
 
-    // `ControlFallback` draws its outline at the rect's own CENTER, local
-    // (rect.w/2, -rect.h/2, 0) = (10, -10, 0) — a fixed, known point this
-    // test can hand-trace through both transforms:
-    //   1. own rotation (three rotation.z = -PI/2) about (0,0):
-    //      (10,-10) -> (-10,-10)
-    //   2. own group's rect-origin translation (10, 0):
-    //      (-10,-10) -> (0,-10)
-    //   3. ancestor's conjugated matrix (a=0,b=1,c=-1,d=0,tx=100,ty=0),
-    //      `ancestorGroupMatrix`: x' = a*x - c*y + tx = 0*0 - (-1)*(-10) + 100 = 90
-    //                             y' = -b*x + d*y - ty = -1*0 + 0*(-10) - 0 = 0
-    //      (0,-10) -> (90, 0)
-    // A rotation applied the wrong DIRECTION or about the wrong ORIGIN lands
-    // somewhere else entirely, not merely off by a rounding error.
-    // `updateMatrixWorld` (not `updateWorldMatrix`, which does not climb to
-    // parents here) recomputes top-down from the scene, cascading into every
-    // descendant — including the ancestor wrapper this test exists to check.
+    // The outline's centre (rect.w/2, -rect.h/2) = (10, -10) turns -PI/2 about (0,0) to (-10,-10), moves by
+    // the rect origin to (0,-10), and `ancestorGroupMatrix` maps it to (90, 0). A
+    // wrong direction or origin lands elsewhere. `updateMatrixWorld`, not
+    // `updateWorldMatrix`, recomputes from the scene down through the wrapper.
     (renderer.scene as unknown as { instance: THREE.Object3D }).instance.updateMatrixWorld(true);
     const outline = renderer.scene.findAllByType('LineSegments')[0]!.instance as THREE.Object3D;
     const p = new THREE.Vector3().setFromMatrixPosition(outline.matrixWorld);
@@ -301,9 +278,8 @@ describe('<ControlCanvasWalker>', () => {
     );
 
     const lines = renderer.scene.findAllByType('LineSegments').map((l) => l.instance as { renderOrder: number });
-    // The SAME key a Node2D canvas item takes — no band of its own, which is
-    // what lets a Control interleave with the world rather than sit above it.
-    // Pre-order: Root draws at the first sequence in its run, Child at the next.
+    // The key a Node2D canvas item takes, with no band of its own, so a Control
+    // interleaves with the world. Pre-order: Root first in its run, Child next.
     const at = (sequence: number) => canvasRenderOrder({ layerRank: WORLD_RANK, zFinal: 0, sequence });
     expect(lines.some((l) => l.renderOrder === at(1))).toBe(true);
     expect(lines.some((l) => l.renderOrder === at(2))).toBe(true);
@@ -337,11 +313,9 @@ describe('<ControlCanvasWalker>', () => {
       .map((l) => (l.instance as { renderOrder: number }).renderOrder);
     const onLayer = (sequence: number) =>
       canvasRenderOrder({ layerRank: layerRankOf(layerRanks([5]), 5), zFinal: 0, sequence });
-    // BOTH descendants reach the layer — the nested Grandchild as much as the
-    // Child — and at CONSECUTIVE sequences, which is what "arbitrarily nested"
-    // means here. Asserting only "above the world" would hold for ANY sequence,
-    // including one that dropped the Grandchild entirely: every rank-5 key
-    // already exceeds every world key by construction.
+    // Both descendants reach the layer at consecutive sequences. "Above the
+    // world" alone would pass with the Grandchild dropped: every rank-5 key
+    // exceeds every world key.
     expect(lines).toContain(onLayer(2));
     expect(lines).toContain(onLayer(3));
     // …and the layer as a whole still sits above the world canvas.
@@ -377,9 +351,8 @@ describe('<ControlCanvasWalker>', () => {
     );
 
     const lines = renderer.scene.findAllByType('LineSegments').map((l) => l.instance as { renderOrder: number });
-    // Godot's `layer < 0` draws BEFORE the world canvas — and it is the LAYER
-    // that decides, not the draw sequence: the Control on layer -1 comes first
-    // in the tree here, but so would a layer -1 Control authored last.
+    // Godot's `layer < 0` draws before the world canvas, decided by the layer,
+    // not the sequence: a layer -1 Control authored last would come first too.
     const worldFloor = canvasRenderOrder({
       layerRank: layerRankOf(layerRanks([-1]), 0),
       zFinal: CANVAS_ITEM_Z_MIN,
@@ -443,10 +416,8 @@ describe('<ControlCanvasWalker>', () => {
   });
 
   describe('EffectiveZProvider (Light2D culling z_final)', () => {
-    // Reports the ambient `useEffectiveZ()` it reads — i.e. the accumulated
-    // `z_final` its OWN parent published — encoded in its group's name rather
-    // than a closure, matching `canvaslayer/Component.test.tsx`'s `LayerProbe`
-    // convention (a hook can only be called from a real component).
+    // Names its group after the ambient `useEffectiveZ()`, the `z_final` its
+    // parent published: a hook runs only inside a real component.
     const ZProbe: NativeControlComponent = () => <group name={`ZProbe:z=${useEffectiveZ()}`} />;
 
     function zProbeReading(renderer: { scene: { findAllByType: (t: string) => { instance: { name: string } }[] } }): number {
@@ -521,9 +492,8 @@ describe('<ControlCanvasWalker>', () => {
         <ControlCanvasWalker tree={[high]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
       );
       expect(zProbeReading(highRenderer)).toBe(CANVAS_ITEM_Z_MAX);
-      // The hint range (`PROPERTY_HINT_RANGE`) is a slider clamp, not a setter
-      // guard — `CanvasItem::set_z_index` never rejects/clamps a value, so the
-      // authored property itself is untouched by the accumulation's own clamp.
+      // `PROPERTY_HINT_RANGE` is a slider clamp, not a setter guard:
+      // `CanvasItem::set_z_index` clamps nothing, so the authored value stays.
       expect((high.node.properties as { zIndex?: number }).zIndex).toBe(9000);
 
       const lowProbe = solveNode('Low/Probe', 'ZProbe', {});
@@ -586,15 +556,10 @@ describe('<ControlCanvasWalker>', () => {
     });
 
     it("hands a painter its OWN z_final by prop, where the ambient context is its parent's", async () => {
-      // These two deliberately disagree, and the gap is the whole point.
-      // Godot attaches an item for draw at its own accumulated z:
-      // `_cull_canvas_item` folds `ci->z_index` into `p_z` and only then calls
-      // `_attach_canvas_item_for_draw(ci, …, p_z, …)`
-      // (`servers/rendering/renderer_canvas_cull.cpp`). The context exists to
-      // seed this node's DESCENDANTS, so it still reads the parent's value
-      // here — and `useCanvasItemLighting`'s own `effectiveZ` fallback reads
-      // exactly that context. A painter that leaned on the fallback would
-      // silently drop its own `z_index` and light at the wrong z window.
+      // These two disagree on purpose. `_cull_canvas_item` attaches an item at its
+      // own z (`servers/rendering/renderer_canvas_cull.cpp`), while the context
+      // seeds the descendants with the parent's. A painter on the lighting
+      // fallback would drop its own `z_index`.
       const PropProbe: NativeControlComponent = ({ effectiveZ }) => (
         <group name={`zprop:prop=${effectiveZ},ambient=${useEffectiveZ()}`} />
       );
@@ -617,9 +582,8 @@ describe('<ControlCanvasWalker>', () => {
   });
 
   describe('own-pixel tint handed to the painter', () => {
-    // Reports the tint it was GIVEN alongside the ambient it could have read,
-    // in its group's name — the `zprop:` convention above. A painter resolving
-    // its own tint is the arrangement this prop replaces.
+    // Names its group after the tint it was given and the ambient it could read,
+    // as `zprop:` does above.
     const TintProbe: NativeControlComponent = ({ tint }) => (
       <group name={`tint:own=${tint.own.r},alpha=${tint.own.a},ambient=${useParentModulate().r}`} />
     );
@@ -763,11 +727,10 @@ describe('<ControlCanvasWalker>', () => {
     });
 
     it('snaps the composite origin — position plus the pivot/scale transform’s own translation', async () => {
-      // Measured through Godot 4.6.3: a ColorRect at (100, 100) with
-      // pivot_offset (10.25, 10.25) and scale (2, 2) draws its top-left at
-      // exactly 90 with no half-pixel blend, i.e. floor(100 - 10.25 + 0.5).
-      // The inner pivot groups contribute that -10.25, so the OUTER group
-      // carries the snapped total minus it.
+      // Godot 4.6.3 draws a ColorRect at (100, 100) with pivot_offset
+      // (10.25, 10.25) and scale (2, 2) with its top-left at
+      // exactly 90, floor(100 - 10.25 + 0.5). The inner pivot groups add the
+      // -10.25, so the outer group carries the snapped total minus it.
       const position = await rootPosition(
         freeAt(100, 100, { pivotOffset: { x: 10.25, y: 10.25 }, scale: { x: 2, y: 2 } })
       );

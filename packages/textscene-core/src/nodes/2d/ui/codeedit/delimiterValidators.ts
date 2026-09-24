@@ -1,5 +1,5 @@
 /**
- * `delimiter_strings` / `delimiter_comments` — CodeEdit's two delimiter arrays,
+ * `delimiter_strings` and `delimiter_comments`, CodeEdit's two delimiter arrays,
  * which share one `delimiters` Vector in the engine.
  */
 
@@ -9,26 +9,10 @@ import { parsePackedStringArray } from './arrayForms.js';
 import { isGodotSymbol } from './symbolChars.js';
 
 /**
- * `delimiter_strings` / `delimiter_comments` (code_edit.cpp:2997-2998): each
- * element is `"start_key"` or `"start_key end_key"`, split on the FIRST space
- * exactly as `CodeEdit::_set_delimiters` does (`key.get_slicec(' ', 0)` /
- * `key.get_slice_count(' ') > 1 ? key.get_slicec(' ', 1) : String()`,
- * code_edit.cpp:3501-3502) — a second space and anything after it is silently
- * ignored, matching the engine rather than flagging it.
- *
- * A wholly empty element is skipped with no error, matching
- * `_set_delimiters`'s own `if (key.is_empty()) { continue; }`
- * (code_edit.cpp:3497-3499). Anything else routes through `_add_delimiter`
- * (code_edit.cpp:3418-3457), whose `ERR_FAIL_COND_MSG` guards this mirrors:
- *   - an empty start key (code_edit.cpp:3421)
- *   - a start key containing a non-symbol character (code_edit.cpp:3424)
- *   - an end key containing a non-symbol character (code_edit.cpp:3430)
- *   - a start key that repeats one already in THIS array (code_edit.cpp:3436)
- *
- * A start key repeated across the OTHER `delimiter_*` property (both types
- * share one `delimiters` Vector, so the "already exists" guard applies
- * regardless of type) is a cross-property collision this single-property
- * validator cannot see; `linter.ts` catches that one instead.
+ * `delimiter_strings` and `delimiter_comments` (code_edit.cpp:2997-2998). The guards mirror
+ * `_add_delimiter` (code_edit.cpp:3418-3457): an empty or non-symbol start key, a non-symbol end
+ * key, a repeated start key (code_edit.cpp:3436). A start key repeated across the other property
+ * shares the same `delimiters` Vector, and `linter.ts` catches that collision.
  */
 export function delimiterArrayValidator(name: string): PropertyValidator {
   const formatCode = `INVALID_${name.toUpperCase()}_FORMAT`;
@@ -46,8 +30,11 @@ export function delimiterArrayValidator(name: string): PropertyValidator {
 
     const seenStartKeys = new Set<string>();
     for (const element of elements) {
+      // `_set_delimiters` skips an empty element (code_edit.cpp:3497-3499).
       if (element === '') continue;
 
+      // Split on the first space as `_set_delimiters` does (code_edit.cpp:3501-3502). A second
+      // space and anything after it is ignored, as the engine ignores it.
       const firstSpace = element.indexOf(' ');
       let startKey: string;
       let endKey: string;

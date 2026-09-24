@@ -1,5 +1,5 @@
 /**
- * timer linter registration - imports linter components to trigger self-registration.
+ * Timer linter registration: the imports self-register.
  */
 
 import './linterParser.js';

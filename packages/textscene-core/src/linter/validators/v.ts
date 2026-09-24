@@ -1,29 +1,8 @@
 /**
- * Declarative validator namespace `v` — the thin DSL that lets each
- * node's `linterParser.ts` become a flat property → combinator map.
- *
- * Before this file the 31
- * `linterParser.ts` files totalled 9,488 LOC of near-identical
- * `parseFloat → NaN check → range check → return {ParseError shape}`.
- * Each validator now collapses to a single call site of ~30 chars.
- *
- * Each `v.xxx(propertyName, options?)` returns a `PropertyValidator`
- * (`(key, value, line) => ParseError | null`). Error codes are
- * auto-derived from the property name (uppercase + `_FORMAT` / `_VALUE`
- * suffix), so per-property call sites no longer pass them. Message
- * text follows the same template the existing files use (so all
- * `expect(msg).toContain('cast_shadow')` and `toContain('0-3')` style
- * tests keep passing).
- *
- * Built on top of the existing `create*Validator` factories in this
- * directory; this file is a façade, not a re-implementation.
- *
- * ## Where the combinators live
- *
- * One file per value family in `v/`, each over the shared tagging and grounding
- * helpers in `v/grounding.ts`. This module assembles them into the namespace and
- * keeps the import path every slice already uses, so a combinator moves between
- * families without moving any call site.
+ * The declarative validator namespace `v`, which makes each `linterParser.ts` a
+ * flat property-to-combinator map. `v.xxx(propertyName, options?)` returns a
+ * `PropertyValidator` whose error codes derive from the property name. The
+ * combinators, one value family per file in `v/`, wrap the `create*Validator` factories.
  */
 
 import { floatCombinators } from './v/floats.js';
@@ -39,9 +18,7 @@ export { arrayLiteralElements } from './v/scalars.js';
 export { RADIAN_ROUNDTRIP_EPSILON } from './v/floats.js';
 export type { FloatOpts, IntOpts, EnumOpts } from './v/options.js';
 
-/**
- * The declarative validator namespace. Use as `v.float`, `v.enumInt`, etc.
- */
+/** The declarative validator namespace: `v.float`, `v.enumInt` and the rest. */
 export const v = {
   ...floatCombinators,
   ...integerCombinators,

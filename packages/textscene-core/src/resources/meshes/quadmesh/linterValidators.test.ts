@@ -1,19 +1,14 @@
 /**
- * Tests for what a QuadMesh sub_resource validates — all of it inherited.
- *
- * QuadMesh declares no property of its own: `size` and `center_offset` are
- * PlaneMesh's, `flip_faces` and `material` are PrimitiveMesh's. Its own copies
- * would be a shadow that drifts, so the cases below ride the resource base-walk
- * and are what proves it reaches a leaf two hops down.
+ * What a QuadMesh sub_resource validates, all of it inherited: `size` and
+ * `center_offset` are PlaneMesh's, `flip_faces` and `material` PrimitiveMesh's.
+ * The cases ride the resource base-walk and prove it reaches a leaf two hops down.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
-// The FULL linter barrel, so these cases also guard the wiring: if
-// linter/index.ts drops a mesh validator import, the "rejects …" cases below
-// stop firing and turn red. (resources/** validators are outside the
-// barrelCompleteness/ruleCoverage filesystem guards, so this is their
-// registration safety net.)
+// The full linter barrel, so a mesh validator import dropped from
+// linter/index.ts turns the "rejects …" cases red. resources/** validators are
+// outside the barrelCompleteness/ruleCoverage guards, so this guards their wiring.
 import '../../../linter/index';
 
 function errorsOf(diagnostics: ReturnType<Linter['lint']>) {

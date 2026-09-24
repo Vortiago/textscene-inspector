@@ -1,5 +1,3 @@
-/**
- * generic6dofjoint3d linter registration - imports linter components to trigger self-registration.
- */
+/** Generic6DOFJoint3D linter registration: importing the modules registers them. */
 
 import './linterParser.js';

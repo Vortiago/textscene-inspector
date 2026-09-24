@@ -1,12 +1,7 @@
 /**
- * `<CanvasLayer>` render contract: the native (WebGL canvas) painter for
- * `CanvasLayer`. Draws no chrome of its own — it only republishes fresh
- * `CanvasLayerIndexProvider`/`CanvasModulateContext` scopes around its
- * children, mirroring the `CanvasLayer` branch of `NodeDispatcher.tsx`'s
- * `PlainNode` (see that module — this is the same convention, not a second
- * one). Assertions read scene-graph structure only, never pixels, matching
- * `nodes/2d/marker2d/Component.test.tsx`'s style for a
- * react-three-test-renderer suite.
+ * `<CanvasLayer>` render contract: it draws no chrome and republishes fresh
+ * `CanvasLayerIndexProvider` and `CanvasModulateContext` scopes around its children,
+ * as `NodeDispatcher.tsx`'s `PlainNode` does. Structure only, never pixels.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

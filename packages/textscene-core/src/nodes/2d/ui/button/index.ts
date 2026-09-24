@@ -1,4 +1,4 @@
-/** Button registration — parser. */
+/** Button registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseButton } from './parser';

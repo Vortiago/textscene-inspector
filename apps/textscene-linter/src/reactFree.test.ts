@@ -1,21 +1,8 @@
 /**
- * React-free boundary guard for the linter CLI app.
- *
- * `apps/textscene-linter` must stay React- and three.js-free: it is a plain
- * Node CLI and esbuild bundles it as such (`platform: 'node'`). The guard in
- * `@textscene/core` (`linter/reactFree.test.ts`) only covers `linter/index.ts`
- * — it cannot see an accidental root-barrel `@textscene/core` import added at
- * the app level, because the app layer is outside core's test scope.
- *
- * This test walks the static *value*-import closure of `src/cli.ts` (type-only
- * imports are skipped — the bundler erases them), following relative imports
- * and `@textscene/core/*` subpaths into the core package's `src/`. It asserts:
- *
- *   - No `.tsx` render component is reachable.
- *   - No react / react-dom / @react-three / three bare specifier is value-imported.
- *   - Every workspace import resolves (walker stays exhaustive).
- *
- * Modeled on `apps/textscene-vscode/src/webExtensionSafe.test.ts`.
+ * Keeps the linter CLI, a plain Node bundle, free of React and three.js. It walks
+ * the value-import closure of `src/cli.ts` into core's `src/`, since core's own
+ * guard covers only `linter/index.ts` and cannot see a root-barrel import added
+ * here. Type-only imports are skipped: the bundler erases them.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -40,11 +27,10 @@ describe('linter-app React-free boundary', () => {
   });
 
   it('walker resolves every workspace import (guard stays exhaustive)', () => {
-    // Every other assertion here is an emptiness check, and a closure collapsed
-    // to the entry file alone satisfies all of them. 749 files today; the floor
-    // catches a walker that stopped following, not a tree that shrank. Inline
-    // rather than core's shared scrape floor: core publishes no test-helper
-    // subpath and this app must not deep-import past its exports map.
+    // A closure collapsed to the entry file passes every emptiness check here, so
+    // the floor catches a walker that stopped following. It is inline because core
+    // publishes no test-helper subpath and this app cannot deep-import past its
+    // exports map.
     expect(closure.files.size).toBeGreaterThan(400);
     expect(closure.unresolved).toEqual([]);
   });

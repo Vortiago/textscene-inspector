@@ -1,29 +1,8 @@
 /**
- * The titlebar band GraphNode/GraphFrame each build from an INTERNAL
- * `HBoxContainer` (`titlebar_hbox`) holding one internal `Label`
- * (`title_label`, theme type variation `GraphNodeTitleLabel`/
- * `GraphFrameTitleLabel`) — `graph_node.cpp:1322-1334`,
- * `graph_frame.cpp:348-360`. Neither internal node is ever serialised (both
- * are `add_child(..., INTERNAL_MODE_FRONT)`), so nothing here reads a
- * `.tscn` property for them beyond the owning node's own `title` string.
- *
- * `titlebar_hbox` has `h_size_flags = SIZE_EXPAND_FILL`, default (FILL)
- * `v_size_flags`, and its own combined minimum size is exactly
- * `title_label`'s (its one child, `HBoxContainer::get_minimum_size` with one
- * entry). `_resort`'s own `Rect2(sb_titlebar->get_offset(), titlebar_size)`
- * feeds `fit_child_in_rect` a height ALREADY REDUCED by `sb_titlebar`'s
- * margins — smaller than `titlebar_hbox`'s own minimum whenever those
- * margins are positive — so `Control::set_rect`'s universal minimum-size
- * floor (`control.cpp:1773-1797`, ported for every other container by
- * `controlRectSolver.ts`'s `dispatchChildren`, but not reachable here since
- * `titlebar_hbox` is not a real `SolveNode`) always wins and raises
- * `titlebar_hbox`'s resolved height back up to the title text's own minimum
- * height. The converged, closed-form answer this module computes directly
- * (`titlebarBandHeight`) is therefore INDEPENDENT of `sb_titlebar`'s margins,
- * which only ever shrink the pre-floor value below that floor, never past
- * it — matching what `NOTIFICATION_DRAW`'s own `titlebar_rect` reads back
- * (`graph_node.cpp:634`, `graph_frame.cpp:106`):
- * `titlebar_hbox->get_size() + sb_titlebar->get_minimum_size()`.
+ * The titlebar band GraphNode and GraphFrame build from an internal `HBoxContainer` (`titlebar_hbox`)
+ * that holds one internal `Label` (`title_label`): `graph_node.cpp:1322-1334`, `graph_frame.cpp:348-360`.
+ * Both are `INTERNAL_MODE_FRONT` children and never serialised, so the owning node's `title` is the
+ * only `.tscn` input.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -49,7 +28,7 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { layoutLabelLines, LABEL_LINE_SPACING_PX, LABEL_PARAGRAPH_SEPARATOR } from '../label/nativeSolver';
 
-/** `title_label`'s real Godot class — both variations are declared `set_type_variation("Label")`. */
+/** `title_label`'s real Godot class: both variations are declared `set_type_variation("Label")`. */
 const TITLE_LABEL_NATIVE_TYPE = 'Label';
 
 export interface TitlebarFontTheme {
@@ -59,22 +38,13 @@ export interface TitlebarFontTheme {
 }
 
 /**
- * `title_label`'s resolved font — the SAME ancestor + type-chain walk any
- * other Control's theme font goes through (`resolveThemeFontIn`/
- * `resolveThemeFontSizeIn`), rooted at `n`'s own `themeChain`/`projectTheme`:
- * `title_label`'s nearest CONTROL ancestor carrying a `theme` resource is
- * `n` itself (its parent, `titlebar_hbox`, is a bare internal `HBoxContainer`
- * with no `theme` of its own), so `n.themeChain` already IS `title_label`'s
- * own ancestor chain, unlike `n.fontOverrides` — `theme_override_fonts/*` is
- * a LOCAL override only `n`'s OWN theme key would read, never inherited by a
- * child, so `title_label` (which can author no override at all) passes
- * `undefined` rather than any of `n`'s.
- *
- * Colour has no such ancestor walk in this codebase (`textTheme.ts`'s own
- * doc — colour data is not decoded from a `Theme` resource at all), so
- * `defaultColor` is the whole answer: `GraphNodeTitleLabel`'s is
- * `control_font_color` (`default_theme.cpp:819`); `GraphFrameTitleLabel`'s is
- * opaque white (`:849`).
+ * `title_label`'s font, through the theme walk every Control uses, rooted at
+ * `n`: its parent `titlebar_hbox` carries no `theme`, so `n.themeChain` is
+ * `title_label`'s chain. `theme_override_fonts/*` is local to `n` and never
+ * inherited, so `title_label`, which can author no override, passes `undefined`.
+ * @param defaultColor The whole colour answer, since no `Theme` colour is decoded
+ *   (`textTheme.ts`): `control_font_color` for `GraphNodeTitleLabel`
+ *   (`default_theme.cpp:819`), opaque white for `GraphFrameTitleLabel` (`:849`).
  */
 export function resolveTitleFontTheme(
   n: SolveNode,
@@ -90,11 +60,9 @@ export function resolveTitleFontTheme(
 }
 
 /**
- * Shapes `text` exactly as `Label::_shape` does for an unwrapped, non-uppercase
- * Label (`title_label` sets neither `autowrap_mode` nor `uppercase` — both
- * stay at `Label`'s own OFF/false defaults) — `label.cpp:992-996`'s branch,
- * transcribed once and shared by both `labelMinimumSize` (via `shapeText`
- * directly) and here, rather than re-derived.
+ * Shapes `text` as `Label::_shape` does for an unwrapped, non-uppercase Label,
+ * the branch at `label.cpp:992-996`: `title_label` leaves `autowrap_mode` and
+ * `uppercase` at their OFF/false defaults.
  */
 export function shapeTitleText(text: string, fontTheme: TitlebarFontTheme): TextLayoutResult {
   return shapeText(text, {
@@ -107,13 +75,13 @@ export function shapeTitleText(text: string, fontTheme: TitlebarFontTheme): Text
   });
 }
 
-/** The shaped title's own minimum size — `Label::get_minimum_size`'s OFF branch (`label.cpp:992-996`), empty-text short-circuit included. */
+/** The shaped title's own minimum size: `Label::get_minimum_size`'s OFF branch (`label.cpp:992-996`), empty-text short-circuit included. */
 export function titleTextMinimumSize(
   text: string,
   fontTheme: TitlebarFontTheme
 ): { x: number; y: number } {
   if (text.length === 0) {
-    // `label.cpp:239-241`: `Size2(1, get_line_height())` — `get_line_height()`
+    // `label.cpp:239-241`: `Size2(1, get_line_height())`: `get_line_height()`
     // with no shaped lines returns `font->get_height(font_size)`, no
     // `line_spacing` folded in (`label.cpp:125-134`).
     return { x: 1, y: getFontLinePitchPx(fontTheme.fontMetrics, fontTheme.fontSizePx, 0) };
@@ -131,9 +99,10 @@ export interface TitlebarGeometry {
 }
 
 /**
- * The titlebar band's converged geometry — this module's own doc for why the
- * closed form is independent of `sb_titlebar`'s margins on the HEIGHT axis.
- * `nodeWidth` is the owning GraphNode/GraphFrame's own solved width.
+ * The band's converged geometry, `titlebar_hbox->get_size() + sb_titlebar->get_minimum_size()`
+ * (`graph_node.cpp:634`, `graph_frame.cpp:106`), in closed form: `set_rect`'s minimum-size floor
+ * (`control.cpp:1773-1797`) lifts the margin-reduced height back to the text's, and no `SolveNode`
+ * carries the band for `controlRectSolver.ts` to floor. `nodeWidth` is the owner's solved width.
  */
 export function titlebarGeometry(
   nodeWidth: number,
@@ -148,5 +117,5 @@ export function titlebarGeometry(
   };
 }
 
-/** `title_label`'s own per-line placement within `contentRect` — `Label::_get_line_rect`, shared verbatim via `layoutLabelLines`. */
+/** `title_label`'s per-line placement within `contentRect`: `Label::_get_line_rect`. */
 export { layoutLabelLines };

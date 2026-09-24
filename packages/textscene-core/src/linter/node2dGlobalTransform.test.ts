@@ -20,11 +20,10 @@ describe('globalScale', () => {
   });
 
   it('reads a NaN determinant the way SIGN does, as zero', () => {
-    // `SIGN` is `m_v > 0 ? +1 : (m_v < 0 ? -1 : 0)` (typedefs.h:123-126): both
-    // comparisons are false for NaN, so it falls through to 0 — where
-    // `Math.sign` returns NaN and poisons a y column that is perfectly finite.
-    // Reachable, not theoretical: `nan` is a float literal Godot writes and
-    // reloads, so `scale = Vector2(nan, 1)` parses and lands here.
+    // `SIGN` is `m_v > 0 ? +1 : (m_v < 0 ? -1 : 0)` (typedefs.h:123-126), so NaN
+    // falls through to 0, where `Math.sign` returns NaN and poisons a finite y
+    // column. `nan` is a float literal Godot writes and reloads, so
+    // `scale = Vector2(nan, 1)` lands here.
     const nanDeterminant = { a: NaN, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
     expect(globalScale(nanDeterminant).y).toBe(0);
   });

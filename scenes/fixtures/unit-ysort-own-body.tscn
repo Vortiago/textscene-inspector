@@ -1,13 +1,8 @@
 [gd_scene format=3]
 
-; A y_sort_enabled node that HAS pixels of its own, with one merged child sorting
-; behind it and one in front. Sort keys come from each node's position.y, while
-; the drawn rects are chosen to overlap the bar — so the bar visibly covers the
-; red block and is visibly covered by the blue one.
-;
-;   Behind  sortY 240 - 160 =  80  -> drawn first, bar covers it
-;   OwnBody sortY          = 240
-;   InFront sortY 240 + 130 = 370  -> drawn last, covers the bar
+; A y_sort_enabled node with pixels of its own, one merged child sorting behind it and one in
+; front. Sort keys come from each node's position.y, and the drawn rects overlap the bar, so the
+; bar covers the red block and the blue one covers the bar.
 
 [node name="Root" type="Node2D"]
 
@@ -15,17 +10,20 @@
 y_sort_enabled = true
 position = Vector2(64, 60)
 
+; sortY 240.
 [node name="OwnBody" type="Polygon2D" parent="Sorted"]
 y_sort_enabled = true
 position = Vector2(0, 240)
 color = Color(0.95, 0.78, 0.15, 1)
 polygon = PackedVector2Array(0, 0, 960, 0, 960, 120, 0, 120)
 
+; sortY 240 - 160 = 80: drawn first, so the bar covers it.
 [node name="Behind" type="Polygon2D" parent="Sorted/OwnBody"]
 position = Vector2(80, -160)
 color = Color(0.85, 0.25, 0.25, 1)
 polygon = PackedVector2Array(0, 0, 320, 0, 320, 320, 0, 320)
 
+; sortY 240 + 130 = 370: drawn last, so it covers the bar.
 [node name="InFront" type="Polygon2D" parent="Sorted/OwnBody"]
 position = Vector2(560, 130)
 color = Color(0.2, 0.6, 0.9, 1)

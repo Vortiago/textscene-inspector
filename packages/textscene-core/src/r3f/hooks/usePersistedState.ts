@@ -1,30 +1,17 @@
 /**
- * localStorage-backed `useState`. Mirrors the try/catch
- * getItem+JSON.parse-with-fallback pattern the web app already uses inline
- * for its fixture/Source-pane persistence (`apps/textscene-web/src/r3f-main.tsx`),
- * generalised so `<TscnPreviewShell>` (shared core, both hosts) can persist
- * dock layout and viewport mode too. VS Code webviews are a browser context,
- * so `localStorage` works there the same way it does in the standalone web
- * app — no host-specific branching needed.
- *
- * Never throws: a missing/corrupt/rejected persisted value silently falls
- * back to `defaultValue`, and a failed write (private-mode/quota/no
- * `window`) is swallowed — persistence is a nice-to-have, never a crash
- * surface. This is also the load-bearing contract behind the round-2
- * "no new default-visible render toggle" constraint: a FRESH session with
- * no localStorage entry always reads back `defaultValue`.
- *
- * Writes are DEBOUNCED (trailing edge, flushed on unmount): the dock
- * splitters call the setter once per pointermove (60–1000 Hz with high-rate
- * mice), and a synchronous `localStorage.setItem` per move would put
- * main-thread I/O inside the exact interaction where frame budget matters.
- * One write lands per settled change instead of hundreds per drag.
+ * `localStorage`-backed `useState` for both hosts, since a VS Code webview is a browser context.
+ * It never throws: a missing, corrupt or rejected value reads as `defaultValue`, so a fresh
+ * session always gets the default, and a failed write is swallowed.
  */
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
+/**
+ * Trailing debounce: a dock splitter calls the setter per pointermove (60–1000 Hz), and a
+ * synchronous `setItem` per move puts main-thread I/O inside the drag.
+ */
 const WRITE_DEBOUNCE_MS = 200;
 
-/** One-shot read of a persisted value; falls back to `defaultValue` on any failure. */
+/** Falls back to `defaultValue` on any failure. */
 export function readPersisted<T>(
   key: string,
   defaultValue: T,
@@ -42,14 +29,14 @@ export function readPersisted<T>(
   }
 }
 
-/** One-shot write of a persisted value; failures (private mode/quota) are swallowed. */
+/** Swallows a failed write, as in private mode or a full quota. */
 export function writePersisted<T>(key: string, value: T): void {
   try {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(key, JSON.stringify(value));
     }
   } catch {
-    /* private mode / quota exceeded — the in-memory state still updates. */
+    /* Private mode or a full quota: the in-memory state still updates. */
   }
 }
 
@@ -60,17 +47,14 @@ export function usePersistedState<T>(
 ): [T, Dispatch<SetStateAction<T>>] {
   const [state, setState] = useState<T>(() => readPersisted(key, defaultValue, isValid));
 
-  // Trailing-debounce persistence (see module doc): each change re-arms the
-  // timer; `pendingRef` remembers a not-yet-written value so unmount AND
-  // `pagehide` can flush it — React unmount effects never run on a tab
-  // close/reload or a VS Code webview disposal, so without the pagehide
-  // flush a change made within the debounce window would be silently lost.
+  // `pendingRef` holds an unwritten value so unmount and `pagehide` can flush it. Unmount effects
+  // never run on a tab close, a reload or a webview disposal, so without `pagehide` a change inside
+  // the debounce window is lost.
   const pendingRef = useRef<{ key: string; value: T } | null>(null);
   const isFirstRunRef = useRef(true);
   useEffect(() => {
     if (isFirstRunRef.current) {
-      // Never write on mount: a fresh session must not materialize the
-      // default into storage just by rendering.
+      // Never write on mount: rendering alone must not store the default.
       isFirstRunRef.current = false;
       return;
     }

@@ -1,41 +1,8 @@
 #!/usr/bin/env node
 /**
- * End-to-end gate: Control text paints inside the REAL VS Code webview, under
- * the production CSP, with nothing fetched.
- *
- * `webviewHtml.ts` serves the preview with `default-src 'none'` and no
- * `connect-src`, `worker-src` or `font-src`. That is why the renderer paints
- * every glyph through a vendored MSDF atlas riding `img-src … data:` rather
- * than through a font library that would fetch its own font and spawn a
- * blob-URL worker (ADR-0037). The extension-host integration suite cannot see
- * that: a webview is a sandboxed `vscode-webview://` frame, so the suite proves
- * the panel loads and hands over its payload, never that a pixel landed. This
- * gate drives a real desktop VS Code — the build `@vscode/test-electron`
- * downloads — opens the preview through the extension's own contributed
- * command, and reads the canvas back over CDP.
- *
- *   pnpm test:vscode:csp                run the gate (builds the extension first)
- *   pnpm test:vscode:csp --skip-build   reuse the current dist/
- *   pnpm test:vscode:csp --verbose      stream VS Code's stdout/stderr
- *
- * It rebuilds `apps/textscene-vscode/dist/`, so it must not run alongside
- * `pnpm validate` or any other build of that package — `--skip-build` runs it
- * against a bundle you already trust. A build that lands between the two runs
- * below would have them capture different code, which is the one thing the pair
- * cannot survive, so the bundle's mtime is asserted unchanged across them.
- *
- * Two scenes, one launch each:
- *   - the Control label fixture, which must produce at least INK_FLOOR ink
- *     pixels in the canvas readback;
- *   - its text-free twin, derived from that same file at run time, which must
- *     produce exactly zero.
- *
- * The pair is what makes the assertion mean "glyphs painted" rather than
- * "something painted": the two scenes differ in nothing but whether a glyph is
- * asked for, so an empty canvas cannot pass the first and a canvas that paints
- * chrome or a background cannot pass the second.
- *
- * Linux/Xvfb only — see the CI notes in `.github/workflows/ci.yml`.
+ * End-to-end gate (`pnpm test:vscode:csp`): Control text paints inside the real
+ * VS Code webview, under the production CSP, with nothing fetched. Linux/Xvfb
+ * only: see the CI notes in `.github/workflows/ci.yml`.
  */
 import { spawnSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -48,29 +15,24 @@ import {
 } from './driveScene.mjs';
 import { blankSceneText } from './sceneText.mjs';
 
-/** The Control fixture whose only ink is text. */
+/**
+ * The Control fixture whose only ink is text. The preview CSP (`webviewHtml.ts`)
+ * is `default-src 'none'` with no `connect-src`, `worker-src` or `font-src`, so
+ * glyphs come from a vendored MSDF atlas riding `img-src … data:`, not a font
+ * library that fetches a font and spawns a blob-URL worker (ADR-0037).
+ */
 const FIXTURE = 'scenes/fixtures/unit-label-2d.tscn';
 
 /**
- * Ink floor for the label scene's canvas readback.
- *
- * Deliberately far below what a passing run produces, because the count scales
- * with the canvas and the canvas scales with the virtual display the driver
- * happens to get: on a 640x480 Xvfb screen the preview shares the editor area
- * with the source document, leaving a 235x357 canvas and 252 ink pixels, and a
- * roomier display only raises that. Nothing is gained by tracking the number —
- * the failure being guarded (the glyph atlas blocked, so no glyph paints at all)
- * takes it to zero on any display, and the text-free twin asserting exactly 0 is
- * what makes a non-zero count here attributable to text rather than to chrome.
+ * Ink floor for the label scene, far below a passing run: the count scales with
+ * the virtual display. A 640x480 Xvfb screen, shared with the source editor,
+ * gives a 235x357 canvas and 252 ink pixels. A blocked glyph atlas takes the
+ * count to zero on any display.
  */
 const INK_FLOOR = 100;
 
 const OUT_ROOT = path.join(REPO_ROOT, 'scripts/vscode/output/csp-gate');
 const BASE_PORT = 9464;
-
-// ============================================================================
-// Args
-// ============================================================================
 
 function parseArgs(argv) {
   const opts = { skipBuild: false, verbose: false, headed: false };
@@ -84,10 +46,6 @@ function parseArgs(argv) {
   }
   return opts;
 }
-
-// ============================================================================
-// Scenes
-// ============================================================================
 
 /**
  * Lays out the throwaway workspace the two runs open: the fixture verbatim and
@@ -116,10 +74,6 @@ function prepareScenes() {
   return { workspace, withText, withoutText, replacements };
 }
 
-// ============================================================================
-// Assertions
-// ============================================================================
-
 class GateFailures {
   constructor() {
     this.failures = [];
@@ -136,7 +90,7 @@ class GateFailures {
 
 /**
  * A blocked `data:` image quotes the whole base64 payload back in its violation
- * message — several hundred kilobytes of it, which buries every other failure.
+ * message, several hundred kilobytes of it, which buries every other failure.
  */
 function brief(value, limit = 200) {
   const text = typeof value === 'string' ? value : JSON.stringify(value);
@@ -190,13 +144,12 @@ function checkRun(gate, label, report) {
   );
 }
 
-// ============================================================================
-// Main
-// ============================================================================
-
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
 
+  // The gate rebuilds `apps/textscene-vscode/dist/`, so it must not run beside
+  // `pnpm validate` or another build of that package. `--skip-build` runs it
+  // against a bundle you already trust, and `--verbose` streams VS Code's output.
   if (!opts.skipBuild) {
     console.log('[gate] building the extension…');
     const build = spawnSync('pnpm', ['--filter', 'textscene-inspector', 'build'], {
@@ -209,12 +162,18 @@ async function main() {
 
   const binary = await resolveVscodeBinary();
   const bundle = path.join(REPO_ROOT, 'apps/textscene-vscode/dist/webview/webview.js');
+  // A build between the two runs gives them different code, which the pair
+  // cannot survive, so the bundle's mtime must stay unchanged.
   const bundleStamp = statSync(bundle).mtimeMs;
   const { workspace, withText, withoutText, replacements } = prepareScenes();
   console.log(`[gate] VS Code:   ${binary}`);
   console.log(`[gate] workspace: ${workspace}`);
   console.log(`[gate] control:   blanked ${replacements} text assignment(s)`);
 
+  // One launch each. The label fixture must paint at least INK_FLOOR ink pixels,
+  // and its text-free twin exactly zero. They differ only in whether a glyph is
+  // asked for, so an empty canvas fails the first and a canvas that paints
+  // chrome or a background fails the second.
   const runs = [
     { label: 'with-text', scene: withText },
     { label: 'without-text', scene: withoutText },
@@ -229,11 +188,10 @@ async function main() {
       outDir: path.join(OUT_ROOT, run.label),
       binary,
       port: BASE_PORT + index,
-      // The canvas settles on a signal (two identical readbacks), so there is
-      // no fixed wait to tune, and the layout commands the CLI runs to widen
-      // the window for a screenshot are skipped: each is a fuzzy palette match
-      // that could invoke something else, and readback ink does not depend on
-      // how wide the editor area is.
+      // The canvas settles on a signal (two identical readbacks), so no fixed
+      // wait. The CLI's layout palette commands are skipped: each is a fuzzy
+      // match that could invoke something else, and readback ink does not depend
+      // on the editor width.
       settle: 0,
       preserveBuffer: true,
       prepareLayout: false,
@@ -247,7 +205,7 @@ async function main() {
         'workbench.activityBar.location': 'hidden',
         'workbench.statusBar.visible': false,
       },
-      // Kept for failure triage — CI uploads them.
+      // Kept for failure triage: CI uploads them.
       screenshots: true,
       headed: opts.headed,
       keepOpen: 0,

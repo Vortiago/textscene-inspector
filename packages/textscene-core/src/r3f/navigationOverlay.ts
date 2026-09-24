@@ -1,13 +1,8 @@
 /**
- * Shared geometry builders for the navigation debug overlay (NavigationRegion3D
- * / NavigationRegion2D). Godot draws navmeshes as a translucent filled overlay
- * plus edge lines — not solid scene geometry — so both node types build the
- * same two geometries from `[positions, polygons]` and render them unlit and
- * transparent.
- *
- * This is the THREE-side build step over the two navigation slice decodes
- * (`resources/navigation/navigationpolygon` / `navigationmesh`), shared rather
- * than duplicated as each slice's `build.ts`.
+ * Geometry builders for the navigation debug overlay, shared by NavigationRegion3D
+ * and NavigationRegion2D over their slice decodes. Godot draws a navmesh as a
+ * translucent fill plus edge lines, so both build the same two geometries from
+ * `[positions, polygons]`, unlit and transparent.
  */
 
 import * as THREE from 'three';
@@ -18,11 +13,9 @@ import { materialProgramInputs } from './materialProgramInputs';
 export const NAV_OVERLAY_COLOR = 0x33d17f;
 
 /**
- * The edge-line material both regions draw, byte-identical between them.
- * Literal-only, so the key is constant and an overlay never remounts.
- *
- * The FACES material stays with each node type, which draws it at a different
- * opacity — 0.35 in 2D, 0.38 in 3D.
+ * The edge-line material both regions draw. Literal-only, so the key is constant
+ * and an overlay never remounts. The faces material stays with each node type, at
+ * opacity 0.35 in 2D and 0.38 in 3D.
  */
 export const NAV_EDGES_MATERIAL = materialProgramInputs({
   props: { color: NAV_OVERLAY_COLOR, transparent: true, opacity: 0.9, depthWrite: false },
@@ -56,15 +49,9 @@ export function buildNavEdgeGeometry(positions: Float32Array, polygons: number[]
 }
 
 /**
- * Lift a flat `PackedVector2Array` (x, y pairs) into 3D positions at z = 0,
- * negating Y.
- *
- * A NavigationPolygon's vertices are raw local canvas pixels in Godot's
- * **+Y-down** space — `navigation_region_2d.cpp::_update_debug_mesh()` copies
- * them verbatim and draws them under the region's Node2D transform with an
- * identity mesh transform. Passing that Y through unchanged mirrors the whole
- * navmesh about the region's origin; every other 2D slice does the same
- * negation in `node2dGroupProps`.
+ * Lift a flat `PackedVector2Array` into 3D positions at z = 0, negating Y as
+ * `node2dGroupProps` does. `navigation_region_2d.cpp::_update_debug_mesh()` copies
+ * the vertices verbatim, so they are raw +Y-down local pixels.
  */
 export function vector2ToPositions(flat: Float32Array): Float32Array {
   const count = Math.floor(flat.length / 2);

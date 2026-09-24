@@ -1,16 +1,7 @@
-; ONE VARIABLE: `layout_direction = 3` (RTL) on the lower Button.
-;
-; Under RTL, `Button::_notification` swaps the icon and text alignment SIDES
-; before placing either (button.cpp:262-276), so the icon jumps from the left
-; content margin to the right one and the LEFT-aligned label hugs the opposite
-; end. Both buttons pin `alignment = 0` and `icon_alignment = 0` because the
-; CENTER defaults are swap-invariant and would show nothing. The inline
-; GradientTexture2D icon is asymmetric along X so a moved icon cannot be
-; mistaken for an unmoved one, and the StyleBoxFlat pins the box so the icon
-; and label are the only things that can move.
-;
-; `unit-control-layout-direction-rtl` moves a BoxContainer's child order under
-; the same property and never draws a Button; every other Button scene is LTR.
+; The one variable: `layout_direction = 3` (RTL) on the lower Button, which swaps the icon and text
+; alignment sides (button.cpp:262-276). Both pin alignment 0, since centre is swap-invariant, and the
+; icon is asymmetric on X. unit-control-layout-direction-rtl draws no Button, and every other
+; Button scene is LTR.
 
 [gd_scene load_steps=4 format=3 uid="uid://unitbuttonrtl"]
 

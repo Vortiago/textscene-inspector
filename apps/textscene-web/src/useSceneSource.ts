@@ -1,21 +1,14 @@
 /**
- * useSceneSource — owns the hold-last-valid edit-loop invariant (ADR-0020).
- *
- * The invariant: a resolving fixture load must never stomp newer keystrokes.
- * This hook is the single owner of that invariant's full span:
- *   - fixture fetch + cancellation
- *   - editedSinceLoad tracking
- *   - loadError / isFetching state
- *   - debounced edit forward through resolveForwardedContent (sourceGate)
- *   - authoritative replace (the unconditional path upload uses)
- *
- * Unit-testable with a stubbed fetch, no DOM.
+ * The scene source for the pane and the renderer. It owns the hold-last-valid invariant
+ * (ADR-0020): a resolving fixture load never overwrites newer keystrokes. It holds the
+ * fixture fetch and its cancellation, the edited flag, the load state, the debounced
+ * forward through `resolveForwardedContent`, and the unconditional `replace` of an upload.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { resolveForwardedContent } from './sourceGate';
 import { FIXTURE_STORAGE_KEY } from './useFixtureSelection';
 
-/** Pane edits reach the renderer only after this pause — never on the keystroke itself (ADR-0020). */
+/** Pane edits reach the renderer only after this pause, never on the keystroke itself (ADR-0020). */
 export const DEBOUNCE_MS = 250;
 
 export interface UseSceneSourceOptions {
@@ -24,17 +17,16 @@ export interface UseSceneSourceOptions {
   /** Non-null when the user has loaded a .tscn from disk, so the fetch effect is skipped. */
   uploadedTscnName: string | null;
   /**
-   * Called synchronously with the arriving fixture's file path immediately
-   * before its content becomes the rendered scene — the only moment at which
-   * the host may re-point resource resolution (see `useCorpusRoot`), because
-   * the outgoing scene is already gone and the incoming one has not rendered.
-   * Read from a ref, so an unstable callback never re-triggers the fetch.
+   * Called synchronously with the arriving fixture's path just before it renders. Only then
+   * may the host re-point resource resolution (`useCorpusRoot`): the outgoing scene is gone
+   * and the incoming one has not rendered. Read from a ref, so an unstable callback never
+   * re-triggers the fetch.
    */
   onBeforeSwap?: (fixtureFile: string) => void;
 }
 
 export interface UseSceneSourceResult {
-  /** Raw pane buffer — always up to date with the latest keystroke. */
+  /** Raw pane buffer, up to date with the latest keystroke. */
   buffer: string;
   /**
    * Gate-filtered content forwarded to the renderer. Updated after the
@@ -46,11 +38,9 @@ export interface UseSceneSourceResult {
   /** Non-null when the last fetch failed; cleared on the next edit. */
   loadError: string | null;
   /**
-   * The fixture file the RENDERED content came from — '' for an uploaded
-   * scene, a blanked render, or a fixture whose fetch is still in flight.
-   * Distinct from the selected `fixtureFile`, which runs ahead of the render
-   * for the whole fetch; anything scoped to what is actually on screen (the
-   * corpus root above all) must key on this, not on the selection.
+   * The fixture file the rendered content came from: '' for an upload, a blanked render,
+   * or a fetch still in flight. The selected `fixtureFile` runs ahead of it for the whole
+   * fetch, so anything scoped to what is on screen (the corpus root) keys on this.
    */
   renderedFixtureFile: string;
   /**
@@ -59,31 +49,25 @@ export interface UseSceneSourceResult {
    */
   onBufferChange: (value: string) => void;
   /**
-   * Authoritative replacement — sets buffer and forwardedContent together,
-   * cancelling any pending debounce. Used by uploads (unconditional path).
-   * `from` records the fixture the text came from; omitted for content that
-   * belongs to no fixture (an upload).
+   * Authoritative replacement: sets buffer and forwardedContent together and cancels any
+   * pending debounce. `from` is the fixture the text came from, omitted for an upload.
    */
   replace: (text: string, from?: string) => void;
   /**
-   * Drop the RENDERED scene, leaving the pane buffer alone — the
-   * corpus-boundary teardown. Only what the renderer holds has to go (a
-   * mounted scene is what turns a root switch into cross-corpus fetches); the
-   * editor keeps showing the outgoing source until the incoming scene lands,
-   * exactly as a same-corpus switch does.
+   * Drop the rendered scene and leave the pane buffer alone: the corpus-boundary teardown.
+   * A mounted scene turns a root switch into cross-corpus fetches, so only the render goes.
+   * The editor shows the outgoing source until the incoming scene lands.
    */
   clearRender: () => void;
   /**
-   * Re-run the current fixture's fetch. Selecting the already-selected fixture
-   * is a state no-op, so without this a load that FAILED has no way back —
-   * the viewport stays empty however many times the user picks that scene.
+   * Re-run the current fixture's fetch. Selecting the selected fixture again is a state
+   * no-op, so without this a failed load has no way back.
    */
   reload: () => void;
   /**
-   * True when the pane holds keystrokes newer than the last load/replace —
-   * i.e. content that a fixture switch, ⤢ open-sub-scene, or upload-replace
-   * would silently discard. A function (reads the live ref) so event
-   * handlers get the current answer without re-render churn.
+   * True when the pane holds keystrokes newer than the last load or replace, which a
+   * fixture switch, ⤢ open-sub-scene or upload would discard. A function over the live
+   * ref, so event handlers get the current answer without a re-render.
    */
   editedSinceLoad: () => boolean;
 }
@@ -101,21 +85,17 @@ export function useSceneSource({
   // Bumped by `reload` to re-run the fetch effect at an unchanged fixtureFile.
   const [reloadNonce, setReloadNonce] = useState(0);
 
-  // Kept in a ref so a caller's inline callback can never land in the fetch
-  // effect's deps and re-trigger the fetch.
+  // A ref, so a caller's inline callback never lands in the fetch effect's deps.
   const onBeforeSwapRef = useRef(onBeforeSwap);
   onBeforeSwapRef.current = onBeforeSwap;
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // Flips true when the user edits after the current fixture load started.
-  // A resolving load must never stomp newer keystrokes.
+  // True when the user edits after the current fixture load started.
   const editedSinceLoadRef = useRef(false);
 
-  // Authoritative replacement: buffer and forwardedContent move together,
-  // superseding any pending debounced edit forward. The pane now holds known
-  // content, so a fetch error no longer describes it — clear it (uploads
-  // never re-run the fetch effect, so nothing else would) — and any earlier
-  // keystrokes are gone, so the edited flag resets too.
+  // The pane now holds known content, so a fetch error no longer describes it. An upload
+  // never re-runs the fetch effect, so nothing else clears it. Earlier keystrokes are
+  // gone, so the edited flag resets too.
   const replace = useCallback((text: string, from = '') => {
     clearTimeout(timerRef.current);
     setBuffer(text);
@@ -125,12 +105,9 @@ export function useSceneSource({
     editedSinceLoadRef.current = false;
   }, []);
 
-  // Teardown half of a corpus crossing. Deliberately does NOT touch `buffer` or
-  // the edited flag: the caller either has a fetch about to reset them or an
-  // upload's `replace` about to supersede them, and blanking the editor for the
-  // whole fetch is not something the leak requires. `loadError` DOES go — it
-  // described the render being dropped, and would otherwise caption the blank
-  // viewport with a previous fixture's failure.
+  // Leaves `buffer` and the edited flag alone: a fetch or an upload's `replace` is about
+  // to reset them. `loadError` goes, or it would caption the blank viewport with a
+  // previous fixture's failure.
   const clearRender = useCallback(() => {
     clearTimeout(timerRef.current);
     setForwardedContent('');
@@ -140,7 +117,6 @@ export function useSceneSource({
 
   const reload = useCallback(() => setReloadNonce((n) => n + 1), []);
 
-  // Fixture fetch effect. Re-runs when fixtureFile or uploadedTscnName changes.
   useEffect(() => {
     let cancelled = false;
 
@@ -150,18 +126,15 @@ export function useSceneSource({
     };
 
     if (!fixtureFile) {
-      // A previous fixture's fetch may still be in flight — the `cancelled`
-      // guard makes its finally() skip the reset, so reset the flag here.
+      // A previous fetch may be in flight, and `cancelled` makes its finally() skip the reset.
       setIsFetching(false);
-      // User is on an uploaded TSCN or the fixture is genuinely cleared with
-      // no upload — do not overwrite whatever replace() already set.
+      // On an upload, keep what replace() already set.
       if (!uploadedTscnName) {
         replace('');
       }
       return cleanup;
     }
 
-    // New fixture load starts — reset the edited guard.
     editedSinceLoadRef.current = false;
     setLoadError(null);
     setIsFetching(true);
@@ -175,21 +148,17 @@ export function useSceneSource({
       })
       .then((text) => {
         if (cancelled || editedSinceLoadRef.current) return;
-        // The scene swap. Resource resolution is re-pointed FIRST, in the same
-        // synchronous turn: the outgoing scene is gone by now (a corpus-crossing
-        // selection tore it down before this fetch started) and the incoming one
-        // has not rendered, so this is the only moment at which no consumer can
-        // observe a foreign corpus root.
+        // Re-point resource resolution first, in the same synchronous turn. The outgoing
+        // scene is gone and the incoming one has not rendered, so no consumer can observe a
+        // foreign corpus root.
         onBeforeSwapRef.current?.(fixtureFile);
-        // Forward fetched text unconditionally (like upload): a zero-node
-        // fixture must surface the shell's parse-error banner, not silently
-        // hold the previous render — hold-last-valid applies to the edit loop
-        // only.
+        // Unconditional, like an upload: a zero-node fixture must show the parse-error
+        // banner. Hold-last-valid applies to the edit loop only.
         replace(text, fixtureFile);
         try {
           window.localStorage.setItem(FIXTURE_STORAGE_KEY, fixtureFile);
         } catch {
-          // Best-effort.
+          // Remembering the fixture is optional: storage can be blocked.
         }
       })
       .catch((err: unknown) => {
@@ -197,7 +166,7 @@ export function useSceneSource({
         const message = err instanceof Error ? err.message : String(err);
         setLoadError(message);
         setBuffer('');
-        // forwardedContent unchanged — hold last valid render on fetch failure.
+        // forwardedContent stays: a failed fetch holds the last valid render.
       })
       .finally(() => {
         if (cancelled) return;
@@ -211,8 +180,7 @@ export function useSceneSource({
     (value: string) => {
       setBuffer(value);
       editedSinceLoadRef.current = true;
-      // The user has taken over from the load — a fetch error no longer
-      // describes what the pane holds.
+      // A fetch error no longer describes what the pane holds.
       setLoadError(null);
 
       clearTimeout(timerRef.current);

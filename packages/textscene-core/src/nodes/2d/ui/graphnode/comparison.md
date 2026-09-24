@@ -37,9 +37,8 @@ Strict parsing format-checks these `GraphNode` properties, plus 6 inherited from
 <!-- lint:end -->
 
 The lenient parser reads `title`, `ignore_invalid_connection_type` and
-`slots_focus_mode` the same way the strict one does. `slot/<index>/<leaf>` is
-replayed in FILE ORDER, one leaf write at a time, exactly like
-`GraphNode::_set` — an unparseable leaf value is dropped rather than applied, and
-a slot authoring only `draw_stylebox = false` (every other leaf still at its
-class default) is erased outright, matching `GraphNode::set_slot`'s own erase
-condition.
+`slots_focus_mode` the same way the strict one does. `slot/<index>/<leaf>` is replayed
+in file order, one leaf write at a time, as `GraphNode::_set` does. An unparseable leaf
+value is dropped, not applied. A slot that authors only `draw_stylebox = false`, with
+every other leaf at its class default, is erased, as the erase condition of
+`GraphNode::set_slot` requires.

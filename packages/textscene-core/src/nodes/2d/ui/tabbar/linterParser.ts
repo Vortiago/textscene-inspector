@@ -1,10 +1,7 @@
 /**
- * TabBar strict validators for linting.
- *
- * Declare only TabBar's OWN members: the ones doc/classes/TabBar.xml
- * lists without an `overrides=` attribute. Everything from Control up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * TabBar strict validators. Declare only the members doc/classes/TabBar.xml
+ * lists without `overrides=`: the base-walk delivers the inherited ones, and a
+ * re-declared key shadows its ancestor.
  */
 
 import '../control/linterParser.js';
@@ -14,21 +11,14 @@ import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 /**
- * The `tab_<idx>/<leaf>` leaves, which are ONLY the four
- * `base_property_helper.register_property` calls at tab_bar.cpp:2190-2193.
- *
- * TabBar binds far more per-tab setters than it serialises: `set_tab_metadata`,
- * `set_tab_hidden`, `set_tab_language`, `set_tab_text_direction`,
- * `set_tab_button_icon` and `set_tab_icon_max_width` are all
- * `ClassDB::bind_method`s (tab_bar.cpp:2064-2079) reachable only from script.
- * A key naming one of them resolves to no `Property` in the helper's
- * `property_list` (property_list_helper.cpp:63) and is silently dropped, so
- * they are rejected as unknown rather than validated.
+ * The `tab_<idx>/<leaf>` leaves: only the four `register_property` calls at
+ * tab_bar.cpp:2190-2193. The other per-tab setters (metadata, hidden, language,
+ * text_direction, button_icon, icon_max_width, tab_bar.cpp:2064-2079) resolve to no
+ * helper `Property` (property_list_helper.cpp:63) and drop, so they are unknown keys.
  */
 const TAB_LEAVES: Readonly<Record<string, PropertyValidator>> = {
-  // tab_bar.cpp:2190, Variant::STRING, no hint. `set_tab_title`
-  // (tab_bar.cpp:900) assigns any string past an ERR_FAIL_INDEX on the tab
-  // INDEX, never on the text.
+  // tab_bar.cpp:2190, Variant::STRING, no hint. `set_tab_title` (tab_bar.cpp:900)
+  // checks the tab index, never the text.
   title: v.quotedString('title'),
   // tab_bar.cpp:2191, Variant::STRING, no hint. `set_tab_tooltip`
   // (tab_bar.cpp:925) is the same shape.
@@ -40,10 +30,9 @@ const TAB_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 };
 
 /**
- * The prefix is the bare `tab_` set at tab_bar.cpp:2188, which collides with
- * the scalar keys `tab_alignment`, `tab_count` and `tab_close_display_policy`.
- * Both this dispatcher and the registry's own lookup require an integer run
- * between the prefix and a `/`, and the registry consults exact keys first, so
+ * The bare `tab_` prefix (tab_bar.cpp:2188) collides with `tab_alignment`,
+ * `tab_count` and `tab_close_display_policy`. The dispatcher and the registry
+ * require an integer before a `/`, and the registry tries exact keys first, so
  * the three scalars keep their own validators.
  */
 const tabValidator = indexedFamilyValidator({
@@ -51,9 +40,8 @@ const tabValidator = indexedFamilyValidator({
   leaves: TAB_LEAVES,
   unknownCode: 'INVALID_TAB_KEY',
   describes: 'tab',
-  // `_set` is `property_helper.property_set_value` verbatim (tab_bar.h:208),
-  // whose `_get_property` returns nullptr unless the index `is_valid_int()`
-  // (property_list_helper.cpp:53-55), so a non-numeric index is a DROPPED write.
+  // `_set` is `property_helper.property_set_value` (tab_bar.h:208), which drops an
+  // index that fails `is_valid_int()` (property_list_helper.cpp:53-55).
   indexParse: 'is_valid_int',
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',
@@ -64,27 +52,18 @@ const tabValidator = indexedFamilyValidator({
 });
 
 validatorRegistry.registerAll('TabBar', {
-  // tab_bar.cpp:2123, PROPERTY_HINT_RANGE "-1,4096,1", both ends closed.
-  // The two ends have different authority. FLOOR: every path into
-  // `set_current_tab` that is not the literal -1 deselect sentinel falls to
-  // `ERR_FAIL_INDEX(p_current, get_tab_count())` (tab_bar.cpp:804), which
-  // refuses a negative index whatever the tab count is, so -2 and below are
-  // enforced. -1 itself is guarded by `_can_deselect()` (tab_bar.cpp:798), a
-  // check against the sibling tabs' disabled/hidden state that no
-  // per-property validator can see, and it passes trivially while the tab
-  // vector is still empty at load, so -1 is accepted here.
-  // CEILING: 4096 exists only in the hint, and the setter assigns straight
-  // through once the index is in range, so it is a warning.
+  // tab_bar.cpp:2123, PROPERTY_HINT_RANGE "-1,4096,1". Below -1, `ERR_FAIL_INDEX`
+  // (tab_bar.cpp:804) refuses the write. -1 meets `_can_deselect()` (tab_bar.cpp:798), a
+  // sibling-tab check no validator sees, which passes while the tab vector is empty at
+  // load. 4096 is only in the hint, so it warns.
   current_tab: v.int('current_tab', {
     min: -1,
     max: 4096,
     enforced: { min: 'tab_bar.cpp:804' },
     hinted: { max: 'tab_bar.cpp:2123' },
   }),
-  // tab_bar.cpp:2124, PROPERTY_HINT_ENUM "Left,Center,Right".
-  // `ERR_FAIL_INDEX(p_alignment, ALIGNMENT_MAX)` (tab_bar.cpp:1671) refuses
-  // both ends, so both are enforced: ALIGNMENT_MAX is 3 (tab_bar.h:47), and
-  // ERR_FAIL_INDEX also rejects a negative index.
+  // tab_bar.cpp:2124, PROPERTY_HINT_ENUM "Left,Center,Right". `ERR_FAIL_INDEX(p_alignment,
+  // ALIGNMENT_MAX)` (tab_bar.cpp:1671) refuses both ends. ALIGNMENT_MAX is 3 (tab_bar.h:47).
   tab_alignment: v.enumInt(
     'tab_alignment',
     0,
@@ -92,9 +71,8 @@ validatorRegistry.registerAll('TabBar', {
     { 0: 'LEFT', 1: 'CENTER', 2: 'RIGHT' },
     { enforced: 'tab_bar.cpp:1671' }
   ),
-  // tab_bar.cpp:2127, PROPERTY_HINT_ENUM "Show Never,Show Active Only,Show
-  // Always". Same shape: `ERR_FAIL_INDEX(p_policy, CLOSE_BUTTON_MAX)`
-  // (tab_bar.cpp:1944), CLOSE_BUTTON_MAX is 3 (tab_bar.h:54).
+  // tab_bar.cpp:2127, PROPERTY_HINT_ENUM "Show Never,Show Active Only,Show Always".
+  // `ERR_FAIL_INDEX(p_policy, CLOSE_BUTTON_MAX)` (tab_bar.cpp:1944), CLOSE_BUTTON_MAX is 3 (tab_bar.h:54).
   tab_close_display_policy: v.enumInt(
     'tab_close_display_policy',
     0,
@@ -102,25 +80,20 @@ validatorRegistry.registerAll('TabBar', {
     { 0: 'SHOW_NEVER', 1: 'SHOW_ACTIVE_ONLY', 2: 'SHOW_ALWAYS' },
     { enforced: 'tab_bar.cpp:1944' }
   ),
-  // tab_bar.cpp:2128, PROPERTY_HINT_RANGE "0,99999,1,suffix:px". No
-  // `or_greater`, so both ends are closed, but only the floor is real:
-  // `set_max_tab_width` is `ERR_FAIL_COND(p_width < 0)` (tab_bar.cpp:1966)
-  // and then a bare assignment, so a width past 99999 is applied verbatim and
-  // only the inspector widget objects.
+  // tab_bar.cpp:2128, PROPERTY_HINT_RANGE "0,99999,1,suffix:px". `set_max_tab_width`
+  // refuses only `p_width < 0` (tab_bar.cpp:1966), so the ceiling is the hint's warning.
   max_tab_width: v.int('max_tab_width', {
     min: 0,
     max: 99999,
     enforced: { min: 'tab_bar.cpp:1966' },
     hinted: { max: 'tab_bar.cpp:2128' },
   }),
-  // tab_bar.cpp:2132, Variant::INT with no hint at all. `set_tabs_rearrange_group`
-  // (tab_bar.cpp:2004) is a bare assignment, and -1 (the "not in any group"
-  // default) is a legal value, so neither end is bounded: format only.
+  // tab_bar.cpp:2132, Variant::INT, no hint. `set_tabs_rearrange_group` (tab_bar.cpp:2004)
+  // assigns anything, and -1 is the "no group" default, so no bound applies.
   tabs_rearrange_group: v.int('tabs_rearrange_group'),
 
   // The eight Variant::BOOL properties, tab_bar.cpp:2125, 2126, 2129, 2130,
-  // 2131, 2133, 2134, 2135. Every setter is a plain assignment past at most an
-  // equality early-out, so `true`/`false` is the whole constraint.
+  // 2131, 2133, 2134, 2135. Every setter is a plain assignment.
   clip_tabs: v.boolean('clip_tabs'),
   close_with_middle_mouse: v.boolean('close_with_middle_mouse'),
   scrolling_enabled: v.boolean('scrolling_enabled'),
@@ -130,11 +103,9 @@ validatorRegistry.registerAll('TabBar', {
   select_with_rmb: v.boolean('select_with_rmb'),
   deselect_enabled: v.boolean('deselect_enabled'),
 
-  // tab_bar.cpp:2137 `ADD_ARRAY_COUNT("Tabs", "tab_count", …)`, which expands to
-  // an ordinary ADD_PROPERTY of Variant::INT with PROPERTY_HINT_NONE
-  // (class_db.cpp:1492), so it serialises like any other int and carries no
-  // hinted bound. `set_tab_count` opens with `ERR_FAIL_COND(p_count < 0)`
-  // (tab_bar.cpp:745): the floor is enforced, and there is no ceiling.
+  // tab_bar.cpp:2137 `ADD_ARRAY_COUNT`: an INT ADD_PROPERTY with PROPERTY_HINT_NONE
+  // (class_db.cpp:1492). `set_tab_count` refuses `p_count < 0` (tab_bar.cpp:745),
+  // and nothing bounds the ceiling.
   tab_count: v.int('tab_count', { min: 0, enforced: 'tab_bar.cpp:745' }),
 
   'tab_#/*': tabValidator,

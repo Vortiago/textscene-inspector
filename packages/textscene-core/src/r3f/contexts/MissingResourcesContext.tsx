@@ -1,23 +1,8 @@
 /**
- * Aggregates per-resource missing / uploaded state across an entire
- * preview shell so a single DOM panel can list every unresolved path.
- *
- * Replaces the pre-migration `missingResourcesMap` in
- * `apps/textscene-web/src/main.ts`.
- *
- * Why a context, not an event subscription:
- *   `FileEventBus` only emits `loaded` / `failed` for paths the loader
- *   has been *asked* about. The dispatcher's per-node `useResource`
- *   calls are the single source of truth for "this path was needed by
- *   something in the tree". Each consumer reports up here when it
- *   transitions to `missing` and clears when it transitions to
- *   `loaded` (or unmounts).
- *
- * Default (no-provider) shape:
- *   When `useResource` runs outside a `<MissingResourcesProvider>`
- *   (e.g. a linter-only caller, a unit test), the context returns
- *   no-op actions and empty sets. Hook consumers can call `report`
- *   unconditionally without checking for null.
+ * The missing and uploaded paths of a whole preview shell, for one panel. A
+ * context, not an event subscription: each `useResource` knows its path is
+ * needed and reports it. With no provider the actions do nothing and the sets
+ * are empty, so a hook calls `report` without a null check.
  */
 import {
   createContext,
@@ -34,15 +19,14 @@ import { resourceFilePath } from '../../resources/subResourcePath.js';
 export interface MissingResourcesContextValue {
   /** Paths the dispatcher's resource hooks currently report as missing. */
   missingPaths: ReadonlySet<string>;
-  /** Paths the user has uploaded a file for via `addUploadedFile`. */
+  /** Paths the user uploaded a file for through `addUploadedFile`. */
   uploadedPaths: ReadonlySet<string>;
-  /** Report a path as missing — called from `useResource` when status becomes `'missing'`. */
+  /** `useResource` calls it when the status becomes `'missing'`. */
   report: (path: string) => void;
-  /** Clear a path from the missing set — called from `useResource` when status becomes `'loaded'` or on unmount. */
+  /** `useResource` calls it when the status becomes `'loaded'`, and on unmount. */
   clear: (path: string) => void;
-  /** Mark a path as uploaded. Removes it from `missingPaths` if present. */
+  /** Marks a path uploaded and removes it from `missingPaths`. */
   markUploaded: (path: string) => void;
-  /** Remove a previously-uploaded path. */
   removeUploaded: (path: string) => void;
 }
 
@@ -61,11 +45,9 @@ MissingResourcesContext.displayName = 'MissingResourcesContext';
 export interface MissingResourcesProviderProps {
   children: ReactNode;
   /**
-   * Observer for the live missing-paths set — fired after mount and after
-   * every change (never on mere callback-identity changes, so hosts may pass
-   * an inline arrow). The explicit surface for code OUTSIDE the provider's
-   * subtree (e.g. a host drop handler above the shell) to read the current
-   * set; consumers inside the tree use `useMissingResources` instead.
+   * Fired after mount and after every change of the missing set, never on a
+   * new callback identity, so a host may pass an inline arrow. It serves code
+   * outside the subtree. Code inside uses `useMissingResources`.
    */
   onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
 }
@@ -81,14 +63,9 @@ export function MissingResourcesProvider({
     () => new Set<string>()
   );
 
-  // STABILITY CONTRACT: report / clear / markUploaded / removeUploaded
-  // must be `useCallback`d with empty deps so consumers (notably
-  // `useResource`) can depend on them in effects without re-running on
-  // every provider state change. Naively depending on the whole context
-  // object would create an infinite render loop because each setter
-  // mutates state → new context value object → effect re-runs → reports
-  // again. Pull these callbacks out by name in consumers, not the
-  // context object as a whole.
+  // The actions have empty deps, so an effect that depends on one does not
+  // re-run on each state change. An effect on the whole context object loops,
+  // so a consumer takes the actions by name.
   const report = useCallback((path: string) => {
     if (!path) return;
     setMissingPaths((prev) => {
@@ -111,14 +88,10 @@ export function MissingResourcesProvider({
 
   const markUploaded = useCallback((path: string) => {
     if (!path) return;
-    // The two sets are keyed differently and this is the ONE place that knows
-    // it. `missingPaths` holds resource IDENTITIES, because that is what a
-    // consumer asked for and will ask for again — a **Sub-resource path**
-    // included. `uploadedPaths` holds FILES, because a file is what the user
-    // supplied and what a host's provider stores against. So uploading one
-    // `.tres` that backs three surface materials clears three missing rows and
-    // shows ONE uploaded row with one Remove button, instead of three rows for
-    // one file picked once.
+    // Only this place knows the two keys. `missingPaths` holds resource identities,
+    // a **Sub-resource path** included. `uploadedPaths` holds files, what the user
+    // supplied. One `.tres` behind three materials clears three missing rows and
+    // shows one uploaded row.
     setUploadedPaths((prev) => {
       const file = resourceFilePath(path);
       if (prev.has(file)) return prev;
@@ -134,7 +107,7 @@ export function MissingResourcesProvider({
     });
   }, []);
 
-  /** Takes a FILE — the key `markUploaded` stored, and what an uploaded row is. */
+  /** Takes a file, the key `markUploaded` stored. */
   const removeUploaded = useCallback((path: string) => {
     if (!path) return;
     setUploadedPaths((prev) => {
@@ -145,9 +118,8 @@ export function MissingResourcesProvider({
     });
   }, []);
 
-  // Latest-callback ref: notifying must key ONLY on the set's identity. An
-  // unmemoized host callback in the deps would re-fire per render — and a
-  // host that stores the set in state would then loop render→notify→render.
+  // A ref, so notification keys only on the set's identity. A host callback in
+  // the deps re-fires each render, and a host storing the set in state loops.
   const onMissingPathsChangeRef = useRef(onMissingPathsChange);
   useEffect(() => {
     onMissingPathsChangeRef.current = onMissingPathsChange;

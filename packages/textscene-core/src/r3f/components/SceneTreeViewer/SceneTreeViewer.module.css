@@ -1,9 +1,7 @@
 /*
- * Variant J — "Split Dock": a calm, dense, VS-Code-native dark outliner.
- *
- * Design tokens (`--tsi-*`) are defined in TscnPreviewShell.module.css's
- * `:root` block. Touching colours here means touching the token — keep
- * this file free of raw hex values (subtle overlays via color-mix only).
+ * The outliner's styles. The `--tsi-*` design tokens live in the `:root`
+ * block of TscnPreviewShell.module.css. This file holds no raw hex value:
+ * an overlay uses color-mix on a token.
  */
 .root {
   font-size: var(--tsi-font-sm);
@@ -13,7 +11,6 @@
   background: var(--tsi-bg-panel);
 }
 
-/* ── Search / filter toolbar ─────────────────────────────────────────── */
 .toolbar {
   display: flex;
   align-items: center;
@@ -49,7 +46,7 @@
   }
 }
 
-/* Ghost control button — transparent by default, fills only on hover. */
+/* Transparent until hovered. */
 .controlBtn {
   background: transparent;
   border: 1px solid transparent;
@@ -76,7 +73,7 @@
 }
 
 .iconBtn {
-  /* Square icon-button variant — used by Expand/Collapse all. */
+  /* The square icon button for Expand all and Collapse all. */
   width: 24px;
   height: 24px;
   display: inline-flex;
@@ -87,7 +84,6 @@
   line-height: 1;
 }
 
-/* ── Tree body ───────────────────────────────────────────────────────── */
 .tree {
   overflow: auto;
   padding: var(--tsi-space-1) 0;
@@ -105,12 +101,9 @@
 }
 
 /*
- * Compact single-line row. The DOM source order is twisty → typeBadge →
- * [notImplemented] → nodeName → glyphs, but variant J wants the type label to
- * read as a quiet *trailing* annotation after the node name. A flex row with
- * explicit `order` reorders visually (name first) without touching the DOM,
- * and the node name's `flex: 1` pushes the type label + glyphs to the right —
- * always one tight line, no wrapping.
+ * The DOM order is twisty, typeBadge, notImplemented, nodeName, glyphs. Flex
+ * `order` puts the name first without a DOM change, and the name's `flex: 1`
+ * pushes the type label and glyphs to the right on one line.
  */
 .header {
   position: relative;
@@ -120,8 +113,7 @@
   padding: 1px var(--tsi-space-2);
   min-height: 22px;
   cursor: pointer;
-  /* 2px inset accent border placeholder — kept transparent so selected
-     rows never shift layout when the accent appears. */
+  /* Transparent, so the selected accent never shifts the layout. */
   border-left: 2px solid transparent;
   transition: background-color 0.12s;
 
@@ -129,7 +121,6 @@
     background: var(--tsi-bg-hover);
   }
 
-  /* Visual order via flex `order` (independent of DOM order). */
   & > .expandIcon,
   & > .expandSpacer {
     order: 1;
@@ -153,7 +144,7 @@
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
-  /* Quiet until the row is hovered or selected — keeps the outliner calm. */
+  /* Dim until the row is hovered or selected. */
   opacity: 0.55;
   transition: opacity 0.12s;
 
@@ -162,7 +153,6 @@
   }
 }
 
-/* Selection: accent-soft fill, inset 2px accent left border, accent text. */
 .selected {
   background: var(--tsi-accent-soft);
   border-left-color: var(--tsi-accent);
@@ -173,7 +163,7 @@
     color: var(--tsi-accent-fg);
   }
 
-  /* Dim the trailing type label so the highlighted name stays the focus. */
+  /* A dim type label keeps the highlighted name in focus. */
   & .typeBadge {
     color: color-mix(in srgb, var(--tsi-accent-fg) 65%, transparent);
   }
@@ -187,7 +177,6 @@
   }
 }
 
-/* ── Expand twisties ─────────────────────────────────────────────────── */
 .expandIcon {
   width: 12px;
   font-size: 0.625rem;
@@ -211,11 +200,8 @@
 }
 
 /*
- * Quiet trailing type label. The TSX still applies `.typeBadge` plus a
- * per-type colour class, but variant J renders types as dim, small,
- * trailing text rather than loud filled badges. The colour classes below
- * are reduced to a faint left-hand dot so type is still glanceable
- * without shouting.
+ * The TSX applies `.typeBadge` and a per-type colour class. The type renders
+ * as small trailing text after a faint dot, not as a filled badge.
  */
 .typeBadge {
   display: inline-flex;
@@ -229,7 +215,6 @@
   color: var(--tsi-fg-muted);
   flex-shrink: 0;
 
-  /* faint type dot */
   &::before {
     content: '';
     width: 5px;
@@ -241,7 +226,7 @@
   }
 }
 
-/* Per-type tint applies to the dot + text, low-chroma. */
+/* The per-type tint applies to the dot and the text. */
 .typeNode3d {
   color: var(--tsi-fg-faint);
 }
@@ -263,8 +248,7 @@
 }
 
 .nodeName {
-  /* Grow to fill the row so the trailing type label + glyphs sit at the right;
-     min-width:0 lets the name ellipsize instead of overflowing. */
+  /* `min-width: 0` lets the name ellipsise instead of overflowing. */
   flex: 1 1 auto;
   color: var(--tsi-fg-default);
   font-size: var(--tsi-font-sm);
@@ -274,7 +258,6 @@
   min-width: 0;
 }
 
-/* ── Trailing glyphs ─────────────────────────────────────────────────── */
 .transformIcon {
   color: var(--tsi-value-mono);
   font-size: var(--tsi-font-xs);
@@ -343,7 +326,7 @@
   }
 }
 
-/* "Not Implemented" stays a real chip — it's a warning, not a type label. */
+/* "Not Implemented" is a warning, not a type label, so it stays a chip. */
 .notImplementedBadge {
   background: var(--tsi-warning-bg);
   color: var(--tsi-warning-fg);

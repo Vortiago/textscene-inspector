@@ -1,9 +1,8 @@
 /**
- * Integration against the vendored hexagonal map (scenes/demos/2d/hexagonal_map/,
- * godot-demo-projects, MIT): the real map.tscn parses, its real tileset.tres
- * resolves (26 atlas sources, HEXAGON / vertical offset axis / 110×94), and
- * known cells decode to hand-computed map_to_local centers — the end-to-end
- * guard for half-offset / hexagon placement support.
+ * End-to-end hexagon placement against the vendored hexagonal map
+ * (scenes/demos/2d/hexagonal_map/): map.tscn parses, tileset.tres resolves
+ * (26 atlas sources, HEXAGON, vertical offset axis, 110×94), and known cells
+ * decode to hand-computed `map_to_local` centres.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';

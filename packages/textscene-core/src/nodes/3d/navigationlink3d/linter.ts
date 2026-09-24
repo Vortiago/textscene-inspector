@@ -1,50 +1,8 @@
 /**
- * Semantic linter rule for NavigationLink3D — Godot's own configuration
- * warning, `get_configuration_warnings()` (navigation_link_3d.cpp:494-502):
- *
- *     PackedStringArray NavigationLink3D::get_configuration_warnings() const {
- *         PackedStringArray warnings = Node3D::get_configuration_warnings();
- *         if (start_position.is_equal_approx(end_position)) {
- *             warnings.push_back(RTR("NavigationLink3D start position should be
- *             different than the end position to be useful."));
- *         }
- *         return warnings;
- *     }
- *
- * Not cosmetic: a link whose two ends coincide still creates a real
- * NavigationServer3D link (the constructor and `_link_enter_navigation_map`
- * run regardless of the two positions), just one with zero length, so
- * pathfinding gains a connection that goes nowhere. Godot's own severity for
- * this is a configuration warning, not a load refusal, so this rule is
- * WARNING tier, matching it exactly.
- *
- * The comparison is UNGATED: no presence check, no `_validate_property`, no
- * `ADD_PROPERTY_DEFAULT`, and the constructor (:274-285) never touches either
- * field. `start_position`/`end_position` are declared with no initializer
- * (navigation_link_3d.h:43-44), so a `Vector3` that a `.tscn` never sets
- * zero-constructs exactly like one authored as `Vector3(0, 0, 0)` — by the
- * time this method runs, the two are indistinguishable. This rule mirrors
- * that: it resolves each side to its documented default, `Vector3(0, 0, 0)`
- * (doc/classes/NavigationLink3D.xml), when the key is absent, then always
- * runs the comparison — including on a bare node with NEITHER key written,
- * which is exactly what a freshly-added NavigationLink3D looks like, and
- * exactly what the Godot editor's warning triangle flags on it before its
- * endpoints are dragged apart.
- *
- * This does not conflict with "absence is Godot's default form": that
- * convention forbids treating an absent key as an AUTHORED value or
- * requiring one to be present. This rule does neither — it fills absence
- * with the class default and applies the engine's own check to the resolved
- * value, the same substitution the engine performs internally. (This is a
- * narrower case than SpringBoneCollisionCapsule3D's cross-field rule, which
- * legitimately gates on both keys being written: that invariant lives in the
- * SETTERS, which only run for a key the file actually assigns, so presence
- * is load-bearing there. `get_configuration_warnings` here reads only the
- * final resolved members and does not care how they got that value.)
- *
- * `Vector3::is_equal_approx` (core/math/vector3.cpp:141-143) is
- * per-COMPONENT `Math::is_equal_approx`, which `godot/math.ts` provides — the
- * asymmetric, left-scaled tolerance is documented there.
+ * NavigationLink3D's configuration warning (navigation_link_3d.cpp:494-502) for
+ * a start and end position that are approximately equal. Such a link still
+ * creates a zero-length NavigationServer3D link, and Godot only warns, so this
+ * rule warns. An absent position is the doc/classes/NavigationLink3D.xml default.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -56,7 +14,12 @@ import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
 import { isEqualApprox } from '../../../godot/index.js';
 import type { Vector3 } from '../../../parser/vectors.js';
 
-/** navigation_link_3d.h:43-44 declares both fields with no initializer; doc/classes/NavigationLink3D.xml:81,92 confirms the resulting zero-construct as the documented default. */
+/**
+ * navigation_link_3d.h:43-44 declares both fields with no initializer, and the constructor
+ * (:274-285) never sets them, so an absent key equals `Vector3(0, 0, 0)`
+ * (doc/classes/NavigationLink3D.xml:81,92). The comparison runs even on a bare node, as the
+ * engine's does: filling absence with the class default authors nothing.
+ */
 const DEFAULT_POSITION: Vector3 = { x: 0, y: 0, z: 0 };
 
 /** The `Vector3(x, y, z)` a property carries, its XML default when absent, or null when malformed. */
@@ -67,9 +30,8 @@ function readPosition(properties: Record<string, string>, key: string): Vector3 
   const match = VECTOR3_REGEX.exec(trimmed);
   if (!match) return null;
   const captures = [match[1], match[2], match[3]];
-  // Withheld, not NaN: the engine stores a number here, just not the one
-  // written, and none this rule may name — `_to_int`'s float branch is
-  // undefined behaviour (variant.h:369-370).
+  // Withheld, not NaN: the engine stores a number, but not the one written, and
+  // `_to_int`'s float branch is undefined behaviour (variant.h:369-370).
   if (slotComponentsAltered(trimmed, 'Vector3', captures)) return null;
   // `slotComponents`: VECTOR3_REGEX admits the `Vector3i(...)` spelling Godot
   // converts, whose arguments are narrowed to int32 before the widening.
@@ -77,7 +39,7 @@ function readPosition(properties: Record<string, string>, key: string): Vector3 
   return { x: x!, y: y!, z: z! };
 }
 
-/** `Vector3::is_equal_approx` — all three components, each by `isEqualApprox`. */
+/** `Vector3::is_equal_approx` (core/math/vector3.cpp:141-143): each component by `isEqualApprox`. */
 function vector3EqualApprox(a: Vector3, b: Vector3): boolean {
   return isEqualApprox(a.x, b.x) && isEqualApprox(a.y, b.y) && isEqualApprox(a.z, b.z);
 }
@@ -90,8 +52,7 @@ function checkNavigationLink3D(context: RuleContext): Diagnostic[] {
 
   const start = readPosition(properties, 'start_position');
   const end = readPosition(properties, 'end_position');
-  // A malformed literal is the format validator's finding, not this rule's;
-  // it stays silent rather than double-reporting or guessing a comparison.
+  // A malformed literal is the format validator's finding, so this rule stays silent.
   if (start === null || end === null) return [];
   if (!vector3EqualApprox(start, end)) return [];
 

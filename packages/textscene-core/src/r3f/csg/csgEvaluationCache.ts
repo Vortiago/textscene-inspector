@@ -1,13 +1,7 @@
 /**
- * Memoizes boolean results across renders and reparses.
- *
- * This is the cache that matters. Boolean evaluation is synchronous CPU work, and the web
- * source pane reparses on every keystroke (ADR-0020) while the VS Code extension reparses
- * on every save (ADR-0021). Without a content-keyed cache, typing one character in a
- * scene with CSG re-runs every boolean in it.
- *
- * Module-level rather than a React ref, because the point is to survive the remount that
- * a reparse causes.
+ * Memoises boolean results across renders and reparses. Evaluation is synchronous CPU work, and the
+ * web source pane reparses on each keystroke (ADR-0020), the extension on each save (ADR-0021).
+ * Module-level rather than a React ref, so it survives the remount a reparse causes.
  */
 
 import { LRUCache } from '../../resources/LRUCache';

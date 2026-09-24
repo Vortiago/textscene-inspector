@@ -1,21 +1,14 @@
 [gd_scene load_steps=3 format=3 uid="uid://unitcsgpolypath"]
 
-; CSGPolygon3D MODE_PATH sweeps the outline along a Curve3D that belongs to a
-; DIFFERENT node, which a render component cannot reach on its own. The
-; scene-wide pass in r3f/csgPolygonPaths.ts resolves `path_node` after parse.
-;
-; Both shapes the corpus writes appear here, and they point opposite ways:
-; a SIBLING (csg.tscn:365, the Road) and a CHILD (racetrack_csg.tscn:60).
-; A resolver that assumed either one would silently drop the other's geometry.
-;
-; Curve3D `_data.points` packs NINE floats per control point: in.xyz, out.xyz,
-; position.xyz. All handles are zero here, so every span is straight.
-;
-; `tilts` is REQUIRED, one entry per point. Godot's Curve3D::_set_data bails
-; without it and the curve loads with zero points, so the whole sweep silently
-; disappears in Godot while our lenient parser still renders it. Measured: the
-; fixture rendered fine here and completely empty in Godot until this was added.
+; CSGPolygon3D MODE_PATH sweeps the outline along a Curve3D owned by a different node, which a
+; render component cannot reach. The scene-wide pass in r3f/csgPolygonPaths.ts resolves
+; `path_node` after parse. Both corpus shapes appear: a sibling (csg.tscn:365, the Road) and a
+; child (racetrack_csg.tscn:60). A resolver that assumed either one drops the other's geometry.
 
+; `_data.points` packs nine floats per control point: in.xyz, out.xyz, position.xyz. Every
+; handle is zero, so each span is straight. `tilts` is required, one entry per point:
+; `Curve3D::_set_data` bails without it and the curve loads with zero points, so the sweep
+; vanishes in Godot while the lenient parser still renders it.
 [sub_resource type="Curve3D" id="Curve3D_road"]
 _data = {
 "points": PackedVector3Array(0, 0, 0, 0, 0, 0, -3, 0, -2, 0, 0, 0, 0, 0, 0, 0, 0, -3, 0, 0, 0, 0, 0, 0, 3, 0, -2, 0, 0, 0, 0, 0, 0, 3, 0, 2),
@@ -28,8 +21,8 @@ albedo_color = Color(0.35, 0.35, 0.4, 1)
 
 [node name="CSGPolygonPathRoot" type="Node3D"]
 
-; SIBLING form, path_node = "../Path3D". The Road witness's property set, minus
-; path_joined (this curve is open, not a loop).
+; Sibling form, path_node = "../Path3D". The Road witness's property set, minus path_joined
+; (this curve is open, not a loop).
 [node name="Road" type="Node3D" parent="."]
 
 [node name="RoadTop" type="CSGPolygon3D" parent="Road"]
@@ -51,9 +44,9 @@ material = SubResource("StandardMaterial3D_road")
 [node name="Path3D" type="Path3D" parent="Road"]
 curve = SubResource("Curve3D_road")
 
-; CHILD form, path_node = "Path3D", naming a Path3D parented UNDER the polygon.
-; Carries the racetrack witness's use_collision and calculate_tangents too; both
-; are parsed and validated but not acted on.
+; Child form, path_node = "Path3D", naming a Path3D parented under the polygon. Carries the
+; racetrack witness's use_collision and calculate_tangents too. Both are parsed and validated
+; but not acted on.
 [node name="Rail" type="CSGPolygon3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
 calculate_tangents = false

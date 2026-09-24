@@ -1,10 +1,6 @@
 /**
- * Integration tests for TscnPreviewPanel lifecycle management.
- *
- * Panels are constructed directly using the public `TscnPreviewPanel`
- * constructor with a fake `vscode.WebviewPanel` (see `createTestPanel` in
- * panelHelpers). This lets tests observe lifecycle events without any
- * test-mode plumbing baked into production code.
+ * Integration tests for the TscnPreviewPanel lifecycle, over a fake
+ * `vscode.WebviewPanel` (`createTestPanel`) with no test mode in production.
  */
 
 import * as assert from 'assert';
@@ -60,7 +56,7 @@ suite('Panel Lifecycle Tests', () => {
     panel.dispose();
     await disposalPromise;
 
-    // After dispose the onDidDispose event has fired — the promise resolved.
+    // The resolved promise proves onDidDispose fired.
     assert.ok(true, 'onDidDispose fired after panel.dispose()');
   });
 

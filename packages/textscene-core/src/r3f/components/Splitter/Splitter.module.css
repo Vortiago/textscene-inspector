@@ -13,8 +13,7 @@
   background: var(--tsi-accent);
 }
 
-/* Stack mode (narrow viewport): the columns flow vertically, so a vertical
-   col-resize handle is meaningless — hide it. */
+/* In stack mode the columns flow vertically, so the col-resize handle hides. */
 @media (max-width: 768px) {
   .splitter {
     display: none;

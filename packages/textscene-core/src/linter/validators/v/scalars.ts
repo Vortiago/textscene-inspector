@@ -14,26 +14,14 @@ import { unquoteString } from '../../../parser/utils.js';
 import { valueCode } from './codes.js';
 
 /**
- * One TSCN string literal as a STRING slot takes it: an optional StringName
- * jacket, a quote, an escape-aware body, a closing quote, and nothing after
- * it. `".*"` only checked the first and last character, so it accepted
- * `"Head" junk "Tail"` as a single string.
- *
- * The tokenizer reads `&"…"` and the 3.x-compatible `@"…"` as one
- * `TK_STRING_NAME` (`variant_parser.cpp:263-265`), and `variant.cpp:582-587`
- * lists `STRING_NAME` as a strict source for `STRING` —
- * `VariantCasterAndValidate` (`binder_common.h:175`) gates a setter argument
- * on `can_convert_strict` — so `text = &"Hello"` stores `Hello`.
- *
- * `\"` inside the value is honoured. A raw newline is accepted too — the body
- * class permits one — which costs nothing, because StrictTscnParser skips
+ * One TSCN string literal as a STRING slot takes it: an optional `&` or `@`
+ * jacket (`TK_STRING_NAME`, `variant_parser.cpp:263-265`), an escape-aware quoted
+ * body, and nothing after it. A raw newline is harmless: StrictTscnParser skips
  * multiline properties before any validator sees them.
  */
 const QUOTED_RE = /^[&@]?"(?:[^"\\]|\\[\s\S])*"$/;
-// `[&@]`, the same pair QUOTED_RE takes: `case '@':` falls through to the
-// StringName case under `#ifndef DISABLE_DEPRECATED`
-// (variant_parser.cpp:262-265), so both jackets load. The two grammars
-// disagreeing put an error on a value the file's own sibling accepted.
+// The same jackets as QUOTED_RE: `case '@':` falls through to the StringName
+// case under `#ifndef DISABLE_DEPRECATED` (variant_parser.cpp:262-265).
 const STRING_NAME_RE = /^[&@]?"(?:[^"\\]|\\[\s\S])*"$/;
 
 export const scalarCombinators = {
@@ -47,6 +35,9 @@ export const scalarCombinators = {
    * Used for properties like `Label3D.text` that take TSCN string literals.
    */
   quotedString(name: string): PropertyValidator {
+    // `variant.cpp:582-587` makes STRING_NAME a strict source for STRING, and
+    // `VariantCasterAndValidate` (`binder_common.h:175`) gates a setter on it, so
+    // `text = &"Hello"` stores `Hello`.
     const code = formatCode(name);
     return shape((key, value, line) => {
       if (!QUOTED_RE.test(value)) {
@@ -57,9 +48,8 @@ export const scalarCombinators = {
   },
 
   /**
-   * A `StringName` property: Godot writes `&"value"`, but the variant text
-   * parser also accepts a plain `"value"`, and both appear in real scenes — so
-   * `quotedString` would reject the form the engine itself saves.
+   * A `StringName` property: Godot writes `&"value"`, and the variant text
+   * parser also accepts a plain `"value"`.
    */
   stringName(name: string): PropertyValidator {
     const code = formatCode(name);
@@ -77,17 +67,10 @@ export const scalarCombinators = {
   },
 
   /**
-   * A string slot the setter cuts to its first character.
-   *
-   * Counted in CODE POINTS off the DECODED text, because both halves of the
-   * comparison are the engine's: `String` is UTF-32, so `left(1)` keeps one code
-   * point and `"\ud83d\udd12"` is one character to Godot and two UTF-16 units to
-   * JS; and the tokenizer resolves `\uXXXX` before the setter runs, so
-   * `ellipsis_char = "\u2026"` is one character, not six. Measuring the raw
-   * literal in JS units errored on both, on files Godot loads unaltered.
-   *
-   * An empty literal is legal — `left(1)` of `""` is `""` — and each caller's
-   * own fallback, not the setter's, decides what is drawn then.
+   * A string slot the setter cuts to its first character, counted in code
+   * points of the decoded text: `String` is UTF-32, and the tokenizer resolves
+   * `\uXXXX` first, so `"\u2026"` is one character. An empty literal is legal,
+   * since `left(1)` of `""` is `""`.
    *
    * @param enforced - `file:line` of the `left(1)` that cuts the value, which is
    *   the "silently alters the write" branch of ADR-0032 and so the error tier.
@@ -122,33 +105,15 @@ export const scalarCombinators = {
   },
 
   /**
-   * A `Variant::ARRAY` property's literal shape, and nothing about its elements.
-   *
-   * Which wrapped `Array[T]([…])` values load is the SETTER's question, and
-   * there are three answers:
-   *
-   * - `typedAs: 'T'` — the property carries a `PROPERTY_HINT_ARRAY_TYPE` and
-   *   its setter takes a `TypedArray<T>`, so `Array::assign` refuses an array
-   *   typed as anything else. Matching the wrapper shape alone would accept
-   *   `Array[Dictionary]` for a RichTextEffect slot.
-   * - `anyElementType: true` — the setter takes a bare `const Array &`, or
-   *   `_set` tests only `p_value.get_type() != Variant::ARRAY`. A typed array
-   *   IS `Variant::ARRAY`, so EVERY element type loads. Name the `file:line` of
-   *   that gate at the call site.
-   * - neither — not yet answered from the setter. The wrapper is refused,
-   *   which is the narrow answer and the one to widen once the engine line has
-   *   been read.
-   *
-   * `Array::is_typed()` deciding whether the WRITER emits a wrapper
-   * (variant_parser.cpp:2341-2344) does not bound any of this: what Godot saves
-   * never limits what it loads, and a hand-edited or foreign-tool file is
-   * exactly the file a linter exists for.
-   *
-   * Elements go unchecked because every one of these setters bare-assigns the
-   * whole array with no per-element guard; a stricter validator would reject
-   * values the engine loads.
+   * A `Variant::ARRAY` property's literal shape. `typedAs: 'T'` is a `TypedArray<T>`
+   * setter, whose `Array::assign` refuses another element type. `anyElementType`
+   * is a bare `const Array &` or `get_type()` gate; cite its `file:line` at the
+   * call site. With neither, a wrapper is refused until the setter is read.
    */
   arrayLiteral(name: string, opts?: { typedAs?: string; anyElementType?: true }): PropertyValidator {
+    // `Array::is_typed()` decides only whether the writer emits a wrapper
+    // (variant_parser.cpp:2341-2344), which never bounds the loader. Elements go
+    // unchecked: every one of these setters bare-assigns the whole array.
     const code = formatCode(name);
     const typed = opts?.typedAs;
     const anyType = opts?.anyElementType === true;
@@ -172,7 +137,7 @@ export const scalarCombinators = {
 };
 
 /**
- * The raw ELEMENT text of a value {@link scalarCombinators.arrayLiteral} has
+ * The raw element text of a value {@link scalarCombinators.arrayLiteral} has
  * already accepted, for a caller that goes on to count or split the elements.
  */
 export function arrayLiteralElements(value: string): string {

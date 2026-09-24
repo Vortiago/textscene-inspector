@@ -1,11 +1,8 @@
 /**
- * TorusMesh decode — property bag in, radii and ring counts out.
- *
- * Defaults from Godot `primitive_meshes.h:377-380`. `set_rings`
- * (`primitive_meshes.cpp:2348`) and `set_ring_segments` (:2361) both ERR_FAIL
- * below 3, keeping the default. The radii have no setter guard (:2320, :2332);
- * their inner > outer swap and the equal-radii refusal happen when Godot builds
- * the surface (:2232-2241), so they live in `build.ts`.
+ * TorusMesh decode. Defaults: `primitive_meshes.h:377-380`. `set_rings`
+ * (`primitive_meshes.cpp:2348`) and `set_ring_segments` (:2361) ERR_FAIL below 3,
+ * keeping the default. The radii have no setter guard (:2320, :2332): Godot swaps
+ * or refuses them at surface build (:2232-2241), so that lives in `build.ts`.
  */
 
 import { floatOr } from '../../../parser/valueParsers';

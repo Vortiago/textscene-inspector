@@ -1,10 +1,8 @@
 /**
- * The shape decoders over the three spellings a packed slot takes. The packed
- * constructor's body is a FLAT argument list; the bare and typed bodies hold one
- * ELEMENT per comma, and both flatten to the same components.
- *
- * A decoder narrower than the validator beside it lints clean and then draws
- * nothing: the caller catches the throw and keeps an empty array.
+ * The shape decoders over the three spellings of a packed slot: the constructor
+ * body is a flat argument list, and the bare and typed bodies hold one element per
+ * comma, flattening alike. A decoder narrower than its validator lints clean, then
+ * draws nothing, since the caller catches the throw and keeps an empty array.
  */
 
 import { describe, it, expect } from 'vitest';

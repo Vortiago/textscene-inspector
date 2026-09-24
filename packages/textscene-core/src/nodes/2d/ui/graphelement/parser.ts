@@ -1,5 +1,5 @@
 /**
- * GraphElement parser — Control + the six own members `_bind_methods` adds.
+ * GraphElement parser: Control + the six own members `_bind_methods` adds.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -27,7 +27,7 @@ export function parseGraphElement(
 
   // `GraphElement::set_selectable` forces `set_selected(false)` whenever
   // `p_selectable` is false (graph_element.cpp:205-210), unconditionally on
-  // load order — a false `selectable` always wins over an authored `selected`.
+  // load order: a false `selectable` always wins over an authored `selected`.
   result.selected = selectable === false ? false : parseOptionalBool(properties.selected);
 
   return result;

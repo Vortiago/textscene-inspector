@@ -1,7 +1,6 @@
 /**
- * Path2D parser — the Node2D transform/modulate surface plus the raw `curve`
- * resource reference (the Curve2D is resolved + tessellated in the component;
- * the parser only captures the reference string).
+ * Parses a Path2D: the Node2D surface plus the raw `curve` reference, which the
+ * component resolves and tessellates.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

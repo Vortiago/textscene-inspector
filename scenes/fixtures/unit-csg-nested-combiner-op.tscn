@@ -1,13 +1,9 @@
 [gd_scene format=3]
 
-; ONE VARIABLE: whether a nested CSGCombiner3D's own `operation` applies to its
-; whole fold. The parent calls `child->_get_brush()` — the child's entire subtree
-; folded to one brush — then combines THAT by `child->get_operation()`
-; (`modules/csg/csg_shape.cpp:472,481`).
-;
-; A flat left-to-right fold drops the combiner's operation, because a combiner
-; carries no solid to attach it to, and unions its child in at root level: the
-; notch becomes a bump. No other fixture nests an operation-bearing combiner.
+; One variable, and no other fixture nests a combiner: whether a nested CSGCombiner3D's own
+; `operation` applies to its whole fold. The parent folds `child->_get_brush()` to one brush and
+; combines it by `child->get_operation()` (`modules/csg/csg_shape.cpp:472,481`). A flat fold has
+; no solid to attach the combiner's operation to, so it unions the child: the notch becomes a bump.
 
 [node name="NestedCombinerOp" type="CSGBox3D"]
 size = Vector3(2, 2, 2)

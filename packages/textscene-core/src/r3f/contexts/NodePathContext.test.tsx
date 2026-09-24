@@ -1,8 +1,4 @@
-/**
- * Contract tests for NodePathContext: the dispatcher-provided "what's my
- * TSCN path?" seam. Dispatcher path-joining is covered in
- * NodeDispatcher.test.tsx — here we pin the provider/hook contract itself.
- */
+/** The provider and hook of NodePathContext. NodeDispatcher.test.tsx covers the path joins. */
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';

@@ -1,46 +1,9 @@
 /**
- * Pure geometry for a `StyleBoxFlat`, ported from
- * `scene/resources/style_box_flat.cpp` (Godot 4.6.3) — `StyleBoxFlat::draw`
- * and its `draw_rounded_rectangle`/`adapt_values`/`set_inner_corner_radius`/
- * `set_corner_scale` helpers — restricted to this module's scope: fill,
- * per-corner radii, per-edge borders, `border_blend`, `draw_center`, expand
- * margins, anti-aliasing (`anti_aliased`/`aa_size`), `skew`, and the drop
- * shadow (`shadow_color`/`shadow_size`/`shadow_offset`).
+ * Pure geometry for a `StyleBoxFlat`, ported from `StyleBoxFlat::draw` and its
+ * helpers in `scene/resources/style_box_flat.cpp` (Godot 4.6.3). Plain number
+ * arrays in the input rect's Godot-pixel, +Y-down space (`native/rect.ts`): no
+ * THREE, and the caller flips the axis.
  *
- * `skew` shears every vertex about the STYLE rect's centre, so all of a box's
- * rings lean together. It also participates in `aa_on` (`draw()`:
- * `(rounded_corners || !skew.is_zero_approx()) && anti_aliased`) — a sheared
- * edge is diagonal even when every corner is sharp, and needs the feather an
- * axis-aligned edge does not. With neither a radius nor a skew, `aa_on` is
- * false whatever `anti_aliased` says, matching Godot's own "only antialias if
- * actually needed" comment.
- *
- * The shadow is drawn FIRST, so everything else paints over it, and its two
- * rings adapt their corners against the offset `shadow_inner_rect` rather than
- * the style rect — an offset shadow keeps the box's own corner profile instead
- * of deriving a new one. `shadow_size` alone gates it: a `shadow_color` with no
- * size draws nothing.
- *
- * The AA ring math additionally assumes `TextServer::get_current_drawn_item_
- * oversampling()` (style_box_flat.cpp:499-502) is `1`: this codebase has no
- * concept of per-viewport 2D oversampling anywhere else, so `aa_size_scaled
- * == aa_size` throughout this port.
- *
- * `border_blend` is realised with vertex colours, not a shader: the border
- * ring's INNER (infill-boundary) vertices are coloured `border_color_inner`
- * (which the source sets to `bg_color` when blending, so it matches the
- * fill) and its OUTER (style-rect-boundary) vertices stay `border_color`;
- * three's own per-triangle colour interpolation blends one into the other
- * across the ring, exactly how the RenderingServer's flat-shaded triangle
- * array does in Godot itself. The AA rings reuse the same mechanism: an
- * alpha-0 outer/transparent boundary blended into an opaque inner one is
- * exactly what a vertex-coloured ring already expresses, so no shader change
- * was needed to add AA.
- *
- * No THREE import — plain number arrays throughout, positions in the same
- * Godot-pixel, +Y-down space as the `Rect2` passed in (`native/rect.ts`); the
- * caller converts to a three.js position, this module never flips an axis.
-*
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -57,6 +20,9 @@ interface Rgba {
   a: number;
 }
 
+// `border_blend` and the AA rings use vertex colours, not a shader: a ring's inner
+// vertices take `border_color_inner` and its outer ones `border_color`, and three
+// interpolates across each triangle as Godot's flat triangle array does.
 interface GeometryBuffers {
   positions: number[];
   indices: number[];
@@ -90,12 +56,12 @@ function growIndividual(r: Rect2, left: number, top: number, right: number, bott
   return { x: r.x - left, y: r.y - top, w: r.w + left + right, h: r.h + top + bottom };
 }
 
-/** `Rect2::grow` (`core/math/rect2.h:230-236`) — the same amount on all four sides. */
+/** `Rect2::grow` (`core/math/rect2.h:230-236`): the same amount on all four sides. */
 function grow(r: Rect2, by: number): Rect2 {
   return growIndividual(r, by, by, by, by);
 }
 
-/** `Rect2::position += offset` — moves a rect without resizing it. */
+/** `Rect2::position += offset`: moves a rect without resizing it. */
 function translate(r: Rect2, offset: Vec2): Rect2 {
   return { x: r.x + offset.x, y: r.y + offset.y, w: r.w, h: r.h };
 }
@@ -103,11 +69,9 @@ function translate(r: Rect2, offset: Vec2): Rect2 {
 // --- `adapt_values` (style_box_flat.cpp:436-442) -----------------------------
 
 /**
- * Scales a pair of opposing values down (never up) so they don't overflow
- * `p_width`, then clamps each to its own max and to whatever a PRIOR call
- * already wrote for that index (the running `Math.min`, needed because
- * `draw()` calls this twice per array with overlapping index pairs for
- * corner-radius adaptation).
+ * Scales a pair of opposing values down, never up, so they do not overflow
+ * `p_width`, then clamps each to its max and to a prior call's value for that
+ * index: `draw()` calls this twice per array with overlapping index pairs.
  */
 function adaptValues(
   indexA: number,
@@ -262,16 +226,10 @@ function pushColor(out: number[], c: Rgba): void {
 }
 
 /**
- * Port of `draw_rounded_rectangle` (style_box_flat.cpp:313-434), minus its
- * `skew` term (this module never models skew, so it is always zero and drops
- * out of the vertex formula entirely).
- *
- * `ringRect`/`innerColor`/`outerColor` describe the OUTER boundary and its
- * colour; `innerRect`/`innerColor` (again) the boundary closer to the shape's
- * own centre — matching the source's own "inner vertex written first, outer
- * vertex only when `draw_border`" order. For a border ring, `ringRect` is the
- * style rect and `innerRect` is the infill boundary; for the filled centre,
- * both are the infill rect (so only the "inner" vertex is ever written).
+ * Port of `draw_rounded_rectangle` (style_box_flat.cpp:313-434). `ringRect` and
+ * `outerColor` are the outer boundary, `innerRect` and `innerColor` the one
+ * nearer the centre. The inner vertex is written first, the outer one only for
+ * a border ring. The filled centre passes the infill rect as both.
  */
 function drawRoundedRectangle(
   buffers: GeometryBuffers,
@@ -300,9 +258,8 @@ function drawRoundedRectangle(
 
   const quarterArc = Math.PI / 2;
 
-  // `style_rect_center` (`style_box_flat.cpp:352`) — every vertex shears about
-  // the STYLE rect's centre, not its own ring's, so all four rings of one box
-  // lean together instead of each shearing about a different point.
+  // `style_rect_center` (`style_box_flat.cpp:352`): every vertex shears about the
+  // style rect's centre, not its own ring's, so all rings of one box lean together.
   const centreX = styleRect.x + styleRect.w / 2;
   const centreY = styleRect.y + styleRect.h / 2;
   const shear = (x: number, y: number): [number, number] => [
@@ -355,19 +312,18 @@ function drawRoundedRectangle(
 }
 
 /**
- * Builds a `StyleBoxFlat`'s draw geometry for a rect, in the same Godot-pixel
- * space the rect is given in. Empty buffers for a degenerate rect (zero
- * width/height, matching `draw()`'s early return) or a box that draws
- * nothing (`!draw_border && !draw_center`, shadow not modelled).
+ * Builds a `StyleBoxFlat`'s draw geometry for a rect, in the rect's Godot-pixel
+ * space. Empty buffers for a degenerate rect (`draw()`'s early return) or a box
+ * with no border, no centre and no shadow.
  */
 export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): GeometryBuffers {
   const empty: GeometryBuffers = { positions: [], indices: [], colors: [] };
 
   const borderWidth = sides(data.borderWidth);
   const drawBorder = borderWidth.some((w) => w > 0);
-  // `draw_shadow = (shadow_size > 0)` (`style_box_flat.cpp:458`) — a
-  // `shadow_color` alone draws nothing. The early return needs all THREE
-  // (`:459`), or a shadow-only stylebox would paint nothing at all.
+  // `draw_shadow = (shadow_size > 0)` (`style_box_flat.cpp:458`): a `shadow_color`
+  // alone draws nothing. The early return needs all three (`:459`), or a
+  // shadow-only stylebox would paint nothing.
   const drawShadow = data.shadowSize > 0;
   if (!drawBorder && !data.drawCenter && !drawShadow) return empty;
 
@@ -404,19 +360,17 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
   const borderColorInner: Rgba = blendOn ? borderColorBlend : data.borderColor;
 
   // draw(): `aa_on = (rounded_corners || !skew.is_zero_approx()) && anti_aliased`.
-  // Skew earns its own term because a sheared edge is diagonal even when every
-  // corner is sharp, and a diagonal edge needs the feather an axis-aligned one
-  // does not.
+  // A sheared edge is diagonal even with sharp corners, so it needs the feather.
   const roundedCorners = cornerRadiusIn.some((r) => r > 0);
   const skewed = data.skew.x !== 0 || data.skew.y !== 0;
   const aaOn = (roundedCorners || skewed) && data.antiAliased;
-  // aa_size_scaled = aa_size / oversampling; oversampling assumed 1 (see file header).
+  // aa_size_scaled = aa_size / oversampling, and oversampling is 1: nothing here
+  // models `TextServer::get_current_drawn_item_oversampling()` (style_box_flat.cpp:499-502).
   const aaSizeScaled = data.aaSize;
 
-  // draw(): style_box_flat.cpp:511-517 — each BORDERED side (not the adapted
-  // one — the raw authored border_width) shrinks border_style_rect inward by
-  // aa_size_scaled, so the border ring's own drawing rect narrows to leave
-  // room for the outer feather ring without growing past style_rect.
+  // draw(): style_box_flat.cpp:511-517: each side with a raw authored border_width
+  // shrinks border_style_rect by aa_size_scaled, leaving room for the outer
+  // feather ring inside style_rect.
   let borderStyleRect = styleRect;
   if (aaOn) {
     if (borderWidth[SIDE_LEFT]! > 0) borderStyleRect = growIndividual(borderStyleRect, -aaSizeScaled, 0, 0, 0);
@@ -427,10 +381,9 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
 
   const buffers: GeometryBuffers = { positions: [], indices: [], colors: [] };
 
-  // Drop shadow (`style_box_flat.cpp:524-540`), FIRST so the box paints over
-  // it. Both its rings adapt their corners against `shadow_inner_rect` rather
-  // than the style rect, so an offset shadow keeps the box's own corner
-  // profile instead of re-deriving one from a rect it no longer shares.
+  // Drop shadow (`style_box_flat.cpp:524-540`), first so the box paints over it.
+  // Its rings adapt corners against `shadow_inner_rect`, so an offset shadow
+  // keeps the box's own corner profile.
   if (drawShadow) {
     const shadowInnerRect = translate(styleRect, data.shadowOffset);
     const shadowRect = translate(grow(styleRect, data.shadowSize), data.shadowOffset);
@@ -498,10 +451,8 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
   }
 
   if (aaOn) {
-    // style_box_flat.cpp:555-582: per-side AA feather widths — a bordered
-    // side feathers the BORDER's outer/inner edges; a borderless side
-    // feathers the FILL's own boundary instead (there is no border ring
-    // there to feather).
+    // style_box_flat.cpp:555-582: per-side AA feather widths. A bordered side
+    // feathers the border's edges, and a borderless side feathers the fill's.
     const aaBorderWidth: number[] = [0, 0, 0, 0];
     const aaBorderWidthHalf: number[] = [0, 0, 0, 0];
     const aaFillWidth: number[] = [0, 0, 0, 0];
@@ -609,7 +560,7 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
         false
       );
       if (!blendOn) {
-        // AA on the ring's INNER edge — feathers into border_color_blend
+        // AA on the ring's inner edge: feathers into border_color_blend
         // (bg_color when draw_center, else alpha-0 border_color).
         drawRoundedRectangle(
           buffers,
@@ -624,9 +575,8 @@ export function styleBoxFlatGeometry(data: StyleBoxFlatData, rect: Rect2): Geome
           false
         );
       }
-      // AA on the ring's OUTER edge — feathers to alpha-0 border_color,
-      // extending aa_size/2 PAST style_rect (the "extra outer ring" the AA
-      // port adds).
+      // AA on the ring's outer edge: feathers to alpha-0 border_color, extending
+      // aa_size/2 past style_rect.
       drawRoundedRectangle(
         buffers,
         borderStyleRect,

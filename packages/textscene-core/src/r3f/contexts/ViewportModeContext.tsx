@@ -1,26 +1,7 @@
 /**
- * Viewport-mode seam (ADR-0006): the single source of truth for how the
- * center viewport displays the active scene.
- *
- * - `mode` — `'3D'` mounts the R3F canvas; `'2D'` mounts the Control overlay.
- * - `showCollisions` — drives the CollisionShape3D wireframe gizmos (off by
- *   default, like Godot's "Visible Collision Shapes").
- * - `showLabels` — drives in-viewport text (Label3D); ON by default to match
- *   Godot, which always rasterises Label3D text at runtime (ADR-0008 point 4
- *   superseded — see its amendment note). The toolbar toggle turns it OFF when
- *   the text clutters the view, mirroring the collision gizmo.
- * - `showGrid` — a ground-plane grid helper in the 3D viewport. Off by
- *   default: a sibling hardening bucket regenerates ALL visual-regression
- *   baselines in this same round, so a toggle that's visible out of the box
- *   would invalidate that work. A user who turns it on gets it persisted
- *   (host-layered, like the mode itself) — only a FRESH session with no
- *   persisted preference sees it off.
- *
- * The context has a safe default (3D, collisions off, labels on, grid off)
- * so components that read it render correctly even when no provider is
- * mounted (test scaffolding, and the off-by-default toggles). The toolbar
- * toggle (P4) writes through the provider; persistence is layered on top via
- * a host-specific hook.
+ * How the centre viewport shows the scene (ADR-0006). `'3D'` mounts the R3F
+ * canvas, `'2D'` the Control overlay. The default (3D, collisions off, labels
+ * on, grid off) needs no provider, and the host layers persistence on top.
  */
 
 import {
@@ -34,38 +15,36 @@ import {
 export type ViewportMode = '2D' | '3D';
 
 /**
- * localStorage keys for the two persisted viewport preferences.
- * `<TscnPreviewShell>` reads them once to seed this provider;
- * `<ViewportToolbar>` writes them on an EXPLICIT user choice. Programmatic
- * mode changes (WorkspaceAutoSelect's typed-root pick, the Cameras panel's
- * 2D framing) deliberately do NOT persist — they are per-scene derivations,
- * not the user's preference, and writing them would clobber it.
+ * The localStorage keys of the persisted viewport preferences. The shell
+ * reads them once. `<ViewportToolbar>` writes them on a user choice, and a
+ * programmatic change, a per-scene derivation, never persists.
  */
 export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
 export const SHOW_GRID_STORAGE_KEY = 'tsi.showGrid';
 /**
- * Whether to frame the scene on load. OFF by default, which is Godot: its
- * editor opens every scene at a fixed orbit and leaves framing to F. That also
- * costs less to draw — a framed scene puts every object inside the frustum,
- * so nothing is culled.
+ * Whether to frame the scene on load. Off by default, as Godot's editor opens
+ * at a fixed orbit. A framed scene also puts every object in the frustum, so
+ * nothing is culled.
  */
 export const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
 
 export interface ViewportModeValue {
   mode: ViewportMode;
   setMode: (mode: ViewportMode) => void;
+  /** The CollisionShape3D gizmos, off by default like Godot's "Visible Collision Shapes". */
   showCollisions: boolean;
   setShowCollisions: (show: boolean) => void;
+  /** Label3D text, on by default, since Godot always rasterises it (ADR-0008 amendment). */
   showLabels: boolean;
   setShowLabels: (show: boolean) => void;
   showNavigation: boolean;
   setShowNavigation: (show: boolean) => void;
+  /** A ground-plane grid in 3D, off by default, or it lands in every golden. A user's choice persists. */
   showGrid: boolean;
   setShowGrid: (show: boolean) => void;
   /**
-   * The editor preview sun / preview environment (ADR-0025). On by default,
-   * as in Godot, and forced off for whichever preview the scene supersedes —
-   * these flags only say what the USER asked for.
+   * The editor preview sun and environment (ADR-0025), on by default as in
+   * Godot. The scene can force one off, so these flags say only what the user asked for.
    */
   showPreviewSun: boolean;
   setShowPreviewSun: (show: boolean) => void;
@@ -164,7 +143,7 @@ export function ViewportModeProvider({
   return <ViewportModeContext.Provider value={value}>{children}</ViewportModeContext.Provider>;
 }
 
-/** Read the viewport mode + collision/label/grid visibility state. Safe without a provider. */
+/** The viewport mode and the overlay toggles. Safe without a provider. */
 export function useViewportMode(): ViewportModeValue {
   return useContext(ViewportModeContext);
 }

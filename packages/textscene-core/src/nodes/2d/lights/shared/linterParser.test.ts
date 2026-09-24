@@ -1,7 +1,6 @@
 /**
- * The Light2D set must reach its subclasses, which is the whole point of
- * the tier. Assert through `findValidator` on a real leaf, not just on the
- * abstract key: a tier that registers but is never imported registers nothing.
+ * The Light2D set must reach its subclasses. Asserted through `findValidator` on
+ * a real leaf, not only the abstract key: a tier never imported registers nothing.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -9,15 +8,9 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import './linterParser.js';
 
 /**
- * Every key Light2D binds, read from its ADD_PROPERTY calls.
- *
- * Set exactly ONE of these two, from the source rather than from expectation:
- * fill KEYS, or set DECLARES_NOTHING when the class binds no ADD_PROPERTY at all
- * (Godot has many: a themed spacer whose whole surface is theme items, an
- * orientation subclass that only fixes an inherited default). Leaving both unset
- * is red on purpose. Do NOT delete an assertion to go green: an empty KEYS
- * against an empty registerAll passes vacuously, which is what the pairing
- * below exists to prevent.
+ * Every key Light2D binds, read from its ADD_PROPERTY calls. Set this or
+ * DECLARES_NOTHING: leaving both unset fails on purpose, since an empty KEYS
+ * against an empty registerAll would pass vacuously.
  */
 const KEYS: string[] = [
   'enabled',
@@ -36,7 +29,7 @@ const KEYS: string[] = [
   'shadow_filter_smooth',
   'shadow_item_cull_mask',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, with the source line that proves it. */
 const DECLARES_NOTHING = false;
 const LEAVES = ["DirectionalLight2D","PointLight2D"] as const;
 
@@ -69,8 +62,8 @@ describe('Light2D shared validators', () => {
 
     it.each(['-2147483649', '4294967296'])('errors one step outside int32 on %s', (value) => {
       // Past the 32-bit band the engine keeps bits the file does not state.
-      // `2147483648` is INSIDE it — the unsigned spelling of -2147483648, which
-      // the hint's own floor already allows.
+      // `2147483648` is inside it: the unsigned spelling of -2147483648, which the
+      // hint's own floor allows.
       expect(check(value)?.severity).toBe('error');
     });
 

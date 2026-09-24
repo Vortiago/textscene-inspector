@@ -1,16 +1,13 @@
 /**
- * Shared headless-browser launch for the showcase harnesses. The SwiftShader
- * flags make WebGL render headlessly; SHOWCASE_CHANNEL picks the browser:
- * unset → system Chrome ('chrome'), 'bundled' → Playwright's bundled Chromium,
- * any other value → that Playwright channel.
+ * The shared headless-browser launch for the showcase harnesses. SHOWCASE_CHANNEL picks the
+ * browser: unset gives system Chrome ('chrome'), 'bundled' gives Playwright's bundled Chromium,
+ * and any other value names that Playwright channel.
  */
 import { chromium } from 'playwright';
 
 /**
- * The headless-WebGL contract: force ANGLE + SwiftShader so WebGL paints in
- * software (never --disable-gpu, which kills WebGL). Shared by every Chromium
- * launch in the repo — showcase, VS Code capture, visual harness — so a flag
- * rename lands in one place.
+ * ANGLE and SwiftShader make WebGL paint in software, where --disable-gpu would kill WebGL. Every
+ * Chromium launch in the repo (showcase, VS Code capture, visual harness) shares these flags.
  */
 export const SWIFTSHADER_GL_ARGS = [
   '--enable-unsafe-swiftshader',

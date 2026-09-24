@@ -5,8 +5,8 @@
 
 export function fixtureFor(baseKey, typeName) {
   const FIXTURES = {
-    // A Control is laid out by anchors and offsets under a Control parent; a
-    // Transform3D on one is not a thing Godot would ever write.
+    // A Control is laid out by anchors and offsets under a Control parent. Godot never writes a
+    // Transform3D on one.
     control: `[gd_scene format=3]
 
 [node name="Root" type="Control"]

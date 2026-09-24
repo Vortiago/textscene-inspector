@@ -1,6 +1,6 @@
 /**
- * Polygon2D property formatter — surfaces the fill color, vertex count, offset,
- * and texture reference, then the shared Node2D transform/modulate sections.
+ * Formats Polygon2D properties: the fill colour, vertex count, offset and
+ * texture reference, then the shared Node2D sections.
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';

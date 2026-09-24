@@ -1,13 +1,7 @@
 /**
- * The ancestry readers this module exports, against the table itself.
- *
- * Co-located because `godot/` ships them: the sibling `linter/nodeBaseTypes.test.ts`
- * asks whether every REGISTERED type reaches a root, which needs the validator
- * registry and is a linter question. Nothing here imports one.
- *
- * The walks are written out longhand rather than through `baseChain`, for the
- * reason its own docblock names: a guard on the table must not be phrased in
- * terms of a helper reading the same table.
+ * The ancestry readers `godot/` exports, against the table itself. The sibling
+ * `linter/nodeBaseTypes.test.ts` asks the linter question of registered types. The walks are
+ * longhand rather than through `baseChain`: a guard on the table must not read it through a helper.
  */
 
 import { describe, expect, it } from 'vitest';

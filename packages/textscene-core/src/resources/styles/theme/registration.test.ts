@@ -18,8 +18,8 @@ describe('theme slice registration', () => {
   });
 
   it('claims no extension and is never fetched as bytes', () => {
-    // A Theme is always `.tres` — the shared Godot-text container no slice may
-    // claim — so routing is by type name and the provider fetches text.
+    // A Theme is always `.tres`, which no slice may claim, so routing is by type
+    // name and the provider fetches text.
     expect(resourceSliceRegistry.byTypeName('Theme')?.extensions).toBeUndefined();
     expect(isBinaryResourceType('Theme')).toBe(false);
     expect(isBinaryResourceType('Theme', 'res://ui/main_theme.tres')).toBe(false);

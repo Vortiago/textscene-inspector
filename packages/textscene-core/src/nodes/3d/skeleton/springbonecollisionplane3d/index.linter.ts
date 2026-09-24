@@ -1,5 +1,6 @@
 /**
- * springbonecollisionplane3d linter registration - imports linter components to trigger self-registration.
+ * springbonecollisionplane3d linter registration: importing the linter modules triggers their
+ * self-registration.
  */
 
 import './linterParser.js';

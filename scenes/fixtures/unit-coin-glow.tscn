@@ -1,9 +1,8 @@
 [gd_scene load_steps=9 format=3 uid="uid://unitcoinglow"]
 
-; An additive, unshaded, billboarded QuadMesh with a radial GradientTexture2D:
-; the halo must read as a soft gold ring against the dark ground and cast NO
-; shadow (a blend-mode material writes none). The metallic + emissive coin disc
-; beside it casts a normal shadow.
+; An additive, unshaded, billboarded QuadMesh with a radial GradientTexture2D: the halo reads as a
+; soft gold ring and casts no shadow, since a blend-mode material writes none. The metallic,
+; emissive coin disc beside it casts a normal shadow.
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_dark"]
 size = Vector2(10, 10)

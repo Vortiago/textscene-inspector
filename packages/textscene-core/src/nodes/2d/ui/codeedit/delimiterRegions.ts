@@ -1,17 +1,8 @@
 /**
- * CodeEdit's delimiter tracking — `delimiter_comments` and
- * `delimiter_strings` as `_update_delimiter_cache`/`_is_in_delimiter`/
- * `get_delimiter_start_position`/`get_delimiter_end_position` read them
- * (`scene/gui/code_edit.cpp:3210-3415,2082-2180`).
- *
- * These two tables reach a still frame through ONE surface: the fold gutter.
- * `CodeHighlighter` colours a line from its OWN `color_regions`
- * (`scene/resources/syntax_highlighter.cpp` names no delimiter at all), so
- * nothing here paints text. What it feeds is `lineFolding.ts`'s
- * `canFoldLine`, which asks whether a line is inside a comment or string
- * region that continues.
- *
- * Pure `.ts` — no React, no THREE.
+ * CodeEdit's delimiter tracking: `delimiter_comments` and `delimiter_strings` as the delimiter cache and
+ * position getters read them (`scene/gui/code_edit.cpp:3210-3415,2082-2180`). Its one still-frame
+ * surface is the fold gutter: `CodeHighlighter` colours from its own `color_regions`
+ * (`scene/resources/syntax_highlighter.cpp` names no delimiter), so nothing here paints text.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -34,15 +25,10 @@ export interface Delimiter {
 }
 
 /**
- * `CodeEdit::_set_delimiters` (`code_edit.cpp:3490-3508`): each entry is
- * `"<start>[ <end>]"`, split on the FIRST space, and an entry with no end key
- * is line-only.
- *
- * `_add_delimiter`'s own guards (`:3418-3442`) drop an entry rather than
- * failing the node: an empty start key, a key with a non-symbol character
- * (`is_symbol`, `symbolChars.ts`), or a start key already registered. The
- * insertion point is by DESCENDING start-key length (`:3434-3442`), which is
- * what makes a longer key win over a shorter prefix when the cache scans.
+ * `CodeEdit::_set_delimiters` (`code_edit.cpp:3490-3508`): each entry is `"<start>[ <end>]"`, split on
+ * the first space, and one with no end key is line-only. `_add_delimiter` (`:3418-3442`) drops an empty,
+ * non-symbol or repeated start key, and inserts by descending start-key length (`:3434-3442`), so a
+ * longer key wins over a shorter prefix when the cache scans.
  */
 export function buildDelimiters(
   comments: readonly string[] | undefined,
@@ -72,7 +58,7 @@ export function buildDelimiters(
     }
   };
   // CodeEdit's constructor registers `"` and `'` as string delimiters
-  // (`code_edit.cpp:3920-3922`); an authored `delimiter_strings` REPLACES
+  // (`code_edit.cpp:3920-3922`). An authored `delimiter_strings` replaces
   // them, since `_set_delimiters` clears the type first (`:3492`).
   add(strings ?? ['"', "'"], 'string');
   add(comments ?? [], 'comment');
@@ -80,20 +66,15 @@ export function buildDelimiters(
 }
 
 /**
- * One line's entry in `delimiter_cache` — Godot's `RBMap<int, int>`, in key
- * order. The KEY is a column + 1 and the VALUE the delimiter index the line is
- * in from there on, or `-1` for "out of any region".
+ * One line's entry in `delimiter_cache`, Godot's `RBMap<int, int>` in key order. The key is a
+ * column + 1, and the value the delimiter index the line is in from there on, or `-1` for none.
  */
 export type DelimiterCacheLine = Array<[column: number, region: number]>;
 
 /**
- * `CodeEdit::_update_delimiter_cache` (`code_edit.cpp:3210-3367`) over the
- * whole buffer, which is the only range a still frame ever needs.
- *
- * The scan walks each line character by character, skipping a `\` and the
- * character after it, and records the column each region opens and closes at.
- * A region left open at the end of a line carries into the next one, which is
- * how a block comment spans lines at all.
+ * `CodeEdit::_update_delimiter_cache` (`code_edit.cpp:3210-3367`) over the whole buffer, the only
+ * range a still frame needs. The scan walks each line, skipping a `\` and the character after it,
+ * and records the column each region opens and closes at.
  */
 export function buildDelimiterCache(
   lines: readonly string[],
@@ -103,8 +84,8 @@ export function buildDelimiterCache(
   if (delimiters.length === 0) return cache;
 
   for (let i = 0; i < lines.length; i++) {
-    // Whatever region the line above left open carries in here — the whole of
-    // how a block comment spans lines (`code_edit.cpp:3238`).
+    // Whatever region the line above left open carries in here: that is how a
+    // block comment spans lines (`code_edit.cpp:3238`).
     let inRegion = i <= 0 || cache[i - 1]!.length < 1 ? -1 : cache[i - 1]![cache[i - 1]!.length - 1]![1];
     const str = lines[i]!;
     const lineLength = str.length;
@@ -174,7 +155,7 @@ export function buildDelimiterCache(
   return cache;
 }
 
-/** The region index that carried INTO `line` from the one above, or `-1`. */
+/** The region index that carried into `line` from the one above, or `-1`. */
 function regionBefore(cache: readonly DelimiterCacheLine[], line: number): number {
   if (line <= 0) return -1;
   const previous = cache[line - 1]!;
@@ -182,11 +163,9 @@ function regionBefore(cache: readonly DelimiterCacheLine[], line: number): numbe
 }
 
 /**
- * `CodeEdit::_is_in_delimiter` (`code_edit.cpp:3369-3415`) at `p_column = -1`
- * — "is this WHOLE line, whitespace aside, inside a region of this type?" —
- * which is the only form `can_fold_line` asks for.
- *
- * Returns the delimiter index, or `-1`.
+ * `CodeEdit::_is_in_delimiter` (`code_edit.cpp:3369-3415`) at `p_column = -1`: is the whole line,
+ * whitespace aside, inside a region of this type? The only form `can_fold_line` asks. Returns the
+ * delimiter index, or `-1`.
  */
 export function isLineInDelimiter(
   lines: readonly string[],
@@ -233,9 +212,8 @@ function isWhitespace(ch: string | undefined): boolean {
 }
 
 /**
- * `CodeEdit::get_delimiter_start_position`/`get_delimiter_end_position`
- * (`code_edit.cpp:2082-2180`), reduced to the LINE each returns —
- * `can_fold_line` reads nothing else off them (`:1701-1721`).
+ * `CodeEdit::get_delimiter_start_position` and `get_delimiter_end_position` (`code_edit.cpp:2082-2180`),
+ * reduced to the line each returns: `can_fold_line` reads nothing else (`:1701-1721`).
  */
 export function delimiterStartLine(
   lines: readonly string[],
@@ -302,13 +280,9 @@ export function delimiterEndLine(
 }
 
 /**
- * `CodeEdit::_update_code_region_tags` (`code_edit.cpp:3186-3207`): the
- * `#region`/`#endregion` spellings, built from the SHORTEST single-line
- * comment delimiter (the loop runs the table backwards, and the table is
- * sorted by descending start-key length).
- *
- * Both tags are empty until a single-line comment delimiter exists, which is
- * why a scene that clears `delimiter_comments` folds no region at all.
+ * `CodeEdit::_update_code_region_tags` (`code_edit.cpp:3186-3207`): `#region` and `#endregion` from the
+ * shortest single-line comment delimiter, since the loop runs the length-sorted table backwards. With
+ * no such delimiter both tags are empty, so a scene that clears `delimiter_comments` folds no region.
  */
 export function codeRegionStrings(delimiters: readonly Delimiter[]): {
   start: string;

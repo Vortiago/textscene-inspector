@@ -2,8 +2,8 @@
  * Field readers for one `_surfaces` entry, which Godot writes as a flat dict.
  *
  * Base64 payloads use the `A–Za–z0–9+/=` alphabet and the other values use `()`
- * (AABB/Vector4/ExtResource), so no braces appear inside a surface — a
- * non-greedy brace match isolates each surface reliably.
+ * (AABB/Vector4/ExtResource), so no braces appear inside a surface, and a
+ * non-greedy brace match isolates each surface.
  */
 
 import { warn } from '../../../logger.js';
@@ -11,16 +11,15 @@ import { parseGodotFloat } from '../../../godot/number.js';
 import { dictNumberField } from '../../../godot/variantParser.js';
 import { parseGodotInt } from '../../../godot/int.js';
 
-/** A surface's declared `AABB(px, py, pz, sx, sy, sz)` — a compressed surface's position scale. */
+/** A surface's declared `AABB(px, py, pz, sx, sy, sz)`: a compressed surface's position scale. */
 export interface SurfaceAabb {
   position: [number, number, number];
   size: [number, number, number];
 }
 
 /**
- * The `{…}` surface dicts, braces INCLUDED: the field readers below run to a
- * `,`/`}` delimiter, so a brace-stripped body gave the last key in a dict no
- * terminator and read it as absent.
+ * The `{…}` surface dicts, braces included: the field readers run to a `,`/`}`
+ * delimiter, so a brace-stripped body leaves the last key with no terminator.
  */
 export function* iterateSurfaceBlocks(surfacesRaw: string): Generator<string> {
   const re = /\{[^{}]*\}/g;
@@ -34,9 +33,9 @@ export function readInt(block: string, key: string): number {
   const match = dictNumberField(key).exec(block);
   if (!match) return 0;
   // Read at int64, the Variant's own width: `format` is a
-  // `BitField<Mesh::ArrayFormat>` (mesh.cpp:244) and a compressed surface's
-  // value runs past 2^32 — narrowing it to int32 zeroes the whole attribute
-  // layout. The counts beside it are `int` and sit far inside that band.
+  // `BitField<Mesh::ArrayFormat>` (mesh.cpp:244), and a compressed surface's
+  // value runs past 2^32, so int32 zeroes the whole attribute layout. The
+  // counts beside it are `int` and sit far inside that band.
   const stored = parseGodotInt(match[1]!, 'int64');
   return stored === null || Number.isNaN(stored) ? 0 : stored;
 }
@@ -71,7 +70,7 @@ export function readAabb(block: string): SurfaceAabb | undefined {
 }
 
 export function readUvScale(block: string): [number, number] | undefined {
-  // Only x and y are consulted; z/w scale UV2, which nothing decodes yet.
+  // Only x and y are consulted. z/w scale UV2, which nothing decodes.
   const n = readFloatTuple(block, 'uv_scale', 'Vector4', 4);
   return n ? [n[0]!, n[1]!] : undefined;
 }
@@ -88,7 +87,7 @@ export function readMaterialRef(block: string): string | undefined {
 
 /**
  * Extract the base64 payload of a `"<key>": PackedByteArray("…")` field.
- * A corrupt payload makes `atob` throw, which would fail the whole mesh; an
+ * A corrupt payload makes `atob` throw, which would fail the whole mesh. An
  * empty buffer instead lets the caller drop just this surface.
  */
 export function readPackedBytes(block: string, key: string): Uint8Array {

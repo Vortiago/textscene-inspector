@@ -1,7 +1,6 @@
 /**
- * RemoteTransform2D render contract: no component of its own — the registry
- * reuses the Node2D transform group (ADR-0008), registered as a CanvasItem
- * so it stays in the 2D world canvas.
+ * RemoteTransform2D has no component of its own: the registry reuses the Node2D
+ * transform group (ADR-0008), as a CanvasItem in the 2D world canvas.
  */
 
 import { describe, expect, it } from 'vitest';

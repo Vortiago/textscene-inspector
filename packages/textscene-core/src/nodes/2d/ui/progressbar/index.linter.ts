@@ -1,5 +1,3 @@
-/**
- * progressbar linter registration - imports linter components to trigger self-registration.
- */
+/** Registers the ProgressBar validators. */
 
 import './linterParser.js';

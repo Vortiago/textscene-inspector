@@ -1,22 +1,7 @@
 /**
- * Decode a Curve resource body, whichever serialization it arrived in.
- *
- * Godot serialises the whole curve into two internal array properties:
- *
- *   _limits = [min_value, max_value, min_domain, max_domain]
- *   _data   = [Vector2(x, y), left_tangent, right_tangent, left_mode, right_mode, …]
- *
- * `_data` is a flat run of FIVE entries per point, and its first entry is a
- * `Vector2(…)` literal, so it cannot be split on commas the way a
- * `PackedFloat32Array` can. Files written before Godot 4.3 carry a two-element
- * `_limits` (the domain properties did not exist), so both lengths are accepted.
- *
- * The same properties reach us two ways — inline as a `[sub_resource
- * type="Curve"]` block, or as the `[resource]` body of a standalone `.tres`
- * referenced by `ExtResource` — and one decode reads both, so neither arrival
- * path can drift from the other.
- *
- * Pure `.ts`, no THREE.
+ * Decode a Curve resource body, inline `[sub_resource]` or standalone `.tres`, through
+ * one decode so neither arrival path drifts. Godot writes `_limits = [min_value,
+ * max_value, min_domain, max_domain]` (two entries before Godot 4.3) and `_data`.
  */
 
 import type { ParsedResource } from '../../../parser/parsedResource';
@@ -28,13 +13,16 @@ import { ruleInt, slotComponents } from '../../../godot/int.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
 import { resizePoints } from './pointCount';
 
-/** Entries per point in `_data`: position, left tangent, right tangent, two modes. */
+/**
+ * Entries per point in `_data`: `Vector2(x, y)`, left tangent, right tangent, left
+ * mode, right mode. The `Vector2(…)` entry means `_data` cannot split on commas.
+ */
 const ELEMS_PER_POINT = 5;
 
 /**
- * Decode a Curve resource body. A malformed or absent `_data` yields a curve
- * with no points, which `sampleCurve` answers 0 for — callers that need "no
- * curve at all" must test `points.length`, not the sampled value.
+ * Decode a Curve resource body. A malformed or absent `_data` yields a curve with
+ * no points, which `sampleCurve` answers 0 for: a caller that needs "no curve at
+ * all" tests `points.length`, not the sampled value.
  */
 export function decodeCurve(data: Record<string, string>): Curve {
   const limits = parseFloatArray(data._limits);
@@ -48,9 +36,7 @@ export function decodeCurve(data: Record<string, string>): Curve {
 
   // `point_count` is written after `_data`, and Godot's setter resizes the point
   // list to it (curve.cpp:41-57): a smaller count drops the tail, a larger one
-  // pads with default points, and a negative one is refused, leaving `_data`
-  // alone. Honouring it keeps a hand-edited file from sampling a point list the
-  // resource does not claim.
+  // pads with default points, and a negative one is refused, leaving `_data` alone.
   const declared = ruleInt(data.point_count);
   if (declared !== null && declared >= 0) curve.points = resizePoints(curve, declared);
 
@@ -70,12 +56,7 @@ export function resolveCurve(
   return decodeCurve(resource.data as Record<string, string>);
 }
 
-/**
- * The `Curve` a standalone resource file carries, or null when the file is some
- * other resource type. The `[resource]` body holds exactly the properties an
- * inline `[sub_resource type="Curve"]` block does, so it decodes through the
- * same `decodeCurve`.
- */
+/** The `Curve` a standalone resource file carries, or null for another resource type. */
 export function curveFromResource(parsed: ParsedResource): Curve | null {
   if (parsed.resourceType !== 'Curve') return null;
   return decodeCurve(parsed.properties);
@@ -87,12 +68,9 @@ function parsePoints(value: string | undefined): CurvePoint[] {
 
   const points: CurvePoint[] = [];
   for (let i = 0; i < entries.length; i += ELEMS_PER_POINT) {
-    // One unreadable point drops the whole curve, because that is what the
-    // engine does: `set_data` validates every element in a loop that finishes
-    // before the first write to `_points` (`curve.cpp:465`, write at `:477`),
-    // so a single non-Vector2 leaves the point list EMPTY. `point_count` then
-    // padding it back to clamped-origin defaults is the engine's own result,
-    // not a shape invented here.
+    // One unreadable point drops the whole curve, as in the engine: `set_data`
+    // validates every element before the first write to `_points` (`curve.cpp:465`,
+    // write at `:477`). `point_count` then pads it back to clamped-origin defaults.
     const position = parseVector2Entry(entries[i]!);
     if (!position) return [];
     points.push({
@@ -110,59 +88,42 @@ function parsePoints(value: string | undefined): CurvePoint[] {
 function parseFloatArray(value: string | undefined): number[] | null {
   const entries = splitArrayLiteral(value);
   if (!entries) return null;
-  // `parseGodotFloat`, not `parseFloat`: the latter reads `5abc` as 5, and the
-  // curve was then scaled by a maximum the file does not contain.
-  // Finite, for the same reason `_data`'s components are: a non-finite limit
-  // clamps every padded point onto Infinity and scales every sample by it.
+  // `parseGodotFloat`, not `parseFloat`, which reads `5abc` as 5. Finite, since a
+  // non-finite limit clamps every padded point onto Infinity and scales every sample by it.
   const numbers = entries.map((e) => parseGodotFloat(e));
   return numbers.some((n) => n === null || !Number.isFinite(n)) ? null : (numbers as number[]);
 }
 
 /**
  * Split a Godot `[…]` array literal into its top-level entries, so a nested
- * `Vector2(0, 0)` survives as one entry instead of becoming two. Returns null
- * when the value is absent or is not bracketed.
- *
- * The split itself is `splitTopLevel`: the local copy tracked bracket depth but
- * not quotes, so a quoted entry holding a comma split into two.
- *
- * `dropTrailingComma` because `_parse_array` closes on `TK_BRACKET_CLOSE`
- * before it demands another value (variant_parser.cpp:1658-1662), so `[…, ]`
- * holds one fewer element than the commas suggest. Without it a single legal
- * trailing comma made `_data` fail the `% 5` arity gate and discarded every
- * point in the curve.
+ * `Vector2(0, 0)` stays one entry. Null when the value is absent or not bracketed.
  */
 function splitArrayLiteral(value: string | undefined): string[] | null {
   if (value === undefined) return null;
   const trimmed = value.trim();
   if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) return null;
+  // `_parse_array` closes on `TK_BRACKET_CLOSE` before it demands another value
+  // (variant_parser.cpp:1658-1662), so `[…, ]` holds one fewer element than the
+  // commas suggest. A kept trailing comma would fail the `% 5` arity gate.
   return dropTrailingComma(splitTopLevel(trimmed.slice(1, -1)));
 }
 
 /**
- * The canonical finite grammar, not a local `([^,]+?)` pair.
- *
- * The loose components accepted anything up to the next delimiter, so
- * `Vector2(1.2.3, 4)` decoded to `{x: 1.2, y: 4}` and `Vector2(8abc, 4)` to
- * `{x: 8, y: 4}` — a control point the file does not contain, which is the
- * accident `parser/vectors.ts` says the anchored grammar exists to prevent.
+ * The canonical finite grammar, not a loose `([^,]+?)` pair, which reads
+ * `Vector2(8abc, 4)` as `{x: 8, y: 4}`: a control point the file does not contain.
  */
 const VECTOR2_RE = slotTupleRegex('Vector2', 2);
 
 /**
  * The position of one `_data` entry, or null when it is not a finite `Vector2`.
- *
- * The RESULT is tested, not just the grammar: an overflowing exponent —
- * `Vector2(0, 1e999)` — is inside the finite pattern and reads as `Infinity`,
- * which `sampleCurve` hands on as Infinity/NaN to the particle geometry that
- * multiplies by it. Both spellings take the one exit the call site already has
- * for a position it cannot read.
+ * The result is tested, not only the grammar: `Vector2(0, 1e999)` matches the
+ * finite pattern and reads as `Infinity`, which would reach the particle geometry.
  */
 function parseVector2Entry(entry: string): { x: number; y: number } | null {
   const match = VECTOR2_RE.exec(entry);
   if (!match) return null;
   // `slotComponents`, not bare `matchedFloat`: the slot grammar admits the
-  // `Vector2i` spelling, whose arguments Godot narrows to int32 BEFORE widening
+  // `Vector2i` spelling, whose arguments Godot narrows to int32 before widening
   // into the float slot, so `Vector2i(4294967295, 0)` is the point `(-1, 0)`.
   const components = slotComponents(entry, 'Vector2', [match[1], match[2]]);
   if (!allFinite(components)) return null;
@@ -170,12 +131,9 @@ function parseVector2Entry(entry: string): { x: number; y: number } | null {
 }
 
 /**
- * One tangent slot, or `fallback` when the text is not a finite float.
- *
- * Non-finite is a MISS, not a value: `inf` and `nan` are literals
- * `parseGodotFloat` reads, and `sample`'s `y + d * tangent` hands either on to
- * the particle geometry that multiplies by the sample — the same exit the
- * position beside it takes.
+ * One tangent slot, or `fallback` when the text is not a finite float. `inf` and
+ * `nan` are a miss, not a value: `sample`'s `y + d * tangent` would hand either on
+ * to the particle geometry.
  */
 function numberOr(entry: string, fallback: number): number {
   const num = parseGodotFloat(entry);

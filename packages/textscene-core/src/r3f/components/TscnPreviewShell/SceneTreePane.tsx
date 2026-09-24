@@ -6,10 +6,8 @@ import type { TscnNode } from '../../../parser/types.js';
 import { SceneNodeCount } from './SceneStats.js';
 import styles from './TscnPreviewShell.module.css';
 
-// Bundle reduction: lazy-load the DOM panel so it doesn't land in the initial
-// canvas-paint bundle. The first frame doesn't need it — it hydrates after the
-// canvas is up. A `React.lazy` of the module's default export; the underlying
-// file re-exports the named component as the default to satisfy that contract.
+// Lazy, so the panel stays out of the first canvas-paint bundle. `React.lazy`
+// takes a default export, so the `.then` maps the named export to one.
 const SceneTreeViewer = lazy(() =>
   import('../SceneTreeViewer/SceneTreeViewer.js').then((m) => ({
     default: m.SceneTreeViewer,
@@ -32,11 +30,8 @@ export function SceneTreePane({
   onNodeReveal?: (path: string, node: TscnNode) => void;
   onOpenSubScene?: (scenePath: string) => void;
 }) {
-  // When `error` is truthy, mounting `<SceneTreeViewer>` with a null
-  // sceneGraph triggers its own "Loading scene…" empty-state — which
-  // makes the tree pane look stuck (Gap 7). Use a dedicated empty-state
-  // message in the tree pane so the user knows the load failed and the
-  // banner above is the actionable surface.
+  // On an error, `<SceneTreeViewer>` with a null sceneGraph shows "Loading
+  // scene…" and looks stuck. This message points at the error banner instead.
   let treeBody: ReactNode;
   if (error) {
     treeBody = (

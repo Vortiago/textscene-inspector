@@ -27,10 +27,6 @@ function mockDiagnosticsConfig(overrides: { enabled?: boolean; lintDebounceMs?: 
   });
 }
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 function makeCoreDiagnostic(overrides: Partial<TscnLintDiagnostic> = {}): TscnLintDiagnostic {
   return {
     severity: 'error',
@@ -70,10 +66,6 @@ const VALID_TSCN = '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]';
 const VALID_TRES = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]';
 const INVALID_TSCN = '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\nthis is not a property';
 
-// ============================================================================
-// toVsCodeDiagnostic (pure mapping)
-// ============================================================================
-
 describe('toVsCodeDiagnostic', () => {
   const doc = makeLineSource('first line\nsecond line longer\nthird');
 
@@ -95,8 +87,7 @@ describe('toVsCodeDiagnostic', () => {
 
     it('floors a severity outside the union to Information, not to the constructor default', () => {
       // `SEVERITY_MAP[<off-union>]` is `undefined`, and `vscode.Diagnostic`
-      // defaults an absent severity to Error — so the least confident finding
-      // would read as the most severe thing in the file.
+      // defaults an absent severity to Error, the most severe thing in the file.
       const result = toVsCodeDiagnostic(
         makeCoreDiagnostic({
           severity: 'bogus' as unknown as TscnLintDiagnostic['severity'],
@@ -193,10 +184,6 @@ describe('toVsCodeDiagnostic', () => {
     });
   });
 });
-
-// ============================================================================
-// TscnDiagnostics (lint-document flow)
-// ============================================================================
 
 describe('TscnDiagnostics', () => {
   let collection: ReturnType<typeof createMockDiagnosticCollection>;
@@ -415,13 +402,10 @@ describe('TscnDiagnostics', () => {
   });
 
   describe('textscene.diagnostics.* configuration', () => {
-    // Earlier tests in this file override `onDidOpenTextDocument` et al. via
-    // `.mockImplementation` to capture a handler; `vi.clearAllMocks()` (the
-    // shared `afterEach` in test-setup.ts) clears CALLS but not those
-    // implementations, so a later test would otherwise inherit a stale one.
-    // Reset all five to a plain pass-through disposable before each test
-    // here; individual tests still override whichever handler they need to
-    // capture afterward.
+    // Earlier tests replace `onDidOpenTextDocument` and the others through
+    // `.mockImplementation`, and the shared `vi.clearAllMocks()` clears calls, not
+    // implementations. Each test here starts with all five as a pass-through
+    // disposable and overrides the handler it captures.
     beforeEach(() => {
       (vscode.workspace.onDidOpenTextDocument as Mock).mockImplementation(() => ({ dispose: vi.fn() }));
       (vscode.workspace.onDidSaveTextDocument as Mock).mockImplementation(() => ({ dispose: vi.fn() }));

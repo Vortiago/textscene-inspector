@@ -1,25 +1,7 @@
-; ONE VARIABLE: `surface_material_override/N` on an ArrayMesh — whether a
-; MeshInstance3D's per-surface material override reaches a baked mesh's draw
-; groups, and reaches ONLY the surface it names.
-;
-; unit-arraymesh-surface-override-quads.tres holds two quads whose surfaces BOTH
-; name the same `[sub_resource]` body material, so the mesh alone draws two
-; identical blue plates. The node overrides surface 1 and nothing else, so the
-; correct image is a blue LEFT plate and an amber RIGHT one. The left plate is
-; the control: an override that leaks onto every surface turns both amber, an
-; override that is dropped leaves both blue, and an override applied to the wrong
-; index swaps which plate is amber — three distinct failures, each legible from
-; the pair rather than from either plate on its own.
-;
-; Why a regression here is invisible in every other scene: no other fixture sets
-; `surface_material_override/N` at all, and no other golden puts a node-level
-; material in front of a mesh that already carries its own. `arraymesh` has no
-; material, `arraymesh-uv` and `arraymesh-compressed` take theirs from a shared
-; material file, and `arraymesh-own-material` reads both of its surfaces straight
-; off the mesh — every one of them renders the same picture whether the override
-; path exists or not. `material_override`, which outranks this override on every
-; surface, is deliberately NOT in this scene: a second overriding node would give
-; the image two variables and no way to say which one moved.
+; The one variable: `surface_material_override/1` on an ArrayMesh whose two surfaces share one
+; blue material. Correct is blue left, amber right: a leak turns both amber, a drop leaves both
+; blue, a wrong index swaps them. No other fixture sets surface_material_override/N, and this
+; one leaves out `material_override` so the image has one variable.
 [gd_scene load_steps=3 format=3 uid="uid://unitarraymeshsurfover"]
 
 [ext_resource type="ArrayMesh" path="res://unit-arraymesh-surface-override-quads.tres" id="1_quads"]

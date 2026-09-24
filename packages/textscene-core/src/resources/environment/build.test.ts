@@ -1,12 +1,7 @@
 /**
- * Environment slice BUILD tests — `EnvironmentProperties` in, the settings the
- * render layer applies out.
- *
- * The factory below is a COMPLETE property bag, every field at the value Godot's
- * own `Environment` constructor installs. Test files are outside `tsc`'s reach
- * (the package tsconfig excludes them), so a partial literal here type-checks
- * and then hands the build `undefined` where it expects a number — arithmetic
- * that quietly produces NaN instead of failing.
+ * Environment slice build: `EnvironmentProperties` in, render settings out. The
+ * factory below is a complete property bag at Godot's `Environment` constructor
+ * values: a partial one hands the build `undefined`, which produces NaN, not a failure.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -89,7 +84,7 @@ describe('createEnvironmentSettings', () => {
 
   it('gates flat ambient on ambient_light_source', () => {
     // `base()` is BG source (0) with BG_COLOR (1), so the ambient is the
-    // background colour — black here, but present rather than null.
+    // background colour: black here, but present rather than null.
     expect(createEnvironmentSettings(base()).ambient).toEqual({
       color: { r: 0, g: 0, b: 0, a: 1 },
       energy: 1,
@@ -154,9 +149,8 @@ describe('createEnvironmentSettings — which white the tonemapper is handed', (
   });
 
   it('gives AGX its own tonemap_agx_white instead (regression)', () => {
-    // Reading `tonemap_white` here would hand AgX a high clip of 1 (floored to
-    // 2) rather than Blender's 16.29 — the shoulder would then saturate every
-    // linear input at or above 2.0 that should still be resolving.
+    // `tonemap_white` would hand AgX a high clip of 1 (floored to 2), not Blender's
+    // 16.29, and saturate every linear input at or above 2.0.
     const settings = createEnvironmentSettings(
       base({ tonemap_mode: 4, tonemap_white: 1, tonemap_agx_white: 16.29 })
     );
@@ -169,9 +163,8 @@ describe('createEnvironmentSettings — which white the tonemapper is handed', (
   });
 
   it('leaves the per-curve floor to the curve, not to the settings (edge case)', () => {
-    // `resolvedWhite` applies `environment_get_white`'s floors where the shader
-    // is built; the settings carry the authored value unclamped, so a consumer
-    // that needs it still has it.
+    // `resolvedWhite` applies `environment_get_white`'s floors where the shader is
+    // built. The settings carry the authored value unclamped.
     expect(
       createEnvironmentSettings(base({ tonemap_mode: 2, tonemap_white: 0.5 })).toneMapping.white
     ).toBe(0.5);
@@ -194,9 +187,8 @@ describe('createEnvironmentSettings — which white the tonemapper is handed', (
 
 describe('AgX white end to end — select, then floor', () => {
   it('composes _update_tonemap’s pick with environment_get_white’s floor', async () => {
-    // The two halves are right in isolation elsewhere; this is the composition.
-    // A bare `tonemap_mode = 4` scene must reach the shader at Godot's 16.29,
-    // not at the 2.0 that flooring `tonemap_white` would produce.
+    // The composition: a bare `tonemap_mode = 4` scene reaches the shader at
+    // Godot's 16.29, not the 2.0 that flooring `tonemap_white` would produce.
     const { decodeEnvironment } = await import('./decode');
     const { toneMappingWhiteParam } = await import('./godotToneMapping');
     const settings = createEnvironmentSettings(decodeEnvironment({ tonemap_mode: '4' }));

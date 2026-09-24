@@ -1,8 +1,7 @@
 /**
- * <CanvasItem2D> — the shared CanvasItem ritual (Node2D transform group,
- * z_index draw order, visibility, hierarchical modulate) extracted from the
- * sprite slices. Tests assert through rendered three.js state, mirroring the
- * sprite parity suites.
+ * <CanvasItem2D>, the shared CanvasItem ritual: the Node2D transform group,
+ * z_index draw order, visibility and hierarchical modulate, read from rendered
+ * three.js state.
  */
 import { describe, it, expect } from 'vitest';
 import type * as THREE from 'three';
@@ -13,8 +12,7 @@ import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { CanvasItem2D } from './CanvasItem2D';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../canvasPaintOrder';
 
-/** The world canvas's rank — derived, never hardcoded: only a rank's ORDER
-  * is meaningful, and spacing them for undeclared layers moved the value. */
+/** The world canvas's rank, derived rather than hardcoded: only a rank's order means anything. */
 const WORLD_RANK = layerRankOf(layerRanks([]), 0);
 
 const heading = { type: 'node', attributes: { type: 'Node2D', name: 'CI' } };
@@ -47,7 +45,7 @@ describe('CanvasItem2D', () => {
     expect(group.name).toBe('CI');
     expect(group.position.x).toBeCloseTo(100, 5);
     expect(group.position.y).toBeCloseTo(-50, 5); // Godot +Y down → three −Y
-    // Draw order is `renderOrder`, not depth — the group stays in the z=0 plane.
+    // Draw order is `renderOrder`, not depth: the group stays in the z=0 plane.
     expect(group.position.z).toBeCloseTo(0, 5);
     expect(group.renderOrder).toBe(canvasRenderOrder({ layerRank: WORLD_RANK, zFinal: 2, sequence: 0 }));
     expect(group.rotation.z).toBeCloseTo(-0.5, 5); // clockwise-positive → negated

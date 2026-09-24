@@ -1,5 +1,3 @@
-/**
- * splitcontainer linter registration - imports linter components to trigger self-registration.
- */
+/** SplitContainer linter registration: importing the validators registers them. */
 
 import './linterParser.js';

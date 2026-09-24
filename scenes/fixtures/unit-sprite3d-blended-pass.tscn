@@ -1,35 +1,14 @@
 [gd_scene load_steps=4 format=3]
 
-; ONE VARIABLE: whether a Sprite3D at default `alpha_cut` and FULL modulate
-; alpha still reaches the BLENDED pass — a texture carrying transparent texels,
-; drawn in front of an opaque surface.
-;
-; Godot picks the pass from the generated shader, never from a colour:
-; `_update_shader` emits `ALPHA *= albedo.a * albedo_tex.a` for any transparency
-; but DISABLED (`material.cpp:1836`), and FLAG_PASS_ALPHA follows the shader's
-; booleans alone (`render_forward_clustered.cpp:4079-4090`). Gating on the
-; modulate alpha instead files this sprite in the OPAQUE list, where blending is
-; off and the texture's alpha never composites: every a=0 texel paints its
-; stored RGB, and the quad writes depth over whatever stands behind it.
-;
-; Invisible everywhere else for two independent reasons. The texture: the marker
-; the other Sprite3D scenes draw is RGB with NO alpha channel, and the inline
-; gradient's stops are both alpha 1, so not one sprite texel anywhere else is
-; non-opaque. The arrangement: nothing stands behind any of them, and blending
-; an opaque texel over the background paints exactly what an opaque write does,
-; with no depth-tested geometry for `depth_draw_opaque`'s skipped write to lose.
-;
-; The walk sprite's transparent texels carry RGB (0, 0, 0), decorrelated from
-; their alpha, so an opaque read is a hard BLACK RECTANGLE on the wall rather
-; than a merely dimmer sprite; its antialiased edge band is the graded half of
-; the same consequence. The quad sits strictly inside the wall on all four
-; sides, so that rectangle cannot be read as the environment behind it.
-;
-; The sprite carries nothing but its texture and pixel_size: a modulate alpha
-; below 1, a `transparency`, or a non-default `alpha_cut` all blend under the
-; wrong rule too and would gate nothing. It is also the scene's only alpha-pass
-; object, so the baseline pins no transparent sort order.
+; One variable: whether a Sprite3D at default `alpha_cut` and full modulate alpha reaches the
+; blended pass, with transparent texels over an opaque surface. `_update_shader` emits
+; `ALPHA *= albedo.a * albedo_tex.a` for any transparency but DISABLED (`material.cpp:1836`),
+; and FLAG_PASS_ALPHA follows the shader's booleans (`render_forward_clustered.cpp:4079-4090`).
 
+; Gating on the modulate alpha files this sprite in the opaque list, where blending is off: every
+; a=0 texel paints its stored RGB and the quad writes depth over what stands behind it. Its
+; transparent texels carry RGB (0, 0, 0), so an opaque read is a hard black rectangle on the
+; wall, and the antialiased edge band is the graded half of the same failure.
 [ext_resource type="Texture2D" path="res://textures/dodge-walk1.png" id="1_walk"]
 
 [sub_resource type="QuadMesh" id="QuadMesh_wall"]
@@ -39,6 +18,10 @@ size = Vector2(3.2, 2.6)
 shading_mode = 0
 albedo_color = Color(0.15, 0.55, 0.85, 1)
 
+; Invisible elsewhere for two reasons. The other Sprite3D scenes draw an RGB marker with no alpha
+; channel and an inline gradient with alpha 1 at both stops, so no other sprite texel is
+; non-opaque. And nothing stands behind them, where blending an opaque texel paints what an opaque
+; write does, with no depth-tested geometry for `depth_draw_opaque`'s skipped write to lose.
 [node name="Scene" type="Node3D"]
 
 [node name="Camera3D" type="Camera3D" parent="."]
@@ -50,6 +33,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
 mesh = SubResource("QuadMesh_wall")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
+; Strictly inside the wall on all four sides, so the black rectangle cannot be read as the
+; environment. Only texture and pixel_size: a modulate alpha below 1, a `transparency` or a
+; non-default `alpha_cut` blend under the wrong rule too. It is the only alpha-pass object, so the
+; baseline pins no transparent sort order.
 [node name="TransparentSprite" type="Sprite3D" parent="."]
 texture = ExtResource("1_walk")
 pixel_size = 0.01

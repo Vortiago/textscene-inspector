@@ -1,9 +1,6 @@
 /**
- * ErrorBoundary — the shared class component both PreviewErrorBoundary
- * (around <ViewportArea>) and NodeDispatcher's per-node catch reuse. Plain
- * react-dom render here since error-boundary semantics are renderer-agnostic
- * (a core React feature, not R3F-specific); NodeDispatcher.test.tsx pins the
- * R3F/per-node usage separately.
+ * ErrorBoundary under a plain react-dom render, since boundaries are a core React
+ * feature. NodeDispatcher.test.tsx covers its per-node use inside R3F.
  */
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -49,8 +46,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('renders the fallback when a child throws during render', () => {
-    // React logs the thrown error to console.error twice (dev double-log);
-    // silence it so the test output isn't noisy with an expected throw.
+    // React logs an expected throw to console.error twice in development.
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     render(
@@ -98,11 +94,8 @@ describe('ErrorBoundary', () => {
   });
 
   it('resetKeys: clears a caught error when a resetKey changes, WITHOUT remounting the boundary itself', () => {
-    // Mirrors PreviewErrorBoundary's "clears when the file is fixed" contract
-    // — the fix arrives as new props (a fresh sceneGraph), not a user
-    // click, and must NOT force a remount of everything the boundary wraps
-    // (that would drop viewport camera state / playback state on every
-    // edit, not just a crash recovery).
+    // The fix arrives as new props, a fresh sceneGraph, and must not remount the
+    // wrapped tree, which would drop the camera and playback state on every edit.
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     function Harness({ resetKey, shouldThrow }: { resetKey: string; shouldThrow: boolean }) {
@@ -123,9 +116,8 @@ describe('ErrorBoundary', () => {
     rerender(<Harness resetKey="v1" shouldThrow={true} />);
     expect(screen.getByTestId('fallback')).toBeDefined();
 
-    // A NEW resetKey (the "fixed" scene) — even though the child still WOULD
-    // throw if given the chance, the boundary clears and re-renders children,
-    // which is what proves the reset happened via props, not a remount.
+    // A new resetKey clears the boundary although the child would still throw,
+    // so the reset came through props, not a remount.
     rerender(<Harness resetKey="v2" shouldThrow={false} />);
     expect(screen.queryByTestId('fallback')).toBeNull();
     expect(screen.getByText('safe content')).toBeDefined();

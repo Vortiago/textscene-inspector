@@ -1,14 +1,8 @@
 /**
- * Evaluate a resolved AnimationTree (`AnimNode` graph) at its authored
- * `parameters/*` state into a blend program: the set of clips to play with
- * their effective weights and time scales. A static previewer has no game
- * script driving the parameters, so we evaluate the values saved in the
- * `.tscn` — exactly what the Godot editor's Animation panel shows.
- *
- * Weights follow Godot's blend math at a clip-weight approximation (per-bone
- * filters on Blend2 are not modelled): a clip reachable through several paths
- * accumulates the sum of its path weights. Clips whose weight rounds to zero
- * are dropped so the mixer only runs audible actions.
+ * Evaluates a resolved AnimationTree (`AnimNode` graph) at the `parameters/*` values saved in the
+ * `.tscn`, as the Godot editor's Animation panel does, into a blend program: clips with weights and
+ * time scales. Godot's blend math at a clip-weight approximation, without Blend2's per-bone filters:
+ * a clip on several paths sums their weights, and a clip whose weight rounds to zero is dropped.
  */
 
 import { stripStringName, type AnimNode } from './treeResources';
@@ -35,8 +29,8 @@ export function evaluateTree(
 /**
  * Accumulate `{clip, weight, timeScale}` contributions for `node`, scaling by
  * the inherited `weight` / `timeScale` from ancestor blends. Parameter keys are
- * the BlendTree-local node name (e.g. `gun/blend_amount`); the platformer's
- * trees are flat, so nested-graph parameter scoping is not yet modelled.
+ * the BlendTree-local node name (for example `gun/blend_amount`). Nested-graph
+ * parameter scoping is not modelled.
  */
 function evaluate(
   node: AnimNode | null,
@@ -59,8 +53,8 @@ function evaluate(
     }
 
     case 'add2': {
-      // Additive blend: Godot's add_amount is not a [0,1] lerp, so don't cap at
-      // 1 (only floor at 0 — a negative additive weight is meaningless here).
+      // Additive blend: Godot's add_amount is not a [0,1] lerp, so it is not capped
+      // at 1. It floors at 0, since a negative additive weight means nothing here.
       const amount = Math.max(0, numberParam(params, `${node.name}/add_amount`, 0));
       return [
         ...evaluate(node.base, params, weight, timeScale),

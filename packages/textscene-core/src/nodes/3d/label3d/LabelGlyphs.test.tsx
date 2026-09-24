@@ -1,15 +1,7 @@
 /**
- * `<LabelGlyphs>` — Label3D's glyph-drawing pass, tested directly rather
- * than through `Component.tsx`'s `React.lazy` boundary (see that file's own
- * doc: the lazy content never resolves synchronously under
- * `@react-three/test-renderer`, the same reason
- * `ControlRasterPass.test.tsx` renders `ControlRasterPasses` directly
- * instead of through `ControlRasterLayer`'s lazy wrapper).
- *
- * Covers what the pre-MSDF canvas-rasteriser tests pinned (text presence,
- * font_size sizing, modulate tint, outline presence/absence, no_depth_test,
- * double_sided, multi-line layout) against the new BufferGeometry +
- * ShaderMaterial shape, plus the outline pass this rewrite adds.
+ * `<LabelGlyphs>`, tested directly: `Component.tsx`'s `React.lazy` content never
+ * resolves under `@react-three/test-renderer`. Covers text presence, font_size,
+ * tint, the outline pass, no_depth_test, double_sided and multi-line layout.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -99,10 +91,9 @@ describe('<LabelGlyphs>', () => {
   it('renders no glyph ink for empty text — a zero-width content box, no throw', async () => {
     const renderer = await render(props({ text: '' }));
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    // The raster painter always emits its one quad; "no ink" is the quad
-    // spanning no content at all (with no outline stroke and no skew there
-    // is no horizontal pad to widen it) — down to the single device pixel a
-    // canvas must be at minimum.
+    // The raster painter always emits its one quad. "No ink" is the quad at
+    // the one device pixel a canvas must have, since with no outline stroke
+    // and no skew no horizontal pad widens it.
     expect(boundingSize(mesh).x).toBeCloseTo(1 / CANVAS_TEXT_SUPERSAMPLE, 6);
   });
 
@@ -113,18 +104,14 @@ describe('<LabelGlyphs>', () => {
     const largeMesh = large.scene.findByType('Mesh').instance as THREE.Mesh;
     const smallSize = boundingSize(smallMesh);
     const largeSize = boundingSize(largeMesh);
-    // Both sizes are above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so each
-    // glyph advance is rounded to a WHOLE pixel with the rounding remainder
-    // carried (`text_server_adv.cpp:7079-7084`) — independently at each size,
-    // and the two need not land on the same fractions. Doubling the size
-    // therefore does not exactly double the pen extent; the residual is
-    // bounded by the rounding, not by the scale.
+    // Both sizes are above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so each advance
+    // rounds to a whole pixel with the remainder carried (`text_server_adv.cpp:7079-7084`),
+    // independently at each size. Doubling the size does not exactly double the
+    // pen extent: the residual is bounded by the rounding.
     expect(Math.abs(largeSize.x - smallSize.x * 2)).toBeLessThan(2);
-    // Vertically the quad carries a FIXED anti-aliasing pad on each edge
-    // that does not scale with the glyphs, so the CONTENT box is what grows
-    // — and it too is only near-proportional: ascent and descent each ceil
-    // to a whole pixel INDEPENDENTLY at each size
-    // (`text_server_adv.cpp:1515-1516`).
+    // The quad's vertical anti-aliasing pad is fixed, so the content box is what
+    // grows, and only near-proportionally: ascent and descent each ceil to a
+    // whole pixel independently at each size (`text_server_adv.cpp:1515-1516`).
     const contentHeight = (size: THREE.Vector3) => size.y - 2 * CANVAS_TEXT_VERTICAL_PAD_PX;
     expect(Math.abs(contentHeight(largeSize) - contentHeight(smallSize) * 2)).toBeLessThan(3);
   });
@@ -166,12 +153,10 @@ describe('<LabelGlyphs>', () => {
   });
 
   describe('outline pass', () => {
-    // Godot emits the outline glyphs as their OWN surfaces before the fill
-    // (`label_3d.cpp:610-621`), both `TRANSPARENCY_ALPHA` (`:386`) on the
-    // same cached shader (`:396`) — `blend_mix, depth_draw_opaque`
-    // (`material.cpp:775-812`), ordered by `material_set_render_priority`
-    // (`:402`). Two overlapping alpha-blended surfaces is the engine's own
-    // design, not something to collapse into one draw call.
+    // Godot emits the outline glyphs as their own surfaces before the fill
+    // (`label_3d.cpp:610-621`), both `TRANSPARENCY_ALPHA` (`:386`) on one cached
+    // shader (`:396`), `blend_mix, depth_draw_opaque` (`material.cpp:775-812`),
+    // ordered by `material_set_render_priority` (`:402`).
 
     it('draws the outline as its own surface BEFORE the fill, at outline_render_priority then render_priority', async () => {
       const renderer = await render(props({ outline_size: 12, outline_modulate: { r: 0, g: 0, b: 0, a: 1 } }));
@@ -217,10 +202,8 @@ describe('<LabelGlyphs>', () => {
   });
 
   describe('texture_filter', () => {
-    // Expressible at last: a rasterised glyph texture HAS a magnification
-    // filter, where a distance field never did. `label_3d.h:140` defaults to
-    // LINEAR_WITH_MIPMAPS; the enum's even members are the NEAREST ones
-    // (`material.h:172-177`).
+    // `label_3d.h:140` defaults to LINEAR_WITH_MIPMAPS. The enum's even members
+    // are the NEAREST ones (`material.h:172-177`).
     const mapFilters = (renderer: Awaited<ReturnType<typeof render>>) => {
       const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
         .material as THREE.MeshBasicMaterial;
@@ -250,13 +233,10 @@ describe('<LabelGlyphs>', () => {
   });
 
   describe('alpha_cut', () => {
-    // `label_3d.cpp:401-405`: the priority reaches the renderer as a MATERIAL
-    // render priority only while `alpha_cut == ALPHA_CUT_DISABLED`. Otherwise
-    // the material leaves `TRANSPARENCY_ALPHA`, the priority comparator no
-    // longer applies to it, and Godot bakes `z_shift = priority * pixel_size`
-    // into the vertex Z instead (`:417-420`). Geometry here is Godot px inside
-    // `Component.tsx`'s own `pixel_size` group, so the shift is the bare
-    // priority.
+    // `label_3d.cpp:401-405`: the priority is a material render priority only
+    // while `alpha_cut == ALPHA_CUT_DISABLED`. Otherwise Godot bakes `z_shift =
+    // priority * pixel_size` into the vertex Z (`:417-420`), and here, in Godot px
+    // inside the `pixel_size` group, the shift is the bare priority.
     const surfaceZ = (renderer: Awaited<ReturnType<typeof render>>) =>
       renderer.scene
         .findAllByType('Mesh')
@@ -285,7 +265,7 @@ describe('<LabelGlyphs>', () => {
       expect(surfaceZ(renderer)).toEqual([-3, 4]);
     });
 
-    // `label_3d.cpp:386-393` picks the material's TRANSPARENCY from the same
+    // `label_3d.cpp:386-393` picks the material's transparency from the same
     // property, which is the half the z-shift tests above do not cover.
     const materials = (renderer: Awaited<ReturnType<typeof render>>) =>
       renderer.scene
@@ -309,9 +289,9 @@ describe('<LabelGlyphs>', () => {
     });
 
     it('HASH cuts stochastically and paints opaque; OPAQUE_PREPASS keeps blending but writes depth', async () => {
-      // `label_3d.cpp:390,392`. The prepass cut is the SCENE's
+      // `label_3d.cpp:390,392`. The prepass cut is the scene's
       // `opaque_prepass_threshold` (`render_forward_clustered.cpp:1791`), not
-      // the node's `alpha_scissor_threshold` — authoring one must not move it.
+      // the node's `alpha_scissor_threshold`, so authoring one must not move it.
       const hash = await render(props({ alpha_cut: AlphaCutMode.HASH, alpha_scissor_threshold: 0.25 }));
       const [hashMaterial] = materials(hash);
       expect(hashMaterial!.alphaHash).toBe(true);
@@ -344,12 +324,8 @@ describe('<LabelGlyphs>', () => {
       const renderer = await render(props({ text: 'A\nB\nC', font_size: 32 }));
       const groups = renderer.scene.children.map((c) => c.instance as THREE.Group);
       expect(groups.length).toBe(3);
-      // Every line-group's own Y matches the previous one exactly one line
-      // pitch further down — the render-level equivalent of the deleted
-      // Component.multiline.test.tsx's "grows the quad by one line height
-      // per newline" (there measured as PlaneGeometry.height deltas; here as
-      // each line's own group position, since a line is now its own mesh
-      // rather than one merged canvas).
+      // Each line is its own mesh in its own group, not one quad whose
+      // PlaneGeometry.height grows, so each group's Y sits one line pitch lower.
       const step0 = groups[0]!.position.y - groups[1]!.position.y;
       const step1 = groups[1]!.position.y - groups[2]!.position.y;
       expect(step0).toBeGreaterThan(0);
@@ -361,14 +337,9 @@ describe('<LabelGlyphs>', () => {
       const twoLines = await render(props({ text: 'AB\nCDEFG' }));
       const oneMesh = oneLine.scene.findByType('Mesh').instance as THREE.Mesh;
       const twoMeshes = twoLines.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
-      // "AB\nCDEFG" concatenates to the SAME 7 glyphs as "ABCDEFG" — a
-      // single-fillText/single-merged-geometry implementation would report
-      // the same overall width for both. Neither of the two-line render's
-      // OWN lines ("AB", "CDEFG") is as wide as the one-line render's single
-      // "ABCDEFG" line, which is the render-level equivalent of the deleted
-      // Component.multiline.test.tsx's "sizes the quad from the widest
-      // line, not the concatenated string" (there one PlaneGeometry; here
-      // one mesh per line, so the check is over ALL of them, not just one).
+      // "AB\nCDEFG" has the same 7 glyphs as "ABCDEFG", so one merged geometry
+      // would report one width for both. Each line is its own mesh, so no line
+      // of the two-line render may be as wide as the one-line render.
       const oneWidth = boundingSize(oneMesh).x;
       for (const mesh of twoMeshes) {
         expect(boundingSize(mesh).x).toBeLessThan(oneWidth);

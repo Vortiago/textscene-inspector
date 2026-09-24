@@ -1,45 +1,8 @@
 /**
- * One slot, one width — the parser's read and the validator's declaration may
- * not disagree about it.
- *
- * A slot's `IntWidth` is the C++ type on the far side of the property write, and
- * it is stated TWICE with nothing between the two statements:
- *
- * ```
- * layers: layerBitmask('layers', { hinted: '…', width: 'uint32' })   // validator
- * parseOptionalInt(properties.layers, 'uint32')                      // parser
- * ```
- *
- * They cannot read each other. ADR-0001 keeps the linter out of the webview
- * bundle, so the parser may never import the validator registry, and `src/godot/`
- * — the one module both sides do share — holds the CONVERSION rather than a
- * per-slot table of it: 547 slots declare a width, which is 4.4 KB gzipped
- * shipped to every webview so that the twenty-odd call sites passing a
- * non-default width could look one up.
- * So the two declarations are checked against each other from outside instead,
- * which costs the shipped bundle nothing.
- *
- * The defect this closes is not hypothetical: `intOr` grew a `width` parameter
- * and `parseOptionalInt` did not, so eight bitmask slots the linter declares
- * `uint32` were read as `int32`. `collision_layer = 4294967295` came back as -1,
- * and `layers = 3e9` — a FLOAT literal a uint32 slot holds exactly — came back
- * undefined and rendered as layer 1. The first sweeps found six more, in six
- * files nobody was looking at.
- *
- * ## What it proves, and what it does not
- *
- * Agreement, not correctness. Both sides reading `int32` for a `uint32_t` setter
- * passes here; what catches THAT is the per-property engine citation ADR-0032
- * requires beside the declaration. This guard is the other half: a citation
- * checked on one side only protects that side.
- *
- * ## Why source text
- *
- * The read happens inside a function the registry never sees, so there is no
- * runtime object to ask. Both populations are derived rather than listed — the
- * readers from their own signatures, the call sites from the whole of `src/` —
- * because a roster is the form this defect takes: the shipped bug WAS a list of
- * readers that gained a member nobody added to the other list.
+ * One slot, one width: the parser's read (`parseOptionalInt(properties.layers, 'uint32')`)
+ * and the validator's declaration (`layerBitmask('layers', { width: 'uint32' })`) agree.
+ * They cannot read each other, since ADR-0001 keeps the registry out of the webview
+ * bundle, so this checks them against each other from outside, at no bundle cost.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -54,23 +17,17 @@ import type { IntWidth } from '../godot/index.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 /**
- * The width a reader applies when the call site names none.
- *
- * Every width-taking reader defaults to `int32`, so an OMITTED argument is a
- * declaration of int32 rather than an absence of one — which is exactly how the
- * eight bitmask slots came to be read at the wrong width while looking clean.
+ * The width a reader applies when the call site names none. Every width-taking reader
+ * defaults to `int32`, so an omitted argument declares int32.
  */
 const IMPLIED_WIDTH: IntWidth = 'int32';
 
 const WIDTH_ARGUMENT = /^['"](uint8|int32|uint32|int64)['"]$/;
 
 /**
- * The property bags a slice reads a raw value out of, whatever it calls them.
- *
- * Four spellings for one thing: `properties` (lenient parser), `props` /
- * `rawProps` (rules, reading the same bag off a parsed node) and `data` (a
- * resource decoder's bag). A `[...]` subscript is deliberately NOT matched —
- * the key is then a variable and no cross-check is possible.
+ * The property bags a slice reads a raw value out of: `properties` (lenient parser),
+ * `props` and `rawProps` (rules) and `data` (a resource decoder). A `[...]` subscript
+ * is not matched: its key is a variable, so no cross-check is possible.
  */
 const PROPERTY_READ =
   /^\s*(?:[\w.?![\]]*\.)?(?:properties|props|rawProps|rawProperties|data)\??\.(\w+)\b/;
@@ -99,13 +56,9 @@ function argumentsAt(source: string, open: number): string {
 }
 
 /**
- * One call's arguments, split at the commas that separate them.
- *
- * Depth- and quote-aware, because an argument is routinely a call of its own
- * (`intOr(properties.amount, clamp(a, b), ctx)`) and routinely a template
- * literal (`` `${context}.seed` ``). Splitting on a bare comma read the second
- * half of both as a fresh argument, which put a width literal in a position the
- * reader never sees it.
+ * One call's arguments, split at the commas that separate them. Depth- and quote-aware:
+ * an argument is often a call (`intOr(properties.amount, clamp(a, b), ctx)`) or a template
+ * literal (`` `${context}.seed` ``), and a bare-comma split would misplace a width literal.
  */
 function splitArguments(args: string): string[] {
   const parts: string[] = [];
@@ -132,12 +85,8 @@ function splitArguments(args: string): string[] {
 }
 
 /**
- * Every exported function that takes an {@link IntWidth}, by name.
- *
- * Derived from the signatures rather than listed. The shipped defect was a
- * reader the width never reached, so a hand-written roster of readers has the
- * same blind spot as the bug: `parseOptionalInt` would not have been on it.
- * Whatever names come back are what the sweep below looks for, so a fifth
+ * Every exported function that takes an {@link IntWidth}, derived from the signatures,
+ * not listed: a hand-written roster misses the reader a width never reaches, and a new
  * reader is swept the day it is written.
  */
 function widthTakingReaders(files: readonly string[]): string[] {
@@ -153,14 +102,9 @@ function widthTakingReaders(files: readonly string[]): string[] {
 }
 
 /**
- * The property key each local in a file was bound to, `null` where two bindings
- * of one name disagree.
- *
- * A rule routinely lifts the raw text out first — `const collisionMask =
- * rawProps.collision_mask;` — and reads it a few lines down, which put a uint32
- * mask read at int32 outside a sweep that only looked at the argument itself.
- * One hop, and only from a binding whose right-hand side IS the property read:
- * anything derived from it is no longer that slot's text.
+ * The property key each local in a file was bound to, `null` where two bindings of one
+ * name disagree. A rule often lifts `const collisionMask = rawProps.collision_mask;` and
+ * reads it later. One hop, only from a binding whose right side is the property read.
  */
 function localBindings(source: string): Map<string, string | null> {
   const bound = new Map<string, string | null>();
@@ -184,7 +128,7 @@ export function intReadsIn(source: string, label: string, readers: readonly stri
   for (const match of stripped.matchAll(calls)) {
     const args = splitArguments(argumentsAt(stripped, match.index + match[0].length));
     const first = args[0] ?? '';
-    // Anything else — a subscript, a parameter, an expression — names no slot,
+    // Anything else (a subscript, a parameter, an expression) names no slot,
     // so there is no second declaration to disagree with.
     const key = PROPERTY_READ.exec(first)?.[1] ?? (/^\w+$/.test(first) ? bound.get(first) : undefined);
     if (key === undefined || key === null) continue;
@@ -198,16 +142,10 @@ export function intReadsIn(source: string, label: string, readers: readonly stri
 }
 
 /**
- * The class a file speaks for: the nearest ancestor directory Godot knows as a
- * type.
- *
- * A slice directory IS its class (`nodes/3d/decal/`, `resources/noise/
- * fastnoiselite/`), and the ancestry table holds both hierarchies, so the
- * attribution is derived rather than mapped. It matters that it is per CLASS
- * and not per key name: `FastNoiseLite::set_seed` takes `int`
- * (`fastnoise_lite.h:138`) where `CPUParticles2D::set_seed` takes `uint32_t`
- * (`cpu_particles_2d.h:261`), so a name-keyed check calls the correct read of
- * one of them a defect.
+ * The class a file speaks for: the nearest ancestor directory Godot knows as a type,
+ * since a slice directory is its class. Per class, not per key name: `FastNoiseLite::set_seed`
+ * takes `int` (`fastnoise_lite.h:138`) where `CPUParticles2D::set_seed` takes `uint32_t`
+ * (`cpu_particles_2d.h:261`).
  */
 export function classOf(label: string, classes: ReadonlyMap<string, string>): string | undefined {
   const dirs = label.split('/').slice(0, -1).reverse();
@@ -225,12 +163,8 @@ interface Declared {
 }
 
 /**
- * The declaration side, as the comparison asks about it.
- *
- * A seam with two adapters: the live registry, and the synthetic pair the bite
- * test drives. Without it the comparison reached the singleton directly for an
- * attributed read, so the half of it that runs on every slice file was the half
- * no test could pose a question to.
+ * The declaration side, a seam with two adapters: the live registry and the synthetic
+ * pair the bite test drives, so a test can question the attributed half too.
  */
 interface Declarations {
   /** The width declared for one class's slot, base chain walked. */
@@ -245,11 +179,9 @@ const INT_SLOTS = everyValidator((v) => v.intSlot !== undefined, { atLeast: 2000
 /** The live registry as a {@link Declarations}. */
 function registryDeclarations(): Declarations {
   const byKey = new Map<string, Declared>();
-  // `everyValidator`, not `registeredKeys()` + `declarationFor`: that walk
-  // reaches ROOTS only, so ~60 leaf int slots behind wildcard dispatchers
-  // (`TileMap.layer_#/*`, `Skeleton3D.bones/*`, `MenuButton.popup/item_#/*`)
-  // had no declaration to compare a read against, and every read of one was
-  // `continue`d — skipped, not failed.
+  // `everyValidator`, not `registeredKeys()` + `declarationFor`, which reaches roots
+  // only and would skip every leaf int slot behind a wildcard dispatcher
+  // (`TileMap.layer_#/*`, `Skeleton3D.bones/*`, `MenuButton.popup/item_#/*`).
   for (const { nodeType, key, validator } of INT_SLOTS) {
     const width = validator.intSlot?.width;
     if (width === undefined) continue;
@@ -269,7 +201,7 @@ function registryDeclarations(): Declarations {
 
 /** What the sweep found, split by what a reader has to do about it. */
 interface Verdicts {
-  /** A read and a declaration that disagree — the work list. */
+  /** A read and a declaration that disagree: the work list. */
   disagreements: string[];
   /** A read of an ambiguous key from a file no class owns; nothing can check it. */
   unattributable: string[];
@@ -278,15 +210,9 @@ interface Verdicts {
 }
 
 /**
- * Compare one file's reads against what the registry declares.
- *
- * Takes both populations as arguments so the comparison can be driven with a
- * synthetic pair: a guard whose bite is only ever observed on the live tree is
- * one whose bite nobody has observed.
- *
- * A read the owning class does not declare is skipped, not failed. There is
- * genuinely no second declaration then — `MeshInstance3D.gi_lightmap_scale` has
- * no validator yet — and demanding one here would turn a width guard into a
+ * Compare one file's reads against the declarations, both passed in so a synthetic pair
+ * can drive it. A read its owning class does not declare is skipped, not failed
+ * (`MeshInstance3D.gi_lightmap_scale` has no validator): this is a width guard, not a
  * coverage guard.
  */
 export function verdictsFor(
@@ -333,10 +259,14 @@ const label = (file: string): string => relative(srcRoot, file).replaceAll('\\',
 const treeReads = files.flatMap((file) => intReadsIn(readFileSync(file, 'utf8'), label(file), readers));
 const treeVerdicts = verdictsFor(treeReads, (l) => classOf(l, classes), registryDeclarations());
 
+// Agreement, not correctness: both sides reading `int32` for a `uint32_t` setter passes,
+// and the engine citation ADR-0032 requires beside the declaration catches that. Source
+// text, since the read happens inside a function the registry never sees. A per-slot
+// width table in `src/godot/` would ship to every webview instead.
 describe('an int slot is read at the width its validator declares', () => {
   it('finds every reader the width can be passed to', () => {
-    // The four a slice actually calls, plus whatever else takes the type. A
-    // reader missing from this list is a reader the sweep below cannot see.
+    // The readers a slice calls, plus whatever else takes the type. A reader
+    // missing from this list is a reader the sweep below cannot see.
     expect(readers).toEqual(expect.arrayContaining(['intOr', 'parseGodotInt', 'parseOptionalInt', 'ruleInt']));
   });
 

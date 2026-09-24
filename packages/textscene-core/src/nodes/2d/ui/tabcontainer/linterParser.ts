@@ -1,19 +1,8 @@
 /**
- * TabContainer strict validators for linting.
- *
- * Declare only TabContainer's OWN members: the ones doc/classes/TabContainer.xml
- * lists without an `overrides=` attribute. Everything from Container up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
- *
- * Container itself has no own members (no linterParser.ts in ../container), so
- * this imports Control's directly, matching the scaffold.
- *
- * `tab_<i>/*` is TabContainer's OWN `PropertyListHelper` family
- * (tab_container.cpp:1270-1276) — a SEPARATE `PropertyListHelper` instance
- * from TabBar's already-validated one (tabbar/linterParser.ts), with its own
- * leaf set (title/icon/disabled/hidden, no tooltip). See
- * propertyListRouteCoverage.test.ts.
+ * TabContainer strict validators: only the members doc/classes/TabContainer.xml lists without
+ * `overrides=`, since the base-walk delivers the rest. Container has none, so this imports Control's.
+ * `tab_<i>/*` (tab_container.cpp:1270-1276) is a separate `PropertyListHelper` family from TabBar's,
+ * with `hidden` and no `tooltip` (propertyListRouteCoverage.test.ts).
  */
 
 import '../control/linterParser.js';
@@ -22,14 +11,10 @@ import { v } from '../../../../linter/validators/index.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
-/**
- * `tab_<idx>/<leaf>` leaves, exactly the four
- * `base_property_helper.register_property` calls at tab_container.cpp:1272-1275.
- */
+/** The `tab_<idx>/<leaf>` leaves: the four `register_property` calls at tab_container.cpp:1272-1275. */
 const TAB_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // tab_container.cpp:1272, Variant::STRING, no hint. set_tab_title
-  // (tab_container.cpp:883) assigns any string past an ERR_FAIL on the tab
-  // CONTROL, never on the text.
+  // (tab_container.cpp:883) checks the tab control, never the text.
   title: v.quotedString('title'),
   // tab_container.cpp:1273, Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE "Texture2D".
   icon: v.resourceReference('icon'),
@@ -44,10 +29,8 @@ const tabValidator = indexedFamilyValidator({
   leaves: TAB_LEAVES,
   unknownCode: 'INVALID_TABCONTAINER_TAB_KEY',
   describes: 'tab',
-  // `_set` is `property_helper.property_set_value` verbatim, whose
-  // `_get_property` returns nullptr unless the index `is_valid_int()`
-  // (property_list_helper.cpp:53-55), the same shape TabBar's own tab_<i>/*
-  // family uses.
+  // `_set` is `property_helper.property_set_value`, which drops an index that fails
+  // `is_valid_int()` (property_list_helper.cpp:53-55), as in TabBar's family.
   indexParse: 'is_valid_int',
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',
@@ -58,10 +41,8 @@ const tabValidator = indexedFamilyValidator({
 });
 
 validatorRegistry.registerAll('TabContainer', {
-  // tab_container.cpp:1208, ADD_PROPERTY(..., "tab_alignment", PROPERTY_HINT_ENUM,
-  // "Left,Center,Right"). Delegates to TabBar::set_tab_alignment, which has
-  // `ERR_FAIL_INDEX(p_alignment, ALIGNMENT_MAX)` (tab_bar.cpp:1671,
-  // ALIGNMENT_MAX=3): the enforced ceiling agrees with the hint's 3 labels.
+  // tab_container.cpp:1208, PROPERTY_HINT_ENUM "Left,Center,Right". TabBar::set_tab_alignment's
+  // `ERR_FAIL_INDEX(p_alignment, ALIGNMENT_MAX)` (tab_bar.cpp:1671, ALIGNMENT_MAX=3) agrees with the hint.
   tab_alignment: v.enumInt(
     'tab_alignment',
     0,
@@ -70,15 +51,10 @@ validatorRegistry.registerAll('TabContainer', {
     { enforced: 'tab_bar.cpp:1671' }
   ),
 
-  // tab_container.cpp:1209, PROPERTY_HINT_RANGE "-1,4096,1". set_current_tab
-  // defers to setup_current_tab while outside the tree (tab_container.cpp:744),
-  // resolved on ENTER_TREE (tab_container.cpp:222-224) through
-  // TabBar::set_current_tab. Any value below -1 unconditionally hits
-  // `ERR_FAIL_INDEX(p_current, get_tab_count())` (tab_bar.cpp:804), since a
-  // negative index fails that check regardless of tab count; -1 itself is a
-  // sentinel handled separately (tab_bar.cpp:798) meaning "no tab selected".
-  // CEILING: 4096 exists only in the hint, which carries no or_greater, so it
-  // is a warning — the same split TabBar's own current_tab makes.
+  // tab_container.cpp:1209, PROPERTY_HINT_RANGE "-1,4096,1". Outside the tree, set_current_tab
+  // defers (tab_container.cpp:744) to ENTER_TREE (tab_container.cpp:222-224) and TabBar::set_current_tab,
+  // whose `ERR_FAIL_INDEX` (tab_bar.cpp:804) refuses below -1. -1 means no tab (tab_bar.cpp:798).
+  // 4096 is only in the hint, so it warns.
   current_tab: v.int('current_tab', {
     min: -1,
     max: 4096,
@@ -86,9 +62,8 @@ validatorRegistry.registerAll('TabContainer', {
     hinted: { max: 'tab_container.cpp:1209' },
   }),
 
-  // tab_container.cpp:1210, PROPERTY_HINT_ENUM "Top,Bottom". TabContainer's OWN
-  // set_tabs_position has `ERR_FAIL_INDEX(p_tabs_position, POSITION_MAX)`
-  // (tab_container.cpp:820, POSITION_MAX=2): enforced, agrees with the hint.
+  // tab_container.cpp:1210, PROPERTY_HINT_ENUM "Top,Bottom". set_tabs_position's
+  // `ERR_FAIL_INDEX(p_tabs_position, POSITION_MAX)` (tab_container.cpp:820, POSITION_MAX=2) agrees.
   tabs_position: v.enumInt(
     'tabs_position',
     0,
@@ -114,23 +89,17 @@ validatorRegistry.registerAll('TabContainer', {
   // delegates to TabBar's own, which bare-assigns (tab_bar.cpp:1995).
   drag_to_rearrange_enabled: v.boolean('drag_to_rearrange_enabled'),
 
-  // tab_container.cpp:1216, plain INT, no hint (PROPERTY_HINT_NONE).
-  // set_tabs_rearrange_group delegates to TabBar's own (tab_bar.cpp:2003),
-  // which bare-assigns with no ERR_FAIL and no clamp. Any integer is legal,
-  // including the -1 sentinel that disables cross-container rearranging.
+  // tab_container.cpp:1216, plain INT, PROPERTY_HINT_NONE. set_tabs_rearrange_group delegates
+  // to TabBar's (tab_bar.cpp:2003), which assigns any integer. -1 disables cross-container rearranging.
   tabs_rearrange_group: v.int('tabs_rearrange_group'),
 
   // tab_container.cpp:1217, plain BOOL, no hint.
   // set_use_hidden_tabs_for_min_size bare-assigns.
   use_hidden_tabs_for_min_size: v.boolean('use_hidden_tabs_for_min_size'),
 
-  // tab_container.cpp:1218, PROPERTY_HINT_ENUM "None,Click,All" (3 labels,
-  // 0-2). set_tab_focus_mode delegates to the internal TabBar's
-  // Control::set_focus_mode, whose own `ERR_FAIL_INDEX((int)p_focus_mode, 4)`
-  // (control.cpp:2267) accepts a 4th value (Accessibility, 3) that
-  // TabContainer's own hint never lists. That gap is exactly what a hint
-  // constrains in the widget without the engine refusing it, so 3 is a
-  // warning grounded in this ADD_PROPERTY line, not an error.
+  // tab_container.cpp:1218, PROPERTY_HINT_ENUM "None,Click,All" (0-2). The internal TabBar's
+  // Control::set_focus_mode, `ERR_FAIL_INDEX((int)p_focus_mode, 4)` (control.cpp:2267), also
+  // accepts 3 (Accessibility), which the hint never lists, so 3 warns and does not error.
   tab_focus_mode: v.enumInt(
     'tab_focus_mode',
     0,

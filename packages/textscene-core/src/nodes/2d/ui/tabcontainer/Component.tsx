@@ -1,28 +1,10 @@
 /**
- * `<TabContainer>` — the native (WebGL canvas) painter for `TabContainer`:
- * `TabContainer::_notification(NOTIFICATION_DRAW)` (`tab_container.cpp:247-
- * 277`). Draws the `panel` StyleBox behind the content band, the
- * `tabbar_background` StyleBox across the FULL-width header band (`:262` —
- * an EMPTY box by default, so it draws nothing unless overridden), and the
- * internal tab strip itself inside that band,
- * delegating entirely to `../tabbar/Component.tsx`'s own `<TabBar>` against
- * a synthetic `SolveNode` (`nativeSolver.ts`'s `buildInternalTabBarNode`) —
- * one strip-drawing implementation, not a second copy that could drift.
- *
- * `all_tabs_in_front` decides whether the strip draws BEHIND its pages
- * (`false`, the class default — Godot's own `INTERNAL_MODE_BACK`, which
- * places a child AFTER every regular child, i.e. ON TOP — so the DEFAULT
- * actually draws the strip OVER the current page) or in front of them
- * (`true` — `INTERNAL_MODE_FRONT`, drawn first, UNDER the page). The walker
- * renders this painter's own output BEFORE its children (siblings drawn
- * after), which is already the `true` case; the DEFAULT needs
- * `subtreeChromeRenderOrder` instead (`ControlComponentRegistry.ts`'s own
- * doc on that field).
- *
- * No `Popup`/context-menu is modelled (`get_popup()`), so the popup menu
- * icon this painter's Godot counterpart draws beside the strip never
- * appears — there is nothing for it to open.
+ * `<TabContainer>`: the native (WebGL canvas) painter for `TabContainer::_notification(NOTIFICATION_DRAW)`
+ * (`tab_container.cpp:247` to `:277`). It draws `panel` behind the content band, `tabbar_background`
+ * across the full-width header band (`:262`, empty by default), and the strip through `<TabBar>`
+ * on the synthetic node from `buildInternalTabBarNode`. No popup menu (`get_popup()`) is modelled.
  */
+
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -44,7 +26,7 @@ import {
   tabbarStyleMargins,
 } from './nativeSolver';
 
-/** `default_theme.cpp:1223`: `theme->set_constant("side_margin", "TabContainer", round(8 * scale))` — same literal `nativeSolver.ts`'s own `SIDE_MARGIN_LITERAL` uses for the minimum-size contribution. */
+/** `default_theme.cpp:1223`: `theme->set_constant("side_margin", "TabContainer", round(8 * scale))`, the literal `nativeSolver.ts` uses for the minimum size. */
 const SIDE_MARGIN_LITERAL = 8;
 
 const EMPTY_CHILD_RECTS: NativeControlComponentProps['childRects'] = new Map();
@@ -88,10 +70,9 @@ export function TabContainer({
   const tabbarBackground = solveNode.styleBoxes.tabbar_background;
   const headerBand = tabHeaderBand(rect, headerHeight, tabsPosition);
 
-  // Godot's DEFAULT (`all_tabs_in_front === false`) draws the strip AFTER
-  // every page (`INTERNAL_MODE_BACK`) — this painter's own output otherwise
-  // draws BEFORE its children, so the default case needs the subtree-chrome
-  // slot instead of this node's own paint slot.
+  // Godot's default (`all_tabs_in_front === false`, `INTERNAL_MODE_BACK`) draws the strip
+  // after every page, on top. This painter draws before its children, which is the `true`
+  // case (`INTERNAL_MODE_FRONT`), so the default takes the subtree-chrome slot.
   const stripRenderOrder = allTabsInFront ? renderOrder : subtreeChromeRenderOrder + 0.5;
 
   return (

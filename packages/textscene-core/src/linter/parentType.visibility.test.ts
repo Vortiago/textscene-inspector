@@ -1,10 +1,7 @@
 /**
- * The two families walk different chains, and both stop early. A uniform walk of
- * every ancestor's `visible` key answers `hidden` for trees Godot draws.
- *
- * The Node3D chain is here; the CanvasItem/Viewport search — which climbs
- * further and so answers differently — is the sibling
- * `parentType.canvasItemVisibility.test.ts`.
+ * `visibleInTreeVerdict` down the Node3D chain, which stops early: a uniform walk
+ * of every ancestor's `visible` key answers `hidden` for trees Godot draws. The
+ * CanvasItem chain is in `parentType.canvasItemVisibility.test.ts`.
  */
 
 import { describe, expect, it } from 'vitest';

@@ -1,15 +1,7 @@
 /**
- * `StyleBoxLine` — a resolved `StyleBoxLine` SubResource (`style_box_line.h`/
- * `.cpp`), the generic parse any `theme_override_styles/*` slot resolves to
- * when it names this kind — `Separator` is one caller (`nodes/2d/ui/
- * separator/`), not the only one: any Control's stylebox slot can name a
- * StyleBoxLine, and `native/parseStyleBox.ts` is what dispatches to this
- * parser for all of them.
- *
- * `margin` stores the EFFECTIVE per-side margin (`StyleBox::get_margin`,
- * `style_box.cpp:78-86`: the authored `content_margin`, or — when unset,
- * the `-1` sentinel — `get_style_margin`), not the raw `-1`, mirroring
- * `StyleBoxFlatData.contentMargin`'s own convention.
+ * A resolved `StyleBoxLine` SubResource (`style_box_line.h`/`.cpp`) for any
+ * Control's `theme_override_styles/*` slot, which `native/parseStyleBox.ts`
+ * dispatches here.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -25,28 +17,32 @@ import type { ControlColor } from '../../../nodes/2d/ui/control/types';
 
 export interface StyleBoxLineData {
   color: ControlColor;
-  /** `style_box_line.h:36` — default `1`. */
+  /** `style_box_line.h:36`, default `1`. */
   thickness: number;
-  /** `style_box_line.h:37` — default `false`, independent of the owning widget's own orientation (a `Separator`'s, say). */
+  /** `style_box_line.h:37`, default `false`, independent of the owning widget's orientation. */
   vertical: boolean;
-  /** `style_box_line.h:38` — default `1.0`. */
+  /** `style_box_line.h:38`, default `1.0`. */
   growBegin: number;
-  /** `style_box_line.h:39` — default `1.0`. */
+  /** `style_box_line.h:39`, default `1.0`. */
   growEnd: number;
+  /**
+   * The effective margin (`StyleBox::get_margin`, `style_box.cpp:78-86`): the
+   * authored `content_margin`, or `get_style_margin` when unset, never the raw `-1`.
+   */
   margin: { left: number; top: number; right: number; bottom: number };
 }
 
 const CONTEXT = 'StyleBoxLine';
 
-/** `style_box_line.h:34` — bare `Color color;`, default-constructed opaque black. */
+/** `style_box_line.h:34`: a bare `Color color;`, default-constructed opaque black. */
 const DEFAULT_LINE_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 1 };
 
-/** `style_box.cpp:143`'s sentinel — "ask `get_style_margin`" (also `parseStyleBox.ts`'s `CONTENT_MARGIN_UNSET`). */
+/** `style_box.cpp:143`'s sentinel: "ask `get_style_margin`" (also `parseStyleBox.ts`'s `CONTENT_MARGIN_UNSET`). */
 const CONTENT_MARGIN_UNSET = -1;
 
 type Side = 'left' | 'top' | 'right' | 'bottom';
 
-/** `StyleBoxLine::get_style_margin` (`style_box_line.cpp:33-43`): half the thickness on the axis PERPENDICULAR to `vertical`, zero on the other. */
+/** `StyleBoxLine::get_style_margin` (`style_box_line.cpp:33-43`): half the thickness on the axis perpendicular to `vertical`, zero on the other. */
 function styleMargin(side: Side, vertical: boolean, thickness: number): number {
   const half = thickness / 2;
   if (vertical) return side === 'left' || side === 'right' ? half : 0;
@@ -60,9 +56,9 @@ function marginOr(raw: string | undefined, side: Side, vertical: boolean, thickn
 }
 
 /**
- * Resolve a `theme_override_styles/*` (or any StyleBox-slot) ref to a
- * `StyleBoxLineData`, or `null` for an absent/malformed ref, a non-SubResource
- * form, an unknown id, or a resource that is not a `StyleBoxLine` at all.
+ * Resolves a StyleBox-slot ref to a `StyleBoxLineData`, or `null` for an absent
+ * or malformed ref, a non-SubResource form, an unknown id, or a resource that
+ * is not a `StyleBoxLine`.
  */
 export function parseStyleBoxLine(
   ref: string | undefined,

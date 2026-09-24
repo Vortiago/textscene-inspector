@@ -1,42 +1,8 @@
 /**
- * Semantic rule for GraphElement — `selected = true` authored alongside
- * `selectable = false`.
- *
- * Error tier (ADR-0032): both values are individually legal Godot, but
- * `scene/gui/graph_element.cpp`'s `set_selectable` ALTERS one of them — it
- * forces the element out of selection whenever it is made unselectable,
- * regardless of which property the deserializer applies first:
- *
- *   void GraphElement::set_selectable(bool p_selectable) {
- *       if (!p_selectable) {
- *           set_selected(false);
- *       }
- *       selectable = p_selectable;
- *   }
- *
- * `set_selected` in turn only takes effect while `is_selectable()` is still
- * true:
- *
- *   void GraphElement::set_selected(bool p_selected) {
- *       if (!is_selectable() || selected == p_selected) {
- *           return;
- *       }
- *       selected = p_selected;
- *       ...
- *   }
- *
- * Working through both orderings a text-resource loader could apply the two
- * properties in: if `selectable = false` loads first, `is_selectable()` is
- * already false by the time `selected = true` loads, so that call is a no-op
- * and `selected` stays false. If `selected = true` loads first, `selected`
- * becomes true, then `selectable = false` loading immediately calls
- * `set_selected(false)` — `is_selectable()` still reads the pre-update `true`
- * at that point, so the call *does* take effect and forces `selected` back to
- * false. Either order converges on the same fixed point: a GraphElement can
- * never actually load as selected while unselectable, even though the .tscn
- * text keeps showing `selected = true`.
- *
- * Format validation lives in linterParser.ts.
+ * Semantic rule for GraphElement: `selected = true` authored with
+ * `selectable = false`. Error tier (ADR-0032): `set_selectable(false)` calls
+ * `set_selected(false)` before it stores the flag (`scene/gui/graph_element.cpp`),
+ * and `set_selected` returns early once `is_selectable()` is false.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -45,6 +11,10 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { boolSlotValue } from '../../../../godot/index.js';
 
+// Either load order ends unselected: `selectable` first makes the later
+// `selected = true` a no-op, and `selected` first is undone by the
+// `set_selected(false)` that `set_selectable(false)` runs while `is_selectable()`
+// still reads true. The .tscn keeps showing `selected = true`.
 function checkSelectedRequiresSelectable(context: RuleContext): Diagnostic[] {
   const { node } = context;
   if (!isValidProperties(node.properties)) return [];

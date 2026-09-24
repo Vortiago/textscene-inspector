@@ -1,6 +1,4 @@
-/**
- * NavigationRegion2D-specific type definitions.
- */
+/** The NavigationRegion2D property shape. */
 
 import type { Node2DProperties } from '../../base/node2d/types';
 

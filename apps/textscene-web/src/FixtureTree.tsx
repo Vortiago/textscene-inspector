@@ -1,8 +1,7 @@
 /**
- * Collapsible Category → Project → folder → scene tree — the web app's version
- * of Godot's FileSystem dock, embedded in the scene-switcher palette. Driven by
- * the palette's `query` (recursive name/path filter); branches auto-expand
- * while filtering so matches are visible.
+ * The collapsible Category → Project → folder → scene tree of the scene-switcher
+ * palette, like Godot's FileSystem dock. The palette's `query` filters it by name
+ * and path, and branches expand while filtering so matches show.
  */
 
 import { useMemo, useState } from 'react';

@@ -1,12 +1,8 @@
 /**
- * BaseMaterial3D's Albedo, ORM, Metallic, Roughness, Emission, Normal Map and
- * Bent Normal Map groups (`material.cpp:3611-3648`).
- *
- * A texture slot takes an ExtResource or an inline SubResource; both are
- * `v.resourceReference`, and only a malformed reference errors.
- *
- * The `*_texture_channel` enums are the one error tier here: their setters open
- * with `ERR_FAIL_INDEX(p_channel, 5)`.
+ * BaseMaterial3D's Albedo to Bent Normal Map groups (`material.cpp:3611-3648`). A texture
+ * slot is `v.resourceReference`, so only a malformed reference errors. The
+ * `*_texture_channel` enums are the one error tier: their setters open with
+ * `ERR_FAIL_INDEX(p_channel, 5)`.
  */
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';

@@ -1,10 +1,7 @@
 /**
- * ReferenceRect registration — the parser half only.
- *
- * `nodeComponentRegistry` is the 3D-node registry (`r3f/nodes/`); a 2D-UI
- * Control never registers there, drawn or not — see `index.r3f.test.ts` for
- * the native (WebGL canvas) painter this type DOES register, into
- * `ControlComponentRegistry` instead.
+ * Tests the ReferenceRect parser registration. A 2D-UI Control never registers
+ * in the 3D `nodeComponentRegistry`: `index.r3f.test.ts` tests its
+ * `ControlComponentRegistry` painter.
  */
 
 import { describe, expect, it } from 'vitest';

@@ -1,22 +1,9 @@
 #!/usr/bin/env node
 /**
- * The deployed-site build: the previewer plus the on-demand games corpus.
- *
- * The games corpus (`scenes/games/**`, gitignored) is DEPLOY-ONLY. A developer
- * who ran `pnpm vendor:games` to verify against a real game should not thereby
- * get ~140 game scenes in their local scene selector, but the deployed site
- * does want them — so this is the one entry point that vendors them and sets
- * `VITE_INCLUDE_GAMES=1`. `pnpm dev` and a plain `pnpm build` leave them out.
- *
- * Two consumers read that variable and must agree, or the selector would list
- * scenes whose files were never mirrored:
- *   - `apps/textscene-web/scripts/copy-fixtures.js` → `public/fixtures/games/`
- *   - `apps/textscene-web/src/fixturesAll.ts`       → the `.games.` manifest
- *
- * The variable is set HERE rather than as a shell prefix on the npm script,
- * because `cmd.exe` cannot parse `FOO=1 cmd`.
- *
- * Point the Cloudflare Pages build command at `pnpm build:deploy`.
+ * The deployed-site build: the previewer plus the games corpus (`scenes/games/**`, gitignored).
+ * The corpus is deploy-only, so a local `pnpm vendor:games` keeps it out of the local selector,
+ * and this is the one entry point that vendors it and sets `VITE_INCLUDE_GAMES=1`. Point the
+ * Cloudflare Pages build command at `pnpm build:deploy`.
  */
 import { spawnSync } from 'node:child_process';
 
@@ -26,6 +13,10 @@ const steps = [
   ['pnpm', ['--filter', '@textscene/web-previewer', 'build']],
 ];
 
+// Set here, not as a shell prefix on the npm script: `cmd.exe` cannot parse `FOO=1 cmd`.
+// `apps/textscene-web/scripts/copy-fixtures.js` (to `public/fixtures/games/`) and
+// `apps/textscene-web/src/fixturesAll.ts` (the `.games.` manifest) read it and must agree, or
+// the selector lists unmirrored scenes. `pnpm dev` and a plain `pnpm build` leave it unset.
 const env = { ...process.env, VITE_INCLUDE_GAMES: '1' };
 
 for (const [command, args] of steps) {

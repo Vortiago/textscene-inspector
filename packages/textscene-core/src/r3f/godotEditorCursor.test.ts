@@ -1,9 +1,7 @@
 /**
- * Navigation maths, pinned against Godot's own editor behaviour: the cursor
- * model round-trips with the editor's opening pose, the pole clamp holds, pan
- * carries eye and focus together, zoom never crosses the focus point, freelook
- * pivots on the eye, and each numpad snap looks down the axis Godot's
- * `_menu_option` picks.
+ * Navigation maths against Godot's editor: the cursor round-trips the opening pose, the pole clamp
+ * holds, pan moves eye and focus together, zoom never crosses the focus point, freelook pivots on
+ * the eye, and each numpad snap looks down the axis `_menu_option` picks.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -183,9 +181,8 @@ describe('wheelZoomScale', () => {
   });
 
   it('normalises line- and page-mode deltas to the same notch', () => {
-    // A browser reporting lines sends three of them per notch — the figure
-    // Firefox uses. Reading a line as a ~16px text line would make this 0.48
-    // of a notch and zoom Firefox at roughly half of Chrome's rate.
+    // A browser reporting lines sends three per notch, as Firefox does. Reading a line as a ~16px
+    // text line would make this 0.48 of a notch and zoom Firefox at about half Chrome's rate.
     expect(wheelZoomScale({ deltaY: 3, deltaMode: 1 })).toBeCloseTo(1.08, 9);
     expect(wheelZoomScale({ deltaY: 1, deltaMode: 2 })).toBeCloseTo(1.08, 9);
   });
@@ -197,9 +194,8 @@ describe('wheelZoomScale', () => {
   });
 
   it('composes: a trackpad’s stream of small events zooms exactly as far as one big one', () => {
-    // The whole point of scaling exponentially rather than linearly in
-    // notches. A linear factor makes sixteen tiny events overshoot one
-    // equivalent event, which is precisely the mouse-vs-trackpad mismatch.
+    // A linear factor makes sixteen tiny events overshoot one equivalent event, which is the
+    // mismatch between a mouse and a trackpad.
     const streamed = Array.from({ length: 16 }, () => wheelZoomScale({ deltaY: 10 })).reduce(
       (a, b) => a * b,
       1
@@ -233,8 +229,8 @@ describe('resolveWheelMode', () => {
 
   it('zooms on ctrl, which is both Godot’s zoom modifier and a trackpad pinch', () => {
     expect(resolveWheelMode({ ctrlKey: true })).toBe('zoom');
-    // A pinch reports ctrl; shift held at the same time must not turn it into
-    // a pan, or a shift-pinch would fly the view off instead of zooming.
+    // A pinch reports ctrl. Shift held at the same time must not turn it into a pan, or a
+    // shift-pinch would fly the view off instead of zooming.
     expect(resolveWheelMode({ ctrlKey: true, shiftKey: true })).toBe('zoom');
   });
 });

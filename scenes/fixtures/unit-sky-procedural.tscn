@@ -1,9 +1,7 @@
-; A scene-owned ProceduralSkyMaterial, authored well away from Godot's defaults
-; so the gradient shape is legible: a saturated orange sky over a green ground,
-; with a low sun whose disc the shader draws into the sky itself.
-;
-; The scene carries BOTH a WorldEnvironment and a DirectionalLight3D, so neither
-; editor preview applies — everything here is the scene's own.
+; A scene-owned ProceduralSkyMaterial far from Godot's defaults, so the gradient shape is
+; legible: a saturated orange sky over a green ground, with a low sun whose disc the shader
+; draws into the sky. The scene carries both a WorldEnvironment and a DirectionalLight3D, so no
+; editor preview applies.
 [gd_scene load_steps=6 format=3]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_mat"]

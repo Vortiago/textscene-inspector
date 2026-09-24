@@ -1,19 +1,7 @@
 /**
- * Per-panel "active camera" state.
- *
- * `activeCameraPath === null` means the user is in free-orbit mode and
- * the R3F canvas uses its own `<PerspectiveCamera makeDefault>`. When
- * set to a node path, the canvas switches `state.camera` to the Camera3D
- * node at that path (or one of its descendant cameras).
- *
- * The action buttons live in `<NodeDetailsPanel>` for Camera3D-selected
- * nodes; the canvas reads `activeCameraPath` and uses `useThree().set`
- * to swap.
- *
- * Also carries a reset handler so the toolbar's "Reset Camera"
- * button can frame the orbit-controls back to its default. The canvas
- * registers the navigation handle's `reset` via `registerResetHandler`; the
- * toolbar calls `resetCamera()`.
+ * The panel's active camera. `activeCameraPath === null` means free orbit
+ * with the canvas's own camera. A node path makes the canvas look through the
+ * Camera3D there. It also carries the handlers the toolbar's buttons call.
  */
 
 import {
@@ -29,11 +17,11 @@ import {
 
 /** One-shot 2D framing request: frame the Canvas2DStage on a Camera2D's view. */
 export interface Frame2DRequest {
-  /** View center in Godot canvas pixels. */
+  /** The view centre in Godot canvas pixels. */
   center: { x: number; y: number };
   /** Stage magnification. */
   zoom: number;
-  /** Monotonic id so the stage can re-apply identical consecutive requests. */
+  /** Monotonic, so the stage re-applies two identical requests in a row. */
   requestId: number;
 }
 
@@ -42,38 +30,24 @@ export interface CameraControlContextValue {
   switchToCamera: (path: string) => void;
   returnToFreeView: () => void;
   /**
-   * Latest 2D framing request (consumed by `<Canvas2DStage>`); null until a
-   * 2D camera is "used". One-shot: the stage applies it once per requestId
-   * and the user keeps free pan/zoom afterwards.
+   * The latest 2D framing request, null until a 2D camera is used. The stage
+   * applies it once per requestId, and free pan and zoom follow.
    */
   frame2D: Frame2DRequest | null;
   requestFrame2D: (view: { center: { x: number; y: number }; zoom: number }) => void;
   /**
-   * Frame the orbit-controls back to its initial state. No-op when no
-   * canvas has registered a reset handler yet (e.g. during the brief
-   * mount window before `<TscnCanvas>`'s effect runs).
+   * Frames the camera back to its initial state. Does nothing until a canvas
+   * registers a reset handler.
    */
   resetCamera: () => void;
-  /**
-   * Called from `<TscnCanvas>` so the toolbar's reset button can drive
-   * the canvas's `<GodotEditorControls>`. Returns an unregister callback so
-   * the canvas can drop the handler on unmount.
-   *
-   * Implementation detail: the handler is stored in a ref so consumers
-   * (the toolbar) don't re-render every time the canvas's
-   * useEffect re-runs.
-   */
+  /** `<TscnCanvas>` registers its `<GodotEditorControls>` reset here, and gets the cleanup. */
   registerResetHandler: (handler: () => void) => () => void;
   /**
-   * Capture the current 3D viewport as a PNG data URL. Returns
-   * `null` when no canvas has registered a handler yet (e.g. in 2D mode,
-   * or during the brief mount window before `<TscnCanvas>`'s effect runs).
+   * The 3D viewport as a PNG data URL, or `null` before a canvas registers a
+   * handler, as in 2D mode.
    */
   takeScreenshot: () => string | null;
-  /**
-   * Called from `<TscnCanvas>` so the toolbar's screenshot button can pull
-   * a frame from the canvas's WebGLRenderer. Mirrors `registerResetHandler`.
-   */
+  /** `<TscnCanvas>` registers the frame capture of its WebGLRenderer here. */
   registerScreenshotHandler: (handler: () => string | null) => () => void;
 }
 
@@ -81,10 +55,9 @@ const CameraControlContext = createContext<CameraControlContextValue | null>(nul
 CameraControlContext.displayName = 'CameraControlContext';
 
 /**
- * A canvas-registered handler slot (reset, screenshot, …): the handler lives
- * in a ref so registration never re-renders consumers, and the returned
- * unregister only clears the slot if it still holds THAT handler (a newer
- * canvas may have replaced it before the old one unmounts).
+ * A handler slot in a ref, so a registration re-renders no consumer. The
+ * cleanup clears the slot only while it holds that handler, since a newer
+ * canvas may replace it before the old one unmounts.
  */
 function useHandlerSlot<T>(): {
   ref: MutableRefObject<T | null>;
@@ -105,11 +78,8 @@ function useHandlerSlot<T>(): {
 export interface CameraControlProviderProps {
   children: ReactNode;
   /**
-   * The camera to activate on mount, if any — a Camera3D node path (as
-   * `useNodePath` reports it) the host resolved from a deep-link (the web
-   * previewer's `?camera=` query param). `<ActiveCameraSwitcher>` looks it up
-   * once the scene has rendered; switching scenes drops back to free-orbit
-   * (`<SceneChangeResetter>`), so it only ever frames the deep-linked scene.
+   * A Camera3D node path to activate on mount, from a deep link. A scene
+   * switch drops back to free orbit, so it frames only the linked scene.
    */
   initialActiveCameraPath?: string | null;
 }
@@ -189,7 +159,7 @@ export function useCameraControl(): CameraControlContextValue {
   return value;
 }
 
-/** Optional variant — returns null instead of throwing when no provider is mounted. */
+/** Returns null instead of throwing when no provider is mounted. */
 export function useOptionalCameraControl(): CameraControlContextValue | null {
   return useContext(CameraControlContext);
 }

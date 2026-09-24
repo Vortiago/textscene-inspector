@@ -1,12 +1,5 @@
 /**
- * Sprite3D `billboard` actually turns the sprite.
- *
- * The mode was stashed in `mesh.userData.billboardMode` with no reader anywhere
- * in the codebase, so a billboarded sprite never faced the camera — while the
- * sibling Label3D slice implemented the same property properly. Two vendored
- * scenes pair the two node types side by side to demonstrate the modes
- * (scenes/demos/3d/sprites/3d_sprites.tscn `Testers/Billboard`), so the label
- * turned and the sprite beside it did not.
+ * Sprite3D `billboard` turns the sprite to face the camera, as Label3D does for the same property.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -25,9 +18,8 @@ function node(raw: Record<string, string> = {}): TscnNode {
 }
 
 /**
- * Render with a declared-but-unloaded texture — the branch that keeps the
- * node's own transform group mounted — advance a frame, and report the object
- * billboarding was applied to.
+ * Render with a declared but unloaded texture (the branch that keeps the node's own transform group
+ * mounted), advance a frame, and report the object billboarding was applied to.
  */
 const EXTERNALS = [{ id: '1_tex', path: 'res://sprite.png', type: 'Texture2D' }] as const;
 

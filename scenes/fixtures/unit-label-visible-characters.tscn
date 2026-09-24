@@ -1,11 +1,9 @@
 [gd_scene format=3 uid="uid://unit_label_visible_characters"]
 
-; `visible_characters`, frozen mid-reveal at the default VC_CHARS_BEFORE_SHAPING
-; behaviour — the ONE variable this fixture pins away from unit-label-2d.tscn,
-; whose three Labels never set it. Godot truncates the STRING before shaping
-; (label.cpp:155-156), so the trailing "reveal" characters do not exist as
-; glyphs at all rather than existing but hidden — a regression that draws the
-; full string, or draws it dimmed instead of shortened, is visible only here.
+; `visible_characters` mid-reveal at the default VC_CHARS_BEFORE_SHAPING, the one variable
+; against unit-label-2d.tscn. Godot truncates the string before shaping (label.cpp:155-156), so
+; the trailing "reveal" characters are not glyphs at all. Drawing the full string, or drawing it
+; dimmed instead of shortened, shows only here.
 
 [node name="Root" type="Control"]
 anchors_preset = 15

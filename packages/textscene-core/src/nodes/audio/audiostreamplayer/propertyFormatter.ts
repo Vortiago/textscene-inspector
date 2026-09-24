@@ -1,6 +1,6 @@
 /**
- * AudioStreamPlayer property formatter — sections shown in the
- * details panel. AudioStreamPlayer is non-spatial (no visual representation),
+ * AudioStreamPlayer property formatter: the sections the details panel
+ * shows. AudioStreamPlayer is non-spatial (no visual representation),
  * so it calls out the "not played in preview" status.
  */
 

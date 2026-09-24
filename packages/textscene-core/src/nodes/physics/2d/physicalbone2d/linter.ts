@@ -1,18 +1,7 @@
 /**
- * Semantic linter rules for PhysicalBone2D.
- *
- * Format validation is in linterParser.ts. This file covers the three
- * scene-context checks `PhysicalBone2D::get_configuration_warnings` performs
- * (scene/2d/physics/physical_bone_2d.cpp:109-126), which need the surrounding
- * tree rather than the node's own properties:
- *   1. the node needs a Skeleton2D ancestor, reached through zero or more
- *      PhysicalBone2D parents (`_find_skeleton_parent`, cpp:79-95);
- *   2. once that ancestor exists, `bone2d_index` must actually name a bone;
- *   3. a PhysicalBone2D chained under another PhysicalBone2D should carry a
- *      Joint2D-derived child to keep the two bones connected.
- *
- * All three are advisory in Godot's own configuration-warnings panel, so they
- * are `warning` severity here too.
+ * Semantic linter rules for PhysicalBone2D: the three tree checks of
+ * `PhysicalBone2D::get_configuration_warnings` (scene/2d/physics/physical_bone_2d.cpp:109-126).
+ * Each is a configuration warning, so each warns here. linterParser.ts does the format checks.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -27,17 +16,14 @@ import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 type SkeletonAncestry = 'found' | 'absent' | 'unknowable';
 
 /**
- * physical_bone_2d.cpp:79-95 `_find_skeleton_parent()` — walks up through a
- * chain of PhysicalBone2D ancestors until it reaches a Skeleton2D. Any other
- * type stops the walk immediately (the engine's `current_parent` goes null),
- * so a PhysicalBone2D under, say, a plain Node2D never finds one either.
- *
- * `unknowable` is a third answer rather than a second way of saying `absent`:
- * an ancestor whose class is declared in the scene it was instanced from could
- * be the Skeleton2D, the next bone in the chain, or the type that ends the
- * walk, and calling it none of the three warns on every rig built that way.
- * The engine's casts are `cast_to`, so subclasses count, hence `descendsFrom`.
+ * physical_bone_2d.cpp:79-95 `_find_skeleton_parent()`: walks up a chain of PhysicalBone2D
+ * ancestors to a Skeleton2D. Any other type stops the walk. The casts are `cast_to`, so
+ * subclasses count (`descendsFrom`).
  */
+
+// `unknowable` is not `absent`: an ancestor whose class its instanced scene declares could be
+// the Skeleton2D, the next bone or the terminator, and ruling all three out warns on every
+// rig built that way.
 function skeletonAncestry(scene: TscnScene, node: TscnNode): SkeletonAncestry {
   const search = searchAncestors<'found' | 'absent'>(scene, node, (ancestor) => {
     if (descendsFrom(ancestor.type, 'Skeleton2D')) return 'found';
@@ -49,13 +35,9 @@ function skeletonAncestry(scene: TscnScene, node: TscnNode): SkeletonAncestry {
 }
 
 /**
- * The "Joint2D-based child" physical_bone_2d.cpp:118-122 asks for.
- *
- * Derived, not rostered: Godot's own test is a `cast_to<Joint2D>`, so any
- * subclass counts and a hand-listed set goes stale the day the engine or a
- * GDExtension adds one. `descendsFrom` is reflexive, so a plain `Joint2D`
- * still matches; a child whose class this build has never heard of MAY be one,
- * so it counts as unseeable rather than as absent.
+ * The "Joint2D-based child" physical_bone_2d.cpp:118-122 asks for. Godot's test is a
+ * `cast_to<Joint2D>`, so any subclass counts, through the reflexive `descendsFrom`, not a
+ * hand-listed roster. A child of a class this build does not know may be one, so it is unseeable.
  */
 function jointChildVerdict(children: readonly TscnNode[]): 'present' | 'absent' | 'unknowable' {
   if (children.some((child) => descendsFrom(child.type, 'Joint2D'))) return 'present';

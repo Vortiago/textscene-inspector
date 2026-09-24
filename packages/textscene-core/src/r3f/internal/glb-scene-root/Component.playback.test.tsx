@@ -1,8 +1,7 @@
 /**
- * GLBSceneRoot animation-driver tests — a GLB instance's embedded clips are
- * surfaced through the selection-driven Animation transport (ADR-0012) and
- * driven by a full-object THREE.AnimationMixer rooted on the loaded GLB
- * (the GLB counterpart to AnimationPlayer / ADR-0011).
+ * A GLB instance's embedded clips reach the selection-driven Animation transport (ADR-0012) and
+ * play through a THREE.AnimationMixer rooted on the loaded GLB, the counterpart of
+ * AnimationPlayer (ADR-0011).
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -26,16 +25,15 @@ import {
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import { initGlbModules } from '../../../resources/processing/glbProcessing';
 
-// GLBSceneRoot clones Object3D via cloneWithMaterials which requires the lazy
-// GLB module cache to be initialised first.
+// GLBSceneRoot clones through cloneWithMaterials, which needs the lazy GLB module cache.
 beforeAll(async () => {
   await initGlbModules();
 });
 
 const GLB_PATH = 'res://player.glb';
 const GLB_NODE_PATH = 'Root/player';
-// Godot parity: clips surface on an AnimationPlayer node in the hierarchy, so
-// the driver activates when this child path — not the GLB root — is selected.
+// As in Godot, clips surface on an AnimationPlayer child, so selecting this path, not the GLB
+// root, activates the driver.
 const GLB_ANIM_PATH = 'Root/player/AnimationPlayer';
 
 /** A GLB-like object: a Scene group with a movable child, carrying clips. */
@@ -104,8 +102,8 @@ async function mountScene({ select = GLB_ANIM_PATH }: { select?: string | null }
 }
 
 function moverX(renderer: Awaited<ReturnType<typeof mountScene>>): number {
-  // Mover lives inside the mounted <primitive> (the cloned GLB), so it is not
-  // a fiber node — traverse the real THREE scene by name instead.
+  // Mover lives inside the mounted <primitive>, the cloned GLB, so it is no fiber node: traverse
+  // the THREE scene by name.
   const root = renderer.scene.instance as THREE.Object3D;
   const mover = root.getObjectByName('Mover');
   if (!mover) throw new Error('Mover not found in mounted GLB');
@@ -118,7 +116,7 @@ describe('GLBSceneRoot animation driver — transport registration', () => {
     expect(transport.clips).toEqual([]); // not selected -> not registered
 
     await setSelection(GLB_NODE_PATH);
-    expect(transport.clips).toEqual([]); // the GLB ROOT no longer drives the tab
+    expect(transport.clips).toEqual([]); // the GLB root does not drive the tab
 
     await setSelection(GLB_ANIM_PATH);
     expect(transport.clips).toEqual(['idle', 'slide']); // the AnimationPlayer node does
@@ -160,8 +158,8 @@ describe('GLBSceneRoot animation driver — playback', () => {
   });
 
   it('restores the authored pose when it loses selection mid-playback', async () => {
-    // The mixer is torn down on deselect (it is gated on selection), so the
-    // effect cleanup — not the playback loop — must restore the authored pose.
+    // Deselect removes the mixer, so the effect cleanup, not the playback loop, must restore the
+    // authored pose.
     const renderer = await mountScene();
     await ReactThreeTestRenderer.act(async () => transport.selectClip('slide'));
     await ReactThreeTestRenderer.act(async () => transport.play());

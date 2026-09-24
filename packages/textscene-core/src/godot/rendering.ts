@@ -1,51 +1,32 @@
-/** RenderingServer-wide limits, as the engine declares them. */
+/**
+ * RenderingServer-wide limits, as the engine declares them. They live here because classes with
+ * no shared ancestor that owns the property read them, so a per-slice copy would diverge. Each
+ * constant carries the numbers, not the grounding: cite the setter's `file:line` at each call site.
+ */
 
 /**
- * `RenderingServer::MATERIAL_RENDER_PRIORITY_MIN` / `_MAX`
- * (`servers/rendering/rendering_server.h:258-259`), the closed range every
- * material render-order property is held to.
- *
- * A RenderingServer fact, not any node's: it grounds `SpriteBase3D.render_priority`
- * (`sprite_3d.cpp:383`), both `Label3D.render_priority` (`label_3d.cpp:766`) and
- * `Label3D.outline_render_priority` (`label_3d.cpp:778`), and `Material.render_priority`
- * (`material.cpp:65`), where `material.h:74-75` aliases the pair straight from the
- * RS enum. A Material resource and a SpriteBase3D node share no ancestor that
- * owns the property, so there is no slice to hoist onto and re-spelling the pair
- * per slice is how the numbers drift apart.
- *
- * ENFORCED, not merely hinted: each setter opens with
- * `ERR_FAIL_COND(p_priority < MIN || p_priority > MAX)`, so a value outside the
- * range is refused rather than clamped. Cite the SETTER's `file:line` at each
- * call site — this constant carries the numbers, not the grounding.
+ * `RenderingServer::MATERIAL_RENDER_PRIORITY_MIN` / `_MAX` (`servers/rendering/rendering_server.h:258-259`),
+ * enforced: each setter opens with `ERR_FAIL_COND(p_priority < MIN || p_priority > MAX)` and refuses, not clamps.
+ * Grounds `SpriteBase3D.render_priority` (`sprite_3d.cpp:383`), `Label3D.render_priority` (`label_3d.cpp:766`),
+ * `Label3D.outline_render_priority` (`label_3d.cpp:778`) and `Material.render_priority` (`material.cpp:65`, `material.h:74-75` aliases the RS pair).
  */
 export const MATERIAL_RENDER_PRIORITY_MIN = -128;
 /** See {@link MATERIAL_RENDER_PRIORITY_MIN}. */
 export const MATERIAL_RENDER_PRIORITY_MAX = 127;
 
 /**
- * `RenderingServer::CANVAS_ITEM_Z_MIN` / `_MAX`
- * (`servers/rendering/rendering_server.h:103-104`), the depth window a 2D draw
- * order is expressed in.
- *
- * Godot spells these into the inspector hint by string concatenation
- * (`itos(RS::CANVAS_ITEM_Z_MIN) + "," + itos(RS::CANVAS_ITEM_Z_MAX)`), which is
- * why the numbers appear in several unrelated `.cpp` files and why a slice that
- * re-types them is the drift risk. Both ends are CLOSED in the hint — neither
- * `,or_greater` nor `,or_less` — so a value outside them is a warning wherever
- * the setter merely assigns, and an error only where a setter clamps.
- * Cite the SETTER's `file:line` at each call site; these constants carry the
- * numbers, not the grounding.
+ * `RenderingServer::CANVAS_ITEM_Z_MIN` / `_MAX` (`servers/rendering/rendering_server.h:103-104`), a 2D draw order's depth
+ * window. Godot concatenates them into the hint (`itos(RS::CANVAS_ITEM_Z_MIN) + "," + itos(RS::CANVAS_ITEM_Z_MAX)`), so
+ * the numbers appear in unrelated `.cpp` files. Both hint ends are closed, with no `,or_greater` or `,or_less`: a value
+ * outside warns where the setter assigns, and errors only where a setter clamps.
  */
 export const CANVAS_ITEM_Z_MIN = -4096;
 /** See {@link CANVAS_ITEM_Z_MIN}. */
 export const CANVAS_ITEM_Z_MAX = 4096;
 
 /**
- * `RenderingServer::CANVAS_LAYER_MIN` / `_MAX`
- * (`servers/rendering/rendering_server.h:105-106`), int32's own limits —
- * declared in the same enum block as the Z pair above and spelled into their
- * hints the same way (`light_2d.cpp:311-312`, `canvas_layer.cpp:340`).
- * Cite the SETTER's `file:line` at each call site; these carry the numbers.
+ * `RenderingServer::CANVAS_LAYER_MIN` / `_MAX` (`servers/rendering/rendering_server.h:105-106`), int32's own limits,
+ * declared beside the Z pair and spelled into their hints the same way (`light_2d.cpp:311-312`, `canvas_layer.cpp:340`).
  */
 export const CANVAS_LAYER_MIN = -2147483648;
 /** See {@link CANVAS_LAYER_MIN}. */

@@ -1,5 +1,5 @@
 /**
- * GPUParticles3D registration — parser.
+ * GPUParticles3D registration: parser.
  *
  * Reuses the Node3D parse; property knowledge lives in linterParser.ts.
  * The previewer does not simulate or draw particles, so index.r3f.ts registers

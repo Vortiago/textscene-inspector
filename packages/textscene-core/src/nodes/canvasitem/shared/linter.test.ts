@@ -1,15 +1,13 @@
 /**
- * CanvasItem clip-ancestry rule — `CanvasItem::get_configuration_warnings()`
- * (canvas_item.cpp:1297-1323): the node's OWN `clip_children_mode`, then an
- * ancestor walk for a clipping CanvasItem and a CanvasGroup.
- *
- * `Sprite2D`/`Node2D` stand in for the Node2D tree and `Label`/`Control` for
- * the Control tree — this rule's whole point is reaching both.
+ * CanvasItem clip-ancestry rule, `CanvasItem::get_configuration_warnings()`
+ * (canvas_item.cpp:1297-1323): the node's own `clip_children_mode`, then an ancestor walk for a
+ * clipping CanvasItem and a CanvasGroup. `Sprite2D`/`Node2D` stand in for the Node2D tree and
+ * `Label`/`Control` for the Control tree, since the rule reaches both.
  */
 import { describe, it, expect } from 'vitest';
 import { node, scene, lint, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
 import './linter';
-// Pulled in only for the one test asserting this rule fires ALONGSIDE
+// Pulled in only for the one test asserting this rule fires beside
 // CanvasGroup's own ancestor-clip rule, not for this rule's own behavior.
 import '../../2d/canvasgroup/linter.js';
 
@@ -38,7 +36,7 @@ describe('CanvasItem clip-ancestry rule', () => {
 
     it('stays silent when own clip_children is non-finite', () => {
       // A non-finite reads as NaN, and `NaN !== CLIP_CHILDREN_DISABLED` is true,
-      // so a bare inequality read a value off the number line as a clipping mode.
+      // so a bare inequality would read a value off the number line as a clipping mode.
       for (const spelling of ['nan', 'inf', 'inf_neg']) {
         expectNoDiagnostic(
           scene(
@@ -98,7 +96,7 @@ describe('CanvasItem clip-ancestry rule', () => {
     });
 
     it('warns naming the NEAREST clipping ancestor when the chain passes through several', () => {
-      // Both Far and Near independently trip this rule on THEMSELVES too (each
+      // Both Far and Near independently trip this rule on themselves too (each
       // clips and each has a clipping ancestor of its own where applicable), so
       // this narrows to the Sprite2D leaf specifically.
       const diagnostic = lint(
@@ -140,7 +138,7 @@ describe('CanvasItem clip-ancestry rule', () => {
     ).filter((d) => d.nodeName === 'Inner');
     // Godot really does emit both here: CanvasGroup::get_configuration_warnings
     // opens with Node2D::get_configuration_warnings, which resolves to
-    // CanvasItem's — so the CanvasItem-tier rule and CanvasGroup's own rule
+    // CanvasItem's, so the CanvasItem-tier rule and CanvasGroup's own rule
     // both fire, with different wording, not a duplicate to dedupe.
     expect(diagnostics.map((d) => d.ruleName).sort()).toEqual([
       'canvasgroup-ancestor-clips-children',

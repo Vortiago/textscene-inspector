@@ -1,20 +1,8 @@
 /**
- * A `.tscn` chooses the text that indexes our lookup tables — a node type, a
- * property key, a property value — and `Object.prototype`'s members are legal
- * text.
- *
- * Bare indexing on a plain object answers for all of them: `constructor` yields
- * the `Object` FUNCTION, `__proto__` yields `Object.prototype`, and `valueOf`
- * yields a method that throws when called with no receiver. So a four-line
- * scene reached three different failures — a hard crash that killed the whole
- * lint, a diagnostic whose message interpolated `function Object() { [native
- * code] }`, and a bare string pushed where a `ParseError` was expected.
- *
- * Every table keyed by scene text therefore reads through `Object.hasOwn` or is
- * a `Map`. The per-table unit tests cannot see a NEW table missing the guard,
- * which is what this sweep is for: it drives the two real entry points with
- * prototype names in each position and asserts the linter neither throws nor
- * invents a diagnostic.
+ * Scene text indexes our lookup tables, and `constructor`, `__proto__` and
+ * `valueOf` are legal text, so every such table reads through `Object.hasOwn`
+ * or is a `Map`. This sweep puts prototype names in each position of both entry
+ * points: the linter neither throws nor invents a diagnostic.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,8 +12,8 @@ import '../linter/index.js';
 
 /**
  * Names reachable through a plain object's prototype chain. `valueOf` and
- * `hasOwnProperty` are the ones that THREW; `toString` returned a string;
- * `constructor` and `__proto__` returned an object.
+ * `hasOwnProperty` throw without a receiver, `toString` returns a string, and
+ * `constructor` and `__proto__` return an object.
  */
 const PROTOTYPE_KEYS = [
   'constructor',
@@ -52,7 +40,7 @@ describe('the node-type table answers only for types it declares', () => {
 
   it('keeps an unknown GDExtension class unknowable rather than mismatched', () => {
     // The distinction `isCatalogedType` exists for: a prototype name answering
-    // true put a made-up class on the "known, and not a CollisionObject3D" side.
+    // true puts a made-up class on the "known, and not a CollisionObject3D" side.
     expect(isCatalogedType('JBody3D')).toBe(false);
   });
 

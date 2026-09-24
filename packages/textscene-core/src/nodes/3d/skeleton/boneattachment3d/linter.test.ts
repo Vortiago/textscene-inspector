@@ -1,6 +1,6 @@
 /**
- * Tests for the BoneAttachment3D skeleton-resolution rule
- * (`boneattachment3d-parent-not-skeleton3d` / `boneattachment3d-external-skeleton-unset`).
+ * The BoneAttachment3D skeleton-resolution rule (`boneattachment3d-parent-not-skeleton3d` and
+ * `boneattachment3d-external-skeleton-unset`).
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -87,7 +87,7 @@ use_external_skeleton = true
   });
 
   // `_update_external_skeleton_cache` fills the cache only when `has_node` is
-  // true AND the node casts to Skeleton3D (cpp:81-92); either miss leaves
+  // true and the node casts to Skeleton3D (cpp:81-92). Either miss leaves
   // `external_skeleton_node_cache.is_null()` true at cpp:64, so Godot warns.
   it('warns when the external path names no reachable node', () => {
     const content = `[gd_scene format=3]
@@ -154,7 +154,7 @@ external_skeleton = NodePath("")
   });
 
   it('stays quiet under a parent BoneAttachment3D, whose external skeleton it inherits', () => {
-    // bone_attachment_3d.cpp:93-108: with the flag on and an EMPTY path, the
+    // bone_attachment_3d.cpp:93-108: with the flag on and an empty path, the
     // cache is taken from a parent BoneAttachment3D's own external skeleton, so
     // the empty path here is a legitimate authoring state.
     const content = `[gd_scene format=3]
@@ -189,8 +189,8 @@ use_external_skeleton = true
   });
 
   it('leaves its own fixture clean', () => {
-    // Whole-file check of the "zero errors and zero warnings" claim, for the
-    // rule half; the validator half lives in linterParser.test.ts.
+    // Whole-file check of the "zero errors and zero warnings" claim, for the rule half. The
+    // validator half lives in linterParser.test.ts.
     const content = readFixture('unit-bone-attachment-3d.tscn');
     expect(ruleDiagnostics(linter.lint(content))).toEqual([]);
   });

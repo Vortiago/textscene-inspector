@@ -6,13 +6,9 @@
   background: var(--tsi-bg-elevated);
   border-bottom: 1px solid var(--tsi-border);
   font-size: var(--tsi-font-sm);
-  /* On big fixtures (e.g. `example-hallway.tscn` with 9+
-     missing externals) this panel grew unboundedly, pushed the tree +
-     details panels off the bottom of the sidebar, and made the tree
-     unreachable. Cap at a portion of the viewport and scroll inside.
-     `flex-shrink: 0` keeps the cap honest under the parent flex
-     container — without it, the panel would still try to claim its
-     natural intrinsic height. */
+  /* Capped and scrolled inside, so many missing externals cannot push the
+     tree off the sidebar. `flex-shrink: 0` keeps the cap under the parent
+     flex container, which would otherwise size it by its content. */
   flex-shrink: 0;
   max-height: 30vh;
   overflow-y: auto;
@@ -33,11 +29,8 @@
 }
 
 .item {
-  /* Stack icon/path on top, action below, so the path gets the
-     full sidebar width before deciding whether to truncate. Common
-     `res://textures/<file>.png` paths fit on one line; longer paths
-     ellipsize but the full path is still discoverable via `title=` hover
-     and the row's `data-path` attribute. */
+  /* Icon and path on top, action below, so the path gets the full width. A
+     longer path ellipsizes, and `title=` and `data-path` keep it whole. */
   display: flex;
   flex-direction: column;
   gap: var(--tsi-space-1);
@@ -85,11 +78,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-  /* `direction: rtl` keeps the filename visible when the path is too
-     long for the row — ellipsis lands at the start of the string
-     (`…textures/test_texture.png`) instead of clobbering the basename
-     (`res://tex…`). `unicode-bidi: plaintext` keeps the actual
-     characters in their original left-to-right order. */
+  /* `direction: rtl` puts the ellipsis at the start (`…textures/test_texture.png`),
+     so the filename stays visible. `unicode-bidi: plaintext` keeps the
+     characters in left-to-right order. */
   direction: rtl;
   unicode-bidi: plaintext;
   text-align: left;

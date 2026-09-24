@@ -1,48 +1,9 @@
 /**
- * Which items a 2D light reaches — Godot's whole test, and the class key it
- * forces on the accumulator.
- *
- * The per-ITEM half is one condition, in
- * `drivers/gles3/rasterizer_canvas_gles3.cpp`, `_record_item_commands` (line
- * 1347 on master):
- *
- *   if (light->render_index_cache >= 0 && p_item->light_mask & light->item_mask &&
- *       p_item->z_final >= light->z_min && p_item->z_final <= light->z_max &&
- *       p_item->global_rect_cache.intersects(light->rect_cache)) {
- *
- * The LAYER half is tested once per canvas rather than per item, in
- * `servers/rendering/renderer_viewport.cpp`, `_draw_viewport` (line 1220):
- *
- *   RendererCanvasRender::Light *ptr = lights;
- *   while (ptr) {
- *       if (E.value->layer >= ptr->layer_min && E.value->layer <= ptr->layer_max) {
- *           ptr->next_ptr = canvas_lights;
- *           canvas_lights = ptr;
- *       }
- *       ptr = ptr->filter_next_ptr;
- *   }
- *
- * where `E.value->layer` is the canvas's own layer — 0 for the world canvas,
- * the CanvasLayer's `layer` (Godot default 1) inside one. It decides whether the
- * light is handed to that canvas AT ALL, and it is cross-canvas: a light
- * declared anywhere lights every canvas whose layer falls in its range.
- *
- * Both comparisons are inclusive at both ends, and neither swaps an inverted
- * pair — `min > max` is simply an empty interval, since `Light2D`'s four setters
- * assign and forward with no CLAMP and no reordering. Confirmed on Godot 4.6.3
- * as well as read: with `range_z_max = 4`, a z_index-4 panel lights and a
- * z_index-5 one does not; with `range_z_min = 4` the z_index-4 panel still
- * lights and the z_index-0 one does not.
- *
- * WHY THIS IS A CLASS KEY. The light pass accumulates `S` for a whole SET of
- * lights into one screen-space buffer, and an item then multiplies its albedo by
- * what that buffer holds. Nothing downstream can subtract one light's
- * contribution back out per fragment, so two lights may only share a buffer when
- * no item can tell them apart. The five values above are the entire light side
- * of the test, so agreeing on all five is exactly that condition — and the
- * partition that used to be "by cull mask" becomes "by this tuple", with no
- * change for any light that leaves the four range properties at their defaults.
- *
+ * Which items a 2D light reaches, and the class key that forces on the accumulator. The per-item
+ * test is `_record_item_commands` in `drivers/gles3/rasterizer_canvas_gles3.cpp` (line 1347 on
+ * master): the light mask, the `z_final` window and the rects.
+ */
+/*
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -51,44 +12,42 @@
 import { POINT_LIGHT_2D_RANGE_DEFAULTS } from '../../nodes/2d/pointlight2d/types.js';
 
 /**
- * Everything a light contributes to Godot's cull test — and therefore the whole
- * identity of an accumulation class.
+ * Everything a light contributes to the cull test, and so the identity of an accumulation class. A
+ * buffer sums its lights and nothing downstream subtracts one back out, so two lights share a
+ * buffer only when no item can tell them apart: when all five values agree.
  */
 export interface LightCullKey {
   /**
-   * `Light2D.range_item_cull_mask`, ANDed against each CanvasItem's own
-   * `light_mask`. NOT the light node's `light_mask`, which is its CanvasItem
-   * mask and says nothing about what it lights.
+   * `Light2D.range_item_cull_mask`, ANDed against each CanvasItem's own `light_mask`. Not the
+   * light node's `light_mask`, which is its CanvasItem mask and says nothing about what it lights.
    */
   readonly itemCullMask: number;
-  /** `Light2D.range_z_min` — the lowest accumulated `z_index` this light reaches. */
+  /** `Light2D.range_z_min`: the lowest accumulated `z_index` this light reaches. */
   readonly zMin: number;
-  /** `Light2D.range_z_max` — the highest, inclusive. */
+  /** `Light2D.range_z_max`: the highest, inclusive. */
   readonly zMax: number;
-  /** `Light2D.range_layer_min` — the lowest CANVAS layer this light is handed to. */
+  /**
+   * `Light2D.range_layer_min`: the lowest canvas layer this light is handed to. `_draw_viewport` in
+   * `servers/rendering/renderer_viewport.cpp` (line 1220) tests it once per canvas: 0 for the world
+   * canvas, the CanvasLayer's `layer` (default 1) inside one, so a light reaches any canvas in range.
+   */
   readonly layerMin: number;
-  /** `Light2D.range_layer_max` — the highest, inclusive. */
+  /** `Light2D.range_layer_max`: the highest, inclusive. */
   readonly layerMax: number;
 }
 
 /**
- * The window an untouched `Light2D` carries, as a cull key — the engine values
- * live in `POINT_LIGHT_2D_RANGE_DEFAULTS`, beside the properties they parse.
- *
- * The z pair is wide enough to go unnoticed on a scene whose z stays small, but
- * it is a window like any other; the layer pair is not wide at all, and is why a
- * default light never lights a default CanvasLayer.
+ * An untouched `Light2D`'s window, from `POINT_LIGHT_2D_RANGE_DEFAULTS`. The z pair is wide but
+ * still a window. The layer pair is narrow, which is why a default light never lights a default
+ * CanvasLayer.
  */
 export const DEFAULT_LIGHT_CULL_KEY: LightCullKey = POINT_LIGHT_2D_RANGE_DEFAULTS;
 
 /**
- * Does this light reach this item?
- *
- * `itemZ` is Godot's `z_final` — the item's accumulated, clamped `z_index` (see
- * `canvasItemPlacement`) — and `itemLayer` is the layer of the CANVAS the item
- * belongs to, not a property of the item. JS `&` is a signed 32-bit operation
- * over exactly the 32 bits Godot compares, and `!== 0` reads the result the same
- * way `if` does in C++.
+ * `itemZ` is Godot's accumulated, clamped `z_final` (`canvasItemPlacement`), and `itemLayer` is the
+ * layer of the item's canvas. Bounds are inclusive and `min > max` is empty: the four setters
+ * neither clamp nor reorder (probed on Godot 4.6.3). JS `&` covers the 32 bits Godot compares, and
+ * `!== 0` reads it as C++'s `if` does.
  */
 export function lightReachesItem(
   key: LightCullKey,
@@ -113,7 +72,6 @@ export function lightCullKeyId(key: LightCullKey): string {
   return `${key.itemCullMask}|${key.zMin}|${key.zMax}|${key.layerMin}|${key.layerMax}`;
 }
 
-/** Do two keys describe the same class? */
 export function sameLightCullKey(a: LightCullKey, b: LightCullKey): boolean {
   return (
     a.itemCullMask === b.itemCullMask &&
@@ -125,13 +83,9 @@ export function sameLightCullKey(a: LightCullKey, b: LightCullKey): boolean {
 }
 
 /**
- * A total order over cull keys, cull mask first.
- *
- * The classes are SORTED rather than mount-ordered so a class's index — and
- * therefore its camera layer and its slot in every item's uniform array —
- * depends only on WHICH keys are present, never on which light mounted first.
- * Leading with the mask keeps a scene that authors no range window ordered
- * exactly as it was when the mask alone was the key.
+ * A total order over cull keys, cull mask first. Sorted, not mount-ordered, so a class's index,
+ * camera layer and uniform slot depend only on which keys are present. With no range window
+ * authored, the order is the mask order.
  */
 export function compareLightCullKeys(a: LightCullKey, b: LightCullKey): number {
   return (

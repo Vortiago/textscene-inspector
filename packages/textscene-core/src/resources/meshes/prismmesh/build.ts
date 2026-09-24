@@ -1,18 +1,8 @@
 /**
  * PrismMesh geometry, ported from Godot `PrismMesh::_create_mesh_array`
- * (`primitive_meshes.cpp:1610-1873`).
- *
- * The cross-section is a TRIANGLE in the XY plane — apex at the top, base at the
- * bottom, the apex's X placed by `left_to_right` (`:1670`) — extruded along Z.
- * Five surfaces: the front and back triangular caps (`:1663`), the two slanted
- * sides whose normals tilt with `left_to_right` (`:1746-1752`), and the base
- * (`:1822`). The apex row collapses onto one line, so its quads degenerate into
- * the triangle fan Godot emits at `j == 1` (`:1706`).
- *
- * Two conversions, the same pair `arraymesh/build.ts` applies to baked Godot
- * geometry: each index triple is reversed (Godot fronts triangles clockwise,
- * three expects counter-clockwise) and V is flipped (Godot's UV origin is the
- * image's top left).
+ * (`primitive_meshes.cpp:1610-1873`): a triangle in the XY plane, apex at the top,
+ * extruded along Z. It reverses each index triple and flips V, the two
+ * conversions `arraymesh/build.ts` applies to baked Godot geometry.
  */
 
 import * as THREE from 'three';
@@ -48,6 +38,7 @@ export function buildPrismMeshGeometry(p: PrismMeshProperties): THREE.BufferGeom
   ): void => {
     positions.push(position[0], position[1], position[2]);
     normals.push(normal[0], normal[1], normal[2]);
+    // Godot's UV origin is the image's top left.
     uvs.push(u, 1 - v);
     point++;
   };
@@ -56,7 +47,7 @@ export function buildPrismMeshGeometry(p: PrismMeshProperties): THREE.BufferGeom
     indices.push(a, c, b);
   };
 
-  /* front + back — the triangular caps */
+  /* front + back: the triangular caps (`:1663`), apex X by `left_to_right` (`:1670`) */
   let y = start.y;
   let thisrow = point;
   let prevrow = 0;
@@ -78,7 +69,8 @@ export function buildPrismMeshGeometry(p: PrismMeshProperties): THREE.BufferGeom
 
       const i2 = i * 2;
       if (i > 0 && j === 1) {
-        // The row below is the collapsed apex, so each quad is one triangle.
+        // The row below is the collapsed apex, so each quad is one triangle, the
+        // fan Godot emits at `j == 1` (`:1706`).
         triangle(prevrow + i2, thisrow + i2, thisrow + i2 - 2);
         triangle(prevrow + i2 + 1, thisrow + i2 + 1, thisrow + i2 - 1);
       } else if (i > 0 && j > 0) {
@@ -96,7 +88,7 @@ export function buildPrismMeshGeometry(p: PrismMeshProperties): THREE.BufferGeom
     thisrow = point;
   }
 
-  /* left + right — the slanted sides, whose tilt follows the apex */
+  /* left + right: the slanted sides, whose normals tilt with `left_to_right` (`:1746-1752`) */
   const normalLeft = normalize(-size.y, size.x * leftToRight, 0);
   const normalRight = normalize(size.y, size.x * (1 - leftToRight), 0);
 
@@ -132,7 +124,7 @@ export function buildPrismMeshGeometry(p: PrismMeshProperties): THREE.BufferGeom
     thisrow = point;
   }
 
-  /* bottom — the rectangular base */
+  /* bottom: the rectangular base (`:1822`) */
   let z = start.z;
   thisrow = point;
   prevrow = 0;

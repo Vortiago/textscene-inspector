@@ -1,19 +1,6 @@
 /**
- * `<ConnectionLine>` — one resolved GraphEdit connection: the curve
- * (`connectionCurve.ts`, `GraphEdit::get_connection_line`) tessellated and
- * stroked (`connectionStroke.ts`, the shader's fixed AA/rim bands) into a
- * hand-built `BufferGeometry`, painted the same way `<StyleBoxQuad>` paints
- * `border_blend`: vertex colours stay raw sRGB and are decoded per-fragment,
- * because linearising the two endpoint colours before the GPU interpolates
- * between them bends the ramp (`StyleBoxQuad.tsx`'s own doc for the measured
- * error this avoids).
- *
- * Positions bake their own Y flip (`connectionStroke.ts`), so this renders a
- * bare `<mesh>` with no wrapping flip group — `Line2D`'s own pattern for a
- * hand-built stroke, not `StyleBoxQuad`'s (whose geometry module emits
- * un-flipped absolute coordinates instead). Being a raw mesh rather than a
- * `<ControlQuad>`/`<StyleBoxQuad>`, it spreads `useControlClipPlanes()` on
- * its own account (`nativeClipCoverage.test.tsx`'s own doc).
+ * `<ConnectionLine>`: one resolved GraphEdit connection, the curve of `connectionCurve.ts`
+ * (`GraphEdit::get_connection_line`) stroked by `connectionStroke.ts` into a `BufferGeometry`.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -45,6 +32,7 @@ function toStrokeColor(c: ControlColor): RGBA {
 }
 
 export function ConnectionLine({ connection, curvature, lineWidth, rimColor, tintOwn, renderOrder }: ConnectionLineProps) {
+  // A raw mesh, so it applies the clip planes itself (`nativeClipCoverage.test.tsx`).
   const clippingPlanes = useControlClipPlanes();
   const geometry = useMemo(() => {
     const controlPoints = connectionControlPoints(connection.from.pos, connection.to.pos, curvature);
@@ -76,6 +64,8 @@ export function ConnectionLine({ connection, curvature, lineWidth, rimColor, tin
     merge: [canvasItemFacing()],
   });
 
+  // The positions carry their own Y flip (`connectionStroke.ts`), so no flip group wraps the
+  // mesh, as for `Line2D`.
   return (
     <mesh renderOrder={renderOrder}>
       <primitive object={geometry} attach="geometry" />
@@ -84,13 +74,16 @@ export function ConnectionLine({ connection, curvature, lineWidth, rimColor, tin
   );
 }
 
-/** Shared with the minimap's own polyline (`MinimapChrome.tsx`), which colours its vertices the same way. */
+/** Shared with the minimap polyline (`MinimapChrome.tsx`), which colours its vertices the same way. */
 export const CONNECTION_SRGB_VERTEX_COLORS: ProgramInjection = {
   cacheKey: 'godot-graphedit-connection-srgb-vertex-colors',
   onBeforeCompile: decodeVertexColorsFromSRGB,
 };
 
-/** `Color::srgb_to_linear`, applied to the interpolated vertex colour — `StyleBoxQuad.tsx`'s own copy, for the same reason. */
+/**
+ * `Color::srgb_to_linear`, applied to the interpolated vertex colour, as `StyleBoxQuad.tsx`
+ * does for `border_blend`: linearising the endpoint colours before the GPU lerp bends the ramp.
+ */
 function decodeVertexColorsFromSRGB(shader: { fragmentShader: string }): void {
   shader.fragmentShader = shader.fragmentShader.replace(
     '#include <color_fragment>',

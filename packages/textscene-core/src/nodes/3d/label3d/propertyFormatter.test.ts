@@ -1,6 +1,4 @@
-/**
- * Tests for the Label3D property formatter.
- */
+/** Label3D property formatter. */
 
 import { describe, it, expect } from 'vitest';
 import { formatLabel3DProperties } from './propertyFormatter';
@@ -18,8 +16,7 @@ function section(sections: ReturnType<typeof formatLabel3DProperties>, title: st
 
 describe('formatLabel3DProperties', () => {
   it('shows "(empty)" placeholder text, pixel size, and billboard mode by default (disabled)', () => {
-    // Label3D's billboard defaults to DISABLED (see Component.parity.test.tsx:
-    // "was ENABLED → labels wrongly tracked camera").
+    // Label3D's billboard defaults to DISABLED (Component.parity.test.tsx).
     const text = section(formatLabel3DProperties(props()), 'Text')!;
     expect(text.items).toEqual([
       { label: 'Text', value: '(empty)' },

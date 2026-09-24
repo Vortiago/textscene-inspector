@@ -1,18 +1,7 @@
 /**
- * <Path2D> — a Node2D that holds a Curve2D. It resolves + tessellates the curve
- * and ALWAYS provides it to descendants via Path2DCurveProvider (so a
- * PathFollow2D child can follow it regardless of selection), and draws the curve
- * as a **selection-gated** white polyline gizmo (ADR-0018) — visible only while
- * this node is selected, mirroring Godot's 2D editor path line.
- *
- * The curve sampler stays in Path2D-local Godot space (+Y down); each curve
- * vertex (px, py) is drawn at three-local (px, -py) inside the conjugated
- * diag(1,-1,1) Node2D group, matching Polygon2D's Y-negation convention.
- *
- * Degrades gracefully: a missing curve, an ExtResource (.tres) curve, or a
- * SubResource that isn't found yields a null sampler → no gizmo, and children
- * fall back to their authored transform. Real scenes set the curve at runtime
- * via script (e.g. godot-open-rpg's gamepiece.tscn), so absence is normal.
+ * Draws a Path2D: it tessellates its Curve2D, always provides it to descendants
+ * so a PathFollow2D child follows it, and draws it as a selection-gated white
+ * polyline gizmo (ADR-0018), as Godot's 2D editor does.
  */
 
 import { useMemo } from 'react';
@@ -41,9 +30,9 @@ export function Path2D({ node, children }: NodeComponentProps) {
   const sampler = useMemo<Curve2DSampler | null>(() => {
     if (!props.curve) return null;
     const ref = parseResourceReference(props.curve);
-    // Only embedded SubResource Curve2D is resolved synchronously; an external
-    // .tres curve would need the async resource pipeline (not used by real
-    // scenes here) — degrade to null.
+    // Only an embedded SubResource Curve2D resolves synchronously. Any other
+    // curve gives a null sampler: no gizmo, and children keep their authored
+    // transform. A script often sets the curve at runtime, so absence is normal.
     if (!ref || ref.type !== 'SubResource') return null;
     const sub = findSubResource(internalResources, ref.id);
     if (!sub) return null;
@@ -66,8 +55,8 @@ function PathCurveGizmo({ sampler }: { sampler: Curve2DSampler }) {
 }
 
 /**
- * Turn the flat Godot-space polyline `[x0,y0,x1,y1,…]` into LineSegments
- * vertex positions `(v0,v1),(v1,v2),…`, applying the +Y-down → three Y-negation.
+ * Turns the flat Godot-space polyline `[x0,y0,x1,y1,…]` into LineSegments
+ * positions `(v0,v1),(v1,v2),…`, negating Y inside the Node2D group.
  */
 function buildPolylineSegments(points: number[]): Float32Array {
   const vertexCount = Math.floor(points.length / 2);

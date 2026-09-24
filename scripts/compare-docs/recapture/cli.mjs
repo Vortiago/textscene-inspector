@@ -14,15 +14,13 @@ export function parseArgs(argv) {
         a.only = argv[++i];
         if (!a.only) throw new Error('--only needs an image-name fragment');
         break;
-      // A dropped flag is not a narrower run, it is the whole gallery: `--onl
-      // unit-decal` left `only` null and re-rendered every committed image from
-      // the working tree.
+      // An unknown flag such as `--onl` would leave `only` null and re-render
+      // every committed image.
       default:
         throw new Error(`Unknown flag ${argv[i]}`);
     }
   }
-  // Each flag turns the OTHER side off, so passing both selects neither: the run
-  // printed "Re-rendering N image(s)…" and exited 0 having rendered nothing.
+  // Each flag turns the other side off, so both together select neither.
   if (!a.godot && !a.ours) throw new Error('--godot and --ours are mutually exclusive');
   return a;
 }

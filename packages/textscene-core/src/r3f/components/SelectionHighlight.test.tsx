@@ -1,16 +1,7 @@
 /**
- * Regression test for viewport selection feedback.
- *
- * Pins the wire from `SelectionContext.selectedNodePath` →
- * `THREE.BoxHelper` attached to the canvas scene. Before this fix the
- * tree click updated `selectedNodePath` but nothing rendered in 3D, so
- * the user could not tell which object in the viewport corresponded to
- * the row they were inspecting.
- *
- * Mounts `TscnSceneContents` (the inside-`<Canvas>` half of TscnCanvas)
- * with a SelectionProvider + HierarchyProvider, then drives selection
- * changes through the provider and asserts the scene contains a
- * `BoxHelper` whose target is the dispatcher-registered Object3D.
+ * A selected path puts a `BoxHelper` in the canvas scene around the Object3D
+ * the dispatcher registered for it. The tests mount `TscnSceneContents` with
+ * a SelectionProvider and a HierarchyProvider.
  */
 import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -92,7 +83,6 @@ describe('<SelectionHighlight> (WI-UX-2)', () => {
 
     const helper = findBoxHelper(renderer.scene.instance as unknown as THREE.Scene);
     expect(helper).not.toBeNull();
-    // BoxHelper is green to match main's HelperManager highlight color.
     const lineMaterial = (helper as unknown as { material: THREE.LineBasicMaterial }).material;
     expect(lineMaterial.color.getHex()).toBe(0x00ff00);
   });
@@ -135,7 +125,7 @@ describe('<SelectionHighlight> (WI-UX-2)', () => {
     expect(helperB).not.toBeNull();
     const targetB = (helperB as unknown as { object: THREE.Object3D }).object;
     expect(targetB).toBeDefined();
-    // New selection ⇒ helper must point at a different Object3D.
+    // A new selection moves the helper to a different Object3D.
     expect(targetB).not.toBe(targetA);
   });
 

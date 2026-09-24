@@ -1,5 +1,5 @@
 /**
- * BoxShape3D decode — property bag in, box extents out.
+ * BoxShape3D decode: property bag in, box extents out.
  *
  * `box_shape_3d.cpp:100` ERR_FAILs when ANY component is negative, refusing the
  * whole assignment, so a partly-negative size keeps the `Vector3(1, 1, 1)`

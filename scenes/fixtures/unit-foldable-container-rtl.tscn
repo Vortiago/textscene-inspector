@@ -1,16 +1,7 @@
-; The ONE variable: `layout_direction = 3` on a FoldableContainer. RTL moves
-; three things at once in the SAME node, and Godot moves them together: the
-; fold arrow goes to the trailing edge and, while folded, becomes
-; `folded_arrow_mirrored` (foldable_container.cpp:293-300,428-435); the title
-; text starts at the style's leading margin with `title_alignment` LEFT and
-; RIGHT swapped (`:503-511`); and the content is inset from the panel style's
-; RIGHT margin (`:365-367`). The folded pair shows the arrow and the alignment
-; swap, the unfolded pair the content inset, each against its own LTR twin.
-; unit-foldable-container.tscn moves folded/alignment/position at direction
-; LTR, so none of this is visible there. The folded pair carries no children:
-; a folded container's children are hidden by Godot at sort time, which this
-; previewer cannot yet reproduce, and a child here would put that separate
-; divergence into this fixture's picture.
+; One variable: `layout_direction = 3` on a FoldableContainer, which moves three things together.
+; The fold arrow goes to the trailing edge and, while folded, becomes `folded_arrow_mirrored`
+; (foldable_container.cpp:293-300,428-435). The title starts at the style's leading margin with
+; `title_alignment` LEFT and RIGHT swapped (:503-511). The content insets from the right margin (:365-367).
 
 [gd_scene format=3]
 
@@ -25,6 +16,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
+; The folded pair shows the arrow and the alignment swap, the open pair the content inset, each
+; against its LTR twin. unit-foldable-container.tscn moves folded, alignment and position at LTR
+; only. The folded pair has no children: Godot hides them at sort time, which the previewer
+; does not reproduce, and a child would add that divergence to this picture.
 [node name="FoldedLtr" type="FoldableContainer" parent="."]
 layout_mode = 1
 offset_left = 40.0

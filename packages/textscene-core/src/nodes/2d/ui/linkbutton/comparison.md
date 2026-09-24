@@ -9,9 +9,9 @@ renders_as: a text run with an optional underline stroke
 
 # LinkButton
 
-LinkButton is a hyperlink-style button that opens `uri` when pressed (never navigated by
-this previewer). The previewer draws the label text with no StyleBox chrome, plus a
-solid underline stroke when `underline` calls for it at the node's draw state.
+LinkButton is a hyperlink-style button that opens `uri` when pressed. The previewer
+never navigates. It draws the label text with no StyleBox chrome, and a solid underline
+stroke when `underline` asks for it at the node's draw state.
 
 ## Linting
 
@@ -40,17 +40,17 @@ Strict parsing format-checks these `LinkButton` properties, plus 10 inherited fr
 | `valid-button-group` (type-family match) | `button-group-without-toggle-mode` | warning |
 <!-- lint:end -->
 
-`linterParser.ts` format-checks all nine of LinkButton's own members. `parser.ts` reads
-`text`, `uri`, `underline`, `text_overrun_behavior` and `ellipsis_char`; `language`,
-`text_direction` and the structured-text-bidi pair pass into the untyped property bag
-with no substitution.
+`linterParser.ts` format-checks all of LinkButton's own members. `parser.ts` reads
+`text`, `uri`, `underline`, `text_overrun_behavior` and `ellipsis_char`. `language`,
+`text_direction` and the structured-text-bidi pair go into the untyped property bag with
+no substitution.
 
 ## Known limitations
 
-- **Approximated** A `theme_override_fonts/font` scene font's underline position and
-  thickness still come from the vendored Open Sans metrics — no scene font carries its
+- **Approximated** A `theme_override_fonts/font` scene font takes its underline position
+  and thickness from the vendored Open Sans metrics, because no scene font carries its
   own baked underline data.
 - **Approximated** The label's paragraph direction is not applied, so under
   `layout_direction = 3` or `text_direction = 2` a right-to-left script, or a label
-  ending in punctuation, keeps left-to-right glyph order. Which EDGE the label and its
+  ending in punctuation, keeps left-to-right glyph order. Which edge the label and its
   underline hug does follow the layout direction.

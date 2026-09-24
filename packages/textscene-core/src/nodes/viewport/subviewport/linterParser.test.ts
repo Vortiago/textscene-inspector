@@ -1,11 +1,7 @@
 /**
- * SubViewport linting — every diagnostic comes from a validator.
- *
- * The sorting principle (CONTEXT.md): a validator failure is an error when
- * Godot's own setter refuses or alters the value, and a warning when only a
- * `PROPERTY_HINT_RANGE`/`PROPERTY_HINT_ENUM` states the bound while the setter
- * assigns straight through (ADR-0032). SubViewport has no semantic rule, because
- * the one condition it carried, a degenerate size, is a clamp the engine applies.
+ * SubViewport linting: every diagnostic comes from a validator. A failure errors
+ * when Godot's setter refuses or alters the value, and warns when only a
+ * `PROPERTY_HINT_RANGE` or `PROPERTY_HINT_ENUM` states the bound (ADR-0032).
  */
 
 import { describe, it } from 'vitest';
@@ -87,8 +83,7 @@ describe('SubViewport linter', () => {
   describe('a degenerate size is an error, not an advisory', () => {
     it('errors on a size Godot would clamp, rather than warning about it', () => {
       // Viewport::_set_size raises either component to 2 (viewport.cpp:1120),
-      // so 0 is altered exactly as a negative is. The old
-      // `subviewport-empty-size` warning restated this and was removed.
+      // so 0 is altered exactly as a negative is. No warning restates it.
       expectDiagnostic(scene(node('SubViewport', { size: 'Vector2i(0, 400)' })), {
         prop: 'size',
         severity: 'error',

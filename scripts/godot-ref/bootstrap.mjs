@@ -1,12 +1,8 @@
 /**
- * The generated GDScript: one bootstrap scene that instantiates the target,
- * picks the 2D or 3D path for it, and writes one settled frame.
- *
- * It is emitted in hard tabs, because that is what Godot compiles. The one
- * shared fragment is `PREVIEW_LIGHTING_GD` — whole top-level functions at column
- * 0, so no separately-indented piece ever puts the whitespace that decides this
- * program's meaning in two files at once. `run.test.mjs` asserts against this
- * output.
+ * The generated GDScript bootstrap, emitted in hard tabs. The one shared
+ * fragment, `PREVIEW_LIGHTING_GD`, is whole top-level functions at column 0, so
+ * no two files share the indentation that decides the program's meaning.
+ * `run.test.mjs` asserts against this output.
  */
 
 import { CANVAS_2D_CAPTURE } from '../visual/previewServer.mjs';

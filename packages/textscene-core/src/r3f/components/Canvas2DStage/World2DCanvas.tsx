@@ -1,15 +1,8 @@
 /**
- * The 2D-world layer of the Canvas2DStage (ADR-0006, Godot-parity amendment):
- * a transparent orthographic R3F canvas rendering the scene's CanvasItem
- * content (sprites, tilemaps, Node2D trees) and, as a sibling, the native
- * Control canvas — together they mirror Godot's 2D editor, which composites
- * the whole CanvasItem world in one view. The camera tracks the stage's
- * pan/zoom (world2DCamera math) so canvas pixels line up exactly with the
- * capture frame. Pointer events pass through to the stage (pan/zoom drag).
- *
- * `World2DContents` is exported separately so @react-three/test-renderer can
- * exercise the scene part without a DOM `<Canvas>` host (the TscnSceneContents
- * pattern).
+ * The 2D-world layer of the Canvas2DStage (ADR-0006): a transparent orthographic
+ * canvas that draws the CanvasItem world and the native Control canvas in one
+ * view, as Godot's 2D editor does. Its camera tracks the stage's pan and zoom.
+ * `World2DContents` is exported for @react-three/test-renderer.
  */
 
 import { lazy, Suspense, useLayoutEffect, useMemo } from 'react';
@@ -29,11 +22,9 @@ import { canvasModulateColor } from '../../canvasModulate.js';
 import { ViewportPassOrchestrator } from '../../contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../../../nodes/viewport/subviewport/ControlRasterLayer.js';
 
-// The native Control layer is lazy-loaded through the controls barrel — its
-// side-effect imports are what register every Control type, so a direct
-// import of the component file would silently unregister them all. Lazy so
-// its 23 registrations stay out of the 2D canvas's initial bundle until a
-// stage that actually renders Controls asks for them.
+// Through the controls barrel, whose side-effect imports register every Control
+// type: the component file alone registers none. Lazy, so the registrations stay
+// out of the initial bundle until a stage renders Controls.
 const ControlCanvasLayer = lazy(() =>
   import('../../controls/index.js').then((m) => ({ default: m.ControlCanvasLayer }))
 );
@@ -75,20 +66,17 @@ export function World2DContents({
         externalResources={externalResources}
       >
         <CameraRig pan={pan} zoom={zoom} />
-        {/* The light accumulator starts from the canvas tint, so it needs the
-            same colour the dispatcher publishes to the items — the one pure
-            function of `nodes` is the shared definition of it. */}
+        {/* The light accumulator starts from the canvas tint, the same pure
+            function of `nodes` the dispatcher publishes to the items. */}
         <CanvasLighting2DProvider canvasModulate={canvasModulate}>
           <NodeDispatcher nodes={nodes} />
-          {/* `null`, never a DOM element: this Suspense boundary lives inside
-              the R3F reconciler's tree, which has no host to mount a `<div>`
-              fallback on. Inside the lighting provider because a Control is a
-              CanvasItem like any other, so a 2D light reaches it. */}
+          {/* `null`: the R3F reconciler's tree has no host for a `<div>` fallback.
+              Inside the lighting provider, so a 2D light reaches a Control. */}
           <Suspense fallback={null}>
             <ControlCanvasLayer nodes={nodes} />
           </Suspense>
-          {/* A `SubViewportContainer` (or another `ViewportTexture` consumer)
-              may be sampling its target whoever draws the on-screen Controls. */}
+          {/* A `ViewportTexture` consumer may sample its target whoever draws
+              the on-screen Controls. */}
           <ControlRasterLayer
             nodes={nodes}
             internalResources={internalResources}
@@ -106,33 +94,17 @@ export function World2DCanvas(props: World2DCanvasProps) {
     <Canvas
       orthographic
       camera={{ position: [0, 0, 1000], near: 0.1, far: 4000 }}
-      // `localClippingEnabled` — ScrollContainer's native clip planes
-      // (`r3f/controls/native/controlClipping.tsx`) are per-material state
-      // three otherwise silently ignores: a spike verified stencil was never
-      // viable here (this canvas requests no stencil buffer at all), so
-      // planes are the only mechanism, and this flag is what turns them on.
-      //
-      // `antialias: false` — scene/main/viewport.h:309 `msaa_2d =
-      // MSAA_DISABLED`. A 2D canvas samples one pixel centre; soft edges are
-      // authored geometry (style_box_flat.cpp:555-629), so MSAA ramps them twice.
+      // Without `localClippingEnabled`, three ignores ScrollContainer's clip planes
+      // (`r3f/controls/native/controlClipping.tsx`). This canvas has no stencil buffer.
+      // `antialias: false`: scene/main/viewport.h:309 `msaa_2d = MSAA_DISABLED`.
+      // Soft edges are authored geometry (style_box_flat.cpp:555-629), and MSAA ramps them twice.
       gl={{ alpha: true, localClippingEnabled: true, antialias: false }}
-      // Godot never tone-maps a canvas: the RD renderer runs
-      // `_render_buffers_post_process_and_tonemap` on the 3D buffers and
-      // composites canvas items into the viewport AFTER it, so authored 2D
-      // colour reaches the framebuffer as written. `flat` = `NoToneMapping`;
-      // without it @react-three/fiber defaults to ACES Filmic, which lifted
-      // highlights and desaturated every fill in this stage.
-      //
-      // It reaches further than the stage's own content: a viewport surface
-      // only ever exists in this workspace, so the default also applied to the
-      // offscreen pass of a container's 3D sub-viewport, which the
-      // `SubViewport` component deliberately leaves on the renderer's live
-      // curve. This is the one
-      // canvas where "the parent viewport's curve" has no Environment behind
-      // it, so the honest curve is none.
+      // Godot composites canvas items after `_render_buffers_post_process_and_tonemap`,
+      // so 2D colour is never tone-mapped. `flat` is `NoToneMapping`, not R3F's ACES.
+      // It also covers a container's 3D sub-viewport pass, whose parent viewport
+      // here has no Environment and so no curve.
       flat
-      // Fill the stage and stay transparent to pointer input so the stage's
-      // own drag-to-pan / wheel-to-zoom handlers keep working.
+      // Transparent to pointer input, so the stage's pan and zoom handlers work.
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
     >
       <World2DContents {...props} />

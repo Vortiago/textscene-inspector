@@ -1,5 +1,5 @@
 /**
- * Tests for SoftBody3D linter (semantic rule, through `Linter`).
+ * SoftBody3D linter: the semantic rule, through `Linter`.
  *
  * Ports SoftBody3D::get_configuration_warnings (soft_body_3d.cpp:401-407):
  * `if (mesh.is_null()) warnings.push_back(RTR("This body will be ignored

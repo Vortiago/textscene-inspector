@@ -1,8 +1,6 @@
 /**
- * Batched tile geometry builder — pure typed-array output (4 verts / 6 indices
- * per cell). Positions are three-local (Godot pixel space with Y negated once,
- * see node2dTransform); UVs follow the flipY=true convention (image-Y top-left
- * → UV-Y bottom-left), same as spriteFrame.ts.
+ * The batched tile geometry builder: 4 vertices and 6 indices per cell, positions in Godot pixels
+ * with Y negated once, and UVs under spriteFrame.ts's flipY=true convention.
  */
 import { describe, it, expect } from 'vitest';
 import { buildTileGeometryArrays } from './tileGeometry';

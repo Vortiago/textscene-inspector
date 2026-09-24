@@ -1,32 +1,8 @@
 /**
- * The two item-side operands of Godot's light-cull test: the item's effective
- * z_index and the layer of the canvas it belongs to.
- *
- * `servers/rendering/renderer_canvas_cull.cpp`, `_cull_canvas_item` (lines
- * 816-820 on master):
- *
- *   int parent_z = p_z;
- *   if (ci->z_relative) {
- *       p_z = CLAMP(p_z + ci->z_index, RSE::CANVAS_ITEM_Z_MIN, RSE::CANVAS_ITEM_Z_MAX);
- *   } else {
- *       p_z = ci->z_index;
- *   }
- *
- * and `_attach_canvas_item_for_draw` (line 564) stores it as `ci->z_final`,
- * which is what the GLES3 rasterizer's `_record_item_commands` tests the light's
- * window against. `servers/rendering/rendering_server_enums.h` fixes the clamp
- * bound, and Godot 4.6.3 reports `RenderingServer.CANVAS_ITEM_Z_MIN/MAX` as
- * -4096 / 4096.
- *
- * Measured, with a light at `range_z_max = 4` over a Node2D parent at
- * `z_index = 2`: a child at `z_index 1` (effective 3) is lit, rgb(141, 122, 138);
- * a child at `z_index 3` (effective 5) is not, rgb(55, 62, 106); and the same
- * child with `z_as_relative = false` is lit again at absolute 3,
- * rgb(138, 120, 137).
- *
- * The layer side is a per-CANVAS test, not a per-item one, so the value threaded
- * here is the canvas's: 0 on the world canvas, the CanvasLayer's own `layer`
- * (Godot default 1) inside one.
+ * The item's `z_final` (`_cull_canvas_item`, `servers/rendering/renderer_canvas_cull.cpp` lines
+ * 816-820) and its canvas's layer: 0 on the world canvas, the CanvasLayer's `layer` (default 1)
+ * inside one. `servers/rendering/rendering_server_enums.h` fixes the clamp, and Godot 4.6.3
+ * reports `CANVAS_ITEM_Z_MIN/MAX` as -4096 / 4096.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -43,6 +19,9 @@ import {
 
 describe('accumulateCanvasItemZ', () => {
   it('adds a relative z_index onto the parent\'s', () => {
+    // Godot 4.6.3, light at range_z_max = 4 over a Node2D at z_index 2: a z_index-1 child
+    // (effective 3) is lit, rgb(141, 122, 138), and a z_index-3 child (effective 5) is not,
+    // rgb(55, 62, 106).
     expect(accumulateCanvasItemZ(2, { z_index: 3, z_as_relative: true })).toBe(5);
     expect(accumulateCanvasItemZ(0, { z_index: 0, z_as_relative: true })).toBe(0);
     expect(accumulateCanvasItemZ(-4, { z_index: 1, z_as_relative: true })).toBe(-3);
@@ -53,6 +32,7 @@ describe('accumulateCanvasItemZ', () => {
   });
 
   it('resets to the absolute z_index when z_as_relative is false', () => {
+    // On Godot 4.6.3 that z_index-3 child is lit at absolute 3, rgb(138, 120, 137).
     expect(accumulateCanvasItemZ(2, { z_index: 3, z_as_relative: false })).toBe(3);
     expect(accumulateCanvasItemZ(4000, { z_index: -2, z_as_relative: false })).toBe(-2);
   });
@@ -65,19 +45,16 @@ describe('accumulateCanvasItemZ', () => {
   });
 
   it('does NOT clamp an absolute z_index, matching the engine\'s own asymmetry', () => {
-    // Godot clamps only the accumulating branch; the else branch assigns
-    // `ci->z_index` straight through. Both `_cull_canvas_item` (816-820) and
-    // `_collect_ysort_children` (160-166) are written that way.
+    // Godot clamps only the accumulating branch, and the else branch assigns `ci->z_index`
+    // unchanged, in both `_cull_canvas_item` (816-820) and `_collect_ysort_children` (160-166).
     expect(accumulateCanvasItemZ(0, { z_index: 9000, z_as_relative: false })).toBe(9000);
   });
 });
 
 describe('the y-sort pass and the light cull agree on z', () => {
   it('buckets y-sorted items by the very function the lights are culled against', async () => {
-    // Godot computes this accumulation once and reads it twice — once to bucket
-    // y-sorted children and once as the `z_final` a light's window is tested
-    // against. Two copies here could only drift, which is the failure mode the
-    // tile-source band and the y-sort worldY both had.
+    // Godot computes this once and reads it twice: to bucket y-sorted children, and as the
+    // `z_final` a light's window tests. One function here too, so the two cannot drift.
     const { collectYSortedItems } = await import('../ySortItems');
     const node = {
       name: 'Root',

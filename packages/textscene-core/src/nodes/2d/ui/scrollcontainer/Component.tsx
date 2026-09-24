@@ -1,80 +1,7 @@
 /**
- * `<ScrollContainer>` — the native (WebGL canvas) painter for
- * `ScrollContainer`. It is the FIRST node to push its own planes into
- * `ControlClipContext` (`../../../../r3f/controls/native/controlClipping.tsx`),
- * and draws a themed scrollbar (`comparison.md` records that Godot's themed
- * `ScrollBar` has no CSS equivalent).
- *
- * CLIPPING. `Control::clip_contents` clips to `Rect2(Point2(), get_size())` —
- * this node's ENTIRE own rect, never reduced by a scrollbar reservation
- * (confirmed against the real engine: the focus-panel comment in
- * `scroll_container.cpp`'s constructor says outright that the scrolled child
- * and the focus border share one CanvasItem and its ONE clip).
- *
- * `useWorldClipPlanes` (`native/controlClipping.tsx`) resolves that rect
- * against the canvas, intersects it with whatever this node inherited and
- * quantizes the result to whole pixels; what comes back is published to the
- * subtree through `ControlClipProvider` below. `anchorRef` carries no local
- * transform of its own, so its `matrixWorld` is the walker's outer group for
- * this node, composed through every ancestor — exactly "this node's local
- * origin, in world space", which is the frame the rect handed to the hook is
- * expressed in. That origin is the WHOLE-PIXEL snapped one
- * (`native/controlPixelSnap.ts`), while `ownRect` below stays the
- * full-precision `{0, 0, rect.w, rect.h}`, and the pair is deliberate: Godot
- * clips to `Rect2(Point2(), get_size())` — an unrounded size — evaluated
- * inside a canvas item whose translation has already been floored, so the clip
- * rect's own position is whole and its size is not, which is exactly the pair
- * the scissor's separate roundings consume.
- *
- * SCROLLBAR GEOMETRY. Opens the **solve handoff** channel
- * (`nativeSolver.ts`'s `scrollContainerLayoutChannel`, sealed by this type's
- * registered `ContainerLayoutFn`) — the FULL `ScrollContainerLayout`
- * `scrollContainerScrollBars` already computed during the REAL solve, whose
- * `SolveContext` cache had every descendant's `combinedMinimumSize` already
- * memoised. Falls back to building a FRESH `SolveContext` (the same
- * `nativeTheme`/`measureText` the real solve uses, via `createSolveContext`)
- * and re-invoking `scrollContainerScrollBars` itself only when no sealed
- * layout arrives — which in a real solve never happens, since the layout
- * seals one unconditionally — never to a narrower input (e.g. child
- * `custom_minimum_size` alone), so the fallback and the sealed path can
- * never disagree about overflow/grabber geometry, only about how much
- * redundant work they cost. `ScrollBar`'s own
- * grabber has no `autohide`/pointer-state gate in `scene/gui/scroll_bar.cpp`
- * (unlike `SplitContainer`'s split-bar background) — it always draws once
- * its enclosing bar is visible, so this painter never needs interactive
- * state to decide whether to draw one.
- *
- * TINT. Mirrors `PanelChrome.tsx` exactly: the walker's `tint.own`
- * is handed to each track/grabber `<StyleBoxQuad>`'s own `color` prop, which
- * composes it onto the StyleBox's two base colours, in sRGB, before its
- * single linear conversion.
- *
- * DRAW ORDER. Both bars use `subtreeChromeRenderOrder`
- * (`ControlComponentRegistry.ts`'s `NativeControlComponentProps`), NOT this
- * node's own `renderOrder` — using `renderOrder` was the ORIGINAL, now-wrong
- * rule, and it drew both bars UNDER the scrolled content instead of over it:
- * a node draws at the FRONT of the draw-sequence run its subtree occupies
- * (`canvasPaintOrder.ts`), so every descendant of this ScrollContainer
- * necessarily gets a larger sequence — and so a larger key — than this node's
- * own. Godot never draws its
- * scrollbars at this node's own paint slot either: `h_scroll`/`v_scroll` are
- * added via `Node::add_child(..., INTERNAL_MODE_BACK)`
- * (`scene/gui/scroll_container.cpp:919,924`), which places them AFTER every
- * normal child regardless of when they were added, so they paint LAST among
- * this node's own descendants.
- *
- * `subtreeChromeRenderOrder` is the canvas key at the END of this node's own
- * draw-sequence run — a subtree owns a CONTIGUOUS range, so that is the last
- * descendant's own `renderOrder`, and this node's next SIBLING starts exactly
- * one past it. Both bars must therefore
- * land in that one-wide gap: track at `subtreeChromeRenderOrder + 0.25`,
- * grabber at `+ 0.5` — FRACTIONAL, not `+1`/`+2`, so a `+1` bar can never
- * reach the next sibling's own paint slot the way an integer offset could.
- * (`+0.5` between the two bars was already deliberate for grabber-over-track
- * ordering; `+0.25` for the track follows the same reasoning, now anchored
- * to `subtreeChromeRenderOrder` rather than `renderOrder`.) The two h/v bars
- * never spatially overlap (each dodges the other's own reserved strip), so
- * ordering between them is not load-bearing.
+ * The native (WebGL canvas) painter for `ScrollContainer`: it clips its
+ * subtree through `ControlClipContext` and draws the themed scrollbars and
+ * scroll hints. `scene/gui/scroll_bar.cpp` has no autohide gate on a grabber.
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
@@ -101,39 +28,23 @@ import {
 } from './nativeSolver';
 
 /**
- * `scroll_hint_vertical_color` / `scroll_hint_horizontal_color`, both
- * `Color(0, 0, 0)` in the default theme (`default_theme.cpp:669-670`) and set
- * as the hint TextureRect's `modulate` (`scroll_container.cpp:622,631,640,650`).
- * Black multiplies the gradient's white down to nothing, leaving the texture's
- * own alpha ramp as the whole of what is drawn.
+ * `scroll_hint_vertical_color` and `scroll_hint_horizontal_color`: `Color(0, 0, 0)`
+ * (`default_theme.cpp:669-670`), set as the hint's `modulate`
+ * (`scroll_container.cpp:622,631,640,650`). Only the texture's alpha ramp shows.
  */
 const SCROLL_HINT_MODULATE = new THREE.Color(0, 0, 0);
 
 /**
- * Where the hints sit in the chrome run: above every descendant (the content
- * they fade over) and below both scrollbars. That is the engine's own order —
- * all four helper nodes are `INTERNAL_MODE_BACK`, so they follow the content
- * children, and the two hints are added BEFORE `h_scroll`/`v_scroll`
- * (`scroll_container.cpp:905-924`). A bare `chromeRenderOrder` would TIE with
- * the topmost descendant, which three resolves by insertion order rather than
- * by anything this painter controls, so the fade lands under an opaque child.
+ * The hints draw above every descendant and below both scrollbars, the order
+ * of `scroll_container.cpp:905-924`. A bare `chromeRenderOrder` would tie with
+ * the topmost descendant, and three would put the fade under an opaque child.
  */
 const SCROLL_HINT_RENDER_ORDER_OFFSET = 0.125;
 
 /**
- * One visible `scroll_hint_*` TextureRect.
- *
- * `set_expand_mode(EXPAND_IGNORE_SIZE)` with the default `STRETCH_SCALE`
- * (`scroll_container.cpp:905-912`) stretches the icon across the whole rect,
- * which is one quad. `tile_scroll_hint`'s `STRETCH_TILE` (`:751-752`) needs no
- * second path: both icons are gradients uniform along the axis they would tile
- * on, so tiled and stretched are the same pixels.
- *
- * `set_flip_h`/`set_flip_v` (`:629-630,647-648`) reverse the fade so it is
- * densest against the edge the content continues past, as a negative UV
- * repeat — `TextureRect`'s own `applyFlip` spelling. `useOptionalIconTexture`
- * memoises PER HOOK INSTANCE, so the texture flipped here is this hint's alone
- * and the two hints never share one.
+ * One visible `scroll_hint_*` TextureRect, stretched across its rect as one
+ * quad (`scroll_container.cpp:905-912`). `STRETCH_TILE` (`:751-752`) draws the
+ * same pixels, since each gradient is uniform along its tiling axis.
  */
 function ScrollHintChrome({
   hint,
@@ -149,12 +60,12 @@ function ScrollHintChrome({
   const loaded = useOptionalIconTexture(
     hint === null ? null : hint.vertical ? SCROLL_HINT_ICONS.vertical : SCROLL_HINT_ICONS.horizontal
   );
+  // `set_flip_h`/`set_flip_v` (`:629-630,647-648`) become a negative UV repeat.
+  // Each hook instance has its own texture, so the two hints never share a flip.
   const flipH = hint?.flipH === true;
   const flipV = hint?.flipV === true;
-  // In a memo, not an effect: the material is built from this texture during
-  // the same render, and three only refreshes a material's `mapTransform`
-  // uniform when the material itself changes — a flip applied after mount
-  // would never reach the GPU.
+  // A memo, not an effect: three refreshes `mapTransform` only when the
+  // material changes, so a flip applied after mount never reaches the GPU.
   const texture = useMemo(() => {
     if (!loaded) return null;
     loaded.repeat.set(flipH ? -1 : 1, flipV ? -1 : 1);
@@ -180,12 +91,9 @@ function ScrollHintChrome({
 
 
 /**
- * A ScrollBar's effective `ControlDrawTransform`. `h_scroll`/`v_scroll` are
- * constructed by `ScrollContainer`'s own constructor and placed purely through
- * `set_anchor_and_offset` (`_update_scrollbar_position`), so neither ever
- * carries an authored rotation, scale or pivot — the composite the snap floors
- * is the bar's position alone. Hoisted to a module constant because it is a
- * fact about the engine's own nodes, not a per-render value.
+ * A ScrollBar's `ControlDrawTransform`. `_update_scrollbar_position` places the
+ * bars through `set_anchor_and_offset` alone, so they carry no rotation, scale
+ * or pivot.
  */
 const SCROLL_BAR_DRAW_TRANSFORM: ControlDrawTransform = {
   rotation: 0,
@@ -197,70 +105,30 @@ interface ScrollBarChromeProps {
   bar: ScrollBarPlacement;
   track: StyleBoxFlatData;
   grabber: StyleBoxFlatData;
-  /** Raw sRGB, composed into `track`/`grabber` internally by `<StyleBoxQuad>`'s own `color` prop. */
+  /** Raw sRGB, which `<StyleBoxQuad>` composes into `track` and `grabber`. */
   color: RGBA;
-  /** `subtreeChromeRenderOrder` (or its fallback) — see this module's own DRAW ORDER doc. */
+  /**
+   * `subtreeChromeRenderOrder`, the last descendant's key. The bars are
+   * `INTERNAL_MODE_BACK` children (`scene/gui/scroll_container.cpp:919,924`) that
+   * paint after every descendant, so they sit at fractions below the next sibling.
+   */
   chromeRenderOrder: number;
-  /** `gui/common/snap_controls_to_pixels`, read once by the painter and passed down. */
+  /** The walker's `gui/common/snap_controls_to_pixels`, the only value correct inside a SubViewport. */
   snapToPixels: boolean;
 }
 
 /**
- * One scrollbar's track + grabber.
- *
- * Two DISTINCT axis conversions are needed here, not one, because
- * `styleBoxFlatGeometry` never flips an axis (its own doc says so — "the
- * caller converts to a three.js position, this module never flips an axis")
- * and never re-origins one either (`rect.x`/`rect.y` are added straight onto
- * every vertex it emits):
- *
- * 1. POSITION — this bar's (or its grabber's) own offset within its parent.
- *    Handled the SAME way the walker positions every Control's own group:
- *    `position={[x, -y, 0]}`, negating Y once.
- * 2. The GEOMETRY's OWN internal axis — `styleBoxFlatGeometry`'s vertices
- *    grow toward LARGER Y as Godot pixels go DOWN the rect (e.g. its bottom
- *    corners are at `rect.y + rect.h`), which is the OPPOSITE of three's
- *    "+Y is up". Left unflipped, a StyleBoxQuad's shape renders upside down
- *    around its own origin. That is invisible for a plain, vertically
- *    symmetric flat fill (a `Panel`'s uniform corner radius, no less) — which
- *    is exactly why this went unnoticed elsewhere — but this painter's whole
- *    POINT is an asymmetric pair (a grabber sitting somewhere inside its
- *    track, not centred), so an unflipped grabber would sit at the WRONG END
- *    of the track. Fixed by a `scale={[1, -1, 1]}` wrapper around the
- *    zero-origin geometry, verified against the real engine's pixels
- *    (`pnpm ref:godot --probe`, see this module's own test suite): a
- *    zero-scroll grabber sits at the TRACK's Godot-top, which after this flip
- *    is world Y ≈ 0 counting down to negative, not the reverse.
- *
- * Both `StyleBoxQuad` calls are always handed a ZERO-origin rect for the SAME
- * reason position is handled by an enclosing group: passing this bar's
- * ALREADY-absolute rect verbatim would double-count that offset once the
- * mesh sits inside a group that already carries it.
- *
- * PIXEL SNAP. `h_scroll`/`v_scroll` are real `HScrollBar`/`VScrollBar` Control
- * nodes (`scene/gui/scroll_container.cpp:919,924`), so each is its OWN
- * CanvasItem and `Control::_update_canvas_item_transform` floors each one's
- * translation INDEPENDENTLY of the ScrollContainer's — a bar under a snapped
- * container still snaps again on its own account. This group is that bar's
- * canvas item, so its position goes through the same
- * `snappedControlOrigin` port the walker uses for every other Control, never a
- * hand-rolled floor. `bar.rect` itself stays at full precision:
- * `_update_scrollbar_position` sets anchors and offsets, `get_rect()` reports
- * what they resolve to, and only the drawn transform is floored — the
- * container's own reservation arithmetic reads the unsnapped numbers.
- *
- * The GRABBER is NOT a node. `ScrollBar`'s own `NOTIFICATION_DRAW`
- * (`scene/gui/scroll_bar.cpp:326-344`) builds a `Rect2` straight from
- * `get_grabber_offset()` — no int cast, no rounding — and draws it into the
- * bar's canvas item, so it inherits the bar's snap and never gets a second one
- * of its own. Nesting its group inside the snapped one is exactly that.
+ * One scrollbar's track and grabber. Each bar is its own CanvasItem
+ * (`scene/gui/scroll_container.cpp:919,924`), so it snaps through
+ * `snappedControlOrigin` apart from the container, while `bar.rect` stays at
+ * full precision for the reservation arithmetic.
  */
 function ScrollBarChrome({ bar, track, grabber, color, chromeRenderOrder, snapToPixels }: ScrollBarChromeProps) {
   if (!bar.visible) return null;
   const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
-  // Position only. `StyleBoxQuad` now takes just the size from the rect it is
-  // handed and applies the Godot→three y flip itself, so a caller supplies the
-  // offset through a group and nothing else.
+  // A group carries the position. `StyleBoxQuad` takes only the size and flips y.
+  // The grabber is no node (`scene/gui/scroll_bar.cpp:326-344`): it draws
+  // unrounded inside the bar's canvas item and inherits the bar's snap.
   return (
     <CanvasItemGroup position={[origin.x, -origin.y, 0]} renderOrder={chromeRenderOrder + 0.25}>
       <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={chromeRenderOrder + 0.25} />
@@ -285,16 +153,9 @@ export function ScrollContainer({
   meta,
 }: NativeControlComponentProps) {
   const cachedLayout = scrollContainerLayoutChannel.open(meta) ?? null;
-  // FALLBACK ONLY (`cachedLayout` absent, `layout` below): a FRESH
-  // SolveContext, built from the exact same theme/measurer the real solve
-  // uses — not a second, narrower approximation of one. Rebuilt whenever
-  // `solveNode` changes, not only on a theme change: the context carries a
-  // path-keyed minimum-size cache, so reusing one across a re-walk (a
-  // sub-scene or a child's texture arriving, which gives that child a real
-  // minimum where it had none) would answer from the pre-arrival numbers —
-  // the bars would disagree with the registered layout fn about whether
-  // anything overflows. `solveNode` is an intentional cache-buster, not a
-  // value the callback reads.
+  // Fallback when no layout is sealed: a fresh SolveContext on the real
+  // solve's theme and measurer. `solveNode` busts its path-keyed minimum-size
+  // cache, so a child whose texture arrives later is not measured stale.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const solveCtx = useMemo(() => createSolveContext(theme, measureText), [theme, solveNode]);
   const layout = useMemo(
@@ -302,17 +163,15 @@ export function ScrollContainer({
     [cachedLayout, solveNode, solveCtx, rect]
   );
 
-  // The bars are separate CanvasItems, so the walker's snap of THIS node's own
-  // group does not reach them — each is snapped on its own account (see
-  // `ScrollBarChrome`'s PIXEL SNAP doc) using the walker's OWN resolved value,
-  // which is the only one correct inside a SubViewport.
-
-  // The whole widget rect clips its subtree — the planes go into the Provider below.
+  // `Control::clip_contents` clips to `Rect2(Point2(), get_size())`, never reduced
+  // by a scrollbar (`scroll_container.cpp`'s constructor: child and focus border
+  // share one clip). The origin is whole-pixel snapped and the size is not,
+  // which is the pair the scissor reads.
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
   const { anchorRef, clip } = useWorldClipPlanes(ownRect);
 
-  // The hint's own `modulate` composed onto the walker's tint, the same order
-  // `<StyleBoxQuad>`'s `color` prop composes a stylebox fill.
+  // The hint's `modulate` composed onto the walker's tint, in the order
+  // `<StyleBoxQuad>` composes a fill.
   const hintColor = useMemo(() => tint.color.clone().multiply(SCROLL_HINT_MODULATE), [tint.color]);
 
   return (

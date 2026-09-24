@@ -1,9 +1,9 @@
 /**
- * TextureButton registration contract: the parser self-registers in the NodeRegistry
- * and the native (WebGL canvas) painter self-registers in the
- * ControlComponentRegistry (Controls render via the native 2D-UI canvas,
- * ADR-0002 — NOT the 3D NodeComponentRegistry, and they carry no linter slice).
+ * TextureButton registration contract: the parser self-registers in the NodeRegistry and the
+ * native (WebGL canvas) painter in the ControlComponentRegistry. Controls render through the
+ * native 2D-UI canvas (ADR-0002), not the 3D NodeComponentRegistry.
  */
+
 import { describe, it, expect } from 'vitest';
 import './index'; // parser registration side effect
 import './index.r3f'; // native component registration side effect

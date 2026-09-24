@@ -1,19 +1,7 @@
-; ONE VARIABLE: `layout_direction = 3` (RTL) on the lower TabContainer.
-;
-; `_update_margins` SWAPS the tabbar style's left and right margin under RTL
-; (tab_container.cpp:412) and `Control::_size_changed` then mirrors the strip
-; inside the container (control.cpp:1785-1787). The two together keep the
-; AUTHORED margins on their authored sides and move `side_margin` to the
-; opposite edge — which is only measurable against a `tabbar_background`
-; whose own left and right margins differ, so the override here is a
-; lopsided 4/28 pair with a visible fill marking the header band. The tabs
-; inside that strip mirror as well. The current page is placed by direct
-; offsets rather than through fit_child_in_rect, so the same mirror puts the
-; panel style's own RIGHT margin on the left (control.cpp:1785-1787) while
-; the panel StyleBox itself, a plain draw call, stays put — which the equally
-; lopsided 6/26 `panel` override and the page's own ColorRect make visible.
-; No other TabContainer scene authors either style, let alone with a
-; direction.
+; One variable: `layout_direction = 3` on the lower TabContainer. `_update_margins` swaps the
+; tabbar style's left and right margin under RTL (tab_container.cpp:412), and `Control::_size_changed`
+; mirrors the strip (control.cpp:1785-1787), so the authored margins keep their sides and
+; `side_margin` moves to the other edge. The tabs in the strip mirror too.
 
 [gd_scene load_steps=3 format=3]
 
@@ -42,6 +30,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.12, 0.12, 0.18, 1)
 
+; Measurable only against a `tabbar_background` with unequal side margins: the override is a
+; lopsided 4/28 pair with a visible fill marking the header band. No other TabContainer scene
+; authors either style, let alone with a direction.
 [node name="Ltr" type="TabContainer" parent="."]
 layout_mode = 1
 anchor_right = 1.0
@@ -91,6 +82,9 @@ layout_mode = 2
 [node name="Advanced" type="Control" parent="Rtl"]
 layout_mode = 2
 
+; The current page is placed by direct offsets, not fit_child_in_rect, so the mirror
+; (control.cpp:1785-1787) puts the panel style's right margin on the left while the panel
+; StyleBox, a plain draw call, stays. The lopsided 6/26 `panel` override and this ColorRect show it.
 [node name="Page" type="ColorRect" parent="Rtl/Advanced"]
 anchors_preset = 15
 anchor_right = 1.0

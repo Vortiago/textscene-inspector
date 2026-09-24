@@ -1,33 +1,8 @@
 /**
- * Contract: a heading attribute value is captured WHOLE, whatever its form.
- *
- * Godot writes a space after every comma, so a value scanner that is not
- * delimiter-balanced truncates at that space —
- * `parent_id_path=PackedInt32Array(840561040, 1598164129)` down to
- * `PackedInt32Array(840561040,`, silently dropping the rest.
- *
- * Non-gameable by construction, in three directions:
- *
- *  1. GENERALITY. `Vector2(1, 2)` is pinned deliberately, so no list of
- *     constructor names can satisfy this file — the capture must accept ANY
- *     `Name(...)` call rather than an enumeration. (Godot does not emit
- *     `Vector2(...)` in a heading; the rung constrains the GRAMMAR, not
- *     Godot's writer.)
- *  2. NO OVER-CAPTURE. A greedy `\w+\(.*\)` would swallow two adjacent
- *     constructor attributes into one, so every multi-attribute rung asserts the
- *     COMPLETE attribute set, not just the value under test.
- *  3. STRING-AWARENESS. A delimiter inside a quoted string (`"Foo (copy)"`,
- *     `"a]b"`) must not close the value. Both are legal Godot node/group names,
- *     and both defeat a character-class scan however many constructor names it
- *     knows, so the capture has to track quotes rather than count characters.
- *
- * Asserted at `parseHeading`'s own boundary on purpose: nothing in the tree reads
- * `parent_id_path` or `node_paths`, so there is no downstream layer to assert at
- * and none should be invented to create one.
- *
- * `heading-array-attrs.test.ts` beside it pins the same grammar for the two
- * array-shaped values with simpler cases; the two files together, plus
- * `heading-value-scan.test.ts`, cover the whole value grammar.
+ * A heading attribute value is captured whole: Godot writes a space after every comma.
+ * `Vector2(1, 2)` forces any `Name(...)` call, not a name list. Every multi-attribute
+ * case asserts the complete set, against over-capture. `"Foo (copy)"` and `"a]b"` force
+ * quote tracking. Asserted at `parseHeading`, since nothing downstream reads these.
  */
 
 import { describe, it, expect } from 'vitest';

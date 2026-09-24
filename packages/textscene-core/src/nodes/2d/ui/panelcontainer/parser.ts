@@ -1,7 +1,6 @@
 /**
- * PanelContainer parser. Adds no fields beyond Control — its StyleBox panel
- * (`theme_override_styles/panel`) and content margins are handled by the
- * Component + the base Control parser's theme-override collection.
+ * Parses a PanelContainer. It adds no fields beyond Control: the base Control
+ * parser collects its `theme_override_styles/panel` StyleBox.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';

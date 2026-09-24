@@ -12,7 +12,7 @@ renders_as: a clipped content rect with themed scrollbars
 ScrollContainer clips its single child to its own rect and draws the theme's scrollbar
 on whichever axis overflows. `scroll_hint_mode` adds the theme's edge fade over the
 side the content continues past, and `draw_focus_border` insets the content and both
-scrollbars by the focus style's own margins. A right-to-left `layout_direction` moves
+scrollbars by the focus style's margins. A right-to-left `layout_direction` moves
 the vertical scrollbar to the left edge and shifts the content past the strip it
 reserves.
 
@@ -51,6 +51,6 @@ component's `switch` to `auto` overflow, the same as an absent value.
 
 ## Known limitations
 
-- **Editor only** The focus border `draw_focus_border` names is drawn only while the
-  container or a child holds keyboard focus, which a still frame never has; its
+- **Editor only** The focus border that `draw_focus_border` names is drawn only while
+  the container or a child holds keyboard focus, which a still frame never has. Its
   margins apply regardless.

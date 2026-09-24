@@ -1,31 +1,8 @@
 /**
- * The alias table behind `deprecated.ts`, keyed by the DECLARING type, plus the
- * chain walk that finds a row from a descendant.
- *
- * A row spells one deprecated `_set` arm that FORWARDS ONE KEY to one setter:
- * a rename, or a rename carrying the arm's value test and rewrite. It is not
- * every such arm in `scene/`, and the four shapes it leaves out are each left
- * out for a reason:
- *
- * - ALREADY OWNED BY A SLICE. `AnimationPlayer`'s three callback-mode arms and
- *   `AnimationTree`'s `process_callback` register validators under the
- *   deprecated spelling and read `current ?? deprecated` in their parsers.
- *   Canonicalising underneath that changes which of two conflicting values
- *   wins, so the slice keeps them. `deprecated.test.ts` pins each.
- * - A BULK CONSTRUCTOR. `ItemList` and `PopupMenu` read `items` as an Array
- *   three elements at a time into `add_item` calls (item_list.cpp:2244-2258).
- *   There is no single target property to name.
- * - A `_get`-ONLY arm. `AnimationPlayer`'s `playback/play`
- *   (animation_player.cpp:71) reads back and nothing assigns it.
- * - THE RESOURCE SIDE, which no row covers yet: `Environment.background_sky*`,
- *   `BaseMaterial3D`'s `flags_*`/`params_*`, `Animation.loop`,
- *   `NavigationMesh.polygon_verts_per_poly` and
- *   `VisualShaderNodeParameter.uniform_name`.
- *
- * A missing row costs no false positive — an unresolved key is simply
- * unvalidated, as any unknown key is. Nothing can scrape the engine to keep
- * this honest, since `godot-source-decoupling` forbids reading the checkout at
- * test time, so this list IS the claim.
+ * The alias table behind `deprecated.ts`, keyed by the declaring type, and the chain walk that
+ * finds a row from a descendant. It comes from every `::_set` body in `scene/`, found by either
+ * `p_name == "…"` spelling. A missing row leaves a key unvalidated, never a false positive, and
+ * no test may read the engine (`godot-source-decoupling`), so this list is the claim.
  */
 
 import { literalText } from './string.js';
@@ -36,12 +13,9 @@ import { indexedKeyRegex } from './indexedKey.js';
 import { doubledVector, isTruthy } from './deprecatedTransforms.js';
 
 /**
- * What one deprecated spelling forwards to.
- *
- * A bare string is a PURE rename. The object form carries the value test a
- * `_set` arm applies before forwarding (`applies`; absent means every value
- * forwards) and the rewrite the setter receives (`transform`; absent means the
- * literal passes through untouched).
+ * One deprecated `_set` arm that forwards one key to one setter. A bare string is a pure rename.
+ * The object form adds the arm's value test (`applies`, absent when every value forwards) and the
+ * value the setter receives (`transform`, absent when the literal passes through).
  */
 export type AliasRow =
   | string
@@ -53,7 +27,7 @@ export type AliasRow =
 
 /** `set_size((Vector3)p_value * 2)`: the Godot-3 half-extents, doubled. */
 const HALF_EXTENTS_3D: AliasRow = { to: 'size', transform: doubledVector('Vector3') };
-/** `set_size((Size2)p_value * 2)` — the 2D twin. */
+/** `set_size((Size2)p_value * 2)`, the 2D twin. */
 const HALF_EXTENTS_2D: AliasRow = { to: 'size', transform: doubledVector('Vector2') };
 /** `(expand || ignore_texture_size) && bool(p_value)` → `EXPAND_IGNORE_SIZE`. */
 const EXPAND_IGNORE_SIZE: AliasRow = { to: 'expand_mode', applies: isTruthy, transform: () => '1' };
@@ -61,12 +35,9 @@ const EXPAND_IGNORE_SIZE: AliasRow = { to: 'expand_mode', applies: isTruthy, tra
 const giMode = (mode: '1' | '2'): AliasRow => ({ to: 'gi_mode', applies: isTruthy, transform: () => mode });
 
 /**
- * `Type.deprecated` to the property the setter actually writes.
- *
- * A `Map` of `Map`s, not object literals: both keys come from a `.tscn`, and a
- * plain object answers `constructor`/`__proto__`/`toString` from its prototype.
- * That returned a FUNCTION where the signature promises a string, and the
- * linter threw `propertyKey.startsWith is not a function` on a four-line scene.
+ * `Type.deprecated` to the property the setter writes. A `Map` of `Map`s, not object literals:
+ * both keys come from a `.tscn`, and a plain object answers `constructor`, `__proto__` or
+ * `toString` from its prototype with a function where a string is promised.
  */
 const DEPRECATED_PROPERTY_NAMES = toLookup({
   // set_sprite_frames, both dimensions.
@@ -75,7 +46,7 @@ const DEPRECATED_PROPERTY_NAMES = toLookup({
   // set_horizontal_alignment / set_vertical_alignment.
   Label: { align: 'horizontal_alignment', valign: 'vertical_alignment' }, // label.cpp:1002-1007
   // `_set` is `p_name == "bbcode_text" && !((String)p_value).is_empty()`, so an
-  // EMPTY bbcode_text is refused and must not clear `text`.
+  // empty bbcode_text is refused and must not clear `text`.
   RichTextLabel: {
     bbcode_text: { to: 'text', applies: (raw) => literalText(raw) !== '' }, // rich_text_label.cpp:7563
   },
@@ -105,7 +76,7 @@ const DEPRECATED_PROPERTY_NAMES = toLookup({
     time_horizon: 'time_horizon_agents', // navigation_agent_3d.cpp:213
     agent_height_offset: 'path_height_offset', // navigation_agent_3d.cpp:221
   },
-  // The Godot-3 half-extents family, keyed by the DECLARING type: `extents` on
+  // The Godot-3 half-extents family, keyed by the declaring type: `extents` on
   // any other type is not an alias and stays unknown.
   BoxShape3D: { extents: HALF_EXTENTS_3D }, // box_shape_3d.cpp:81-83
   RectangleShape2D: { extents: HALF_EXTENTS_2D }, // rectangle_shape_2d.cpp:42-44
@@ -126,14 +97,27 @@ const DEPRECATED_PROPERTY_NAMES = toLookup({
   TextureRect: { expand: EXPAND_IGNORE_SIZE, ignore_texture_size: EXPAND_IGNORE_SIZE }, // texture_rect.cpp:171-173
   // Declared on the base, so every GeometryInstance3D descendant carries it.
   GeometryInstance3D: { use_in_baked_light: giMode('1'), use_dynamic_gi: giMode('2') }, // visual_instance_3d.cpp:323-330
+
+  // Not listed, as the slice owns them: `AnimationPlayer`'s three callback-mode arms and
+  // `AnimationTree`'s `process_callback` validate the deprecated spelling and read
+  // `current ?? deprecated`, so canonicalising would change which value wins.
+  // `deprecated.test.ts` pins each.
+
+  // Not listed, as no single property receives it: `ItemList` and `PopupMenu` read `items`
+  // three elements at a time into `add_item` calls (item_list.cpp:2244-2258).
+
+  // Not listed, as nothing assigns it: `AnimationPlayer`'s `_get`-only `playback/play`
+  // (animation_player.cpp:71).
+
+  // No row yet on the resource side: `Environment.background_sky*`, `BaseMaterial3D`'s
+  // `flags_*`/`params_*`, `Animation.loop`, `NavigationMesh.polygon_verts_per_poly` and
+  // `VisualShaderNodeParameter.uniform_name`.
 });
 
 /**
- * Deprecated LEAVES under an indexed key family, which the flat table cannot
- * spell. `TileSetAtlasSource::_set` splits `x:y/alt/leaf` and forwards the
- * leaf to the alternative's `TileData::set` (`tile_set.cpp:4812`), whose own
- * `_set` renames `texture_offset` (`:6702-6704`). The index gate is the one the
- * source applies, `is_valid_int`.
+ * Deprecated leaves under an indexed key family. `TileSetAtlasSource::_set` splits `x:y/alt/leaf`
+ * and forwards the leaf to `TileData::set` (`tile_set.cpp:4812`), whose own `_set` renames
+ * `texture_offset` (`:6702-6704`). The index gate is the source's, `is_valid_int`.
  */
 const DEPRECATED_INDEXED_LEAVES = new Map<string, readonly { pattern: RegExp; leaf: string; to: string }[]>([
   [
@@ -143,13 +127,9 @@ const DEPRECATED_INDEXED_LEAVES = new Map<string, readonly { pattern: RegExp; le
 ]);
 
 /**
- * Whether a serialised value is the INT or FLOAT variant `Variant::is_num()`
- * accepts. A quoted `"1"` is a STRING and a `true` is a BOOL; neither is num,
- * so neither forwards.
- *
- * The tokenizer's grammar alone, never `is_valid_int`: only `-` is consumed
- * before the digit test (`variant_parser.cpp:420-424`), so `+5` fails the whole
- * file's load and must not read as numeric.
+ * Whether a value is the INT or FLOAT variant `Variant::is_num()` accepts: a quoted `"1"` or a
+ * `true` does not forward. The tokenizer's grammar, not `is_valid_int`: only `-` precedes the
+ * digit test (`variant_parser.cpp:420-424`), so `+5` fails the file's load.
  */
 function isNumericLiteral(raw: string): boolean {
   return TSCN_FLOAT_RE.test(raw.trim());
@@ -160,7 +140,7 @@ function toLookup(table: Record<string, Record<string, AliasRow>>): Map<string, 
   return new Map(Object.entries(table).map(([type, keys]) => [type, new Map(Object.entries(keys))]));
 }
 
-/** The row `key` matches on `type` itself — flat table first, then the indexed leaves. */
+/** The row `key` matches on `type` itself: the flat table first, then the indexed leaves. */
 function ownRow(type: string, key: string): AliasRow | undefined {
   const flat = DEPRECATED_PROPERTY_NAMES.get(type)?.get(key);
   if (flat !== undefined) return flat;

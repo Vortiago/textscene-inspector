@@ -1,7 +1,6 @@
 /**
- * GLBSceneRoot registers each internal GLB object under its tree path so
- * the SceneTreeViewer can select (gizmo) + hide individual nodes, and drives
- * per-object visibility from the hidden-paths set. Registrations clear on unmount.
+ * GLBSceneRoot registers each GLB object under its tree path, so the SceneTreeViewer can select
+ * and hide it, and applies the hidden-paths set per object. Registrations clear on unmount.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -61,8 +60,7 @@ async function mount(loader: ResourceLoader) {
   return renderer;
 }
 
-// GLBSceneRoot clones Object3D via cloneWithMaterials which requires the lazy
-// GLB module cache to be initialised first.
+// GLBSceneRoot clones through cloneWithMaterials, which needs the lazy GLB module cache.
 beforeAll(async () => {
   await initGlbModules();
 });

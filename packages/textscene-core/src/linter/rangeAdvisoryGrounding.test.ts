@@ -1,26 +1,8 @@
 /**
- * Every range-advisory threshold must cite the Godot line that states it.
- *
- * `boundGrounding.test.ts` sweeps validators. An advisory arm is the same kind
- * of claim about the same kind of value, made one layer up in a semantic rule,
- * and it was outside that sweep: a threshold could be invented here while the
- * bound ratchet read zero. Both `Camera2D.zoom` bounds were once wrong in
- * exactly this way, the validator copy and the rule copy independently.
- *
- * `RangeArm.cite` being required is what gives this complete coverage: the
- * compiler rejects an arm without one, everywhere, with no sweep needed. What a
- * type cannot check is whether the string names a real source location rather
- * than restating the rule's own opinion, so that is what this file checks, by
- * reading the sources instead of the live objects. A runtime registry would
- * need every table wrapped in a register call, and a table built from a shared
- * helper is constructed inside `check()` — it would re-register per lint.
- *
- * Known edge: the scrape sees `cite: '…'` literals, so a shared arm-builder
- * taking the citation as a PARAMETER hides its value from this check. The
- * compiler still demands a cite, so nothing goes uncited; only its plausibility
- * escapes. `lights/shared/linterChecks.ts` is split into `omniRangeArms` and
- * `spotRangeArms` for exactly this reason — two `ADD_PROPERTY` lines, two
- * literals — rather than one helper taking a `cite` argument.
+ * Every range-advisory threshold cites a real Godot source location. The
+ * compiler already requires `RangeArm.cite`, so this reads the sources for each
+ * `cite: '…'` literal: a runtime registry would re-register per lint for a table
+ * a shared helper builds inside `check()`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -32,7 +14,11 @@ import type { TscnNode } from '../parser/types.js';
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
 
 
-/** Every `cite: '…'` literal in the sources, with the file it came from. */
+/**
+ * Every `cite: '…'` literal in the sources, with its file. A cite passed to an
+ * arm-builder as a parameter hides from it, so `lights/shared/linterChecks.ts`
+ * keeps `omniRangeArms` and `spotRangeArms` apart, one literal each.
+ */
 function citeLiterals(): { file: string; cite: string }[] {
   const root = join(import.meta.dirname, '..');
   const out: { file: string; cite: string }[] = [];
@@ -62,10 +48,9 @@ function node(properties: Record<string, string>): TscnNode {
 
 describe('range advisory grounding', () => {
   it('finds the arms it is meant to be checking', () => {
-    // A scrape that silently matches nothing passes every assertion below it,
-    // so the floor is near the real count (65) rather than at 1: a broken
-    // regex, a moved directory, or a subtree that switches to double-quoted
-    // cites has to fail here rather than shrink the subject list in silence.
+    // A scrape that matches nothing passes every assertion below it, so the
+    // floor sits near the real count: a broken regex, a moved directory or
+    // double-quoted cites fail here.
     expect(citeLiterals().length).toBeGreaterThan(55);
   });
 

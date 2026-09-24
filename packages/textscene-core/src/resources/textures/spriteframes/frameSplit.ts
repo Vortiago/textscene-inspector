@@ -1,7 +1,7 @@
 /**
  * The bracket scanners behind the SpriteFrames decode: where each animation dict
  * sits in the `animations` value, and the elements of one dict's `frames` array.
- * Depth counting only — no string-escaped braces appear in these values.
+ * Depth counting only: no string-escaped braces appear in these values.
  */
 
 const FRAMES_ARRAY_RE = /"frames"\s*:\s*\[/;
@@ -13,10 +13,9 @@ const FRAMES_ARRAY_RE = /"frames"\s*:\s*\[/;
 export const ANIMATION_DICT_DEPTH = 2;
 
 /**
- * The elements of the `"frames"` array inside one animation dict, trimmed —
- * split on the commas at the array's own depth, so a dict element arrives
- * whole. `frames` is the only nested array Godot writes into an animation dict
- * (sprite_frames.cpp:178-188).
+ * The elements of one animation dict's `"frames"` array, trimmed and split at
+ * the array's own depth, so a dict element arrives whole. `frames` is the only
+ * nested array Godot writes into an animation dict (sprite_frames.cpp:178-188).
  */
 export function splitFramesArray(block: string): string[] {
   const open = FRAMES_ARRAY_RE.exec(block);

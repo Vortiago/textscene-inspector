@@ -1,5 +1,5 @@
 /**
- * CSGMesh3D registration — parser.
+ * CSGMesh3D registration: the parser.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

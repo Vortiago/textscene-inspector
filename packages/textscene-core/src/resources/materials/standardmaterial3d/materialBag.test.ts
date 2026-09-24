@@ -1,9 +1,6 @@
 /**
- * The one derivation both adapters read: which three material CLASS a Godot
- * feature set needs, and the prop bag that goes with it.
- *
- * Inputs are RAW Godot property strings, so decode and derivation are exercised
- * together — a hand-built scalar bag would let the two drift apart.
+ * The one derivation both adapters read: which three material class a Godot feature set
+ * needs, and its prop bag. Inputs are raw Godot property strings, so decode runs too.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -27,7 +24,7 @@ describe('standardMaterialBag — the material class', () => {
 
   it('derives a basic material for SHADING_MODE_UNSHADED', () => {
     // Godot's unshaded branch writes `frag_color = vec4(albedo, alpha)`, so no
-    // PBR term reaches the output — three's unlit material is the equivalent.
+    // PBR term reaches the output. three's unlit material is the equivalent.
     const derived = bag({ shading_mode: '0', emission_enabled: 'true', emission: 'Color(1, 0, 0, 1)' });
     expect(derived.materialClass).toBe('basic');
     expect(derived.props).not.toHaveProperty('emissive');
@@ -63,10 +60,9 @@ describe('standardMaterialBag — scalar mapping', () => {
 
   it('blends the rim highlight from the light colour toward the albedo', () => {
     // Godot's `light_compute`: `diffuse_light += rim_light * rim *
-    // mix(vec3(1.0), albedo, rim_tint)` — so tint 0 leaves the highlight at the
-    // light colour and 1 takes it to the LINEAR albedo. three's closest native
-    // term is `sheenColor`. Albedo authored in sRGB's linear segment again, so
-    // `mix(1, 0.0025, 0.5)` and friends are exact.
+    // mix(vec3(1.0), albedo, rim_tint)`, so tint 0 keeps the light colour and 1 the
+    // linear albedo, in three's `sheenColor`. The albedo sits in sRGB's linear segment,
+    // so `mix(1, 0.0025, 0.5)` is exact.
     const derived = bag({
       rim_enabled: 'true',
       rim: '0.6',
@@ -87,7 +83,7 @@ describe('standardMaterialBag — scalar mapping', () => {
 
   it('omits the blend factors a three preset already carries', () => {
     // `Material.setValues` warns on an undefined parameter and R3F assigns
-    // whatever it is given, so an omitted factor must be ABSENT, not undefined.
+    // whatever it is given, so an omitted factor must be absent, not undefined.
     const preset = bag({ blend_mode: '0' });
     expect(preset.props.blending).toBe(THREE.NormalBlending);
     expect(preset.props).not.toHaveProperty('blendSrc');
@@ -150,7 +146,7 @@ describe('standardMaterialBag — texture slots', () => {
 describe('standardMaterialBag — no material at all', () => {
   it('falls back to the surface Godot itself draws', () => {
     // Not a default-constructed StandardMaterial3D: every backend binds a
-    // hardcoded shader — `ALBEDO = vec3(0.6); ROUGHNESS = 0.8; METALLIC = 0.2`.
+    // hardcoded shader: `ALBEDO = vec3(0.6); ROUGHNESS = 0.8; METALLIC = 0.2`.
     const derived = standardMaterialBag(null);
     expect(derived.materialClass).toBe('standard');
     const props = derived.props as THREE.MeshStandardMaterialParameters;

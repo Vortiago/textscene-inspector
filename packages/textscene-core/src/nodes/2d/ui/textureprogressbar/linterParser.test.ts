@@ -1,15 +1,7 @@
 /**
- * TextureProgressBar strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. No `linter.ts` exists for this slice: neither
- * `_validate_property` (texture_progress_bar.cpp:638-649, editor-inspector
- * visibility only, gated behind `is_editor_hint()`) nor anything else in
- * texture_progress_bar.cpp/.h emits a `WARN_PRINT` or a
- * `get_configuration_warnings` entry, so there is no engine-grounded
- * cross-field check to encode.
+ * Tests the TextureProgressBar strict validators through `validatorRegistry`, so a failure points
+ * at the validator. No `linter.ts`: `_validate_property` (texture_progress_bar.cpp:638-649) is
+ * editor-only, and texture_progress_bar.cpp/.h emit no `WARN_PRINT` or configuration warning.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -52,8 +44,7 @@ describe('TextureProgressBar strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format.
     const accepted = validatorRegistry
       .getOwnKeys('TextureProgressBar')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -87,7 +78,7 @@ describe('TextureProgressBar strict validators', () => {
     });
   });
 
-  // texture_progress_bar.cpp:576 — set_fill_mode: `ERR_FAIL_INDEX(p_fill, FILL_MODE_MAX)`
+  // texture_progress_bar.cpp:576: set_fill_mode: `ERR_FAIL_INDEX(p_fill, FILL_MODE_MAX)`
   describe('fill_mode', () => {
     it('accepts 0, FILL_LEFT_TO_RIGHT', () => {
       expect(check('fill_mode', '0')).toBeNull();
@@ -118,7 +109,7 @@ describe('TextureProgressBar strict validators', () => {
     });
   });
 
-  // texture_progress_bar.cpp:66-75 — set_nine_patch_stretch assigns straight through
+  // texture_progress_bar.cpp:66-75: set_nine_patch_stretch assigns straight through
   describe('nine_patch_stretch', () => {
     it('accepts true', () => {
       expect(check('nine_patch_stretch', 'true')).toBeNull();
@@ -133,7 +124,7 @@ describe('TextureProgressBar strict validators', () => {
     });
   });
 
-  // texture_progress_bar.cpp:625-632 — set_radial_center_offset assigns straight through
+  // texture_progress_bar.cpp:625-632: set_radial_center_offset assigns straight through
   describe('radial_center_offset', () => {
     it('accepts a typical Vector2', () => {
       expect(check('radial_center_offset', 'Vector2(0, 0)')).toBeNull();
@@ -148,7 +139,7 @@ describe('TextureProgressBar strict validators', () => {
     });
   });
 
-  // texture_progress_bar.cpp:610-619 — set_fill_degrees: `CLAMP(p_angle, 0, 360)`
+  // texture_progress_bar.cpp:610-619: set_fill_degrees: `CLAMP(p_angle, 0, 360)`
   describe('radial_fill_degrees', () => {
     it('accepts the default, 360', () => {
       expect(check('radial_fill_degrees', '360')).toBeNull();
@@ -175,7 +166,7 @@ describe('TextureProgressBar strict validators', () => {
     });
   });
 
-  // texture_progress_bar.cpp:591-604 — set_radial_initial_angle wraps with Math::fposmodp
+  // texture_progress_bar.cpp:591-604: set_radial_initial_angle wraps with Math::fposmodp
   describe('radial_initial_angle', () => {
     it('accepts the default, 0', () => {
       expect(check('radial_initial_angle', '0')).toBeNull();
@@ -202,7 +193,7 @@ describe('TextureProgressBar strict validators', () => {
     });
   });
 
-  // texture_progress_bar.cpp:700-703 — ADD_PROPERTYI hints "0,16384,1,suffix:px" on each side
+  // texture_progress_bar.cpp:700-703: ADD_PROPERTYI hints "0,16384,1,suffix:px" on each side
   describe.each([
     ['stretch_margin_bottom', 703],
     ['stretch_margin_left', 700],
@@ -234,7 +225,7 @@ describe('TextureProgressBar strict validators', () => {
     });
   });
 
-  // texture_progress_bar.cpp:41-47, 99-105, 33-39 — all three delegate to _set_texture
+  // texture_progress_bar.cpp:41-47, 99-105, 33-39: all three delegate to _set_texture
   describe.each(['texture_over', 'texture_progress', 'texture_under'])('%s', (property) => {
     it('accepts a SubResource reference', () => {
       expect(check(property, 'SubResource("Texture2D_1")')).toBeNull();
@@ -249,7 +240,7 @@ describe('TextureProgressBar strict validators', () => {
     });
   });
 
-  // texture_progress_bar.cpp:107-114 — set_progress_offset (texture_progress_offset) assigns straight through
+  // texture_progress_bar.cpp:107-114: set_progress_offset (texture_progress_offset) assigns straight through
   describe('texture_progress_offset', () => {
     it('accepts a typical Vector2', () => {
       expect(check('texture_progress_offset', 'Vector2(4, -2)')).toBeNull();
@@ -260,7 +251,7 @@ describe('TextureProgressBar strict validators', () => {
     });
   });
 
-  // texture_progress_bar.cpp:120-157 — set_tint_under/set_tint_progress/set_tint_over assign straight through
+  // texture_progress_bar.cpp:120-157: set_tint_under/set_tint_progress/set_tint_over assign straight through
   describe.each(['tint_over', 'tint_progress', 'tint_under'])('%s', (property) => {
     it('accepts the default opaque white', () => {
       expect(check(property, 'Color(1, 1, 1, 1)')).toBeNull();
@@ -276,10 +267,8 @@ describe('TextureProgressBar strict validators', () => {
   });
 
   describe('the fixture, unit-texture-progress-bar.tscn', () => {
-    // Every literal MyTextureProgressBar carries, verbatim from the .tscn. The
-    // fixture's job is "zero errors AND zero warnings" — this is what proves it,
-    // rather than trusting the per-property boundary cases above to generalise
-    // to the exact strings the fixture ships.
+    // Every literal MyTextureProgressBar carries, verbatim from the .tscn, proves the
+    // fixture's "zero errors and zero warnings" beyond the boundary cases above.
     const FIXTURE_VALUES: Record<string, string> = {
       fill_mode: '4',
       nine_patch_stretch: 'true',

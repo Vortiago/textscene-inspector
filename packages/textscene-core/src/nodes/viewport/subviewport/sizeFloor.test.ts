@@ -1,22 +1,8 @@
 /**
- * `viewport-size-too-small` is RETIRED, and this is where that stays decided.
- *
- * The rule reported "must be at least 2 pixels on both dimensions to render
- * anything" on every `Window` descendant, grounded as one of Godot's own
- * configuration warnings. It is unreachable in 4.6.3.
- *
- * `Viewport::get_configuration_warnings` (viewport.cpp) tests `Viewport::size`,
- * and the ONLY assignment to that field is in `Viewport::_set_size`, which
- * computes `Size2i new_size = p_size.maxi(2)` first (viewport.cpp:1120) and
- * stores that. `Window` keeps the authored number in its OWN `Window::size`
- * and reaches the viewport field through `_set_size` like everything else
- * (window.cpp:1352), so the value the warning reads is floored before it is
- * ever compared. Measured on 4.6.3: a SubViewport written
- * `size = Vector2i(1, 1)` loads with `size == (2, 2)`.
- *
- * Without this test the rule's absence looks like an obvious gap and the next
- * coverage sweep re-adds it. `size` still carries its ordinary validator, so a
- * value no int32 holds is still reported — by that, not by a second arm.
+ * No `viewport-size-too-small` rule: its warning (viewport.cpp) reads `Viewport::size`,
+ * which only `_set_size` assigns, after `p_size.maxi(2)` (viewport.cpp:1120), `Window`
+ * included (window.cpp:1352). On 4.6.3, `size = Vector2i(1, 1)` loads as (2, 2).
+ * `size`'s own validator still reports a non-int32 value.
  */
 
 import { describe, it, expect } from 'vitest';

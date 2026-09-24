@@ -1,19 +1,8 @@
 /**
- * Window strict validators for linting.
- *
- * Declare only Window's OWN members — the ones doc/classes/Window.xml
- * lists without an `overrides=` attribute. Everything from Node up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
- *
- * Window extends Viewport, whose members are registered once in
- * `../../viewport/shared/linterParser.ts` and reach this type through the
- * base-walk — so they are never Window's own. `auto_translate` is skipped:
- * window.cpp's ADD_PROPERTY flags it PROPERTY_USAGE_NONE, so it is never
- * serialised into a .tscn.
- *
- * Window is a base class for AcceptDialog/ConfirmationDialog/Popup/PopupMenu/
- * PopupPanel/FileDialog, which chain here rather than re-declaring these.
+ * Window strict validators: only Window's own members (doc/classes/Window.xml without
+ * `overrides=`). Members from Node up, and Viewport's in `../../viewport/shared/linterParser.ts`,
+ * arrive through the NODE_BASE_TYPES base walk. AcceptDialog, ConfirmationDialog, Popup,
+ * PopupMenu, PopupPanel and FileDialog chain here.
  */
 
 import '../../viewport/shared/linterParser.js';
@@ -21,12 +10,11 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 import { THEME_OVERRIDE_VALIDATORS } from '../../../linter/validators/themeOverrides.js';
 
-// `theme_type_variation` is a StringName: Godot always serialises it `&"..."`,
-// but the variant text parser also accepts a plain `"..."` literal (it implicitly
-// casts to StringName on the setter) — same leniency as the shared `busValidator`.
-
+// Re-declaring an inherited key shadows it and duplicates the rule. `auto_translate`
+// has no validator: window.cpp's ADD_PROPERTY flags it PROPERTY_USAGE_NONE, so it is
+// never serialised.
 validatorRegistry.registerAll('Window', {
-  // window.cpp:3422 — PROPERTY_HINT_ENUM "Windowed,Minimized,Maximized,Fullscreen,Exclusive Fullscreen".
+  // window.cpp:3422, PROPERTY_HINT_ENUM "Windowed,Minimized,Maximized,Fullscreen,Exclusive Fullscreen".
   // set_mode (window.cpp:523-531) assigns unconditionally, no ERR_FAIL.
   mode: v.enumInt(
     'mode',
@@ -42,7 +30,7 @@ validatorRegistry.registerAll('Window', {
     { hinted: 'window.cpp:3422' }
   ),
   title: v.quotedString('title'),
-  // window.cpp:3427 — PROPERTY_HINT_ENUM, 6 labels. set_initial_position
+  // window.cpp:3427, PROPERTY_HINT_ENUM, 6 labels. set_initial_position
   // (window.cpp:331-337) assigns unconditionally, no ERR_FAIL.
   initial_position: v.enumInt(
     'initial_position',
@@ -63,14 +51,14 @@ validatorRegistry.registerAll('Window', {
   // `size = size.max(size_limit)` (window.cpp:1190) floors it: size_limit comes from
   // min_size, itself clamped to >= 0 by _clamp_limit_size. A negative size is altered.
   size: v.vector2i('size', { min: 0, enforced: 'window.cpp:1190' }),
-  // window.cpp:3430 — PROPERTY_HINT_RANGE "0,64,1,or_greater": 64 is a soft
+  // window.cpp:3430, PROPERTY_HINT_RANGE "0,64,1,or_greater": 64 is a soft
   // editor bound (or_greater), so only the 0 floor is closed. set_current_screen
   // (window.cpp:344-351) assigns unconditionally, no clamp.
   current_screen: v.int('current_screen', { min: 0, hinted: 'window.cpp:3430' }),
   nonclient_area: v.rect2i('nonclient_area'),
   mouse_passthrough_polygon: v.packedVector2Array('mouse_passthrough_polygon'),
 
-  // "Flags" group — every one an ADD_PROPERTYI(..., "set_flag", "get_flag", FLAG_*) bool.
+  // "Flags" group: every one an ADD_PROPERTYI(..., "set_flag", "get_flag", FLAG_*) bool.
   visible: v.boolean('visible'),
   wrap_controls: v.boolean('wrap_controls'),
   transient: v.boolean('transient'),
@@ -100,7 +88,7 @@ validatorRegistry.registerAll('Window', {
   // "Content Scale" group.
   // set_content_scale_size (window.cpp:1716-1717) ERR_FAIL_CONDs on either component < 0.
   content_scale_size: v.vector2i('content_scale_size', { min: 0, enforced: 'window.cpp:1716' }),
-  // window.cpp:3463 — PROPERTY_HINT_ENUM, 3 labels. set_content_scale_mode
+  // window.cpp:3463, PROPERTY_HINT_ENUM, 3 labels. set_content_scale_mode
   // (window.cpp:1727-1731) assigns unconditionally, no ERR_FAIL.
   content_scale_mode: v.enumInt(
     'content_scale_mode',
@@ -113,7 +101,7 @@ validatorRegistry.registerAll('Window', {
     },
     { hinted: 'window.cpp:3463' }
   ),
-  // window.cpp:3464 — PROPERTY_HINT_ENUM, 5 labels. set_content_scale_aspect
+  // window.cpp:3464, PROPERTY_HINT_ENUM, 5 labels. set_content_scale_aspect
   // (window.cpp:1738-1742) assigns unconditionally, no ERR_FAIL.
   content_scale_aspect: v.enumInt(
     'content_scale_aspect',
@@ -128,7 +116,7 @@ validatorRegistry.registerAll('Window', {
     },
     { hinted: 'window.cpp:3464' }
   ),
-  // window.cpp:3465 — PROPERTY_HINT_ENUM, 2 labels. set_content_scale_stretch
+  // window.cpp:3465, PROPERTY_HINT_ENUM, 2 labels. set_content_scale_stretch
   // (window.cpp:1749-1752) assigns unconditionally, no ERR_FAIL.
   content_scale_stretch: v.enumInt(
     'content_scale_stretch',
@@ -140,16 +128,10 @@ validatorRegistry.registerAll('Window', {
     },
     { hinted: 'window.cpp:3465' }
   ),
-  // window.cpp:3466 — PROPERTY_HINT_RANGE "0.5,8.0,0.01" closes both ends, but
-  // that is the hint's own syntax, not enforcement: set_content_scale_factor
-  // (window.cpp:1772-1776) only does `ERR_FAIL_COND(p_factor <= 0)` (:1774) —
-  // neither 0.5 nor 8.0 is ever checked. The one place content_scale_factor
-  // gets altered afterward is `_update_viewport_size` (window.cpp:1240-1247)
-  // flooring it to >= 1, and only when content_scale_stretch is INTEGER — an
-  // unrelated, conditional side effect, not a bound on this property.
-  //
-  // Three tiers, then: at or below 0 errors, and the hint's own [0.5, 8.0]
-  // warns on both sides.
+  // At or below 0 errors: set_content_scale_factor (window.cpp:1772-1776) only does
+  // `ERR_FAIL_COND(p_factor <= 0)` (:1774). The hint's [0.5, 8.0] (window.cpp:3466)
+  // warns on both sides. The floor to >= 1 under INTEGER stretch in
+  // `_update_viewport_size` (window.cpp:1240-1247) is a side effect, not a bound.
   content_scale_factor: v.float('content_scale_factor', {
     enforcedMin: { at: 0, exclusive: true },
     min: 0.5,
@@ -165,8 +147,10 @@ validatorRegistry.registerAll('Window', {
   // "Theme" group.
   // window.cpp:3477 is Control.theme's twin, down to the PropertyInfo.
   theme: v.resourceReference('theme'),
+  // Godot serialises this StringName as `&"..."`, but the variant text parser also
+  // accepts a plain `"..."`, which the setter casts, as the shared `busValidator` does.
   theme_type_variation: v.stringName('theme_type_variation'),
 
-  // Shared with Control — Godot emits this family from both, identically.
+  // Shared with Control: Godot emits this family from both, identically.
   ...THEME_OVERRIDE_VALIDATORS,
 });

@@ -1,14 +1,7 @@
 /**
- * `<EnvironmentLayer>` — applies one Godot `Environment` to the scene.
- *
- * The single mechanism behind both consumers: an authored `WorldEnvironment`
- * node, and the editor preview environment this previewer supplies to a scene
- * that has none (ADR-0025). They differ only in where the settings come from,
- * so anything that changes how an environment is applied changes both at once.
- *
- * Applies background, sky (as background and/or as the ambient IBL), flat
- * ambient, tonemapping and fog — each restoring what it found on unmount,
- * because the renderer and scene outlive any one environment.
+ * Applies one Godot `Environment` to the scene, for an authored `WorldEnvironment` and for the
+ * editor preview environment alike (ADR-0025): background, sky, flat ambient, tonemapping and fog.
+ * Each restores what it found on unmount, because the renderer and scene outlive an environment.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -50,10 +43,8 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   // compositor owns the curve when either is live. The HDR pass is not free, so
   // each is gated on the scene being able to show it.
   const glowParams = useMemo(() => glowParamsFor(settings), [settings]);
-  // null when scanning the scene cannot decide the question: either nothing could
-  // glow, or the settings glow every pixel regardless of what the scene holds. One
-  // nullable argument rather than a threshold plus a flag, because a threshold of 0
-  // means "everything blooms" and would be actively wrong if the flag were dropped.
+  // Null when a scan cannot decide: nothing could glow, or every pixel glows. One nullable value,
+  // not a threshold and a flag, since a threshold of 0 means "everything blooms".
   const scanThreshold =
     glowParams && !glowNeedsEveryPixel(glowParams)
       ? unexposedBrightPassThreshold(glowParams)
@@ -61,7 +52,7 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
   const hasBloomable = useSceneHasBloomableEmissive(scanThreshold);
   const hasBlended = useSceneHasBlendedSurface();
   const activeGlow = glowParams && (scanThreshold === null || hasBloomable) ? glowParams : null;
-  // ONE value decides the pass and the suppression, so they cannot disagree.
+  // One value decides the pass and the suppression, so they cannot disagree.
   const composited = useComposedToneMapping(activeGlow, hasBlended);
 
   return (
@@ -76,10 +67,9 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
             sky={sky}
             asBackground={showsSky}
             backgroundIntensity={settings.background.energyMultiplier}
-            // The sky's REFLECTION strength drives `environmentIntensity`. Godot
-            // reflects the sky at `background_energy_multiplier` whatever the
-            // ambient source, so this is the full energy, not the diffuse-scaled
-            // one; the diffuse share is restored per-material below.
+            // The reflection strength drives `environmentIntensity`: Godot reflects the sky at
+            // `background_energy_multiplier` whatever the ambient source. The diffuse share is
+            // restored per material below.
             intensity={skyAmbient ? skyAmbient.energy : 0}
           />
           <SkyDiffuseReflectionSplit
@@ -89,16 +79,9 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
         </>
       )}
       {flatAmbient && flatAmbient.energy > 0 && (
-        // `* LIGHT_INTENSITY_SCALE` for the same reason a directional light
-        // needs it, on the path where it is easiest to miss because Godot
-        // writes it most simply: Godot adds `ambient_light * albedo` with no
-        // 1/PI, while three's `getAmbientLightIrradiance` returns the colour
-        // unscaled and then multiplies by `albedo/PI`.
-        //
-        // The SKY ambient above does NOT take this factor: three's
-        // `getIBLIrradiance` already returns `PI * envColor * intensity`, and
-        // that PI cancels against the same Lambert 1/PI. Applying it there too
-        // would break the one ambient path that is already right.
+        // `* LIGHT_INTENSITY_SCALE`: Godot adds `ambient_light * albedo` with no 1/PI, while three
+        // multiplies the colour by `albedo/PI`. The sky ambient takes no factor, because
+        // `getIBLIrradiance` already returns `PI * envColor * intensity`.
         <ambientLight
           color={godotColorToLinear(flatAmbient.color)}
           intensity={flatAmbient.energy * LIGHT_INTENSITY_SCALE}
@@ -109,26 +92,10 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
 }
 
 /**
- * Restores Godot's separation of sky DIFFUSE from sky REFLECTION, which three
- * couples under one `scene.environmentIntensity`. Godot scales the diffuse
- * ambient by `ambient_light_sky_contribution` while a metal reflects the whole
- * sky regardless; three applies the single intensity to both. With
- * `environmentIntensity` set to the full REFLECTION strength (in `SkyLayer`),
- * each material's `envMapIntensity` is pulled back toward the diffuse
- * contribution by how dielectric it is:
- *
- *   envMapIntensity = contribution + metalness · (1 − contribution)
- *
- * A full metal (metalness 1) keeps the whole reflection; a rough dielectric
- * (metalness 0) keeps only `contribution` of the sky — 0 under a COLOR ambient,
- * so it falls back to the flat ambient alone, exactly as Godot leaves it. This
- * is the `envMapIntensity` split.
- *
- * A no-op at `contribution >= 1` (the common case where the two already agree),
- * so it never touches a material unless a scene lowers the sky contribution.
- * Re-applied over a short window like the bloom probe below, so materials that
- * mount a beat later (GLB, instanced sub-scenes) are caught; originals are
- * restored on unmount because the renderer outlives any one environment.
+ * Splits sky diffuse from reflection, which three couples under one `environmentIntensity`: Godot
+ * scales diffuse by `ambient_light_sky_contribution` while a metal reflects the whole sky. Each
+ * material gets `envMapIntensity = contribution + metalness · (1 − contribution)`, so a dielectric
+ * keeps `contribution` (0 under a COLOR ambient). A no-op at `contribution >= 1`.
  */
 function SkyDiffuseReflectionSplit({
   contribution,
@@ -142,18 +109,10 @@ function SkyDiffuseReflectionSplit({
     new Map<THREE.MeshStandardMaterial, { envMap: THREE.Texture | null; intensity: number }>()
   );
 
-  // Applied every frame rather than once on mount: materials arrive across
-  // several frames (async textures force a fresh material, GLB and instanced
-  // sub-scenes mount late), and the assignment is idempotent, so re-stamping
-  // each frame is the robust way to catch them all without chasing mount order.
-  //
-  // three IGNORES a material's `envMapIntensity` while the IBL comes from
-  // `scene.environment` — the renderer overrides that uniform with
-  // `scene.environmentIntensity` unless the material owns its `envMap`
-  // (WebGLRenderer, `material.envMap === null && scene.environment !== null`).
-  // So the split is bought by pointing each material's own `envMap` at the sky
-  // (the same PMREM texture, same mapping — no recompile) and then setting its
-  // per-material intensity.
+  // Stamped every frame, since materials arrive across frames (async textures, GLB and instanced
+  // sub-scenes) and the assignment is idempotent. three ignores `envMapIntensity` unless the
+  // material owns its `envMap` (`material.envMap === null && scene.environment !== null` in
+  // WebGLRenderer), so each points its own `envMap` at the same PMREM texture, with no recompile.
   useFrame(() => {
     if (!active || contribution >= 1) return;
     const environment = scene.environment;
@@ -174,8 +133,7 @@ function SkyDiffuseReflectionSplit({
     });
   });
 
-  // Restore what was found when this environment goes away — the renderer and
-  // its materials outlive any one environment.
+  // Restores what was found, because the materials outlive any one environment.
   useEffect(() => {
     const captured = originals.current;
     return () => {
@@ -209,11 +167,9 @@ function useSceneHasBlendedSurface(): boolean {
 }
 
 /**
- * Re-runs a scene predicate over a short window, so async content (GLB, instanced
- * sub-scenes) is still seen, and LATCHES: mounting the composer flips
- * `gl.toneMapping`, which recompiles every tone-mapped material in the scene.
- *
- * A null predicate skips the scan.
+ * Re-runs a scene predicate over a short window, so async content (GLB, instanced sub-scenes) is
+ * seen, and latches: mounting the composer flips `gl.toneMapping`, which recompiles every
+ * tone-mapped material. A null predicate skips the scan.
  */
 function useLatchedSceneScan(scan: ((scene: THREE.Object3D) => boolean) | null): boolean {
   const scene = useThree((s) => s.scene);
@@ -237,10 +193,9 @@ function useLatchedSceneScan(scan: ((scene: THREE.Object3D) => boolean) | null):
 }
 
 /**
- * The compositor's mount decision, and the glow it carries — null stays on three's
- * in-material curve. The GL-context check belongs here, not in the layer: the same
- * value suppresses the in-material tonemap, and `postprocessing` needs a real
- * context at construction (there is none under test-renderer or headless DOM).
+ * The compositor's mount decision and its glow; null stays on three's in-material curve. The
+ * GL-context check lives here, since the same value suppresses the in-material tonemap and
+ * `postprocessing` needs a real context (none under test-renderer or a headless DOM).
  */
 function useComposedToneMapping(
   glow: GlowParams | null,
@@ -248,9 +203,8 @@ function useComposedToneMapping(
 ): { glow: GlowParams | null } | null {
   const gl = useThree((s) => s.gl);
   const glReady = useMemo(() => hasRealGlContext(gl), [gl]);
-  // Godot composites canvas items into the viewport AFTER
-  // `_render_buffers_post_process_and_tonemap`, so a 2D canvas gets no pass at all
-  // — and every canvas item blends, which would otherwise mount one on all of them.
+  // Godot composites canvas items after `_render_buffers_post_process_and_tonemap`, so a 2D canvas
+  // gets no pass. Without this check, every canvas item blends and would mount one.
   const is2D = useCanvasWorkspace() === '2d';
   return useMemo(
     () => (glReady && !is2D && (glow || hasBlendedSurface) ? { glow } : null),
@@ -272,9 +226,8 @@ interface EnvironmentApplierProps {
   /** When a real sky renders, it owns the background and this must not fight it. */
   hasSky: boolean;
   /**
-   * The composer forces the renderer to `NoToneMapping` while mounted, and
-   * `GodotToneMapEffect` applies the same ported curve itself — so the
-   * in-material tonemap must NOT also be applied here.
+   * The composer forces `NoToneMapping` while mounted and `GodotToneMapEffect` applies the curve,
+   * so the in-material tonemap is not applied here.
    */
   suppressToneMapping: boolean;
 }
@@ -293,9 +246,8 @@ function EnvironmentApplier({ settings, hasSky, suppressToneMapping }: Environme
       // Godot Color literals are sRGB; convert to three.js's linear working space.
       scene.background = godotColorToLinear(settings.background.color);
     } else if (mode === BackgroundMode.BG_SKY && !hasSky) {
-      // A sky we cannot resolve — an unsupported material, or one held in an
-      // ExtResource `.tres`. A mid-blue solid keeps the background non-null so
-      // the scene still reads as "sky here" rather than as a black void.
+      // A sky we cannot resolve (an unsupported material, or one in an ExtResource `.tres`). A
+      // mid-blue solid reads as "sky here" rather than as a black void.
       scene.background = godotColorToLinear({ r: 0.5, g: 0.6, b: 0.75 });
     }
     return () => {
@@ -335,8 +287,8 @@ function EnvironmentApplier({ settings, hasSky, suppressToneMapping }: Environme
   useEffect(() => {
     const previousFog = scene.fog;
     if (fog) {
-      // Godot screen-space fog → exponential-squared fog (closest THREE match);
-      // DEPTH mode (1) is approximated with the same density-based fog.
+      // Godot fog maps to exponential-squared fog, the closest THREE match, and DEPTH mode (1)
+      // uses the same density-based fog.
       scene.fog = new THREE.FogExp2(godotColorToLinear(fog.color).getHex(), fog.density);
     }
     return () => {

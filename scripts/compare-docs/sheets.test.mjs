@@ -1,20 +1,7 @@
 /**
- * Structural guard over the comparison sheets.
- *
- * Nothing checked these before: `build-gallery.mjs` throws on a few fatal shapes
- * during the web build, and silently coerces an unknown `status=` to
- * `unreviewed`, so a typo'd frontmatter key or a dangling image was invisible.
- *
- * Three rules here are load-bearing rather than tidy. `build-gallery` only reports
- * a missing image when `image:` is DECLARED (so a freshly scaffolded slice cannot
- * break the web build), which leaves two holes this file closes: an unknown key
- * catches `imgae:`, and the status rule catches `image:` being deleted from a
- * sheet that claims a verified status. The third closes a hole those two open
- * between them: a SECTIONED sheet (one carrying `<!-- compare: … -->` markers)
- * takes its nav badge from the rollup over its section statuses, never from
- * frontmatter, so a frontmatter `status:` there is never read by anything — and
- * every other check above skips sectioned sheets when judging `status:`, so
- * nothing was watching that dead value for a contradiction.
+ * Structural guard over the comparison sheets. The gallery coerces an unknown
+ * `status=` to `unreviewed` and reports a missing image only when `image:` is
+ * declared, so a typo'd key or a deleted `image:` is caught here.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -56,13 +43,8 @@ const CATEGORIES = new Set(['3D', '2D', 'Resources', 'Complex Scenes', 'Other'])
 
 /**
  * The hand-maintained index at docs/comparison/README.md, and the node count in
- * the root README.
- *
- * Neither is generated and neither was guarded, so every wave appended five
- * entries by hand and a missed one was invisible until somebody read the doc.
- * Both stay hand-written on purpose: the index's per-node blurbs are richer
- * than `renders_as:` and generating them would lose that. Only the SET of
- * entries is asserted, never their prose.
+ * the root README. Hand-written on purpose, since the blurbs are richer than
+ * `renders_as:`. Only the set of entries is asserted, never their prose.
  */
 const COMPARISON_INDEX = join(HERE, '../../docs/comparison/README.md');
 const ROOT_README = join(HERE, '../../README.md');
@@ -98,7 +80,7 @@ describe('comparison sheets', () => {
 
   it('uses no unknown frontmatter key', () => {
     // A typo'd key is otherwise silent: `imgae:` reads as a sheet with no image,
-    // which the gallery now treats as "not captured yet" rather than an error.
+    // which the gallery treats as "not captured yet".
     const unknown = sheets.flatMap((s) =>
       Object.keys(s.meta)
         .filter((k) => !KNOWN_KEYS.has(k))
@@ -108,15 +90,9 @@ describe('comparison sheets', () => {
   });
 
   it('hides no known frontmatter key behind a comment, `image` aside', () => {
-    // A commented key reads, to a human skimming the file, as an already-set
-    // value — but `parseFrontmatter`'s key regex cannot match past the `#`, so
-    // it is silently absent from `meta` for every consumer.
-    //
-    // `image` is the one exception, and a deliberate convention rather than a
-    // slip: an un-captured sheet commits `# image: <basename>` to RESERVE the
-    // basename its capture will write, and the absent key is exactly what tells
-    // the gallery it has no pair yet. Every other key means something the
-    // moment it is written, so a commented one is a typo or a stale paste.
+    // `parseFrontmatter` cannot see a commented key. `image` is the exception:
+    // an un-captured sheet commits `# image: <basename>` to reserve the name its
+    // capture will write, and the absent key tells the gallery it has no pair.
     const bad = sheets.flatMap((s) =>
       findCommentedFrontmatterKeys(s.text)
         .filter((k) => KNOWN_KEYS.has(k) && k !== 'image')
@@ -139,11 +115,8 @@ describe('comparison sheets', () => {
   });
 
   it('declares an image once it claims a verified status', () => {
-    // `done`/`limitation` assert a comparison someone actually looked at, which
-    // is impossible without captures. Scaffolded sheets are `unreviewed` and pass.
-    // Excludes sectioned sheets: their own `image:` (if any) is the header pair,
-    // not the thing a top-level `status:` would be claiming about — the next
-    // test below is the one that polices their frontmatter status.
+    // `done`/`limitation` claim a comparison someone looked at, which needs
+    // captures. Sectioned sheets are the next test's subject.
     const bad = sheets
       .filter((s) => s.meta.visual !== 'false' && !s.body.includes('<!-- compare:'))
       .filter((s) => ['done', 'limitation'].includes(s.meta.status) && !s.meta.image)
@@ -152,13 +125,9 @@ describe('comparison sheets', () => {
   });
 
   it('declares no frontmatter status on a sectioned sheet', () => {
-    // build-gallery.mjs never reads frontmatter `status:` for a sectioned sheet
-    // (one carrying a `<!-- compare: … -->` marker) — its nav badge and header
-    // rolls up from its sections' own `status=` attributes instead. A frontmatter
-    // `status:` there is a second, unread source of truth that can silently say
-    // something the sections do not: PointLight2D declared `limitation` while
-    // every one of its seven sections was `done`, and the badge always read
-    // "Done". Forbidding the key outright is the fix that cannot rot again.
+    // The gallery never reads frontmatter `status:` for a sectioned sheet: its
+    // badge rolls up from the sections' `status=`. A frontmatter one would be a
+    // second, unread source of truth, so the key is forbidden.
     const bad = sheets
       .filter((s) => s.body.includes('<!-- compare:'))
       .filter((s) => s.meta.status)
@@ -181,19 +150,13 @@ describe('comparison sheets', () => {
   });
 
   it('renders the header pair of a sheet that ALSO has sections', async () => {
-    // A sheet's own `image:` and its section markers are both sources, never
-    // either/or. Resolving the header pair only when a sheet has no sections
-    // lets the first section swallow the sheet's own comparison — and on the
-    // whole-scene sheets that overview IS the subject. The
-    // loss is invisible: every other image on the page still renders, and the
-    // build stayed green because nothing was missing, only unreferenced.
+    // A sheet's own `image:` and its section markers are both sources, or the
+    // first section silently swallows the sheet's own comparison.
     const sectionedWithHeader = sheets.filter(
       (s) => s.meta.image && parseCompareMarkers(s.body).length > 0
     );
     expect(sectionedWithHeader.length).toBeGreaterThan(0);
 
-    // Generated in a SUBPROCESS: build-gallery.mjs parses argv at module scope,
-    // so importing it would run a full build as an import side effect.
     const out = join(tmpdir(), `gallery-header-pair-${process.pid}.html`);
     execFileSync(process.execPath, [join(HERE, 'build-gallery.mjs'), '--out', out], {
       stdio: 'ignore',
@@ -227,12 +190,9 @@ describe('comparison sheets', () => {
   });
 
   it('gives every table row the cell count its own header declares', () => {
-    // The one shape both other guards are blind to. `docs:lint-sections --check`
-    // re-runs the generator and diffs it against its own output, so a row the
-    // generator itself malformed reads as up to date; the gallery then splits it
-    // into six `<td>` against three `<th>`. Fourteen committed rows carried an
-    // unescaped `|` from a bit-mask `Accepts` string, printing a mask label
-    // where the severity belongs and dropping the last bits.
+    // `docs:lint-sections --check` diffs the generator against its own output,
+    // so a row it malformed reads as up to date. An unescaped `|` in a bit-mask
+    // `Accepts` string splits into more `<td>` than `<th>`.
     const problems = [];
     let tables = 0;
     for (const s of sheets) {
@@ -250,12 +210,9 @@ describe('comparison sheets', () => {
         }
       }
     }
-    // Without a coverage floor the guard passes on a corpus whose tables it
-    // never found. DERIVED rather than a fixed count: a sheet holding a table
-    // row must yield at least one table to the sweep, so a corpus that shrinks
-    // moves both sides together while a sweep that stops matching moves only
-    // one. A fixed floor went stale the moment the sheets got shorter, and the
-    // fix for a stale floor is always to lower it, which is the guard dying.
+    // A derived floor, not a fixed count: a sheet holding a table row must
+    // yield a table to the sweep, so a shrinking corpus moves both sides and a
+    // sweep that stops matching moves one.
     const sheetsHoldingARow = sheets.filter((s) =>
       s.body.split('\n').some((line) => line.trim().startsWith('|'))
     ).length;
@@ -291,9 +248,8 @@ describe('comparison sheets', () => {
   });
 
   it('links to no other Markdown file', () => {
-    // A relative .md link cannot work: sheets sit at varying depths in the slice
-    // tree, and the gallery emits the href verbatim into one flat HTML page, so
-    // it is dead there and on the deployed site. Name the other sheet instead.
+    // A relative .md link is dead: sheets sit at varying depths, and the gallery
+    // emits the href verbatim into one flat page. Name the other sheet instead.
     const bad = sheets
       .flatMap((s) =>
         [...s.body.matchAll(/\]\(([^)]+\.md[^)]*)\)/g)].map((m) => `${s.label} -> ${m[1]}`)
@@ -317,10 +273,8 @@ describe('comparison sheets', () => {
   });
 
   it('maps each image basename to a single fixture', () => {
-    // Two sheets SHARING one capture is deliberate and common (CollisionShape3D
-    // and RigidBody3D document the same image). What must not happen is one
-    // basename claimed for two different scenes: recapture's byImage map is
-    // last-wins, so that silently decides which scene lands in the file.
+    // Two sheets may share one capture, but not one basename for two scenes:
+    // recapture's byImage map is last-wins.
     const byImage = new Map();
     for (const s of sheets) {
       const pairs = parseCompareMarkers(s.body);
@@ -346,27 +300,14 @@ describe('comparison sheets', () => {
   });
 
   /**
-   * A sheet's status is a claim about what the viewport does; the r3f
-   * registration is what the viewport actually does. Nothing keeps a hand-written
-   * claim honest, and broad node coverage means most sheets are written once and
-   * never looked at again — so the two are asserted against each other.
-   *
-   * `visual:` is deliberately NOT tied to this. The three say different things:
-   * `visual: false` means a plain capture has nothing worth comparing — also true
-   * of a Marker2D whose gizmo is selection-gated (ADR-0018) — while
-   * `renderIntent: 'transform-only'` means the node itself draws nothing. They
-   * come apart in both directions: a gizmo node draws but has no useful pair, and
-   * a RigidBody3D draws nothing yet its sheet's capture usefully shows the child
-   * mesh it carries. Only the registry claim is machine-checkable, so only it is
-   * asserted; whether to show an image pair stays an editorial call per sheet.
+   * A sheet's status against the r3f registration, which is what the viewport
+   * does. `visual:` is not tied to it: a gizmo node (ADR-0018) draws but has no
+   * useful pair, and a RigidBody3D draws nothing but its capture shows its mesh.
    */
   /**
-   * The type names an `index.r3f.ts` actually registers.
-   *
-   * Inline `typeName: 'Foo'` literals, plus the one shape that has none: a
-   * family whose members differ only by name registers in a LOOP over a
-   * constant its React-free sibling `index.ts` exports. Resolving that constant
-   * is what makes the answer by-type instead of by-position.
+   * The type names an `index.r3f.ts` registers: inline `typeName: 'Foo'`
+   * literals, and a family's loop over a constant its React-free sibling
+   * `index.ts` exports.
    */
   function typesRegisteredBy(r3fFile) {
     const source = readFileSync(r3fFile, 'utf8');
@@ -380,18 +321,9 @@ describe('comparison sheets', () => {
   }
 
   /**
-   * The registration that speaks for `type`, or null — its file and its intent.
-   *
-   * The walk to an ancestor is for the family loops: `physics/2d/index.r3f.ts`
-   * registers StaticBody2D, RigidBody2D and CharacterBody2D, none of which owns
-   * an `index.r3f.ts`, so reading only the slice directory called all three
-   * unregistered and they could never claim `linter-only` however honestly they
-   * drew nothing.
-   *
-   * But the ancestor must NAME the type. Crediting the nearest one positionally
-   * meant any future slice under a family directory inherited an intent from a
-   * file that had never heard of it — and in the direction that stays quiet, a
-   * DRAWING slice under `physics/2d/` could claim `linter-only` and pass.
+   * The registration that speaks for `type`, or null: its file and its intent.
+   * It walks to an ancestor for the family loops (`physics/2d/index.r3f.ts`),
+   * and the ancestor must name the type, or a drawing slice below it passes.
    */
   function registrationFor(sliceDir, type) {
     for (let dir = sliceDir; dir.includes(`${sep}nodes`); dir = dirname(dir)) {
@@ -407,8 +339,7 @@ describe('comparison sheets', () => {
 
   describe('status agrees with the render registration', () => {
     /** Slice-backed sheets only; the `complex-*` showcases have no slice. */
-    // Filter first, then read once per slice: the two directional assertions
-    // below would otherwise re-stat and re-read the same index.r3f.ts files.
+    // Read once per slice, not once per directional assertion.
     const sliceSheets = sheets
       .filter((s) => s.file.includes(`${sep}nodes${sep}`))
       .map((s) => {
@@ -418,8 +349,7 @@ describe('comparison sheets', () => {
           hasComponent: registration !== null,
           transformOnly: registration?.intent === 'transform-only',
           // A `pending` registration mounts a base component while the node's
-          // own visual is still missing, so it is a gap that happens to be
-          // registered — presence of a file cannot settle the status alone.
+          // own visual is missing: a registered gap.
           pending: registration?.intent === 'pending',
         };
       });
@@ -429,9 +359,8 @@ describe('comparison sheets', () => {
     });
 
     it('credits a family loop only to the types it registers', () => {
-      // The one loop registration in the tree, and the case the by-type lookup
-      // exists for: three slices own no `index.r3f.ts` and must still resolve,
-      // while a fourth slice in the same directory must not inherit it.
+      // A loop registration: three slices own no `index.r3f.ts` and must
+      // resolve, while another slice in the same directory must not inherit it.
       const family = join(NODES_ROOT, 'physics/2d/index.r3f.ts');
       expect(typesRegisteredBy(family).sort()).toEqual([
         'CharacterBody2D',
@@ -445,22 +374,13 @@ describe('comparison sheets', () => {
     });
 
     it('gives every slice-backed sheet a status, so none sits outside the checks', () => {
-      // `KNOWN_KEYS` permits `status:`; nothing required it. Every assertion in
-      // this block filters on a status literal, so a sheet without one matched
-      // none of them — 59 of 251 sheets, a quarter of the gallery, exempt from
-      // the guard this block describes as bidirectional. The count floor above
-      // could not notice: it is built from the path filter alone.
-      //
-      // Resource sheets are in THIS check and not the four below. They have no
-      // render registration to agree with — a Resource slice registers through
-      // `registerResourceSlice` (ADR-0031), and `nodeComponentRegistry` is not
-      // its table — but the status is still a claim, and it was unasserted
-      // twice over: absent, and outside the `nodes` path filter.
+      // Every assertion in this block filters on a status literal, so a sheet
+      // without one would escape them all. Resource sheets are in this check
+      // only: a Resource slice registers through `registerResourceSlice`
+      // (ADR-0031), not `nodeComponentRegistry`.
       const slice = (s) =>
         s.file.includes(`${sep}nodes${sep}`) || s.file.includes(`${sep}resources${sep}`);
-      // A SECTIONED sheet is exempt, and forbidden the key outright by the
-      // guard above: its badge rolls up from its sections' own `status=`, so a
-      // frontmatter one would be a second, unread source of truth.
+      // A sectioned sheet is exempt: the guard above forbids its key.
       const backed = sheets.filter(slice).filter((s) => !s.body.includes('<!-- compare:'));
       expect(backed.length).toBeGreaterThan(230);
       expect(backed.filter((s) => !s.meta.status).map((s) => s.label)).toEqual([]);
@@ -474,16 +394,9 @@ describe('comparison sheets', () => {
     });
 
     it('never calls a transform-only registration `unimplemented`', () => {
-      // The reverse direction, deliberately narrow. Requiring `linter-only` here
-      // was too strong: `renderIntent: 'transform-only'` is a claim about the
-      // node's OWN geometry, while the sheet status is a claim about what there
-      // is to compare against Godot — and a driver has no geometry yet a very
-      // visible effect. AnimationPlayer is the case that proved it: its gallery
-      // entry is a GIF of two synchronised spinning cubes, sitting under a badge
-      // that said "draws nothing, complete". RemoteTransform3D is the same shape.
-      //
-      // What stays forbidden is the contradiction: a node cannot be registered,
-      // deliberate and invisible AND be an unimplemented gap.
+      // Narrow on purpose: `transform-only` is about the node's own geometry,
+      // and a driver such as AnimationPlayer has none but a visible effect. Only
+      // the contradiction is forbidden: registered as invisible and a gap.
       const bad = sliceSheets
         .filter((s) => s.transformOnly && s.meta.status === 'unimplemented')
         .map((s) => `${s.label}: registers transform-only but claims to be unimplemented`);
@@ -491,10 +404,8 @@ describe('comparison sheets', () => {
     });
 
     it('leaves every `unimplemented` sheet without a component that claims to draw', () => {
-      // Not "without a component": a gap may still register its base to keep
-      // `visible` and the workspace split working, and says so with
-      // `renderIntent: 'pending'`. What stays forbidden is a sheet calling the
-      // node a gap while its registration claims a finished visual.
+      // A gap may register its base to keep `visible` and the workspace split,
+      // with `renderIntent: 'pending'`, but not claim a finished visual.
       const bad = sliceSheets
         .filter((s) => s.meta.status === 'unimplemented' && s.hasComponent && !s.pending)
         .map((s) => `${s.label}: claims unimplemented but registers a drawing component`);
@@ -519,8 +430,7 @@ describe('hand-maintained docs stay in step with the sheets', () => {
   );
 
   it('lists every slice sheet, so a new node cannot be absent from the index', () => {
-    // Loose showcase sheets live outside src/nodes and describe scenes, not
-    // types; the index covers node types only.
+    // The index covers node types, not the loose showcase sheets.
     const sliceTypes = sheets
       .filter((s) => s.file.includes(`${sep}nodes${sep}`) && s.meta.type)
       .map((s) => s.meta.type);
@@ -535,11 +445,8 @@ describe('hand-maintained docs stay in step with the sheets', () => {
   });
 
   it("states a node count the ledger agrees with, held to the README's own phrasing", () => {
-    // Two phrasings, two standards, because the README's claim changed in kind
-    // once coverage completed. While it read "Around N node types", N was
-    // allowed to trail the truth by the rounding "Around" implies — but not by a
-    // whole wave. It claims ALL of them, so hedging is gone and so is the
-    // tolerance: an exact claim that is off by one is simply false.
+    // An exact "All N" claim must match exactly. An "Around N" claim may trail
+    // the truth by the rounding "Around" implies.
     const readme = readFileSync(ROOT_README, 'utf8');
     const sheetTypes = new Set(
       sheets.filter((s) => s.file.includes(`${sep}nodes${sep}`) && s.meta.type).map((s) => s.meta.type)
@@ -547,10 +454,8 @@ describe('hand-maintained docs stay in step with the sheets', () => {
 
     const exact = /All (\d+) of Godot [\d.]+'s instantiable node types/.exec(readme);
     if (exact) {
-      // Count against ClassDB, not against the sheet directory. `AreaLight3D`
-      // has a slice and a sheet but is absent from 4.6.3's ClassDB entirely, so
-      // it is not one of the types this sentence is counting — including it
-      // would make an exact claim off by one for a node Godot does not have.
+      // Counted against ClassDB, not the sheet directory: `AreaLight3D` has a
+      // sheet but is absent from 4.6.3's ClassDB.
       const catalogued = new Set(
         JSON.parse(readFileSync(join(HERE, 'node-catalog.json'), 'utf8')).nodes.map((n) => n.name)
       );

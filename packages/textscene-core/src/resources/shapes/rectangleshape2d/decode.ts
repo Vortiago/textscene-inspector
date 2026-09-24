@@ -1,5 +1,5 @@
 /**
- * RectangleShape2D decode — property bag in, rectangle size out.
+ * RectangleShape2D decode: property bag in, rectangle size out.
  *
  * `rectangle_shape_2d.cpp:61` ERR_FAILs when either component is negative,
  * refusing the whole assignment, so the rectangle keeps its 20x20 default.

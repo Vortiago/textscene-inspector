@@ -152,12 +152,10 @@ describe('transform utils', () => {
     });
 
     it('should decompose transform with rotation around Y axis', () => {
-      // Godot column-major basis for Ry(+π/2):
-      // Ry(+90°) rotation matrix:
+      // Ry(+90°), whose rows (Vector3 rows[3]) are basis_x, basis_y and basis_z:
       //   |  0  0  1 |
       //   |  0  1  0 |
       //   | -1  0  0 |
-      // Godot stores Basis as rows (Vector3 rows[3]); basis_x = row 0, etc.
       const transform: Transform3D = {
         basis_x: { x: 0, y: 0, z: 1 },
         basis_y: { x: 0, y: 1, z: 0 },
@@ -250,13 +248,7 @@ describe('transform utils', () => {
 
     describe('rotation + scale combined', () => {
       it('should decompose 90° Y-rotation with Z-scale=6 (edge-plane-rotated-scaled.tscn TestWall)', () => {
-        // Restored from 401f8f5 ("Fix Transform3D decomposition for
-        // rotated+scaled planes"). The intermediate commit b4ccaab
-        // wrongly rewrote this test to assert the buggy (transposed)
-        // decomposition output, with a rationalising comment that the
-        // user's intent "isn't recoverable". That was wrong — Godot's
-        // Basis is `Vector3 rows[3]`, so the matrix CAN be recovered
-        // correctly; earlier code was transposing it.
+        // Godot's Basis is `Vector3 rows[3]`, so the matrix decomposes without transposing.
         const transform = parseTransform3D(
           'Transform3D(-4.371139e-08, 0, 6, 0, 1, 0, -1, 0, -2.6226832e-07, 0, 0, 0)'
         );
@@ -270,23 +262,15 @@ describe('transform utils', () => {
 
 
       it('ShortWall with origin: FACE_X vertex (0,0,1) maps to world x≈6 (12-unit wide wall)', () => {
-        // Full ShortWall transform including origin=(0,0,1.75).
-        // Decompose gives scale.z=6, rotation.y=+π/2, position=(0,0,1.75).
-        // Applying that TRS to local (0, 0, 1):
-        //   after scale:    (0, 0, 6)
-        //   after Ry(+π/2): (6, 0, 0)  [Ry maps +Z → +X]
-        //   after translate: (6, 0, 1.75)
-        // world_x=6 confirms the wall is 12 units wide (z∈[-1,1] → x∈[-6,6]).
+        // scale.z=6, rotation.y=+π/2, position=(0,0,1.75): local (0, 0, 1) scales to (0, 0, 6),
+        // Ry maps +Z to +X for (6, 0, 0), and translation gives (6, 0, 1.75). world_x=6 makes the
+        // wall 12 units wide (z∈[-1,1] → x∈[-6,6]).
         const transform = parseTransform3D(
           'Transform3D(-4.371139e-08, 0, 6, 0, 1, 0, -1, 0, -2.6226832e-07, 0, 0, 1.75)'
         );
         const result = decomposeTransform3D(transform);
 
-        // Manually apply TRS to local (0, 0, 1):
-        //   scaled: (0, 0, scale.z * 1) = (0, 0, 6)
-        //   rotated by Ry(rotation.y): (sin(ry)*z, 0, cos(ry)*z)
-        //     ≈ (sin(π/2)*6, 0, cos(π/2)*6) = (6, 0, ≈0)
-        //   translated: (6 + pos.x, 0 + pos.y, ≈0 + pos.z) = (6, 0, 1.75)
+        // Ry(ry) maps (0, 0, z) to (sin(ry)*z, 0, cos(ry)*z).
         const sz = result.scale.z;
         const ry = result.rotation.y;
         const worldX = Math.sin(ry) * sz * 1 + result.position.x;
@@ -295,12 +279,10 @@ describe('transform utils', () => {
       });
 
       it('should match Godot for edge-plane-rotated-scaled.tscn ReferenceWall', () => {
-        // This should already work (no rotation, just scale)
         const transformString = 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 6, 0, 0, 5)';
         const transform = parseTransform3D(transformString);
         const result = decomposeTransform3D(transform);
 
-        // No rotation, Z-scale=6, Z-position=5
         expect(result.rotation.x).toBeCloseTo(0, 5);
         expect(result.rotation.y).toBeCloseTo(0, 5);
         expect(result.rotation.z).toBeCloseTo(0, 5);
@@ -321,7 +303,6 @@ describe('transform utils', () => {
       const originalOrigin = { ...transform.origin };
       decomposeTransform3D(transform);
 
-      // Original should not be modified
       expect(transform.origin).toEqual(originalOrigin);
     });
   });
@@ -390,7 +371,7 @@ describe('transform utils', () => {
     it('should handle node name in warning message', () => {
       const result = parseOptionalTransform('BadTransform', 'MySpecialNode');
 
-      // Should return identity transform (warning is logged but we can't easily test that)
+      // The logged warning goes unasserted.
       expect(result).toEqual(identityTransform3D());
     });
 
@@ -425,9 +406,7 @@ describe('transform utils', () => {
   });
 
   describe('nested-transform composition (RoomGeometry parent chain)', () => {
-    // Builds a THREE.Matrix4 from a Transform3D using the corrected row-major
-    // interpretation, then recompose from TRS to simulate what R3F does when
-    // updateMatrixWorld walks the hierarchy.
+    // A THREE.Matrix4 recomposed from the decomposed TRS, as R3F's updateMatrixWorld does.
     function trsMatrixFromTransform3DString(s: string): THREE.Matrix4 {
       const t = parseTransform3D(s);
       const { position, rotation, scale } = decomposeTransform3D(t);
@@ -469,13 +448,9 @@ describe('transform utils', () => {
     });
 
     it('EndWall FACE_X vertex (0,0,1) maps to world x ≈ 9.025 + 3 = 12.025 (6-unit wide wall)', () => {
-      // EndWall has scale.z≈3 (from basis_z column magnitude) and rotation.y≈π/2.
-      // FACE_X local vertex (0, 0, 1) after TRS:
-      //   scaled:  (0, 0, 3)
-      //   Ry(π/2): (3, 0, ~0)  [sin(π/2)*3 = 3]
-      //   translate: (1.2504363 + 3, 0, 8.75) = (4.2504363, 0, 8.75)
-      // Through ShortCorridor (x+7.775): (12.025, 0, 8.75)
-      // Through RoomGeometry (tiny offsets): ≈(12.024, 0.003, 8.753)
+      // EndWall: scale.z≈3 and rotation.y≈π/2 take local (0, 0, 1) to (4.2504363, 0, 8.75).
+      // ShortCorridor adds x+7.775 for (12.025, 0, 8.75), and RoomGeometry's tiny offsets give
+      // ≈(12.024, 0.003, 8.753).
       const mRoomGeometry = trsMatrixFromTransform3DString(
         'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0010881424, 0.0035161972, 0.0035357475)'
       );
@@ -499,8 +474,7 @@ describe('transform utils', () => {
     });
 
     it('EndWall local origin without parent chain — confirms leaf decompose is correct', () => {
-      // Isolated unit: just the EndWall transform, no parents.
-      // Verifies the leaf decompose produces correct origin independent of composition.
+      // The EndWall transform alone, with no parents.
       const endWall = parseTransform3D(
         'Transform3D(-4.371139e-08, 0, 3, 0, 1, 0, -1, 0, -1.3113416e-07, 1.2504363, 0, 8.75)'
       );

@@ -1,14 +1,8 @@
 /**
- * AreaLight3D `area_normalize_energy` (Godot default TRUE).
- *
- * Godot divides the light's colour by `area_size.x × area_size.y` when
- * normalisation is on, so resizing the rectangle does not change how much light
- * it puts out. three.js's RectAreaLight intensity is a luminance, so its total
- * output scales with area for exactly the same reason — the same division is
- * what keeps a 4 × 0.05 strip as bright as a 1 × 1 panel.
- *
- * Unparsed and unapplied, the seven sized AreaLight3D nodes in
- * scenes/demos/3d/lights_and_shadows/test.tscn were dimmed by up to 20×.
+ * AreaLight3D `area_normalize_energy`, true by default: Godot divides the colour
+ * by `area_size.x × area_size.y`, so resizing does not change the output. A
+ * RectAreaLight intensity is a luminance, so the same division keeps a
+ * 4 × 0.05 strip as bright as a 1 × 1 panel.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -57,7 +51,7 @@ describe('<AreaLight3D> energy normalisation', () => {
     const small = await intensityOf({ light_energy: '2.0', area_size: 'Vector2(0.5, 0.5)' });
     const large = await intensityOf({ light_energy: '2.0', area_size: 'Vector2(2, 2)' });
 
-    // intensity × area is the total output — equal on both.
+    // intensity × area is the total output, equal on both.
     expect(small * 0.25).toBeCloseTo(large * 4, 5);
   });
 

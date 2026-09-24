@@ -1,39 +1,17 @@
 /**
- * Camera-invariance probe: proves "the camera never moves on selection"
- * (Atle's product rule — auto-fit is load-time only, regressed once and
- * reverted) by reading the ACTUAL matrix three.js uploads to the GPU for the
- * viewport camera, before and after a tree selection, entirely from OUTSIDE
- * the app.
- *
- * There is no app-level hook to ask "what is the camera's world matrix" —
- * adding one would be a production test seam, which the brief for this gate
- * asks to avoid. Instead this patches `WebGL(2)RenderingContext.prototype`
- * (a global the page cannot see or influence) via Playwright's
- * `addInitScript`, the same mechanism `scripts/vscode/driveScene.mjs` uses to
- * force `preserveDrawingBuffer` for its own canvas readback.
- *
- * Why `viewMatrix` specifically: three.js's `WebGLProgram` (see
- * `node_modules/three/src/renderers/webgl/WebGLProgram.js`) prefixes EVERY
- * compiled shader — vertex and fragment, built-in or custom — with
- * `uniform mat4 viewMatrix;`, and `WebGLRenderer.setProgram` uploads it via
- * `p_uniforms.setValue(gl, 'viewMatrix', camera.matrixWorldInverse)` for every
- * program switch. That upload becomes a real `gl.uniformMatrix4fv` call whose
- * bytes ARE `camera.matrixWorldInverse.elements` — an exact, unmodified read
- * of the viewport camera's world transform (inverted; the two are related by
- * a fixed invertible map, so byte-identity of one is byte-identity of the
- * other). Shadow-map passes upload their OWN light-camera `viewMatrix` first,
- * but the main colour pass always renders last within a completed frame, so
- * sampling after a settle always finds the viewport camera's value.
+ * Proves the camera never moves on selection by reading the `viewMatrix`
+ * three.js uploads, from outside the app: a patch on
+ * `WebGL(2)RenderingContext.prototype` through `addInitScript`, as
+ * `scripts/vscode/driveScene.mjs` does, so no production file carries a hook.
  */
 
 /* global window, document, WebGLRenderingContext, WebGL2RenderingContext */
-// Both globals exist only inside the browser this function is serialised
-// into via Playwright's `addInitScript` — never in this Node process.
+// These globals exist only in the browser this function is serialised into.
 
 /**
- * Installed via `context.addInitScript(installViewMatrixProbe)`, BEFORE the
- * app's own scripts run. Must be self-contained (no closures over this
- * module's scope survive `Function.prototype.toString` serialisation).
+ * Installed with `context.addInitScript(installViewMatrixProbe)` before the
+ * app's scripts run. Self-contained, since no closure over this module survives
+ * `Function.prototype.toString` serialisation.
  */
 export function installViewMatrixProbe() {
   const byCanvas = new WeakMap();
@@ -48,6 +26,10 @@ export function installViewMatrixProbe() {
       if (location && name === 'viewMatrix') viewMatrixLocations.add(location);
       return location;
     };
+    // three.js uploads `camera.matrixWorldInverse` to every shader's `viewMatrix`,
+    // and byte-identity of the inverse is byte-identity of the camera. Shadow
+    // passes upload their own first, but the main colour pass renders last, so a
+    // settled frame holds the viewport camera's value.
     const originalUniformMatrix4fv = proto.uniformMatrix4fv;
     proto.uniformMatrix4fv = function patchedUniformMatrix4fv(location, transpose, value, ...rest) {
       if (location && this.canvas && viewMatrixLocations.has(location)) {
@@ -63,10 +45,9 @@ export function installViewMatrixProbe() {
   patch(typeof WebGLRenderingContext !== 'undefined' ? WebGLRenderingContext.prototype : undefined);
   patch(typeof WebGL2RenderingContext !== 'undefined' ? WebGL2RenderingContext.prototype : undefined);
 
-  // The viewport's own GL canvas is the largest on the page — offscreen
-  // passes (icon atlases, render-to-texture surfaces) mount their own small
-  // canvases. Same heuristic `scripts/vscode/driveScene.mjs`'s
-  // `readCanvasDataUrl` uses to pick the canvas to read back.
+  // The viewport's GL canvas is the largest on the page: offscreen passes mount
+  // small ones. The same heuristic as `readCanvasDataUrl` in
+  // `scripts/vscode/driveScene.mjs`.
   window.__tscnReadViewMatrix = function tscnReadViewMatrix() {
     let best = null;
     for (const canvas of document.querySelectorAll('canvas')) {
@@ -86,10 +67,8 @@ export function installViewMatrixProbe() {
 }
 
 /**
- * Exact (byte-for-byte, given both sides are plain finite numbers cloned from
- * the same `Float32Array` layout) equality of two 16-element view matrices.
- * `Object.is` rather than `===` only to make the "what counts as equal" rule
- * explicit — the values here are never `-0`/`NaN` in practice.
+ * Exact equality of two 16-element view matrices cloned from the same
+ * `Float32Array` layout. `Object.is` states the equality rule explicitly.
  */
 export function matricesEqual(a, b) {
   if (!Array.isArray(a) || !Array.isArray(b)) return false;

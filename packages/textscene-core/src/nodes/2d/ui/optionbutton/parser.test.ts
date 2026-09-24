@@ -6,8 +6,8 @@ function h(attributes: Record<string, string>): ParsedHeading {
   return { type: 'node', attributes };
 }
 
-// Godot serializes OptionButton items as item_count + popup/item_N/text + popup/item_N/id,
-// with `selected` an index into them (see scenes/demos/2d/custom_drawing for a real example).
+// Godot serialises OptionButton items as item_count + popup/item_N/text + popup/item_N/id, with
+// `selected` an index into them (scenes/demos/2d/custom_drawing has a real example).
 describe('parseOptionButton', () => {
   it('parses the popup items in order (text + numeric id), the selected index, and disabled', () => {
     const p = parseOptionButton(h({ name: 'Difficulty', type: 'OptionButton' }), {
@@ -49,7 +49,7 @@ describe('parseOptionButton', () => {
       'popup/item_2/id': '2',
       selected: '2',
     });
-    // a filtered/compacted array would drop index 1, so selected=2 would mis-resolve
+    // a compacted array would drop index 1, so selected=2 would mis-resolve
     expect(p.items).toHaveLength(3);
     expect(p.items?.[1]).toEqual({ text: '', id: 1 });
     expect(p.items?.[p.selected!]?.text).toBe('Hard');
@@ -66,8 +66,7 @@ describe('parseOptionButton', () => {
 
 describe('a Variant int Godot reads differently from `parseInt`', () => {
   it('builds the item count the exponent spelling names', () => {
-    // `parseInt` stops at the `e`, so `2e1` built two items where Godot builds
-    // twenty and every index past the second went missing.
+    // `parseInt` stops at the `e`, so `2e1` would build two items where Godot builds twenty.
     const p = parseOptionButton(h({ name: 'Big', type: 'OptionButton' }), {
       item_count: '2e1',
       'popup/item_19/text': '"Last"',

@@ -1,53 +1,9 @@
 #!/usr/bin/env node
 /**
- * Parity measurement: render a scene through real Godot AND through the previewer,
- * then report how far apart they are.
- *
- *   pnpm ref:diff unit-csg-box.tscn
- *   pnpm ref:diff unit-csg-*.tscn --max-mean 2
- *
- * ## Why this exists
- *
- * `pnpm test:visual` compares the previewer against its own committed PNG, so it detects
- * CHANGE and can never detect WRONGNESS. A render that was wrong the day it was baselined
- * stays green forever. That is not hypothetical: `csg-cylinder-3d` matched its golden for
- * months while its cone apex was shaded unlike Godot's, because three.js gives a
- * collapsed apex nine distinct radial normals where Godot's `smooth_faces` averages every
- * face meeting at one position into a single normal.
- *
- * `ref:godot` and `ref:ours` could each answer that question already, but only one side at
- * a time and only by eye. This runs both at the same camera and prints the number, which
- * is what makes parity something you can put in a PR body instead of assert by assertion.
- *
- * ## Deliberately not a gate
- *
- * CI has no Godot and no xvfb, and committing reference PNGs so that it could have them
- * would mean fixtures are only editable by someone with Godot installed. The three
- * reference PNGs already in `scripts/godot-ref/reference/` show the other failure mode:
- * committed, asserted by nothing, and now of unknown freshness. So this is a tool the
- * author runs, exactly like `ref:godot` itself (see AGENTS.md).
- *
- * `--max-mean` is offered for scripted use and is opt-in; without it the command reports
- * and exits 0 whatever the numbers say.
- *
- * ## Reading the output
- *
- * Three numbers per scene, all per-channel and unweighted (`imageDelta.mjs`):
- *
- *   changed   the share of pixels differing at all. Between two DIFFERENT renderers this
- *             saturates — a half-bit of shading difference everywhere reads as ~100% —
- *             so it locates a difference rather than sizing it.
- *   max       the worst single-channel excursion. One resampled edge pixel can reach
- *             255, so this bounds the damage, it does not describe it.
- *   mean      mean |Δ| per channel over the whole frame. This is the parity statistic:
- *             it is what "closer to Godot" is measured in when a baseline is arbitrated,
- *             and the only one of the three that moves with the SIZE of a difference
- *             rather than its extent.
- *
- * The predecessor of these numbers was a single perceptual percentage, which can report
- * 0.000% for two images that share no identical pixel anywhere — a flat luminance or
- * chroma shift scores zero under a YIQ distance. An arbitration tool that inherits the
- * gate's blind spot is worse than none, because its answer is trusted more.
+ * Renders a scene through real Godot and the previewer at one camera and prints
+ * how far apart they are: `pnpm ref:diff unit-csg-*.tscn [--max-mean 2]`.
+ * `test:visual` detects change, this detects wrongness. Not a gate: CI has no
+ * Godot, and committed references would need Godot to edit a fixture.
  */
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -93,17 +49,10 @@ export function parseArgs(argv) {
 }
 
 /**
- * A fixture is addressed two different ways by the two harnesses: `ref:godot` wants a path
- * on disk, `ref:ours` wants the name the web app's fixture catalog lists. Accept either
- * form and produce both, so the caller never has to know.
- *
- * The catalog flattens `scenes/fixtures/` to a bare filename but keeps every other subtree
- * as a relative path (`demos/3d/truck_town/town/town_scene.tscn`). Taking the basename for
- * BOTH — as this did — silently measured the wrong scene for anything outside
- * `scenes/fixtures/`: the app rejects an unknown `?fixture=` and falls back to the stored
- * or default scene, so `ref:diff` on a demo compared Godot's town against our unit-plane
- * fixture and reported 25%. `gotoFixture` now also asserts the app opened what was asked
- * for, so a future mismatch fails instead of producing a number.
+ * Accepts a path on disk or a catalog name and produces both: `ref:godot` wants
+ * the path, `ref:ours` the name. The catalog flattens `scenes/fixtures/` to a bare
+ * filename but keeps any other subtree as a relative path
+ * (`demos/3d/truck_town/town/town_scene.tscn`).
  */
 export function resolveFixture(input) {
   const name = basename(input);
@@ -115,13 +64,8 @@ export function resolveFixture(input) {
 }
 
 /**
- * What the PNGs a run writes are named after.
- *
- * The catalog name rather than the basename, because two projects in one sweep
- * can both hold a `settings_menu.tscn` — and under a bare basename the second
- * scene's images silently overwrote the first's, leaving one scene's diff
- * filed under the other's name. `scenes/fixtures/` is flat, so its scenes keep
- * the bare name they always had.
+ * What a run's PNGs are named after: the catalog name, not the basename, since
+ * two projects in one sweep can both hold a `settings_menu.tscn`.
  */
 function labelFor(fixtureName) {
   return fixtureName.replace(/\.tscn$/, '').split('/').join('-');
@@ -138,9 +82,9 @@ export function catalogName(scenePath) {
 }
 
 /**
- * Difference between two PNG buffers, plus the diff image — the same
- * measurement the golden gate asserts on (`../visual/imageDelta.mjs`), so a
- * parity number and a golden number mean the same thing.
+ * The difference between two PNG buffers, plus the diff image: per channel and
+ * unweighted, as the golden gate measures (`../visual/imageDelta.mjs`), not a
+ * perceptual YIQ distance, which scores 0 for a flat luminance shift.
  */
 export function comparePngs(godotBuffer, oursBuffer) {
   const result = compareImages(godotBuffer, oursBuffer, { diff: true });
@@ -156,16 +100,9 @@ export function comparePngs(godotBuffer, oursBuffer) {
 }
 
 /**
- * One scene through both renderers.
- *
- * WHICH FRAME a scene is belongs to the engine, not to a flag: `run.mjs` picks
- * 2D or 3D from the scene root and reports the mode it rendered in. Our side
- * captures whatever that says, so the two rectangles agree by construction. It
- * used to always capture the 3D canvas, so every Control scene came back as a
- * SIZE MISMATCH and produced no number at all.
- *
- * The renderer and the capture are injected so the pairing above is assertable
- * without a Godot and a browser.
+ * One scene through both renderers. `run.mjs` picks 2D or 3D from the scene root
+ * and our side captures the mode it reports. The renderer and the capture are
+ * injected, so the pairing is testable without Godot or a browser.
  */
 export async function diffOne(
   { scenePath, fixtureName, label },
@@ -174,20 +111,16 @@ export async function diffOne(
 ) {
   const renderAs = async (renderMode) =>
     render({ scene: scenePath, out: join(outDir, `${label}.godot.png`), frame, mode: renderMode });
-  // A project setting one of the root-window-only viewport settings cannot be
-  // answered from the nested capture, and `run.mjs` refuses rather than return
-  // the class default — naming the arm that can. Following that instruction is
-  // the whole remedy, so a scene carrying one stays in the batch.
+  // `run.mjs` refuses a root-window-only viewport setting in the nested arm and
+  // names the arm that can answer it, so the scene is retried there.
   const { out: godotOut, mode } = await renderAs('auto').catch((error) => {
     if (!error?.rootOnlyDrift) throw error;
     return renderAs('2d-root');
   });
   const godotBuffer = await readFile(godotOut);
 
-  // The reference IS the project-viewport rect, which is also the rect our 2D
-  // stage must lay out at 1:1 — so the picture the engine just produced is
-  // what sizes the capture window, with nothing re-derived from the project
-  // file on this side.
+  // The reference is the project-viewport rect our 2D stage lays out at 1:1,
+  // so it sizes the capture window, with nothing re-derived on this side.
   const canvas2D = mode === '2d';
   const reference = PNG.sync.read(godotBuffer);
   const oursBuffer = await capture({
@@ -210,11 +143,8 @@ export async function diffOne(
 }
 
 /**
- * Every scene in the sweep, reported as it lands.
- *
- * A scene the harness cannot render is recorded as a `failed` row rather than
- * thrown: the tool is documented as `ref:diff unit-csg-*.tscn`, and aborting on
- * one scene measures nothing about the ones behind it.
+ * Every scene in the sweep, reported as it lands. An unrenderable scene is a
+ * `failed` row, not a throw, so the scenes behind it are still measured.
  */
 export async function diffAll(targets, args, deps = {}) {
   const results = [];
@@ -226,14 +156,19 @@ export async function diffAll(targets, args, deps = {}) {
       result = { label: target.label, failed: error.message.split('\n')[0] };
     }
     results.push(result);
-    // captureOurs() rebuilds the web app on every call. The first render is the only one
-    // that can see uncommitted source, so subsequent scenes in the same run reuse it.
+    // captureOurs() rebuilds the web app on every call, but only the first build
+    // can see new source, so later scenes in the run reuse it.
     process.env.VISUAL_SKIP_BUILD = '1';
     console.log(formatResult(result));
   }
   return results;
 }
 
+/**
+ * One result line. `changed` saturates between two renderers, so it locates a
+ * difference. `max` bounds the damage from one pixel. `mean` |Δ| per channel is
+ * the parity statistic, the only one that moves with a difference's size.
+ */
 function formatResult(result) {
   const label = result.label.padEnd(28);
   if (result.failed) return `${label} FAILED         ${result.failed}`;
@@ -258,8 +193,8 @@ async function main() {
 
   const results = await diffAll(args.fixtures.map(resolveFixture), args);
 
-  // A scene that never rendered is over ANY bound: it produced no number, which
-  // is a worse answer than a large one.
+  // A scene that never rendered is over any bound: no number is worse than a
+  // large one. Without `--max-mean`, only such a scene exits 1.
   const over = results.filter(
     (r) => r.failed || r.sizeMismatch || (args.maxMean !== null && r.meanChannelError > args.maxMean)
   );

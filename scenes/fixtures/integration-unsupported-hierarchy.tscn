@@ -1,6 +1,5 @@
-; A CollisionShape3D parented to a MeshInstance3D — a hierarchy Godot allows to
-; exist but does not treat as collision geometry. The `collisionshape3d-invalid-parent`
-; WARNING that produces is the point of this scene; it must keep firing.
+; A CollisionShape3D parented to a MeshInstance3D: Godot allows it but does not treat it as
+; collision geometry. The `collisionshape3d-invalid-parent` warning it produces must keep firing.
 [gd_scene format=3]
 
 [sub_resource type="BoxMesh" id="mesh_1"]

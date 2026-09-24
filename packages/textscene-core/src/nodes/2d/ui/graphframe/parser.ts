@@ -1,4 +1,4 @@
-/** GraphFrame parser — GraphElement + `title`/`autoshrink_*`/`drag_margin`/`tint_color*`. */
+/** GraphFrame parser: GraphElement + `title`/`autoshrink_*`/`drag_margin`/`tint_color*`. */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';

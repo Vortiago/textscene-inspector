@@ -1,6 +1,4 @@
-/**
- * LightOccluder2D registration — parser.
- */
+/** LightOccluder2D registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseLightOccluder2D } from './parser';

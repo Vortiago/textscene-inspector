@@ -1,17 +1,8 @@
 /**
- * The BG ambient reaches the rendered scene, not just the settings object.
- *
- * `renderer.bg-ambient.test.ts` pins the Godot AmbientSource × BGMode table;
- * this pins the wire from that table to an actual `<ambientLight>`, driving the
- * real parser end to end from `.tscn` text.
- *
- * There is deliberately NO golden for this. The previewer always mounts editor
- * preview lights (`TscnSceneContents`: ambient 0.4 + a directional), and at
- * corpus-realistic values — the 0.6 grey background of
- * scenes/demos/3d/graphics_settings/control.tscn at energy 1 — the BG ambient's
- * contribution does not survive 8-bit quantisation next to them: a golden only
- * moves once `background_energy_multiplier` is pushed to ~50. A baseline that
- * cannot fail is worse than no baseline, so the guard lives here at the seam.
+ * The BG ambient reaches an actual `<ambientLight>`, driven from `.tscn` text through the real
+ * parser. `renderer.bg-ambient.test.ts` pins the AmbientSource × BGMode table. No golden: beside the
+ * editor preview lights (`TscnSceneContents`), a realistic BG ambient does not survive 8-bit
+ * quantisation until `background_energy_multiplier` nears 50, so a golden could not fail.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';

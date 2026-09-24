@@ -1,22 +1,8 @@
 /**
- * Fixtures contract.
- *
- * Witnesses that the six `unit-*.tscn` fixtures exist, parse via the real
- * TscnParser, and carry the representative shape the slice calls for. This
- * gates the fiddly Godot serialization on actual parsed values — not just file
- * existence.
- *
- * Nothing pins the SIZE or the SUBJECT of the co-located parser/Component
- * suites. A frozen path roster carrying a `minCases` count and a substring
- * `mentions` list cannot: an empty `it` counts as a case and a token in a
- * comment pays for the subject, so a suite replaced wholesale by stubs reads as
- * complete — while merging two real cases into one `it.each` falls under the
- * count and reads as a regression. Suite quality is judged at /code-review; the
- * mechanical pins are this file's fixtures and the registry sweeps in
- * `linter/ruleCoverage.test.ts`.
- *
- * Repo root is resolved by walking up to pnpm-workspace.yaml so the test is
- * insensitive to its own depth.
+ * Fixtures contract: the `unit-*.tscn` fixtures exist, parse through the real TscnParser, and carry
+ * the representative shape, checked on parsed values, not file existence. Nothing pins the size or
+ * subject of the co-located suites, since a case count passes stubs and fails a merged `it.each`.
+ * The repo root is found by walking up to pnpm-workspace.yaml, so the test's depth does not matter.
  */
 import { describe, it, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';

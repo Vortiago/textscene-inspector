@@ -1,11 +1,7 @@
 /**
- * `<ControlCanvasLayer>`: the native (WebGL) mount point for Control nodes,
- * a sibling of `<NodeDispatcher>` inside `World2DContents`'s
- * `<SceneResourcesProvider>`. This suite pins the seam: it resolves the
- * given `nodes` into positioned Control groups (via `buildSolveTree` +
- * `<ControlCanvasWalker>`), reads the viewport rect from the active
- * project's settings rather than a hardcoded constant, and forces a
- * `visible = false` root visible.
+ * Pins the mount point's seam: `nodes` become positioned Control groups, the
+ * viewport rect comes from the active project's settings, and a
+ * `visible = false` root draws.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -16,17 +12,14 @@ import { controlComponentRegistry, type NativeControlComponent } from '../Contro
 import { controlSolverRegistry } from './solverRegistry';
 import { useCanvasModulate } from '../../canvasModulate';
 
-// A stand-in `Native` painter that surfaces the ambient CanvasModulate scope
-// as a named group, so this suite can observe it without reading pixels.
+// Names a group after the ambient CanvasModulate, observable without pixels.
 const ModulateProbeNative: NativeControlComponent = () => {
   const modulate = useCanvasModulate();
   return <group name={`modulate:r=${modulate.r}`} />;
 };
 
-// A stand-in `Native` painter that surfaces its own solved rect WIDTH as a
-// named group — used to prove a REAL text measurer (not `null`) reaches the
-// solver through this mount point (a text-consuming MinimumSizeFn like
-// Button's/Label's would otherwise always floor to zero).
+// Names a group after its solved width, to show a real text measurer reaches
+// the solver: with `null`, a text-driven MinimumSizeFn floors to zero.
 const RectProbeNative: NativeControlComponent = ({ rect }) => <group name={`rect:w=${rect.w}`} />;
 
 const projectSettingsMock = vi.hoisted(() => ({
@@ -86,9 +79,7 @@ describe('<ControlCanvasLayer>', () => {
   });
 
   it("uses the ACTIVE project's viewport size, proving it is read live rather than hardcoded", async () => {
-    // A custom (non-default) viewport: a FULL_RECT root's far corner must
-    // move with it — the one observable a hardcoded 1152x648 could never
-    // produce.
+    // A non-default viewport, so a hardcoded 1152x648 cannot pass.
     projectSettingsMock.viewportSize = { width: 400, height: 300 };
     projectSettingsMock.themeScale = 1;
 
@@ -126,9 +117,7 @@ describe('<ControlCanvasLayer>', () => {
   });
 
   it('reads externalResources/internalResources from the ambient SceneResourcesProvider (ADR-0009)', async () => {
-    // A TextureRect-shaped ref resolved through ambient context, not a prop —
-    // asserted via buildSolveTree's own textureSize field staying null (no
-    // loader mounted), which only happens if the ref was actually looked at.
+    // The ref resolves through ambient context, not a prop.
     const root = node('Root', 'Control', {
       anchorsPreset: 15,
       texture: 'ExtResource("1")',
@@ -142,12 +131,9 @@ describe('<ControlCanvasLayer>', () => {
   });
 
   it('wires a REAL text measurer into the solver, not null — a text-driven MinimumSizeFn floors to actual measured width', async () => {
-    // A leaf with no anchors/offsets at all floors its rect to its minimum
-    // size (`controlRectSolver.ts`'s `floorAtMinimumSize`) — so this type's
-    // registered `MinimumSizeFn` result becomes the rendered rect's WIDTH
-    // directly, letting this test observe whether `ctx.measureText` behaved
-    // like a real measurer (non-zero) or the `null` this mount point used to
-    // hardcode (always zero, regardless of text).
+    // A leaf with no anchors or offsets floors to its minimum size
+    // (`floorAtMinimumSize`), so the width is the `MinimumSizeFn` result: zero
+    // unless `ctx.measureText` is a real measurer.
     controlComponentRegistry.register({
       typeName: 'Control',
       Component: RectProbeNative,

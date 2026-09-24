@@ -1,7 +1,6 @@
 /**
- * Tests for buildSceneGraph — immutability (Object.freeze) and single-scene node
- * flattening. PackedScene instance composition lives in the live scene tree
- * (ADR-0013), not this function.
+ * Tests for buildSceneGraph: immutability (Object.freeze) and single-scene node flattening.
+ * The live scene tree composes PackedScene instances (ADR-0013), not this function.
  */
 import { describe, it, expect } from 'vitest';
 import { buildSceneGraph } from './SceneGraph';
@@ -88,8 +87,8 @@ describe('buildSceneGraph', () => {
 
       const graph = buildSceneGraph(main);
 
-      // Only the authored inline nodes — the instance node is present but its
-      // sub-scene is NOT injected here (see ADR-0013, r3f/liveSceneTree.ts).
+      // Only the authored inline nodes: the instance node is present, but its sub-scene is not
+      // injected here (ADR-0013, r3f/liveSceneTree.ts).
       expect(graph.flattenedNodes.map((n) => n.path)).toEqual(['Main', 'Main/Door']);
     });
   });

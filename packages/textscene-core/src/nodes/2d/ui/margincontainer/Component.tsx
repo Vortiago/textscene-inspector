@@ -1,9 +1,7 @@
 /**
- * `<MarginContainer>` — the native (WebGL canvas) painter for
- * MarginContainer. MarginContainer draws no chrome of its own in Godot; it
- * only insets its children (`marginContainerLayout`, `nativeSolver.ts`), so
- * this paints nothing. `ControlCanvasWalker` still renders this node's
- * children as siblings regardless of what this component returns.
+ * `<MarginContainer>`, the native painter, paints nothing: Godot's MarginContainer only insets its
+ * children (`marginContainerLayout`). `ControlCanvasWalker` renders the children as siblings whatever
+ * this returns.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 

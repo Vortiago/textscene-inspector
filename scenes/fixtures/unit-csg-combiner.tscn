@@ -1,12 +1,9 @@
 [gd_scene load_steps=3 format=3 uid="uid://unitcsgcombiner"]
 
-; CSGCombiner3D draws nothing of its own: Godot's _build_brush() returns an empty
-; brush (csg_shape.cpp:1072). It exists so a set of CSG children folds into one
-; solid, which then combines into ITS parent by its own `operation`.
-;
-; Before boolean evaluation exists, the observable behaviour this fixture pins is
-; `visible`. An unregistered CSGCombiner3D falls through to GenericNodeFallback,
-; which does not apply visible, so a hidden combiner's children keep drawing.
+; CSGCombiner3D draws nothing of its own: `_build_brush()` returns an empty brush
+; (csg_shape.cpp:1072). It folds its CSG children into one solid, which combines into its parent
+; by its own `operation`. This fixture pins `visible`: an unregistered combiner falls through to
+; GenericNodeFallback, which ignores `visible`, so a hidden combiner's children keep drawing.
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
 albedo_color = Color(0.45, 0.5, 0.45, 1)

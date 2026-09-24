@@ -1,9 +1,8 @@
 [gd_scene format=3]
-; SpringBoneCollisionPlane3D: no visuals, an infinite XZ plane whose normal is the rotated +Y axis.
-; It binds no property of its own, so the shape is placed entirely by the inherited
-; position_offset and rotation_offset on top of the node transform.
-; Parented under a SpringBoneSimulator3D so it is the effective shape Godot would write
-; (elsewhere the simulation never consults it).
+; SpringBoneCollisionPlane3D: no visuals, an infinite XZ plane whose normal is the rotated +Y
+; axis. It binds no property of its own, so the inherited position_offset and rotation_offset
+; place it on top of the node transform. It sits under a SpringBoneSimulator3D, the effective
+; shape Godot would write, since elsewhere the simulation never consults it.
 
 [node name="Root" type="Node3D"]
 

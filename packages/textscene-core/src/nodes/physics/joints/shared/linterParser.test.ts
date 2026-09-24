@@ -19,7 +19,7 @@ describe('Joint shared validators', () => {
 
   it('keeps the two dimensions apart, despite the shared setter', () => {
     // `disable_collision` and `exclude_nodes_from_collision` are the same C++
-    // setter under two names; each dimension serialises only its own.
+    // setter under two names. Each dimension serialises only its own.
     expect(validatorRegistry.findValidator('Joint2D', 'exclude_nodes_from_collision')).toBeNull();
     expect(validatorRegistry.findValidator('Joint3D', 'disable_collision')).toBeNull();
     expect(validatorRegistry.findValidator('Joint2D', 'solver_priority')).toBeNull();

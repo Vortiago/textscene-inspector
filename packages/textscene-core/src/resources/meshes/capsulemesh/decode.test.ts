@@ -1,14 +1,8 @@
 /**
- * Tests for the CapsuleMesh decode.
- *
- * Ported from Godot `scene/resources/3d/primitive_meshes.cpp`: `set_radius`
- * (:632-647) RAISES height to `radius * 2` when the radius exceeds the half
- * height, `set_height` (:649-664) LOWERS radius to `height * 0.5` in the same
- * situation, and the loader assigns in class-property order — radius (:623) then
- * height (:624), the pair Godot links explicitly (ADD_LINKED_PROPERTY :628-629).
- * `set_radial_segments` (:666-677) floors at 4; `set_rings` (:679-690) ERR_FAILs
- * below 0, keeping the default. Unlike CapsuleShape3D neither float setter
- * rejects a negative. Defaults from `primitive_meshes.h:130-133`.
+ * CapsuleMesh decode, from `scene/resources/3d/primitive_meshes.cpp`: `set_radius`
+ * (:632-647) raises height to `radius * 2` past the half height, `set_height`
+ * (:649-664) lowers radius to `height * 0.5`, and the loader assigns radius (:623)
+ * then height (:624), the linked pair (ADD_LINKED_PROPERTY :628-629).
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -30,6 +24,7 @@ describe('decodeCapsuleMesh', () => {
     );
   });
 
+  // Defaults: `primitive_meshes.h:130-133`.
   it('falls back to the Godot defaults when everything is absent, silently', () => {
     expect(decodeCapsuleMesh({})).toEqual({
       radius: 0.5,
@@ -45,7 +40,7 @@ describe('decodeCapsuleMesh', () => {
   });
 
   it('lowers radius when both are authored and the capsule is too short', () => {
-    // set_radius(2) raises height to 4, then set_height(2) lowers radius to 1 —
+    // set_radius(2) raises height to 4, then set_height(2) lowers radius to 1:
     // the height authored last stands.
     expect(decodeCapsuleMesh({ radius: '2', height: '2' })).toMatchObject({
       radius: 1,
@@ -64,6 +59,7 @@ describe('decodeCapsuleMesh', () => {
     });
   });
 
+  // `set_radial_segments` (:666-677).
   it('floors radial_segments at 4, not merely at 0', () => {
     expect(decodeCapsuleMesh({ radial_segments: '2' }).radialSegments).toBe(4);
     expect(decodeCapsuleMesh({ radial_segments: '4' }).radialSegments).toBe(4);
@@ -71,6 +67,7 @@ describe('decodeCapsuleMesh', () => {
     expect(decodeCapsuleMesh({ radial_segments: '80' }).radialSegments).toBe(80);
   });
 
+  // `set_rings` (:679-690).
   it('rejects rings below 0 (ERR_FAIL keeps the default) but allows 0', () => {
     expect(decodeCapsuleMesh({ rings: '-1' }).rings).toBe(8);
     expect(decodeCapsuleMesh({ rings: '0' }).rings).toBe(0);

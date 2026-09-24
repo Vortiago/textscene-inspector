@@ -1,17 +1,8 @@
 /**
- * Godot's Decal fade terms, as pure maths.
- *
- * `decalFade.ts` carries the formulae and their Godot source citations; this
- * file owns the NUMBERS. Every expected value is hand-computed from Godot's
- * closed form, never read back from our renderer — a value taken from our own
- * output would go green against a wrong implementation and lock it in.
- *
- * The one thing a renderer can silently get backwards is which exponent applies
- * above the origin, so that is pinned twice: by the arithmetic here, and by a
- * real Godot render (`scripts/godot-ref/scenes/decal-fade-sign.tscn`), where a
- * receiver ABOVE the projector at exponent 0 comes back rgb(255,40,42) and an
- * identical one BELOW at exponent 4 comes back rgb(148,122,127) — a red/green
- * ratio of 1.21 against the 1.19 that fade = 0.0625 predicts.
+ * Godot's Decal fade terms as pure maths. `decalFade.ts` carries the formulae and cites, and this
+ * file the numbers: each is hand-computed from Godot's closed form, never read back from our
+ * renderer, which would lock in a wrong implementation. Which exponent applies above the origin
+ * is also pinned by a real Godot render (see the sign test).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -58,7 +49,6 @@ describe('bakeDecalFadeAttribute', () => {
   it('bakes the depth fade the existing decal fixtures actually sit at', () => {
     // unit-decal.tscn: decal at y=1, size.y=3 (half 1.5), floor at y=0.
     // uv_local.y = -1/1.5 = -2/3, lower_fade 0.3 → (1 - 2/3)^0.3 = 0.7192231.
-    // That is the ~28% the existing `decal` golden has been too strong by.
     const geometry = geometryAt([-1]);
     bakeDecalFadeAttribute(geometry, { ...NO_FADE, lowerFade: 0.3 }, 3);
 
@@ -66,8 +56,10 @@ describe('bakeDecalFadeAttribute', () => {
   });
 
   it('applies upper_fade ABOVE the origin and lower_fade below it', () => {
-    // The sign convention, confirmed against a real Godot render. Both vertices
-    // sit at |uv_local.y| = 0.5 of a size.y = 4 box, so only the exponent differs.
+    // Both vertices sit at |uv_local.y| = 0.5 of a size.y = 4 box, so only the exponent differs.
+    // In `scripts/godot-ref/scenes/decal-fade-sign.tscn` a receiver above at exponent 0 renders
+    // rgb(255,40,42) and one below at exponent 4 rgb(148,122,127): a red/green ratio of 1.21
+    // against the 1.19 that fade = 0.0625 predicts.
     const geometry = geometryAt([1, -1]);
     bakeDecalFadeAttribute(geometry, { upperFade: 4, lowerFade: 0, normalFade: 0 }, 4);
 
@@ -77,9 +69,8 @@ describe('bakeDecalFadeAttribute', () => {
   });
 
   it('switches exponent across the origin, not somewhere either side of it', () => {
-    // Exactly AT the origin the branch is unobservable — the base is 1-|0| = 1
-    // and 1^x is 1 for every exponent — so Godot's `> 0` and a `>= 0` cannot be
-    // told apart there, and asserting on it would prove nothing. The boundary is
+    // At the origin the branch is unobservable: the base is 1-|0| = 1 and 1^x is 1 for every
+    // exponent, so Godot's `> 0` and a `>= 0` cannot be told apart there. The boundary is
     // observable an epsilon either side, which is what this pins.
     const geometry = geometryAt([0.004, -0.004]);
     bakeDecalFadeAttribute(geometry, { upperFade: 1000, lowerFade: 0, normalFade: 0 }, 4);
@@ -142,11 +133,9 @@ describe('bakeDecalFadeAttribute', () => {
   });
 
   it('writes the attribute even when no fade is authored', () => {
-    // Load-bearing, and the reason this is asserted by name rather than left to
-    // a comment: the projection material sets `vertexColors` once and shares
-    // itself across every receiver, and `vertexColors` against a geometry with
-    // NO `color` attribute samples black. So "skip the bake when nothing fades"
-    // is not an optimisation available here — it would blank every projection.
+    // The projection material sets `vertexColors` once for every receiver, and against a geometry
+    // with no `color` attribute it samples black. Skipping the bake when nothing fades would blank
+    // every projection.
     const geometry = geometryAt([-1]);
     bakeDecalFadeAttribute(geometry, NO_FADE, 3);
 

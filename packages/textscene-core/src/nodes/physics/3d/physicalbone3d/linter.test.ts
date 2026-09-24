@@ -1,7 +1,6 @@
 /**
- * Tests for the PhysicalBone3D collision-shape rule
- * (`collisionobject3d-needs-collision-shape`), collision_object_3d.cpp:739 — the
- * reach gap this slice's `linter.ts` closes (see its docblock).
+ * PhysicalBone3D rules: the collision-shape warning (`collisionobject3d-needs-collision-shape`,
+ * collision_object_3d.cpp:739), and the `joint_constraints/*` rule in this slice's `linter.ts`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -36,7 +35,7 @@ describe('PhysicalBone3D collision-shape rule', () => {
   // `collision_shape_3d.cpp:83` attaches on
   // `Object::cast_to<CollisionObject3D>(get_parent())`, so a shape under an
   // intervening node registers with nothing and this bone's `shapes` map stays
-  // empty — the state collision_object_3d.cpp:739 warns about.
+  // empty: the state collision_object_3d.cpp:739 warns about.
   it('warns when the only shape sits deeper than a direct child', () => {
     expectDiagnostic(
       scene(
@@ -55,12 +54,10 @@ describe('PhysicalBone3D collision-shape rule', () => {
 });
 
 describe('joint_constraints/* against the JointData live when the line is applied', () => {
-  // `PhysicalBone3D::_set` (physical_bone_3d.cpp:715-724) forwards a key to
-  // `joint_data->_set` only `if (joint_data)`, and `joint_data` is null until
-  // `set_joint_type` builds the subclass for a type in 1..5 (:1094-1113; NONE
-  // and any value outside the switch leave it null). Properties apply in file
-  // order, so a constraint written above `joint_type`, or under NONE, reaches
-  // no JointData and `_set` returns false: a dropped write.
+  // `PhysicalBone3D::_set` (physical_bone_3d.cpp:715-724) forwards a key only `if (joint_data)`,
+  // which `set_joint_type` builds for a type in 1..5 (:1094-1113). Properties apply in file
+  // order, so a constraint above `joint_type`, or under NONE, reaches no JointData: a dropped
+  // write.
   it('errors on a constraint written while joint_type is still NONE', () => {
     expectDiagnostic(scene(node('PhysicalBone3D', { 'joint_constraints/bias': 0.3 })), {
       ruleName: 'physicalbone3d-joint-constraint-without-joint',

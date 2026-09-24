@@ -1,6 +1,4 @@
-/**
- * collisionshape3d linter registration - imports linter components to trigger self-registration.
- */
+/** CollisionShape3D linter registration: importing the modules registers them. */
 
 import './linterParser.js';
 import './linter.js';

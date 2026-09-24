@@ -1,11 +1,8 @@
 /**
  * Reach guard for `range-exp-edit-negative-min` (range.cpp:71-79): the rule
  * must run on Range and every concrete registered descendant.
- *
- * See `nodes/2d/ui/control/linter.reach.test.ts` for why this exists apart
- * from `configurationWarningCoverage.test.ts`: that guard is a baked literal
- * this task cannot edit, and still lists the Range row as `unimplemented`, so
- * it does not exercise this rule at all yet.
+ * `nodes/2d/ui/control/linter.reach.test.ts` says why this is apart from
+ * `configurationWarningCoverage.test.ts`.
  */
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry.js';

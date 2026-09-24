@@ -1,22 +1,18 @@
 [gd_scene format=3]
 
-; Two bone chains, one per config mode, because the two never coexist in a
-; single setting: `individual_config` false keeps the shared radius/stiffness/
-; drag/gravity block live and turns the joint list read-only, true swaps them.
-; Setting 0 is the shared mode Godot saves by default, joints/<j>/bone included
-; (spring_bone_simulator_3d.cpp:382 hands those two keys storage back); setting 1
-; is the individual mode, with joint_count and the per-joint tunables.
-; `enable_all_child_collisions` is absent on setting 1, its default true, so the
-; exclude list is the live one there and the explicit collision list is setting
-; 0's.
-;
-; settings/1/center_node = NodePath("..") is one hop from the simulator itself,
-; so it resolves to Skeleton3D — the modifier's own required direct parent.
+; Two bone chains, one per config mode, because the two never share a setting:
+; `individual_config` false keeps the shared radius/stiffness/drag/gravity block live and the
+; joint list read-only, and true swaps them. Setting 0 is the shared mode Godot saves by default,
+; joints/<j>/bone included (spring_bone_simulator_3d.cpp:382 hands those two keys storage back).
 
 [node name="Root" type="Node3D"]
 
 [node name="Skeleton3D" type="Skeleton3D" parent="."]
 
+; Setting 1 is the individual mode, with joint_count and the per-joint tunables. Its
+; `enable_all_child_collisions` is absent, default true, so its exclude list is live and the
+; explicit collision list is setting 0's. settings/1/center_node = NodePath("..") is one hop
+; from the simulator, so it resolves to Skeleton3D, the modifier's required direct parent.
 [node name="MySpringBoneSimulator3D" type="SpringBoneSimulator3D" parent="Skeleton3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 external_force = Vector3(0, 0, 0.1)

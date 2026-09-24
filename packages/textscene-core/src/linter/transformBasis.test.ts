@@ -1,8 +1,7 @@
 /**
- * A non-finite basis component is a LEGAL value Godot writes and reloads
- * (`variant_parser.cpp:149-157`), and both predicates here answer it rather
- * than treating it as an unparseable literal — which is what the finite-grammar
- * read they replaced did, silently, through a `catch`.
+ * A non-finite basis component is a legal value Godot writes and reloads
+ * (`variant_parser.cpp:149-157`), and both predicates answer it rather than
+ * treat it as an unparseable literal.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -56,8 +55,7 @@ describe('hasNonUnitScale3D', () => {
   it('reports a nan component, from the axes that do not carry it', () => {
     // The determinant is NaN, SIGN takes neither comparison and returns 0, so
     // get_scale is (nan, 0, 0). The NaN axis is not equal-approx to 1 because
-    // EVERY comparison against NaN is false — never because it compares less —
-    // and the other two are a whole unit away.
+    // every comparison against NaN is false, and the other two are a unit away.
     expect(hasNonUnitScale3D(withFirstComponent('nan'))).toBe(true);
   });
 

@@ -1,10 +1,7 @@
 /**
- * Keyboard-operable scene tree: `role="tree"` was declared but there
- * was no tabIndex/arrow-nav/roving focus, so the ARIA was a false promise.
- * Roving tabIndex per the WAI-ARIA APG Tree View pattern: exactly ONE
- * treeitem is a tab stop at a time (the selected row, or the first root row
- * when nothing is selected); arrow keys move focus AND selection together
- * (this app has no separate "focused but unselected" concept).
+ * Roving tabIndex per the WAI-ARIA APG Tree View pattern: one treeitem is the
+ * tab stop, the selected row or else the first root row. Arrow keys move focus
+ * and selection together, since the app has no focused-but-unselected state.
  */
 import { describe, expect, it } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -29,7 +26,7 @@ function withPanel(graph: ReturnType<typeof createSceneGraphFromTscnScene>) {
   };
 }
 
-/** Every currently-rendered row, in DOM (== visible) order. */
+/** Every rendered row, in DOM order, which is the visible order. */
 function treeItems(): HTMLElement[] {
   return screen.getAllByRole('treeitem');
 }
@@ -159,7 +156,7 @@ describe('<SceneTreeViewer> keyboard operability (#224)', () => {
     rowFor('Root').focus();
     fireEvent.keyDown(rowFor('Root'), { key: 'ArrowRight' }); // expand
     rowFor('Child').focus();
-    fireEvent.keyDown(rowFor('Child'), { key: 'ArrowLeft' }); // Child has no children -> go to parent
+    fireEvent.keyDown(rowFor('Child'), { key: 'ArrowLeft' }); // Child has no children, so focus goes to the parent.
 
     expect(globalThis.document.activeElement).toBe(rowFor('Root'));
   });
@@ -179,10 +176,7 @@ describe('<SceneTreeViewer> keyboard operability (#224)', () => {
   });
 
   it('keeps a tab stop on the first root row when the SELECTED row is collapsed out of view', () => {
-    // Regression: `isSelected || (selectedNodePath === null && isDefaultFocusable)`
-    // left the whole tree without any tabIndex=0 row once a selection existed
-    // but its row was unmounted (parent collapsed, or filtered out by search)
-    // — Tab skipped the tree entirely.
+    // A selection whose row is unmounted must not leave the tree without a tab stop.
     const graph = createSceneGraphFromTscnScene({
       nodes: [makeNode('Root', 'Node3D', [makeNode('Child', 'MeshInstance3D')])],
     });
@@ -193,7 +187,7 @@ describe('<SceneTreeViewer> keyboard operability (#224)', () => {
     fireEvent.click(rowFor('Child')); // select the child
     expect(rowFor('Child').tabIndex).toBe(0);
 
-    fireEvent.keyDown(rowFor('Root'), { key: 'ArrowLeft' }); // collapse — Child unmounts
+    fireEvent.keyDown(rowFor('Root'), { key: 'ArrowLeft' }); // collapse: Child unmounts
     expect(screen.queryByText('Child')).toBeNull();
     // The tree must still have exactly one tab stop: the first root row.
     expect(rowFor('Root').tabIndex).toBe(0);

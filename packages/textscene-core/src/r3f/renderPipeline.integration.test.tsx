@@ -1,11 +1,7 @@
 /**
- * End-to-end render pipeline integration:
- *   TscnParser.parse() → SceneResourcesProvider + NodeDispatcher → ReactThreeTestRenderer
- *
- * Covers material precedence, mesh/light dispatch, and — most importantly —
- * nested hierarchy transform composition (parent y=2, child y=1 must give
- * worldPos.y≈3 through <group> nesting). WebGLRenderer is not mocked because
- * ReactThreeTestRenderer uses no WebGL.
+ * The render pipeline end to end: `TscnParser.parse()`, then SceneResourcesProvider
+ * and NodeDispatcher, into ReactThreeTestRenderer, which uses no WebGL. Covers
+ * material precedence, mesh and light dispatch, and nested transform composition.
  */
 
 import * as THREE from 'three';
@@ -22,8 +18,8 @@ import './nodes/index';
 
 type ReactThreeTestInstance = ReactThreeTest.ReactThreeTestInstance;
 
-// Use the test renderer tree API to find meshes/lights — avoids the dual-THREE
-// instanceof problem that occurs when traverse() is called on scene.instance.
+// The test renderer's tree API, since `instanceof` fails across its second
+// three.js copy under `traverse()`.
 function findMeshes(scene: { findAllByType(t: string): ReactThreeTestInstance[] }) {
   return scene.findAllByType('Mesh');
 }
@@ -96,7 +92,7 @@ mesh = SubResource("BoxMesh_abc123")
 `);
       const meshes = findMeshes(renderer.scene);
       expect(meshes.length).toBeGreaterThan(0);
-      // Material type string check avoids dual-THREE instanceof issue
+      // A type-string check, since `instanceof` fails across three.js copies.
       const material = (meshes[0]!.instance as THREE.Mesh).material as THREE.MeshStandardMaterial;
       expect(material.type).toBe('MeshStandardMaterial');
     });
@@ -232,8 +228,7 @@ transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 
     });
 
     it('handles nested node hierarchy — child world pos = parent(y=2) + child(y=1) = y≈3', async () => {
-      // This is the KEY test from the original. Validates that parent Group transforms
-      // compose correctly in the R3F hierarchy. A failure here means transform nesting is broken.
+      // Parent y=2 and child y=1 compose through <group> nesting to world y≈3.
       const renderer = await renderScene(`[gd_scene load_steps=2 format=3]
 
 [sub_resource type="BoxMesh" id="BoxMesh_1"]

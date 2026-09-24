@@ -1,11 +1,7 @@
 /**
- * The `terrain_set_<n>/` family — TileSet's one family that carries a second
- * index (tile_set.cpp:3893-3927, :4190-4194).
- *
- * `mode` is the shared dispatcher's own `<prefix><i>/<leaf>` shape;
- * `terrain_<m>/name` and `terrain_<m>/color` are a nested indexed family, which
- * that dispatcher deliberately does not reach, so the key grammar for them is
- * built here from `indexedKeyRegex`.
+ * The `terrain_set_<n>/` family, TileSet's one family with a second index
+ * (tile_set.cpp:3893-3927, :4190-4194). `mode` takes the shared dispatcher's shape. The nested
+ * `terrain_<m>/name` and `terrain_<m>/color` are out of its reach, so their grammar is built here.
  */
 
 import { indexedFamilyValidator } from '../../linter/validators/indexedFamily.js';
@@ -27,11 +23,9 @@ const TERRAIN_MODE = {
 };
 
 /**
- * The nested level, gated the same way `_set` gates it: `components[1]` must
- * begin `terrain_` and `is_valid_int()` past that prefix (tile_set.cpp:3904).
- * A spelling the gate refuses matches nothing here and falls through to the
- * flat dispatcher, which reports the key as unknown — which is what `_set` does
- * with it.
+ * The nested level, gated as `_set` gates it: `components[1]` begins `terrain_` and is
+ * `is_valid_int()` past it (tile_set.cpp:3904). A refused spelling falls through to the flat
+ * dispatcher, which reports it unknown, as `_set` does.
  */
 const TERRAIN_KEY = indexedKeyRegex('^terrain_set_(#)/terrain_(#)/(.+)$', 'is_valid_int');
 
@@ -45,14 +39,14 @@ const TERRAIN_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 };
 
 /**
- * `terrain_set_<n>/mode`, plus every key shape the nested branch below did not
- * claim — an unrecognised leaf, a refused index, a negative one.
+ * `terrain_set_<n>/mode`, plus every key shape the nested branch below did not claim: an
+ * unrecognised leaf, a refused index or a negative one.
  */
 const terrainSetLeaves = indexedFamilyValidator({
   prefix: 'terrain_set_',
   leaves: {
     // tile_set.cpp:4190, PROPERTY_HINT_ENUM. set_terrain_set_mode (:773) casts
-    // the int into the enum and assigns it; its only guard is on the INDEX.
+    // the int into the enum and assigns it. Its only guard is on the index.
     mode: v.enumInt('mode', 0, 2, TERRAIN_MODE, { hinted: 'tile_set.cpp:4190' }),
   },
   unknownCode: 'INVALID_TILESET_TERRAIN_SET_KEY',
@@ -74,11 +68,9 @@ const terrainSetLeaves = indexedFamilyValidator({
 export const terrainSetValidator: PropertyValidator = accepts((key, value, line) => {
   const nested = TERRAIN_KEY.exec(key);
   if (!nested) {
-    // `_set` splits with `split("/", true, 2)` (:3666), so `components[1]` is
-    // ONE segment and anything below it rides along unread: `terrain_set_0/mode/x`
-    // reaches `components[1] == "mode"` (:3897) and the write lands. The
-    // dispatcher takes the leaf as everything below the index, so the segment is
-    // trimmed before it sees the key.
+    // `_set` splits with `split("/", true, 2)` (:3666), so `terrain_set_0/mode/x` reaches
+    // `components[1] == "mode"` (:3897) and the write lands. The dispatcher reads everything below
+    // the index as the leaf, so the trailing segment is trimmed first.
     const trailing = MODE_TRAILING_RE.exec(key);
     if (trailing) {
       const error = terrainSetLeaves(`terrain_set_${trailing[1]}/mode`, value, line);
@@ -89,7 +81,7 @@ export const terrainSetValidator: PropertyValidator = accepts((key, value, line)
     return terrainSetLeaves(key, value, line);
   }
 
-  // `_set` tests the terrain-set index BEFORE it looks at `components[1]`
+  // `_set` tests the terrain-set index before it looks at `components[1]`
   // (:3896 against :3904), so the outer guard is the one that reports.
   const setIndex = Number(nested[1]);
   if (setIndex < 0) {

@@ -1,11 +1,7 @@
 /**
- * Wire a host `ResourceProvider` into the resource pipeline.
- *
- * Every host (web previewer, VS Code webview) builds the same three-step
- * sequence: a `FileEventBus` over the provider, a `ResourceLoader` over the
- * bus, then `loader.setProvider(provider)`. That construction ORDER is an
- * invariant; this factory owns it so a pipeline change (an extra processor,
- * a reorder, a cache preload) lands once instead of drifting between hosts.
+ * Wire a host `ResourceProvider` into the resource pipeline: a `FileEventBus` over the
+ * provider, a `ResourceLoader` over the bus, then `loader.setProvider(provider)`. The
+ * order is an invariant, owned here so every host builds the same pipeline.
  */
 import { FileEventBus } from './FileEventBus';
 import { ResourceLoader } from './ResourceLoader';

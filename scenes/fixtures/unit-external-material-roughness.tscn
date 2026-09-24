@@ -1,43 +1,28 @@
-; The one variable: a ROUGHNESS MAP that arrives on the EXTERNAL `.tres`
-; material path.
-;
-; Every other roughness-bearing fixture declares its StandardMaterial3D as a
-; `[sub_resource]` of its own `.tscn`, and the only fixtures whose material is an
-; external `.tres` carry scalars alone. So the two halves of the question — does a
-; `.tres` material reach a primitive mesh at all, and does its `roughness_texture`
-; survive the trip — are invisible to every other scene: a regression in either
-; leaves the corpus green while this surface silently turns into the renderer's
-; default material (mid-grey, ROUGHNESS 0.8) or into a flat `roughness = 1.0`.
-;
-; The map is a hard horizontal split, glossy (0.10) over rough (0.90), sampled
-; raw as a non-colour map. It is legible as PIXELS rather than as a probe: the
-; sphere's upper cap carries a small, hard specular highlight and its lower cap a
-; broad dim one, with the seam a sharp ring across the middle. Drop the map and
-; both caps become the same dull matte; bind it to a colour slot instead and the
-; albedo goes banded.
-;
-; The dielectric is deliberate — `metallic = 0`, so the sky's reflection is the
-; 0.04 Fresnel floor and the picture is the DIRECT light's specular lobe rather
-; than a mirrored environment, which no roughness map could be arbitrated
-; through. Authoring a DirectionalLight3D at all is what takes Godot's editor
-; preview sun away (ADR-0025), leaving its preview environment; its
-; `light_energy = 2.0` is the ordinary authored brightness that a dark enough
-; albedo still resolves well short of clipping under, so the roughness signal is
-; not thrown away in a saturated highlight.
+; One variable: a roughness map on an external `.tres` material. Every other roughness fixture
+; uses a `[sub_resource]` material, and every `.tres` fixture carries scalars alone, so a
+; regression here turns this surface into the default material (mid-grey, roughness 0.8) or a
+; flat `roughness = 1.0` while every other scene stays green.
 [gd_scene load_steps=3 format=3]
 
+; The map splits glossy (0.10) over rough (0.90), sampled raw as a non-colour map. The upper
+; cap shows a small hard highlight, the lower a broad dim one, with a sharp seam. Without the
+; map both caps are the same dull matte. Bound to a colour slot, the albedo goes banded.
 [ext_resource type="StandardMaterial3D" path="res://unit-external-material-roughness.tres" id="1_mat"]
 
 [sub_resource type="SphereMesh" id="Sphere_1"]
 radius = 1.0
 height = 2.0
 
+; `metallic = 0`, so the sky's reflection is the 0.04 Fresnel floor and the picture is the
+; direct light's specular lobe, not a mirrored environment no roughness map could be judged
+; through. Authoring a DirectionalLight3D removes Godot's editor preview sun (ADR-0025) and
+; keeps its preview environment.
 [node name="ExternalMaterialRoughness" type="Node3D"]
 
-; Basis rows put local -Z — the direction the light travels — down-and-forward at
-; 40 degrees, which lands the specular highlight inside the GLOSSY band, well
-; clear of the seam. The two caps are then read against each other rather than
-; through a highlight that straddles both.
+; Basis rows point local -Z, the direction the light travels, down and forward at 40 degrees.
+; The specular highlight then lands inside the glossy band, clear of the seam, so the two caps
+; read against each other. `light_energy = 2.0` is an ordinary brightness that a dark albedo
+; resolves well short of clipping, so no roughness signal is lost in a saturated highlight.
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.766044, 0.642788, 0, -0.642788, 0.766044, 0, 3, 3)
 light_energy = 2.0

@@ -1,10 +1,6 @@
 /**
- * SpinBox strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it.
+ * SpinBox strict validators: format and range checks, asserted through `validatorRegistry` rather
+ * than a linted `.tscn`, so a failure points at the validator.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -122,9 +118,8 @@ describe('SpinBox strict validators', () => {
 
   // spin_box.cpp:678: ADD_PROPERTY(PropertyInfo(Variant::FLOAT,
   // "custom_arrow_step", PROPERTY_HINT_RANGE, "0,10000,0.0001,or_greater"), …).
-  // set_custom_arrow_step (:615-617) assigns straight through: the bound is
-  // hinted, so it warns rather than errors, and `or_greater` leaves the max
-  // end open.
+  // set_custom_arrow_step (:615-617) only assigns, so the bound warns, and `or_greater` leaves
+  // the max end open.
   describe('custom_arrow_step', () => {
     it('accepts a typical value', () => {
       expect(check('custom_arrow_step', '0.5')).toBeNull();

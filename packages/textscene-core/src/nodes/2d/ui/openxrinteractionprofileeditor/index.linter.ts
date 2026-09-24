@@ -1,5 +1,3 @@
-/**
- * openxrinteractionprofileeditor linter registration - imports linter components to trigger self-registration.
- */
+/** Registers the OpenXRInteractionProfileEditor validators by importing them. */
 
 import './linterParser.js';

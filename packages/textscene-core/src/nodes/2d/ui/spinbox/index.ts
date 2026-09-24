@@ -1,4 +1,4 @@
-/** SpinBox registration — parser. */
+/** SpinBox registration: parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseSpinBox } from './parser';

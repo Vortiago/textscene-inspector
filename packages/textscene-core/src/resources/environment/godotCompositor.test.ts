@@ -1,23 +1,8 @@
 /**
  * The composite shader against Godot 4.6.3's `tonemap.glsl` `main()`
- * (`servers/rendering/renderer_rd/shaders/effects/`), whose order is:
- *
- *   color.rgb *= exposure;                              // the SCENE, once
- *   if (glow && glow_mode != SOFTLIGHT) {
- *       vec3 glow = gather_glow(...) * params.glow_intensity;
- *       if (glow_mode == MIX) color = color * (1 - glow_intensity) + glow;
- *       else                  color = apply_glow(color, glow, params.white);
- *   }
- *   color.rgb = apply_tonemapping(color.rgb);           // max(0) then the curve
- *   // post-tonemap glow (SOFTLIGHT) runs here, on tonemapped operands
- *
- * and whose `params.white` the renderer fills from `environment_get_white`
- * (`renderer_scene_render_rd.cpp`: `tonemap.white = environment_get_white(...)`),
- * i.e. the FLOORED white rather than the authored property.
- *
- * Assertions are on the discriminating structure, never on the whole emitted
- * string: a snapshot of generated GLSL locks its formatting and fails on every
- * edit without saying which of these invariants broke.
+ * (`servers/rendering/renderer_rd/shaders/effects/`): exposure on the scene once, a
+ * glow blend (MIX lerps), `apply_tonemapping` (max(0), then the curve), then SOFTLIGHT.
+ * Assertions read that structure, never a GLSL snapshot, which names no broken invariant.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -35,7 +20,7 @@ function glowOn(extra: Record<string, string> = {}): GlowParams {
   return params;
 }
 
-/** `mainImage`'s body — above it sit the DEFINITIONS, not the call order. */
+/** `mainImage`'s body: above it sit the definitions, not the call order. */
 function body(params: GlowParams | null, toneMapping = { mode: GodotToneMapper.FILMIC, white: 1 }) {
   const glsl = compositeGlsl(params, toneMapping);
   return glsl.slice(glsl.indexOf('void mainImage'));
@@ -43,8 +28,8 @@ function body(params: GlowParams | null, toneMapping = { mode: GodotToneMapper.F
 
 describe('compositeGlsl — the shader it emits', () => {
   it('is self-contained: the curve and the blend are defined above mainImage', () => {
-    // The effect compiles this one string; a function it only calls would be a
-    // link error at shader-compile time, i.e. a black frame.
+    // The effect compiles this one string. A function it only calls would be a
+    // link error at shader-compile time: a black frame.
     const glsl = compositeGlsl(glowOn(), { mode: GodotToneMapper.FILMIC, white: 1 });
     expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
     expect(glsl).toContain('vec3 godotGlowBlend(vec3 color, vec3 glow)');
@@ -78,10 +63,9 @@ describe('compositeGlsl — the glow gather', () => {
 });
 
 describe('compositeGlsl — exposure', () => {
-  // `tonemap.glsl` exposes the SCENE colour once before the blend; the GLOW was
-  // already exposed by the bright pass. Getting this wrong double-exposes the
-  // glow, or scales the blended SUM instead of its operands — and every glow
-  // fixture leaves `tonemap_exposure` at 1.0, where all three are identical.
+  // `tonemap.glsl` runs `color.rgb *= exposure` on the scene once before the blend;
+  // the bright pass already exposed the glow. Every glow fixture leaves
+  // `tonemap_exposure` at 1.0, where a double-exposed glow or a scaled sum looks the same.
   it('exposes the scene colour and leaves the glow alone, pre-tonemap modes', () => {
     const glsl = compositeGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), {
       mode: GodotToneMapper.FILMIC,
@@ -148,11 +132,9 @@ describe('compositeGlsl — which side of the tone curve the blend falls on', ()
 
 describe('compositeGlsl — the white SCREEN normalises against', () => {
   it('uses Godot’s FLOORED white, not the authored property (regression)', () => {
-    // `apply_glow` divides by `params.white`, which the renderer fills from
-    // `environment_get_white` — floored at 1.0 for every SDR curve. Passing the
-    // raw `tonemap_white` instead would divide by a value below 1 and blow the
-    // glow out. Godot's own comment: "white cannot be smaller than the maximum
-    // output value".
+    // `apply_glow` divides by `params.white`, which `renderer_scene_render_rd.cpp` fills
+    // from `environment_get_white`, floored at 1.0 for every SDR curve: "white cannot be
+    // smaller than the maximum output value". A raw `tonemap_white` below 1 blows the glow out.
     const glsl = compositeGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), {
       mode: GodotToneMapper.FILMIC,
       white: 0.5,
@@ -185,7 +167,7 @@ describe('compositeGlsl — the white SCREEN normalises against', () => {
 describe('compositeGlsl — malformed input', () => {
   it('falls back to ADDITIVE for a blend mode outside the enum (error path)', () => {
     // `glow_blend_mode` is decoded leniently, so a hand-edited scene can carry
-    // anything; an unknown mode must still compile.
+    // anything. An unknown mode must still compile.
     expect(body(glowOn({ glow_blend_mode: '99' }))).toContain('godotGlowBlend');
     expect(compositeGlsl(glowOn({ glow_blend_mode: '99' }), {
       mode: GodotToneMapper.FILMIC,
@@ -225,7 +207,7 @@ describe('compositeGlsl — the AgX contrast', () => {
 });
 
 describe('compositeGlsl — with the glow flag clear', () => {
-  // `tonemap.glsl:859-899` guards every glow line on FLAG_USE_GLOW; with it clear
+  // `tonemap.glsl:859-899` guards every glow line on FLAG_USE_GLOW. With it clear,
   // the same pass reduces to exposure and the curve.
   const tone = { mode: GodotToneMapper.FILMIC, white: 1 };
 

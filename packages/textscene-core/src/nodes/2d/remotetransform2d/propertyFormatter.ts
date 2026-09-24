@@ -1,7 +1,6 @@
 /**
- * RemoteTransform2D property formatter — surfaces remote_path + the update
- * flags (Godot defaults when the TSCN omits them) ahead of the shared Node2D
- * transform sections.
+ * Formats RemoteTransform2D properties: `remote_path` and the update flags, with
+ * Godot's defaults where omitted, ahead of the shared Node2D sections.
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';

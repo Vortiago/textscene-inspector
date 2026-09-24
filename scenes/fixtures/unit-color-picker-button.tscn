@@ -1,10 +1,7 @@
 [gd_scene format=3]
 
-; `color`'s alpha (0.6) is the ONE variable that matters visually: it is the
-; only value that puts the checkerboard backdrop on screen at all, since an
-; opaque swatch fully covers it and a regression there is invisible on any
-; fully-opaque color. `edit_alpha`/`edit_intensity` stay non-default only for
-; the strict parser's grammar coverage — neither reaches a drawn pixel.
+; The one variable: `color` alpha 0.6, the only thing that shows the checkerboard, which an opaque
+; swatch covers. `edit_alpha` and `edit_intensity` are non-default for grammar coverage only.
 
 [node name="Root" type="Control"]
 anchors_preset = 15

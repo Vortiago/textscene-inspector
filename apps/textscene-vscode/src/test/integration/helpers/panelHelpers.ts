@@ -1,11 +1,6 @@
 /**
- * Test helpers for managing TscnPreviewPanel instances in integration tests.
- *
- * Panels are constructed directly using the public constructor with a fake
- * `vscode.WebviewPanel`. The fake panel captures `postMessage` calls so tests
- * can assert host→webview messages, and exposes a `triggerMessage` helper that
- * drives the panel's `onDidReceiveMessage` handler — the same dispatch path
- * used in production.
+ * Builds TscnPreviewPanel instances over a fake `vscode.WebviewPanel` for the
+ * integration tests.
  */
 
 import * as vscode from 'vscode';
@@ -14,9 +9,7 @@ import type { HostToWebviewMessage } from '../../../protocol';
 
 const EXTENSION_ID = 'vortiago.textscene-inspector';
 
-/**
- * Resolve the extension's install URI from the VS Code test host.
- */
+/** The extension's install URI in the VS Code test host. */
 export function getExtensionUri(): vscode.Uri {
   const extension = vscode.extensions.getExtension(EXTENSION_ID);
   if (!extension) {
@@ -28,11 +21,11 @@ export function getExtensionUri(): vscode.Uri {
 export interface TestPanel {
   /** The `TscnPreviewPanel` under test. */
   panel: TscnPreviewPanel;
-  /** All messages the panel has sent to the webview via `postMessage`. */
+  /** Every message the panel has sent to the webview through `postMessage`. */
   sentMessages: HostToWebviewMessage[];
   /**
-   * Simulate a webview→host message. Routes through the real
-   * `dispatchWebviewMessage` call — the same path used in production.
+   * Sends a webview-to-host message through the production
+   * `dispatchWebviewMessage` call.
    */
   triggerMessage(msg: Record<string, unknown>): void;
 }
@@ -47,12 +40,9 @@ export interface TestPanelOptions {
 }
 
 /**
- * Create a `TscnPreviewPanel` wired to a fake `vscode.WebviewPanel`.
- *
- * The fake panel captures every `postMessage` call in `sentMessages`.
- * `triggerMessage` fires the real `onDidReceiveMessage` listener that the
- * panel registered during construction, so all dispatch happens through the
- * production code path.
+ * Creates a `TscnPreviewPanel` over a fake `vscode.WebviewPanel`, which captures
+ * every `postMessage` in `sentMessages`. `triggerMessage` fires the listener the
+ * panel registered in its constructor.
  */
 export function createTestPanel(
   extensionUri: vscode.Uri,
@@ -132,11 +122,9 @@ export function createTestPanel(
 }
 
 /**
- * Poll every 50ms until `predicate()` is true or `timeoutMs` elapses — the ONE
- * deadline/poll policy every integration-test wait builds on. Returns whether
- * the predicate was satisfied. When `describeFailure` is given, a timeout
- * throws with its message instead of returning `false` — rich diagnostics stay
- * in the caller's closure.
+ * Polls every 50ms until `predicate()` is true or `timeoutMs` elapses, and returns
+ * whether it held. Every integration-test wait builds on it. With
+ * `describeFailure`, a timeout throws its message instead of returning `false`.
  */
 export async function waitFor(
   predicate: () => boolean,
@@ -150,8 +138,8 @@ export async function waitFor(
     }
     await new Promise((r) => setTimeout(r, 50));
   }
-  // Final check: the condition may have become true during the last sleep —
-  // without this, a loaded CI runner reports spurious timeouts.
+  // The condition can come true during the last sleep, which a loaded CI runner
+  // otherwise reports as a timeout.
   if (predicate()) {
     return true;
   }
@@ -161,9 +149,6 @@ export async function waitFor(
   return false;
 }
 
-/**
- * Wait for a specific message type to appear in `sentMessages`.
- */
 export async function waitForMessage(
   sentMessages: HostToWebviewMessage[],
   messageType: string,
@@ -178,9 +163,6 @@ export async function waitForMessage(
   return sentMessages.find((m) => m.type === messageType)!;
 }
 
-/**
- * Wait for a panel to be disposed.
- */
 export async function waitForPanelDisposal(
   panel: TscnPreviewPanel,
   timeout = 5000,

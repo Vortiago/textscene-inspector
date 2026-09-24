@@ -1,9 +1,6 @@
 /**
- * The ArrayMesh slice's routing claim (ADR-0031).
- *
- * Registration is a side effect of importing the index, so importing it here is
- * the whole arrangement — these assertions are exactly what a router reads back
- * out.
+ * The ArrayMesh slice's routing claim (ADR-0031). Importing the index registers
+ * it, and these assertions read back what a router reads.
  */
 
 import { describe, expect, it } from 'vitest';

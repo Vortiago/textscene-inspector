@@ -1,14 +1,8 @@
 /**
- * The 2D viewport (ADR-0007 + ADR-0006 Godot-parity amendment): a pannable/
- * zoomable stage compositing — like Godot's 2D editor — the whole CanvasItem
- * world in one view:
- *   1. the canvas frame (Godot's project-viewport rectangle),
- *   2. the `<World2DCanvas>` (transparent ortho R3F layer: sprites, tilemaps,
- *      Node2D trees, and the native Control canvas as a sibling), camera
- *      glued to the stage pan/zoom.
- * The stage itself only owns the chrome (bounds, zoom %, scroll-to-zoom,
- * drag-to-pan) — the `.overlayFrame` div is the capture-contract region a
- * visual-regression harness clips to, not overlay machinery.
+ * The 2D viewport (ADR-0007, ADR-0006): a pannable, zoomable stage that shows the
+ * whole CanvasItem world in one view, as Godot's 2D editor does. The stage owns
+ * the chrome: the project-viewport frame, the zoom HUD, wheel zoom and drag pan.
+ * `<World2DCanvas>` draws the world with its camera glued to the stage view.
  */
 import {
   useCallback,
@@ -43,7 +37,7 @@ const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 4;
 const clampZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
 
-/** CSS-scale step for one wheel notch — this stage's own feel, not Godot's. */
+/** CSS-scale step for one wheel notch: this stage's own feel, not Godot's. */
 const ZOOM_PER_NOTCH = 1.1;
 
 /** The −/+ HUD buttons' step. Coarser than a notch: one click, one visible jump. */
@@ -56,10 +50,9 @@ interface View2D {
 }
 
 /**
- * Scale about a point in stage-local pixels, keeping whatever sits under that
- * point pinned to it. Pure, so the three callers that need it — wheel (anchored
- * to the cursor), pinch (to the fingers' midpoint), HUD buttons (to the stage
- * centre) — share one implementation instead of three copies of the algebra.
+ * Scales about a point in stage-local pixels, keeping what sits under it pinned:
+ * the cursor for the wheel, the fingers' midpoint for a pinch, the stage centre
+ * for the HUD buttons.
  */
 function zoomViewAround(view: View2D, px: number, py: number, factor: number): View2D {
   const zoom = clampZoom(view.zoom * factor);
@@ -71,7 +64,7 @@ function zoomViewAround(view: View2D, px: number, py: number, factor: number): V
 const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
 
 export interface Canvas2DStageProps {
-  /** Root scene's nodes — the native canvas lays out the Control subtree(s) within. */
+  /** The root scene's nodes. The native canvas lays out their Control subtrees. */
   nodes: readonly TscnNode[];
   /** SubResources for StyleBox/Texture refs inside the Control canvas (ADR-0009: explicit props). */
   internalResources: readonly TscnInternalResource[];
@@ -88,24 +81,18 @@ export function Canvas2DStage({
   const [view, setView] = useState<View2D>({ pan: { x: 0, y: 0 }, zoom: 1 });
   const { pan, zoom } = view;
   // `display/window/size/viewport_*`, or Godot's 1152x648 for a scene with no
-  // project around it. This rect is what a root Control resolves its anchors
-  // to, so 23 of the corpus's 81 projects were being composed against the
-  // wrong frame while it was a module constant.
+  // project around it. A root Control resolves its anchors to this rect.
   const { width: canvasWidth, height: canvasHeight } = useProjectSettings().viewportSize;
 
   /**
-   * The view as of NOW, not as of the last render. A wheel burst or a pinch
-   * fires several events per frame, and reading React state would make every
-   * event after the first in a frame compute from a stale view — so the ref is
-   * written ahead of the re-render and is what the handlers read.
+   * The view as of now, written ahead of the re-render. A wheel burst or a pinch
+   * fires several events per frame, and React state would be stale after the first.
    */
   const viewRef = useRef(view);
 
   const applyView = useCallback((next: View2D) => {
     const current = viewRef.current;
-    // A commit identical to the current view still re-renders the stage and
-    // the Control overlay. Every committer (drag, touch, wheel, HUD buttons)
-    // crosses this seam, so the no-op rule lives here once.
+    // An identical view still re-renders the stage and the Control overlay.
     if (next.zoom === current.zoom && next.pan.x === current.pan.x && next.pan.y === current.pan.y) {
       return;
     }
@@ -131,16 +118,15 @@ export function Canvas2DStage({
     });
   }, [applyView, canvasWidth, canvasHeight]);
 
-  // Fit on mount, unless the view is pinned (read once — the preference decides
-  // how this scene OPENS; the Fit button and pan/zoom stay live either way).
+  // Fit on mount unless the view is pinned. Read once: the preference decides how
+  // the scene opens, and the Fit button stays live either way.
   const [fitOnOpen] = useState(() => readPersisted(FIT_ON_OPEN_2D_STORAGE_KEY, true, isBoolean));
   useEffect(() => {
     if (fitOnOpen) fit();
   }, [fit, fitOnOpen]);
 
-  // "View through" a Camera2D (Cameras panel): one-shot framing request —
-  // center the camera's view point at its magnification; the user keeps free
-  // pan/zoom afterwards.
+  // "View through" a Camera2D: a one-shot request that centres the camera's view
+  // point at its magnification. Pan and zoom stay free afterwards.
   const frame2D = useOptionalCameraControl()?.frame2D ?? null;
   useEffect(() => {
     if (!frame2D) return;
@@ -165,11 +151,9 @@ export function Canvas2DStage({
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      // Per NOTCH, not per event (ADR-0029): a mouse wheel delivers one notch
-      // per event and still steps by ZOOM_PER_NOTCH, but a trackpad streams
-      // fractions of one and Firefox reports lines rather than pixels. Scaling
-      // by the event count instead would zoom a trackpad roughly an order of
-      // magnitude faster than a wheel for the same physical gesture.
+      // Per notch, not per event (ADR-0029): a trackpad streams fractions of a
+      // notch and Firefox reports lines. Per event, a trackpad zooms about ten
+      // times faster than a wheel.
       const notches = clampWheelNotches(wheelNotches(e));
       if (notches === 0) return;
       const r = el.getBoundingClientRect();
@@ -186,46 +170,30 @@ export function Canvas2DStage({
     return () => el.removeEventListener('wheel', onWheel);
   }, [applyView]);
 
-  // Drag-to-pan via pointer capture (like <Splitter>): the mouse drag keeps
-  // tracking off the element rather than off window listeners, so an unmount
-  // mid-drag can't call setPan on an unmounted component.
+  // Drag-to-pan through pointer capture, not window listeners, so an unmount
+  // mid-drag cannot set state on an unmounted component.
   const pan2dDrag = useRef({ startX: 0, startY: 0, ox: 0, oy: 0, active: false });
 
-  // Touch takes its own path: one finger pans, two pan AND pinch together, so
-  // a single drag slot cannot hold the gesture. Touch pointers are implicitly
-  // captured to the target, so they need no explicit capture.
+  // Touch takes its own path: one finger pans, and two pan and pinch together.
+  // Touch pointers are captured to the target implicitly.
   const touchPoints = useRef<Map<number, TouchPoint>>(new Map());
-  // `startSpan`/`startZoom` are the pinch's anchor: the zoom is MEASURED from
-  // where the gesture began, not accumulated move-to-move. A browser fires one
-  // pointermove PER POINTER, so two fingers sliding together transit
-  // mixed-time states whose span swings hard — 100px apart, briefly 300px once
-  // one has moved, 100px again once the other catches up. Multiplying those
-  // ratios unwinds the excursion only while nothing clamps it, and `clampZoom`
-  // holds a tight [0.1, 4]: one clamped excursion never unwinds, so a plain
-  // two-finger pan would silently rescale the stage.
+  // The zoom is measured from `startSpan`/`startZoom`, not multiplied move to
+  // move. One pointermove per pointer makes the span swing mid-slide, and once
+  // `clampZoom` clips a swing it never unwinds, so a two-finger pan would rescale.
   const touchOrigin = useRef<{
     centroid: TouchPoint;
     span: number;
     startSpan: number;
     startZoom: number;
   } | null>(null);
-  // The stage cannot move while fingers are on it, so its rect is read once per
-  // gesture rather than per move: the previous move committed new inline styles,
-  // so a getBoundingClientRect() here forces a synchronous layout of the whole
-  // stage on every single pointermove.
+  // Read once per gesture: the stage cannot move under the fingers, and a read
+  // per move forces a synchronous layout after the last move's inline styles.
   const touchRect = useRef<DOMRect | null>(null);
 
-  // A window blur is fingers leaving with no pointerup ever arriving: alt-tab
-  // mid-gesture would otherwise leave the map holding pointers that never lift,
-  // and `resolveTouchMode` would read the next single-finger drag as a pinch.
-  // The cleanup doubles as the unmount reset.
+  // A window blur lifts fingers with no pointerup, and the next single-finger
+  // drag would read as a pinch. The cleanup is the unmount reset too.
   useEffect(() => {
-    /**
-     * The invariant every touch path maintains: no fingers, no gesture origin. A
-     * stale origin is what would make the next single-finger drag pan from
-     * wherever a two-finger gesture happened to end — and a stale rect would
-     * anchor its pinch to where the stage was before whatever moved it.
-     */
+    /** No fingers, no gesture origin and no stale rect, on every touch path. */
     function resetTouch() {
       touchPoints.current.clear();
       touchOrigin.current = null;
@@ -241,16 +209,14 @@ export function Canvas2DStage({
   const onStagePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (isGesturePointer(e.pointerType)) {
       touchPoints.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      // A finger landing moves the midpoint discontinuously; drop the origin
-      // so the next move re-seeds it instead of panning by the jump.
+      // A new finger moves the midpoint in a jump. The next move re-seeds the origin.
       touchOrigin.current = null;
       touchRect.current = e.currentTarget.getBoundingClientRect();
       return;
     }
     if (e.button !== 0) return;
-    // The origin comes from the ref, not the render: a wheel or pinch earlier
-    // in this same frame has already written `viewRef` and the rendered `pan`
-    // is one commit behind it, which would start the drag from a stale offset.
+    // From the ref: a wheel or pinch earlier in this frame has written `viewRef`,
+    // and the rendered `pan` is one commit behind it.
     const origin = viewRef.current.pan;
     pan2dDrag.current = {
       startX: e.clientX,
@@ -272,9 +238,8 @@ export function Canvas2DStage({
     points.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     const active = [...points.values()];
-    // Both one and two fingers pan here — 2D has no orbit — but the shared
-    // resolver still decides what counts as a gesture at all, so the
-    // "three fingers is not a gesture" rule lives in one place.
+    // One and two fingers both pan, since 2D has no orbit. The shared resolver
+    // decides what counts as a gesture.
     if (resolveTouchMode(active.length) === null) {
       touchOrigin.current = null;
       return;
@@ -298,8 +263,7 @@ export function Canvas2DStage({
       zoom: view.zoom,
     };
     // Not inverted, unlike the 3D viewport: a CSS scale grows as the fingers
-    // spread, where an orbit radius shrinks. Measured from the anchor, so a
-    // clamp on one event cannot carry into the next.
+    // spread, where an orbit radius shrinks.
     const zoom = clampZoom(origin.startZoom * pinchSpanRatio(origin.startSpan, span));
     if (zoom === view.zoom) {
       applyView(panned);
@@ -327,8 +291,7 @@ export function Canvas2DStage({
   const endStageDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (isGesturePointer(e.pointerType)) {
       touchPoints.current.delete(e.pointerId);
-      // Lifting one of two fingers leaves the other mid-gesture; re-seed so it
-      // pans from where it is rather than from the old midpoint.
+      // The finger left behind re-seeds, so it pans from where it is.
       touchOrigin.current = null;
       if (touchPoints.current.size === 0) touchRect.current = null;
       return;
@@ -357,9 +320,8 @@ export function Canvas2DStage({
       onPointerMove={onStagePointerMove}
       onPointerUp={endStageDrag}
       onPointerCancel={endStageDrag}
-      // A pointer can vanish without a pointerup — capture stolen, or the
-      // browser taking the gesture over — which would leave a finger in the map
-      // for the next drag to misread as a pinch.
+      // A pointer can vanish without a pointerup, when capture is stolen or the
+      // browser takes the gesture, and leave a finger the next drag reads as a pinch.
       onLostPointerCapture={endStageDrag}
       aria-label="2D canvas"
       data-testid="canvas-2d-stage"
@@ -378,8 +340,8 @@ export function Canvas2DStage({
         </span>
       </div>
 
-      {/* Origin axes through world (0, 0) = the viewport rect's top-left at
-          screen (pan.x, pan.y) — Godot's 2D-editor red X / green Y. */}
+      {/* Godot's 2D-editor red X and green Y axes through world (0, 0), the
+          viewport rect's top-left at screen (pan.x, pan.y). */}
       <div
         className={`${styles.originAxis} ${styles.originAxisX}`}
         style={{ top: pan.y }}
@@ -393,8 +355,8 @@ export function Canvas2DStage({
         aria-hidden
       />
 
-      {/* The CanvasItem world (sprites/tilemaps) and, as a sibling inside
-          this canvas, the native Control layer — Godot's 2D editor order. */}
+      {/* The CanvasItem world and, as a sibling inside this canvas, the native
+          Control layer, in Godot's 2D editor order. */}
       <World2DCanvas
         nodes={nodes}
         internalResources={internalResources}
@@ -403,11 +365,8 @@ export function Canvas2DStage({
         zoom={zoom}
       />
 
-      {/* The Godot project-viewport rectangle: the region a parity capture
-          clips to (its testid is the contract `scripts/visual/previewServer.mjs`
-          addresses it by). The native Control canvas draws INSIDE
-          `<World2DCanvas>` above, not into this div — it is the capture
-          contract's own frame, not a mount point. */}
+      {/* The project-viewport rectangle a parity capture clips to, by the testid
+          `scripts/visual/previewServer.mjs` uses. Nothing mounts into it. */}
       <div
         className={styles.overlayFrame}
         data-testid="canvas-2d-capture-frame"
@@ -416,10 +375,8 @@ export function Canvas2DStage({
           height: canvasHeight,
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
         }}
-        // The rect this frame IS, before the stage's pan/zoom transform. A
-        // capture harness reads it to know what "zoom 1" means for THIS scene:
-        // the frame is the project's viewport, so it is no longer a constant it
-        // can hardcode (`projectViewportSize`).
+        // The frame before the pan and zoom transform. A capture harness reads it
+        // to know what zoom 1 means for this scene (`projectViewportSize`).
         data-viewport-size={`${canvasWidth}x${canvasHeight}`}
       />
 

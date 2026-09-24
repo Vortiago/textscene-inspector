@@ -1,15 +1,7 @@
 /**
- * The viewport's display toggles, behind one button.
- *
- * The seven of them used to sit inline on the toolbar, which at ten controls
- * wrapped to a second row spanning most of the viewport's top edge — covering
- * the scene it exists to control, and burying the controls legend underneath
- * it. The three things reached for constantly (3D/2D, Reset Camera, Screenshot)
- * stay on the bar; everything set once and forgotten lives here.
- *
- * Deliberately still inside the toolbar overlay rather than moved to the dock:
- * the capture harnesses paint the overlay out by testid and `verify:2d` clicks
- * the 2D button in it, so keeping the boundary intact keeps both working.
+ * The display toggles behind one button, so the toolbar stays one row. It stays
+ * in the toolbar overlay, not the dock: the capture harnesses paint the overlay
+ * out by testid, and `verify:2d` clicks the 2D button in it.
  */
 import { useCallback, useState } from 'react';
 import { useDismissable } from '../../hooks/useDismissable.js';
@@ -30,10 +22,8 @@ export function DisplayMenu({ toggles }: { toggles: readonly DisplayToggle[] }) 
 
   if (toggles.length === 0) return null;
 
-  // Everything is hidden behind the button, so the count says whether anything
-  // is on without opening it — otherwise a toggle set days ago is invisible.
-  // Disabled ones do not count: a preview that yielded to the scene's own light
-  // reads as checked, and counting it would claim the user turned it on.
+  // The count shows a toggle is on with the menu shut. A disabled one does not
+  // count: a preview that yielded to the scene's light reads as checked.
   const activeCount = toggles.filter((toggle) => toggle.checked && !toggle.disabled).length;
 
   return (

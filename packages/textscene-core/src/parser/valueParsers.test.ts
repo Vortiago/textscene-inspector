@@ -1,8 +1,7 @@
 /**
- * Tests for the shared value decoders. The contract under test: fall back
- * SILENTLY when a value is absent, but WARN-then-fall-back when it is
- * present yet unparseable. `parseOptionalInt` is the exception — it returns
- * `undefined` and never warns.
+ * The shared value decoders fall back silently when a value is absent, and warn and
+ * fall back when it is present but unparseable. `parseOptionalInt` returns `undefined`
+ * and never warns.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as logger from '../logger';
@@ -310,10 +309,8 @@ describe('parseOptionalRect2', () => {
 });
 
 describe('vec2iOr takes the spellings can_convert_strict converts', () => {
-  // The renderer half of the conversion widening. Nothing asserted it, so
-  // dropping `compositeSpellings` from `slotTupleRegex` would revert this —
-  // and every reader in tileset, curve and vectors with it — while the suite
-  // stayed green.
+  // The renderer half of the conversion widening: dropping `compositeSpellings` from
+  // `slotTupleRegex` would revert every reader in tileset, curve and vectors.
   it('reads a Vector2 into a Vector2i slot rather than falling back', () => {
     expect(vec2iOr('Vector2(1920, 1080)', { x: 512, y: 512 })).toEqual({ x: 1920, y: 1080 });
   });
@@ -328,10 +325,9 @@ describe('vec2iOr takes the spellings can_convert_strict converts', () => {
 });
 
 describe('the conversion branch follows the composite type, not the token', () => {
-  // MEASURED on 4.6.3: `ItemList.fixed_icon_size = Vector2(4294967295, 64)`
-  // stores `(-2147483648, 64)` — the UB double->int32 sentinel, because a
-  // Vector2 holds doubles — while `Vector2i(4294967295, 64)` stores
-  // `(-1, 64)` by wrapping an int64. The token is identical in both.
+  // Measured on 4.6.3: `ItemList.fixed_icon_size = Vector2(4294967295, 64)` stores
+  // the UB double->int32 sentinel `(-2147483648, 64)`, since a Vector2 holds doubles.
+  // `Vector2i(4294967295, 64)` wraps an int64 to `(-1, 64)`.
   it('refuses a converted component the double branch cannot hold', () => {
     expect(vec2iOr('Vector2(4294967295, 64)', { x: -1, y: -1 })).toEqual({ x: -1, y: -1 });
   });
@@ -363,8 +359,7 @@ describe('parseOptionalInt width', () => {
   });
 
   it('keeps a FLOAT literal inside the uint32 range instead of dropping it', () => {
-    // int32 called 3e9 unrepresentable and returned undefined, and every caller
-    // then fell back to its default — layers 3e9 rendered as layer 1.
+    // At int32, 3e9 is unrepresentable, so layers 3e9 would fall back to layer 1.
     expect(parseOptionalInt('3e9', 'uint32')).toBe(3000000000);
   });
 
@@ -383,9 +378,8 @@ describe('an overflowing exponent is inside the finite grammar', () => {
 });
 
 /**
- * `resource_format_text.cpp:269-270` assigns the `index=` tag field into an
- * `int`, so it goes through `Variant::_to_int`, whose STRING arm is
- * `String::to_int()` — a leading-integer reader that never fails.
+ * `resource_format_text.cpp:269-270` assigns the `index=` tag field to an `int` through
+ * `Variant::_to_int` and `String::to_int()`, a leading-integer reader that never fails.
  */
 describe('parseHeadingIndex', () => {
   it('reads a plain index', () => {

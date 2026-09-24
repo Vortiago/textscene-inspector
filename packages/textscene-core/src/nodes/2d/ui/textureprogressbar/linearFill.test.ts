@@ -1,5 +1,5 @@
 /**
- * `linearProgressDraw` vs Godot 4.6.3 (`texture_progress_bar.cpp:445-482`).
+ * `linearProgressDraw` against Godot 4.6.3 (`texture_progress_bar.cpp:445-482`).
  * Worked by hand: texture (100, 20), `progress_offset` (5, 2), ratio 0.4.
  */
 import { describe, expect, it } from 'vitest';

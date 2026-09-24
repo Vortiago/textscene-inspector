@@ -1,4 +1,4 @@
-/** CheckBox parser — Control + text + checked/disabled flags. */
+/** CheckBox parser: Control plus text and the checked and disabled flags. */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import type { CheckBoxProperties } from './types';

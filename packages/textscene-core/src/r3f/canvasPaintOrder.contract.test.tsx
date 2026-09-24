@@ -1,39 +1,8 @@
 /**
- * RED contract — a Control is a CanvasItem, so it paints in TREE ORDER against
- * its Node2D siblings, not above all of them.
- *
- * Godot draws a canvas by appending every visible item to a per-`z_final`
- * linked list during one pre-order walk, then drawing the lists in z order:
- * `_attach_canvas_item_for_draw` (`servers/rendering/renderer_canvas_cull.cpp`
- * lines 274-283) appends to `r_z_list[zidx]`, and `_cull_canvas_item`'s
- * behind/ahead child split (lines 477-490) is the ONLY reordering in the walk.
- * The item's NODE TYPE never enters that decision — a `ColorRect` and a
- * `Sprite2D` at the same `z_final` draw purely in the order the tree visits
- * them. The widespread impression that "UI draws over the world" comes from UI
- * conventionally being authored last, not from a rule.
- *
- * So a background `ColorRect` authored as the FIRST child of a `Node2D` root —
- * how a 2D game backdrop is normally written — must draw UNDERNEATH the
- * sprites that follow it. That is the case these tests pin.
- *
- * ---- The seam -----------------------------------------------------------
- *
- * Paint order in the WebGL canvas is decided by three's transparent-object
- * sort, `reversePainterSortStable`
- * (`three/src/renderers/webgl/WebGLRenderLists.js`), which compares
- * `groupOrder`, then `renderOrder`, then view z DESCENDING (far first), then
- * object id. `groupOrder` is the `renderOrder` of the nearest `Group` ANCESTOR
- * — `projectObject` overwrites it on the way down
- * (`three/src/renderers/WebGLRenderer.js:1838-1840`) — while `renderOrder` is
- * the drawn object's own. Every 2D canvas material here is `transparent` +
- * `depthWrite={false}`, so this comparator alone decides what covers what;
- * nothing is resolved by the depth buffer.
- *
- * These tests therefore observe the composite key three would sort on, for the
- * mesh each node actually draws, and assert the ORDER of those keys. They do
- * not assert any particular encoding: how the key is composed is the
- * implementation's business, and a fix that reorders these two nodes by any
- * means passes.
+ * A Control paints in tree order against its Node2D siblings: a `ColorRect`
+ * authored first draws under the sprites after it. Godot appends items by
+ * `z_final` (`servers/rendering/renderer_canvas_cull.cpp` lines 274-283), and the
+ * behind/ahead split (lines 477-490) is the only reorder. Node type is no factor.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -102,13 +71,10 @@ async function renderWorld(tscn: string): Promise<THREE.Object3D | null> {
 }
 
 /**
- * The key three sorts this drawn object by, as a tuple ordered so that
- * lexicographically SMALLER paints FIRST (further back).
- *
- * The third component is the NEGATED world z, because the transparent
- * comparator orders view z descending — far first — and this canvas's ortho
- * camera looks down -Z from z=1000, so a larger world z is nearer and paints
- * later.
+ * The key `reversePainterSortStable` (`WebGLRenderLists.js`) sorts by, smallest first:
+ * `groupOrder` of the nearest `Group` (`WebGLRenderer.js:1838-1840`), `renderOrder`,
+ * and negated world z, since the ortho camera looks down -Z from z=1000. No 2D
+ * material writes depth. The tests assert the order of the keys, not their encoding.
  */
 function paintKey(object: THREE.Object3D): [number, number, number] {
   const world = new THREE.Vector3();
@@ -125,14 +91,9 @@ function compareKeys(a: [number, number, number], b: [number, number, number]): 
 }
 
 /**
- * The mesh the named node draws its own pixels with.
- *
- * A node's group is named for the node, except that the Control walker
- * qualifies its groups by type (`ColorRect:Background`) — and a Control also
- * leaves an EMPTY placeholder group under its Node2D parent in the world
- * walk, so matching on the name alone can find a group that draws nothing.
- * Both name forms are accepted and the search continues past any group with no
- * mesh in it.
+ * The mesh the named node draws with. The Control walker names its groups by type
+ * (`ColorRect:Background`) and leaves an empty placeholder group in the world walk,
+ * so both names match and the search passes any group without a mesh.
  */
 function drawnMeshUnder(root: THREE.Object3D | null, name: string): THREE.Object3D {
   let found: THREE.Object3D | undefined;
@@ -158,9 +119,8 @@ describe('2D canvas paint order — a Control sorts in tree order with its Node2
 
   it('a ParallaxBackground’s negative layer draws its whole subtree under the world canvas', async () => {
     // `ParallaxBackground extends CanvasLayer` (`scene/2d/parallax_background.h`),
-    // so its `layer` names a CANVAS, and a canvas below the world's draws first
-    // however late in the tree it sits. Authored LAST here for exactly that
-    // reason — under tree order alone it would draw over the ball.
+    // so its `layer` names a canvas, and a canvas below the world's draws first.
+    // Authored last, since in tree order alone it would draw over the ball.
     const root = await renderWorld(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
@@ -179,12 +139,10 @@ polygon = PackedVector2Array(0, 0, 640, 0, 640, 400)
   });
 
   it('a ParallaxBackground hosts the canvas its CONTROL children draw on too', async () => {
-    // `_enter_canvas`'s climb stops at `Object::cast_to<CanvasLayer>(n)`
-    // (canvas_item.cpp:246-252), and `ParallaxBackground` IS one
-    // (`parallax_background.h:34`) — so a Control under it parents at THAT
-    // canvas, on layer -100, exactly as a Node2D does. Hoisting past it would
-    // put the Control on the world canvas, where its canvas-root rank draws it
-    // over the ball instead.
+    // `_enter_canvas` stops at `Object::cast_to<CanvasLayer>(n)` (canvas_item.cpp:246-252),
+    // and `ParallaxBackground` is one (`parallax_background.h:34`), so a Control under it
+    // parents at that canvas on layer -100, as a Node2D does. On the world canvas its
+    // root rank would draw it over the ball.
     const root = await renderWorld(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
@@ -204,15 +162,10 @@ color = Color(0.9, 0.2, 0.2, 1)
   });
 
   it('a canvas item under a plain Node draws over a sibling authored after it', async () => {
-    // Its parent is not a CanvasItem, so `_enter_canvas` parents it at the
-    // viewport's own canvas (canvas_item.cpp:246-267) and it is drawn in its
-    // pre-order rank among the canvas's ROOTS — the draw index
-    // `gui_get_canvas_sort_index()` hands out while SceneTree walks the
-    // `_root_canvas` group (canvas_item.cpp:222-232, :453-466,
-    // scene_tree.cpp:333-348, node.cpp:2152-2187), consumed by
-    // `Canvas::ChildItem::operator<` (renderer_canvas_cull.h:146-151). Each
-    // root's subtree draws whole, so it covers everything under the root it
-    // hangs under however early in the file it was authored.
+    // Its parent is not a CanvasItem, so it parents at the viewport's canvas
+    // (canvas_item.cpp:246-267) and draws at its pre-order rank among the roots
+    // (canvas_item.cpp:222-232, :453-466, scene_tree.cpp:333-348, node.cpp:2152-2187,
+    // renderer_canvas_cull.h:146-151), over everything under the root it hangs under.
     const root = await renderWorld(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]

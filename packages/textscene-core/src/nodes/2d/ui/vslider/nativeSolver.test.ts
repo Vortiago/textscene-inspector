@@ -1,8 +1,7 @@
 /**
- * `vSliderMinimumSize` registers `../shared/sliderSolver.ts`'s
- * `sliderMinimumSize` at `vertical = true`. The geometry itself is proved
- * once in `shared/sliderSolver.test.ts`; this only pins the registration and
- * the axis this slice supplies.
+ * `vSliderMinimumSize` registers `../shared/sliderSolver.ts`'s `sliderMinimumSize` at
+ * `vertical = true`. `shared/sliderSolver.test.ts` proves the geometry. This pins only the
+ * registration and the axis this slice supplies.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';

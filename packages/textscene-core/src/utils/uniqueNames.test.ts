@@ -4,10 +4,8 @@ import { StrictTscnParser } from '../linter/StrictTscnParser.js';
 import { uniqueNameClaims, uniqueNameOwnership } from './uniqueNames.js';
 
 /**
- * Both trees, every time. They agree on `rawProperties` by construction
- * (`parser/rawPropertyParity.test.ts`), but only a real parse proves this reads
- * the field they agree on — a hand-built `TscnNode` is written in whichever
- * shape its author had in mind, so it can only confirm that.
+ * Both trees, every time. They agree on `rawProperties` (`parser/rawPropertyParity.test.ts`), but
+ * only a real parse proves this reads that field: a hand-built `TscnNode` takes its author's shape.
  */
 const SRC = `[gd_scene format=3]
 
@@ -24,8 +22,7 @@ unique_name_in_owner = true
 
 function strictScene(source: string) {
   const { scene } = new StrictTscnParser().parse(source);
-  // Absent only if the scanner could not run at all, which these sources do not
-  // provoke — so it is a broken test, not a case to assert around.
+  // Absent only if the scanner could not run, which these sources do not provoke: a broken test.
   if (!scene) throw new Error('strict parser produced no scene');
   return scene;
 }
@@ -101,14 +98,10 @@ unique_name_in_owner = true
 });
 
 describe('override headings inside an instanced sub-scene', () => {
-  // A heading with neither `type=` nor `instance=` overrides a node that
-  // already exists inside the instance, and resource_format_text.cpp:259-261
-  // leaves its owner untouched (`owner = 0` only when
-  // `!(type == TYPE_INSTANTIATED && instance == -1)`), so it stays owned by the
-  // SUB-SCENE root. node.cpp:2222-2233 registers `%Name` on that owner and
-  // node.cpp:1930-1938 consults only the caller's own owner table, so the
-  // outer scene's `%Hit` addresses nothing. Probed on 4.6.3: `Hit.owner ==
-  // Enemy` and `Player.get_node_or_null("%Hit") == null`.
+  // An override keeps its sub-scene owner (resource_format_text.cpp:259-261). node.cpp:2222-2233
+  // registers `%Name` there and node.cpp:1930-1938 reads only the caller's owner table, so the
+  // outer `%Hit` addresses nothing. Probed on 4.6.3: `Hit.owner == Enemy` and
+  // `Player.get_node_or_null("%Hit") == null`.
   const overridden = `[gd_scene format=3]
 [ext_resource type="PackedScene" path="res://enemy.tscn" id="1"]
 
@@ -153,10 +146,9 @@ unique_name_in_owner = true
 });
 
 /**
- * The same walk, keeping what `uniqueNameClaims` drops: an override's claim
- * belongs to the instance root that owns it, and an added node inside an
- * instance is still this root's. Both are what a per-owner table is composed
- * from once the sub-scene is loaded.
+ * The same walk, keeping what `uniqueNameClaims` drops: an override's claim belongs to its
+ * instance root, and a node added inside an instance is this root's. A per-owner table is
+ * composed from both once the sub-scene loads.
  */
 describe('uniqueNameOwnership', () => {
   const src = `[gd_scene format=3]

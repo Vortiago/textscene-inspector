@@ -41,22 +41,13 @@ describe('<Node>', () => {
   });
 
   /**
-   * Pre-fix, instance-only nodes (no explicit `type`
-   * attribute, only `name` + `instance`) were typed as the base `Node`
-   * fallback in NodeRegistry. The base `Node` parser correctly captured
-   * `properties.transform`, but the R3F `<Node>` component dropped it
-   * before applying to the wrapping `<group>` — so the Crate
-   * instance GLB in the hallway fixture rendered ~40× too big
-   * (its instance's basis carried a uniform 0.025 scale).
-   *
-   * After the fix the component threads `properties.transform`
-   * through `transformFromNode3DProperties` and applies the
-   * decomposed position / rotation / scale to the wrapping group.
+   * An instance-only node (no `type`, only `name` and `instance`) is typed as the base `Node`, and
+   * the component applies its `properties.transform` to the wrapping group through
+   * `transformFromNode3DProperties`, so an instance basis with a 0.025 scale renders at that scale.
    */
   it('applies properties.transform when present (WI-HALL-4 — instance-node Transform3D)', async () => {
-    // A representative instance transform from a real-world hallway scene.
-    // basis columns encode a Y-axis ~90° rotation combined with a
-    // uniform 0.025 scale; origin is the world placement (9.659, 0.059, 6.018).
+    // A representative instance transform: the basis columns encode a Y-axis ~90°
+    // rotation with a uniform 0.025 scale, and the origin is (9.659, 0.059, 6.018).
     const transform: Transform3D = {
       basis_x: { x: 0.015184397, y: 0.019860366, z: -8.681242e-10 },
       basis_y: { x: 0, y: -1.0927848e-9, z: -0.025 },
@@ -78,19 +69,16 @@ describe('<Node>', () => {
     expect(group.instance.position.y).toBeCloseTo(0.059, 4);
     expect(group.instance.position.z).toBeCloseTo(6.018, 4);
 
-    // Each basis column's norm is the scale on that axis. For this
-    // transform every column's norm is ~0.025 (uniform scale). The
-    // load-bearing assertion: scale is NOT 1, which is what the bug
-    // was producing (transform dropped → identity scale → GLB at full
-    // size). Tolerance loose enough for the Y2K9 rotation noise.
+    // Each basis column's norm is the scale on that axis, ~0.025 here. The
+    // load-bearing assertion: the scale is not 1, which a dropped transform
+    // gives. The tolerance allows for rotation noise.
     expect(group.instance.scale.x).toBeCloseTo(0.025, 4);
     expect(group.instance.scale.y).toBeCloseTo(0.025, 4);
     expect(group.instance.scale.z).toBeCloseTo(0.025, 4);
 
-    // Sanity: rotation is non-zero (the basis is not aligned with
-    // world axes). Without checking exact Euler angles — which depend
-    // on rotation-order conventions — assert at least one axis is
-    // non-trivial.
+    // Rotation is non-zero, since the basis is not aligned with the world axes.
+    // Exact Euler angles depend on rotation-order conventions, so this asserts
+    // only that one axis is non-trivial.
     const r = group.instance.rotation;
     expect(Math.abs(r.x) + Math.abs(r.y) + Math.abs(r.z)).toBeGreaterThan(0.1);
   });

@@ -1,33 +1,13 @@
 /**
- * Semantic rule for ReflectionProbe — `ambient_color`/`ambient_color_energy`
- * authored while `ambient_mode` is not AMBIENT_COLOR (2).
- *
- * Advisory, never an error: both keys are perfectly legal here.
- * `ReflectionProbe::_validate_property` (reflection_probe.cpp:203-212) only
- * hides them from the EDITOR inspector when `ambient_mode != AMBIENT_COLOR`,
- * by setting `PROPERTY_USAGE_NO_EDITOR` — and `PROPERTY_USAGE_NO_EDITOR ==
- * PROPERTY_USAGE_STORAGE` (object.h:132), so the STORAGE bit that controls
- * serialisation is untouched. A scene saved from the editor after the author
- * switched `ambient_mode` away from AMBIENT_COLOR keeps whatever
- * `ambient_color`/`ambient_color_energy` it last held, and Godot reloads that
- * file without complaint — this is not a defect Godot itself would refuse.
- *
- * That hook grounds NOTHING about the runtime, though, and the class doc's
- * "Only effective if ambient_mode is AMBIENT_COLOR" is prose, which ADR-0032
- * forbids as a basis. The real gate is in the shader: `light_storage.cpp:1817`
- * copies `ambient_color` into the reflection buffer unconditionally, and
- * `scene_forward_lights_inc.glsl:977` switches on `ambient_mode` so that
- * `:998`'s `ambient_out.rgb = hvec3(reflections.data[ref_index].ambient)` — the
- * only read of that field — runs solely in `case REFLECTION_AMBIENT_COLOR:`.
- * Under any other mode the value reaches the GPU and is never sampled: same
- * shape as CharacterBody's `floor_*` properties under `motion_mode = FLOATING`
- * (characterBodyLinterRule.ts) — legal, serialisable, inert. The message says
- * "set but has no effect", not "invalid" or "dropped", because neither of those
- * is what happens. (Verified in the `renderer_rd` backend, which serves both
- * Forward+ and Mobile.)
- *
- * Format validation lives in linterParser.ts.
+ * ReflectionProbe semantic rule: `ambient_color` or `ambient_color_energy` set
+ * while `ambient_mode` is not AMBIENT_COLOR (2). Both keys are legal and reload,
+ * so the rule is an info that the value has no effect. Format validation lives
+ * in linterParser.ts.
  */
+
+// `_validate_property` (reflection_probe.cpp:203-212) only sets PROPERTY_USAGE_NO_EDITOR,
+// which equals PROPERTY_USAGE_STORAGE (object.h:132), so the keys still serialise. The
+// class doc's prose is no basis (ADR-0032).
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
@@ -36,7 +16,7 @@ import { ruleInt } from '../../../linter/validators/commonValidators.js';
 
 /** reflection_probe.h:44-48 enum AmbientMode; AMBIENT_COLOR is the last value. */
 const AMBIENT_COLOR = 2;
-/** reflection_probe.h:60 — `AmbientMode ambient_mode = AMBIENT_ENVIRONMENT;` (1), the default when the key is absent. */
+/** reflection_probe.h:60, `AmbientMode ambient_mode = AMBIENT_ENVIRONMENT;` (1): the default for an absent key. */
 const AMBIENT_MODE_DEFAULT = 1;
 
 const AMBIENT_ONLY_KEYS = ['ambient_color', 'ambient_color_energy'] as const;
@@ -46,6 +26,10 @@ function checkAmbientMode(context: RuleContext): Diagnostic[] {
   if (!isValidProperties(node.properties)) return [];
   const props = node.properties;
 
+  // light_storage.cpp:1817 copies `ambient_color` unconditionally, but its only read
+  // (scene_forward_lights_inc.glsl:998) runs in `case REFLECTION_AMBIENT_COLOR:` of the
+  // switch at scene_forward_lights_inc.glsl:977, in the `renderer_rd` backend of Forward+
+  // and Mobile.
   const modeRaw = props.ambient_mode;
   const mode = ruleInt(modeRaw, AMBIENT_MODE_DEFAULT);
   if (mode === AMBIENT_COLOR) return [];

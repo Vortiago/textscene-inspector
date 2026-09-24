@@ -1,5 +1,3 @@
-/**
- * referencerect linter registration - imports linter components to trigger self-registration.
- */
+/** Registers the ReferenceRect validators. */
 
 import './linterParser.js';

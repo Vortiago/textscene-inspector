@@ -1,21 +1,7 @@
-; Sky ambient (image-based light), isolated — the third way energy reaches a
-; surface, after `unit-light-transport-direct` and `-ambient`.
-;
-; The sky is deliberately UNIFORM: all four ProceduralSkyMaterial colours are
-; white, so radiance is 1.0 in every direction and the irradiance on any
-; surface is exactly 1.0 whatever its normal. A Lambertian surface therefore
-; renders its own albedo again, and the unshaded square laid on the ground is
-; that albedo — invisible when the IBL scale is right.
-;
-; Uniformity is the point. A convolution of a constant is that same constant,
-; so this fixture measures the IBL's SCALE with the filter shape removed:
-; three's PMREM roughness-1 mip and Godot's roughest radiance mip are different
-; convolutions of the same cubemap and disagree by a few /255 on a graded sky,
-; which would otherwise be indistinguishable from a scale error.
-;
-; The DirectionalLight3D at energy 0 suppresses Godot's editor preview sun
-; (ADR-0025 counts node types, not energy) and leaves the sky shader's sun disc
-; unlit, so the sky stays uniform.
+; Sky ambient (image-based light), isolated: the third way energy reaches a surface, after
+; `unit-light-transport-direct` and `-ambient`. All four ProceduralSkyMaterial colours are white,
+; so irradiance is 1.0 on any normal and a Lambertian surface renders its own albedo. The
+; unshaded square is that albedo, invisible when the IBL scale is right.
 [gd_scene load_steps=8 format=3]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]
@@ -52,9 +38,14 @@ shading_mode = 0
 
 [node name="LightTransportSky" type="Node3D"]
 
+; Uniformity removes the filter shape, so this measures only the IBL scale. three's PMREM
+; roughness-1 mip and Godot's roughest radiance mip are different convolutions that disagree by
+; a few /255 on a graded sky, which would look like a scale error.
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Env_1")
 
+; Energy 0 suppresses Godot's editor preview sun (ADR-0025 counts node types, not energy) and
+; leaves the sky shader's sun disc unlit, so the sky stays uniform.
 [node name="DarkSun" type="DirectionalLight3D" parent="."]
 light_energy = 0.0
 

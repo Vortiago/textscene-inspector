@@ -1,98 +1,74 @@
-; Two clipping ScrollContainers whose clip rects land on quarter pixels, one at
-; a whole-pixel origin and one at a fractional one.
-;
-; The one variable: whether a canvas clip is cut at a WHOLE pixel derived from
-; the clip rect's position and size rounded SEPARATELY. Godot's
-; `RendererCanvasCull::_cull_canvas_item` rounds `final_clip_rect.position` and
-; `final_clip_rect.size` independently before either reaches a scissor, so the
-; kept columns are `[round(pos), round(pos) + round(size))` — which is NOT
-; `round(pos + size)` once `pos` carries a fraction.
-;
-; A Control's own draw transform is snapped to whole pixels
-; (`Control::_update_canvas_item_transform`), so an ordinary Control's clip
-; origin is already integral and the two roundings collapse into one. Reaching
-; the fraction at all therefore needs a scaled ancestor: `Scaled` is an
-; unrotated free Control at the whole (600, 340) with `scale = 1.25`, and 1.25
-; times a whole number is exact in binary, so every world coordinate below is a
-; quarter pixel with no float slack.
-;
-; `Whole` is the control: origin (20, 20) — integral — with size
-; (500.25, 280.75), so its right edge is 520.25 and its bottom 300.75. Rounding
-; position and size separately is indistinguishable from rounding the edge here.
-;
-; `Fractional` is 322 x 195 at (79, 17) inside `Scaled`, i.e. world origin
-; (698.75, 361.25) and world size (402.5, 243.75). Its right edge is x = 1101.25
-; with a .75 origin fraction and a .5 size fraction — the pair where
-; `round(698.75) + round(402.5) = 699 + 403 = 1102` overshoots
-; `round(1101.25) = 1101` by a whole column. Its bottom edge is y = 605.0 with a
-; .25 origin fraction and a .75 size fraction, the pair where the two roundings
-; still agree, so the same node brackets the divergence instead of only
-; demonstrating it.
-;
-; Both scroll modes are SHOW_NEVER (3) on both containers: the fill overflows
-; and is clipped, but no scrollbar chrome is drawn, so every boundary pixel here
-; is the clip and nothing else — no stylebox feather, no bar origin snap. Both
-; are scrolled 40 px on both axes as well — 50 world px inside `Scaled` — which
-; is what lifts the fill's OWN top and left edges out of the clip; unscrolled
-; they would sit exactly on the clip's top and left, and a fill edge on a
-; fraction is a rasterisation question, not a clipping one. The fills are bright
-; against a near-black backdrop so a single kept or dropped column is the
-; largest step the scene can make.
-;
-; Measured against Godot 4.6.3 at `--mode 2d`, backdrop rgb(20, 23, 31).
-; `Whole`, fill rgb(242, 230, 64): at y = 150, x = 518/519 are fill and
-; x = 520/521 backdrop; at x = 260, y = 299/300 are fill and y = 301/302
-; backdrop. `Fractional`, fill rgb(102, 217, 242): at y = 480, x = 1100/1101 are
-; fill and x = 1102/1103 backdrop; at x = 900, y = 603/604 are fill and
-; y = 605/606 backdrop. No partial column or row at any of the four boundaries.
-;
-; A Control's own draw transform is pixel-snapped, so a clipper without a scaled
-; ancestor cannot reach a fractional clip origin at all — and at a whole origin
-; separate rounding and edge rounding cannot be told apart. A clip that rounds
-; the edge instead of the position and the size is therefore invisible in every
-; scene that does not do what this one does.
+; One variable: whether a canvas clip is cut at whole pixels from its position and size rounded
+; apart. `RendererCanvasCull::_cull_canvas_item` rounds `final_clip_rect.position` and
+; `final_clip_rect.size` separately before the scissor, keeping `[round(pos), round(pos) + round(size))`,
+; which is not `round(pos + size)` once `pos` has a fraction. A clip that rounds the edge shows only here.
 
 [gd_scene format=3]
 
+; Measured against Godot 4.6.3 at `--mode 2d`, backdrop rgb(20, 23, 31). No partial column or
+; row at any of the four boundaries.
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; `Control::_update_canvas_item_transform` snaps a Control's draw transform, so an ordinary clip
+; origin is whole and the two roundings collapse into one. A fractional origin needs a scaled
+; ancestor.
 [node name="Backdrop" type="ColorRect" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.08, 0.09, 0.12, 1)
 
+; The control: whole origin (20, 20), size (500.25, 280.75), so the right edge is 520.25 and the
+; bottom 300.75. Here rounding position and size apart equals rounding the edge. Godot, fill
+; rgb(242, 230, 64): at y = 150, x = 518/519 fill and 520/521 backdrop. At x = 260, y = 299/300
+; fill and 301/302 backdrop.
 [node name="Whole" type="ScrollContainer" parent="."]
 anchors_preset = 0
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 520.25
 offset_bottom = 300.75
+; Both scroll modes are SHOW_NEVER (3) on both containers: the fill overflows and is clipped, but
+; no scrollbar chrome draws, so every boundary pixel is the clip alone, with no stylebox feather
+; and no bar origin snap.
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 3
+; Both containers scroll 40 px on both axes (50 world px inside `Scaled`), lifting the fill's own
+; top and left edges off the clip. A fill edge on a fraction is a rasterisation question, not a
+; clipping one.
 scroll_horizontal = 40
 scroll_vertical = 40
 
 [node name="WholeFill" type="ColorRect" parent="Whole"]
 custom_minimum_size = Vector2(2000, 1200)
 layout_mode = 2
+; The fills are bright against the near-black backdrop, so one kept or dropped column is the
+; largest step the scene can make.
 color = Color(0.95, 0.9, 0.25, 1)
 
+; Unrotated, at the whole (600, 340), with `scale = 1.25`. 1.25 times a whole number is exact in
+; binary, so every world coordinate below is a quarter pixel with no float slack.
 [node name="Scaled" type="Control" parent="."]
 anchors_preset = 0
 offset_left = 600.0
 offset_top = 340.0
 scale = Vector2(1.25, 1.25)
 
+; 322 x 195 at (79, 17) inside `Scaled`: world origin (698.75, 361.25), size (402.5, 243.75). The
+; right edge x = 1101.25 has a .75 origin and a .5 size fraction, where
+; `round(698.75) + round(402.5) = 699 + 403 = 1102` overshoots `round(1101.25) = 1101` by a
+; column. Godot, fill rgb(102, 217, 242): at y = 480, x = 1100/1101 fill and 1102/1103 backdrop.
 [node name="Fractional" type="ScrollContainer" parent="Scaled"]
 anchors_preset = 0
 offset_left = 79.0
 offset_top = 17.0
 offset_right = 401.0
 offset_bottom = 212.0
+; The bottom edge y = 605.0 has a .25 origin and a .75 size fraction, where the roundings agree,
+; so this node brackets the divergence. Godot: at x = 900, y = 603/604 fill and 605/606 backdrop.
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 3
 scroll_horizontal = 40

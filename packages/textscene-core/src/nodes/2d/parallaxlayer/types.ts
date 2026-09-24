@@ -1,4 +1,4 @@
-/** ParallaxLayer — a Node2D whose pose a parent ParallaxBackground overwrites. */
+/** The ParallaxLayer property shape: a Node2D whose pose a parent ParallaxBackground overwrites. */
 
 import type { Node2DProperties, Vector2 } from '../../base/node2d/types';
 

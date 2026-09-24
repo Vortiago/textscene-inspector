@@ -1,25 +1,8 @@
 /**
- * Dimension-parameterized semantic linter rule for VehicleBody3D.
- *
- * Godot has no 2D vehicle body, so `dim` is always '3D' today; the factory shape
- * is kept because ruleCoverage derives the rule name from it, and because the
- * sibling body rules (rigidBody/staticBody/characterBody) are all built this way.
- *
- * Format validation lives in the slice's linterParser.ts. This rule declares
- * ONLY what a VehicleBody3D adds to a RigidBody3D. `rigidBodyLinterRule` matches
- * on `descendsFrom`, so it already reaches this type and supplies the whole
- * shared body set (the physics_material_override reference, the collision-shape
- * requirement, the mass/damping bounds, the zero layer/mask advisories, and —
- * as of rigid_body_3d.cpp:667's per-axis scale check — the runtime-overridden-
- * scale warning too) exactly once; repeating any of them here would report one
- * condition under two rule names. The no-shape warning reaches every
- * CollisionObject3D through collisionObjectLinterRule the same way.
- *
- * The scale check (`vehiclebody3d-scaled-transform`) is NOT repeated here:
- * `rigidBodyLinterRule` implements rigid_body_3d.cpp:667 and reaches
- * VehicleBody3D through the same `descendsFrom` matcher as everything else in
- * this list, so the
- * copy here retired rather than double-warning every scaled VehicleBody3D.
+ * The VehicleBody3D rule: only what a VehicleBody3D adds to a RigidBody3D. Godot has
+ * no 2D vehicle body, but ruleCoverage derives the rule name from the factory shape.
+ * Repeating a shared check, such as the scale warning of rigid_body_3d.cpp:667, would
+ * report one condition under two rule names.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
@@ -35,6 +18,11 @@ import { descendsFrom } from '../../godot/nodeBaseTypes.js';
  */
 const NO_WHEELS_AT = 'vehicle_body_3d.cpp:731';
 
+/**
+ * `rigidBodyLinterRule` reaches this type through `descendsFrom` with the shared body
+ * set and the per-axis scale warning, so no `vehiclebody3d-scaled-transform` repeats
+ * rigid_body_3d.cpp:667 here. `collisionObjectLinterRule` supplies the no-shape warning.
+ */
 export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
   const type = `VehicleBody${dim}`;
   const wheelType = `VehicleWheel${dim}`;
@@ -44,20 +32,14 @@ export function makeVehicleBodyLinterRule(dim: PhysicsDim): LintRule {
     const diagnostics: Diagnostic[] = [];
     const { node } = context;
 
-    // A vehicle body is driven entirely by its wheels: with none, engine_force
-    // and steering do nothing at all and the body behaves as a plain RigidBody3D.
-    //
-    // DIRECT children only, matching the engine: VehicleWheel3D registers itself
-    // in NOTIFICATION_ENTER_TREE via `cast_to<VehicleBody3D>(get_parent())`, so a
-    // wheel under an intermediate node is never attached. Counting descendants
-    // here would call a vehicle whose wheels are all nested "fine" when Godot
-    // gives it no working wheels at all.
-    // `isTypeOpaque` declines on a child whose class this file cannot read — an
-    // instanced sub-scene rooted at a wheel, or a GDExtension one — the way
-    // every other child-presence check in the linter does. `descendsFrom`
-    // because `VehicleWheel3D` registers itself from its own inherited
-    // `_notification`, so a subclass attaches too.
+    // With no wheels, engine_force and steering do nothing and the body acts as a
+    // plain RigidBody3D. Direct children only: VehicleWheel3D registers in
+    // NOTIFICATION_ENTER_TREE through `cast_to<VehicleBody3D>(get_parent())`, so a
+    // nested wheel is never attached.
     if (
+      // `isTypeOpaque` declines on an instanced or GDExtension child, like every
+      // child-presence check here. `descendsFrom`: a subclass inherits the
+      // registering `_notification`.
       !node.children.some((child) => isTypeOpaque(child) || descendsFrom(child.type, wheelType))
     ) {
       diagnostics.push({

@@ -1,5 +1,5 @@
 /**
- * RemoteTransform3D registration — parser + property formatter.
+ * RemoteTransform3D registration: parser + property formatter.
  *
  * Non-visual: it pushes its transform to a remote Node3D but draws nothing
  * of its own, so the render component (index.r3f.ts) reuses the Node3D

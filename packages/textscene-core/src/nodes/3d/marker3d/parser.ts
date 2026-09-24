@@ -1,6 +1,6 @@
 /**
- * Marker3D parser — the Node3D transform surface plus `gizmo_extents` (the
- * cross-gizmo arm length; Godot default 0.25 world units).
+ * Marker3D parser: the Node3D transform surface plus `gizmo_extents`, the cross
+ * gizmo's arm length (Godot default 0.25 world units).
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

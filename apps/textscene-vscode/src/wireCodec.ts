@@ -1,11 +1,7 @@
 /**
- * Host<->webview resource wire codec.
- *
- * Centralises the ArrayBuffer<->base64 encoding contract so that the
- * extension host (TscnPreviewPanel) and the webview bundle
- * (WebviewResourceProvider) cannot drift independently. Both bundles import
- * from this module; it must remain React/THREE/Node-free so both import
- * closures accept it.
+ * Host<->webview resource wire codec: the one ArrayBuffer<->base64 contract that
+ * TscnPreviewPanel and WebviewResourceProvider both import. It stays free of
+ * React, THREE and Node, so both import closures accept it.
  */
 
 /** Wire shape for a resource response payload (host -> webview). */
@@ -16,11 +12,9 @@ export type WireResourcePayload = {
 };
 
 /**
- * Encode a raw resource value for transmission over the webview message bus.
- *
- * `string` content is passed through unchanged with `isBinary: false`.
- * `ArrayBuffer` content is base64-encoded in 8 KB chunks (avoiding stack
- * overflow on large textures) and returned with `isBinary: true`.
+ * Encodes a resource for the webview message bus. A `string` passes through with
+ * `isBinary: false`. An `ArrayBuffer` is base64-encoded in 8 KB chunks, which
+ * avoids a stack overflow on a large texture, with `isBinary: true`.
  */
 export function encodeResourceResponse(content: string | ArrayBuffer): WireResourcePayload {
   if (!(content instanceof ArrayBuffer)) {
@@ -38,11 +32,8 @@ export function encodeResourceResponse(content: string | ArrayBuffer): WireResou
 }
 
 /**
- * Decode a wire payload received over the webview message bus back into its
- * original form.
- *
- * `isBinary: false` payloads are returned as-is.
- * `isBinary: true` payloads are base64-decoded into an `ArrayBuffer`.
+ * Decodes a wire payload into its original form: `isBinary: false` as is, and
+ * `isBinary: true` base64-decoded into an `ArrayBuffer`.
  */
 export function decodeResourceResponse(payload: WireResourcePayload): string | ArrayBuffer {
   if (!payload.isBinary) {

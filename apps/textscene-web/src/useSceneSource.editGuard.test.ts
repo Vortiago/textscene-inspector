@@ -1,15 +1,13 @@
 /**
- * `useSceneSource` — the guard that keeps a resolving load from stomping newer keystrokes.
- *
- * The hook owns the hold-last-valid edit-loop invariant (ADR-0020): a resolving
- * fixture load must never stomp newer keystrokes. Shared scaffolding is in
+ * `useSceneSource`: the guard that keeps a resolving load from stomping newer keystrokes.
+ * The hook keeps the hold-last-valid invariant (ADR-0020). The shared scaffolding is in
  * `useSceneSource.testkit.ts`.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
-// Stub resolveForwardedContent: valid TSCN passes through, garbage is rejected.
-// Hoisted per module graph, so every suite in this split declares its own.
+// A stub resolveForwardedContent passes valid TSCN and rejects garbage. `vi.mock` is hoisted
+// per module graph, so every suite in this split declares its own.
 vi.mock('./sourceGate', () => ({
   resolveForwardedContent: (buffer: string, lastGood: string) =>
     buffer.trim().startsWith('[gd_scene') ? buffer : lastGood,
@@ -30,7 +28,7 @@ beforeEach(() => {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // ignore
+    // Clearing storage is optional.
   }
 });
 
@@ -38,13 +36,9 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// ---------------------------------------------------------------------------
-// Hold-last-valid invariant: late fetch resolution after a keystroke is dropped
-// ---------------------------------------------------------------------------
-
 describe('hold-last-valid invariant — late fetch after keystroke', () => {
   it('drops a fetch resolution that arrives after the user has edited the buffer', async () => {
-    // Hold the fetch open so we can resolve it manually AFTER the edit.
+    // The fetch stays open, to resolve after the edit.
     const fetchText = deferred<string>();
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -59,7 +53,7 @@ describe('hold-last-valid invariant — late fetch after keystroke', () => {
       expect(result.current.isFetching).toBe(true);
     });
 
-    // User edits before the fetch resolves — sets editedSinceLoad.
+    // The user edits before the fetch resolves, which sets editedSinceLoad.
     act(() => {
       result.current.onBufferChange(VALID_EDIT_TSCN);
     });
@@ -70,7 +64,7 @@ describe('hold-last-valid invariant — late fetch after keystroke', () => {
     expect(result.current.buffer).toBe(VALID_EDIT_TSCN);
     expect(result.current.forwardedContent).toBe(VALID_EDIT_TSCN);
 
-    // Now the fetch resolves — it must NOT stomp the user's edit.
+    // The fetch resolves and must not overwrite the user's edit.
     await act(async () => {
       fetchText.resolve(FIXTURE_TSCN);
     });
@@ -80,10 +74,6 @@ describe('hold-last-valid invariant — late fetch after keystroke', () => {
     expect(result.current.forwardedContent).toBe(VALID_EDIT_TSCN);
   });
 });
-
-// ---------------------------------------------------------------------------
-// Debounced edit forward
-// ---------------------------------------------------------------------------
 
 describe('editedSinceLoad — the discard-guard predicate', () => {
   it('is false after a load, true after a keystroke, false again after replace and after a new fixture load', async () => {
@@ -104,7 +94,7 @@ describe('editedSinceLoad — the discard-guard predicate', () => {
     });
     expect(result.current.editedSinceLoad()).toBe(true);
 
-    // Authoritative replace (upload) — pane holds known content again.
+    // An upload's replace: the pane holds known content again.
     act(() => {
       result.current.replace(UPLOADED_TSCN);
     });

@@ -1,10 +1,8 @@
 /**
- * Parity: Godot StandardMaterial3D transparency MODE + shading_mode.
- * - mode 0 DISABLED: opaque, albedo alpha ignored (no transparent pipeline).
- * - mode 1 ALPHA: alpha-blend, depthWrite OFF (objects behind stay visible).
- * - mode 2 ALPHA_SCISSOR: hard cutout via alphaTest, opaque, depthWrite ON.
- * - shading_mode 0 UNSHADED: flat albedo, unaffected by lights (MeshBasic).
- * Placeholder (no material) must match Godot's white/matte/non-metallic default.
+ * Parity: StandardMaterial3D transparency mode and shading_mode. DISABLED ignores
+ * albedo alpha, ALPHA blends with depthWrite off, ALPHA_SCISSOR cuts out through
+ * alphaTest with depthWrite on, and UNSHADED is flat MeshBasic albedo. No material
+ * is Godot's default surface.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -67,9 +65,8 @@ describe('StandardMaterialSlot parity rendering', () => {
   it('no-material placeholder is Godot’s default material shader, not a default StandardMaterial3D', async () => {
     const m = (await matFor(null)) as THREE.MeshStandardMaterial;
     // scene_shader_forward_clustered.cpp: ALBEDO = vec3(0.6), ROUGHNESS = 0.8,
-    // METALLIC = 0.2. ALBEDO is a shader constant, so 0.6 is LINEAR — asserted
-    // in that space rather than as a hex string, which would only restate the
-    // sRGB encoding of it.
+    // METALLIC = 0.2. ALBEDO is a shader constant, so 0.6 is linear, and it is
+    // asserted in that space rather than as its sRGB hex string.
     const linear = m.color.getRGB({ r: 0, g: 0, b: 0 } as THREE.Color, THREE.LinearSRGBColorSpace);
     expect(linear.r).toBeCloseTo(0.6, 5);
     expect(linear.g).toBeCloseTo(0.6, 5);

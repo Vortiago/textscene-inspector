@@ -1,17 +1,7 @@
 /**
- * A whole scene carrying non-finite components draws no error, end to end.
- *
- * The unit tests beside each validator pin the grammar; this pins the thing a
- * user sees, through the real `Linter` with every slice registered. It is the
- * test to watch fail when the widened component grammar is reverted: the corpus
- * gate cannot prove this fix works, because no corpus scene carries a
- * non-finite literal, so it only proves the fix costs nothing.
- *
- * Every literal below is one Godot's own writer produces: each component of a
- * real-typed composite goes through `rtos_fix` (`variant_parser.cpp:1985-1997`),
- * which writes `inf`, `inf_neg` (the compat spelling a `.tscn` gets, since
- * `resource_format_text.cpp:1770` writes with `use_compat` true) and `nan`, and
- * `_parse_construct` (`:552-596`) reads all four back, `-inf` included.
+ * A whole scene carrying non-finite components draws no error, through the real
+ * `Linter` with every slice registered. No corpus scene carries a non-finite
+ * literal, so this test, not the corpus gate, fails when the grammar narrows.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -19,16 +9,17 @@ import { Linter } from './Linter.js';
 import './index.js';
 
 /**
- * The ERROR diagnostics only. A malformed literal is always an error (a shape
- * the parser could not read), while the scene below also draws the ordinary
- * "no texture" / "no shape" advisories that have nothing to do with this fix
- * and would make the assertion drift with unrelated rules.
+ * The error diagnostics only. A malformed literal is always an error, while the
+ * scene also draws unrelated "no texture" and "no shape" advisories.
  */
 function lintErrors(content: string) {
   return new Linter().lint(content).filter((d) => d.severity === 'error');
 }
 
 describe('a scene Godot wrote with non-finite components', () => {
+  // `rtos_fix` (`variant_parser.cpp:1985-1997`) writes `inf`, `inf_neg` (a `.tscn`
+  // writes with `use_compat` true, `resource_format_text.cpp:1770`) and `nan`, and
+  // `_parse_construct` (`:552-596`) reads all four back, `-inf` included.
   it('draws no error from any of them', () => {
     const content = `[gd_scene format=3]
 

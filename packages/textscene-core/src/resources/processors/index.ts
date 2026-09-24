@@ -1,7 +1,4 @@
-/**
- * Resource processor factories.
- * Each factory creates a processor using createResourceProcessor with type-specific logic.
- */
+/** Resource processor factories over `createResourceProcessor`. */
 
 export { createTextureProcessor } from './createTextureProcessor';
 export { createMaterialProcessor } from './createMaterialProcessor';

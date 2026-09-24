@@ -1,12 +1,8 @@
 /**
- * AudioListener2D registration — parser.
- *
- * Reuses the Node2D parse; AudioListener2D declares no ADD_PROPERTY of its own
- * (audio_listener_2d.cpp:110-114 binds only make_current/clear_current/is_current),
- * so there is no linterParser.ts for it — everything it serialises arrives
- * through the Node2D base-walk. Draws nothing by design (ADR-0008), so
- * index.r3f.ts registers Node2D and its children still land in the right
- * transform space.
+ * AudioListener2D registration: the parser, which reuses the Node2D parse. The
+ * class declares no ADD_PROPERTY (audio_listener_2d.cpp:110-114 binds only
+ * make_current/clear_current/is_current). Its one serialised key, `current`, comes
+ * from `_get_property_list` and is validated in linterParser.ts.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

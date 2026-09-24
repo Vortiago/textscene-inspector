@@ -1,8 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
-; Exercises the two properties MeshInstance2D declares of its own
-; (mesh, texture — see linterParser.ts) plus a Node2D property inherited
-; through the base-walk, to prove the chain still resolves.
+; Exercises the two properties MeshInstance2D declares (mesh and texture, see linterParser.ts)
+; plus a Node2D property inherited through the base-walk, to prove the chain still resolves.
 
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
 

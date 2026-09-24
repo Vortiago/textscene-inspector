@@ -1,10 +1,8 @@
 /**
- * `<VSplitContainer>` — the native (WebGL canvas) painter for
- * VSplitContainer. Identical reasoning to `hsplitcontainer/Component.tsx`
- * (read its module doc first, including the sealed-boundary channel) at
- * `vertical = true`: reads `sizeFlagsVertical`/`customMinimumSize.y` for the
- * split axis, and draws the `vsplitter` icon (48px along the container's
- * width, 8px along the split axis) instead of `hsplitter`.
+ * `<VSplitContainer>`: the native (WebGL canvas) painter, `hsplitcontainer/Component.tsx` (read
+ * its doc first, including the sealed-boundary channel) at `vertical = true`. It reads
+ * `sizeFlagsVertical`/`customMinimumSize.y` for the split axis and draws the `vsplitter` icon
+ * (48px along the container's width, 8px along the split axis).
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -28,10 +26,9 @@ import { splitOffsetsOf, type SplitContainerProperties } from '../shared/splitCo
 export function VSplitContainer({ solveNode, tint, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
   const props = painterView<SplitContainerProperties>(solveNode);
 
-  // Decided BEFORE the icon hook, not after: hook order is fixed, so an early
-  // return cannot skip the load. `autohide` defaults true, which makes the
-  // grabber invisible in the common scene — decoding its image and holding a
-  // GPU texture for a quad that never draws.
+  // Decided before the icon hook: hook order is fixed, so an early return cannot skip the load.
+  // `autohide` defaults true, so the grabber is invisible in the common scene, and loading it
+  // would decode an image and hold a GPU texture for a quad that never draws.
   const sortable = solveNode.children.filter(isSortableControl);
   const drawsGrabber =
     sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);

@@ -1,4 +1,4 @@
-/** Tree's draw-time geometry vs `scene/gui/tree.cpp` (Godot 4.6.3), restricted to the always-empty case (`nativeSolver.ts`'s own doc). */
+/** Tree's draw-time geometry against `scene/gui/tree.cpp` (Godot 4.6.3), for the always-empty case (`nativeSolver.ts`). */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import {
@@ -85,15 +85,15 @@ describe('treeColumnWidthPx', () => {
 });
 
 describe('treeTitleButtonX', () => {
-  // tree.cpp:5154-5160 — `ofs2` starts at the panel's own SIDE_LEFT margin and
+  // tree.cpp:5154-5160: `ofs2` starts at the panel's SIDE_LEFT margin and
   // advances one column width per header cell.
   it('walks the header cells left to right from the panel margin', () => {
     expect(treeTitleButtonX(0, 4, 30, 100, false)).toBe(4);
     expect(treeTitleButtonX(1, 4, 30, 100, false)).toBe(34);
     expect(treeTitleButtonX(2, 4, 30, 100, false)).toBe(64);
   });
-  // tree.cpp:5158-5160 — `tbrect.position.x = get_size().width - tbrect.size.x
-  // - tbrect.position.x`: mirrored inside the Tree's OWN width.
+  // tree.cpp:5158-5160: `tbrect.position.x = get_size().width - tbrect.size.x
+  // - tbrect.position.x`, mirrored inside the Tree's own width.
   it('mirrors each cell inside the Tree own width under RTL', () => {
     expect(treeTitleButtonX(0, 4, 30, 100, true)).toBe(66);
     expect(treeTitleButtonX(1, 4, 30, 100, true)).toBe(36);

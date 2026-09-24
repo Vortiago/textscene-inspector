@@ -1,10 +1,7 @@
 /**
- * AnimationPlayer type definitions.
- *
- * Property surface mirrors linterParser.ts validators.
- * Clip data (anims/* and libraries properties) is extracted as a parsed
- * structure for the details panel, since raw TSCN stores clip data as
- * sub-resources rather than simple scalars.
+ * AnimationPlayer type definitions. The property surface mirrors the linterParser.ts validators.
+ * Clip data (`anims/*` and `libraries`) is a parsed structure for the details panel, since the
+ * `.tscn` stores clips as sub-resources.
  */
 
 import type { NodeProperties } from '../../node/types';
@@ -23,11 +20,8 @@ export enum MethodCallMode {
 }
 
 /**
- * Reference to an AnimationLibrary SubResource declared on the node via
- * `libraries/<name> = SubResource("id")`. The empty-name default library is
- * written `libraries/` (so `name` is `''`). The animations themselves live in
- * the referenced AnimationLibrary sub_resource and are resolved render-side
- * (see animationResolver.ts) — the parser only captures the reference.
+ * An AnimationLibrary SubResource the node references with `libraries/<name> = SubResource("id")`.
+ * The parser captures only the reference. animationResolver.ts resolves the clips render-side.
  */
 export interface AnimationLibraryRef {
   /** Library name; `''` for the default `libraries/` library. */

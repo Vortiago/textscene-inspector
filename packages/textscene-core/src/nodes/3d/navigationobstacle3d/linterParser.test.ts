@@ -1,13 +1,8 @@
 /**
- * NavigationObstacle3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * NavigationObstacle3D strict validators, asserted through `validatorRegistry` so a
+ * failure points at the validator rather than at scene parsing. Rule-level
+ * behaviour belongs in linter.test.ts. Quote the governing Godot source line
+ * beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,16 +18,10 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * NavigationObstacle3D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
- *
- * doc/classes/NavigationObstacle3D.xml lists nine members, none carrying
- * `overrides=`: affect_navigation_mesh, avoidance_enabled, avoidance_layers,
- * carve_navigation_mesh, height, radius, use_3d_avoidance, velocity, vertices.
- * Each has a real ADD_PROPERTY in navigation_obstacle_3d.cpp:77-87 (velocity
- * is PROPERTY_USAGE_NO_EDITOR, which is also PROPERTY_USAGE_STORAGE and so
- * still serialises).
+ * The keys NavigationObstacle3D binds: the doc/classes/NavigationObstacle3D.xml
+ * members, none with `overrides=`, each an ADD_PROPERTY in
+ * navigation_obstacle_3d.cpp:77-87. Set this or DECLARES_NOTHING: both unset fails
+ * on purpose. Never delete an assertion to pass.
  */
 const KEYS: string[] = [
   'radius',
@@ -45,20 +34,14 @@ const KEYS: string[] = [
   'avoidance_layers',
   'use_3d_avoidance',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys NavigationObstacle3D does NOT declare, each paired with the ancestor that does.
- * Name at least one; Node3D is where to start.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives NavigationObstacle3D no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart, and it is red until filled for the same reason
- * KEYS is.
+ * At least one key NavigationObstacle3D inherits, with the ancestor that declares it.
+ * The malformed-value sweep iterates `getOwnKeys`, so it passes vacuously on a
+ * class that declares nothing. Resolving a key to the ancestor's own validator
+ * tells "declares nothing" apart from "not written yet".
  */
 const INHERITED: [owner: string, key: string][] = [
   ['Node3D', 'transform'],
@@ -75,17 +58,14 @@ describe('NavigationObstacle3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // Runs the fixture's zero-diagnostic claim against what this test imports.
+    // `fixtureLint` covers the whole registry but needs the barrel.
     expectFixtureClean('unit-navigation-obstacle-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // NavigationObstacle3D declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose is not validating a format. Vacuous
+    // when NavigationObstacle3D declares nothing, which INHERITED covers.
     const accepted = validatorRegistry
       .getOwnKeys('NavigationObstacle3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -100,7 +80,7 @@ describe('NavigationObstacle3D strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
+      // The same function, not merely some validator: a shadowing copy on
       // NavigationObstacle3D would answer here while drifting from the ancestor's rule.
       expect(validatorRegistry.findValidator('NavigationObstacle3D', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('NavigationObstacle3D')).not.toContain(key);
@@ -109,9 +89,8 @@ describe('NavigationObstacle3D strict validators', () => {
 });
 
 describe('radius', () => {
-  // navigation_obstacle_3d.cpp:77, PROPERTY_HINT_RANGE "0.0,100,0.01,suffix:m",
-  // a CLOSED max with no or_greater. :308 ERR_FAIL_COND_MSG(p_radius < 0.0,
-  // ...) enforces the floor; the setter never checks the 100 ceiling.
+  // navigation_obstacle_3d.cpp:77, PROPERTY_HINT_RANGE "0.0,100,0.01,suffix:m". :308
+  // refuses p_radius < 0.0, but the setter never checks the 100 ceiling.
   it('accepts a value within the hinted range', () => {
     expect(check('radius', '50.0')).toBeNull();
   });
@@ -142,9 +121,8 @@ describe('radius', () => {
 });
 
 describe('height', () => {
-  // navigation_obstacle_3d.cpp:78, same closed-max split as radius: :326
-  // ERR_FAIL_COND_MSG(p_height < 0.0, ...) enforces the floor, the 100
-  // ceiling is hint-only.
+  // navigation_obstacle_3d.cpp:78, the same split as radius: :326 refuses
+  // p_height < 0.0, and the 100 ceiling is hint-only.
   it('accepts a value within the hinted range', () => {
     expect(check('height', '50.0')).toBeNull();
   });
@@ -244,10 +222,9 @@ describe('avoidance_enabled', () => {
 });
 
 describe('velocity', () => {
-  // navigation_obstacle_3d.cpp:85, PROPERTY_USAGE_NO_EDITOR is ALSO
-  // PROPERTY_USAGE_STORAGE (object.h:132), so it serialises and is validated
-  // despite hiding from the inspector. set_velocity (:387) assigns straight
-  // through, no bound.
+  // navigation_obstacle_3d.cpp:85, PROPERTY_USAGE_NO_EDITOR includes
+  // PROPERTY_USAGE_STORAGE (object.h:132), so it serialises. set_velocity (:387)
+  // assigns with no bound.
   it('accepts a well-formed Vector3', () => {
     expect(check('velocity', 'Vector3(0, 0, 0)')).toBeNull();
   });
@@ -262,9 +239,8 @@ describe('velocity', () => {
 });
 
 describe('avoidance_layers', () => {
-  // navigation_obstacle_3d.cpp:86, PROPERTY_HINT_LAYERS_AVOIDANCE. Bare
-  // uint32_t assignment in set_avoidance_layers (:341): out-of-range is a
-  // language-level reinterpretation, not a guard, so it is a warning.
+  // navigation_obstacle_3d.cpp:86, PROPERTY_HINT_LAYERS_AVOIDANCE. set_avoidance_layers
+  // (:341) stores a uint32_t with no guard, so out-of-range warns.
   it('accepts a valid bitmask', () => {
     expect(check('avoidance_layers', '3')).toBeNull();
   });

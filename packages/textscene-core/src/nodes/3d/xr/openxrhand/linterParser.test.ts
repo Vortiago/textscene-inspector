@@ -1,10 +1,7 @@
 /**
- * OpenXRHand strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * OpenXRHand strict validators, asserted through `validatorRegistry`, not by linting a
+ * `.tscn`, so a failure points at the validator and no fixture text needs upkeep. Rule-level
+ * behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -33,10 +30,9 @@ describe('OpenXRHand strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint`
+    // checks it against the whole registry through the barrel. This checks the same file
+    // against only what this test imported.
     expectFixtureClean('unit-open-xr-hand.tscn');
   });
 
@@ -60,7 +56,7 @@ describe('OpenXRHand strict validators', () => {
 
     it('errors past HAND_MAX, which set_hand refuses via ERR_FAIL_INDEX', () => {
       // openxr_hand.cpp:84: ERR_FAIL_INDEX(p_hand, HAND_MAX) returns before the
-      // assignment, so the stored value never changes — the enforced tier.
+      // assignment, so the stored value never changes: the enforced tier.
       expect(check('hand', '2')?.severity).toBe('error');
     });
 

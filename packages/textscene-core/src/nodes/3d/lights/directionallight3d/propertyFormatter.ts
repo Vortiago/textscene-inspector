@@ -1,6 +1,4 @@
-/**
- * DirectionalLight3D property formatter - formats directional light properties for display.
- */
+/** DirectionalLight3D property formatter: the inspector sections for the light. */
 
 import type { PropertySection } from '../../../../core/NodeRegistry';
 import type { DirectionalLight3DProperties } from './types';
@@ -13,10 +11,8 @@ import {
 export function formatDirectionalLight3DProperties(properties: DirectionalLight3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
 
-  // Base light section
   sections.push(formatBaseLightSection(properties));
 
-  // Shadow section with directional-specific items
   const directionalShadowItems: PropertySection['items'] = [];
 
   if (properties.directional_shadow_mode !== undefined) {
@@ -36,7 +32,6 @@ export function formatDirectionalLight3DProperties(properties: DirectionalLight3
 
   sections.push(formatShadowSectionWithNormalBias(properties, directionalShadowItems));
 
-  // Include inherited Node3D transform properties
   sections.push(...formatNode3DProperties(properties));
 
   return sections;

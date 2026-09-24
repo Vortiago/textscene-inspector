@@ -1,13 +1,7 @@
 /**
- * `StandardMaterial3DData` → the three-flavoured scalar bag both adapters apply.
- *
- * The split exists for one reason: `decode.ts` must stay renderer-free so the
- * slice's `index.ts` can be re-exported into a linter's import closure
- * (ADR-0031), while `blending` / `side` are three CONSTANTS. So the Godot
- * semantics are decoded there and translated to three's vocabulary here — a
- * mapping, not a second decode. Both `<StandardMaterialSlot>` (reactive) and
- * `build.ts` (imperative) read the output, which is what makes the JSX slot and
- * the loader unable to disagree.
+ * `StandardMaterial3DData` → the three-flavoured scalar bag both adapters apply: a
+ * mapping, not a second decode. `decode.ts` stays renderer-free for the linter's import
+ * closure (ADR-0031), while `blending` and `side` are three constants.
  */
 
 import * as THREE from 'three';
@@ -20,8 +14,8 @@ import {
 } from './types';
 
 /**
- * Godot's cull mode names the faces it DISCARDS; three's `side` names the ones it
- * KEEPS. `_update_shader` emits `cull_back` / `cull_front` / `cull_disabled`, so
+ * Godot's cull mode names the faces it discards, and three's `side` names the ones it
+ * keeps. `_update_shader` emits `cull_back` / `cull_front` / `cull_disabled`, so
  * CULL_BACK (the default) draws front faces.
  */
 const SIDE: Readonly<Record<CullMode, THREE.Side>> = {
@@ -74,10 +68,9 @@ export function standardMaterial3DScalars(
 }
 
 /**
- * Raw Godot property strings → the scalars a material slot renders. The
- * synchronous entry point every StandardMaterial3D-bearing node component uses
- * (MeshInstance3D, the CSG primitives); external textures are resolved
- * separately by the caller.
+ * Raw Godot property strings → the scalars a material slot renders. The synchronous
+ * entry point of every StandardMaterial3D-bearing node component. The caller resolves
+ * external textures.
  */
 export function parseStandardMaterial3DScalars(
   properties: Record<string, string>

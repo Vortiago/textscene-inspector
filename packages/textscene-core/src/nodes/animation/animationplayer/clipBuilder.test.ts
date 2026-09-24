@@ -1,11 +1,7 @@
 /**
- * clipBuilder tests — GodotAnimation -> THREE.AnimationClip.
- *
- * Verifies KeyframeTrack names (name-path binding targets), times, and the
- * value mapping (incl. rotation_degrees -> radians, and 2D Vector2/scalar
- * decomposition into per-component tracks). 2D tracks are conjugated by
- * diag(1,-1,1) to match node2dTransform's static render: position Y and
- * rotation negated, scale kept.
+ * GodotAnimation to THREE.AnimationClip: track names, times and the value mapping, including
+ * rotation_degrees to radians and 2D per-component tracks. 2D tracks are conjugated by
+ * diag(1,-1,1) to match node2dTransform: position Y and rotation negated, scale kept.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -126,7 +122,7 @@ describe('buildClip — rotation actually drives the quaternion (regression)', (
     mixer.clipAction(clip).play();
     mixer.update(1); // half a 180° turn about Y
 
-    // The matrix is built from the quaternion — assert IT moved, not just euler.
+    // The matrix is built from the quaternion, so assert that it moved, not only the Euler.
     expect(Math.abs(child.quaternion.y)).toBeGreaterThan(0.1);
   });
 });
@@ -179,9 +175,8 @@ describe('buildClip — quaternion (rotation_3d)', () => {
 });
 
 describe('resolveTrackBinding — Godot NodePath semantics', () => {
-  // `..` cancels the segment before it, as in Godot. Pinning these directly is
-  // what a leading-only hop count got wrong: it read `Child/../../Sibling` as
-  // descending and let the track bind to a node outside the root.
+  // `..` cancels the segment before it, as in Godot, so `Child/../../Sibling` climbs above
+  // the root rather than descending.
   it.each([
     ['.', { kind: 'root' }],
     ['', { kind: 'root' }],
@@ -221,8 +216,7 @@ describe('buildClip — NodePaths that leave the animation root', () => {
   });
 
   it('keeps a "." track bound to the mixer root when a sibling track is unbindable', () => {
-    // The regression this pins: an unbindable track must not relocate what "."
-    // means for every other track in the same clip.
+    // An unbindable track does not relocate what "." means for the other tracks in the clip.
     const root = new Object3D();
     root.name = 'Root';
     const parent = new Object3D();
@@ -352,7 +346,7 @@ describe('buildClip — scale (C4) and 2D decomposition', () => {
       anim('move', 2, [
         track('position', [
           { time: 0, value: [0, 0], transition: 1 },
-          { time: 2, value: [10, 100], transition: 1 }, // Godot (10,100): 100px DOWN
+          { time: 2, value: [10, 100], transition: 1 }, // Godot (10,100): 100px down
         ]),
       ])
     );
@@ -404,7 +398,7 @@ describe('buildClip — keyframe values three.js cannot key', () => {
 
   it('keys nothing when the FIRST key overflows the grammar to Infinity', () => {
     // `1e999` is inside the finite grammar and keeps the Vector3 shape, so the
-    // key-0 shape checks pass it — only the read result is non-finite.
+    // key-0 shape checks pass it. Only the read result is non-finite.
     const clip = positionClip('Vector3(0, 1e999, 0), Vector3(0, 1, 0)');
     expect(clip.tracks).toEqual([]);
     expect(everyValueFinite(clip)).toBe(true);

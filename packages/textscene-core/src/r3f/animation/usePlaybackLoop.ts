@@ -1,21 +1,7 @@
 /**
- * Shared transport→mixer playback loop for both animation drivers — the
- * AnimationPlayer slice (value tracks built from GodotAnimations, ADR-0011)
- * and the GLB animation driver (ready-made glTF clips on a GLBSceneRoot).
- *
- * The state machine is identical across both: play advances the mixer and
- * reports the playhead; pause samples the seeked time; stop halts and lets the
- * driver restore its authored pose. What differs is parameterised:
- *   - `speedScale`      — AnimationPlayer honours `speed_scale`; GLB uses 1.
- *   - `configureAction` — how a freshly-selected clip's loop is set (Godot
- *                         `loop_mode` vs a GLB's default looping).
- *   - `restore`         — each driver snapshots and restores its own pose
- *                         (value-track targets vs the whole GLB subtree).
- *
- * The per-frame decision (which transport edge fired, whether to flush time,
- * whether this is a fresh play entry) is delegated to the pure `stepPlayback`
- * reducer; this hook is a thin adapter that builds the input, calls it, and
- * actuates the result on the mixer.
+ * The transport-to-mixer playback loop of the AnimationPlayer (ADR-0011) and GLB
+ * drivers: play advances and reports, pause samples the seek, stop restores the
+ * pose. `stepPlayback` decides each frame, and this hook carries it out.
  */
 import { useRef, type MutableRefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -34,20 +20,13 @@ export interface PlaybackLoopParams {
   /** Apply loop settings when a clip first becomes the selected action. */
   configureAction: (action: AnimationAction, clipName: string) => void;
   /**
-   * When this value changes (compared with `Object.is`), `configureAction`
-   * re-runs on the CURRENTLY selected action even though the clip itself
-   * hasn't changed — e.g. flipping a live loop-override preference
-   * must take effect immediately, not only on the next clip switch/replay.
-   * Omit (stays `undefined`) to keep the original reconfigure-on-clip-switch-
-   * only behavior.
+   * A change (by `Object.is`) re-runs `configureAction` on the current action,
+   * so a loop-override flip applies at once. Omitted, only a clip switch does.
    */
   reconfigureKey?: unknown;
   /**
-   * Report the live playhead to the transport (for the scrubber). The
-   * transport throttles this internally; pass `{ immediate: true }`
-   * to force an unthrottled flush — this loop does so once on the
-   * playing → paused edge so the paused readout is never left showing a
-   * throttle-stale time.
+   * Reports the playhead to the transport, which throttles it. The loop passes
+   * `{ immediate: true }` once on the pause edge, so the paused readout is exact.
    */
   reportTime: (t: number, options?: { immediate?: boolean }) => void;
   /** Restore the authored pose when playback stops. */
@@ -74,9 +53,8 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
       prev?.stop();
       prevClipRef.current = selectedClip;
     }
-    // Reconfigure on a clip switch OR when reconfigureKey itself
-    // changes (e.g. the user flips the loop-override preference mid-clip) —
-    // without restarting the currently-running action.
+    // Reconfigure on a clip switch or a reconfigureKey change, without
+    // restarting the running action.
     const reconfigureChanged = !Object.is(params.reconfigureKey, prevReconfigureKeyRef.current);
     if ((clipChanged || reconfigureChanged) && action && selectedClip) {
       params.configureAction(action, selectedClip);

@@ -1,18 +1,7 @@
 /**
- * Resolving a Godot node path onto a loaded GLB's THREE graph.
- *
- * These cannot be matched by string equality, because the two sides are
- * produced by DIFFERENT importers. Godot's glTF importer synthesises a
- * `Skeleton3D` between an armature and its skinned mesh; three's loader does
- * not. Decoding `player.glb` shows the graph is literally
- *
- *     Skeleton
- *       Robot   [MESH]
- *       MASTER/hip/waist/...
- *
- * while `player.tscn` addresses that mesh as `Player/Skeleton/Skeleton3D/Robot`.
- * Exact matching alone would work on Truck Town's terrain and fail on the
- * player, the enemy and the ragdoll — the majority of the affected scenes.
+ * A Godot node path on a loaded GLB's THREE graph. Godot's importer synthesises a `Skeleton3D`
+ * between an armature and its skinned mesh, and three's does not: `player.glb` holds
+ * `Skeleton/Robot`, which `player.tscn` addresses as `Player/Skeleton/Skeleton3D/Robot`.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -40,8 +29,8 @@ describe('matchGlbTarget', () => {
   });
 
   it('aliases to the nearest matching ancestor when the node itself has no counterpart', () => {
-    // The enemy/ragdoll: `Skeleton3D` exists ONLY in Godot's tree, so an
-    // override naming it can only mean the node three does have above it.
+    // `Skeleton3D` exists only in Godot's tree, so an override naming it means the node three has
+    // above it.
     const root = buildTestGlbGraph(['root/root_001/Body']);
     const match = matchGlbTarget(flattenGlbObjects(root), 'root/root_001/Skeleton3D');
 
@@ -49,7 +38,7 @@ describe('matchGlbTarget', () => {
   });
 
   it('prefers the deepest candidate when several could match', () => {
-    // Two objects named `Body`; the one whose path shares more with Godot's wins.
+    // Two objects named `Body`: the one whose path shares more with Godot's wins.
     const root = buildTestGlbGraph(['Body', 'Rig/Armature/Body']);
     const match = matchGlbTarget(flattenGlbObjects(root), 'Rig/Armature/Skeleton3D/Body');
 
@@ -57,7 +46,7 @@ describe('matchGlbTarget', () => {
   });
 
   it('does not match a same-named node on an unrelated branch', () => {
-    // A bare-name matcher would happily return this one. The path has to agree.
+    // A bare-name matcher would return this one. The path has to agree.
     const root = buildTestGlbGraph(['Weapons/Body']);
     const match = matchGlbTarget(flattenGlbObjects(root), 'Character/Torso/Body');
 

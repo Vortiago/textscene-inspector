@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { parseCSGBox3D } from './parser';
 import { heading } from '../../../../parser/testing/parserKit';
 
-// Defaults here are Godot's, taken from the class reference
-// (docs.godotengine.org/en/stable/classes/class_csgbox3d.html). Godot omits a
-// property at its default, so a wrong default silently mis-sizes every node
-// that writes none — this file previously pinned (2,2,2) as if it were correct.
+// Defaults here are Godot's, from the class reference
+// (docs.godotengine.org/en/stable/classes/class_csgbox3d.html). Godot omits a property at its
+// default, so a wrong default silently mis-sizes every node that writes none.
 describe('parseCSGBox3D', () => {
   it('parses size from Vector3', () => {
     const props = parseCSGBox3D(heading('CSGBox3D', { name: 'Floor' }), {

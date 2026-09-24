@@ -1,10 +1,7 @@
 /**
- * Unit tests for the `textscene.defaultViewportMode` setting: the panel
- * reads it once at HTML-generation time and embeds it as
- * `window.__TEXTSCENE_CONFIG__` for `r3f-webview-main.tsx` to read at mount
- * (see `webviewHtml.ts`). "auto" (the default) leaves Godot-parity
- * auto-select in control; an explicit "2D"/"3D" is threaded through to
- * `<TscnPreviewShell initialViewportMode>` inside the webview.
+ * Unit tests for `textscene.defaultViewportMode`. The panel embeds it once in the
+ * HTML as `window.__TEXTSCENE_CONFIG__`, read at mount. "auto" (the default) keeps
+ * Godot-parity auto-select, and "2D"/"3D" reaches `<TscnPreviewShell initialViewportMode>`.
  */
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';

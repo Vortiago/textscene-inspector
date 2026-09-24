@@ -1,5 +1,5 @@
 /**
- * foldablecontainer linter registration - imports linter components to trigger self-registration.
+ * FoldableContainer linter registration: importing the validators registers them.
  */
 
 import './linterParser.js';

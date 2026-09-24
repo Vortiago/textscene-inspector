@@ -1,10 +1,6 @@
 /**
- * The wildcard semantics both coverage ledgers count against.
- *
- * No dist and no registry: this pins the MEANING of a registered key, which is
- * what decides whether an engine property reads as covered. A matcher that
- * quietly widened would drive both ledgers' unvalidated count to zero and read
- * as a codebase with no gaps.
+ * The wildcard semantics both coverage ledgers count against, with no dist. A
+ * matcher that widened would drive both ledgers' count to zero.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -20,9 +16,8 @@ describe('keyMatcher', () => {
 
   it('lets `<prefix>/*` reach any depth below the prefix, as the registry does', () => {
     // `findOwnValidator` matches this shape with a bare `startsWith(prefix)`
-    // (linter/ValidatorRegistry.ts, kind 'path'), so a nested leaf resolves to
-    // the same validator. Read as one segment, `AudioEffectChorus`'s
-    // `voice/1/cutoff_hz` family counted as covered by nothing.
+    // (linter/ValidatorRegistry.ts, kind 'path'), so a nested leaf such as
+    // `voice/1/cutoff_hz` resolves to the same validator.
     const m = keyMatcher('glow_levels/*');
     expect(m('glow_levels/1')).toBe(true);
     expect(m('glow_levels/max')).toBe(true);
@@ -68,8 +63,8 @@ describe('unvalidatedByClass', () => {
   const registry = (keys) => ({ getOwnKeys: (cls) => keys[cls] ?? [] });
 
   it('reports per declaring class, ignoring what a base covers', () => {
-    // The base-walk is deliberately not applied: a validator for a base's
-    // property belongs on the base, so the leaf must not be credited with it.
+    // A validator for a base's property belongs on the base, so the leaf is not
+    // credited with it.
     const engine = {
       BaseMaterial3D: [{ name: 'albedo_color' }, { name: 'roughness' }],
       StandardMaterial3D: [{ name: 'albedo_color' }, { name: 'roughness' }],

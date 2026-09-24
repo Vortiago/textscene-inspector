@@ -1,7 +1,7 @@
 /**
- * NavigationObstacle3D render contract: no component of its own — the
- * registry reuses the Node3D transform group (ADR-0008), registered as a
- * pure 3D-only type (neither `canvasItem` nor `container`).
+ * NavigationObstacle3D render contract: it reuses the Node3D transform group
+ * (ADR-0008), registered as a 3D-only type, neither `canvasItem` nor
+ * `container`.
  */
 
 import { describe, expect, it } from 'vitest';

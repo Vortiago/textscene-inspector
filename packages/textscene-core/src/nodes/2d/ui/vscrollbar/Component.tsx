@@ -1,11 +1,9 @@
 /**
- * `<VScrollBar>` — the native (WebGL canvas) painter for `VScrollBar`.
- * Identical reasoning to `hscrollbar/Component.tsx` (read its module doc
- * first) at `vertical = true`: draws the `scroll` track across the bar's own
- * full rect, then the `grabber` on top, sized/offset from THIS bar's own
- * `Range` (`value`/`min_value`/`max_value`/`page`) along the Y axis instead
- * of X.
+ * `<VScrollBar>`: the native (WebGL canvas) painter, `hscrollbar/Component.tsx` at `vertical = true`.
+ * It draws the `scroll` track across the bar's rect, then the `grabber` placed along Y by this bar's
+ * `Range` (`value`/`min_value`/`max_value`/`page`).
  */
+
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';

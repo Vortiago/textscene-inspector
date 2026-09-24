@@ -1,22 +1,16 @@
-/**
- * OmniLight3D type definitions
- */
+/** OmniLight3D node data. */
 
 import type { Node3DProperties } from '../../../base/node3d/types';
 import type { BaseLightWithNormalBias } from '../shared/types';
 
-/**
- * OmniLight3D node properties
- *
- * Extends Node3D with omnidirectional point light capabilities
- */
+/** OmniLight3D properties: Light3D plus range, attenuation and shadow mode. */
 export interface OmniLight3DProperties extends Node3DProperties, BaseLightWithNormalBias {
   /** Maximum distance the light reaches */
   omni_range: number;
 
-  /** Light attenuation/decay (how light falls off with distance) */
+  /** How the light falls off with distance. */
   omni_attenuation: number;
 
-  /** Omni shadow mode - DUAL_PARABOLOID or CUBE (optional) */
+  /** DUAL_PARABOLOID or CUBE (optional). */
   omni_shadow_mode?: number;
 }

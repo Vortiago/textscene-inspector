@@ -1,6 +1,6 @@
 /**
  * The MeshLibrary slice's routing claims (ADR-0031). Importing the index
- * registers them; these assertions are what a router reads back out.
+ * registers them, and these assertions are what a router reads back out.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -26,7 +26,7 @@ describe('meshlibrary slice registration', () => {
   });
 
   it('does not claim the ArrayMesh its items address', () => {
-    // An item's mesh is a Sub-resource path onto its own slice and bus slot;
+    // An item's mesh is a Sub-resource path onto its own slice and bus slot, so
     // claiming ArrayMesh here would steal that routing.
     expect(resourceSliceRegistry.byTypeName('ArrayMesh')).toBeNull();
   });

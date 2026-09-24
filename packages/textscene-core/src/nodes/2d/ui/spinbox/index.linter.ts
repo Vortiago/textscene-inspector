@@ -1,5 +1,3 @@
-/**
- * spinbox linter registration - imports linter components to trigger self-registration.
- */
+/** SpinBox linter registration: importing the validators registers them. */
 
 import './linterParser.js';

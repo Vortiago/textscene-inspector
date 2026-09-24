@@ -1,8 +1,7 @@
 /**
- * `<NinePatchRect>` render contract. `texturerect/Component.test.tsx` is the
- * shape this follows for texture resolution/scope/filter; the geometry MATH
- * itself is `ninePatchGeometry.test.ts`'s job — these tests only check that
- * the painter wires the right numbers into it and mounts a mesh correctly.
+ * Tests the `<NinePatchRect>` render contract, shaped as `texturerect/Component.test.tsx` for texture
+ * resolution, scope and filter. `ninePatchGeometry.test.ts` owns the geometry maths: this checks only
+ * that the painter passes the right numbers and mounts a mesh.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

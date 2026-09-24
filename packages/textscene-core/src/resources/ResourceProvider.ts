@@ -1,13 +1,9 @@
-/**
- * Interface for loading external resources from various sources.
- * Apps implement this based on their environment (filesystem, HTTP, upload).
- */
+/** How a host loads an external resource: filesystem, HTTP or upload. */
 
 export interface ResourceProvider {
   /**
-   * Load a resource by path.
-   * @param path - Godot resource path (e.g., "res://scenes/player.tscn")
-   * @param type - Optional resource type hint (e.g., "PackedScene", "Texture2D")
+   * @param path - Godot resource path, such as "res://scenes/player.tscn"
+   * @param type - Optional resource type hint, such as "PackedScene" or "Texture2D"
    * @returns Resource content as string (text files) or ArrayBuffer (binary files), or null if not found
    */
   loadResource(path: string, type?: string): Promise<string | ArrayBuffer | null>;

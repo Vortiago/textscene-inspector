@@ -1,7 +1,4 @@
-/**
- * AnimationTransportContext tests — the scene-level play/pause/scrub state
- * that the AnimationPlayer Component reads and the Animation dock tab drives.
- */
+/** The scene-level play, pause and scrub state that the Animation tab drives. */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
@@ -178,7 +175,7 @@ describe('AnimationTransportContext — reportTime throttling (WI-213)', () => {
     act(() => result.current.reportTime(0.1));
     expect(result.current.time).toBeCloseTo(0.1);
 
-    // Same tick (60fps ~= 16ms apart) — well inside a ~100ms/10Hz window.
+    // One frame at 60 fps, well inside the 10 Hz window.
     act(() => {
       vi.advanceTimersByTime(16);
       result.current.reportTime(0.11);

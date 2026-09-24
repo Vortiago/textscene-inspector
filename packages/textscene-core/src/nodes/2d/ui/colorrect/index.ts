@@ -1,4 +1,4 @@
-/** ColorRect registration — parser. */
+/** ColorRect registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseColorRect } from './parser';

@@ -1,10 +1,7 @@
 [gd_scene format=3]
 
-; The Content ColorRect is the ONE variable: the container previously carried
-; zero children, so its own sort loop never assigned a rect and ratio/
-; stretch_mode/both alignments were parsed and linted but never exercised by a
-; render. A regression in the ratio/stretch/alignment math is invisible
-; against an empty container.
+; The one variable: the Content ColorRect, the child that makes the container's sort loop assign
+; a rect. Against an empty container, a regression in ratio, stretch or alignment is invisible.
 
 [node name="Root" type="Control"]
 anchors_preset = 15

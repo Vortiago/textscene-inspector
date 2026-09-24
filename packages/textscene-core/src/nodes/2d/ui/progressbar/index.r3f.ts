@@ -1,7 +1,6 @@
 /**
- * ProgressBar registration — the native (WebGL canvas) rect solve + painter.
- * `./nativeSolver` registers the minimum-size function as a side effect of
- * import.
+ * Registers the native (WebGL canvas) painter for ProgressBar. Importing
+ * `./nativeSolver` registers its minimum-size function.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

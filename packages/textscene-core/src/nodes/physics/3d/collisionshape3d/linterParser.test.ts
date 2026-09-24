@@ -1,13 +1,8 @@
 /**
- * CollisionShape3D strict validators.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator rather
- * than at scene parsing. Rule-level behaviour lives in linter.test.ts.
- *
- * This file did not exist while the slice did — which is how `debug_fill` came
- * to be bound by Godot (`collision_shape_3d.cpp:186`) and registered by nobody,
- * silently accepting any value.
+ * CollisionShape3D strict validators, asserted through `validatorRegistry`, not by linting a
+ * `.tscn`, so a failure points at the validator. Rule-level behaviour lives in linter.test.ts.
+ * `debug_fill` (`collision_shape_3d.cpp:186`) is pinned here, since an unregistered key accepts
+ * any value.
  */
 
 import { describe, expect, it } from 'vitest';

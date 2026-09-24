@@ -1,38 +1,8 @@
 /**
- * SubViewportContainer's native (WebGL canvas) minimum size — a port of
- * `SubViewportContainer::get_minimum_size`
- * (`scene/gui/subviewport_container.cpp`):
- *
- *     Size2 SubViewportContainer::get_minimum_size() const {
- *         if (stretch) { return Size2(); }
- *         Size2 ms;
- *         for (int i = 0; i < get_child_count(); i++) {
- *             SubViewport *c = Object::cast_to<SubViewport>(get_child(i));
- *             if (!c) { continue; }
- *             Size2 minsize = c->get_size();
- *             ms = ms.max(minsize);
- *         }
- *         return ms;
- *     }
- *
- * There is no container layout half. A SubViewportContainer imposes no rect on
- * anything — its only child that matters is a `SubViewport`, which is not a
- * Control and never appears in the solve at all — so registering a
- * `ContainerLayoutFn` here would only tell the walker and the solver that this
- * node's (nonexistent) Control children are container-managed, which is a
- * different claim from the one Godot makes.
- *
- * WHY THIS READS `node.children` AND NOT `children`. `buildSolveTree` strips a
- * viewport boundary out of the `SolveNode` forest (a sub-viewport's subtree is
- * dispatched by the surface painter, ADR-0033), so `SolveNode.children` is
- * always EMPTY here and the raw parsed children are the only place the
- * sub-viewports still exist. Godot's own loop is over `get_child_count()`,
- * i.e. the raw tree, for the same reason.
- *
- * `stretch_shrink` deliberately does not enter this. It divides the CONTAINER's
- * already-solved rect (`recalc_force_viewport_sizes`), which is downstream of
- * the minimum size, not an input to it — a shrinking container still floors at
- * the sub-viewport's full authored size.
+ * SubViewportContainer's native minimum size, `SubViewportContainer::get_minimum_size`
+ * (`scene/gui/subviewport_container.cpp`): zero under `stretch`, else the largest SubViewport child's
+ * `size`. No container layout is registered: the child that matters is a `SubViewport`, not a
+ * Control, so a `ContainerLayoutFn` would claim children Godot does not manage.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -47,12 +17,16 @@ import type { SubViewportContainerProperties } from './types';
 
 export const subViewportContainerMinimumSize: MinimumSizeFn = (n) => {
   const props = n.node.properties as SubViewportContainerProperties;
+  // `stretch_shrink` divides the solved rect downstream (`recalc_force_viewport_sizes`), so a
+  // shrinking container still floors at the sub-viewport's full size.
   if (props.stretch === true) return { x: 0, y: 0 };
 
   let width = 0;
   let height = 0;
+  // `buildSolveTree` strips a viewport boundary from `SolveNode.children` (ADR-0033), so the raw
+  // children, which Godot's `get_child_count()` loop reads too, are the only place it exists.
   for (const child of n.node.children) {
-    // `Object::cast_to<SubViewport>` — every other child kind is skipped.
+    // `Object::cast_to<SubViewport>`: every other child kind is skipped.
     if (!isViewportBoundary(child.type)) continue;
     // Never undefined: `subviewport/parser.ts` applies Godot's own 512x512
     // default (`scene/main/viewport.h`) to every parsed SubViewport.

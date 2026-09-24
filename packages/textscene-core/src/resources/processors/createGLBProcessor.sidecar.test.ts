@@ -1,10 +1,8 @@
 /**
- * The GLB processor honours an **Import sidecar**'s root scale (ADR-0028).
- *
- * The witness is the truck town's tree: a Sketchfab export whose `"tree"` node carries a
- * scale of 100, cancelled upstream by `nodes/root_scale=0.01`. With the sidecar dropped,
- * the previewer AND a fresh Godot import both render it ~100x too large — which is how
- * it went unnoticed, since the two agreed.
+ * The GLB processor honours an **Import sidecar**'s root scale (ADR-0028). The truck
+ * town tree's `"tree"` node scales by 100, cancelled by `nodes/root_scale=0.01`.
+ * Without the sidecar, the previewer and a fresh Godot import both draw it 100x too
+ * large, so the two agree on the wrong size.
  */
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -65,7 +63,7 @@ describe('createGLBProcessor — import sidecar', () => {
   });
 
   it('renders at import defaults when no sidecar exists', async () => {
-    // Not a fallback — it is what a fresh Godot import of that project also produces.
+    // Not a fallback: a fresh Godot import of that project produces it too.
     const root = await loadWith({});
     expect(contentScale(root)).toBeCloseTo(100, 4);
   });

@@ -1,13 +1,7 @@
 /**
- * The preview command is offered exactly where it opens something.
- *
- * `textscene.openPreviewToSide` accepts `.tscn` and nothing else
- * (`extension.ts`), while the `tscn` LANGUAGE also claims `.tres` so resource
- * files get the same highlighting and diagnostics. A `when` clause written
- * against the language therefore offers the command on files it refuses, and
- * two of them were: the palette entry and the keybinding both read
- * `editorLangId == tscn`, so ctrl+k v on a `.tres` ran the command and got
- * "Open a .tscn file to preview it."
+ * The preview command is offered only where it opens something. It accepts `.tscn`
+ * alone, while the `tscn` language also claims `.tres`, so a `when` clause on
+ * `editorLangId == tscn` offers it on a `.tres` it refuses.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -40,8 +34,8 @@ describe('preview command gating', () => {
   ].filter((entry) => entry.command === 'textscene.openPreviewToSide');
 
   it('gates every contribution on the extension the command accepts', () => {
-    // Four menus and one keybinding. The floor is what stops a manifest
-    // reshuffle this stops finding from reading as "every clause is correct".
+    // Four menus and one keybinding. The floor stops a manifest reshuffle that this
+    // scan misses from passing as "every clause is correct".
     expect(gated.length).toBeGreaterThanOrEqual(5);
     const wrong = gated.filter((e) => e.when !== GATE).map((e) => `${e.where}: ${e.when}`);
     expect(wrong).toEqual([]);

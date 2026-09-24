@@ -5,7 +5,7 @@ import { clamp } from '../../../godot/index.js';
  * does it in.
  */
 
-/** `_alpha_blend<uint8_t>` (noise.h:73-79) — integer blend, alpha 0..255. */
+/** `_alpha_blend<uint8_t>` (noise.h:73-79): integer blend, alpha 0..255. */
 export function alphaBlend(background: number, foreground: number, alpha: number): number {
   const a = alpha + 1;
   const inv = 256 - alpha;

@@ -1,47 +1,8 @@
 /**
- * Semantic linter rules for SpringBoneSimulator3D.
- *
- * Format and range validation is linterParser.ts's, which checks each
- * `settings/<i>/…` leaf in isolation. This file holds the claims that need a
- * SIBLING property to be decidable, so no per-property validator can make them.
- * All four are conditions Godot's own saver cannot produce: it writes the count
- * ahead of the leaves and `_validate_dynamic_prop` (spring_bone_simulator_3d.cpp
- * :348) strips whichever half of each pair is inert, so every one of these fires
- * only against a hand-edited or converted scene.
- *
- * ## A setting index at or past `setting_count`
- *
- * `_set` opens with `ERR_FAIL_INDEX_V(which, (int)settings.size(), false)`
- * (:44), and `settings` is resized only by `set_setting_count` (:840), the body
- * behind `setting_count`. An index at or past that count is refused, so every
- * leaf under it is dropped on load. The validator already errors on a NEGATIVE
- * index against the same guard; only the high end needs the sibling.
- *
- * ## The two config modes, each of which silently drops the other's block
- *
- * `individual_config` chooses whether one shared radius/stiffness/drag/gravity
- * block drives the whole chain or each joint carries its own. Both directions
- * are enforced by an early return rather than by a value check:
- * `set_radius` and its eight siblings return when the setting IS individual
- * (:644, :658, :678, :692, :712, :726, :746, :760, :781, :795, :810), and
- * `set_joint_radius` and its five siblings return when it is NOT (:914, :934,
- * :951, :968, :1003, :1029). Either way the write vanishes with nothing
- * surfaced, which is the case ADR-0032 grounds a diagnostic on.
- *
- * `joints/<j>/bone` and `bone_name` are exempt from the second check: those two
- * are refused in BOTH modes and Godot writes them itself in the shared one
- * (linterParser.ts records the `usage ^= PROPERTY_USAGE_STORAGE` that puts them
- * in the file), so flagging them would fire on engine output.
- *
- * ## The collision list that is not the live one
- *
- * `enable_all_child_collisions` selects between an explicit collision list and
- * an exclusion list over every child. `set_collision_path` (:1150-1152) and
- * `set_collision_count` (:1181-1183) return when it is true;
- * `set_exclude_collision_path` (:1094-1096) and `set_exclude_collision_count`
- * (:1125-1127) return when it is false. Its default is `true`
- * (spring_bone_simulator_3d.h:145), so an ABSENT key means the exclusion list is
- * the live one and an explicit `collisions/<j>` beside it is dropped.
+ * Semantic linter rules for SpringBoneSimulator3D: the claims that need a sibling property, which
+ * no per-property validator in linterParser.ts can make. Godot's own saver writes the count ahead
+ * of the leaves, and `_validate_dynamic_prop` (spring_bone_simulator_3d.cpp :348) strips the inert
+ * half of each pair, so each rule fires only on a hand-edited or converted scene.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -53,22 +14,20 @@ import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { indexedElements, indexedKeyRegex, toIntIndex, boolSlotValue} from '../../../../godot/index.js';
 
 /**
- * Any `settings/<i>/…` leaf, whatever its depth.
- *
- * Every index position here — the setting, the joint, the collision — is read
- * with a bare `path.get_slicec('/', n).to_int()` and no validity gate
- * (spring_bone_simulator_3d.cpp:42, :122, :143, :147), so the grammar is the
- * whole segment and {@link toIntIndex} is what turns it into a number.
+ * Any `settings/<i>/…` leaf, whatever its depth. Every index position here (the setting, the joint,
+ * the collision) is read with a bare `path.get_slicec('/', n).to_int()` and no validity gate
+ * (spring_bone_simulator_3d.cpp:42, :122, :143, :147), so {@link toIntIndex} turns the whole
+ * segment into a number.
  */
 const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/(.+)$', 'to_int');
 /** `<leaf>` below a joint index, for the individual-mode check. */
 const JOINT_KEY_RE = indexedKeyRegex('^joints/#/(.+)$', 'to_int');
 
 /**
- * The first segment below the setting index for every leaf the SHARED block
- * owns, exactly the list `_validate_dynamic_prop` hides when the config is
- * individual (:373-376). Matching on that segment covers `radius/value` and
- * `radius/damping_curve` at once, as the engine's own `split[2]` test does.
+ * The first segment below the setting index for every leaf of the shared block, the list
+ * `_validate_dynamic_prop` hides when the config is individual (:373-376). set_radius and its eight
+ * siblings return when the setting is individual (:644, :658, :678, :692, :712, :726, :746, :760,
+ * :781, :795, :810).
  */
 const SHARED_CONFIG_SEGMENTS: ReadonlySet<string> = new Set([
   'rotation_axis',
@@ -80,8 +39,10 @@ const SHARED_CONFIG_SEGMENTS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * The per-joint leaves whose setters return unless the config is individual.
- * `bone` and `bone_name` are absent on purpose: see the file header.
+ * The per-joint leaves whose setters return unless the config is individual (:914, :934, :951,
+ * :968, :1003, :1029). Either way the write vanishes silently, which ADR-0032 grounds a diagnostic
+ * on. `bone` and `bone_name` are absent: both are refused in either mode, and Godot writes them
+ * itself in shared mode (see jointLeaves.ts).
  */
 const JOINT_CONFIG_LEAVES: ReadonlySet<string> = new Set([
   'rotation_axis',
@@ -93,9 +54,15 @@ const JOINT_CONFIG_LEAVES: ReadonlySet<string> = new Set([
   'gravity_direction',
 ]);
 
-/** Leaves that only land while `enable_all_child_collisions` is false. */
+/**
+ * Leaves that land only while `enable_all_child_collisions` is false: set_collision_path
+ * (:1150-1152) and set_collision_count (:1181-1183) return when it is true.
+ */
 const EXPLICIT_COLLISION_RE = indexedKeyRegex('^collisions/#$|^collision_count$', 'to_int');
-/** Leaves that only land while `enable_all_child_collisions` is true. */
+/**
+ * Leaves that land only while `enable_all_child_collisions` is true: set_exclude_collision_path
+ * (:1094-1096) and set_exclude_collision_count (:1125-1127) return when it is false.
+ */
 const EXCLUDE_COLLISION_RE = indexedKeyRegex(
   '^exclude_collisions/#$|^exclude_collision_count$',
   'to_int'
@@ -132,10 +99,8 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
   const collisionIgnored = new Set<number>();
   const excludeIgnored = new Set<number>();
 
-  // Grouped by the setting `_set` RESOLVES each key to, so `settings/00/…` and
-  // `settings/0/…` are one setting and every leaf finds the siblings written
-  // beside it under either spelling. Keying on the index TEXT split them in two
-  // and read a default for a value the file states.
+  // Grouped by the setting `_set` resolves each key to, so `settings/00/…` and `settings/0/…` are
+  // one setting and every leaf finds the siblings written beside it under either spelling.
   const settings = indexedElements(rawProps, 'settings/', 'to_int');
 
   for (const key of Object.keys(rawProps)) {
@@ -146,12 +111,19 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
     // A negative index is the validator's error, against the same
     // ERR_FAIL_INDEX_V; reporting it again here would double up on one defect.
     if (!(index >= 0)) continue;
+    // `_set` opens with `ERR_FAIL_INDEX_V(which, (int)settings.size(), false)` (:44), and only
+    // `set_setting_count` (:840) resizes `settings`, so every leaf at or past the count is dropped
+    // on load.
     if (index >= count) outOfRange.add(index);
 
     const siblings = settings.get(index);
     const individual = readBool(siblings?.get('individual_config'), false);
+    // `enable_all_child_collisions` defaults to true (spring_bone_simulator_3d.h:145), so an absent
+    // key makes the exclusion list the live one.
     const allChildCollisions = readBool(siblings?.get('enable_all_child_collisions'), true);
 
+    // Matching the shared block on the first segment covers `radius/value` and
+    // `radius/damping_curve` at once, as the engine's own `split[2]` test does.
     const joint = JOINT_KEY_RE.exec(leaf);
     if (joint) {
       if (!individual && JOINT_CONFIG_LEAVES.has(joint[1]!)) jointIgnored.add(index);

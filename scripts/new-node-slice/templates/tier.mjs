@@ -1,7 +1,6 @@
 /**
- * The files a validator tier is made of: the shared validator registration, its
- * test, and — only with `--rule` — the family rule, its test and the barrel
- * entry that pulls them in.
+ * The files of a validator tier: the shared validator registration and its test, and with
+ * `--rule` the family rule, its test and the barrel entry that pulls them in.
  */
 
 export function tierFiles({ typeName, heirs, toSrc, rule, parentLinterImport }) {

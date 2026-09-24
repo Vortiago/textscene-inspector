@@ -1,12 +1,8 @@
 /**
- * Regression contract: the Camera3D rule must not diagnose ordinary Godot
- * output.
- *
- * An absent `fov` is never a diagnostic: Godot defaults it to 75
- * (camera_3d.h:68) and omits defaults when serialising, and camera3d/parser.ts
- * defaults it identically. The value bound and the base-chain reach still are.
- *
- * The cases below are the shapes that regressed once, kept as pins.
+ * Regression contract: the Camera3D rule must not diagnose ordinary Godot output. An absent
+ * `fov` is never a diagnostic: Godot defaults it to 75 (camera_3d.h:68) and omits defaults when
+ * serialising, and camera3d/parser.ts defaults it identically. The value bound and the
+ * base-chain reach still apply.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -73,8 +69,7 @@ fov = 250.0
   });
 
   it('reaches XRCamera3D too, which inherits the rule', () => {
-    // The subclass was invisible to the rule until its applicability moved from
-    // an exact type list to the base chain.
+    // The rule applies through the base chain, not an exact type list, so a subclass is covered.
     const content = `[gd_scene format=3]
 
 [node name="Camera" type="XRCamera3D"]

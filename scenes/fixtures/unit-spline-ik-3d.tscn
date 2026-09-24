@@ -1,11 +1,9 @@
 [gd_scene load_steps=2 format=3]
 
-; SplineIK3D under the Skeleton3D it modifies, which is the only placement where
-; a SkeletonModifier3D does anything. The subject is the four leaves it adds to
-; ChainIK3D's settings/<i>/ family: tilt_fade_in and tilt_fade_out are bone
-; COUNTS with a "-1,100,1,or_greater" hint, not angles, so nothing here is
-; stored in radians. Setting 1 turns tilt off, the state in which Godot stops
-; serialising the two fade keys at all.
+; SplineIK3D under the Skeleton3D it modifies, the only placement where a SkeletonModifier3D
+; does anything. The subject is the four leaves it adds to ChainIK3D's settings/<i>/ family.
+; tilt_fade_in and tilt_fade_out are bone counts with a "-1,100,1,or_greater" hint, not angles,
+; so nothing is in radians. Setting 1 turns tilt off, and Godot then writes neither fade key.
 
 [sub_resource type="Curve3D" id="Curve3D_spline"]
 _data = {

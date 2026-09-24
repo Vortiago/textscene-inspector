@@ -1,43 +1,13 @@
 /**
- * Shared value decoders for the lenient parser.
- *
- * Each reads a raw TSCN property string into a typed scalar/vector and
- * follows one contract: fall back silently when the value is ABSENT, but
- * warn-then-fall-back when it is PRESENT yet unparseable (so a malformed
- * scene surfaces in the log while still rendering). The strict linter path
- * validates separately and is unaffected.
- *
- * `settableNonNegative` / `nonNegativeOr` / `nonNegativeSizeOr` add the guard
- * Godot's own setters apply: a negative argument is REFUSED (`ERR_FAIL_COND_MSG`
- * returns before assigning), so the property keeps its default rather than
- * storing a value Godot never holds. The `settable` variant reports `undefined`
- * for refused-or-absent, for callers that must know whether a property was set.
- *
- * `intOr` / `floatOr` / `boolOr` / `enumOr` / `vec2Or` take a fallback and
- * always return a value. The `parseOptional*` family (`parseOptionalInt` /
- * `parseOptionalFloat` / `parseOptionalBool` / `parseOptionalVector2`) are the
- * distinct optional readers, for properties where "unset" is meaningful (Control
- * layout props, optional light scalars): no fallback and no warning. All four
- * return `undefined` when the property is ABSENT; on a present-but-unparseable
- * value the numeric and vector readers also return `undefined`, but
- * `parseOptionalBool` returns `false` — it asks what the slot STORES, so anything
- * else reads as false rather than unset. Pass `context` (a node type or name) to
- * label the warning.
- *
- * Pure `.ts` — importable by `linterParser` slices; never pulls in THREE.
- * These wrap the canonical leaf scanners (`parseVector2` in `parser/vectors.ts`);
- * genuinely one-off structured literals (StyleBox shapes) stay inline in
- * their node slice, and the throwing `parseColor` in `standardmaterial3d` keeps
- * its own contract. `Rect2` graduated the same way `Vector2i` did: a second
- * slice's hand-rolled grammar accepted `1.2.3` and stored a NaN region — an
- * invisible frame — so the canonical-grammar reader lives here now. `Vector2i`
- * was such a one-off until a third slice needed it (`SubViewport.size` /
- * `size_2d_override`, after `Sprite2D`/`Sprite3D` `frame_coords`), and it keeps
- * its own pair here because the components are TRUNCATED, not because the
- * grammar differs — Godot reads an INT slot with any number token and converts.
+ * Shared value decoders for the lenient parser, pure `.ts` with no THREE. Each falls
+ * back silently when a value is absent, and warns and falls back when it is present
+ * but unparseable, so a malformed scene still renders. `context` labels the warning.
  */
 
 import { warn } from '../logger';
+// These wrap the canonical leaf scanners. One-off structured literals (StyleBox shapes)
+// stay in their slice, and the throwing `parseColor` in `standardmaterial3d` keeps its
+// own contract.
 import { parseVector2, type Vector2 } from './vectors';
 import { slotTupleRegex, parseGodotFloat, allFinite } from '../godot/number.js';
 import { slotComponents, storedFromFloat, storedInt, type IntWidth } from '../godot/int.js';
@@ -58,12 +28,8 @@ function finiteScalar(value: string): number | null {
 }
 
 /**
- * The same, as the integer the slot STORES.
- *
- * Narrowed, because the previewer and the linter must read one number out of
- * one literal. Unnarrowed, `z_index = 4294967295` drew at z = 4.29e8 — behind
- * the camera, so the node vanished — while the linter read the -1 Godot holds,
- * found it in range, and reported nothing.
+ * The same, as the integer the slot stores. Narrowed so the previewer and the linter
+ * read one number from one literal: `z_index = 4294967295` is the -1 Godot holds.
  */
 function finiteIntScalar(value: string, width: IntWidth): number | null {
   const num = finiteScalar(value);
@@ -83,8 +49,8 @@ export interface Rect2Value {
 const RECT2_PATTERN = slotTupleRegex('Rect2', 4);
 
 /**
- * `Rect2(x, y, w, h)` → a rect; undefined when absent (silently) or present
- * but malformed (warn-then-unset). Built on the canonical float grammar:
+ * `Rect2(x, y, w, h)` as a rect, or undefined when absent (silently) or malformed
+ * (with a warning). Built on the canonical float grammar:
  * each component must parse whole, so `1.2.3` and `--1` are refused outright
  * instead of truncating or landing as NaN.
  */
@@ -111,8 +77,8 @@ export function parseOptionalRect2(
 
 export function floatOr(value: string | undefined, fallback: number, context = 'value'): number {
   if (value === undefined) return fallback;
-  // Anchored: `parseFloat` read `1.2.3` as 1.2 and `1abc` as 1, both silently.
-  // A non-finite still falls back — the documented renderer/linter split.
+  // Anchored, so `1.2.3` and `1abc` are refused, not read as 1.2 and 1. A non-finite
+  // falls back: the documented renderer/linter split.
   const parsed = finiteScalar(value);
   if (parsed === null) {
     warn(`${context}: invalid float "${value}", using ${fallback}`);
@@ -122,15 +88,10 @@ export function floatOr(value: string | undefined, fallback: number, context = '
 }
 
 /**
- * `width` is the SETTER's argument type, and it is `'int32'` for almost every
- * Godot property. Pass `'uint32'` only where the engine does: measured,
- * `Camera3D`/`Decal::set_cull_mask` and `AudioStreamPlayer2D/3D::set_area_mask`
- * take `uint32_t`, while `CanvasItem::set_light_mask` and
- * `CanvasLayer::set_layer` take `int`. Reading an unsigned slot as signed would
- * show `4294967295` as `-1` in the inspector, which is not what Godot holds.
- *
- * The slot's width is declared here and again on its validator;
- * `intSlotWidth.guard.test.ts` holds the two to one answer.
+ * `width` is the setter's argument type, `'int32'` for almost every property.
+ * `Camera3D`/`Decal::set_cull_mask` and `AudioStreamPlayer2D/3D::set_area_mask` take
+ * `uint32_t`, where signed reads `4294967295` as -1. The validator declares the width
+ * again, and `intSlotWidth.guard.test.ts` holds the two to one answer.
  */
 export function intOr(
   value: string | undefined,
@@ -139,8 +100,7 @@ export function intOr(
   width: IntWidth = 'int32'
 ): number {
   if (value === undefined) return fallback;
-  // `parseInt` stopped at the `e`, so `hframes = 2e1` drew a 2-column grid
-  // while the linter judged the frame index against Godot's 20.
+  // The whole token parses, so `hframes = 2e1` is the 20 Godot and the linter read.
   const parsed = finiteIntScalar(value, width);
   if (parsed === null) {
     warn(`${context}: invalid int "${value}", using ${fallback}`);
@@ -151,8 +111,7 @@ export function intOr(
 
 export function boolOr(value: string | undefined, fallback: boolean, context = 'value'): boolean {
   if (value === undefined) return fallback;
-  // `boolSlotValue` already reads the int and float spellings a BOOL slot
-  // converts, which is where this reader's own `'1'`/`'0'` arms came from.
+  // `boolSlotValue` reads the int and float spellings a BOOL slot converts.
   const stored = boolSlotValue(value);
   if (stored !== undefined) return stored;
   warn(`${context}: invalid bool "${value}", using ${fallback}`);
@@ -160,15 +119,10 @@ export function boolOr(value: string | undefined, fallback: boolean, context = '
 }
 
 /**
- * Reader for a property whose Godot setter REFUSES a negative argument
- * (`ERR_FAIL_COND_MSG`, e.g. `sphere_shape_3d.cpp:86`, `circle_shape_2d.cpp:46`,
- * both capsule shapes): the setter returns before assigning, so the property
- * keeps the value it held — at load time, its default.
- *
- * Returns `undefined` for an absent, unparseable OR negative value, so a caller
- * that must know whether the property was SET can tell — the linked capsule
- * radius/height pair clamps each other only for values the setter accepted.
- * Silent when absent, warns for the two authored-but-refused cases.
+ * A property whose setter refuses a negative argument before assigning
+ * (`sphere_shape_3d.cpp:86`, `circle_shape_2d.cpp:46`, both capsules), so it keeps its
+ * default. `undefined` for absent, unparseable or negative, warning on the last two:
+ * the capsule pair clamps each other only for values the setter accepted.
  */
 export function settableNonNegative(
   value: string | undefined,
@@ -187,7 +141,7 @@ export function settableNonNegative(
   return parsed;
 }
 
-/** {@link settableNonNegative} with a concrete default — the common case. */
+/** {@link settableNonNegative} with a concrete default, the common case. */
 export function nonNegativeOr(
   value: string | undefined,
   fallback: number,
@@ -197,13 +151,9 @@ export function nonNegativeOr(
 }
 
 /**
- * A size whose Godot setter ERR_FAILs when ANY component is negative
- * (`box_shape_3d.cpp:100`, `rectangle_shape_2d.cpp:61`). The whole assignment is
- * refused, not clamped per component, so the property keeps its default; a
- * per-component clamp would invent a size Godot never stores.
- *
- * Takes an already-decoded vector: the grammar belongs to `parseVector2` /
- * `parseVector3`, this only applies the setter's guard.
+ * A size whose setter refuses the whole assignment when any component is negative
+ * (`box_shape_3d.cpp:100`, `rectangle_shape_2d.cpp:61`), so it keeps its default. Takes
+ * a decoded vector: the grammar belongs to `parseVector2` and `parseVector3`.
  */
 export function nonNegativeSizeOr<T extends { x: number; y: number; z?: number }>(
   size: T,
@@ -233,11 +183,7 @@ export function enumOr<T extends number>(
   return parsed;
 }
 
-/**
- * Parse a `Vector2(x, y)` property, falling back when absent and
- * warning-then-falling-back when present but unparseable. Wraps the
- * canonical (throwing) `parseVector2` scanner.
- */
+/** A `Vector2(x, y)` property through the throwing `parseVector2` scanner. */
 export function vec2Or(value: string | undefined, fallback: Vector2, context = 'value'): Vector2 {
   if (!value) return fallback;
   try {
@@ -249,22 +195,13 @@ export function vec2Or(value: string | undefined, fallback: Vector2, context = '
 }
 
 /**
- * The one `Vector2i(x, y)` grammar. Godot writes Vector2i wherever a value is a
- * pixel count (`SubViewport.size`, `Sprite2D.frame_coords`).
- *
- * The same component grammar as the float composites, not `-?\d+`: Godot reads
- * an INT slot with `_parse_construct<int32_t>`, which takes any number token
- * and converts it. `SubViewport.size = Vector2i(2e1, 2e1)` is a file Godot
- * loads as `(20, 20)`, and the narrower grammar warned-and-fell-back to the
- * default instead — a viewport drawn at the wrong size on a valid scene.
+ * The one `Vector2i(x, y)` grammar, with the float composites' component grammar, not
+ * `-?\d+`: `_parse_construct<int32_t>` takes any number token and truncates it, so
+ * Godot loads `SubViewport.size = Vector2i(2e1, 2e1)` as `(20, 20)`.
  */
 const VECTOR2I_PATTERN = slotTupleRegex('Vector2i', 2);
 
-/**
- * Parse a `Vector2i(x, y)` property, falling back when absent and
- * warning-then-falling-back when present but unparseable — the integer sibling
- * of {@link vec2Or}.
- */
+/** The integer sibling of {@link vec2Or}. */
 export function vec2iOr(value: string | undefined, fallback: Vector2, context = 'value'): Vector2 {
   if (!value) return fallback;
   const match = VECTOR2I_PATTERN.exec(value);
@@ -272,10 +209,9 @@ export function vec2iOr(value: string | undefined, fallback: Vector2, context = 
     warn(`${context}: invalid Vector2i "${value}", using fallback`);
     return fallback;
   }
-  // A `Vector2(...)` written into a Vector2i slot holds two DOUBLES, so both
-  // components convert through `double -> int32` however the token was spelled.
-  // Measured on 4.6.3: `Vector2(4294967295, 64)` stores `(-2147483648, 64)` —
-  // the UB sentinel — where `Vector2i(4294967295, 64)` wraps to `(-1, 64)`.
+  // A `Vector2(...)` in a Vector2i slot holds doubles, so both components convert
+  // through `double -> int32`. Measured on 4.6.3: `Vector2(4294967295, 64)` stores the
+  // UB sentinel `(-2147483648, 64)`, where `Vector2i(4294967295, 64)` wraps to `(-1, 64)`.
   const converted = isConvertedSpelling('Vector2i', compositeTypeName(value));
   const x = storedInt(match[1], converted);
   const y = storedInt(match[2], converted);
@@ -287,10 +223,8 @@ export function vec2iOr(value: string | undefined, fallback: Vector2, context = 
 }
 
 /**
- * Optional `Vector2i` reader: `undefined` for an absent value, and
- * warn-then-`undefined` for a present-but-malformed one — the integer sibling of
- * {@link parseOptionalVector2}, kept warning because a malformed
- * `frame_coords` silently picks sprite frame (0,0) otherwise.
+ * The integer sibling of {@link parseOptionalVector2}, but it warns on a malformed
+ * value: a malformed `frame_coords` would otherwise pick frame (0,0) with no sign.
  */
 export function parseOptionalVector2i(
   value: string | undefined,
@@ -302,8 +236,7 @@ export function parseOptionalVector2i(
     warn(`${context}: invalid Vector2i "${value}"`);
     return undefined;
   }
-  // A `Vector2(...)` in a Vector2i slot holds doubles, so both components take
-  // the `double -> int32` branch whatever the token looks like — see `vec2iOr`.
+  // A `Vector2(...)` in a Vector2i slot holds doubles: see `vec2iOr`.
   const converted = isConvertedSpelling('Vector2i', compositeTypeName(value));
   const x = storedInt(match[1], converted);
   const y = storedInt(match[2], converted);
@@ -315,13 +248,9 @@ export function parseOptionalVector2i(
 }
 
 /**
- * Optional int reader: returns `undefined` for an absent or unparseable
- * value — no fallback, no warning. Distinct from `intOr`; used where a
- * missing property is itself meaningful (Control layout props).
- *
- * `width` is the setter's argument type, as on {@link intOr}: read at int32, a
- * `uint32_t` slot shows `4294967295` as -1 and refuses `3e9` — a FLOAT literal
- * it holds exactly — leaving the caller with `undefined` and a default.
+ * `undefined` for an absent or unparseable int, with no warning, where "unset" means
+ * something (Control layout props). `width` is as on {@link intOr}: read at int32, a
+ * `uint32_t` slot refuses `3e9`, a float literal it holds exactly.
  */
 export function parseOptionalInt(
   value: string | undefined,
@@ -333,7 +262,7 @@ export function parseOptionalInt(
 
 /**
  * Optional bool reader: `undefined` for an absent value, else what the BOOL
- * slot stores for it.
+ * slot stores for it. An unconvertible value reads `false`, not `undefined`.
  * Distinct from `boolOr`; used where a missing property is meaningful (Control
  * flags that default off only when present, so absence stays unset).
  */
@@ -342,22 +271,16 @@ export function parseOptionalBool(value: string | undefined): boolean | undefine
   return boolSlotValue(value) === true;
 }
 
-/**
- * Optional float reader: returns `undefined` for an absent or unparseable
- * value — no fallback, no warning. Mirrors `parseOptionalInt` for floats;
- * used where a missing numeric property is itself meaningful.
- */
+/** `parseOptionalInt` for floats. */
 export function parseOptionalFloat(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
   return finiteScalar(value) ?? undefined;
 }
 
 /**
- * Optional Vector2 reader: returns `undefined` for an absent or unparseable
- * value — no fallback, no warning. Wraps the canonical (throwing) `parseVector2`
- * so its float grammar (`FLOAT_PATTERN_SOURCE`) is shared. Used for Control
- * `custom_minimum_size` (StyleBox `shadow_offset` uses the `{0,0}`-fallback
- * `vec2Or` instead, since its render always needs a concrete offset).
+ * `undefined` for an absent or unparseable Vector2, with no warning, through
+ * `parseVector2` and its `FLOAT_PATTERN_SOURCE`. For Control `custom_minimum_size`.
+ * StyleBox `shadow_offset` needs a concrete offset, so it uses `vec2Or`.
  */
 export function parseOptionalVector2(value: string | undefined): Vector2 | undefined {
   if (!value) return undefined;
@@ -369,13 +292,10 @@ export function parseOptionalVector2(value: string | undefined): Vector2 | undef
 }
 
 /**
- * The path a NodePath slot stores from this value — `NodePath("../a")` and the
- * bare `"../a"` the slot converts (variant.cpp:746-749) both give `"../a"`; an
- * empty literal yields `""`. Returns `null` for an absent value or anything
- * that is neither spelling, so callers choose their own fallback (`?? raw`,
- * `?? '(none)'`). The canonical NodePath decoder for display formatters; the
- * linter keeps its stricter variant (`linterUtils.extractNodePath`) which also
- * rejects empty paths.
+ * The path a NodePath slot stores: `NodePath("../a")` and the bare `"../a"` it converts
+ * (variant.cpp:746-749) both give `"../a"`. `null` for absent or any other spelling, so
+ * the caller picks a fallback. The linter's `linterUtils.extractNodePath` also rejects
+ * an empty path.
  */
 export function parseNodePathLiteral(value: string | undefined): string | null {
   if (value === undefined) return null;
@@ -383,17 +303,10 @@ export function parseNodePathLiteral(value: string | undefined): string | null {
 }
 
 /**
- * The sibling index a `[node …]` heading's `index=` attribute names.
- *
- * `resource_format_text.cpp:269-270` assigns the tag field straight into an
- * `int`, so the value goes through `Variant::_to_int` (`variant.h`), whose
- * STRING arm is `String::to_int()`. That reader takes a leading integer and
- * stops: `index="3px"` is index 3 and `index=" "` is index 0, neither an error
- * nor an absent index. {@link toIntIndex} is that model.
- *
- * One reader for one attribute: six slices spelled this four ways, and the two
- * that used a bare `Number` stored `NaN`, which poisons every sibling-ordering
- * comparison it reaches.
+ * The sibling index a heading's `index=` names. `resource_format_text.cpp:269-270`
+ * assigns it to an `int` through `Variant::_to_int` (`variant.h`) and `String::to_int()`:
+ * `index="3px"` is 3 and `index=" "` is 0. {@link toIntIndex} is that model. A `NaN`
+ * here would poison every sibling-ordering comparison.
  */
 export function parseHeadingIndex(value: string | undefined): number | undefined {
   if (value === undefined || value === '') return undefined;

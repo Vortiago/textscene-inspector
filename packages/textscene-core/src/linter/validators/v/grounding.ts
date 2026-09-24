@@ -1,11 +1,8 @@
 /**
  * Where a validator's authority comes from, and the tags that record it.
- *
- * `accepts` and `shape` declare what a validator takes and whether it rejects
- * anything a Godot-written scene could carry; `ground` and `endSeverity` turn a
- * `Grounding` into the ADR-0032 tier its range branch reports at. Every
- * combinator beside this file goes through one of them, which is what lets
- * `boundGrounding.test.ts` sweep the live registry for an unclassified one.
+ * `accepts` and `shape` declare what a validator takes; `ground` and
+ * `endSeverity` turn a `Grounding` into its ADR-0032 tier. Every combinator
+ * goes through one, so `boundGrounding.test.ts` can sweep the live registry.
  */
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
@@ -15,56 +12,39 @@ import { parseGodotFloat, type EnforcedEnd } from '../commonValidators.js';
 import { valueCode } from './codes.js';
 
 /**
- * Where a bound's authority comes from (ADR-0032). Exactly one of these belongs
- * on any validator carrying a numeric or enum bound, and each takes the
- * governing `file:line` so the claim is checkable.
- *
- * `enforced` — Godot's setter refuses or alters the value (`ERR_FAIL*`, a clamp,
- * a silently dropped write). Out of range is an ERROR.
- *
- * `hinted` — the property's `PROPERTY_HINT_RANGE` states the bound but the
- * setter assigns straight through. The hint constrains the inspector widget,
- * not the engine, so out of range is a WARNING.
- *
- * Neither is the un-audited legacy state: the bound behaves as an error and is
- * counted by `boundGrounding.test.ts`, whose ratchet only goes down.
+ * Where a bound's authority comes from (ADR-0032), with its governing
+ * `file:line`. Every validator carrying a numeric or enum bound declares one.
+ * A bound with neither errors, and `boundGrounding.test.ts` fails on it.
  */
 export interface Grounding {
   /**
-   * `file:line` of the setter guard that refuses or alters the value. A bare
-   * string grounds BOTH ends; `{ min, max }` grounds them separately, which
-   * real properties need: `PhysicalBone2D.bone2d_index` has an `ERR_FAIL_COND`
-   * on its floor and nothing but a hint on its ceiling.
+   * The setter guard that refuses or alters the value (`ERR_FAIL*`, a clamp, a
+   * dropped write), so out of range errors. A bare string grounds both ends;
+   * `{ min, max }` grounds them separately, as `PhysicalBone2D.bone2d_index`
+   * needs for its guarded floor and hinted ceiling.
    */
   enforced?: string | { min?: string; max?: string };
-  /** `file:line` of the ADD_PROPERTY whose PROPERTY_HINT_RANGE states the bound. */
+  /**
+   * The ADD_PROPERTY whose PROPERTY_HINT_RANGE states the bound while the setter
+   * assigns straight through. The hint constrains the inspector, so out of range warns.
+   */
   hinted?: string | { min?: string; max?: string };
 }
 
 /**
- * A `Grounding` that may also name a setter guard on the special float literals.
- *
- * Separate from `Grounding` because only the FLOAT combinators can honour it:
- * an int slot cannot hold a non-finite at all (it is altered at parse), and a
- * bitmask or a vector has its own answer. While `finite` sat on the shared
- * interface, `v.int` and `v.positiveInt` accepted the field and silently
- * dropped it — a citation written and never read. Narrowing it here makes that
- * a compile error instead.
- *
- * `inf` and `nan` are legal TSCN float literals that Godot writes and reloads
- * (`variant_parser.cpp:150-155`), so the shared numeric validator accepts them.
- * A setter that refuses one names its guard here — and the two guards are
- * different rules, not degrees of the same one, so a property carrying the
- * narrower one must not be given the wider.
+ * A `Grounding` that may also name a setter guard on `inf` and `nan`, legal
+ * literals Godot writes and reloads (`variant_parser.cpp:150-155`). Only the
+ * float combinators take it, so an int combinator given one fails to compile.
+ * The two guards are different rules: never give a property the wider one.
  */
 export interface FiniteGrounding extends Grounding {
   /** `file:line` of an `ERR_FAIL_COND(!is_finite(...))` in the setter. */
   finite?: string;
   /**
    * `file:line` of a `Math::is_nan` guard in a setter that stores `inf` and
-   * `-inf` unaltered — `AudioStreamPlayer::set_volume_db`'s
-   * `ERR_FAIL_COND_MSG(Math::is_nan(p_volume), …)` and its 2D/3D twins.
-   * `finite` subsumes it and wins where both are given.
+   * `-inf` unaltered, such as `AudioStreamPlayer::set_volume_db`'s
+   * `ERR_FAIL_COND_MSG(Math::is_nan(p_volume), …)`. `finite` wins where both
+   * are given.
    */
   nan?: string;
 }
@@ -85,8 +65,8 @@ function distinctCites(g: string | { min?: string; max?: string } | undefined): 
 
 /**
  * Tag a validator with what it accepts, for the generated `## Linting` table.
- * Exported so a slice with a bespoke validator can describe it too — an
- * untagged one renders an empty cell, which `validatorAccepts.test.ts` fails on.
+ * A bespoke validator needs it too: `validatorAccepts.test.ts` fails on an
+ * untagged one.
  */
 export function accepts(validator: PropertyValidator, description: string): PropertyValidator {
   validator.accepts = description;
@@ -95,12 +75,8 @@ export function accepts(validator: PropertyValidator, description: string): Prop
 
 /**
  * `accepts`, plus the declaration that this validator rejects nothing but
- * malformed input. Every combinator below is either a `shape` or carries a
- * `Grounding`; `boundGrounding.test.ts` fails on one that is neither, so a new
- * combinator cannot quietly start rejecting real values uncited.
- *
- * Exported for the same reason as `accepts`: a slice with a bespoke validator
- * has to classify it too.
+ * malformed input. Every combinator, bespoke ones included, is a `shape` or
+ * carries a `Grounding`, and `boundGrounding.test.ts` fails on one that is neither.
  */
 export function shape(validator: PropertyValidator, description: string): PropertyValidator {
   validator.formatOnly = true;
@@ -108,16 +84,10 @@ export function shape(validator: PropertyValidator, description: string): Proper
 }
 
 /**
- * Reject the special float literals a setter refuses, ahead of the range check.
- *
- * It runs FIRST because a range check cannot express either refusal: `Infinity
- * > max` is true, so a bounded property would report the wrong reason, and every
- * NaN comparison is false, so an unbounded one would report nothing at all.
- *
- * One implementation for both guards because the tag forwarding below is the
- * part that breaks silently — a wrapper that drops `leaves` or `intSlot` takes
- * the slot out of a registry sweep rather than failing it — and two copies of it
- * drift.
+ * Reject the special float literals a setter refuses, ahead of the range check,
+ * which reports `Infinity > max` for the wrong reason and says nothing on NaN.
+ * One implementation for both guards: the tag forwarding below breaks silently,
+ * and two copies of it would drift.
  */
 function withLiteralGuard(
   validator: PropertyValidator,
@@ -139,26 +109,18 @@ function withLiteralGuard(
     return validator(key, value, line);
   };
   guarded.accepts = validator.accepts;
-  // The wrapper only adds a literal branch ahead of the range checks, so the
-  // bounded ends, their tiers and the NUMBERS stay the inner validator's.
-  // `bounds` is what `hintImplementationParity` compares against the engine's
-  // hint, so dropping it took the property out of that comparison and counted
-  // it as unimplemented while it was fully implemented.
+  // The bounded ends, their tiers and the numbers stay the inner validator's:
+  // `hintImplementationParity` compares `bounds` against the engine's hint.
   guarded.tiers = validator.tiers;
   guarded.bounds = validator.bounds;
-  // The two tags a registry sweep navigates by: `everyValidator` descends
-  // `leaves`, and the int-slot probe selects on `intSlot`. A wrapper that drops
-  // either leaves the slot outside the population rather than failing a guard,
-  // so the sweep passes by asking about fewer validators than exist.
+  // The tags a registry sweep navigates by: `everyValidator` descends `leaves`,
+  // and the int-slot probe selects on `intSlot`. Dropping either shrinks the
+  // sweep's population in silence.
   guarded.intSlot = validator.intSlot;
   guarded.leaves = validator.leaves;
-  // `formatOnly` is deliberately NOT forwarded, even though it is dropped the
-  // same way: `inf`/`nan` are legal TSCN float literals, so this guard rejects a
-  // real value and owes a citation — which is exactly what `formatOnly` denies.
-  //
-  // Keep BOTH citations when the property also carries a range bound, the same
-  // rule `ground` follows: the literal guard and the range guard are separate
-  // lines in the setter, and dropping either makes it uncheckable.
+  // Not `formatOnly`: `inf`/`nan` are legal literals, so this guard rejects a
+  // real value. Keep both citations, as `ground` does: the literal guard and the
+  // range guard are separate lines in the setter.
   const inner = validator.grounding?.cite;
   guarded.grounding = {
     // The inner kind wins where there is one. The literal branch is always an
@@ -180,7 +142,7 @@ export function withFiniteGuard(
 }
 
 /**
- * Reject `nan` ALONE, for a setter guarded by `Math::is_nan` rather than by
+ * Reject `nan` alone, for a setter guarded by `Math::is_nan` rather than by
  * `!is_finite`. `inf` and `-inf` reach the field unaltered there, so the finite
  * guard cannot stand in: it would reject two values Godot stores.
  */
@@ -211,27 +173,18 @@ export function maybeNan(
 }
 
 /**
- * Severity of a bound's range branch, and the tag that records why.
- *
- * A validator is tagged with its grounding so `boundGrounding.test.ts` can
- * sweep the live registry: a bound with neither `enforced` nor `hinted` is
- * un-audited, behaves as it always has, and is counted by the ratchet.
+ * Tag a validator with its bounds, their tiers and its grounding, which
+ * `boundGrounding.test.ts` sweeps in the live registry. A bound with neither
+ * `enforced` nor `hinted` errors, and the sweep fails on it.
  */
 export function ground(
   validator: PropertyValidator,
   opts: EndedGrounding,
   /**
-   * The bound this validator enforces, per end, by VALUE. An absent end is an
-   * open one: `v.float('width')` with neither is a format check, so it needs no
-   * grounding and must not be counted by the ratchet.
-   *
-   * Values rather than flags because two tags are derived from them — the
-   * severity each end reports, and the bound itself, which a guard compares
-   * against the engine's captured `PROPERTY_HINT_RANGE`.
-   *
-   * `min`/`max` are the OUTER ends, so they stay the hint's numbers where a
-   * hint states them; `enforcedMin`/`enforcedMax` are the setter's own, which
-   * report as errors from further out.
+   * The bound per end, by value, since a guard compares it against the engine's
+   * `PROPERTY_HINT_RANGE`. An absent end is open, so `v.float('width')` is a
+   * format check. `min`/`max` are the hint's outer ends, and `enforcedMin`/
+   * `enforcedMax` the setter's own, which error from further out.
    */
   bounds: {
     min?: number;
@@ -252,19 +205,13 @@ export function ground(
   // carrying only one is bounded and owes a citation.
   const isBounded =
     hasMin || hasMax || bounds.enforcedMin !== undefined || bounds.enforcedMax !== undefined;
-  // Here rather than in the range factories, because this is the one function
-  // every combinator passes through: tagging at the factories left the 55
-  // validators built from an inline arrow — `v.strictInt`, `v.positiveInt` —
-  // silently untagged, and the sheet rendered their tier blank.
+  // Here, not in the range factories: every combinator passes through this
+  // function, including those built from an inline arrow, such as `v.strictInt`.
   if (isBounded) {
     validator.bounds = bounds;
-    // The tier of the OUTER end. Where the setter has an end of its own, that
-    // one is always an error and lives in `bounds`, so this reports what a
-    // value between the two says: the hint's tier, not the setter's.
-    // An end with ONLY a setter limit still rejects values, and always as an
-    // error. Leaving it out left `tiers` empty for every strictly-positive
-    // property, and the generated sheet then rendered a blank out-of-range cell
-    // for a validator that refuses.
+    // The tier of the outer end, the hint's, for a value between it and the
+    // setter's own end, which always errors. An end with only a setter limit
+    // errors too, so the sheet's out-of-range cell is never blank.
     const separate = { min: bounds.enforcedMin !== undefined, max: bounds.enforcedMax !== undefined };
     const tierFor = (end: 'min' | 'max') =>
       (end === 'min' ? hasMin : hasMax) ? endSeverity({ ...opts, ...bounds }, end) : 'error';
@@ -273,12 +220,9 @@ export function ground(
       ...(hasMax || separate.max ? { max: tierFor('max') } : {}),
     };
   }
-  // EVERY distinct citation, across both kinds and both ends. Keeping one per
-  // kind discarded the second end's `file:line` entirely, so the citation sweep
-  // could never see it and a wrong or malformed one was unobservable. Both
-  // shapes are live: `extra_cull_margin` grounds its floor and its ceiling
-  // differently, and `Control.anchors_preset` has a distinct ENFORCED cite per
-  // end (an early return at one line, an `ERR_FAIL_INDEX` at another).
+  // Every distinct citation, across both kinds and both ends, so the citation
+  // sweep sees each: `extra_cull_margin` grounds its ends differently, and
+  // `Control.anchors_preset` has a distinct enforced cite per end.
   const enforced = distinctCites(opts.enforced);
   const hinted = distinctCites(opts.hinted);
   if (enforced.length > 0) {
@@ -294,20 +238,10 @@ export function ground(
 }
 
 /**
- * Whether the HINT's end at `end` describes a band any value can land in.
- *
- * `exclusive` is deliberately not consulted. It moves the endpoint, not the
- * band: `[at, min)` and `(at, min)` are both non-empty exactly when `at < min`,
- * so the strict comparison is the whole answer. (`numericRange` in `codes.ts`
- * DOES look at `exclusive`, because it answers a different question — which of
- * two coinciding ends is the tighter one to print.)
- *
- * The predicate `endSeverity` had was `enforcedMin !== undefined`, with no
- * reference to the numbers at all, so a setter end at or INSIDE the hint's
- * handed the end to the hint's tier and named a warning band that no value can
- * reach. `lintCoverage.mjs` computes the same reachability for the sheet's
- * "Out of range" column, and `boundGrounding.tiers.test.ts` sweeps the live
- * registry for ends where the two would disagree.
+ * Whether the hint's end at `end` describes a band any value can land in.
+ * `exclusive` moves the endpoint, not the band: `[at, min)` and `(at, min)` are
+ * both non-empty exactly when `at < min`. `lintCoverage.mjs` computes the same for
+ * the sheet, and `boundGrounding.tiers.test.ts` sweeps for disagreement.
  */
 export function outerEndIsReachable(bounds: EndedGrounding, end: 'min' | 'max'): boolean {
   const hintEnd = end === 'min' ? bounds.min : bounds.max;
@@ -318,16 +252,13 @@ export function outerEndIsReachable(bounds: EndedGrounding, end: 'min' | 'max'):
 }
 
 /**
- * Severity for one END of a bound (ADR-0032): `warning` when only a hint names
- * it, `error` when the setter does. Un-audited ends keep erroring, which is the
- * pre-split behaviour.
+ * Severity for one end of a bound (ADR-0032): `warning` when only a hint names
+ * it, `error` when the setter does. An end neither names errors.
  */
 export function endSeverity(opts: EndedGrounding, end: 'min' | 'max'): Severity {
-  // A setter limit STRICTLY FURTHER OUT than the hint's own end owns the
-  // `enforced:` citation, leaving the band between the two to the hint's tier,
-  // which warns. Where it sits at or inside the hint's end there is no such
-  // band — the setter refuses every value that would have reached it — so the
-  // end keeps the enforced tier.
+  // A setter limit strictly further out than the hint's end leaves the band
+  // between them to the hint, which warns. At or inside the hint's end there is
+  // no such band, so the end keeps the enforced tier.
   const setterEnd = end === 'min' ? opts.enforcedMin : opts.enforcedMax;
   const separateEnforcedEnd = setterEnd !== undefined && outerEndIsReachable(opts, end);
   if (!separateEnforcedEnd && citeFor(opts.enforced, end)) return 'error';
@@ -335,7 +266,7 @@ export function endSeverity(opts: EndedGrounding, end: 'min' | 'max'): Severity 
 }
 
 /**
- * A `Grounding` alongside BOTH ends, hint and setter: a tier is decided by
+ * A `Grounding` alongside both ends, hint and setter: a tier is decided by
  * where the two sit relative to each other, so neither half can be dropped.
  */
 export type EndedGrounding = Grounding & {

@@ -1,51 +1,8 @@
 /**
- * Semantic linter rules for OpenXRRenderModelManager, from Godot's own
- * configuration warnings,
- * `OpenXRRenderModelManager::get_configuration_warnings()`
- * (openxr_render_model_manager.cpp:199-226):
- *
- *     XROrigin3D *parent = nullptr;
- *     if (tracker == 0 || tracker == 1) {
- *         if (!make_local_to_pose.is_empty()) {
- *             warnings.push_back("Must specify a tracker to make node local to pose.");
- *         }
- *         parent = Object::cast_to<XROrigin3D>(get_parent());
- *     } else {
- *         Node *node = get_parent();
- *         while (!parent && node) {
- *             parent = Object::cast_to<XROrigin3D>(node);
- *             node = node->get_parent();
- *         }
- *     }
- *     if (!parent) {
- *         warnings.push_back("This node must be a child of an XROrigin3D node!");
- *     }
- *
- *     if (!GLOBAL_GET("xr/openxr/extensions/render_model")) {
- *         warnings.push_back("The render model extension is not enabled in project settings!");
- *     }
- *
- * The third warning reads a PROJECT SETTING
- * (`xr/openxr/extensions/render_model`) no `.tscn` carries — runtime-only,
- * declined.
- *
- * The first two share one `tracker`-gated branch, and both are checkable from
- * the file alone:
- *
- *  - `tracker` ANY(0) or NONE_SET(1) (0 is also `tracker`'s own default, so
- *    an absent key means this branch): only the DIRECT parent is cast, and
- *    `make_local_to_pose` being set here is a real, reachable authoring
- *    state, not the serialised default — the default IS the empty string,
- *    and the trigger is a NON-empty value while the tracker stays
- *    unspecific. A file can hit this by setting `make_local_to_pose` alone
- *    and never touching `tracker` at all.
- *  - `tracker` LEFT_HAND(2) or RIGHT_HAND(3): every ANCESTOR up to the scene
- *    root is checked, not just the immediate parent.
- *
- * The ancestor search reuses `parentTypeVerdict` at each step rather than
- * hand-rolling its instanced/untyped exemption a second time: a `mismatch`
- * just climbs one level higher, and `satisfied` / `unknowable` / `root`
- * (chain exhausted without a match) end the walk.
+ * The configuration warnings of `OpenXRRenderModelManager::get_configuration_warnings()`
+ * (openxr_render_model_manager.cpp:199-226): a `make_local_to_pose` with no hand tracker, and no
+ * XROrigin3D. The third reads the project setting `xr/openxr/extensions/render_model`, which no
+ * `.tscn` carries, so it is not modelled.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -71,9 +28,8 @@ function readTracker(properties: Record<string, string>): number {
 }
 
 /**
- * Walks every ANCESTOR (not just the immediate parent), reusing
- * `parentTypeVerdict` at each step. See the file docblock for why this beats
- * hand-rolling the instanced/untyped exemption again.
+ * Walks every ancestor with `parentTypeVerdict`, so its instanced and untyped exemption holds: a
+ * `mismatch` climbs one level, and `satisfied`, `unknowable` or `root` ends the walk.
  */
 function ancestorHasXROrigin3D(scene: TscnScene, node: TscnNode): ParentVerdict {
   let current = node;
@@ -89,16 +45,18 @@ function checkOpenXRRenderModelManager(context: RuleContext): Diagnostic[] {
   const properties = node.properties as unknown as Record<string, string>;
   const diagnostics: Diagnostic[] = [];
 
+  // ANY(0), the default, and NONE_SET(1) cast only the direct parent. A non-empty
+  // `make_local_to_pose` beside them is a reachable state, even with no `tracker` key. LEFT_HAND(2)
+  // and RIGHT_HAND(3) search every ancestor.
   const tracker = readTracker(properties);
   const directParentOnly =
     tracker === RENDER_MODEL_TRACKER_ANY || tracker === RENDER_MODEL_TRACKER_NONE_SET;
 
   if (directParentOnly) {
     const rawPose = properties.make_local_to_pose;
-    // `literalText` rather than a hand-rolled unwrap: Godot's own check is
-    // `if (!make_local_to_pose.is_empty())` (cpp:204), and every jacket the
-    // empty string wears — `""` and the StringName `&""` a String slot converts
-    // — has to come off before the length is read.
+    // `literalText`, not a hand-rolled unwrap: Godot checks `!make_local_to_pose.is_empty()`
+    // (cpp:204), so both jackets the empty string wears, `""` and the StringName `&""` a String
+    // slot converts, come off before the length is read.
     const hasPose = rawPose !== undefined && literalText(rawPose) !== '';
     if (hasPose) {
       diagnostics.push({

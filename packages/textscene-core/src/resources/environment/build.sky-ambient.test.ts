@@ -1,33 +1,8 @@
 /**
- * Ambient light when the sky is the source.
- *
- * Transcribed from `RenderSceneDataRD::update_ubo` (Godot 4.6), which is the
- * code that actually fills the shader's ambient — not `sky_bake_panorama`,
- * which is the baking path and reads differently:
- *
- *   if (src == BG && (bg == CLEAR_COLOR || bg == COLOR)):
- *       flat = (bg == CLEAR_COLOR ? default_clear_color : bg_color) * bg_energy
- *       USE_AMBIENT_LIGHT
- *   else:
- *       flat = ambient_light_color * ambient_light_energy
- *       cubemap = (src == BG && bg == SKY) || src == SKY
- *       light   = cubemap || src == COLOR
- *
- * and the shader then blends:
- *
- *   ambient = flat
- *   if cubemap: ambient = mix(ambient, sky * bg_energy, ambient_color_sky_mix)
- *
- * Two consequences we had wrong: `AMBIENT_SOURCE_SKY` took `ambient_light_color`
- * at full strength (it is blended OUT entirely at the default contribution of
- * 1.0), and the sky's own contribution is scaled by `background_energy_multiplier`
- * — not by `ambient_light_energy`.
- *
- * REFLECTIONS are a separate channel: `reflection_source` defaults to the
- * background, so a sky is reflected by metals whenever it is the background,
- * WHATEVER lights the diffuse ambient. `skyAmbient` therefore carries the sky
- * reflection energy even for a COLOR or DISABLED source over a sky, with its
- * `contribution` (the diffuse share) at 0.
+ * Ambient light when the sky is the source, from `RenderSceneDataRD::update_ubo`
+ * (Godot 4.6): with a cubemap, `ambient = mix(flat, sky * bg_energy,
+ * ambient_color_sky_mix)`, so the default contribution of 1.0 blends out
+ * `ambient_light_color`, and `background_energy_multiplier` scales the sky.
  */
 import { describe, expect, it } from 'vitest';
 import { createEnvironmentSettings } from './build';
@@ -76,8 +51,7 @@ const base = (overrides: Partial<EnvironmentProperties> = {}): EnvironmentProper
 
 describe('sky ambient', () => {
   it('takes ambient from the sky for the default source over a sky background', () => {
-    // AMBIENT_SOURCE_BG (the default) + BG_SKY: this is the single most common
-    // environment in the wild, and it previously produced NO ambient at all.
+    // AMBIENT_SOURCE_BG (the default) over BG_SKY, the most common environment.
     const settings = createEnvironmentSettings(base());
     expect(settings.skyAmbient).toEqual({ energy: 1, contribution: 1 });
   });
@@ -97,8 +71,8 @@ describe('sky ambient', () => {
   });
 
   it('blends the flat colour out entirely at the default sky contribution', () => {
-    // The bug: a scene setting ambient_light_color under AMBIENT_SOURCE_SKY
-    // had that colour applied at full strength, on top of the sky.
+    // ambient_light_color under AMBIENT_SOURCE_SKY is not applied at full strength
+    // on top of the sky.
     const settings = createEnvironmentSettings(
       base({
         ambient_light_source: 3,
@@ -123,9 +97,8 @@ describe('sky ambient', () => {
   });
 
   it('reflects the sky for a colour source but takes no diffuse from it', () => {
-    // ambient_light_sky_contribution is meaningless for the DIFFUSE without a
-    // cubemap source; Godot only reads it behind USE_AMBIENT_CUBEMAP. The sky
-    // is still REFLECTED though (reflection_source defaults to the background),
+    // Godot reads ambient_light_sky_contribution only behind USE_AMBIENT_CUBEMAP.
+    // The sky is still reflected (reflection_source defaults to the background),
     // so skyAmbient carries the reflection energy at diffuse contribution 0.
     const settings = createEnvironmentSettings(
       base({

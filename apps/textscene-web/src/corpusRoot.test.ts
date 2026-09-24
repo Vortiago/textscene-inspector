@@ -42,8 +42,8 @@ describe('corpusRootFor', () => {
   });
 
   it('derives the game root for unlisted game subscenes (addons/, deep links)', () => {
-    // games/<dir>/ is a 2-segment root (vs demos' 3-segment); addon editor
-    // scenes are kept on disk but not listed, so they resolve via the prefix.
+    // games/<dir>/ is a two-segment root, and a demos root has three. Addon editor
+    // scenes are on disk but unlisted, so they resolve through the prefix.
     expect(
       corpusRootFor('games/godot-open-rpg/addons/dialogic/Editor/editor.tscn', manifest)
     ).toBe('games/godot-open-rpg');

@@ -1,10 +1,7 @@
 /**
- * HSplitContainer narrows exactly one inherited key and inherits the rest.
- *
- * The base-walk can only ever widen what a leaf accepts, so a fixed-orientation
- * container needs its own validator to take `vertical` back — Godot's setter
- * refuses it outright on this class. These assertions pin both halves: the
- * narrowing, and that narrowing did not cost the inherited set.
+ * HSplitContainer takes back one inherited key, `vertical`, which Godot's setter
+ * refuses on this class; the base-walk can only widen a leaf. These tests pin
+ * the removal and the inherited set it leaves.
  */
 
 import { describe, expect, it } from 'vitest';

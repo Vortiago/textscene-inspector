@@ -1,11 +1,7 @@
 /**
- * MenuButton registration — parser.
- *
- * `parseMenuButton` reuses Button's parse plus the one default MenuButton's
- * constructor overrides (`flat`); property knowledge for `switch_on_hover`,
- * `item_count` and the `popup/item_<idx>/<leaf>` family lives in
- * linterParser.ts/linter.ts — none of them affects rendering (see
- * `types.ts`'s own doc).
+ * Registers the MenuButton parser: Button's parse plus the `flat` default MenuButton's constructor sets.
+ * `switch_on_hover`, `item_count` and `popup/item_<idx>/<leaf>` live in linterParser.ts and linter.ts,
+ * since none of them affects rendering.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

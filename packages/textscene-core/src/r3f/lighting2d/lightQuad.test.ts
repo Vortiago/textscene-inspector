@@ -1,10 +1,7 @@
 /**
- * The producer side of the 2D light pass: the material one PointLight2D
- * contributes to the accumulator.
- *
- * Each `Light2D.BlendMode` is one fixed-function blend of `light_blend_compute`,
- * so the blend state IS the port — an approximation would show up here as two
- * modes sharing one set of factors.
+ * The material one PointLight2D adds to the accumulator. Each `Light2D.BlendMode` is one
+ * fixed-function blend of `light_blend_compute`, so the blend state is the port: an approximation
+ * shows up as two modes sharing one set of factors.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -53,8 +50,8 @@ function filteredMaterial(shadow: ShadowSampling = sampling()) {
 describe('createLightQuadMaterial', () => {
   it('emits the light term unclamped, in sRGB, with the cookie alpha kept separate', () => {
     const mat = material(Light2DBlendMode.ADD);
-    // rgb is the light term; alpha stays raw because the accumulator needs it
-    // both as the blend factor and, summed, as the Light Only mask.
+    // rgb is the light term. Alpha stays raw: the accumulator needs it as the blend factor and,
+    // summed, as the Light Only mask.
     expect(mat.fragmentShader).toContain('vec4(godotToSrgb(cookie.rgb) * uColor * uEnergy, cookie.a)');
     expect(mat.fragmentShader).not.toContain('clamp(');
   });
@@ -113,8 +110,7 @@ describe('createLightQuadMaterial', () => {
   });
 
   it('sorts with the transparent list, so lights replay in canvas order', () => {
-    // The opaque list sorts nearest-first, reversing canvas order — and MIX is
-    // the one mode whose result depends on the order lights are applied.
+    // The opaque list sorts nearest-first, reversing canvas order, and MIX depends on light order.
     expect(material(Light2DBlendMode.MIX).transparent).toBe(true);
   });
 
@@ -132,19 +128,16 @@ describe('createLightQuadMaterial', () => {
 });
 
 /**
- * The filtered branch. Expected values are Godot's:
- *  - `rasterizer_canvas_gles3.cpp:182` for the tap step,
- *  - `canvas.glsl:469-493` for the two kernel widths,
- *  - `canvas.glsl:500-502` for the `mix`, whose expansion over the accumulator's
- *    own `src×srcAlpha` blend is the (1−s)² MEASURED on Godot 4.6.3
- *    (167/129/100/80/67/63 of 255 over a 0.25 surface, PCF5 at smooth 8).
+ * The filtered branch, against `rasterizer_canvas_gles3.cpp:182` (tap step), `canvas.glsl:469-493`
+ * (kernel widths) and `canvas.glsl:500-502` (the `mix`). Over the accumulator's `src×srcAlpha` blend
+ * that is the (1−s)² Godot 4.6.3 shows: 167/129/100/80/67/63 of 255 over 0.25, PCF5 at smooth 8.
  */
 describe('shadowPixelSize', () => {
   it('is one atlas texel widened by shadow_filter_smooth', () => {
     expect(shadowPixelSize(0)).toBe(1 / 2048);
     expect(shadowPixelSize(8)).toBe(9 / 2048);
     expect(shadowPixelSize(5)).toBe(6 / 2048);
-    // The dungeon's 23 lights all author smooth 5, so this row is its penumbra.
+    // Smooth 5 is the dungeon lights' penumbra.
     expect(shadowPixelSize(5) * SHADOW_MAP_BINS).toBe(6);
   });
 });
@@ -204,7 +197,7 @@ describe('createLightQuadMaterial with a shadow filter', () => {
       arg!.trim()
     );
     expect(taps).toEqual([
-      // PCF13 first — the `#if` branch is written in Godot's own order.
+      // PCF13 first: the `#if` branch follows Godot's own order.
       '- uShadowPixelSize * 6.0',
       '- uShadowPixelSize * 5.0',
       '- uShadowPixelSize * 4.0',
@@ -228,8 +221,8 @@ describe('createLightQuadMaterial with a shadow filter', () => {
   });
 
   it('takes the SHADOW_TEST comparison from canvas.glsl:454, in that order', () => {
-    // `step(sd, dist)` — 1 where the stored occluder depth is at or in FRONT of
-    // the fragment. Swapping the arguments inverts every shadow.
+    // `step(sd, dist)`: 1 where the stored occluder depth is at or in front of the fragment.
+    // Swapping the arguments inverts every shadow.
     const shader = filteredMaterial()
       .fragmentShader;
     expect(shader).toContain('shadow += step(texture2D(uShadowMap, vec2(m_u, 0.5)).r, dist);');
@@ -238,8 +231,8 @@ describe('createLightQuadMaterial with a shadow filter', () => {
   it('offsets the taps along the map axis by (1 + smooth) / 2048', () => {
     const mat = filteredMaterial(sampling({ smooth: 8 }));
     expect(mat.uniforms.uShadowPixelSize!.value).toBe(9 / 2048);
-    // The tap coordinate moves in u only — the map's second axis is the atlas
-    // row, and a tap that wandered off it would sample another light's shadow.
+    // The tap moves in u only: the map's second axis is the atlas row, and a tap off it samples
+    // another light's shadow.
     expect(mat.fragmentShader).toContain('vec2(m_u, 0.5)');
   });
 
@@ -280,9 +273,8 @@ describe('createShadowColorQuadMaterial with a shadow filter', () => {
   const TINT = { r: 0.15, g: 0.35, b: 1, a: 0.5 };
 
   it('emits the fractional tint, reducing to the stencil path at s = 1', () => {
-    // The colour rides the sampling, so this quad and the cookie quad of the
-    // same light provably read one value — the options type forbids naming a
-    // second one here.
+    // The colour rides the sampling, so this quad and the light's cookie quad read one value. The
+    // options type forbids naming a second one here.
     const mat = createShadowColorQuadMaterial({
       cookie: new THREE.Texture(),
       blendMode: 0,

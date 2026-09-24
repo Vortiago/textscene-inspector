@@ -37,7 +37,7 @@ async function geometryOf(node: TscnNode) {
 }
 
 /**
- * Distinct RIM positions at a given height. Excludes the on-axis point, which is the
+ * Distinct rim positions at a given height. Excludes the on-axis point, which is the
  * cap's centre vertex and sits at the same height as the ring it fans to.
  */
 function ringAt(geometry: THREE.BufferGeometry, y: number): Set<string> {
@@ -53,9 +53,9 @@ function ringAt(geometry: THREE.BufferGeometry, y: number): Set<string> {
 }
 
 describe('<CSGCylinder3D>', () => {
-  // The geometry is Godot's brush construction, not three's CylinderGeometry, so there
-  // is no `.parameters` to read; these assert the shape itself. Depth coverage of the
-  // construction lives in cylinderGeometry.test.ts.
+  // The geometry is Godot's brush construction, not three's CylinderGeometry, so there is no
+  // `.parameters` to read, and these assert the shape. cylinderGeometry.test.ts covers the
+  // construction in depth.
   it('builds a cylinder of the requested radius, height and side count', async () => {
     const geom = await geometryOf(makeNode({ radius: 0.25, height: 0.8, sides: 8 }));
     geom.computeBoundingBox();
@@ -87,9 +87,8 @@ describe('<CSGCylinder3D>', () => {
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const mat = mesh.material as THREE.MeshStandardMaterial;
-    // sRGB→linear conversion at parse time means the channel is darker than
-    // the raw 0.4 but still non-zero and below the input — proves the
-    // material scalars were applied (not the default 0xcccccc grey).
+    // sRGB→linear conversion at parse time makes the channel darker than the raw 0.4 but still
+    // non-zero, which proves the material scalars applied, not the default 0xcccccc grey.
     expect(mat.color.r).toBeGreaterThan(0);
     expect(mat.color.r).toBeLessThan(0.4);
     expect(mat.color.r).toBeGreaterThan(mat.color.b); // reddish-brown, r > b

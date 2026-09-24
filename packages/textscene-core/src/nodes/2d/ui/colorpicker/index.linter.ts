@@ -1,5 +1,5 @@
 /**
- * colorpicker linter registration - imports linter components to trigger self-registration.
+ * ColorPicker linter registration: importing the validators registers them.
  */
 
 import './linterParser.js';

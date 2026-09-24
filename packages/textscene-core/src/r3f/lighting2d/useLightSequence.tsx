@@ -1,24 +1,8 @@
 /**
- * `useLightSequence` — this light's slot in the canvas light list.
- *
- * The rationale for using tree order rather than the registration ordinal is in
- * `lightSequence.ts`. This is the React half: the LIVE tree (which composes
- * instanced sub-scenes into one path space, ADR-0013) is walked ONCE for the
- * canvas, and each light looks itself up by the path every dispatched node
- * already carries.
- *
- * The walk belongs to the PASS, not to the light. The numbering is a property
- * of the canvas's light list — which light comes second says nothing about that
- * light on its own — and deriving it per light meant one whole-tree walk and
- * four resource-bus subscriptions for each, every one producing the identical
- * map. It is also where the rule will have to change next: Godot keeps a light
- * list per CANVAS, so a light inside a CanvasLayer belongs to a different list,
- * and that is a fact about the pass rather than about any node.
- *
- * Falls back to the ordinal when the path is not in the map — a light mounted
- * outside a scene hierarchy (bare test scaffolding), or the frame before a
- * sub-scene carrying it has loaded. That is exactly the previous behaviour, so
- * the fallback degrades to "as good as before" rather than to zero.
+ * `useLightSequence`: this light's slot in the canvas light list, in tree order
+ * (`lightSequence.ts` says why). The live tree is walked once per canvas, not per
+ * light, since the numbering belongs to the list. Godot keeps one list per
+ * canvas, so a light inside a CanvasLayer belongs to another list.
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
@@ -56,6 +40,8 @@ export function useLightSequence(ordinal: number): number {
   const sequence = useContext(CanvasLightSequenceContext);
   const path = useNodePath();
 
+  // A light outside a scene hierarchy, or in a sub-scene not yet loaded, falls
+  // back to its ordinal.
   if (!path) return ordinal;
   return sequence.get(path) ?? ordinal;
 }

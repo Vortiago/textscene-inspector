@@ -1,9 +1,7 @@
 /**
- * The three populations, and the two things a sweep author gets wrong.
- *
- * Driven over SCRATCH registries wherever the claim is about the walk itself,
- * so a case cannot pass because the live registry happens to hold the right
- * shape — and over the live one only where the claim is about the live one.
+ * The three populations, and the two things a sweep author gets wrong. A claim
+ * about the walk runs over a scratch registry, so the live registry's shape
+ * cannot pass it. Only a claim about the live registry runs over it.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -25,7 +23,7 @@ describe('registeredTypes', () => {
   it('separates the two scopes, neither of which contains the other', () => {
     const registry = new ValidatorRegistry();
     registry.registerAll('Declares', { a: leaf() });
-    registry.registerAll('Empty', {}); // legal and deliberate — CheckButton does this
+    registry.registerAll('Empty', {}); // legal and deliberate: CheckButton does this
     registry.registerUnavailable('RemovesOnly', {
       gone: { reason: 'the base takes it away', cite: 'box_container.cpp:1' },
     });
@@ -56,9 +54,8 @@ describe('registeredKeys', () => {
 
 describe('everyValidator', () => {
   it('descends a dispatcher that `keep` itself rejects', () => {
-    // The rule that was a comment inside one function: `keep` decides what is
-    // REPORTED, never what is descended. Excusing a validator must not excuse
-    // the subtree behind it.
+    // `keep` decides what is reported, never what is descended. Excusing a
+    // validator must not excuse the subtree behind it.
     const kept = leaf();
     const root = dispatcher([kept]);
     const found = everyValidator((v) => v !== root, {
@@ -108,14 +105,14 @@ describe('everyValidator', () => {
   });
 
   it('reports both removed keys when one type removes two for the same reason', () => {
-    // `unavailableValidator` memoises on `nodeType\0reason\0cite` and NOT on the
-    // key, so these two ARE one function. Identity dedupe would drop the second
-    // label and the guard would never ask about it.
+    // `unavailableValidator` memoises on `nodeType\0reason\0cite`, not on the
+    // key, so these two are one function. Identity dedupe would drop the second
+    // label.
     const registry = new ValidatorRegistry();
     const reason = { reason: 'the base takes it away', cite: 'box_container.cpp:1' };
     registry.registerUnavailable('Twins', { first: reason, second: { ...reason } });
 
-    // The memoisation, stated: same reason and cite, so literally one function.
+    // Same reason and cite, so one function.
     expect(registry.declarationFor('Twins', 'first')).toBe(
       registry.declarationFor('Twins', 'second')
     );
@@ -126,9 +123,9 @@ describe('everyValidator', () => {
   });
 
   it('reports a root whose validator was already reached as a leaf, in either order', () => {
-    // One leaf function registered twice — behind `<group>/*` as a dispatcher
-    // leaf and under `<group>/<leaf>` as an exact key — is two registrations,
-    // so both get a depth-0 subject. Only the walk INTO leaves dedupes.
+    // One leaf function registered behind `<group>/*` and under `<group>/<leaf>`
+    // is two registrations, so both get a depth-0 subject. Only the walk into
+    // leaves dedupes.
     const shared = leaf();
     const group = {
       label: 'Type.group/*',
@@ -184,18 +181,16 @@ describe('everyValidator', () => {
 
 describe('the wall itself, pinned at the type level', () => {
   it('hands back nothing to introspect from a lookup', () => {
-    // The load-bearing line of the whole design, and the one nothing else would
-    // notice losing: widen `findValidator` back to `PropertyValidator` in a
-    // convenience edit and the roots-only population compiles again, silently,
-    // with every call site still green. `@ts-expect-error` reds when the error
-    // it covers STOPS happening, so the reversion fails this test instead.
+    // Widening `findValidator` to `PropertyValidator` compiles the roots-only
+    // population again with every call site green. `@ts-expect-error` fails
+    // when the error it covers stops happening, so this test catches it.
     const validator = validatorRegistry.findValidator('Node2D', 'position');
     // @ts-expect-error a registry lookup is a ValidatorFn: it carries no tags.
     void validator?.accepts;
-    // @ts-expect-error same, for the tag the recurring defect actually filtered on.
+    // @ts-expect-error same, for the tag an int sweep filters on.
     void validator?.intSlot;
 
-    // The tags are reachable — by asking for the DECLARATION, which says so.
+    // The tags are reachable through the declaration.
     expect(validatorRegistry.declarationFor('Node2D', 'position')?.accepts).toBeDefined();
   });
 });

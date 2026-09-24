@@ -1,4 +1,4 @@
-/** LineEdit parser — Control base + the text/placeholder/echo properties. */
+/** Parses a LineEdit: the Control base plus the text, placeholder and echo properties. */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalFloat, parseOptionalInt } from '../../../../parser/valueParsers';
@@ -31,8 +31,7 @@ export function parseLineEdit(
     caretForceDisplayed: parseOptionalBool(properties.caret_force_displayed),
     drawControlChars: parseOptionalBool(properties.draw_control_chars),
   };
-  // `right_icon` stays a raw resource ref — the painter resolves it via the
-  // node's own scope (do not unquote).
+  // `right_icon` stays a raw resource ref, not unquoted: the painter resolves it in the node's own scope.
   if (properties.right_icon !== undefined) result.rightIcon = properties.right_icon;
   return result;
 }

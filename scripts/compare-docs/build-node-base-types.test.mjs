@@ -1,12 +1,8 @@
 /**
- * The derived base-type table, and the guard that the committed artifact is
- * current.
- *
- * `nodeBaseTypes.generated.ts` is checked in because CI has no Godot, so
- * nothing regenerates it there. That makes it exactly the kind of file that
- * rots: the catalog gains a node, nobody re-runs the generator, and the new
- * type's chain is missing while every test still passes. The last case below
- * closes that by re-deriving from the same committed catalog and comparing.
+ * The derived base-type table, and the guard that the committed artifact is current.
+ * `nodeBaseTypes.generated.ts` is checked in because CI has no Godot to regenerate it, so a
+ * catalog that gains a node without a re-run leaves its chain missing while every other test
+ * passes. The committed-output cases re-derive from the same catalog and compare.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -41,9 +37,8 @@ describe('deriveBaseTypes', () => {
   });
 
   it('refuses a node whose chain is absent, rather than emitting no base for it', () => {
-    // The silence the scaffold's catalog check cannot reach: the name IS in the
-    // catalog, so every spelling check passes, while the type lands in
-    // NODE_BASE_TYPES with no base and inherits not one validator.
+    // The silence the scaffold's catalog check cannot reach: the name is in the catalog, so every
+    // spelling check passes, while the type lands in NODE_BASE_TYPES with no base and no validator.
     expect(() => deriveBaseTypes([{ name: 'Orphan' }])).toThrow(/Orphan has no chain/);
     expect(() => deriveBaseTypes([{ name: 'Orphan', chain: [] }])).toThrow(/Orphan has no chain/);
   });
@@ -53,10 +48,8 @@ describe('deriveBaseTypes', () => {
   });
 
   it('refuses a table a base-walk could not leave', () => {
-    // Two chains can agree on every hop and still close a loop between them.
-    // Every consumer bounds its own walk, so the cycle would not hang anything
-    // — it would silently truncate an ancestry, which is the failure this
-    // whole table exists to prevent.
+    // Two chains can agree on every hop and still close a loop. Every consumer bounds its own
+    // walk, so the cycle hangs nothing but truncates an ancestry, the failure this table prevents.
     expect(() =>
       deriveBaseTypes([
         { name: 'X', chain: ['A', 'B'] },
@@ -91,9 +84,8 @@ describe('deriveBaseTypes', () => {
   });
 
   it('the gallery hand-writes no resource chain the capture disagrees with', () => {
-    // RESOURCE_CLASSES predates the capture and spells its ancestry by hand.
-    // The capture can now answer, so the two are compared rather than one of
-    // them being trusted.
+    // RESOURCE_CLASSES spells its ancestry by hand, so it is compared with the capture rather
+    // than either being trusted.
     const bases = JSON.parse(readFileSync(RESOURCE_BASES, 'utf8'));
     // `seen` so a cyclic capture fails this assertion instead of hanging the run.
     const derived = (name) => {

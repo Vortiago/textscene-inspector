@@ -1,4 +1,4 @@
-/** Shared validator utilities for TSCN linting */
+/** The shared validator barrel for `.tscn` linting. */
 
 export * from './commonValidators.js';
 export * from './vectorValidators.js';

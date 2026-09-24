@@ -1,6 +1,5 @@
 /**
- * Tests for the RetargetModifier3D child-skeleton rule
- * (`retargetmodifier3d-no-child-skeleton`).
+ * Tests for the RetargetModifier3D child-skeleton rule (`retargetmodifier3d-no-child-skeleton`).
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

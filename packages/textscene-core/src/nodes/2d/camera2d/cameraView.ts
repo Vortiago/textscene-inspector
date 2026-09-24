@@ -1,15 +1,8 @@
 /**
- * What a Camera2D frames — pure math from the camera's parsed surface + its
- * world position to {view center (Godot canvas px), magnification}. Mirrors
- * Godot's anchoring: DRAG_CENTER (default) centers the view on the camera;
- * FIXED_TOP_LEFT puts the camera at the view's top-left corner, so the
- * center sits half a view further (view size = viewport / zoom). Consumed by
- * the Cameras panel to frame the 2D stage ("view through" a 2D camera).
- *
- * Order matters and matches `camera_2d.cpp::get_camera_transform()`: the view
- * rect is clamped into the scroll limits FIRST and `offset` is added AFTER —
- * which is why the class reference says "the offsetted camera can go past the
- * limits".
+ * What a Camera2D frames, after `camera_2d.cpp::get_camera_transform()`: pure math
+ * from its parsed properties and world position to the view centre in Godot canvas
+ * pixels and the magnification. DRAG_CENTER centres the view on the camera, and
+ * FIXED_TOP_LEFT puts the camera at its corner.
  */
 
 import { isZeroApprox } from '../../../godot/index.js';
@@ -19,28 +12,23 @@ export interface Camera2DView {
   /** View center in Godot canvas pixels. */
   center: { x: number; y: number };
   /**
-   * The framed extent in Godot canvas pixels, PER AXIS.
-   *
-   * `zoom_scale` is `Vector2(1, 1) / zoom` and the rect is `screen_size *
-   * zoom_scale` (camera_2d.cpp:107, :163), so a non-uniform zoom frames a
-   * different width and height. Returned rather than left to each consumer to
-   * re-derive: dividing the viewport by a single magnification is exactly the
-   * mistake this replaces.
+   * The framed extent in Godot canvas pixels, per axis: `zoom_scale` is
+   * `Vector2(1, 1) / zoom` and the rect is `screen_size * zoom_scale`
+   * (camera_2d.cpp:107, :163). A consumer that divides by one magnification is wrong.
    */
   size: { x: number; y: number };
   /**
-   * Magnification on the X axis, for a consumer that can only hold one — the
-   * "look through this camera" control frames an orbit camera and has no second
-   * axis to give. Anything framing a RECT wants {@link Camera2DView.size}.
+   * Magnification on the X axis, for a consumer that holds one, such as the "look
+   * through this camera" control. Anything framing a rect wants
+   * {@link Camera2DView.size}.
    */
   zoom: number;
 }
 
 /**
- * Everything `camera2DView` needs, and exactly what `<Camera2D>` publishes on
- * `userData.camera2d` — the parsed framing surface, with the node's own
- * position deliberately absent because a consumer resolves that from wherever
- * it holds the camera (the live tree, or an Object3D's world matrix).
+ * Everything `camera2DView` needs, and what `<Camera2D>` publishes on
+ * `userData.camera2d`. The position is absent: a consumer reads it from where it
+ * holds the camera, the live tree or an Object3D's world matrix.
  */
 export type Camera2DFraming = Pick<
   Camera2DProperties,
@@ -68,20 +56,18 @@ export function camera2DView(
   worldPosition: { x: number; y: number },
   viewportSize: { x: number; y: number }
 ): Camera2DView {
-  // `set_zoom` refuses the WHOLE write when either component is zero-approx
-  // (`ERR_FAIL_COND_MSG(Math::is_zero_approx(p_zoom.x) ||
-  // Math::is_zero_approx(p_zoom.y), …)`, camera_2d.cpp:104), so the default
-  // (1, 1) stays on both axes — `Vector2(0, 2)` frames at (1, 1), not (1, 2).
-  // The slice's own validator reads it the same way (linterParser.ts:45).
-  // Framing is then per axis: `zoom_scale = Vector2(1, 1) / zoom` and the rect
-  // is `screen_size * zoom_scale` (camera_2d.cpp:107, :163).
+  // `set_zoom` refuses the whole write when either component is zero-approx
+  // (camera_2d.cpp:104), so (1, 1) stays on both axes: `Vector2(0, 2)` frames at
+  // (1, 1), as the validator reads it. The rect is `screen_size * zoom_scale`, per
+  // axis (camera_2d.cpp:107, :163).
   const refused = isZeroApprox(props.zoom.x) || isZeroApprox(props.zoom.y);
   const zoom = refused ? 1 : props.zoom.x;
   const zoomY = refused ? 1 : props.zoom.y;
   const viewWidth = viewportSize.x / zoom;
   const viewHeight = viewportSize.y / zoomY;
 
-  // Godot clamps the view RECT, so work in top-left space and convert back.
+  // Godot clamps the view rect before it adds `offset`, so work in top-left space
+  // and convert back. The offset camera can go past the limits.
   let left = worldPosition.x;
   let top = worldPosition.y;
   if (props.anchor_mode !== Camera2DAnchorMode.FIXED_TOP_LEFT) {
@@ -105,11 +91,8 @@ export function camera2DView(
 }
 
 /**
- * One axis of Godot's limit clamp, in the engine's own branch order.
- *
- * The first branch is the one that is easy to miss: when the view is WIDER than
- * the span between the limits, Godot centres it in the span rather than pinning
- * it to either edge.
+ * One axis of Godot's limit clamp, in the engine's branch order. A view wider than
+ * the span between the limits centres in the span, pinned to neither edge.
  */
 function clampToLimits(position: number, extent: number, near: number, far: number): number {
   if (near > far - extent) return (near + far - extent) / 2;

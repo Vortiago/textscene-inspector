@@ -1,25 +1,8 @@
 /**
- * Guards the boundary between the Godot engine source and this repository.
- *
- * Linter validators are measured from the engine source rather than guessed — a
- * `PROPERTY_HINT_RANGE` bound exists nowhere else — so a local checkout of
- * godot at the matching tag is a normal part of authoring a node slice
- * (REFERENCES.md says how to get one). The knowledge is what matters; the files
- * are not. A bound is baked in as a literal and the governing source line is
- * reproduced as a comment beside it.
- *
- * The failure this prevents: someone finds it convenient to read
- * `doc/classes/<Type>.xml` at test time to enumerate properties, or points a
- * generator at the checkout. That silently makes a multi-gigabyte external
- * clone a build requirement — every contributor and CI runner without it breaks,
- * and the repo becomes pinned to one engine version by accident rather than by
- * decision. Deleting the checkout must leave `pnpm validate` unchanged.
- *
- * Citing a source location in a comment — `scene/3d/camera_3d.cpp:682`, or the
- * established `doc/classes/Range.xml` shorthand for where a default came from —
- * is the encouraged practice, not a violation. The checkout lives outside the
- * repo, so anything actually reaching it has to name it or read it out of the
- * environment; those are the two patterns below.
+ * Keeps the local Godot checkout (REFERENCES.md) a reading aid: a bound is a literal with its
+ * source line cited beside it, never read from `doc/classes/<Type>.xml` at test time, since that
+ * makes a multi-gigabyte clone a build requirement. Deleting the checkout leaves `pnpm validate`
+ * unchanged. A cite (`scene/3d/camera_3d.cpp:682`, `doc/classes/Range.xml`) is not a violation.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -31,17 +14,10 @@ import { CHECKOUT_CONTROLS, ENV_CONTROLS } from './godot-source-decoupling.contr
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 
 /**
- * Naming the checkout at all implies resolving it. Prose in REFERENCES.md is the
- * one place that must, since it tells a human how to create it.
- *
- * Four spellings: a versioned tag directory, the `repos/godot` clone location,
- * and a `godot` directory followed by one of the engine's top-level
- * directories — as a slash path or as `join()` segments.
- *
- * URLs are excluded rather than allowlisted: `godotLinks.mjs` builds
- * `https://api.github.com/repos/godotengine/godot/...` to resolve documentation links,
- * which is a network fetch of a public API and the opposite of a local-path
- * dependency. A URL can never be the checkout.
+ * A name for the checkout implies resolving it, and only REFERENCES.md, which tells a human how
+ * to create it, may name it. Four spellings: a versioned tag directory, the `repos/godot` clone,
+ * and a `godot` directory before an engine top-level directory, as a path or as `join()` segments.
+ * A URL, such as the GitHub API fetch in `godotLinks.mjs`, can never be the checkout.
  */
 const ENGINE_DIRS = 'scene|core|doc|modules|servers|main|platform|editor';
 const CHECKOUT_RE = new RegExp(
@@ -56,14 +32,10 @@ const URL_RE = /https?:\/\//;
 const CHECKOUT_ALLOWED = new Set(['REFERENCES.md', 'scripts/godot-source-decoupling.controls.mjs']);
 
 /**
- * The other way in is the environment. A citation cannot come from `process.env`,
- * so any `GODOT_*` variable READ exists to locate the checkout at run time,
- * whatever its suffix. `GODOT_BIN` alone is exempt: a path to the godot binary
- * is a tool. Anchored on the read — `env.X`, `env['X']`, shell `$X` — because
- * the bare name also spells this repo's own constants (`GODOT_PI`).
- *
- * The shell form is not read in script files: there `${GODOT_X}` is a template
- * literal interpolating one of those constants.
+ * A `GODOT_*` read from the environment can only locate the checkout, except `GODOT_BIN`, a path
+ * to the binary. The pattern anchors on the read (`env.X`, `env['X']`, shell `$X`), since the bare
+ * name also spells this repo's constants (`GODOT_PI`). In a script file `${GODOT_X}` is a template
+ * literal, so the shell form is not checked there.
  */
 const ENV_RE = /\benv(?:\.|\[['"])GODOT_(?!BIN\b)[A-Z_]+\b/;
 const SHELL_ENV_RE = /\$\{?GODOT_(?!BIN\b)[A-Z_]+\b/;
@@ -95,7 +67,7 @@ const SKIP_EXT = new Set([
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
-/** Every tracked file — the guard is about the repo as shipped, not the worktree. */
+/** Every tracked file: the guard is about the repo as shipped, not the worktree. */
 function trackedFiles() {
   return execFileSync('git', ['ls-files', '-z'], { cwd: REPO_ROOT, encoding: 'utf8' })
     .split('\0')
@@ -108,15 +80,14 @@ function scannableFiles() {
     try {
       return statSync(join(REPO_ROOT, rel)).size <= MAX_BYTES;
     } catch {
-      return false; // deleted-but-tracked mid-rebase
+      return false; // A tracked file can be missing mid-rebase.
     }
   });
 }
 
 /**
- * One read of the repo, shared by every assertion below. Walking and reading
- * the ~5,600 tracked files per `it` costs about half a second of pure duplicate
- * work; `linter/reactFree.test.ts` hoists its own sweep for the same reason.
+ * One read of the repo, shared by every assertion below, since a read per `it` costs about half a
+ * second each. `linter/reactFree.test.ts` hoists its own sweep for the same reason.
  */
 const SCANNED = scannableFiles().map((file) => ({
   file,
@@ -135,7 +106,7 @@ function offenders(re, allowed, scanned = SCANNED) {
   return hits;
 }
 
-/** The two sweeps — pattern, allowlist and post-filter together. */
+/** The two sweeps: pattern, allowlist and post-filter together. */
 const checkoutHits = (allowed, scanned) =>
   offenders(CHECKOUT_RE, allowed, scanned).filter((h) => !URL_RE.test(h.text));
 
@@ -146,10 +117,8 @@ const envHits = (allowed, scanned) => {
 };
 
 /**
- * Both sweeps with the allowlist open, read once for every assertion below.
- * `offenders` consults the allowlist only as `has(file)`, so an allowlisted
- * sweep is exactly these hits minus the files the allowlist names, and a second
- * pass over the repo to learn that costs another 40ms per assertion.
+ * Both sweeps with an empty allowlist, run once. `offenders` reads the allowlist only as
+ * `has(file)`, so an allowlisted sweep is these hits minus the named files, without a second pass.
  */
 const ALL_CHECKOUT_HITS = checkoutHits(new Set());
 const ALL_ENV_HITS = envHits(new Set());
@@ -179,10 +148,8 @@ describe('Godot source stays a reading aid, not a dependency', () => {
   });
 
   it('flags the allowlisted REFERENCES.md mention once the allowlist is dropped', () => {
-    // Every assertion above is an emptiness check, so a pattern that matches
-    // nothing passes all of them and the guard is disarmed in silence. The
-    // clone recipe in REFERENCES.md is a real offender kept on purpose, so run
-    // the whole sweep with an empty allowlist and require it back.
+    // A pattern that matches nothing passes every emptiness check above. The clone recipe in
+    // REFERENCES.md is a real offender kept on purpose, so the open sweep must report it.
     expect(CHECKOUT_ALLOWED.has('REFERENCES.md')).toBe(true);
     expect(hitFiles(ALL_CHECKOUT_HITS)).toContain('REFERENCES.md');
   });
@@ -206,8 +173,7 @@ describe('Godot source stays a reading aid, not a dependency', () => {
   });
 
   it('holds no allowlist entry that exempts nothing', () => {
-    // A dead entry waves the next real hit on that path straight through, and
-    // every other assertion here reads the same zero with or without it.
+    // A dead entry lets the next real hit on that path through, and no other assertion sees it.
     expect(deadEntries(CHECKOUT_ALLOWED, ALL_CHECKOUT_HITS)).toEqual([]);
     expect(deadEntries(ENV_ALLOWED, ALL_ENV_HITS)).toEqual([]);
   });

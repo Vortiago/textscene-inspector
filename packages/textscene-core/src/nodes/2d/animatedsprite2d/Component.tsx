@@ -1,21 +1,8 @@
 /**
- * <AnimatedSprite2D> — draws a SpriteFrames animation as a textured quad.
- *
- * Like Godot's editor (and our AnimationPlayer / GLB drivers, ADR-0012), it is a
- * selection-driven transport driver, NOT an autonomous loop: by default it shows
- * the authored `frame` statically. Select the node and the Animation dock lists
- * its SpriteFrames clips; play/pause/scrub then advances the displayed frame from
- * the transport playhead (`frameAtTime` maps time → frame — no THREE mixer). It
- * draws the current frame like a Sprite2D (centered/offset/flip, inherited
- * modulate via CanvasItem2D). The SpriteFrames may be embedded (SubResource) or
- * an external `.tres` (ExtResource); a frame is an ordinary Texture2D reference
- * resolved against whichever of those two homes the SpriteFrames came from —
- * `useSpriteFrames` for the pools, `useTexture2D` for the texture, so a sheet
- * cell (AtlasTexture) arrives here already windowed, at the cell's own size.
- *
- * The per-frame transport-actuation decision is delegated to the pure
- * `stepPlayback` reducer; this component is a thin adapter that actuates the
- * returned command on its local time accumulator and `frameAtTime` lookup.
+ * <AnimatedSprite2D> draws a SpriteFrames animation as a textured quad, like a
+ * Sprite2D. It is a selection-driven transport driver (ADR-0012), not an autonomous
+ * loop: it shows the authored `frame` until the node is selected and the transport
+ * plays. The pure `stepPlayback` reducer decides each frame's transport action.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -43,9 +30,9 @@ import type { AnimatedSprite2DProperties } from './types';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 
 /**
- * A frame is the whole of whatever texture it names — a sheet cell arrives as
- * its own texture, cropped by the resolver, so nothing is windowed here.
- * Module-scope so the memos below see one stable identity.
+ * A frame is the whole of the texture it names: `useTexture2D` crops a sheet cell
+ * (AtlasTexture) to its own texture, so nothing is windowed here. Module scope
+ * gives the memos below one stable identity.
  */
 const WHOLE_FRAME: SpriteFrameProps = {
   region_enabled: false,
@@ -59,9 +46,8 @@ const NO_INTERNAL_RESOURCES: readonly TscnInternalResource[] = [];
 export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as AnimatedSprite2DProperties;
 
-  // All animations the SpriteFrames declares — the transport lets the user pick
-  // any clip, so we resolve the whole map (not just the authored one). The
-  // SpriteFrames itself may be embedded (SubResource) or an external `.tres`.
+  // Every animation the SpriteFrames declares, not only the authored one: the
+  // transport lets the user pick any clip.
   const { spriteFrames: resolved, status: spriteFramesStatus } = useSpriteFrames(props.sprite_frames);
   const spriteFrames = resolved?.animations ?? null;
   const clipNames = useMemo(() => (spriteFrames ? [...spriteFrames.keys()] : []), [spriteFrames]);
@@ -73,8 +59,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     [spriteFrames]
   );
 
-  // Selection-driven (ADR-0012): this sprite owns the transport only while it is
-  // the node selected in the tree.
+  // This sprite owns the transport only while it is the node selected in the tree.
   const transport = useAnimationTransport();
   const nodePath = useNodePath();
   const selectedNodePath = useOptionalSelection()?.selectedNodePath ?? null;
@@ -94,13 +79,12 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const currentAnim = pickAnimation(spriteFrames, isActive ? transport.selectedClip : props.animation);
 
   // Playback advances `playbackFrame` from the transport playhead while
-  // playing/paused; when stopped the authored `props.frame` is shown directly.
+  // playing/paused. When stopped the authored `props.frame` is shown directly.
   const [playbackFrame, setPlaybackFrame] = useState(0);
   const { time: transportTime, reportTime } = transport;
-  // The local time accumulator: unlike the mixer drivers, AnimatedSprite2D has
-  // no THREE action to read the live playhead from, so it maintains its own
-  // clock. Re-seeded from the transport on fresh play entry (resume) and clip
-  // switch — the `continuing` logic folds into the reducer's `resume` flag.
+  // AnimatedSprite2D has no THREE action to read the live playhead from, so it
+  // keeps its own clock. The reducer's `resume` flag re-seeds it from the transport
+  // on a fresh play entry and on a clip switch.
   const prevStateRef = useRef(effectiveState);
   const prevAnimRef = useRef<string | null>(null);
   const prevTimeRef = useRef(0);
@@ -119,8 +103,8 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
       clipChanged: currentAnim.name !== prevAnimRef.current,
     });
 
-    // Pause-edge flush: the adapter guards the null (liveTime is always
-    // a number here, but the contract is clear).
+    // Pause-edge flush. `liveTime` is always a number here, though
+    // `stepPlayback` also accepts null.
     if (step.flushTime) {
       reportTime(lastPlayingTimeRef.current, { immediate: true });
     }
@@ -128,20 +112,18 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     switch (step.command) {
       case 'ensure-playing': {
         const dur = clipDuration(currentAnim);
-        // Re-seed the local clock on fresh (re)entry into playing OR clip switch.
-        // `resume` from the reducer folds in the former `continuing` logic.
+        // Re-seed the local clock on a fresh entry into playing or a clip switch.
         const base = step.resume ? transportTime : lastPlayingTimeRef.current;
-        // The preview Speed multiplier and Loop override apply to this driver
-        // exactly like the mixer drivers (loopsUnderOverride mirrors
-        // applyLoopOverride). Wrap a repeating clip past its end; hold a
-        // non-repeating one at its last frame.
+        // The preview Speed multiplier and Loop override apply as in the mixer
+        // drivers (loopsUnderOverride mirrors applyLoopOverride). A repeating clip
+        // wraps past its end, and a non-repeating one holds its last frame.
         const s = delta * transport.playbackSpeed;
         const loops = loopsUnderOverride(transport.loopOverride, currentAnim.loop);
         const t = dur > 0 && loops ? (base + s) % dur : Math.min(base + s, dur);
         reportTime(t);
         lastPlayingTimeRef.current = t;
-        // frameAtTime consults the anim's OWN loop flag (wrap vs clamp at the
-        // end), so hand it the override-effective flag, not the authored one.
+        // frameAtTime reads the animation's own loop flag, so it gets the
+        // override-effective flag, not the authored one.
         const effectiveAnim = loops === currentAnim.loop ? currentAnim : { ...currentAnim, loop: loops };
         const next = frameAtTime(effectiveAnim, t);
         setPlaybackFrame((prev) => (prev === next ? prev : next));
@@ -149,15 +131,15 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
       }
       case 'seek':
       case 'hold-paused': {
-        // Paused: sample the transport time either way — with no THREE action
-        // to hold, "hold" and "seek" collapse to the same frame lookup.
+        // Paused: with no THREE action to hold, "hold" and "seek" are the same
+        // frame lookup at the transport time.
         const next = frameAtTime(currentAnim, transportTime);
         setPlaybackFrame((prev) => (prev === next ? prev : next));
         break;
       }
       case 'stop-and-restore':
       case 'none': {
-        // stopped: the authored frame is shown below via props.frame — nothing to drive here.
+        // Stopped: the authored props.frame shows below, so nothing drives here.
         break;
       }
     }
@@ -173,20 +155,18 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const frame = frameCount > 0 ? Math.min(Math.max(rawFrame, 0), frameCount - 1) : 0;
   const frameRef = currentAnim?.frames[frame] ?? null;
 
-  // Resolve the current frame against the SpriteFrames' OWN resource pools (the
-  // scene's, or the .tres's — a frame's ids are scoped to its home).
+  // A frame's ids are scoped to its SpriteFrames' home, so the frame resolves
+  // against those pools: the scene's, or the .tres's.
   const { texture: frameTexture, missing: frameMissing } = useTexture2D(
     frameRef ?? undefined,
     resolved?.externalResources ?? NO_EXTERNAL_RESOURCES,
     resolved?.subResources ?? NO_INTERNAL_RESOURCES
   );
 
-  // composeFrameTexture clones per frame (sampler state is per consumer);
-  // dispose the prior clone on advance (and unmount) so playback doesn't leak
-  // one GPU texture per keyframe.
-  // NoColorSpace: the 2D canvas's hardware filter blends undecoded sRGB bytes
-  // (`canvas2DTextureDecode.ts`); the material below decodes the
-  // already-filtered sample via `useCanvasDecodeDefines`.
+  // composeFrameTexture clones per frame, as sampler state is per consumer. The
+  // prior clone is disposed on advance and unmount, so playback leaks no GPU texture.
+  // NoColorSpace: the 2D canvas's filter blends undecoded sRGB bytes
+  // (`canvas2DTextureDecode.ts`), and `useCanvasDecodeDefines` decodes the sample.
   const displayedTexture = useMemo(
     () => composeFrameTexture(frameTexture ?? undefined, WHOLE_FRAME, 'clamp', THREE.NoColorSpace),
     [frameTexture]
@@ -198,9 +178,8 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     [frameTexture]
   );
 
-  // While an external `.tres` SpriteFrames is still loading, render nothing
-  // rather than the missing-resource placeholder (matches Sprite2D's pending
-  // UX); the placeholder is for genuinely-absent/failed resources.
+  // A `.tres` SpriteFrames still loading renders nothing, as Sprite2D does. The
+  // placeholder is for an absent or failed resource.
   const showPlaceholder = spriteFramesStatus !== 'pending' && (!frameRef || frameMissing);
 
   const cgx = props.offset.x + (props.centered ? 0 : width / 2);
@@ -215,8 +194,8 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
         if (showPlaceholder) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
         if (!displayedTexture) return null;
 
-        // Constant while a clip plays — one frame's clone decodes exactly as the
-        // next one's — so this remounts on the map appearing, not per frame.
+        // Constant while a clip plays, since each frame's clone decodes alike, so
+        // this remounts when the map appears, not per frame.
         const program = materialProgramInputs({
           props: {
             map: displayedTexture,

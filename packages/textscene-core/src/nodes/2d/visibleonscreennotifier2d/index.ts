@@ -1,8 +1,7 @@
 /**
- * VisibleOnScreenNotifier2D registration — parser.
- *
- * Non-visual node: renders as a transform-only group (ADR-0008), reusing the
- * Node2D transform parse; the render component (index.r3f.ts) reuses Node2D.
+ * VisibleOnScreenNotifier2D registration: the parser. The node is non-visual, so it renders as a
+ * transform-only group (ADR-0008). It reuses the Node2D transform parse, and index.r3f.ts reuses
+ * the Node2D component.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

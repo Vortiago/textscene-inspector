@@ -1,14 +1,7 @@
 /**
- * ColorPicker strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`
- * (ColorPicker ships none: see comparison.md).
- *
- * Grow this into one case per property (happy, malformed, and any bound) and
- * quote the governing Godot source line beside every numeric bound.
+ * ColorPicker strict validators, asserted through `validatorRegistry` so a
+ * failure points at the validator and not at scene parsing. ColorPicker has
+ * no rules (comparison.md).
  */
 
 import { readFileSync } from 'node:fs';
@@ -47,8 +40,7 @@ describe('ColorPicker strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format.
     const accepted = validatorRegistry
       .getOwnKeys('ColorPicker')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -110,7 +102,7 @@ describe('ColorPicker strict validators', () => {
   describe('color_mode (enum 0-3, enforced)', () => {
     // color_picker.cpp:1996, PROPERTY_HINT_ENUM "RGB,HSV,LINEAR,OKHSL".
     // set_color_mode (color_picker.cpp:1242-1243) ERR_FAIL_INDEXes on
-    // MODE_MAX before assigning, so out-of-range is an ERROR, not a warning.
+    // MODE_MAX before assigning, so out-of-range is an error, not a warning.
     it('accepts 0 (MODE_RGB, the documented default)', () => {
       expect(check('color_mode', '0')).toBeNull();
     });
@@ -159,10 +151,8 @@ describe('ColorPicker strict validators', () => {
   describe('picker_shape (enum 0-6, enforced)', () => {
     // color_picker.cpp:1998, PROPERTY_HINT_ENUM "HSV Rectangle,HSV Rectangle
     // Wheel,VHS Circle,OKHSL Circle,OK HS Rectangle:5,OK HL Rectangle,None:4",
-    // which by VALUE covers 0-6 contiguously (SHAPE_HSV_RECTANGLE=0 through
-    // SHAPE_OK_HL_RECTANGLE=6, color_picker.h:113-122). set_picker_shape
-    // (color_picker.cpp:853-854) ERR_FAIL_INDEXes on SHAPE_MAX before
-    // assigning, so out-of-range is an ERROR.
+    // which by value covers 0-6 (color_picker.h:113-122). set_picker_shape
+    // (color_picker.cpp:853-854) ERR_FAIL_INDEXes on SHAPE_MAX, so out-of-range is an error.
     it('accepts 0 (SHAPE_HSV_RECTANGLE, the documented default)', () => {
       expect(check('picker_shape', '0')).toBeNull();
     });
@@ -296,8 +286,7 @@ describe('ColorPicker strict validators', () => {
     it('rejects `vertical`, which VBoxContainer fixes and ColorPicker inherits the removal of', () => {
       const validator = validatorRegistry.findValidator('ColorPicker', 'vertical');
       expect(validator).not.toBeNull();
-      // Both literals fail: the property cannot be written at all on this
-      // chain, so there is no "correct" value for it to accept.
+      // Both literals fail: no value of the property can be written on this chain.
       expect(validator!('vertical', 'true', 1)).not.toBeNull();
       expect(validator!('vertical', 'false', 1)).not.toBeNull();
     });
@@ -308,11 +297,8 @@ describe('ColorPicker strict validators', () => {
   });
 
   describe('the fixture, property by property', () => {
-    // The fixture is the deliverable's "zero errors and zero warnings" claim,
-    // made checkable without running the full `lint:tscn` pipeline (off limits
-    // to this slice, see AGENTS.md): every `key = value` line under the
-    // MyColorPicker node must resolve through the same `findValidator` walk
-    // this file already exercises, and return null.
+    // Every `key = value` line under the MyColorPicker node resolves through
+    // `findValidator` and returns null: the fixture lints clean without `lint:tscn`.
     const fixturePath = join(
       import.meta.dirname,
       '../../../../../../../scenes/fixtures/unit-color-picker.tscn'

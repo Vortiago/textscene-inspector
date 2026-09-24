@@ -9,9 +9,9 @@ renders_as: nothing of its own; children stay at their own free/anchored rects
 
 # Container
 
-Container is the base every layout container extends. It draws no chrome, and a bare
-Container — Godot's own `_notification` has no `NOTIFICATION_SORT_CHILDREN` arm for it —
-imposes no layout either, so its children lay out exactly as free Controls would.
+Container is the base every layout container extends. It draws no chrome. A bare
+Container also imposes no layout, because Godot's `_notification` has no
+`NOTIFICATION_SORT_CHILDREN` arm for it, so its children lay out as free Controls do.
 
 ## Linting
 
@@ -29,5 +29,5 @@ Strict parsing format-checks the inherited set (53 inherited from Control, 16 in
 <!-- lint:end -->
 
 Container registers no validators or rules of its own, so the strict and lenient parsers
-agree on every property. Whatever the registered base parser reads it reads without
+agree on every property. The registered base parser reads each property without
 substitution.

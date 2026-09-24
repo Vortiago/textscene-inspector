@@ -1,12 +1,7 @@
 /**
- * `LIGHT_INTENSITY_SCALE`, pinned to the physics rather than to its own value.
- *
- * Asserting `LIGHT_INTENSITY_SCALE === Math.PI` would be a restatement of the
- * source line and could never disagree with it. What follows instead encodes
- * each engine's diffuse equation — read from Godot's `light_storage.cpp` and
- * three's `common.glsl.js` / `lights_physical_pars_fragment.glsl.js` — and
- * checks that the constant makes them agree. A wrong constant fails these; so
- * does a right constant paired with a wrong understanding of either engine.
+ * `LIGHT_INTENSITY_SCALE` against each engine's diffuse equation, from Godot's `light_storage.cpp`
+ * and three's `common.glsl.js` / `lights_physical_pars_fragment.glsl.js`, not against its own
+ * value. A wrong constant fails, and so does a right one with a wrong reading of either engine.
  */
 import { describe, expect, it } from 'vitest';
 import { LIGHT_INTENSITY_SCALE } from './lightConstants';
@@ -26,15 +21,10 @@ function godotDiffuse(albedo: number, nDotL: number, energy: number): number {
 
 describe('LIGHT_INTENSITY_SCALE', () => {
   it('makes three reproduce Godot’s diffuse', () => {
-    // Both sides are linear in N·L and in energy, so one pair settles it —
-    // sweeping more would only restate this. `albedo` is Color(0.5, 0.5, 0.5)
-    // through sRGB → linear; it cancels, and is here to keep the equations
-    // readable as the physics they encode.
-    //
-    // The statement is that a Lambertian surface facing a white energy-1.0
-    // light renders exactly its own albedo, which
-    // scenes/fixtures/unit-light-transport-direct.tscn shows on screen: an
-    // unshaded patch of that albedo laid on the lit plane disappears into it.
+    // Both sides are linear in N·L and energy, so one pair settles it. `albedo` is Color(0.5, 0.5,
+    // 0.5) converted from sRGB to linear, and cancels. A Lambertian surface under a white
+    // energy-1.0 light renders its own albedo: in scenes/fixtures/unit-light-transport-direct.tscn
+    // an unshaded patch of that albedo disappears into the lit plane.
     const albedo = 0.2140;
     expect(threeDiffuse(albedo, 1, 1 * LIGHT_INTENSITY_SCALE)).toBeCloseTo(
       godotDiffuse(albedo, 1, 1),
@@ -44,8 +34,7 @@ describe('LIGHT_INTENSITY_SCALE', () => {
   });
 
   it('is what the Godot render of that fixture measures', () => {
-    // Godot 4.6.3 put the lit plane at 131/255 while ours sat at 106/255 with
-    // the old value of 2. These are the measured sRGB bytes, converted here.
+    // Measured sRGB bytes: Godot 4.6.3 puts the lit plane at 131/255, and a scale of 2 gives 106.
     const toLinear = (v: number) => Math.pow((v / 255 + 0.055) / 1.055, 2.4);
     const measuredRatio = toLinear(131) / toLinear(106);
     expect(LIGHT_INTENSITY_SCALE / 2).toBeCloseTo(measuredRatio, 2);

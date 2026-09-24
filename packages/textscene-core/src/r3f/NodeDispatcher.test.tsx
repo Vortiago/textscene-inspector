@@ -1,9 +1,6 @@
 /**
- * Tests for the NodeDispatcher recursive walker:
- *   - Routes registered types through the registered Component.
- *   - Falls back to GenericNodeFallback for unknown types.
- *   - Wraps each subtree in a NodePathProvider so descendants can read
- *     their own TSCN path.
+ * The NodeDispatcher walker: registered types reach their Component, unknown
+ * types the GenericNodeFallback, and each subtree gets a NodePathProvider.
  */
 import type React from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -65,10 +62,8 @@ describe('<NodeDispatcher>', () => {
       return <group name="probe" />;
     }
 
-    // Register a one-off node type for this test. The registry's
-    // duplicate-overwrite semantics are intentional (HMR-friendly), so
-    // we don't bother restoring afterwards — no other test references
-    // the 'Probe' type.
+    // Not restored afterwards: the registry overwrites a duplicate, and no other
+    // test uses the 'Probe' type.
     nodeComponentRegistry.register({ typeName: 'Probe', Component: PathProbe });
 
     const nodes: TscnNode[] = [
@@ -81,11 +76,9 @@ describe('<NodeDispatcher>', () => {
   });
 
   it('PERF (WI-213): attaches pointer handlers to exactly ONE delegated root, not one per node', async () => {
-    // Before event delegation, every node's wrapper group carried its own
-    // copy of the four pointer handlers — R3F treats every object with a
-    // registered handler as its own interactive raycast root, so a mesh at
-    // depth d was triangle-tested once per ancestor on every pointer move.
-    // `object.__r3f.eventCount` is R3F's own per-object handler count.
+    // R3F makes each object with a handler its own raycast root, so a handler per
+    // wrapper tests a mesh once per ancestor. `object.__r3f.eventCount` is R3F's
+    // per-object handler count.
     const nodes: TscnNode[] = [
       makeNode('Root', 'Node3D', [
         makeNode('Child', 'Node3D', [makeNode('Grandchild', 'Node3D')]),
@@ -121,11 +114,11 @@ describe('<NodeDispatcher> per-node error boundary (#216)', () => {
     ];
     const renderer = await renderWithProviders(<NodeDispatcher nodes={nodes} />);
 
-    // The good sibling still rendered — the crash didn't blank the tree.
+    // The good sibling still rendered: the crash did not blank the tree.
     const groups = renderer.scene.findAllByType('Group');
     expect(groups.some((g) => g.instance.name === 'GoodSibling')).toBe(true);
 
-    // The crashed node's wrapper shows a magenta placeholder (the SAME
+    // The crashed node's wrapper shows a magenta placeholder (the same
     // visual language as a missing resource) instead of vanishing outright.
     const meshes = renderer.scene.findAllByType('Mesh');
     const placeholder = meshes.find((m) => {
@@ -147,11 +140,8 @@ describe('<NodeDispatcher> per-node error boundary (#216)', () => {
   });
 
   it('positions the placeholder near a crashing CanvasItem (2D) node\'s authored position, not the 3D-transform origin', async () => {
-    // A CanvasItem-registered type's properties are Node2DProperties-shaped
-    // (position/rotation/scale), not Node3DProperties (a combined
-    // `transform`) — reading `.transform` off them is always undefined, so
-    // the FALLBACK must route through the 2D transform math (node2dGroupProps)
-    // instead of silently collapsing to the origin.
+    // A CanvasItem's properties have no `.transform`, so the fallback must take
+    // the 2D transform math (node2dGroupProps) or land at the origin.
     function Bomb2D(_: NodeComponentProps): never {
       throw new Error('2D node render exploded');
     }

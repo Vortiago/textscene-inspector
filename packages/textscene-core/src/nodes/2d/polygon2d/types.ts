@@ -1,4 +1,4 @@
-/** Polygon2D — a filled 2D polygon (extends Node2D). */
+/** The Polygon2D property shape: a filled 2D polygon on Node2D. */
 
 import type { Color, Node2DProperties, Vector2 } from '../../base/node2d/types';
 
@@ -19,7 +19,7 @@ export interface Polygon2DProperties extends Node2DProperties {
   polygons: number[][];
   /**
    * Trailing vertices of `polygon` that are UV/skinning helpers rather than
-   * outline points. Godot drops them ONLY when `polygons` is empty.
+   * outline points. Godot drops them when `polygons` is empty or invert is on.
    */
   internalVertexCount: number;
   /** Fill the grown bounding box with the polygon punched out (default false). */
@@ -29,7 +29,7 @@ export interface Polygon2DProperties extends Node2DProperties {
   /** `ExtResource("id")` / `SubResource("id")` texture reference. */
   texture?: string;
   /**
-   * Per-vertex texture coordinates in TEXEL space (+Y down), flat
+   * Per-vertex texture coordinates in texel space (+Y down), flat
    * `[u0, v0, u1, v1, …]`. Godot pairs these with `polygon` only when the two
    * hold the same number of vertices; otherwise the point coordinates stand in.
    */
@@ -41,7 +41,7 @@ export interface Polygon2DProperties extends Node2DProperties {
   vertexColors: Float32Array;
   /** Pixel offset folded into the UV transform (default 0,0). */
   textureOffset: Vector2;
-  /** UV scale, applied to the rotated coordinate AND to `textureOffset`. */
+  /** UV scale, applied to the rotated coordinate and to `textureOffset`. */
   textureScale: Vector2;
   /** UV rotation in radians, applied before the offset. */
   textureRotation: number;

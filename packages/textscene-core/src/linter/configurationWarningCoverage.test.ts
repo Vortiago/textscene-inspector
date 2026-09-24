@@ -1,24 +1,8 @@
 /**
- * Every configuration warning Godot raises is implemented as a rule, or declined.
- *
- * The census the guard reads is `configurationWarningCensus.ts`; its header
- * explains what a row is, how the table was derived, and why the decline
- * categories are typed. This file is only the checking.
- *
- * ## Reaching the leaves is the whole point
- *
- * Godot declares a warning on the class that OWNS the condition, which is often
- * an abstract base - `CollisionObject3D`, `Light3D`, `CSGShape3D`, `XRNode3D`.
- * The types that actually appear in a `.tscn` are its descendants. And
- * `RuleRegistry` applicability is **exact-match by design**
- * (`RuleRegistry.ts:getRulesForNodeType`), so a rule listing
- * `applicableNodeTypes: ['Light3D']` fires for a name no scene file contains and
- * for none of `DirectionalLight3D`/`OmniLight3D`/`SpotLight3D`.
- *
- * So an `implemented` row is not satisfied by the rule merely existing. It is
- * satisfied when the rule reaches EVERY concrete registered type that descends
- * from the declaring class. That is the check this guard exists for; the rest is
- * bookkeeping.
+ * Every configuration warning Godot raises is implemented as a rule, or declined (`configurationWarningCensus.ts`).
+ * Godot declares a warning on the class that owns the condition, often an abstract base such as `Light3D`, and
+ * `RuleRegistry.getRulesForNodeType` matches exactly. So an implemented row passes only when its rule reaches every
+ * concrete registered type descending from the declaring class, not when the rule merely exists.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -35,17 +19,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 /**
- * Every row still in the `unimplemented` arm, by declaring class and source
- * line. Named rather than counted: a count says nothing when one gap is fixed
- * and another added in the same edit, and cannot distinguish a gap that became
- * a rule from one quietly re-typed to a decline.
- *
- * The one that remains is close to permanent: Godot
- * decides `CSGShape3D`'s empty-or-non-manifold check from the combined boolean
- * brush (`csg_shape.cpp:981`, after `_get_brush()` folds the subtree at
- * `:453-511`), which no scene file describes. A narrower rule for a CSG leaf's
- * OWN degenerate geometry ships beside it, but that is a different condition
- * and is deliberately not credited to this row.
+ * Every row still `unimplemented`, by declaring class and line, named rather than counted. The remaining one is close
+ * to permanent: Godot decides `CSGShape3D`'s empty-or-non-manifold check from the combined brush (`csg_shape.cpp:981`,
+ * after `_get_brush()` folds the subtree at `:453-511`), which no scene file describes. The rule for a CSG leaf's own
+ * degenerate geometry is a different condition and is not credited to this row.
  */
 const UNIMPLEMENTED_ROWS: readonly string[] = ['CSGShape3D csg_shape.cpp:982'];
 
@@ -74,15 +51,9 @@ describe('Godot configuration-warning coverage', () => {
     expect(missing).toEqual([]);
   });
 
-  // A `get_configuration_warnings()` entry is advisory BY CONSTRUCTION: Godot
-  // shows it in the editor dock and loads the scene regardless, so ADR-0032
-  // puts every one of them at `warning` and none at `error`. That needs no
-  // per-row data — it follows from the row being in this table at all.
-  //
-  // Without this, a row could claim `implemented` while its rule reported at a
-  // tier the engine never justifies. PathFollow2D did exactly that, keeping
-  // `error` after the PathFollow3D sibling was corrected, and every existing
-  // check here passed: the rule existed, emitted the name and reached the type.
+  // A `get_configuration_warnings()` entry is advisory by construction: Godot shows it in the editor dock and loads the
+  // scene, so ADR-0032 puts every one at `warning`. Without this, a row could claim `implemented` while its rule
+  // reported at `error` and every other check here passed.
   it('every implemented row is reported at warning, never error', () => {
     const miscased: string[] = [];
     for (const [cls, rows] of Object.entries(WARNINGS)) {
@@ -165,10 +136,8 @@ describe('Godot configuration-warning coverage', () => {
   });
 
   it('names exactly the rows still outstanding, not merely how many', () => {
-    // The IDENTITIES, not a count. A bare integer cannot tell "a gap became a
-    // rule" from "a gap was quietly re-typed to a decline", and says nothing at
-    // all when one row is fixed while another is added in the same edit.
-    // Pinning the `at` values makes every one of those show up as a diff here.
+    // The identities, not a count: pinning the `at` values shows a gap that became a rule, a gap re-typed to a
+    // decline, and one row fixed while another is added, each as a diff here.
     const outstanding = Object.entries(WARNINGS)
       .flatMap(([cls, rows]) =>
         rows.filter((r) => 'unimplemented' in r.verdict).map((r) => `${cls} ${r.at}`)

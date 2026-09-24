@@ -1,36 +1,21 @@
 /**
- * Pure walk of a `FontResource` graph (`../../../../resources/fonts/font/` —
- * read-only from here, this module never edits that pipeline) down to the
- * one thing this engine's runtime font loader needs: real font bytes.
- *
- * Godot's three Font resource kinds recurse into each other (a `.tres`
- * wrapper's own `fallbacks`, a `FontVariation`'s `base_font`) before real
- * bytes are ever reached — the Font slice's `types.ts` has the full shape.
- * This walk mirrors that recursion exactly once, so `sceneFontLoader.ts`
- * (the DOM-touching orchestrator) and its tests never need to re-derive
- * "which face actually renders" from the raw resource tree themselves.
- *
- * `SystemFont` (`kind: 'system'`) always fails to resolve here — its
- * `font_names` are OS family names this previewer has no access to load
- * bytes for (the Font slice's `types.ts`). A `SystemFont` behind a
- * `fallbacks` list is skipped in favour of the next entry that DOES resolve,
- * exactly like a `FontFile` fallback with no bytes of its own is.
+ * Walks a `FontResource` graph down to the font bytes the runtime font loader needs. Godot's Font
+ * kinds recurse through `fallbacks` and `base_font`, and a `SystemFont` never resolves, since the
+ * previewer cannot load bytes for OS family names.
  */
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 
 export interface ResolvedFontBytes {
   /** Raw font bytes, ready for `new FontFace(name, bytes)`. */
   readonly bytes: ArrayBuffer;
-  /** The specific `FontFileResource` these bytes came from — a stable object identity `sceneFontLoader.ts` keys its load-cache on (the same resource object is reused across nodes/renders that reference the same underlying font, per this codebase's resource-loader caching). */
+  /** The `FontFileResource` the bytes came from. `sceneFontLoader.ts` keys its load cache on its identity. */
   readonly leaf: FontFileResource;
 }
 
 /**
- * Depth-first walk: `FontVariation` -> `baseFont`, `FontFile` -> its own
- * `bytes` if present else the first `fallbacks` entry that resolves,
- * `SystemFont` -> never resolves. Returns `null` for `undefined`/`null` (no
- * font authored at this node — the theme's own default) and for any branch
- * that bottoms out with no loadable bytes.
+ * Depth first: `FontVariation` to `baseFont`, `FontFile` to its `bytes`, else the first
+ * `fallbacks` entry that resolves. Returns `null` for no authored font (the theme default) and
+ * for a branch with no loadable bytes.
  */
 export function resolveFontFileBytes(font: FontResource | null | undefined): ResolvedFontBytes | null {
   if (!font) return null;

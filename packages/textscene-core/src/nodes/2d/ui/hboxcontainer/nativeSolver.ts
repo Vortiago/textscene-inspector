@@ -1,5 +1,5 @@
 /**
- * HBoxContainer's native (WebGL canvas) rect solve — the shared BoxContainer
+ * HBoxContainer's native (WebGL canvas) rect solve: the shared BoxContainer
  * port at `vertical = false`. Registration only; the algorithm itself lives
  * once in `../shared/boxContainerSolver.ts` for both HBox and VBox.
  */

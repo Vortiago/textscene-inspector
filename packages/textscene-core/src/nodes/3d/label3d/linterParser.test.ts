@@ -1,6 +1,4 @@
-/**
- * Tests for the Label3D strict-parser validators.
- */
+/** Label3D strict validators. */
 
 import { describe, expect, it } from 'vitest';
 import {
@@ -84,9 +82,8 @@ describe('Label3D Linter', () => {
       },
       {
         // set_horizontal_alignment (label_3d.cpp:678) opens with
-        // ERR_FAIL_INDEX((int)p_alignment, 4), so both ends are refused
-        // outright — errors, not the :156 hint's warning tier. Both endpoints
-        // are probed from both sides: 0 and 3 load, -1 and 4 do not.
+        // ERR_FAIL_INDEX((int)p_alignment, 4), so both ends error, not the :156
+        // hint's warning tier: 0 and 3 load, -1 and 4 do not.
         prop: 'horizontal_alignment',
         valid: [0, 3],
         invalid: [

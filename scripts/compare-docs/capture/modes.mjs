@@ -1,4 +1,4 @@
-/** Which workspace — 2D or 3D — a fixture is captured in, and where that came from. */
+/** Which workspace, 2D or 3D, a fixture is captured in, and where that came from. */
 
 import { existsSync, readFileSync } from 'node:fs';
 import { imagePath, modePath } from './paths.mjs';
@@ -11,11 +11,10 @@ export function readRecordedMode(imageFile) {
 }
 
 /**
- * The workspace each fixture is captured in, from the side that knows: Godot.
- * A fixture the reference pass skipped takes it from the mode RECORDED beside
- * that reference — and one with neither is not capturable, because there is
- * nothing to compare it against anyway. A cached image from before the mode was
- * recorded lands there too, which re-renders it rather than guessing.
+ * The workspace each fixture is captured in, from Godot, or from the mode
+ * recorded beside a skipped reference. A fixture with neither has nothing to
+ * compare against, so it is not capturable. The previewer must agree, and a
+ * disagreement is reported, not reconciled.
  */
 export function resolveModes(fixtures, godotModes) {
   const modes = new Map();

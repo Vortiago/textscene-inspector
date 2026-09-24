@@ -1,10 +1,8 @@
 /**
- * Tests for the CylinderMesh decode.
- *
- * Defaults from Godot `primitive_meshes.h:199-205`. `set_radial_segments`
- * (`primitive_meshes.cpp:1342-1352`) floors at 4; `set_rings` (:1355-1366)
+ * CylinderMesh decode. Defaults: `primitive_meshes.h:199-205`. `set_radial_segments`
+ * (`primitive_meshes.cpp:1342-1352`) floors at 4, and `set_rings` (:1355-1366)
  * ERR_FAILs below 0, keeping the default. The radii and height have no guards
- * (:1300-1339), so a cone (`top_radius = 0`) and a squat cylinder are both legal.
+ * (:1300-1339), so a cone (`top_radius = 0`) and a squat cylinder are legal.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

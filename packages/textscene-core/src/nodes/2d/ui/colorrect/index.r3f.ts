@@ -1,4 +1,4 @@
-/** ColorRect registration — native (WebGL canvas) painter. */
+/** ColorRect registration: the native (WebGL canvas) painter. */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ColorRect } from './Component';

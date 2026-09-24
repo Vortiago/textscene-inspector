@@ -1,13 +1,7 @@
-; The ONE variable: `layout_direction = 3` on a ScrollContainer. The embedded
-; scrollbars are anchored children, so `Control::_size_changed` mirrors each
-; one whole (control.cpp:1785-1787) and the vertical bar moves to the LEFT
-; edge; the content is placed through `fit_child_in_rect` instead, which does
-; NOT mirror, so `_reposition_children` shifts it past the reserved strip by
-; hand (scroll_container.cpp:357-363). The child overflows vertically only, so
-; exactly one bar shows and the strip it reserves is the whole horizontal
-; move. The LTR container above holds the unmirrored bar and content.
-; unit-scroll-container.tscn moves the overflow/offset cases at direction LTR,
-; so a regression in either half of this is invisible there.
+; One variable: `layout_direction = 3` on a ScrollContainer. The scrollbars are anchored
+; children, so `Control::_size_changed` mirrors each whole (control.cpp:1785-1787) and the
+; vertical bar moves to the left edge. The content goes through `fit_child_in_rect`, which does
+; not mirror, so `_reposition_children` shifts it past the reserved strip (scroll_container.cpp:357-363).
 
 [gd_scene format=3]
 
@@ -22,6 +16,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
+; The child overflows vertically only, so one bar shows and its strip is the whole horizontal
+; move. unit-scroll-container.tscn moves overflow and offset at LTR, so neither half shows there.
 [node name="Ltr" type="ScrollContainer" parent="."]
 layout_mode = 1
 offset_left = 40.0

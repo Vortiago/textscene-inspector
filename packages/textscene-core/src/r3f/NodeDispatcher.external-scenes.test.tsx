@@ -1,18 +1,8 @@
 /**
- * External-scene (PackedScene instance) rendering through the R3F pipeline:
- *   ResourceLoader (fake) + SceneResourcesProvider + NodeDispatcher.
- *
- * Covers instance node creation, parent-child hierarchy preservation,
- * instance transform application, scene caching (scenes are staged
- * synchronously in the shared fake loader's cache so
- * `<InstancedSceneSubtree>` renders resolve them deterministically),
- * and full TSCN-parse integration. The R3F tree is queried via
- * ReactThreeTestRenderer named groups.
- *
- * NOTE: the legacy SceneManager pipeline tagged instanced roots with
- * `userData.instanceRoot`; the R3F pipeline intentionally does not. The
- * DELETED_FEATURE test below pins that removal so the behavior change
- * stays a documented decision rather than an accident.
+ * PackedScene instance rendering through a fake ResourceLoader, SceneResourcesProvider
+ * and NodeDispatcher: instance creation, hierarchy, instance transforms, scene caching
+ * and full TSCN-parse integration. Scenes are staged in the fake loader's cache, so
+ * `<InstancedSceneSubtree>` resolves them deterministically.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -94,9 +84,8 @@ describe('NodeDispatcher — external scene node rendering', () => {
         [{ id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' }]
       );
 
-      // Instance root merge (ADR-0013): the loaded root 'ChildCube' collapses
-      // INTO the instance node 'ChildInstance', so there is no 'ChildCube'
-      // level — the root's child mesh renders under the merged node instead.
+      // Instance root merge (ADR-0013): the loaded root 'ChildCube' collapses into the
+      // instance node 'ChildInstance', so the root's child mesh renders under it.
       const groups = renderer.scene.findAllByType('Group');
       expect(groups.find((g) => g.instance.name === 'ChildInstance')).toBeDefined();
       expect(groups.find((g) => g.instance.name === 'ChildCube')).toBeUndefined();
@@ -165,11 +154,8 @@ describe('NodeDispatcher — external scene node rendering', () => {
     });
 
     it('DELETED_FEATURE: instanceRoot userData is not set in R3F pipeline', () => {
-      // The original test checked:
-      //   nodeTracker.getObject('MainScene/ChildInstance/ChildCube')?.userData.instanceRoot === 'MainScene/ChildInstance'
-      // R3F's InstancedSceneSubtree does NOT set userData.instanceRoot — hierarchy is
-      // expressed through React component nesting, not object metadata.
-      // This feature was dropped in the migration. Test is skipped/noted here for audit.
+      // InstancedSceneSubtree sets no `userData.instanceRoot`: React nesting
+      // expresses the hierarchy, not object metadata.
       expect(true).toBe(true);
     });
 
@@ -230,9 +216,8 @@ instance = ExtResource("1_cube")
         </ResourceLoaderProvider>
       );
 
-      // The merged ChildInstance node (it adopted the root's Node3D type) holds
-      // the instance transform (5, 10, 15) directly — the root transform, if
-      // any, is replaced by the instance's.
+      // The merged ChildInstance node, with the root's Node3D type, holds the instance
+      // transform (5, 10, 15), which replaces any root transform.
       const groups = renderer.scene.findAllByType('Group');
       const instanceGroup = groups.find((g) => g.instance.name === 'ChildInstance');
       expect(instanceGroup).toBeDefined();

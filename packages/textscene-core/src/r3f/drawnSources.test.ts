@@ -1,9 +1,6 @@
 /**
- * A tile layer's atlas sources are batched into one mesh each, so they need a
- * deterministic order WITHIN the layer's one place in the canvas. That order is
- * `sourceIndex`, applied as the batch mesh's own `renderOrder` — and it is
- * dense over the sources actually DRAWN, not the tileset's full list, so it
- * cannot run past however many batches the layer emits.
+ * Each atlas source batches into one mesh ordered by `sourceIndex` within the layer. The index is
+ * dense over the drawn sources, not the tileset's list, so it never runs past the batches emitted.
  */
 import { describe, expect, it } from 'vitest';
 import { drawnSources } from './drawnSources';
@@ -72,8 +69,7 @@ describe('drawnSources', () => {
   });
 
   it('ignores cells naming a source the tileset does not define', () => {
-    // Nothing to draw them from — and letting them through would hand
-    // TileSourceMesh an undefined atlas.
+    // Letting them through would hand TileSourceMesh an undefined atlas.
     const drawn = drawnSources(tileSet([1]), [cell(9, 0), cell(1, 1)]);
     expect(drawn.map((e) => e.sourceId)).toEqual([1]);
     expect(drawn[0]!.cells).toHaveLength(1);

@@ -1,12 +1,7 @@
 /**
- * Two y-sorted TileMapLayers naming DIFFERENT TileSets must each bucket their
- * rows against their own tile pitch.
- *
- * A row's sort key is `map_to_local(cell).y`, which scales with the grid's
- * `tile_size`. Expanding every layer against one grid puts the coarser layer's
- * rows at the finer layer's pitch, so the two interleave at the wrong depths —
- * while `TileGroupRenderer` re-resolves per layer and draws each row from the
- * right model. The sorter and the renderer would disagree about the same rows.
+ * Two y-sorted TileMapLayers with different TileSets each bucket their rows at their
+ * own tile pitch. A row's sort key is `map_to_local(cell).y`, which scales with the
+ * grid's `tile_size`, and `TileGroupRenderer` draws each row from its own model.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -35,10 +30,7 @@ tile_size = Vector2i(${size}, ${size})
 const cellsAt = (rows: number[]): PlacedCell[] =>
   rows.map((y) => ({ coords: { x: 0, y }, sourceId: 0, atlasCoords: { x: 0, y: 0 }, alternativeId: 0 }));
 
-/**
- * `TileGroup_*` names in draw order — the rank the y-sort pass assigned, read
- * back off each group's own z rather than off traversal order.
- */
+/** `TileGroup_*` names in draw order, read off each group's own z, not traversal order. */
 async function drawOrder(): Promise<string[]> {
   const scene = new TscnParser().parse(`[gd_scene format=3]
 [ext_resource type="TileSet" path="res://small.tres" id="1"]
@@ -57,9 +49,9 @@ y_sort_enabled = true
 `);
   const layers = findByType(scene.nodes, 'TileMapLayer');
   expect(layers).toHaveLength(2);
-  // 32px rows at y=0,4 sort to 16 and 144; 64px rows at y=1,2 sort to 96 and
-  // 160, which interleaves them. Against the 32px grid the same two rows sort
-  // to 48 and 80 and both fall BELOW the small layer's second row.
+  // 32px rows at y=0,4 sort to 16 and 144, 64px rows at y=1,2 to 96 and 160, which
+  // interleaves them. Against the 32px grid the same two rows sort to 48 and 80, and
+  // both fall below the small layer's second row.
   for (const [i, rows] of [[0, 4], [1, 2]].entries()) {
     const props = layers[i]!.properties as TileMapLayerProperties;
     props.cells = cellsAt(rows);

@@ -1,13 +1,8 @@
 /**
- * useSpriteFrames — the SpriteFrames slice's host adapter: it resolves the
- * `sprite_frames` reference from either home and hands the arriving property bag
- * to the slice decode.
- *
- * The two homes differ in exactly one load-bearing way, and that is what these
- * tests pin: an in-scene SubResource resolves its frame refs against the SCENE's
- * pools, while an external `.tres` resolves them against the FILE's own — its
- * frame `ExtResource("id")`s are scoped to the .tres, so borrowing the scene's
- * table would silently sample the wrong image.
+ * useSpriteFrames resolves `sprite_frames` from either home. An in-scene
+ * SubResource resolves its frame refs against the scene's pools, and an external
+ * `.tres` against the file's own: its frame ids are scoped to the .tres, so the
+ * scene's table would sample the wrong image.
  */
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
@@ -38,7 +33,7 @@ const SCENE_EXT: TscnExternalResource[] = [
   { id: '8', type: 'SpriteFrames', path: 'res://frames.res' },
 ];
 
-/** A SpriteFrames `.tres` whose frame ids are scoped to the FILE, not the scene. */
+/** A SpriteFrames `.tres` whose frame ids are scoped to the file, not the scene. */
 const TRES = parseTresFile(
   `[gd_resource type="SpriteFrames" load_steps=3 format=3]
 
@@ -137,7 +132,7 @@ describe('useSpriteFrames — external .tres', () => {
     expect(walk.frames).toEqual(['SubResource("AtlasTexture_1")']);
     expect(walk.fps).toBe(8);
     expect(walk.loop).toBe(false);
-    // The file's tables, NOT the scene's — the frame's atlas id is scoped to it.
+    // The file's tables, not the scene's: the frame's atlas id is scoped to it.
     expect(frames.subResources.map((r) => r.type)).toEqual(['AtlasTexture']);
     expect(frames.externalResources.map((r) => r.path)).toEqual(['res://sheet.png']);
   });
@@ -187,7 +182,7 @@ describe('useSpriteFrames — hook-call count', () => {
     const { result, rerender } = renderSpriteFrames('SubResource("sf")', fake);
     expect([...result.current.spriteFrames!.animations.keys()]).toEqual(['right']);
 
-    // The synchronous branch feeds `''` to useResource; if that hook were
+    // The synchronous branch feeds `''` to useResource. If that hook were
     // conditional instead, this rerender would throw "Rendered more hooks…".
     rerender({ spriteFramesRef: 'ExtResource("7")' });
     expect([...result.current.spriteFrames!.animations.keys()]).toEqual(['walk']);

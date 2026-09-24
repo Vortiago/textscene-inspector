@@ -1,7 +1,6 @@
 /**
- * `<MenuBar>` render contract — one chrome StyleBox + one text run per
- * PopupMenu-child title. Structure/tint assertions only (pixels are a
- * golden-image concern via `pnpm ref:godot`, not this suite).
+ * Tests the `<MenuBar>` render contract: one chrome StyleBox and one text run per PopupMenu child's
+ * title. It asserts structure and tint only: pixels belong to the golden images and `pnpm ref:godot`.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

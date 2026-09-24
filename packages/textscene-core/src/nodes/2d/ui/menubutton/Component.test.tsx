@@ -1,8 +1,6 @@
 /**
- * `<MenuButton>` render contract — Button's own chrome/text/icon assembly
- * (`button/Component.test.tsx` covers that shared machinery in full), plus
- * the one genuine divergence this slice ports: MenuButton's own disabled
- * font colour.
+ * Tests the `<MenuButton>` render contract: Button's chrome, text and icon assembly, covered in full by
+ * `button/Component.test.tsx`, plus MenuButton's own disabled font colour.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -56,7 +54,7 @@ describe('<MenuButton> (isolated painter contract)', () => {
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
-    // style_normal_color = Color(0.1, 0.1, 0.1, 0.6) — the SAME button_normal object MenuButton's own theme entry reuses.
+    // style_normal_color = Color(0.1, 0.1, 0.1, 0.6): the button_normal object MenuButton's theme entry reuses.
     expect(color.getX(0)).toBeCloseTo(0.1, 5);
     expect(findTextMesh(renderer.scene)).toBeDefined();
   });
@@ -83,11 +81,9 @@ describe('<MenuButton> (isolated painter contract)', () => {
     expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.3, 5);
   });
 
-  // MenuButton declares no `_notification(NOTIFICATION_DRAW)` of its own, so
-  // it inherits Button's alignment-side swap (`button.cpp:271-275`) whole:
-  // LEFT under RTL must land exactly where RIGHT lands under LTR. This
-  // painter is a SECOND assembly of `layoutButtonContent`, so nothing in
-  // `button/Component.test.tsx` notices a missing `rtl` argument here.
+  // MenuButton has no `_notification(NOTIFICATION_DRAW)`, so it inherits Button's alignment swap
+  // (`button.cpp:271-275`): LEFT under RTL lands where RIGHT lands under LTR. This painter assembles
+  // `layoutButtonContent` a second time, so `button/Component.test.tsx` misses a lost `rtl` here.
   it('places a LEFT-aligned label under RTL exactly where a RIGHT-aligned one lands under LTR', async () => {
     const labelX = async (properties: Partial<MenuButtonProperties>, rtl: boolean) => {
       const renderer = await ReactThreeTestRenderer.create(

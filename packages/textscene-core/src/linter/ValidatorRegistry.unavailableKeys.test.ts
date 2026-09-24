@@ -1,11 +1,7 @@
 /**
- * `registerUnavailable`: a leaf taking a key AWAY from its base chain.
- *
- * Narrowing is not the same as re-declaring. A fixed-orientation container
- * cannot carry `vertical` at all, so the key needs a rejection that fires
- * whatever the value, stops at a descendant that puts the key back, and reports
- * the same reach through `getUnavailableKeys` (which feeds the generated sheet)
- * as through `findValidator` (which feeds the linter).
+ * `registerUnavailable`: a leaf taking a key away from its base chain, which is not re-declaring it. The rejection
+ * fires whatever the value, stops at a descendant that puts the key back, and reports the same reach through
+ * `getUnavailableKeys` (the generated sheet) as through `findValidator` (the linter).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -81,8 +77,8 @@ describe('ValidatorRegistry.registerUnavailable', () => {
   });
 
   it('refuses one type both declaring and removing a key, in either order', () => {
-    // A registration is a declaration OR a removal; one type holding both
-    // hands `registeredKeys` the removal labelled a declaration and the sweep
+    // A registration is a declaration or a removal. One type holding both
+    // hands `registeredKeys` the removal labelled a declaration, and the walk
     // a validator it never resolves.
     const removal = { vertical: { reason: 'fixed', cite: 'box_container.cpp:312' } };
     const declared = new ValidatorRegistry(CHAIN);

@@ -1,11 +1,7 @@
 /**
- * Tests for NavigationLink2D's semantic linter rule (strict parser format
- * checks live in linterParser.test.ts and are asserted through
- * validatorRegistry there).
- *
- * Uses `Linter` directly (via testkit), not the `linter/index.ts` barrel: that
- * barrel side-effect-imports every in-flight slice, so pulling it here would
- * fail flakily on a sibling's half-written file mid-wave.
+ * Tests the NavigationLink2D semantic rule through the testkit `Linter`, not the
+ * `linter/index.ts` barrel, which imports every slice and fails on a sibling's
+ * broken file.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -61,17 +57,16 @@ describe('NavigationLink2D semantic rules', () => {
   });
 
   it('stays quiet on a malformed value, leaving it to the format validator', () => {
-    // linterParser.ts already reports INVALID_START_POSITION_FORMAT for this;
-    // the rule must not ALSO fire off a resolved-to-null comparison.
+    // linterParser.ts already reports INVALID_START_POSITION_FORMAT for this.
+    // The rule must not also fire off a resolved-to-null comparison.
     expectNoDiagnostic(scene(node('NavigationLink2D', { start_position: 'not-a-vector', end_position: 'Vector2(0, 0)' })), {
       ruleName: RULE_NAME,
     });
   });
 
   it('carries zero diagnostics on the committed fixture, through the real Linter', () => {
-    // Stronger than filtering by RULE_NAME: this is the fixture's actual
-    // "zero errors and zero warnings" claim, run against everything this file
-    // imported (strict format validators AND this rule together).
+    // Stronger than filtering by RULE_NAME: the format validators and this rule
+    // together report nothing on the fixture.
     expect(lint(readFixture('unit-navigation-link-2d.tscn'))).toEqual([]);
   });
 });

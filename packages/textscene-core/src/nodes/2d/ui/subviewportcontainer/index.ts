@@ -1,4 +1,4 @@
-/** SubViewportContainer registration — parser. */
+/** SubViewportContainer registration: parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseSubViewportContainer } from './parser';

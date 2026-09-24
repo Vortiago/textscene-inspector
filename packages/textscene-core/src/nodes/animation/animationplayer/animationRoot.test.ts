@@ -1,5 +1,5 @@
 /**
- * animationRoot tests — resolving the mixer root (D1) and the standing
+ * animationRoot tests: resolving the mixer root (D1) and the standing
  * feasibility guard for ADR-0011's name-path binding through the
  * dispatcher's unnamed pickable wrappers (D2).
  */

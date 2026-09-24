@@ -1,6 +1,6 @@
 /**
- * CanvasModulate parser — the Node2D transform/modulate surface plus `color`.
- * Omitted `color` falls back to white via `parseColor(undefined)`.
+ * CanvasModulate parser: the Node2D transform and modulate, and `color`. An omitted
+ * `color` falls back to white through `parseColor(undefined)`.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

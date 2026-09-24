@@ -1,9 +1,6 @@
 /**
- * AudioStreamPlayer3D R3F component tests.
- *
- * The component renders an editor-only gizmo, not a runtime mesh, so
- * assertions focus on: gizmo presence, userData markers, optional
- * range-sphere visibility, transform propagation, non-shadow-casting,
+ * AudioStreamPlayer3D R3F component: an editor-only gizmo, not a runtime mesh. The tests cover
+ * gizmo presence, userData markers, range visibility, transform propagation, no shadow casting
  * and tree passthrough.
  */
 
@@ -25,12 +22,8 @@ import {
 } from './types';
 
 /**
- * The speaker + range gizmos are now gated on selection. To
- * exercise the gizmo content the test scaffolding must (a) place the
- * component inside a NodePathProvider so it knows its path and (b)
- * set `selectedNodePath` to that same path through SelectionProvider.
- * Without this, the gate evaluates to false and the gizmo subtree is
- * intentionally empty.
+ * The speaker and range gizmos are selection-gated, so the scaffolding places the component in a
+ * NodePathProvider and sets `selectedNodePath` to the same path through SelectionProvider.
  */
 function SelectSeeder({ path }: { path: string }) {
   const { setSelectedNodePath } = useSelection();
@@ -96,9 +89,8 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       withSelectedAudio('Audio', <AudioStreamPlayer3D node={makeNode()} />)
     );
-    // Cone + cylinder front disk = 2 mesh primitives in the gizmo body.
-    // This used to be unconditional; now requires the audio node
-    // to be the active selection.
+    // Cone + cylinder front disk = 2 mesh primitives in the gizmo body, drawn
+    // only while the audio node is selected.
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes.length).toBeGreaterThanOrEqual(2);
   });
@@ -127,11 +119,9 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
       return ud.isAudioRangeSphere === true;
     });
     expect(group).toBeDefined();
-    // Godot draws a camera-facing CIRCLE of lines at
-    // `unit_size x soft_multiplier`; the default ATTENUATION_INVERSE_DISTANCE
-    // multiplier is 12, so 25 x 12 = 300 — not unit_size raw.
-    // Traversed, not indexed: `<GizmoLine>` now wraps its line in a group that
-    // carries the gizmo's draw order (`GIZMO_GROUP_ORDER`).
+    // Godot draws a camera-facing circle of lines at `unit_size x soft_multiplier`, and the default
+    // INVERSE_DISTANCE multiplier is 12, so 25 x 12 = 300. Traversed, not indexed: `<GizmoLine>`
+    // wraps its line in a group that carries the gizmo's draw order (`GIZMO_GROUP_ORDER`).
     let line: THREE.Line | undefined;
     (group!.instance as unknown as THREE.Object3D).traverse((o) => {
       if (!line && (o as THREE.Line).isLine) line = o as THREE.Line;
@@ -171,7 +161,7 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     for (const m of meshes) {
       const mat = (m.instance as THREE.Mesh).material as { type: string };
       expect(mat.type).toBe('MeshBasicMaterial');
-      // None of the meshes should cast shadows — gizmos are non-lit.
+      // No gizmo mesh casts a shadow: gizmos are not lit.
       expect(m.instance.castShadow).toBe(false);
     }
   });

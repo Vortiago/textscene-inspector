@@ -1,4 +1,4 @@
-/** ParallaxLayer registration — render component. */
+/** Registers the ParallaxLayer render component. */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { ParallaxLayer } from './Component';

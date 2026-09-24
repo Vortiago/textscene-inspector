@@ -12,7 +12,7 @@ describe('decodeNavigationPolygon', () => {
   });
 
   it('keeps vertices in raw Godot 2D space (+Y down, unnegated)', () => {
-    // The Y flip belongs to the render adapter (navigationOverlay.vector2ToPositions);
+    // The Y flip belongs to the render adapter (navigationOverlay.vector2ToPositions):
     // negating here would mirror every navmesh about its region origin.
     const data = decodeNavigationPolygon({
       vertices: 'PackedVector2Array(0, 0, 10, 32, 0, 32)',
@@ -35,8 +35,8 @@ describe('decodeNavigationPolygon', () => {
 
   it('also reads the bare `[PackedInt32Array(...)]` wrapper (format tolerance)', () => {
     // NavigationPolygon::_get_polygons returns a TypedArray, so Godot writes the
-    // `Array[PackedInt32Array](…)` form; the untyped form is accepted anyway
-    // rather than making the wrapper spelling load-bearing.
+    // `Array[PackedInt32Array](…)` form. The untyped form is accepted too, so
+    // the wrapper spelling is not load-bearing.
     const data = decodeNavigationPolygon({
       vertices: 'PackedVector2Array(0, 0, 4, 0, 4, 4)',
       polygons: '[PackedInt32Array(0, 1, 2)]',
@@ -56,7 +56,7 @@ describe('decodeNavigationPolygon', () => {
 
   it('returns null instead of throwing on malformed POLYGON indices', () => {
     // The index reader throws on an element Godot's tokenizer refuses, and this
-    // call sits outside the vertices try/catch — so without its own guard the
+    // call sits outside the vertices try/catch, so without its own guard the
     // throw leaves the decoder and takes the previewer down with it.
     expect(
       decodeNavigationPolygon({
@@ -82,7 +82,7 @@ describe('decodeNavigationPolygon', () => {
   });
 
   it('returns null when a property is not a Godot-text literal at all (error path)', () => {
-    // An inline `[sub_resource]`'s data is `Record<string, unknown>`; a non-string
+    // An inline `[sub_resource]`'s data is `Record<string, unknown>`, and a non-string
     // there decodes to nothing rather than being coerced.
     expect(
       decodeNavigationPolygon({ vertices: 42, polygons: '[PackedInt32Array(0, 1, 2)]' })
@@ -119,7 +119,7 @@ describe('decodeNavigationPolygon', () => {
   });
 
   it('ignores a trailing half vertex when range-checking indices (edge case)', () => {
-    // Five floats describe two vertices and a stray x; index 2 must not resolve.
+    // Five floats describe two vertices and a stray x, so index 2 must not resolve.
     const data = decodeNavigationPolygon({
       vertices: 'PackedVector2Array(0, 0, 4, 0, 4)',
       polygons: '[PackedInt32Array(0, 1, 2)]',

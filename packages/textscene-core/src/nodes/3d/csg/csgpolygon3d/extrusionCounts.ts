@@ -1,10 +1,7 @@
 /**
- * How many frames the sweep walks and how many end caps it gets
- * (csg_shape.cpp:2201-2231), plus the two PATH approximations worth telling the
- * user about.
- *
- * Part of the CSGPolygon3D port; the derivation notice is in
- * `polygonGeometry.ts`.
+ * How many frames the sweep walks and how many end caps it gets (csg_shape.cpp:2201-2231), plus
+ * the two PATH approximations worth telling the user about. Part of the CSGPolygon3D port, whose
+ * derivation notice is in `polygonGeometry.ts`.
  */
 
 import { warnOnce } from './polygonSweepFrames';

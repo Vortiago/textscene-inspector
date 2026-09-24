@@ -1,5 +1,5 @@
 /**
- * Generic .tres processor — fetches a Godot resource file through the
+ * Generic .tres processor: fetches a Godot resource file through the
  * FileEventBus and parses it into a ParsedResource on the 'resource' bus slot.
  */
 import { describe, it, expect, vi } from 'vitest';

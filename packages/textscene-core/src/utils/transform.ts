@@ -1,5 +1,5 @@
 /**
- * Transform utilities for parsing and decomposing Transform3D matrices.
+ * Parses and decomposes Transform3D literals.
  */
 
 import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
@@ -10,12 +10,8 @@ const TRANSFORM3D_RE = slotTupleRegex('Transform3D', 12);
 const CALL_PREFIX = 'Transform3D(';
 
 /**
- * Parse Transform3D from string format.
- * Example: "Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)"
- *
- * Arity is reported apart from grammar because the two are different authoring
- * mistakes: a six-component matrix is a Transform2D pasted into a 3D slot,
- * while a component that will not parse is a typo.
+ * A `Transform3D(…)` literal of 12 components. Arity reports apart from grammar: six components
+ * are a Transform2D pasted into a 3D slot, while a component that will not parse is a typo.
  */
 export function parseTransform3D(transformString: string): Transform3D {
   const match = TRANSFORM3D_RE.exec(transformString);
@@ -31,10 +27,8 @@ export function parseTransform3D(transformString: string): Transform3D {
   }
 
   const components = match.slice(1).map((v) => matchedFloat(v));
-  // An overflowing exponent is inside the finite grammar, and an Infinity here
-  // decomposes to a NaN rotation and scale — a three.js matrix that drops the
-  // node and every descendant. Same warn-then-fall-back path as a literal the
-  // grammar refuses outright.
+  // An overflowing exponent passes the grammar, and an Infinity decomposes to a NaN rotation that
+  // drops the node and its descendants, so it takes a refused literal's path.
   if (!allFinite(components)) {
     throw new Error(`Non-finite Transform3D: ${transformString}`);
   }
@@ -51,27 +45,10 @@ export function parseTransform3D(transformString: string): Transform3D {
 }
 
 /**
- * Decompose Transform3D matrix into position, rotation, and scale.
- *
- * Dependency-free replication of three.js r184's decomposition path
- * (`Matrix4.decompose` → `Quaternion.setFromRotationMatrix` →
- * `Euler.setFromQuaternion(q, 'XYZ')`), op-for-op in the same evaluation
- * order so results are bit-identical to the previous three.js-backed
- * implementation — pinned by `transform.threeEquivalence.test.ts`. This
- * keeps the parser layer free of any `three` value-import (guarded by
- * reactFree.test.ts and the vscode app's webExtensionSafe.test.ts).
- *
- * The Euler order is XYZ, matching `THREE.Object3D.rotation` defaults so
- * values can be applied directly to `<group rotation={...}>`. Reflections
- * (negative determinant) fold the sign into `scale.x`, three.js convention.
- *
- * Convention: Godot stores Basis as `Vector3 rows[3]`. The parsed
- * `basis_x`, `basis_y`, `basis_z` ARE the three rows of the 3×3 matrix
- * (NOT columns — earlier code mistakenly transposed by treating them
- * as columns, see commit history around b4ccaab regression
- * and 401f8f5 fix that documented the row interpretation). Columns —
- * what per-axis scale is measured along — are therefore
- * `(basis_x.c, basis_y.c, basis_z.c)`.
+ * Position, XYZ Euler rotation (as `<group rotation={...}>` takes it) and scale, op-for-op as
+ * three.js r184's `Matrix4.decompose` path, so results are bit-identical
+ * (`transform.threeEquivalence.test.ts`) while the parser layer imports no `three` value
+ * (reactFree.test.ts, webExtensionSafe.test.ts).
  */
 export function decomposeTransform3D(
   transform: Transform3D
@@ -96,7 +73,8 @@ export function decomposeTransform3D(
   let qw = 1;
 
   if (det !== 0) {
-    // Per-axis scale = column lengths.
+    // Godot stores Basis as `Vector3 rows[3]`, so basis_x, basis_y and basis_z are rows, and each
+    // axis scale is a column's length.
     sx = Math.sqrt(
       basis_x.x * basis_x.x + basis_y.x * basis_y.x + basis_z.x * basis_z.x
     );
@@ -106,6 +84,7 @@ export function decomposeTransform3D(
     sz = Math.sqrt(
       basis_x.z * basis_x.z + basis_y.z * basis_y.z + basis_z.z * basis_z.z
     );
+    // A reflection folds its sign into scale.x, as three.js does.
     if (det < 0) sx = -sx;
 
     // Normalize columns to a pure rotation matrix (m_rc = row r, column c).
@@ -151,8 +130,8 @@ export function decomposeTransform3D(
     }
   }
 
-  // Quaternion → unit rotation matrix (re-orthogonalized — this round-trip
-  // is what makes gimbal handling stable for float32-serialized bases).
+  // Quaternion back to a unit rotation matrix: the round-trip re-orthogonalises, which keeps gimbal
+  // handling stable for float32-serialised bases.
   const x2 = qx + qx;
   const y2 = qy + qy;
   const z2 = qz + qz;
@@ -203,9 +182,7 @@ export function identityTransform3D(): Transform3D {
 }
 
 /**
- * Parse optional transform property with error handling.
- * Returns undefined if no transform string provided.
- * Returns identity transform if parsing fails (with warning logged).
+ * Undefined for an absent transform, and identity with a logged warning for a malformed one.
  */
 export function parseOptionalTransform(
   transformString: string | undefined,

@@ -1,20 +1,8 @@
 /**
- * <AudioStreamPlayer3D> — non-rendered audio source visualised as a
- * speaker-icon gizmo at the node's transform.
- *
- * Audio playback is intentionally not supported in the previewer; this
- * component closes the parity gap by rendering a small editor-only
- * cone-and-disk silhouette (a stylised speaker) plus an optional
- * wireframe sphere showing the `unit_size` audible range. Pattern
- * mirrors the light gizmos in `lights/shared/lightHelpers.tsx`.
- *
- * The cone group is tagged `userData.isAudioGizmo = true` so the
- * helper / selection systems can identify it as an editor-only widget
- * rather than a user-authored mesh.
- *
- * Children pass through unchanged — `node.children` are dispatched
- * by `NodeDispatcher` and rendered alongside the gizmo so the audio
- * node behaves like a transform node in the tree.
+ * <AudioStreamPlayer3D>: the previewer plays no audio, so the node renders an editor-only speaker
+ * gizmo and its audible range at its transform, as the light gizmos in
+ * `lights/shared/lightHelpers.tsx` do. `userData.isAudioGizmo` marks the cone group as an editor
+ * widget. Children render beside the gizmo, so the node behaves like a transform node.
  */
 
 import { useMemo, useRef } from 'react';
@@ -28,7 +16,7 @@ import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useBillboard, BILLBOARD_ENABLED } from '../../../r3f/hooks/useBillboard';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 
-/** Editor-only gizmo colour — yellow to match the light helpers. */
+/** Editor-only gizmo colour: yellow, to match the light helpers. */
 const GIZMO_COLOR = 0xffff00;
 
 /** Literal-only, so the key is constant and the speaker gizmo never remounts. */
@@ -49,21 +37,12 @@ export function AudioStreamPlayer3D({ node, children }: NodeComponentProps) {
     [properties]
   );
 
-  // Godot's AudioStreamPlayer3DGizmoPlugin draws the audible range whenever the
-  // node attenuates at all or declares a hard cutoff — it never consults
-  // `unit_size` for the DECISION, only for the radius. (We used to suppress the
-  // gizmo at exactly `unit_size === 10`, which is the default nearly every
-  // corpus node carries, so it was almost never drawn.)
+  // Godot's AudioStreamPlayer3DGizmoPlugin draws the audible range whenever the node attenuates
+  // at all or declares a hard cutoff. It reads `unit_size` only for the radius.
   const rangeRadius = audibleRangeRadius(properties);
 
-  // Gate the editor-only speaker + range gizmo on selection,
-  // same as Camera3D and the light gizmos. Without this, every audio
-  // node in the scene drew a yellow wireframe cone/disk + range sphere
-  // regardless of selection — main's HelperManager rendered nothing for
-  // unselected audio nodes (ui-designer-2's A/B on the hallway fixture).
-  // The `<group>` itself stays mounted so the transform context is
-  // preserved for the node's children; only the visual gizmo content
-  // is conditional.
+  // The speaker and range gizmos are selection-gated, as Camera3D and the light gizmos are. The
+  // `<group>` stays mounted, so the children keep their transform context.
   const gizmoVisible = useGizmoVisible();
 
   return (
@@ -85,10 +64,8 @@ export function AudioStreamPlayer3D({ node, children }: NodeComponentProps) {
 }
 
 /**
- * The speaker silhouette: a small cone whose narrow end points away
- * from the camera-ward (-Z) direction, paired with a thin disk for
- * the front baffle. Lights don't cast shadows in this gizmo; the
- * mesh is purely visual.
+ * The speaker silhouette: a small cone whose narrow end points away from the camera-ward (-Z)
+ * direction, and a thin disk for the front baffle. It casts no shadow.
  */
 function SpeakerGizmo() {
   return (
@@ -113,18 +90,14 @@ interface RangeCircleProps {
   radius: number;
 }
 
-/** Vertex count around the range circle — smooth enough at any screen size. */
+/** Vertex count around the range circle, smooth enough at any screen size. */
 const RANGE_CIRCLE_SEGMENTS = 64;
 
 /**
- * The audible-range gizmo: a CAMERA-FACING CIRCLE OF LINES, not a sphere.
- *
- * That is what Godot's `AudioStreamPlayer3DGizmoPlugin` draws, and the choice is
- * deliberate on their side ("This helps distinguish AudioStreamPlayer3D gizmos
- * from OmniLight3D gizmos"). It also matters here: the default radius is
- * `unit_size 10 x soft_multiplier 12 = 120` world units, so a wireframe sphere
- * puts the camera inside a grid that swamps the whole scene, while an outline
- * stays readable.
+ * The audible-range gizmo: a camera-facing circle of lines, not a sphere, as Godot's
+ * `AudioStreamPlayer3DGizmoPlugin` draws it. The default radius is `unit_size 10 x soft_multiplier
+ * 12 = 120` world units, so a wireframe sphere would put the camera inside a grid that swamps the
+ * scene.
  */
 function RangeCircle({ radius }: RangeCircleProps) {
   const groupRef = useRef<THREE.Object3D | null>(null);
@@ -172,16 +145,15 @@ const SOFT_MULTIPLIER: Record<AttenuationModel, number> = {
 interface EmissionConeProps {
   /** The audible-range radius the cone is drawn out to. */
   radius: number;
-  /** Godot's `emission_angle_degrees` — the HALF-angle from the forward axis. */
+  /** Godot's `emission_angle_degrees`: the half-angle from the forward axis. */
   angleDegrees: number;
 }
 
 /**
- * The directional emission cone Godot draws when `emission_angle_enabled` is on:
- * four rib lines from the node's origin out along the cone, closed by a circle
- * at the base. `emission_angle_degrees` is the half-angle off the node's forward
- * (-Z) axis, so the base radius is `range x tan(angle)`. Clamped just under 90
- * degrees, where the tangent diverges and the cone becomes a half-space.
+ * The emission cone Godot draws when `emission_angle_enabled` is on: four ribs from the origin,
+ * closed by a circle at the base. `emission_angle_degrees` is the half-angle off the forward (-Z)
+ * axis, so the base radius is `range x tan(angle)`, clamped just under 90 degrees, where the
+ * tangent diverges.
  */
 function EmissionCone({ radius, angleDegrees }: EmissionConeProps) {
   const positions = useMemo(() => {

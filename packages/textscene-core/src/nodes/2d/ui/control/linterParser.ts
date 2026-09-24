@@ -1,16 +1,7 @@
 /**
- * Base Control strict validators for linting.
- *
- * Control is the root of the 2D UI family (Label, Button, Panel, the
- * *Containers, …). Registering the shared layout/anchor/offset + theme-override
- * validators here — once, under `'Control'` — makes them apply to every Control
- * subclass through the ValidatorRegistry base-walk (see godot/nodeBaseTypes.ts),
- * closing the gap where the render parser coerced these values while the linter
- * ignored them entirely.
- *
- * Validators are deliberately format-lenient (accept anything the renderer
- * accepts, reject only malformed literals) so widening linter coverage to the
- * whole UI family does not introduce false positives on real Godot scenes.
+ * Base Control strict validators. Registered once under `'Control'`, they reach every
+ * Control subclass through the ValidatorRegistry base-walk (godot/nodeBaseTypes.ts).
+ * They reject only malformed literals, so a real Godot scene of any UI type passes.
  */
 
 import '../../../canvasitem/shared/linterParser.js';
@@ -28,18 +19,14 @@ import {
 } from '../../../../godot/index.js';
 
 /**
- * `Array[NodePath]([…])` — the four `accessibility_*_nodes` properties
- * (control.cpp:4313-4316, `PROPERTY_HINT_ARRAY_TYPE "NodePath"` on a
- * `Variant::ARRAY`, not `PACKED_*`) are `TypedArray<NodePath>` getters, so the
- * serialiser takes the typed-array branch (`core/variant/variant_parser.cpp:2341-2344`)
- * rather than any packed spelling. The bare `[NodePath(…), …]` form loads too:
- * `TypedArray(const Array&)` (`core/variant/typed_array.h:43-46`) calls `assign()`
- * on an untyped incoming array, the same trap CodeEdit's array properties
- * document. Setters (control.cpp:2203-2247) are bare assigns, no ERR_FAIL, so
- * this is a shape check only: an empty array is legal and every element must
- * itself be a `NodePath("…")` literal, empty path included.
+ * The four `accessibility_*_nodes` properties (control.cpp:4313-4316) have `TypedArray<NodePath>`
+ * getters, so they serialise as `Array[NodePath]([…])` (`core/variant/variant_parser.cpp:2341-2344`).
+ * A bare `[NodePath(…), …]` loads too: `TypedArray(const Array&)` calls `assign()`
+ * (`core/variant/typed_array.h:43-46`).
  */
 function nodePathArray(name: string): PropertyValidator {
+  // The setters (control.cpp:2203-2247) have no ERR_FAIL, so this checks the shape only: an empty
+  // array is legal, and each element is a `NodePath("…")` literal, the empty path included.
   const code = `INVALID_${name.toUpperCase()}_FORMAT`;
   const reject = (key: string, line: number, value: string) =>
     propertyError(
@@ -63,11 +50,9 @@ function nodePathArray(name: string): PropertyValidator {
 }
 
 /**
- * `Control::SizeFlags`, the bits the `size_flags_*` hint strings name
- * (control.h:80-83, bound as `BIND_BITFIELD_FLAG` at control.cpp:4388-4392).
- * `SIZE_SHRINK_BEGIN = 0` (control.h:79) is the empty set and `SIZE_EXPAND_FILL
- * = 3` (control.h:85, bound at control.cpp:4390) is `SIZE_EXPAND | SIZE_FILL`,
- * so neither is a bit of its own.
+ * The `Control::SizeFlags` bits the `size_flags_*` hints name (control.h:80-83,
+ * control.cpp:4388-4392). `SIZE_SHRINK_BEGIN = 0` (control.h:79) is the empty set and
+ * `SIZE_EXPAND_FILL = 3` (control.h:85, control.cpp:4390) is `SIZE_EXPAND | SIZE_FILL`.
  */
 const SIZE_FLAGS_LABELS = {
   1: 'SIZE_FILL',
@@ -77,21 +62,13 @@ const SIZE_FLAGS_LABELS = {
 };
 
 validatorRegistry.registerAll('Control', {
-  // Layout regime + anchors/offsets (the free/anchored path).
-  // control.cpp:4210, ENUM "Position,Anchors,Container,Uncontrolled" (4 labels,
-  // matching LayoutMode 0-3 exactly, control.h:147-152). _set_layout_mode
-  // (control.cpp:919-935) assigns unconditionally, no ERR_FAIL.
+  // control.cpp:4210, ENUM "Position,Anchors,Container,Uncontrolled", LayoutMode 0-3
+  // (control.h:147-152). _set_layout_mode (control.cpp:919-935) has no ERR_FAIL.
   layout_mode: v.int('layout_mode', { min: 0, max: 3, hinted: 'control.cpp:4210' }),
-  // control.cpp:4245, ENUM built from the preset table ("Custom:-1" plus 16
-  // named presets 0-15). ONE guard produces both verdicts:
-  // `set_anchors_preset`'s `ERR_FAIL_INDEX((int)p_preset, 16)`
-  // (control.cpp:1116) refuses -5 and 16 alike. The floor is -1 rather than 0
-  // only because `_set_anchors_layout_preset` returns before reaching it on
-  // exactly that value (control.cpp:983-989, "Keep settings as is").
-  // In LAYOUT_MODE_POSITION (0, the field default at control.h:201) and
-  // LAYOUT_MODE_CONTAINER (2) the write never reaches :1116 at all — the early
-  // return at control.cpp:991-994 drops it, in range or not — which is still
-  // the error tier, since the stored value is not the written one.
+  // control.cpp:4245, ENUM "Custom:-1" plus presets 0-15. `ERR_FAIL_INDEX((int)p_preset, 16)` (control.cpp:1116)
+  // refuses -5 and 16 alike. The floor is -1: `_set_anchors_layout_preset` returns first on it (control.cpp:983-989).
+  // In layout modes 0 (default, control.h:201) and 2, control.cpp:991-994 drops every write, which is
+  // still the error tier: the stored value is not the written one.
   anchors_preset: v.int('anchors_preset', {
     min: -1,
     max: 15,
@@ -116,16 +93,10 @@ validatorRegistry.registerAll('Control', {
   pivot_offset: v.vector2('pivot_offset'),
   pivot_offset_ratio: v.vector2('pivot_offset_ratio'),
 
-  // Container-child sizing.
-  // control.cpp:4275/4276 hint PROPERTY_HINT_FLAGS, not a RANGE, and both state
-  // the same four bits: "Fill:1,Expand:2,Shrink Center:4,Shrink End:8". The
-  // vertical hint is not the narrower one — the per-parent filter at
-  // control.cpp:555-562 is `is_editor_hint()`-gated and reads the live parent
-  // Container, so it grounds nothing static.
-  // set_h_size_flags (control.cpp:1845) and set_v_size_flags (control.cpp:1859)
-  // bare-assign the BitField: no mask, no clamp, no ERR_FAIL. A bit outside the
-  // hint is therefore KEPT, merely unreachable from the inspector, which is
-  // `hintedBitField`'s warning tier and not `maskedBitField`'s error tier.
+  // control.cpp:4275/4276 hint the same PROPERTY_HINT_FLAGS "Fill:1,Expand:2,Shrink Center:4,Shrink End:8".
+  // The per-parent filter (control.cpp:555-562) is editor-only and reads the live parent.
+  // set_h_size_flags (control.cpp:1845) and set_v_size_flags (control.cpp:1859) have no mask,
+  // so an unhinted bit is kept: `hintedBitField`'s warning, not `maskedBitField`'s error.
   size_flags_horizontal: hintedBitField('size_flags_horizontal', {
     hinted: 'control.cpp:4275',
     labels: SIZE_FLAGS_LABELS,
@@ -139,23 +110,12 @@ validatorRegistry.registerAll('Control', {
   size_flags_stretch_ratio: v.nonNegativeFloat('size_flags_stretch_ratio', {
     hinted: 'control.cpp:4277',
   }),
-  // control.cpp:1729 returns without storing when either component is
-  // non-finite ("Prevent infinite loop"), and the equality early-return above it
-  // can never intercept one, so the write is dropped and the size stays (0, 0).
+  // control.cpp:1729 drops a non-finite component ("Prevent infinite loop"), and the
+  // equality return above it never catches one, so the size stays (0, 0).
   custom_minimum_size: v.vector2('custom_minimum_size', { finite: 'control.cpp:1729' }),
 
-  // control.cpp:4297, ENUM "None,Click,All,Accessibility" (FocusMode 0-3,
-  // control.h:65-70). set_focus_mode (control.cpp:2267) is
-  // `ERR_FAIL_INDEX((int)p_focus_mode, 4)`: genuinely enforced, so out of range
-  // is an error rather than a hint warning. Every Control descendant accepted
-  // any value until this existed, including the ones whose own subclass bound is
-  // narrower (GraphNode.slots_focus_mode enforces 1-3, TabContainer's
-  // tab_focus_mode is only hinted 0-2 because it delegates to this same guard).
   // control.cpp:4301, ENUM "Stop,Pass (Propagate Up),Ignore" (MouseFilter 0-2,
-  // control.h:88-92). set_mouse_filter (control.cpp:1923) is
-  // `ERR_FAIL_INDEX(p_filter, 3)`: enforced, so out of range is an error. Like
-  // focus_mode this had no validator anywhere, so every Control descendant
-  // accepted any value.
+  // control.h:88-92). set_mouse_filter (control.cpp:1923) is `ERR_FAIL_INDEX(p_filter, 3)`.
   mouse_filter: v.enumInt(
     'mouse_filter',
     0,
@@ -163,6 +123,8 @@ validatorRegistry.registerAll('Control', {
     { 0: 'STOP', 1: 'PASS', 2: 'IGNORE' },
     { enforced: 'control.cpp:1923' }
   ),
+  // control.cpp:4297, ENUM "None,Click,All,Accessibility" (FocusMode 0-3, control.h:65-70).
+  // set_focus_mode (control.cpp:2267) is `ERR_FAIL_INDEX((int)p_focus_mode, 4)`.
   focus_mode: v.enumInt(
     'focus_mode',
     0,
@@ -171,19 +133,15 @@ validatorRegistry.registerAll('Control', {
     { enforced: 'control.cpp:2267' }
   ),
 
-  // Shared with Window — Godot emits this family from both, identically
-  // (control.cpp:432/446 state the same two hints as window.cpp:183/207).
-  // Grounding for these two lives in linter/validators/themeOverrides.ts,
-  // which this slice does not own.
+  // Shared with Window: control.cpp:432/446 state the same two hints as window.cpp:183/207.
+  // linter/validators/themeOverrides.ts holds the grounding.
   ...THEME_OVERRIDE_VALIDATORS,
 
-  // "Accessibility" group (control.cpp:4310-4316). Setters are bare assigns
-  // (control.cpp:2166-2247), no ERR_FAIL anywhere in the group.
+  // "Accessibility" group (control.cpp:4310-4316). The setters (control.cpp:2166-2247) have no ERR_FAIL.
   accessibility_name: v.quotedString('accessibility_name'),
   accessibility_description: v.quotedString('accessibility_description'),
   // control.cpp:4312, ENUM "Off,Polite,Assertive" = DisplayServer::AccessibilityLiveMode
-  // (3 BIND_ENUM_CONSTANTs, display/display_server.cpp:1768-1770). Field is
-  // full-width (control.h:259), not a bitfield: hinted, not enforced.
+  // (display/display_server.cpp:1768-1770). The field is full-width (control.h:259): hinted, not enforced.
   accessibility_live: v.enumInt(
     'accessibility_live',
     0,
@@ -196,18 +154,17 @@ validatorRegistry.registerAll('Control', {
   accessibility_labeled_by_nodes: nodePathArray('accessibility_labeled_by_nodes'),
   accessibility_flow_to_nodes: nodePathArray('accessibility_flow_to_nodes'),
 
-  // "Focus" group. Neighbor/next/previous are NODE_PATH with only
-  // PROPERTY_HINT_NODE_PATH_VALID_TYPES (an editor-picker filter, not a value
-  // bound); setters (control.cpp:2618-2648) bare-assign the path itself — the
-  // ERR_FAIL_INDEX at :2620 guards the internal Side index, not the value.
+  // "Focus" group. PROPERTY_HINT_NODE_PATH_VALID_TYPES filters the editor picker and bounds
+  // no value. The setters (control.cpp:2618-2648) assign the path: the ERR_FAIL_INDEX at
+  // :2620 guards the Side index.
   focus_neighbor_left: v.nodePath('focus_neighbor_left'),
   focus_neighbor_top: v.nodePath('focus_neighbor_top'),
   focus_neighbor_right: v.nodePath('focus_neighbor_right'),
   focus_neighbor_bottom: v.nodePath('focus_neighbor_bottom'),
   focus_next: v.nodePath('focus_next'),
   focus_previous: v.nodePath('focus_previous'),
-  // control.cpp:2295, ERR_FAIL_INDEX((int)p_focus_behavior_recursive, 3) — enforced.
-  // ENUM "Inherited,Disabled,Enabled" (control.h:72-76, INHERITED=0..ENABLED=2).
+  // control.cpp:2295, ERR_FAIL_INDEX((int)p_focus_behavior_recursive, 3).
+  // ENUM "Inherited,Disabled,Enabled" (control.h:72-76).
   focus_behavior_recursive: v.enumInt(
     'focus_behavior_recursive',
     0,
@@ -216,9 +173,8 @@ validatorRegistry.registerAll('Control', {
     { enforced: 'control.cpp:2295' }
   ),
 
-  // "Mouse" group.
-  // control.cpp:1953, ERR_FAIL_INDEX(p_mouse_behavior_recursive, 3) — enforced.
-  // Same three labels/values as focus_behavior_recursive (control.h:94-98).
+  // "Mouse" group. control.cpp:1953, ERR_FAIL_INDEX(p_mouse_behavior_recursive, 3).
+  // The values of focus_behavior_recursive (control.h:94-98).
   mouse_behavior_recursive: v.enumInt(
     'mouse_behavior_recursive',
     0,
@@ -227,9 +183,8 @@ validatorRegistry.registerAll('Control', {
     { enforced: 'control.cpp:1953' }
   ),
   mouse_force_pass_scroll_events: v.boolean('mouse_force_pass_scroll_events'),
-  // control.cpp:2877, ERR_FAIL_INDEX(int(p_shape), CURSOR_MAX) — enforced. The
-  // enum is `godot/control.ts`'s, because SubViewportContainer's rule reads the
-  // same table and the two must not disagree about where it ends.
+  // control.cpp:2877, ERR_FAIL_INDEX(int(p_shape), CURSOR_MAX). The table lives in
+  // `godot/control.ts` because SubViewportContainer's rule reads it too.
   mouse_default_cursor_shape: v.enumInt(
     'mouse_default_cursor_shape',
     0,
@@ -238,14 +193,11 @@ validatorRegistry.registerAll('Control', {
     { enforced: 'control.cpp:2877' }
   ),
 
-  // Misc.
   clip_contents: v.boolean('clip_contents'),
   localize_numeral_system: v.boolean('localize_numeral_system'),
-  // control.cpp:3539, ERR_FAIL_INDEX(p_direction, LAYOUT_DIRECTION_MAX) where
-  // MAX=5 (control.h:154-160, INHERITED=0..SYSTEM_LOCALE=4). The early return
-  // at :3536 fires only when the incoming value equals data.layout_dir, which
-  // is itself only ever assigned a value that already cleared this same
-  // guard — so it can never intercept an out-of-range write. Enforced.
+  // control.cpp:3539, ERR_FAIL_INDEX(p_direction, LAYOUT_DIRECTION_MAX = 5) (control.h:154-160).
+  // The early return at :3536 compares with data.layout_dir, which holds only values
+  // that passed this guard, so it never catches an out-of-range write.
   layout_direction: v.enumInt(
     'layout_direction',
     0,
@@ -253,26 +205,19 @@ validatorRegistry.registerAll('Control', {
     { 0: 'INHERITED', 1: 'APPLICATION_LOCALE', 2: 'LTR', 3: 'RTL', 4: 'SYSTEM_LOCALE' },
     { enforced: 'control.cpp:3539' }
   ),
-  // shortcut_context declares Variant::OBJECT + PROPERTY_HINT_NODE_TYPE
-  // (control.cpp:4307, takes a live `const Node *`), and packed_scene.cpp:884-891
-  // converts a Node value to `get_path_to(n)` — a NodePath — before writing it.
-  // That is what the WRITER emits; the loader also takes `null`, since NIL
-  // converts to OBJECT (variant.cpp:543-545) and set_shortcut_context handles a
-  // nullptr by storing an empty ObjectID (control.cpp:2022-2027).
+  // Variant::OBJECT with PROPERTY_HINT_NODE_TYPE (control.cpp:4307): the writer stores
+  // `get_path_to(n)`, a NodePath (packed_scene.cpp:884-891). `null` loads too: NIL converts to
+  // OBJECT (variant.cpp:543-545), and the setter stores an empty ObjectID (control.cpp:2022-2027).
   shortcut_context: v.nodePath('shortcut_context', { orNull: true }),
 
-  // "Theme" group. `null` is legal here and the combinator accepts it; see
-  // its docblock for why the write-side STORE_IF_NULL reasoning is a red
-  // herring.
+  // "Theme" group. `null` is legal, and the combinator accepts it.
   theme: v.resourceReference('theme'),
-  // control.cpp:3017-3022, StringName param, bare assign. The GETTER
-  // (control.cpp:3028, `StringName Control::get_theme_type_variation`) is what
-  // the serialiser reads despite ADD_PROPERTY declaring Variant::STRING
-  // (control.cpp:4320) — StringName always writes `&"…"` (variant_parser.cpp:2147-2151).
+  // control.cpp:3017-3022 assigns a StringName. ADD_PROPERTY declares Variant::STRING
+  // (control.cpp:4320), but the StringName getter (control.cpp:3028) decides the form: `&"…"`
+  // (variant_parser.cpp:2147-2151).
   theme_type_variation: v.stringName('theme_type_variation'),
-  // control.cpp:3657-3660, bare assign to a full-width field (control.h:298).
-  // ENUM "Inherit,Always,Disabled" = Node::AutoTranslateMode (3
-  // BIND_ENUM_CONSTANTs, main/node.cpp:4032-4034). Hinted, not enforced.
+  // control.cpp:3657-3660 assigns a full-width field (control.h:298). ENUM "Inherit,Always,Disabled"
+  // = Node::AutoTranslateMode (main/node.cpp:4032-4034). Hinted, not enforced.
   tooltip_auto_translate_mode: v.enumInt(
     'tooltip_auto_translate_mode',
     0,

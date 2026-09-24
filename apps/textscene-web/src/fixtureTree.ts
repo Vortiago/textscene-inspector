@@ -1,8 +1,7 @@
 /**
- * Builds a collapsible Category → Project → folder → scene tree from the flat
- * fixture manifest, plus a recursive name/path filter. Mirrors Godot's
- * FileSystem dock: demo projects nest by their res:// folder structure; other
- * categories list scenes directly.
+ * Builds the Category → Project → folder → scene tree from the flat fixture manifest,
+ * and a recursive name and path filter. Like Godot's FileSystem dock, demo projects
+ * nest by their res:// folders, and other categories list scenes directly.
  */
 
 import type { Fixture } from './fixtures';

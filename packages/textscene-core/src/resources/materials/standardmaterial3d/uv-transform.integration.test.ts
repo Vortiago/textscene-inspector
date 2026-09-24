@@ -1,7 +1,7 @@
 /**
  * UV transforms over a SHARED texture, through the imperative material path.
  *
- * Several materials legitimately sample one image with different `uv1_scale`;
+ * Several materials legitimately sample one image with different `uv1_scale`:
  * `buildStandardMaterial` must clone per material so their repeats cannot
  * clobber each other, and must never write to the loader's cached source.
  */

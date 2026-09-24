@@ -1,13 +1,8 @@
 /**
- * CollisionPolygon2D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * CollisionPolygon2D strict validators, asserted through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator and no fixture text needs upkeep.
+ * Rule-level behaviour belongs in linter.test.ts. Each property gets happy, malformed and bound
+ * cases, with the governing Godot source line beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,14 +18,9 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * CollisionPolygon2D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
- *
- * doc/classes/CollisionPolygon2D.xml lists five members, none carrying
- * `overrides=`: build_mode, disabled, one_way_collision,
- * one_way_collision_margin, polygon. Each has a real ADD_PROPERTY in
- * collision_polygon_2d.cpp:308-314.
+ * The keys CollisionPolygon2D binds, from the source: doc/classes/CollisionPolygon2D.xml lists
+ * five members without `overrides=`, each with an ADD_PROPERTY in
+ * collision_polygon_2d.cpp:308-314. Set this or DECLARES_NOTHING, never neither.
  */
 const KEYS: string[] = [
   'build_mode',
@@ -39,20 +29,14 @@ const KEYS: string[] = [
   'one_way_collision',
   'one_way_collision_margin',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys CollisionPolygon2D does NOT declare, each paired with the ancestor that does.
- * Name at least one; Node2D is where to start.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives CollisionPolygon2D no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart, and it is red until filled for the same reason
- * KEYS is.
+ * Keys CollisionPolygon2D does not declare, each paired with the ancestor that does. The
+ * malformed-value check iterates `getOwnKeys`, so it passes vacuously on an empty set.
+ * Resolving a key through the base-walk to the ancestor's own validator tells a class that
+ * declares nothing from an unwritten slice.
  */
 const INHERITED: [owner: string, key: string][] = [
   ['Node2D', 'position'],
@@ -69,17 +53,16 @@ describe('CollisionPolygon2D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run rather than reasoned.
+    // `fixtureLint` owns the whole-registry version but needs the barrel. This checks the
+    // same file against only what this test imported.
     expectFixtureClean('unit-collision-polygon-2d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // CollisionPolygon2D declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow. It is vacuous when the class declares nothing,
+    // which INHERITED covers.
     const accepted = validatorRegistry
       .getOwnKeys('CollisionPolygon2D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -94,7 +77,7 @@ describe('CollisionPolygon2D strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
+      // The same function, not merely some validator: a shadowing copy on
       // CollisionPolygon2D would answer here while drifting from the ancestor's rule.
       expect(validatorRegistry.findValidator('CollisionPolygon2D', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('CollisionPolygon2D')).not.toContain(key);
@@ -134,11 +117,9 @@ describe('build_mode', () => {
 });
 
 describe('polygon', () => {
-  // collision_polygon_2d.cpp:309 — PropertyInfo(Variant::PACKED_VECTOR2_ARRAY,
-  // "polygon"). get_polygon (:199-201) returns the real Vector<Point2> field
-  // directly (not a TypedArray behind the packed hint), so the corpus spells
-  // it PackedVector2Array(...), e.g.
-  // scenes/demos/2d/finite_state_machine/player/Player.tscn.
+  // collision_polygon_2d.cpp:309: PropertyInfo(Variant::PACKED_VECTOR2_ARRAY, "polygon").
+  // get_polygon (:199-201) returns the Vector<Point2> field, not a TypedArray, so it
+  // serialises as PackedVector2Array(...).
   it('accepts a well-formed PackedVector2Array', () => {
     expect(check('polygon', 'PackedVector2Array(-10, -10, 10, -10, 10, 10, -10, 10)')).toBeNull();
   });
@@ -175,7 +156,7 @@ describe('disabled', () => {
 });
 
 describe('one_way_collision', () => {
-  // collision_polygon_2d.cpp:313, BOOL with PROPERTY_HINT_GROUP_ENABLE — an
+  // collision_polygon_2d.cpp:313, BOOL with PROPERTY_HINT_GROUP_ENABLE: an
   // inspector group-header toggle, not a range hint. set_one_way_collision
   // (:271-278) assigns unconditionally.
   it('accepts true', () => {

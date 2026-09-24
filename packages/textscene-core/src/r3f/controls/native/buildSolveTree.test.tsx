@@ -1,18 +1,8 @@
 /**
- * `useBuildSolveTree` walks the **Live scene tree** (`liveSceneTree.ts`,
- * ADR-0013) into the `SolveNode` forest the native rect solver consumes.
- * These scenarios exercise instancing on the SolveNode seam: a `.tscn`
- * composed the normal Godot way (a HUD instanced into a level, a widget
- * instanced into that HUD) must not lose content or resolve a StyleBox/
- * texture against the wrong scene's resource pool.
- *
- * Non-Control ancestors (a `Node3D` housing an instanced HUD, the raw `Node`
- * an unresolved/multi-root instance parses as) are transparent: they are not
- * genuine Control types (`TWO_D_UI_TYPES`, the same mirror `has2DUIContent`
- * reads), so they contribute no SolveNode of their own — their Control
- * descendants surface directly, at whatever depth they are actually
- * authored, exactly like the DOM overlay's `display: contents` passthrough
- * keeps a non-Control ancestor from ever becoming a CSS containing block.
+ * `useBuildSolveTree` walks the **Live scene tree** (ADR-0013) into `SolveNode`s.
+ * An instanced HUD or widget must keep its content and resolve each StyleBox and
+ * texture in its own scene's pool. A non-Control ancestor gets no SolveNode, and
+ * its Control descendants surface at their authored depth.
  */
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
@@ -116,11 +106,8 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
       wrapper: wrapperFor(loader.loader),
     });
 
-    // 'Root' (Node3D) is not a Control type, so it contributes no SolveNode —
-    // its instanced descendant is promoted straight to the top-level forest.
-    // The PATH stays faithful to the true hierarchy (hiddenNodePaths/selection
-    // still need to address 'Root/Hud'), even though it is no longer nested
-    // under a SolveNode for 'Root'.
+    // 'Root' (Node3D) gets no SolveNode, so its instanced descendant is a forest
+    // root. The path stays 'Root/Hud', which hiddenNodePaths and selection address.
     expect(result.current.tree).toHaveLength(1);
     expect(result.current.tree[0]?.path).toBe('Root/Hud');
     expect(result.current.tree[0]?.node.type).toBe('Label');
@@ -159,10 +146,8 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
   });
 
   it('a multi-root instance keeps the node with subscene roots beneath it, host children staying inline in OUTER scope', () => {
-    // Godot HUDs are normally instanced from a single-root .tscn, but a
-    // multi-root one never collapses (ADR-0013) — the instance node itself
-    // stays, with the loaded roots injected beneath it (sub-scene scope) and
-    // any host-authored children of the instance node keeping OUTER scope.
+    // A multi-root instance never collapses (ADR-0013): the instance node stays,
+    // its loaded roots in sub-scene scope and host-authored children in outer scope.
     const loader = createFakeResourceLoader();
     loader.scenes.seed(LAYER_PATH, scene([label('First', { text: 'FIRST ROOT' }), label('Second', { text: 'SECOND ROOT' })]));
 
@@ -184,11 +169,8 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
   });
 
   it("resolves a sub-scene's StyleBox AND texture in the SUB-SCENE's resource pool, not the host's", () => {
-    // Host and sub-scene both declare id "1" for DIFFERENT StyleBoxes/textures —
-    // the shape a real project produces, since ids are per-file. Resolving
-    // against the wrong pool would silently pick the HOST's resource instead
-    // of failing, so this fixture makes a scope mistake loud (wrong numbers)
-    // rather than quiet (missing content).
+    // Host and sub-scene both declare id "1" for different resources, as per-file
+    // ids allow, so a scope mistake gives wrong numbers, not missing content.
     const loader = createFakeResourceLoader();
     const subTexturePath = 'res://sub-icon.png';
     const hostTexturePath = 'res://HOST-icon.png';
@@ -231,17 +213,10 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
   });
 
   it("resolves a HOST-authored child's StyleBox in the HOST's pool, even when it hangs off an instance node", () => {
-    // The mirror of the test above, and the one that gates the host half of
-    // the scope. A multi-root instance keeps the instance node in place and
-    // splits its children into an `inline` group (host-authored, HOST scope)
-    // and a `subscene` group (SUB scope). The sub-scene pool arrives on the
-    // group by construction, but the HOST pool only reaches the inline group
-    // because the walk passes it down — and that argument is optional, so
-    // dropping it fails silently: the StyleBox simply stops resolving, with
-    // no error and nothing else in this file going red.
-    //
-    // Both pools declare id "1" for different colours, so resolving against
-    // the wrong one is loud (wrong numbers) rather than quiet (absent).
+    // The host half of the scope: the `inline` group gets the host pool only
+    // because the walk passes an optional argument down, so dropping it fails
+    // silently. Both pools declare id "1" for different colours, so the wrong
+    // pool gives wrong numbers.
     const loader = createFakeResourceLoader();
     loader.scenes.seed(
       LAYER_PATH,
@@ -278,10 +253,8 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
   });
 
   it("populates a top-level TextureRect's own textureSize from its `texture` property, no instancing involved", () => {
-    // `resolveTextureSize` reads `node.properties.texture` generically for any
-    // 2D-UI node — TextureRect just happens to be the first type whose native
-    // minimum-size solver actually consumes this field
-    // (`nodes/2d/ui/texturerect/nativeSolver.ts`).
+    // `resolveTextureSize` reads `node.properties.texture` for any 2D-UI node.
+    // TextureRect's minimum-size solver consumes it.
     const loader = createFakeResourceLoader();
     const texturePath = 'res://portrait.png';
     loader.textures.seed(texturePath, { image: { width: 320, height: 160 } } as unknown as THREE.Texture);
@@ -300,10 +273,8 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
   });
 
   it("populates a top-level Button's own textureSize from its `icon` property (Button has no `texture` field at all)", () => {
-    // Button's minimum-size solver (`nodes/2d/ui/button/nativeSolver.ts`)
-    // needs the icon's own natural size the same way TextureRect needs its
-    // texture's — `resolveTextureSize` reads whichever of `texture`/`icon` a
-    // node actually carries, since the two node types never carry both.
+    // Button's minimum-size solver needs its icon's size, and no type carries
+    // both `texture` and `icon`.
     const loader = createFakeResourceLoader();
     const iconPath = 'res://icon.png';
     loader.textures.seed(iconPath, { image: { width: 24, height: 24 } } as unknown as THREE.Texture);
@@ -321,11 +292,8 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
 
   it("takes a TextureRect's textureSize from an INLINE GradientTexture2D, with no loader round trip", () => {
     // An inline procedural texture never reaches the loader, so a path-only
-    // resolution leaves this null and the node's minimum size collapses to
-    // (0, 0) — inside a container that moves every sibling below it, not just
-    // this node's own pixels. Measured against Godot 4.6.3: a
-    // 160x160 GradientTexture2D in a VBoxContainer pushes the ColorRect below
-    // it down by 160 px.
+    // resolution gives a (0, 0) minimum. Godot 4.6.3 pushes the ColorRect below
+    // a 160x160 GradientTexture2D in a VBoxContainer down by 160 px.
     const loader = createFakeResourceLoader();
     const internalResources: TscnInternalResource[] = [
       { id: 'Gradient_1', type: 'Gradient', data: { colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)' } },
@@ -350,11 +318,8 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
 
   it("takes a TextureRect's textureSize from an inline AtlasTexture's REGION, never the sheet's size", () => {
     // `AtlasTexture::get_width`/`get_height` (`scene/resources/atlas_texture.cpp`
-    // :33-53) report `rounded_region.size + margin.size`, so the cell — not the
-    // 1024x1024 sheet — is what a Control reserves. Resolving the slot to the
-    // sheet's PATH would answer 1024x1024 here, which is worse than the (0, 0)
-    // an unresolved slot gives: it would push every sibling below it a
-    // thousand pixels down.
+    // :33-53) report `rounded_region.size + margin.size`, so a Control reserves
+    // the cell, not the 1024x1024 sheet that the sheet's path would answer.
     const loader = createFakeResourceLoader();
     const sheetPath = 'res://sheet.png';
     loader.textures.seed(sheetPath, { image: { width: 1024, height: 1024 } } as unknown as THREE.Texture);
@@ -462,7 +427,7 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
     });
 
     const initialGeneration = result.current.generation;
-    // Cold cache: the instance node itself isn't a Control, and nothing has
+    // Cold cache: the instance node itself is not a Control, and nothing has
     // loaded yet, so the forest is empty.
     expect(result.current.tree).toHaveLength(0);
 
@@ -496,7 +461,7 @@ describe('useBuildSolveTree — instanced sub-scenes', () => {
   });
 });
 
-/** A Node2D-shaped node — every discrete transform field stated explicitly. */
+/** A Node2D-shaped node with every transform field stated. */
 function node2D(
   name: string,
   transform: { position?: { x: number; y: number }; rotation?: number; scale?: { x: number; y: number }; skew?: number },
@@ -562,11 +527,8 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
   });
 
   it('composes two chained Node2D ancestors, outer first — Transform2D::operator*, core/math/transform_2d.cpp:198-217', async () => {
-    // Outer translates only; inner rotates only at its own local origin. The
-    // composed origin is the outer's translation alone (the inner contributes
-    // none of its own), and the composed basis is the inner's rotation alone
-    // (the outer contributes none of its own) — this is what proves the two
-    // ancestors actually multiplied rather than one masking the other.
+    // Outer only translates and inner only rotates, so the composed origin is the
+    // outer's and the basis the inner's: both multiplied, neither masked.
     const outer = node2D('Outer', { position: { x: 100, y: 50 } }, {
       children: [node2D('Inner', { rotation: Math.PI / 2 }, { children: [label('L')] })],
     });
@@ -595,10 +557,8 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
   });
 
   it('a CanvasLayer under a rotated Node2D gets no ancestor transform, and neither do ITS children', async () => {
-    // CanvasLayer is not a CanvasItem (it derives from Node), so it never
-    // enters the chain `get_parent_item()` climbs at all — its own canvas is
-    // entirely independent of scene-tree ancestry (canvas_item.cpp:263-267
-    // parents a CanvasLayer's children at `canvas_layer->get_canvas()`).
+    // CanvasLayer derives from Node, so `get_parent_item()` never climbs it: its
+    // children parent at `canvas_layer->get_canvas()` (canvas_item.cpp:263-267).
     const nodes = [
       node2D('N', { rotation: Math.PI / 2 }, {
         children: [node('Layer', 'CanvasLayer', { children: [label('L')] })],
@@ -679,13 +639,10 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
 });
 
 describe('useBuildSolveTree — `parent_visible_in_tree` follows the SCENE tree, not the canvas parenting', () => {
-  // `NOTIFICATION_ENTER_TREE` casts the DIRECT parent to `CanvasItem` and takes
-  // `ci->is_visible_in_tree()` (canvas_item.cpp:311-316) — with no `top_level`
-  // test, unlike `get_parent_item()` (canvas_item.cpp:565-571) — and
-  // `_handle_visibility_change` walks `get_child(i)` into every CanvasItem
-  // child, top_level ones included (canvas_item.cpp:103-108, "Should the
-  // top_levels stop propagation? I think so, but..."). So this ONE facet
-  // crosses breaks that reset the transform and the tint.
+  // `NOTIFICATION_ENTER_TREE` takes the direct parent's `is_visible_in_tree()`
+  // (canvas_item.cpp:311-316) with no `top_level` test, unlike `get_parent_item()`
+  // (canvas_item.cpp:565-571), and propagation reaches top_level children
+  // (canvas_item.cpp:103-108). So visibility crosses breaks that reset the rest.
 
   it("ANDs a skipped Node2D ancestor's own `visible` — `is_visible_in_tree`, canvas_item.cpp:62-64", () => {
     const nodes = [node2D('N', {}, { children: [label('L')], properties: { visible: false } })];
@@ -710,10 +667,9 @@ describe('useBuildSolveTree — `parent_visible_in_tree` follows the SCENE tree,
 
   it('reaches a `top_level` Control, which `get_parent_item()` would have cut off', () => {
     // `get_parent_item()` opens `if (top_level) return nullptr;`
-    // (canvas_item.cpp:565-571), so transform and modulate reset — but
-    // ENTER_TREE's cast runs with no such test (canvas_item.cpp:311-316), and
-    // the propagation loop steps into a top_level child anyway
-    // (canvas_item.cpp:103-108).
+    // (canvas_item.cpp:565-571), so transform and modulate reset. ENTER_TREE's cast
+    // has no such test (canvas_item.cpp:311-316), and propagation steps into a
+    // top_level child (canvas_item.cpp:103-108).
     const nodes = [
       control('Root', {}, [
         node2D('N', {}, {
@@ -781,13 +737,10 @@ describe('useBuildSolveTree — `parent_visible_in_tree` follows the SCENE tree,
 });
 
 describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becomes a canvas root', () => {
-  // `NOTIFICATION_ENTER_CANVAS` climbs CanvasItem parents looking for a Control
-  // (control.cpp:3874-3890); a non-CanvasItem link ends the climb with
-  // `has_parent_control == false` and the Control registers as a viewport ROOT
-  // control. `_enter_canvas` (canvas_item.cpp:234-285) parents its canvas item
-  // at the enclosing CanvasLayer's canvas, or the viewport's own, rather than at
-  // any ancestor item — so no ancestor transform, modulate or z reaches it, and
-  // it anchors against the viewport. Being a root of THIS forest is that state.
+  // A non-CanvasItem link ends the climb (control.cpp:3874-3890), so the Control is
+  // a viewport root, and `_enter_canvas` (canvas_item.cpp:234-285) parents it at the
+  // enclosing canvas. No ancestor transform, modulate or z reaches it, and it
+  // anchors against the viewport: a root of this forest.
 
   it('surfaces a Control separated from its ancestor Control by a plain `Node` as a second root', () => {
     const nodes = [
@@ -814,9 +767,8 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
   });
 
   it('keeps a top_level Control clear of the Node2D ancestors it sits under', () => {
-    // `get_parent_item()` short-circuits before the parent cast
-    // (canvas_item.cpp:565-571), so the Node2D between them composes onto
-    // nothing — unlike a promoted Control, which rides its transform.
+    // `get_parent_item()` returns before the parent cast (canvas_item.cpp:565-571),
+    // so the Node2D between them composes onto nothing, unlike for a promoted Control.
     const anchor = node2D('Anchor', { position: { x: 30, y: 40 } }, {
       children: [label('Floating', { topLevel: true })],
     });
@@ -860,14 +812,10 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
   });
 
   it('draws after the whole subtree of the root it was hoisted out of', () => {
-    // A hoisted Control is a root of the viewport's canvas, and a canvas draws
-    // its roots in the order a per-canvas counter indexed them
-    // (`gui_get_canvas_sort_index()`, canvas_item.cpp:222-232,
-    // viewport.cpp:3721-3724) while SceneTree walked the `_root_canvas` group
-    // in tree pre-order (canvas_item.cpp:453-466, scene_tree.cpp:333-348,
-    // node.cpp:2152-2187) — each root's subtree whole
-    // (renderer_canvas_cull.cpp:494-511). So it draws OVER a sibling authored
-    // after it, which the slot its own file position gives it cannot express.
+    // A canvas draws its roots by a per-canvas index (canvas_item.cpp:222-232,
+    // viewport.cpp:3721-3724) taken in pre-order (canvas_item.cpp:453-466,
+    // scene_tree.cpp:333-348, node.cpp:2152-2187), each subtree whole
+    // (renderer_canvas_cull.cpp:494-511). So a hoisted Control draws over later siblings.
     const detached = node('Holder', 'Node', { children: [label('Detached')] });
     const nodes = [control('Root', { anchors_preset: 15 })];
     (nodes[0] as TscnNode).children = [detached, label('Later')];
@@ -882,10 +830,9 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
   });
 
   it('orders a Control hoisted to a CanvasLayer against THAT layer’s own roots', () => {
-    // The layer is its own canvas, and its counter is `CanvasLayer::
-    // get_sort_index()` (canvas_layer.cpp:261-267) over the layer's own roots
-    // — pre-order [First, Detached, Second], so the hoisted item draws over
-    // the first child's subtree and still under the second's.
+    // The layer's counter is `CanvasLayer::get_sort_index()` (canvas_layer.cpp:261-267)
+    // over its own roots, in pre-order [First, Detached, Second]: the hoisted item
+    // draws over the first child's subtree and under the second's.
     const detached = node('Holder', 'Node', { children: [label('Detached')] });
     const first = control('First');
     (first as TscnNode).children = [detached];
@@ -905,11 +852,10 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
   });
 
   it('still carries the eye toggle of every ancestor it was hoisted past', () => {
-    // The toggle is the OUTLINER's subtree, not Godot's canvas parenting: a
-    // hoisted node leaves the ancestor's emitted group, so the flag has to
-    // travel on the node instead. (The ancestor's own `visible = false` does
-    // NOT — `_handle_visibility_change` casts direct children only,
-    // canvas_item.cpp:92-111 — which is exactly what the hoist expresses.)
+    // The toggle follows the outliner's subtree, and a hoisted node leaves its
+    // ancestor's group, so the flag travels on the node. The ancestor's own
+    // `visible = false` does not: `_handle_visibility_change` casts direct
+    // children only (canvas_item.cpp:92-111).
     const scene = new TscnParser().parse(`[gd_scene format=3]
 
 [node name="Root" type="Control"]
@@ -962,9 +908,8 @@ function control(name: string, extra: Record<string, unknown> = {}, children: Ts
 
 describe('useBuildSolveTree — theme resolution', () => {
   it("resolves a root Control's theme = ExtResource(...) and threads it to a themeless child's themeChain[0] — the corpus's dominant shape", () => {
-    // The brief's central claim: a node-local read returns nothing for this
-    // shape (a themed root, plain Labels beneath it) — only the ancestor
-    // chain does.
+    // A node-local read finds nothing for a themed root over plain Labels. Only
+    // the ancestor chain does.
     const loader = createFakeResourceLoader();
     const rootTheme = theme({ defaultFontSize: 24 });
     loader.themes.seed('res://theme.tres', rootTheme);
@@ -1043,9 +988,8 @@ describe('useBuildSolveTree — theme resolution', () => {
       wrapper: wrapperFor(loader.loader),
     });
 
-    // 'Bridge' (Node3D) contributes no SolveNode, and it is not a CanvasItem
-    // either, so its Control descendant surfaces as a canvas root of its own —
-    // with the theme chain reset to empty rather than inherited through it.
+    // 'Bridge' (Node3D) is neither a Control nor a CanvasItem, so its Control
+    // descendant is a canvas root, with an empty theme chain.
     const leaf = result.current.tree.find((n) => n.path === 'Root/Bridge/Leaf')!;
     expect(leaf.themeChain).toEqual([]);
   });
@@ -1088,14 +1032,11 @@ describe('useBuildSolveTree — theme resolution', () => {
     });
 
     const initialGeneration = result.current.generation;
-    // Cold cache: the walk never blocks on the load, so the root Control
-    // still gets a SolveNode — just with an empty theme chain for now.
+    // Cold cache: the walk never blocks on the load, so the root Control still
+    // gets a SolveNode, with an empty theme chain for now.
     expect(result.current.tree[0]?.themeChain).toEqual([]);
-    // The request only happens in the post-render effect, never inline
-    // during the synchronous walk — asserted the same way the existing
-    // texture/scene generation tests do: nothing resolves until `_resolve`
-    // is called, proving the walk itself never requested it eagerly enough
-    // to already be cached.
+    // The request happens in the post-render effect, not in the walk: nothing
+    // resolves until `_resolve` is called.
     expect(loader.themes.cache.has('res://theme.tres')).toBe(false);
 
     const resolved = theme({ defaultFontSize: 24 });
@@ -1139,9 +1080,8 @@ describe('useBuildSolveTree — theme resolution', () => {
     const initialGeneration = result.current.generation;
 
     await act(async () => {
-      // `peekSceneFontMetrics`'s own async pipeline — kicked off entirely
-      // outside `loader`, inside the SOLVE pass itself, not through any
-      // `loader.eventBus` channel this test's other generation-bump cases use.
+      // `peekSceneFontMetrics`'s async pipeline, started from the solve itself,
+      // outside `loader` and its event bus.
       await resolveSceneFontMetrics(
         { kind: 'file', bytes: new ArrayBuffer(4), mimeType: 'font/ttf', fallbacks: [], properties: {} },
         'Root/Title'
@@ -1168,9 +1108,9 @@ describe('useBuildSolveTree — theme resolution', () => {
   });
 
   it("wires the project's default theme (gui/theme/custom) as the final rung of a themeless Control's chain", async () => {
-    // End-to-end through the REAL ResourceLoader (not the fake): project.godot
-    // is read via FileEventBus.tryLoad (ProjectSettingsContext), and the
-    // referenced Theme .tres through the real Theme processor.
+    // End to end through the real ResourceLoader: project.godot through
+    // FileEventBus.tryLoad (ProjectSettingsContext), and the Theme .tres through
+    // the real Theme processor.
     const projectGodot = [
       'config_version=5',
       '',
@@ -1341,22 +1281,16 @@ describe('useBuildSolveTree — theme StyleBox/Color/Constant resolution', () =>
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    // Unscaled — the literal `8` the project theme's own `.tres` declares,
-    // never multiplied by this previewer's own built-in-default scale.
+    // Unscaled: the literal `8` the project theme's `.tres` declares.
     expect(result.current.tree[0]?.constants.h_separation).toBe(8);
   });
 });
 
 /**
- * The inline-procedural texture's minimum-size contribution, end to end:
- * `.tscn` text → `useBuildSolveTree` → `solveControlTree`. The unit test above
- * proves `SolveNode.textureSize` is populated; this proves the number reaches
- * a SOLVED RECT, which is the part a purely visual check would attribute to
- * the painter.
- *
- * Expected positions are Godot 4.6.3's, read off a render of
+ * An inline procedural texture's minimum size, from `.tscn` text to a solved rect.
+ * Expected positions are Godot 4.6.3's renders of
  * `scenes/fixtures/unit-texturerect-gradienttexture.tscn` and
- * `unit-button-icon-gradienttexture.tscn` at the project viewport (1152x648).
+ * `unit-button-icon-gradienttexture.tscn` at 1152x648.
  */
 describe('useBuildSolveTree — an inline procedural texture moves the solved rect', () => {
   const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
@@ -1481,13 +1415,10 @@ color = Color(0.95, 0.85, 0.1, 1)
 });
 
 /**
- * The scene-tree eye toggle (`SelectionContext.hiddenNodePaths`) is the
- * previewer's stand-in for clearing a node's `visible` in the editor, so it has
- * to reach the SOLVE the same way `visible` does: `Container::_sort_children`
- * skips a child that `as_sortable_control` rejects
- * (`scene/gui/container.cpp::Container::_sort_children`), leaving no slot
- * behind. Setting only the emitted group's `visible` would keep the slot and
- * paint a permanent hole in the container.
+ * The eye toggle (`SelectionContext.hiddenNodePaths`) stands in for clearing
+ * `visible`, so it reaches the solve: `Container::_sort_children` leaves no slot
+ * for a rejected child (`scene/gui/container.cpp::Container::_sort_children`). A
+ * hidden group alone would paint a hole.
  */
 describe('useBuildSolveTree — hiddenNodePaths reaches the solve', () => {
   const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
@@ -1553,10 +1484,8 @@ custom_minimum_size = Vector2(0, 40)
   });
 
   it('hides a promoted Control when the SKIPPED node the eye toggle names is its ancestor', () => {
-    // A Node2D leaves no SolveNode to carry `visible`, and its Control
-    // descendants promote past it — so an own-path-only stamp would let them
-    // escape a toggle that `NodeDispatcher` applies to a whole subtree
-    // (one `<group visible>` around the node AND its children).
+    // A Node2D leaves no SolveNode, and its Control descendants promote past it,
+    // so an own-path stamp would let them escape a whole-subtree toggle.
     const scene = new TscnParser().parse(`[gd_scene format=3]
 
 [node name="Root" type="Control"]
@@ -1597,11 +1526,9 @@ anchors_preset = 15
   });
 });
 
-// A scene reached ONLY by the Control walk has no other component registering
-// it: `createSceneProcessor` resolves an address through the MetadataStore, and
-// for an unregistered one it throws "Scene metadata not found". That failure is
-// cached like any other, so the instance never resolves on any later render —
-// the registration has to precede the request, not merely accompany it.
+// Only the Control walk registers this scene. `createSceneProcessor` throws
+// "Scene metadata not found" for an unregistered address and caches the
+// failure, so the registration must precede the request.
 describe('useBuildSolveTree — requesting an uncached sub-scene', () => {
   it('registers the ExtResource before it asks the loader for the scene', () => {
     const loader = createFakeResourceLoader();
@@ -1742,8 +1669,8 @@ describe('useBuildSolveTree — per-type texture slots (registerTextureSlots)', 
     async () => {
       const loader = createFakeResourceLoader();
       const tresPath = 'res://icons/keyboard_arrow_left.tres';
-      // A real Kenney-shaped file, run through the actual `.tres` parser —
-      // mirrors `useTexture2D.test.tsx`'s own `.tres AtlasTexture` fixture.
+      // A real AtlasTexture `.tres`, through the actual parser, as in
+      // `useTexture2D.test.tsx`.
       const atlasTres: ParsedResource = parseTresFile(`[gd_resource type="AtlasTexture" format=3]
 
 [ext_resource type="Texture2D" path="res://sheet.png" id="1_tk63f"]
@@ -1769,8 +1696,8 @@ region = Rect2(32, 32, 64, 64)
         loader.resources._resolve(tresPath, atlasTres);
       });
 
-      // The RESOURCE bus, never the texture one — the `.tres` is text (a
-      // region declaration), not pixels.
+      // The resource bus, not the texture one: the `.tres` is a region in
+      // text, not pixels.
       expect(result.current.generation).toBeGreaterThan(initialGeneration);
       expect(result.current.tree[0]?.textureSize).toEqual({ x: 64, y: 64 });
     }
@@ -1869,10 +1796,9 @@ describe('useBuildSolveTree — layout direction', () => {
   });
 
   it('starts the forest from an INHERITED direction the caller climbed to for it', () => {
-    // The climb casts each ancestor to `Control`, then to `Window`, then keeps
-    // going (`control.cpp:3584-3598`). A `SubViewport` is a `Viewport` and
-    // neither, so it is STEPPED OVER and the container above it decides — a
-    // forest this walk cannot see the top of, so its caller states it.
+    // The climb casts to `Control`, then `Window`, then goes on
+    // (`control.cpp:3584-3598`), stepping over a `SubViewport`. This walk cannot
+    // see the container above it, so the caller states it.
     const nodes = [
       node('Box', 'HBoxContainer', {
         properties: { name: 'Box' } as Record<string, unknown>,
@@ -1962,11 +1888,9 @@ describe('useBuildSolveTree — a container that writes its children’s `visibl
   });
 
   describe('TabContainer shows the current page and HIDES every other', () => {
-    // `_repaint` runs `c->show()` on `i == current` and `c->hide()` on the
-    // rest (`tab_container.cpp:377-399`); `add_child_notify` has already
-    // hidden every page as it was added (`:651`). An editor-saved scene writes
-    // `visible = false` on the non-current pages itself, so only a hand-edited
-    // one exposes this.
+    // `_repaint` shows `i == current` and hides the rest
+    // (`tab_container.cpp:377-399`), after `add_child_notify` hid each page (`:651`).
+    // An editor-saved scene writes the hidden pages itself, so a hand-edited one shows it.
     function tabs(properties: Record<string, unknown>, pages: TscnNode[]): TscnNode {
       return node('TC', 'TabContainer', {
         properties: { name: 'TC', ...properties } as Record<string, unknown>,

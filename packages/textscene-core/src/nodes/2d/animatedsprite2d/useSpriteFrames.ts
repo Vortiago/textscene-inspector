@@ -1,22 +1,8 @@
 /**
- * useSpriteFrames — resolves an AnimatedSprite2D's `sprite_frames` reference
- * into its animations map plus the resource pools its frame textures resolve
- * against, from either home a SpriteFrames can live in:
- *
- *   - `SubResource("…")` — embedded in the scene; resolved synchronously
- *     against the scene's internal/external resources (never `pending`).
- *   - `ExtResource("…")` / `res://…` — an external `.tres` SpriteFrames file;
- *     fetched via useResource('Resource') and resolved against the file's own
- *     ext/sub sections (its frame `ExtResource("id")`s reference the .tres's
- *     ids, NOT the scene's). Missing-file panel rows + late-arrival upload
- *     recovery come from useResource.
- *
- * Mirrors useTileSetModel: hook-call count stays constant by feeding `''` to
- * useResource on the synchronous branch (the documented no-request idiom).
- *
- * The hook is the SpriteFrames slice's host adapter: both homes hand the same
- * property bag to `decodeSpriteFrames`, so the decode never learns which one it
- * came from.
+ * useSpriteFrames resolves an AnimatedSprite2D's `sprite_frames` reference into
+ * its animations map and the resource pools its frame textures resolve against.
+ * Both homes hand the same property bag to `decodeSpriteFrames`, so the decode
+ * never learns which one it came from.
  */
 
 import { useMemo } from 'react';
@@ -55,15 +41,18 @@ export function useSpriteFrames(spriteFramesRef: string | undefined): SpriteFram
   const isExternal =
     !!spriteFramesRef && (ref?.type === 'ExtResource' || spriteFramesRef.startsWith('res://'));
   const resolvedPath = isExternal ? resolveExtResourcePath(spriteFramesRef, externalResources) : null;
-  // Only text resources can ever parse; a binary `.res` SpriteFrames would park
-  // the load in-flight forever (no processor handles it).
+  // Only a text resource parses. No processor handles a binary `.res`, so its
+  // load would stay in flight forever.
   const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
+  // `''` is the no-request idiom: the hook-call count stays constant on the
+  // synchronous branch, as in useTileSetModel.
   const tresResult = useResource<ParsedResource>(tresPath ?? '', 'resource');
 
   return useMemo((): SpriteFramesResult => {
     if (!spriteFramesRef) return EMPTY;
 
-    // In-scene SubResource — resolve synchronously against the scene's pools.
+    // An in-scene SubResource resolves synchronously against the scene's pools, so
+    // it is never `pending`.
     if (ref?.type === 'SubResource') {
       const sub = findSubResource(internalResources, ref.id);
       const decoded = sub ? decodeSpriteFrames(sub.data) : null;
@@ -79,9 +68,10 @@ export function useSpriteFrames(spriteFramesRef: string | undefined): SpriteFram
         : EMPTY;
     }
 
-    // External `.tres` SpriteFrames — async; resolve frames against the FILE's
-    // own ext/sub sections (its frame ids are scoped to the .tres). A non-`.tres`
-    // external (e.g. a binary `.res`) leaves tresPath null → unresolvable.
+    // An external `.tres` loads through useResource, which also supplies the
+    // missing-file rows and the late-upload recovery. Its frames resolve against
+    // the file's own sections, since its frame ids are scoped to the .tres. A
+    // binary `.res` leaves tresPath null, so it is unresolvable.
     if (!tresPath) return EMPTY;
     if (tresResult.status === 'pending') return { spriteFrames: null, status: 'pending' };
     if (tresResult.status === 'unavailable' || !tresResult.value) return EMPTY;

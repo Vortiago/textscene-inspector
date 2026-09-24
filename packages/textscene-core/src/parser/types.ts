@@ -1,163 +1,116 @@
 /**
- * Type definitions for TSCN data structures
+ * The data structures a TSCN parse produces: scene, node, resources and scope.
  */
 
 import type { Node3DProperties } from '../nodes/base/node3d/types';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 
 /**
- * One `[node]` heading as the scan saw it, before `buildSceneTree` decided what
- * to do with it.
- *
- * Kept off `TscnNode` because only the two diagnostics below read it, and every
- * node in the tree would otherwise carry fields nothing else uses. Two
- * derivations consume it, both against the tree that was actually returned:
- * `strandedNodes` for the headings absent from it, and `rootDeclaringParent`
- * for the one that became its root.
+ * One `[node]` heading as the scan saw it, before `buildSceneTree` placed it. Kept off
+ * `TscnNode` because only `strandedNodes` and `rootDeclaringParent` read it, both
+ * against the returned tree.
  */
 export interface NodeOrigin {
   readonly node: TscnNode;
   /** 1-based line of the node's own heading. */
   readonly line: number;
   /**
-   * The heading's `parent=` value as written, or undefined where it declares
-   * none.
-   *
-   * Not `node.parent`, which both parsers leave unset for an empty one. The two
-   * are different diagnostics: `add_node_path` never returns `-1`
-   * (`packed_scene.cpp:2307-2311`), so a heading spelling `parent=""` cannot
-   * reach the `n.parent == -1` refusal at all.
+   * The heading's `parent=` as written, or undefined where it declares none. Not
+   * `node.parent`, which both parsers leave unset for an empty one: `add_node_path`
+   * never returns `-1` (`packed_scene.cpp:2307-2311`), so `parent=""` cannot reach the
+   * `n.parent == -1` refusal.
    */
   readonly declaredParent: string | undefined;
   /**
-   * Whether the heading carries `parent_id_path=`, the id trail Godot falls
-   * back to when the `parent=` path does not walk
-   * (`packed_scene.cpp:161-163`, `:1947`).
-   *
-   * Only whether, not the ids: they name nodes by id inside the base scenes,
-   * which no reader of THIS file can resolve. It is enough to know that a
-   * vanished path here does not settle where the node lands.
+   * Whether the heading carries `parent_id_path=`, the id trail Godot falls back to
+   * when the `parent=` path does not walk (`packed_scene.cpp:161-163`, `:1947`). The
+   * ids name nodes inside base scenes this file cannot resolve, so a vanished path
+   * here does not settle where the node lands.
    */
   readonly recoverableById?: boolean;
 }
 
-/**
- * Represents a complete TSCN scene
- */
 export interface TscnScene {
-  /** Root nodes in the scene tree */
+  /** Root nodes in the scene tree. */
   nodes: TscnNode[];
-  /** External resource references */
   externalResources: TscnExternalResource[];
-  /** Internal resource definitions */
   internalResources: TscnInternalResource[];
   /**
-   * Headings whose `parent=` path resolved against nothing, so they are NOT in
+   * Headings whose `parent=` path resolved against nothing, so they are not in
    * `nodes`. Absent rather than empty when nothing was stranded.
    */
   orphanedNodes?: readonly NodeOrigin[];
   /**
-   * The root heading, when it declares a `parent=` — the one shape of it Godot
-   * refuses (`packed_scene.cpp:218-219`).
-   *
-   * Absent otherwise, like `orphanedNodes`: the render path takes the tree as
-   * it is built either way, and a key present-but-empty would change the object
-   * shape it sees for every well-formed scene.
+   * The root heading, when it declares a `parent=`, which Godot refuses
+   * (`packed_scene.cpp:218-219`). Absent otherwise, since a present-but-empty key
+   * would change the object shape the render path sees for every well-formed scene.
    */
   rootWithParent?: NodeOrigin;
   /**
    * Headings spelling `parent=""`, which faults the text loader
-   * (`resource_format_text.cpp:206-207`). Absent rather than empty, like
-   * `orphanedNodes`.
-   *
-   * Not a subset of either field above: such a heading carries no `node.parent`,
-   * so the builder seats it wherever a parentless heading goes rather than
-   * stranding it.
+   * (`resource_format_text.cpp:206-207`). Absent rather than empty. Not a subset of the
+   * fields above: such a heading has no `node.parent`, so it is seated, not stranded.
    */
   emptyParentHeadings?: readonly NodeOrigin[];
-  /** Event-based resource loader (used by SceneGraph helpers). */
+  /** Event-based resource loader, used by SceneGraph helpers. */
   resourceLoader?: ResourceLoader;
 }
 
-/**
- * Represents a node in the TSCN scene tree
- */
 export interface TscnNode {
-  /** Node name */
   name: string;
-  /** Node type (e.g., "Node3D", "MeshInstance3D") */
+  /** Godot class name, for example "Node3D". */
   type: string;
-  /** Parent node path ("." for root, "NodeName" for named parent) */
+  /** Parent node path: "." for the root's children, "NodeName" for a named parent. */
   parent?: string;
-  /** Child nodes */
   children: TscnNode[];
-  /** Type-specific properties (e.g., Node3DProperties for Node3D nodes) */
+  /** Type-specific properties, for example Node3DProperties for a Node3D. */
   properties: Node3DProperties | Record<string, unknown>;
   /**
-   * Raw body properties as strings, exactly as written. Published by BOTH parsers
-   * (`parser/rawPropertyParity.test.ts`), so it is the one field whose meaning does
-   * not depend on which produced the node — `properties` is the typed slice shape on
-   * the lenient tree and this same bag on the strict one. Read this from anything the
-   * linter and the render path share. Also what lets a type-less instance node's
-   * overrides be re-parsed against the instanced root's type.
+   * Raw body properties as written, published by both parsers
+   * (`parser/rawPropertyParity.test.ts`), so read this from code the linter and the
+   * render path share. `properties` differs by parser. It also lets a type-less
+   * instance node's overrides be re-parsed against the instanced root's type.
    */
   rawProperties?: Record<string, string>;
   /**
-   * Whether `rawProperties`' key insertion order reflects a SINGLE file's
-   * real property order (`Object.keys` order = scan order, ADR-0035) rather
-   * than a synthesized bag. `core/NodeRegistry.ts`'s `parseNodeWithRegistry`
-   * sets this `true` for every node it builds — one `TscnParserCore` scan.
-   * `resources/mergeInstanceRoot.ts`'s raw merge
-   * (`{ ...root.rawProperties, ...instanceNode.rawProperties }`) produces
-   * neither file's order (a shared key keeps ROOT's position but the
-   * INSTANCE's value), so it sets this `false` on the node it returns. A
-   * file-order-sensitive resolver (`r3f/controls/controlAnchors.ts`'s
-   * `resolveControlLayout`, `nodes/2d/ui/shared/range.ts`'s
-   * `resolveRangeValue`) must fall back to Godot's editor-save-order
-   * assumption unless this is `true`.
+   * Whether `rawProperties`' key order is one file's scan order (ADR-0035).
+   * `core/NodeRegistry.ts`'s `parseNodeWithRegistry` sets `true`. The raw merge in
+   * `resources/mergeInstanceRoot.ts` sets `false`: a shared key keeps the root's
+   * position but the instance's value.
    */
+  // A file-order-sensitive resolver (`r3f/controls/controlAnchors.ts`'s
+  // `resolveControlLayout`, `nodes/2d/ui/shared/range.ts`'s `resolveRangeValue`)
+  // assumes Godot's editor save order unless this is `true`.
   rawPropertiesOrderReliable?: boolean;
   /**
-   * Set when this node's authored `parent` path descends INTO instanced content
-   * — a `.tscn` PackedScene or a `.glb` — whose interior this file does not
-   * declare. The node is attached in the tree to the nearest enclosing INSTANCE
-   * node, and this holds the remainder of the path BELOW that instance
-   * (`"Skeleton/Skeleton3D"`, `"ColorRect/CenterContainer/VBoxContainer"`).
-   * Never the empty string.
-   *
-   * `parent` keeps the authored path verbatim, so this is purely additive: the
-   * linter and `mergeInstanceRoot`'s re-parse both still read what the file said.
+   * Set when the authored `parent` path descends into instanced content (a `.tscn` or
+   * `.glb`) this file does not declare: the path below the nearest enclosing instance,
+   * which holds the node in the tree. Never the empty string. `parent` keeps the
+   * authored path, so the linter and `mergeInstanceRoot` still read what the file said.
    */
   instanceSubPath?: string;
   /**
-   * True when the `[node]` heading declared none of `type=`, `instance=` and
-   * `instance_placeholder=` — Godot's marker for "override properties on the
-   * node already at this path" rather than "add a new node here". See
-   * `isPropertyOverrideHeading`.
+   * True when the heading declared none of `type=`, `instance=` and
+   * `instance_placeholder=`: Godot's marker for overriding the node already at this
+   * path. See `isPropertyOverrideHeading`.
    */
   overridesExistingNode?: boolean;
   /**
-   * The resource scope this node's subtree must resolve against, set when the
-   * node has been grafted into content loaded from ANOTHER scene. It was
-   * authored in the outer scene, so its `ExtResource("3")` and its
-   * `SubResource("1")` alike mean whatever the OUTER tables say — under the
-   * sub-scene's tables the same id is a different resource, or absent entirely.
+   * The resource scope this subtree resolves against, set when the node is grafted
+   * into content loaded from another scene. It was authored in the outer scene, so its
+   * `ExtResource` and `SubResource` ids mean what the outer tables say.
    */
   authoredScope?: SceneScope;
   /**
-   * The heading's `owner=` NodePath as written, root-relative (`"."` is the
-   * root). The loader resolves it and sets the node's owner
-   * (resource_format_text.cpp:257-262), which decides the table a `%Name`
-   * registers on; Godot's own writer never emits it (packed_scene.cpp:1036-1044).
+   * The heading's `owner=` NodePath as written, root-relative. The loader sets the owner
+   * from it (resource_format_text.cpp:257-262), which decides the table a `%Name`
+   * registers on. Godot's own writer never emits it (packed_scene.cpp:1036-1044).
    */
   owner?: string;
-  /** External scene instance reference (e.g., ExtResource("1_abc")) */
+  /** External scene instance reference, for example ExtResource("1_abc"). */
   instance?: string;
 }
 
-/**
- * Represents an external resource reference
- */
 export interface TscnExternalResource {
   id: string;
   path: string;
@@ -165,29 +118,16 @@ export interface TscnExternalResource {
 }
 
 /**
- * The resource scope a subtree resolves its ids against — BOTH pools, always
- * together.
- *
- * They travel as one value rather than two parameters because a `.tscn`'s ids
- * are per-file and per-KIND: a node can name `ExtResource("2")` and
- * `SubResource("1")` in the same property block, and both mean "in the scene I
- * was authored in". Splitting them lets a caller pass one and forget the other,
- * which resolves half the ids against the right scene and half against nothing
- * — a StyleBox that silently comes back `undefined` while the textures beside
- * it load fine. That is not hypothetical: while these were separate parameters
- * (one required, one optional), BOTH consumers that needed the SubResource pool
- * shipped call sites that compiled, ran, and passed their full suites with it
- * omitted. One type makes the omission unrepresentable instead of untested.
+ * The resource scope a subtree resolves its ids against: both pools, always together.
+ * Ids are per file and per kind, and one property block can name `ExtResource("2")` and
+ * `SubResource("1")`. One type makes it impossible to pass one pool and forget the
+ * other, which resolves half the ids against nothing.
  */
 export interface SceneScope {
   readonly externalResources: readonly TscnExternalResource[];
   readonly internalResources: readonly TscnInternalResource[];
 }
 
-
-/**
- * Represents an internal resource
- */
 export interface TscnInternalResource {
   id: string;
   type: string;
@@ -199,23 +139,20 @@ export type ExtResource = TscnExternalResource;
 /** Alias used by the immutable SceneGraph and dependency-tracking helpers. */
 export type SubResource = TscnInternalResource;
 
-/**
- * Represents a missing external resource that failed to load
- */
+/** An external resource that failed to load. */
 export interface MissingResource {
-  /** Godot resource path (e.g., res://scenes/Door.tscn) */
+  /** Godot resource path, for example res://scenes/Door.tscn. */
   path: string;
-  /** Resource type (e.g., PackedScene, Texture2D, StandardMaterial3D) */
+  /** Resource type, for example PackedScene or Texture2D. */
   type: string;
-  /** Node path that references this resource */
+  /** Node path that references this resource. */
   referencedBy: string;
-  /** Error message from failed load attempt */
+  /** Error message from the failed load. */
   error?: string;
 }
 
 /**
- * Callback invoked when renderer needs a resource that isn't available.
- * Return the resource content if available, or null if unavailable.
+ * Called when the renderer needs a resource that is not available.
  *
  * @param resource - Details about the missing resource
  * @returns Resource content (string for text, ArrayBuffer for binary), or null if unavailable

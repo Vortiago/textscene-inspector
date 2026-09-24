@@ -2,23 +2,16 @@ import { availableParallelism } from 'node:os';
 import { defineConfig } from 'vitest/config';
 
 /**
- * Resolve `@textscene/core` to its TypeScript SOURCE during tests via the
- * package's `@textscene/source` export condition, so a fresh checkout runs
- * `pnpm test` WITHOUT first building core's `dist/`. Production `vite build`
- * never sets this condition, so it falls through to `dist`.
- *
- * We set the condition in BOTH places because the right one depends on the
- * project's test `environment`:
- *   - node env  → Vite's SSR pipeline → `ssr.resolve.conditions`
- *   - happy-dom / jsdom → browser-like → Vite pre-bundles via the CLIENT
- *     resolver → `resolve.conditions` (verified: ssr-only left the happy-dom
- *     web project unable to resolve the package entry).
- * Each conditions array REPLACES Vite's defaults, so the relevant defaults
- * (`module` + `node`/`browser` + `development|production`) are re-listed;
- * `import`/`default` are always applied automatically. Apps with a standalone
- * config spread this directly; core/linter inherit it via the default export.
+ * Tests resolve `@textscene/core` to its TypeScript source through the `@textscene/source` export
+ * condition, so a fresh checkout runs `pnpm test` without building `dist/`. Production `vite build`
+ * never sets the condition. Apps with a standalone config spread `sourceResolve`, and core and the
+ * linter inherit it through the default export.
  */
 const SOURCE_CONDITION = '@textscene/source';
+// Both resolvers carry the condition: a node project resolves through `ssr.resolve.conditions`,
+// and a happy-dom or jsdom project pre-bundles through the client's `resolve.conditions`. Each
+// array replaces Vite's defaults, so `module`, `node` or `browser` and `development|production`
+// are listed again. Vite always applies `import` and `default`.
 export const sourceResolve = {
   resolve: {
     conditions: [SOURCE_CONDITION, 'module', 'browser', 'development|production'],

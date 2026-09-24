@@ -1,5 +1,5 @@
 /**
- * worldenvironment linter registration - imports linter components to trigger self-registration.
+ * worldenvironment linter registration: imports linter components to trigger self-registration.
  */
 
 import './linterParser.js';

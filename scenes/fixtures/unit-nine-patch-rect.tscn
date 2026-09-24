@@ -2,11 +2,10 @@
 
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_tex"]
 
-; NinePatchRect exercising every own member: axis_stretch_*, draw_center,
-; patch_margin_*, region_rect, texture. The variable is the nine-cell split
-; itself — corners at native size while the edges tile or stretch — which no
-; other fixture draws: a TextureRect scales one quad whole, so a regression in
-; the per-cell UV windowing is invisible everywhere else.
+; NinePatchRect exercising every own member: axis_stretch_*, draw_center, patch_margin_*,
+; region_rect, texture. The variable is the nine-cell split (corners at native size, edges tiled
+; or stretched), which no other fixture draws: a TextureRect scales one quad whole, so the
+; per-cell UV windowing is invisible elsewhere.
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0

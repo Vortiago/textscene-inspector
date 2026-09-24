@@ -14,9 +14,7 @@ describe('commentSpans', () => {
   });
 
   it('blockOnly does not read a CSS division as a regex literal', () => {
-    // The failure this branch exists for: `calc(100% / 3)` opened a regex scan
-    // that ran forward and swallowed the `/*` after it, so every comment in the
-    // file below that line left the conventions guard in silence.
+    // CSS has no regex: a regex scan from `calc(100% / 3)` would swallow the `/*` after it.
     const spans = commentSpans('a { width: calc(100% / 3); }\n/* kept */\n', {
       blockOnly: true,
     });
@@ -43,8 +41,7 @@ describe('stripComments', () => {
 
 describe('literals are not comments', () => {
   it('leaves a wildcard property key alone', () => {
-    // `'theme_override_colors/*'` opened a block comment that ran to the next
-    // real `*/`, blanking up to 9,982 characters of real source.
+    // `'theme_override_colors/*'` must open no block comment inside its string.
     const src = "const KEYS = ['theme_override_colors/*'];\nconst x = 1;\n/** doc */\nconst y = 2;";
     expect(stripComments(src)).toBe(
       "const KEYS = ['theme_override_colors/*'];\nconst x = 1;\n          \nconst y = 2;"
@@ -77,16 +74,15 @@ describe('literals are not comments', () => {
   });
 
   it('reads a regex after a keyword as a regex, not a division', () => {
-    // `return` is not an operator character, so the regex branch never fired
-    // and the `\/\/` body opened a line comment that ate the rest of the line.
+    // `return` is not an operator character, so without the keyword test the `\/\/` body would
+    // open a line comment.
     const src = 'function f(s) {\n  return /https?:\\/\\//.test(s);\n}';
     expect(stripComments(src)).toBe(src);
   });
 
   it('descends into a template interpolation, so backtick parity survives it', () => {
-    // Treating `${…}` as opaque flips parity when the interpolation holds a
-    // nested template: the closing backtick reads as an opening one and every
-    // later comment in the file is inside a string that never ends.
+    // An opaque `${…}` flips parity on a nested template: the closing backtick reads as an opening
+    // one, and every later comment sits inside a string that never ends.
     const src = 'const a = `x${`y`}z`;\n// note\nconst b = 1;';
     const out = stripComments(src);
     expect(out).toContain('const a = `x${`y`}z`;');
@@ -94,8 +90,7 @@ describe('literals are not comments', () => {
   });
 
   it('does not start a regex scan at a JSX close tag', () => {
-    // `<` opens a regex in JS, but in a `.tsx` file `</div>` is a close tag,
-    // and scanning from it swallowed every later comment.
+    // `<` opens a regex in JS, but in a `.tsx` file `</div>` is a close tag.
     const src = 'const el = <div>Done</div>;\n// note\nconst b = 1;';
     const out = stripComments(src);
     expect(out).toContain('const el = <div>Done</div>;');
@@ -104,9 +99,8 @@ describe('literals are not comments', () => {
   });
 
   it('does not start a regex scan at a self-closing JSX tag', () => {
-    // `} />` is the close tag's twin: the `/` follows the `}` of the last
-    // expression attribute, and reading it as a regex opener consumed the
-    // rest of the line, trailing comment included.
+    // `} />` is the close tag's twin: the `/` follows the `}` of the last expression attribute,
+    // and a regex reading consumes the rest of the line, trailing comment included.
     expect(commentSpans('const el = <Foo bar={1} />; // note').map((s) => s.text)).toEqual([
       '// note',
     ]);
@@ -125,9 +119,8 @@ describe('literals are not comments', () => {
   });
 
   it('does not let an apostrophe in JSX text open a string past its line', () => {
-    // A quoted string cannot hold a raw newline, so an unterminated one ends
-    // with its line. Running past it let `Don't` swallow every comment up to
-    // the next `'` anywhere in the file.
+    // A quoted string cannot hold a raw newline, so an unterminated one ends with its line
+    // instead of running to the next `'` in the file.
     const src = "const el = <p>Don't</p>;\n// note\nconst b = 1;";
     expect(commentSpans(src).map((s) => s.text)).toEqual(['// note']);
   });

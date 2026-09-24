@@ -1,4 +1,4 @@
-/** CPUParticles2D registration — parser + formatter. */
+/** CPUParticles2D registration: parser and formatter. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseCPUParticles2D } from './parser';

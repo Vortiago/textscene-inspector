@@ -1,8 +1,7 @@
 /**
- * LinkButton registration contract: the parser self-registers in the NodeRegistry
- * and the native (WebGL canvas) painter self-registers in the
- * ControlComponentRegistry (Controls render via the native 2D-UI canvas,
- * ADR-0002 — NOT the 3D NodeComponentRegistry, and they carry no linter slice).
+ * Tests that the LinkButton parser registers in the NodeRegistry and the native painter in the
+ * ControlComponentRegistry, since Controls render on the native 2D-UI canvas (ADR-0002), not in the
+ * 3D NodeComponentRegistry.
  */
 import { describe, it, expect } from 'vitest';
 import './index'; // parser registration side effect

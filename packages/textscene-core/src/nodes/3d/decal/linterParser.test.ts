@@ -120,7 +120,7 @@ albedo_mix = 1.5
   });
 
   it('accepts normal_fade at the 0.999 ceiling and warns at 1.0', () => {
-    // decal.cpp:251 hints "0,0.999,0.001" — 1.0 makes the decal invisible even
+    // decal.cpp:251 hints "0,0.999,0.001": 1.0 makes the decal invisible even
     // when fully perpendicular, so the hint stops one step short. The setter
     // (:106-109) is a bare assignment, so past the ceiling is a warning.
     const atCeiling = `[gd_scene format=3]
@@ -170,11 +170,9 @@ upper_fade = -0.5
   });
 
   it('errors on a cull_mask past the width of the int slot that holds it', () => {
-    // decal.cpp:263 hints PROPERTY_HINT_LAYERS_3D_RENDER, a widget hint that
-    // grounds no numeric bound, and the setter never rejects: every 32-bit
-    // pattern passes. 4294967296 needs a 33rd bit the `uint32_t` slot
-    // (decal.h:106) does not hold, which is the error tier. 1048575 is
-    // Camera3D's DEFAULT, never a bound.
+    // decal.cpp:263 hints PROPERTY_HINT_LAYERS_3D_RENDER, which grounds no numeric bound, and the
+    // setter never rejects, so every 32-bit pattern passes. 4294967296 needs a 33rd bit the
+    // `uint32_t` slot (decal.h:106) lacks: the error tier. 1048575 is Camera3D's default, not a bound.
     const content = `[gd_scene format=3]
 
 [node name="X" type="Decal"]

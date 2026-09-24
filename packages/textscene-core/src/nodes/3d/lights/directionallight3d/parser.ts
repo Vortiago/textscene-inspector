@@ -1,6 +1,4 @@
-/**
- * DirectionalLight3D parser - parses DirectionalLight3D nodes from TSCN.
- */
+/** DirectionalLight3D parser: the Light3D surface plus the directional shadow. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { DirectionalLight3DProperties } from './types';

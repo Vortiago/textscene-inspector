@@ -1,4 +1,4 @@
-/** SphereShape3D resource slice — claims the type name, re-exports its decode. */
+/** SphereShape3D resource slice: claims the type name, re-exports its decode. */
 
 import { registerShapeSlice } from '../registerShapeSlice';
 

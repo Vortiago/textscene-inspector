@@ -1,11 +1,8 @@
 /**
- * Validators shared by every PhysicsBody3D-derived node: the six axis locks.
- *
- * Registered under the abstract key 'PhysicsBody3D', which Godot cannot
- * instantiate, so it appears in no .tscn and owns no slice; it reaches the six
- * 3D bodies through the NODE_BASE_TYPES base-walk. Each direct heir's
- * linterParser imports this module, which imports the CollisionObject3D tier
- * above it. PhysicsBody2D binds nothing and has no twin here.
+ * Validators shared by every PhysicsBody3D-derived node: the six axis locks. Registered under
+ * the abstract 'PhysicsBody3D', which no .tscn can instantiate, and reaching the six 3D bodies
+ * through the NODE_BASE_TYPES base-walk. Each direct heir's linterParser imports this module,
+ * which imports the CollisionObject3D tier. PhysicsBody2D binds nothing and has no twin.
  */
 
 import '../../shared/linterParser.js';

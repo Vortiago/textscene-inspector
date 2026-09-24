@@ -1,43 +1,9 @@
 [gd_scene load_steps=2 format=3]
 
-; A Theme `.tres` carrying BOTH `default_font` (a real table-parseable `.otf`
-; — Montserrat ExtraBold, already vendored in the demos corpus, copied
-; byte-for-byte rather than re-sourced) and `default_font_size`, applied via
-; `theme = ExtResource(...)` on the ROOT Control — never on either
-; Label. That is the one variable: whether a Label with no local font/size of
-; its own resolves its glyphs and its line metrics by walking UP through an
-; ancestor's theme, rather than by a node-local field that has nothing to
-; read.
-;
-; DirectLabel sits one hop below the theme owner; NestedLabel sits two, under
-; a plain wrapper Control that carries no theme of its own — so a walk that
-; stopped at the first ancestor (or read only the node's own resource) would
-; still resolve DirectLabel by accident while leaving NestedLabel on the
-; bundled default. Neither Label sets `theme_override_fonts/font` or
-; `theme_override_font_sizes/font_size`; if either did, the override — not the
-; ancestor walk — would be what the golden pinned.
-;
-; No other golden anywhere authors a Theme resource or a scene font: every
-; other text-bearing Control in the set (unit-label-2d-wrap.tscn,
-; unit-panel-styleboxes.tscn, unit-button-states.tscn, …) renders through the
-; bundled default MSDF atlas with no `theme =` in reach. `test:visual` holding
-; green through the whole scene-font feature landing therefore proved only
-; that the DEFAULT path did not regress — this is the first frame that can
-; fail if the Theme/ancestor-walk half of it does.
-;
-; Godot 4.6.3, `--mode 2d`, arbitrated directly (not against any other
-; baseline). Ink rows/columns measured off both renders (DirectLabel /
-; NestedLabel, against the 64..700 plate each sits in):
-;
-;   DirectLabel  rows  Godot 56-87   ours 57-86    (1 px either edge)
-;                cols  Godot 65-615  ours 65-614    (1 px)
-;   NestedLabel  rows  Godot 255-295 ours 255-294   (1 px)
-;                cols  Godot 65-625  ours 65-625     exact
-;
-; Extents and baseline rows match within 1 px throughout — the AA/rasteriser
-; slack unit-label-2d-wrap.tscn's own header already documents for this text
-; engine (glyphs are canvas-2D-rasterised on our side, FreeType on Godot's —
-; stem edges differ, extents and baseline rows do not).
+; The one variable: a Label with no font of its own resolving `default_font` and `default_font_size`
+; through the root Control's Theme `.tres`. NestedLabel sits two hops down, so a walk that stops at
+; the first ancestor fails it alone. No other golden authors a Theme or a scene font. Godot's
+; extents match within 1 px, the glyph rasteriser's slack.
 
 [ext_resource type="Theme" path="res://unit-control-scene-font-theme.tres" id="1"]
 

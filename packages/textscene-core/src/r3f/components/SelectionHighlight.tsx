@@ -1,19 +1,7 @@
 /**
- * Viewport selection feedback. Mounts inside `<TscnCanvas>` so it has
- * access to `useThree`'s scene, and reads `selectedNodePath` plus the
- * dispatcher's path → Object3D ref-map from `SelectionContext`. When a
- * node is selected, attaches a green `THREE.BoxHelper` to the scene
- * wrapping the selected node's THREE object. Matches main's
- * `HelperManager.highlightNode` color (`0x00ff00`) so users moving
- * between branches see a consistent affordance.
- *
- * Lifecycle (build/dispose/tick-update/add-remove) delegated
- * to `useSceneHelper`. The factory returns null when nothing is
- * selected; the hook tears down the helper accordingly.
- *
- * Renders no DOM. Mount as a sibling of `<NodeDispatcher>` inside
- * `<Canvas>`. Outside a SelectionProvider (tests that mount the canvas
- * standalone) the component is a no-op.
+ * Puts a green `THREE.BoxHelper` around the selected node's object. It mounts
+ * inside `<Canvas>` beside `<NodeDispatcher>`, renders no DOM, and does
+ * nothing outside a SelectionProvider. `useSceneHelper` owns the lifecycle.
  */
 import * as THREE from 'three';
 import { useOptionalSelection } from '../contexts/SelectionContext.js';
@@ -22,6 +10,7 @@ import { useResourceLoader } from '../../resources/useResource.js';
 import { useLiveTreeVersion } from '../useLiveSceneTree.js';
 import { WorldBoxHelper } from './WorldBoxHelper.js';
 
+// The selection colour of the imperative `HelperManager.highlightNode`.
 const HIGHLIGHT_COLOR = 0x00ff00;
 
 export function SelectionHighlight() {
@@ -29,10 +18,8 @@ export function SelectionHighlight() {
   const selectedNodePath = selection?.selectedNodePath ?? null;
   const nodeObjectMap = selection?.nodeObjectMap ?? null;
   const tickUpdate = useHelperTickUpdate();
-  // With the tick gate closed (static scene), bounds can still change when an
-  // async resource lands INSIDE the selected wrapper (a GLB / instanced
-  // sub-scene replacing its placeholder). Recreate the helper on those loads
-  // so the box tracks the real geometry instead of the placeholder's bounds.
+  // With the tick gate closed, bounds still change when a GLB or sub-scene
+  // replaces its placeholder inside the selection. Recreate the helper then.
   const resourceVersion = useLiveTreeVersion(useResourceLoader());
 
   useSceneHelper<THREE.BoxHelper>(

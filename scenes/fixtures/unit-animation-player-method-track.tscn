@@ -1,12 +1,8 @@
 [gd_scene load_steps=3 format=3 uid="uid://unit_animation_player_method_track"]
 
-; Mixes a method track (tracks/0, calling Mesh.set_modulate) with a value
-; track (tracks/1, animating Mesh position). The render-side parser only
-; understands `value` tracks (plus the dedicated 3D transform track types);
-; `method` is an unrecognized type and is skipped entirely during resolution
-; — it never becomes a GodotTrack at all (not even a no-op placeholder), so
-; only the position track drives the mesh. Confirms a mixed clip degrades to
-; "the parts we understand" rather than failing outright.
+; A method track (tracks/0, Mesh.set_modulate) beside a value track (tracks/1, Mesh position). The
+; render parser skips `method` tracks, so only the position track drives the mesh: a mixed clip
+; degrades to the tracks it understands.
 
 [sub_resource type="BoxMesh" id="BoxMesh_box"]
 

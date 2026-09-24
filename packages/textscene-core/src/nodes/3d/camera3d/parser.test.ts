@@ -112,8 +112,8 @@ describe('Camera3D Parser', () => {
 
 describe('a projection value the tokenizer cannot read', () => {
   it('keeps the default rather than reading a prefix of it', () => {
-    // `parseInt('1abc', 10)` is 1, so a token Godot cannot load selected the
-    // orthogonal projection and the previewer drew a different camera.
+    // `parseInt('1abc', 10)` is 1, so a prefix read selects the orthogonal projection for a
+    // token Godot cannot load.
     const props = parseCamera3D(heading('Camera3D', { name: 'Camera' }), {
       projection: '1abc',
     });

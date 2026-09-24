@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { buildFontResource, createFontResourceFromContent } from './loadFont';
 import type { FontLoaderFn, FontResource } from './types';
 
-/** A loader that never resolves anything — for cases with no Font-valued property to recurse into. */
+/** A loader that resolves nothing, for cases with no Font-valued property to recurse into. */
 const NO_OP_LOADER: FontLoaderFn = async () => null;
 
 const MONTSERRAT_TRES = [
@@ -16,11 +16,9 @@ const MONTSERRAT_TRES = [
   '',
 ].join('\n');
 
-// A `.tres` (`[gd_resource]` header) carrying more than one Font as named
-// sub-resources — the ONLY shape `res://file.tres::SubId` addresses. A
-// scene's own inline sub-resource never goes through this path (see
-// `createFontResourceFromContent`'s docstring): `parseTresFile` requires a
-// `[gd_resource]` header and rejects a `.tscn`'s `[gd_scene]` outright.
+// A `.tres` carrying more than one Font as named sub-resources, the only shape
+// `res://file.tres::SubId` addresses. A scene's inline sub-resource never comes this
+// way: `parseTresFile` rejects a `.tscn`'s `[gd_scene]` header.
 const MULTI_FONT_TRES = [
   '[gd_resource type="Resource" load_steps=2 format=3]',
   '',

@@ -51,15 +51,10 @@ let nestedCleanPath: string;
 let nestedBadPath: string;
 
 /**
- * Spawns the built CLI. Forces GITHUB_ACTIONS off by default: CI (and this
- * suite's own `pnpm test:unit` run) sets GITHUB_ACTIONS=true in the parent
- * process, and spawnSync inherits process.env by default, which would flip
- * every test below to the auto-detected `github` annotation format. The
- * isolation has to live in the default *value* (evaluated fresh whenever a
- * caller omits `env`) - stripping GITHUB_ACTIONS inside the function body
- * instead would just read it back off `process.env` and pass it straight
- * through, defeating the isolation in CI. Tests that specifically exercise
- * auto-detection pass their own explicit `env` override.
+ * Spawns the built CLI with GITHUB_ACTIONS off: CI sets it, and spawnSync inherits
+ * process.env, which flips every test to the `github` format. The isolation lives
+ * in the default value, since stripping it in the body reads it back off
+ * `process.env`. A test of auto-detection passes its own `env`.
  */
 function runCli(args: string[], env: typeof process.env = { ...process.env, GITHUB_ACTIONS: '' }) {
   return spawnSync(process.execPath, [cliPath, ...args], { encoding: 'utf-8', env });
@@ -254,13 +249,10 @@ describe('CLI --format output modes', () => {
 });
 
 describe('CLI bundle purity', () => {
-  // Marker choice: a bundled three.js always contains 'THREE.'-prefixed
-  // console warnings (e.g. "THREE.WebGLRenderer:"), and a bundled React
-  // runtime always contains its Symbol.for("react. element registrations
-  // and react-dom module ids. Plain substrings like 'three' or 'react'
-  // would false-positive on ordinary prose, so we use these structural
-  // markers plus a size backstop: pulling in three.js alone adds well over
-  // 1 MB unminified.
+  // Structural markers, since plain 'three' or 'react' false-positive on prose. A
+  // bundled three.js holds 'THREE.'-prefixed warnings ("THREE.WebGLRenderer:"), and
+  // React holds its Symbol.for("react. registrations and react-dom module ids.
+  // A size check backs them up: three.js alone adds over 1 MB unminified.
   it('contains no three.js or React markers', () => {
     const bundle = readFileSync(cliPath, 'utf-8');
 
@@ -280,11 +272,9 @@ describe('CLI bundle purity', () => {
   });
 
   it('stays under the size backstop', () => {
-    // A backstop for a leak the markers above miss, not a budget for the
-    // linter's own growth: every validator wave adds to this bundle, and
-    // bundling three.js or react-dom would add more than the whole of it.
-    // Raise it when honest growth reaches it; do not raise it to admit a
-    // dependency the markers just failed on.
+    // A backstop for a leak the markers miss, not a budget for the linter's growth:
+    // three.js or react-dom adds more than the whole bundle. Raise it for honest
+    // growth, never to admit a dependency the markers failed on.
     expect(statSync(cliPath).size).toBeLessThan(1_400_000);
   });
 });

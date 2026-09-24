@@ -1,11 +1,6 @@
 /**
- * AudioStreamPlayer2D registration — parser + property formatter.
- *
- * Positional 2D audio node (extends Node2D): only the 2D transform matters
- * for the preview, so it reuses `parseNode2D` the way the 2D physics bodies
- * do (see nodes/physics/2d/index.ts). Audio-only properties (stream, volume,
- * attenuation) are now parsed by the dedicated parser; the render component
- * (index.r3f.ts) reuses the Node2D transform group (ADR-0008).
+ * AudioStreamPlayer2D registration: parser and property formatter. A positional 2D audio node
+ * (extends Node2D) whose render component reuses the Node2D transform group (ADR-0008).
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

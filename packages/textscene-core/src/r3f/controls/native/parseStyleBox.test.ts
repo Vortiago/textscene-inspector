@@ -1,9 +1,7 @@
 /**
- * `parseStyleBox` — the SubResource reference chain (`parseResourceReference`
- * + `findSubResource`, the shared resolution funnel) resolved to a typed
- * `StyleBoxFlatData`. Defaults are transcribed from
- * `scene/resources/style_box_flat.h`/`.cpp` and `style_box.cpp::get_margin`
- * (Godot 4.6.3) — see `native/styleBoxFlat.ts` for the field-by-field citation.
+ * `parseStyleBox` resolves a SubResource reference to a typed `StyleBoxFlatData`.
+ * Defaults come from `scene/resources/style_box_flat.h`/`.cpp` and
+ * `style_box.cpp::get_margin` (Godot 4.6.3).
  */
 import { describe, expect, it } from 'vitest';
 import { parseStyleBox } from './parseStyleBox';
@@ -95,13 +93,8 @@ describe('parseStyleBox', () => {
   });
 
   it('falls back to Godot documented defaults for every absent key', () => {
-    // style_box_flat.h: bg_color default Color(0.6,0.6,0.6) [a defaults to 1],
-    // border_color default Color(0.8,0.8,0.8) [a defaults to 1]; border_width/
-    // corner_radius/expand_margin default 0 per side; draw_center default
-    // true; blend_border (border_blend) default false; anti_aliasing default
-    // true; anti_aliasing_size default 1; corner_detail default 8; skew and shadow_offset
-    // default to a zero Vector2; shadow_size default 0; shadow_color default
-    // Color(0, 0, 0, 0.6) (style_box_flat.h:39,48-53).
+    // The member defaults in `style_box_flat.h` (`style_box_flat.h:39,48-53`).
+    // A colour literal without alpha has an alpha of 1.
     const box = parseStyleBox('SubResource("StyleBoxFlat_empty")', [], resources);
     expect(box).toEqual({
       bgColor: { r: 0.6, g: 0.6, b: 0.6, a: 1 },
@@ -133,9 +126,8 @@ describe('parseStyleBox', () => {
   });
 
   it('clamps an authored corner_detail to the setter range 1..20 (StyleBoxFlat::set_corner_detail)', () => {
-    // style_box_flat.cpp:130 — CLAMP(p_corner_detail, 1, 20). A 0 would
-    // otherwise divide by zero in the arc sweep (`pt_angle`'s
-    // `detail / (double)adapted_corner_detail`).
+    // style_box_flat.cpp:130: CLAMP(p_corner_detail, 1, 20). A 0 would divide
+    // by zero in the arc sweep (`pt_angle`'s `detail / (double)adapted_corner_detail`).
     expect(parseStyleBox('SubResource("StyleBoxFlat_corner_detail_too_small")', [], resources)?.cornerDetail).toBe(1);
     expect(parseStyleBox('SubResource("StyleBoxFlat_corner_detail_too_large")', [], resources)?.cornerDetail).toBe(20);
   });
@@ -168,9 +160,8 @@ describe('parseStyleBox', () => {
     expect(parseStyleBox('SubResource("StandardMaterial3D_m")', [], resources)).toBeNull();
   });
 
-  // `null` means "no override", which every consumer answers by painting the
-  // default theme box. A StyleBoxEmpty is an override that REPLACES that chrome
-  // with nothing, so it must not take the same route.
+  // `null` means "no override", and a consumer paints the default theme box. A
+  // StyleBoxEmpty replaces that chrome with nothing, so it is not `null`.
   it('resolves StyleBoxEmpty to a box that paints nothing, not to null', () => {
     const box = parseStyleBox('SubResource("StyleBoxEmpty_x")', [], resources);
     expect(box).not.toBeNull();
@@ -179,9 +170,8 @@ describe('parseStyleBox', () => {
     expect(box!.shadowSize).toBe(0);
   });
 
-  // StyleBoxEmpty does not override `get_style_margin`, so the base StyleBox's 0
-  // is what an unset `content_margin_<side>` falls back to — not StyleBoxFlat's
-  // border width.
+  // StyleBoxEmpty does not override `get_style_margin`, so an unset
+  // `content_margin_<side>` falls back to the base StyleBox's 0, not a border width.
   it('gives StyleBoxEmpty zero content margin where StyleBoxFlat would fall back to its border width', () => {
     const box = parseStyleBox('SubResource("StyleBoxEmpty_x")', [], resources);
     expect(box!.contentMargin).toEqual({ left: 0, top: 0, right: 0, bottom: 0 });
@@ -224,7 +214,7 @@ describe('parseStyleBox', () => {
     expect((box as { styleBoxKind?: string }).styleBoxKind).toBe('texture');
     expect((box as { texture?: { texture?: string } }).texture?.texture).toBe('ExtResource("1_tex")');
     // texture_margin_left (5) falls through as the effective content margin
-    // (no content_margin_left authored — the -1 sentinel).
+    // (no content_margin_left authored: the -1 sentinel).
     expect(box!.contentMargin).toEqual({ left: 5, top: 0, right: 0, bottom: 0 });
     expect(box!.drawCenter).toBe(false);
   });

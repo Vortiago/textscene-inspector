@@ -1,4 +1,4 @@
-/** Control registration — parser. */
+/** Control registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseControl } from './parser';

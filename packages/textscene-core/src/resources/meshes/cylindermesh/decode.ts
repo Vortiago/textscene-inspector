@@ -1,10 +1,8 @@
 /**
- * CylinderMesh decode — property bag in, radii/height/segment counts out.
- *
- * Defaults from Godot `primitive_meshes.h:199-205`. `set_radial_segments`
- * (`primitive_meshes.cpp:1347`) floors at 4; `set_rings` (:1360) ERR_FAILs below
- * 0, so a negative count keeps the default. The radii and height have no guard
- * (:1300-1339), which is what makes a cone (`top_radius = 0`) legal.
+ * CylinderMesh decode. Defaults: `primitive_meshes.h:199-205`. `set_radial_segments`
+ * (`primitive_meshes.cpp:1347`) floors at 4, and `set_rings` (:1360) ERR_FAILs
+ * below 0, so a negative count keeps the default. The radii and height have no
+ * guard (:1300-1339), so a cone (`top_radius = 0`) is legal.
  */
 
 import { floatOr } from '../../../parser/valueParsers';

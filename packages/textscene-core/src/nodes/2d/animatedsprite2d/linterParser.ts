@@ -1,42 +1,25 @@
-/**
- * AnimatedSprite2D strict validators for linting.
- *
- * `animation` and `autoplay` are both declared `Variant::STRING_NAME`
- * (animated_sprite_2d.cpp:672-673), and the GETTER decides which spelling Godot
- * writes: `StringName get_animation()` (animated_sprite_2d.h:101) emits
- * `&"name"`, `String get_autoplay()` (:104) emits `"name"`. `v.stringName`
- * takes either, which is what the AnimatedSprite3D twin registers for the
- * identical pair (sprite_3d.cpp:1540-1541).
- *
- * `animation`'s `PROPERTY_HINT_ENUM` list is filled from the live SpriteFrames
- * by `_validate_property`, so there is no closed set of names a static linter
- * can check against — only the literal's shape.
- *
- * `frames` is the pre-4.0 spelling of `sprite_frames`: `_set`
- * (animated_sprite_2d.cpp:616-618, `#ifndef DISABLE_DEPRECATED`) hands
- * `p_value` straight to `set_sprite_frames`, so the slot takes exactly the same
- * literals. Registered under the DEPRECATED name so the diagnostic quotes the
- * key the scene carries.
- */
+/** AnimatedSprite2D strict validators for linting. */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
+// The base chain: registration happens on import, so a test that loads only this
+// slice resolves an inherited key only through this line.
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
 
 validatorRegistry.registerAll('AnimatedSprite2D', {
+  // `frames`, the pre-4.0 spelling, reaches the same slot: `_set` hands it to
+  // `set_sprite_frames` (animated_sprite_2d.cpp:616-618, `#ifndef DISABLE_DEPRECATED`).
   sprite_frames: v.resourceReference('sprite_frames'),
+  // Both are `Variant::STRING_NAME` (animated_sprite_2d.cpp:672-673), but the getter
+  // decides the spelling: `get_animation()` (animated_sprite_2d.h:101) writes `&"name"`,
+  // `get_autoplay()` (:104) writes `"name"`, as in the 3D twin (sprite_3d.cpp:1540-1541).
+  // The enum hint comes from the live SpriteFrames, so only the literal's shape is checked.
   animation: v.stringName('animation'),
-  // animated_sprite_2d.cpp:674 carries no hint at all. A negative frame never
-  // reaches storage by either route through set_frame_and_progress: with no
-  // SpriteFrames the function returns before writing anything
-  // (animated_sprite_2d.cpp:360-362), and with one the negative arm assigns 0
-  // (:368-369). Both are the silently-corrected write `enforced` names.
-  // The empty-slot half is not only about negatives — EVERY frame is dropped
-  // there — and that needs the sibling key, so `linter.ts` owns it.
+  // animated_sprite_2d.cpp:674 carries no hint. With no SpriteFrames,
+  // set_frame_and_progress writes nothing (animated_sprite_2d.cpp:360-362), and
+  // with one its negative arm assigns 0 (:368-369). That empty slot drops every
+  // frame, which needs the sibling key, so `linter.ts` owns that half.
   frame: v.strictNonNegativeInt('frame', { enforced: 'animated_sprite_2d.cpp:360-369' }),
   speed_scale: v.float('speed_scale'),
   centered: v.boolean('centered'),
@@ -47,11 +30,10 @@ validatorRegistry.registerAll('AnimatedSprite2D', {
   autoplay: v.stringName('autoplay'),
 });
 
-// Nothing in the ADD_PROPERTY block (animated_sprite_2d.cpp:671-681) declares
-// it, and the DISABLE_DEPRECATED `_set` that could still catch a 4.0-era key
-// has one arm, `frames` (:615-622) — so it returns false and the write is
-// dropped. `is_playing` is only a method binding (:634). Registered rather than
-// deleted: with no entry at all `playing = true` is silently accepted.
+// No ADD_PROPERTY declares it (animated_sprite_2d.cpp:671-681), and the
+// DISABLE_DEPRECATED `_set` has one arm, `frames` (:615-622), so the write is
+// dropped. `is_playing` is only a method binding (:634). With no entry at all,
+// `playing = true` would be silently accepted.
 validatorRegistry.registerUnavailable('AnimatedSprite2D', {
   playing: {
     reason: `it is a method, not a property — playback is started with play(), and only 'autoplay' is serialised`,

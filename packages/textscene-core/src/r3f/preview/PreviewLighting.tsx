@@ -1,10 +1,7 @@
 /**
- * `<PreviewLighting>` — Godot's editor preview sun and preview environment,
- * each mounted only while the scene does not supply its own (ADR-0025).
- *
- * The scene is inspected through the LIVE tree, so a `DirectionalLight3D` or
- * `WorldEnvironment` inside an instanced sub-scene counts exactly as it does in
- * Godot's editor, where those nodes really are children of the scene root.
+ * `<PreviewLighting>`: Godot's editor preview sun and environment, each mounted
+ * only while the scene supplies none (ADR-0025). It reads the live tree, so a
+ * node inside an instanced sub-scene counts, as in Godot's editor.
  */
 
 import { useMemo } from 'react';

@@ -13,8 +13,8 @@ export interface NavigationObstacle3DProperties extends Node3DProperties {
   avoidance_layers?: number;
   /** Whether the obstacle carves a hole into the navigation mesh. */
   affect_navigation_mesh?: boolean;
-  /** Whether carving requires the obstacle to be static (vs dynamic avoidance only). */
+  /** Whether carving requires the obstacle to be static, rather than dynamic avoidance only. */
   carve_navigation_mesh?: boolean;
-  /** Whether avoidance uses full 3D (vs 2D/XZ-plane) computation. */
+  /** Whether avoidance uses full 3D computation, rather than the 2D XZ plane. */
   use_3d_avoidance?: boolean;
 }

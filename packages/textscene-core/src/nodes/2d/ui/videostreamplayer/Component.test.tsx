@@ -1,8 +1,8 @@
 /**
- * `<VideoStreamPlayer>` — draws nothing, matching
- * `video_stream_player.cpp:174-184`'s `NOTIFICATION_DRAW` bailing on a null
- * `texture` (always null: no decoder in this codebase).
+ * `<VideoStreamPlayer>` draws nothing, as `NOTIFICATION_DRAW` (`video_stream_player.cpp:174-184`)
+ * bails on a null `texture`, which no decoder here ever fills.
  */
+
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';

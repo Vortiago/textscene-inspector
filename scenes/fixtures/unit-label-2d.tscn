@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
-; The 2D UI Control Label (Godot `Label`) — distinct from unit-label3d.tscn,
-; which is the world-space Label3D node.
+; The 2D UI Control Label (Godot `Label`), distinct from unit-label3d.tscn, the world-space
+; Label3D node.
 
 [node name="Root" type="Control"]
 anchors_preset = 15

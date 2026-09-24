@@ -1,13 +1,7 @@
 /**
- * The two coordinate systems a ViewportTexture has to bridge.
- *
- * `viewport_path` is authored relative to the **local scene root** (which is
- * why such a material sets `resource_local_to_scene = true`), but the registry
- * a `<SubViewport>` publishes into is keyed by the DISPATCHER-ABSOLUTE path —
- * root = the root node's own name, children joined with `/`
- * (`NodeDispatcher` dispatches each top-level node at `path={node.name}`).
- * `resolveViewportTexturePath` returns the former; the registry needs the
- * latter, and this is the one function that converts.
+ * `viewport_path` counts from the **local scene root**, while a `<SubViewport>`
+ * publishes under its dispatcher-absolute path (`NodeDispatcher` starts each top-level
+ * node at `path={node.name}`). These functions convert one to the other.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -18,10 +12,7 @@ import { uniqueNameClaims } from '../utils/uniqueNames.js';
 import { viewportTextureRegistryKey, viewportTextureUniqueNameKey } from './viewportTexturePath';
 
 describe('viewportTextureRegistryKey', () => {
-  /**
-   * The consumer's own dispatcher path starts at the scene root, so its first
-   * segment IS the root's name — no extra context needed to find it.
-   */
+  /** The consumer's dispatcher path starts at the scene root, so its first segment is the root's name. */
   it('rebases a root-relative viewport path onto the consumer scene root', () => {
     expect(viewportTextureRegistryKey('Root/Screen', 'SubViewport')).toBe('Root/SubViewport');
   });
@@ -32,7 +23,7 @@ describe('viewportTextureRegistryKey', () => {
     );
   });
 
-  /** A consumer that IS the root (a single-node scene) still rebases onto itself. */
+  /** A consumer that is the root (a single-node scene) still rebases onto itself. */
   it('handles a consumer at the scene root', () => {
     expect(viewportTextureRegistryKey('Root', 'SubViewport')).toBe('Root/SubViewport');
   });
@@ -49,28 +40,23 @@ describe('viewportTextureRegistryKey', () => {
     expect(viewportTextureRegistryKey('Root/Screen', '')).toBeNull();
   });
 
-  /**
-   * `NodePath(".")` names the viewport itself. It is not a child path, and
-   * joining it would key the registry at a literal `Root/.` that nothing ever
-   * publishes.
-   */
+  /** `NodePath(".")` names the viewport itself: a literal `Root/.` join is a key nothing publishes. */
   it('resolves a self-referencing "." to the scene root itself', () => {
     expect(viewportTextureRegistryKey('Root/Screen', '.')).toBe('Root');
   });
 
   /**
-   * `/root/…` measures from the live SceneTree, which a static parse does not
-   * model — joining it built a key nothing publishes and could resolve as a
-   * relative descent once the claim table is in play.
+   * `/root/…` measures from the live SceneTree, which a static parse does not model:
+   * a join is a key nothing publishes, and could resolve as a relative descent.
    */
   it('returns null for an absolute path', () => {
     expect(viewportTextureRegistryKey('Root/Screen', '/root/Main/SubViewport')).toBeNull();
   });
 
   /**
-   * `%Name` is a JUMP: `get_node_or_null` looks the name up in the owner's claim
-   * table and descends from the claimant. Joining the literal built
-   * `Root/%Hud/CombinedViewport`, which nothing registers.
+   * `%Name` is a jump: `get_node_or_null` looks the name up in the owner's claim
+   * table and descends from the claimant. A literal `Root/%Hud/CombinedViewport`
+   * join is a key nothing registers.
    */
   describe('a %Name segment', () => {
     const claimed: ReadonlyMap<string, string> = new Map([
@@ -92,9 +78,8 @@ describe('viewportTextureRegistryKey', () => {
 
     /**
      * The table is the consumer's owner's, and a name it lacks addresses nothing
-     * (node.cpp:1930-1938). The literal join would hit the alias a sub-viewport
-     * under ANOTHER owner publishes for itself — an instanced sub-scene's `%Inner`
-     * reached from outside it.
+     * (node.cpp:1930-1938). The literal join would hit the alias of a sub-viewport
+     * under another owner, such as an instanced sub-scene's `%Inner`.
      */
     it('resolves to nothing for a %Name the table has no entry for', () => {
       expect(viewportTextureRegistryKey('Root/Screen', '%Inner', claimed)).toBeNull();
@@ -107,14 +92,10 @@ describe('viewportTextureRegistryKey', () => {
   });
 });
 
-/**
- * The `%Name` spelling is a CLAIM, and Godot resolves competing claims before
- * anything can address one.
- */
+/** The `%Name` spelling is a claim, and Godot resolves competing claims before anything can address one. */
 describe('viewportTextureUniqueNameKey', () => {
-  // Parsed, never hand-built: `unique_name_in_owner` reaches `rawProperties`
-  // through the parser, and a node literal written here would only confirm the
-  // shape its author had in mind (`utils/uniqueNames.test.ts` says the same).
+  // Parsed, never hand-built: `unique_name_in_owner` reaches `rawProperties` through
+  // the parser, and a hand-built node would only confirm its author's assumed shape.
   const roots = new TscnParser().parse(`[gd_scene format=3]
 
 [node name="Root" type="Node2D"]
@@ -171,14 +152,10 @@ unique_name_in_owner = true
   });
 
   it('publishes for a claimant the table does not cover', () => {
-    // Content composed in from an INSTANCED sub-scene is not in the authored
-    // roots the table is built from, and its own owner is that sub-scene's
-    // root — absent from the table is not the same as losing the claim.
-    //
-    // The table has to be the POPULATED one and the node absent FROM it: an
-    // empty table reaches `winner === undefined` by the same route a missing
-    // one does, so passing `new Map()` restates the test above it and leaves
-    // `claims.size > 0 && !claims.has(key)` free to return null here.
+    // Instanced sub-scene content is absent from the authored table, and its owner is
+    // the sub-scene's root, so absent is not losing. The table must be populated: an
+    // empty one restates the test above and leaves `claims.size > 0 &&
+    // !claims.has(key)` free to return null here.
     const [inner] = new TscnParser().parse(`[gd_scene format=3]
 
 [node name="Inner" type="SubViewport"]
@@ -189,9 +166,8 @@ unique_name_in_owner = true
   });
 
   /**
-   * The Instance root merge (ADR-0013) returns a fresh node, and the graft that
-   * places a deep host child copies it — so the publisher never holds the object
-   * the table was built from.
+   * The Instance root merge (ADR-0013) returns a fresh node, and the graft of a deep
+   * host child copies it, so the publisher never holds the table's object.
    */
   it('publishes for a claimant the Instance root merge rebuilt', () => {
     const host = new TscnParser().parse(`[gd_scene format=3]

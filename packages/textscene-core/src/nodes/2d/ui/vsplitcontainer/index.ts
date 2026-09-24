@@ -1,4 +1,4 @@
-/** VSplitContainer registration — parser. */
+/** VSplitContainer registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseVSplitContainer } from './parser';

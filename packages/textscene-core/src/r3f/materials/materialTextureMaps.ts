@@ -1,17 +1,8 @@
 /**
- * The three-side map props one Godot material contributes, and the single place
- * the two texture vocabularies are paired.
- *
- * Spelled with three's own map names because that is what a node component
- * resolves and hands over, while the derivation is addressed by Godot SLOT
- * (`albedo_texture`, `heightmap_texture`, …). Somebody has to pair them, and
- * pairing them twice is how a map comes to land in the right slot on one arrival
- * and the wrong one on another — the failure is a texture appearing as roughness
- * on a `.tres` material and as metalness on an inline one, with no type error.
- *
- * Every texture here must arrive ALREADY BOUND — put through `bindSlotTexture`
- * for its Godot slot by whoever resolved it. See
- * `resources/materials/standardmaterial3d/textureBinding.ts`.
+ * The three-side map props one Godot material contributes, and the one place
+ * three's map names are paired with Godot slots. Pairing them twice lets a map
+ * land as roughness on one arrival and metalness on another. Every texture arrives
+ * bound through `bindSlotTexture` (`resources/materials/standardmaterial3d/textureBinding.ts`).
  */
 
 import type * as THREE from 'three';

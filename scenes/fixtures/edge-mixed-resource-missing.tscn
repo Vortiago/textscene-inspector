@@ -1,17 +1,8 @@
 [gd_scene load_steps=4 format=3 uid="uid://edge_mixed_resource_missing"]
 
-; Four MeshInstance3D nodes, each missing a different resource dimension —
-; all lint-safe (no rule inspects a StandardMaterial3D's OWN texture
-; references, or requires material_override at all):
-;   - NoMesh: `mesh` omitted entirely -> magenta wireframe placeholder.
-;   - NoMaterial: valid mesh, `material_override` omitted -> default grey
-;     material (Godot/renderer parity — no material is a normal, not an
-;     error, state).
-;   - NoTexture: valid mesh + a material whose `albedo_texture` points at a
-;     real (declared) ExtResource path that doesn't exist on disk — the
-;     established "missing resource" convention (see unit-external-missing.tscn)
-;     — the material falls back to its color, no texture slot resolves.
-;   - Baseline: valid mesh + valid material, for visual contrast.
+; Four lint-clean MeshInstance3D nodes, each missing one resource. NoMesh draws the magenta
+; placeholder and NoMaterial the default grey. NoTexture's albedo_texture names an ExtResource
+; absent on disk, so it falls back to its colour. Baseline has everything, for contrast.
 
 [ext_resource type="Texture2D" path="res://textures/this_texture_does_not_exist.png" id="1_missing_tex"]
 

@@ -1,6 +1,4 @@
-/**
- * Tests for StaticBody3D linter (strict parser + semantic rules)
- */
+/** StaticBody3D linter: strict validators and semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -237,7 +235,7 @@ physics_material_override = ExtResource("ext_mat_1")
     });
 
     // No `collision_mask == 0` check: no engine warning exists for it, and it
-    // is the standard "only needs to BE detected" static configuration.
+    // is the standard static configuration of a body that is only detected.
     it('stays quiet when collision_mask is 0', () => {
       expectClean(scene(node('StaticBody3D', { collision_mask: 0 }), collisionShape3d));
     });

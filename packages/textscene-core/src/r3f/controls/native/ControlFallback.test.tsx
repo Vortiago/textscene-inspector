@@ -1,9 +1,4 @@
-/**
- * `<ControlFallback>` draws an outline sized to a Control's solved rect when
- * no `Native` painter is registered for its type yet — so the native canvas
- * path is eyeball-able (every Control's position/size is visible) before any
- * real chrome exists. Never a quad/fill (that would read as real content).
- */
+/** A Control with no `Native` painter gets an outline sized to its solved rect, never a fill. */
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

@@ -1,7 +1,4 @@
-/**
- * PointLight2D property formatter — formats light properties for the
- * details panel. Mirrors the Sprite2D formatter for the 2D surface.
- */
+/** Formats PointLight2D properties for the details panel, as the Sprite2D formatter does for the 2D surface. */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { PointLight2DProperties } from './types';
@@ -21,7 +18,7 @@ export function formatPointLight2DProperties(props: PointLight2DProperties): Pro
         { label: 'Energy', value: props.energy.toFixed(2) },
         { label: 'Blend Mode', value: BLEND_MODE_LABELS[props.blend_mode] ?? String(props.blend_mode) },
         { label: 'Texture Scale', value: props.texture_scale.toFixed(2) },
-        // The mask that decides what this light LIGHTS, distinct from the
+        // The mask that decides what this light lights, distinct from the
         // node's own CanvasItem `light_mask`, which the Node2D section carries.
         { label: 'Range Item Cull Mask', value: props.range_item_cull_mask.toString() },
         { label: 'Shadow Item Cull Mask', value: props.shadow_item_cull_mask.toString() },

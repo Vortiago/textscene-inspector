@@ -1,11 +1,7 @@
 /**
- * The files a slice gets when it REUSES a base parse — `transform-only` and
- * `pending` both do, because property knowledge lives in linterParser.ts and
- * the render half is deferred to whoever implements it.
- *
- * The indentation below is the emitted file's, not this module's: these are
- * whole TypeScript files, and a template literal carries its own leading
- * whitespace into the output.
+ * The files of a slice that reuses a base parse, as `transform-only` and `pending` do: property
+ * knowledge lives in linterParser.ts. The indentation below is the emitted file's, since a
+ * template literal carries its own leading whitespace into the output.
  */
 
 
@@ -45,9 +41,9 @@ nodeRegistry.register(${camel}Registration);
 export { ${camel}Registration };
 `
     );
-    // A `pending` slice mounts the base too, and says so with its own intent:
-    // `GenericNodeFallback` carries no `visible`, and an unregistered type reads
-    // as belonging to BOTH canvases. Only `control` opts out — see `invisibleBase`.
+    // A `pending` slice mounts the base under its own intent: `GenericNodeFallback` carries no
+    // `visible`, and an unregistered type belongs to both canvases. Only `control` opts out
+    // (`invisibleBase`).
     if (intent === 'transform-only' || (intent === 'pending' && base.invisibleBase)) {
       const pending = intent === 'pending';
       files.set(

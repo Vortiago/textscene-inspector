@@ -1,11 +1,7 @@
 /**
- * BaseMaterial3D's optional shading features (`material.cpp:3650-3715`) — Rim,
- * Clearcoat, Anisotropy, AO, Height, Subsurface Scattering, Transmittance,
- * Back Lighting, Refraction and Detail.
- *
- * Hinted throughout except the two `*_texture_channel` enums: the
- * `ERR_FAIL_INDEX` in `set_feature` (:2523) guards the C++ feature index, not
- * anything a scene writes.
+ * BaseMaterial3D's optional shading features (`material.cpp:3650-3715`), Rim to Detail.
+ * Hinted throughout except the two `*_texture_channel` enums. The `ERR_FAIL_INDEX` in
+ * `set_feature` (:2523) guards the C++ feature index, not anything a scene writes.
  */
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';

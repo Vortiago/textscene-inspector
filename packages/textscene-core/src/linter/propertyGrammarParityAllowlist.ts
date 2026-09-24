@@ -1,34 +1,12 @@
 /**
- * Every parser/linter asymmetry this repo has justified, keyed by node type.
- *
- * The entries live in `propertyGrammarParityAllowlist/`, one part per node
- * family, and this module merges them; `propertyGrammarParity.test.ts` is the
- * guard that reads it. Nothing outside a test imports it, so it reaches no
- * shipped bundle.
+ * Every justified parser and linter asymmetry, keyed by node type, merged from
+ * one part per family in `propertyGrammarParityAllowlist/`. Only test code
+ * imports it, so it reaches no shipped bundle.
  */
 
-// ---------------------------------------------------------------------------
-// Allowlist of known, justified asymmetries.
-//
-// "parserOnly"  — parser reads this property for rendering but no linter
-//                 validator is registered (acceptable: the renderer needs it,
-//                 the linter has nothing to check).
-// "linterOnly"  — linter validates this key and the parser never reads it
-//                 BECAUSE THERE IS NOTHING TO READ: the property cannot change
-//                 a frozen frame.
-// "renderGap"   — linter validates this key, the property DOES change a frozen
-//                 frame, and the renderer has not implemented it yet.
-//
-// The last two both suppress the failure, so the split is not about the guard:
-// it is about not letting a bug masquerade as a decision. Pick by asking one
-// question — would Godot draw this scene differently? — and never by asking
-// whether the key looks important.
-//
-// Shared keys that span every Node2D or Node3D leaf are recorded on the base
-// type (Node2D / Node3D) and inherited automatically; leaf-specific entries
-// only contain keys that are unique to that slice.
-// ---------------------------------------------------------------------------
-
+// Choose `linterOnly` or `renderGap` by one question: would Godot draw this
+// scene differently? Never by whether the key looks important. A key every
+// Node2D or Node3D leaf shares sits on that base type and is inherited.
 import { mergeDisjoint } from './mergeDisjoint.js';
 import type { AsymmetryEntry } from './propertyGrammarParityAllowlist/types.js';
 import { animationAndAudioAsymmetries } from './propertyGrammarParityAllowlist/animationAndAudio.js';

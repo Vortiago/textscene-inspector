@@ -1,15 +1,12 @@
-; GraphEdit's minimap at a NON-default opacity. `minimap_opacity` is the
-; minimap's own `modulate.a` (graph_edit.cpp:2786-2791), which multiplies
-; every draw inside it — panel, node rect, camera rect, resizer. A regression
-; that drops the modulate reads as correct at the default 0.65 in any scene
-; that does not move it, because the panel colour alone is plausible.
-; Every fixture in this family shares one GraphEdit rect and one GraphNode,
-; and `scroll_offset` is deliberately ABSENT from all but
-; unit-graph-edit-scroll-offset-clamped.tscn, which exists to move it:
-; GraphEdit's own `set_scroll_offset` clamps against min/max bounds no laid-out
-; child has widened while a scene's properties are applied (graph_edit.cpp:407),
-; so an authored offset moves the grid, the nodes AND the minimap camera at once
-; and would mask the one variable each file exists to move.
+; GraphEdit's minimap at a non-default opacity. `minimap_opacity` is the minimap's own
+; `modulate.a` (graph_edit.cpp:2786-2791), which multiplies every draw inside it: panel, node
+; rect, camera rect, resizer. A dropped modulate reads as correct at the default 0.65, because
+; the panel colour alone is plausible.
+
+; Every fixture in this family shares one GraphEdit rect and one GraphNode, and only
+; unit-graph-edit-scroll-offset-clamped.tscn authors `scroll_offset`: `set_scroll_offset` clamps
+; against bounds no child has widened while properties apply (graph_edit.cpp:407), so an authored
+; offset moves the grid, the nodes and the minimap camera together and masks the one variable.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitgraphedminopacity"]
 

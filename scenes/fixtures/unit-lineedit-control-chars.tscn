@@ -1,10 +1,7 @@
-; draw_control_chars — the ONE variable no other LineEdit fixture sets. The
-; mid-string U+0001 is unshapeable by any font; on, it draws as a hex-code
-; box that OCCUPIES WIDTH, shifting "after" to the right of where it would
-; sit if the control character were merely invisible. A regression that
-; treats it as ordinary text (falling back to an average-glyph-width advance
-; instead of either dropping it or boxing it) is invisible in a diff that
-; only checks the surrounding glyphs' own ink.
+; draw_control_chars, the one variable no other LineEdit fixture sets. No font can shape the
+; mid-string U+0001. With the flag on it draws as a hex-code box that takes width, pushing "after"
+; right. Treating it as ordinary text (an average-glyph-width advance instead of dropping or
+; boxing it) is invisible to a diff that checks only the surrounding glyphs' ink.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitlineeditcontrolchars"]
 

@@ -1,4 +1,4 @@
-/** AspectRatioContainer registration — parser. Render side: `./index.r3f`. */
+/** AspectRatioContainer registration: the parser. Render side: `./index.r3f`. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseAspectRatioContainer } from './parser';

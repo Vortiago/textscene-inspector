@@ -1,9 +1,8 @@
-/** What a node DOES, derived from its ancestry — the gallery's left-menu grouping. */
+/** The gallery's menu group for a node, derived from its ancestry. */
 
-// Ordered, specific → general. First base class (or the node's own name) found in
-// a node's [name, ...ancestors] decides its group.
+// Ordered specific to general: the first entry found in [name, ...ancestors]
+// decides the group.
 const GROUP_RULES = [
-  // --- 3D ---
   ['Light3D', 'Lighting'],
   ['ReflectionProbe', 'Reflection & global illumination'],
   ['VoxelGI', 'Reflection & global illumination'],
@@ -61,7 +60,6 @@ const GROUP_RULES = [
   ['WorldEnvironment', 'Environment'],
   ['VisualInstance3D', 'Meshes & rendering'],
 
-  // --- 2D ---
   ['Light2D', 'Lighting'],
   ['LightOccluder2D', 'Lighting'],
   ['Joint2D', 'Physics — joints'],
@@ -104,12 +102,11 @@ const GROUP_RULES = [
   ['Sprite2D', '2D rendering'],
   ['Polygon2D', '2D rendering'],
   ['Line2D', '2D rendering'],
-  // CanvasModulate is a Node2D, so its specific rule must precede the Node2D
-  // catch-all below — order is most-specific-first.
+  // CanvasModulate is a Node2D, so it precedes the Node2D catch-all.
   ['CanvasModulate', 'Canvas effects'],
   ['Node2D', '2D generic'],
 
-  // --- Other (neither CanvasItem nor Node3D) ---
+  // Neither CanvasItem nor Node3D.
   ['CanvasLayer', 'Canvas layers'],
   ['Window', 'UI — windows'],
   ['AnimationPlayer', 'Animation'],
@@ -134,8 +131,7 @@ export function groupOf(node) {
   for (const [base, group] of GROUP_RULES) if (names.has(base)) return group;
   if (/^(OpenXR|XR)/.test(node.name)) return 'XR / AR';
   if (node.name.startsWith('SpringBone')) return 'Skeleton, bones & IK';
-  // Dimension-aware catch-all so a base node (Node3D, Node) or any future node
-  // with an unfamiliar base still groups sensibly rather than vanishing.
+  // A base node or an unfamiliar base still gets a group by dimension.
   if (names.has('Node3D')) return '3D generic';
   if (names.has('CanvasItem')) return '2D generic';
   return 'Generic';

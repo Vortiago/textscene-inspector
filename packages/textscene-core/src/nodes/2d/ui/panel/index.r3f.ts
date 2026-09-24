@@ -1,4 +1,4 @@
-/** Panel registration — native (WebGL canvas) painter. */
+/** Registers the native (WebGL canvas) painter for Panel. */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Panel } from './Component';

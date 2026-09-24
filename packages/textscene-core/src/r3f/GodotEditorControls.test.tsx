@@ -1,9 +1,7 @@
 /**
- * The event wiring around the navigation maths: what the canvas listens to,
- * what it deliberately ignores (plain left-drag belongs to selection, keys
- * typed into a text field belong to the field), that it stops listening when
- * it unmounts, and that the handle it publishes as R3F's `state.controls`
- * honours the framing contract `frameSceneBounds` depends on.
+ * The event wiring around the navigation maths: what the canvas listens to, what it
+ * ignores (plain left-drag, keys typed into a field), that it stops on unmount, and
+ * that its published `state.controls` honours the `frameSceneBounds` contract.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -171,9 +169,8 @@ describe('<GodotEditorControls> mouse navigation', () => {
 });
 
 /**
- * happy-dom's `WheelEvent` drops the MouseEvent modifier flags — they read back
- * `undefined` however the init is spelled — so the two the wheel bindings
- * depend on are defined onto the instance. `deltaX`/`deltaY` do survive.
+ * happy-dom's `WheelEvent` drops the MouseEvent modifier flags, so the two the wheel
+ * bindings read are defined onto the instance. `deltaX`/`deltaY` survive.
  */
 function wheelEvent(init: {
   deltaX?: number;
@@ -304,8 +301,8 @@ function touchDrag(
     );
 
   points.forEach((point, index) => fire('pointerdown', index, point.from));
-  // Every finger reports its start once, so the gesture has an origin before
-  // any of them has moved — otherwise the first move reads as a jump.
+  // Every finger reports its start once, so the gesture has an origin before any
+  // moves, or the first move reads as a jump.
   points.forEach((point, index) => fire('pointermove', index, point.from));
   points.forEach((point, index) => fire('pointermove', index, point.to));
   points.forEach((_point, index) => fire('pointerup', index));
@@ -344,13 +341,9 @@ describe('<GodotEditorControls> touch navigation', () => {
   });
 
   it('leaves the orbit radius where it was after a pan whose pinch nets out', async () => {
-    // A browser fires one pointermove PER POINTER, so two fingers sliding
-    // together transit a state where only one has moved and the span has
-    // collapsed — 100px, briefly 40px, 100px again. Measured incrementally
-    // that 0.4x/2.5x pair unwinds only while nothing clamps it, and
-    // `scaleCursorDistance` clamps every call: this radius is inside the
-    // clip-derived range but 2.5x it is not, so an accumulated pinch would
-    // land the eye somewhere the user never asked for.
+    // One pointermove per pointer: the span goes 100px, briefly 40px, 100px again. An
+    // incremental 0.4x/2.5x pair unwinds only unclamped, and `scaleCursorDistance`
+    // clamps: this radius is in the clip range but 2.5x it is not.
     const { get, controls, element } = await mount();
     const camera = get().camera;
     camera.position.set(0, 0, camera.far / 8);
@@ -378,11 +371,9 @@ describe('<GodotEditorControls> touch navigation', () => {
 
     const zoomed = camera.position.distanceTo(controls.target);
     expect(zoomed).toBeLessThan(radius / 2);
-    // The focus point barely moves, but not exactly not at all: a browser
-    // fires one pointermove PER POINTER, so the fingers pass through states
-    // where only one has moved and the midpoint is briefly off-centre. Those
-    // opposite nudges do not quite cancel, because pan speed scales with the
-    // orbit radius and the pinch is changing it in between.
+    // The focus point moves slightly: one pointermove per pointer puts the midpoint
+    // briefly off-centre, and the opposite nudges do not cancel, because pan speed
+    // scales with the radius the pinch changes in between.
     expect(controls.target.length()).toBeLessThan((radius - zoomed) / 10);
   });
 

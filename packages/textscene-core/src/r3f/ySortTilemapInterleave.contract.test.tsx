@@ -1,22 +1,8 @@
 /**
- * RED contract — Y-sort TileMapLayer PER-Y interleave (the dungeon symptom).
- *
- * The dungeon bug: a decoration that sits between two rows of ground tiles must draw
- * in FRONT of the tiles behind it and BEHIND the tiles in front of it — i.e. its draw
- * order must land BETWEEN the tiles' by Godot Y. This only works if a y-sorted
- * TileMapLayer is decomposed PER Y-GROUP and those groups interleave with sibling
- * nodes in the parent's flat y-sort. Treating the whole layer as ONE unit at its
- * origin Y (all tiles clustered at a single z) fails this — the decoration ends up
- * entirely in front of or behind the whole layer.
- *
- * Setup: a `y_sort_enabled` Floor with a `y_sort_enabled` TileMapLayer (two single-
- * source tiles at Godot local Y = 32 and Y = 160, from the real isometric tileset)
- * plus a `Decor` sibling at the midpoint Y = 96. Assert `Decor`'s accumulated world-z
- * lands strictly BETWEEN the tile groups' world-z. Under the one-unit approximation
- * the tiles cluster at a single z, so `min == max` and nothing can be between → RED.
- *
- * This is the authored contract — do NOT weaken it (do not empty the tile data, do not
- * relax the strict-between assertion to `> 0`). See the plan + operator corrections.
+ * A y-sorted TileMapLayer splits into one group per Y row, and the rows interleave
+ * with sibling nodes in the parent's flat y-sort. A `Decor` between two tile rows of
+ * the isometric tileset draws in front of the row behind it and behind the row in
+ * front. Keep the tile data and the strict-between assertion.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -104,13 +90,9 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
   let root: THREE.Object3D | null | undefined = first;
   while (root?.parent) root = root.parent;
   root?.traverse((o: THREE.Object3D) => {
-    // Assert on the ACTUAL rendered tile MESH (the harm layer), not the
-    // `TileGroup_*` wrapper: read the canvas position three would sort the MESH
-    // by, which is its nearest enclosing group's. A bug that gave the mesh a
-    // canvas key of its own — rather than the local batch index it is supposed
-    // to carry — is invisible from the wrapper and only shows here, where the
-    // pixels actually are. The batched tile mesh is an anonymous child of its
-    // `TileGroup_<name>_<i>` group.
+    // Read the rendered tile mesh, an anonymous child of `TileGroup_<name>_<i>`, at the
+    // order three sorts it by (its nearest group's), not the wrapper's: a mesh with a
+    // canvas key of its own, not its local batch index, shows only here.
     if (o.name?.startsWith('TileGroup_')) {
       o.traverse((m: THREE.Object3D) => {
         if ((m as THREE.Mesh).isMesh) tileZ.push(nearestGroupOrder(m));
@@ -142,23 +124,17 @@ describe('Y-sort TileMapLayer per-Y interleave (issue #74 dungeon symptom)', () 
     // Both tile meshes and the decoration rendered.
     expect(tileZ.length).toBeGreaterThan(0);
     expect(decorZ).toBeDefined();
-    // THE PIN: the decoration's draw order lands strictly BETWEEN the tile ROWS as
-    // rendered (the meshes). Two failure modes this catches: (1) the one-unit
-    // approximation clusters all tiles at a single z (min === max) → nothing between;
-    // (2) the tile mesh double-counts its rank (mesh at 2×rank while the decoration is
-    // at 1×rank) → the near tile row coincides with / overtakes the decoration.
+    // The decoration lands strictly between the rendered tile rows. This fails when the
+    // layer is one unit (min === max), or when the mesh counts its rank twice and the
+    // near row overtakes the decoration.
     expect(Math.min(...tileZ)).toBeLessThan(decorZ!);
     expect(decorZ!).toBeLessThan(Math.max(...tileZ));
   });
 
   it('keeps every expanded tile row inside the y-sort subtree\'s own draw-sequence run', async () => {
-    // A y-sorted layer expands into one group PER ROW, and those rows are what
-    // the layer's own reserve was held back for (`canvasPaintOrder.ts`). Sizing
-    // each row by the layer node it names would claim a fresh reserve per row
-    // and run off the end of the enclosing subtree's run — where the next
-    // SIBLING lives, so the whole tilemap would climb over it. Nothing in the
-    // interleave above notices that: it only compares rows against a decoration
-    // INSIDE the same subtree, which is carried along by the same overflow.
+    // The rows share the layer's own reserve (`canvasPaintOrder.ts`). A fresh reserve
+    // per row runs off the subtree's run into the next sibling's, which the test above
+    // misses: its decoration sits inside the same subtree and overflows with it.
     const model = tileSetFromTres(parseTresFile(tilesetContent))!;
     const cells: PlacedCell[] = [0, 2, 4, 6, 8].map((y) => ({
       coords: { x: 0, y },

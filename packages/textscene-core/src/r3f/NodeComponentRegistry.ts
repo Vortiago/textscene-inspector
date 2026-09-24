@@ -1,7 +1,6 @@
 /**
- * Maps TscnNode.type strings to React components.
- * Self-registration mirrors the imperative NodeRegistry pattern.
- * Duplicate typeName re-registration silently overwrites — HMR friendly.
+ * Maps TscnNode.type strings to React components. Types self-register, as with
+ * NodeRegistry. Re-registering a typeName overwrites without a warning, for HMR.
  */
 
 import type React from 'react';
@@ -22,10 +21,8 @@ export interface NodeComponentRegistration {
   typeName: string;
   Component: NodeComponent;
   /**
-   * True for CanvasItem types (Node2D world content: sprites, tilemaps,
-   * 2D physics, Camera2D…). The workspace-aware dispatcher renders these
-   * only in the 2D world canvas — never in the 3D viewport — mirroring
-   * Godot's editor split.
+   * True for CanvasItem types (sprites, tilemaps, 2D physics, Camera2D). The dispatcher
+   * renders these only in the 2D canvas, never the 3D viewport, as Godot's editor does.
    */
   canvasItem?: boolean;
   /**
@@ -40,27 +37,20 @@ export interface NodeComponentRegistration {
    */
   csgShape?: CsgShapeRegistration;
   /**
-   * Whether this type draws anything of its own.
-   *
-   * `'transform-only'` says the node is finished and correct while drawing
-   * nothing — a Timer, a joint, an XR tracker (ADR-0008). Its comparison sheet
-   * reads `linter-only`. Defaults to `'draws'`.
-   *
-   * `'pending'` says Godot draws this and we do not yet: the badge and the
-   * sheet call it a gap, but the base component stays registered. Absence of a
-   * registration says the same thing about the badge and three other things
-   * besides — `GenericNodeFallback` carries no `visible`, and
-   * `drawsInWorkspace` reads an unregistered type as belonging to BOTH
-   * canvases, so a 3D emitter drags its subtree into the 2D one. Declaring the
-   * gap is not the same as forfeiting the transform space it lives in.
+   * Whether this type draws anything of its own. Defaults to `'draws'`.
+   * `'transform-only'`: complete while drawing nothing, like a Timer or a joint
+   * (ADR-0008), with sheet status `linter-only`. `'pending'`: Godot draws it and this
+   * does not yet, so the badge and the sheet show a gap.
    */
+  // A pending type keeps its base component. An unregistered type would also lose
+  // `visible` (`GenericNodeFallback`) and sit in both canvases (`drawsInWorkspace`),
+  // so a 3D emitter would drag its subtree into the 2D one.
   renderIntent?: 'draws' | 'transform-only' | 'pending';
   /**
-   * A pass over the whole authored tree that this type needs before the graph
-   * is built, because its component cannot reach the node it names on its own:
-   * a RemoteTransform moving its target, a CSGPolygon3D reading its path. Runs
-   * once per parse, in stage order; a pass registered by two types (the 2D and
-   * 3D relays share one) runs once. See `useParsedScene`.
+   * A pass over the authored tree before the graph is built, for a component that
+   * cannot reach the node it names: a RemoteTransform's target, a CSGPolygon3D's path.
+   * Runs once per parse in stage order, once even when two types share it. See
+   * `useParsedScene`.
    */
   scenePass?: ScenePassRegistration;
   /**
@@ -109,9 +99,8 @@ export interface ScenePassRegistration {
 const SCENE_PASS_STAGES: readonly ScenePassRegistration['stage'][] = ['transforms', 'paths'];
 
 class NodeComponentRegistryImpl {
-  // The whole registration is stored, and every flag is answered from it. Four
-  // parallel Sets/Maps meant each new flag cost add/delete plumbing in
-  // `register`, a line in `clear`, and a field — three places to forget.
+  // The whole registration is stored and answers every flag, so a new flag needs no
+  // plumbing in `register` or `clear`.
   private readonly registry = createTypeRegistry<NodeComponentRegistration>(
     'NodeComponentRegistry'
   );

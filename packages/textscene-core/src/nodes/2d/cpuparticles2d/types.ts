@@ -1,10 +1,7 @@
 /**
- * CPUParticles2D — Godot's CPU-simulated 2D particle emitter.
- *
- * Every default here is the one Godot's own constructor installs
- * (`scene/2d/cpu_particles_2d.h`), because a particle node in a real scene
- * writes only the handful of properties it changed: the candle's Fire emitter
- * sets only a handful, and the rest ARE the look.
+ * CPUParticles2D: Godot's CPU-simulated 2D particle emitter. Every default is the
+ * one Godot's constructor installs (`scene/2d/cpu_particles_2d.h`), since a scene
+ * writes only the few properties it changed.
  */
 
 import type { Node2DProperties, Color, Vector2 } from '../../base/node2d/types';
@@ -15,11 +12,11 @@ export enum CPUParticles2DEmissionShape {
   Sphere = 1,
   SphereSurface = 2,
   Rectangle = 3,
-  /** Positions sampled from `emission_points` — not previewed (see linter.ts). */
+  /** Positions sampled from `emission_points`. Not previewed (see linter.ts). */
   Points = 4,
-  /** As Points, but the normal also steers the initial velocity — not previewed. */
+  /** As Points, but the normal also steers the initial velocity. Not previewed. */
   DirectedPoints = 5,
-  /** An annulus between the inner and outer radius — not previewed. */
+  /** An annulus between the inner and outer radius. Not previewed. */
   Ring = 6,
 }
 
@@ -33,7 +30,7 @@ export enum CPUParticles2DDrawOrder {
 
 /**
  * Godot `CPUParticles2D.Parameter`. Every one is `lerp(min, max, random) *
- * curve.sample(t)` — one mechanism, twelve slots.
+ * curve.sample(t)`.
  */
 export enum CPUParticles2DParam {
   InitialLinearVelocity = 0,
@@ -50,18 +47,14 @@ export enum CPUParticles2DParam {
   AnimOffset = 11,
 }
 
-/** `PARAM_MAX` — the length of every parameter array. */
+/** `PARAM_MAX`: the length of every parameter array. */
 export const CPU_PARTICLES_2D_PARAM_COUNT = 12;
 
 /**
- * The twelve parameter slots, in `CPUParticles2DParam` order: the serialised
- * property prefix (`<prefix>_min` / `_max` / `_curve`), the Inspector label, the
- * Godot default both `_min` and `_max` take, and whether Godot exposes a curve.
- *
- * ONE table because `def` is read from two directions: the parser applies it,
- * and the formatter hides a slot that still holds it. Two copies drift into the
- * Inspector silently hiding an authored value, or showing an untouched one, and
- * no test would catch the disagreement.
+ * The parameter slots, in `CPUParticles2DParam` order: the serialised prefix
+ * (`<prefix>_min` / `_max` / `_curve`), the Inspector label, the Godot default of
+ * `_min` and `_max`, and whether Godot exposes a curve. The parser applies `def`
+ * and the formatter hides a slot that holds it, so one table keeps them agreed.
  */
 export const PARAM_SLOTS: ReadonlyArray<{
   prefix: string;
@@ -88,8 +81,7 @@ export interface ParticleParam {
   min: number;
   max: number;
   /**
-   * Raw `SubResource("id")` reference to a `Curve`, resolved at render time
-   * (the parser sees property strings, not the scene's resource table).
+   * Raw `SubResource("id")` reference to a `Curve`, resolved at render time.
    * `InitialLinearVelocity` has no serialised curve property in Godot, so its
    * slot is always absent.
    */
@@ -101,7 +93,7 @@ export interface CPUParticles2DProperties extends Node2DProperties {
   emitting: boolean;
   /** Particle count. Godot's inspector caps this at 1,000,000. */
   amount: number;
-  /** Raw texture reference (`ExtResource`/`SubResource`); absent means a 1×1 quad. */
+  /** Raw texture reference (`ExtResource`/`SubResource`). Absent means a 1×1 quad. */
   texture?: string;
 
   lifetime: number;
@@ -114,9 +106,9 @@ export interface CPUParticles2DProperties extends Node2DProperties {
   use_fixed_seed: boolean;
   seed: number;
   lifetime_randomness: number;
-  /** Simulation rate; 0 means Godot's 30 Hz fallback. */
+  /** Simulation rate. 0 means Godot's 30 Hz fallback. */
   fixed_fps: number;
-  /** Godot default TRUE — a restarting particle gets a partial first step. */
+  /** Godot default true: a restarting particle gets a partial first step. */
   fract_delta: boolean;
   /** When false (Godot's default) particles live in canvas space, not node space. */
   local_coords: boolean;
@@ -128,14 +120,14 @@ export interface CPUParticles2DProperties extends Node2DProperties {
   emission_ring_radius: number;
   emission_ring_inner_radius: number;
 
-  /** `particle_flag_align_y` — orient each quad along its velocity. */
+  /** `particle_flag_align_y`: orient each quad along its velocity. */
   particle_flag_align_y: boolean;
   direction: Vector2;
   /** Degrees of half-cone either side of `direction`. */
   spread: number;
   gravity: Vector2;
 
-  /** Indexed by `CPUParticles2DParam`; always `CPU_PARTICLES_2D_PARAM_COUNT` long. */
+  /** Indexed by `CPUParticles2DParam`. Always `CPU_PARTICLES_2D_PARAM_COUNT` long. */
   params: ParticleParam[];
 
   color: Color;

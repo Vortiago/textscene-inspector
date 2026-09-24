@@ -1,4 +1,4 @@
-/** ProgressBar parser — Control + Range bases plus ProgressBar's own four members. */
+/** Parses a ProgressBar: the Control and Range bases plus its own four members. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
@@ -12,9 +12,9 @@ export function parseProgressBar(
 ): ProgressBarProperties {
   return {
     ...parseControl(heading, properties),
-    // ProgressBar keeps Range's own documented `step = 0.01` — measured from the engine
-    // (`ClassDB.class_get_property_default_value`, 4.6.3). `_calc_value` snaps
-    // `value` to it, so an omitted key is NOT "no snap".
+    // ProgressBar's default `step` is 0.01, measured with
+    // `ClassDB.class_get_property_default_value` (4.6.3). `_calc_value` snaps
+    // `value` to it, so an omitted key is not "no snap".
     ...parseRange(properties, { step: 0.01 }),
     fillMode: parseOptionalInt(properties.fill_mode),
     showPercentage: parseOptionalBool(properties.show_percentage),

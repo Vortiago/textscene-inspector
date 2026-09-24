@@ -1,7 +1,4 @@
-/**
- * `separatorMinimumSize` — `Separator::get_minimum_size`
- * (`scene/gui/separator.cpp:33-41`, Godot 4.6.3).
- */
+/** `separatorMinimumSize`: `Separator::get_minimum_size` (`scene/gui/separator.cpp:33-41`, Godot 4.6.3). */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';

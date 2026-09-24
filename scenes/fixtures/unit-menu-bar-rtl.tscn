@@ -1,14 +1,7 @@
-; ONE VARIABLE: `layout_direction = 3` (RTL) on the lower MenuBar.
-;
-; `MenuBar::_get_menu_item_rect` mirrors every item inside the bar's own
-; width under RTL (menu_bar.cpp:424), so the first menu sits against the
-; trailing edge and the order runs back the other way. Both bars are far
-; wider than their own minimum, which is what makes the mirror visible at
-; all: a bar shrunk to its content would put the same pixels in the same
-; place either way. The three titles have clearly different widths so a
-; reversal cannot be mistaken for a mirror of equal blocks, and `flat` stays
-; false so each item's own StyleBox marks where it landed. No other MenuBar
-; scene pairs a direction with a bar wider than its content.
+; One variable: `layout_direction = 3` on the lower MenuBar. `MenuBar::_get_menu_item_rect`
+; mirrors every item inside the bar's width under RTL (menu_bar.cpp:424), so the first menu sits
+; at the trailing edge and the order runs back. No other MenuBar scene pairs a direction with a
+; bar wider than its content.
 
 [gd_scene format=3]
 
@@ -23,6 +16,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.12, 0.12, 0.18, 1)
 
+; Both bars are far wider than their minimum: a bar shrunk to its content puts the same pixels
+; in the same place either way. The titles differ in width, so a reversal is not a mirror of
+; equal blocks, and `flat` stays false so each item's StyleBox marks where it landed.
 [node name="Ltr" type="MenuBar" parent="."]
 layout_mode = 1
 anchor_right = 1.0

@@ -1,10 +1,7 @@
 /**
- * One labeled section of `<label, value>` rows. Internal to
- * `<NodeDetailsPanel>` — not exported from the package.
- *
- * `value` is a plain display string — every `PropertyFormatter` emits
- * `toFixed` / enum-name / `rgba(...)` text — so it renders as a text node.
- * No `dangerouslySetInnerHTML`, no XSS surface.
+ * One labelled section of label and value rows, internal to `<NodeDetailsPanel>`.
+ * Every `PropertyFormatter` emits a display string, so `value` renders as a
+ * text node with no `dangerouslySetInnerHTML` and no XSS surface.
  */
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
 import styles from './NodeDetailsPanel.module.css';

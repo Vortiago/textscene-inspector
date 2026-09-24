@@ -1,15 +1,8 @@
 /**
- * `<SubViewportContainer>`'s composited quad must carry the walker's own
- * `tint` exactly like every other native painter's pixels do — measured
- * against Godot 4.6.3 on a scratch fixture
- * (not committed; see the Item 2 write-up in `comparison.md`): a
- * `ColorRect(0.8, 0.8, 0.8)` filling the sub-viewport reads back through the
- * container as rgb(204,204,204) with no tint, rgb(102,102,102) with
- * `self_modulate = Color(0.5, 0.5, 0.5, 1)`, and rgb(51,51,51) with BOTH an
- * ancestor `modulate = Color(0.5, 0.5, 0.5, 1)` AND that same `self_modulate`
- * — a plain multiply in the same sRGB-friendly space the content colour is
- * authored in (0.8 × 0.5 × 0.5 = 0.2, and 0.2 × 255 = 51 exactly), not a
- * double gamma application.
+ * `<SubViewportContainer>`'s quad carries the walker's `tint` as every native painter does. Godot
+ * 4.6.3 (`comparison.md`, Item 2): a `ColorRect(0.8, 0.8, 0.8)` sub-viewport reads 204 untinted, 102
+ * under `self_modulate` 0.5, and 51 with an ancestor `modulate` 0.5 on top: a plain multiply in the
+ * authored sRGB space (0.8 × 0.5 × 0.5 × 255 = 51), not a double gamma application.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -79,9 +72,8 @@ async function mountContainer(tint = painterTint()) {
 describe('<SubViewportContainer> modulate / self_modulate', () => {
   it('composes an authored modulate AND self_modulate through the real walker, exactly once', async () => {
     // The measured chain above, end to end: 0.5 x 0.5 = 0.25 on the quad, so a
-    // 0.8 content texel reads 0.8 x 0.25 = 0.2 -> rgb(51). Authored on the NODE
-    // (not handed in as a tint) because that fold is the walker's, and this is
-    // the only test in this file that can catch it being applied twice.
+    // 0.8 content texel reads 0.8 x 0.25 = 0.2 -> rgb(51). Authored on the node, not handed in
+    // as a tint, because the fold is the walker's and only this test catches it applied twice.
     controlComponentRegistry.register({ typeName: 'SubViewportContainer', Component: SubViewportContainer });
     controlSolverRegistry.clear();
     const entry = fakeEntry();
@@ -126,10 +118,8 @@ describe('<SubViewportContainer> modulate / self_modulate', () => {
 
   it('draws the composited quad at the tint the walker composed', async () => {
     const material = await mountContainer(painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 }));
-    // `useGodotLinearColor` converts the sRGB-authored 0.5 to the renderer's
-    // linear working space — NOT 0.5 itself — so the assertion compares
-    // against sRGB→linear(0.5), the same conversion every other tinted
-    // native painter's material colour already goes through.
+    // `useGodotLinearColor` converts the sRGB-authored 0.5 to the renderer's linear space, so the
+    // assertion compares against sRGB-to-linear(0.5), as for every tinted native painter.
     const expected = srgbToLinear(0.5);
     expect(material.color.r).toBeCloseTo(expected, 4);
     expect(material.opacity).toBeCloseTo(1, 5);

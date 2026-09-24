@@ -11,8 +11,8 @@ renders_as: children flowed along one axis and wrapped into lines
 
 FlowContainer lays its children out along one axis, wraps to a new line when the
 current one runs out of room, and aligns each line per `alignment`. It draws nothing
-itself. A right-to-left `layout_direction` mirrors each line horizontally; on a vertical
-flow that mirror and `reverse_fill` land on the same axis, so setting both cancels out.
+itself. A right-to-left `layout_direction` mirrors each line horizontally. On a vertical
+flow, that mirror and `reverse_fill` act on the same axis, so setting both cancels out.
 
 ## Linting
 
@@ -35,13 +35,13 @@ Strict parsing format-checks these `FlowContainer` properties, plus 53 inherited
 |  | `control-property-order` | warning |
 <!-- lint:end -->
 
-`parser.ts` now reads all four members straight through, unclamped. `vertical` stays
-validated (and parsed) here, since a plain FlowContainer serialises it where its
-fixed-axis subclasses hide it — the solver resolves `HFlowContainer`/`VFlowContainer`'s
-own orientation from the node's type instead of this property.
+`parser.ts` reads all four members straight through, unclamped. `vertical` is validated
+and parsed here, since a plain FlowContainer serialises it where its fixed-axis
+subclasses hide it. The solver resolves the orientation of `HFlowContainer` and
+`VFlowContainer` from the node's type, not from this property.
 
 ## Known limitations
 
 - **Approximated** A TextureRect child using a `Fit` expand mode inside a multi-line
-  flow is sized like any other child; Godot instead keeps its previous frame's size,
-  which a static render has no analogue for.
+  flow is sized like any other child. Godot keeps the child's size from the previous
+  frame, which a static render cannot reproduce.

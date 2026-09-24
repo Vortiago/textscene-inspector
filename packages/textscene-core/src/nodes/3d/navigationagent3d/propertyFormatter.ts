@@ -1,7 +1,7 @@
 /**
- * NavigationAgent3D property formatter — surfaces the avoidance/path
- * properties (Godot defaults when the TSCN omits them). Non-spatial helper
- * (extends Node), so no transform section.
+ * NavigationAgent3D property formatter: the avoidance and path properties, with
+ * Godot's defaults where the TSCN omits them. It extends Node, so it has no
+ * transform section.
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';

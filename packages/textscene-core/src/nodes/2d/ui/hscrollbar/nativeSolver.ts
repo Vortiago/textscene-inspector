@@ -1,5 +1,5 @@
 /**
- * HScrollBar's native (WebGL canvas) minimum-size solve — the shared
+ * HScrollBar's native (WebGL canvas) minimum-size solve: the shared
  * ScrollBar port at `vertical = false`. Registration only; the algorithm
  * itself lives once in `../shared/scrollBarSolver.ts` for both HScrollBar and
  * VScrollBar.

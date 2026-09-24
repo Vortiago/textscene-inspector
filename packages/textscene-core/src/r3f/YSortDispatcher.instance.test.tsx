@@ -1,14 +1,7 @@
 /**
- * Y-sort must not lose PackedScene instances.
- *
- * A `[node ... instance=ExtResource("N")]` node carries no `type=` attribute, so
- * only the dispatcher's `node.instance` branch can render it — a bare
- * `nodeComponentRegistry.get(node.type)` lookup can never hit. Any second
- * dispatch path that forgets that branch drops every instanced sub-scene it
- * owns, silently and with green unit tests.
- *
- * These pin that an instance renders identically whether or not its parent is
- * `y_sort_enabled`, and that it still participates in the y-sort ordering.
+ * Y-sort must not lose PackedScene instances. An `instance=` node has no `type=`,
+ * so only the dispatcher's `node.instance` branch renders it. An instance renders
+ * the same under a `y_sort_enabled` parent, and takes part in the sort.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -110,7 +103,7 @@ describe('<YSortDispatcher> PackedScene instances', () => {
   it('an instance participates in the y-sort order, not just the tree order', async () => {
     // `Vase1` (Y=100) is declared before `Marker` (Y=200), so tree order and Y
     // order agree; flip the assertion's meaning by checking the instance is
-    // BEHIND the higher-Y marker, which only a real sort can guarantee.
+    // behind the higher-Y marker, which only a real sort can guarantee.
     const z = await render(true).then(worldZByName);
     expect(z.get('VaseBody')).toBeDefined();
     expect(z.get('Marker')).toBeDefined();

@@ -1,18 +1,8 @@
 /**
- * Dimension-parameterized semantic linter rule for CollisionPolygon2D / CollisionPolygon3D.
- *
- * Both mirror their own class's get_configuration_warnings() —
- * collision_polygon_2d.cpp:232-257 and collision_polygon_3d.cpp:235-252 — and
- * every diagnostic in both is a WARNING; neither ever refuses a load, only
- * shows the editor's warning icon.
- *
- * Genuine dimension-specific seams: 2D's build-mode-dependent minimum vertex
- * count and its one-way-collision-ignored-under-Area2D check
- * (collision_polygon_2d.cpp:239-254) have no 3D equivalent —
- * collision_polygon_3d.cpp declares neither a build_mode nor a
- * one_way_collision property — and 3D's non-uniform-scale check
- * (collision_polygon_3d.cpp:246-249) has no 2D equivalent. Format validation
- * stays in each slice's linterParser.ts.
+ * The CollisionPolygon2D/3D rules, each a class's get_configuration_warnings()
+ * (collision_polygon_2d.cpp:232-257, collision_polygon_3d.cpp:235-252), so each warns.
+ * 2D's vertex count and one-way check (collision_polygon_2d.cpp:239-254) and 3D's scale
+ * check (collision_polygon_3d.cpp:246-249) have no twin. Format checks: linterParser.ts.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
@@ -59,7 +49,7 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
       grounding: configWarning,
     },
     // 2D only: `collision_polygon_2d.cpp` carries the build-mode vertex count
-    // and the one-way check, and the 3D file has neither property.
+    // and the one-way check, and `collision_polygon_3d.cpp` declares neither property.
     insufficientPoints: is2D
       ? {
           severity: 'warning',
@@ -89,12 +79,10 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
     const report = (arm: RuleArm | undefined, message: string) =>
       reportArm(diagnostics, arm, node, message);
 
-    // collision_polygon_2d.cpp:235-237 / collision_polygon_3d.cpp:238-240 —
-    // `!Object::cast_to<CollisionObject<dim>>(get_parent())`. The `unknowable`
-    // arm is why this goes through the verdict: an instanced or override parent
-    // declares its class in a scene this linter never opens, and measuring the
-    // ExtResource ref against CollisionObject<dim> warns on every body built by
-    // instancing one.
+    // collision_polygon_2d.cpp:235-237 / collision_polygon_3d.cpp:238-240:
+    // `!Object::cast_to<CollisionObject<dim>>(get_parent())`. An instanced or override
+    // parent declares its class in a scene this linter never opens, so the verdict's
+    // `unknowable` arm keeps every body built by instancing silent.
     const placement = parentTypeVerdict(scene, node, collisionObject);
     const parent = verdictParent(placement);
     if (placement.kind === 'root') {
@@ -103,11 +91,9 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
       report(arms.invalidParent, `${type} '${node.name}' has parent '${placement.parent.name}' of type '${placement.parent.type}', which is not a ${collisionObject}. ${advice}`);
     }
 
-    // collision_polygon_2d.cpp:239-250 / collision_polygon_3d.cpp:242-244 —
-    // empty polygon, then (2D only) a build-mode-dependent minimum vertex
-    // count. The two are mutually exclusive in 2D's source (the count check
-    // is in the `else` of the emptiness check), so at most one of them fires
-    // there; 3D has no count check at all.
+    // collision_polygon_2d.cpp:239-250 / collision_polygon_3d.cpp:242-244: an empty
+    // polygon, then (2D only) a build-mode minimum vertex count in the `else` of the
+    // emptiness check, so at most one of them fires.
     const pointCount = polygonPointCount(rawProps.polygon);
     if (pointCount !== null) {
       if (pointCount === 0) {
@@ -135,13 +121,13 @@ export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
       }
     }
 
-    // collision_polygon_2d.cpp:252-254 — `one_way_collision && Object::cast_to<Area2D>(get_parent())`.
+    // collision_polygon_2d.cpp:252-254: `one_way_collision && Object::cast_to<Area2D>(get_parent())`.
     // No 3D equivalent: CollisionPolygon3D has no one_way_collision property.
     if (boolSlotValue(rawProps.one_way_collision) === true && parent && descendsFrom(parent.type, 'Area2D')) {
       report(arms.oneWayIgnored, `${type} '${node.name}' has 'one_way_collision' set, but its parent '${parent.name}' is an Area2D. The One Way Collision property will be ignored when the collision object is an Area2D.`);
     }
 
-    // collision_polygon_3d.cpp:246-249 — non-uniform transform scale. No 2D
+    // collision_polygon_3d.cpp:246-249: non-uniform transform scale. No 2D
     // equivalent: collision_polygon_2d.cpp's get_configuration_warnings()
     // carries no scale check at all.
     if (arms.nonUniformScale && rawProps.transform !== undefined) {

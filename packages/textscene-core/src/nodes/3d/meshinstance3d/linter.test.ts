@@ -1,6 +1,4 @@
-/**
- * Tests for MeshInstance3D linting (strict parser + the generic dangling-resource pass)
- */
+/** MeshInstance3D linting: the strict parser and the generic dangling-resource pass. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -36,9 +34,8 @@ describe('MeshInstance3D Linter', () => {
 
     describe('cast_shadow validation', () => {
       it('should detect an invalid cast_shadow value as a warning', () => {
-        // visual_instance_3d.cpp:601 hints the enum but set_cast_shadows_setting
-        // (:366-370) is a bare assignment, so out-of-range is a warning, not an
-        // error (ADR-0032).
+        // visual_instance_3d.cpp:601 hints the enum, but set_cast_shadows_setting
+        // (:366-370) is a bare assignment, so out-of-range warns (ADR-0032).
         const diagnostics = lint(
           scene(node('MeshInstance3D', { cast_shadow: 99 }, { name: 'InvalidShadow' }))
         );
@@ -67,11 +64,9 @@ describe('MeshInstance3D Linter', () => {
 
     runPropertyValidation({ nodeType: 'MeshInstance3D' }, [
       { prop: 'gi_mode', valid: [0, 1, 2], invalid: [{ value: 5, contains: ['0-2'] }] },
-      // `gi_lightmap_scale` had a validator here until GeometryInstance3D took
-      // over this family. It is deprecated and bound PROPERTY_USAGE_NONE
-      // (scene/3d/visual_instance_3d.cpp), so Godot never writes it to a .tscn
-      // and nothing could ever have reached that check. The parser still reads
-      // the key so an older hand-written scene carrying it still loads.
+      // `gi_lightmap_scale` is deprecated and bound PROPERTY_USAGE_NONE
+      // (scene/3d/visual_instance_3d.cpp), so Godot never writes it and it gets no
+      // validator. The parser still reads it, so an older scene carrying it loads.
       {
         prop: 'visibility_range_begin',
         valid: ['10.5'],
@@ -224,10 +219,9 @@ describe('MeshInstance3D Linter', () => {
       );
     });
 
-    // `_set` reads a FIXED slice for the index — `get_slicec('/', 1)`
-    // (mesh_instance_3d.cpp:66) — and `get_slicec` returns that slice alone
-    // (ustring.cpp:941-964), so the override lands on surface 0 and its
-    // reference is as dangling as any other.
+    // `_set` reads the index from `get_slicec('/', 1)` (mesh_instance_3d.cpp:66), which
+    // returns that slice alone (ustring.cpp:941-964), so the override lands on surface 0
+    // and its reference is as dangling as any other.
     it('follows a trailing segment to the surface Godot writes', () => {
       expectDiagnostic(
         scene(
@@ -299,8 +293,8 @@ describe('MeshInstance3D Linter', () => {
   });
 
   // mesh_instance_3d.cpp:367 bounds the surface index with
-  // ERR_FAIL_INDEX(p_surface, surface_override_materials.size()) — the mesh's own
-  // surface count, which a .tscn does not state — so no fixed index is out of range.
+  // ERR_FAIL_INDEX(p_surface, surface_override_materials.size()), the mesh's surface
+  // count, which a .tscn does not state, so no fixed index is out of range.
   describe('Semantic Validation (Surface Index Range)', () => {
     it.each([0, 31, 256, 999])('accepts surface index %s', (index) => {
       expectClean(
@@ -361,10 +355,8 @@ describe('MeshInstance3D Linter', () => {
           )
         )
       );
-      // We expect multiple diagnostics: cast_shadow and gi_mode format
-      // complaints plus the missing mesh resource.
+      // The cast_shadow and gi_mode format findings, plus the missing mesh resource.
       expect(diagnostics.length).toBeGreaterThan(1);
-      // Verify at least some of the expected errors are present
       const hasCastShadowError = diagnostics.some(d => d.message.includes('cast_shadow'));
       const hasGiModeError = diagnostics.some(d => d.message.includes('gi_mode'));
       expect(hasCastShadowError || hasGiModeError).toBe(true);
@@ -411,12 +403,10 @@ layers = 1023
 
 describe('MeshInstance3D surface-override index grammar', () => {
   it('checks an override written under a non-numeric index, which _set resolves', () => {
-    // `_set` reads the index with a bare
-    // `p_name.get_slicec('/', 1).to_int()` and no validity gate
+    // `_set` reads the index with a bare `get_slicec('/', 1).to_int()`
     // (mesh_instance_3d.cpp:66), and `to_int` skips a character it cannot use
-    // rather than stopping at it (ustring.cpp:2280-2293), so
-    // `surface_material_override/x1` overrides surface 1 and its dangling
-    // reference is a real one.
+    // (ustring.cpp:2280-2293), so `surface_material_override/x1` overrides surface 1
+    // and its dangling reference is real.
     expectDiagnostic(
       scene(node('MeshInstance3D', { 'surface_material_override/x1': 'SubResource("mat_missing")' })),
       { ruleName: 'dangling-resource-reference', severity: 'error', contains: ["'surface_material_override/x1'"] }

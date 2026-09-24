@@ -1,17 +1,8 @@
 /**
- * <AreaLight3D> — Godot rectangular area light. Renders as a three.js
- * RectAreaLight, with width/height read from the parsed `area_size`
- * Vector2 (defaults to 1×1). RectAreaLight has no shadow support, so
- * shadow_* properties are silently ignored by the component; `area_range`
- * is likewise carried on the parsed node but not applied (three.js
- * RectAreaLight has no range/penumbra control).
- *
- * three.js RectAreaLight emits ZERO illumination until the LTC uniform
- * library is populated, so we call `RectAreaLightUniformsLib.init()` once
- * at module load (idempotent; no renderer arg — it only fills the global
- * `UniformsLib` LTC textures). This is the first RectAreaLight in the
- * codebase, so there is no shared bootstrap to reuse; siblings
- * (Spot/Omni/Directional) are plain three.js lights that need no such init.
+ * <AreaLight3D>: a three.js RectAreaLight sized from `area_size` (default 1×1).
+ * RectAreaLight has no shadows and no range, so shadow_* and `area_range` are
+ * not applied. It emits nothing until the LTC uniforms exist, so module load
+ * calls the idempotent `RectAreaLightUniformsLib.init()` once.
  */
 
 import { useMemo, useRef } from 'react';
@@ -39,7 +30,7 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
   // Godot divides the emitted colour by the rectangle's surface area when
   // `area_normalize_energy` is on (its default), so the total output is
   // size-independent. three.js RectAreaLight intensity is a luminance, which
-  // scales with area for the same reason — so the same division applies here.
+  // scales with area for the same reason, so the same division applies here.
   const area = width * height;
   const normalize = properties.area_normalize_energy && area > 0;
   const intensity =

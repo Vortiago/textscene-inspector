@@ -1,7 +1,6 @@
 /**
- * RemoteTransform3D property formatter — surfaces remote_path + the update
- * flags (Godot defaults when the TSCN omits them) ahead of the shared Node3D
- * transform sections.
+ * RemoteTransform3D property formatter: remote_path and the update flags (Godot defaults when the
+ * TSCN omits them), ahead of the shared Node3D transform sections.
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
@@ -9,7 +8,7 @@ import type { RemoteTransform3DProperties } from './types';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 import { parseNodePathLiteral } from '../../../parser/valueParsers';
 
-/** `NodePath("../foo")` → `../foo`; anything else passes through; absent → (none). */
+/** `NodePath("../foo")` → `../foo`. Anything else passes through, and absent gives (none). */
 function displayNodePath(raw: string | undefined): string {
   return raw ? (parseNodePathLiteral(raw) ?? raw) : '(none)';
 }

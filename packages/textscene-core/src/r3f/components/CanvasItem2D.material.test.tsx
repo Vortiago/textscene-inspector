@@ -1,12 +1,7 @@
 /**
- * The CanvasItemMaterial seam: `<CanvasItem2D>` resolves a node's material once
- * — including Godot's `use_parent_material` walk up the CanvasItem chain — and
- * hands it to the slice's `body`, so no slice re-implements the rule.
- *
- * These assert the resolved blend state reaching a real rendered material,
- * through Polygon2D as the consumer. The isometric dungeon's `TopLight`
- * polygons are the motivating case: `blend_mode = 1` (Add) over a warm
- * translucent fill, which reads as an opaque khaki slab under plain MIX.
+ * `<CanvasItem2D>` resolves a node's material once, `use_parent_material` walk
+ * included, and hands it to the slice's `body`. Polygon2D shows the blend state
+ * reaching a rendered material: `blend_mode = 1` (Add) over a translucent fill.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -26,8 +21,8 @@ const TRI = 'PackedVector2Array(0, 0, 16, 0, 16, 16)';
 async function materialsByNodeName(tscn: string): Promise<Map<string, THREE.MeshBasicMaterial>> {
   const scene = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
-  // Sprite slices draw a placeholder without a texture, which carries no blend
-  // state — seed every external image the scene references.
+  // A sprite slice draws a placeholder with no blend state until its texture
+  // loads, so every external image is seeded.
   for (const ext of scene.externalResources) {
     if (ext.type !== 'Texture2D') continue;
     const tex = new THREE.Texture();

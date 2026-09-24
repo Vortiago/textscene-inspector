@@ -1,12 +1,7 @@
 /**
- * Shared test-kit for parser slice tests.
- *
- * Collapses the local `heading()` factory that ~37 parser.test.ts files
- * re-declared to build a node ParsedHeading, the `valueOf()` PropertySection
- * lookup that propertyFormatter tests re-declared, and the walk-up-to-
- * pnpm-workspace.yaml repo-root resolver that fixture tests re-declared.
- * Build-excluded via the `src/**\/testing/**` tsconfig rule, like the linter
- * test-kit.
+ * Shared test kit for parser slice tests: the node `heading()` factory, the formatter
+ * `valueOf()` lookup and the repo-root resolver. Build-excluded through the
+ * `src/**\/testing/**` tsconfig rule, like the linter test kit.
  */
 
 import { existsSync } from 'node:fs';
@@ -38,9 +33,8 @@ export function valueOf(sections: PropertySection[], label: string): string | un
 }
 
 /**
- * Resolve the monorepo root by walking up to pnpm-workspace.yaml — stable
- * regardless of whether vitest runs from the repo root or the package dir
- * (never `process.cwd()`, per AGENTS.md).
+ * The monorepo root, found by walking up to pnpm-workspace.yaml, so it holds from the
+ * repo root or the package dir. Never `process.cwd()` (AGENTS.md).
  */
 export function repoRoot(): string {
   let dir = dirname(fileURLToPath(import.meta.url));
@@ -57,12 +51,9 @@ export function fixturesDir(): string {
 }
 
 /**
- * Narrow a parsed `TscnNode.properties` (`Node3DProperties |
- * Record<string, unknown>`) down to its `transform`, when present.
- * The bare idiom `'transform' in properties && properties.transform` doesn't
- * narrow: the `Record<string, unknown>` arm's index signature keeps
- * `properties.transform` typed `unknown`, which then only narrows to `{}` on
- * the truthy check. Do the runtime check once, typed.
+ * A parsed node's `transform`, when present. `'transform' in properties` does not
+ * narrow: the `Record<string, unknown>` arm keeps it `unknown`, which a truthy check
+ * narrows only to `{}`.
  */
 export function transformOf(
   properties: Node3DProperties | Record<string, unknown>

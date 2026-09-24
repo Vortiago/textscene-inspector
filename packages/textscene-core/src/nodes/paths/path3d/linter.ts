@@ -1,17 +1,11 @@
 /**
- * Semantic linter rules for Path3D
- *
- * Note: Format validation (curve resource reference format) is handled by linterParser.ts
- * during strict parsing. This file focuses on semantic validation that requires
- * full scene context (e.g., curve resource exists).
- *
- * No "no PathFollow3D children" check: `path_3d.h`/`path_3d.cpp` declare a
- * `get_configuration_warnings()` override only on `PathFollow3D`, never on
- * `Path3D` itself — Godot raises no warning for a followerless Path3D. A
- * CSGPolygon3D in PATH mode extruding along a `path_node`, or a SplineIK3D
- * naming one through its indexed settings, are both first-class consumers
- * that need no PathFollow3D at all.
+ * Semantic linter rules for Path3D: the checks that need the whole scene, such as whether the
+ * curve resource exists. linterParser.ts checks the reference format.
  */
+
+// No "no PathFollow3D children" check: `path_3d.h`/`path_3d.cpp` declare
+// `get_configuration_warnings()` only on `PathFollow3D`. A CSGPolygon3D in PATH mode or a
+// SplineIK3D can consume a Path3D with no PathFollow3D at all.
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import type { TscnInternalResource } from '../../../parser/types.js';
@@ -44,14 +38,10 @@ function floatCount(forms: readonly RegExp[], value: string, groupSize: number):
   return matched.flat ? count : count * groupSize;
 }
 
-/**
- * Validate Path3D semantic rules
- */
 function checkPath3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
   // A curve-less Path3D is valid (the curve can be assigned at runtime) but
@@ -73,22 +63,10 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
 }
 
 /**
- * Validate the referenced Curve3D's `_data` against what Godot will actually load.
- *
- * `Curve3D::_set_data` (`scene/resources/curve.cpp:2278-2299`) hard-fails on a missing
- * `points` or `tilts` key, and on a `points` array whose length is not a multiple of
- * three Vector3s (in / out / position per control point). A curve that fails to load
- * comes back with ZERO points, so the Path3D silently draws nothing and any CSGPolygon3D
- * sweeping along it produces no geometry at all.
- *
- * This is worth a rule because it is invisible to everything else we have: our lenient
- * parser reads such a curve happily, the strict parser sees well-formed TSCN, and the
- * scene renders here while rendering EMPTY in Godot. That exact mistake was made while
- * authoring a swept-path scene and only surfaced from a pixel comparison
- * against a real Godot render.
- *
- * Errors rather than warnings: Godot refuses to load the resource, so this is not an
- * advisory style question.
+ * Validate the referenced Curve3D's `_data` against what Godot loads. `Curve3D::_set_data`
+ * (`scene/resources/curve.cpp:2278-2299`) fails on a missing `points` or `tilts` key, and on a
+ * `points` length that is not a multiple of three Vector3s (in, out, position). The curve then
+ * loads with zero points, so the Path3D and any CSGPolygon3D along it draw nothing: an error.
  */
 function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] {
   const { node, scene } = context;
@@ -140,11 +118,9 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
   if (tiltsLiteral) {
     const tilts = floatCount(TILTS_FORMS, tiltsLiteral[1]!, 1);
     const expected = vector3s / 3;
-    // Too FEW only. `Curve3D::_set_data`'s fill loop is bounded by
-    // `points.size()` (curve.cpp:2294) and indexes `rt[i]` inside it, so a short
-    // `tilts` reads past the end of the array while a long one simply leaves its
-    // extra values untouched — that scene loads, and reporting it was an error
-    // on a file Godot opens.
+    // Too few only. `Curve3D::_set_data`'s fill loop is bounded by `points.size()`
+    // (curve.cpp:2294) and indexes `rt[i]` inside it, so a short `tilts` reads past the end
+    // while a long one leaves its extra values untouched and loads.
     if (tilts < expected) {
       return [
         problem(
@@ -158,9 +134,6 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
   return [];
 }
 
-/**
- * Path3D semantic validation rule
- */
 const path3DValidationRule: LintRule = {
   meta: {
     name: 'valid-path3d',
@@ -187,8 +160,6 @@ const path3DValidationRule: LintRule = {
   check: checkPath3D,
 };
 
-// Self-register the rule
 ruleRegistry.register(path3DValidationRule);
 
-// Export for testing
 export { path3DValidationRule };

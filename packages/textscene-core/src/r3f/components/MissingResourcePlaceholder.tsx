@@ -1,30 +1,7 @@
 /**
- * Editor-only visual marker for "this resource is referenced but failed
- * to resolve". Consolidates two near-identical magenta-shape
- * widgets that previously lived inline in node components:
- *   - `NodeDispatcher.InstancePlaceholder` — wireframe magenta box for a
- *     missing PackedScene reference.
- *   - `Sprite3D.Placeholder` — translucent magenta plane for a missing
- *     sprite texture (the plane shape reflects the sprite's quad nature).
- *
- * Both render no text — Gap 12 moved the path label into the
- * DOM `<MissingResourcesPanel>` because in-3D drei text overlapped into
- * illegible blobs when several missing-resource markers clustered.
- *
- * Two shapes:
- *   - `box`   — small wireframe cube; positional anchor for a 3D node.
- *   - `plane` — translucent quad; reflects a sprite/billboard footprint.
- *
- * MeshInstance3D's missing-mesh / missing-texture branches do NOT use
- * this — they swap a magenta material onto the **actual** mesh geometry
- * so the unresolved mesh's shape stays visible to the user (a different
- * affordance, not a placeholder widget).
- *
- * Sprite3D and the GLB scene root mount the `plane` marker too, which makes it
- * the one place a 3D node reaches `canvasItemFacing()`. Single pass stays
- * correct there: a lone `planeGeometry` winds one way, so exactly one of the
- * two facing passes was ever producing a fragment for it and the pass that is
- * dropped drew nothing.
+ * The editor marker for a referenced resource that failed to resolve. The path goes
+ * to the DOM `<MissingResourcesPanel>`, since clustered 3D labels overlap into blobs.
+ * MeshInstance3D does not use it: a magenta material on its real geometry keeps the shape.
  */
 import { CanvasItemGroup } from './CanvasItemGroup';
 import { canvasItemFacing } from '../canvasItemFacing';
@@ -34,12 +11,15 @@ import { wireGizmoProgram } from './wireGizmoProgram';
 export type MissingResourcePlaceholderShape = 'box' | 'plane';
 
 interface Props {
-  /** Visual shape — see file header. */
+  /**
+   * A magenta wireframe `box` anchors a 3D node, such as a missing scene. A translucent
+   * `plane` shows a sprite footprint. A lone `planeGeometry` winds one way, so
+   * `canvasItemFacing()` holds on it.
+   */
   shape: MissingResourcePlaceholderShape;
   /** Optional name on the wrapping group for tree / debug lookup. */
   name?: string;
-  /** Optional transform — used by Sprite3D so the placeholder sits where
-   *  the sprite would have rendered. */
+  /** Optional transform, so Sprite3D's placeholder sits where the sprite would render. */
   position?: [number, number, number];
   rotation?: [number, number, number];
   scale?: [number, number, number];
@@ -47,9 +27,8 @@ interface Props {
 
 const BOX_SIZE: [number, number, number] = [0.5, 0.5, 0.5];
 
-// Both literal-only, so both keys are constant — the marker never remounts, and
-// a program input added later keys itself. Module scope because the component
-// draws ONE of them and derived both.
+// Both literal-only, so both keys are constant and the marker never remounts.
+// Module scope, since the component draws one of them.
 const BOX_MATERIAL = wireGizmoProgram('magenta');
 const PLANE_MATERIAL = materialProgramInputs({
   props: { color: 'magenta', transparent: true, opacity: 0.6 },

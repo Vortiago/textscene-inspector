@@ -1,17 +1,7 @@
-; VSplitContainer: the same solve on the other axis.
-;
-; The one variable against unit-split-container.tscn: which axis is split. A
-; transposed axis is the failure this exists to catch — the horizontal fixture
-; passes identically whether the implementation reads `size_flags_horizontal`
-; or `size_flags_vertical`, because in that scene both children carry the same
-; flags on the axis being tested. Here the children expand VERTICALLY, and an
-; implementation reading the horizontal flags computes the "neither expands"
-; branch and pins the boundary at split_offset (0) instead.
-;
-; Measured against Godot 4.6.3. Each column is 120 wide and 300 tall.
-;
-;   Both    top 144 | 12 | bottom 144   both expand, split_offset 0
-;   Offset  top 194 | 12 | bottom  94   both expand, split_offset 50
+; One variable against unit-split-container.tscn: which axis VSplitContainer splits. There both
+; children carry the same flags on the tested axis, so reading `size_flags_horizontal` or
+; `size_flags_vertical` passes alike. Here the children expand vertically, and reading the
+; horizontal flags takes the "neither expands" branch, pinning the boundary at split_offset (0).
 
 [gd_scene format=3]
 
@@ -26,6 +16,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
+; Godot 4.6.3: top 144 | 12 | bottom 144, both expand, split_offset 0. Each column is 120 wide
+; and 300 tall.
 [node name="Both" type="VSplitContainer" parent="."]
 offset_left = 20.0
 offset_top = 20.0
@@ -42,6 +34,7 @@ layout_mode = 2
 size_flags_vertical = 3
 color = Color(0, 1, 0, 1)
 
+; Godot 4.6.3: top 194 | 12 | bottom 94, both expand, split_offset 50.
 [node name="Offset" type="VSplitContainer" parent="."]
 offset_left = 180.0
 offset_top = 20.0

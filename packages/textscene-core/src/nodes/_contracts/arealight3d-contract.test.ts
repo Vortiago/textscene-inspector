@@ -1,24 +1,8 @@
 /**
- * AreaLight3D slice behavioral contract — written RED before the slice shipped.
- *
- * Godot 4.7 adds AreaLight3D, a rectangular real-time area light. The previewer
- * implements DirectionalLight3D / OmniLight3D / SpotLight3D under
- * nodes/3d/lights/ but had NO AreaLight3D — a 4.7 scene using it silently
- * rendered no light. The slice adds the full vertical: parse + register +
- * render (three.js RectAreaLight) + a lint-clean fixture.
- *
- * This is a WRITE slice (the behaviour does NOT yet ship), so unlike a
- * test-writing slice these are REAL behavioural witnesses through STABLE public
- * APIs (TscnParser, nodeRegistry, nodeComponentRegistry, Linter) — not
- * substring/coverage pins. They fail today and pass once the slice is built.
- *
- * RED-lever note: an UNREGISTERED type already parses to a node with
- * type === 'AreaLight3D' (base-Node fallback), so type-presence alone is NOT a
- * valid failing lever. These pins key off what the fallback canNOT satisfy: the
- * registry entries, the TYPED light properties, the RectAreaLight render, and a
- * fixture the linter passes. The exact Godot property mapping for the rectangle
- * size/extents and the assertion quality of the shipped co-located tests are
- * judged at /code-review, not pinned here.
+ * AreaLight3D contract, a Godot 4.7 rectangular area light, through stable public APIs (TscnParser,
+ * nodeRegistry, nodeComponentRegistry, Linter). An unregistered type already parses with its type
+ * name through the base-Node fallback, so these pins key off what the fallback cannot satisfy: the
+ * registry entries, the typed light properties, the RectAreaLight render and a lint-clean fixture.
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';

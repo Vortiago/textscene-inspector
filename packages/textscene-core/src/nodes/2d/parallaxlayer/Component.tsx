@@ -1,19 +1,7 @@
 /**
- * <ParallaxLayer> — an ordinary Node2D whose pose its parent ParallaxBackground
- * is allowed to overwrite, plus `motion_mirroring`'s repeated instance.
- *
- * The authored transform stays where every other 2D slice keeps it, on
- * `<Node2D>`, so modulate, z-index, skew and y-sort behave identically. The
- * scroll lands on a WRAPPER group instead, holding only the delta between the
- * authored pose and the one `set_base_offset_and_scale` forces
- * (`parallaxLayerDelta`) — which is why nothing here has to re-derive the
- * authored side. The wrapper stays at identity until a background poses it, and
- * a layer outside a ParallaxBackground (Godot warns about that arrangement, and
- * so does the linter) simply never is.
- *
- * Mirroring renders the subtree once per drawn instance. Godot repeats the
- * canvas ITEM, so the offsets are in the layer's own local space and the copies
- * share this one authored transform rather than each recomputing it.
+ * Draws a ParallaxLayer: a Node2D whose pose its parent ParallaxBackground may
+ * overwrite. The authored pose stays on `<Node2D>`, and a wrapper group holds
+ * only the scroll delta (`parallaxLayerDelta`), at identity until posed.
  */
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
@@ -44,13 +32,15 @@ export function ParallaxLayer({ node, children }: NodeComponentProps) {
   useLayoutEffect(() => {
     const group = groupRef.current;
     if (!group || !registry) return;
-    // `_update_scroll` poses `get_child(i)`, so only a DIRECT child qualifies —
+    // `_update_scroll` poses `get_child(i)`, so only a direct child qualifies.
     // React context alone would also reach a layer nested under a Node2D.
     const parentPath = path.slice(0, Math.max(0, path.lastIndexOf('/')));
     if (parentPath !== registry.parentPath) return;
     return registry.register(path, { group, motion, origin });
   }, [registry, path, motion, origin]);
 
+  // Godot repeats the canvas item, so the mirror offsets are in the layer's own
+  // local space and every copy shares the one authored transform.
   const mirrors = useMemo(
     () => parallaxMirrorOffsets(props.motion_mirroring, props.scale),
     [props.motion_mirroring, props.scale]
@@ -64,7 +54,7 @@ export function ParallaxLayer({ node, children }: NodeComponentProps) {
         {mirrors.length === 0
           ? children
           : mirrors.map((offset, index) => (
-              // paint-order-safe: wraps DISPATCHED children, each of which
+              // paint-order-safe: wraps dispatched children, each of which
               // brings its own canvas-item wrapper nearer than this one.
               <group key={`mirror-${index}`} position={[offset.x, 0 - offset.y, 0]}>
                 {children}

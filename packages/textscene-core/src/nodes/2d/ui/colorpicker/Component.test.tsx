@@ -1,8 +1,7 @@
 /**
- * `<ColorPicker>` — the colour sample row (including `btn_pick`/`btn_shape`),
- * the `SHAPE_HSV_RECTANGLE` SV square/hue slider, and the mode/slider-grid/
- * hex/swatches rows (`color_picker.cpp`/`color_mode.cpp`, this component's
- * own doc for exact line citations).
+ * `<ColorPicker>`: the colour sample row (with `btn_pick` and `btn_shape`), the
+ * `SHAPE_HSV_RECTANGLE` SV square and hue slider, and the mode, slider-grid, hex and
+ * swatches rows (`color_picker.cpp`, `color_mode.cpp`, cited in the component's doc).
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -21,7 +20,7 @@ function node(properties: Record<string, unknown>): SolveNode {
   return { ...emptySolveNode(), path: 'P', node: tscnNode };
 }
 
-/** Hides every row this file's shape/sample-only tests are not about, isolating the mesh counts the original tests already pinned. */
+/** Hides every row the shape and sample tests are not about, so their mesh counts stay isolated. */
 const ONLY_SHAPE_AND_SAMPLE = {
   colorModesVisible: false,
   slidersVisible: false,
@@ -104,7 +103,7 @@ describe('<ColorPicker> (isolated painter contract)', () => {
     // 0: pick box, 1: pick icon, 2: shape icon, 3: swatch, 4: sv base.
     const baseMesh = meshes[4]!.instance as THREE.Mesh;
     const color = baseMesh.geometry.getAttribute('color') as THREE.BufferAttribute;
-    // top-left vertex is white(1,1,1,1) in the untinted layer; tinted by 0.5.
+    // The top-left vertex is white(1,1,1,1) in the untinted layer, tinted by 0.5.
     expect(color.getX(0)).toBeCloseTo(0.5);
     expect(color.getY(0)).toBeCloseTo(0.5);
     expect(color.getZ(0)).toBeCloseTo(0.5);
@@ -151,12 +150,10 @@ describe('<ColorPicker> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    // 5 rows (R,G,B,I,A — edit_alpha/edit_intensity both default true), each
-    // with a label TextRun, a StyleBoxQuad value FIELD box, a value TextRun
-    // and its own up/down SpinBox arrow icons (2 meshes); R/G/B/A are
-    // colorized (`_reset_sliders_theme`): a gradient band + the overridden
-    // `bar_arrow` grabber. Intensity alone keeps the stock HSlider chrome:
-    // track + grabber_area(fill) + the default circle grabber.
+    // 5 rows (R, G, B, I, A: edit_alpha and edit_intensity default true), each a label,
+    // a value field box, a value TextRun and two SpinBox arrows. R, G, B and A are colorized
+    // (`_reset_sliders_theme`): a gradient band and the `bar_arrow` grabber. Intensity keeps
+    // the stock HSlider chrome: track, grabber_area fill and the circle grabber.
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes.length).toBe(
       5 /* labels */ +

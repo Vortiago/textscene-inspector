@@ -1,8 +1,8 @@
 /**
- * `<Tree>` render contract — the panel StyleBox, and blank-titled header
- * cells when `column_titles_visible`. Structure assertions only; pixels are
- * `pnpm ref:godot`'s job.
+ * `<Tree>` render contract: the panel StyleBox, and blank-titled header cells when
+ * `column_titles_visible`. Structure only: pixels are `pnpm ref:godot`'s job.
  */
+
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -119,9 +119,8 @@ describe('<Tree> — column header row', () => {
   });
 
   it('draws no header cells for columns=0 (an invalid, below-floor value clamped to 1 elsewhere)', async () => {
-    // columns floors at 1 inside the painter even if an unvalidated value
-    // slipped through — a Tree with any column_titles_visible=true still
-    // shows exactly one header cell, never zero.
+    // The painter floors columns at 1 even for an unvalidated value, so a Tree
+    // with column_titles_visible=true shows at least one header cell.
     const renderer = await ReactThreeTestRenderer.create(
       <Tree {...painterEnv()} solveNode={solveNode({ columns: 0, columnTitlesVisible: true })} rect={RECT} renderOrder={0} />
     );

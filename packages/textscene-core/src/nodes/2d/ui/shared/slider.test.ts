@@ -1,17 +1,8 @@
 /**
- * Godot-parity contract for the shared Slider base. `sliderTickIndices`
- * transcribes the tick loop in `Slider::_notification(NOTIFICATION_DRAW)`
- * (scene/gui/slider.cpp):
- *
- *     if (ticks > 1) {
- *       for (int i = 0; i < ticks; i++) {
- *         if (!ticks_on_borders && (i == 0 || i + 1 == ticks)) { continue; }
- *
- * `tick_count` defaults to 0 (doc/classes/Slider.xml), so the `ticks > 1` guard
- * is what makes `ticks_on_borders = true` a no-op on a slider that never set a
- * count — which is exactly what
- * `scenes/demos/viewport/gui_in_3d/gui_panel_3d.tscn`'s HSlider does, and real
- * Godot draws no ticks on it.
+ * Godot-parity contract for the shared Slider base: `sliderTickIndices` transcribes the tick loop in
+ * `Slider::_notification(NOTIFICATION_DRAW)` (scene/gui/slider.cpp). `tick_count` defaults to 0
+ * (doc/classes/Slider.xml), so `ticks > 1` makes `ticks_on_borders = true` a no-op without a count,
+ * as on `scenes/demos/viewport/gui_in_3d/gui_panel_3d.tscn`'s HSlider, which Godot draws tickless.
  */
 import { describe, it, expect } from 'vitest';
 import { parseSlider, sliderTickIndices } from './slider';

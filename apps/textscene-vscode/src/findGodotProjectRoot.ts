@@ -1,15 +1,8 @@
 /**
- * Shared Godot project-root resolution: walk upward from a document's
- * directory looking for `project.godot`, stopping at (and falling back to)
- * the workspace root when none is found. `res://` is ALWAYS project-root-
- * relative in Godot (never relative to the current file), so a scene living
- * in a subfolder with no `project.godot` anywhere above it still resolves
- * `res://` against the workspace root rather than its own directory —
- * otherwise every shared asset (GLBs, textures) 404s.
- *
- * Shared by `VSCodeResourceProvider` (reads resource bytes for the preview
- * webview) and `TscnDocumentLinkProvider` (turns `res://` references into
- * clickable links) so both agree on exactly where a `res://` path points.
+ * Walks up from a document's directory for `project.godot`, and falls back to the
+ * workspace root, since Godot's `res://` is always project-root-relative. The
+ * preview's `VSCodeResourceProvider` and `TscnDocumentLinkProvider` share it, so
+ * both agree on where a `res://` path points.
  */
 
 import * as vscode from 'vscode';
@@ -19,12 +12,9 @@ function normalizeFsPath(fsPath: string): string {
 }
 
 /**
- * Whether a normalized path sits strictly under the root.
- *
- * The separator is what makes it a boundary: a bare `startsWith` also accepts
- * every SIBLING whose path merely begins with the root's spelling, so a
- * document in `/home/u/proj-other` would be walked as if it were inside
- * `/home/u/proj`. A root that already ends in one must not gain a second.
+ * Whether a normalized path sits strictly under the root. The separator makes it
+ * a boundary: a bare `startsWith` walks `/home/u/proj-other` as if it were inside
+ * `/home/u/proj`. A root that already ends in one gains no second.
  */
 function isUnderRoot(rootNormalized: string, candidateNormalized: string): boolean {
   const prefix = rootNormalized.endsWith('/') ? rootNormalized : `${rootNormalized}/`;
@@ -46,7 +36,7 @@ export async function findGodotProjectRoot(
       await vscode.workspace.fs.stat(projectFile);
       return currentDir;
     } catch {
-      // Not found here — keep searching upward.
+      // Not found here: keep searching upward.
     }
 
     if (

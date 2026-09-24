@@ -1,21 +1,8 @@
 /**
- * `<GraphEditMinimapChrome>` — paints `GraphEditMinimap`, the overview panel
- * GraphEdit's constructor builds at the bottom-right of its own rect
- * (`scene/gui/graph_edit.cpp:3325-3340`), off the geometry `minimap.ts`
- * solves. `GraphEdit::_minimap_draw` (`:1807-1891`) is the draw itself:
- * panel, every GraphFrame, every GraphNode, the connections, the camera
- * viewport, then the resizer icon.
- *
- * `minimap->set_modulate(Color(1, 1, 1, minimap_opacity))` (`:3330`) is a
- * CanvasItem modulate, so it multiplies every draw below — folded into each
- * quad's own sRGB colour here, before the single linear conversion, the same
- * ordering every other two-colour chrome in this codebase uses.
- *
- * The connection polylines (`:1870-1883`) are the one draw here that is not a
- * stylebox: `draw_polyline_colors(points, colors, 0.5, lines_antialiased)`
- * (`:1611`), whose geometry `polylineStroke.ts` ports and whose points and
- * colours `minimapConnections.ts` solves. `connection_lines_antialiased` has
- * no other reader anywhere in the engine.
+ * `<GraphEditMinimapChrome>`: paints `GraphEditMinimap`, the overview panel at the
+ * bottom-right of GraphEdit (`scene/gui/graph_edit.cpp:3325-3340`), from the geometry of
+ * `minimap.ts`. `_minimap_draw` (`:1807-1891`) draws the panel, the GraphFrames, the
+ * GraphNodes, the connections, the camera rect and the resizer icon.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -70,17 +57,17 @@ interface MinimapConnectionsProps {
   transform: MinimapTransform;
   bounds: GraphScrollBounds;
   curvature: number;
-  /** `connection_lines_antialiased` — `lines_antialiased`'s only reader (`graph_edit.h:254`, default true). */
+  /** `connection_lines_antialiased` (`graph_edit.h:254`, default true), whose only engine reader is this draw. */
   antialiased: boolean;
-  /** The minimap's own opacity, already folded onto the inherited tint. */
+  /** The minimap opacity, folded onto the inherited tint. */
   lineTint: ControlColor;
   renderOrder: number;
 }
 
 /**
- * Every connection as ONE mesh — the polylines are coplanar, share a material
- * and paint in one band, so merging them costs nothing and keeps the draw
- * count independent of the graph's size.
+ * Every connection as one mesh: the polylines are coplanar, share a material and paint in
+ * one band, so the draw count does not grow with the graph. The points and colours come from
+ * `minimapConnections.ts`, and the stroke from `polylineStroke.ts` (`:1870-1883`, `:1611`).
  */
 function MinimapConnections({ connections, transform, bounds, curvature, antialiased, lineTint, renderOrder }: MinimapConnectionsProps) {
   const clippingPlanes = useControlClipPlanes();
@@ -132,19 +119,19 @@ function MinimapConnections({ connections, transform, bounds, curvature, antiali
 }
 
 export interface GraphEditMinimapProps {
-  /** The minimap panel's rect in GraphEdit's own local space. */
+  /** The rect of the minimap panel in GraphEdit's local space. */
   rect: Rect2;
   transform: MinimapTransform;
   bounds: GraphScrollBounds;
-  /** Frames first, then nodes — `_minimap_draw`'s own two loops. */
+  /** Frames first, then nodes, as the two loops of `_minimap_draw` run. */
   elements: readonly MinimapElement[];
-  /** `GraphEdit::zoom` — each element's box is scaled by it before conversion (`:1827-1829`). */
+  /** `GraphEdit::zoom`, which scales each element's box before conversion (`:1827-1829`). */
   zoom: number;
   scrollOffset: { x: number; y: number };
   graphEditSize: { x: number; y: number };
   /** `minimap->get_modulate().a`. */
   opacity: number;
-  /** Every connection `_update_connections` resolved, in GraphEdit's own order. */
+  /** Every connection `_update_connections` resolved, in GraphEdit's order. */
   connections: readonly ResolvedConnection[];
   /** `connection_lines_curvature`, the same curve the main canvas draws. */
   curvature: number;
@@ -174,24 +161,25 @@ export function GraphEditMinimapChrome({
   renderOrder,
 }: GraphEditMinimapProps) {
   const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
-  // Every draw inside the minimap carries its own `modulate` alpha.
+  // `minimap->set_modulate(Color(1, 1, 1, minimap_opacity))` (`:3330`) multiplies every draw
+  // inside the minimap, so it folds into each sRGB colour before the linear conversion.
   const modulated = useMemo(
     () => multiplyModulate(tint.own, { r: 1, g: 1, b: 1, a: opacity }),
     [tint.own, opacity]
   );
 
-  // `default_theme.cpp:1342` — make_flat_stylebox(Color(0.24, 0.24, 0.24), 0, 0, 0, 0).
+  // `default_theme.cpp:1342`: make_flat_stylebox(Color(0.24, 0.24, 0.24), 0, 0, 0, 0).
   const panelStyle = useMemo(
     () => flatBox({ r: 0.24, g: 0.24, b: 0.24, a: 1 }, theme.cornerRadius, 0, { r: 0.8, g: 0.8, b: 0.8, a: 1 }),
     [theme.cornerRadius]
   );
-  // `default_theme.cpp:1343-1345` — make_flat_stylebox(Color(0.65, 0.65, 0.65, 0.2), 0, 0, 0, 0, 0)
-  // then `set_border_width_all(1)` / `set_border_color(Color(0.65, 0.65, 0.65, 0.45))`, both unscaled.
+  // `default_theme.cpp:1343-1345`: make_flat_stylebox(Color(0.65, 0.65, 0.65, 0.2), 0, 0, 0, 0, 0),
+  // then `set_border_width_all(1)` and `set_border_color(Color(0.65, 0.65, 0.65, 0.45))`, both unscaled.
   const cameraStyle = useMemo(
     () => flatBox({ r: 0.65, g: 0.65, b: 0.65, a: 0.2 }, 0, 1, { r: 0.65, g: 0.65, b: 0.65, a: 0.45 }),
     []
   );
-  // `default_theme.cpp:1347` — make_flat_stylebox(Color(1, 1, 1), 0, 0, 0, 0, 2); the bg is replaced per element.
+  // `default_theme.cpp:1347`: make_flat_stylebox(Color(1, 1, 1), 0, 0, 0, 0, 2). Each element replaces the bg.
   const nodeCornerRadius = Math.round(2 * scale);
 
   const resizerTexture = useNodeIcon(icons.resizer, GRAPH_EDIT_MINIMAP_RESIZER_ICON);

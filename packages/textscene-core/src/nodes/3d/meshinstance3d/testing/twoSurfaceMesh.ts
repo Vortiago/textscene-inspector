@@ -1,21 +1,13 @@
 /**
- * A two-surface ArrayMesh, inlined in the scene as a `[sub_resource]`.
- *
- * Every per-SURFACE behaviour has to be asserted on a mesh that really has more
- * than one. A PrimitiveMesh does not: `MeshInstance3D::_set`
- * (`scene/3d/mesh_instance_3d.cpp:65-73`) refuses any
- * `surface_material_override/N` whose index is past the array `_mesh_changed`
- * (`:407`) sizes to `mesh->get_surface_count()`, which is 1 for every one of
- * them. A BoxMesh with a slot-1 override therefore proves nothing about slot 1
- * — Godot never stored it.
- *
- * Inline rather than a `.tres`: `useSceneArrayMeshGeometry` decodes it straight
- * from the parsed scene, so a test needs no `ResourceLoader` and no settle loop.
+ * A two-surface ArrayMesh inlined as a `[sub_resource]`, so a test needs no
+ * `ResourceLoader`. A PrimitiveMesh has one surface, and `_set`
+ * (`scene/3d/mesh_instance_3d.cpp:65-73`) refuses an override past the array
+ * `_mesh_changed` (`:407`) sizes, so only this mesh proves a per-surface case.
  */
 
 import type { TscnInternalResource } from '../../../../parser/types';
 
-/** A quad's worth of surface bytes — four vertices, two triangles. */
+/** A quad's worth of surface bytes: four vertices, two triangles. */
 const QUAD_BODY = `"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
 "attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
 "format": 34359742487,
@@ -27,9 +19,8 @@ const QUAD_BODY = `"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
 "vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")`;
 
 /**
- * A `[sub_resource type="ArrayMesh"]` with two identical quads, each naming the
- * material at the matching index of `surfaceMaterialIds` as its OWN — `null`
- * for a surface that declares none.
+ * A `[sub_resource type="ArrayMesh"]` with two identical quads, each owning the
+ * material at its index of `surfaceMaterialIds`, or none for `null`.
  */
 export function inlineTwoSurfaceMesh(
   id: string,

@@ -1,14 +1,9 @@
 [gd_scene load_steps=5 format=3 uid="uid://unitglowsoftlight"]
 
-; SOFTLIGHT glow over a MID-GREY ground.
-;
-; Soft light is the one blend mode Godot composites AFTER the tone curve, on
-; tonemapped operands with the glow buffer tonemapped too. It is also the only
-; mode whose effect depends on what it lands on: the curve is anchored at 0.25 and
-; leaves anything above 1.0 alone, so a mid-grey surface shifts where black or
-; blown-out ones would not move at all. Hence the grey ground rather than the dark
-; sky the other glow fixtures use — against black, soft light and additive would
-; be indistinguishable and the ordering would go untested.
+; SOFTLIGHT glow over a mid-grey ground. Godot composites soft light after the tone curve, on
+; tonemapped operands with the glow buffer tonemapped too. The curve is anchored at 0.25 and
+; leaves anything above 1.0 alone, so mid-grey shifts where black or blown-out would not: against
+; black, soft light and additive look the same and the ordering would go untested.
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_grey"]
 sky_top_color = Color(0.28, 0.28, 0.3, 1)

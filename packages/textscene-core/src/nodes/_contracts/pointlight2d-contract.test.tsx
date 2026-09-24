@@ -1,50 +1,8 @@
 /**
- * PointLight2D slice behavioral contract — written RED before the slice shipped.
- *
- * Godot 2D lighting: PointLight2D (a Light2D) contributes a light "cookie"
- * texture, tinted by `color` and scaled by `energy`, to the canvas light pass —
- * the isometric dungeon's 23 torches. The previewer had NO PointLight2D, so a
- * scene using it rendered the node as an inert group (GenericNodeFallback) and the
- * torches did not glow. This slice adds the vertical: parse (typed Light2D /
- * PointLight2D props + Godot property-absent defaults) + register + render (the
- * cookie quad the light pass accumulates) + a lint-clean fixture + the property
- * validators.
- *
- * SCOPE. Occluder shadow-casting (LightOccluder2D / OccluderPolygon2D),
- * normal-mapped specular, and the light masks (`light_mask`,
- * `range_item_cull_mask`) are OUT of scope (tracked follow-ups) — do NOT pin
- * them here.
- *
- * WHAT THE MESH IS. A Godot light paints nothing on the canvas: it is applied to
- * every lit item's albedo. So the quad this slice renders lives on a dedicated
- * camera LAYER that only the accumulation pre-pass looks at, and the pins below
- * assert what that quad feeds into the pass — its blend, and the light term its
- * shader emits. An earlier revision pinned a `DstColorFactor` blend on the
- * visible canvas, which is the single-quad approximation this slice has since
- * replaced; a light that reaches the canvas directly would now be the bug.
- *
- * COLOUR SPACE. `color` reaches the shader in sRGB, deliberately NOT converted to
- * linear. Godot's 2D canvas has no linear working space (`Viewport.hdr_2d`
- * defaults false), so `color × energy` is an sRGB-space product; converting first
- * would leave `energy` scaling the result by only energy^(1/2.2) once the frame is
- * re-encoded. Measured against Godot 4.6.3 — an ADD torch at energy 2 over a grey
- * surface lands within 1/255 of the engine this way.
- *
- * RED-lever notes (this repo's own hard-won lessons):
- *  - An UNREGISTERED type already parses to a node with type === 'PointLight2D'
- *    (base-Node fallback), so type-presence alone is NOT a valid failing lever.
- *    These pins key off what the fallback CANNOT satisfy: the registry entries, the
- *    TYPED light props (with Godot property-ABSENT defaults — .tscn OMITS default
- *    values, so the omitted case is the COMMON case), the emitted MESH, and the
- *    property validators.
- *  - Assert on the RENDERED MESH (its layer, material blend and uniforms), never a
- *    wrapper group. The previewer's y-sort feature shipped green with a feature-
- *    breaking bug precisely because its contract asserted on a proxy and its visual
- *    golden was baked from the code under test.
- *  - Linter validator registration is a KNOWN blind spot: with no validator an
- *    invalid property value passes silently and NO gate catches it. Pinned here as a
- *    lint-error DELTA (invalid value => strictly more errors than the valid value),
- *    which stays robust to any baseline (e.g. unresolved-resource) errors.
+ * PointLight2D contract. A Godot light paints nothing on the canvas: it lights every item's albedo.
+ * So the cookie quad lives on a camera layer only the accumulation pre-pass reads, and these pins
+ * assert on that mesh's layer, blend and uniforms, never on a wrapper group. Occluder shadows,
+ * normal-mapped specular and the light masks are out of scope.
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -243,7 +201,9 @@ enabled = false
     expect(mats.length).toBeGreaterThan(0);
     const color = mats[0]!.uniforms.uColor!.value as THREE.Vector3;
     expect(color.x).toBeCloseTo(0.5, 5);
-    // Linearizing here (≈0.214) is what leaves `energy` scaling by energy^(1/2.2).
+    // Godot's 2D canvas has no linear working space (`Viewport.hdr_2d` defaults false), so
+    // `color × energy` is an sRGB product. Linearizing here (≈0.214) leaves `energy` scaling by
+    // energy^(1/2.2). This way an ADD light at energy 2 lands within 1/255 of Godot 4.6.3.
     expect(color.x).not.toBeCloseTo(godotColorToLinear({ r: 0.5, g: 0.5, b: 0.5 }).r, 2);
   });
 

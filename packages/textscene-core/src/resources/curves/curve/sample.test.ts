@@ -66,10 +66,9 @@ describe('sampleCurve', () => {
   });
 
   it('overshoots past a control point exactly as the Bézier form does', () => {
-    // The candle's real `scale_amount_curve`. Steep tangents on the decaying
-    // span lift the control points ABOVE both of its endpoints, so the sampled
-    // value at 0.6 exceeds the 0.188 it is decaying from — a Hermite reading of
-    // the same tangents would not, which is why the Bézier form is ported.
+    // Steep tangents on the decaying span lift the control points above both of its
+    // endpoints, so the sampled value at 0.6 exceeds the 0.188 it decays from. A
+    // Hermite reading of the same tangents would not.
     const curve = curveOf(
       point(0, 0, 0, 1.36377),
       point(0.262376, 0.188182, 0.41974, 0.41974),

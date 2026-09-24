@@ -1,4 +1,4 @@
-/** ProgressBar registration — parser. */
+/** Registers the ProgressBar parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseProgressBar } from './parser';

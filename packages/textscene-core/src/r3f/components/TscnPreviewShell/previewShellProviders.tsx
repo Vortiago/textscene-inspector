@@ -1,9 +1,6 @@
 /**
- * The preview panel's provider stack, in the order it mounts.
- *
- * A plain function rather than a component, so the shell's element tree gains
- * no wrapper: it returns the same `withProviders(children)` callable the shell
- * used when the pyramid was written out by hand.
+ * The preview panel's provider stack, in the order it mounts. It is a plain
+ * function, not a component, so the shell's element tree gains no wrapper.
  */
 
 import type { ReactNode } from 'react';
@@ -27,18 +24,15 @@ export interface PreviewShellProviderOptions {
   onMissingPathsChange: ((paths: ReadonlySet<string>) => void) | undefined;
   /** The host's forced viewport mode, if it named one. */
   initialViewportMode: ViewportMode | undefined;
-  /** What was persisted last session — the mode/grid/frame defaults. */
+  /** The mode, grid and frame persisted last session. */
   initialViewport: { mode: ViewportMode; showGrid: boolean; frameOnOpen: boolean };
   panelId: string;
   rootScenePath: string;
 }
 
 /**
- * Flattens what was an 8-level hand-nested provider pyramid into one
- * call. Each entry still mounts its own INDEPENDENT provider, in the SAME
- * order as before — composeProviders only removes the JSX-nesting
- * boilerplate; ADR-0002 (and its per-domain-UI-state analogues here) keeps
- * these contexts separate on purpose, so this is not a merge.
+ * Each entry mounts its own provider, in order. ADR-0002 keeps these contexts
+ * separate on purpose, so `composeProviders` only removes the JSX nesting.
  */
 export function previewShellProviders({
   hierarchyValue,
@@ -63,9 +57,7 @@ export function previewShellProviders({
       </MissingResourcesProvider>
     ),
     (children) => (
-      // A host-forced `initialViewportMode` (e.g. the VS Code extension's
-      // `textscene.defaultViewportMode` setting) wins over whatever was
-      // persisted from a prior session.
+      // A host-forced `initialViewportMode` wins over the persisted mode.
       <ViewportModeProvider
         initialMode={initialViewportMode ?? initialViewport.mode}
         initialShowGrid={initialViewport.showGrid}
@@ -76,31 +68,22 @@ export function previewShellProviders({
     ),
     (children) => <AnimationTransportProvider>{children}</AnimationTransportProvider>,
     (children) => <AnimationDriverProvider>{children}</AnimationDriverProvider>,
-    // Same reason as the driver registry directly above: a `<SubViewport>`
-    // publishes its offscreen target here and a `ViewportTexture` consumer
-    // resolves it by NodePath. It wraps BOTH canvases and the DOM overlay
-    // because consumers live on both sides of that split (ADR-0030).
+    // A `<SubViewport>` publishes its target here and a `ViewportTexture` resolves
+    // it by NodePath. It wraps both canvases and the DOM overlay, since consumers
+    // live on both sides (ADR-0030).
     (children) => <ViewportTextureProvider>{children}</ViewportTextureProvider>,
     // Inside the texture registry: a pass registers its ordering edge and
     // publishes the target it rendered, so the two are read together.
     (children) => <ViewportPassProvider>{children}</ViewportPassProvider>,
-    // The return leg of the same seam: a stretching SubViewportContainer
-    // measures its own DOM box and the publisher sizes the target from it,
-    // because Godot's `recalc_force_viewport_sizes` makes the CONTAINER's rect
-    // the viewport's size. Wraps both canvases and the overlay for the same
-    // reason the texture registry does — the two ends live on either side.
+    // A stretching SubViewportContainer measures its DOM box and the publisher
+    // sizes the target from it, since Godot's `recalc_force_viewport_sizes`
+    // makes the container's rect the viewport's size. It wraps both sides too.
     (children) => <ViewportRectProvider>{children}</ViewportRectProvider>,
     (children) => <AnimatedValueProvider>{children}</AnimatedValueProvider>,
-    // The scene's `project.godot`. Outermost of the Control-facing providers
-    // because BOTH consumers of the theme scale sit under it — the on-screen
-    // overlay in `<Canvas2DStage>` and the off-screen `<ControlRasterHosts>`,
-    // which `<ViewportArea>` mounts side by side.
-    //
-    // The key carries `panelId` as well as the scene's res:// identity because
-    // `rootScenePath` is relative to the **Corpus root**: two vendored projects
-    // can each hold a `res://main.tscn`, and on that swap the path alone would
-    // not change, so the settings would stay the outgoing project's while the
-    // byte layer had already been cleared for the incoming one.
+    // Outermost of the Control-facing providers, since both theme-scale consumers,
+    // `<Canvas2DStage>` and `<ControlRasterHosts>`, sit under it.
+    // The key carries `panelId`: `rootScenePath` is relative to the **Corpus root**,
+    // so two projects can each hold a `res://main.tscn` and the path alone stays.
     (children) => (
       <ProjectSettingsProvider sceneKey={`${panelId} ${rootScenePath}`}>
         {children}

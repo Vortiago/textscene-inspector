@@ -1,11 +1,6 @@
 /**
- * Tests for `createResourceProcessor` — the generic cache + inflight +
- * event-emission factory behind the texture/material/GLB/scene processors.
- *
- * The four concrete processors exercise this loop indirectly (see
- * `processors/createSceneProcessor.test.ts`); this file pins the factory's
- * own contract for BOTH fetch modes: FileEventBus-driven (shouldProcess +
- * process) and direct (loadDirectly).
+ * `createResourceProcessor`, the factory behind every processor, in both fetch
+ * modes: FileEventBus-driven (`shouldProcess` and `process`) and direct (`loadDirectly`).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createResourceProcessor, type ResourceProcessor } from './createResourceProcessor';
@@ -123,12 +118,12 @@ describe('createResourceProcessor', () => {
       expect(processSpy).not.toHaveBeenCalled();
       expect(loadedHandler).not.toHaveBeenCalled();
       expect(failedHandler).not.toHaveBeenCalled();
-      // The request stays inflight — the design assumes a sibling processor
-      // (sharing the FileEventBus) handles data this one rejects.
+      // The request stays in flight: a sibling processor on the same FileEventBus
+      // handles data this one rejects.
       expect(processor.isLoading('res://a.bin')).toBe(true);
       expect(processor.isCached('res://a.bin')).toBe(false);
-      // This processor didn't consume the bytes, so it must NOT drop them
-      // out from under the sibling processor that will.
+      // This processor did not consume the bytes, so it must not drop them
+      // from under the sibling processor that will.
       expect(fileEventBus.isCached('res://a.bin')).toBe(true);
     });
 
@@ -299,12 +294,11 @@ describe('createResourceProcessor', () => {
 
       processor.clearCache('res://a');
 
-      // The value a mounted mesh still references must NOT be disposed out
-      // from under it — bypassing the pin guarantee is the bug under repair.
+      // The value a mounted mesh still references must not be disposed under it.
       expect(dispose).not.toHaveBeenCalled();
       expect(processor.isCached('res://a')).toBe(false);
 
-      processor.unpin('res://a'); // consumer unmounts — released exactly once
+      processor.unpin('res://a'); // consumer unmounts: released exactly once
       expect(dispose).toHaveBeenCalledTimes(1);
       expect(dispose).toHaveBeenCalledWith('direct:res://a');
     });
@@ -353,7 +347,7 @@ describe('createResourceProcessor', () => {
       expect(dispose).not.toHaveBeenCalledWith('direct:res://pinned');
       expect(processor.getCacheSize()).toBe(0);
 
-      processor.unpin('res://pinned'); // consumer unmounts — released once
+      processor.unpin('res://pinned'); // consumer unmounts: released once
       expect(dispose).toHaveBeenCalledTimes(2);
       expect(dispose).toHaveBeenCalledWith('direct:res://pinned');
     });
@@ -533,7 +527,7 @@ describe('createResourceProcessor', () => {
       processor.pin('res://b');
 
       processor.request('res://c');
-      await flush(); // both pinned — no eviction, size temporarily = 3
+      await flush(); // both pinned: no eviction, size temporarily = 3
 
       expect(processor.getCacheSize()).toBe(3);
       expect(dispose).not.toHaveBeenCalled();
@@ -586,7 +580,7 @@ describe('createResourceProcessor', () => {
       processor.request('res://b');
       await flush();
       processor.request('res://c');
-      await flush(); // overflow — 'a' is the LRU candidate but must stay pinned
+      await flush(); // overflow: 'a' is the LRU candidate but must stay pinned
 
       expect(processor.isCached('res://a')).toBe(true);
       expect(processor.isCached('res://b')).toBe(false);
@@ -597,9 +591,8 @@ describe('createResourceProcessor', () => {
     });
 
     it('re-request after clearCache while pinned: old value disposed on unpin, new value untouched', async () => {
-      // THREE resources are distinct instances even when a path re-loads, so
-      // model the cached value as a fresh object per load — a string would be
-      // `Object.is`-equal across reloads and mask the identity handling.
+      // A re-loaded THREE resource is a distinct instance, so each load returns a
+      // fresh object: a string is `Object.is`-equal across reloads and masks identity.
       const dispose = vi.fn();
       let version = 0;
       const processor = createResourceProcessor<{ path: string; version: number }>({
@@ -621,8 +614,8 @@ describe('createResourceProcessor', () => {
       await flush();
       const second = processor.getCached('res://a');
 
-      expect(second).not.toBe(first); // a genuinely new instance is cached
-      expect(dispose).not.toHaveBeenCalled(); // still pinned — nothing released
+      expect(second).not.toBe(first); // a new instance is cached
+      expect(dispose).not.toHaveBeenCalled(); // still pinned: nothing released
 
       processor.unpin('res://a'); // last consumer unmounts
 
@@ -700,8 +693,8 @@ describe('createResourceProcessor', () => {
       const loaded = vi.fn();
       eventBus.on('resource', 'loaded', loaded);
 
-      processor.request('res://a'); // save 1 — slow flight departs
-      processor.clearCache('res://a'); // save 2 — hot-reload clears the path
+      processor.request('res://a'); // save 1: slow flight departs
+      processor.clearCache('res://a'); // save 2: hot-reload clears the path
       processor.request('res://a'); // reload flight, resolves fast
       await flush();
       expect(processor.getCached('res://a')).toBe('fresh');

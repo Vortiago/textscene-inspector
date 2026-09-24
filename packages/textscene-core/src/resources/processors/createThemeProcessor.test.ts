@@ -1,9 +1,7 @@
 /**
- * Theme processor — the sixth peer of texture/material/GLB/scene/font,
- * sharing the same createResourceProcessor cache/inflight/event loop.
- * Exercises the actual corpus shapes: a Theme .tres carrying a
- * `default_font`, and a font ref crossing into a SEPARATE file resolved
- * through the injected `loadFont`.
+ * The theme processor on the corpus shapes: a Theme .tres carrying a
+ * `default_font`, and a font ref into a separate file resolved through the
+ * injected `loadFont`.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { FileEventBus } from '../FileEventBus';
@@ -106,9 +104,8 @@ describe('createThemeProcessor', () => {
     const { processor, eventBus } = setup({ 'res://images/x.png': new ArrayBuffer(4) });
 
     // shouldProcess declines (not a string), so process() never runs and the
-    // request is left inflight for THIS processor rather than failing it —
-    // exactly like the material processor's own extension gate, and unlike
-    // the font processor which must accept both shapes.
+    // request stays inflight for this processor rather than failing, like the
+    // material processor's extension gate and unlike the font processor.
     const failed = eventBus.once<Error>('theme', 'failed', 'res://images/x.png', 500).catch(() => null);
     processor.request('res://images/x.png');
 

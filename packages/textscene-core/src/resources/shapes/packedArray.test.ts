@@ -32,7 +32,7 @@ describe('parsePackedVector2Array', () => {
 
 describe('packed FLOAT element grammar', () => {
   it('refuses a literal Godot cannot read, instead of taking its prefix', () => {
-    // `parseFloat` read `1.2.3` as 1.2 and stored a vertex the file lacks.
+    // `parseFloat` would read `1.2.3` as 1.2, a vertex the file lacks.
     for (const bad of ['1.2.3', '+1', '.5', '0x10']) {
       expect(() => parsePackedVector2Array(`PackedVector2Array(0, 0, ${bad}, 4)`)).toThrow(
         'Invalid number in PackedVector2Array'
@@ -41,8 +41,8 @@ describe('packed FLOAT element grammar', () => {
   });
 
   it('throws on a non-finite element rather than substituting a vertex', () => {
-    // Legal in the file, undrawable here — but the callers' documented
-    // fallback is "draw nothing", and 0 is a vertex the scene never asked for.
+    // Legal in the file, undrawable here: the callers' fallback is "draw
+    // nothing", and 0 is a vertex the scene never asked for.
     for (const spelling of ['inf', '-inf', 'inf_neg', 'nan']) {
       expect(() => parsePackedVector2Array(`PackedVector2Array(0, 0, ${spelling}, 4)`)).toThrow(
         'Invalid number in PackedVector2Array'
@@ -61,7 +61,7 @@ describe('parsePackedInt32Arrays', () => {
   });
 
   it('reads an element the way Godot narrows it, not the way parseInt stops', () => {
-    // `2e1` is a file Godot loads as 20; `parseInt` stopped at the `e`.
+    // `2e1` is a file Godot loads as 20, where `parseInt` stops at the `e`.
     expect(parsePackedInt32Arrays('[PackedInt32Array(2e1, 1.9, -1.9)]')).toEqual([[20, 1, -1]]);
   });
 
@@ -74,8 +74,7 @@ describe('parsePackedInt32Arrays', () => {
   it('extracts the wrapper form whose elements are BARE arrays', () => {
     // `can_convert_strict` lists ARRAY as a source for every PACKED_* type, so
     // a typed array of bare element arrays converts element-wise and loads.
-    // Scanned for the constructor alone it matched nothing, and the outer
-    // `Array[` defeated the bare fallback too, so it returned `[]` in silence.
+    // The outer `Array[` must not defeat the bare fallback into a silent `[]`.
     expect(parsePackedInt32Arrays('Array[PackedInt32Array]([[0, 1, 2], [0, 2, 3]])')).toEqual([
       [0, 1, 2],
       [0, 2, 3],
@@ -117,12 +116,10 @@ describe('fanTriangulate', () => {
 
 describe('parsePackedInt32Arrays — the bare inner-array spelling', () => {
   it('reads sub-polygons written as plain nested arrays', () => {
-    // Measured on 4.6.3: `polygons = [[0, 1, 2], [0, 2, 3]]` on a Polygon2D
-    // loads as two sub-polygons. The strict side accepts it (polygon_2d.cpp:720
-    // is an untyped ARRAY and `set_polygons` takes `const Array &`), so a
-    // constructor-only scan here made the renderer disagree with the linter
-    // about the same file, silently: zero iterations, `[]`, and the outline
-    // fan-triangulated as one polygon with nothing reported on either layer.
+    // Measured on 4.6.3: `polygons = [[0, 1, 2], [0, 2, 3]]` on a Polygon2D loads
+    // as two sub-polygons, and the strict side accepts it (polygon_2d.cpp:720 is
+    // an untyped ARRAY and `set_polygons` takes `const Array &`). A `[]` here
+    // would fan-triangulate the outline as one polygon, reported by neither layer.
     expect(parsePackedInt32Arrays('[[0, 1, 2], [0, 2, 3]]')).toEqual([
       [0, 1, 2],
       [0, 2, 3],

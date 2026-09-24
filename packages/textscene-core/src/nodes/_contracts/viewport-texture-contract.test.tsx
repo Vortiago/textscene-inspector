@@ -1,23 +1,8 @@
 /**
- * ViewportTextureRegistry behavioural contract — written RED before the
- * offscreen-render subsystem ships.
- *
- * This is the seam two parallel workstreams both build against, so it is pinned
- * FIRST and deliberately: the publisher (a `<SubViewport>` rendering its subtree
- * into a `WebGLRenderTarget`) and the consumers (`ViewportTexture` on a
- * material / Sprite2D / TextureRect, and the `SubViewportContainer` surface)
- * are developed independently and would otherwise invent incompatible shapes.
- *
- * The design mirrors the **AnimationDriverRegistry** (CONTEXT.md): a `nodePath →
- * entry` lookup with two contexts — a STABLE register function so a publisher's
- * effect does not re-fire, and a REACTIVE map so a consumer re-renders when its
- * target appears. That precedent exists because it is the same problem: a node
- * publishes something other nodes resolve by NodePath.
- *
- * Every consumer samples `texture` directly in the same WebGL canvas the
- * publisher rendered it into — 3D content, 2D-canvas content, and a
- * Control-only subtree's own native pass are all published the same shape,
- * so a consumer never learns which kind of content produced the target.
+ * ViewportTextureRegistry contract: the seam between a `<SubViewport>` publishing a `WebGLRenderTarget`
+ * and its consumers, one shape for all content. Like **AnimationDriverRegistry** (CONTEXT.md), a
+ * `nodePath → entry` lookup: a stable register function, so a publisher's effect does not re-fire,
+ * and a reactive map, so a consumer re-renders when its target appears.
  */
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
@@ -118,11 +103,9 @@ describe('ViewportTextureRegistry contract', () => {
 
 describe('resolveViewportTexturePath', () => {
   /**
-   * Godot resolves `ViewportTexture.viewport_path` against the **local scene
-   * root**, NOT against the node holding the material — which is exactly why
-   * such a material must set `resource_local_to_scene = true`. Getting this
-   * wrong would resolve `gui_in_3d`'s `NodePath("SubViewport")` relative to the
-   * quad and find nothing.
+   * Godot resolves `ViewportTexture.viewport_path` against the local scene root, not the node
+   * holding the material, which is why such a material must set `resource_local_to_scene = true`.
+   * Resolved from the quad, `NodePath("SubViewport")` finds nothing.
    */
   it('resolves a NodePath literal against the scene root', () => {
     expect(resolveViewportTexturePath('NodePath("SubViewport")')).toBe('SubViewport');

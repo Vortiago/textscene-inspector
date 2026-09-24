@@ -1,10 +1,6 @@
 /**
- * SplitContainer's native (WebGL canvas) rect solve — the shared
- * SplitContainer port at whichever `vertical` THIS node authored
- * (`split_container.cpp:1299`), unlike HSplitContainer/VSplitContainer, whose
- * axis is fixed by TYPE and baked into their own `nativeSolver.ts` as a
- * literal. The algorithm itself lives once in
- * `../shared/splitContainerSolver.ts`, shared by all four.
+ * SplitContainer's native rect solve: `../shared/splitContainerSolver.ts` at the `vertical` this node
+ * authored (`split_container.cpp:1299`). HSplitContainer and VSplitContainer fix the axis by type.
  */
 
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';

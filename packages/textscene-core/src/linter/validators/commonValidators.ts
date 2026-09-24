@@ -1,4 +1,4 @@
-/** Shared validator utilities for common property types */
+/** Boolean, enum and numeric-range validator factories, shared by every slice. */
 
 import type { ParseError } from '../../linter/types.js';
 import type { PropertyValidator } from '../propertyValidator.js';
@@ -18,34 +18,24 @@ import {
 } from '../../godot/index.js';
 
 /**
- * The Variant-literal readers, re-exported from their home in `src/godot/`.
- *
- * They live there because that module imports NOTHING, so the renderer's
- * decoders can read a value the way Godot does without pulling this file's
- * diagnostic machinery into the webview bundle. They are re-exported here
- * because the linter is where they are reached for.
+ * The Variant-literal readers, re-exported from `src/godot/`. They live there
+ * because that module imports nothing, so the renderer can read a value as
+ * Godot does without pulling diagnostics into the webview bundle.
  */
 export { TSCN_FLOAT_PATTERN_SOURCE, TSCN_FLOAT_RE, parseGodotFloat } from '../../godot/number.js';
 export { parseGodotInt, ruleCount, ruleInt, storedFromFloat } from '../../godot/int.js';
 
 /**
- * One capture group of an ALREADY-MATCHED float tuple, as a number.
- *
- * The component grammar and {@link parseGodotFloat} are derived from the same
- * table, so a component the regex matched always reads: the NaN is unreachable,
- * and every comparison against it is false anyway, which is what a validator
- * wants for a component it cannot place on the number line. Use this rather
- * than `parseFloat` wherever a matched component is compared, or `inf` reads as
- * NaN and a bound silently stops applying to it.
+ * One capture group of an already-matched float tuple, as a number. The regex
+ * and {@link parseGodotFloat} share one grammar, so the NaN fallback is
+ * unreachable. Use this, not `parseFloat`, which reads `inf` as NaN and
+ * silently drops a bound.
  */
 export function tupleComponent(text: string | undefined): number {
   return parseGodotFloat(text ?? '') ?? NaN;
 }
 
-/**
- * Creates a boolean validator function
- * Validates that a value is either 'true' or 'false'
- */
+/** A validator that accepts a boolean literal. */
 export function createBooleanValidator(
   propertyName: string,
   errorCode: string = 'INVALID_BOOLEAN_FORMAT'
@@ -62,9 +52,7 @@ export function createBooleanValidator(
   };
 }
 
-/**
- * Creates an enum validator for integer enum values
- */
+/** A validator for an integer enum. */
 export function createEnumValidator(
   propertyName: string,
   min: number,
@@ -73,32 +61,25 @@ export function createEnumValidator(
   errorCodeFormat: string = 'INVALID_FORMAT',
   errorCodeValue: string = 'INVALID_VALUE',
   /**
-   * Severity of the RANGE branch (ADR-0032). The FORMAT branch below stays an
-   * error unconditionally: an unparseable value is malformed whatever the
-   * engine does with it.
+   * Severity of the range branch (ADR-0032). The format branch always errors:
+   * an unparseable value is malformed whatever the engine does with it.
    */
   valueSeverity: ParseError['severity'] = 'error',
   /**
-   * Severity of the MAX branch, defaulting to the min's. Separate for the same
-   * reason `createNumericRangeValidator` splits them: an enum can have an
-   * enforced floor and a merely hinted ceiling, and collapsing the two to a
-   * single severity reported an ERROR for a value only the inspector hint
-   * excludes.
+   * Severity of the max branch, defaulting to the min's: an enum can have an
+   * enforced floor and a hinted ceiling.
    */
   maxSeverity: ParseError['severity'] = valueSeverity,
   /**
-   * Exactly which values are in range, where the enum is not contiguous.
-   * `PROPERTY_HINT_ENUM` lets a label carry its own `:value`, and a class that
-   * uses them can leave a gap — PopupMenu offers ids 0 and 2-5 out of a
-   * contiguous engine enum. Membership is not a range, so min/max cannot say
-   * it; they stay the reported band's ends.
+   * Exactly which values are in range, where the enum is not contiguous: a
+   * `PROPERTY_HINT_ENUM` label can carry its own `:value`, so PopupMenu offers
+   * ids 0 and 2-5. min/max stay the reported band's ends.
    */
   allowed?: ReadonlySet<number>,
   /**
-   * The SETTER's own ends, where they sit outside the hint's. An enum carries
-   * both tiers as often as a range does: `Button.text_direction` hints 0-3 and
-   * its `ERR_FAIL_COND` refuses only below -1, so -1 is a value Godot stores
-   * and the inspector cannot offer — a warning from `min`, not an error.
+   * The setter's own ends, where they sit outside the hint's: `Button.text_direction`
+   * hints 0-3 and its `ERR_FAIL_COND` refuses only below -1, so -1 warns from
+   * `min` instead of erroring.
    */
   enforcedMin?: EnforcedEnd,
   enforcedMax?: EnforcedEnd
@@ -111,9 +92,8 @@ export function createEnumValidator(
     }
     const refused = unrepresentableInt(propertyName, key, value, line, errorCodeValue, num);
     if (refused) return refused;
-    // The setter's ends first, exactly as `createNumericRangeValidator` orders
-    // them: they are the more severe tier, and the band between them and the
-    // hint's ends is what the membership test below reports.
+    // The setter's ends first: they are the more severe tier, and the band
+    // between them and the hint's ends is what the membership test reports.
     const refusal =
       enforcedEndRefusal(propertyName, enforcedMin, 'min', num) ??
       enforcedEndRefusal(propertyName, enforcedMax, 'max', num);
@@ -122,10 +102,9 @@ export function createEnumValidator(
       ? !allowed.has(num)
       : num < min || num > max;
     if (outOfBand) {
-      // Only the constants the bound ACCEPTS. `enumValues` is the engine's whole
-      // enum, while min/max is the window this class's hint opens onto it, so
-      // listing all of them named the rejected value as a valid one in the same
-      // sentence that refused it (`Button.alignment` offers 0-2 of a 0-3 enum).
+      // Only the constants the bound accepts: `enumValues` is the engine's whole
+      // enum, and min/max the window this class's hint opens onto it
+      // (`Button.alignment` offers 0-2 of a 0-3 enum).
       const validValuesStr = Object.entries(enumValues)
         .filter(([val]) => (allowed ? allowed.has(Number(val)) : Number(val) >= min && Number(val) <= max))
         .map(([val, name]) => `${val}=${name}`)
@@ -145,12 +124,9 @@ export function createEnumValidator(
 }
 
 /**
- * The setter's OWN limit at one end, where it sits outside the hint's.
- *
- * The two are separate tiers and both are reachable, so one slot cannot hold
- * them: `AudioStreamPlayer.pitch_scale` is refused at `<= 0` and hinted from
- * 0.01, and collapsing that to a single floor either errors on 0.005 (a value
- * Godot loads) or says nothing about it (a value the inspector excludes).
+ * The setter's own limit at one end, where it sits outside the hint's. Both
+ * tiers are reachable: `AudioStreamPlayer.pitch_scale` is refused at `<= 0` and
+ * hinted from 0.01, so 0.005 loads but warns.
  */
 export interface EnforcedEnd {
   /** The limit itself. */
@@ -167,35 +143,32 @@ export interface NumericRangeSpec {
   /** Outer ceiling. */
   max?: number | null;
   /**
-   * The slot's C++ integer type, where the class declares one.
-   *
-   * `slotWidth` can only infer `uint32` from a ceiling above `INT32_MAX`, so an
-   * unsigned slot whose hint states no such ceiling reads as int32 and refuses
-   * values the engine stores. Naming it here is the declaration; the inference
-   * stays as the fallback for the slots that do carry the ceiling.
+   * The slot's C++ integer type, where the class declares one. `slotWidth`
+   * infers `uint32` only from a ceiling above `INT32_MAX`, so an unsigned slot
+   * without that ceiling needs this declaration.
    */
   width?: IntWidth;
   /**
-   * The setter's floor, below `min`. Anything under it is an ERROR whatever
+   * The setter's floor, below `min`. Anything under it errors whatever
    * `minSeverity` says, and the band up to `min` still reports at that tier.
    */
   enforcedMin?: EnforcedEnd;
   /** The setter's ceiling, above `max`. */
   enforcedMax?: EnforcedEnd;
   parseAsInt?: boolean;
-  /** Replaces the derived text on the OUTER ends only. */
+  /** Replaces the derived text on the outer ends only. */
   message?: string;
   /** Replaces the derived text on the setter's own ends, which state a different reason. */
   enforcedMessage?: string;
   errorCodeFormat?: string;
   errorCodeValue?: string;
   /**
-   * Severity of the outer MIN branch; the FORMAT branch stays an error.
+   * Severity of the outer min branch; the format branch stays an error.
    * Separate from the max because a property can have an enforced floor and a
-   * merely hinted ceiling (ADR-0032).
+   * hinted ceiling (ADR-0032).
    */
   minSeverity?: ParseError['severity'];
-  /** Severity of the outer MAX branch. Defaults to the min's. */
+  /** Severity of the outer max branch. Defaults to the min's. */
   maxSeverity?: ParseError['severity'];
 }
 
@@ -214,20 +187,16 @@ function refusalMessage(
       : end.exclusive
         ? 'less than'
         : 'at most';
-  // Not "refuses the write": the enforced tier covers a setter that ALTERS the
-  // value as well as one that drops it, and roughly half of these ends are a
-  // CLAMP (range.cpp:255) or a MAX (material.cpp:3087). One sentence true of
-  // both beats a sweep that classifies 350-odd ends and drifts.
+  // Not "refuses the write": the enforced tier covers a setter that alters the
+  // value, such as a CLAMP (range.cpp:255) or a MAX (material.cpp:3087), as
+  // well as one that drops it. This sentence is true of both.
   return `Property '${propertyName}' must be ${relation} ${end.at} (got ${num}); Godot does not store this value.`;
 }
 
 /**
- * The setter's refusal at one end, or `null` when the value clears it.
- *
- * Both the comparison and its wording, because separating them is what let a
- * second copy appear: `refusalMessage` was exported so `v.strictInt` could
- * rebuild the `exclusive ? <= : <` test around it, and an exclusive polarity is
- * exactly the thing that is easy to get backwards at a max end.
+ * The setter's refusal at one end, or `null` when the value clears it. The
+ * comparison and its wording live together, since an exclusive polarity is
+ * easy to get backwards at a max end.
  */
 export function enforcedEndRefusal(
   propertyName: string,
@@ -266,20 +235,17 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
     maxSeverity = valueSeverity,
   } = spec;
   const validator: PropertyValidator = (key, value, line) => {
-    // `inf`/`nan` are legal literals in either slot, so the miss signal is null
-    // and a parsed NaN falls through to the range checks, which it never trips.
-    // `null` in the FLOAT case, and that is the flag the truncation check reads
-    // at the end: only an INT slot has a fractional part to drop.
+    // `inf`/`nan` are legal in either slot, so a parsed NaN falls through to
+    // the range checks, which it never trips. `read` is null for a float slot,
+    // and the truncation check at the end reads that flag.
     const read = parseAsInt ? readIntSlot(value, max, spec.width) : null;
     const num = read ? read.stored : boolLiteralAsNumber(value) ?? parseGodotFloat(value);
-    // An INT slot narrows a non-finite at PARSE time to a value the file does
-    // not state (see `asStoredInt`), so the literal is ALTERED and reports as
-    // an error. A FLOAT slot stores it verbatim and says nothing. That is the
-    // whole difference between the two, and it is the engine's own.
+    // An int slot narrows a non-finite at parse time to a value the file does
+    // not state (see `asStoredInt`), so it errors. A float slot stores it
+    // verbatim and says nothing, as the engine does.
     if (parseAsInt) {
-      // The SAME width the read used. Classifying at the default int32 while
-      // reading at the declared width is what makes an int64 slot's reader
-      // limit report as an engine alteration, at the error tier.
+      // The same width the read used, or an int64 slot's reader limit reports
+      // as an engine alteration.
       const refused = unrepresentableInt(
         propertyName, key, value, line, errorCodeValue, num, spec.width ?? slotWidth(max)
       );
@@ -301,12 +267,8 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
       enforcedEndRefusal(propertyName, enforcedMax, 'max', num, enforcedMessage);
     if (refusal) return propertyError(key, line, refusal, errorCodeValue);
 
-    // Check min constraint
     if (min !== null && num < min) {
-      // Pick a default message based on whether one bound or two are set.
-      // Two bounds → "must be between X and Y" (matches the wording the
-      // per-node linter tests assert). One bound → "must be >= X" or
-      // "must be non-negative" (the legacy single-bound wording).
+      // The per-node linter tests assert this wording.
       let defaultMsg: string;
       if (max !== null) {
         defaultMsg = `Property '${propertyName}' must be between ${min} and ${max} (got ${num})`;
@@ -318,7 +280,6 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
       return propertyError(key, line, customMessage || defaultMsg, errorCodeValue, valueSeverity);
     }
 
-    // Check max constraint
     if (max !== null && num > max) {
       const defaultMsg =
         min !== null
@@ -327,10 +288,9 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
       return propertyError(key, line, customMessage || defaultMsg, errorCodeValue, maxSeverity);
     }
 
-    // Last, so a value that is BOTH stored differently and out of range reports
-    // the error rather than this warning. A FLOAT slot has no `read` and stores
-    // `5.5` verbatim, but converts a BOOL exactly as an int slot does
-    // (`_to_float`, `variant.h:361-377`), so it reports that half on its own.
+    // Last, so a value both stored differently and out of range reports the
+    // error. A float slot stores `5.5` verbatim but converts a BOOL as an int
+    // slot does (`_to_float`, `variant.h:361-377`), so it reports that alone.
     return read
       ? storedNotWritten(propertyName, key, value, line, errorCodeValue, read)
       : convertedSpelling(

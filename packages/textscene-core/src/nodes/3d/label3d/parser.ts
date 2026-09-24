@@ -1,6 +1,4 @@
-/**
- * Label3D parser - parses Label3D TSCN properties
- */
+/** Label3D parser: the Node3D surface plus the label's own properties. */
 
 import { type ParsedHeading, unquoteString } from '../../../parser/utils';
 import type { Label3DProperties } from './types';
@@ -24,9 +22,8 @@ export function parseLabel3D(
     billboard: parseBillboardMode(properties.billboard),
     modulate: parseColor(properties.modulate),
     // `intOr`, not `floatOr`: label_3d.cpp declares both sizes Variant::INT with
-    // an `int` setter, so Godot truncates the fractional part and the renderer
-    // must size the quad by the number the engine holds. Reading them as floats
-    // drew with a value the linter simultaneously reported as dropped.
+    // an `int` setter, so Godot truncates the fraction, and the renderer sizes
+    // the quad by the number the engine holds.
     outline_size: intOr(properties.outline_size, 12, 'outline_size'),
     outline_modulate: colorOr(properties.outline_modulate, { r: 0, g: 0, b: 0, a: 1 }),
     double_sided: boolSlotValue(properties.double_sided) !== false, // Godot default true
@@ -69,5 +66,5 @@ function parseBillboardMode(value: string | undefined): BillboardMode {
   if (num === 0) return BillboardMode.BILLBOARD_DISABLED;
   if (num === 2) return BillboardMode.BILLBOARD_FIXED_Y;
 
-  return BillboardMode.BILLBOARD_ENABLED;  // default to enabled (1)
+  return BillboardMode.BILLBOARD_ENABLED;  // 1, and any other value
 }

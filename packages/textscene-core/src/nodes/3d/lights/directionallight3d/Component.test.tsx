@@ -42,7 +42,7 @@ describe('<DirectionalLight3D>', () => {
   });
 
   it('defaults an absent shadow_bias to Godot’s own default', async () => {
-    // `light_3d.cpp:490` — 0.1 / 100 * 2 = 0.002.
+    // `light_3d.cpp:490`: 0.1 / 100 * 2 = 0.002.
     const renderer = await ReactThreeTestRenderer.create(
       <DirectionalLight3D node={makeNode({ shadow_enabled: true })} />
     );
@@ -84,10 +84,9 @@ describe('<DirectionalLight3D>', () => {
 
 describe('<DirectionalLight3D> shadow frustum', () => {
   it('sits back from the node so a light at the origin still casts shadows', async () => {
-    // three's shadow camera sits AT the light's position, but Godot's
-    // directional shadow ignores the node's position entirely. A light
-    // authored at the origin — the default for a bare DirectionalLight3D —
-    // therefore had every caster behind its own near plane and cast nothing.
+    // three's shadow camera sits at the light's position, but Godot's
+    // directional shadow ignores the node's position. A light at the origin, the
+    // default, would put every caster behind its near plane.
     const renderer = await ReactThreeTestRenderer.create(
       <DirectionalLight3D
         node={{
@@ -104,9 +103,9 @@ describe('<DirectionalLight3D> shadow frustum', () => {
       />
     );
     const light = renderer.scene.findByType('DirectionalLight').instance as THREE.DirectionalLight;
-    // The reach comes from a NEGATIVE near plane, not from displacing the
-    // light: everything anchored to the light's transform — its helper, the
-    // selection box, F-to-frame — must stay at the node, as Godot draws them.
+    // The reach comes from a negative near plane, not from moving the light:
+    // its helper, the selection box and F-to-frame stay at the node, as Godot
+    // draws them.
     expect(light.position.length()).toBe(0);
     expect(light.shadow.camera.near).toBeLessThan(0);
     expect(light.shadow.camera.far).toBeGreaterThan(0);

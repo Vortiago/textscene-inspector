@@ -10,10 +10,10 @@ renders_as: nothing of its own
 # Range
 
 Range is the base that carries a bounded number, with `step` and `page`, behind
-sliders, scroll bars, spin boxes and progress bars. It draws nothing itself — Godot's
-own `Range::_notification` handles only accessibility, never `NOTIFICATION_DRAW` — and
-overrides no minimum size or container layout either, so the previewer's native
-painter is registered but empty, and its children still show.
+sliders, scroll bars, spin boxes and progress bars. It draws nothing itself, because
+Godot's `Range::_notification` handles only accessibility, never `NOTIFICATION_DRAW`.
+It also overrides no minimum size or container layout. So the previewer's native painter
+is registered but empty, and its children still show.
 
 ## Linting
 

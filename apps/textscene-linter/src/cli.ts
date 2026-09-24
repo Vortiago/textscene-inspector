@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * TextScene Linter CLI — lints Godot's text formats, `.tscn` scenes and
- * `.tres` resources. A directory argument is walked for both.
+ * The TextScene Linter CLI lints Godot's text formats: `.tscn` scenes and
+ * `.tres` resources. It walks a directory argument for both.
  */
 
 import { readFileSync } from 'fs';
@@ -10,10 +10,9 @@ import { formatGithubAnnotations, formatJson } from './format';
 import { collectFileDiagnostics, expandTscnPaths, printFileResult, runLint } from './lint';
 
 /**
- * Reads the version from this package's own package.json so `--version`
- * stays in sync with releases. Both src/cli.ts and the bundled dist/cli.js
- * sit one level below the package root, so '../package.json' resolves
- * correctly from either location.
+ * Reads `--version` from this package's package.json. Both src/cli.ts and the
+ * bundled dist/cli.js sit one level below the package root, so
+ * '../package.json' resolves from either.
  */
 function getVersion(): string {
   try {
@@ -94,5 +93,4 @@ program
     process.exit(exitCode);
   });
 
-// Parse and execute
 program.parse();

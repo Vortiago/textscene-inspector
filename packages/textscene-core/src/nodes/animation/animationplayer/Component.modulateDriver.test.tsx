@@ -1,16 +1,8 @@
 /**
- * Value-track driving for continuous properties (ADR-0017): an AnimationPlayer
- * `value` track targeting `Decal:modulate` fades a sibling decal's colour/alpha
- * through the AnimatedValue registry — the THREE mixer drives transforms only,
- * so `modulate` is sampled (linearly interpolated) and pushed to the target's
- * registered setter.
- *
- * The observable is the value the driver PUSHES for that node+property, read via
- * a probe registered at the decal's path (the same `useAnimatedValue` seam the
- * Decal component itself consumes). The decal's own render is a projection baked
- * imperatively onto scene geometry — invisible to the test-renderer — so the
- * pushed value, not a material, is what this test inspects. `modulate.a` is what
- * a decal folds into its projection opacity (`albedo_mix × modulate.a`).
+ * Value-track driving (ADR-0017): a `value` track on `Decal:modulate` is sampled, interpolated, and
+ * pushed through the AnimatedValue registry. The decal's projection is invisible to the
+ * test-renderer, so a probe on the decal's `useAnimatedValue` seam reads the pushed value.
+ * `modulate.a` is what a decal folds into its projection opacity (`albedo_mix × modulate.a`).
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

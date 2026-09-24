@@ -1,9 +1,7 @@
 /**
- * `<StyleBoxQuad>` — renders `styleBoxFlatGeometry`'s output as a
- * `BufferGeometry` mesh, the "house recipe" 2D material every flat-shaded
- * canvas item in this codebase uses (`meshBasicMaterial`, `vertexColors`,
- * `transparent`, `depthWrite={false}`, `THREE.DoubleSide` — see
- * `nodes/2d/polygon2d/Component.tsx`'s `FilledPolygon`).
+ * `<StyleBoxQuad>` draws `styleBoxFlatGeometry` as a mesh with the flat 2D
+ * material: `meshBasicMaterial`, `vertexColors`, `transparent`,
+ * `depthWrite={false}` and `THREE.DoubleSide`.
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -71,12 +69,9 @@ describe('<StyleBoxQuad>', () => {
       <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
     );
     const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
-    // `WebGLRenderer` draws a `transparent` + `DoubleSide` material TWICE —
-    // once culled to `BackSide`, then once to `FrontSide` — unless the
-    // material opts out. `styleBoxFlatGeometry`'s rings alternate winding
-    // (see its own "ring triangulation coverage" cases), so that split hands
-    // each pass one triangle per ring quad and reorders the shadow ring's
-    // half after the border ring's.
+    // `WebGLRenderer` draws a transparent `DoubleSide` material twice, back then
+    // front, unless it opts out. The rings alternate winding, so each pass would
+    // keep one triangle per ring quad and reorder shadow after border.
     expect(mat.forceSinglePass).toBe(true);
   });
 
@@ -90,11 +85,9 @@ describe('<StyleBoxQuad>', () => {
     );
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
-    // Godot interpolates a `border_blend` ramp between two sRGB colours and
-    // the rasterizer interpolates VERTEX attributes, so the attribute has to
-    // still be in sRGB at that point — linearising here (0.5 →
-    // sRGBChannelToLinear(0.5) ≈ 0.2140) made the GPU interpolate the ramp in
-    // the wrong space. See this component's own doc.
+    // Godot ramps a `border_blend` in sRGB, and the rasterizer interpolates
+    // vertex attributes, so the attribute stays sRGB, not
+    // sRGBChannelToLinear(0.5) ≈ 0.2140.
     expect(color.getX(0)).toBeCloseTo(1, 4);
     expect(color.getY(0)).toBeCloseTo(0.5, 4);
     expect(color.getZ(0)).toBeCloseTo(0, 4);
@@ -103,11 +96,8 @@ describe('<StyleBoxQuad>', () => {
   });
 
   it('decodes those sRGB vertex colours in the fragment shader, before the multiply into diffuseColor', async () => {
-    // The conversion has to happen PER FRAGMENT — that is the whole point of
-    // moving it off the vertex attribute. Asserted on the injected source
-    // rather than a rendered pixel: `@react-three/test-renderer`'s mock GL
-    // never compiles a shader, so this pins the injection, and a real
-    // compilation of it is covered only by the browser gates.
+    // Asserted on the injected source: the test renderer's mock GL compiles no
+    // shader, so only the browser gates compile it.
     const renderer = await ReactThreeTestRenderer.create(
       <StyleBoxQuad styleBox={box({})} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
     );
@@ -117,14 +107,12 @@ describe('<StyleBoxQuad>', () => {
     const shader = { fragmentShader: '#include <color_fragment>' };
     mat.onBeforeCompile!(shader as never, null as never);
     expect(shader.fragmentShader).not.toContain('#include <color_fragment>');
-    // Godot's own curve, `Color::srgb_to_linear` (`utils/colorSpace.ts`) —
-    // knee at 0.04045, `/ 12.92` below it and `pow((c + 0.055) / 1.055, 2.4)`
-    // above.
+    // `Color::srgb_to_linear` (`utils/colorSpace.ts`): knee at 0.04045, `/ 12.92`
+    // below it and `pow((c + 0.055) / 1.055, 2.4)` above.
     expect(shader.fragmentShader).toContain('0.04045');
     expect(shader.fragmentShader).toContain('12.92');
     expect(shader.fragmentShader).toContain('2.4');
-    // Alpha carries no transfer function, and the AA feather rings interpolate
-    // exactly that channel — converting it would feather wrong.
+    // Alpha carries no transfer function, and the AA feathers ramp in it.
     expect(shader.fragmentShader).toContain('vColor.a');
   });
 
@@ -188,9 +176,8 @@ describe('<StyleBoxQuad>', () => {
       );
       const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
       const color = geom.attributes.color as THREE.BufferAttribute;
-      // Vertex 1 is the border ring's first OUTER (border_color) vertex — see
-      // styleBoxFlatGeometry.test.ts's border_blend fixture for the even/odd
-      // inner/outer ordering this relies on.
+      // Vertex 1 is the border ring's first outer (border_color) vertex, by the
+      // even/odd ordering styleBoxFlatGeometry.test.ts pins.
       expect(color.getX(1)).toBeCloseTo(0.25, 5);
     });
 

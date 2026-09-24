@@ -1,14 +1,7 @@
-; SubViewport — a canvas boundary that is NOT a world boundary (ADR-0033).
-;
-; The one variable: what a sub-viewport does to its subtree in the DEFAULT
-; (own_world_3d unset) case. Godot's Viewport resolves World3D by walking up to
-; the parent viewport, so InsideSphere DOES draw beside OutsideBox; it always
-; owns its World2D, so InsideRect draws nowhere. Verified against Godot 4.6.3.
-;
-; A regression here is invisible in every other scene: no other fixture places
-; 3D content inside a SubViewport, and the failure mode — subtree silently
-; dropped — leaves a scene that still renders, just missing a node.
-; The own_world_3d arm lives in unit-sub-viewport-own-world.tscn.
+; SubViewport: a canvas boundary that is not a world boundary (ADR-0033). One variable: what a
+; sub-viewport does to its subtree with own_world_3d unset. Viewport resolves World3D by walking
+; up to the parent viewport, so InsideSphere draws beside OutsideBox, and it always owns its
+; World2D, so InsideRect draws nowhere. Verified against Godot 4.6.3.
 
 [gd_scene format=3]
 
@@ -21,6 +14,8 @@ height = 1.2
 
 [node name="Root" type="Node3D"]
 
+; No other fixture puts 3D content inside a SubViewport, and a dropped subtree leaves a scene
+; that still renders, missing a node. unit-sub-viewport-own-world.tscn covers the own_world_3d arm.
 [node name="OutsideBox" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, 0)
 mesh = SubResource("1")

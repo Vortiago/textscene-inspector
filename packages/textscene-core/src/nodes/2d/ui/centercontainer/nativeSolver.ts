@@ -1,31 +1,8 @@
 /**
- * CenterContainer's native (WebGL canvas) layout solver — a port of
- * `CenterContainer::get_minimum_size` and its `NOTIFICATION_SORT_CHILDREN`
- * handler (`scene/gui/center_container.cpp`), plus the shared
- * `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`) that
- * handler calls. CenterContainer draws nothing itself; `Component.tsx`
- * renders nothing and the walker paints children as siblings.
- *
- * The one property this container adds beyond Control — `use_top_left`
- * (`center_container.h:38`) — changes BOTH halves: `get_minimum_size` returns
- * `(0, 0)` instead of the children's aggregate, and `_notification` centres
- * each child on the container's top-left CORNER (so the child straddles the
- * origin, partly off to the negative side) instead of the container's own
- * centre.
- *
- * `fit_child_in_rect`'s FILL branch is a genuine no-op here, not merely
- * cross-axis: `_notification` hands it `Rect2(ofs, minsize)` — a rect whose
- * SIZE already equals the child's own combined minimum size on BOTH axes
- * (`center_container.cpp:83-84`) — so whether or not the child's size flags
- * include `SIZE_FILL`, `fit_child_in_rect`'s `r.size = p_rect.size` either
- * way lands on the same `minsize`. A child can never grow to fill a
- * CenterContainer by setting FILL; it always ends up at its own minimum,
- * centred.
- *
- * RTL changes nothing here. `center_container.cpp` calls `is_layout_rtl()`
- * nowhere, and the rect it hands `fit_child_in_rect` IS the child's own
- * minimum size — so every RTL term in that function
- * (`p_rect.size.width - minsize.width`, `container.cpp:99,109`) is zero.
+ * CenterContainer's native (WebGL canvas) layout solver, a port of `get_minimum_size` and
+ * `NOTIFICATION_SORT_CHILDREN` (`scene/gui/center_container.cpp`) with the shared
+ * `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`). `use_top_left`
+ * (`center_container.h:38`) changes both halves.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -39,18 +16,13 @@ import type { ContainerLayoutFn, MinimumSizeFn } from '../../../../r3f/controls/
 import type { CenterContainerProperties } from './types';
 import { SIZE_FILL, fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 
-// Control::SizeFlags (control.h:78-85) — read here only to confirm
-// `fit_child_in_rect`'s branch is a no-op (see module doc); the flags never
-// change this container's actual result.
+// Control::SizeFlags (control.h:78-85). The flags never change this container's result,
+// since `fit_child_in_rect` (container.cpp:95-128) receives the child's minimum size.
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 
 function props(n: SolveNode): CenterContainerProperties {
   return n.node.properties as CenterContainerProperties;
 }
-
-/** See `margincontainer/nativeSolver.ts`'s identical helper for the caveat about ancestor visibility. */
-
-/** `Container::fit_child_in_rect` (`container.cpp:95-128`), LTR branch only (see module doc). */
 
 /**
  * `CenterContainer::get_minimum_size` (`center_container.cpp:33-48`):
@@ -72,17 +44,10 @@ export const centerContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 /**
- * `CenterContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN`
- * (`center_container.cpp:73-88`): each visible child is centred
- * INDEPENDENTLY on ITS OWN combined minimum size — there is no shared
- * distribution the way a box container splits space between siblings, so two
- * children with different minimum sizes end up at two different offsets,
- * both centred on the container's own rect (or its top-left corner, under
- * `use_top_left`).
- *
- * `size` below is `contentRect.w`/`.h` ONLY — like `computeAnchoredRect`,
- * `contentRect.x`/`.y` are this node's OWN parent-relative position and must
- * not leak into a child's rect, which is relative to THIS node's top-left.
+ * `NOTIFICATION_SORT_CHILDREN` (`center_container.cpp:73-88`): each visible child is centred on
+ * its own combined minimum size, independently of its siblings, on the container's rect or,
+ * under `use_top_left`, on its top-left corner. Only `contentRect.w` and `.h` count: `.x` and `.y`
+ * are this node's parent-relative position, and a child's rect is relative to this node.
  */
 export const centerContainerLayout: ContainerLayoutFn = (n, children, contentRect, _ctx) => {
   const useTopLeft = props(n).useTopLeft === true;
@@ -90,20 +55,20 @@ export const centerContainerLayout: ContainerLayoutFn = (n, children, contentRec
   const out = new Map<string, Rect2>();
   for (const { node: child, minSize } of children) {
     if (!isSortableControl(child)) continue;
+    // center_container.cpp:83-84: half the spare size, or half the negated minimum under
+    // `use_top_left`, floored.
     const ofsX = useTopLeft ? Math.floor(-minSize.x * 0.5) : Math.floor((contentRect.w - minSize.x) / 2);
     const ofsY = useTopLeft ? Math.floor(-minSize.y * 0.5) : Math.floor((contentRect.h - minSize.y) / 2);
 
     const cp = child.node.properties as CenterContainerProperties;
     const hFlags = cp.sizeFlagsHorizontal ?? DEFAULT_SIZE_FLAGS;
     const vFlags = cp.sizeFlagsVertical ?? DEFAULT_SIZE_FLAGS;
-    // `Rect2(ofs, minsize)` — the rect fit_child_in_rect receives already IS
-    // the child's own minimum size (center_container.cpp:84), which is what
-    // makes the FILL branch a no-op (see module doc).
+    // `Rect2(ofs, minsize)` is already the child's minimum size (center_container.cpp:84),
+    // so FILL is a no-op: a child cannot grow to fill a CenterContainer.
     out.set(
       child.path,
-      // Every mirror term inside is zero at this cell — it IS the child's
-      // minimum size — but the container's own flag is what Godot reads there,
-      // so it is what gets handed down.
+      // Every RTL term inside (`container.cpp:99,109`) is zero here, and
+      // `center_container.cpp` never calls `is_layout_rtl()`. Godot still reads the flag.
       fitChildInRect({ x: ofsX, y: ofsY, w: minSize.x, h: minSize.y }, minSize, hFlags, vFlags, n.rtl)
     );
   }

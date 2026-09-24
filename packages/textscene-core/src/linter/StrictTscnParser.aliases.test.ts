@@ -23,7 +23,7 @@ describe('a transforming arm with no validator of its own', () => {
     expect(errors[0]!.message).toContain('size = Vector3(-2, 2, 2)');
     expect(errors[0]!.message).toContain('components must be >= 0.001');
     expect(errors[0]!.code).toBe('INVALID_SIZE_VALUE');
-    // Anchored on the line and the value column of the key AS WRITTEN.
+    // Anchored on the line and the value column of the key as written.
     expect(errors[0]!.line).toBe(4);
     expect(errors[0]!.column).toBe('extents'.length + 3);
   });

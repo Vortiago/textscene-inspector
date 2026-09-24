@@ -1,13 +1,7 @@
-/**
- * Polygon2D strict validators for linting. Validates the Polygon2D-specific
- * surface (fill color, offset, texture, antialiasing, invert, texture
- * transform, the outline/skinning arrays); the Node2D transform/modulate base
- * props stay lenient like the other 2D slices.
- */
+/** Polygon2D strict validators. The Node2D surface arrives through the base walk. */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
+// Registration happens on import, so a test that loads only this slice
+// resolves an inherited key only when this line imports the ancestor.
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, shape, v } from '../../../linter/validators/index.js';
@@ -22,39 +16,17 @@ const PACKED_INT32_ELEMENT_RE = packedArrayLiteral('PackedInt32Array');
 const BARE_INT_ARRAY_ELEMENT_RE = ARRAY_LITERAL_RE;
 
 /**
- * `polygons`: an Array of PackedInt32Array index lists (polygon_2d.cpp:720,
- * ARRAY + PROPERTY_HINT_TYPE_STRING "PackedInt32Array"). The `polygons` member
- * is a plain, untyped `Array` (polygon_2d.h:44 — nothing ever calls
- * `set_typed()` on it), so the `array.is_typed()` guard
- * (variant_parser.cpp:2341) is false and the serialiser skips its typed
- * `Array[…](` prefix entirely, falling to the untyped bracket write at
- * :2378-2390: a bare `[…]`, never `Array[PackedInt32Array](…)`. Every
- * witnessed value
- * (scenes/demos/2d/skeleton/player/player.tscn,
- * scenes/fixtures/unit-2d-geometry-parity.tscn) matches
- * `[PackedInt32Array(0, 1, 2, 3), …]`. set_polygons (polygon_2d.cpp:435-438)
- * is a bare assignment: format-only.
- *
- * Each ELEMENT also loads a second way: `_draw` reads it back as
- * `Vector<int> src_indices = polygons[i];` (polygon_2d.cpp:328), an implicit
- * `Variant -> PackedInt32Array` cast. `Variant::can_convert_strict` lists
- * `ARRAY` as a valid source for `PACKED_INT32_ARRAY` (variant.cpp's
- * `can_convert`/`can_convert_strict` tables both carry the pair), and the
- * actual conversion (`_convert_array_from_variant`, variant.cpp:2092-2130)
- * copies each element through `Variant::operator int()` faithfully — unlike a
- * flat float list miscast to Vector2 pairs, an int element converts to itself,
- * so a bare `[0, 1, 2]` element is not a degenerate spelling but a genuinely
- * equivalent one. Both element forms are accepted here.
+ * `polygons` (polygon_2d.cpp:720) is an untyped Array (polygon_2d.h:44), so
+ * `array.is_typed()` (variant_parser.cpp:2341) is false and Godot writes a bare
+ * `[…]` (:2378-2390). set_polygons (polygon_2d.cpp:435-438) only assigns.
  */
 function polygonsValidator(): PropertyValidator {
   const code = 'INVALID_POLYGONS_FORMAT';
   // `shape` first for the `accepts` tag, then `markIntSlot`: the index lists are
   // an INT slot, so this rejects a literal Godot's own tokenizer reads.
   return markIntSlot(shape((key, value, line) => {
-    // `Array[PackedInt32Array]([…])` IS an Array, and `polygons` is declared
-    // Variant::ARRAY with a bare-assigning setter (polygon_2d.cpp:720, :435-437),
-    // so the typed spelling loads unchanged. Rejecting it put the linter in
-    // conflict with this repo's own reader, which renders those holes correctly.
+    // `Array[PackedInt32Array]([…])` is an Array too, and the setter only
+    // assigns (polygon_2d.cpp:720, :435-437), so the typed spelling loads.
     const outer = arrayLiteralBody(value);
     if (outer === null) {
       return propertyError(
@@ -69,18 +41,14 @@ function polygonsValidator(): PropertyValidator {
     /** The first fractional element seen, held back until every entry is scanned. */
     let truncated: ParseError | null = null;
     for (const entry of dropTrailingComma(splitTopLevel(body))) {
-      // `PackedInt32Array(…)` is a CONSTRUCTOR call: `_parse_construct`
-      // (variant_parser.cpp:552-596) demands a value right after each comma it
-      // consumes (:562-565 falls through to :571's unconditional `get_token`,
-      // never re-checking for the closing paren), so a trailing comma there is
-      // a parse error, unlike the bracket-array literal it sits inside. Bare
-      // `[…]` IS that bracket grammar, so only ITS inner list gets the same
-      // trailing-comma tolerance as the outer one.
-      // `null` is a legal element of any untyped Array, and `set_polygons`
-      // assigns one bare (polygon_2d.cpp:435-437), so it is stored; `_draw`
-      // reads it into an empty `Vector<int>` and skips it at `ic < 3`
-      // (:328-330). Nothing refuses it, so nothing here may.
+      // `null` is a legal untyped Array element: `set_polygons` stores it
+      // (polygon_2d.cpp:435-437), and `_draw` reads an empty `Vector<int>` and
+      // skips it at `ic < 3` (:328-330).
       if (entry.trim() === 'null') continue;
+      // A bare `[0, 1, 2]` element is equivalent: `_draw` casts each element to
+      // `Vector<int>` (polygon_2d.cpp:328), variant.cpp's `can_convert_strict`
+      // allows ARRAY, and `_convert_array_from_variant` (variant.cpp:2092-2130)
+      // copies each int faithfully.
       const packed = PACKED_INT32_ELEMENT_RE.exec(entry);
       const bare = packed ? null : BARE_INT_ARRAY_ELEMENT_RE.exec(entry);
       const el = packed ?? bare;
@@ -94,6 +62,9 @@ function polygonsValidator(): PropertyValidator {
       }
       const inner = el[1]!.trim();
       if (inner === '') continue;
+      // `_parse_construct` (variant_parser.cpp:552-596) demands a value after each
+      // comma (:562-565, :571), so `PackedInt32Array(…)` refuses a trailing comma
+      // that a bare `[…]`, the bracket grammar, allows.
       const indices = bare ? dropTrailingComma(inner.split(',')) : inner.split(',');
       // One pass: unreadable by the tokenizer, or read and then narrowed
       // away (_parse_construct<int32_t>, variant_parser.cpp:1428-1430).
@@ -111,28 +82,14 @@ function polygonsValidator(): PropertyValidator {
 }
 
 /**
- * `bones`: PROPERTY_USAGE_NO_EDITOR | PROPERTY_USAGE_INTERNAL, but that macro
- * is `PROPERTY_USAGE_STORAGE` alone (object.h:132) — no EDITOR bit, STORAGE
- * still set — so it does reach a `.tscn`
- * (scenes/demos/2d/skeleton/player/player.tscn witnesses it). `_get_bones`
- * (polygon_2d.cpp:577-584) builds a fresh untyped `Array`, alternating a
- * bone-path String and a PackedFloat32Array of weights per bone — untyped for
- * the same reason `polygons` is, so a bare `[…]`. `_set_bones`
- * (polygon_2d.cpp:588-595) opens with `ERR_FAIL_COND(p_bones.size() & 1)`,
- * which drops the entire write on an odd element count: enforced. The
- * per-element String/PackedFloat32Array alternation is NOT itself checked by
- * the setter — `NodePath(p_bones[i])` and the Variant->Vector<float> cast on
- * `p_bones[i + 1]` both degrade silently rather than ERR_FAIL — so this format
- * check stops at bracket shape and element count, the same scope GridMap's
- * `data` validator (nodes/3d/gridmap/linterParser.ts) uses for its own
- * count-multiple bound without validating each triple's element type either.
+ * `bones`: PROPERTY_USAGE_NO_EDITOR | PROPERTY_USAGE_INTERNAL keeps STORAGE
+ * (object.h:132), so it reaches a `.tscn`. `_get_bones` (polygon_2d.cpp:577-584)
+ * writes an untyped `[…]` alternating a bone path and its weights, and
+ * `_set_bones` (polygon_2d.cpp:588-595) refuses an odd count: enforced.
  */
 function bonesValidator(): PropertyValidator {
   const validator = accepts((key, value, line) => {
-    // `Array[PackedInt32Array]([…])` IS an Array, and `polygons` is declared
-    // Variant::ARRAY with a bare-assigning setter (polygon_2d.cpp:720, :435-437),
-    // so the typed spelling loads unchanged. Rejecting it put the linter in
-    // conflict with this repo's own reader, which renders those holes correctly.
+    // `arrayLiteralBody` also reads the typed `Array[…]([…])` spelling.
     const outer = arrayLiteralBody(value);
     if (outer === null) {
       return propertyError(
@@ -144,6 +101,9 @@ function bonesValidator(): PropertyValidator {
     }
     const body = outer.trim();
     const count = body === '' ? 0 : dropTrailingComma(splitTopLevel(body)).length;
+    // The setter checks only the count: `NodePath(p_bones[i])` and the weights
+    // cast degrade silently, so, as GridMap's `data` does, element types go
+    // unchecked (nodes/3d/gridmap/linterParser.ts).
     if (count % 2 !== 0) {
       return propertyError(
         key,
@@ -162,11 +122,10 @@ validatorRegistry.registerAll('Polygon2D', {
   color: v.color('color'),
   offset: v.vector2('offset'),
   // polygon_2d.cpp:717 (PACKED_VECTOR2_ARRAY, no hint). get_polygon
-  // (polygon_2d.cpp:414-416) returns `Vector<Vector2>` directly — the packed
-  // type itself, not a TypedArray getter — so `PackedVector2Array(...)` is the
-  // only spelling. set_polygon (polygon_2d.cpp:408-412) is a bare assignment:
-  // format-only.
+  // (polygon_2d.cpp:414-416) returns `Vector<Vector2>`, so `PackedVector2Array(...)`
+  // is the only spelling. set_polygon (polygon_2d.cpp:408-412) only assigns.
   polygon: v.packedVector2Array('polygon'),
+  // polygon_2d.cpp:720, ARRAY with PROPERTY_HINT_TYPE_STRING "PackedInt32Array".
   polygons: polygonsValidator(),
   texture: v.resourceReference('texture'),
   antialiased: v.boolean('antialiased'),
@@ -179,9 +138,9 @@ validatorRegistry.registerAll('Polygon2D', {
     max: 16384,
     hinted: 'polygon_2d.cpp:714',
   }),
-  // polygon_2d.cpp:722 hints "0,1000" hard both ends (no or_greater);
+  // polygon_2d.cpp:722 hints "0,1000", closed both ends.
   // set_internal_vertex_count (polygon_2d.cpp:418-420) assigns unconditionally,
-  // no ERR_FAIL/clamp — a warning, not an error (ADR-0032).
+  // so out of range warns (ADR-0032).
   internal_vertex_count: v.int('internal_vertex_count', {
     min: 0,
     max: 1000,
@@ -189,9 +148,8 @@ validatorRegistry.registerAll('Polygon2D', {
   }),
   bones: bonesValidator(),
   // polygon_2d.cpp:710, NODE_PATH + NODE_PATH_VALID_TYPES "Skeleton2D".
-  // set_skeleton (polygon_2d.cpp:597-602) has an early equality return, then a
-  // bare assignment — no value to ground; resolving the path is a rule's job,
-  // not this format validator's.
+  // set_skeleton (polygon_2d.cpp:597-602) only assigns, so no value is bounded.
+  // Resolving the path is a rule's job.
   skeleton: v.nodePath('skeleton'),
   texture_offset: v.vector2('texture_offset'),
   texture_scale: v.vector2('texture_scale'),

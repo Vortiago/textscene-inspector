@@ -1,15 +1,7 @@
 /**
- * A MeshInstance3D whose StandardMaterial3D sets `billboard_mode` turns the
- * whole mesh to face the camera — the 3D-platformer coin's `GlowSprite` (a
- * billboarded QuadMesh with an additive gradient) foreshortened to a faint
- * smear because `billboard_mode` was neither parsed nor applied.
- *
- * The discriminating trick (mirrors Sprite3D's billboard test): author a
- * quarter-turn YAW and check billboard THROWS IT AWAY. The default
- * test-renderer camera has a ~identity quaternion, so an identity-authored node
- * would look the same billboarded or not — the assertion has to be that a
- * non-identity authored rotation is either replaced (ENABLED) or preserved
- * (DISABLED).
+ * A StandardMaterial3D `billboard_mode` turns the whole mesh to face the camera.
+ * The test camera is near identity, so each node authors a quarter-turn yaw that
+ * ENABLED must replace and DISABLED must keep, as in Sprite3D's billboard test.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -20,7 +12,7 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { Transform3D } from '../../base/node3d/types';
 import type { MeshInstance3DProperties } from './types';
 
-/** Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 3, 0, 0) — a quarter-turn about Y. */
+/** Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 3, 0, 0): a quarter-turn about Y. */
 const YAWED: Transform3D = {
   basis_x: { x: 0, y: 0, z: 1 },
   basis_y: { x: 0, y: 1, z: 0 },
@@ -29,11 +21,8 @@ const YAWED: Transform3D = {
 };
 
 /**
- * Identity basis, offset to the side and up. FIXED_Y assertions need a node
- * with NO authored rotation but a non-zero, off-axis position: only a working
- * mode-2 billboard can then introduce a yaw toward the camera, so the test can
- * actually fail (a yawed authored basis would zero x/z on its own and prove
- * nothing).
+ * Identity basis, offset to the side and up, so only a working FIXED_Y billboard
+ * can yaw it toward the camera. A yawed authored basis would prove nothing.
  */
 const OFFSET_UPRIGHT: Transform3D = {
   basis_x: { x: 1, y: 0, z: 0 },
@@ -85,7 +74,7 @@ describe('<MeshInstance3D> material billboard_mode', () => {
 
   it('faces the camera when the material sets billboard_mode = 1 (ENABLED)', async () => {
     // ENABLED replaces the model basis with the camera's (~identity here), so
-    // the authored yaw is thrown away — the coin glow now reads head-on.
+    // the authored yaw is thrown away.
     const mesh = await meshAfterFrame({ shading_mode: '0', billboard_mode: '1' });
     expect(mesh.quaternion.x).toBeCloseTo(0, 6);
     expect(mesh.quaternion.y).toBeCloseTo(0, 6);
@@ -93,7 +82,7 @@ describe('<MeshInstance3D> material billboard_mode', () => {
   });
 
   it('turns only around Y when the material sets billboard_mode = 2 (FIXED_Y)', async () => {
-    // Authored rotation is identity, so the yaw below can ONLY come from a
+    // Authored rotation is identity, so the yaw below can only come from a
     // working FIXED_Y billboard turning the offset node toward the camera.
     const mesh = await meshAfterFrame({ shading_mode: '0', billboard_mode: '2' }, OFFSET_UPRIGHT);
     expect(mesh.rotation.x).toBeCloseTo(0, 6);

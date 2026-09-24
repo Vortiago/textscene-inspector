@@ -1,12 +1,7 @@
 /**
- * The `.tres`-form half of AtlasTexture resolution: decoding a loaded
- * standalone AtlasTexture file. Detecting the reference in the first place
- * (`resolveExtAtlasTexturePath`) lives in `SubResourceResolver.test.ts`,
- * alongside `resolveTexture2DPath`, which must decline it the same way it
- * declines the inline form. The inline `SubResource` form
- * (`resolveAtlasTextureRef`) and the crop itself (`resolveAtlasTexture`) are
- * exercised through `useTexture2D.test.tsx`, which is where a consumer
- * actually observes them.
+ * Decoding a loaded standalone AtlasTexture `.tres`. `SubResourceResolver.test.ts`
+ * covers `resolveExtAtlasTexturePath`, and `useTexture2D.test.tsx` covers
+ * `resolveAtlasTextureRef` and `resolveAtlasTexture`.
  */
 import { describe, expect, it } from 'vitest';
 import type { ParsedResource } from '../../../parser/parsedResource';

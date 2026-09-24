@@ -1,27 +1,13 @@
 /**
- * The viewport's input bindings, as data.
- *
- * One source for the in-app help: the summary pill and the panel are built
- * from these rows, where previously the bindings lived only in
- * `docs/user-guide-web.md` and the app said nothing at all.
- *
- * The rows a resolver governs carry a `trigger`, and `bindings.test.ts` feeds
- * each one to the real resolver in `godotEditorCursor.ts` / `pointerGesture.ts`
- * and fails if the answer differs. That is what stops the table claiming
- * 'Orbit' for an input that actually pans. The prose in `docs/user-guide-web.md`
- * and the VS Code README is still maintained by hand and is NOT covered.
- *
- * The mouse and keyboard rows are Godot 4.6's own editor bindings. The
- * trackpad rows are Godot's pan-gesture bindings, minus the unmodified one:
- * the browser reports a two-finger scroll and a mouse wheel as the same event,
- * so the wheel's own Godot binding (zoom) keeps that slot. The touch rows have
- * no Godot equivalent at all — Godot's editor has no touch scheme.
+ * The viewport's input bindings as data, for the help pill and panel. A row
+ * with a `trigger` is held to its resolver by `bindings.test.ts`. The prose in
+ * `docs/user-guide-web.md` and the VS Code README is not covered.
  */
 import type { NavMode, NavModifiers } from '../../godotEditorCursor.js';
 
 /**
- * What a row's input resolves to, for the rows a resolver decides. `null` means
- * navigation deliberately declines it — plain left-drag, which selects.
+ * What a row's input resolves to. `null` means navigation declines it, as for a
+ * plain left-drag, which selects.
  */
 export type BindingOutcome = NavMode | null;
 
@@ -40,9 +26,8 @@ export interface Binding {
   readonly input: string;
   readonly action: string;
   /**
-   * Present when a resolver owns this row, so the test can hold the table to
-   * the code. Absent for rows nothing resolves — the keyboard shortcuts, the
-   * zoom HUD buttons, and the taps/pinches handled outside the mode resolvers.
+   * Present when a resolver owns the row. Absent for the keyboard shortcuts,
+   * the zoom HUD buttons, and the taps and pinches outside the mode resolvers.
    */
   readonly trigger?: BindingTrigger;
   readonly resolvesTo?: BindingOutcome;
@@ -61,6 +46,10 @@ export interface ControlsHelp {
   readonly groups: readonly BindingGroup[];
 }
 
+// In both tables the mouse and keyboard rows are Godot 4.6's editor bindings. The
+// trackpad rows are its pan-gesture bindings minus the unmodified one: a browser
+// reports a two-finger scroll as a wheel event, so the wheel's zoom keeps that
+// slot. Godot's editor has no touch scheme.
 const CONTROLS_3D: ControlsHelp = {
   summary: 'middle-drag = orbit · shift+wheel = pan · wheel = zoom',
   groups: [

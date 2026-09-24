@@ -1,28 +1,8 @@
 /**
- * StandardMaterial3D anisotropy handling — parse layer.
- *
- * Godot's BaseMaterial3D anisotropy feature stretches the specular highlight
- * along tangent space (brushed metal, hair), behind an `anisotropy_enabled`
- * flag, with an `anisotropy` strength scalar and an `anisotropy_flowmap`
- * texture. three.js models the same effect natively on `MeshPhysicalMaterial`:
- * `anisotropy` (0..1 magnitude, default 0 = isotropic), `anisotropyRotation`
- * (direction, radians), and `anisotropyMap` (per-pixel direction+strength).
- *
- * Godot's `anisotropy` scalar is −1..1 where the SIGN encodes tangent
- * DIRECTION (a negative value rotates the highlight 90° perpendicular).
- * three.js splits that into a 0..1 `anisotropy` MAGNITUDE plus an
- * `anisotropyRotation`. This parse layer maps BOTH:
- *   - strength → `anisotropy` = |value| clamped to 0..1 (so a negative value
- *     keeps its effect STRENGTH instead of silently vanishing), and
- *   - direction → `anisotropyRotation` = 0 for a positive value, π/2 (90°,
- *     perpendicular) for a negative one — the documented sign→direction mapping.
- * (The `anisotropy_flowmap` texture is a resource-loading concern handled in the
- * node Component, not here; its render contract lives in Component.material-anisotropy.test.tsx.)
- *
- * Like `clearcoat_enabled` / `rim_enabled` gate their scalars, both anisotropy
- * scalars are GATED on `anisotropy_enabled`: with the flag off, Godot ignores
- * the properties, so the parse must yield the isotropic zero rather than leak a
- * stray strength/rotation onto a material the author never enabled it for.
+ * StandardMaterial3D anisotropy, parse layer. Godot's −1..1 `anisotropy` carries the
+ * tangent direction in its sign, which maps to three's 0..1 magnitude and a 0 or π/2
+ * `anisotropyRotation`, gated on `anisotropy_enabled`. The flowmap's render contract
+ * lives in Component.material-anisotropy.test.tsx.
  */
 import { describe, expect, it } from 'vitest';
 import { parseStandardMaterial3DScalars } from './scalars';
@@ -31,29 +11,23 @@ const HALF_PI = Math.PI / 2;
 
 describe('parseStandardMaterial3DScalars — anisotropy flag (WI-68)', () => {
   it('parses a positive anisotropy strength with no rotation when enabled', () => {
-    // DISCRIMINATOR (RED at base): the returned scalars carry no `anisotropy` /
-    // `anisotropyRotation` fields today, so toMatchObject fails at runtime. A
-    // positive value → magnitude straight through, direction unrotated (0).
+    // A positive value → magnitude straight through, direction unrotated (0).
     expect(
       parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '0.8' })
     ).toMatchObject({ anisotropy: 0.8, anisotropyRotation: 0 });
   });
 
   it('maps a negative anisotropy to magnitude + a 90° perpendicular rotation', () => {
-    // Godot anisotropy is −1..1; the SIGN carries direction. A negative value
-    // must keep its STRENGTH (|−0.8| → 0.8, never silently isotropic) AND flip
-    // the highlight perpendicular — three.js expresses that as a π/2 rotation.
+    // A negative value keeps its strength (|−0.8| → 0.8) and turns the highlight
+    // perpendicular, which three.js expresses as a π/2 rotation.
     expect(
       parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '-0.8' })
     ).toMatchObject({ anisotropy: 0.8, anisotropyRotation: expect.closeTo(HALF_PI, 5) });
   });
 
   it('enabled but strength unset → Godot default (anisotropy 0.0, no rotation)', () => {
-    // COMMON REAL-WORLD INPUT: .tscn omits default-valued properties. Godot's
-    // BaseMaterial3D `anisotropy` default is 0.0 (docs.godotengine.org) — unlike
-    // clearcoat (1.0) / rim (1.0), the anisotropy default is the isotropic zero,
-    // so enabling the feature without a strength shows no effect. Pin the
-    // documented default so a hallucinated non-zero fallback can't slip in.
+    // A .tscn omits default-valued properties. Godot's `anisotropy` default is 0.0,
+    // unlike clearcoat (1.0) and rim (1.0), so the flag alone shows no effect.
     expect(parseStandardMaterial3DScalars({ anisotropy_enabled: 'true' })).toMatchObject({
       anisotropy: 0,
       anisotropyRotation: 0,
@@ -61,8 +35,7 @@ describe('parseStandardMaterial3DScalars — anisotropy flag (WI-68)', () => {
   });
 
   it('clamps the enabled anisotropy magnitude to 0..1 (over-range saturates to 1), preserving direction', () => {
-    // The three.js `anisotropy` magnitude saturates at 1; a stray out-of-range
-    // Godot value must not leak past the range. The SIGN still drives rotation:
+    // The three.js `anisotropy` magnitude saturates at 1. The sign still drives rotation:
     // +2.5 → magnitude 1, no rotation; −2.5 → magnitude 1, perpendicular.
     expect(
       parseStandardMaterial3DScalars({ anisotropy_enabled: 'true', anisotropy: '2.5' })
@@ -73,10 +46,8 @@ describe('parseStandardMaterial3DScalars — anisotropy flag (WI-68)', () => {
   });
 
   it('gates on anisotropy_enabled — strength present but the flag absent → isotropic (0), no rotation', () => {
-    // GUARDRAIL (load-bearing): Godot applies anisotropy only when
-    // anisotropy_enabled is set. A raw parse that skips the flag gate would leak
-    // 0.8 onto a material the author never enabled anisotropy for — the exact
-    // harm. Mirrors the clearcoat_enabled / rim_enabled gates.
+    // Godot applies anisotropy only when anisotropy_enabled is set, so without the
+    // flag 0.8 must not reach the material.
     expect(parseStandardMaterial3DScalars({ anisotropy: '-0.8' })).toMatchObject({
       anisotropy: 0,
       anisotropyRotation: 0,
@@ -84,7 +55,7 @@ describe('parseStandardMaterial3DScalars — anisotropy flag (WI-68)', () => {
   });
 
   it('anisotropy defaults to 0 (isotropic) when no anisotropy properties are present', () => {
-    // GUARDRAIL: the unset material and an explicit anisotropy_enabled=false both
+    // The unset material and an explicit anisotropy_enabled=false both
     // resolve to isotropic (no anisotropy, no rotation).
     expect(parseStandardMaterial3DScalars({})).toMatchObject({ anisotropy: 0, anisotropyRotation: 0 });
     expect(
@@ -93,8 +64,8 @@ describe('parseStandardMaterial3DScalars — anisotropy flag (WI-68)', () => {
   });
 
   it('does not suppress other scalar parsing when anisotropy is on', () => {
-    // GUARDRAIL: enabling anisotropy must NOT short-circuit albedo / metal /
-    // roughness parsing — every other scalar still flows through unchanged.
+    // Enabling anisotropy must not short-circuit albedo / metal /
+    // roughness parsing: every other scalar still flows through unchanged.
     const result = parseStandardMaterial3DScalars({
       anisotropy_enabled: 'true',
       anisotropy: '0.5',

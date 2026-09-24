@@ -1,18 +1,8 @@
 /**
- * Where a 2D light casts from, and how far — read off its cookie quad.
- *
- * Godot culls occluders against the light's `rect_cache`, which is exactly the
- * cookie's extent placed by `offset` (`RendererCanvasCull::_light_find_shadow`
- * builds it from `texture_size * texture_scale`), and radiates the shadow from
- * the light NODE's origin, which `offset` does not move. Both come off the one
- * quad: its parent group is the CanvasItem, so the group's world origin is the
- * shadow origin and the quad's own world corners are the rect.
- *
- * A light's world transform is not a React value — it is the product of every
- * ancestor Node2D transform, assembled by three during the render loop — so it
- * is SAMPLED per frame and republished only when it moves, which for a static
- * scene is once. See ShadowCasterStage for the same argument on the occluder
- * side.
+ * Where a 2D light casts from, and how far, read off its cookie quad. Godot
+ * culls occluders against `rect_cache`, the cookie's `texture_size * texture_scale`
+ * placed by `offset` (`RendererCanvasCull::_light_find_shadow`), and radiates the
+ * shadow from the light node's origin, which `offset` does not move.
  */
 
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
@@ -37,15 +27,10 @@ function expandToCorner(rect: LightRect, x: number, y: number, matrix: THREE.Mat
 }
 
 /**
- * The pose both shadow mechanisms read: the origin and rect the stencil volumes
- * need, plus the light-local frame and reach the polar map needs.
- *
- * The two extra fields are Godot's, from the same call site
- * (`renderer_viewport.cpp:556`): `light_update_shadow(…,
- * light->xform_cache.affine_inverse(), …, radius_cache / 1000, radius_cache * 1.1,
- * …)`. `radius_cache` is `local_rect.size.length()` (line 485) — the cookie
- * rect's FULL diagonal in light-local units, which is the quad geometry's own
- * size and so is unaffected by where the light sits or how it is scaled.
+ * The pose both shadow mechanisms read. The polar map's fields come from
+ * `renderer_viewport.cpp:556`: `light_update_shadow(…, light->xform_cache.affine_inverse(),
+ * …, radius_cache / 1000, radius_cache * 1.1, …)`. `radius_cache` (line 485) is the
+ * cookie rect's full light-local diagonal, whatever the light's position or scale.
  */
 export interface ShadowLightPose extends ShadowLight, ShadowPolarLight {
   /** Narrows `ShadowPolarLight`'s `ArrayLike<number>` to the 2×3 it always is. */
@@ -54,10 +39,8 @@ export interface ShadowLightPose extends ShadowLight, ShadowPolarLight {
 
 /**
  * The pose of the light whose cookie `quad` draws, in the previewer's 2D world
- * space, or null while the quad is not yet in the tree.
- *
- * `quad` must be the cookie mesh itself: its geometry's bounds give the rect
- * and its parent gives the shadow origin and the light-local frame.
+ * space, or null while the quad is not in the tree. The quad's bounds give the
+ * rect, and its parent, the CanvasItem, gives the origin and the local frame.
  */
 export function sampleShadowLight(
   quad: THREE.Mesh | null,
@@ -69,11 +52,9 @@ export function sampleShadowLight(
   const box = geometry.boundingBox;
   if (!box) return null;
 
-  // A pass running in `useFrame` executes BEFORE the renderer's own
-  // `updateMatrixWorld`, so the matrices are refreshed rather than trusted —
-  // unless the caller has just done it. `updateWorldMatrix(true, …)` recomposes
-  // the whole ancestor chain, so on a light several Node2Ds deep a second walk
-  // costs more than the allocations the hook's guard saves.
+  // `useFrame` runs before the renderer's `updateMatrixWorld`, so the matrices
+  // are refreshed unless the caller has just done it: a second ancestor walk on
+  // a deep light costs more than the allocations the hook's guard saves.
   if (!matricesFresh) quad.updateWorldMatrix(true, false);
   origin.setFromMatrixPosition(quad.parent.matrixWorld);
 
@@ -84,7 +65,7 @@ export function sampleShadowLight(
   expandToCorner(rect, box.max.x, box.max.y, quad.matrixWorld);
   if (!Number.isFinite(rect.minX) || !Number.isFinite(rect.minY)) return null;
 
-  // The light NODE's frame, not the quad's: `offset` moves the cookie without
+  // The light node's frame, not the quad's: `offset` moves the cookie without
   // moving the space Godot states its shadow map in.
   const e = inverse.copy(quad.parent.matrixWorld).invert().elements;
   const worldToLocal: [number, number, number, number, number, number] = [
@@ -122,10 +103,9 @@ export function sameShadowLight(a: ShadowLightPose | null, b: ShadowLightPose | 
 }
 
 /**
- * Everything `sampleShadowLight` reads: the cookie quad's world matrix (which
- * places the rect), the light node's world matrix (which gives the origin and
- * the local frame), and the quad's own bounds. The pose is a pure function of
- * these 36 numbers, so comparing them is the whole of "has anything moved".
+ * Everything `sampleShadowLight` reads: the quad's and the light node's world
+ * matrices and the quad's bounds. Comparing these 36 numbers before sampling
+ * spares a still scene a 4×4 inverse and short-lived objects per light per frame.
  */
 const SAMPLE_INPUTS = 36;
 
@@ -155,18 +135,10 @@ function readSampleInputs(quad: THREE.Mesh, out: Float64Array): boolean {
 }
 
 /**
- * `sampleShadowLight(quad)` refreshed on mount and on every frame, republished
- * only on a move. Returns null while `enabled` is false, so a light with
- * shadows off costs nothing but the frame callback.
- *
- * The layout pass is what lets a still frame be correct without a render loop
- * having run; the frame callback is what keeps an animated light correct. See
- * ShadowCasterStage for the same split on the occluder side.
- *
- * The frame callback runs whether or not anything moved, so it compares the
- * pose's INPUTS before building one. Sampling first and discarding the result
- * would spend a 4×4 inverse and half a dozen short-lived objects per shadowed
- * light per frame on a scene that has been still since load.
+ * `sampleShadowLight(quad)` refreshed on mount and every frame, republished only
+ * on a move, and null while `enabled` is false. A world transform is assembled by
+ * three in the render loop, so the layout pass serves a still frame and the frame
+ * callback an animated light, as in ShadowCasterStage.
  */
 export function useShadowLightPose(
   quad: THREE.Mesh | null,

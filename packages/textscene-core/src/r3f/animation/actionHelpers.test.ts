@@ -1,8 +1,4 @@
-/**
- * startAction / seekAction — unit tests for the two action-level helpers that
- * encode the "freshly play()-ed action defaults to weight 1" re-apply-on-seek
- * invariant exactly once.
- */
+/** startAction and seekAction re-apply weight and timeScale on every play(). */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { startAction, seekAction } from './actionHelpers';

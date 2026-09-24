@@ -1,12 +1,6 @@
-; Calibration scene for Godot's editor preview lighting (ADR-0025).
-;
-; Carries NO DirectionalLight3D and NO WorldEnvironment, so the reference
-; harness injects both previews under Godot's own yield rule — which is exactly
-; what this scene exists to measure. Rendered with --no-previews it is black,
-; which is what the running game would show.
-;
-; The sphere floats above the plane so the preview sun's shadow lands in open
-; ground rather than under the caster.
+; Calibrates Godot's editor preview lighting (ADR-0025). It has no DirectionalLight3D and no WorldEnvironment, so the harness injects both previews under Godot's yield rule.
+; With --no-previews it renders black, as the running game does.
+; The sphere floats above the plane, so the preview sun's shadow lands in open ground rather than under the caster.
 [gd_scene load_steps=3 format=3]
 
 [sub_resource type="PlaneMesh" id="Plane_1"]

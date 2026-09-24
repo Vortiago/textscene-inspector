@@ -1,21 +1,14 @@
 /**
- * Godot's 1D `Curve` resource — a polyline of points with per-side tangents,
- * sampled as a cubic Bézier between consecutive points.
- *
- * Not to be confused with the `resources/curves/curve2d` / `curve3d` slices,
- * which decode `Curve2D`/`Curve3D` PATH geometry. This one is the scalar
- * `f(offset) -> value` curve that particle parameters, `CurveTexture` and the
- * editor's curve widget all use.
- *
- * Pure data — no THREE — so parser and linter paths can both read it.
+ * Godot's 1D `Curve` resource: the scalar `f(offset) -> value` curve of particle
+ * parameters and `CurveTexture`, sampled as a cubic Bézier between points. The
+ * `curve2d` and `curve3d` slices decode path geometry. No THREE, so the linter reads it.
  */
 
 /** Godot `Curve.TangentMode`. */
 export enum CurveTangentMode {
   /** The stored tangent is authored freely. */
   Free = 0,
-  /** The tangent is kept pointing at the neighbouring point (Godot keeps the
-   *  stored value in sync, so sampling reads it the same way as Free). */
+  /** The tangent points at the neighbouring point. Godot keeps the stored value in sync, so sampling reads it as Free. */
   Linear = 1,
 }
 
@@ -31,17 +24,17 @@ export interface CurvePoint {
 export interface Curve {
   /** Points in authored order (Godot keeps `_data` sorted by `position.x`). */
   points: CurvePoint[];
-  /** `_limits[0]` — the editor's vertical minimum. Not applied by `sampleCurve`. */
+  /** `_limits[0]`: the editor's vertical minimum. Not applied by `sampleCurve`. */
   minValue: number;
-  /** `_limits[1]` — the editor's vertical maximum. Not applied by `sampleCurve`. */
+  /** `_limits[1]`: the editor's vertical maximum. Not applied by `sampleCurve`. */
   maxValue: number;
-  /** `_limits[2]` — the horizontal domain start (Godot 4.3+; older files omit it). */
+  /** `_limits[2]`: the horizontal domain start (Godot 4.3+, older files omit it). */
   minDomain: number;
-  /** `_limits[3]` — the horizontal domain end (Godot 4.3+; older files omit it). */
+  /** `_limits[3]`: the horizontal domain end (Godot 4.3+, older files omit it). */
   maxDomain: number;
 }
 
-/** A `Curve` with no points — Godot's `sample()` answers 0 for it. */
+/** A `Curve` with no points, for which Godot's `sample()` answers 0. */
 export const EMPTY_CURVE: Curve = {
   points: [],
   minValue: 0,

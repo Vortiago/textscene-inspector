@@ -1,10 +1,10 @@
 # Documentation References
 
-Quick reference for looking up documentation.
+This file lists where to find the documentation for the engine and the libraries this repo uses.
 
 ## Context7 Library IDs
 
-Use these with the Context7 MCP tool for up-to-date documentation:
+Use these IDs with the Context7 MCP tool:
 
 - **three.js**: `/mrdoob/three.js`
 - **React**: `/reactjs/react.dev`
@@ -17,7 +17,7 @@ Use these with the Context7 MCP tool for up-to-date documentation:
 - **ViTest**: `/websites/vitest_dev`
 - **PNPM**: `/pnpm/pnpm`
 
-## Godot engine source — a local reading aid, never a dependency
+## Godot engine source: a local reading aid, never a dependency
 
 Property bounds (`PROPERTY_HINT_RANGE`), enum constants and the own-versus-inherited
 member split are stated only in the engine source. Linter validators are therefore
@@ -40,8 +40,8 @@ It produces an invented citation: an agent asked to ground a claim in a file it 
 open returns plausible, wrong line numbers. Check that the path resolves before
 trusting any `file:line`.
 
-`pnpm ref:godot` runs whatever `godot` is on PATH. Check it with `godot --version`
-rather than assuming: when it matches the pinned clone, a probe and a citation
+`pnpm ref:godot` runs whatever `godot` is on PATH. Check it with `godot --version`.
+When it matches the pinned clone, a probe and a citation
 answer for the same release, and when it does not, a disagreement between them is
 evidence of a version difference rather than of a defect. Read
 `doc/classes/<Type>.xml` for members, defaults, enum constants and the `inherits=`
@@ -66,7 +66,7 @@ The published class reference is already a minor version ahead (4.7). That is wh
 `AreaLight3D` has a slice and a hand-stated `Light3D` hop but no citable `ADD_PROPERTY`
 hint.
 
-A validator whose bound differs between releases follows the NEWER one, because a
+A validator whose bound differs between releases follows the newer one, because a
 `.tscn` does not record which release wrote it and an error must mean no supported
 release accepts the value (ADR-0032). Those citations name 4.7.2 and a second clone
 supplies them:

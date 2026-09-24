@@ -1,7 +1,4 @@
-/**
- * Tests for VSCodeResourceProvider
- * Validates workspace resource loading, path resolution, and security
- */
+/** Tests for VSCodeResourceProvider: loading, path resolution and containment. */
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { VSCodeResourceProvider } from './VSCodeResourceProvider';
@@ -17,7 +14,7 @@ describe('VSCodeResourceProvider', () => {
     documentUri = createMockUri('/workspace/scenes/test.tscn');
     provider = new VSCodeResourceProvider(workspaceRoot, documentUri);
 
-    // Mock project.godot search - simulate finding it at workspace root
+    // project.godot exists at the workspace root.
     vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
       const path = uri.fsPath.toLowerCase().replace(/\\/g, '/');
       if (path.endsWith('project.godot') && path.startsWith('/workspace/project.godot')) {
@@ -26,10 +23,6 @@ describe('VSCodeResourceProvider', () => {
       return Promise.reject(new Error('Not found'));
     });
   });
-
-  // ============================================================================
-  // Path Resolution Tests
-  // ============================================================================
 
   describe('Path Resolution', () => {
     it('should resolve res:// path to workspace root', async () => {
@@ -57,10 +50,9 @@ describe('VSCodeResourceProvider', () => {
     });
 
     it('resolves res:// from the workspace root for a subdir scene when no project.godot exists', async () => {
-      // res:// is ALWAYS project-root-relative in Godot. With no project.godot to
-      // anchor on, the provider must fall back to the workspace root — NOT the
-      // scene's own folder. Regression: a scene in Scenes/Level1/ used to resolve
-      // res://assets/X.glb to Scenes/Level1/assets/X.glb, so every GLB 404'd.
+      // res:// is always project-root-relative in Godot. With no project.godot, the
+      // provider falls back to the workspace root, not the scene's own folder,
+      // where res://assets/X.glb 404s.
       vscode.workspace.fs.stat.mockRejectedValue(new Error('Not found')); // no project.godot anywhere
       const subdirDoc = createMockUri('/workspace/Scenes/Level1/Level1.tscn');
       const subdirProvider = new VSCodeResourceProvider(workspaceRoot, subdirDoc);
@@ -85,9 +77,8 @@ describe('VSCodeResourceProvider', () => {
     });
 
     it('refuses a sibling directory whose path merely starts with the root spelling', async () => {
-      // The boundary is the SEPARATOR, not the prefix: `/workspace-secrets/...`
-      // starts with `/workspace`, so a bare `startsWith` admitted every sibling
-      // of the workspace and read it into the webview.
+      // The boundary is the separator, not the prefix: `/workspace-secrets/...`
+      // starts with `/workspace`, so a bare `startsWith` admits every sibling.
       await expect(
         provider.loadResource('res://../../workspace-secrets/key.pem', 'PackedScene')
       ).rejects.toThrow(/Path traversal detected/);
@@ -106,10 +97,6 @@ describe('VSCodeResourceProvider', () => {
     });
   });
 
-  // ============================================================================
-  // File Loading Tests
-  // ============================================================================
-
   describe('File Loading', () => {
     it('should load text resource as string', async () => {
       const tscnContent = '[gd_scene format=3]\n[node name="Test" type="Node3D"]';
@@ -124,7 +111,7 @@ describe('VSCodeResourceProvider', () => {
     });
 
     it('should load binary resource as ArrayBuffer', async () => {
-      // Simulate binary image data (PNG header)
+      // A PNG header.
       const binaryData = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
       vscode.workspace.fs.readFile.mockResolvedValueOnce(binaryData);
@@ -134,7 +121,6 @@ describe('VSCodeResourceProvider', () => {
       expect(result).toBeInstanceOf(ArrayBuffer);
       expect((result as ArrayBuffer).byteLength).toBe(8);
 
-      // Verify contents match
       const resultView = new Uint8Array(result as ArrayBuffer);
       expect(Array.from(resultView)).toEqual(Array.from(binaryData));
     });
@@ -149,10 +135,6 @@ describe('VSCodeResourceProvider', () => {
       ).rejects.toThrow(/Failed to load resource.*missing\.tscn/);
     });
   });
-
-  // ============================================================================
-  // Edge Cases
-  // ============================================================================
 
   describe('Edge Cases', () => {
     it('should handle empty files', async () => {
@@ -189,10 +171,6 @@ describe('VSCodeResourceProvider', () => {
       expect(result).toBe(content);
     });
   });
-
-  // ============================================================================
-  // Served Resource Tracking (fsPath -> res:// round-trip for hot-reload)
-  // ============================================================================
 
   describe('Served Resource Tracking', () => {
     it('returns null for a file that was never loaded through this provider', () => {

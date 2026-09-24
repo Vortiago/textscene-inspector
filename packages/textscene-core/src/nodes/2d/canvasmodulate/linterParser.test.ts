@@ -1,6 +1,4 @@
-/**
- * CanvasModulate validator coverage — the `color` color format check.
- */
+/** CanvasModulate validators: the `color` format check. */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import './linterParser';

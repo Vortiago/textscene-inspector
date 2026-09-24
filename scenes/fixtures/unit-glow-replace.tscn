@@ -1,12 +1,9 @@
 [gd_scene load_steps=5 format=3 uid="uid://unitglowreplace"]
 
-; REPLACE blend: the frame BECOMES the glow buffer.
-;
-; Nothing of the scene survives except what passed the bright pass and was blurred,
-; so this is the only fixture where the pyramid is visible on its own, with no
-; scene colour underneath to mask a wrong falloff. It is also the mode that proves
-; the composer mount cannot be decided from "is anything bright" alone — REPLACE
-; rewrites every pixel even where the glow buffer is black.
+; REPLACE blend: the frame becomes the glow buffer. Only what passed the bright pass survives,
+; so this is the one fixture that shows the pyramid alone, with no scene colour to mask a wrong
+; falloff. REPLACE rewrites every pixel even where the glow buffer is black, so the composer
+; mount cannot be decided from "is anything bright" alone.
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_lit"]
 sky_top_color = Color(0.35, 0.4, 0.5, 1)

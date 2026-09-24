@@ -1,13 +1,7 @@
 /**
- * The resolved `CanvasItemMaterial` in force for a 2D node.
- *
- * Godot's `use_parent_material` walks UP the CanvasItem chain until it finds a
- * node that supplies one, so the material a node draws with is a property of
- * its ancestry, not of the node alone. That walk lives here, once, rather than
- * in each of the ten slices that funnel through `<CanvasItem2D>` — a slice
- * receives the already-resolved material and never has to know the rule.
- *
- * `null` means "no material": Godot's plain canvas blending (MIX, lit normally).
+ * The resolved `CanvasItemMaterial` for a 2D node. `use_parent_material` walks
+ * up the CanvasItem chain, and that walk lives here once, so each slice gets
+ * the resolved material. `null` means Godot's plain canvas blending (MIX, lit).
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
@@ -38,15 +32,10 @@ export function useInheritedCanvasItemMaterial(): CanvasItemMaterialProperties |
 }
 
 /**
- * Resolve the material this node draws with:
- *
- *   `use_parent_material`  → whatever the ancestor chain supplies
- *   own `materialPath` ref → that resource, when it parses as a CanvasItemMaterial
- *   neither                → null
- *
- * A `ShaderMaterial` (or any other material type) resolves to null: it is not
- * implemented, and inventing blend state for it would be worse than Godot's
- * plain default.
+ * `use_parent_material` gives the ancestor chain's material, an own
+ * `materialPath` gives that resource when it parses as a CanvasItemMaterial,
+ * and neither gives null. Any other material type resolves to null, since
+ * invented blend state is worse than Godot's plain default.
  */
 export function useCanvasItemMaterial(
   props: Node2DProperties

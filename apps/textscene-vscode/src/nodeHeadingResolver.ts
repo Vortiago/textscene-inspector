@@ -1,18 +1,14 @@
 /**
- * Shared `[node …]` heading resolver, used to disambiguate duplicate sibling
- * names by the Godot `parent=` value — for both "jump to node" and the
- * Outline (`DocumentSymbolProvider`) start-line lookup.
+ * Shared `[node …]` heading resolver: it tells duplicate sibling names apart by
+ * the `parent=` value, for "jump to node" and the Outline start-line lookup.
  */
 
 import { parseHeading } from '@textscene/core/parser';
 
 /**
- * Locate a node's `[node …]` heading line by name and Godot `parent=`.
- *
- * `expectedParent` is the raw Godot parent value (`undefined` for the root,
- * `"."` for a direct child, else the ancestor path). Matching on it
- * disambiguates duplicate sibling names. When it is absent (the unique root,
- * or a caller without a parent value), the first name match wins.
+ * Locates a node's `[node …]` heading line by name and `parent=`. `expectedParent`
+ * is the raw value: `undefined` for the root, `"."` for a direct child, else the
+ * ancestor path. Without it, the first name match wins.
  *
  * @returns the 0-based line index, or -1 if the node is not found.
  */

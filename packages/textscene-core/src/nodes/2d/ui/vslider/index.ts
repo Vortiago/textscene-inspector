@@ -1,4 +1,4 @@
-/** VSlider registration — parser. */
+/** VSlider registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseVSlider } from './parser';

@@ -1,9 +1,7 @@
 /**
- * <NavigationRegion2D> — draws its NavigationPolygon as a translucent debug
- * overlay (filled green region + edge lines) in the 2D workspace, mirroring
- * Godot's editor navigation visualization. Positions are raw Godot 2D pixel
- * coords; the Node2D wrapper applies the +Y-down → three conjugation. Gated on
- * the `showNavigation` viewport toggle (on by default).
+ * Draws a NavigationRegion2D's NavigationPolygon as a translucent debug overlay,
+ * as Godot's editor does, behind the `showNavigation` toggle (on by default).
+ * Positions are raw Godot 2D pixels: the Node2D wrapper converts from +Y-down.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -35,8 +33,8 @@ export function NavigationRegion2D({ node, children }: NodeComponentProps) {
   const { externalResources, internalResources } = useSceneResources();
   const { showNavigation } = useViewportMode();
 
-  // A NavigationPolygon is as often an inline `[sub_resource]` as a `.tres`;
-  // resolving only one form drew no navmesh for the other.
+  // A NavigationPolygon is as often an inline `[sub_resource]` as a `.tres`, so
+  // both forms resolve.
   const resource = useSubOrExtResource(
     properties.navigationPolygon,
     internalResources,
@@ -54,8 +52,8 @@ export function NavigationRegion2D({ node, children }: NodeComponentProps) {
     };
   }, [resource]);
 
-  // Per-component geometries (not cached); R3F won't auto-dispose geometry
-  // passed via attach. Dispose on rebuild / unmount to avoid GPU leaks.
+  // R3F does not dispose a geometry passed through `attach`, and these are per
+  // component, so dispose them on rebuild and unmount.
   useEffect(() => {
     if (!overlay) return;
     return () => {

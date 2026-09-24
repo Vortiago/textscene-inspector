@@ -12,20 +12,13 @@ export interface UploadErrorChannel {
 }
 
 /**
- * Two error channels owned by different layers (upload errors here, `loadError`
- * inside `useSceneSource`) feed one toolbar banner, which must show whichever
- * was set most recently. Value order can't encode that — an in-flight fixture
- * fetch can reject AFTER an upload error was set — so set-order is tracked
- * explicitly: `reportUploadError` bumps the channel, and the effect below
- * records a fetch error's arrival.
- *
- * Each error is cleared by the interactions that supersede it: edits clear
- * both, fixture switches clear the upload one, `replace()` clears `loadError`.
+ * Upload errors here and `useSceneSource`'s `loadError` feed one banner, which shows the one
+ * set most recently. A fixture fetch can reject after an upload error, so the set order is
+ * tracked. An edit clears both, a fixture switch the upload one, `replace()` the `loadError`.
  */
 export function useUploadError(loadError: string | null): UploadErrorChannel {
-  // Upload-path errors (unreadable file, no .tscn among the dropped/selected
-  // files). Distinct from `loadError`, which useSceneSource owns for fixture
-  // fetches; cleared on the next successful upload, fixture switch, or edit.
+  // An unreadable file, or no .tscn among the dropped or selected files. The next successful
+  // upload, fixture switch or edit clears it.
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   const [newestErrorChannel, setNewestErrorChannel] = useState<'upload' | 'load'>('upload');
@@ -33,8 +26,7 @@ export function useUploadError(loadError: string | null): UploadErrorChannel {
     if (loadError !== null) setNewestErrorChannel('load');
   }, [loadError]);
 
-  // If the newest channel has since been cleared, the other one — if still
-  // live — shows instead.
+  // When the newest channel is clear, the other one shows if it is live.
   const effectiveError =
     newestErrorChannel === 'load' ? (loadError ?? uploadError) : (uploadError ?? loadError);
 

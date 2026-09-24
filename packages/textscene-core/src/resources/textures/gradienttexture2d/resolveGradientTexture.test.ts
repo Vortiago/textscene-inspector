@@ -58,8 +58,7 @@ describe('resolveGradientTexture2D', () => {
     expect(resolveGradientTexture2D('ExtResource("3")', coinResources)).toBeNull();
   });
 
-  // A null result is also the absence of a key: a reference the cache holds
-  // nothing for must not hand back something a consumer would pin.
+  // A null result carries no key, so a consumer has nothing to pin.
   it('returns null for a SubResource of a different type', () => {
     const resources: TscnInternalResource[] = [
       { id: 'CanvasTexture_x', type: 'CanvasTexture', data: {} },
@@ -101,9 +100,8 @@ fill_to = Vector2(0.5, 0.01)
 `;
 
 /**
- * A material `.tres` carrying the same texture as a `[sub_resource]` — the
- * shape a procedural material uses, where the reference resolves against the
- * MATERIAL FILE's table rather than any scene's.
+ * A material `.tres` carrying the same texture as a `[sub_resource]`, where the
+ * reference resolves against the material file's table, not a scene's.
  */
 const MATERIAL_FILE = `[gd_resource type="StandardMaterial3D" load_steps=3 format=3 uid="uid://cmat000"]
 
@@ -115,15 +113,14 @@ albedo_texture = SubResource("GradientTexture2D_qhu5r")
 roughness = 0.4
 `;
 
-/** The rasterised bytes, the comparison that ignores cache/texture identity. */
+/** The rasterised bytes: a comparison that ignores cache and texture identity. */
 function pixels(texture: THREE.DataTexture): Uint8Array {
   return texture.image.data as Uint8Array;
 }
 
 describe('a GradientTexture2D inside a material .tres', () => {
   it('resolves against the material file’s own sub-resource table', () => {
-    // The procedural-material shape: the texture never appears in any scene's
-    // table, so the reference must be resolved in the file that carries it.
+    // The texture is in no scene's table, so it resolves in the file that carries it.
     const parsed = parseTresFile(MATERIAL_FILE);
     const resolved = resolveGradientTexture2D(
       parsed.properties.albedo_texture,
@@ -137,9 +134,8 @@ describe('a GradientTexture2D inside a material .tres', () => {
   });
 
   it('rasterises the same pixels the inline scene form does', () => {
-    // One property set, two homes: the material file's [sub_resource] and the
-    // scene's inline [sub_resource] must produce the same pixels, or a shipped
-    // gradient would render differently depending on where it was saved.
+    // The material file's [sub_resource] and the scene's inline one must produce
+    // the same pixels, wherever the gradient was saved.
     const parsed = parseTresFile(MATERIAL_FILE);
     const inMaterial = resolveGradientTexture2D(
       parsed.properties.albedo_texture,

@@ -1,8 +1,6 @@
 /**
- * Tests for generateWebviewHtml's `initialConfig` injection: the extension
- * host embeds a small JSON blob (currently just the resolved
- * `textscene.defaultViewportMode`) as a global the webview reads once at
- * mount, before `r3f-webview-main.tsx` renders `<TscnPreviewShell>`.
+ * Tests for generateWebviewHtml's `initialConfig`: a JSON global the webview reads
+ * once at mount, before `r3f-webview-main.tsx` renders `<TscnPreviewShell>`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -44,8 +42,8 @@ describe('generateWebviewHtml', () => {
   });
 
   it('escapes "<" so an embedded value can never break out of the script tag', () => {
-    // viewportMode is a closed enum today, but the escaping is defensive —
-    // pin it against a value that WOULD break out unescaped.
+    // viewportMode is a closed enum, and the escaping is defence in depth, pinned
+    // against a value that breaks out unescaped.
     const html = generateWebviewHtml({
       ...BASE_OPTIONS,
       initialConfig: { viewportMode: '</script><script>evil()</script>' as never },

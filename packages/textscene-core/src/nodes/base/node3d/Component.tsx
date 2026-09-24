@@ -1,6 +1,6 @@
 /**
- * <Node3D> — invisible transform container.
- * Decomposes the Godot Transform3D matrix into position/rotation/scale on a <group>.
+ * <Node3D>: an invisible transform container that decomposes the Godot Transform3D into position,
+ * rotation and scale on a <group>.
  */
 
 import { useMemo } from 'react';
@@ -15,8 +15,8 @@ export function Node3D({ node, children }: NodeComponentProps) {
     [props]
   );
   const visible = props.visible !== false;
-  // paint-order-safe: 3D content, which the canvas key never reaches — the
-  // 2D canvas is the only place `groupOrder` carries one.
+  // paint-order-safe: 3D content, which the canvas key never reaches. Only the
+  // 2D canvas gives `groupOrder` a value.
   return (
     <group
       name={node.name}

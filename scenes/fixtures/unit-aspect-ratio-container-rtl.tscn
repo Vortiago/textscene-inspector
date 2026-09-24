@@ -1,11 +1,6 @@
-; The ONE variable: `layout_direction = 3` on an AspectRatioContainer. Godot
-; measures the aligned child from the trailing edge instead
-; (aspect_ratio_container.cpp:164-168), so `alignment_horizontal = 0` (Begin)
-; lands the child against the RIGHT edge. `stretch_mode = 2` (Fit) leaves the
-; child narrower than the container, which is what makes the alignment
-; visible at all; the LTR container above holds the unmirrored position.
-; unit-aspect-ratio-container.tscn moves ratio/stretch/alignment at direction
-; LTR, so a regression in this mirror is invisible there.
+; The one variable: `layout_direction = 3` on an AspectRatioContainer. Godot measures the aligned
+; child from the trailing edge (aspect_ratio_container.cpp:164-168), so Begin lands it on the
+; right, and Fit keeps it narrower than the container. unit-aspect-ratio-container.tscn is LTR.
 
 [gd_scene format=3]
 

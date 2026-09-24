@@ -1,19 +1,7 @@
 /**
- * Semantic linter rules for Path2D.
- *
- * Format validation (the `curve` reference format) is handled by linterParser.ts
- * during strict parsing. This file covers the one semantic check that needs
- * scene context: the referenced Curve2D exists.
- *
- * Divergence from Path3D (which ERRORs on a missing curve): in real 2D games a
- * Path2D's curve is frequently assigned at runtime via an attached script (e.g.
- * godot-open-rpg's gamepiece.tscn), so a missing `curve` is advisory and is
- * suppressed entirely when the node has a `script`.
- *
- * No "no PathFollow2D children" check: `path_2d.h`/`path_2d.cpp` declare a
- * `get_configuration_warnings()` override only on `PathFollow2D`, never on
- * `Path2D` itself — Godot raises no warning for a followerless Path2D, and
- * Godot's own tween demo deliberately drives one from script with no follower.
+ * Path2D semantic rules. A missing `curve` is advisory: a script often assigns
+ * it at runtime. No followerless-Path2D check: only `PathFollow2D` overrides
+ * `get_configuration_warnings()` in `path_2d.h`/`path_2d.cpp`.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -28,10 +16,9 @@ function checkPath2D(context: RuleContext): Diagnostic[] {
 
   const curve = heldResource(rawProps.curve);
   if (curve === undefined) {
-    // A script commonly assigns the curve at runtime — stay silent in that case.
-    // The exemption needs a script that actually LOADS: read raw, `'null'` is a
-    // truthy string, so a cleared slot claimed one, and a reference the scene
-    // never declares claimed one too.
+    // A script commonly assigns the curve at runtime, so stay silent then. The
+    // script must load: a raw `'null'` is truthy, and an undeclared reference
+    // loads nothing.
     const script = heldResource(rawProps.script);
     if (script === undefined || !checkResourceExists(scene, script)) {
       diagnostics.push({

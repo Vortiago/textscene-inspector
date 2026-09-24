@@ -1,22 +1,11 @@
 /**
- * A shared contract test: every native leaf material must spread
- * `useControlClipPlanes()` onto its `clippingPlanes`, because a clip plane
- * array is per-MATERIAL state (`THREE.Material.clippingPlanes`), never
- * inherited by the scene graph the way a `THREE.Object3D` transform is
- * (`controlClipping.tsx`'s own doc). `StyleBoxQuad` and `ControlQuad` are the
- * two quad primitives every native Control painter is built from, and a
- * regression in EITHER would silently un-clip every painter built on it —
- * which is the failure the first half of this module catches in one place
- * rather than per consumer.
- *
- * The second half catches what a per-primitive test structurally cannot: a
- * painter that mounts something else — a raw `<mesh>`, a `<TextRun>` — and
- * forgets to hand it the ambient planes. It mounts a real clipping Control
- * through the real walker and asserts that NOTHING it draws is left
- * unclipped. `GraphNode`/`GraphFrame` title text escaped exactly that way,
- * visible only as a few hundred pixels of text outside a GraphEdit whose
- * children had scrolled out of its own rect.
+ * Every native leaf material spreads `useControlClipPlanes()` onto its
+ * `clippingPlanes`, because clip planes are per-material state that the scene
+ * graph does not inherit.
  */
+// The quad tests cover `StyleBoxQuad` and `ControlQuad`, the primitives every
+// painter builds on. The walker tests catch a painter that mounts something else
+// (a raw `<mesh>`, a `<TextRun>`) without the ambient planes.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -110,21 +99,12 @@ describe('every native quad primitive spreads useControlClipPlanes()', () => {
 });
 
 /**
- * The other half of the same mechanism: a per-material plane array is inert
- * unless its RENDERER opted in, because three gates the whole local-clipping
- * path on one renderer flag (`WebGLRenderer.localClippingEnabled` →
- * `WebGLClipping.init`'s `localClippingEnabled`). A renderer left at the
- * default silently ignores every `clippingPlanes` array the tests above pin,
- * with no error and no warning — the failure is a ScrollContainer that simply
- * does not clip.
- *
- * Every canvas that mounts `ControlRasterLayer`/`ControlCanvasLayer` therefore
- * has to set it, the 3D canvas included: a Control-only SubViewport sampled by
- * a 3D scene renders its Controls through THAT canvas's renderer
- * (`renderToOffscreenTarget` takes the live `useThree().gl`, never a renderer
- * of its own), so the flag has to be true wherever a Control can be drawn
- * rather than only where the 2D workspace draws one.
+ * A per-material plane array is inert unless the renderer sets
+ * `WebGLRenderer.localClippingEnabled`, and without it a ScrollContainer does
+ * not clip and nothing reports it.
  */
+// The 3D canvas needs it too: a Control SubViewport sampled by a 3D scene renders
+// through that canvas's renderer (`renderToOffscreenTarget` takes `useThree().gl`).
 describe('local clipping is enabled on every canvas that draws Controls', () => {
   const CANVAS_SOURCES = [
     ['World2DCanvas.tsx', join(import.meta.dirname, '../../components/Canvas2DStage/World2DCanvas.tsx')],
@@ -133,9 +113,8 @@ describe('local clipping is enabled on every canvas that draws Controls', () => 
 
   it.each(CANVAS_SOURCES)('%s passes localClippingEnabled to its <Canvas>', (_name, path) => {
     // Line comments stripped first, and `<Canvas\s` rather than `<Canvas\b`:
-    // both files name `<Canvas>` in prose, and a `>` inside a comment would
-    // otherwise end the non-greedy match before the props (the same reading
-    // `World2DCanvas.test.tsx` does for `flat`).
+    // both files name `<Canvas>` in prose, and a `>` in a comment would end the
+    // non-greedy match before the props.
     const canvasTag = /<Canvas\s[\s\S]*?>/.exec(readFileSync(path, 'utf8').replace(/\/\/.*$/gm, ''))?.[0] ?? '';
     expect(canvasTag).not.toBe('');
     expect(canvasTag).toMatch(/localClippingEnabled:\s*true/);
@@ -143,16 +122,11 @@ describe('local clipping is enabled on every canvas that draws Controls', () => 
 });
 
 /**
- * `Control::set_clip_contents(true)` is a property of the CONTROL, so it has
- * to reach every pixel that control's painter draws, whatever primitive drew
- * it. `GraphEdit` sets it in its own constructor (`graph_edit.cpp:3342`) and
- * `ScrollContainer` from the property, so both are real clipping ancestors to
- * mount a subtree under.
- *
- * Reads the WHOLE rendered tree rather than a named painter: the point is to
- * fail for a primitive nobody thought to list, which is how this regression
- * arrived.
+ * `Control::set_clip_contents(true)` belongs to the Control, so it reaches every
+ * pixel its painter draws. `GraphEdit` sets it in its constructor
+ * (`graph_edit.cpp:3342`) and `ScrollContainer` from the property.
  */
+// Reads the whole rendered tree, so a primitive nobody listed still fails.
 async function meshesOf(tscn: string): Promise<THREE.Mesh[]> {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();

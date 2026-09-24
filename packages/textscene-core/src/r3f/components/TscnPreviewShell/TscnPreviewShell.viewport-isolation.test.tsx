@@ -1,23 +1,18 @@
 /**
- * Multi-Panel State Isolation contract, viewport-mode edition: two
- * <TscnPreviewShell> instances in one document must not share ViewportMode
- * state. Selection isolation on its own is already pinned in
- * TscnPreviewShell.test.tsx ("isolates selection state between two shells");
- * this file drives the combined flow — select in A, switch A to 2D — and
- * asserts B's mode AND selection stay untouched, and that A's selection
+ * Two <TscnPreviewShell> instances share no viewport mode. A selection and a
+ * 2D switch in A leave B's mode and selection alone, and A's selection
  * survives its own mode switch.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// happy-dom has no WebGL: stub the R3F canvas like the sibling shell tests do.
+// happy-dom has no WebGL, so the R3F canvas is a stub.
 vi.mock('../../TscnCanvas', () => ({
   TscnCanvas: () => <div data-testid="canvas-stub" />,
   TscnSceneContents: () => null,
 }));
-// Keep the 2D stage lean too — its pan/zoom chrome is covered by
-// Canvas2DStage.test.tsx; here only "which viewport is mounted" matters.
+// Only the mounted viewport matters here. Canvas2DStage.test.tsx covers the stage.
 vi.mock('../Canvas2DStage/Canvas2DStage', () => ({
   Canvas2DStage: () => <div data-testid="stage-2d-stub" />,
 }));
@@ -76,20 +71,19 @@ describe('<TscnPreviewShell> viewport-mode isolation between panels', () => {
       await userEvent.click(modeButton(shellA, '2D'));
     });
 
-    // A swapped viewports…
+    // A swapped viewports.
     expect(modeButton(shellA, '2D').getAttribute('aria-pressed')).toBe('true');
     expect(shellA.querySelector('[data-testid="canvas-stub"]')).toBeNull();
     expect(shellA.querySelector('[data-testid="stage-2d-stub"]')).toBeTruthy();
 
-    // …while B is completely unaffected: still 3D, still canvas, still unselected.
+    // B is still 3D, still canvas and still unselected.
     expect(modeButton(shellB, '3D').getAttribute('aria-pressed')).toBe('true');
     expect(modeButton(shellB, '2D').getAttribute('aria-pressed')).toBe('false');
     expect(shellB.querySelector('[data-testid="canvas-stub"]')).toBeTruthy();
     expect(shellB.querySelector('[data-testid="stage-2d-stub"]')).toBeNull();
     expect(shellB.querySelectorAll('[class*=selected]').length).toBe(0);
 
-    // And A's own selection survives its viewport-mode switch — the mode only
-    // swaps the center viewport, never the dock's selection state.
+    // The mode swaps only the centre viewport, so A's selection survives.
     expect(shellA.querySelectorAll('[class*=selected]').length).toBeGreaterThan(0);
   });
 
@@ -114,7 +108,7 @@ describe('<TscnPreviewShell> viewport-mode isolation between panels', () => {
     expect(modeButton(shellA, '2D').getAttribute('aria-pressed')).toBe('true');
     expect(modeButton(shellB, '2D').getAttribute('aria-pressed')).toBe('true');
 
-    // Flip B back to 3D; A must stay in 2D.
+    // Flip B back to 3D. A stays in 2D.
     await act(async () => {
       await userEvent.click(modeButton(shellB, '3D'));
     });

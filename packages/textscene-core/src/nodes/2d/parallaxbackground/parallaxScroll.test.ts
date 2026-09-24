@@ -1,11 +1,7 @@
 /**
- * The parallax model, pinned against Godot 4.4 source and against real renders.
- *
- * The three `probe_*` numbers quoted below come from `pnpm ref:godot` on Godot
- * 4.6.3 at the repo's default 2D capture size (1152x648): a Camera2D at
- * (600, 400) with default zoom/anchor puts the view's top-left at (24, 76), and
- * three ParallaxLayers with motion_scale (0,0) / (0.5,0.5) / (1,1) drew at
- * screen (0,0) / (188,162) / (576,324). Those are the expectations below.
+ * Pins the parallax model to `pnpm ref:godot` at 1152x648: a default Camera2D at
+ * (600, 400) puts the view's top-left at (24, 76), and layers with motion_scale
+ * (0,0), (0.5,0.5) and (1,1) draw at screen (0,0), (188,162) and (576,324).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -90,8 +86,8 @@ describe('parallaxScroll', () => {
       PROBE_VIEW
     );
     expect(scroll.offset.x).toBeCloseTo(10 + -24 * 0.1, 10);
-    // A zero base_scale axis kills the camera term entirely — which is what
-    // pins the platformer demo's sky to the top of the view.
+    // A zero base_scale axis removes the camera term, which pins a layer to
+    // the top of the view.
     expect(scroll.offset.y).toBe(5);
   });
 
@@ -128,7 +124,7 @@ describe('parallaxScroll', () => {
     const ignoring = parallaxScroll({ ...DEFAULTS, scroll_ignore_camera_zoom: true }, zoomed);
     expect(plain.scale).toBe(2);
     expect(ignoring.scale).toBe(1);
-    // `screen_offset` is the UNZOOMED half-viewport (camera_2d.cpp's
+    // `screen_offset` is the unzoomed half-viewport (camera_2d.cpp's
     // `screen_size * 0.5`), not the zoom-scaled one used inside
     // get_camera_transform().
     expect(ignoring.offset.x).toBeCloseTo((plain.offset.x + 576 * 1) / 2, 10);
@@ -233,8 +229,8 @@ describe('parallaxMirrorOffsets', () => {
   });
 
   it('draws exactly two instances on a single mirrored axis', () => {
-    // Measured: a 100 px x-mirror in a 1152 px viewport put copies at x = 0 and
-    // x = 100 and nothing at 220, 320 or 1120.
+    // Godot draws a 100 px x-mirror in a 1152 px viewport at x = 0 and x = 100,
+    // and nothing at 220, 320 or 1120.
     expect(parallaxMirrorOffsets({ x: 100, y: 0 }, unit)).toEqual([
       { x: 100, y: 0 },
       { x: 0, y: 0 },

@@ -1,6 +1,5 @@
 /**
- * OptionButton registration contract: parser self-registers in the
- * NodeRegistry, native (WebGL canvas) painter self-registers in the
+ * Tests that the OptionButton parser registers in the NodeRegistry and the native painter in the
  * ControlComponentRegistry (ADR-0002).
  */
 import { describe, it, expect } from 'vitest';

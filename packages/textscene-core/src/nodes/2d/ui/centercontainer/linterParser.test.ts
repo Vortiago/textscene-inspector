@@ -1,13 +1,7 @@
 /**
- * CenterContainer strict validators — format only, so the only failure is an
- * error (an unparseable boolean literal). `use_top_left` carries no
- * PROPERTY_HINT_RANGE/ENUM and its setter has no ERR_FAIL or clamp
- * (center_container.cpp:50-58), so there is no range branch to test.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it.
+ * CenterContainer strict validators, format only: `use_top_left` has no range hint and its
+ * setter no ERR_FAIL or clamp (center_container.cpp:50-58), so the one failure is an unparseable
+ * boolean. Asserted through `validatorRegistry`, so a failure points at the validator.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,10 +17,9 @@ function check(property: string, value: string) {
 }
 
 /**
- * doc/classes/CenterContainer.xml declares exactly one member without an
- * `overrides=` attribute: `use_top_left`. `Container::_bind_methods`
- * (container.cpp:217) binds no ADD_PROPERTY at all, so nothing else is
- * CenterContainer's own; everything else arrives through the base-walk.
+ * doc/classes/CenterContainer.xml declares one member without `overrides=`: `use_top_left`.
+ * `Container::_bind_methods` (container.cpp:217) binds no ADD_PROPERTY, so everything else
+ * arrives through the base-walk.
  */
 const KEYS: string[] = ['use_top_left'];
 /** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
@@ -42,16 +35,14 @@ describe('CenterContainer strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run against what this test
+    // imported. `fixtureLint` runs it against the whole registry through the barrel.
     expectFixtureClean('unit-center-container.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
     // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; the per-property case follows.
+    // sweep is generic on purpose. The per-property case follows.
     const accepted = validatorRegistry
       .getOwnKeys('CenterContainer')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);

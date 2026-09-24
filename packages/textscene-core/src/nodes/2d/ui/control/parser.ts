@@ -1,4 +1,4 @@
-/** Base Control parser — layout + theme-override properties shared by all 2D UI nodes. */
+/** Base Control parser: the layout and theme-override properties of every 2D UI node. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { unquoteStringName } from '../../../../parser/utils';
@@ -103,9 +103,7 @@ export function parseControl(
   result.sizeFlagsStretchRatio = parseOptionalFloat(properties.size_flags_stretch_ratio);
   result.customMinimumSize = parseOptionalVector2(properties.custom_minimum_size);
 
-  // CanvasItem tint + the Control's own 2D transform. Both were dropped for the
-  // whole 2D UI family; `rotation` is radians in the file, degrees only in the
-  // inspector.
+  // `rotation` is radians in the file and degrees only in the inspector.
   result.modulate = parseColorOrUndefined(properties.modulate);
   result.selfModulate = parseColorOrUndefined(properties.self_modulate);
   result.rotation = parseOptionalFloat(properties.rotation);
@@ -113,10 +111,7 @@ export function parseControl(
   result.pivotOffset = parseOptionalVector2(properties.pivot_offset);
   result.pivotOffsetRatio = parseOptionalVector2(properties.pivot_offset_ratio);
 
-  // CanvasItem draw-order + sampler properties (mirrors node2d/parser.ts's
-  // z_index/show_behind_parent/light_mask reads: same helpers, same Godot
-  // defaults). Never left undefined — an unset Control has these values in
-  // real Godot too, so the parsed type should not lie about it.
+  // Never undefined, as in `node2d/parser.ts`: an unset Control holds these Godot defaults.
   result.zIndex = intOr(properties.z_index, 0);
   result.showBehindParent = boolSlotValue(properties.show_behind_parent) === true;
   result.topLevel = boolSlotValue(properties.top_level) === true;
@@ -134,8 +129,7 @@ export function parseControl(
 
   Object.assign(result, parseThemeOverrides(properties));
 
-  // `theme = ExtResource(...)`/`SubResource(...)` — raw, resolved downstream
-  // the same way `themeOverrideStyles`' refs are (`SubResourceResolver`).
+  // Raw, and resolved later by `SubResourceResolver`, as `themeOverrideStyles` is.
   if (properties.theme !== undefined) result.theme = properties.theme;
   result.themeTypeVariation = parseThemeTypeVariation(properties.theme_type_variation);
 

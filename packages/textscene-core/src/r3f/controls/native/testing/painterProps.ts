@@ -1,20 +1,11 @@
 /**
- * The painter props a test does not care about, so widening the contract is one
- * edit rather than one per slice.
- *
- * Spread it FIRST and let a test's own explicit attributes override:
+ * The painter props a test does not care about, so a new required field is one
+ * edit here and never a reason to make it optional. Spread it first:
  *
  *     <Panel {...painterEnv()} solveNode={n} rect={RECT} renderOrder={0} />
- *
- * Before this existed, every painter test hand-rolled the whole props object, so
- * adding a required field broke sixteen test files at once — which is both
- * tedious and a quiet pressure to make new fields optional purely for test
- * convenience, weakening the contract the real caller depends on.
- *
- * Defaults mirror what `ControlCanvasWalker` supplies for a Control with no
- * children in a project that sets no theme scale, which is what the fixtures
- * under `scenes/fixtures/` resolve to.
  */
+// Defaults are what `ControlCanvasWalker` supplies for a childless Control in a
+// project with no theme scale, as the `scenes/fixtures/` scenes resolve to.
 
 import { nativeTheme } from '../nativeTheme';
 import { WHITE_MODULATE, type RGBA } from '../../../canvasItemModulate';
@@ -26,40 +17,16 @@ import type { Rect2 } from '../rect';
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
 /**
- * A composed own-pixel tint at an arbitrary sRGB value — what the walker hands
- * a painter, without a walk. `own` is already `modulate × self_modulate`, so a
- * test states the PRODUCT rather than the factors that made it.
+ * A composed own-pixel tint at an sRGB value, as the walker hands a painter.
+ * `own` is already `modulate × self_modulate`, so a test states the product.
  */
 export function painterTint(own: RGBA = WHITE_MODULATE): ControlOwnTint {
   return { own, color: godotColorToLinear(own), opacity: own.a };
 }
 
 /**
- * The environment half of a painter's props — theme, measurer, child rects,
- * the post-subtree chrome draw order, and this Control's own `z_final`.
- *
- * `subtreeChromeRenderOrder` defaults to `0` — the value the walker derives
- * for a childless Control at paint index 0 — because only the painters with
- * `INTERNAL_MODE_BACK`-style chrome read it at all, and one of those asserting
- * draw order overrides it explicitly. It belongs here rather than being made
- * optional on the contract: an absent value there would let a painter silently
- * fall back to its own `renderOrder` and draw its chrome under its own subtree.
- *
- * `effectiveZ` defaults to `0` for the same reason and with the same shape of
- * hazard — Godot's z for a Control authoring no `z_index` under no
- * z-shifting ancestor. A painter that opts into 2D lighting must pass it to
- * `useCanvasItemLighting` explicitly, since that parameter's own fallback
- * reads the ambient context, which is the PARENT's z.
- *
- * `tint` defaults to opaque white — a scene authoring neither `modulate` nor
- * `self_modulate` anywhere above the node. A painter asserting composition
- * passes `painterTint(own)` with the product it wants; the FOLD that produced
- * it is the walker's, and is asserted there.
- *
- * `snapToPixels` defaults to `true`: Godot's own
- * `Viewport::snap_controls_to_pixels` initialiser (`scene/main/viewport.h`),
- * which every viewport keeps unless it is the root window and the project
- * opted out. A painter asserting the OFF case states it.
+ * The environment half of a painter's props: theme, measurer, child rects, the
+ * post-subtree chrome draw order and this Control's own `z_final`.
  */
 export function painterEnv(): Pick<
   NativeControlComponentProps,
@@ -76,10 +43,16 @@ export function painterEnv(): Pick<
     theme: nativeTheme(1),
     measureText: null,
     childRects: NO_CHILD_RECTS,
+    // A childless Control at paint index 0. Required on the contract, since an
+    // absent value would draw chrome under the subtree.
     subtreeChromeRenderOrder: 0,
+    // A Control with no `z_index`. A lit painter passes it to
+    // `useCanvasItemLighting`, whose fallback reads the parent's z.
     effectiveZ: 0,
+    // The `Viewport::snap_controls_to_pixels` initialiser (`scene/main/viewport.h`).
     snapToPixels: true,
     meta: undefined,
+    // Opaque white: the walker's fold is asserted in the walker's tests.
     tint: painterTint(),
   };
 }

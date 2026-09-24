@@ -1,8 +1,7 @@
 /**
- * VehicleBody3D is a RigidBody3D subclass and renders the same way: a
- * transform-only group (ADR-0005, ADR-0008). What registering it buys is what
- * this file pins — the tree/inspector stop calling it unsupported, and `visible`
- * is honoured, which GenericNodeFallback never applied.
+ * VehicleBody3D renders as a transform-only group (ADR-0005, ADR-0008). Its
+ * registration makes the tree and the inspector stop calling it unsupported,
+ * and applies `visible`, which GenericNodeFallback does not.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -28,9 +27,8 @@ describe('VehicleBody3D registration', () => {
   });
 
   it('declares drawing nothing of its own, which is what joins it to the shared contract', () => {
-    // transformOnly.render-contract.test.tsx DERIVES its subjects from this
-    // flag, so dropping it would silently shrink that suite instead of failing
-    // it. Pinned here, where the registration lives.
+    // transformOnly.render-contract.test.tsx derives its subjects from this
+    // flag, so dropping it would shrink that suite instead of failing it.
     expect(nodeComponentRegistry.isTransformOnly('VehicleBody3D')).toBe(true);
   });
 });
@@ -53,12 +51,9 @@ async function render(node: TscnNode) {
   );
 }
 
-// The rest of the ADR-0008 rendered contract — bare Group, no placeholder
-// userData, visible by default, zero own meshes, children inheriting the
-// transform — is asserted for VehicleBody3D by the shared
-// r3f/nodes/transformOnly.render-contract.test.tsx, which this slice joins.
-// Only `visible = false` is left here, because that contract checks the
-// default-visible case and this is the behaviour registering the type restored.
+// The shared r3f/nodes/transformOnly.render-contract.test.tsx asserts the rest of
+// the ADR-0008 contract for VehicleBody3D. It checks only the default-visible
+// case, so `visible = false` stays here.
 describe('<VehicleBody3D> render contract', () => {
   it('honours visible = false, hiding itself and its subtree', async () => {
     const renderer = await render(vehicleNode({ visible: false }));

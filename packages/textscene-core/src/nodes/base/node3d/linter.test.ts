@@ -65,12 +65,9 @@ describe('Node3D Linter', () => {
   describe('Strict Parser Validation - Scale Properties', () => {
     runPropertyValidation({ nodeType: 'Node3D' }, [
       {
-        // Any magnitude is valid Godot and lints clean, including zero
-        // (`Node3D::set_scale`, node_3d.cpp:812-827, is a bare assignment with
-        // no zero guard, unlike Node2D's), negative (a mirror/flip), and
-        // extreme-but-finite values; only malformed values error. See
-        // linterParser.ts — the base-walk inherits this to every Node3D
-        // subclass.
+        // Any magnitude lints clean: zero (`Node3D::set_scale`, node_3d.cpp:812-827, has no zero
+        // guard, unlike Node2D's), negative (a mirror) and extreme but finite. Only a malformed
+        // value errors, and the base walk delivers this to every Node3D subclass.
         prop: 'scale',
         valid: [
           'Vector3(1, 1, 1)',
@@ -124,8 +121,8 @@ describe('Node3D Linter', () => {
 
     it('should pass validation for a visibility_parent that names a sibling', () => {
       // Every node below the root states `parent="."`. Without it the second
-      // heading is a second ROOT, which Godot refuses (packed_scene.cpp:206)
-      // and the tree build drops — so the rule under test never ran on it.
+      // heading is a second root, which Godot refuses (packed_scene.cpp:206)
+      // and the tree build drops, so the rule under test would not run.
       expectClean(
         scene(
           node('Node3D', {}, { name: 'Root' }),
@@ -172,11 +169,9 @@ describe('Node3D Linter', () => {
       expectClean(scene(node('Node3D', { visibility_parent: 'NodePath("")' }, { name: 'ChildNode' })));
     });
 
-    // `%Name` resolves through the owner's `owned_unique_nodes`
-    // (node.cpp:1931-1933), not by tree position, and it is what the inspector's
-    // node picker writes. Comparing it against a position-keyed path map called a
-    // working reference "not found", at error tier. The flag is what puts the
-    // name in the table (node.cpp:2222), so the target must carry it.
+    // `%Name` resolves through the owner's `owned_unique_nodes` (node.cpp:1931-1933), not by tree
+    // position, and the inspector's node picker writes it. The flag puts the name in the table
+    // (node.cpp:2222), so the target carries it.
     it('should report nothing for a %unique-name visibility_parent', () => {
       expectNoDiagnostic(
         scene(
@@ -192,9 +187,9 @@ describe('Node3D Linter', () => {
     });
 
     it('should report nothing for a relative visibility_parent path', () => {
-      // `..` walks to the parent and the next segment reads ITS children, so a
-      // relative path resolves like any other — the rule declines only the
-      // absolute form, whose root is the live SceneTree's and not this file's.
+      // `..` walks to the parent and the next segment reads its children, so a
+      // relative path resolves like any other. The rule declines only the
+      // absolute form, whose root is the live SceneTree's, not this file's.
       expectNoDiagnostic(
         scene(
           node('Node3D', {}, { name: 'ParentNode' }),

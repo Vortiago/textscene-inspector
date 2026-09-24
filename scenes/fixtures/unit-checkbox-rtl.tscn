@@ -1,13 +1,6 @@
-; ONE VARIABLE: `layout_direction = 3` (RTL) on the lower CheckBox.
-;
-; Under RTL, CheckBox draws its check glyph against the RIGHT content margin
-; instead of the left (check_box.cpp:127-131) and moves Button's internal
-; margin to the opposite side (:98-100), which sends the label to the far end
-; of what is left. `unit-checkbox` and `unit-checkbox-icon-magnified` are both
-; LTR, and no other scene draws a CheckBox under a layout direction at all.
-;
-; Both rows are `button_pressed` so the glyph is the filled variant and a
-; swapped side reads at a glance.
+; The one variable: `layout_direction = 3` (RTL) on the lower CheckBox. It draws the check glyph at
+; the right content margin (check_box.cpp:127-131) and moves Button's margin across (:98-100).
+; Both rows are pressed, so a swap reads at a glance. No other scene draws an RTL CheckBox.
 
 [gd_scene format=3 uid="uid://unitcheckboxrtl"]
 

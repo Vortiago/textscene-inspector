@@ -1,9 +1,8 @@
 /**
  * Webview `log` and `resourceNeeded` messages onto the host output channel.
  *
- * `logger.ts` opens the channel with `{ log: true }`, so its real shape is a
- * `LogOutputChannel` with one method per level — an output-channel mock
- * carrying only `appendLine` makes every line below unreachable.
+ * `logger.ts` opens the channel with `{ log: true }`, so it is a `LogOutputChannel`
+ * with one method per level. A mock with only `appendLine` reaches none of them.
  */
 import { describe, expect, it, beforeEach, afterEach, type Mock } from 'vitest';
 import { relayMissingResource, relayWebviewLog } from './hostLogRelay';

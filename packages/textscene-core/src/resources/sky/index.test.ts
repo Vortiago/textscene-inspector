@@ -3,9 +3,8 @@ import * as skySlice from './index';
 import { decodeSkyMaterial } from './decode';
 import { resourceSliceRegistry } from '../sliceRegistration';
 
-// Importing the entry point is what registers the claims; the assertions read the
-// registry by name, never `all()` — that array's contents depend on which other
-// slice indexes a given test file happens to pull in.
+// Importing the entry point registers the claims. The assertions read the registry
+// by name, not `all()`: its contents depend on which other slice indexes load.
 describe('sky slice registration', () => {
   it('claims the Sky indirection and all three materials as ONE slice (happy path)', () => {
     for (const typeName of [
@@ -21,11 +20,8 @@ describe('sky slice registration', () => {
   });
 
   it('routes the sky MATERIALS to the resource slot, not the material one', () => {
-    // The routing fix this claim carries: the substring rule it replaces sent
-    // every type name containing "Material" to the material processor, which
-    // builds THREE materials and cannot decode a sky — so an external
-    // `ProceduralSkyMaterial.tres` never reached the slot its only consumer
-    // (`useSubOrExtResource`) subscribes to.
+    // The material processor builds THREE materials and cannot decode a sky, so
+    // an external `ProceduralSkyMaterial.tres` must reach `useSubOrExtResource`.
     for (const typeName of [
       'ProceduralSkyMaterial',
       'PanoramaSkyMaterial',
@@ -46,24 +42,20 @@ describe('sky slice registration', () => {
   });
 
   it('does not claim a sky-adjacent type it cannot decode (error path)', () => {
-    // A `ShaderMaterial` sky is authored Godot shader source, not one of the
-    // three built-in materials, and this slice's decode would return null.
+    // A `ShaderMaterial` sky is authored shader source, which this decode refuses.
     expect(resourceSliceRegistry.byTypeName('ShaderMaterial')).toBeNull();
     expect(resourceSliceRegistry.byTypeName('SkyMaterial')).toBeNull();
   });
 
   it('re-exports the decode surface and the types, not the build', () => {
-    // `index.ts` must stay THREE-free: `build.ts` renders a cubemap, and the
-    // routing side may not pull that into its closure.
+    // `index.ts` stays THREE-free, so routing never pulls in the cubemap render.
     expect(typeof skySlice.decodeSkyMaterial).toBe('function');
     expect(typeof skySlice.skyMaterialRef).toBe('function');
     expect('buildSkyEnvironment' in skySlice).toBe(false);
   });
 
   it('decodes every material type name it claims — no claim without a decoder', () => {
-    // The claim table is what routes a file here; a type name claimed but not
-    // handled by `decode` is a resource that loads and then silently renders
-    // nothing, which is exactly what routing-by-substring produced.
+    // A type name claimed but not decoded loads and then renders nothing.
     const claimed = resourceSliceRegistry
       .all()
       .filter((registration) => registration.slice === 'sky')

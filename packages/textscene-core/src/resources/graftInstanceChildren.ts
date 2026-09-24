@@ -1,20 +1,8 @@
 /**
- * Graft a host scene's deep children into the sub-scene it instanced.
- *
- * `sceneTreeBuilder` can get a node whose parent path descends into an instance
- * as far as the INSTANCE node, recording the remainder as `instanceSubPath`; it
- * cannot go further, because only the loaded sub-scene knows what
- * `Sprite2D/Pivot` names. This closes that gap for the `.tscn` flavour, where
- * the target is an ordinary `TscnNode` tree and matching is exact.
- *
- * The GLB flavour cannot share this: its target is a `THREE.Object3D` graph
- * produced by a different importer, which needs its own tolerant matcher.
- *
- * PURITY IS LOAD-BEARING. The loaded sub-scene is a shared cache entry — the
- * two pause menus instance the same file — so this copies along the mutated
- * spine and structurally shares everything else. Writing into the cached tree
- * would corrupt every other instance of it, and only when a second consumer
- * happened to render.
+ * Graft a host scene's deep children into the `.tscn` sub-scene it instanced, where
+ * `sceneTreeBuilder` stopped at the instance node with an `instanceSubPath`. The GLB
+ * flavour needs its own tolerant matcher. It must stay pure: the sub-scene is a shared
+ * cache entry, so this copies along the changed spine and shares everything else.
  */
 
 import type { SceneScope, TscnNode } from '../parser/types';
@@ -26,10 +14,9 @@ import { warn } from '../logger';
  *
  * @param rootChildren the loaded sub-scene root's children (never mutated)
  * @param hostChildren the instancing node's children, deep and direct alike
- * @param outerScope the HOST scene's resource tables — BOTH pools, see
- *   `SceneScope` — stamped onto each grafted node so its resource references
- *   keep resolving against the scene they were authored against rather than the
- *   sub-scene's
+ * @param outerScope the host scene's resource tables, both pools (see `SceneScope`),
+ *   stamped onto each grafted node so its references resolve against the scene
+ *   they were authored in
  */
 export function graftInstanceChildren(
   rootChildren: readonly TscnNode[],
@@ -52,7 +39,7 @@ export function graftInstanceChildren(
     if (next) {
       grafted = next;
     } else {
-      // Visible-but-misplaced beats invisible: a sub-path we cannot resolve is
+      // Visible-but-misplaced beats invisible: a sub-path that does not resolve is
       // a matching failure worth seeing, not a reason to drop the node.
       warn(
         `[graftInstanceChildren] "${child.name}" targets "${child.instanceSubPath}", which the instanced scene does not contain — appending at its root`
@@ -82,11 +69,9 @@ function graftAt(
 
   if (rest.length > 0) {
     if (target.instance) {
-      // The path continues INTO another instance, whose own sub-scene has not
-      // been merged yet — `Pivot` lives inside whatever `Sprite2D` instances.
-      // Re-anchor here with the remaining path: when that node collapses in
-      // turn it runs this same graft and resolves the rest. Recursion through
-      // the existing mechanism rather than a second one.
+      // The path continues into another instance, whose sub-scene is not merged
+      // yet. Re-anchor here with the remaining path: when that node collapses, it
+      // runs this same graft and resolves the rest.
       replacement = {
         ...target,
         children: [...target.children, { ...child, instanceSubPath: rest.join('/') }],
@@ -106,12 +91,9 @@ function graftAt(
 }
 
 /**
- * Attach `child` under `parent` — as a new node, or, when it only overrides
- * properties, by folding its raw properties onto the node already there.
- *
- * The override case is why `overridesExistingNode` exists: appending would
- * leave two nodes of the same name where Godot has one, and the authored
- * properties would land on a duplicate nothing else references.
+ * Attach `child` under `parent` as a new node, or fold an override's raw properties
+ * onto the node already there. Appending an override would leave two nodes of one
+ * name where Godot has one, with the properties on a duplicate nothing references.
  */
 function attach(parent: TscnNode, child: TscnNode): TscnNode {
   if (!child.overridesExistingNode) {

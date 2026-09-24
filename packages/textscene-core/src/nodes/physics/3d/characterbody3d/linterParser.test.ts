@@ -26,7 +26,7 @@ describe('CharacterBody3D strict validators (physics state)', () => {
   });
 
   // character_body_3d.cpp:848, ERR_FAIL_COND_MSG(p_up_direction == Vector3()). Exact equality, so
-  // only the zero vector itself is refused; everything else is normalised.
+  // only the zero vector itself is refused. Everything else is normalised.
   describe('up_direction', () => {
     it('accepts the default and any other direction', () => {
       expect(check('up_direction', 'Vector3(0, 1, 0)')).toBeNull();
@@ -57,8 +57,8 @@ describe('CharacterBody3D strict validators (physics state)', () => {
   });
 
   // character_body_3d.cpp:933 and :927, both PROPERTY_HINT_RANGE
-  // "0,180,0.1,radians_as_degrees": the inspector shows 0-180 DEGREES while the
-  // .tscn stores RADIANS, so the ceiling is PI and the floor is 0.
+  // "0,180,0.1,radians_as_degrees": the inspector shows 0-180 degrees while the
+  // .tscn stores radians, so the ceiling is PI and the floor is 0.
   describe.each(['floor_max_angle', 'wall_min_slide_angle'])('%s', (property) => {
     it('accepts the converted ends Godot itself writes', () => {
       expect(check(property, '0')).toBeNull();

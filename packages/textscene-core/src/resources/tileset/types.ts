@@ -1,11 +1,7 @@
 /**
- * The TileSet slice's types — the pure data model shared by the tile node
- * slices (TileMap / TileMapLayer), this slice's decode, and the placement /
- * geometry math. No React, no THREE (linter- and parser-closure safe).
- *
- * Carries the model's own lookup helper (`tileDrawInfo`) and enum constants
- * alongside the shapes: they are the meaning of the data, and splitting them
- * off would leave a consumer holding the types unable to read them.
+ * The TileSet data model shared by the tile node slices, this slice's decode and the placement
+ * and geometry math, free of React and THREE. It carries `tileDrawInfo` and the enum constants
+ * beside the shapes, since a consumer holding the types needs them to read the data.
  */
 
 export interface Vec2i {
@@ -13,7 +9,7 @@ export interface Vec2i {
   y: number;
 }
 
-/** TileSet.tile_shape — square, isometric, half-offset square, and hexagon all render. */
+/** TileSet.tile_shape: square, isometric, half-offset square and hexagon all render. */
 export const TILE_SHAPE_SQUARE = 0;
 export const TILE_SHAPE_ISOMETRIC = 1;
 export const TILE_SHAPE_HALF_OFFSET_SQUARE = 2;
@@ -37,13 +33,9 @@ export interface TileSetModel extends TileGrid {
   /** Atlas sources keyed by their `sources/N` id. */
   sources: Map<number, AtlasSourceModel>;
   /**
-   * Source ids, each once, in the order their keys appear in the file.
-   *
-   * This previewer's own deterministic batching order, not the engine's:
-   * `add_source` keeps `source_ids` sorted ascending (tile_set.cpp:483-484) and
-   * Godot draws a layer's cells interleaved in scan order rather than per
-   * source at all, so there is no engine order to match — see `tileSourceZ`.
-   * One entry per `sources` key, never per written spelling of one.
+   * Source ids, each once, in file order: this previewer's batching order. Godot sorts
+   * `source_ids` (tile_set.cpp:483-484) and draws cells in scan order, not per source, so there
+   * is no engine order to match (see `tileSourceZ`). One entry per key, not per spelling of one.
    */
   sourceOrder: number[];
 }
@@ -91,11 +83,9 @@ export interface TileDrawInfo {
 }
 
 /**
- * The pure lookup from a placed cell's (atlasCoords, alternativeId) to its
- * draw info. The base alternative id (low bits) selects an authored
- * alternative tile; the high bits XOR their transforms on top (matching
- * Godot's draw_tile, where painted transform bits compose with the
- * alternative's own flip flags).
+ * A placed cell's draw info from (atlasCoords, alternativeId). The low bits select an authored
+ * alternative tile, and the high bits XOR their transforms on top, as Godot's draw_tile composes
+ * painted transform bits with the alternative's own flip flags.
  */
 export function tileDrawInfo(
   source: AtlasSourceModel,

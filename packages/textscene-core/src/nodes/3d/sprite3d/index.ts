@@ -1,6 +1,4 @@
-/**
- * Sprite3D registration — parser + property formatter.
- */
+/** Sprite3D registration: the parser and the property formatter. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseSprite3D } from './parser';

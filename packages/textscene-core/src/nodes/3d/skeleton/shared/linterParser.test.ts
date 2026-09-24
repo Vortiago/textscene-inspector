@@ -1,11 +1,8 @@
 /**
- * The IKModifier3D set must reach its subclasses, which is the whole point of
- * the tier. Assert through `findValidator` on a real leaf, not just on the
- * abstract key: a tier that registers but is never imported registers nothing.
- *
- * The leaves cover BOTH direct branches. CCDIK3D, FABRIK3D and JacobianIK3D
- * share one path (IterateIK3D, then ChainIK3D), so a broken TwoBoneIK3D link
- * is invisible in all three.
+ * The IKModifier3D set must reach its subclasses. Assert through `findValidator` on a real leaf,
+ * not on the abstract key: a tier that registers but is never imported registers nothing. The
+ * leaves cover both direct branches, since CCDIK3D, FABRIK3D and JacobianIK3D share one path
+ * (IterateIK3D, then ChainIK3D) that hides a broken TwoBoneIK3D link.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -13,15 +10,12 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import './linterParser.js';
 
 /**
- * Every key IKModifier3D binds, read from its ADD_PROPERTY calls.
- *
- * `ik_modifier_3d.cpp:64` is the class's only ADD_PROPERTY, and
- * `doc/classes/IKModifier3D.xml` lists the matching single member.
- * `setting_count` and the `settings/<i>/` family are NOT here: the subclasses
- * declare them, with different leaves per branch.
+ * Every key IKModifier3D binds. `ik_modifier_3d.cpp:64` is its only ADD_PROPERTY, and
+ * `doc/classes/IKModifier3D.xml` lists the one matching member. The subclasses declare
+ * `setting_count` and the `settings/<i>/` family, with different leaves per branch.
  */
 const KEYS: string[] = ['mutable_bone_axes'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 const LEAVES = [
   'ChainIK3D',

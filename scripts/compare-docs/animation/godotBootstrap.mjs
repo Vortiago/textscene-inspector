@@ -1,10 +1,7 @@
 /**
- * The GDScript that drives the reference side of an animated capture: seek the
- * clip to each of the sampled times and save a PNG per frame.
- *
- * Two programs, because the two modes share nothing but the sampling: a 3D
- * scene is framed with the editor camera and lit by the editor preview
- * environment, while a 2D one renders into the project viewport with neither.
+ * The GDScript that drives the reference side of an animated capture: seek the clip to each
+ * sampled time and save a PNG per frame. Two programs, since the modes share only the sampling:
+ * a 3D scene uses the editor camera and preview environment, a 2D one the project viewport alone.
  */
 
 import { PREVIEW_LIGHTING_GD, gdString } from '../../godot-ref/bootstrap.mjs';
@@ -48,11 +45,10 @@ ${PREVIEW_LIGHTING_GD}
 `;
 }
 
-// The 2D reference: an AnimatedSprite2D rendered into a SubViewport the size of
-// the project viewport (2D positions are absolute), stepping `frame` across one
-// loop. Mirrors godot-ref/bootstrap.mjs's _render_2d — no 3D camera, no editor preview sun or
-// environment (those are the 3D editor's; 2D lighting is the scene's own). A
-// Camera2D is disabled before the subtree is added so it can't offset the canvas.
+// The 2D reference: an AnimatedSprite2D in a SubViewport the size of the project viewport (2D
+// positions are absolute), stepping `frame` across one loop. Like godot-ref/bootstrap.mjs's
+// _render_2d it has no 3D camera and no editor preview (2D lighting is the scene's own). Each
+// Camera2D is disabled before the subtree is added, so none can offset the canvas.
 export function godotBootstrap2D(resPath, framesDir) {
   const [r, g, b] = CANVAS_2D_CAPTURE.clearColor;
   return `extends Node

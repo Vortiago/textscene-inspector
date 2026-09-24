@@ -1,6 +1,4 @@
-/**
- * Marker3D registration smoke tests — full slice (selection-gated cross, ADR-0018).
- */
+/** Marker3D registration: the full slice, with the selection-gated cross (ADR-0018). */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';

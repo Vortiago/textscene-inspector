@@ -1,8 +1,6 @@
 /**
- * RED contract for Line2D strict validators. The validators must
- * be lenient enough that a witnessed Line2D form lints clean (so the bulk
- * fixtureLint guard stays green), while still rejecting a malformed
- * `default_color` or a non-numeric `width`. Mirrors the Polygon2D linter test.
+ * Line2D strict validators: a witnessed Line2D form lints clean, and a malformed
+ * `default_color` or a non-numeric `width` is rejected.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

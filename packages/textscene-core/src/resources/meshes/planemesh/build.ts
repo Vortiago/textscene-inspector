@@ -1,6 +1,6 @@
 /**
  * PlaneMesh geometry, shared with its QuadMesh subclass (same property shape,
- * different defaults — the decode supplies those).
+ * different defaults, which the decode supplies).
  */
 
 import * as THREE from 'three';

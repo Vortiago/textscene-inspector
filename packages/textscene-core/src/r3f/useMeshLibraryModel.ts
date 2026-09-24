@@ -1,9 +1,7 @@
 /**
- * useMeshLibraryModel — resolves a GridMap's `mesh_library` reference into a
- * MeshLibraryModel. GridMaps reference an external MeshLibrary `.tres`
- * (`ExtResource("…")` / `res://…`), fetched via useResource('Resource') and
- * parsed against the file's own ext sections. Hook-call count is constant: the
- * no-request idiom feeds `''` to useResource when there's nothing to load.
+ * Resolve a GridMap's `mesh_library` reference (`ExtResource("…")` or `res://…`)
+ * into a MeshLibraryModel, loading the `.tres` through `useResource`. With nothing
+ * to load it passes `''`, so the hook-call count is constant.
  */
 
 import { useMemo } from 'react';
@@ -25,7 +23,7 @@ export function useMeshLibraryModel(meshLibraryRef: string | undefined): MeshLib
   const resolvedPath = meshLibraryRef
     ? resolveExtResourcePath(meshLibraryRef, externalResources)
     : null;
-  // Only text resources parse; a binary `.res` MeshLibrary would park forever.
+  // Only a text resource parses. A binary `.res` MeshLibrary would park forever.
   const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
   const tresResult = useResource<ParsedResource>(tresPath ?? '', 'resource');
 

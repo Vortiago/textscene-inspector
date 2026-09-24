@@ -1,4 +1,4 @@
-/** VBoxContainer registration — parser. */
+/** VBoxContainer registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseVBoxContainer } from './parser';

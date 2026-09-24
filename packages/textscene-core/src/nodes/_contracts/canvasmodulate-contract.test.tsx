@@ -1,36 +1,8 @@
 /**
- * CanvasModulate slice behavioral contract — written RED before the slice shipped.
- *
- * Godot: CanvasModulate (a Node2D) multiplies the color of the CanvasItems it
- * governs by its `color` (default white). The isometric dungeon uses one to set a
- * cool ambient tint. The previewer had NO CanvasModulate, so the node rendered as
- * an inert group and its descendants were untinted. This slice adds the vertical:
- * parse (typed `color` + Godot default) + register + render (fold `color` into the
- * inherited Modulate2DContext so descendant CanvasItems are tinted) + a lint-clean
- * fixture + the property validator.
- *
- * CANVAS-WIDE, not subtree: Godot applies the colour as
- * `RS::canvas_set_modulate(canvas, color)` on ENTER_CANVAS, so tree position is
- * irrelevant and a CHILDLESS CanvasModulate still tints the scene — which is
- * exactly what the isometric dungeon authors. This contract therefore asserts
- * on a SIBLING as well as a descendant; the sibling case is the one that a
- * subtree-scoped implementation gets wrong.
- *
- * RED-lever notes (this repo's own lessons):
- *  - An UNREGISTERED type already parses to type === 'CanvasModulate' (base-Node
- *    fallback), so type-presence is NOT a valid failing lever. These pins key off
- *    the registry entries, the TYPED `color` prop + its Godot property-ABSENT
- *    default (white), the descendant MESH tint, and the property validator.
- *  - Assert on the RENDERED descendant MESH's material.color, not a proxy. The base
- *    Node2D already provides Modulate2DContext with `parent × modulate` but NEVER
- *    folds in `color`, so a CanvasModulate implemented as a plain Node2D passthrough
- *    renders the descendant UNTINTED — the tint assertion is what distinguishes the
- *    real implementation from that plausible-wrong one.
- *  - The modulate multiply happens in sRGB space; the single sRGB→linear conversion
- *    is at the leaf (`godotColorToLinear`), so a descendant under CanvasModulate(C)
- *    with a white own-color renders material.color === godotColorToLinear(C).
- *  - Linter validator registration is a KNOWN blind spot — pinned as a lint-error
- *    DELTA (invalid `color` value => strictly more errors than a valid one).
+ * CanvasModulate contract. Godot multiplies the colour of every CanvasItem on the canvas by `color`
+ * (default white) through `RS::canvas_set_modulate(canvas, color)` on ENTER_CANVAS, so a childless
+ * CanvasModulate still tints the scene. These pins assert on a sibling as well as a descendant, and
+ * on the rendered mesh's material.color, not on the registry alone or a proxy.
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -93,7 +65,7 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
 `;
 }
 
-/** A CanvasModulate(color=extra) beside a WHITE Polygon2D — the dungeon's shape. */
+/** A CanvasModulate(color=extra) beside a white Polygon2D. */
 function siblingTintScene(colorLine: string): string {
   return `[gd_scene format=3]
 
@@ -181,6 +153,8 @@ describe('CanvasModulate slice — behavioral contract (RED until shipped)', () 
     if (!requireComp()) return;
     const mat = firstMeshMaterial(await renderScene(tintScene('color = Color(0.4, 0.6, 0.9, 1)')));
     expect(mat, 'a descendant Polygon2D mesh should render under CanvasModulate').toBeDefined();
+    // The multiply runs in sRGB and the one sRGB→linear conversion is at the leaf, so a white
+    // descendant renders godotColorToLinear(C).
     const lin = godotColorToLinear({ r: 0.4, g: 0.6, b: 0.9 });
     // Node2D passthrough (ignores color) would leave the white descendant at 1,1,1 → RED.
     expect(mat!.color.r).toBeCloseTo(lin.r, 3);
@@ -191,8 +165,7 @@ describe('CanvasModulate slice — behavioral contract (RED until shipped)', () 
 
   it('tints a SIBLING CanvasItem — a childless CanvasModulate still governs the canvas', async () => {
     if (!requireComp()) return;
-    // The isometric dungeon's shape. A subtree-scoped modulate tints nothing
-    // here, leaving the white polygon at 1,1,1 → RED.
+    // A subtree-scoped modulate tints nothing here, leaving the white polygon at 1,1,1 → RED.
     const mat = firstMeshMaterial(
       await renderScene(siblingTintScene('color = Color(0.4, 0.6, 0.9, 1)'))
     );
@@ -216,7 +189,7 @@ describe('CanvasModulate slice — behavioral contract (RED until shipped)', () 
   it('an Unshaded item skips the canvas tint, as Godot\'s base pass does', async () => {
     if (!requireComp()) return;
     // canvas.glsl guards the multiply: `#elif !defined(MODE_UNSHADED)
-    // color *= canvas_modulation;` — so light_mode = 1 keeps its authored
+    // color *= canvas_modulation;`, so light_mode = 1 keeps its authored
     // colour while its shaded sibling is tinted.
     const renderer = await renderScene(`[gd_scene format=3]
 
@@ -248,7 +221,7 @@ color = Color(0.4, 0.6, 0.9, 1)
 
     const lin = godotColorToLinear({ r: 0.4, g: 0.6, b: 0.9 });
     expect(byName.get('Shaded')!.color.r).toBeCloseTo(lin.r, 3);
-    // The unshaded one keeps white — tinting it would be the bug.
+    // The unshaded one keeps white: tinting it would be the bug.
     expect(byName.get('Unshaded')!.color.r).toBeCloseTo(1, 3);
     expect(byName.get('Unshaded')!.color.g).toBeCloseTo(1, 3);
     expect(byName.get('Unshaded')!.color.b).toBeCloseTo(1, 3);

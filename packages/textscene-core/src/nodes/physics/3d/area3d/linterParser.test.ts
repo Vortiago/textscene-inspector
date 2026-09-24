@@ -1,17 +1,8 @@
 /**
- * Area3D strict validators — reverb bus and wind property format/bound checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Each `describe` pins the ENGINE rule at its cited `area_3d.cpp:NNN`, not
- * just "rejects garbage": both edges of every bound are asserted accepted,
- * the first value past each edge is asserted at the right severity, and the
- * non-finite spellings Godot's own writer produces (`inf`, `-inf`, `inf_neg`,
- * `nan`) are asserted at whatever a bare numeric comparison against them
- * actually yields — not assumed.
+ * Area3D strict validators for the reverb bus and wind properties, asserted through
+ * `validatorRegistry`, not by linting a `.tscn`. Each `describe` pins the engine rule at its
+ * cited `area_3d.cpp:NNN`: both edges accepted, the first value past each edge at its severity,
+ * and `inf`, `-inf`, `inf_neg` and `nan` at what a numeric comparison against them yields.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -40,7 +31,7 @@ describe('Area3D reverb/wind strict validators', () => {
   });
 
   describe('reverb_bus_name — area_3d.cpp:804, Variant::STRING_NAME', () => {
-    // set_reverb_bus_name (:618-620) is a bare assignment; the ENUM hint's
+    // set_reverb_bus_name (:618-620) is a bare assignment. The ENUM hint's
     // option list is populated dynamically in the editor only, so it carries
     // no bound to check a saved value against.
     it('accepts the quoted-string spelling Godot writes for the default bus', () => {
@@ -60,8 +51,7 @@ describe('Area3D reverb/wind strict validators', () => {
 
   // Both reverb properties hint "0,1,0.01" over a bare-assigning setter
   // (set_reverb_amount :631-633, set_reverb_uniformity :639-641), so both ends
-  // are hint-only and out-of-range warns on either side. Cite and code stay
-  // columns; only the non-numeric sample differs, which is arbitrary anyway.
+  // are hint-only and out-of-range warns on either side.
   describe.each([
     ['reverb_bus_amount', 'area_3d.cpp:805', 'REVERB_BUS_AMOUNT', 'loud'],
     ['reverb_bus_uniformity', 'area_3d.cpp:806', 'REVERB_BUS_UNIFORMITY', 'even'],
@@ -84,8 +74,8 @@ describe('Area3D reverb/wind strict validators', () => {
     it.each([
       ['just below 0', '-0.01'],
       ['just above 1', '1.01'],
-      // `inf > 1` trips the hinted ceiling and `inf_neg < 0` the hinted floor;
-      // the bare-assignment setter never checks either.
+      // `inf > 1` trips the hinted ceiling and `inf_neg < 0` the hinted floor.
+      // The bare-assignment setter never checks either.
       ['inf', 'inf'],
       ['inf_neg', 'inf_neg'],
     ])('warns on %s rather than erroring', (_label, value) => {
@@ -98,8 +88,7 @@ describe('Area3D reverb/wind strict validators', () => {
 
   // Both wind properties hint a floor of 0 with or_greater opening the max, over
   // a bare-assigning setter (set_wind_force_magnitude :134-137,
-  // set_wind_attenuation_factor :145-148), so only below-floor warns. The
-  // past-ceiling sample is arbitrary and stays a column with the cite.
+  // set_wind_attenuation_factor :145-148), so only below-floor warns.
   describe.each([
     [
       'wind_force_magnitude',

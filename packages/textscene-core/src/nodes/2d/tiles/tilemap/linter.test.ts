@@ -85,8 +85,8 @@ describe('TileMap lint rules', () => {
 
     // No `layer_0/…` key at all, yet the loaded node still has Layer0: the
     // constructor pushes it before any property is applied (tile_map.cpp:1014-1021),
-    // and it defaults to not-y-sorted at z_index 0 — the exact collision partner
-    // for a y-sorted layer_1 at z_index 0.
+    // and it defaults to not y-sorted at z_index 0, colliding with a y-sorted
+    // layer_1 at z_index 0.
     it('warns when a y-sorted layer collides with the constructor’s keyless Layer0', () => {
       expectDiagnostic(scene(`layer_1/y_sort_enabled = true`), {
         ruleName: 'tilemap-y-sort-z-index-conflict',
@@ -131,8 +131,8 @@ describe('TileMap lint rules', () => {
     });
 
     it('treats an absent layer sub-key at its TileMapLayer default (y_sort_enabled false, z_index 0)', () => {
-      // layer_1 has only a `name`, no y_sort_enabled/z_index of its own — it
-      // must still count as a (non-Y-sorted, z_index 0) layer.
+      // layer_1 has only a `name`, so it counts as a non-Y-sorted layer at
+      // z_index 0.
       const diagnostics = lint(scene(`y_sort_enabled = true\nlayer_1/name = "Bare"`));
       expect(diagnostics.filter((d) => d.ruleName === 'tilemap-node-y-sort-without-layer')).toHaveLength(1);
     });
@@ -141,10 +141,9 @@ describe('TileMap lint rules', () => {
 
 describe('format, read as it stood when each layer loaded', () => {
   // `TileMap::_set` stores `format` only from a `Variant::INT`
-  // (tile_map.cpp:688-691) and otherwise falls through to `return false`
-  // (:724): a FLOAT or BOOL spelling is a dropped write and the member keeps
-  // its initial TILE_MAP_DATA_FORMAT_3 (tile_map.h:64). Probed on 4.6.3:
-  // `format = 1.0` above a one-cell layer loads that cell.
+  // (tile_map.cpp:688-691), else `return false` (:724), so `format = 1.0` is a
+  // dropped write, the member keeps TILE_MAP_DATA_FORMAT_3 (tile_map.h:64), and
+  // Godot loads the one-cell layer below it.
   it('reports a FLOAT-spelled format once, as a dropped write, and still decodes the data at 2', () => {
     const diagnostics = lint(
       scene(
@@ -161,7 +160,7 @@ describe('format, read as it stood when each layer loaded', () => {
 
   // Properties apply in file order (packed_scene.cpp:369-492): a `format`
   // below `layer_0/tile_data` reaches `_set` after the data has already been
-  // decoded at 2. Probed on 4.6.3: the layer keeps its cell.
+  // decoded at 2, so the layer keeps its cell.
   it('stays quiet about a legacy format written below the tile data it would have governed', () => {
     expectNoDiagnostic(
       scene(
@@ -194,11 +193,9 @@ describe('tile data phase 1 already refused', () => {
 
 describe('TileMap index grammar', () => {
   it('counts a `+`-signed layer index, which TileMap resolves', () => {
-    // `TileMap::_set` gates on `property_helper.is_property_valid`
-    // (tile_map.cpp:700), whose index gate is `String::is_valid_int()`
-    // (property_list_helper.cpp:126) — one leading sign allowed, `+` as
-    // readily as `-` (ustring.cpp:4752). `layer_+1/y_sort_enabled` therefore
-    // Y-sorts layer 1.
+    // `is_property_valid` (tile_map.cpp:700) gates the index on
+    // `String::is_valid_int()` (property_list_helper.cpp:126), which takes `+`
+    // as readily as `-` (ustring.cpp:4752), so `layer_+1/…` Y-sorts layer 1.
     expectDiagnostic(scene(`layer_+1/y_sort_enabled = true`), {
       ruleName: 'tilemap-layer-y-sort-without-node',
       severity: 'warning',
@@ -206,15 +203,10 @@ describe('TileMap index grammar', () => {
   });
 
   it('builds no layer for a negative index', () => {
-    // Re-narrowing fence, not a red-green test: widening the grammar to admit
-    // a sign is what first let `layer_-1/…` through the match. `_get_property`
-    // returns null for `index < 0` (property_list_helper.cpp:58), so
-    // `property_set_value` refuses the write and no such layer exists.
-    //
-    // Asserted through the node-Y-sort warning, which is the one that
-    // DISTINGUISHES a dropped index from the constructor's Layer0: a leaked
-    // layer -1 would be a Y-sorted layer and silence it, while Layer0's
-    // defaults leave it firing.
+    // `_get_property` returns null for `index < 0` (property_list_helper.cpp:58),
+    // so no such layer exists. The node Y-sort warning tells a dropped index from
+    // Layer0: a leaked Y-sorted layer -1 would silence it, and Layer0 leaves it
+    // firing.
     expectDiagnostic(scene(`y_sort_enabled = true\nlayer_-1/y_sort_enabled = true`), {
       ruleName: 'tilemap-node-y-sort-without-layer',
       severity: 'warning',
@@ -224,8 +216,8 @@ describe('TileMap index grammar', () => {
   });
 
   it('counts the layer Godot builds for a skipped index in the y-sort conflict', () => {
-    // `_set`'s grow loop builds layer 1 at TileMapLayer's defaults — not
-    // y-sorted, z_index 0 — and `get_configuration_warnings` iterates that real
+    // `_set`'s grow loop builds layer 1 at TileMapLayer's defaults, not
+    // y-sorted, z_index 0, and `get_configuration_warnings` iterates that real
     // vector (tile_map.cpp:848), so it shares a z-index with the sorted layers.
     expectDiagnostic(
       scene(`y_sort_enabled = true

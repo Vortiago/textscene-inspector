@@ -1,7 +1,6 @@
 /**
- * `defaultSeparatorStyleBoxLine` — `default_theme.cpp:734-740,1063-1069`
- * (Godot 4.6.3). `parseStyleBoxLine` itself is tested at
- * `native/styleBoxLine.test.ts`, its new home.
+ * `defaultSeparatorStyleBoxLine`: `default_theme.cpp:734-740,1063-1069` (Godot 4.6.3).
+ * `native/styleBoxLine.test.ts` tests `parseStyleBoxLine`.
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';

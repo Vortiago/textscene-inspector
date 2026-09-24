@@ -1,9 +1,7 @@
 /**
- * Shared Slider base for the HSlider/VSlider slices. `Slider` is Godot's
- * abstract base (Range → Slider → H/VSlider), so its own properties and their
- * parsing live ONCE here; the two slices keep only their wiring and their axis.
- * Pure `.ts` (no React/THREE) so both parsers can import it inside the linter
- * graph — the native painter's geometry lives in `shared/sliderSolver.ts`.
+ * Shared Slider base for the HSlider/VSlider slices. `Slider` is Godot's abstract base (Range →
+ * Slider → H/VSlider), so its properties and their parse live here, in pure `.ts` for the linter
+ * graph. The native geometry is `shared/sliderSolver.ts`.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';
@@ -37,9 +35,8 @@ export function parseSlider(
 ): SliderProperties {
   return {
     ...parseControl(heading, properties),
-    // HSlider and VSlider both set `step = 1.0` in their constructors — measured from the engine
-    // (`ClassDB.class_get_property_default_value`, 4.6.3). `_calc_value` snaps
-    // `value` to it, so an omitted key is NOT "no snap".
+    // HSlider and VSlider both set `step = 1.0` in their constructors
+    // (`ClassDB.class_get_property_default_value`, 4.6.3), so a slider without the key still snaps.
     ...parseRange(properties, { step: 1 }),
     tickCount: parseOptionalInt(properties.tick_count),
     ticksOnBorders: parseOptionalBool(properties.ticks_on_borders),
@@ -48,19 +45,12 @@ export function parseSlider(
 }
 
 /**
- * The tick indices Godot actually paints, from
- * `Slider::_notification(NOTIFICATION_DRAW)`:
- *
- *     if (ticks > 1) {
- *       for (int i = 0; i < ticks; i++) {
- *         if (!ticks_on_borders && (i == 0 || i + 1 == ticks)) { continue; }
- *
- * so `tick_count <= 1` paints nothing at all, and the borders are skipped
- * unless `ticks_on_borders` is set.
+ * The tick indices `Slider::_notification(NOTIFICATION_DRAW)` paints: none unless `ticks > 1`, and
+ * the borders only with `ticks_on_borders` (`if (!ticks_on_borders && (i == 0 || i + 1 == ticks))`).
  */
 export function sliderTickIndices(props: SliderProperties): number[] {
-  // `tick_count` is an unbounded INT slot, and a slider is at most a few
-  // hundred CSS pixels wide here (countWalk.ts).
+  // `tick_count` is an unbounded INT slot, so the walk is capped (countWalk.ts): past a thousand,
+  // ticks land sub-pixel on each other and no image changes.
   const ticks = Math.min(props.tickCount ?? SLIDER_DEFAULT_TICK_COUNT, MAX_WALKED_ELEMENTS);
   if (ticks <= 1) return [];
   const onBorders = props.ticksOnBorders ?? false;

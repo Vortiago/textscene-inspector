@@ -1,6 +1,6 @@
 /**
- * Marker2D validator coverage — the `gizmo_extents` float format check and the
- * hinted floor at 0 (marker_2d.cpp:105, `or_greater` leaves the top open).
+ * Marker2D validators: the `gizmo_extents` float format and the hinted floor at 0
+ * (marker_2d.cpp:105, where `or_greater` leaves the top open).
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';

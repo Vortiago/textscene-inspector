@@ -1,10 +1,6 @@
 /**
- * AudioStreamPlayer3D types.
- *
- * Property surface matches the linter validators in linterParser.ts.
- * AudioStreamPlayer3D is non-rendered in the viewport (no audio output
- * in the previewer); the R3F component renders a small speaker-icon
- * gizmo at the node's transform so it remains spatially visible.
+ * AudioStreamPlayer3D types. The property surface matches the linterParser.ts validators. The
+ * previewer plays no audio, so the R3F component draws a speaker gizmo at the node's transform.
  */
 
 import type { Node3DProperties } from '../../base/node3d/types';
@@ -36,9 +32,8 @@ export interface AudioStreamPlayer3DProperties
   attenuation_model: AttenuationModel;
 
   /**
-   * Distance at which the audio is heard at full volume. Drives the
-   * range-sphere helper gizmo in the editor view.
-   * Default: 10.0.
+   * Distance at which the audio is heard at full volume. The range gizmo's
+   * radius scales it. Default: 10.0.
    */
   unit_size: number;
 
@@ -57,7 +52,7 @@ export interface AudioStreamPlayer3DProperties
   /** Doppler tracking mode (default: DISABLED). */
   doppler_tracking: DopplerTracking;
 
-  /** Panning strength 0..1 (default: 1.0). */
+  /** Panning strength, at least 0 (default: 1.0). */
   panning_strength: number;
 
   /** Area mask bitmask for Area3D overrides (default: 1). */

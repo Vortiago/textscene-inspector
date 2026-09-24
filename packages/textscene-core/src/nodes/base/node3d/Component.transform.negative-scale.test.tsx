@@ -1,14 +1,8 @@
 /**
- * Negative-scale decomposition through the actual <Node3D> render path.
- * `utils/transform.threeEquivalence.test.ts` already bit-pins
- * `decomposeTransform3D` against a three.js oracle at the pure-math layer
- * (including a `diag(-1,1,1)` reflection case) — this file instead exercises
- * the WIRING: does <Node3D> apply the decomposed reflection to a real
- * THREE.Group the same way. Round-trip assertions (recompose → compare to
- * the original basis) avoid hand-derived rotation numbers for the
- * full-inversion / rotation-combined cases, where the decomposition folds
- * the reflection sign into scale.x and finds a compensating rotation that
- * is not obvious to hand-calculate.
+ * Negative-scale decomposition through the <Node3D> render path: `utils/transform.threeEquivalence.test.ts`
+ * pins the math, and this checks that <Node3D> applies the reflection to a THREE.Group. Round-trips
+ * (recompose, compare to the original basis) avoid hand-derived rotations where the reflection
+ * sign folds into scale.x with a compensating rotation.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -32,7 +26,7 @@ async function renderAt(properties: Node3DProperties) {
   return renderer.scene.findByProps({ name: node.name }).instance as THREE.Group;
 }
 
-/** Godot Basis is `Vector3 rows[3]` — recover rows from a THREE.Matrix4's column-major elements. */
+/** Godot Basis is `Vector3 rows[3]`: recover rows from a THREE.Matrix4's column-major elements. */
 function godotRowsFromMatrix(m: THREE.Matrix4): Transform3D {
   const te = m.elements;
   return {
@@ -72,14 +66,13 @@ describe('Node3D negative-scale decomposition', () => {
     const group = await renderAt({ name: 'neg-xyz', transform });
 
     // Convention (utils/transform.ts doc comment): a negative determinant
-    // folds ALL of its sign into scale.x — y/z stay positive.
+    // folds all of its sign into scale.x, and y and z stay positive.
     expect(group.scale.x).toBeLessThan(0);
     expect(group.scale.y).toBeGreaterThan(0);
     expect(group.scale.z).toBeGreaterThan(0);
 
-    // Round-trip: recompose the rendered TRS into a matrix and confirm it
-    // reproduces the ORIGINAL basis — the property that actually matters,
-    // independent of which specific rotation the algorithm picked.
+    // Round-trip: the rendered TRS, recomposed, reproduces the original basis,
+    // whichever rotation the algorithm picked.
     const quat = new THREE.Quaternion().setFromEuler(
       new THREE.Euler(group.rotation.x, group.rotation.y, group.rotation.z, 'XYZ')
     );
@@ -104,7 +97,7 @@ describe('Node3D negative-scale decomposition', () => {
   });
 
   it('negative scale combined with rotation round-trips to the same world transform', async () => {
-    // Build a known-good basis via THREE (Ry(90°)-ish rotation + a
+    // Build a known-good basis with THREE (Ry(90°)-ish rotation and a
     // negative-X, non-uniform scale), convert to Godot row storage, then
     // feed it through the actual Node3D render path.
     const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.3, Math.PI / 2, -0.2, 'XYZ'));

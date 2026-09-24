@@ -1,11 +1,7 @@
-/**
- * AudioStreamPlayer2D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- */
+/** AudioStreamPlayer2D strict validators. */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
+// The base chain. Registration happens on import, so a test that loads only this slice resolves
+// an inherited key only when the ancestor is imported too.
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
@@ -30,7 +26,7 @@ validatorRegistry.registerAll('AudioStreamPlayer2D', {
   }),
   // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0),
   // against a hint (audio_stream_player_2d.cpp:432) of
-  // "0.01,4,0.01,or_greater" — `or_greater` opens the ceiling. The two floors
+  // "0.01,4,0.01,or_greater", where `or_greater` opens the ceiling. The two floors
   // sit apart, so (0, 0.01) loads into Godot and only warns.
   pitch_scale: v.positiveFloat(
     'pitch_scale',
@@ -45,7 +41,7 @@ validatorRegistry.registerAll('AudioStreamPlayer2D', {
   autoplay: v.boolean('autoplay'),
   stream_paused: v.boolean('stream_paused'),
   // audio_stream_player_2d.cpp:300, ERR_FAIL_COND(p_pixels <= 0.0), against a
-  // hint (:436) of "1,4096,1,or_greater,exp,suffix:px" — `or_greater` opens
+  // hint (:436) of "1,4096,1,or_greater,exp,suffix:px": `or_greater` opens
   // the ceiling and the hint's floor of 1 sits above the setter's, so
   // (0, 1) loads into Godot and only warns.
   max_distance: v.positiveFloat('max_distance', undefined, {
@@ -58,8 +54,7 @@ validatorRegistry.registerAll('AudioStreamPlayer2D', {
   attenuation: v.float('attenuation'),
   // audio_stream_player_2d.cpp:349, ERR_FAIL_COND_MSG(p_panning_strength < 0, ...)
   // enforces the floor only. The hint (:439) is "0,3,0.01,or_greater": or_greater
-  // opens the ceiling, so there is no upper bound to check; a prior max:1 here
-  // rejected legal values above 1.
+  // opens the ceiling, so there is no upper bound to check.
   panning_strength: v.float('panning_strength', {
     min: 0,
     enforced: { min: 'audio_stream_player_2d.cpp:349' },

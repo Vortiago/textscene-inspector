@@ -31,8 +31,8 @@ describe('emissionScalars', () => {
     expect(s.emissiveIntensity).toBeCloseTo(peak, 6);
     expect(s.emissive[0]).toBeCloseTo(1, 6);
     expect(s.emissive[1]).toBeCloseTo(linear(0.5) / peak, 6);
-    // Converting after normalising would give linear(0.5 / 2) / 1 instead —
-    // a different, more saturated colour.
+    // Converting after normalising would give linear(0.5 / 2) / 1 instead: a
+    // different, more saturated colour.
     expect(s.emissive[1]).not.toBeCloseTo(linear(0.5 / 2), 4);
   });
 

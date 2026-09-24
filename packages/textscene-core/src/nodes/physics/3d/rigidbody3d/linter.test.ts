@@ -1,6 +1,4 @@
-/**
- * Tests for RigidBody3D linter (strict parser + semantic rules)
- */
+/** RigidBody3D linter: the strict parser and the semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -88,7 +86,7 @@ custom_integrator = false
         invalid: [{ value: 3, contains: ['0-1'] }],
       },
       {
-        // rigid_body_3d.cpp:444, ERR_FAIL_COND(p_linear_damp < 0.0); hint :785
+        // rigid_body_3d.cpp:444, ERR_FAIL_COND(p_linear_damp < 0.0). Hint :785
         // ends in `or_greater`, so a large damp is in band.
         prop: 'linear_damp',
         valid: [0.0, 0.5, 5.0, 20.0],
@@ -100,7 +98,7 @@ custom_integrator = false
         invalid: [{ value: 2, contains: ['0-1'] }],
       },
       {
-        // rigid_body_3d.cpp:454, ERR_FAIL_COND(p_angular_damp < 0.0); hint :789
+        // rigid_body_3d.cpp:454, ERR_FAIL_COND(p_angular_damp < 0.0). Hint :789
         // ends in `or_greater`.
         prop: 'angular_damp',
         valid: [0.0, 0.5, 5.0, 15.0],
@@ -140,14 +138,14 @@ custom_integrator = false
         ],
       },
       {
-        // 2 is KEEP_ACTIVE — collision_object_2d.cpp:654 and its 3D twin bind
-        // three constants. This table asserted 0-1 and encoded the bug.
+        // 2 is KEEP_ACTIVE: collision_object_2d.cpp:654 and its 3D twin bind
+        // three constants.
         prop: 'disable_mode',
         valid: [0, 1, 2],
         invalid: [{ value: 5, contains: ['0-2'] }],
       },
       {
-        // Valid values include 0, which legitimately warns (zero collision layer).
+        // Valid values include 0, which warns (zero collision layer).
         prop: 'collision_layer',
         acceptMode: 'no-error',
         valid: [0, 1, 100, 1048575, 2147483648, 4294967295],
@@ -156,7 +154,7 @@ custom_integrator = false
         ],
       },
       {
-        // Valid values include 0, which legitimately warns (zero collision mask).
+        // Valid values include 0, which warns (zero collision mask).
         prop: 'collision_mask',
         acceptMode: 'no-error',
         valid: [0, 1, 255, 1048575, 2147483648, 4294967295],
@@ -193,9 +191,8 @@ physics_material_override = SubResource("mat_1")
   describe('Semantic Validation (Mass and Damping)', () => {
     // rigid_body_3d.cpp:764 hints "0.001,1000,0.001,or_greater": the high end is
     // open, so only the gap between the setter's ERR_FAIL (mass <= 0, :334) and
-    // the hint's 0.001 is advisory.
-    // Reported by the validator's hinted floor rather than a rule: the two said
-    // the same thing, and only the validator's is visible to the hint ledger.
+    // the hint's 0.001 is advisory. The validator's hinted floor reports it, not a
+    // rule, since only the validator's is visible to the hint ledger.
     it('should warn about mass below the hint', () => {
       expectDiagnostic(scene(node('RigidBody3D', { mass: 0.0005 }), collisionShape3d), {
         prop: 'mass',
@@ -353,11 +350,10 @@ physics_material_override = ExtResource("ext_mat_1")
       );
     });
 
-    // `get_scale()` is `SIGN(determinant()) * get_scale_abs()` (basis.cpp:321-322),
-    // so a mirrored basis reads as (-1, -1, -1) and every axis fails
-    // `abs(scale.axis - 1) > 0.05` (rigid_body_3d.cpp:666). Column MAGNITUDES are
-    // (1, 1, 1) and say nothing, which is why the shared unsigned helper is right
-    // for the pairwise non-uniform rules and wrong here.
+    // `get_scale()` is `SIGN(determinant()) * get_scale_abs()` (basis.cpp:321-322), so a
+    // mirrored basis reads as (-1, -1, -1) and every axis fails `abs(scale.axis - 1) > 0.05`
+    // (rigid_body_3d.cpp:666). The column magnitudes are (1, 1, 1), so the shared unsigned
+    // helper, right for the pairwise non-uniform rules, is wrong here.
     it('warns on a mirrored basis, whose signed scale is (-1, -1, -1)', () => {
       expectDiagnostic(
         scene(
@@ -411,7 +407,7 @@ physics_material_override = ExtResource("ext_mat_1")
           })
         )
       );
-      // Should have multiple errors: mass, disable_mode, collision_layer, physics_material_override, linear_damp
+      // Errors on mass, disable_mode, collision_layer, physics_material_override and linear_damp.
       expect(diagnostics.length).toBeGreaterThanOrEqual(3);
     });
 

@@ -1,16 +1,8 @@
 /**
- * `foldableContainerMinimumSize`/`foldableContainerLayout` vs Godot 4.6.3
- * (`FoldableContainer::get_minimum_size`, `_update_title_min_size`,
- * `_notification`'s `NOTIFICATION_SORT_CHILDREN`, `scene/gui/foldable_container.cpp`).
- * Expected numbers reuse `button/nativeSolver.test.ts`'s worked example
- * (`unitsPerEm=2048`, `ascent=2189`, `descent=600`, 'A' hmtx advance 1354
- * design units — `content_margin`=4 all sides at scale 1, matching the
- * default-theme margin every native painter here shares).
- *
- * At font size 16, `font->get_height()` = 23 (`ceil(2189*16/2048)=18`,
- * `ceil(600*16/2048)=5`). 'A' shaped width = `ceil(1354*16/2048)` = 11.
- * `content_margin` = 4 all sides -> a margin SIZE of (8, 8). The arrow icons
- * are 16x16, `h_separation` = 2 (both at scale 1).
+ * FoldableContainer solve against Godot 4.6.3 (`scene/gui/foldable_container.cpp`), with
+ * the font of `button/nativeSolver.test.ts`: at size 16 the height is 23 (18 + 5) and 'A'
+ * is 11 wide. At scale 1, `content_margin` is 4 per side, the arrows are 16x16 and
+ * `h_separation` is 2.
  */
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../../parser/types';
@@ -223,7 +215,7 @@ describe('FoldableContainer under RTL', () => {
   it("insets the content from the panel style's RIGHT margin instead of its left (foldable_container.cpp:365-367)", () => {
     // `inner_rect.position.x = rtl ? panel_style->get_margin(SIDE_RIGHT)
     //                              : panel_style->get_margin(SIDE_LEFT)`;
-    // the WIDTH subtracts both margins either way.
+    // the width subtracts both margins.
     const container = { ...node({ folded: false, title: 'A' }), rtl: true };
     const withPanel = { ...container, styleBoxes: { panel: lopsidedPanel(container) } };
     const child = node({}, [], 'Child');

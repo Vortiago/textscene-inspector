@@ -1,26 +1,7 @@
 /**
- * Regression tests for window-frame composition (WestInnerWindow).
- *
- * The window frame is four inline MeshInstance3D bars (top/bottom horizontal,
- * left/right vertical) plus a glass pane, nested under a Node3D chain that
- * carries a 180°-about-X flip. A photo or window frame was suspected of being
- * positioned wrong; the 2026-05-29 positioning hunt proved the frame
- * pieces form the correct coplanar rectangle around the glass. This suite
- * locks that in.
- *
- * Ground truth captured from a real-world hallway scene's window chain:
- *   SceneObjects (identity) -> Windows (identity)
- *     -> WestInnerWindow  Transform3D(1, -8.74e-08, 8.74e-08, -8.74e-08, -1, 0,
- *                                     8.74e-08, ~0, -1, 3.5, 1.602, -1.87)
- *        (180° flip about X: world ≈ (+px+3.5, -py+1.602, -pz-1.87))
- *        ├─ GlassPane   local (0, 0, -0.08)
- *        ├─ FrameTop    local (0,  0.5250001, -0.111694336)
- *        ├─ FrameBottom local (0, -0.525,     -0.111694336)
- *        ├─ FrameLeft   local (-0.375, 0,      -0.111694336)
- *        └─ FrameRight  local ( 0.37499952, 0, -0.111694336)
- *
- * The four frame bars must be coplanar (world z = -1.758305664, +0.0317 in
- * front of the glass) and straddle the glass center (3.5, 1.602) in X and Y.
+ * The WestInnerWindow frame from a real hallway scene: four inline bars and a glass pane under a
+ * Node3D chain with a 180° flip about X. The four bars must be coplanar (world z = -1.758305664,
+ * 0.0317 in front of the glass) and straddle the glass centre (3.5, 1.602) in X and Y.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -115,8 +96,7 @@ describe('window-frame composition (WestInnerWindow) — regression suite', () =
     expect(c.frameTop.x).toBeCloseTo(c.glass.x, 5);
     expect(c.frameBottom.x).toBeCloseTo(c.glass.x, 5);
 
-    // Rectangle spans: vertical-bar centers 0.75 apart in X, horizontal-bar
-    // centers 1.05 apart in Y — enclosing the 0.7 x 1.0 glass.
+    // Bar centres 0.75 apart in X and 1.05 apart in Y enclose the 0.7 x 1.0 glass.
     expect(Math.abs(c.frameLeft.x - c.frameRight.x)).toBeCloseTo(0.74999952, 5);
     expect(Math.abs(c.frameTop.y - c.frameBottom.y)).toBeCloseTo(1.0500001, 5);
   });

@@ -10,7 +10,7 @@ renders_as: a theme icon followed by a text run
 # CheckBox
 
 CheckBox is a toggle button with a check indicator to the left of its label. The
-previewer draws the theme's own indicator icon and the label beside it.
+previewer draws the theme's indicator icon and the label beside it.
 
 ## Linting
 
@@ -36,5 +36,5 @@ string.
 
 - **Approximated** The label's paragraph direction is not applied, so under
   `layout_direction = 3` or `text_direction = 2` a right-to-left script, or a label
-  ending in punctuation, keeps left-to-right glyph order. Which SIDE the label, the
+  ending in punctuation, keeps left-to-right glyph order. Which side the label, the
   icon and the chrome sit on does follow the layout direction.

@@ -1,45 +1,45 @@
 # TSCN Scenes
 
 `scenes/fixtures/` is a Godot `res://` root. Every `.tscn` the previewer offers
-by default sits at its top level, and every resource those scenes reference
-(`materials/`, `textures/`, `fonts/`) sits at the `res://` subpath the scene
-names. The web previewer mirrors the directory verbatim into
-`public/fixtures/`, the VS Code integration workspace mirrors it verbatim too,
-and `pnpm ref:godot` stages it as the project root — so all three resolve
-`res://` to the same bytes, exactly as opening the folder in VS Code does.
+by default is at its top level, and every resource those scenes reference
+(`materials/`, `textures/`, `fonts/`) is at the `res://` subpath the scene
+names. The web previewer copies the directory unchanged into
+`public/fixtures/`, the VS Code integration workspace copies it unchanged too,
+and `pnpm ref:godot` stages it as the project root. All three therefore resolve
+`res://` to the same bytes, as opening the folder in VS Code does.
 
-Other directories under `scenes/` are their own roots and are NOT part of that
-namespace:
+The other directories under `scenes/` are their own roots and are not part of
+that namespace:
 
 | Directory | What it is |
 | --- | --- |
-| `fixtures/` | The default corpus's `res://` root — unit, edge, integration and example scenes plus their resources |
-| `upload-payloads/` | Files the `test-missing-*` fixtures deliberately CANNOT find. Kept out of every root so "missing" is true for Godot, the web previewer and VS Code alike; drag one into the previewer to watch a missing resource resolve |
-| `isometric/` | Vendored dungeon corpus — its own unmarked root (`scripts/corpusRoots.mjs`) |
+| `fixtures/` | The default corpus's `res://` root: unit, edge, integration and example scenes and their resources |
+| `upload-payloads/` | Files the `test-missing-*` fixtures cannot find, on purpose. They are kept out of every root, so "missing" is true for Godot, the web previewer and VS Code alike. Drag one into the previewer to see a missing resource resolve |
+| `isometric/` | Vendored dungeon corpus: its own unmarked root (`scripts/corpusRoots.mjs`) |
 | `demos/<top>/<project>/` | Vendored godot-demo-projects, each with its own `project.godot` |
 | `games/` | On-demand vendored games (gitignored, see below) |
 
 ## Open-source games corpus (on-demand)
 
-Real community games (Kenney 3D Platformer, GDQuest Open RPG, lampe-games Open
-RTS) can be vendored into `scenes/games/` to exercise the previewer against
-full, real-world scene graphs. They are **fetched on demand, not committed**
-(to keep the repo lean):
+`pnpm vendor:games` vendors real community games (Kenney 3D Platformer, GDQuest
+Open RPG, lampe-games Open RTS) into `scenes/games/`, to test the previewer
+against full, real-world scene graphs. The games are **fetched on demand, not
+committed**, to keep the repo small:
 
 ```bash
 pnpm vendor:games   # shallow-fetch each game at a pinned commit + regenerate the manifest
 ```
 
-This populates `scenes/games/` (gitignored) and writes
-`apps/textscene-web/src/fixtures.games.ts` (gitignored). A fresh clone / CI has
-no games until you run the command. The pinned sources, commits, and licenses
-are listed in `scripts/vendor-godot-games.mjs`.
+The command fills `scenes/games/` (gitignored) and writes
+`apps/textscene-web/src/fixtures.games.ts` (gitignored). A fresh clone or CI has
+no games until you run it. `scripts/vendor-godot-games.mjs` lists the pinned
+sources, commits and licences.
 
-### Games are DEPLOY-ONLY, not local
+### Games are deploy-only, not local
 
-Vendoring is for *verifying* against real scene graphs, so having done it must
-not drop ~140 game scenes into your local scene selector. The corpus therefore
-appears **only** in the deployed site:
+Vendoring is for *verifying* against real scene graphs, so it must not add the
+game scenes to your local scene selector. The corpus appears **only** in the
+deployed site:
 
 | Command | Games |
 | --- | --- |
@@ -48,64 +48,66 @@ appears **only** in the deployed site:
 
 `build:deploy` (`scripts/build-deploy.mjs`) vendors the corpus and sets
 `VITE_INCLUDE_GAMES=1`. Two consumers read that variable and must agree, or the
-selector lists scenes whose files were never mirrored:
+selector lists scenes whose files were never copied:
 `apps/textscene-web/scripts/copy-fixtures.js` (the `public/fixtures/games/`
-mirror) and `apps/textscene-web/src/fixturesAll.ts` (the manifest). A test pins
-the default-excluded arm.
+copy) and `apps/textscene-web/src/fixturesAll.ts` (the manifest). A test pins
+the default-excluded case.
 
-**Deploying:** point the Cloudflare Pages build command at `pnpm build:deploy`.
-There is no `wrangler.toml` and the Pages deploy in `.github/workflows/ci.yml`
-is commented out, so that build command lives in the Cloudflare dashboard and
-has to be changed there.
+**Deploying:** set the Cloudflare Pages build command to `pnpm build:deploy`.
+There is no `wrangler.toml`, and the Pages deploy in `.github/workflows/ci.yml`
+is commented out, so the build command lives in the Cloudflare dashboard. Change
+it there.
 
-## Quick Start - Testing New Mesh Primitives
+## Quick Start: Testing Mesh Primitives
 
-### Option 1: Web Previewer (Fastest)
+### Option 1: Web Previewer
 
 1. Start the web development server:
    ```bash
    pnpm dev:web
    ```
 
-2. Open http://localhost:5173 in your browser
+2. Open http://localhost:3000 in your browser.
 
-3. Click "Choose File" and select one of these test files:
+3. Press Ctrl/Cmd+K and pick one of these fixtures, or open the file with **Open .tscn**:
    - `scenes/fixtures/unit-plane-mesh.tscn` - Green floor plane
    - `scenes/fixtures/unit-capsule-mesh.tscn` - Blue capsule
    - `scenes/fixtures/unit-torus-mesh.tscn` - Orange torus (donut)
    - `scenes/fixtures/unit-prism-mesh.tscn` - Purple triangular prism
    - `scenes/fixtures/integration-all-primitives.tscn` - **All primitives together with lighting**
 
-4. Interact with the 3D view:
-   - **Rotate**: Left mouse drag
-   - **Pan**: Right mouse drag or Shift + left drag
-   - **Zoom**: Mouse wheel
-   - **Reset Camera**: Click "Reset Camera" button
+4. Use the 3D view. The viewport navigates like Godot's 3D editor: see
+   [the web user guide](../docs/user-guide-web.md#viewport-navigation), or press **?**
+   in the viewport. **Reset Camera** in the toolbar resets the view.
 
 ### Option 2: VS Code Extension
 
-1. Build and package the extension:
+1. Build the packages:
    ```bash
    pnpm build
+   ```
+
+2. Package the extension:
+   ```bash
    pnpm vsc:package
    ```
 
-2. Install the `.vsix` file in VS Code:
+3. Install the `.vsix` file in VS Code:
    - Open VS Code
    - Go to Extensions (Ctrl+Shift+X)
    - Click "..." → "Install from VSIX"
-   - Select `apps/textscene-vscode/textscene-inspector-0.0.1.vsix`
+   - Select the `textscene-inspector-<version>.vsix` file in `apps/textscene-vscode/`
 
-3. Open the `scenes/fixtures/` folder in VS Code and pick any `.tscn` in it
-   (opening the folder is what makes `res://` resolve)
+4. Open the `scenes/fixtures/` folder in VS Code and pick any `.tscn` in it.
+   Opening the folder makes `res://` resolve.
 
-4. Click the preview icon in the top-right corner or use:
-   - Command Palette (Ctrl+Shift+P) → "TextScene: Open Preview to the Side"
+5. Click the preview icon in the top-right corner, or run
+   "TextScene: Open Preview to the Side" from the Command Palette (Ctrl+Shift+P).
 
 ## Scene Organization
 
 ### Unit scenes (`unit-*.tscn`)
-Minimal scenes for testing individual node types.
+Minimal scenes that test one node type each.
 
 | File | Mesh Type | Description | What to Verify |
 |------|-----------|-------------|----------------|
@@ -118,12 +120,11 @@ Minimal scenes for testing individual node types.
 | `unit-camera-basic.tscn` | Camera3D | Camera node | Camera setup verification |
 
 ### Integration and example scenes (`integration-*.tscn`, `example-*.tscn`)
-Complex scenes exercising multiple nodes together, alongside the unit scenes at
-the same `res://` root.
+Scenes with many nodes together, at the same `res://` root as the unit scenes.
 
 | File | Contents | Purpose |
 |------|----------|---------|
-| `integration-all-primitives.tscn` | All 4 new mesh types + lighting | **Best for full verification** - Shows all primitives with proper materials and lighting |
+| `integration-all-primitives.tscn` | Plane, capsule, torus and prism meshes with lighting | **Best for full verification**: all primitives with materials and lighting |
 | `integration-lights-all-types.tscn` | Directional, Omni, and Spot lights | Light rendering verification |
 | `integration-instanced-subscene.tscn` | Two instances of `res://unit-instance-child.tscn` | Sub-scene instancing |
 | `example-hallway-mockup.tscn` | Complex architectural scene | Performance/integration testing |
@@ -132,31 +133,30 @@ the same `res://` root.
 
 ## What to Look For
 
-### PlaneMesh ✅
+### PlaneMesh
 - [ ] Plane is horizontal (orientation = 1 for FACE_Y)
 - [ ] Visible subdivisions (grid pattern with 5x5)
 - [ ] Green color
 - [ ] Positioned below origin (y = -1)
 
-### CapsuleMesh ✅
+### CapsuleMesh
 - [ ] Smooth rounded caps at top and bottom
 - [ ] Cylindrical middle section
 - [ ] Blue metallic appearance
 - [ ] Height = 3.0 units total (includes caps)
 
-### TorusMesh ✅
-- [ ] Perfect donut shape
+### TorusMesh
+- [ ] Donut shape
 - [ ] Hole in center (inner radius)
 - [ ] Orange metallic finish
 - [ ] Smooth ring segments
 
-### PrismMesh ✅
+### PrismMesh
 - [ ] Triangular cross-section (3 sides)
 - [ ] Purple color
 - [ ] Vertical orientation
-- [ ] Note: Simple approximation using CylinderGeometry with 3 radial segments
 
-### All Primitives Scene ✅
+### All Primitives Scene
 - [ ] Floor plane at bottom
 - [ ] Capsule on the left (-4, 0, 0)
 - [ ] Torus in center (0, 0, 0)
@@ -167,14 +167,14 @@ the same `res://` root.
 
 ## Interactive Features to Test
 
-### Scene Tree Viewer (Left Panel)
+### Scene Tree (right dock, top)
 - [ ] All nodes visible in hierarchy
 - [ ] Click node to select it
 - [ ] Selected node highlights in both tree and 3D view
 - [ ] Expand/collapse works
 - [ ] Search filters nodes
 
-### Node Details Panel (Right Panel)
+### Inspector tab (right dock, below the tree)
 - [ ] Shows properties of selected node
 - [ ] Transform, mesh type, material visible
 - [ ] Properties update when selecting different nodes
@@ -189,13 +189,13 @@ the same `res://` root.
 ## Troubleshooting
 
 ### Meshes not appearing?
-1. Check browser console (F12) for errors
-2. Ensure build is up to date: `pnpm build`
-3. Try hard refresh (Ctrl+Shift+R)
+1. Check the browser console (F12) for errors.
+2. Make sure the build is up to date: `pnpm build`.
+3. Do a hard refresh (Ctrl+Shift+R).
 
 ### Types not showing in editor?
-1. Run: `pnpm type-check:all` (builds renderer automatically)
-2. Reload VS Code window
+1. Run `pnpm type-check:all`. It builds `@textscene/core` first.
+2. Reload the VS Code window.
 
 ### Renderer not installed?
 ```bash
@@ -205,7 +205,7 @@ pnpm build
 
 ## Creating Your Own Test Fixtures
 
-Template for new mesh types:
+Template for a new mesh type:
 
 ```tscn
 [gd_scene format=3]

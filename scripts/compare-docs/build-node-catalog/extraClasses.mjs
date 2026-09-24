@@ -1,21 +1,18 @@
-/** Classes the gallery documents that ClassDB's NODE enumeration never yields. */
+/** Classes the gallery documents that ClassDB's node enumeration never yields. */
 
 /**
- * Classes the previewer documents that the LOCAL Godot's ClassDB does not list —
- * AreaLight3D exists in current Godot but not in 4.6.3, and the links are
- * deliberately unpinned to `stable`/`master`. Without this its sheet is the one
- * gallery entry with no reference chips. An entry self-heals into `nodes` the
- * day the local Godot lists it (see the dedup filter at the call site).
+ * Classes the local ClassDB does not list, such as AreaLight3D, which is newer
+ * than 4.6.3, so its sheet still gets reference chips. The links are unpinned
+ * (`stable`/`master`). The call site drops an entry once the local Godot lists it.
  */
 export const EXTRA_CLASSES = [
   { name: 'AreaLight3D', chain: ['Light3D', 'VisualInstance3D', 'Node3D', 'Node'] },
 ];
 
 /**
- * Resource classes the gallery documents. ClassDB's node enumeration does not
- * reach them (they are Resources, not Nodes), but their sheets want the same
- * docs/source chips, and this run is the only place holding the source index.
- * Chains are their Godot ancestry, used the same way as a node's.
+ * Resource classes the gallery documents. The node enumeration does not reach
+ * them, but their sheets want the same docs/source chips. A chain is the Godot
+ * ancestry, used as a node's is.
  */
 export const RESOURCE_CLASSES = [
   { name: 'StandardMaterial3D', chain: ['BaseMaterial3D', 'Material', 'Resource'] },

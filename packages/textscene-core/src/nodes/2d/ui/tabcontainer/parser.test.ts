@@ -46,7 +46,7 @@ describe('parseTabContainer', () => {
 
   it('reads a tab index the way PropertyListHelper resolves it (is_valid_int), not sequentially', () => {
     // property_list_helper.cpp:53-55: the gate is is_valid_int(), so `tab_00`
-    // and `tab_+0` both resolve to index 0 — a later duplicate wins.
+    // and `tab_+0` both resolve to index 0, and a later duplicate wins.
     const p = parseTabContainer(h({ name: 'Menu', type: 'TabContainer' }), {
       'tab_00/title': '"First"',
       'tab_+0/title': '"Second"',

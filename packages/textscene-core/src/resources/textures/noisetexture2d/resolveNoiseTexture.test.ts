@@ -1,12 +1,8 @@
 /**
- * Resolving a NoiseTexture2D from a real material's shape, end to end at the
- * resolver level: `scenes/demos/3d/procedural_materials/materials/ice.tres` —
- * an albedo texture (noise + colour ramp, seamless) and a normal texture
- * (`as_normal_map` over a second generator) in one file, each referencing
- * sub-resources of that file.
- *
- * Sizes are shrunk from the shipped 1024x1024: the pipeline under test is the
- * same at any size, and the real thing costs about a second per texture.
+ * Resolving a NoiseTexture2D from `scenes/demos/3d/procedural_materials/materials/ice.tres`:
+ * a seamless ramped albedo and an `as_normal_map` normal texture, each naming
+ * sub-resources of that file. Sizes shrink from 1024x1024, about a second per
+ * texture, since the pipeline is the same at any size.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -65,8 +61,8 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
     expect(resolved.texture.image.width).toBe(32);
     expect(resolved.texture.colorSpace).toBe(THREE.SRGBColorSpace);
 
-    // The ramp runs pale blue → white, so every pixel is bluish-white: blue is
-    // the strongest channel and nothing is near black.
+    // The ramp runs pale blue to white, so blue is the strongest channel and
+    // nothing is near black.
     const data = resolved.texture.image.data as Uint8Array;
     for (let i = 0; i < data.length; i += 4) {
       expect(data[i + 2]).toBeGreaterThanOrEqual(data[i]!);
@@ -107,8 +103,8 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
     expect(resolveNoiseTexture2D(undefined, ice.subResources)).toBeNull();
     expect(resolveNoiseTexture2D('ExtResource("1")', ice.subResources)).toBeNull();
     expect(resolveNoiseTexture2D('res://noise.png', ice.subResources)).toBeNull();
-    // A Gradient sub-resource is not a texture; the gradient slice's own
-    // resolver declines it too, so the dispatch falls through to the async path.
+    // A Gradient sub-resource is not a texture, and the gradient slice declines it
+    // too, so the dispatch falls through to the async path.
     expect(resolveNoiseTexture2D('SubResource("Gradient_16ij7")', ice.subResources)).toBeNull();
     expect(resolveNoiseTexture2D('SubResource("nope")', ice.subResources)).toBeNull();
   });

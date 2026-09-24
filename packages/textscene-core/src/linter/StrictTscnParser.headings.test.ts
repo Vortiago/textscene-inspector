@@ -1,5 +1,5 @@
 /**
- * StrictTscnParser: headings the scanner cannot read at all — malformed
+ * StrictTscnParser: headings the scanner cannot read at all: malformed
  * brackets, quoting and attribute syntax.
  */
 
@@ -53,7 +53,7 @@ describe('StrictTscnParser', () => {
 
     it('does not flag bracket-opening lines inside a multi-line value', () => {
       // Continuation lines of an accumulated value may legitimately start
-      // with '[' (arrays/dicts spanning lines) — no INVALID_HEADING_FORMAT.
+      // with '[' (arrays/dicts spanning lines), so no INVALID_HEADING_FORMAT.
       const content = `[gd_scene load_steps=2 format=3]
 
 [sub_resource type="SpriteFrames" id="sf_1"]

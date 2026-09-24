@@ -1,7 +1,7 @@
 /**
- * NavigationObstacle3D property formatter — surfaces radius/height/avoidance
- * properties (Godot defaults when the TSCN omits them) ahead of the shared
- * Node3D transform sections.
+ * NavigationObstacle3D property formatter: the radius, height and avoidance
+ * properties, with Godot's defaults where the TSCN omits them, ahead of the
+ * shared Node3D transform sections.
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';

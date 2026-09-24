@@ -1,39 +1,16 @@
 /**
- * PanelContainer's native (WebGL canvas) container solve.
+ * PanelContainer's native (WebGL canvas) container solve, from
+ * `scene/gui/panel_container.cpp:35-51` and `:78-94`: pure functions, no
+ * React, no THREE.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  *
- * `panelContainerMinimumSize` ports `PanelContainer::get_minimum_size`
- * (`scene/gui/panel_container.cpp:35-51`): the per-axis MAX of every child's
- * combined minimum size, plus the resolved panel style's own minimum size
- * (`StyleBox::get_minimum_size`, `scene/resources/style_box.cpp:35-36` — the
- * sum of its left+right, top+bottom content margins).
- *
- * `panelContainerLayout` ports `PanelContainer::_notification`'s
- * `NOTIFICATION_SORT_CHILDREN` branch (`panel_container.cpp:78-94`): the
- * content rect is the container's own rect offset by the style's
- * `get_offset()` (its left/top margins) and shrunk by its `get_minimum_size()`
- * (both margin sums) — then every child is fit into that SAME rect via
- * `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`), which
- * this module also ports (PanelContainer never overrides it).
- *
- * `contentMargin` on a resolved `StyleBoxFlatData` is already the EFFECTIVE
- * margin (`native/parseStyleBox.ts` has resolved Godot's `-1` "ask the
- * border width" sentinel), so both functions read it directly with no
- * further fallback.
- *
- * Both functions apply `as_sortable_control` (`container.cpp:143-155`,
- * `isSortableControl`) like every other container solver here: a hidden child
- * contributes nothing to the aggregate minimum size, which is what Godot does
- * and is observable — a PanelContainer wrapping one hidden and one visible
- * child must size to the visible one alone. The same helper drops a
- * `top_level` child, which is a canvas root and no child of this container's
- * layout at all.
- *
- * Pure data + functions, no React, no THREE.
+ * Both functions skip a child that fails `as_sortable_control`
+ * (`container.cpp:143-155`): a hidden child adds nothing to the minimum size,
+ * and a `top_level` child is a canvas root outside this layout.
  */
 
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
@@ -50,7 +27,9 @@ function panelStyleOf(n: SolveNode, ctx: SolveContext): StyleBoxFlatData {
 
 
 /**
- * `PanelContainer::get_minimum_size` (`panel_container.cpp:35-51`).
+ * `PanelContainer::get_minimum_size` (`panel_container.cpp:35-51`): the
+ * per-axis max of the children's minimum sizes, plus the panel style's margin
+ * sums (`StyleBox::get_minimum_size`, `scene/resources/style_box.cpp:35-36`).
  */
 export const panelContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   let x = 0;
@@ -67,12 +46,9 @@ export const panelContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 /**
- * `Container::fit_child_in_rect` (`container.cpp:95-128`). `rect` here is the
- * CONTENT rect `panelContainerLayout` already computed — this function only
- * decides how one child sits inside it. PanelContainer has no RTL branch of
- * its own (`panel_container.cpp` calls `is_layout_rtl()` nowhere), but
- * `fit_child_in_rect` reads the CONTAINER's flag itself, so `rtl` comes from
- * the container, never the child.
+ * `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`) inside the
+ * content rect. `panel_container.cpp` has no RTL branch, and
+ * `container.cpp:95-128` reads the container's flag, never the child's.
  */
 function fitChild(child: SolveNode, minSize: Vec2, rect: Rect2, rtl: boolean): Rect2 {
   const props = controlProps(child);
@@ -87,14 +63,14 @@ function fitChild(child: SolveNode, minSize: Vec2, rect: Rect2, rtl: boolean): R
 
 /**
  * `PanelContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN` branch
- * (`panel_container.cpp:78-94`). `rect` is the container's OWN solved rect
- * (`controlRectSolver.ts`'s `dispatchChildren` passes it un-inset — insetting
- * for chrome is this function's job, per `solverRegistry.ts`'s
- * `ContainerLayoutFn` contract), so every returned child rect stays relative
- * to the CONTAINER's top-left, not the content rect's.
+ * (`panel_container.cpp:78-94`): every child fits the same content rect.
+ * `rect` arrives un-inset, so each child rect is relative to the container's
+ * top-left, not the content rect's.
  */
 export const panelContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
   const style = panelStyleOf(n, ctx);
+  // `contentMargin` is already the effective margin: `native/parseStyleBox.ts`
+  // resolves Godot's `-1` "ask the border width" sentinel.
   const { left, top, right, bottom } = style.contentMargin;
 
   // ofs = style->get_offset() (style_box.cpp:88-89); size -= style->get_minimum_size().

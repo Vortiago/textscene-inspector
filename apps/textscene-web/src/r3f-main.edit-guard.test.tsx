@@ -1,14 +1,8 @@
 /**
- * Discard guard for Source-pane edits: edits are ephemeral (ADR-0020), but
- * loss must not be SILENT — every one-click scene replacement (fixture
- * palette, the tree's ⤢ open-sub-scene which routes through the same
- * handler, and a scene-replacing drop/upload) confirms before discarding
- * keystrokes newer than the last load. Unedited panes never prompt, and a
- * resource-only drop (no .tscn) never prompts — it fulfills missing rows
- * without touching the buffer.
- *
- * Reuses the r3f-main.*.test.tsx WebGL-mock pattern: TscnCanvas /
- * TscnSceneContents stubbed (happy-dom has no WebGL), everything else real.
+ * The discard guard for Source-pane edits (ADR-0020): the fixture palette, ⤢ open-sub-scene
+ * and a scene-replacing drop or upload confirm before discarding keystrokes newer than the
+ * last load. An unedited pane never prompts, nor does a resource-only drop, which fulfils
+ * missing rows without touching the buffer.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -52,7 +46,7 @@ function resetPersistence() {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // happy-dom may throw in edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
   window.history.replaceState(null, '', '/');
 }
@@ -84,7 +78,7 @@ function typeBuffer(text: string) {
   fireEvent.change(paneTextarea(), { target: { value: text } });
 }
 
-/** Switch fixture via the palette (Ctrl+K → filter → click leaf). */
+/** Switch fixture through the palette (Ctrl+K → filter → click leaf). */
 async function switchViaPalette() {
   fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
   const palette = await screen.findByRole('dialog', { name: 'Open or switch scene' });
@@ -104,8 +98,8 @@ async function uploadScene() {
 }
 
 /**
- * happy-dom does not implement window.confirm — stub the global (returning
- * `accept`) and hand back the mock for call assertions.
+ * happy-dom has no window.confirm, so stub the global to return `accept` and hand back the
+ * mock for call assertions.
  */
 function stubConfirm(accept: boolean) {
   const fn = vi.fn(() => accept);
@@ -186,8 +180,8 @@ describe('Source-pane edit-discard guard', () => {
     await waitForScene('UploadedRoot');
     expect(confirmSpy).not.toHaveBeenCalled();
 
-    // replace() resets the edited flag — pristine uploaded content must not
-    // count as "edits" on the next switch.
+    // replace() resets the edited flag, so pristine uploaded content is no edit on the next
+    // switch.
     await switchViaPalette();
     await waitForScene('SwitchedRoot');
     expect(confirmSpy).not.toHaveBeenCalled();

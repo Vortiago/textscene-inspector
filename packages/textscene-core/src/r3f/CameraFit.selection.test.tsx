@@ -1,16 +1,8 @@
 /**
- * CameraFit is selection-inert.
- *
- * Design decision: selection changes must NEVER move the camera. Once the
- * load-time fit timers (150ms, 500ms, 1100ms) have fired, nothing but a
- * scene/camera change re-frames: an unrequested camera move on click is
- * worse than a selection-gated gizmo extending past the current frame (the
- * user re-frames explicitly via FrameSelectedShortcut). Deterministic
- * `-selected` visual captures are the harness's job (scripts/visual/run.mjs
- * clicks only after the last fit timer has provably fired).
- *
- * Seam: the `frameSceneBounds` module boundary, mocked so we can count
- * calls independently of Three.js scene geometry.
+ * CameraFit is selection-inert: after the load-time fit timers (150, 500, 1100ms), only a
+ * scene or camera change re-frames. The user re-frames with FrameSelectedShortcut, and
+ * scripts/visual/run.mjs clicks after the last timer. `frameSceneBounds` is mocked, so
+ * calls count independently of scene geometry.
  */
 import { useEffect } from 'react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
@@ -57,11 +49,9 @@ function tree(graph: ReturnType<typeof makeGraph>, path: string | null) {
 }
 
 /**
- * Mounts CameraFit with `initialPath` selected, drains the load-time timers
- * (150/500/1100ms), resets the mock, then re-renders with `nextPath` and
- * returns the pending-timer count captured immediately before and after that
- * selection change. Callers assert nothing new was scheduled and no frame
- * call ever fires.
+ * Mounts CameraFit with `initialPath`, drains the load-time timers, resets the mock and
+ * re-renders with `nextPath`. Returns the pending-timer counts just before and after that
+ * selection change, so callers can assert nothing was scheduled or framed.
  */
 async function mountThenSelect(initialPath: string | null, nextPath: string | null) {
   const graph = makeGraph();

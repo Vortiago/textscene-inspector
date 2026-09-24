@@ -129,9 +129,8 @@ describe('runLint', () => {
     expect(runLint([errorPath], false).exitCode).toBe(1);
   });
 
-  // Pins current CLI behavior: warning/info diagnostics are printed but do
-  // NOT fail the run. Only error-severity diagnostics and unreadable files
-  // produce a nonzero exit code.
+  // Warning/info diagnostics print but do not fail the run. Only an error-severity
+  // diagnostic or an unreadable file gives a nonzero exit code.
   it('returns exit code 0 for warnings-only files (established contract)', () => {
     const { exitCode, results } = runLint([warningPath], false);
 

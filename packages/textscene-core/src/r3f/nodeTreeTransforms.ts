@@ -1,16 +1,8 @@
 /**
- * Transform maths over the PARSED node tree, shared by the scene-wide passes that run
- * between parse and graph assembly.
- *
- * Two passes need the same answers and must not disagree: `remoteTransforms.ts` resolves
- * where a RemoteTransform3D drives its target, and `csgPolygonPaths.ts` resolves where a
- * CSGPolygon3D's Path3D sits when `path_local` is off. Both walk the parsed tree rather
- * than the rendered `Object3D` tree, because they run before anything is mounted.
- *
- * Extracted verbatim rather than re-derived. `basis_x/y/z` are ROWS, not columns (see
- * `utils/transform.ts`), and reading them the other way produces a transposed matrix that
- * looks plausible until something is rotated. That has already been a regression here
- * once; there is no reason to give it a second chance by writing a second copy.
+ * Transform maths over the parsed node tree, shared by the passes that run before
+ * anything mounts: `remoteTransforms.ts` and `csgPolygonPaths.ts`. `basis_x/y/z`
+ * are rows, not columns (`utils/transform.ts`), and read the other way they give a
+ * transposed matrix that looks plausible until something rotates.
  */
 
 import * as THREE from 'three';

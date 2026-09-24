@@ -1,13 +1,7 @@
-; The ONE variable: a TabContainer whose pages author no `visible` at all.
-; `TabContainer::add_child_notify` hides every page as it is added
-; (tab_container.cpp:651) and `_repaint` then shows only `i == current`
-; (tab_container.cpp:377-399, the same split as `controls[i]->set_visible(i ==
-; current)` at :290-293). With no `current_tab` written, `current` is 0 — the
-; first `add_tab` sets it (tab_bar.cpp:1324-1331) — so page 0 draws and page 1
-; does not, and the strip selects tab 0.
-; Every editor-saved TabContainer writes `visible = false` on its non-current
-; pages itself, so the whole corpus passes whether or not the container writes
-; anything; only a hand-edited file like this one exposes it.
+; One variable: a TabContainer whose pages author no `visible`. `TabContainer::add_child_notify`
+; hides each page as it is added (tab_container.cpp:651), and `_repaint` shows only `i == current`
+; (tab_container.cpp:377-399, the split of `controls[i]->set_visible(i == current)` at :290-293).
+; No `current_tab`, so `current` is 0, set by the first `add_tab` (tab_bar.cpp:1324-1331).
 
 [gd_scene format=3 uid="uid://unittabcurrentpage"]
 
@@ -16,6 +10,9 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; So page 0 draws, page 1 does not, and the strip selects tab 0. The editor writes
+; `visible = false` on non-current pages itself, so the corpus passes whether or not the
+; container writes anything. Only a hand-edited file like this one exposes it.
 [node name="Tabs" type="TabContainer" parent="."]
 offset_left = 64.0
 offset_top = 48.0
