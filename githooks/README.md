@@ -12,7 +12,7 @@ printed order.
 
 A change to the toolchain (`package.json`, the lockfile, a `tsconfig`, a vitest or eslint config, a
 workflow or a hook) runs the full `pnpm validate`. A push that changes only files no check reads
-runs nothing. `FULL_VALIDATE=1 git push` runs the full gate. CI runs the full gate on every push.
+runs nothing. `FULL_VALIDATE=1 git push` runs the full gate. CI runs the full gate on each pull request and on `main`.
 
 ## Skip the hooks
 

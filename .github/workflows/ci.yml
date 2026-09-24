@@ -1,95 +1,79 @@
-name: CI/CD
+name: CI
 
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
-    branches: ['main']
+  workflow_dispatch:
 
 permissions:
   contents: read
-  # GitHub Pages (disabled for private repo)
-  # pages: write
-  # id-token: write
+
+# A new push to a pull request cancels its older run. Each push to main runs to the end.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  build:
+  static:
+    name: Lint, type check and generated files
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
 
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 9.15.4
+      - run: pnpm lint
+      - run: pnpm type-check
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: 'pnpm'
+      # The test projects resolve @textscene/core through its emitted declarations, and the
+      # docs checks load its dist.
+      - run: pnpm --filter @textscene/core build
+      - run: pnpm type-check:tests
 
-      - run: pnpm install --frozen-lockfile
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Type Check
-        run: pnpm type-check
-
-      # Before the tests: loadCoreLinter.test.mjs skips itself when core's dist is
-      # absent, so building afterwards meant the loader guard never ran in CI.
-      # `docs:lint-sections --check` needs the same dist.
-      - name: Build Core
-        run: pnpm --filter @textscene/core build
-
-      # `pnpm type-check` skips every test file: each package's build tsconfig
-      # excludes them. vitest transpiles without checking, so this is the only
-      # gate that types them. After Build Core, because the app-side projects
-      # resolve @textscene/core through its emitted declarations.
-      - name: Type Check Tests
-        run: pnpm type-check:tests
-
-      - name: Run Tests
-        run: pnpm test:unit
-
-      - name: Check Generated Lint Sections
-        run: pnpm docs:lint-sections --check
-
+      - run: pnpm docs:lint-sections --check
+      - run: pnpm docs:index --check
       # After the sheets, which the gallery is assembled from.
-      - name: Check Generated Comparison Gallery
-        run: pnpm docs:gallery --check
+      - run: pnpm docs:gallery --check
+      - run: pnpm fonts:bake --check
 
-      # The committed font metrics + MSDF atlas are generated from the vendored
-      # woff2. Nothing else notices if they drift: eslint deliberately ignores
-      # the base64 modules, and no test re-derives them.
-      - name: Check Generated Font Artifacts
-        run: pnpm fonts:bake --check
+  unit:
+    name: Unit tests (${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
 
-      - name: Build Web Previewer
-        run: pnpm --filter @textscene/web-previewer build
+      # Before the tests: loadCoreLinter.test.mjs skips itself when core's dist is absent.
+      - run: pnpm --filter @textscene/core build
+      - run: pnpm test:unit --shard=${{ matrix.shard }}/4
 
-      - name: Build Linter CLI
-        run: pnpm --filter @textscene/linter build
+  build:
+    name: Build and package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
 
-      # After the CLI build, so it lints the binary this run produced. The
-      # vendored demos are scenes Godot itself opens, so an error here is our
-      # false positive rather than a broken scene.
-      - name: Lint shipped scenes
-        run: pnpm lint:scenes:only
+      # The prebuild hook builds @textscene/core.
+      - run: pnpm --filter @textscene/web-previewer build
+      - run: pnpm build:linter
 
-      - name: Package VS Code Extension
-        run: pnpm vsc:package
+      # Lints with the binary this run built. The vendored demos are scenes Godot itself
+      # opens, so an error here is a false positive in a rule.
+      - run: pnpm lint:scenes:only
 
-      # Needs the webview + extension host bundles from the packaging step
-      # above. `check:bundle-size` passes `--enforce`, so both halves hard-fail
-      # here: the webview initial-paint budget and the host-bundle react/three
-      # guard (see ARCHITECTURE.md, "Bundle Size Target").
-      - name: Check bundle size
-        run: pnpm check:bundle-size
+      - run: pnpm vsc:package
 
-      # Needs @textscene/core built, which the Build Web Previewer step
-      # above already triggered via its prebuild hook.
-      - name: Check package (publint)
-        run: pnpm check:package
+      # Reads the webview and extension host bundles from the packaging step.
+      - run: pnpm check:bundle-size
+      - run: pnpm check:package
 
       - uses: actions/upload-artifact@v7
         with:
@@ -107,156 +91,94 @@ jobs:
           path: apps/textscene-linter/dist/cli.js
 
   visual-regression:
-    name: Visual Regression (goldens + raster)
+    name: Visual regression (goldens)
     runs-on: ubuntu-latest
     needs: build
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
 
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 9.15.4
+      # assertWebBuildFresh compares core's src with core's own dist before it captures from
+      # a downloaded bundle, so the dist must exist here.
+      - run: pnpm --filter @textscene/core build
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-
-      - run: pnpm install --frozen-lockfile
-
-      # `assertWebBuildFresh` compares core's src against core's OWN dist before
-      # it will capture from a downloaded bundle, so the dist has to exist here
-      # even though nothing in this job bundles it.
-      - name: Build Core
-        run: pnpm --filter @textscene/core build
-
-      # Reuse the dist built by the build job. run.mjs rebuilds by default —
-      # locally that guards against capturing a stale dist that predates the
-      # change under test — but here the artifact IS this commit's build, so
-      # VISUAL_SKIP_BUILD=1 below keeps it and skips a redundant cold rebuild
-      # (which would also wipe this download via vite's emptyOutDir).
+      # The artifact is this commit's build. VISUAL_SKIP_BUILD=1 keeps it, and a rebuild
+      # would empty the downloaded dist.
       - uses: actions/download-artifact@v8
         with:
           name: web-previewer
           path: apps/textscene-web/dist/
 
-      - name: Cache Playwright chromium
-        uses: actions/cache@v6
+      - uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: npx playwright install chromium --with-deps
 
-      - name: Install Playwright chromium
-        run: npx playwright install chromium --with-deps
-
-      - name: Compare golden images
-        run: pnpm test:visual
+      - run: pnpm test:visual
         env:
           VISUAL_SKIP_BUILD: '1'
 
-      - name: Upload diff artifacts
-        if: failure()
+      - if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: visual-diffs
           path: scripts/visual/output/
 
   e2e-web:
-    name: E2E (web previewer app)
+    name: E2E (web previewer)
     runs-on: ubuntu-latest
     needs: build
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
 
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 9.15.4
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-
-      - run: pnpm install --frozen-lockfile
-
-      # `assertWebBuildFresh` compares core's src against core's OWN dist before
-      # it will capture from a downloaded bundle, so the dist has to exist here
-      # even though nothing in this job bundles it.
-      - name: Build Core
-        run: pnpm --filter @textscene/core build
-
-      # Same reuse-the-build-artifact rationale as the visual-regression job
-      # above: the artifact IS this commit's build, so VISUAL_SKIP_BUILD=1
-      # skips a redundant cold rebuild (which would also wipe this download
-      # via vite's emptyOutDir).
+      # The same build reuse as in visual-regression.
+      - run: pnpm --filter @textscene/core build
       - uses: actions/download-artifact@v8
         with:
           name: web-previewer
           path: apps/textscene-web/dist/
 
-      - name: Cache Playwright chromium
-        uses: actions/cache@v6
+      - uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: npx playwright install chromium --with-deps
 
-      - name: Install Playwright chromium
-        run: npx playwright install chromium --with-deps
-
-      - name: Outliner, inspector, camera-invariance and load-health gate
-        run: pnpm test:e2e:web
+      - run: pnpm test:e2e:web
         env:
           VISUAL_SKIP_BUILD: '1'
-          # No system Chrome on the runner — use Playwright's own bundled
-          # Chromium (scripts/showcase/browser.mjs's launchShowcaseBrowser
-          # otherwise defaults to the 'chrome' channel, which this runner
-          # never installs).
+          # The runner has no system Chrome, so the gate uses Playwright's bundled Chromium.
           SHOWCASE_CHANNEL: bundled
 
-  integration-tests:
-    name: Integration Tests (${{ matrix.os }})
+  integration:
+    name: Integration tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
 
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 9.15.4
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-
-      - run: pnpm install --frozen-lockfile
-
-      # "textscene-inspector" is the VS Code extension package (apps/textscene-vscode);
-      # the workspace root is named @textscene/monorepo, so this filter is unambiguous.
-      - name: Run Integration Tests (Linux)
-        if: runner.os == 'Linux'
+      # textscene-inspector is the VS Code extension package (apps/textscene-vscode).
+      - if: runner.os == 'Linux'
         run: xvfb-run -a pnpm --filter textscene-inspector test:integration
-
-      - name: Run Integration Tests (macOS/Windows)
-        if: runner.os != 'Linux'
+      - if: runner.os != 'Linux'
         run: pnpm --filter textscene-inspector test:integration
 
-      # Proves text actually paints inside the webview, which the extension-host
-      # suite above cannot see into. It drives VS Code over CDP and so needs a
-      # display — the driver wraps its own launch in xvfb-run, hence no wrapper
-      # here — and connects to VS Code's own Chromium, so no `playwright install`
-      # is needed. Linux-only because the driver has only ever been exercised
-      # under Xvfb; the macOS/Windows window and binary layouts are unverified,
-      # and claiming them here would be claiming something untested.
-      - name: Webview CSP + glyph gate (Linux)
-        if: runner.os == 'Linux'
+      # Proves that text paints inside the webview, which the extension host suite cannot
+      # see. The driver starts its own xvfb-run and uses VS Code's Chromium. It runs on
+      # Linux only, because nobody has verified its window and binary layout elsewhere.
+      - if: runner.os == 'Linux'
         run: pnpm test:vscode:csp
 
-      - name: Upload test results on failure
-        if: failure()
+      - if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: integration-test-results-${{ matrix.os }}
@@ -265,58 +187,35 @@ jobs:
             apps/textscene-vscode/out/
             scripts/vscode/output/csp-gate/
 
-  vsix-verification:
-    name: VSIX Package Verification (${{ matrix.os }})
+  vsix:
+    name: VSIX contents
+    runs-on: ubuntu-latest
     needs: build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+    timeout-minutes: 5
     steps:
-      - name: Download VSIX artifact
-        uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v8
         with:
           name: vscode-extension
           path: .
 
-      - name: Verify VSIX package structure
-        shell: bash
+      - name: Check the packaged files
         run: |
-          # Check VSIX file exists
-          if [ ! -f *.vsix ]; then
-            echo "Error: VSIX file not found"
-            exit 1
-          fi
+          vsix=$(ls *.vsix)
+          for entry in extension/dist/extension.js extension/dist/extension.web.js \
+            extension/package.json extension.vsixmanifest; do
+            unzip -l "$vsix" | grep -q "$entry" || { echo "::error::$entry is missing from $vsix"; exit 1; }
+          done
+          # The browser entry point runs the extension on vscode.dev.
+          unzip -p "$vsix" extension/package.json | grep -q '"browser"' \
+            || { echo "::error::the packaged package.json has no browser entry"; exit 1; }
 
-          VSIX_FILE=$(ls *.vsix)
-          echo "Verifying VSIX package: $VSIX_FILE"
-
-          # VSIX is a zip file - verify it's valid and contains expected files
-          unzip -l "$VSIX_FILE" | grep "extension/dist/extension.js" || { echo "Error: extension.js not found in VSIX"; exit 1; }
-          unzip -l "$VSIX_FILE" | grep "extension/dist/extension.web.js" || { echo "Error: extension.web.js (vscode.dev web-extension host) not found in VSIX"; exit 1; }
-          unzip -l "$VSIX_FILE" | grep "extension/package.json" || { echo "Error: package.json not found in VSIX"; exit 1; }
-          unzip -l "$VSIX_FILE" | grep "extension.vsixmanifest" || { echo "Error: extension.vsixmanifest not found in VSIX"; exit 1; }
-
-          # The manifest must declare the browser (web extension) entry point
-          unzip -p "$VSIX_FILE" extension/package.json | grep '"browser"' || { echo "Error: browser entry missing from packaged package.json"; exit 1; }
-
-          echo "✓ VSIX package structure is valid"
-
-      # GitHub Pages deployment (disabled for private repo)
-      # - if: github.ref == 'refs/heads/main'
-      #   uses: actions/upload-pages-artifact@v3
-      #   with:
-      #     path: apps/textscene-web/dist/
-
-  # GitHub Pages deployment (disabled for private repo)
-  # deploy:
-  #   if: github.ref == 'refs/heads/main'
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   environment:
-  #     name: github-pages
-  #     url: ${{ steps.deployment.outputs.page_url }}
-  #   steps:
-  #     - id: deployment
-  #       uses: actions/deploy-pages@v4
+  # The one check that branch protection requires, so a new or renamed job needs no settings change.
+  ci-ok:
+    name: CI passed
+    if: always()
+    needs: [static, unit, build, visual-regression, e2e-web, integration, vsix]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
