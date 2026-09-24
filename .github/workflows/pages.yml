@@ -5,7 +5,8 @@ name: GitHub Pages
 # with `pnpm build:deploy`. Only a main commit that CI passed deploys here.
 on:
   workflow_run:
-    workflows: ['CI/CD']
+    # Both names of ci.yml's workflow, so a rename does not stop the deploy silently.
+    workflows: ['CI', 'CI/CD']
     types: [completed]
     branches: [main]
   workflow_dispatch:
