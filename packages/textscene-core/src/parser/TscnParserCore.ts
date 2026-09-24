@@ -67,6 +67,12 @@ export interface ParseObserver {
     line: number,
     isMultiline: boolean
   ): void;
+  /**
+   * A `[node]` or `[sub_resource]` section closed, and the scan built `built` from it. `line` is
+   * its heading's line. It fires after the section's last `onProperty`, so an observer can file
+   * what it collected under the object.
+   */
+  onSectionBuilt?(built: TscnNode | TscnInternalResource, line: number): void;
 }
 
 /**
@@ -87,9 +93,9 @@ export class TscnParserCore {
     // would corrupt accumulated multi-line string values.
     const lines = content.split(/\r?\n/);
 
-    // Every node beside its heading's line, in scan order. The line lives here, not on
-    // `TscnNode`, because only the orphan report reads it. One array, not a parallel
-    // `nodes` list, which two push sites would have to keep in step.
+    // Every node beside its heading's line, in scan order. The line stays off `TscnNode`:
+    // the orphan report reads it here, and a strict observer gets it from `onSectionBuilt`.
+    // One array, not a parallel `nodes` list, which two push sites would keep in step.
     const origins: NodeOrigin[] = [];
     const externalResources: TscnExternalResource[] = [];
     const internalResources: TscnInternalResource[] = [];
@@ -126,6 +132,7 @@ export class TscnParserCore {
             declaredParent: currentHeading.attributes.parent,
             recoverableById: currentHeading.attributes.parent_id_path !== undefined,
           });
+          observer?.onSectionBuilt?.(node, currentHeadingLine);
         }
       } else if (currentSection === 'ext_resource') {
         const resource = parseExternalResource(currentHeading);
@@ -136,6 +143,7 @@ export class TscnParserCore {
         const resource = parseInternalResource(currentHeading, currentProperties);
         if (resource) {
           internalResources.push(resource);
+          observer?.onSectionBuilt?.(resource, currentHeadingLine);
         }
       }
 

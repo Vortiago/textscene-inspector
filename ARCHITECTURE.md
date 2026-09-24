@@ -190,8 +190,9 @@ rules. See [ADR-0001](./docs/adr/0001-unified-slice-react-free-linter.md).
 
 Two parsers serve different use cases, but they share one scanning loop:
 `packages/textscene-core/src/parser/TscnParserCore.ts`. The core loop takes an
-optional `ParseObserver` (`onError`, `onSectionStart` and `onProperty` hooks).
-Strict behaviour is an observer adapter. Lenient behaviour is the bare loop.
+optional `ParseObserver` (`onError`, `onSectionStart`, `onProperty` and
+`onSectionBuilt` hooks). Strict behaviour is an observer adapter. Lenient
+behaviour is the bare loop.
 
 - **`packages/textscene-core/src/parser/TscnParser.ts`**: the lenient parser
   the renderer uses. It runs the core loop with no observer. It recovers from
@@ -201,7 +202,11 @@ Strict behaviour is an observer adapter. Lenient behaviour is the bare loop.
   adapter that runs the same core loop with an observer. The observer collects
   every syntax and format error with line and column, does strict heading
   checks (missing node name or identifier), and runs the `validatorRegistry`
-  property validators.
+  property validators. It also returns a line table (`SourceLines`): the
+  heading line of each node and sub-resource the scan built, and the line of
+  each property it stores. A rule reaches its node through the tree, which
+  carries no lines, so `Linter` reads the table to put the rule's diagnostic on
+  the node's heading, and a dangling reference on its property's line.
 
 The observer is purely additive. It never changes what the lenient loop parses
 or recovers, so renderer behaviour is identical with or without it.
@@ -812,8 +817,13 @@ render can still be linted. The gutter explains why. A pure helper
 severity for each line and every message. It feeds a `<SourceGutter>` column
 (`SourceGutter.tsx`) that renders an error, warning or info dot for each
 offending line, scroll-synced with the textarea. A hover or focus popover lists
-that line's messages. The pane's toggle carries a compact problem-count badge
-(`✖ 1 / ⚠ 2`), so a collapsed pane still signals problems. A "Download .tscn"
+that line's messages. A diagnostic that names no line goes to the file-level
+section in the pane header (`FileProblems.tsx`), never onto a synthetic line 1,
+which would claim that line is at fault. It has the same dot and popover, and
+it takes keyboard focus. The pane's toggle carries a compact problem-count
+badge (`✖ 1 / ⚠ 2`), so a collapsed pane still signals problems. Every
+diagnostic lands in exactly one of the two groups, so the badge counts only
+what the pane can show. A "Download .tscn"
 button (Blob and anchor, no write-back to disk) sits in a small pane header.
 The textarea carries a native placeholder for the empty state. When a
 from-scratch paste never produces a valid render (`forwardedContent` never

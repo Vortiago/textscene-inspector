@@ -4,8 +4,8 @@
  * The `scrollTop` prop keeps it in step with the textarea.
  */
 import { memo, useMemo, useState } from 'react';
-import type { Severity } from '@textscene/core/linter';
 import type { LineDiagnostics } from './lineDiagnostics';
+import { problemPopoverClass, severityDotClass } from './problemClasses';
 import styles from './r3f-main.module.css';
 
 export interface SourceGutterProps {
@@ -16,14 +16,8 @@ export interface SourceGutterProps {
   scrollTop: number;
 }
 
-const SEVERITY_CLASS: Record<Severity, string> = {
-  error: styles.severityError ?? '',
-  warning: styles.severityWarning ?? '',
-  info: styles.severityInfo ?? '',
-};
-
 /**
- * `React.memo`'d: `byLine` is already memoized upstream (`groupDiagnosticsByLine`)
+ * `React.memo`'d: `byLine` is already memoized upstream (`groupDiagnostics`)
  * and `lineCount` is a stable number, so without this the gutter would rebuild
  * its full N-row list on every unrelated `R3FApp` render (every keystroke,
  * every scroll) even when none of its own props changed.
@@ -55,7 +49,7 @@ export const SourceGutter = memo(function SourceGutter({
                   <button
                     type="button"
                     tabIndex={-1}
-                    className={`${styles.gutterDot} ${SEVERITY_CLASS[entry.severity]}`}
+                    className={severityDotClass(entry.severity)}
                     data-testid={`gutter-dot-${line}`}
                     aria-label={`Line ${line}: ${entry.messages.join('; ')}`}
                     onMouseEnter={() => setHoverLine(line)}
@@ -66,7 +60,7 @@ export const SourceGutter = memo(function SourceGutter({
                   {hoverLine === line && (
                     <div
                       role="tooltip"
-                      className={styles.gutterPopover}
+                      className={problemPopoverClass(styles.gutterPopover)}
                       data-testid={`gutter-popover-${line}`}
                     >
                       {entry.messages.map((message, i) => (

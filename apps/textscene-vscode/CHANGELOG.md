@@ -13,6 +13,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `res://` document links: `res://relative/path` references in `.tscn` files are clickable, opening the referenced file resolved from the Godot project root.
 - Editor and Explorer context-menu entries, and a `ctrl+k v` / `cmd+k v` keybinding, for "Open Preview to the Side".
 
+### Changed
+- Problems panel: a semantic rule's finding marks the heading of the node it is about, and a dangling resource reference marks the line of its property. Before, both sat at the top of the file.
+
 ## [0.9.0] - 2026-06-10
 
 ### Added

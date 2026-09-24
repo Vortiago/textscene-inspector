@@ -4,8 +4,8 @@
  * renderer runs the same loop with no observer.
  */
 
-import type { TscnNode } from '../parser/types.js';
-import type { ParseError, StrictParseResult } from './types.js';
+import type { TscnInternalResource, TscnNode } from '../parser/types.js';
+import type { ParseError, SectionLines, StrictParseResult } from './types.js';
 import { TscnParserCore } from '../parser/TscnParserCore.js';
 import type { ParseObserver } from '../parser/TscnParserCore.js';
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils.js';
@@ -13,7 +13,7 @@ import { SCENE_ROOT_PATH, getAncestorPaths, joinPath, resolveParentPath } from '
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { ownsNilMessage } from './propertyValidator.js';
 import { INSTANCE_PLACEHOLDER_TYPE, isNilLiteral } from '../godot/index.js';
-import { resolveDeprecatedProperty } from '../godot/deprecated.js';
+import { canonicalPropertyName, resolveDeprecatedProperty } from '../godot/deprecated.js';
 
 /**
  * A TscnNode built without NodeRegistry, so without three.js. `properties` and `rawProperties` are the same bag, as the
@@ -62,6 +62,10 @@ export class StrictTscnParser {
    */
   parse(content: string): StrictParseResult {
     const errors: ParseError[] = [];
+    const lines = new Map<TscnNode | TscnInternalResource, SectionLines>();
+    // The open section's property lines, which `onSectionBuilt` files under what the section
+    // builds. A fresh map per heading, since the finished one is kept.
+    let propertyLines = new Map<string, number>();
 
     // The section whose body the scan is inside, or null outside the sections that own properties. Every refusal raised
     // while it is set is about that section, and the validator knows only a key and a value. A sub-resource counts, since
@@ -99,6 +103,7 @@ export class StrictTscnParser {
       },
 
       onSectionStart: (heading, section, line) => {
+        propertyLines = new Map();
         if (section !== 'node') {
           // A sub-resource is named by its `id=`, which tells one `[sub_resource type="CircleShape2D"]` from its
           // siblings. Every other section clears the owner: `ext_resource`, `gd_scene` and `gd_resource` carry no
@@ -195,6 +200,9 @@ export class StrictTscnParser {
       },
 
       onProperty: (_section, ownerType, key, value, line, isMultiline) => {
+        // The key the scan stores the value under, so a reader of the bag finds the line.
+        propertyLines.set(canonicalPropertyName(ownerType, key, value), line);
+
         // Skip validation for multi-line values (shader code, label text) and
         // for properties without a typed owner (index=/instance= nodes,
         // ext_resource/gd_scene sections).
@@ -249,6 +257,10 @@ export class StrictTscnParser {
         }
         errors.push({ ...error, ...currentOwner });
       },
+
+      onSectionBuilt: (built, headingLine) => {
+        lines.set(built, { heading: headingLine, properties: propertyLines });
+      },
     };
 
     const scene = this.core.parse(content, createSimpleNode, observer);
@@ -257,6 +269,6 @@ export class StrictTscnParser {
     // would skip the rule phase, so one out-of-range property would silence every semantic rule in the file, and a
     // rule whose condition a validator rejects would never run.
 
-    return { errors, scene };
+    return { errors, scene, lines };
   }
 }

@@ -52,11 +52,9 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * Pure mapping: core linter diagnostic -> vscode.Diagnostic.
- *
- * Core locations are 1-based; vscode is 0-based. Out-of-range lines and
- * columns are clamped to the document; diagnostics without a location
- * land on line 0.
+ * A core diagnostic as a `vscode.Diagnostic`. Core lines are 1-based and clamped into the
+ * document. A diagnostic with no line is about the whole file: a zero-width range at the
+ * document start lists it in the Problems panel and marks no text.
  */
 export function toVsCodeDiagnostic(
   diagnostic: TscnLintDiagnostic,

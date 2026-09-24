@@ -32,8 +32,8 @@ export function armEmits<K extends string>(arms: RuleArms<K>): NonNullable<RuleM
 /**
  * `arm`'s diagnostic for `node`, the one conversion from arm to report. Fields
  * are named, not spread, or the compiler lets `grounding` ship to every caller.
- * Only a file diagnostic has a `location`: a rule reaches its subject through
- * the tree, which carries no heading line.
+ * A rule passes no `location`: it reaches its subject through the tree, which
+ * carries no lines, and `Linter` puts the report on the node's heading.
  */
 export function armDiagnostic(
   arm: RuleArm,

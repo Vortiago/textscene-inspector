@@ -226,6 +226,37 @@ describe('TscnDiagnostics', () => {
     diagnostics.dispose();
   });
 
+  it('publishes a rule finding on the heading of the node it is about, not on the first line', () => {
+    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    // A StaticBody2D with no shape child, which Godot's configuration warning names.
+    const heading = '[node name="Body" type="StaticBody2D" parent="."]';
+    const document = makeTscnDocument(
+      `[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n${heading}\n`
+    );
+
+    diagnostics.lintDocument(document);
+
+    const published = collection.set.mock.calls[0]![1] as vscode.Diagnostic[];
+    const finding = published.find((d) => d.code === 'collisionobject2d-needs-collision-shape');
+    expect(finding?.range.start).toEqual(new vscode.Position(4, 0));
+    expect(finding?.range.end).toEqual(new vscode.Position(4, heading.length));
+    diagnostics.dispose();
+  });
+
+  it('publishes a dangling reference on the line of the property that holds it', () => {
+    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    const document = makeTscnDocument(
+      '[gd_scene format=3]\n\n[node name="Box" type="CSGBox3D"]\nmaterial = SubResource("nope")\n'
+    );
+
+    diagnostics.lintDocument(document);
+
+    const published = collection.set.mock.calls[0]![1] as vscode.Diagnostic[];
+    const finding = published.find((d) => d.code === 'dangling-resource-reference');
+    expect(finding?.range.start.line).toBe(3);
+    diagnostics.dispose();
+  });
+
   it('ignores non-.tscn documents', () => {
     const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
     const document = {

@@ -271,6 +271,7 @@ garbage-line-without-equals
         onError: () => {},
         onSectionStart: () => {},
         onProperty: () => {},
+        onSectionBuilt: () => {},
       });
 
       expect(observed).toEqual(bare);
@@ -512,6 +513,69 @@ background_mode = 1
         'node',
         7
       );
+    });
+
+    describe('onSectionBuilt', () => {
+      it('hands over each built node and sub-resource with its heading line, the objects the scene holds', () => {
+        const content = `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://icon.png" id="1"]
+
+[sub_resource type="BoxMesh" id="bm"]
+size = Vector3(1, 2, 3)
+
+[node name="Root" type="Node3D"]
+
+[node name="Child" type="Node3D" parent="."]
+`;
+        const onSectionBuilt = vi.fn<NonNullable<ParseObserver['onSectionBuilt']>>();
+
+        const scene = parser.parse(content, simpleCreator, { onSectionBuilt });
+
+        const root = scene.nodes[0]!;
+        expect(onSectionBuilt.mock.calls).toEqual([
+          [scene.internalResources[0], 5],
+          [root, 8],
+          [root.children[0], 10],
+        ]);
+        // Identity, not equality: the call hands over the objects a reader of the scene holds.
+        expect(onSectionBuilt.mock.calls[1]![0]).toBe(root);
+        expect(onSectionBuilt.mock.calls[0]![0]).toBe(scene.internalResources[0]);
+      });
+
+      it("fires after the section's last property, a multi-line one included", () => {
+        const content = `[node name="Title" type="Label"]
+text = "first
+second"
+[node name="Next" type="Node3D" parent="."]
+`;
+        const events: string[] = [];
+
+        parser.parse(content, simpleCreator, {
+          onSectionStart: (heading) => events.push(`start ${heading.attributes.name}`),
+          onProperty: (_section, _ownerType, key) => events.push(`property ${key}`),
+          onSectionBuilt: (built) => events.push(`built ${'name' in built ? built.name : built.id}`),
+        });
+
+        expect(events).toEqual(['start Title', 'property text', 'built Title', 'start Next', 'built Next']);
+      });
+
+      it('never fires for a section that builds nothing, or for a node the creator declines', () => {
+        const content = `[gd_resource type="Environment" format=3]
+
+[ext_resource type="Texture2D" path="res://icon.png" id="1"]
+
+[resource]
+background_mode = 1
+
+[node name="Declined" type="Node3D"]
+`;
+        const onSectionBuilt = vi.fn<NonNullable<ParseObserver['onSectionBuilt']>>();
+
+        parser.parse(content, () => null, { onSectionBuilt });
+
+        expect(onSectionBuilt).not.toHaveBeenCalled();
+      });
     });
   });
 });

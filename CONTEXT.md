@@ -93,6 +93,7 @@ _Avoid_: re-declaring per-node `intOr` or `floatOr` copies. "validator" (that is
 
 **Diagnostic**:
 One linter finding: a **Severity**, a message, the node it concerns, the name of the check that produced it and, usually, a line and column.
+A rule's finding sits on its node's heading, and a refused value on its property's line. A finding with no line is about the whole file.
 Parse-phase findings share the `strict-parser` name.
 _Avoid_: "error" for a diagnostic of unknown severity. "issue" (ambiguous with the tracker).
 
@@ -360,7 +361,7 @@ _Avoid_: "default node".
 
 **Source pane**:
 The web previewer's editable `.tscn` text view, a left sibling of the preview shell, never inside it.
-It holds the single editable buffer, fed three ways: fixture select, file upload, or direct paste and typing. That buffer is the source of truth for the **Linter**, surfaced as gutter markers with a hover popover. It is also the source for the shell's rendered scene, gated on a clean **Lenient parser** result (**Hold-last-valid**). Edits are ephemeral and leave the browser only through a "Download .tscn" export. Nothing is written back to disk. A browser reload resets silently. An in-app one-click scene replacement (fixture palette, ⤢ open-sub-scene, scene-replacing drop or upload) of an edited buffer confirms before discarding (ADR-0020).
+It holds the single editable buffer, fed three ways: fixture select, file upload, or direct paste and typing. That buffer is the source of truth for the **Linter**, surfaced as gutter markers with a hover popover, and in a file-level section for a finding with no line. It is also the source for the shell's rendered scene, gated on a clean **Lenient parser** result (**Hold-last-valid**). Edits are ephemeral and leave the browser only through a "Download .tscn" export. Nothing is written back to disk. A browser reload resets silently. An in-app one-click scene replacement (fixture palette, ⤢ open-sub-scene, scene-replacing drop or upload) of an edited buffer confirms before discarding (ADR-0020).
 _Avoid_: "code editor", "Monaco", "CodeMirror" (it is a bare `<textarea>` with no editor library). Conflating it with the **SceneTreeViewer** panel or with the VS Code extension's own text editor.
 
 **Host (app)**:

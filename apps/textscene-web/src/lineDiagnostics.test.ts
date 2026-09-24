@@ -1,10 +1,11 @@
 /**
- * Tests for the pure `Diagnostic[]` grouping per line and the problem-count badge.
+ * Tests for the pure `Diagnostic[]` grouping per line and for the file-level section, and for
+ * the problem-count badge.
  */
 import { describe, expect, it } from 'vitest';
 import type { Diagnostic } from '@textscene/core/linter';
 import {
-  groupDiagnosticsByLine,
+  groupDiagnostics,
   summarizeDiagnostics,
   formatProblemBadge,
 } from './lineDiagnostics';
@@ -19,10 +20,10 @@ function diagnostic(overrides: Partial<Diagnostic> & Pick<Diagnostic, 'severity'
   };
 }
 
-describe('groupDiagnosticsByLine', () => {
+describe('groupDiagnostics by line', () => {
   it('maps a single diagnostic onto its line at its own severity', () => {
     const d = diagnostic({ severity: 'warning', message: 'oops', location: { line: 3 } });
-    const byLine = groupDiagnosticsByLine([d]);
+    const { byLine } = groupDiagnostics([d]);
     expect(byLine.get(3)).toEqual({ line: 3, severity: 'warning', messages: ['oops'] });
   });
 
@@ -32,7 +33,7 @@ describe('groupDiagnosticsByLine', () => {
       diagnostic({ severity: 'error', message: 'fatal problem', location: { line: 5 } }),
       diagnostic({ severity: 'warning', message: 'another note', location: { line: 5 } }),
     ];
-    const byLine = groupDiagnosticsByLine(diagnostics);
+    const { byLine } = groupDiagnostics(diagnostics);
     expect(byLine.size).toBe(1);
     expect(byLine.get(5)).toEqual({
       line: 5,
@@ -41,9 +42,10 @@ describe('groupDiagnosticsByLine', () => {
     });
   });
 
-  it('produces no entry for lines with no diagnostics (empty input)', () => {
-    const byLine = groupDiagnosticsByLine([]);
+  it('produces neither a line nor a file-level group for no diagnostics', () => {
+    const { byLine, fileLevel } = groupDiagnostics([]);
     expect(byLine.size).toBe(0);
+    expect(fileLevel).toBeNull();
   });
 
   it('floors a severity outside the union rather than letting it hold the row', () => {
@@ -58,7 +60,7 @@ describe('groupDiagnosticsByLine', () => {
       }),
       diagnostic({ severity: 'error', message: 'fatal', location: { line: 4 } }),
     ];
-    expect(groupDiagnosticsByLine(diagnostics).get(4)).toEqual({
+    expect(groupDiagnostics(diagnostics).byLine.get(4)).toEqual({
       line: 4,
       severity: 'error',
       messages: ['off-union', 'fatal'],
@@ -70,18 +72,66 @@ describe('groupDiagnosticsByLine', () => {
       diagnostic({ severity: 'error', message: 'bad line 2', location: { line: 2 } }),
       diagnostic({ severity: 'warning', message: 'bad line 9', location: { line: 9 } }),
     ];
-    const byLine = groupDiagnosticsByLine(diagnostics);
+    const { byLine } = groupDiagnostics(diagnostics);
     expect(byLine.size).toBe(2);
     expect(byLine.get(2)?.severity).toBe('error');
     expect(byLine.get(9)?.severity).toBe('warning');
   });
+});
 
-  it('skips a diagnostic with no location/line — it cannot mark a gutter row', () => {
+describe('groupDiagnostics for the file-level section', () => {
+  it('puts a diagnostic with no location in the file-level group, not on a line', () => {
     const withLocation = diagnostic({ severity: 'error', message: 'has line', location: { line: 4 } });
-    const noLocation = diagnostic({ severity: 'error', message: 'no line info', location: undefined });
-    const byLine = groupDiagnosticsByLine([withLocation, noLocation]);
-    expect(byLine.size).toBe(1);
+    const noLocation = diagnostic({ severity: 'warning', message: 'no line info', location: undefined });
+    const { byLine, fileLevel } = groupDiagnostics([withLocation, noLocation]);
+    expect([...byLine.keys()]).toEqual([4]);
     expect(byLine.get(4)?.messages).toEqual(['has line']);
+    expect(fileLevel).toEqual({ severity: 'warning', messages: ['no line info'] });
+  });
+
+  it('never puts a locationless diagnostic on line 1, which would claim that line is at fault', () => {
+    const { byLine } = groupDiagnostics([diagnostic({ severity: 'info', message: 'file', location: undefined })]);
+    expect(byLine.size).toBe(0);
+  });
+
+  it('takes a location that names no row: no line, a zero, a negative, a fraction, NaN', () => {
+    const rowless = [{ column: 3 }, { line: 0 }, { line: -2 }, { line: 1.5 }, { line: Number.NaN }];
+    const { byLine, fileLevel } = groupDiagnostics(
+      rowless.map((location, i) => diagnostic({ severity: 'info', message: `m${i}`, location }))
+    );
+    expect(byLine.size).toBe(0);
+    expect(fileLevel?.messages).toEqual(['m0', 'm1', 'm2', 'm3', 'm4']);
+  });
+
+  it('keeps the highest severity and every message in order, flooring an off-union one', () => {
+    const { fileLevel } = groupDiagnostics([
+      diagnostic({ severity: 'info', message: 'a', location: undefined }),
+      diagnostic({ severity: 'error', message: 'b', location: undefined }),
+      diagnostic({ severity: 'bogus' as unknown as Diagnostic['severity'], message: 'c', location: undefined }),
+    ]);
+    expect(fileLevel).toEqual({ severity: 'error', messages: ['a', 'b', 'c'] });
+  });
+
+  it('is null when every diagnostic names a line', () => {
+    const { fileLevel } = groupDiagnostics([diagnostic({ severity: 'error', message: 'x', location: { line: 2 } })]);
+    expect(fileLevel).toBeNull();
+  });
+});
+
+describe('the badge and the two groups', () => {
+  it('count the same findings: every diagnostic lands in exactly one group', () => {
+    const diagnostics = [
+      diagnostic({ severity: 'error', message: 'line 2', location: { line: 2 } }),
+      diagnostic({ severity: 'warning', message: 'line 2 again', location: { line: 2 } }),
+      diagnostic({ severity: 'info', message: 'line 7', location: { line: 7 } }),
+      diagnostic({ severity: 'warning', message: 'file', location: undefined }),
+      diagnostic({ severity: 'error', message: 'file too', location: { line: 0 } }),
+    ];
+    const { byLine, fileLevel } = groupDiagnostics(diagnostics);
+    const shown = [...byLine.values()].flatMap((g) => g.messages).concat(fileLevel?.messages ?? []);
+
+    expect(shown.sort()).toEqual(diagnostics.map((d) => d.message).sort());
+    expect(shown).toHaveLength(summarizeDiagnostics(diagnostics).total);
   });
 });
 

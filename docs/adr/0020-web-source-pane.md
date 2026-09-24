@@ -58,6 +58,15 @@ that wraps `<TscnPreviewShell>`. The specifics and the rejected options:
    `color: transparent` textarea, scroll-synced and metric-matched) achieves it without
    CodeMirror. It is alignment-sensitive, and monospace makes it tractable.
 
+   *Amendment:* the badge counts only what the pane shows. The `Linter` puts a rule's
+   diagnostic on the heading of its node, and a dangling reference on the line of its
+   property, so a gutter dot marks each such finding. A diagnostic with no line goes to a
+   file-level section in the pane header. That section has the same dot and popover, and it
+   takes keyboard focus. Such a diagnostic never goes on line 1, because a dot there says that
+   line is at fault. *Rejected:* a badge that counts only the findings with a line. It hides
+   the findings about the whole file, which an author cannot find anywhere else. Also
+   rejected: a second count on the badge for those findings. Two numbers answer one question.
+
 5. **Ephemeral persistence plus Download.** Edits live in memory only. A scene switch or a
    reload resets the buffer to the content of the file. A "Download .tscn" button exports
    the current buffer. *Rejected:* write-back through the File System Access API. It is

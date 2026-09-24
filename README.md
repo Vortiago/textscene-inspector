@@ -75,7 +75,8 @@ scene and its textures in one gesture), and shareable `?fixture=` deep links.
 Add `&camera=<node path>` (for example `&camera=Root/Camera3D`) to open looking
 through a scene's own Camera3D. An editable Source pane renders `.tscn` text as
 you type, with a linter gutter (error and warning dots, hover popover,
-problem-count badge) and a "Download .tscn" export.
+problem-count badge), a file-level section for findings no line holds, and a
+"Download .tscn" export.
 
 **CLI linter**: `pnpm lint:tscn <files>`, after `pnpm build:linter`.
 

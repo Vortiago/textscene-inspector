@@ -294,5 +294,7 @@ export type {
   RuleMeta,
   ParseError,
   StrictParseResult,
+  SectionLines,
+  SourceLines,
 } from './types.js';
 export type { PropertyValidator } from './ValidatorRegistry.js';
