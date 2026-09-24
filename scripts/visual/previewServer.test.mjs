@@ -4,7 +4,7 @@
  * both its failures are silent: a frame taken before the picture stopped moving, and one taken at
  * a different simulated instant from the Godot reference.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -16,10 +16,17 @@ import {
   canvas2DViewportFor,
   isUniformImage,
   settleCanvas,
+  startPreview,
   writeCaptureImage,
   SETTLE_SIM_SECONDS,
 } from './previewServer.mjs';
 import { bootstrapScript } from '../godot-ref/run.mjs';
+
+// The real spawn, so a test can replace one call without launching `vite preview`.
+vi.mock('node:child_process', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, spawn: vi.fn(actual.spawn) };
+});
 
 /** A PNG whose every pixel is the same colour, as a dead GL context reads back. */
 function uniformPng(width = 8, height = 8) {
@@ -180,40 +187,74 @@ describe('an interrupted harness does not orphan its preview group', () => {
     return fn();
   };
 
-  // A stand-in for the real spawn: same `detached` group shape, no build.
-  const harness = () => `
+  const exitOf = (child) =>
+    new Promise((resolve) => child.once('exit', (code, signal) => resolve({ code, signal })));
+
+  /**
+   * A stand-in for the real spawn: the same `detached` group shape and the teardown `startPreview`
+   * registers, with no build. `keepAlive: false` unrefs the group, so the harness ends normally.
+   */
+  const harness = ({ keepAlive = true } = {}) => `
 import { spawn } from 'node:child_process';
-import { registerPreviewGroupTeardown } from ${JSON.stringify(
+import { reapPreviewGroupOnExit } from ${JSON.stringify(
     new URL('./previewServer.mjs', import.meta.url).href
   )};
 const proc = spawn('sh', ['-c', 'sleep 120'], { detached: true, stdio: 'ignore' });
-registerPreviewGroupTeardown(proc);
+reapPreviewGroupOnExit(proc);
 console.log(String(proc.pid));
-setTimeout(() => {}, 120000);
+${keepAlive ? 'setTimeout(() => {}, 120000);' : 'proc.unref();'}
 `;
 
-  it('reaps the group when the harness is interrupted with SIGINT', async () => {
-    const h = runHarness(harness());
+  /** Starts the harness and waits for the pid of its preview group. */
+  async function startHarness(options) {
+    const h = runHarness(harness(options));
+    const exited = exitOf(h.child);
     await until(() => h.out().trim().length > 0);
-    const groupPid = Number(h.out().trim());
-    expect(alive(groupPid)).toBe(true);
+    return { ...h, exited, groupPid: Number(h.out().trim()) };
+  }
 
-    h.child.kill('SIGINT');
-    const reaped = await until(() => !alive(groupPid));
+  // The exit code, not death by the signal: `process.exit` is what runs Playwright's browser close.
+  it.each([
+    ['SIGINT', 130],
+    ['SIGTERM', 143],
+    ['SIGHUP', 129],
+  ])('reaps the group and exits with the shell code when the harness gets %s', async (signal, code) => {
+    const h = await startHarness();
+    expect(alive(h.groupPid)).toBe(true);
+
+    h.child.kill(signal);
+    const exit = await h.exited;
+    const reaped = await until(() => !alive(h.groupPid));
     h.cleanup();
+    expect(exit).toEqual({ code, signal: null });
     expect(reaped).toBe(true);
   }, 20000);
 
-  it('reaps the group when the harness is terminated with SIGTERM', async () => {
-    const h = runHarness(harness());
-    await until(() => h.out().trim().length > 0);
-    const groupPid = Number(h.out().trim());
+  it('reaps the group when the harness ends normally', async () => {
+    const h = await startHarness({ keepAlive: false });
 
-    h.child.kill('SIGTERM');
-    const reaped = await until(() => !alive(groupPid));
+    const exit = await h.exited;
+    const reaped = await until(() => !alive(h.groupPid));
     h.cleanup();
+    expect(exit).toEqual({ code: 0, signal: null });
     expect(reaped).toBe(true);
   }, 20000);
+
+  it('is the teardown startPreview registers for the group it spawns', () => {
+    spawn.mockReturnValueOnce({ pid: 4242 });
+    const once = vi.spyOn(process, 'once').mockReturnValue(process);
+    const kill = vi.spyOn(process, 'kill').mockReturnValue(true);
+    try {
+      startPreview(1);
+      const handlers = Object.fromEntries(once.mock.calls);
+      expect(Object.keys(handlers).sort()).toEqual(['SIGHUP', 'SIGINT', 'SIGTERM', 'exit']);
+      handlers.exit();
+      expect(kill).toHaveBeenCalledWith(-4242, 'SIGTERM');
+    } finally {
+      once.mockRestore();
+      kill.mockRestore();
+    }
+  });
 });
 
 /**

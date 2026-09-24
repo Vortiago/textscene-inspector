@@ -10,7 +10,7 @@ export { assertWebBuildFresh, ensureWebBuilt } from './preview/webBuild.mjs';
 export {
   assertPortFree,
   killPreviewGroup,
-  registerPreviewGroupTeardown,
+  reapPreviewGroupOnExit,
   startPreview,
   waitForServer,
 } from './preview/server.mjs';

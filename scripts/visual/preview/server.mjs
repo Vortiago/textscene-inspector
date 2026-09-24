@@ -5,6 +5,7 @@
 
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
+import { constants } from 'node:os';
 import { REPO_ROOT } from './paths.mjs';
 
 /**
@@ -30,41 +31,36 @@ export async function assertPortFree(port, envVarName = 'VISUAL_PORT') {
   }
 }
 
-/**
- * Reaps the preview group when this process ends, however it ends. `detached: true` lets the group
- * outlive us, and Node runs no `finally` on a signal. `exit` covers normal and thrown ends and
- * stays synchronous. A signal handler reaps and re-raises, so the harness dies of that signal.
- * SIGKILL cannot be caught and is the one path that orphans a server.
- */
-export function registerPreviewGroupTeardown(proc) {
-  const onExit = () => killPreviewGroup(proc);
-  const onSignal = (signal) => {
-    process.removeListener('exit', onExit);
-    killPreviewGroup(proc);
-    process.kill(process.pid, signal);
-  };
-  process.once('exit', onExit);
-  process.once('SIGINT', () => onSignal('SIGINT'));
-  process.once('SIGTERM', () => onSignal('SIGTERM'));
-  process.once('SIGHUP', () => onSignal('SIGHUP'));
-}
-
 export function startPreview(port) {
   const proc = spawn(
     'pnpm',
     ['--filter', '@textscene/web-previewer', 'preview', '--port', String(port), '--strictPort'],
     { cwd: REPO_ROOT, shell: true, stdio: 'ignore', detached: true }
   );
-  // `detached` puts the preview in its own process group, out of reach of the terminal's Ctrl-C,
-  // and no `finally` runs on a signal, so the server would hold the port for the next run. Set at
-  // the spawn, so no launcher can forget it. `process.exit` still lets playwright close its browser.
-  const stopOnSignal = (signal) => {
-    killPreviewGroup(proc);
-    process.exit(signal === 'SIGINT' ? 130 : 143);
-  };
-  process.once('SIGINT', stopOnSignal);
-  process.once('SIGTERM', stopOnSignal);
+  // Registered at the spawn, so no launcher can forget it.
+  reapPreviewGroupOnExit(proc);
   return { proc, baseUrl: `http://localhost:${port}` };
+}
+
+/**
+ * SIGHUP arrives when the terminal closes. The detached group is in its own session and gets no
+ * SIGHUP, so the harness reaps it then too.
+ */
+const TERMINATING_SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'];
+
+/**
+ * Reaps the preview group when this process ends, however it ends. `detached: true` lets the group
+ * outlive us and escape the terminal's Ctrl-C, and Node runs no `finally` on a signal. The `exit`
+ * handler covers every end and stays synchronous. A caught signal ends the process with
+ * `process.exit(128 + signal number)`, not a re-raise, so the `exit` handlers run: this one reaps
+ * the group, and Playwright's closes its browser. SIGKILL cannot be caught and is the one path that
+ * orphans a server.
+ */
+export function reapPreviewGroupOnExit(proc) {
+  process.once('exit', () => killPreviewGroup(proc));
+  for (const signal of TERMINATING_SIGNALS) {
+    process.once(signal, () => process.exit(128 + constants.signals[signal]));
+  }
 }
 
 /**
