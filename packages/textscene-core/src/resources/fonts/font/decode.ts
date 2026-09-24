@@ -4,7 +4,7 @@
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
-import { findSubResource, parseResourceReference } from '../../SubResourceResolver';
+import { findExtResource, findSubResource, parseResourceReference } from '../../SubResourceResolver';
 import { resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { FontCacheReader, FontLoaderFn, FontResource } from './types';
 
@@ -125,7 +125,7 @@ export function resolveInlineFontResource(
   if (!parsed) return null;
 
   if (parsed.type === 'ExtResource') {
-    const path = externalResources.find((r) => r.id === parsed.id)?.path;
+    const path = findExtResource(externalResources, parsed.id)?.path;
     if (!path) return null;
     const cached = fontCache.getCached(path);
     if (cached === undefined) {

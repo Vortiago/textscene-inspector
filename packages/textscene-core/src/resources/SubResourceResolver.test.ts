@@ -1,6 +1,8 @@
 /** The resource-reference helpers in `SubResourceResolver.ts`. */
 import { describe, it, expect } from 'vitest';
 import {
+  findExtResource,
+  findSubResource,
   parseResourceReference,
   resolveExtAtlasTexturePath,
   resolveInstancePath,
@@ -9,6 +11,7 @@ import {
   unwrapCanvasTextureRef,
 } from './SubResourceResolver';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
+import { countedTable } from './testing/countedTable';
 
 const externalResources: readonly TscnExternalResource[] = [
   { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
@@ -248,5 +251,95 @@ describe('resolveTexture2DPath', () => {
   it('declines an ExtResource AtlasTexture .tres, directly or through a CanvasTexture — its size is the region, never the sheet', () => {
     expect(resolveTexture2DPath('ExtResource("7")', externals, internals)).toBeNull();
     expect(resolveTexture2DPath('SubResource("CanvasTexture_atlas")', externals, internals)).toBeNull();
+  });
+});
+
+describe('findExtResource', () => {
+  it('finds the [ext_resource] declaring an id (happy path)', () => {
+    expect(findExtResource(externalResources, '2_frame')).toBe(externalResources[1]);
+  });
+
+  it('returns undefined for an undeclared id and for an empty table (error path)', () => {
+    expect(findExtResource(externalResources, '9_missing')).toBeUndefined();
+    expect(findExtResource([], '1_cube')).toBeUndefined();
+  });
+
+  it('keeps the first declaration of a repeated id, as a scan in file order would (edge case)', () => {
+    const first = { id: '1', path: 'res://first.png', type: 'Texture2D' };
+    const repeated = { id: '1', path: 'res://second.png', type: 'Texture2D' };
+    expect(findExtResource([first, repeated], '1')).toBe(first);
+  });
+
+  it('answers from its id map: a repeated lookup reads no entry of the table', () => {
+    const { table, entryReads } = countedTable(externalResources);
+    expect(findExtResource(table, '1_cube')?.path).toBe('res://child_cube.tscn');
+    const readsAfterIndexing = entryReads();
+    for (let i = 0; i < 100; i += 1) findExtResource(table, i % 2 ? '1_cube' : '2_frame');
+    expect(entryReads()).toBe(readsAfterIndexing);
+  });
+
+  it('extends its map over entries appended after the first lookup (edge case)', () => {
+    const table: TscnExternalResource[] = [{ id: '1', path: 'res://a.png', type: 'Texture2D' }];
+    expect(findExtResource(table, '2')).toBeUndefined();
+    const appended = { id: '2', path: 'res://b.png', type: 'Texture2D' };
+    table.push(appended);
+    expect(findExtResource(table, '2')).toBe(appended);
+  });
+
+  it('forgets entries a truncation removed (edge case)', () => {
+    const table: TscnExternalResource[] = [
+      { id: '1', path: 'res://a.png', type: 'Texture2D' },
+      { id: '2', path: 'res://b.png', type: 'Texture2D' },
+    ];
+    expect(findExtResource(table, '2')).toBe(table[1]);
+    table.length = 1;
+    expect(findExtResource(table, '2')).toBeUndefined();
+  });
+});
+
+describe('findSubResource', () => {
+  const internalResources: readonly TscnInternalResource[] = [
+    { id: 'Box_1', type: 'BoxMesh', data: {} },
+    { id: '2', type: 'ArrayMesh', data: { id: 'mesh_2' } },
+  ];
+
+  it('finds a resource by its structural id and by its runtime `data.id` (happy path)', () => {
+    expect(findSubResource(internalResources, 'Box_1')).toBe(internalResources[0]);
+    expect(findSubResource(internalResources, 'mesh_2')).toBe(internalResources[1]);
+    expect(findSubResource(internalResources, '2')).toBe(internalResources[1]);
+  });
+
+  it('returns undefined for an undeclared id and for an empty table (error path)', () => {
+    expect(findSubResource(internalResources, 'Missing_1')).toBeUndefined();
+    expect(findSubResource([], 'Box_1')).toBeUndefined();
+  });
+
+  it('gives an id to the first resource answering to it either way, in file order (edge case)', () => {
+    const byDataId = { id: 'a', type: 'BoxMesh', data: { id: 'shared' } };
+    const byStructuralId = { id: 'shared', type: 'SphereMesh', data: {} };
+    expect(findSubResource([byDataId, byStructuralId], 'shared')).toBe(byDataId);
+    expect(findSubResource([byStructuralId, byDataId], 'shared')).toBe(byStructuralId);
+  });
+
+  it('ignores a `data.id` that is not a string, which no reference text can equal (edge case)', () => {
+    const numeric = { id: 'Box_1', type: 'BoxMesh', data: { id: 7 } };
+    expect(findSubResource([numeric], '7')).toBeUndefined();
+    expect(findSubResource([numeric], 'Box_1')).toBe(numeric);
+  });
+
+  it('answers from its id map: a repeated lookup reads no entry of the table', () => {
+    const { table, entryReads } = countedTable(internalResources);
+    expect(findSubResource(table, 'mesh_2')?.type).toBe('ArrayMesh');
+    const readsAfterIndexing = entryReads();
+    for (let i = 0; i < 100; i += 1) findSubResource(table, i % 2 ? 'Box_1' : 'mesh_2');
+    expect(entryReads()).toBe(readsAfterIndexing);
+  });
+
+  it('extends its map over entries appended after the first lookup (edge case)', () => {
+    const table: TscnInternalResource[] = [{ id: 'Box_1', type: 'BoxMesh', data: {} }];
+    expect(findSubResource(table, 'Sphere_1')).toBeUndefined();
+    const appended = { id: 'Sphere_1', type: 'SphereMesh', data: {} };
+    table.push(appended);
+    expect(findSubResource(table, 'Sphere_1')).toBe(appended);
   });
 });

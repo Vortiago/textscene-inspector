@@ -17,6 +17,7 @@ import {
   packedArrayCallAnywhere,
 } from '../../../godot/index.js';
 import { nodePathLiteral } from '../../../godot/variantParser.js';
+import { findSubResource } from '../../../resources/SubResourceResolver.js';
 import type { AnimationLibraryRef } from './types';
 
 export type { GodotKeyframeValue } from './keyframeValues.js';
@@ -65,14 +66,14 @@ export function resolveAnimations(
 ): GodotAnimation[] {
   const animations: GodotAnimation[] = [];
   for (const lib of libraries) {
-    const libResource = findById(internalResources, lib.subResourceId);
+    const libResource = findSubResource(internalResources, lib.subResourceId);
     if (!libResource || libResource.type !== 'AnimationLibrary') continue;
 
     const dataStr = asString(libResource.data['_data']);
     if (!dataStr) continue;
 
     for (const [name, animId] of parseLibraryData(dataStr)) {
-      const animResource = findById(internalResources, animId);
+      const animResource = findSubResource(internalResources, animId);
       if (!animResource || animResource.type !== 'Animation') continue;
       animations.push(parseAnimation(name, animResource));
     }
@@ -92,14 +93,14 @@ export function resolveAudioTrackPaths(
 ): string[] {
   const paths: string[] = [];
   for (const lib of libraries) {
-    const libResource = findById(internalResources, lib.subResourceId);
+    const libResource = findSubResource(internalResources, lib.subResourceId);
     if (!libResource || libResource.type !== 'AnimationLibrary') continue;
 
     const dataStr = asString(libResource.data['_data']);
     if (!dataStr) continue;
 
     for (const [, animId] of parseLibraryData(dataStr)) {
-      const animResource = findById(internalResources, animId);
+      const animResource = findSubResource(internalResources, animId);
       if (!animResource || animResource.type !== 'Animation') continue;
       paths.push(...audioTrackPaths(animResource.data));
     }
@@ -129,7 +130,7 @@ export function hasUnresolvableClips(
   internalResources: readonly TscnInternalResource[]
 ): boolean {
   return libraries.some((lib) => {
-    const libResource = findById(internalResources, lib.subResourceId);
+    const libResource = findSubResource(internalResources, lib.subResourceId);
     if (!libResource || libResource.type !== 'AnimationLibrary') return false;
     const dataStr = asString(libResource.data['_data']);
     return dataStr !== undefined && EXT_RESOURCE_CALL_ANYWHERE_RE.test(dataStr);
@@ -318,16 +319,6 @@ function parseFloatList(raw: string): number[] | null {
     values.push(num);
   }
   return values;
-}
-
-function findById(
-  resources: readonly TscnInternalResource[],
-  id: string
-): TscnInternalResource | undefined {
-  return resources.find((r) => {
-    const dataId = (r.data as { id?: string }).id;
-    return r.id === id || dataId === id;
-  });
 }
 
 function asString(value: unknown): string | undefined {

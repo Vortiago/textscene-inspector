@@ -36,7 +36,11 @@ import {
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { useResource, useResourceLoader } from '../resources/useResource.js';
 import { collapseLiveNode, singleSceneCache } from './liveSceneTree.js';
-import { parseResourceReference, resolveInstancePath } from '../resources/SubResourceResolver.js';
+import {
+  findExtResource,
+  parseResourceReference,
+  resolveInstancePath,
+} from '../resources/SubResourceResolver.js';
 import {
   SceneResourcesProvider,
   useSceneResources,
@@ -358,7 +362,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
     if (!loader || !scenePath) return;
     const parsed = parseResourceReference(instanceRef);
     if (parsed && parsed.type === 'ExtResource') {
-      const ext = externalResources.find((r) => r.id === parsed.id);
+      const ext = findExtResource(externalResources, parsed.id);
       if (ext) {
         loader.register({ id: ext.id, path: ext.path, type: ext.type });
       }

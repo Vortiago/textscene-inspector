@@ -26,7 +26,7 @@ import {
   findSubResource,
   useSceneResources,
 } from '../../../r3f/SceneResourcesContext';
-import { parseResourceReference } from '../../../resources/SubResourceResolver';
+import { findExtResource, parseResourceReference } from '../../../resources/SubResourceResolver';
 import { useResource } from '../../../resources/useResource';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { MeshGeometry } from './meshGeometry';
@@ -531,7 +531,7 @@ function resolveExtArrayMeshPath(
   if (!meshRef) return null;
   const parsed = parseResourceReference(meshRef);
   if (!parsed || parsed.type !== 'ExtResource') return null;
-  const ext = externalResources.find((r) => r.id === parsed.id);
+  const ext = findExtResource(externalResources, parsed.id);
   if (!ext?.path || !ext.path.endsWith('.tres')) return null;
   return ext.path;
 }
