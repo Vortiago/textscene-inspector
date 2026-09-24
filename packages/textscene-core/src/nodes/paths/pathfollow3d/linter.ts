@@ -88,10 +88,10 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Not a second spelling of `progress`: `PackedScene::instantiate` sets stored properties before parenting
-  // (packed_scene.cpp:492 sets, :541 parents) and `path` is bound on NOTIFICATION_ENTER_TREE, so `set_progress`
-  // stores the raw value and `set_progress_ratio` (path_3d.cpp:503) drops every authored ratio. Unconditional,
-  // since the guard is on the missing parent, not on the value.
+  // Not a second spelling of `progress`: `PackedScene::instantiate` sets stored properties
+  // (packed_scene.cpp:492) before it parents (:541), and `path` binds on NOTIFICATION_ENTER_TREE.
+  // So `set_progress` stores the raw value, and `set_progress_ratio` (path_3d.cpp:503), missing its
+  // parent, drops every authored ratio: the check is unconditional, whatever the value.
   if (rawProps.progress_ratio !== undefined) {
     diagnostics.push({
       severity: 'error',

@@ -68,9 +68,9 @@ export function buildGlyphQuadArrays(
 ): GlyphQuadArrays {
   const scale = fontSizePx / OPEN_SANS_ATLAS_INFO.fontSize;
   const baselineOffsetPx = layout.baselineOffsetPx;
-  // How far the bake's line-top reference sits above the baseline, at the target size. A run smaller
-  // than its line's size reads a few tenths of a pixel low, from Godot's per-size FreeType hinting.
-  // `textRun.md` says why, and why no closed-form fix works without porting the hinter.
+  // How far the bake's line-top reference sits above the baseline, at the target size. A run
+  // smaller than its line's size reads a few tenths of a pixel low, from Godot's per-size FreeType
+  // hinting. `textRun.md` says why, and why no closed-form fix works without porting the hinter.
   const bakeAnchorPx = OPEN_SANS_ATLAS_INFO.base * scale;
 
   let glyphCount = 0;

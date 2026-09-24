@@ -1,8 +1,8 @@
 /**
- * The font-metrics contract the native Control text engine shapes against, plus
- * the shared px quantisation every implementation goes through. An implementation
- * supplies only design-unit data. This module imports nothing, so a consumer of
- * the type never pulls Open Sans's baked data into its closure.
+ * The font-metrics contract the native Control text engine shapes against, and the px quantisation
+ * every implementation shares, from design-unit data alone. The whole-pixel advance round above the
+ * subpixel threshold carries a remainder, so it lives in `textLayout.ts`. This module imports
+ * nothing, so no consumer pulls in Open Sans's baked data.
  */
 
 /**
@@ -35,10 +35,10 @@ export interface FontMetrics {
 }
 
 /**
- * `units` scaled to `fontSizePx` as `units * (fontSizePx / unitsPerEm)`. `units * fontSizePx / unitsPerEm` is
- * bit-identical only at a power-of-two `unitsPerEm`. No rule stops at this float: ascent and descent ceil to whole
- * pixels, and an advance goes through FreeType's and HarfBuzz's fixed-point chain to whole 1/64 px. The whole-pixel
- * advance round above the subpixel threshold carries a remainder between glyphs, so it lives in `textLayout.ts`.
+ * `units` scaled to `fontSizePx` as `units * (fontSizePx / unitsPerEm)`, which `units * fontSizePx
+ * / unitsPerEm` matches bit for bit only at a power-of-two `unitsPerEm`. No rule stops at this
+ * float: ascent and descent ceil to whole pixels, and an advance goes through FreeType's and
+ * HarfBuzz's fixed-point chain to whole 1/64 px.
  */
 function unitsToPx(units: number, metrics: Pick<FontMetrics, 'unitsPerEm'>, fontSizePx: number): number {
   return units * (fontSizePx / metrics.unitsPerEm);

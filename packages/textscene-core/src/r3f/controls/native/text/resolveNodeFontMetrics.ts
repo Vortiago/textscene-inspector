@@ -1,8 +1,8 @@
 /**
- * Joins theme resolution (`resolveThemeFontIn`, `resolveThemeFontSizeIn`) to each Control's solver and painter.
- * Both pass the same `themeKey`, Godot's own `set_font` key in `default_theme.cpp` (`"font"` for Label, Button,
- * CheckBox, OptionButton and LineEdit, `"normal_font"` for RichTextLabel at `:1194`), so a widget's floored box and
- * its glyphs share one font and size. The size key appends `_size`, and each `nativeSolver.ts` cites its pair.
+ * Joins theme resolution (`resolveThemeFontIn`, `resolveThemeFontSizeIn`) to each Control's solver
+ * and painter. Both pass the same `themeKey`, so a widget's floored box and its glyphs share one
+ * font and size. It is Godot's own `set_font` key: `"font"` for Label, Button, CheckBox,
+ * OptionButton and LineEdit, `"normal_font"` for RichTextLabel (`default_theme.cpp:1194`).
  */
 
 import { controlProps, type ShareNode } from '../solveTree';
@@ -50,8 +50,9 @@ export function resolveNodeFont(n: ShareNode, themeKey: string): FontResource | 
 }
 
 /**
- * The font size `sizeKey` resolves to on `n` (`scene/gui/control.cpp:3107-3129`). `overridePx` is
- * the widget's `theme_override_font_sizes/<sizeKey>`, read from `props.themeOverrideFontSizes`.
+ * The font size `sizeKey` resolves to on `n` (`scene/gui/control.cpp:3107-3129`): the font key plus
+ * `_size`, as each `nativeSolver.ts` cites. `overridePx` is the widget's
+ * `theme_override_font_sizes/<sizeKey>`, read from `props.themeOverrideFontSizes`.
  * `builtInDefaultPx` stands in for `ThemeDB::get_fallback_font_size()`.
  */
 export function resolveNodeFontSizePx(

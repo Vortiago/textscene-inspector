@@ -1,8 +1,8 @@
 /**
- * Parses Godot's `.import` sidecar, which records the importer and parameters of the asset beside it,
- * and which `parseTresFile` rejects for want of a `[gd_resource]` header. A foreign-format parser outside
- * the resource-slice registry (ADR-0031): it is found by path convention, never named by a scene, so it
- * claims no type name and no bus slot.
+ * Parses Godot's `.import` sidecar, the importer and parameters of the asset beside it, which
+ * `parseTresFile` rejects for want of a `[gd_resource]` header. A foreign-format parser outside
+ * the resource-slice registry (ADR-0031): it is found by path convention, never named by a scene,
+ * so it claims no type name and no bus slot.
  */
 
 import {
@@ -19,15 +19,17 @@ const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/]*)=(.*)$/;
 const SECTION = /^\[([A-Za-z_][A-Za-z0-9_]*)\]$/;
 
 /**
- * Only `[params]` describes the import, and its values stay raw strings. `[remap]` and `[deps]` address the
- * baked artifact under `.godot/imported/`, which this previewer never reads (ADR-0028). The typed readers below
- * cover the only honoured parameters: `nodes/root_scale`, `nodes/apply_root_scale`, and the `_subresources`
- * material remaps and mesh layers. The rest is GLTFLoader's work or a bake concern with no visual effect.
+ * Only `[params]` describes the import. `[remap]` and `[deps]` address the baked artifact under
+ * `.godot/imported/`, which this previewer never reads (ADR-0028).
  */
 export interface ParsedImportFile {
   /** The `[remap] importer=` value: `scene` for glTF/GLB, `wavefront_obj` for OBJ. */
   importer: string | null;
-  /** The `[params]` block, raw value strings. */
+  /**
+   * The `[params]` block, as raw value strings. The typed readers cover the only honoured keys:
+   * `nodes/root_scale`, `nodes/apply_root_scale`, and the `_subresources` material remaps and
+   * mesh layers. The rest is GLTFLoader's work or a bake concern with no visual effect.
+   */
   params: Record<string, string>;
 }
 

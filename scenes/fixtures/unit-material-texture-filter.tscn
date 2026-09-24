@@ -1,9 +1,8 @@
 [gd_scene load_steps=5 format=3 uid="uid://unitmaterialtexfilter"]
 
-; One variable: `texture_filter`, left 0 (NEAREST, no mipmaps), right 3 (LINEAR_WITH_MIPMAPS, Godot's default), on two
-; quads that sample one image. The only scene that witnesses per-material texture cloning, as no other fixture pairs one
-; image with two filter states: the filter is a material property in Godot but lives on the Texture in three, and the
-; loader caches one THREE.Texture per path, so filter state on it renders both quads with the material built last.
+; One variable: `texture_filter`, left 0 (NEAREST, no mipmaps), right 3 (LINEAR_WITH_MIPMAPS,
+; Godot's default), on two quads that sample one image. The only scene that witnesses per-material
+; texture cloning, as no other fixture pairs one image with two filter states.
 
 [ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_tex"]
 
@@ -22,6 +21,8 @@ roughness = 1.0
 
 [sub_resource type="StandardMaterial3D" id="Material_linear"]
 albedo_texture = ExtResource("1_tex")
+; A material property in Godot, but the Texture's in three, and the loader caches one THREE.Texture
+; per path: filter state written onto it renders both quads with whichever material built last.
 texture_filter = 3
 roughness = 1.0
 

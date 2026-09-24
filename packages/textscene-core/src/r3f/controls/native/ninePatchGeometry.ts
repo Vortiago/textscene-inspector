@@ -61,10 +61,10 @@ interface AxisCell {
 }
 
 /**
- * `map_ninepatch_axis` (`servers/rendering/renderer_rd/shaders/canvas.glsl:435-467`, called per axis at `:587-588`),
- * the RD backend's per-fragment UV remap of one quad, as dest-space cells along one axis, each carrying the absolute
- * source-pixel span it samples. Flat quads port it exactly, since each branch is a 1:1 copy or an affine map. The
- * arguments are this axis's slice of `NinePatchInput`.
+ * `map_ninepatch_axis` (`servers/rendering/renderer_rd/shaders/canvas.glsl:435-467`, called per
+ * axis at `:587-588`), the RD backend's per-fragment UV remap of one quad, as dest-space cells
+ * along this axis's slice of `NinePatchInput`, each with the absolute source-pixel span it samples.
+ * Flat quads are exact, as each branch is a 1:1 copy or an affine map.
  */
 function solveAxisCells(
   drawSize: number,

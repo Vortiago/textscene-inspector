@@ -9,10 +9,10 @@ import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { hintedBitField, layerBitmask, v } from '../../../linter/validators/index.js';
 
-// Every `ADD_PROPERTY` in `navigation_agent_3d.cpp` is below, and where a setter calls `ERR_FAIL_COND`
-// or clamps with `MAX(0.0, …)` the cite names the setter body, not the hint (ADR-0032). The
-// `DISABLE_DEPRECATED` shim (cpp:209-243) forwards `time_horizon`, `target_location` and `agent_height_offset`
-// to modern setters, and `godot/deprecated.ts` resolves them to the modern keys, so none registers.
+// Every `ADD_PROPERTY` in `navigation_agent_3d.cpp` is below. A cite names the setter body, not the
+// hint, where a setter calls `ERR_FAIL_COND` or clamps with `MAX(0.0, …)` (ADR-0032). The
+// `DISABLE_DEPRECATED` shim (cpp:209-243) forwards `time_horizon`, `target_location` and
+// `agent_height_offset`, and `godot/deprecated.ts` maps them to modern keys, so none registers.
 validatorRegistry.registerAll('NavigationAgent3D', {
   // Pathfinding group, navigation_agent_3d.cpp:154-168.
 

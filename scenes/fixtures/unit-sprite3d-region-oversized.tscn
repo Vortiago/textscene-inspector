@@ -1,9 +1,9 @@
 [gd_scene load_steps=2 format=3]
 
 ; One variable: a `region_rect` larger than its texture on a Sprite3D, the 3D half of the overrun
-; `unit-sprite2d-region-oversized.tscn` pins, resolving the other way. SpriteBase3D derives the `texture_repeat` it
-; hands `get_material_for_2d` from the frame's UV corners (`sprite_3d.cpp:163`). This is the only Sprite3D window that
-; leaves `[0, 1]`, so the only one it answers REPEAT for: it runs to 3.0, emits `repeat_enable` and tiles where 2D clamps.
+; `unit-sprite2d-region-oversized.tscn` pins, resolving the other way. This is the only Sprite3D
+; window that leaves `[0, 1]`, so the only one SpriteBase3D answers REPEAT for, and it tiles where
+; the 2D canvas clamps.
 
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
 
@@ -19,4 +19,6 @@ pixel_size = 0.01
 region_enabled = true
 ; Neither sprite family clips the region (`base_rect = region_rect`, and
 ; `Texture2D::get_rect_region` passes through), so both keep the full region size and UVs past 1.0.
+; SpriteBase3D derives the `texture_repeat` it hands `get_material_for_2d` from the frame's UV
+; corners (`sprite_3d.cpp:163`): this window runs to 3.0, so it emits `repeat_enable`.
 region_rect = Rect2(0, 0, 288, 192)

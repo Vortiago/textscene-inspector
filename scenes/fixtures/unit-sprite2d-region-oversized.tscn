@@ -1,9 +1,9 @@
 [gd_scene load_steps=2 format=3]
 
-; One variable: a `region_rect` larger than its texture, which Godot does not clip. Measured against Godot 4.6.3:
-; 0.000%, pixel for pixel. Invisible elsewhere: `unit-sprite2d.tscn` and `unit-sprite2d-canvastexture.tscn` enable
-; no region, and every other region or hframes/vframes window stays inside the image, where UVs stay in [0,1] and
-; clamp equals repeat.
+; One variable: a `region_rect` larger than its texture, which Godot does not clip. Measured against
+; Godot 4.6.3: 0.000%. Invisible elsewhere: `unit-sprite2d.tscn` and
+; `unit-sprite2d-canvastexture.tscn` enable no region, and every other region or hframes/vframes
+; window stays inside the image, where UVs stay in [0,1] and clamp equals repeat.
 
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
 
@@ -18,7 +18,8 @@ position = Vector2(40, 40)
 texture = ExtResource("1_marker")
 centered = false
 region_enabled = true
-; `Sprite2D::_get_rects` takes `base_rect = region_rect` and `Texture2D::get_rect_region` passes
-; the src rect through, so UVs run past 1.0. The canvas default, `DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_DISABLED`
-; (scene/main/viewport.h), maps to CLAMP_TO_EDGE, so the edge texel column stretches.
+; `Sprite2D::_get_rects` takes `base_rect = region_rect` and `Texture2D::get_rect_region` passes the
+; src rect through, so UVs run past 1.0. The canvas default,
+; `DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_DISABLED` (scene/main/viewport.h), maps to CLAMP_TO_EDGE, so
+; the edge texel column stretches.
 region_rect = Rect2(0, 0, 288, 192)

@@ -109,9 +109,9 @@ const optionValidator = indexedFamilyValidator({
 });
 
 // `current_dir`, `current_file` and `current_path` are live UI state with PROPERTY_USAGE_NONE
-// (file_dialog.cpp:2136-2138), so the storage guard (packed_scene.cpp:865) never saves them: no validator.
-// `dialog_text` keeps AcceptDialog's validator. `_validate_property` hides it (file_dialog.cpp:242-247), but
-// `AcceptDialog::set_text` (dialogs.cpp:168-179) only assigns: an inert value, not a refusal like box_container.cpp:312.
+// (file_dialog.cpp:2136-2138), which the storage guard (packed_scene.cpp:865) never saves, so no
+// validator. `dialog_text` keeps AcceptDialog's validator: it is hidden but no removal
+// (`linter/removalKeys.md`).
 validatorRegistry.registerAll('FileDialog', {
   // file_dialog.cpp:2113, BOOL, no hint. set_mode_overrides_title (:1354-1356)
   // is a bare assignment.

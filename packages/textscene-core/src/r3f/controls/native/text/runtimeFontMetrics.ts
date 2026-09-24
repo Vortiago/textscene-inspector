@@ -1,8 +1,6 @@
 /**
- * The `FontMetrics` for a runtime-loaded scene font, as pure arithmetic. The DOM calls arrive as the injected
- * `measureWidthUnits`, so the module runs under happy-dom with a fake measurer. Advances and kerning come from canvas,
- * not a hand-parsed `hmtx` or `kern`: `measureText` carries the real `hmtx` table and the OpenType `GPOS` kerning a
- * `kern` reader misses, though a measured float can differ by one 1/64 step from the integer `hmtx` value.
+ * The `FontMetrics` for a runtime-loaded scene font, as pure arithmetic. The DOM calls arrive as
+ * the injected `measureWidthUnits`, so the module runs under happy-dom with a fake measurer.
  */
 
 import type { FontMetrics } from './fontMetrics';
@@ -60,11 +58,15 @@ export function createRuntimeFontMetrics(input: RuntimeFontMetricsInput): Canvas
     ascent: scalars.ascent,
     descent: scalars.descent,
 
-    // Never `null`: canvas has no "no glyph" signal, and the measured width is what `fillText` paints.
+    // Never `null`: canvas has no "no glyph" signal, and the measured width is what `fillText`
+    // paints. It carries the real `hmtx` advance, not a hand-parsed one, though a measured float
+    // can differ by one 1/64 step from the integer `hmtx` value after quantisation.
     getGlyphAdvanceUnits(ch: string): number {
       return measureChar(ch);
     },
 
+    // From canvas, not a hand-parsed `kern` table: a measured pair carries the OpenType `GPOS`
+    // kerning, which a `kern` reader misses.
     getKerningAdjustmentUnits(a: string, b: string): number {
       const key = `${a}\0${b}`;
       let adjustment = kerningCache.get(key);

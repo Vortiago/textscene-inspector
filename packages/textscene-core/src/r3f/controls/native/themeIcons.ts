@@ -1,8 +1,8 @@
 /**
- * Godot default-theme SVG icons the native (WebGL) Control painters need, as base64 `data:` URLs, so the source
- * bytes round-trip without escaping `<`, `"` and `#`. Each is an unmodified copy from Godot 4.6.3's `scene/theme/icons/`,
- * keyed by its filename without the extension (`default_theme_icons_builders.py`), as `scene/theme/default_theme.cpp`
- * binds it per control with `set_icon`. Licence: Godot Engine, MIT, see THIRD-PARTY-NOTICES.md.
+ * Godot 4.6.3's default-theme SVG icons (`scene/theme/icons/`, unmodified) for the native (WebGL)
+ * Control painters, as base64 `data:` URLs so the bytes round-trip without escaping `<`, `"` and
+ * `#`. A filename less its extension is the key `default_theme.cpp` binds with `set_icon`
+ * (`default_theme_icons_builders.py`). Licence: Godot Engine, MIT, see THIRD-PARTY-NOTICES.md.
  */
 
 function svgDataUrl(base64: string): string {
@@ -113,9 +113,9 @@ const VSLIDER_TICK_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjQiPjxwYXRoIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iLjI1IiBkPSJNMCAzVjFoMTZ2MnoiLz48L3N2Zz4K';
 
 /**
- * HSlider/VSlider's `grabber`/`grabber_disabled` icons: identical for both orientations (`default_theme.cpp:589-591,604-606`).
- * The `grabber_highlight` hover variant
- * (`default_theme.cpp:589-592,604-607`) is not vended, since a static previewer draws no hover state.
+ * HSlider/VSlider's `grabber`/`grabber_disabled` icons, identical for both orientations
+ * (`default_theme.cpp:589-591,604-606`). The `grabber_highlight` hover variant (`:589-592,604-607`)
+ * is not vended, since a static previewer draws no hover state.
  */
 export interface SliderGrabberIcons {
   grabber: string;
@@ -305,8 +305,9 @@ const TAB_BAR_SCROLL_LEFT_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjYiIGZpbGw9IiNmZWZmZmUiIGZpbGwtb3BhY2l0eT0iLjc1Ii8+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWExYTFhIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNjUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTkgNS0zIDMgMyAzIi8+PC9zdmc+Cg==';
 
 /**
- * TabBar's close and scroll-arrow icons (`default_theme.cpp:1034,1036,1039`). `TabContainer` reuses the TabBar painter.
- * The `_highlight` hover pair (`default_theme.cpp:1035,1037`) is not vended, since a static previewer draws no hover state.
+ * TabBar's close and scroll-arrow icons (`default_theme.cpp:1034,1036,1039`). `TabContainer` reuses
+ * the TabBar painter. The `_highlight` hover pair (`:1035,1037`) is not vended, since a static
+ * previewer draws no hover state.
  */
 export interface TabBarIcons {
   close: string;
