@@ -28,10 +28,10 @@ export function SkyDiffuseReflectionSplit({
   /** Created by the first frame that splits, disposed with the split. */
   const holders = useRef<MaterialHolders | null>(null);
 
-  // Stamped every frame, since materials arrive across frames (async textures, GLB and instanced
-  // sub-scenes) and a mesh can swap its material with no event. three ignores `envMapIntensity`
-  // unless the material owns its `envMap` (`material.envMap === null && scene.environment !== null`
-  // in WebGLRenderer), so each points its own `envMap` at the same PMREM texture, with no recompile.
+  // Stamped every frame: materials arrive across frames (async textures, GLB, sub-scenes), and a
+  // mesh can swap its material with no event. three ignores `envMapIntensity` unless the material
+  // owns its `envMap` (`material.envMap === null && scene.environment !== null` in WebGLRenderer),
+  // so each points its own `envMap` at the same PMREM texture, with no recompile.
   useFrame(() => {
     if (!active || contribution >= 1) return;
     const environment = scene.environment;

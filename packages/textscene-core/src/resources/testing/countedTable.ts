@@ -1,4 +1,4 @@
-/** A resource table that counts reads of its entries, so a test can tell an id lookup from a scan. */
+/** A resource table that counts reads of its entries, so a test tells an id lookup from a scan. */
 export interface CountedTable<T> {
   table: T[];
   /** How many times an entry has been read by index since the table was made. */
