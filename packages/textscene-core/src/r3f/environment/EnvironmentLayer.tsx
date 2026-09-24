@@ -4,9 +4,9 @@
  * Each restores what it found on unmount, because the renderer and scene outlive an environment.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useThree } from '@react-three/fiber';
 import { BackgroundMode, type EnvironmentSettings } from '../../resources/environment/types';
 import { applyToneMapping } from '../../resources/environment/toneMapping';
 import {
@@ -24,6 +24,7 @@ import { sceneHasBlendedSurface } from './alphaPassScan';
 import { useLatchedSceneScan } from './useLatchedSceneScan';
 import { SkyLayer } from '../sky/SkyLayer';
 import { ToneMapLayer } from './ToneMapLayer';
+import { SkyDiffuseReflectionSplit } from './SkyDiffuseReflectionSplit';
 
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
@@ -89,63 +90,6 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
       )}
     </>
   );
-}
-
-/**
- * Splits sky diffuse from reflection, which three couples under one `environmentIntensity`: Godot
- * scales diffuse by `ambient_light_sky_contribution` while a metal reflects the whole sky. Each
- * material gets `envMapIntensity = contribution + metalness · (1 − contribution)`, so a dielectric
- * keeps `contribution` (0 under a COLOR ambient). A no-op at `contribution >= 1`.
- */
-function SkyDiffuseReflectionSplit({
-  contribution,
-  active,
-}: {
-  contribution: number;
-  active: boolean;
-}) {
-  const scene = useThree((s) => s.scene);
-  const originals = useRef(
-    new Map<THREE.MeshStandardMaterial, { envMap: THREE.Texture | null; intensity: number }>()
-  );
-
-  // Stamped every frame, since materials arrive across frames (async textures, GLB and instanced
-  // sub-scenes) and the assignment is idempotent. three ignores `envMapIntensity` unless the
-  // material owns its `envMap` (`material.envMap === null && scene.environment !== null` in
-  // WebGLRenderer), so each points its own `envMap` at the same PMREM texture, with no recompile.
-  useFrame(() => {
-    if (!active || contribution >= 1) return;
-    const environment = scene.environment;
-    if (!environment) return;
-    scene.traverse((obj) => {
-      const material = (obj as THREE.Mesh).material;
-      const mats = Array.isArray(material) ? material : material ? [material] : [];
-      for (const m of mats) {
-        const std = m as THREE.MeshStandardMaterial;
-        if (typeof std.envMapIntensity !== 'number') continue;
-        if (!originals.current.has(std)) {
-          originals.current.set(std, { envMap: std.envMap, intensity: std.envMapIntensity });
-        }
-        std.envMap = environment;
-        const metalness = std.metalness ?? 0;
-        std.envMapIntensity = contribution + metalness * (1 - contribution);
-      }
-    });
-  });
-
-  // Restores what was found, because the materials outlive any one environment.
-  useEffect(() => {
-    const captured = originals.current;
-    return () => {
-      for (const [mat, orig] of captured) {
-        mat.envMap = orig.envMap;
-        mat.envMapIntensity = orig.intensity;
-      }
-      captured.clear();
-    };
-  }, [contribution, active]);
-
-  return null;
 }
 
 /** A null threshold means no glow, or one that catches every pixel: nothing to scan for. */
