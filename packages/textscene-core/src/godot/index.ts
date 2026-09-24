@@ -17,6 +17,12 @@ export {
   smoothstep,
 } from './math.js';
 export {
+  TRANSFORM2D_IDENTITY,
+  type Transform2DColumns,
+  multiplyTransform2D,
+  transform2DFromParts,
+} from './transform2d.js';
+export {
   type BasisComponents,
   basisGetScale,
   basisGetScaleAbs,

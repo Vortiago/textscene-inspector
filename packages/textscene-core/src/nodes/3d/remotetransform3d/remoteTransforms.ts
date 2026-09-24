@@ -12,6 +12,12 @@ import type { Node2DProperties, Vector2 } from '../../../nodes/base/node2d/types
 import { joinPath, resolveNodePathLiteral } from '../../../utils/nodePath.js';
 import { UNIQUE_NODE_PREFIX, isUniqueNameInOwner } from '../../../utils/uniqueNames.js';
 import { globalMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
+import {
+  TRANSFORM2D_IDENTITY,
+  multiplyTransform2D,
+  transform2DFromParts,
+  type Transform2DColumns,
+} from '../../../godot/transform2d.js';
 
 const REMOTE_TRANSFORM_TYPES = new Set(['RemoteTransform3D', 'RemoteTransform2D']);
 
@@ -143,21 +149,6 @@ function composeSelected3D(
   );
 }
 
-/**
- * A Godot Transform2D as its two basis columns and origin:
- * `x' = a·x + c·y + tx`, `y' = b·x + d·y + ty`.
- */
-interface Affine2D {
-  a: number;
-  b: number;
-  c: number;
-  d: number;
-  tx: number;
-  ty: number;
-}
-
-const IDENTITY_2D: Affine2D = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
-
 function applyRelay2D(
   relay: TscnNode,
   relayPath: string,
@@ -178,8 +169,8 @@ function applyRelay2D(
   const targetGlobal = globalAffine2D(targetPath, nodeByPath);
   const desired = composeSelected2D(targetGlobal, relayGlobal, flags);
   const parentPath = parentPathOf(targetPath);
-  const parentGlobal = parentPath ? globalAffine2D(parentPath, nodeByPath) : IDENTITY_2D;
-  const newLocal = mulAffine2D(invertAffine2D(parentGlobal), desired);
+  const parentGlobal = parentPath ? globalAffine2D(parentPath, nodeByPath) : TRANSFORM2D_IDENTITY;
+  const newLocal = multiplyTransform2D(invertAffine2D(parentGlobal), desired);
 
   // Godot's RemoteTransform2D pushes position, rotation and scale only. The target keeps its `skew`.
   const dec = decomposeAffine2D(newLocal);
@@ -189,66 +180,46 @@ function applyRelay2D(
   tp.scale = dec.scale;
 }
 
-function localAffine2D(node: TscnNode): Affine2D {
+function localAffine2D(node: TscnNode): Transform2DColumns {
   const props = node.properties as Partial<Node2DProperties>;
-  if (!props || props.position === undefined) return IDENTITY_2D;
-  return trsToAffine2D(
-    props.position,
+  if (!props || props.position === undefined) return TRANSFORM2D_IDENTITY;
+  return transform2DFromParts(
     props.rotation ?? 0,
     props.scale ?? { x: 1, y: 1 },
-    props.skew ?? 0
+    props.skew ?? 0,
+    props.position
   );
 }
 
-function globalAffine2D(path: string, nodeByPath: Map<string, TscnNode>): Affine2D {
-  let result = IDENTITY_2D;
+function globalAffine2D(path: string, nodeByPath: Map<string, TscnNode>): Transform2DColumns {
+  let result = TRANSFORM2D_IDENTITY;
   let acc = '';
   for (const segment of path.split('/')) {
     acc = acc ? `${acc}/${segment}` : segment;
     const node = nodeByPath.get(acc);
-    if (node) result = mulAffine2D(result, localAffine2D(node));
+    if (node) result = multiplyTransform2D(result, localAffine2D(node));
   }
   return result;
 }
 
-function composeSelected2D(base: Affine2D, source: Affine2D, flags: RemoteFlags): Affine2D {
+function composeSelected2D(
+  base: Transform2DColumns,
+  source: Transform2DColumns,
+  flags: RemoteFlags
+): Transform2DColumns {
   const b = decomposeAffine2D(base);
   const s = decomposeAffine2D(source);
-  return trsToAffine2D(
-    flags.updatePosition ? s.position : b.position,
+  return transform2DFromParts(
     flags.updateRotation ? s.rotation : b.rotation,
     flags.updateScale ? s.scale : b.scale,
-    0
+    0,
+    flags.updatePosition ? s.position : b.position
   );
 }
 
-/** Godot `Transform2D(rotation, scale, skew, position)` construction. */
-function trsToAffine2D(position: Vector2, rotation: number, scale: Vector2, skew: number): Affine2D {
-  return {
-    a: Math.cos(rotation) * scale.x,
-    b: Math.sin(rotation) * scale.x,
-    c: -Math.sin(rotation + skew) * scale.y,
-    d: Math.cos(rotation + skew) * scale.y,
-    tx: position.x,
-    ty: position.y,
-  };
-}
-
-/** m1 · m2 (apply m2 then m1). */
-function mulAffine2D(m1: Affine2D, m2: Affine2D): Affine2D {
-  return {
-    a: m1.a * m2.a + m1.c * m2.b,
-    b: m1.b * m2.a + m1.d * m2.b,
-    c: m1.a * m2.c + m1.c * m2.d,
-    d: m1.b * m2.c + m1.d * m2.d,
-    tx: m1.a * m2.tx + m1.c * m2.ty + m1.tx,
-    ty: m1.b * m2.tx + m1.d * m2.ty + m1.ty,
-  };
-}
-
-function invertAffine2D(m: Affine2D): Affine2D {
+function invertAffine2D(m: Transform2DColumns): Transform2DColumns {
   const det = m.a * m.d - m.b * m.c;
-  if (det === 0) return IDENTITY_2D;
+  if (det === 0) return TRANSFORM2D_IDENTITY;
   const inv = 1 / det;
   const a = m.d * inv;
   const b = -m.b * inv;
@@ -258,7 +229,7 @@ function invertAffine2D(m: Affine2D): Affine2D {
 }
 
 /** Godot Transform2D decomposition into position, rotation and scale. Skew is dropped. */
-function decomposeAffine2D(m: Affine2D): { position: Vector2; rotation: number; scale: Vector2 } {
+function decomposeAffine2D(m: Transform2DColumns): { position: Vector2; rotation: number; scale: Vector2 } {
   const rotation = Math.atan2(m.b, m.a);
   const det = m.a * m.d - m.b * m.c;
   const scaleX = Math.hypot(m.a, m.b);

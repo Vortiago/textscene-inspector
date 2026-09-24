@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import type { Node2DLocalTransform } from '../nodes/base/node2d/types';
 import type { Vec3Tuple } from './nodeTransform';
+import { transform2DFromParts } from '../godot/transform2d.js';
 
 // F is its own inverse, so `F·M1·F · F·M2·F = F·(M1·M2)·F` composes through any
 // nesting with no global flip group: Godot `(100, 50)` sits at three.js `(100, -50)`.
@@ -33,19 +34,12 @@ export function node2dGroupProps(t: Node2DLocalTransform, z = 0): Node2DGroupPro
   const skew = t.skew ?? 0;
   if (skew === 0) return { position, rotation, scale };
 
-  // Godot composes T·R·Skew·S, where `skew` tilts local Y by `skew` rad from X.
-  // Conjugated by F, the linear part is F·L·F, with the Y-negated `position`:
-  //   x' =  cos(rot)·sx · x + sin(rot+skew)·sy · y
-  //   y' = −sin(rot)·sx · x + cos(rot+skew)·sy · y
-  const sx = t.scale.x;
-  const sy = t.scale.y;
-  const c = Math.cos(t.rotation);
-  const s = Math.sin(t.rotation);
-  const cS = Math.cos(t.rotation + skew);
-  const sS = Math.sin(t.rotation + skew);
+  // Conjugated by F, Godot's linear part `[a c; b d]` is `[a -c; -b d]`, placed at the
+  // Y-negated `position`.
+  const { a, b, c, d } = transform2DFromParts(t.rotation, t.scale, skew, t.position);
   const matrix = new THREE.Matrix4().set(
-    c * sx, sS * sy, 0, position[0],
-    -s * sx, cS * sy, 0, position[1],
+    a, -c, 0, position[0],
+    -b, d, 0, position[1],
     0, 0, 1, position[2],
     0, 0, 0, 1
   );

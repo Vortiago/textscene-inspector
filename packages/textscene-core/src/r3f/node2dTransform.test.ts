@@ -32,6 +32,26 @@ describe('node2dGroupProps', () => {
     expect(e[14]).toBeCloseTo(0.3, 6); // n34 = z
   });
 
+  it('bakes the matrix the explicit F·L·F formula gives, at every rotation, skew and scale', () => {
+    // The pre-`transform2DFromParts` spelling of this matrix. `+ 0` folds -0 into +0: the
+    // two differ at most in the sign of an exact zero, which no product on the GPU sees.
+    const explicit = (rot: number, sx: number, sy: number, skew: number): number[] => [
+      Math.cos(rot) * sx, Math.sin(rot + skew) * sy,
+      -Math.sin(rot) * sx, Math.cos(rot + skew) * sy,
+    ];
+    for (const rotation of [0, 0.5, -1.2, Math.PI / 2, Math.PI, 3.7]) {
+      for (const skew of [0.25, -0.5, Math.PI / 3, -Math.PI / 2]) {
+        for (const [sx, sy] of [[1, 1], [2, -3], [-0.5, 0.25]] as const) {
+          const e = node2dGroupProps({ position: { x: 4, y: 5 }, rotation, scale: { x: sx, y: sy }, skew })
+            .matrix!.elements;
+          // `elements` is column-major, so n12 is e[4] and n21 is e[1].
+          const baked = [e[0]!, e[4]!, e[1]!, e[5]!].map((n) => n + 0);
+          expect(baked).toEqual(explicit(rotation, sx, sy, skew).map((n) => n + 0));
+        }
+      }
+    }
+  });
+
   it('node2dGroupSpread → TRS props when no skew, matrix props when skewed', () => {
     const trs = node2dGroupSpread(node2dGroupProps({ position: { x: 1, y: 2 }, rotation: 0, scale: { x: 1, y: 1 } }));
     expect(trs).toHaveProperty('position');

@@ -204,6 +204,34 @@ update_rotation = false
   });
 });
 
+describe('applyRemoteTransforms (2D) under a transformed parent', () => {
+  it('re-expresses the relay pose in the rotated, scaled parent space and keeps the skew', () => {
+    // Parent maps local (x, y) to (100 - 2y, 2x), so the relay's global (100, 50) is the
+    // local (25, 0), its rotation 0 is -PI/2 and its scale 1 is 0.5 there. RemoteTransform2D
+    // pushes position, rotation and scale only, so the target's own skew survives.
+    const content = `[gd_scene format=3]
+[node name="Root" type="Node2D"]
+[node name="Parent" type="Node2D" parent="."]
+position = Vector2(100, 0)
+rotation = 1.5707963267948966
+scale = Vector2(2, 2)
+[node name="Target" type="Sprite2D" parent="Parent"]
+position = Vector2(7, 7)
+skew = 0.3
+[node name="Relay" type="RemoteTransform2D" parent="."]
+position = Vector2(100, 50)
+remote_path = NodePath("../Parent/Target")
+`;
+    const props = targetNode2D(content, 'Root/Parent/Target');
+    expect(props.position.x).toBeCloseTo(25, 9);
+    expect(props.position.y).toBeCloseTo(0, 9);
+    expect(props.rotation).toBeCloseTo(-Math.PI / 2, 9);
+    expect(props.scale.x).toBeCloseTo(0.5, 9);
+    expect(props.scale.y).toBeCloseTo(0.5, 9);
+    expect(props.skew).toBeCloseTo(0.3, 12);
+  });
+});
+
 describe('the %Name table this module builds inline', () => {
   it('answers what the shared claim walk answers', () => {
     // The inline collection applies the shared rule a second time rather than copying it. Godot's

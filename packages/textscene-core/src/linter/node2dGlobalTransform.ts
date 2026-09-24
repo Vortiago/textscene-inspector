@@ -13,34 +13,13 @@ import { VECTOR2_REGEX } from './validators/vectorValidators.js';
 import { TSCN_FLOAT_RE, parseGodotFloat, tupleComponent } from './validators/commonValidators.js';
 import { isEqualApprox, isZeroApprox, sign } from '../godot/math.js';
 import { slotComponents, slotComponentsAltered } from '../godot/int.js';
-import { boolSlotValue } from '../godot/index.js';
-
-/** Godot's `Transform2D` layout (`core/math/transform_2d.h`): x-axis `(a, b)`, y-axis `(c, d)`, origin `(tx, ty)`. */
-export interface Transform2DMatrix {
-  readonly a: number;
-  readonly b: number;
-  readonly c: number;
-  readonly d: number;
-  readonly tx: number;
-  readonly ty: number;
-}
-
-const IDENTITY: Transform2DMatrix = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
-
-/**
- * `Transform2D::operator*` (`transform_2d.cpp:198-217`): composes `local`'s space
- * into `parent`'s, so the result maps a point as applying `local`, then `parent`, would.
- */
-function multiply(parent: Transform2DMatrix, local: Transform2DMatrix): Transform2DMatrix {
-  return {
-    a: parent.a * local.a + parent.c * local.b,
-    b: parent.b * local.a + parent.d * local.b,
-    c: parent.a * local.c + parent.c * local.d,
-    d: parent.b * local.c + parent.d * local.d,
-    tx: parent.a * local.tx + parent.c * local.ty + parent.tx,
-    ty: parent.b * local.tx + parent.d * local.ty + parent.ty,
-  };
-}
+import {
+  TRANSFORM2D_IDENTITY,
+  boolSlotValue,
+  multiplyTransform2D,
+  transform2DFromParts,
+  type Transform2DColumns,
+} from '../godot/index.js';
 
 /** The vector as the slot holds it; `null` when the composition must not proceed. */
 function parseVector2(
@@ -69,13 +48,12 @@ function parseScalar(raw: string | undefined, fallback: number): number {
 }
 
 /**
- * A Node2D's own local `Transform2D`, by the `Transform2D(rot, scale, skew, pos)`
- * constructor's formula (`transform_2d.cpp:104-110`). An absent key takes Node2D's
- * field default (`node_2d.h`): position `(0, 0)`, rotation `0`, scale `(1, 1)` and
- * skew `0`, together the identity.
+ * A Node2D's own local `Transform2D`, built as `Node2D::_update_transform` builds it. An
+ * absent key takes Node2D's field default (`node_2d.h`): position `(0, 0)`, rotation `0`,
+ * scale `(1, 1)` and skew `0`, together the identity.
  */
-function localTransform2D(node: TscnNode): Transform2DMatrix | null {
-  if (!isValidProperties(node.properties)) return IDENTITY;
+function localTransform2D(node: TscnNode): Transform2DColumns | null {
+  if (!isValidProperties(node.properties)) return TRANSFORM2D_IDENTITY;
   const props = node.properties;
 
   const position = parseVector2(props.position, { x: 0, y: 0 });
@@ -84,14 +62,7 @@ function localTransform2D(node: TscnNode): Transform2DMatrix | null {
   if (position === null || scale === null) return null;
   const skew = parseScalar(props.skew, 0);
 
-  return {
-    a: Math.cos(rotation) * scale.x,
-    b: Math.sin(rotation) * scale.x,
-    c: -Math.sin(rotation + skew) * scale.y,
-    d: Math.cos(rotation + skew) * scale.y,
-    tx: position.x,
-    ty: position.y,
-  };
+  return transform2DFromParts(rotation, scale, skew, position);
 }
 
 function isTopLevel(node: TscnNode): boolean {
@@ -99,7 +70,7 @@ function isTopLevel(node: TscnNode): boolean {
 }
 
 export type GlobalTransform2DVerdict =
-  | { readonly kind: 'known'; readonly transform: Transform2DMatrix }
+  | { readonly kind: 'known'; readonly transform: Transform2DColumns }
   /** An instanced or untyped ancestor, a non-Node2D CanvasItem, or an altered `Vector2i` component. */
   | { readonly kind: 'unknowable' };
 
@@ -130,11 +101,11 @@ export function resolveGlobalTransform2D(scene: TscnScene, node: TscnNode): Glob
     if (search.kind === 'found' && search.value === 'control') return { kind: 'unknowable' };
   }
 
-  let composed = IDENTITY;
+  let composed = TRANSFORM2D_IDENTITY;
   for (let i = chain.length - 1; i >= 0; i--) {
     const local = localTransform2D(chain[i]!);
     if (local === null) return { kind: 'unknowable' };
-    composed = multiply(composed, local);
+    composed = multiplyTransform2D(composed, local);
   }
   return { kind: 'known', transform: composed };
 }
@@ -145,7 +116,7 @@ export function resolveGlobalTransform2D(scene: TscnScene, node: TscnNode): Glob
  * not `Math.sign`: they differ on NaN, which a serialised `nan` puts into the
  * determinant while the y column stays finite.
  */
-export function globalScale(transform: Transform2DMatrix): { x: number; y: number } {
+export function globalScale(transform: Transform2DColumns): { x: number; y: number } {
   const det = transform.a * transform.d - transform.c * transform.b;
   return {
     x: Math.hypot(transform.a, transform.b),
@@ -157,7 +128,7 @@ export function globalScale(transform: Transform2DMatrix): { x: number; y: numbe
  * `Transform2D::is_conformal()` (`transform_2d.cpp:167-179`): the axes are
  * equal-length and perpendicular, allowing a single shared reflection.
  */
-export function isConformal(transform: Transform2DMatrix): boolean {
+export function isConformal(transform: Transform2DColumns): boolean {
   const { a, b, c, d } = transform;
   const nonFlipped = isEqualApprox(a, d) && isEqualApprox(b, -c);
   const flipped = isEqualApprox(a, -d) && isEqualApprox(b, c);
@@ -170,7 +141,7 @@ export function isConformal(transform: Transform2DMatrix): boolean {
  * against 0.0, but this recomputes by another path, so `isZeroApprox` on the normalised
  * dot product absorbs `cos`/`sin` residue while a few degrees of real skew stay clear.
  */
-export function hasZeroGlobalSkew(transform: Transform2DMatrix): boolean {
+export function hasZeroGlobalSkew(transform: Transform2DColumns): boolean {
   const { a, b, c, d } = transform;
   const len0 = Math.hypot(a, b);
   const len1 = Math.hypot(c, d);

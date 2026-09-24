@@ -11,6 +11,7 @@ import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { Vec2 } from './rect';
 import type { PaintRange } from '../../canvasPaintOrder';
 import type { StyleBoxFlatData } from './styleBoxFlat';
+import type { Transform2DColumns } from '../../../godot/transform2d.js';
 
 /**
  * One resolved, unloaded theme icon: the raw Texture2D-valued ref plus the scope
@@ -23,18 +24,10 @@ export interface ThemedIconRef {
 }
 
 /**
- * A 2D affine transform in Godot's `Transform2D` layout (`core/math/transform_2d.h`),
- * +Y down: `x' = a*x + c*y + tx`, `y' = b*x + d*y + ty`. Never decomposed, since
- * composed ancestors can shear, which rotation and scale cannot represent.
+ * A Godot `Transform2D` (`godot/transform2d.ts`). Never decomposed, since composed
+ * ancestors can shear, which rotation and scale cannot represent.
  */
-export interface Affine2D {
-  a: number;
-  b: number;
-  c: number;
-  d: number;
-  tx: number;
-  ty: number;
-}
+export type Affine2D = Transform2DColumns;
 
 /**
  * The accumulated `CanvasItem` state of the non-Control ancestors a promoted
