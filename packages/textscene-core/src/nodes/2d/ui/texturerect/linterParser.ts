@@ -5,7 +5,8 @@
  */
 
 import '../control/linterParser.js';
-import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';import { TEXTURE_STRETCH_MODE } from '../../../../linter/validators/sharedEnumLabels.js';
+import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
+import { TEXTURE_STRETCH_MODE } from '../../../../linter/validators/sharedEnumLabels.js';
 
 import { v } from '../../../../linter/validators/index.js';
 
