@@ -29,6 +29,7 @@
     "check:package": "publint packages/textscene-core",
     "generate:fixtures": "node scripts/generate-fixtures.js",
     "vendor:games": "node scripts/vendor-godot-games.mjs && node scripts/generate-fixtures.js",
+    "vendor:verktoykasse": "node scripts/vendor/verktoykasse.mjs",
     "vendor:ld58": "node scripts/vendor-ld58.mjs && node scripts/generate-fixtures.js",
     "build:site": "node scripts/vendor-godot-games.mjs && node scripts/vendor-ld58.mjs && node scripts/generate-fixtures.js && pnpm --filter @textscene/web-previewer build",
     "build:deploy": "node scripts/build-deploy.mjs",

@@ -20,8 +20,8 @@ Read [AGENTS.md](AGENTS.md) first. It lists the gates for each kind of change an
 project conventions. [ARCHITECTURE.md](ARCHITECTURE.md) explains the structure.
 
 - Put each test next to the file it tests.
-- Write code comments and docs in Simplified Technical English: short sentences, one
-  word for one thing, no contractions.
+- Write code comments and docs to the rules in [.claude/rules/](.claude/rules/): Clean Code
+  and Simplified Technical English.
 
 ## Check it
 
@@ -36,7 +36,7 @@ The pre-push hook and CI run the same gates.
 ## Open the pull request
 
 - Use a [Conventional Commits](https://www.conventionalcommits.org/) title, for example
-  `fix(parser): read a negative index`.
+  `fix(parser): read a negative index`. The `commit-msg` hook checks each commit message.
 - End the description with `Closes #<issue>`.
 - Keep one change in one pull request.
 

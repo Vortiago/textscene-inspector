@@ -271,4 +271,8 @@ fail on a mis-shaped slice.
   files and `lint:begin` sections keep their generator's text: change the generator.
 - Implement completely: no stubs, placeholders or TODOs. Do every numbered item,
   including doc-only edits.
-- Commits: conventional, technical.
+- Commits: conventional, technical. The `commit-msg` hook and the PR-title Claude hook
+  enforce the format.
+- `.claude/skills/conventional-commits/`, `.claude/rules/` and `.claude/agents/ste-review.md`
+  are vendored from Verktøykasse. Never edit them here: run
+  `pnpm vendor:verktoykasse --from <checkout>`. A test fails on a local edit.
