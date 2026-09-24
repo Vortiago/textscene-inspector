@@ -82,6 +82,9 @@ const PHYSICAL_FEATURES = [
   'transmission',
   'iridescence',
   'dispersion',
+  // three 0.186.0 added this one: `material.retroreflectivity > 0` at `WebGLPrograms.js:143`,
+  // layer bit 24 at `:541-542`.
+  'retroreflectivity',
 ] as const;
 
 type PhysicalFeature = (typeof PHYSICAL_FEATURES)[number];

@@ -115,6 +115,8 @@ describe('materialProgramInputs', () => {
       ['transmission', { transmission: 0.5 }],
       ['iridescence', { iridescence: 0.5 }],
       ['dispersion', { dispersion: 0.5 }],
+      // three 0.186.0 `WebGLPrograms.js:143`, layer bit 24 at `:541-542`.
+      ['retroreflectivity', { retroreflectivity: 0.5 }],
       ['flatShading', { flatShading: true }],
     ];
 
