@@ -1,6 +1,6 @@
 /**
- * Tests the capture layer's pure decisions; the browser and process lifecycle needs a real
- * Chromium (`pnpm test:visual`). `settleCanvas` decides which frame every measurement uses, and
+ * Tests the capture layer's pure decisions and the preview group's teardown. The browser needs a
+ * real Chromium (`pnpm test:visual`). `settleCanvas` decides which frame every measurement uses, and
  * both its failures are silent: a frame taken before the picture stopped moving, and one taken at
  * a different simulated instant from the Godot reference.
  */
