@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types.js';
-import { firstNodeOfType } from './linterUtils.js';
+import { firstNodeOfType, nodesDescendingFrom } from './linterUtils.js';
 
 function node(
   name: string,
@@ -52,5 +52,33 @@ describe('firstNodeOfType', () => {
   it('is null when nothing of that type joins the group', () => {
     const root = node('Root', 'Node3D', [node('Bare', 'WorldEnvironment')]);
     expect(firstNodeOfType([root], 'WorldEnvironment', () => false)).toBeNull();
+  });
+});
+
+describe('nodesDescendingFrom', () => {
+  it('lists every heir of the base class in depth-first order, the base itself included', () => {
+    const tree = node('Tree', 'AnimationTree');
+    const nested = node('Nested', 'AnimationPlayer');
+    const mixer = node('Mixer', 'AnimationMixer');
+    const root = node('Root', 'Node', [node('Branch', 'Node3D', [tree, nested]), mixer]);
+
+    expect(nodesDescendingFrom([root], 'AnimationMixer')).toEqual([tree, nested, mixer]);
+  });
+
+  it('is empty when nothing inherits the base class (error path)', () => {
+    const roots = [node('Root', 'Node3D', [node('Cam', 'Camera3D')])];
+    expect(nodesDescendingFrom(roots, 'AnimationMixer')).toEqual([]);
+  });
+
+  it('leaves out a class the catalog does not know, which inherits nothing (edge case)', () => {
+    const root = node('Root', 'Node', [node('Custom', 'MyGDExtensionPlayer')]);
+    expect(nodesDescendingFrom([root], 'Node')).toEqual([root]);
+  });
+
+  it('answers from the cached index: the same frozen list each time', () => {
+    const roots = [node('Root', 'Node', [node('Player', 'AnimationPlayer')])];
+    const first = nodesDescendingFrom(roots, 'AnimationMixer');
+    expect(nodesDescendingFrom(roots, 'AnimationMixer')).toBe(first);
+    expect(Object.isFrozen(first)).toBe(true);
   });
 });

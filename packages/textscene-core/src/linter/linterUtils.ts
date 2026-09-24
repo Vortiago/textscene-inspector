@@ -2,6 +2,7 @@
 
 import type { TscnNode } from '../parser/types.js';
 import { nodePathLiteral } from '../godot/index.js';
+import { descendsFrom } from '../godot/nodeBaseTypes.js';
 import { cachedUniqueNameClaims, type uniqueNameClaims } from '../utils/uniqueNames.js';
 
 /**
@@ -18,7 +19,10 @@ export function isValidProperties(props: unknown): props is Record<string, strin
  * against a tree pays one O(N) walk, and each later one is O(1) or O(matches).
  */
 interface SceneIndex {
-  /** node -> its parent, or `null` for a root. Absent key = node not in this tree. */
+  /**
+   * node -> its parent, or `null` for a root. Absent key = node not in this tree. Keys are in
+   * the order the walk reached them: depth-first, Godot tree order.
+   */
   parentOf: Map<TscnNode, TscnNode | null>;
   /** Nodes that have an ancestor (not themselves) with `instance` set. */
   underInstanceAncestor: Set<TscnNode>;
@@ -28,6 +32,8 @@ interface SceneIndex {
    * entry that satisfies a predicate, at O(nodes of that type).
    */
   nodesByType: Map<string, TscnNode[]>;
+  /** base class -> every node whose class is it or inherits it, filled on first ask. */
+  heirsByBase: Map<string, readonly TscnNode[]>;
 }
 
 /**
@@ -62,7 +68,7 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   // per-call copy, matching `RuleRegistry`'s hot-path contract, and the freeze enforces it.
   for (const ofType of nodesByType.values()) Object.freeze(ofType);
 
-  return { parentOf, underInstanceAncestor, nodesByType };
+  return { parentOf, underInstanceAncestor, nodesByType, heirsByBase: new Map() };
 }
 
 /**
@@ -94,6 +100,35 @@ const NO_MATCHES: readonly TscnNode[] = Object.freeze([]);
  */
 export function nodesOfType(roots: TscnNode[], type: string): readonly TscnNode[] {
   return getSceneIndex(roots).nodesByType.get(type) ?? NO_MATCHES;
+}
+
+/**
+ * Every node whose class is `base` or inherits it, in depth-first order, frozen, off the same
+ * cached index: {@link nodesOfType} by ancestry, for a rule that asks what a node is rather than
+ * what it is named. A class the catalog does not know inherits nothing.
+ */
+export function nodesDescendingFrom(roots: TscnNode[], base: string): readonly TscnNode[] {
+  const index = getSceneIndex(roots);
+  let heirs = index.heirsByBase.get(base);
+  if (!heirs) {
+    heirs = collectHeirs(index, base);
+    index.heirsByBase.set(base, heirs);
+  }
+  return heirs;
+}
+
+function collectHeirs(index: SceneIndex, base: string): readonly TscnNode[] {
+  // One ancestry test per distinct class, not per node: a scene repeats its classes.
+  const heirClasses = new Set<string>();
+  for (const type of index.nodesByType.keys()) {
+    if (descendsFrom(type, base)) heirClasses.add(type);
+  }
+  if (heirClasses.size === 0) return NO_MATCHES;
+  const heirs: TscnNode[] = [];
+  for (const node of index.parentOf.keys()) {
+    if (heirClasses.has(node.type)) heirs.push(node);
+  }
+  return Object.freeze(heirs);
 }
 
 /** How many nodes of `type` the scene contains, off the same cached index. */
