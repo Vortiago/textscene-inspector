@@ -197,6 +197,7 @@ library, which keeps them at feature parity.
 - [docs/user-guide-vscode.md](./docs/user-guide-vscode.md): VS Code extension guide
 - [ARCHITECTURE.md](./ARCHITECTURE.md): project structure and patterns
 - [REFERENCES.md](./REFERENCES.md): Godot and three.js documentation links
+- [CONTRIBUTING.md](./CONTRIBUTING.md): issues, gates and pull requests
 - [GitHub issues](https://github.com/Vortiago/textscene-inspector/issues): roadmap and open work
 
 ## License
