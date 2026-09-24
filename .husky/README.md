@@ -38,7 +38,7 @@ To skip the pre-commit hook:
 git commit --no-verify
 ```
 
-**⚠️ Warning**: Skip hooks only for a work-in-progress commit on a feature branch. Never skip hooks for a commit to main or a shared branch. The `pre-push` hook still runs `pnpm validate` before the code leaves your machine.
+**⚠️ Warning**: Skip hooks only for a work-in-progress commit on a feature branch. Never skip hooks for a commit to main or a shared branch. The `pre-push` hook still runs `pnpm validate` before the code leaves your machine. Claude Code cannot skip the pre-commit hook: `.claude/hooks/check-no-verify.mjs` blocks it.
 
 ## Modifying hooks
 
@@ -72,16 +72,16 @@ pnpm validate           # Run the full pre-push gate
 To make the pre-commit hook faster, reduce the scope of `vitest related` in
 `lint-staged.config.mjs`.
 
-## Claude Code Web Integration
+## Claude Code integration
 
-**Claude Code Web** has its own validation hooks in `.claude/hooks/`.
+Claude Code has its own `PreToolUse` hooks in `.claude/hooks/`.
 
-| Scenario | What Validates |
+| Scenario | What validates |
 |----------|----------------|
 | Local git commit | Husky `pre-commit` (`lint-staged`, staged files) |
 | Local git push | Husky `pre-push` (`pnpm validate`, full) |
-| Claude Code CLI | Husky hooks (as above) |
-| Claude Code Web | `.claude/hooks/validate-commit.js` (`pnpm validate`) |
+| Claude Code `git commit` | Husky hooks (as above). `.claude/hooks/check-no-verify.mjs` blocks `--no-verify` and `-n`. |
+| Claude Code GitHub API commit | `.claude/hooks/validate-commit.mjs` (the `lint-staged` tasks, committed files) |
 
 CI (`.github/workflows/ci.yml`) runs the same gates as `pnpm validate`, but as separate steps
 (lint, type-check, tests, builds, `check:bundle-size`, `check:package`), so the Actions UI names
@@ -92,4 +92,4 @@ the step that failed. Both paths block on the same checks.
 - [Husky documentation](https://typicode.github.io/husky/)
 - [lint-staged documentation](https://github.com/okonet/lint-staged)
 - See `CLAUDE.md` for the full development workflow
-- See `.claude/hooks/README.md` for the Claude Code Web hooks
+- See `.claude/hooks/README.md` for the Claude Code hooks

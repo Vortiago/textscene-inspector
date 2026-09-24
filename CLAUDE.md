@@ -26,4 +26,5 @@ there, never here.
 - Full scope at full quality: never trim, skip tests, or defer for perceived
   time, token or context pressure. Never mention such limits.
 - No time estimates. Report complexity only (simple / moderate / complex).
-- Claude Code Web: `--no-verify` is blocked, so validation always runs.
+- Claude Code: `.claude/hooks/check-no-verify.mjs` blocks `git commit --no-verify` and `-n`,
+  so the pre-commit checks always run.

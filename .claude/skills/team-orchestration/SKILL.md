@@ -88,6 +88,6 @@ Verify in two layers:
 ## Do not
 
 - Do not spawn one-shot subagents with `Agent({})` when the user asked for a team. SendMessage cannot reach them, and you cannot re-engage them.
-- Do not commit with `--no-verify` unless the user authorised it for a specific environmental block (for example Windows MAX_PATH). Record the block in the commit message.
+- Do not commit with `--no-verify`. The `check-no-verify` hook blocks it. For a specific environmental block (for example Windows MAX_PATH), ask the user to make the commit, and record the block in the commit message.
 - Do not accept "looks fine" from a verifier. Reject a vague report and ask for the observed values.
 - Do not merge a PR that still has `it.fails()` wrappers. The inventory must be at zero.
