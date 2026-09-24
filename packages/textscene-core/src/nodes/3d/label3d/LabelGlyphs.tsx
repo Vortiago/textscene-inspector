@@ -18,6 +18,7 @@ import {
 } from '../../../r3f/controls/native/text/sceneFontLoader';
 import type { CanvasTextTransparency } from '../../../r3f/controls/native/text/canvasTextPainter';
 import { alphaCutSurface, NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
+import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
 import { AlphaCutMode, TextureFilter, type Label3DProperties } from './types';
 
@@ -33,6 +34,7 @@ export default function LabelGlyphs({ properties }: LabelGlyphsProps) {
     peekBundledCanvasFontMetrics,
     peekBundledCanvasFontMetrics
   );
+  usePendingWhile(!fontMetrics);
 
   const layout = useMemo(
     () =>
