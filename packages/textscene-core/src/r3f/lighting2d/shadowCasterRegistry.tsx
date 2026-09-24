@@ -21,6 +21,10 @@ export interface ShadowCaster {
 export interface ShadowCasterRegistry {
   /** Publish a caster; the returned function withdraws it. */
   add(caster: ShadowCaster): () => void;
+  /**
+   * A snapshot, and the same array until the next add or withdrawal, so a per-frame read
+   * allocates nothing.
+   */
   casters(): readonly ShadowCaster[];
   /** Bumped on every add and withdrawal: cheap change detection for a pass. */
   version(): number;
@@ -32,9 +36,12 @@ export function createShadowCasterRegistry(): ShadowCasterRegistry {
   const entries = new Set<ShadowCaster>();
   const listeners = new Set<() => void>();
   let version = 0;
+  /** Built by the first `casters()` after a change, dropped by `changed`. */
+  let snapshot: readonly ShadowCaster[] | null = null;
 
   const changed = () => {
     version++;
+    snapshot = null;
     for (const listener of listeners) listener();
   };
 
@@ -46,7 +53,7 @@ export function createShadowCasterRegistry(): ShadowCasterRegistry {
         if (entries.delete(caster)) changed();
       };
     },
-    casters: () => [...entries],
+    casters: () => (snapshot ??= [...entries]),
     version: () => version,
     subscribe(listener) {
       listeners.add(listener);

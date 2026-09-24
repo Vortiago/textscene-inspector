@@ -22,6 +22,7 @@ import {
   worldShadowCasters,
   type WorldShadowCaster,
 } from './shadowCasterRegistry';
+import { createCasterMotionWatch } from './shadowCasterMotion';
 
 /**
  * Runs ahead of the light accumulation pre-pass (-1), so a frame that both
@@ -68,13 +69,16 @@ export function ShadowCasterStage({ children }: { children: ReactNode }) {
   // What the context already holds. Comparing against state inside the setter
   // would make the sample itself part of an updater React may replay.
   const published = useRef(casters);
+  const motion = useMemo(createCasterMotionWatch, []);
 
   const sample = useCallback(() => {
+    // Inputs first: a still scene stops here, before the flatten allocates per occluder.
+    if (!motion.changed(registry)) return;
     const next = worldShadowCasters(registry);
     if (sameWorldCasters(published.current, next)) return;
     published.current = next;
     setCasters(next);
-  }, [registry]);
+  }, [registry, motion]);
 
   // An occluder registers in a passive effect, so the version it bumps is what
   // brings this component back for the layout pass that can finally see it.
