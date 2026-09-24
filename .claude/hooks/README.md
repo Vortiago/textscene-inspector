@@ -102,7 +102,7 @@ ESLint error gives exit code 2.
 |---------|-------------------------|--------------------------------|
 | **Runs for** | A local `git commit` or `git push` | A Claude Code tool call |
 | **Commit checks** | `lint-staged` on the staged files | The same `lint-staged` tasks on the files of a GitHub API commit |
-| **Push checks** | `pnpm validate` | None. The git pre-push hook runs them. |
+| **Push checks** | The checks that match the pushed files | None. The git pre-push hook runs them. |
 | **--no-verify** | Allowed | Blocked for Claude Code |
 
 ## More information
