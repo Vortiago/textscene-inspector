@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { relative } from 'node:path';
 import { mergeDisjoint } from './mergeDisjoint.js';
+import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
 
 describe('mergeDisjoint', () => {
   it('merges parts that share no key', () => {
@@ -42,6 +45,58 @@ describe('mergeDisjoint', () => {
   it('still refuses an Object.prototype name declared twice', () => {
     expect(() => mergeDisjoint([{ toString: 1 }, { toString: 2 }], 'rows')).toThrow(
       'toString has rows in two parts'
+    );
+  });
+});
+
+/**
+ * The argument text of every `registerAll(…)` call in `source`, parentheses balanced. A string
+ * or comment holding a paren would skew the count, and none of the scanned calls holds one.
+ */
+function registerAllArguments(source: string): string[] {
+  const calls: string[] = [];
+  for (const match of source.matchAll(/\bregisterAll\(/g)) {
+    const start = match.index + match[0].length;
+    let depth = 1;
+    let end = start;
+    for (; end < source.length && depth > 0; end++) {
+      if (source[end] === '(') depth++;
+      else if (source[end] === ')') depth--;
+    }
+    calls.push(source.slice(start, end - 1));
+  }
+  return calls;
+}
+
+/** An object spread, the last-wins merge `mergeDisjoint` replaces. */
+const SPREAD = /\.\.\.\s*[\w(]/;
+
+describe('every validator table built from parts goes through mergeDisjoint', () => {
+  it('reads the argument of each registerAll call, nested calls included', () => {
+    const source =
+      "registerAll('A', mergeDisjoint([keys, { a: v.int('a') }], 'x'));\nregisterAll('B', { ...keys });";
+    expect(registerAllArguments(source)).toEqual([
+      "'A', mergeDisjoint([keys, { a: v.int('a') }], 'x')",
+      "'B', { ...keys }",
+    ]);
+    expect(SPREAD.test("'B', { ...keys }")).toBe(true);
+    expect(SPREAD.test("'B', { ...shared('a.cpp:1') }")).toBe(true);
+    expect(SPREAD.test("'A', mergeDisjoint([keys], 'x')")).toBe(false);
+  });
+
+  it('spreads no part into a registerAll table', () => {
+    const offenders = allSourceFiles()
+      .filter((file) => registerAllArguments(readFileSync(file, 'utf8')).some((args) => SPREAD.test(args)))
+      .map((file) => relative(srcRoot, file).replaceAll('\\', '/'));
+    expect(offenders).toEqual([]);
+  });
+
+  it('throws at registration when two key groups of one type declare the same key', () => {
+    // The shape each migrated table now has: a duplicate names itself at import time.
+    const surface = { albedo_color: 'surface' };
+    const pbr = { albedo_color: 'pbr', metallic: 'pbr' };
+    expect(() => mergeDisjoint([surface, pbr], 'a BaseMaterial3D validator')).toThrow(
+      'albedo_color has a BaseMaterial3D validator in two parts'
     );
   });
 });

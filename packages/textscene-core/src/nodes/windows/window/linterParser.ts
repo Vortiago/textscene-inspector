@@ -9,11 +9,12 @@ import '../../viewport/shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 import { THEME_OVERRIDE_VALIDATORS } from '../../../linter/validators/themeOverrides.js';
+import { mergeDisjoint } from '../../../linter/mergeDisjoint.js';
 
 // Re-declaring an inherited key shadows it and duplicates the rule. `auto_translate`
 // has no validator: window.cpp's ADD_PROPERTY flags it PROPERTY_USAGE_NONE, so it is
 // never serialised.
-validatorRegistry.registerAll('Window', {
+validatorRegistry.registerAll('Window', mergeDisjoint([{
   // window.cpp:3422, PROPERTY_HINT_ENUM "Windowed,Minimized,Maximized,Fullscreen,Exclusive Fullscreen".
   // set_mode (window.cpp:523-531) assigns unconditionally, no ERR_FAIL.
   mode: v.enumInt(
@@ -150,7 +151,7 @@ validatorRegistry.registerAll('Window', {
   // Godot serialises this StringName as `&"..."`, but the variant text parser also
   // accepts a plain `"..."`, which the setter casts, as the shared `busValidator` does.
   theme_type_variation: v.stringName('theme_type_variation'),
-
-  // Shared with Control: Godot emits this family from both, identically.
-  ...THEME_OVERRIDE_VALIDATORS,
-});
+},
+// Shared with Control: Godot emits this family from both, identically.
+THEME_OVERRIDE_VALIDATORS,
+], 'a Window validator'));

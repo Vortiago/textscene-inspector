@@ -7,6 +7,7 @@
 // Registers Material, so the inherited keys resolve when this module loads alone.
 import '../material/linterValidators.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
+import { mergeDisjoint } from '../../../linter/mergeDisjoint.js';
 import { featureKeys } from './features.js';
 import { pbrKeys } from './pbr.js';
 import { renderKeys } from './render.js';
@@ -16,11 +17,10 @@ import { uvKeys } from './uv.js';
 
 // On the declaring class, not the leaf a scene names, so the walk (classBaseTypes.ts)
 // delivers them to `StandardMaterial3D` and `ORMMaterial3D` alike.
-validatorRegistry.registerAll('BaseMaterial3D', {
-  ...surfaceKeys,
-  ...pbrKeys,
-  ...featureKeys,
-  ...uvKeys,
-  ...renderKeys,
-  ...stencilKeys,
-});
+validatorRegistry.registerAll(
+  'BaseMaterial3D',
+  mergeDisjoint(
+    [surfaceKeys, pbrKeys, featureKeys, uvKeys, renderKeys, stencilKeys],
+    'a BaseMaterial3D validator'
+  )
+);

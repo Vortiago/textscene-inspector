@@ -9,6 +9,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { hintedBitField, v, shape, propertyError } from '../../../../linter/validators/index.js';
 import { THEME_OVERRIDE_VALIDATORS } from '../../../../linter/validators/themeOverrides.js';
+import { mergeDisjoint } from '../../../../linter/mergeDisjoint.js';
 import {
   ARRAY_LITERAL_RE,
   CURSOR_MAX,
@@ -61,7 +62,7 @@ const SIZE_FLAGS_LABELS = {
   8: 'SIZE_SHRINK_END',
 };
 
-validatorRegistry.registerAll('Control', {
+validatorRegistry.registerAll('Control', mergeDisjoint([{
   // control.cpp:4210, ENUM "Position,Anchors,Container,Uncontrolled", LayoutMode 0-3
   // (control.h:147-152). _set_layout_mode (control.cpp:919-935) has no ERR_FAIL.
   layout_mode: v.int('layout_mode', { min: 0, max: 3, hinted: 'control.cpp:4210' }),
@@ -132,11 +133,11 @@ validatorRegistry.registerAll('Control', {
     { 0: 'NONE', 1: 'CLICK', 2: 'ALL', 3: 'ACCESSIBILITY' },
     { enforced: 'control.cpp:2267' }
   ),
-
-  // Shared with Window: control.cpp:432/446 state the same two hints as window.cpp:183/207.
-  // linter/validators/themeOverrides.ts holds the grounding.
-  ...THEME_OVERRIDE_VALIDATORS,
-
+},
+// Shared with Window: control.cpp:432/446 state the same two hints as window.cpp:183/207.
+// linter/validators/themeOverrides.ts holds the grounding.
+THEME_OVERRIDE_VALIDATORS,
+{
   // "Accessibility" group (control.cpp:4310-4316). The setters (control.cpp:2166-2247) have no ERR_FAIL.
   accessibility_name: v.quotedString('accessibility_name'),
   accessibility_description: v.quotedString('accessibility_description'),
@@ -226,4 +227,4 @@ validatorRegistry.registerAll('Control', {
     { hinted: 'control.cpp:4288' }
   ),
   tooltip_text: v.quotedString('tooltip_text'),
-});
+}], 'a Control validator'));

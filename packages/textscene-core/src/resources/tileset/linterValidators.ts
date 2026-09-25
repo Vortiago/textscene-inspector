@@ -8,6 +8,7 @@
 // Registers Resource, so the inherited keys resolve when this module loads alone.
 import '../resource/linterValidators.js';
 import { validatorRegistry } from '../../linter/ValidatorRegistry.js';
+import { mergeDisjoint } from '../../linter/mergeDisjoint.js';
 import { v } from '../../linter/validators/index.js';
 import { layerFamilyKeys } from './layerValidators.js';
 import { terrainSetValidator } from './terrainValidators.js';
@@ -34,7 +35,7 @@ const TILE_LAYOUT = {
 /** tile_set.h:260-263. */
 const TILE_OFFSET_AXIS = { 0: 'TILE_OFFSET_AXIS_HORIZONTAL', 1: 'TILE_OFFSET_AXIS_VERTICAL' };
 
-validatorRegistry.registerAll('TileSet', {
+validatorRegistry.registerAll('TileSet', mergeDisjoint([{
   // tile_set.cpp:4266. set_tile_shape (:352) assigns and re-notifies; no guard.
   tile_shape: v.enumInt('tile_shape', 0, 3, TILE_SHAPE, { hinted: 'tile_set.cpp:4266' }),
   // tile_set.cpp:4267. set_tile_layout (:368) is an assignment and an
@@ -51,11 +52,11 @@ validatorRegistry.registerAll('TileSet', {
   tile_size: v.vector2i('tile_size', { min: 1, enforced: 'tile_set.cpp:392' }),
   // tile_set.cpp:4369. set_uv_clipping (:567) assigns past an equality early-out.
   uv_clipping: v.boolean('uv_clipping'),
-
-  // The five `ADD_ARRAY`s (:4370-4378) add no key: `add_property_array` sets no
-  // storage bit (class_db.cpp:1500), so a family's length is its indices, never a count.
-  ...layerFamilyKeys,
-
+},
+// The five `ADD_ARRAY`s (:4370-4378) add no key: `add_property_array` sets no
+// storage bit (class_db.cpp:1500), so a family's length is its indices, never a count.
+layerFamilyKeys,
+{
   // A glued index over a leaf that may nest one level further (`terrain_set_0/mode`
   // beside `terrain_set_0/terrain_1/name`): the `#/**` routing shape. The `mode`
   // branch of `_set` (:3897-3902) falls to `return false` (:4007), but the write
@@ -67,4 +68,4 @@ validatorRegistry.registerAll('TileSet', {
   'tile_proxies/*': tileProxyValidator,
   // `pattern_<n>` has no leaf at all: the terminal-index routing shape.
   'pattern_#': patternValidator,
-});
+}], 'a TileSet validator'));
