@@ -80,8 +80,9 @@ export function packedArrayCallAnywhere(typeName: string, global = false): RegEx
 
 /**
  * A Dictionary field whose value is one `TypeName(…)` call, `[1]` the body up to the first `)`:
- * `"cells": PackedInt32Array(…)`, `"aabb": AABB(…)`. A slot that also converts `[…]` or
- * `Array[T]([…])` wants `dictPackedField` (`packedArrayFields.ts`) instead.
+ * the constructor spelling the writer emits. A packed read such as `d["cells"]` (grid_map.cpp:67)
+ * also converts `[…]` and `Array[T]([…])` (variant.cpp:2094-2098), which this does not match:
+ * `dictPackedField` (`packedArrayFields.ts`) reads all three.
  */
 export function dictCallField(key: string, typeName: string): RegExp {
   return new RegExp(`"${key}"${WS}:${WS}${callBody(typeName)}`);

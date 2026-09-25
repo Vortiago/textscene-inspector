@@ -30,4 +30,7 @@ Strict parsing format-checks these `XROrigin3D` properties, plus 17 inherited fr
 |  | `xrorigin3d-unsupported-scale` | warning |
 <!-- lint:end -->
 
+The `xrorigin3d-missing-camera-child` rule stays silent when a child's class lives elsewhere.
+An `instance=` node, or a class the pinned catalog does not list, may be an XRCamera3D.
+
 `world_scale` is clamped to `[0.01, 1000]` by `XRServer::set_world_scale`, so a value past the clamp is a strict error. The lenient `parseNode3D` never reads `world_scale` or `current`, so a malformed or out-of-range value parses through silently.
