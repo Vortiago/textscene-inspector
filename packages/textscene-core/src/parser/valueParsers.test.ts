@@ -19,6 +19,8 @@ import {
   settableNonNegative,
   nonNegativeOr,
   nonNegativeSizeOr,
+  settableIntOr,
+  settableFloatOr,
   parseOptionalRect2,
   parseHeadingIndex,
 } from './valueParsers';
@@ -254,6 +256,41 @@ describe('settableNonNegative / nonNegativeOr', () => {
     expect(nonNegativeOr('nope', 0.5, 'Shape')).toBe(0.5);
     expect(Number.isNaN(nonNegativeOr('nope', 0.5, 'Shape'))).toBe(false);
     expect(warnSpy).toHaveBeenCalled();
+  });
+});
+
+describe('settableIntOr / settableFloatOr', () => {
+  it('reads a value inside the range, both ends included', () => {
+    expect(settableIntOr('1', 32, { min: 1 }, 'rings')).toBe(1);
+    expect(settableIntOr('16384', 64, { min: 1, max: 16384 }, 'width')).toBe(16384);
+    expect(settableFloatOr('0', 0.1, { min: 0, max: 1 }, 'skirt')).toBe(0);
+    expect(settableFloatOr('1', 0.1, { min: 0, max: 1 }, 'skirt')).toBe(1);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('treats an absent value as the default, silently', () => {
+    expect(settableIntOr(undefined, 32, { min: 1 }, 'rings')).toBe(32);
+    expect(settableFloatOr(undefined, 0.1, { min: 0, max: 1 }, 'skirt')).toBe(0.1);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps the default for a value the setter refuses, and warns with both numbers', () => {
+    expect(settableIntOr('0', 32, { min: 1 }, 'SphereMesh rings')).toBe(32);
+    expect(warnSpy).toHaveBeenCalledWith(
+      "SphereMesh rings: Godot's setter refuses 0, keeping the default 32"
+    );
+  });
+
+  it('refuses past an optional max, and never past an open one', () => {
+    expect(settableIntOr('16385', 64, { min: 1, max: 16384 }, 'width')).toBe(64);
+    expect(settableFloatOr('1.5', 0.1, { min: 0, max: 1 }, 'skirt')).toBe(0.1);
+    expect(settableIntOr('2147483647', 512, { min: 1 }, 'width')).toBe(2147483647);
+  });
+
+  it('warns then keeps the default for an unparseable value (never NaN)', () => {
+    expect(settableIntOr('nope', 32, { min: 1 }, 'rings')).toBe(32);
+    expect(settableFloatOr('nope', 0.1, { min: 0, max: 1 }, 'skirt')).toBe(0.1);
+    expect(warnSpy).toHaveBeenCalledTimes(2);
   });
 });
 

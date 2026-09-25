@@ -6,8 +6,7 @@
  */
 
 import type { Color } from '../../../utils/colorParser';
-import { warn } from '../../../logger.js';
-import { enumOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { enumOr, settableIntOr, vec2Or, type SetterRange } from '../../../parser/valueParsers';
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
@@ -127,13 +126,29 @@ export function gradientFromResource(parsed: ParsedResource): Gradient | null {
 const DEFAULT_TEXTURE_SIZE = 64;
 
 /**
+ * `set_width` and `set_height` refuse an axis outside 1 to `GRADIENT_TEXTURE_MAX_SIZE`
+ * (`gradient_texture.cpp:324`, `:335`).
+ */
+const TEXTURE_SIZE_RANGE: SetterRange = { min: 1, max: GRADIENT_TEXTURE_MAX_SIZE };
+
+/**
  * A `GradientTexture2D` sub-resource. The caller resolves the `gradient` ref.
  * Defaults: 64×64, linear fill, from (0,0) to (1,0), no repeat, LDR.
  */
 export function decodeGradientTexture2D(data: Record<string, string>): GradientTexture2D {
   return {
-    width: textureSizeAxis(data.width, 'GradientTexture2D.width'),
-    height: textureSizeAxis(data.height, 'GradientTexture2D.height'),
+    width: settableIntOr(
+      data.width,
+      DEFAULT_TEXTURE_SIZE,
+      TEXTURE_SIZE_RANGE,
+      'GradientTexture2D.width'
+    ),
+    height: settableIntOr(
+      data.height,
+      DEFAULT_TEXTURE_SIZE,
+      TEXTURE_SIZE_RANGE,
+      'GradientTexture2D.height'
+    ),
     fill: enumOr(
       data.fill,
       GradientFill.Linear,
@@ -150,17 +165,6 @@ export function decodeGradientTexture2D(data: Record<string, string>): GradientT
     ),
     useHdr: boolSlotValue(data.use_hdr) === true,
   };
-}
-
-/**
- * `set_width` and `set_height` refuse an axis outside 1 to `GRADIENT_TEXTURE_MAX_SIZE`
- * (`gradient_texture.cpp:324`, `:335`), and a refused write keeps the default.
- */
-function textureSizeAxis(raw: string | undefined, context: string): number {
-  const value = intOr(raw, DEFAULT_TEXTURE_SIZE, context);
-  if (value >= 1 && value <= GRADIENT_TEXTURE_MAX_SIZE) return value;
-  warn(`${context}: Godot's setter refuses ${value}, keeping the default ${DEFAULT_TEXTURE_SIZE}`);
-  return DEFAULT_TEXTURE_SIZE;
 }
 
 function safeColors(value: string): Color[] {

@@ -148,6 +148,46 @@ export function nonNegativeOr(
   return settableNonNegative(value, context) ?? fallback;
 }
 
+/** The inclusive range a setter accepts. No `max` means only the floor is guarded. */
+export interface SetterRange {
+  min: number;
+  max?: number;
+}
+
+/**
+ * An int whose setter refuses a value outside `range` before assigning (an
+ * `ERR_FAIL_COND` guard), so the property keeps its default. The caller cites the guard.
+ */
+export function settableIntOr(
+  value: string | undefined,
+  fallback: number,
+  range: SetterRange,
+  context = 'value'
+): number {
+  return unlessRefused(intOr(value, fallback, context), fallback, range, context);
+}
+
+/** {@link settableIntOr} for a float setter. */
+export function settableFloatOr(
+  value: string | undefined,
+  fallback: number,
+  range: SetterRange,
+  context = 'value'
+): number {
+  return unlessRefused(floatOr(value, fallback, context), fallback, range, context);
+}
+
+function unlessRefused(
+  value: number,
+  fallback: number,
+  { min, max = Infinity }: SetterRange,
+  context: string
+): number {
+  if (value >= min && value <= max) return value;
+  warn(`${context}: Godot's setter refuses ${value}, keeping the default ${fallback}`);
+  return fallback;
+}
+
 /**
  * A size whose setter refuses the whole assignment when any component is negative
  * (`box_shape_3d.cpp:100`, `rectangle_shape_2d.cpp:61`), so it keeps its default. Takes
