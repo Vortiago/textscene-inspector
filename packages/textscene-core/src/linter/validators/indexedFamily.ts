@@ -8,7 +8,12 @@
 import { keyShapeError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
-import { IS_VALID_INT_RE, stringToInt, type IndexParse } from '../../godot/index.js';
+import {
+  IS_VALID_INT_RE,
+  declaredLeafResolver,
+  stringToInt,
+  type IndexParse,
+} from '../../godot/index.js';
 import { negativeIndexError } from '../reportedIndices.js';
 
 /**
@@ -95,40 +100,8 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
     : (indexText: string, key: string, line: number) =>
         stringToInt(indexText) < 0 ? unknown(key, line) : null;
 
-  /**
-   * The leaf names whose branch reads a segment below itself: `end_bone`, since
-   * `end_bone/direction` is declared beside it. Such a branch returns false for
-   * an option it does not know (two_bone_ik_3d.cpp:69), so only a terminal
-   * branch swallows a tail.
-   */
-  const readsDeeper = new Set<string>();
-  for (const name of Object.keys(leaves)) {
-    for (let cut = name.indexOf('/'); cut >= 0; cut = name.indexOf('/', cut + 1)) {
-      readsDeeper.add(name.slice(0, cut));
-    }
-  }
-
-  /**
-   * The declared leaf a hand-rolled `_set` reaches for. `get_slicec('/', n)` ignores what follows
-   * its segment, so `settings/0/root_bone/extra` calls `set_root_bone` (bone_twist_disperser_3d.cpp:37-40).
-   * Cutting from the right keeps a two-segment leaf at its own depth
-   * (`settings/<i>/<where>/<what>`, convert_transform_modifier_3d.cpp:37-40).
-   */
-  const declaredLeaf = (leafName: string): string => {
-    if (Object.prototype.hasOwnProperty.call(leaves, leafName)) return leafName;
-    let candidate = leafName;
-    for (;;) {
-      // `PropertyListHelper` cuts at the last `/` too (property_list_helper.cpp:47),
-      // but there a trailing segment fails `is_valid_int`, and that family
-      // reports the whole remainder unknown.
-      const cut = candidate.lastIndexOf('/');
-      if (cut < 0) return leafName;
-      candidate = candidate.slice(0, cut);
-      if (Object.prototype.hasOwnProperty.call(leaves, candidate) && !readsDeeper.has(candidate)) {
-        return candidate;
-      }
-    }
-  };
+  /** The leaf a hand-rolled `_set` reaches through a tail it ignores. */
+  const declaredLeaf = declaredLeafResolver(Object.keys(leaves));
 
   const validator = accepts((key, value, line) => {
     // The first `/` past the prefix ends the index, and the rest is the leaf: a
@@ -147,12 +120,15 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
     if (gatesOnValidInt && !IS_VALID_INT_RE.test(indexText)) return unknown(key, line);
     const negative = refuseNegative(indexText, key, line);
     if (negative) return negative;
-    // A non-negative index resolves to some setting and the write lands, so only
-    // the leaf can still be refused.
+    // A non-negative index resolves to some setting and the write lands, so only the leaf can
+    // still be refused. `PropertyListHelper` cuts at the last `/` (property_list_helper.cpp:47), so
+    // there a trailing segment fails `is_valid_int` and the whole remainder is unknown.
     const resolved = gatesOnValidInt ? leafName : declaredLeaf(leafName);
     // hasOwnProperty, so a leaf named `toString` cannot resolve an inherited
     // function and get called as a validator.
-    if (!Object.prototype.hasOwnProperty.call(leaves, resolved)) return unknown(key, line);
+    if (resolved === null || !Object.prototype.hasOwnProperty.call(leaves, resolved)) {
+      return unknown(key, line);
+    }
     const leaf = leaves[resolved];
     if (!leaf) return unknown(key, line);
     // A leaf whose own path carries an index is a nested family (`ChainIK3D`'s

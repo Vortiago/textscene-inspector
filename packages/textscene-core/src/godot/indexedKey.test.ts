@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { indexedElements, visitIndexedKeys } from './indexedKey.js';
+import { declaredLeafResolver, indexedElements, visitIndexedKeys } from './indexedKey.js';
 
 /** Every visit `visitIndexedKeys` makes, as its five arguments. */
 function visits(
@@ -175,5 +175,80 @@ describe('indexedElements', () => {
     for (const name of ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__']) {
       expect(leaves.get(name)).toBeUndefined();
     }
+  });
+});
+
+describe('declaredLeafResolver', () => {
+  // SpringBoneSimulator3D's shape: `end_bone` reads an option below itself
+  // (spring_bone_simulator_3d.cpp:52-62), and `radius` is declared only through its options.
+  const resolve = declaredLeafResolver([
+    'root_bone',
+    'end_bone',
+    'end_bone/direction',
+    'radius/value',
+  ]);
+
+  it('resolves a declared leaf to itself', () => {
+    expect(resolve('root_bone')).toBe('root_bone');
+    expect(resolve('end_bone/direction')).toBe('end_bone/direction');
+  });
+
+  it('drops a tail below a terminal leaf, which get_slicec never reads', () => {
+    expect(resolve('root_bone/extra')).toBe('root_bone');
+    expect(resolve('root_bone/a/b')).toBe('root_bone');
+    expect(resolve('radius/value/extra')).toBe('radius/value');
+    expect(resolve('end_bone/direction/extra')).toBe('end_bone/direction');
+  });
+
+  it('resolves nothing below a leaf whose branch reads an option there', () => {
+    // The branch compares that segment and returns false on one it does not know.
+    expect(resolve('end_bone/extra')).toBeNull();
+  });
+
+  it('resolves nothing for a path no declared leaf starts', () => {
+    expect(resolve('not_a_leaf')).toBeNull();
+    expect(resolve('radius')).toBeNull();
+    expect(resolve('radius/extra')).toBeNull();
+    // A segment prefix, not a string prefix: `root_bone_name` is another branch.
+    expect(resolve('root_bone_name')).toBeNull();
+  });
+
+  it('resolves nothing for a prototype name', () => {
+    expect(resolve('toString')).toBeNull();
+    expect(resolve('constructor/extra')).toBeNull();
+  });
+});
+
+describe('indexedElements with a leaf resolver', () => {
+  const resolve = declaredLeafResolver(['individual_config', 'radius/value']);
+
+  it('seats a key carrying a tail on the leaf _set applies it to', () => {
+    const elements = indexedElements(
+      { 'settings/0/individual_config/extra': 'true' },
+      'settings/',
+      'to_int',
+      resolve
+    );
+    expect(elements.get(0)?.get('individual_config')).toBe('true');
+  });
+
+  it('keeps the text of a leaf that resolves to nothing', () => {
+    const elements = indexedElements(
+      { 'settings/0/joints/0/radius': '0.5' },
+      'settings/',
+      'to_int',
+      resolve
+    );
+    expect(elements.get(0)?.get('joints/0/radius')).toBe('0.5');
+  });
+
+  it('lets the later of two spellings of one leaf win, in file order', () => {
+    const elements = indexedElements(
+      { 'settings/0/individual_config': 'false', 'settings/0/individual_config/x': 'true' },
+      'settings/',
+      'to_int',
+      resolve
+    );
+    expect(elements.get(0)?.get('individual_config')).toBe('true');
   });
 });

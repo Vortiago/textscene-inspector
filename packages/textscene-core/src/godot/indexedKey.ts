@@ -69,18 +69,53 @@ export function visitIndexedKeys(
  * spellings can name one element (`settings/00/x` and `settings/0/x`), so a lookup built from
  * `0..count` misses values and a text-keyed one splits an element. A `Map`: the leaf is raw
  * `.tscn` text, and `__proto__` or `constructor` would reach an object's prototype.
+ * `resolveLeaf` (a {@link declaredLeafResolver}) seats `x/extra` on the `x` that `_set` applies it
+ * to. A leaf it resolves to nothing keeps its own text.
  */
 export function indexedElements(
   properties: Readonly<Record<string, string>>,
   prefix: string,
-  indexParse: IndexParse
+  indexParse: IndexParse,
+  resolveLeaf?: (leaf: string) => string | null
 ): Map<number, Map<string, string>> {
   const elements = new Map<number, Map<string, string>>();
   visitIndexedKeys(properties, prefix, indexParse, (_key, _indexText, index, leaf, value) => {
     const leaves = elements.get(index) ?? new Map<string, string>();
     // A later key wins, as Godot applies properties in file order.
-    leaves.set(leaf, value);
+    leaves.set(resolveLeaf?.(leaf) ?? leaf, value);
     elements.set(index, leaves);
   });
   return elements;
+}
+
+/**
+ * The declared leaf a hand-rolled `_set` applies a path below the index to. Each branch reads one
+ * `get_slicec('/', n)` and ignores what follows, so `settings/0/root_bone/extra` calls
+ * `set_root_bone` (bone_twist_disperser_3d.cpp:37-40). A branch that reads an option below itself
+ * (`end_bone`, beside `end_bone/direction`) returns false on one it does not know
+ * (two_bone_ik_3d.cpp:69), so only a terminal leaf swallows a tail. Nothing, not the path itself,
+ * for a path that reaches no declared leaf.
+ */
+export function declaredLeafResolver(
+  leafNames: Iterable<string>
+): (leafName: string) => string | null {
+  // A Set, not an object: a leaf named `toString` must not resolve an inherited member.
+  const declared = new Set(leafNames);
+  const readsDeeper = new Set<string>();
+  for (const name of declared) {
+    for (let cut = name.indexOf('/'); cut >= 0; cut = name.indexOf('/', cut + 1)) {
+      readsDeeper.add(name.slice(0, cut));
+    }
+  }
+  return (leafName) => {
+    if (declared.has(leafName)) return leafName;
+    // Cutting from the right keeps a two-segment leaf at its own depth
+    // (`settings/<i>/<where>/<what>`, convert_transform_modifier_3d.cpp:37-40).
+    let candidate = leafName;
+    for (let cut = candidate.lastIndexOf('/'); cut >= 0; cut = candidate.lastIndexOf('/')) {
+      candidate = candidate.slice(0, cut);
+      if (declared.has(candidate) && !readsDeeper.has(candidate)) return candidate;
+    }
+    return null;
+  };
 }

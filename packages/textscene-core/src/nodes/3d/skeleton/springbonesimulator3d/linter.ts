@@ -11,7 +11,14 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
-import { indexedElements, indexedKeyRegex, stringToInt, boolSlotValue } from '../../../../godot/index.js';
+import {
+  boolSlotValue,
+  declaredLeafResolver,
+  indexedElements,
+  indexedKeyRegex,
+  stringToInt,
+} from '../../../../godot/index.js';
+import { SETTING_LEAVES } from './settingLeaves.js';
 
 /**
  * Any `settings/<i>/…` leaf, whatever its depth. Every index position here (the setting, the joint,
@@ -20,8 +27,17 @@ import { indexedElements, indexedKeyRegex, stringToInt, boolSlotValue } from '..
  * segment as the `int` Godot stores.
  */
 const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/(.+)$', 'to_int');
-/** `<leaf>` below a joint index, for the individual-mode check. */
-const JOINT_KEY_RE = indexedKeyRegex('^joints/#/(.+)$', 'to_int');
+/**
+ * The segment below a joint index, for the individual-mode check. `prop = get_slicec('/', 4)`
+ * (:123) reads that segment alone, so `joints/0/radius/extra` reaches set_joint_radius.
+ */
+const JOINT_KEY_RE = indexedKeyRegex('^joints/#/([^/]+)', 'to_int');
+
+/**
+ * The `settings/<i>/<leaf>` leaf a key reaches through a tail `_set` ignores:
+ * `individual_config/extra` is `individual_config` (:73), and `radius/extra` reaches none (:85).
+ */
+const resolveSettingLeaf = declaredLeafResolver(Object.keys(SETTING_LEAVES));
 
 /**
  * The first segment below the setting index for every leaf of the shared block, the list
@@ -55,18 +71,21 @@ const JOINT_CONFIG_LEAVES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Leaves that land only while `enable_all_child_collisions` is false: set_collision_path
- * (:1150-1152) and set_collision_count (:1181-1183) return when it is true.
+ * The `what` segments that land only while `enable_all_child_collisions` is false:
+ * set_collision_path (:1150-1152) and set_collision_count (:1181-1183) return when it is true.
+ * Neither branch reads an option below `what` (:146-150), so a tail reaches the setter, and a
+ * missing collision index is `"".to_int()`, collision 0.
  */
-const EXPLICIT_COLLISION_RE = indexedKeyRegex('^collisions/#$|^collision_count$', 'to_int');
+const EXPLICIT_COLLISION_SEGMENTS: ReadonlySet<string> = new Set(['collisions', 'collision_count']);
 /**
- * Leaves that land only while `enable_all_child_collisions` is true: set_exclude_collision_path
- * (:1094-1096) and set_exclude_collision_count (:1125-1127) return when it is false.
+ * The `what` segments that land only while `enable_all_child_collisions` is true:
+ * set_exclude_collision_path (:1094-1096) and set_exclude_collision_count (:1125-1127) return
+ * when it is false.
  */
-const EXCLUDE_COLLISION_RE = indexedKeyRegex(
-  '^exclude_collisions/#$|^exclude_collision_count$',
-  'to_int'
-);
+const EXCLUDE_COLLISION_SEGMENTS: ReadonlySet<string> = new Set([
+  'exclude_collisions',
+  'exclude_collision_count',
+]);
 
 /** A `.tscn` boolean, or the C++ default when the key is absent. */
 function readBool(raw: string | undefined, fallback: boolean): boolean {
@@ -97,7 +116,7 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
 
   // Grouped by the setting `_set` resolves each key to, so `settings/00/…` and `settings/0/…` are
   // one setting and every leaf finds the siblings written beside it under either spelling.
-  const settings = indexedElements(rawProps, 'settings/', 'to_int');
+  const settings = indexedElements(rawProps, 'settings/', 'to_int', resolveSettingLeaf);
 
   for (const key of Object.keys(rawProps)) {
     const indexed = SETTING_KEY_RE.exec(key);
@@ -123,17 +142,23 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
     // key makes the exclusion list the live one.
     const allChildCollisions = readBool(siblings?.get('enable_all_child_collisions'), true);
 
-    // Matching the shared block on the first segment covers `radius/value` and
-    // `radius/damping_curve` at once, as the engine's own `split[2]` test does.
+    // `what = get_slicec('/', 2)` (:43), the segment every branch of `_set` tests.
+    const what = leaf.split('/')[0]!;
     const joint = JOINT_KEY_RE.exec(leaf);
     if (joint) {
       if (!individual && JOINT_CONFIG_LEAVES.has(joint[1]!)) jointIgnored.set(indexText, index);
-    } else if (individual && SHARED_CONFIG_SEGMENTS.has(leaf.split('/')[0]!)) {
-      sharedIgnored.set(indexText, index);
+    } else if (individual && SHARED_CONFIG_SEGMENTS.has(what)) {
+      // Only a key that reaches a setter is dropped by its mode gate. `radius/extra` is refused
+      // earlier (:85), and the validator already reports it unknown.
+      if (resolveSettingLeaf(leaf) !== null) sharedIgnored.set(indexText, index);
     }
 
-    if (allChildCollisions && EXPLICIT_COLLISION_RE.test(leaf)) collisionIgnored.set(indexText, index);
-    if (!allChildCollisions && EXCLUDE_COLLISION_RE.test(leaf)) excludeIgnored.set(indexText, index);
+    if (allChildCollisions && EXPLICIT_COLLISION_SEGMENTS.has(what)) {
+      collisionIgnored.set(indexText, index);
+    }
+    if (!allChildCollisions && EXCLUDE_COLLISION_SEGMENTS.has(what)) {
+      excludeIgnored.set(indexText, index);
+    }
   }
 
   if (outOfRange.size > 0) {

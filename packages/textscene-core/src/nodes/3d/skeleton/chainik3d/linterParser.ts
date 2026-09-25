@@ -10,7 +10,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { accepts, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { indexedKeyRegex } from '../../../../godot/index.js';
+import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/index.js';
 import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 // The surface is a hand-built `settings/<i>/<leaf>` family: `_set` (chain_ik_3d.cpp:33) and `_get`
@@ -89,6 +89,12 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   joint_count: v.strictInt('joint_count', { min: 0, enforced: 'chain_ik_3d.cpp:333' }),
 };
 
+/**
+ * The leaf `_set` reaches through a tail it ignores: `what = get_slicec('/', 2)` (chain_ik_3d.cpp:38)
+ * makes `root_bone/extra` a write to `root_bone`.
+ */
+const resolveSettingLeaf = declaredLeafResolver(Object.keys(SETTING_LEAVES));
+
 const negativeSettingIndex = (index: string): string =>
   `Setting index ${index} is out of range: Godot refuses a negative index and drops the write`;
 
@@ -118,8 +124,9 @@ const settingsFamily: PropertyValidator = accepts((key, value, line) => {
   // A subclass's leaf passes: IterateIK3D's `target_node` and `joints/<j>/` (iterate_ik_3d.cpp:117-125)
   // and SplineIK3D's `path_3d`/`tilt_*` (spline_ik_3d.cpp:83-86). A base cannot close a set its
   // descendants extend, so `indexedFamilyValidator`, whose `unknownCode` closes it, does not fit.
-  if (!Object.prototype.hasOwnProperty.call(SETTING_LEAVES, leafName)) return null;
-  const leaf = SETTING_LEAVES[leafName];
+  const resolved = resolveSettingLeaf(leafName);
+  if (resolved === null) return null;
+  const leaf = SETTING_LEAVES[resolved];
   return leaf ? leaf(key, value, line) : null;
 }, 'settings/<i>/ bone chain setup');
 

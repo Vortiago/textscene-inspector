@@ -116,6 +116,23 @@ describe('ChainIK3D settings index', () => {
   });
 });
 
+describe('ChainIK3D key tails', () => {
+  it('checks a leaf carrying a tail, since _set reads one segment', () => {
+    // `what = path.get_slicec('/', 2)` (chain_ik_3d.cpp:38) is `root_bone`, so set_root_bone
+    // runs and clamps the value (:186-188).
+    expect(check('settings/0/root_bone/extra', '-2')?.severity).toBe('error');
+    expect(check('settings/0/root_bone/extra', '3')).toBeNull();
+    // `opt = path.get_slicec('/', 3)` (:48) is `length`, so set_end_bone_length runs.
+    expect(check('settings/0/end_bone/length/extra', '-1')?.severity).toBe('warning');
+  });
+
+  it('does not read an unknown end_bone option as end_bone itself', () => {
+    // The `end_bone` branch reads `opt` and returns false on `extra` (:55-56), so the
+    // end_bone clamp never sees the value.
+    expect(check('settings/0/end_bone/extra', '-2')).toBeNull();
+  });
+});
+
 describe('ChainIK3D bone name leaves', () => {
   it.each(['settings/0/root_bone_name', 'settings/0/end_bone_name'])(
     'accepts any quoted string for %s',

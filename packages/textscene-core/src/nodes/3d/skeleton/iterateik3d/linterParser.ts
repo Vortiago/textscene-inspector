@@ -16,7 +16,7 @@ import {
   ROTATION_AXIS,
   SECONDARY_DIRECTION,
 } from '../skeletonmodifier3d/linterParser.js';
-import { indexedKeyRegex } from '../../../../godot/index.js';
+import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/index.js';
 import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 /**
@@ -77,6 +77,13 @@ const settingLeafValidator = indexedFamilyValidator({
  * `get_slicec(...).to_int()` and no gate (:37, :44), so a non-digit spelling still lands.
  */
 const JOINT_KEY = indexedKeyRegex('^settings/(#)/joints/#/(.+)$', 'to_int');
+/**
+ * The joint leaf `_set` reaches through a tail it ignores: `prop = get_slicec('/', 4)` (:45) makes
+ * `rotation_axis/extra` a write to `rotation_axis`, and `limitation` reads `opt` below itself (:51).
+ */
+const resolveJointLeaf = declaredLeafResolver(Object.keys(JOINT_LEAVES));
+/** `settings/<i>/target_node`, with any tail, since `what = get_slicec('/', 2)` (:38) stops there. */
+const TARGET_NODE_KEY = indexedKeyRegex('^settings/#/target_node(?:/|$)', 'to_int');
 
 /**
  * `settings/…` on IterateIK3D, half of a family: `_get_property_list` pushes its own leaves, then
@@ -87,8 +94,8 @@ const JOINT_KEY = indexedKeyRegex('^settings/(#)/joints/#/(.+)$', 'to_int');
 const settingsValidator = accepts((key, value, line) => {
   const joint = JOINT_KEY.exec(key);
   if (joint) {
-    const leafName = joint[2]!;
-    if (Object.prototype.hasOwnProperty.call(JOINT_LEAVES, leafName)) {
+    const leafName = resolveJointLeaf(joint[2]!);
+    if (leafName !== null) {
       // The joint index is deliberately unchecked: each leaf's ERR_FAIL_INDEX
       // sits in its own setter, so there is no single line to cite, and the
       // setting index below already covers what `_set` refuses uniformly.
@@ -102,7 +109,7 @@ const settingsValidator = accepts((key, value, line) => {
       if (negative) return negative;
       return JOINT_LEAVES[leafName]!(key, value, line);
     }
-  } else if (key.endsWith('/target_node')) {
+  } else if (TARGET_NODE_KEY.test(key)) {
     return settingLeafValidator(key, value, line);
   }
 
