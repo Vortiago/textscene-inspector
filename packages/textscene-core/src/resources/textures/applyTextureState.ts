@@ -72,7 +72,9 @@ export interface MaterialTextureState {
    * (`flags[FLAG_USE_TEXTURE_REPEAT] = true`, mapping to `repeat_enable` on the
    * sampler). three's `Texture` defaults to clamp-to-edge instead, so a surface
    * whose UVs leave 0..1 — a large terrain, a tiled road — smears its edge texel
-   * into stripes rather than tiling. Omitted means Godot's default.
+   * into stripes rather than tiling. The loader no longer pre-applies Repeat
+   * (ADR-0042), so this is the consumer's stated default: it diverges from a
+   * clamped arrival in either direction. Omitted means Godot's default.
    */
   repeat?: boolean;
 }
@@ -138,12 +140,14 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
 
   const filterState = godotTextureFilterState(state.filter);
   const uvDiverges = state.uv !== undefined && !isIdentity(state.uv);
-  // Godot's default (repeat) is applied to the shared texture at load, so only
-  // a material that explicitly turns it OFF diverges — the same rule the filter
-  // follows, and what keeps every ordinary texture shared rather than cloned.
+  // The loader ships three's clamp default and states nothing about repeat, so
+  // this binding's wanted wrapping is compared against what the texture actually
+  // carries — bidirectionally. Godot's default (`true`) asks for Repeat, so a
+  // clamped arrival clones to tile it (the terrain-stripes guard); an authored
+  // `false` asks for clamp, so a tiled arrival clones back. Only a texture
+  // already carrying what the binding wants stays shared.
   const wrapping = state.repeat === false ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
-  const wrapDiverges =
-    state.repeat === false && (texture.wrapS !== wrapping || texture.wrapT !== wrapping);
+  const wrapDiverges = texture.wrapS !== wrapping || texture.wrapT !== wrapping;
   // Only an AUTHORED filter can diverge. Comparing an unauthored material
   // against Godot's default would clone every texture whose sampler state
   // happens not to match it — a procedural GradientTexture2D has no mipmaps, so

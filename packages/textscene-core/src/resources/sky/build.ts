@@ -42,6 +42,22 @@ export interface SkyEnvironmentInput {
 }
 
 /**
+ * The panorama sky's own copy of the equirectangular texture, tiled for the
+ * shader. `PANORAMA_SKY_FRAGMENT_SHADER` samples with `fract(atan(...))`, so u
+ * wraps 0..1 and needs Repeat wrapping; the loader's shared entry is clamp
+ * (three's default), so the sky builds a source-shared Repeat clone rather than
+ * mutating the entry a 2D consumer shares. The caller disposes it with the
+ * environment. Returns null for a sky with no panorama.
+ */
+export function skyPanoramaTexture(panorama?: THREE.Texture | null): THREE.Texture | null {
+  if (!panorama) return null;
+  const tiled = panorama.clone();
+  tiled.wrapS = THREE.RepeatWrapping;
+  tiled.wrapT = THREE.RepeatWrapping;
+  return tiled;
+}
+
+/**
  * Returns null when the sky could not be rendered — a headless test renderer,
  * a lost context, a driver that refuses the float render target. A null sky is
  * a visible absence rather than a wrong picture, and the caller simply leaves
@@ -51,9 +67,10 @@ export function buildSkyEnvironment(
   gl: THREE.WebGLRenderer,
   { sky, lights, panorama }: SkyEnvironmentInput
 ): SkyEnvironment | null {
+  const tiledPanorama = skyPanoramaTexture(panorama);
   const geometry = new THREE.BoxGeometry(2, 2, 2);
   const material = new THREE.ShaderMaterial({
-    uniforms: skyUniforms(sky, lights, panorama),
+    uniforms: skyUniforms(sky, lights, tiledPanorama),
     vertexShader: SKY_VERTEX_SHADER,
     fragmentShader: skyFragmentShader(sky),
     side: THREE.BackSide,
@@ -83,6 +100,7 @@ export function buildSkyEnvironment(
     prefiltered?.dispose();
     geometry.dispose();
     material.dispose();
+    tiledPanorama?.dispose();
     return null;
   } finally {
     pmrem?.dispose();
@@ -96,6 +114,7 @@ export function buildSkyEnvironment(
       prefiltered.dispose();
       geometry.dispose();
       material.dispose();
+      tiledPanorama?.dispose();
     },
   };
 }

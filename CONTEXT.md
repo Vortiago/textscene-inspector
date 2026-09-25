@@ -334,6 +334,11 @@ The shared region_rect plus hframes/vframes UV maths for SpriteBase nodes.
 Godot computes a base rect (the region when enabled, else the full texture) and then subdivides it by the frame grid. `composeFrameTexture` windows a texture clone's UVs to the current frame. `frameSizePx` returns the frame's pixel size. Flip handling and world sizing stay per slice. Sprite2D mirrors through mesh scale at 1 px = 1 unit. Sprite3D mirrors through UV negation and scales by `pixel_size`. The wrap mode (`SpriteWrapMode`, a required argument) stays per slice too. Godot never clips an oversized `region_rect`. Neither the region nor the quad shrinks and the UVs leave the texture, so only the sampler decides the overrun. The 2D canvas clamps to the edge texel where Sprite3D's material repeats.
 _Avoid_: re-inlining region or frames maths in a sprite slice (hand-syncing is how the two diverged). Defaulting the wrap mode (a default is how the 2D and 3D samplers diverge silently). "clip" or "crop" for an oversized region (Godot does neither).
 
+**Stated-consumer-default wrapping**:
+The rule that a shared texture's wrapping is chosen by each consumer at bind time, never by the loader.
+The loader (`textureProcessing.ts`) leaves wrapping at three's clamp-to-edge default, because one cached entry serves both a 3D material (Godot's `BaseMaterial3D` constructs with `FLAG_USE_TEXTURE_REPEAT`, so it tiles) and a 2D canvas item (whose `texture_repeat` resolves to the viewport's DISABLED default, so it clamps). `applyTextureState` reads the material's `texture_repeat` and makes the divergence bidirectional: a default material tiles a clamped arrival on a source-shared clone, and `repeat = false` on a tiled entry clamps it back. A consumer that cannot clone into a material (the panorama sky, sampled with `fract(atan(...))` so u must wrap) builds its own source-shared Repeat copy and disposes it with its own build.
+_Avoid_: setting wrapping in the loader (it cannot know which consumer asks); "the texture repeats" as a property of the image (it is the sampler's, per consumer); mutating a shared cache entry's wrapping in place.
+
 **Synthetic render type**:
 A render-only component with no parser and no linter (`GenericNodeFallback`, `GLBSceneRoot`).
 Not a user-authorable TSCN type. It lives in `r3f/internal/`, not in a Node slice.

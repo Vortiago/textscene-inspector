@@ -53,16 +53,16 @@ export { pinNoColorSpace };
  * undecoded view (`undecodedTexture.ts`), named for the 2D-canvas reason this
  * module's own doc gives, and wrapped the way the canvas wraps.
  *
- * The shared cache entry is loaded with REPEAT wrapping, because that is what
- * a 3D material inherits (`BaseMaterial3D` constructs with
- * `FLAG_USE_TEXTURE_REPEAT` set). A canvas item inherits the opposite: its
- * `texture_repeat` defaults to `TEXTURE_REPEAT_PARENT`, which resolves at the
- * root to the VIEWPORT's default, and that is
- * `DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_DISABLED` (`scene/main/viewport.h:420`,
- * applied at `scene/main/viewport.cpp:4009`; the resolution walk is
- * `CanvasItem::_refresh_texture_repeat_cache`,
- * `scene/main/canvas_item.cpp:1686-1694`). So a UV that leaves 0..1 clamps to
- * the edge texel on the canvas where it would tile in 3D — visible wherever a
+ * A canvas item wants clamp-to-edge, which is what the shared cache entry
+ * already carries: the loader leaves wrapping at three's default and each
+ * consumer states its own at bind time (see `textureProcessing.ts`). Godot's
+ * canvas inherits exactly this — its `texture_repeat` defaults to
+ * `TEXTURE_REPEAT_PARENT`, which resolves at the root to the VIEWPORT's default,
+ * and that is `DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_DISABLED`
+ * (`scene/main/viewport.h:420`, applied at `scene/main/viewport.cpp:4009`; the
+ * resolution walk is `CanvasItem::_refresh_texture_repeat_cache`,
+ * `scene/main/canvas_item.cpp:1686-1694`). So a UV that leaves 0..1 clamps to the
+ * edge texel on the canvas where a 3D material tiles it — visible wherever a
  * canvas item's UVs overrun its texture, which for `Polygon2D` is the ordinary
  * case rather than an exotic one.
  *

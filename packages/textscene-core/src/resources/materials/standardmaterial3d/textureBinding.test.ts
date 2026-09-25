@@ -27,12 +27,14 @@ import { bindSlotTexture, materialTextureState, releaseBoundTexture } from './te
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type TextureSlot } from './types';
 
-/** As the loader hands them out: one shared entry per path, tagged sRGB. */
+/**
+ * As the loader hands them out: one shared entry per path, tagged sRGB, at
+ * three's clamp wrapping. Repeat is the 3D consumer's stated default, not the
+ * loader's — a default material asks for it at bind time.
+ */
 function loaded(): THREE.Texture {
   const texture = new THREE.Texture();
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
   return texture;
 }
 
@@ -47,8 +49,11 @@ describe('bindSlotTexture — colour space per Godot texture slot', () => {
     const shared = loaded();
     const bound = bindSlotTexture(shared, slot, DEFAULTS);
     expect(bound.colorSpace).toBe(THREE.SRGBColorSpace);
-    // Nothing diverged, so the shared cache entry is handed straight back.
-    expect(bound).toBe(shared);
+    // A default material tiles (Godot's `texture_repeat`), so a clamped arrival
+    // diverges on wrapping and the binding clones — the source stays shared.
+    expect(bound).not.toBe(shared);
+    expect(bound.source).toBe(shared.source);
+    expect(bound.wrapS).toBe(THREE.RepeatWrapping);
   });
 
   it.each(RAW)('%s samples raw bytes', (slot) => {
@@ -91,10 +96,20 @@ describe('bindSlotTexture — colour space per Godot texture slot', () => {
     expect(bound.colorSpace).toBe(THREE.NoColorSpace);
   });
 
-  it('leaves a texture its producer already tagged raw untouched', () => {
-    // A NoiseTexture2D built `as_normal_map` arrives NoColorSpace; a normal slot
-    // needs nothing of it, so there is nothing to clone.
+  it('tiles a raw-tagged arrival for the default material', () => {
+    // A NoiseTexture2D built `as_normal_map` arrives NoColorSpace, so the colour
+    // space needs nothing — but a default material still asks for Repeat, so a
+    // clamped arrival clones to tile it while the raw tag is kept.
     const procedural = new THREE.Texture();
+    const bound = bindSlotTexture(procedural, 'normal_texture', DEFAULTS);
+    expect(bound.colorSpace).toBe(THREE.NoColorSpace);
+    expect(bound.wrapS).toBe(THREE.RepeatWrapping);
+  });
+
+  it('shares a raw-tagged texture that already tiles', () => {
+    const procedural = new THREE.Texture();
+    procedural.wrapS = THREE.RepeatWrapping;
+    procedural.wrapT = THREE.RepeatWrapping;
     expect(bindSlotTexture(procedural, 'normal_texture', DEFAULTS)).toBe(procedural);
   });
 
@@ -130,7 +145,8 @@ describe('releaseBoundTexture', () => {
       disposed = true;
     });
 
-    // An albedo binding at Godot's defaults hands the original straight back.
+    // A default albedo binding clones to tile; releasing that clone must leave
+    // the loader's shared entry alive for every other consumer.
     releaseBoundTexture(bindSlotTexture(shared, 'albedo_texture', DEFAULTS));
 
     expect(disposed).toBe(false);
