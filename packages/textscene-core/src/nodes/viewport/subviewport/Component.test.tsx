@@ -8,15 +8,12 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
-import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import { parseSubViewport } from './parser';
 import { SubViewport, allocatableExtent } from './Component';
 import { MAX_TEXTURE_EXTENT } from '../../../godot/index.js';
+import { SceneStack } from '../../../r3f/testing/SceneStack';
 
 import '../../../r3f/nodes/index';
 
@@ -52,20 +49,10 @@ mesh = SubResource("1")
 async function render(source: string, workspace?: '2d' | '3d') {
   const parsed = new TscnParser().parse(source);
   const fake = createFakeResourceLoader();
-  const tree = (
-    <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider
-        internalResources={parsed.internalResources}
-        externalResources={parsed.externalResources}
-      >
-        <SelectionProvider>
-          <NodeDispatcher nodes={parsed.nodes} />
-        </SelectionProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
-  );
   return ReactThreeTestRenderer.create(
-    workspace ? <CanvasWorkspaceProvider workspace={workspace}>{tree}</CanvasWorkspaceProvider> : tree
+    <SceneStack workspace={workspace} loader={fake.loader} scene={parsed}>
+      <NodeDispatcher nodes={parsed.nodes} />
+    </SceneStack>
   );
 }
 

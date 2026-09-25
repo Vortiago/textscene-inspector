@@ -1,7 +1,7 @@
 /**
  * The providers a component test mounts a parsed scene inside, outermost first: the canvas
- * workspace, the resource loader, the scene's own resources and the selection. One stack, so a
- * provider every such test needs is added here once, not to each test. Test-only: the `testing/`
+ * workspace when one is given, the resource loader, the scene's own resources and the selection.
+ * One stack, so a provider every such test needs is added here once. Test-only: the `testing/`
  * directories under `src` are excluded from the build.
  */
 import type { ReactNode } from 'react';
@@ -17,8 +17,8 @@ export interface SceneStackProps {
   /** The parsed scene whose sub-resources and external resources the stack provides. */
   scene: Pick<TscnScene, 'internalResources' | 'externalResources'>;
   loader: ResourceLoader;
-  /** The workspace the canvas draws. */
-  workspace: CanvasWorkspace;
+  /** The workspace the canvas draws. Omitted, no workspace provider mounts: the default holds. */
+  workspace?: CanvasWorkspace;
   /** The node path selected once mounted. Defaults to none. */
   selectedPath?: string | null;
   children: ReactNode;
@@ -31,19 +31,19 @@ export function SceneStack({
   selectedPath = null,
   children,
 }: SceneStackProps) {
-  return (
-    <CanvasWorkspaceProvider workspace={workspace}>
-      <ResourceLoaderProvider loader={loader}>
-        <SceneResourcesProvider
-          internalResources={scene.internalResources}
-          externalResources={scene.externalResources}
-        >
-          <SelectionProvider>
-            {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-            {children}
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+  const stack = (
+    <ResourceLoaderProvider loader={loader}>
+      <SceneResourcesProvider
+        internalResources={scene.internalResources}
+        externalResources={scene.externalResources}
+      >
+        <SelectionProvider>
+          {selectedPath !== null && <SelectSeeder path={selectedPath} />}
+          {children}
+        </SelectionProvider>
+      </SceneResourcesProvider>
+    </ResourceLoaderProvider>
   );
+  if (workspace === undefined) return stack;
+  return <CanvasWorkspaceProvider workspace={workspace}>{stack}</CanvasWorkspaceProvider>;
 }
