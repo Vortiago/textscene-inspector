@@ -14,6 +14,20 @@ describe('parseAnimatedSprite2D', () => {
     expect(p.frame).toBe(1);
   });
 
+  it('decodes the escapes of an animation name, as the SpriteFrames decoder does', () => {
+    const p = parseAnimatedSprite2D(heading('AnimatedSprite2D', { name: 'Anim' }), {
+      animation: '&"Say \\"hi\\""',
+    });
+    expect(p.animation).toBe('Say "hi"');
+  });
+
+  it('keeps an animation value that is no whole string literal as written', () => {
+    const p = parseAnimatedSprite2D(heading('AnimatedSprite2D', { name: 'Anim' }), {
+      animation: '&"unclosed\\"',
+    });
+    expect(p.animation).toBe('&"unclosed\\"');
+  });
+
   it('defaults (centered true, frame 0, no animation)', () => {
     const p = parseAnimatedSprite2D(heading('AnimatedSprite2D', { name: 'Anim' }), {});
     expect(p.centered).toBe(true);

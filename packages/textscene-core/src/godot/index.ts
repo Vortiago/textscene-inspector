@@ -39,6 +39,7 @@ export {
 export {
   IS_VALID_INT_RE,
   literalText,
+  STRING_LITERAL_SOURCE,
   dropTrailingComma,
   simplifyResPath,
   splitTopLevel,

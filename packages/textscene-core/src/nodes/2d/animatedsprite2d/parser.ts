@@ -4,7 +4,7 @@
  * resolved sub- or ext-resource.
  */
 
-import type { ParsedHeading } from '../../../parser/utils';
+import { unquoteLiteral, type ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { boolOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import type { AnimatedSprite2DProperties } from './types';
@@ -23,7 +23,7 @@ export function parseAnimatedSprite2D(
     flip_v: boolOr(properties.flip_v, false),
   };
   if (properties.sprite_frames) result.sprite_frames = properties.sprite_frames;
-  // `animation = &"right"` → "right".
-  if (properties.animation) result.animation = properties.animation.replace(/^&?"(.*)"$/, '$1');
+  // `animation = &"right"` → "right", read as the SpriteFrames decoder reads the name it matches.
+  if (properties.animation) result.animation = unquoteLiteral(properties.animation);
   return result;
 }

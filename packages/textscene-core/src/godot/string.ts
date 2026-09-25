@@ -10,6 +10,13 @@ export const IS_VALID_INT_SOURCE = String.raw`[+-]?\d+`;
 export const IS_VALID_INT_RE = new RegExp(`^${IS_VALID_INT_SOURCE}$`);
 
 /**
+ * One `"…"` string literal as the tokenizer scans it: `\` takes the next character, whatever it is,
+ * and the next unescaped `"` ends the string (`variant_parser.cpp:276-290`). A source with no
+ * capture group, so a caller embeds it in its own pattern.
+ */
+export const STRING_LITERAL_SOURCE = String.raw`"(?:[^"\\]|\\[\s\S])*"`;
+
+/**
  * The text inside a serialised `String`, `StringName` or `NodePath` literal. Godot 4 writes a bare StringName with `&` and
  * a bare NodePath with `^` (`variant_parser.cpp`'s `write`), so `&"spin"` and `"walk"` are both plain names to compare.
  * Only a matched outer pair comes off: `" default "` keeps its spaces, because `set_animation` compares the contents.

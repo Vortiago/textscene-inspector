@@ -58,6 +58,13 @@ describe('decodeSpriteFrames', () => {
 });
 
 describe('parseSpriteFramesAnimations', () => {
+  it('decodes the escapes of an animation name, as AnimatedSprite2D reads its animation', () => {
+    const map = parseSpriteFramesAnimations(
+      '[{"frames": [], "loop": true, "name": &"Say \\"hi\\"", "speed": 5.0}]'
+    );
+    expect([...map.keys()]).toEqual(['Say "hi"']);
+  });
+
   it('maps each animation name to its ordered frame texture refs', () => {
     const map = parseSpriteFramesAnimations(ANIMATIONS);
     expect([...map.keys()]).toEqual(['right', 'up']);

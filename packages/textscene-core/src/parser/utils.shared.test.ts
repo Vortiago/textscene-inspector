@@ -138,7 +138,7 @@ describe('unquoteLiteral', () => {
     expect(unquoteLiteral('""')).toBe('');
   });
   it('leaves every value that is not one string literal as written', () => {
-    for (const value of ['2.0', 'true', 'Vector3(1, 1, 1)', '[1, 2]', '"a" "b"', '']) {
+    for (const value of ['0', '2.0', 'true', 'Vector3(1, 1, 1)', '[1, 2]', '"a" "b"', '']) {
       expect(unquoteLiteral(value), value).toBe(value);
     }
   });

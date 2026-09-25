@@ -8,8 +8,14 @@
 import type { SpriteFramesAnimation, SpriteFramesData } from './types';
 import { dictNumberField } from '../../../godot/variantParser.js';
 import { matchedFloat } from '../../../godot/number.js';
-import { boolSlotValue, keyedResourceRefReader, resourceRef } from '../../../godot/index.js';
+import {
+  boolSlotValue,
+  keyedResourceRefReader,
+  resourceRef,
+  STRING_LITERAL_SOURCE,
+} from '../../../godot/index.js';
 import { ANIMATION_DICT_DEPTH, splitFramesArray, splitTopLevelDicts } from './frameSplit.js';
+import { unquoteLiteral } from '../../../parser/utils.js';
 
 /**
  * The frame's texture ref, or null. Godot writes a null Ref as `null`
@@ -31,6 +37,9 @@ const SPEED_RE = dictNumberField('speed');
 const ANIMATION_KEYS_RE = ['name', 'speed', 'loop', 'frames'].map(
   (key) => new RegExp(`"${key}"\\s*:`)
 );
+
+/** The `"name"` value: one string literal, escapes and all, with an optional `&` or `@` sigil. */
+const NAME_RE = new RegExp(String.raw`"name"\s*:\s*([&@]?${STRING_LITERAL_SOURCE})`);
 
 /** `SPRITE_FRAME_MINIMUM_DURATION` (`scene/resources/sprite_frames.h:35`). */
 export const SPRITE_FRAME_MINIMUM_DURATION = 0.01;
@@ -54,10 +63,10 @@ export function parseSpriteFramesAnimations(
   for (const block of splitTopLevelDicts(animationsValue, ANIMATION_DICT_DEPTH)) {
     if (!ANIMATION_KEYS_RE.every((re) => re.test(block))) continue;
     // `animations[d["name"]] = anim` (:229) keys on the Variant as a StringName;
-    // only the string spelling the writer emits is read.
-    const nameMatch = block.match(/"name"\s*:\s*&?"([^"]*)"/);
+    // only the string spelling the writer emits is read, escapes decoded.
+    const nameMatch = NAME_RE.exec(block);
     if (!nameMatch) continue;
-    const name = nameMatch[1]!;
+    const name = unquoteLiteral(nameMatch[1]!);
     // One read per frame element keeps `frames` and `durations` in step, whatever
     // spelling either takes (`"texture": null`, a bare ref).
     const frames = readFrames(block);

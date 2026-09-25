@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveTreeRoot } from './treeResources';
 
@@ -93,6 +94,57 @@ describe('resolveTreeRoot — state machine', () => {
         { name: 'walk', node: { kind: 'animation', clip: 'walk' } },
       ],
     });
+  });
+});
+
+/**
+ * A node name may hold `"`: `add_node` refuses only `/` and `output`
+ * (animation_blend_tree.cpp:1490-1493), and `property_name_encode` escapes it into a quoted key
+ * (ustring.cpp:5061-5062). The key and the `&"…"` token that names the node must read the same.
+ */
+describe('resolveTreeRoot — node names that hold a quote', () => {
+  function subResources(body: string): TscnInternalResource[] {
+    return new TscnParser().parse(`[gd_scene format=3]\n\n${body}`).internalResources;
+  }
+
+  it('wires a BlendTree node whose name holds an escaped quote', () => {
+    const resources = subResources(`[sub_resource type="AnimationNodeAnimation" id="clip"]
+animation = &"idle"
+
+[sub_resource type="AnimationNodeBlendTree" id="tree"]
+"nodes/Say \\"hi\\"/node" = SubResource("clip")
+node_connections = [&"output", 0, &"Say \\"hi\\""]
+`);
+    const root = resolveTreeRoot('SubResource("tree")', resources);
+    expect(root).toEqual({ kind: 'animation', clip: 'idle' });
+  });
+
+  it('starts a StateMachine at a state whose name holds an escaped quote', () => {
+    const resources = subResources(`[sub_resource type="AnimationNodeAnimation" id="clip"]
+animation = &"idle"
+
+[sub_resource type="AnimationNodeStateMachine" id="sm"]
+"states/Say \\"hi\\"/node" = SubResource("clip")
+transitions = [&"Start", &"Say \\"hi\\"", SubResource("t1")]
+`);
+    const root = resolveTreeRoot('SubResource("sm")', resources);
+    expect(root).toMatchObject({
+      kind: 'statemachine',
+      startState: 'Say "hi"',
+      states: [{ name: 'Say "hi"', node: { kind: 'animation', clip: 'idle' } }],
+    });
+  });
+
+  it('still reads a plain name and a bare port through the same readers', () => {
+    const resources = subResources(`[sub_resource type="AnimationNodeAnimation" id="clip"]
+animation = &"idle"
+
+[sub_resource type="AnimationNodeBlendTree" id="tree"]
+nodes/clip/node = SubResource("clip")
+node_connections = [&"output", 0, &"clip"]
+`);
+    const root = resolveTreeRoot('SubResource("tree")', resources);
+    expect(root).toEqual({ kind: 'animation', clip: 'idle' });
   });
 });
 

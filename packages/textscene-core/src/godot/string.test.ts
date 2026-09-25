@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { IS_VALID_INT_RE, literalText, splitTopLevel, stringToInt, toIntIndex , stringToFloat, simplifyResPath} from './string.js';
+import {
+  IS_VALID_INT_RE,
+  literalText,
+  simplifyResPath,
+  splitTopLevel,
+  STRING_LITERAL_SOURCE,
+  stringToFloat,
+  stringToInt,
+  toIntIndex,
+} from './string.js';
 
 describe('literalText', () => {
   it.each([
@@ -31,6 +40,32 @@ describe('literalText', () => {
 
   it('trims a value that was never quoted and leaves the rest', () => {
     expect(literalText('  default  ')).toBe('default');
+  });
+});
+
+describe('STRING_LITERAL_SOURCE', () => {
+  const firstLiteral = (text: string) => new RegExp(STRING_LITERAL_SOURCE).exec(text)?.[0];
+
+  it('matches a plain string literal whole', () => {
+    expect(firstLiteral('"idle"')).toBe('"idle"');
+    expect(firstLiteral('""')).toBe('""');
+  });
+
+  it('runs past an escaped quote to the next unescaped one', () => {
+    expect(firstLiteral('"Say \\"hi\\"", "next"')).toBe('"Say \\"hi\\""');
+  });
+
+  it('ends at a quote that follows an escaped backslash', () => {
+    expect(firstLiteral('"a\\\\", "b"')).toBe('"a\\\\"');
+  });
+
+  it('takes a backslash before a raw newline as one escape', () => {
+    expect(firstLiteral('"a\\\nb"')).toBe('"a\\\nb"');
+  });
+
+  it('matches nothing in a string that never closes', () => {
+    expect(firstLiteral('"never closes')).toBeUndefined();
+    expect(firstLiteral('"a\\"')).toBeUndefined();
   });
 });
 
