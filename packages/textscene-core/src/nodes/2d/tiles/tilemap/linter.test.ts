@@ -207,16 +207,18 @@ describe('format, read as it stood when each layer loaded', () => {
     );
   });
 
-  it('names a layer index past 2^53 as written, not as the double it rounds to', () => {
-    const diagnostic = expectDiagnostic(
-      scene(
-        `tile_set = SubResource("TileSet_a")\nformat = 1\nlayer_9999999999999999999999/tile_data = PackedInt32Array(0, 0, 0)`,
-        TILESET_RESOURCES
-      ),
-      { ruleName: 'tilemap-unsupported-format' }
+  // `to_int` saturates at INT64_MAX (ustring.cpp:2283-2284), whose low 32 bits are -1, so
+  // `_get_property` refuses the index (property_list_helper.cpp:58) and the data never loads.
+  it('leaves a layer index that saturates to -1 to the negative-index refusal', () => {
+    const content = scene(
+      `tile_set = SubResource("TileSet_a")\nformat = 1\nlayer_9999999999999999999999/tile_data = PackedInt32Array(0, 0, 0)`,
+      TILESET_RESOURCES
     );
-    expect(diagnostic.message).toContain("'layer_9999999999999999999999/tile_data'");
-    expect(diagnostic.message).not.toContain('1e+22');
+    expectNoDiagnostic(content, { ruleName: 'tilemap-unsupported-format' });
+    expectDiagnostic(content, {
+      severity: 'error',
+      contains: ['Layer index 9999999999999999999999 (stored as -1) must be non-negative'],
+    });
   });
 });
 

@@ -134,13 +134,47 @@ describe('ItemList semantic rules', () => {
 });
 
 describe('ItemList index spelling in the message', () => {
-  it('names an index past 2^53 as the file writes it, not as the double it rounds to', () => {
+  // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
+  it('applies an index that wraps past 32 bits to the item it lands on', () => {
+    const content = scene(node('ItemList', { item_count: 1, 'item_4294967296/text': '"x"' }));
+    expect(lint(content).filter((d) => d.severity === 'error')).toEqual([]);
+  });
+
+  it('names what Godot stores beside a wrapping index past the count', () => {
     const diagnostic = expectDiagnostic(
-      scene(node('ItemList', { item_count: 2, 'item_9999999999999999999999/text': '"x"' })),
+      scene(node('ItemList', { item_count: 1, 'item_4294967297/text': '"x"' })),
       { ruleName: 'itemlist-item-index-out-of-range', severity: 'error' }
     );
-    expect(diagnostic.message).toContain('index(es) 9999999999999999999999 fall outside item_count (2)');
-    expect(diagnostic.message).not.toContain('1e+22');
+    expect(diagnostic.message).toContain(
+      'index(es) 4294967297 (stored as 1) fall outside item_count (1)'
+    );
+  });
+
+  // INT64_MIN (ustring.cpp:2284) keeps 0 in its low 32 bits, so the write lands on item 0.
+  it('applies an index that saturates to INT64_MIN to item 0', () => {
+    const content = scene(
+      node('ItemList', { item_count: 1, 'item_-9999999999999999999999/text': '"x"' })
+    );
+    expect(lint(content).filter((d) => d.severity === 'error')).toEqual([]);
+  });
+
+  // INT64_MAX keeps -1, which `_get_property` refuses (property_list_helper.cpp:58).
+  it('leaves an index that saturates to INT64_MAX to the negative-index refusal', () => {
+    const content = scene(
+      node('ItemList', { item_count: 2, 'item_9999999999999999999999/text': '"x"' })
+    );
+    expectNoDiagnostic(content, { ruleName: 'itemlist-item-index-out-of-range' });
+    expectDiagnostic(content, {
+      severity: 'error',
+      contains: ['Item index 9999999999999999999999 (stored as -1) must be non-negative'],
+    });
+  });
+
+  it('reports an index the int narrows below zero, naming what it stores', () => {
+    expectDiagnostic(scene(node('ItemList', { item_count: 1, 'item_2147483648/text': '"x"' })), {
+      severity: 'error',
+      contains: ['Item index 2147483648 (stored as -2147483648) must be non-negative'],
+    });
   });
 
   it('names each spelling as written when two resolve to one item', () => {

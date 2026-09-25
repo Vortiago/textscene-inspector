@@ -116,6 +116,27 @@ describe('tileSetFromScene', () => {
     expect(source.tiles.get('-1:2')!.alternatives.get(0)!.textureOrigin).toEqual({ x: 4, y: 4 });
   });
 
+  // The source id, both halves of a tile coordinate and the alternative id are each `to_int()`
+  // stored in 32 bits (tile_set.cpp:3963, :4755, :4798), so each keeps its low 32 bits.
+  it('reads an id or coordinate past 32 bits as the int Godot stores', () => {
+    const wrappedInternals: TscnInternalResource[] = [
+      {
+        id: 'atlas1',
+        type: 'TileSetAtlasSource',
+        data: {
+          id: 'atlas1',
+          texture: 'ExtResource("2")',
+          '4294967296:4294967298/4294967297/flip_h': 'true',
+        },
+      },
+      { id: 'ts', type: 'TileSet', data: { id: 'ts', 'sources/4294967299': 'SubResource("atlas1")' } },
+    ];
+    const model = tileSetFromScene('SubResource("ts")', wrappedInternals, externals);
+
+    expect(model!.sourceOrder).toEqual([3]);
+    expect(model!.sources.get(3)!.tiles.get('0:2')!.alternatives.get(1)!.flipH).toBe(true);
+  });
+
   // `add_source` re-seats a `-1` override at the auto-assigned `next_source_id`
   // (tile_set.cpp:481-482) and refuses anything below it (:479), so neither
   // spelling names source -1 and this decode cannot know which id the first one

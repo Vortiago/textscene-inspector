@@ -9,6 +9,7 @@ import {
   listIndices,
   listWrittenIndices,
   unsatisfiedIndices,
+  writtenIndex,
 } from './reportedIndices.js';
 
 describe('listIndices', () => {
@@ -33,25 +34,17 @@ describe('listWrittenIndices', () => {
     expect(listWrittenIndices(new Map([['10', 10], ['+2', 2], ['07', 7]]))).toBe('+2, 07, 10');
   });
 
-  it('names an index past 2^53 by its text, never as the double it rounds to', () => {
-    const listed = listWrittenIndices(
-      new Map([['9999999999999999999999', Number('9999999999999999999999')]])
-    );
-    expect(listed).toBe('9999999999999999999999');
-    expect(listed).not.toContain('e+');
+  it('names what Godot stores beside a text that does not spell it', () => {
+    expect(listWrittenIndices(new Map([['4294967297', 1]]))).toBe('4294967297 (stored as 1)');
   });
 
-  it('orders two spellings of one value by the text, shorter first', () => {
-    // `Number` rounds both runs to 1e22, so only the text can order them.
+  it('orders several spellings of one index by the text, shorter first', () => {
     const written = new Map([
-      ['10000000000000000000000', 1e22],
-      ['9999999999999999999999', 1e22],
+      ['4294967301', 5],
       ['+5', 5],
       ['5', 5],
     ]);
-    expect(listWrittenIndices(written)).toBe(
-      '5, +5, 9999999999999999999999, 10000000000000000000000'
-    );
+    expect(listWrittenIndices(written)).toBe('5, +5, 4294967301 (stored as 5)');
   });
 
   it('orders a nested key by each index position in turn', () => {
@@ -88,12 +81,45 @@ describe('indicesPastCount', () => {
 
   it('names one text once, whatever its leaves', () => {
     const past = indicesPastCount(
-      { 'item_9999999999999999999999/text': '"a"', 'item_9999999999999999999999/icon': 'null' },
+      { 'item_4294967299/text': '"a"', 'item_4294967299/icon': 'null' },
       'item_',
       'is_valid_int',
       2
     );
-    expect([...past.keys()]).toEqual(['9999999999999999999999']);
+    expect(past).toEqual(new Map([['4294967299', 3]]));
+  });
+
+  // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
+  it('measures the index Godot stores, not the number the text spells', () => {
+    expect(indicesPastCount({ 'item_4294967296/text': '"a"' }, 'item_', 'is_valid_int', 1).size).toBe(
+      0
+    );
+  });
+});
+
+describe('writtenIndex', () => {
+  it('names a text that spells the stored index as it is', () => {
+    expect(writtenIndex('-1', -1)).toBe('-1');
+  });
+
+  it('names a padded or signed spelling as written', () => {
+    expect(writtenIndex('+05', 5)).toBe('+05');
+  });
+
+  it('adds the stored index where the int narrows the text', () => {
+    expect(writtenIndex('2147483648', -2147483648)).toBe('2147483648 (stored as -2147483648)');
+  });
+
+  it('adds the stored index where to_int reads text is_valid_int refuses', () => {
+    expect(writtenIndex('a-1', -1)).toBe('a-1 (stored as -1)');
+  });
+
+  it('adds the stored pair where either half of a nested key differs', () => {
+    expect(writtenIndex('0/4294967298', [0, 2])).toBe('0/4294967298 (stored as 0/2)');
+  });
+
+  it('names a nested key as written where both halves spell their index', () => {
+    expect(writtenIndex('00/5', [0, 5])).toBe('00/5');
   });
 });
 

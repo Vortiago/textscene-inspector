@@ -146,44 +146,6 @@ export function stringToInt(text: string, width: 'int32' | 'uint32' = 'int32'): 
   return Number(width === 'int32' ? BigInt.asIntN(32, value) : BigInt.asUintN(32, value));
 }
 
-/** The largest magnitude a JS number spells exactly, where {@link stringToIntOrNaN} stops. */
-const TO_INT_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
-
-/**
- * `String::to_int()` read as a double: `NaN` outside {@link TO_INT_SAFE}, where the engine holds an
- * int64 this reader cannot name. Only {@link toIntIndex} reads it.
- */
-function stringToIntOrNaN(text: string): number {
-  // `if (length() == 0) return 0` (`:2304-2306`).
-  if (text.length === 0) return 0;
-  // The scan stops at the first `.` (`:2308`): `"12.9"` is 12 with no float read.
-  const dot = text.indexOf('.');
-  const to = dot >= 0 ? dot : text.length;
-  let integer = 0n;
-  let positive = true;
-  for (let i = 0; i < to; i++) {
-    const code = text.charCodeAt(i);
-    if (code >= ZERO && code <= NINE) {
-      integer = integer * 10n + BigInt(code - ZERO);
-      if (integer > TO_INT_SAFE) return NaN;
-    } else if (integer === 0n && code === MINUS) {
-      positive = !positive;
-    }
-  }
-  // Negated as a BigInt, not as a double: `-Number(0n)` is `-0`, and the engine
-  // holds one zero.
-  return Number(positive ? integer : -integer);
-}
-
-/**
- * The index a hand-rolled `_set` reads with a bare `get_slicec('/', n).to_int()`
- * (`bone_twist_disperser_3d.cpp:37`): a clean spelling through `Number`, which keeps its sign past
- * 2^53, and any other through {@link stringToIntOrNaN}.
- */
-export function toIntIndex(text: string): number {
-  return IS_VALID_INT_RE.test(text) ? Number(text) : stringToIntOrNaN(text);
-}
-
 /**
  * `String::simplify_path()` (`core/string/ustring.cpp:4152-4210`) for the `scheme://` form of every `.tscn` resource address.
  * Godot splits the drive (ASCII alphanumerics then `://`) off the front and rebuilds the rest from its non-empty parts, so a

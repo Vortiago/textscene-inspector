@@ -5,8 +5,15 @@
  * slot is dropped. A refused bone (:605, :606) is never added, which shifts every later slot.
  */
 
-import { indexedKeyRegex, literalText, toIntIndex } from '../../../godot/index.js';
+import { indexedKeyRegex, literalText, stringToInt } from '../../../godot/index.js';
 import { unquoteString } from '../../../parser/utils.js';
+
+/**
+ * The lowest bone slot no file reaches. `bones` grows by one bone per `bones/<size>/name` key
+ * (:85), so slot 2^31 needs 2^31 name keys before it. A key that addresses it or above is refused
+ * by `ERR_FAIL_UNSIGNED_INDEX_V(which, bones.size(), false)` (:90), which phase 1 reports.
+ */
+export const UNREACHABLE_BONE_SLOT = 2 ** 31;
 
 /**
  * `bones/<i>/name`, plus anything below it: `_set` dispatches on slice 2 alone
@@ -35,11 +42,10 @@ export function addBoneRefusal(text: string): '' | ':' | '/' | null {
 export interface BoneNameFinding {
   kind: 'order' | 'duplicate';
   key: string;
-  /**
-   * The bone slot the key addresses, as the key writes it. Past 2^53 a double no longer holds the
-   * integer written, so a message names this text, never the number.
-   */
+  /** The bone slot the key addresses, as the key writes it. */
   indexText: string;
+  /** The slot Godot stores: `to_int()` in a `uint32_t which` (skeleton_3d.cpp:82). */
+  index: number;
   /** The slot `add_bone` would have filled: the live bone count. */
   expected: number;
   name: string;
@@ -48,9 +54,9 @@ export interface BoneNameFinding {
 }
 
 /**
- * Every dropped `bones/<i>/name` write, in file order. A negative index (`INVALID_BONE_INDEX`) and
- * a name :605 refuses are skipped, since phase 1 reports both on the same key. Both still leave the
- * bone unadded, which `added` records.
+ * Every dropped `bones/<i>/name` write, in file order. An unreachable slot (`INVALID_BONE_INDEX`)
+ * and a name :605 refuses are skipped, since phase 1 reports both on the same key. Both still leave
+ * the bone unadded, which `added` records.
  */
 export function boneNameFindings(properties: Record<string, string>): BoneNameFinding[] {
   const findings: BoneNameFinding[] = [];
@@ -61,19 +67,18 @@ export function boneNameFindings(properties: Record<string, string>): BoneNameFi
     const match = BONE_NAME_KEY.exec(key);
     if (!match) continue;
     const indexText = match[1]!;
-    const index = toIntIndex(indexText);
-    // NaN fails this too, and is phase 1's as well.
-    if (!(index >= 0)) continue;
+    const index = stringToInt(indexText, 'uint32');
+    if (index >= UNREACHABLE_BONE_SLOT) continue;
     const name = boneNameText(value);
     if (addBoneRefusal(name) !== null) continue;
 
     if (index !== added) {
-      findings.push({ kind: 'order', key, indexText, expected: added, name });
+      findings.push({ kind: 'order', key, indexText, index, expected: added, name });
       continue;
     }
     const heldBy = taken.get(name);
     if (heldBy !== undefined) {
-      findings.push({ kind: 'duplicate', key, indexText, expected: added, name, heldBy });
+      findings.push({ kind: 'duplicate', key, indexText, index, expected: added, name, heldBy });
       continue;
     }
     taken.set(name, index);

@@ -252,39 +252,43 @@ describe('BoneTwistDisperser3D count and index reads', () => {
     expect(found[0]!.message).toContain('joint(s) 0/0 (setting/joint)');
   });
 
-  it('names a setting index past 2^53 as the file writes it, and reports its joint once', () => {
-    // The scene the index sweep missed. `settings/99999999999999999999/…` is past any count, so
-    // `_set` refuses the whole setting at :39 and its joint never reaches :502.
-    const found = ruleFindings({
+  // The issue's scene. `to_int` saturates at INT64_MAX (ustring.cpp:2283-2284), the `int` keeps -1,
+  // and `ERR_FAIL_INDEX_V` (bone_twist_disperser_3d.cpp:39) refuses it, which phase 1 reports.
+  it('leaves a setting index that saturates to INT64_MAX to the negative-index refusal', () => {
+    const props = {
       setting_count: 1,
       'settings/0/joint_count': 1,
       'settings/99999999999999999999/joints/0/twist_amount': 0.5,
-    });
-    expect(found.map((d) => d.ruleName)).toEqual([
-      'bonetwistdisperser3d-setting-index-out-of-range',
-    ]);
-    expect(found[0]!.message).toContain('index(es) 99999999999999999999 fall outside');
-    expect(found[0]!.message).not.toContain('100000000000000000000');
+    };
+    expect(ruleFindings(props)).toEqual([]);
+    expect(lint(scene(node('BoneTwistDisperser3D', props))).map((d) => d.message)).toContainEqual(
+      expect.stringContaining('Setting index 99999999999999999999 (stored as -1) must be non-negative')
+    );
   });
 
-  it('says nothing about an index no double names, rather than a NaN joint', () => {
-    // `toIntIndex` reads NaN for a digit run `to_int` must skip into past 2^53. No comparison
-    // places NaN, so the NaN-safe skip leaves it out of both rules.
-    const found = ruleFindings({
+  // `int which = ….to_int()` (bone_twist_disperser_3d.cpp:37) keeps the low 32 bits, so
+  // `4294967296` is setting 0, whose joint_count holds joint 0.
+  it('treats a setting index that wraps past 32 bits as the setting it lands on', () => {
+    const props = {
       setting_count: 1,
-      'settings/a99999999999999999999/joints/0/twist_amount': 0.5,
-    });
-    expect(found).toEqual([]);
+      'settings/0/joint_count': 1,
+      'settings/4294967296/joints/0/twist_amount': 0.5,
+    };
+    expect(ruleFindings(props)).toEqual([]);
+    const errors = lint(scene(node('BoneTwistDisperser3D', props))).filter(
+      (d) => d.severity === 'error'
+    );
+    expect(errors).toEqual([]);
   });
 
-  it('names a joint index past 2^53 as the file writes it', () => {
+  it('names what Godot stores beside a wrapping joint index past its joint_count', () => {
     const found = ruleFindings({
       setting_count: 1,
       'settings/0/joint_count': 1,
-      'settings/0/joints/99999999999999999999/twist_amount': 0.5,
+      'settings/0/joints/4294967297/twist_amount': 0.5,
     });
     expect(found).toHaveLength(1);
-    expect(found[0]!.message).toContain('joint(s) 0/99999999999999999999 (setting/joint)');
+    expect(found[0]!.message).toContain('joint(s) 0/4294967297 (stored as 0/1) (setting/joint)');
   });
 
   it('caps the joint pairs it names, however many fall outside', () => {

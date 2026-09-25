@@ -11,12 +11,13 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
-import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
+import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
 
 /**
  * Any `settings/<i>/…` leaf, with the index text captured. `_set` reads both index positions with a
- * bare `path.get_slicec('/', n).to_int()` and no validity gate (bone_twist_disperser_3d.cpp:37, :66),
- * so the grammar is the whole segment and {@link toIntIndex} turns it into a number.
+ * bare `path.get_slicec('/', n).to_int()` into an `int` and no validity gate
+ * (bone_twist_disperser_3d.cpp:37, :66), so the grammar is the whole segment, and
+ * {@link stringToInt} reads the number Godot stores.
  */
 const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/', 'to_int');
 /** The one nested leaf a scene can write, with both index texts captured. */
@@ -34,10 +35,9 @@ function resolveJointCounts(properties: Record<string, string>): Map<number, num
   for (const key of Object.keys(properties)) {
     const match = JOINT_COUNT_KEY_RE.exec(key);
     if (!match) continue;
-    const settingIndex = toIntIndex(match[1]!);
-    // A negative index is refused before the count is read at all. NaN, which `toIntIndex` returns
-    // for a spelling no double names, is skipped with it, since no comparison places it.
-    if (!(settingIndex >= 0)) continue;
+    const settingIndex = stringToInt(match[1]!);
+    // A negative index is refused before the count is read at all.
+    if (settingIndex < 0) continue;
     // A malformed count is its own validator's error. Ignoring it here leaves
     // the setting at its zero default rather than inventing a ceiling. A
     // negative one is refused outright (`ERR_FAIL_COND(p_count < 0)`, :487), so
@@ -76,10 +76,10 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
     const indexed = SETTING_KEY_RE.exec(key);
     if (!indexed) continue;
     const settingText = indexed[1]!;
-    const settingIndex = toIntIndex(settingText);
+    const settingIndex = stringToInt(settingText);
     // A negative index is the validator's error, against the same ERR_FAIL_INDEX_V, and reporting
-    // it again here would double up on one defect. NaN is skipped with it: no comparison places it.
-    if (!(settingIndex >= 0)) continue;
+    // it again here would double up on one defect.
+    if (settingIndex < 0) continue;
     // `_set` opens with `ERR_FAIL_INDEX_V(which, (int)settings.size(), false)`
     // (bone_twist_disperser_3d.cpp:39), and only `set_setting_count` (:649-666) resizes `settings`,
     // so every leaf of an index at or past the count is dropped on load.
@@ -92,8 +92,8 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
     const joint = JOINT_AMOUNT_KEY_RE.exec(key);
     if (!joint) continue;
     const jointText = joint[2]!;
-    const jointIndex = toIntIndex(jointText);
-    if (!(jointIndex >= 0)) continue;
+    const jointIndex = stringToInt(jointText);
+    if (jointIndex < 0) continue;
     // `set_joint_twist_amount` guards with `ERR_FAIL_INDEX(p_joint, (int)joints.size())` (:502), and
     // only `set_joint_count` (:485-491) resizes it. The file's count governs: it is pushed (:158) before
     // its joints (:159-164), and `_update_joints` waits for ENTER_TREE (:220-222, :597). Absent means

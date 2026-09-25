@@ -75,15 +75,15 @@ describe('FileDialog semantic rules', () => {
 });
 
 describe('FileDialog index spelling in the message', () => {
-  it('names an index past 2^53 as the file writes it, not as the double it rounds to', () => {
+  // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
+  it('names what Godot stores beside a wrapping index past the count', () => {
     const diagnostic = expectDiagnostic(
-      scene(node('FileDialog', { option_count: 2, 'option_9999999999999999999999/name': '"x"' })),
+      scene(node('FileDialog', { option_count: 2, 'option_4294967298/name': '"x"' })),
       { ruleName: 'filedialog-option-index-out-of-range', severity: 'error' }
     );
     expect(diagnostic.message).toContain(
-      'index(es) 9999999999999999999999 fall outside option_count (2)'
+      'index(es) 4294967298 (stored as 2) fall outside option_count (2)'
     );
-    expect(diagnostic.message).not.toContain('1e+22');
   });
 
   it('stays silent on an option inside the count whatever its spelling', () => {

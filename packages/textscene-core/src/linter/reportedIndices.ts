@@ -1,6 +1,6 @@
 /** The indices of an indexed family that one diagnostic names: which, how many, and how spelled. */
 
-import { indexedKeys, type IndexParse } from '../godot/index.js';
+import { IS_VALID_INT_RE, indexedKeys, type IndexParse } from '../godot/index.js';
 
 /**
  * A `*_count` has no ceiling, so one diagnostic per index can exceed the spread argument limit and
@@ -27,6 +27,24 @@ export type ResolvedIndex = number | readonly number[];
 const positionsOf = (resolved: ResolvedIndex): readonly number[] =>
   typeof resolved === 'number' ? [resolved] : resolved;
 
+/** Whether `text` spells `stored`: `+5` and `05` spell 5, and `4294967297` does not spell 1. */
+function spells(text: string, stored: number): boolean {
+  return IS_VALID_INT_RE.test(text) && BigInt(text) === BigInt(stored);
+}
+
+/**
+ * An index as a message names it: the text the key writes, then what Godot stores where the two
+ * differ. `to_int()` lands in an `int`, so `4294967297` is stored as 1 and `x1` as 1. A nested key
+ * (`0/5`) is compared position by position.
+ */
+export function writtenIndex(text: string, stored: ResolvedIndex): string {
+  const positions = positionsOf(stored);
+  const parts = text.split('/');
+  const isPlain =
+    parts.length === positions.length && parts.every((part, at) => spells(part, positions[at]!));
+  return isPlain ? text : `${text} (stored as ${positions.join('/')})`;
+}
+
 function byResolvedIndex(
   [textA, resolvedA]: readonly [string, ResolvedIndex],
   [textB, resolvedB]: readonly [string, ResolvedIndex]
@@ -36,18 +54,20 @@ function byResolvedIndex(
   for (let at = 0; at < Math.min(a.length, b.length); at++) {
     if (a[at] !== b[at]) return a[at]! - b[at]!;
   }
-  // Two spellings can resolve alike (`5` and `+5`, or two digit runs past 2^53 that round to one
-  // double), so the text breaks the tie, shorter first, which orders plain digit runs by value.
+  // Several spellings can resolve alike (`5`, `+5`, `05` and `4294967301`), so the text breaks the
+  // tie, shorter first, which orders plain digit runs by value.
   return textA.length - textB.length || (textA < textB ? -1 : textA > textB ? 1 : 0);
 }
 
 /**
- * The index texts a message names, as the file writes them, ascending by what each resolves to and
- * capped like {@link listIndices}. Never the number: past 2^53 a double no longer holds the integer
- * the file states, and `Number` reads `9999999999999999999999` as `1e+22`.
+ * The index texts a message names, each as {@link writtenIndex} spells it, ascending by what each
+ * resolves to and capped like {@link listIndices}. Never `Number(text)`: past 2^53 a double no
+ * longer holds the integer the file states, and `Number` reads `9999999999999999999999` as `1e+22`.
  */
 export function listWrittenIndices(written: ReadonlyMap<string, ResolvedIndex>): string {
-  return listIndices([...written].sort(byResolvedIndex).map(([text]) => text));
+  return listIndices(
+    [...written].sort(byResolvedIndex).map(([text, resolved]) => writtenIndex(text, resolved))
+  );
 }
 
 /**

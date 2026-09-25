@@ -1,6 +1,6 @@
 /** How Godot resolves an indexed property key: `item_0/text`, `settings/2/joints/1/bone`. */
 
-import { IS_VALID_INT_RE, IS_VALID_INT_SOURCE, toIntIndex } from './string.js';
+import { IS_VALID_INT_RE, IS_VALID_INT_SOURCE, stringToInt } from './string.js';
 
 /**
  * Which of Godot's two index resolutions a class uses, the union `indexedFamilyValidator`'s
@@ -13,7 +13,7 @@ export type IndexParse = 'is_valid_int' | 'to_int';
 /**
  * The text each parse admits at an index, as regex source. `is_valid_int` is {@link IS_VALID_INT_RE}'s
  * body: one optional sign, `+` or `-` (`ustring.cpp:4752`), then digits. `to_int` skips what it cannot
- * use (`ustring.cpp:2280-2293`), so it takes the whole segment and {@link toIntIndex} reads it.
+ * use (`ustring.cpp:2280-2293`), so it takes the whole segment and {@link stringToInt} reads it.
  * Non-empty, as in `indexedFamilyValidator`, so `settings//leaf` reaches neither phase.
  */
 const INDEX_SOURCE: Readonly<Record<IndexParse, string>> = {
@@ -37,7 +37,7 @@ export interface IndexedKey {
   key: string;
   /** The index as the file spells it. `5`, `+5` and `05` all name element 5. */
   indexText: string;
-  /** The element Godot applies the key to. */
+  /** The element Godot applies the key to: `to_int()` stored in an `int` ({@link stringToInt}). */
   index: number;
   /** The path below the index. */
   leaf: string;
@@ -46,7 +46,7 @@ export interface IndexedKey {
 
 /**
  * Calls `visit` for every key of a family that names an element, in file order. A key with no
- * index or no leaf, an index text the parse refuses, and a negative or NaN index name none. A
+ * index or no leaf, an index text the parse refuses, and an index stored negative name none. A
  * callback, not a list: `indexedElements` runs on every parse, and a family of 200,000 keys would
  * allocate a record per key only to group it.
  */
@@ -69,11 +69,10 @@ function visitIndexedKeys(
     if (indexText === '' || leaf === '') continue;
     // `layer_9/tile_data/x` gives the index text `9/tile_data`, so `_set` builds no layer 9.
     if (indexParse === 'is_valid_int' && !IS_VALID_INT_RE.test(indexText)) continue;
-    const index = toIntIndex(indexText);
+    const index = stringToInt(indexText);
     // A negative index never lands: `_get_property` refuses it (`property_list_helper.cpp:58`) and
-    // each hand-rolled `_set` has its own `ERR_FAIL_INDEX_V`, which phase 1 reports. NaN, for a
-    // magnitude no double names exactly, fails every comparison and would seat a wrong key.
-    if (!(index >= 0)) continue;
+    // each hand-rolled `_set` has its own `ERR_FAIL_INDEX_V`, which phase 1 reports.
+    if (index < 0) continue;
     visit(key, indexText, index, leaf, properties[key]!);
   }
 }

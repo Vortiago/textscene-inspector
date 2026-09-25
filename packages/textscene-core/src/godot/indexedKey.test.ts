@@ -7,41 +7,58 @@ import { describe, expect, it } from 'vitest';
 import { indexedElements, indexedKeys } from './indexedKey.js';
 
 describe('indexedKeys', () => {
-  it('resolves each key in file order, keeping the whole key and the index as written', () => {
-    // `is_valid_int` skips one leading sign (ustring.cpp:4752), so `+2` names item 2.
-    expect(
-      indexedKeys({ item_count: '3', 'item_+2/text': '"Save"', 'item_0/icon': 'null' }, 'item_', 'is_valid_int')
-    ).toEqual([
+  it('keeps the whole key, the index text, the leaf and the value as written', () => {
+    expect(indexedKeys({ 'item_+2/text': '"Save"' }, 'item_', 'is_valid_int')).toEqual([
       { key: 'item_+2/text', indexText: '+2', index: 2, leaf: 'text', value: '"Save"' },
-      { key: 'item_0/icon', indexText: '0', index: 0, leaf: 'icon', value: 'null' },
     ]);
   });
 
-  it('leaves out every key that names no element', () => {
-    // A refused spelling, a negative index, no leaf, and the rsplit that leaves `5/x` above the
-    // last `/` (property_list_helper.cpp:47-55).
+  it('lists the keys in file order', () => {
+    const keys = indexedKeys({ 'item_1/text': '"a"', 'item_0/text': '"b"' }, 'item_', 'is_valid_int');
+    expect(keys.map(({ key }) => key)).toEqual(['item_1/text', 'item_0/text']);
+  });
+
+  it('leaves out an index text is_valid_int refuses', () => {
+    // `_get_property` returns null unless the index `is_valid_int()`
+    // (property_list_helper.cpp:53-55).
+    expect(indexedKeys({ 'item_x/text': '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
+  });
+
+  it('leaves out an index stored negative', () => {
+    // `_get_property` refuses `index < 0` (property_list_helper.cpp:58).
+    expect(indexedKeys({ 'item_-1/text': '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
+  });
+
+  it('leaves out a key with no leaf', () => {
+    expect(indexedKeys({ 'item_3/': '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
+  });
+
+  it('leaves out a key whose last slash puts a slash in the index text', () => {
+    // `rsplit("/", true, 1)` (property_list_helper.cpp:47) makes the index text `5/x`.
+    expect(indexedKeys({ 'item_5/x/text': '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
+  });
+
+  // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
+  it('applies an index that wraps past 32 bits to the element it lands on', () => {
+    const [key] = indexedKeys({ 'item_4294967296/text': '"a"' }, 'item_', 'is_valid_int');
+    expect(key).toMatchObject({ indexText: '4294967296', index: 0 });
+  });
+
+  // `to_int` saturates at INT64_MAX (ustring.cpp:2283-2284), whose low 32 bits are -1.
+  it('leaves out an index that saturates to INT64_MAX', () => {
     expect(
-      indexedKeys(
-        { 'item_x/text': '"a"', 'item_-1/text': '"b"', 'item_3/': '"c"', 'item_5/x/text': '"d"' },
-        'item_',
-        'is_valid_int'
-      )
+      indexedKeys({ 'item_9999999999999999999999/text': '"a"' }, 'item_', 'is_valid_int')
     ).toEqual([]);
   });
 
-  it('keeps an index past 2^53 as the file spells it, and drops one no double names', () => {
-    // A clean digit run keeps its sign through `Number`, so it still compares past any count. A
-    // run `to_int` must skip into reads NaN, which no comparison places.
-    const [huge] = indexedKeys(
-      { 'item_9999999999999999999999/text': '"a"' },
+  // INT64_MIN keeps 0 in its low 32 bits, so the write lands on element 0.
+  it('applies an index that saturates to INT64_MIN to element 0', () => {
+    const [key] = indexedKeys(
+      { 'item_-9999999999999999999999/text': '"a"' },
       'item_',
       'is_valid_int'
     );
-    expect(huge!.indexText).toBe('9999999999999999999999');
-    expect(huge!.index).toBeGreaterThan(2 ** 53);
-    expect(
-      indexedKeys({ 'settings/a99999999999999999999/bone': '"A"' }, 'settings/', 'to_int')
-    ).toEqual([]);
+    expect(key).toMatchObject({ indexText: '-9999999999999999999999', index: 0 });
   });
 });
 

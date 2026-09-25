@@ -15,12 +15,12 @@ import {
   listWrittenIndices,
   unsatisfiedIndices,
 } from '../../../../linter/reportedIndices.js';
-import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
+import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
 
 /**
  * Any `settings/<i>/…` leaf, whatever its depth. `_set` reads the index with a bare
- * `path.get_slicec('/', 1).to_int()` and no validity gate (two_bone_ik_3d.cpp:37), so {@link
- * toIntIndex} turns the whole segment into a number. All four regexes share this grammar, so a key
+ * `path.get_slicec('/', 1).to_int()` into an `int` and no validity gate (two_bone_ik_3d.cpp:37),
+ * so {@link stringToInt} reads the whole segment. All four regexes share this grammar, so a key
  * one admits is always one its siblings can look up.
  */
 const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/', 'to_int');
@@ -62,8 +62,7 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   for (const key of Object.keys(rawProps)) {
     const m = TARGET_NODE_KEY_RE.exec(key);
     if (!m) continue;
-    const at = toIntIndex(m[1]!);
-    if (Number.isFinite(at)) targetNodes.set(at, rawProps[key]!);
+    targetNodes.set(stringToInt(m[1]!), rawProps[key]!);
   }
   // Absence is the trigger too, since `target_node` is empty by default (two_bone_ik_3d.h), so
   // every setting in range counts. Derived, not walked: `setting_count` is an INT slot with no
@@ -86,19 +85,17 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   for (const key of Object.keys(rawProps)) {
     const m = POLE_DIRECTION_KEY_RE.exec(key);
     if (!m) continue;
-    const at = toIntIndex(m[1]!);
-    if (Number.isFinite(at)) poleDirections.set(at, rawProps[key]!);
+    poleDirections.set(stringToInt(m[1]!), rawProps[key]!);
   }
 
   for (const key of Object.keys(rawProps)) {
     const indexed = SETTING_KEY_RE.exec(key);
     if (!indexed) continue;
     const indexText = indexed[1]!;
-    const index = toIntIndex(indexText);
+    const index = stringToInt(indexText);
     // A negative index is the validator's error, against the same ERR_FAIL_INDEX_V, so it is not
-    // reported twice. `!(index >= 0)` also skips NaN, which `toIntIndex` returns for a magnitude no
-    // double names.
-    if (!(index >= 0)) continue;
+    // reported twice.
+    if (index < 0) continue;
     // `_set` opens with `ERR_FAIL_INDEX_V(which, (int)settings.size(), false)`
     // (two_bone_ik_3d.cpp:39), and only `_set_setting_count` (ik_modifier_3d.h:97-114) resizes
     // `settings`, so every leaf at or past the count is dropped on load.

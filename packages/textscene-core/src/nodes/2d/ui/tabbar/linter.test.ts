@@ -133,11 +133,18 @@ describe('TabBar cross-field rule', () => {
     it('says nothing about a malformed tab_count, which has its own validator', () => {
       expect(only({ tab_count: 'three', 'tab_9/title': '"Nine"' })).toHaveLength(0);
     });
-    it('names an index past 2^53 as the file writes it, not as the double it rounds to', () => {
-      const found = only({ tab_count: 2, 'tab_9999999999999999999999/title': '"x"' });
+    // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
+    it('applies an index that wraps past 32 bits to the tab it lands on', () => {
+      expect(only({ tab_count: 1, 'tab_4294967296/title': '"x"' })).toHaveLength(0);
+    });
+    it('names what Godot stores beside a wrapping index past the count', () => {
+      const found = only({ tab_count: 1, 'tab_4294967297/title': '"x"' });
       expect(found).toHaveLength(1);
-      expect(found[0]?.message).toContain('tab index(es) 9999999999999999999999 but');
-      expect(found[0]?.message).not.toContain('1e+22');
+      expect(found[0]?.message).toContain('tab index(es) 4294967297 (stored as 1) but');
+    });
+    // INT64_MAX (ustring.cpp:2283-2284) keeps -1, which linterParser.ts reports.
+    it('leaves an index that saturates to INT64_MAX to the negative-index refusal', () => {
+      expect(only({ tab_count: 2, 'tab_9999999999999999999999/title': '"x"' })).toHaveLength(0);
     });
     it('caps the list it names, however many tabs fall outside', () => {
       const tabs = Object.fromEntries(

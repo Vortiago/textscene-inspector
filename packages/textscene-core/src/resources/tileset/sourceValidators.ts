@@ -13,7 +13,14 @@ import {
   propertyError,
   v,
 } from '../../linter/validators/index.js';
-import { dropTrailingComma, indexedKeyRegex, isNilLiteral, splitTopLevel } from '../../godot/index.js';
+import {
+  dropTrailingComma,
+  indexedKeyRegex,
+  isNilLiteral,
+  splitTopLevel,
+  stringToInt,
+} from '../../godot/index.js';
+import { writtenIndex } from '../../linter/reportedIndices.js';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 
 const unknownKey = (key: string, line: number, describes: string, code: string) =>
@@ -61,13 +68,15 @@ const sourceResource = requiredResource('source', 'tile_set.cpp:477', 'INVALID_T
 export const sourceValidator: PropertyValidator = accepts((key, value, line) => {
   const match = SOURCE_KEY.exec(key);
   if (!match) return unknownKey(key, line, 'source', 'INVALID_TILESET_SOURCE_KEY');
-  const id = Number(match[1]);
+  // `int source_id = components[1].to_int()` (:3963).
+  const id = stringToInt(match[1]!);
   if (id === -1) {
     return keyShapeError(
       key,
       line,
-      'Source id -1 is TileSet::INVALID_SOURCE, so add_source re-seats the source at the ' +
-        'auto-assigned next_source_id (tile_set.cpp:481) and no cell can address it by -1',
+      `Source id ${writtenIndex(match[1]!, id)} is TileSet::INVALID_SOURCE, so add_source ` +
+        're-seats the source at the auto-assigned next_source_id (tile_set.cpp:481) and no ' +
+        'cell can address it by -1',
       'INVALID_TILESET_SOURCE_ID'
     );
   }
@@ -75,7 +84,7 @@ export const sourceValidator: PropertyValidator = accepts((key, value, line) => 
     return keyShapeError(
       key,
       line,
-      `Source id ${id} must be non-negative: add_source fails ` +
+      `Source id ${writtenIndex(match[1]!, id)} must be non-negative: add_source fails ` +
         'ERR_FAIL_COND_V_MSG("Negative source IDs are not allowed") (tile_set.cpp:479), ' +
         'so the source is never added',
       'INVALID_TILESET_SOURCE_ID'
@@ -98,12 +107,13 @@ const patternResource = requiredResource('pattern', 'tile_set.cpp:1359', 'INVALI
 export const patternValidator: PropertyValidator = accepts((key, value, line) => {
   const match = PATTERN_KEY.exec(key);
   if (!match) return unknownKey(key, line, 'pattern', 'INVALID_TILESET_PATTERN_KEY');
-  const index = Number(match[1]);
+  // `int pattern_index = ….to_int()` (:3996).
+  const index = stringToInt(match[1]!);
   if (index < 0) {
     return keyShapeError(
       key,
       line,
-      `Pattern index ${index} must be non-negative: TileSet::_set fills patterns with ` +
+      `Pattern index ${writtenIndex(match[1]!, index)} must be non-negative: TileSet::_set fills patterns with ` +
         '`for (int i = patterns.size(); i <= pattern_index; i++)` (tile_set.cpp:3997), ' +
         'which adds nothing for a negative index, and still reports success',
       'INVALID_TILESET_PATTERN_INDEX'

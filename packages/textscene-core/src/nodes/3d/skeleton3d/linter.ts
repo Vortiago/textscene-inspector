@@ -8,6 +8,7 @@ import type { Skeleton3DProperties } from './types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { indexedKeyRegex, boolSlotValue} from '../../../godot/index.js';
 import { boneNameFindings } from './boneNameOrder.js';
+import { writtenIndex } from '../../../linter/reportedIndices.js';
 
 /**
  * `bones/<i>/pose` and `bones/<i>/bound_children`, the two 3.x arms
@@ -75,7 +76,7 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
       finding.kind === 'order'
         ? {
             severity: 'error',
-            message: `'${finding.key}' names bone ${finding.indexText}, but only ${finding.expected} bone${finding.expected === 1 ? '' : 's'} exist${finding.expected === 1 ? 's' : ''} by this line. Godot adds a bone only when the index equals the current count, so it drops this write.`,
+            message: `'${finding.key}' names bone ${writtenIndex(finding.indexText, finding.index)}, but only ${finding.expected} bone${finding.expected === 1 ? '' : 's'} exist${finding.expected === 1 ? 's' : ''} by this line. Godot adds a bone only when the index equals the current count, so it drops this write.`,
             nodeName: node.name,
             nodeType: node.type,
             ruleName: 'skeleton3d-bone-name-order',

@@ -17,13 +17,14 @@ import {
   ROTATION_AXIS,
   SECONDARY_DIRECTION,
 } from '../skeletonmodifier3d/linterParser.js';
-import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
+import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { writtenIndex } from '../../../../linter/reportedIndices.js';
 
 /**
  * Why a negative setting index is refused, shared by both levels of the family
  * so the two report the same thing.
  */
-const negativeSettingIndex = (index: number): string =>
+const negativeSettingIndex = (index: string): string =>
   `Setting index ${index} must be non-negative; IterateIK3D::_set fails the index check (iterate_ik_3d.cpp:39) before reaching the property, so the write never lands`;
 
 
@@ -92,12 +93,12 @@ const settingsValidator = accepts((key, value, line) => {
       // The joint index is deliberately unchecked: each leaf's ERR_FAIL_INDEX
       // sits in its own setter, so there is no single line to cite, and the
       // setting index below already covers what `_set` refuses uniformly.
-      const settingIndex = toIntIndex(joint[1]!);
+      const settingIndex = stringToInt(joint[1]!);
       if (settingIndex < 0) {
         return keyShapeError(
           key,
           line,
-          negativeSettingIndex(settingIndex),
+          negativeSettingIndex(writtenIndex(joint[1]!, settingIndex)),
           'INVALID_SETTING_INDEX'
         );
       }

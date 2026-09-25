@@ -11,7 +11,7 @@ import { parseVector2, type Vector2 } from './vectors';
 import { slotTupleRegex, parseGodotFloat, allFinite } from '../godot/number.js';
 import { slotComponents, storedFromFloat, storedVector2i, type IntWidth } from '../godot/int.js';
 
-import { nodePathLiteral, toIntIndex, boolSlotValue} from '../godot/index.js';
+import { nodePathLiteral, stringToInt, boolSlotValue } from '../godot/index.js';
 
 /**
  * A finite scalar in the tokenizer's grammar, or `null`.
@@ -277,14 +277,11 @@ export function parseNodePathLiteral(value: string | undefined): string | null {
 
 /**
  * The sibling index a heading's `index=` names. `resource_format_text.cpp:269-270`
- * assigns it to an `int` through `Variant::_to_int` (`variant.h`) and `String::to_int()`:
- * `index="3px"` is 3 and `index=" "` is 0. {@link toIntIndex} is that model. A `NaN`
- * here would poison every sibling-ordering comparison.
+ * assigns it to an `int index` (:196) through `Variant::_to_int` (`variant.h:372-373`)
+ * and `String::to_int()`: `index="3px"` is 3 and `index=" "` is 0. {@link stringToInt}
+ * is that model.
  */
 export function parseHeadingIndex(value: string | undefined): number | undefined {
   if (value === undefined || value === '') return undefined;
-  const index = toIntIndex(value);
-  // Past `String::to_int`'s own bound this reader cannot name the int64 Godot
-  // holds, so it declines rather than letting a wrong number travel.
-  return Number.isNaN(index) ? undefined : index;
+  return stringToInt(value);
 }

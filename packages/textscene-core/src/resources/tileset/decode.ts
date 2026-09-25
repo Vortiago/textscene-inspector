@@ -6,7 +6,7 @@
  */
 
 import { warn } from '../../logger';
-import { indexedKeyRegex, ruleInt, boolSlotValue } from '../../godot/index.js';
+import { indexedKeyRegex, ruleInt, boolSlotValue, stringToInt } from '../../godot/index.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { vec2iOr } from '../../parser/valueParsers';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
@@ -37,7 +37,7 @@ export interface TileSetSourceData {
 /**
  * `TileSet::_set` gates the source id on `components[1].is_valid_int()`
  * (tile_set.cpp:3961), which skips ONE leading sign (ustring.cpp:4752), so
- * `sources/+3` is source 3. `Number` is the reader the gate has already vetted.
+ * `sources/+3` is source 3. The id is `to_int()` stored in an `int` (:3963).
  */
 const SOURCE_KEY_RE = indexedKeyRegex('^sources/(#)$', 'is_valid_int');
 
@@ -56,7 +56,7 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   for (const [key, value] of Object.entries(data.properties)) {
     const sourceMatch = SOURCE_KEY_RE.exec(key);
     if (!sourceMatch) continue;
-    const sourceId = Number(sourceMatch[1]);
+    const sourceId = stringToInt(sourceMatch[1]!);
     // `add_source` re-seats -1 at the auto-assigned `next_source_id` (tile_set.cpp:481)
     // and refuses anything below (:479). The landing id depends on every other
     // source, so the source is dropped, not misplaced.
@@ -172,7 +172,9 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
   const tiles = new Map<string, AtlasTileModel>();
 
   const tileAt = (x: string, y: string): AtlasTileModel => {
-    const key = `${Number(x)}:${Number(y)}`;
+    // `Vector2i(coords_split[0].to_int(), coords_split[1].to_int())` (tile_set.cpp:4755) takes
+    // each half into an `int32_t`.
+    const key = `${stringToInt(x)}:${stringToInt(y)}`;
     let tile = tiles.get(key);
     if (!tile) {
       tile = { sizeInAtlas: { x: 1, y: 1 }, alternatives: new Map() };
@@ -201,7 +203,8 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
 
     const alt = ALT_KEY_RE.exec(rest);
     if (!alt) continue;
-    const altId = Number(alt[1]);
+    // `int alternative_id = components[1].to_int()` (tile_set.cpp:4798).
+    const altId = stringToInt(alt[1]!);
     // -1 is `INVALID_TILE_ALTERNATIVE`, which `_set` refuses (tile_set.cpp:4799).
     // Below that, `create_alternative_tile` re-seats at `next_alternative_id`.
     // Neither names an alternative a cell can address.

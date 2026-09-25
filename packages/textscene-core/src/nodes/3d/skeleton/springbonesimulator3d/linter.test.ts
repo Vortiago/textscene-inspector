@@ -103,23 +103,22 @@ describe('SpringBoneSimulator3D semantic rules', () => {
       );
     });
 
+    // `_set` refuses the setting at spring_bone_simulator_3d.cpp:44, before `set_collision_path`
+    // could return at :1150, so the collision-list claim would name a setter the write never
+    // reaches. The `int` keeps the low 32 bits of `4294967297`, setting 1.
     it('reports a collision on an out-of-range setting once, as out of range', () => {
-      // `_set` refuses the setting at spring_bone_simulator_3d.cpp:44, before `set_collision_path`
-      // could return at :1150, so the collision-list claim would name a setter the write never
-      // reaches. The index is named as the file writes it, where `Number` prints 1e+21.
       const found = lint(
         scene(
           node('SpringBoneSimulator3D', {
             setting_count: 1,
-            'settings/999999999999999999999/collisions/0': 'NodePath("../Collision")',
+            'settings/4294967297/collisions/0': 'NodePath("../Collision")',
           })
         )
       ).filter((d) => d.ruleName.startsWith('springbonesimulator3d-'));
       expect(found.map((d) => d.ruleName)).toEqual([
         'springbonesimulator3d-setting-index-out-of-range',
       ]);
-      expect(found[0]!.message).toContain('index(es) 999999999999999999999 fall outside');
-      expect(found[0]!.message).not.toContain('e+21');
+      expect(found[0]!.message).toContain('index(es) 4294967297 (stored as 1) fall outside');
     });
   });
 

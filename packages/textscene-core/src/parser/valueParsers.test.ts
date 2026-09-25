@@ -402,10 +402,14 @@ describe('parseHeadingIndex', () => {
     expect(parseHeadingIndex('')).toBeUndefined();
   });
 
-  it('declines a non-integer spelling whose digits overrun the to_int reader', () => {
-    // A clean integer spelling goes through `Number` for its SIGN and keeps a
-    // value past 2^53; only the `String::to_int` path surrenders to NaN.
-    expect(parseHeadingIndex(`${'9'.repeat(40)}px`)).toBeUndefined();
-    expect(parseHeadingIndex('9'.repeat(40))).toBe(Number('9'.repeat(40)));
+  // `int index` (resource_format_text.cpp:196) keeps the low 32 bits of `to_int()`, and a run of
+  // 20 or more digits saturates at INT64_MAX (ustring.cpp:2283-2284), whose low 32 bits are -1.
+  it('reads a run of digits past int64 as the -1 the int keeps', () => {
+    expect(parseHeadingIndex('9'.repeat(40))).toBe(-1);
+    expect(parseHeadingIndex(`${'9'.repeat(40)}px`)).toBe(-1);
+  });
+
+  it('keeps the low 32 bits of an index past the int', () => {
+    expect(parseHeadingIndex('4294967299')).toBe(3);
   });
 });

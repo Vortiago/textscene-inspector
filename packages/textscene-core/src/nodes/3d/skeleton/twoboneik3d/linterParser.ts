@@ -23,7 +23,7 @@ const UNKNOWN_SETTING_CODE = 'INVALID_SETTING_KEY';
 /** Error code for a `settings/…` key addressing a negative setting. */
 const NEGATIVE_SETTING_INDEX_CODE = 'INVALID_SETTING_INDEX';
 
-function negativeIndexMessage(index: number): string {
+function negativeIndexMessage(index: string): string {
   return (
     `Setting index ${index} must be non-negative. TwoBoneIK3D::_set opens with ` +
     'ERR_FAIL_INDEX_V(which, settings.size(), false) (two_bone_ik_3d.cpp:39), so the ' +

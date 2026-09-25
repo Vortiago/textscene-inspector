@@ -92,6 +92,29 @@ const CASES: KeyCase[] = [
     key: 'terrain_set_+1/terrain_+2/name',
     valid: ['"Stone"'],
   },
+  {
+    // `int terrain_set_index = ….to_int()` (:3895) keeps the low 32 bits.
+    key: 'terrain_set_2147483648/mode',
+    invalid: [
+      {
+        value: '0',
+        severity: 'error',
+        contains: ['index 2147483648 (stored as -2147483648) must be non-negative'],
+      },
+    ],
+  },
+  {
+    // `int terrain_index = ….to_int()` (:3904) keeps the low 32 bits.
+    key: 'terrain_set_0/terrain_2147483648/name',
+    invalid: [
+      {
+        value: '"a"',
+        severity: 'error',
+        contains: ['Terrain index 2147483648 (stored as -2147483648) must be non-negative'],
+      },
+    ],
+  },
+  { key: 'terrain_set_4294967296/terrain_4294967296/name', valid: ['"Stone"'] },
 ];
 
 describe('TileSet terrain sets', () => {

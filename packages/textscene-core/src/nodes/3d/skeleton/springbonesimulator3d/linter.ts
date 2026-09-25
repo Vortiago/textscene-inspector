@@ -11,13 +11,13 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
-import { indexedElements, indexedKeyRegex, toIntIndex, boolSlotValue} from '../../../../godot/index.js';
+import { indexedElements, indexedKeyRegex, stringToInt, boolSlotValue } from '../../../../godot/index.js';
 
 /**
  * Any `settings/<i>/…` leaf, whatever its depth. Every index position here (the setting, the joint,
  * the collision) is read with a bare `path.get_slicec('/', n).to_int()` and no validity gate
- * (spring_bone_simulator_3d.cpp:42, :122, :143, :147), so {@link toIntIndex} turns the whole
- * segment into a number.
+ * (spring_bone_simulator_3d.cpp:42, :122, :143, :147), so {@link stringToInt} reads the whole
+ * segment as the `int` Godot stores.
  */
 const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/(.+)$', 'to_int');
 /** `<leaf>` below a joint index, for the individual-mode check. */
@@ -104,10 +104,10 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
     if (!indexed) continue;
     const indexText = indexed[1]!;
     const leaf = indexed[2]!;
-    const index = toIntIndex(indexText);
-    // A negative index is the validator's error, against the same
-    // ERR_FAIL_INDEX_V; reporting it again here would double up on one defect.
-    if (!(index >= 0)) continue;
+    const index = stringToInt(indexText);
+    // A negative index is the validator's error, against the same ERR_FAIL_INDEX_V, and reporting
+    // it again here would double up on one defect.
+    if (index < 0) continue;
     // `_set` opens with `ERR_FAIL_INDEX_V(which, (int)settings.size(), false)` (:44), and only
     // `set_setting_count` (:840) resizes `settings`, so every leaf at or past the count is dropped
     // on load.

@@ -45,7 +45,6 @@ export {
   splitTopLevel,
   stringToFloat,
   stringToInt,
-  toIntIndex,
 } from './string.js';
 export {
   MATERIAL_RENDER_PRIORITY_MIN,

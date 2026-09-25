@@ -52,13 +52,13 @@ describe('MenuButton semantic rules', () => {
     );
   });
 
-  it('names an index past 2^53 as the file writes it, not as the double it rounds to', () => {
+  // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
+  it('names what Godot stores beside a wrapping index past the count', () => {
     const diagnostic = expectDiagnostic(
-      scene(node('MenuButton', { item_count: 2, 'popup/item_9999999999999999999999/text': '"x"' })),
+      scene(node('MenuButton', { item_count: 2, 'popup/item_4294967298/text': '"x"' })),
       { ruleName: RULE, severity: 'error' }
     );
-    expect(diagnostic.message).toContain('index(es) 9999999999999999999999 fall outside');
-    expect(diagnostic.message).not.toContain('1e+22');
+    expect(diagnostic.message).toContain('index(es) 4294967298 (stored as 2) fall outside');
   });
 
   it('leaves a negative index to the per-property validator', () => {

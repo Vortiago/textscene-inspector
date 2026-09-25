@@ -6,11 +6,12 @@
 
 import { indexedFamilyValidator } from '../../linter/validators/indexedFamily.js';
 import { accepts, keyShapeError, v } from '../../linter/validators/index.js';
-import { indexedKeyRegex } from '../../godot/index.js';
+import { indexedKeyRegex, stringToInt } from '../../godot/index.js';
+import { writtenIndex } from '../../linter/reportedIndices.js';
 import { terrainColor } from './terrainColor.js';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 
-const negativeTerrainSet = (index: number): string =>
+const negativeTerrainSet = (index: string): string =>
   `Terrain-set index ${index} must be non-negative. TileSet::_set fails ` +
   'ERR_FAIL_COND_V(terrain_set_index < 0, false) (tile_set.cpp:3896) before the ' +
   'terrain set is reached, so the write never lands';
@@ -82,22 +83,23 @@ export const terrainSetValidator: PropertyValidator = accepts((key, value, line)
   }
 
   // `_set` tests the terrain-set index before it looks at `components[1]`
-  // (:3896 against :3904), so the outer guard is the one that reports.
-  const setIndex = Number(nested[1]);
+  // (:3896 against :3904), so the outer guard is the one that reports. Both
+  // indices are `to_int()` stored in an `int` (:3895, :3904).
+  const setIndex = stringToInt(nested[1]!);
   if (setIndex < 0) {
     return keyShapeError(
       key,
       line,
-      negativeTerrainSet(setIndex),
+      negativeTerrainSet(writtenIndex(nested[1]!, setIndex)),
       'INVALID_TILESET_TERRAIN_SET_INDEX'
     );
   }
-  const terrainIndex = Number(nested[2]);
+  const terrainIndex = stringToInt(nested[2]!);
   if (terrainIndex < 0) {
     return keyShapeError(
       key,
       line,
-      `Terrain index ${terrainIndex} must be non-negative. TileSet::_set fails ` +
+      `Terrain index ${writtenIndex(nested[2]!, terrainIndex)} must be non-negative. TileSet::_set fails ` +
         'ERR_FAIL_COND_V(terrain_index < 0, false) (tile_set.cpp:3905) before the terrain ' +
         'is reached, so the write never lands',
       'INVALID_TILESET_TERRAIN_INDEX'
