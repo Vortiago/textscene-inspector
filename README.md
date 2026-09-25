@@ -13,7 +13,9 @@ vscode.dev), a standalone web previewer, and a linter for Godot's text formats
 (`.tscn` scenes and `.tres` resources). The linter runs both as a CLI and as
 in-editor diagnostics.
 
-Try it without installing anything: **[textscene-inspector.pages.dev](https://textscene-inspector.pages.dev/)**.
+Try it without installing anything: **[vortiago.github.io/textscene-inspector](https://vortiago.github.io/textscene-inspector/)**.
+The development build, with the built-in test scenes and the parity gallery, is at
+[textscene-inspector.pages.dev](https://textscene-inspector.pages.dev/).
 
 ![The web previewer rendering a CSG hallway mockup in the Split Dock UI](./docs/showcase/web/hallway.png)
 
@@ -69,13 +71,18 @@ outline, go-to-definition on `SubResource` and `ExtResource` ids within the
 file, and hot reload on save. It is not yet published to the Marketplace.
 Build it from source (below).
 
-**Web previewer**: a fixture browser, an "Open .tscn" picker with a
-<kbd>Ctrl/Cmd+K</kbd> scene palette, drag-and-drop multi-file upload (drop a
-scene and its textures in one gesture), and shareable `?fixture=` deep links.
-Add `&camera=<node path>` (for example `&camera=Root/Camera3D`) to open looking
-through a scene's own Camera3D. An editable Source pane renders `.tscn` text as
-you type, with a linter gutter (error and warning dots, hover popover,
-problem-count badge) and a "Download .tscn" export.
+**Web previewer**: an "Open .tscn" picker with a <kbd>Ctrl/Cmd+K</kbd> scene
+palette, and drag-and-drop multi-file upload (drop a scene and its textures in
+one gesture). An editable Source pane renders `.tscn` text as you type, with a
+linter gutter (error and warning dots, hover popover, problem-count badge) and a
+"Download .tscn" export. It builds in two editions:
+
+- The **public edition** (GitHub Pages, `pnpm build:pages`) opens only your own
+  files. It has no built-in scenes, no parity gallery and no source maps.
+- The **dev edition** (Cloudflare Pages, `pnpm dev`) adds a fixture browser, the
+  parity gallery, and shareable `?fixture=` deep links. Add
+  `&camera=<node path>` (for example `&camera=Root/Camera3D`) to open looking
+  through a scene's own Camera3D.
 
 **CLI linter**: `pnpm lint:tscn <files>`, after `pnpm build:linter`.
 
@@ -172,7 +179,9 @@ Add to `.vscode/launch.json`:
 | Command | Does |
 |---|---|
 | `pnpm build` | Build all packages |
-| `pnpm build:site` | Deployable web build. Vendors the games and ld-58 corpora (script-stripped, never committed) and builds `apps/textscene-web/dist` |
+| `pnpm build:site` | Dev-edition web build. Vendors the games and ld-58 corpora (script-stripped, never committed) and builds `apps/textscene-web/dist` |
+| `pnpm build:pages` | Public-edition web build for GitHub Pages: no built-in scenes, no parity gallery, no source maps. Runs `check:public-site` on the result |
+| `pnpm check:public-site` | Fail if `apps/textscene-web/dist` holds dev-edition content |
 | `pnpm build:linter` | Build the standalone linter bundle |
 | `pnpm test` | Full unit suite |
 | `pnpm lint` | ESLint |

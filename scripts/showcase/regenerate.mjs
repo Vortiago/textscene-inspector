@@ -7,7 +7,7 @@
  *   node scripts/showcase/regenerate.mjs
  */
 
-import { readFileSync } from 'node:fs';
+import { readFixtureManifest } from '../fixtureManifest.mjs';
 import {
   assertPortFree,
   killPreviewGroup,
@@ -34,9 +34,7 @@ try {
   console.log(`[regenerate] preview at ${baseUrl}`);
 
   // Each scenario's fixture file comes from the generated manifest.
-  const fixturesTs = readFileSync('apps/textscene-web/src/fixtures.ts', 'utf8');
-  const arr = fixturesTs.match(/export const fixtures[^=]*=\s*(\[[\s\S]*?\]);/);
-  const FIXTURES = arr ? JSON.parse(arr[1]) : [];
+  const FIXTURES = readFixtureManifest();
   const fileForLabel = (label) => FIXTURES.find((f) => f.name === label)?.file;
 
   const names = Object.keys(scenarios);
