@@ -42,7 +42,9 @@ describe('OptionButton item_count', () => {
     expect(parsed.items!.length).toBeLessThanOrEqual(MAX_WALKED_ELEMENTS);
   });
 
-  it('reads the highest declared index without spreading the key set', () => {
+  // Building 200 000 keys takes about 2 s on an idle machine and runs past the 5 s default under
+  // load. The case asserts that no stack overflows, not how fast the walk is.
+  it('reads the highest declared index without spreading the key set', { timeout: 30_000 }, () => {
     // `Math.max(-1, ...declared.keys())` passes one argument per index and
     // throws `RangeError: Maximum call stack size exceeded` at this size.
     const properties: Record<string, string> = { item_count: '200000' };
