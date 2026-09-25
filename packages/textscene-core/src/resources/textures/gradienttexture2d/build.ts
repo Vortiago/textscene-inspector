@@ -14,7 +14,8 @@ import type { Gradient, GradientTexture2D } from './types';
  * `Color::get_r8()`), tagged `SRGBColorSpace` like an albedo texture. Alpha passes
  * through linearly. `LinearFilter`, not DataTexture's `NearestFilter`, matches
  * Godot's smooth sampling. `decodeGradientTexture2D` bounds both axes to what
- * Godot's size setters accept, so the allocation stays within 16384².
+ * Godot's size setters accept, 16384 each, and `resolveGradientTexture` draws no
+ * texture where the tab cannot allocate that much.
  */
 export function rasterizeGradientTexture2D(
   tex: GradientTexture2D,

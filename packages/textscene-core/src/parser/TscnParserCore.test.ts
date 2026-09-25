@@ -355,7 +355,8 @@ visible = true
         'size',
         'Vector3(1, 2, 3)',
         4,
-        false
+        false,
+        { key: 'size', value: 'Vector3(1, 2, 3)' }
       );
       // accumulated multi-line value: STARTING line, isMultiline=true
       expect(onProperty).toHaveBeenNthCalledWith(
@@ -365,10 +366,14 @@ visible = true
         'text',
         '"first\nsecond"',
         7,
-        true
+        true,
+        { key: 'text', value: '"first\nsecond"' }
       );
       // single-line property after the multi-line one: its own line number
-      expect(onProperty).toHaveBeenNthCalledWith(3, 'node', 'Label', 'visible', 'true', 9, false);
+      expect(onProperty).toHaveBeenNthCalledWith(3, 'node', 'Label', 'visible', 'true', 9, false, {
+        key: 'visible',
+        value: 'true',
+      });
     });
 
     it('passes ownerType=undefined where the section names no type', () => {
@@ -384,9 +389,15 @@ visible = true
 
       expect(onProperty).toHaveBeenCalledTimes(2);
       // gd_scene body property: section 'none', no owner type
-      expect(onProperty).toHaveBeenNthCalledWith(1, 'none', undefined, 'config', '1', 2, false);
+      expect(onProperty).toHaveBeenNthCalledWith(1, 'none', undefined, 'config', '1', 2, false, {
+        key: 'config',
+        value: '1',
+      });
       // index= node has no type attribute: ownerType undefined
-      expect(onProperty).toHaveBeenNthCalledWith(2, 'node', undefined, 'visible', 'true', 5, false);
+      expect(onProperty).toHaveBeenNthCalledWith(2, 'node', undefined, 'visible', 'true', 5, false, {
+        key: 'visible',
+        value: 'true',
+      });
     });
 
     it("takes a [resource] body's ownerType from the [gd_resource] header", () => {
@@ -409,7 +420,8 @@ background_mode = 1
         'radiance_size',
         '2',
         4,
-        false
+        false,
+        { key: 'radiance_size', value: '2' }
       );
       expect(onProperty).toHaveBeenNthCalledWith(
         2,
@@ -418,7 +430,8 @@ background_mode = 1
         'background_mode',
         '1',
         7,
-        false
+        false,
+        { key: 'background_mode', value: '1' }
       );
     });
 
@@ -453,7 +466,8 @@ background_mode = 1
         'background_mode',
         '1',
         4,
-        false
+        false,
+        { key: 'background_mode', value: '1' }
       );
     });
 
@@ -471,7 +485,29 @@ background_mode = 1
         'background_mode',
         '1',
         2,
-        false
+        false,
+        { key: 'background_mode', value: '1' }
+      );
+    });
+
+    it('hands a deprecated spelling over as written, beside the pair the bag stores', () => {
+      const content = `[gd_scene format=3]
+
+[node name="Sprite" type="AnimatedSprite2D"]
+frames = SubResource("sf")
+`;
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+
+      parser.parse(content, simpleCreator, { onProperty });
+
+      expect(onProperty).toHaveBeenCalledWith(
+        'node',
+        'AnimatedSprite2D',
+        'frames',
+        'SubResource("sf")',
+        4,
+        false,
+        { key: 'sprite_frames', value: 'SubResource("sf")' }
       );
     });
 

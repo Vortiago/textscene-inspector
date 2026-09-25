@@ -1,10 +1,39 @@
 /**
- * `indexedKeys`' and `indexedElements`' own contracts, around the module every rule resolves an
- * index through. The slices' `linter.test.ts` files test the rules that use them.
+ * The own contracts of `visitIndexedKeys`, `indexedKeys` and `indexedElements`, around the module
+ * every rule resolves an index through. The slices' `linter.test.ts` files test the rules that use
+ * them.
  */
 
 import { describe, expect, it } from 'vitest';
-import { indexedElements, indexedKeys } from './indexedKey.js';
+import { indexedElements, indexedKeys, visitIndexedKeys } from './indexedKey.js';
+
+/** Every visit `visitIndexedKeys` makes, as its five arguments. */
+function visits(
+  properties: Record<string, string>,
+  prefix: string,
+  indexParse: 'is_valid_int' | 'to_int'
+): unknown[][] {
+  const seen: unknown[][] = [];
+  visitIndexedKeys(properties, prefix, indexParse, (...args) => seen.push(args));
+  return seen;
+}
+
+describe('visitIndexedKeys', () => {
+  it('visits each key that names an element, in file order, with the index Godot stores', () => {
+    expect(visits({ 'item_1/text': '"a"', 'item_+0/icon': 'null' }, 'item_', 'is_valid_int')).toEqual([
+      ['item_1/text', '1', 1, 'text', '"a"'],
+      ['item_+0/icon', '+0', 0, 'icon', 'null'],
+    ]);
+  });
+
+  it('visits no key whose index is refused or stored negative', () => {
+    expect(visits({ 'item_x/text': '"a"', 'item_-1/text': '"b"' }, 'item_', 'is_valid_int')).toEqual([]);
+  });
+
+  it('visits nothing for a family with no keys', () => {
+    expect(visits({ text: '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
+  });
+});
 
 describe('indexedKeys', () => {
   it('keeps the whole key, the index text, the leaf and the value as written', () => {

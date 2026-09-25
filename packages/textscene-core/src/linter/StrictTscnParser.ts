@@ -13,7 +13,6 @@ import { SCENE_ROOT_PATH, getAncestorPaths, joinPath, resolveParentPath } from '
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { ownsNilMessage } from './propertyValidator.js';
 import { INSTANCE_PLACEHOLDER_TYPE, isNilLiteral } from '../godot/index.js';
-import { canonicalPropertyName, resolveDeprecatedProperty } from '../godot/deprecated.js';
 
 /**
  * A TscnNode built without NodeRegistry, so without three.js. `properties` and `rawProperties` are the same bag, as the
@@ -199,9 +198,9 @@ export class StrictTscnParser {
         }
       },
 
-      onProperty: (_section, ownerType, key, value, line, isMultiline) => {
+      onProperty: (_section, ownerType, key, value, line, isMultiline, stored) => {
         // The key the scan stores the value under, so a reader of the bag finds the line.
-        propertyLines.set(canonicalPropertyName(ownerType, key, value), line);
+        propertyLines.set(stored.key, line);
 
         // Skip validation for multi-line values (shader code, label text) and
         // for properties without a typed owner (index=/instance= nodes,
@@ -215,12 +214,11 @@ export class StrictTscnParser {
         let lookupValue = value;
         let validator = validatorRegistry.findValidator(ownerType, key);
         if (!validator) {
-          const resolved = resolveDeprecatedProperty(ownerType, key, value);
-          if (resolved.key === key) return;
-          validator = validatorRegistry.findValidator(ownerType, resolved.key);
+          if (stored.key === key) return;
+          validator = validatorRegistry.findValidator(ownerType, stored.key);
           if (!validator) return;
-          lookupKey = resolved.key;
-          lookupValue = resolved.value;
+          lookupKey = stored.key;
+          lookupValue = stored.value;
         }
 
         const found = validator(lookupKey, lookupValue, line);

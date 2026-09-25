@@ -47,10 +47,10 @@ export interface IndexedKey {
 /**
  * Calls `visit` for every key of a family that names an element, in file order. A key with no
  * index or no leaf, an index text the parse refuses, and an index stored negative name none. A
- * callback, not a list: `indexedElements` runs on every parse, and a family of 200,000 keys would
- * allocate a record per key only to group it.
+ * callback, not a list: a caller that groups or filters, such as `indexedElements` on every parse,
+ * would otherwise allocate a record per key of a 200,000-key family only to drop it.
  */
-function visitIndexedKeys(
+export function visitIndexedKeys(
   properties: Readonly<Record<string, string>>,
   prefix: string,
   indexParse: IndexParse,

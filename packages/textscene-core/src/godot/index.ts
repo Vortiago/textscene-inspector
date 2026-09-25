@@ -36,6 +36,7 @@ export {
   indexedElements,
   indexedKeyRegex,
   indexedKeys,
+  visitIndexedKeys,
 } from './indexedKey.js';
 export {
   IS_VALID_INT_RE,

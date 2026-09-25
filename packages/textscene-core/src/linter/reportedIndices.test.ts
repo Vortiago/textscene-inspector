@@ -61,6 +61,13 @@ describe('listWrittenIndices', () => {
     const written = new Map(Array.from({ length: 40 }, (_, i) => [String(i), i] as const));
     expect(listWrittenIndices(written).endsWith('31 and 8 more')).toBe(true);
   });
+
+  it('names the lowest indices past the cap, whatever order the keys arrive in', () => {
+    const written = new Map(Array.from({ length: 40 }, (_, i) => [`+${39 - i}`, 39 - i] as const));
+    const listed = listWrittenIndices(written);
+    expect(listed.startsWith('+0, +1, ')).toBe(true);
+    expect(listed.endsWith('+31 and 8 more')).toBe(true);
+  });
 });
 
 describe('indicesPastCount', () => {

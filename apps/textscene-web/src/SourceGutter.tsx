@@ -61,6 +61,9 @@ export const SourceGutter = memo(function SourceGutter({
 }: SourceGutterProps) {
   const gutterRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState<OpenPopover | null>(null);
+  // A lint that drops the open row's finding renders that row without its handlers, so no leave
+  // event would ever close it, and the popover would come back with the next finding there.
+  if (open && !byLine.has(open.line)) setOpen(null);
   const lines = useMemo(
     () => Array.from({ length: Math.max(lineCount, 1) }, (_, i) => i + 1),
     [lineCount]

@@ -79,7 +79,7 @@ It reports every syntax and format error as a `ParseError` with line and column.
 _Avoid_: "validator" (reserve for property validators).
 
 **ParseObserver** (`parser/TscnParserCore.ts`):
-The optional hook **seam** (`onError`, `onSectionStart`, `onProperty`) on the single shared scanning loop.
+The optional hook **seam** (`onError`, `onSectionStart`, `onProperty`, `onSectionBuilt`) on the single shared scanning loop.
 Lenient parsing passes no observer, so recovery behaviour is byte-identical. Strict parsing passes an observer that collects `ParseError`s, runs the heading checks and dispatches property validators. One loop, two adapters.
 _Avoid_: "callback API", "strict mode flag".
 

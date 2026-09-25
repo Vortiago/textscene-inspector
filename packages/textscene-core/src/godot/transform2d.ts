@@ -2,6 +2,11 @@
  * `Transform2D` (`core/math/transform_2d.h`) as six numbers, +Y down. The linter's global-transform
  * verdicts and the previewer's 2D placement build a Node2D's local transform, compose a chain and
  * invert it through these functions, so a static verdict and a drawn position cannot disagree.
+ *
+ * Portions ported from Godot Engine (MIT).
+ * Copyright (c) 2014-present Godot Engine contributors.
+ * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+ * See THIRD-PARTY-NOTICES.md.
  */
 
 /**

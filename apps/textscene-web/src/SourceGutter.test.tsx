@@ -99,4 +99,15 @@ describe('SourceGutter popover', () => {
     expect(screen.queryByTestId('gutter-row-1')).toBeNull();
     expect(screen.queryByTestId('gutter-dot-1')).toBeNull();
   });
+
+  it('keeps a popover closed when a lint drops its finding under the pointer and brings it back', () => {
+    const { rerender } = render(<SourceGutter lineCount={22} byLine={BY_LINE} scrollTop={0} />);
+    fireEvent.mouseEnter(screen.getByTestId('gutter-row-21'));
+    expect(popover(21)).not.toBeNull();
+
+    // The row loses its handlers with its finding, so the pointer leaving it reports nothing.
+    rerender(<SourceGutter lineCount={22} byLine={new Map()} scrollTop={0} />);
+    rerender(<SourceGutter lineCount={22} byLine={BY_LINE} scrollTop={0} />);
+    expect(popover(21)).toBeNull();
+  });
 });

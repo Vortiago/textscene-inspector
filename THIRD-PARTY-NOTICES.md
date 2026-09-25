@@ -23,7 +23,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/sky/skyShaders.ts` | `scene/resources/3d/sky_material.cpp` |
 | `packages/textscene-core/src/resources/environment/godotToneMapping.ts` | `drivers/gles3/shaders/tonemap_inc.glsl` |
 | `packages/textscene-core/src/resources/environment/godotGlow.ts` | `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (`MODE_GLOW` bright pass under `FLAG_GLOW_FIRST_PASS`) and `.../effects/tonemap.glsl` (`gather_glow`, `apply_glow`, and `main()`'s pre/post-tonemap glow ordering) |
-| `packages/textscene-core/src/utils/colorSpace.ts` | `core/math/color.h` (`Color::srgb_to_linear`) |
+| `packages/textscene-core/src/utils/colorSpace.ts` | `core/math/color.h` (`Color::srgb_to_linear`, `Color::linear_to_srgb`) |
 | `packages/textscene-core/src/utils/godotNamedColor.ts` | `core/math/color_names.inc` (the X11 named-colour table, transcribed verbatim) and `core/math/color.cpp` (`Color::find_named_color`'s name normalization, `Color::named`) |
 | `packages/textscene-core/src/resources/materials/standardmaterial3d/emission.ts` | `scene/resources/material.cpp` (`BaseMaterial3D::_update_shader` emission block, `set_emission_energy_multiplier`) |
 | `packages/textscene-core/src/nodes/3d/csg/smoothNormals.ts` | `modules/csg/csg_shape.cpp` (`CSGShape3D::update_shape` normal accumulation, `flip_faces`) and `core/math/plane.h` (`Plane(p1, p2, p3)`) |
@@ -140,7 +140,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleAdvance.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`'s alive branch: the accelerations, orbit, damping and angular integration) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleAppearance.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`'s appearance pass) and `core/math/color.cpp` (the YIQ-style hue-rotation basis) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleBuffer.ts` | `scene/2d/cpu_particles_2d.cpp` (`_update_particle_data_buffer`, `SortLifetime`) |
-| `packages/textscene-core/src/nodes/2d/cpuparticles2d/affine2d.ts` | `core/math/transform_2d.cpp` (`Transform2D::basis_xform`, `Transform2D::operator*`, `Transform2D::affine_inverse`) |
+| `packages/textscene-core/src/godot/transform2d.ts` | `core/math/transform_2d.cpp` (`Transform2D::operator*`, `Transform2D::affine_inverse`, the `Transform2D(rot, scale, skew, pos)` constructor) |
 | `scripts/godot-ref/bootstrap.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditor::_node_added` yield rule, `_load_default_preview_settings`, `_preview_settings_changed`) |
 | `scripts/godot-ref/refConstants.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditorViewport::Cursor()`) |
 | `packages/textscene-core/src/nodes/2d/ui/videostreamplayer/nativeSolver.ts` | `scene/gui/video_stream_player.cpp` (`VideoStreamPlayer::get_minimum_size`) |

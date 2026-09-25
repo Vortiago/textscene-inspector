@@ -6,7 +6,6 @@
  */
 
 import { TscnParserCore, type ParseObserver } from './TscnParserCore.js';
-import { resolveDeprecatedProperty } from '../godot/deprecated.js';
 import type { TscnExternalResource, TscnInternalResource } from './types.js';
 
 export interface ParsedResource {
@@ -33,12 +32,10 @@ export function parseTresFile(content: string): ParsedResource {
         inResourceSection = heading.type === 'resource';
       }
     },
-    onProperty(_section, ownerType, key, value) {
-      // The observer hands over the line as written; the bag holds what the
-      // setter writes, as the scanner's own bags do.
+    onProperty(_section, _ownerType, _key, _value, _line, _isMultiline, stored) {
+      // The bag holds what the setter writes, as the scanner's own bags do.
       if (!inResourceSection) return;
-      const resolved = resolveDeprecatedProperty(ownerType, key, value);
-      properties[resolved.key] = resolved.value;
+      properties[stored.key] = stored.value;
     },
   };
 

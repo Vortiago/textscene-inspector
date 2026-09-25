@@ -6,9 +6,9 @@
  */
 
 import * as THREE from 'three';
-import { warn } from '../../../logger.js';
 import { IMAGE_MAX_PIXELS } from '../../../godot/index.js';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
+import { unlessAllocationFails } from '../pixelAllocation';
 import type { Gradient } from '../gradienttexture2d/types';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import type { NoiseTexture2DData } from './types';
@@ -54,7 +54,9 @@ export function rasterizeNoiseTexture2D(
 ): THREE.DataTexture | null {
   if (!noiseTextureFits(tex)) return null;
   const { width, height } = tex;
-  const flipped = allocatedPixels(tex, () => bottomUp(rgbaPixels(tex, noise, colorRamp), width, height));
+  const flipped = unlessAllocationFails(`[NoiseTexture2D] ${width}x${height}`, () =>
+    bottomUp(rgbaPixels(tex, noise, colorRamp), width, height)
+  );
   if (flipped === null) return null;
 
   const texture = new THREE.DataTexture(flipped, width, height, THREE.RGBAFormat);
@@ -69,20 +71,6 @@ export function rasterizeNoiseTexture2D(
   texture.wrapT = wrap;
   texture.needsUpdate = true;
   return texture;
-}
-
-/**
- * `build()`'s pixels, or null when the tab cannot allocate them. A size {@link noiseTextureFits}
- * accepts can still exceed the memory a tab has, and a typed array that large throws `RangeError`.
- */
-function allocatedPixels(tex: NoiseTexture2DData, build: () => Uint8Array): Uint8Array | null {
-  try {
-    return build();
-  } catch (error) {
-    if (!(error instanceof RangeError)) throw error;
-    warn(`[NoiseTexture2D] ${tex.width}x${tex.height} could not be allocated (${error.message}); drawing no texture`);
-    return null;
-  }
 }
 
 /** The noise image, then the colour ramp, then the bump-to-normal pass, as top-down RGBA. */

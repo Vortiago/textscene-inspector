@@ -5,7 +5,7 @@
  * the lenient skip-and-continue recovery.
  */
 
-import { resolveDeprecatedProperty } from '../godot/deprecated.js';
+import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/deprecated.js';
 import type {
   TscnScene,
   TscnNode,
@@ -57,7 +57,9 @@ export interface ParseObserver {
   /**
    * A property value completed, after any multiline accumulation. `line` is its
    * starting line. `ownerType` is the heading's `type=` for node/sub_resource, the
-   * `[gd_resource type="…"]` header's for a `[resource]` body, else undefined.
+   * `[gd_resource type="…"]` header's for a `[resource]` body, else undefined. `key` and
+   * `value` are as written. `stored` is the pair the section's bag holds, a deprecated
+   * spelling resolved, so an observer never derives it a second way.
    */
   onProperty?(
     section: SectionType,
@@ -65,7 +67,8 @@ export interface ParseObserver {
     key: string,
     value: string,
     line: number,
-    isMultiline: boolean
+    isMultiline: boolean,
+    stored: ResolvedProperty
   ): void;
   /**
    * A `[node]` or `[sub_resource]` section closed, and the scan built `built` from it. `line` is
@@ -172,7 +175,8 @@ export class TscnParserCore {
           pendingMultiline.key,
           value,
           pendingMultiline.startLine,
-          pendingMultiline.lines.length > 1
+          pendingMultiline.lines.length > 1,
+          resolved
         );
       }
       pendingMultiline = null;
@@ -267,7 +271,7 @@ export class TscnParserCore {
             // Stored under the name and literal the setter receives: a pre-4.0 alias like
             // `frames` is `sprite_frames`, and `extents` is `size` doubled, so every
             // reader sees one key and one value. The observer gets both as written,
-            // since a diagnostic names what is in the file.
+            // since a diagnostic names what is in the file, and the stored pair beside them.
             const resolved = resolveDeprecatedProperty(
               currentOwnerType(),
               property.key,
@@ -280,7 +284,8 @@ export class TscnParserCore {
               property.key,
               property.value,
               lineNumber,
-              false
+              false,
+              resolved
             );
           }
         }
