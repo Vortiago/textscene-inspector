@@ -76,6 +76,16 @@ describe('SceneStack', () => {
     ]);
   });
 
+  it('hands an array the scene omits to the scene resources provider as undefined', () => {
+    const scene = { externalResources: SCENE.externalResources };
+    const element = SceneStack({ scene, loader, children: null });
+    const resources = providerChain(element).find(({ type }) => type === SceneResourcesProvider);
+    expect(resources?.props).toEqual({
+      internalResources: undefined,
+      externalResources: SCENE.externalResources,
+    });
+  });
+
   it('leaves the context default in force without a workspace', () => {
     const { getByTestId } = render(
       <SceneStack scene={SCENE} loader={loader}>

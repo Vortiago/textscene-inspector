@@ -5,17 +5,20 @@
  * directories under `src` are excluded from the build.
  */
 import type { ReactNode } from 'react';
-import type { TscnScene } from '../../parser/types';
 import type { ResourceLoader } from '../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { CanvasWorkspaceProvider, type CanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { SelectionProvider } from '../contexts/SelectionContext';
-import { SceneResourcesProvider } from '../SceneResourcesContext';
+import { SceneResourcesProvider, type SceneResourcesProviderProps } from '../SceneResourcesContext';
 import { SelectSeeder } from './SelectSeeder';
 
 export interface SceneStackProps {
-  /** The parsed scene whose sub-resources and external resources the stack provides. */
-  scene: Pick<TscnScene, 'internalResources' | 'externalResources'>;
+  /**
+   * The sub-resources and external resources the stack provides: a whole parsed scene, or either
+   * array alone. An omitted array reaches SceneResourcesProvider as `undefined`, so its stable
+   * empty default holds.
+   */
+  scene: Pick<SceneResourcesProviderProps, 'internalResources' | 'externalResources'>;
   loader: ResourceLoader;
   /** The workspace the canvas draws. Omitted, no workspace provider mounts: the default holds. */
   workspace?: CanvasWorkspace;

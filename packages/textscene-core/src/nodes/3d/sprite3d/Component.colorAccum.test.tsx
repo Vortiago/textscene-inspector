@@ -9,9 +9,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { parseSprite3D } from './parser';
 import { parseLabel3D } from '../label3d/parser';
@@ -64,16 +62,15 @@ async function render(nodes: TscnNode[]) {
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 8, height: 8 };
   fake.textures.seed(TEXTURE_PATH, tex);
   return ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={[]}
-          externalResources={[{ id: '1', type: 'Texture2D', path: TEXTURE_PATH }]}
-        >
-          <NodeDispatcher nodes={nodes} />
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </SelectionProvider>
+    <SceneStack
+      loader={fake.loader}
+      scene={{
+        internalResources: [],
+        externalResources: [{ id: '1', type: 'Texture2D', path: TEXTURE_PATH }],
+      }}
+    >
+      <NodeDispatcher nodes={nodes} />
+    </SceneStack>
   );
 }
 
