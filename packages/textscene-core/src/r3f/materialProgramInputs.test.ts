@@ -4,7 +4,7 @@
  * `map` reads back fine. `materialFactoryConformance.test.ts` gates the source and
  * `nodes/2d/polygon2d/Component.texture.test.tsx` drives a late texture end to end.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   materialProgramInputs,
@@ -324,17 +324,43 @@ describe('materialProgramInputs', () => {
         expect(agx).not.toBe(filmic);
       });
 
-      it('keeps the injection in the key beside the curve term', () => {
+      it('keeps the injection in the key beside the prototype key and its curve term', () => {
         const material = injectedMaterial(true);
         const { agx } = keysAcrossSwap(material);
-        expect(agx).toBe(`stylebox${toneMappingProgramKey(material)}`);
+        expect(agx).toBe(
+          `stylebox${material.onBeforeCompile.toString()}${toneMappingProgramKey(material)}`
+        );
       });
 
       it('leaves the key of an injected material that is not tone-mapped', () => {
-        const { filmic, agx } = keysAcrossSwap(injectedMaterial(false));
+        const material = injectedMaterial(false);
+        const { filmic, agx } = keysAcrossSwap(material);
         expect(agx).toBe(filmic);
-        expect(agx).toBe('stylebox');
+        expect(agx).toBe(`stylebox${material.onBeforeCompile.toString()}`);
       });
+    });
+
+    it('gives two materials one program key when their injections differ only in closure', () => {
+      // three's own key is the patch's source text, so a per-render closure over other
+      // uniforms must not separate two materials that share a program.
+      const keyOfMaterial = (marker: string): string => {
+        const program = materialProgramInputs({ props: { injection: injection('light', marker) } });
+        return Object.assign(new THREE.MeshBasicMaterial(), program.props).customProgramCacheKey();
+      };
+      expect(keyOfMaterial('A')).toBe(keyOfMaterial('B'));
+    });
+
+    it('appends whatever the prototype key answers, as read when three asks', () => {
+      const program = materialProgramInputs({ props: { injection: injection('stylebox', 'A') } });
+      const material = Object.assign(new THREE.MeshBasicMaterial(), program.props);
+      const prototypeKey = vi
+        .spyOn(THREE.Material.prototype, 'customProgramCacheKey')
+        .mockReturnValue('|patched');
+      try {
+        expect(material.customProgramCacheKey()).toBe('stylebox|patched');
+      } finally {
+        prototypeKey.mockRestore();
+      }
     });
   });
 });

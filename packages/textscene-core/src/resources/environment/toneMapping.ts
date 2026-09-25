@@ -107,7 +107,8 @@ const threeCustomProgramCacheKey = THREE.Material.prototype.customProgramCacheKe
 /**
  * Adds `toneMappingProgramKey` to three's own key, so a material marked dirty compiles the new
  * curve. On the prototype, as the renderer's own background materials are reachable no other way.
- * A material with its own `customProgramCacheKey` shadows this and adds the term itself.
+ * A material with its own `customProgramCacheKey` shadows this, so it appends this key itself
+ * (`materialProgramInputs.ts`).
  */
 function keyProgramsOnToneMappingChunk(): void {
   THREE.Material.prototype.customProgramCacheKey = customProgramCacheKeyWithChunk;

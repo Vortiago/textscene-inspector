@@ -5,7 +5,6 @@
  * A bare `:NNN` cites three 0.185.1's `WebGLPrograms.js`, where identity is decided.
  */
 import * as THREE from 'three';
-import { toneMappingProgramKey } from '../resources/environment/toneMapping';
 
 /** The subset of three's `onBeforeCompile` argument an injection may touch. */
 export interface ProgramShader {
@@ -202,9 +201,10 @@ function cacheKeyThunk(cacheKey: string): () => string {
   const existing = CACHE_KEY_THUNKS.get(cacheKey);
   if (existing) return existing;
   // A method, not an arrow, since it reads the material three calls it on. This own property
-  // shadows the prototype key `applyToneMapping` extends, so it adds the curve term itself.
+  // shadows the prototype key, so it appends that key whatever extends it (`applyToneMapping`
+  // adds the curve term), read per call as a later patch replaces it.
   const thunk = function (this: THREE.Material): string {
-    return cacheKey + toneMappingProgramKey(this);
+    return cacheKey + THREE.Material.prototype.customProgramCacheKey.call(this);
   };
   CACHE_KEY_THUNKS.set(cacheKey, thunk);
   return thunk;
