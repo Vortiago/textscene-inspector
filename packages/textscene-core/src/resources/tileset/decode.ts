@@ -10,7 +10,12 @@ import { indexedKeyRegex, ruleInt, boolSlotValue } from '../../godot/index.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { vec2iOr } from '../../parser/valueParsers';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
-import { parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
+// Aliased: `TileSetSourceData` has a `findSubResource` key of its own, which the adapters fill.
+import {
+  findSubResource as findSubResourceById,
+  parseResourceReference,
+  resolveExtResourcePath,
+} from '../SubResourceResolver';
 import { TILE_SHAPE_HEXAGON, TILE_SHAPE_SQUARE } from './types';
 import type {
   AlternativeTileModel,
@@ -108,7 +113,7 @@ export function tileSetFromTres(parsed: ParsedResource): TileSetModel | null {
   if (parsed.resourceType !== 'TileSet') return null;
   return resolveTileSetModel({
     properties: parsed.properties,
-    findSubResource: (id) => parsed.subResources.find((r) => r.id === id),
+    findSubResource: (id) => findSubResourceById(parsed.subResources, id),
     resolveTexturePath: (texRef) => resolveExtResourcePath(texRef, parsed.extResources),
   });
 }
@@ -124,12 +129,12 @@ export function tileSetFromScene(
 ): TileSetModel | null {
   const ref = parseResourceReference(tileSetRef);
   if (!ref || ref.type !== 'SubResource') return null;
-  const tileSet = internalResources.find((r) => r.id === ref.id);
+  const tileSet = findSubResourceById(internalResources, ref.id);
   if (!tileSet || tileSet.type !== 'TileSet') return null;
 
   return resolveTileSetModel({
     properties: tileSet.data,
-    findSubResource: (id) => internalResources.find((r) => r.id === id),
+    findSubResource: (id) => findSubResourceById(internalResources, id),
     resolveTexturePath: (texRef) => resolveExtResourcePath(texRef, externalResources),
   });
 }

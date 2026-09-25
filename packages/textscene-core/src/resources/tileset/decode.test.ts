@@ -9,6 +9,7 @@ import { tileSetFromScene, tileSetFromTres } from './decode';
 import { TscnParser } from '../../parser/TscnParser';
 import { parseTresFile } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
+import { countedTable } from '../testing/countedTable';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -364,6 +365,55 @@ describe('a TileSet enum Godot reads differently from `parseInt`', () => {
     );
 
     expect(model?.layout).toBe(10);
+  });
+});
+
+describe('TileSet source lookups', () => {
+  const ATLAS_IDS = ['a0', 'a1', 'a2', 'a3'];
+
+  /** Four atlas sources, as `SubResource` blocks of one file. */
+  function atlasSources(): TscnInternalResource[] {
+    return ATLAS_IDS.map((id) => ({
+      id,
+      type: 'TileSetAtlasSource',
+      data: { id, texture: 'ExtResource("2")' },
+    }));
+  }
+
+  /** A TileSet body naming every atlas in `ATLAS_IDS`, as `sources/0` to `sources/3`. */
+  function tileSetBody(): Record<string, string> {
+    return Object.fromEntries(ATLAS_IDS.map((id, i) => [`sources/${i}`, `SubResource("${id}")`]));
+  }
+
+  it('reads each entry of the scene table once, however many sources the TileSet names', () => {
+    const { table, entryReads } = countedTable([
+      ...atlasSources(),
+      { id: 'ts', type: 'TileSet', data: { id: 'ts', ...tileSetBody() } },
+    ]);
+    const model = tileSetFromScene('SubResource("ts")', table, externals);
+
+    expect(model!.sourceOrder).toEqual([0, 1, 2, 3]);
+    expect(entryReads()).toBe(table.length);
+  });
+
+  it('reads each entry of a .tres table once, however many sources it names', () => {
+    const { table, entryReads } = countedTable(atlasSources());
+    const model = tileSetFromTres({
+      resourceType: 'TileSet',
+      properties: tileSetBody(),
+      extResources: externals,
+      subResources: table,
+    });
+
+    expect(model!.sourceOrder).toEqual([0, 1, 2, 3]);
+    expect(entryReads()).toBe(table.length);
+  });
+
+  it('skips a source whose id names nothing, as before (error path)', () => {
+    const { table } = countedTable([
+      { id: 'ts', type: 'TileSet', data: { id: 'ts', 'sources/0': 'SubResource("gone")' } },
+    ]);
+    expect(tileSetFromScene('SubResource("ts")', table, externals)!.sourceOrder).toEqual([]);
   });
 });
 

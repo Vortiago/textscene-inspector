@@ -9,6 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import type { TscnInternalResource } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
+import { findSubResource } from '../../../resources/SubResourceResolver.js';
 import {
   packedArrayBody,
   packedArrayForms,
@@ -61,6 +62,21 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
 }
 
 /**
+ * The first Curve3D in declaration order declared under `id`. The id map answers when that id's
+ * first holder is the Curve3D. A file that repeats the id with another type first falls back to
+ * the scan. An id the map lacks has no holder at all, so the scan would find nothing either.
+ */
+function firstCurve3DWithId(
+  resources: readonly TscnInternalResource[],
+  id: string
+): TscnInternalResource | undefined {
+  const firstHolder = findSubResource(resources, id);
+  if (!firstHolder) return undefined;
+  if (firstHolder.id === id && firstHolder.type === 'Curve3D') return firstHolder;
+  return resources.find((r) => r.id === id && r.type === 'Curve3D');
+}
+
+/**
  * Validate the referenced Curve3D's `_data` against what Godot loads. `Curve3D::_set_data`
  * (`scene/resources/curve.cpp:2278-2299`) fails on a missing `points` or `tilts` key, and on a
  * `points` length that is not a multiple of three Vector3s (in, out, position). The curve then
@@ -71,9 +87,7 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
   const id = subResourceRefAnywhere(curveRef);
   if (id === null) return [];
 
-  const resource = scene.internalResources?.find(
-    (r: TscnInternalResource) => r.id === id && r.type === 'Curve3D'
-  );
+  const resource = firstCurve3DWithId(scene.internalResources ?? [], id);
   if (!resource) return [];
 
   const data = (resource.data as Record<string, string>)['_data'];

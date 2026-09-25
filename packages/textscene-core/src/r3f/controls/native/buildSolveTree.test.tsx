@@ -16,6 +16,7 @@ import { ResourceLoader } from '../../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { countedTable } from '../../../resources/testing/countedTable';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext';
 import { SelectionProvider, useSelection } from '../../contexts/SelectionContext';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
@@ -905,6 +906,46 @@ function theme(overrides: Partial<ThemeResource> = {}): ThemeResource {
 function control(name: string, extra: Record<string, unknown> = {}, children: TscnNode[] = []): TscnNode {
   return node(name, 'Control', { properties: { name, ...extra } as Record<string, unknown>, children });
 }
+
+describe('useBuildSolveTree — ExtResource lookups', () => {
+  /** Unrelated declarations ahead of `last`, so a scan per lookup would read all of them. */
+  function tableEndingIn(last: TscnExternalResource): TscnExternalResource[] {
+    const filler = ['a', 'b', 'c', 'd'].map((id) => ({ id, path: `res://${id}.png`, type: 'Texture2D' }));
+    return [...filler, last];
+  }
+
+  it("reads each ExtResource entry once however many Controls name the same theme", () => {
+    const loader = createFakeResourceLoader();
+    const shared = theme({ defaultFontSize: 24 });
+    loader.themes.seed('res://theme.tres', shared);
+    const { table, entryReads } = countedTable(
+      tableEndingIn({ id: '1_theme', path: 'res://theme.tres', type: 'Theme' })
+    );
+    const nodes = ['A', 'B', 'C', 'D', 'E', 'F'].map((name) =>
+      control(name, { theme: 'ExtResource("1_theme")' })
+    );
+
+    const { result } = renderHook(() => useBuildSolveTree(nodes, table, []), {
+      wrapper: wrapperFor(loader.loader),
+    });
+
+    expect(result.current.tree.map((n) => n.themeChain?.[0])).toEqual(nodes.map(() => shared));
+    expect(entryReads()).toBe(table.length);
+  });
+
+  it('reads each ExtResource entry once however many instances wait on one scene', () => {
+    const loader = createFakeResourceLoader();
+    const { table, entryReads } = countedTable(
+      tableEndingIn({ id: '1_layer', path: LAYER_PATH, type: 'PackedScene' })
+    );
+    const nodes = ['A', 'B', 'C', 'D'].map((name) => instanceOf(name, '1_layer'));
+
+    renderHook(() => useBuildSolveTree(nodes, table, []), { wrapper: wrapperFor(loader.loader) });
+
+    expect(loader.scenes.cache.has(LAYER_PATH)).toBe(false);
+    expect(entryReads()).toBe(table.length);
+  });
+});
 
 describe('useBuildSolveTree — theme resolution', () => {
   it("resolves a root Control's theme = ExtResource(...) and threads it to a themeless child's themeChain[0] — the corpus's dominant shape", () => {

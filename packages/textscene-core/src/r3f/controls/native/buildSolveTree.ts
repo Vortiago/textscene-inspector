@@ -20,6 +20,7 @@ import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/index.
 import { projectLayoutDirectionEnv } from '../../../parser/projectSettingsParser';
 import { joinPath } from '../../../utils/nodePath';
 import {
+  findExtResource,
   findSubResource,
   parseResourceReference,
   resolveExtAtlasTexturePath,
@@ -339,7 +340,7 @@ function buildForest(
     if (!parsed) return null;
 
     if (parsed.type === 'ExtResource') {
-      const path = ext.find((r) => r.id === parsed.id)?.path;
+      const path = findExtResource(ext, parsed.id)?.path;
       if (!path) return null;
       const cached = themeCache.getCached(path);
       if (cached === undefined) {
@@ -562,7 +563,7 @@ function buildForest(
         // found" for an unregistered address and caches the failure. A raw `res://`
         // instance has none to register, and is still requested.
         const parsed = node.instance ? parseResourceReference(node.instance) : null;
-        const entry = parsed?.type === 'ExtResource' ? ext.find((r) => r.id === parsed.id) : undefined;
+        const entry = parsed?.type === 'ExtResource' ? findExtResource(ext, parsed.id) : undefined;
         // One path can be reached both ways in a single walk; an ExtResource already
         // recorded for it is never overwritten by a raw-path node's absent one.
         if (!pendingScenes.get(scenePath)?.ext) {
