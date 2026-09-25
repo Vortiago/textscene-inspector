@@ -1,5 +1,7 @@
 /** `String`'s parsing behaviour, as the engine defines it. */
 
+import { toInt32, toUint32 } from './intWidth.js';
+
 /**
  * The spelling `String::is_valid_int()` accepts: an optional sign, then digits. `[+-]?`, not `-?`: Godot reads a leading `+`.
  * Not `to_int()`, which skips non-digits (`ustring.cpp:2267-2301`, {@link stringToInt}): the parse a class uses decides
@@ -153,9 +155,9 @@ const EXACT_DOUBLE_INT_RE = /^[+-]?\d{1,15}$/;
  */
 export function stringToInt(text: string, width: 'int32' | 'uint32' = 'int32'): number {
   if (EXACT_DOUBLE_INT_RE.test(text)) {
-    // ToInt32 and ToUint32 are exact below 2^53, and `| 0` maps `-0` to the engine's one zero.
+    // Both narrowings are exact below 2^53, and each maps `-0` to the engine's one zero.
     const value = Number(text);
-    return width === 'int32' ? value | 0 : value >>> 0;
+    return width === 'int32' ? toInt32(value) : toUint32(value);
   }
   // int64 to `int` is implementation-defined before C++20: GCC, at `-std=gnu++17`
   // (SConstruct:891), keeps it modulo 2^32. To `uint32_t` it is modular by the standard.
