@@ -4,13 +4,15 @@
  * `map` reads back fine. `materialFactoryConformance.test.ts` gates the source and
  * `nodes/2d/polygon2d/Component.texture.test.tsx` drives a late texture end to end.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
   materialProgramInputs,
   type MaterialProgramBag,
   type ProgramInjection,
 } from './materialProgramInputs';
+import { GodotToneMapper } from '../resources/environment/godotToneMapping';
+import { applyToneMapping, toneMappingProgramKey } from '../resources/environment/toneMapping';
 
 /** A key from the factory: the only thing about a program a caller can compare. */
 function keyOf<P extends object, M extends readonly object[] = []>(
@@ -246,7 +248,10 @@ describe('materialProgramInputs', () => {
     it('separates one injection from none, and two from one', () => {
       const none = keyOf({});
       const one = keyOf({ injection: injection('light', 'B') });
-      const two = keyOf({ injection: injection('stylebox', 'A') }, { injection: injection('light', 'B') });
+      const two = keyOf(
+        { injection: injection('stylebox', 'A') },
+        { injection: injection('light', 'B') }
+      );
       expect(one).not.toBe(none);
       expect(two).not.toBe(one);
     });
@@ -283,6 +288,53 @@ describe('materialProgramInputs', () => {
       materialProgramInputs({ props: { customProgramCacheKey: () => 'loose' } });
       // @ts-expect-error a shared recipe has no unpaired route in either.
       materialProgramInputs({ props: {}, merge: [{ onBeforeCompile: () => {} }] });
+    });
+
+    describe('under a tone-curve swap', () => {
+      // The injected key is an own property, so it shadows the prototype key that
+      // `applyToneMapping` extends. FILMIC then AGX is the editor preview environment
+      // yielding to a WorldEnvironment that an instanced sub-scene brings in.
+      const { FILMIC, AGX } = GodotToneMapper;
+      const ORIGINAL_CHUNK = THREE.ShaderChunk.tonemapping_pars_fragment;
+
+      afterEach(() => {
+        THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
+      });
+
+      /** A material as R3F's `applyProps` leaves it: every factory prop assigned onto it. */
+      function injectedMaterial(toneMapped: boolean): THREE.MeshBasicMaterial {
+        const program = materialProgramInputs({
+          props: { toneMapped, injection: injection('stylebox', 'A') },
+        });
+        return Object.assign(new THREE.MeshBasicMaterial(), program.props);
+      }
+
+      /** The material's program key under FILMIC, then under AGX after FILMIC is undone. */
+      function keysAcrossSwap(material: THREE.Material): { filmic: string; agx: string } {
+        const gl = { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 };
+        const restoreFilmic = applyToneMapping(gl, { mode: FILMIC });
+        const filmic = material.customProgramCacheKey();
+        restoreFilmic();
+        applyToneMapping(gl, { mode: AGX });
+        return { filmic, agx: material.customProgramCacheKey() };
+      }
+
+      it('gives an injected, tone-mapped material a new program key', () => {
+        const { filmic, agx } = keysAcrossSwap(injectedMaterial(true));
+        expect(agx).not.toBe(filmic);
+      });
+
+      it('keeps the injection in the key beside the curve term', () => {
+        const material = injectedMaterial(true);
+        const { agx } = keysAcrossSwap(material);
+        expect(agx).toBe(`stylebox${toneMappingProgramKey(material)}`);
+      });
+
+      it('leaves the key of an injected material that is not tone-mapped', () => {
+        const { filmic, agx } = keysAcrossSwap(injectedMaterial(false));
+        expect(agx).toBe(filmic);
+        expect(agx).toBe('stylebox');
+      });
     });
   });
 });

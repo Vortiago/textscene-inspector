@@ -91,23 +91,30 @@ export function applyToneMapping(
   };
 }
 
+/**
+ * The program-key term for the curve three would compile into `material` now, and empty for a
+ * material that is not tone-mapped, which never compiles the chunk. three 0.186.0 keys a program on
+ * the `renderer.toneMapping` enum (`WebGLPrograms.js:490`) and reads the chunk only at compile
+ * (`WebGLProgram.js:775`), so without this term two curves share one program.
+ */
+export function toneMappingProgramKey(material: Pick<THREE.Material, 'toneMapped'>): string {
+  if (!material.toneMapped) return '';
+  return `,toneMappingChunk:${chunkId(THREE.ShaderChunk[TONEMAP_CHUNK])}`;
+}
+
 const threeCustomProgramCacheKey = THREE.Material.prototype.customProgramCacheKey;
 
 /**
- * Keys every program on the tone-mapping chunk, so a material marked dirty compiles the new curve.
- * three 0.186.0 keys a program on the `renderer.toneMapping` enum (`WebGLPrograms.js:490`) and
- * reads the chunk only at compile (`WebGLProgram.js:775`), so two curves could share one program.
- * On the prototype, as the renderer's own background materials are reachable no other way.
+ * Adds `toneMappingProgramKey` to three's own key, so a material marked dirty compiles the new
+ * curve. On the prototype, as the renderer's own background materials are reachable no other way.
+ * A material with its own `customProgramCacheKey` shadows this and adds the term itself.
  */
 function keyProgramsOnToneMappingChunk(): void {
   THREE.Material.prototype.customProgramCacheKey = customProgramCacheKeyWithChunk;
 }
 
 function customProgramCacheKeyWithChunk(this: THREE.Material): string {
-  const key = threeCustomProgramCacheKey.call(this);
-  // A material that is not tone-mapped never compiles the chunk, so a swap leaves its program.
-  if (!this.toneMapped) return key;
-  return `${key},toneMappingChunk:${chunkId(THREE.ShaderChunk[TONEMAP_CHUNK])}`;
+  return threeCustomProgramCacheKey.call(this) + toneMappingProgramKey(this);
 }
 
 /** Written only by `chunkId`. Never cleared, since a session installs a handful of curves. */

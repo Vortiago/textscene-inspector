@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { applyToneMapping, toneMappingFor } from './toneMapping';
+import { applyToneMapping, toneMappingFor, toneMappingProgramKey } from './toneMapping';
 import type { ToneMappedRenderer } from './toneMapping';
 import {
   GodotToneMapper,
@@ -207,6 +207,36 @@ describe('applyToneMapping', () => {
     });
     applyToneMapping(gl, { mode: 0, exposure: 1 });
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('toneMappingProgramKey', () => {
+  const { FILMIC, AGX } = GodotToneMapper;
+  const toneMapped = { toneMapped: true };
+
+  afterEach(() => {
+    THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
+  });
+
+  it('names the installed curve, one term per curve', () => {
+    applyToneMapping(fakeRenderer(), { mode: FILMIC });
+    const underFilmic = toneMappingProgramKey(toneMapped);
+    applyToneMapping(fakeRenderer(), { mode: AGX });
+    expect(underFilmic).not.toBe('');
+    expect(toneMappingProgramKey(toneMapped)).not.toBe(underFilmic);
+  });
+
+  it('gives an equal chunk the same term when it is installed again', () => {
+    applyToneMapping(fakeRenderer(), { mode: AGX });
+    const first = toneMappingProgramKey(toneMapped);
+    applyToneMapping(fakeRenderer(), { mode: FILMIC });
+    applyToneMapping(fakeRenderer(), { mode: AGX });
+    expect(toneMappingProgramKey(toneMapped)).toBe(first);
+  });
+
+  it('is empty for a material that is not tone-mapped, whatever the curve', () => {
+    applyToneMapping(fakeRenderer(), { mode: AGX });
+    expect(toneMappingProgramKey({ toneMapped: false })).toBe('');
   });
 });
 
