@@ -63,6 +63,7 @@ export function applyToneMapping(
   const custom = mapping === THREE.CustomToneMapping;
 
   if (custom) {
+    keyProgramsOnToneMappingChunk();
     // The white normalisation is a constant per environment, so it is baked
     // into the chunk rather than plumbed through as a uniform every material
     // would have to declare.
@@ -88,6 +89,38 @@ export function applyToneMapping(
     if (gl.toneMappingExposure !== previousExposure) gl.toneMappingExposure = previousExposure;
     if (changed) markMaterialsDirty(scene);
   };
+}
+
+const threeCustomProgramCacheKey = THREE.Material.prototype.customProgramCacheKey;
+
+/**
+ * Keys every program on the tone-mapping chunk, so a material marked dirty compiles the new curve.
+ * three 0.186.0 keys a program on the `renderer.toneMapping` enum (`WebGLPrograms.js:490`) and
+ * reads the chunk only at compile (`WebGLProgram.js:775`), so two curves could share one program.
+ * On the prototype, as the renderer's own background materials are reachable no other way.
+ */
+function keyProgramsOnToneMappingChunk(): void {
+  THREE.Material.prototype.customProgramCacheKey = customProgramCacheKeyWithChunk;
+}
+
+function customProgramCacheKeyWithChunk(this: THREE.Material): string {
+  const key = threeCustomProgramCacheKey.call(this);
+  // A material that is not tone-mapped never compiles the chunk, so a swap leaves its program.
+  if (!this.toneMapped) return key;
+  return `${key},toneMappingChunk:${chunkId(THREE.ShaderChunk[TONEMAP_CHUNK])}`;
+}
+
+/** Written only by `chunkId`. Never cleared, since a session installs a handful of curves. */
+const chunkIds = new Map<string, number>();
+
+/** A short stand-in for a chunk text in a program key. Equal texts get equal ids. */
+function chunkId(chunk: string): number {
+  let id = chunkIds.get(chunk);
+  if (id === undefined) {
+    id = chunkIds.size;
+    chunkIds.set(chunk, id);
+  }
+  return id;
 }
 
 function markMaterialsDirty(scene: THREE.Object3D | undefined): void {
