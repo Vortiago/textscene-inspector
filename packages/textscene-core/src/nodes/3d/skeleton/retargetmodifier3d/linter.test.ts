@@ -83,6 +83,14 @@ describe('RetargetModifier3D child-skeleton rule', () => {
     expect(warningsOf(linter.lint(content))).toEqual([]);
   });
 
+  it('stays quiet when a child is a class the pinned catalog does not know', () => {
+    // A GDExtension class may subclass Skeleton3D, and `cast_to` would accept it.
+    const content = scene(`
+[node name="Target" type="MyExtensionSkeleton3D" parent="Skeleton3D/Retarget"]
+`);
+    expect(warningsOf(linter.lint(content))).toEqual([]);
+  });
+
   it('leaves the slice fixture clean', () => {
     // `expectFixtureClean` runs StrictTscnParser, which is validators only, so
     // the fixture's "zero warnings" claim is unproven against a RULE until it
