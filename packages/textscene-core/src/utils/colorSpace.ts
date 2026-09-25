@@ -5,12 +5,12 @@
  */
 
 /**
- * Godot's `Color::srgb_to_linear` for one channel, unclamped: Godot's HDR picker writes channels
- * above 1, and the extrapolating `pow` keeps an HDR emission colour bright enough to cross the
- * glow bright-pass.
+ * Godot's `Color::srgb_to_linear` (`core/math/color.h:192-198`) for one channel, unclamped: Godot's
+ * HDR picker writes channels above 1, and the extrapolating `pow` keeps an HDR emission colour
+ * bright enough to cross the glow bright-pass.
  */
 export function sRGBChannelToLinear(c: number): number {
-  if (c <= 0.04045) return c / 12.92;
+  if (c < 0.04045) return c / 12.92;
   return Math.pow((c + 0.055) / 1.055, 2.4);
 }
 

@@ -20,8 +20,13 @@ describe('sRGBChannelToLinear', () => {
     expect(sRGBChannelToLinear(0.5)).toBeCloseTo(0.214041, 6);
   });
 
-  it('keeps the linear segment up to 0.04045', () => {
+  it('keeps the linear segment below 0.04045, as Color::srgb_to_linear does', () => {
     expect(sRGBChannelToLinear(0.04)).toBe(0.04 / 12.92);
+  });
+
+  it('takes the power segment at 0.04045 itself, where Godot compares with `<`', () => {
+    expect(sRGBChannelToLinear(0.04045)).toBe(Math.pow((0.04045 + 0.055) / 1.055, 2.4));
+    expect(sRGBChannelToLinear(0.04045)).not.toBe(0.04045 / 12.92);
   });
 
   it('extrapolates an HDR channel above 1 rather than clamping it', () => {
@@ -38,6 +43,11 @@ describe('linearChannelToSRGB', () => {
 
   it('keeps the linear segment below 0.0031308, as Color::linear_to_srgb does', () => {
     expect(linearChannelToSRGB(0.003)).toBe(12.92 * 0.003);
+  });
+
+  it('takes the power segment at 0.0031308 itself, where Godot compares with `<`', () => {
+    expect(linearChannelToSRGB(0.0031308)).toBe(1.055 * Math.pow(0.0031308, 1 / 2.4) - 0.055);
+    expect(linearChannelToSRGB(0.0031308)).not.toBe(12.92 * 0.0031308);
   });
 
   it('joins its two segments at the threshold', () => {
