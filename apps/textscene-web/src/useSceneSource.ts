@@ -5,6 +5,7 @@
  * forward through `resolveForwardedContent`, and the unconditional `replace` of an upload.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { nextErrorSequence } from './errorSequence';
 import { resolveForwardedContent } from './sourceGate';
 import { FIXTURE_STORAGE_KEY } from './useFixtureSelection';
 
@@ -12,11 +13,13 @@ import { FIXTURE_STORAGE_KEY } from './useFixtureSelection';
 export const DEBOUNCE_MS = 250;
 
 /**
- * One failed fixture fetch. Each failure is a new object, also when a retry fails with the
- * same message, so a consumer keyed on it sees every failure arrive.
+ * One failed fixture fetch. Each failure takes a new `sequence` when it is set, also when a
+ * retry fails with the same message, so the banner orders it against an upload error.
  */
 export interface LoadError {
   readonly message: string;
+  /** From `nextErrorSequence`, taken when the fetch rejects. */
+  readonly sequence: number;
 }
 
 export interface UseSceneSourceOptions {
@@ -175,7 +178,7 @@ export function useSceneSource({
       .catch((err: unknown) => {
         if (cancelled || editedSinceLoadRef.current) return;
         const message = err instanceof Error ? err.message : String(err);
-        setLoadError({ message });
+        setLoadError({ message, sequence: nextErrorSequence() });
         setBuffer('');
         // forwardedContent stays: a failed fetch holds the last valid render.
       })
