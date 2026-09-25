@@ -1,11 +1,11 @@
 /**
- * `setting_count` on the eight classes that declare it: one int32 reading, each class's own setter
- * guard cited, and every declarer giving the same verdict on the same literal, which no other guard
- * compares across siblings.
+ * `setting_count` on the eight classes that declare it: one int32 reading, the guard site each
+ * class's setter reaches cited, and every declarer giving the same verdict on the same literal,
+ * which no other guard compares across siblings.
  */
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry, type PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { settingCount, type SettingCountSetter } from './settingCount.js';
+import { settingCount, type SettingCountGuard } from './settingCount.js';
 import '../aimmodifier3d/linterParser.js';
 import '../bonetwistdisperser3d/linterParser.js';
 import '../converttransformmodifier3d/linterParser.js';
@@ -15,8 +15,8 @@ import '../splineik3d/linterParser.js';
 import '../springbonesimulator3d/linterParser.js';
 import '../twoboneik3d/linterParser.js';
 
-/** Each class that declares `setting_count`, and the class whose `set_setting_count` it reaches. */
-const DECLARERS: ReadonlyArray<readonly [string, SettingCountSetter]> = [
+/** Each class that declares `setting_count`, and the class whose guard site its setter reaches. */
+const DECLARERS: ReadonlyArray<readonly [string, SettingCountGuard]> = [
   ['AimModifier3D', 'BoneConstraint3D'],
   ['ConvertTransformModifier3D', 'BoneConstraint3D'],
   ['CopyTransformModifier3D', 'BoneConstraint3D'],
@@ -95,19 +95,19 @@ describe('settingCount', () => {
     ['BoneTwistDisperser3D', 'bone_twist_disperser_3d.cpp:650'],
     ['IKModifier3D', 'ik_modifier_3d.h:98'],
     ['SpringBoneSimulator3D', 'spring_bone_simulator_3d.cpp:841'],
-  ] as const)('cites the %s guard as enforced, on an int32 slot', (setter, cite) => {
-    const tagged = settingCount(setter);
+  ] as const)('cites the %s guard as enforced, on an int32 slot', (guard, cite) => {
+    const tagged = settingCount(guard);
     expect(tagged.grounding).toEqual({ kind: 'enforced', cite });
     expect(tagged.intSlot?.width).toBe('int32');
   });
 });
 
 describe('setting_count across its eight declarers', () => {
-  it.each(DECLARERS)('%s owns the key and cites its own setter guard', (nodeType, setter) => {
+  it.each(DECLARERS)('%s owns the key and cites its setter\'s guard site', (nodeType, guard) => {
     expect(validatorRegistry.getOwnKeys(nodeType)).toContain('setting_count');
     const declared = validatorRegistry.declarationFor(nodeType, 'setting_count')!;
-    expect(declared.grounding).toEqual(settingCount(setter).grounding);
-    expect(declared.intSlot).toEqual(settingCount(setter).intSlot);
+    expect(declared.grounding).toEqual(settingCount(guard).grounding);
+    expect(declared.intSlot).toEqual(settingCount(guard).intSlot);
   });
 
   it.each(PROBES)('gives every declarer the same verdict on %s', (literal) => {
