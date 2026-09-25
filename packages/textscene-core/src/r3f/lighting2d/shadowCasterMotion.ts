@@ -10,7 +10,7 @@ import { visibleInTree, type ShadowCaster, type ShadowCasterRegistry } from './s
 /** Per caster: the visibility flag, then the 16 world-matrix elements. */
 const INPUTS_PER_CASTER = 17;
 
-export interface CasterMotionWatch {
+interface CasterMotionWatch {
   /**
    * True on the first look, and whenever the flatten could differ from the one the last `true`
    * answered for. Refreshes each visible caster's world matrix, as the flatten does.
