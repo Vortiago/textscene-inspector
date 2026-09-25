@@ -4,7 +4,7 @@
  * waits for the user's own file.
  */
 import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 // Before the imports below: `siteEdition.ts` reads the variable when it first loads.
 vi.hoisted(() => {
@@ -25,6 +25,25 @@ const UPLOADED_TSCN = `[gd_scene format=3]
 
 [node name="UploadedRoot" type="Node3D"]
 `;
+
+const INSTANCING_TSCN = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://door.tscn" id="1"]
+
+[node name="Room" type="Node3D"]
+
+[node name="Door" parent="." instance=ExtResource("1")]
+`;
+
+/** Opens the instancing scene through the file input and expands its root row. */
+async function openInstancingScene() {
+  fireEvent.change(screen.getByTestId('upload-tscn-input'), {
+    target: { files: [new File([INSTANCING_TSCN], 'room.tscn')] },
+  });
+  const roomRow = (await screen.findByText('Room')).closest('[data-node-path]') as HTMLElement;
+  fireEvent.click(within(roomRow).getByRole('button', { name: 'Expand' }));
+  await screen.findByText('Door');
+}
 
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
@@ -86,6 +105,15 @@ describe('public site edition', () => {
 
     expect(await screen.findByText('UploadedRoot')).toBeTruthy();
     expect(screen.getByTestId('uploaded-tscn-label').textContent).toBe('uploaded.tscn');
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('offers no open-sub-scene action, which would load from the mirror', async () => {
+    render(<R3FApp />);
+
+    await openInstancingScene();
+
+    expect(screen.queryByLabelText('Open sub-scene standalone')).toBeNull();
     expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });
