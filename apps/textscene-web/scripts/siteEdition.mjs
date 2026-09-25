@@ -10,7 +10,6 @@
 /** The value of `VITE_SITE_EDITION` that selects the public edition. Any other is dev. */
 export const PUBLIC_SITE_EDITION = 'public';
 
-/** @param {NodeJS.ProcessEnv} env */
-export function isPublicSiteBuild(env = process.env) {
-  return env.VITE_SITE_EDITION === PUBLIC_SITE_EDITION;
+export function isPublicSiteBuild() {
+  return process.env.VITE_SITE_EDITION === PUBLIC_SITE_EDITION;
 }

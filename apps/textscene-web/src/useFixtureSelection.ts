@@ -33,8 +33,8 @@ export function useFixtureSelection({
   defaultFixture,
 }: UseFixtureSelectionOptions): UseFixtureSelectionResult {
   const [fixtureFile, setFixtureFile] = useState<string>(() => {
-    // An empty catalog (the public edition) serves no scene, so a deep link or a stored
-    // choice from another build would only fetch a file that is not there.
+    // A site mirrors exactly the scenes its catalog lists, so an empty catalog serves none:
+    // a deep link or a stored choice would only fetch a file that is not there.
     if (fixtures.length === 0) return defaultFixture;
     try {
       // An unlisted demos/ or games/ subscene needs no catalog entry.

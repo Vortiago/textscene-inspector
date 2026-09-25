@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { REPO_ROOT } from './repoRoot.mjs';
 
-export const FIXTURE_MANIFEST_PATH = join(REPO_ROOT, 'apps/textscene-web/src/fixtures.ts');
+const FIXTURE_MANIFEST_PATH = join(REPO_ROOT, 'apps/textscene-web/src/fixtures.ts');
 
 /**
  * @param {string} source - the text of `fixtures.ts`.

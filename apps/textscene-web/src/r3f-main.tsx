@@ -28,7 +28,6 @@ import { createFileIngest } from './fileIngest';
 import { useFileDrop } from './useFileDrop';
 import { useUploadError } from './useUploadError';
 import { Toolbar } from './R3FToolbar';
-import { IS_PUBLIC_SITE } from './siteEdition';
 import styles from './r3f-main.module.css';
 
 export function R3FApp() {
@@ -48,9 +47,9 @@ export function R3FApp() {
   const initialActiveCameraPath = useCameraDeepLink();
 
   // One provider, bus and loader for the app's lifetime, so an uploaded texture survives a
-  // fixture switch.
+  // fixture switch. The site mirrors exactly the scenes it lists.
   const pipeline = useMemo(
-    () => createResourcePipeline(new WebResourceProvider({ hasFixturesMirror: !IS_PUBLIC_SITE })),
+    () => createResourcePipeline(new WebResourceProvider({ hasFixturesMirror: fixtures.length > 0 })),
     []
   );
   const { provider, loader } = pipeline;

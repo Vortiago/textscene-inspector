@@ -103,13 +103,10 @@ jobs:
           name: tscn-linter-cli
           path: apps/textscene-linter/dist/cli.js
 
-      # After the uploads: the public edition builds into the same dist/ the
-      # dev-edition artifact above comes from. pages.yml deploys this build from main.
-      - name: Build the public site
+      # After the uploads: the public edition builds into the same dist/ the dev-edition
+      # artifact above comes from, then checks it for dev-edition content.
+      - name: Build and check the public site
         run: pnpm build:pages
-
-      - name: Check the public site holds no dev-edition content
-        run: pnpm check:public-site
 
   visual-regression:
     name: Visual Regression (goldens + raster)

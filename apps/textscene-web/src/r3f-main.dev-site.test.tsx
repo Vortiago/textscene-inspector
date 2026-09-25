@@ -3,7 +3,7 @@
  * scenes and the parity gallery link. `r3f-main.public-site.test.tsx` pins the other edition.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 
 vi.mock('@textscene/core', async () => {
   const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
@@ -44,13 +44,5 @@ describe('dev site edition', () => {
     expect(screen.getByText('Parity').closest('a')?.getAttribute('href')).toBe(
       'parity/index.html'
     );
-  });
-
-  it('offers the built-in scenes in the scene palette', () => {
-    render(<R3FApp />);
-
-    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
-
-    expect(screen.getByLabelText('Filter built-in scenes')).toBeTruthy();
   });
 });

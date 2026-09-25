@@ -180,7 +180,7 @@ Add to `.vscode/launch.json`:
 |---|---|
 | `pnpm build` | Build all packages |
 | `pnpm build:site` | Dev-edition web build. Vendors the games and ld-58 corpora (script-stripped, never committed) and builds `apps/textscene-web/dist` |
-| `pnpm build:pages` | Public-edition web build for GitHub Pages: no built-in scenes, no parity gallery, no source maps |
+| `pnpm build:pages` | Public-edition web build for GitHub Pages: no built-in scenes, no parity gallery, no source maps. Runs `check:public-site` on the result |
 | `pnpm check:public-site` | Fail if `apps/textscene-web/dist` holds dev-edition content |
 | `pnpm build:linter` | Build the standalone linter bundle |
 | `pnpm test` | Full unit suite |

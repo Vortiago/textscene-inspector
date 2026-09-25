@@ -43,11 +43,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Build the public site
+      - name: Build and check the public site
         run: pnpm build:pages
-
-      - name: Check the public site holds no dev-edition content
-        run: pnpm check:public-site
 
       - uses: actions/configure-pages@v6
 

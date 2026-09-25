@@ -9,6 +9,9 @@ export default defineConfig({
   // Relative asset URLs: GitHub Pages serves the public edition under /<repo>/, not at
   // the root. The dev edition keeps `/`, as its `/fixtures/` fetches are root-absolute too.
   base: isPublicSite ? './' : '/',
+  // public/ holds only dev content (the fixtures mirror and the parity gallery), so the
+  // public edition copies none of it, whatever an earlier dev build left there.
+  publicDir: isPublicSite ? false : 'public',
   server: {
     // All interfaces, so other hosts on the LAN or tailnet reach the dev server.
     host: '0.0.0.0',

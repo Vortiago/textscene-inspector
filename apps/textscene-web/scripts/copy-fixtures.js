@@ -9,10 +9,8 @@ const scenesRoot = join(__dirname, '../../../scenes');
 const fixturesSource = join(scenesRoot, 'fixtures');
 const fixturesTarget = join(__dirname, '../public/fixtures');
 
-// Vite copies public/ into dist/ whole, so the public edition removes a mirror an
-// earlier dev build left rather than only skipping the copy.
+// The public edition's build reads no public/ (vite.config.ts), so a mirror is wasted work.
 if (isPublicSiteBuild()) {
-  rmSync(fixturesTarget, { recursive: true, force: true });
   console.log('Public site edition: no fixtures mirrored');
   process.exit(0);
 }

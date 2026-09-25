@@ -17,11 +17,13 @@ const imagesTarget = join(outDir, 'images');
 // Cloudflare Pages rejects any single file larger than 25 MiB (see copy-fixtures).
 const MAX_DEPLOY_FILE_BYTES = 25 * 1024 * 1024;
 
-rmSync(outDir, { recursive: true, force: true });
+// The public edition's build reads no public/ (vite.config.ts), so a gallery is wasted work.
 if (isPublicSiteBuild()) {
   console.log('Public site edition: no parity gallery staged');
   process.exit(0);
 }
+
+rmSync(outDir, { recursive: true, force: true });
 mkdirSync(imagesTarget, { recursive: true });
 
 // The generator's <img> src values are `images/…`, relative to index.html, so

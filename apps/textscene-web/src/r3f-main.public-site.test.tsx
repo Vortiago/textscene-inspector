@@ -3,7 +3,7 @@
  * parity gallery link and no request to the fixtures mirror, so the app opens empty and
  * waits for the user's own file.
  */
-import { describe, expect, it, vi, beforeEach, afterEach, afterAll } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 // Before the imports below: `siteEdition.ts` reads the variable when it first loads.
@@ -29,10 +29,6 @@ const UPLOADED_TSCN = `[gd_scene format=3]
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
   window.localStorage.clear();
-});
-
-afterEach(() => {
-  window.history.replaceState(null, '', '/');
 });
 
 afterAll(() => {

@@ -6,8 +6,8 @@ import { fixtureUrlForRes } from '../corpusRoot';
 
 export interface WebResourceProviderOptions {
   /**
-   * Whether the site serves the `/fixtures/` mirror. The public edition does not, so a
-   * missing res:// path goes to the upload prompt without a request that can only 404.
+   * Whether the site serves the `/fixtures/` mirror. Without it, a missing res:// path goes
+   * to the upload prompt with no request, which could only 404.
    */
   hasFixturesMirror?: boolean;
 }
