@@ -50,7 +50,7 @@ describe('listWrittenIndices', () => {
 
   it('orders a nested key by each index position in turn', () => {
     // Numeric on both halves: a lexicographic sort puts `0/10` before `0/2`.
-    const pairs = new Map<string, readonly number[]>([
+    const pairs = new Map<string, readonly [number, number]>([
       ['1/0', [1, 0]],
       ['0/10', [0, 10]],
       ['0/2', [0, 2]],
@@ -69,7 +69,59 @@ describe('listWrittenIndices', () => {
     expect(listed.startsWith('+0, +1, ')).toBe(true);
     expect(listed.endsWith('+31 and 8 more')).toBe(true);
   });
+
+  it('lists what a full sort puts first, for a large shuffled map', () => {
+    // Three spellings per index, so the text tie-break decides as often as the index does.
+    const entries = Array.from({ length: 5_000 }, (_, index) => [
+      [String(index), index] as const,
+      [`+${index}`, index] as const,
+      [String(4294967296 + index), index] as const,
+    ]).flat();
+    shuffle(entries);
+    const sorted = [...entries].sort(
+      ([textA, a], [textB, b]) => a - b || textA.length - textB.length || compareText(textA, textB)
+    );
+    expect(listWrittenIndices(new Map(entries))).toBe(spellFirst(sorted, entries.length));
+  });
+
+  it('lists what a full sort puts first, for a large shuffled map of nested keys', () => {
+    const entries = Array.from({ length: 5_000 }, (_, at) => {
+      const pair = [at % 50, Math.floor(at / 50)] as const;
+      return [`${pair[0]}/${pair[1]}`, pair] as const;
+    });
+    shuffle(entries);
+    const sorted = [...entries].sort(
+      ([textA, a], [textB, b]) =>
+        a[0] - b[0] || a[1] - b[1] || textA.length - textB.length || compareText(textA, textB)
+    );
+    expect(listWrittenIndices(new Map(entries))).toBe(spellFirst(sorted, entries.length));
+  });
 });
+
+/** A seeded Fisher-Yates shuffle, so a failure reproduces. */
+function shuffle<T>(items: T[]): void {
+  let seed = 1;
+  const next = (): number => (seed = (seed * 48271) % 2147483647) / 2147483647;
+  for (let at = items.length - 1; at > 0; at--) {
+    const other = Math.floor(next() * (at + 1));
+    [items[at], items[other]] = [items[other]!, items[at]!];
+  }
+}
+
+function compareText(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/** The capped list the first entries of a full sort spell. */
+function spellFirst(
+  sorted: readonly (readonly [string, number | readonly number[]])[],
+  total: number
+): string {
+  return listIndices(
+    sorted.slice(0, 32).map(([text, resolved]) => writtenIndex(text, resolved)),
+    total
+  );
+}
 
 describe('indicesPastCount', () => {
   it('maps each written index at or past the count to the index it resolves to', () => {

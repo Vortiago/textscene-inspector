@@ -72,7 +72,10 @@ export function negativeIndexError(
   return null;
 }
 
-/** Ascending position by position. A plain number allocates nothing: a sort compares n log n pairs. */
+/**
+ * Ascending position by position. A plain number allocates nothing, since the selection below
+ * compares every entry at least once.
+ */
 function compareResolved(a: ResolvedIndex, b: ResolvedIndex): number {
   if (typeof a === 'number' && typeof b === 'number') return a - b;
   const positionsA = positionsOf(a);
@@ -83,10 +86,10 @@ function compareResolved(a: ResolvedIndex, b: ResolvedIndex): number {
   return 0;
 }
 
-function byResolvedIndex(
-  [textA, resolvedA]: readonly [string, ResolvedIndex],
-  [textB, resolvedB]: readonly [string, ResolvedIndex]
-): number {
+/** One written index text and what it resolves to, as a map entry holds them. */
+type WrittenEntry = readonly [string, ResolvedIndex];
+
+function byResolvedIndex([textA, resolvedA]: WrittenEntry, [textB, resolvedB]: WrittenEntry): number {
   // Several spellings can resolve alike (`5`, `+5`, `05` and `4294967301`), so the text breaks the
   // tie, shorter first, which orders plain digit runs by value.
   return (
@@ -96,18 +99,45 @@ function byResolvedIndex(
   );
 }
 
+/** Where `entry` goes in the ascending `entries`: after every entry it does not precede. */
+function insertionPoint(entries: readonly WrittenEntry[], entry: WrittenEntry): number {
+  let low = 0;
+  let high = entries.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (byResolvedIndex(entry, entries[middle]!) < 0) high = middle;
+    else low = middle + 1;
+  }
+  return low;
+}
+
+/**
+ * The {@link MAX_REPORTED_INDICES} entries a sort by {@link byResolvedIndex} puts first, in that
+ * order, from one pass: a family can write 200,000 keys past its count, and a full sort orders all
+ * of them to show 32. A later entry that ties goes after, where a stable sort puts it.
+ */
+function firstWritten(written: Iterable<WrittenEntry>): WrittenEntry[] {
+  const first: WrittenEntry[] = [];
+  for (const entry of written) {
+    const isFull = first.length === MAX_REPORTED_INDICES;
+    if (isFull && byResolvedIndex(entry, first[first.length - 1]!) >= 0) continue;
+    first.splice(insertionPoint(first, entry), 0, entry);
+    if (first.length > MAX_REPORTED_INDICES) first.pop();
+  }
+  return first;
+}
+
 /**
  * The index texts a message names, each as {@link writtenIndex} spells it, ascending by what each
  * resolves to and capped like {@link listIndices}. Never `Number(text)`: past 2^53 a double no
  * longer holds the integer the file states, and `Number` reads `9999999999999999999999` as `1e+22`.
+ * One depth per map: `5` beside `[5, 0]` has no order, as neither position list outranks the other.
  */
-export function listWrittenIndices(written: ReadonlyMap<string, ResolvedIndex>): string {
-  // Capped before it is spelled: each `writtenIndex` parses its text twice as a BigInt, and a
-  // family can write 200,000 keys past its count.
-  const shown = [...written]
-    .sort(byResolvedIndex)
-    .slice(0, MAX_REPORTED_INDICES)
-    .map(([text, resolved]) => writtenIndex(text, resolved));
+export function listWrittenIndices(
+  written: ReadonlyMap<string, number> | ReadonlyMap<string, readonly [number, number]>
+): string {
+  // Capped before it is spelled: each `writtenIndex` parses its text twice as a BigInt.
+  const shown = firstWritten(written).map(([text, resolved]) => writtenIndex(text, resolved));
   return listIndices(shown, written.size);
 }
 
