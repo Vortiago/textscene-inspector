@@ -1,6 +1,7 @@
 /**
- * The material-holder list a per-frame pass reads instead of a scene walk: re-collected only after
- * three reports the tree changed, and complete after every kind of change it reports.
+ * The material-holder list a per-frame pass reads instead of a scene walk: the root is walked once,
+ * each change three reports walks only the subtree it names, and the list stays complete after
+ * every kind of change three reports.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -9,6 +10,11 @@ import { MaterialHolders } from './materialHolders';
 
 function mesh(): THREE.Mesh {
   return new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial());
+}
+
+/** The list as a set: a removal swaps the last holder into the gap, so order is not kept. */
+function holderSet(holders: MaterialHolders): Set<THREE.Object3D> {
+  return new Set(holders.current());
 }
 
 describe('MaterialHolders', () => {
@@ -21,7 +27,7 @@ describe('MaterialHolders', () => {
     group.add(inner);
     scene.add(group, outer, sprite, new THREE.PointLight());
 
-    expect(new MaterialHolders(scene).current()).toEqual([inner, outer, sprite]);
+    expect(holderSet(new MaterialHolders(scene))).toEqual(new Set([inner, outer, sprite]));
   });
 
   it('walks the root once while nothing is added or removed', () => {
@@ -62,6 +68,21 @@ describe('MaterialHolders', () => {
     expect(holders.current()).toEqual([late]);
   });
 
+  it('walks only the added subtree, never the root again, when a mesh arrives', () => {
+    const scene = new THREE.Scene();
+    scene.add(mesh(), mesh());
+    const holders = new MaterialHolders(scene);
+    holders.current();
+    const rootWalk = vi.spyOn(scene, 'traverse');
+
+    const late = mesh();
+    const subtreeWalk = vi.spyOn(late, 'traverse');
+    scene.add(late);
+    expect(holders.current()).toContain(late);
+    expect(subtreeWalk).toHaveBeenCalledTimes(1);
+    expect(rootWalk).not.toHaveBeenCalled();
+  });
+
   it('picks up a subtree that arrives whole, as a GLB clone does', () => {
     const scene = new THREE.Scene();
     const holders = new MaterialHolders(scene);
@@ -86,6 +107,20 @@ describe('MaterialHolders', () => {
     expect(holders.current()).toEqual([attached]);
   });
 
+  it('keeps a holder that moves between two parents under the root, once', () => {
+    const scene = new THREE.Scene();
+    const from = new THREE.Group();
+    const to = new THREE.Group();
+    const moving = mesh();
+    from.add(moving);
+    scene.add(from, to);
+    const holders = new MaterialHolders(scene);
+    holders.current();
+
+    to.add(moving);
+    expect(holders.current()).toEqual([moving]);
+  });
+
   it('drops a removed mesh, and stops listening to the subtree it took along', () => {
     const scene = new THREE.Scene();
     const group = new THREE.Group();
@@ -93,28 +128,39 @@ describe('MaterialHolders', () => {
     group.add(leaving);
     scene.add(group);
     const holders = new MaterialHolders(scene);
-    const listener = firstListener(group, () => holders.current());
+    const listeners = listenersAddedTo(group, () => holders.current());
     expect(holders.current()).toEqual([leaving]);
 
     scene.remove(group);
     expect(holders.current()).toEqual([]);
-    expect(group.hasEventListener('childadded', listener)).toBe(false);
-    expect(group.hasEventListener('childremoved', listener)).toBe(false);
+    for (const [type, listener] of listeners) {
+      expect(group.hasEventListener(type, listener)).toBe(false);
+    }
+  });
+
+  it('keeps every other holder when one is removed from the middle of the list', () => {
+    const scene = new THREE.Scene();
+    const [first, middle, last] = [mesh(), mesh(), mesh()];
+    scene.add(first, middle, last);
+    const holders = new MaterialHolders(scene);
+    holders.current();
+
+    scene.remove(middle);
+    expect(holderSet(holders)).toEqual(new Set([first, last]));
+    scene.remove(last);
+    expect(holders.current()).toEqual([first]);
   });
 
   it('ignores changes to a subtree once it has left the root', () => {
     const scene = new THREE.Scene();
     const group = new THREE.Group();
     scene.add(group);
-    const traverse = vi.spyOn(scene, 'traverse');
     const holders = new MaterialHolders(scene);
     holders.current();
     scene.remove(group);
-    holders.current();
 
     group.add(mesh());
     expect(holders.current()).toEqual([]);
-    expect(traverse).toHaveBeenCalledTimes(2);
   });
 
   it('removes every listener on dispose, and walks afresh when read again', () => {
@@ -122,11 +168,13 @@ describe('MaterialHolders', () => {
     const group = new THREE.Group();
     scene.add(group);
     const holders = new MaterialHolders(scene);
-    const listener = firstListener(scene, () => holders.current());
+    const listeners = listenersAddedTo(scene, () => holders.current());
 
     holders.dispose();
-    expect(scene.hasEventListener('childadded', listener)).toBe(false);
-    expect(group.hasEventListener('childremoved', listener)).toBe(false);
+    for (const [type, listener] of listeners) {
+      expect(scene.hasEventListener(type, listener)).toBe(false);
+      expect(group.hasEventListener(type, listener)).toBe(false);
+    }
 
     const late = mesh();
     group.add(late);
@@ -134,12 +182,14 @@ describe('MaterialHolders', () => {
   });
 });
 
-/** The listener `collect` puts on `object`, captured while it runs. */
-function firstListener(object: THREE.Object3D, collect: () => void): Parameters<THREE.Object3D['addEventListener']>[1] {
+type ListenerArgs = Parameters<THREE.Object3D['addEventListener']>;
+
+/** Every listener `act` adds to `object`, with its event type, captured while `act` runs. */
+function listenersAddedTo(object: THREE.Object3D, act: () => void): [ListenerArgs[0], ListenerArgs[1]][] {
   const addEventListener = vi.spyOn(object, 'addEventListener');
-  collect();
-  const listener = addEventListener.mock.calls[0]?.[1];
+  act();
+  const added = addEventListener.mock.calls.map(([type, listener]) => [type, listener] as [ListenerArgs[0], ListenerArgs[1]]);
   addEventListener.mockRestore();
-  if (!listener) throw new Error('expected the tracker to listen on the object');
-  return listener;
+  if (added.length === 0) throw new Error('expected the tracker to listen on the object');
+  return added;
 }

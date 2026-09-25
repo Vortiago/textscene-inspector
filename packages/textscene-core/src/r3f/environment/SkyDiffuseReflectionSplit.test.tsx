@@ -64,13 +64,15 @@ describe('<SkyDiffuseReflectionSplit>', () => {
     }
   });
 
-  it('touches nothing at a contribution of 1, or while inactive', async () => {
+  it('touches nothing at a contribution of 1, where three already couples the two', async () => {
     const full = standardMesh();
-    const { renderer: fullRenderer } = await mount([full], { contribution: 1, active: true });
-    await fullRenderer.advanceFrames(2, 16);
+    const { renderer } = await mount([full], { contribution: 1, active: true });
+    await renderer.advanceFrames(2, 16);
     expect(materialOf(full).envMap).toBeNull();
     expect(materialOf(full).envMapIntensity).toBe(1);
+  });
 
+  it('neither walks the scene nor touches a material while inactive', async () => {
     const inactive = standardMesh();
     const { renderer, scene } = await mount([inactive], { contribution: 0, active: false });
     const traverse = vi.spyOn(scene, 'traverse');
@@ -109,6 +111,43 @@ describe('<SkyDiffuseReflectionSplit>', () => {
     await renderer.advanceFrames(1, 16);
     expect(materialOf(late).envMap).toBe(environment);
     expect(materialOf(late).envMapIntensity).toBe(1);
+  });
+
+  it('stamps a mesh the reconciler inserts before a sibling, with no walk of the scene', async () => {
+    // R3F's `insertBefore` splices the child in by hand and dispatches `childadded` itself,
+    // where an append goes through `Object3D.add`.
+    function Stage({ inserted }: { inserted: boolean }) {
+      return (
+        <>
+          <SkyDiffuseReflectionSplit contribution={0} active />
+          <group>
+            {inserted ? (
+              <mesh name="Inserted">
+                <meshStandardMaterial metalness={1} />
+              </mesh>
+            ) : null}
+            <mesh name="Sibling">
+              <meshStandardMaterial />
+            </mesh>
+          </group>
+        </>
+      );
+    }
+    const renderer = await ReactThreeTestRenderer.create(<Stage inserted={false} />);
+    mounted.push(renderer);
+    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    const environment = new THREE.Texture();
+    scene.environment = environment;
+    await renderer.advanceFrames(1, 16);
+    const rootWalk = vi.spyOn(scene, 'traverse');
+
+    await renderer.update(<Stage inserted />);
+    await renderer.advanceFrames(1, 16);
+    const inserted = scene.getObjectByName('Inserted') as THREE.Mesh;
+    expect(inserted.parent?.children.indexOf(inserted)).toBe(0);
+    expect(materialOf(inserted).envMap).toBe(environment);
+    expect(materialOf(inserted).envMapIntensity).toBe(1);
+    expect(rootWalk).not.toHaveBeenCalled();
   });
 
   it('stamps a material swapped onto an existing mesh, with no walk', async () => {
@@ -191,7 +230,7 @@ describe('splitSkyDiffuse', () => {
     expect(writes()).toBe(0);
   });
 
-  it('re-stamps after a metalness change or a new environment', () => {
+  it('re-stamps the intensity after a metalness change', () => {
     const material = new THREE.MeshStandardMaterial();
     const holder = new THREE.Mesh(new THREE.BufferGeometry(), material);
     const originals = new Map<THREE.MeshStandardMaterial, EnvMapOriginal>();
@@ -200,6 +239,13 @@ describe('splitSkyDiffuse', () => {
     material.metalness = 1;
     splitSkyDiffuse([holder], environment, 0, originals);
     expect(material.envMapIntensity).toBe(1);
+  });
+
+  it('re-stamps the envMap for a new environment, keeping the first original', () => {
+    const material = new THREE.MeshStandardMaterial();
+    const holder = new THREE.Mesh(new THREE.BufferGeometry(), material);
+    const originals = new Map<THREE.MeshStandardMaterial, EnvMapOriginal>();
+    splitSkyDiffuse([holder], environment, 0, originals);
 
     const next = new THREE.Texture();
     splitSkyDiffuse([holder], next, 0, originals);
