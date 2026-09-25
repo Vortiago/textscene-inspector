@@ -10,8 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../linter/validators/commonValidators.js';
-import { indexedElements } from '../../../godot/index.js';
-import { listIndices } from '../../../linter/reportedIndices.js';
+import { indicesPastCount, listWrittenIndices } from '../../../linter/reportedIndices.js';
 
 /**
  * FileDialog serves the family through a `PropertyListHelper` (file_dialog.cpp),
@@ -35,19 +34,17 @@ function checkFileDialog(context: RuleContext): Diagnostic[] {
   // file does not state. Neither is a count this rule can name in a message.
   if (count === null) return diagnostics;
 
-  // `indexedElements` resolves the index as `_get_property` does and skips a key
-  // with no leaf, such as `option_3/`. Only the `>= option_count` half is this
-  // rule's: a negative index is the dispatcher's branch in linterParser.ts, so
-  // one refusal is not reported twice.
-  const offending = [...indexedElements(rawProps, OPTION_PREFIX, 'is_valid_int').keys()]
-    .filter((index) => index >= count)
-    .sort((a, b) => a - b);
-  if (offending.length === 0) return diagnostics;
+  // Resolved as `_get_property` resolves it, so a key with no leaf, such as
+  // `option_3/`, names no option. Only the `>= option_count` half is this rule's:
+  // a negative index is the dispatcher's branch in linterParser.ts, so one refusal
+  // is not reported twice.
+  const offending = indicesPastCount(rawProps, OPTION_PREFIX, 'is_valid_int', count);
+  if (offending.size === 0) return diagnostics;
 
   // Godot's saver never writes this: `option_count` (`ADD_ARRAY_COUNT`) precedes
   // the leaves (object.h, `_get_property_listv`) and `options.resize(p_count)`
   // keeps them in step, so only a hand edit reaches here.
-  const indices = listIndices(offending);
+  const indices = listWrittenIndices(offending);
   diagnostics.push({
     severity: 'error',
     message:

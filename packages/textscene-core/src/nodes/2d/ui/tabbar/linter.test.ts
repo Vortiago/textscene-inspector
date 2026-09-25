@@ -133,6 +133,25 @@ describe('TabBar cross-field rule', () => {
     it('says nothing about a malformed tab_count, which has its own validator', () => {
       expect(only({ tab_count: 'three', 'tab_9/title': '"Nine"' })).toHaveLength(0);
     });
+    it('names an index past 2^53 as the file writes it, not as the double it rounds to', () => {
+      const found = only({ tab_count: 2, 'tab_9999999999999999999999/title': '"x"' });
+      expect(found).toHaveLength(1);
+      expect(found[0]?.message).toContain('tab index(es) 9999999999999999999999 but');
+      expect(found[0]?.message).not.toContain('1e+22');
+    });
+    it('caps the list it names, however many tabs fall outside', () => {
+      const tabs = Object.fromEntries(
+        Array.from({ length: 40 }, (_, i) => [`tab_${i + 1}/title`, '"x"'])
+      );
+      const found = only({ tab_count: 1, ...tabs });
+      expect(found).toHaveLength(1);
+      expect(found[0]?.message).toContain('32 and 8 more but');
+    });
+    it('leaves a key whose index text is not a valid int to the dispatcher', () => {
+      // `_get_property` rsplits at the last `/` (property_list_helper.cpp:47), so `tab_5/x/title`
+      // has the index text `5/x`, which `is_valid_int` refuses: the key names no tab at all.
+      expect(only({ tab_count: 1, 'tab_5/x/title': '"x"' })).toHaveLength(0);
+    });
   });
 
   it('reports nothing on the committed fixture', () => {

@@ -10,7 +10,11 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties, extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { listIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
+import {
+  listIndices,
+  listWrittenIndices,
+  unsatisfiedIndices,
+} from '../../../../linter/reportedIndices.js';
 import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
 /**
@@ -47,8 +51,9 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   // against; each is already its own validator's diagnostic.
   if (count === null) return diagnostics;
 
-  const outOfRange = new Set<number>();
-  const ignoredVectors = new Set<number>();
+  // Keyed by each index text as the file writes it, to the setting it resolves to.
+  const outOfRange = new Map<string, number>();
+  const ignoredVectors = new Map<string, number>();
 
   // `target_node`, indexed canonically for the same reason `poleDirections`
   // below is: `_set`'s bare `to_int` (two_bone_ik_3d.cpp:37) resolves
@@ -88,7 +93,8 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   for (const key of Object.keys(rawProps)) {
     const indexed = SETTING_KEY_RE.exec(key);
     if (!indexed) continue;
-    const index = toIntIndex(indexed[1]!);
+    const indexText = indexed[1]!;
+    const index = toIntIndex(indexText);
     // A negative index is the validator's error, against the same ERR_FAIL_INDEX_V, so it is not
     // reported twice. `!(index >= 0)` also skips NaN, which `toIntIndex` returns for a magnitude no
     // double names.
@@ -96,7 +102,11 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
     // `_set` opens with `ERR_FAIL_INDEX_V(which, (int)settings.size(), false)`
     // (two_bone_ik_3d.cpp:39), and only `_set_setting_count` (ik_modifier_3d.h:97-114) resizes
     // `settings`, so every leaf at or past the count is dropped on load.
-    if (index >= count) outOfRange.add(index);
+    if (index >= count) {
+      outOfRange.set(indexText, index);
+      // The refusal comes first, so a vector here never reaches its own setter.
+      continue;
+    }
 
     // `set_pole_direction_vector` (two_bone_ik_3d.cpp:444-448) returns unless `pole_direction` is
     // `SECONDARY_DIRECTION_CUSTOM`, dropping the write silently (ADR-0032).
@@ -108,11 +118,11 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
     const direction =
       ruleInt(directionRaw, SECONDARY_DIRECTION_NONE);
     if (direction === null) continue;
-    if (direction !== SECONDARY_DIRECTION_CUSTOM) ignoredVectors.add(index);
+    if (direction !== SECONDARY_DIRECTION_CUSTOM) ignoredVectors.set(indexText, index);
   }
 
   if (outOfRange.size > 0) {
-    const indices = listIndices([...outOfRange].sort((a, b) => a - b));
+    const indices = listWrittenIndices(outOfRange);
     diagnostics.push({
       severity: 'error',
       message:
@@ -140,7 +150,7 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   }
 
   if (ignoredVectors.size > 0) {
-    const indices = listIndices([...ignoredVectors].sort((a, b) => a - b));
+    const indices = listWrittenIndices(ignoredVectors);
     diagnostics.push({
       severity: 'error',
       message:

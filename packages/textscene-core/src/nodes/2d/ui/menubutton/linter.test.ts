@@ -3,7 +3,7 @@
  * imports every slice and fails on a sibling's broken file. Format checks live in linterParser.test.ts.
  */
 
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { node, scene, expectDiagnostic, expectNoDiagnostic } from '../../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
@@ -50,6 +50,15 @@ describe('MenuButton semantic rules', () => {
       scene(node('MenuButton', { item_count: 1, 'popup/item_+2/text': '"Autosave"' })),
       { ruleName: RULE, severity: 'error', contains: ['2'] }
     );
+  });
+
+  it('names an index past 2^53 as the file writes it, not as the double it rounds to', () => {
+    const diagnostic = expectDiagnostic(
+      scene(node('MenuButton', { item_count: 2, 'popup/item_9999999999999999999999/text': '"x"' })),
+      { ruleName: RULE, severity: 'error' }
+    );
+    expect(diagnostic.message).toContain('index(es) 9999999999999999999999 fall outside');
+    expect(diagnostic.message).not.toContain('1e+22');
   });
 
   it('leaves a negative index to the per-property validator', () => {

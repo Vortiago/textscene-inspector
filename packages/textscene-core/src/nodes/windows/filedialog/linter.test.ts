@@ -3,7 +3,7 @@
  * the `linter/index.ts` barrel, which imports every slice.
  */
 
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { node, scene, expectClean, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
@@ -71,6 +71,25 @@ describe('FileDialog semantic rules', () => {
 
   it('stays clean with option_count set and no option_<N>/… keys at all', () => {
     expectClean(scene(node('FileDialog', { option_count: 0 })));
+  });
+});
+
+describe('FileDialog index spelling in the message', () => {
+  it('names an index past 2^53 as the file writes it, not as the double it rounds to', () => {
+    const diagnostic = expectDiagnostic(
+      scene(node('FileDialog', { option_count: 2, 'option_9999999999999999999999/name': '"x"' })),
+      { ruleName: 'filedialog-option-index-out-of-range', severity: 'error' }
+    );
+    expect(diagnostic.message).toContain(
+      'index(es) 9999999999999999999999 fall outside option_count (2)'
+    );
+    expect(diagnostic.message).not.toContain('1e+22');
+  });
+
+  it('stays silent on an option inside the count whatever its spelling', () => {
+    expectNoDiagnostic(scene(node('FileDialog', { option_count: 2, 'option_+01/name': '"x"' })), {
+      ruleName: 'filedialog-option-index-out-of-range',
+    });
   });
 });
 

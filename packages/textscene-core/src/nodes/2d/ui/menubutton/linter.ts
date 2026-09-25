@@ -10,8 +10,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
-import { indexedElements } from '../../../../godot/index.js';
-import { listIndices } from '../../../../linter/reportedIndices.js';
+import { indicesPastCount, listWrittenIndices } from '../../../../linter/reportedIndices.js';
 
 const RULE_NAME = 'menubutton-item-index-out-of-range';
 
@@ -35,16 +34,14 @@ function checkMenuButton(context: RuleContext): Diagnostic[] {
   if (count === null) return [];
 
   // Only the high end: linterParser.ts's family dispatcher already reports a negative index.
-  const offending = [...indexedElements(rawProps, ITEM_PREFIX, 'is_valid_int').keys()]
-    .filter((index) => index >= count)
-    .sort((a, b) => a - b);
-  if (offending.length === 0) return [];
+  const offending = indicesPastCount(rawProps, ITEM_PREFIX, 'is_valid_int', count);
+  if (offending.size === 0) return [];
 
   return [
     {
       severity: 'error',
       message:
-        `MenuButton item index(es) ${listIndices(offending)} fall outside item_count (${count}). ` +
+        `MenuButton item index(es) ${listWrittenIndices(offending)} fall outside item_count (${count}). ` +
         'MenuButton forwards the write to its popup child (menu_button.cpp:178), whose ' +
         'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for an ' +
         'index >= the array length, so no setter runs and these popup/item_<N>/… values are ' +

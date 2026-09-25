@@ -516,6 +516,22 @@ describe('Skeleton3D Linter', () => {
         expect(onBone0[0]?.message).toContain('non-empty');
       });
 
+      it('names a bone index past 2^53 as the key writes it, not as the double it rounds to', () => {
+        const diagnostic = expectDiagnostic(
+          scene(node('Skeleton3D', { 'bones/99999999999999999999/name': '"Root"' })),
+          { ruleName: 'skeleton3d-bone-name-order', severity: 'error' }
+        );
+        expect(diagnostic.message).toContain('names bone 99999999999999999999, but only 0 bones');
+        expect(diagnostic.message).not.toContain('100000000000000000000');
+      });
+
+      it('names a padded bone index as the key writes it', () => {
+        expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/name': '"Root"', 'bones/02/name': '"Head"' })), {
+          ruleName: 'skeleton3d-bone-name-order',
+          contains: ['names bone 02, but only 1 bone exists'],
+        });
+      });
+
       // A negative index is phase 1's INVALID_BONE_INDEX; the rule leaves it be
       // rather than reporting the same key under a second name.
       it('leaves a negative bone index to the validator', () => {

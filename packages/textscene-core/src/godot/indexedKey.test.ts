@@ -1,10 +1,49 @@
 /**
- * `indexedElements`' own contract, around the module every rule resolves an index through. The
- * slices' `linter.test.ts` files test the rules that use it.
+ * `indexedKeys`' and `indexedElements`' own contracts, around the module every rule resolves an
+ * index through. The slices' `linter.test.ts` files test the rules that use them.
  */
 
 import { describe, expect, it } from 'vitest';
-import { indexedElements } from './indexedKey.js';
+import { indexedElements, indexedKeys } from './indexedKey.js';
+
+describe('indexedKeys', () => {
+  it('resolves each key in file order, keeping the whole key and the index as written', () => {
+    // `is_valid_int` skips one leading sign (ustring.cpp:4752), so `+2` names item 2.
+    expect(
+      indexedKeys({ item_count: '3', 'item_+2/text': '"Save"', 'item_0/icon': 'null' }, 'item_', 'is_valid_int')
+    ).toEqual([
+      { key: 'item_+2/text', indexText: '+2', index: 2, leaf: 'text', value: '"Save"' },
+      { key: 'item_0/icon', indexText: '0', index: 0, leaf: 'icon', value: 'null' },
+    ]);
+  });
+
+  it('leaves out every key that names no element', () => {
+    // A refused spelling, a negative index, no leaf, and the rsplit that leaves `5/x` above the
+    // last `/` (property_list_helper.cpp:47-55).
+    expect(
+      indexedKeys(
+        { 'item_x/text': '"a"', 'item_-1/text': '"b"', 'item_3/': '"c"', 'item_5/x/text': '"d"' },
+        'item_',
+        'is_valid_int'
+      )
+    ).toEqual([]);
+  });
+
+  it('keeps an index past 2^53 as the file spells it, and drops one no double names', () => {
+    // A clean digit run keeps its sign through `Number`, so it still compares past any count. A
+    // run `to_int` must skip into reads NaN, which no comparison places.
+    const [huge] = indexedKeys(
+      { 'item_9999999999999999999999/text': '"a"' },
+      'item_',
+      'is_valid_int'
+    );
+    expect(huge!.indexText).toBe('9999999999999999999999');
+    expect(huge!.index).toBeGreaterThan(2 ** 53);
+    expect(
+      indexedKeys({ 'settings/a99999999999999999999/bone': '"A"' }, 'settings/', 'to_int')
+    ).toEqual([]);
+  });
+});
 
 describe('indexedElements', () => {
   it('seats two spellings of one index on one element, under to_int', () => {

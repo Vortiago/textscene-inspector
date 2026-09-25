@@ -8,17 +8,15 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { listIndices } from '../../../../linter/reportedIndices.js';
+import { indicesPastCount, listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
-import { indexedKeyRegex } from '../../../../godot/index.js';
 
 /**
- * `item_<idx>/`, with the index captured. ItemList serves the family through a
- * `PropertyListHelper` (item_list.cpp), whose `_get_property` gates on
- * `String::is_valid_int()` (property_list_helper.cpp:53).
+ * The family's prefix. ItemList serves it through a `PropertyListHelper` (item_list.cpp), whose
+ * `_get_property` gates the index on `String::is_valid_int()` (property_list_helper.cpp:53).
  */
-const ITEM_KEY_RE = indexedKeyRegex('^item_(#)/', 'is_valid_int');
+const ITEM_PREFIX = 'item_';
 
 // The leaves go through a `PropertyListHelper` (item_list.cpp:2461-2466), whose
 // `_get_property` (property_list_helper.cpp:46-64) returns null when
@@ -39,21 +37,15 @@ function checkItemList(context: RuleContext): Diagnostic[] {
   // neither is a count this rule can name in a message.
   if (count === null) return diagnostics;
 
-  const offending = new Set<number>();
-  for (const key of Object.keys(rawProps)) {
-    const match = ITEM_KEY_RE.exec(key);
-    if (!match) continue;
-    const index = Number(match[1]);
-    // The family dispatcher in linterParser.ts reports a negative index, so
-    // reporting it here would double the diagnostic.
-    if (index >= 0 && index >= count) offending.add(index);
-  }
+  // Resolved as `_get_property` resolves it. The family dispatcher in linterParser.ts reports a
+  // negative index, so only the high end is this rule's.
+  const offending = indicesPastCount(rawProps, ITEM_PREFIX, 'is_valid_int', count);
   if (offending.size === 0) return diagnostics;
 
   // `ItemList::_set` (item_list.cpp:2237-2240) calls `property_set_value`, which returns
   // false for that index (property_list_helper.cpp:166-175), so no `set_item_*` setter
   // runs and nothing is logged: the silently dropped write ADR-0032 grounds on.
-  const indices = listIndices([...offending].sort((a, b) => a - b));
+  const indices = listWrittenIndices(offending);
   diagnostics.push({
     severity: 'error',
     message:

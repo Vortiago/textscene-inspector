@@ -266,6 +266,37 @@ describe('TwoBoneIK3D semantic rules', () => {
     expect(missingTargetWarning?.message).toContain('setting(s) 0');
   });
 
+  it('reports a pole vector on an out-of-range setting once, as out of range', () => {
+    // `_set` refuses the setting at two_bone_ik_3d.cpp:39, before `set_pole_direction_vector` could
+    // return at :446, so the pole-direction claim would name a setter the write never reaches.
+    const found = lint(
+      scene(
+        node('TwoBoneIK3D', {
+          setting_count: 1,
+          'settings/0/target_node': 'NodePath("../Target")',
+          'settings/99999999999999999999/pole_direction_vector': 'Vector3(0, 1, 0)',
+        })
+      )
+    ).filter((d) => d.ruleName.startsWith('twoboneik3d-'));
+    expect(found.map((d) => d.ruleName)).toEqual(['twoboneik3d-setting-index-out-of-range']);
+    // As the file writes it: `Number` would print 100000000000000000000.
+    expect(found[0]!.message).toContain('index(es) 99999999999999999999 fall outside');
+  });
+
+  it('names a padded index as written when its pole vector is ignored', () => {
+    const diagnostic = expectDiagnostic(
+      scene(
+        node('TwoBoneIK3D', {
+          setting_count: 1,
+          'settings/0/pole_direction': 3,
+          'settings/00/pole_direction_vector': 'Vector3(0, 0, 1)',
+        })
+      ),
+      { ruleName: 'twoboneik3d-pole-direction-vector-ignored' }
+    );
+    expect(diagnostic.message).toContain('setting(s) 00 set pole_direction_vector');
+  });
+
   it('stays clean with setting_count set and no settings/<i>/… keys at all', () => {
     expectClean(scene(node('TwoBoneIK3D', { setting_count: 0 })));
   });

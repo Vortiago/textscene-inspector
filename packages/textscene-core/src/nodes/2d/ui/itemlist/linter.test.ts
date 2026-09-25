@@ -133,6 +133,43 @@ describe('ItemList semantic rules', () => {
   });
 });
 
+describe('ItemList index spelling in the message', () => {
+  it('names an index past 2^53 as the file writes it, not as the double it rounds to', () => {
+    const diagnostic = expectDiagnostic(
+      scene(node('ItemList', { item_count: 2, 'item_9999999999999999999999/text': '"x"' })),
+      { ruleName: 'itemlist-item-index-out-of-range', severity: 'error' }
+    );
+    expect(diagnostic.message).toContain('index(es) 9999999999999999999999 fall outside item_count (2)');
+    expect(diagnostic.message).not.toContain('1e+22');
+  });
+
+  it('names each spelling as written when two resolve to one item', () => {
+    const diagnostic = expectDiagnostic(
+      scene(node('ItemList', { item_count: 1, 'item_3/text': '"a"', 'item_03/icon': 'null' })),
+      { ruleName: 'itemlist-item-index-out-of-range' }
+    );
+    expect(diagnostic.message).toContain('index(es) 3, 03 fall outside');
+  });
+
+  it('caps the list it names, however many items fall outside', () => {
+    const items = Object.fromEntries(
+      Array.from({ length: 40 }, (_, i) => [`item_${i + 1}/text`, '"x"'])
+    );
+    const diagnostic = expectDiagnostic(scene(node('ItemList', { item_count: 1, ...items })), {
+      ruleName: 'itemlist-item-index-out-of-range',
+    });
+    expect(diagnostic.message).toContain('32 and 8 more fall outside');
+  });
+
+  it('leaves a key whose index text is not a valid int to the dispatcher', () => {
+    // `_get_property` rsplits at the last `/` (property_list_helper.cpp:47), so `item_5/x/text` has
+    // the index text `5/x`, which `is_valid_int` refuses: the key names no item at all.
+    expectNoDiagnostic(scene(node('ItemList', { item_count: 1, 'item_5/x/text': '"x"' })), {
+      ruleName: 'itemlist-item-index-out-of-range',
+    });
+  });
+});
+
 describe('ItemList index grammar', () => {
   it('errors on a `+`-signed index past item_count', () => {
     // `PropertyListHelper::_get_property` gates on `String::is_valid_int()`

@@ -232,6 +232,71 @@ describe('BoneTwistDisperser3D semantic rules', () => {
   });
 });
 
+describe('BoneTwistDisperser3D count and index reads', () => {
+  /** Every diagnostic either rule of this slice produces for `props`. */
+  const ruleFindings = (props: Record<string, string | number | boolean>) =>
+    lint(scene(node('BoneTwistDisperser3D', props))).filter((d) =>
+      d.ruleName.startsWith('bonetwistdisperser3d-')
+    );
+
+  it('measures joints against the length a refused joint_count leaves behind', () => {
+    // `set_joint_count` opens with `ERR_FAIL_COND(p_count < 0)` (bone_twist_disperser_3d.cpp:487),
+    // so the joints vector keeps its empty length and joint 0 is dropped. The -1 is the
+    // `enforced:` validator's own error, and the rule names no joint count at all.
+    const found = ruleFindings({
+      setting_count: 1,
+      'settings/0/joint_count': -1,
+      'settings/0/joints/0/twist_amount': 0.5,
+    });
+    expect(found.map((d) => d.ruleName)).toEqual(['bonetwistdisperser3d-joint-index-out-of-range']);
+    expect(found[0]!.message).toContain('joint(s) 0/0 (setting/joint)');
+  });
+
+  it('names a setting index past 2^53 as the file writes it, and reports its joint once', () => {
+    // The scene the index sweep missed. `settings/99999999999999999999/…` is past any count, so
+    // `_set` refuses the whole setting at :39 and its joint never reaches :502.
+    const found = ruleFindings({
+      setting_count: 1,
+      'settings/0/joint_count': 1,
+      'settings/99999999999999999999/joints/0/twist_amount': 0.5,
+    });
+    expect(found.map((d) => d.ruleName)).toEqual([
+      'bonetwistdisperser3d-setting-index-out-of-range',
+    ]);
+    expect(found[0]!.message).toContain('index(es) 99999999999999999999 fall outside');
+    expect(found[0]!.message).not.toContain('100000000000000000000');
+  });
+
+  it('says nothing about an index no double names, rather than a NaN joint', () => {
+    // `toIntIndex` reads NaN for a digit run `to_int` must skip into past 2^53. No comparison
+    // places NaN, so the NaN-safe skip leaves it out of both rules.
+    const found = ruleFindings({
+      setting_count: 1,
+      'settings/a99999999999999999999/joints/0/twist_amount': 0.5,
+    });
+    expect(found).toEqual([]);
+  });
+
+  it('names a joint index past 2^53 as the file writes it', () => {
+    const found = ruleFindings({
+      setting_count: 1,
+      'settings/0/joint_count': 1,
+      'settings/0/joints/99999999999999999999/twist_amount': 0.5,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toContain('joint(s) 0/99999999999999999999 (setting/joint)');
+  });
+
+  it('caps the joint pairs it names, however many fall outside', () => {
+    const joints = Object.fromEntries(
+      Array.from({ length: 40 }, (_, j) => [`settings/0/joints/${j + 1}/twist_amount`, 0.5])
+    );
+    const found = ruleFindings({ setting_count: 1, 'settings/0/joint_count': 1, ...joints });
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toContain('0/32 and 8 more (setting/joint)');
+  });
+});
+
 describe('BoneTwistDisperser3D index grammar', () => {
   it('errors on a setting written under a non-numeric index, which _set resolves', () => {
     // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()` and

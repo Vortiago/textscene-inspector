@@ -11,7 +11,22 @@ import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { decodeLegacyTileData } from '../shared/tileData.js';
 import { TILE_MAP_DATA_FORMAT_DEFAULT, formatWhenApplied, tileDataValidator } from './tileDataSlots.js';
 import { tileMapLayerVector } from '../shared/layerVector';
+import { indexedKeys } from '../../../../godot/index.js';
 import { ySortDiagnostics } from './ySortRules.js';
+
+/**
+ * Each layer's `layer_<i>/tile_data` key and value, in layer order, the key as the file writes it.
+ * Resolved as `_set` resolves it, so a layer the engine never builds carries no tile data here.
+ * Of two spellings of one layer (`layer_1/…` and `layer_+1/…`) the later one wins, as Godot applies
+ * properties in file order. Its own spelling is what `formatWhenApplied` finds in the file.
+ */
+function tileDataKeys(rawProps: Record<string, string>): Array<[string, string]> {
+  const byLayer = new Map<number, [string, string]>();
+  for (const { key, index, leaf, value } of indexedKeys(rawProps, 'layer_', 'is_valid_int')) {
+    if (leaf === 'tile_data') byLayer.set(index, [key, value]);
+  }
+  return [...byLayer].sort(([a], [b]) => a - b).map(([, entry]) => entry);
+}
 
 function checkTileMap(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -23,14 +38,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
   // (:1014-1021) and grown to the highest index written (:701-710). A gap layer
   // is not y-sorted, at z_index 0, and takes part in the comparison below.
   const layers = tileMapLayerVector(rawProps);
-  // Keyed by the resolved index, so a layer the engine never builds carries no
-  // tile data here either, and the key a message names is the one the loaded
-  // layer answers to.
-  const layerData: Array<[string, string]> = [];
-  for (const [index, leaves] of layers) {
-    const tileData = leaves.get('tile_data');
-    if (tileData !== undefined) layerData.push([`layer_${index}/tile_data`, tileData]);
-  }
+  const layerData = tileDataKeys(rawProps);
   // tile_map.cpp:843: unconditional, on every TileMap whatever its configuration.
   diagnostics.push({
     severity: 'warning',

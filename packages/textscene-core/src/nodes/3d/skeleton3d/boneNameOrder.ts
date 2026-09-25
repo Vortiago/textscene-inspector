@@ -35,8 +35,11 @@ export function addBoneRefusal(text: string): '' | ':' | '/' | null {
 export interface BoneNameFinding {
   kind: 'order' | 'duplicate';
   key: string;
-  /** The bone slot the key addresses. */
-  index: number;
+  /**
+   * The bone slot the key addresses, as the key writes it. Past 2^53 a double no longer holds the
+   * integer written, so a message names this text, never the number.
+   */
+  indexText: string;
   /** The slot `add_bone` would have filled: the live bone count. */
   expected: number;
   name: string;
@@ -57,19 +60,20 @@ export function boneNameFindings(properties: Record<string, string>): BoneNameFi
   for (const [key, value] of Object.entries(properties)) {
     const match = BONE_NAME_KEY.exec(key);
     if (!match) continue;
-    const index = toIntIndex(match[1]!);
+    const indexText = match[1]!;
+    const index = toIntIndex(indexText);
     // NaN fails this too, and is phase 1's as well.
     if (!(index >= 0)) continue;
     const name = boneNameText(value);
     if (addBoneRefusal(name) !== null) continue;
 
     if (index !== added) {
-      findings.push({ kind: 'order', key, index, expected: added, name });
+      findings.push({ kind: 'order', key, indexText, expected: added, name });
       continue;
     }
     const heldBy = taken.get(name);
     if (heldBy !== undefined) {
-      findings.push({ kind: 'duplicate', key, index, expected: added, name, heldBy });
+      findings.push({ kind: 'duplicate', key, indexText, expected: added, name, heldBy });
       continue;
     }
     taken.set(name, index);

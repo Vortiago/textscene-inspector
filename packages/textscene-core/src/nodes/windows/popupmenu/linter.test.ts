@@ -121,6 +121,25 @@ describe('PopupMenu semantic rules', () => {
   });
 });
 
+describe('PopupMenu index spelling in the message', () => {
+  it('names an index past 2^53 as the file writes it, not as the double it rounds to', () => {
+    const diagnostic = expectDiagnostic(
+      scene(node('PopupMenu', { item_count: 2, 'item_9999999999999999999999/text': '"x"' })),
+      { ruleName: 'popupmenu-item-index-out-of-range', severity: 'error' }
+    );
+    expect(diagnostic.message).toContain('index(es) 9999999999999999999999 fall outside item_count (2)');
+    expect(diagnostic.message).not.toContain('1e+22');
+  });
+
+  it('names a zero-padded index as written, beside the plain spelling of another item', () => {
+    const diagnostic = expectDiagnostic(
+      scene(node('PopupMenu', { item_count: 1, 'item_004/text': '"a"', 'item_2/text': '"b"' })),
+      { ruleName: 'popupmenu-item-index-out-of-range' }
+    );
+    expect(diagnostic.message).toContain('index(es) 2, 004 fall outside');
+  });
+});
+
 describe('PopupMenu index grammar', () => {
   it('errors on a `+`-signed index past item_count', () => {
     // `is_valid_int` skips ONE leading sign, `+` as readily as `-`

@@ -180,6 +180,44 @@ describe('format, read as it stood when each layer loaded', () => {
       { ruleName: 'tilemap-unsupported-format', severity: 'error' }
     );
   });
+
+  // The position is the written key's: a canonical `layer_1/tile_data` is absent from this file, so
+  // looking it up would find no key and read the `format` below as applied.
+  it('reads the position of a `+`-signed tile_data key as the file writes it', () => {
+    expectNoDiagnostic(
+      scene(
+        `tile_set = SubResource("TileSet_a")\nlayer_+1/tile_data = PackedInt32Array(0, 0, 0)\nformat = 1`,
+        TILESET_RESOURCES
+      ),
+      { ruleName: 'tilemap-unsupported-format' }
+    );
+  });
+
+  it('names a `+`-signed tile_data key as written when the format above it is legacy', () => {
+    expectDiagnostic(
+      scene(
+        `tile_set = SubResource("TileSet_a")\nformat = 1\nlayer_+1/tile_data = PackedInt32Array(0, 0, 0)`,
+        TILESET_RESOURCES
+      ),
+      {
+        ruleName: 'tilemap-unsupported-format',
+        severity: 'error',
+        contains: ["'layer_+1/tile_data' (format = 1)"],
+      }
+    );
+  });
+
+  it('names a layer index past 2^53 as written, not as the double it rounds to', () => {
+    const diagnostic = expectDiagnostic(
+      scene(
+        `tile_set = SubResource("TileSet_a")\nformat = 1\nlayer_9999999999999999999999/tile_data = PackedInt32Array(0, 0, 0)`,
+        TILESET_RESOURCES
+      ),
+      { ruleName: 'tilemap-unsupported-format' }
+    );
+    expect(diagnostic.message).toContain("'layer_9999999999999999999999/tile_data'");
+    expect(diagnostic.message).not.toContain('1e+22');
+  });
 });
 
 describe('tile data phase 1 already refused', () => {

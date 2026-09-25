@@ -23,7 +23,13 @@ export {
   basisHasUnitScale,
   basisIsOrthonormal,
 } from './basis.js';
-export { type IndexParse, indexedElements, indexedKeyRegex } from './indexedKey.js';
+export {
+  type IndexedKey,
+  type IndexParse,
+  indexedElements,
+  indexedKeyRegex,
+  indexedKeys,
+} from './indexedKey.js';
 export {
   IS_VALID_INT_RE,
   literalText,

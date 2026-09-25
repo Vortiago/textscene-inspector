@@ -75,7 +75,7 @@ function checkSkeleton3D(context: RuleContext): Diagnostic[] {
       finding.kind === 'order'
         ? {
             severity: 'error',
-            message: `'${finding.key}' names bone ${finding.index}, but only ${finding.expected} bone${finding.expected === 1 ? '' : 's'} exist${finding.expected === 1 ? 's' : ''} by this line. Godot adds a bone only when the index equals the current count, so it drops this write.`,
+            message: `'${finding.key}' names bone ${finding.indexText}, but only ${finding.expected} bone${finding.expected === 1 ? '' : 's'} exist${finding.expected === 1 ? 's' : ''} by this line. Godot adds a bone only when the index equals the current count, so it drops this write.`,
             nodeName: node.name,
             nodeType: node.type,
             ruleName: 'skeleton3d-bone-name-order',
