@@ -9,7 +9,7 @@ import { keyShapeError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { IS_VALID_INT_RE, stringToInt, type IndexParse } from '../../godot/index.js';
-import { writtenIndex } from '../reportedIndices.js';
+import { negativeIndexError } from '../reportedIndices.js';
 
 /**
  * The `is_valid_int` gate, the one cite this file owns since every `PropertyListHelper` family
@@ -62,7 +62,7 @@ export interface IndexedFamilyOptions {
     cite: string;
     /**
      * Message for the rejected index, so each class keeps its own wording. It receives the index
-     * as {@link writtenIndex} spells it: the key's text, and what Godot stores where they differ.
+     * as `writtenIndex` spells it: the key's text, and what Godot stores where they differ.
      */
     message: (index: string) => string;
     /** Error code for the negative-index branch. */
@@ -83,6 +83,17 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
   // key: one closure per registered family, not one per call.
   const unknown = (key: string, line: number): ReturnType<PropertyValidator> =>
     keyShapeError(key, line, `Unknown ${describes} property: "${key}"`, unknownCode);
+
+  /**
+   * Godot refuses to resolve a negative index under either parse, so `_set` treats the key as
+   * unrecognised and the write never lands. The index is the one Godot stores: `to_int` reads
+   * `settings/a-1/…` as -1, and the `int` keeps the low 32 bits, so `4294967296` is 0.
+   */
+  const refuseNegative = negativeIndex
+    ? (indexText: string, key: string, line: number) =>
+        negativeIndexError(indexText, key, line, negativeIndex.message, negativeIndex.code)
+    : (indexText: string, key: string, line: number) =>
+        stringToInt(indexText) < 0 ? unknown(key, line) : null;
 
   /**
    * The leaf names whose branch reads a segment below itself: `end_bone`, since
@@ -134,16 +145,8 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
     // A class that gates on `is_valid_int` has no index at all for text the
     // regex rejects, so the key is unrecognised before an index is ever read.
     if (gatesOnValidInt && !IS_VALID_INT_RE.test(indexText)) return unknown(key, line);
-    // The index Godot stores: `to_int` reads `settings/a-1/…` as -1 (ustring.cpp:2291-2292), and
-    // the `int` keeps the low 32 bits, so `2147483648` is negative and `4294967296` is 0.
-    const index = stringToInt(indexText);
-    if (index < 0) {
-      // Godot refuses to resolve a negative index under either parse, so
-      // `_set` treats the key as unrecognised and the write never lands.
-      if (!negativeIndex) return unknown(key, line);
-      const named = writtenIndex(indexText, index);
-      return keyShapeError(key, line, negativeIndex.message(named), negativeIndex.code);
-    }
+    const negative = refuseNegative(indexText, key, line);
+    if (negative) return negative;
     // A non-negative index resolves to some setting and the write lands, so only
     // the leaf can still be refused.
     const resolved = gatesOnValidInt ? leafName : declaredLeaf(leafName);

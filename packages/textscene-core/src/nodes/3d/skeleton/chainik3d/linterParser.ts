@@ -7,11 +7,11 @@
 
 import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
+import { accepts, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
-import { writtenIndex } from '../../../../linter/reportedIndices.js';
+import { indexedKeyRegex } from '../../../../godot/index.js';
+import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 // The surface is a hand-built `settings/<i>/<leaf>` family: `_set` (chain_ik_3d.cpp:33) and `_get`
 // (:69) parse it with `get_slicec('/', n)`, and `get_property_list` (:115) emits
@@ -89,8 +89,11 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   joint_count: v.strictInt('joint_count', { min: 0, enforced: 'chain_ik_3d.cpp:333' }),
 };
 
+const negativeSettingIndex = (index: string): string =>
+  `Setting index ${index} is out of range: Godot refuses a negative index and drops the write`;
+
 /**
- * The `settings/<i>/` dispatcher. {@link stringToInt} reads the index as `_set` does
+ * The `settings/<i>/` dispatcher. {@link negativeIndexError} reads the index as `_set` does
  * (chain_ik_3d.cpp:37), and `ERR_FAIL_INDEX_V` (:39) refuses a negative one, so `settings/a-1/...`
  * is refused and `settings/a1b2/...` is setting 12. An index past the live `setting_count` is a
  * sibling bound.
@@ -101,16 +104,14 @@ const settingsFamily: PropertyValidator = accepts((key, value, line) => {
   const slash = rest.indexOf('/');
   if (slash <= 0) return null;
 
-  const indexText = rest.slice(0, slash);
-  const index = stringToInt(indexText);
-  if (index < 0) {
-    return keyShapeError(
-      key,
-      line,
-      `Setting index ${writtenIndex(indexText, index)} is out of range: Godot refuses a negative index and drops the write`,
-      'INVALID_SETTINGS_INDEX'
-    );
-  }
+  const negative = negativeIndexError(
+    rest.slice(0, slash),
+    key,
+    line,
+    negativeSettingIndex,
+    'INVALID_SETTINGS_INDEX'
+  );
+  if (negative) return negative;
 
   const leafName = rest.slice(slash + 1);
   if (JOINT_BONE_RE.test(leafName)) return jointBoneReadOnly(key, value, line);

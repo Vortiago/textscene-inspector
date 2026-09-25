@@ -10,15 +10,14 @@
 import '../chainik3d/linterParser.js';
 import { validatorRegistry, type PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
-import { keyShapeError } from '../../../../linter/validators/propertyError.js';
 import { accepts, v } from '../../../../linter/validators/v.js';
 import { settingCount } from '../shared/settingCount.js';
 import {
   ROTATION_AXIS,
   SECONDARY_DIRECTION,
 } from '../skeletonmodifier3d/linterParser.js';
-import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
-import { writtenIndex } from '../../../../linter/reportedIndices.js';
+import { indexedKeyRegex } from '../../../../godot/index.js';
+import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 /**
  * Why a negative setting index is refused, shared by both levels of the family
@@ -93,15 +92,14 @@ const settingsValidator = accepts((key, value, line) => {
       // The joint index is deliberately unchecked: each leaf's ERR_FAIL_INDEX
       // sits in its own setter, so there is no single line to cite, and the
       // setting index below already covers what `_set` refuses uniformly.
-      const settingIndex = stringToInt(joint[1]!);
-      if (settingIndex < 0) {
-        return keyShapeError(
-          key,
-          line,
-          negativeSettingIndex(writtenIndex(joint[1]!, settingIndex)),
-          'INVALID_SETTING_INDEX'
-        );
-      }
+      const negative = negativeIndexError(
+        joint[1]!,
+        key,
+        line,
+        negativeSettingIndex,
+        'INVALID_SETTING_INDEX'
+      );
+      if (negative) return negative;
       return JOINT_LEAVES[leafName]!(key, value, line);
     }
   } else if (key.endsWith('/target_node')) {

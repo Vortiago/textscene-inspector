@@ -20,7 +20,7 @@ import {
   splitTopLevel,
   stringToInt,
 } from '../../godot/index.js';
-import { writtenIndex } from '../../linter/reportedIndices.js';
+import { negativeIndexError, writtenIndex } from '../../linter/reportedIndices.js';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 
 const unknownKey = (key: string, line: number, describes: string, code: string) =>
@@ -99,6 +99,11 @@ sourceValidator.leaves = [sourceResource];
 const PATTERN_KEY = indexedKeyRegex('^pattern_(#)$', 'is_valid_int');
 const patternResource = requiredResource('pattern', 'tile_set.cpp:1359', 'INVALID_TILESET_PATTERN');
 
+const negativePatternIndex = (index: string): string =>
+  `Pattern index ${index} must be non-negative: TileSet::_set fills patterns with ` +
+  '`for (int i = patterns.size(); i <= pattern_index; i++)` (tile_set.cpp:3997), ' +
+  'which adds nothing for a negative index, and still reports success';
+
 /**
  * `pattern_<n>`: a `TileMapPattern` slot keyed by its index (tile_set.cpp:4230). A
  * negative index is dropped silently: the fill loop `for (int i = patterns.size();
@@ -108,17 +113,14 @@ export const patternValidator: PropertyValidator = accepts((key, value, line) =>
   const match = PATTERN_KEY.exec(key);
   if (!match) return unknownKey(key, line, 'pattern', 'INVALID_TILESET_PATTERN_KEY');
   // `int pattern_index = ….to_int()` (:3996).
-  const index = stringToInt(match[1]!);
-  if (index < 0) {
-    return keyShapeError(
-      key,
-      line,
-      `Pattern index ${writtenIndex(match[1]!, index)} must be non-negative: TileSet::_set fills patterns with ` +
-        '`for (int i = patterns.size(); i <= pattern_index; i++)` (tile_set.cpp:3997), ' +
-        'which adds nothing for a negative index, and still reports success',
-      'INVALID_TILESET_PATTERN_INDEX'
-    );
-  }
+  const negative = negativeIndexError(
+    match[1]!,
+    key,
+    line,
+    negativePatternIndex,
+    'INVALID_TILESET_PATTERN_INDEX'
+  );
+  if (negative) return negative;
   return patternResource(key, value, line);
 }, 'pattern_<n> = SubResource("id") naming a TileMapPattern');
 patternValidator.grounding = { kind: 'enforced', cite: 'tile_set.cpp:3997, tile_set.cpp:1359' };

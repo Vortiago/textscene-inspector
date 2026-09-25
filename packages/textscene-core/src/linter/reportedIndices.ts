@@ -1,6 +1,16 @@
-/** The indices of an indexed family that one diagnostic names: which, how many, and how spelled. */
+/**
+ * The indices of an indexed family that one diagnostic names: which, how many, and how spelled, and
+ * the error that refuses a negative one.
+ */
 
-import { IS_VALID_INT_RE, visitIndexedKeys, type IndexParse } from '../godot/index.js';
+import {
+  IS_VALID_INT_RE,
+  stringToInt,
+  visitIndexedKeys,
+  type IndexParse,
+} from '../godot/index.js';
+import type { ParseError } from './types.js';
+import { keyShapeError } from './validators/propertyError.js';
 
 /**
  * A `*_count` has no ceiling, so one diagnostic per index can exceed the spread argument limit and
@@ -43,6 +53,23 @@ export function writtenIndex(text: string, stored: ResolvedIndex): string {
   const isPlain =
     parts.length === positions.length && parts.every((part, at) => spells(part, positions[at]!));
   return isPlain ? text : `${text} (stored as ${positions.join('/')})`;
+}
+
+/**
+ * The key-shape error for an index text that `to_int()` stores below zero, or null. The index is
+ * read into an `int`, so `a-1` is -1 (ustring.cpp:2291-2292) and `2147483648` wraps to -2147483648.
+ * `message` receives the index as {@link writtenIndex} spells it.
+ */
+export function negativeIndexError(
+  indexText: string,
+  key: string,
+  line: number,
+  message: (index: string) => string,
+  code: string
+): ParseError | null {
+  const index = stringToInt(indexText);
+  if (index < 0) return keyShapeError(key, line, message(writtenIndex(indexText, index)), code);
+  return null;
 }
 
 /** Ascending position by position. A plain number allocates nothing: a sort compares n log n pairs. */

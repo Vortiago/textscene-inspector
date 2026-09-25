@@ -8,6 +8,7 @@ import {
   indicesPastCount,
   listIndices,
   listWrittenIndices,
+  negativeIndexError,
   unsatisfiedIndices,
   writtenIndex,
 } from './reportedIndices.js';
@@ -127,6 +128,35 @@ describe('writtenIndex', () => {
 
   it('names a nested key as written where both halves spell their index', () => {
     expect(writtenIndex('00/5', [0, 5])).toBe('00/5');
+  });
+});
+
+describe('negativeIndexError', () => {
+  const message = (index: string): string => `Index ${index} is negative`;
+
+  it('returns null for an index Godot stores at or above zero', () => {
+    expect(negativeIndexError('0', 'item_0/text', 3, message, 'NEGATIVE')).toBeNull();
+  });
+
+  it('refuses the key of a negative index, naming it as written', () => {
+    expect(negativeIndexError('-2', 'item_-2/text', 3, message, 'NEGATIVE')).toEqual({
+      severity: 'error',
+      message: 'Index -2 is negative',
+      line: 3,
+      column: 'item_-2/text'.length + 3,
+      code: 'NEGATIVE',
+      keyVerdict: true,
+    });
+  });
+
+  it('refuses a text the int wraps below zero, naming what Godot stores', () => {
+    const error = negativeIndexError('2147483648', 'item_2147483648/text', 1, message, 'NEGATIVE');
+    expect(error?.message).toBe('Index 2147483648 (stored as -2147483648) is negative');
+  });
+
+  it('reads the index as to_int does, so a sign after a non-digit counts', () => {
+    const error = negativeIndexError('a-1', 'settings/a-1/bone', 1, message, 'NEGATIVE');
+    expect(error?.message).toBe('Index a-1 (stored as -1) is negative');
   });
 });
 

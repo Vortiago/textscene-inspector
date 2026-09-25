@@ -12,8 +12,8 @@ import { indexedFamilyValidator } from '../../../../linter/validators/indexedFam
 import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
 import { settingCount } from '../shared/settingCount.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
-import { writtenIndex } from '../../../../linter/reportedIndices.js';
+import { indexedKeyRegex } from '../../../../godot/index.js';
+import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 /**
  * `BoneTwistDisperser3D::DisperseMode`, bone_twist_disperser_3d.h:41-45, in the
@@ -185,23 +185,6 @@ const flatFamily = indexedFamilyValidator({
 const JOINT_KEY_RE = indexedKeyRegex('^settings/(#)/joints/(#)/([^/]+)(?:/.*)?$', 'to_int');
 
 /**
- * The negative-index error for an index `_set` stores below zero, read as it reads it (:37, :66):
- * `a-1` is -1 (ustring.cpp:2291-2292) and `2147483648` wraps to -2147483648 in the `int`, and the
- * `ERR_FAIL_INDEX_V` beside each parse refuses it.
- */
-function negativeIndexError(
-  indexText: string,
-  key: string,
-  line: number,
-  message: (index: string) => string,
-  code: string
-) {
-  const index = stringToInt(indexText);
-  if (index < 0) return keyShapeError(key, line, message(writtenIndex(indexText, index)), code);
-  return null;
-}
-
-/**
  * The whole `settings/` family. The nested `joints/<j>/<leaf>` shape is handled here, and everything
  * else goes to `flatFamily`, which owns the index parse, the negative-index refusal and the
  * unknown-leaf message for the common shape.
@@ -213,6 +196,8 @@ const settingValidator = accepts((key, value, line) => {
   const unknown = () =>
     keyShapeError(key, line, `Unknown setting property: "${key}"`, UNKNOWN_SETTING_CODE);
 
+  // `_set` reads each index with a bare `to_int` (:37, :66), and the `ERR_FAIL_INDEX_V` beside each
+  // parse refuses a negative one.
   const negativeSetting = negativeIndexError(
     match[1] ?? '',
     key,
