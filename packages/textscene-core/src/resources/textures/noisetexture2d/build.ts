@@ -8,7 +8,6 @@
 import * as THREE from 'three';
 import { IMAGE_MAX_PIXELS } from '../../../godot/index.js';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
-import { unlessAllocationFails } from '../pixelAllocation';
 import type { Gradient } from '../gradienttexture2d/types';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import type { NoiseTexture2DData } from './types';
@@ -44,8 +43,8 @@ export function noiseTextureFits({
 /**
  * The whole pipeline as a `THREE.DataTexture`, written bottom-up: `flipY` skips a
  * typed-array source, and every UV path assumes a file texture's flipY layout. Null
- * for a size {@link noiseTextureFits} refuses, or one the tab cannot allocate, so the
- * previewer draws no texture.
+ * for a size {@link noiseTextureFits} refuses, so the previewer draws no texture. A
+ * size the tab cannot allocate throws `RangeError`, which the shared resolver catches.
  */
 export function rasterizeNoiseTexture2D(
   tex: NoiseTexture2DData,
@@ -54,11 +53,7 @@ export function rasterizeNoiseTexture2D(
 ): THREE.DataTexture | null {
   if (!noiseTextureFits(tex)) return null;
   const { width, height } = tex;
-  const flipped = unlessAllocationFails(`[NoiseTexture2D] ${width}x${height}`, () =>
-    bottomUp(rgbaPixels(tex, noise, colorRamp), width, height)
-  );
-  if (flipped === null) return null;
-
+  const flipped = bottomUp(rgbaPixels(tex, noise, colorRamp), width, height);
   const texture = new THREE.DataTexture(flipped, width, height, THREE.RGBAFormat);
   // A normal map carries directions, not colour, and sRGB would bend every normal.
   // Godot marks the same distinction with its `srgb` import flag.

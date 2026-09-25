@@ -13,7 +13,6 @@ import {
 } from '../resolveProceduralSubResource';
 import { decodeGradientTexture2D, resolveGradient } from './decode';
 import { rasterizeGradientTexture2D } from './build';
-import { unlessAllocationFails } from '../pixelAllocation';
 
 export function resolveGradientTexture2D(
   ref: string | undefined,
@@ -24,7 +23,7 @@ export function resolveGradientTexture2D(
 
 /**
  * Texture properties and the table their `gradient` reference resolves in, to pixels. Null with no
- * gradient, and for a size the tab cannot allocate: Godot's 16384² ceiling is 1 GiB of RGBA8.
+ * gradient.
  */
 function rasterize(
   properties: Record<string, string>,
@@ -32,8 +31,5 @@ function rasterize(
 ): THREE.DataTexture | null {
   const gradient = resolveGradient(properties.gradient, resources);
   if (!gradient) return null;
-  const tex = decodeGradientTexture2D(properties);
-  return unlessAllocationFails(`[GradientTexture2D] ${tex.width}x${tex.height}`, () =>
-    rasterizeGradientTexture2D(tex, gradient)
-  );
+  return rasterizeGradientTexture2D(decodeGradientTexture2D(properties), gradient);
 }
