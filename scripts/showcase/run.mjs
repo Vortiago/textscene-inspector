@@ -9,7 +9,7 @@
  */
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
-import { readFixtureLookup } from './fixtureManifest.mjs';
+import { readFixtureLookup } from '../fixtureManifest.mjs';
 
 const fileForLabel = readFixtureLookup();
 

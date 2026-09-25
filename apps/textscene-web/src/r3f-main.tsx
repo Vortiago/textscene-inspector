@@ -31,6 +31,9 @@ import { useUploadError } from './useUploadError';
 import { Toolbar } from './R3FToolbar';
 import styles from './r3f-main.module.css';
 
+/** The site mirrors exactly the scenes it lists, so an empty catalog means no mirror. */
+const HAS_FIXTURES_MIRROR = fixtures.length > 0;
+
 export function R3FApp() {
   const { sourcePane, toggleVisible: toggleSourcePane, onSplitterMouseDown } = useSourcePane();
 
@@ -49,7 +52,10 @@ export function R3FApp() {
 
   // One provider, bus and loader for the app's lifetime, so an uploaded texture survives a
   // fixture switch.
-  const pipeline = useMemo(() => createResourcePipeline(new WebResourceProvider()), []);
+  const pipeline = useMemo(
+    () => createResourcePipeline(new WebResourceProvider({ hasFixturesMirror: HAS_FIXTURES_MIRROR })),
+    []
+  );
   const { provider, loader } = pipeline;
 
   // Each vendored demo project keeps its own res:// namespace. The root switches at the
@@ -275,7 +281,8 @@ export function R3FApp() {
             onResourceUpload={handleResourceUpload}
             onResourceRemove={handleResourceRemove}
             onMissingPathsChange={handleMissingPathsChange}
-            onOpenSubScene={handleOpenSubScene}
+            // Opening a sub-scene loads it from the mirror, so without one the ⤢ button goes.
+            onOpenSubScene={HAS_FIXTURES_MIRROR ? handleOpenSubScene : undefined}
             initialActiveCameraPath={initialActiveCameraPath}
             toolbar={
               <Toolbar

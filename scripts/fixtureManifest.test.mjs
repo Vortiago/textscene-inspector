@@ -1,41 +1,44 @@
 /**
- * The showcase's reader of the generated fixtures manifest: a pure parse of the source text,
- * and a read that resolves from the repo root rather than the working directory.
+ * The Node-side reader of the generated scene manifest: a pure parse of the source text, and
+ * a read that resolves from the repo root rather than the working directory.
  */
-
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
-import { parseFixtureManifest, readFixtureLookup } from './fixtureManifest.mjs';
+import { parseFixtureManifest, readFixtureLookup, readFixtureManifest } from './fixtureManifest.mjs';
 
-/** The shape `pnpm generate:fixtures` writes. */
-const GENERATED = `export interface Fixture {
-  name: string;
-  file: string;
-}
+describe('parseFixtureManifest', () => {
+  it('reads the JSON array the generator writes', () => {
+    const source = `export interface Fixture { name: string }
 
 export const fixtures: Fixture[] = [
-  {
-    "name": "Child_cube",
-    "file": "child_cube.tscn",
-    "category": "Other"
-  }
+  { "name": "Plane", "file": "unit-plane-mesh.tscn", "category": "Unit" }
 ];
 `;
 
-describe('parseFixtureManifest', () => {
-  it('reads the entries of the generated array', () => {
-    expect(parseFixtureManifest(GENERATED)).toEqual([
-      { name: 'Child_cube', file: 'child_cube.tscn', category: 'Other' },
+    expect(parseFixtureManifest(source)).toEqual([
+      { name: 'Plane', file: 'unit-plane-mesh.tscn', category: 'Unit' },
     ]);
   });
 
-  it('reads no entries from a source that declares no fixtures array', () => {
-    expect(parseFixtureManifest('export const other = [];\n')).toEqual([]);
+  it('reads an empty manifest', () => {
+    expect(parseFixtureManifest('export const fixtures: Fixture[] = [];')).toEqual([]);
   });
 
   it('throws on an array that is not JSON, rather than guessing its entries', () => {
     expect(() => parseFixtureManifest("export const fixtures = [{ name: 'x' }];")).toThrow(SyntaxError);
+  });
+
+  it('throws on a file with no fixtures array', () => {
+    expect(() => parseFixtureManifest('export const scenes = [];')).toThrow(
+      'expected `export const fixtures = [...]`'
+    );
+  });
+});
+
+describe('readFixtureManifest', () => {
+  it('reads the committed manifest', () => {
+    expect(readFixtureManifest().some((f) => f.file === 'unit-plane-mesh.tscn')).toBe(true);
   });
 });
 

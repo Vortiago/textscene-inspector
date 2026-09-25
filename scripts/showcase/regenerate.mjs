@@ -15,7 +15,7 @@ import {
 } from '../visual/previewServer.mjs';
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
-import { readFixtureLookup } from './fixtureManifest.mjs';
+import { readFixtureLookup } from '../fixtureManifest.mjs';
 
 // A fixed, uncommon port gives the URL without parsing stdout. `assertPortFree` names
 // SHOWCASE_PORT as the override, so the port reads it.
