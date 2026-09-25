@@ -1,16 +1,47 @@
 /**
- * Resolves an AnimationPlayer's `root_node` to the scene path of its Animation root, which every
- * Track NodePath resolves from (ADR-0011). The walk is Godot's `get_node`, so `..` climbs one node
- * and a path above the scene root reaches nothing.
+ * Resolves an AnimationPlayer's `root_node`, and each Track from it, to scene paths (ADR-0011). Both
+ * walk as `get_node_or_null` does: `_update_caches` reads the root from the player
+ * (animation_mixer.cpp:661) and each Track from that root (:714). A `%Name` segment reads the
+ * owner's unique-name table.
  */
 
 import { resolveRelativePath } from '../../../utils/nodePath';
 import { extractNodePathInner } from './animationResolver';
 
-/** `root_node`'s default: the player's parent. */
-const DEFAULT_ROOT_NODE = '..';
+/**
+ * An absolute path measures from the SceneTree root (node.cpp:1904-1909), which a preview has no
+ * counterpart for, so it reaches nothing here.
+ */
+function walkFrom(
+  base: string,
+  path: string,
+  uniquePaths?: ReadonlyMap<string, string>
+): string | null {
+  if (path.startsWith('/')) return null;
+  return resolveRelativePath(base, path, uniquePaths);
+}
 
-export function resolveAnimationRootPath(playerPath: string, rootNode: string): string | null {
-  const path = rootNode ? (extractNodePathInner(rootNode) ?? rootNode).trim() : DEFAULT_ROOT_NODE;
-  return resolveRelativePath(playerPath, path);
+/**
+ * The Animation root's scene path, or `null` when `root_node` reaches nothing. An empty path does:
+ * `get_node_or_null` refuses it (node.cpp:1894), and the mixer then builds no caches
+ * (animation_mixer.cpp:662-666). The parser supplies the `NodePath("..")` default for an absent
+ * property.
+ */
+export function resolveAnimationRootPath(
+  playerPath: string,
+  rootNode: string,
+  uniquePaths?: ReadonlyMap<string, string>
+): string | null {
+  const path = (extractNodePathInner(rootNode) ?? rootNode).trim();
+  if (path === '') return null;
+  return walkFrom(playerPath, path, uniquePaths);
+}
+
+/** A Track's target as a scene path, or `null` when the walk reaches nothing. */
+export function resolveTrackScenePath(
+  rootPath: string,
+  targetPath: string,
+  uniquePaths?: ReadonlyMap<string, string>
+): string | null {
+  return walkFrom(rootPath, targetPath, uniquePaths);
 }

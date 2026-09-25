@@ -20,6 +20,8 @@ import {
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import { fixturesDir } from '../../../parser/testing/parserKit';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
+import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
 
 import '../../../r3f/nodes/index';
 
@@ -62,13 +64,16 @@ const PLAYER_BODY = 'libraries/ = SubResource("Lib")';
 async function playHalfway(tscn: string, playerPath: string): Promise<THREE.Object3D> {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
+  // The scene graph gives the `%Name` table a track resolves through.
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="3d" loader={fake.loader} scene={parsed} selectedPath={playerPath}>
-      <AnimationTransportProvider>
-        <Capture />
-        <NodeDispatcher nodes={parsed.nodes} />
-      </AnimationTransportProvider>
-    </SceneStack>
+    <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(parsed), panelId: 'p' }}>
+      <SceneStack workspace="3d" loader={fake.loader} scene={parsed} selectedPath={playerPath}>
+        <AnimationTransportProvider>
+          <Capture />
+          <NodeDispatcher nodes={parsed.nodes} />
+        </AnimationTransportProvider>
+      </SceneStack>
+    </HierarchyProvider>
   );
   mounted.push(renderer);
   await ReactThreeTestRenderer.act(async () => transport.play());
@@ -197,5 +202,45 @@ ${PLAYER_BODY}
     const root = await playHalfway(tscn, 'Scene/Rig/AnimationPlayer');
     expect(objectAt(root, 'Lamp').position.x).toBeCloseTo(1, 1);
     expect(objectAt(root, 'Rig').position.x).toBe(0);
+  });
+
+  it('drives the node a %Name track names, through the owner’s unique-name table', async () => {
+    const root = await playHalfway(
+      `[gd_scene format=3]
+
+${moveAnimation('%Lamp')}
+[node name="Root" type="Node3D"]
+
+[node name="Props" type="Node3D" parent="."]
+
+[node name="Lamp" type="Node3D" parent="Props"]
+unique_name_in_owner = true
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+${PLAYER_BODY}
+`,
+      'Root/AnimationPlayer'
+    );
+    expect(objectAt(root, 'Props', 'Lamp').position.x).toBeCloseTo(5, 1);
+  });
+
+  it('drives nothing through an empty root_node, which Godot refuses', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const root = await playHalfway(
+      `[gd_scene format=3]
+
+${moveAnimation('Target')}
+[node name="Root" type="Node3D"]
+
+[node name="Target" type="Node3D" parent="."]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+root_node = NodePath("")
+${PLAYER_BODY}
+`,
+      'Root/AnimationPlayer'
+    );
+    expect(objectAt(root, 'Target').position.x).toBe(0);
+    warn.mockRestore();
   });
 });

@@ -36,9 +36,10 @@ import {
   trackTargetPaths,
 } from '../../../r3f/animation/trackTargets';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
-import { resolveRelativePath } from '../../../utils/nodePath';
+import { useUniqueNameClaims } from '../../../r3f/contexts/ViewportTextureContext';
+import { uniqueNameLivePaths } from '../../../utils/uniqueNames';
 import { resolveAnimations } from './animationResolver';
-import { resolveAnimationRootPath } from './animationRoot';
+import { resolveAnimationRootPath, resolveTrackScenePath } from './animationRoot';
 import { buildClip, loopSettingsFor } from './clipBuilder';
 import {
   sampleSteppedValue,
@@ -88,19 +89,26 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   );
 
   // The scene path `root_node` names from this player, or null when it leaves the scene.
+  // A `%Name` segment reads the table of the node the walk stands on (node.cpp:1930-1938): the
+  // player for `root_node`, the Animation root for each Track.
+  const playerNames = useUniqueNamePaths(nodePath);
   const rootPath = useMemo(
-    () => (nodePath === null ? null : resolveAnimationRootPath(nodePath, properties.root_node)),
-    [nodePath, properties.root_node]
+    () =>
+      nodePath === null ? null : resolveAnimationRootPath(nodePath, properties.root_node, playerNames),
+    [nodePath, properties.root_node, playerNames]
+  );
+  const rootNames = useUniqueNamePaths(rootPath);
+  const scenePathOf = useCallback(
+    (targetPath: string) =>
+      rootPath === null ? null : resolveTrackScenePath(rootPath, targetPath, rootNames),
+    [rootPath, rootNames]
   );
 
   // Clip templates, each track named by its target's scene path. `bind` turns them into clips that
   // move the exact objects. GLBSceneRoot uses ready-made glTF clips.
   const clips = useMemo<AnimationClip[]>(
-    () =>
-      animations.map((a) =>
-        buildClip(a, (targetPath) => (rootPath === null ? null : resolveRelativePath(rootPath, targetPath)))
-      ),
-    [animations, rootPath]
+    () => animations.map((a) => buildClip(a, scenePathOf)),
+    [animations, scenePathOf]
   );
 
   const durations = useMemo(
@@ -191,17 +199,17 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   // The selected clip's value-push tracks with target paths resolved once
   // (the player path / root_node / track target are constant for the clip).
   const valueTargets = useMemo(() => {
-    if (!isDriving || rootPath === null) return null;
+    if (!isDriving) return null;
     const clip = animations.find((a) => a.name === transport.selectedClip);
     if (!clip) return null;
     const targets = clip.tracks
       .filter((t) => t.type === 'value' && Object.hasOwn(VALUE_PUSH_PROPERTIES, t.property))
       .flatMap((t) => {
-        const path = resolveRelativePath(rootPath, t.targetPath);
+        const path = scenePathOf(t.targetPath);
         return path === null ? [] : [{ path, property: t.property, keys: t.keys, interp: t.interp }];
       });
     return targets.length > 0 ? { clipName: clip.name, targets } : null;
-  }, [isDriving, rootPath, animations, transport.selectedClip]);
+  }, [isDriving, scenePathOf, animations, transport.selectedClip]);
 
   // Owned (path, property) pairs currently driven, keyed by `${path}:${property}`.
   const ownedValues = useRef<Map<string, { path: string; property: string }>>(new Map());
@@ -258,6 +266,12 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
       {children}
     </group>
   );
+}
+
+/** The `%Name` table seen from the node at `path`, as the live paths the dispatcher registers. */
+function useUniqueNamePaths(path: string | null): ReadonlyMap<string, string> | undefined {
+  const claims = useUniqueNameClaims(path);
+  return useMemo(() => (claims ? uniqueNameLivePaths(claims) : undefined), [claims]);
 }
 
 /**

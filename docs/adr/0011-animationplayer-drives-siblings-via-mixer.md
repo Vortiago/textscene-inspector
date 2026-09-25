@@ -27,6 +27,11 @@ Rejected: a central animation-value context that computes per-frame values and p
 >   template names each Track by its target's scene path (`Root/Right/Arm.position`). A path that
 >   climbs above the scene root reaches nothing, and the player drops it with a warning. A `..`
 >   sibling of the Animation root binds like any other node, and the root does not move.
+> - The walk follows `_update_caches` (`animation_mixer.cpp:661-666`, `:689`, `:714`). An empty
+>   `root_node` reaches nothing, so the player drives nothing (`node.cpp:1894`). An absolute path
+>   measures from the SceneTree root, which a preview has no counterpart for, so it reaches
+>   nothing. A `%Name` segment reads the owner's unique-name table, the player's for `root_node`
+>   and the Animation root's for a Track. A Track with `enabled = false` is skipped.
 > - Each driver calls `bind()` when it builds a mixer, the player's own or an AnimationTree's
 >   (ADR-0019). So `bind()` finds a target that loaded late. `trackTargets.ts` finds the object the
 >   dispatcher registered at that path: the named group inside its wrapper. It reaches content that

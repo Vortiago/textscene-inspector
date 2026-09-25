@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
-import { hasUnresolvableClips, resolveAnimations } from './animationResolver';
+import { hasUnresolvableClips, resolveAnimations, resolveAudioTrackPaths } from './animationResolver';
 import type { AnimationLibraryRef, AnimationPlayerProperties } from './types';
 import { TscnParser } from '../../../parser/TscnParser';
 
@@ -638,5 +638,46 @@ describe('hasUnresolvableClips — the padding Godot discards', () => {
 
   it('still says no for a library holding only SubResource clips', () => {
     expect(hasUnresolvableClips(DEFAULT_LIB, libAt('{\n"walk": SubResource("Anim_walk")\n}'))).toBe(false);
+  });
+});
+
+describe('resolveAnimations — a disabled track', () => {
+  // `Track::enabled` defaults to true (animation.h:114), `tracks/N/enabled` sets it
+  // (animation.cpp:156-157), and `_update_caches` skips a disabled track (animation_mixer.cpp:689).
+  function withTrackEnabled(enabled: string | undefined): TscnInternalResource[] {
+    const track: Record<string, string> = {
+      length: '1.0',
+      'tracks/0/type': '"value"',
+      'tracks/0/path': 'NodePath("Circle:position")',
+      'tracks/0/keys':
+        '{\n"times": PackedFloat32Array(0, 1),\n"values": [Vector3(0, 0, 0), Vector3(1, 0, 0)]\n}',
+      'tracks/1/type': '"audio"',
+      'tracks/1/path': 'NodePath("Speaker")',
+      'tracks/1/keys': '{\n"clips": [],\n"times": PackedFloat32Array()\n}',
+    };
+    if (enabled !== undefined) {
+      track['tracks/0/enabled'] = enabled;
+      track['tracks/1/enabled'] = enabled;
+    }
+    return [
+      res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
+      res('A', 'Animation', track),
+    ];
+  }
+
+  it('drops a track whose enabled is false', () => {
+    expect(resolveAnimations(DEFAULT_LIB, withTrackEnabled('false'))[0]!.tracks).toHaveLength(0);
+  });
+
+  it('keeps a track whose enabled is true', () => {
+    expect(resolveAnimations(DEFAULT_LIB, withTrackEnabled('true'))[0]!.tracks).toHaveLength(1);
+  });
+
+  it('keeps a track that omits enabled, which defaults to true', () => {
+    expect(resolveAnimations(DEFAULT_LIB, withTrackEnabled(undefined))[0]!.tracks).toHaveLength(1);
+  });
+
+  it('lists no audio target for a disabled audio track', () => {
+    expect(resolveAudioTrackPaths(DEFAULT_LIB, withTrackEnabled('false'))).toEqual([]);
   });
 });
