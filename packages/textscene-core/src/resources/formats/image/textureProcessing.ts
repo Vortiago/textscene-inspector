@@ -56,9 +56,9 @@ export async function createTextureFromBuffer(
           loadedTexture.colorSpace = THREE.SRGBColorSpace;
           // Wrapping stays at three's clamp-to-edge default on purpose. One
           // decoded entry is cached per path and shared, but Godot gives it two
-          // opposite defaults — `BaseMaterial3D` tiles (`FLAG_USE_TEXTURE_REPEAT`),
-          // a `CanvasItem` clamps — so neither belongs on the shared entry. Each
-          // consumer states its own at bind time (`applyTextureState.ts`, ADR-0042).
+          // opposite defaults: `BaseMaterial3D` tiles (`FLAG_USE_TEXTURE_REPEAT`)
+          // and a `CanvasItem` clamps. So neither belongs on the shared entry, and
+          // each consumer states its own at bind time (ADR-0042).
           resolve(loadedTexture);
         },
         undefined,

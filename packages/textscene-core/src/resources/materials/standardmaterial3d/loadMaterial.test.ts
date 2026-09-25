@@ -21,7 +21,7 @@ import {
 /**
  * A texture as the LOADER hands it out: tagged `SRGBColorSpace` before any slot
  * is known, wrapping left at three's clamp default. A default material asks for
- * Repeat, so a slot never gets this object straight back — it binds a
+ * Repeat, so a slot never gets this object straight back: it binds a
  * source-shared clone, and `.source` identity is what proves the decoded image
  * reached the slot below.
  */

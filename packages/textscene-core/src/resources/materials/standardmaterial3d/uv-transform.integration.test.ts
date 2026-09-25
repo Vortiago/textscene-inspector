@@ -61,9 +61,9 @@ describe('UV transform integration — shared textures', () => {
       expect(material.map!.repeat.y).toBeCloseTo(scales[index]!, 5);
     }
 
-    // Six clones. Even the identity scale clones now: a default material asks
-    // for Repeat and the loader hands a clamp entry, so wrapping diverges for
-    // every material regardless of its UV transform.
+    // Six clones, the identity scale included: a default material asks for
+    // Repeat and the loader hands a clamp entry, so wrapping diverges for every
+    // material whatever its UV transform.
     expect(new Set(materials.map((m) => m.map)).size).toBe(6);
     expect(materials[2]!.map).not.toBe(shared);
     expect(materials[2]!.map!.source).toBe(shared.source);

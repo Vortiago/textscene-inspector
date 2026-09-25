@@ -169,11 +169,10 @@ describe('applyTextureState', () => {
 
   describe('texture_repeat', () => {
     it('clones a clamped arrival to Repeat for the default, Godot\'s repeat', () => {
-      // The loader ships three's clamp default; a default material asks for
-      // Repeat (`BaseMaterial3D` FLAG_USE_TEXTURE_REPEAT = true), so a clamped
-      // shared entry diverges on wrapping and the binding clones to tile it —
-      // the terrain-stripes guard. The shared entry stays clamp for a 2D
-      // consumer of the same path.
+      // The loader ships three's clamp default. A default material asks for
+      // Repeat (`BaseMaterial3D` FLAG_USE_TEXTURE_REPEAT = true), so the binding
+      // clones to tile it: the terrain-stripes guard. The shared entry stays
+      // clamp for a 2D consumer of the same path.
       const texture = new THREE.Texture();
       const result = applyTextureState(texture, state({}));
 
@@ -191,7 +190,7 @@ describe('applyTextureState', () => {
       expect(result.wrapT).toBe(THREE.RepeatWrapping);
     });
 
-    it('shares an already-Repeat texture for the default — nothing diverges', () => {
+    it('shares an already-Repeat texture for the default, as nothing diverges', () => {
       const texture = new THREE.Texture();
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
@@ -201,7 +200,7 @@ describe('applyTextureState', () => {
 
     it('shares a clamped texture when a material turns repeat OFF', () => {
       // Clamp is what the entry already carries, so `repeat = false` asks for
-      // nothing — the loader's own texture comes straight back.
+      // nothing: the loader's own texture comes straight back.
       const texture = new THREE.Texture();
       expect(applyTextureState(texture, state({ repeat: false }))).toBe(texture);
     });

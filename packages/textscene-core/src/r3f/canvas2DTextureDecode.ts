@@ -53,11 +53,11 @@ export { pinNoColorSpace };
  * undecoded view (`undecodedTexture.ts`), named for the 2D-canvas reason this
  * module's own doc gives, and wrapped the way the canvas wraps.
  *
- * A canvas item wants clamp-to-edge, which is what the shared cache entry
- * already carries: the loader leaves wrapping at three's default and each
- * consumer states its own at bind time (see `textureProcessing.ts`). Godot's
- * canvas inherits exactly this — its `texture_repeat` defaults to
- * `TEXTURE_REPEAT_PARENT`, which resolves at the root to the VIEWPORT's default,
+ * A canvas item wants clamp-to-edge, and this hook states it rather than
+ * inheriting it. A file-loaded entry arrives clamped (ADR-0042), but a
+ * procedural producer can hand over Repeat (a seamless `NoiseTexture2D`), so
+ * the force below is load-bearing. Godot's canvas clamps by default: its
+ * `texture_repeat` defaults to `TEXTURE_REPEAT_PARENT`, which resolves at the root to the VIEWPORT's default,
  * and that is `DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_DISABLED`
  * (`scene/main/viewport.h:420`, applied at `scene/main/viewport.cpp:4009`; the
  * resolution walk is `CanvasItem::_refresh_texture_repeat_cache`,

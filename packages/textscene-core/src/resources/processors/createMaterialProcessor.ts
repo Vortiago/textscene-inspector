@@ -19,7 +19,7 @@ import {
   type TextureLoaderFn,
 } from '../materials/standardmaterial3d/loadMaterial';
 import { parseSubResourcePath } from '../subResourcePath';
-import { releaseBoundTexture } from '../materials/standardmaterial3d/textureBinding';
+import { releaseOwnedTextures } from '../materials/standardmaterial3d/textureBinding';
 
 /**
  * Create a material processor that handles loading and caching materials.
@@ -60,11 +60,6 @@ export function createMaterialProcessor(
  */
 function disposeMaterialAndOwnedTextures(material: THREE.Material): void {
   releaseProceduralTextures(material);
-  // Walk the material's own values rather than a hand-listed set of slot names:
-  // three assigns every map in its constructor, so this cannot go stale the day
-  // a new one is wired, and the ownership tag is the real discriminator anyway.
-  for (const value of Object.values(material)) {
-    if (value instanceof THREE.Texture) releaseBoundTexture(value);
-  }
+  releaseOwnedTextures(material);
   material.dispose();
 }

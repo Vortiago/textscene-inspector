@@ -130,7 +130,7 @@ describe('createTextureFromBuffer', () => {
   it('leaves wrapping at three\'s clamp-to-edge default on both axes', async () => {
     // The loader ships the shared cache entry with three's own default, NOT
     // Repeat. Godot has two defaults for one image (`BaseMaterial3D` repeat,
-    // `CanvasItem` clamp), so neither belongs on the shared entry — each
+    // `CanvasItem` clamp), so neither belongs on the shared entry. Each
     // consumer states its own at bind time (`applyTextureState.ts`).
     const texture = await createTextureFromBuffer(data, 'image/png');
     expect(texture.wrapS).toBe(THREE.ClampToEdgeWrapping);

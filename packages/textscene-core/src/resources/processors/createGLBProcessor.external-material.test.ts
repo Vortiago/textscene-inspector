@@ -12,6 +12,7 @@ import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import { createGLBProcessor } from './createGLBProcessor';
 import { initGlbModules } from '../formats/glb/glbProcessing';
+import { applyTextureState, isMaterialOwnedTexture } from '../textures/applyTextureState';
 
 const GLTF_PATH = 'res://characters/mannequiny.gltf';
 const BLUE_PATH = 'res://materials/blue.tres';
@@ -75,14 +76,14 @@ interface Harness {
 /** Drive the processor the way the loader does, with a stub material peer-loader. */
 async function loadWith(
   files: Record<string, string>,
-  options: { materialName?: string; failMaterial?: boolean } = {}
+  options: { materialName?: string; failMaterial?: boolean; externalMap?: THREE.Texture } = {}
 ): Promise<Harness> {
   const asset = gltfWithNamedMaterial(options.materialName ?? GLTF_MATERIAL);
   const fileEventBus = new FileEventBus({
     loadResource: vi.fn(async (path: string) => (path === GLTF_PATH ? asset : (files[path] ?? null))),
   });
   const eventBus = new ResourceEventBus();
-  const external = new THREE.MeshStandardMaterial({ color: 0x2585fa });
+  const external = new THREE.MeshStandardMaterial({ color: 0x2585fa, map: options.externalMap ?? null });
   const loadMaterial = vi.fn(async () => (options.failMaterial ? null : external));
   const processor = createGLBProcessor(fileEventBus, eventBus, loadMaterial);
 
@@ -144,6 +145,44 @@ describe('createGLBProcessor — import sidecar external materials', () => {
     external.addEventListener('dispose', disposed);
     expect(surfaceMaterial(root)).not.toBe(external);
 
+    clearTemplate();
+    expect(disposed).not.toHaveBeenCalled();
+  });
+
+  it('gives the template its own copy of a texture the external material owns', async () => {
+    // A binding clone belongs to the `.tres` material, and the material processor
+    // frees it on eviction, so the template must neither sample it nor free it.
+    const shared = new THREE.Texture();
+    const owned = applyTextureState(shared, { colorSpace: THREE.SRGBColorSpace });
+    expect(isMaterialOwnedTexture(owned)).toBe(true);
+    const { root, clearTemplate } = await loadWith(
+      { [`${GLTF_PATH}.import`]: SIDECAR },
+      { externalMap: owned }
+    );
+
+    const map = surfaceMaterial(root).map!;
+    expect(map).not.toBe(owned);
+    expect(map.source).toBe(shared.source);
+    const ownedDisposed = vi.fn();
+    const copyDisposed = vi.fn();
+    owned.addEventListener('dispose', ownedDisposed);
+    map.addEventListener('dispose', copyDisposed);
+
+    clearTemplate();
+    expect(copyDisposed).toHaveBeenCalledTimes(1);
+    expect(ownedDisposed).not.toHaveBeenCalled();
+  });
+
+  it('keeps sharing a loader cache entry the external material binds as is', async () => {
+    const shared = new THREE.Texture();
+    shared.wrapS = shared.wrapT = THREE.RepeatWrapping;
+    const { root, clearTemplate } = await loadWith(
+      { [`${GLTF_PATH}.import`]: SIDECAR },
+      { externalMap: shared }
+    );
+    expect(surfaceMaterial(root).map).toBe(shared);
+    const disposed = vi.fn();
+    shared.addEventListener('dispose', disposed);
     clearTemplate();
     expect(disposed).not.toHaveBeenCalled();
   });

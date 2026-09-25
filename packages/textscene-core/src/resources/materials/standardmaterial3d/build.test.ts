@@ -363,7 +363,7 @@ describe('buildStandardMaterial — texture slots', () => {
   });
 
   it('tiles a clamped arriving texture for the default material', () => {
-    // The loader ships three's clamp default; a default StandardMaterial3D asks
+    // The loader ships three's clamp default. A default StandardMaterial3D asks
     // for Repeat (Godot's `texture_repeat`), so a clamped arrival must end
     // Repeat on the map slot or a surface whose UVs leave 0..1 smears its edge
     // texel into stripes. The shared entry stays clamp for a 2D consumer.
@@ -563,12 +563,11 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
     expect(texture.repeat.x).toBe(1);
   });
 
-  it('tiles a clamped arrival even with no transform authored', () => {
-    // No `uv1_scale` means no transform, but the default material still tiles,
-    // so the map ends Repeat on a clone while the shared entry stays clamp.
+  it('adds no tiling when no transform is authored', () => {
+    // The default Repeat wrapping on a clamped arrival is covered under texture
+    // slots. This checks only that no `uv1_scale` leaves the scale at 1.
     const texture = loadedTexture();
     const material = build({}, { albedo_texture: texture });
-    expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
     expect(material.map!.repeat.x).toBe(1);
     expect(texture.repeat.x).toBe(1);
   });
@@ -594,7 +593,7 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
   it('clamps its own copy when the material turns texture_repeat off', () => {
     // A material authoring `texture_repeat = false` over a texture that already
     // tiles must diverge and clamp its own copy, or its atlas wraps to the
-    // opposite edge where Godot clamps. The loader no longer tiles an entry
+    // opposite edge where Godot clamps. The loader hands out a clamped entry
     // (ADR-0042), so the test seeds the tiled arrival directly.
     const texture = loadedTexture();
     texture.wrapS = THREE.RepeatWrapping;

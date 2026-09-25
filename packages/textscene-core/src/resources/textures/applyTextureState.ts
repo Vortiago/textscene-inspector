@@ -7,9 +7,9 @@
  * no type name. It is the shared APPLIER over an already-loaded `THREE.Texture`,
  * which is why it sits beside the texture slices rather than inside one.
  *
- * INTERNAL SEAM. Nothing outside `standardmaterial3d/textureBinding.ts` calls
- * this in production. That module knows WHICH state a Godot texture slot
- * requires; this one knows only how to make a texture carry a state it is
+ * INTERNAL SEAM. Only `standardmaterial3d/textureBinding.ts` and the panorama
+ * sky (`sky/build.ts`) call this in production. Each knows WHICH state its
+ * sampler requires; this one knows only how to make a texture carry a state it is
  * handed. Keeping the two apart is what lets the rule live in one place while
  * the mechanics stay reusable by any future material type.
  *
@@ -72,9 +72,9 @@ export interface MaterialTextureState {
    * (`flags[FLAG_USE_TEXTURE_REPEAT] = true`, mapping to `repeat_enable` on the
    * sampler). three's `Texture` defaults to clamp-to-edge instead, so a surface
    * whose UVs leave 0..1 — a large terrain, a tiled road — smears its edge texel
-   * into stripes rather than tiling. The loader no longer pre-applies Repeat
-   * (ADR-0042), so this is the consumer's stated default: it diverges from a
-   * clamped arrival in either direction. Omitted means Godot's default.
+   * into stripes rather than tiling. The loader leaves wrapping at three's clamp
+   * default (ADR-0042), so this field is the binding's only source of Repeat.
+   * Omitted means Godot's default.
    */
   repeat?: boolean;
 }
@@ -140,12 +140,9 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
 
   const filterState = godotTextureFilterState(state.filter);
   const uvDiverges = state.uv !== undefined && !isIdentity(state.uv);
-  // The loader ships three's clamp default and states nothing about repeat, so
-  // this binding's wanted wrapping is compared against what the texture actually
-  // carries — bidirectionally. Godot's default (`true`) asks for Repeat, so a
-  // clamped arrival clones to tile it (the terrain-stripes guard); an authored
-  // `false` asks for clamp, so a tiled arrival clones back. Only a texture
-  // already carrying what the binding wants stays shared.
+  // The wanted wrapping is compared with what the texture carries, since a
+  // producer may hand over either (ADR-0042). Only a texture already wrapped as
+  // the binding wants stays shared.
   const wrapping = state.repeat === false ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
   const wrapDiverges = texture.wrapS !== wrapping || texture.wrapT !== wrapping;
   // Only an AUTHORED filter can diverge. Comparing an unauthored material
@@ -168,12 +165,8 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
     cloned.repeat.set(state.uv!.scale.x, state.uv!.scale.y);
     cloned.offset.set(state.uv!.offset.x, state.uv!.offset.y);
   }
-  // A tiling transform only tiles under repeat wrapping, so a clone made for
-  // one carries it too — unless the material explicitly turned repeat off.
-  if (wrapDiverges || uvDiverges) {
-    cloned.wrapS = wrapping;
-    cloned.wrapT = wrapping;
-  }
+  cloned.wrapS = wrapping;
+  cloned.wrapT = wrapping;
   if (filterDiverges) applyTextureFilterState(cloned, filterState);
   // Pinned rather than assigned for the undecoded case: R3F reasserts
   // `SRGBColorSpace` on colour-map props every commit, so a plain write is

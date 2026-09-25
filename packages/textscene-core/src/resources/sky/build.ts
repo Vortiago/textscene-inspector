@@ -21,6 +21,8 @@ import type { SkyProperties } from './types';
 import { warn } from '../../logger';
 import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight } from './skyUniforms';
+import { applyTextureState } from '../textures/applyTextureState';
+import { releaseBoundTexture } from '../materials/standardmaterial3d/textureBinding';
 
 export type { SkyLight } from './skyUniforms';
 
@@ -42,19 +44,17 @@ export interface SkyEnvironmentInput {
 }
 
 /**
- * The panorama sky's own copy of the equirectangular texture, tiled for the
- * shader. `PANORAMA_SKY_FRAGMENT_SHADER` samples with `fract(atan(...))`, so u
- * wraps 0..1 and needs Repeat wrapping; the loader's shared entry is clamp
- * (three's default), so the sky builds a source-shared Repeat clone rather than
- * mutating the entry a 2D consumer shares. The caller disposes it with the
- * environment. Returns null for a sky with no panorama.
+ * The panorama as the sky shader samples it. `PANORAMA_SKY_FRAGMENT_SHADER`
+ * wraps u with `fract(atan(...))`, so it states Repeat (ADR-0042). The result is
+ * a clone only when the arrival diverges, and `releaseBoundTexture` frees it
+ * only then. Returns null for a sky with no panorama.
  */
 export function skyPanoramaTexture(panorama?: THREE.Texture | null): THREE.Texture | null {
   if (!panorama) return null;
-  const tiled = panorama.clone();
-  tiled.wrapS = THREE.RepeatWrapping;
-  tiled.wrapT = THREE.RepeatWrapping;
-  return tiled;
+  return applyTextureState(panorama, {
+    colorSpace: panorama.colorSpace as THREE.ColorSpace,
+    repeat: true,
+  });
 }
 
 /**
@@ -98,12 +98,14 @@ export function buildSkyEnvironment(
     warn('[Sky] could not render the sky environment', error);
     cubeTarget.dispose();
     prefiltered?.dispose();
-    geometry.dispose();
-    material.dispose();
-    tiledPanorama?.dispose();
     return null;
   } finally {
+    // The sky scene renders once, so its mesh and panorama are freed here and
+    // not held for the environment's lifetime.
     pmrem?.dispose();
+    geometry.dispose();
+    material.dispose();
+    releaseBoundTexture(tiledPanorama);
   }
 
   return {
@@ -112,9 +114,6 @@ export function buildSkyEnvironment(
     dispose: () => {
       cubeTarget.dispose();
       prefiltered.dispose();
-      geometry.dispose();
-      material.dispose();
-      tiledPanorama?.dispose();
     },
   };
 }
