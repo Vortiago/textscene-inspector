@@ -6,7 +6,6 @@ import { fileURLToPath } from 'node:url';
 export async function runComplex(delegated, args) {
   if (!delegated.length) return [];
   const sides = [args.godot ? '--godot' : null, args.ours ? '--ours' : null].filter(Boolean);
-  if (!sides.length) return [];
   console.log(`\n[recapture] ${delegated.length} image(s) owned by capture-complex.mjs — delegating`);
   const failures = [];
   for (const t of delegated) {

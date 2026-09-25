@@ -7,7 +7,6 @@
  *   node scripts/showcase/regenerate.mjs
  */
 
-import { readFileSync } from 'node:fs';
 import {
   assertPortFree,
   killPreviewGroup,
@@ -16,11 +15,11 @@ import {
 } from '../visual/previewServer.mjs';
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
+import { readFixtureLookup } from './fixtureManifest.mjs';
 
 // A fixed, uncommon port gives the URL without parsing stdout. `assertPortFree` names
 // SHOWCASE_PORT as the override, so the port reads it.
 const PORT = Number(process.env.SHOWCASE_PORT) || 4188;
-
 
 // Before the spawn: with `--strictPort` and `stdio: 'ignore'` the server fails silently on a
 // taken port, and `waitForServer` gets its 200 from the stranger, so every clip would record a
@@ -33,11 +32,7 @@ try {
   process.env.SHOWCASE_URL = baseUrl;
   console.log(`[regenerate] preview at ${baseUrl}`);
 
-  // Each scenario's fixture file comes from the generated manifest.
-  const fixturesTs = readFileSync('apps/textscene-web/src/fixtures.ts', 'utf8');
-  const arr = fixturesTs.match(/export const fixtures[^=]*=\s*(\[[\s\S]*?\]);/);
-  const FIXTURES = arr ? JSON.parse(arr[1]) : [];
-  const fileForLabel = (label) => FIXTURES.find((f) => f.name === label)?.file;
+  const fileForLabel = readFixtureLookup();
 
   const names = Object.keys(scenarios);
   console.log(`[regenerate] recording ${names.length} scenarios…`);
