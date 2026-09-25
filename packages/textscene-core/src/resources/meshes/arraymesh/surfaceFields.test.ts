@@ -92,4 +92,8 @@ describe('readName', () => {
   it('is undefined for a surface with no name', () => {
     expect(readName('{ "format": 1 }')).toBeUndefined();
   });
+
+  it('reads a hand-written StringName as its text, as the String slot converts it', () => {
+    expect(readName('{ "format": 1, "name": &"Body" }')).toBe('Body');
+  });
 });

@@ -8,9 +8,8 @@
 
 import { warn } from '../../../logger.js';
 import { parseGodotFloat } from '../../../godot/number.js';
-import { dictCallField, dictNumberField } from '../../../godot/variantParser.js';
+import { dictCallField, dictNumberField, dictStringField } from '../../../godot/variantParser.js';
 import { parseGodotInt } from '../../../godot/int.js';
-import { STRING_LITERAL_SOURCE } from '../../../godot/string.js';
 import { unquoteString } from '../../../parser/utils.js';
 
 /** A surface's declared `AABB(px, py, pz, sx, sy, sz)`: a compressed surface's position scale. */
@@ -77,9 +76,12 @@ export function readUvScale(block: string): [number, number] | undefined {
   return n ? [n[0]!, n[1]!] : undefined;
 }
 
-const NAME_RE = new RegExp(String.raw`"name"\s*:\s*(${STRING_LITERAL_SOURCE})`);
+const NAME_RE = dictStringField('name');
 
-/** A surface's `"name"`, its escapes decoded. */
+/**
+ * A surface's `"name"`, its escapes decoded. Godot writes a String (`mesh.h:314`), and a
+ * hand-written StringName converts to the same text.
+ */
 export function readName(block: string): string | undefined {
   const literal = NAME_RE.exec(block)?.[1];
   return literal === undefined ? undefined : unquoteString(literal);

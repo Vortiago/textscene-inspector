@@ -7,6 +7,7 @@
  * Every pattern below derives from one body string per literal, so no copy can diverge on padding.
  */
 import { TSCN_FLOAT_PATTERN_SOURCE } from './number.js';
+import { STRING_LITERAL_SOURCE } from './string.js';
 
 const WS = '\\s*';
 
@@ -99,6 +100,15 @@ export function dictNumberField(key: string, global = false): RegExp {
     `"${key}"${WS}:${WS}(${TSCN_FLOAT_PATTERN_SOURCE})${WS}(?=[,}])`,
     global ? 'g' : ''
   );
+}
+
+/**
+ * A field of a serialised Dictionary whose value is one string literal, `[1]` the literal with its
+ * quotes and any `&` (StringName) or `@` sigil, for the caller's unquote to strip. The value runs
+ * to its `,`/`}`, as in {@link dictNumberField}, so `"a" "b"` matches nothing instead of reading `a`.
+ */
+export function dictStringField(key: string): RegExp {
+  return new RegExp(`"${key}"${WS}:${WS}([&@]?${STRING_LITERAL_SOURCE})${WS}(?=[,}])`);
 }
 
 /**

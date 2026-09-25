@@ -9,19 +9,17 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { arrayLiteralBody, dictNumberField } from '../../../../godot/variantParser.js';
-import { STRING_LITERAL_SOURCE } from '../../../../godot/string.js';
+import {
+  arrayLiteralBody,
+  dictNumberField,
+  dictStringField,
+} from '../../../../godot/variantParser.js';
 import { unquoteStringName } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { GraphEditConnection } from './types';
 
 /** One `{...}` Dictionary block; connection entries hold only scalar fields, so no nested brace ever occurs. */
 const DICT_BLOCK_RE = /\{[^{}]*\}/g;
-
-/** A Dictionary field with a quoted string value, which may carry the StringName prefix `&"…"` (`variant_writer.cpp`). */
-function dictStringField(key: string): RegExp {
-  return new RegExp(String.raw`"${key}"\s*:\s*([&@]?${STRING_LITERAL_SOURCE})\s*(?=[,}])`);
-}
 
 const FROM_NODE_RE = dictStringField('from_node');
 const TO_NODE_RE = dictStringField('to_node');

@@ -10,6 +10,7 @@ import {
   NODE_PATH_LITERAL_ANYWHERE_RE,
   NODE_PATH_LITERAL_RE,
   dictCallField,
+  dictStringField,
   isNilLiteral,
   nodePathLiteral,
   packedArrayCallAnywhere,
@@ -144,5 +145,33 @@ describe('dictCallField', () => {
     expect(dictCallField('times', 'PackedFloat32Array').exec(value)?.[1]).toBe(
       packedArrayCallAnywhere('PackedFloat32Array').exec(value)?.[1]
     );
+  });
+});
+
+describe('dictStringField', () => {
+  it('reads the whole literal a Dictionary key holds, quotes included', () => {
+    expect(dictStringField('name').exec('{ "format": 1, "name": "Body" }')?.[1]).toBe('"Body"');
+  });
+
+  it('keeps a StringName or @ sigil inside the capture, for the unquote to strip', () => {
+    expect(dictStringField('name').exec('{ "name": &"walk", "speed": 5.0 }')?.[1]).toBe('&"walk"');
+    expect(dictStringField('name').exec('{ "name": @"walk" }')?.[1]).toBe('@"walk"');
+  });
+
+  it('runs past an escaped quote', () => {
+    expect(dictStringField('name').exec('{ "name": "say \\"hi\\"", "format": 1 }')?.[1]).toBe(
+      '"say \\"hi\\""'
+    );
+  });
+
+  it('tolerates the padding the tokenizer discards', () => {
+    expect(dictStringField('to_node').exec('{ "to_node" :\t&"B" \n}')?.[1]).toBe('&"B"');
+  });
+
+  it('matches nothing for another key, a value that is no string, or text after the literal', () => {
+    const name = dictStringField('name');
+    expect(name.exec('{ "surface_name": 1, "names": "a" }')).toBeNull();
+    expect(name.exec('{ "name": 1 }')).toBeNull();
+    expect(name.exec('{ "name": "a" "b" }')).toBeNull();
   });
 });

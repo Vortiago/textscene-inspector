@@ -6,14 +6,9 @@
  */
 
 import type { SpriteFramesAnimation, SpriteFramesData } from './types';
-import { dictNumberField } from '../../../godot/variantParser.js';
+import { dictNumberField, dictStringField } from '../../../godot/variantParser.js';
 import { matchedFloat } from '../../../godot/number.js';
-import {
-  boolSlotValue,
-  keyedResourceRefReader,
-  resourceRef,
-  STRING_LITERAL_SOURCE,
-} from '../../../godot/index.js';
+import { boolSlotValue, keyedResourceRefReader, resourceRef } from '../../../godot/index.js';
 import { ANIMATION_DICT_DEPTH, splitFramesArray, splitTopLevelDicts } from './frameSplit.js';
 import { unquoteLiteral } from '../../../parser/utils.js';
 
@@ -39,7 +34,7 @@ const ANIMATION_KEYS_RE = ['name', 'speed', 'loop', 'frames'].map(
 );
 
 /** The `"name"` value: one string literal, escapes and all, with an optional `&` or `@` sigil. */
-const NAME_RE = new RegExp(String.raw`"name"\s*:\s*([&@]?${STRING_LITERAL_SOURCE})`);
+const NAME_RE = dictStringField('name');
 
 /** `SPRITE_FRAME_MINIMUM_DURATION` (`scene/resources/sprite_frames.h:35`). */
 export const SPRITE_FRAME_MINIMUM_DURATION = 0.01;
