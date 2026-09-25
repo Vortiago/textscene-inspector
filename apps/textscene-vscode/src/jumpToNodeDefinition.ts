@@ -20,8 +20,8 @@ function columnHolding(resource: vscode.Uri): vscode.ViewColumn | undefined {
 }
 
 /**
- * Open `resource` and put the cursor on `nodeName`'s heading, in the column that
- * already shows the scene, or else column one. A name the file does not carry is a
+ * Open `resource` and put the cursor on `nodeName`'s heading, in the column of a tab
+ * that already holds the scene, or else column one. A name the file does not carry is a
  * warning, not an error: the webview's tree can outlive an edit that removed the node.
  */
 export async function jumpToNodeDefinition(
