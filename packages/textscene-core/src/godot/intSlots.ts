@@ -63,7 +63,7 @@ export function storedInt(
 const VECTOR2I_SLOT_RE = slotTupleRegex('Vector2i', 2);
 
 /** Why a `Vector2i` slot stores nothing: no spelling it takes, or a component no int32 holds. */
-export type Vector2iRefusal = 'malformed' | 'unstorable';
+type Vector2iRefusal = 'malformed' | 'unstorable';
 
 /**
  * A `Vector2i` slot's literal as the pair Godot stores. A `Vector2(...)` holds doubles, so both

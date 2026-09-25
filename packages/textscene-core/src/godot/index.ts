@@ -94,7 +94,6 @@ export {
   storedFromFloat,
   storedInt,
   storedVector2i,
-  type Vector2iRefusal,
   toInt16,
   toInt32,
   toUint32,

@@ -32,7 +32,7 @@ export function listIndices(indices: readonly (number | string)[], total = indic
  * What a written index text resolves to: one number, or one per index position of a nested key
  * (`settings/0/joints/5` resolves to `[0, 5]`).
  */
-export type ResolvedIndex = number | readonly number[];
+type ResolvedIndex = number | readonly number[];
 
 const positionsOf = (resolved: ResolvedIndex): readonly number[] =>
   typeof resolved === 'number' ? [resolved] : resolved;

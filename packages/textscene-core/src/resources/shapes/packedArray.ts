@@ -19,7 +19,7 @@ import { arrayLiteralBody } from '../../godot/variantParser.js';
  * A packed array of fixed-size tuples, named once: its type, the three spellings its slot
  * takes, and the components in each element.
  */
-export interface PackedTupleType {
+interface PackedTupleType {
   readonly typeName: string;
   readonly forms: readonly RegExp[];
   readonly groupSize: number;

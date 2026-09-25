@@ -7,7 +7,7 @@
 import { isGodotSymbol } from './symbolChars.js';
 
 /** The two keys of an entry. An empty `endKey` makes a line-only delimiter. */
-export interface DelimiterKeys {
+interface DelimiterKeys {
   startKey: string;
   endKey: string;
 }

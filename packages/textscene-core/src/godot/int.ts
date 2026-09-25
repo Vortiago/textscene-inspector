@@ -16,4 +16,3 @@ export {
   slotComponents,
   slotComponentsAltered,
 } from './intSlots.js';
-export type { Vector2iRefusal } from './intSlots.js';
