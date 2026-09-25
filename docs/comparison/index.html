@@ -2040,7 +2040,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser never rejects. Every scalar goes through the shared <code>floatOr</code>, <code>intOr</code> and <code>boolOr</code> decoders, which log the bad literal and fall back to Godot's default. An unreadable <code>glow_intensity</code> therefore renders as default glow rather than as no Environment at all.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Not drawn</strong> Volumetric fog (<code>volumetric_fog_*</code>) has no three.js equivalent. Screen-space <code>fog_enabled</code> maps to <code>THREE.FogExp2</code> and is drawn.</li><li><strong>Approximated</strong> <code>tonemap_exposure</code> under the default LINEAR tonemapper is ignored, because three applies exposure only while a tone curve is active.</li><li><strong>Approximated</strong> A second Environment with a different tone curve reaching live materials keeps the first curve, because three's program cache keys on the tonemapping enum.</li></ul></div>
+<ul><li><strong>Not drawn</strong> Volumetric fog (<code>volumetric_fog_*</code>) has no three.js equivalent. Screen-space <code>fog_enabled</code> maps to <code>THREE.FogExp2</code> and is drawn.</li><li><strong>Approximated</strong> <code>tonemap_exposure</code> under the default LINEAR tonemapper is ignored, because three applies exposure only while a tone curve is active.</li></ul></div>
     </article>
     <article class="sheet" data-type="FABRIK3D" hidden>
       <header class="sheet-head">
