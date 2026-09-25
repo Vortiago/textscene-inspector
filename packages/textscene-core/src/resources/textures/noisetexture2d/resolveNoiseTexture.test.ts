@@ -127,7 +127,7 @@ noise = SubResource("missing")
     expect(resolveNoiseTexture2D('SubResource("dangling")', broken.subResources)).toBeNull();
   });
 
-  it('resolves a texture wider than the device ceiling to no texture, as with no noise', () => {
+  it("resolves a texture wider than the previewer's texture ceiling to no texture", () => {
     const oversized = parseTresFile(`[gd_resource type="StandardMaterial3D" format=3]
 
 [sub_resource type="FastNoiseLite" id="n"]

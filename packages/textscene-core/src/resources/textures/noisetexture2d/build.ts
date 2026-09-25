@@ -22,9 +22,9 @@ export { noiseImage, seamlessNoiseImage, seamlessSkirt } from './noiseImage';
 export { bumpMapToNormalMap } from './normalMap';
 
 /**
- * Whether Godot draws this texture at all. An axis past the device's ceiling fails the upload
- * (`rendering_device.cpp:973`), and a seamless source past `Image::MAX_PIXELS` is never built
- * (`noise.cpp:43`, `image.cpp:2421`), which leaves the seamless pass nothing to read.
+ * Whether the previewer rasterises this texture. It refuses an axis past the WebGL ceiling it
+ * assumes (`MAX_TEXTURE_EXTENT`), where Godot asks the device. Separately, Godot never builds a
+ * seamless source past `Image::MAX_PIXELS` (`noise.cpp:43`, `image.cpp:2421`).
  */
 export function noiseTextureFits({
   width,
@@ -42,7 +42,7 @@ export function noiseTextureFits({
 /**
  * The whole pipeline as a `THREE.DataTexture`, written bottom-up: `flipY` skips a
  * typed-array source, and every UV path assumes a file texture's flipY layout. Null
- * where Godot draws no texture ({@link noiseTextureFits}), and the previewer draws none.
+ * for a size {@link noiseTextureFits} refuses, so the previewer draws no texture.
  */
 export function rasterizeNoiseTexture2D(
   tex: NoiseTexture2DData,

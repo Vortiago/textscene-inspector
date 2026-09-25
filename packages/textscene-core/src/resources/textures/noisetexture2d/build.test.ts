@@ -280,7 +280,7 @@ describe('rasterizeNoiseTexture2D', () => {
     expect([...a]).not.toEqual([...b]);
   });
 
-  it('draws a texture whose axis sits exactly at the device ceiling', () => {
+  it("draws a texture whose axis sits exactly at the previewer's texture ceiling", () => {
     const texture = rasterized(
       decodeNoiseTexture2D({ width: String(MAX_TEXTURE_EXTENT), height: '1' }),
       noise,
@@ -303,34 +303,53 @@ describe('rasterizeNoiseTexture2D', () => {
 });
 
 describe('noiseTextureFits', () => {
-  const size = (width: number, height: number, seamless = false): NoiseTexture2DData =>
+  const plain = (width: number, height: number): NoiseTexture2DData =>
+    decodeNoiseTexture2D({ width: String(width), height: String(height) });
+
+  const seamless = (width: number, height: number, blendSkirt = 0.1): NoiseTexture2DData =>
     decodeNoiseTexture2D({
       width: String(width),
       height: String(height),
-      seamless: String(seamless),
+      seamless: 'true',
+      seamless_blend_skirt: String(blendSkirt),
     });
 
+  /** The pixels of the source `_get_seamless_image` builds a skirt larger. */
+  const skirtedSource = (tex: NoiseTexture2DData): number =>
+    (tex.width + seamlessSkirt(tex.width, tex.seamlessBlendSkirt)) *
+    (tex.height + seamlessSkirt(tex.height, tex.seamlessBlendSkirt));
+
   it("fits Godot's default 512x512 texture", () => {
-    expect(noiseTextureFits(size(512, 512))).toBe(true);
-    expect(noiseTextureFits(size(512, 512, true))).toBe(true);
+    expect(noiseTextureFits(plain(512, 512))).toBe(true);
+    expect(noiseTextureFits(seamless(512, 512))).toBe(true);
   });
 
-  it('fits an axis at the device ceiling and refuses one pixel past it, on either axis', () => {
-    expect(noiseTextureFits(size(MAX_TEXTURE_EXTENT, 1))).toBe(true);
-    expect(noiseTextureFits(size(MAX_TEXTURE_EXTENT + 1, 1))).toBe(false);
-    expect(noiseTextureFits(size(1, MAX_TEXTURE_EXTENT + 1))).toBe(false);
+  it("fits an axis at the previewer's texture ceiling and refuses one pixel past it", () => {
+    expect(noiseTextureFits(plain(MAX_TEXTURE_EXTENT, 1))).toBe(true);
+    expect(noiseTextureFits(plain(MAX_TEXTURE_EXTENT + 1, 1))).toBe(false);
+    expect(noiseTextureFits(plain(1, MAX_TEXTURE_EXTENT + 1))).toBe(false);
   });
 
-  it('fits a full-size plain texture, whose image is exactly Image::MAX_PIXELS', () => {
-    expect(noiseTextureFits(size(MAX_TEXTURE_EXTENT, MAX_TEXTURE_EXTENT))).toBe(true);
+  it("fits a plain texture at the previewer's texture ceiling on both axes", () => {
+    expect(noiseTextureFits(plain(MAX_TEXTURE_EXTENT, MAX_TEXTURE_EXTENT))).toBe(true);
   });
 
-  it('refuses a seamless texture whose skirted source passes Image::MAX_PIXELS', () => {
-    const tex = size(MAX_TEXTURE_EXTENT, MAX_TEXTURE_EXTENT, true);
-    const source =
-      (tex.width + seamlessSkirt(tex.width, tex.seamlessBlendSkirt)) *
-      (tex.height + seamlessSkirt(tex.height, tex.seamlessBlendSkirt));
-    expect(source).toBeGreaterThan(IMAGE_MAX_PIXELS);
+  it('fits a seamless texture whose skirted source is exactly Image::MAX_PIXELS', () => {
+    // A zero skirt still adds one pixel per axis (noise.cpp:36-37), so 16383 becomes 16384.
+    const tex = seamless(MAX_TEXTURE_EXTENT - 1, MAX_TEXTURE_EXTENT - 1, 0);
+    expect(skirtedSource(tex)).toBe(IMAGE_MAX_PIXELS);
+    expect(noiseTextureFits(tex)).toBe(true);
+  });
+
+  it('refuses a seamless texture one row taller than an Image::MAX_PIXELS source', () => {
+    const tex = seamless(MAX_TEXTURE_EXTENT - 1, MAX_TEXTURE_EXTENT, 0);
+    expect(skirtedSource(tex)).toBeGreaterThan(IMAGE_MAX_PIXELS);
+    expect(noiseTextureFits(tex)).toBe(false);
+  });
+
+  it('refuses a full-size seamless texture, whose skirt passes Image::MAX_PIXELS', () => {
+    const tex = seamless(MAX_TEXTURE_EXTENT, MAX_TEXTURE_EXTENT);
+    expect(skirtedSource(tex)).toBeGreaterThan(IMAGE_MAX_PIXELS);
     expect(noiseTextureFits(tex)).toBe(false);
   });
 });
