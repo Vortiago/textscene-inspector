@@ -22,6 +22,9 @@ export {
   affineInverseTransform2D,
   multiplyTransform2D,
   transform2DFromParts,
+  transform2DGetScale,
+  transform2DHasZeroSkew,
+  transform2DIsConformal,
 } from './transform2d.js';
 export {
   type BasisComponents,

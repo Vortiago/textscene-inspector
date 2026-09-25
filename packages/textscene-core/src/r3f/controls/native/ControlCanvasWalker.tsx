@@ -5,10 +5,9 @@
  * Children render beside the painter, since the solve has already placed them.
  */
 import { useMemo } from 'react';
-import * as THREE from 'three';
 import type { Rect2 } from './rect';
 import { controlProps, type SolveNode } from './solveTree';
-import type { Transform2DColumns } from '../../../godot/transform2d.js';
+import { threeMatrixFromTransform2D } from '../../node2dTransform';
 import type { NativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type TextMeasurer } from './solverRegistry';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
@@ -45,21 +44,6 @@ export interface ControlCanvasWalkerProps {
 }
 
 const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
-
-/**
- * The skipped Node2D ancestors' transform `t`, conjugated by `F = diag(1, -1, 1)`
- * (`node2dTransform.ts`). A product of ancestors can shear, so the 2x3 is baked in,
- * never decomposed: F·M·F is `[a, -c, tx; -b, d, -ty]` for Godot's
- * `columns[0]=(a,b)`, `columns[1]=(c,d)`, `columns[2]=(tx,ty)`.
- */
-export function ancestorGroupMatrix(t: Transform2DColumns): THREE.Matrix4 {
-  return new THREE.Matrix4().set(
-    t.a, -t.c, 0, t.tx,
-    -t.b, t.d, 0, -t.ty,
-    0, 0, 1, 0,
-    0, 0, 0, 1
-  );
-}
 
 export function ControlCanvasWalker({
   tree,
@@ -292,9 +276,13 @@ function ControlNodeGroup({
   if (!solveNode.skippedAncestors) return ownGroup;
 
   // paint-order-safe: outside the keyed `ownGroup`, never between it and a mesh.
-  // The skipped Node2D chain this node promoted past (`SolveNode.skippedAncestors`).
+  // The skipped Node2D chain this node promoted past (`SolveNode.skippedAncestors`). A product
+  // of ancestors can shear, so it goes in as a whole matrix, never decomposed.
   return (
-    <group matrix={ancestorGroupMatrix(solveNode.skippedAncestors.transform)} matrixAutoUpdate={false}>
+    <group
+      matrix={threeMatrixFromTransform2D(solveNode.skippedAncestors.transform)}
+      matrixAutoUpdate={false}
+    >
       {ownGroup}
     </group>
   );

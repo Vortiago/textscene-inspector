@@ -233,7 +233,7 @@ describe('<ControlCanvasWalker>', () => {
     );
 
     // The outline's centre (rect.w/2, -rect.h/2) = (10, -10) turns -PI/2 about (0,0) to (-10,-10), moves by
-    // the rect origin to (0,-10), and `ancestorGroupMatrix` maps it to (90, 0). A
+    // the rect origin to (0,-10), and `threeMatrixFromTransform2D` maps it to (90, 0). A
     // wrong direction or origin lands elsewhere. `updateMatrixWorld`, not
     // `updateWorldMatrix`, recomputes from the scene down through the wrapper.
     (renderer.scene as unknown as { instance: THREE.Object3D }).instance.updateMatrixWorld(true);

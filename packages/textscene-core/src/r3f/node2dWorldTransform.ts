@@ -7,23 +7,26 @@
 
 import type { TscnNode } from '../parser/types';
 import { liveNodeChain, type LiveTreeContext } from './liveSceneTree';
+import { node2DLocalTransform } from './node2dTransform';
 import {
   TRANSFORM2D_IDENTITY,
   multiplyTransform2D,
-  transform2DFromParts,
   type Transform2DColumns,
 } from '../godot/transform2d.js';
 
-/** A live node's Node2D local transform, or the identity for a non-2D node. */
+/** A live node's Node2D local transform, or the identity for a node with no 2D position. */
 function localTransform(node: TscnNode): Transform2DColumns {
   const props = node.properties as Record<string, unknown> | undefined;
   const position = props?.position as { x: number; y: number } | undefined;
   if (!position || typeof position.x !== 'number') return TRANSFORM2D_IDENTITY;
 
-  const rotation = typeof props?.rotation === 'number' ? (props.rotation as number) : 0;
-  const scale = (props?.scale as { x: number; y: number } | undefined) ?? { x: 1, y: 1 };
-  const skew = typeof props?.skew === 'number' ? (props.skew as number) : 0;
-  return transform2DFromParts(rotation, scale, skew, position);
+  // A Node3D also carries a `position`, beside a Vector3 `rotation`: only a number is an angle.
+  return node2DLocalTransform({
+    position,
+    rotation: typeof props?.rotation === 'number' ? props.rotation : undefined,
+    scale: props?.scale as { x: number; y: number } | undefined,
+    skew: typeof props?.skew === 'number' ? props.skew : undefined,
+  });
 }
 
 /**

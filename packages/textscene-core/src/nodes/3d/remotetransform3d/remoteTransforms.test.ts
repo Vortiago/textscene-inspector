@@ -202,6 +202,23 @@ update_rotation = false
     expect(props.position.x).toBeCloseTo(120, 4);
     expect(props.rotation).toBeCloseTo(0.5, 4);
   });
+
+  it('zeroes the y scale of a relay whose global axes are parallel, as get_scale() does', () => {
+    // The parent's zero y scale lays both of the rotated relay's axes on x: a zero determinant,
+    // a non-zero y column. `SIGN(0)` is 0 (typedefs.h:123-126), so the target collapses too.
+    const content = `[gd_scene format=3]
+[node name="Root" type="Node2D"]
+[node name="Target" type="Sprite2D" parent="."]
+[node name="Flat" type="Node2D" parent="."]
+scale = Vector2(1, 0)
+[node name="Relay" type="RemoteTransform2D" parent="Flat"]
+rotation = 0.5
+remote_path = NodePath("../../Target")
+`;
+    const props = targetNode2D(content, 'Root/Target');
+    expect(props.scale.x).toBeCloseTo(Math.cos(0.5), 12);
+    expect(props.scale.y).toBe(0);
+  });
 });
 
 describe('applyRemoteTransforms (2D) under a transformed parent', () => {

@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { node2dGroupProps, node2dGroupSpread } from './node2dTransform';
+import * as THREE from 'three';
+import {
+  node2DLocalTransform,
+  node2dGroupProps,
+  node2dGroupSpread,
+  threeMatrixFromTransform2D,
+  transform2DFromThreeMatrix,
+} from './node2dTransform';
+import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../godot/transform2d.js';
 
 describe('node2dGroupProps', () => {
   it('conjugates by diag(1,-1,1): negates Y translation and rotation, preserves scale', () => {
@@ -74,5 +82,116 @@ describe('node2dGroupProps', () => {
     const parent = node2dGroupProps({ position: { x: 0, y: 30 }, rotation: 0, scale: { x: 1, y: 1 } });
     const child = node2dGroupProps({ position: { x: 0, y: 30 }, rotation: 0, scale: { x: 1, y: 1 } });
     expect(parent.position[1]).toBe(child.position[1]); // both -30
+  });
+});
+
+describe('node2DLocalTransform', () => {
+  it('builds the transform from every part a parsed Node2D carries', () => {
+    const parts = { position: { x: 4, y: 5 }, rotation: 0.5, scale: { x: 2, y: -3 }, skew: 0.25 };
+    expect(node2DLocalTransform(parts)).toEqual(
+      transform2DFromParts(0.5, { x: 2, y: -3 }, 0.25, { x: 4, y: 5 })
+    );
+  });
+
+  it('reads an empty bag as the identity, each part at its Node2D default', () => {
+    expect(node2DLocalTransform({})).toEqual(TRANSFORM2D_IDENTITY);
+  });
+
+  it('defaults only the absent parts', () => {
+    expect(node2DLocalTransform({ position: { x: 7, y: -2 } })).toEqual({
+      ...TRANSFORM2D_IDENTITY,
+      tx: 7,
+      ty: -2,
+    });
+  });
+});
+
+describe('threeMatrixFromTransform2D', () => {
+  it('conjugates by F: the off-diagonal terms and the Y origin negate, at depth z', () => {
+    const e = threeMatrixFromTransform2D({ a: 1, b: 2, c: 3, d: 4, tx: 5, ty: 6 }, 0.25).elements;
+    // `elements` is column-major: n11 n21 n31 n41, n12 ….
+    expect([e[0], e[1], e[4], e[5]]).toEqual([1, -2, -3, 4]);
+    expect([e[12], e[13], e[14]]).toEqual([5, -6, 0.25]);
+  });
+
+  it('keeps a zero origin at +0, and z at 0 by default', () => {
+    const e = threeMatrixFromTransform2D(TRANSFORM2D_IDENTITY).elements;
+    // `toEqual` tells -0 from +0, so this pins the `0 - ty` spelling.
+    expect([e[12], e[13], e[14]]).toEqual([0, 0, 0]);
+  });
+
+  it('bakes the same matrix node2dGroupProps bakes for a sheared item', () => {
+    const local = { position: { x: 4, y: 5 }, rotation: 0.5, scale: { x: 2, y: -3 }, skew: 0.25 };
+    const baked = node2dGroupProps(local, 0.3).matrix!;
+    expect(threeMatrixFromTransform2D(node2DLocalTransform(local), 0.3).elements).toEqual(
+      baked.elements
+    );
+  });
+});
+
+describe('transform2DFromThreeMatrix', () => {
+  /** Build the three world matrix a Node2D chain produces, then read it back. */
+  function worldMatrixOf(
+    transforms: Array<{ position?: [number, number]; rotation?: number; scale?: [number, number] }>
+  ): THREE.Matrix4 {
+    let leaf: THREE.Object3D | null = null;
+    let root: THREE.Object3D | null = null;
+    for (const t of transforms) {
+      const object = new THREE.Object3D();
+      // node2dGroupProps' conjugation: negate the Y translation and the rotation.
+      object.position.set(t.position?.[0] ?? 0, 0 - (t.position?.[1] ?? 0), 0);
+      object.rotation.z = 0 - (t.rotation ?? 0);
+      object.scale.set(t.scale?.[0] ?? 1, t.scale?.[1] ?? 1, 1);
+      if (leaf) leaf.add(object);
+      else root = object;
+      leaf = object;
+    }
+    root!.updateMatrixWorld(true);
+    return leaf!.matrixWorld;
+  }
+
+  it('reads back a pure translation with Y un-negated (happy path)', () => {
+    const transform = transform2DFromThreeMatrix(worldMatrixOf([{ position: [10, 20] }]));
+    expect(transform.tx).toBeCloseTo(10, 6);
+    expect(transform.ty).toBeCloseTo(20, 6);
+    expect(transform.a).toBeCloseTo(1, 6);
+    expect(transform.d).toBeCloseTo(1, 6);
+  });
+
+  it('reads back a scale unchanged', () => {
+    const transform = transform2DFromThreeMatrix(worldMatrixOf([{ scale: [3, 0.5] }]));
+    expect(transform.a).toBeCloseTo(3, 6);
+    expect(transform.d).toBeCloseTo(0.5, 6);
+    expect(transform.b).toBeCloseTo(0, 6);
+    expect(transform.c).toBeCloseTo(0, 6);
+  });
+
+  it('un-negates the rotation, so a Godot clockwise angle comes back clockwise', () => {
+    const angle = 0.4;
+    const transform = transform2DFromThreeMatrix(worldMatrixOf([{ rotation: angle }]));
+    // Godot's Transform2D from a rotation is columns (cos, sin), (-sin, cos).
+    expect(transform.a).toBeCloseTo(Math.cos(angle), 6);
+    expect(transform.b).toBeCloseTo(Math.sin(angle), 6);
+    expect(transform.c).toBeCloseTo(0 - Math.sin(angle), 6);
+    expect(transform.d).toBeCloseTo(Math.cos(angle), 6);
+  });
+
+  it('composes a parent chain the way Godot composes global transforms', () => {
+    const transform = transform2DFromThreeMatrix(
+      worldMatrixOf([{ position: [100, 50] }, { position: [-13, -35], scale: [0.6, 0.6] }])
+    );
+    expect(transform.tx).toBeCloseTo(87, 6);
+    expect(transform.ty).toBeCloseTo(15, 6);
+    expect(transform.a).toBeCloseTo(0.6, 6);
+    expect(transform.d).toBeCloseTo(0.6, 6);
+  });
+
+  it('reads the identity matrix as the identity transform (edge case)', () => {
+    expect(transform2DFromThreeMatrix(new THREE.Matrix4())).toEqual(TRANSFORM2D_IDENTITY);
+  });
+
+  it('inverts threeMatrixFromTransform2D exactly', () => {
+    const t = transform2DFromParts(0.7, { x: 2, y: -0.5 }, 0.3, { x: 5, y: -6 });
+    expect(transform2DFromThreeMatrix(threeMatrixFromTransform2D(t, 0.4))).toEqual(t);
   });
 });

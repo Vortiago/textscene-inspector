@@ -1,8 +1,9 @@
 /**
  * Global `Transform2D` composition for a Node2D-family chain, for the warnings that
  * read `get_global_scale()`, `get_global_skew()` and `is_conformal()` (`node_2d.cpp:353-362`,
- * `:315-320`). It composes each ancestor's `position`, `rotation`, `scale` and `skew`
- * (`node_2d.cpp:499-503`), since Node2D's `transform` is `PROPERTY_USAGE_NONE` (`node_2d.cpp:501`).
+ * `:315-320`), which `godot/transform2d.ts` answers. It composes each ancestor's `position`,
+ * `rotation`, `scale` and `skew` (`node_2d.cpp:499-503`), since Node2D's `transform` is
+ * `PROPERTY_USAGE_NONE` (`node_2d.cpp:501`).
  */
 
 import type { TscnNode, TscnScene } from '../parser/types.js';
@@ -11,7 +12,6 @@ import { searchAncestors } from './parentType.js';
 import { descendsFrom } from '../godot/nodeBaseTypes.js';
 import { VECTOR2_REGEX } from './validators/vectorValidators.js';
 import { TSCN_FLOAT_RE, parseGodotFloat, tupleComponent } from './validators/commonValidators.js';
-import { isEqualApprox, isZeroApprox, sign } from '../godot/math.js';
 import { slotComponents, slotComponentsAltered } from '../godot/int.js';
 import {
   TRANSFORM2D_IDENTITY,
@@ -108,51 +108,4 @@ export function resolveGlobalTransform2D(scene: TscnScene, node: TscnNode): Glob
     composed = multiplyTransform2D(composed, local);
   }
   return { kind: 'known', transform: composed };
-}
-
-/**
- * `Transform2D::get_scale()` (`transform_2d.cpp:115-118`): the x column's length, and
- * the y column's signed by the determinant. The engine's `SIGN` (`typedefs.h:123-126`),
- * not `Math.sign`: they differ on NaN, which a serialised `nan` puts into the
- * determinant while the y column stays finite.
- */
-export function globalScale(transform: Transform2DColumns): { x: number; y: number } {
-  const det = transform.a * transform.d - transform.c * transform.b;
-  return {
-    x: Math.hypot(transform.a, transform.b),
-    y: sign(det) * Math.hypot(transform.c, transform.d),
-  };
-}
-
-/**
- * `Transform2D::is_conformal()` (`transform_2d.cpp:167-179`): the axes are
- * equal-length and perpendicular, allowing a single shared reflection.
- */
-export function isConformal(transform: Transform2DColumns): boolean {
-  const { a, b, c, d } = transform;
-  const nonFlipped = isEqualApprox(a, d) && isEqualApprox(b, -c);
-  const flipped = isEqualApprox(a, -d) && isEqualApprox(b, c);
-  return nonFlipped || flipped;
-}
-
-/**
- * Whether the two axes are orthogonal, the zero-skew case of `Transform2D::get_skew()`
- * (`transform_2d.cpp:72-75`). Godot compares its cached `get_global_skew()` exactly
- * against 0.0, but this recomputes by another path, so `isZeroApprox` on the normalised
- * dot product absorbs `cos`/`sin` residue while a few degrees of real skew stay clear.
- */
-export function hasZeroGlobalSkew(transform: Transform2DColumns): boolean {
-  const { a, b, c, d } = transform;
-  const len0 = Math.hypot(a, b);
-  const len1 = Math.hypot(c, d);
-  // `Vector2::normalize()` (`core/math/vector2.cpp:52-58`) leaves a zero vector at
-  // `(0, 0)`, so `get_skew()` is exactly 0, where a division would give NaN. Godot
-  // stays silent on skew here and below, though the zero-scale check trips.
-  if (len0 === 0 || len1 === 0) return true;
-  // Parallel non-zero axes: `get_skew()` multiplies by `SIGN(det)`, exactly 0
-  // (`typedefs.h:123-126`). Exact, like `SIGN`: at `det == 1e-30` the sign is `+1`
-  // and Godot reports skew.
-  if (a * d - c * b === 0) return true;
-  const normalizedDot = (a * c + b * d) / (len0 * len1);
-  return isZeroApprox(normalizedDot);
 }

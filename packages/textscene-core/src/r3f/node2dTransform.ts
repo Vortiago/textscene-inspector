@@ -1,14 +1,15 @@
 /**
- * Maps a Godot `Node2D` local transform onto R3F `<group>` props. Godot 2D is
- * `+Y` down with clockwise rotation, and three.js is `+Y` up, so each local
- * transform is conjugated by `F = diag(1, -1, 1)`: Y translation and rotation
- * negate, scale stays. One pixel is one world unit, in the z=0 plane.
+ * Maps a Godot `Node2D` transform into three.js: `<group>` props for a local one, and a
+ * `Matrix4` both ways for any `Transform2D`. Godot 2D is `+Y` down with clockwise
+ * rotation, and three.js is `+Y` up, so each transform is conjugated by
+ * `F = diag(1, -1, 1)`: Y translation and rotation negate, scale stays. One pixel is
+ * one world unit, in the z=0 plane.
  */
 
 import * as THREE from 'three';
 import type { Node2DLocalTransform } from '../nodes/base/node2d/types';
 import type { Vec3Tuple } from './nodeTransform';
-import { transform2DFromParts } from '../godot/transform2d.js';
+import { transform2DFromParts, type Transform2DColumns } from '../godot/transform2d.js';
 
 // F is its own inverse, so `F·M1·F · F·M2·F = F·(M1·M2)·F` composes through any
 // nesting with no global flip group: Godot `(100, 50)` sits at three.js `(100, -50)`.
@@ -34,16 +35,56 @@ export function node2dGroupProps(t: Node2DLocalTransform, z = 0): Node2DGroupPro
   const skew = t.skew ?? 0;
   if (skew === 0) return { position, rotation, scale };
 
-  // Conjugated by F, Godot's linear part `[a c; b d]` is `[a -c; -b d]`, placed at the
-  // Y-negated `position`.
-  const { a, b, c, d } = transform2DFromParts(t.rotation, t.scale, skew, t.position);
-  const matrix = new THREE.Matrix4().set(
-    a, -c, 0, position[0],
-    -b, d, 0, position[1],
-    0, 0, 1, position[2],
-    0, 0, 0, 1
+  const matrix = threeMatrixFromTransform2D(
+    transform2DFromParts(t.rotation, t.scale, skew, t.position),
+    z
   );
   return { position, rotation, scale, matrix };
+}
+
+/**
+ * A Node2D's local `Transform2D`, each absent part at its `node_2d.h:39-42` default: position
+ * `(0, 0)`, rotation 0, scale `(1, 1)` and skew 0. A hand-built bag may skip the parser that
+ * fills them.
+ */
+export function node2DLocalTransform(parts: Partial<Node2DLocalTransform>): Transform2DColumns {
+  return transform2DFromParts(
+    parts.rotation ?? 0,
+    parts.scale ?? { x: 1, y: 1 },
+    parts.skew ?? 0,
+    parts.position ?? { x: 0, y: 0 }
+  );
+}
+
+/**
+ * `t` conjugated by F at depth `z`: Godot's `columns[0] = (a, b)`, `columns[1] = (c, d)` and
+ * `columns[2] = (tx, ty)` become `[a, -c, tx; -b, d, -ty]`. Baked whole, so a shear survives.
+ */
+export function threeMatrixFromTransform2D(t: Transform2DColumns, z = 0): THREE.Matrix4 {
+  return new THREE.Matrix4().set(
+    t.a, -t.c, 0, t.tx,
+    // `0 - ty` (not `-ty`) so a zero origin stays +0, as in `node2dGroupProps`.
+    -t.b, t.d, 0, 0 - t.ty,
+    0, 0, 1, z,
+    0, 0, 0, 1
+  );
+}
+
+/**
+ * The Godot `Transform2D` behind a matrix in the conjugated space, the inverse of
+ * {@link threeMatrixFromTransform2D}: F is its own inverse, so the 2x2's off-diagonal terms flip
+ * sign and the Y translation negates.
+ */
+export function transform2DFromThreeMatrix(matrix: THREE.Matrix4): Transform2DColumns {
+  const e = matrix.elements;
+  return {
+    a: e[0]!,
+    b: 0 - e[1]!,
+    c: 0 - e[4]!,
+    d: e[5]!,
+    tx: e[12]!,
+    ty: 0 - e[13]!,
+  };
 }
 
 /**

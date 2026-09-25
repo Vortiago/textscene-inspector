@@ -12,11 +12,13 @@ import type { Node2DProperties, Vector2 } from '../../../nodes/base/node2d/types
 import { joinPath, resolveNodePathLiteral } from '../../../utils/nodePath.js';
 import { UNIQUE_NODE_PREFIX, isUniqueNameInOwner } from '../../../utils/uniqueNames.js';
 import { globalMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
+import { node2DLocalTransform } from '../../../r3f/node2dTransform.js';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
   multiplyTransform2D,
   transform2DFromParts,
+  transform2DGetScale,
   type Transform2DColumns,
 } from '../../../godot/transform2d.js';
 
@@ -184,12 +186,7 @@ function applyRelay2D(
 function localTransform2D(node: TscnNode): Transform2DColumns {
   const props = node.properties as Partial<Node2DProperties>;
   if (!props || props.position === undefined) return TRANSFORM2D_IDENTITY;
-  return transform2DFromParts(
-    props.rotation ?? 0,
-    props.scale ?? { x: 1, y: 1 },
-    props.skew ?? 0,
-    props.position
-  );
+  return node2DLocalTransform(props);
 }
 
 function globalTransform2D(path: string, nodeByPath: Map<string, TscnNode>): Transform2DColumns {
@@ -218,11 +215,14 @@ function composeSelected2D(
   );
 }
 
-/** Godot Transform2D decomposition into position, rotation and scale. Skew is dropped. */
+/**
+ * Godot Transform2D decomposition into position, rotation (`get_rotation`, `transform_2d.cpp:82-84`)
+ * and scale. Skew is dropped.
+ */
 function decomposeTransform2D(m: Transform2DColumns): { position: Vector2; rotation: number; scale: Vector2 } {
-  const rotation = Math.atan2(m.b, m.a);
-  const det = m.a * m.d - m.b * m.c;
-  const scaleX = Math.hypot(m.a, m.b);
-  const scaleY = (det < 0 ? -1 : 1) * Math.hypot(m.c, m.d);
-  return { position: { x: m.tx, y: m.ty }, rotation, scale: { x: scaleX, y: scaleY } };
+  return {
+    position: { x: m.tx, y: m.ty },
+    rotation: Math.atan2(m.b, m.a),
+    scale: transform2DGetScale(m),
+  };
 }

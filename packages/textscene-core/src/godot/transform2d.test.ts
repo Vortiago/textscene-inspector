@@ -1,7 +1,7 @@
 /**
- * `Transform2D` construction, product and affine inverse against the engine's own formulas
- * (`transform_2d.cpp:107-113`, `:198-218`, `:48-66`), and the guard that keeps them the only
- * spelling, so a linter verdict and a drawn placement read the same transform.
+ * `Transform2D` construction, product, affine inverse and scale against the engine's own formulas
+ * (`transform_2d.cpp:107-113`, `:198-218`, `:48-66`, `:115-118`), and the guard that keeps them the
+ * only spelling, so a linter verdict and a drawn placement read the same transform.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -12,6 +12,9 @@ import {
   affineInverseTransform2D,
   multiplyTransform2D,
   transform2DFromParts,
+  transform2DGetScale,
+  transform2DHasZeroSkew,
+  transform2DIsConformal,
   type Transform2DColumns,
 } from './transform2d.js';
 import { allSourceFiles, srcRoot } from '../linter/testing/ruleNameScrape.js';
@@ -160,6 +163,57 @@ describe('affineInverseTransform2D', () => {
     const poisoned = transform2DFromParts(0, { x: NaN, y: 1 }, 0, { x: 0, y: 0 });
     expect(affineInverseTransform2D(blown)).toBe(TRANSFORM2D_IDENTITY);
     expect(affineInverseTransform2D(poisoned)).toBe(TRANSFORM2D_IDENTITY);
+  });
+});
+
+describe('transform2DGetScale', () => {
+  it('signs the y column by the determinant', () => {
+    expect(transform2DGetScale({ a: 2, b: 0, c: 0, d: 3, tx: 0, ty: 0 })).toEqual({ x: 2, y: 3 });
+    // A flip puts the determinant negative, and the y length follows it.
+    expect(transform2DGetScale({ a: 2, b: 0, c: 0, d: -3, tx: 0, ty: 0 })).toEqual({ x: 2, y: -3 });
+  });
+
+  it('reads a degenerate transform as zero scale on y', () => {
+    // `SIGN(0)` is 0 (typedefs.h:123-126), so a zero determinant zeroes the
+    // signed half rather than leaving it unsigned.
+    expect(transform2DGetScale({ a: 0, b: 0, c: 0, d: 0, tx: 0, ty: 0 })).toEqual({ x: 0, y: 0 });
+    expect(transform2DGetScale({ a: 1, b: 0, c: 2, d: 0, tx: 0, ty: 0 })).toEqual({ x: 1, y: 0 });
+  });
+
+  it('reads a NaN determinant the way SIGN does, as zero', () => {
+    // `SIGN` is `m_v > 0 ? +1 : (m_v < 0 ? -1 : 0)` (typedefs.h:123-126), so NaN
+    // falls through to 0, where `Math.sign` returns NaN and poisons a finite y
+    // column. `nan` is a float literal Godot writes and reloads, so
+    // `scale = Vector2(nan, 1)` lands here.
+    const nanDeterminant = { a: NaN, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
+    expect(transform2DGetScale(nanDeterminant).y).toBe(0);
+  });
+});
+
+describe('transform2DIsConformal', () => {
+  it('accepts a uniform scale under rotation, reflected or not', () => {
+    expect(transform2DIsConformal(transform2DFromParts(0.7, { x: 2, y: 2 }, 0, { x: 5, y: 6 }))).toBe(true);
+    expect(transform2DIsConformal(transform2DFromParts(0.7, { x: 2, y: -2 }, 0, { x: 0, y: 0 }))).toBe(true);
+  });
+
+  it('refuses a non-uniform scale and a skew', () => {
+    expect(transform2DIsConformal(transform2DFromParts(0, { x: 2, y: 3 }, 0, { x: 0, y: 0 }))).toBe(false);
+    expect(transform2DIsConformal(transform2DFromParts(0, { x: 1, y: 1 }, 0.3, { x: 0, y: 0 }))).toBe(false);
+  });
+});
+
+describe('transform2DHasZeroSkew', () => {
+  it('reads orthogonal axes as unskewed through cos and sin residue', () => {
+    expect(transform2DHasZeroSkew(transform2DFromParts(Math.PI / 3, { x: 2, y: -5 }, 0, { x: 0, y: 0 }))).toBe(true);
+  });
+
+  it('reads a few degrees of skew as skewed', () => {
+    expect(transform2DHasZeroSkew(transform2DFromParts(0, { x: 1, y: 1 }, 0.05, { x: 0, y: 0 }))).toBe(false);
+  });
+
+  it('reads a zero axis and parallel axes as unskewed, as get_skew() does', () => {
+    expect(transform2DHasZeroSkew({ a: 0, b: 0, c: 0, d: 1, tx: 0, ty: 0 })).toBe(true);
+    expect(transform2DHasZeroSkew({ a: 1, b: 0, c: 2, d: 0, tx: 0, ty: 0 })).toBe(true);
   });
 });
 

@@ -45,11 +45,8 @@ import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewport
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
 import type { SkippedAncestors, SolveNode, ThemedIconRef } from './solveTree';
-import {
-  multiplyTransform2D,
-  transform2DFromParts,
-  type Transform2DColumns,
-} from '../../../godot/transform2d.js';
+import { multiplyTransform2D } from '../../../godot/transform2d.js';
+import { node2DLocalTransform } from '../../node2dTransform';
 import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import {
   allocatePaintRange,
@@ -224,21 +221,6 @@ interface ForestResult {
   pendingFonts: string[];
 }
 
-// --- Skipped-ancestor CanvasItem transform ------------------------------------
-
-/**
- * A Node2D's local `Transform2D`. The defaults repeat `nodes/base/node2d/parser.ts`'s:
- * a hand-built bag may skip that parser.
- */
-function node2DAncestorTransform(props: Node2DProperties): Transform2DColumns {
-  return transform2DFromParts(
-    props.rotation ?? 0,
-    props.scale ?? { x: 1, y: 1 },
-    props.skew ?? 0,
-    props.position ?? { x: 0, y: 0 }
-  );
-}
-
 /**
  * Whether `Object::cast_to<CanvasItem>` accepts this non-Control node, as
  * `CanvasItem::get_parent_item()` tests (`canvas_item.cpp:565-571`). Node2D is the
@@ -270,7 +252,7 @@ export function nextSkippedAncestors(
 ): SkippedAncestors | null {
   if (!isCanvasItem(collapsed)) return null;
   const props = collapsed.properties as Node2DProperties;
-  const local = node2DAncestorTransform(props);
+  const local = node2DLocalTransform(props);
   return {
     // `local` first, then the ancestors above it, as `get_global_transform()` composes.
     transform: previous ? multiplyTransform2D(previous.transform, local) : local,
