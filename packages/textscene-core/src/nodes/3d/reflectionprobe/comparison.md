@@ -38,7 +38,8 @@ Strict parsing format-checks these `ReflectionProbe` properties, plus 1 inherite
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-reflectionprobe-ambient-mode` | `reflectionprobe-ambient-color-no-effect` | info |
+| `valid-reflectionprobe-properties` | `reflectionprobe-ambient-color-no-effect` | info |
+|  | `reflectionprobe-origin-offset-clamped` | warning |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. An `intensity = "bright"` or `ambient_mode = "Environment"` parses with no warning and reaches no in-memory state.

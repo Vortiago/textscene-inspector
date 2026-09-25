@@ -28,6 +28,8 @@ Strict parsing format-checks these `AcceptDialog` properties, plus 45 inherited 
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
+|  | `window-size-clamped-by-limits` | warning |
+|  | `window-content-scale-factor-floored` | warning |
 <!-- lint:end -->
 
 The lenient parser registers the plain `Node` reader, which reads only the heading attributes and an optional `transform`. A bad `dialog_text` is never read, substituted or reported on the lenient path.
