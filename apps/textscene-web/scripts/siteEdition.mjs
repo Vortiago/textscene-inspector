@@ -10,6 +10,9 @@
 /** The value of `VITE_SITE_EDITION` that selects the public edition. Any other is dev. */
 export const PUBLIC_SITE_EDITION = 'public';
 
+/** The value `pnpm build:deploy` sets, so a `public` inherited from the shell cannot win. */
+export const DEV_SITE_EDITION = 'dev';
+
 export function isPublicSiteBuild() {
   return process.env.VITE_SITE_EDITION === PUBLIC_SITE_EDITION;
 }

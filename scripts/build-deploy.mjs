@@ -6,6 +6,7 @@
  * `VITE_INCLUDE_GAMES=1`. Point the Cloudflare Pages build command at `pnpm build:deploy`.
  * `pnpm build:pages` builds the public edition for GitHub Pages.
  */
+import { DEV_SITE_EDITION } from '../apps/textscene-web/scripts/siteEdition.mjs';
 import { runSteps } from './runSteps.mjs';
 
 const steps = [
@@ -17,7 +18,8 @@ const steps = [
 // `apps/textscene-web/scripts/copy-fixtures.js` (to `public/fixtures/games/`) and
 // `apps/textscene-web/src/fixturesAll.ts` (the `.games.` manifest) read it and must agree, or
 // the selector lists unmirrored scenes. `pnpm dev` and a plain `pnpm build` leave it unset.
-const env = { ...process.env, VITE_INCLUDE_GAMES: '1' };
+// The edition is set too: an inherited `VITE_SITE_EDITION=public` would empty the catalog.
+const env = { ...process.env, VITE_INCLUDE_GAMES: '1', VITE_SITE_EDITION: DEV_SITE_EDITION };
 
 runSteps('build:deploy', steps, env);
 
