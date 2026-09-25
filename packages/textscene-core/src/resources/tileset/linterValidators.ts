@@ -8,7 +8,6 @@
 // Registers Resource, so the inherited keys resolve when this module loads alone.
 import '../resource/linterValidators.js';
 import { validatorRegistry } from '../../linter/ValidatorRegistry.js';
-import { mergeDisjoint } from '../../linter/mergeDisjoint.js';
 import { v } from '../../linter/validators/index.js';
 import { layerFamilyKeys } from './layerValidators.js';
 import { terrainSetValidator } from './terrainValidators.js';
@@ -35,7 +34,7 @@ const TILE_LAYOUT = {
 /** tile_set.h:260-263. */
 const TILE_OFFSET_AXIS = { 0: 'TILE_OFFSET_AXIS_HORIZONTAL', 1: 'TILE_OFFSET_AXIS_VERTICAL' };
 
-validatorRegistry.registerAll('TileSet', mergeDisjoint([{
+validatorRegistry.registerAll('TileSet', {
   // tile_set.cpp:4266. set_tile_shape (:352) assigns and re-notifies; no guard.
   tile_shape: v.enumInt('tile_shape', 0, 3, TILE_SHAPE, { hinted: 'tile_set.cpp:4266' }),
   // tile_set.cpp:4267. set_tile_layout (:368) is an assignment and an
@@ -68,4 +67,4 @@ layerFamilyKeys,
   'tile_proxies/*': tileProxyValidator,
   // `pattern_<n>` has no leaf at all: the terminal-index routing shape.
   'pattern_#': patternValidator,
-}], 'a TileSet validator'));
+});

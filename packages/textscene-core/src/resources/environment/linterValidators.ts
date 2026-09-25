@@ -7,7 +7,6 @@
 // Registers Resource, so the inherited keys resolve when this module loads alone.
 import '../resource/linterValidators.js';
 import { validatorRegistry } from '../../linter/ValidatorRegistry.js';
-import { mergeDisjoint } from '../../linter/mergeDisjoint.js';
 import { backgroundKeys } from './backgroundValidators.js';
 import { fogKeys } from './fogValidators.js';
 import { postProcessKeys } from './postProcessValidators.js';
@@ -15,8 +14,8 @@ import { screenSpaceKeys } from './screenSpaceValidators.js';
 
 validatorRegistry.registerAll(
   'Environment',
-  mergeDisjoint(
-    [backgroundKeys, postProcessKeys, screenSpaceKeys, fogKeys],
-    'an Environment validator'
-  )
+  backgroundKeys,
+  postProcessKeys,
+  screenSpaceKeys,
+  fogKeys
 );

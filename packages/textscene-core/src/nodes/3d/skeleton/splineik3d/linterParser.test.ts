@@ -6,10 +6,10 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
+import { ValidatorRegistry, validatorRegistry } from '../../../../linter/ValidatorRegistry';
+import type { PropertyValidator } from '../../../../linter/ValidatorRegistry';
 import { NODE_BASE_TYPES } from '../../../../godot/nodeBaseTypes';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
-import { v } from '../../../../linter/validators/v';
 import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
@@ -147,13 +147,14 @@ describe('SplineIK3D strict validators', () => {
 
     it('hands a FLAT inherited leaf to the ChainIK3D registration', () => {
       // The registry resolves one wildcard per key, and this slice's is nearer than ChainIK3D's, so
-      // the dispatcher delegates or every inherited leaf reads as unknown. Probed with an exact key
-      // so ChainIK3D's own wildcard registration is left alone.
-      const probe = v.strictInt('root_bone');
-      validatorRegistry.registerAll('ChainIK3D', { 'settings/0/root_bone': probe });
+      // the dispatcher delegates or every inherited leaf reads as unknown. `root_bone` is ChainIK3D's
+      // (chain_ik_3d.cpp:127), so the value its validator refuses is refused here, with its answer.
+      const key = 'settings/0/root_bone';
+      const viaChain = validatorRegistry.findValidator('ChainIK3D', key)!;
+      expect(viaChain(key, 'not-an-int', 1)).not.toBeNull();
 
-      expect(check('settings/0/root_bone', '3')).toBeNull();
-      expect(check('settings/0/root_bone', 'not-an-int')).not.toBeNull();
+      expect(check(key, 'not-an-int')).toEqual(viaChain(key, 'not-an-int', 1));
+      expect(check(key, '3')).toBeNull();
     });
   });
 
@@ -163,12 +164,14 @@ describe('SplineIK3D strict validators', () => {
     });
 
     it('resolves an ancestor key without re-declaring it here', () => {
-      // `mutable_bone_axes` is IKModifier3D's (ik_modifier_3d.cpp:64), two hops up. Probed rather
-      // than assumed registered, so the test proves this slice's base walk on its own.
-      const probe = v.boolean('mutable_bone_axes');
-      validatorRegistry.registerAll('IKModifier3D', { mutable_bone_axes: probe });
+      // `mutable_bone_axes` is IKModifier3D's (ik_modifier_3d.cpp:64), two hops up. A sentinel in a
+      // private registry, not the singleton, which already declares the key: the same walk over the
+      // same base table proves this slice's hops on their own.
+      const registry = new ValidatorRegistry(NODE_BASE_TYPES);
+      const ikModifier: PropertyValidator = () => null;
+      registry.registerAll('IKModifier3D', { mutable_bone_axes: ikModifier });
 
-      expect(validatorRegistry.findValidator('SplineIK3D', 'mutable_bone_axes')).toBe(probe);
+      expect(registry.findValidator('SplineIK3D', 'mutable_bone_axes')).toBe(ikModifier);
       expect(validatorRegistry.getOwnKeys('SplineIK3D')).not.toContain('mutable_bone_axes');
     });
   });

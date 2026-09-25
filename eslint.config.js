@@ -146,6 +146,27 @@ export default [
     },
   },
 
+  // `registerAll` takes a validator table's parts as separate arguments and throws on a key two of
+  // them share. A spread merges the parts first, last-wins, so the earlier validator is gone before
+  // the check runs. Test files are exempt: a registry test spreads a shared group on purpose.
+  {
+    files: ['packages/textscene-core/src/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: [
+            "CallExpression[callee.property.name='registerAll'] SpreadElement",
+            "CallExpression[callee.name='registerAll'] SpreadElement",
+          ].join(', '),
+          message:
+            'Pass each part of a validator table to registerAll as its own argument. A spread keeps the last validator for a shared key and drops the earlier one without a report.',
+        },
+      ],
+    },
+  },
+
   // Config files and scripts - Node.js environment
   {
     files: [
