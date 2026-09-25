@@ -79,6 +79,17 @@ describe('XROrigin3D rule', () => {
       expect(ruleDiagnostics(linter.lint(content), CAMERA_CHILD_RULE)).toEqual([]);
     });
 
+    it('stays quiet when a child is a class the pinned catalog does not know', () => {
+      // A GDExtension class may subclass XRCamera3D, and the `cast_to` would accept it.
+      const content = `[gd_scene format=3]
+
+[node name="Origin" type="XROrigin3D"]
+
+[node name="Camera" type="MyXRCamera3D" parent="."]
+`;
+      expect(ruleDiagnostics(linter.lint(content), CAMERA_CHILD_RULE)).toEqual([]);
+    });
+
     it.each(['inf', 'nan'])('warns on a %s component, a value Godot writes', (spelling) => {
       // A legal literal (variant_parser.cpp:149-157), not a malformed one:
       // get_scale carries it (or the 0 its NaN determinant signs to) into an

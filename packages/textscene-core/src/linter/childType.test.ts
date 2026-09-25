@@ -1,7 +1,7 @@
 /**
- * The one direct-child type test the semantic rules share. The generic subtree walk it replaced
- * was deleted for answering a question Godot never asks, and its copies drifted before that, so a
- * guard keeps every child-presence rule on this function.
+ * The one direct-child type test the semantic rules share. Godot attaches a shape, a wheel or a
+ * camera through `get_parent()` alone, so the test reads direct children and never a subtree. A
+ * guard keeps every child-presence rule on this function, since a copy drifts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -45,26 +45,39 @@ describe('hasChildOfType', () => {
 
   it('matches nothing for an empty type list unless a child is opaque', () => {
     expect(hasChildOfType(node('Body', [node('Sprite2D')]), [])).toBe(false);
+    expect(hasChildOfType(node('Body', [node('MyExtensionNode')]), [])).toBe(true);
   });
 });
 
 describe('the one direct-child type test', () => {
-  /** `children.some((child) => … descendsFrom(child.type …` in any spacing: a hand-rolled copy. */
-  const HAND_ROLLED = /children\s*\.\s*some\(\s*\(?(\w+)\)?\s*=>[^;]*?descendsFrom\(\s*\1\.type/;
+  /** `children.some((child) => … descendsFrom(child.type …` in any spacing. */
+  const SOME_COPY = /children\s*\.\s*some\(\s*\(?(\w+)\)?\s*=>[^;]*?descendsFrom\(\s*\1\.type/;
+  /** `for (const child of node.children)` with `descendsFrom(child.type …` in its body. */
+  const LOOP_COPY =
+    /for\s*\(\s*const\s+(\w+)\s+of\s+[\w.?]*children\s*\)[\s\S]{0,600}?descendsFrom\(\s*\1\.type/;
+  const isHandRolled = (source: string) => SOME_COPY.test(source) || LOOP_COPY.test(source);
 
-  it('detects the copies the rules used to carry', () => {
+  it('detects a hand-rolled copy in the `.some` and the loop spelling', () => {
     expect(
-      HAND_ROLLED.test('!node.children.some((child) => isTypeOpaque(child) || descendsFrom(child.type, wheelType))')
+      isHandRolled('!node.children.some((child) => isTypeOpaque(child) || descendsFrom(child.type, wheelType))')
     ).toBe(true);
-    expect(
-      HAND_ROLLED.test("if (children.some((c) =>\n  descendsFrom(c.type, 'Joint2D'))) return 'present';")
-    ).toBe(true);
-    expect(HAND_ROLLED.test('children.some(isTypeUnknowable)')).toBe(false);
+    expect(isHandRolled("if (children.some((c) =>\n  descendsFrom(c.type, 'Joint2D'))) return 'present';")).toBe(
+      true
+    );
+    const loop = [
+      'for (const child of node.children) {',
+      '  if (isTypeUnknowable(child)) continue;',
+      "  if (descendsFrom(child.type, 'XRCamera3D')) return 'satisfied';",
+      '}',
+    ].join('\n');
+    expect(isHandRolled(loop)).toBe(true);
+    expect(isHandRolled('children.some(isTypeUnknowable)')).toBe(false);
+    expect(isHandRolled('for (const child of node.children) walk(child);')).toBe(false);
   });
 
   it('lives only in childType.ts', () => {
     const copies = allSourceFiles()
-      .filter((file) => HAND_ROLLED.test(readFileSync(file, 'utf8')))
+      .filter((file) => isHandRolled(readFileSync(file, 'utf8')))
       .map((file) => relative(srcRoot, file).replaceAll('\\', '/'));
     expect(copies).toEqual(['linter/childType.ts']);
   });
