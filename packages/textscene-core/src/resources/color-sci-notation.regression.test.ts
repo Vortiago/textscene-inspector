@@ -1,11 +1,14 @@
 /**
  * Colour decoders and validators accept Godot's full float grammar, scientific
  * notation and sign included, as in `Color(1.8771e-06, 0.751954, 0.25936, 1)`. They
- * still reject garbage and keep the throw-on-invalid contract.
+ * still reject garbage: the decoder with `undefined`, the validator with a diagnostic.
+ * `parseColorOrUndefined` is the reader the StandardMaterial3D decode uses.
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseColor } from './materials/standardmaterial3d/parser';
+import { parseColorOrUndefined } from '../utils/colorParser';
+import { sRGBToLinearRGB } from '../utils/colorSpace';
+import { decodeStandardMaterial3D } from './materials/standardmaterial3d/decode';
 import { decodeEnvironment } from './environment/decode';
 import { validatorRegistry } from '../linter/ValidatorRegistry';
 import './environment/linterValidators';
@@ -14,9 +17,15 @@ import './materials/basematerial3d/linterValidators';
 const MAT_SCI = 'Color(1.8771e-06, 0.751954, 0.25936, 1)';
 const ENV_SCI = 'Color(1.01075e-06, 0, 0.451248, 1)';
 
-describe('#141 scientific-notation color channels', () => {
-  it('material parseColor decodes a sci-notation channel (does not throw)', () => {
-    expect(parseColor(MAT_SCI)).toEqual({ r: 1.8771e-6, g: 0.751954, b: 0.25936, a: 1 });
+describe('scientific-notation color channels', () => {
+  it('the material colour reader decodes a sci-notation channel', () => {
+    expect(parseColorOrUndefined(MAT_SCI)).toEqual({ r: 1.8771e-6, g: 0.751954, b: 0.25936, a: 1 });
+  });
+
+  it('StandardMaterial3D decode reads a sci-notation albedo_color, not the white default', () => {
+    expect(decodeStandardMaterial3D({ albedo_color: MAT_SCI }).albedo).toEqual(
+      sRGBToLinearRGB(1.8771e-6, 0.751954, 0.25936)
+    );
   });
 
   it('Environment decodeEnvironment decodes a sci-notation background_color (does not throw)', () => {
@@ -41,16 +50,16 @@ describe('#141 scientific-notation color channels', () => {
   });
 
   it('still decodes a plain decimal color', () => {
-    expect(parseColor('Color(0.5, 0.25, 0.125, 1)')).toEqual({ r: 0.5, g: 0.25, b: 0.125, a: 1 });
+    expect(parseColorOrUndefined('Color(0.5, 0.25, 0.125, 1)')).toEqual({ r: 0.5, g: 0.25, b: 0.125, a: 1 });
   });
 
-  it('still throws on a genuinely invalid color (grammar not loosened to garbage)', () => {
-    expect(() => parseColor('Color(not, a, color, x)')).toThrow();
+  it('still refuses a genuinely invalid color (grammar not loosened to garbage)', () => {
+    expect(parseColorOrUndefined('Color(not, a, color, x)')).toBeUndefined();
   });
 
   it('decodes Godot signed and HDR (>1) channels (the full grammar the fix enables)', () => {
-    expect(parseColor('Color(-0.5, 1.0, 2.5, 1)')).toEqual({ r: -0.5, g: 1, b: 2.5, a: 1 });
-    expect(parseColor('Color(0.5, 0.25, 0.125, 1)')).toEqual({ r: 0.5, g: 0.25, b: 0.125, a: 1 });
+    expect(parseColorOrUndefined('Color(-0.5, 1.0, 2.5, 1)')).toEqual({ r: -0.5, g: 1, b: 2.5, a: 1 });
+    expect(parseColorOrUndefined('Color(0.5, 0.25, 0.125, 1)')).toEqual({ r: 0.5, g: 0.25, b: 0.125, a: 1 });
   });
 
   // `1e` is deliberately absent: `READING_EXP` ends the token with no digits
@@ -64,9 +73,9 @@ describe('#141 scientific-notation color channels', () => {
     'Color(+1, 0, 0, 1)',
     'Color(.5, 0, 0, 1)',
   ])(
-    'still throws on the near-miss malformed color %s (grammar not over-loosened to accept it)',
+    'still refuses the near-miss malformed color %s (grammar not over-loosened to accept it)',
     (bad) => {
-      expect(() => parseColor(bad)).toThrow();
+      expect(parseColorOrUndefined(bad)).toBeUndefined();
     },
   );
 
@@ -87,7 +96,7 @@ describe('#141 scientific-notation color channels', () => {
       // `\d+(?:\.\d*)?` fails fast. At 100_000 digits the linear form runs in <1ms and the
       // backtracking form takes seconds, past the 2s timeout.
       const adversarial = `Color(${'9'.repeat(100_000)}!, 0, 0, 1)`;
-      expect(() => parseColor(adversarial)).toThrow();
+      expect(parseColorOrUndefined(adversarial)).toBeUndefined();
     },
     2000,
   );

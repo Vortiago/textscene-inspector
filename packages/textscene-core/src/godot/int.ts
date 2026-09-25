@@ -8,4 +8,12 @@
 export { toInt32, toUint32, toUint8, toInt16, INT32_MAX, readerLimitedInt } from './intWidth.js';
 export type { IntWidth } from './intWidth.js';
 export { parseGodotInt, storedFromFloat } from './intReader.js';
-export { ruleInt, ruleCount, storedInt, slotComponents, slotComponentsAltered } from './intSlots.js';
+export {
+  ruleInt,
+  ruleCount,
+  storedInt,
+  storedVector2i,
+  slotComponents,
+  slotComponentsAltered,
+} from './intSlots.js';
+export type { Vector2iRefusal } from './intSlots.js';

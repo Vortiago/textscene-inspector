@@ -65,12 +65,26 @@ export function compositeCallPrefix(...typeNames: readonly string[]): RegExp {
   return new RegExp(`^${WS}(?:${typeNames.join('|')})${WS}\\(`);
 }
 
+/** A `TypeName(…)` call inside a larger value, the body captured up to the first `)`. */
+function callBody(typeName: string): string {
+  return `${typeName}${WS}\\(([^)]*)\\)`;
+}
+
 /**
  * The same call anywhere in a larger value. `[1]` is the body, which stops at the first `)`. Pass `global` for a
  * repeated scan: a `g`-flagged RegExp carries `lastIndex`, so each caller needs its own instance.
  */
 export function packedArrayCallAnywhere(typeName: string, global = false): RegExp {
-  return new RegExp(`${typeName}${WS}\\(([^)]*)\\)`, global ? 'g' : '');
+  return new RegExp(callBody(typeName), global ? 'g' : '');
+}
+
+/**
+ * A Dictionary field whose value is one `TypeName(…)` call, `[1]` the body up to the first `)`:
+ * `"cells": PackedInt32Array(…)`, `"aabb": AABB(…)`. A slot that also converts `[…]` or
+ * `Array[T]([…])` wants `dictPackedField` (`packedArrayFields.ts`) instead.
+ */
+export function dictCallField(key: string, typeName: string): RegExp {
+  return new RegExp(`"${key}"${WS}:${WS}${callBody(typeName)}`);
 }
 
 /**

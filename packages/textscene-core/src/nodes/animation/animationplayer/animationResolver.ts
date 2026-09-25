@@ -16,7 +16,7 @@ import {
   literalText,
   packedArrayCallAnywhere,
 } from '../../../godot/index.js';
-import { nodePathLiteral } from '../../../godot/variantParser.js';
+import { dictCallField, nodePathLiteral } from '../../../godot/variantParser.js';
 import { findSubResource } from '../../../resources/SubResourceResolver.js';
 import type { AnimationLibraryRef } from './types';
 
@@ -232,18 +232,20 @@ function parseNodePath(raw: string): { targetPath: string; property: string } | 
   return { targetPath: inner.slice(0, colon), property: inner.slice(colon + 1) };
 }
 
-const PACKED_FLOAT_RE = new RegExp(`"times"\\s*:\\s*${packedArrayCallAnywhere('PackedFloat32Array').source}`);
-const PACKED_TRANSITIONS_RE = new RegExp(`"transitions"\\s*:\\s*${packedArrayCallAnywhere('PackedFloat32Array').source}`);
+// A value track's key Dictionary fields, which `Animation::_set` reads as `Vector<real_t>`
+// (animation.cpp:267, :285).
+const TIMES_FIELD_RE = dictCallField('times', 'PackedFloat32Array');
+const TRANSITIONS_FIELD_RE = dictCallField('transitions', 'PackedFloat32Array');
 
 function parseKeys(keysStr: string): GodotKeyframe[] {
   if (keysStr.length === 0) return [];
 
-  const timesMatch = PACKED_FLOAT_RE.exec(keysStr);
+  const timesMatch = TIMES_FIELD_RE.exec(keysStr);
   if (!timesMatch || timesMatch[1] === undefined) return [];
   const times = parseFloatList(timesMatch[1]);
   if (times === null || times.length === 0) return [];
 
-  const transMatch = PACKED_TRANSITIONS_RE.exec(keysStr);
+  const transMatch = TRANSITIONS_FIELD_RE.exec(keysStr);
   const transitions =
     transMatch && transMatch[1] !== undefined ? parseFloatList(transMatch[1]) : [];
   if (transitions === null) return [];

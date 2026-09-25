@@ -3,7 +3,7 @@
  * composite in a float slot. See `int.ts` for the whole picture.
  */
 
-import { matchedFloat } from './number.js';
+import { matchedFloat, slotTupleRegex } from './number.js';
 import { compositeTypeName, isConvertedSpelling } from './variantConversion.js';
 import type { IntWidth } from './intWidth.js';
 import { parseGodotInt, storedFromFloat } from './intReader.js';
@@ -57,6 +57,28 @@ export function storedInt(
   if (!Number.isFinite(num)) return null;
   const stored = storedFromFloat(num, text ?? '', 'int32', alwaysFloatBranch);
   return Number.isNaN(stored) ? null : stored;
+}
+
+/** The `Vector2i` slot grammar: every spelling `can_convert_strict` converts into it. */
+const VECTOR2I_SLOT_RE = slotTupleRegex('Vector2i', 2);
+
+/** Why a `Vector2i` slot stores nothing: no spelling it takes, or a component no int32 holds. */
+export type Vector2iRefusal = 'malformed' | 'unstorable';
+
+/**
+ * A `Vector2i` slot's literal as the pair Godot stores. A `Vector2(...)` holds doubles, so both
+ * components take the `double -> int32` branch whatever the token looks like. Measured on 4.6.3:
+ * `Vector2(4294967295, 64)` stores `(-2147483648, 64)`, `Vector2i(4294967295, 64)` `(-1, 64)`.
+ */
+export function storedVector2i(raw: string): { x: number; y: number } | Vector2iRefusal {
+  const literal = raw.trim();
+  const match = VECTOR2I_SLOT_RE.exec(literal);
+  if (!match) return 'malformed';
+  const converted = isConvertedSpelling('Vector2i', compositeTypeName(literal));
+  const x = storedInt(match[1], converted);
+  const y = storedInt(match[2], converted);
+  if (x === null || y === null) return 'unstorable';
+  return { x, y };
 }
 
 /**

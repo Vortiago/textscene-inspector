@@ -6,12 +6,10 @@
 
 import { warn } from '../logger';
 // These wrap the canonical leaf scanners. One-off structured literals (StyleBox shapes)
-// stay in their slice, and the throwing `parseColor` in `standardmaterial3d` keeps its
-// own contract.
+// stay in their slice.
 import { parseVector2, type Vector2 } from './vectors';
 import { slotTupleRegex, parseGodotFloat, allFinite } from '../godot/number.js';
-import { slotComponents, storedFromFloat, storedInt, type IntWidth } from '../godot/int.js';
-import { compositeTypeName, isConvertedSpelling } from '../godot/variantConversion.js';
+import { slotComponents, storedFromFloat, storedVector2i, type IntWidth } from '../godot/int.js';
 
 import { nodePathLiteral, toIntIndex, boolSlotValue} from '../godot/index.js';
 
@@ -194,57 +192,32 @@ export function vec2Or(value: string | undefined, fallback: Vector2, context = '
   }
 }
 
-/**
- * The one `Vector2i(x, y)` grammar, with the float composites' component grammar, not
- * `-?\d+`: `_parse_construct<int32_t>` takes any number token and truncates it, so
- * Godot loads `SubViewport.size = Vector2i(2e1, 2e1)` as `(20, 20)`.
- */
-const VECTOR2I_PATTERN = slotTupleRegex('Vector2i', 2);
-
-/** The integer sibling of {@link vec2Or}. */
+/** The integer sibling of {@link vec2Or}: {@link parseOptionalVector2i}, or `fallback`. */
 export function vec2iOr(value: string | undefined, fallback: Vector2, context = 'value'): Vector2 {
-  if (!value) return fallback;
-  const match = VECTOR2I_PATTERN.exec(value);
-  if (!match) {
-    warn(`${context}: invalid Vector2i "${value}", using fallback`);
-    return fallback;
-  }
-  // A `Vector2(...)` in a Vector2i slot holds doubles, so both components convert
-  // through `double -> int32`. Measured on 4.6.3: `Vector2(4294967295, 64)` stores the
-  // UB sentinel `(-2147483648, 64)`, where `Vector2i(4294967295, 64)` wraps to `(-1, 64)`.
-  const converted = isConvertedSpelling('Vector2i', compositeTypeName(value));
-  const x = storedInt(match[1], converted);
-  const y = storedInt(match[2], converted);
-  if (x === null || y === null) {
-    warn(`${context}: Vector2i "${value}" has a component Godot cannot store, using fallback`);
-    return fallback;
-  }
-  return { x, y };
+  return parseOptionalVector2i(value, context) ?? fallback;
 }
 
 /**
  * The integer sibling of {@link parseOptionalVector2}, but it warns on a malformed
  * value: a malformed `frame_coords` would otherwise pick frame (0,0) with no sign.
+ * `storedVector2i` reads it: the slot takes any number token and truncates it
+ * (`_parse_construct<int32_t>`), so `SubViewport.size = Vector2i(2e1, 2e1)` is `(20, 20)`.
  */
 export function parseOptionalVector2i(
   value: string | undefined,
   context = 'value'
 ): Vector2 | undefined {
   if (!value) return undefined;
-  const match = VECTOR2I_PATTERN.exec(value);
-  if (!match) {
+  const stored = storedVector2i(value);
+  if (stored === 'malformed') {
     warn(`${context}: invalid Vector2i "${value}"`);
     return undefined;
   }
-  // A `Vector2(...)` in a Vector2i slot holds doubles: see `vec2iOr`.
-  const converted = isConvertedSpelling('Vector2i', compositeTypeName(value));
-  const x = storedInt(match[1], converted);
-  const y = storedInt(match[2], converted);
-  if (x === null || y === null) {
+  if (stored === 'unstorable') {
     warn(`${context}: Vector2i "${value}" has a component Godot cannot store`);
     return undefined;
   }
-  return { x, y };
+  return stored;
 }
 
 /**

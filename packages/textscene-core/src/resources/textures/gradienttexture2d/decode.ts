@@ -20,7 +20,7 @@ import {
 import {
   floatElements,
   packedTupleNumbers,
-  PACKED_COLOR_ARRAY_SPELLINGS,
+  PACKED_COLOR_ARRAY,
 } from '../../shapes/packedArray';
 import {
   GradientFill,
@@ -54,7 +54,7 @@ export function parsePackedFloat32Array(value: string): number[] {
  * (`resources/shapes/packedArray.ts`), and a distinct name keeps the two contracts apart.
  */
 export function parseColorStops(value: string): Color[] {
-  const nums = packedTupleNumbers(value, 'PackedColorArray', PACKED_COLOR_ARRAY_SPELLINGS, 4);
+  const nums = packedTupleNumbers(value, PACKED_COLOR_ARRAY);
   const colors: Color[] = [];
   for (let i = 0; i + 3 < nums.length; i += 4) {
     colors.push({ r: nums[i]!, g: nums[i + 1]!, b: nums[i + 2]!, a: nums[i + 3]! });

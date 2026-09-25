@@ -8,7 +8,7 @@
 
 import { warn } from '../../../logger.js';
 import { parseGodotFloat } from '../../../godot/number.js';
-import { dictNumberField } from '../../../godot/variantParser.js';
+import { dictCallField, dictNumberField } from '../../../godot/variantParser.js';
 import { parseGodotInt } from '../../../godot/int.js';
 
 /** A surface's declared `AABB(px, py, pz, sx, sy, sz)`: a compressed surface's position scale. */
@@ -51,7 +51,7 @@ function readFloatTuple(
   type: string,
   count: number
 ): number[] | undefined {
-  const match = new RegExp(`"${key}"\\s*:\\s*${type}\\(([^)]*)\\)`).exec(block);
+  const match = dictCallField(key, type).exec(block);
   if (!match) return undefined;
   // `parseGodotFloat`, not `Number`: the latter reads `0x10` as 16 and an empty
   // component as 0, neither of which Godot's tokenizer accepts, so a malformed
@@ -86,15 +86,22 @@ export function readMaterialRef(block: string): string | undefined {
 }
 
 /**
+ * The writer puts a non-empty `PackedByteArray` body in one quoted base64 string
+ * (variant_parser.cpp:2410-2413). Its compat form, a comma list of bytes, is not read.
+ */
+const BASE64_BODY_RE = /^"([^"]*)"$/;
+
+/**
  * Extract the base64 payload of a `"<key>": PackedByteArray("…")` field.
  * A corrupt payload makes `atob` throw, which would fail the whole mesh. An
  * empty buffer instead lets the caller drop just this surface.
  */
 export function readPackedBytes(block: string, key: string): Uint8Array {
-  const match = new RegExp(`"${key}"\\s*:\\s*PackedByteArray\\("([^"]*)"\\)`).exec(block);
-  if (!match) return new Uint8Array(0);
+  const body = dictCallField(key, 'PackedByteArray').exec(block)?.[1]?.trim();
+  const base64 = body === undefined ? undefined : BASE64_BODY_RE.exec(body)?.[1];
+  if (base64 === undefined) return new Uint8Array(0);
   try {
-    return Uint8Array.from(atob(match[1]!), (c) => c.charCodeAt(0));
+    return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
   } catch {
     warn(`[ArrayMesh] ${key} is not valid base64 — ignoring the payload`);
     return new Uint8Array(0);

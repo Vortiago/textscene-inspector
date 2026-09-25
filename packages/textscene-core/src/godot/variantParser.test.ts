@@ -9,8 +9,10 @@ import { describe, expect, it } from 'vitest';
 import {
   NODE_PATH_LITERAL_ANYWHERE_RE,
   NODE_PATH_LITERAL_RE,
+  dictCallField,
   isNilLiteral,
   nodePathLiteral,
+  packedArrayCallAnywhere,
 } from './variantParser.js';
 
 describe('nodePathLiteral', () => {
@@ -108,5 +110,39 @@ describe('the NIL literal', () => {
     expect(isNilLiteral('nils')).toBe(false);
     expect(isNilLiteral('NULL')).toBe(false);
     expect(isNilLiteral('')).toBe(false);
+  });
+});
+
+describe('dictCallField', () => {
+  it('reads the body of the call a Dictionary key holds, as Godot writes it', () => {
+    const cells = dictCallField('cells', 'PackedInt32Array');
+    expect(cells.exec('{ "cells": PackedInt32Array(0, 0, 1) }')?.[1]).toBe('0, 0, 1');
+    expect(dictCallField('aabb', 'AABB').exec('{ "aabb": AABB(-1, -1, 1, 2, 2, 0) }')?.[1]).toBe(
+      '-1, -1, 1, 2, 2, 0'
+    );
+  });
+
+  it('tolerates the padding the tokenizer discards around the colon and the paren', () => {
+    // get_token discards any character <= 32 before a token (variant_parser.cpp:415-417).
+    const times = dictCallField('times', 'PackedFloat32Array');
+    expect(times.exec('"times" :\tPackedFloat32Array ( 0, 1 )')?.[1]).toBe(' 0, 1 ');
+  });
+
+  it('matches nothing for another key, another type or another value kind', () => {
+    const cells = dictCallField('cells', 'PackedInt32Array');
+    expect(cells.exec('{ "octants": PackedInt32Array(1) }')).toBeNull();
+    expect(cells.exec('{ "cells": PackedFloat32Array(1) }')).toBeNull();
+    expect(cells.exec('{ "cells": [1, 2, 3] }')).toBeNull();
+  });
+
+  it('keeps an empty call as an empty body, not as no match', () => {
+    expect(dictCallField('cells', 'PackedInt32Array').exec('{ "cells": PackedInt32Array() }')?.[1]).toBe('');
+  });
+
+  it('reads the same call body as packedArrayCallAnywhere, so the two cannot drift', () => {
+    const value = '{ "times": PackedFloat32Array ( 0.5, 1 ), "transitions": PackedFloat32Array(1, 1) }';
+    expect(dictCallField('times', 'PackedFloat32Array').exec(value)?.[1]).toBe(
+      packedArrayCallAnywhere('PackedFloat32Array').exec(value)?.[1]
+    );
   });
 });
