@@ -14,7 +14,7 @@ Plays a frame-by-frame animation from a `SpriteFrames` resource on a quad in 3D 
 ## Linting
 
 <!-- lint:begin AnimatedSprite3D -->
-Strict parsing format-checks these `AnimatedSprite3D` properties, plus 20 inherited from SpriteBase3D, 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
+Strict parsing format-checks these `AnimatedSprite3D` properties, plus 20 inherited from SpriteBase3D, 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032). `AnimatedSprite3D` also REFUSES `playing` outright.
 
 | Property | Accepts | Out of range |
 | --- | --- | --- |
@@ -24,6 +24,7 @@ Strict parsing format-checks these `AnimatedSprite3D` properties, plus 20 inheri
 | `frame_progress` | float |  |
 | `speed_scale` | float |  |
 | `sprite_frames` | null, SubResource("id") or ExtResource("id") |  |
+| `playing` | **not available on this type** |  |
 
 | Rule | Reports | Severity |
 | --- | --- | --- |

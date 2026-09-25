@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { SelectionProvider, useSelection } from './contexts/SelectionContext';
 import { CameraControlProvider, useCameraControl } from './contexts/CameraControlContext';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut';
+import { SelectSeeder } from './testing/SelectSeeder';
 
 let camera: THREE.Camera;
 function CameraCapture() {
@@ -41,14 +42,6 @@ function RegisteredMesh({
   return <primitive object={mesh} />;
 }
 
-function Seeder({ selectedPath }: { selectedPath: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(selectedPath);
-  }, [selectedPath, setSelectedNodePath]);
-  return null;
-}
-
 function fireF() {
   globalThis.window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', bubbles: true }));
 }
@@ -60,7 +53,7 @@ describe('<FrameSelectedShortcut> (#224)', () => {
         <CameraCapture />
         <RegisteredMesh path="Near" position={[0, 0, 0]} />
         <RegisteredMesh path="Far" position={[80, 0, 0]} />
-        <Seeder selectedPath="Far" />
+        <SelectSeeder path="Far" />
         <FrameSelectedShortcut />
       </SelectionProvider>
     );
@@ -80,7 +73,7 @@ describe('<FrameSelectedShortcut> (#224)', () => {
         <CameraCapture />
         <RegisteredMesh path="Near" position={[0, 0, 0]} />
         <RegisteredMesh path="Far" position={[80, 0, 0]} />
-        <Seeder selectedPath={null} />
+        <SelectSeeder path={null} />
         <FrameSelectedShortcut />
       </SelectionProvider>
     );
@@ -104,7 +97,7 @@ describe('<FrameSelectedShortcut> (#224)', () => {
       <SelectionProvider>
         <CameraCapture />
         <RegisteredMesh path="Near" position={[0, 0, 0]} />
-        <Seeder selectedPath="Near" />
+        <SelectSeeder path="Near" />
         <FrameSelectedShortcut />
       </SelectionProvider>
     );
@@ -133,7 +126,7 @@ describe('<FrameSelectedShortcut> (#224)', () => {
         <CameraControlProvider>
           <CameraCapture />
           <RegisteredMesh path="Far" position={[80, 0, 0]} />
-          <Seeder selectedPath="Far" />
+          <SelectSeeder path="Far" />
           <ActivateAuthoredCamera />
           <FrameSelectedShortcut />
         </CameraControlProvider>
@@ -153,7 +146,7 @@ describe('<FrameSelectedShortcut> (#224)', () => {
       <SelectionProvider>
         <CameraCapture />
         <RegisteredMesh path="Near" position={[0, 0, 0]} />
-        <Seeder selectedPath="Near" />
+        <SelectSeeder path="Near" />
         <FrameSelectedShortcut />
       </SelectionProvider>
     );

@@ -17,6 +17,7 @@ import { corpusRootFor, resToFixtureFile, fixtureFileToRes } from './corpusRoot'
 import { useCorpusRoot } from './useCorpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import { SourceGutter } from './SourceGutter';
+import { FileProblems } from './FileProblems';
 import { useSceneSource } from './useSceneSource';
 import { useFixtureSelection } from './useFixtureSelection';
 import { useCameraDeepLink } from './useCameraDeepLink';
@@ -113,7 +114,8 @@ export function R3FApp() {
     missingPathsRef.current = new Set([...paths].map(resourceFilePath));
   }, []);
 
-  const { diagnosticsByLine, problemBadge, lineCount } = useSourceDiagnostics(buffer);
+  const { diagnosticsByLine, fileDiagnostics, problemBadge, lineCount } =
+    useSourceDiagnostics(buffer);
   const [gutterScrollTop, setGutterScrollTop] = useState(0);
 
   const options = useMemo(() => fixtureOptions(uploadedTscnName), [uploadedTscnName]);
@@ -225,6 +227,7 @@ export function R3FApp() {
             >
               <div className={styles.sourcePaneHeader}>
                 <span className={styles.sourcePaneTitle}>Source</span>
+                {fileDiagnostics && <FileProblems group={fileDiagnostics} />}
                 <button
                   type="button"
                   className={styles.downloadButton}

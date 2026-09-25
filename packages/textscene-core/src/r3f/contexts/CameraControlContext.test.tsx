@@ -1,7 +1,7 @@
 /**
  * `resetCamera` drives the registered handler, the `reset()` of the canvas's
  * `<GodotEditorControls>`. The camera switch (`switchToCamera`,
- * `returnToFreeView`, `activeCameraPath`) is pinned too.
+ * `returnToFreeView`, `activeCameraPath`) and the 2D framing claim are pinned too.
  */
 import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -174,6 +174,36 @@ describe('CameraControlContext', () => {
     // handler is the active one when reset fires.
     expect(secondHandler).toHaveBeenCalledTimes(1);
     expect(firstHandler).not.toHaveBeenCalled();
+  });
+
+  it('lets a 2D framing request be claimed once, however many stages ask', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    act(() => {
+      result.current.requestFrame2D({ center: { x: 1, y: 2 }, zoom: 1 });
+    });
+    const { requestId } = result.current.frame2D!;
+
+    expect(result.current.claimFrame2D(requestId)).toBe(true);
+    expect(result.current.claimFrame2D(requestId)).toBe(false);
+  });
+
+  it('lets a newer 2D framing request be claimed after an older one', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    act(() => {
+      result.current.requestFrame2D({ center: { x: 1, y: 2 }, zoom: 1 });
+    });
+    result.current.claimFrame2D(result.current.frame2D!.requestId);
+
+    act(() => {
+      result.current.requestFrame2D({ center: { x: 1, y: 2 }, zoom: 1 });
+    });
+
+    expect(result.current.claimFrame2D(result.current.frame2D!.requestId)).toBe(true);
+  });
+
+  it('refuses to claim a request id no request carries', () => {
+    const { result } = renderHook(() => useCameraControl(), { wrapper });
+    expect(result.current.claimFrame2D(0)).toBe(false);
   });
 
   it('useOptionalCameraControl returns null without a provider', () => {

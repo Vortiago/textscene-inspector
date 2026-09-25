@@ -1,10 +1,11 @@
 /**
- * Parses Godot's `project.godot`, the configuration at a project's `res://` root, into raw settings
+ * Parses Godot's `project.godot`, the configuration at a project's `res://` root, into settings
  * keyed by full name. A foreign-format parser outside the resource-slice registry (ADR-0031): no
  * scene names it, so it claims no type name and no bus slot.
  */
 
 import { boolSlotValue, isLocaleRightToLeft, type LayoutDirectionEnv } from '../godot/index.js';
+import { unquoteLiteral } from './utils.js';
 import { parseOptionalInt } from './valueParsers.js';
 
 /**
@@ -16,8 +17,10 @@ const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/.]*)=(.*)$/;
 const SECTION = /^\[([A-Za-z_][A-Za-z0-9_]*)\]$/;
 
 /**
- * Raw `project.godot` settings, keyed by full setting name. Typed readers exist only for settings
- * this previewer honours, so the store does not become a settings grab-bag.
+ * `project.godot` settings, keyed by full setting name: a string literal's decoded text, as
+ * `VariantParser` reads the file back (`project_settings.cpp:964`), and any other value as
+ * written. Typed readers exist only for settings this previewer honours, so the store does not
+ * become a settings grab-bag.
  */
 export type ProjectSettings = Readonly<Record<string, string>>;
 
@@ -50,18 +53,11 @@ export function parseProjectSettings(content: string): ProjectSettings | null {
     // Godot splits a name across heading and key: `theme/default_theme_scale` under
     // `[gui]` is `gui/theme/default_theme_scale`, as `ProjectSettings.get_setting()`
     // takes it. `config_version` above the first heading keeps its bare name.
-    settings[section ? `${section}/${key!}` : key!] = unquote(rawValue!.trim());
+    settings[section ? `${section}/${key!}` : key!] = unquoteLiteral(rawValue!.trim());
     sawSetting = true;
   }
 
   return sawSetting ? settings : null;
-}
-
-/** Godot writes strings quoted; every other value form is left verbatim. */
-function unquote(value: string): string {
-  return value.length >= 2 && value.startsWith('"') && value.endsWith('"')
-    ? value.slice(1, -1)
-    : value;
 }
 
 /** Godot's default when the project does not set the scale. */

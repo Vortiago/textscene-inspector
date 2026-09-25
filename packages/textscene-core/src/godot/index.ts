@@ -17,22 +17,39 @@ export {
   smoothstep,
 } from './math.js';
 export {
+  TRANSFORM2D_IDENTITY,
+  type Transform2DColumns,
+  affineInverseTransform2D,
+  multiplyTransform2D,
+  transform2DFromParts,
+  transform2DGetScale,
+  transform2DHasZeroSkew,
+  transform2DIsConformal,
+} from './transform2d.js';
+export {
   type BasisComponents,
   basisGetScale,
   basisGetScaleAbs,
   basisHasUnitScale,
   basisIsOrthonormal,
 } from './basis.js';
-export { type IndexParse, indexedElements, indexedKeyRegex } from './indexedKey.js';
+export {
+  type IndexParse,
+  indexedElements,
+  indexedKeyRegex,
+  visitIndexedKeys,
+} from './indexedKey.js';
 export {
   IS_VALID_INT_RE,
   literalText,
+  STRING_LITERAL_RE,
+  STRING_LITERAL_SOURCE,
   dropTrailingComma,
   simplifyResPath,
   splitTopLevel,
+  stringLiteralBodies,
   stringToFloat,
   stringToInt,
-  toIntIndex,
 } from './string.js';
 export {
   MATERIAL_RENDER_PRIORITY_MIN,
@@ -42,6 +59,7 @@ export {
   CANVAS_LAYER_MIN,
   CANVAS_LAYER_MAX,
 } from './rendering.js';
+export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export {
   CURSOR_ARROW,
@@ -75,6 +93,7 @@ export {
   readerLimitedInt,
   storedFromFloat,
   storedInt,
+  storedVector2i,
   toInt16,
   toInt32,
   toUint32,
@@ -88,6 +107,7 @@ export {
   TYPED_OR_BARE_ARRAY_RE,
   TYPED_WRAPPER_RE,
   compositeCallPrefix,
+  dictCallField,
   isNilLiteral,
   packedArrayCallAnywhere,
   packedArrayLiteral,

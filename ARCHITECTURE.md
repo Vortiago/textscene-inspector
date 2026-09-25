@@ -190,8 +190,9 @@ rules. See [ADR-0001](./docs/adr/0001-unified-slice-react-free-linter.md).
 
 Two parsers serve different use cases, but they share one scanning loop:
 `packages/textscene-core/src/parser/TscnParserCore.ts`. The core loop takes an
-optional `ParseObserver` (`onError`, `onSectionStart` and `onProperty` hooks).
-Strict behaviour is an observer adapter. Lenient behaviour is the bare loop.
+optional `ParseObserver` (`onError`, `onSectionStart`, `onProperty` and
+`onSectionBuilt` hooks). Strict behaviour is an observer adapter. Lenient
+behaviour is the bare loop.
 
 - **`packages/textscene-core/src/parser/TscnParser.ts`**: the lenient parser
   the renderer uses. It runs the core loop with no observer. It recovers from
@@ -202,6 +203,12 @@ Strict behaviour is an observer adapter. Lenient behaviour is the bare loop.
   every syntax and format error with line and column, does strict heading
   checks (missing node name or identifier), and runs the `validatorRegistry`
   property validators.
+
+  The strict parser also returns a line table, `SourceLines`. It holds the
+  heading line of each node and sub-resource the scan built, and the line of
+  each stored property. A rule reaches its node through the tree, which carries
+  no lines. `Linter` reads the table to put a rule's diagnostic on its node's
+  heading. It puts a dangling reference on the line of its property.
 
 The observer is purely additive. It never changes what the lenient loop parses
 or recovers, so renderer behaviour is identical with or without it.
@@ -812,10 +819,19 @@ render can still be linted. The gutter explains why. A pure helper
 severity for each line and every message. It feeds a `<SourceGutter>` column
 (`SourceGutter.tsx`) that renders an error, warning or info dot for each
 offending line, scroll-synced with the textarea. A hover or focus popover lists
-that line's messages. The pane's toggle carries a compact problem-count badge
-(`✖ 1 / ⚠ 2`), so a collapsed pane still signals problems. A "Download .tscn"
-button (Blob and anchor, no write-back to disk) sits in a small pane header.
-The textarea carries a native placeholder for the empty state. When a
+that line's messages.
+
+A gutter popover opens toward the larger half of the visible gutter, and a
+longer list scrolls. The helper puts a diagnostic that names no line in the
+file-level section of the pane header (`FileProblems.tsx`). It never puts one
+on line 1, because a dot there would say that line is at fault. The section
+shows the same dot and popover as a gutter row, and it takes keyboard focus.
+The pane's toggle carries a compact problem-count badge (`✖ 1 / ⚠ 2`), so a
+collapsed pane still signals problems. Each diagnostic the badge counts is in
+exactly one of the two groups, so the pane shows all of them.
+
+A "Download .tscn" button (Blob and anchor, no write-back to disk) sits in a
+small pane header. The textarea carries a native placeholder for the empty state. When a
 from-scratch paste never produces a valid render (`forwardedContent` never
 leaves `''`), the web app shows its own "nothing has rendered yet" notice
 layered over the viewport. The shared shell has no such state to expose, so

@@ -9,6 +9,7 @@ import {
   INITIAL_SCAN_STATE,
   isIncompleteState,
   scanValueChunk,
+  unquoteLiteral,
   type ValueScanState,
 } from './utils';
 import * as logger from '../logger';
@@ -26,7 +27,8 @@ export interface ParsedImportFile {
   /** The `[remap] importer=` value: `scene` for glTF/GLB, `wavefront_obj` for OBJ. */
   importer: string | null;
   /**
-   * The `[params]` block, as raw value strings. The typed readers cover the only honoured keys:
+   * The `[params]` block: a string literal's decoded text, as `VariantParser` reads it back
+   * (`resource_importer.cpp:76`), and any other value as written. The typed readers cover only
    * `nodes/root_scale`, `nodes/apply_root_scale`, and the `_subresources` material remaps and
    * mesh layers. The rest is GLTFLoader's work or a bake concern with no visual effect.
    */
@@ -49,7 +51,9 @@ export function parseImportFile(content: string): ParsedImportFile | null {
 
   /** Commit whatever the open value has accumulated, balanced or salvaged. */
   const storePending = (): void => {
-    if (pending && section === 'params') params[pending.key] = unquote(pending.lines.join('\n'));
+    if (pending && section === 'params') {
+      params[pending.key] = unquoteLiteral(pending.lines.join('\n'));
+    }
     pending = null;
   };
 
@@ -91,20 +95,13 @@ export function parseImportFile(content: string): ParsedImportFile | null {
       continue;
     }
 
-    const value = unquote(raw);
+    const value = unquoteLiteral(raw);
     if (section === 'params') params[key!] = value;
     else if (section === 'remap' && key === 'importer') importer = value;
   }
   storePending();
 
   return sawSection ? { importer, params } : null;
-}
-
-/** Godot writes strings quoted; every other value form is left verbatim. */
-function unquote(value: string): string {
-  return value.length >= 2 && value.startsWith('"') && value.endsWith('"')
-    ? value.slice(1, -1)
-    : value;
 }
 
 /**

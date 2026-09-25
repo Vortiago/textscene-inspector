@@ -195,12 +195,17 @@ export function materialProgramInputs<
  * `needsUpdate`, but it would overwrite the stable function `useCanvasItemLighting`
  * memoises.
  */
-const CACHE_KEY_THUNKS = new Map<string, () => string>();
+const CACHE_KEY_THUNKS = new Map<string, (this: THREE.Material) => string>();
 
 function cacheKeyThunk(cacheKey: string): () => string {
   const existing = CACHE_KEY_THUNKS.get(cacheKey);
   if (existing) return existing;
-  const thunk = () => cacheKey;
+  // A method, not an arrow, since it reads the material three calls it on. This own property
+  // shadows the prototype key, so it appends that key whatever extends it (`applyToneMapping`
+  // adds the curve term), read per call as a later patch replaces it.
+  const thunk = function (this: THREE.Material): string {
+    return cacheKey + THREE.Material.prototype.customProgramCacheKey.call(this);
+  };
   CACHE_KEY_THUNKS.set(cacheKey, thunk);
   return thunk;
 }
@@ -276,7 +281,8 @@ function programKey(props: Record<string, unknown>, cacheKey: string): string {
     if (declared !== '') add(`defines:${declared}`);
   }
 
-  // The composed `customProgramCacheKey()` return (`:382`, pushed at `:432`).
+  // The injections' part of `customProgramCacheKey()` (`:382`, pushed at `:432`). Its curve term
+  // stays out: a curve swap marks the material dirty, which compiles it without a remount.
   if (cacheKey !== '') add(`inject:${cacheKey}`);
   return key;
 }

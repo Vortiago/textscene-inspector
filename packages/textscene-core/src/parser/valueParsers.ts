@@ -6,14 +6,12 @@
 
 import { warn } from '../logger';
 // These wrap the canonical leaf scanners. One-off structured literals (StyleBox shapes)
-// stay in their slice, and the throwing `parseColor` in `standardmaterial3d` keeps its
-// own contract.
+// stay in their slice.
 import { parseVector2, type Vector2 } from './vectors';
 import { slotTupleRegex, parseGodotFloat, allFinite } from '../godot/number.js';
-import { slotComponents, storedFromFloat, storedInt, type IntWidth } from '../godot/int.js';
-import { compositeTypeName, isConvertedSpelling } from '../godot/variantConversion.js';
+import { slotComponents, storedFromFloat, storedVector2i, type IntWidth } from '../godot/int.js';
 
-import { nodePathLiteral, toIntIndex, boolSlotValue} from '../godot/index.js';
+import { nodePathLiteral, stringToInt, boolSlotValue } from '../godot/index.js';
 
 /**
  * A finite scalar in the tokenizer's grammar, or `null`.
@@ -150,6 +148,46 @@ export function nonNegativeOr(
   return settableNonNegative(value, context) ?? fallback;
 }
 
+/** The inclusive range a setter accepts. No `max` means only the floor is guarded. */
+export interface SetterRange {
+  min: number;
+  max?: number;
+}
+
+/**
+ * An int whose setter refuses a value outside `range` before assigning (an
+ * `ERR_FAIL_COND` guard), so the property keeps its default. The caller cites the guard.
+ */
+export function settableIntOr(
+  value: string | undefined,
+  fallback: number,
+  range: SetterRange,
+  context = 'value'
+): number {
+  return unlessRefused(intOr(value, fallback, context), fallback, range, context);
+}
+
+/** {@link settableIntOr} for a float setter. */
+export function settableFloatOr(
+  value: string | undefined,
+  fallback: number,
+  range: SetterRange,
+  context = 'value'
+): number {
+  return unlessRefused(floatOr(value, fallback, context), fallback, range, context);
+}
+
+function unlessRefused(
+  value: number,
+  fallback: number,
+  { min, max = Infinity }: SetterRange,
+  context: string
+): number {
+  if (value >= min && value <= max) return value;
+  warn(`${context}: Godot's setter refuses ${value}, keeping the default ${fallback}`);
+  return fallback;
+}
+
 /**
  * A size whose setter refuses the whole assignment when any component is negative
  * (`box_shape_3d.cpp:100`, `rectangle_shape_2d.cpp:61`), so it keeps its default. Takes
@@ -194,57 +232,32 @@ export function vec2Or(value: string | undefined, fallback: Vector2, context = '
   }
 }
 
-/**
- * The one `Vector2i(x, y)` grammar, with the float composites' component grammar, not
- * `-?\d+`: `_parse_construct<int32_t>` takes any number token and truncates it, so
- * Godot loads `SubViewport.size = Vector2i(2e1, 2e1)` as `(20, 20)`.
- */
-const VECTOR2I_PATTERN = slotTupleRegex('Vector2i', 2);
-
-/** The integer sibling of {@link vec2Or}. */
+/** The integer sibling of {@link vec2Or}: {@link parseOptionalVector2i}, or `fallback`. */
 export function vec2iOr(value: string | undefined, fallback: Vector2, context = 'value'): Vector2 {
-  if (!value) return fallback;
-  const match = VECTOR2I_PATTERN.exec(value);
-  if (!match) {
-    warn(`${context}: invalid Vector2i "${value}", using fallback`);
-    return fallback;
-  }
-  // A `Vector2(...)` in a Vector2i slot holds doubles, so both components convert
-  // through `double -> int32`. Measured on 4.6.3: `Vector2(4294967295, 64)` stores the
-  // UB sentinel `(-2147483648, 64)`, where `Vector2i(4294967295, 64)` wraps to `(-1, 64)`.
-  const converted = isConvertedSpelling('Vector2i', compositeTypeName(value));
-  const x = storedInt(match[1], converted);
-  const y = storedInt(match[2], converted);
-  if (x === null || y === null) {
-    warn(`${context}: Vector2i "${value}" has a component Godot cannot store, using fallback`);
-    return fallback;
-  }
-  return { x, y };
+  return parseOptionalVector2i(value, context) ?? fallback;
 }
 
 /**
  * The integer sibling of {@link parseOptionalVector2}, but it warns on a malformed
  * value: a malformed `frame_coords` would otherwise pick frame (0,0) with no sign.
+ * `storedVector2i` reads it: the slot takes any number token and truncates it
+ * (`_parse_construct<int32_t>`), so `SubViewport.size = Vector2i(2e1, 2e1)` is `(20, 20)`.
  */
 export function parseOptionalVector2i(
   value: string | undefined,
   context = 'value'
 ): Vector2 | undefined {
   if (!value) return undefined;
-  const match = VECTOR2I_PATTERN.exec(value);
-  if (!match) {
+  const stored = storedVector2i(value);
+  if (stored === 'malformed') {
     warn(`${context}: invalid Vector2i "${value}"`);
     return undefined;
   }
-  // A `Vector2(...)` in a Vector2i slot holds doubles: see `vec2iOr`.
-  const converted = isConvertedSpelling('Vector2i', compositeTypeName(value));
-  const x = storedInt(match[1], converted);
-  const y = storedInt(match[2], converted);
-  if (x === null || y === null) {
+  if (stored === 'unstorable') {
     warn(`${context}: Vector2i "${value}" has a component Godot cannot store`);
     return undefined;
   }
-  return { x, y };
+  return stored;
 }
 
 /**
@@ -304,14 +317,11 @@ export function parseNodePathLiteral(value: string | undefined): string | null {
 
 /**
  * The sibling index a heading's `index=` names. `resource_format_text.cpp:269-270`
- * assigns it to an `int` through `Variant::_to_int` (`variant.h`) and `String::to_int()`:
- * `index="3px"` is 3 and `index=" "` is 0. {@link toIntIndex} is that model. A `NaN`
- * here would poison every sibling-ordering comparison.
+ * assigns it to an `int index` (:196) through `Variant::_to_int` (`variant.h:372-373`)
+ * and `String::to_int()`: `index="3px"` is 3 and `index=" "` is 0. {@link stringToInt}
+ * is that model.
  */
 export function parseHeadingIndex(value: string | undefined): number | undefined {
   if (value === undefined || value === '') return undefined;
-  const index = toIntIndex(value);
-  // Past `String::to_int`'s own bound this reader cannot name the int64 Godot
-  // holds, so it declines rather than letting a wrong number travel.
-  return Number.isNaN(index) ? undefined : index;
+  return stringToInt(value);
 }

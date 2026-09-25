@@ -18,6 +18,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Directory arguments (for example `tscn-lint scenes/`) recurse into every
   `.tscn` file underneath instead of throwing `EISDIR`.
 
+### Changed
+- A semantic rule's finding carries the line of its node's heading, and a
+  dangling resource reference the line of its property. `--format json` gives
+  them a `line` and `column`, and `--format github` annotates that line instead
+  of the whole file.
+
 ## [0.9.0] - 2026-06-10
 
 ### Added

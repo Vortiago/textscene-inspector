@@ -2,7 +2,6 @@
  * <Path3D> draws a selection-gated white polyline gizmo from its Curve3D, and
  * degrades to nothing when the curve is absent.
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnInternalResource } from '../../../parser/types';
@@ -10,7 +9,8 @@ import { Path3D } from './Component';
 import { parsePath3D } from './parser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider, useSelection } from '../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
+import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 // Straight 3-point path: (0,0,0) → (10,0,0) → (10,10,0), zero tangents.
 const CURVE: TscnInternalResource = {
@@ -30,14 +30,6 @@ function pathNode(name = 'MyPath', props: Record<string, string> = {}): TscnNode
     children: [],
     properties: parsePath3D({ type: 'node', attributes: { type: 'Path3D', name } }, props),
   };
-}
-
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
 }
 
 async function renderPath(

@@ -9,12 +9,23 @@ import {
   type Diagnostic,
   type RuleContext,
   type ParseError,
+  type SourceLines,
 } from './types.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { StrictTscnParser } from './StrictTscnParser.js';
 import { isLegacyFormat, readHeaderFormat } from './headerFormat.js';
 import { FILE_DIAGNOSTICS, STRICT_PARSER_RULE_NAME } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
+import { headingLocation } from './sourceLocation.js';
+
+/**
+ * `diagnostic` put on `heading`, unless it carries a location of its own. A copy, not a write:
+ * a rule may hand back one object for several nodes.
+ */
+function onHeading(diagnostic: Diagnostic, heading: Diagnostic['location']): Diagnostic {
+  if (diagnostic.location || !heading) return diagnostic;
+  return { ...diagnostic, location: heading };
+}
 
 export class Linter {
   private parser = new StrictTscnParser();
@@ -45,9 +56,10 @@ export class Linter {
     // A property error does not withhold the tree, so a file reports its parse
     // errors and the semantic findings underneath them together.
     if (parseResult.scene) {
-      for (const d of orphanDiagnostics(parseResult.scene)) diagnostics.push(d);
-      for (const d of danglingResourceDiagnostics(parseResult.scene)) diagnostics.push(d);
-      for (const d of this.lintScene(parseResult.scene)) diagnostics.push(d);
+      const { scene, lines } = parseResult;
+      for (const d of orphanDiagnostics(scene)) diagnostics.push(d);
+      for (const d of danglingResourceDiagnostics(scene, lines)) diagnostics.push(d);
+      for (const d of this.lintScene(scene, lines)) diagnostics.push(d);
     }
 
     return this.sortDiagnostics(diagnostics);
@@ -97,21 +109,26 @@ export class Linter {
   /**
    * Run the semantic rules over a parsed TSCN scene.
    * @param scene - The parsed scene to validate
+   * @param lines - Where each node of `scene` sits, for the heading each diagnostic is put on
    * @returns Array of diagnostics found
    */
-  private lintScene(scene: TscnScene): Diagnostic[] {
+  private lintScene(scene: TscnScene, lines: SourceLines): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
     for (const node of scene.nodes) {
-      this.lintNode(scene, node, diagnostics);
+      this.lintNode(scene, node, lines, diagnostics);
     }
 
     return diagnostics;
   }
 
-  /** Lint a node and, recursively, its children. */
-  private lintNode(scene: TscnScene, node: TscnNode, diagnostics: Diagnostic[]): void {
+  /**
+   * Lint a node and, recursively, its children. Every diagnostic it reports is about `node`
+   * (`LintRule.check`), so one without a `location` goes on the node's heading.
+   */
+  private lintNode(scene: TscnScene, node: TscnNode, lines: SourceLines, diagnostics: Diagnostic[]): void {
     const rules = ruleRegistry.getRulesForNodeType(node.type);
+    const heading = headingLocation(lines, node);
 
     const context: RuleContext = {
       scene,
@@ -124,7 +141,7 @@ export class Linter {
       // exceeds the call limit. A throw in one rule is that rule's own diagnostic and the walk goes on:
       // no host catches around `lint`, so an uncaught throw drops every diagnostic of the file.
       try {
-        for (const diagnostic of rule.check(context)) diagnostics.push(diagnostic);
+        for (const diagnostic of rule.check(context)) diagnostics.push(onHeading(diagnostic, heading));
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         diagnostics.push(
@@ -132,14 +149,15 @@ export class Linter {
             FILE_DIAGNOSTICS.ruleCrashed,
             node,
             `Rule '${rule.meta.name}' threw while linting '${node.name}': ${reason}. ` +
-              'Its own findings for this node are missing; every other rule ran.'
+              'Its own findings for this node are missing; every other rule ran.',
+            heading
           )
         );
       }
     }
 
     for (const child of node.children) {
-      this.lintNode(scene, child, diagnostics);
+      this.lintNode(scene, child, lines, diagnostics);
     }
   }
 

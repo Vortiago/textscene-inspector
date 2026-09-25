@@ -24,3 +24,9 @@ export function parseFixtureManifest(source) {
 export function readFixtureManifest() {
   return parseFixtureManifest(readFileSync(FIXTURE_MANIFEST_PATH, 'utf8'));
 }
+
+/** Reads this checkout's manifest into a lookup from a fixture label to its file name. */
+export function readFixtureLookup() {
+  const fixtures = readFixtureManifest();
+  return (label) => fixtures.find((fixture) => fixture.name === label)?.file;
+}

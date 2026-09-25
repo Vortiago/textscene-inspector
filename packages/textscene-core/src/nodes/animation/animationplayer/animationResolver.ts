@@ -16,7 +16,8 @@ import {
   literalText,
   packedArrayCallAnywhere,
 } from '../../../godot/index.js';
-import { nodePathLiteral } from '../../../godot/variantParser.js';
+import { dictCallField, nodePathLiteral } from '../../../godot/variantParser.js';
+import { findSubResource } from '../../../resources/SubResourceResolver.js';
 import type { AnimationLibraryRef } from './types';
 
 export type { GodotKeyframeValue } from './keyframeValues.js';
@@ -65,14 +66,14 @@ export function resolveAnimations(
 ): GodotAnimation[] {
   const animations: GodotAnimation[] = [];
   for (const lib of libraries) {
-    const libResource = findById(internalResources, lib.subResourceId);
+    const libResource = findSubResource(internalResources, lib.subResourceId);
     if (!libResource || libResource.type !== 'AnimationLibrary') continue;
 
     const dataStr = asString(libResource.data['_data']);
     if (!dataStr) continue;
 
     for (const [name, animId] of parseLibraryData(dataStr)) {
-      const animResource = findById(internalResources, animId);
+      const animResource = findSubResource(internalResources, animId);
       if (!animResource || animResource.type !== 'Animation') continue;
       animations.push(parseAnimation(name, animResource));
     }
@@ -92,14 +93,14 @@ export function resolveAudioTrackPaths(
 ): string[] {
   const paths: string[] = [];
   for (const lib of libraries) {
-    const libResource = findById(internalResources, lib.subResourceId);
+    const libResource = findSubResource(internalResources, lib.subResourceId);
     if (!libResource || libResource.type !== 'AnimationLibrary') continue;
 
     const dataStr = asString(libResource.data['_data']);
     if (!dataStr) continue;
 
     for (const [, animId] of parseLibraryData(dataStr)) {
-      const animResource = findById(internalResources, animId);
+      const animResource = findSubResource(internalResources, animId);
       if (!animResource || animResource.type !== 'Animation') continue;
       paths.push(...audioTrackPaths(animResource.data));
     }
@@ -129,7 +130,7 @@ export function hasUnresolvableClips(
   internalResources: readonly TscnInternalResource[]
 ): boolean {
   return libraries.some((lib) => {
-    const libResource = findById(internalResources, lib.subResourceId);
+    const libResource = findSubResource(internalResources, lib.subResourceId);
     if (!libResource || libResource.type !== 'AnimationLibrary') return false;
     const dataStr = asString(libResource.data['_data']);
     return dataStr !== undefined && EXT_RESOURCE_CALL_ANYWHERE_RE.test(dataStr);
@@ -231,18 +232,20 @@ function parseNodePath(raw: string): { targetPath: string; property: string } | 
   return { targetPath: inner.slice(0, colon), property: inner.slice(colon + 1) };
 }
 
-const PACKED_FLOAT_RE = new RegExp(`"times"\\s*:\\s*${packedArrayCallAnywhere('PackedFloat32Array').source}`);
-const PACKED_TRANSITIONS_RE = new RegExp(`"transitions"\\s*:\\s*${packedArrayCallAnywhere('PackedFloat32Array').source}`);
+// A value track's key Dictionary fields, which `Animation::_set` reads as `Vector<real_t>`
+// (animation.cpp:267, :285).
+const TIMES_FIELD_RE = dictCallField('times', 'PackedFloat32Array');
+const TRANSITIONS_FIELD_RE = dictCallField('transitions', 'PackedFloat32Array');
 
 function parseKeys(keysStr: string): GodotKeyframe[] {
   if (keysStr.length === 0) return [];
 
-  const timesMatch = PACKED_FLOAT_RE.exec(keysStr);
+  const timesMatch = TIMES_FIELD_RE.exec(keysStr);
   if (!timesMatch || timesMatch[1] === undefined) return [];
   const times = parseFloatList(timesMatch[1]);
   if (times === null || times.length === 0) return [];
 
-  const transMatch = PACKED_TRANSITIONS_RE.exec(keysStr);
+  const transMatch = TRANSITIONS_FIELD_RE.exec(keysStr);
   const transitions =
     transMatch && transMatch[1] !== undefined ? parseFloatList(transMatch[1]) : [];
   if (transitions === null) return [];
@@ -318,16 +321,6 @@ function parseFloatList(raw: string): number[] | null {
     values.push(num);
   }
   return values;
-}
-
-function findById(
-  resources: readonly TscnInternalResource[],
-  id: string
-): TscnInternalResource | undefined {
-  return resources.find((r) => {
-    const dataId = (r.data as { id?: string }).id;
-    return r.id === id || dataId === id;
-  });
 }
 
 function asString(value: unknown): string | undefined {

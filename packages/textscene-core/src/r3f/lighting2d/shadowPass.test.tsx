@@ -10,10 +10,6 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { TscnParser } from '../../parser/TscnParser';
 import { NodeDispatcher } from '../NodeDispatcher';
-import { CanvasWorkspaceProvider } from '../contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from '../contexts/SelectionContext';
-import { SceneResourcesProvider } from '../SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import type { ReactNode } from 'react';
 import {
@@ -29,6 +25,7 @@ import {
   shadowStencilRef,
   shadowVolumeRenderOrder,
 } from './ShadowVolumeMask';
+import { SceneStack } from '../testing/SceneStack';
 import '../nodes'; // side-effect: registers every node's r3f component
 
 const COOKIE = 'res://light.png';
@@ -81,21 +78,12 @@ async function render(tscn: string, probe?: ReactNode) {
   fake.textures.seed(COOKIE, cookie);
 
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={parsed.internalResources}
-          externalResources={parsed.externalResources}
-        >
-          <SelectionProvider>
-            <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
-              <NodeDispatcher nodes={parsed.nodes} />
-              {probe}
-            </CanvasLighting2DProvider>
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
+      <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+        <NodeDispatcher nodes={parsed.nodes} />
+        {probe}
+      </CanvasLighting2DProvider>
+    </SceneStack>
   );
   // No frame is advanced: the world matrices are sampled in a layout effect
   // as well, so a still tree settles inside React's own commit loop. Driving

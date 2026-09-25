@@ -39,29 +39,20 @@ import type { Gradient } from '../../../resources/textures/gradienttexture2d/typ
 import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from './godotRng';
 import {
+  TRANSFORM2D_IDENTITY,
+  affineInverseTransform2D,
+  multiplyTransform2D,
+  type Transform2DColumns,
+} from '../../../godot/transform2d.js';
+import {
   CPUParticles2DDrawOrder,
   CPUParticles2DEmissionShape,
   CPUParticles2DParam,
   type CPUParticles2DProperties,
 } from './types';
 
-/**
- * A Godot `Transform2D`: two basis columns and the origin column, named after the
- * columns so the port reads like the C++.
- */
-export interface Affine2D {
-  /** `columns[0]`: the local X axis. */
-  ax: number;
-  ay: number;
-  /** `columns[1]`: the local Y axis. */
-  bx: number;
-  by: number;
-  /** `columns[2]`: the origin. */
-  ox: number;
-  oy: number;
-}
-
-export const IDENTITY_AFFINE: Affine2D = { ax: 1, ay: 0, bx: 0, by: 1, ox: 0, oy: 0 };
+/** A particle's `Transform2D`, which the process loop writes in place, as Godot's `Particle`. */
+type ParticleTransform = { -readonly [K in keyof Transform2DColumns]: number };
 
 /**
  * The seed substituted when a scene does not set `use_fixed_seed`. Godot uses
@@ -89,13 +80,13 @@ export interface ParticleSimInput {
    * `local_coords` is false: Godot spawns in global space and draws with an
    * identity transform, so the pose maps back through this transform's inverse.
    */
-  emissionTransform: Affine2D;
+  emissionTransform: Transform2DColumns;
 }
 
 /** One particle as the renderer needs it: where its quad goes, and its tint. */
 export interface RenderedParticle {
   /** Item-local `Transform2D` mapping the texture quad's local corners. */
-  transform: Affine2D;
+  transform: Transform2DColumns;
   /** Godot's `p.color`: sRGB, alpha included, curve, ramp and hue applied. */
   color: Color;
   /**
@@ -112,7 +103,7 @@ export interface RenderedParticle {
 
 /** Godot's private `Particle` struct, only the fields the process loop reads. */
 interface Particle {
-  transform: Affine2D;
+  transform: ParticleTransform;
   color: Color;
   custom: [number, number, number, number];
   rotation: number;
@@ -171,7 +162,7 @@ export function simulateFrozenPose(input: ParticleSimInput): RenderedParticle[] 
     lifetime,
     seed: (props.use_fixed_seed ? props.seed : DEFAULT_PREVIEW_SEED) >>> 0,
     rng: new GodotRandomPCG(0),
-    emissionXform: props.local_coords ? IDENTITY_AFFINE : input.emissionTransform,
+    emissionXform: props.local_coords ? TRANSFORM2D_IDENTITY : input.emissionTransform,
   };
 
   // Godot's settle steps whole frames and the last one overshoots: `while (todo >
@@ -195,12 +186,12 @@ interface SimState {
   lifetime: number;
   seed: number;
   rng: GodotRandomPCG;
-  emissionXform: Affine2D;
+  emissionXform: Transform2DColumns;
 }
 
 function newParticle(): Particle {
   return {
-    transform: { ...IDENTITY_AFFINE },
+    transform: { ...TRANSFORM2D_IDENTITY },
     color: { r: 1, g: 1, b: 1, a: 1 },
     custom: [0, 0, 0, 0],
     rotation: 0,
@@ -239,7 +230,7 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
   // A global-coords emitter spawns in world space. `velocity_xform` is the same
   // transform with its translation dropped, since a velocity is a direction.
   const emissionXform = state.emissionXform;
-  const velocityXform: Affine2D = { ...emissionXform, ox: 0, oy: 0 };
+  const velocityXform: Transform2DColumns = { ...emissionXform, tx: 0, ty: 0 };
 
   const systemPhase = state.time / lifetime;
 
@@ -281,7 +272,7 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
       restartParticle(state, input, p, i, tv);
       if (!props.local_coords) {
         p.velocity = basisXform(velocityXform, p.velocity);
-        p.transform = multiplyAffine(emissionXform, p.transform);
+        p.transform = multiplyTransform2D(emissionXform, p.transform);
       }
     } else if (!p.active) {
       continue;
@@ -296,8 +287,8 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
 
     // Godot integrates position after the appearance pass, and does it on the
     // restart frame too, so a newborn particle is already one step along.
-    p.transform.ox += p.velocity.x * localDelta;
-    p.transform.oy += p.velocity.y * localDelta;
+    p.transform.tx += p.velocity.x * localDelta;
+    p.transform.ty += p.velocity.y * localDelta;
   }
 }
 
@@ -408,7 +399,7 @@ function restartParticle(
   p.custom[1] = 0.0;
   p.custom[2] = texAnimOffset * lerp(animOffset.min, animOffset.max, p.animOffsetRand);
   p.custom[3] = 1.0 - rng.randf() * props.lifetime_randomness;
-  p.transform = { ...IDENTITY_AFFINE };
+  p.transform = { ...TRANSFORM2D_IDENTITY };
   p.time = 0;
   p.lifetime = state.lifetime * p.custom[3];
   p.baseColor = { r: 1, g: 1, b: 1, a: 1 };
@@ -426,16 +417,16 @@ function emitAtShape(props: CPUParticles2DProperties, p: Particle, rng: GodotRan
     case CPUParticles2DEmissionShape.Sphere: {
       const t = 2 * Math.PI * rng.randf();
       const radius = props.emission_sphere_radius * rng.randf();
-      p.transform.ox = Math.cos(t) * radius;
-      p.transform.oy = Math.sin(t) * radius;
+      p.transform.tx = Math.cos(t) * radius;
+      p.transform.ty = Math.sin(t) * radius;
       break;
     }
     case CPUParticles2DEmissionShape.SphereSurface: {
       const s = rng.randf();
       const t = 2 * Math.PI * rng.randf();
       const radius = props.emission_sphere_radius * Math.sqrt(1.0 - s * s);
-      p.transform.ox = Math.cos(t) * radius;
-      p.transform.oy = Math.sin(t) * radius;
+      p.transform.tx = Math.cos(t) * radius;
+      p.transform.ty = Math.sin(t) * radius;
       break;
     }
     case CPUParticles2DEmissionShape.Rectangle: {
@@ -444,8 +435,8 @@ function emitAtShape(props: CPUParticles2DProperties, p: Particle, rng: GodotRan
       // (+44.5, +9.3), the y-first draw. The x-first reading gives (+25.4, +16.9).
       const y = rng.randf();
       const x = rng.randf();
-      p.transform.ox = (x * 2.0 - 1.0) * props.emission_rect_extents.x;
-      p.transform.oy = (y * 2.0 - 1.0) * props.emission_rect_extents.y;
+      p.transform.tx = (x * 2.0 - 1.0) * props.emission_rect_extents.x;
+      p.transform.ty = (y * 2.0 - 1.0) * props.emission_rect_extents.y;
       break;
     }
     default:
@@ -480,7 +471,7 @@ function advanceParticle(
   const texAnimOffset = sampleParam(curves, CPUParticles2DParam.AnimOffset, tv);
 
   const force: Vector2 = { x: props.gravity.x, y: props.gravity.y };
-  const pos: Vector2 = { x: p.transform.ox, y: p.transform.oy };
+  const pos: Vector2 = { x: p.transform.tx, y: p.transform.ty };
 
   // Each of the three accelerations sits behind a C++ ternary, so its
   // `rand_from_seed` draw is consumed only when the branch is taken. Drawing
@@ -494,7 +485,7 @@ function advanceParticle(
 
   // Radial and tangential acceleration are both measured from the emitter's
   // own origin, which for a global-coords emitter is its world position.
-  const diff: Vector2 = { x: pos.x - state.emissionXform.ox, y: pos.y - state.emissionXform.oy };
+  const diff: Vector2 = { x: pos.x - state.emissionXform.tx, y: pos.y - state.emissionXform.ty };
   const diffLength = Math.hypot(diff.x, diff.y);
   if (diffLength > 0) {
     const radial = texRadialAccel * lerpParam(props, CPUParticles2DParam.RadialAccel, seedRef);
@@ -520,8 +511,8 @@ function advanceParticle(
     const ang = orbitAmount * localDelta * 2 * Math.PI;
     const cr = Math.cos(-ang);
     const sr = Math.sin(-ang);
-    p.transform.ox += -diff.x + (cr * diff.x - sr * diff.y);
-    p.transform.oy += -diff.y + (sr * diff.x + cr * diff.y);
+    p.transform.tx += -diff.x + (cr * diff.x - sr * diff.y);
+    p.transform.ty += -diff.y + (sr * diff.x + cr * diff.y);
   }
 
   if (curves[CPUParticles2DParam.InitialLinearVelocity]) {
@@ -595,19 +586,19 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
     let yAxis: Vector2 =
       Math.hypot(p.velocity.x, p.velocity.y) > 0
         ? { x: p.velocity.x, y: p.velocity.y }
-        : { x: p.transform.bx, y: p.transform.by };
+        : { x: p.transform.c, y: p.transform.d };
     const length = Math.hypot(yAxis.x, yAxis.y);
     yAxis = length > 0 ? { x: yAxis.x / length, y: yAxis.y / length } : { x: 0, y: 0 };
-    p.transform.bx = yAxis.x;
-    p.transform.by = yAxis.y;
+    p.transform.c = yAxis.x;
+    p.transform.d = yAxis.y;
     // Vector2::orthogonal() is (y, -x).
-    p.transform.ax = yAxis.y;
-    p.transform.ay = -yAxis.x;
+    p.transform.a = yAxis.y;
+    p.transform.b = -yAxis.x;
   } else {
-    p.transform.ax = Math.cos(p.rotation);
-    p.transform.ay = -Math.sin(p.rotation);
-    p.transform.bx = Math.sin(p.rotation);
-    p.transform.by = Math.cos(p.rotation);
+    p.transform.a = Math.cos(p.rotation);
+    p.transform.b = -Math.sin(p.rotation);
+    p.transform.c = Math.sin(p.rotation);
+    p.transform.d = Math.cos(p.rotation);
   }
 
   const scaleParam = props.params[CPUParticles2DParam.Scale]!;
@@ -615,10 +606,10 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
   // Godot floors the scale so a zero-scale quad never collapses the basis.
   const scaleX = Math.max(0.00001, texScale * amount);
   const scaleY = Math.max(0.00001, texScale * amount);
-  p.transform.ax *= scaleX;
-  p.transform.ay *= scaleX;
-  p.transform.bx *= scaleY;
-  p.transform.by *= scaleY;
+  p.transform.a *= scaleX;
+  p.transform.b *= scaleX;
+  p.transform.c *= scaleY;
+  p.transform.d *= scaleY;
 }
 
 /**
@@ -626,7 +617,7 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
  * into the emitter node's local space.
  */
 function collectPose(state: SimState, props: CPUParticles2DProperties): RenderedParticle[] {
-  const inverse = affineInverse(state.emissionXform);
+  const inverse = affineInverseTransform2D(state.emissionXform);
 
   const order = state.particles.map((_, index) => index);
   if (props.draw_order === CPUParticles2DDrawOrder.Lifetime) {
@@ -641,7 +632,7 @@ function collectPose(state: SimState, props: CPUParticles2DProperties): Rendered
     // point. Omitting it draws the same nothing for a fraction of the vertices.
     if (!p.active) continue;
     pose.push({
-      transform: multiplyAffine(inverse, p.transform),
+      transform: multiplyTransform2D(inverse, p.transform),
       color: p.color,
       anim: p.custom[2],
       age: p.time,
@@ -714,44 +705,6 @@ function rotateHue(color: Color, angle: number): Color {
 }
 
 /** `Transform2D::basis_xform`: the linear part only. */
-function basisXform(t: Affine2D, v: Vector2): Vector2 {
-  return { x: t.ax * v.x + t.bx * v.y, y: t.ay * v.x + t.by * v.y };
-}
-
-/** `Transform2D::operator*`: `a` applied to `b`. */
-function multiplyAffine(a: Affine2D, b: Affine2D): Affine2D {
-  const col0 = basisXform(a, { x: b.ax, y: b.ay });
-  const col1 = basisXform(a, { x: b.bx, y: b.by });
-  const origin = basisXform(a, { x: b.ox, y: b.oy });
-  return {
-    ax: col0.x,
-    ay: col0.y,
-    bx: col1.x,
-    by: col1.y,
-    ox: origin.x + a.ox,
-    oy: origin.y + a.oy,
-  };
-}
-
-/**
- * `Transform2D::affine_inverse`. A singular transform (a node scaled to zero) has
- * no inverse, and Godot's `ERR_FAIL_COND` leaves the matrix untouched, so this
- * answers the identity, not NaN.
- */
-function affineInverse(t: Affine2D): Affine2D {
-  const det = t.ax * t.by - t.ay * t.bx;
-  if (det === 0 || !Number.isFinite(det)) return { ...IDENTITY_AFFINE };
-  const idet = 1 / det;
-  const ax = t.by * idet;
-  const ay = -t.ay * idet;
-  const bx = -t.bx * idet;
-  const by = t.ax * idet;
-  return {
-    ax,
-    ay,
-    bx,
-    by,
-    ox: -(ax * t.ox + bx * t.oy),
-    oy: -(ay * t.ox + by * t.oy),
-  };
+function basisXform(t: Transform2DColumns, v: Vector2): Vector2 {
+  return { x: t.a * v.x + t.c * v.y, y: t.b * v.x + t.d * v.y };
 }

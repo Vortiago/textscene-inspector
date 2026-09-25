@@ -32,6 +32,16 @@ const CLEAN_TSCN = `[gd_scene load_steps=1 format=3]
 [node name="CleanRoot" type="Node3D"]
 `;
 
+// A StaticBody2D with no shape child: a rule's finding about the node, not about a line.
+// The rule reaches the node through the tree, and the linter puts it on the heading.
+const SHAPELESS_BODY_TSCN = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Body" type="StaticBody2D" parent="."]
+`;
+const BODY_HEADING_LINE = 5;
+
 function mockFetch(text = STUB_TSCN) {
   globalThis.fetch = vi.fn().mockResolvedValue({
     ok: true,
@@ -70,7 +80,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('#202 linter gutter — dot appears on the offending line (debounced)', () => {
+describe('linter gutter — dot appears on the offending line (debounced)', () => {
   it('shows no gutter dot for a clean scene', async () => {
     render(<R3FApp />);
     await waitForScene();
@@ -108,7 +118,25 @@ describe('#202 linter gutter — dot appears on the offending line (debounced)',
   });
 });
 
-describe('#202 linter gutter — hover popover shows the line message(s)', () => {
+describe('linter gutter — a rule finding marks the heading of its node', () => {
+  it('puts a warning dot on the heading, and leaves the file-level section out', async () => {
+    render(<R3FApp />);
+    await waitForScene();
+
+    typeBuffer(SHAPELESS_BODY_TSCN);
+    await waitFor(() => {
+      expect(screen.queryByTestId(`gutter-dot-${BODY_HEADING_LINE}`)).toBeTruthy();
+    });
+
+    const dot = screen.getByTestId(`gutter-dot-${BODY_HEADING_LINE}`);
+    expect(dot.className).toMatch(/warning/i);
+    fireEvent.mouseEnter(dot);
+    expect(screen.getByTestId(`gutter-popover-${BODY_HEADING_LINE}`).textContent).toContain('Body');
+    expect(screen.queryByTestId('file-problems')).toBeNull();
+  });
+});
+
+describe('linter gutter — hover popover shows the line message(s)', () => {
   it('shows the diagnostic message on hover/focus and hides it again on leave/blur', async () => {
     render(<R3FApp />);
     await waitForScene();
@@ -129,7 +157,7 @@ describe('#202 linter gutter — hover popover shows the line message(s)', () =>
   });
 });
 
-describe('#202 linter gutter — toggle carries a problem-count badge', () => {
+describe('linter gutter — toggle carries a problem-count badge', () => {
   it('shows no badge for a clean scene', async () => {
     render(<R3FApp />);
     await waitForScene();

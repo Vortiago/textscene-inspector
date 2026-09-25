@@ -126,4 +126,20 @@ noise = SubResource("missing")
     expect(resolveNoiseTexture2D('SubResource("no_noise")', broken.subResources)).toBeNull();
     expect(resolveNoiseTexture2D('SubResource("dangling")', broken.subResources)).toBeNull();
   });
+
+  it("resolves a texture wider than the previewer's texture ceiling to no texture", () => {
+    const oversized = parseTresFile(`[gd_resource type="StandardMaterial3D" format=3]
+
+[sub_resource type="FastNoiseLite" id="n"]
+
+[sub_resource type="NoiseTexture2D" id="wide"]
+width = 2000000000
+height = 512
+noise = SubResource("n")
+
+[resource]
+albedo_texture = SubResource("wide")
+`);
+    expect(resolveNoiseTexture2D('SubResource("wide")', oversized.subResources)).toBeNull();
+  });
 });

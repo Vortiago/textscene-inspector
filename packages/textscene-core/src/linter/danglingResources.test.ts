@@ -158,3 +158,46 @@ describe('dangling-resource-reference', () => {
     ]);
   });
 });
+
+describe('where a dangling reference is reported', () => {
+  it("on the line of the node's property that holds it", () => {
+    const [found] = dangling(`[gd_scene format=3]
+
+[node name="Box" type="CSGBox3D"]
+size = Vector3(1, 1, 1)
+material = SubResource("nope")
+`);
+    expect(found?.location).toEqual({ line: 5, column: 1 });
+  });
+
+  it("on the line of a sub-resource's property that holds it", () => {
+    const [found] = dangling(`[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat_1"]
+albedo_texture = SubResource("nope")
+
+[node name="Root" type="Node3D"]
+`);
+    expect(found?.location).toEqual({ line: 4, column: 1 });
+  });
+
+  it('on the line of the deprecated spelling the file wrote', () => {
+    // `frames` is stored as `sprite_frames` (animated_sprite_2d.cpp:617), the key the sweep reads.
+    const [found] = dangling(`[gd_scene format=3]
+
+[node name="Anim" type="AnimatedSprite2D"]
+frames = SubResource("nope")
+`);
+    expect(found?.location).toEqual({ line: 4, column: 1 });
+  });
+
+  it('on each line of its own, when two slots on one node dangle', () => {
+    const lines = dangling(`[gd_scene format=3]
+
+[node name="Mesh" type="MeshInstance3D"]
+mesh = SubResource("a")
+skin = SubResource("c")
+`).map((d) => d.location?.line);
+    expect(lines.sort()).toEqual([4, 5]);
+  });
+});

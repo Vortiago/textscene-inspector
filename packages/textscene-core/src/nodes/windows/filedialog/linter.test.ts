@@ -3,7 +3,7 @@
  * the `linter/index.ts` barrel, which imports every slice.
  */
 
-import { describe, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { node, scene, expectClean, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
@@ -71,6 +71,25 @@ describe('FileDialog semantic rules', () => {
 
   it('stays clean with option_count set and no option_<N>/… keys at all', () => {
     expectClean(scene(node('FileDialog', { option_count: 0 })));
+  });
+});
+
+describe('FileDialog index spelling in the message', () => {
+  // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
+  it('names what Godot stores beside a wrapping index past the count', () => {
+    const diagnostic = expectDiagnostic(
+      scene(node('FileDialog', { option_count: 2, 'option_4294967298/name': '"x"' })),
+      { ruleName: 'filedialog-option-index-out-of-range', severity: 'error' }
+    );
+    expect(diagnostic.message).toContain(
+      'index(es) 4294967298 (stored as 2) fall outside option_count (2)'
+    );
+  });
+
+  it('stays silent on an option inside the count whatever its spelling', () => {
+    expectNoDiagnostic(scene(node('FileDialog', { option_count: 2, 'option_+01/name': '"x"' })), {
+      ruleName: 'filedialog-option-index-out-of-range',
+    });
   });
 });
 

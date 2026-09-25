@@ -13,7 +13,7 @@
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
-import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
+import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
 import type { GraphNodeProperties, GraphNodeSlot } from './types';
 import { parseGraphElement } from '../graphelement/parser';
 
@@ -107,10 +107,11 @@ function parseSlots(properties: Record<string, string>): Map<number, GraphNodeSl
   for (const [key, value] of Object.entries(properties)) {
     const m = SLOT_KEY_RE.exec(key);
     if (!m) continue;
-    const index = toIntIndex(m[1]!);
+    // `int idx = …to_int()` (graph_node.cpp:45).
+    const index = stringToInt(m[1]!);
     // `set_slot`'s own `ERR_FAIL_COND_MSG(p_slot_index < 0, ...)` (:706) refuses
     // a negative index outright: the write never lands.
-    if (!(index >= 0)) continue;
+    if (index < 0) continue;
     const leaf = m[2]!;
     const current = slots.get(index) ?? defaultGraphNodeSlot();
     const next = applyLeaf(current, leaf, value);

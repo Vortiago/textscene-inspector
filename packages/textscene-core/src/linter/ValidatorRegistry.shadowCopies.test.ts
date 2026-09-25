@@ -99,8 +99,8 @@ describe('ValidatorRegistry meta-guard: no shadow copies', () => {
 
   it('sees a key a spread contributed, which a source scrape cannot', () => {
     // Why the own half reads the registry rather than the source text: a shared
-    // key group spread into `registerAll` declares its keys with no `key:` line
-    // to find, and twenty registrations arrive that way.
+    // key group handed to `registerAll`, spread as here or as its own argument,
+    // declares its keys with no `key:` line to find.
     const SHARED_KEYS = { transform: v.transform3d('transform') };
     const scratch = new ValidatorRegistry({ Child: 'Base' });
     scratch.registerAll('Base', { transform: v.transform3d('transform') });

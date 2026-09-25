@@ -109,10 +109,22 @@ describe('parseTileMap', () => {
       format: '2',
       'layer_0/tile_data': 'PackedInt32Array(0, 0, 0)',
       'layer_1000/tile_data': 'PackedInt32Array(1, 0, 0)',
-      'layer_4294967296/name': '"Far"',
+      'layer_2000000000/name': '"Far"',
     });
 
     expect(result.layers.map((layer) => layer.name)).toEqual(['Layer0', 'Layer1000', 'Far']);
+  });
+
+  // `int index = ….to_int()` (property_list_helper.cpp:130-131) keeps the low 32 bits, so
+  // `4294967296` names layer 0, not a far layer.
+  it('applies an index that wraps past 32 bits to the layer it lands on', () => {
+    const result = parseTileMap(heading('TileMap', { name: 'Map', parent: '.' }), {
+      format: '2',
+      'layer_0/tile_data': 'PackedInt32Array(0, 0, 0)',
+      'layer_4294967296/name': '"Renamed"',
+    });
+
+    expect(result.layers.map((layer) => layer.name)).toEqual(['Renamed']);
   });
 
   // The fill ceiling costs a contiguous file nothing: every index between its

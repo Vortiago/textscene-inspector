@@ -13,14 +13,15 @@ import type { Gradient, GradientTexture2D } from './types';
  * An RGBA8 texture of `tex.width × tex.height` sRGB bytes (Godot's
  * `Color::get_r8()`), tagged `SRGBColorSpace` like an albedo texture. Alpha passes
  * through linearly. `LinearFilter`, not DataTexture's `NearestFilter`, matches
- * Godot's smooth sampling.
+ * Godot's smooth sampling. `decodeGradientTexture2D` bounds both axes to what
+ * Godot's size setters accept, 16384 each, and `resolveGradientTexture` draws no
+ * texture where the tab cannot allocate that much.
  */
 export function rasterizeGradientTexture2D(
   tex: GradientTexture2D,
   gradient: Gradient
 ): THREE.DataTexture {
-  const width = Math.max(1, Math.floor(tex.width));
-  const height = Math.max(1, Math.floor(tex.height));
+  const { width, height } = tex;
   const data = new Uint8Array(width * height * 4);
 
   for (let y = 0; y < height; y++) {

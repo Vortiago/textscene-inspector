@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../linter/testing/fixtureCheck';
+import { lint, node, scene } from '../../../linter/testing/testkit';
 import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
@@ -189,5 +190,40 @@ describe('AnimatedSprite3D strict validators', () => {
     it('rejects a non-numeric value', () => {
       expect(check('speed_scale', 'fast')).not.toBeNull();
     });
+  });
+});
+
+/**
+ * `playing` is registered as unavailable, as on AnimatedSprite2D: no ADD_PROPERTY binds it
+ * (sprite_3d.cpp:1539-1544), and the deprecated-key `_set` handles only `frames` (:1494-1500), so
+ * `_setv` drops the write. `is_playing` is a method binding (:1512). Without the entry,
+ * `findValidator` returns null and the strict parser skips the key without a word.
+ */
+describe('playing is a key verdict, not a value', () => {
+  it('rejects the key whatever the value', () => {
+    for (const value of ['true', 'false', '1']) {
+      const verdict = validatorRegistry.findValidator('AnimatedSprite3D', 'playing')?.(
+        'playing',
+        value,
+        1
+      );
+      expect(verdict?.severity).toBe('error');
+      expect(verdict?.message).toContain('cannot be set on AnimatedSprite3D');
+    }
+  });
+
+  it('reports `playing = true` when the single-node scene is linted', () => {
+    const found = lint(scene(node('AnimatedSprite3D', { playing: true }))).filter((d) =>
+      d.message.includes("'playing'")
+    );
+    expect(found).toHaveLength(1);
+    expect(found[0]!.severity).toBe('error');
+    expect(found[0]!.message).toContain('play() starts playback');
+  });
+
+  it('keeps the removal out of the declared keys and leaves autoplay, the stored twin, valid', () => {
+    expect(validatorRegistry.getOwnKeys('AnimatedSprite3D')).not.toContain('playing');
+    expect(validatorRegistry.getUnavailableKeys('AnimatedSprite3D')).toEqual(['playing']);
+    expect(check('autoplay', '"idle"')).toBeNull();
   });
 });

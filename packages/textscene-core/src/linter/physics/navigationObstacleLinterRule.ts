@@ -7,17 +7,17 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { isValidProperties } from '../linterUtils.js';
-import {
-  resolveGlobalTransform2D,
-  globalScale,
-  isConformal,
-  hasZeroGlobalSkew,
-} from '../node2dGlobalTransform.js';
+import { resolveGlobalTransform2D } from '../node2dGlobalTransform.js';
 import { parseGodotFloat } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
-import { boolSlotValue } from '../../godot/index.js';
+import {
+  boolSlotValue,
+  transform2DGetScale,
+  transform2DHasZeroSkew,
+  transform2DIsConformal,
+} from '../../godot/index.js';
 
 /**
  * `navigation_obstacle_2d.cpp:332`, the floor `get_global_scale()` must clear on both
@@ -94,7 +94,7 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
     if (arms.nonPositiveScale) {
       const verdict = resolveGlobalTransform2D(scene, node);
       if (verdict.kind === 'known') {
-        const scale = globalScale(verdict.transform);
+        const scale = transform2DGetScale(verdict.transform);
 
         // navigation_obstacle_2d.cpp:331-333
         if (scale.x < MIN_GLOBAL_SCALE || scale.y < MIN_GLOBAL_SCALE) {
@@ -109,12 +109,12 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
         // `nan > 0` is false in JS exactly as in C++.
         if (radius !== null && radius > 0) {
           // navigation_obstacle_2d.cpp:336-338
-          if (!isConformal(verdict.transform)) {
+          if (!transform2DIsConformal(verdict.transform)) {
             report(arms.nonUniformScale, `${type} '${node.name}' has radius ${radius} but a non-uniformly-scaled global transform. The agent radius can only be scaled uniformly; the largest value along the two axes of the global scale will be used to scale the radius, which may change in unexpected ways when the node is rotated.`);
           }
 
           // navigation_obstacle_2d.cpp:340-342
-          if (!hasZeroGlobalSkew(verdict.transform)) {
+          if (!transform2DHasZeroSkew(verdict.transform)) {
             report(arms.skew, `${type} '${node.name}' has radius ${radius} but a skewed global transform. Skew has no effect on the agent radius.`);
           }
         }

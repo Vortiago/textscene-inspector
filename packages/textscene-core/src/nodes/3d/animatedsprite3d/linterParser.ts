@@ -1,8 +1,6 @@
 /**
  * AnimatedSprite3D strict validators: only the members doc/classes/AnimatedSprite3D.xml lists
- * without an `overrides=` attribute. `playing` is not one: unlike AnimatedSprite2D, this class
- * exposes it only through `is_playing()` (sprite_3d.h:266), with no setter and no `ADD_PROPERTY`
- * (sprite_3d.cpp:1502-1545), so it never reaches a `.tscn`.
+ * without an `overrides=` attribute, plus the `playing` key that the class refuses.
  */
 
 // The SpriteBase3D tier, which pulls GeometryInstance3D, VisualInstance3D and Node3D. The
@@ -49,4 +47,14 @@ validatorRegistry.registerAll('AnimatedSprite3D', {
   // it (sprite_3d.cpp:1141, `if (speed == 0) { return; }`): documented behaviour, not a guard or
   // a hint, so this stays unbounded.
   speed_scale: v.float('speed_scale'),
+});
+
+// No ADD_PROPERTY declares it (sprite_3d.cpp:1539-1544), and the DISABLE_DEPRECATED `_set` has one
+// arm, `frames` (:1494-1500), so the write is dropped, as on AnimatedSprite2D. `is_playing` is only
+// a method binding (:1512). With no entry at all, `playing = true` would be silently accepted.
+validatorRegistry.registerUnavailable('AnimatedSprite3D', {
+  playing: {
+    reason: `it is a method, not a property: play() starts playback, and only 'autoplay' is serialised`,
+    cite: 'sprite_3d.cpp:1494-1500',
+  },
 });

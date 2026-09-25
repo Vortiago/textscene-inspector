@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { useEffect, useMemo } from 'react';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
-import { parseResourceReference } from '../../resources/SubResourceResolver';
+import { findExtResource, parseResourceReference } from '../../resources/SubResourceResolver';
 import { resolveProceduralTexture } from '../../resources/textures/resolveProceduralTexture';
 import { useViewportTextureSlot } from '../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { useProceduralTexturePins } from '../../resources/useProceduralTexture';
@@ -368,7 +368,7 @@ function collectTextureRequests(
     if (typeof raw !== 'string') continue;
     const parsed = parseResourceReference(raw);
     if (!parsed || parsed.type !== 'ExtResource') continue;
-    const ext = externalResources.find((r) => r.id === parsed.id);
+    const ext = findExtResource(externalResources, parsed.id);
     if (ext?.path) out[slot] = ext.path;
   }
   return out;

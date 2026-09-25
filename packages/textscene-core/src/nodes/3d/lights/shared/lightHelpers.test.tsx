@@ -3,7 +3,6 @@
  * gives no helpers however many lights exist, and a light's path gives that
  * light's helper alone. Hover is not a trigger.
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -24,11 +23,10 @@ import {
 import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
 import { TscnSceneContents } from '../../../../r3f/TscnCanvas';
 import { HierarchyProvider } from '../../../../r3f/contexts/HierarchyContext';
-import {
-  SelectionProvider,
-  useSelection,
-} from '../../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
 import { createSceneGraphFromTscnScene } from '../../../../core/SceneGraph';
+import { HoverSeeder } from '../../../../r3f/testing/HoverSeeder';
+import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
 
 import '../../../../r3f/nodes/index';
 
@@ -69,14 +67,6 @@ function spotNode(name: string, overrides: Partial<SpotLight3DProperties> = {}):
     ...overrides,
   };
   return { name, type: 'SpotLight3D', children: [], properties: props };
-}
-
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
 }
 
 function findHelpersOfType<T extends THREE.Object3D>(
@@ -239,18 +229,10 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
       nodes: [spotNode('Torch')],
     });
 
-    function HoverSeeder() {
-      const { hoverStore } = useSelection();
-      useEffect(() => {
-        hoverStore.set('Torch');
-      }, [hoverStore]);
-      return null;
-    }
-
     const renderer = await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
         <SelectionProvider>
-          <HoverSeeder />
+          <HoverSeeder path="Torch" />
           <TscnSceneContents />
         </SelectionProvider>
       </HierarchyProvider>,

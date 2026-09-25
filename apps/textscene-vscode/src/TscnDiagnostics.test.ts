@@ -160,15 +160,27 @@ describe('toVsCodeDiagnostic', () => {
       expect(result.range.end.character).toBe('third'.length);
     });
 
-    it('clamps line/column zero to the document start', () => {
+    it('clamps column zero to the start of its line', () => {
       const result = toVsCodeDiagnostic(
-        makeCoreDiagnostic({ location: { line: 0, column: 0 } }),
+        makeCoreDiagnostic({ location: { line: 2, column: 0 } }),
         doc
       );
 
-      expect(result.range.start.line).toBe(0);
+      expect(result.range.start.line).toBe(1);
       expect(result.range.start.character).toBe(0);
+      expect(result.range.end.character).toBe('second line longer'.length);
     });
+
+    // The web gutter reads these the same way (`diagnosticLine`): about the file, not line 1.
+    it.each([0, -3, 2.5, Number.NaN])(
+      'gives line %s, which no row carries, the zero-width range at the document start',
+      (line) => {
+        const result = toVsCodeDiagnostic(makeCoreDiagnostic({ location: { line, column: 4 } }), doc);
+
+        expect(result.range.start).toEqual(new vscode.Position(0, 0));
+        expect(result.range.end).toEqual(new vscode.Position(0, 0));
+      }
+    );
   });
 
   describe('metadata', () => {
@@ -223,6 +235,37 @@ describe('TscnDiagnostics', () => {
     diagnostics.lintDocument(document);
 
     expect(collection.set).toHaveBeenCalledWith(document.uri, []);
+    diagnostics.dispose();
+  });
+
+  it('publishes a rule finding on the heading of the node it is about, not on the first line', () => {
+    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    // A StaticBody2D with no shape child, which Godot's configuration warning names.
+    const heading = '[node name="Body" type="StaticBody2D" parent="."]';
+    const document = makeTscnDocument(
+      `[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n${heading}\n`
+    );
+
+    diagnostics.lintDocument(document);
+
+    const published = collection.set.mock.calls[0]![1] as vscode.Diagnostic[];
+    const finding = published.find((d) => d.code === 'collisionobject2d-needs-collision-shape');
+    expect(finding?.range.start).toEqual(new vscode.Position(4, 0));
+    expect(finding?.range.end).toEqual(new vscode.Position(4, heading.length));
+    diagnostics.dispose();
+  });
+
+  it('publishes a dangling reference on the line of the property that holds it', () => {
+    const diagnostics = new TscnDiagnostics(collection as unknown as vscode.DiagnosticCollection);
+    const document = makeTscnDocument(
+      '[gd_scene format=3]\n\n[node name="Box" type="CSGBox3D"]\nmaterial = SubResource("nope")\n'
+    );
+
+    diagnostics.lintDocument(document);
+
+    const published = collection.set.mock.calls[0]![1] as vscode.Diagnostic[];
+    const finding = published.find((d) => d.code === 'dangling-resource-reference');
+    expect(finding?.range.start.line).toBe(3);
     diagnostics.dispose();
   });
 

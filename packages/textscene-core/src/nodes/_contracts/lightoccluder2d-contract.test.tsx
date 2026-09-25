@@ -5,44 +5,21 @@
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
-import { useEffect } from 'react';
+import { resolve } from 'node:path';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { TscnParser } from '../../parser/TscnParser';
-import type { TscnScene, TscnNode } from '../../parser/types';
+import type { TscnNode } from '../../parser/types';
+import { fixturesDir, flatten, repoRoot } from '../../parser/testing/parserKit';
 import { nodeRegistry } from '../../core/NodeRegistry';
 import { Linter } from '../../linter/Linter';
 import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry';
 import { NodeDispatcher } from '../../r3f/NodeDispatcher';
-import { CanvasWorkspaceProvider } from '../../r3f/contexts/CanvasWorkspaceContext';
-import { SelectionProvider, useSelection } from '../../r3f/contexts/SelectionContext';
-import { SceneResourcesProvider } from '../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
+import { SceneStack } from '../../r3f/testing/SceneStack';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
-
-function repoRoot(): string {
-  let dir = dirname(fileURLToPath(import.meta.url));
-  for (let i = 0; i < 12; i += 1) {
-    if (existsSync(resolve(dir, 'pnpm-workspace.yaml'))) return dir;
-    dir = dirname(dir);
-  }
-  throw new Error('repo root (pnpm-workspace.yaml) not found above this test');
-}
-
-function flatten(scene: TscnScene): TscnNode[] {
-  const out: TscnNode[] = [];
-  const walk = (n: TscnNode): void => {
-    out.push(n);
-    n.children.forEach(walk);
-  };
-  scene.nodes.forEach(walk);
-  return out;
-}
 
 function parseOccNode(tscn: string): TscnNode {
   const occ = flatten(new TscnParser().parse(tscn)).find((n) => n.type === 'LightOccluder2D');
@@ -76,15 +53,6 @@ ${opts.nodeProps ?? ''}
 `;
 }
 
-/** Sets the selected node path from inside SelectionProvider (gizmo gate). */
-function SelectSeeder({ path }: { path: string }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
-}
-
 /**
  * Render a .tscn through NodeDispatcher (2D workspace), optionally selecting a
  * node. `seed` runs against the fake loader before render, to make an
@@ -99,19 +67,9 @@ async function renderOcc(
   const fake = createFakeResourceLoader();
   seed?.(fake);
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={scene.internalResources}
-          externalResources={scene.externalResources}
-        >
-          <SelectionProvider>
-            {selectPath ? <SelectSeeder path={selectPath} /> : null}
-            <NodeDispatcher nodes={scene.nodes} />
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace="2d" loader={fake.loader} scene={scene} selectedPath={selectPath}>
+      <NodeDispatcher nodes={scene.nodes} />
+    </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 10));
   return renderer;
@@ -239,7 +197,7 @@ occluder = ExtResource("1_occ")
   });
 
   it('ships a fixture containing a LightOccluder2D that the linter passes', () => {
-    const dir = resolve(repoRoot(), 'scenes/fixtures');
+    const dir = fixturesDir();
     const withOcc = readdirSync(dir)
       .filter((f) => f.endsWith('.tscn'))
       .filter((f) => readFileSync(resolve(dir, f), 'utf8').includes('type="LightOccluder2D"'));

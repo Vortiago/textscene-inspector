@@ -12,14 +12,15 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { indexedElements, indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
+import { indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
 
 const RULE_NAME = 'converttransformmodifier3d-range-outside-mode-hint';
 
 /**
- * `settings/<i>/apply|reference/range_min|range_max`, the four mode-dependent leaves. `_set` reads the
- * index with a bare `path.get_slicec('/', 1).to_int()` and no validity gate
- * (convert_transform_modifier_3d.cpp:41), so {@link toIntIndex} turns the whole segment into a number.
+ * `settings/<i>/apply|reference/range_min|range_max`, the four mode-dependent leaves. `_set` reads
+ * the index with a bare `path.get_slicec('/', 1).to_int()` and no validity gate
+ * (convert_transform_modifier_3d.cpp:41), so {@link stringToInt} reads the whole segment as the
+ * `int` Godot stores.
  */
 const RANGE_KEY_RE = indexedKeyRegex('^settings/(#)/(apply|reference)/(range_min|range_max)$', 'to_int');
 
@@ -88,10 +89,10 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
   for (const key of Object.keys(props)) {
     const match = RANGE_KEY_RE.exec(key);
     if (!match) continue;
-    const index = toIntIndex(match[1]!);
+    const index = stringToInt(match[1]!);
     // A negative index is the validator's error, against the ERR_FAIL_INDEX_V
     // in `_set`. Reporting it again here would double up on one defect.
-    if (!(index >= 0)) continue;
+    if (index < 0) continue;
 
     const modeRaw = settings.get(index)?.get(`${match[2]!}/transform_mode`);
     // Absent means Position, the struct's initialiser

@@ -3,7 +3,6 @@
  * (ADR-0018), and positions its children either way. Godot's own gizmo
  * (editor/scene/3d/gizmos/physics/vehicle_body_3d_gizmo_plugin.cpp) is always on.
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -12,7 +11,8 @@ import { VehicleWheel3D } from './Component';
 import { parseVehicleWheel3D } from './parser';
 import { heading } from '../../../../parser/testing/parserKit';
 import { NodePathProvider } from '../../../../r3f/contexts/NodePathContext';
-import { SelectionProvider, useSelection } from '../../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
+import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
 
 function wheelNode(props: Record<string, string> = {}): TscnNode {
   return {
@@ -21,14 +21,6 @@ function wheelNode(props: Record<string, string> = {}): TscnNode {
     children: [],
     properties: parseVehicleWheel3D(heading('VehicleWheel3D', { name: 'Wheel1' }), props),
   } as TscnNode;
-}
-
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
 }
 
 async function renderWheel(selectedPath: string | null, props: Record<string, string> = {}) {

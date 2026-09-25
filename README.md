@@ -74,8 +74,9 @@ Build it from source (below).
 **Web previewer**: an "Open .tscn" picker with a <kbd>Ctrl/Cmd+K</kbd> scene
 palette, and drag-and-drop multi-file upload (drop a scene and its textures in
 one gesture). An editable Source pane renders `.tscn` text as you type, with a
-linter gutter (error and warning dots, hover popover, problem-count badge) and a
-"Download .tscn" export. It builds in two editions:
+"Download .tscn" export. Its linter gutter has error and warning dots, a hover
+popover and a problem-count badge. A file-level section holds the diagnostics
+that name no line. It builds in two editions:
 
 - The **public edition** (GitHub Pages, `pnpm build:pages`) opens only your own
   files. It has no built-in scenes, no parity gallery and no source maps.

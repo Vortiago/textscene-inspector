@@ -8,7 +8,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
+import { linearChannelToSRGB, sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { ControlColor } from '../control/types';
 import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
@@ -106,12 +106,6 @@ export function colorPickerMenuButtonSize(theme: Pick<NativeTheme, 'widgets' | '
 /** `ScaledGodotTheme.scale` (`godotDefaultTheme.ts`): the raw `gui/theme/default_theme_scale`. */
 export function colorPickerScale(theme: Pick<NativeTheme, 'scale'>): number {
   return theme.scale;
-}
-
-/** `Color::linear_to_srgb` (`core/math/color.h:199-204`), the inverse of `sRGBChannelToLinear`. */
-function linearChannelToSRGB(c: number): number {
-  if (c < 0.0031308) return 12.92 * c;
-  return 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
 }
 
 /**

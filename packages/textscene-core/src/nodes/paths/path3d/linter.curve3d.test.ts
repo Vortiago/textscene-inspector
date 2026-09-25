@@ -109,6 +109,33 @@ describe('curve3d-loadable', () => {
     ]);
   });
 
+  describe('an id the file declares twice', () => {
+    /** A Path3D scene whose `curve` names `Shared`, with `blocks` declaring it. */
+    function lintSharedId(...blocks: string[]) {
+      return new Linter().lint(`[gd_scene format=3]
+
+${blocks.join('\n\n')}
+
+[node name="Path3D" type="Path3D"]
+curve = SubResource("Shared")
+`);
+    }
+
+    const TILTLESS_CURVE3D = `[sub_resource type="Curve3D" id="Shared"]\n_data = {\n${POINTS}\n}`;
+    const SOUND_CURVE3D = `[sub_resource type="Curve3D" id="Shared"]\n_data = {\n${POINTS},\n"tilts": PackedFloat32Array(0, 0)\n}`;
+
+    it('checks the first Curve3D under the id when another type holds it first', () => {
+      const errors = curveErrors(lintSharedId('[sub_resource type="Curve" id="Shared"]', TILTLESS_CURVE3D));
+      expect(errors).toHaveLength(1);
+      expect(errors[0]!.message).toContain('tilts');
+    });
+
+    it('checks only the first of two Curve3D declarations under the id', () => {
+      expect(curveErrors(lintSharedId(SOUND_CURVE3D, TILTLESS_CURVE3D))).toEqual([]);
+      expect(curveErrors(lintSharedId(TILTLESS_CURVE3D, SOUND_CURVE3D))).toHaveLength(1);
+    });
+  });
+
   it('stays quiet when the curve reference points at no resource in this scene', () => {
     // A missing resource is already reported by dangling-resource-reference. This rule must
     // not pile a second, less useful error on top of it.

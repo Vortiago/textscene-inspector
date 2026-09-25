@@ -10,7 +10,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../parser/types';
 import { TscnSceneContents } from '../TscnCanvas';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
-import { SelectionProvider, useSelection } from '../contexts/SelectionContext';
+import { SelectionProvider } from '../contexts/SelectionContext';
 import {
   AnimationTransportProvider,
   useAnimationTransport,
@@ -20,20 +20,13 @@ import {
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
 import { WorldBoxHelper } from './WorldBoxHelper';
 import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/types';
+import { SelectSeeder } from '../testing/SelectSeeder';
 
 import '../nodes/index';
 
 function makeMeshInstance(name: string): TscnNode {
   const props: MeshInstance3DProperties = { name, surfaceMaterialOverrides: new Map() };
   return { name, type: 'MeshInstance3D', children: [], properties: props };
-}
-
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
 }
 
 const REG: PlayerRegistration = { clips: ['clip'], durations: { clip: 10 } };

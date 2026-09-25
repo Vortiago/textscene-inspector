@@ -7,6 +7,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../linter/types.js';
 import { ruleRegistry } from '../../linter/RuleRegistry.js';
 import { resourceRef } from '../../godot/index.js';
+import { findExtResource } from '../../resources/SubResourceResolver.js';
 
 const BINARY_RESOURCE_RE = /\.(scn|res)$/i;
 
@@ -29,7 +30,7 @@ function checkBinaryResourceReferences(context: RuleContext): Diagnostic[] {
   const pathForRef = (ref: string): string | null => {
     const parsed = resourceRef(ref);
     if (parsed?.kind !== 'ExtResource') return null;
-    const ext = scene.externalResources.find((r) => r.id === parsed.id);
+    const ext = findExtResource(scene.externalResources, parsed.id);
     return ext && BINARY_RESOURCE_RE.test(ext.path) ? ext.path : null;
   };
 

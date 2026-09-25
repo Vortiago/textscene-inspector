@@ -7,6 +7,14 @@
 
 import { warn } from '../../../logger.js';
 import { ruleInt, toInt16, toUint32 } from '../../../godot/int.js';
+import { dictCallField } from '../../../godot/variantParser.js';
+
+/**
+ * The `"cells"` entry of the `data` Dictionary, `[1]` its int body. `GridMap::_set` reads it
+ * as `Vector<int> cells = d["cells"]` (grid_map.cpp:66-67), and the parser and the linter
+ * both find it through this one pattern.
+ */
+export const CELLS_FIELD_RE = dictCallField('cells', 'PackedInt32Array');
 
 export interface GridMapCell {
   x: number;

@@ -1,10 +1,67 @@
 /**
- * `indexedElements`' own contract, around the module every rule resolves an index through. The
- * slices' `linter.test.ts` files test the rules that use it.
+ * The own contracts of `visitIndexedKeys` and `indexedElements`, around the module every rule
+ * resolves an index through. The slices' `linter.test.ts` files test the rules that use them.
  */
 
 import { describe, expect, it } from 'vitest';
-import { indexedElements } from './indexedKey.js';
+import { indexedElements, visitIndexedKeys } from './indexedKey.js';
+
+/** Every visit `visitIndexedKeys` makes, as its five arguments. */
+function visits(
+  properties: Record<string, string>,
+  prefix: string,
+  indexParse: 'is_valid_int' | 'to_int'
+): unknown[][] {
+  const seen: unknown[][] = [];
+  visitIndexedKeys(properties, prefix, indexParse, (...args) => seen.push(args));
+  return seen;
+}
+
+describe('visitIndexedKeys', () => {
+  it('visits each key that names an element, in file order, with the index Godot stores', () => {
+    expect(visits({ 'item_1/text': '"a"', 'item_+0/icon': 'null' }, 'item_', 'is_valid_int')).toEqual([
+      ['item_1/text', '1', 1, 'text', '"a"'],
+      ['item_+0/icon', '+0', 0, 'icon', 'null'],
+    ]);
+  });
+
+  it('visits no key whose index is refused or stored negative', () => {
+    expect(visits({ 'item_x/text': '"a"', 'item_-1/text': '"b"' }, 'item_', 'is_valid_int')).toEqual([]);
+  });
+
+  it('visits nothing for a family with no keys', () => {
+    expect(visits({ text: '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
+  });
+
+  it('visits no key with no leaf', () => {
+    expect(visits({ 'item_3/': '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
+  });
+
+  it('visits no key whose last slash puts a slash in the index text', () => {
+    // `rsplit("/", true, 1)` (property_list_helper.cpp:47) makes the index text `5/x`.
+    expect(visits({ 'item_5/x/text': '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
+  });
+
+  // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
+  it('applies an index that wraps past 32 bits to the element it lands on', () => {
+    expect(visits({ 'item_4294967296/text': '"a"' }, 'item_', 'is_valid_int')).toEqual([
+      ['item_4294967296/text', '4294967296', 0, 'text', '"a"'],
+    ]);
+  });
+
+  // `to_int` saturates at INT64_MAX (ustring.cpp:2283-2284), whose low 32 bits are -1.
+  it('visits no index that saturates to INT64_MAX', () => {
+    expect(visits({ 'item_9999999999999999999999/text': '"a"' }, 'item_', 'is_valid_int')).toEqual(
+      []
+    );
+  });
+
+  // INT64_MIN keeps 0 in its low 32 bits, so the write lands on element 0.
+  it('applies an index that saturates to INT64_MIN to element 0', () => {
+    const [visit] = visits({ 'item_-9999999999999999999999/text': '"a"' }, 'item_', 'is_valid_int');
+    expect(visit?.slice(1, 3)).toEqual(['-9999999999999999999999', 0]);
+  });
+});
 
 describe('indexedElements', () => {
   it('seats two spellings of one index on one element, under to_int', () => {

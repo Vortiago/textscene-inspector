@@ -8,7 +8,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 
 // `findSubResource` lives in the pure resources layer (next to its ExtResource
-// twin, `resolveExtResourcePath`); re-exported here for its many R3F importers.
+// twin, `findExtResource`); re-exported here for its many R3F importers.
 export { findSubResource } from '../resources/SubResourceResolver';
 
 export interface SceneResources {

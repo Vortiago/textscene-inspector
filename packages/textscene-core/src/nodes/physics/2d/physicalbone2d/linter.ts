@@ -8,8 +8,9 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import type { TscnNode, TscnScene } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { isTypeUnknowable, parentTypeVerdict, searchAncestors } from '../../../../linter/parentType.js';
-import { descendsFrom, isCatalogedType } from '../../../../godot/nodeBaseTypes.js';
+import { parentTypeVerdict, searchAncestors } from '../../../../linter/parentType.js';
+import { hasChildOfType } from '../../../../linter/childType.js';
+import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 
 /** What `_find_skeleton_parent()` would settle on, read off this file alone. */
@@ -31,19 +32,6 @@ function skeletonAncestry(scene: TscnScene, node: TscnNode): SkeletonAncestry {
   // rig built that way.
   if (search.kind === 'unknowable') return 'unknowable';
   return search.kind === 'found' ? search.value : 'absent';
-}
-
-/**
- * The "Joint2D-based child" physical_bone_2d.cpp:118-122 asks for. Godot's test is a
- * `cast_to<Joint2D>`, so any subclass counts, through the reflexive `descendsFrom`, not a
- * hand-listed roster. A child of a class this build does not know may be one, so it is unseeable.
- */
-function jointChildVerdict(children: readonly TscnNode[]): 'present' | 'absent' | 'unknowable' {
-  if (children.some((child) => descendsFrom(child.type, 'Joint2D'))) return 'present';
-  if (children.some((child) => isTypeUnknowable(child) || !isCatalogedType(child.type))) {
-    return 'unknowable';
-  }
-  return 'absent';
 }
 
 function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
@@ -81,7 +69,8 @@ function checkPhysicalBone2D(context: RuleContext): Diagnostic[] {
   // `cast_to<PhysicalBone2D>(get_parent())` (physical_bone_2d.cpp:119), so
   // subclasses count and an unseeable parent decides nothing.
   if (parentTypeVerdict(scene, node, 'PhysicalBone2D').kind === 'satisfied') {
-    if (jointChildVerdict(node.children) === 'absent') {
+    // The "Joint2D-based child" physical_bone_2d.cpp:118-122 asks for, a `cast_to<Joint2D>`.
+    if (!hasChildOfType(node, ['Joint2D'])) {
       diagnostics.push({
         severity: 'warning',
         message: `PhysicalBone2D '${node.name}' is chained under another PhysicalBone2D but has no Joint2D-based child. A PhysicalBone2D node should have a Joint2D-based child node to keep bones connected.`,

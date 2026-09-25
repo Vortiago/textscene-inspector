@@ -5,16 +5,13 @@
  * (ADR-0018), the absent standalone quad and the Node3D pass-through.
  */
 
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Decal } from './Component';
-import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider, useSelection } from '../../../r3f/contexts/SelectionContext';
 import {
   AnimatedValueProvider,
   useAnimatedValueRegistry,
@@ -22,6 +19,7 @@ import {
 } from '../../../r3f/contexts/AnimatedValueContext';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import { parseDecal } from './parser';
+import { SceneStack } from '../../../r3f/testing/SceneStack';
 
 const TEXTURE_PATH = 'res://textures/decal.png';
 const NODE_NAME = 'MyDecal';
@@ -45,35 +43,26 @@ function extRef(id: string, path: string): TscnExternalResource {
   return { id, type: 'Texture2D', path };
 }
 
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
-}
-
 interface RenderOptions {
   node: TscnNode;
   externals?: TscnExternalResource[];
   cached?: Array<{ path: string; texture: THREE.Texture | 'missing' }>;
   children?: ReactNode;
-  selectedPath?: string | null;
+  selectedPath?: string;
 }
 
 /** The mounted tree, separated from `create` so a test can re-render it. */
 function decalTree(opts: RenderOptions, loader: ReturnType<typeof createFakeResourceLoader>['loader']) {
   return (
-    <ResourceLoaderProvider loader={loader}>
-      <SceneResourcesProvider externalResources={opts.externals ?? []}>
-        <SelectionProvider>
-          {opts.selectedPath !== undefined && <SelectSeeder path={opts.selectedPath} />}
-          <NodePathProvider path={opts.node.name}>
-            <Decal node={opts.node}>{opts.children}</Decal>
-          </NodePathProvider>
-        </SelectionProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
+    <SceneStack
+      loader={loader}
+      scene={{ externalResources: opts.externals ?? [] }}
+      selectedPath={opts.selectedPath}
+    >
+      <NodePathProvider path={opts.node.name}>
+        <Decal node={opts.node}>{opts.children}</Decal>
+      </NodePathProvider>
+    </SceneStack>
   );
 }
 
@@ -282,19 +271,18 @@ describe('<Decal>', () => {
       return null;
     }
     const renderer = await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
-        <SceneResourcesProvider externalResources={[]}>
-          <SelectionProvider>
-            <SelectSeeder path="D" />
-            <AnimatedValueProvider>
-              <Capture />
-              <NodePathProvider path="D">
-                <Decal node={makeNode({ size: 'Vector3(2, 2, 2)' }, 'D')} />
-              </NodePathProvider>
-            </AnimatedValueProvider>
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
+      <SceneStack
+        loader={createFakeResourceLoader().loader}
+        scene={{ externalResources: [] }}
+        selectedPath="D"
+      >
+        <AnimatedValueProvider>
+          <Capture />
+          <NodePathProvider path="D">
+            <Decal node={makeNode({ size: 'Vector3(2, 2, 2)' }, 'D')} />
+          </NodePathProvider>
+        </AnimatedValueProvider>
+      </SceneStack>
     );
     // The gizmo (visible because 'D' is selected) rides the size-scaled group.
     const sizingScale = () => {

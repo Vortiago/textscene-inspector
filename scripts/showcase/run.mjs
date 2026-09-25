@@ -7,13 +7,11 @@
  *   node scripts/showcase/run.mjs <scenario-name>
  *   node scripts/showcase/run.mjs all
  */
-import { readFixtureManifest } from '../fixtureManifest.mjs';
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
+import { readFixtureLookup } from '../fixtureManifest.mjs';
 
-// The label-to-file map of the generated fixtures manifest.
-const FIXTURES = readFixtureManifest();
-const fileForLabel = (label) => FIXTURES.find((f) => f.name === label)?.file;
+const fileForLabel = readFixtureLookup();
 
 const arg = process.argv[2];
 if (!arg) {

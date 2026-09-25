@@ -7,35 +7,16 @@
 
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 // Two imports are load-bearing: TscnParser registers every node parser, and the linter barrel
 // registers every validator, without which the bus/playing assertions cannot pass.
 import { TscnParser } from '../../parser/TscnParser';
-import type { TscnScene, TscnNode } from '../../parser/types';
+import type { TscnNode } from '../../parser/types';
+import { fixturesDir, flatten, repoRoot } from '../../parser/testing/parserKit';
 import { nodeRegistry } from '../../core/NodeRegistry';
 import { Linter } from '../../linter/Linter';
 import '../../linter/index'; // side-effect: registers every node's linter validators
-
-function repoRoot(): string {
-  let dir = dirname(fileURLToPath(import.meta.url));
-  for (let i = 0; i < 12; i += 1) {
-    if (existsSync(resolve(dir, 'pnpm-workspace.yaml'))) return dir;
-    dir = dirname(dir);
-  }
-  throw new Error('repo root (pnpm-workspace.yaml) not found above this test');
-}
-
-function flatten(scene: TscnScene): TscnNode[] {
-  const out: TscnNode[] = [];
-  const walk = (n: TscnNode): void => {
-    out.push(n);
-    n.children.forEach(walk);
-  };
-  scene.nodes.forEach(walk);
-  return out;
-}
 
 function firstOfType(src: string, type: string): TscnNode {
   const node = flatten(new TscnParser().parse(src)).find((n) => n.type === type);
@@ -180,7 +161,7 @@ describe('#147 AudioStreamPlayer / AudioStreamPlayer2D audio properties — beha
 
   // Criterion 2: a unit fixture reproduces the witnessed form and is wired into the generated manifest.
   it('ships a unit fixture with a plain AudioStreamPlayer that parses to typed props, wired into fixtures.ts', () => {
-    const dir = resolve(repoRoot(), 'scenes/fixtures');
+    const dir = fixturesDir();
     // trailing quote in the match keeps this to the PLAIN player (not AudioStreamPlayer2D/3D).
     const candidates = readdirSync(dir)
       .filter((f) => f.endsWith('.tscn'))

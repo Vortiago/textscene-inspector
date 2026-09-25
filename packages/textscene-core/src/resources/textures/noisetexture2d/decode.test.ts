@@ -69,4 +69,32 @@ describe('decodeNoiseTexture2D', () => {
     expect(decoded.bumpStrength).toBe(8);
   });
 
+  it('keeps the 512 default for an axis the size setters refuse', () => {
+    // noise_texture_2d.cpp:243 and :252 refuse below 1, so the default stays.
+    const decoded = decodeNoiseTexture2D({ width: '0', height: '-3' });
+    expect(decoded.width).toBe(512);
+    expect(decoded.height).toBe(512);
+  });
+
+  it('keeps an axis of 1, the smallest the size setters accept', () => {
+    const decoded = decodeNoiseTexture2D({ width: '1', height: '1' });
+    expect(decoded).toMatchObject({ width: 1, height: 1 });
+  });
+
+  it('keeps an axis past the hint, which only the inspector widget bounds', () => {
+    // `1,2048,1,or_greater`: the setter takes any positive int32.
+    expect(decodeNoiseTexture2D({ width: '2147483647' }).width).toBe(2147483647);
+  });
+
+  it('keeps the 0.1 default for a blend skirt outside 0 to 1', () => {
+    // noise_texture_2d.cpp:309 refuses it.
+    expect(decodeNoiseTexture2D({ seamless_blend_skirt: '1.5' }).seamlessBlendSkirt).toBe(0.1);
+    expect(decodeNoiseTexture2D({ seamless_blend_skirt: '-0.2' }).seamlessBlendSkirt).toBe(0.1);
+  });
+
+  it('keeps a blend skirt at either end of 0 to 1', () => {
+    expect(decodeNoiseTexture2D({ seamless_blend_skirt: '0' }).seamlessBlendSkirt).toBe(0);
+    expect(decodeNoiseTexture2D({ seamless_blend_skirt: '1' }).seamlessBlendSkirt).toBe(1);
+  });
+
 });

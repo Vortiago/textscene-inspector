@@ -102,6 +102,24 @@ describe('SpringBoneSimulator3D semantic rules', () => {
         { ruleName: 'springbonesimulator3d-setting-index-out-of-range' }
       );
     });
+
+    // `_set` refuses the setting at spring_bone_simulator_3d.cpp:44, before `set_collision_path`
+    // could return at :1150, so the collision-list claim would name a setter the write never
+    // reaches. The `int` keeps the low 32 bits of `4294967297`, setting 1.
+    it('reports a collision on an out-of-range setting once, as out of range', () => {
+      const found = lint(
+        scene(
+          node('SpringBoneSimulator3D', {
+            setting_count: 1,
+            'settings/4294967297/collisions/0': 'NodePath("../Collision")',
+          })
+        )
+      ).filter((d) => d.ruleName.startsWith('springbonesimulator3d-'));
+      expect(found.map((d) => d.ruleName)).toEqual([
+        'springbonesimulator3d-setting-index-out-of-range',
+      ]);
+      expect(found[0]!.message).toContain('index(es) 4294967297 (stored as 1) fall outside');
+    });
   });
 
   describe('the two config modes', () => {
@@ -305,5 +323,19 @@ describe('SpringBoneSimulator3D index grammar', () => {
       ),
       { ruleName: 'springbonesimulator3d-shared-config-ignored', severity: 'error' }
     );
+  });
+
+  it('names the index of each ignored key as the file writes it', () => {
+    const diagnostic = expectDiagnostic(
+      scene(
+        node('SpringBoneSimulator3D', {
+          setting_count: 1,
+          'settings/0/individual_config': true,
+          'settings/00/radius/value': 0.5,
+        })
+      ),
+      { ruleName: 'springbonesimulator3d-shared-config-ignored' }
+    );
+    expect(diagnostic.message).toContain('setting(s) 00 carry the shared');
   });
 });

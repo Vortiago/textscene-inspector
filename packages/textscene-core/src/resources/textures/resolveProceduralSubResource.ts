@@ -8,6 +8,7 @@ import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../parser/types';
 import { findSubResource, parseResourceReference } from '../SubResourceResolver';
 import { proceduralTexture, proceduralTextureKey } from './proceduralTextureCache';
+import { unlessAllocationFails } from './pixelAllocation';
 
 /**
  * A rasterised procedural texture and the cache key that keeps it resident. They
@@ -22,7 +23,9 @@ export interface ProceduralTextureResolution<T extends THREE.Texture = THREE.Tex
 /**
  * Resolves `ref` as an inline `[sub_resource]` of `typeName`, rasterised once per
  * file and sub-resource. Null for every other reference form, which leaves the
- * caller's async path untouched. The result is borrowed: never dispose it.
+ * caller's async path untouched, and for pixels the tab cannot allocate: a
+ * GradientTexture2D at Godot's 16384² ceiling is 1 GiB of RGBA8. The result is
+ * borrowed: never dispose it.
  */
 export function resolveProceduralSubResource<T extends THREE.Texture>(
   ref: string | undefined,
@@ -41,7 +44,9 @@ export function resolveProceduralSubResource<T extends THREE.Texture>(
   const texture = proceduralTexture(internalResources, parsed.id, () => {
     const resource = findSubResource(internalResources, parsed.id);
     if (!resource || resource.type !== typeName) return null;
-    return rasterize(resource.data as Record<string, string>, internalResources);
+    return unlessAllocationFails(`[${typeName}] sub-resource "${parsed.id}"`, () =>
+      rasterize(resource.data as Record<string, string>, internalResources)
+    );
   }) as T | null;
   if (!texture) return null;
 

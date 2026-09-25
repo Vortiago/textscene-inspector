@@ -153,6 +153,28 @@ describe('parseImportFile — a value that never balances', () => {
   });
 });
 
+describe('parseImportFile — string values', () => {
+  // The editor writes a String param as `"` + `c_escape_multiline()` + `"`
+  // (`variant_parser.cpp:2033`), and `VariantParser` decodes it on the way back in.
+  it('decodes the escapes Godot writes into a string param', () => {
+    const parsed = parseImportFile('[params]\n\nnodes/root_name="Tree \\"A\\" \\\\ 2"\n')!;
+    expect(parsed.params['nodes/root_name']).toBe('Tree "A" \\ 2');
+  });
+
+  it('keeps a param whose trailing quote is escaped as written, since it never closes', () => {
+    const parsed = parseImportFile('[params]\n\nnodes/root_name="a\\"\nnodes/root_scale=0.5\n')!;
+    expect(parsed.params['nodes/root_name']).toBe('"a\\"');
+  });
+
+  it('leaves the escapes inside _subresources for its JSON decode', () => {
+    const parsed = parseImportFile(
+      '[params]\n\n_subresources={"materials": {"Mat \\"x\\"": ' +
+        '{"use_external/enabled": true, "use_external/path": "res://m.tres"}}}\n'
+    );
+    expect(importExternalMaterials(parsed)).toEqual(new Map([['Mat "x"', 'res://m.tres']]));
+  });
+});
+
 describe('importRootScale', () => {
   it('reads the tree witness as a bake of 0.01', () => {
     // apply_root_scale = true means Godot scales the MESHES and leaves the root
