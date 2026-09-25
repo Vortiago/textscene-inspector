@@ -108,21 +108,26 @@ function handRolledKeyGrammar(source: string): string | null {
 }
 
 /**
- * Whoever builds or scans the `to_int` grammar, derived from the argument that selects
- * it. Two terms, not one call pattern: a shape string holds its own parentheses. A rule
- * building `settings/${i}/…` from a loop has no regex to find: `indexedElements` is the
- * scan such rules use, and only a behaviour test holds them to it.
+ * Whoever builds or scans an index grammar, derived from the argument that selects the parse.
+ * Two terms, not one call pattern: a shape string holds its own parentheses. A rule building
+ * `settings/${i}/…` from a loop has no regex to find: `indexedElements` and `indexedKeys` are
+ * the scans such rules use, and only a behaviour test holds them to it.
  */
-const COMPOSES_BUILDER = /\b(?:indexedKeyRegex|indexedElements)\(/;
-const NAMES_TO_INT = /'to_int'/;
+const COMPOSES_BUILDER = /\b(?:indexedKeyRegex|indexedElements|indexedKeys)\(/;
+const NAMES_A_PARSE = /'(?:to_int|is_valid_int)'/;
 
 /**
- * Reading a `to_int` index with `Number`, right only for an `is_valid_int` capture the
- * grammar has vetted. A `to_int` capture is a whole segment: `Number('a-1')` is NaN where
- * the engine reads -1, and NaN compares as "in range". `toIntIndex` (`godot/string.ts`)
- * is the reader.
+ * Reading an index with `Number` or `parseInt`, under either parse. Godot stores `to_int()` in an
+ * `int` (`property_list_helper.cpp:57`): `Number('4294967296')` is 4294967296 where Godot stores
+ * 0, and `Number('a-1')` is NaN where it reads -1. `stringToInt` (`godot/string.ts`) is the reader.
  */
-const RAW_INDEX_READ = /\bNumber\(/;
+const RAW_INDEX_READ = /\b(?:Number|parseInt)\(/;
+
+/** Whether `source` composes an index grammar and reads a number with `Number` or `parseInt`. */
+function readsIndexRaw(source: string): boolean {
+  const bare = stripComments(source);
+  return COMPOSES_BUILDER.test(bare) && NAMES_A_PARSE.test(bare) && RAW_INDEX_READ.test(bare);
+}
 
 describe('Godot indexed-key grammar', () => {
   const files = allSourceFiles().map((file) => ({
@@ -195,19 +200,34 @@ describe('Godot indexed-key grammar', () => {
     ).toBeNull();
   });
 
-  it('reads a to_int index through toIntIndex, never Number', () => {
+  it('reads an index through stringToInt, never Number or parseInt, under either parse', () => {
     const population = files
       .map(({ rel, src }) => ({ rel, bare: stripComments(src) }))
-      .filter(({ bare }) => COMPOSES_BUILDER.test(bare) && NAMES_TO_INT.test(bare));
+      .filter(({ bare }) => COMPOSES_BUILDER.test(bare) && NAMES_A_PARSE.test(bare));
     // Anti-vacuity, and the term is builder-derived: a rename that stopped every
     // caller naming the parse would empty this and leave it trivially green.
-    expect(population.length).toBeGreaterThan(5);
+    expect(population.length).toBeGreaterThan(20);
 
-    const offenders = population
-      .filter(({ bare }) => RAW_INDEX_READ.test(bare))
+    const offenders = files
+      .filter(({ src }) => readsIndexRaw(src))
       .map(({ rel }) => rel)
       .sort();
     expect(offenders).toEqual([]);
+  });
+
+  /**
+   * A fence, not a regression test: an `is_valid_int` family reading its capture with `Number`,
+   * as ItemList, TabBar and the TileSet validators did, is an offence, and the reader is not.
+   */
+  it('flags a raw read of an is_valid_int capture, and leaves stringToInt alone', () => {
+    const shape = "const ITEM_KEY_RE = indexedKeyRegex('^item_(#)/', 'is_valid_int');\n";
+    expect(readsIndexRaw(`${shape}const index = Number(match[1]);`)).toBe(true);
+    expect(readsIndexRaw(`${shape}const index = parseInt(match[1], 10);`)).toBe(true);
+    expect(readsIndexRaw(`${shape}const index = stringToInt(match[1]!);`)).toBe(false);
+    // A comment naming the reader is not a call to it.
+    expect(readsIndexRaw(`${shape}// never Number(match[1])\nconst i = stringToInt(t);`)).toBe(
+      false
+    );
   });
 
   /**

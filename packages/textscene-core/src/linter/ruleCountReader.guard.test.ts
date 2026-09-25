@@ -19,10 +19,11 @@ const label = (file: string): string => relative(srcRoot, file).replaceAll('\\',
 
 type Reader = 'ruleInt' | 'ruleCount';
 
-/** One call to an integer reader, and the text of its first argument. */
+/** One call to an integer reader, the text of its first argument, and where the call starts. */
 interface ReaderCall {
   reader: Reader;
   argument: string;
+  at: number;
 }
 
 /** Each `ruleInt(…)` and `ruleCount(…)` call in `src`, with its first argument. */
@@ -40,7 +41,11 @@ function readerCalls(src: string): ReaderCall[] {
         depth--;
       } else if (c === ',' && depth === 0) break;
     }
-    calls.push({ reader: match[1] as Reader, argument: src.slice(start, end).trim() });
+    calls.push({
+      reader: match[1] as Reader,
+      argument: src.slice(start, end).trim(),
+      at: match.index,
+    });
   }
   return calls;
 }
@@ -59,28 +64,65 @@ function concreteKey(shape: string): string | null {
 }
 
 /**
- * The count key a reader call reads, followed through one binding: the argument itself, the
- * initialiser of the name it passes (`const countRaw = rawProps.item_count`), or the
+ * The `{` offset of every block that encloses `at`, innermost first, then -1 for the module. Braces
+ * are counted in comment-stripped text, so a brace inside a string or a regex literal would skew
+ * it. No rule file spells one unbalanced, and the fence below pins the scoping.
+ */
+function enclosingBlocks(src: string, at: number): number[] {
+  const open: number[] = [];
+  for (let i = 0; i < at; i++) {
+    if (src[i] === '{') open.push(i);
+    else if (src[i] === '}') open.pop();
+  }
+  return [...open.reverse(), -1];
+}
+
+/**
+ * The initialiser of the `const` or `let` binding of `name` in scope at `at`: the last one written
+ * before `at` directly in the innermost block that declares it. A binding of the same name in
+ * another function, or in a sibling block, is out of scope.
+ */
+function bindingInScope(src: string, name: string, at: number): string | undefined {
+  const declaration = new RegExp(String.raw`\b(?:const|let)\s+${name}\s*=\s*([^;]+);`, 'g');
+  const candidates = [...src.matchAll(declaration)].filter((m) => m.index < at);
+  for (const block of enclosingBlocks(src, at)) {
+    const own = candidates.filter((m) => enclosingBlocks(src, m.index)[0] === block);
+    if (own.length > 0) return own[own.length - 1]![1];
+  }
+  return undefined;
+}
+
+/**
+ * The count key a reader call at `at` reads, followed through one binding in scope: the argument
+ * itself, the initialiser of the name it passes (`const countRaw = rawProps.item_count`), or the
  * `indexedKeyRegex` shape a loop key is matched against before `properties[key]` is read. Null when
  * none of them names a count, so the call is not a count read.
  */
-function countKeyRead(argument: string, src: string): string | null {
+function countKeyRead(argument: string, src: string, at: number): string | null {
   const direct = COUNT_ACCESS.exec(argument);
   if (direct) return direct[1]!;
 
   const name = /^([A-Za-z_]\w*)$/.exec(argument)?.[1];
   if (name) {
-    const initialiser = new RegExp(String.raw`\b(?:const|let)\s+${name}\s*=\s*([^;]+);`).exec(src)?.[1];
+    const initialiser = bindingInScope(src, name, at);
     const bound = initialiser === undefined ? null : COUNT_ACCESS.exec(initialiser);
     if (bound) return bound[1]!;
   }
 
   const keyName = /\[\s*([A-Za-z_]\w*)\s*\]$/.exec(argument)?.[1];
   if (keyName) {
+    // The match that names the loop key, in the innermost block around the call that holds one.
     const tested = new RegExp(String.raw`\b([A-Za-z_]\w*)\.(?:exec|test)\(\s*${keyName}\s*\)`, 'g');
-    for (const [, regexName] of src.matchAll(tested)) {
-      const shape = new RegExp(String.raw`\b${regexName}\s*=\s*indexedKeyRegex\(\s*'([^']*)'`).exec(src)?.[1];
-      if (shape?.includes('_count')) return concreteKey(shape);
+    for (const block of enclosingBlocks(src, at)) {
+      const inBlock = [...src.matchAll(tested)].filter(
+        (m) => m.index > block && m.index < at && enclosingBlocks(src, m.index).includes(block)
+      );
+      for (const [, regexName] of inBlock) {
+        const initialiser = bindingInScope(src, regexName!, at);
+        const shape = /^indexedKeyRegex\(\s*'([^']*)'/.exec(initialiser?.trim() ?? '')?.[1];
+        if (shape?.includes('_count')) return concreteKey(shape);
+      }
+      if (inBlock.length > 0) break;
     }
   }
   return null;
@@ -122,8 +164,8 @@ describe('rule-layer count reads', () => {
     .filter(({ src }) => /ruleRegistry\.register\(/.test(src))
     .flatMap(({ file, src }) => {
       const types = ruleTypes(file);
-      return readerCalls(src).flatMap(({ reader, argument }) => {
-        const key = countKeyRead(argument, src);
+      return readerCalls(src).flatMap(({ reader, argument, at }) => {
+        const key = countKeyRead(argument, src, at);
         if (key === null) return [];
         const refused = types.some((type) => refusesNegative(type, key));
         return [{ rel: label(file), reader, key, refused }];
@@ -132,9 +174,9 @@ describe('rule-layer count reads', () => {
 
   it('resolves the counts the rules read, so the sweep cannot pass vacuously', () => {
     const refused = reads.filter((read) => read.refused);
-    // Far below the real count: this catches a resolver or registry probe that broke.
+    // Far below the real count, so it fails only when the resolver or the registry probe breaks.
     expect(refused.length).toBeGreaterThan(8);
-    // Both resolution paths, on the slice that once read both through `ruleInt`.
+    // Both resolution paths: a direct `setting_count` read, and a `joint_count` through a loop key.
     expect(refused).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ rel: 'nodes/3d/skeleton/bonetwistdisperser3d/linter.ts', key: 'setting_count' }),
@@ -156,21 +198,40 @@ describe('rule-layer count reads', () => {
 
   /**
    * A fence, not a regression test: the three spellings a count read takes, and a non-count read
-   * the resolver must leave alone.
+   * the resolver must leave alone. `at` is the end of the snippet, where the call would be.
    */
   it('follows a count read through each spelling, and ignores a read of anything else', () => {
-    expect(countKeyRead('rawProps.item_count', '')).toBe('item_count');
-    expect(countKeyRead("properties['setting_count'] ?? ''", '')).toBe('setting_count');
-    expect(countKeyRead('countRaw', 'const countRaw = rawProps.tab_count;')).toBe('tab_count');
+    expect(countKeyRead('rawProps.item_count', '', 0)).toBe('item_count');
+    expect(countKeyRead("properties['setting_count'] ?? ''", '', 0)).toBe('setting_count');
+    const bound = 'const countRaw = rawProps.tab_count;';
+    expect(countKeyRead('countRaw', bound, bound.length)).toBe('tab_count');
     const loop =
       "const JOINT_COUNT_KEY_RE = indexedKeyRegex('^settings/(#)/joint_count$', 'to_int');\n" +
-      'for (const key of Object.keys(properties)) { const match = JOINT_COUNT_KEY_RE.exec(key); }';
-    expect(countKeyRead('properties[key]', loop)).toBe('settings/0/joint_count');
+      'for (const key of Object.keys(properties)) { const match = JOINT_COUNT_KEY_RE.exec(key); ';
+    expect(countKeyRead('properties[key]', loop, loop.length)).toBe('settings/0/joint_count');
 
-    expect(countKeyRead('rawProps.current_tab', '')).toBeNull();
-    expect(countKeyRead('raw', 'const raw = leaves.get("z_index");')).toBeNull();
+    expect(countKeyRead('rawProps.current_tab', '', 0)).toBeNull();
+    const other = 'const raw = leaves.get("z_index");';
+    expect(countKeyRead('raw', other, other.length)).toBeNull();
     expect(readerCalls('ruleInt(props[window.min], window.minDefault)')).toEqual([
-      { reader: 'ruleInt', argument: 'props[window.min]' },
+      { reader: 'ruleInt', argument: 'props[window.min]', at: 0 },
     ]);
+  });
+
+  it('reads the binding in scope at the call, not one of the same name elsewhere', () => {
+    const inB =
+      'function a() { const raw = props.item_count; }\nfunction b() { const raw = leaves.get("z"); ';
+    expect(countKeyRead('raw', inB, inB.length)).toBeNull();
+    const inA =
+      'function b() { const raw = leaves.get("z"); }\nfunction a() { const raw = props.item_count; ';
+    expect(countKeyRead('raw', inA, inA.length)).toBe('item_count');
+  });
+
+  it('reads the binding of the innermost block that declares the name', () => {
+    const shadowed =
+      'function a() { const raw = props.item_count; for (const x of y) { const raw = x.z; ';
+    expect(countKeyRead('raw', shadowed, shadowed.length)).toBeNull();
+    const outer = 'function a() { const raw = props.item_count; for (const x of y) { ';
+    expect(countKeyRead('raw', outer, outer.length)).toBe('item_count');
   });
 });
