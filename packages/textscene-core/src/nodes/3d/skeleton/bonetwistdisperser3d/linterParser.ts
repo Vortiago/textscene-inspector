@@ -10,6 +10,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
+import { settingCount } from '../shared/settingCount.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
 import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
@@ -250,14 +251,8 @@ validatorRegistry.registerAll('BoneTwistDisperser3D', {
   // and altering nothing, so format is the only constraint.
   mutable_bone_axes: v.boolean('mutable_bone_axes'),
 
-  // bone_twist_disperser_3d.cpp:561, ADD_ARRAY_COUNT: a serialised INT through `add_property` with
-  // `PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_ARRAY` (class_db.cpp:1492, class_db.h:475), no hint.
-  // set_setting_count opens with ERR_FAIL_COND(p_count < 0) (:650), so the floor is enforced. There
-  // is no ceiling.
-  setting_count: v.strictInt('setting_count', {
-    min: 0,
-    enforced: 'bone_twist_disperser_3d.cpp:650',
-  }),
+  // bone_twist_disperser_3d.cpp:561, ADD_ARRAY_COUNT. The class defines its own set_setting_count.
+  setting_count: settingCount('BoneTwistDisperser3D'),
 
   // The plain wildcard, not `settings/#/*`: `matchesIndexedKey` routes a single leaf segment, so
   // it would never deliver `settings/0/joints/0/twist_amount`.

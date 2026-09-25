@@ -12,6 +12,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
+import { settingCount } from '../shared/settingCount.js';
 import {
   BONE_DIRECTION,
   SECONDARY_DIRECTION,
@@ -111,10 +112,9 @@ const settingValidator = indexedFamilyValidator({
 
 validatorRegistry.registerAll('TwoBoneIK3D', {
   // two_bone_ik_3d.cpp:506, ADD_ARRAY_COUNT on this class, since IKModifier3D never calls the
-  // macro. PROPERTY_HINT_NONE, and no ceiling. TwoBoneIK3D::set_setting_count
-  // (two_bone_ik_3d.h:267) forwards to `_set_setting_count<T>`, which opens with
-  // ERR_FAIL_COND(p_count < 0) (ik_modifier_3d.h:98): a negative count is an error.
-  setting_count: v.strictInt('setting_count', { min: 0, enforced: 'ik_modifier_3d.h:98' }),
+  // macro. TwoBoneIK3D::set_setting_count (two_bone_ik_3d.h:267) forwards to IKModifier3D's
+  // `_set_setting_count<T>`.
+  setting_count: settingCount('IKModifier3D'),
 
   // A plain wildcard, not `settings/#/*`: the registry's glued-index matcher routes a single leaf
   // segment only, and two of the 14 leaves take two segments (two_bone_ik_3d.cpp:152-153).

@@ -12,6 +12,7 @@ import { validatorRegistry, type PropertyValidator } from '../../../../linter/Va
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { keyShapeError } from '../../../../linter/validators/propertyError.js';
 import { accepts, v } from '../../../../linter/validators/v.js';
+import { settingCount } from '../shared/settingCount.js';
 import {
   ROTATION_AXIS,
   SECONDARY_DIRECTION,
@@ -142,10 +143,9 @@ validatorRegistry.registerAll('IterateIK3D', {
   // (iterate_ik_3d.cpp:193) is a bare assignment.
   deterministic: v.boolean('deterministic'),
 
-  // iterate_ik_3d.cpp:398, ADD_ARRAY_COUNT, a serialised INT (class_db.cpp:1492) with
-  // PROPERTY_HINT_NONE. IterateIK3D::set_setting_count (iterate_ik_3d.h:287) forwards to
-  // `_set_setting_count`, which opens `ERR_FAIL_COND(p_count < 0)` (ik_modifier_3d.h:98): an error.
-  setting_count: v.int('setting_count', { min: 0, enforced: 'ik_modifier_3d.h:98' }),
+  // iterate_ik_3d.cpp:398, ADD_ARRAY_COUNT. IterateIK3D::set_setting_count (iterate_ik_3d.h:287)
+  // forwards to IKModifier3D's `_set_setting_count`.
+  setting_count: settingCount('IKModifier3D'),
 
   'settings/*': settingsValidator,
 });
