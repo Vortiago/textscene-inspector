@@ -128,7 +128,7 @@ _Avoid_: "fixing" the silence by resolving instance internals (the linter must s
 
 **Viewport scope**:
 The nearest Viewport ancestor of a node, or null for the scene's own viewport: the per-viewport state (the current-camera slot) a node participates in.
-An unknowable scope, an ancestor whose type comes from another scene, never pools the node into any scope.
+An unknowable scope, an ancestor whose type comes from another scene or that the catalog does not know (a GDExtension class), never pools the node into any scope.
 _Avoid_: scoping a per-viewport contention rule to the whole scene (two split-screen cameras do not contend).
 
 ### Code organisation

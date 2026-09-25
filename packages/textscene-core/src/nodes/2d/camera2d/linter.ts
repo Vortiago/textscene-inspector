@@ -4,10 +4,10 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode, TscnScene } from '../../../parser/types.js';
+import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties, nodesOfType } from '../../../linter/linterUtils.js';
-import { viewportScopeOf } from '../../../linter/viewportScope.js';
+import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../godot/index.js';
 
@@ -17,31 +17,10 @@ function cameraIsEnabled(node: TscnNode): boolean {
   return boolSlotValue((node.properties as Record<string, string>).enabled) !== false;
 }
 
-/**
- * Enabled Camera2D nodes per viewport scope, tallied once per scene from the
- * per-type index. A walk per camera is O(matches x nodes x depth) on the very
- * scene the rule detects. Keyed on the roots array, since `searchAncestors` reads
- * nothing of `scene` but `nodes`.
- */
-const enabledCamerasByScope = new WeakMap<TscnNode[], Map<TscnNode | null, number>>();
-
 /** Enabled Camera2D nodes sharing `scope`'s viewport, the set that really contends. */
-function countEnabledCamerasInScope(scene: TscnScene, scope: TscnNode | null): number {
-  let tally = enabledCamerasByScope.get(scene.nodes);
-  if (!tally) {
-    tally = new Map<TscnNode | null, number>();
-    for (const camera of nodesOfType(scene.nodes, 'Camera2D')) {
-      if (!cameraIsEnabled(camera)) continue;
-      // A camera whose viewport this file cannot determine is left out of the
-      // contending set: `undefined` is never a scope a caller holds.
-      const cameraScope = viewportScopeOf(scene, camera);
-      if (cameraScope === undefined) continue;
-      tally.set(cameraScope, (tally.get(cameraScope) ?? 0) + 1);
-    }
-    enabledCamerasByScope.set(scene.nodes, tally);
-  }
-  return tally.get(scope) ?? 0;
-}
+const countEnabledCamerasInScope = viewportScopeCounter((roots) =>
+  nodesOfType(roots, 'Camera2D').filter(cameraIsEnabled)
+);
 
 /**
  * Smoothing is on with a speed of exactly 0: the setter stores it, and the

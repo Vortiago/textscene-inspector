@@ -4,10 +4,10 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnNode, TscnScene } from '../../../parser/types.js';
+import type { TscnNode } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { isValidProperties } from '../../../linter/linterUtils.js';
-import { viewportScopeOf } from '../../../linter/viewportScope.js';
+import { isValidProperties, nodesDescendingFrom } from '../../../linter/linterUtils.js';
+import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../godot/index.js';
@@ -42,43 +42,18 @@ function projectionMode(raw: string | undefined): number {
  */
 function cameraClaimsCurrent(node: TscnNode): boolean {
   if (!isValidProperties(node.properties)) return false;
-  return boolSlotValue((node.properties as Record<string, string>).current) === true;
+  return boolSlotValue(node.properties.current) === true;
 }
 
 /**
- * Cameras claiming `current` per viewport scope, tallied once per scene. A walk per
- * camera is O(matches x nodes x depth) on the very scene the rule detects. Keyed on
- * the roots array, since `viewportScopeOf` reads nothing of `scene` but `nodes`.
+ * Cameras claiming `current` that share `scope`'s viewport. The family joins, since
+ * the slot set takes any Camera3D subclass: `XRCamera3D` inherits the ENTER_WORLD
+ * handler that joins it (camera_3d.cpp:186). A type the catalog does not know joins
+ * nothing here, the same no-guess rule as the scope walk.
  */
-const currentCamerasByScope = new WeakMap<TscnNode[], Map<TscnNode | null, number>>();
-
-/**
- * Cameras claiming `current` that share `scope`'s viewport. `descendsFrom` gathers
- * the family, since the slot set takes any Camera3D subclass: `XRCamera3D` inherits
- * the ENTER_WORLD handler that joins it (camera_3d.cpp:186). A type the catalog does
- * not know joins nothing here, the same no-guess rule as the scope walk.
- */
-function countCurrentCamerasInScope(scene: TscnScene, scope: TscnNode | null): number {
-  const cached = currentCamerasByScope.get(scene.nodes);
-  if (cached) return cached.get(scope) ?? 0;
-  const tally = new Map<TscnNode | null, number>();
-  const visit = (nodes: readonly TscnNode[]): void => {
-    for (const descendant of nodes) {
-      if (cameraClaimsCurrent(descendant) && descendsFrom(descendant.type, 'Camera3D')) {
-        // A camera whose viewport this file cannot determine is left out of the
-        // contending set: `undefined` is never a scope a caller holds.
-        const cameraScope = viewportScopeOf(scene, descendant);
-        if (cameraScope !== undefined) {
-          tally.set(cameraScope, (tally.get(cameraScope) ?? 0) + 1);
-        }
-      }
-      visit(descendant.children);
-    }
-  };
-  visit(scene.nodes);
-  currentCamerasByScope.set(scene.nodes, tally);
-  return tally.get(scope) ?? 0;
-}
+const countCurrentCamerasInScope = viewportScopeCounter((roots) =>
+  nodesDescendingFrom(roots, 'Camera3D').filter(cameraClaimsCurrent)
+);
 
 function checkCamera3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -99,7 +74,7 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
     if (claiming > 1) {
       diagnostics.push({
         severity: 'info',
-        message: `Camera3D 'current' contention: ${claiming} cameras claim the current-camera slot of one viewport. Only one holds it — the last entered wins and the others silently lose it (viewport.cpp:4578), so only one of them draws.`,
+        message: `${node.type} 'current' contention: ${claiming} cameras claim the current-camera slot of one viewport. Only one holds it: the last one entered wins, and the others silently lose it (viewport.cpp:4578), so only one of them draws.`,
         nodeName: node.name,
         nodeType: node.type,
         ruleName: 'camera3d-multiple-current',
@@ -160,7 +135,7 @@ const camera3DValidationRule: LintRule = {
   meta: {
     name: 'valid-camera3d-properties',
     description:
-      "Validates the Camera3D near/far clipping-plane pair per projection mode, which neither plane's own bound can express",
+      "Validates the Camera3D near/far clipping-plane pair per projection mode, which neither plane's own bound can express, and reports cameras that contend for one viewport's current-camera slot",
     category: 'validation',
     emits: [
       {

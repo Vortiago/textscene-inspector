@@ -2,6 +2,7 @@
 
 import type { TscnNode } from '../parser/types.js';
 import { nodePathLiteral } from '../godot/index.js';
+import { descendsFrom } from '../godot/nodeBaseTypes.js';
 import { cachedUniqueNameClaims, type uniqueNameClaims } from '../utils/uniqueNames.js';
 
 /**
@@ -94,6 +95,19 @@ const NO_MATCHES: readonly TscnNode[] = Object.freeze([]);
  */
 export function nodesOfType(roots: TscnNode[], type: string): readonly TscnNode[] {
   return getSceneIndex(roots).nodesByType.get(type) ?? NO_MATCHES;
+}
+
+/**
+ * Every node whose class is `base` or descends from it, off the same cached index. For a
+ * slot any subclass joins, where {@link nodesOfType} would miss the subclasses. The order
+ * is per type, not tree order.
+ */
+export function nodesDescendingFrom(roots: TscnNode[], base: string): TscnNode[] {
+  const members: TscnNode[] = [];
+  for (const [type, ofType] of getSceneIndex(roots).nodesByType) {
+    if (descendsFrom(type, base)) members.push(...ofType);
+  }
+  return members;
 }
 
 /** How many nodes of `type` the scene contains, off the same cached index. */

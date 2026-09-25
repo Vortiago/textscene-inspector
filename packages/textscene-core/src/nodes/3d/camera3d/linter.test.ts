@@ -485,6 +485,61 @@ describe('Camera3D Linter', () => {
         );
       });
 
+      // Each SubViewport holds its own slot, so a nested one scopes apart from the one
+      // that contains it: the outer and inner current cameras never meet.
+      it('reports nothing for current cameras in an outer and an inner SubViewport', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('SubViewport', {}, { name: 'Outer', parent: '.' }),
+            node('Camera3D', { current: true }, { name: 'OuterCamera', parent: 'Outer' }),
+            node('SubViewport', {}, { name: 'Inner', parent: 'Outer' }),
+            node('Camera3D', { current: true }, { name: 'InnerCamera', parent: 'Outer/Inner' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
+      it('reports nothing for a current camera in a SubViewport under an instanced ancestor', () => {
+        expectNoDiagnostic(
+          scene(
+            packedScene,
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'MainCamera', parent: '.' }),
+            instanced('Instance', { parent: '.' }),
+            node('SubViewport', {}, { name: 'Inset', parent: 'Instance' }),
+            node('Camera3D', { current: true }, { name: 'InsetCamera', parent: 'Instance/Inset' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
+      it('reports nothing for a current camera in a SubViewport under an uncatalogued ancestor', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'MainCamera', parent: '.' }),
+            node('JBody3D', {}, { name: 'Body', parent: '.' }),
+            node('SubViewport', {}, { name: 'Inset', parent: 'Body' }),
+            node('Camera3D', { current: true }, { name: 'InsetCamera', parent: 'Body/Inset' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
+      // A GDExtension camera may or may not subclass Camera3D, and the catalog cannot
+      // say, so its claim joins no tally: the same no-guess rule as the scope walk.
+      it('never counts a current claim from an uncatalogued camera-like type', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Node3D', {}, { name: 'Root' }),
+            node('Camera3D', { current: true }, { name: 'Camera', parent: '.' }),
+            node('PhantomCamera3D', { current: true }, { name: 'Phantom', parent: '.' })
+          ),
+          { ruleName: 'camera3d-multiple-current' }
+        );
+      });
+
       // XRCamera3D inherits Camera3D's ENTER_WORLD handler (camera_3d.cpp:186-192), so a
       // current XR camera joins the same per-viewport set.
       it('reports a Camera3D and an XRCamera3D both current in one viewport', () => {
@@ -494,7 +549,12 @@ describe('Camera3D Linter', () => {
             node('Camera3D', { current: true }, { name: 'Camera', parent: '.' }),
             node('XRCamera3D', { current: true }, { name: 'XRCamera', parent: '.' })
           ),
-          { ruleName: 'camera3d-multiple-current', severity: 'info' }
+          {
+            ruleName: 'camera3d-multiple-current',
+            severity: 'info',
+            nodeType: 'XRCamera3D',
+            contains: ['XRCamera3D'],
+          }
         );
       });
 
