@@ -93,12 +93,17 @@ function useDisposeOnReplace(geometry: THREE.BufferGeometry | null): void {
   useEffect(() => () => geometry?.dispose(), [geometry]);
 }
 
+/** One triangle, three vertices of three floats each: the least a triangle soup can draw. */
+const MIN_TRIANGLE_SOUP_FLOATS = 3 * 3;
+
+/** A tetrahedron's four corners: the fewest points that enclose a volume. */
+const MIN_CONVEX_HULL_POINTS = 4;
+
 /** A concave shape is already a triangle soup, bound as a non-indexed BufferGeometry. */
 function TriangleSoupWire({ shapeData, color }: PolygonWireProps) {
   const geometry = useMemo(() => {
     const { data } = decodeConcavePolygonShape3D(shapeData);
-    // Three vertices, one triangle, is the least a soup can draw.
-    if (data.length < 9) return null;
+    if (data.length < MIN_TRIANGLE_SOUP_FLOATS) return null;
     const geom = new THREE.BufferGeometry();
     geom.setAttribute('position', new THREE.BufferAttribute(data, 3));
     geom.computeVertexNormals();
@@ -126,7 +131,7 @@ function ConvexHullWire({ shapeData, color }: PolygonWireProps) {
     for (let i = 0; i + 2 < points.length; i += 3) {
       verts.push(new THREE.Vector3(points[i], points[i + 1], points[i + 2]));
     }
-    if (verts.length < 4) {
+    if (verts.length < MIN_CONVEX_HULL_POINTS) {
       setGeometry(null);
       return;
     }
