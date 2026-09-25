@@ -54,9 +54,9 @@ copy) and `apps/textscene-web/src/fixturesAll.ts` (the manifest). A test pins
 the default-excluded case.
 
 **Deploying:** set the Cloudflare Pages build command to `pnpm build:deploy`.
-There is no `wrangler.toml`, and the Pages deploy in `.github/workflows/ci.yml`
-is commented out, so the build command lives in the Cloudflare dashboard. Change
-it there.
+There is no `wrangler.toml`, and CI does not deploy the dev edition, so the build
+command lives in the Cloudflare dashboard. Change it there. The public edition,
+with no built-in scenes, deploys to GitHub Pages from `.github/workflows/pages.yml`.
 
 ## Quick Start: Testing Mesh Primitives
 

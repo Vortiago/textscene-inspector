@@ -1,6 +1,6 @@
 # TextScene Inspector
 
-[![CI/CD](https://github.com/Vortiago/textscene-inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/Vortiago/textscene-inspector/actions/workflows/ci.yml)
+[![CI](https://github.com/Vortiago/textscene-inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/Vortiago/textscene-inspector/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 Renders Godot `.tscn` scenes in 3D, without Godot.

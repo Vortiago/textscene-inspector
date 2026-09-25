@@ -9,6 +9,7 @@
  *   pnpm test:visual                 # compare every scene against its baseline
  *   pnpm test:visual:update          # rewrite the baselines, then eyeball and commit them
  *   node scripts/visual/run.mjs --scene label3d [--update]
+ *   node scripts/visual/run.mjs --shard 2/4      # every 4th scene from the 2nd, as CI runs it
  */
 
 import { resolve } from 'node:path';
@@ -75,20 +76,10 @@ async function main() {
     }
 
     for (const scene of scenes) {
-      const { buffer, reason, status } = await captureScene(pages, baseUrl, scene);
-      if (!buffer) {
-        results.push({ scene, status: status ?? 'unstable', detail: reason });
-        continue;
-      }
-      if (opts.update) {
-        // `writeBaseline` refuses a uniform capture and skips an unchanged one: a dead context
-        // settles as cleanly as a real one, and a dead baseline passes every later compare.
-        results.push({ scene, ...writeBaseline(scene, buffer) });
-        continue;
-      }
-      const result = compareToBaseline(scene, buffer);
-      if (result.status === 'fail') writeFailureArtifacts(scene, buffer, result);
-      results.push({ scene, status: result.status, detail: result.detail });
+      const result = await checkScene(pages, baseUrl, scene, opts);
+      results.push(result);
+      // One line per scene, so a slow run shows progress and a cancelled one shows how far it got.
+      console.log(`[visual] ${results.length}/${scenes.length} ${scene.name} ${result.status}`);
     }
   } finally {
     // A crashed browser rejects close(), which would skip the kill below and leave `vite preview`
@@ -122,6 +113,20 @@ async function main() {
   // A lingering handle from the killed preview group would keep the event loop open after
   // success, so the script exits explicitly.
   process.exit(0);
+}
+
+/** Captures one scene and compares it with its baseline, or writes the baseline under --update. */
+async function checkScene(pages, baseUrl, scene, opts) {
+  const { buffer, reason, status } = await captureScene(pages, baseUrl, scene);
+  if (!buffer) return { scene, status: status ?? 'unstable', detail: reason };
+  if (opts.update) {
+    // `writeBaseline` refuses a uniform capture and skips an unchanged one: a dead context
+    // settles as cleanly as a real one, and a dead baseline passes every later compare.
+    return { scene, ...writeBaseline(scene, buffer) };
+  }
+  const result = compareToBaseline(scene, buffer);
+  if (result.status === 'fail') writeFailureArtifacts(scene, buffer, result);
+  return { scene, status: result.status, detail: result.detail };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {

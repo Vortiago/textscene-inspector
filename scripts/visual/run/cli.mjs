@@ -5,9 +5,12 @@
 
 import { GOLDEN_SCENES } from '../scenes.mjs';
 
-/** Parses `--update` and `--scene <name>`. Anything else is a usage error (exit 2). */
+/**
+ * Parses `--update`, `--scene <name>` and `--shard <index>/<count>`. Anything else, and `--scene`
+ * with `--shard`, is a usage error (exit 2).
+ */
 export function parseArgs(argv) {
-  const opts = { update: false, scene: null };
+  const opts = { update: false, scene: null, shard: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--update') opts.update = true;
@@ -21,12 +24,29 @@ export function parseArgs(argv) {
       }
       opts.scene = value;
     }
+    else if (a === '--shard') opts.shard = parseShard(argv[++i]);
     else {
       console.error(`[visual] unknown argument: ${a}`);
       process.exit(2);
     }
   }
+  if (opts.scene && opts.shard) {
+    console.error('[visual] --scene and --shard select scenes in two ways. Pass one.');
+    process.exit(2);
+  }
   return opts;
+}
+
+/** `2/4` → `{ index: 2, count: 4 }`, with 1 <= index <= count. */
+function parseShard(value) {
+  const match = /^(\d+)\/(\d+)$/.exec(value ?? '');
+  const index = Number(match?.[1]);
+  const count = Number(match?.[2]);
+  if (!match || index < 1 || index > count) {
+    console.error(`[visual] --shard needs <index>/<count>, 1 <= index <= count, got "${value}"`);
+    process.exit(2);
+  }
+  return { index, count };
 }
 
 /**
@@ -35,7 +55,7 @@ export function parseArgs(argv) {
  */
 const MIN_GOLDEN_SCENES = 100;
 
-/** The scenes this run covers: all of them, or the one `--scene` named. */
+/** The scenes this run covers: all of them, one shard of them, or the one `--scene` named. */
 export function selectScenes(opts) {
   if (GOLDEN_SCENES.length < MIN_GOLDEN_SCENES) {
     console.error(
@@ -45,6 +65,7 @@ export function selectScenes(opts) {
     );
     process.exit(2);
   }
+  if (opts.shard) return shardOf(GOLDEN_SCENES, opts.shard);
   if (!opts.scene) return GOLDEN_SCENES;
   const scenes = GOLDEN_SCENES.filter((s) => s.name === opts.scene);
   if (scenes.length === 0) {
@@ -54,6 +75,14 @@ export function selectScenes(opts) {
     process.exit(2);
   }
   return scenes;
+}
+
+/**
+ * Every `count`-th scene from `index`, so each shard gets a share of every chapter and its slow
+ * scenes. The shards of one count cover each scene exactly once.
+ */
+export function shardOf(scenes, { index, count }) {
+  return scenes.filter((_, k) => k % count === index - 1);
 }
 
 /** Column-aligned result lines plus the count that decides the exit code. */

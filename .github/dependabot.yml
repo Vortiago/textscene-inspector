@@ -4,11 +4,10 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
+    # @types/vscode matches engines.vscode in apps/textscene-vscode, and vsce refuses a
+    # newer one. The engine floor moves by hand, and the types move with it.
     ignore:
-      # vsce refuses a VSIX whose @types/vscode is newer than engines.vscode, so the
-      # types move only with a deliberate engine bump.
       - dependency-name: '@types/vscode'
-        update-types: ['version-update:semver-minor', 'version-update:semver-major']
     groups:
       minor-and-patch:
         update-types:
@@ -16,7 +15,7 @@ updates:
           - 'patch'
 
   - package-ecosystem: 'github-actions'
-    directory: '/'
+    directories: ['/', '/.github/actions/*']
     schedule:
       interval: 'weekly'
     groups:

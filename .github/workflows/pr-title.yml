@@ -1,0 +1,32 @@
+name: PR title
+
+# A squash merge uses the PR title as the commit header on main, so the title must be a
+# Conventional Commit. The commit-msg hook checks only local commits. The check runs on
+# synchronize too, because branch protection reads it from the head commit.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  conventional:
+    name: Conventional Commit title
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .claude/skills/conventional-commits
+
+      # The title goes through the environment, never into the script text.
+      - env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          . .claude/skills/conventional-commits/validate.sh
+          cc_is_exempt "$TITLE" && exit 0
+          cc_header_valid "$TITLE" && exit 0
+          echo "::error::The PR title is not a Conventional Commit: $TITLE"
+          echo "Expected <type>[(scope)][!]: <subject>, with a type from: ${CC_TYPES//|/ }."
+          exit 1

@@ -17,6 +17,11 @@ export function runSteps(tag, steps, env) {
       env,
       shell: process.platform === 'win32',
     });
+    // A command that cannot start leaves `status` null and says why in `error`.
+    if (result.error) {
+      console.error(`[${tag}] "${command} ${args.join(' ')}" did not start: ${result.error.message}`);
+      process.exit(1);
+    }
     if (result.status !== 0) {
       console.error(`[${tag}] "${command} ${args.join(' ')}" failed with ${result.status}`);
       process.exit(result.status ?? 1);
