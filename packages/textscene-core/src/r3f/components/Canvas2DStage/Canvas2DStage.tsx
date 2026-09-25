@@ -150,14 +150,18 @@ export function Canvas2DStage({
   }, [fit, fitOnOpen, scenePath]);
 
   // "View through" a Camera2D: a one-shot request that centres the camera's view
-  // point at its magnification. Pan and zoom stay free afterwards.
-  const frame2D = useOptionalCameraControl()?.frame2D ?? null;
+  // point at its magnification. Pan and zoom stay free afterwards. The claim keeps a
+  // remount from replaying an old request, and still applies one made with the mount.
+  const cameraControl = useOptionalCameraControl();
+  const frame2D = cameraControl?.frame2D ?? null;
+  const claimFrame2D = cameraControl?.claimFrame2D;
   useEffect(() => {
-    if (!frame2D) return;
+    if (!frame2D || !claimFrame2D) return;
     const el = stageRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) return;
+    if (!claimFrame2D(frame2D.requestId)) return;
     const zoom = clampZoom(frame2D.zoom);
     moveView({
       zoom,
@@ -166,7 +170,7 @@ export function Canvas2DStage({
         y: r.height / 2 - frame2D.center.y * zoom,
       },
     });
-  }, [frame2D, moveView]);
+  }, [frame2D, claimFrame2D, moveView]);
 
   // Wheel-to-zoom, anchored to the cursor. Added as a non-passive native
   // listener so preventDefault actually suppresses page scroll.
