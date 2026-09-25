@@ -10,6 +10,7 @@
  */
 
 import { arrayLiteralBody, dictNumberField } from '../../../../godot/variantParser.js';
+import { STRING_LITERAL_SOURCE } from '../../../../godot/string.js';
 import { unquoteStringName } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { GraphEditConnection } from './types';
@@ -19,8 +20,13 @@ const DICT_BLOCK_RE = /\{[^{}]*\}/g;
 
 /** A Dictionary field with a quoted string value, which may carry the StringName prefix `&"…"` (`variant_writer.cpp`). */
 function dictStringField(key: string): RegExp {
-  return new RegExp(`"${key}"\\s*:\\s*([&@]?"(?:[^"\\\\]|\\\\[\\s\\S])*")\\s*(?=[,}])`);
+  return new RegExp(String.raw`"${key}"\s*:\s*([&@]?${STRING_LITERAL_SOURCE})\s*(?=[,}])`);
 }
+
+const FROM_NODE_RE = dictStringField('from_node');
+const TO_NODE_RE = dictStringField('to_node');
+const FROM_PORT_RE = dictNumberField('from_port');
+const TO_PORT_RE = dictNumberField('to_port');
 
 export function parseGraphEditConnections(raw: string | undefined): GraphEditConnection[] {
   if (raw === undefined) return [];
@@ -29,10 +35,10 @@ export function parseGraphEditConnections(raw: string | undefined): GraphEditCon
 
   const connections: GraphEditConnection[] = [];
   for (const block of body.match(DICT_BLOCK_RE) ?? []) {
-    const fromNodeMatch = dictStringField('from_node').exec(block);
-    const toNodeMatch = dictStringField('to_node').exec(block);
-    const fromPortMatch = dictNumberField('from_port').exec(block);
-    const toPortMatch = dictNumberField('to_port').exec(block);
+    const fromNodeMatch = FROM_NODE_RE.exec(block);
+    const toNodeMatch = TO_NODE_RE.exec(block);
+    const fromPortMatch = FROM_PORT_RE.exec(block);
+    const toPortMatch = TO_PORT_RE.exec(block);
     if (!fromNodeMatch || !toNodeMatch || !fromPortMatch || !toPortMatch) continue;
 
     const fromPort = parseOptionalInt(fromPortMatch[1]);

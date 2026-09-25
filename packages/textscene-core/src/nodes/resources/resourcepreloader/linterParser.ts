@@ -8,13 +8,18 @@
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError } from '../../../linter/validators/index.js';
-import { ARRAY_LITERAL_RE, packedArrayLiteral, resourceRef } from '../../../godot/index.js';
+import {
+  ARRAY_LITERAL_RE,
+  dropTrailingComma,
+  packedArrayLiteral,
+  resourceRef,
+  splitTopLevel,
+  STRING_LITERAL_RE,
+} from '../../../godot/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import { dropTrailingComma, splitTopLevel } from '../../../godot/string.js';
 
 const OUTER_RE = ARRAY_LITERAL_RE;
 const PACKED_STRING_ARRAY_RE = packedArrayLiteral('PackedStringArray');
-const QUOTED_NAME_RE = /^"(?:[^"\\]|\\[\s\S])*"$/;
 const FORMAT_CODE = 'INVALID_RESOURCES_FORMAT';
 
 /**
@@ -76,7 +81,7 @@ const resourcesValidator: PropertyValidator = accepts((key, value, line) => {
   // `_parse_construct`'s `first &&` at :575.
   const names = dropTrailingComma(splitTopLevel(namesMatch[1]!));
   for (const name of names) {
-    if (!QUOTED_NAME_RE.test(name)) {
+    if (!STRING_LITERAL_RE.test(name)) {
       return propertyError(
         key,
         line,

@@ -75,6 +75,23 @@ export function dropTrailingComma(parts: string[]): string[] {
   return parts.length > 1 && parts[parts.length - 1] === '' ? parts.slice(0, -1) : parts;
 }
 
+/** A value that is exactly one `"…"` literal and nothing else. No `g` flag: `.test()` stays stateless. */
+export const STRING_LITERAL_RE = new RegExp(`^${STRING_LITERAL_SOURCE}$`);
+
+/**
+ * The body of each `"…"` element of a comma list, escapes still as written, or null when any
+ * element is not one whole literal. An empty list is `[]`. One trailing comma is legal, as in
+ * `_parse_array`: the `PackedStringArray(…)` loop also closes on it (variant_parser.cpp:1522-1525).
+ */
+export function stringLiteralBodies(list: string): string[] | null {
+  const bodies: string[] = [];
+  for (const element of dropTrailingComma(splitTopLevel(list))) {
+    if (!STRING_LITERAL_RE.test(element)) return null;
+    bodies.push(element.slice(1, -1));
+  }
+  return bodies;
+}
+
 const ZERO = '0'.charCodeAt(0);
 const SEVEN = '7'.charCodeAt(0);
 const EIGHT = '8'.charCodeAt(0);

@@ -1,11 +1,11 @@
 /**
- * The `_surfaces` field readers that take a constructor-call value: the AABB and
- * Vector4 tuples and the base64 byte payloads, each found through `dictCallField`.
+ * The `_surfaces` field readers: the AABB and Vector4 tuples and the base64 byte payloads,
+ * each found through `dictCallField`, and the surface name.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../../../logger';
-import { readAabb, readPackedBytes, readUvScale } from './surfaceFields';
+import { readAabb, readName, readPackedBytes, readUvScale } from './surfaceFields';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -77,5 +77,19 @@ describe('readPackedBytes', () => {
     expect(readPackedBytes('{ "vertex_data": PackedByteArray() }', 'vertex_data')).toHaveLength(0);
     expect(readPackedBytes('{ "vertex_data": PackedByteArray(1, 2, 3) }', 'vertex_data')).toHaveLength(0);
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('readName', () => {
+  it('reads the name Godot writes', () => {
+    expect(readName('{ "format": 1, "name": "Body" }')).toBe('Body');
+  });
+
+  it('runs past an escaped quote and decodes it', () => {
+    expect(readName('{ "name": "say \\"hi\\"", "format": 1 }')).toBe('say "hi"');
+  });
+
+  it('is undefined for a surface with no name', () => {
+    expect(readName('{ "format": 1 }')).toBeUndefined();
   });
 });

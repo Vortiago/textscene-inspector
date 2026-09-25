@@ -4,7 +4,9 @@ import {
   literalText,
   simplifyResPath,
   splitTopLevel,
+  STRING_LITERAL_RE,
   STRING_LITERAL_SOURCE,
+  stringLiteralBodies,
   stringToFloat,
   stringToInt,
 } from './string.js';
@@ -131,6 +133,42 @@ describe('splitTopLevel', () => {
   it('keeps an empty trailing element, since a trailing comma is one', () => {
     expect(splitTopLevel('1,')).toEqual(['1', '']);
   });
+});
+
+describe('STRING_LITERAL_RE', () => {
+  it('accepts a value that is one whole literal', () => {
+    expect(STRING_LITERAL_RE.test('"a\\"b"')).toBe(true);
+  });
+
+  it('rejects a literal with anything outside it', () => {
+    expect(STRING_LITERAL_RE.test('"a" "b"')).toBe(false);
+    expect(STRING_LITERAL_RE.test('&"a"')).toBe(false);
+  });
+});
+
+describe('stringLiteralBodies', () => {
+  it('returns each body with its escapes as written', () => {
+    expect(stringLiteralBodies('"a, b", "\\"q\\""')).toEqual(['a, b', '\\"q\\"']);
+  });
+
+  it('returns no bodies for an empty list', () => {
+    expect(stringLiteralBodies('')).toEqual([]);
+  });
+
+  it('takes one trailing comma', () => {
+    expect(stringLiteralBodies('"a",')).toEqual(['a']);
+  });
+
+  it('takes a backslash before a raw newline as one escape', () => {
+    expect(stringLiteralBodies('"a\\\nb", "c"')).toEqual(['a\\\nb', 'c']);
+  });
+
+  it.each([',', '"a",,', ',"a"', '"a", 5', '"a" "b"', '&"a"', '"never closes'])(
+    'rejects a list with an element that is not one literal: %s',
+    (list) => {
+      expect(stringLiteralBodies(list)).toBeNull();
+    }
+  );
 });
 
 describe('simplifyResPath', () => {

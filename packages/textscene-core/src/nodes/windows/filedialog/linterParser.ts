@@ -8,9 +8,8 @@
 import '../confirmationdialog/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../linter/validators/indexedFamily.js';
-import { v, accepts, propertyError } from '../../../linter/validators/index.js';
+import { v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import { packedArrayForms } from '../../../godot/index.js';
 
 // file_dialog.cpp:2114, PROPERTY_HINT_ENUM, 5 labels ("Open File,Open Files,
 // Open Folder,Open Any,Save"). set_file_mode (:1362-1363) is
@@ -33,50 +32,13 @@ const DISPLAY_MODE = { 0: 'THUMBNAILS', 1: 'LIST' };
 const ACCESS = { 0: 'RESOURCES', 1: 'USERDATA', 2: 'FILESYSTEM' };
 
 /**
- * All three spellings the slot converts: `can_convert_strict` lists ARRAY as a source
- * for PACKED_STRING_ARRAY (variant.cpp:467-473), so `filters = ["*.png"]` loads,
- * measured on 4.6.3.
- */
-const FILTERS_FORMS = packedArrayForms('PackedStringArray');
-// Every element must be a TK_STRING (variant_parser.cpp:1500-1533). A trailing comma
-// is legal: this branch's close is ungated (variant_parser.cpp:1524-1525), unlike
-// `_parse_construct`'s `first &&` at :575.
-const FILTERS_BODY_RE = /^\s*"(?:[^"\\]|\\.)*"\s*(?:,\s*"(?:[^"\\]|\\.)*"\s*)*,?\s*$/;
-
-/**
- * Format-only: `set_filters` (file_dialog.cpp:1259-1266) assigns the vector with no
- * per-element check. Hand-rolled, since `v.ts` has no plain-string packed array.
- */
-function packedStringArrayValidator(name: string): PropertyValidator {
-  const code = `INVALID_${name.toUpperCase()}_FORMAT`;
-  const validator = accepts((key, value, line) => {
-    const match = FILTERS_FORMS.map((form) => form.exec(value)).find(Boolean);
-    if (!match) {
-      return propertyError(
-        key,
-        line,
-        `Property '${name}' must be an array of quoted strings like PackedStringArray("*.png"), Array[String](["*.png"]) or ["*.png"], got: ${value}`,
-        code
-      );
-    }
-    const body = match[1]!.trim();
-    if (body === '' || FILTERS_BODY_RE.test(body)) return null;
-    return propertyError(key, line, `Property '${name}' contains a non-string element: ${value}`, code);
-  }, 'string array (PackedStringArray(…), Array[String]([…]) or […])');
-  validator.formatOnly = true;
-  return validator;
-}
-
-const filtersValidator = packedStringArrayValidator('filters');
-
-/**
  * The three leaves `PropertyListHelper` emits per option (file_dialog.cpp:2201-2203).
  * `name` and `values` are format-only: `set_option_name` (:1977) and
  * `set_option_values` (:1989) assign once `ERR_FAIL_INDEX` passes the option index.
  */
 const OPTION_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   name: v.quotedString('name'),
-  values: packedStringArrayValidator('values'),
+  values: v.packedStringArray('values', '"*.png"'),
   // `set_option_default` (:2006-2015) clamps against the sibling `values` length
   // (file_dialog.cpp:2012-2014), which this validator cannot see. Both branches
   // floor at 0, so only the floor is checkable.
@@ -123,7 +85,10 @@ validatorRegistry.registerAll('FileDialog', {
   // before its `dir_exists` guard, and the offline linter has no filesystem to
   // check that guard against.
   root_subfolder: v.quotedString('root_subfolder'),
-  filters: filtersValidator,
+  // Format-only: set_filters (:1259-1266) assigns the vector with no per-element check.
+  // `can_convert_strict` lists ARRAY as a source for PACKED_STRING_ARRAY
+  // (variant.cpp:467-473), so `filters = ["*.png"]` loads, measured on 4.6.3.
+  filters: v.packedStringArray('filters', '"*.png"'),
   // file_dialog.cpp:2119, STRING, no hint. set_filename_filter (:1268-1276)
   // is a bare assignment.
   filename_filter: v.quotedString('filename_filter'),

@@ -10,6 +10,8 @@ import { warn } from '../../../logger.js';
 import { parseGodotFloat } from '../../../godot/number.js';
 import { dictCallField, dictNumberField } from '../../../godot/variantParser.js';
 import { parseGodotInt } from '../../../godot/int.js';
+import { STRING_LITERAL_SOURCE } from '../../../godot/string.js';
+import { unquoteString } from '../../../parser/utils.js';
 
 /** A surface's declared `AABB(px, py, pz, sx, sy, sz)`: a compressed surface's position scale. */
 export interface SurfaceAabb {
@@ -75,9 +77,12 @@ export function readUvScale(block: string): [number, number] | undefined {
   return n ? [n[0]!, n[1]!] : undefined;
 }
 
+const NAME_RE = new RegExp(String.raw`"name"\s*:\s*(${STRING_LITERAL_SOURCE})`);
+
+/** A surface's `"name"`, its escapes decoded. */
 export function readName(block: string): string | undefined {
-  const match = /"name"\s*:\s*"([^"]*)"/.exec(block);
-  return match?.[1];
+  const literal = NAME_RE.exec(block)?.[1];
+  return literal === undefined ? undefined : unquoteString(literal);
 }
 
 /** A surface's raw `"material"` value, whichever reference form it holds. */

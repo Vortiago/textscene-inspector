@@ -386,6 +386,23 @@ describe('CodeEdit strict validators', () => {
       expect(check('auto_brace_completion_pairs', '{}')).toBeNull();
     });
 
+    it('accepts one trailing comma, which `_parse_dictionary` closes on', () => {
+      expect(check('auto_brace_completion_pairs', '{ "(": ")", }')).toBeNull();
+    });
+
+    it('reads a comma or a colon inside a key as part of the key', () => {
+      expect(check('auto_brace_completion_pairs', '{ ",": ";", ":": "|" }')).toBeNull();
+    });
+
+    it.each(['{,}', '{ "(": ")",, }', '{ "(": 5 }', '{ "(" ")" }'])(
+      'rejects a body that is not a list of string pairs: %s',
+      (value) => {
+        expect(check('auto_brace_completion_pairs', value)?.code).toBe(
+          'INVALID_AUTO_BRACE_COMPLETION_PAIRS_FORMAT'
+        );
+      }
+    );
+
     it('rejects a value not wrapped in curly braces', () => {
       expect(check('auto_brace_completion_pairs', 'PackedStringArray("(", ")")')).not.toBeNull();
     });
