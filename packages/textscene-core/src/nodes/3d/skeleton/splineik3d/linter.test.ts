@@ -92,4 +92,12 @@ setting_count = 1
 `;
     expect(warningsOf(linter.lint(content))).toEqual([]);
   });
+
+  it('credits a path written with a tail, which _set ignores', () => {
+    // `what = path.get_slicec('/', 2)` (spline_ik_3d.cpp:38) is `path_3d`, so set_path_3d runs.
+    const content = scene(`setting_count = 1
+settings/0/path_3d/extra = NodePath("../../SplinePath")
+`);
+    expect(warningsOf(linter.lint(content))).toEqual([]);
+  });
 });

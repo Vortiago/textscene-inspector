@@ -16,16 +16,15 @@ import {
   unsatisfiedIndices,
 } from '../../../../linter/reportedIndices.js';
 import { indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { resolveTwoBoneSettingLeaf } from './linterParser.js';
 
 /**
- * Any `settings/<i>/…` leaf, whatever its depth. `_set` reads the index with a bare
- * `path.get_slicec('/', 1).to_int()` into an `int` and no validity gate (two_bone_ik_3d.cpp:37),
- * so {@link stringToInt} reads the whole segment. Both regexes and `indexedElements` share this
- * grammar, so a key one admits is always one its siblings can look up.
+ * Any `settings/<i>/…` key, its index and the path below it captured. `_set` reads the index with a
+ * bare `path.get_slicec('/', 1).to_int()` into an `int` and no validity gate (two_bone_ik_3d.cpp:37),
+ * so {@link stringToInt} reads the whole segment. This regex and `indexedElements` share the
+ * grammar, so a key it admits is always one its siblings can look up.
  */
-const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/', 'to_int');
-/** The one leaf whose write depends on a sibling, `pole_direction`. */
-const POLE_VECTOR_KEY_RE = indexedKeyRegex('^settings/(#)/pole_direction_vector$', 'to_int');
+const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/(.*)$', 'to_int');
 
 /** `SECONDARY_DIRECTION_CUSTOM`, skeleton_modifier_3d.h:75. */
 const SECONDARY_DIRECTION_CUSTOM = 7;
@@ -53,7 +52,7 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   // Grouped by the setting `_set` resolves each key to, not by its text: the bare `to_int`
   // (two_bone_ik_3d.cpp:37) has no `is_valid_int` gate, so `settings/00/…` and `settings/0/…`
   // address the same setting.
-  const settings = indexedElements(rawProps, 'settings/', 'to_int');
+  const settings = indexedElements(rawProps, 'settings/', 'to_int', resolveTwoBoneSettingLeaf);
 
   // Absence is the trigger too, since `target_node` is empty by default (two_bone_ik_3d.h), so
   // every setting in range counts. Derived, not walked: `setting_count` is an INT slot with no
@@ -91,8 +90,8 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
     // `SECONDARY_DIRECTION_CUSTOM`, dropping the write silently (ADR-0032).
     // `_validate_dynamic_prop` (two_bone_ik_3d.cpp:186-188) hides the key in that state, and the
     // getter returns the axis the enum names.
-    const vector = POLE_VECTOR_KEY_RE.exec(key);
-    if (!vector) continue;
+    // The one leaf whose write depends on a sibling, `pole_direction`.
+    if (resolveTwoBoneSettingLeaf(indexed[2]!) !== 'pole_direction_vector') continue;
     const directionRaw = settings.get(index)?.get('pole_direction');
     const direction = ruleInt(directionRaw, SECONDARY_DIRECTION_NONE);
     if (direction === null) continue;

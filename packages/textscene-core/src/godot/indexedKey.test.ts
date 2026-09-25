@@ -6,6 +6,9 @@
 import { describe, expect, it } from 'vitest';
 import { declaredLeafResolver, indexedElements, visitIndexedKeys } from './indexedKey.js';
 
+/** A class that declares no leaf, so every leaf keeps its own text. */
+const NO_DECLARED_LEAVES = declaredLeafResolver([]);
+
 /** Every visit `visitIndexedKeys` makes, as its five arguments. */
 function visits(
   properties: Record<string, string>,
@@ -70,7 +73,8 @@ describe('indexedElements', () => {
     const elements = indexedElements(
       { 'settings/0/individual_config': 'true', 'settings/00/radius/value': '0.5' },
       'settings/',
-      'to_int'
+      'to_int',
+      NO_DECLARED_LEAVES
     );
     expect([...elements.keys()]).toEqual([0]);
     expect([...elements.get(0)!]).toEqual([
@@ -85,7 +89,8 @@ describe('indexedElements', () => {
     const elements = indexedElements(
       { 'settings/x1/bone': '"A"', 'settings/x/bone': '"B"' },
       'settings/',
-      'to_int'
+      'to_int',
+      NO_DECLARED_LEAVES
     );
     expect([...elements.keys()].sort()).toEqual([0, 1]);
   });
@@ -108,7 +113,10 @@ describe('indexedElements', () => {
     // (property_list_helper.cpp:58), and every hand-rolled `_set` has its own
     // `ERR_FAIL_INDEX_V` beside the parse.
     expect(indexedElements({ 'item_-1/text': '"Open"' }, 'item_', 'is_valid_int').size).toBe(0);
-    expect(indexedElements({ 'settings/a-1/bone': '"A"' }, 'settings/', 'to_int').size).toBe(0);
+    expect(
+      indexedElements({ 'settings/a-1/bone': '"A"' }, 'settings/', 'to_int', NO_DECLARED_LEAVES)
+        .size
+    ).toBe(0);
   });
 
   it('keeps the whole path below the index as the leaf', () => {
@@ -117,7 +125,8 @@ describe('indexedElements', () => {
     const elements = indexedElements(
       { 'settings/0/joints/1/bone': '"A"' },
       'settings/',
-      'to_int'
+      'to_int',
+      NO_DECLARED_LEAVES
     );
     expect([...elements.get(0)!]).toEqual([['joints/1/bone', '"A"']]);
   });
@@ -126,7 +135,8 @@ describe('indexedElements', () => {
     const elements = indexedElements(
       { setting_count: '2', 'settings/0': 'x', 'settings//bone': '"A"' },
       'settings/',
-      'to_int'
+      'to_int',
+      NO_DECLARED_LEAVES
     );
     expect(elements.size).toBe(0);
   });
@@ -135,7 +145,8 @@ describe('indexedElements', () => {
     const elements = indexedElements(
       { 'settings/0/bone': '"First"', 'settings/00/bone': '"Second"' },
       'settings/',
-      'to_int'
+      'to_int',
+      NO_DECLARED_LEAVES
     );
     expect(elements.get(0)?.get('bone')).toBe('"Second"');
   });
@@ -151,7 +162,12 @@ describe('indexedElements', () => {
 
   it('still nests a to_int family, whose leaf is everything below the index', () => {
     expect([
-      ...indexedElements({ 'settings/0/joints/1/bone': '2' }, 'settings/', 'to_int').get(0)!,
+      ...indexedElements(
+        { 'settings/0/joints/1/bone': '2' },
+        'settings/',
+        'to_int',
+        NO_DECLARED_LEAVES
+      ).get(0)!,
     ]).toEqual([['joints/1/bone', '2']]);
   });
 
@@ -161,7 +177,8 @@ describe('indexedElements', () => {
     const elements = indexedElements(
       { 'settings/0/__proto__': '"polluted"' },
       'settings/',
-      'to_int'
+      'to_int',
+      NO_DECLARED_LEAVES
     );
     expect(elements.get(0)?.get('__proto__')).toBe('"polluted"');
     expect([...elements.get(0)!.keys()]).toEqual(['__proto__']);
@@ -170,7 +187,12 @@ describe('indexedElements', () => {
   it('answers undefined for a prototype-named leaf nothing wrote', () => {
     // On an object literal `leaves.constructor` and `leaves.toString` answer with a function out
     // of a value typed as a string.
-    const elements = indexedElements({ 'settings/0/bone': '"A"' }, 'settings/', 'to_int');
+    const elements = indexedElements(
+      { 'settings/0/bone': '"A"' },
+      'settings/',
+      'to_int',
+      NO_DECLARED_LEAVES
+    );
     const leaves = elements.get(0)!;
     for (const name of ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__']) {
       expect(leaves.get(name)).toBeUndefined();
@@ -213,6 +235,11 @@ describe('declaredLeafResolver', () => {
     expect(resolve('root_bone_name')).toBeNull();
   });
 
+  it('resolves nothing below a first segment no declared leaf starts', () => {
+    expect(resolve('joints/0/radius')).toBeNull();
+    expect(resolve('/root_bone')).toBeNull();
+  });
+
   it('resolves nothing for a prototype name', () => {
     expect(resolve('toString')).toBeNull();
     expect(resolve('constructor/extra')).toBeNull();
@@ -220,6 +247,16 @@ describe('declaredLeafResolver', () => {
 });
 
 describe('indexedElements with a leaf resolver', () => {
+  it('requires a resolver for a to_int family and takes none for is_valid_int', () => {
+    // A type contract, held by `type-check:tests`: a hand-rolled `_set` ignores a tail, so a
+    // `to_int` caller that forgot the resolver would split `x/extra` from `x`.
+    // @ts-expect-error: a to_int family must say which leaves it declares.
+    indexedElements({}, 'settings/', 'to_int');
+    // @ts-expect-error: `PropertyListHelper` reads one exact segment, so it takes no resolver.
+    indexedElements({}, 'item_', 'is_valid_int', NO_DECLARED_LEAVES);
+    expect(indexedElements({}, 'item_', 'is_valid_int').size).toBe(0);
+  });
+
   const resolve = declaredLeafResolver(['individual_config', 'radius/value']);
 
   it('seats a key carrying a tail on the leaf _set applies it to', () => {

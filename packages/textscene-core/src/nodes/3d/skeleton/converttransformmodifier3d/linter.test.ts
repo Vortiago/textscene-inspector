@@ -197,4 +197,19 @@ describe('ConvertTransformModifier3D index grammar', () => {
       { ruleName: RULE, severity: 'warning' }
     );
   });
+
+  it('reads a range and its mode through a tail, which _set ignores', () => {
+    // `where` and `what` are slices 2 and 3 (convert_transform_modifier_3d.cpp:42, :44), and
+    // nothing below them is read, so both keys reach their setters.
+    expectDiagnostic(
+      scene(
+        node('ConvertTransformModifier3D', {
+          setting_count: 1,
+          'settings/0/apply/transform_mode/extra': 1,
+          'settings/0/apply/range_max/extra': 4.0,
+        })
+      ),
+      { ruleName: RULE, severity: 'warning' }
+    );
+  });
 });

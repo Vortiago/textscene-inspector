@@ -75,6 +75,13 @@ describe('SplineIK3D strict validators', () => {
       expect(check('settings/0/path_3d', '&"../SplinePath"')).not.toBeNull();
       expect(check('settings/0/path_3d', 'definitely-not-a-valid-value')).not.toBeNull();
     });
+
+    it('checks a path written with a tail, which _set ignores', () => {
+      // `what = path.get_slicec('/', 2)` (spline_ik_3d.cpp:38) is `path_3d`, so set_path_3d runs.
+      expect(check('settings/0/path_3d/extra', '&"../SplinePath"')).not.toBeNull();
+      expect(check('settings/0/tilt_fade_in/extra', '-2')?.severity).toBe('warning');
+      expect(check('settings/0/path_3d/extra', 'NodePath("../SplinePath")')).toBeNull();
+    });
   });
 
   describe('settings/<i>/tilt_enabled', () => {

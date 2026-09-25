@@ -125,9 +125,7 @@ const settingsFamily: PropertyValidator = accepts((key, value, line) => {
   // and SplineIK3D's `path_3d`/`tilt_*` (spline_ik_3d.cpp:83-86). A base cannot close a set its
   // descendants extend, so `indexedFamilyValidator`, whose `unknownCode` closes it, does not fit.
   const resolved = resolveSettingLeaf(leafName);
-  if (resolved === null) return null;
-  const leaf = SETTING_LEAVES[resolved];
-  return leaf ? leaf(key, value, line) : null;
+  return resolved === null ? null : SETTING_LEAVES[resolved]!(key, value, line);
 }, 'settings/<i>/ bone chain setup');
 
 settingsFamily.grounding = { kind: 'enforced', cite: 'chain_ik_3d.cpp:39' };

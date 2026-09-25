@@ -13,6 +13,7 @@ import {
   declaredLeafResolver,
   stringToInt,
   type IndexParse,
+  type LeafResolver,
 } from '../../godot/index.js';
 import { negativeIndexError } from '../reportedIndices.js';
 
@@ -100,8 +101,15 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
     : (indexText: string, key: string, line: number) =>
         stringToInt(indexText) < 0 ? unknown(key, line) : null;
 
-  /** The leaf a hand-rolled `_set` reaches through a tail it ignores. */
-  const declaredLeaf = declaredLeafResolver(Object.keys(leaves));
+  /**
+   * The leaf a key reaches. `PropertyListHelper` cuts at the last `/`
+   * (property_list_helper.cpp:47), so there a trailing segment fails `is_valid_int` and only the
+   * exact leaf resolves, found with hasOwnProperty so `toString` cannot resolve an inherited
+   * function. A hand-rolled `_set` ignores a tail below the segment it reads.
+   */
+  const resolveLeaf: LeafResolver = gatesOnValidInt
+    ? (leafName) => (Object.prototype.hasOwnProperty.call(leaves, leafName) ? leafName : null)
+    : declaredLeafResolver(Object.keys(leaves));
 
   const validator = accepts((key, value, line) => {
     // The first `/` past the prefix ends the index, and the rest is the leaf: a
@@ -121,21 +129,14 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
     const negative = refuseNegative(indexText, key, line);
     if (negative) return negative;
     // A non-negative index resolves to some setting and the write lands, so only the leaf can
-    // still be refused. `PropertyListHelper` cuts at the last `/` (property_list_helper.cpp:47), so
-    // there a trailing segment fails `is_valid_int` and the whole remainder is unknown.
-    const resolved = gatesOnValidInt ? leafName : declaredLeaf(leafName);
-    // hasOwnProperty, so a leaf named `toString` cannot resolve an inherited
-    // function and get called as a validator.
-    if (resolved === null || !Object.prototype.hasOwnProperty.call(leaves, resolved)) {
-      return unknown(key, line);
-    }
-    const leaf = leaves[resolved];
-    if (!leaf) return unknown(key, line);
+    // still be refused.
+    const resolved = resolveLeaf(leafName);
+    if (resolved === null) return unknown(key, line);
     // A leaf whose own path carries an index is a nested family (`ChainIK3D`'s
     // `settings/<i>/joints/<j>/bone`, chain_ik_3d.cpp), matched by its slice's own regex through
     // {@link stringToInt}. Absorbing one needs a sub-path that ends in an index
     // (`SpringBoneSimulator3D`'s `collisions/<j>`) and a `negativeIndex` per index position.
-    return leaf(key, value, line);
+    return leaves[resolved]!(key, value, line);
   }, opts.accepts ?? describes);
 
   const cites = [

@@ -9,6 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
+import { resolveAimSettingLeaf } from './linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { indexedElements, boolSlotValue} from '../../../../godot/index.js';
@@ -30,7 +31,7 @@ const DEFAULT_PRIMARY_ROTATION_AXIS = 0; // Vector3::AXIS_X
  */
 function declaredSettings(properties: Record<string, string>): Map<number, Map<string, string>> {
   const settingCount = ruleCount(properties.setting_count) ?? 0;
-  const settings = indexedElements(properties, SETTING_PREFIX, 'to_int');
+  const settings = indexedElements(properties, SETTING_PREFIX, 'to_int', resolveAimSettingLeaf);
   for (const index of [...settings.keys()]) {
     if (index >= settingCount) settings.delete(index);
   }

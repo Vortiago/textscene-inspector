@@ -64,20 +64,25 @@ export function visitIndexedKeys(
   }
 }
 
+/** The declared leaf a path below an index reaches, or null. See {@link declaredLeafResolver}. */
+export type LeafResolver = (leafName: string) => string | null;
+
 /**
  * A family's keys grouped by the element Godot applies them to, leaf name to raw value. Two
  * spellings can name one element (`settings/00/x` and `settings/0/x`), so a lookup built from
  * `0..count` misses values and a text-keyed one splits an element. A `Map`: the leaf is raw
  * `.tscn` text, and `__proto__` or `constructor` would reach an object's prototype.
- * `resolveLeaf` (a {@link declaredLeafResolver}) seats `x/extra` on the `x` that `_set` applies it
- * to. A leaf it resolves to nothing keeps its own text.
+ * A `to_int` family is a hand-rolled `_set`, which ignores a tail below the segment it reads, so it
+ * takes the class's resolver and seats `x/extra` on `x`. A leaf that resolves to nothing keeps its
+ * own text.
  */
-export function indexedElements(
+export function indexedElements<P extends IndexParse>(
   properties: Readonly<Record<string, string>>,
   prefix: string,
-  indexParse: IndexParse,
-  resolveLeaf?: (leaf: string) => string | null
+  indexParse: P,
+  ...leafResolver: P extends 'to_int' ? [LeafResolver] : []
 ): Map<number, Map<string, string>> {
+  const [resolveLeaf] = leafResolver as [LeafResolver?];
   const elements = new Map<number, Map<string, string>>();
   visitIndexedKeys(properties, prefix, indexParse, (_key, _indexText, index, leaf, value) => {
     const leaves = elements.get(index) ?? new Map<string, string>();
@@ -96,19 +101,22 @@ export function indexedElements(
  * (two_bone_ik_3d.cpp:69), so only a terminal leaf swallows a tail. Nothing, not the path itself,
  * for a path that reaches no declared leaf.
  */
-export function declaredLeafResolver(
-  leafNames: Iterable<string>
-): (leafName: string) => string | null {
+export function declaredLeafResolver(leafNames: Iterable<string>): LeafResolver {
   // A Set, not an object: a leaf named `toString` must not resolve an inherited member.
   const declared = new Set(leafNames);
   const readsDeeper = new Set<string>();
+  const firstSegments = new Set<string>();
   for (const name of declared) {
+    firstSegments.add(firstSegment(name));
     for (let cut = name.indexOf('/'); cut >= 0; cut = name.indexOf('/', cut + 1)) {
       readsDeeper.add(name.slice(0, cut));
     }
   }
   return (leafName) => {
     if (declared.has(leafName)) return leafName;
+    // Every branch tests the first segment, so a path no declared leaf starts is a miss without
+    // cutting: a family's nested `joints/<j>/…` keys, most of a large one, end here.
+    if (!firstSegments.has(firstSegment(leafName))) return null;
     // Cutting from the right keeps a two-segment leaf at its own depth
     // (`settings/<i>/<where>/<what>`, convert_transform_modifier_3d.cpp:37-40).
     let candidate = leafName;
@@ -118,4 +126,10 @@ export function declaredLeafResolver(
     }
     return null;
   };
+}
+
+/** The text before the first `/`, or all of it: the `what` a hand-rolled `_set` tests. */
+function firstSegment(path: string): string {
+  const slash = path.indexOf('/');
+  return slash < 0 ? path : path.slice(0, slash);
 }

@@ -143,14 +143,19 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
     const allChildCollisions = readBool(siblings?.get('enable_all_child_collisions'), true);
 
     // `what = get_slicec('/', 2)` (:43), the segment every branch of `_set` tests.
-    const what = leaf.split('/')[0]!;
+    const slash = leaf.indexOf('/');
+    const what = slash < 0 ? leaf : leaf.slice(0, slash);
     const joint = JOINT_KEY_RE.exec(leaf);
     if (joint) {
       if (!individual && JOINT_CONFIG_LEAVES.has(joint[1]!)) jointIgnored.set(indexText, index);
-    } else if (individual && SHARED_CONFIG_SEGMENTS.has(what)) {
-      // Only a key that reaches a setter is dropped by its mode gate. `radius/extra` is refused
-      // earlier (:85), and the validator already reports it unknown.
-      if (resolveSettingLeaf(leaf) !== null) sharedIgnored.set(indexText, index);
+    } else if (
+      individual &&
+      SHARED_CONFIG_SEGMENTS.has(what) &&
+      // Only a key that reaches a setter meets its mode gate. `_set` refuses `radius/extra`
+      // first (:85), and the validator reports it unknown.
+      resolveSettingLeaf(leaf) !== null
+    ) {
+      sharedIgnored.set(indexText, index);
     }
 
     if (allChildCollisions && EXPLICIT_COLLISION_SEGMENTS.has(what)) {

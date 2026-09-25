@@ -11,6 +11,7 @@ import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { indexedElements, nodePathLiteral } from '../../../../godot/index.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
+import { resolveSplineSettingLeaf } from './linterParser.js';
 
 /** `NodePath("")` and a bare `""`, the two spellings of the unset path. */
 function isUnsetPath(raw: string): boolean {
@@ -30,7 +31,7 @@ function checkSplineIK3D(context: RuleContext): Diagnostic[] {
   // Grouped by the setting `_set` resolves each key to, not by the index text: `_set` reads the
   // index with a bare `path.get_slicec('/', 1).to_int()` and no validity gate
   // (spline_ik_3d.cpp:37), so `settings/00/path_3d` sets setting 0's path.
-  const settings = indexedElements(properties, 'settings/', 'to_int');
+  const settings = indexedElements(properties, 'settings/', 'to_int', resolveSplineSettingLeaf);
   const posed = new Set<number>();
   for (const [index, leaves] of settings) {
     if (index >= count) continue;

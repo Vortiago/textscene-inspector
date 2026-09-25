@@ -16,6 +16,7 @@ import { settingCount } from '../shared/settingCount.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { BONE_AXIS } from '../skeletonmodifier3d/linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
+import { declaredLeafResolver } from '../../../../godot/index.js';
 
 /**
  * The five leaves AimModifier3D itself pushes (aim_modifier_3d.cpp:91-95). `primary_rotation_axis`
@@ -40,12 +41,19 @@ const AIM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   relative: v.boolean('relative'),
 };
 
+/**
+ * Every leaf under the prefix. `_get_property_list` calls `BoneConstraint3D::get_property_list`
+ * first (aim_modifier_3d.cpp:85), so it also carries the base's seven leaves
+ * (bone_constraint_3d.cpp:102-108). They route to the base, which owns their bounds.
+ */
+const SETTING_LEAVES = { ...AIM_LEAVES, ...boneConstraintBaseLeaves() };
+
+/** For the rule: `what = path.get_slicec('/', 2)` (aim_modifier_3d.cpp:39). */
+export const resolveAimSettingLeaf = declaredLeafResolver(Object.keys(SETTING_LEAVES));
+
 const settingValidator = indexedFamilyValidator({
   prefix: 'settings/',
-  // `_get_property_list` calls `BoneConstraint3D::get_property_list` first (aim_modifier_3d.cpp:85),
-  // so the prefix also carries the base's seven leaves (bone_constraint_3d.cpp:102-108). They route
-  // to the base, which owns their bounds.
-  leaves: { ...AIM_LEAVES, ...boneConstraintBaseLeaves() },
+  leaves: SETTING_LEAVES,
   unknownCode: 'INVALID_SETTING_KEY',
   describes: 'setting',
   // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
