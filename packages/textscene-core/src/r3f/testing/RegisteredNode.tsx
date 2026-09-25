@@ -17,5 +17,6 @@ export function RegisteredNode({ path, children }: { path: string; children: Rea
     },
     [path, registerNodeObject, unregisterNodeObject]
   );
+  // paint-order-safe: the dispatcher's selection wrapper, outside any canvas item's own group.
   return <group ref={wrapperRef}>{children}</group>;
 }
