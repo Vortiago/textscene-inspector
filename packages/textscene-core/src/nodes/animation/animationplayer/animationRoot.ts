@@ -1,37 +1,16 @@
 /**
- * Resolves an AnimationPlayer's `root_node` to the THREE object its mixer roots on (ADR-0011).
- * Track NodePaths bind relative to it through THREE.PropertyBinding's subtree search. The dispatcher
- * wraps every node in an unnamed pickable `<group>`, so each `..` climbs to the nearest named
- * ancestor. Only leading `..` segments are followed.
+ * Resolves an AnimationPlayer's `root_node` to the scene path of its animation root, which every
+ * track NodePath is read from (ADR-0011). The walk is Godot's `get_node`, so `..` climbs one node
+ * and a path above the scene root reaches nothing.
  */
 
-import type { Object3D } from 'three';
+import { resolveRelativePath } from '../../../utils/nodePath';
 import { extractNodePathInner } from './animationResolver';
 
-export function resolveAnimationRoot(
-  playerObject: Object3D,
-  rootNode: string
-): Object3D | null {
-  const path = extractPath(rootNode);
+/** `root_node`'s default: the player's parent. */
+const DEFAULT_ROOT_NODE = '..';
 
-  if (path === '.' || path === '') return playerObject;
-
-  // Each ".." segment climbs to the next named ancestor.
-  let current: Object3D | null = playerObject;
-  for (const segment of path.split('/')) {
-    if (segment !== '..') break; // named down-segments are unsupported
-    current = nearestNamedAncestor(current);
-    if (current === null) return null;
-  }
-  return current;
-}
-
-function extractPath(rootNode: string): string {
-  return (extractNodePathInner(rootNode) ?? rootNode).trim();
-}
-
-function nearestNamedAncestor(object: Object3D): Object3D | null {
-  let node = object.parent;
-  while (node && node.name === '') node = node.parent;
-  return node ?? null;
+export function resolveAnimationRootPath(playerPath: string, rootNode: string): string | null {
+  const path = rootNode ? (extractNodePathInner(rootNode) ?? rootNode).trim() : DEFAULT_ROOT_NODE;
+  return resolveRelativePath(playerPath, path);
 }

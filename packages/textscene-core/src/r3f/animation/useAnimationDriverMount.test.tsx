@@ -21,6 +21,7 @@ import {
   AnimationDriverProvider,
   useAnimationDriver,
   type AnimationDriverEntry,
+  type BoundClips,
 } from '../contexts/AnimationDriverContext';
 import {
   SelectionProvider,
@@ -53,7 +54,9 @@ interface HarnessProps {
   buildMixer?: boolean;
   autoplay?: string;
   durations?: Record<string, number>;
-  onMixerBuilt?: (obj: THREE.Object3D) => void;
+  onMixerBuilt?: (targets: THREE.Object3D[]) => void;
+  /** Defaults to the clips as given, moving `object`. */
+  bind?: () => BoundClips;
   restore?: () => void;
 }
 
@@ -84,6 +87,7 @@ function Harness({
   autoplay,
   durations,
   onMixerBuilt,
+  bind,
   restore,
 }: HarnessProps) {
   const computedDurations = useMemo(
@@ -91,16 +95,21 @@ function Harness({
     [durations, clips]
   );
   const stableOnMixerBuilt = useCallback(
-    (obj: THREE.Object3D) => {
-      onMixerBuilt?.(obj);
+    (targets: THREE.Object3D[]) => {
+      onMixerBuilt?.(targets);
     },
     [onMixerBuilt]
+  );
+  const stableBind = useCallback(
+    () => bind?.() ?? { clips, targets: object ? [object] : [] },
+    [bind, clips, object]
   );
   const stableRestore = useCallback(() => restore?.(), [restore]);
 
   capturedResult = useAnimationDriverMount({
     object,
     clips,
+    bind: stableBind,
     nodePath: NODE_PATH,
     isActive,
     buildMixer,
@@ -314,7 +323,39 @@ describe('useAnimationDriverMount — registerDriver (registry publication)', ()
 });
 
 describe('useAnimationDriverMount — mixer build (ADR-0012)', () => {
-  it('calls onMixerBuilt when active + object + clips are ready', async () => {
+  it('plays the clips bind() returns, not the templates it was given', async () => {
+    const templates = [makeClip('idle')];
+    const bound = makeClip('idle');
+    const object = makeObject();
+
+    const renderer = await mountHarness({
+      object,
+      clips: templates,
+      isActive: true,
+      bind: () => ({ clips: [bound], targets: [object] }),
+    });
+
+    expect(capturedResult.actionsRef.current.get('idle')?.getClip()).toBe(bound);
+    await renderer.unmount();
+  });
+
+  it('publishes bind with the entry, so an AnimationTree binds the same way', async () => {
+    const clips = [makeClip('idle')];
+    const object = makeObject();
+    const bound = makeClip('idle');
+
+    const renderer = await mountHarness({
+      object,
+      clips,
+      isActive: false,
+      bind: () => ({ clips: [bound], targets: [object] }),
+    });
+
+    expect(capturedDriver?.bind().clips).toEqual([bound]);
+    await renderer.unmount();
+  });
+
+  it('calls onMixerBuilt with the bound targets when active + object + clips are ready', async () => {
     const onMixerBuilt = vi.fn();
     const clips = [makeClip('idle')];
     const object = makeObject();
@@ -322,7 +363,7 @@ describe('useAnimationDriverMount — mixer build (ADR-0012)', () => {
     const renderer = await mountHarness({ object, clips, isActive: true, onMixerBuilt });
 
     expect(onMixerBuilt).toHaveBeenCalledTimes(1);
-    expect(onMixerBuilt).toHaveBeenCalledWith(object);
+    expect(onMixerBuilt).toHaveBeenCalledWith([object]);
     expect(capturedResult.mixerRef.current).toBeInstanceOf(THREE.AnimationMixer);
     expect(capturedResult.actionsRef.current.has('idle')).toBe(true);
 

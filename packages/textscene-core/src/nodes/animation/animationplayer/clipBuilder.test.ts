@@ -4,9 +4,12 @@
  * diag(1,-1,1) to match node2dTransform: position Y and rotation negated, scale kept.
  */
 
-import { describe, it, expect } from 'vitest';
-import { AnimationMixer, LoopOnce, LoopPingPong, LoopRepeat, Object3D } from 'three';
-import { buildClip, loopSettingsFor, resolveTrackBinding } from './clipBuilder';
+import { describe, it, expect, vi } from 'vitest';
+import { AnimationMixer, LoopOnce, LoopPingPong, LoopRepeat, Object3D, type AnimationClip } from 'three';
+import * as logger from '../../../logger';
+import { bindClip } from '../../../r3f/animation/trackTargets';
+import { resolveRelativePath } from '../../../utils/nodePath';
+import { buildClip, loopSettingsFor } from './clipBuilder';
 import { resolveAnimations, type GodotAnimation, type GodotTrack } from './animationResolver';
 import type { TscnInternalResource } from '../../../parser/types';
 
@@ -22,6 +25,18 @@ function track(property: string, keys: GodotTrack['keys'], targetPath = 'Target'
 
 function findTrack(clip: ReturnType<typeof buildClip>, name: string) {
   return clip.tracks.find((t) => t.name === name);
+}
+
+/** Builds for a player whose animation root is the scene node at `root`. */
+function build(animation: GodotAnimation, root = 'Root') {
+  return buildClip(animation, (targetPath) => resolveRelativePath(root, targetPath));
+}
+
+/** A mixer over `root` playing `clip`, each track bound to the object its path names. */
+function mixerFor(clip: AnimationClip, root: Object3D, targets: ReadonlyMap<string, Object3D>) {
+  const mixer = new AnimationMixer(root);
+  mixer.clipAction(bindClip(clip, targets)).play();
+  return mixer;
 }
 
 /** THREE stores KeyframeTrack values as Float32Array, so compare with tolerance. */
@@ -50,7 +65,7 @@ describe('loopSettingsFor — Godot loop_mode mapping', () => {
 
 describe('buildClip — clip metadata', () => {
   it('names the clip and sets its duration from the animation length', () => {
-    const clip = buildClip(anim('idle', 2.5, []));
+    const clip = build(anim('idle', 2.5, []));
     expect(clip.name).toBe('idle');
     expect(clip.duration).toBe(2.5);
   });
@@ -58,7 +73,7 @@ describe('buildClip — clip metadata', () => {
 
 describe('buildClip — position (C1)', () => {
   it('maps a Vector3 position track to <path>.position with flattened values', () => {
-    const clip = buildClip(
+    const clip = build(
       anim('a', 1, [
         track('position', [
           { time: 0, value: [0, 0, 0], transition: 1 },
@@ -66,7 +81,7 @@ describe('buildClip — position (C1)', () => {
         ]),
       ])
     );
-    const t = findTrack(clip, 'Target.position');
+    const t = findTrack(clip, 'Root/Target.position');
     expect(t).toBeDefined();
     expect(Array.from(t!.times)).toEqual([0, 1]);
     expect(Array.from(t!.values)).toEqual([0, 0, 0, 1, 2, 3]);
@@ -75,27 +90,27 @@ describe('buildClip — position (C1)', () => {
 
 describe('buildClip — rotation (C2/C3)', () => {
   it('converts a Vector3 rotation_degrees track to per-component radians on <path>.rotation[xyz]', () => {
-    const clip = buildClip(
+    const clip = build(
       anim('a', 1, [track('rotation_degrees', [{ time: 0, value: [90, 0, 180], transition: 1 }])])
     );
-    expectValuesCloseTo(findTrack(clip, 'Target.rotation[x]')!.values, [90 * DEG2RAD]);
-    expectValuesCloseTo(findTrack(clip, 'Target.rotation[y]')!.values, [0]);
-    expectValuesCloseTo(findTrack(clip, 'Target.rotation[z]')!.values, [180 * DEG2RAD]);
+    expectValuesCloseTo(findTrack(clip, 'Root/Target.rotation[x]')!.values, [90 * DEG2RAD]);
+    expectValuesCloseTo(findTrack(clip, 'Root/Target.rotation[y]')!.values, [0]);
+    expectValuesCloseTo(findTrack(clip, 'Root/Target.rotation[z]')!.values, [180 * DEG2RAD]);
   });
 
   it('passes a Vector3 rotation (radians) track through per component', () => {
-    const clip = buildClip(
+    const clip = build(
       anim('a', 1, [track('rotation', [{ time: 0, value: [0, 1.5708, 0], transition: 1 }])])
     );
-    expectValuesCloseTo(findTrack(clip, 'Target.rotation[y]')!.values, [1.5708]);
-    expect(findTrack(clip, 'Target.rotation')).toBeUndefined();
+    expectValuesCloseTo(findTrack(clip, 'Root/Target.rotation[y]')!.values, [1.5708]);
+    expect(findTrack(clip, 'Root/Target.rotation')).toBeUndefined();
   });
 
   it('maps a scalar 2D rotation track to a negated <path>.rotation[z] (diag(1,-1,1) conjugation)', () => {
-    const clip = buildClip(
+    const clip = build(
       anim('a', 1, [track('rotation', [{ time: 0, value: 0, transition: 1 }, { time: 1, value: 1.5708, transition: 1 }])])
     );
-    const t = findTrack(clip, 'Target.rotation[z]');
+    const t = findTrack(clip, 'Root/Target.rotation[z]');
     expect(t).toBeDefined();
     // Godot 2D rotation is clockwise (+Y down); node2dTransform renders it as
     // `0 - rotation`, so the animated track negates to agree.
@@ -110,7 +125,7 @@ describe('buildClip — rotation actually drives the quaternion (regression)', (
     const root = new Object3D();
     root.add(child);
 
-    const clip = buildClip(
+    const clip = build(
       anim('spin', 2, [
         track('rotation', [
           { time: 0, value: [0, 0, 0], transition: 1 },
@@ -118,8 +133,7 @@ describe('buildClip — rotation actually drives the quaternion (regression)', (
         ]),
       ])
     );
-    const mixer = new AnimationMixer(root);
-    mixer.clipAction(clip).play();
+    const mixer = mixerFor(clip, root, new Map([['Root/Target', child]]));
     mixer.update(1); // half a 180° turn about Y
 
     // The matrix is built from the quaternion, so assert that it moved, not only the Euler.
@@ -133,7 +147,7 @@ describe('buildClip — quaternion (rotation_3d)', () => {
   }
 
   it('maps a length-4 quaternion track to a QuaternionKeyframeTrack on <path>.quaternion', () => {
-    const clip = buildClip(
+    const clip = build(
       anim('a', 1, [
         quatTrack([
           { time: 0, value: [0, 0, 0, 1], transition: 1 },
@@ -141,7 +155,7 @@ describe('buildClip — quaternion (rotation_3d)', () => {
         ]),
       ])
     );
-    const t = findTrack(clip, 'Target.quaternion');
+    const t = findTrack(clip, 'Root/Target.quaternion');
     expect(t).toBeDefined();
     expect(Array.from(t!.times)).toEqual([0, 1]);
     expectValuesCloseTo(t!.values, [0, 0, 0, 1, 0.707107, 0, 0, 0.707107]);
@@ -153,7 +167,7 @@ describe('buildClip — quaternion (rotation_3d)', () => {
     const root = new Object3D();
     root.add(child);
 
-    const clip = buildClip(
+    const clip = build(
       anim('spin', 2, [
         quatTrack([
           { time: 0, value: [0, 0, 0, 1], transition: 1 },
@@ -161,130 +175,53 @@ describe('buildClip — quaternion (rotation_3d)', () => {
         ]),
       ])
     );
-    const mixer = new AnimationMixer(root);
-    mixer.clipAction(clip).play();
+    const mixer = mixerFor(clip, root, new Map([['Root/Target', child]]));
     mixer.update(1); // half-way: slerp ~45° about Y
 
     expect(Math.abs(child.quaternion.y)).toBeGreaterThan(0.1);
   });
 
   it('drops a quaternion track whose first value is not a 4-tuple', () => {
-    const clip = buildClip(anim('a', 1, [quatTrack([{ time: 0, value: [0, 0, 0], transition: 1 }])]));
+    const clip = build(anim('a', 1, [quatTrack([{ time: 0, value: [0, 0, 0], transition: 1 }])]));
     expect(clip.tracks).toEqual([]);
   });
 });
 
-describe('resolveTrackBinding — Godot NodePath semantics', () => {
-  // `..` cancels the segment before it, as in Godot, so `Child/../../Sibling` climbs above
-  // the root rather than descending.
+describe('buildClip — a track names its target by scene path', () => {
+  // The player resolves each NodePath from its animation root as Godot's `get_node` walks it, with
+  // `..` cancelling the segment before it, so `Child/../../Sibling` climbs above the root.
   it.each([
-    ['.', { kind: 'root' }],
-    ['', { kind: 'root' }],
-    ['./Target', { kind: 'name', name: 'Target' }],
-    ['Target', { kind: 'name', name: 'Target' }],
-    ['Child/Target', { kind: 'name', name: 'Target' }],
-    ['Child/Target/', { kind: 'name', name: 'Target' }],
-    ['A/../B', { kind: 'name', name: 'B' }],
-    ['Sprite/..', { kind: 'root' }],
-    ['..', { kind: 'unbindable' }],
-    ['../Sibling', { kind: 'unbindable' }],
-    ['Child/../../Sibling', { kind: 'unbindable' }],
-  ])('resolves %j', (path, expected) => {
-    expect(resolveTrackBinding(path)).toEqual(expected);
+    ['.', 'Root/Player'],
+    ['', 'Root/Player'],
+    ['./Target', 'Root/Player/Target'],
+    ['Target', 'Root/Player/Target'],
+    ['Child/Target', 'Root/Player/Child/Target'],
+    ['A/../B', 'Root/Player/B'],
+    ['Sprite/..', 'Root/Player'],
+    ['..', 'Root'],
+    ['../Sibling', 'Root/Sibling'],
+    ['Child/../../Sibling', 'Root/Sibling'],
+  ])('names %j from the root at Root/Player as %j', (targetPath, scenePath) => {
+    const clip = build(anim('a', 1, [track('position', [{ time: 0, value: [1, 2, 3], transition: 1 }], targetPath)]), 'Root/Player');
+    expect(clip.tracks.map((t) => t.name)).toEqual([`${scenePath}.position`]);
   });
-});
 
-describe('buildClip — NodePaths that leave the animation root', () => {
-  it('drops a track that resolves above the animation root, keeping its siblings', () => {
-    const clip = buildClip(
+  it('drops a track that climbs above the scene root, with a warning, keeping its siblings', () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const clip = build(
       anim('a', 1, [
         track('position', [{ time: 0, value: [1, 2, 3], transition: 1 }], '../Sibling'),
         track('position', [{ time: 0, value: [4, 5, 6], transition: 1 }], 'Target'),
       ])
     );
-    expect(findTrack(clip, 'Target.position')).toBeDefined();
-    expect(clip.tracks).toHaveLength(1);
-    // A raw "../Sibling.position" would make clipAction throw outright.
-    expect(() => new AnimationMixer(new Object3D()).clipAction(clip)).not.toThrow();
+    expect(clip.tracks.map((t) => t.name)).toEqual(['Root/Target.position']);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('../Sibling'));
+    warn.mockRestore();
   });
 
-  it('binds the colon-only NodePath(":position") form to the root, not dropping it', () => {
-    const clip = buildClip(
-      anim('a', 1, [track('position', [{ time: 0, value: [1, 2, 3], transition: 1 }], '')])
-    );
-    expect(findTrack(clip, '.position')).toBeDefined();
-  });
-
-  it('keeps a "." track bound to the mixer root when a sibling track is unbindable', () => {
-    // An unbindable track does not relocate what "." means for the other tracks in the clip.
+  it('drives the root itself for a "." track', () => {
     const root = new Object3D();
-    root.name = 'Root';
-    const parent = new Object3D();
-    parent.name = 'Parent';
-    parent.add(root);
-
-    const clip = buildClip(
-      anim('move', 2, [
-        track(
-          'position',
-          [
-            { time: 0, value: [0, 0, 0], transition: 1 },
-            { time: 2, value: [0, 0, 10], transition: 1 },
-          ],
-          '.'
-        ),
-        track('position', [{ time: 0, value: [1, 1, 1], transition: 1 }], '../Escapes'),
-      ])
-    );
-    const mixer = new AnimationMixer(root);
-    mixer.clipAction(clip).play();
-    mixer.update(1);
-    expect(root.position.z).toBeCloseTo(5, 5);
-    expect(parent.position.z).toBe(0);
-  });
-
-  it('binds a multi-level descending targetPath, which THREE resolves by final name', () => {
-    const root = new Object3D();
-    const child = new Object3D();
-    child.name = 'Child';
-    const target = new Object3D();
-    target.name = 'Target';
-    root.add(child);
-    child.add(target);
-
-    const clip = buildClip(
-      anim('move', 2, [
-        track(
-          'position',
-          [
-            { time: 0, value: [0, 0, 0], transition: 1 },
-            { time: 2, value: [0, 0, 8], transition: 1 },
-          ],
-          'Child/Target'
-        ),
-      ])
-    );
-    const mixer = new AnimationMixer(root);
-    mixer.clipAction(clip).play();
-    mixer.update(1);
-    expect(target.position.z).toBeCloseTo(4, 5);
-  });
-});
-
-describe('buildClip — root-targeting track (NodePath ".")', () => {
-  it('binds a "." targetPath to the mixer root (track name has no node prefix)', () => {
-    const clip = buildClip(
-      anim('a', 1, [track('position', [{ time: 0, value: [1, 2, 3], transition: 1 }], '.')])
-    );
-    // Empty node name → THREE.PropertyBinding resolves to the mixer root.
-    expect(findTrack(clip, '.position')).toBeDefined();
-    expect(findTrack(clip, '..position')).toBeUndefined();
-  });
-
-  it('drives the root through a mixer when the track targets "."', () => {
-    const root = new Object3D();
-    root.name = 'Root';
-    const clip = buildClip(
+    const clip = build(
       anim('move', 2, [
         track('position', [
           { time: 0, value: [0, 0, 0], transition: 1 },
@@ -292,23 +229,37 @@ describe('buildClip — root-targeting track (NodePath ".")', () => {
         ], '.'),
       ])
     );
-    const mixer = new AnimationMixer(root);
-    mixer.clipAction(clip).play();
-    mixer.update(1); // mid-clip → halfway to y=4
+    mixerFor(clip, root, new Map([['Root', root]])).update(1);
     expect(root.position.y).toBeCloseTo(2, 5);
+  });
+
+  it('drives a multi-level descending target', () => {
+    const root = new Object3D();
+    const target = new Object3D();
+    root.add(target);
+    const clip = build(
+      anim('move', 2, [
+        track('position', [
+          { time: 0, value: [0, 0, 0], transition: 1 },
+          { time: 2, value: [0, 0, 8], transition: 1 },
+        ], 'Child/Target'),
+      ])
+    );
+    mixerFor(clip, root, new Map([['Root/Child/Target', target]])).update(1);
+    expect(target.position.z).toBeCloseTo(4, 5);
   });
 });
 
 describe('buildClip — scale (C4) and 2D decomposition', () => {
   it('maps a Vector3 scale track to <path>.scale', () => {
-    const clip = buildClip(
+    const clip = build(
       anim('a', 1, [track('scale', [{ time: 0, value: [2, 2, 2], transition: 1 }])])
     );
-    expect(findTrack(clip, 'Target.scale')).toBeDefined();
+    expect(findTrack(clip, 'Root/Target.scale')).toBeDefined();
   });
 
   it('decomposes a Vector2 position track into <path>.position[x] and a Y-negated [y]', () => {
-    const clip = buildClip(
+    const clip = build(
       anim('a', 1, [
         track('position', [
           { time: 0, value: [0, 0], transition: 1 },
@@ -316,8 +267,8 @@ describe('buildClip — scale (C4) and 2D decomposition', () => {
         ]),
       ])
     );
-    const x = findTrack(clip, 'Target.position[x]');
-    const y = findTrack(clip, 'Target.position[y]');
+    const x = findTrack(clip, 'Root/Target.position[x]');
+    const y = findTrack(clip, 'Root/Target.position[y]');
     // X passes through; Y is negated to match node2dTransform's diag(1,-1,1)
     // conjugation of the static render (Godot 2D +Y is down).
     expect(Array.from(x!.values)).toEqual([0, 10]);
@@ -325,7 +276,7 @@ describe('buildClip — scale (C4) and 2D decomposition', () => {
   });
 
   it('keeps a 2D Vector2 scale track un-negated (scale is not conjugated)', () => {
-    const clip = buildClip(
+    const clip = build(
       anim('a', 1, [
         track('scale', [
           { time: 0, value: [1, 1], transition: 1 },
@@ -333,8 +284,8 @@ describe('buildClip — scale (C4) and 2D decomposition', () => {
         ]),
       ])
     );
-    expect(Array.from(findTrack(clip, 'Target.scale[x]')!.values)).toEqual([1, 3]);
-    expect(Array.from(findTrack(clip, 'Target.scale[y]')!.values)).toEqual([1, -4]);
+    expect(Array.from(findTrack(clip, 'Root/Target.scale[x]')!.values)).toEqual([1, 3]);
+    expect(Array.from(findTrack(clip, 'Root/Target.scale[y]')!.values)).toEqual([1, -4]);
   });
 
   it('drives a 2D position track to the Y-conjugated location through a mixer', () => {
@@ -342,7 +293,7 @@ describe('buildClip — scale (C4) and 2D decomposition', () => {
     child.name = 'Target';
     const root = new Object3D();
     root.add(child);
-    const clip = buildClip(
+    const clip = build(
       anim('move', 2, [
         track('position', [
           { time: 0, value: [0, 0], transition: 1 },
@@ -350,8 +301,7 @@ describe('buildClip — scale (C4) and 2D decomposition', () => {
         ]),
       ])
     );
-    const mixer = new AnimationMixer(root);
-    mixer.clipAction(clip).play();
+    const mixer = mixerFor(clip, root, new Map([['Root/Target', child]]));
     mixer.update(1); // mid-clip: lerp half-way to Godot (10,100)
     expect(child.position.x).toBeCloseTo(5, 5);
     // three.js +Y is up; Godot's +Y-down must render down → negative three Y.
@@ -361,13 +311,13 @@ describe('buildClip — scale (C4) and 2D decomposition', () => {
 
 describe('buildClip — unsupported property (C5)', () => {
   it('omits tracks for properties outside the slice-1 transform set', () => {
-    const clip = buildClip(
+    const clip = build(
       anim('a', 1, [
         track('modulate', [{ time: 0, value: [1, 1, 1], transition: 1 }]),
         track('position', [{ time: 0, value: [1, 2, 3], transition: 1 }]),
       ])
     );
-    expect(clip.tracks.map((t) => t.name)).toEqual(['Target.position']);
+    expect(clip.tracks.map((t) => t.name)).toEqual(['Root/Target.position']);
   });
 });
 
@@ -390,7 +340,7 @@ describe('buildClip — keyframe values three.js cannot key', () => {
         },
       },
     ];
-    return buildClip(resolveAnimations([{ name: '', subResourceId: 'Lib' }], internal)[0]!);
+    return build(resolveAnimations([{ name: '', subResourceId: 'Lib' }], internal)[0]!);
   }
 
   const everyValueFinite = (clip: ReturnType<typeof buildClip>): boolean =>
@@ -414,7 +364,7 @@ describe('buildClip — keyframe values three.js cannot key', () => {
 
   it('keys the whole track when every component is finite', () => {
     const clip = positionClip('Vector3(0, 1, 0), Vector3(0, 2, 0)');
-    expect(clip.tracks.map((t) => t.name)).toEqual(['Target.position']);
+    expect(clip.tracks.map((t) => t.name)).toEqual(['Root/Target.position']);
     expect(Array.from(clip.tracks[0]!.values)).toEqual([0, 1, 0, 0, 2, 0]);
     expect(everyValueFinite(clip)).toBe(true);
   });

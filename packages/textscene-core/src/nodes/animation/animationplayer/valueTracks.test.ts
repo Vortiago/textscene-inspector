@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   sampleSteppedValue,
   sampleInterpolatedValue,
-  resolveTargetNodePath,
 } from './valueTracks';
 import type { GodotKeyframe } from './animationResolver';
 
@@ -68,25 +67,5 @@ describe('sampleInterpolatedValue', () => {
 
   it('returns an empty tuple for an empty track', () => {
     expect(sampleInterpolatedValue([], 1, 1)).toEqual([]);
-  });
-});
-
-describe('resolveTargetNodePath', () => {
-  it('resolves a direct-child target under the default root_node (..)', () => {
-    expect(resolveTargetNodePath('Coin/AnimationPlayer', 'NodePath("..")', 'Sprite2D')).toBe(
-      'Coin/Sprite2D'
-    );
-    expect(resolveTargetNodePath('Root/Coin/AnimationPlayer', 'NodePath("..")', 'Sprite2D')).toBe(
-      'Root/Coin/Sprite2D'
-    );
-  });
-
-  it('handles a self root_node (.) and deep relative targets', () => {
-    expect(resolveTargetNodePath('Coin/AP', 'NodePath(".")', 'Sprite2D')).toBe('Coin/AP/Sprite2D');
-    expect(resolveTargetNodePath('A/B/AP', 'NodePath("..")', '../C/Sprite')).toBe('A/C/Sprite');
-  });
-
-  it('defaults to the parent when root_node is absent', () => {
-    expect(resolveTargetNodePath('Coin/AP', '', 'Sprite2D')).toBe('Coin/Sprite2D');
   });
 });

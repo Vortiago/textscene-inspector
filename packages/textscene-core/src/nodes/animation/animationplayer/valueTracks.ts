@@ -4,7 +4,7 @@
  * component through the AnimatedValue registry (ADR-0016).
  */
 
-import { extractNodePathInner, type GodotKeyframe } from './animationResolver';
+import type { GodotKeyframe } from './animationResolver';
 
 /**
  * The value a stepped (discrete) value track holds at `time`: the last keyframe at or before
@@ -79,29 +79,3 @@ export const VALUE_PUSH_PROPERTIES: Record<string, boolean> = {
   modulate: true,
   size: true,
 };
-
-/**
- * Resolve a value track's relative target (for example `Sprite2D`) to an absolute node
- * path, given the player's own path and its `root_node` (default `..` = the
- * player's parent), so it can be matched against the target node's own path.
- */
-export function resolveTargetNodePath(
-  playerNodePath: string,
-  rootNodeRaw: string,
-  relativeTarget: string
-): string {
-  const rootRelative = rootNodeRaw ? (extractNodePathInner(rootNodeRaw) ?? rootNodeRaw) : '..';
-  const rootAbsolute = applyRelativePath(playerNodePath, rootRelative);
-  return applyRelativePath(rootAbsolute, relativeTarget);
-}
-
-/** Apply a relative node path (`..`/`.`/names) onto an absolute base path. */
-function applyRelativePath(base: string, relative: string): string {
-  const segments = base ? base.split('/') : [];
-  for (const seg of relative.split('/')) {
-    if (seg === '' || seg === '.') continue;
-    if (seg === '..') segments.pop();
-    else segments.push(seg);
-  }
-  return segments.join('/');
-}

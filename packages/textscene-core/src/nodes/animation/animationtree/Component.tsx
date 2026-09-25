@@ -20,7 +20,7 @@ import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { useAnimationDriver } from '../../../r3f/contexts/AnimationDriverContext';
 import { stepPlayback } from '../../../r3f/animation/stepPlayback';
 import { startAction, seekAction } from '../../../r3f/animation/actionHelpers';
-import { snapshotSubtree, restoreSnapshot } from '../../../r3f/animation/poseSnapshot';
+import { snapshotPose, restoreSnapshot } from '../../../r3f/animation/poseSnapshot';
 import { resolveTreeRoot } from './treeResources';
 import { evaluateTree } from './evaluateTree';
 import { resolveAnimPlayerPath } from './resolveAnimPlayer';
@@ -106,14 +106,14 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
 
   // Build a mixer rooted on the driver's object with one weighted action per
   // program clip, only while active, so a deselected tree never touches the scene.
-  // Snapshot the subtree so stop or deselect restores it.
+  // Snapshot what the clips move so stop or deselect restores it.
   const mixerRef = useRef<AnimationMixer | null>(null);
   const actionsRef = useRef<Map<string, AnimationAction>>(new Map());
-  const snapshotRef = useRef<ReturnType<typeof snapshotSubtree>>([]);
+  const snapshotRef = useRef<ReturnType<typeof snapshotPose>>([]);
   useEffect(() => {
     if (!isActive || !driver || program.length === 0) return;
-    const { object, clips } = driver;
-    const mixer = new AnimationMixer(object);
+    const { clips, targets } = driver.bind();
+    const mixer = new AnimationMixer(driver.object);
     const actions = new Map<string, AnimationAction>();
     for (const { clip } of program) {
       const found = clips.find((c) => c.name === clip);
@@ -122,7 +122,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
     }
     mixerRef.current = mixer;
     actionsRef.current = actions;
-    snapshotRef.current = snapshotSubtree(object);
+    snapshotRef.current = snapshotPose(targets);
     return () => {
       mixer.stopAllAction();
       restoreSnapshot(snapshotRef.current);

@@ -1,7 +1,6 @@
 /**
- * Captures and restores a THREE subtree's local transforms, so the GLB (ADR-0014)
- * and AnimationTree (ADR-0019) drivers restore the authored pose on stop. A
- * blended clip touches any bone, so the whole subtree is kept. AnimationPlayer
+ * Captures and restores the local transforms of the objects a driver's clips move, so the GLB
+ * (ADR-0014) and AnimationTree (ADR-0019) drivers restore the authored pose on stop. AnimationPlayer
  * keeps its own track snapshot, which restores the Euler order too.
  */
 
@@ -14,18 +13,21 @@ export interface PoseSnapshot {
   scale: Vector3;
 }
 
-/** Snapshot every descendant's local position/quaternion/scale. */
-export function snapshotSubtree(root: Object3D): PoseSnapshot[] {
-  const snapshots: PoseSnapshot[] = [];
-  root.traverse((object) => {
-    snapshots.push({
-      object,
-      position: object.position.clone(),
-      quaternion: object.quaternion.clone(),
-      scale: object.scale.clone(),
-    });
-  });
-  return snapshots;
+/** Every object in `root`'s subtree: a skeletal or blended glTF clip may touch any bone. */
+export function subtreeObjects(root: Object3D): Object3D[] {
+  const objects: Object3D[] = [];
+  root.traverse((object) => objects.push(object));
+  return objects;
+}
+
+/** Snapshot each object's local position/quaternion/scale. */
+export function snapshotPose(objects: readonly Object3D[]): PoseSnapshot[] {
+  return objects.map((object) => ({
+    object,
+    position: object.position.clone(),
+    quaternion: object.quaternion.clone(),
+    scale: object.scale.clone(),
+  }));
 }
 
 export function restoreSnapshot(snapshots: readonly PoseSnapshot[]): void {
