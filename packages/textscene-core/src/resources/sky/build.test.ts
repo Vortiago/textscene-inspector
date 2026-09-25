@@ -42,7 +42,7 @@ describe('buildSkyEnvironment panorama wiring', () => {
   function build(panorama: THREE.Texture, renders = true) {
     let sampled: THREE.Texture | null = null;
     vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation(
-      (_gl: THREE.WebGLRenderer, scene: THREE.Object3D) => {
+      (_renderer, scene) => {
         const mesh = scene.children[0] as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
         sampled = mesh.material.uniforms.source_panorama!.value as THREE.Texture;
         if (!renders) throw new Error('no WebGL context');
