@@ -62,4 +62,16 @@ describe('viewportScopeOf', () => {
     );
     expect(scopeOf(source, 'Camera')).toBe(undefined);
   });
+
+  // `knownParent` declines a stated type the catalog never enumerated too
+  // (`isTypeOpaque`, parentType.ts:88-90): a GDExtension class like Jolt's `JBody3D`
+  // may itself be a Viewport subclass, so the walk ends `unknowable` here as well.
+  it('is undefined when an uncatalogued ancestor ends the walk', () => {
+    const source = scene(
+      node('Node3D', {}, { name: 'Root' }),
+      node('JBody3D', {}, { name: 'Body', parent: '.' }),
+      node('Camera3D', {}, { name: 'Camera', parent: 'Body' })
+    );
+    expect(scopeOf(source, 'Camera')).toBe(undefined);
+  });
 });
