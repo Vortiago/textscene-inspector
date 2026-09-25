@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
+import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
 import * as THREE from 'three';
 
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -225,9 +226,12 @@ function OffscreenViewport({
   // The portal declares the workspace its content needs, not the host's, which
   // could drop it. The portal scene is detached, so no host CanvasItem transform
   // reaches it and a canvas root inside cancels nothing (`canvasRootScope.tsx`).
+  // It is the world a node inside escapes to, too (`parentSpaceScope.tsx`).
   return createPortal(
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
-      <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
+      <WorldRootProvider value={portalScene}>
+        <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
+      </WorldRootProvider>
     </CanvasWorkspaceProvider>,
     portalScene
   );
