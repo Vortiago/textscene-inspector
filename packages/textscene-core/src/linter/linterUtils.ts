@@ -32,8 +32,6 @@ interface SceneIndex {
    * entry that satisfies a predicate, at O(nodes of that type).
    */
   nodesByType: Map<string, TscnNode[]>;
-  /** base class -> every node whose class is it or inherits it, filled on first ask. */
-  heirsByBase: Map<string, readonly TscnNode[]>;
 }
 
 /**
@@ -68,7 +66,7 @@ function buildSceneIndex(roots: TscnNode[]): SceneIndex {
   // per-call copy, matching `RuleRegistry`'s hot-path contract, and the freeze enforces it.
   for (const ofType of nodesByType.values()) Object.freeze(ofType);
 
-  return { parentOf, underInstanceAncestor, nodesByType, heirsByBase: new Map() };
+  return { parentOf, underInstanceAncestor, nodesByType };
 }
 
 /**
@@ -105,19 +103,11 @@ export function nodesOfType(roots: TscnNode[], type: string): readonly TscnNode[
 /**
  * Every node whose class is `base` or inherits it, in depth-first order, frozen, off the same
  * cached index: {@link nodesOfType} by ancestry, for a rule that asks what a node is rather than
- * what it is named. A class the catalog does not know inherits nothing.
+ * what it is named. A class the catalog does not know inherits nothing. Each call walks the tree
+ * once, so a rule that asks per node caches the answer per tree, as the audio checks do.
  */
 export function nodesDescendingFrom(roots: TscnNode[], base: string): readonly TscnNode[] {
   const index = getSceneIndex(roots);
-  let heirs = index.heirsByBase.get(base);
-  if (!heirs) {
-    heirs = collectHeirs(index, base);
-    index.heirsByBase.set(base, heirs);
-  }
-  return heirs;
-}
-
-function collectHeirs(index: SceneIndex, base: string): readonly TscnNode[] {
   // One ancestry test per distinct class, not per node: a scene repeats its classes.
   const heirClasses = new Set<string>();
   for (const type of index.nodesByType.keys()) {

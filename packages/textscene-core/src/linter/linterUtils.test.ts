@@ -75,10 +75,8 @@ describe('nodesDescendingFrom', () => {
     expect(nodesDescendingFrom([root], 'Node')).toEqual([root]);
   });
 
-  it('answers from the cached index: the same frozen list each time', () => {
+  it('hands back a frozen list, as nodesOfType does', () => {
     const roots = [node('Root', 'Node', [node('Player', 'AnimationPlayer')])];
-    const first = nodesDescendingFrom(roots, 'AnimationMixer');
-    expect(nodesDescendingFrom(roots, 'AnimationMixer')).toBe(first);
-    expect(Object.isFrozen(first)).toBe(true);
+    expect(Object.isFrozen(nodesDescendingFrom(roots, 'AnimationMixer'))).toBe(true);
   });
 });
