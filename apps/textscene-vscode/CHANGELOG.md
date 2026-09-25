@@ -14,7 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Editor and Explorer context-menu entries, and a `ctrl+k v` / `cmd+k v` keybinding, for "Open Preview to the Side".
 
 ### Changed
-- Problems panel: a semantic rule's finding marks the heading of the node it is about, and a dangling resource reference marks the line of its property. Before, both sat at the top of the file.
+- Problems panel: a semantic rule's diagnostic marks the heading of its node. A dangling resource reference marks the line of its property. Both used to sit at the top of the file.
 
 ## [0.9.0] - 2026-06-10
 
