@@ -1,6 +1,7 @@
 /** The parser test kit's path resolvers and its scene walk. */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { basename, resolve } from 'node:path';
 import { TscnParser } from '../TscnParser';
 import { fixturesDir, flatten, repoRoot } from './parserKit';
@@ -10,9 +11,18 @@ describe('repoRoot', () => {
     expect(existsSync(resolve(repoRoot(), 'pnpm-workspace.yaml'))).toBe(true);
   });
 
-  it('answers the same from any caller, since it walks up from the kit itself', () => {
-    expect(repoRoot()).toBe(repoRoot());
-    expect(existsSync(resolve(repoRoot(), 'packages/textscene-core/src/parser/testing'))).toBe(true);
+  it('is the directory five levels above this kit, the answer a fixed derivation gives', () => {
+    expect(repoRoot()).toBe(resolve(import.meta.dirname, '../../../../..'));
+  });
+
+  it('gives the same answer whatever the working directory is', () => {
+    const fromHere = repoRoot();
+    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(tmpdir());
+    try {
+      expect(repoRoot()).toBe(fromHere);
+    } finally {
+      cwd.mockRestore();
+    }
   });
 });
 
