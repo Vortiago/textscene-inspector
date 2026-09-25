@@ -10,6 +10,7 @@ import {
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
+import { GRADIENT_TEXTURE_MAX_SIZE } from '../../../godot/index.js';
 
 describe('parsePackedFloat32Array', () => {
   it('parses a comma-separated float run', () => {
@@ -163,6 +164,29 @@ describe('decodeGradientTexture2D', () => {
     expect(tex.fill).toBe(GradientFill.Linear);
     expect(tex.fillFrom).toEqual({ x: 0, y: 0 });
     expect(tex.fillTo).toEqual({ x: 1, y: 0 });
+  });
+
+  // gradient_texture.cpp:324 and :335 refuse outside 1 to 16384, so the 64 default stays.
+  it.each(['0', '-5', '16385', '2147483647'])('keeps the 64 default for a %s axis', (size) => {
+    const tex = decodeGradientTexture2D({ width: size, height: size });
+    expect(tex.width).toBe(64);
+    expect(tex.height).toBe(64);
+  });
+
+  it('keeps an axis of 16384, the largest the size setters accept', () => {
+    const tex = decodeGradientTexture2D({ width: '16384', height: '16384' });
+    expect(tex.width).toBe(GRADIENT_TEXTURE_MAX_SIZE);
+    expect(tex.height).toBe(GRADIENT_TEXTURE_MAX_SIZE);
+  });
+
+  it('keeps an axis of 1, the smallest the size setters accept', () => {
+    const tex = decodeGradientTexture2D({ width: '1', height: '1' });
+    expect(tex).toMatchObject({ width: 1, height: 1 });
+  });
+
+  it('refuses one axis without touching the other', () => {
+    const tex = decodeGradientTexture2D({ width: '16385', height: '32' });
+    expect(tex).toMatchObject({ width: 64, height: 32 });
   });
 });
 
