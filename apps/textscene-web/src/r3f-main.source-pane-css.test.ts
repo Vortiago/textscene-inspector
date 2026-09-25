@@ -31,7 +31,20 @@ describe('source pane CSS', () => {
 
   it(".sourceBody is the size container the gutter popover's cqw width reads", () => {
     expect(declarations('sourceBody')).toMatch(/container-type:\s*inline-size/);
-    expect(declarations('gutterPopover')).toMatch(/max-width:[^;]*100cqw/);
+    expect(declarations('gutterPopoverBody')).toMatch(/max-width:[^;]*100cqw/);
+  });
+
+  it('.gutterPopover bridges its gap with padding, so the pointer never leaves the row', () => {
+    const popover = declarations('gutterPopover');
+    expect(popover).toMatch(/left:\s*100%/);
+    expect(popover).toMatch(/padding-left:\s*4px/);
+    expect(popover).not.toMatch(/margin/);
+  });
+
+  it(".gutterPopoverUp opens it upward, bottom edge to the row's bottom edge", () => {
+    const up = declarations('gutterPopoverUp');
+    expect(up).toMatch(/top:\s*auto/);
+    expect(up).toMatch(/bottom:\s*0/);
   });
 
   it('.sourcePaneHeader holds the file-level popover, which spans it inside the pane', () => {
@@ -42,14 +55,16 @@ describe('source pane CSS', () => {
     expect(popover).toMatch(/right:/);
   });
 
-  it('.fileProblemsPopover scrolls a long list instead of running past the pane', () => {
-    const popover = declarations('fileProblemsPopover');
-    expect(popover).toMatch(/max-height:/);
-    expect(popover).toMatch(/overflow-y:\s*auto/);
+  it('.fileProblemsPopover caps its height below the header', () => {
+    expect(declarations('fileProblemsPopover')).toMatch(/max-height:\s*60vh/);
   });
 
-  it('.problemPopover positions both popovers over the textarea', () => {
-    const popover = declarations('problemPopover');
+  it('.problemPopover scrolls a list taller than its cap, in either popover', () => {
+    expect(declarations('problemPopover')).toMatch(/overflow-y:\s*auto/);
+  });
+
+  it.each(['gutterPopover', 'fileProblemsPopover'])('.%s lies over the textarea', (name) => {
+    const popover = declarations(name);
     expect(popover).toMatch(/position:\s*absolute/);
     expect(popover).toMatch(/z-index:\s*\d+/);
   });

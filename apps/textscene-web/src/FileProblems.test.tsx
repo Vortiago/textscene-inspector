@@ -3,7 +3,8 @@
  * a click and Escape open and close. `r3f-main.file-problems.test.tsx` tests it in the pane.
  */
 import { describe, expect, it } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { FileProblems } from './FileProblems';
 import type { DiagnosticGroup } from './lineDiagnostics';
 
@@ -78,6 +79,30 @@ describe('FileProblems', () => {
 
     fireEvent.keyDown(section(), { key: 'Escape' });
     expect(popover()).toBeNull();
+  });
+
+  describe('after Escape closed it while it kept the focus', () => {
+    // Real focus, not `fireEvent.focus`: the button already holds it, so a click or a key
+    // that reopens the popover gets no second focus event to lean on.
+    function focusThenEscape() {
+      render(<FileProblems group={GROUP} />);
+      act(() => section().focus());
+      fireEvent.keyDown(section(), { key: 'Escape' });
+      expect(document.activeElement).toBe(section());
+      expect(popover()).toBeNull();
+    }
+
+    it('reopens on a click', () => {
+      focusThenEscape();
+      fireEvent.click(section());
+      expect(popover()).not.toBeNull();
+    });
+
+    it.each(['{Enter}', ' '])('reopens on the key %j, which activates the button', async (key) => {
+      focusThenEscape();
+      await userEvent.keyboard(key);
+      expect(popover()).not.toBeNull();
+    });
   });
 
   it('shows a single finding with a count of one', () => {

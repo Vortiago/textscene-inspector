@@ -6,7 +6,7 @@
  */
 import { useId, useState } from 'react';
 import type { DiagnosticGroup } from './lineDiagnostics';
-import { problemPopoverClass, severityDotClass } from './problemClasses';
+import { severityDotClass } from './problemClasses';
 import styles from './r3f-main.module.css';
 
 export interface FileProblemsProps {
@@ -40,9 +40,12 @@ export function FileProblems({ group }: FileProblemsProps) {
         onMouseLeave={() => setHovered(false)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        // Safari leaves a clicked button unfocused, so the click gives it the focus that
-        // holds the popover open.
-        onClick={(e) => e.currentTarget.focus()}
+        // Opens itself, not through focus: a button still focused after Escape gets no focus
+        // event, and Safari leaves a clicked button unfocused. Enter and Space click too.
+        onClick={(e) => {
+          e.currentTarget.focus();
+          setFocused(true);
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Escape') close();
         }}
@@ -55,7 +58,7 @@ export function FileProblems({ group }: FileProblemsProps) {
         <div
           role="tooltip"
           id={popoverId}
-          className={problemPopoverClass(styles.fileProblemsPopover)}
+          className={`${styles.problemPopover} ${styles.fileProblemsPopover}`}
           data-testid="file-problems-popover"
         >
           {group.messages.map((message, i) => (
