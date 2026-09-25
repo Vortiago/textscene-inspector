@@ -6,7 +6,9 @@
  */
 
 import * as THREE from 'three';
-import { IMAGE_MAX_PIXELS, MAX_TEXTURE_EXTENT } from '../../../godot/index.js';
+import { warn } from '../../../logger.js';
+import { IMAGE_MAX_PIXELS } from '../../../godot/index.js';
+import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import type { Gradient } from '../gradienttexture2d/types';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import type { NoiseTexture2DData } from './types';
@@ -42,7 +44,8 @@ export function noiseTextureFits({
 /**
  * The whole pipeline as a `THREE.DataTexture`, written bottom-up: `flipY` skips a
  * typed-array source, and every UV path assumes a file texture's flipY layout. Null
- * for a size {@link noiseTextureFits} refuses, so the previewer draws no texture.
+ * for a size {@link noiseTextureFits} refuses, or one the tab cannot allocate, so the
+ * previewer draws no texture.
  */
 export function rasterizeNoiseTexture2D(
   tex: NoiseTexture2DData,
@@ -51,31 +54,8 @@ export function rasterizeNoiseTexture2D(
 ): THREE.DataTexture | null {
   if (!noiseTextureFits(tex)) return null;
   const { width, height } = tex;
-  // Domain warp is not applied (`fastnoise_lite.cpp:318-325`): the JS port's
-  // `DomainWrap` checks `instanceof Vector2` against a class it does not export,
-  // so a plain `{x, y}` comes back unchanged (1.1.1). The field renders unwarped.
-  const sample = noiseSampler(noise);
-
-  const gray = tex.seamless
-    ? seamlessNoiseImage(sample, width, height, tex.invert, tex.normalize, tex.seamlessBlendSkirt)
-    : noiseImage(sample, width, height, tex.invert, tex.normalize);
-
-  let rgba: Uint8Array;
-  if (tex.asNormalMap) {
-    // The bump conversion reads only the red channel, so the no-ramp path feeds
-    // it the grayscale field directly instead of expanding to RGBA first.
-    rgba = colorRamp
-      ? bumpMapToNormalMap(modulateWithGradient(gray, colorRamp), 4, width, height, tex.bumpStrength)
-      : bumpMapToNormalMap(gray, 1, width, height, tex.bumpStrength);
-  } else {
-    rgba = colorRamp ? modulateWithGradient(gray, colorRamp) : grayToRgba(gray);
-  }
-
-  const flipped = new Uint8Array(rgba.length);
-  const rowBytes = width * 4;
-  for (let y = 0; y < height; y++) {
-    flipped.set(rgba.subarray(y * rowBytes, (y + 1) * rowBytes), (height - 1 - y) * rowBytes);
-  }
+  const flipped = allocatedPixels(tex, () => bottomUp(rgbaPixels(tex, noise, colorRamp), width, height));
+  if (flipped === null) return null;
 
   const texture = new THREE.DataTexture(flipped, width, height, THREE.RGBAFormat);
   // A normal map carries directions, not colour, and sRGB would bend every normal.
@@ -89,4 +69,54 @@ export function rasterizeNoiseTexture2D(
   texture.wrapT = wrap;
   texture.needsUpdate = true;
   return texture;
+}
+
+/**
+ * `build()`'s pixels, or null when the tab cannot allocate them. A size {@link noiseTextureFits}
+ * accepts can still exceed the memory a tab has, and a typed array that large throws `RangeError`.
+ */
+function allocatedPixels(tex: NoiseTexture2DData, build: () => Uint8Array): Uint8Array | null {
+  try {
+    return build();
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    warn(`[NoiseTexture2D] ${tex.width}x${tex.height} could not be allocated (${error.message}); drawing no texture`);
+    return null;
+  }
+}
+
+/** The noise image, then the colour ramp, then the bump-to-normal pass, as top-down RGBA. */
+function rgbaPixels(
+  tex: NoiseTexture2DData,
+  noise: FastNoiseLiteData,
+  colorRamp: Gradient | null
+): Uint8Array {
+  const { width, height } = tex;
+  // Domain warp is not applied (`fastnoise_lite.cpp:318-325`): the JS port's
+  // `DomainWrap` checks `instanceof Vector2` against a class it does not export,
+  // so a plain `{x, y}` comes back unchanged (1.1.1). The field renders unwarped.
+  const sample = noiseSampler(noise);
+
+  const gray = tex.seamless
+    ? seamlessNoiseImage(sample, width, height, tex.invert, tex.normalize, tex.seamlessBlendSkirt)
+    : noiseImage(sample, width, height, tex.invert, tex.normalize);
+
+  if (tex.asNormalMap) {
+    // The bump conversion reads only the red channel, so the no-ramp path feeds
+    // it the grayscale field directly instead of expanding to RGBA first.
+    return colorRamp
+      ? bumpMapToNormalMap(modulateWithGradient(gray, colorRamp), 4, width, height, tex.bumpStrength)
+      : bumpMapToNormalMap(gray, 1, width, height, tex.bumpStrength);
+  }
+  return colorRamp ? modulateWithGradient(gray, colorRamp) : grayToRgba(gray);
+}
+
+/** `rgba`'s rows in reverse order, the layout a typed-array `DataTexture` needs. */
+function bottomUp(rgba: Uint8Array, width: number, height: number): Uint8Array {
+  const flipped = new Uint8Array(rgba.length);
+  const rowBytes = width * 4;
+  for (let y = 0; y < height; y++) {
+    flipped.set(rgba.subarray(y * rowBytes, (y + 1) * rowBytes), (height - 1 - y) * rowBytes);
+  }
+  return flipped;
 }

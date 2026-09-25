@@ -33,7 +33,7 @@ import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
 import type { SubViewportProperties } from './types';
-import { MAX_TEXTURE_EXTENT } from '../../../godot/index.js';
+import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it

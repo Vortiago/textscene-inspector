@@ -22,7 +22,8 @@ import type { NoiseTexture2DData } from './types';
 import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import { GradientInterpolationMode, type Gradient } from '../gradienttexture2d/types';
-import { IMAGE_MAX_PIXELS, MAX_TEXTURE_EXTENT } from '../../../godot/index.js';
+import { IMAGE_MAX_PIXELS } from '../../../godot/index.js';
+import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 
 /** A deterministic ramp: value 0 → black, value 1 → red. */
 const RAMP: Gradient = {

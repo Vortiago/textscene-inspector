@@ -41,15 +41,17 @@ export function useSourceDiagnostics(buffer: string): SourceDiagnostics {
     return () => clearTimeout(timer);
   }, [buffer]);
 
+  // Counts newlines rather than `buffer.split('\n').length`, which builds an array of every
+  // line on each keystroke.
+  const lineCount = useMemo(() => countLines(buffer), [buffer]);
   // The badge and the two groups read one `diagnostics`, so the badge counts what they show.
-  const grouped = useMemo(() => groupDiagnostics(diagnostics), [diagnostics]);
+  // The live `lineCount`, not the linted one: until the debounced lint catches up, a line
+  // deleted since has no gutter row, so its finding shows in the file-level section.
+  const grouped = useMemo(() => groupDiagnostics(diagnostics, lineCount), [diagnostics, lineCount]);
   const problemBadge = useMemo(
     () => formatProblemBadge(summarizeDiagnostics(diagnostics)),
     [diagnostics]
   );
-  // Counts newlines rather than `buffer.split('\n').length`, which builds an array of every
-  // line on each keystroke.
-  const lineCount = useMemo(() => countLines(buffer), [buffer]);
 
   return {
     diagnosticsByLine: grouped.byLine,

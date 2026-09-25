@@ -1,7 +1,4 @@
-/**
- * Texture size limits: Godot's Image pixel ceiling, the size bound of Godot's gradient texture
- * setters, and the per-axis WebGL ceiling the previewer assumes where Godot asks the device.
- */
+/** Texture size limits: Godot's Image pixel ceiling, and the size bound of its gradient texture setters. */
 
 /**
  * `Image::MAX_PIXELS` (`core/io/image.h:71`), 16384². `Image::initialize_data` refuses a larger
@@ -15,9 +12,3 @@ export const IMAGE_MAX_PIXELS = 268435456;
  * `:335`), as `GradientTexture1D::set_width` does (`:144`).
  */
 export const GRADIENT_TEXTURE_MAX_SIZE = 16384;
-
-/**
- * The per-axis texture size the previewer assumes, WebGL2's common `MAX_TEXTURE_SIZE`. Godot leaves
- * this ceiling to the device and refuses a larger upload (`rendering_device.cpp:973`).
- */
-export const MAX_TEXTURE_EXTENT = 16384;

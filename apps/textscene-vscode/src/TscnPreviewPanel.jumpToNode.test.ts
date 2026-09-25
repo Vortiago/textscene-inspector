@@ -212,6 +212,36 @@ describe('TscnPreviewPanel jumpToNode editor column', () => {
     expect(await jumpColumn(triggerMessage)).toBe(vscode.ViewColumn.One);
   });
 
+  it('skips a scene tab behind the preview in its own column, which would cover the preview', async () => {
+    openTabs(tabGroup(2, [textTab(SCENE_PATH, false)]));
+    const { panel, triggerMessage } = setupMockPanel();
+    panel.viewColumn = vscode.ViewColumn.Two;
+    await createReadyPanel(triggerMessage);
+
+    expect(await jumpColumn(triggerMessage)).toBe(vscode.ViewColumn.One);
+  });
+
+  it('focuses a scene tab in another column over one behind the preview', async () => {
+    openTabs(
+      tabGroup(2, [textTab(SCENE_PATH, false)]),
+      tabGroup(3, [textTab(SCENE_PATH, false), textTab('/workspace/level.gd', true)])
+    );
+    const { panel, triggerMessage } = setupMockPanel();
+    panel.viewColumn = vscode.ViewColumn.Two;
+    await createReadyPanel(triggerMessage);
+
+    expect(await jumpColumn(triggerMessage)).toBe(vscode.ViewColumn.Three);
+  });
+
+  it('opens the scene beside a preview that sits in column one, not over it', async () => {
+    openTabs(tabGroup(2, [textTab('/workspace/player.gd', true)]));
+    const { panel, triggerMessage } = setupMockPanel();
+    panel.viewColumn = vscode.ViewColumn.One;
+    await createReadyPanel(triggerMessage);
+
+    expect(await jumpColumn(triggerMessage)).toBe(vscode.ViewColumn.Beside);
+  });
+
   it('ignores a tab that shows the scene file in something other than a text editor', async () => {
     // A custom editor's input carries the same `uri`, but showing the text in that column
     // would open a second editor there, not focus one.

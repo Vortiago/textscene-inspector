@@ -12,7 +12,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { TscnParser } from '../../../parser/TscnParser';
 import { parseSubViewport } from './parser';
 import { SubViewport, allocatableExtent } from './Component';
-import { MAX_TEXTURE_EXTENT } from '../../../godot/index.js';
+import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 
 import '../../../r3f/nodes/index';

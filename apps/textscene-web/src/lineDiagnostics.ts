@@ -61,16 +61,20 @@ function addTo(group: DiagnosticGroup, severity: Severity, message: string): voi
 
 /**
  * Groups diagnostics by `location.line`, each line with its highest severity and every message
- * in the given order. A diagnostic that names no row goes to the file-level group, never onto a
- * synthetic line: a dot on line 1 would claim that line is at fault.
+ * in the given order. A diagnostic that names no row of the buffer's `lineCount` goes to the
+ * file-level group, never onto a synthetic line: a dot on line 1 would claim that line is at
+ * fault. A line past the end is one a lint of older text named, before lines were deleted.
  */
-export function groupDiagnostics(diagnostics: readonly Diagnostic[]): GroupedDiagnostics {
+export function groupDiagnostics(
+  diagnostics: readonly Diagnostic[],
+  lineCount: number
+): GroupedDiagnostics {
   const byLine = new Map<number, LineDiagnostics>();
   let fileLevel: DiagnosticGroup | null = null;
   for (const d of diagnostics) {
     const severity = flooredSeverity(d.severity);
     const line = diagnosticLine(d);
-    if (line === undefined) {
+    if (line === undefined || line > lineCount) {
       if (fileLevel) addTo(fileLevel, severity, d.message);
       else fileLevel = { severity, messages: [d.message] };
       continue;
