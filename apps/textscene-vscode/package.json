@@ -190,7 +190,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@types/vscode": "^1.138.0",
+    "@types/vscode": "~1.85.0",
     "@vscode/test-electron": "catalog:",
     "@vscode/test-web": "^0.0.81",
     "@vscode/vsce": "^3.9.2",
