@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
+import { stripComments } from '@textscene/dev-kit';
 import { mergeDisjoint } from './mergeDisjoint.js';
 import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
 
@@ -49,21 +50,37 @@ describe('mergeDisjoint', () => {
   });
 });
 
+/** The offset just past the string literal that opens at `start`, escapes included. */
+function skipString(source: string, start: number): number {
+  const quote = source[start];
+  let at = start + 1;
+  while (at < source.length && source[at] !== quote) at += source[at] === '\\' ? 2 : 1;
+  return at + 1;
+}
+
 /**
- * The argument text of every `registerAll(…)` call in `source`, parentheses balanced. A string
- * or comment holding a paren would skew the count, and none of the scanned calls holds one.
+ * The argument text of every `registerAll(…)` call in `source`, parentheses balanced. Comments are
+ * blanked and string literals skipped first, since a cited interval such as `[0.1, 0.25)` in a
+ * comment would close the call early and hide every key after it.
  */
 function registerAllArguments(source: string): string[] {
+  const bare = stripComments(source);
   const calls: string[] = [];
-  for (const match of source.matchAll(/\bregisterAll\(/g)) {
+  for (const match of bare.matchAll(/\bregisterAll\(/g)) {
     const start = match.index + match[0].length;
     let depth = 1;
-    let end = start;
-    for (; end < source.length && depth > 0; end++) {
-      if (source[end] === '(') depth++;
-      else if (source[end] === ')') depth--;
+    let at = start;
+    while (at < bare.length && depth > 0) {
+      const char = bare[at]!;
+      if (char === "'" || char === '"' || char === '`') {
+        at = skipString(bare, at);
+        continue;
+      }
+      if (char === '(') depth++;
+      else if (char === ')') depth--;
+      at++;
     }
-    calls.push(source.slice(start, end - 1));
+    calls.push(bare.slice(start, at - 1));
   }
   return calls;
 }
@@ -84,19 +101,23 @@ describe('every validator table built from parts goes through mergeDisjoint', ()
     expect(SPREAD.test("'A', mergeDisjoint([keys], 'x')")).toBe(false);
   });
 
+  it('reads past a paren inside a comment or a string literal', () => {
+    const source = [
+      "registerAll('A', {",
+      '  // [0.1, 0.25) is the hint range.',
+      "  a: v.float('a', { note: 'x)' }),",
+      '  ...keys,',
+      '});',
+    ].join('\n');
+    const [args] = registerAllArguments(source);
+    expect(SPREAD.test(args!)).toBe(true);
+    expect(args!.trimEnd().endsWith('}')).toBe(true);
+  });
+
   it('spreads no part into a registerAll table', () => {
     const offenders = allSourceFiles()
       .filter((file) => registerAllArguments(readFileSync(file, 'utf8')).some((args) => SPREAD.test(args)))
       .map((file) => relative(srcRoot, file).replaceAll('\\', '/'));
     expect(offenders).toEqual([]);
-  });
-
-  it('throws at registration when two key groups of one type declare the same key', () => {
-    // The shape each migrated table now has: a duplicate names itself at import time.
-    const surface = { albedo_color: 'surface' };
-    const pbr = { albedo_color: 'pbr', metallic: 'pbr' };
-    expect(() => mergeDisjoint([surface, pbr], 'a BaseMaterial3D validator')).toThrow(
-      'albedo_color has a BaseMaterial3D validator in two parts'
-    );
   });
 });

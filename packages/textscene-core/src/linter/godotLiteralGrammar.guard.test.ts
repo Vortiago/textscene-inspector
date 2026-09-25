@@ -326,8 +326,8 @@ describe('Godot composite literal grammar', () => {
   });
 
   it('builds the Vector2i slot grammar once, inside storedVector2i', () => {
-    // Three readers once carried their own copy of the double-branch rule for a `Vector2(...)`
-    // spelling. The renderer's decoders and the SpriteFrames replay now share one reader.
+    // A `Vector2(...)` spelling takes the double branch, a measured rule every copy must
+    // repeat, so the renderer's decoders and the SpriteFrames replay share one reader.
     const builders = files
       .filter(({ bare }) => /\bslotTupleRegex\(\s*['"]Vector2i['"]/.test(bare))
       .map(({ rel }) => rel);
@@ -346,8 +346,8 @@ describe('Godot composite literal grammar', () => {
     expect(offenders).toEqual([]);
   });
 
-  // The detector's own edges: every form the six former copies used, and the key reads
-  // of other value kinds that must stay legal.
+  // The detector's own edges: each way a key glues onto a call, and the key reads of
+  // other value kinds that must stay legal.
   it('tells a hand-glued call field from a key read of another value kind', () => {
     expect(HAND_GLUED_CALL_FIELD.test('`"cells"\\\\s*:\\\\s*${call.source}`')).toBe(true);
     expect(HAND_GLUED_CALL_FIELD.test('`"${key}"\\\\s*:\\\\s*${type}\\\\(`')).toBe(true);

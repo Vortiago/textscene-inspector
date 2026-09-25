@@ -33,8 +33,8 @@ describe('node2dGroupProps', () => {
   });
 
   it('bakes the matrix the explicit F·L·F formula gives, at every rotation, skew and scale', () => {
-    // The pre-`transform2DFromParts` spelling of this matrix. `+ 0` folds -0 into +0: the
-    // two differ at most in the sign of an exact zero, which no product on the GPU sees.
+    // F·L·F spelled out from `cos`/`sin` directly. `+ 0` folds -0 into +0: the two spellings
+    // differ at most in the sign of an exact zero, which no product on the GPU sees.
     const explicit = (rot: number, sx: number, sy: number, skew: number): number[] => [
       Math.cos(rot) * sx, Math.sin(rot + skew) * sy,
       -Math.sin(rot) * sx, Math.cos(rot + skew) * sy,

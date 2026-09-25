@@ -18,15 +18,15 @@ import { passesDelimiterGuards, splitDelimiterEntry } from './delimiterEntry.js'
  * from an element the engine's guards drop: neither reaches the shared `delimiters` Vector.
  */
 function startKeysOf(raw: string | undefined): Set<string> {
-  const keys = new Set<string>();
+  const startKeys = new Set<string>();
   const elements = raw === undefined ? null : parsePackedStringArray(raw);
   for (const element of elements ?? []) {
     // `_set_delimiters` skips an empty element (code_edit.cpp:3497-3499).
     if (element === '') continue;
-    const entry = splitDelimiterEntry(element);
-    if (passesDelimiterGuards(entry)) keys.add(entry.startKey);
+    const keys = splitDelimiterEntry(element);
+    if (passesDelimiterGuards(keys)) startKeys.add(keys.startKey);
   }
-  return keys;
+  return startKeys;
 }
 
 function checkCodeEdit(context: RuleContext): Diagnostic[] {

@@ -24,12 +24,6 @@ export interface ThemedIconRef {
 }
 
 /**
- * A Godot `Transform2D` (`godot/transform2d.ts`). Never decomposed, since composed
- * ancestors can shear, which rotation and scale cannot represent.
- */
-export type Affine2D = Transform2DColumns;
-
-/**
  * The accumulated `CanvasItem` state of the non-Control ancestors a promoted
  * Control was walked past: the facets `_render_canvas_item_tree` re-seeds for a
  * canvas root (`renderer_canvas_cull.cpp:70-83`), as one value because one break resets all.
@@ -39,8 +33,11 @@ export type Affine2D = Transform2DColumns;
 // native painter reads `CanvasItemMaterialContext`) and the texture sampler
 // (`Node2DProperties` does not parse `texture_filter`/`texture_repeat`).
 export interface SkippedAncestors {
-  /** Composed `Transform2D`, outermost first (`transform_2d.cpp:198-217`). */
-  transform: Affine2D;
+  /**
+   * Composed `Transform2D`, outermost first (`transform_2d.cpp:198-218`). Never decomposed:
+   * composed ancestors can shear, which rotation and scale cannot represent.
+   */
+  transform: Transform2DColumns;
   /** Componentwise product of each skipped ancestor's `modulate`; `self_modulate` never propagates (`renderer_canvas_cull.cpp`). */
   modulate: ControlColor;
   /**

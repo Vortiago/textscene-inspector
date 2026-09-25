@@ -44,8 +44,12 @@ import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
-import type { Affine2D, SkippedAncestors, SolveNode, ThemedIconRef } from './solveTree';
-import { multiplyTransform2D, transform2DFromParts } from '../../../godot/transform2d.js';
+import type { SkippedAncestors, SolveNode, ThemedIconRef } from './solveTree';
+import {
+  multiplyTransform2D,
+  transform2DFromParts,
+  type Transform2DColumns,
+} from '../../../godot/transform2d.js';
 import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import {
   allocatePaintRange,
@@ -226,7 +230,7 @@ interface ForestResult {
  * A Node2D's local `Transform2D`. The defaults repeat `nodes/base/node2d/parser.ts`'s:
  * a hand-built bag may skip that parser.
  */
-function node2DAncestorTransform(props: Node2DProperties): Affine2D {
+function node2DAncestorTransform(props: Node2DProperties): Transform2DColumns {
   return transform2DFromParts(
     props.rotation ?? 0,
     props.scale ?? { x: 1, y: 1 },

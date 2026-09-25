@@ -7,7 +7,8 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { Rect2 } from './rect';
-import { controlProps, type Affine2D, type SolveNode } from './solveTree';
+import { controlProps, type SolveNode } from './solveTree';
+import type { Transform2DColumns } from '../../../godot/transform2d.js';
 import type { NativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type TextMeasurer } from './solverRegistry';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
@@ -51,7 +52,7 @@ const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
  * never decomposed: F·M·F is `[a, -c, tx; -b, d, -ty]` for Godot's
  * `columns[0]=(a,b)`, `columns[1]=(c,d)`, `columns[2]=(tx,ty)`.
  */
-export function ancestorGroupMatrix(t: Affine2D): THREE.Matrix4 {
+export function ancestorGroupMatrix(t: Transform2DColumns): THREE.Matrix4 {
   return new THREE.Matrix4().set(
     t.a, -t.c, 0, t.tx,
     -t.b, t.d, 0, -t.ty,

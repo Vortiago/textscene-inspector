@@ -3,6 +3,8 @@
  * and a read that resolves from the repo root rather than the working directory.
  */
 
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import { parseFixtureManifest, readFixtureLookup } from './fixtureManifest.mjs';
 
@@ -44,5 +46,17 @@ describe('readFixtureLookup', () => {
 
   it('answers undefined for a label the manifest does not hold', () => {
     expect(readFixtureLookup()('No such fixture')).toBeUndefined();
+  });
+
+  it('reads the same manifest when the process runs outside the repo', () => {
+    const moduleUrl = new URL('./fixtureManifest.mjs', import.meta.url).href;
+    const script = `import { readFixtureLookup } from ${JSON.stringify(moduleUrl)};
+process.stdout.write(String(readFixtureLookup()('Child_cube')));`;
+    const run = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+      cwd: tmpdir(),
+      encoding: 'utf8',
+    });
+    expect(run.stderr).toBe('');
+    expect(run.stdout).toBe('child_cube.tscn');
   });
 });
