@@ -78,6 +78,18 @@ describe('readPackedBytes', () => {
     expect(readPackedBytes('{ "vertex_data": PackedByteArray(1, 2, 3) }', 'vertex_data')).toHaveLength(0);
     expect(warnSpy).not.toHaveBeenCalled();
   });
+
+  it('decodes every byte value exactly', () => {
+    const every = Uint8Array.from({ length: 256 }, (_, i) => i);
+    const base64 = btoa(String.fromCharCode(...every));
+    const block = `{ "vertex_data": PackedByteArray("${base64}") }`;
+    expect(readPackedBytes(block, 'vertex_data')).toEqual(every);
+  });
+
+  it('reads the first field of a key, as a duplicate never stands in for it', () => {
+    const block = '{ "vertex_data": PackedByteArray(1, 2), "vertex_data": PackedByteArray("AQID") }';
+    expect(readPackedBytes(block, 'vertex_data')).toHaveLength(0);
+  });
 });
 
 describe('readName', () => {

@@ -8,7 +8,12 @@
 
 import { warn } from '../../../logger.js';
 import { parseGodotFloat } from '../../../godot/number.js';
-import { dictCallField, dictNumberField, dictStringField } from '../../../godot/variantParser.js';
+import {
+  dictBase64Field,
+  dictCallField,
+  dictNumberField,
+  dictStringField,
+} from '../../../godot/variantParser.js';
 import { parseGodotInt } from '../../../godot/int.js';
 import { unquoteString } from '../../../parser/utils.js';
 
@@ -92,25 +97,42 @@ export function readMaterialRef(block: string): string | undefined {
   return /"material"\s*:\s*([^,\n}]+)/.exec(block)?.[1]?.trim();
 }
 
-/**
- * The writer puts a non-empty `PackedByteArray` body in one quoted base64 string
- * (variant_parser.cpp:2410-2413). Its compat form, a comma list of bytes, is not read.
- */
-const BASE64_BODY_RE = /^"([^"]*)"$/;
+/** Written only by `base64Field`. Never cleared: a mesh reads a fixed handful of keys. */
+const BASE64_FIELDS = new Map<string, RegExp>();
+
+/** The `key` field's pattern, built once per key rather than once per surface. */
+function base64Field(key: string): RegExp {
+  let field = BASE64_FIELDS.get(key);
+  if (!field) {
+    field = dictBase64Field(key);
+    BASE64_FIELDS.set(key, field);
+  }
+  return field;
+}
 
 /**
- * Extract the base64 payload of a `"<key>": PackedByteArray("…")` field.
- * A corrupt payload makes `atob` throw, which would fail the whole mesh. An
- * empty buffer instead lets the caller drop just this surface.
+ * Extract the base64 payload of a `"<key>": PackedByteArray("…")` field. Its compat form, a
+ * comma list of bytes, is not read. A corrupt payload makes `atob` throw, which would fail the
+ * whole mesh. An empty buffer instead lets the caller drop just this surface.
  */
 export function readPackedBytes(block: string, key: string): Uint8Array {
-  const body = dictCallField(key, 'PackedByteArray').exec(block)?.[1]?.trim();
-  const base64 = body === undefined ? undefined : BASE64_BODY_RE.exec(body)?.[1];
+  const base64 = base64Field(key).exec(block)?.[1];
   if (base64 === undefined) return new Uint8Array(0);
   try {
-    return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    return binaryStringBytes(atob(base64));
   } catch {
     warn(`[ArrayMesh] ${key} is not valid base64 — ignoring the payload`);
     return new Uint8Array(0);
   }
+}
+
+/**
+ * The bytes of an `atob` result, one char code (0 to 255) each. A plain loop into a preallocated
+ * array, not `Uint8Array.from` with a mapper: that calls the mapper per character, over 20 times
+ * slower on a 4 MB payload.
+ */
+function binaryStringBytes(binary: string): Uint8Array {
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
 }

@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   NODE_PATH_LITERAL_ANYWHERE_RE,
   NODE_PATH_LITERAL_RE,
+  dictBase64Field,
   dictCallField,
   dictStringField,
   isNilLiteral,
@@ -145,6 +146,38 @@ describe('dictCallField', () => {
     expect(dictCallField('times', 'PackedFloat32Array').exec(value)?.[1]).toBe(
       packedArrayCallAnywhere('PackedFloat32Array').exec(value)?.[1]
     );
+  });
+});
+
+describe('dictBase64Field', () => {
+  it('reads the quoted base64 text the writer emits', () => {
+    expect(dictBase64Field('vertex_data').exec('{ "vertex_data": PackedByteArray("AQID") }')?.[1]).toBe(
+      'AQID'
+    );
+  });
+
+  it('tolerates the padding the tokenizer discards', () => {
+    const padded = '{ "vertex_data" :\tPackedByteArray (\n "AQID" ) }';
+    expect(dictBase64Field('vertex_data').exec(padded)?.[1]).toBe('AQID');
+  });
+
+  it('matches the call but captures nothing for an empty array or the compat byte list', () => {
+    const field = dictBase64Field('vertex_data');
+    for (const block of ['{ "vertex_data": PackedByteArray() }', '{ "vertex_data": PackedByteArray(1, 2) }']) {
+      const match = field.exec(block);
+      expect(match).not.toBeNull();
+      expect(match?.[1]).toBeUndefined();
+    }
+  });
+
+  it('lets the first call of the key decide, as dictCallField does', () => {
+    const block = '{ "vertex_data": PackedByteArray(1), "vertex_data": PackedByteArray("AQID") }';
+    expect(dictBase64Field('vertex_data').exec(block)?.[1]).toBeUndefined();
+  });
+
+  it('matches nothing for another key or another type', () => {
+    expect(dictBase64Field('vertex_data').exec('{ "index_data": PackedByteArray("AQID") }')).toBeNull();
+    expect(dictBase64Field('vertex_data').exec('{ "vertex_data": PackedInt32Array(1) }')).toBeNull();
   });
 });
 

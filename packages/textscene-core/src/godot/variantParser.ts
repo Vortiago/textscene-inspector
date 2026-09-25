@@ -90,6 +90,18 @@ export function dictCallField(key: string, typeName: string): RegExp {
 }
 
 /**
+ * A Dictionary field whose value is a `PackedByteArray(…)` call, `[1]` the base64 text the writer
+ * quotes for a non-empty array (variant_parser.cpp:2410-2413). The quoted body is optional, so the
+ * key's first call decides, as in {@link dictCallField}: `[1]` is undefined for an empty call and
+ * for the compat list of bytes. Base64 holds no `"` or `)`, so the body ends where that one does.
+ */
+export function dictBase64Field(key: string): RegExp {
+  return new RegExp(
+    `"${key}"${WS}:${WS}PackedByteArray${WS}\\((?:${WS}"([^")]*)"${WS}\\))?`
+  );
+}
+
+/**
  * A field of a serialised Dictionary whose value is a number, `[1]` the literal (`global` as for {@link packedArrayCallAnywhere}).
  * The value runs to its `,`/`}`, so `1.2.3` matches nothing instead of reading `1.2`. The grammar is the writer's, `inf` included:
  * a caller that cannot use `inf` rejects it, but one that stopped matching there would pair later values with the wrong keys.
