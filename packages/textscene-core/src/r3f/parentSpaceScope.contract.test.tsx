@@ -185,6 +185,77 @@ ${CHILD_3D}
   });
 });
 
+describe('a node that escaped keeps its place in the React tree', () => {
+  it('still sees the real scene: a WorldEnvironment under a Node3D sets its background', async () => {
+    const root = await renderWorld(`[gd_scene format=3]
+
+[sub_resource type="Environment" id="Env"]
+background_mode = 1
+background_color = Color(1, 0, 0, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env")
+`);
+    expect((root as THREE.Scene).background).toBeInstanceOf(THREE.Color);
+  });
+
+  it('leaves nothing behind when the escaped subtree unmounts', async () => {
+    const parsed = new TscnParser().parse(`[gd_scene format=3]
+
+${MOVED_ROOT_3D}
+
+[node name="Folder" type="Node" parent="."]
+
+[node name="Child" type="Node3D" parent="Folder"]
+`);
+    const fake = createFakeResourceLoader();
+    const tree = (nodes: typeof parsed.nodes) => (
+      <SceneStack workspace="3d" loader={fake.loader} scene={parsed}>
+        <NodeDispatcher nodes={nodes} />
+      </SceneStack>
+    );
+    const renderer = await ReactThreeTestRenderer.create(tree(parsed.nodes));
+    // The pointer root's first child is the world root, the only place an escaped node goes.
+    const pointerRoot = (renderer.scene as unknown as { children: Array<{ instance: THREE.Object3D }> })
+      .children[0]!.instance;
+    const worldRoot = pointerRoot.children[0]!;
+    expect(worldRoot.children).toHaveLength(1);
+    const root = parsed.nodes[0]!;
+    await renderer.update(tree([{ ...root, children: [] }]));
+    expect(worldRoot.children).toHaveLength(0);
+  });
+
+  it('stays escaped when its siblings reorder', async () => {
+    const parsed = new TscnParser().parse(`[gd_scene format=3]
+
+${MOVED_ROOT_3D}
+
+[node name="Folder" type="Node" parent="."]
+
+[node name="Child" type="Node3D" parent="Folder"]
+${CHILD_3D}
+
+[node name="Other" type="Node3D" parent="."]
+`);
+    const fake = createFakeResourceLoader();
+    const tree = (nodes: typeof parsed.nodes) => (
+      <SceneStack workspace="3d" loader={fake.loader} scene={parsed}>
+        <NodeDispatcher nodes={nodes} />
+      </SceneStack>
+    );
+    const renderer = await ReactThreeTestRenderer.create(tree(parsed.nodes));
+    const root = parsed.nodes[0]!;
+    const reordered = [{ ...root, children: [...root.children].reverse() }];
+    await renderer.update(tree(reordered));
+    let top = (renderer.scene as unknown as { children: Array<{ instance: THREE.Object3D }> }).children[0]!.instance;
+    while (top.parent) top = top.parent;
+    top.updateMatrixWorld(true);
+    expect(worldOrigin(top, 'Child')).toEqual([0, 1, 0]);
+  });
+});
+
 describe('a top_level Node3D', () => {
   it('drops its parent’s transform', async () => {
     const root = await renderWorld(`[gd_scene format=3]

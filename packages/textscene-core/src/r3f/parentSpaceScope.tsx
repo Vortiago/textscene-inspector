@@ -1,12 +1,12 @@
 /**
  * The scope a node draws in when its parent's transform and visibility do not reach it
- * (`godot/parentSpace.ts`), such as a plain Node or a CanvasItem under a Node3D. Such a node portals
- * to its viewport's world root, outside every ancestor group. Three hides a whole subtree below one
- * invisible object, and Godot does not.
+ * (`godot/parentSpace.ts`), such as a plain Node or a CanvasItem under a Node3D. Such a node's three
+ * object moves to its viewport's world root, outside every ancestor group. Three hides a whole
+ * subtree below one invisible object, and Godot does not.
  */
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
-import { createPortal, extend } from '@react-three/fiber';
+import { createContext, useContext, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { extend } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
@@ -68,9 +68,9 @@ export function ParentSpaceFamilyProvider({
 }
 
 /**
- * Wraps a node's whole render, portalling it to the world root when it escapes its parent. A node
- * that nests normally gets no portal. Outside a dispatcher there is no world root, and the node
- * stays where it is.
+ * Wraps a node's whole render, moving it to the world root when it escapes its parent. A node that
+ * nests normally gets no wrapper. Outside a dispatcher there is no world root, and the node stays
+ * where it is.
  */
 export function ParentSpaceScope({ node, children }: { node: TscnNode; children: ReactNode }) {
   const parentFamily = useParentSpaceFamily();
@@ -81,7 +81,38 @@ export function ParentSpaceScope({ node, children }: { node: TscnNode; children:
   if (!escapes || !worldRoot) return <>{children}</>;
   // No ancestor CanvasItem transform reaches the world root, so the CanvasSpace a canvas root
   // inside inverts is empty.
-  return createPortal(<CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>, worldRoot);
+  return (
+    <WorldRootAttached worldRoot={worldRoot}>
+      <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
+    </WorldRootAttached>
+  );
+}
+
+/**
+ * Moves only the three object, not the React subtree: an R3F portal would hand every component
+ * inside its own `scene`, which WorldEnvironment, Decal and the light helpers write to. An
+ * `object3D`, not a group, so no canvas key resets.
+ */
+function WorldRootAttached({ worldRoot, children }: { worldRoot: THREE.Object3D; children: ReactNode }) {
+  const ref = useRef<THREE.Object3D>(null);
+  /** Written only by the move below: the React parent R3F last added the object to. */
+  const homeRef = useRef<THREE.Object3D | null>(null);
+  // R3F adds the object back to its React parent when siblings reorder, so every commit re-checks.
+  useLayoutEffect(() => {
+    const object = ref.current;
+    if (!object || object.parent === worldRoot) return;
+    homeRef.current = object.parent;
+    worldRoot.add(object);
+  });
+  // R3F removes the object from its React parent on unmount, which misses it anywhere else, so it
+  // goes home first. React runs this before it removes the host subtree.
+  useLayoutEffect(() => {
+    const object = ref.current;
+    return () => {
+      if (object && homeRef.current) homeRef.current.add(object);
+    };
+  }, [worldRoot]);
+  return <object3D ref={ref}>{children}</object3D>;
 }
 
 /**

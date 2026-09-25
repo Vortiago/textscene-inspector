@@ -95,9 +95,12 @@ omission.
 > the Node3D above that `Node`.
 >
 > - `godot/parentSpace.ts` states the rule: a child escapes a parent in the Node3D or CanvasItem
->   family when it is not of that family. `<ParentSpaceScope>` portals such a child to the
->   viewport's world root, outside every ancestor group, because three hides a whole subtree below
->   one invisible object. The eye toggle follows the same rule, as the editor's does.
+>   family when it is not of that family. `<ParentSpaceScope>` moves such a child's three object
+>   to the viewport's world root, outside every ancestor group, because three hides a whole subtree
+>   below one invisible object. The eye toggle follows the same rule, as the editor's does.
+> - Rejected: an R3F `createPortal`. It gives every component inside a scene of its own, and
+>   WorldEnvironment, Decal and the light helpers write to `useThree().scene`. Only the three
+>   object moves, so the React tree, `useThree()` and every context stay as they were.
 > - A type-less `instance=` node stays in its parent's group until it merges (ADR-0013). Its class is the
 >   sub-scene root's, unknown until the sub-scene loads, and a `.glb` root is a Node3D.
 > - A `top_level` Node3D keeps its parent link, so it stays in place and still hides with its
