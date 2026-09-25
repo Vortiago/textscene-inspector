@@ -9,27 +9,22 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
-import { arrayBody, STRING_ARRAY_FORMS } from './arrayForms.js';
-import { unquoteString } from '../../../../parser/utils.js';
-
-const QUOTED_ELEMENT_CAPTURE_RE = /"((?:[^"\\]|\\[\s\S])*)"/g;
+import { parsePackedStringArray } from './arrayForms.js';
+import { passesDelimiterGuards, splitDelimiterEntry } from './delimiterEntry.js';
 
 /**
- * The start key of each non-empty element of a delimiter literal, split as `_set_delimiters` does
- * (code_edit.cpp:3501-3502). An empty set for a value this rule cannot parse: linterParser.ts's
- * validator reports a malformed literal.
+ * The start key of each element `_add_delimiter` would store, split as `_set_delimiters` does. An
+ * empty set for a literal the reader refuses, which the validator reports as malformed, and no key
+ * from an element the engine's guards drop: neither reaches the shared `delimiters` Vector.
  */
 function startKeysOf(raw: string | undefined): Set<string> {
   const keys = new Set<string>();
-  if (raw === undefined) return keys;
-  const body = arrayBody(raw, STRING_ARRAY_FORMS);
-  if (body === undefined || body === '') return keys;
-  for (const m of body.matchAll(QUOTED_ELEMENT_CAPTURE_RE)) {
-    const element = unquoteString(m[1] ?? '');
+  const elements = raw === undefined ? null : parsePackedStringArray(raw);
+  for (const element of elements ?? []) {
+    // `_set_delimiters` skips an empty element (code_edit.cpp:3497-3499).
     if (element === '') continue;
-    const firstSpace = element.indexOf(' ');
-    const startKey = firstSpace === -1 ? element : element.slice(0, firstSpace);
-    if (startKey !== '') keys.add(startKey);
+    const entry = splitDelimiterEntry(element);
+    if (passesDelimiterGuards(entry)) keys.add(entry.startKey);
   }
   return keys;
 }

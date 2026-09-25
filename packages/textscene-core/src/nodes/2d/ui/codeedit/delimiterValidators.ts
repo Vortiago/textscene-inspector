@@ -6,6 +6,7 @@
 import { accepts, propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { parsePackedStringArray } from './arrayForms.js';
+import { splitDelimiterEntry } from './delimiterEntry.js';
 import { isGodotSymbol } from './symbolChars.js';
 
 /**
@@ -33,20 +34,7 @@ export function delimiterArrayValidator(name: string): PropertyValidator {
       // `_set_delimiters` skips an empty element (code_edit.cpp:3497-3499).
       if (element === '') continue;
 
-      // Split on the first space as `_set_delimiters` does (code_edit.cpp:3501-3502). A second
-      // space and anything after it is ignored, as the engine ignores it.
-      const firstSpace = element.indexOf(' ');
-      let startKey: string;
-      let endKey: string;
-      if (firstSpace === -1) {
-        startKey = element;
-        endKey = '';
-      } else {
-        startKey = element.slice(0, firstSpace);
-        const secondSpace = element.indexOf(' ', firstSpace + 1);
-        endKey =
-          secondSpace === -1 ? element.slice(firstSpace + 1) : element.slice(firstSpace + 1, secondSpace);
-      }
+      const { startKey, endKey } = splitDelimiterEntry(element);
 
       if (startKey === '') {
         return propertyError(
