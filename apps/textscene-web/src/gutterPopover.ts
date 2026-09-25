@@ -4,7 +4,7 @@
  */
 
 /** A row's top and bottom edge, and the visible gutter's height, in pixels from its top edge. */
-export interface GutterGeometry {
+interface GutterGeometry {
   rowTop: number;
   rowBottom: number;
   viewportHeight: number;

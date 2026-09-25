@@ -6,14 +6,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { SourceGutter } from './SourceGutter';
-import type { LineDiagnostics } from './lineDiagnostics';
+import type { DiagnosticGroup } from './lineDiagnostics';
 
 const ROW = 18;
 const VIEWPORT = 400;
 
-const BY_LINE = new Map<number, LineDiagnostics>([
-  [2, { line: 2, severity: 'warning', messages: ['near the top'] }],
-  [21, { line: 21, severity: 'error', messages: ['near the bottom', 'and another'] }],
+const BY_LINE = new Map<number, DiagnosticGroup>([
+  [2, { severity: 'warning', messages: ['near the top'] }],
+  [21, { severity: 'error', messages: ['near the bottom', 'and another'] }],
 ]);
 
 function renderGutter() {

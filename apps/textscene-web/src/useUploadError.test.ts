@@ -6,18 +6,15 @@
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useUploadError } from './useUploadError';
-import { nextErrorSequence } from './errorSequence';
-import type { LoadError } from './useSceneSource';
+import { sequencedError, type SequencedError } from './errorSequence';
 
 const NOT_FOUND = 'Failed to load fixture: Not Found';
 const NO_TSCN = 'No .tscn file found among the dropped/selected files.';
 
 /** A fetch failure set now, as `useSceneSource` sets one. */
-function loadFailure(message: string): LoadError {
-  return { message, sequence: nextErrorSequence() };
-}
+const loadFailure = sequencedError;
 
-function renderChannel(initial: LoadError | null = null) {
+function renderChannel(initial: SequencedError | null = null) {
   return renderHook(({ loadError }) => useUploadError(loadError), {
     initialProps: { loadError: initial },
   });

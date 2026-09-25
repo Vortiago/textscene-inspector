@@ -27,7 +27,7 @@ describe('groupDiagnostics by line', () => {
   it('maps a single diagnostic onto its line at its own severity', () => {
     const d = diagnostic({ severity: 'warning', message: 'oops', location: { line: 3 } });
     const { byLine } = groupDiagnostics([d], ROWS);
-    expect(byLine.get(3)).toEqual({ line: 3, severity: 'warning', messages: ['oops'] });
+    expect(byLine.get(3)).toEqual({ severity: 'warning', messages: ['oops'] });
   });
 
   it('collapses multiple diagnostics on one line to the max severity with all messages, in order', () => {
@@ -39,7 +39,6 @@ describe('groupDiagnostics by line', () => {
     const { byLine } = groupDiagnostics(diagnostics, ROWS);
     expect(byLine.size).toBe(1);
     expect(byLine.get(5)).toEqual({
-      line: 5,
       severity: 'error',
       messages: ['first warning', 'fatal problem', 'another note'],
     });
@@ -64,7 +63,6 @@ describe('groupDiagnostics by line', () => {
       diagnostic({ severity: 'error', message: 'fatal', location: { line: 4 } }),
     ];
     expect(groupDiagnostics(diagnostics, ROWS).byLine.get(4)).toEqual({
-      line: 4,
       severity: 'error',
       messages: ['off-union', 'fatal'],
     });

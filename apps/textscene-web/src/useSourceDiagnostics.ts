@@ -11,7 +11,6 @@ import {
   formatProblemBadge,
   countLines,
   type DiagnosticGroup,
-  type LineDiagnostics,
 } from './lineDiagnostics';
 import { DEBOUNCE_MS } from './useSceneSource';
 
@@ -22,7 +21,7 @@ import { DEBOUNCE_MS } from './useSceneSource';
 const linter = new Linter();
 
 export interface SourceDiagnostics {
-  diagnosticsByLine: Map<number, LineDiagnostics>;
+  diagnosticsByLine: Map<number, DiagnosticGroup>;
   /** The diagnostics that name no line, for the file-level section, or `null` for none. */
   fileDiagnostics: DiagnosticGroup | null;
   /** Compact problem-count text ("✖ 1 / ⚠ 2"), or `null` when the buffer is clean. */

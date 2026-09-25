@@ -26,6 +26,7 @@ vi.mock('@textscene/core/linter', async () => {
 });
 
 import { R3FApp } from './r3f-main';
+import { mockFetchOk } from './useSceneSource.testkit';
 
 const STUB_TSCN = `[gd_scene format=3]
 
@@ -63,13 +64,6 @@ scripted.set(MIXED_TSCN, [
   finding('info', 'also about the whole file'),
 ]);
 scripted.set(LOCATED_ONLY_TSCN, [finding('warning', 'warning on line 3', 3)]);
-
-function mockFetch() {
-  globalThis.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    text: () => Promise.resolve(STUB_TSCN),
-  } as unknown as Response) as unknown as typeof fetch;
-}
 
 async function openStubScene() {
   render(<R3FApp />);
@@ -117,7 +111,7 @@ beforeEach(() => {
   } catch {
     // happy-dom can throw here, and clearing storage is optional.
   }
-  mockFetch();
+  globalThis.fetch = mockFetchOk(STUB_TSCN);
 });
 
 afterEach(() => {

@@ -4,7 +4,6 @@
 
 import { useState } from 'react';
 import { sequencedError, type SequencedError } from './errorSequence';
-import type { LoadError } from './useSceneSource';
 
 export interface UploadErrorChannel {
   /** Whichever of the two channels was set most recently and is still live. */
@@ -18,7 +17,7 @@ export interface UploadErrorChannel {
  * set most recently. An edit clears both, a fixture switch the upload one, `replace()` the
  * `loadError`. The next successful upload, fixture switch or edit clears an upload error.
  */
-export function useUploadError(loadError: LoadError | null): UploadErrorChannel {
+export function useUploadError(loadError: SequencedError | null): UploadErrorChannel {
   // An unreadable file, or no .tscn among the dropped or selected files.
   const [uploadError, setUploadError] = useState<SequencedError | null>(null);
 

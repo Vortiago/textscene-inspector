@@ -49,27 +49,32 @@ export type NodeCreator = (
  * Hooks into the scanning loop for strict (linting) consumers. The observer is
  * purely additive: it never changes what the lenient loop parses or recovers.
  */
+/** One property value the scan completed, after any multiline accumulation. */
+export interface ParsedProperty {
+  section: SectionType;
+  /**
+   * The heading's `type=` for node/sub_resource, the `[gd_resource type="…"]` header's for a
+   * `[resource]` body, else undefined.
+   */
+  ownerType: string | undefined;
+  /** The key as written. */
+  key: string;
+  /** The value as written. */
+  value: string;
+  /** The line the value starts on. */
+  line: number;
+  isMultiline: boolean;
+  /** The pair the section's bag holds, a deprecated spelling resolved, so no observer derives it again. */
+  stored: ResolvedProperty;
+}
+
 export interface ParseObserver {
   /** Malformed line detected: INVALID_HEADING_FORMAT or INVALID_PROPERTY_FORMAT. */
   onError?(error: { message: string; line: number; column: number; code: string }): void;
   /** A heading parsed successfully and a new section begins. */
   onSectionStart?(heading: ParsedHeading, section: SectionType, line: number): void;
-  /**
-   * A property value completed, after any multiline accumulation. `line` is its
-   * starting line. `ownerType` is the heading's `type=` for node/sub_resource, the
-   * `[gd_resource type="…"]` header's for a `[resource]` body, else undefined. `key` and
-   * `value` are as written. `stored` is the pair the section's bag holds, a deprecated
-   * spelling resolved, so an observer never derives it a second way.
-   */
-  onProperty?(
-    section: SectionType,
-    ownerType: string | undefined,
-    key: string,
-    value: string,
-    line: number,
-    isMultiline: boolean,
-    stored: ResolvedProperty
-  ): void;
+  /** A property value completed. */
+  onProperty?(property: ParsedProperty): void;
   /**
    * A `[node]` or `[sub_resource]` section closed, and the scan built `built` from it. `line` is
    * its heading's line. It fires after the section's last `onProperty`, so an observer can file
@@ -169,15 +174,15 @@ export class TscnParserCore {
         const value = pendingMultiline.lines.join('\n');
         const resolved = resolveDeprecatedProperty(currentOwnerType(), pendingMultiline.key, value);
         currentProperties[resolved.key] = resolved.value;
-        observer?.onProperty?.(
-          currentSection,
-          currentOwnerType(),
-          pendingMultiline.key,
+        observer?.onProperty?.({
+          section: currentSection,
+          ownerType: currentOwnerType(),
+          key: pendingMultiline.key,
           value,
-          pendingMultiline.startLine,
-          pendingMultiline.lines.length > 1,
-          resolved
-        );
+          line: pendingMultiline.startLine,
+          isMultiline: pendingMultiline.lines.length > 1,
+          stored: resolved,
+        });
       }
       pendingMultiline = null;
     };
@@ -278,15 +283,15 @@ export class TscnParserCore {
               property.value
             );
             currentProperties[resolved.key] = resolved.value;
-            observer?.onProperty?.(
-              currentSection,
-              currentOwnerType(),
-              property.key,
-              property.value,
-              lineNumber,
-              false,
-              resolved
-            );
+            observer?.onProperty?.({
+              section: currentSection,
+              ownerType: currentOwnerType(),
+              key: property.key,
+              value: property.value,
+              line: lineNumber,
+              isMultiline: false,
+              stored: resolved,
+            });
           }
         }
       }

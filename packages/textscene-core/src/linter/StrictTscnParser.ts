@@ -198,7 +198,7 @@ export class StrictTscnParser {
         }
       },
 
-      onProperty: (_section, ownerType, key, value, line, isMultiline, stored) => {
+      onProperty: ({ ownerType, key, value, line, isMultiline, stored }) => {
         // The key the scan stores the value under, so a reader of the bag finds the line.
         propertyLines.set(stored.key, line);
 

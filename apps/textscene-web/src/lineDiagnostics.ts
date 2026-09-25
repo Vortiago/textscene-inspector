@@ -17,17 +17,12 @@ export interface DiagnosticGroup {
   messages: string[];
 }
 
-/** One gutter row's worth of diagnostics. */
-export interface LineDiagnostics extends DiagnosticGroup {
-  line: number;
-}
-
 /**
  * The two homes of the badge's findings. Every diagnostic lands in exactly one, so the badge
  * counts only what the pane can show.
  */
-export interface GroupedDiagnostics {
-  byLine: Map<number, LineDiagnostics>;
+interface GroupedDiagnostics {
+  byLine: Map<number, DiagnosticGroup>;
   /** The diagnostics that name no gutter row, or `null` when there is none. */
   fileLevel: DiagnosticGroup | null;
 }
@@ -69,7 +64,7 @@ export function groupDiagnostics(
   diagnostics: readonly Diagnostic[],
   lineCount: number
 ): GroupedDiagnostics {
-  const byLine = new Map<number, LineDiagnostics>();
+  const byLine = new Map<number, DiagnosticGroup>();
   let fileLevel: DiagnosticGroup | null = null;
   for (const d of diagnostics) {
     const severity = flooredSeverity(d.severity);
@@ -81,7 +76,7 @@ export function groupDiagnostics(
     }
     const existing = byLine.get(line);
     if (existing) addTo(existing, severity, d.message);
-    else byLine.set(line, { line, severity, messages: [d.message] });
+    else byLine.set(line, { severity, messages: [d.message] });
   }
   return { byLine, fileLevel };
 }

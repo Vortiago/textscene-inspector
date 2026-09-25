@@ -32,7 +32,7 @@ export function parseTresFile(content: string): ParsedResource {
         inResourceSection = heading.type === 'resource';
       }
     },
-    onProperty(_section, _ownerType, _key, _value, _line, _isMultiline, stored) {
+    onProperty({ stored }) {
       // The bag holds what the setter writes, as the scanner's own bags do.
       if (!inResourceSection) return;
       properties[stored.key] = stored.value;

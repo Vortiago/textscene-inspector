@@ -4,7 +4,7 @@
  * The `scrollTop` prop keeps it in step with the textarea.
  */
 import { memo, useMemo, useRef, useState } from 'react';
-import type { LineDiagnostics } from './lineDiagnostics';
+import type { DiagnosticGroup } from './lineDiagnostics';
 import { placeGutterPopover, type PopoverPlacement } from './gutterPopover';
 import { severityDotClass } from './problemClasses';
 import styles from './r3f-main.module.css';
@@ -12,7 +12,7 @@ import styles from './r3f-main.module.css';
 export interface SourceGutterProps {
   /** Total number of lines in the buffer (at least 1, even for an empty buffer). */
   lineCount: number;
-  byLine: ReadonlyMap<number, LineDiagnostics>;
+  byLine: ReadonlyMap<number, DiagnosticGroup>;
   /** The textarea's current `scrollTop`, so the gutter's rows track it. */
   scrollTop: number;
 }

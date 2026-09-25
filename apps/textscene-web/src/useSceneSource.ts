@@ -12,12 +12,6 @@ import { FIXTURE_STORAGE_KEY } from './useFixtureSelection';
 /** Pane edits reach the renderer only after this pause, never on the keystroke itself (ADR-0020). */
 export const DEBOUNCE_MS = 250;
 
-/**
- * One failed fixture fetch. Each failure takes a new `sequence` when the fetch rejects, also
- * when a retry fails with the same message, so the banner orders it against an upload error.
- */
-export type LoadError = SequencedError;
-
 export interface UseSceneSourceOptions {
   /** The currently selected fixture file path, or '' when on an upload. */
   fixtureFile: string;
@@ -43,10 +37,11 @@ export interface UseSceneSourceResult {
   /** True while a fixture fetch is in flight. */
   isFetching: boolean;
   /**
-   * Non-null when the last fetch failed. An edit, a new load, `replace` or `clearRender`
-   * clears it.
+   * Non-null when the last fetch failed. An edit, a new load, `replace` or `clearRender` clears
+   * it. Each failure takes a new `sequence` when the fetch rejects, a retry with the same message
+   * too, so the banner orders it against an upload error.
    */
-  loadError: LoadError | null;
+  loadError: SequencedError | null;
   /**
    * The fixture file the rendered content came from: '' for an upload, a blanked render,
    * or a fetch still in flight. The selected `fixtureFile` runs ahead of it for the whole
@@ -91,7 +86,7 @@ export function useSceneSource({
   const [forwardedContent, setForwardedContent] = useState<string>('');
   const [renderedFixtureFile, setRenderedFixtureFile] = useState<string>('');
   const [isFetching, setIsFetching] = useState(false);
-  const [loadError, setLoadError] = useState<LoadError | null>(null);
+  const [loadError, setLoadError] = useState<SequencedError | null>(null);
   // Bumped by `reload` to re-run the fetch effect at an unchanged fixtureFile.
   const [reloadNonce, setReloadNonce] = useState(0);
 
