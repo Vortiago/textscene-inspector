@@ -7,29 +7,9 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import type { TscnNode, TscnScene } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties, nodesOfType } from '../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
-import { searchAncestors } from '../../../linter/parentType.js';
+import { viewportScopeOf } from '../../../linter/viewportScope.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../godot/index.js';
-
-/**
- * The nearest Viewport ancestor (`node.cpp:345-347`), or null for the scene's own
- * viewport. `undefined` for an ancestor whose class this file does not declare: it
- * may be an instanced Viewport, and pooling its cameras into the outer scope is
- * the false positive this scoping prevents.
- */
-function viewportScopeOf(scene: TscnScene, node: TscnNode): TscnNode | null | undefined {
-  // The current-camera slot is per viewport: `viewport = get_viewport()`
-  // (camera_2d.cpp:342), the group `"__cameras_" + itos(vp.get_id())` (:349), and
-  // `make_current` gated on `!viewport->get_camera_2d()` (:354, viewport.h:764).
-  // `Window` is a Viewport (`window.h:43`), so the base chain scopes a dialog too.
-  const search = searchAncestors(scene, node, (ancestor) =>
-    // `visit` gets only ancestors whose type this file states and the catalog knows.
-    descendsFrom(ancestor.type, 'Viewport') ? ancestor : undefined
-  );
-  if (search.kind === 'unknowable') return undefined;
-  return search.kind === 'found' ? search.value : null;
-}
 
 /** Enabled unless the key says otherwise: `enabled` defaults true (camera_2d.h:67). */
 function cameraIsEnabled(node: TscnNode): boolean {

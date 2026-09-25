@@ -126,6 +126,11 @@ The rule that existence checks (node names, NodePath targets) never assume visib
 A reference that crosses an `instance=` boundary stays silent rather than false-positive. The linter reads the static text of one file, never the composed **Live scene tree**.
 _Avoid_: "fixing" the silence by resolving instance internals (the linter must stay file-local and React-free).
 
+**Viewport scope**:
+The nearest Viewport ancestor of a node, or null for the scene's own viewport: the per-viewport state (the current-camera slot) a node participates in.
+An unknowable scope, an ancestor whose type comes from another scene, never pools the node into any scope.
+_Avoid_: scoping a per-viewport contention rule to the whole scene (two split-screen cameras do not contend).
+
 ### Code organisation
 
 **Vertical slice**:
