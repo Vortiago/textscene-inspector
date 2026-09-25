@@ -6,16 +6,12 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { relative } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
-import { allSourceFiles, declaredRuleNames, srcRoot } from './testing/ruleNameScrape.js';
+import { allSourceFiles, declaredRuleNames, srcLabel } from './testing/ruleNameScrape.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { NODE_BASE_TYPES } from '../godot/nodeBaseTypes.js';
 import './index.js'; // side-effect: every slice registers its rules and validators
-
-/** A file's `src/`-relative path, the form every result below is reported in. */
-const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
 
 type Reader = 'ruleInt' | 'ruleCount';
 
@@ -168,7 +164,7 @@ describe('rule-layer count reads', () => {
         const key = countKeyRead(argument, src, at);
         if (key === null) return [];
         const refused = types.some((type) => refusesNegative(type, key));
-        return [{ rel: label(file), reader, key, refused }];
+        return [{ rel: srcLabel(file), reader, key, refused }];
       });
     });
 

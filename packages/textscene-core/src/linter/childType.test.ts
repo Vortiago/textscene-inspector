@@ -6,10 +6,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { relative } from 'node:path';
 import type { TscnNode } from '../parser/types.js';
 import { hasChildOfType } from './childType.js';
-import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
+import { allSourceFiles, srcLabel } from './testing/ruleNameScrape.js';
 
 /** The smallest node shape the rules walk. */
 function node(type: string, children: TscnNode[] = []): TscnNode {
@@ -78,7 +77,7 @@ describe('the one direct-child type test', () => {
   it('lives only in childType.ts', () => {
     const copies = allSourceFiles()
       .filter((file) => isHandRolled(readFileSync(file, 'utf8')))
-      .map((file) => relative(srcRoot, file).replaceAll('\\', '/'));
+      .map(srcLabel);
     expect(copies).toEqual(['linter/childType.ts']);
   });
 });

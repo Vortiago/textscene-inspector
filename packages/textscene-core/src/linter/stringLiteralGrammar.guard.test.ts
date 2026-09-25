@@ -6,12 +6,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { relative } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
-import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
-
-/** A file's `src/`-relative path, the form every list below is written in. */
-const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
+import { allSourceFiles, srcLabel } from './testing/ruleNameScrape.js';
 
 /**
  * The class that spells an escape-aware literal body: everything but `"` and `\`, in either
@@ -31,7 +27,7 @@ describe('Godot string literal grammar', () => {
     // Exactly one file, not an empty list: the definition is the anti-vacuity term.
     const spellers = allSourceFiles()
       .filter((file) => spellsStringLiteral(readFileSync(file, 'utf8')))
-      .map(label)
+      .map(srcLabel)
       .sort();
     expect(spellers).toEqual(['godot/string.ts']);
   });

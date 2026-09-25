@@ -6,7 +6,6 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { relative } from 'node:path';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
@@ -17,7 +16,7 @@ import {
   transform2DIsConformal,
   type Transform2DColumns,
 } from './transform2d.js';
-import { allSourceFiles, srcRoot } from '../linter/testing/ruleNameScrape.js';
+import { allSourceFiles, srcLabel } from '../linter/testing/ruleNameScrape.js';
 
 /** A point through `t`: `(a*x + c*y + tx, b*x + d*y + ty)`. */
 function xform(t: Transform2DColumns, x: number, y: number): [number, number] {
@@ -231,7 +230,7 @@ describe('the one spelling of the Transform2D construction, product and inverse'
   const OTHER_LAYOUT = /\bax\s*[:?][\s\S]{0,120}?\bbx\s*[:?][\s\S]{0,120}?\box\s*[:?]/;
 
   const sources = allSourceFiles().map((file) => ({
-    rel: relative(srcRoot, file).replaceAll('\\', '/'),
+    rel: srcLabel(file),
     text: readFileSync(file, 'utf8'),
   }));
 

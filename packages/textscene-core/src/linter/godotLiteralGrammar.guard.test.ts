@@ -8,13 +8,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
-import { relative } from 'node:path';
-import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
+import { allSourceFiles, srcLabel } from './testing/ruleNameScrape.js';
 import { makeFloatTupleRegex } from './validators/floatTupleValidator.js';
 import { slotTupleRegex, variantTupleRegex } from '../godot/number.js';
-
-/** A file's `src/`-relative path, the form every list below is written in. */
-const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
 
 /** Every composite Godot writes as `TypeName(a, b, …)`. */
 const COMPOSITES = [
@@ -235,7 +231,7 @@ describe('Godot composite literal grammar', () => {
   // a docblock's opening and closing delimiters pair into false regexes around prose.
   const files = allSourceFiles().map((file) => {
     const src = readFileSync(file, 'utf8');
-    return { rel: label(file), src, bare: stripComments(src) };
+    return { rel: srcLabel(file), src, bare: stripComments(src) };
   });
 
   it('is spelled by the two canonical builders, never by a regex literal', () => {

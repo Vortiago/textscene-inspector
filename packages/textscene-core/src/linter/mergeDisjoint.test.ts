@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { relative } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
 import { mergeDisjoint } from './mergeDisjoint.js';
-import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
+import { allSourceFiles, srcLabel } from './testing/ruleNameScrape.js';
 
 describe('mergeDisjoint', () => {
   it('merges parts that share no key', () => {
@@ -117,7 +116,7 @@ describe('every validator table built from parts goes through mergeDisjoint', ()
   it('spreads no part into a registerAll table', () => {
     const offenders = allSourceFiles()
       .filter((file) => registerAllArguments(readFileSync(file, 'utf8')).some((args) => SPREAD.test(args)))
-      .map((file) => relative(srcRoot, file).replaceAll('\\', '/'));
+      .map(srcLabel);
     expect(offenders).toEqual([]);
   });
 });

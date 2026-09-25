@@ -7,12 +7,11 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { relative } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
 import { everyValidator } from './registryPopulation.js';
-import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
+import { allSourceFiles, srcLabel } from './testing/ruleNameScrape.js';
 import type { IntWidth } from '../godot/index.js';
 import './index.js'; // side-effect: every slice registers its validators
 
@@ -255,8 +254,7 @@ export function verdictsFor(
 const files = allSourceFiles();
 const readers = widthTakingReaders(files);
 const classes = new Map(Object.keys(CLASS_BASE_TYPES).map((type) => [type.toLowerCase(), type]));
-const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
-const treeReads = files.flatMap((file) => intReadsIn(readFileSync(file, 'utf8'), label(file), readers));
+const treeReads = files.flatMap((file) => intReadsIn(readFileSync(file, 'utf8'), srcLabel(file), readers));
 const treeVerdicts = verdictsFor(treeReads, (l) => classOf(l, classes), registryDeclarations());
 
 // Agreement, not correctness: both sides reading `int32` for a `uint32_t` setter passes,

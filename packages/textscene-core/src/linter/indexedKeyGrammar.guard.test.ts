@@ -7,13 +7,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { relative } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
-import { allSourceFiles, srcRoot } from './testing/ruleNameScrape.js';
+import { allSourceFiles, srcLabel } from './testing/ruleNameScrape.js';
 import { indexedKeyRegex } from '../godot/indexedKey.js';
-
-/** A file's `src/`-relative path, the form every list below is written in. */
-const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
 
 /**
  * A file that declares a phase-2 rule, by the one property a rule cannot be renamed or
@@ -131,7 +127,7 @@ function readsIndexRaw(source: string): boolean {
 
 describe('Godot indexed-key grammar', () => {
   const files = allSourceFiles().map((file) => ({
-    rel: label(file),
+    rel: srcLabel(file),
     src: readFileSync(file, 'utf8'),
   }));
   const rules = files.filter(({ src }) => DECLARES_A_RULE.test(src));
