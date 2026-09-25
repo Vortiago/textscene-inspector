@@ -66,10 +66,10 @@ export function splitTopLevel(body: string): string[] {
 }
 
 /**
- * Drops the empty element a trailing comma leaves. `_parse_array` (variant_parser.cpp:1643-1677) checks for `TK_BRACKET_CLOSE`
- * before it demands another value (:1658-1662, before the `need_comma` branch at :1663), so `[1, 2,]` holds 2 elements.
- * Only one trailing empty is a trailing comma: an interior `,,` fails `parse_value` (:1664-1665), so that `.tscn` is invalid.
- * Every bracket-array validator needs this, or it rejects a comma Godot accepts.
+ * Drops the empty element a trailing comma leaves. `_parse_array` returns on `]` before it asks
+ * for a comma or a value (variant_parser.cpp:1658-1662), so `[1, 2,]` holds 2 elements. Only one
+ * trailing empty counts: an interior `,,` fails `parse_value` (:1673-1676). Every bracket-array
+ * validator needs this, or it rejects a comma Godot accepts.
  */
 export function dropTrailingComma(parts: string[]): string[] {
   return parts.length > 1 && parts[parts.length - 1] === '' ? parts.slice(0, -1) : parts;

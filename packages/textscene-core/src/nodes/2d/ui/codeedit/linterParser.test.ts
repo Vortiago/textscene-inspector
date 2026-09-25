@@ -258,6 +258,15 @@ describe('CodeEdit strict validators', () => {
       expect(check('delimiter_comments', 'PackedStringArray()')).toBeNull();
     });
 
+    it('accepts a trailing comma, which Godot loads as one element fewer', () => {
+      expect(check('delimiter_strings', 'Array[String](["#",])')).toBeNull();
+      expect(check('delimiter_comments', 'PackedStringArray("#",)')).toBeNull();
+    });
+
+    it('rejects a lone comma, which no loader reads', () => {
+      expect(check('delimiter_comments', 'Array[String]([,])')).not.toBeNull();
+    });
+
     it('skips a wholly empty element with no error (silently dropped, not validated)', () => {
       expect(check('delimiter_comments', 'PackedStringArray("")')).toBeNull();
     });

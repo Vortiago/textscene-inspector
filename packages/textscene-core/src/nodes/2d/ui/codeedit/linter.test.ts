@@ -91,6 +91,17 @@ describe('CodeEdit semantic rules', () => {
     expect(diagnostics[0]?.message).toContain("\"'\"");
   });
 
+  it('finds a collision in the trailing-comma spelling Godot loads', () => {
+    const diagnostics = codeEditDelimiterCollisionRule.check(
+      makeContext({
+        delimiter_strings: 'Array[String](["#",])',
+        delimiter_comments: 'Array[String](["#"])',
+      })
+    );
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]?.message).toContain('"#"');
+  });
+
   it('claims no collision from a literal the validator already reports as malformed', () => {
     // `["#", 5]` holds a non-string element, so Godot sets no delimiter from it at all. The
     // validator's format error is the one diagnostic this value earns.
