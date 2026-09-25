@@ -18,9 +18,8 @@ interface ClickRecord {
 let createObjectURL: MockInstance<typeof URL.createObjectURL>;
 let revokeObjectURL: MockInstance<typeof URL.revokeObjectURL>;
 
-/** Records each click, and throws from it when `refuse` is set. */
-function spyOnClick(refuse = false): ClickRecord[] {
-  const clicks: ClickRecord[] = [];
+/** Replaces the anchor's click with `onClick`, after it records the click in `clicks`. */
+function recordClicks(clicks: ClickRecord[], onClick: () => void): void {
   vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
     this: HTMLAnchorElement
   ) {
@@ -29,7 +28,22 @@ function spyOnClick(refuse = false): ClickRecord[] {
       wasInDocument: this.isConnected,
       revokedBeforeClick: revokeObjectURL.mock.calls.length > 0,
     });
-    if (refuse) throw new Error('synthetic click refused');
+    onClick();
+  });
+}
+
+/** Records each click, which the host accepts. */
+function spyOnClick(): ClickRecord[] {
+  const clicks: ClickRecord[] = [];
+  recordClicks(clicks, () => {});
+  return clicks;
+}
+
+/** Records each click, which the host refuses by throwing. */
+function spyOnRefusedClick(): ClickRecord[] {
+  const clicks: ClickRecord[] = [];
+  recordClicks(clicks, () => {
+    throw new Error('synthetic click refused');
   });
   return clicks;
 }
@@ -81,7 +95,7 @@ describe('downloadTscn', () => {
   });
 
   it('still removes the anchor and revokes the URL when the click is refused', () => {
-    const clicks = spyOnClick(true);
+    const clicks = spyOnRefusedClick();
 
     expect(() => downloadTscn('text', 'level.tscn')).toThrow('synthetic click refused');
 

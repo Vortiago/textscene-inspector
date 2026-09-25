@@ -17,6 +17,7 @@ import { useSceneSource } from './useSceneSource';
 import {
   FIXTURE_TSCN,
   UPLOADED_TSCN,
+  mockFetchFail,
   mockFetchOk,
 } from './useSceneSource.testkit';
 
@@ -92,8 +93,7 @@ describe('reload — refetch at an unchanged fixtureFile', () => {
   });
 
   it('reports a retry that fails the same way as a new failure', async () => {
-    const notFound = { ok: false, statusText: 'Not Found' } as Response;
-    globalThis.fetch = vi.fn().mockResolvedValue(notFound) as unknown as typeof fetch;
+    globalThis.fetch = mockFetchFail();
 
     const { result } = renderHook(() =>
       useSceneSource({ fixtureFile: 'unit-plane-mesh.tscn', uploadedTscnName: null })
