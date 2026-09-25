@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react';
-import { nextErrorSequence } from './errorSequence';
+import { sequencedError, type SequencedError } from './errorSequence';
 import type { LoadError } from './useSceneSource';
 
 export interface UploadErrorChannel {
@@ -13,19 +13,14 @@ export interface UploadErrorChannel {
   clearUploadError: () => void;
 }
 
-/** An unreadable file, or no .tscn among the dropped or selected files. */
-interface UploadError {
-  readonly message: string;
-  readonly sequence: number;
-}
-
 /**
  * Upload errors here and `useSceneSource`'s `loadError` feed one banner, which shows the one
  * set most recently. An edit clears both, a fixture switch the upload one, `replace()` the
  * `loadError`. The next successful upload, fixture switch or edit clears an upload error.
  */
 export function useUploadError(loadError: LoadError | null): UploadErrorChannel {
-  const [uploadError, setUploadError] = useState<UploadError | null>(null);
+  // An unreadable file, or no .tscn among the dropped or selected files.
+  const [uploadError, setUploadError] = useState<SequencedError | null>(null);
 
   // Ordered by the sequence each error took when it was set, never by when it rendered: a
   // fetch rejection and a later drop can render in either order, in one batch or two.
@@ -36,8 +31,7 @@ export function useUploadError(loadError: LoadError | null): UploadErrorChannel 
 
   return {
     effectiveError: newest?.message ?? null,
-    reportUploadError: (message: string) =>
-      setUploadError({ message, sequence: nextErrorSequence() }),
+    reportUploadError: (message: string) => setUploadError(sequencedError(message)),
     clearUploadError: () => setUploadError(null),
   };
 }

@@ -166,6 +166,22 @@ describe('toJsonFindings', () => {
     expect(finding?.column).toBeNull();
   });
 
+  it('maps a line no editor row carries to null, its column with it, as the other hosts read it', () => {
+    const file: FileDiagnostics = {
+      filePath: 'a.tscn',
+      diagnostics: [
+        makeDiagnostic({ location: { line: 0, column: 3 } }),
+        makeDiagnostic({ location: { line: 2.5, column: 1 } }),
+      ],
+    };
+
+    const findings = toJsonFindings([file]);
+    expect(findings.map(({ line, column }) => [line, column])).toEqual([
+      [null, null],
+      [null, null],
+    ]);
+  });
+
   it('maps a file readError to a single synthetic finding, not a per-diagnostic one', () => {
     const file: FileDiagnostics = {
       filePath: 'missing.tscn',
@@ -231,6 +247,18 @@ describe('formatGithubAnnotations', () => {
     expect(formatGithubAnnotations([file])).toEqual([
       '::error file=bad.tscn,line=4,col=10::Invalid Transform3D (strict-parser)',
     ]);
+  });
+
+  it('leaves line and col off an annotation whose line no editor row carries', () => {
+    const file: FileDiagnostics = {
+      filePath: 'bad.tscn',
+      diagnostics: [
+        makeDiagnostic({ ruleName: 'strict-parser', location: { line: 0, column: 10 } }),
+      ],
+    };
+
+    const [annotation] = formatGithubAnnotations([file]);
+    expect(annotation).toMatch(/^::\w+ file=bad\.tscn::/);
   });
 
   it('formats a warning-severity diagnostic as a ::warning workflow command', () => {

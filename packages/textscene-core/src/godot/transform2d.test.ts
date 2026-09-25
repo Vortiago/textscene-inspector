@@ -1,6 +1,6 @@
 /**
- * `Transform2D` construction and product against the engine's own formulas
- * (`transform_2d.cpp:107-113`, `:198-218`), and the guard that keeps them the only
+ * `Transform2D` construction, product and affine inverse against the engine's own formulas
+ * (`transform_2d.cpp:107-113`, `:198-218`, `:48-66`), and the guard that keeps them the only
  * spelling, so a linter verdict and a drawn placement read the same transform.
  */
 
@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
 import {
   TRANSFORM2D_IDENTITY,
+  affineInverseTransform2D,
   multiplyTransform2D,
   transform2DFromParts,
   type Transform2DColumns,
@@ -128,7 +129,41 @@ describe('multiplyTransform2D', () => {
   });
 });
 
-describe('the one spelling of the Transform2D construction and product', () => {
+describe('affineInverseTransform2D', () => {
+  const skewed = transform2DFromParts(0.7, { x: 2, y: -0.5 }, 0.3, { x: 5, y: -6 });
+
+  it('undoes the transform on either side, skew and reflection included', () => {
+    for (const product of [
+      multiplyTransform2D(affineInverseTransform2D(skewed), skewed),
+      multiplyTransform2D(skewed, affineInverseTransform2D(skewed)),
+    ]) {
+      components(product).forEach((value, i) => {
+        expect(value).toBeCloseTo(components(TRANSFORM2D_IDENTITY)[i]!, 12);
+      });
+    }
+  });
+
+  it('maps a transformed point back to where it started', () => {
+    const [x, y] = xform(skewed, 1.5, -2.5);
+    const [bx, by] = xform(affineInverseTransform2D(skewed), x, y);
+    expect(bx).toBeCloseTo(1.5, 12);
+    expect(by).toBeCloseTo(-2.5, 12);
+  });
+
+  it('answers the identity for a transform scaled to zero, which has no inverse', () => {
+    const collapsed = transform2DFromParts(0.4, { x: 0, y: 1 }, 0, { x: 3, y: 4 });
+    expect(affineInverseTransform2D(collapsed)).toBe(TRANSFORM2D_IDENTITY);
+  });
+
+  it('answers the identity, never NaN, for a non-finite determinant', () => {
+    const blown = transform2DFromParts(0, { x: Infinity, y: 1 }, 0, { x: 0, y: 0 });
+    const poisoned = transform2DFromParts(0, { x: NaN, y: 1 }, 0, { x: 0, y: 0 });
+    expect(affineInverseTransform2D(blown)).toBe(TRANSFORM2D_IDENTITY);
+    expect(affineInverseTransform2D(poisoned)).toBe(TRANSFORM2D_IDENTITY);
+  });
+});
+
+describe('the one spelling of the Transform2D construction, product and inverse', () => {
   /** `sin(rotation + skew)`, the constructor's y-axis term, in any variable naming. */
   const CONSTRUCTION = /\b(?:sin|cos)\(\s*[\w.]*\s*\+\s*[\w.]*skew\b/;
   /** `operator*`'s first row over the `{ a, b, c, d }` layout. */
@@ -136,6 +171,8 @@ describe('the one spelling of the Transform2D construction and product', () => {
   /** The product spelled column by column, or over the `{ ax, ay, bx, by, ox, oy }` layout. */
   const COLUMN_PRODUCT =
     /\b(\w+)\.ax \* (\w+)\.ax \+ \1\.bx \* \2\.ay\b|basisXform\(\s*\w+,\s*\{\s*x:\s*\w+\.ax?,\s*y:\s*\w+\.(?:ay|b)\s*\}/;
+  /** The affine inverse's reciprocal of the determinant, under any variable naming. */
+  const INVERSE = /=\s*1\s*\/\s*\(?\s*(?:det|determinant)\b/;
   /** A second field layout for the same six numbers: `ax`, `bx` and `ox` declared together. */
   const OTHER_LAYOUT = /\bax\s*[:?][\s\S]{0,120}?\bbx\s*[:?][\s\S]{0,120}?\box\s*[:?]/;
 
@@ -154,6 +191,8 @@ describe('the one spelling of the Transform2D construction and product', () => {
     expect(OTHER_LAYOUT.test('interface T {\n  ax: number;\n  ay: number;\n  bx: number;\n  by: number;\n  ox: number;\n}')).toBe(
       true
     );
+    expect(INVERSE.test('const inv = 1 / det;')).toBe(true);
+    expect(INVERSE.test('const idet = 1/(determinant);')).toBe(true);
     expect(CONSTRUCTION.test('Math.sin(rotation)')).toBe(false);
     expect(OTHER_LAYOUT.test('{ ax: 1, ay: 0 }')).toBe(false);
   });
@@ -168,6 +207,11 @@ describe('the one spelling of the Transform2D construction and product', () => {
       .filter(({ text }) => PRODUCT.test(text) || COLUMN_PRODUCT.test(text))
       .map(({ rel }) => rel);
     expect(composers).toEqual(['godot/transform2d.ts']);
+  });
+
+  it('inverts a transform only here', () => {
+    const inverters = sources.filter(({ text }) => INVERSE.test(text)).map(({ rel }) => rel);
+    expect(inverters).toEqual(['godot/transform2d.ts']);
   });
 
   it('declares no second field layout for a Transform2D', () => {

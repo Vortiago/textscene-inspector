@@ -19,6 +19,7 @@ export {
 export {
   TRANSFORM2D_IDENTITY,
   type Transform2DColumns,
+  affineInverseTransform2D,
   multiplyTransform2D,
   transform2DFromParts,
 } from './transform2d.js';

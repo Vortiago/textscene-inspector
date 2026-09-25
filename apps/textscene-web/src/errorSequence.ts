@@ -11,3 +11,15 @@ export function nextErrorSequence(): number {
   lastErrorSequence += 1;
   return lastErrorSequence;
 }
+
+/** One error a channel holds, with its place in the shared order. */
+export interface SequencedError {
+  readonly message: string;
+  /** From `nextErrorSequence`, taken when the error is set. */
+  readonly sequence: number;
+}
+
+/** `message` as the newest error, from `nextErrorSequence`. */
+export function sequencedError(message: string): SequencedError {
+  return { message, sequence: nextErrorSequence() };
+}

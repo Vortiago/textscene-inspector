@@ -14,6 +14,7 @@ import { UNIQUE_NODE_PREFIX, isUniqueNameInOwner } from '../../../utils/uniqueNa
 import { globalMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
 import {
   TRANSFORM2D_IDENTITY,
+  affineInverseTransform2D,
   multiplyTransform2D,
   transform2DFromParts,
   type Transform2DColumns,
@@ -170,7 +171,7 @@ function applyRelay2D(
   const desired = composeSelected2D(targetGlobal, relayGlobal, flags);
   const parentPath = parentPathOf(targetPath);
   const parentGlobal = parentPath ? globalTransform2D(parentPath, nodeByPath) : TRANSFORM2D_IDENTITY;
-  const newLocal = multiplyTransform2D(invertTransform2D(parentGlobal), desired);
+  const newLocal = multiplyTransform2D(affineInverseTransform2D(parentGlobal), desired);
 
   // Godot's RemoteTransform2D pushes position, rotation and scale only. The target keeps its `skew`.
   const dec = decomposeTransform2D(newLocal);
@@ -215,17 +216,6 @@ function composeSelected2D(
     0,
     flags.updatePosition ? s.position : b.position
   );
-}
-
-function invertTransform2D(m: Transform2DColumns): Transform2DColumns {
-  const det = m.a * m.d - m.b * m.c;
-  if (det === 0) return TRANSFORM2D_IDENTITY;
-  const inv = 1 / det;
-  const a = m.d * inv;
-  const b = -m.b * inv;
-  const c = -m.c * inv;
-  const d = m.a * inv;
-  return { a, b, c, d, tx: -(a * m.tx + c * m.ty), ty: -(b * m.tx + d * m.ty) };
 }
 
 /** Godot Transform2D decomposition into position, rotation and scale. Skew is dropped. */

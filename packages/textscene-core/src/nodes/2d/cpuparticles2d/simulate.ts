@@ -40,6 +40,7 @@ import { sampleGradientColor } from '../../../resources/textures/gradienttexture
 import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from './godotRng';
 import {
   TRANSFORM2D_IDENTITY,
+  affineInverseTransform2D,
   multiplyTransform2D,
   type Transform2DColumns,
 } from '../../../godot/transform2d.js';
@@ -616,7 +617,7 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
  * into the emitter node's local space.
  */
 function collectPose(state: SimState, props: CPUParticles2DProperties): RenderedParticle[] {
-  const inverse = affineInverse(state.emissionXform);
+  const inverse = affineInverseTransform2D(state.emissionXform);
 
   const order = state.particles.map((_, index) => index);
   if (props.draw_order === CPUParticles2DDrawOrder.Lifetime) {
@@ -706,20 +707,4 @@ function rotateHue(color: Color, angle: number): Color {
 /** `Transform2D::basis_xform`: the linear part only. */
 function basisXform(t: Transform2DColumns, v: Vector2): Vector2 {
   return { x: t.a * v.x + t.c * v.y, y: t.b * v.x + t.d * v.y };
-}
-
-/**
- * `Transform2D::affine_inverse`. A singular transform (a node scaled to zero) has
- * no inverse, and Godot's `ERR_FAIL_COND` leaves the matrix untouched, so this
- * answers the identity, not NaN.
- */
-function affineInverse(t: Transform2DColumns): Transform2DColumns {
-  const det = t.a * t.d - t.b * t.c;
-  if (det === 0 || !Number.isFinite(det)) return TRANSFORM2D_IDENTITY;
-  const idet = 1 / det;
-  const a = t.d * idet;
-  const b = -t.b * idet;
-  const c = -t.c * idet;
-  const d = t.a * idet;
-  return { a, b, c, d, tx: -(a * t.tx + c * t.ty), ty: -(b * t.tx + d * t.ty) };
 }

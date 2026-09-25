@@ -1,7 +1,7 @@
 /**
  * `Transform2D` (`core/math/transform_2d.h`) as six numbers, +Y down. The linter's global-transform
- * verdicts and the previewer's 2D placement build a Node2D's local transform and compose a chain
- * through these two functions, so a static verdict and a drawn position cannot disagree.
+ * verdicts and the previewer's 2D placement build a Node2D's local transform, compose a chain and
+ * invert it through these functions, so a static verdict and a drawn position cannot disagree.
  */
 
 /**
@@ -63,4 +63,21 @@ export function multiplyTransform2D(
     tx: parent.a * local.tx + parent.c * local.ty + parent.tx,
     ty: parent.b * local.tx + parent.d * local.ty + parent.ty,
   };
+}
+
+/**
+ * `Transform2D::affine_inverse` (`transform_2d.cpp:48-66`). A singular transform, such as a node
+ * scaled to zero, has none: the engine's `ERR_FAIL_COND` (`:51`, `MATH_CHECKS` only) returns it
+ * unchanged. Each caller draws through that singular transform, so no answer is visible, and this
+ * returns the identity for a zero or non-finite determinant to keep NaN out of the scene graph.
+ */
+export function affineInverseTransform2D(t: Transform2DColumns): Transform2DColumns {
+  const det = t.a * t.d - t.b * t.c;
+  if (det === 0 || !Number.isFinite(det)) return TRANSFORM2D_IDENTITY;
+  const idet = 1 / det;
+  const a = t.d * idet;
+  const b = -t.b * idet;
+  const c = -t.c * idet;
+  const d = t.a * idet;
+  return { a, b, c, d, tx: -(a * t.tx + c * t.ty), ty: -(b * t.tx + d * t.ty) };
 }
