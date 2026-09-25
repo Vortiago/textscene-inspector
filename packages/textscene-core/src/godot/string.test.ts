@@ -199,6 +199,11 @@ describe('stringToInt', () => {
     expect(stringToInt('42')).toBe(42);
     expect(stringToInt('-42')).toBe(-42);
     expect(stringToInt('007')).toBe(7);
+    expect(stringToInt('+7')).toBe(7);
+  });
+
+  it('reads `-0` as the one zero the engine holds', () => {
+    expect(Object.is(stringToInt('-0'), 0)).toBe(true);
   });
 
   // `_to_int` has no early exit for a character it cannot use: it skips it and
@@ -242,20 +247,109 @@ describe('stringToInt', () => {
   it('reads an empty string as 0', () => {
     expect(stringToInt('')).toBe(0);
   });
+});
 
-  it('holds every value a JS integer spells exactly', () => {
-    expect(stringToInt('9007199254740991')).toBe(Number.MAX_SAFE_INTEGER);
-    expect(stringToInt('-9007199254740991')).toBe(Number.MIN_SAFE_INTEGER);
+/**
+ * The `int` an index lands in (`property_list_helper.cpp:57`) keeps the low 32 bits of the int64
+ * `to_int()` returns. Each expected value comes from the engine rule, worked by hand.
+ */
+describe('stringToInt narrowed into an int', () => {
+  it.each([
+    ['4294967296', 0],
+    ['4294967297', 1],
+    ['2147483647', 2147483647],
+    ['2147483648', -2147483648],
+    ['-2147483648', -2147483648],
+    ['-2147483649', 2147483647],
+  ])('keeps the low 32 bits of %s', (raw, expected) => {
+    expect(stringToInt(raw)).toBe(expected);
   });
 
-  // Past 2^53 the double is not the int64 the text states, and the
-  // engine's own saturation (ustring.cpp:2283-2284) is further out still.
-  it.each(['9007199254740993', '-9007199254740993', '9223372036854775808', '-99999999999999999999'])(
-    'refuses a value no double spells: %s',
-    (raw) => {
-      expect(stringToInt(raw)).toBeNaN();
-    }
-  );
+  // `if (unlikely(digits > 18))` (ustring.cpp:2282) tests from the 20th digit, and the overflow
+  // returns INT64_MAX or INT64_MIN (:2283-2284). INT64_MAX keeps 0xFFFFFFFF, which is -1, and
+  // INT64_MIN keeps 0.
+  it.each([
+    ['99999999999999999999', -1],
+    ['9999999999999999999999', -1],
+    ['-99999999999999999999', 0],
+    ['-9999999999999999999999', 0],
+    ['a99999999999999999999', -1],
+  ])('saturates a run of 20 or more digits: %s', (raw, expected) => {
+    expect(stringToInt(raw)).toBe(expected);
+  });
+
+  // No test runs at the 19th digit, so `int64_t(integer)` (:2297) wraps a 19-digit value past
+  // INT64_MAX: `9999999999999999999` is -8446744073709551617, whose low 32 bits are -1981284353.
+  // Negated through `integer * uint64_t(-1)` (:2299), it is +8446744073709551617.
+  it.each([
+    ['9999999999999999999', -1981284353],
+    ['-9999999999999999999', 1981284353],
+    ['9223372036854775808', 0],
+    ['-9223372036854775809', -1],
+  ])('wraps a 19-digit value past INT64_MAX rather than saturating it: %s', (raw, expected) => {
+    expect(stringToInt(raw)).toBe(expected);
+  });
+
+  // The overflow test at the 20th digit compares against `INT64_MAX / 10` and the last digit
+  // (:2283): `7` still fits a positive value, and `8` a negative one.
+  it.each([
+    ['09223372036854775807', -1],
+    ['09223372036854775808', -1],
+    ['-09223372036854775808', 0],
+    ['-09223372036854775809', 0],
+  ])('reads INT64_MAX and INT64_MIN at the overflow boundary: %s', (raw, expected) => {
+    expect(stringToInt(raw)).toBe(expected);
+  });
+
+  // `uint8_t digits` (:2275) wraps to 0 after 255 digits, so 19 digits go untested and the
+  // `uint64_t` total wraps modulo 2^64: 250 zeros and 25 nines leave (10^25 - 1) mod 2^64,
+  // 1590897978359414783, whose low 32 bits are 1241513983.
+  it('follows the digit counter past its uint8 wrap', () => {
+    expect(stringToInt(`${'0'.repeat(250)}${'9'.repeat(25)}`)).toBe(1241513983);
+  });
+});
+
+/** `skeleton_3d.cpp:82` stores the index in a `uint32_t which`. */
+describe('stringToInt narrowed into a uint32_t', () => {
+  it.each([
+    ['-1', 4294967295],
+    ['a-1', 4294967295],
+    ['4294967296', 0],
+    ['2147483648', 2147483648],
+    ['9999999999999999999', 2313682943],
+    ['99999999999999999999', 4294967295],
+    ['-99999999999999999999', 0],
+  ])('keeps the low 32 bits of %s unsigned', (raw, expected) => {
+    expect(stringToInt(raw, 'uint32')).toBe(expected);
+  });
+});
+
+/**
+ * The reader is total: whatever the text, the result is an integer the slot holds. A rule may then
+ * skip a negative index with `index < 0`, as no NaN can reach the comparison.
+ */
+describe('stringToInt is total over its slot', () => {
+  const pieces = ['', '0', '7', '9', '-', '+', 'x', '.', '/', ' '];
+  const spellings = [
+    ...pieces.flatMap((a) => pieces.flatMap((b) => pieces.map((c) => `${a}${b}${c}`))),
+    ...[18, 19, 20, 21, 64, 300].flatMap((length) => [
+      '9'.repeat(length),
+      `-${'9'.repeat(length)}`,
+      `a-${'8'.repeat(length)}`,
+      `${'0'.repeat(length)}1`,
+    ]),
+  ];
+
+  it.each([
+    ['int32', -2147483648, 2147483647],
+    ['uint32', 0, 4294967295],
+  ] as const)('returns a %s for every spelling', (width, low, high) => {
+    const outside = spellings.filter((text) => {
+      const value = stringToInt(text, width);
+      return !Number.isSafeInteger(value) || value < low || value > high || Object.is(value, -0);
+    });
+    expect(outside).toEqual([]);
+  });
 });
 
 describe('toIntIndex', () => {

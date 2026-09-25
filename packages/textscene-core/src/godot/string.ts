@@ -75,23 +75,85 @@ export function dropTrailingComma(parts: string[]): string[] {
   return parts.length > 1 && parts[parts.length - 1] === '' ? parts.slice(0, -1) : parts;
 }
 
+const ZERO = '0'.charCodeAt(0);
+const SEVEN = '7'.charCodeAt(0);
+const EIGHT = '8'.charCodeAt(0);
+const NINE = '9'.charCodeAt(0);
+const MINUS = '-'.charCodeAt(0);
+
+const INT64_MAX = (1n << 63n) - 1n;
+const INT64_MIN = -(1n << 63n);
+/** `INT64_MAX / 10`, the bound `_to_int`'s overflow test compares against (`ustring.cpp:2283`). */
+const INT64_MAX_TENTH = INT64_MAX / 10n;
+/** `_to_int` tests for overflow only past 18 digits (`if (unlikely(digits > 18))`, `:2282`). */
+const UNCHECKED_DIGITS = 18;
+/** The digit count is a `uint8_t digits` (`:2275`), so `++digits` wraps to 0 after 255. */
+const DIGIT_COUNT_MASK = 0xff;
+
 /**
- * The largest magnitude a JS number spells exactly. It is tighter than the engine's bound, where `_to_int` saturates at
- * INT64_MAX / INT64_MIN (`ustring.cpp:2283-2284`): a value that reaches that is long past exact, so this refuses it first.
+ * `String::to_int()` (`ustring.cpp:2303-2311`) as the int64 it returns. It skips a character it
+ * cannot use (`:2280-2293`), so `"x"` is 0 and `"a1b2"` is 12, and it stops at the first `.`.
  */
+function stringToInt64(text: string): bigint {
+  // `if (length() == 0) return 0` (`:2304-2306`).
+  if (text.length === 0) return 0n;
+  const dot = text.indexOf('.');
+  const to = dot >= 0 ? dot : text.length;
+  let integer = 0n;
+  let digits = 0;
+  let positive = true;
+  for (let i = 0; i < to; i++) {
+    const code = text.charCodeAt(i);
+    if (code >= ZERO && code <= NINE) {
+      if (digits > UNCHECKED_DIGITS) {
+        const overflow =
+          integer > INT64_MAX_TENTH ||
+          (integer === INT64_MAX_TENTH && (positive ? code > SEVEN : code > EIGHT));
+        if (overflow) return positive ? INT64_MAX : INT64_MIN;
+      }
+      // `uint64_t integer` (`:2274`): while the wrapped count is 18 or less nothing is tested, and
+      // the product wraps modulo 2^64 as the engine's does.
+      integer = BigInt.asUintN(64, integer * 10n + BigInt(code - ZERO));
+      digits = (digits + 1) & DIGIT_COUNT_MASK;
+    } else if (integer === 0n && code === MINUS) {
+      // A flip, not a leading-sign rule (`:2291-2292`): `"a-1"` is -1, `"--1"` is 1 and `"1-2"` is 12.
+      positive = !positive;
+    }
+  }
+  // `int64_t(integer)` and `int64_t(integer * uint64_t(-1))` (`:2296-2300`) wrap modulo 2^64, so a
+  // 19-digit value past INT64_MAX, which the overflow test never sees, comes back negative.
+  return BigInt.asIntN(64, positive ? integer : -integer);
+}
+
+/** A clean spelling of at most 15 digits: `to_int` reads its value, which a double holds. */
+const EXACT_DOUBLE_INT_RE = /^[+-]?\d{1,15}$/;
+
+/**
+ * `String::to_int()` as the `int` or `uint32_t` a caller stores it in. Each indexed `_set` does
+ * `int which = ….to_int()` (`property_list_helper.cpp:57`, `bone_twist_disperser_3d.cpp:37`), and
+ * `skeleton_3d.cpp:82` a `uint32_t`. The narrowing keeps the low 32 bits, so `4294967296` is 0 and
+ * `2147483648` is -2147483648. Always a safe integer, never NaN.
+ */
+export function stringToInt(text: string, width: 'int32' | 'uint32' = 'int32'): number {
+  if (EXACT_DOUBLE_INT_RE.test(text)) {
+    // ToInt32 and ToUint32 are exact below 2^53, and `| 0` maps `-0` to the engine's one zero.
+    const value = Number(text);
+    return width === 'int32' ? value | 0 : value >>> 0;
+  }
+  // int64 to `int` is implementation-defined before C++20: GCC, at `-std=gnu++17`
+  // (SConstruct:891), keeps it modulo 2^32. To `uint32_t` it is modular by the standard.
+  const value = stringToInt64(text);
+  return Number(width === 'int32' ? BigInt.asIntN(32, value) : BigInt.asUintN(32, value));
+}
+
+/** The largest magnitude a JS number spells exactly, where {@link stringToIntOrNaN} stops. */
 const TO_INT_SAFE = BigInt(Number.MAX_SAFE_INTEGER);
 
-const ZERO = '0'.charCodeAt(0);
-const MINUS = '-'.charCodeAt(0);
-const NINE = '9'.charCodeAt(0);
-
 /**
- * `String::to_int()` (`ustring.cpp:2303-2311`), Godot's other integer parse, which turns text that looks unreadable into a
- * number: it skips a character it cannot use (`:2280-2293`), so `"x"` is 0 and `"a1b2"` is 12. Never substitute
- * {@link IS_VALID_INT_RE} for it, or the reverse. `NaN` outside {@link TO_INT_SAFE}: the engine holds an int64 this reader
- * cannot name, and NaN keeps every comparison false.
+ * `String::to_int()` read as a double: `NaN` outside {@link TO_INT_SAFE}, where the engine holds an
+ * int64 this reader cannot name. Only {@link toIntIndex} reads it.
  */
-export function stringToInt(text: string): number {
+function stringToIntOrNaN(text: string): number {
   // `if (length() == 0) return 0` (`:2304-2306`).
   if (text.length === 0) return 0;
   // The scan stops at the first `.` (`:2308`): `"12.9"` is 12 with no float read.
@@ -103,11 +165,8 @@ export function stringToInt(text: string): number {
     const code = text.charCodeAt(i);
     if (code >= ZERO && code <= NINE) {
       integer = integer * 10n + BigInt(code - ZERO);
-      // Returning here rather than at the end also keeps a pathological run of
-      // digits from growing a BigInt nobody will read.
       if (integer > TO_INT_SAFE) return NaN;
     } else if (integer === 0n && code === MINUS) {
-      // A flip, not a leading-sign rule (`:2291-2292`): `"a-1"` is -1, `"--1"` is 1 and `"1-2"` is 12.
       positive = !positive;
     }
   }
@@ -117,15 +176,12 @@ export function stringToInt(text: string): number {
 }
 
 /**
- * The index a hand-rolled `_set` reads between a property path's prefix and the next `/`: a bare `get_slicec('/', n).to_int()`
- * with no validity gate (`chain_ik_3d.cpp:37`, `bone_twist_disperser_3d.cpp:37`, `spring_bone_simulator_3d.cpp:42`), so
- * {@link stringToInt} is the reader and `settings/a-1/…` is index -1. A class that gates on `String::is_valid_int()` first (`PropertyListHelper::_get_property`,
- * `property_list_helper.cpp:53-55`) has no index for such text, so it tests {@link IS_VALID_INT_RE} itself.
+ * The index a hand-rolled `_set` reads with a bare `get_slicec('/', n).to_int()`
+ * (`bone_twist_disperser_3d.cpp:37`): a clean spelling through `Number`, which keeps its sign past
+ * 2^53, and any other through {@link stringToIntOrNaN}.
  */
 export function toIntIndex(text: string): number {
-  // `Number` keeps the sign past 2^53, where {@link stringToInt} gives NaN. It is not exact there, but the sign is all
-  // the `ERR_FAIL_INDEX_V` guard asks. Text that is neither reads NaN, so every comparison against it stays false.
-  return IS_VALID_INT_RE.test(text) ? Number(text) : stringToInt(text);
+  return IS_VALID_INT_RE.test(text) ? Number(text) : stringToIntOrNaN(text);
 }
 
 /**
