@@ -17,12 +17,9 @@ import { nodeRegistry } from '../../core/NodeRegistry';
 import { Linter } from '../../linter/Linter';
 import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry';
 import { NodeDispatcher } from '../../r3f/NodeDispatcher';
-import { CanvasWorkspaceProvider } from '../../r3f/contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from '../../r3f/contexts/SelectionContext';
-import { SceneResourcesProvider } from '../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { godotColorToLinear } from '../../r3f/godotColor';
+import { SceneStack } from '../../r3f/testing/SceneStack';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
 
@@ -65,18 +62,9 @@ async function renderScene(tscn: string) {
   const scene = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={scene.internalResources}
-          externalResources={scene.externalResources}
-        >
-          <SelectionProvider>
-            <NodeDispatcher nodes={scene.nodes} />
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
+      <NodeDispatcher nodes={scene.nodes} />
+    </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 10));
   return renderer;

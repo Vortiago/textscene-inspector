@@ -12,11 +12,9 @@ import type { TscnExternalResource, TscnInternalResource } from '../parser/types
 import { parseTresFile, type ParsedResource } from '../parser/parsedResource';
 import { TscnParser } from '../parser/TscnParser';
 import { NodeDispatcher } from '../r3f/NodeDispatcher';
-import { CanvasWorkspaceProvider } from '../r3f/contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from '../r3f/contexts/SelectionContext';
-import { SceneResourcesProvider } from '../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
+import { SceneStack } from '../r3f/testing/SceneStack';
 
 import '../r3f/nodes/index';
 
@@ -56,18 +54,9 @@ async function render(tscn: string) {
   const scene = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={scene.internalResources}
-          externalResources={scene.externalResources}
-        >
-          <SelectionProvider>
-            <NodeDispatcher nodes={scene.nodes} />
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
+      <NodeDispatcher nodes={scene.nodes} />
+    </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 10));
   return renderer;
@@ -149,18 +138,9 @@ texture = SubResource("t")
 texture = ExtResource("1")
 `);
     const renderer = await ReactThreeTestRenderer.create(
-      <CanvasWorkspaceProvider workspace="2d">
-        <ResourceLoaderProvider loader={fake.loader}>
-          <SceneResourcesProvider
-            internalResources={scene.internalResources}
-            externalResources={scene.externalResources}
-          >
-            <SelectionProvider>
-              <NodeDispatcher nodes={scene.nodes} />
-            </SelectionProvider>
-          </SceneResourcesProvider>
-        </ResourceLoaderProvider>
-      </CanvasWorkspaceProvider>
+      <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
+        <NodeDispatcher nodes={scene.nodes} />
+      </SceneStack>
     );
     await new Promise<void>((r) => setTimeout(r, 10));
     expect(cookieOf(renderer.scene.findAllByType('Mesh')[0]!.instance)).toBe(tex);

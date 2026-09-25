@@ -5,7 +5,7 @@
  * (ADR-0018), the absent standalone quad and the Node3D pass-through.
  */
 
-import { useEffect, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -14,7 +14,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider, useSelection } from '../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import {
   AnimatedValueProvider,
   useAnimatedValueRegistry,
@@ -22,6 +22,7 @@ import {
 } from '../../../r3f/contexts/AnimatedValueContext';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import { parseDecal } from './parser';
+import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 const TEXTURE_PATH = 'res://textures/decal.png';
 const NODE_NAME = 'MyDecal';
@@ -43,14 +44,6 @@ function makeNode(props: Record<string, string> = {}, name = NODE_NAME): TscnNod
 
 function extRef(id: string, path: string): TscnExternalResource {
   return { id, type: 'Texture2D', path };
-}
-
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
 }
 
 interface RenderOptions {

@@ -17,13 +17,10 @@ import { nodeRegistry } from '../../core/NodeRegistry';
 import { Linter } from '../../linter/Linter';
 import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry';
 import { NodeDispatcher } from '../../r3f/NodeDispatcher';
-import { CanvasWorkspaceProvider } from '../../r3f/contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from '../../r3f/contexts/SelectionContext';
-import { SceneResourcesProvider } from '../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { godotColorToLinear } from '../../r3f/godotColor';
 import { CanvasLighting2DProvider, LIGHT_LAYER } from '../../r3f/lighting2d/CanvasLighting2D';
+import { SceneStack } from '../../r3f/testing/SceneStack';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
 
@@ -53,23 +50,14 @@ async function renderScene(tscn: string) {
   (tex as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
   fake.textures.seed('res://light.png', tex);
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={scene.internalResources}
-          externalResources={scene.externalResources}
-        >
-          <SelectionProvider>
-            {/* The light's camera layer is its cull-mask class's layer, and only
-                the provider assigns one. Mounted here so the quad these pins
-                look for lands where the real 2D stage puts it. */}
-            <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
-              <NodeDispatcher nodes={scene.nodes} />
-            </CanvasLighting2DProvider>
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
+      {/* The light's camera layer is its cull-mask class's layer, and only
+          the provider assigns one. Mounted here so the quad these pins
+          look for lands where the real 2D stage puts it. */}
+      <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+        <NodeDispatcher nodes={scene.nodes} />
+      </CanvasLighting2DProvider>
+    </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 10));
   return renderer;

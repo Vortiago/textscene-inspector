@@ -6,7 +6,6 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { useEffect } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
@@ -17,11 +16,8 @@ import { nodeRegistry } from '../../core/NodeRegistry';
 import { Linter } from '../../linter/Linter';
 import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry';
 import { NodeDispatcher } from '../../r3f/NodeDispatcher';
-import { CanvasWorkspaceProvider } from '../../r3f/contexts/CanvasWorkspaceContext';
-import { SelectionProvider, useSelection } from '../../r3f/contexts/SelectionContext';
-import { SceneResourcesProvider } from '../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
+import { SceneStack } from '../../r3f/testing/SceneStack';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
 
@@ -57,15 +53,6 @@ ${opts.nodeProps ?? ''}
 `;
 }
 
-/** Sets the selected node path from inside SelectionProvider (gizmo gate). */
-function SelectSeeder({ path }: { path: string }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
-}
-
 /**
  * Render a .tscn through NodeDispatcher (2D workspace), optionally selecting a
  * node. `seed` runs against the fake loader before render, to make an
@@ -80,19 +67,9 @@ async function renderOcc(
   const fake = createFakeResourceLoader();
   seed?.(fake);
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={scene.internalResources}
-          externalResources={scene.externalResources}
-        >
-          <SelectionProvider>
-            {selectPath ? <SelectSeeder path={selectPath} /> : null}
-            <NodeDispatcher nodes={scene.nodes} />
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace="2d" loader={fake.loader} scene={scene} selectedPath={selectPath}>
+      <NodeDispatcher nodes={scene.nodes} />
+    </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 10));
   return renderer;

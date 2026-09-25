@@ -11,12 +11,9 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { PAINT_SEQUENCE_STRIDE } from './canvasPaintOrder';
 import { NodeDispatcher } from './NodeDispatcher';
-import { CanvasWorkspaceProvider } from './contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from './contexts/SelectionContext';
-import { SceneResourcesProvider } from './SceneResourcesContext';
-import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
+import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
 
@@ -38,18 +35,9 @@ async function renderTscnRoot(tscn: string): Promise<THREE.Object3D | null> {
   const scene = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={scene.internalResources}
-          externalResources={scene.externalResources}
-        >
-          <SelectionProvider>
-            <NodeDispatcher nodes={scene.nodes} />
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
+      <NodeDispatcher nodes={scene.nodes} />
+    </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 10));
   const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })

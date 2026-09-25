@@ -29,6 +29,7 @@ import {
   useSelection,
 } from '../../../../r3f/contexts/SelectionContext';
 import { createSceneGraphFromTscnScene } from '../../../../core/SceneGraph';
+import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
 
 import '../../../../r3f/nodes/index';
 
@@ -69,14 +70,6 @@ function spotNode(name: string, overrides: Partial<SpotLight3DProperties> = {}):
     ...overrides,
   };
   return { name, type: 'SpotLight3D', children: [], properties: props };
-}
-
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
 }
 
 function findHelpersOfType<T extends THREE.Object3D>(

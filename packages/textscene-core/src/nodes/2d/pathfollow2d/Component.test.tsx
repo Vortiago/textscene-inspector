@@ -3,7 +3,6 @@
  * three space), falls back to the authored transform when no curve is in scope,
  * and draws a selection-gated follow dot.
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -12,12 +11,13 @@ import { PathFollow2D } from './Component';
 import { parsePathFollow2D } from './parser';
 import { Path2DCurveProvider } from '../../../r3f/contexts/Path2DCurveContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider, useSelection } from '../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import {
   parseCurve2DPoints,
   tessellateCurve2D,
   type Curve2DSampler,
 } from '../../../resources/curves/curve2d';
+import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 // Straight horizontal curve (0,0) → (100,0), length 100.
 const STRAIGHT: Curve2DSampler = tessellateCurve2D(
@@ -34,14 +34,6 @@ function followNode(name = 'MyFollow', props: Record<string, string> = {}): Tscn
       props
     ),
   };
-}
-
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
 }
 
 async function render(
