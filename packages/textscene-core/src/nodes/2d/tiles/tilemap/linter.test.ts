@@ -207,6 +207,56 @@ describe('format, read as it stood when each layer loaded', () => {
     );
   });
 
+  it('says the layer loads empty when no earlier write loaded it', () => {
+    expectDiagnostic(
+      scene(
+        `tile_set = SubResource("TileSet_a")\nformat = 1\nlayer_0/tile_data = PackedInt32Array(0, 0, 0)`,
+        TILESET_RESOURCES
+      ),
+      {
+        ruleName: 'tilemap-unsupported-format',
+        contains: ["'layer_0/tile_data' (format = 1) leaves layer 0 empty"],
+      }
+    );
+  });
+
+  // The refusal at tile_map.cpp:71 returns before `layers[p_layer]->clear()` (:81), so the layer
+  // keeps the data the earlier spelling loaded above the legacy `format`.
+  it('keeps the data an earlier spelling loaded when a later spelling is refused', () => {
+    const diagnostic = expectDiagnostic(
+      scene(
+        `tile_set = SubResource("TileSet_a")\nlayer_1/tile_data = PackedInt32Array(0, 0, 0)\nformat = 1\nlayer_+1/tile_data = PackedInt32Array(0, 0, 0)`,
+        TILESET_RESOURCES
+      ),
+      { ruleName: 'tilemap-unsupported-format', severity: 'error' }
+    );
+    expect(diagnostic.message).toContain(
+      "'layer_+1/tile_data' (format = 1) leaves layer 1 with the tile data of 'layer_1/tile_data'"
+    );
+    expect(diagnostic.message).not.toContain("'layer_1/tile_data' (format");
+  });
+
+  it('reports no missing tile_set when every tile data write is refused', () => {
+    const diagnostics = lint(scene(`format = 1\nlayer_0/tile_data = PackedInt32Array(0, 0, 0)`));
+    expect(diagnostics.map((d) => d.ruleName)).toContain('tilemap-unsupported-format');
+    expect(diagnostics.filter((d) => d.ruleName === 'tilemap-requires-tileset')).toEqual([]);
+  });
+
+  // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits, so
+  // `4294967297` is layer 1.
+  it('names the layer a wrapping index lands on', () => {
+    expectDiagnostic(
+      scene(
+        `tile_set = SubResource("TileSet_a")\nformat = 1\nlayer_4294967297/tile_data = PackedInt32Array(0, 0, 0)`,
+        TILESET_RESOURCES
+      ),
+      {
+        ruleName: 'tilemap-unsupported-format',
+        contains: ["'layer_4294967297/tile_data' (format = 1) leaves layer 1 empty"],
+      }
+    );
+  });
+
   // `to_int` saturates at INT64_MAX (ustring.cpp:2283-2284), whose low 32 bits are -1, so
   // `_get_property` refuses the index (property_list_helper.cpp:58) and the data never loads.
   it('leaves a layer index that saturates to -1 to the negative-index refusal', () => {
