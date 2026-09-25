@@ -7,7 +7,7 @@
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
-import { IDENTITY_AFFINE, type Affine2D } from './simulate';
+import { TRANSFORM2D_IDENTITY, type Transform2DColumns } from '../../../godot/transform2d.js';
 
 /**
  * The Godot 2D global transform behind a three world matrix.
@@ -16,23 +16,21 @@ import { IDENTITY_AFFINE, type Affine2D } from './simulate';
  * (`node2dTransform`), so the world matrix is `F·G·F` and `G = F·W·F`: the
  * off-diagonal terms of the 2×2 flip sign and the Y translation negates.
  */
-export function godotAffineFromWorldMatrix(matrix: THREE.Matrix4): Affine2D {
+export function godotTransform2DFromWorldMatrix(matrix: THREE.Matrix4): Transform2DColumns {
   const e = matrix.elements;
   return {
-    ax: e[0]!,
-    ay: 0 - e[1]!,
-    bx: 0 - e[4]!,
-    by: e[5]!,
-    ox: e[12]!,
-    oy: 0 - e[13]!,
+    a: e[0]!,
+    b: 0 - e[1]!,
+    c: 0 - e[4]!,
+    d: e[5]!,
+    tx: e[12]!,
+    ty: 0 - e[13]!,
   };
 }
 
 /** Do two transforms place the emitter identically? */
-export function sameAffine(a: Affine2D, b: Affine2D): boolean {
-  return (
-    a.ax === b.ax && a.ay === b.ay && a.bx === b.bx && a.by === b.by && a.ox === b.ox && a.oy === b.oy
-  );
+export function sameTransform2D(p: Transform2DColumns, q: Transform2DColumns): boolean {
+  return p.a === q.a && p.b === q.b && p.c === q.c && p.d === q.d && p.tx === q.tx && p.ty === q.ty;
 }
 
 /**
@@ -43,19 +41,19 @@ export function sameAffine(a: Affine2D, b: Affine2D): boolean {
 export function useEmissionTransform(
   container: THREE.Object3D | null,
   localCoords: boolean
-): Affine2D {
-  const [transform, setTransform] = useState<Affine2D>(IDENTITY_AFFINE);
+): Transform2DColumns {
+  const [transform, setTransform] = useState<Transform2DColumns>(TRANSFORM2D_IDENTITY);
   const published = useRef(transform);
 
   useLayoutEffect(() => {
-    let next = IDENTITY_AFFINE;
+    let next = TRANSFORM2D_IDENTITY;
     if (container && !localCoords) {
       // A layout pass runs before the renderer's own `updateMatrixWorld`, so
       // the ancestors' matrices are refreshed rather than trusted.
       container.updateWorldMatrix(true, false);
-      next = godotAffineFromWorldMatrix(container.matrixWorld);
+      next = godotTransform2DFromWorldMatrix(container.matrixWorld);
     }
-    if (sameAffine(published.current, next)) return;
+    if (sameTransform2D(published.current, next)) return;
     published.current = next;
     setTransform(next);
   }, [container, localCoords]);

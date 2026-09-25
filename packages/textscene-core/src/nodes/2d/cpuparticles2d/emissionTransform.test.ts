@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { godotAffineFromWorldMatrix, sameAffine } from './emissionTransform';
-import { IDENTITY_AFFINE } from './simulate';
+import { godotTransform2DFromWorldMatrix, sameTransform2D } from './emissionTransform';
+import { TRANSFORM2D_IDENTITY } from '../../../godot/transform2d.js';
 
 /** Build the three world matrix a Node2D chain produces, then read it back. */
 function worldMatrixOf(
@@ -23,57 +23,57 @@ function worldMatrixOf(
   return leaf!.matrixWorld;
 }
 
-describe('godotAffineFromWorldMatrix', () => {
+describe('godotTransform2DFromWorldMatrix', () => {
   it('reads back a pure translation with Y un-negated (happy path)', () => {
-    const affine = godotAffineFromWorldMatrix(worldMatrixOf([{ position: [10, 20] }]));
-    expect(affine.ox).toBeCloseTo(10, 6);
-    expect(affine.oy).toBeCloseTo(20, 6);
-    expect(affine.ax).toBeCloseTo(1, 6);
-    expect(affine.by).toBeCloseTo(1, 6);
+    const transform = godotTransform2DFromWorldMatrix(worldMatrixOf([{ position: [10, 20] }]));
+    expect(transform.tx).toBeCloseTo(10, 6);
+    expect(transform.ty).toBeCloseTo(20, 6);
+    expect(transform.a).toBeCloseTo(1, 6);
+    expect(transform.d).toBeCloseTo(1, 6);
   });
 
   it('reads back a scale unchanged', () => {
-    const affine = godotAffineFromWorldMatrix(worldMatrixOf([{ scale: [3, 0.5] }]));
-    expect(affine.ax).toBeCloseTo(3, 6);
-    expect(affine.by).toBeCloseTo(0.5, 6);
-    expect(affine.ay).toBeCloseTo(0, 6);
-    expect(affine.bx).toBeCloseTo(0, 6);
+    const transform = godotTransform2DFromWorldMatrix(worldMatrixOf([{ scale: [3, 0.5] }]));
+    expect(transform.a).toBeCloseTo(3, 6);
+    expect(transform.d).toBeCloseTo(0.5, 6);
+    expect(transform.b).toBeCloseTo(0, 6);
+    expect(transform.c).toBeCloseTo(0, 6);
   });
 
   it('un-negates the rotation, so a Godot clockwise angle comes back clockwise', () => {
     const angle = 0.4;
-    const affine = godotAffineFromWorldMatrix(worldMatrixOf([{ rotation: angle }]));
+    const transform = godotTransform2DFromWorldMatrix(worldMatrixOf([{ rotation: angle }]));
     // Godot's Transform2D from a rotation is columns (cos, sin), (-sin, cos).
-    expect(affine.ax).toBeCloseTo(Math.cos(angle), 6);
-    expect(affine.ay).toBeCloseTo(Math.sin(angle), 6);
-    expect(affine.bx).toBeCloseTo(0 - Math.sin(angle), 6);
-    expect(affine.by).toBeCloseTo(Math.cos(angle), 6);
+    expect(transform.a).toBeCloseTo(Math.cos(angle), 6);
+    expect(transform.b).toBeCloseTo(Math.sin(angle), 6);
+    expect(transform.c).toBeCloseTo(0 - Math.sin(angle), 6);
+    expect(transform.d).toBeCloseTo(Math.cos(angle), 6);
   });
 
   it('composes a parent chain the way Godot composes global transforms', () => {
-    const affine = godotAffineFromWorldMatrix(
+    const transform = godotTransform2DFromWorldMatrix(
       worldMatrixOf([{ position: [100, 50] }, { position: [-13, -35], scale: [0.6, 0.6] }])
     );
-    expect(affine.ox).toBeCloseTo(87, 6);
-    expect(affine.oy).toBeCloseTo(15, 6);
-    expect(affine.ax).toBeCloseTo(0.6, 6);
-    expect(affine.by).toBeCloseTo(0.6, 6);
+    expect(transform.tx).toBeCloseTo(87, 6);
+    expect(transform.ty).toBeCloseTo(15, 6);
+    expect(transform.a).toBeCloseTo(0.6, 6);
+    expect(transform.d).toBeCloseTo(0.6, 6);
   });
 
-  it('reads the identity matrix as the identity affine (edge case)', () => {
-    const affine = godotAffineFromWorldMatrix(new THREE.Matrix4());
-    expect(affine).toEqual(IDENTITY_AFFINE);
+  it('reads the identity matrix as the identity transform (edge case)', () => {
+    const transform = godotTransform2DFromWorldMatrix(new THREE.Matrix4());
+    expect(transform).toEqual(TRANSFORM2D_IDENTITY);
   });
 });
 
-describe('sameAffine', () => {
+describe('sameTransform2D', () => {
   it('is true for two equal transforms', () => {
-    expect(sameAffine({ ...IDENTITY_AFFINE }, { ...IDENTITY_AFFINE })).toBe(true);
+    expect(sameTransform2D({ ...TRANSFORM2D_IDENTITY }, { ...TRANSFORM2D_IDENTITY })).toBe(true);
   });
 
   it('is false when any single component differs', () => {
-    for (const key of ['ax', 'ay', 'bx', 'by', 'ox', 'oy'] as const) {
-      expect(sameAffine(IDENTITY_AFFINE, { ...IDENTITY_AFFINE, [key]: 9 })).toBe(false);
+    for (const key of ['a', 'b', 'c', 'd', 'tx', 'ty'] as const) {
+      expect(sameTransform2D(TRANSFORM2D_IDENTITY, { ...TRANSFORM2D_IDENTITY, [key]: 9 })).toBe(false);
     }
   });
 });
