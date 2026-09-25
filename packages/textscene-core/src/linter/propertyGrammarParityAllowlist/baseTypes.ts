@@ -101,7 +101,7 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'global_transform', 'global_position', 'global_rotation', 'global_rotation_degrees',
       'global_basis',
       // Scene-tree / editor properties with no render effect.
-      'top_level', 'rotation_order', 'visibility_parent',
+      'rotation_order', 'visibility_parent',
     ],
     reason: 'Parser uses the transform matrix; linter validates discrete component forms and global equivalents that the renderer ignores.',
   },

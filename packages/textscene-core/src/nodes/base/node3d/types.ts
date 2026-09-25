@@ -41,4 +41,9 @@ export interface Node3DProperties {
   index?: number;
   /** Whether the node and its subtree are rendered. Defaults to true. */
   visible?: boolean;
+  /**
+   * Whether the global transform skips the parent: `global = local` (`node_3d.cpp:656-660`).
+   * Visibility still climbs the parent (`:1132-1143`). Unset when the file omits it.
+   */
+  top_level?: boolean;
 }

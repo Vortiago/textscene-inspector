@@ -62,4 +62,17 @@ describe('globalMatrix3D', () => {
     );
     expect(origin).toEqual([5, 2, 1]);
   });
+
+  it('restarts at a top_level Node3D, whose global transform is its local one', () => {
+    const origin = originOf(
+      'Root/Free/Leaf',
+      [
+        node('Root', 'Node3D', {}, translation(5, 0, 0)),
+        node('Free', 'Node3D', { properties: { transform: translation(0, 2, 0), top_level: true } }),
+        node('Leaf', 'Node3D', {}, translation(0, 0, 1)),
+      ],
+      ['Root', 'Root/Free', 'Root/Free/Leaf']
+    );
+    expect(origin).toEqual([0, 2, 1]);
+  });
 });

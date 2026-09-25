@@ -6,10 +6,11 @@
  */
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import { createPortal } from '@react-three/fiber';
+import { createPortal, extend } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
-import { escapesParentSpace, type SpaceFamily } from '../godot/parentSpace.js';
+import type { Node3DProperties } from '../nodes/base/node3d/types.js';
+import { escapesParentSpace, spaceFamilyOf, type SpaceFamily } from '../godot/parentSpace.js';
 import { CanvasSpaceProvider } from './canvasRootScope.js';
 
 const WorldRootContext = createContext<THREE.Object3D | null>(null);
@@ -31,9 +32,10 @@ export function WorldRootProvider({
 }
 
 /**
- * Mounts a viewport's world root where it renders and publishes it to `children`. An Object3D, not
- * a Group: three takes `groupOrder` from the nearest Group, so this resets no canvas key. It exists
- * from the first render, so a node that escapes has somewhere to go at once.
+ * Mounts a viewport's world root and publishes it to `children`. An Object3D, not a Group: three
+ * takes `groupOrder` from the nearest Group, so this resets no canvas key. It exists from the first
+ * render, so a node that escapes has somewhere to go at once. It is mounted first, with no transform
+ * of its own, so three has updated its world matrix before any node's.
  */
 export function WorldRoot({ children }: { children: ReactNode }) {
   const [root] = useState(() => new THREE.Object3D());
@@ -79,4 +81,41 @@ export function ParentSpaceScope({ node, children }: { node: TscnNode; children:
   if (!escapes || !worldRoot) return <>{children}</>;
   // No ancestor CanvasItem transform reaches the world root, so a canvas root inside cancels nothing.
   return createPortal(<CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>, worldRoot);
+}
+
+/**
+ * An object whose world matrix composes from `space`, not from its parent, as a `top_level`
+ * Node3D's does (`node_3d.cpp:656-660`). It stays in its parent's subtree, where visibility still
+ * reaches it (`:1132-1143`). `space` is the world root, which three updates first.
+ */
+class SpaceAnchoredObject extends THREE.Object3D {
+  constructor(private readonly space: THREE.Object3D) {
+    super();
+  }
+
+  override updateMatrixWorld(_force?: boolean): void {
+    if (this.matrixAutoUpdate) this.updateMatrix();
+    this.matrixWorld.multiplyMatrices(this.space.matrixWorld, this.matrix);
+    this.matrixWorldNeedsUpdate = false;
+    for (const child of this.children) child.updateMatrixWorld(true);
+  }
+
+  override updateWorldMatrix(updateParents: boolean, updateChildren: boolean): void {
+    if (updateParents) this.space.updateWorldMatrix(true, false);
+    if (this.matrixAutoUpdate) this.updateMatrix();
+    this.matrixWorld.multiplyMatrices(this.space.matrixWorld, this.matrix);
+    if (updateChildren) for (const child of this.children) child.updateWorldMatrix(false, true);
+  }
+}
+
+/** An element, not a `<primitive>`: R3F builds it from `args`, so it takes children like any group. */
+const SpaceAnchored = extend(SpaceAnchoredObject);
+
+/** Wraps a `top_level` Node3D's content so its parent's transform stops reaching it. */
+export function TopLevelScope({ node, children }: { node: TscnNode; children: ReactNode }) {
+  const worldRoot = useWorldRoot();
+  const isTopLevel =
+    spaceFamilyOf(node.type) === 'Node3D' && (node.properties as Node3DProperties).top_level === true;
+  if (!isTopLevel || !worldRoot) return <>{children}</>;
+  return <SpaceAnchored args={[worldRoot]}>{children}</SpaceAnchored>;
 }

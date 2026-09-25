@@ -18,6 +18,7 @@ export function parseNode3D(
   const index = parseHeadingIndex(heading.attributes.index);
   const transform = parseOptionalTransform(properties.transform, name);
   const visible = properties.visible === undefined ? undefined : boolSlotValue(properties.visible) !== false;
+  const top_level = properties.top_level === undefined ? undefined : boolSlotValue(properties.top_level) === true;
 
   return {
     name,
@@ -26,5 +27,6 @@ export function parseNode3D(
     instance,
     index,
     visible,
+    top_level,
   };
 }

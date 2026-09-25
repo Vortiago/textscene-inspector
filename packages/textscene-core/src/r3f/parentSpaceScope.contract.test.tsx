@@ -185,6 +185,59 @@ ${CHILD_3D}
   });
 });
 
+describe('a top_level Node3D', () => {
+  it('drops its parent’s transform', async () => {
+    const root = await renderWorld(`[gd_scene format=3]
+
+${MOVED_ROOT_3D}
+
+[node name="Free" type="Node3D" parent="."]
+top_level = true
+${CHILD_3D}
+`);
+    expect(worldOrigin(root, 'Free')).toEqual([0, 1, 0]);
+  });
+
+  it('still hides with its hidden parent, since visibility climbs `data.parent`', async () => {
+    const root = await renderWorld(`[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+visible = false
+
+[node name="Free" type="Node3D" parent="."]
+top_level = true
+`);
+    expect(isRenderedVisible(named(root, 'Free'))).toBe(false);
+  });
+
+  it('passes its own transform on to its children', async () => {
+    const root = await renderWorld(`[gd_scene format=3]
+
+${MOVED_ROOT_3D}
+
+[node name="Free" type="Node3D" parent="."]
+top_level = true
+${CHILD_3D}
+
+[node name="Leaf" type="Node3D" parent="Free"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+`);
+    expect(worldOrigin(root, 'Leaf')).toEqual([0, 1, 2]);
+  });
+
+  it('keeps its parent’s transform while top_level is false', async () => {
+    const root = await renderWorld(`[gd_scene format=3]
+
+${MOVED_ROOT_3D}
+
+[node name="Held" type="Node3D" parent="."]
+top_level = false
+${CHILD_3D}
+`);
+    expect(worldOrigin(root, 'Held')).toEqual([5, 1, 0]);
+  });
+});
+
 describe('a node that escapes inside a sub-viewport', () => {
   it('stays in the sub-viewport’s own world, not the host’s', async () => {
     const root = await renderWorld(`[gd_scene format=3]
