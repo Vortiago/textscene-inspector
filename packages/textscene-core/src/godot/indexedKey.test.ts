@@ -1,11 +1,10 @@
 /**
- * The own contracts of `visitIndexedKeys`, `indexedKeys` and `indexedElements`, around the module
- * every rule resolves an index through. The slices' `linter.test.ts` files test the rules that use
- * them.
+ * The own contracts of `visitIndexedKeys` and `indexedElements`, around the module every rule
+ * resolves an index through. The slices' `linter.test.ts` files test the rules that use them.
  */
 
 import { describe, expect, it } from 'vitest';
-import { indexedElements, indexedKeys, visitIndexedKeys } from './indexedKey.js';
+import { indexedElements, visitIndexedKeys } from './indexedKey.js';
 
 /** Every visit `visitIndexedKeys` makes, as its five arguments. */
 function visits(
@@ -33,61 +32,34 @@ describe('visitIndexedKeys', () => {
   it('visits nothing for a family with no keys', () => {
     expect(visits({ text: '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
   });
-});
 
-describe('indexedKeys', () => {
-  it('keeps the whole key, the index text, the leaf and the value as written', () => {
-    expect(indexedKeys({ 'item_+2/text': '"Save"' }, 'item_', 'is_valid_int')).toEqual([
-      { key: 'item_+2/text', indexText: '+2', index: 2, leaf: 'text', value: '"Save"' },
-    ]);
+  it('visits no key with no leaf', () => {
+    expect(visits({ 'item_3/': '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
   });
 
-  it('lists the keys in file order', () => {
-    const keys = indexedKeys({ 'item_1/text': '"a"', 'item_0/text': '"b"' }, 'item_', 'is_valid_int');
-    expect(keys.map(({ key }) => key)).toEqual(['item_1/text', 'item_0/text']);
-  });
-
-  it('leaves out an index text is_valid_int refuses', () => {
-    // `_get_property` returns null unless the index `is_valid_int()`
-    // (property_list_helper.cpp:53-55).
-    expect(indexedKeys({ 'item_x/text': '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
-  });
-
-  it('leaves out an index stored negative', () => {
-    // `_get_property` refuses `index < 0` (property_list_helper.cpp:58).
-    expect(indexedKeys({ 'item_-1/text': '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
-  });
-
-  it('leaves out a key with no leaf', () => {
-    expect(indexedKeys({ 'item_3/': '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
-  });
-
-  it('leaves out a key whose last slash puts a slash in the index text', () => {
+  it('visits no key whose last slash puts a slash in the index text', () => {
     // `rsplit("/", true, 1)` (property_list_helper.cpp:47) makes the index text `5/x`.
-    expect(indexedKeys({ 'item_5/x/text': '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
+    expect(visits({ 'item_5/x/text': '"a"' }, 'item_', 'is_valid_int')).toEqual([]);
   });
 
   // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
   it('applies an index that wraps past 32 bits to the element it lands on', () => {
-    const [key] = indexedKeys({ 'item_4294967296/text': '"a"' }, 'item_', 'is_valid_int');
-    expect(key).toMatchObject({ indexText: '4294967296', index: 0 });
+    expect(visits({ 'item_4294967296/text': '"a"' }, 'item_', 'is_valid_int')).toEqual([
+      ['item_4294967296/text', '4294967296', 0, 'text', '"a"'],
+    ]);
   });
 
   // `to_int` saturates at INT64_MAX (ustring.cpp:2283-2284), whose low 32 bits are -1.
-  it('leaves out an index that saturates to INT64_MAX', () => {
-    expect(
-      indexedKeys({ 'item_9999999999999999999999/text': '"a"' }, 'item_', 'is_valid_int')
-    ).toEqual([]);
+  it('visits no index that saturates to INT64_MAX', () => {
+    expect(visits({ 'item_9999999999999999999999/text': '"a"' }, 'item_', 'is_valid_int')).toEqual(
+      []
+    );
   });
 
   // INT64_MIN keeps 0 in its low 32 bits, so the write lands on element 0.
   it('applies an index that saturates to INT64_MIN to element 0', () => {
-    const [key] = indexedKeys(
-      { 'item_-9999999999999999999999/text': '"a"' },
-      'item_',
-      'is_valid_int'
-    );
-    expect(key).toMatchObject({ indexText: '-9999999999999999999999', index: 0 });
+    const [visit] = visits({ 'item_-9999999999999999999999/text': '"a"' }, 'item_', 'is_valid_int');
+    expect(visit?.slice(1, 3)).toEqual(['-9999999999999999999999', 0]);
   });
 });
 

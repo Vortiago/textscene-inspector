@@ -11,7 +11,7 @@ import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { decodeLegacyTileData } from '../shared/tileData.js';
 import { TILE_MAP_DATA_FORMAT_DEFAULT, formatWhenApplied, tileDataValidator } from './tileDataSlots.js';
 import { tileMapLayerVector } from '../shared/layerVector';
-import { indexedKeys } from '../../../../godot/index.js';
+import { visitIndexedKeys } from '../../../../godot/index.js';
 import { ySortDiagnostics } from './ySortRules.js';
 
 /** One `layer_<i>/tile_data` write, the key as the file writes it. */
@@ -30,14 +30,12 @@ interface TileDataWrite {
  * Godot applies properties in file order. A layer the engine never builds carries none.
  */
 function tileDataWrites(rawProps: Record<string, string>): TileDataWrite[] {
-  return indexedKeys(rawProps, 'layer_', 'is_valid_int')
-    .filter(({ leaf }) => leaf === 'tile_data')
-    .map(({ key, value, index }) => ({
-      key,
-      value,
-      layer: index,
-      format: formatWhenApplied(rawProps, key),
-    }));
+  const writes: TileDataWrite[] = [];
+  visitIndexedKeys(rawProps, 'layer_', 'is_valid_int', (key, _indexText, layer, leaf, value) => {
+    if (leaf !== 'tile_data') return;
+    writes.push({ key, value, layer, format: formatWhenApplied(rawProps, key) });
+  });
+  return writes;
 }
 
 function checkTileMap(context: RuleContext): Diagnostic[] {

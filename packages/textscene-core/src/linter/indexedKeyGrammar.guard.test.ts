@@ -110,10 +110,10 @@ function handRolledKeyGrammar(source: string): string | null {
 /**
  * Whoever builds or scans an index grammar, derived from the argument that selects the parse.
  * Two terms, not one call pattern: a shape string holds its own parentheses. A rule building
- * `settings/${i}/…` from a loop has no regex to find: `indexedElements` and `indexedKeys` are
- * the scans such rules use, and only a behaviour test holds them to it.
+ * `settings/${i}/…` from a loop has no regex to find: `indexedElements` and `visitIndexedKeys`
+ * are the scans such rules use, and only a behaviour test holds them to it.
  */
-const COMPOSES_BUILDER = /\b(?:indexedKeyRegex|indexedElements|indexedKeys)\(/;
+const COMPOSES_BUILDER = /\b(?:indexedKeyRegex|indexedElements|visitIndexedKeys)\(/;
 const NAMES_A_PARSE = /'(?:to_int|is_valid_int)'/;
 
 /**

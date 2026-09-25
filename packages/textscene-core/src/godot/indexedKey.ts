@@ -31,24 +31,11 @@ export function indexedKeyRegex(shape: string, indexParse: IndexParse): RegExp {
   return new RegExp(shape.replaceAll('#', INDEX_SOURCE[indexParse]));
 }
 
-/** One key of an indexed family that names an element, resolved as Godot resolves it. */
-export interface IndexedKey {
-  /** The whole key, as the file writes it. */
-  key: string;
-  /** The index as the file spells it. `5`, `+5` and `05` all name element 5. */
-  indexText: string;
-  /** The element Godot applies the key to: `to_int()` stored in an `int` ({@link stringToInt}). */
-  index: number;
-  /** The path below the index. */
-  leaf: string;
-  value: string;
-}
-
 /**
- * Calls `visit` for every key of a family that names an element, in file order. A key with no
- * index or no leaf, an index text the parse refuses, and an index stored negative name none. A
- * callback, not a list: a caller that groups or filters, such as `indexedElements` on every parse,
- * would otherwise allocate a record per key of a 200,000-key family only to drop it.
+ * Calls `visit` for every key of a family that names an element, in file order, with the `int` Godot
+ * stores as `index` ({@link stringToInt}): `5`, `+5` and `05` all name element 5. A key with no index
+ * or no leaf, a refused index text and a negative index name none. A callback, not a list: a caller
+ * that filters would otherwise allocate a record per key of a 200,000-key family only to drop it.
  */
 export function visitIndexedKeys(
   properties: Readonly<Record<string, string>>,
@@ -75,19 +62,6 @@ export function visitIndexedKeys(
     if (index < 0) continue;
     visit(key, indexText, index, leaf, properties[key]!);
   }
-}
-
-/** Every key of a family that names an element, in file order, resolved as Godot resolves it. */
-export function indexedKeys(
-  properties: Readonly<Record<string, string>>,
-  prefix: string,
-  indexParse: IndexParse
-): IndexedKey[] {
-  const keys: IndexedKey[] = [];
-  visitIndexedKeys(properties, prefix, indexParse, (key, indexText, index, leaf, value) => {
-    keys.push({ key, indexText, index, leaf, value });
-  });
-  return keys;
 }
 
 /**

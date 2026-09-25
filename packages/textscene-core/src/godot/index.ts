@@ -34,11 +34,9 @@ export {
   basisIsOrthonormal,
 } from './basis.js';
 export {
-  type IndexedKey,
   type IndexParse,
   indexedElements,
   indexedKeyRegex,
-  indexedKeys,
   visitIndexedKeys,
 } from './indexedKey.js';
 export {
