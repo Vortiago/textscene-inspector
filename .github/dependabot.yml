@@ -4,7 +4,8 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
-    # The typings floor must equal engines.vscode, or vsce refuses to package. Raise both by hand.
+    # @types/vscode matches engines.vscode in apps/textscene-vscode, and vsce refuses a
+    # newer one. The engine floor moves by hand, and the types move with it.
     ignore:
       - dependency-name: '@types/vscode'
     groups:
@@ -14,7 +15,7 @@ updates:
           - 'patch'
 
   - package-ecosystem: 'github-actions'
-    directory: '/'
+    directories: ['/', '/.github/actions/*']
     schedule:
       interval: 'weekly'
     groups:

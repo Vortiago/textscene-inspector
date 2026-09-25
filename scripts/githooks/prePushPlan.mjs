@@ -1,6 +1,6 @@
 /**
- * The checks a push needs, from the files it changes. CI runs the full gate on every push, so the
- * pre-push hook runs only what the change can break. A change to the toolchain runs the full gate.
+ * The checks a push needs, from the files it changes. CI runs the full gate on each pull request,
+ * so the pre-push hook runs only what the change can break. A change to the toolchain runs the full gate.
  */
 
 /** A file whose change can break any check, so the push runs the full `pnpm validate`. */
