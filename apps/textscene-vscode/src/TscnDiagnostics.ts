@@ -6,7 +6,12 @@
  */
 
 import * as vscode from 'vscode';
-import { Linter, flooredSeverity, type Diagnostic as TscnLintDiagnostic } from '@textscene/core/linter';
+import {
+  Linter,
+  diagnosticLine,
+  flooredSeverity,
+  type Diagnostic as TscnLintDiagnostic,
+} from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
 
 /** Fallback when `textscene.diagnostics.lintDebounceMs` is unset. */
@@ -53,8 +58,9 @@ function clamp(value: number, min: number, max: number): number {
 
 /**
  * A core diagnostic as a `vscode.Diagnostic`. Core lines are 1-based and clamped into the
- * document. A diagnostic with no line is about the whole file: a zero-width range at the
- * document start lists it in the Problems panel and marks no text.
+ * document. One that names no line (`diagnosticLine`) is about the whole file, so it gets a
+ * zero-width range at the document start: the Problems panel lists it at Ln 1, Col 1, and the
+ * editor draws a collapsed marker there, not a squiggle under line 1's text.
  */
 export function toVsCodeDiagnostic(
   diagnostic: TscnLintDiagnostic,
@@ -74,8 +80,8 @@ function rangeForDiagnostic(
   diagnostic: TscnLintDiagnostic,
   document: DocumentLineSource
 ): vscode.Range {
-  const line = diagnostic.location?.line;
-  if (typeof line !== 'number') {
+  const line = diagnosticLine(diagnostic);
+  if (line === undefined) {
     return new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
   }
 

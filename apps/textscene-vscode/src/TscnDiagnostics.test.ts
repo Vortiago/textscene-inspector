@@ -160,15 +160,27 @@ describe('toVsCodeDiagnostic', () => {
       expect(result.range.end.character).toBe('third'.length);
     });
 
-    it('clamps line/column zero to the document start', () => {
+    it('clamps column zero to the start of its line', () => {
       const result = toVsCodeDiagnostic(
-        makeCoreDiagnostic({ location: { line: 0, column: 0 } }),
+        makeCoreDiagnostic({ location: { line: 2, column: 0 } }),
         doc
       );
 
-      expect(result.range.start.line).toBe(0);
+      expect(result.range.start.line).toBe(1);
       expect(result.range.start.character).toBe(0);
+      expect(result.range.end.character).toBe('second line longer'.length);
     });
+
+    // The web gutter reads these the same way (`diagnosticLine`): about the file, not line 1.
+    it.each([0, -3, 2.5, Number.NaN])(
+      'gives line %s, which no row carries, the zero-width range at the document start',
+      (line) => {
+        const result = toVsCodeDiagnostic(makeCoreDiagnostic({ location: { line, column: 4 } }), doc);
+
+        expect(result.range.start).toEqual(new vscode.Position(0, 0));
+        expect(result.range.end).toEqual(new vscode.Position(0, 0));
+      }
+    );
   });
 
   describe('metadata', () => {

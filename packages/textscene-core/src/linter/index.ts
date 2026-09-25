@@ -284,6 +284,7 @@ export { validatorRegistry } from './ValidatorRegistry.js';
 export { registeredTypes } from './registryPopulation.js';
 export { ruleRegistry } from './RuleRegistry.js';
 export { SEVERITY_ORDER, flooredSeverity, isSeverity } from './types.js';
+export { diagnosticLine } from './diagnosticLine.js';
 
 // Re-export types
 export type {

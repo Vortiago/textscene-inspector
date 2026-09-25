@@ -3,7 +3,13 @@
  * for a diagnostic that names no line. It also builds the problem-count badge. No React or
  * WebGL: the testable seam under `r3f-main.tsx`.
  */
-import { SEVERITY_ORDER, flooredSeverity, type Diagnostic, type Severity } from '@textscene/core/linter';
+import {
+  SEVERITY_ORDER,
+  diagnosticLine,
+  flooredSeverity,
+  type Diagnostic,
+  type Severity,
+} from '@textscene/core/linter';
 
 /** Diagnostics shown together: their highest severity, and every message, in encounter order. */
 export interface DiagnosticGroup {
@@ -47,11 +53,6 @@ function atLeastAsSevere(a: Severity, b: Severity): boolean {
   return SEVERITY_ORDER[a] <= SEVERITY_ORDER[b];
 }
 
-/** Whether `line` names a gutter row. Rows count from 1, so 0, a fraction or `NaN` names none. */
-function isGutterLine(line: number | undefined): line is number {
-  return line !== undefined && Number.isInteger(line) && line >= 1;
-}
-
 /** Adds one diagnostic to `group`, which keeps the higher severity. */
 function addTo(group: DiagnosticGroup, severity: Severity, message: string): void {
   group.messages.push(message);
@@ -68,8 +69,8 @@ export function groupDiagnostics(diagnostics: readonly Diagnostic[]): GroupedDia
   let fileLevel: DiagnosticGroup | null = null;
   for (const d of diagnostics) {
     const severity = flooredSeverity(d.severity);
-    const line = d.location?.line;
-    if (!isGutterLine(line)) {
+    const line = diagnosticLine(d);
+    if (line === undefined) {
       if (fileLevel) addTo(fileLevel, severity, d.message);
       else fileLevel = { severity, messages: [d.message] };
       continue;
