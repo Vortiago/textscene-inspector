@@ -49,7 +49,10 @@ function indexedIds<T>(
   return index.byId;
 }
 
-/** The first entry to claim an id keeps it, as the `Array.find` this index replaces did. */
+/**
+ * The first entry in declaration order keeps an id, so a repeated id resolves to its first
+ * declaration.
+ */
 function claimId<T>(byId: Map<string, T>, id: string, entry: T): void {
   if (!byId.has(id)) byId.set(id, entry);
 }
