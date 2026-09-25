@@ -12,6 +12,7 @@ import { boneConstraintBaseLeaves } from '../boneconstraint3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
+import { settingCount } from '../shared/settingCount.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 
@@ -106,10 +107,9 @@ const settingValidator = indexedFamilyValidator({
 settingValidator.leaves = Object.values(OWN_LEAVES);
 
 validatorRegistry.registerAll('ConvertTransformModifier3D', {
-  // convert_transform_modifier_3d.cpp:329, ADD_ARRAY_COUNT (PROPERTY_HINT_NONE, so no ceiling). Its
-  // setter is BoneConstraint3D's `set_setting_count`, whose `ERR_FAIL_COND(p_count < 0)`
-  // (bone_constraint_3d.cpp:131) enforces the floor.
-  setting_count: v.int('setting_count', { min: 0, enforced: 'bone_constraint_3d.cpp:131' }),
+  // convert_transform_modifier_3d.cpp:329, ADD_ARRAY_COUNT on this class. Its setter is
+  // BoneConstraint3D's `set_setting_count`.
+  setting_count: settingCount('BoneConstraint3D'),
 
   // The plain wildcard, not `settings/#/*`: `matchesIndexedKey` routes a single leaf segment, and
   // `indexedFamilyValidator` parses the two-segment `apply/…` leaves itself.

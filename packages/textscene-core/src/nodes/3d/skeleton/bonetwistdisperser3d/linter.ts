@@ -8,15 +8,16 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
-import { listIndices } from '../../../../linter/reportedIndices.js';
+import { listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
-import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
+import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
 
 /**
  * Any `settings/<i>/…` leaf, with the index text captured. `_set` reads both index positions with a
- * bare `path.get_slicec('/', n).to_int()` and no validity gate (bone_twist_disperser_3d.cpp:37, :66),
- * so the grammar is the whole segment and {@link toIntIndex} turns it into a number.
+ * bare `path.get_slicec('/', n).to_int()` into an `int` and no validity gate
+ * (bone_twist_disperser_3d.cpp:37, :66), so the grammar is the whole segment, and
+ * {@link stringToInt} reads the number Godot stores.
  */
 const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/', 'to_int');
 /** The one nested leaf a scene can write, with both index texts captured. */
@@ -34,7 +35,7 @@ function resolveJointCounts(properties: Record<string, string>): Map<number, num
   for (const key of Object.keys(properties)) {
     const match = JOINT_COUNT_KEY_RE.exec(key);
     if (!match) continue;
-    const settingIndex = toIntIndex(match[1]!);
+    const settingIndex = stringToInt(match[1]!);
     // A negative index is refused before the count is read at all.
     if (settingIndex < 0) continue;
     // A malformed count is its own validator's error. Ignoring it here leaves
@@ -66,40 +67,45 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
   if (settingCount === null) return diagnostics;
 
   const jointCounts = resolveJointCounts(rawProps);
-  const outOfRangeSettings = new Set<number>();
-  /** `[setting index, joint index]` pairs, so one message can list them all. */
-  const outOfRangeJoints: [number, number][] = [];
+  /** Each out-of-range setting index as the file writes it, to the setting it resolves to. */
+  const outOfRangeSettings = new Map<string, number>();
+  /** `<setting>/<joint>` as the file writes both, to the pair they resolve to. */
+  const outOfRangeJoints = new Map<string, [number, number]>();
 
   for (const key of Object.keys(rawProps)) {
     const indexed = SETTING_KEY_RE.exec(key);
     if (!indexed) continue;
-    const settingIndex = toIntIndex(indexed[1]!);
-    // A negative index is the validator's error, against the same
-    // ERR_FAIL_INDEX_V. Reporting it again here would double up on one defect.
+    const settingText = indexed[1]!;
+    const settingIndex = stringToInt(settingText);
+    // A negative index is the validator's error, against the same ERR_FAIL_INDEX_V, and reporting
+    // it again here would double up on one defect.
     if (settingIndex < 0) continue;
     // `_set` opens with `ERR_FAIL_INDEX_V(which, (int)settings.size(), false)`
     // (bone_twist_disperser_3d.cpp:39), and only `set_setting_count` (:649-666) resizes `settings`,
     // so every leaf of an index at or past the count is dropped on load.
     if (settingIndex >= settingCount) {
-      outOfRangeSettings.add(settingIndex);
+      outOfRangeSettings.set(settingText, settingIndex);
       // The whole setting is refused, so its joints never get their own turn.
       continue;
     }
 
     const joint = JOINT_AMOUNT_KEY_RE.exec(key);
     if (!joint) continue;
-    const jointIndex = toIntIndex(joint[2]!);
+    const jointText = joint[2]!;
+    const jointIndex = stringToInt(jointText);
     if (jointIndex < 0) continue;
     // `set_joint_twist_amount` guards with `ERR_FAIL_INDEX(p_joint, (int)joints.size())` (:502), and
     // only `set_joint_count` (:485-491) resizes it. The file's count governs: it is pushed (:158) before
     // its joints (:159-164), and `_update_joints` waits for ENTER_TREE (:220-222, :597). Absent means
     // zero: `LocalVector<DisperseJointSetting> joints` (bone_twist_disperser_3d.h:69) starts empty.
     const jointCount = jointCounts.get(settingIndex) ?? 0;
-    if (jointIndex >= jointCount) outOfRangeJoints.push([settingIndex, jointIndex]);
+    if (jointIndex >= jointCount) {
+      outOfRangeJoints.set(`${settingText}/${jointText}`, [settingIndex, jointIndex]);
+    }
   }
 
   if (outOfRangeSettings.size > 0) {
-    const indices = listIndices([...outOfRangeSettings].sort((a, b) => a - b));
+    const indices = listWrittenIndices(outOfRangeSettings);
     diagnostics.push({
       severity: 'error',
       message:
@@ -113,12 +119,9 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  if (outOfRangeJoints.length > 0) {
-    // Numeric on both halves: a lexicographic sort puts `0/10` before `0/2`.
-    const pairs = outOfRangeJoints
-      .sort((a, b) => a[0] - b[0] || a[1] - b[1])
-      .map(([setting, joint]) => `${setting}/${joint}`)
-      .join(', ');
+  if (outOfRangeJoints.size > 0) {
+    // Ordered by both resolved indices: a lexicographic sort puts `0/10` before `0/2`.
+    const pairs = listWrittenIndices(outOfRangeJoints);
     diagnostics.push({
       severity: 'error',
       message:

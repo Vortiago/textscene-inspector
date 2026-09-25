@@ -16,6 +16,10 @@ describe('recapture flags', () => {
     expect(parseArgs(['--godot'])).toEqual({ godot: true, ours: false, only: null });
   });
 
+  it('renders both sides for both flags, as capture.mjs does', () => {
+    expect(parseArgs(['--godot', '--ours'])).toEqual({ godot: true, ours: true, only: null });
+  });
+
   it('takes the fragment after --only', () => {
     expect(parseArgs(['--only', 'unit-decal']).only).toBe('unit-decal');
   });
@@ -26,10 +30,6 @@ describe('recapture flags', () => {
   });
 
   it('refuses --only with nothing after it', () => {
-    expect(() => parseArgs(['--only'])).toThrow(/--only needs an image-name fragment/);
-  });
-
-  it('refuses the pair that selects neither side', () => {
-    expect(() => parseArgs(['--godot', '--ours'])).toThrow(/mutually exclusive/);
+    expect(() => parseArgs(['--only'])).toThrow(/--only needs a name fragment/);
   });
 });

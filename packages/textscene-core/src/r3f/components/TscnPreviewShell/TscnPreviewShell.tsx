@@ -128,7 +128,7 @@ export function TscnPreviewShell({
               <ViewportToolbar />
             </div>
             <PreviewErrorBoundary sceneGraph={sceneGraph}>
-              <ViewportArea sceneGraph={sceneGraph} />
+              <ViewportArea sceneGraph={sceneGraph} scenePath={rootScenePath} />
             </PreviewErrorBoundary>
           </main>
 

@@ -163,6 +163,26 @@ describe('Skeleton3D Linter', () => {
         });
       });
 
+      // `to_int` saturates a run of 20 or more digits at INT64_MAX (ustring.cpp:2283-2284), which
+      // the `uint32_t` holds as 4294967295: the same refusal.
+      it('should reject a bone index that saturates past any bone count', () => {
+        expectDiagnostic(
+          scene(node('Skeleton3D', { 'bones/99999999999999999999/position': 'Vector3(0, 0, 0)' })),
+          {
+            prop: 'Bone index',
+            contains: ['Bone index 99999999999999999999 (stored as 4294967295) is past any bone count'],
+          }
+        );
+      });
+
+      // `-4294967296` keeps 0 in its low 32 bits, a slot a file reaches, so phase 1 has no claim.
+      it('should accept a bone index that wraps to a reachable slot', () => {
+        expectNoDiagnostic(
+          scene(node('Skeleton3D', { 'bones/-4294967296/position': 'Vector3(0, 0, 0)' })),
+          { prop: 'Bone index' }
+        );
+      });
+
       // `to_int` flips the sign on a `-` seen while the total is still 0 (ustring.cpp:2291-2292),
       // so `a-1` is -1: the same refusal.
       it('should reject a bone index to_int resolves negative', () => {
@@ -258,7 +278,7 @@ describe('Skeleton3D Linter', () => {
           expectDiagnostic(scene(node('Skeleton3D', { 'bones/03/parent': '3' })), {
             prop: 'own parent',
             severity: 'error',
-            contains: ['Bone 3 cannot be its own parent'],
+            contains: ['Bone 03 cannot be its own parent'],
           });
         });
 
@@ -514,6 +534,32 @@ describe('Skeleton3D Linter', () => {
         const onBone0 = diagnostics.filter((d) => d.message.includes('bones/0/name'));
         expect(onBone0).toHaveLength(1);
         expect(onBone0[0]?.message).toContain('non-empty');
+      });
+
+      // `uint32_t which = ….to_int()` (skeleton_3d.cpp:82) keeps the low 32 bits, so
+      // `4294967296` is bone 0 and Godot adds both bones in order.
+      it('adds the bones an index that wraps past 32 bits lands on, in order', () => {
+        expectNoDiagnostic(
+          scene(
+            node('Skeleton3D', { 'bones/4294967296/name': '"Root"', 'bones/1/name': '"Child"' })
+          ),
+          { ruleName: 'skeleton3d-bone-name-order' }
+        );
+      });
+
+      it('names what Godot stores beside a wrapping bone index out of order', () => {
+        expectDiagnostic(scene(node('Skeleton3D', { 'bones/4294967297/name': '"Root"' })), {
+          ruleName: 'skeleton3d-bone-name-order',
+          severity: 'error',
+          contains: ['names bone 4294967297 (stored as 1), but only 0 bones exist'],
+        });
+      });
+
+      it('names a padded bone index as the key writes it', () => {
+        expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/name': '"Root"', 'bones/02/name': '"Head"' })), {
+          ruleName: 'skeleton3d-bone-name-order',
+          contains: ['names bone 02, but only 1 bone exists'],
+        });
       });
 
       // A negative index is phase 1's INVALID_BONE_INDEX; the rule leaves it be

@@ -1,8 +1,8 @@
 /// <reference types="vitest/globals" />
 
 /**
- * `vscode.window`: the message dialogs, the editor, the webview panel factory
- * and the output channel.
+ * `vscode.window`: the message dialogs, the editor, the tab groups, the webview
+ * panel factory and the output channel.
  */
 
 import { vi } from 'vitest';
@@ -19,6 +19,9 @@ export const mockWindow: any = {
   showTextDocument: vi.fn(),
 
   activeTextEditor: undefined,
+
+  /** No editor tabs open. A test that needs some assigns its own `all`. */
+  tabGroups: { all: [] },
 
   /**
    * `logger.ts` passes `{ log: true }`, whose real return is a `LogOutputChannel`

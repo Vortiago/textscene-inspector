@@ -9,9 +9,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
-import { SelectionProvider } from './contexts/SelectionContext';
-import { SceneResourcesProvider } from './SceneResourcesContext';
-import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
+import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { initGlbModules } from '../resources/processing/glbProcessing';
 
@@ -72,19 +70,18 @@ async function render() {
   };
 
   return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider
-        internalResources={[
+    <SceneStack
+      loader={fake.loader}
+      scene={{
+        internalResources: [
           { id: 'Box', type: 'BoxMesh', data: { size: 'Vector3(1, 1, 1)' } },
           { id: '1', type: 'StandardMaterial3D', data: { albedo_color: 'Color(1, 0, 0, 1)' } },
-        ]}
-        externalResources={[{ id: 'sub', path: SUB_SCENE, type: 'PackedScene' }]}
-      >
-        <SelectionProvider>
-          <NodeDispatcher nodes={[instancing]} />
-        </SelectionProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
+        ],
+        externalResources: [{ id: 'sub', path: SUB_SCENE, type: 'PackedScene' }],
+      }}
+    >
+      <NodeDispatcher nodes={[instancing]} />
+    </SceneStack>
   );
 }
 

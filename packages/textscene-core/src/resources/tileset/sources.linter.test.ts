@@ -54,6 +54,14 @@ const CASES: KeyCase[] = [
   },
   { key: 'sources/+3', valid: [ATLAS] },
   {
+    // `int source_id = ….to_int()` (:3963) keeps the low 32 bits, so this is source -1.
+    key: 'sources/4294967295',
+    invalid: [
+      { value: ATLAS, severity: 'error', contains: ['4294967295 (stored as -1)', 'tile_set.cpp:481'] },
+    ],
+  },
+  { key: 'sources/4294967296', valid: [ATLAS] },
+  {
     // tile_set.cpp:3971 demands Variant::ARRAY and :3973 an even element count,
     // because each pair is one from/to mapping.
     key: 'tile_proxies/source_level',
@@ -109,6 +117,13 @@ const CASES: KeyCase[] = [
     invalid: [{ value: PATTERN, severity: 'error', contains: ['Unknown', 'pattern_x'] }],
   },
   { key: 'pattern_+2', valid: [PATTERN] },
+  {
+    // `int pattern_index = ….to_int()` (:3996) keeps the low 32 bits.
+    key: 'pattern_2147483648',
+    invalid: [
+      { value: PATTERN, severity: 'error', contains: ['2147483648 (stored as -2147483648)'] },
+    ],
+  },
   {
     // `components.size() == 1` (:3995), so the write is dropped, and nothing reports it: the
     // terminal-index routing claims no key with a `/` past the glued `pattern_` prefix. Godot never

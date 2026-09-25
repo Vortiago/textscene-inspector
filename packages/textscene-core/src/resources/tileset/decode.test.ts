@@ -9,6 +9,7 @@ import { tileSetFromScene, tileSetFromTres } from './decode';
 import { TscnParser } from '../../parser/TscnParser';
 import { parseTresFile } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
+import { countedTable } from '../testing/countedTable';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -113,6 +114,27 @@ describe('tileSetFromScene', () => {
     expect(source.tiles.get('0:0')!.alternatives.get(1)!.flipV).toBe(true);
     expect(source.tiles.get('0:0')!.alternatives.has(-1)).toBe(false);
     expect(source.tiles.get('-1:2')!.alternatives.get(0)!.textureOrigin).toEqual({ x: 4, y: 4 });
+  });
+
+  // The source id, both halves of a tile coordinate and the alternative id are each `to_int()`
+  // stored in 32 bits (tile_set.cpp:3963, :4755, :4798), so each keeps its low 32 bits.
+  it('reads an id or coordinate past 32 bits as the int Godot stores', () => {
+    const wrappedInternals: TscnInternalResource[] = [
+      {
+        id: 'atlas1',
+        type: 'TileSetAtlasSource',
+        data: {
+          id: 'atlas1',
+          texture: 'ExtResource("2")',
+          '4294967296:4294967298/4294967297/flip_h': 'true',
+        },
+      },
+      { id: 'ts', type: 'TileSet', data: { id: 'ts', 'sources/4294967299': 'SubResource("atlas1")' } },
+    ];
+    const model = tileSetFromScene('SubResource("ts")', wrappedInternals, externals);
+
+    expect(model!.sourceOrder).toEqual([3]);
+    expect(model!.sources.get(3)!.tiles.get('0:2')!.alternatives.get(1)!.flipH).toBe(true);
   });
 
   // `add_source` re-seats a `-1` override at the auto-assigned `next_source_id`
@@ -364,6 +386,55 @@ describe('a TileSet enum Godot reads differently from `parseInt`', () => {
     );
 
     expect(model?.layout).toBe(10);
+  });
+});
+
+describe('TileSet source lookups', () => {
+  const ATLAS_IDS = ['a0', 'a1', 'a2', 'a3'];
+
+  /** Four atlas sources, as `SubResource` blocks of one file. */
+  function atlasSources(): TscnInternalResource[] {
+    return ATLAS_IDS.map((id) => ({
+      id,
+      type: 'TileSetAtlasSource',
+      data: { id, texture: 'ExtResource("2")' },
+    }));
+  }
+
+  /** A TileSet body naming every atlas in `ATLAS_IDS`, as `sources/0` to `sources/3`. */
+  function tileSetBody(): Record<string, string> {
+    return Object.fromEntries(ATLAS_IDS.map((id, i) => [`sources/${i}`, `SubResource("${id}")`]));
+  }
+
+  it('reads each entry of the scene table once, however many sources the TileSet names', () => {
+    const { table, entryReads } = countedTable([
+      ...atlasSources(),
+      { id: 'ts', type: 'TileSet', data: { id: 'ts', ...tileSetBody() } },
+    ]);
+    const model = tileSetFromScene('SubResource("ts")', table, externals);
+
+    expect(model!.sourceOrder).toEqual([0, 1, 2, 3]);
+    expect(entryReads()).toBe(table.length);
+  });
+
+  it('reads each entry of a .tres table once, however many sources it names', () => {
+    const { table, entryReads } = countedTable(atlasSources());
+    const model = tileSetFromTres({
+      resourceType: 'TileSet',
+      properties: tileSetBody(),
+      extResources: externals,
+      subResources: table,
+    });
+
+    expect(model!.sourceOrder).toEqual([0, 1, 2, 3]);
+    expect(entryReads()).toBe(table.length);
+  });
+
+  it('skips a source whose id names nothing, as before (error path)', () => {
+    const { table } = countedTable([
+      { id: 'ts', type: 'TileSet', data: { id: 'ts', 'sources/0': 'SubResource("gone")' } },
+    ]);
+    expect(tileSetFromScene('SubResource("ts")', table, externals)!.sourceOrder).toEqual([]);
   });
 });
 

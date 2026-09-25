@@ -12,9 +12,7 @@ import { initGlbModules } from '../../../resources/processing/glbProcessing';
 import { GLBSceneRoot, GLB_SCENE_ROOT_TYPE } from './Component';
 import { GlbOverridesProvider } from './GlbOverridesContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import { SceneResourcesProvider } from '../../SceneResourcesContext';
-import { SelectionProvider } from '../../contexts/SelectionContext';
+import { SceneStack } from '../../testing/SceneStack';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 
@@ -59,17 +57,13 @@ async function bodyMaterial(ref: string): Promise<THREE.MeshStandardMaterial> {
   const fake = createFakeResourceLoader();
   fake.glbMeshes.seed(GLB_PATH, makeFakeGlb());
   const renderer = await ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider internalResources={INTERNAL} externalResources={EXT}>
-          <GlbOverridesProvider overrides={[override(ref)]}>
-            <NodePathProvider path="Glb">
-              <GLBSceneRoot node={NODE} />
-            </NodePathProvider>
-          </GlbOverridesProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </SelectionProvider>
+    <SceneStack loader={fake.loader} scene={{ internalResources: INTERNAL, externalResources: EXT }}>
+      <GlbOverridesProvider overrides={[override(ref)]}>
+        <NodePathProvider path="Glb">
+          <GLBSceneRoot node={NODE} />
+        </NodePathProvider>
+      </GlbOverridesProvider>
+    </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 10));
   const body = renderer.scene

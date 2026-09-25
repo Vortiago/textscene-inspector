@@ -6,7 +6,7 @@
  */
 
 import { warn } from '../../logger';
-import { indexedKeyRegex, parseGodotInt, toIntIndex } from '../../godot/index.js';
+import { indexedKeyRegex, parseGodotInt, stringToInt } from '../../godot/index.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
@@ -16,7 +16,7 @@ import { ShadowCastingSetting, type MeshLibraryModel, type MeshLibraryItem } fro
 /**
  * `MeshLibrary::_set` reads fixed slices with no validity gate, `get_slicec('/', 1)`
  * for the index and `get_slicec('/', 2)` for the leaf (mesh_library.cpp:40-41). So
- * {@link toIntIndex} decides the number (`+7` is 7, `x` is 0), and anything below the
+ * {@link stringToInt} decides the number (`+7` is 7, `x` is 0), and anything below the
  * leaf is ignored (ustring.cpp:941-964): `item/7/name/extra` sets item 7's name.
  */
 const ITEM_KEY_RE = indexedKeyRegex('^item/(#)/([^/]+)', 'to_int');
@@ -67,11 +67,11 @@ export function meshLibraryFromTres(
   for (const [key, rawValue] of Object.entries(tres.properties)) {
     const match = ITEM_KEY_RE.exec(key);
     if (!match) continue;
-    const id = toIntIndex(match[1]!);
+    const id = stringToInt(match[1]!);
     // `create_item`'s `ERR_FAIL_COND(p_item < 0)` (mesh_library.cpp:159) leaves
     // no item for the `set_item_*` that follows, so a negative index writes
     // nothing.
-    if (!(id >= 0)) continue;
+    if (id < 0) continue;
     const field = match[2]!;
     const item = ensure(id);
 

@@ -153,21 +153,6 @@
     "publish": "npx @vscode/vsce publish --no-dependencies",
     "clean": "rimraf dist out .test-workspace .vscode-test-web"
   },
-  "keywords": [
-    "godot",
-    "godot tscn",
-    "tscn",
-    "tscn viewer",
-    "tscn preview",
-    "scene preview",
-    "godot scene",
-    "3d preview",
-    "three.js",
-    "textscene",
-    "inspector",
-    "viewer",
-    "visualization"
-  ],
   "author": "Vortiago",
   "license": "MIT",
   "repository": {
@@ -190,7 +175,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@types/vscode": "^1.138.0",
+    "@types/vscode": "~1.85.0",
     "@vscode/test-electron": "catalog:",
     "@vscode/test-web": "^0.0.81",
     "@vscode/vsce": "^3.9.2",

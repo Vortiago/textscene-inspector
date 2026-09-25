@@ -153,15 +153,15 @@ describe('#175 environment — scalar reads stop leaking NaN', () => {
   });
 });
 
-describe('#175 environment — a malformed color must NOT crash the whole parse', () => {
+describe('environment — a malformed color must NOT crash the whole parse', () => {
   it('honours a valid color', () => {
     const r = decodeEnvironment({ background_color: 'Color(1, 0, 0, 1)' });
     expect(r.background_color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
   it('a present-but-malformed color falls back to that field OWN default (no throw)', () => {
-    // Currently routes through the THROWING parseColor with no catch -> the whole
-    // decodeEnvironment throws on a malformed color. It must fall back instead.
+    // A throwing colour reader with no catch would fail the whole decodeEnvironment
+    // on one malformed field. Each field falls back instead.
     expect(() => decodeEnvironment({ background_color: 'Color(oops)' })).not.toThrow();
     const r = decodeEnvironment({ background_color: 'Color(oops)', ambient_light_color: 'nope' });
     // background_color default is black; ambient_light_color default is black too.

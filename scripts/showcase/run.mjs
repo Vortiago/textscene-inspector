@@ -7,15 +7,11 @@
  *   node scripts/showcase/run.mjs <scenario-name>
  *   node scripts/showcase/run.mjs all
  */
-import { readFileSync } from 'node:fs';
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
+import { readFixtureLookup } from '../fixtureManifest.mjs';
 
-// The label-to-file map of the generated fixtures manifest.
-const fixturesTs = readFileSync('apps/textscene-web/src/fixtures.ts', 'utf8');
-const arrMatch = fixturesTs.match(/export const fixtures[^=]*=\s*(\[[\s\S]*?\]);/);
-const FIXTURES = arrMatch ? JSON.parse(arrMatch[1]) : [];
-const fileForLabel = (label) => FIXTURES.find((f) => f.name === label)?.file;
+const fileForLabel = readFixtureLookup();
 
 const arg = process.argv[2];
 if (!arg) {

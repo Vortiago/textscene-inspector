@@ -3,11 +3,12 @@
  * preview environment uses FILMIC, and drawing it as LINEAR measures a 25/255 mean
  * channel error against a Godot render (`scripts/godot-ref`).
  */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { applyToneMapping, toneMappingFor } from './toneMapping';
+import { applyToneMapping, toneMappingFor, toneMappingProgramKey } from './toneMapping';
 import type { ToneMappedRenderer } from './toneMapping';
 import {
+  GodotToneMapper,
   toneMappingEffectGlsl,
   toneMappingShaderChunk,
   toneMappingWhiteParam,
@@ -108,11 +109,11 @@ describe('Godot\u2019s curves', () => {
 
 const ORIGINAL_CHUNK = THREE.ShaderChunk.tonemapping_pars_fragment;
 
-describe('applyToneMapping', () => {
-  function fakeRenderer(): ToneMappedRenderer {
-    return { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 };
-  }
+function fakeRenderer(): ToneMappedRenderer {
+  return { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 };
+}
 
+describe('applyToneMapping', () => {
   it('sets both the curve and the exposure on the renderer', () => {
     const gl = fakeRenderer();
     applyToneMapping(gl, { mode: 3, exposure: 1.5 });
@@ -175,8 +176,8 @@ describe('applyToneMapping', () => {
   it('marks the materials dirty — three compiles the tonemapper into every shader', () => {
     // toneMapping is a #define, so a renderer that already has compiled
     // programs keeps rendering the old curve until they are recompiled.
-    // `needsUpdate` is setter-only in three; the observable effect is the
-    // material's version counter, which is what drives recompilation.
+    // `needsUpdate` is setter-only in three. The observable effect is the
+    // material's version counter, which makes three derive the program key again.
     const scene = new THREE.Scene();
     const material = new THREE.MeshStandardMaterial();
     scene.add(new THREE.Mesh(new THREE.BoxGeometry(), material));
@@ -206,5 +207,111 @@ describe('applyToneMapping', () => {
     });
     applyToneMapping(gl, { mode: 0, exposure: 1 });
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('toneMappingProgramKey', () => {
+  const { FILMIC, AGX } = GodotToneMapper;
+  const toneMapped = { toneMapped: true };
+
+  afterEach(() => {
+    THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
+  });
+
+  it('names the installed curve, one term per curve', () => {
+    applyToneMapping(fakeRenderer(), { mode: FILMIC });
+    const underFilmic = toneMappingProgramKey(toneMapped);
+    applyToneMapping(fakeRenderer(), { mode: AGX });
+    expect(underFilmic).not.toBe('');
+    expect(toneMappingProgramKey(toneMapped)).not.toBe(underFilmic);
+  });
+
+  it('gives an equal chunk the same term when it is installed again', () => {
+    applyToneMapping(fakeRenderer(), { mode: AGX });
+    const first = toneMappingProgramKey(toneMapped);
+    applyToneMapping(fakeRenderer(), { mode: FILMIC });
+    applyToneMapping(fakeRenderer(), { mode: AGX });
+    expect(toneMappingProgramKey(toneMapped)).toBe(first);
+  });
+
+  it('is empty for a material that is not tone-mapped, whatever the curve', () => {
+    applyToneMapping(fakeRenderer(), { mode: AGX });
+    expect(toneMappingProgramKey({ toneMapped: false })).toBe('');
+  });
+});
+
+describe('applyToneMapping program keys', () => {
+  // three reuses a compiled program whose key is equal, so a new curve reaches a material that
+  // has compiled only when the key changes with the curve. FILMIC then AGX is the editor preview
+  // environment yielding to a WorldEnvironment that an instanced sub-scene brings in.
+  const { FILMIC, AGX } = GodotToneMapper;
+
+  afterEach(() => {
+    THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
+  });
+
+  /** Each material's key under FILMIC, then under AGX after FILMIC is undone. */
+  function keysAcrossSwap(...materials: THREE.Material[]): { filmic: string[]; agx: string[] } {
+    const gl = fakeRenderer();
+    const restoreFilmic = applyToneMapping(gl, { mode: FILMIC });
+    const filmic = materials.map((material) => material.customProgramCacheKey());
+    restoreFilmic();
+    applyToneMapping(gl, { mode: AGX });
+    return { filmic, agx: materials.map((material) => material.customProgramCacheKey()) };
+  }
+
+  it('gives a tone-mapped material a new program key when AGX replaces FILMIC', () => {
+    const { filmic, agx } = keysAcrossSwap(new THREE.MeshStandardMaterial());
+    expect(agx[0]).not.toBe(filmic[0]);
+  });
+
+  it('re-keys a sky background material, which the renderer owns and no scene holds', () => {
+    const { vertexShader, fragmentShader } = THREE.ShaderLib.backgroundCube!;
+    const { filmic, agx } = keysAcrossSwap(
+      new THREE.ShaderMaterial({ vertexShader, fragmentShader })
+    );
+    expect(agx[0]).not.toBe(filmic[0]);
+  });
+
+  it('re-keys only the materials that compile the curve', () => {
+    const { filmic, agx } = keysAcrossSwap(
+      new THREE.MeshBasicMaterial(),
+      new THREE.MeshBasicMaterial({ toneMapped: false })
+    );
+    expect(agx[0]).not.toBe(filmic[0]);
+    expect(agx[1]).toBe(filmic[1]);
+  });
+
+  it('gives the replaced curve its key back on restore, so its programs are reused', () => {
+    const material = new THREE.MeshStandardMaterial();
+    const gl = fakeRenderer();
+    const restoreFilmic = applyToneMapping(gl, { mode: FILMIC });
+    const underFilmic = material.customProgramCacheKey();
+    const restoreAgx = applyToneMapping(gl, { mode: AGX });
+    const underAgx = material.customProgramCacheKey();
+    restoreAgx();
+
+    expect(underAgx).not.toBe(underFilmic);
+    expect(material.customProgramCacheKey()).toBe(underFilmic);
+    restoreFilmic();
+  });
+
+  it('keeps three’s own key, so two shader patches still compile two programs', () => {
+    applyToneMapping(fakeRenderer(), { mode: AGX });
+    const tinted = new THREE.MeshStandardMaterial();
+    tinted.onBeforeCompile = (shader) => {
+      shader.fragmentShader += '\n// tinted';
+    };
+    const plain = new THREE.MeshStandardMaterial();
+    expect(tinted.customProgramCacheKey()).not.toBe(plain.customProgramCacheKey());
+  });
+
+  it('moves no key for an unknown mode, which installs no curve', () => {
+    const material = new THREE.MeshStandardMaterial();
+    const gl = fakeRenderer();
+    applyToneMapping(gl, { mode: FILMIC });
+    const underFilmic = material.customProgramCacheKey();
+    applyToneMapping(gl, { mode: 99 });
+    expect(material.customProgramCacheKey()).toBe(underFilmic);
   });
 });

@@ -120,6 +120,10 @@ describe('FileDialog strict validators', () => {
       ).toBeNull();
     });
 
+    it('accepts a filter whose backslash escapes a raw newline, as the tokenizer reads it', () => {
+      expect(check('filters', 'PackedStringArray("*.png\\\n", "*.jpg")')).toBeNull();
+    });
+
     it('rejects a value with no PackedStringArray wrapper', () => {
       expect(check('filters', '"*.png"')?.message).toContain('PackedStringArray');
     });

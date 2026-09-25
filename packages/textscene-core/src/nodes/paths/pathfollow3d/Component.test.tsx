@@ -2,7 +2,6 @@
  * <PathFollow3D> places its group at the sampled curve point, falls back to the
  * authored transform when no curve is in scope, and draws a selection-gated handle.
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -11,12 +10,13 @@ import { PathFollow3D } from './Component';
 import { parsePathFollow3D } from './parser';
 import { Path3DCurveProvider } from '../../../r3f/contexts/Path3DCurveContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider, useSelection } from '../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import {
   parseCurve3DPoints,
   tessellateCurve3D,
   type Curve3DSampler,
 } from '../../../resources/curves/curve3d';
+import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 // Straight curve along +X, (0,0,0) → (10,0,0), length 10.
 const STRAIGHT: Curve3DSampler = tessellateCurve3D(
@@ -33,14 +33,6 @@ function followNode(name = 'MyFollow', props: Record<string, string> = {}): Tscn
       props
     ),
   };
-}
-
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
 }
 
 async function render(

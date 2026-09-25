@@ -16,6 +16,27 @@ import { refuseOverlap, unavailableKeysOf } from './removalKeys.js';
 export type { PropertyValidator, ValidatorFn } from './propertyValidator.js';
 export type { Removal } from './unavailableKey.js';
 
+/** One part of a type's validator table: property key to validator. */
+type ValidatorGroup = Readonly<Record<string, PropertyValidator>>;
+
+/**
+ * Throws on a key `keys` repeats, or one `own` already holds. Checked before anything is stored, so a
+ * refused call registers nothing.
+ */
+function refuseRedeclaration(
+  nodeType: string,
+  keys: readonly string[],
+  own: ValidatorGroup
+): void {
+  const declared = new Set(Object.keys(own));
+  for (const key of keys) {
+    if (declared.has(key)) {
+      throw new Error(`${nodeType} already declares '${key}'; a type declares each key once`);
+    }
+    declared.add(key);
+  }
+}
+
 /**
  * Registry for property validators by node type
  */
@@ -51,17 +72,19 @@ export class ValidatorRegistry {
   }
 
   /**
-   * Register multiple validators for a node type
+   * Register the validators of a node type, from one table or several parts of one. A key belongs to
+   * one part: a key that an earlier part, or an earlier call for the same type, declares throws, where
+   * a merge would keep the later validator and drop the earlier one without a report.
    * @param nodeType - TSCN node type (for example "MeshInstance3D")
-   * @param validators - Map of property keys to validator functions
+   * @param groups - one or more maps of property keys to validator functions
    */
-  registerAll(nodeType: string, validators: Record<string, PropertyValidator>): void {
-    refuseOverlap(nodeType, Object.keys(validators), this.unavailable, 'removes');
-    if (!this.validators.has(nodeType)) {
-      this.validators.set(nodeType, {});
-    }
-    const own = this.validators.get(nodeType)!;
-    Object.assign(own, validators);
+  registerAll(nodeType: string, ...groups: [ValidatorGroup, ...ValidatorGroup[]]): void {
+    const keys = groups.flatMap((group) => Object.keys(group));
+    refuseOverlap(nodeType, keys, this.unavailable, 'removes');
+    const own = this.validators.get(nodeType) ?? {};
+    refuseRedeclaration(nodeType, keys, own);
+    this.validators.set(nodeType, own);
+    for (const group of groups) Object.assign(own, group);
     this.wildcards.set(nodeType, buildWildcardIndex(own));
   }
 

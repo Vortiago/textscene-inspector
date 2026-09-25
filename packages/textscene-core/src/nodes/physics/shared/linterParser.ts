@@ -34,15 +34,21 @@ const shared = (disableModeHint: string, layerHint: string, maskHint: string) =>
   collision_priority: v.float('collision_priority'),
 });
 
-validatorRegistry.registerAll('CollisionObject2D', {
-  ...shared('collision_object_2d.cpp:642', 'collision_object_2d.cpp:645', 'collision_object_2d.cpp:646'),
-  // collision_object_2d.cpp:650. The 3D twin spells it `input_ray_pickable`.
-  input_pickable: v.boolean('input_pickable'),
-});
+validatorRegistry.registerAll(
+  'CollisionObject2D',
+  shared('collision_object_2d.cpp:642', 'collision_object_2d.cpp:645', 'collision_object_2d.cpp:646'),
+  {
+    // collision_object_2d.cpp:650. The 3D twin spells it `input_ray_pickable`.
+    input_pickable: v.boolean('input_pickable'),
+  },
+);
 
-validatorRegistry.registerAll('CollisionObject3D', {
-  ...shared('collision_object_3d.cpp:503', 'collision_object_3d.cpp:506', 'collision_object_3d.cpp:507'),
-  // collision_object_3d.cpp:511-512. `input_capture_on_drag` is 3D-only.
-  input_ray_pickable: v.boolean('input_ray_pickable'),
-  input_capture_on_drag: v.boolean('input_capture_on_drag'),
-});
+validatorRegistry.registerAll(
+  'CollisionObject3D',
+  shared('collision_object_3d.cpp:503', 'collision_object_3d.cpp:506', 'collision_object_3d.cpp:507'),
+  {
+    // collision_object_3d.cpp:511-512. `input_capture_on_drag` is 3D-only.
+    input_ray_pickable: v.boolean('input_ray_pickable'),
+    input_capture_on_drag: v.boolean('input_capture_on_drag'),
+  },
+);

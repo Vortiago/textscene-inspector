@@ -16,14 +16,11 @@ import { parseTresFile } from '../parser/parsedResource';
 import { tileSetFromTres } from '../resources/tileset/decode';
 import { mapToLocalPx } from '../resources/tileset/tilePlacement';
 import { NodeDispatcher } from './NodeDispatcher';
-import { CanvasWorkspaceProvider } from './contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from './contexts/SelectionContext';
-import { SceneResourcesProvider } from './SceneResourcesContext';
-import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { findByType } from '../nodes/2d/tiles/tilemaplayer/findByType';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
+import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
 
@@ -67,18 +64,9 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
   fake.textures.seed('res://tileset/isotiles.png', atlasTex);
 
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={scene.internalResources}
-          externalResources={scene.externalResources}
-        >
-          <SelectionProvider>
-            <NodeDispatcher nodes={scene.nodes} />
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
+      <NodeDispatcher nodes={scene.nodes} />
+    </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 10));
 

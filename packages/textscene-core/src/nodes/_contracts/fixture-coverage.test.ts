@@ -2,38 +2,16 @@
  * Fixtures contract: the `unit-*.tscn` fixtures exist, parse through the real TscnParser, and carry
  * the representative shape, checked on parsed values, not file existence. Nothing pins the size or
  * subject of the co-located suites, since a case count passes stubs and fails a merged `it.each`.
- * The repo root is found by walking up to pnpm-workspace.yaml, so the test's depth does not matter.
  */
 import { describe, it, expect } from 'vitest';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import { TscnParser } from '../../parser/TscnParser';
-import type { TscnScene, TscnNode } from '../../parser/types';
-
-function repoRoot(): string {
-  let dir = dirname(fileURLToPath(import.meta.url));
-  for (let i = 0; i < 12; i += 1) {
-    if (existsSync(resolve(dir, 'pnpm-workspace.yaml'))) return dir;
-    dir = dirname(dir);
-  }
-  throw new Error('repo root (pnpm-workspace.yaml) not found above this test');
-}
-
-const fixturesDir = resolve(repoRoot(), 'scenes/fixtures');
-
-function flatten(scene: TscnScene): TscnNode[] {
-  const out: TscnNode[] = [];
-  const walk = (n: TscnNode): void => {
-    out.push(n);
-    n.children.forEach(walk);
-  };
-  scene.nodes.forEach(walk);
-  return out;
-}
+import type { TscnScene } from '../../parser/types';
+import { fixturesDir, flatten } from '../../parser/testing/parserKit';
 
 function parseFixture(file: string): { scene: TscnScene; raw: string } {
-  const f = resolve(fixturesDir, file);
+  const f = resolve(fixturesDir(), file);
   if (!existsSync(f)) throw new Error(`fixture missing: scenes/fixtures/${file}`);
   const raw = readFileSync(f, 'utf8');
   return { scene: new TscnParser().parse(raw), raw };

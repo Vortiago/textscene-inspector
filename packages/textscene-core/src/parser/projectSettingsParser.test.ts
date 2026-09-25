@@ -65,6 +65,26 @@ describe('parseProjectSettings', () => {
     expect(settings?.['rendering/anti_aliasing/quality/use_debanding']).toBe('true');
   });
 
+  it('decodes the escapes Godot writes into a string', () => {
+    // `c_escape_multiline` (`ustring.cpp:4493-4499`) escapes `\` and `"`, and
+    // `VariantParser` decodes them when ProjectSettings loads the file.
+    const settings = parseProjectSettings(
+      '[application]\n\nconfig/name="Say \\"hi\\""\nconfig/icon="res://a\\\\b.svg"\n'
+    );
+    expect(settings?.['application/config/name']).toBe('Say "hi"');
+    expect(settings?.['application/config/icon']).toBe('res://a\\b.svg');
+  });
+
+  it('reads a StringName as its text', () => {
+    const settings = parseProjectSettings('[input]\n\nui_default=&"ui_accept"\n');
+    expect(settings?.['input/ui_default']).toBe('ui_accept');
+  });
+
+  it('keeps a value whose trailing quote is escaped as written, since it never closes', () => {
+    const settings = parseProjectSettings('[application]\n\nconfig/name="unclosed\\"\n');
+    expect(settings?.['application/config/name']).toBe('"unclosed\\"');
+  });
+
   it('keeps only the first line of a wrapped quoted value, and does not crash on it', () => {
     // Godot wraps `config/description` without escaping the newline. The
     // continuation has no `=`, so it is skipped: no setting this previewer reads is

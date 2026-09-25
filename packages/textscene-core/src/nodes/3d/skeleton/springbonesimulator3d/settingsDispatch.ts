@@ -6,7 +6,8 @@
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
-import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
+import { indexedKeyRegex } from '../../../../godot/index.js';
+import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 import { JOINT_LEAVES } from './jointLeaves.js';
 import { SETTING_LEAVES } from './settingLeaves.js';
 
@@ -14,7 +15,7 @@ import { SETTING_LEAVES } from './settingLeaves.js';
  * Why a negative setting index is refused, shared by every level of the family
  * so they all report the same thing.
  */
-const negativeSettingIndex = (index: number): string =>
+const negativeSettingIndex = (index: string): string =>
   `Setting index ${index} must be non-negative; SpringBoneSimulator3D::_set fails ` +
   'ERR_FAIL_INDEX_V(which, settings.size(), false) (spring_bone_simulator_3d.cpp:44) ' +
   'before reaching the property, so the write never lands';
@@ -52,17 +53,12 @@ const COLLISION_KEY = indexedKeyRegex(
 );
 
 /**
- * The negative-setting-index branch every level shares, or null. The index is read as `_set` reads
- * it, a bare `get_slicec('/', 1).to_int()` with no validity gate (:42): `x` is 0 and lands, and
- * `a-1` is -1 (ustring.cpp:2291-2292), which :44 refuses. A NaN index fails the comparison and is
- * left alone.
+ * The negative-setting-index branch every level shares, or null. `_set` reads the index with a bare
+ * `get_slicec('/', 1).to_int()` and no validity gate (:42), so `x` is 0 and lands, and :44 refuses a
+ * negative one.
  */
-function negativeIndexError(indexText: string, key: string, line: number) {
-  const index = toIntIndex(indexText);
-  if (index < 0) {
-    return keyShapeError(key, line, negativeSettingIndex(index), 'INVALID_SETTING_INDEX');
-  }
-  return null;
+function negativeSettingError(indexText: string, key: string, line: number) {
+  return negativeIndexError(indexText, key, line, negativeSettingIndex, 'INVALID_SETTING_INDEX');
 }
 
 /**
@@ -82,7 +78,7 @@ const collisionPath = v.nodePath('collision_path');
 export const settingsValidator: PropertyValidator = accepts((key, value, line) => {
   const joint = JOINT_KEY.exec(key);
   if (joint) {
-    const negative = negativeIndexError(joint[1]!, key, line);
+    const negative = negativeSettingError(joint[1]!, key, line);
     if (negative) return negative;
     const leafName = joint[2]!;
     // The joint index is unchecked on purpose: each leaf's ERR_FAIL_INDEX sits in its own setter
@@ -102,7 +98,7 @@ export const settingsValidator: PropertyValidator = accepts((key, value, line) =
 
   const collision = COLLISION_KEY.exec(key);
   if (collision) {
-    const negative = negativeIndexError(collision[1]!, key, line);
+    const negative = negativeSettingError(collision[1]!, key, line);
     if (negative) return negative;
     return collisionPath(key, value, line);
   }

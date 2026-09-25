@@ -17,6 +17,7 @@ import { corpusRootFor, resToFixtureFile, fixtureFileToRes } from './corpusRoot'
 import { useCorpusRoot } from './useCorpusRoot';
 import { WebResourceProvider } from './providers/WebResourceProvider';
 import { SourceGutter } from './SourceGutter';
+import { FileProblems } from './FileProblems';
 import { useSceneSource } from './useSceneSource';
 import { useFixtureSelection } from './useFixtureSelection';
 import { useCameraDeepLink } from './useCameraDeepLink';
@@ -29,6 +30,9 @@ import { useFileDrop } from './useFileDrop';
 import { useUploadError } from './useUploadError';
 import { Toolbar } from './R3FToolbar';
 import styles from './r3f-main.module.css';
+
+/** The site mirrors exactly the scenes it lists, so an empty catalog means no mirror. */
+const HAS_FIXTURES_MIRROR = fixtures.length > 0;
 
 export function R3FApp() {
   const { sourcePane, toggleVisible: toggleSourcePane, onSplitterMouseDown } = useSourcePane();
@@ -48,7 +52,10 @@ export function R3FApp() {
 
   // One provider, bus and loader for the app's lifetime, so an uploaded texture survives a
   // fixture switch.
-  const pipeline = useMemo(() => createResourcePipeline(new WebResourceProvider()), []);
+  const pipeline = useMemo(
+    () => createResourcePipeline(new WebResourceProvider({ hasFixturesMirror: HAS_FIXTURES_MIRROR })),
+    []
+  );
   const { provider, loader } = pipeline;
 
   // Each vendored demo project keeps its own res:// namespace. The root switches at the
@@ -107,7 +114,8 @@ export function R3FApp() {
     missingPathsRef.current = new Set([...paths].map(resourceFilePath));
   }, []);
 
-  const { diagnosticsByLine, problemBadge, lineCount } = useSourceDiagnostics(buffer);
+  const { diagnosticsByLine, fileDiagnostics, problemBadge, lineCount } =
+    useSourceDiagnostics(buffer);
   const [gutterScrollTop, setGutterScrollTop] = useState(0);
 
   const options = useMemo(() => fixtureOptions(uploadedTscnName), [uploadedTscnName]);
@@ -219,6 +227,7 @@ export function R3FApp() {
             >
               <div className={styles.sourcePaneHeader}>
                 <span className={styles.sourcePaneTitle}>Source</span>
+                {fileDiagnostics && <FileProblems group={fileDiagnostics} />}
                 <button
                   type="button"
                   className={styles.downloadButton}
@@ -272,7 +281,8 @@ export function R3FApp() {
             onResourceUpload={handleResourceUpload}
             onResourceRemove={handleResourceRemove}
             onMissingPathsChange={handleMissingPathsChange}
-            onOpenSubScene={handleOpenSubScene}
+            // Opening a sub-scene loads it from the mirror, so without one the ⤢ button goes.
+            onOpenSubScene={HAS_FIXTURES_MIRROR ? handleOpenSubScene : undefined}
             initialActiveCameraPath={initialActiveCameraPath}
             toolbar={
               <Toolbar

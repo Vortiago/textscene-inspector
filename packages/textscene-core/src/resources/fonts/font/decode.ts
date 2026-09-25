@@ -4,7 +4,9 @@
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
-import { findSubResource, parseResourceReference } from '../../SubResourceResolver';
+import { unquoteString } from '../../../parser/utils';
+import { STRING_LITERAL_SOURCE } from '../../../godot/index.js';
+import { findExtResource, findSubResource, parseResourceReference } from '../../SubResourceResolver';
 import { resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { FontCacheReader, FontLoaderFn, FontResource } from './types';
 
@@ -29,8 +31,8 @@ export function extractResourceRefs(value: string): string[] {
 }
 
 /**
- * `PackedStringArray("a", "b")` → `["a", "b"]`. Godot's own string-escape set,
- * matching `unquoteString`.
+ * `PackedStringArray("a", "b")` → `["a", "b"]`, each element decoded as `unquoteString` decodes
+ * it, so `\n` is a newline and not the letter `n`.
  */
 export function parsePackedStringArray(value: string): string[] {
   const match = value.match(/^PackedStringArray\s*\(([\s\S]*)\)$/);
@@ -38,10 +40,10 @@ export function parsePackedStringArray(value: string): string[] {
   const inner = match[1]!.trim();
   if (inner === '') return [];
   const strings: string[] = [];
-  const re = /"((?:[^"\\]|\\.)*)"/g;
+  const re = new RegExp(STRING_LITERAL_SOURCE, 'g');
   let m: RegExpExecArray | null;
   while ((m = re.exec(inner)) !== null) {
-    strings.push(m[1]!.replace(/\\(.)/g, '$1'));
+    strings.push(unquoteString(m[0]));
   }
   return strings;
 }
@@ -125,7 +127,7 @@ export function resolveInlineFontResource(
   if (!parsed) return null;
 
   if (parsed.type === 'ExtResource') {
-    const path = externalResources.find((r) => r.id === parsed.id)?.path;
+    const path = findExtResource(externalResources, parsed.id)?.path;
     if (!path) return null;
     const cached = fontCache.getCached(path);
     if (cached === undefined) {

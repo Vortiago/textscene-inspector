@@ -7,12 +7,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { relative, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { stripComments } from '@textscene/dev-kit';
-import { allSourceFiles, linterDir, nodesRoot, srcRoot } from './testing/ruleNameScrape.js';
-
-/** A file's `src/`-relative path, the form every list below is written in. */
-const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
+import { allSourceFiles, linterDir, nodesRoot, srcLabel } from './testing/ruleNameScrape.js';
 
 /**
  * The files that may name the raw parent accessor. `linterUtils.ts` declares
@@ -54,7 +51,7 @@ function offenders(
   files: string[] = allSourceFiles()
 ): string[] {
   return files
-    .map((file) => ({ label: label(file), file }))
+    .map((file) => ({ label: srcLabel(file), file }))
     .filter((entry) => !allowed.has(entry.label))
     .filter((entry) => predicate(stripComments(readFileSync(entry.file, 'utf8'))))
     .map((entry) => entry.label)
@@ -66,7 +63,7 @@ describe('only parentType.ts holds a raw parent', () => {
     // Containment, not a size floor: a big walk can still miss the directory a
     // helper moves into. One known path per subtree, plus both allowlisted files,
     // so an exemption cannot name a file the walk never reaches.
-    const scanned = allSourceFiles().map(label);
+    const scanned = allSourceFiles().map(srcLabel);
     for (const known of [
       'linter/parentType.ts',
       'linter/linterUtils.ts',

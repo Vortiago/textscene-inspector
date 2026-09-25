@@ -114,4 +114,9 @@ describe('MultiplayerSpawner strict validators', () => {
     ).toBeNull();
     expect(check('_spawnable_scenes', 'not-a-packed-array')).not.toBeNull();
   });
+
+  it('accepts one trailing comma, which the packed loop closes on', () => {
+    expect(check('_spawnable_scenes', 'PackedStringArray("res://a.tscn",)')).toBeNull();
+    expect(check('_spawnable_scenes', '["res://a.tscn",]')).toBeNull();
+  });
 });

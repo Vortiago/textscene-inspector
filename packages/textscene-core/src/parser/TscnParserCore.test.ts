@@ -271,6 +271,7 @@ garbage-line-without-equals
         onError: () => {},
         onSectionStart: () => {},
         onProperty: () => {},
+        onSectionBuilt: () => {},
       });
 
       expect(observed).toEqual(bare);
@@ -347,27 +348,35 @@ visible = true
 
       expect(onProperty).toHaveBeenCalledTimes(3);
       // sub_resource property: ownerType from the heading's type attribute
-      expect(onProperty).toHaveBeenNthCalledWith(
-        1,
-        'sub_resource',
-        'BoxMesh',
-        'size',
-        'Vector3(1, 2, 3)',
-        4,
-        false
-      );
+      expect(onProperty).toHaveBeenNthCalledWith(1, {
+        section: 'sub_resource',
+        ownerType: 'BoxMesh',
+        key: 'size',
+        value: 'Vector3(1, 2, 3)',
+        line: 4,
+        isMultiline: false,
+        stored: { key: 'size', value: 'Vector3(1, 2, 3)' },
+      });
       // accumulated multi-line value: STARTING line, isMultiline=true
-      expect(onProperty).toHaveBeenNthCalledWith(
-        2,
-        'node',
-        'Label',
-        'text',
-        '"first\nsecond"',
-        7,
-        true
-      );
+      expect(onProperty).toHaveBeenNthCalledWith(2, {
+        section: 'node',
+        ownerType: 'Label',
+        key: 'text',
+        value: '"first\nsecond"',
+        line: 7,
+        isMultiline: true,
+        stored: { key: 'text', value: '"first\nsecond"' },
+      });
       // single-line property after the multi-line one: its own line number
-      expect(onProperty).toHaveBeenNthCalledWith(3, 'node', 'Label', 'visible', 'true', 9, false);
+      expect(onProperty).toHaveBeenNthCalledWith(3, {
+        section: 'node',
+        ownerType: 'Label',
+        key: 'visible',
+        value: 'true',
+        line: 9,
+        isMultiline: false,
+        stored: { key: 'visible', value: 'true' },
+      });
     });
 
     it('passes ownerType=undefined where the section names no type', () => {
@@ -383,9 +392,25 @@ visible = true
 
       expect(onProperty).toHaveBeenCalledTimes(2);
       // gd_scene body property: section 'none', no owner type
-      expect(onProperty).toHaveBeenNthCalledWith(1, 'none', undefined, 'config', '1', 2, false);
+      expect(onProperty).toHaveBeenNthCalledWith(1, {
+        section: 'none',
+        ownerType: undefined,
+        key: 'config',
+        value: '1',
+        line: 2,
+        isMultiline: false,
+        stored: { key: 'config', value: '1' },
+      });
       // index= node has no type attribute: ownerType undefined
-      expect(onProperty).toHaveBeenNthCalledWith(2, 'node', undefined, 'visible', 'true', 5, false);
+      expect(onProperty).toHaveBeenNthCalledWith(2, {
+        section: 'node',
+        ownerType: undefined,
+        key: 'visible',
+        value: 'true',
+        line: 5,
+        isMultiline: false,
+        stored: { key: 'visible', value: 'true' },
+      });
     });
 
     it("takes a [resource] body's ownerType from the [gd_resource] header", () => {
@@ -401,24 +426,24 @@ background_mode = 1
 
       parser.parse(content, simpleCreator, { onProperty });
 
-      expect(onProperty).toHaveBeenNthCalledWith(
-        1,
-        'sub_resource',
-        'Sky',
-        'radiance_size',
-        '2',
-        4,
-        false
-      );
-      expect(onProperty).toHaveBeenNthCalledWith(
-        2,
-        'resource',
-        'Environment',
-        'background_mode',
-        '1',
-        7,
-        false
-      );
+      expect(onProperty).toHaveBeenNthCalledWith(1, {
+        section: 'sub_resource',
+        ownerType: 'Sky',
+        key: 'radiance_size',
+        value: '2',
+        line: 4,
+        isMultiline: false,
+        stored: { key: 'radiance_size', value: '2' },
+      });
+      expect(onProperty).toHaveBeenNthCalledWith(2, {
+        section: 'resource',
+        ownerType: 'Environment',
+        key: 'background_mode',
+        value: '1',
+        line: 7,
+        isMultiline: false,
+        stored: { key: 'background_mode', value: '1' },
+      });
     });
 
     it("reports a [resource] heading's own section kind", () => {
@@ -446,14 +471,15 @@ background_mode = 1
 
       parser.parse(content, simpleCreator, { onProperty });
 
-      expect(onProperty).toHaveBeenCalledWith(
-        'resource',
-        undefined,
-        'background_mode',
-        '1',
-        4,
-        false
-      );
+      expect(onProperty).toHaveBeenCalledWith({
+        section: 'resource',
+        ownerType: undefined,
+        key: 'background_mode',
+        value: '1',
+        line: 4,
+        isMultiline: false,
+        stored: { key: 'background_mode', value: '1' },
+      });
     });
 
     it('leaves ownerType undefined for a [resource] section with no header above it', () => {
@@ -464,14 +490,36 @@ background_mode = 1
 
       parser.parse(content, simpleCreator, { onProperty });
 
-      expect(onProperty).toHaveBeenCalledWith(
-        'resource',
-        undefined,
-        'background_mode',
-        '1',
-        2,
-        false
-      );
+      expect(onProperty).toHaveBeenCalledWith({
+        section: 'resource',
+        ownerType: undefined,
+        key: 'background_mode',
+        value: '1',
+        line: 2,
+        isMultiline: false,
+        stored: { key: 'background_mode', value: '1' },
+      });
+    });
+
+    it('hands a deprecated spelling over as written, beside the pair the bag stores', () => {
+      const content = `[gd_scene format=3]
+
+[node name="Sprite" type="AnimatedSprite2D"]
+frames = SubResource("sf")
+`;
+      const onProperty = vi.fn<NonNullable<ParseObserver['onProperty']>>();
+
+      parser.parse(content, simpleCreator, { onProperty });
+
+      expect(onProperty).toHaveBeenCalledWith({
+        section: 'node',
+        ownerType: 'AnimatedSprite2D',
+        key: 'frames',
+        value: 'SubResource("sf")',
+        line: 4,
+        isMultiline: false,
+        stored: { key: 'sprite_frames', value: 'SubResource("sf")' },
+      });
     });
 
     it('fires onSectionStart for each section with its kind and line', () => {
@@ -512,6 +560,69 @@ background_mode = 1
         'node',
         7
       );
+    });
+
+    describe('onSectionBuilt', () => {
+      it('hands over each built node and sub-resource with its heading line, the objects the scene holds', () => {
+        const content = `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://icon.png" id="1"]
+
+[sub_resource type="BoxMesh" id="bm"]
+size = Vector3(1, 2, 3)
+
+[node name="Root" type="Node3D"]
+
+[node name="Child" type="Node3D" parent="."]
+`;
+        const onSectionBuilt = vi.fn<NonNullable<ParseObserver['onSectionBuilt']>>();
+
+        const scene = parser.parse(content, simpleCreator, { onSectionBuilt });
+
+        const root = scene.nodes[0]!;
+        expect(onSectionBuilt.mock.calls).toEqual([
+          [scene.internalResources[0], 5],
+          [root, 8],
+          [root.children[0], 10],
+        ]);
+        // Identity, not equality: the call hands over the objects a reader of the scene holds.
+        expect(onSectionBuilt.mock.calls[1]![0]).toBe(root);
+        expect(onSectionBuilt.mock.calls[0]![0]).toBe(scene.internalResources[0]);
+      });
+
+      it("fires after the section's last property, a multi-line one included", () => {
+        const content = `[node name="Title" type="Label"]
+text = "first
+second"
+[node name="Next" type="Node3D" parent="."]
+`;
+        const events: string[] = [];
+
+        parser.parse(content, simpleCreator, {
+          onSectionStart: (heading) => events.push(`start ${heading.attributes.name}`),
+          onProperty: ({ key }) => events.push(`property ${key}`),
+          onSectionBuilt: (built) => events.push(`built ${'name' in built ? built.name : built.id}`),
+        });
+
+        expect(events).toEqual(['start Title', 'property text', 'built Title', 'start Next', 'built Next']);
+      });
+
+      it('never fires for a section that builds nothing, or for a node the creator declines', () => {
+        const content = `[gd_resource type="Environment" format=3]
+
+[ext_resource type="Texture2D" path="res://icon.png" id="1"]
+
+[resource]
+background_mode = 1
+
+[node name="Declined" type="Node3D"]
+`;
+        const onSectionBuilt = vi.fn<NonNullable<ParseObserver['onSectionBuilt']>>();
+
+        parser.parse(content, () => null, { onSectionBuilt });
+
+        expect(onSectionBuilt).not.toHaveBeenCalled();
+      });
     });
   });
 });

@@ -6,11 +6,16 @@
  */
 
 import { warn } from '../../logger';
-import { indexedKeyRegex, slotTupleRegex, ruleInt, storedInt, boolSlotValue} from '../../godot/index.js';
-import { compositeTypeName, isConvertedSpelling } from '../../godot/variantConversion.js';
+import { indexedKeyRegex, ruleInt, boolSlotValue, stringToInt } from '../../godot/index.js';
 import type { ParsedResource } from '../../parser/parsedResource';
+import { vec2iOr } from '../../parser/valueParsers';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
-import { parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
+// Aliased: `TileSetSourceData` has a `findSubResource` key of its own, which the adapters fill.
+import {
+  findSubResource as findSubResourceById,
+  parseResourceReference,
+  resolveExtResourcePath,
+} from '../SubResourceResolver';
 import { TILE_SHAPE_HEXAGON, TILE_SHAPE_SQUARE } from './types';
 import type {
   AlternativeTileModel,
@@ -32,7 +37,7 @@ export interface TileSetSourceData {
 /**
  * `TileSet::_set` gates the source id on `components[1].is_valid_int()`
  * (tile_set.cpp:3961), which skips ONE leading sign (ustring.cpp:4752), so
- * `sources/+3` is source 3. `Number` is the reader the gate has already vetted.
+ * `sources/+3` is source 3. The id is `to_int()` stored in an `int` (:3963).
  */
 const SOURCE_KEY_RE = indexedKeyRegex('^sources/(#)$', 'is_valid_int');
 
@@ -51,7 +56,7 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   for (const [key, value] of Object.entries(data.properties)) {
     const sourceMatch = SOURCE_KEY_RE.exec(key);
     if (!sourceMatch) continue;
-    const sourceId = Number(sourceMatch[1]);
+    const sourceId = stringToInt(sourceMatch[1]!);
     // `add_source` re-seats -1 at the auto-assigned `next_source_id` (tile_set.cpp:481)
     // and refuses anything below (:479). The landing id depends on every other
     // source, so the source is dropped, not misplaced.
@@ -87,7 +92,7 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
     offsetAxis: intEnumOr(data.properties.tile_offset_axis, 0, 'tile_offset_axis') as
       | 0
       | 1,
-    tileSize: vec2iOr(data.properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
+    tileSize: tileSetVec2i(data.properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
     sources,
     sourceOrder,
   };
@@ -108,7 +113,7 @@ export function tileSetFromTres(parsed: ParsedResource): TileSetModel | null {
   if (parsed.resourceType !== 'TileSet') return null;
   return resolveTileSetModel({
     properties: parsed.properties,
-    findSubResource: (id) => parsed.subResources.find((r) => r.id === id),
+    findSubResource: (id) => findSubResourceById(parsed.subResources, id),
     resolveTexturePath: (texRef) => resolveExtResourcePath(texRef, parsed.extResources),
   });
 }
@@ -124,12 +129,12 @@ export function tileSetFromScene(
 ): TileSetModel | null {
   const ref = parseResourceReference(tileSetRef);
   if (!ref || ref.type !== 'SubResource') return null;
-  const tileSet = internalResources.find((r) => r.id === ref.id);
+  const tileSet = findSubResourceById(internalResources, ref.id);
   if (!tileSet || tileSet.type !== 'TileSet') return null;
 
   return resolveTileSetModel({
     properties: tileSet.data,
-    findSubResource: (id) => internalResources.find((r) => r.id === id),
+    findSubResource: (id) => findSubResourceById(internalResources, id),
     resolveTexturePath: (texRef) => resolveExtResourcePath(texRef, externalResources),
   });
 }
@@ -141,9 +146,9 @@ function resolveAtlasSource(
   const textureRef = typeof props.texture === 'string' ? props.texture : null;
   return {
     texturePath: textureRef ? data.resolveTexturePath(textureRef) : null,
-    margins: vec2iOr(props.margins, { x: 0, y: 0 }, 'margins'),
-    separation: vec2iOr(props.separation, { x: 0, y: 0 }, 'separation'),
-    textureRegionSize: vec2iOr(props.texture_region_size, { x: 16, y: 16 }, 'texture_region_size'),
+    margins: tileSetVec2i(props.margins, { x: 0, y: 0 }, 'margins'),
+    separation: tileSetVec2i(props.separation, { x: 0, y: 0 }, 'separation'),
+    textureRegionSize: tileSetVec2i(props.texture_region_size, { x: 16, y: 16 }, 'texture_region_size'),
     tiles: resolveTiles(props),
   };
 }
@@ -167,7 +172,9 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
   const tiles = new Map<string, AtlasTileModel>();
 
   const tileAt = (x: string, y: string): AtlasTileModel => {
-    const key = `${Number(x)}:${Number(y)}`;
+    // `Vector2i(coords_split[0].to_int(), coords_split[1].to_int())` (tile_set.cpp:4755) takes
+    // each half into an `int32_t`.
+    const key = `${stringToInt(x)}:${stringToInt(y)}`;
     let tile = tiles.get(key);
     if (!tile) {
       tile = { sizeInAtlas: { x: 1, y: 1 }, alternatives: new Map() };
@@ -190,13 +197,14 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
     const rest = m[3]!;
 
     if (rest === 'size_in_atlas') {
-      tileAt(m[1]!, m[2]!).sizeInAtlas = vec2iOr(value, { x: 1, y: 1 }, key);
+      tileAt(m[1]!, m[2]!).sizeInAtlas = tileSetVec2i(value, { x: 1, y: 1 }, key);
       continue;
     }
 
     const alt = ALT_KEY_RE.exec(rest);
     if (!alt) continue;
-    const altId = Number(alt[1]);
+    // `int alternative_id = components[1].to_int()` (tile_set.cpp:4798).
+    const altId = stringToInt(alt[1]!);
     // -1 is `INVALID_TILE_ALTERNATIVE`, which `_set` refuses (tile_set.cpp:4799).
     // Below that, `create_alternative_tile` re-seats at `next_alternative_id`.
     // Neither names an alternative a cell can address.
@@ -207,31 +215,16 @@ function resolveTiles(props: Record<string, unknown>): Map<string, AtlasTileMode
     else if (prop === 'flip_v') alternative.flipV = typeof value === 'string' && boolSlotValue(value) === true;
     else if (prop === 'transpose') alternative.transpose = typeof value === 'string' && boolSlotValue(value) === true;
     else if (prop === 'texture_origin')
-      alternative.textureOrigin = vec2iOr(value, { x: 0, y: 0 }, key);
+      alternative.textureOrigin = tileSetVec2i(value, { x: 0, y: 0 }, key);
   }
 
   return tiles;
 }
 
-const VECTOR2I_RE = slotTupleRegex('Vector2i', 2);
-
-function vec2iOr(value: unknown, fallback: Vec2i, label: string): Vec2i {
-  if (value === undefined || value === null) return fallback;
-  // A non-string never matches the grammar, so it falls into the warn branch.
-  const literal = typeof value === 'string' ? value.trim() : '';
-  const m = VECTOR2I_RE.exec(literal);
-  if (!m) {
-    warn(`[TileSet] invalid ${label} "${String(value)}" — using default`);
-    return fallback;
-  }
-  // A `Vector2(...)` in a Vector2i slot holds doubles, so both components take
-  // the `double -> int32` branch whatever the token looks like.
-  const converted = isConvertedSpelling('Vector2i', compositeTypeName(literal));
-  const x = storedInt(m[1], converted);
-  const y = storedInt(m[2], converted);
-  if (x === null || y === null) {
-    warn(`[TileSet] ${label} "${String(value)}" has a component Godot cannot store — using default`);
-    return fallback;
-  }
-  return { x, y };
+/**
+ * The shared `vec2iOr` over this decode's `unknown`-typed bag. Both parsers store every
+ * property as its text, so a value that is not a string reads as absent.
+ */
+function tileSetVec2i(value: unknown, fallback: Vec2i, key: string): Vec2i {
+  return vec2iOr(typeof value === 'string' ? value : undefined, fallback, `[TileSet] ${key}`);
 }

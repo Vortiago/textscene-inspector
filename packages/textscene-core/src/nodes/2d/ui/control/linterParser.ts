@@ -132,11 +132,11 @@ validatorRegistry.registerAll('Control', {
     { 0: 'NONE', 1: 'CLICK', 2: 'ALL', 3: 'ACCESSIBILITY' },
     { enforced: 'control.cpp:2267' }
   ),
-
-  // Shared with Window: control.cpp:432/446 state the same two hints as window.cpp:183/207.
-  // linter/validators/themeOverrides.ts holds the grounding.
-  ...THEME_OVERRIDE_VALIDATORS,
-
+},
+// Shared with Window: control.cpp:432/446 state the same two hints as window.cpp:183/207.
+// linter/validators/themeOverrides.ts holds the grounding.
+THEME_OVERRIDE_VALIDATORS,
+{
   // "Accessibility" group (control.cpp:4310-4316). The setters (control.cpp:2166-2247) have no ERR_FAIL.
   accessibility_name: v.quotedString('accessibility_name'),
   accessibility_description: v.quotedString('accessibility_description'),

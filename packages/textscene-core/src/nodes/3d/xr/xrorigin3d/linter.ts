@@ -5,31 +5,13 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
-import type { TscnNode } from '../../../../parser/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { isExplicitlyHidden, isTypeUnknowable } from '../../../../linter/parentType.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { isExplicitlyHidden } from '../../../../linter/parentType.js';
+import { hasChildOfType } from '../../../../linter/childType.js';
 import { hasNonUnitScale3D } from '../../../../linter/transformBasis.js';
 
 const CAMERA_CHILD_RULE = 'xrorigin3d-missing-camera-child';
 const SCALE_RULE = 'xrorigin3d-unsupported-scale';
-
-/**
- * `get_child(i)` cast to `XRCamera3D` (xr_nodes.cpp:687-693), answered by the node's own `children`.
- * An instanced or untyped child's type is unknowable from this file, so it counts as "unknowable",
- * which stays quiet, never as "missing".
- */
-function cameraChildVerdict(node: TscnNode): 'satisfied' | 'unknowable' | 'missing' {
-  let unknown = false;
-  for (const child of node.children) {
-    if (isTypeUnknowable(child)) {
-      unknown = true;
-      continue;
-    }
-    if (descendsFrom(child.type, 'XRCamera3D')) return 'satisfied';
-  }
-  return unknown ? 'unknowable' : 'missing';
-}
 
 function checkXROrigin3D(context: RuleContext): Diagnostic[] {
   const { node } = context;
@@ -40,7 +22,9 @@ function checkXROrigin3D(context: RuleContext): Diagnostic[] {
 
   const diagnostics: Diagnostic[] = [];
 
-  if (cameraChildVerdict(node) === 'missing') {
+  // `get_child(i)` cast to `XRCamera3D` (xr_nodes.cpp:687-693). A child whose class lives
+  // elsewhere may be one, so it keeps the rule quiet.
+  if (!hasChildOfType(node, ['XRCamera3D'])) {
     diagnostics.push({
       severity: 'warning',
       message: `XROrigin3D '${node.name}' has no XRCamera3D child. XROrigin3D requires an XRCamera3D child node, the same configuration warning Godot's own editor reports.`,

@@ -12,6 +12,7 @@ import { boneConstraintBaseLeaves } from '../boneconstraint3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
+import { settingCount } from '../shared/settingCount.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { BONE_AXIS } from '../skeletonmodifier3d/linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
@@ -65,11 +66,9 @@ const settingValidator = indexedFamilyValidator({
 settingValidator.leaves = Object.values(AIM_LEAVES);
 
 validatorRegistry.registerAll('AimModifier3D', {
-  // aim_modifier_3d.cpp:190, ADD_ARRAY_COUNT (PROPERTY_HINT_NONE, so no
-  // ceiling). The setter is BoneConstraint3D::set_setting_count, whose
-  // ERR_FAIL_COND(p_count < 0) (bone_constraint_3d.cpp:131) refuses the write
-  // outright: a delegated setter carries the delegate's guard.
-  setting_count: v.int('setting_count', { min: 0, enforced: 'bone_constraint_3d.cpp:131' }),
+  // aim_modifier_3d.cpp:190, ADD_ARRAY_COUNT on this class. The setter is
+  // BoneConstraint3D::set_setting_count: a delegated setter carries the delegate's guard.
+  setting_count: settingCount('BoneConstraint3D'),
 
   // `itos(i)` glues the index to the prefix as `PropertyListHelper` does, so the glued-index
   // matcher reads `settings/0/forward_axis`.

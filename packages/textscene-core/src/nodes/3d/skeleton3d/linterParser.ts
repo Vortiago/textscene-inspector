@@ -9,16 +9,18 @@
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { keyShapeError, propertyError, v } from '../../../linter/validators/index.js';
-import { indexedKeyRegex, parseGodotInt, toIntIndex, toUint32 } from '../../../godot/index.js';
+import { indexedKeyRegex, parseGodotInt, stringToInt } from '../../../godot/index.js';
+import { writtenIndex } from '../../../linter/reportedIndices.js';
 import { BONE_LEAVES } from './boneLeaves.js';
+import { UNREACHABLE_BONE_SLOT } from './boneNameOrder.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 const MODIFIER_CALLBACK_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
 
 /**
  * `bones/<idx>/<sub>`: the index is a bare `path.get_slicec('/', 1).to_int()` with no validity gate
- * (skeleton_3d.cpp:82), so `toIntIndex` decides the number: `bones/x/position` names bone 0, and
- * Godot applies it.
+ * (skeleton_3d.cpp:82), so {@link stringToInt} decides the number: `bones/x/position` names bone 0,
+ * and Godot applies it.
  */
 const BONE_KEY_RE = indexedKeyRegex('^bones/(#)/(.+)$', 'to_int');
 
@@ -44,19 +46,13 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
     };
   }
 
-  // The index lands in a `uint32_t which` (:82), so a negative `to_int` result is held past 2^31.
-  // `bones` grows one at a time, through `which == bones.size() && what == "name"` (:85), so no
-  // file reaches a count that passes `ERR_FAIL_UNSIGNED_INDEX_V(which, bones.size(), false)` (:90):
-  // the write is refused.
-  const signedIndex = toIntIndex(match[1]!);
-  if (!(signedIndex >= 0)) {
-    // NaN is the other arm: `to_int` saturates at INT64_MAX for a magnitude no
-    // double names (ustring.cpp:2283-2284), and `(uint32_t)INT64_MAX` is the
-    // same all-ones value a -1 gives.
-    const which = toUint32(Number.isNaN(signedIndex) ? -1 : signedIndex);
+  // The index lands in a `uint32_t which` (:82), so `-1` is stored as 4294967295 and
+  // `4294967296` as 0.
+  const which = stringToInt(match[1]!, 'uint32');
+  if (which >= UNREACHABLE_BONE_SLOT) {
     return {
       severity: 'error',
-      message: `Bone index "${match[1]}" is held as uint32 ${which} — past any bone count, so Godot drops the write.`,
+      message: `Bone index ${writtenIndex(match[1]!, which)} is past any bone count a file reaches, so Godot drops the write.`,
       line,
       column: 1,
       code: 'INVALID_BONE_INDEX',
@@ -89,11 +85,11 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
   // as numbers, because `bones/03/parent = 3` names bone 3 twice.
   if (what === 'parent') {
     const parent = parseGodotInt(value);
-    if (parent !== null && parent === signedIndex) {
+    if (parent !== null && parent === which) {
       return propertyError(
         key,
         line,
-        `Bone ${signedIndex} cannot be its own parent; Godot refuses the write and the bone keeps its previous parent.`,
+        `Bone ${writtenIndex(match[1]!, which)} cannot be its own parent; Godot refuses the write and the bone keeps its previous parent.`,
         'SELF_PARENTED_BONE'
       );
     }

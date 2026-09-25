@@ -11,10 +11,6 @@ import * as THREE from 'three';
 
 import type { ReactNode } from 'react';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
-import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import {
@@ -27,6 +23,7 @@ import {
   ViewportPassOrchestrator,
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { SubViewport } from './Component';
+import { SceneStack } from '../../../r3f/testing/SceneStack';
 
 import '../../../r3f/nodes/index';
 
@@ -98,25 +95,16 @@ async function renderScene(
   const seen: (ViewportTextureEntry | null)[] = [];
   const capturedGl: { current: THREE.WebGLRenderer | null } = { current: null };
   const wrap = (nodes: ReactNode) => (
-    <CanvasWorkspaceProvider workspace={workspace}>
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={parsed.internalResources}
-          externalResources={parsed.externalResources}
-        >
-          <SelectionProvider>
-            <ViewportTextureProvider>
-              <ViewportPassProvider>
-                {nodes}
-                <Probe path={viewportPath} seen={seen} />
-                <GlSpy captured={capturedGl} />
-                <ViewportPassOrchestrator />
-              </ViewportPassProvider>
-            </ViewportTextureProvider>
-          </SelectionProvider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    </CanvasWorkspaceProvider>
+    <SceneStack workspace={workspace} loader={fake.loader} scene={parsed}>
+      <ViewportTextureProvider>
+        <ViewportPassProvider>
+          {nodes}
+          <Probe path={viewportPath} seen={seen} />
+          <GlSpy captured={capturedGl} />
+          <ViewportPassOrchestrator />
+        </ViewportPassProvider>
+      </ViewportTextureProvider>
+    </SceneStack>
   );
   const renderer = await ReactThreeTestRenderer.create(
     wrap(<NodeDispatcher nodes={parsed.nodes} />)

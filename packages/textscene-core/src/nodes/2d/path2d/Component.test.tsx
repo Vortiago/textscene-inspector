@@ -3,7 +3,6 @@
  * degrades to nothing when the curve is absent. The curve sampler is always
  * provided to descendants (covered by the PathFollow2D tests).
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnInternalResource } from '../../../parser/types';
@@ -11,7 +10,8 @@ import { Path2D } from './Component';
 import { parsePath2D } from './parser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider, useSelection } from '../../../r3f/contexts/SelectionContext';
+import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
+import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 // A simple 3-point open path: (0,0) → (100,0) → (100,100), zero tangents.
 const CURVE: TscnInternalResource = {
@@ -31,14 +31,6 @@ function pathNode(name = 'MyPath', props: Record<string, string> = {}): TscnNode
     children: [],
     properties: parsePath2D({ type: 'node', attributes: { type: 'Path2D', name } }, props),
   };
-}
-
-function SelectSeeder({ path }: { path: string | null }) {
-  const { setSelectedNodePath } = useSelection();
-  useEffect(() => {
-    setSelectedNodePath(path);
-  }, [path, setSelectedNodePath]);
-  return null;
 }
 
 async function renderPath(

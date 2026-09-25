@@ -8,14 +8,12 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
-import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import { parseSubViewport } from './parser';
-import { SubViewport } from './Component';
+import { SubViewport, allocatableExtent } from './Component';
+import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
+import { SceneStack } from '../../../r3f/testing/SceneStack';
 
 import '../../../r3f/nodes/index';
 
@@ -51,20 +49,10 @@ mesh = SubResource("1")
 async function render(source: string, workspace?: '2d' | '3d') {
   const parsed = new TscnParser().parse(source);
   const fake = createFakeResourceLoader();
-  const tree = (
-    <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider
-        internalResources={parsed.internalResources}
-        externalResources={parsed.externalResources}
-      >
-        <SelectionProvider>
-          <NodeDispatcher nodes={parsed.nodes} />
-        </SelectionProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
-  );
   return ReactThreeTestRenderer.create(
-    workspace ? <CanvasWorkspaceProvider workspace={workspace}>{tree}</CanvasWorkspaceProvider> : tree
+    <SceneStack workspace={workspace} loader={fake.loader} scene={parsed}>
+      <NodeDispatcher nodes={parsed.nodes} />
+    </SceneStack>
   );
 }
 
@@ -116,5 +104,26 @@ describe('<SubViewport> as a world boundary', () => {
 mesh = SubResource("1")
 `);
     expect(r.scene.findAllByProps({ name: 'Contained' }).length).toBeGreaterThan(0);
+  });
+});
+
+describe('allocatableExtent', () => {
+  it('rounds an in-range axis to whole pixels', () => {
+    expect(allocatableExtent(511.6)).toBe(512);
+  });
+
+  it("floors an axis at Godot's 2 pixels", () => {
+    expect(allocatableExtent(1)).toBe(2);
+    expect(allocatableExtent(-40)).toBe(2);
+  });
+
+  it('caps an axis at the shared texture ceiling', () => {
+    expect(allocatableExtent(MAX_TEXTURE_EXTENT)).toBe(MAX_TEXTURE_EXTENT);
+    expect(allocatableExtent(2000000000)).toBe(MAX_TEXTURE_EXTENT);
+  });
+
+  it('allocates the floor for an axis that is not a finite number', () => {
+    expect(allocatableExtent(Number.NaN)).toBe(2);
+    expect(allocatableExtent(Number.POSITIVE_INFINITY)).toBe(2);
   });
 });

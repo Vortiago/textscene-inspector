@@ -5,7 +5,7 @@
  * the lenient skip-and-continue recovery.
  */
 
-import { resolveDeprecatedProperty } from '../godot/deprecated.js';
+import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/deprecated.js';
 import type {
   TscnScene,
   TscnNode,
@@ -49,24 +49,38 @@ export type NodeCreator = (
  * Hooks into the scanning loop for strict (linting) consumers. The observer is
  * purely additive: it never changes what the lenient loop parses or recovers.
  */
+/** One property value the scan completed, after any multiline accumulation. */
+export interface ParsedProperty {
+  section: SectionType;
+  /**
+   * The heading's `type=` for node/sub_resource, the `[gd_resource type="…"]` header's for a
+   * `[resource]` body, else undefined.
+   */
+  ownerType: string | undefined;
+  /** The key as written. */
+  key: string;
+  /** The value as written. */
+  value: string;
+  /** The line the value starts on. */
+  line: number;
+  isMultiline: boolean;
+  /** The pair the section's bag holds, a deprecated spelling resolved, so no observer derives it again. */
+  stored: ResolvedProperty;
+}
+
 export interface ParseObserver {
   /** Malformed line detected: INVALID_HEADING_FORMAT or INVALID_PROPERTY_FORMAT. */
   onError?(error: { message: string; line: number; column: number; code: string }): void;
   /** A heading parsed successfully and a new section begins. */
   onSectionStart?(heading: ParsedHeading, section: SectionType, line: number): void;
+  /** A property value completed. */
+  onProperty?(property: ParsedProperty): void;
   /**
-   * A property value completed, after any multiline accumulation. `line` is its
-   * starting line. `ownerType` is the heading's `type=` for node/sub_resource, the
-   * `[gd_resource type="…"]` header's for a `[resource]` body, else undefined.
+   * A `[node]` or `[sub_resource]` section closed, and the scan built `built` from it. `line` is
+   * its heading's line. It fires after the section's last `onProperty`, so an observer can file
+   * what it collected under the object.
    */
-  onProperty?(
-    section: SectionType,
-    ownerType: string | undefined,
-    key: string,
-    value: string,
-    line: number,
-    isMultiline: boolean
-  ): void;
+  onSectionBuilt?(built: TscnNode | TscnInternalResource, line: number): void;
 }
 
 /**
@@ -87,9 +101,9 @@ export class TscnParserCore {
     // would corrupt accumulated multi-line string values.
     const lines = content.split(/\r?\n/);
 
-    // Every node beside its heading's line, in scan order. The line lives here, not on
-    // `TscnNode`, because only the orphan report reads it. One array, not a parallel
-    // `nodes` list, which two push sites would have to keep in step.
+    // Every node beside its heading's line, in scan order. The line stays off `TscnNode`:
+    // the orphan report reads it here, and a strict observer gets it from `onSectionBuilt`.
+    // One array, not a parallel `nodes` list, which two push sites would keep in step.
     const origins: NodeOrigin[] = [];
     const externalResources: TscnExternalResource[] = [];
     const internalResources: TscnInternalResource[] = [];
@@ -126,6 +140,7 @@ export class TscnParserCore {
             declaredParent: currentHeading.attributes.parent,
             recoverableById: currentHeading.attributes.parent_id_path !== undefined,
           });
+          observer?.onSectionBuilt?.(node, currentHeadingLine);
         }
       } else if (currentSection === 'ext_resource') {
         const resource = parseExternalResource(currentHeading);
@@ -136,6 +151,7 @@ export class TscnParserCore {
         const resource = parseInternalResource(currentHeading, currentProperties);
         if (resource) {
           internalResources.push(resource);
+          observer?.onSectionBuilt?.(resource, currentHeadingLine);
         }
       }
 
@@ -158,14 +174,15 @@ export class TscnParserCore {
         const value = pendingMultiline.lines.join('\n');
         const resolved = resolveDeprecatedProperty(currentOwnerType(), pendingMultiline.key, value);
         currentProperties[resolved.key] = resolved.value;
-        observer?.onProperty?.(
-          currentSection,
-          currentOwnerType(),
-          pendingMultiline.key,
+        observer?.onProperty?.({
+          section: currentSection,
+          ownerType: currentOwnerType(),
+          key: pendingMultiline.key,
           value,
-          pendingMultiline.startLine,
-          pendingMultiline.lines.length > 1
-        );
+          line: pendingMultiline.startLine,
+          isMultiline: pendingMultiline.lines.length > 1,
+          stored: resolved,
+        });
       }
       pendingMultiline = null;
     };
@@ -259,21 +276,22 @@ export class TscnParserCore {
             // Stored under the name and literal the setter receives: a pre-4.0 alias like
             // `frames` is `sprite_frames`, and `extents` is `size` doubled, so every
             // reader sees one key and one value. The observer gets both as written,
-            // since a diagnostic names what is in the file.
+            // since a diagnostic names what is in the file, and the stored pair beside them.
             const resolved = resolveDeprecatedProperty(
               currentOwnerType(),
               property.key,
               property.value
             );
             currentProperties[resolved.key] = resolved.value;
-            observer?.onProperty?.(
-              currentSection,
-              currentOwnerType(),
-              property.key,
-              property.value,
-              lineNumber,
-              false
-            );
+            observer?.onProperty?.({
+              section: currentSection,
+              ownerType: currentOwnerType(),
+              key: property.key,
+              value: property.value,
+              line: lineNumber,
+              isMultiline: false,
+              stored: resolved,
+            });
           }
         }
       }

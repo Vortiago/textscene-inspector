@@ -5,12 +5,9 @@
 import { describe, it, expect } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { NodeDispatcher } from './NodeDispatcher';
-import { CanvasWorkspaceProvider } from './contexts/CanvasWorkspaceContext';
-import { SelectionProvider } from './contexts/SelectionContext';
-import { SceneResourcesProvider } from './SceneResourcesContext';
-import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
+import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
 
@@ -26,20 +23,10 @@ const SCENE = `[gd_scene format=3]
 async function render(workspace?: '2d' | '3d') {
   const scene = new TscnParser().parse(SCENE);
   const fake = createFakeResourceLoader();
-  const tree = (
-    <ResourceLoaderProvider loader={fake.loader}>
-      <SceneResourcesProvider
-        internalResources={scene.internalResources}
-        externalResources={scene.externalResources}
-      >
-        <SelectionProvider>
-          <NodeDispatcher nodes={scene.nodes} />
-        </SelectionProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
-  );
   return ReactThreeTestRenderer.create(
-    workspace ? <CanvasWorkspaceProvider workspace={workspace}>{tree}</CanvasWorkspaceProvider> : tree
+    <SceneStack workspace={workspace} loader={fake.loader} scene={scene}>
+      <NodeDispatcher nodes={scene.nodes} />
+    </SceneStack>
   );
 }
 

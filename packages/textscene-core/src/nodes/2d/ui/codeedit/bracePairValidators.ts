@@ -7,27 +7,27 @@ import { accepts, propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { isGodotSymbol } from './symbolChars.js';
 import { unquoteString } from '../../../../parser/utils.js';
+import { dropTrailingComma, splitTopLevel, STRING_LITERAL_SOURCE } from '../../../../godot/index.js';
 
 const DICT_WRAPPER_RE = /^\s*\{([\s\S]*)\}\s*$/;
-const DICT_PAIR_BODY_RE =
-  /^"(?:[^"\\]|\\[\s\S])*"\s*:\s*"(?:[^"\\]|\\[\s\S])*"(?:\s*,\s*"(?:[^"\\]|\\[\s\S])*"\s*:\s*"(?:[^"\\]|\\[\s\S])*")*$/;
-const DICT_PAIR_CAPTURE_RE = /"((?:[^"\\]|\\[\s\S])*)"\s*:\s*"((?:[^"\\]|\\[\s\S])*)"/g;
+/** One `"key": "value"` entry, each literal captured with its quotes. */
+const DICT_PAIR_RE = new RegExp(String.raw`^(${STRING_LITERAL_SOURCE})\s*:\s*(${STRING_LITERAL_SOURCE})$`);
 
 /**
  * `{ "key": "value", … }` as raw (unescaped) `[key, value]` pairs, or `null` if malformed, after
- * `VariantParser::_parse_dictionary` (core/variant/variant_parser.cpp:677-684). String keys and
- * values only, as `PROPERTY_HINT_TYPE_STRING "String;String"` declares: a non-string one is
- * rejected although Godot would coerce it, the scope `v.quotedString` takes too.
+ * `VariantParser::_parse_dictionary` (core/variant/variant_parser.cpp:677-684). It takes `}` at
+ * every key position (:1701-1703), the one after a comma too, so one trailing comma is legal. String
+ * keys and values only, as `PROPERTY_HINT_TYPE_STRING "String;String"` declares: a non-string one
+ * is rejected although Godot would coerce it, the scope `v.quotedString` takes too.
  */
 function parseStringDictionary(value: string): Array<[string, string]> | null {
   const wrapper = DICT_WRAPPER_RE.exec(value);
   if (!wrapper) return null;
-  const body = wrapper[1]!.trim();
-  if (body === '') return [];
-  if (!DICT_PAIR_BODY_RE.test(body)) return null;
   const pairs: Array<[string, string]> = [];
-  for (const m of body.matchAll(DICT_PAIR_CAPTURE_RE)) {
-    pairs.push([unquoteString(m[1] ?? ''), unquoteString(m[2] ?? '')]);
+  for (const entry of dropTrailingComma(splitTopLevel(wrapper[1]!))) {
+    const pair = DICT_PAIR_RE.exec(entry);
+    if (!pair) return null;
+    pairs.push([unquoteString(pair[1]!), unquoteString(pair[2]!)]);
   }
   return pairs;
 }

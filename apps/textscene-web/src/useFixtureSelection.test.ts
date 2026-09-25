@@ -28,6 +28,16 @@ afterEach(() => {
 });
 
 describe('initial selection', () => {
+  it('ignores the ?fixture= param and localStorage when the catalog is empty', () => {
+    globalThis.localStorage.setItem(STORAGE_KEY, 'unit-box-mesh.tscn');
+    window.history.replaceState(null, '', '/?fixture=demos/2d/platformer/player.tscn');
+
+    const { result } = renderHook(() => useFixtureSelection({ fixtures: [], defaultFixture: '' }));
+
+    expect(result.current.fixtureFile).toBe('');
+    expect(new URL(window.location.href).searchParams.has('fixture')).toBe(false);
+  });
+
   it('returns the defaultFixture when localStorage and URL have no stored choice', () => {
     const { result } = renderHook(() =>
       useFixtureSelection({ fixtures: FIXTURES, defaultFixture: DEFAULT_FILE })

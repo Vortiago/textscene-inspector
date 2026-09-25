@@ -12,9 +12,10 @@ import { fogKeys } from './fogValidators.js';
 import { postProcessKeys } from './postProcessValidators.js';
 import { screenSpaceKeys } from './screenSpaceValidators.js';
 
-validatorRegistry.registerAll('Environment', {
-  ...backgroundKeys,
-  ...postProcessKeys,
-  ...screenSpaceKeys,
-  ...fogKeys,
-});
+validatorRegistry.registerAll(
+  'Environment',
+  backgroundKeys,
+  postProcessKeys,
+  screenSpaceKeys,
+  fogKeys
+);

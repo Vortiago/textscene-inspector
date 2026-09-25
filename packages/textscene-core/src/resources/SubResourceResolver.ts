@@ -7,6 +7,83 @@
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { resourceRef, simplifyResPath } from '../godot/index.js';
 
+/** One resource table's ids, and how many of its leading entries they cover. */
+interface IdIndex<T> {
+  byId: Map<string, T>;
+  indexed: number;
+}
+
+/**
+ * Keyed by table identity, written only by {@link indexedIds}. A parsed table is never
+ * edited in place, only appended to while its file is scanned, so an index extends over
+ * the new tail and restarts after a truncation. A caller that replaced an entry in place
+ * would read the old one.
+ */
+const externalIdIndexes = new WeakMap<
+  readonly TscnExternalResource[],
+  IdIndex<TscnExternalResource>
+>();
+const internalIdIndexes = new WeakMap<
+  readonly TscnInternalResource[],
+  IdIndex<TscnInternalResource>
+>();
+
+/**
+ * The id map over `table`, built once per table: every reference in a scene resolves
+ * in O(1), where a scan per reference costs O(references x resources) on each lint and
+ * each render.
+ */
+function indexedIds<T>(
+  table: readonly T[],
+  indexes: WeakMap<readonly T[], IdIndex<T>>,
+  claimIds: (byId: Map<string, T>, entry: T) => void
+): Map<string, T> {
+  let index = indexes.get(table);
+  if (!index || index.indexed > table.length) {
+    index = { byId: new Map(), indexed: 0 };
+    indexes.set(table, index);
+  }
+  for (; index.indexed < table.length; index.indexed += 1) {
+    claimIds(index.byId, table[index.indexed]!);
+  }
+  return index.byId;
+}
+
+/**
+ * The first entry in declaration order keeps an id, so a repeated id resolves to its first
+ * declaration.
+ */
+function claimId<T>(byId: Map<string, T>, id: string, entry: T): void {
+  if (!byId.has(id)) byId.set(id, entry);
+}
+
+function claimExternalIds(
+  byId: Map<string, TscnExternalResource>,
+  resource: TscnExternalResource
+): void {
+  claimId(byId, resource.id, resource);
+}
+
+/** Both ids {@link findSubResource} answers to. */
+function claimInternalIds(
+  byId: Map<string, TscnInternalResource>,
+  resource: TscnInternalResource
+): void {
+  const dataId = (resource.data as { id?: unknown } | undefined)?.id;
+  if (typeof dataId === 'string') claimId(byId, dataId, resource);
+  claimId(byId, String(resource.id), resource);
+}
+
+/** The `[ext_resource]` declaring `id`, the first one when a file repeats an id. */
+export function findExtResource(
+  externalResources: readonly TscnExternalResource[],
+  id: string
+): TscnExternalResource | undefined {
+  // An empty table answers nothing, and a caller's `?? []` is a fresh array per call.
+  if (externalResources.length === 0) return undefined;
+  return indexedIds(externalResources, externalIdIndexes, claimExternalIds).get(id);
+}
+
 export function parseResourceReference(
   ref: string
 ): { type: 'SubResource' | 'ExtResource'; id: string } | null {
@@ -30,22 +107,21 @@ export function resolveExtResourcePath(
   if (ref.startsWith('res://')) return simplifyResPath(ref);
   const parsed = parseResourceReference(ref);
   if (!parsed || parsed.type !== 'ExtResource') return null;
-  const path = externalResources.find((r) => r.id === parsed.id)?.path;
+  const path = findExtResource(externalResources, parsed.id)?.path;
   return path === undefined ? null : simplifyResPath(path);
 }
 
 /**
  * Find a SubResource by id. It matches both the parser's structural `id` field and
- * the runtime `data.id` key, since both pipelines call it.
+ * the runtime `data.id` key, since both pipelines call it. The first resource in
+ * declaration order that answers to `id` either way wins.
  */
 export function findSubResource(
   internalResources: readonly TscnInternalResource[],
   id: string
 ): TscnInternalResource | undefined {
-  return internalResources.find((r) => {
-    const dataId = (r.data as { id?: string }).id;
-    return dataId === id || String(r.id) === id;
-  });
+  if (internalResources.length === 0) return undefined;
+  return indexedIds(internalResources, internalIdIndexes, claimInternalIds).get(id);
 }
 
 /**
@@ -100,7 +176,7 @@ export function resolveExtAtlasTexturePath(
 ): string | null {
   const parsed = parseResourceReference(ref ?? '');
   if (!parsed || parsed.type !== 'ExtResource') return null;
-  const resource = externalResources.find((r) => r.id === parsed.id);
+  const resource = findExtResource(externalResources, parsed.id);
   if (!resource) return null;
   // The `[ext_resource]` `type=` cannot gate this: Godot writes it from the property
   // slot, so an AtlasTexture in a `texture` slot is recorded `type="Texture2D"`.

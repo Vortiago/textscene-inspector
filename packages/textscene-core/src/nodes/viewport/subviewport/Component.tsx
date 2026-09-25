@@ -33,6 +33,7 @@ import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
 import type { SubViewportProperties } from './types';
+import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
@@ -81,16 +82,14 @@ interface OffscreenViewportProps extends NodeComponentProps {
 }
 
 /**
- * WebGL2's common `MAX_TEXTURE_SIZE`, per axis. Godot floors a viewport at 2
- * (`viewport.cpp:1120`, `p_size.maxi(2)`) and leaves the ceiling to the GPU driver,
- * but a file Godot opens can hand `THREE.WebGLRenderTarget` a 2000000000-pixel axis.
+ * The render target's axis. Godot floors a viewport at 2 (`viewport.cpp:1120`,
+ * `p_size.maxi(2)`) and leaves the ceiling to the GPU driver, but a file Godot
+ * opens can hand `THREE.WebGLRenderTarget` a 2000000000-pixel axis.
  */
-const MAX_VIEWPORT_EXTENT = 16384;
-
 export function allocatableExtent(raw: number): number {
   const rounded = Math.round(raw);
   if (!Number.isFinite(rounded)) return 2;
-  return Math.min(MAX_VIEWPORT_EXTENT, Math.max(2, rounded));
+  return Math.min(MAX_TEXTURE_EXTENT, Math.max(2, rounded));
 }
 
 /**

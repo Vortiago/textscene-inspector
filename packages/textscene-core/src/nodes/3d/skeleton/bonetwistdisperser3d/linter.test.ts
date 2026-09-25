@@ -232,6 +232,75 @@ describe('BoneTwistDisperser3D semantic rules', () => {
   });
 });
 
+describe('BoneTwistDisperser3D count and index reads', () => {
+  /** Every diagnostic either rule of this slice produces for `props`. */
+  const ruleFindings = (props: Record<string, string | number | boolean>) =>
+    lint(scene(node('BoneTwistDisperser3D', props))).filter((d) =>
+      d.ruleName.startsWith('bonetwistdisperser3d-')
+    );
+
+  it('measures joints against the length a refused joint_count leaves behind', () => {
+    // `set_joint_count` opens with `ERR_FAIL_COND(p_count < 0)` (bone_twist_disperser_3d.cpp:487),
+    // so the joints vector keeps its empty length and joint 0 is dropped. The -1 is the
+    // `enforced:` validator's own error, and the rule names no joint count at all.
+    const found = ruleFindings({
+      setting_count: 1,
+      'settings/0/joint_count': -1,
+      'settings/0/joints/0/twist_amount': 0.5,
+    });
+    expect(found.map((d) => d.ruleName)).toEqual(['bonetwistdisperser3d-joint-index-out-of-range']);
+    expect(found[0]!.message).toContain('joint(s) 0/0 (setting/joint)');
+  });
+
+  // The issue's scene. `to_int` saturates at INT64_MAX (ustring.cpp:2283-2284), the `int` keeps -1,
+  // and `ERR_FAIL_INDEX_V` (bone_twist_disperser_3d.cpp:39) refuses it, which phase 1 reports.
+  it('leaves a setting index that saturates to INT64_MAX to the negative-index refusal', () => {
+    const props = {
+      setting_count: 1,
+      'settings/0/joint_count': 1,
+      'settings/99999999999999999999/joints/0/twist_amount': 0.5,
+    };
+    expect(ruleFindings(props)).toEqual([]);
+    expect(lint(scene(node('BoneTwistDisperser3D', props))).map((d) => d.message)).toContainEqual(
+      expect.stringContaining('Setting index 99999999999999999999 (stored as -1) must be non-negative')
+    );
+  });
+
+  // `int which = ….to_int()` (bone_twist_disperser_3d.cpp:37) keeps the low 32 bits, so
+  // `4294967296` is setting 0, whose joint_count holds joint 0.
+  it('treats a setting index that wraps past 32 bits as the setting it lands on', () => {
+    const props = {
+      setting_count: 1,
+      'settings/0/joint_count': 1,
+      'settings/4294967296/joints/0/twist_amount': 0.5,
+    };
+    expect(ruleFindings(props)).toEqual([]);
+    const errors = lint(scene(node('BoneTwistDisperser3D', props))).filter(
+      (d) => d.severity === 'error'
+    );
+    expect(errors).toEqual([]);
+  });
+
+  it('names what Godot stores beside a wrapping joint index past its joint_count', () => {
+    const found = ruleFindings({
+      setting_count: 1,
+      'settings/0/joint_count': 1,
+      'settings/0/joints/4294967297/twist_amount': 0.5,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toContain('joint(s) 0/4294967297 (stored as 0/1) (setting/joint)');
+  });
+
+  it('caps the joint pairs it names, however many fall outside', () => {
+    const joints = Object.fromEntries(
+      Array.from({ length: 40 }, (_, j) => [`settings/0/joints/${j + 1}/twist_amount`, 0.5])
+    );
+    const found = ruleFindings({ setting_count: 1, 'settings/0/joint_count': 1, ...joints });
+    expect(found).toHaveLength(1);
+    expect(found[0]!.message).toContain('0/32 and 8 more (setting/joint)');
+  });
+});
+
 describe('BoneTwistDisperser3D index grammar', () => {
   it('errors on a setting written under a non-numeric index, which _set resolves', () => {
     // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()` and

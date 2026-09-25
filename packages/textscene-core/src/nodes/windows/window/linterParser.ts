@@ -150,7 +150,7 @@ validatorRegistry.registerAll('Window', {
   // Godot serialises this StringName as `&"..."`, but the variant text parser also
   // accepts a plain `"..."`, which the setter casts, as the shared `busValidator` does.
   theme_type_variation: v.stringName('theme_type_variation'),
-
-  // Shared with Control: Godot emits this family from both, identically.
-  ...THEME_OVERRIDE_VALIDATORS,
-});
+},
+// Shared with Control: Godot emits this family from both, identically.
+THEME_OVERRIDE_VALIDATORS,
+);

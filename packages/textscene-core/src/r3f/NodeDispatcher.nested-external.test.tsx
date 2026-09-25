@@ -10,9 +10,7 @@ import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode, TscnScene } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
-import { SelectionProvider } from './contexts/SelectionContext';
-import { SceneResourcesProvider } from './SceneResourcesContext';
-import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
+import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import type { ResourceLoader } from '../resources/ResourceLoader';
 
@@ -142,16 +140,12 @@ async function renderTopScene(
   const externalResources = extraExternalResources ?? topScene.externalResources;
 
   return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={loader}>
-      <SceneResourcesProvider
-        internalResources={topScene.internalResources}
-        externalResources={externalResources}
-      >
-        <SelectionProvider>
-          <NodeDispatcher nodes={topScene.nodes} />
-        </SelectionProvider>
-      </SceneResourcesProvider>
-    </ResourceLoaderProvider>
+    <SceneStack
+      loader={loader}
+      scene={{ internalResources: topScene.internalResources, externalResources }}
+    >
+      <NodeDispatcher nodes={topScene.nodes} />
+    </SceneStack>
   );
 }
 

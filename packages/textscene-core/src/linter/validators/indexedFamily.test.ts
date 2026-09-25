@@ -185,6 +185,28 @@ describe('indexedFamilyValidator', () => {
       expect(error?.message).toContain('index -1 is refused');
     });
 
+    // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
+    it('reports an index the int narrows below zero, naming what it stores', () => {
+      const error = family('settings/2147483648/apply/axis', '1', 1);
+      expect(error?.code).toBe('INVALID_SETTING_INDEX');
+      expect(error?.message).toContain('index 2147483648 (stored as -2147483648) is refused');
+    });
+
+    it('lets an index that wraps past 32 bits to element 0 through', () => {
+      expect(family('settings/4294967296/apply/axis', '1', 1)).toBeNull();
+    });
+
+    // INT64_MIN (ustring.cpp:2284) keeps 0 in its low 32 bits.
+    it('lets an index that saturates to INT64_MIN through to element 0', () => {
+      expect(family('settings/-9999999999999999999999/apply/axis', '1', 1)).toBeNull();
+    });
+
+    // INT64_MAX (ustring.cpp:2283-2284) keeps -1.
+    it('reports an index that saturates to INT64_MAX, naming it as written', () => {
+      const error = family('settings/9999999999999999999999/apply/axis', '1', 1);
+      expect(error?.message).toContain('index 9999999999999999999999 (stored as -1) is refused');
+    });
+
     it('is an ENFORCED grounding naming both guards, since either drops the write', () => {
       // This family takes the default `is_valid_int` parse, so the index gate
       // can refuse a key here too and its citation belongs beside the class's.

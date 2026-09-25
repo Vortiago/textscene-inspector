@@ -70,12 +70,14 @@ describe('sameWorldCasters', () => {
 function Probe({
   object,
   seen,
+  segments,
 }: {
   object: THREE.Object3D;
   seen: (readonly WorldShadowCaster[])[];
+  segments: Float32Array;
 }) {
   useShadowCaster({
-    segments: new Float32Array([0, 0, 0, 10, 0, 0]),
+    segments,
     cullMode: OCCLUDER_CULL_DISABLED,
     occluderLightMask: 1,
     object,
@@ -84,14 +86,35 @@ function Probe({
   return null;
 }
 
-async function mountStage(object: THREE.Object3D) {
+async function mountStage(
+  object: THREE.Object3D,
+  segments: Float32Array = new Float32Array([0, 0, 0, 10, 0, 0])
+) {
   const seen: (readonly WorldShadowCaster[])[] = [];
   const renderer = await ReactThreeTestRenderer.create(
     <ShadowCasterStage>
-      <Probe object={object} seen={seen} />
+      <Probe object={object} seen={seen} segments={segments} />
     </ShadowCasterStage>
   );
   return { renderer, seen };
+}
+
+/**
+ * Local segments that count reads of their coordinates. Only the flatten reads them, so a
+ * frame that reads none has skipped the flatten and its allocations.
+ */
+function countedSegments(values: number[]): { segments: Float32Array; reads: () => number } {
+  let reads = 0;
+  const target = new Float32Array(values);
+  const segments = new Proxy(target, {
+    get(array, key) {
+      if (typeof key === 'string' && /^\d+$/.test(key)) reads += 1;
+      // The typed array's own getters (`length`) need the real array as `this`.
+      const value: unknown = Reflect.get(array, key, array);
+      return typeof value === 'function' ? value.bind(array) : value;
+    },
+  });
+  return { segments, reads: () => reads };
 }
 
 /**
@@ -125,6 +148,23 @@ describe('ShadowCasterStage', () => {
     const first = seen.at(-1);
     await frames(renderer, 3);
     expect(seen.at(-1)).toBe(first);
+  });
+
+  it('skips the flatten on a frame where nothing moved, and runs it again after a move', async () => {
+    const counted = countedSegments([0, 0, 0, 10, 0, 0]);
+    const object = new THREE.Group();
+    const { renderer, seen } = await mountStage(object, counted.segments);
+    await frames(renderer);
+    const readsWhileStill = counted.reads();
+    expect(readsWhileStill).toBeGreaterThan(0);
+
+    await frames(renderer, 5);
+    expect(counted.reads()).toBe(readsWhileStill);
+
+    object.position.set(3, 0, 0);
+    await frames(renderer);
+    expect(counted.reads()).toBeGreaterThan(readsWhileStill);
+    expect(Array.from(seen.at(-1)![0]!.segments)).toEqual([3, 0, 13, 0]);
   });
 
   it('republishes once the occluder is moved by something React never saw', async () => {

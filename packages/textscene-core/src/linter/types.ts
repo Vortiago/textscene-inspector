@@ -1,6 +1,6 @@
 /** The linter's diagnostic, rule and grounding types for `.tscn` validation. */
 
-import type { TscnScene, TscnNode } from '../parser/types';
+import type { TscnScene, TscnNode, TscnInternalResource } from '../parser/types';
 
 /**
  * `error`: Godot refuses or alters the value or cannot load the file, or the linter failed. Fails CI.
@@ -53,6 +53,11 @@ export interface Diagnostic {
   nodeName: string;
   nodeType: string;
   ruleName: string;
+  /**
+   * 1-based. `Linter` puts a rule's diagnostic on its node's heading, and a refused value or a
+   * dangling reference on its property's line. Absent where no line holds the finding: every
+   * host shows it as one about the whole file.
+   */
   location?: {
     line?: number;
     column?: number;
@@ -102,6 +107,23 @@ export interface ParseError {
   nilVerdict?: true;
 }
 
+/** Where one `[node]` or `[sub_resource]` section sits in the file. Every line is 1-based. */
+export interface SectionLines {
+  readonly heading: number;
+  /**
+   * Each stored property's line, keyed as the section's bag stores it: a deprecated spelling
+   * under the key it resolves to, and a key written twice at its last line, whose value the
+   * bag keeps.
+   */
+  readonly properties: ReadonlyMap<string, number>;
+}
+
+/**
+ * The lines of every section the scan built, keyed by the node or sub-resource it built. A rule
+ * reaches its subject through the tree, which carries no lines, so `Linter` looks them up here.
+ */
+export type SourceLines = ReadonlyMap<TscnNode | TscnInternalResource, SectionLines>;
+
 /** Result from the strict parser. */
 export interface StrictParseResult {
   errors: ParseError[];
@@ -111,6 +133,8 @@ export interface StrictParseResult {
    * and the rule phase needs it. Absent only if the scanner could not run.
    */
   scene?: TscnScene;
+  /** Where each node and sub-resource of `scene` sits. */
+  lines: SourceLines;
 }
 
 /** Context provided to lint rules during execution. */
@@ -259,10 +283,10 @@ export interface RuleMeta {
 export interface LintRule {
   meta: RuleMeta;
   /**
-   * Validates a node and returns its diagnostics. `RuleRegistry.getRulesForNodeType`
-   * already filtered by `meta`, so a rule must not re-assert its own applicability:
-   * a stale second copy cancels a widened meta. Checks on the tree, such as a
-   * parent's type, belong here.
+   * Validates a node and returns its diagnostics, each about that node: `Linter` puts one
+   * with no `location` on the node's heading. `getRulesForNodeType` already filtered by
+   * `meta`, so a rule must not re-assert its applicability: a stale copy cancels a widened
+   * meta. Checks on the tree, such as a parent's type, belong here.
    *
    * @param context - The rule execution context
    * @returns Array of diagnostics (empty if no issues found)
