@@ -12,7 +12,7 @@ describe('literalText', () => {
     expect(literalText(raw)).toBe(expected);
   });
 
-  // The contents are what `set_animation` compares, so whitespace INSIDE the
+  // The contents are what `set_animation` compares, so whitespace inside the
   // quotes is part of the name and `" default " == "default"` stays false.
   it('keeps whitespace that was inside the quotes', () => {
     expect(literalText('" default "')).toBe(' default ');
@@ -101,15 +101,9 @@ describe('splitTopLevel', () => {
 
 describe('simplifyResPath', () => {
   /**
-   * Godot splits a `scheme://` drive off the front and rebuilds the remainder
-   * from its non-empty slash-separated parts, so every run of slashes after
-   * the scheme collapses to one (`core/string/ustring.cpp:4152-4210`).
-   * Measured against the engine: `res:///a/b.png`, `res:////a/b.png` and
-   * `res://a//b.png` all simplify to `res://a/b.png`.
-   *
-   * A real scene writes them — Maaack's menus template stores every `[img]`
-   * source as `res:///addons/...` — and a path we do not collapse resolves to
-   * nothing at all.
+   * Godot rebuilds the part after a `scheme://` drive from its non-empty parts (`core/string/ustring.cpp:4152-4210`).
+   * Measured against the engine: `res:///a/b.png`, `res:////a/b.png` and `res://a//b.png` all simplify to
+   * `res://a/b.png`. A path left uncollapsed resolves to nothing.
    */
   it('collapses a run of slashes after the scheme', () => {
     expect(simplifyResPath('res:///a/b.png')).toBe('res://a/b.png');
@@ -172,7 +166,7 @@ describe('stringToInt', () => {
     expect(stringToInt('007')).toBe(7);
   });
 
-  // `_to_int` has no early exit for a character it cannot use: it SKIPS it and
+  // `_to_int` has no early exit for a character it cannot use: it skips it and
   // keeps scanning (ustring.cpp:2280-2293), so text `is_valid_int` rejects
   // still resolves to a number.
   it.each([
@@ -184,7 +178,7 @@ describe('stringToInt', () => {
   });
 
   // `else if (integer == 0 && c == '-') positive = !positive;`
-  // (ustring.cpp:2291-2292) — the sign is not a leading-position rule, it is a
+  // (ustring.cpp:2291-2292): the sign is not a leading-position rule. It is a
   // flip on every `-` seen before the first non-zero digit accumulates.
   it.each([
     ['a-1', -1],
@@ -199,7 +193,7 @@ describe('stringToInt', () => {
   });
 
   // `to` stops at the first `.` (ustring.cpp:2308), so the fractional half is
-  // never scanned — not truncation of a parsed float, a shorter scan.
+  // never scanned: a shorter scan, not truncation of a parsed float.
   it.each([
     ['12.9', 12],
     ['.5', 0],
@@ -219,7 +213,7 @@ describe('stringToInt', () => {
     expect(stringToInt('-9007199254740991')).toBe(Number.MIN_SAFE_INTEGER);
   });
 
-  // Past 2^53 the double is no longer the int64 the text states, and the
+  // Past 2^53 the double is not the int64 the text states, and the
   // engine's own saturation (ustring.cpp:2283-2284) is further out still.
   it.each(['9007199254740993', '-9007199254740993', '9223372036854775808', '-99999999999999999999'])(
     'refuses a value no double spells: %s',
@@ -253,16 +247,16 @@ describe('toIntIndex', () => {
     expect(toIntIndex(raw)).toBe(expected);
   });
 
-  // Past 2^53 no double IS the int64 the text states, so this is not an
-  // exactness claim: the SIGN is the only thing a negative-index guard asks,
+  // Past 2^53 no double is the int64 the text states, so this is not an
+  // exactness claim: the sign is the only thing a negative-index guard asks,
   // and it survives here where `stringToInt` gives up.
   it('keeps the sign of an integer no double spells', () => {
     expect(toIntIndex('-9223372036854775808')).toBeLessThan(0);
     expect(toIntIndex('9223372036854775807')).toBeGreaterThan(0);
   });
 
-  // Neither reader can name it — `is_valid_int` refuses the spelling and
-  // `stringToInt` refuses the magnitude — so every comparison stays false.
+  // Neither reader can name it: `is_valid_int` refuses the spelling and
+  // `stringToInt` refuses the magnitude, so every comparison stays false.
   it('reads text that is neither as NaN', () => {
     expect(toIntIndex('a-9223372036854775808')).toBeNaN();
   });

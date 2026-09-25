@@ -1,5 +1,5 @@
 /**
- * `TscnDefinitionProvider` — resource ids that are not plain identifiers.
+ * `TscnDefinitionProvider`: resource ids that are not plain identifiers.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
@@ -18,15 +18,10 @@ describe('TscnDefinitionProvider', () => {
     };
   });
 
-  // ============================================================================
-  // EDGE CASES - Special Characters in IDs
-  // ============================================================================
-
   describe('a heading that carries a uid, which is what Godot 4.x writes', () => {
-    // `uid` ENDS in `id`, so an unanchored /id\s*=\s*"…"/ captures the uid and
-    // Go-to-Definition silently returns null. 1143 of the 1295 ext_resource
-    // headings in this repo's scenes/ write uid= before id=; sub_resource
-    // headings carry none, which is why this read as "sometimes works".
+    // `uid` ends in `id`, so an unanchored /id\s*=\s*"…"/ captures the uid and
+    // Go-to-Definition returns null. Most ext_resource headings write uid= before
+    // id=. A sub_resource heading carries no uid.
     it('resolves an ext_resource whose uid precedes its id', () => {
       const content = `texture = ExtResource("1_abc")
 

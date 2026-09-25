@@ -1,8 +1,6 @@
 /**
- * Strict-verification harness (group E) — 8 assertions covering
- * StandardMaterial3D UV transforms (uv1_scale, uv1_offset). The bug-catcher
- * here is that UV must apply to ALL active texture maps, not just albedo.
- *
+ * StandardMaterial3D UV transforms (uv1_scale, uv1_offset) apply to every
+ * active texture map, not just albedo.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -100,9 +98,7 @@ describe('StandardMaterial3D UV transforms (assertions 40–47)', () => {
   });
 
   it('#42 uv1_scale.z component ignored — no throw', async () => {
-    // THREE.Texture has no z-axis repeat. Just ensure render doesn't throw
-    // when a non-trivial z is supplied. We assert by reaching the
-    // post-render state (mat is defined) without a thrown error.
+    // THREE.Texture has no z-axis repeat, so a non-trivial z must only not throw.
     const mat = await renderUV({
       matData: { albedo_texture: 'ExtResource("1")', uv1_scale: 'Vector3(2, 2, 5)' },
       externals: [ext('1', A_PATH)],
@@ -185,11 +181,9 @@ describe('StandardMaterial3D UV transforms (assertions 40–47)', () => {
   });
 
   it('disposes every UV-transformed clone on unmount, and no shared source', async () => {
-    // Each clone changes wrapS/wrapT, and three keys its GPU upload on exactly
-    // those — so every clone is an upload of its own that disposing the source
-    // would never free. Re-parsing on each keystroke made one set per character.
-    // The sources belong to the loader's cache and must survive: disposing one
-    // pulls it out from under every other material sampling the same path.
+    // Each clone changes wrapS/wrapT, which three keys its GPU upload on, so every clone
+    // is its own upload and must be disposed. The sources belong to the loader's cache
+    // and survive: other materials sample the same path.
     const fake = createFakeResourceLoader();
     const sources = [A_PATH, N_PATH, R_PATH].map((path) => {
       const texture = tex();

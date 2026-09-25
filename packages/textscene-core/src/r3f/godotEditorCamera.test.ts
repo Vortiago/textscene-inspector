@@ -1,11 +1,7 @@
 /**
- * Godot's editor camera, checked against the sentence its own source uses to
- * describe it: "These rotations place the camera in +X +Y +Z, aka south east,
- * facing north west."
- *
- * That is the independent claim — an arbitrary pair of rotations could satisfy
- * one octant and still be the wrong basis order, so the elevation and azimuth
- * are pinned to hand-computed values too.
+ * Godot's editor camera against its source's own sentence: "These rotations place the camera in
+ * +X +Y +Z, aka south east, facing north west." A wrong basis order can still hit the octant, so
+ * the elevation and azimuth are pinned to hand-computed values too.
  */
 import { describe, expect, it } from 'vitest';
 import {

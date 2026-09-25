@@ -1,22 +1,8 @@
 /**
- * <PathFollow3D> — positions its children along the parent Path3D's curve.
- *
- * It reads the nearest ancestor Path3D's curve via Path3DCurveContext, samples
- * the point at absolute `progress` — the only one of the two position keys a
- * scene file can carry, and unwrapped whatever `loop` says, for the reason
- * `computeFollowTransform` gives —
- * orients children to the tangent per `rotation_mode` (model front is
- * -Z, or +Z with `use_model_front`), and nudges by `h_offset`/`v_offset` along
- * the oriented right/up axes. That computed transform drives the group (Godot
- * derives the follower's transform from the curve, overriding the authored one).
- *
- * With no curve in scope it falls back to its authored Node3D transform (matching
- * the prior transform-only behaviour). A small selection-gated cross marks the
- * follow point (ADR-0018).
- *
- * Approximation note: orientation aligns the model-front axis to the tangent for
- * any non-NONE rotation_mode (Y/XY/XYZ/ORIENTED are not distinguished), and the
- * curve's per-point tilt (roll) is not applied — sufficient for a static preview.
+ * <PathFollow3D>: positions its children along the nearest ancestor Path3D's curve
+ * (Path3DCurveContext), at absolute `progress`, oriented to the tangent and nudged by
+ * `h_offset`/`v_offset`. Like Godot, this transform overrides the authored one. With no curve
+ * in scope it keeps the authored Node3D transform. A selection-gated cross marks the point (ADR-0018).
  */
 
 import { useMemo } from 'react';
@@ -30,7 +16,7 @@ import { transformFromNode3DProperties, type Vec3Tuple } from '../../../r3f/node
 import type { Curve3DSampler } from '../../../resources/curves/curve3d';
 import { RotationMode, type PathFollow3DProperties } from './types';
 
-/** Godot editor path-follow handle color (orange). */
+/** Godot editor path-follow handle colour. */
 const FOLLOW_COLOR = 0xffa733;
 
 // A small 3-axis cross (extent 0.25) at the follow point.
@@ -54,7 +40,7 @@ export function PathFollow3D({ node, children }: NodeComponentProps) {
   const follow = useMemo(() => computeFollowTransform(sampler, props), [sampler, props]);
   const dot = gizmoVisible ? <FollowCross /> : null;
 
-  // No curve in scope → behave like a plain Node3D at the authored transform.
+  // No curve in scope: behave like a plain Node3D at the authored transform.
   if (!follow) {
     return (
       <Node3D node={node}>
@@ -84,22 +70,21 @@ function computeFollowTransform(
 ): FollowTransform | null {
   if (!sampler || sampler.length <= 0) return null;
 
-  // `progress` alone, unwrapped. Godot applies a node's stored properties
-  // BEFORE parenting it (packed_scene.cpp:492 sets, :541 parents) and binds
-  // `PathFollow3D::path` only on enter-tree, so `set_progress_ratio` refuses
-  // every authored ratio (path_3d.cpp:503) and `set_progress`'s own wrap/clamp
-  // branch is skipped for want of a curve. What is left is the raw value and
-  // the sampler's clamp (curve.cpp:2024) — which is why `loop` does not wrap a
-  // scene-loaded progress either, measured both ways against 4.6.3.
+  // `progress` alone, unwrapped. Godot sets stored properties before parenting
+  // (packed_scene.cpp:492 sets, :541 parents) and binds `path` on enter-tree, so
+  // `set_progress_ratio` refuses every authored ratio (path_3d.cpp:503) and `set_progress`
+  // skips its wrap. Only the sampler's clamp (curve.cpp:2024) applies, whatever `loop` says.
   const sample = sampler.sampleAt(props.progress ?? 0);
   const forward = new THREE.Vector3(sample.tangent.x, sample.tangent.y, sample.tangent.z);
 
   const quaternion = new THREE.Quaternion();
   const right = new THREE.Vector3(1, 0, 0);
   const up = new THREE.Vector3(0, 1, 0);
+  // Approximation: every non-NONE rotation_mode aligns the model front (-Z, or +Z with
+  // `use_model_front`) to the tangent, so Y/XY/XYZ/ORIENTED look alike, and the curve's per-point
+  // tilt (roll) is not applied.
   if (props.rotation_mode !== RotationMode.NONE && forward.lengthSq() > 0) {
-    // Align the model-front axis (−Z by default, +Z with use_model_front) to the
-    // tangent. setFromUnitVectors gives the minimal rotation, leaving roll free.
+    // setFromUnitVectors gives the minimal rotation onto the tangent, leaving roll free.
     const modelFront = new THREE.Vector3(0, 0, props.use_model_front ? 1 : -1);
     quaternion.setFromUnitVectors(modelFront, forward.clone().normalize());
     right.applyQuaternion(quaternion);

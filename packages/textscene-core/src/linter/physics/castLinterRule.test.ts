@@ -1,18 +1,8 @@
 /**
- * One factory, four node types — so the table below is the test.
- *
- * The four casts were written by four agents in one wave and disagreed about
- * whether a dead configuration deserves a diagnostic at all: one shipped two
- * rules, three shipped none. Godot settles it. `ShapeCast2D`/`ShapeCast3D`
- * override `get_configuration_warnings` and name the missing-shape defect
- * themselves (scene/2d/physics/shape_cast_2d.cpp:407, and its 3D twin at :185);
- * neither ray cast overrides it, which is why the rays get the two shared
- * dead-config checks and nothing invented on top.
- *
- * Which rules an instantiation does NOT have is asserted against `meta.emits`,
- * never by linting a scene and expecting that rule name to be absent: a name no
- * instantiation emits is absent from every scene, so such a test passes whatever
- * the factory does.
+ * One factory, four node types, so the table below is the test. `ShapeCast2D`/`ShapeCast3D`
+ * name the missing-shape defect themselves (scene/2d/physics/shape_cast_2d.cpp:407, and
+ * its 3D twin at :185). A missing rule is asserted against `meta.emits`, since a name no
+ * instantiation emits is absent from every linted scene whatever the factory does.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -70,12 +60,11 @@ describe.each(CASTS)('%s semantic rules', (type) => {
 
   it('reads an unstorable flag as its default, in both directions', () => {
     // `can_convert_strict` refuses a VECTOR2 source for a BOOL target, so the
-    // write never lands: `collide_with_bodies` is still true and the cast is
-    // live. Collapsing the unreadable value to false accused it.
+    // write never lands: `collide_with_bodies` is still true and the cast is live.
     expectNoDiagnostic(cast({ collide_with_bodies: 'Vector2(1, 0)' }), {
       ruleName: `${prefix}-no-collide-target`,
     });
-    // The same reading the other way: `collide_with_areas` defaults to FALSE,
+    // The same reading the other way: `collide_with_areas` defaults to false,
     // so an unstorable value there leaves the pair dead and the diagnostic stands.
     expectDiagnostic(cast({ collide_with_areas: '"yes"', collide_with_bodies: false }), {
       ruleName: `${prefix}-no-collide-target`,
@@ -123,12 +112,10 @@ describe('the shape-only checks', () => {
   });
 
   it('cannot report a name its own instantiation does not declare', () => {
-    // `emits` and `check` read the SAME arm table, so the 2D shape cast has no
-    // concave arm to report through — a concave shape under it is simply not
-    // its business. Written as a scene rather than only against `emits`
-    // because this string IS producible by the file: widening the check half
-    // alone emits it here while every meta-guard stays green, since the 3D
-    // sibling declares `*-concave-shape` for the wildcard to match.
+    // `emits` and `check` read the same arm table, so the 2D shape cast has no
+    // concave arm. A scene, not only `emits`: widening the check half alone would
+    // emit this string while every meta-guard stays green, since the 3D sibling
+    // declares `*-concave-shape` for the wildcard to match.
     expect(emittedBy('ShapeCast2D')).not.toContain('shapecast2d-concave-shape');
     expectNoDiagnostic(
       scene(

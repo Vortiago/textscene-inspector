@@ -1,11 +1,7 @@
 /**
- * VehicleBody3D registration — parser.
- *
- * A RigidBody3D subclass driven by its VehicleWheel3D children. Non-visual node:
- * renders as a transform-only group (ADR-0005, ADR-0008), reusing the Node3D
- * transform parse; the render component (index.r3f.ts) reuses Node3D. Its own
- * properties (mass, engine_force, brake, steering, …) drive simulation only,
- * which a static preview does not run — they are validated, not parsed.
+ * VehicleBody3D parser registration: a transform-only group (ADR-0005, ADR-0008)
+ * that reuses the Node3D parse. Its own properties drive only the simulation,
+ * which a static preview does not run, so they are validated, not parsed.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

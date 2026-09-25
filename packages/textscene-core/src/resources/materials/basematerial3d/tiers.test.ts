@@ -1,12 +1,7 @@
 /**
- * The tier each BaseMaterial3D bound reports, pinned per property.
- *
- * `endSeverity` derives the severity FROM the declared grounding, so a bound
- * tagged `enforced` when the setter merely assigns stays self-consistent and no
- * sweep can catch it. Naming the expected severity here puts the claim in a
- * second file. One case per DISTINCT claim, not per property: the repeated
- * `0,1,0.01` hinted floats are one claim, and the four `ERR_FAIL_INDEX`
- * channels are another.
+ * The tier each BaseMaterial3D bound reports. `endSeverity` derives severity from the
+ * declared grounding, so a wrong tag stays self-consistent: this second file names the
+ * expected severity, one case per distinct claim (the `0,1,0.01` hinted floats are one).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -63,7 +58,7 @@ runResourcePropertyValidation('StandardMaterial3D', [
   },
   {
     prop: 'fov_override',
-    // "1,179,0.1,degrees" — the `.tscn` stores the degrees the hint names.
+    // "1,179,0.1,degrees": the `.tscn` stores the degrees the hint names.
     valid: ['1', '75', '179'],
     invalid: [{ value: '180', contains: ['fov_override'], severity: 'warning' }],
   },

@@ -1,6 +1,4 @@
-/**
- * navigationobstacle2d linter registration - imports linter components to trigger self-registration.
- */
+/** Imports the NavigationObstacle2D linter modules so they self-register. */
 
 import './linterParser.js';
 import './linter.js';

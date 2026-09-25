@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import './index.r3f'; // triggers both parser (./index) and render registration
+import './index.r3f'; // Registers both the parser (./index) and the render component.
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { TWO_D_PHYSICS_TYPES } from './index';
 

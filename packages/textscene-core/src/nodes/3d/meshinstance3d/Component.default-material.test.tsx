@@ -1,12 +1,7 @@
 /**
- * A multi-surface MeshInstance3D whose slot N (N > 0) resolves to no material.
- *
- * Godot walks every surface of the mesh and falls back per surface — an
- * unpopulated slot gets the SAME hardcoded default shader surface 0 would get,
- * not a lighter or darker stand-in.
- *
- * On a real multi-surface mesh, because a PrimitiveMesh has exactly one surface
- * and Godot drops every higher override (`testing/twoSurfaceMesh.ts`).
+ * A multi-surface MeshInstance3D whose slot N > 0 has no material gets the same
+ * default shader surface 0 would get. It uses a real two-surface mesh, since
+ * Godot drops overrides past a PrimitiveMesh's one surface (`testing/twoSurfaceMesh.ts`).
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';

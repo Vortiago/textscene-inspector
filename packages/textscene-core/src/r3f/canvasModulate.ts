@@ -1,20 +1,8 @@
 /**
- * Which `CanvasModulate` colour is in force for a canvas.
- *
- * A CanvasModulate does NOT tint its own subtree — it tints the whole canvas it
- * belongs to. Godot implements it as `RS::canvas_set_modulate(canvas, color)`
- * on ENTER_CANVAS, so the node's position in the tree is irrelevant and only
- * membership in the canvas matters. The isometric dungeon relies on exactly
- * that: its CanvasModulate is a CHILDLESS leaf beside the level, so a
- * subtree-scoped reading of it tints nothing at all.
- *
- * Two consequences of the "on enter" mechanism, both reproduced here:
- *   - Several CanvasModulates on one canvas do not compose; the LAST to enter
- *     wins, which is document (pre-order) order.
- *   - A hidden one does not apply. It is a CanvasItem, so `is_visible_in_tree()`
- *     gates it, and a hidden ancestor hides it with them.
- *
- * A `CanvasLayer` is its own canvas, so the walk does not descend into one.
+ * Which `CanvasModulate` colour is in force for a canvas. Godot sets it with
+ * `RS::canvas_set_modulate` on ENTER_CANVAS, so it tints the whole canvas wherever
+ * it sits. The last one in pre-order wins, and a hidden one (`is_visible_in_tree()`)
+ * does not apply. A `CanvasLayer` is its own canvas, so the walk does not enter one.
  */
 
 import { createContext, useContext, useMemo } from 'react';
@@ -32,11 +20,9 @@ interface CanvasModulateLike {
 }
 
 /**
- * The canvas-wide tint for a scene's root nodes — white when the scene has no
- * (visible) CanvasModulate, which is the identity for the modulate product.
- *
- * KNOWN GAP: the walk sees authored nodes only, so a CanvasModulate living
- * inside an instanced sub-scene is not found. Godot would apply it.
+ * The canvas-wide tint for a scene's root nodes, white with no visible
+ * CanvasModulate. A CanvasModulate inside an instanced sub-scene is not found,
+ * though Godot applies it.
  */
 export function canvasModulateColor(nodes: readonly TscnNode[]): RGBA {
   let found: RGBA | null = null;
@@ -56,12 +42,9 @@ export function canvasModulateColor(nodes: readonly TscnNode[]): RGBA {
 }
 
 /**
- * The canvas tint in force, kept OUT of the inherited-modulate chain.
- *
- * Godot applies it per item in the base pass, guarded by the item's light mode
- * (`canvas.glsl`: `#elif !defined(MODE_UNSHADED) color *= canvas_modulation;`),
- * so folding it into the modulate every child inherits would apply it to items
- * that must not receive it — and apply it once per nesting level besides.
+ * The canvas tint, kept out of the inherited modulate: Godot applies it once per
+ * item in the base pass, under the light-mode guard (`canvas.glsl`:
+ * `#elif !defined(MODE_UNSHADED) color *= canvas_modulation;`).
  */
 export const CanvasModulateContext = createContext<RGBA>(WHITE_MODULATE);
 CanvasModulateContext.displayName = 'CanvasModulateContext';
@@ -72,20 +55,8 @@ export function useCanvasModulate(): RGBA {
 }
 
 /**
- * The canvas tint THIS item multiplies into its own pixels: the active
- * CanvasModulate, or white for an item the canvas tint must skip.
- *
- * Both `Unshaded` and `LightOnly` skip it — Godot's guard excludes them
- * together, since a light-only item shows nothing of its own base for the tint
- * to act on.
- *
- * The tint is FLOORED at one 8-bit step per channel. The 2D light injection
- * recovers an item's albedo by dividing this value back out (see
- * `lighting2d/canvasItemLighting`), and a zero channel would make that albedo
- * unrecoverable — a black CanvasModulate, the ordinary way to author night,
- * would then swallow every light on the canvas. The floor is below what an
- * 8-bit channel can show, and the lit result is unaffected either way because
- * the accumulator carries the true tint.
+ * The canvas tint this item multiplies into its own pixels, or white for an
+ * `Unshaded` or `LightOnly` item, which Godot's guard excludes together.
  */
 export function useCanvasModulateFor(material: CanvasItemMaterialProperties | null): RGBA {
   const canvasModulate = useContext(CanvasModulateContext);
@@ -96,6 +67,11 @@ export function useCanvasModulateFor(material: CanvasItemMaterialProperties | nu
   );
 }
 
+/**
+ * Floored at one 8-bit step per channel: the 2D light injection divides the tint
+ * back out to recover albedo (`lighting2d/canvasItemLighting`), and a black night
+ * tint would swallow every light. The accumulator carries the true tint.
+ */
 function floorCanvasModulate(color: RGBA): RGBA {
   const { r, g, b } = color;
   if (r >= CANVAS_MODULATE_FLOOR && g >= CANVAS_MODULATE_FLOOR && b >= CANVAS_MODULATE_FLOOR) {

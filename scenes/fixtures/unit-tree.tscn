@@ -1,8 +1,6 @@
-; Three columns with column_titles_visible: the panel StyleBox plus one blank
-; header cell per column, the whole truth of a Tree in a .tscn — its rows and
-; column titles are always created from script, never serialised (see
-; comparison.md). A single-column fixture could not tell a hardcoded width
-; apart from the real equal-split formula, which is why this uses three.
+; Three columns with column_titles_visible: the panel StyleBox plus one blank header cell per
+; column, all a .tscn holds of a Tree, since rows and titles come from script (see comparison.md).
+; One column could not tell a hardcoded width from the real equal-split formula.
 [gd_scene format=3]
 
 [node name="Root" type="Control"]

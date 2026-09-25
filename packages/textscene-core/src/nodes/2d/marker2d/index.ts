@@ -1,4 +1,4 @@
-/** Marker2D registration — parser. */
+/** Marker2D registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseMarker2D } from './parser';

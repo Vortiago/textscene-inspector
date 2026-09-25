@@ -1,28 +1,8 @@
 /**
- * A test title may not name a tier its block does not assert.
- *
- * A failure report prints the test name first, so the name is what a reader
- * derives the tier from — a title saying "warns" beside `severity: 'info'` is
- * a stale comment in the one place nobody re-reads.
- *
- * The rule is symmetric and takes no exemptions: when a block asserts exactly
- * ONE tier, its title may name that tier and no other. That admits the
- * deliberate contrast phrasing — "reports at info, not error, when …" names
- * both, and the asserted one is among them — without a roster to keep current.
- *
- * Scope is `it`/`test` blocks under this package's `src`. A `describe` covers
- * children that may legitimately disagree, and a negative assertion naming no
- * severity asserts no tier for this scan to compare against. The two host apps
- * keep their own test files, which this walk cannot reach from inside the
- * package. A block that builds a `LintRule` as a fixture is skipped: the
- * `severity:` in its `check` is the value under test, not a claim about a tier,
- * so `Linter.test.ts` may say "parse errors" while its fixture rule reports a
- * warning.
- *
- * `validatorCheck.test.ts` is the one file whose `expectError` call is the
- * SUBJECT rather than a claim: it proves the helper throws on the wrong tier.
- * Its titles satisfy this guard by naming both tiers, so a reword that drops
- * one is a false positive rather than a drifted title.
+ * A test title may not name a tier its block does not assert: a failure report
+ * prints the title first. When a block asserts exactly one tier, its title may
+ * name that tier and no other, which admits "reports at info, not error" with no
+ * roster. `validatorCheck.test.ts` titles name both tiers, since its subject is the helper.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -35,9 +15,8 @@ import { SEVERITIES, type Severity } from './types.js';
 const isTestFile = (name: string) => /\.test\.tsx?$/.test(name);
 
 /**
- * The tier names, spelled for a regex — read off the shared roster rather than
- * typed out, so a fourth tier reaches every matcher below instead of only the
- * one table tsc checks.
+ * The tier names, spelled for a regex and read off the shared roster, so a new
+ * tier reaches every matcher below and not only the table tsc checks.
  */
 const TIER_NAMES = SEVERITIES.join('|');
 const TIER_NAMES_CAPITALISED = SEVERITIES.map((t) => t[0]!.toUpperCase() + t.slice(1)).join('|');
@@ -50,61 +29,38 @@ const TIER_WORDS: Record<Severity, RegExp> = {
 };
 
 /**
- * Where a block begins.
- *
- * The lookbehind is what keeps a method call out: `\b` holds between `.` and
- * `test`, so `SOME_RE.test(value)` opens a block, truncating the real block
- * around it — its assertion falls outside the body and the block reads as
- * claiming no tier at all — and inventing one whose title is the next string
- * literal in sight.
- *
- * `.each` takes an arbitrary expression — an inline table, or a variable — so
- * the argument is skipped by counting parentheses rather than matched, and the
- * whole dotted chain is one capture because only the last repetition of a
- * repeated group survives.
+ * Where a block begins. The lookbehind keeps a method call out: `\b` holds
+ * between `.` and `test`, so `SOME_RE.test(value)` would truncate the real block.
+ * The dotted chain is one capture, since only the last repetition of a repeated
+ * group survives.
  */
 const BLOCK_START_RE = /(?<![.$\w])(it|test|describe)((?:\.\w+)*)\s*\(/g;
 
 /**
- * Where a tier claim starts.
- *
- * `severities` too, and with no trailing boundary: a mapped list asserts its
- * tiers through `expect(severitiesOf(…)).toEqual(['info'])` and never spells
- * the `severity:` key at all. `expectSeverity` and `expectRejected` take the
- * tier as an argument and spell no lowercase `severit` for the first
- * alternative to reach — a capital `S` sits inside the word, where `\b` does
- * not hold.
+ * Where a tier claim starts. `severities` too, with no trailing boundary, for
+ * `expect(severitiesOf(…)).toEqual(['info'])`. `expectSeverity` and
+ * `expectRejected` are their own alternative: the capital `S` sits inside the
+ * word, where `\b` does not hold.
  */
 const TIER_ANCHOR_RE = /\b(?:severit(?:y|ies)|expect(?:Severity|Rejected))/g;
 
 /**
- * A tier claimed by the assertion helper's own NAME, with no literal anywhere.
- *
- * `expectError(error, …)` and `expectWarning(…)` (`testing/validatorCheck.ts`)
- * carry the tier in the identifier and take message substrings for arguments,
- * so the anchor above reaches neither. Total over `Severity` rather than over
- * the two helpers that exist today, so a third lands inside the sweep.
+ * A tier claimed by the assertion helper's own name, such as `expectError(…)` in
+ * `testing/validatorCheck.ts`, which the anchor above cannot reach. Total over
+ * `Severity`, so a new helper lands inside the sweep.
  */
 const TIER_HELPER_RE = new RegExp(`\\bexpect(${TIER_NAMES_CAPITALISED})\\s*\\(`, 'g');
 
 /**
- * A list helper whose NAME carries the tier: `errorsOf(…)`, `warningsOf(…)`.
- *
- * Neither anchor above reaches one: the tier is in the identifier and the
- * argument is a diagnostic list, so a block asserting through it names no tier
- * for this scan to compare its title against.
+ * A list helper whose name carries the tier: `errorsOf(…)`, `warningsOf(…)`.
+ * Neither anchor above reaches one.
  */
 const TIER_LIST_RE = new RegExp(`\\b(${TIER_NAMES})sOf\\s*\\(`, 'g');
 
 /**
- * What makes a list helper a CLAIM: the same statement asserting the list is
- * non-empty.
- *
- * Positive evidence rather than the absence of a negative, because the common
- * shape binds the call and asserts on the variable a statement later —
- * `const errors = errorsOf(x);` alone says nothing about the tier, and reading
- * it as a claim would fabricate one for every `expect(errorsOf(x)).toHaveLength(0)`
- * written that way round.
+ * What makes a list helper a claim: the same statement asserts the list is
+ * non-empty. Positive evidence, because `const errors = errorsOf(x);` alone
+ * claims nothing, and `toHaveLength(0)` asserts the tier is absent.
  */
 const NON_EMPTY_RE = /toHaveLength\(\s*[1-9]|toBeGreaterThan\(\s*0|length\)\.toBe\(\s*[1-9]|\[0\]/;
 
@@ -118,10 +74,9 @@ const TIER_LITERAL_RE = new RegExp(`'(${TIER_NAMES})'`, 'g');
 const CLAIM_REACH = 240;
 
 /**
- * A tier NAMED to be excluded is not a tier asserted — `filter(d => d.severity
+ * A tier named to be excluded is not a tier asserted: `filter(d => d.severity
  * !== 'error')` and `.not.toBe('info')` both spell one. Read over the whole
- * claim rather than per literal, so an ambiguous claim is skipped instead of
- * fabricating a tier.
+ * claim, so an ambiguous claim is skipped instead of fabricating a tier.
  */
 const EXCLUDES_RE = /(?:!==?|\.not\b)/;
 
@@ -148,12 +103,8 @@ function openParenAt(src: string, from: number): number {
 
 /**
  * The block's title, when its first argument is a string literal, and where it
- * ends.
- *
- * Sticky rather than a windowed slice, which drops a title longer than the
- * window — and its whole block with it — in silence. Closed by the quote it
- * opened with, because a `[^'"`]` class cuts `(the "no maximum" sentinel)` at
- * the inner quote and hides every tier word behind it.
+ * ends. Sticky, since a windowed slice drops a long title. Closed by the quote
+ * it opened with, since `[^'"`]` cuts `(the "no maximum" sentinel)` short.
  */
 const TITLE_RE = /\s*(['"`])((?:\\.|(?!\1)[^\\])*)\1/y;
 function titleAt(src: string, from: number): { text: string; end: number } | null {
@@ -170,43 +121,35 @@ interface Block {
 }
 
 /**
- * The body of the block opened at `at`: its own call, and never the next
- * block's, nor anything declared after it.
- *
- * A body running to the next START reads the `severity:` in a
- * `runPropertyValidation` table declared BELOW the block as the block's own.
- * Parentheses inside a string literal count like any other, so the close is
- * believed only when it lands on `})` at or before the next start; otherwise
- * the next start bounds the body.
+ * The body of the block opened at `at`: its own call, never a table declared
+ * below it. Parentheses in a string count too, so the close is believed only
+ * when it lands on `})` at or before the next start, which bounds it otherwise.
  */
 function bodyOf(src: string, at: number, callOpen: number, nextAt: number): string {
   const close = afterBalanced(src, callOpen);
-  // `Math.max` because a negative `slice` start counts from the END of the
-  // file, so a block closing inside the first 16 characters would be judged on
-  // the file's tail.
+  // `Math.max`: a negative `slice` start counts from the end of the file, so a
+  // block closing inside the first 16 characters would be judged on the tail.
   const closes =
     close > at && close <= nextAt && /\}\s*\)$/.test(src.slice(Math.max(0, close - 16), close));
   return src.slice(at, closes ? close : nextAt);
 }
 
 /**
- * The `it`/`test` blocks in one file, each body bounded by `bodyOf`.
- *
- * Comments are blanked first, at preserved offsets: comment lines here spell
- * block starts and `severity:` assertions alike, and every other scraping
- * guard in this package strips them for the same reason.
+ * The `it`/`test` blocks in one file, each body bounded by `bodyOf`. Comments
+ * are blanked first, at preserved offsets, since they spell block starts and
+ * `severity:` assertions alike.
  */
 function blocksIn(file: string, source: string): Block[] {
   const src = stripComments(source);
   const starts: { at: number; callOpen: number; title: string | null; isCase: boolean }[] = [];
-  // How far a title already read reaches. A block start inside one is PROSE:
+  // How far a title already read reaches. A block start inside one is prose:
   // `the setter never checks it (tile_map.cpp:996)` opens a block exactly the
   // way `SOME_RE.test(` does, and truncates the block it sits in.
   let readThrough = 0;
   for (const m of src.matchAll(BLOCK_START_RE)) {
     if (m.index < readThrough) continue;
     const open = m.index + m[0].length - 1;
-    // `it.each(<table>)(<title>, …)`: the title sits in the SECOND call, so
+    // `it.each(<table>)(<title>, …)`: the title sits in the second call, so
     // the table is skipped by counting parentheses rather than matched.
     const callOpen = m[2]!.includes('.each') ? openParenAt(src, afterBalanced(src, open)) : open;
     if (callOpen < 0) continue;
@@ -253,14 +196,19 @@ const assertedTiers = (body: string): string[] => {
 };
 
 /**
- * This file. Its pins spell whole `it(…)` blocks as data, so scanning itself
- * reads a pin as a subject. Excluded by path rather than by an exemption
- * entry, the same way `populationDiscipline.guard.test.ts` drops its own.
+ * This file, excluded by path: its pins spell whole `it(…)` blocks as data,
+ * which a scan would read as subjects.
  */
 const SELF = 'linter/testTitleTier.guard.test.ts';
 
 const label = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
 
+/**
+ * Scope is `it` and `test` blocks under this package's `src`: a `describe` may
+ * cover children that disagree, a negative assertion naming no severity asserts
+ * no tier, and the host apps sit outside the walk. A block that builds a
+ * `LintRule` fixture is skipped, since its `severity:` is the value under test.
+ */
 const allBlocks = (): Block[] => {
   const files = atLeast(walk(srcRoot, isTestFile), 500, 'test files').map(label);
   // A renamed file drops silently out of an exclusion by path, and the pins
@@ -277,10 +225,9 @@ const allBlocks = (): Block[] => {
 
 describe('test titles name the tier they assert', () => {
   it('never claims a tier the block does not assert', () => {
-    // The scrape's own floor counts BLOCKS, and the ones this guard actually
-    // checks are the far smaller set carrying exactly one tier — so a narrowed
-    // anchor drops subjects with the walk intact and the list still empty. The
-    // drift pin belongs at the call site, which is where the population is.
+    // The scrape's floor counts blocks, but this guard checks only those with
+    // exactly one tier, so a narrowed anchor drops subjects with the walk
+    // intact. That population's floor sits here.
     const checked = atLeast(
       allBlocks()
         .map((b) => ({ ...b, tiers: assertedTiers(b.body) }))
@@ -299,12 +246,9 @@ describe('test titles name the tier they assert', () => {
   });
 
   it('reads every assertion spelling, and an .each table it cannot inline', () => {
-    // The spellings a tier reaches the file by, pinned so a narrower regex
-    // cannot make the guard above vacuous — only the first and the last spell
-    // `severity:`, and the six helper forms spell no literal at all. The last
-    // two list forms occur nowhere in the tree today, so this is the only place
-    // that proves `NON_EMPTY_RE`'s arms for them are not dead. Plus a title
-    // that lives in the second call of `it.each(<variable>)(…)`.
+    // Every spelling a tier arrives by, pinned so a narrower regex cannot make
+    // the guard above vacuous. This is the only proof of some `NON_EMPTY_RE`
+    // arms, and of a title in the second call of `it.each(<variable>)(…)`.
     const src = [
       "it('a', () => { expect(d.every((x) => x.severity === 'info')).toBe(true); });",
       "it('b', () => { expect(reports[0]?.severity).toBe('warning'); });",
@@ -336,7 +280,7 @@ describe('test titles name the tier they assert', () => {
   it('reads a list helper as a tier only where the block asserts the list is non-empty', () => {
     // `const errors = errorsOf(x)` binds a list and claims nothing; the tier
     // arrives with the assertion, and `toHaveLength(0)` asserts the tier is
-    // ABSENT. Reading the bare call as a claim inverts both.
+    // absent. Reading the bare call as a claim inverts both.
     const src = [
       "it('a', () => { expect(errorsOf(linter.lint(c))).toHaveLength(0); });",
       "it('b', () => { const errors = errorsOf(linter.lint(c)); expect(errors).toEqual([]); });",
@@ -349,9 +293,9 @@ describe('test titles name the tier they assert', () => {
   });
 
   it('keeps a title that spells a block start, and a table below one, out of the scan', () => {
-    // Both fabricate: `it (` in PROSE opens a block that truncates the real
-    // one around it, and a body running to the next START reads the
-    // `severity:` in a table declared after the block as the block's own.
+    // Both fabricate: `it (` in prose opens a block that truncates the real
+    // one, and a body running to the next start reads a later table's
+    // `severity:` as its own.
     const src = [
       "it('errors on a negative index — set_slot refuses it (graph_node.cpp:706)', () => {",
       "  expect(check('slot/-1/left_enabled', 'true')?.severity).toBe('error');",

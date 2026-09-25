@@ -1,11 +1,7 @@
 /**
- * Framing on load is opt-in, because Godot's editor does not do it: it opens
- * every scene at a fixed orbit (`Node3DEditorViewport::Cursor`) and leaves
- * framing to F.
- *
- * It is also the cheaper default. Framing puts the whole scene inside the view
- * frustum, so nothing is culled and every object draws each frame; Godot's
- * fixed distance leaves most of a large scene outside it.
+ * Framing on load is opt-in: Godot's editor opens every scene at a fixed orbit
+ * (`Node3DEditorViewport::Cursor`) and leaves framing to F. It is also cheaper, since
+ * the fixed distance leaves most of a large scene outside the frustum.
  */
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

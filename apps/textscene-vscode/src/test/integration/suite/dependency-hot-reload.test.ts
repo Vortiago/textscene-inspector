@@ -1,37 +1,8 @@
 /**
- * End-to-end regression guard for the Dependency hot-reload contract.
- *
- * The chain under test: FileSystemWatcher -> served-map relevance gate ->
- * `resourceChanged` message -> webview re-fetch.
- *
- * Fixture workspace (dep-chain/ inside .test-workspace):
- *   project.godot
- *   main.tscn  --[ext_resource PackedScene]--> sub.tscn
- *              --[ext_resource Texture2D]----> texture.png
- *              --[ext_resource Material]------> material.tres
- *   sub.tscn   --[ext_resource Texture2D]----> texture.png
- *   material.tres --[ext_resource Texture2D]--> texture.png
- *   unrelated.tscn  (no shared references)
- *
- * Test strategy: panels use a fake `vscode.WebviewPanel` (via `createTestPanel`)
- * so every `postMessage` call is captured in `sentMessages`. `loadResource`
- * messages drive the production `VSCodeResourceProvider.loadResource` path
- * against the REAL filesystem, populating the served-resources map.
- * `handleDependencyChange` is then called directly — exactly what the real
- * FileSystemWatcher calls in production — and the resulting `resourceChanged`
- * posts are asserted. This exercises the complete production code path without
- * requiring a live watcher timer or disk-event latency.
- *
- * Scenarios:
- *   1. Transitive depth   — texture change reaches main.tscn panel
- *   2. Per-panel gate     — unrelated panel is silent; sub.tscn panel fires
- *   3. Hidden panel       — retainContextWhenHidden ensures delivery off-screen
- *   4. Missing-heal       — onDidCreate after initial not-found delivers invalidation
- *   5. Negative           — file the scene never referenced produces no message
- *   6. Deletion           — deleted dependency triggers resourceChanged (missing placeholder)
- *
- * The suite is serial (Mocha's default for `suite`) to avoid cross-test
- * served-map bleed. Each test creates fresh panels.
+ * End-to-end dependency hot-reload: served-map relevance gate, `resourceChanged`,
+ * webview re-fetch. `loadResource` reads the real filesystem into the served map,
+ * and each test calls `handleDependencyChange` as the watcher does, with no watcher
+ * latency. The suite is serial, and each test makes fresh panels, so no map bleeds.
  */
 
 import * as fs from 'fs';
@@ -56,17 +27,12 @@ import {
 } from '../helpers/depChainHelpers';
 import type { HostToWebviewMessage } from '../../../protocol';
 
-// ---------------------------------------------------------------------------
-// Suite setup
-// ---------------------------------------------------------------------------
-
 suite('Dependency Hot-Reload E2E', () => {
   suiteSetup(async () => {
     const extension = vscode.extensions.getExtension('vortiago.textscene-inspector');
     await extension?.activate();
-    // Write the dep-chain fixture workspace files to disk. This runs after
-    // setupTestWorkspace (which runs synchronously in suite/index.ts before
-    // Mocha starts), so it adds files into the already-initialised workspace.
+    // The launcher has already populated the workspace, so this adds the
+    // dep-chain files into it.
     setupDepChainWorkspace();
   });
 
@@ -79,12 +45,6 @@ suite('Dependency Hot-Reload E2E', () => {
     await new Promise<void>((r) => setTimeout(r, 100));
   });
 
-  // -------------------------------------------------------------------------
-  // Scenario 1: Transitive depth
-  //   open main.tscn preview; modify texture.png (deepest dependency layer)
-  //   -> panel receives resourceChanged for the texture's res:// path
-  // -------------------------------------------------------------------------
-
   test('scenario 1: texture change at the deepest dependency layer reaches the main.tscn panel', async function () {
     this.timeout(30000);
 
@@ -96,16 +56,11 @@ suite('Dependency Hot-Reload E2E', () => {
     await waitForResourceChanged(sentMessages, RES_TEXTURE, 8000);
   });
 
-  // -------------------------------------------------------------------------
-  // Scenario 2a: Per-panel relevance gate — unrelated panel stays silent
-  //   a panel open on an unrelated scene receives nothing when texture changes
-  // -------------------------------------------------------------------------
-
   test('scenario 2a: panel for an unrelated scene receives no resourceChanged when texture changes', async function () {
     this.timeout(30000);
 
     const { panel, sentMessages } = await openPanel(depChainFile('unrelated.tscn'));
-    // No loadResource messages — the panel never requested texture.png.
+    // No loadResource: the panel never requested texture.png.
     await new Promise<void>((r) => setTimeout(r, 100));
 
     await assertNoResourceChanged(
@@ -115,18 +70,12 @@ suite('Dependency Hot-Reload E2E', () => {
     );
   });
 
-  // -------------------------------------------------------------------------
-  // Scenario 2b: Per-panel relevance gate — sub.tscn panel also fires
-  //   a second panel on sub.tscn (which also served the texture) receives the
-  //   invalidation too
-  // -------------------------------------------------------------------------
-
   test('scenario 2b: panel for sub.tscn (which also served texture) receives resourceChanged', async function () {
     this.timeout(30000);
 
     const { panel, sentMessages, triggerMessage } = await openPanel(depChainFile('sub.tscn'));
 
-    // sub.tscn references texture.png — prime that resource.
+    // sub.tscn references texture.png.
     await primeResource(triggerMessage, sentMessages, {
       path: RES_TEXTURE,
       resourceType: 'Texture2D',
@@ -138,20 +87,14 @@ suite('Dependency Hot-Reload E2E', () => {
     await waitForResourceChanged(sentMessages, RES_TEXTURE, 8000);
   });
 
-  // -------------------------------------------------------------------------
-  // Scenario 3: Hidden panel
-  //   hide one panel (set visible = false) before the disk change — it still
-  //   receives the message (`retainContextWhenHidden` keeps the webview live)
-  // -------------------------------------------------------------------------
-
+  // `retainContextWhenHidden` keeps a hidden panel's webview live.
   test('scenario 3: a panel whose visible flag is false still receives resourceChanged', async function () {
     this.timeout(30000);
 
     const { panel, sentMessages, triggerMessage } = await openPanel(depChainFile('main.tscn'), {
-      visible: false, // panel is hidden behind another editor
+      visible: false, // hidden behind another editor
     });
 
-    // Prime texture.png into the served map.
     await primeResource(triggerMessage, sentMessages, {
       path: RES_TEXTURE,
       resourceType: 'Texture2D',
@@ -164,24 +107,18 @@ suite('Dependency Hot-Reload E2E', () => {
     await waitForResourceChanged(sentMessages, RES_TEXTURE, 8000);
   });
 
-  // -------------------------------------------------------------------------
-  // Scenario 4: Missing-heal
-  //   reference a not-yet-existing texture, open the preview (missing
-  //   placeholder), then CREATE the file -> invalidation is delivered
-  // -------------------------------------------------------------------------
-
   test('scenario 4: creating a previously-missing resource delivers resourceChanged', async function () {
     this.timeout(30000);
 
     const { panel, sentMessages, triggerMessage } = await openPanel(depChainFile('main.tscn'));
 
-    // Use a path for a texture that does NOT yet exist on disk.
+    // A texture not on disk yet.
     const missingTexPath = depChainFile('missing-heal.png');
     const missingTexUri = vscode.Uri.file(missingTexPath);
     const RES_MISSING = 'res://missing-heal.png';
 
-    // The initial loadResource will fail (ENOENT), but VSCodeResourceProvider
-    // records the path BEFORE the read so a later onDidCreate can recover it.
+    // The first loadResource fails (ENOENT), but VSCodeResourceProvider records the
+    // path before the read, so a later onDidCreate recovers it.
     triggerMessage({
       type: 'loadResource',
       path: RES_MISSING,
@@ -191,11 +128,10 @@ suite('Dependency Hot-Reload E2E', () => {
     await waitForMessage(sentMessages, 'resourceLoadError', 5000);
     await new Promise<void>((r) => setTimeout(r, 100));
 
-    // Now create the file on disk.
     fs.writeFileSync(missingTexPath, Buffer.alloc(4, 0));
 
     try {
-      // Simulate onDidCreate (what the real watcher fires after file creation).
+      // The watcher's onDidCreate.
       await panel.handleDependencyChange(missingTexUri);
 
       await waitForResourceChanged(sentMessages, RES_MISSING, 8000);
@@ -204,20 +140,14 @@ suite('Dependency Hot-Reload E2E', () => {
     }
   });
 
-  // -------------------------------------------------------------------------
-  // Scenario 5: Negative — irrelevant file change
-  //   changing a watched-glob file the scene never referenced produces no message
-  // -------------------------------------------------------------------------
-
   test('scenario 5: changing a file the scene never referenced produces no resourceChanged', async function () {
     this.timeout(30000);
 
     const { panel, sentMessages, triggerMessage } = await openPanel(depChainFile('main.tscn'));
-    // Prime the known resources so the provider is initialised with something.
+    // A provider with served entries, so the miss is a real one.
     await primePanelForDepChain(triggerMessage, sentMessages);
     await new Promise<void>((r) => setTimeout(r, 100));
 
-    // Create a file the scene never referenced.
     const irrelevantPath = depChainFile('completely-irrelevant.png');
     fs.writeFileSync(irrelevantPath, Buffer.alloc(4, 0));
 
@@ -232,26 +162,19 @@ suite('Dependency Hot-Reload E2E', () => {
     }
   });
 
-  // -------------------------------------------------------------------------
-  // Scenario 6: Deletion
-  //   delete a served dependency -> consumers flip to missing placeholder
-  // -------------------------------------------------------------------------
-
   test('scenario 6: deleting a served dependency sends resourceChanged so the webview shows missing placeholder', async function () {
     this.timeout(30000);
 
     const { panel, sentMessages, triggerMessage } = await openPanel(depChainFile('main.tscn'));
 
-    // Prime material.tres into the served map.
     await primeResource(triggerMessage, sentMessages, {
       path: RES_MATERIAL,
       resourceType: 'Material',
       requestId: 'del-prime-mat',
     });
 
-    // Really delete the file, then simulate the watcher's onDidDelete.
-    // handleDependencyChange only consults the served map (no disk read) —
-    // deletion cannot block the invalidation even though the file is gone.
+    // Delete the file for real, then fire the watcher's onDidDelete.
+    // handleDependencyChange reads only the served map, never the disk.
     const materialPath = depChainFile('material.tres');
     const materialBytes = fs.readFileSync(materialPath);
     fs.unlinkSync(materialPath);
@@ -261,20 +184,14 @@ suite('Dependency Hot-Reload E2E', () => {
 
       await waitForResourceChanged(sentMessages, RES_MATERIAL, 8000);
     } finally {
-      // Restore so the fixture stays intact for any test that runs after.
+      // Restore the fixture for the tests after this one.
       fs.writeFileSync(materialPath, materialBytes);
     }
   });
 });
 
-// ---------------------------------------------------------------------------
-// Shared test helpers
-// ---------------------------------------------------------------------------
-
 /**
- * Open a fresh test panel on `scenePath` and complete the webview handshake —
- * the shared preamble of every scenario. Returns the panel wiring for the
- * scenario's own priming, action, and assertions.
+ * Opens a fresh test panel on `scenePath` and completes the webview handshake.
  */
 async function openPanel(scenePath: string, options?: TestPanelOptions): Promise<TestPanel> {
   const testPanel = createTestPanel(getExtensionUri(), vscode.Uri.file(scenePath), options);
@@ -283,9 +200,8 @@ async function openPanel(scenePath: string, options?: TestPanelOptions): Promise
 }
 
 /**
- * Complete the webview handshake: trigger webviewReady and wait for the
- * initial loadTscn to confirm the panel is ready to receive dependency
- * notifications.
+ * Triggers webviewReady and waits for the first loadTscn, after which the panel
+ * receives dependency notifications.
  */
 async function handshake(
   triggerMessage: (msg: Record<string, unknown>) => void,

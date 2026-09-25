@@ -1,18 +1,12 @@
 /**
- * Node3D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- *
- * `scale` keeps no bespoke validator rejecting a zero component, unlike
- * Node2D. Unlike `Node2D::set_scale` (node_2d.cpp:194-198, which substitutes
- * CMP_EPSILON for a (near-)zero component), `Node3D::set_scale` (node_3d.cpp:812-827)
- * is a bare assignment with no zero guard at all: the previous check was a
- * false positive, so `scale` is now format-only like every other Vector3 here.
+ * Node3D strict validators. `scale` is format-only: `Node3D::set_scale` (node_3d.cpp:812-827) is a
+ * bare assignment with no zero guard, unlike `Node2D::set_scale` (node_2d.cpp:194-198), which
+ * substitutes CMP_EPSILON for a (near-)zero component.
  */
 
-// The terminal tier. Registration is self-registering on import, so a slice test
-// that loads only this chain must pull `Node` explicitly or every Node-level key
-// (`process_mode`, `process_priority`, the `editor_description`) resolves to null
-// in isolation and only the full barrel sees them.
+// The terminal tier. Registration happens on import, so a slice test that loads only this chain
+// imports `Node` explicitly, or every Node-level key (`process_mode`, `process_priority`,
+// `editor_description`) resolves to null in isolation.
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';

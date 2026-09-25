@@ -1,13 +1,8 @@
 /**
- * VisibleOnScreenNotifier3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * VisibleOnScreenNotifier3D strict validators, asserted through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator and no fixture text needs upkeep.
+ * Rule-level behaviour belongs in linter.test.ts. Each property gets happy, malformed and bound
+ * cases, with the governing Godot source line beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -27,8 +22,8 @@ describe('VisibleOnScreenNotifier3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases follow.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('VisibleOnScreenNotifier3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -36,9 +31,9 @@ describe('VisibleOnScreenNotifier3D strict validators', () => {
   });
 
   it('resolves layers through the base-walk from VisualInstance3D', () => {
-    // VisibleOnScreenNotifier3D declares no `layers` validator of its own — it
-    // chains to VisualInstance3D (scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(...,
-    // "layers", PROPERTY_HINT_LAYERS_3D_RENDER)) via the NODE_BASE_TYPES base-walk.
+    // VisibleOnScreenNotifier3D declares no `layers` validator of its own. It inherits the one on
+    // VisualInstance3D (scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(...,
+    // "layers", PROPERTY_HINT_LAYERS_3D_RENDER)) through the NODE_BASE_TYPES base-walk.
     expect(validatorRegistry.getOwnKeys('VisibleOnScreenNotifier3D')).not.toContain('layers');
     expect(check('layers', '3')).toBeNull();
     expect(check('layers', 'not-a-number')).not.toBeNull();

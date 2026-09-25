@@ -1,9 +1,8 @@
 /**
- * QuadMesh decode. In Godot QuadMesh is a PlaneMesh subclass whose only
- * differences are its defaults: it faces +Z (orientation FACE_Z = 2) and
- * defaults to a 1×1 size (PlaneMesh faces +Y and defaults to 2×2). Every other
- * field — subdivide_*, center_offset, flip_faces — is shared, so we delegate to
- * `decodePlaneMesh` with QuadMesh's defaults and render through the same path.
+ * QuadMesh decode. Godot's QuadMesh is a PlaneMesh subclass that differs only in
+ * its defaults: it faces +Z (FACE_Z = 2) at 1×1, where PlaneMesh faces +Y at 2×2.
+ * So it delegates to `decodePlaneMesh` with its own defaults and renders through
+ * the same path.
  */
 
 import type { PlaneMeshProperties } from '../planemesh/types';

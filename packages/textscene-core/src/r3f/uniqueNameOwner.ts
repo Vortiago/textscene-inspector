@@ -1,17 +1,8 @@
 /**
- * The owner whose `%Name` table a rendered node resolves against, and that
- * table composed over instanced content.
- *
- * `_acquire_unique_name_in_owner` registers a name on the node's OWNER
- * (node.cpp:2222-2234), and `get_node` reads the caller's own table, else its
- * owner's (node.cpp:1930-1938). A sub-scene root owns everything its file
- * declares, plus the outer file's override headings under it
- * (resource_format_text.cpp:264-265); the outer root owns nodes it ADDS under
- * an instance. So each instance root has a table of its own, and an outer
- * consumer never sees it.
- *
- * Pure: walks the composed live tree over a cache snapshot, like
- * `liveSceneTree.ts`, so the React hook only supplies reactivity.
+ * The owner whose `%Name` table a rendered node resolves against, and that table composed over
+ * instanced content. Each instance root has a table of its own, which an outer consumer never sees
+ * (`uniqueNameOwner.md`). Pure: it walks the composed live tree over a cache snapshot, like
+ * `liveSceneTree.ts`, and the React hook supplies reactivity.
  */
 
 import type { SceneScope, TscnNode } from '../parser/types.js';
@@ -35,7 +26,7 @@ export interface ClaimOwner {
   readonly path: string;
   /** The authored roots of the file this owner is the root of. */
   readonly roots: readonly TscnNode[];
-  /** The owner of the instance node itself — the file its heading is in. Absent for the outer root. */
+  /** The owner of the instance node itself: the file its heading is in. Absent for the outer root. */
   readonly parent?: ClaimOwner;
   /** The live tree, carried by the outer root alone so a table can re-walk it. */
   readonly ctx?: LiveTreeContext;
@@ -131,14 +122,10 @@ function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext):
 }
 
 /**
- * The owner a `%Name` written on the node at `path` registers with, and the
- * table a reference from that node consults.
- *
- * Structurally the file the heading is in owns it, except an override heading
- * inside an instance, which the instance keeps (resource_format_text.cpp:264-265).
- * An explicit `owner=` replaces that answer: `"."` is the root of the file the
- * heading is in, anything else the node at that root-relative path, whose own
- * tree then holds the table.
+ * The owner a `%Name` on the node at `path` registers with: the file the heading is
+ * in, except an override heading inside an instance, which the instance keeps
+ * (resource_format_text.cpp:264-265). An explicit `owner=` replaces that: `"."` is
+ * that file's root, anything else the node at that root-relative path.
  */
 export function claimOwnerOf(
   path: string,
@@ -164,20 +151,18 @@ function cachedSubRoots(
 }
 
 /**
- * `owner`'s `%Name` table, spelled at composed live paths.
- *
- * The outer root's is the shared cached table. An instance root's is its own
- * file's claims, rebased under the node it collapsed into, then the override
- * claims the file above assigns to it — in that order, because the sub-scene
- * acquires its names while it instantiates (packed_scene.cpp:565-570) and the
- * override's property lands afterwards (:492), and the first claimant keeps the
- * name (node.cpp:2225-2231). The sub-scene root's own flag never registers:
- * :565 acquires only for `owner >= 0`, and a root has none.
+ * `owner`'s `%Name` table at composed live paths. The outer root's is the shared
+ * cached table. An instance root's is its own file's claims, rebased under the node
+ * it collapsed into, then the override claims the file above assigns to it.
  */
 export function ownerClaims(owner: ClaimOwner): ReadonlyMap<string, UniqueNameClaim> {
   const own = cachedUniqueNameClaims(owner.roots);
   if (!owner.parent) return own;
   const table = new Map<string, UniqueNameClaim>();
+  // Own claims first: the sub-scene acquires its names while it instantiates
+  // (packed_scene.cpp:565-570), the override's property lands afterwards (:492), and
+  // the first claimant keeps the name (node.cpp:2225-2231). The sub-scene root's own
+  // flag never registers: :565 acquires only for `owner >= 0`, and a root has none.
   for (const [key, claim] of own) {
     if (!claim.livePath.includes('/')) continue;
     table.set(key, { ...claim, livePath: composedPath(owner, claim.livePath) });

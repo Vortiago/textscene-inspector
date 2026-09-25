@@ -1,5 +1,3 @@
-/** CollisionShape3D type definitions. */
-
 import type { Node3DProperties } from '../../../base/node3d/types';
 import type { Color } from '../../../../utils/colorParser';
 
@@ -10,8 +8,8 @@ export interface CollisionShape3DProperties extends Node3DProperties {
   disabled?: boolean;
   /**
    * Wireframe colour for the editor overlay. Absent means the project default
-   * (a translucent teal), NOT the `Color(0, 0, 0, 0)` placeholder the class
-   * reference prints — see `physics/shared/debugColor.ts`.
+   * (a translucent teal), not the `Color(0, 0, 0, 0)` placeholder the class
+   * reference prints. See `physics/shared/debugColor.ts`.
    */
   debugColor?: Color;
 }

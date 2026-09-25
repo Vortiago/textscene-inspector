@@ -1,28 +1,8 @@
 /**
- * `<MenuButton>` — the native (WebGL canvas) painter for `MenuButton`.
- * `menu_button.cpp` declares NO `_notification(NOTIFICATION_DRAW)` at all —
- * every pixel MenuButton draws is its `Button` base's (chrome, label, icon),
- * so this is `button/Component.tsx`'s own logic, reassembled here rather than
- * imported directly because the resolved font colours differ (see
- * `nativeSolver.ts`'s own doc on the ONE theme divergence: MenuButton's own
- * `font_disabled_color` literal).
- *
- * Draw state comes ONLY from this node's OWN parsed props (`disabled`) — no
- * hover/pressed/focus: a static viewer, not an interactive control.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`. `tint.own` (raw sRGB) goes straight to
- * `<StyleBoxQuad>`'s `color` prop for the chrome, and is multiplied per-item
- * into the font and icon colours BEFORE each item's own single sRGB→linear
- * conversion — `PanelChrome.tsx`'s established ordering, exactly as Button's
- * own painter applies it.
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
- *
- * TEXT LAYOUT: calls `nativeSolver.ts`'s `menuButtonLabelShape`, the **solve
- * handoff** share its minimum-size solver calls too — the SAME contract
- * Button's own painter documents.
+ * `<MenuButton>`, the native painter. `menu_button.cpp` has no `_notification(NOTIFICATION_DRAW)`, so this
+ * reassembles `button/Component.tsx`'s chrome, label and icon, with MenuButton's own `font_disabled_color`
+ * (`nativeSolver.ts`). Draw state comes only from `disabled`. `ControlCanvasWalker` owns `visible`,
+ * `children` and the transform.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -65,18 +45,21 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
 
   const clippingPlanes = useControlClipPlanes();
 
-  // --- Text: theme resolution + shaping ------------------------------------
+  // Text: theme resolution and shaping
   const text = props.text ?? '';
   const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = menuButtonTextTheme(solveNode, props, state, { theme });
+  // `tint.own` goes raw to `<StyleBoxQuad>`'s `color` and multiplies each font and icon colour before
+  // its one sRGB-to-linear conversion, as Button's painter does.
   const tintedFontColor = useMemo(
     () => tintColor(baseFontColor, tint.own),
     [baseFontColor, tint.own]
   );
 
+  // The solve-handoff share the minimum-size solver also reads, as in Button's painter.
   const layout: TextLayoutResult | null = menuButtonLabelShape(solveNode, theme);
 
-  // --- Icon: resolve + load the referenced texture -------------------------
+  // Icon: resolve and load the referenced texture
   const { externalResources, internalResources } = solveNode.resources;
   const { texture: iconSource } = useTexture2D(props.icon, externalResources, internalResources);
   const iconTexture = useCanvas2DTexture(iconSource);
@@ -96,7 +79,7 @@ export function MenuButton({ solveNode, tint, rect, renderOrder, theme }: Native
   );
   const iconLinearColor = useGodotLinearColor(tintedIconColorSrgb);
 
-  // --- Content layout: icon + text placement within the solved rect -------
+  // Content layout: icon and text placement within the solved rect
   const content = useMemo(
     () =>
       layoutButtonContent({

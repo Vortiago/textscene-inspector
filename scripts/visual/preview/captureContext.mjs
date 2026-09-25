@@ -1,10 +1,9 @@
 /**
- * The browser context a capture runs in: the app's own chrome turned off
- * through the very preferences the shell reads, rather than cropped out after
- * the fact.
+ * The browser context a capture runs in, with the app's chrome turned off through the preferences
+ * the shell reads instead of cropped out afterwards.
  */
 
-/* global document, window */ // the addInitScript callbacks run in the browser.
+/* global document, window */ // The addInitScript callbacks run in the browser.
 
 import {
   canvas2DViewportFor,
@@ -18,23 +17,10 @@ import {
 } from './appContract.mjs';
 
 /**
- * A browser context scoped to rendering only the scene: source pane closed,
- * viewport toolbar painted out (it floats over the canvas, and
- * `canvas.screenshot()` composites any DOM over the canvas box), and
- * frame-on-open set explicitly rather than inherited from a default a future
- * change could flip.
- *
- * `canvas2D` prepares the 2D stage the same way for the 2D comparison frame:
- * its chrome (grid, viewport outline and dimension label, origin axes, the
- * zoom HUD) painted out, its background flattened to what
- * Godot clears a 2D viewport to, and its opening view pinned to zoom 1 at the
- * origin instead of "Fit" — so the frame is the game frame at 1:1 and sits at
- * the same integer pixels every run. It is OPT-IN because the golden gate
- * captures 2D scenes WITH that chrome; turning any of it on unconditionally
- * would move those baselines.
- *
- * `canvas2DFrame` is the project-viewport rect the stage will lay out at 1:1,
- * and only widens the window when that rect does not fit the default one.
+ * A browser context that renders only the scene: the source pane closed, the floating toolbar
+ * painted out (`canvas.screenshot()` composites any DOM over the canvas), and frame-on-open set
+ * explicitly. `canvas2DFrame` is the project-viewport rect, which widens the window only when it
+ * does not fit the default one.
  */
 export async function createCaptureContext(
   browser,
@@ -52,22 +38,23 @@ export async function createCaptureContext(
     ([key, value]) => window.localStorage.setItem(key, value),
     [FRAME_ON_OPEN_STORAGE_KEY, frameOnOpen ? 'true' : 'false']
   );
+  // `canvas2D` paints out the 2D stage's chrome, flattens its background to Godot's 2D clear
+  // colour and opens it at zoom 1 on the origin, so the frame sits on the same integer pixels each
+  // run. It is opt-in: the golden gate captures 2D scenes with the chrome.
   if (canvas2D) {
     await context.addInitScript(
       ([key, value]) => window.localStorage.setItem(key, value),
       [FIT_ON_OPEN_2D_STORAGE_KEY, 'false']
     );
-    // Seeds the preference the shell reads once at mount. A scene whose root
-    // DOES claim a workspace still wins here (WorkspaceAutoSelect applies its
-    // claim after), so a Node3D-rooted scene captured with --2d still reports
-    // the mismatch rather than silently shooting the wrong frame.
+    // Seeds the preference the shell reads once at mount. WorkspaceAutoSelect applies a root's
+    // claim after it, so a Node3D-rooted scene captured with --2d still reports the mismatch.
     await context.addInitScript(
       ([key, value]) => window.localStorage.setItem(key, value),
       [VIEWPORT_MODE_STORAGE_KEY, JSON.stringify('2D')]
     );
   }
-  // Viewport chrome that floats over the canvas in BOTH modes, and so would
-  // composite into every capture the way the toolbar overlay does.
+  // Viewport chrome that floats over the canvas in both modes, and so would composite into every
+  // capture.
   const hidden = ['viewport-toolbar-overlay', 'viewport-controls-help'];
   let css = '';
   if (canvas2D) {
@@ -82,8 +69,7 @@ export async function createCaptureContext(
       `background-color:${CANVAS_2D_CAPTURE.background} !important}`;
   }
   css += `${hidden.map((id) => `[data-testid="${id}"]`).join(',')}{display:none !important}`;
-  // The <style> must land in <head> once it exists — appending at
-  // document-start puts it in an invalid position the parser drops.
+  // The <style> goes in <head> once it exists: at document-start the parser drops it.
   await context.addInitScript((rules) => {
     const add = () => {
       const style = document.createElement('style');
@@ -97,17 +83,9 @@ export async function createCaptureContext(
 }
 
 /**
- * A throwaway WebGL context, created and torn down before any real scene is
- * captured.
- *
- * The first WebGL context in a fresh headless Chromium+SwiftShader process
- * can lose context under load before a screenshot lands — and `settleCanvas`
- * cannot tell a lost context from a settled one: two captures of a dead,
- * uniform canvas are exactly as byte-identical as two captures of a
- * genuinely stable frame, so the settle gate is silently defeated rather than
- * failed. Whichever scene captures first in a fresh process absorbs that
- * risk; this burns the risk here instead, on a page nothing depends on,
- * before the real capture pages ever open.
+ * A throwaway WebGL context, torn down before any real capture. The first WebGL context in a fresh
+ * headless Chromium and SwiftShader process can be lost under load, and two captures of a dead
+ * canvas are as byte-identical as a settled frame. This page takes that risk instead of a scene.
  */
 export async function warmUpGLContext(browser) {
   const context = await browser.newContext({ viewport: { width: 64, height: 64 } });

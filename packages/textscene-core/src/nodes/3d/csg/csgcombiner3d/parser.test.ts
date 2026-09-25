@@ -32,8 +32,8 @@ describe('parseCSGCombiner3D', () => {
   });
 
   it('leaves operation undefined when unwritten rather than defaulting to 0', () => {
-    // Union is Godot's default, but recording "absent" separately keeps the inspector
-    // honest about what the scene file actually says.
+    // Union is Godot's default, but recording "absent" separately keeps the inspector true to
+    // what the scene file says.
     expect(parseCSGCombiner3D(heading('CSGCombiner3D', { name: 'C' }), {}).operation).toBeUndefined();
   });
 

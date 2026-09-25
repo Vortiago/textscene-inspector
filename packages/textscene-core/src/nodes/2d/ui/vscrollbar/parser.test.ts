@@ -1,10 +1,9 @@
 /**
- * VScrollBar parser contract. VScrollBar declares no properties of its own —
- * it is `Range → ScrollBar → VScrollBar` with only the draw axis differing —
- * so this pins that the slice really does carry the Control + Range +
- * ScrollBar surface through, which is the failure mode of a slice wired to
- * the wrong base.
+ * VScrollBar parser contract. VScrollBar declares no properties (`Range → ScrollBar →
+ * VScrollBar`, only the draw axis differs), so this pins that the slice carries the Control,
+ * Range and ScrollBar surface, which a slice wired to the wrong base would lose.
  */
+
 import { describe, it, expect } from 'vitest';
 import { parseVScrollBar } from './parser';
 

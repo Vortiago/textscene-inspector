@@ -1,17 +1,9 @@
 [gd_scene load_steps=5 format=3 uid="uid://unitglowexposure"]
 
-; Glow with a NON-DEFAULT tonemap_exposure.
-;
-; Godot applies exposure to the glow buffer in the bright pass, BEFORE the knee
-; decides what blooms, and to the scene colour before the blend — so exposure
-; reaches each operand once and the threshold judges exposed values. At the 1.0
-; default every plausible ordering coincides, which is why every other glow
-; fixture is blind to it: applying exposure after the knee, or to the blended sum,
-; passes them all.
-;
-; The emissive sits just BELOW the threshold unexposed and above it once exposed,
-; so the halo exists here only if the ordering is right. Get it wrong and there is
-; no halo at all rather than a slightly wrong one.
+; Glow with a non-default tonemap_exposure. Godot applies exposure to the glow buffer in the
+; bright pass, before the knee, and to the scene colour before the blend, so the threshold
+; judges exposed values. At the 1.0 default every ordering coincides, so exposure after the
+; knee, or on the blended sum, passes every other glow fixture.
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_dark"]
 sky_top_color = Color(0.03, 0.03, 0.05, 1)
@@ -37,6 +29,8 @@ height = 1.2
 radial_segments = 32
 rings = 16
 
+; The emission sits below the threshold unexposed and above it exposed, so the halo exists only
+; if the ordering is right. A wrong ordering gives no halo at all.
 [sub_resource type="StandardMaterial3D" id="Mat_emissive"]
 albedo_color = Color(0.6, 0.3, 0.8, 1)
 roughness = 0.4

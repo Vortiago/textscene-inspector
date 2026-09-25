@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://edge_animation_library_missing_subresource"]
 
-; `libraries/` names SubResource("AnimationLibrary_ghost"), an id this file never declares:
-; Godot fails the load (resource_format_text.cpp:113); the previewer renders zero animations without crashing.
+; `libraries/` names SubResource("AnimationLibrary_ghost"), an id this file never declares. Godot
+; fails the load (resource_format_text.cpp:113). The previewer renders zero animations, no crash.
 
 [node name="Scene" type="Node3D"]
 

@@ -1,16 +1,8 @@
 /**
- * Regression contract: AnimationPlayer autoplay/current_animation existence checks
- * are DEAD on real Godot 4 files.
- *
- * The semantic linter resolved clip names only from `anims/<name>` keys (pre-4.0) and gated the
- * existence checks on `hasAnimations = some key startsWith('anims/')`. Real Godot 4 stores clips
- * in AnimationLibrary `_data`, referenced via `libraries/`, so the checks never fired — a typo'd
- * `autoplay = &"wlak"` was never flagged on any real scene. The linter also left the StringName
- * `&` marker in (unlike the render parser), so a correct fix must strip it AND must NOT
- * false-positive on a valid clip (render and linter must agree on the resolved clip names).
- *
- * The render-side animationResolver already walks libraries -> _data -> clip names; the linter
- * has the same scene access. These rules are WARNINGS (advisory), not format errors.
+ * AnimationPlayer `autoplay` and `current_animation` existence checks on Godot 4 files, which
+ * store clips in AnimationLibrary `_data` through `libraries/`, not in `anims/<name>` keys. The
+ * linter strips the StringName `&` marker and resolves the same clip names as the render-side
+ * animationResolver, so a valid clip never false-positives. These rules warn.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -18,8 +10,8 @@ import { Linter } from '../../../linter/Linter';
 import './linterParser';
 import './linter';
 
-// A library-based AnimationPlayer (the real Godot 4 form): clips live in an AnimationLibrary
-// `_data` map with StringName (`&"..."`) keys, referenced via `libraries/`. walk + jump exist.
+// The Godot 4 form: clips live in an AnimationLibrary `_data` map with StringName (`&"..."`)
+// keys, referenced through `libraries/`. walk and jump exist.
 const libScene = (autoplay = '', current = ''): string =>
   `[gd_scene format=3]
 
@@ -48,7 +40,7 @@ describe('#148 AnimationPlayer existence checks on library-based (Godot 4) scene
   });
 
   it('flags autoplay referencing a clip absent from the AnimationLibrary', () => {
-    // "wlak" is a typo — only walk/jump exist in the library.
+    // "wlak" is a typo: only walk and jump exist in the library.
     expect(rules(linter.lint(libScene('&"wlak"')))).toContain('animationplayer-autoplay-missing');
   });
 
@@ -59,7 +51,7 @@ describe('#148 AnimationPlayer existence checks on library-based (Godot 4) scene
   });
 
   it('does NOT flag a valid &-prefixed autoplay clip (strips the StringName marker, finds the clip)', () => {
-    // walk EXISTS — the `&` must be stripped and the library consulted, else this false-positives.
+    // walk exists: the `&` is stripped and the library consulted, else this false-positives.
     expect(rules(linter.lint(libScene('&"walk"')))).not.toContain('animationplayer-autoplay-missing');
   });
 
@@ -69,7 +61,7 @@ describe('#148 AnimationPlayer existence checks on library-based (Godot 4) scene
     );
   });
 
-  // --- regression guards: the legacy anims/ path must keep working unchanged ---
+  // The legacy `anims/` path keeps working unchanged.
 
   it('still flags an autoplay typo in the legacy anims/ form', () => {
     const content = `[gd_scene format=3]
@@ -93,11 +85,9 @@ autoplay = "walk"
 });
 
 /**
- * Contract hardening: the original RED contract only pinned the empty-name default
- * library with inline SubResource clips. Reviving the existence checks for that one form let two
- * false-positive regressions through — the check is only meaningful when the clip set is FULLY
- * resolvable, and named libraries reference clips as `<lib>/<clip>`. These pin both, plus the
- * dict form, the no-source case, and special-char clip names (linter ↔ renderer agreement).
+ * The existence checks fire only on a fully resolvable clip set, and a named library references
+ * clips as `<lib>/<clip>`. These pin both, plus the dict form, the no-source case and
+ * special-character clip names, where the linter and the renderer agree.
  */
 describe('#148 hardening: existence checks only fire on a fully-resolvable clip set', () => {
   let linter: Linter;
@@ -105,8 +95,8 @@ describe('#148 hardening: existence checks only fire on a fully-resolvable clip 
     linter = new Linter();
   });
 
-  // An ExtResource-backed library points at an external (often binary .res) file the previewer
-  // deliberately cannot resolve — so its clips are invisible and NOTHING can be asserted missing.
+  // An ExtResource-backed library points at an external file (often binary `.res`) the previewer
+  // does not resolve, so its clips are invisible and no clip can be asserted missing.
   const extLibScene = (autoplay = ''): string =>
     `[gd_scene format=3]
 
@@ -120,8 +110,8 @@ ${autoplay ? `autoplay = ${autoplay}\n` : ''}`;
     expect(rules(linter.lint(extLibScene('&"walk"')))).not.toContain('animationplayer-autoplay-missing');
   });
 
-  // A clip in a NAMED library is referenced `<libname>/<clip>` (Godot keys named-library clips by
-  // their library), so resolution must carry the prefix — bare-name matching false-positives.
+  // Godot keys a clip in a named library as `<libname>/<clip>`, so resolution carries the
+  // prefix. Bare-name matching false-positives.
   const namedLibScene = (autoplay = ''): string =>
     `[gd_scene format=3]
 
@@ -180,8 +170,8 @@ autoplay = &"walk"
     expect(rules(linter.lint(content))).not.toContain('animationplayer-autoplay-missing');
   });
 
-  // A clip name with a special char (e.g. `:`) must resolve identically in the linter and the render
-  // resolver (both key off the `"<name>": SubResource(...)` form) — no false positive, typo still caught.
+  // A clip name with a special character (for example `:`) resolves identically in the linter and
+  // the render resolver, since both key off `"<name>": SubResource(...)`.
   const specialClipScene = (autoplay = ''): string =>
     `[gd_scene format=3]
 
@@ -203,13 +193,13 @@ ${autoplay ? `autoplay = ${autoplay}\n` : ''}`;
   });
 
   it('does NOT flag an empty StringName autoplay/current_animation (`&""` = Godot 4 "no clip")', () => {
-    // `&""` strips to "" — that's "nothing playing", not a missing clip. Guard on the STRIPPED name.
+    // `&""` strips to "", which means nothing is playing, not a missing clip. The guard reads the stripped name.
     expect(rules(linter.lint(libScene('&""')))).not.toContain('animationplayer-autoplay-missing');
     expect(rules(linter.lint(libScene('', '&""')))).not.toContain('animationplayer-current-animation-missing');
   });
 
-  // A library that RESOLVES but is empty (`_data = {}`) is still fully enumerable, so a missing clip
-  // IS caught — it must not fall into the unresolvable/no-source suppression.
+  // A library that resolves but is empty (`_data = {}`) is still fully enumerable, so a missing clip
+  // is caught rather than suppressed as unresolvable.
   const emptyLibScene = (autoplay = ''): string =>
     `[gd_scene format=3]
 

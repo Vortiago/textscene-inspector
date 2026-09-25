@@ -1,26 +1,8 @@
 /**
- * TextureButton's native (WebGL canvas) rect solver — `TextureButton::
- * get_minimum_size` (`scene/gui/texture_button.cpp:31-52`) and the
- * `stretch_mode` draw-rect math (`TextureButton::_notification`'s
- * `NOTIFICATION_DRAW`, `:120-230`), registered via
- * `controlSolverRegistry.registerMinimumSize`. `Component.tsx` paints;
- * texture selection per draw state also lives here since it is pure data
- * math with no THREE/React dependency.
- *
- * `texture_button.h:39-47`'s `StretchMode` enum shares its 7 values, in the
- * SAME order, with `TextureRect::StretchMode` (`texture_rect.h`) — but the
- * DRAW math is not identical: `TextureRect::_notification`'s KEEP_ASPECT/
- * KEEP_ASPECT_CENTERED branch truncates through `int tex_width`/`tex_height`
- * (`texture_rect.cpp:63-69`), while `TextureButton`'s own branch
- * (`texture_button.cpp:206-219`) is pure `float`, no truncation — so this
- * module ports TextureButton's own switch rather than reusing
- * `texturerect/nativeSolver.ts`'s `textureRectDraw`. The sampler-property
- * mapping and the flip_h/flip_v UV mirror ARE identical (both are plain
- * `CanvasItem` concerns), so `Component.tsx` imports
- * `resolveTextureRectFilter`/`resolveTextureRectRepeat`/`applyFlip` from
- * that slice directly rather than re-deriving them.
- *
- * Pure data + functions, no THREE/React.
+ * TextureButton's native (WebGL canvas) rect solver: `TextureButton::get_minimum_size`
+ * (`scene/gui/texture_button.cpp:31-52`), the `stretch_mode` draw rect (`NOTIFICATION_DRAW`,
+ * `:120-230`) and the texture pick per draw state. Pure data and functions, no THREE or React.
+ * The sampler mapping and the flip mirror match TextureRect's, so `Component.tsx` imports them from there.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -33,19 +15,15 @@ import type { MinimumSizeFn, TextureSlotRequest, TextureSlotsFn } from '../../..
 import type { TextureRectDraw } from '../texturerect/nativeSolver';
 import type { TextureButtonProperties } from './types';
 
-// --- Which Texture2D slots this type carries (`buildSolveTree.ts`'s texture-size resolution) ---
-
 /** The keys `textureButtonTextureSlots`/`textureButtonMinimumSize` share for `SolveNode.textureSlots`. */
 export const TEXTURE_NORMAL_KEY = 'texture_normal';
 export const TEXTURE_PRESSED_KEY = 'texture_pressed';
 export const TEXTURE_HOVER_KEY = 'texture_hover';
 
 /**
- * `TextureButton::get_minimum_size`'s own three Texture2D reads
- * (`texture_button.cpp:38-55`) — `texture_click_mask` is a `BitMap`, not a
- * Texture2D (`texture_button.h:55`), so it is out of this mechanism's reach
- * entirely; `texture_disabled`/`texture_focused` never affect minimum size at
- * all (Component.tsx resolves them directly, for painting only).
+ * The Texture2D slots for `buildSolveTree.ts`: `get_minimum_size`'s three Texture2D reads
+ * (`texture_button.cpp:38-55`). `texture_click_mask` is a `BitMap` (`texture_button.h:55`), and
+ * `texture_disabled`/`texture_focused` never affect minimum size, so `Component.tsx` resolves them.
  */
 export const textureButtonTextureSlots: TextureSlotsFn = (node: TscnNode) => {
   const props = node.properties as TextureButtonProperties;
@@ -56,14 +34,10 @@ export const textureButtonTextureSlots: TextureSlotsFn = (node: TscnNode) => {
   return requests;
 };
 
-// --- Draw state + texture selection --------------------------------------------
-
 /**
- * `BaseButton::get_draw_mode()` (`base_button.cpp:325-358`) collapsed to
- * what a pointer-less static preview can ever select — the same collapse
- * every other Button-family slice in this codebase documents: `disabled`
- * wins outright, else `pressing = status.pressed` (== `button_pressed`)
- * unconditionally, `DRAW_HOVER`/`DRAW_HOVER_PRESSED` never fire.
+ * `BaseButton::get_draw_mode()` (`base_button.cpp:325-358`) as a pointer-less static preview
+ * sees it: `disabled` wins, else `pressing = status.pressed` (`button_pressed`), and
+ * `DRAW_HOVER`/`DRAW_HOVER_PRESSED` never fire.
  */
 export type TextureButtonDrawState = 'normal' | 'pressed' | 'disabled';
 
@@ -76,16 +50,10 @@ export function resolveTextureButtonDrawState(props: TextureButtonProperties): T
 export type TextureButtonSlot = 'textureNormal' | 'texturePressed' | 'textureHover' | 'textureDisabled';
 
 /**
- * `TextureButton::_notification`'s `NOTIFICATION_DRAW` texture cascade
- * (`texture_button.cpp:120-159`, `DRAW_HOVER`/the unreachable branch of
- * `DRAW_HOVER_PRESSED` omitted): `DRAW_NORMAL` shows `texture_normal` with NO
- * further fallback (an empty slot draws nothing); `DRAW_PRESSED` (and
- * `DRAW_HOVER_PRESSED`) falls `texture_pressed` -> `texture_hover` ->
- * `texture_normal`; `DRAW_DISABLED` falls `texture_disabled` ->
- * `texture_normal`. Returns the resolved PROPERTY KEY, not the ref itself —
- * `Component.tsx` already holds all five slots' resolved textures (every
- * `useTexture2D` call is unconditional, hooks cannot branch), so it looks the
- * chosen key up rather than re-deriving which ref string to resolve.
+ * The `NOTIFICATION_DRAW` texture cascade (`texture_button.cpp:120-159`), less the hover arms.
+ * Normal draws `texture_normal` or nothing. Pressed falls `texture_pressed` -> `texture_hover` ->
+ * `texture_normal`, and disabled falls `texture_disabled` -> `texture_normal`. It returns the property
+ * key, which `Component.tsx` looks up in its already-resolved textures.
  */
 export function resolveTextureButtonSlot(
   props: TextureButtonProperties,
@@ -102,20 +70,11 @@ export function resolveTextureButtonSlot(
   return 'textureNormal';
 }
 
-// --- Minimum size --------------------------------------------------------------
-
 /**
- * `TextureButton::get_minimum_size` (`texture_button.cpp:31-52`):
- * `texture_normal` -> `texture_pressed` -> `texture_hover` ->
- * `texture_click_mask` -> `(0, 0)`, or unconditionally `(0, 0)` when
- * `ignore_texture_size` is set. The three Texture2D rungs read
- * `n.textureSlots` (`textureButtonTextureSlots`'s own registration); a
- * `null` entry (authored but not yet loaded) falls through to the NEXT rung
- * exactly as `Ref<Texture2D>::is_null()` would if the load had already
- * failed — the previewer's own async load settling later bumps `generation`
- * and re-solves, converging on the true cascade once it lands. The
- * `texture_click_mask` rung is not modelled: `Ref<BitMap>`, not a
- * Texture2D-valued slot this mechanism resolves at all.
+ * `TextureButton::get_minimum_size` (`texture_button.cpp:31-52`): `texture_normal` ->
+ * `texture_pressed` -> `texture_hover` -> `(0, 0)`, or `(0, 0)` under `ignore_texture_size`. The
+ * `Ref<BitMap>` click-mask rung is not modelled. A slot not yet loaded falls through like a null
+ * `Ref`, and the load bumps `generation` to re-solve.
  */
 export const textureButtonMinimumSize: MinimumSizeFn = (n, _ctx) => {
   const props = n.node.properties as TextureButtonProperties;
@@ -124,8 +83,6 @@ export const textureButtonMinimumSize: MinimumSizeFn = (n, _ctx) => {
   if (!size) return { x: 0, y: 0 };
   return { x: Math.abs(size.x), y: Math.abs(size.y) };
 };
-
-// --- stretch_mode: draw rect --------------------------------------------------
 
 const STRETCH_SCALE = 0;
 const STRETCH_TILE = 1;
@@ -136,18 +93,10 @@ const STRETCH_KEEP_ASPECT_CENTERED = 5;
 const STRETCH_KEEP_ASPECT_COVERED = 6;
 
 /**
- * `TextureButton::_notification`'s `NOTIFICATION_DRAW` switch on
- * `stretch_mode` (`texture_button.cpp:163-220`), stopping short of the
- * actual draw call and the post-switch flip (`Component.tsx`'s job, via
- * `texturerect/nativeSolver.ts`'s `applyFlip`). `rectSize` is the control's
- * own solved rect size (`get_size()` at draw time).
- *
- * Godot always passes a `_texture_region` to `draw_texture_rect_region` —
- * for every mode but KEEP_ASPECT_COVERED that region is simply the WHOLE
- * natural texture (`Rect2(Point2(), texdraw_size)`, `:159`), which is UV-
- * identical to sampling with no crop at all, so this function leaves
- * `region` `undefined` for those modes (matching `texturerect/nativeSolver.ts`'s
- * own convention) and only computes a real crop rect for KEEP_ASPECT_COVERED.
+ * The `NOTIFICATION_DRAW` switch on `stretch_mode` (`texture_button.cpp:163-220`), short of the
+ * draw call and the flip (`Component.tsx`, `applyFlip`). `rectSize` is `get_size()`. Every mode
+ * but KEEP_ASPECT_COVERED draws the whole texture (`Rect2(Point2(), texdraw_size)`, `:159`), so
+ * `region` stays `undefined` there, as in `texturerect/nativeSolver.ts`.
  */
 export function textureButtonDraw(
   rectSize: Vec2,
@@ -177,8 +126,9 @@ export function textureButtonDraw(
 
     case STRETCH_KEEP_ASPECT:
     case STRETCH_KEEP_ASPECT_CENTERED: {
-      // Pure float, no truncation (`texture_button.cpp:206-219`) — unlike
-      // `TextureRect`'s own `int tex_width`/`tex_height` for the same modes.
+      // Pure float, no truncation (`texture_button.cpp:206-219`), unlike TextureRect's `int` arms for the
+      // same modes (`texture_rect.cpp:63-69`). So this ports its own switch, though `StretchMode`
+      // (`texture_button.h:39-47`) matches `TextureRect::StretchMode` (`texture_rect.h`).
       let texWidth = (textureSize.x * rectSize.y) / textureSize.y;
       let texHeight = rectSize.y;
       if (texWidth > rectSize.x) {

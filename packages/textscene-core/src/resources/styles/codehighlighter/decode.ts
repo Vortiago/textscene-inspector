@@ -1,18 +1,8 @@
 /**
- * CodeHighlighter decode — property bag in, per-branch colour data out.
- *
- * The seven real `ADD_PROPERTY` calls (`syntax_highlighter.cpp:604-611`):
- * four scalar Colors, plus `keyword_colors`/`member_keyword_colors`/
- * `color_regions`, each a `Dictionary(PROPERTY_HINT_TYPE_STRING, "String;Color")`.
- * `SyntaxHighlighter` itself (`syntax_highlighter.h`) adds no property at all.
- *
- * `font_color` — the algorithm's own default colour, `highlight.ts`'s
- * `fontColor` parameter — and `uint_suffix_enabled` are real class members
- * (`syntax_highlighter.h:89,95`) with NO `ADD_PROPERTY`: `font_color` is
- * copied from the owning TextEdit's OWN theme colour at `_update_cache`
- * (`:420-422`), and `uint_suffix_enabled` has a setter bound as a method but
- * never `ADD_PROPERTY`'d. Neither can a `.tscn` ever set, so neither is
- * decoded here.
+ * CodeHighlighter decode: property bag to colour data. Its seven `ADD_PROPERTY` calls
+ * (`syntax_highlighter.cpp:604-611`) are four Colors and three `String;Color` dictionaries,
+ * and `SyntaxHighlighter` adds none. `font_color` (the TextEdit theme's, `:420-422`) and
+ * `uint_suffix_enabled` are members with no property (`syntax_highlighter.h:89,95`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -28,7 +18,7 @@ const DEFAULT_COLOR: Color = { r: 0, g: 0, b: 0, a: 1 };
 
 const DICT_WRAPPER_RE = /^\s*\{([\s\S]*)\}\s*$/;
 
-/** Depth/quote-aware top-level comma split — a `Color(...)` value's own commas must not split an entry. */
+/** Depth- and quote-aware comma split: a `Color(...)` value's own commas must not split an entry. */
 function splitTopLevelEntries(body: string): string[] {
   const entries: string[] = [];
   let depth = 0;
@@ -79,13 +69,10 @@ function splitKeyValue(entry: string): [rawKey: string, rawValue: string] | null
 }
 
 /**
- * `{ "key": Color(...), … }` into ordered, unescaped `[key, Color]` pairs —
+ * `{ "key": Color(...), … }` into ordered, unescaped `[key, Color]` pairs:
  * `VariantParser::_parse_dictionary` (`core/variant/variant_parser.cpp:677-684`)
- * restricted to this property family's own `String;Color` shape. A value that
- * fails `COLOR_RE` drops that one entry rather than the whole map: the
- * surrounding `.tscn` text was already accepted by the strict parser upstream
- * of this decode, so a malformed Color here can only be a corrupt-but-parsed
- * literal, not a grammar violation this decode is responsible for rejecting.
+ * for the `String;Color` shape. A value that fails `COLOR_RE` drops that entry,
+ * not the map: the strict parser already owns grammar errors.
  */
 function decodeColorDictionary(raw: string | undefined): Array<[string, Color]> {
   if (!raw) return [];
@@ -110,24 +97,14 @@ function colorEquals(a: Color, b: Color): boolean {
 }
 
 /**
- * `CodeHighlighter::add_keyword_color`/`add_member_keyword_color` add
- * unconditionally — no symbol-only or non-empty validation exists for a
- * keyword string, unlike a color region's start/end key.
+ * `CodeHighlighter::add_keyword_color` and `add_member_keyword_color` add
+ * unconditionally: a keyword gets no validation, unlike a color region's keys.
  */
 function decodeKeywordColors(raw: string | undefined): ReadonlyMap<string, Color> {
   return new Map(decodeColorDictionary(raw));
 }
 
-/**
- * `CodeHighlighter::add_color_region` (`syntax_highlighter.cpp:490-516`):
- * refuses a key that is empty of, or contains a character outside, the
- * `is_symbol` class (mirrors `isGodotSymbol`, `core/string/char_utils.h:113-114`),
- * refuses a duplicate `startKey`, and otherwise inserts before every EXISTING
- * region whose own `startKey` is STRICTLY LONGER — so the final order is
- * longest-`startKey`-first, with equal lengths ending up reversed from
- * dictionary order (each new equal-length entry lands in front of the ones
- * already placed, since none of them is counted as "longer").
- */
+/** The `is_symbol` class (mirrors `isGodotSymbol`, `core/string/char_utils.h:113-114`). */
 function isSymbolChar(ch: string): boolean {
   const code = ch.codePointAt(0) ?? 0;
   if (code === 0x5f) return false;
@@ -141,13 +118,18 @@ function isSymbolChar(ch: string): boolean {
   );
 }
 
+/**
+ * `CodeHighlighter::add_color_region` (`syntax_highlighter.cpp:490-516`): refuses
+ * an empty or non-symbol key and a duplicate `startKey`. It inserts after every
+ * strictly longer `startKey`, so equal lengths end up in reverse dictionary order.
+ */
 function addColorRegion(regions: CodeHighlighterColorRegion[], startKey: string, endKey: string, color: Color): void {
   if (startKey === '') return;
   for (const ch of startKey) if (!isSymbolChar(ch)) return;
   for (const ch of endKey) if (!isSymbolChar(ch)) return;
   let at = 0;
   for (const region of regions) {
-    if (region.startKey === startKey) return; // duplicate — the whole call refuses.
+    if (region.startKey === startKey) return; // A duplicate refuses the whole call.
     if (startKey.length < region.startKey.length) at++;
   }
   regions.splice(at, 0, { startKey, endKey, color, lineOnly: endKey === '' });
@@ -155,9 +137,9 @@ function addColorRegion(regions: CodeHighlighterColorRegion[], startKey: string,
 
 /**
  * `CodeHighlighter::set_color_regions` (`syntax_highlighter.cpp:537-549`): a
- * dictionary key is `"start_key[ end_key]"`, split on the FIRST space only
- * (`String::get_slicec(' ', 0)`/`(' ', 1)` — a second space and anything past
- * it is dropped from `end_key`, never appended).
+ * dictionary key is `"start_key[ end_key]"`, split on the first space only
+ * (`String::get_slicec(' ', 0)`/`(' ', 1)`): `end_key` drops a second space and
+ * anything past it.
  */
 function decodeColorRegions(raw: string | undefined): readonly CodeHighlighterColorRegion[] {
   const regions: CodeHighlighterColorRegion[] = [];

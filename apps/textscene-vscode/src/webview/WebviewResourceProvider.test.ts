@@ -1,7 +1,4 @@
-/**
- * Tests for WebviewResourceProvider
- * Validates message-based resource loading between webview and extension
- */
+/** Tests for WebviewResourceProvider: resource loading through host messages. */
 
 // @vitest-environment happy-dom
 
@@ -18,21 +15,17 @@ describe('WebviewResourceProvider', () => {
   let messageListeners: Array<(event: MessageEvent) => void>;
 
   beforeEach(() => {
-    // Track message listeners
     messageListeners = [];
 
-    // Mock window.addEventListener
     vi.spyOn(window, 'addEventListener').mockImplementation((event: string, listener: EventListenerOrEventListenerObject) => {
       if (event === 'message' && typeof listener === 'function') {
         messageListeners.push(listener as (event: MessageEvent) => void);
       }
     });
 
-    // Mock window.setTimeout
     vi.spyOn(window, 'setTimeout');
     vi.spyOn(window, 'clearTimeout');
 
-    // Mock VSCode API
     mockVsCode = {
       postMessage: vi.fn<(message: unknown) => void>(),
       getState: vi.fn<() => unknown>(),
@@ -46,15 +39,10 @@ describe('WebviewResourceProvider', () => {
     vi.restoreAllMocks();
   });
 
-  // Helper to simulate message from extension
   function simulateExtensionMessage(data: unknown) {
     const event = { data } as MessageEvent;
     messageListeners.forEach(listener => listener(event));
   }
-
-  // ============================================================================
-  // Constructor & Message Listener Setup
-  // ============================================================================
 
   describe('Constructor', () => {
     it('should register message listener on construction', () => {
@@ -66,7 +54,7 @@ describe('WebviewResourceProvider', () => {
     });
 
     it('should initialize with empty pending requests', () => {
-      // Verify internal state by making a request
+      // A request shows the internal state.
       provider.loadResource('res://test.txt', 'Resource');
 
       expect(mockVsCode.postMessage).toHaveBeenCalledWith(
@@ -77,15 +65,10 @@ describe('WebviewResourceProvider', () => {
     });
   });
 
-  // ============================================================================
-  // Text Resource Loading
-  // ============================================================================
-
   describe('Text Resource Loading', () => {
     it('should load text resource successfully', async () => {
       const loadPromise = provider.loadResource('res://test.txt', 'Resource');
 
-      // Verify message sent to extension
       expect(mockVsCode.postMessage).toHaveBeenCalledWith({
         type: 'loadResource',
         path: 'res://test.txt',
@@ -93,7 +76,6 @@ describe('WebviewResourceProvider', () => {
         requestId: 'resource_0'
       });
 
-      // Simulate response from extension
       simulateExtensionMessage({
         type: 'resourceLoaded',
         requestId: 'resource_0',
@@ -117,7 +99,6 @@ describe('WebviewResourceProvider', () => {
         requestId: 'resource_1'
       }));
 
-      // Resolve promises
       simulateExtensionMessage({ type: 'resourceLoaded', requestId: 'resource_0', content: 'a', isBinary: false });
       simulateExtensionMessage({ type: 'resourceLoaded', requestId: 'resource_1', content: 'b', isBinary: false });
 
@@ -127,10 +108,8 @@ describe('WebviewResourceProvider', () => {
     it('should clear timeout on successful text load', async () => {
       const loadPromise = provider.loadResource('res://test.txt', 'Resource');
 
-      // Get the timeout ID that was set
       const timeoutId = (window.setTimeout as ReturnType<typeof vi.spyOn>).mock.results[0]?.value as number;
 
-      // Simulate response
       simulateExtensionMessage({
         type: 'resourceLoaded',
         requestId: 'resource_0',
@@ -144,19 +123,13 @@ describe('WebviewResourceProvider', () => {
     });
   });
 
-  // ============================================================================
-  // Binary Resource Loading
-  // ============================================================================
-
   describe('Binary Resource Loading', () => {
     it('should load binary resource with base64 decoding', async () => {
       const loadPromise = provider.loadResource('res://icon.png', 'Texture2D');
 
-      // Create test binary data
       const testBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
       const base64 = btoa(String.fromCharCode(...testBytes));
 
-      // Simulate binary response
       simulateExtensionMessage({
         type: 'resourceLoaded',
         requestId: 'resource_0',
@@ -174,7 +147,6 @@ describe('WebviewResourceProvider', () => {
     it('should correctly decode larger binary files', async () => {
       const loadPromise = provider.loadResource('res://large.bin', 'Resource');
 
-      // Create larger test data (256 bytes)
       const testBytes = new Uint8Array(256);
       for (let i = 0; i < 256; i++) {
         testBytes[i] = i;
@@ -213,10 +185,6 @@ describe('WebviewResourceProvider', () => {
     });
   });
 
-  // ============================================================================
-  // Error Handling
-  // ============================================================================
-
   describe('Error Handling', () => {
     it('should handle resource load error from extension', async () => {
       const loadPromise = provider.loadResource('res://missing.txt', 'Resource');
@@ -250,7 +218,6 @@ describe('WebviewResourceProvider', () => {
 
       const loadPromise = provider.loadResource('res://slow.txt', 'Resource');
 
-      // Fast-forward time by 10 seconds
       vi.advanceTimersByTime(10000);
 
       await expect(loadPromise).rejects.toThrow('Resource load timeout: res://slow.txt');
@@ -261,7 +228,6 @@ describe('WebviewResourceProvider', () => {
     it('should not throw if response arrives after cleanup', async () => {
       const loadPromise = provider.loadResource('res://test.txt', 'Resource');
 
-      // Simulate response
       simulateExtensionMessage({
         type: 'resourceLoaded',
         requestId: 'resource_0',
@@ -271,7 +237,7 @@ describe('WebviewResourceProvider', () => {
 
       await loadPromise;
 
-      // Simulate duplicate response (should be ignored)
+      // A duplicate response is ignored.
       simulateExtensionMessage({
         type: 'resourceLoaded',
         requestId: 'resource_0',
@@ -283,10 +249,6 @@ describe('WebviewResourceProvider', () => {
       expect(true).toBe(true);
     });
   });
-
-  // ============================================================================
-  // Malformed Messages
-  // ============================================================================
 
   describe('Malformed Messages', () => {
     it.each([
@@ -310,10 +272,6 @@ describe('WebviewResourceProvider', () => {
       await expect(loadPromise).resolves.toBe('content');
     });
   });
-
-  // ============================================================================
-  // Concurrent Requests
-  // ============================================================================
 
   describe('Concurrent Requests', () => {
     it('should handle multiple concurrent requests', async () => {

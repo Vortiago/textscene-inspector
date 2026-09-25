@@ -1,10 +1,7 @@
 /**
- * Window strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * Window strict validators, asserted through `validatorRegistry` so a failure points at
+ * the validator, not at scene parsing. Rule-level behaviour belongs in linter.test.ts,
+ * through `Linter`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -173,7 +170,7 @@ describe('Window strict validators', () => {
     it('rejects a negative content_scale_size', () => {
       // Assert the diagnostic itself: `?.message` is `undefined` when the
       // validator wrongly accepts, and `expect(undefined).not.toBeNull()`
-      // passes — the test could never fail.
+      // passes, so the test could never fail.
       expect(check('content_scale_size', 'Vector2i(-1, 720)')).not.toBeNull();
     });
 
@@ -212,7 +209,7 @@ describe('Window strict validators', () => {
     });
 
     it('warns below the hinted 0.5 floor, which nothing enforces', () => {
-      // 0.1 loads and runs — the setter only refuses `<= 0` (window.cpp:1774),
+      // 0.1 loads and runs: the setter only refuses `<= 0` (window.cpp:1774),
       // so the hint's floor is the inspector's limit and warns.
       const warning = check('content_scale_factor', '0.1');
       expect(warning?.severity).toBe('warning');

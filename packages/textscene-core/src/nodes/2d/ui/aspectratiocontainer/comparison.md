@@ -36,7 +36,7 @@ Strict parsing format-checks these `AspectRatioContainer` properties, plus 53 in
 | `valid-aspectratiocontainer-children` | `aspectratiocontainer-unsupported-texturerect-expand-mode` | info |
 <!-- lint:end -->
 
-`parser.ts` now reads all four members straight through, unclamped — the same values
+`parser.ts` reads all four members straight through, unclamped: the same values
 `linterParser.ts` only warns about. The solver applies `aspect_ratio_container.h`'s own
 defaults (`ratio` 1.0, `stretch_mode` FIT, both alignments CENTER) and, for an
 out-of-range `stretch_mode`, falls through to no scaling at all, matching the engine's

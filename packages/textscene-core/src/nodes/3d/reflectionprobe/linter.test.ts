@@ -1,11 +1,7 @@
 /**
- * ReflectionProbe semantic rule: the one cross-field condition it has.
- *
- * Driven through the rule's own `check`, over a scene parsed by
- * `StrictTscnParser`, rather than through `Linter`: the barrel is mid-wave and
- * `Linter`-based helpers would pull it in. Applicability is the registry's job
- * (`RuleRegistry.getRulesForNodeType`), so these cases hand `check` a
- * ReflectionProbe node directly and assert only what it reports.
+ * ReflectionProbe's cross-field rule, driven through its own `check` over a
+ * `StrictTscnParser` scene, since `Linter` pulls in the whole barrel. The registry
+ * owns applicability, so each case hands `check` a ReflectionProbe directly.
  */
 
 import { describe, expect, it } from 'vitest';

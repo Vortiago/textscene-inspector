@@ -1,5 +1,5 @@
 /**
- * `hexCodeBoxAdvanceSize`/`hexCodeBoxRects` vs Godot 4.6.3
+ * `hexCodeBoxAdvanceSize`/`hexCodeBoxRects` against Godot 4.6.3
  * (`servers/text/text_server.cpp:737-812`). Expected numbers are hand-derived
  * from the ported formula against the Godot source, never the implementation's
  * own output.
@@ -49,8 +49,7 @@ describe('hexCodeBoxRects — TextServer::draw_hex_code_box/_draw_hex_code_box_n
   });
 
   it('a two-byte codepoint draws FOUR digits (4 nibbles) on top of the same 4-rect frame', () => {
-    // 0x00FF: a=0xF (0x71, 5 segments), b=0x0 (0x7E, 6), c=0x0 (0x7E, 6), d=0x0 (0x7E, 6) -- wait d/c read from bits 8-15, both 0 for 0x00FF.
-    // Use 0x1234 instead so every nibble is distinct and non-degenerate to avoid hand-picking a coincidental zero.
+    // 0x1234: every nibble is distinct and non-zero, so no digit count is a coincidence.
     const rects = hexCodeBoxRects(15, 0x1234);
     // 4 frame + 4 digits, each with a nonzero segment count (every nibble 1/2/3/4 has >=2 segments).
     expect(rects.length).toBeGreaterThanOrEqual(4 + 4 * 2);

@@ -1,14 +1,8 @@
 /**
- * Unit tests for the declarative validator namespace `v`.
- *
- * Each combinator is exercised on its happy path + at least one edge
- * (NaN, out-of-range, wrong format). The asserts pin message text the
- * same way the per-node `linter.test.ts` files do (`toContain` rather
- * than `toBe`) so they survive small wording tweaks without breaking.
- *
- * This file holds the scalar combinators. The tuple/reference ones are
- * `v.tuples.test.ts`, and the packed-array and string grammars are
- * `v.packedArrays.test.ts`.
+ * The scalar combinators of the validator namespace `v`, each on its happy path
+ * and at least one edge. Messages are pinned with `toContain`, as the per-node
+ * `linter.test.ts` files do. Tuples live in `v.tuples.test.ts`, packed arrays
+ * and strings in `v.packedArrays.test.ts`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -91,16 +85,15 @@ describe('v.int', () => {
     expect(err!.message).toContain('20000');
   });
 
-  // Same stop-at-the-first-non-digit accident in the other direction: Godot's
-  // parser cannot read this at all, and `parseInt` reads 8.
+  // Godot's parser cannot read this at all, while `parseInt` reads 8.
   it('rejects a trailing-garbage value Godot cannot read', () => {
     const err = v.int('hframes', { min: 1, max: 16384 })('hframes', '8abc', 1);
     expect(err!.code).toBe('INVALID_HFRAMES_FORMAT');
   });
 
-  // A float literal in an INT slot loads and truncates toward zero, so the
-  // stored value is not the written one — the truncation warning. It is judged
-  // AFTER the bounds, so `0.9` under a floor of 1 keeps its range error.
+  // A float literal in an INT slot loads and truncates toward zero, which
+  // warns. It is judged after the bounds, so `0.9` under a floor of 1 keeps
+  // its range error.
   it('warns that a float literal is truncated toward zero', () => {
     expect(v.int('frame', { min: 0, max: 10 })('frame', '5.9', 1)?.severity).toBe('warning');
     expect(v.int('frame', { min: 1, max: 10 })('frame', '0.9', 1)?.severity).toBe('error');
@@ -108,31 +101,26 @@ describe('v.int', () => {
 });
 
 describe('the int combinators agree on what Godot can read', () => {
-  // Both combinators READ all four spellings — the tokenizer resolves them for
-  // a bare slot too (variant_parser.cpp:701-707), so the file loads and neither
-  // may call it a FORMAT error. What they then report is a VALUE question,
-  // answered below.
+  // Both combinators read all four spellings: the tokenizer resolves them for a
+  // bare slot too (variant_parser.cpp:701-707), so neither may call it a format
+  // error. What they report is a value question, answered below.
   it.each(['inf', '-inf', 'inf_neg', 'nan'])('neither calls %s a format error', (literal) => {
     expect(v.int('frame')('frame', literal, 1)?.code).not.toBe('INVALID_FRAME_FORMAT');
     expect(v.strictInt('frame')('frame', literal, 1)?.code).not.toBe('INVALID_FRAME_FORMAT');
   });
 
   it.each(['inf', '-inf', 'inf_neg', 'nan'])('both report %s as altered in an INT slot', (literal) => {
-    // Measured on 4.6.3 stable: `Vector2i(inf, 8)`, `(-inf, 8)`, `(inf_neg, 8)`
-    // and `(nan, 8)` all store `(-2147483648, 8)`. The narrowing happens at
-    // parse time, so an INT slot never holds the value the file states — an
-    // alteration, which is the error tier. A FLOAT slot stores it verbatim and
-    // stays silent, which is the case directly below.
+    // `Vector2i(inf, 8)` and its three siblings all store `(-2147483648, 8)`:
+    // the narrowing at parse time is an alteration, the error tier. A float
+    // slot stores it verbatim and stays silent, the case directly below.
     expect(v.int('frame')('frame', literal, 1)?.severity).toBe('error');
     expect(v.strictInt('frame')('frame', literal, 1)?.severity).toBe('error');
     expect(v.float('weight')('weight', literal, 1)).toBeNull();
   });
 
   it('reports the alteration rather than a bound it cannot compare', () => {
-    // The message must not name the stored number: the C++ narrowing is UB and
-    // the practical result is architecture-specific, so only the ALTERATION is
-    // portable. `nan` and `inf` therefore read alike here, where before `inf`
-    // was wrongly treated as "above the ceiling" and `nan` as unanswerable.
+    // The message must not name the stored number: the C++ narrowing is UB, so
+    // only the alteration is portable, and `nan` and `inf` read alike.
     for (const literal of ['inf', 'nan']) {
       const reported = v.int('frame', { min: 0, max: 10 })('frame', literal, 1);
       expect(reported?.severity).toBe('error');
@@ -146,9 +134,7 @@ describe('the int combinators agree on what Godot can read', () => {
     expect(v.strictInt('frame')('frame', literal, 1)).not.toBeNull();
   });
 
-  // And on a fractional literal too: one engine behaviour, one verdict. Split
-  // between a FORMAT error on 56 slots and silence on 169, the same `.cpp` line
-  // judges Sprite2D and Sprite3D differently.
+  // And on a fractional literal too: one engine behaviour, one verdict.
   it('agree on a fractional literal, which the INT conversion truncates', () => {
     for (const validator of [v.int('frame', { min: 0, max: 10 }), v.strictInt('frame', { min: 0, max: 10 })]) {
       const diagnostic = validator('frame', '5.5', 1);
@@ -221,9 +207,8 @@ describe('v.boolean', () => {
 });
 
 describe('column offset on every code path', () => {
-  // Every per-property validator returns `column: key.length + 3`.
-  // This matches the per-node tests' implicit expectation when they
-  // compare diagnostics shape. Pin it across one representative path.
+  // Every per-property validator returns `column: key.length + 3`, which the
+  // per-node tests expect. Pin it across one representative path.
   it('puts the column at the value position (key.length + 3)', () => {
     const err = v.float('fov')('fov', 'oops', 1);
     expect(err!.column).toBe('fov'.length + 3);

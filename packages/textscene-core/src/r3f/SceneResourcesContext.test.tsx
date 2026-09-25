@@ -1,12 +1,7 @@
 /**
- * Contract tests for SceneResourcesContext: the synchronous SubResource /
- * ExtResource seam node components read instead of the async useResource hook.
- *
- * The nested-provider case is the instancing case (ADR-0009's two explicit
- * mounts): an instanced sub-scene mounts its OWN SceneResourcesProvider so its
- * nodes resolve refs against the sub-scene's resources FIRST, while inheriting
- * the host pool as a fallback (ADR-0013) so host-added children parented under
- * a collapsed instance can still resolve their host ExtResource ids.
+ * SceneResourcesContext, the synchronous resource seam. A nested provider is an
+ * instanced sub-scene (ADR-0009): its own resources come first, and the host pool
+ * stays as a fallback for host-added children (ADR-0013).
  */
 import { describe, expect, it } from 'vitest';
 import { render, renderHook } from '@testing-library/react';
@@ -50,7 +45,7 @@ describe('SceneResourcesContext', () => {
         </SceneResourcesProvider>
       ),
     });
-    // Top-level provider inherits the EMPTY default, so the resolved pool is
+    // Top-level provider inherits the empty default, so the resolved pool is
     // exactly the supplied resources.
     expect(result.current.internalResources).toEqual(hostInternal);
     expect(result.current.externalResources).toEqual(hostExternal);
@@ -88,14 +83,12 @@ describe('SceneResourcesContext', () => {
       </SceneResourcesProvider>
     );
 
-    // Inner subtree sees its OWN resources first, then the inherited host pool.
+    // Inner subtree sees its own resources first, then the inherited host pool.
     expect(subSeen!.internalResources).toEqual([...subInternal, ...hostInternal]);
     expect(subSeen!.externalResources).toEqual([...subExternal, ...hostExternal]);
-    // Precedence: on a duplicate id ("1_tex"), the sub-scene's own wins via
-    // first-match, so the sub-scene never accidentally picks up host content.
+    // On a duplicate id ("1_tex"), the sub-scene's own wins on first match.
     expect(subSeen!.externalResources.find((r) => r.id === '1_tex')?.path).toBe('res://sub.png');
-    // A host-added child sitting in the sub-scene subtree can still reach a
-    // host-only id (the lamps/doors regression) — host resources are present.
+    // A host-added child in the sub-scene subtree still reaches a host-only id.
     expect(subSeen!.internalResources).toContainEqual(hostInternal[0]);
 
     // The sibling outside the inner provider still sees only the host's.

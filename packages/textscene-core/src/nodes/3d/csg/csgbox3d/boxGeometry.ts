@@ -1,11 +1,7 @@
 /**
- * CSGBox3D geometry, built the way Godot builds it.
- *
- * three's `BoxGeometry` renders identically here, so this is not a bug fix. It exists so
- * all seven CSG types produce their solid through
- * one path: the boolean evaluator asks a registered builder for triangles, and a slice
- * that answered with a three primitive instead would be the one with different UVs and
- * different normal generation feeding into the same merge.
+ * CSGBox3D geometry, built the way Godot builds it. three's `BoxGeometry` renders the same, but
+ * every CSG type produces its solid through one path: the evaluator asks a registered builder for
+ * triangles, and a three primitive would feed different UVs and normals into the same merge.
  *
  * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`modules/csg/csg_shape.cpp`, `CSGBox3D::_build_brush`),
@@ -52,7 +48,7 @@ export function buildCsgBoxGeometry(spec: CsgBoxSpec): THREE.BufferGeometry {
   const { size, flipFaces } = spec;
   const mul = [size.x / 2, size.y / 2, size.z / 2];
 
-  const faceCount = 12; // it's a cube
+  const faceCount = 12; // two triangles on each of six faces
   const positions = new Float32Array(faceCount * 9);
   const uvs = new Float32Array(faceCount * 6);
   // A box has no smooth_faces property: every face is flat.

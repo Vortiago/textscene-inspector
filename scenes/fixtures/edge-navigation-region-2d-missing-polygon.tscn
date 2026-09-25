@@ -1,11 +1,8 @@
 [gd_scene format=3 uid="uid://edge_navigation_region_2d_missing_polygon"]
 
-; `navigation_polygon` omitted entirely, while the region stays visible in the
-; tree. Demonstrates `navigationregion2d-requires-navigation-polygon`, a
-; correct port of `navigation_region_2d.cpp:299-307`'s own
-; get_configuration_warnings(): with no NavigationPolygon set, Godot itself
-; warns "A NavigationPolygon resource must be set or created for this node to
-; work." One warning, zero errors; renders with no baked navmesh geometry.
+; `navigation_polygon` omitted on a visible region. navigationregion2d-requires-navigation-polygon
+; ports Godot's own warning (navigation_region_2d.cpp:299-307). One warning, zero errors. It
+; renders no navmesh geometry.
 
 [node name="Root" type="Node2D"]
 

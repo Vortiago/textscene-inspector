@@ -1,4 +1,4 @@
-/** Node2D registration — parser + formatter. */
+/** Node2D registration: parser and formatter. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseNode2D } from './parser';

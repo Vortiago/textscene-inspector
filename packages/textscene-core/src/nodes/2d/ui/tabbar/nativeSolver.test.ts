@@ -251,7 +251,7 @@ describe('computeTabBarDrawLayout', () => {
     // the while-loop sheds tab 1 too, dropping maxDrawnTab to 0.
     const large = computeTabBarDrawLayout(tabs, 100, 0, true, 0, 0, 30, 30);
     expect(large.maxDrawnTab).toBe(0);
-    // The two widths need not match — this is exactly what a themed pair needs.
+    // The two widths need not match, which a themed pair needs.
     const asymmetric = computeTabBarDrawLayout(tabs, 100, 0, true, 0, 0, 55, 5);
     expect(asymmetric.maxDrawnTab).toBe(0);
   });
@@ -303,10 +303,8 @@ describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.
 });
 
 describe('tabBarFontSizePx', () => {
-  // `theme_cache.font_size` (`tab_bar.cpp:365`) is a bound theme ITEM
-  // (`tab_bar.cpp:2179`), so `Control::get_theme_font_size` answers it: a
-  // node-local override wins, but only while it is POSITIVE
-  // (`control.cpp:3113-3117`).
+  // `theme_cache.font_size` (`tab_bar.cpp:365`) is a bound theme item (`tab_bar.cpp:2179`),
+  // so a node-local override wins, but only while it is positive (`control.cpp:3113-3117`).
   const THEME = nativeTheme(1);
   const bar = (): SolveNode => ({
     ...solveNode(),
@@ -332,11 +330,8 @@ describe('tabBarFontSizePx', () => {
 });
 
 describe('tabBarMinimumSize — the tab buffer is shaped at theme_cache.font_size', () => {
-  // `TabBar::_shape` shapes every tab at `theme_cache.font_size`
-  // (tab_bar.cpp:365), which is a theme ITEM (tab_bar.cpp:2179), so a
-  // node-local `theme_override_font_sizes/font_size` wins over every theme in
-  // the chain (control.cpp:3113-3117). `ms.height` floors on that same buffer
-  // (tab_bar.cpp:82) and `ms.width` on its advance (tab_bar.cpp:80).
+  // `TabBar::_shape` shapes every tab at the font size above. `ms.height` floors on that
+  // buffer (tab_bar.cpp:82) and `ms.width` on its advance (tab_bar.cpp:80).
   function ctx(): SolveContext {
     return {
       theme: nativeTheme(1),
@@ -376,11 +371,9 @@ describe('tabBarMinimumSize — the tab buffer is shaped at theme_cache.font_siz
     expect(sizeOf(node({ themeOverrideFontSizes: { font_size: 0 } }))).toEqual(sizeOf(node()));
   });
 
-  // `_draw_tab` centres the buffer as `get_margin(SIDE_TOP) + ((sb_rect.size.y
-  // - sb_ms.y) - text_buf->get_size().y) / 2` (tab_bar.cpp:677) against the
-  // rect `get_minimum_size` floored at `text_buf->get_size().y + y_margin`
-  // (tab_bar.cpp:82). ONE buffer feeds both, so that term cannot go negative —
-  // it only can where the height and the glyphs came from two different sizes.
+  // `_draw_tab` centres the buffer as `get_margin(SIDE_TOP) + ((sb_rect.size.y - sb_ms.y) -
+  // text_buf->get_size().y) / 2` (tab_bar.cpp:677) in the rect floored at `text_buf->get_size().y
+  // + y_margin` (tab_bar.cpp:82). One buffer feeds both, so the term cannot go negative.
   it('the bar the solver sizes contains the buffer the painter shapes, at any font size', () => {
     const style = pickTabStyleBox({}, tabBarStyleBoxes(1), 'unselected');
     for (const fontSize of [8, 16, 28, 32]) {
@@ -441,8 +434,8 @@ describe('layoutTabContent under RTL', () => {
 
   it('flows icon, text and close right to left from the tab width minus the style LEFT margin (tab_bar.cpp:660,668,676,721)', () => {
     const out = layoutTabContent({ ...base, rtl: true });
-    // p_x = size_cache - margin(SIDE_LEFT) = 200 - 20 = 180 — Godot measures the
-    // LEFT margin from the right edge here, never the right margin.
+    // p_x = size_cache - margin(SIDE_LEFT) = 200 - 20 = 180: Godot measures the
+    // left margin from the right edge here, never the right margin.
     expect(out.icon?.rect.x).toBe(180 - 16);
     // p_x = 180 - 16 - 4 = 160; text at p_x - size_text.
     expect(out.text?.offset.x).toBe(160 - 50);

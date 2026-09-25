@@ -1,20 +1,16 @@
-/**
- * ResourceProvider implementation for web browser environment.
- * Loads resources from user-uploaded files stored in memory.
- */
+/** The browser ResourceProvider: uploaded files in memory, then the fixtures mirror. */
 
 import { isBinaryResourceType, info, warn } from '@textscene/core';
 import type { ResourceProvider } from '@textscene/core';
 import { fixtureUrlForRes } from '../corpusRoot';
 
 export class WebResourceProvider implements ResourceProvider {
-  /** Uploaded files, keyed per corpus root via {@link uploadKey}. */
+  /** Uploaded files, keyed per corpus root by {@link uploadKey}. */
   private uploadedFiles: Map<string, File> = new Map();
   /**
-   * Public-fixtures subtree the active scene's res:// namespace maps onto.
-   * '' = the fixtures root (unit fixtures, examples, the flattened isometric
-   * corpus); vendored demo projects each set their own root (e.g.
-   * 'demos/2d/platformer') so their res:// paths cannot collide.
+   * Public-fixtures subtree the active scene's res:// namespace maps onto: '' for
+   * the fixtures root (unit fixtures, examples, the flattened isometric corpus),
+   * or a demo project's own root, such as 'demos/2d/platformer', so paths never collide.
    */
   private resourceRoot = '';
 
@@ -32,10 +28,9 @@ export class WebResourceProvider implements ResourceProvider {
   }
 
   /**
-   * Add a manually uploaded file, scoped to the currently-active corpus root.
-   * Uploading while corpus A is active will NOT make the file visible when the
-   * provider is later switched to a different corpus root.
-   * @param path - Godot resource path (e.g., 'res://scenes/Door.tscn')
+   * Adds an uploaded file, scoped to the active corpus root, so another root does
+   * not see it.
+   * @param path - Godot resource path, such as 'res://scenes/Door.tscn'
    * @param file - The uploaded File object
    */
   addUploadedFile(path: string, file: File): void {
@@ -43,14 +38,10 @@ export class WebResourceProvider implements ResourceProvider {
   }
 
   /**
-   * Remove an uploaded file under EVERY corpus root, not just the active one.
-   * The uploaded-rows UI keys on the bare res:// path and survives corpus
-   * switches, so a root-scoped delete would silently no-op after a switch —
-   * the row would vanish while the file kept being served whenever its
-   * original corpus became active again. Remove is an explicit user action
-   * on the path itself; deleting it everywhere matches what the row shows.
-   * After removal, requesting the path again falls through to the fixtures
-   * fetch (or fails).
+   * Removes an uploaded file under every corpus root. The uploaded-rows UI keys on
+   * the bare res:// path across corpus switches, so a root-scoped delete no-ops
+   * after a switch while the row vanishes. A later request falls through to the
+   * fixtures fetch.
    */
   removeUploadedFile(path: string): boolean {
     const suffix = `\0${path}`;
@@ -65,13 +56,12 @@ export class WebResourceProvider implements ResourceProvider {
   }
 
   async loadResource(path: string, type: string): Promise<string | ArrayBuffer> {
-    // Check uploaded files first (only for the active corpus root)
+    // Uploaded files of the active corpus root first.
     const uploadedFile = this.uploadedFiles.get(this.uploadKey(path));
     if (uploadedFile) {
       return isBinaryResourceType(type, path) ? uploadedFile.arrayBuffer() : uploadedFile.text();
     }
 
-    // For resources from /fixtures/, try fetching them
     if (path.startsWith('res://')) {
       try {
         // Convert Godot path to fixture path under the active corpus root.
@@ -81,10 +71,9 @@ export class WebResourceProvider implements ResourceProvider {
         const response = await fetch(fixtureUrl);
 
         if (response.ok) {
-          // Check Content-Type to detect if server returned HTML fallback (missing file)
+          // A missing file comes back as the SPA's HTML fallback.
           const contentType = response.headers.get('content-type') || '';
           if (contentType.includes('text/html')) {
-            // Server returned HTML fallback (SPA behavior) - file doesn't exist
             warn(`[WebResourceProvider] File not found (got HTML fallback): ${path}`);
             throw new Error(`Resource not found: ${path}`);
           }
@@ -104,7 +93,7 @@ export class WebResourceProvider implements ResourceProvider {
       }
     }
 
-    // Resource not available - will trigger onResourceNeeded callback
+    // The throw triggers the onResourceNeeded callback.
     throw new Error(`Resource not found: ${path}`);
   }
 }

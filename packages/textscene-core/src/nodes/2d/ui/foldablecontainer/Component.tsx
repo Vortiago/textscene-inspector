@@ -1,33 +1,8 @@
 /**
- * `<FoldableContainer>` — the native (WebGL canvas) painter for
- * `FoldableContainer`: `_notification(NOTIFICATION_DRAW)`
- * (`scene/gui/foldable_container.cpp:267-328`), minus RTL, hover and focus
- * (a static viewer never reaches any of the three — see `nativeSolver.ts`'s
- * own doc). Its content Controls are never drawn here — `ControlCanvasWalker`
- * renders them as siblings, already positioned by `foldableContainerLayout`
- * (or nowhere, when `folded`).
- *
- * Draws, in order: the title bar StyleBox (`title_panel`/
- * `title_collapsed_panel`), the fold-state arrow icon, the title text
- * (shifted right of the icon per `title_alignment`, within the space the
- * icon/separator leave), and — only when NOT `folded` — the content `panel`
- * StyleBox behind where the children sit.
- *
- * Tint: the walker's `tint` prop, exactly as every other native painter here
- * applies it — `tint.own` (raw sRGB) to each `<StyleBoxQuad>`'s `color`, and
- * multiplied into the title font colour before `<TextRun>`'s own single
- * sRGB→linear conversion. The arrow icon's own theme colour is unconditional
- * opaque white (`icon->draw(ci, pos)` passes no modulate,
- * `foldable_container.cpp:310`) — its grey comes from the vendored SVG's own
- * fill, not a runtime multiply — so its quad reads `tint.color`/`tint.opacity`
- * directly, the same shape `CheckBox`'s own icon uses for the identical reason.
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
- *
- * TEXT LAYOUT: calls `nativeSolver.ts`'s `foldableContainerTitleShape`, the
- * **solve handoff** share both solver entry points call too, so the title
- * bar this paints is the one the solve sized the container from.
+ * The native painter for `FoldableContainer`: `_notification(NOTIFICATION_DRAW)`
+ * (`scene/gui/foldable_container.cpp:267-328`) without hover and focus. It draws the
+ * title bar, the arrow, the title text and, unless `folded`, the content `panel`.
+ * `ControlCanvasWalker` draws the children.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -74,9 +49,12 @@ function actualTitleAlignment(alignment: number, rtl: boolean): number {
 
 export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<FoldableContainerProperties>(solveNode);
+  // The solve handoff: the solver sizes the container from this same title shape.
   const title = foldableContainerTitleShape(solveNode, theme);
 
   const clippingPlanes = useControlClipPlanes();
+  // `icon->draw(ci, pos)` passes no modulate (`foldable_container.cpp:310`): the grey is the
+  // SVG's fill, so the quad takes the tint alone, as CheckBox's icon does.
   const iconTexture = useNodeIcon(
     solveNode.icons[FOLDABLE_CONTAINER_ARROW_THEME_NAME[title.arrow]],
     ARROW_ICON_URL[title.arrow]
@@ -94,10 +72,8 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme }:
     h: title.size.y,
   };
 
-  // foldable_container.cpp:288: the near-edge margin before centring — the
-  // SAME value for both `title_position`s in the common symmetric-margin
-  // theme, since this direct (non-flipped) layout reads `top` unconditionally
-  // rather than the source's flip-space `TOP`-vs-`BOTTOM` branch (module doc).
+  // foldable_container.cpp:288: the near-edge margin before centring. This layout does not
+  // flip, so it reads `top` for both `title_position`s, which matches a symmetric-margin theme.
   const titleStyleOfs = titleMargin.top;
 
   const textHeight = title.layout ? title.layout.heightPx : 0;
@@ -105,18 +81,16 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme }:
   const iconTopExtra = Math.max((title.size.y - titleMarginSize.y - arrowSize.y) * 0.5, 0);
 
   const rtl = solveNode.rtl;
-  // foldable_container.cpp:293-300 — the arrow hugs the reading direction's
-  // leading edge, which RTL measures from the style's own RIGHT margin.
+  // foldable_container.cpp:293-300: the arrow sits at the leading edge, which RTL
+  // measures from the style's right margin.
   const iconPos = {
     x: rtl ? rect.w - titleMargin.right - arrowSize.x : titleMargin.left,
     y: iconTopExtra + titleStyleOfs,
   };
   const titleTextWidth = rect.w - titleMarginSize.x - arrowSize.x - hSeparation;
 
-  // `text_buf->set_width(title_text_width)` (`foldable_container.cpp:307`)
-  // primes the SAME trim `TextParagraph::draw` then applies — the untrimmed
-  // shape `foldableContainerTitleMetrics` returns never reaches the screen
-  // once `title_text_overrun_behavior` trims.
+  // `text_buf->set_width(title_text_width)` (`foldable_container.cpp:307`) sets the trim
+  // `TextParagraph::draw` applies, so the drawn title is the trimmed shape.
   const overrunFlags = useMemo(
     () => overrunFlagsForBehavior(props.titleTextOverrunBehavior ?? OverrunBehavior.NO_TRIMMING),
     [props.titleTextOverrunBehavior]
@@ -144,7 +118,7 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme }:
 
   const textPos = {
     // `title_text_pos.x += rtl ? title_controls_width : icon width + h_sep`
-    // (`:296-301`); `title_controls` is never serialised, so RTL adds nothing.
+    // (`:296-301`). `title_controls` is never serialised, so RTL adds nothing.
     x: titleMargin.left + (rtl ? 0 : arrowSize.x + hSeparation) + alignmentShift,
     y: titleStyleOfs + textTopExtra,
   };
@@ -158,10 +132,8 @@ export function FoldableContainer({ solveNode, tint, rect, renderOrder, theme }:
 
   return (
     <>
-      {/* `StyleBoxQuad` consumes only the SIZE of the rect it is given (its own
-          doc), so a box drawn at an offset INSIDE this control needs that
-          offset from the group around it — the arrow and the title text below
-          already reach theirs the same way. */}
+      {/* `StyleBoxQuad` reads only the size of its rect,
+          so the group supplies the offset. */}
       <CanvasItemGroup position={[titleRect.x, -titleRect.y, 0]}>
         <StyleBoxQuad styleBox={title.titleStyle} color={tint.own} rect={titleRect} renderOrder={renderOrder} />
       </CanvasItemGroup>

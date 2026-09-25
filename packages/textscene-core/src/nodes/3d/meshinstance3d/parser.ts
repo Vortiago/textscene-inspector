@@ -1,6 +1,4 @@
-/**
- * MeshInstance3D parser - parses MeshInstance3D nodes from TSCN.
- */
+/** Parses MeshInstance3D nodes from TSCN. */
 
 import type { ParsedHeading } from '../../../parser/utils';
 import type { MeshInstance3DProperties } from './types';
@@ -9,18 +7,14 @@ import { parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParse
 import { indexedKeyRegex, toIntIndex } from '../../../godot/index.js';
 
 /**
- * `MeshInstance3D::_set` reads the index with a bare
- * `get_slicec('/', 1).to_int()` and no validity gate
- * (mesh_instance_3d.cpp:66), so the grammar is the whole path segment and
- * {@link toIntIndex} decides the number: `+2` is surface 2, `abc` is surface 0.
- *
- * Unanchored, because `get_slicec` returns that one slice and ignores the rest
- * (ustring.cpp:941-964): `surface_material_override/0/extra` names surface 0
- * and the override lands on it.
+ * `_set` reads the index with a bare `get_slicec('/', 1).to_int()`
+ * (mesh_instance_3d.cpp:66), so {@link toIntIndex} decides the number: `+2` is
+ * surface 2, `abc` is surface 0. Unanchored: `get_slicec` ignores the rest
+ * (ustring.cpp:941-964), so `surface_material_override/0/extra` names surface 0.
  */
 const SURFACE_OVERRIDE_KEY_RE = indexedKeyRegex('^surface_material_override/(#)', 'to_int');
 
-/** Assign only when the decoded value is present (the optional readers already drop absent/garbage). */
+/** Assigns only a present value: the optional readers already drop an absent or unreadable one. */
 function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | undefined): void {
   if (value !== undefined) target[key] = value;
 }
@@ -38,8 +32,8 @@ export function parseMeshInstance3D(
     if (!indexedMatch) continue;
     const surfaceIndex = toIntIndex(indexedMatch[1]!);
     // `if (idx >= surface_override_materials.size() || idx < 0) return false`
-    // (mesh_instance_3d.cpp:68). Only the sign is knowable here — the surface
-    // count comes from the mesh resource, which the renderer resolves.
+    // (mesh_instance_3d.cpp:68). Only the sign is knowable here: the renderer resolves
+    // the surface count from the mesh.
     if (!(surfaceIndex >= 0)) continue;
     surfaceMaterialOverrides.set(surfaceIndex, value);
   }

@@ -1,12 +1,8 @@
 /**
- * Showcase scenario registry. Each entry maps a clip name to the fixture's
- * dropdown label, a caption, and a `run(page, helpers)` that demonstrates the
- * feature. The recorder opens the app DIRECTLY on the fixture via `?fixture=`
- * (no default-scene detour), so `run` is FEATURE-ONLY — the scene is already
- * loaded and auto-framed when it starts. Capture the poster early (h.poster())
- * so the thumbnail shows the feature, not a transitional frame.
- *
- * Add a clip by adding an entry here, then: node scripts/showcase/run.mjs <name>
+ * The showcase scenarios: each clip name maps to the fixture's label, a caption and a
+ * `run(page, helpers)`. The recorder opens the fixture through `?fixture=`, so the scene is loaded
+ * and framed when `run` starts. Capture the poster early (h.poster()), so the thumbnail shows the
+ * feature. To add a clip, add an entry and run `node scripts/showcase/run.mjs <name>`.
  */
 
 /** Static-geometry showcase: poster immediately, then a tight orbit. */
@@ -21,7 +17,7 @@ function orbitScene(label, caption, orbitOpts = {}) {
   };
 }
 
-/** 2D-canvas scene: a static front-on poster (no orbit — 2D content is flat). */
+/** 2D-canvas scene: a static front-on poster, with no orbit, since 2D content is flat. */
 function flatScene(label, caption) {
   return {
     label,
@@ -39,7 +35,7 @@ export const scenarios = {
     'A green ground plane holds primitive meshes (prism, torus, capsule), each with its own material, orbited as solid 3D geometry.'
   ),
 
-  // 2D canvas — real Godot demo scenes, rendered front-on by the flat-2D camera.
+  // 2D canvas: real Godot demo scenes, rendered front-on by the flat-2D camera.
   pong: flatScene(
     'Pong',
     'The Godot "Pong" demo rendered from its real .tscn: cyan and magenta paddles, the ball, and the dashed centre separator — Sprite2D quads positioned by their Area2D parents, with hierarchical CanvasItem modulate tinting the paddles.'
@@ -79,17 +75,15 @@ export const scenarios = {
     'StaticBody3D / Area3D render as transform groups positioning their child meshes; AudioStreamPlayer renders nothing visible.'
   ),
 
-  // CSG hallway mockup — self-contained, renders fully today.
+  // The self-contained CSG hallway mockup, which renders fully.
   hallway: orbitScene(
     'Hallway Mockup',
     'A self-contained CSG hallway mockup: corridor (floor / walls / ceiling), portrait frames, and Label3D name plates — tracks 3D-rendering progress.',
     { dx: 320, dy: 20, steps: 70 }
   ),
 
-  // Layout tour: the Split Dock shell (ADR-0007) + the 2D Control overlay. Opens
-  // on the CSG hallway mockup (3D), orbits, switches to a Control-based dialog
-  // scene via the command palette, then flips to 2D mode so the overlay renders
-  // its UI.
+  // Layout tour of the Split Dock shell (ADR-0007) and the 2D Control overlay: it orbits the CSG
+  // hallway mockup, switches to a Control dialog scene in the command palette, then flips to 2D.
   'dcc-layout': {
     label: 'Hallway Mockup',
     caption:
@@ -140,11 +134,9 @@ export const scenarios = {
     },
   },
 
-  // Missing-resource upload round-trip. A small room whose floor, walls, and
-  // crate reference three textures that are NOT bundled (res://demo/missing/*),
-  // so it loads flat-shaded and the Resources tab lists all three as missing.
-  // Uploading a file for each path drives the late-arrival pipeline and the
-  // surfaces gain their textures live — proving request-missing → upload → used.
+  // The room's floor, walls and crate reference three textures that are not bundled
+  // (res://demo/missing/*), so it loads flat-shaded and the Resources tab lists them as missing.
+  // An upload for each path drives the late-arrival pipeline, and the surfaces gain textures live.
   'missing-upload': {
     label: 'Missing Resources',
     caption:
@@ -170,7 +162,7 @@ export const scenarios = {
         'scenes/demos/2d/physics_platformer/background/plank.png'
       );
       await page.waitForTimeout(700);
-      await h.poster(); // textured "after" — the thumbnail
+      await h.poster(); // The textured "after", which is the thumbnail.
       await h.orbit(page, { dx: 300, dy: 18, steps: 58 }); // orbit the now-textured room
     },
   },

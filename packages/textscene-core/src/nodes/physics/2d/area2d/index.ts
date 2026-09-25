@@ -1,11 +1,8 @@
 /**
- * Area2D registration — parser + property formatter.
- *
- * Unlike the shared `physics/2d` loop (StaticBody2D/RigidBody2D/CharacterBody2D,
- * which reuse `parseNode2D` verbatim), Area2D carries its own parser so the
- * lenient renderer path also captures monitoring/monitorable/collision_layer/
- * collision_mask for the Inspector — the render component itself stays a
- * transform-only Node2D group (mirrors Area3D, ADR-0005/ADR-0008).
+ * Area2D registration: the parser and property formatter. Unlike StaticBody2D, RigidBody2D and
+ * CharacterBody2D, which reuse `parseNode2D`, Area2D has its own parser so the Inspector shows
+ * monitoring, monitorable, collision_layer and collision_mask. It still renders as a
+ * transform-only Node2D group, like Area3D (ADR-0005/ADR-0008).
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

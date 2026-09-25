@@ -2,7 +2,7 @@
  * The conversion table both grammar builders interpolate.
  *
  * Its output is spliced straight into a `new RegExp(...)`, and every composite
- * capture index in four modules depends on the group staying NON-capturing, so
+ * capture index in four modules depends on the group staying non-capturing, so
  * the shape of the emitted string is as load-bearing as its contents.
  */
 

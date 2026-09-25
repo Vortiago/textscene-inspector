@@ -1,17 +1,6 @@
 /**
- * TextureProgressBar's native (WebGL canvas) rect solver —
- * `TextureProgressBar::get_minimum_size` (`texture_progress_bar.cpp:81-97`).
- * Registered via `controlSolverRegistry.registerMinimumSize`. Pure per-node
- * math, no THREE/React.
- *
- * The `!nine_patch_stretch` branch (`:86-96`) maxes THREE texture natural
- * sizes — `texture_under`/`texture_progress`/`texture_over`, none of which is
- * the generic `texture`/`icon` name `buildSolveTree.ts` resolves by default —
- * so this type declares them via `controlSolverRegistry.registerTextureSlots`
- * (`textureProgressBarTextureSlots`) and reads the result back off
- * `SolveNode.textureSlots`, resolved by the walker the SAME way as any other
- * Texture2D ref: inline, an `ExtResource(AtlasTexture)` `.tres`, or a loaded
- * image file alike.
+ * TextureProgressBar's native (WebGL canvas) rect solver: `TextureProgressBar::get_minimum_size`
+ * (`texture_progress_bar.cpp:81-97`). Pure per-node math, no THREE or React.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -32,7 +21,11 @@ export const TEXTURE_UNDER_KEY = 'texture_under';
 export const TEXTURE_PROGRESS_KEY = 'texture_progress';
 export const TEXTURE_OVER_KEY = 'texture_over';
 
-/** `TextureProgressBar`'s own three Texture2D properties (`texture_progress_bar.h:38-40`). */
+/**
+ * `TextureProgressBar`'s own three Texture2D properties (`texture_progress_bar.h:38-40`). Without
+ * `nine_patch_stretch`, `get_minimum_size` maxes their natural sizes (`texture_progress_bar.cpp:86-96`).
+ * `buildSolveTree.ts` resolves none of them by default, so this declares them for the walker.
+ */
 export const textureProgressBarTextureSlots: TextureSlotsFn = (node: TscnNode) => {
   const props = node.properties as TextureProgressBarProperties;
   const requests: TextureSlotRequest[] = [];
@@ -46,10 +39,8 @@ export const TEXTURE_FILL_LEFT_TO_RIGHT = 0;
 export const TEXTURE_FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE = 8;
 
 /**
- * `set_fill_mode` (`texture_progress_bar.cpp:575-583`) `ERR_FAIL_INDEX`
- * REFUSES an out-of-range write, so the stored `mode` keeps its class
- * default (`FILL_LEFT_TO_RIGHT`, `texture_progress_bar.h:105`) rather than
- * becoming an invalid enum value.
+ * `set_fill_mode` (`texture_progress_bar.cpp:575-583`) refuses an out-of-range write with
+ * `ERR_FAIL_INDEX`, so `mode` keeps its default (`FILL_LEFT_TO_RIGHT`, `texture_progress_bar.h:105`).
  */
 export function normalizeTextureProgressBarFillMode(fillMode: number | undefined): number {
   const mode = fillMode ?? TEXTURE_FILL_LEFT_TO_RIGHT;

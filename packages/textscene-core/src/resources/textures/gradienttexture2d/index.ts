@@ -1,14 +1,8 @@
 /**
- * Gradient resource slice — entry point (ADR-0031).
- *
- * One slice, two claims: `GradientTexture2D` is meaningless without the
- * `Gradient` it rasterises, and both are decoded by the same `decode.ts`, so
- * splitting them would put one type's decode in another slice's folder.
- *
- * THREE-free and React-free — it re-exports `decode.ts` and `types.ts` only.
- * `build.ts` (the rasteriser) and `resolveGradientTexture.ts` (its resolve
- * adapter) import THREE, so a claim consumer reaching them through this file
- * would pull a renderer into the linter's import closure.
+ * Gradient resource slice entry point (ADR-0031). One slice claims `Gradient` and
+ * `GradientTexture2D`, since one `decode.ts` decodes both. THREE-free and
+ * React-free: `build.ts` and `resolveGradientTexture.ts` import THREE, so this
+ * re-exports `decode.ts` and `types.ts` only.
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';

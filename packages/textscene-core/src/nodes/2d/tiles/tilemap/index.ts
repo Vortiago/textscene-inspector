@@ -1,6 +1,4 @@
-/**
- * TileMap registration — parser + property formatter.
- */
+/** Registers the TileMap parser and property formatter. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseTileMap } from './parser';

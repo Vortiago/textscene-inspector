@@ -1,11 +1,7 @@
 /**
- * `useTileSetModels` — one resolution per DISTINCT `tile_set`.
- *
- * A y-sort root routinely holds several `TileMapLayer`s with different tilesets
- * (a 16x16 floor and a 32x32 prop sheet, say). A hook cannot be called in a
- * loop, so the y-sort expansion used to resolve the FIRST layer's tileset and
- * bucket every layer's cells against that grid — right art at the wrong tile
- * pitch, which puts those rows' sort Y where no sibling expects them.
+ * `useTileSetModels`: one resolution per distinct `tile_set`. A y-sort root can hold
+ * layers with different tilesets, and one shared grid puts a layer's rows at the
+ * wrong tile pitch, so their sort Y lands where no sibling expects it.
  */
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';

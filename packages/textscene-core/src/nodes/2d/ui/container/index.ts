@@ -1,9 +1,6 @@
 /**
- * Container registration — parser.
- *
- * Reuses the Control parse; property knowledge lives in linterParser.ts.
- * Not rendered yet, so it registers NO component: the dispatcher falls back to
- * GenericNodeFallback and the tree keeps reporting it as not implemented.
+ * Container registration: the Control parser. It registers no node component,
+ * so the dispatcher falls back to GenericNodeFallback.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

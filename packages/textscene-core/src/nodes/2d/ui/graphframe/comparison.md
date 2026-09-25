@@ -11,11 +11,11 @@ renders_as: a titled frame around its own content rect
 
 GraphFrame is a GraphElement that groups and auto-resizes around other elements inside a
 GraphEdit. The previewer draws its panel/titlebar StyleBoxes (tint-substituted when
-`tint_color_enabled`), the title text, and the resize handle when `resizable` and NOT
-`autoshrink_enabled`. It draws the frame at its own authored `size`/`position_offset` —
-the same rect a freshly loaded scene actually shows, since `attach_graph_element_to_frame`
-is a runtime call with no `.tscn` surface at all, so no attached-node auto-resize ever
-runs before a script calls it.
+`tint_color_enabled`), the title text, and the resize handle when `resizable` is set and
+`autoshrink_enabled` is not. It draws the frame at its authored `size`/`position_offset`.
+That is the rect a freshly loaded scene shows: `attach_graph_element_to_frame` is a
+runtime call with no `.tscn` surface, so no attached-node auto-resize runs before a
+script calls it.
 
 ## Linting
 
@@ -42,8 +42,7 @@ Strict parsing format-checks these `GraphFrame` properties, plus 6 inherited fro
 <!-- lint:end -->
 
 The lenient parser reads `title`, `autoshrink_enabled`, `autoshrink_margin`,
-`drag_margin`, `tint_color_enabled` and `tint_color` the same way the strict one
-does — an out-of-range `autoshrink_margin`/`drag_margin` still applies as parsed
-(both are warnings, not errors, in the linter), and a malformed `tint_color`
-resolves to `undefined`, falling back to `Color(0.3, 0.3, 0.3, 0.75)` at draw
-time.
+`drag_margin`, `tint_color_enabled` and `tint_color` the same way the strict one does.
+An out-of-range `autoshrink_margin` or `drag_margin` still applies as parsed, since both
+are warnings, not errors, in the linter. A malformed `tint_color` resolves to
+`undefined` and falls back to `Color(0.3, 0.3, 0.3, 0.75)` at draw time.

@@ -38,8 +38,8 @@ describe('parseParallaxBackground', () => {
   });
 
   it('lets the composite `transform` win over offset/rotation/scale', () => {
-    // The instance override the skeleton demo writes: Godot serialises all three
-    // and applies `transform` last.
+    // An instance override can write all three: Godot serialises them and
+    // applies `transform` last.
     const result = parseParallaxBackground(heading('ParallaxBackground', { name: 'BG' }), {
       offset: 'Vector2(0, -427)',
       scale: 'Vector2(0.5, 0.5)',

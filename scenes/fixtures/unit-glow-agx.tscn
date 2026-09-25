@@ -1,12 +1,9 @@
 [gd_scene load_steps=5 format=3 uid="uid://unitglowagx"]
 
-; Glow under the AgX tone curve rather than FILMIC.
-;
-; Every other glow fixture tonemaps with FILMIC, which the editor preview supplies,
-; so the glow path's composition with the other four curves goes unmeasured. AgX is
-; the most divergent of them — a rec2020 inset, a piecewise sigmoid about middle
-; grey, then an outset — and its hard toe crushes exactly the dim halo tail glow
-; produces, so a curve applied in the wrong place shows here.
+; Glow under the AgX tone curve rather than FILMIC. Every other glow fixture uses the editor
+; preview's FILMIC. AgX diverges most (a rec2020 inset, a piecewise sigmoid about middle grey,
+; an outset), and its hard toe crushes the dim halo tail glow produces, so a curve applied in
+; the wrong place shows here.
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_dark"]
 sky_top_color = Color(0.06, 0.07, 0.1, 1)

@@ -1,7 +1,6 @@
 /**
- * Parity: legacy TileMap renders each enabled layer's cells in order — layer
- * draw order within the node is a rank over `(layer z_index, layer index,
- * atlas source)`, carried by each batch mesh's own `renderOrder`.
+ * Tests that the legacy TileMap draws each enabled layer's cells in order: a rank
+ * over (layer z_index, layer index, atlas source), on each batch mesh's `renderOrder`.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -68,11 +67,11 @@ describe('TileMap render parity', () => {
     const [layer0, layer1] = meshes.map((m) => m.instance as THREE.Object3D);
     // Godot's TileMap `add_child`s a real `TileMapLayer` CanvasItem per layer
     // and forwards `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so a
-    // layer is a canvas item in its own right: its key rides its GROUP, which
+    // layer is a canvas item in its own right: its key rides its group, which
     // is what three reads a drawn object's position from.
     const zBucket = (o: THREE.Object3D) => Math.floor(nearestGroupOrder(o) / PAINT_SEQUENCE_STRIDE);
     expect(nearestGroupOrder(layer0!)).toBeLessThan(nearestGroupOrder(layer1!));
-    // …and `layer_1/z_index = 1` puts that layer a whole z BUCKET up, which is
+    // …and `layer_1/z_index = 1` puts that layer a whole z bucket up, which is
     // what lets it interleave with the TileMap's siblings rather than only with
     // the other layers. A rank shared across one canvas item cannot express it.
     expect(zBucket(layer1!)).toBe(zBucket(layer0!) + 1);

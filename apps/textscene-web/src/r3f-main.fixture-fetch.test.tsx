@@ -1,21 +1,13 @@
 /**
- * Fixture-fetch failure + debounce-supersession pins for the editable source pane.
- *
- * Pins the app-level state table around `fetch(/fixtures/…)`:
- *   - a fetch that FAILS clears the pane buffer, HOLDS the previous render, and
- *     surfaces the load-error banner (role="alert");
- *   - a pending edit forward (the pane's debounce) is superseded by a fixture
- *     switch — the switched root renders and the edited root never does, whether
- *     the switch's fetch succeeds or fails;
- *   - a stale error banner is cleared by the interaction that supersedes it
- *     (fetch error → upload; upload error → fixture switch), and when both
- *     channels hold an error the most recently SET one shows.
+ * The app state around `fetch(/fixtures/…)`: a failed fetch clears the buffer, holds the
+ * render and shows the load-error banner. A fixture switch supersedes a pending edit forward.
+ * The interaction that supersedes an error clears its banner, and the most recent error shows.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
-// <TscnCanvas> mounts a real WebGL <Canvas> happy-dom can't provide — stub it (and the
-// scene contents) so the rest of the shell + the pane render. Everything else is real.
+// happy-dom cannot provide the WebGL <Canvas> that <TscnCanvas> mounts, so it and the scene
+// contents are stubs. Everything else is real.
 vi.mock('@textscene/core', async () => {
   const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
   return { ...real, TscnCanvas: () => null, TscnSceneContents: () => null };
@@ -43,7 +35,7 @@ const SWITCHED_TSCN = `[gd_scene load_steps=1 format=3]
 `;
 
 const DEFAULT_FILE = 'unit-plane-mesh.tscn';
-/** The fixture the tests switch TO (any leaf that isn't the app's default). */
+/** The fixture the tests switch to: any leaf but the app's default. */
 const SWITCH_TARGET = flattenLeaves(buildFixtureTree(fixtures)).find(
   (l) => l.file !== DEFAULT_FILE
 ) as Leaf;
@@ -82,11 +74,9 @@ function paneTextarea() {
 }
 
 /**
- * Open the palette and click the switch target. `justBeforeClick` (if given)
- * runs in the same synchronous task as the click itself, so anything it arms —
- * specifically the pane's DEBOUNCE_MS edit forward — cannot fire before the
- * switch lands. Arming the edit BEFORE this call would race the real debounce
- * timer against the awaited palette lookup and flake under machine load.
+ * Open the palette and click the switch target. `justBeforeClick` runs in the click's
+ * synchronous task, so the pane's DEBOUNCE_MS edit forward it arms cannot fire before the
+ * switch lands. Armed before this call, it would race the palette lookup and flake under load.
  */
 async function switchToTarget(justBeforeClick?: () => void) {
   fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
@@ -99,11 +89,9 @@ async function switchToTarget(justBeforeClick?: () => void) {
 }
 
 /**
- * Deterministically outlast the pane's debounce, keeping React happy about
- * the timer's state flush. This sleep timer is armed strictly AFTER any edit
- * debounce timer, so timer-expiry ordering guarantees a (wrongly) surviving
- * edit forward fires before this resolves — regardless of machine load. The
- * 2x is pure margin, not load compensation.
+ * Outlast the pane's debounce inside `act`. This timer is armed after any edit debounce
+ * timer, so timer order makes a surviving edit forward fire first under any load. The 2x
+ * is margin, not load compensation.
  */
 async function settlePastDebounce() {
   await act(async () => {
@@ -115,11 +103,10 @@ beforeEach(() => {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // happy-dom may throw in edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
-  // A fixture switch writes `?fixture=` back to the URL
-  // (history.replaceState) — reset it so one test's switch doesn't leak
-  // into the next test's initial mount as a stale deep link.
+  // A fixture switch writes `?fixture=` to the URL, which would reach the next test's mount
+  // as a stale deep link.
   window.history.replaceState(null, '', '/');
 });
 
@@ -138,17 +125,16 @@ describe('fixture fetch failure — pane clears, render holds, banner shows', ()
     await waitFor(() => {
       expect(screen.queryByRole('alert')?.textContent).toContain('Failed to load fixture');
     });
-    // The pane buffer is cleared…
+    // The pane buffer is cleared,
     expect(paneTextarea().value).toBe('');
-    // …but the previous render HOLDS (forwarded content untouched on failure).
+    // but the previous render holds.
     expect(screen.queryByText('StubRoot')).toBeTruthy();
   });
 });
 
 describe('debounce supersession — a fixture switch cancels a pending edit forward', () => {
-  // These scenarios edit the pane mid-switch, which now triggers the
-  // edit-discard guard — accept it (happy-dom has no window.confirm); the
-  // guard's own contract lives in r3f-main.edit-guard.test.tsx.
+  // An edit mid-switch triggers the discard guard, and happy-dom has no window.confirm.
+  // r3f-main.edit-guard.test.tsx holds the guard's own contract.
   beforeEach(() => {
     vi.stubGlobal('confirm', vi.fn(() => true));
   });
@@ -162,7 +148,7 @@ describe('debounce supersession — a fixture switch cancels a pending edit forw
     await waitForScene();
 
     await switchToTarget(() => {
-      // Armed in the same task as the click — guaranteed inside the window.
+      // Armed in the click's task, so inside the window.
       fireEvent.change(paneTextarea(), { target: { value: EDITED_TSCN } });
     });
 
@@ -178,7 +164,7 @@ describe('debounce supersession — a fixture switch cancels a pending edit forw
     await waitForScene();
 
     await switchToTarget(() => {
-      // Armed in the same task as the click — guaranteed inside the window.
+      // Armed in the click's task, so inside the window.
       fireEvent.change(paneTextarea(), { target: { value: EDITED_TSCN } });
     });
 
@@ -192,9 +178,7 @@ describe('debounce supersession — a fixture switch cancels a pending edit forw
   });
 });
 
-// ---------------------------------------------------------------------------
-// Error-banner supersession — newer interactions clear stale errors
-// ---------------------------------------------------------------------------
+// Error-banner supersession: a newer interaction clears a stale error.
 
 const UPLOADED_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -242,9 +226,8 @@ describe('error-banner supersession — stale errors do not outlive the next act
   });
 
   it('shows the fixture error, not the stale upload error, when the switch fetch fails after a bad drop', async () => {
-    // The switch target's fetch stays in flight until the test fails it,
-    // opening the window where an upload error lands BEFORE the fetch error.
-    // The banner must then show the fetch error — the most recently set one.
+    // The switch target's fetch stays in flight until the test fails it, so an upload error
+    // lands before the fetch error. The banner shows the most recent one, the fetch error.
     let failSwitchFetch!: () => void;
     globalThis.fetch = vi.fn().mockImplementation((url: unknown) => {
       if (String(url).endsWith(`/${SWITCH_TARGET.file}`)) {

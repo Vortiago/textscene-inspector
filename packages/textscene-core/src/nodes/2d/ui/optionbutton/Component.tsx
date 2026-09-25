@@ -1,26 +1,8 @@
 /**
- * `<OptionButton>` — the native (WebGL canvas) painter for
- * `OptionButton`: Button-style StyleBox chrome, the SELECTED item's text (not
- * every item — this is a static previewer, never the open popup), and the
- * chevron arrow icon at its right edge, drawn from the vendored theme icons
- * (`native/themeIcons.ts`'s `OPTION_BUTTON_ICONS`).
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`.
- * The StyleBox hands `tint.own` straight to `<StyleBoxQuad>`'s `color` prop
- * (two base colours, composed internally); the arrow's own theme colour is
- * ALWAYS opaque white (`modulate_arrow`
- * defaults `false`, `default_theme.cpp:251` — `NOTIFICATION_DRAW` then never
- * enters the font-colour switch at all, leaving `clr = Color(1, 1, 1)`
- * unconditionally), so the arrow quad's colour/opacity are `tint.color`/
- * `tint.opacity` directly, same as `CheckBox`'s icon.
- *
- * `renderOrder` reaches all three meshes (chrome `StyleBoxQuad`, arrow
- * `ControlQuad`, text `<TextRun>`); `clippingPlanes` reaches the text material
- * explicitly (the two quads read `useControlClipPlanes()` internally).
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * `<OptionButton>`, the native painter: Button-style StyleBox chrome, the selected item's text and the
+ * chevron arrow from `OPTION_BUTTON_ICONS`. The arrow's theme colour stays white, since `modulate_arrow`
+ * defaults false (`default_theme.cpp:251`), so its quad takes `tint` directly, as CheckBox's icon does.
+ * `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -62,14 +44,13 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
   const arrowTexture = useNodeIcon(solveNode.icons.arrow, OPTION_BUTTON_ICONS.arrow);
   const arrowSize = useMemo(() => optionButtonArrowSize(solveNode), [solveNode]);
 
-  // --- Text: the SELECTED item only, never the popup's full list -----------
+  // Text: the selected item only, never the popup's full list
   const text = resolveOptionButtonSelectedText(props);
   const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = optionButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
-  // Read INSIDE the render body, not the `useMemo` below — see Label's own
-  // Component.tsx for why.
+  // Read in the render body, not the `useMemo` below, for the reason Label's Component.tsx gives.
   const fontMetrics = resolveNodeFontMetrics(solveNode, OPTION_BUTTON_THEME_FONT_KEY);
   const layout: TextLayoutResult | null = useMemo(
     () =>
@@ -79,7 +60,7 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
     [hasText, text, fontSizePx, fontMetrics]
   );
 
-  // --- Content layout: text + arrow placement within the solved rect ------
+  // Content layout: text and arrow placement within the solved rect
   const arrowMargin = solveNode.constants.arrow_margin ?? theme.separation;
 
   const content = useMemo(
@@ -91,12 +72,9 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
         arrowMargin,
         hSeparation: optionButtonHSeparation(solveNode.constants, { theme }),
         rtl: solveNode.rtl,
-        // Godot's draw path reads the same ceiled `text_buf->get_size()` its
-        // minimum size does (`scene/gui/button.cpp:343,349`), so the alignment
-        // shift is computed against the ceiled width, not the raw pen advance.
-        // Only the width needs it: `Size2::ceil()` ceils both components, but
-        // the line pitch is already a sum of independently-ceiled ascent and
-        // descent plus an integral theme spacing, so the height is integral.
+        // The draw path reads the ceiled `text_buf->get_size()` its minimum size does
+        // (`scene/gui/button.cpp:343,349`), so alignment uses the ceiled width. The height is already
+        // integral: ceiled ascent plus ceiled descent plus an integral spacing.
         textNaturalSize: layout
           ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
           : { x: 0, y: 0 },
@@ -106,7 +84,7 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
 
   return (
     <>
-      {/* `Button::_notification`'s `if (!flat)` (`button.cpp:216`) — inherited,
+      {/* `Button::_notification`'s `if (!flat)` (`button.cpp:216`), inherited,
           and the only thing `flat` changes: the minimum size still carries the
           stylebox's margins (`:525`). */}
       {!props.flat && (

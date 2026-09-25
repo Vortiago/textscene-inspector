@@ -1,15 +1,8 @@
 /**
- * BoxContainer's native rect solve, tested against literal inputs — no React,
- * no scene cache, no TscnParser (except the one integration test that reads
- * the actual committed fixture). Every expected rect is either:
- *  - measured directly off real Godot 4.6.3 via a `SubViewport` + `get_rect()`
- *    probe, reproduced here as a
- *    synthetic `custom_minimum_size` input rather than a Label, so a
- *    font-metric regression and a `_resort` regression can never present as
- *    the same failure, or
- *  - a hand-worked arithmetic example from the cited Godot source, shown in
- *    the comment.
- * None are re-derived the way the implementation derives them.
+ * BoxContainer's native rect solve against literal inputs. Each expected rect is measured off
+ * Godot 4.6.3 (a `SubViewport` + `get_rect()` probe) or hand-worked from the cited source, never
+ * re-derived as the implementation does. Children use a synthetic `custom_minimum_size`, not a
+ * Label, so a font-metric regression and a `_resort` regression never fail alike.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -48,9 +41,8 @@ function child(overrides: Partial<BoxChildInput> = {}): BoxChildInput {
   };
 }
 
-// --- Both original fixtures, reproduced with synthetic minimum sizes -------
-// (unit-vbox-container.tscn / unit-hbox-container.tscn; rects measured by the
-// probe-project SubViewport + get_rect() oracle.)
+// unit-vbox-container.tscn and unit-hbox-container.tscn with synthetic minimum sizes, rects
+// measured by the probe-project SubViewport + get_rect() oracle.
 
 describe('resortBoxContainer — unit-vbox-container.tscn, reproduced synthetically', () => {
   it('END alignment (no child expands): Top/Bottom land at y=586/625, height 23 each', () => {
@@ -92,13 +84,12 @@ describe('resortBoxContainer — unit-hbox-container.tscn, reproduced synthetica
   });
 });
 
-// --- The four cases neither original fixture exercises ---------------------
-// Each is measured against real Godot 4.6.3 via the probe-project SubViewport
-// + get_rect() oracle (same technique, ad hoc scenes, not committed).
+// Four cases neither fixture exercises, each measured on Godot 4.6.3 with the same SubViewport
+// + get_rect() oracle in ad hoc scenes.
 
 describe('resortBoxContainer — fractional-remainder carry + discard/refit eviction', () => {
-  // Also the new unit-hbox-container-stretch.tscn fixture's own children —
-  // see the "reads the actual fixture" integration test below.
+  // Also the unit-hbox-container-stretch.tscn fixture's children, which the "reads the actual
+  // fixture" integration test below reads.
   const children = [
     child({ minSize: { x: 100, y: 0 }, hSizeFlags: HORIZONTAL, stretchRatio: 1 }),
     child({ minSize: { x: 100, y: 0 }, hSizeFlags: HORIZONTAL, stretchRatio: 3 }),
@@ -106,12 +97,10 @@ describe('resortBoxContainer — fractional-remainder carry + discard/refit evic
   ];
 
   it('evicts the oversized child, then carries the fractional remainder among the survivors', () => {
-    // Pass 1 (ratio_total=6, stretch_avail=1130): A=188.3(keep,188) B=565.0(keep,565)
-    // C=376.7 < 600 (its own minimum) => EVICTED, stretch_avail becomes 530, ratio_total=4.
-    // Pass 2 (A:B=1:3): A=530*1/4=132.5 (floor 132, error 0.5); B=530*3/4=397.5, error
-    // reaches 1.0 => B gets the carried pixel: floor(397.5)+1=398.
-    // Godot 4.6.3 SubViewport get_rect(): Narrow=[0,0,132,648] Wide=[143,0,398,648]
-    // Oversized=[552,0,600,648] (theme_override_constants/separation = 11).
+    // Pass 1 (ratio_total=6, stretch_avail=1130): A=188.3, B=565.0, C=376.7 < its 600 minimum, so
+    // C is evicted: stretch_avail 530, ratio_total 4. Pass 2 (A:B=1:3): A=132.5 floors to 132 (error
+    // 0.5), B=397.5 carries to 398. Godot 4.6.3 get_rect() (separation 11): Narrow=[0,0,132,648]
+    // Wide=[143,0,398,648] Oversized=[552,0,600,648].
     const rects = resortBoxContainer(false, { width: 1152, height: 648 }, 11, 0, false, children);
     expect(rects).toEqual<Rect2[]>([
       { x: 0, y: 0, w: 132, h: 648 },
@@ -123,18 +112,10 @@ describe('resortBoxContainer — fractional-remainder carry + discard/refit evic
 
 describe('resortBoxContainer — float32 fractional-error accumulator (unit-vbox-container-pitch.tscn\'s ExpandColumn)', () => {
   it('three-way carry test lands on Green=213/Amber=451, not the float64 double-precision 214/452', () => {
-    // Godot 4.6.3 headless, `Control.get_rect()` read directly off the live engine
-    // (SubViewport-free `_ready` probe against this exact scene, the same oracle
-    // technique the rest of this suite uses): Red [P:(0,0), S:(400,60)], Blue [P:(0,84), S:(400,106)],
-    // Green [P:(0,214), S:(400,213)], Amber [P:(0,451), S:(400,90)].
-    //
-    // `stretch_avail`(320) * ratio / `stretch_ratio_total`(3) for Blue(ratio 1) and
-    // Green(ratio 2) leaves 320/3 and 640/3 fractional. `error`/`final_pixel_size` are
-    // `float` (box_container.cpp:114,121) — float32 throughout — and their two fractions
-    // sum to 0.9999923706054688, UNDER the `error >= 1` carry threshold (:134), so Green
-    // keeps its floored 213 and the container's 542px leaves 1px unassigned at the bottom.
-    // A float64 port sums the same two fractions to 1.0000000000000142, OVER the
-    // threshold, wrongly carries a pixel into Green (214), and shifts Amber down by one.
+    // Godot 4.6.3 `get_rect()`: Red [P:(0,0), S:(400,60)], Blue [P:(0,84), S:(400,106)], Green
+    // [P:(0,214), S:(400,213)], Amber [P:(0,451), S:(400,90)]. Blue's 320/3 and Green's 640/3 sum in
+    // float32 (box_container.cpp:114,121) to 0.9999923706054688, under the carry (:134), leaving 1px
+    // free. A float64 port sums 1.0000000000000142, carries into Green (214) and shifts Amber down.
     const VERTICAL_EXPAND = 3; // Control.SIZE_FILL | SIZE_EXPAND
     const children = [
       child({ minSize: { x: 0, y: 60 } }),
@@ -154,18 +135,10 @@ describe('resortBoxContainer — float32 fractional-error accumulator (unit-vbox
 
 describe('resortBoxContainer — Size2i truncation of the container size and each child\'s minimum, ahead of the stretch arithmetic', () => {
   it('truncates the fractional container height AND both fractional child minimums before dividing the stretch range', () => {
-    // Godot 4.6.3 headless, `Control.get_rect()`/`get_combined_minimum_size()` read off
-    // the live engine for a VBoxContainer sized 400.9x541.3 (fractional `offset_*`) holding
-    // two FILL|EXPAND children with fractional `custom_minimum_size` (60.6 and 40.4),
-    // separation 24, both stretch_ratio 1: A [P:(0,0), S:(400,258)] min=(0, 60.6),
-    // B [P:(0,282), S:(400,259)] min=(0, 40.4). `Size2i new_size = get_size()`
-    // (box_container.cpp:47) truncates 541.3 -> 541 and `Size2i size =
-    // c->get_combined_minimum_size()` (:60) truncates 60.6 -> 60 / 40.4 -> 40 BEFORE
-    // stretch_min/stretch_avail/stretch_max ever see them: stretch_max = 541-24 = 517,
-    // stretch_min = 60+40 = 100, stretch_diff = 417, stretch_avail = 100+417 = 517,
-    // 517/2 = 258.5 each -> A floors to 258, B carries the pixel to 259 (541 total, no
-    // leftover). A full-precision port would instead divide (541.3-24-100.9)... /2 and land
-    // on different fractional shares.
+    // Godot 4.6.3 `get_rect()`, VBox 400.9x541.3, separation 24, two FILL|EXPAND children with
+    // minimums 60.6 and 40.4: A [P:(0,0), S:(400,258)], B [P:(0,282), S:(400,259)]. `Size2i` truncates
+    // 541.3 to 541 (box_container.cpp:47) and the minimums to 60 and 40 (:60), so stretch_avail is
+    // 517 and 258.5 each floors A to 258 and carries B to 259. Full precision gives other shares.
     const children = [
       child({ minSize: { x: 0, y: 60.6 }, vSizeFlags: 3, stretchRatio: 1 }),
       child({ minSize: { x: 0, y: 40.4 }, vSizeFlags: 3, stretchRatio: 1 }),
@@ -180,12 +153,10 @@ describe('resortBoxContainer — Size2i truncation of the container size and eac
 
 describe('resortBoxContainer — RTL ordering + BEGIN+RTL alignment', () => {
   it('reverses placement order and (BEGIN, rtl) pushes the offset to the far edge', () => {
-    // No child expands (stretch_ratio_total=0): stretch_diff = (1152-2*15) - (50+80+120) = 872.
-    // ALIGNMENT_BEGIN + rtl => ofs = stretch_diff (box_container.cpp:152-156). RTL walks
-    // children back-to-front: Third places first (at ofs=872), then Second, then First —
-    // First (the LTR-first child) ends up at the RIGHT edge.
-    // Godot 4.6.3 SubViewport get_rect() (layout_direction=RTL on the container):
-    // First=[1102,0,50,648] Second=[1007,0,80,648] Third=[872,0,120,648].
+    // No child expands: stretch_diff = (1152-2*15) - (50+80+120) = 872, and ALIGNMENT_BEGIN + rtl
+    // gives ofs = stretch_diff (box_container.cpp:152-156). RTL places Third first, so First ends at
+    // the right edge. Godot 4.6.3 get_rect() (RTL container): First=[1102,0,50,648]
+    // Second=[1007,0,80,648] Third=[872,0,120,648].
     const children = [
       child({ minSize: { x: 50, y: 0 } }),
       child({ minSize: { x: 80, y: 0 } }),
@@ -202,11 +173,9 @@ describe('resortBoxContainer — RTL ordering + BEGIN+RTL alignment', () => {
 
 describe('resortBoxContainer — rule 1: EXPAND without FILL claws its reserved stretch space back to its minimum', () => {
   it('an EXPAND-only child reserves stretch space in _resort, then fit_child_in_rect shrinks it to its minimum and left-positions it', () => {
-    // Both EXPAND (ratio_total=2): each initially reserves 1132*1/2=566.0. The EXPAND|FILL
-    // sibling keeps that width; the EXPAND-only child's fit_child_in_rect call then
-    // overrides w back down to its own 80px minimum, x unchanged (no SHRINK_END/CENTER =>
-    // begin-position, non-rtl => no offset) — a real clawback, not the FILL no-op case.
-    // Godot 4.6.3 SubViewport get_rect(): ExpandOnly=[0,0,80,648] ExpandFill=[586,0,566,648].
+    // Both EXPAND (ratio_total=2) reserve 1132*1/2=566.0 each. fit_child_in_rect shrinks the
+    // EXPAND-only child to its 80px minimum at the band's start: a real clawback, not the FILL
+    // no-op. Godot 4.6.3 get_rect(): ExpandOnly=[0,0,80,648] ExpandFill=[586,0,566,648].
     const children = [
       child({ minSize: { x: 80, y: 40 }, hSizeFlags: EXPAND, stretchRatio: 1 }),
       child({ minSize: { x: 80, y: 40 }, hSizeFlags: HORIZONTAL, stretchRatio: 1 }),
@@ -234,11 +203,9 @@ describe('resortBoxContainer — edges', () => {
   });
 });
 
-// --- Registry adapters -------------------------------------------------------
-
 describe('boxContainerMinimumSize', () => {
   it('main axis sums children + separation between them; cross axis is the largest child (horizontal)', () => {
-    // Matches the new unit-hbox-container-stretch.tscn fixture's own container minimum,
+    // Matches the unit-hbox-container-stretch.tscn fixture's container minimum,
     // measured by the same Godot oracle: MyHBoxContainer min=[822, 0].
     const sizes = [{ x: 100, y: 0 }, { x: 100, y: 0 }, { x: 600, y: 0 }];
     expect(boxContainerMinimumSize(false, 11, sizes)).toEqual({ x: 822, y: 0 });
@@ -271,12 +238,10 @@ describe('boxContainerMinimumSize', () => {
   });
 });
 
-// --- End-to-end through the registry (ContainerLayoutFn/MinimumSizeFn wiring) ---
-
 function solveNode(path: string, type: string, properties: Record<string, unknown>, children: SolveNode[] = []): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
-  // A local theme_override_constants/* now reaches a solver through
+  // A local theme_override_constants/* reaches a solver through
   // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
   const constants = (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
   return { ...emptySolveNode(), path, node: tscnNode, children, constants };
@@ -329,12 +294,10 @@ describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered en
   });
 
   it('never lays out a child promoted past a Node2D, nor counts it toward the container minimum', () => {
-    // `Container::as_sortable_control` casts the DIRECT child to Control
-    // (container.cpp:143-155) and `_resort`/`get_minimum_size` only ever hand it
-    // `get_child(i)` (box_container.cpp:58, :198). A Control the walker promoted
-    // past a Node2D is a grandchild in the real tree, so the Container never
-    // sees it: it keeps its own anchors against its Node2D parent's zero
-    // anchorable rect (canvas_item.h:414).
+    // `Container::as_sortable_control` casts the direct child (container.cpp:143-155), and `_resort`
+    // and `get_minimum_size` hand it only `get_child(i)` (box_container.cpp:58, :198). A Control
+    // promoted past a Node2D is a grandchild the Container never sees, so it keeps its anchors
+    // against the Node2D's zero anchorable rect (canvas_item.h:414).
     controlSolverRegistry.registerContainerLayout('HBoxContainer', makeBoxContainerLayout(false));
     controlSolverRegistry.registerMinimumSize('HBoxContainer', makeBoxContainerMinimumSize(false));
 
@@ -384,8 +347,8 @@ describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered en
     controlSolverRegistry.registerMinimumSize('VBoxContainer', makeBoxContainerMinimumSize(true));
 
     // sizeFlagsVertical mimics what nodes/2d/ui/label/parser.ts already bakes in for an
-    // unset Label (SIZE_SHRINK_CENTER) — this test's own input, not a real Label parse,
-    // per the module's font-metric/`_resort` decoupling rule.
+    // unset Label (SIZE_SHRINK_CENTER): a synthetic input, not a Label parse, to keep font
+    // metrics out of a `_resort` test.
     const root = solveNode('MyVBoxContainer', 'VBoxContainer', {
       layoutMode: 1,
       anchorsPreset: 15,
@@ -423,7 +386,7 @@ describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered en
     function toSolveTree(nodes: readonly TscnNode[], parentPath: string): SolveNode[] {
       return nodes.map((n) => {
         const path = joinPath(parentPath, n.name);
-        // A local theme_override_constants/* now reaches a solver through
+        // A local theme_override_constants/* reaches a solver through
         // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
         const constants =
           (n.properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
@@ -448,15 +411,10 @@ describe('makeBoxContainerLayout — the container\'s own layout direction reach
   });
 
   it('an RTL HBoxContainer mirrors its own rect and lays its children out from the far edge', () => {
-    // `BoxContainer::_resort` reads `is_layout_rtl()` once (`box_container.cpp:48`)
-    // and uses it twice: ALIGNMENT_BEGIN takes the far-edge offset (`:154-155`)
-    // and the placement loop walks back to front (`:187-195`).
-    //
-    // Worked through, three children of 60/120/180 at separation 4 in a
-    // 400-wide box: stretch_min 360, stretch_max 400-2*4=392, stretch_diff 32,
-    // so ofs starts at 32 and the children place C, B, A at 32, 216 and 340.
-    // The box itself is mirrored by `Control::_size_changed` (`control.cpp:1785-1787`):
-    // 1152 - 64 - 400 = 688.
+    // `_resort` reads `is_layout_rtl()` once (`box_container.cpp:48`): ALIGNMENT_BEGIN takes the far
+    // offset (`:154-155`) and placement walks back to front (`:187-195`). Children 60/120/180 at
+    // separation 4 in 400: stretch_diff 32, so C, B, A place at 32, 216 and 340. The box mirrors
+    // through `Control::_size_changed` (`control.cpp:1785-1787`): 1152 - 64 - 400 = 688.
     controlSolverRegistry.registerContainerLayout('HBoxContainer', makeBoxContainerLayout(false));
     controlSolverRegistry.registerMinimumSize('HBoxContainer', makeBoxContainerMinimumSize(false));
 

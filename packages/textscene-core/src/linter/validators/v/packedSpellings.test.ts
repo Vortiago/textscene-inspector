@@ -1,10 +1,7 @@
 /**
- * A packed slot accepts three spellings, not one.
- *
- * `can_convert_strict` lists ARRAY as a valid source for every PACKED_* type
- * (`variant.cpp:467-473`), and the write converts. Verified on godot 4.6.3:
- * `filters = ["*.png"]`, `points = [Vector2(0, 0), Vector2(5, 5)]` and
- * `split_offsets = Array[int]([3, 7])` all load into their packed slots.
+ * A packed slot accepts three spellings: `can_convert_strict` lists ARRAY as a
+ * source for every PACKED_* type (`variant.cpp:467-473`), so `filters = ["*.png"]`
+ * and `split_offsets = Array[int]([3, 7])` load into their packed slots.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -35,14 +32,14 @@ describe('a PackedVector2Array slot', () => {
   it('accepts the convertible element spelling, at the slot\'s own arity', () => {
     // `Variant::operator Vector2()` reads a Vector2i verbatim
     // (`variant.cpp:1751-1756`), and `_convert_array` runs it per element
-    // (`variant.cpp:2082-2091`) — so this is a file Godot opens.
+    // (`variant.cpp:2082-2091`), so this is a file Godot opens.
     expect(at('[Vector2i(0, 0), Vector2i(5, 5)]')).toBeNull();
     expect(at('Array[Vector2]([Vector2i(0, 0)])')).toBeNull();
     expect(at('[Vector2(0, 0), Vector2i(5, 5)]')).toBeNull();
   });
 
   it('still reports an element that is not a Vector2', () => {
-    // A RESHAPING conversion, which `godot/variantConversion.ts` leaves out of
+    // A reshaping conversion, which `godot/variantConversion.ts` leaves out of
     // the accepted table on purpose; the arity check is what catches it.
     expect(at('[Vector3(0, 0, 0)]')?.severity).toBe('error');
     expect(at('[Vector2i(0, 0, 0)]')?.severity).toBe('error');

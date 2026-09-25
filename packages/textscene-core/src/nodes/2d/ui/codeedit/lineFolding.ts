@@ -1,15 +1,7 @@
 /**
- * `CodeEdit::can_fold_line` (`scene/gui/code_edit.cpp:1662-1735`) and the two
- * code-region tests it leans on (`:1990-2012`) — the whole of what decides
- * whether the fold gutter draws an arrow beside a line.
- *
- * Every input is serialisable: `line_folding`, `delimiter_comments`,
- * `delimiter_strings`, `indent_size` and the buffer itself. The branches that
- * are NOT are the runtime ones — `_is_line_hidden` and `is_line_folded` are
- * both false in a frame nothing has folded, since no `.tscn` property folds a
- * line.
- *
- * Pure `.ts` — no React, no THREE.
+ * `CodeEdit::can_fold_line` (`scene/gui/code_edit.cpp:1662-1735`) and its two code-region tests
+ * (`:1990-2012`): what decides whether the fold gutter draws an arrow beside a line. Every input is
+ * serialisable: `line_folding`, the delimiters, `indent_size` and the buffer.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -36,7 +28,7 @@ export interface FoldContext {
   /** `code_region_start_string` / `code_region_end_string` (`code_edit.cpp:3186-3207`). */
   regionStart: string;
   regionEnd: string;
-  /** `text.get_tab_size()` — CodeEdit's `indent_size` forwards to it (`code_edit.cpp:908-920`). Godot default 4. */
+  /** `text.get_tab_size()`, which CodeEdit's `indent_size` forwards to (`code_edit.cpp:908-920`). Godot default 4. */
   tabSize: number;
 }
 
@@ -59,7 +51,7 @@ export function buildFoldContext(
   };
 }
 
-/** `TextEdit::get_indent_level` (`text_edit.cpp:4145-4161`) — tabs count as `tab_size`, and the last character is never counted. */
+/** `TextEdit::get_indent_level` (`text_edit.cpp:4145-4161`): tabs count as `tab_size`, and the last character is never counted. */
 export function getIndentLevel(line: string, tabSize: number): number {
   let tabs = 0;
   let spaces = 0;
@@ -71,7 +63,7 @@ export function getIndentLevel(line: string, tabSize: number): number {
   return tabs * tabSize + spaces;
 }
 
-/** `is_line_code_region_start` (`code_edit.cpp:1990-2000`) — the first space-separated word of the trimmed line IS the tag. */
+/** `is_line_code_region_start` (`code_edit.cpp:1990-2000`): the first space-separated word of the trimmed line is the tag. */
 export function isLineCodeRegionStart(ctx: FoldContext, line: number): boolean {
   return matchesRegionTag(ctx, line, ctx.regionStart);
 }
@@ -88,7 +80,7 @@ function matchesRegionTag(ctx: FoldContext, line: number, tag: string): boolean 
   return first === tag;
 }
 
-/** `is_in_comment(line)` — `_is_in_delimiter` at no column (`code_edit.cpp:2068-2071`). */
+/** `is_in_comment(line)`: `_is_in_delimiter` at no column (`code_edit.cpp:2068-2071`). */
 export function isInComment(ctx: FoldContext, line: number): number {
   return isLineInDelimiter(ctx.lines, ctx.delimiters, ctx.cache, line, 'comment');
 }
@@ -99,11 +91,8 @@ export function isInString(ctx: FoldContext, line: number): number {
 }
 
 /**
- * `CodeEdit::can_fold_line` (`code_edit.cpp:1662-1735`).
- *
- * `_is_line_hidden` and `is_line_folded` are both false here — nothing in a
- * `.tscn` folds a line, so the frame this renders has none folded — and the
- * two branches that read them collapse away.
+ * `CodeEdit::can_fold_line` (`code_edit.cpp:1662-1735`). No `.tscn` property folds a line, so
+ * `_is_line_hidden` and `is_line_folded` are false and their two branches collapse away.
  */
 export function canFoldLine(ctx: FoldContext, line: number, lineFoldingEnabled: boolean): boolean {
   if (!lineFoldingEnabled) return false;
@@ -133,7 +122,7 @@ export function canFoldLine(ctx: FoldContext, line: number, lineFoldingEnabled: 
     // No end line: the region runs to the end of the buffer.
     if (endLine === -1) return true;
     if (endLine === line) {
-      // A BLOCK of single-line delimiters: this line must start it and it must
+      // A block of single-line delimiters: this line must start it and it must
       // continue for at least one more.
       if (line - 1 >= 0 && continuesRegion(ctx, line - 1, inString, inComment)) return false;
       return continuesRegion(ctx, line + 1, inString, inComment);

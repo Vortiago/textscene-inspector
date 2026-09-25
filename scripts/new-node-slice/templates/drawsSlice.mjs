@@ -1,12 +1,7 @@
 /**
- * The files a `draws` slice gets: its own types, parser, Component and the
- * tests for both, plus the two registrations.
- *
- * The registration carries `base.workspaceFlag` for the same reason the
- * transform-only template does: which canvas draws a type follows from its
- * base, not from whether it has a Component of its own.
- *
- * The indentation below is the emitted file's, not this module's.
+ * The files a `draws` slice gets: its own types, parser, Component, their tests and the two
+ * registrations. The registration carries `base.workspaceFlag`, since the canvas that draws a
+ * type follows from its base. The indentation below is the emitted file's, not this module's.
  */
 
 
@@ -139,10 +134,8 @@ ${base.workspaceFlag ? `  ${base.workspaceFlag}\n` : ''}});
 export { ${typeName} };
 `
     );
-    // The registration test the other two shapes already carry: it imports
-    // `./index` itself, so it proves the slice's own self-registration and
-    // says nothing about the aggregation barrels. `parserBarrelCompleteness`
-    // owns the barrel question, from the one position that can ask it.
+    // It imports `./index` itself, so it proves the slice's own self-registration and nothing
+    // about the aggregation barrels, which `parserBarrelCompleteness` checks.
     files.set(
       `${lower}.test.ts`,
       `/**

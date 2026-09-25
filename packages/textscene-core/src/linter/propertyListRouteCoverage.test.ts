@@ -1,13 +1,8 @@
 /**
- * Every property-list route family resolves to a validator, or is a named gap.
- *
- * The table the guard reads is `propertyListRoutes.ts`; its header explains the
- * population and its limits, the four routes a key can arrive by, and what a
- * `sample` proves. This file is only the checking.
- *
- * `UNIMPLEMENTED_COUNT` is a ratchet, exactly like `ownValidatorCoverage`'s
- * `UNDECLARED`: the ceiling can only move down, and every row it counts is a
- * live property family a scene author can write today with zero validation.
+ * Every property-list route family in `propertyListRoutes.ts` resolves to a
+ * validator, or is a named gap. `UNIMPLEMENTED_COUNT` is a ratchet like
+ * `ownValidatorCoverage`'s `UNDECLARED`: each row it counts is a family a scene
+ * can carry with no validation.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -38,11 +33,9 @@ function isDeclined(
 }
 
 /**
- * Every concretely registered node type — real parser slices, the same
- * population `ownValidatorCoverage`'s registry half sweeps — that is `type`
- * itself or descends from it. `descendsFrom` matches the type itself, so a
- * declaring class that is ALSO a concrete leaf (`BoneConstraint3D`,
- * `GraphNode`, …) is included without special-casing.
+ * Every registered parser slice that is `type` or descends from it, the
+ * population `ownValidatorCoverage` sweeps. `descendsFrom` matches the type
+ * itself, so a declaring class that is also a leaf (`BoneConstraint3D`) counts.
  */
 function concreteDescendants(type: string): string[] {
   return nodeRegistry
@@ -61,9 +54,8 @@ const unimplementedRows = ROWS.filter(
 describe('property-list route coverage', () => {
   it('covers the read population, MultiplayerSpawner excluded', () => {
     // A pin, not a ceiling: the population grows only when someone reads
-    // another override and writes its row, and this number moving is the
-    // reviewable evidence that happened. It cannot prove the population is
-    // complete — nothing may scrape the engine to ask.
+    // another override and writes its row. It cannot prove the population is
+    // complete, since nothing may scrape the engine to ask.
     const types = new Set(ROWS.map((row) => row.type));
     expect(types.size).toBe(39);
     expect(types.has('MultiplayerSpawner')).toBe(false);
@@ -107,9 +99,8 @@ describe('property-list route coverage', () => {
   });
 
   it('pins the unimplemented count, so it can only move by editing this file', () => {
-    // Exact equality, not a ceiling: it must fall if a row is fixed and rise
-    // only if a new row is added deliberately, both of which require touching
-    // this constant, which is the whole point of the ratchet.
+    // Exact equality, not a ceiling: a fixed row and a new row both require
+    // an edit to this constant.
     expect(unimplementedRows.length).toBe(UNIMPLEMENTED_COUNT);
   });
 });

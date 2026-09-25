@@ -1,11 +1,7 @@
 /**
- * BoneConstraint3D's `settings/<i>/` leaves.
- *
- * The class binds zero `ADD_PROPERTY` and its XML lists no member, so it looked
- * like an abstract base with nothing to validate. It is not: it materialises
- * seven serialised leaves per setting in an UNPREFIXED
- * `BoneConstraint3D::get_property_list` (bone_constraint_3d.cpp:91-115) that
- * every subclass calls before appending its own.
+ * BoneConstraint3D's `settings/<i>/` leaves. The class binds no `ADD_PROPERTY` and its XML lists no
+ * member, but the unprefixed `BoneConstraint3D::get_property_list` (bone_constraint_3d.cpp:91-115)
+ * adds seven serialised leaves per setting, and every subclass calls it before appending its own.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -40,9 +36,9 @@ describe('BoneConstraint3D settings leaves', () => {
   });
 
   describe('amount (float 0-1, hinted)', () => {
-    // bone_constraint_3d.cpp:102 hints "0,1,0.001"; set_amount (:164-167)
-    // assigns straight through past an ERR_FAIL_INDEX on the setting INDEX, so
-    // out of range is the hint's warning rather than an error.
+    // bone_constraint_3d.cpp:102 hints "0,1,0.001", and set_amount (:164-167)
+    // assigns straight through past an ERR_FAIL_INDEX on the setting index, so
+    // out of range is the hint's warning, not an error.
     it.each(['0', '0.5', '1'])('accepts %s', (value) => {
       expect(check('settings/0/amount', value)).toBeNull();
     });
@@ -96,11 +92,9 @@ describe('BoneConstraint3D settings leaves', () => {
       expect(check('settings/99/amount', '0.5')).toBeNull();
     });
 
-    // `_set` reads the index with a BARE `to_int()` and no validity gate
-    // (bone_constraint_3d.cpp:37), and `_to_int` skips non-digits rather than
-    // stopping at them (ustring.cpp:2268-2298), so `x` resolves to 0 and the
-    // write LANDS on setting 0. Nothing refuses it, so ADR-0032 grounds no
-    // diagnostic on the index; only the leaf is left to judge.
+    // `_set` reads the index with a bare `to_int()` and no validity gate (bone_constraint_3d.cpp:37),
+    // and `_to_int` skips non-digits (ustring.cpp:2268-2298), so `x` resolves to 0 and the write
+    // lands. Nothing refuses it, so ADR-0032 grounds no diagnostic on the index, only on the leaf.
     it('leaves a non-numeric setting index alone, since to_int resolves it to 0', () => {
       expect(check('settings/x/amount', '0.5')).toBeNull();
     });

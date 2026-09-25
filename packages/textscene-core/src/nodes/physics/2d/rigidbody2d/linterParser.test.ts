@@ -81,7 +81,7 @@ describe('RigidBody2D strict validators (physics state)', () => {
 
     it('warns rather than errors outside the enum range', () => {
       // rigid_body_2d.cpp:757 hints PROPERTY_HINT_ENUM "Disabled,Cast
-      // Ray,Cast Shape"; set_continuous_collision_detection_mode (:566-569)
+      // Ray,Cast Shape". set_continuous_collision_detection_mode (:566-569)
       // assigns straight through, so out-of-range is the widget's complaint.
       const error = check('continuous_cd', '5');
       expect(error?.severity).toBe('warning');

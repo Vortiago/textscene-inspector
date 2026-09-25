@@ -1,15 +1,7 @@
 /**
- * AspectRatioContainer strict validators for linting.
- *
- * Declare only AspectRatioContainer's OWN members — the ones doc/classes/AspectRatioContainer.xml
- * lists without an `overrides=` attribute. Everything from Container up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
- *
- * None of the four setters below (aspect_ratio_container.cpp:48-78) contain an
- * ERR_FAIL or a clamp: each is a bare equality-guarded assignment, so every
- * bound here is a PROPERTY_HINT_RANGE/PROPERTY_HINT_ENUM hint rather than
- * engine enforcement, and every rule is a WARNING (ADR-0032).
+ * AspectRatioContainer strict validators. The four setters (aspect_ratio_container.cpp:48-78)
+ * hold no ERR_FAIL or clamp, so every bound is a PROPERTY_HINT_RANGE or PROPERTY_HINT_ENUM
+ * hint and every rule is a warning (ADR-0032).
  */
 
 import '../control/linterParser.js';
@@ -27,6 +19,8 @@ const STRETCH_MODE = {
   3: 'STRETCH_COVER',
 };
 
+// Own members only, those doc/classes/AspectRatioContainer.xml lists without `overrides=`. Container's
+// keys arrive through the NODE_BASE_TYPES walk, and a re-declared one shadows it and duplicates the rule.
 validatorRegistry.registerAll('AspectRatioContainer', {
   // aspect_ratio_container.cpp:188, PROPERTY_HINT_RANGE "0.001,10.0,0.0001,or_greater".
   // "or_greater" opens the max end (never a diagnostic), so only the 0.001
@@ -38,11 +32,9 @@ validatorRegistry.registerAll('AspectRatioContainer', {
   stretch_mode: v.enumInt('stretch_mode', 0, 3, STRETCH_MODE, {
     hinted: 'aspect_ratio_container.cpp:189',
   }),
-  // aspect_ratio_container.cpp:192, PROPERTY_HINT_ENUM "Begin,Center,End",
-  // the same AlignmentMode values as BoxContainer's ALIGNMENT_BEGIN=0,
-  // ALIGNMENT_CENTER=1, ALIGNMENT_END=2 (aspect_ratio_container.h:50-54).
-  // set_alignment_horizontal (aspect_ratio_container.cpp:64-70) assigns
-  // unconditionally, no ERR_FAIL.
+  // aspect_ratio_container.cpp:192, PROPERTY_HINT_ENUM "Begin,Center,End", the same
+  // AlignmentMode values as BoxContainer's (aspect_ratio_container.h:50-54).
+  // set_alignment_horizontal (aspect_ratio_container.cpp:64-70) assigns unconditionally.
   alignment_horizontal: v.enumInt('alignment_horizontal', 0, 2, CONTAINER_ALIGNMENT, {
     hinted: 'aspect_ratio_container.cpp:192',
   }),

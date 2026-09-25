@@ -1,15 +1,7 @@
 /**
- * Every Godot primitive Shape3D draws its own geometry.
- *
- * Capsule, sphere and cylinder shapes used to fall through to a 1x1x1
- * wireframe box — wrong shape AND wrong size. The player capsule in
- * scenes/demos/3d/platformer/player/player.tscn is one of them, and the only
- * gizmo-bearing golden carries the one shape type that WAS implemented, so
- * nothing could see it.
- *
- * Sizes come from the class reference: CapsuleShape3D radius 0.5 / height 2.0
- * (full height, hemispheres included), SphereShape3D radius 0.5,
- * CylinderShape3D radius 0.5 / height 2.0 — all Y-axis aligned.
+ * Every Godot primitive Shape3D draws its own geometry, not a 1x1x1 wireframe box. Sizes come
+ * from the class reference: CapsuleShape3D radius 0.5 / height 2.0 (full height, hemispheres
+ * included), SphereShape3D radius 0.5, CylinderShape3D radius 0.5 / height 2.0, all on the Y axis.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -37,7 +29,7 @@ describe('<CollisionGizmo> primitive shapes', () => {
     const geometry = await geometryOf(shape('CapsuleShape3D', { radius: '0.4', height: '1.8' }));
     expect(geometry.type).toBe('CapsuleGeometry');
     expect(geometry.parameters.radius).toBeCloseTo(0.4, 6);
-    // three's `height` param is the CYLINDRICAL middle section; Godot's height
+    // three's `height` param is the cylindrical middle section. Godot's height
     // is the whole capsule, so middle = height - 2 x radius.
     expect(geometry.parameters.height).toBeCloseTo(1.0, 6);
   });

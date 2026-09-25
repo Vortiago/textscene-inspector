@@ -1,6 +1,4 @@
-/**
- * DirectionalLight3D linter registration - imports linter components to trigger self-registration.
- */
+/** DirectionalLight3D linter registration: the imports self-register. */
 
 import './linterParser.js';
 import './linter.js';

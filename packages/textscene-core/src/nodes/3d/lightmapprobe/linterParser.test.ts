@@ -1,15 +1,7 @@
 /**
- * LightmapProbe strict validators, which are none.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it.
- *
- * LightmapProbe binds no property of its own, so the interesting claim is not
- * "this bound is right" but "nothing is declared here, AND the inherited
- * surface still reaches this type". The second half is what an empty
- * registration could plausibly break, so it gets the tests.
+ * LightmapProbe strict validators, which are none. The tests assert that nothing
+ * is declared here and that the inherited surface still reaches this type, which
+ * an empty registration could break.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,35 +14,22 @@ import './linterParser';
 const check = checkerFor('LightmapProbe');
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * LightmapProbe binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * Set exactly one, from the source: the keys LightmapProbe binds, or
+ * DECLARES_NOTHING when it binds no ADD_PROPERTY. Both unset is red on purpose.
  */
 const KEYS: string[] = [];
 /**
- * True: `lightmap_probe.h:35-39` is the entire class body — `GDCLASS`, a
- * `public:` label and one bare constructor declaration, no `_bind_methods`
- * override. `initialize_class` (`object.h:526`) only calls `_bind_methods()`
- * when a subclass's function pointer differs from its parent's, so LightmapProbe
- * never runs one and no `ADD_PROPERTY` or `ADD_ARRAY_COUNT` can exist.
- * `lightmap_probe.cpp:33-34` is that constructor's empty body alone: no
- * `_set`/`_get`/`_get_property_list`, and no unprefixed `get_property_list`
- * either (the shape `ChainIK3D` uses further up other chains). `LightmapProbe.xml`
- * carries no `<members>` block, which agrees.
+ * True: the class body (`lightmap_probe.h:35-39`) has no `_bind_methods`, which
+ * `initialize_class` (`object.h:526`) needs to add a property, and
+ * `lightmap_probe.cpp:33-34` is an empty constructor with no `_set`/`_get`/property
+ * list. `LightmapProbe.xml` has no `<members>` block.
  */
 const DECLARES_NOTHING = true;
 
 /**
- * Keys LightmapProbe does NOT declare, each paired with the ancestor that does.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives LightmapProbe no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart. All three are Node3D's own
- * (`nodes/base/node3d/linterParser.ts`), picked to cover a transform, a
- * boolean and an enum-hinted int.
+ * Keys LightmapProbe does not declare, each with the ancestor that does: a
+ * transform, a boolean and an enum-hinted int of Node3D. The malformed-value
+ * loop passes vacuously on an empty class, and this does not.
  */
 const INHERITED: [owner: string, key: string][] = [
   ['Node3D', 'transform'],
@@ -68,22 +47,16 @@ describe('LightmapProbe strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
-    //
-    // With no own keys that is the INHERITED validators only — `linterParser`
-    // imports the parent chain — so it covers what VisualInstance3D up declares and
-    // becomes this slice's own claim the moment KEYS gains an entry.
+    // `fixtureLint` checks the whole registry but needs the barrel. This checks
+    // the same file against what this test imported, which with no own keys is
+    // the inherited validators that `linterParser` imports.
     expectFixtureClean('unit-lightmap-probe.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; with no own keys it is vacuous today and
-    // becomes real the moment one is added by mistake. INHERITED below covers
-    // the keys LightmapProbe actually carries.
+    // A validator that accepts arbitrary prose checks no format. With no own
+    // keys this is vacuous until one is added by mistake. INHERITED covers the
+    // keys LightmapProbe carries.
     const accepted = validatorRegistry
       .getOwnKeys('LightmapProbe')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -98,8 +71,8 @@ describe('LightmapProbe strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
-      // LightmapProbe would answer here while drifting from the ancestor's rule.
+      // The same function, not merely some validator: a shadowing copy would
+      // answer here while its rule differs from the ancestor's.
       expect(validatorRegistry.findValidator('LightmapProbe', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('LightmapProbe')).not.toContain(key);
     }

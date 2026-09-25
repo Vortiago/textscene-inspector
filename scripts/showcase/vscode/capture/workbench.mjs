@@ -1,16 +1,12 @@
 /**
- * Driving the running workbench: find its page, run palette commands, open
- * files, reach into a preview webview, and wait for OUR previewer's canvas to
- * actually paint before shooting.
- *
- * Everything here is keyboard-driven through the command palette, because the
- * subject of the shot is the webview and a mouse-driven menu would be in it.
+ * Drives the running workbench: it finds its page, runs palette commands, opens files, reaches
+ * into a preview webview and waits for our previewer's canvas to paint. It uses the keyboard and
+ * the command palette, since a mouse-driven menu would appear in the shot.
  */
 /* global document */ // `document` appears only inside frame.evaluate() callbacks, which run in the browser.
 
-// Workbench parts are addressed by their stable ids rather than by class: the
-// `.part.sidebar` spelling also matches a hidden part, so a visibility test
-// against it answers for the wrong element.
+// Workbench parts by their stable ids, not by class: `.part.sidebar` also matches a hidden part,
+// so a visibility test against it answers for the wrong element.
 const SIDE_BAR = '[id="workbench.parts.sidebar"]';
 const STATUS_BAR = '[id="workbench.parts.statusbar"]';
 const EDITOR_PART = '[id="workbench.parts.editor"]';
@@ -35,13 +31,9 @@ export async function workbenchPage(browser) {
 }
 
 /**
- * Move keyboard focus out of a preview webview and back to the workbench.
- *
- * A webview is an iframe, and VS Code's keybinding service never sees a key
- * pressed while it holds focus — so the palette silently stops opening and
- * every command after it is a no-op that still reports success. Clicking the
- * middle of the status bar is the cheapest way back: nothing lives there, so
- * the click changes no state.
+ * Moves keyboard focus from a preview webview back to the workbench. VS Code's keybinding service
+ * sees no key pressed inside the webview iframe, so the palette stops opening and each command
+ * silently does nothing. A click in the middle of the status bar changes no state.
  */
 async function focusWorkbench(page) {
   const box = await page.locator(STATUS_BAR).first().boundingBox().catch(() => null);
@@ -52,17 +44,17 @@ async function focusWorkbench(page) {
 /** Run a command-palette command by its visible label. */
 export async function palette(page, label) {
   await focusWorkbench(page);
-  await page.keyboard.press('Escape'); // dismiss any stray menu/notification first
+  await page.keyboard.press('Escape'); // Dismisses a stray menu or notification.
   await sleep(150);
   await page.keyboard.press('Control+Shift+P');
   await sleep(500);
   await page.keyboard.type(label, { delay: 8 });
-  await sleep(800); // let the fuzzy filter settle on the top match
+  await sleep(800); // Lets the fuzzy filter settle on the top match.
   await page.keyboard.press('Enter');
   await sleep(700);
 }
 
-/** Open a workspace file via Quick Open. */
+/** Opens a workspace file through Quick Open. */
 async function openFile(page, relPath) {
   await focusWorkbench(page);
   await page.keyboard.press('Escape');
@@ -81,25 +73,21 @@ const openPreview = (page) => palette(page, 'TextScene: Open Preview to the Side
 const soloPreview = (page) => palette(page, 'View: Close Editors in Other Groups');
 
 /**
- * Give the preview group `fraction` of the editor area by dragging the sash.
- *
- * The shots that keep the .tscn source beside the preview want the DESKTOP
- * shell — viewport and dock side by side — and an even split of a 1440px window
- * leaves each group under the shell's 768px stacking width. The window itself
- * cannot be resized (see `seedUserData`), so the split is the only lever.
- * Dragging the sash is also what a reader would do.
+ * Gives the preview group `fraction` of the editor area by dragging the sash, as a reader would.
+ * A shot with the source beside the preview wants the desktop shell, and an even split of the
+ * 1440px window, which cannot be resized (`seedUserData`), falls under its 768px stacking width.
  */
 async function widenPreview(page, fraction) {
   const editor = await page.locator(EDITOR_PART).first().boundingBox();
   const sash = page.locator(`${EDITOR_PART} .monaco-sash.vertical`).first();
   const box = await sash.boundingBox().catch(() => null);
-  if (!editor || !box) return; // a single group has no sash to drag
+  if (!editor || !box) return; // A single group has no sash to drag.
   const y = box.y + box.height / 2;
   await page.mouse.move(box.x + box.width / 2, y);
   await page.mouse.down();
   await page.mouse.move(editor.x + editor.width * (1 - fraction), y, { steps: 12 });
   await page.mouse.up();
-  await sleep(1200); // webview relayout
+  await sleep(1200); // Webview relayout.
 }
 
 /**

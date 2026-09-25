@@ -1,44 +1,38 @@
 /**
- * Godot-editor workspace selection (ADR-0006 amendment): the editor picks the
- * main screen from the node a plugin claims — CanvasItemEditor handles any
- * CanvasItem (Node2D/Control), Node3DEditor handles Node3D, and a plain Node
- * root is claimed by neither (the editor stays where it was). We mirror that
- * rule against the scene ROOT node. Light module: registry + type sets only.
+ * Workspace selection from the scene root (ADR-0006 amendment), as the Godot editor
+ * picks its main screen: CanvasItemEditor claims any CanvasItem, Node3DEditor any
+ * Node3D, and a plain Node root neither. Light module: registry and type sets only.
  */
 
 import type { TscnNode } from '../parser/types';
 import type { ViewportMode } from './contexts/ViewportModeContext';
-// The classification lives on the slice registrations — load them so the
-// rule works regardless of which canvas (if any) imported them first.
+// The classification lives on the slice registrations, loaded here so the rule
+// works whichever canvas, if any, imported them first.
 import './nodes/index.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { is2DUIType } from './controls/has2DUIContent.js';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 
 /**
- * A node Godot's CanvasItemEditor would claim — 2D world content (Node2D,
- * sprites, tilemaps…) or Control/CanvasLayer UI. The shared predicate behind
- * both the root-workspace rule and the "scene has 2D content" hint, so the
- * classification lives in one place. Callers that must see content inside
- * instanced sub-scenes feed effective nodes from the **live scene tree**
- * (`useLiveSceneNodes(isCanvasItemNode)`) rather than a static walk.
+ * A node Godot's CanvasItemEditor would claim: 2D world content or Control and
+ * CanvasLayer UI. A caller that must see inside instanced sub-scenes feeds it nodes
+ * from the **live scene tree** (`useLiveSceneNodes(isCanvasItemNode)`).
  */
 export function isCanvasItemNode(node: TscnNode): boolean {
   return is2DUIType(node.type) || nodeComponentRegistry.isCanvasItem(node.type);
 }
 
 /**
- * The workspace the scene's root node claims, or null when no workspace
- * claims it (plain Node / unknown types — keep the current workspace).
+ * The workspace the scene's root node claims, or null for a plain Node or an
+ * unknown type, which keeps the current workspace.
  */
 export function workspaceForRoot(root: TscnNode | undefined): ViewportMode | null {
   if (!root) return null;
   if (isCanvasItemNode(root)) {
     return '2D';
   }
-  // A viewport is a plain `Node` that neither editor plugin handles, so it
-  // claims nothing — but it IS registered and non-container, so without this
-  // it would fall through to the Node3D arm below and claim '3D' (ADR-0033).
+  // A viewport is a plain `Node` that neither editor plugin handles, but it is
+  // registered and non-container, so it would fall through to the Node3D arm (ADR-0033).
   if (isViewportBoundary(root.type)) {
     return null;
   }

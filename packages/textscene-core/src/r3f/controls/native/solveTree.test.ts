@@ -1,12 +1,7 @@
 /**
- * `painterView`'s runtime contract: a real narrowing whose identity is stable.
- *
- * Two halves that pull against each other — the view must not CARRY
- * `modulate`/`selfModulate` (a solver helper handed the whole object would
- * otherwise read them and double-apply the walker's fold), and it must be the
- * same object every call for one property bag, because painters memoize on
- * props identity (`label/Component.tsx`, `checkbox/Component.tsx`). A per-call
- * copy satisfies the first and breaks the second.
+ * `painterView`'s runtime contract: the view carries no `modulate` or
+ * `selfModulate`, and it is the same object on every call for one property bag,
+ * because painters memoise on props identity. A per-call copy breaks the second.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -82,7 +77,7 @@ describe('painterView', () => {
       text: 'hello',
       customMinimumSize: { x: 4, y: 8 },
     });
-    // Shallow: a nested value is the SAME object, never a clone.
+    // Shallow: a nested value is the same object, never a clone.
     expect(view['customMinimumSize']).toBe(properties['customMinimumSize']);
   });
 

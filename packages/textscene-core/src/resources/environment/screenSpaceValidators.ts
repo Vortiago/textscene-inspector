@@ -13,7 +13,7 @@ export const screenSpaceKeys: Record<string, PropertyValidator> = {
   ssr_enabled: v.boolean('ssr_enabled'),
   // environment.cpp:1307 ("32,512,1"), set_ssr_max_steps (:267) bare-assigns.
   ssr_max_steps: v.int('ssr_max_steps', { min: 32, max: 512, hinted: 'environment.cpp:1307' }),
-  // MAX(p, 0.0) at :277 and :286 — a negative fade is altered, not just off-slider.
+  // MAX(p, 0.0) at :277 and :286: a negative fade is altered, not only off-slider.
   ssr_fade_in: v.float('ssr_fade_in', { min: 0, enforced: 'environment.cpp:277' }),
   ssr_fade_out: v.float('ssr_fade_out', { min: 0, enforced: 'environment.cpp:286' }),
   // environment.cpp:1310 ("0.01,128,0.1"), setter (:294) bare-assigns.

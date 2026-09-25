@@ -1,7 +1,7 @@
 /*
- * Variant J — "Split Dock": a calm, dense, VS-Code-native dark inspector.
- * Design tokens (`--tsi-*`) are defined in TscnPreviewShell.module.css's
- * `:root` block — referenced here, never redefined.
+ * The inspector's styles. The `--tsi-*` design tokens live in the `:root`
+ * block of TscnPreviewShell.module.css: this file reads them and never
+ * redefines one.
  */
 .root {
   padding: var(--tsi-space-2) 0 var(--tsi-space-3) 0;
@@ -21,10 +21,7 @@
   font-style: italic;
 }
 
-/*
- * Node title: clear, strong heading. The first section directly below
- * carries the dim "Type" subtitle row, so the title stays quiet and flat.
- */
+/* The section below carries the dim "Type" row, so the title stays flat. */
 .title {
   margin: 0;
   padding: 0 var(--tsi-space-3) var(--tsi-space-2) var(--tsi-space-3);
@@ -43,11 +40,7 @@
   margin-bottom: 0;
 }
 
-/*
- * Group/section header: uppercase, letter-spaced, dim and small.
- * Pinned to the top of the scroll container with a panel background so
- * it stays legible while scrolling dense property lists.
- */
+/* Sticky with a panel background, so it stays legible over scrolled rows. */
 .sectionTitle {
   position: sticky;
   top: 0;
@@ -64,11 +57,7 @@
   color: var(--tsi-fg-muted);
 }
 
-/*
- * Property row: compact, label-left / value-right. An inset 2px left
- * border reserved (transparent) so hover/selected variants never shift
- * layout when they paint it in.
- */
+/* A transparent 2px left border, so a hover or selected colour never shifts the layout. */
 .row {
   display: flex;
   align-items: baseline;
@@ -88,10 +77,6 @@
   font-size: var(--tsi-font-sm);
 }
 
-/*
- * Values: numeric / vector / path content reads as mono and gets the
- * dedicated value tint. Right-aligned to pair cleanly with the label.
- */
 .value {
   flex: 1;
   min-width: 0;
@@ -103,10 +88,7 @@
   overflow-wrap: break-word;
 }
 
-/*
- * Enum / resource / type tokens arrive wrapped in <code>. Render them as
- * quiet rounded chips on an elevated surface.
- */
+/* Enum, resource and type tokens arrive wrapped in <code>. */
 .value code {
   display: inline-block;
   padding: 1px var(--tsi-space-1);
@@ -117,11 +99,7 @@
   font-size: var(--tsi-font-sm);
 }
 
-/*
- * Color values (rgba(...) / Color(...)) get a small leading swatch.
- * The swatch reads the value text via a CSS variable when supplied; it
- * falls back to a neutral chip when no per-row color is provided.
- */
+/* A colour value's swatch reads a per-row CSS variable, else a neutral chip. */
 .value .swatch {
   display: inline-block;
   width: 0.75em;
@@ -133,11 +111,7 @@
   background: var(--swatch-color, var(--tsi-bg-elevated));
 }
 
-/*
- * External-instance row: selection-like treatment. Soft accent fill, a
- * 2px accent left border (reuses the reserved inset border, no shift),
- * and accent foreground on both label and value.
- */
+/* The external-instance row paints the reserved left border, so nothing shifts. */
 .externalInstance {
   background: var(--tsi-accent-soft);
   border-left-color: var(--tsi-accent);
@@ -156,10 +130,6 @@
   color: var(--tsi-accent-fg);
 }
 
-/*
- * Warning / unsupported-node section: a restrained left rail rather than
- * a loud fill, in keeping with the calm surface language.
- */
 .warningSection {
   border-left: 2px solid var(--tsi-warning);
   margin-bottom: var(--tsi-space-3);
@@ -188,10 +158,6 @@
   font-family: var(--tsi-font-mono);
 }
 
-/*
- * Action controls (e.g. camera switch): ghost by default — transparent
- * surface, dim text, accent on hover/active. Reads as a quiet pill.
- */
 .actionButton {
   display: inline-block;
   margin: 0 var(--tsi-space-3);

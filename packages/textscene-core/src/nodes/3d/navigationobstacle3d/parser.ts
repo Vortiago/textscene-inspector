@@ -1,6 +1,6 @@
 /**
- * NavigationObstacle3D parser — extends the Node3D base parse with the
- * radius/height/avoidance property surface.
+ * NavigationObstacle3D parser: the Node3D base parse plus the radius, height and
+ * avoidance properties.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

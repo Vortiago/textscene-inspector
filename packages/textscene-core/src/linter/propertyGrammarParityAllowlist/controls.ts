@@ -1,23 +1,15 @@
 /**
- * `Control` leaves: the text-bearing four, the container bases and the button
- * tier.
- *
- * The container bases and `BaseButton` sit here rather than with the 2D leaves
- * because they are the same case as the text controls — a Control tier with no
- * `parser.ts`, whose one entry covers every leaf beneath it.
+ * `Control` leaves: the text-bearing controls, the container bases and the
+ * button tier. `BaseButton` is a Control tier with no `parser.ts`, so its one
+ * entry covers every leaf beneath it.
  */
 
 import type { AsymmetryEntry } from './types.js';
 
 export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
-  // -------------------------------------------------------------------------
-  // Text-bearing Control leaves
-  //
-  // These share a shape: carets, selection, context menus and virtual keyboards
-  // have no frozen-frame surface at all, while BiDi and locale DO change which
-  // glyphs land where — this renderer shapes text itself and shapes it
-  // left-to-right, so those keys are a render gap rather than a delegation.
-  // -------------------------------------------------------------------------
+  // Text-bearing leaves: carets, selection, context menus and virtual keyboards
+  // have no frozen-frame surface, while BiDi and locale change where glyphs
+  // land. This renderer shapes text left-to-right, so those are a render gap.
 
   Label: {
     linterOnly: [],
@@ -62,11 +54,9 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'threaded', 'progress_bar_delay',
     ],
     renderGap: [
-      // HORIZONTAL_ALIGNMENT_FILL positions a line at its origin but never
-      // stretches it to the box — the one interaction `fitLineToWidth`
-      // (`textJustify.ts`) is not wired into here, since RichTextLabel's own
-      // per-run glyph slicing (`layoutRichTextRuns`) would need to re-derive
-      // run boundaries against a justified line rather than the shaped one.
+      // HORIZONTAL_ALIGNMENT_FILL places a line at its origin without stretching
+      // it: `fitLineToWidth` (`textJustify.ts`) is not wired in, since
+      // `layoutRichTextRuns` would need run boundaries on the justified line.
       'justification_flags',
       // BiDi and locale: our shaper runs left-to-right only.
       'language', 'structured_text_bidi_override',
@@ -93,11 +83,8 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'follow_focus', 'scroll_deadzone',
       'scroll_horizontal_custom_step', 'scroll_vertical_custom_step',
       // Picks STRETCH_TILE over STRETCH_SCALE on the two hint TextureRects
-      // (scroll_container.cpp:751-752), and nothing else. Both hint icons are
-      // gradients UNIFORM along the axis they would tile on, while the rect
-      // matches the texture's own extent across it — so the two stretch modes
-      // are the same pixels. Confirmed byte-identical on both axes through
-      // `pnpm ref:godot`.
+      // (scroll_container.cpp:751-752). Both hint icons are uniform along the
+      // tiled axis, so the modes give identical bytes under `pnpm ref:godot`.
       'tile_scroll_hint',
     ],
     reason: 'Deadzone, wheel step and follow-focus need an interaction to matter, and tiling the scroll hint cannot change a gradient that is uniform along the tiled axis.',
@@ -129,15 +116,9 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'Interaction base with no parser of its own; press semantics, grouping and shortcuts describe behaviour under input, which a static preview never applies.',
   },
 
-  // -------------------------------------------------------------------------
-  // The editing, list and graph tiers
-  //
-  // Three shapes recur here. An indexed family (`tab_#/*`, `slot/#/*`) is read
-  // through a computed key the guard's scrape of fixed strings cannot match —
-  // the OptionButton entry above is the precedent. Carets, selection,
-  // clipboards, context menus and virtual keyboards have no frozen-frame
-  // surface. Everything else that would change the picture is a render gap.
-  // -------------------------------------------------------------------------
+  // Editing, list and graph tiers: an indexed family (`tab_#/*`, `slot/#/*`) is
+  // read through a computed key the scrape cannot match. Carets, selection and
+  // the like have no frozen-frame surface, and the rest is a render gap.
 
   TextEdit: {
     linterOnly: [
@@ -152,15 +133,15 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'backspace_deletes_composite_character_enabled',
       // Word-boundary sets, which only a double-click selection consults.
       'custom_word_separators', 'use_custom_word_separators', 'use_default_word_separators',
-      // Highlights every occurrence OF THE SELECTION, and a static frame has none.
+      // Highlights every occurrence of the selection, and a static frame has none.
       'highlight_all_occurrences',
       // Virtual keyboard: a mobile affordance with no rendered surface.
       'virtual_keyboard_enabled', 'virtual_keyboard_show_on_focus',
-      // Scroll smoothing and speed describe how the view MOVES, never where it rests.
+      // Scroll smoothing and speed describe how the view moves, never where it rests.
       'scroll_smooth', 'scroll_v_scroll_speed',
-      // `adjust_viewport_to_caret` (text_edit.cpp:904-909) snaps the view back to
-      // line 0 on first draw, and no scene property can move caret 0 — so an
-      // authored scroll offset is genuinely inert rather than unimplemented.
+      // `adjust_viewport_to_caret` (text_edit.cpp:904-909) snaps the view to
+      // line 0 on first draw, and no scene property moves caret 0, so an
+      // authored scroll offset is inert.
       'scroll_horizontal', 'scroll_vertical', 'scroll_past_end_of_file',
     ],
     renderGap: [
@@ -186,8 +167,8 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Tree: {
     linterOnly: [
-      // A `.tscn` Tree has no rows at all — TreeItems exist only once a script
-      // creates them — so every key below describes rows that are never there.
+      // A `.tscn` Tree has no rows, since only a script creates TreeItems, so
+      // every key below describes rows that are never there.
       'allow_reselect', 'allow_rmb_select', 'allow_search', 'auto_tooltip',
       'drop_mode_flags', 'enable_drag_unfolding', 'enable_recursive_folding',
       'hide_folding', 'hide_root', 'select_mode',
@@ -201,7 +182,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   ItemList: {
     linterOnly: [
       // Read through a computed key, `properties[`item_${i}/text`]`, which the
-      // guard's scrape of fixed key strings cannot match.
+      // scrape of fixed key strings cannot match.
       'item_#/*',
     ],
     reason: 'The row family is read through a computed key the scrape cannot match.',
@@ -226,8 +207,8 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   GraphNode: {
     linterOnly: [
-      // Read through a computed key, `slot/<index>/<leaf>`, which the guard's
-      // scrape of fixed key strings cannot match.
+      // Read through a computed key, `slot/<index>/<leaf>`, which the scrape of
+      // fixed key strings cannot match.
       'slot/*',
     ],
     reason: 'The slot family is read through a computed key the scrape cannot match.',
@@ -235,8 +216,8 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   GraphEdit: {
     linterOnly: [
-      // Panning is an interaction; a scene holds the resulting scroll_offset
-      // and zoom, which the parser does read.
+      // Panning is an interaction. The scene holds the resulting scroll_offset
+      // and zoom, which the parser reads.
       'panning_scheme', 'right_disconnects',
       // `zoom_step` reaches nothing but the panner's own scroll factor.
       'zoom_step',
@@ -249,7 +230,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   MenuBar: {
     linterOnly: [
       // Opening a menu is an interaction, and the native global menu replaces
-      // the bar with the desktop\'s own — neither reaches a frozen frame.
+      // the bar with the desktop\'s own. Neither reaches a frozen frame.
       'switch_on_hover', 'prefer_global_menu', 'start_index',
     ],
     renderGap: [
@@ -271,8 +252,8 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   FoldableContainer: {
     linterOnly: [
-      // A FoldableGroup coordinates which sibling is open; the scene already
-      // holds each container\'s own resulting `folded`.
+      // A FoldableGroup coordinates which sibling is open. The scene already
+      // holds each container\'s resulting `folded`.
       'foldable_group',
     ],
     renderGap: [
@@ -284,13 +265,11 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   ColorPicker: {
     linterOnly: [
-      // Deferred mode changes WHEN the colour signal fires, never the picture.
+      // Deferred mode changes when the colour signal fires, never the picture.
       'deferred_mode',
-      // `btn_add_preset` is the only thing this ever disables, and it lives
-      // inside `preset_container`, which stays collapsed at load (presets
-      // only ever arrive through `add_preset()` at runtime — never a
-      // `.tscn` — so the button that shows them is never in a static frame
-      // either).
+      // It disables only `btn_add_preset`, inside `preset_container`, which
+      // stays collapsed at load: presets arrive only through `add_preset()` at
+      // runtime, never a `.tscn`.
       'can_add_swatches',
     ],
     reason: 'Deferred mode is signal timing alone; can_add_swatches only disables a button inside the presets grid, which is never expanded in a static frame.',

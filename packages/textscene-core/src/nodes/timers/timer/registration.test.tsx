@@ -1,5 +1,5 @@
 /**
- * Timer render contract: no component of its own — the registry reuses the
+ * Timer render contract: no component of its own. The registry reuses the
  * base Node group, registered `container: true` so the non-spatial helper
  * passes through both the 2D and 3D workspaces.
  */

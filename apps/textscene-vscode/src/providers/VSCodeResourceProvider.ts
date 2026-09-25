@@ -1,7 +1,4 @@
-/**
- * ResourceProvider implementation for VS Code environment.
- * Loads resources from the workspace filesystem.
- */
+/** The VS Code ResourceProvider: it loads resources from the workspace filesystem. */
 
 import * as vscode from 'vscode';
 import { isBinaryResourceType, stripResPrefix } from '@textscene/core/resources/resourceProviderUtils';
@@ -15,14 +12,10 @@ function normalizeFsPath(fsPath: string): string {
 }
 
 /**
- * Whether a normalized path is the root or sits under it.
- *
- * A bare `startsWith` is not containment: it also accepts every SIBLING whose
- * path merely begins with the root's spelling, so `res://../proj-secrets/key.pem`
- * out of a `/home/u/proj` workspace normalizes to `/home/u/proj-secrets/key.pem`
- * and passes the check labelled as stopping traversal. The separator is what
- * makes it a boundary; a root that already ends in one (`/`, `c:/`) must not
- * gain a second.
+ * Whether a normalized path is the root or sits under it. A bare `startsWith`
+ * admits `res://../proj-secrets/key.pem` out of a `/home/u/proj` workspace, so the
+ * separator makes the boundary. A root that already ends in one (`/`, `c:/`)
+ * gains no second.
  */
 function isWithinRoot(rootNormalized: string, candidateNormalized: string): boolean {
   if (candidateNormalized === rootNormalized) return true;
@@ -34,16 +27,14 @@ export class VSCodeResourceProvider implements ResourceProvider {
   private projectRoot: vscode.Uri | null = null;
 
   /**
-   * fsPath (normalized) -> the exact `res://` string a `loadResource` call
-   * resolved it to. Recorded as soon as a candidate location is resolved
-   * (either branch), *before* the read is attempted — a resource the scene
-   * references but that doesn't exist on disk yet must still be recorded, so
-   * a later `onDidCreate` for that exact path can recover it via
-   * `getServedResPath`, instead of being silently treated as irrelevant.
+   * Normalized fsPath -> the exact `res://` string a `loadResource` call resolved
+   * it to. Recorded on resolution, before the read, so a resource not on disk yet
+   * is still recorded and a later `onDidCreate` recovers it through
+   * `getServedResPath`.
    */
   private servedResources = new Map<string, string>();
 
-  /** `workspaceRoot`, normalized once — it's constructor-fixed and reused on every resolution. */
+  /** `workspaceRoot`, normalized once in the constructor for every resolution. */
   private readonly workspaceRootNormalized: string;
 
   constructor(
@@ -66,7 +57,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
     } catch (primaryError) {
       info(`[VSCodeResourceProvider] Primary resolution failed:`, primaryError);
 
-      // If primary resolution failed, try relative to document's directory as fallback
+      // Fallback: relative to the document's directory.
       try {
         const relativePath = stripResPrefix(resourcePath);
         const documentDir = vscode.Uri.joinPath(this.documentUri, '..');
@@ -74,7 +65,6 @@ export class VSCodeResourceProvider implements ResourceProvider {
 
         info(`[VSCodeResourceProvider] Trying fallback path: ${fallbackPath.fsPath}`);
 
-        // Validate within workspace bounds
         const fallbackPathNormalized = normalizeFsPath(fallbackPath.fsPath);
 
         if (isWithinRoot(this.workspaceRootNormalized, fallbackPathNormalized)) {
@@ -92,12 +82,9 @@ export class VSCodeResourceProvider implements ResourceProvider {
   }
 
   /**
-   * Read an already-resolved fsPath and convert it to the shape `loadResource`
-   * returns. Shared by the primary and fallback resolution branches, which
-   * differ only in which `fsPath` they resolved to. Throw-transparent: a
-   * `readFile` failure here propagates to the caller's try/catch unchanged, so
-   * the primary branch's failure still falls through to the fallback branch,
-   * and the fallback's failure still falls through to the final error.
+   * Reads a resolved fsPath into the shape `loadResource` returns, for both
+   * branches. A `readFile` failure propagates unchanged, so the primary branch
+   * falls through to the fallback, and the fallback to the final error.
    */
   private async readContent(
     fsPath: vscode.Uri,
@@ -107,39 +94,31 @@ export class VSCodeResourceProvider implements ResourceProvider {
     const fileData = await vscode.workspace.fs.readFile(fsPath);
     info(`[VSCodeResourceProvider] Read ${fileData.byteLength} bytes`);
 
-    // Return as ArrayBuffer for binary files (textures, audio, GLB/GLTF)
+    // Binary files (textures, audio, GLB/GLTF) return an ArrayBuffer.
     if (isBinaryResourceType(type, resourcePath)) {
-      // Create a new ArrayBuffer from Uint8Array
       const buffer = new ArrayBuffer(fileData.byteLength);
       const view = new Uint8Array(buffer);
       view.set(fileData);
       return buffer;
     }
 
-    // Return as string for text files (scenes, scripts, shaders)
+    // Text files (scenes, scripts, shaders) return a string.
     return new TextDecoder('utf-8').decode(fileData);
   }
 
   /**
-   * Look up the exact `res://` string previously served (via `loadResource`)
-   * for this fsPath, or `null` if this provider never served it — meaning
-   * either the file is irrelevant to the current scene, or it hasn't been
-   * requested yet (either way, there is nothing to invalidate). No IO: this
-   * replaces re-deriving the path via project-root-relative math, so it
-   * round-trips resources resolved through the document-dir fallback branch
-   * and is unaffected by on-disk casing differences from a file watcher.
+   * The exact `res://` string `loadResource` served for this fsPath, or `null`
+   * when never served, so there is nothing to invalidate. A lookup with no IO, not
+   * a re-derivation, so it round-trips the fallback branch and ignores a watcher's
+   * casing.
    */
   getServedResPath(fileUri: vscode.Uri): string | null {
     return this.servedResources.get(normalizeFsPath(fileUri.fsPath)) ?? null;
   }
 
   /**
-   * Find the Godot project root by searching for project.godot file.
-   * Searches upward from the document location toward workspace root.
-   * Falls back to the workspace root if no project.godot is found.
-   * Delegates to the shared `findGodotProjectRoot` (also used by
-   * `TscnDocumentLinkProvider`) and caches the result for this provider's
-   * lifetime.
+   * The Godot project root from the shared `findGodotProjectRoot`, cached for this
+   * provider's lifetime.
    */
   private async findProjectRoot(): Promise<vscode.Uri> {
     if (this.projectRoot) {
@@ -154,20 +133,16 @@ export class VSCodeResourceProvider implements ResourceProvider {
   }
 
   /**
-   * Convert Godot resource path (res://) to VS Code Uri.
-   * Resolves relative to Godot project root (where project.godot is located).
-   * Validates that resolved path stays within workspace bounds (prevents path traversal attacks).
+   * Resolves a `res://` path against the project root into a VS Code Uri, and
+   * refuses one outside the workspace, which blocks path traversal.
    */
   private async resolveGodotPath(godotPath: string): Promise<vscode.Uri> {
     const relativePath = stripResPrefix(godotPath);
 
-    // Find project root (where project.godot is located)
     const projectRoot = await this.findProjectRoot();
 
-    // Resolve the path relative to project root
     const resolvedUri = vscode.Uri.joinPath(projectRoot, relativePath);
 
-    // Validate that resolved path is within workspace bounds
     const resolvedPathNormalized = normalizeFsPath(resolvedUri.fsPath);
 
     if (!isWithinRoot(this.workspaceRootNormalized, resolvedPathNormalized)) {

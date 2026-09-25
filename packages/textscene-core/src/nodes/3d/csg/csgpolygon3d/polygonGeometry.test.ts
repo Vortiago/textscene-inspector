@@ -1,11 +1,8 @@
 /**
  * CSGPolygon3D geometry, pinned against `CSGPolygon3D::_build_brush`
- * (`modules/csg/csg_shape.cpp:2151`).
- *
- * Three assertions here exist because the obvious three.js substitute is wrong in a way
- * that still looks like a solid: `ExtrudeGeometry` sweeps to +Z over [0, depth] where
- * Godot sweeps to -Z over [-depth, 0], and `LatheGeometry` starts its profile on +Z where
- * Godot starts on +X and never emits caps.
+ * (`modules/csg/csg_shape.cpp:2151`). The obvious three.js substitutes look solid but are wrong:
+ * `ExtrudeGeometry` sweeps to +Z over [0, depth] where Godot sweeps to -Z over [-depth, 0], and
+ * `LatheGeometry` starts its profile on +Z where Godot starts on +X and never emits caps.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -111,7 +108,7 @@ describe('buildCsgPolygonGeometry', () => {
     });
 
     it('builds NO caps at a full revolution, closing on itself instead', () => {
-      // csg_shape.cpp:2214 — end_count stays 0 at 360 degrees, and the last frame snaps
+      // csg_shape.cpp:2214: end_count stays 0 at 360 degrees, and the last frame snaps
       // back to the base transform so the seam shares vertices exactly.
       const sides = 8;
       const geometry = build({ polygon: SLOPE, mode: PolygonMode.SPIN, spinDegrees: 360, spinSides: sides });
@@ -181,7 +178,7 @@ describe('buildCsgPolygonGeometry', () => {
       };
       // Front cap triangles come first and must stay flat even with smooth_faces on.
       expect(flatTriangle(0)).toBe(true);
-      // At least one wall triangle must NOT be flat.
+      // At least one wall triangle must not be flat.
       const wallStart = 8;
       const anySmooth = Array.from({ length: 20 }, (_, i) => wallStart + i).some((t) => !flatTriangle(t));
       expect(anySmooth).toBe(true);

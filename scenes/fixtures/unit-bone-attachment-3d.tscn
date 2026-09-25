@@ -1,12 +1,9 @@
 [gd_scene format=3]
 
-; Both ways a BoneAttachment3D can reach a skeleton, because they are exclusive
-; (bone_attachment_3d.cpp:128-142): MyBoneAttachment3D is parented to the
-; Skeleton3D and takes it from get_parent(), ExternalBoneAttachment3D sits
-; outside and names one through external_skeleton, which only serialises while
-; use_external_skeleton is on. The skeleton carries two real bones so bone_idx
-; and bone_name name something; the linter checks neither against it, since the
-; only ceiling on a bone index is a bone count no .tscn states.
+; Both exclusive ways a BoneAttachment3D reaches a skeleton (bone_attachment_3d.cpp:128-142): one
+; is parented to the Skeleton3D, the other names it in external_skeleton, which serialises only
+; while use_external_skeleton is on. The linter checks no bone_idx or bone_name against the two
+; bones, since no .tscn states a bone count.
 
 [node name="Root" type="Node3D"]
 

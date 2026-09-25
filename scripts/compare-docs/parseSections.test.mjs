@@ -1,15 +1,7 @@
 /**
- * `parseSections` (build-gallery.mjs) turns a sheet body into intro prose plus
- * its per-property comparison sections. A section is a `## Heading` followed by
- * a `<!-- compare: … -->` marker; historically that adjacency had to be
- * IMMEDIATE, so a heading separated from its marker by a blank line — ordinary
- * Markdown, and what `PointLight2D`'s comparison.md actually writes in four of
- * its seven sections — fell through to plain prose with no rendered widget, and
- * did so silently: the marker line itself is an HTML comment `renderBody` drops,
- * so nothing in the output even hints a section went missing.
- *
- * These tests pin the fix (blank lines tolerated) and the backstop (a marker
- * that STILL isn't attached to a heading fails loudly instead of vanishing).
+ * `parseSections` (gallery/sheetParsing.mjs): a `## Heading` then, after any
+ * blank lines, a `<!-- compare: … -->` marker. `renderBody` drops the marker
+ * line, so a marker attached to no heading must fail loudly, not vanish.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -53,7 +45,7 @@ describe('parseSections', () => {
     const { sections, trailing, orphaned } = parseSections(body);
     expect(sections).toHaveLength(1);
     expect(sections[0].title).toBe('Metallic');
-    // Regression guard: a section's OWN prose must not leak the next heading in.
+    // A section's own prose must not take in the next heading.
     expect(sections[0].body).toBe('Body prose.');
     expect(trailing).toContain('## Known limitations');
     expect(trailing).toContain('Some caveat that applies to the whole sheet.');
@@ -124,11 +116,8 @@ describe('build() missing-image reporting', () => {
   });
 
   it('stays empty for a sheet that declares no image at all', () => {
-    // The state a freshly scaffolded slice ships in: no capture target for
-    // recapture, and no broken reference for build-gallery to report. Adding
-    // the `image:` key by hand is what asks for the first capture, so a
-    // declared-but-absent image has to stay non-fatal — see the reasoning at
-    // the `missing` push in build-gallery.mjs.
+    // A freshly scaffolded slice: no capture target for recapture and no
+    // broken reference to report. Adding `image:` asks for the first capture.
     const { missing } = build([minimalSheet({})], false, false);
     expect(missing).toEqual([]);
   });

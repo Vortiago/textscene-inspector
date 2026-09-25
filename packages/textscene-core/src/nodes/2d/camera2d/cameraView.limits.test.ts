@@ -1,16 +1,8 @@
 /**
- * Camera2D scroll limits.
- *
- * `camera_2d.cpp::get_camera_transform()` clamps the view rect into the limit
- * rect BEFORE adding `offset` (the docs say so too: "The offsetted camera can
- * go past the limits"), and the clamp has three branches per axis:
- *
- *   1. view wider than the limit span → CENTRE it in the span
- *   2. past the near edge            → snap to it
- *   3. past the far edge             → snap the far edge back
- *
- * gated on `limit_enabled` (default true). None of it was implemented, so
- * "look through" a limited camera framed somewhere Godot would never scroll to.
+ * Camera2D scroll limits. `camera_2d.cpp::get_camera_transform()` clamps the view
+ * rect into the limit rect before adding `offset`, gated on `limit_enabled`. Per
+ * axis, a view wider than the span centres in it, and otherwise the near or far
+ * edge snaps back.
  */
 import { describe, expect, it } from 'vitest';
 import { camera2DView } from './cameraView';
@@ -77,7 +69,7 @@ describe('camera2DView limits', () => {
   });
 
   it('measures the view at the camera zoom', () => {
-    // zoom 2 halves the view to 576 px, so it now FITS the 800-px span.
+    // zoom 2 halves the view to 576 px, so it fits the 800-px span.
     const view = camera2DView(
       props({ zoom: 'Vector2(2, 2)', limit_left: '0', limit_right: '800' }),
       { x: 5000, y: 0 },

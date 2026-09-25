@@ -1,7 +1,7 @@
 /**
  * Collision objects and the bodies derived from them.
  *
- * `CollisionObject2D`/`CollisionObject3D` each declare ONE "needs a collision
+ * `CollisionObject2D`/`CollisionObject3D` each declare one "needs a collision
  * shape" `push_back`, implemented as one rule per dimension that reaches every
  * subclass through `descendsFrom`.
  */

@@ -1,21 +1,17 @@
 [gd_scene format=3]
 
-; Never carries `vertical`, which VFlowContainer removes. These three
-; fixed-size ColorRect children are the ONE variable, replacing the original
-; two Labels: a Label's height depends on font metrics, which cannot
-; reliably pin whether a wrap happens at all. First(20) fits alone;
-; Second(20) cannot join it (20+4+20 > 32) and wraps to column 1; Third(14)
-; cannot join Second either (20+4+14 > 32) and wraps to column 2, which does
-; NOT read as "filled" (the wrap check re-adds Third's own height:
-; 14+14=28 <= 32) — the one condition that lets last_wrap_alignment move a
-; column at all. A regression in the wrap threshold, the per-column
-; alignment, last_wrap_alignment, or reverse_fill is invisible without this.
+; Never carries `vertical`, which VFlowContainer removes. The three fixed-size ColorRects are the
+; one variable: a Label's height depends on font metrics, which cannot pin a wrap. First(20) fits
+; alone. Second(20) wraps to column 1 (20+4+20 > 32) and Third(14) to column 2 (20+4+14 > 32).
+; Column 2 is not "filled" (the wrap check re-adds Third: 14+14=28 <= 32), so last_wrap_alignment can move it.
 
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; Without these children a regression in the wrap threshold, the per-column alignment,
+; last_wrap_alignment or reverse_fill is invisible.
 [node name="MyVFlowContainer" type="VFlowContainer" parent="."]
 layout_mode = 1
 offset_left = 8.0

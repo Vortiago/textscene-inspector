@@ -96,7 +96,7 @@ describe('decodeCurve', () => {
   it('lets `point_count` pad the emptied list, which is the engine\'s own result', () => {
     // `_data` is refused wholesale, then `set_point_count` pads with
     // `_add_point(Vector2())` (`curve.cpp:41-57`) whose position is clamped to
-    // the domain floor (`:63`) — three points at the origin, sampling 0.
+    // the domain floor (`:63`): three points at the origin, sampling 0.
     const curve = decodeCurve({
       _data: '[Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.5, 1e999), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]',
       point_count: '3',
@@ -171,8 +171,8 @@ describe('`point_count` resizes the decoded point list', () => {
     expect(curve.points[0]).toEqual(DEFAULT_POINT);
     expect(curve.points[1]).toEqual(DEFAULT_POINT);
     // `leftTangent` is 1, not the written 0.5: `_add_point` ends in
-    // `update_auto_tangents` (curve.cpp:100), and a LINEAR endpoint re-aims at
-    // the neighbour that just arrived — here the slope from (0,0) to (1,1).
+    // `update_auto_tangents` (curve.cpp:100), and a Linear endpoint re-aims at
+    // the neighbour that just arrived: here the slope from (0,0) to (1,1).
     expect(curve.points[2]).toEqual({
       position: { x: 1, y: 1 },
       leftTangent: 1,

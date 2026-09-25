@@ -1,7 +1,6 @@
 /**
- * <SpotLight3D> — cone-shaped light with target for direction.
- * Gizmo: three.js SpotLightHelper draws the cone outline so users can
- * see the angle / range / aim without depending on visible illumination.
+ * <SpotLight3D>: a cone light aimed at a target. Its SpotLightHelper gizmo
+ * shows the angle, range and aim without relying on the illumination.
  */
 
 import { useMemo, useRef } from 'react';
@@ -29,11 +28,10 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
   const color = parseColorToHex(properties.light_color);
   const intensity = properties.light_energy * LIGHT_INTENSITY_SCALE;
   const angleRadians = (properties.spot_angle * Math.PI) / 180;
-  // Godot `spot_attenuation` is the DISTANCE falloff exponent (default 1) →
-  // three.js decay (was hardcoded to 2, dimming lights too fast).
-  // `spot_angle_attenuation` is the CONE-EDGE falloff exponent (default 1;
-  // higher = sharper edge) → three.js penumbra (0 hard .. 1 soft), mapped
-  // inversely. Explicit `penumbra` overrides the derived value.
+  // `spot_attenuation`, the distance falloff exponent (default 1), is three.js
+  // decay. `spot_angle_attenuation`, the cone-edge exponent (default 1, higher is
+  // sharper), maps inversely to penumbra (0 hard, 1 soft). An explicit `penumbra`
+  // overrides the derived value.
   const decay = properties.spot_attenuation ?? 1;
   const penumbra =
     properties.penumbra ??

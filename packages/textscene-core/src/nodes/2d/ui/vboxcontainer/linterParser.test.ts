@@ -1,10 +1,7 @@
 /**
- * VBoxContainer narrows exactly one inherited key and inherits the rest.
- *
- * The base-walk can only ever widen what a leaf accepts, so a fixed-orientation
- * container needs its own validator to take `vertical` back — Godot's setter
- * refuses it outright on this class. These assertions pin both halves: the
- * narrowing, and that narrowing did not cost the inherited set.
+ * VBoxContainer narrows one inherited key and inherits the rest. The base-walk only widens, so
+ * a fixed-orientation container needs its own validator to take `vertical` back, which Godot's
+ * setter refuses on this class. These tests pin the narrowing and the inherited set.
  */
 
 import { describe, expect, it } from 'vitest';

@@ -1,7 +1,8 @@
 /**
- * VSeparator self-registration: importing `index.r3f` must wire the native
- * (WebGL canvas) painter and the minimum-size solver into their registries.
+ * VSeparator self-registration: importing `index.r3f` wires the native (WebGL canvas)
+ * painter and the minimum-size solver into their registries.
  */
+
 import { describe, expect, it } from 'vitest';
 import './index.r3f';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

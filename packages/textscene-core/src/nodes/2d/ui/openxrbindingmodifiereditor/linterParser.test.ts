@@ -1,13 +1,8 @@
 /**
- * OpenXRBindingModifierEditor strict validators: coverage check.
- *
- * The type declares no ADD_PROPERTY of its own (see linterParser.ts), so
- * there is no per-property happy/malformed/edge case to grow here. What
- * matters is that the base-walk still reaches every inherited key a scene
- * author can legally set on it, including `size_flags_horizontal`, the one
- * member modules/openxr/doc_classes/OpenXRBindingModifierEditor.xml lists
- * for this type, tagged overrides="Control" because the constructor only
- * changes its default (openxr_binding_modifier_editor.cpp:249).
+ * Tests that the base-walk reaches every inherited key of OpenXRBindingModifierEditor, which declares no
+ * ADD_PROPERTY (linterParser.ts). That includes `size_flags_horizontal`, the one member
+ * modules/openxr/doc_classes/OpenXRBindingModifierEditor.xml lists, as overrides="Control": the
+ * constructor only changes its default (openxr_binding_modifier_editor.cpp:249).
  */
 
 import { describe, expect, it } from 'vitest';

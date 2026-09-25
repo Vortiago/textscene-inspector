@@ -1,49 +1,26 @@
 /**
- * Registry of the rects a `SubViewportContainer` FORCES onto its sub-viewport
- * children, keyed by scene-tree node path — the return leg of ADR-0033's seam.
- *
- * `ViewportTextureRegistry` carries a target from a publisher inside the R3F
- * root to consumers in the DOM overlay. This carries a measurement the other
- * way, and it exists because Godot's own dependency runs that way too:
- *
- *     void SubViewportContainer::_notification(NOTIFICATION_RESIZED) { ... }
- *     void SubViewportContainer::recalc_force_viewport_sizes() {
- *         if (!stretch) return;
- *         c->set_size_force(get_size() / stretch_shrink);
- *     }
- *
- * With `stretch` on, the container's own rect — not the authored `size` — is
- * what the viewport renders at, so the sub-viewport's content lays out against
- * a number only the container knows. In the previewer the container is a DOM
- * box in the Control overlay and the publisher is an R3F component in a
- * different reconciler root, so the rect has to cross that boundary.
- *
- * Deliberately a SEPARATE registry rather than a wider `ViewportTextureEntry`:
- * the two travel in opposite directions and have different lifetimes (a rect
- * exists as soon as the overlay lays out; a target only once the pass has run),
- * and a consumer of one must not re-render because the other changed.
- *
- * **No rect published is a valid state**, not an error: `stretch` off does not
- * resize the viewport at all (Godot returns early), and a sub-viewport with no
- * container has nothing to be resized by. Both fall back to the authored
- * `size`, which is exactly what Godot does for them.
+ * The rects a `SubViewportContainer` forces onto its sub-viewports, by node
+ * path: the return leg of ADR-0033's seam. With `stretch` on, Godot's
+ * `recalc_force_viewport_sizes` sizes the viewport at `get_size() / stretch_shrink`,
+ * and only the container, a DOM box in another reconciler root, knows that rect.
  */
 
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 
-/** The forced rect, in viewport pixels — already divided by `stretch_shrink`. */
+/** The forced rect in viewport pixels, already divided by `stretch_shrink`. */
 export interface ViewportRect {
   x: number;
   y: number;
 }
 
 /**
- * Publish the rect at `path`; returns a cleanup that unregisters it.
- * Re-registering the same path transfers ownership: superseded cleanups become
- * no-ops, so a publisher may re-register freely without releasing first.
+ * Publishes the rect at `path` and returns the cleanup. A re-registration
+ * transfers ownership, so a superseded cleanup does nothing.
  */
 export type RegisterViewportRect = (path: string, rect: ViewportRect) => () => void;
 
+// Separate from the texture registry: the two travel in opposite directions
+// with different lifetimes, and a consumer of one must not re-render for the other.
 const NO_OP_REGISTER: RegisterViewportRect = () => () => {};
 const EMPTY: ReadonlyMap<string, ViewportRect> = new Map();
 
@@ -58,7 +35,11 @@ export function useRegisterViewportRect(): RegisterViewportRect {
   return useContext(RegisterViewportRectContext);
 }
 
-/** Reactive lookup: the rect forced at `path`, or null when none is. */
+/**
+ * The rect forced at `path`, or null, which is valid: with `stretch` off Godot
+ * returns early, and a sub-viewport with no container has nothing to resize it.
+ * Both keep the authored `size`.
+ */
 export function useViewportRect(path: string | null): ViewportRect | null {
   const rects = useContext(ViewportRectsContext);
   return path === null ? null : rects.get(path) ?? null;
@@ -67,12 +48,9 @@ export function useViewportRect(path: string | null): ViewportRect | null {
 export function ViewportRectProvider({ children }: { children: ReactNode }) {
   const [rects, setRects] = useState<ReadonlyMap<string, ViewportRect>>(() => new Map());
   /**
-   * Which registration currently owns each path. The sibling registries
-   * identify the owner by the registered entry itself, which cannot work here:
-   * the fast path below leaves an equal measurement's ORIGINAL object in the
-   * map, so a remount that re-measures the same rect would look like the
-   * departing mount and its stale cleanup would delete the live registration.
-   * A ref, so transferring ownership never renders.
+   * The registration that owns each path. The entry cannot say, since the fast
+   * path below keeps an equal measurement's original object. A ref, so a
+   * transfer of ownership never renders.
    */
   const owners = useRef(new Map<string, object>()).current;
 
@@ -83,9 +61,8 @@ export function ViewportRectProvider({ children }: { children: ReactNode }) {
       const token = {};
       owners.set(path, token);
       setRects((prev) => {
-        // Identity-stable on an unchanged measurement: a ResizeObserver fires on
-        // every layout pass, and a new Map each time would re-render every
-        // consumer and re-allocate every render target.
+        // Stable on an unchanged measurement: a ResizeObserver fires every layout
+        // pass, and a new Map would re-allocate every render target.
         const current = prev.get(path);
         if (current && current.x === rect.x && current.y === rect.y) return prev;
         const next = new Map(prev);

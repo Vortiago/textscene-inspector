@@ -1,9 +1,6 @@
 /**
- * `collectNestedViewportPaths` — the `dependsOn` a viewport pass registers
- * with the ordered pass driver (`passOrder.ts`): every OTHER viewport
- * boundary nested inside this one's own subtree, since any of them might be
- * sampled (a `ViewportTexture` on content somewhere in this subtree) and must
- * therefore render first.
+ * `collectNestedViewportPaths`: the `dependsOn` a viewport pass registers with
+ * the ordered pass driver (`passOrder.ts`).
  */
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../parser/types';

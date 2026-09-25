@@ -1,27 +1,16 @@
 /**
- * The `CSGShape3D` half of every CSG parse — `operation` and `cast_shadow`, the
- * properties a CSGCombiner3D shares with the primitives.
- *
- * Its own module, not a second export beside `finishCsgParse`: the parity guard
- * scrapes a parser's property reads FILE by file and follows every helper it
- * hands the property bag to, so a combiner importing from a file that also reads
- * the material slot would be credited with a key its type does not have
- * (`csg_shape.h:194-202` — a combiner is a CSGShape3D, not a CSGPrimitive3D).
- *
- * Pure TS, so the parser closure stays React-free; the render scaffold lives
- * separately in CsgPrimitive.tsx.
+ * The `CSGShape3D` half of every CSG parse, `operation` and `cast_shadow`, shared by CSGCombiner3D
+ * and the primitives, whose render scaffold is CsgPrimitive.tsx. A React-free module of its own,
+ * not beside `finishCsgParse`: the parity guard scrapes property reads per file, and would credit a
+ * combiner, not a CSGPrimitive3D (`csg_shape.h:194-202`), with `material`.
  */
 
 import { parseOptionalInt } from '../../../parser/valueParsers';
 
 /**
- * Copy every `CSGShape3D` property onto a CSG parse result — split out so a type
- * without `material` can take all of it and nothing else, instead of re-reading
- * these properties and silently dropping whichever one is added here next.
- *
- * A non-union `operation` used to warn here, because it was parsed and then dropped. It
- * is applied now (ADR-0027), so the warn would fire on every correctly rendered
- * subtraction, burying real problems in a scene that uses booleans at all.
+ * Copy every `CSGShape3D` property onto a CSG parse result, so a type without `material` takes
+ * all of it and nothing else. A non-union `operation` does not warn: it is applied (ADR-0027), so
+ * a warning would fire on every correctly rendered subtraction.
  */
 export function finishCsgShapeParse(
   result: { operation?: number; castShadow?: number },

@@ -72,8 +72,8 @@ describe('AudioStreamPlayer3D Linter', () => {
           invalid: [{ value: 'invalid', contains: ['volume_db', 'must be a number'] }],
         },
         {
-          // audio_stream_player_3d.cpp:883 hints "-80,80,suffix:dB" — wider than the
-          // 2D/base players — and set_volume_db (:552-554) only refuses NaN.
+          // audio_stream_player_3d.cpp:883 hints "-80,80,suffix:dB", wider than the
+          // 2D and base players, and set_volume_db (:552-554) only refuses NaN.
           prop: 'volume_db',
           valid: [-80.0, 0, 80],
           invalid: [
@@ -148,7 +148,7 @@ describe('AudioStreamPlayer3D Linter', () => {
         },
         {
           // audio_stream_player_3d.cpp:704 assigns straight through, so the
-          // hint at :902 ("1,20500,1,suffix:Hz") only warns — at both ends.
+          // hint at :902 ("1,20500,1,suffix:Hz") only warns, at both ends.
           prop: 'attenuation_filter_cutoff_hz',
           valid: [1, 5000, 10000, 20500],
           invalid: [
@@ -297,8 +297,8 @@ describe('AudioStreamPlayer3D Linter', () => {
       });
 
       it('reports nothing when emission_angle_degrees is set with emission_angle_enabled', () => {
-        // By ruleName, not by tier: filtering on `severity === 'warning'` made
-        // this pass for any rule behaviour once the arm became info.
+        // By ruleName, not by tier: a `severity === 'warning'` filter would pass
+        // whatever the info arm does.
         expectNoDiagnostic(withStream({ emission_angle_enabled: true, emission_angle_degrees: 45.0 }), {
           ruleName: 'audiostreamplayer3d-emission-angle-not-enabled',
         });
@@ -383,7 +383,7 @@ describe('AudioStreamPlayer3D Linter', () => {
     it('should handle multiple validation errors', () => {
       const diagnostics = lint(bare({ pitch_scale: 0, unit_size: -5.0, max_polyphony: 0 }));
       // pitch_scale and max_polyphony are refused by the engine, so they error;
-      // unit_size = -5 only warns now (audio_stream_player_3d.cpp:569 is a bare
+      // unit_size = -5 only warns (audio_stream_player_3d.cpp:569 is a bare
       // assignment).
       expect(diagnostics.some(d => d.severity === 'error' && d.message.includes('pitch_scale'))).toBe(true);
       expect(diagnostics.some(d => d.severity === 'error' && d.message.includes('max_polyphony'))).toBe(true);

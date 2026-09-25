@@ -1,6 +1,6 @@
 /**
- * `graphEditLayout` vs `GraphEdit::_update_scroll_offset`
- * (`scene/gui/graph_edit.cpp:435-462`, position half only — see the
+ * `graphEditLayout` versus `GraphEdit::_update_scroll_offset`
+ * (`scene/gui/graph_edit.cpp:435-462`, position half only: see the
  * module's own doc for the unreachable `set_scale(zoom, zoom)` half).
  */
 import { describe, expect, it } from 'vitest';

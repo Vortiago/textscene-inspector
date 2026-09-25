@@ -1,14 +1,7 @@
-; ONE VARIABLE: `layout_direction = 3` (RTL) on the lower TabBar.
-;
-; Both bars are too narrow for their four tabs with `clip_tabs = true`, so
-; `buttons_visible` turns on and the scroll arrows draw. Under RTL the pair
-; moves from the trailing edge to the LEADING one, the second arrow steps by
-; the INCREMENT icon's own width rather than the decrement's, and
-; `missing_right` lights the DECREMENT arrow instead of the increment one
-; (tab_bar.cpp:565-591) — three swaps that a bar without overflow never
-; reaches, which is why `unit-tab-bar-rtl` (no clipping, icon and close
-; buttons instead) cannot see a regression in any of them. Both bars anchor
-; to the same symmetric rect, so only the inside of the strip can move.
+; One variable: `layout_direction = 3` on the lower TabBar. Both bars are too narrow for four tabs
+; with `clip_tabs = true`, so `buttons_visible` turns on and the scroll arrows draw. Under RTL the
+; pair moves to the leading edge, the second arrow steps by the increment icon's width, and
+; `missing_right` lights the decrement arrow (tab_bar.cpp:565-591).
 
 [gd_scene format=3]
 
@@ -23,6 +16,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.12, 0.12, 0.18, 1)
 
+; A bar without overflow reaches none of those three swaps, so `unit-tab-bar-rtl` (no clipping,
+; icon and close buttons instead) cannot see them. Both bars anchor to the same symmetric rect,
+; so only the inside of the strip can move.
 [node name="Ltr" type="TabBar" parent="."]
 layout_mode = 1
 anchor_right = 1.0

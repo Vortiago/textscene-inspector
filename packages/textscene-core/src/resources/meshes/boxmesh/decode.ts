@@ -1,4 +1,4 @@
-/** BoxMesh decode — property bag in, box size and subdivisions out. */
+/** BoxMesh decode: property bag in, box size and subdivisions out. */
 
 import type { BoxMeshProperties } from './types';
 import { warn } from '../../../logger';

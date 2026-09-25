@@ -1,9 +1,8 @@
 [gd_scene format=3]
 
-; XRHandModifier3D under the Skeleton3D it poses: SkeletonModifier3D resolves its
-; skeleton from the DIRECT parent only. hand_tracker names the right hand rather
-; than the default left, and bone_update = 1 rotates the bones without moving them
-; so the mesh keeps its own bone lengths.
+; XRHandModifier3D under the Skeleton3D it poses: SkeletonModifier3D resolves its skeleton from
+; the direct parent only. hand_tracker names the right hand rather than the default left, and
+; bone_update = 1 rotates the bones without moving them so the mesh keeps its own bone lengths.
 
 [node name="Root" type="Node3D"]
 

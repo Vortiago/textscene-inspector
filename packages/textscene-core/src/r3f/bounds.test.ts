@@ -1,12 +1,7 @@
 /**
- * Regression coverage for the GLB/skinned-mesh selection box landing on the
- * world origin instead of the rendered model (the platformer Player symptom).
- *
- * Root cause: `THREE.Box3.setFromObject` prefers `SkinnedMesh.boundingBox`
- * (the posed/cached box) over `geometry.boundingBox`. For GLTF-cloned skinned
- * meshes that posed box is in a corrupted frame, so the selection box collapses
- * to the origin. `computeWorldBoundingBox` uses `geometry.boundingBox ×
- * matrixWorld` and must therefore track the rendered position.
+ * A skinned mesh's selection box tracks the rendered model. `setFromObject`
+ * prefers the posed `SkinnedMesh.boundingBox`, which a cloned GLTF mesh holds in
+ * a corrupted frame, so its box collapses to the origin.
  */
 import * as THREE from 'three';
 import { describe, it, expect } from 'vitest';
@@ -44,14 +39,14 @@ describe('computeWorldBoundingBox', () => {
     parent.add(skinned);
     parent.updateWorldMatrix(true, true);
 
-    // Our function tracks the rendered position via geometry.boundingBox.
+    // It tracks the rendered position through geometry.boundingBox.
     const ours = computeWorldBoundingBox(parent).getCenter(new THREE.Vector3());
     expect(ours.x).toBeCloseTo(-9.5, 5);
     expect(ours.y).toBeCloseTo(-3.84, 5);
     expect(ours.z).toBeCloseTo(3.93, 5);
 
-    // Document the three.js behavior we work around: setFromObject uses the
-    // corrupt SkinnedMesh.boundingBox and lands far from the model.
+    // The three.js behaviour this works around: setFromObject uses the corrupt
+    // SkinnedMesh.boundingBox and lands far from the model.
     const broken = new THREE.Box3().setFromObject(parent).getCenter(new THREE.Vector3());
     expect(broken.distanceTo(ours)).toBeGreaterThan(50);
   });
@@ -70,9 +65,8 @@ describe('computeWorldBoundingBox', () => {
   });
 
   it('unions every instance of an InstancedMesh (a Godot GridMap frames the whole grid, not one base tile)', () => {
-    // InstancedMesh.boundingBox starts null; the util must fall back to its
-    // object-level box (union over instanceMatrix), not geometry.boundingBox ×
-    // matrixWorld alone — which would collapse the grid to one tile at 0.
+    // InstancedMesh.boundingBox starts null. The box must come from the instance
+    // matrices, or the grid collapses to one tile at 0.
     const mesh = new THREE.InstancedMesh(unitBoxGeometry(), new THREE.MeshBasicMaterial(), 2);
     mesh.setMatrixAt(0, new THREE.Matrix4().makeTranslation(-5, 0, 0));
     mesh.setMatrixAt(1, new THREE.Matrix4().makeTranslation(5, 0, 0));

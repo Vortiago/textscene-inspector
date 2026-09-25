@@ -1,17 +1,8 @@
 /**
- * SkeletonIK3D strict validators — format checks, and the absence of bounds.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Every one of the nine keys is format-only. Each setter between
- * skeleton_ik_3d.cpp:399 and :476 is a bare field assignment: no `ERR_FAIL*`, no
- * clamp, no mask, no `is_finite` guard, and the only PROPERTY_HINT_RANGE in the
- * file sits on a property that never serialises. So the tests below assert the
- * SHAPE each property takes, plus the values that would be wrongly rejected if
- * someone later invented a bound for one of them.
+ * SkeletonIK3D strict validators: format checks, and the absence of bounds. Asserted through
+ * `validatorRegistry`, so a failure points at the validator, not at scene parsing. Every setter
+ * (skeleton_ik_3d.cpp:399 to :476) is a bare assignment, so the tests pin the shape of each key and
+ * the values an invented bound would reject.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -27,14 +18,10 @@ function check(property: string, value: string) {
 }
 
 /**
- * The nine `ADD_PROPERTY` calls in `SkeletonIK3D::_bind_methods`
- * (skeleton_ik_3d.cpp:353-361), in source order.
- *
- * `interpolation` (skeleton_ik_3d.cpp:366) is deliberately absent: it carries
- * PROPERTY_USAGE_NONE, so it has no STORAGE bit and never reaches a `.tscn`.
- * It is also the only member behind the in-class `#ifndef DISABLE_DEPRECATED`
- * (skeleton_ik_3d.cpp:363-367), and it only forwards to `set_influence`
- * (skeleton_ik_3d.cpp:419), which is SkeletonModifier3D's key.
+ * The nine `ADD_PROPERTY` calls in `SkeletonIK3D::_bind_methods` (skeleton_ik_3d.cpp:353-361), in
+ * source order. `interpolation` (skeleton_ik_3d.cpp:366) is absent: PROPERTY_USAGE_NONE has no
+ * STORAGE bit. It is the only member behind `#ifndef DISABLE_DEPRECATED`
+ * (skeleton_ik_3d.cpp:363-367), and it forwards to `set_influence` (skeleton_ik_3d.cpp:419).
  */
 const KEYS: string[] = [
   'root_bone',
@@ -47,7 +34,7 @@ const KEYS: string[] = [
   'min_distance',
   'max_iterations',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 describe('SkeletonIK3D strict validators', () => {
@@ -60,16 +47,14 @@ describe('SkeletonIK3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // Runs the fixture's "zero errors and zero warnings" claim against the validators this test
+    // imports. `fixtureLint` checks the same file against the whole registry.
     expectFixtureClean('unit-skeleton-ik-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format. This loop is generic, and the
+    // per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('SkeletonIK3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -93,11 +78,10 @@ describe('SkeletonIK3D strict validators', () => {
   });
 
   it('declares no BOUND at all, on a class whose setters refuse nothing', () => {
-    // The positive claim, and the one `boundGrounding` cannot make: it only
-    // asks whether a bound is cited. Here the point is that there is no bound
-    // to cite — every setter (skeleton_ik_3d.cpp:399-476) is a bare field
-    // assignment. An invented floor such as `v.float('min_distance', { min: 0,
-    // enforced: '…' })` passes a classification sweep and fails this.
+    // `boundGrounding` asks only whether a bound is cited. This asserts there is none to cite:
+    // every setter (skeleton_ik_3d.cpp:399-476) is a bare assignment. An invented floor such as
+    // `v.float('min_distance', { min: 0, enforced: '…' })` passes a classification check and fails
+    // this.
     const bounded = validatorRegistry
       .getOwnKeys('SkeletonIK3D')
       .filter((property) => validatorRegistry.declarationFor('SkeletonIK3D', property)?.bounds);
@@ -124,11 +108,10 @@ describe('SkeletonIK3D bone names', () => {
   });
 
   it('accepts a name that is not an enum member', () => {
-    // `_validate_property` (skeleton_ik_3d.cpp:307-315) turns these two into a
-    // PROPERTY_HINT_ENUM, but only under `is_editor_hint()`
-    // (skeleton_ik_3d.cpp:304) and only over `get_concatenated_bone_names()` of
-    // a live Skeleton3D. Neither is visible to a linter, and neither is the
-    // hint the property serialises under.
+    // `_validate_property` (skeleton_ik_3d.cpp:307-315) makes these two a PROPERTY_HINT_ENUM only
+    // under `is_editor_hint()` (skeleton_ik_3d.cpp:304), over a live Skeleton3D's
+    // `get_concatenated_bone_names()`. A linter sees neither, and the property does not serialise
+    // under that hint.
     expect(check('root_bone', '&"NoSuchBoneInAnySkeleton"')).toBeNull();
   });
 });

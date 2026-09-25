@@ -1,12 +1,8 @@
 /**
- * `v.arrayLiteral` — the shape of a `Variant::ARRAY` property's literal.
- *
- * Which typed `Array[T]([…])` values load is a PER-PROPERTY question about the
- * SETTER: a `TypedArray<T>` slot refuses another element type (`Array::assign`),
- * a `const Array &` slot takes every one. What the serialiser emits
- * (`Array::is_typed()`, variant_parser.cpp:2341-2344) answers neither — a
- * write-side fact never bounds the loader. All three arms are asserted here,
- * including the mismatched element type, which the shape alone cannot catch.
+ * `v.arrayLiteral`: which typed `Array[T]([…])` values load depends on the setter.
+ * A `TypedArray<T>` slot refuses another element type (`Array::assign`), and a
+ * `const Array &` slot takes every one. What the serialiser emits
+ * (`Array::is_typed()`, variant_parser.cpp:2341-2344) never bounds the loader.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -44,10 +40,9 @@ describe('v.arrayLiteral (untyped)', () => {
 });
 
 /**
- * `anyElementType` — a slot whose setter takes a bare `const Array &`, or whose
- * `_set` tests only `p_value.get_type() != Variant::ARRAY`. A typed Array IS
- * `Variant::ARRAY`, so every element type loads and refusing one rejected a
- * file Godot opens.
+ * `anyElementType`: a slot whose setter takes a bare `const Array &`, or whose
+ * `_set` tests only `p_value.get_type() != Variant::ARRAY`. A typed Array is
+ * `Variant::ARRAY`, so every element type loads.
  */
 describe('v.arrayLiteral (any element type)', () => {
   it.each(['[]', '[1, 2]', 'Array[int]([0, 4, 2, 4])', 'Array[Variant]([])'])(
@@ -74,9 +69,8 @@ describe('arrayLiteralElements', () => {
   });
 
   it('reads the body from INSIDE the typed wrapper, not off the head', () => {
-    // `value.trim().slice(1, -1)` gives `rray[int]([0, 4, 2`, which a caller
-    // then counts as three elements — the pair check answering on text that is
-    // not the array.
+    // `value.trim().slice(1, -1)` gives `rray[int]([0, 4, 2`, text that is not
+    // the array.
     expect(arrayLiteralElements('Array[int]([0, 4, 2])')).toBe('0, 4, 2');
     expect(arrayLiteralElements('Array[ Vector2i ]([Vector2i(0, 0)])')).toBe('Vector2i(0, 0)');
     expect(arrayLiteralElements('Array[int]([])')).toBe('');

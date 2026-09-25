@@ -1,13 +1,7 @@
 /**
- * `<SplitContainer>` — the native (WebGL canvas) painter for the base
- * `SplitContainer` type. Identical reasoning to `hsplitcontainer/Component.tsx`
- * (read its module doc first, including the sealed-boundary channel), except
- * `vertical` is read from THIS node's own properties at runtime
- * (`types.ts`'s doc) rather than being fixed by type the way
- * HSplitContainer/VSplitContainer's own painters are.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`.
+ * `<SplitContainer>`: the native painter for the base `SplitContainer` type. It follows
+ * `hsplitcontainer/Component.tsx`, sealed-boundary channel included, but reads `vertical` from the
+ * node, not the type. `tint` is the walker's, `self_modulate` folded onto `modulate`.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -38,10 +32,9 @@ export function SplitContainer({ solveNode, tint, rect, theme, renderOrder, meta
   const props = painterView<SplitContainerProperties>(solveNode);
   const vertical = verticalOf(props);
 
-  // `_resort` hides every dragger outright below two valid children
-  // (`split_container.cpp:714-724`), before `dragger_visibility`/`autohide`
-  // are ever consulted — mirrored here rather than only in the layout, since
-  // this painter has no rect to draw an icon between otherwise.
+  // `_resort` hides every dragger below two valid children (`split_container.cpp:714-724`), before
+  // `dragger_visibility` or `autohide` is read. The painter checks it too, since it has no rect
+  // to draw an icon between otherwise.
   const sortable = solveNode.children.filter(isSortableControl);
   const drawsGrabber =
     sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);

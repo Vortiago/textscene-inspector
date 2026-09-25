@@ -1,7 +1,7 @@
 /**
- * `<GraphNode>` render contract — panel/titlebar chrome, title text, per-slot
- * ports/slot boxes, resizer. Structure/tint assertions only (pixels are a
- * golden-image concern via `pnpm ref:godot`, not this suite).
+ * `<GraphNode>` render contract: panel/titlebar chrome, title text, per-slot
+ * ports and slot boxes, and resizer. Structure and tint only: the golden images
+ * own the pixels.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -162,7 +162,7 @@ describe('<GraphNode> chrome placement', () => {
 
   it('draws the body panel BELOW the titlebar, not over it (graph_node.cpp:634-641)', async () => {
     // `Rect2 body_rect(0, titlebar_rect.size.height, ...)`. `StyleBoxQuad`
-    // takes only a SIZE, so the offset has to come from the group around it.
+    // takes only a size, so the offset has to come from the group around it.
     const renderer = await ReactThreeTestRenderer.create(
       <GraphNode {...painterEnv()} solveNode={graphNode({ title: 'N' })} rect={RECT} renderOrder={0} />
     );

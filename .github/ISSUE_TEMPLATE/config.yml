@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Vulnerability report
+    url: https://github.com/Vortiago/textscene-inspector/security/advisories/new
+    about: Do not open a public issue. Report a vulnerability privately.

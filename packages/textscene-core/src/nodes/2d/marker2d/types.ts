@@ -1,4 +1,4 @@
-/** Marker2D — a transform anchor drawn as a small editor cross gizmo. */
+/** Marker2D: a transform anchor drawn as a small editor cross gizmo. */
 
 import type { Node2DProperties } from '../../base/node2d/types';
 

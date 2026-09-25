@@ -1,19 +1,8 @@
 /**
- * The two walks must agree on which types own a canvas.
- *
- * `_enter_canvas` climbs until `Object::cast_to<CanvasLayer>(n)` succeeds
- * (`scene/main/canvas_item.cpp:246-252`), so every `CanvasLayer` subclass is
- * where a broken chain lands. The Node2D world walk asks that with
- * `isCanvasLayerType`, derived from ClassDB; the Control walk asks it with
- * `controlSolverRegistry.isCanvasBoundary`, a per-slice registration. One
- * question, two mechanisms — and `ParallaxBackground` sat in the first and not
- * the second, so a Control inside one hoisted straight past its layer onto the
- * viewport's canvas.
- *
- * A registration cannot be derived: the boundary also needs a painter and a
- * full-viewport rect, which only the slice can supply. So this asserts the
- * coverage instead, over the whole pinned catalog rather than over the two
- * names anybody happens to remember.
+ * The two walks agree on which types own a canvas: `_enter_canvas` stops at any
+ * `CanvasLayer` subclass (`scene/main/canvas_item.cpp:246-252`). The Node2D walk
+ * derives it from ClassDB, the Control walk registers it per slice, since only a
+ * slice supplies the painter and rect, so this checks the whole pinned catalog.
  */
 import { describe, expect, it } from 'vitest';
 import { CATALOG_BASE_TYPES } from '../../godot/nodeBaseTypes.generated';

@@ -418,10 +418,9 @@ describe('Environment Linter Validators', () => {
 
 describe('index.linter entry point', () => {
   it('registers the same validators when imported through the slice entry point', async () => {
-    // The barrel wires `index.linter.ts`, not the implementation module. Both
-    // reach the same `registerAll`, which merges rather than replaces — so the
-    // interim state (barrel on one path, this test on the other) is a no-op
-    // rather than a double registration.
+    // The barrel wires `index.linter.ts`, not the implementation module. Both reach
+    // the same `registerAll`, which merges rather than replaces, so importing both
+    // paths registers nothing twice.
     await import('./index.linter');
     const validator = validatorRegistry.findValidator('Environment', 'glow_blend_mode');
     expect(validator).not.toBeNull();

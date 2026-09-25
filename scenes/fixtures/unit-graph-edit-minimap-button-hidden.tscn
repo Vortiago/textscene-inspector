@@ -1,15 +1,6 @@
-; GraphEdit with only the minimap TOGGLE BUTTON hidden. The minimap itself
-; stays visible: `show_minimap_button` hides the toolbar button alone
-; (graph_edit.cpp:2854-2857) while `minimap_enabled` decides the panel. A
-; renderer that conflates the two draws the right picture in every fixture
-; that moves neither, and the wrong one only here.
-; Every fixture in this family shares one GraphEdit rect and one GraphNode,
-; and `scroll_offset` is deliberately ABSENT from all but
-; unit-graph-edit-scroll-offset-clamped.tscn, which exists to move it:
-; GraphEdit's own `set_scroll_offset` clamps against min/max bounds no laid-out
-; child has widened while a scene's properties are applied (graph_edit.cpp:407),
-; so an authored offset moves the grid, the nodes AND the minimap camera at once
-; and would mask the one variable each file exists to move.
+; GraphEdit with only the minimap toggle button hidden. `show_minimap_button` hides the toolbar
+; button alone (graph_edit.cpp:2854-2857), while `minimap_enabled` decides the panel. A renderer
+; that conflates the two draws the right picture wherever neither moves, and the wrong one here.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitgraphedminbtn"]
 
@@ -18,6 +9,7 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; No `scroll_offset`, as in the whole family: unit-graph-edit-family.md says why.
 [node name="Graph" type="GraphEdit" parent="."]
 layout_mode = 1
 offset_left = 8.0

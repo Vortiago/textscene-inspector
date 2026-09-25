@@ -1,19 +1,12 @@
 /**
- * Validators shared by every GPUParticlesCollision3D-derived node.
- *
- * Registered under the abstract key 'GPUParticlesCollision3D', which Godot cannot
- * instantiate, so it appears in no .tscn and owns no slice. It reaches its
- * 4 subclasses through the
- * NODE_BASE_TYPES base-walk.
- *
- * Declare only GPUParticlesCollision3D's OWN members: the ones doc/classes/GPUParticlesCollision3D.xml
- * lists without an `overrides=` attribute, cross-checked against ADD_PROPERTY
- * in the .cpp. Quote the governing source line beside every non-obvious bound.
+ * Validators shared by every GPUParticlesCollision3D-derived node, under the abstract key
+ * 'GPUParticlesCollision3D', which appears in no .tscn. The NODE_BASE_TYPES base-walk
+ * delivers them. Only its own members: doc/classes/GPUParticlesCollision3D.xml
+ * without `overrides=`, checked against ADD_PROPERTY.
  */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
+// Registration happens on import, so a test that loads only this slice resolves an
+// inherited key only when this line pulls the ancestor in.
 import '../../../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../../linter/ValidatorRegistry.js';
 import { layerBitmask } from '../../../../../linter/validators/index.js';

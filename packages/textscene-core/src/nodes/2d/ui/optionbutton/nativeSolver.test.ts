@@ -1,30 +1,8 @@
 /**
- * `optionbutton/nativeSolver.ts` vs Godot 4.6.3 (`scene/gui/option_button.cpp`,
- * `scene/theme/default_theme.cpp:212-251`). Expected numbers are hand-derived
- * from the source, NOT recomputed the way the implementation itself computes
- * them (`AGENTS.md`'s test-authoring rule) — same vendored OpenSans_SemiBold
- * metrics/atlas `button/nativeSolver.test.ts` cites.
- *
- * At font size 16 an OptionButton floors on `font->get_height()` = 23 (ascent
- * 18 + descent 5); `line_spacing` is Label's constant and OptionButton sets
- * none. 'A' `hmtx` advance width at 16px = 1354*(16/2048) = 10.578125 (the
- * CONTINUOUS source, `openSansMetrics.ts`'s `advanceWidths` — not
- * `openSansAtlas.ts`'s own atlas-bake-resolution-42 `xadvance`); 'AB' =
- * 21.15625. `textOffset` is the paragraph's own BOX TOP-LEFT — the MSDF
- * bake's own line anchor is `<TextRun>`'s to reconcile (`TextRun.test.tsx`
- * pins it).
- *
- * The OptionButton "normal"/"hover"/"pressed"/"disabled" styleboxes use
- * `2*default_margin(4)=8` horizontal / `default_margin(4)=4` vertical content
- * margins (`default_theme.cpp:212-215`, `godotDefaultTheme.ts`'s own
- * `OPTION_BUTTON_CONTENT_MARGIN_X/Y`), a DIFFERENT pair from the arrow's own
- * placement, which uses `arrow_margin` (`:249`, `round(4*scale)`) measured
- * from the FULL rect edge, not the content-margin edge — verified against
- * `pnpm ref:godot scenes/fixtures/unit-optionbutton.tscn --mode 2d`: the
- * 150x32 button's box fill (rgb(46,46,46)) extends flush to its right pixel
- * edge (probe (649,y)=46, (651,y)=76 background) while the chevron's own ink
- * sits at probe (641,y), i.e. `150 - 12(arrow) - 4(arrow_margin) = 134` in
- * from the left, NOT `150 - 12 - 8`.
+ * Tests `optionbutton/nativeSolver.ts` against Godot 4.6.3 (`scene/gui/option_button.cpp`,
+ * `scene/theme/default_theme.cpp:212-251`) with numbers derived by hand from OpenSans_SemiBold's `hmtx`
+ * advances, never from the code: font height 23, 'A' 10.578125. `textOffset` is the box top-left, and
+ * `<TextRun>` reconciles the MSDF line anchor (`TextRun.test.tsx`).
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -48,13 +26,10 @@ import {
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const A_ADVANCE = 1354 * (16 / 2048); // 10.578125
-// 'B's hmtx advance width is 1350 design units, DIFFERENT from 'A's 1354 — the
-// two only coincided at the OLD atlas-bake-resolution-42 xadvance (both
-// rounded to the integer 28), not a fact about the font.
+// 'B' is 1350 design units, not 'A''s 1354.
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
-// The SHAPED size of 'AB' — `TS->shaped_text_get_size(...).x` ceils the pen
-// advance to a whole pixel (`text_server_adv.cpp:7524-7537`), and every
-// minimum size below is built from that, not from the fractional sum.
+// `TS->shaped_text_get_size(...).x` ceils the pen advance (`text_server_adv.cpp:7524-7537`), and every
+// minimum size below builds on that, not on the fractional sum.
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
 const FONT_HEIGHT = 23;
 
@@ -68,9 +43,8 @@ function node(props: Partial<OptionButtonProperties>): SolveNode {
       children: [],
       properties: { name: 'O', ...props } as OptionButtonProperties,
     },
-    // A local theme_override_colors/*(constants/*) reaches a solver through
-    // `n.colors`/`n.constants` (the walker folds them in unconditionally),
-    // not props.
+    // A local theme_override_colors/* or constants/* reaches a solver through `n.colors` or `n.constants`,
+    // which the walker fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},
     constants: props.themeOverrideConstants ?? {},
   };
@@ -136,7 +110,7 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
   it('uses the WIDEST item\'s text, not the selected one\'s, for the width floor', () => {
     const items = [
       { text: 'A', id: 0 }, // 10.578125 wide
-      { text: 'AB', id: 1 }, // 21.125 wide — the widest
+      { text: 'AB', id: 1 }, // 21.125 wide, the widest
     ];
     const result = optionButtonMinimumSize(node({ items, selected: 0 }), ctx());
     // width = 16 (margin) + 21.125 (widest item) + 12 (arrow) + 4 (h_separation).
@@ -212,7 +186,10 @@ describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-2
 
   it('the arrow sits at (rect.w - arrowSize.w - arrowMargin), NOT the content-margin edge', () => {
     const { arrowRect } = layoutOptionButtonContent(BASE);
-    // x = 150 - 12 - 4 = 134.
+    // Content margins are 8 by 4 (default_theme.cpp:212-215, `OPTION_BUTTON_CONTENT_MARGIN_X/Y`), but
+    // `arrow_margin` (`:249`, round(4*scale)) counts from the full rect edge: `pnpm ref:godot
+    // scenes/fixtures/unit-optionbutton.tscn --mode 2d` puts the chevron at 150 - 12 - 4 = 134, not 150 - 12 - 8.
+    // Probe: fill at (649,y) = 46 and background at (651,y) = 76, so the box ends flush; chevron ink at (641,y).
     expect(arrowRect.x).toBe(134);
   });
 
@@ -241,13 +218,10 @@ describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-2
 });
 
 /**
- * `OptionButton::_notification`'s RTL arms. The arrow changes side —
- *
- *     ofs = Point2(theme_cache.arrow_margin, int(Math::abs((size.height - arrow_icon->get_height()) / 2)));   // option_button.cpp:126
- *
- * — the internal margin reserves SIDE_LEFT instead of SIDE_RIGHT (`:141-143`),
- * and the constructor's `HORIZONTAL_ALIGNMENT_LEFT` (`:654`) becomes RIGHT
- * through `Button::_notification`'s swap (`button.cpp:271-275`).
+ * `OptionButton::_notification`'s RTL arms: the arrow moves to
+ * `ofs = Point2(theme_cache.arrow_margin, int(Math::abs((size.height - arrow_icon->get_height()) / 2)))`
+ * (option_button.cpp:126), the internal margin reserves SIDE_LEFT instead of SIDE_RIGHT (`:141-143`), and
+ * the constructor's `HORIZONTAL_ALIGNMENT_LEFT` (`:654`) becomes RIGHT through Button's swap (`button.cpp:271-275`).
  */
 describe('layoutOptionButtonContent — RTL puts the arrow on the left', () => {
   const BASE = {
@@ -287,8 +261,7 @@ describe('layoutOptionButtonContent — RTL puts the arrow on the left', () => {
 });
 
 describe(`optionButtonMinimumSize — resolves this OptionButton's own theme font key ("${OPTION_BUTTON_THEME_FONT_KEY}", default_theme.cpp:237)`, () => {
-  // See `resolveNodeFontMetrics.test.ts`'s own doc for why an UNRESOLVABLE
-  // font's warn is the observable proof here, not a resolved FontMetrics value.
+  // An unresolvable font's warn is the observable proof here (`resolveNodeFontMetrics.test.ts`).
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
@@ -313,16 +286,10 @@ describe(`optionButtonMinimumSize — resolves this OptionButton's own theme fon
 });
 
 /**
- * `OptionButton` sizes to its WIDEST item through
- * `Button::get_minimum_size_for_text_and_icon` (`button.cpp:492`), whose
- * `paragraph->get_size()` is a max over
- * `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`) —
- * `Size2(sd->width, ...).ceil()` (`text_server_adv.cpp:7524-7537`).
- *
- * Godot 4.6.3, `scenes/fixtures/complex-2d-gui.tscn` in a 1152x648
- * SubViewport:
- *
- *   SystemsGrid/Difficulty  items "Recon"/"Standard"/"Blackout"  min = (103, 31)
+ * `OptionButton` sizes to its widest item through `Button::get_minimum_size_for_text_and_icon`
+ * (`button.cpp:492`), whose `paragraph->get_size()` maxes the ceiled `TS->shaped_text_get_size(lines_rid[i])`
+ * (`text_paragraph.cpp:601-608`, `text_server_adv.cpp:7524-7537`). Godot 4.6.3 on `complex-2d-gui.tscn`:
+ * SystemsGrid/Difficulty, items "Recon"/"Standard"/"Blackout", min = (103, 31).
  */
 describe('optionButtonMinimumSize — the shaped item extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
   it("reaches Godot's own whole-pixel minimum width 103 for the Recon/Standard/Blackout item set", () => {

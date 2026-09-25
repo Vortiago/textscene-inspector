@@ -1,4 +1,4 @@
-/** Path2D registration — parser. */
+/** Registers the Path2D parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parsePath2D } from './parser';

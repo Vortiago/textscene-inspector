@@ -1,10 +1,6 @@
 /**
- * Unit tests for GLB processing helpers.
- *
- * `cloneWithMaterials` guards the three.js single-parent + shared-material
- * trap: `Object3D.clone(true)` copies the hierarchy but NOT materials, so
- * without explicit material cloning every instance would share material
- * references and mutations would bleed between scene instances.
+ * GLB processing helpers. `Object3D.clone(true)` copies the hierarchy but not
+ * materials, so `cloneWithMaterials` must clone them or a change bleeds between instances.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -19,14 +15,13 @@ import {
   initGlbModules,
   isGLBPath,
 } from './glbProcessing';
-// Statically, so the identity check below is immune to the `vi.resetModules()`
-// calls in this file — a dynamic import after a reset yields a fresh instance.
+// Statically, so the identity check below is immune to the `vi.resetModules()` calls in
+// this file: a dynamic import after a reset yields a fresh instance.
 import * as processingShim from '../../processing/glbProcessing';
 
 /**
- * Locate a repo-relative asset by walking up from cwd until it's found —
- * cwd differs between a `--filter` run (package dir) and a recursive
- * `pnpm test` run, so a fixed relative path is not portable.
+ * Locate a repo-relative asset by walking up from cwd. The cwd differs between a
+ * `--filter` run (package dir) and a recursive `pnpm test` run.
  */
 function findRepoAsset(relative: string): string {
   let dir = process.cwd();
@@ -38,9 +33,8 @@ function findRepoAsset(relative: string): string {
   throw new Error(`Asset not found walking up from ${process.cwd()}: ${relative}`);
 }
 
-// cloneWithMaterials uses SkeletonUtils.clone, which is lazily imported on the
-// first GLB load. Pre-initialise once for the whole test file so tests that
-// call cloneWithMaterials directly don't need to go through createGLBMesh first.
+// cloneWithMaterials needs the lazily imported SkeletonUtils, so load it once here for
+// the tests that do not go through createGLBMesh.
 beforeAll(async () => {
   await initGlbModules();
 });
@@ -56,7 +50,7 @@ describe('initGlbModules', () => {
   });
 
   it('cloneWithMaterials throws a clear error when called before initialisation', async () => {
-    // A fresh module instance has an empty lazy cache — the guard must fire.
+    // A fresh module instance has an empty lazy cache, so the guard must fire.
     vi.resetModules();
     const fresh = await import('./glbProcessing');
 
@@ -72,8 +66,8 @@ describe('initGlbModules', () => {
     });
     try {
       const fresh = await import('./glbProcessing');
-      // Vitest wraps a throwing mock factory in its own error message, so
-      // assert only that the load rejects — the retry below is the contract.
+      // Vitest wraps a throwing mock factory in its own error message, so assert
+      // only that the load rejects. The retry below is the contract.
       await expect(fresh.initGlbModules()).rejects.toThrow();
 
       vi.doUnmock('three/addons/loaders/GLTFLoader.js');
@@ -88,10 +82,8 @@ describe('initGlbModules', () => {
 
 describe('createGLBMesh', () => {
   it('surfaces a GLB’s embedded animation clips on the returned object', async () => {
-    // The committed platformer player.glb carries Blender-exported clips; a
-    // Godot GLB import would expose these on the model's AnimationPlayer. The
-    // loader returns them on `gltf.animations`, which we attach to the scene
-    // object so the GLB animation driver can play them.
+    // This GLB carries Blender-exported clips, which a Godot import exposes on the
+    // model's AnimationPlayer.
     const glbPath = findRepoAsset('scenes/demos/3d/platformer/player/player.glb');
     const buffer = readFileSync(glbPath);
     const arrayBuffer = buffer.buffer.slice(
@@ -269,7 +261,7 @@ describe('cloneWithMaterials', () => {
 
   it('rebinds a SkinnedMesh to the cloned skeleton (not the source bones)', () => {
     // A plain Object3D.clone(true) leaves the cloned SkinnedMesh.skeleton
-    // pointing at the SOURCE bones, so animating one instance deforms another
+    // pointing at the source bones, so animating one instance deforms another
     // (or the template). A skeleton-aware clone rebinds to the cloned bones.
     const root = new THREE.Group();
     root.name = 'armature';
@@ -301,9 +293,8 @@ describe('cloneWithMaterials', () => {
 
     const cloned = cloneWithMaterials(root);
 
-    // Clips are stateless (the mixer holds playback state) and bind by name —
-    // the clone has the same node names, so sharing the same clip reference is
-    // correct and cheap.
+    // Clips are stateless (the mixer holds playback state) and bind by name. The clone
+    // has the same node names, so it shares the clip reference.
     expect(cloned.animations).toContain(clip);
   });
 });
@@ -387,9 +378,9 @@ describe('disposeClonedMaterials', () => {
 
 describe('processing/ re-export shim', () => {
   it('serves the one module instance, so the lazy module cache stays shared', () => {
-    // `useResource` and the r3f GLB hooks still import the old path. A second
-    // instance would give them an empty `initGlbModules` cache and make
-    // `cloneWithMaterials` throw its not-initialised guard in production.
+    // `useResource` and the r3f GLB hooks import the shim path. A second instance
+    // would give them an empty `initGlbModules` cache and make `cloneWithMaterials`
+    // throw its not-initialised guard in production.
     expect(processingShim.initGlbModules).toBe(initGlbModules);
     expect(processingShim.cloneWithMaterials).toBe(cloneWithMaterials);
     expect(processingShim.isGLBPath).toBe(isGLBPath);

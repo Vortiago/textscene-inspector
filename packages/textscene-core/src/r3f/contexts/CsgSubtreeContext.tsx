@@ -1,27 +1,15 @@
 /**
- * Tells a CSG node whether its own solid has been absorbed into an ancestor's boolean.
- *
- * The alternative would be for the dispatcher to skip CSG children outright, and that is
- * exactly what must NOT happen: `PlainNode` is the sole caller of `registerNodeObject`,
- * so a skipped child loses tree-selection, highlighting and the hidden-eye toggle. And
- * `subtreeConformance.test.tsx` renders every registered type with a probe child and
- * asserts it survives, which a root that swallowed its `children` would fail.
- *
- * So contributors stay mounted and remove their own MESH, from the inside. This context
- * is how they find out to.
- *
- * Keyed by node PATH rather than a boolean "inside a CSG subtree" flag. Godot sets
- * `parent_shape` only for a DIRECT CSG parent, so `CSGBox3D > Node3D > CSGSphere3D` is
- * two independent roots; a boolean flag would swallow the sphere and would need every
- * non-CSG component in the codebase to reset it.
+ * Tells a CSG node whether an ancestor's boolean absorbed its solid. A skipped
+ * child would lose selection and the hidden toggle, so it stays mounted and drops
+ * its own mesh. Keyed by path, since Godot sets `parent_shape` only for a direct
+ * CSG parent: `CSGBox3D > Node3D > CSGSphere3D` is two roots.
  */
 
 import { createContext, useContext, type ReactNode } from 'react';
 
 /**
- * `pending` while the CSG library is still loading, `failed` when it could not load or
- * the evaluator threw. On `failed` every contributor un-prunes and draws its own solid,
- * which is the retired CSG-as-primitive behaviour serving as the degraded fallback.
+ * `pending` while the CSG library loads, `failed` when it could not load or the
+ * evaluator threw. On `failed` every contributor draws its own solid as the fallback.
  */
 export type CsgSubtreeStatus = 'pending' | 'ready' | 'failed';
 
@@ -30,8 +18,8 @@ export interface CsgSubtreeValue {
   /** Node paths whose solids this root has taken over. */
   absorbedPaths: ReadonlySet<string>;
   /**
-   * Node paths this root skipped for invisibility, which contribute a POINT at their
-   * origin instead of their solid — `CsgPlan.invisiblePaths` has the Godot rule.
+   * Node paths skipped as invisible, which contribute a point at their origin
+   * instead of their solid. `CsgPlan.invisiblePaths` has the Godot rule.
    */
   invisiblePaths: ReadonlySet<string>;
 }

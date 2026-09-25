@@ -135,7 +135,7 @@ describe('snappedControlOrigin', () => {
   it('snaps the SUM of the position and the internal translation, returning the outer half', () => {
     // Measured through Godot 4.6.3: a ColorRect at (100, 100) with
     // pivot_offset (10.25, 10.25) and scale (2, 2) draws its top-left at
-    // exactly 90 — floor(100 - 10.25 + 0.5) — not at 89.75.
+    // exactly 90, floor(100 - 10.25 + 0.5), not at 89.75.
     const transform: ControlDrawTransform = {
       rotation: 0,
       scale: { x: 2, y: 2 },

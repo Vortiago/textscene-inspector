@@ -1,5 +1,5 @@
 /**
- * HSplitContainer's native (WebGL canvas) rect solve — the shared
+ * HSplitContainer's native (WebGL canvas) rect solve: the shared
  * SplitContainer port at `vertical = false`. Registration only; the algorithm
  * itself lives once in `../shared/splitContainerSolver.ts` for both HSplit
  * and VSplit.

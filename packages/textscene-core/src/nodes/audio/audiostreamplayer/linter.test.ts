@@ -1,13 +1,8 @@
 /**
- * Tests for AudioStreamPlayer semantic linter rules.
- *
- * Mirrors the AudioStreamPlayer2D/3D semantic rules for the non-positional
- * AudioStreamPlayer, minus the positional ones (max_distance / attenuation).
- * A streamless player is VALID (the stream can be set at runtime), so it is
- * NOT an error; the advisory case (autoplay with no stream) is a WARNING —
- * which the bulk fixtureLint guard allows. Only a dangling stream reference is
- * an error. (volume_db's hint band, and format validation of pitch_scale /
- * max_polyphony, live on the validators in linterParser.ts.)
+ * AudioStreamPlayer semantic rules: the 2D and 3D rules minus the positional ones. A streamless
+ * player is valid, since the stream can be set at runtime. Autoplay with no stream warns, and only
+ * a dangling stream reference errors. volume_db's hint band and the pitch_scale and max_polyphony
+ * format checks live on the validators in linterParser.ts.
  */
 
 import { describe, it } from 'vitest';
@@ -59,7 +54,7 @@ describe('AudioStreamPlayer semantic rules', () => {
   });
 
   it('stays silent when an AnimationPlayer audio track targets this node', () => {
-    // The coin.tscn shape, ported to the non-positional player:
+    // A node an AnimationPlayer audio track drives:
     // animation_mixer.cpp:891-898 builds its own polyphonic playback for the
     // track's target and never reads the node's `stream`.
     expectClean(

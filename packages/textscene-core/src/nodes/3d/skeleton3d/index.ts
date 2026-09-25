@@ -1,10 +1,7 @@
 /**
- * Skeleton3D registration — parser.
- *
- * Non-visual node: renders as a transform-only group (ADR-0008), reusing the
- * Node3D transform parse; the render component (index.r3f.ts) reuses Node3D.
- * In Godot the skeleton drives mesh deformation — the previewer shows where it
- * sits, not the bones.
+ * Skeleton3D registration: the parser. A non-visual node renders as a transform-only group
+ * (ADR-0008), so both this parse and index.r3f.ts reuse Node3D's. The previewer shows where the
+ * skeleton sits, not its bones.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

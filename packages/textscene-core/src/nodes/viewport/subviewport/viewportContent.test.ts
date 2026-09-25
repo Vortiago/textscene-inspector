@@ -1,9 +1,7 @@
 /**
- * The classifier that decides WHICH rasterizer owns a sub-viewport's target.
- *
- * Load-bearing beyond rendering: the offscreen (WebGL) publisher and the DOM
- * rasterizer write into the same `ViewportTextureRegistry` under the same key,
- * so a misclassification is not a wrong picture but two publishers racing.
+ * The classifier that decides which publisher owns a sub-viewport's target. Both
+ * publishers write the same `ViewportTextureRegistry` key, so a misclassification
+ * makes two publishers race.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -36,7 +34,7 @@ describe('viewportContentKind', () => {
     );
   });
 
-  /** Controls have no WebGL form — the DOM overlay rasterizes them (ADR-0003). */
+  /** Controls are drawn by the native Control-raster pass (ADR-0037), not the offscreen pass. */
   it('classifies Control-only content as dom', () => {
     expect(viewportContentKind(viewport('\n[node name="Panel" type="ColorRect" parent="Viewport"]'))).toBe(
       'dom'
@@ -48,10 +46,9 @@ describe('viewportContentKind', () => {
   });
 
   /**
-   * `ProgressBar` is a `Range`, so Godot calls it 2D UI, but this previewer
-   * ships no DOM component for it. Reading the component mirror here made the
-   * viewport `'empty'`, which both publishers skip — nothing registers a target
-   * and a `ViewportTexture` naming the path resolves null forever.
+   * `ProgressBar` is a `Range`, so Godot calls it 2D UI, though this previewer has
+   * no component for it. Read as `'empty'`, both publishers would skip it, and a
+   * `ViewportTexture` naming the path would resolve null.
    */
   it('classifies a Control with no DOM component of its own as dom', () => {
     expect(
@@ -61,8 +58,7 @@ describe('viewportContentKind', () => {
 
   /**
    * An instance node has no type until its sub-scene resolves. Godot's own
-   * viewport demos instance 3D sub-scenes (`3d_in_2d.tscn` instances
-   * `robot_3d.tscn`), so a bare one is assumed to be 3D content.
+   * viewport demos instance 3D sub-scenes, so a bare one is assumed to be 3D.
    */
   it('treats a bare instanced sub-scene as 3d content', () => {
     const scene = new TscnParser().parse(`[gd_scene format=3]
@@ -80,16 +76,10 @@ describe('viewportContentKind', () => {
   });
 
   /**
-   * …but that assumption is SPECULATIVE, and decisive evidence outranks it.
-   *
-   * A `.tscn` records an instance's own property overrides against the base
-   * class they belong to, so a CanvasItem-only key (`modulate`, `z_index`,
-   * `skew`, …) or a two-component `position` names the sub-scene's world even
-   * though its type is still unknown. `scenes/demos/2d/platformer/
-   * game_splitscreen.tscn` is the case: `Viewport1` holds three instances, and
-   * assuming 3D for all of them selected a `Camera3D` that does not exist and
-   * published a target holding nothing but the clear colour — a wrong picture,
-   * not a missing one, and one that looks exactly like a broken blit.
+   * The 3D assumption yields to decisive evidence: a CanvasItem-only override
+   * (`modulate`, `z_index`, `skew`, …) or a two-component `position` names the
+   * sub-scene's world. Assuming 3D picks a `Camera3D` that does not exist and
+   * publishes only the clear colour.
    */
   it('an instance carrying CanvasItem-only overrides is 2d content', () => {
     const scene = new TscnParser().parse(`[gd_scene format=3]
@@ -142,10 +132,8 @@ position = Vector3(1, 2, 3)
   });
 
   /**
-   * The whole point of calling the bare instance's claim speculative: one
-   * decisive 2D sibling settles the viewport for both. Godot's split-screen
-   * platformer instances an untouched `level.tscn` next to two positioned
-   * players, and the level is the content that matters.
+   * One decisive 2D sibling settles the viewport for an untouched instance
+   * beside it, such as a level next to two positioned players.
    */
   it('a decisive 2D sibling outranks a bare instance’s speculative 3d claim', () => {
     const scene = new TscnParser().parse(`[gd_scene format=3]
@@ -166,7 +154,7 @@ z_index = 3
     expect(viewportContentKind(node)).toBe('2d');
   });
 
-  /** A REGISTERED 3D type is decisive, so it still wins over 2D evidence. */
+  /** A registered 3D type is decisive, so it still wins over 2D evidence. */
   it('a registered 3D node still outranks 2D evidence', () => {
     const scene = new TscnParser().parse(`[gd_scene format=3]
 
@@ -223,11 +211,9 @@ z_index = 3
   });
 
   /**
-   * The other direction, and the one a registration test gets wrong: `Node` IS
-   * registered (`container: true`), so "is this type registered" claims 3D for
-   * every plain-Node container without looking inside. Every 2D sub-scene whose
-   * root is a bare `Node` — the shape a Godot level uses — landed on the 3D
-   * pass, found no `Camera3D`, and published a clear-colour target.
+   * `Node` is registered (`container: true`), so "is this type registered" would
+   * claim 3D for every plain-Node container. A 2D sub-scene rooted at a bare `Node`
+   * would land on the 3D pass and publish a clear-colour target.
    */
   it('a plain Node container holding 2D content is 2d, not 3d', () => {
     expect(
@@ -252,9 +238,8 @@ z_index = 3
   });
 
   /**
-   * A nested sub-viewport's subtree draws into ITS target, not this one — that
-   * is where `Viewport` rasterisation stops. Counting it would make an outer
-   * viewport claim content it never renders.
+   * A nested sub-viewport's subtree draws into its own target. Counting it would
+   * make an outer viewport claim content it never renders.
    */
   it('does not descend into a nested sub-viewport', () => {
     expect(
@@ -281,10 +266,9 @@ z_index = 3
 });
 
 /**
- * The parsed graph cannot answer for an untouched instance — it is a typeless,
- * childless `Node` whichever world its sub-scene lives in. These pin the other
- * half: once the sub-scene is cached, Instance root merge gives the node its
- * real identity and the same classifier is exact.
+ * The parsed graph cannot answer for an untouched instance: it is a typeless,
+ * childless `Node` whichever world its sub-scene lives in. Once the sub-scene is
+ * cached, Instance root merge gives the node its real identity.
  */
 describe('resolveViewportSubtree', () => {
   /** `[gd_scene]` with one instanced child, plus the sub-scene it points at. */
@@ -319,7 +303,7 @@ ${extra}`);
 
 [node name="Sprite" type="Sprite2D" parent="."]
 `);
-    // The parsed graph alone still guesses 3D — that is the gap being closed.
+    // The parsed graph alone still guesses 3D.
     expect(viewportContentKind(node)).toBe('3d');
     expect(
       viewportContentKind(resolveViewportSubtree(node, externalResources, cache))
@@ -358,9 +342,9 @@ ${extra}`);
   });
 
   /**
-   * Each group carries the scope its children resolve their OWN refs against,
-   * which is why the resolver goes through `liveChildGroups` rather than
-   * walking the tree itself: this inner ref exists only in the sub-scene's pool.
+   * Each group carries the scope its children resolve their own refs against,
+   * so the resolver goes through `liveChildGroups`: this inner ref exists only in
+   * the sub-scene's pool.
    */
   it('resolves a sub-scene’s own nested instance against the SUB-SCENE’s resources', () => {
     const outer = new TscnParser().parse(`[gd_scene format=3]
@@ -427,11 +411,9 @@ ${extra}`);
 
 describe('an instance override spelled with an i-suffixed composite', () => {
   it('reads Vector2i as 2D, which is what Godot writes for a pixel count', () => {
-    // `Vector2i`/`Rect2i` are the NATIVE spelling of `frame_coords`,
-    // `region_rect` and `size`. Listing only `Vector2`/`Rect2` made these match
-    // neither discriminator, so `sawUntypedInstance` stayed true and the scene
-    // fell through to the 3D publisher — which then raced the DOM rasterizer
-    // for the same ViewportTextureRegistry key.
+    // `Vector2i` and `Rect2i` are Godot's own spelling of `frame_coords`,
+    // `region_rect` and `size`. Unlisted, they match neither discriminator, and
+    // the scene falls through to the 3D publisher.
     const scene = new TscnParser().parse(`[gd_scene load_steps=2 format=3]
 
 [ext_resource type="PackedScene" path="res://sprite.tscn" id="1"]

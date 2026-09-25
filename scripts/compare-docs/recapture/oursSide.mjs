@@ -1,6 +1,5 @@
 /** Our side: one build, one preview server, one browser, one context per workspace. */
 
-import { } from 'node:fs';
 import { chromium } from 'playwright';
 import { SWIFTSHADER_GL_ARGS } from '../../showcase/browser.mjs';
 import {
@@ -38,8 +37,7 @@ export async function captureOurs(targets, godotModes) {
   try {
     await waitForServer(`${baseUrl}/`);
     browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
-    // Burn the first-WebGL-context-lost risk before any published image is
-    // captured — see warmUpGLContext's own doc comment.
+    // Spends the first-context-lost risk before any published image.
     await warmUpGLContext(browser);
     let done = 0;
     for (const mode of ['3d', '2d']) {

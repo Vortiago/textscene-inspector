@@ -1,17 +1,8 @@
 /**
- * PERF: gate the selection/hover BoxHelper's per-frame recompute.
- *
- * `useSceneHelper` defaults `tickUpdate` to true, so before this fix
- * `<SelectionHighlight>`/`<HoverHighlight>` ran `updateWorldMatrix(true,true)`
- * + a full subtree traverse every frame forever, even for a fully static
- * scene with nothing selected moving. The box only needs to recompute:
- *   - once, when the selection/hover target changes (already covered — a
- *     new target re-runs the helper's creation effect, and `THREE.BoxHelper`'s
- *     constructor calls the (overridden) `update()` synchronously), and
- *   - every frame while something could actually be moving, i.e. while the
- *     shared AnimationTransport is 'playing' OR 'paused' (a paused scrub still
- *     seeks the mixer — see usePlaybackLoop's paused branch).
- * It must NOT recompute every frame while `playState === 'stopped'`.
+ * The selection and hover BoxHelper recompute every frame only while the transport
+ * is 'playing' or 'paused', since a paused scrub still seeks the mixer. A new target
+ * recomputes once, through `THREE.BoxHelper`'s constructor. While 'stopped', the
+ * per-frame `updateWorldMatrix(true,true)` and subtree traverse do not run.
  */
 import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -100,8 +91,8 @@ describe('BoxHelper playback gating (WI-213)', () => {
     const callsAfterMount = updateSpy.mock.calls.length;
     expect(callsAfterMount).toBeGreaterThan(0); // the constructor's own call
 
-    // Advance several ticks; the per-frame recompute must stay disabled
-    // while nothing is playing — call count must NOT grow.
+    // While nothing plays, the per-frame recompute stays off and the call count
+    // does not grow.
     await renderer.advanceFrames(5, 0.1);
     expect(updateSpy.mock.calls.length).toBe(callsAfterMount);
 
@@ -155,7 +146,7 @@ describe('BoxHelper playback gating (WI-213)', () => {
   });
 
   it('runs exactly ONE grace update after the playing → stopped edge (the restore frame)', async () => {
-    // The commit that closes the tick gate lands BEFORE the frame in which
+    // The commit that closes the tick gate lands before the frame in which
     // the driver's 'stopped' branch restores the authored pose. One grace
     // update on that frame keeps the box aligned with the restored pose;
     // after it, the gate must hold again.

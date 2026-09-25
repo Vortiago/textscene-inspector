@@ -1,56 +1,8 @@
 /**
- * Semantic rule for the whole OpenXRCompositionLayer family, from Godot's own
- * `OpenXRCompositionLayer::get_configuration_warnings()`
- * (openxr_composition_layer.cpp:759-778):
- *
- *     if (is_visible() && is_inside_tree()) {
- *         XROrigin3D *origin = Object::cast_to<XROrigin3D>(get_parent());
- *         if (origin == nullptr) {
- *             warnings.push_back(RTR("... must have an XROrigin3D node as their parent."));
- *         }
- *     }
- *     if (!get_transform().basis.is_orthonormal()) {
- *         warnings.push_back(RTR("... must have orthonormalized transforms ..."));
- *     }
- *     if (enable_hole_punch && get_sort_order() >= 0) {
- *         warnings.push_back(RTR("Hole punching won't work as expected unless the sort order is less than zero."));
- *     }
- *
- * One registration reaching every descendant through
- * `applicableNodeTypeMatcher`, because RuleRegistry matches
- * `applicableNodeTypes` by exact name and would otherwise never reach a
- * subclass.
- *
- * All three checks are decidable from the `.tscn` alone, so all three are
- * implemented (none declined):
- *
- * - The parent check casts `get_parent()` UNCONDITIONALLY (no `parent &&`
- *   guard, unlike `XRCamera3D::get_configuration_warnings`), so it warns at
- *   the scene root too — the `OpenXRVisibilityMask`/`BoneAttachment3D` shape,
- *   not the XRCamera3D one. `parentTypeVerdict`'s `unknowable` (an instanced
- *   or untyped parent) stays silent: the same unconditional-cast reasoning
- *   that puts `root` in the warn set says nothing about a parent this linter
- *   cannot type, and guessing would be a false positive on a legal scene.
- * - The transform check reads the node's OWN `Transform3D`, i.e. exactly the
- *   `.tscn`'s `transform` property (or the identity default when absent,
- *   which is trivially orthonormal) — no runtime state needed.
- * - The hole-punch check reads two properties on the SAME node
- *   (`enable_hole_punch`, `sort_order`), both serialised plainly. Godot's
- *   default `sort_order` is `1` (`openxr_composition_layer.h:90`), so an
- *   explicit `enable_hole_punch = true` with no `sort_order` override still
- *   warns — `default-omitted` does not apply here because the TRIGGERING
- *   state (`enable_hole_punch = true`) is an explicit opt-in, not a default.
- *
- * NOT modelled: `set_layer_viewport`'s `ERR_FAIL_COND_MSG(p_viewport !=
- * nullptr, ...)` when `use_android_surface` is already true (:303-305). This
- * looks like a same-node cross-field candidate, but `layer_viewport` is
- * `ADD_PROPERTY`'d at :151, BEFORE `use_android_surface` at :152, so in an
- * editor-saved file (property order follows declaration order) the
- * `layer_viewport` setter runs while `use_android_surface` is still its
- * default `false`, and the guard never fires. A rule that flagged the two
- * keys co-occurring in a `.tscn` would fire on files Godot loads without
- * complaint — and would additionally depend on the keys' TEXTUAL ORDER for a
- * hand-edited file, which no other rule in this codebase models. Left out.
+ * The three configuration warnings of `OpenXRCompositionLayer::get_configuration_warnings()`
+ * (openxr_composition_layer.cpp:759-778), all decidable from the `.tscn`. One registration reaches
+ * every subclass through `applicableNodeTypeMatcher`, since RuleRegistry matches
+ * `applicableNodeTypes` by exact name.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -65,6 +17,10 @@ const PARENT_RULE = 'openxrcompositionlayer-parent-not-xrorigin3d';
 const ORTHONORMAL_RULE = 'openxrcompositionlayer-non-orthonormal-transform';
 const HOLE_PUNCH_RULE = 'openxrcompositionlayer-hole-punch-sort-order';
 
+// Not modelled: set_layer_viewport's ERR_FAIL_COND_MSG when `use_android_surface` is true (:303-305).
+// `layer_viewport` is declared at :151, before `use_android_surface` at :152, so a saved file sets it
+// while `use_android_surface` is still false. A co-occurrence rule would fire on files Godot loads,
+// and would depend on the keys' textual order.
 function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
   // No applicability check here: RuleRegistry has already filtered by the
   // matcher below, so re-asserting it states the same fact twice and the two
@@ -73,8 +29,9 @@ function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
   const properties = node.properties as unknown as Record<string, string>;
   const diagnostics: Diagnostic[] = [];
 
-  // openxr_composition_layer.cpp:762-767: unconditional cast, so this warns
-  // at the scene root too (see docblock).
+  // openxr_composition_layer.cpp:762-767 casts `get_parent()` with no `parent &&` guard, unlike
+  // XRCamera3D, so this warns at the scene root too. An `unknowable` parent (instanced or untyped)
+  // stays silent, since a guess would be a false positive on a legal scene.
   if (!isExplicitlyHidden(properties)) {
     const verdict = parentTypeVerdict(scene, node, 'XROrigin3D');
     if (verdict.kind === 'mismatch' || verdict.kind === 'root') {
@@ -106,8 +63,9 @@ function checkOpenXRCompositionLayer(context: RuleContext): Diagnostic[] {
   }
 
   // openxr_composition_layer.cpp:773-775. `enable_hole_punch` defaults false
-  // (openxr_composition_layer.h:88) and `sort_order` defaults 1 (h:90), so an
-  // explicit `enable_hole_punch = true` with sort_order omitted still warns.
+  // (openxr_composition_layer.h:88) and `sort_order` defaults 1 (openxr_composition_layer.h:90), so an
+  // explicit `enable_hole_punch = true` with sort_order omitted still warns: the trigger is an
+  // explicit opt-in, so `default-omitted` does not apply.
   const holePunchEnabled = boolSlotValue(properties.enable_hole_punch) === true;
   const sortOrder =
     ruleInt(properties.sort_order, 1);

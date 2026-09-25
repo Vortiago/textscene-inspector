@@ -1,26 +1,8 @@
 /**
- * <Node> — base Godot Node. Renders children inside a `<group>` and
- * applies an optional Transform3D when the parsed node carries one.
- *
- * Pre-fix the component dropped the transform entirely. The
- * `Node` fallback type is what `parseNodeWithRegistry` assigns to any
- * TSCN node that has no explicit `type` attribute — including
- * instance-only nodes like `[node name="Crate"
- * parent="..." instance=ExtResource("...")]`. In Godot those instance
- * nodes still carry a `transform = Transform3D(...)` property, and
- * the parsed node's `properties.transform` slot DOES get populated by
- * the base `parseNode`. But because the R3F component ignored
- * `properties.transform`, the Crate instance node — which has
- * a uniform 0.025 scale baked into its transform basis — rendered
- * its underlying GLB at full size (~40× too big in the hallway
- * fixture).
- *
- * Fix: thread `properties.transform` through `transformFromNode3DProperties`
- * (the same helper Node3D uses) and apply position / rotation / scale
- * to the wrapping `<group>`. For nodes that genuinely have no
- * transform — purely-organisational `Node` containers from `Node`
- * subclasses in 2D scenes, or test scaffolding — the helper returns
- * the identity transform, so the `<group>` is a no-op.
+ * <Node>: the base Godot Node, and the fallback type for a node with no `type` attribute, such as
+ * an instance-only `[node name="Crate" instance=ExtResource("...")]`. It renders children in a
+ * `<group>` and applies `properties.transform` through `transformFromNode3DProperties`, as Node3D
+ * does. With no transform the helper returns identity, so the group is a no-op.
  */
 
 import { useMemo } from 'react';

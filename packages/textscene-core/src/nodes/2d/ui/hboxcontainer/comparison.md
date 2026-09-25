@@ -33,5 +33,5 @@ Strict parsing format-checks the inherited set (1 inherited from BoxContainer, 5
 
 `alignment` goes through `parseOptionalInt`, so an absent or unparseable value becomes
 `undefined` with no warning and maps to `flex-start`, Godot's BEGIN default. A missing
-`theme_override_constants/separation` takes the Component's default of `4` px, Godot's
-own.
+`theme_override_constants/separation` takes the Component's default of `4` px, which is
+Godot's default.

@@ -1,5 +1,3 @@
-/**
- * vseparator linter registration - imports linter components to trigger self-registration.
- */
+/** VSeparator linter registration: importing the modules registers them. */
 
 import './linterParser.js';

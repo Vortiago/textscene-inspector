@@ -1,37 +1,7 @@
 /**
- * `<HSplitContainer>` — the native (WebGL canvas) painter for
- * HSplitContainer. A SplitContainer draws no chrome of its own beyond the
- * grabber icon: `split_bar_background` (`default_theme.cpp:1275-1277`) is an
- * EMPTY stylebox that draws nothing, and the split boundary itself is pure
- * layout — produced by `shared/splitContainerSolver.ts`'s `ContainerLayoutFn`,
- * not drawn here. `ControlCanvasWalker` positions the two children as
- * siblings at the rects that function already computed; this component only
- * ever draws the (usually invisible — see below) icon between them.
- *
- * The icon's own position depends on where the two children's boundary
- * landed, which is a **solve handoff** channel
- * (`shared/splitContainerSolver.ts`'s `splitContainerBoundaryChannel`): the
- * EXACT `computed_split_offset` the registered `ContainerLayoutFn` computed
- * from each sortable child's full recursive `combined_minimum_size`, which
- * no painter can reach. Opening it compares the channel by reference, so a
- * value of the right shape from anywhere else does not pass.
- *
- * Falls back to recomputing via the SAME `computeSplitDraggerPosition` the
- * solver calls, fed by each sortable child's OWN `custom_minimum_size`
- * rather than the full `combined_minimum_size`, only when no sealed boundary
- * arrives — which in a real solve never happens, since the layout seals one
- * unconditionally. That gap is real but bounded, and today invisible
- * everywhere: `isSplitGrabberVisible` is false for every scene that does not
- * override `theme_override_constants/autohide` to `0` (its own doc —
- * verified against `pnpm ref:godot` on a probe scene: the gap between every
- * row's two ColorRects reads back the plain backdrop colour, never the
- * grabber's gray). So the only pixels the FALLBACK could ever mis-place are
- * the (already invisible by default) icon's own — the two ACTUAL child
- * rects are always exact regardless, computed by the registered solver with
- * full `combined_minimum_size` access.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`.
+ * `<HSplitContainer>`, the native (WebGL canvas) painter: it draws only the
+ * grabber icon. `split_bar_background` (`default_theme.cpp:1275-1277`) is empty,
+ * and `shared/splitContainerSolver.ts`'s `ContainerLayoutFn` places the children.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -55,15 +25,10 @@ import { splitOffsetsOf, type SplitContainerProperties } from '../shared/splitCo
 export function HSplitContainer({ solveNode, tint, rect, theme, renderOrder, meta }: NativeControlComponentProps) {
   const props = painterView<SplitContainerProperties>(solveNode);
 
-  // `_resort` hides every dragger outright below two valid children
-  // (`split_container.cpp:714-724`), before `dragger_visibility`/`autohide`
-  // are ever consulted — mirrored here rather than only in the layout, since
-  // this painter has no rect to draw an icon between otherwise.
-  //
-  // Decided BEFORE the icon hook, not after: hook order is fixed, so an early
-  // return cannot skip the load. `autohide` defaults true, which makes the
-  // grabber invisible in the common scene — decoding its image and holding a
-  // GPU texture for a quad that never draws.
+  // `_resort` hides each dragger below two valid children (`split_container.cpp:714-724`),
+  // before `dragger_visibility`/`autohide` apply.
+  // Decided before the icon hook: `autohide` defaults true, and the hook order is
+  // fixed, so this is what spares the common scene an image decode and a GPU texture.
   const sortable = solveNode.children.filter(isSortableControl);
   const drawsGrabber =
     sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
@@ -75,14 +40,16 @@ export function HSplitContainer({ solveNode, tint, rect, theme, renderOrder, met
   }
 
   const iconSize = splitGrabberIconSize(solveNode.node.type, false, solveNode.textureSlots);
-  // `grabberExtent` overridden with the (possibly themed) icon's own width —
-  // the SAME override `shared/splitContainerSolver.ts`'s `separationOf` makes
-  // for the registered solver, so the drawn icon lands exactly on the
-  // boundary the layout actually computed.
+  // `grabberExtent` takes the icon's width, as `separationOf` in
+  // `shared/splitContainerSolver.ts` does, so the icon lands on the solved boundary.
   const separation = resolveSplitSeparation(props, solveNode.constants, {
     ...theme.widgets.splitContainer,
     grabberExtent: iconSize.x,
   });
+  // The solver hands over `computed_split_offset`, built from each child's full
+  // `combined_minimum_size`, through a channel opened by reference. The fallback
+  // reads only `custom_minimum_size`, but the layout always seals a boundary, and
+  // only the grabber, hidden unless `autohide` is `0`, could land wrong.
   const cached = splitContainerBoundaryChannel.open(meta)?.draggerPositions;
   const draggerPositions =
     cached ??

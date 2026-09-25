@@ -1,10 +1,8 @@
 /**
  * The GLB processor honours an **Import sidecar**'s `_subresources` material remaps.
- *
- * The witness is `scenes/demos/3d/ragdoll_physics/characters/mannequiny.glb.import`:
- * the glTF's own materials carry no base colour at all, and the sidecar repoints each
- * one at a `res://materials/*.tres`. Without the remap the mannequins render white
- * where Godot draws them blue.
+ * `scenes/demos/3d/ragdoll_physics/characters/mannequiny.glb.import` repoints each
+ * base-colourless glTF material at a `res://materials/*.tres`, so without the remap
+ * the mannequins render white where Godot draws them blue.
  */
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -139,7 +137,7 @@ describe('createGLBProcessor — import sidecar external materials', () => {
   });
 
   it('leaves the shared external material alive when the template is disposed', async () => {
-    // The material processor owns and caches it; the template must not free a peer's resource.
+    // The material processor owns and caches it, so the template must not free it.
     const { root, external, clearTemplate } = await loadWith({ [`${GLTF_PATH}.import`]: SIDECAR });
     const disposed = vi.fn();
     external.addEventListener('dispose', disposed);

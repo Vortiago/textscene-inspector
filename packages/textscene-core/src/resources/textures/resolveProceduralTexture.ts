@@ -1,19 +1,8 @@
 /**
- * "Is this texture reference generated rather than loaded?" — one answer for
- * every procedural texture slice.
- *
- * A procedural texture is described entirely by the file it lives in, so it
- * resolves synchronously where the slot is read, with no host-file round trip.
- * There are two such slices now (GradientTexture2D, NoiseTexture2D) and every
- * consumer needs the same walk, so the dispatch lives here rather than being
- * re-spelled per call site — the pattern where a third slice would silently
- * reach only whichever consumers remembered to add it.
- *
- * Each slice's resolver declines a reference that is not its own type, so this
- * is a first-match walk, not a type lookup the caller performs.
- *
- * The result is BORROWED from `proceduralTextureCache`: callers never dispose
- * it, and must pin `key` for as long as they hold `texture`.
+ * Whether a texture reference is generated rather than loaded, for every
+ * procedural slice, resolved synchronously. A first-match walk: each resolver
+ * declines another type. The result is borrowed from `proceduralTextureCache`:
+ * never dispose it, and pin `key` while holding `texture`.
  */
 
 import type { TscnInternalResource } from '../../parser/types.js';

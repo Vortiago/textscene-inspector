@@ -1,5 +1,5 @@
 /**
- * MeshLibrary's `item/<i>/<leaf>` family — the only properties the class
+ * MeshLibrary's `item/<i>/<leaf>` family: the only properties the class
  * serialises, and all nine of them built by hand in `_get_property_list`
  * (mesh_library.cpp:143-156) rather than declared with `ADD_PROPERTY`.
  */
@@ -63,7 +63,7 @@ describe('MeshLibrary item family', () => {
   /**
    * `_set`'s own switch maps every other integer to
    * `SHADOW_CASTING_SETTING_ON` (mesh_library.cpp:66-68), so the written value
-   * is silently altered — ADR-0032's error row, not the warning
+   * is silently altered: ADR-0032's error row, not the warning
    * `GeometryInstance3D.cast_shadow` carries for the same four constants.
    */
   it('errors on a mesh_cast_shadow Godot rewrites to ON', () => {
@@ -74,12 +74,10 @@ describe('MeshLibrary item family', () => {
   });
 
   /**
-   * `shapes` is a FLAT array pairing each Shape3D with its Transform3D
-   * (`_get_item_shapes`, mesh_library.cpp:355-364), so Godot's writer only ever
-   * emits an even count. `_set_item_shapes` does not refuse an odd one: it
-   * appends a Transform3D of its own where the item is fresh and drops the last
-   * element where it is not (:319-338), so the stored value is never the
-   * written one.
+   * `shapes` pairs each Shape3D with its Transform3D (`_get_item_shapes`,
+   * mesh_library.cpp:355-364), so Godot writes an even count. `_set_item_shapes`
+   * completes an odd one: it appends a Transform3D to a fresh item and drops the
+   * last element otherwise (:319-338).
    */
   it('errors on an odd shapes count, which Godot completes rather than stores', () => {
     const identity = 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)';
@@ -92,8 +90,8 @@ describe('MeshLibrary item family', () => {
 
   /**
    * `_set` forwards to `_set_item_shapes(int, const Array &)`
-   * (mesh_library.cpp:78, :316), which takes an Array of ANY element type — so
-   * the typed spelling loads and refusing it rejected a file Godot opens. What
+   * (mesh_library.cpp:78, :316), which takes an Array of any element type, so
+   * the typed spelling loads, and refusing it rejects a file Godot opens. What
    * `_get_item_shapes` writes is a write-side fact and bounds nothing here.
    */
   it('takes the typed Array spelling, and counts pairs inside the wrapper', () => {
@@ -122,11 +120,10 @@ describe('MeshLibrary item family', () => {
   });
 
   /**
-   * Keys `_set` applies but `_get_property_list` never writes. Reporting one
-   * would claim a drop the engine does not make: `shape` wraps a single Shape3D
-   * into a one-element shape list (:71-76), and the two `navmesh*` spellings
-   * were renamed in 4.0 beta 9 and still forward to the current setters
-   * (:87-90).
+   * Keys `_set` applies but `_get_property_list` never writes, so reporting one
+   * claims a drop the engine does not make. `shape` wraps one Shape3D into a
+   * one-element list (:71-76). The `navmesh*` spellings, renamed in 4.0 beta 9,
+   * forward to the current setters (:87-90).
    */
   it('accepts the keys Godot loads but never saves', () => {
     expect(check('item/0/shape', 'SubResource("BoxShape3D_a")')).toBeNull();
@@ -163,11 +160,10 @@ describe('MeshLibrary item family', () => {
   });
 
   /**
-   * `_set` reads FIXED slices — `get_slicec('/', 1)` for the index and
-   * `get_slicec('/', 2)` for the leaf (mesh_library.cpp:40-41) — and
-   * `get_slicec` returns that slice alone (ustring.cpp:941-964). So
-   * `item/0/name/extra` sets item 0's name, and the value below it is the only
-   * thing left to judge.
+   * `_set` reads fixed slices, `get_slicec('/', 1)` for the index and
+   * `get_slicec('/', 2)` for the leaf (mesh_library.cpp:40-41), and `get_slicec`
+   * returns that slice alone (ustring.cpp:941-964). So `item/0/name/extra` sets
+   * item 0's name, and only the value is left to judge.
    */
   it('reads the leaf as a fixed slice, so a trailing segment still names it', () => {
     expect(check('item/0/name/extra', '"Floor"')).toBeNull();

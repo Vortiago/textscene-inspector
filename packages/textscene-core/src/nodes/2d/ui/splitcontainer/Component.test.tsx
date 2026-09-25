@@ -1,9 +1,7 @@
 /**
- * `<SplitContainer>` — same invisibility rules as `hsplitcontainer/Component.tsx`
- * (autohide default true, <2 sortable children, collapsed, hidden dragger),
- * plus `vertical` read from THIS node's own properties at runtime rather
- * than fixed by type. Pins both axes against `hsplitcontainer`'s/
- * `vsplitcontainer`'s own already-verified numbers.
+ * `<SplitContainer>`: the invisibility rules of `hsplitcontainer/Component.tsx` (autohide default
+ * true, <2 sortable children, collapsed, hidden dragger), with `vertical` read from the node. Both
+ * axes are pinned to `hsplitcontainer`'s and `vsplitcontainer`'s verified numbers.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -20,7 +18,7 @@ function solveNode(
   properties: Record<string, unknown>,
   children: SolveNode[] = []
 ): SolveNode {
-  // A local theme_override_constants/* now reaches a solver through
+  // A local theme_override_constants/* reaches a solver through
   // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
   const constants =
     (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};

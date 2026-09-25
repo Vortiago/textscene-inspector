@@ -1,24 +1,7 @@
 /**
- * <ShadowCasterStage> — the occluder registry plus the once-per-frame world
- * snapshot every shadowed light reads.
- *
- * An occluder publishes LOCAL segments against the group that carries its
- * transform (`shadowCasterRegistry`), so somebody has to flatten them into
- * world space, and that flatten is the expensive half: doing it inside each
- * light would repeat it once per light per frame. It happens here instead,
- * once, and the result is shared.
- *
- * WHY A SAMPLE AND NOT A RENDER-TIME READ. A world matrix is not a React value:
- * it is the product of every ancestor's transform, and nothing re-renders when
- * an AnimationPlayer moves an occluder. So the snapshot is taken twice over —
- * in a LAYOUT EFFECT, which covers mounting and every React-driven change (the
- * local matrices are already committed by then, and `updateWorldMatrix`
- * recomputes the chain from them, so no frame has to have run), and in
- * `useFrame`, which covers the movement React never hears about.
- *
- * Either way it is published as state ONLY when the numbers actually changed,
- * so a static scene settles during mount and costs nothing afterwards, while a
- * moving occluder costs one React render per frame — the price of being right.
+ * `<ShadowCasterStage>`: the occluder registry, and the world-space snapshot of its local segments
+ * that every shadowed light reads. Flattening once here, not in each light, saves one flatten per
+ * light per frame.
  */
 
 import {
@@ -51,15 +34,14 @@ const NO_CASTERS: readonly WorldShadowCaster[] = [];
 const WorldShadowCasterContext = createContext<readonly WorldShadowCaster[]>(NO_CASTERS);
 
 /**
- * Every visible occluder in world space as of the last frame, unfiltered — a
- * light narrows it with its own `shadow_item_cull_mask`. Empty outside a stage,
- * which is what makes a light with no occluder registry simply cast nothing.
+ * Every visible occluder in world space as of the last frame, unfiltered: a light narrows it with
+ * its own `shadow_item_cull_mask`. Empty outside a stage, so a light there casts nothing.
  */
 export function useWorldShadowCasters(): readonly WorldShadowCaster[] {
   return useContext(WorldShadowCasterContext);
 }
 
-/** Do two snapshots describe the same geometry, down to the coordinate? */
+/** Exact equality, coordinate by coordinate. */
 export function sameWorldCasters(
   a: readonly WorldShadowCaster[],
   b: readonly WorldShadowCaster[]
@@ -97,6 +79,9 @@ export function ShadowCasterStage({ children }: { children: ReactNode }) {
   // An occluder registers in a passive effect, so the version it bumps is what
   // brings this component back for the layout pass that can finally see it.
   const version = useSyncExternalStore(registry.subscribe, registry.version);
+  // A world matrix is no React value: nothing re-renders when an AnimationPlayer moves an occluder.
+  // The layout effect covers mount and React changes, since `updateWorldMatrix` needs only the
+  // committed local matrices. `useFrame` covers the rest. State changes only when the numbers do.
   useLayoutEffect(sample, [sample, version]);
   useFrame(sample, SHADOW_SNAPSHOT_PRIORITY);
 

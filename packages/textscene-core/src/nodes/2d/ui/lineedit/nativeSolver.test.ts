@@ -1,18 +1,8 @@
 /**
- * `lineEditMinimumSize` vs Godot 4.6.3 (`LineEdit::get_minimum_size`,
- * `scene/gui/line_edit.cpp:2443-2477`). Expected numbers are hand-derived
- * from the vendored OpenSans_SemiBold metrics/atlas (`unitsPerEm=2048`,
- * `ascent=2189`, `descent=600`; `hmtx` advance width for 'W' is 1936 design
- * units — `openSansMetrics.ts`'s CONTINUOUS `advanceWidths`, not
- * `openSansAtlas.ts`'s own atlas-bake-resolution-42 `xadvance`) and the
- * default theme's LineEdit margin (`content_margin` = `round(4*scale)` = 4 at
- * scale 1, all four sides, from `make_flat_stylebox`'s own default —
- * `nativeTheme.ts`'s `widgets.lineEdit`) — an independent worked example,
- * never the implementation's own output.
- *
- * At font size 16: fontHeightPx (ceil(ascent)+ceil(descent), NO line_spacing
- * — LineEdit sets none, unlike Label/Button) = ceil(2189*16/2048) +
- * ceil(600*16/2048) = 18 + 5 = 23. 'W' advance at 16px = 1936*(16/2048) = 15.125.
+ * Tests `lineEditMinimumSize` against Godot 4.6.3 (`scene/gui/line_edit.cpp:2443-2477`) with numbers
+ * derived by hand, never from the code: OpenSans_SemiBold's `hmtx` 'W' is 1936 units (`openSansMetrics.ts`,
+ * not the atlas's rounded `xadvance`), 15.125 at size 16. The LineEdit margin is `round(4*scale)` = 4 on
+ * all sides (`make_flat_stylebox`). LineEdit sets no line_spacing: the font height is 18 + 5 = 23.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -50,8 +40,8 @@ function node(props: Partial<LineEditProperties>, styleBoxes: Record<string, Sty
     path: 'L',
     node: { name: 'L', type: 'LineEdit', children: [], properties: { name: 'L', ...props } as LineEditProperties },
     styleBoxes,
-    // A local theme_override_colors/* reaches `resolveTextTheme` through
-    // `n.colors` (the walker folds it in unconditionally), not props.
+    // A local theme_override_colors/* reaches `resolveTextTheme` through `n.colors`, which the walker
+    // fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},
   };
 }
@@ -109,7 +99,7 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
       '(`theme_cache.normal->get_minimum_size().max(theme_cache.read_only->get_minimum_size())`, line_edit.cpp:2475)',
     () => {
       const wideReadOnly = flatStyleBox({ contentMargin: { left: 20, top: 10, right: 20, bottom: 10 } });
-      // editable defaults true (uses "normal" for DRAWING), but min-size still floors against read_only's wider box.
+      // editable defaults true and draws with "normal", but the minimum size still floors against read_only's wider box.
       const result = lineEditMinimumSize(node({}, { read_only: wideReadOnly }), ctx());
       expect(result.x).toBeCloseTo(40 + 4 * W_ADVANCE, 6);
       expect(result.y).toBe(20 + FONT_HEIGHT);
@@ -124,12 +114,9 @@ describe('lineEditMinimumSize — StyleBox content margins + minimum_character_w
 
   it('a theme_override_font_sizes/font_size override changes BOTH the W-advance and the font height', () => {
     const result = lineEditMinimumSize(node({ themeOverrideFontSizes: { font_size: 32 } }), ctx());
-    // 'W' hmtx advance 1936 design units quantizes to 1936/64 = 30.25 at size
-    // 32, but 32 is above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so the
-    // engine reports a WHOLE-pixel advance — `_font_get_glyph_advance`'s own
-    // `.round()` branch, text_server_adv.cpp:3282-3283. Confirmed against
-    // real Godot 4.6.3: `ThemeDB.fallback_font.get_char_size(0x57, 32).x` is
-    // 30.0 and a bare LineEdit at `font_size` 32 has minimum size (128, 53).
+    // 'W' is 30.25 at size 32, but above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE the engine rounds the
+    // advance to a whole pixel (text_server_adv.cpp:3282-3283). Godot 4.6.3 gives
+    // `ThemeDB.fallback_font.get_char_size(0x57, 32).x` = 30.0 and a bare LineEdit minimum (128, 53).
     const wAdvance32 = 30;
     const fontHeight32 = Math.ceil(2189 * (32 / 2048)) + Math.ceil(600 * (32 / 2048));
     expect(result.x).toBe(8 + 4 * wAdvance32);
@@ -298,18 +285,17 @@ describe('lineEditRightIconSize — LineEdit::_get_right_icon_size (line_edit.cp
 describe('lineEditCaretRect — the caret_force_displayed static-preview position (line_edit.cpp:1552-1611)', () => {
   const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
   const RECT = { x: 200, y: 30 };
-  // Shared with layoutLineEditContent's own LEFT test: yArea=trunc(30-4-4)=22,
-  // y=trunc(4+(22-23)/2)=trunc(3.5)=3 — identical formula, `fontHeightPx`
-  // standing in for `text_height` (the two never diverge in this engine).
+  // The LEFT test of layoutLineEditContent uses the same formula: yArea = trunc(30-4-4) = 22,
+  // y = trunc(4+(22-23)/2) = 3, with `fontHeightPx` standing in for `text_height`.
 
   it('when real text is showing, sits at the SAME pen-start x the text itself uses (shaped_text_get_carets at column 0)', () => {
     const rect = lineEditCaretRect({
       rectSize: RECT,
       styleMargin: MARGIN,
-      alignment: 1, // CENTER — must be ignored; only isPlaceholder branches on alignment.
+      alignment: 1, // CENTER, ignored: only the placeholder branch reads alignment.
       fontHeightPx: 23,
       isPlaceholder: false,
-      textPenX: 75, // whatever the caller's own content.textOffset.x resolved to.
+      textPenX: 75, // the caller's content.textOffset.x.
       rightIconRawWidthPx: 0,
       ofsMaxPx: 192,
       caretWidthPx: 1,
@@ -481,8 +467,8 @@ describe('layoutLineEditContent — NOTIFICATION_DRAW content rect + x_ofs/y_ofs
   });
 
   it('y_ofs includes the ACTIVE style\'s own TOP margin — `style->get_offset().y` (style_box.cpp:87-89) — not just the text/area centring term', () => {
-    // A margin-heavy style shifts y_ofs down by (its own top margin), even though the
-    // centring term (y_area - text_height)/2 is identical to the LEFT case above.
+    // A margin-heavy style shifts y_ofs down by its own top margin, while the centring term
+    // (y_area - text_height)/2 matches the LEFT case above.
     const result = layoutLineEditContent({
       rectSize: { x: 200, y: 38 },
       styleMargin: { left: 4, top: 12, right: 4, bottom: 4 },
@@ -665,8 +651,7 @@ describe('layoutLineEditContent — right_icon/clear-button inset (line_edit.cpp
 });
 
 describe(`lineEditMinimumSize — resolves this LineEdit's own theme font key ("${LINE_EDIT_THEME_FONT_KEY}", default_theme.cpp:419)`, () => {
-  // See `resolveNodeFontMetrics.test.ts`'s own doc for why an UNRESOLVABLE
-  // font's warn is the observable proof here, not a resolved FontMetrics value.
+  // An unresolvable font's warn is the observable proof here (`resolveNodeFontMetrics.test.ts`).
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});

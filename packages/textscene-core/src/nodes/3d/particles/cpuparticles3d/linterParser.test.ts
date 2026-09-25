@@ -1,13 +1,8 @@
 /**
- * CPUParticles3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * CPUParticles3D strict validators, asserted through `validatorRegistry` so a
+ * failure points at the validator rather than at scene parsing. Rule-level
+ * behaviour belongs in linter.test.ts. Quote the governing Godot source line
+ * beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -27,15 +22,14 @@ describe('CPUParticles3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format.
     const accepted = validatorRegistry
       .getOwnKeys('CPUParticles3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
     expect(accepted).toEqual([]);
   });
 
-  // cpu_particles_3d.cpp:1555-1556 — top-level (before any ADD_GROUP).
+  // cpu_particles_3d.cpp:1555-1556: top level, before any ADD_GROUP.
   describe('emitting / amount', () => {
     it('accepts a boolean emitting flag', () => {
       expect(check('emitting', 'true')).toBeNull();
@@ -55,7 +49,7 @@ describe('CPUParticles3D strict validators', () => {
     });
   });
 
-  // cpu_particles_3d.cpp:1557-1560 — ADD_GROUP("Time", "").
+  // cpu_particles_3d.cpp:1557-1560: ADD_GROUP("Time", "").
   describe('Time group', () => {
     it('accepts lifetime at and above the hard floor, or_greater lifting the ceiling', () => {
       expect(check('lifetime', '0.01')).toBeNull();
@@ -67,8 +61,8 @@ describe('CPUParticles3D strict validators', () => {
       expect(check('lifetime', '0')?.severity).toBe('error');
     });
 
-    // set_lifetime (:92) refuses `<= 0`; the hint (:1558) floors at 0.01, so
-    // (0, 0.01) is a band Godot loads and the inspector excludes.
+    // set_lifetime (:92) refuses `<= 0` and the hint (:1558) floors at 0.01, so Godot
+    // loads (0, 0.01) and the inspector excludes it.
     it('warns between the refused floor and the hinted one', () => {
       const warning = check('lifetime', '0.005');
       expect(warning?.severity).toBe('warning');
@@ -86,7 +80,7 @@ describe('CPUParticles3D strict validators', () => {
     });
   });
 
-  // cpu_particles_3d.cpp:1562-1569 — top-level (between the Time and Drawing groups).
+  // cpu_particles_3d.cpp:1562-1569: top level, between the Time and Drawing groups.
   describe('emission cadence and RNG group', () => {
     it('bounds speed_scale to 0-64 (PROPERTY_HINT_RANGE "0,64,0.01", hard both ends)', () => {
       expect(check('speed_scale', '0')).toBeNull();
@@ -108,7 +102,7 @@ describe('CPUParticles3D strict validators', () => {
     it('bounds seed to 0-4294967295 (uint32_t; "0,"+UINT32_MAX+",1", hard both ends)', () => {
       expect(check('seed', '0')).toBeNull();
       expect(check('seed', '4294967295')).toBeNull();
-      // -1 IS 4294967295 in a uint32 slot, so it lands on the stated ceiling.
+      // -1 is 4294967295 in a uint32 slot, so it lands on the stated ceiling.
       expect(check('seed', '-1')).toBeNull();
       expect(check('seed', '4294967296')?.code).toBe('INVALID_SEED_VALUE');
     });
@@ -128,7 +122,7 @@ describe('CPUParticles3D strict validators', () => {
     });
   });
 
-  // cpu_particles_3d.cpp:1570-1574 — ADD_GROUP("Drawing", "").
+  // cpu_particles_3d.cpp:1570-1574: ADD_GROUP("Drawing", "").
   describe('Drawing group', () => {
     it('accepts an AABB format for visibility_aabb (PROPERTY_HINT_NONE, no range)', () => {
       expect(check('visibility_aabb', 'AABB(0, 0, 0, 1, 1, 1)')).toBeNull();
@@ -158,7 +152,7 @@ describe('CPUParticles3D strict validators', () => {
     });
   });
 
-  // cpu_particles_3d.cpp:1666-1677 — ADD_GROUP("Emission Shape", "emission_").
+  // cpu_particles_3d.cpp:1666-1677: ADD_GROUP("Emission Shape", "emission_").
   describe('Emission Shape group', () => {
     it('accepts every emission_shape enum value 0-6', () => {
       for (const value of ['0', '1', '2', '3', '4', '5', '6']) {
@@ -191,10 +185,9 @@ describe('CPUParticles3D strict validators', () => {
       expect(check('emission_points', 'not-an-array')?.code).toBe('INVALID_EMISSION_POINTS_FORMAT');
     });
 
-    // variant_parser.cpp:2519 (points/normals) and :2534 (colors) put every
-    // component through `rtos_fix`, which writes `inf` / `inf_neg` / `nan`
-    // (:1985-1997). `Number()` reads none of them, so they were format errors on
-    // arrays Godot itself wrote.
+    // variant_parser.cpp:2519 (points, normals) and :2534 (colors) write every component
+    // through `rtos_fix`, which writes `inf`, `inf_neg` and `nan` (:1985-1997).
+    // `Number()` reads none of them.
     it('accepts a non-finite component, which the array writer emits', () => {
       expect(check('emission_points', 'PackedVector3Array(0, inf, 0)')).toBeNull();
       expect(check('emission_normals', 'PackedVector3Array(0, inf_neg, nan)')).toBeNull();
@@ -209,9 +202,8 @@ describe('CPUParticles3D strict validators', () => {
       );
     });
 
-    // variant_parser.cpp:1573 divides the flat float count by 3 with integer
-    // division and drops the remainder, so a count that isn't a multiple of 3
-    // still loads (as a shorter array) rather than failing to parse.
+    // variant_parser.cpp:1573 divides the float count by 3 and drops the remainder, so
+    // the array loads shorter rather than failing to parse.
     it('accepts an emission_points count that is not a multiple of 3', () => {
       expect(check('emission_points', 'PackedVector3Array(0, 0, 1, 0)')).toBeNull();
     });
@@ -253,7 +245,7 @@ describe('CPUParticles3D strict validators', () => {
     });
   });
 
-  // cpu_particles_3d.cpp:1678-1685 — ADD_GROUP("Particle Flags", …) and ADD_GROUP("Direction", "").
+  // cpu_particles_3d.cpp:1678-1685: ADD_GROUP("Particle Flags", …) and ADD_GROUP("Direction", "").
   describe('Particle Flags and Direction groups', () => {
     it('accepts boolean particle flags', () => {
       expect(check('particle_flag_align_y', 'true')).toBeNull();
@@ -275,14 +267,14 @@ describe('CPUParticles3D strict validators', () => {
     });
   });
 
-  // cpu_particles_3d.cpp:1686-1687 — ADD_GROUP("Gravity", "").
+  // cpu_particles_3d.cpp:1686-1687: ADD_GROUP("Gravity", "").
   describe('Gravity group', () => {
     it('accepts a Vector3 gravity, including negative components', () => {
       expect(check('gravity', 'Vector3(0, -9.8, 0)')).toBeNull();
     });
   });
 
-  // cpu_particles_3d.cpp:1688-1690 — ADD_GROUP("Initial Velocity", "initial_").
+  // cpu_particles_3d.cpp:1688-1690: ADD_GROUP("Initial Velocity", "initial_").
   describe('Initial Velocity group', () => {
     it('floors initial_velocity_min/max at 0, or_greater lifting the ceiling', () => {
       expect(check('initial_velocity_min', '0')).toBeNull();
@@ -291,8 +283,8 @@ describe('CPUParticles3D strict validators', () => {
     });
   });
 
-  // cpu_particles_3d.cpp:1691-1742 — the min/max/curve triplet groups. `or_less,or_greater`
-  // together mean BOTH sides of the stated range are soft, i.e. fully unbounded.
+  // cpu_particles_3d.cpp:1691-1742: the min, max and curve groups. `or_less,or_greater`
+  // together open both ends of the stated range.
   describe('unbounded min/max families (or_less AND or_greater on both bounds)', () => {
     it('accepts angular_velocity_min/max far outside the stated -720..720 slider range', () => {
       expect(check('angular_velocity_min', '-99999')).toBeNull();
@@ -329,7 +321,7 @@ describe('CPUParticles3D strict validators', () => {
     });
   });
 
-  // cpu_particles_3d.cpp:1694, 1698, 1702, 1706, 1710, 1714, 1718 — the *_curve properties.
+  // cpu_particles_3d.cpp:1694, 1698, 1702, 1706, 1710, 1714, 1718: the *_curve properties.
   describe('*_curve resource references', () => {
     it('accepts a resource reference for every curve property', () => {
       for (const prop of [
@@ -360,7 +352,7 @@ describe('CPUParticles3D strict validators', () => {
     });
   });
 
-  // cpu_particles_3d.cpp:1711-1714 — ADD_GROUP("Damping", "").
+  // cpu_particles_3d.cpp:1711-1714: ADD_GROUP("Damping", "").
   describe('Damping group', () => {
     it('floors damping_min/max at 0, or_greater lifting the ceiling', () => {
       expect(check('damping_min', '0')).toBeNull();
@@ -369,7 +361,7 @@ describe('CPUParticles3D strict validators', () => {
     });
   });
 
-  // cpu_particles_3d.cpp:1719-1726 — ADD_GROUP("Scale", "").
+  // cpu_particles_3d.cpp:1719-1726: ADD_GROUP("Scale", "").
   describe('Scale group', () => {
     it('floors scale_amount_min/max at 0, or_greater lifting the ceiling', () => {
       expect(check('scale_amount_min', '0')).toBeNull();
@@ -382,7 +374,7 @@ describe('CPUParticles3D strict validators', () => {
     });
   });
 
-  // cpu_particles_3d.cpp:1727-1730 — ADD_GROUP("Color", "").
+  // cpu_particles_3d.cpp:1727-1730: ADD_GROUP("Color", "").
   describe('Color group', () => {
     it('accepts a Color format', () => {
       expect(check('color', 'Color(1, 1, 1, 1)')).toBeNull();
@@ -393,7 +385,7 @@ describe('CPUParticles3D strict validators', () => {
     });
   });
 
-  // cpu_particles_3d.cpp:1732-1735 — ADD_GROUP("Hue Variation", "hue_").
+  // cpu_particles_3d.cpp:1732-1735: ADD_GROUP("Hue Variation", "hue_").
   describe('Hue Variation group', () => {
     it('bounds hue_variation_min/max to -1..1 (hard both ends)', () => {
       expect(check('hue_variation_min', '-1')).toBeNull();
@@ -403,7 +395,7 @@ describe('CPUParticles3D strict validators', () => {
     });
   });
 
-  // cpu_particles_3d.cpp:1740-1741 — the one hard-bounded pair in the Animation group.
+  // cpu_particles_3d.cpp:1740-1741: the one closed pair in the Animation group.
   describe('Animation group: anim_offset_min/max', () => {
     it('bounds anim_offset_min/max to 0-1 (hard both ends, no or_greater/or_less)', () => {
       expect(check('anim_offset_min', '0')).toBeNull();
@@ -414,9 +406,8 @@ describe('CPUParticles3D strict validators', () => {
   });
 
   it('resolves an inherited GeometryInstance3D key through the base-walk', () => {
-    // Proves the base import is wired: `cast_shadow` is declared on
-    // GeometryInstance3D, not on this type, so it must resolve through
-    // NODE_BASE_TYPES rather than getOwnKeys.
+    // `cast_shadow` is declared on GeometryInstance3D, so it resolves through
+    // NODE_BASE_TYPES only when the base import is wired.
     const validator = validatorRegistry.findValidator('CPUParticles3D', 'cast_shadow');
     expect(validator).not.toBeNull();
     expect(validatorRegistry.getOwnKeys('CPUParticles3D')).not.toContain('cast_shadow');

@@ -1,12 +1,8 @@
 /**
- * PointLight2D semantic rules — the required texture, and the range windows
- * that can never match.
- *
- * Godot's tests are `>= min && <= max` on both windows (rasterizer line 850 for
- * z, `renderer_viewport.cpp`'s per-canvas loop for the layer), and nothing swaps
- * an inverted pair. So `min > max` is an EMPTY interval: the light is enabled,
- * costs a full accumulation pass, and reaches nothing. That is authoring error
- * rather than a malformed file, so it warns.
+ * Tests the PointLight2D rules: the required texture, and the range windows that
+ * never match. Godot tests `>= min && <= max` (rasterizer line 850 for z,
+ * `renderer_viewport.cpp`'s per-canvas loop for the layer) and never swaps an
+ * inverted pair, so `min > max` reaches nothing. It reports at info.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -90,8 +86,8 @@ describe('PointLight2D linter', () => {
   });
 
   it("accepts a single-value window, which is Godot's own layer default", () => {
-    // range_layer_min = range_layer_max = 0 is what every untouched light has;
-    // an off-by-one that treated equality as inverted would warn on the corpus.
+    // range_layer_min = range_layer_max = 0 is what every untouched light has, so
+    // an off-by-one that treated equality as inverted would fire on every light.
     expectNoDiagnostic(
       scene(
         node('PointLight2D', {
@@ -116,8 +112,7 @@ describe('PointLight2D linter', () => {
 
   it("compares an authored bound against the ABSENT half's default", () => {
     // `range_z_max = -2000` alone is already empty against the default
-    // range_z_min of -1024. Reading only pairs that are both authored would
-    // miss the commonest way to write the mistake.
+    // range_z_min of -1024, the commonest way to write the mistake.
     expectDiagnostic(scene(node('PointLight2D', { ...WITH_TEXTURE, range_z_max: -2000 })), {
       ruleName: 'pointlight2d-inverted-z-range',
       severity: 'info',

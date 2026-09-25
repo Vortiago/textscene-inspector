@@ -1,8 +1,7 @@
 /**
- * The slice's THROWING Color reader — the one decoder in the value-decoder family
- * that rejects a malformed literal instead of substituting a fallback, because
- * its callers (the linter's Color validators, the scientific-notation regression
- * guard) need the rejection. `decode.ts` uses the optional reader instead.
+ * The slice's throwing Color reader, the one value decoder that rejects a malformed
+ * literal instead of substituting a fallback, because the linter's Color validators need
+ * the rejection. `decode.ts` uses the optional reader instead.
  */
 
 import { describe, it, expect } from 'vitest';

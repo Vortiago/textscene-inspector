@@ -1,11 +1,8 @@
 /**
- * `texture_filter` through the imperative (`.tres`) material path.
- *
- * The property is per-MATERIAL in Godot but lives on the Texture in three, and
- * the loader caches ONE texture per path — so the contract under test is that
- * two materials sharing an image get their own sampler state and the shared
- * source is never written to. Getting this wrong is silent and order-dependent:
- * whichever material built last would win for every consumer.
+ * `texture_filter` through the imperative (`.tres`) material path. It is per material in
+ * Godot but lives on the cached Texture in three, so two materials sharing an image get
+ * their own sampler state, and the shared source is never written to. A write to it
+ * fails silently: the last material built wins for every consumer.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -26,10 +23,9 @@ function build(
 }
 
 /**
- * A texture as the LOADER hands it out: tagged `SRGBColorSpace` before any slot
- * is known (`resources/formats/image/textureProcessing.ts`). Binding is what
- * decides the colour space each Godot slot actually samples in, so starting
- * from three's own default would let a raw slot pass without being bound.
+ * A texture as the loader hands it out: tagged `SRGBColorSpace` before any slot is known
+ * (`resources/formats/image/textureProcessing.ts`). From three's own default, a raw slot
+ * would pass without being bound.
  */
 function loadedTexture(): THREE.Texture {
   const texture = new THREE.Texture();
@@ -59,10 +55,9 @@ describe('texture_filter integration — shared textures', () => {
   });
 
   it('clones to the stated Repeat default even when the filter is unauthored', () => {
-    // Wrapping is the consumer's stated default, not the loader's: the loader
-    // hands a clamp entry and a default material asks for Repeat, so the map is
-    // a source-shared Repeat clone. The shared entry stays clamp for a 2D
-    // consumer of the same path.
+    // The consumer states the wrapping, not the loader. The loader hands out a
+    // clamp entry and a default material asks for Repeat, so the map is a Repeat
+    // clone that shares the source. The shared entry stays clamp for 2D.
     const shared = loadedTexture();
     const material = build({}, { albedo_texture: shared });
 

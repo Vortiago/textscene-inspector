@@ -22,7 +22,7 @@ describe('isGodotTextResourcePath', () => {
 
   it('matches case-insensitively, as `recognize_path` does', () => {
     // resource_loader.cpp:73 compares with `nocasecmp_to`, so `Model.TRES` is a
-    // file Godot loads — and one this linter must therefore read.
+    // file Godot loads, so this linter must read it.
     expect(isGodotTextResourcePath('Model.TRES')).toBe(true);
     expect(isGodotTextResourcePath('Level.TsCn')).toBe(true);
   });

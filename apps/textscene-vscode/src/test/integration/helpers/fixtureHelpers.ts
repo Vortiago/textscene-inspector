@@ -1,55 +1,26 @@
-/**
- * Test helpers for working with TSCN fixture files.
- */
+/** Helpers for the TSCN fixtures in the test workspace. */
 
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
+// `__dirname` is the bundle's output directory, four levels below the app root.
+const FIXTURES_DIR = path.join(path.resolve(__dirname, '../../../../.test-workspace'), 'fixtures');
+
 /**
- * Get the path to a fixture file in the test workspace.
- * @param fixtureName Name of the fixture file (e.g., 'unit-empty-scene.tscn')
+ * @param fixtureName Name of the fixture file, such as 'unit-empty-scene.tscn'
  * @returns URI to the fixture file
  */
 export function getFixturePath(fixtureName: string): vscode.Uri {
-  // __dirname in compiled JS points to out/test/integration/helpers
-  // Need to go up to textscene-vscode root, then to .test-workspace
-  const workspaceRoot = path.resolve(
-    __dirname,
-    '../../../../.test-workspace',
-  );
-  return vscode.Uri.file(path.join(workspaceRoot, 'fixtures', fixtureName));
+  return vscode.Uri.file(path.join(FIXTURES_DIR, fixtureName));
 }
 
-/**
- * Open a fixture file in VS Code.
- * @param fixtureName Name of the fixture file
- * @returns The opened text document
- */
-export async function openFixture(
-  fixtureName: string,
-): Promise<vscode.TextDocument> {
-  const fixtureUri = getFixturePath(fixtureName);
-  return await vscode.workspace.openTextDocument(fixtureUri);
-}
-
-/**
- * List all available fixtures in the test workspace.
- * @returns Array of fixture file names
- */
+/** @returns The fixture file names in the test workspace */
 export function listFixtures(): string[] {
-  // __dirname in compiled JS points to out/test/integration/helpers
-  const workspaceRoot = path.resolve(
-    __dirname,
-    '../../../../.test-workspace',
-  );
-  const fixturesDir = path.join(workspaceRoot, 'fixtures');
-
   try {
-    return fs
-      .readdirSync(fixturesDir)
-      .filter((file: string) => file.endsWith('.tscn'));
+    return fs.readdirSync(FIXTURES_DIR).filter((file: string) => file.endsWith('.tscn'));
   } catch {
+    // No test workspace yet: a caller that needs fixtures skips its test.
     return [];
   }
 }

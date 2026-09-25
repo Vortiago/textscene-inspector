@@ -1,8 +1,8 @@
 [gd_scene load_steps=9 format=3 uid="uid://unitshaderskyenv"]
 
-; Twin of unit-stage-ambient-ibl.tscn with one change: the sky is an unsupported
-; custom ShaderMaterial. Pins that an unresolvable sky still leaves AgX + ambient
-; applied (diffuse identical to the twin) — only the reflection and background go.
+; Twin of unit-stage-ambient-ibl.tscn with one change: the sky is an unsupported custom
+; ShaderMaterial. An unresolvable sky still leaves AgX and ambient applied (diffuse identical to
+; the twin). Only the reflection and background go.
 
 [ext_resource type="Shader" path="res://sky-shader-stub.gdshader" id="1_shader"]
 

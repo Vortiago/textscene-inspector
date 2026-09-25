@@ -1,6 +1,6 @@
 /**
- * AudioStreamPlayer renders nothing visible — reuse the base Node component
- * (zero geometry) so a non-spatial audio node doesn't show a placeholder cube.
+ * AudioStreamPlayer renders nothing visible: it reuses the base Node component (zero geometry),
+ * so a non-spatial audio node shows no placeholder cube.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';

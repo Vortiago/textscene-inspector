@@ -26,7 +26,7 @@ describe('decodeNavigationMesh', () => {
 
   it('also reads the typed `Array[PackedInt32Array](…)` wrapper (format tolerance)', () => {
     // NavigationMesh::_get_polygons returns an untyped Array, so Godot writes the
-    // bare form; the typed spelling its 2D sibling emits is accepted anyway.
+    // bare form. The typed spelling its 2D sibling emits is accepted too.
     const data = decodeNavigationMesh({
       vertices: 'PackedVector3Array(0, 0, 0, 1, 0, 0, 1, 0, 1)',
       polygons: 'Array[PackedInt32Array]([PackedInt32Array(0, 1, 2)])',
@@ -44,7 +44,7 @@ describe('decodeNavigationMesh', () => {
 
   it('returns null instead of throwing on malformed POLYGON indices', () => {
     // The index reader throws on an element Godot's tokenizer refuses, and this
-    // call sits outside the vertices try/catch — so without its own guard the
+    // call sits outside the vertices try/catch, so without its own guard the
     // throw leaves the decoder and takes the previewer down with it.
     expect(
       decodeNavigationMesh({
@@ -70,7 +70,7 @@ describe('decodeNavigationMesh', () => {
   });
 
   it('returns null when a property is not a Godot-text literal at all (error path)', () => {
-    // An inline `[sub_resource]`'s data is `Record<string, unknown>`; a non-string
+    // An inline `[sub_resource]`'s data is `Record<string, unknown>`, and a non-string
     // there decodes to nothing rather than being coerced.
     expect(
       decodeNavigationMesh({ vertices: null, polygons: '[PackedInt32Array(0, 1, 2)]' })
@@ -116,7 +116,7 @@ describe('decodeNavigationMesh', () => {
   });
 
   it('ignores a trailing partial vertex when range-checking indices (edge case)', () => {
-    // Eight floats describe two vertices and a stray pair; index 2 must not resolve.
+    // Eight floats describe two vertices and a stray pair, so index 2 must not resolve.
     expect(
       decodeNavigationMesh({
         vertices: 'PackedVector3Array(0, 0, 0, 1, 0, 0, 1, 0)',

@@ -1,25 +1,7 @@
 /**
- * Semantic linter rules for SubViewportContainer.
- *
- * 1. The structural check: the container exists solely to display its
- * SubViewport children, so one with none draws nothing at all. No format
- * check can see that — it is a fact about the node's CHILDREN.
- *
- * Deliberately NOT a rule: more than one SubViewport child. Godot's
- * `NOTIFICATION_DRAW` loops every SubViewport child and draws each, stacked in
- * tree order, so multiple children are legal rather than suspicious.
- *
- * 2. `SubViewportContainer::get_configuration_warnings()`
- * (subviewport_container.cpp:269-288) also checks:
- *
- *     if (get_default_cursor_shape() != Control::CURSOR_ARROW) {
- *         warnings.push_back(RTR("The default mouse cursor shape of
- *             SubViewportContainer has no effect.\nConsider leaving it at its
- *             initial value `CURSOR_ARROW`."));
- *     }
- *
- * `mouse_default_cursor_shape` field-initialises to `CURSOR_ARROW` (0)
- * (control.h:245), so an absent key means ARROW and never warns.
+ * Semantic rules for SubViewportContainer. One with no SubViewport child draws nothing, while several
+ * are legal, since the draw stacks each in tree order. `get_configuration_warnings()`
+ * (subviewport_container.cpp:269-288) warns on a `mouse_default_cursor_shape` other than `CURSOR_ARROW`.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -38,12 +20,9 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   // `cast_to<SubViewport>` (subviewport_container.cpp:274), so a subclass
   // counts; `descendsFrom` is reflexive and still matches a plain SubViewport.
   const hasSubViewport = children.some((child) => descendsFrom(child.type, 'SubViewport'));
-  // Instance-opaque linting (CONTEXT.md): a child whose type comes from another
-  // scene may well be rooted at a SubViewport, so staying silent beats
-  // false-positiving on a normal Godot idiom. Testing `instance` alone missed
-  // the override-heading case, which parses as a confident `'Node'`; a class
-  // outside Godot's catalog is the same question, since `descendsFrom` answers
-  // false for "never heard of it" exactly as it does for "not a subclass".
+  // Instance-opaque linting (CONTEXT.md): a child typed by another scene, an override heading
+  // (parsed as a confident `'Node'`) or a class outside the catalog may be a SubViewport, and
+  // `descendsFrom` answers false for all three, so the rule stays silent.
   const hasOpaqueChild = children.some(
     (child) => isTypeUnknowable(child) || !isCatalogedType(child.type)
   );
@@ -60,6 +39,8 @@ function checkSubViewportContainer(context: RuleContext): Diagnostic[] {
   }
 
   const props = isValidProperties(node.properties) ? node.properties : {};
+  // `mouse_default_cursor_shape` starts at `CURSOR_ARROW` (0) (control.h:245), so an absent key
+  // never warns.
   const cursorRaw = props.mouse_default_cursor_shape;
   if (cursorRaw !== undefined) {
     // In range, not merely non-null: a non-finite reads as NaN and `99` reads

@@ -39,11 +39,8 @@ describe('resourceRef', () => {
     expect(resourceRef('Resource("x")')).toBeNull();
   });
 
-  // `_parse_sub_resource` / `_parse_ext_resource` take TK_NUMBER as well as
-  // TK_STRING (`resource_format_text.cpp:107,128`: "Expected number (old style
-  // sub-resource index) or string"), and `String id = token.value` stringifies
-  // the int. The header side reads `String id = next_tag.fields["id"]`
-  // (`:488`, `:1048`), so `id=1` and `ExtResource(1)` meet as the string "1".
+  // The loader takes TK_NUMBER as well as TK_STRING (`resource_format_text.cpp:107,128`) and stringifies the int,
+  // as the header's `String id = next_tag.fields["id"]` is (`:488`, `:1048`), so `id=1` and `ExtResource(1)` meet as "1".
   it.each([
     ['ExtResource(1)', 'ExtResource', '1'],
     ['SubResource(3)', 'SubResource', '3'],

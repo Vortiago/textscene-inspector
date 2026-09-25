@@ -1,21 +1,8 @@
 /**
- * The test-kit's own diagnostic lookup.
- *
- * `expectDiagnostic`'s `where` is matched by message SUBSTRING, so `{ prop:
- * 'resource reference' }` names the sentence `createResourceReferenceValidator`
- * emits for every resource slot and `{ prop: 'theme_override_constants' }`
- * names a whole property family. Picking the first hit made those assertions
- * about whichever diagnostic the linter sorted first — a fixture gaining a
- * second bad slot silently re-pointed the test without changing it.
- *
- * The kit refuses that now: a `where` several diagnostics answer is red until it
- * is narrowed. `expectNoDiagnostic` keeps the family semantics, because "none of
- * them" is the stronger claim there.
- *
- * These cases exist because the refusal is invisible from inside the slice
- * tests it protects — every one of them passes whether or not the ambiguity
- * check fires. An `it` that should have failed cannot be caught from outside,
- * so each is driven through `toThrow` here.
+ * The test-kit's own diagnostic lookup. `expectDiagnostic` refuses a `where`
+ * substring that several diagnostics answer, so a second bad slot cannot
+ * re-point an assertion. `expectNoDiagnostic` keeps the family semantics.
+ * Each case runs through `toThrow`, since the slice tests pass either way.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -25,7 +12,7 @@ import './index.js'; // trigger all validator + rule registrations
 /**
  * Two bad resource slots on one node. Both diagnostics carry the shared
  * "must be a resource reference" sentence, so `{ prop: 'resource reference' }`
- * cannot tell them apart — the exact shape six live call sites used.
+ * cannot tell them apart.
  */
 const TWO_RESOURCE_SLOTS = scene(
   node('GPUParticles3D', {

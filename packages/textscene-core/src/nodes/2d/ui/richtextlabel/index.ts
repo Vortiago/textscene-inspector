@@ -1,4 +1,4 @@
-/** RichTextLabel registration — parser. */
+/** Registers the RichTextLabel parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseRichTextLabel } from './parser';

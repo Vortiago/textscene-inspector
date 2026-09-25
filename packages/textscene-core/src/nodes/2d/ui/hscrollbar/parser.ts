@@ -1,5 +1,5 @@
 /**
- * HScrollBar parser — delegates to the shared ScrollBar base (Control +
+ * HScrollBar parser: delegates to the shared ScrollBar base (Control +
  * Range + `custom_step`). HScrollBar adds no properties of its own; only the
  * draw axis differs, which is the Component's business.
  */

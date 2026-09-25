@@ -1,16 +1,8 @@
 /**
- * `materialProgramInputs()` — the key and the merged props it derives from the
- * same bag.
- *
- * The failure it prevents is silent and total: a material compiled before its
- * texture resolved samples NOTHING for the rest of its life (`USE_MAP` is baked
- * at that first compile), so a textured polygon paints its flat fill colour over
- * the whole shape and a particle field paints untextured quads. Nothing in the
- * material's own state looks wrong afterwards — `map` reads back as the texture
- * — which is why the SOURCE rule that every material is built here is a gate of
- * its own (`materialFactoryConformance.test.ts`). The behavioural half — that a
- * late texture actually reaches the shader — is asserted where the sequence can
- * be driven end to end, in `nodes/2d/polygon2d/Component.texture.test.tsx`.
+ * `materialProgramInputs()`: the key and the merged props from the same bag. A
+ * material compiled before its texture resolved samples nothing for life, while
+ * `map` reads back fine. `materialFactoryConformance.test.ts` gates the source and
+ * `nodes/2d/polygon2d/Component.texture.test.tsx` drives a late texture end to end.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -20,7 +12,7 @@ import {
   type ProgramInjection,
 } from './materialProgramInputs';
 
-/** A key from the factory — the only thing about a program a caller can compare. */
+/** A key from the factory: the only thing about a program a caller can compare. */
 function keyOf<P extends object, M extends readonly object[] = []>(
   props: P & MaterialProgramBag,
   ...merge: { [Part in keyof M]: M[Part] & MaterialProgramBag }
@@ -40,9 +32,8 @@ describe('materialProgramInputs', () => {
     const program = materialProgramInputs({ props: { map: texture() } });
     expect(program.key).not.toBe('');
     expect('key' in program.props).toBe(false);
-    // `react-jsx-runtime.development.js:242-245` reads the explicit `key=`
-    // attribute first and then lets a spread `config.key` overwrite it, warning
-    // as it goes — so a key inside `props` would silently win.
+    // `react-jsx-runtime.development.js:242-245` lets a spread `config.key`
+    // overwrite the explicit `key=`, so a key inside `props` would win.
     // @ts-expect-error `key` is the factory's output; a caller may not supply one.
     materialProgramInputs({ props: { key: 'mine' } });
   });
@@ -70,9 +61,8 @@ describe('materialProgramInputs', () => {
   });
 
   it('keeps one key across a texture swap — a new texture is not a new program', () => {
-    // An AnimatedSprite2D advancing a frame, a Sprite2D re-regioned. Remounting
-    // a material per animation frame would throw away a compiled program per
-    // frame for a program that is identical.
+    // An AnimatedSprite2D advancing a frame, a Sprite2D re-regioned: the program
+    // is identical, so a remount per frame would waste a compile per frame.
     expect(keyOf({ map: texture(), defines: DECODE })).toBe(
       keyOf({ map: texture(), defines: DECODE })
     );
@@ -86,7 +76,7 @@ describe('materialProgramInputs', () => {
   });
 
   it('separates two defines that differ only in VALUE', () => {
-    // `WebGLPrograms.js:415-420` pushes each define's name AND its value.
+    // `WebGLPrograms.js:415-420` pushes each define's name and its value.
     expect(keyOf({ defines: { STEPS: '4' } })).not.toBe(keyOf({ defines: { STEPS: '8' } }));
   });
 
@@ -125,6 +115,8 @@ describe('materialProgramInputs', () => {
       ['transmission', { transmission: 0.5 }],
       ['iridescence', { iridescence: 0.5 }],
       ['dispersion', { dispersion: 0.5 }],
+      // three 0.186.0 `WebGLPrograms.js:143`, layer bit 24 at `:541-542`.
+      ['retroreflectivity', { retroreflectivity: 0.5 }],
       ['flatShading', { flatShading: true }],
     ];
 
@@ -141,21 +133,20 @@ describe('materialProgramInputs', () => {
 
     it('reads a physical feature as a threshold, not a magnitude', () => {
       // `:141` is `material.clearcoat > 0`, so a slider moving inside the band
-      // is a uniform — rebuilding for it would throw away the program per edit.
+      // is a uniform, and rebuilding would waste the program per edit.
       expect(keyOf({ clearcoat: 0.5 })).toBe(keyOf({ clearcoat: 0.9 }));
       expect(keyOf({ clearcoat: 0 })).toBe(keyOf({}));
     });
 
     it('keys flatShading only while the material is not wireframe', () => {
-      // `:317` — `material.wireframe === false && material.flatShading === true`.
+      // `:317`: `material.wireframe === false && material.flatShading === true`.
       expect(keyOf({ flatShading: true, wireframe: true })).toBe(keyOf({ wireframe: true }));
     });
 
     it('keys anisotropyMap only once anisotropy has crossed zero', () => {
-      // `:147` gates the slot on `HAS_ANISOTROPY`, and only
-      // `MeshPhysicalMaterial` declares `anisotropy` at all
-      // (`MeshPhysicalMaterial.js:353`) — so on any other material the flowmap
-      // is provably not a program input.
+      // `:147` gates the slot on `HAS_ANISOTROPY`, and only `MeshPhysicalMaterial`
+      // declares `anisotropy` (`MeshPhysicalMaterial.js:353`), so on any other
+      // material the flowmap is not a program input.
       const flowmap = texture(THREE.NoColorSpace);
       expect(keyOf({ anisotropyMap: flowmap })).toBe(keyOf({}));
       expect(keyOf({ anisotropy: 0.5, anisotropyMap: flowmap })).not.toBe(
@@ -164,9 +155,8 @@ describe('materialProgramInputs', () => {
     });
 
     it('keys alphaHash even though its neighbour alphaTest is exempt', () => {
-      // `Material.js:134` declares `alphaHash` as a plain field — no setter, no
-      // `version++` — so the exemption `alphaTest` earns at `:494-502` does not
-      // transfer, and hashing would never reach a mounted material's shader.
+      // `Material.js:134` declares `alphaHash` as a plain field with no setter, so
+      // the exemption `alphaTest` earns at `:494-502` does not transfer.
       expect(keyOf({ alphaHash: true })).not.toBe(keyOf({ alphaHash: false }));
       expect(keyOf({ alphaHash: false })).toBe(keyOf({}));
     });
@@ -174,9 +164,8 @@ describe('materialProgramInputs', () => {
 
   describe('the parameters three does NOT bake into a key', () => {
     it('leaves alphaTest alone — the setter bumps version on the zero crossing', () => {
-      // `Material.js:494-502`: `alphaTest` IS a program input, and it re-derives
-      // itself. Remounting for it would throw away the program three is about to
-      // rebuild anyway.
+      // `Material.js:494-502`: `alphaTest` is a program input that re-derives
+      // itself, so a remount would waste the program three rebuilds anyway.
       expect(keyOf({ alphaTest: 0.5 })).toBe(keyOf({ alphaTest: 0 }));
     });
 
@@ -204,7 +193,7 @@ describe('materialProgramInputs', () => {
     });
 
     it('leaves clippingPlanes alone — `setProgram` re-checks the plane count', () => {
-      // `numClippingPlanes` IS a program parameter (`:354`), but
+      // `numClippingPlanes` is a program parameter (`:354`), but
       // `WebGLRenderer.js:2456-2458` compares it every draw and rebuilds, so a
       // Control moving in or out of a clipped ancestor self-heals.
       const plane = new THREE.Plane();
@@ -217,10 +206,9 @@ describe('materialProgramInputs', () => {
     const lighting = { transparent: true as const };
 
     it('takes a forced transparent over the site value beneath it', () => {
-      // `canvasItemLighting.ts` sets `transparent: true` unconditionally, and it
-      // is spread LAST — so an item that writes `transparent: false` is still
-      // transparent, and its key must say so or the program and the material
-      // disagree.
+      // `canvasItemLighting.ts` sets `transparent: true` and is spread last, so an
+      // item that writes `transparent: false` is still transparent, and its key
+      // says so.
       expect(keyOf({ transparent: false }, lighting)).toBe(keyOf({}, lighting));
       expect(keyOf({ transparent: false }, lighting)).not.toBe(keyOf({ transparent: false }));
     });
@@ -273,8 +261,8 @@ describe('materialProgramInputs', () => {
 
     it('keeps a lone injection identical across renders, patch and thunk alike', () => {
       // R3F assigns a changed prop without bumping `material.needsUpdate`, so a
-      // fresh closure per render is not a recompile — but it would replace the
-      // stable function `useCanvasItemLighting` memoises for exactly this reason.
+      // fresh closure per render is no recompile, but it would replace the stable
+      // function `useCanvasItemLighting` memoises.
       const light = injection('light', 'B');
       const first = materialProgramInputs({ props: {}, merge: [{ injection: light }] });
       const second = materialProgramInputs({ props: {}, merge: [{ injection: light }] });

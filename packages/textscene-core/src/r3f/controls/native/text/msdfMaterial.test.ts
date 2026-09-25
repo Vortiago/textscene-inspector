@@ -1,12 +1,7 @@
 /**
- * `createMsdfMaterial` — the MSDF quad shader every glyph mesh shares: a
- * standard median-of-3 signed-distance decode (msdfgen's own recommended
- * technique, not a Godot port — there is no Godot GLSL source for this since
- * Godot's own TextServer draws through FreeType bitmaps, not MSDF), a
- * `distanceBias` uniform for synthesized-bold embolden, and clip planes
- * spread onto the material because three.js clipping is per-material state
- * (`ScrollContainer`'s clip hook supplies `THREE.Plane[]`; this is where they
- * must land for a glyph mesh nested inside one to actually clip).
+ * `createMsdfMaterial`, the MSDF quad shader every glyph mesh shares: msdfgen's
+ * median-of-3 decode, not a Godot port, a `distanceBias` for synthesised bold,
+ * and clip planes on the material, since three.js clipping is per-material state.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -81,8 +76,8 @@ describe('createMsdfMaterial', () => {
       clippingPlanes: planes,
     });
     expect(mat.clippingPlanes).toEqual(planes);
-    // A fresh array, not the same reference -- a later push onto the caller's
-    // array must not silently mutate an already-built material.
+    // A fresh array, not the same reference: a later push onto the caller's
+    // array must not mutate a built material.
     expect(mat.clippingPlanes).not.toBe(planes);
   });
 

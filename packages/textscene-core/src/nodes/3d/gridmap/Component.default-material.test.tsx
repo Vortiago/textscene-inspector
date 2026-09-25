@@ -1,11 +1,7 @@
 /**
- * <GridMap> tiles whose ArrayMesh declares NO surface material.
- *
- * A MeshLibrary item carries only a mesh — the library has no material of its
- * own — so a material-less tile mesh reaches the renderer with a null material
- * and Godot binds the same hardcoded default shader it binds for any other
- * material-less surface. The tile's stand-in must therefore be that default,
- * not an arbitrary neutral grey.
+ * <GridMap> tiles whose ArrayMesh declares no surface material. A MeshLibrary
+ * item has no material of its own, so Godot binds its default shader, as for
+ * any material-less surface. The stand-in must be that default, not a grey.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

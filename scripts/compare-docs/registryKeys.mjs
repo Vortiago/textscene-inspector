@@ -1,28 +1,18 @@
 /**
- * How a registered validator key matches an engine property name.
- *
- * A fact about `ValidatorRegistry`, not about either coverage ledger, so it
- * lives here rather than being spelled out twice: both ledgers ask the same
- * question of two disjoint hierarchies, and a copy each is a copy that can
- * disagree about what counts as covered.
+ * How a registered validator key matches an engine property name. Both coverage
+ * ledgers ask this of disjoint hierarchies, so one copy keeps them agreeing.
  */
 
 /**
- * A registered key can stand for a whole indexed family.
- *
- * `Generic6DOFJoint3D` registers 18 wildcard keys covering 84 engine
- * properties, and `PropertyListHelper` families register as `item_#/*`. Compared
- * literally these read as the single largest gap in the codebase while being
- * entirely covered, which is the difference between a ledger and a scare.
+ * A registered key can stand for a whole indexed family, such as the
+ * `PropertyListHelper` family `item_#/*`. Compared literally, a covered family
+ * reads as a gap.
  */
 export function keyMatcher(key) {
   if (!key.includes('*') && !key.includes('#')) return (name) => name === key;
   const shape = WILDCARD_SHAPES.find(({ suffix }) => key.endsWith(suffix));
-  // `buildWildcardIndex` recognises the same four suffixes and DROPS anything
-  // else, so such a registration reaches no property at all. Every registered
-  // wildcard key in the tree carries one of them; mirroring the drop keeps this
-  // matcher honest if one ever does not, rather than crediting coverage the
-  // registry does not provide.
+  // `buildWildcardIndex` recognises the same four suffixes and drops anything
+  // else, so such a registration reaches no property. This mirrors the drop.
   if (!shape) return () => false;
   const re = new RegExp(`^${literal(key.slice(0, -shape.suffix.length))}${shape.tail}$`);
   return (name) => re.test(name);
@@ -32,36 +22,24 @@ export function keyMatcher(key) {
 const literal = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
- * The four shapes, matched the way `linter/wildcardIndex.ts` matches them, most
- * specific suffix first (`#/**` ends with `/*` too).
- *
- * The DEPTH each one reaches is the part a single `[^/]+` per `*` cannot
- * express. A plain `<prefix>/*` is `findOwnValidator`'s bare `startsWith`, so
- * `voice/*` covers `voice/1/cutoff_hz`; `#/**` likewise reaches any depth under
- * a glued index, which is the whole reason that shape exists beside `#/*`.
- * Matched one segment deep, a registration covering such a family reads as
- * covering nothing and the ledger reports a gap that is not there —
- * `AudioEffectChorus` alone declares 24 properties of that shape.
- *
- * The index halves stay `\d+` rather than the registry's shape-only match: the
- * subject here is the names Godot's own property lists emit, and those are
- * always numeric, so nothing widens what a real engine property can match.
+ * The four shapes, matched as `linter/wildcardIndex.ts` does, most specific
+ * suffix first (`#/**` ends with `/*` too). The index halves stay `\d+`, since
+ * Godot's property lists always emit a numeric index.
  */
 const WILDCARD_SHAPES = [
-  // `terrain_set_#/**` — glued index, leaf may nest (matchesIndexedSubtree).
+  // `terrain_set_#/**`: glued index, leaf may nest (matchesIndexedSubtree).
   { suffix: '#/**', tail: '\\d+/.+' },
-  // `item_#/*` — glued index, exactly one leaf segment (matchesIndexedKey).
+  // `item_#/*`: glued index, exactly one leaf segment (matchesIndexedKey).
   { suffix: '#/*', tail: '\\d+/[^/]+' },
-  // `bones/*` — a literal `/` follows the prefix and any depth below matches.
+  // `bones/*`: `findOwnValidator`'s bare `startsWith`, so any depth matches.
   { suffix: '/*', tail: '/.+' },
-  // `pattern_#` — the whole key below the prefix IS the index, no leaf at all.
+  // `pattern_#`: the whole key below the prefix is the index, no leaf.
   { suffix: '#', tail: '\\d+' },
 ];
 
 /**
- * Per declaring class, not per leaf: a validator for a `BaseMaterial3D`
- * property belongs on `BaseMaterial3D`, so the base-walk is deliberately not
- * applied and `getOwnKeys` is asked instead of `findValidator`.
+ * Per declaring class, not per leaf: a `BaseMaterial3D` property's validator
+ * belongs on `BaseMaterial3D`, so this asks `getOwnKeys`, not `findValidator`.
  */
 export function unvalidatedByClass(engine, validatorRegistry, covered) {
   const rows = [];

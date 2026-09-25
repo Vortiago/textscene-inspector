@@ -1,15 +1,8 @@
 /**
- * SplitContainer's native rect solve, tested against literal inputs — no
- * React, no scene cache, no TscnParser (except the integration tests that
- * read the actual committed fixtures). Every expected number is either:
- *  - reproduced from `unit-split-container.tscn`/`unit-split-container-vertical.tscn`'s
- *    own `comparison.md` table, itself measured against real Godot 4.6.3
- *    (`pnpm ref:godot --mode 2d`, pixel-scanned for the colour edge), or
- *  - a synthetic `custom_minimum_size` case (never a Label) exercising the
- *    CLAMP path neither fixture's all-zero-minimum rows can reach, which keeps
- *    a font-metric regression and a `_resort` regression from ever presenting
- *    as the same failure.
- * None are re-derived the way the implementation derives them.
+ * SplitContainer's native rect solve against literal inputs, never re-derived as the code does.
+ * Numbers come from the `comparison.md` table of `unit-split-container.tscn` and
+ * `unit-split-container-vertical.tscn` (Godot 4.6.3, `pnpm ref:godot --mode 2d`), or from a synthetic
+ * `custom_minimum_size` case (never a Label) for the CLAMP path the fixtures' zero minimums miss.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -24,7 +17,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 import {
-  computeSplitDraggerPosition,
+  computeSplitDraggerPositions,
   isSplitGrabberVisible,
   makeSplitContainerLayout,
   splitContainerBoundaryChannel,
@@ -42,6 +35,22 @@ import {
 } from './splitContainerSolver';
 import type { SplitContainerProperties } from './splitContainer';
 import { solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+
+/**
+ * The two-child case of `computeSplitDraggerPositions`: one boundary and the deprecated singular
+ * `split_offset`. Returns `computed_split_offset`, where the separation band starts on the split axis.
+ */
+function computeSplitDraggerPosition(
+  size: number,
+  separation: number,
+  first: SplitAxisChild,
+  second: SplitAxisChild,
+  splitOffset: number,
+  collapsed: boolean,
+  rtl = false
+): number {
+  return computeSplitDraggerPositions(size, separation, [first, second], [splitOffset], collapsed, rtl)[0]!;
+}
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const FILL = 1;
@@ -61,9 +70,8 @@ function axisChild(overrides: Partial<SplitAxisChild> = {}): SplitAxisChild {
   return { minSize: 0, expands: false, stretchRatio: 1, ...overrides };
 }
 
-// --- computeSplitDraggerPosition — the closed-form offset -------------------
-// Every row below is `unit-split-container.tscn`'s own comparison.md table,
-// 400px wide, sep 12 unless noted (measured via `pnpm ref:godot --mode 2d`).
+// Every row below is `unit-split-container.tscn`'s comparison.md table, 400px wide, sep 12
+// unless noted (measured with `pnpm ref:godot --mode 2d`).
 
 describe('computeSplitDraggerPosition — unit-split-container.tscn rows, reproduced', () => {
   it('Both: both expand equally, split_offset 0 -> 194 | 12 | 194', () => {
@@ -133,8 +141,7 @@ describe('computeSplitDraggerPosition — unit-split-container-vertical.tscn row
   });
 });
 
-// --- The clamp — no fixture row exercises a nonzero minimum, so these are ---
-// synthetic custom_minimum_size cases.
+// No fixture row has a nonzero minimum, so the clamp cases are synthetic custom_minimum_size cases.
 
 describe('computeSplitDraggerPosition — CLAMP against synthetic custom_minimum_size', () => {
   it('split_offset pushed below the first child minimum clamps up to it', () => {
@@ -190,8 +197,6 @@ describe('computeSplitDraggerPosition — CLAMP against synthetic custom_minimum
   });
 });
 
-// --- resortSplitContainer — full rects, both axes ---------------------------
-
 describe('resortSplitContainer', () => {
   it('returns an empty array for zero children', () => {
     expect(resortSplitContainer(false, { width: 400, height: 60 }, 12, [0], false, [])).toEqual([]);
@@ -228,14 +233,12 @@ describe('resortSplitContainer', () => {
 
   it('reading the wrong axis is a real bug the vertical fixture exists to catch: horizontal flags on a VSplitContainer take the "neither" branch', () => {
     const rects = resortSplitContainer(true, { width: 120, height: 300 }, 12, [0], false, [
-      child({ hSizeFlags: EXPAND_FILL }), // claims nothing — VSplit reads vSizeFlags
+      child({ hSizeFlags: EXPAND_FILL }), // claims nothing: VSplit reads vSizeFlags
       child({ hSizeFlags: EXPAND_FILL }),
     ]);
     expect(rects[0]).toEqual<Rect2>({ x: 0, y: 0, w: 120, h: 0 });
   });
 });
-
-// --- splitContainerMinimumSize -----------------------------------------------
 
 describe('splitContainerMinimumSize', () => {
   it('sums both children plus ONE separation on the main axis; cross axis is the largest (horizontal)', () => {
@@ -256,8 +259,6 @@ describe('splitContainerMinimumSize', () => {
     expect(splitContainerMinimumSize(false, 10, [])).toEqual({ x: 0, y: 0 });
   });
 });
-
-// --- resolveSplitSeparation ---------------------------------------------------
 
 describe('resolveSplitSeparation', () => {
   const THEME = { separation: 12, grabberExtent: 8 };
@@ -282,8 +283,6 @@ describe('resolveSplitSeparation', () => {
     expect(resolveSplitSeparation(separationProps({ draggerVisibility: 2 }), { separation: 99 }, THEME)).toBe(0);
   });
 });
-
-// --- Grabber visibility + rect ------------------------------------------------
 
 function props(overrides: Partial<SplitContainerProperties> = {}): SplitContainerProperties {
   return { name: 'Split', ...overrides };
@@ -324,12 +323,10 @@ describe('splitGrabberIconRect', () => {
   });
 });
 
-// --- End-to-end through the registry (ContainerLayoutFn/MinimumSizeFn wiring) ---
-
 function solveNode(path: string, type: string, properties: Record<string, unknown>, children: SolveNode[] = []): SolveNode {
   const name = path.split('/').pop()!;
   const tscnNode: TscnNode = { name, type, children: [], properties: { name, ...properties } };
-  // A local theme_override_constants/* now reaches a solver through
+  // A local theme_override_constants/* reaches a solver through
   // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
   const constants = (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
   return { ...emptySolveNode(), path, node: tscnNode, children, constants };
@@ -410,10 +407,9 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
 
     expect(solved.get('Split/RatioLeft')?.rect).toEqual({ x: 0, y: 0, w: 294, h: 60 });
     expect(solved.get('Split/RatioRight')?.rect).toEqual({ x: 306, y: 0, w: 94, h: 60 });
-    // The CONTAINER's own SolvedControl carries the dragger position its
-    // ContainerLayoutFn actually computed (ITEM A: a painter can read this
-    // back instead of recomputing it from a narrower subset of the inputs)
-    // — exactly where RatioLeft's rect ends, 294.
+    // The container's SolvedControl carries the dragger position its ContainerLayoutFn computed,
+    // so a painter reads it back rather than recomputing it from a narrower input: where
+    // RatioLeft's rect ends, 294.
     expect(splitContainerBoundaryChannel.open(solved.get('Split')?.meta)).toEqual({ draggerPositions: [294] });
   });
 
@@ -477,11 +473,9 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     const ctx = createSolveContext(nativeTheme(1));
     const solved = solveControlTree([root], VIEWPORT, ctx);
 
-    // A, B and C are the three SORTABLE children (Hidden is skipped). With
-    // nothing expanding, `expands_seen` never leaves 0, so both default
-    // dragger positions are 0 (`split_container.cpp:609-610`) and each is
-    // clamped up to its own low bound — 0 and one separation. The last child
-    // takes the whole remainder.
+    // A, B and C are the sortable children (Hidden is skipped). Nothing expands, so `expands_seen`
+    // stays 0, both defaults are 0 (`split_container.cpp:609-610`) and each clamps up to its low
+    // bound: 0 and one separation. The last child takes the remainder.
     expect(solved.get('Split/A')?.rect).toEqual({ x: 0, y: 0, w: 0, h: 60 });
     expect(solved.get('Split/B')?.rect).toEqual({ x: 12, y: 0, w: 0, h: 60 });
     expect(solved.get('Split/C')?.rect).toEqual({ x: 24, y: 0, w: 376, h: 60 });
@@ -497,7 +491,7 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     function toSolveTree(nodes: readonly TscnNode[], parentPath: string): SolveNode[] {
       return nodes.map((n) => {
         const path = joinPath(parentPath, n.name);
-        // A local theme_override_constants/* now reaches a solver through
+        // A local theme_override_constants/* reaches a solver through
         // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
         const constants =
           (n.properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
@@ -532,7 +526,7 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
     function toSolveTree(nodes: readonly TscnNode[], parentPath: string): SolveNode[] {
       return nodes.map((n) => {
         const path = joinPath(parentPath, n.name);
-        // A local theme_override_constants/* now reaches a solver through
+        // A local theme_override_constants/* reaches a solver through
         // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
         const constants =
           (n.properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
@@ -552,11 +546,9 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
   });
 });
 
-// --- The (int) narrowing SplitContainer applies before it does any arithmetic
-// `_get_valid_range` casts the size and both minimums to int, and
-// `get_minimum_size` accumulates via `minimum[axis] += (int)min_size[axis]`.
-// Every text-derived minimum is fractional, so dropping the casts leaves a
-// surviving fraction that moves a child rect by up to a pixel.
+// SplitContainer narrows to int before its arithmetic: `_get_valid_range` casts the size and both
+// minimums, and `get_minimum_size` accumulates `minimum[axis] += (int)min_size[axis]`. Text
+// minimums are fractional, so a surviving fraction moves a child rect by up to a pixel.
 describe('computeSplitDraggerPosition — (int) narrowing of size and minimums', () => {
   it('truncates each child minimum on its own before clamping', () => {
     // lo = (int)10.9 = 10. Keeping the fraction would clamp up to 10.9.
@@ -599,8 +591,6 @@ describe('splitContainerMinimumSize — (int) accumulation', () => {
   });
 });
 
-// --- RTL --------------------------------------------------------------------
-
 describe('computeSplitDraggerPosition under RTL', () => {
   it('inverts the clamped position against the axis size on a HORIZONTAL split (split_container.cpp:703-707)', () => {
     // `if (!vertical && is_layout_rtl()) dragger_positions[i] = size - dragger_positions[i] - sep`.
@@ -626,8 +616,8 @@ describe('computeSplitDraggerPosition under RTL', () => {
   });
 
   it('is already axis-scoped: the `!vertical` guard belongs to the caller (split_container.cpp:703)', () => {
-    // This function only ever sees ONE axis, so a vertical caller must pass
-    // `rtl && !vertical` — `resortSplitContainer` below is what enforces it.
+    // This function sees one axis, so a vertical caller passes `rtl && !vertical`.
+    // `resortSplitContainer` below enforces it.
     const pos = computeSplitDraggerPosition(
       300,
       12,
@@ -726,28 +716,16 @@ describe('makeSplitContainerLayout under RTL — registered end-to-end', () => {
     // LTR puts RatioLeft at 0..294 and RatioRight at 306..400; RTL mirrors both.
     expect(solved.get('Split/RatioLeft')?.rect).toEqual({ x: 106, y: 0, w: 294, h: 60 });
     expect(solved.get('Split/RatioRight')?.rect).toEqual({ x: 0, y: 0, w: 94, h: 60 });
-    // The grabber band sits at the INVERTED position, 400 - 294 - 12.
+    // The grabber band sits at the inverted position, 400 - 294 - 12.
     expect(splitContainerBoundaryChannel.open(solved.get('Split')?.meta)).toEqual({ draggerPositions: [94] });
   });
 });
 
 /**
- * N children and the `split_offsets` array
- * (`split_container.cpp:517-618,621-707,710-756`).
- *
- * Every number below is hand-walked from those three functions for the stated
- * inputs; none is read back from this module. The working scenario is three
- * children, all `SIZE_EXPAND` at ratio 1, minimum 20 on the split axis, in a
- * 300px box at the default separation 12:
- *
- *   stretchable_space = 300 - 12*2 = 276, stretch_total = 3, so each child's
- *   `desired_stretch_size` is 92 exactly (`:583`), and the default dragger
- *   positions are the running sum 92 and 92+12+92 = 196 (`:605-617`, the
- *   middle branch, since `expands_seen` is neither 0 nor the full count).
- *
- *   `_get_valid_range(0)` = (20, 300 - 24 - 20 - 20) = (20, 236);
- *   `_get_valid_range(1)` = (12 + 20 + 20, 300 - 12 - 20) = (52, 268)
- *   (`:318-337`).
+ * N children and `split_offsets` (`split_container.cpp:517-618,621-707,710-756`), hand-walked for
+ * three `SIZE_EXPAND` children at ratio 1, minimum 20, in 300px at separation 12: each gets 276/3 =
+ * 92 (`:583`), the defaults are 92 and 196 (`:605-617`), and `_get_valid_range` gives (20, 236)
+ * and (52, 268) (`:318-337`).
  */
 describe('split_offsets — three children (split_container.cpp:517-618,621-707)', () => {
   const EXPANDING = child({ minSize: { x: 20, y: 20 }, hSizeFlags: EXPAND_FILL });

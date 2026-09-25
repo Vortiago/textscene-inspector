@@ -1,6 +1,4 @@
-/**
- * NavigationRegion2D parser — Node2D plus the navigation_polygon reference.
- */
+/** Parses a NavigationRegion2D: Node2D plus the navigation_polygon reference. */
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';

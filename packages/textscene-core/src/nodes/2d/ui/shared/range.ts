@@ -1,9 +1,7 @@
 /**
- * Shared Range base for the Control slices whose geometry is driven by a value
- * inside `[min_value, max_value]` (the sliders today). `Range` is Godot's
- * abstract base class, so its properties and its ratio formula live ONCE here —
- * the `shared/boxContainer.ts` pattern for a slice family. Pure `.ts` (no
- * React/THREE) so parsers can import it inside the linter graph.
+ * Shared Range base for the Control slices whose geometry follows a value in
+ * `[min_value, max_value]`. `Range` is Godot's abstract base, so its properties and ratio formula
+ * live here, in pure `.ts` that parsers inside the linter graph can import.
  */
 
 import { parseOptionalBool, parseOptionalFloat } from '../../../../parser/valueParsers';
@@ -24,14 +22,10 @@ export interface RangeProperties {
    */
   step?: number;
   /**
-   * The "page size" of a scrollable range — `value`'s clamp ceiling is
-   * `max_value - page`, not `max_value` alone (`Range::_calc_value`,
-   * `range.cpp:190-192`). Godot default 0 (`range.h:43`), which collapses the
-   * ceiling back to plain `max_value`. Not read by `rangeRatio`'s DISPLAY
-   * math (`get_as_ratio()`'s own `CLAMP(value, min, max)` ignores it too,
-   * `range.cpp` — a slider's fill still spans the full [min, max] visually);
-   * only `resolveRangeValue`'s file-order simulation needs it, since
-   * `set_page` is one more setter that re-clamps `value` as a side effect.
+   * The page size: `Range::_calc_value` clamps `value` at `max_value - page` (`range.cpp:190-192`).
+   * Godot default 0 (`range.h:43`). `rangeRatio` ignores it, as `get_as_ratio()`'s `CLAMP(value,
+   * min, max)` in `range.cpp` does, so a slider's fill spans `[min, max]`. `resolveRangeValue` needs
+   * it, since `set_page` re-clamps `value`.
    */
   page?: number;
   /** `exp_edit`: distribute `value` logarithmically across the range. */
@@ -52,15 +46,10 @@ export const RANGE_DEFAULT_MAX = 100;
 export const RANGE_DEFAULT_PAGE = 0;
 
 /**
- * Per-subclass Range defaults the caller must supply, because `Range` itself
- * records none.
- *
- * `step` is the one that bites: `_calc_value` snaps `value` to it, and each
- * subclass sets its own in its constructor — measured from the engine
- * (`ClassDB.class_get_property_default_value`, 4.6.3): HSlider, VSlider,
- * SpinBox and TextureProgressBar 1.0, ProgressBar 0.01, the scrollbars 0.0
- * (which disables the snap). Reading an absent `step` as "no snap" draws a
- * slider at a value Godot never holds.
+ * Per-subclass Range defaults the caller supplies, since `Range` records none. `_calc_value` snaps
+ * to `step`, and `ClassDB.class_get_property_default_value` (4.6.3) gives HSlider, VSlider, SpinBox
+ * and TextureProgressBar 1.0, ProgressBar 0.01 and the scrollbars 0.0 (no snap). An absent `step`
+ * read as no snap draws a slider at a value Godot never holds.
  */
 export interface RangeDefaults {
   step?: number;
@@ -87,21 +76,10 @@ export function parseRange(
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
 /**
- * `Range::get_as_ratio()` (scene/gui/range.cpp) — the 0..1 position of `value`
- * within `[min, max]`, which is what `Slider` multiplies its travel by:
- *
- *     if (Math::is_equal_approx(get_max(), get_min())) { return 1.0; }
- *     ...
- *     double value = CLAMP(get_value(), shared->min, shared->max);
- *     return CLAMP((value - get_min()) / (get_max() - get_min()), 0, 1);
- *
- * A degenerate range returns 1.0 rather than dividing by zero, and the
- * `exp_ratio` branch (guarded by `get_min() >= 0`) spaces the value by log2.
- *
- * `get_value()` is `shared->val` — the value AS `Range`'s own setters last
- * left it, not the raw authored float — so `orderedKeys` (when given) threads
- * through `resolveRangeValue`'s file-order simulation (ADR-0035) rather than
- * reading `props.value` directly.
+ * `Range::get_as_ratio()` (scene/gui/range.cpp): the 0..1 position of `value` in `[min, max]` that
+ * `Slider` multiplies its travel by. A degenerate range returns 1.0, and the `exp_ratio` branch
+ * (guarded by `get_min() >= 0`) spaces the value by log2. `get_value()` is `shared->val` as the
+ * setters left it, so `resolveRangeValue` (ADR-0035) replays `orderedKeys`.
  */
 export function rangeRatio(props: RangeProperties, orderedKeys?: RangeValueOrder): number {
   const min = props.minValue ?? RANGE_DEFAULT_MIN;
@@ -112,9 +90,9 @@ export function rangeRatio(props: RangeProperties, orderedKeys?: RangeValueOrder
 
   const value = clamp(raw, min, max);
   if (props.expEdit && min >= 0) {
-    // Godot takes log(x)/log(2) — log2 — and lets `min == 0` short-circuit to 0
-    // rather than log2(0) = -Infinity. A clamped `value` of 0 still yields
-    // -Infinity here, which CLAMP pins to 0, exactly as the engine does.
+    // Godot takes log(x)/log(2) and lets `min == 0` short-circuit to 0 rather than
+    // log2(0) = -Infinity. A clamped `value` of 0 still yields -Infinity, which CLAMP pins
+    // to 0, as the engine does.
     const expMin = min === 0 ? 0 : Math.log2(min);
     const expMax = Math.log2(max);
     return clamp((Math.log2(value) - expMin) / (expMax - expMin), 0, 1);
@@ -122,15 +100,10 @@ export function rangeRatio(props: RangeProperties, orderedKeys?: RangeValueOrder
   return clamp((value - min) / (max - min), 0, 1);
 }
 
-// --- File-order-aware value resolution (ADR-0035, Option B) -----------------
-
 /**
- * A node's raw `.tscn` property keys, in real file order — `undefined` when
- * that order is unknown or unreliable. `native/solveTree.ts`'s
- * `controlLayoutOrder(n)` is the usual producer (reads
- * `TscnNode.rawPropertiesOrderReliable`, ADR-0035) — the SAME helper
- * `controlAnchors.ts`'s `ControlLayoutOrder` uses, since both read the
- * identical node-level fact.
+ * A node's raw `.tscn` property keys in file order, or `undefined` when the order is unknown or
+ * unreliable. `controlLayoutOrder(n)` in `native/solveTree.ts` produces it from
+ * `TscnNode.rawPropertiesOrderReliable` (ADR-0035), as for `controlAnchors.ts`'s `ControlLayoutOrder`.
  */
 export type RangeValueOrder = readonly string[] | undefined;
 
@@ -144,13 +117,10 @@ interface RangeSimState {
 }
 
 /**
- * `Range::_calc_value` (`range.cpp:182-200`) — the four terms `value`'s own
- * setter applies, in the engine's order: snap to `step` measured FROM `min`,
- * round, then the two CONDITIONAL clamps.
- *
- * Both clamps are gated: `allow_greater` lifts the `max - page` ceiling and
- * `allow_lesser` lifts the `min` floor, so a scene authoring either really does
- * hold a value outside its own bounds and Godot draws it there.
+ * `Range::_calc_value` (`range.cpp:182-200`): the terms `value`'s setter applies, in the engine's
+ * order: snap to `step` from `min`, round, then two gated clamps. `allow_greater` lifts the
+ * `max - page` ceiling and `allow_lesser` the `min` floor, so such a scene holds a value outside
+ * its bounds and Godot draws it there.
  */
 function calcValue(val: number, min: number, max: number, page: number, gates: RangeValueGates = {}): number {
   let v = val;
@@ -171,7 +141,7 @@ interface RangeValueGates {
   allowLesser?: boolean;
 }
 
-/** `Math::snapped` (`core/math/math_funcs.h`) — `_snapped_r128`'s own fallback, and its answer wherever a double holds the result exactly. */
+/** `Math::snapped` (`core/math/math_funcs.h`): `_snapped_r128`'s fallback, and its answer wherever a double holds the result exactly. */
 function snapped(value: number, step: number): number {
   return Math.floor(value / step + 0.5) * step;
 }
@@ -186,7 +156,7 @@ function gatesOf(props: RangeProperties): RangeValueGates {
   };
 }
 
-/** `Range::set_min` (`range.cpp:211-226`) — the early return (`:212-214`) is load-bearing: a redundant `min_value` line does nothing at all, not even re-clamp `value`. */
+/** `Range::set_min` (`range.cpp:211-226`). Through the early return (`:212-214`), a redundant `min_value` line does nothing, not even re-clamp `value`. */
 function applyMinValue(state: RangeSimState, min: number): void {
   if (state.min === min) return;
   state.min = min;
@@ -195,7 +165,7 @@ function applyMinValue(state: RangeSimState, min: number): void {
   state.val = calcValue(state.val, state.min, state.max, state.page, state.gates); // :219, set_value(shared->val)
 }
 
-/** `Range::set_max` (`range.cpp:228-241`) — validates against `min` BEFORE the early-return check (`:229-232`). */
+/** `Range::set_max` (`range.cpp:228-241`): validates against `min` before the early return (`:229-232`). */
 function applyMaxValue(state: RangeSimState, max: number): void {
   const validated = Math.max(max, state.min); // :229
   if (state.max === validated) return; // :230-232
@@ -204,7 +174,7 @@ function applyMaxValue(state: RangeSimState, max: number): void {
   state.val = calcValue(state.val, state.min, state.max, state.page, state.gates); // :236
 }
 
-/** `Range::set_page` (`range.cpp:254-266`) — same early-return shape as `set_min`/`set_max`. */
+/** `Range::set_page` (`range.cpp:254-266`): the same early-return shape as `set_min`/`set_max`. */
 function applyPage(state: RangeSimState, page: number): void {
   const validated = clamp(page, 0, state.max - state.min); // :255
   if (state.page === validated) return; // :256-258
@@ -212,39 +182,20 @@ function applyPage(state: RangeSimState, page: number): void {
   state.val = calcValue(state.val, state.min, state.max, state.page, state.gates); // :261
 }
 
-/** `Range::set_value` → `_set_value_no_signal` → `_calc_value` (`range.cpp:168-180,182-200`). No early return — `value`'s own setter always recomputes. */
+/** `Range::set_value` → `_set_value_no_signal` → `_calc_value` (`range.cpp:168-180,182-200`). No early return: `value`'s setter always recomputes. */
 function applyValue(state: RangeSimState, value: number): void {
   state.val = calcValue(value, state.min, state.max, state.page, state.gates);
 }
 
 /**
- * Resolves a Range's effective `value` — `Range::get_value()`'s final
- * `shared->val`, per file order (ADR-0035, Option B) — by REPLAYING
- * `min_value`/`max_value`/`page`/`value` in the order the `.tscn` lists them,
- * a direct simulation of the four setters involved rather than a pairwise
- * "does X come before Y" rule. `set_step` (`range.cpp:243-252`) is excluded
- * from the replay entirely: it has no re-clamp side effect of its own (no
- * `set_value` call), so it can never change which of the OTHER four keys'
- * events fire or what they compute — the ONE setter of the five this ADR's
- * breadth survey names that genuinely is inert as a trigger.
- *
- * `orderedKeys === undefined` (order unknown or unreliable) assumes
- * editor-save order — bounds authored before value — WITHOUT replaying file
- * order: under that assumption, `min`/`max`/`page` never change again after
- * `value`'s own setter runs, so `value`'s setter sees exactly the FINAL
- * parsed `min_value`/`max_value`/`page`, and one `calcValue` call against
- * those reproduces what the full replay would compute. `page`'s ceiling is
- * order-INDEPENDENT in this one sense — it is the LAST page/min/max state
- * whichever order produces it — so leaving it out of this branch (as this
- * function did before this fix) was an inconsistency with the order-aware
- * branch below, not a deliberate simplification: a merged-instance-root
- * Range authoring `page` would silently ignore it while an ordinarily-parsed
- * one would not, for a reason that has nothing to do with file order.
- * `rangeRatio`'s own `CLAMP(value, min, max)` still applies on top, exactly
- * as before.
+ * `Range::get_value()`'s final `shared->val`: replays `min_value`/`max_value`/`page`/`value` in
+ * `.tscn` order through their setters (ADR-0035, Option B). `set_step` (`range.cpp:243-252`) calls
+ * no `set_value`, so it cannot change what the others compute. `rangeRatio` clamps on top.
  */
 export function resolveRangeValue(props: RangeProperties, orderedKeys: RangeValueOrder): number {
   if (!orderedKeys) {
+    // Editor-save order puts the bounds before `value`, so one `calcValue` against the final
+    // `min_value`/`max_value`/`page` is what the replay computes.
     const min = props.minValue ?? RANGE_DEFAULT_MIN;
     const max = props.maxValue ?? RANGE_DEFAULT_MAX;
     const page = props.page ?? RANGE_DEFAULT_PAGE;

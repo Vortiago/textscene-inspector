@@ -1,7 +1,6 @@
 /**
- * `<ColorPickerButton>` — reused Button chrome plus a checkerboard + colour
- * swatch inset by the "normal" StyleBox's content margins
- * (`color_picker.cpp:2426-2434`).
+ * `<ColorPickerButton>`: the Button chrome, then a checkerboard and a colour
+ * swatch inset by the content margins of "normal" (`color_picker.cpp:2426-2434`).
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -44,11 +43,8 @@ describe('<ColorPickerButton> (isolated painter contract)', () => {
   });
 
   it('draws opaque black when the parser has already substituted its default — color_picker.h:513 Color()', async () => {
-    // `parseColorPickerButton` injects `Color(0, 0, 0, 1)` for an absent
-    // `color` before this painter ever sees the properties bag (parser.ts's
-    // own doc) — this pins what the painter does with that already-defaulted
-    // string, not `parseColor`'s own unrelated white fallback for a bag that
-    // skipped the parser entirely.
+    // The parser writes `Color(0, 0, 0, 1)` for an absent `color`. This pins the
+    // painter on that string, not the white fallback of `parseColor`.
     const renderer = await ReactThreeTestRenderer.create(
       <ColorPickerButton
         {...painterEnv()}

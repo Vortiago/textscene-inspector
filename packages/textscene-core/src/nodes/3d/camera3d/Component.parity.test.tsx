@@ -1,9 +1,8 @@
 /**
- * Parity: Camera3D projection vs Godot.
- * - Orthographic `size` is the FULL frustum dimension (diameter), so the
- *   half-extent is size/2 (Godot's Projection::set_orthogonal divides by 2).
- * - With keep_aspect = KEEP_WIDTH on a perspective camera, the stored `fov`
- *   is the HORIZONTAL fov; three.js wants vertical, so it must be converted.
+ * Parity of the Camera3D projection with Godot. Orthographic `size` is the full frustum dimension
+ * (diameter), so the half-extent is size/2 (Projection::set_orthogonal divides by 2). With
+ * keep_aspect = KEEP_WIDTH on a perspective camera the stored `fov` is horizontal, and three.js
+ * wants vertical, so it is converted.
  */
 import { describe, it, expect } from 'vitest';
 import type * as THREE from 'three';

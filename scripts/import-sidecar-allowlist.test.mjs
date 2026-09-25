@@ -1,23 +1,8 @@
 /**
- * Guards the `.import` parameter allowlist against the corpus (ADR-0028).
- *
- * The previewer performs an **asset re-import**: it loads the source `.gltf`/`.glb`/
- * `.obj` and re-derives the scene, honouring `nodes/root_scale`, `nodes/apply_root_scale`
- * and, from `_subresources`, the per-material `use_external` remaps and the per-node
- * `mesh_instance/layers` mask — and nothing else. Every other parameter is either
- * something three's GLTFLoader already does, or a bake/performance concern with no
- * visual consequence in a preview.
- *
- * That is a fine boundary right up until someone vendors a demo whose sidecar needs a
- * parameter we ignore — at which point the scene renders wrong with nothing to say so.
- * The failure this file exists to prevent already happened once in the other direction:
- * the corpus shipped NO sidecars at all, so Godot re-imported at defaults, the previewer
- * matched it, and a 937-unit tree measured as clean parity. Both renderers agreeing is
- * only evidence when both are fed what the engine actually has.
- *
- * So the allowlist is asserted rather than documented. Today every vendored sidecar
- * outside the tree is identity and this passes trivially; the moment one is not, it
- * fails and forces a decision.
+ * Asserts the `.import` parameter allowlist against the corpus (ADR-0028). The previewer's asset
+ * re-import honours `nodes/root_scale`, `nodes/apply_root_scale` and, from `_subresources`, the
+ * `use_external` material remaps and the `mesh_instance/layers` mask. A vendored sidecar that
+ * needs any other parameter would render wrong with nothing to say so, so this test fails instead.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -29,29 +14,21 @@ const SCENES = join(REPO_ROOT, 'scenes');
 const SKIP_DIRS = new Set(['node_modules', '.git', 'games']);
 
 /**
- * The parameters we honour. `_subresources` only in part — its material remaps and its
- * per-node layer mask — which is why each non-empty block is still named individually
- * below.
+ * The parameters the previewer honours. `_subresources` is honoured only in part (its material
+ * remaps and its per-node layer mask), so each non-empty block is still named below.
  */
 const HONOURED = new Set(['nodes/root_scale', 'nodes/apply_root_scale', '_subresources']);
 
 /**
- * Reviewed and inert AT ANY VALUE, so their presence needs no per-file check.
- *
- * Three reasons run through this list. Some are bake/performance concerns a previewer
- * has no equivalent for (LODs, shadow meshes, lightmap UV2 and texel size, mesh
- * compression, light baking mode). Some are already what three's GLTFLoader does
- * (tangents, named skins, surface dedup). The rest change how Godot NAMES or FILES
- * things rather than what is drawn: node/material name suffixes, material extraction to
- * separate files, glTF naming version, and animation clip bookkeeping.
- *
- * `nodes/use_name_suffixes` deserves its own note: it governs Godot's `-col`/`-noimp`
- * name conventions, which this previewer does not implement at all. So `false` matches
- * us exactly and `true` is a pre-existing divergence unrelated to sidecars — reading the
- * parameter would not fix it, and a file setting it either way tells us nothing new.
+ * Inert at any value, so they need no per-file check. Each is a bake or performance concern with
+ * no preview equivalent (LODs, shadow meshes, lightmap UV2, compression, light baking), something
+ * three's GLTFLoader already does (tangents, named skins, surface dedup), or a change to how Godot
+ * names or files things (name suffixes, material extraction, glTF naming, clip bookkeeping).
  */
 const INERT = new Set([
   'nodes/import_as_skeleton_bones',
+  // Governs Godot's `-col`/`-noimp` name conventions, which the previewer does not implement at
+  // all, so reading the parameter would change nothing.
   'nodes/use_name_suffixes',
   'nodes/use_node_type_suffixes',
   'nodes/root_name',
@@ -75,7 +52,7 @@ const INERT = new Set([
   'gltf/naming_version',
   'gltf/embedded_image_handling',
   'gltf/texture_map_mode',
-  // wavefront_obj
+  // The wavefront_obj importer's parameters.
   'generate_tangents',
   'generate_lods',
   'generate_shadow_mesh',
@@ -85,11 +62,9 @@ const INERT = new Set([
 ]);
 
 /**
- * Parameters that WOULD change what is drawn if set, and which we do not read. Their
- * corpus-wide default is asserted, so a scene that starts relying on one fails here
- * instead of rendering wrong. `scale_mesh`/`offset_mesh` are the wavefront_obj
- * equivalents of the root scale we DO honour for scenes — deliberately out of scope
- * while every OBJ in the corpus is identity (ADR-0028).
+ * Parameters that would change the picture and that the previewer does not read, so their
+ * default is asserted corpus-wide. `scale_mesh` and `offset_mesh` are wavefront_obj's root scale,
+ * out of scope while every OBJ in the corpus is identity (ADR-0028).
  */
 const MUST_BE_DEFAULT = new Map([
   ['nodes/root_type', ''],
@@ -100,17 +75,9 @@ const MUST_BE_DEFAULT = new Map([
 ]);
 
 /**
- * `_subresources` carries PER-NODE, PER-MESH, PER-MATERIAL import overrides, and unlike
- * everything above it is not uniformly inert — so each non-empty block is listed with
- * what it does and whether it matters. The guard asserts this exact set: a newly
- * vendored sidecar with overrides fails rather than joining the list silently.
- *
- * One of these is a real, unhandled divergence. It is narrow and out of scope for
- * ADR-0028, but it is WRITTEN DOWN rather than undiscovered — which is the whole point
- * of the guard.
- *
- * Declared per BLOCK, not per file: a listed sidecar that grows a new block tomorrow is a
- * decision too, and naming only the file would let it join in silence.
+ * `_subresources` carries per-node, per-mesh and per-material import overrides and is not
+ * uniformly inert, so each non-empty block is listed with what it does. The guard asserts this
+ * exact set per block, not per file: a new block in a listed sidecar is a decision too.
  */
 const KNOWN_SUBRESOURCE_OVERRIDES = {
   'scenes/demos/3d/material_testers/models/godot_ball.glb.import': {
@@ -147,9 +114,8 @@ function walk(dir, out = []) {
 }
 
 /**
- * Minimal INI read — deliberately independent of the production parser it guards, so a
- * bug in that parser cannot make this pass. Returns the `[params]` top-level keys plus
- * the non-empty blocks inside `_subresources`, both from one string-aware pass.
+ * The `[params]` top-level keys and the non-empty `_subresources` blocks, in one string-aware
+ * pass. It is independent of the production parser, so a bug there cannot make this pass.
  */
 function readSidecar(file) {
   const params = {};
@@ -186,7 +152,7 @@ function readSidecar(file) {
 
 const SECTION_LINE = /^\[[A-Za-z_][A-Za-z0-9_]*\]$/;
 
-/** Advance a string/bracket scan by one line — a brace inside a quoted value is content. */
+/** Advances a string and bracket scan by one line. A brace inside a quoted value is content. */
 function scanLine(line, { inString, depth }) {
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
@@ -203,9 +169,8 @@ function scanLine(line, { inString, depth }) {
 }
 
 /**
- * The `_subresources` dictionary's own keys whose value opens a nested block, sorted.
- * Read from the raw text rather than by line shape, so a block written on one line or
- * with any other spacing is still seen — a guard that can fail OPEN guards nothing.
+ * The `_subresources` keys whose value opens a nested block, sorted. It reads the raw text, not
+ * the line shape, so a block on one line or with other spacing cannot slip past the guard.
  */
 function topLevelBlocks(text) {
   const blocks = [];
@@ -247,7 +212,7 @@ const readParams = (file) => READ.get(file).params;
 
 describe('.import sidecar allowlist (ADR-0028)', () => {
   it('finds the vendored sidecars', () => {
-    // A guard over an empty set proves nothing; fail loudly if they vanish.
+    // A guard over an empty set proves nothing.
     expect(sidecars.length).toBeGreaterThan(0);
   });
 
@@ -263,9 +228,8 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
   });
 
   it('uses no parameter this previewer has not reviewed', () => {
-    // An unrecognised key is the interesting case: a Godot version or importer we have
-    // not looked at. It is a decision, not a failure — classify it into one of the sets
-    // above (with the reason) or honour it.
+    // An unrecognised key comes from a Godot version or importer nobody has reviewed. Classify it
+    // into one of the sets above, with the reason, or honour it.
     const unknown = [];
     for (const file of sidecars) {
       for (const key of Object.keys(readParams(file))) {
@@ -290,9 +254,7 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
   });
 
   it('carries only the _subresources blocks already accounted for', () => {
-    // _subresources is the one parameter that is not uniformly inert, so each non-empty
-    // block is named with what it does. A NEW block — in a new sidecar or in one already
-    // listed — must be looked at instead of silently joining them.
+    // A new block, in a new sidecar or a listed one, needs review before it joins the list.
     const found = {};
     for (const file of sidecars) {
       const { blocks } = READ.get(file);
@@ -306,8 +268,7 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
   });
 
   it('has exactly one sidecar that corrects a root scale', () => {
-    // The correction this whole mechanism exists for. A second one deserves a look
-    // rather than silent inclusion.
+    // The correction this mechanism exists for. A second one needs review.
     const scaled = sidecars.filter((file) => {
       const raw = readParams(file)['nodes/root_scale'];
       return raw !== undefined && Number(raw) !== 1;

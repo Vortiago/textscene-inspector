@@ -1,9 +1,7 @@
 /**
- * TwoBoneIK3D strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing. Rule-level behaviour belongs in linter.test.ts.
+ * TwoBoneIK3D strict validators: format and range checks. Asserted through `validatorRegistry`, not
+ * by linting a `.tscn`, so a failure points at the validator and not at scene parsing.
+ * linter.test.ts tests rule behaviour through `Linter`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -19,15 +17,13 @@ function check(property: string, value: string) {
 }
 
 /**
- * The keys registered directly on TwoBoneIK3D: the `ADD_ARRAY_COUNT` int
- * (two_bone_ik_3d.cpp:506) and the one wildcard covering the whole
- * `settings/<i>/<leaf>` family `_get_property_list` builds
- * (two_bone_ik_3d.cpp:129-160). The family's 14 leaves are patterns behind the
- * wildcard, not registrations of their own, so they are asserted below rather
- * than here.
+ * The keys registered on TwoBoneIK3D: the `ADD_ARRAY_COUNT` int (two_bone_ik_3d.cpp:506) and the
+ * one wildcard covering the `settings/<i>/<leaf>` family `_get_property_list` builds
+ * (two_bone_ik_3d.cpp:129-160). The family's 14 leaves are patterns behind the wildcard, asserted
+ * below.
  */
 const KEYS: string[] = ['setting_count', 'settings/*'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 /** Every leaf key one setting serialises, in `_get_property_list` order. */
@@ -58,10 +54,8 @@ describe('TwoBoneIK3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // Runs the fixture's "zero errors and zero warnings" claim against the validators this test
+    // imports. `fixtureLint` checks the same file against the whole registry.
     expectFixtureClean('unit-two-bone-ik-3d.tscn');
   });
 
@@ -127,17 +121,16 @@ describe('TwoBoneIK3D settings/<i>/ key shape', () => {
   });
 
   it('accepts a non-numeric index, because this class reads it with a bare to_int', () => {
-    // `_set` (two_bone_ik_3d.cpp:37) has no `is_valid_int` gate, and `_to_int`
-    // skips non-digits (ustring.cpp:2268-2298), so `first` resolves to 0 and the
-    // write LANDS on setting 0. Reporting it was a false positive imported from
-    // PropertyListHelper, which DOES gate (property_list_helper.cpp:52-54) and
-    // drops the write. Two engine paths, two verdicts; this class is the former.
+    // `_set` (two_bone_ik_3d.cpp:37) has no `is_valid_int` gate, and `_to_int` skips non-digits
+    // (ustring.cpp:2268-2298), so `first` resolves to 0 and the write lands on setting 0.
+    // PropertyListHelper does gate (property_list_helper.cpp:52-54) and drops the write, but this
+    // class does not use it.
     expect(check('settings/first/target_node', 'NodePath("../Target")')).toBeNull();
   });
 
   it('still applies the leaf bound under a non-numeric index', () => {
-    // Accepting the index must not mean skipping the leaf: Godot applies the
-    // write to setting 0, so a bad VALUE is still a bad value.
+    // Accepting the index must not skip the leaf: Godot applies the write to setting 0, so a bad
+    // value is still a bad value.
     expect(check('settings/first/pole_direction', '99')).not.toBeNull();
   });
 

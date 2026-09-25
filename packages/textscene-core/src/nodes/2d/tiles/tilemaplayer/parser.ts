@@ -1,5 +1,5 @@
 /**
- * TileMapLayer parser — extends the Node2D base parse.
+ * TileMapLayer parser, which extends the Node2D base parse.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';

@@ -1,21 +1,11 @@
 /**
- * The comparison sheet a slice ships with (SHEET-STANDARD.md). Its category is
- * a guess; its status, `visual:` and `renders_as` are NOT — they follow from
- * the intent, and `sheets.test.mjs` asserts the status against the render
- * registration in both directions, so they cannot be hand-edited apart from the
- * slice without failing.
+ * The comparison sheet a slice ships with (SHEET-STANDARD.md). Its category is a guess. Its status,
+ * `visual:` and `renders_as` follow from the intent.
  */
 
 export function sheetFile({ typeName, baseKey, intent, fixtureName, imageBasename }) {
-  // The comparison sheet is slice content (SHEET-STANDARD.md). `image:` ships
-  // commented out: a declared-but-uncaptured basename fails build-gallery (and
-  // so the web build), while recapture only collects sheets that DO declare one.
-  // So the order is: uncomment the line, then `pnpm recapture --only <basename>`.
-  // Until then the gallery shows its "not captured yet" placeholder.
-  //
-  // `category` is a best guess — 2D/3D from the type suffix, Other for a
-  // non-visual node; the corpus is genuinely mixed here (AnimationPlayer is 3D,
-  // Timer is Other), so check the nav divider it lands under.
+  // `category` guesses 2D or 3D from the type suffix and Other for a non-visual node. The corpus is
+  // mixed (AnimationPlayer is 3D, Timer is Other), so check the nav divider it lands under.
   const sheetCategory = /2D$/.test(typeName)
     ? '2D'
     : /3D$/.test(typeName)
@@ -26,14 +16,13 @@ export function sheetFile({ typeName, baseKey, intent, fixtureName, imageBasenam
           ? 'Other'
           : '3D';
 
-  // Status and `visual:` follow from the intent, and `sheets.test.mjs` asserts
-  // the status against the render registration in both directions — so these
-  // cannot be hand-edited apart from the slice without failing.
+  // `sheets.test.mjs` asserts the status against the render registration in both directions, so
+  // a hand edit apart from the slice fails.
   const sheetStatus = { draws: 'unreviewed', 'transform-only': 'linter-only', pending: 'unimplemented' }[
     intent
   ];
-  // A node that draws nothing has no image pair worth showing. A `pending` node
-  // has none YET, and will once it renders, so it does not claim `visual: false`.
+  // A node that draws nothing has no image pair to show. A `pending` node will have one once it
+  // renders, so it does not claim `visual: false`.
   const visualLine = intent === 'transform-only' ? 'visual: false\n' : '';
   const rendersAs = {
     draws: 'TBD — one short noun phrase',
@@ -47,6 +36,9 @@ export function sheetFile({ typeName, baseKey, intent, fixtureName, imageBasenam
     pending:
       'The previewer parses and validates this node but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.',
   }[intent];
+  // `image:` ships commented out: a declared, uncaptured basename fails build-gallery and so the
+  // web build, and recapture collects only declared ones. Uncomment it, then run
+  // `pnpm recapture --only <basename>`. Until then the gallery shows a "not captured yet" placeholder.
   return `---
 type: ${typeName}
 category: ${sheetCategory}

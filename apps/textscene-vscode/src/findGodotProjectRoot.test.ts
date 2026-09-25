@@ -1,9 +1,6 @@
 /**
- * Tests for findGodotProjectRoot: the shared "walk up looking for
- * project.godot, fall back to the workspace root" resolution used by both
- * VSCodeResourceProvider (loading resource bytes) and TscnDocumentLinkProvider
- * (resolving `res://` document links) so they never disagree on where a
- * `res://` path points.
+ * Tests for findGodotProjectRoot: walk up for project.godot, and fall back to the
+ * workspace root.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

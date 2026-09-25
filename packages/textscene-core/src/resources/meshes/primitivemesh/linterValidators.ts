@@ -21,7 +21,7 @@ validatorRegistry.registerAll('PrimitiveMesh', {
   flip_faces: v.boolean('flip_faces'),
   // primitive_meshes.cpp:259
   add_uv2: v.boolean('add_uv2'),
-  // primitive_meshes.cpp:260 ("0,10,0.01,or_greater"); `set_uv2_padding` (:320)
+  // primitive_meshes.cpp:260 ("0,10,0.01,or_greater"). `set_uv2_padding` (:320)
   // bare-assigns, so the floor is the hint's and `or_greater` opens the ceiling.
   uv2_padding: v.nonNegativeFloat('uv2_padding', { hinted: 'primitive_meshes.cpp:260' }),
 });

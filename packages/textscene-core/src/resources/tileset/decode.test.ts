@@ -1,7 +1,7 @@
 /**
- * TileSet resolver — normalizes a TileSet reference into the TileSetModel.
- * Scene adapter: the TileSet and its atlas sources are SubResources of the
- * scene; texture refs resolve against the scene's external resources.
+ * TileSet resolver: a TileSet reference into the TileSetModel. In the scene
+ * adapter, the TileSet and its atlas sources are SubResources of the scene, and
+ * texture refs resolve against the scene's external resources.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as logger from '../../logger';
@@ -86,7 +86,7 @@ describe('tileSetFromScene', () => {
     expect(source.tiles.get('1:3')!.sizeInAtlas).toEqual({ x: 2, y: 2 });
   });
 
-  // Every index here is gated on `String::is_valid_int()`, which skips ONE
+  // Every index here is gated on `String::is_valid_int()`, which skips one
   // leading sign, `+` as readily as `-` (ustring.cpp:4752): the source id at
   // tile_set.cpp:3961, the two coordinate components at :4754, the alternative
   // id at :4797.
@@ -128,8 +128,7 @@ describe('tileSetFromScene', () => {
 
     expect(model!.sources.size).toBe(0);
     expect(model!.sourceOrder).toEqual([]);
-    // The key reaches the reader now that the grammar is the engine's, so the
-    // drop is reported rather than being a grammar miss nobody sees.
+    // With the engine's grammar the key reaches the reader, so the drop is reported.
     const idWarns = warnSpy.mock.calls.filter((c: unknown[]) =>
       String(c[0]).includes('negative source id')
     );
@@ -238,7 +237,7 @@ describe('tileSetFromScene', () => {
     const model = tileSetFromScene('SubResource("ts")', isoInternals, externals);
     expect(model!.shape).toBe(1);
     expect(model!.layout).toBe(5);
-    expect(model!.offsetAxis).toBe(0); // absent → horizontal default
+    expect(model!.offsetAxis).toBe(0); // Absent: the horizontal default.
     expect(model!.tileSize).toEqual({ x: 128, y: 64 });
   });
 
@@ -358,8 +357,8 @@ describe('a TileSet Vector2i slot follows the composite type, not the token', ()
 
 describe('a TileSet enum Godot reads differently from `parseInt`', () => {
   it('reads the layout the exponent spelling names', () => {
-    // `parseInt` stops at the `e`, so `1e1` decoded to 1 (STACKED_OFFSET)
-    // where Godot's tokenizer types the token FLOAT and stores 10.
+    // Godot's tokenizer types `1e1` as FLOAT and stores 10, where `parseInt`
+    // would stop at the `e` and read 1 (STACKED_OFFSET).
     const model = tileSetFromTres(
       parseTresFile('[gd_resource type="TileSet"]\n\n[resource]\ntile_layout = 1e1\n')!
     );

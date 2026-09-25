@@ -55,11 +55,9 @@ describe('mergeInstanceRoot', () => {
   });
 
   it('does not let an undefined instance property clobber the root value', () => {
-    // The base Node parser emits a `transform` key for EVERY node, set to
-    // undefined when the .tscn has no transform line. A raw spread would let
-    // that undefined erase the root's real transform — the platformer GridMap
-    // bug (instance=grid_map.tscn with no transform override rendered the
-    // level at the origin instead of (-16,-6,-12)).
+    // The base Node parser emits a `transform` key for every node, undefined when
+    // the .tscn has no transform line. A raw spread would let that undefined
+    // erase the root's real transform and draw the level at the origin.
     const instanceNode = node({
       name: 'GridMap',
       type: 'Node',
@@ -80,7 +78,7 @@ describe('mergeInstanceRoot', () => {
   });
 
   it('still lets a DEFINED instance property override the root value', () => {
-    // Guard the fix's boundary: defined values (incl. falsy 0/false/"") win.
+    // Defined values win, falsy 0/false/"" included.
     const instanceNode = node({
       name: 'Coin1',
       type: 'Node',
@@ -127,7 +125,7 @@ describe('mergeInstanceRoot', () => {
 
     const merged = mergeInstanceRoot(instanceNode, { nodes: [root] });
 
-    // The instance node's own ref is consumed by the merge; a plain root
+    // The instance node's own ref is consumed by the merge. A plain root
     // leaves the merged node with no instance ref, so it dispatches as an
     // ordinary node (no re-load loop). Tree affordances use the originating
     // ref held in the caller's scope, not this field.
@@ -166,16 +164,10 @@ describe('mergeInstanceRoot', () => {
     expect(mergeInstanceRoot(instanceNode, scene)).toBeNull();
   });
 
-  // ---- type-specific overrides on a type-less instance node ----
-  //
-  // An instance node (`instance=ExtResource(...)`, no `type=`) is parsed by the
-  // base Node parser, which only extracts name/parent/transform/index — so a
-  // type-specific override like a GridMap `data` or a Camera3D `fov` never
-  // reaches the merged node's parsed properties. The fix retains the raw
-  // override map on `instanceNode.rawProperties`, and (once the root type is
-  // known here) re-parses `{ ...root.rawProperties, ...instanceNode.rawProperties }`
-  // ONCE with the root type's parser — so the override layers onto the root at
-  // the RAW level and is parsed with the correct type, rather than being lost.
+  // Type-specific overrides on a type-less instance node. The base Node parser
+  // extracts only name, parent, transform and index, so the merge re-parses
+  // `{ ...root.rawProperties, ...instanceNode.rawProperties }` with the root
+  // type's parser to keep an override such as GridMap `data` or Camera3D `fov`.
 
   it('re-parses a type-specific GridMap `data` override against the root GridMap type', () => {
     // stage.tscn instances grid_map.tscn and overrides its cell layout.
@@ -189,8 +181,8 @@ describe('mergeInstanceRoot', () => {
     const root = node({
       name: 'GridMap',
       type: 'GridMap',
-      // Parsed root props carry the BASE layout — the fix must NOT spread these;
-      // it must re-parse the raw override so the override layout wins.
+      // Parsed root props carry the base layout. The merge re-parses the raw
+      // override instead of spreading these, so the override layout wins.
       properties: { cells: 'BASE_CELLS', meshLibrary: 'ExtResource("ml")' },
       rawProperties: {
         mesh_library: 'ExtResource("ml")',
@@ -202,7 +194,7 @@ describe('mergeInstanceRoot', () => {
 
     expect(merged!.type).toBe('GridMap');
     const props = merged!.properties as GridMapProperties;
-    expect(props.cells).toBe('9, 8, 7'); // the OVERRIDE layout, not BASE
+    expect(props.cells).toBe('9, 8, 7'); // the override layout, not the base
     expect(props.meshLibrary).toBe('ExtResource("ml")'); // root-only prop survives
   });
 
@@ -246,8 +238,8 @@ describe('mergeInstanceRoot', () => {
 describe('mergeInstanceRoot — rawPropertiesOrderReliable (ADR-0035)', () => {
   it('is false on the merged node even though the instance node it was built from was reliable', () => {
     // `{ ...root.rawProperties, ...instanceNode.rawProperties }` keeps a
-    // shared key at ROOT's position but the INSTANCE's value, and appends any
-    // instance-only key after every root key — neither file's real order. A
+    // shared key at the root's position but the instance's value, and appends any
+    // instance-only key after every root key: neither file's real order. A
     // file-order-sensitive resolver must fall back for this node.
     const instanceNode = node({
       name: 'Cam',

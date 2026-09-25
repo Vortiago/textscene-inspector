@@ -1,18 +1,8 @@
 /**
- * Slot allocation inside a light class.
- *
- * A class is one CULL TUPLE — `(range_item_cull_mask, range_z_min, range_z_max,
- * range_layer_min, range_layer_max)` — because those five light-side constants
- * are the whole of what Godot tests an item against (`_record_item_commands` in
- * `drivers/gles3/rasterizer_canvas_gles3.cpp`, plus the per-canvas layer test in
- * `servers/rendering/renderer_viewport.cpp`). Two lights that agree on all five are
- * indistinguishable to every item and so share one accumulation.
- *
- * Lights of one class accumulate into ONE buffer in ONE pass, so their shadow
- * stamps share an 8-bit stencil. The ordinal is what keeps those stamps apart,
- * and three properties make it usable: distinct within a class, DENSE (they
- * index a 255-value stencil), and independent across classes (a class pass
- * renders no other class's layer, so two classes may reuse the same number).
+ * Slot allocation in a light class, one cull tuple of `drivers/gles3/rasterizer_canvas_gles3.cpp`
+ * and `servers/rendering/renderer_viewport.cpp`. A class shares one pass and 8-bit stencil, so the
+ * ordinal keeps its shadow stamps apart: distinct in a class, dense for 255 values, and free to
+ * repeat across classes.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -61,7 +51,7 @@ describe('useRegisterCanvasLight2D', () => {
   });
 
   it('keeps two lights in one class when only their key VALUES match', async () => {
-    // The registry is keyed by the tuple's VALUE, never by object identity: a
+    // The registry is keyed by the tuple's value, never by object identity: a
     // light rebuilds its key object whenever its component re-renders.
     const a: number[] = [];
     const b: number[] = [];
@@ -75,9 +65,8 @@ describe('useRegisterCanvasLight2D', () => {
   });
 
   it('restarts the numbering in a second class', async () => {
-    // Nothing draws two classes into one stencil, so reusing 0 costs nothing —
-    // and NOT reusing it would burn the 255-value range on a scene with many
-    // classes.
+    // Nothing draws two classes into one stencil, so reusing 0 costs nothing, and not reusing it
+    // would burn the 255-value range on a scene with many classes.
     const first: number[] = [];
     const second: number[] = [];
     await mount(
@@ -90,7 +79,7 @@ describe('useRegisterCanvasLight2D', () => {
   });
 
   it('splits a class on a z window even when the cull masks agree', async () => {
-    // The accumulator is a screen-space SUM, so a light that reaches fewer items
+    // The accumulator is a screen-space sum, so a light that reaches fewer items
     // than its pass-mate cannot be un-summed per fragment. It needs its own pass.
     const first: number[] = [];
     const second: number[] = [];
@@ -138,8 +127,8 @@ describe('useRegisterCanvasLight2D', () => {
   });
 
   it('gives 0 while a light is registering, which is a real ordinal', async () => {
-    // Nothing has a slot on the mount pass, so the first render must not invent
-    // one — a light that reported -1 or NaN would derive a stencil ref from it.
+    // Nothing has a slot on the mount pass, so the first render must not invent one: a light that
+    // reported -1 or NaN would derive a stencil ref from it.
     const seen: number[] = [];
     await mount(<Light cullKey={DEFAULT_KEY} seen={seen} />);
     expect(seen[0]).toBe(0);

@@ -5,7 +5,7 @@
 
 Renders Godot `.tscn` scenes in 3D, without Godot.
 
-TextScene Inspector parses the `.tscn` text directly and draws it with
+TextScene Inspector parses the `.tscn` text and draws it with
 react-three-fiber over three.js: meshes, PBR materials, lights, cameras,
 environments, and instanced sub-scenes. There is no Godot install, no editor
 cache, and no import step. It ships as a VS Code extension (desktop and
@@ -17,8 +17,9 @@ Try it without installing anything: **[textscene-inspector.pages.dev](https://te
 
 ![The web previewer rendering a CSG hallway mockup in the Split Dock UI](./docs/showcase/web/hallway.png)
 
-*The web previewer's Split Dock chrome: scene tree on the left, Inspector,
-Resources and Cameras tabs on the right. The scene is a self-contained CSG
+*The web previewer's Split Dock chrome: the Source pane on the left, and a
+right dock that holds the scene tree above the Inspector, Resources and Cameras
+tabs. The scene is a self-contained CSG
 corridor of floor, walls, ceiling, portrait frames and Label3D name plates, all
 built from primitive nodes.*
 
@@ -29,9 +30,8 @@ vertical slice.
 
 Coverage is broader than what draws. Some node types are parsed and fully
 lint-checked while drawing nothing, either because that is correct (a Timer, a
-skeleton modifier, an XR tracker) or because rendering has not landed yet. The
-parity gallery distinguishes the two, so "not implemented" never gets quietly
-attached to a node that is finished.
+skeleton modifier, an XR tracker) or because rendering is not implemented. The
+parity gallery shows which of the two applies to each node type.
 
 | Category | Types |
 |---|---|
@@ -42,7 +42,7 @@ attached to a node that is finished.
 | 2D | Sprite2D, AnimatedSprite2D, Polygon2D, Line2D, TileMap, TileMapLayer, NavigationRegion2D, Marker2D, Path2D, PathFollow2D, ParallaxBackground, ParallaxLayer |
 | 3D scene | Sprite3D, Label3D, Decal, GridMap, NavigationRegion3D, Marker3D, Path3D, PathFollow3D |
 | Viewports | SubViewport, SubViewportContainer: nested viewports, with `ViewportTexture` composited onto 3D surfaces |
-| UI | 23 Control types, rendered as a DOM overlay |
+| UI | Control nodes, drawn natively in the WebGL canvas |
 
 Beyond the node set:
 
@@ -118,7 +118,7 @@ v1.6.2631 or later (`winget --version`).
 pnpm test                # full vitest suite
 pnpm test:watch          # watch mode
 pnpm test:visual         # golden images, headless chromium, exact pixel compare
-pnpm test:visual:update  # rewrite baselines after an intentional change — eyeball, then commit
+pnpm test:visual:update  # rewrite baselines after an intentional change: eyeball, then commit
 ```
 
 The VS Code extension carries its own integration suite, run in a real VS Code
@@ -187,7 +187,7 @@ salvage, and a strict parser lints and reports everything. Node types
 self-register on import, so adding one touches its own directory and three
 aggregation imports, never a central parser or renderer file. The web previewer
 and the VS Code extension are thin shells over the same `@textscene/core`
-library, which keeps them at feature parity by construction.
+library, which keeps them at feature parity.
 
 [ARCHITECTURE.md](./ARCHITECTURE.md) has the details.
 
@@ -197,6 +197,7 @@ library, which keeps them at feature parity by construction.
 - [docs/user-guide-vscode.md](./docs/user-guide-vscode.md): VS Code extension guide
 - [ARCHITECTURE.md](./ARCHITECTURE.md): project structure and patterns
 - [REFERENCES.md](./REFERENCES.md): Godot and three.js documentation links
+- [CONTRIBUTING.md](./CONTRIBUTING.md): issues, gates and pull requests
 - [GitHub issues](https://github.com/Vortiago/textscene-inspector/issues): roadmap and open work
 
 ## License

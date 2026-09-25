@@ -1,11 +1,7 @@
 /**
- * `decodeStandardMaterial3D` — the one decode's own contract.
- *
- * Feature-by-feature scalar coverage lives in the `scalars.*.test.ts` files
- * (clearcoat, rim, heightmap, anisotropy, refraction, triplanar). This file
- * pins what those do not: the transparency/alpha rule, the feature gates over
- * the texture-slot enumeration, the value-decoder edges, and the Godot defaults
- * an omitted property means.
+ * `decodeStandardMaterial3D`'s own contract: the transparency and alpha rule, the slot
+ * feature gates, the value-decoder edges and the defaults of an omitted property. The
+ * per-feature scalars live in the `scalars.*.test.ts` files.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -94,16 +90,14 @@ describe('decodeStandardMaterial3D — transparency', () => {
 });
 
 /**
- * `uses_alpha_pass()` ported. `transparency` is only one of its inputs — the
- * discriminating case throughout is a property set with transparency DISABLED
- * that still lands in the alpha pass.
+ * `uses_alpha_pass()` ported. `transparency` is only one of its inputs, so each case
+ * leaves transparency DISABLED and still lands in the alpha pass.
  */
 describe('decodeStandardMaterial3D — alpha-pass classification', () => {
   it('puts a non-MIX blend mode in the alpha pass whatever transparency says', () => {
-    // `blend_mode_uses_blend_alpha` is true for ADD / SUB / MUL / PREMULT_ALPHA,
-    // so an additive material renders in the alpha pass and — under the default
-    // OPAQUE_ONLY depth mode — writes no depth. The corpus discriminator is
-    // `3d/labels_and_texts`, whose material sets `blend_mode = 1` and nothing else.
+    // `blend_mode_uses_blend_alpha` is true for ADD / SUB / MUL / PREMULT_ALPHA, so an
+    // additive material renders in the alpha pass and, under the default OPAQUE_ONLY
+    // depth mode, writes no depth.
     for (const mode of ['1', '2', '3', '4']) {
       const data = decodeStandardMaterial3D({ blend_mode: mode });
       expect(data.transparency, `blend_mode ${mode}`).toBe(Transparency.DISABLED);
@@ -127,9 +121,8 @@ describe('decodeStandardMaterial3D — alpha-pass classification', () => {
   });
 
   it('re-admits a cutout to the alpha pass under alpha antialiasing', () => {
-    // `uses_alpha_antialiasing` un-cancels the clip; Godot switches the blend to
-    // alpha-to-coverage. The corpus case is `3d/antialiasing`, which pairs
-    // `transparency = 2` with `alpha_antialiasing_mode = 1`.
+    // `uses_alpha_antialiasing` un-cancels the clip, and Godot switches the blend to
+    // alpha-to-coverage.
     const data = decodeStandardMaterial3D({
       transparency: '2',
       alpha_scissor_threshold: '0.5',
@@ -145,7 +138,7 @@ describe('decodeStandardMaterial3D — alpha-pass classification', () => {
   });
 
   it('only PIXEL_ALPHA distance fade writes ALPHA; the dither modes do not', () => {
-    // `player_gray.tres` uses mode 2 and must stay opaque.
+    // Mode 2 must stay opaque.
     expect(decodeStandardMaterial3D({ distance_fade_mode: '1' }).transparent).toBe(true);
     expect(decodeStandardMaterial3D({ distance_fade_mode: '2' }).transparent).toBe(false);
     expect(decodeStandardMaterial3D({ distance_fade_mode: '3' }).transparent).toBe(false);
@@ -156,9 +149,8 @@ describe('decodeStandardMaterial3D — alpha-pass classification', () => {
   });
 
   it('approximates ALPHA_HASH with blending, keeping the opaque-pass depth write', () => {
-    // Deliberate deviation: Godot dithers a discard and stays opaque. three has
-    // no stochastic clip, so a literal port would render the surface FULLY
-    // opaque — further from Godot's look than alpha blending is.
+    // A deliberate deviation: Godot dithers a discard and stays opaque. three has no
+    // stochastic clip, and fully opaque is further from Godot's look than blending.
     const data = decodeStandardMaterial3D({ transparency: '3' });
     expect(data.transparent).toBe(true);
     expect(data.depthWrite).toBe(true);
@@ -219,7 +211,7 @@ describe('decodeStandardMaterial3D — refraction forces opacity', () => {
   });
 
   it('still joins the alpha pass, because it samples the screen texture', () => {
-    // `unit-material-refraction.tscn` authors no transparency at all.
+    // No transparency is authored.
     const data = decodeStandardMaterial3D({
       albedo_color: 'Color(0.85, 0.9, 1.0, 1)',
       roughness: '0.05',
@@ -249,9 +241,7 @@ describe('decodeStandardMaterial3D — texture-slot enumeration', () => {
   });
 
   it('drops every gated slot whose feature flag is off', () => {
-    // The old split gated `normal_texture` on one arrival path and `ao_texture`
-    // on the other, so the same material grew or lost a map depending on how it
-    // was referenced. One gate table now answers for both.
+    // One gate table answers for both arrival paths.
     const data = decodeStandardMaterial3D({
       normal_texture: 'ExtResource("1")',
       emission_texture: 'ExtResource("2")',
@@ -365,9 +355,7 @@ describe('decodeStandardMaterial3D — value-decoder edges', () => {
 
 describe('decodeStandardMaterial3D — corpus materials', () => {
   it('decodes the truck-town tree leaves as a double-sided depth-pre-pass surface', () => {
-    // scenes/demos/3d/truck_town/town/tree/Leav_material.tres. Both properties
-    // were dropped by the old `.tres` decode, so the leaves rendered opaque and
-    // single-sided — front faces only, from behind nothing at all.
+    // Both properties decide how foliage draws: pre-pass depth and both faces.
     const data = decodeStandardMaterial3D({
       transparency: '4',
       cull_mode: '2',
@@ -384,9 +372,7 @@ describe('decodeStandardMaterial3D — corpus materials', () => {
   });
 
   it('decodes the procedural-materials glass with its normal, refraction and triplanar', () => {
-    // scenes/demos/3d/procedural_materials/materials/glass.tres. The old
-    // `.tres` decode kept only the colour and roughness: no transparency, no
-    // normal scale, no refraction, no triplanar.
+    // A glass material: transparency, normal scale, refraction and triplanar together.
     const data = decodeStandardMaterial3D({
       transparency: '1',
       albedo_color: 'Color(0.423529, 0.517647, 0.623529, 0.627451)',
@@ -402,7 +388,7 @@ describe('decodeStandardMaterial3D — corpus materials', () => {
     expect(data.transparent).toBe(true);
     // Refraction rewrites both: `ddm = DEPTH_DRAW_ALWAYS` and a flat
     // `ALPHA = 1.0` replace the authored depth mode and the albedo alpha, so
-    // this surface is depth-writing and does NOT fade despite `transparency = 1`
+    // this surface is depth-writing and does not fade despite `transparency = 1`
     // and an alpha of 0.63.
     expect(data.depthDrawMode).toBe(DepthDrawMode.ALWAYS);
     expect(data.depthWrite).toBe(true);

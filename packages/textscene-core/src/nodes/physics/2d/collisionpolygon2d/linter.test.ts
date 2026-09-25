@@ -1,10 +1,8 @@
 /**
- * CollisionPolygon2D linter tests — mirrors
- * CollisionPolygon2D::get_configuration_warnings() (collision_polygon_2d.cpp:232-257):
- * parent must descend from CollisionObject2D, the polygon must carry enough
- * vertices for its build mode, and one-way collision has no effect under an
- * Area2D. Every one of these is a WARNING in Godot's own source (a
- * configuration-warning banner, never a load/run failure).
+ * CollisionPolygon2D linter: mirrors CollisionPolygon2D::get_configuration_warnings()
+ * (collision_polygon_2d.cpp:232-257). The parent must descend from CollisionObject2D, the polygon
+ * needs enough vertices for its build mode, and one-way collision has no effect under an Area2D.
+ * Each is a configuration warning in Godot, never a load failure.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -53,12 +51,10 @@ describe('CollisionPolygon2D Linter', () => {
   });
 
   it('says nothing about a parent whose type is declared in another scene', () => {
-    // `instance=` names a PackedScene, not a class, so `type` here is the
-    // ExtResource ref; an override heading (neither `type=` nor `instance=`)
-    // takes its class from the instance it sits inside and parses with the
-    // index fallback's truthy "0". Neither can be measured against
-    // CollisionObject2D, and warning anyway fires on scenes built to be
-    // instanced.
+    // `instance=` names a PackedScene, so `type` here is the ExtResource ref. An override
+    // heading (neither `type=` nor `instance=`) parses with the index fallback's truthy "0".
+    // Neither can be measured against CollisionObject2D, and a warning would fire on scenes
+    // built to be instanced.
     const instancedParent = scene(
       packedScene,
       node('Node2D', {}, { name: 'Root' }),
@@ -172,9 +168,8 @@ describe('CollisionPolygon2D Linter', () => {
   });
 
   it('says nothing when build_mode is non-finite, which names no mode at all', () => {
-    // Both arms compare against BUILD_SOLIDS, and `NaN !== 0` is true, so a
-    // non-finite fell into the Segments arm and named a mode the file never
-    // states — with the wrong threshold beside it.
+    // Both arms compare against BUILD_SOLIDS, and `NaN !== 0` is true, so an unguarded
+    // non-finite falls into the Segments arm and names a mode the file never states.
     expectNoDiagnostic(
       scene(
         node('StaticBody2D', {}, { name: 'Root' }),

@@ -1,21 +1,9 @@
 #!/usr/bin/env node
 /**
- * Write each comparison sheet's `## Linting` block from the LIVE linter
- * registries, and emit the same coverage for every unsupported node as JSON.
- *
- *   node scripts/compare-docs/build-lint-sections.mjs           # rewrite in place
- *   node scripts/compare-docs/build-lint-sections.mjs --check   # fail if stale
- *
- * Needs a CURRENT built core (`pnpm --filter @textscene/core build`); a stale one
- * is refused rather than measured.
- *
- * Only the block BETWEEN the markers is generated; the prose beneath it — what
- * the lenient parser does with a value strict rejects — is hand-written and is
- * never touched. On a sheet with no markers the section is inserted.
- *
- * The gallery cannot compute this itself: deciding whether a matcher rule reaches
- * an unsupported type means executing a predicate, and build-gallery.mjs runs
- * inside the web build BEFORE core is built. So it reads `lint-coverage.json`.
+ * Writes each comparison sheet's `## Linting` block from the live linter registries, and the
+ * same coverage for every unsupported node to `lint-coverage.json`. The gallery reads that file:
+ * a matcher rule's reach is a predicate to execute, and build-gallery.mjs runs in the web build
+ * before core is built. `--check` fails instead of writing when either is stale.
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -40,16 +28,15 @@ const BEGIN = (type) => `<!-- lint:begin ${type} -->`;
 const END = '<!-- lint:end -->';
 
 /**
- * Replace the marked block, or insert a `## Linting` section if absent.
- *
- * Insertion goes before `## Known limitations` when present (limitations read as
- * the closing note of a sheet), else at the end.
+ * Replaces the marked block, or inserts a `## Linting` section before `## Known limitations` (a
+ * sheet's closing note), else at the end. Only the block between the markers is generated: the
+ * hand-written prose beneath it, on what the lenient parser does with a value strict rejects,
+ * is never touched.
  */
 function applyBlock(text, type, rendered) {
   const block = `${BEGIN(type)}\n${rendered}\n${END}`;
-  // Match ANY begin marker, not this type's. Keying on the current `type:` meant
-  // renaming a node left the stale block in place and appended a second
-  // `## Linting` section that never converged.
+  // Any begin marker, not this type's: keying on `type:` leaves a renamed node's stale block in
+  // place and appends a second `## Linting` section that never converges.
   const markers = [...text.matchAll(/<!-- lint:begin \S+ -->/g)];
   if (markers.length > 1) {
     throw new Error(`${type}: more than one lint:begin marker — cannot tell which block to rewrite`);
@@ -72,10 +59,9 @@ function applyBlock(text, type, rendered) {
 
 const check = process.argv.includes('--check');
 
-// Both modes, not just --check: generating from a stale dist writes a previous
-// revision's coverage into committed sheets, and --check then certifies it. The
-// message is printed rather than thrown so the remedy is the last line, not a
-// stack frame.
+// Both modes need a current core build (`pnpm --filter @textscene/core build`): a stale dist
+// writes a previous revision's coverage into the committed sheets, and --check then certifies
+// it. The message is printed, not thrown, so the remedy is the last line, not a stack frame.
 try {
   requireFreshDist(CORE, 'the generated lint sections');
 } catch (err) {
@@ -110,9 +96,8 @@ for (const file of collectSheetFiles()) {
     exempt++;
     continue;
   }
-  // An unknown type is not "a node with no linting" — it is a typo or a rename.
-  // Generating for it publishes a confident, false "nothing is linted" chapter,
-  // because coverageFor returns empty validators for any string.
+  // An unknown type is a typo or a rename, not a node with no linting. coverageFor returns empty
+  // validators for any string, so generating for it publishes a false "nothing is linted" chapter.
   if (!knownTypes.has(meta.type)) {
     throw new Error(
       `${sheetLabel(file)}: type "${meta.type}" is not a Godot node in node-catalog.json. ` +

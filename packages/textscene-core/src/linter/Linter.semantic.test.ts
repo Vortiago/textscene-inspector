@@ -16,7 +16,6 @@ describe('Linter', () => {
 
   describe('Semantic Validation (Phase 2)', () => {
     afterEach(() => {
-      // Cleanup test rules
       ruleRegistry['rules'].delete('test-semantic-rule');
       ruleRegistry['rules'].delete('test-type-specific-rule');
     });
@@ -165,7 +164,6 @@ visible = true
       expect(diagnostics.find(d => d.ruleName === 'test-rule-1')).toBeDefined();
       expect(diagnostics.find(d => d.ruleName === 'test-rule-2')).toBeDefined();
 
-      // Cleanup
       ruleRegistry['rules'].delete('test-rule-1');
       ruleRegistry['rules'].delete('test-rule-2');
     });

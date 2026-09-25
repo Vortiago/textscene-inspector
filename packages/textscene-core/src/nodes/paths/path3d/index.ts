@@ -1,8 +1,6 @@
 /**
- * Path3D registration — parser.
- *
- * Draws a selection-gated Curve3D polyline gizmo (ADR-0018) and provides the
- * curve to PathFollow3D children. Previously transform-only (ADR-0008).
+ * Path3D registration: the parser. Path3D draws a selection-gated Curve3D polyline gizmo
+ * (ADR-0018) and provides the curve to PathFollow3D children.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

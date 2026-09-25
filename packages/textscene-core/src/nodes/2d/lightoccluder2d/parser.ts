@@ -1,6 +1,4 @@
-/**
- * LightOccluder2D parser — Node2D plus the occluder polygon reference and mask props.
- */
+/** LightOccluder2D parser: Node2D, the occluder polygon reference and the masks. */
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';

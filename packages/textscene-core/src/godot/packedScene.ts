@@ -1,11 +1,8 @@
 /**
- * The vocabulary of a `[node]` heading — `scene/resources/packed_scene.cpp` and
- * the text loader that feeds it.
- *
- * Here rather than beside either reader because BOTH node creators spell it:
- * the renderer's `NodeRegistry` and the linter's `StrictTscnParser`. The two
- * disagreeing is a silent divergence between what renders and what lints, and
- * neither module is the other's dependency.
+ * The vocabulary of a `[node]` heading: `scene/resources/packed_scene.cpp` and its text loader.
+ * It lives here because both node creators spell it, the renderer's `NodeRegistry` and the
+ * linter's `StrictTscnParser`, and neither depends on the other. Two copies would let what
+ * renders and what lints diverge silently.
  */
 
 /**

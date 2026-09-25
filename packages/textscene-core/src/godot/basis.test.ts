@@ -10,7 +10,7 @@ import {
 } from './basis.js';
 
 const IDENTITY: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-/** Rows `(1, 0.5, 0)`, `(0, 1, 0)`, `(0, 0, 1)` — a shear in the second COLUMN. */
+/** Rows `(1, 0.5, 0)`, `(0, 1, 0)`, `(0, 0, 1)`: a shear in the second column. */
 const SHEARED: BasisComponents = [1, 0.5, 0, 0, 1, 0, 0, 0, 1];
 /** Determinant -1, every column still unit. */
 const MIRRORED: BasisComponents = [-1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -61,8 +61,8 @@ describe('basisHasUnitScale', () => {
     expect(basisHasUnitScale(MIRRORED)).toBe(false);
     expect(basisHasUnitScale(SHEARED)).toBe(false);
     expect(basisHasUnitScale(infFirst(Infinity))).toBe(false);
-    // NaN, because EVERY comparison against it is false — not because it
-    // compares greater or less than 1.
+    // NaN, because every comparison against it is false, not because it compares greater or
+    // less than 1.
     expect(basisHasUnitScale(infFirst(NaN))).toBe(false);
   });
 });

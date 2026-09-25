@@ -1,7 +1,7 @@
 /**
- * `<VSlider>` — the axis-swapped twin of `hslider/Component.test.tsx`
- * (read its own doc first): same part count/order, but the grabber travels
- * BOTTOM→TOP and ticks draw the `vslider_tick` icon.
+ * `<VSlider>`: the axis-swapped twin of `hslider/Component.test.tsx` (read its doc first). The
+ * part count and order match, but the grabber travels bottom to top and ticks draw the
+ * `vslider_tick` icon.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -37,7 +37,7 @@ describe('<VSlider>', () => {
     );
     const groups = renderer.scene.findAllByType('Group');
     const grabberGroup = groups[groups.length - 1]!;
-    // x is NOT flipped (only y is, group position = [x, -y, 0]): x = trunc(40/2) - trunc(16/2) = 12.
+    // x is not flipped (only y is, group position = [x, -y, 0]): x = trunc(40/2) - trunc(16/2) = 12.
     // y = 300 - 0*areasize - 16 = 284; -y (three space) = -284; 284 + 16 = 300 = RECT.h.
     expect(grabberGroup.instance.position.x).toBeCloseTo(12);
     expect(grabberGroup.instance.position.y).toBeCloseTo(-284);
@@ -63,7 +63,7 @@ describe('<VSlider>', () => {
       />
     );
     const meshes = renderer.scene.findAllByType('Mesh');
-    // meshes: [track, fill, tick0, tick1, tick2, grabber] — pick a tick mesh (index 2).
+    // meshes: [track, fill, tick0, tick1, tick2, grabber]. Index 2 is a tick mesh.
     const tickMesh = meshes[2]!.instance as THREE.Mesh;
     const geometry = tickMesh.geometry as THREE.PlaneGeometry;
     expect(geometry.parameters.width).toBe(8);

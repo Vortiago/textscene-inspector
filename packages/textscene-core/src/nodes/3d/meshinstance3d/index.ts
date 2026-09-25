@@ -1,10 +1,7 @@
 /**
- * MeshInstance3D registration — parser + property formatter.
- *
- * Imported for its side-effect by `parser/TscnParser.ts` so the parser
- * knows how to turn raw TSCN body properties into a `MeshInstance3DProperties`.
- * The R3F `<MeshInstance3D>` component (registered separately in
- * `r3f/nodes/meshinstance3d/index.ts`) handles the rendering.
+ * MeshInstance3D registration: parser + property formatter. `parser/TscnParser.ts`
+ * imports it for the side effect, so the parser can build a
+ * `MeshInstance3DProperties`. index.r3f.ts registers the render component.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

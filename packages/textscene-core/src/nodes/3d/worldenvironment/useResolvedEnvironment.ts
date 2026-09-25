@@ -1,19 +1,7 @@
 /**
- * Resolve `WorldEnvironment.environment` → `Environment.sky` → `Sky.sky_material`,
- * accepting either form at every level.
- *
- * Godot treats `SubResource("id")` and `ExtResource("id")` identically here; following
- * only the inline form means a scene keeping any of the three in a standalone `.tres`
- * silently gets no environment or no sky. Losing the sky costs more than a backdrop: an
- * Environment can draw its ambient from the sky, so surfaces the sun does not reach go
- * black.
- *
- * A hook rather than a pure function because the external form loads through the
- * resource pipeline. `useSubOrExtResource` returns the inline case synchronously on the
- * first render, so the overwhelmingly common all-inline scene resolves in one pass with
- * no flash. The levels are independent: a resolved Environment applies its fog and
- * tonemapping immediately even while its sky `.tres` is still in flight
- * (**Progressive fill-in**).
+ * Resolves `WorldEnvironment.environment` → `Environment.sky` → `Sky.sky_material`, in the
+ * `SubResource` or the `ExtResource` form at every level, as Godot does. A lost sky also loses the
+ * ambient an Environment draws from it, so surfaces the sun does not reach go black.
  */
 
 import { useMemo } from 'react';
@@ -31,6 +19,11 @@ export interface ResolvedEnvironment {
   sky: SkyProperties | null;
 }
 
+/**
+ * A hook, not a pure function, because the external form loads through the resource pipeline.
+ * `useSubOrExtResource` returns the inline case on the first render, so an all-inline scene resolves
+ * in one pass. Each level applies as it resolves (**Progressive fill-in**).
+ */
 export function useResolvedEnvironment(
   environmentRef: string | undefined
 ): ResolvedEnvironment | null {

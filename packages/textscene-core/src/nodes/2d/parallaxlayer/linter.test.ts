@@ -55,8 +55,7 @@ motion_scale = Vector2(0.5, 1)
   });
 
   it('stays quiet when the parent is an untyped instance whose type it cannot know', () => {
-    // `game_splitscreen.tscn` writes exactly this shape: `instance=` with no
-    // `type=`, so the parent's real class lives in another file.
+    // `instance=` with no `type=`: the parent's real class lives in another file.
     const content = `[gd_scene load_steps=2 format=3]
 
 [ext_resource type="PackedScene" path="res://bg.tscn" id="1"]

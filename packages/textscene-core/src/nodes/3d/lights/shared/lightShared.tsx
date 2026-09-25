@@ -1,8 +1,6 @@
 /**
- * Shared helpers for directional / spot lights that require a target object.
- * In three.js, DirectionalLight and SpotLight point at their `target` Object3D;
- * the conventional Godot orientation is "-Z forward", so we place the target
- * one unit in the local -Z direction inside the group.
+ * The group for a directional or spot light and its `target` Object3D. Godot
+ * lights face -Z, so the target sits one unit along local -Z.
  */
 
 import { useEffect, useRef } from 'react';
@@ -37,8 +35,7 @@ export function LightWithTarget({
 }: LightWithTargetProps) {
   const targetRef = useRef<THREE.Object3D>(new THREE.Object3D());
 
-  // Lazily initialised once; expose target via ref for the renderLight closure.
-  // We deliberately don't store target in state to keep identity stable.
+  // A ref, not state, keeps the target's identity stable across renders.
   useEffect(() => {
     targetRef.current.name = `${name}_target`;
   }, [name]);

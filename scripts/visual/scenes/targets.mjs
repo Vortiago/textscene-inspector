@@ -4,49 +4,36 @@
  */
 
 export const TILE_AND_TARGET_SCENES = [
-  // --- TileMap / TileMapLayer batched-geometry coverage ---
+  // TileMap and TileMapLayer batched geometry.
   { name: 'tile-map', file: 'unit-tile-map.tscn', mode: '2d' },
   { name: 'tile-map-layer', file: 'unit-tile-map-layer.tscn', mode: '2d' },
-  // Six cells of the SAME atlas tile at six orientations, encoded the way Godot
-  // paints them: flip/transpose bits inside the alternative id. Every other
-  // tile fixture and golden carries alternativeId 0 only, so the flip/transpose
-  // UV composition — the most intricate and most corpus-exercised piece of the
-  // tile slices — was guarded by nothing but a hand-written array in the test
-  // written alongside it. The marker glyph is asymmetric on both axes, so each
-  // orientation is visually distinct.
-  // Tight threshold on purpose: a 2D canvas render with no AA-sensitive
-  // shading is byte-stable, and only the four TRANSPOSED cells move when the
-  // composition order is wrong — 0.21% of the frame. The default 0.1% leaves
-  // too little margin for a guard this specific.
-  { name: 'tile-map-layer-flips', file: 'unit-tile-map-layer-flips.tscn', maxDiffPct: 0.02, mode: '2d' },
+  // Six cells of one atlas tile at six orientations, with the flip and transpose
+  // bits in the alternative id as Godot paints them. Every other tile fixture
+  // uses alternativeId 0. The marker glyph is asymmetric on both axes, and a wrong
+  // composition order moves only the four transposed cells, 0.21% of the frame.
+  { name: 'tile-map-layer-flips', file: 'unit-tile-map-layer-flips.tscn', mode: '2d' },
   { name: 'tile-map-layer-isometric', file: 'unit-tile-map-layer-isometric.tscn', mode: '2d' },
-  // Y-sort (issue 74) regression guard: the full isometric dungeon. Sibling y-sort
-  // subtrees (Floor / Walls / Decorations under the non-y-sorted root) must layer in
-  // disjoint tree-ordered z-bands, and each layer's tiles interleave with decorations
-  // by Y — decorations must NOT hide behind the floor. maxDiffPct covers SwiftShader AA.
-  { name: 'isometric-dungeon', file: 'dungeon.tscn', maxDiffPct: 0.5, mode: '2d' },
-  // Hexagon grid (shape=3, vertical offset axis): odd columns stagger by
-  // half a tile — the half-offset placement math had no visual guard before.
+  // Y-sort: sibling y-sort subtrees (Floor, Walls, Decorations under a
+  // non-y-sorted root) layer in disjoint tree-ordered z-bands, and each layer's
+  // tiles interleave with decorations by Y. No decoration hides behind the floor.
+  { name: 'isometric-dungeon', file: 'dungeon.tscn', mode: '2d' },
+  // Hexagon grid (shape=3, vertical offset axis): odd columns stagger by half a
+  // tile.
   { name: 'tile-map-layer-hexagon', file: 'unit-tile-map-layer-hexagon.tscn', mode: '2d' },
 
-  // --- RemoteTransform3D / RemoteTransform2D drive their target ---
-  // The relay copies its own transform onto the node its remote_path names
-  // (resolved once at parse time — r3f/remoteTransforms.ts). Each fixture
-  // authors the target AWAY from the relay so the render only reads right if
-  // the drive applied: the 3D cube is authored at -2 X but driven to the
-  // relay's +2; the 2D pentagon is authored at the gray ghost's spot but
-  // driven to the relay's upper-right. Verified against real Godot 4.6.3.
-  { name: 'remote-transform-3d', file: 'unit-remote-transform-3d.tscn' },
-  { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', maxDiffPct: 0.5, mode: '2d' },
+  // RemoteTransform3D and RemoteTransform2D copy their transform onto the node
+  // remote_path names, resolved once at parse time (r3f/remoteTransforms.ts).
+  // Each target is authored away from its relay. Verified against Godot 4.6.3.
 
-  // --- ViewportTexture: content sampled THROUGH a SubViewport target ---
-  // The only golden that consumes a render target, so it alone pins the
-  // through-target colour pipeline: the offscreen pass must tonemap like
-  // Godot's viewport pass (shared environment in force inside the target,
-  // applied again on the consuming quad — curve squared), and the target's
-  // linear storage must survive the consumer re-tagging it sRGB. Both
-  // regressions are invisible in every other scene, where all content renders
-  // in the main pass exactly once. Probe-verified against Godot 4.6.3 to
-  // within 1% linear per sample.
+  // The cube is authored at -2 X and driven to the relay's +2.
+  { name: 'remote-transform-3d', file: 'unit-remote-transform-3d.tscn' },
+  // The pentagon is authored at the grey ghost and driven to the relay's
+  // upper right.
+  { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', mode: '2d' },
+
+  // ViewportTexture: the only golden that samples through a render target. The
+  // offscreen pass tonemaps like Godot's: the shared environment applies inside
+  // the target and again on the consuming quad (curve squared). The target's linear storage survives the
+  // consumer's sRGB tag. Within 1% linear per sample of Godot 4.6.3.
   { name: 'sub-viewport-texture', file: 'unit-sub-viewport-texture.tscn' },
 ];

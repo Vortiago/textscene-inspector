@@ -1,6 +1,6 @@
 /**
- * The PackedScene slice's routing claims (ADR-0031). Importing the index
- * registers them; these assertions are what a router reads back out.
+ * The PackedScene slice's routing claims (ADR-0031). Importing the index registers them,
+ * and these assertions are what a router reads back out.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,7 +23,7 @@ describe('packedscene slice registration', () => {
   });
 
   it('leaves binary .scn unclaimed', () => {
-    // No loader produces a ParsedResource from binary yet, and a claim would
+    // No loader produces a ParsedResource from binary, and a claim would
     // route a file nothing can read.
     expect(resourceSliceRegistry.byExtension('.scn')).toBeNull();
   });

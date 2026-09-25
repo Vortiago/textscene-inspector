@@ -1,9 +1,7 @@
 /**
- * The ArrayMesh slice decode — decodes a Godot 4 text ArrayMesh (.tres, format=4) into
- * per-surface typed arrays a THREE.BufferGeometry can consume. The fixtures
- * here are byte-exact copies of real converted demo meshes so the decoder is
- * tested against the actual on-disk layout (base64 PackedByteArray + the
- * uint64 vertex `format` bitfield), not an idealized stand-in.
+ * The ArrayMesh decode: a text ArrayMesh (.tres, format=4) into per-surface typed
+ * arrays. The fixtures are byte-exact copies of converted demo meshes, so the
+ * decoder meets the real layout: base64 PackedByteArray and the uint64 `format`.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as logger from '../../../logger';
@@ -18,7 +16,7 @@ afterEach(() => {
 });
 
 /**
- * scenes/demos/3d/platformer/stage/meshes/wall.tres — a 4-vertex quad, one
+ * scenes/demos/3d/platformer/stage/meshes/wall.tres: a 4-vertex quad, one
  * surface, one material. format 34359742487 = VERTEX|NORMAL|TANGENT|TEX_UV|INDEX,
  * uncompressed (no ARRAY_FLAG_COMPRESS_ATTRIBUTES). vertex 0 = (-1,-1,1).
  */
@@ -120,10 +118,9 @@ describe('decodeArrayMesh', () => {
   });
 
   it("addresses a surface material declared in the mesh's own .tres as a sub-resource path", () => {
-    // Godot writes this form whenever the mesh carries its own materials
-    // instead of referencing shared ones (every Truck Town vehicle). The
-    // material lives in a different document from the previewed scene, so the
-    // only thing that can find it is its owning file plus its id.
+    // Godot writes this form when the mesh carries its own materials. The
+    // material lives in a different document from the previewed scene, so only
+    // its owning file plus its id can find it.
     const mesh = decodeArrayMesh(OWN_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres');
     expect(mesh.surfaces[0]!.materialPath).toBe(
       'res://vehicles/meshes/wheel.tres::StandardMaterial3D_shvqh'
@@ -131,17 +128,16 @@ describe('decodeArrayMesh', () => {
   });
 
   it("resolves a surface's material named by the old-style integer index", () => {
-    // `_parse_sub_resource` takes TK_NUMBER (`resource_format_text.cpp:107`);
+    // `_parse_sub_resource` takes TK_NUMBER (`resource_format_text.cpp:107`), and
     // the header's `id=3` is read as the string "3" (`:1048`).
     const mesh = decodeArrayMesh(INDEXED_MATERIAL_TRES, 'res://vehicles/meshes/wheel.tres');
     expect(mesh.surfaces[0]!.materialPath).toBe('res://vehicles/meshes/wheel.tres::3');
   });
 
   it('decodes the [sub_resource] ArrayMesh a sub-resource path names, not the file body', () => {
-    // A `.tres` can hold several ArrayMeshes: the `[resource]` one plus e.g. its
-    // `shadow_mesh` as a `[sub_resource]`. Addressed by id, the SUB-RESOURCE's
-    // `_surfaces` must be read — falling through to the file body would hand
-    // back a different mesh under the right-looking name.
+    // A `.tres` can hold several ArrayMeshes: the `[resource]` one plus, for
+    // example, its `shadow_mesh` as a `[sub_resource]`. Addressed by id, the
+    // sub-resource's `_surfaces` is read, not the file body's other mesh.
     const mesh = decodeArrayMesh(
       NESTED_MESH_TRES,
       'res://vehicles/meshes/wheel.tres::ArrayMesh_shadow'
@@ -164,7 +160,7 @@ describe('decodeArrayMesh', () => {
     const message = String(warnSpy.mock.calls[0]![0]);
     expect(message).toContain('[ArrayMesh]');
     expect(message).toContain('ArrayMesh_absent');
-    // The owning file, not the whole address — the address is not a file.
+    // The owning file, not the whole address: the address is not a file.
     expect(message).toContain('res://vehicles/meshes/wheel.tres');
     expect(message).not.toContain('::');
   });
@@ -248,14 +244,10 @@ blend_shape_mode = 0
 `;
 
 /**
- * scenes/demos/3d/truck_town/vehicles/meshes/truck_cab.tres, the `headlights`
- * surface verbatim — the smallest compressed surface in the corpus. format
- * 34896613383 = VERTEX|NORMAL|TANGENT|INDEX + ARRAY_FLAG_COMPRESS_ATTRIBUTES +
- * ARRAY_FLAG_FORMAT_VERSION_2, 12 B/vertex: 8 B of position record then a 4 B
- * normal region.
- *
- * The expected values throughout are what Godot 4.6.3's own
- * ArrayMesh.surface_get_arrays() returns for these exact bytes.
+ * scenes/demos/3d/truck_town/vehicles/meshes/truck_cab.tres, the `headlights` surface
+ * verbatim. format 34896613383 = VERTEX|NORMAL|TANGENT|INDEX + ARRAY_FLAG_COMPRESS_ATTRIBUTES
+ * + ARRAY_FLAG_FORMAT_VERSION_2, 12 B/vertex: an 8 B position record, then a 4 B normal
+ * region. Expected values are Godot 4.6.3's own ArrayMesh.surface_get_arrays() for these bytes.
  */
 const COMPRESSED_TRES = `[gd_resource type="ArrayMesh" format=4]
 
@@ -275,17 +267,10 @@ blend_shape_mode = 0
 `;
 
 /**
- * A compressed surface with NORMAL but NO TANGENT — format 536875011 =
- * VERTEX|NORMAL|INDEX + ARRAY_FLAG_COMPRESS_ATTRIBUTES. Hand-built, because no
- * corpus mesh is in this state: compression only folds a tangent frame into the
- * normal bytes when there IS a tangent, so here the octahedral pair is the
- * normal itself and the position record's angle slot stays zero.
- *
- * The three normals are +Y, +X and +Z, octahedral-encoded as the inverse of
- * `octToVec3` — the pair is (x, y) and z follows. Reading this through the
- * axis-angle path instead would take
- * that zero slot as `abs(0 * 2 - 1) * PI` — a half-turn, not the identity — and
- * tilt every one of them.
+ * Hand-built, compressed with NORMAL and no TANGENT: format 536875011 = VERTEX|NORMAL|INDEX
+ * + ARRAY_FLAG_COMPRESS_ATTRIBUTES. With no tangent the octahedral pair (the inverse of
+ * `octToVec3`) is the normal itself, +Y, +X and +Z, and the angle slot stays zero. The
+ * axis-angle path would read that zero as `abs(0 * 2 - 1) * PI`, a half-turn, and tilt them.
  */
 const COMPRESSED_NO_TANGENT_TRES = `[gd_resource type="ArrayMesh" format=4]
 
@@ -317,9 +302,8 @@ describe('compressed attribute layout', () => {
 
   it('decodes a compressed normal from the axis-angle TBN, angle in the position record', () => {
     // Compressed surfaces do not store the normal. The octahedral pair in the
-    // normal region is a rotation AXIS, and the angle is the 4th uint16 of the
-    // 8-byte position record — the slot a VERTEX-only surface leaves zeroed.
-    // Reading that pair as a normal yields a direction unrelated to the surface.
+    // normal region is a rotation axis, and the angle is the 4th uint16 of the
+    // 8-byte position record, the slot a VERTEX-only surface leaves zeroed.
     const surface = decodeArrayMesh(COMPRESSED_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(surface.normals).toHaveLength(4 * 3);
@@ -331,11 +315,10 @@ describe('compressed attribute layout', () => {
   });
 
   it('decodes a compressed normal whose frame angle is below the midpoint', () => {
-    // The angle's stored sign carries the binormal's HANDEDNESS, not the
-    // rotation's direction, so Godot takes its absolute value. Reading it signed
-    // rotates the frame backwards for every vertex below the midpoint and flips
-    // the normal's x and y — invisible in a fixture that stores the midpoint
-    // exactly, where the absolute value is a no-op.
+    // The angle's stored sign carries the binormal's handedness, not the
+    // rotation's direction, so Godot takes its absolute value. Read signed, it
+    // flips the normal's x and y below the midpoint, which a fixture storing the
+    // midpoint exactly cannot show.
     const surface = decodeArrayMesh(COMPRESSED_LOW_ANGLE_TRES, 'res://q.tres').surfaces[0]!;
 
     for (let v = 0; v < 4; v++) {
@@ -349,17 +332,16 @@ describe('compressed attribute layout', () => {
     const surface = decodeArrayMesh(COMPRESSED_NO_TANGENT_TRES, 'res://n.tres').surfaces[0]!;
     const n = surface.normals!;
     // Tolerance 4: a "zero" component is stored as 32768, which decodes to
-    // 1.5e-5 rather than 0 — the uint16 grid, not a decode error.
+    // 1.5e-5 rather than 0. That is the uint16 grid, not a decode error.
     [0, 1, 0, 1, 0, 0, 0, 0, 1].forEach((expected, i) => {
       expect(n[i]).toBeCloseTo(expected, 4);
     });
   });
 
   it('drops a compressed surface that declares no aabb', () => {
-    // The aabb IS the position scale for a compressed surface, so without it
-    // there is nothing to dequantise against. This mesh has only that surface,
-    // so nothing survives and the whole decode fails rather than yielding an
-    // empty mesh that would cache as a success.
+    // The aabb is the position scale of a compressed surface. Without it this
+    // only surface is dropped, and the decode fails rather than yield an empty
+    // mesh that would cache as a success.
     const noAabb = COMPRESSED_TRES.replace(
       '"aabb": AABB(0.416992, 0.114807, 1.339844, 0.102539, 0.06988499, 0.023437023),\n',
       ''
@@ -379,8 +361,8 @@ describe('compressed attribute layout', () => {
   });
 
   it('reads compressed UV1 past the vertex colour', () => {
-    // The attribute record is COLOR then UV1, and compression halves UV1 to 4
-    // bytes but leaves RGBA8 at 4 — so the colour offset does not move.
+    // The attribute record is COLOR then UV1. Compression halves UV1 to 4 bytes
+    // but leaves RGBA8 at 4, so the colour offset does not move.
     const surface = decodeArrayMesh(COMPRESSED_COLOR_UV_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(Array.from(surface.uvs!)).toEqual([0, 1, 1, 1, 1, 0, 0, 0]);
@@ -388,7 +370,7 @@ describe('compressed attribute layout', () => {
 
   it('dequantises compressed UVs through a non-zero uv_scale', () => {
     // Godot normalises UVs that leave [-1,1] into the uint16 range and records
-    // the divisor in uv_scale; a zero uv_scale means the stored value IS the UV.
+    // the divisor in uv_scale. A zero uv_scale means the stored value is the UV.
     // This quad's UVs run 0..4, which Godot stored against uv_scale 8.
     const surface = decodeArrayMesh(COMPRESSED_UVSCALE_TRES, 'res://mesh.tres').surfaces[0]!;
 
@@ -398,8 +380,8 @@ describe('compressed attribute layout', () => {
   });
 
   it('emits no UVs when attribute_data is not the size the format implies', () => {
-    // An unmodelled CUSTOM0..3 channel widens the record, so UV1 is no longer
-    // where the format says. That costs the UVs, not the surface.
+    // An unmodelled CUSTOM0..3 channel widens the record, so UV1 is not where
+    // the format says. That costs the UVs, not the surface.
     const truncated = COMPRESSED_UV_TRES.replace(
       /"attribute_data": PackedByteArray\("[^"]*"\)/,
       '"attribute_data": PackedByteArray("vAAbqRD/NCEQ/xupvAA0IQ==")'
@@ -413,7 +395,7 @@ describe('compressed attribute layout', () => {
 
 /**
  * A compressed quad saved by Godot 4.6.3 whose tangent handedness puts the stored
- * frame angle at uint16 15684 — well below the midpoint, where reading the angle
+ * frame angle at uint16 15684, well below the midpoint, where reading the angle
  * signed instead of absolute gives a visibly wrong normal. Expected values are
  * Godot's own `surface_get_arrays()[ARRAY_NORMAL]` for these bytes.
  */
@@ -436,8 +418,8 @@ blend_shape_mode = 0
 
 /**
  * scenes/demos/3d/truck_town/vehicles/meshes/truck_trailer.tres, its
- * `truck_trailer` surface verbatim — the corpus's only compressed surface that
- * also carries TEX_UV. format 34896613399 adds TEX_UV to the compressed set, so
+ * `truck_trailer` surface verbatim: a compressed surface that also carries
+ * TEX_UV. format 34896613399 adds TEX_UV to the compressed set, so
  * `attribute_data` is 4 B/vertex.
  */
 const COMPRESSED_UV_TRES = `[gd_resource type="ArrayMesh" format=4]
@@ -571,10 +553,9 @@ const BAD_THEN_GOOD_TRES = WALL_TRES.replace(
 
 describe('undecodable surfaces', () => {
   it('fails a mesh whose ONLY surface has vertex_data shorter than its format requires', () => {
-    // Per-surface dropping is what keeps a mesh's readable surfaces; when nothing
-    // is left there is no mesh, and saying so is what earns the consumer its
-    // magenta placeholder and a missing-resources row. Returning an empty mesh
-    // would be cached as a success and render invisibly instead.
+    // With no readable surface left there is no mesh, and the failure earns the
+    // consumer its magenta placeholder and a missing-resources row. An empty mesh
+    // would cache as a success and render invisibly.
     expect(() => decodeArrayMesh(TRUNCATED_TRES, 'res://mesh.tres')).toThrow();
   });
 
@@ -585,8 +566,7 @@ describe('undecodable surfaces', () => {
   });
 
   it('fails a mesh whose ONLY surface has index_data shorter than its index_count', () => {
-    // A short index buffer used to throw a RangeError from deep inside the read,
-    // bypassing the per-surface drop entirely.
+    // A short index buffer drops its surface, not the whole read with a RangeError.
     const shortIndices = GOOD_THEN_BAD_TRES.replace(
       '"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),',
       '"index_data": PackedByteArray("AgAA"),'
@@ -648,10 +628,9 @@ _surfaces = [{
 
 describe('attribute_data layout', () => {
   it('reads UV1 past the vertex colour instead of decoding the colour as u', () => {
-    // Godot orders the attribute record COLOR, UV1, UV2 — a surface with vertex
-    // colours puts 4 RGBA8 bytes ahead of UV1, so reading from offset 0 decodes
-    // the colour as `u`. Real case: the COLOR+TEX_UV surface of
-    // demos/3d/material_testers/models/godot_ball.tres (12-byte record).
+    // Godot orders the attribute record COLOR, UV1, UV2: vertex colours put 4
+    // RGBA8 bytes ahead of UV1, so reading from offset 0 decodes the colour as
+    // `u`. godot_ball.tres has such a surface (12-byte record).
     const surface = decodeArrayMesh(COLOR_UV_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(Array.from(surface.uvs!)).toEqual([0.25, 0.5, 0.75, 1]);
@@ -659,16 +638,10 @@ describe('attribute_data layout', () => {
 });
 
 /**
- * ONE quad, saved twice: the same four vertices, normals, UVs and indices, once
- * uncompressed (format 34359742487) and once with ARRAY_FLAG_COMPRESS_ATTRIBUTES
- * (format 34896613399). The two blobs share nothing byte-for-byte, so the only
- * thing that can make them agree is both layouts being read correctly.
- *
- * Godot itself treats the pair as interchangeable — the two encodings go through
- * `_unpack_vertex_attributes`
+ * One quad saved uncompressed (format 34359742487) and compressed (34896613399).
+ * The blobs share no bytes, and Godot's `_unpack_vertex_attributes`
  * (`servers/rendering/renderer_rd/shaders/forward_clustered/scene_forward_clustered.glsl`)
- * and converge on the same vertex, normal and UV — so any divergence between
- * them is ours.
+ * decodes both to the same vertex, normal and UV, so a divergence is a decode bug.
  */
 const SAME_QUAD_UNCOMPRESSED_TRES = `[gd_resource type="ArrayMesh" format=4]
 
@@ -735,9 +708,9 @@ describe('one quad in both layouts', () => {
     ]);
     expect(Array.from(surface.uvs!)).toEqual(TEX_UV);
     expect(Array.from(surface.indices)).toEqual(INDEX);
-    // ARRAY_NORMAL = (-0.000048, 0.0, 1.0) per vertex. It is NOT the octahedral
-    // pair in the normal region — that pair is the rotation axis (0, 1, 0), and
-    // reading it as a normal would give a quad facing +Y rather than +Z.
+    // ARRAY_NORMAL = (-0.000048, 0.0, 1.0) per vertex. The octahedral pair in the
+    // normal region is the rotation axis (0, 1, 0), and read as a normal it
+    // would face the quad +Y rather than +Z.
     for (let v = 0; v < 4; v++) {
       expect(surface.normals![v * 3 + 0]).toBeCloseTo(-0.000048, 6);
       expect(surface.normals![v * 3 + 1]).toBeCloseTo(0, 6);
@@ -746,11 +719,9 @@ describe('one quad in both layouts', () => {
   });
 
   it('decodes both layouts to the same surface', () => {
-    // The tolerance is the quantisation gap between the two encodings, not
-    // slack: a float32 position and a uint16 one over the same aabb differ by up
-    // to half a grid step, and the two normal encodings disagree in the 5th
-    // decimal for the same reason. Anything a shading difference could see —
-    // a flipped sign, an unnormalised vector, a wrong stride — is orders of
+    // The tolerance is the quantisation gap: float32 and uint16 positions over one
+    // aabb differ by up to half a grid step, and the normals in the 5th decimal.
+    // A flipped sign, an unnormalised vector or a wrong stride is orders of
     // magnitude larger.
     const plain = decodeArrayMesh(SAME_QUAD_UNCOMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
     const packed = decodeArrayMesh(SAME_QUAD_COMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
@@ -768,7 +739,7 @@ describe('one quad in both layouts', () => {
 });
 
 /**
- * The second surface of TWO_SURFACE_TRES declared as LINES (primitive 1) —
+ * The second surface of TWO_SURFACE_TRES declared as LINES (primitive 1):
  * Godot's `Mesh.PRIMITIVE_LINES`, whose index_data pairs vertices rather than
  * tripling them.
  */
@@ -782,7 +753,7 @@ const LINE_STRIP_ONLY_TRES = WALL_TRES.replace('"primitive": 3,', '"primitive": 
 
 describe('non-triangle primitives', () => {
   it('skips a non-triangle surface and keeps the triangle ones', () => {
-    // A LINES surface's indices are vertex PAIRS; read as triangles they
+    // A LINES surface's indices are vertex pairs. Read as triangles they
     // fabricate faces that were never authored, so the surface is dropped.
     const mesh = decodeArrayMesh(LINES_SECOND_SURFACE_TRES, 'res://mesh.tres');
 
@@ -793,7 +764,7 @@ describe('non-triangle primitives', () => {
 
   it('fails loudly when every surface is a non-triangle primitive', () => {
     // Nothing renderable came out, so this must not cache an empty geometry as a
-    // success; the message names the primitive as the reason, not a byte defect.
+    // success. The message names the primitive as the reason, not a byte defect.
     expect(() => decodeArrayMesh(LINE_STRIP_ONLY_TRES, 'res://mesh.tres')).toThrow(
       /non-triangle/
     );

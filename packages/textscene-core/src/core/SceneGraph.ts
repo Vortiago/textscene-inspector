@@ -5,14 +5,11 @@
 
 import type { TscnNode, ExtResource, SubResource } from '../parser/types.js';
 
-/**
- * Immutable scene graph for one authored root scene.
- * Once created, never modified; buildSceneGraph assembles a fresh graph per parse.
- */
+/** Immutable scene graph for one authored root scene. */
 export interface SceneGraph {
-  /** Root scene path (e.g., "res://main.tscn") */
+  /** Root scene path, such as "res://main.tscn". */
   readonly rootScene: string;
-  /** The authored root scene, keyed by path — a single entry. PackedScene instances are composed by liveSceneTree (ADR-0013), not folded in here. */
+  /** The authored root scene, keyed by path: one entry. liveSceneTree composes PackedScene instances (ADR-0013). */
   readonly scenes: ReadonlyMap<string, ParsedScene>;
   /** All nodes flattened into single array with full paths */
   readonly flattenedNodes: ReadonlyArray<SceneNode>;
@@ -23,15 +20,15 @@ export interface SceneGraph {
  * Represents a single .tscn file's contents.
  */
 export interface ParsedScene {
-  /** Scene file path (e.g., "res://door.tscn") */
+  /** Scene file path, such as "res://door.tscn". */
   readonly path: string;
   /** Root nodes in this scene (original TSCN nodes, not mutated) */
   readonly nodes: ReadonlyArray<TscnNode>;
   /** External scene references (instances) */
   readonly externalScenes: ReadonlyArray<ExternalSceneRef>;
-  /** Internal resource definitions (embedded materials, meshes, etc.) */
+  /** Internal resource definitions, such as embedded materials and meshes. */
   readonly internalResources: ReadonlyArray<SubResource>;
-  /** External resource references (textures, materials, etc.) */
+  /** External resource references, such as textures and materials. */
   readonly externalResources: ReadonlyArray<ExtResource>;
 }
 
@@ -40,13 +37,12 @@ export interface ParsedScene {
  * Represents a flattened view of the scene hierarchy.
  */
 export interface SceneNode {
-  /** Full path in hierarchy (e.g., "Main/Hallway/Door") */
+  /** Full path in hierarchy, such as "Main/Hallway/Door". */
   readonly path: string;
-  /** Node name (e.g., "Door") */
   readonly name: string;
   /** Original TSCN node data (not mutated) */
   readonly data: TscnNode;
-  /** Source scene file path (e.g., "res://door.tscn") */
+  /** Source scene file path, such as "res://door.tscn". */
   readonly source: string;
   /** Parent node path (null for root nodes) */
   readonly parent: string | null;
@@ -59,19 +55,15 @@ export interface SceneNode {
 export interface ExternalSceneRef {
   /** Node name for this instance in parent scene */
   readonly nodeName: string;
-  /** Path to external scene file (e.g., "res://enemy.tscn") */
+  /** Path to external scene file, such as "res://enemy.tscn". */
   readonly scenePath: string;
   /** Resolved scene data (if loaded) */
   readonly resolvedScene?: ParsedScene;
-  /** Resolution status */
   readonly resolutionStatus: 'pending' | 'resolved' | 'failed';
 }
 
 
-/**
- * Convert a TscnScene to a ParsedScene for use in SceneGraph.
- * This is a lightweight conversion that wraps existing data in readonly containers.
- */
+/** Wrap a TscnScene's parts in a ParsedScene, without copying them. */
 export function tscnSceneToParsedScene(
   path: string,
   nodes: TscnNode[],
@@ -89,13 +81,9 @@ export function tscnSceneToParsedScene(
 }
 
 /**
- * Assemble the immutable single-scene SceneGraph the renderer consumes: flatten
- * the root scene's inline nodes (full paths like "Main/Hallway/Door" + parent
- * links) and freeze the graph, its scenes map, and its flattened nodes.
- *
- * Only the authored root scene is composed here. PackedScene instance
- * composition (folding sub-scenes into the tree) is owned by the live scene tree
- * (`r3f/liveSceneTree.ts`), not this function — see ADR-0013.
+ * Assemble the immutable single-scene SceneGraph the renderer consumes: flatten the root
+ * scene's inline nodes with full paths and parent links, and freeze the graph, its scenes map
+ * and its nodes. The live scene tree (`r3f/liveSceneTree.ts`) composes instances (ADR-0013).
  */
 export function buildSceneGraph(rootScene: ParsedScene): SceneGraph {
   const flattenedNodes: SceneNode[] = [];

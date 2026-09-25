@@ -33,11 +33,9 @@ describe('parseColorPicker', () => {
   });
 
   it('defaults color to Godot opaque white and leaves every other own property undefined when absent', () => {
-    // `ColorPicker::ColorPicker()` calls `set_pick_color(Color(1, 1, 1))`
-    // (color_picker.cpp:2289) before the scene loader ever runs, so an
-    // omitted `color` key means opaque white, not the raw `Color()` member
-    // default. Every visibility/mode key stays undefined so the painter's own
-    // `?? <Godot default>` fallbacks (nativeSolver.ts) apply.
+    // The constructor calls `set_pick_color(Color(1, 1, 1))` (color_picker.cpp:2289),
+    // so an omitted `color` means opaque white. Every visibility and mode key stays
+    // undefined, so the painter's Godot-default fallbacks apply.
     const p = parseColorPicker(heading('ColorPicker', { name: 'Picker' }), {});
     expect(p.color).toBe('Color(1, 1, 1, 1)');
     expect(p.pickerShape).toBeUndefined();

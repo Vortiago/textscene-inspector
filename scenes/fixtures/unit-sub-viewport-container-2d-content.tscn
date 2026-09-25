@@ -1,32 +1,7 @@
-; SubViewportContainer holding 2D-WORLD content instead of Controls.
-;
-; The one variable: what the surface displays when the sub-viewport's subtree
-; has no DOM form. Every other container fixture
-; (unit-sub-viewport-container.tscn, -stretch.tscn) holds ColorRects, which the
-; surface renders as DOM and which therefore appear whether or not a single
-; pixel ever reaches it from the render target. Only CanvasItem content proves
-; the target → readPixels → <canvas> blit runs at all: regress it and these two
-; Polygon2Ds vanish while every Control fixture stays perfect.
-;
-; stretch is off, so the surface is exactly the sub-viewport's 200x150 and each
-; probe below addresses one target pixel — no scaling between the two sides.
-;
-; Deliberately asymmetric BOTH ways, because the readback is bottom-up (GL's
-; framebuffer origin is bottom-left) while a canvas is top-down:
-;
-;   Band  rows   0..39, full width  — a vertical flip moves it to rows 110..149
-;   Mark  rows  60..99, cols 10..49 — a horizontal flip moves it to cols 150..189
-;
-; Band is Color(0.5, 0.5, 0.5): sRGB 0.5 stores as linear 0.214 -> byte 55 in
-; the target, and must display as byte ~128. It reads 55 if the blit forgets
-; that the target is tagged LinearSRGBColorSpace while a 2D canvas interprets
-; putImageData bytes as sRGB — the brightness class of bug that a pure-primary
-; fixture cannot see, since the encode is the identity at 0 and 255.
-;
-; The bottom-right quadrant is left uncovered so it reads the viewport's own
-; clear colour, Godot's default rgb(77, 77, 77) — the constant the container
-; already paints in DOM, so a correct blit is indistinguishable from the
-; backdrop there and a wrong one is not.
+; One variable: what the surface shows when the sub-viewport's subtree has no DOM form. The other
+; container fixtures (unit-sub-viewport-container.tscn, -stretch.tscn) hold ColorRects, which
+; render as DOM whether or not a pixel reaches the surface from the render target. Only CanvasItem
+; content proves the target → readPixels → <canvas> blit runs: regress it and these Polygon2Ds vanish.
 
 [gd_scene format=3]
 
@@ -41,16 +16,28 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
+; stretch is off, so the surface is exactly the sub-viewport's 200x150 and each probe addresses
+; one target pixel. The bottom-right quadrant stays uncovered for the viewport's clear colour,
+; Godot's default rgb(77, 77, 77), the constant the container paints in DOM: there a correct blit
+; matches the backdrop and a wrong one does not.
 [node name="Booth" type="SubViewportContainer" parent="."]
 offset_left = 100.0
 offset_top = 80.0
 offset_right = 400.0
 offset_bottom = 280.0
 
+; Asymmetric both ways, because the readback is bottom-up (GL's framebuffer origin is
+; bottom-left) while a canvas is top-down. Band covers rows 0..39 at full width, which a vertical
+; flip moves to rows 110..149. Mark covers rows 60..99, cols 10..49, which a horizontal flip moves
+; to cols 150..189.
 [node name="SubViewport" type="SubViewport" parent="Booth"]
 size = Vector2i(200, 150)
 render_target_update_mode = 4
 
+; Color(0.5, 0.5, 0.5): sRGB 0.5 stores as linear 0.214, byte 55 in the target, and must show as
+; about 128. It reads 55 if the blit forgets that the target is LinearSRGBColorSpace while a 2D
+; canvas reads putImageData bytes as sRGB, a bug a pure-primary fixture cannot see, since the
+; encode is the identity at 0 and 255.
 [node name="Band" type="Polygon2D" parent="Booth/SubViewport"]
 color = Color(0.5, 0.5, 0.5, 1)
 polygon = PackedVector2Array(0, 0, 200, 0, 200, 40, 0, 40)

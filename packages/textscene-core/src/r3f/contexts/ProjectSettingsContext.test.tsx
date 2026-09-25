@@ -1,10 +1,7 @@
 /**
- * The **Project settings** seam: `res://project.godot` is found by convention,
- * so its ABSENCE must be an ordinary outcome (Godot's own
- * `ThemeDB::initialize_theme_noproject()` builds the default theme at scale
- * 1.0), and it must never reach the Missing Resources panel — hence
- * `FileEventBus.tryLoad`, the seam ADR-0028 uses for an Import sidecar, rather
- * than `useResource`.
+ * The **Project settings** seam: a missing `res://project.godot` is an ordinary
+ * outcome, as in Godot's `ThemeDB::initialize_theme_noproject()`, and never
+ * reaches the Missing Resources panel.
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -28,7 +25,7 @@ function Probe() {
   );
 }
 
-/** A provider serving exactly the paths in `files`; anything else is a miss. */
+/** A provider that serves only the paths in `files`. Anything else is a miss. */
 function fakeProvider(files: Record<string, string>): ResourceProvider & { calls: string[] } {
   const calls: string[] = [];
   return {
@@ -130,8 +127,8 @@ describe('ProjectSettingsProvider', () => {
     const { rerender } = render(tree('res://a.tscn'));
     await waitFor(() => expect(screen.getByTestId('scale').textContent).toBe('2'));
 
-    // What a corpus switch does before the incoming scene renders: drop the
-    // byte layer, so the re-read cannot serve the outgoing project's file.
+    // A corpus switch drops the byte layer first, so the re-read cannot serve
+    // the outgoing project's file.
     loader.clearCaches();
     rerender(tree('res://b.tscn'));
     await waitFor(() => expect(provider.calls.filter((p) => p === PROJECT_SETTINGS_PATH).length).toBe(2));

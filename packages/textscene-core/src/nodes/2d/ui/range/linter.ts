@@ -1,32 +1,4 @@
-/**
- * Semantic rules for Range.
- *
- * 1. An authored max_value below min_value.
- *
- * ERROR: the setter ALTERS the value. `Range::set_max`
- * clamps rather than honours it (scene/gui/range.cpp:229:
- * `double max_validated = MAX(p_max, shared->min);`), and `Range::set_min`
- * clamps the opposite direction the same way (range.cpp:217:
- * `shared->max = MAX(shared->max, shared->min);`) — so regardless of which
- * property the deserializer applies first, the two setters converge on the
- * same fixed point: `max_value` ends up `MAX(authored max_value, authored
- * min_value)`, i.e. the range collapses to a single point at `min_value`
- * rather than the (still-legal) inverted numbers the .tscn keeps showing.
- * The warning exists because that collapse is otherwise invisible.
- *
- * 2. `Range::get_configuration_warnings()` (range.cpp:71-79):
- *
- *     if (shared->exp_ratio && shared->min < 0) {
- *         warnings.push_back(RTR("If \"Exp Edit\" is enabled, \"Min Value\" must
- *             be greater or equal to 0."));
- *     }
- *
- * `exp_edit` (ADD_PROPERTY name for `exp_ratio`, range.cpp:411) defaults false
- * and `min_value` defaults 0.0 (range.h:40,44), so an absent key on either side
- * cannot trigger this — both must be authored.
- *
- * Format validation lives in linterParser.ts.
- */
+/** Semantic rules for Range: an inverted min/max pair and a negative min under `exp_edit`. */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
@@ -44,12 +16,15 @@ function checkRangeBounds(context: RuleContext): Diagnostic[] {
   const minRaw = props.min_value;
   const maxRaw = props.max_value;
 
+  // Error tier: `set_max` stores `MAX(p_max, shared->min)` (scene/gui/range.cpp:229)
+  // and `set_min` raises max the same way (range.cpp:217), so either load
+  // order collapses the range to a point at `min_value`. The .tscn keeps the
+  // inverted pair, so without this rule the collapse is invisible.
   if (minRaw !== undefined && maxRaw !== undefined) {
     const min = parseGodotFloat(minRaw);
     const max = parseGodotFloat(maxRaw);
-    // `nan` is excluded explicitly rather than left to the comparison: the
-    // MAX() at range.cpp:217 does not collapse a nan pair, so there is no
-    // single point to report it collapsing to.
+    // The MAX() at range.cpp:217 does not collapse a nan pair, so `nan` has
+    // no single point to report.
     if (min !== null && max !== null && !Number.isNaN(min) && !Number.isNaN(max) && max < min) {
       diagnostics.push({
         severity: 'error',
@@ -61,6 +36,9 @@ function checkRangeBounds(context: RuleContext): Diagnostic[] {
     }
   }
 
+  // `get_configuration_warnings()` (range.cpp:71-79) warns on `exp_ratio && min < 0`.
+  // `exp_edit` (range.cpp:411) defaults false and `min_value` 0.0 (range.h:40,44),
+  // so both must be authored.
   if (boolSlotValue(props.exp_edit) === true && minRaw !== undefined) {
     const min = parseGodotFloat(minRaw);
     if (min !== null && !Number.isNaN(min) && min < 0) {

@@ -10,10 +10,10 @@ renders_as: a horizontal track with a rectangular grabber
 # HScrollBar
 
 HScrollBar is a horizontal track with a draggable grabber and step buttons. The
-previewer draws the track and the grabber, sized and positioned from this bar's own
-`value`, `min_value`, `max_value` and `page`. Godot's own default theme sets every
-increment and decrement icon to an empty texture, so neither Godot nor the previewer
-draws step buttons.
+previewer draws the track and the grabber, sized and positioned from `value`,
+`min_value`, `max_value` and `page`. Godot's default theme sets every increment and
+decrement icon to an empty texture, so neither Godot nor the previewer draws step
+buttons.
 
 ## Linting
 
@@ -33,6 +33,6 @@ Strict parsing format-checks the inherited set (1 inherited from ScrollBar, 9 in
 
 The lenient parser is `parseHScrollBar`, which reuses the shared `Range` reader for
 `value`, `min_value`, `max_value` and `page`, plus its own `custom_step`. A malformed
-number becomes `undefined` and the bar falls back to Godot's own Range defaults: min
-0, max 100, value 0, page 0. `custom_step` never reaches a draw formula, so a malformed
-one stays harmless here too.
+number becomes `undefined` and the bar falls back to Godot's Range defaults: min 0,
+max 100, value 0, page 0. `custom_step` never reaches a draw formula, so a malformed one
+is harmless.

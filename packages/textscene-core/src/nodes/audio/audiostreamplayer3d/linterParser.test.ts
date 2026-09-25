@@ -1,11 +1,7 @@
 /**
- * AudioStreamPlayer3D strict validators — `playback_type`, not covered by
- * linter.test.ts, and `emission_angle_degrees`, whose value table there pins the
- * band by value without stating the tier or why the floor sits below the hint's.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing. Rule-level behaviour belongs in linter.test.ts.
+ * AudioStreamPlayer3D strict validators: `playback_type`, and the tiers of `emission_angle_degrees`
+ * with why its floor sits below the hint's. Asserted through `validatorRegistry`, not by linting a
+ * `.tscn`, so a failure points at the validator. Rule-level behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -44,7 +40,7 @@ describe('AudioStreamPlayer3D strict validators: emission_angle_degrees', () => 
   // Two tiers, because the setter and the hint disagree at the floor:
   // audio_stream_player_3d.cpp:687 ERR_FAIL_CONDs `p_angle < 0 || p_angle > 90`,
   // while the hint at :899 is "0.1,90,0.1,degrees". The `degrees` flag is a unit
-  // LABEL, not `radians_as_degrees`, so nothing is converted here.
+  // label, not `radians_as_degrees`, so nothing is converted here.
   it("accepts the hint's own band", () => {
     expect(check('emission_angle_degrees', '0.1')).toBeNull();
     expect(check('emission_angle_degrees', '45')).toBeNull();
@@ -68,13 +64,10 @@ describe('AudioStreamPlayer3D strict validators: emission_angle_degrees', () => 
 });
 
 /**
- * `set_volume_db` opens with
- * `ERR_FAIL_COND_MSG(Math::is_nan(p_volume), "Volume can't be set to NaN.")`
- * (audio_stream_player_3d.cpp:553) and refuses nothing else. Measured on 4.6.3:
- * after `volume_db = -12`, writing NaN leaves -12 and prints the error, while
- * `inf` and `-inf` are stored unaltered — so the finite guard would reject two
- * values Godot keeps, and a range bound covers neither (every comparison
- * against NaN is false).
+ * `set_volume_db` opens with `ERR_FAIL_COND_MSG(Math::is_nan(p_volume), ...)`
+ * (audio_stream_player_3d.cpp:553) and refuses nothing else. Measured on 4.6.3: writing NaN after
+ * `volume_db = -12` leaves -12, while `inf` and `-inf` are stored unaltered, so the finite guard
+ * would reject two values Godot keeps, and no range bound can catch NaN.
  */
 describe('AudioStreamPlayer3D strict validators: volume_db', () => {
   it('errors on nan, which the setter refuses', () => {

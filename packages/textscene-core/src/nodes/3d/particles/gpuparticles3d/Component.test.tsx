@@ -1,12 +1,8 @@
 /**
- * GPUParticles3D draws no particles yet, but it is still a Node3D: its
- * transform, its `visible` flag and its exclusion from the 2D canvas are all
- * behaviour a bare `GenericNodeFallback` loses.
- *
- * That is why the slice registers the base component under
- * `renderIntent: 'pending'` rather than registering nothing at all. Dropping
- * the registration to make the tree badge honest took the three behaviours
- * below with it, silently — no golden covers this type.
+ * GPUParticles3D draws no particles, but it is still a Node3D: its transform,
+ * its `visible` flag and its exclusion from the 2D canvas are lost to a bare
+ * `GenericNodeFallback`. So the slice registers the base under
+ * `renderIntent: 'pending'`, and no golden covers this type.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -62,9 +58,8 @@ describe('<Node3D> (gpuparticles3d component)', () => {
   });
 
   it('honours visible = false through the dispatcher, not just in isolation', async () => {
-    // The test above mounts Node3D directly, so it passes whatever the
-    // dispatcher decides to mount. This one asks the question that regressed:
-    // does dispatching the TYPE still reach a component that carries `visible`?
+    // The test above mounts Node3D directly. This one checks that dispatching the type
+    // still reaches a component that carries `visible`.
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
         <NodeDispatcher nodes={[makeNode({ name: 'HiddenEmitter', visible: false })]} />

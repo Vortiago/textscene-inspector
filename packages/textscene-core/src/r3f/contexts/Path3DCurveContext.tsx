@@ -1,12 +1,6 @@
 /**
- * Flows a Path3D's tessellated curve down to its PathFollow3D descendants — the
- * 3D twin of Path2DCurveContext.
- *
- * Path3D ALWAYS provides this (a sampler, or `null` when it has no Curve3D) so a
- * nested PathFollow3D can position its children along the nearest ancestor
- * path's curve, independent of selection (the gizmo is selection-gated, but the
- * follow placement is real scene state). A curveless Path3D provides `null`,
- * resetting any outer path for its subtree so PathFollow3D falls back to its
+ * A Path3D's tessellated curve for its PathFollow3D descendants, whatever the
+ * selection. A curveless Path3D provides `null`, so PathFollow3D keeps its
  * authored transform.
  */
 

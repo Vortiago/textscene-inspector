@@ -1,8 +1,4 @@
-/**
- * SplitContainer registration — the native (WebGL canvas) rect solve +
- * painter. `./nativeSolver` registers the container-layout/minimum-size
- * functions as a side effect of import.
- */
+/** SplitContainer registration: native rect solve and painter. Importing `./nativeSolver` registers its solvers. */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { SplitContainer } from './Component';

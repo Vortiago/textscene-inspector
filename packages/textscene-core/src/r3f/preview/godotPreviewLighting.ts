@@ -1,14 +1,8 @@
 /**
- * Godot's editor preview lighting (ADR-0025).
- *
- * The previewer is an editor, so it takes the editor's semantics: a scene that
- * supplies no sun gets Godot's preview sun, a scene that supplies no
- * environment gets Godot's preview environment, and each yields independently
- * the moment the scene provides its own. At RUNTIME Godot adds neither, which
- * is why an unlit scene renders black in the game and lit in the editor.
- *
- * Values transcribed from `Node3DEditor::_load_default_preview_settings` and
- * `_preview_settings_changed`; the yield rule from `_node_added`.
+ * Godot's editor preview lighting (ADR-0025): a scene with no sun gets the preview
+ * sun and one with no environment the preview environment, each yielding on its
+ * own. At runtime Godot adds neither. Values from `Node3DEditor::_load_default_preview_settings`
+ * and `_preview_settings_changed`, the yield rule from `_node_added`.
  */
 
 import * as THREE from 'three';
@@ -53,10 +47,8 @@ export interface PreviewToggles {
 }
 
 /**
- * Which previews to mount. Mirrors `_node_added`: by node TYPE, with no regard
- * for whether the node is visible or emits anything — a `DirectionalLight3D`
- * with `visible = false` and zero energy still takes the preview sun away, in
- * Godot and here.
+ * Which previews to mount. Mirrors `_node_added`: by node type only, so a hidden
+ * `DirectionalLight3D` with zero energy still takes the preview sun away.
  */
 export function previewYield(
   sceneNodeTypes: Iterable<string>,
@@ -77,9 +69,9 @@ export function previewYield(
 }
 
 /**
- * The direction the preview sun's light TRAVELS — Godot's authored euler
- * applied to a light's local -Z, in the YXZ order `Basis::from_euler` defaults
- * to (and which three spells the same way).
+ * The direction the preview sun's light travels: Godot's euler applied to a
+ * light's local -Z, in the YXZ order `Basis::from_euler` defaults to, which three
+ * spells the same way.
  */
 export function previewSunDirection(): THREE.Vector3 {
   const euler = new THREE.Euler(
@@ -91,7 +83,7 @@ export function previewSunDirection(): THREE.Vector3 {
   return new THREE.Vector3(0, 0, -1).applyEuler(euler).normalize();
 }
 
-/** Godot's `Color::get_luminance()` — Rec. 709 coefficients. */
+/** Godot's `Color::get_luminance()`, with Rec. 709 coefficients. */
 function luminance({ r, g, b }: Color): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
@@ -118,20 +110,16 @@ function previewHorizonColor(): Color {
 }
 
 /**
- * Godot's preview environment, built through the same decode→build pipeline an
- * authored `WorldEnvironment` goes through, so the two cannot diverge in how
- * they are applied.
- *
- * The preview also enables glow (matching `_load_default_preview_settings`),
- * which the render layer turns into a bloom compositor pass (`ToneMapLayer`) so
- * emissive materials bloom as they do in Godot's editor.
+ * Godot's preview environment, through the same decode and build pipeline as an
+ * authored `WorldEnvironment`, so the two cannot diverge. Its glow becomes a
+ * bloom pass in `ToneMapLayer`.
  */
 export function previewEnvironment(): { settings: EnvironmentSettings; sky: SkyProperties } {
   const settings = createEnvironmentSettings(
     decodeEnvironment({
       background_mode: String(2), // BG_SKY
-      // TONE_MAPPER_FILMIC — the preview's deliberate departure from the
-      // LINEAR default an authored Environment starts with.
+      // TONE_MAPPER_FILMIC: the preview departs from an authored Environment's
+      // LINEAR default.
       tonemap_mode: String(2),
       // The editor preview enables glow; emissive materials bloom because of it.
       glow_enabled: 'true',

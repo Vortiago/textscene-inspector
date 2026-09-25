@@ -1,12 +1,8 @@
 /**
- * Label strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing. Deliberately does NOT go through `Linter`
- * (`linter/index.ts` imports every slice in the repo, several of which are
- * being edited concurrently), so this only imports `./linterParser` plus the
- * fixture-driven `StrictTscnParser` check.
+ * Label strict validators, asserted through `validatorRegistry` so a failure
+ * points at the validator, not at scene parsing. It skips `Linter`, whose
+ * `linter/index.ts` imports every slice, and imports only `./linterParser` and
+ * the fixture-driven `StrictTscnParser` check.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -154,7 +150,7 @@ describe('Label strict validators', () => {
   describe('justification_flags', () => {
     it('warns on the full 8-bit combination, which sets two unoffered bits', () => {
       // set_justification_flags (label.cpp:79-93) bare-assigns with no mask, so
-      // 255 LOADS unaltered. But label.cpp:1437 offers only {1,2,8,32,64,128},
+      // 255 loads unaltered. But label.cpp:1437 offers only {1,2,8,32,64,128},
       // so bits 4 and 16 are unreachable from the inspector: warning, not error.
       expectWarning(check('justification_flags', '255'), 'sets a bit the inspector\'s flag list does not offer; it lists only JUSTIFICATION_KASHIDA (1) | JUSTIFICATION_WORD_BOUND (2) | JUSTIFICATION_AFTER_LAST_TAB (8) | JUSTIFICATION_SKIP_LAST_LINE (32) | JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS (64) | JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE (128). Godot keeps the value, so this loads and runs, but the value is unreachable from the editor');
     });

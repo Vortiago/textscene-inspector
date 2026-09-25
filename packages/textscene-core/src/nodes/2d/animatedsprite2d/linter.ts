@@ -1,8 +1,6 @@
 /**
- * Semantic linter rules for AnimatedSprite2D
- *
- * Format validation is handled by linterParser.ts during strict parsing.
- * This file focuses on semantic validation requiring full scene context.
+ * Semantic linter rules for AnimatedSprite2D: the checks that need the whole node.
+ * linterParser.ts validates each value's format during strict parsing.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -11,14 +9,9 @@ import { heldResource } from '../../../linter/resourceChecker.js';
 import { DEFAULT_ANIMATION_NAME, literalText, ruleInt } from '../../../godot/index.js';
 
 /**
- * The SpriteFrames reference in effect when Godot replays `key`.
- *
- * `SceneState::instantiate` applies a node's stored properties in the order the
- * FILE lists them (packed_scene.cpp:369-492), and `set_frame_and_progress`
- * returns without writing while the slot is null
- * (animated_sprite_2d.cpp:360-362). A `sprite_frames` line written BELOW `frame`
- * therefore leaves the frame where an absent one does. Measured on 4.6.3:
- * `frame = 2` above `sprite_frames` loads as frame 0, below it as frame 2.
+ * The SpriteFrames reference in effect when Godot replays `key`: properties apply
+ * in file order (packed_scene.cpp:369-492), so a `sprite_frames` line below `key` is
+ * still null, and `set_frame_and_progress` writes nothing (animated_sprite_2d.cpp:360-362).
  */
 function spriteFramesWhenApplied(
   rawProps: Record<string, string>,
@@ -30,14 +23,11 @@ function spriteFramesWhenApplied(
   return heldResource(rawProps.sprite_frames);
 }
 
-/**
- * Validate AnimatedSprite2D semantic rules (resource references, animation properties, etc.)
- */
+/** The AnimatedSprite2D rules that read `sprite_frames` beside another key. */
 function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node } = context;
 
-  // Access raw properties from the node (Record<string, string>)
   const rawProps = node.properties as unknown as Record<string, string>;
 
   if (heldResource(rawProps.sprite_frames) === undefined) {
@@ -51,16 +41,14 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   }
 
   // `set_animation` clears the name and ERR_FAIL_MSGs whenever the SpriteFrames
-  // slot is null at that line (animated_sprite_2d.cpp:562-565), which a slot
-  // written BELOW `animation` is too. Measured on 4.6.3: `animation = &"walk"`
+  // slot is null at that line (animated_sprite_2d.cpp:562-565), and a slot written
+  // below `animation` is null there too. Measured on 4.6.3: `animation = &"walk"`
   // above `sprite_frames` loads as the default name, below it as "walk".
-  //
-  // Not `"default"`, though: `set_animation` opens with
-  // `if (animation == p_name) { return; }` (animated_sprite_2d.cpp:554-556) and the
-  // field already holds that name (animated_sprite_2d.h:43), so the clearing branch
-  // this reports is never reached and Godot loads the scene in silence.
   if (
     rawProps.animation &&
+    // `"default"` never reaches that branch: `set_animation` opens with
+    // `if (animation == p_name) { return; }` (animated_sprite_2d.cpp:554-556), and
+    // the field already holds that name (animated_sprite_2d.h:43).
     literalText(rawProps.animation) !== DEFAULT_ANIMATION_NAME &&
     spriteFramesWhenApplied(rawProps, 'animation') === undefined
   ) {
@@ -73,11 +61,10 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // With a null SpriteFrames `set_frame_and_progress` drops EVERY frame
-  // (animated_sprite_2d.cpp:360-362), not only the negative one
-  // `linterParser.ts` floors — so this is that guard's cross-property half.
-  // Above 0 only: a negative frame is the validator's error already, and 0 is
-  // the value the node holds anyway.
+  // With a null SpriteFrames, `set_frame_and_progress` drops every frame
+  // (animated_sprite_2d.cpp:360-362). Measured on 4.6.3: `frame = 2` above
+  // `sprite_frames` loads as frame 0, below it as frame 2. Above 0 only: the validator already errors on
+  // a negative frame, and 0 is the value the node holds anyway.
   const frame = ruleInt(rawProps.frame);
   if (frame !== null && frame > 0 && spriteFramesWhenApplied(rawProps, 'frame') === undefined) {
     diagnostics.push({
@@ -90,17 +77,13 @@ function checkAnimatedSprite2D(context: RuleContext): Diagnostic[] {
   }
 
   // `speed_scale` and `frame_progress` get no diagnostic: both are
-  // PROPERTY_HINT_NONE behind a bare setter, so no value is out of range (0
-  // speed_scale is a legal paused state, and frame_progress is not clamped).
-  // `playing` is not a property at all, so it is a key verdict in
-  // linterParser.ts rather than a value rule here.
+  // PROPERTY_HINT_NONE behind a bare setter: 0 speed_scale is a legal paused state,
+  // and frame_progress is not clamped. `playing` is no property at all, so
+  // linterParser.ts gives it a key verdict.
 
   return diagnostics;
 }
 
-/**
- * AnimatedSprite2D semantic validation rule
- */
 const animatedSprite2DValidationRule: LintRule = {
   meta: {
     name: 'valid-animatedsprite2d-resources',
@@ -124,8 +107,6 @@ const animatedSprite2DValidationRule: LintRule = {
   check: checkAnimatedSprite2D,
 };
 
-// Self-register the rule
 ruleRegistry.register(animatedSprite2DValidationRule);
 
-// Export for testing
 export { animatedSprite2DValidationRule };

@@ -1,15 +1,8 @@
 /**
- * Every input a Godot-editor viewport gesture arrives on — pointer, wheel,
- * keyboard, and the per-frame freelook flight — routed onto an
- * `EditorControlsHandle`. The bindings themselves are catalogued in
- * `GodotEditorControls.tsx`; what each gesture DOES to the cursor is in
- * `editorMouseNavigation.ts`, `editorTouchGesture.ts` and
- * `editorKeyBindings.ts`. This module owns the state they share and the
- * listeners that feed them.
- *
- * The handlers all live inside ONE effect: they share the drag and touch state
- * below, and registering them together is what guarantees the cleanup detaches
- * exactly the listeners that were attached.
+ * Every input of a Godot-editor viewport gesture (pointer, wheel, keyboard, per-frame
+ * freelook) routed onto an `EditorControlsHandle`. The handlers share one effect, so
+ * the cleanup detaches exactly the listeners it attached. The gestures themselves
+ * live in `editorMouseNavigation.ts`, `editorTouchGesture.ts` and `editorKeyBindings.ts`.
  */
 
 import { useFrame, type RootState } from '@react-three/fiber';
@@ -38,7 +31,7 @@ export function useEditorNavigation(
   get: RootState['get']
 ): void {
   const dragRef = useRef<DragState | null>(null);
-  // Every touch pointer currently down, in the order it landed — a pinch needs
+  // Every touch pointer currently down, in the order it landed: a pinch needs
   // two at once, which a single drag slot cannot hold.
   const touchPointsRef = useRef<Map<number, TouchPoint>>(new Map());
   const touchGestureRef = useRef<TouchGesture | null>(null);
@@ -48,15 +41,13 @@ export function useEditorNavigation(
 
   useEffect(() => {
     const element = gl.domElement;
-    // Captured once: the Map itself never changes identity, and the cleanup
-    // must clear the same one the handlers filled rather than whatever
-    // `.current` happens to hold by then.
+    // Captured once, so the cleanup clears the Map the handlers filled, not
+    // whatever `.current` holds by then.
     const touchPoints = touchPointsRef.current;
 
     /**
-     * The invariant every touch path maintains: no fingers, no gesture origin.
-     * A stale origin is what would make the next single-finger drag pan from
-     * wherever a two-finger gesture happened to end.
+     * The invariant every touch path keeps: no fingers, no gesture origin. A stale
+     * origin would make the next single-finger drag pan from where a pinch ended.
      */
     function resetTouch(): void {
       touchPoints.clear();
@@ -130,7 +121,7 @@ export function useEditorNavigation(
       if (isTypingTarget(event.target)) return;
 
       // Read the sprint modifier off the event rather than tracking its own
-      // keydown: Shift held BEFORE freelook started never fires one.
+      // keydown: Shift held before freelook started never fires one.
       sprintRef.current = event.shiftKey;
       if (freelookRef.current && FREELOOK_KEYS[event.code]) {
         heldKeysRef.current.add(event.code);

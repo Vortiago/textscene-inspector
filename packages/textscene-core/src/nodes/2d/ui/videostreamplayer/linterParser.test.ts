@@ -1,13 +1,6 @@
 /**
- * VideoStreamPlayer strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property (happy, malformed, and any bound) and
- * quote the governing Godot source line beside every numeric bound.
+ * Tests the VideoStreamPlayer strict validators through `validatorRegistry`, so a failure points
+ * at the validator. Rule behaviour is in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,9 +16,8 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * VideoStreamPlayer binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * Set exactly one, from the engine source: the keys VideoStreamPlayer binds, or
+ * DECLARES_NOTHING when it binds no ADD_PROPERTY. Both unset is red on purpose.
  */
 const KEYS: string[] = [
   'audio_track',
@@ -52,16 +44,13 @@ describe('VideoStreamPlayer strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // `fixtureLint` covers the whole registry through the barrel. This checks
+    // the fixture against only what this test imports.
     expectFixtureClean('unit-video-stream-player.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format.
     const accepted = validatorRegistry
       .getOwnKeys('VideoStreamPlayer')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -211,10 +200,9 @@ describe('VideoStreamPlayer strict validators', () => {
     });
 
     it('does not judge which bus names exist, because the scene cannot know', () => {
-      // The PROPERTY_HINT_ENUM at video_stream_player.cpp:585 ships with an EMPTY
-      // hint string; _validate_property fills it from the live AudioServer at
-      // video_stream_player.cpp:510-521, and only in the editor. The bus layout
-      // lives outside the scene, so an unknown name is not a scene-level defect.
+      // The PROPERTY_HINT_ENUM at video_stream_player.cpp:585 ships empty, and
+      // _validate_property fills it from the live AudioServer, only in the editor
+      // (video_stream_player.cpp:510-521). An unknown bus is no scene defect.
       expect(check('bus', '&"NotABusInAnyProject"')).toBeNull();
     });
   });
@@ -239,12 +227,9 @@ describe('VideoStreamPlayer strict validators', () => {
   });
 
   describe('the two binds that never reach a .tscn', () => {
-    // Both are real ADD_PROPERTY calls, and both pass PROPERTY_USAGE_NONE:
-    // `volume` (video_stream_player.cpp:576) is the linear twin of volume_db, and
-    // `stream_position` (video_stream_player.cpp:583) is a seek that only means
-    // anything against a live playback. Godot serialises neither, so a validator
-    // for either would guard a key that cannot appear. The registration test above
-    // pins the set; this says why these two are outside it.
+    // Both ADD_PROPERTY calls pass PROPERTY_USAGE_NONE: `volume` (video_stream_player.cpp:576)
+    // is volume_db's linear twin, and `stream_position` (video_stream_player.cpp:583) is a seek
+    // on live playback. Godot serialises neither, so neither key can appear.
     it.each(['volume', 'stream_position'])('registers no validator for %s', (property) => {
       expect(validatorRegistry.findValidator('VideoStreamPlayer', property)).toBeNull();
     });

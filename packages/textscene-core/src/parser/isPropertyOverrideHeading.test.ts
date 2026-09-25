@@ -1,11 +1,7 @@
 /**
- * Godot's marker for "override the node already at this path".
- *
- * Two independent node creators build nodes from a heading — the renderer's
- * `parseNodeWithRegistry` and the linter's `StrictTscnParser` — and if they ever
- * disagreed about what an override is, what renders and what lints would
- * silently diverge. So the predicate lives in one place and this asserts both
- * callers agree with it on the same headings.
+ * Godot's marker for "override the node already at this path". Both node creators,
+ * `parseNodeWithRegistry` and `StrictTscnParser`, must agree with the one predicate,
+ * or what renders and what lints diverge.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -82,11 +78,9 @@ describe('the two node creators agree', () => {
   ];
 
   it('agrees that an instance_placeholder heading declares an InstancePlaceholder', () => {
-    // The two creators otherwise spell an undeclared type differently on
-    // purpose — the renderer falls back to `Node` so it can draw something,
-    // the linter keeps the heading's own marker. A placeholder is the one
-    // case where Godot names a class of its own (packed_scene.cpp:255), so
-    // both must say it or the two trees hold different nodes.
+    // The creators spell an undeclared type differently: the renderer falls back to
+    // `Node`, the linter keeps the heading's marker. A placeholder is the one case
+    // where Godot names a class of its own (packed_scene.cpp:255), so both must say it.
     const line = '[node name="Rock" parent="." instance_placeholder="res://rock.tscn"]';
     const rendered = parseNodeWithRegistry(heading(line), {});
     const linted = new StrictTscnParser().parse([PREAMBLE, line, ''].join('\n'));

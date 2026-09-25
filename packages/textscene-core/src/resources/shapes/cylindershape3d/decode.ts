@@ -1,9 +1,7 @@
 /**
- * CylinderShape3D decode — property bag in, radius/height out.
- *
- * Unlike CapsuleShape3D the two are independent: `cylinder_shape_3d.cpp:94` and
- * `:105` assign without touching the other property. Both ERR_FAIL a negative
- * argument (`:95` / `:106`), which refuses the value instead of storing it.
+ * CylinderShape3D decode. Unlike CapsuleShape3D the two are independent:
+ * `cylinder_shape_3d.cpp:94` and `:105` assign without touching the other. Both
+ * ERR_FAIL a negative argument (`:95` / `:106`), refusing the value.
  */
 
 import { nonNegativeOr } from '../../../parser/valueParsers';

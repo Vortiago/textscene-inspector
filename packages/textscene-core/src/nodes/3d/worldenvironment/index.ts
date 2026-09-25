@@ -1,5 +1,5 @@
 /**
- * WorldEnvironment registration — parser + formatter.
+ * WorldEnvironment registration: the parser and the property formatter.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

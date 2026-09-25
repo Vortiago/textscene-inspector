@@ -1,6 +1,4 @@
-/**
- * Tests for DirectionalLight3D linter (strict parser + semantic rules)
- */
+/** DirectionalLight3D linting: strict validators and semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -196,7 +194,7 @@ describe('DirectionalLight3D Linter', () => {
   });
 
   describe('Semantic Validation', () => {
-    // light_3d.cpp:389 — light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater".
+    // light_3d.cpp:389: light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater".
     describe('light energy warnings', () => {
       it('should warn on negative light_energy', () => {
         expectDiagnostic(scene(node('DirectionalLight3D', { light_energy: -0.005 })), {
@@ -236,7 +234,7 @@ describe('DirectionalLight3D Linter', () => {
       });
     });
 
-    // light_3d.cpp:584 — directional_shadow_max_distance PROPERTY_HINT_RANGE
+    // light_3d.cpp:584: directional_shadow_max_distance PROPERTY_HINT_RANGE
     // "0,8192,0.1,or_greater,exp": the high end is open, so 15000 is in band.
     describe('negative shadow distance warning', () => {
       it('should warn on negative shadow_max_distance', () => {
@@ -378,10 +376,9 @@ describe('DirectionalLight3D Linter', () => {
           })
         )
       );
-      // light_energy = 0 is valid. directional_shadow_mode (light_3d.cpp:578)
-      // and shadow_opacity (light_3d.cpp:407, via Light3D::set_param's
-      // index-only guard) are both hints, not enforcement (ADR-0032), so the
-      // out-of-range mode and opacity WARN instead of erroring, and nothing
+      // light_energy = 0 is valid. directional_shadow_mode (light_3d.cpp:578) and
+      // shadow_opacity (light_3d.cpp:407, behind Light3D::set_param's index-only
+      // guard) are hints, not enforcement (ADR-0032), so both warn and nothing
       // here reaches the error tier.
       expect(diagnostics.filter((d) => d.severity === 'error')).toHaveLength(0);
       const warnings = diagnostics.filter((d) => d.severity === 'warning');

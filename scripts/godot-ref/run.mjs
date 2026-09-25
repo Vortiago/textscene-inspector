@@ -1,64 +1,13 @@
 #!/usr/bin/env node
 /**
- * Godot reference-render harness — renders a `.tscn` through the REAL engine so
- * parity questions are answered by measurement instead of derivation.
+ * Renders a `.tscn` through the real Godot engine, so a parity question is answered by
+ * measurement. It needs a local Godot 4.6 (`godot`) and `xvfb-run`, which CI does not have, so
+ * it is a developer tool, not a gate. Each flag's reason stands beside its case in `parseArgs`.
  *
+ * @example
  *   pnpm ref:godot scenes/fixtures/unit-plane-mesh.tscn --out /tmp/ref.png
  *   pnpm ref:godot scripts/godot-ref/scenes/preview-lighting.tscn \
  *     --camera 0,1.5,4 --look-at 0,0.8,0 --probe 200,8 --probe 200,292
- *
- * `--probe x,y` prints the exact RGB at that pixel, which is what turns "close
- * to Godot" into a number.
- *
- * Requires a local Godot 4.6 (`godot`) and `xvfb-run`; there is no CI copy of
- * either, so this is a developer tool, never a gate.
- *
- * CAMERA: by default this opens where Godot's EDITOR opens every scene —
- * `Node3DEditorViewport::Cursor()`'s fixed orbit at distance 4, fov 70 — which
- * is exactly where the previewer opens it too. So a bare `ref:godot` and a bare
- * `ref:ours` produce the same frame with nothing derived and nothing to keep in
- * sync, and "the pixel at (x, y)" means the same thing on both sides.
- *
- * A scene's own `Camera3D` is IGNORED by default, because the previewer ignores
- * it too: Godot's editor keeps its own free camera and draws the node as a
- * frustum gizmo. `--scene-camera` opts into rendering through it.
- *
- * `--frame` instead fits the scene's geometry bounds the way `frameSceneBounds.ts`
- * does (the previewer's opt-in "frame on open"), for a scene too large to read
- * at distance 4. `--camera` / `--look-at` override everything.
- *
- * 2D: a scene whose root is a CanvasItem (or a CanvasLayer) has no 3D camera to
- * place, and forcing one renders a sky with the scene's Controls laid out
- * against the wrong rectangle. Such a scene renders instead through a
- * SubViewport the size of Godot's project viewport — the same rectangle the
- * previewer's 2D stage draws — so both sides produce the game frame 1:1 and
- * `--width` / `--height` (which size the 3D frame) do not apply. `--mode`
- * forces the choice when the root's type does not settle it.
- *
- * `--mode 2d-root` draws that SAME rectangle as the root WINDOW instead of
- * inside a SubViewport. It exists because a handful of viewport settings are
- * handed to `SceneTree`'s root window and to nothing else, so nothing nested
- * can observe them (`ROOT_ONLY_VIEWPORT_PROPERTIES`). The SubViewport arm stays
- * the default — it owns its rectangle outright, with no window manager or
- * screen size able to reach it — and now REFUSES rather than answering from the
- * class default when a project sets one of those settings.
- *
- * TWO THINGS THIS HARNESS DOES THAT A NAIVE `godot --path` DOES NOT:
- *
- * 1. **It injects the editor previews.** `godot --path` runs the GAME. Godot's
- *    preview sun and preview environment are `Node3DEditor` members and do not
- *    exist at runtime, so a raw render of an unlit scene is black — a picture
- *    Godot never shows the user. The generated bootstrap re-implements
- *    `Node3DEditor::_node_added`'s yield rule (two independent presence checks,
- *    by node type, ignoring `visible`) and `_load_default_preview_settings`'s
- *    values. `--no-previews` renders true runtime semantics instead.
- * 2. **It strips `default_environment`.** A project-level default environment
- *    would light the scene through a channel the previewer has no notion of,
- *    silently biasing every comparison.
- *
- * `--particles <seconds>` is the third: the editor ANIMATES particles (there is
- * no `is_editor_hint` guard on the process path), so a paused reference draws a
- * pose the editor never sits on. See `PARTICLES_PROCESS_DEFAULT`.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -70,11 +19,9 @@ import { CANVAS_2D_CAPTURE, CANVAS_CAPTURE, SETTLE_SIM_SECONDS } from '../visual
 import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 
 /**
- * The frame `capture-ours.mjs` produces, taken from the one definition of it.
- * Matching it is what makes the two harnesses' probe coordinates address the
- * same surface point with no arguments — differing aspect ratios alone would
- * break that, since at a shared vertical fov the wider frame covers a wider
- * horizontal frustum and no rescaling maps probes 1:1.
+ * The frame `capture-ours.mjs` produces, so a probe coordinate addresses the same surface point
+ * in both harnesses. At a shared vertical fov a wider frame covers a wider horizontal frustum, so
+ * no rescaling maps probes 1:1 across two aspect ratios.
  */
 const DEFAULT_WIDTH = CANVAS_CAPTURE.width;
 const DEFAULT_HEIGHT = CANVAS_CAPTURE.height;
@@ -83,80 +30,26 @@ const DEFAULT_HEIGHT = CANVAS_CAPTURE.height;
 export const EDITOR_FOV = 70;
 
 /**
- * Godot's `--fixed-fps`, which replaces `get_process_delta_time()` with a
- * constant and skips `add_frame_delay` (`main/main.cpp:1902,4830,5071`).
- *
- * The settle contract puts the shutter at the scene's load instant, and the
- * pause-before-instantiate keeps it there for anything driven by
- * NOTIFICATION_*_PROCESS. NOTIFICATION_DRAW is NOT pause-gated, though, so a
- * node that catches up at first draw still reads one process delta — and
- * without this flag that delta is wall clock, i.e. how long this host took to
- * reach the first frame. `CPUParticles2D::_update_internal` is the measured
- * case: past the authored `preprocess` it advances by `delta`, quantized to
- * whole `1/fixed_fps` steps when the emitter sets one. A host slow enough to
- * cross that threshold jumps the reference a full step, silently, and only
- * sometimes — a reference image that is reproducible here and different there.
- *
- * 1000 puts the constant delta at 1 ms: below `1/fixed_fps` for any emitter
- * that does not ask for four-figure rates, so the quantized branch floors to
- * zero steps, and negligible in the unquantized one. Higher is not better —
- * the point is a delta small enough to round away, not a large frame count.
- *
- * This pins the reference to its own host, and nothing else: it changes what
- * Godot BELIEVES elapsed, never how many frames run or what is drawn.
+ * Godot's `--fixed-fps`: a constant process delta and no `add_frame_delay`
+ * (`main/main.cpp:1902,4830,5071`). It changes only what Godot believes elapsed, never how many
+ * frames run or what is drawn. 1 ms floors a `1/fixed_fps` step to zero for any emitter below
+ * four-figure rates, and is negligible unquantised: a higher value gains nothing.
  */
 export const REFERENCE_FIXED_FPS = 1000;
 
 /**
- * How many seconds of particle simulation `--particles` advances by, when the
- * caller does not say. ZERO, i.e. the reference keeps drawing the pose it draws
- * today unless someone asks for another one.
- *
- * Off by default even though this is the EDITOR-mirroring harness, and the two
- * other editor behaviours (`--no-previews`) are on by default. The asymmetry is
- * the point:
- *
- *  - The preview sun has ONE value Godot itself defines
- *    (`_load_default_preview_settings`), so defaulting to it copies the engine.
- *    A particle instant has no such value. The editor runs the emitter on wall
- *    clock — `set_process_internal(emitting)` at `cpu_particles_2d.cpp:1262` has
- *    no `is_editor_hint` guard — so "what the editor shows" is a different
- *    picture every frame and cannot be a default.
- *  - Any derived default (`preprocess`, else one lifetime) would be OUR
- *    previewer's convention written into the reference, which is the one thing
- *    a reference must never carry: it would then agree with us by construction.
- *  - A non-zero default would silently move every reference image already
- *    arbitrated against this harness.
- *
- * So the caller names the instant, in seconds, and the fixture header and the
- * comparison sheet record the number they named. Godot executes it through its
- * OWN loop — see `_advance_particles` in the bootstrap.
- *
- * ADDS to an authored `preprocess` rather than replacing it: `_update_internal`
- * seeds `todo` from the request and then adds `pre_process_time` on top when
- * `time == 0` (`cpu_particles_2d.cpp:727-731`). So `--particles 2` on an emitter
- * that writes `preprocess = 1.5` settles at 3.5 s, and the flag is "further",
- * not "at". An emitter with no `preprocess` — the case this exists for — has
- * nothing to add, so there the two readings coincide.
- *
- * SCENE-WIDE, deliberately: one number reaches every emitter. The previewer's
- * substituted window is PER EMITTER (one `lifetime` each), so a scene whose
- * emitters carry different lifetimes settles to several instants at once and no
- * single value here addresses it. Such a scene is not arbitrable through this
- * flag; arbitrate the behaviour on a fixture holding one instant instead of
- * picking a value and calling the residual a measurement.
+ * Default seconds `--particles` advances: zero. Unlike the preview sun, a particle instant has no
+ * value Godot defines: the editor runs the emitter on wall clock (`cpu_particles_2d.cpp:1262`
+ * has no `is_editor_hint` guard). A derived default would write our convention into the
+ * reference, and a non-zero one would move every reference image this harness has made.
  */
 export const PARTICLES_PROCESS_DEFAULT = 0;
 
 /**
- * `Node3DEditorViewport::Cursor()` — where the editor opens EVERY scene,
- * whatever is in it. Mirrors `godotEditorCamera.ts`, which is what the
- * previewer opens at, so a bare `ref:godot` and a bare `ref:ours` frame the
- * same picture with no arguments. This file generates GDScript and runs under
- * plain node, so it cannot import the TypeScript — `run.test.mjs` asserts these
- * against `godotEditorCamera.ts` instead, because a one-sided edit here would
- * leave both harnesses "working" while framing different pictures, and every
- * probe measured after that would be quietly wrong.
+ * `Node3DEditorViewport::Cursor()`: where the editor opens every scene (distance 4, fov 70), and
+ * where the previewer opens it through `godotEditorCamera.ts`. So a bare `ref:godot` and a bare
+ * `ref:ours` frame the same picture. Plain node cannot import that TypeScript, so `run.test.mjs`
+ * asserts these against it: a one-sided edit would make every later probe wrong.
  */
 export const EDITOR_CAMERA_DIRECTION = [0.4207355, 0.4794255, 0.7701512];
 export const EDITOR_CAMERA_DISTANCE = 4;
@@ -165,19 +58,16 @@ export const EDITOR_CAMERA_DISTANCE = 4;
 export const FRAME_MARGIN = 1.6;
 
 /**
- * The render modes, and what `--mode` accepts. `2d-root` is APPENDED rather
- * than slotted next to `2d`, so the rejection message keeps reading
- * `auto|2d|3d|…` with the historical prefix intact.
+ * The values `--mode` accepts. `2d-root` comes last, so the rejection message keeps its
+ * `auto|2d|3d|…` prefix.
  */
 export const RENDER_MODES = ['auto', '2d', '3d', '2d-root'];
 
 /**
- * Driver -> the rendering method that offers it (main.cpp:2547-2565). Swapping
- * drivers is how a channel whose value x 255 is fractional is told apart from a
- * parity defect: the blend's tie-break is implementation-defined, so a one-step
- * gap that moves with the driver has no expected value to port. Linux builds
- * ship vulkan and the GLES3 trio; `d3d12`/`metal` are here because the table is
- * the engine's, and are rejected later by the engine itself, not by us.
+ * Driver to the rendering method that offers it (main.cpp:2547-2565). A one-step gap on a
+ * channel whose value x 255 is fractional moves with the driver, so it is not a parity defect.
+ * Linux builds ship vulkan and the GLES3 trio. `d3d12` and `metal` stay because the table is the
+ * engine's, and the engine rejects them itself.
  */
 export const DRIVER_NAMES = ['vulkan', 'd3d12', 'metal', 'opengl3', 'opengl3_angle', 'opengl3_es'];
 
@@ -190,35 +80,24 @@ export const RENDERING_DRIVERS = {
   opengl3_es: 'gl_compatibility',
 };
 
-/** The mode whose capture IS the root window rather than a nested viewport. */
+/**
+ * Draws the project-viewport rectangle as the root window, for the settings Godot hands only to
+ * the root (`ROOT_ONLY_VIEWPORT_PROPERTIES`). The SubViewport arm stays the default: no window
+ * manager or screen size reaches its rectangle, and it refuses when a project sets one of those.
+ */
 const ROOT_WINDOW_MODE = '2d-root';
 
 /**
- * The viewport settings Godot applies to `SceneTree`'s root `Window` AND TO
- * NOTHING ELSE, each with the class default a `Viewport` keeps when nobody
- * hands it the project's value.
- *
- * `main/main.cpp`'s block runs only for a real game (`if (!editor &&
- * !project_manager)`, main/main.cpp:4521) and reaches `sml->get_root()`; the
- * `SceneTree` constructor's block writes straight to `root`. Neither walks any
- * other viewport, and `Viewport` has no inheritance path for these — so a
- * scene composed inside a `SubViewport` draws under the class default whatever
- * the project says, and the default 2D capture cannot observe the setting at
- * all. That is what `2d-root` exists for.
- *
- * Confined to what can change a 2D picture. The root-only settings that only a
- * 3D render could show (`msaa_3d`, TAA, debanding, occlusion culling, mesh LOD,
- * the shadow atlas, VRS) are already observed, because the 3D path renders
- * into the root window's own viewport and never nests anything.
- *
- * `property` is the SCRIPT-side name from `scene/main/viewport.cpp`'s
- * `ADD_PROPERTY` block — several differ from both the setter and the C++ field
- * (`oversampling` for `set_use_oversampling`, `transparent_bg` for
- * `set_transparent_background`), and a name Godot does not expose reads back
- * null on both viewports, which would compare equal and report agreement. The
- * generated script therefore proves each name exists before comparing.
+ * The 2D viewport settings Godot applies to `SceneTree`'s root `Window` and to nothing else, so a
+ * `SubViewport` keeps the class default (`defaultAt`). `main/main.cpp`'s game-only block
+ * (`if (!editor && !project_manager)`, main/main.cpp:4521, through `sml->get_root()`) and the
+ * `SceneTree` constructor write only to `root`, and `Viewport` has no inheritance path for these.
  */
 export const ROOT_ONLY_VIEWPORT_PROPERTIES = [
+  // `property` is the script-side name from `scene/main/viewport.cpp`'s `ADD_PROPERTY` block,
+  // not the setter's (`oversampling` for `set_use_oversampling`, `transparent_bg` for
+  // `set_transparent_background`). A name Godot does not expose reads null on both viewports and
+  // compares equal, so the bootstrap proves each name exists before it compares.
   {
     property: 'gui_snap_controls_to_pixels',
     setting: 'gui/common/snap_controls_to_pixels',
@@ -285,19 +164,14 @@ export const ROOT_ONLY_VIEWPORT_PROPERTIES = [
     appliedAt: 'scene/main/scene_tree.cpp:2147-2148',
     defaultAt: 'scene/main/viewport.h:332',
   },
+  // No 3D entries (`msaa_3d`, TAA, debanding, occlusion culling, mesh LOD, the shadow atlas,
+  // VRS): the 3D path renders into the root window's own viewport and observes them.
 ];
 
 /**
- * The refusal. Turns the bootstrap's drift report into the message the harness
- * throws instead of returning the SubViewport's answer.
- *
- * A measurement that cannot observe what was asked has to SAY SO — returning
- * the class default is a confident wrong number, and every 2D parity reading
- * this repo has taken went through that nested capture. There is no flag to
- * silence this, because the remedy answers the question correctly rather than
- * suppressing it.
- *
- * `null` when there is nothing to report, so a clean run costs nothing.
+ * The message the harness throws instead of the SubViewport's answer, which would be the class
+ * default: a confident wrong number. No flag silences it, since `--mode 2d-root` answers the
+ * question. `null` when there is nothing to report.
  */
 export function rootOnlyDriftMessage(report) {
   if (!report) return null;
@@ -308,10 +182,8 @@ export function rootOnlyDriftMessage(report) {
   const cite = (property) => ROOT_ONLY_VIEWPORT_PROPERTIES.find((e) => e.property === property);
   const named = drift.map(({ property }) => cite(property)?.setting ?? property);
 
-  // The FIRST LINE carries the settings and the remedy, because the batch
-  // capture tools log `error.message.split('\n')[0]` and nothing else: a
-  // summary that says only "something could not be observed" reaches those logs
-  // as a dead end.
+  // The first line carries the settings and the remedy, because the batch capture tools log
+  // `error.message.split('\n')[0]` and nothing else.
   const lines = [
     named.length > 0
       ? `Refusing to answer: this 2D capture nests the scene in a SubViewport, so ` +
@@ -349,9 +221,9 @@ const PREVIEW_SUN_AZIMUTH_DEG = 150;
 const PREVIEW_SKY_TOP = [0.385, 0.454, 0.55];
 const PREVIEW_GROUND_BOTTOM = [0.2, 0.169, 0.133];
 
-/** Reject NaN early: it reaches Godot as `viewport_width=NaN`, which does not
- * fail — the engine produces nothing and never exits, so both 300s spawn
- * timeouts elapse before the harness reports an unrelated "produced no image".
+/**
+ * Rejects NaN early. As `viewport_width=NaN` Godot produces nothing and never exits, so both
+ * 300 s spawn timeouts elapse before an unrelated "produced no image".
  */
 function positiveNumber(flag, raw) {
   const value = Number(raw);
@@ -402,27 +274,25 @@ export function parseArgs(argv) {
     width: DEFAULT_WIDTH,
     height: DEFAULT_HEIGHT,
     previews: true,
-    // Godot's EDITOR viewport fov (`editors/3d/default_fov`), which is NOT the
-    // 75 a bare Camera3D node defaults to. Rendering the reference at 75 while
-    // the previewer draws at 70 is a silent zoom difference in every frame.
+    // The editor viewport's fov, not a bare Camera3D's 75: the previewer draws at 70, so 75 would
+    // be a silent zoom difference in every frame.
     fov: EDITOR_FOV,
     fovExplicit: false,
     emitBounds: false,
     frame: false,
     sceneCamera: false,
     sceneCameraPath: null,
-    // 2D or 3D is a property of the SCENE, not of the invocation, so the
-    // engine itself decides by default (`_is_canvas_scene`) — a JS copy of
-    // Godot's class hierarchy would be one more pair of constants to keep in
-    // sync, and this one cannot be checked by looking at the picture.
+    // 2D or 3D belongs to the scene, so the engine decides (`_is_canvas_scene`). A JS copy of
+    // Godot's class hierarchy would be one more pair to keep in step, and no picture shows drift.
     mode: 'auto',
     camera: null,
     lookAt: null,
     probes: [],
     patch: 1,
+    // One number for every emitter, while the previewer's window is one `lifetime` per emitter.
+    // Arbitrate a scene whose emitters differ on a fixture that holds one instant instead.
     particles: PARTICLES_PROCESS_DEFAULT,
-    // null = whatever the engine picks, so the default reference is never
-    // pinned to one rasterizer.
+    // Null lets the engine pick, so the default reference is not pinned to one rasteriser.
     renderingDriver: null,
   };
 
@@ -439,24 +309,35 @@ export function parseArgs(argv) {
         args.height = positiveNumber('--height', argv[++i]);
         break;
       case '--no-previews':
+        // `godot --path` runs the game, where the editor's preview sun and environment
+        // (`Node3DEditor` members) do not exist and an unlit scene renders black. By default the
+        // bootstrap re-implements `Node3DEditor::_node_added`'s yield rule (two presence checks by
+        // node type, ignoring `visible`). This flag renders runtime semantics instead.
         args.previews = false;
         break;
       case '--emit-bounds':
         args.emitBounds = true;
         break;
       case '--frame':
+        // Fits the geometry bounds as `frameSceneBounds.ts` does (the previewer's opt-in "frame
+        // on open"), for a scene too large to read at distance 4.
         args.frame = true;
         break;
       case '--scene-camera':
+        // By default a scene's own `Camera3D` is ignored, as in the previewer: the editor keeps
+        // its own free camera and draws the node as a frustum gizmo.
         args.sceneCamera = true;
-        // Optional node path: a scene may hold several Camera3Ds and "the first
-        // one in tree order" is not a choice anyone made. Naming it is how both
-        // harnesses provably look through the SAME camera.
+        // An optional node path, since the first of several Camera3Ds in tree order is not a
+        // choice anyone made. A named camera proves both harnesses look through the same one.
         if (argv[i + 1] && !String(argv[i + 1]).startsWith('--')) {
           args.sceneCameraPath = argv[++i];
         }
         break;
       case '--mode':
+        // A CanvasItem or CanvasLayer root renders through a SubViewport the size of the project
+        // viewport, the rectangle the previewer's 2D stage draws, so `--width` and `--height` do
+        // not apply. A forced 3D camera would draw a sky with the Controls laid out wrongly. The flag
+        // forces the path when the root's type does not settle it.
         args.mode = oneOf('--mode', RENDER_MODES, argv[++i]);
         break;
       case '--fov':
@@ -464,18 +345,24 @@ export function parseArgs(argv) {
         args.fovExplicit = true;
         break;
       case '--camera':
+        // `--camera` and `--look-at` override every other camera choice.
         args.camera = vec3('--camera', argv[++i]);
         break;
       case '--look-at':
         args.lookAt = vec3('--look-at', argv[++i]);
         break;
       case '--probe':
+        // Prints the exact RGB at that pixel, which turns "close to Godot" into a number.
         args.probes.push(vec2('--probe', argv[++i]));
         break;
       case '--patch':
         args.patch = positiveNumber('--patch', argv[++i]);
         break;
       case '--particles':
+        // The editor animates particles, so a paused reference draws a pose the editor never
+        // shows. Godot runs the named seconds through `_advance_particles`, on top of an authored
+        // `preprocess` (`cpu_particles_2d.cpp:727-731`): `2` on `preprocess = 1.5` settles at 3.5 s.
+        // Record the value in the fixture header and the sheet.
         args.particles = nonNegativeNumber('--particles', argv[++i]);
         break;
       case '--rendering-driver':
@@ -491,10 +378,9 @@ export function parseArgs(argv) {
 }
 
 /**
- * The `res://` root for a scene: the nearest ancestor holding a `project.godot`
- * (each vendored demo is its own Godot project), else the scene's own directory
- * — `scenes/fixtures` is a flat bag whose `res://` paths are relative to itself
- * and which deliberately carries no project file.
+ * The `res://` root for a scene: the nearest ancestor holding a `project.godot` (each vendored
+ * demo is its own Godot project), else the scene's own directory. `scenes/fixtures` has no
+ * project file, and its `res://` paths are relative to itself.
  */
 export function resolveProjectRoot(scenePath) {
   let dir = dirname(resolve(scenePath));
@@ -512,28 +398,10 @@ export function resolveProjectRoot(scenePath) {
 }
 
 /**
- * The generated `project.godot`. Carries the source project's settings forward
- * (msaa, shadow quality and friends change the picture) minus the two things
- * that must not vary: the default environment, and the viewport size.
- */
-/**
- * The source project's `display/window/size/viewport_*`, or Godot's default
- * pair — the rect a 2D scene is COMPOSED against, and what a root Control
- * resolves its anchors to. 23 of the corpus's 81 projects set it
- * (`demos/2d/platformer` is 800x480, `demos/2d/pong` 640x400).
- *
- * This is the case `projectConfig`'s "must not vary" rule does not cover. That
- * rule is about 3D FRAME determinism: the 3D camera renders whatever aspect the
- * harness asks for, so pinning it keeps a 3D reference comparable run to run.
- * A 2D scene is different in kind — the viewport rect is part of the scene's
- * layout, not of the camera, so overriding it composes the scene differently
- * from how Godot would and no amount of matching frame sizes recovers that.
- * The 2D path therefore takes its size from HERE and the 3D path keeps the
- * override.
- *
- * `projectViewportSize` in `parser/projectSettingsParser.ts` is the authority;
- * this is the same two keys read without a build step, as with the localStorage
- * keys in `previewServer.mjs`.
+ * The source project's `display/window/size/viewport_*`, or Godot's default pair: the rect a 2D
+ * scene is composed against and a root Control anchors to. The 3D path pins its own frame size to
+ * stay comparable run to run, but an override here would lay a 2D scene out differently. It reads
+ * the keys of `projectViewportSize` (`parser/projectSettingsParser.ts`) without a build step.
  */
 export function projectViewportSizeFromIni(sourceIni) {
   const axis = (key, fallback) => {
@@ -548,10 +416,7 @@ export function projectViewportSizeFromIni(sourceIni) {
   };
 }
 
-/**
- * A whole `[name]` section of a Godot ConfigFile, removed — the entries under
- * it are arbitrary keys, so there is no per-key pattern to match.
- */
+/** Removes a whole `[name]` section of a Godot ConfigFile, whose keys no pattern can match. */
 function dropSection(ini, name) {
   const lines = ini.split('\n');
   const out = [];
@@ -564,32 +429,32 @@ function dropSection(ini, name) {
   return out.join('\n');
 }
 
+/**
+ * The generated `project.godot`. It carries the source project's settings forward (msaa and
+ * shadow quality change the picture) minus the default environment and the 3D frame size.
+ */
 export function projectConfig(
   sourceIni,
   { width, height, pinWindowToViewport = false, runScripts = true }
 ) {
   const drop = [
+    // A project default environment would light the scene through a channel the previewer does
+    // not have, and bias every comparison.
     /^environment\/defaults\/default_environment\s*=/,
     /^rendering\/environment\/defaults\/default_environment\s*=/,
     /^window\/size\/viewport_width\s*=/,
     /^window\/size\/viewport_height\s*=/,
     /^run\/main_scene\s*=/,
     /^config_version\s*=/,
-    // Redraws only when something changes, so a settled scene stops producing
-    // frames and the bootstrap's `frame_post_draw` await never resumes: the
-    // render walks off the end of `--quit-after` having written nothing, and
-    // reports "produced no image (exit 0)" with an empty stderr. Godot
-    // recommends it for non-game UI projects, which is where this harness is
-    // pointed whenever a Control scene is the subject.
+    // Low-processor mode redraws only on change, so a settled scene never resumes the bootstrap's
+    // `frame_post_draw` await and ends "produced no image (exit 0)" with an empty stderr. Godot
+    // recommends it for UI projects, which a Control scene often comes from.
     /^run\/low_processor_mode\s*=/,
   ];
 
-  // Only when the capture IS the window. A window sized by an override — or by
-  // a fullscreen `window/size/mode` — makes the stretch transform scale the
-  // whole picture, so the root-window arm would draw a rectangle the previewer
-  // never draws. Scoped to that arm rather than added to the list above,
-  // because a blanket drop would silently move every 3D reference already
-  // arbitrated through this harness.
+  // A window override or a fullscreen `window/size/mode` makes the stretch transform scale the
+  // picture, so the root-window arm would draw a rectangle the previewer never draws. Only that
+  // arm drops them: a blanket drop would move every existing 3D reference.
   if (pinWindowToViewport) {
     drop.push(
       /^window\/size\/window_width_override\s*=/,
@@ -598,15 +463,9 @@ export function projectConfig(
     );
   }
 
-  // An autoload is a script too, and it runs BEFORE the scene exists — so
-  // stripping the scene's own scripts leaves it untouched. The engine gates
-  // them on being a game at all (`main/main.cpp:4397`), which is why the
-  // editor this harness mirrors never runs one.
-  //
-  // It matters because a project can put its whole look there: an autoload
-  // whose `_ready` assigns `get_tree().get_root().theme` themes every widget
-  // while the scene file says nothing about a theme, and no renderer reading
-  // the file could ever reproduce it.
+  // An autoload runs before the scene exists, so stripping the scene's scripts misses it. Only a
+  // game runs one (`main/main.cpp:4397`), never the editor this harness mirrors. An autoload that
+  // sets `get_tree().get_root().theme` themes every widget, which no reader of the file reproduces.
   const kept = (runScripts ? sourceIni ?? '' : dropSection(sourceIni ?? '', 'autoload'))
     .split('\n')
     .filter((line) => !drop.some((re) => re.test(line.trim())))
@@ -629,16 +488,10 @@ export function projectConfig(
 }
 
 /**
- * Read back the colour at each probe. `patch` (odd, default 1) samples a
- * square of that side centred on the coordinate and returns the per-channel
- * MEDIAN.
- *
- * A single pixel is not a safe sample across two renderers: our 3D canvas
- * multisamples while these references render MSAA-off, so one pixel near an
- * edge, a silhouette or a shadow boundary carries a blend weight that exists
- * on one side only. (Our 2D canvas does not — it matches the engine's own
- * `msaa_2d = Disabled`, `scene/main/viewport.h:309`.) The median (not the
- * mean) also discards a stray outlier outright instead of averaging it in.
+ * The per-channel median of a `patch`-sided square (odd, default 1) at each probe. Our 3D canvas
+ * multisamples and these references do not, so one pixel near an edge carries a blend weight on
+ * one side only. Our 2D canvas matches the engine's `msaa_2d = Disabled`
+ * (`scene/main/viewport.h:309`). The median, not the mean, discards a stray outlier.
  */
 export function probePixels(buffer, probes, { patch = 1 } = {}) {
   const png = PNG.sync.read(buffer);
@@ -690,16 +543,10 @@ const gdString = (s) =>
     .replace(/\t/g, '\\t')}"`;
 
 /**
- * The bootstrap scene's script. Instantiates the target scene, picks the 2D or
- * 3D path for it, and writes one settled frame.
- *
- * `simSeconds` is the shared settle contract (`SETTLE_SIM_SECONDS`), i.e. how
- * far the scene's own clock has run when the shutter opens. It is a parameter
- * only so a test can drive the refusal below; the single definition is the
- * default. Both sides refuse a non-zero value, because neither can honour one
- * yet and each would otherwise sample a different instant — see the constant's
- * own doc. It governs the EDITOR-preview path; `--no-previews` deliberately
- * renders a live runtime, where "the authored instant" is not the question.
+ * The bootstrap scene's script: it instantiates the target scene, picks its 2D or 3D path and
+ * writes one settled frame. `simSeconds` (`SETTLE_SIM_SECONDS`) is a parameter only so a test can
+ * drive the refusal of a non-zero value, which neither side can honour. It governs the preview
+ * path. `--no-previews` renders a live runtime, where the authored instant is not the question.
  */
 export function bootstrapScript({
   scenePath,
@@ -1275,16 +1122,15 @@ script = ExtResource("1")
 `;
 
 /**
- * The render pass's argv. Split out so the flag set is assertable without an
- * engine: dropping `--fixed-fps` costs nothing visible here and everything
- * later, since the reference keeps rendering — just against this host's frame
- * timing instead of a constant.
+ * The render pass's argv, split out so a test can assert it without an engine. Without
+ * `--fixed-fps` a node that catches up at first draw, which is not pause-gated, reads this host's
+ * wall clock: `CPUParticles2D::_update_internal` then jumps a whole `1/fixed_fps` step on a slow
+ * host, only sometimes, and the reference still renders.
  */
 export function renderArgv(work, { renderingDriver = null } = {}) {
   const argv = ['--path', work, '--fixed-fps', String(REFERENCE_FIXED_FPS), '--quit-after', '400'];
-  // main.cpp:2582 aborts on a driver its method does not offer, so the pair
-  // travels together — naming the driver alone would abort under the default
-  // `forward_plus`.
+  // main.cpp:2582 aborts on a driver its method does not offer, so the driver alone would abort
+  // under the default `forward_plus`.
   if (renderingDriver) {
     argv.push(
       '--rendering-driver',
@@ -1300,35 +1146,21 @@ export function renderArgv(work, { renderingDriver = null } = {}) {
 export const ENGINE_TIMEOUT_S = 300;
 /** Seconds between the group's SIGTERM and its SIGKILL. */
 export const ENGINE_KILL_AFTER_S = 10;
-/**
- * `spawnSync`'s own timer, strictly longer than the group killer's whole
- * budget so it can only ever fire as a backstop — never in place of it.
- */
+/** `spawnSync`'s own timer, longer than the group killer's whole budget, so it is only a backstop. */
 export const SPAWN_BACKSTOP_MS = (ENGINE_TIMEOUT_S + ENGINE_KILL_AFTER_S + 30) * 1000;
 
 /**
- * Builds the argv for one engine pass. Split out from the spawn so the reaping
- * contract is assertable without an engine, an X server, or a 300-second wait.
- *
- * Every pass goes through `timeout(1)` rather than relying on `spawnSync`'s
- * timer alone. Under a display the direct child is `xvfb-run`, a WRAPPER:
- * `spawnSync` signals that wrapper, and the `godot` it launched survives,
- * reparents to init and keeps rendering forever — as does the `Xvfb` whose
- * display lock then blocks the number for every later run. `timeout` puts the
- * command in its own process group and signals the GROUP on expiry (coreutils
- * `timeout.c` calls `setpgid` unless `--foreground`), so the engine dies with
- * its wrapper. `-k` follows with SIGKILL for an engine ignoring SIGTERM.
- *
- * `screen` sizes the virtual X screen for this run. Only the root-window arm
- * passes one: its capture IS the window, so a project viewport larger than
- * xvfb-run's own default screen would leave the window clipped to the screen
- * and the image the wrong size. Left unset everywhere else, since changing the
- * screen under a render that does not depend on it is one more variable in a
- * reference nobody asked to move.
+ * The argv for one engine pass, split out so a test can assert the reaping contract without an
+ * engine, an X server or a 300-second wait.
  */
 export function godotSpawnPlan(args, { display, screen = null, groupTimeout = true }) {
+  // Only the root-window arm sizes the X screen: its capture is the window, which a smaller
+  // default screen would clip. Every other render keeps xvfb-run's default screen.
   const screenArgs = screen ? ['-s', `-screen 0 ${screen.width}x${screen.height}x24`] : [];
   const engine = display ? ['xvfb-run', '-a', ...screenArgs, 'godot', ...args] : ['godot', ...args];
+  // `spawnSync` signals only the `xvfb-run` wrapper, and the orphaned `godot` and `Xvfb` render
+  // on and hold the display lock. `timeout` signals the whole group (coreutils `timeout.c` calls
+  // `setpgid` unless `--foreground`), and `-k` follows with SIGKILL.
   const argv = groupTimeout
     ? ['timeout', '-k', String(ENGINE_KILL_AFTER_S), String(ENGINE_TIMEOUT_S), ...engine]
     : engine;
@@ -1354,11 +1186,9 @@ function runGodot(args, { display, screen = null }) {
     encoding: 'utf8',
     timeout: plan.timeoutMs,
   });
-  // `error` carries a spawn failure (ENOENT when godot/xvfb-run is missing, or
-  // the backstop firing) that `status` alone (null in that case) does not —
-  // callers surface it. `timedOut` names the group killer's own expiry, which
-  // reports as an ordinary non-zero exit and would otherwise read as an engine
-  // crash.
+  // `error` carries a spawn failure (ENOENT for a missing godot or xvfb-run, or the backstop),
+  // where `status` is null. `timedOut` names the group killer's expiry, which exits non-zero and
+  // would otherwise read as an engine crash.
   return {
     status: result.status,
     error: result.error ?? null,
@@ -1410,11 +1240,8 @@ export async function renderReference({
       lookAt, frame, sceneCamera, sceneCameraPath, mode, boundsOut, fov, fovExplicit, particles,
       renderingDriver });
   } finally {
-    // Each run copies the whole res:// root, and `keepWork` is the only reason
-    // to hold one afterwards. On a tmpfs /tmp these accumulate in RAM: 236 of
-    // them, ~260MB, had piled up on the development host before this cleanup
-    // existed — and the engine-gated tests now run inside `pnpm test:unit`,
-    // so every suite run added more.
+    // Each run copies the whole res:// root, which on a tmpfs /tmp stays in RAM, and the
+    // engine-gated tests run inside `pnpm test:unit`.
     if (!keepWork) await rm(work, { recursive: true, force: true });
   }
 }
@@ -1427,9 +1254,8 @@ async function renderInto(
   }
 ) {
   await cp(root, work, { recursive: true, dereference: true });
-  // Inside the scratch project, not beside the image: the mode is how the
-  // caller pairs this render with the previewer's, not an artefact to keep. The
-  // drift report is the same kind of thing — read once, turned into a refusal.
+  // Inside the scratch project, not beside the image: the mode and the drift report are read once,
+  // not kept.
   const modeOut = join(work, '__ref_mode.txt');
   const driftOut = join(work, '__ref_root_only.json');
   const rootWindow = mode === ROOT_WINDOW_MODE;
@@ -1438,16 +1264,14 @@ async function renderInto(
     ? await readFile(join(root, 'project.godot'), 'utf8')
     : null;
   const canvas2DSize = projectViewportSizeFromIni(sourceIni);
-  // The root-window arm captures the window, so the window has to BE the
-  // project-viewport rect; every other arm keeps the 3D frame override.
+  // The root-window arm captures the window, so the window is the project-viewport rect. Every
+  // other arm keeps the 3D frame override.
   await writeFile(
     join(work, 'project.godot'),
     projectConfig(sourceIni, {
       ...(rootWindow ? { ...canvas2DSize, pinWindowToViewport: true } : { width, height }),
-      // Same axis as the scene's own scripts, and stricter: an autoload is
-      // instantiated only for a GAME (`main/main.cpp:4397`'s
-      // `if (!project_manager && !editor)`), so unlike a node script there is
-      // no `@tool` exception to keep.
+      // Only a game instantiates an autoload (`main/main.cpp:4397`'s
+      // `if (!project_manager && !editor)`), so unlike a node script it has no `@tool` exception.
       runScripts: !previews,
     })
   );
@@ -1476,17 +1300,13 @@ async function renderInto(
   );
   await writeFile(join(work, '__ref_main.tscn'), MAIN_SCENE);
 
-  // Delete any prior image at these paths BEFORE rendering. Success is judged by
-  // the file existing afterwards; the default `out` path is reused across runs, so
-  // a stale image from an earlier render would otherwise be reported as this run's
-  // result if Godot now crashes/times out — the exact silent-wrong-measurement this
-  // tool exists to prevent.
+  // Success means the file exists afterwards, and the default `out` path is reused, so a stale
+  // image would pass for this run's result when Godot crashes or times out.
   await rm(resolve(out), { force: true });
   if (boundsOut) await rm(resolve(boundsOut), { force: true });
 
-  // Import first, headless: textures and meshes must exist as .godot/imported
-  // artefacts before a render can resolve them. Failures here are not fatal —
-  // a scene with no importable assets legitimately has nothing to do.
+  // A render resolves textures and meshes only as .godot/imported artefacts. A failed import is
+  // not fatal, since a scene with no importable assets has nothing to import.
   runGodot(['--headless', '--path', work, '--import'], { display: false });
 
   const render = runGodot(renderArgv(work, { renderingDriver }), {
@@ -1494,9 +1314,8 @@ async function renderInto(
     screen: rootWindow ? canvas2DSize : null,
   });
   if (!existsSync(resolve(out))) {
-    // Surface the spawn error (missing godot/xvfb-run, the backstop firing)
-    // that a bare "produced no image" would otherwise hide with empty stderr,
-    // and name an expiry rather than letting its exit code read as a crash.
+    // A bare "produced no image" with an empty stderr would hide the spawn error, and an expiry's
+    // exit code would read as a crash.
     const why = render.timedOut
       ? `\nThe engine did not finish within ${ENGINE_TIMEOUT_S}s and its process group was reaped.`
       : render.error
@@ -1508,21 +1327,16 @@ async function renderInto(
   }
   const rendered = existsSync(modeOut) ? (await readFile(modeOut, 'utf8')).trim() : null;
 
-  // Both refusals below delete the image first. Godot has already written one
-  // by the time either is known, and the default out path lives in the repo and
-  // is reused across runs — so a picture the harness will not vouch for would
-  // outlive the message saying so, which is the same stale-answer trap the
-  // pre-render delete above exists to close.
+  // A refusal deletes the image Godot has already written, since the reused default out path
+  // would keep a picture the harness does not vouch for.
   const refuse = async (message, marks = {}) => {
     await rm(resolve(out), { force: true });
     throw Object.assign(new Error(message), marks);
   };
 
   if (rootWindow) {
-    // The window is asked for, not guaranteed: a window manager, a screen too
-    // small, or a project setting nobody thought to drop can all hand back a
-    // different rect, and a picture at the wrong size is a wrong measurement
-    // that still looks like an answer.
+    // A window manager, a small screen or an undropped project setting can hand back a different
+    // rect, and a picture at the wrong size is a wrong measurement that looks like an answer.
     const png = PNG.sync.read(await readFile(resolve(out)));
     if (png.width !== canvas2DSize.width || png.height !== canvas2DSize.height) {
       await refuse(
@@ -1536,9 +1350,7 @@ async function renderInto(
   const drift = existsSync(driftOut)
     ? rootOnlyDriftMessage(JSON.parse(await readFile(driftOut, 'utf8')))
     : null;
-  // Marked, not just worded: the message names `--mode 2d-root` as the arm that
-  // CAN answer, and a caller that follows that instruction should not have to
-  // match on the prose to know this is the refusal that says so.
+  // Marked, so a caller that follows the message to `--mode 2d-root` need not match on its prose.
   if (drift) await refuse(drift, { rootOnlyDrift: true });
 
   return { workDir: work, out: resolve(out), mode: rendered };

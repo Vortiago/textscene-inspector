@@ -1,9 +1,7 @@
 /**
- * Decode a LabelSettings resource body, whichever serialisation it arrived
- * in — inline `[sub_resource type="LabelSettings"]`, or the `[resource]`
- * body of a standalone `.tres` `ExtResource` names.
- *
- * Pure `.ts`, no THREE.
+ * Decodes a LabelSettings resource body, from an inline
+ * `[sub_resource type="LabelSettings"]` or the `[resource]` body of a `.tres`.
+ * No THREE.
  */
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -12,15 +10,15 @@ import { colorOr, type Color } from '../../../utils/colorParser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import type { LabelSettingsResource } from './types';
 
-/** `label_settings.h:59,62` — both colour fields' shared default. */
+/** `label_settings.h:59,62`: both colour fields' default. */
 const DEFAULT_WHITE: Color = { r: 1, g: 1, b: 1, a: 1 };
-/** `label_settings.h:65` — transparent, so a Label draws no shadow until this is set. */
+/** `label_settings.h:65`: transparent, so a Label draws no shadow until this is set. */
 const DEFAULT_TRANSPARENT: Color = { r: 0, g: 0, b: 0, a: 0 };
 /** `Font::DEFAULT_FONT_SIZE` (`core/io/resource.h`'s font default, mirrored at `label_settings.h:58`). */
 const DEFAULT_FONT_SIZE = 16;
 const CONTEXT = 'LabelSettings';
 
-/** Decode a LabelSettings resource body — an absent/malformed field falls back to the class's own default rather than warning the whole resource away. */
+/** An absent or malformed field falls back to the class default, not a warning for the whole resource. */
 export function decodeLabelSettings(data: Record<string, string>): LabelSettingsResource {
   return {
     lineSpacing: floatOr(data.line_spacing, 3, CONTEXT),

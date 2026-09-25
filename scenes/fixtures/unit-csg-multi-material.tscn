@@ -1,12 +1,9 @@
 [gd_scene load_steps=4 format=3 uid="uid://unitcsgmultimaterial"]
 
-; Multi-surface output. Godot interns one material per contributing brush and
-; emits one surface each (CSGShape3D::update_shape), so a boolean between two
-; differently-materialed solids produces a mesh with TWO surfaces.
-;
-; This is the only scene that can catch a group/materialIndex remap bug: with
-; one material everywhere, a wrong mapping is invisible. The subtraction is
-; arranged so faces of both materials survive into the result.
+; Multi-surface output. Godot interns one material per contributing brush and emits one
+; surface each (CSGShape3D::update_shape), so a boolean of two differently-materialled solids
+; has two surfaces. With one material everywhere a wrong group/materialIndex remap is
+; invisible, so only this scene catches one. The subtraction keeps faces of both materials.
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_outer"]
 albedo_color = Color(0.2, 0.65, 0.35, 1)
@@ -33,8 +30,8 @@ radial_segments = 32
 rings = 16
 material = SubResource("StandardMaterial3D_inner")
 
-; A third material UNIONED on, so the surface count is three rather than two and
-; an off-by-one in the slot mapping cannot pass by coincidence.
+; A third material unioned on, so the surface count is three rather than two and an
+; off-by-one in the slot mapping cannot pass by coincidence.
 [node name="Boss" type="CSGCylinder3D" parent="Shell"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 1.2, -0.7)
 radius = 0.35

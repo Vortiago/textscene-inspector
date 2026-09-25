@@ -1,7 +1,6 @@
 /**
- * <OmniLight3D> — Godot omnidirectional point light. Emits in all directions
- * with attenuation; no target required. Wrapped in a transform group so the
- * helper gizmo (a wireframe sphere) follows the light.
+ * <OmniLight3D>: a point light with attenuation, in a transform group so the
+ * wireframe-sphere helper follows the light.
  */
 
 import { useMemo, useRef } from 'react';

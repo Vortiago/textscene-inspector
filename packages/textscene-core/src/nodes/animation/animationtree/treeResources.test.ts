@@ -1,10 +1,7 @@
 /**
- * Tree-root resource resolution tests.
- *
- * `resolveTreeRoot` turns an AnimationTree's `tree_root` SubResource reference
- * into a typed `AnimNode` graph by following the AnimationNode* SubResources
- * and a BlendTree's `node_connections`. THREE-free / React-free, like
- * `resolveAnimations`.
+ * `resolveTreeRoot` turns an AnimationTree's `tree_root` SubResource into a typed `AnimNode` graph
+ * by following the AnimationNode* SubResources and a BlendTree's `node_connections`. THREE-free
+ * and React-free, like `resolveAnimations`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -100,12 +97,10 @@ describe('resolveTreeRoot — state machine', () => {
 });
 
 /**
- * A BlendTree may hold another BlendTree, and nothing in the engine stops that
- * chain closing on itself: `add_node` guards only the name, null and `/`
- * (animation_blend_tree.cpp:1489-1493) and `connect_node` only a node feeding
- * itself (:1615-1619). So a cycle is a file Godot writes out and reloads, and
- * `resolveTreeRoot` runs inside a render-phase `useMemo` with no error boundary
- * above it — a stack overflow here blanks the whole preview.
+ * A BlendTree may hold another BlendTree, and nothing stops that chain closing on itself: `add_node`
+ * guards only the name, null and `/` (animation_blend_tree.cpp:1489-1493) and `connect_node` only a
+ * node feeding itself (:1615-1619). `resolveTreeRoot` runs in a render-phase `useMemo` with no
+ * error boundary, so a stack overflow here blanks the whole preview.
  */
 describe('resolveTreeRoot — cyclic sub-resource references', () => {
   it('yields no root for a BlendTree that holds itself', () => {
@@ -134,7 +129,7 @@ describe('resolveTreeRoot — cyclic sub-resource references', () => {
     expect(resolveTreeRoot('SubResource("A")', resources)).toBeNull();
   });
 
-  // The guard is per-PATH, not per-tree: one sub-resource wired into two ports
+  // The guard is per path, not per tree: one sub-resource wired into two ports
   // is ordinary reuse, and refusing the second would silence half the blend.
   it('still resolves one clip sub-resource wired into both Blend2 inputs', () => {
     const resources = [

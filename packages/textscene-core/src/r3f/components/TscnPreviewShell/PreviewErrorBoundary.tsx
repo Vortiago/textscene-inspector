@@ -1,18 +1,8 @@
 /**
- * Wraps `<ViewportArea>` so a render-time exception there (thrown before
- * `<Canvas>` even mounts, or from the 2D `Canvas2DStage` DOM overlay) shows a
- * recoverable message instead of leaving the whole shell dark. This is
- * the OUTER half of the fix — it does NOT catch anything thrown from inside
- * `<TscnCanvas>`'s own `<Canvas>` (R3F mounts a separate react-reconciler
- * root there); `NodeDispatcher`'s per-node `<ErrorBoundary>` covers that half.
- *
- * `resetKeys={[sceneGraph]}` clears the caught error the instant a fresh
- * parse hands the shell a new `SceneGraph` (the user fixed whatever crashed
- * it) — via `ErrorBoundary`'s props-driven reset, NOT a `key`-driven remount,
- * so a successful reparse does not tear down `<TscnCanvas>` and lose
- * the viewport camera state on every edit (see
- * "preserves the same TscnCanvas instance across content changes" in
- * TscnPreviewShell.test.tsx).
+ * A render error in `<ViewportArea>` shows a recoverable message. It misses
+ * errors inside `<Canvas>`, a separate reconciler root that `NodeDispatcher`'s
+ * per-node `<ErrorBoundary>` covers. `resetKeys`, not a `key` remount, clears
+ * it on a new `SceneGraph`, so a reparse keeps the viewport camera state.
  */
 import type { ReactNode } from 'react';
 import type { SceneGraph } from '../../../core/SceneGraph.js';

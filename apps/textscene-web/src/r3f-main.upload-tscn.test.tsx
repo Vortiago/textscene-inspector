@@ -1,14 +1,11 @@
 /**
- * Upload-TSCN regression: the toolbar's "Upload TSCN" file input lets the
- * user load a .tscn file from disk. The parsed scene tree must populate
- * with the uploaded content's root nodes, and the dropdown should
- * deselect so the user knows they're not on a fixture anymore.
+ * The toolbar's "Upload TSCN" file input: the scene tree shows the uploaded content's root
+ * nodes, and the scene chip shows that no fixture is active.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-// `<TscnCanvas>` mounts a real WebGL `<Canvas>` which happy-dom can't
-// provide. Substitute a stub so the rest of the shell renders.
+// happy-dom cannot provide the WebGL `<Canvas>` that `<TscnCanvas>` mounts, so it is a stub.
 vi.mock('@textscene/core', async () => {
   const real = await vi.importActual<typeof import('@textscene/core')>(
     '@textscene/core'
@@ -30,8 +27,7 @@ const UPLOADED_TSCN = `[gd_scene load_steps=1 format=3]
 `;
 
 beforeEach(() => {
-  // Default fixture fetch on mount — return any valid TSCN so the shell
-  // settles into a non-empty state before the test simulates an upload.
+  // Any valid TSCN for the default fixture, so the shell settles before the upload.
   globalThis.fetch = vi.fn().mockResolvedValue({
     ok: true,
     text: () => Promise.resolve('[gd_scene load_steps=1 format=3]\n\n[node name="FixtureRoot" type="Node3D"]\n'),
@@ -46,16 +42,14 @@ describe('<R3FApp> Upload TSCN (WI-UX-7)', () => {
   it('replaces the active scene with parsed nodes from an uploaded .tscn file', async () => {
     render(<R3FApp />);
 
-    // The default fixture loads first; wait for its root to appear in
-    // the tree so we have a baseline.
+    // The default fixture's root in the tree is the baseline.
     await waitFor(() => {
       expect(screen.queryByText('FixtureRoot')).toBeTruthy();
     });
 
     const uploadInput = screen.getByTestId('upload-tscn-input') as HTMLInputElement;
     expect(uploadInput).toBeTruthy();
-    // Multi-file upload broadened `accept` to the resource kinds
-    // handleFilesUpload's basename-matching can resolve, not just `.tscn`.
+    // `accept` holds every resource kind handleFilesUpload's basename matching resolves.
     expect(uploadInput.accept).toContain('.tscn');
 
     const file = new File([UPLOADED_TSCN], 'my-scene.tscn', { type: 'text/plain' });
@@ -65,8 +59,7 @@ describe('<R3FApp> Upload TSCN (WI-UX-7)', () => {
       await Promise.resolve();
     });
 
-    // The uploaded scene's root appears in the tree, replacing the
-    // fixture's root.
+    // The uploaded scene's root replaces the fixture's root in the tree.
     await waitFor(() => {
       expect(screen.queryByText('UploadedRoot')).toBeTruthy();
     });
@@ -95,10 +88,8 @@ describe('<R3FApp> Upload TSCN (WI-UX-7)', () => {
   });
 
   it('reflects the uploaded file in the scene switcher (the native dropdown is gone)', async () => {
-    // The old native <select> was replaced by the command-palette scene
-    // switcher (the built-in fixtures are dev-only scaffolding). After an
-    // upload the scene chip shows the uploaded filename — signalling "not on a
-    // fixture" — and there is no longer a combobox in the DOM.
+    // The scene switcher is a command palette, not a combobox. After an upload the scene chip
+    // shows the uploaded file name, so no fixture is active.
     render(<R3FApp />);
 
     await waitFor(() => {
@@ -143,10 +134,8 @@ describe('<R3FApp> Upload TSCN (WI-UX-7)', () => {
   });
 
   it('keeps Reset Camera disabled when content is non-empty but parses to no scene (WI-UX-7c)', async () => {
-    // Malformed fixture: bytes load successfully but the lenient parser
-    // extracts zero nodes, so `TscnPreviewShell` parses to `sceneGraph === null`
-    // with an error banner. The button must stay disabled — gating on raw
-    // `content.length` would incorrectly enable it here.
+    // The bytes load, but the lenient parser finds zero nodes, so `sceneGraph === null` with
+    // an error banner. The button stays disabled, which a gate on `content.length` would miss.
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       text: () => Promise.resolve('[this is { not valid tscn at all'),
@@ -154,8 +143,7 @@ describe('<R3FApp> Upload TSCN (WI-UX-7)', () => {
 
     render(<R3FApp />);
 
-    // Wait for the parse-error banner to appear so we know content was
-    // applied and the shell finished parsing.
+    // The parse-error banner shows the shell applied the content and parsed it.
     await waitFor(() => {
       expect(screen.queryByRole('alert')).toBeTruthy();
     });

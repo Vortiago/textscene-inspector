@@ -1,6 +1,4 @@
-/**
- * Tests for OmniLight3D linter (strict parser + semantic rules)
- */
+/** OmniLight3D linting: strict validators and semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -168,7 +166,7 @@ describe('OmniLight3D Linter', () => {
       });
     });
 
-    // light_3d.cpp:389 — light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater".
+    // light_3d.cpp:389: light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater".
     // The high end is open, so only a negative is out of band.
     describe('light energy warnings', () => {
       it('should warn on negative light_energy', () => {
@@ -192,7 +190,7 @@ describe('OmniLight3D Linter', () => {
       });
     });
 
-    // light_3d.cpp:639 — omni_range PROPERTY_HINT_RANGE "0,4096,0.001,or_greater,exp".
+    // light_3d.cpp:639: omni_range PROPERTY_HINT_RANGE "0,4096,0.001,or_greater,exp".
     describe('omni_range warnings', () => {
       it('should warn on negative omni_range', () => {
         expectDiagnostic(scene(node('OmniLight3D', { omni_range: -0.5 })), {
@@ -211,8 +209,8 @@ describe('OmniLight3D Linter', () => {
       });
     });
 
-    // light_3d.cpp:640 — omni_attenuation PROPERTY_HINT_RANGE
-    // "-10,10,0.001,or_greater,or_less": BOTH ends open, so no value is out of band.
+    // light_3d.cpp:640: omni_attenuation PROPERTY_HINT_RANGE
+    // "-10,10,0.001,or_greater,or_less": both ends open, so no value is out of band.
     describe('omni_attenuation carries no advisory', () => {
       it.each([0.05, 1.5, 7.0, -2])('says nothing about omni_attenuation %s', (attenuation) => {
         expectNoDiagnostic(scene(node('OmniLight3D', { omni_attenuation: attenuation, omni_range: 5.0 })), {
@@ -252,8 +250,8 @@ describe('OmniLight3D Linter', () => {
 
     it('does not warn when light_projector is present but malformed', () => {
       // The format validator already errors on it, and Godot sets no projector
-      // from a value its reader rejects, so warning here reported one defect
-      // twice.
+      // from a value its reader rejects, so a warning here would report one
+      // defect twice.
       expectNoDiagnostic(
         scene(node('OmniLight3D', { light_projector: 'not-a-reference', omni_range: 5.0 })),
         { ruleName: 'omnilight3d-projector-without-shadow' }
@@ -299,7 +297,7 @@ describe('OmniLight3D Linter', () => {
       );
       expect(diagnostics).toHaveLength(2);
       // omni_shadow_mode (light_3d.cpp:641) and shadow_opacity (light_3d.cpp:407,
-      // via Light3D::set_param's index-only guard) are both hints, not
+      // behind Light3D::set_param's index-only guard) are both hints, not
       // enforcement, so both diagnose as warnings, not errors. light_energy=0
       // is valid.
       expect(diagnostics.every((d) => d.severity === 'warning')).toBe(true);

@@ -1,7 +1,6 @@
 /**
- * Cell-placement math — Godot's map_to_local: grid coords → the CENTER of the
- * cell in local pixels (Godot 2D space, +Y down). Isometric expectations are
- * hand-computed from the verbatim TileSet::map_to_local switch (tile_set.cpp).
+ * Godot's map_to_local: grid coords to the centre of the cell in local pixels, +Y down. The
+ * expectations are hand-computed from the TileSet::map_to_local switch (tile_set.cpp).
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as logger from '../../logger';

@@ -15,8 +15,7 @@ describe('parseColorPickerButton', () => {
   });
 
   it('defaults to Godot opaque black when the property is absent entirely', () => {
-    // `Color color;` (color_picker.h:513) is the base `Color()` constructor —
-    // r=g=b=0, a=1.
+    // `Color color;` (color_picker.h:513) is `Color()`: r=g=b=0, a=1.
     const p = parseColorPickerButton(heading('ColorPickerButton', { name: 'Swatch' }), {});
     expect(p.color).toBe('Color(0, 0, 0, 1)');
   });

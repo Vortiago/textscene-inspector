@@ -1,11 +1,7 @@
 /**
- * Zoom-to-pointer: the point under the pointer must stay under the pointer.
- *
- * The ASSERTION is independent — it projects through a real `PerspectiveCamera`
- * rather than replaying the implementation's arithmetic. The anchor helper is
- * not: it restates the focus-plane formula, which is deliberate, since that
- * restatement is what catches a wrong constant (verified by doubling one in
- * production — two cases fail).
+ * Zoom-to-pointer: the point under the pointer stays under the pointer. The assertion
+ * projects through a real `PerspectiveCamera`. The anchor helper restates the
+ * focus-plane formula on purpose, so a wrong constant in production fails here.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -19,10 +15,7 @@ function cursorAt(distance: number, target = new THREE.Vector3()): EditorCursor 
   return { target, xRot: 0.5, yRot: -0.5, distance };
 }
 
-/**
- * Where a world point lands on screen, in pixels from the viewport centre —
- * the honest check, since that is what the user sees.
- */
+/** Where a world point lands on screen, in pixels from the viewport centre: what the user sees. */
 function project(cursor: EditorCursor, point: THREE.Vector3, view: PointerView) {
   const camera = new THREE.PerspectiveCamera(view.fovDegrees, 1, 0.01, 10000);
   camera.position.copy(cursorCameraPosition(cursor));

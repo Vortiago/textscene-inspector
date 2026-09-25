@@ -1,8 +1,6 @@
 /**
- * Ambient type declarations for CSS Module imports across the core package.
- * Vite (web app) and esbuild-css-modules-plugin (VS Code webview) handle
- * the runtime side; this file teaches TypeScript that the import returns
- * a hashed class-name lookup map.
+ * Ambient types for the core package's CSS Module imports: the import is a map of hashed class
+ * names. Vite and esbuild-css-modules-plugin handle the runtime side.
  */
 declare module '*.module.css' {
   const classes: Readonly<Record<string, string>>;

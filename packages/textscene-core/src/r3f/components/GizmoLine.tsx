@@ -1,32 +1,20 @@
 /**
- * <GizmoLine> — the shared render ritual for selection-gated editor line gizmos
- * (the 2D/3D marker crosses, path-curve polylines, and path-follow handles).
- *
- * It owns the bits every line gizmo repeated: build a BufferGeometry from a flat
- * `positions` array (plus optional per-vertex `colors`), dispose it on rebuild
- * (R3F won't auto-dispose a geometry passed via `attach`), and draw it as an
- * unlit, depth-write-free, transparent `<lineSegments>` on a high render order so
- * it sits over scene content. Callers just compute the vertex arrays.
+ * The render ritual of a selection-gated line gizmo: a BufferGeometry from flat
+ * `positions` and optional `colors`, disposed on rebuild since R3F does not dispose
+ * an attached geometry, drawn as an unlit transparent `<lineSegments>` over the scene.
  */
 
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { materialProgramInputs } from '../materialProgramInputs';
 
-/** Render order for selection-gated gizmos — above ordinary scene content. */
+/** Render order for selection-gated gizmos, above ordinary scene content. */
 export const GIZMO_RENDER_ORDER = 10;
 
 /**
- * The GROUP order a gizmo draws at — above every canvas item there can be.
- *
- * A gizmo is editor chrome, not a CanvasItem, so it does not take a place in
- * the canvas the way `canvasPaintOrder.ts` assigns one. It also cannot rely on
- * `renderOrder` alone to stay on top: three compares the nearest enclosing
- * group's order FIRST, and in the 2D canvas that group is the gizmo's own node,
- * sitting at whatever position the scene gave it — so a gizmo would fall behind
- * anything authored after its node. Lifting the group clear of the key space
- * keeps "over scene content" true, which is the whole point of a selection
- * affordance.
+ * The group order a gizmo draws at, above every canvas item. A gizmo is editor
+ * chrome, not a CanvasItem, and three compares the nearest group's order first,
+ * so at its node's canvas key it would fall behind anything authored after it.
  */
 export const GIZMO_GROUP_ORDER = Number.MAX_SAFE_INTEGER;
 
@@ -48,7 +36,7 @@ export function GizmoLine({ positions, colors, color }: GizmoLineProps) {
   }, [positions, colors]);
   useEffect(() => () => geometry.dispose(), [geometry]);
 
-  // `vertexColors` IS a program input (`WebGLPrograms.js:308`), and a gizmo that
+  // `vertexColors` is a program input (`WebGLPrograms.js:308`), and a gizmo that
   // gains or loses its colour attribute would otherwise keep the first program.
   // Default to white so vertex-coloured gizmos multiply against white (and we
   // never hand the material an undefined colour).

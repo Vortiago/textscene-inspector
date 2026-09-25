@@ -1,29 +1,9 @@
 [gd_scene load_steps=2 format=3]
 
-; ONE VARIABLE: a `region_rect` LARGER than its texture. Godot does not clip
-; one. `Sprite2D::_get_rects` takes `base_rect = region_rect` verbatim and
-; `Texture2D::get_rect_region` passes the src rect straight through, so the quad
-; keeps the full region size and the UVs run past 1.0. What fills the overrun is
-; decided by the sampler alone: the 2D canvas defaults to
-; `DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_DISABLED` (scene/main/viewport.h), which
-; the renderer maps to CLAMP_TO_EDGE — so the edge texel column STRETCHES.
-;
-; The texture is 96x96 and the region is 288x192, so the sprite reads as the "F"
-; marker in the top-left ninth and the marker's uniform blue edge colour filling
-; the rest. If the overrun ever tiles again it reads as a 3x2 grid of "F"s
-; instead — the defect this pins.
-;
-; Invisible in every other scene: `unit-sprite2d.tscn` and
-; `unit-sprite2d-canvastexture.tscn` never enable a region, and every fixture
-; that does (and every hframes/vframes sheet) keeps its window INSIDE the image,
-; where UVs stay in [0,1] and clamp and repeat are indistinguishable. This is the
-; only scene whose UVs leave the texture at all.
-;
-; Measured against Godot 4.6.3: 0.000% — pixel-for-pixel.
-;
-; The marker's rightmost column and bottom row are a single opaque colour, which
-; is what makes the smear visible: a texture with a transparent edge would make
-; clamp-to-edge, tiling-into-transparency and not-drawing look identical.
+; One variable: a `region_rect` larger than its texture, which Godot does not clip. Measured against
+; Godot 4.6.3: 0.000%. Invisible elsewhere: `unit-sprite2d.tscn` and
+; `unit-sprite2d-canvastexture.tscn` enable no region, and every other region or hframes/vframes
+; window stays inside the image, where UVs stay in [0,1] and clamp equals repeat.
 
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
 
@@ -31,7 +11,15 @@
 
 [node name="OversizedRegion" type="Sprite2D" parent="."]
 position = Vector2(40, 40)
+; The texture is 96x96 and the region 288x192: the "F" marker fills the top-left ninth and its
+; uniform blue edge colour the rest. A tiled overrun reads as a 3x2 grid of "F"s. The marker's
+; last column and row are one opaque colour: a transparent edge would make clamping, tiling into
+; transparency and not drawing look the same.
 texture = ExtResource("1_marker")
 centered = false
 region_enabled = true
+; `Sprite2D::_get_rects` takes `base_rect = region_rect` and `Texture2D::get_rect_region` passes the
+; src rect through, so UVs run past 1.0. The canvas default,
+; `DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_DISABLED` (scene/main/viewport.h), maps to CLAMP_TO_EDGE, so
+; the edge texel column stretches.
 region_rect = Rect2(0, 0, 288, 192)

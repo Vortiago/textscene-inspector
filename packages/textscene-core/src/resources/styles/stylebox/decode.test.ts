@@ -98,9 +98,8 @@ describe('decodeStyleBox — malformed values', () => {
   });
 
   it('falls back to the property default for a malformed colour', () => {
-    // A property with its own default falls back to it, as border_color already
-    // did — the skip-instead-of-whiten rule governs theme_override_colors, where
-    // a skipped entry means "inherit".
+    // A property with its own default falls back to it. The skip rule belongs to
+    // theme_override_colors, where a skipped entry means "inherit".
     const box = flat({ bg_color: 'Color(nope)', border_color: 'not-a-color' });
     expect(box.bgColor).toEqual({ r: 0.6, g: 0.6, b: 0.6, a: 1 });
     expect(box.borderColor).toEqual({ r: 0.8, g: 0.8, b: 0.8, a: 1 });

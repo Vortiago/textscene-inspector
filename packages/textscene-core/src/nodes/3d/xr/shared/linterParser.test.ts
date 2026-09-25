@@ -33,7 +33,7 @@ const KEYS: string[] = [
   'swapchain_state_max_anisotropy',
   'swapchain_state_border_color',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 const LEAVES = ["OpenXRCompositionLayerCylinder","OpenXRCompositionLayerEquirect","OpenXRCompositionLayerQuad"] as const;
 
@@ -72,13 +72,10 @@ describe('OpenXRCompositionLayer shared validators', () => {
     it('rejects a bare node reference', () => {
       expect(check('OpenXRCompositionLayerQuad', 'layer_viewport', 'SubViewport')).not.toBeNull();
     });
-    // The loader is wider than the writer. `variant_parser.cpp:699` reads a
-    // bare `null`/`nil` as `Variant()`, `Variant::can_convert_strict` allows
-    // `NIL -> OBJECT` (variant.cpp:543-545), and `set_layer_viewport`
-    // (openxr_composition_layer.cpp:295-305) clears the slot with no ERR_FAIL:
-    // both of its guards read `p_viewport != nullptr`, and the engine itself
-    // passes `nullptr` at :345. Registered on the shared base, so one arm per
-    // leaf proves the fix reaches all three.
+    // `variant_parser.cpp:699` reads a bare `null`/`nil`, NIL converts to OBJECT
+    // (variant.cpp:543-545), and `set_layer_viewport` (openxr_composition_layer.cpp:295-305) clears
+    // the slot with no ERR_FAIL; the engine passes `nullptr` itself at :345. One arm per leaf
+    // proves the shared registration reaches all three.
     it.each(LEAVES)('accepts an explicitly cleared slot on %s', (nodeType) => {
       expect(check(nodeType, 'layer_viewport', 'null')).toBeNull();
       expect(check(nodeType, 'layer_viewport', 'nil')).toBeNull();
@@ -122,12 +119,9 @@ describe('OpenXRCompositionLayer shared validators', () => {
   });
 
   describe('the extension-property family (openxr_composition_layer.cpp:705-737)', () => {
-    // No validator is registered for it (see linterParser.ts's docblock): the
-    // key set depends on which OpenXR extension wrappers are compiled in and
-    // cannot be enumerated statically. This guards the CONSEQUENCE that
-    // matters — an arbitrary `<a>/<b>` key produces no diagnostic on any of
-    // the three leaves — so a future "flag unknown properties" change breaks
-    // this test instead of silently rejecting a legal scene.
+    // No validator is registered, since the key set depends on the OpenXR extension wrappers compiled
+    // in. This guards the consequence: an arbitrary `<a>/<b>` key produces no diagnostic on any leaf,
+    // so a "flag unknown properties" change breaks this test instead of rejecting a legal scene.
     it.each(LEAVES)('resolves no validator for an extension-style key on %s', (nodeType) => {
       expect(validatorRegistry.findValidator(nodeType, 'fb_composition_layer_alpha_blend/enable')).toBeNull();
     });

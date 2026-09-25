@@ -1,9 +1,7 @@
 /**
- * Godot writes multi-line string values (label text, descriptions) across
- * several physical lines inside one pair of quotes. The line-based property
- * parser must rejoin them rather than keeping only the first fragment (which
- * left a stray leading quote and dropped the rest — visible as a truncated
- * two-line title collapsing to `"Field Notes`).
+ * Godot writes a multi-line string value across several lines inside one pair of
+ * quotes. The line-based parser rejoins them, rather than keeping a first fragment
+ * such as `"Field Notes`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -39,8 +37,7 @@ horizontal_alignment = 1
   it('keeps parsing the property that follows the multi-line string', () => {
     const scene = new TscnParser().parse(MULTILINE);
     const title = find(scene.nodes, 'Title');
-    // horizontal_alignment sits AFTER the closing quote line — it must not be
-    // swallowed into the string.
+    // horizontal_alignment sits after the closing quote line, outside the string.
     expect(
       (title?.properties as Record<string, unknown> | undefined)?.horizontalAlignment
     ).toBe(1);
@@ -86,11 +83,9 @@ horizontal_alignment = 1
     expect((b?.properties as Record<string, unknown> | undefined)?.text).toBe('fine');
   });
 
-  // A RichTextLabel's BBCode `text` puts tags like `[u]…[/u]` / `[center]` on
-  // their own lines — these look like section headings (start with `[`, end with
-  // `]`) but are string CONTENT, not a new section. The salvage trigger must
-  // recognise only real section headings, or the value truncates at the first
-  // such line and the next property is dropped (the Credits.tscn bug).
+  // BBCode tags such as `[u]…[/u]` and `[center]` on their own lines look like
+  // headings but are string content. Only a real section heading may trigger the
+  // salvage, or the value truncates and the next property is dropped.
   describe('BBCode tag lines inside a multi-line string', () => {
     const BBCODE = `[gd_scene format=3]
 

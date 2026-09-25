@@ -1,15 +1,8 @@
 [gd_scene load_steps=3 format=3 uid="uid://edge_animation_track_missing_target"]
 
-; A value track targets NodePath("Ghost:position") — "Ghost" does not exist
-; anywhere in this scene. CURRENT behavior: the render-side parser
-; (animationResolver.ts) is THREE-free and doesn't verify targets exist, so
-; the track parses normally into a GodotTrack; at mount, three.js's own
-; PropertyBinding silently no-ops a track whose target can't be found (no
-; crash, no visible effect) — see Component.degraded-path.test.tsx. NO
-; linter rule currently inspects individual Animation track target NodePaths
-; (only root_node/autoplay/current_animation existence are checked), so this
-; fixture lints completely clean today — that absence of a diagnostic is the
-; corpus-pinned CURRENT state, not an asserted correctness claim.
+; A value track targets NodePath("Ghost:position"), and no node "Ghost" exists. The render
+; parser does not check targets, and three.js PropertyBinding ignores the track at mount.
+; No rule checks a track's target path, so this lints clean: a pinned state, not a claim.
 
 [sub_resource type="BoxMesh" id="BoxMesh_box"]
 

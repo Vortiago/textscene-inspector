@@ -1,32 +1,17 @@
 /**
- * ColorPicker strict validators for linting.
- *
- * Declare only ColorPicker's OWN members: the ones doc/classes/ColorPicker.xml
- * lists without an `overrides=` attribute. Everything from VBoxContainer up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
- *
- * Imports VBoxContainer's own linterParser (its direct parent), not
- * BoxContainer's, so VBoxContainer's `registerUnavailable` for `vertical`
- * actually runs before the base-walk reaches it: ColorPicker fixes no
- * orientation of its own, so it inherits VBoxContainer's removal of the key
- * rather than declaring anything about it here.
- *
- * `color_mode` and `picker_shape` are both `ERR_FAIL_INDEX`-guarded
- * (color_picker.cpp:1243, :854): the setter takes a `ColorModeType` /
- * `PickerShapeType` enum by value and refuses anything outside
- * `MODE_MAX` / `SHAPE_MAX`, so both are `enforced` even though each also
- * carries a matching `PROPERTY_HINT_ENUM` (ADR-0032: enforcement outranks an
- * agreeing hint).
+ * ColorPicker strict validators. They declare only the members that
+ * doc/classes/ColorPicker.xml lists without `overrides=`: the NODE_BASE_TYPES
+ * base-walk delivers the inherited keys, and a redeclared key shadows its ancestor.
  */
 
+// The direct parent, so VBoxContainer's `registerUnavailable` for `vertical` reaches ColorPicker.
 import '../vboxcontainer/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
-// color_picker.cpp:1996, PROPERTY_HINT_ENUM "RGB,HSV,LINEAR,OKHSL", matching
-// ColorModeType MODE_RGB=0, MODE_HSV=1, MODE_LINEAR=2 (MODE_RAW=2 is a
-// deprecated alias for the same value, color_picker.h:105-107), MODE_OKHSL=3.
+// color_picker.cpp:1996, PROPERTY_HINT_ENUM "RGB,HSV,LINEAR,OKHSL". MODE_RAW is a
+// deprecated alias for 2 (color_picker.h:105-107). The setter refuses a value
+// outside the enum (color_picker.cpp:1243), and that outranks the agreeing hint (ADR-0032).
 const COLOR_MODE = {
   0: 'MODE_RGB',
   1: 'MODE_HSV',
@@ -36,9 +21,8 @@ const COLOR_MODE = {
 
 // color_picker.cpp:1998, PROPERTY_HINT_ENUM "HSV Rectangle,HSV Rectangle
 // Wheel,VHS Circle,OKHSL Circle,OK HS Rectangle:5,OK HL Rectangle,None:4":
-// the `:5`/`:4` suffixes reassign those two entries, so by VALUE the hint
-// covers 0-6 contiguously and matches PickerShapeType SHAPE_HSV_RECTANGLE=0
-// through SHAPE_OK_HL_RECTANGLE=6 (color_picker.h:113-122) exactly.
+// by value the hint covers 0-6, as PickerShapeType does (color_picker.h:113-122).
+// The setter refuses a value outside it (color_picker.cpp:854).
 const PICKER_SHAPE = {
   0: 'SHAPE_HSV_RECTANGLE',
   1: 'SHAPE_HSV_WHEEL',

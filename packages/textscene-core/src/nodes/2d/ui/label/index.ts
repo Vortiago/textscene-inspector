@@ -1,4 +1,4 @@
-/** Label registration — parser. */
+/** Label registration: parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseLabel } from './parser';

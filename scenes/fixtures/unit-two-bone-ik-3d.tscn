@@ -1,10 +1,9 @@
 [gd_scene format=3]
 
-; One TwoBoneIK3D setting with every serialised leaf present. The combination is
-; the one Godot's inspector keeps visible at once (two_bone_ik_3d.cpp:162-190):
-; middle_bone set, end_bone set, use_virtual_end off and extend_end_bone on so
-; the end_bone/* pair stays live, pole_direction Custom so pole_direction_vector
-; is neither hidden nor dropped on load.
+; One TwoBoneIK3D setting with every serialised leaf present, in the combination the inspector
+; keeps visible at once (two_bone_ik_3d.cpp:162-190): middle_bone and end_bone set,
+; use_virtual_end off and extend_end_bone on so the end_bone/* pair stays live, and
+; pole_direction Custom so pole_direction_vector is neither hidden nor dropped on load.
 
 [node name="Root" type="Node3D"]
 

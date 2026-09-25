@@ -1,4 +1,4 @@
-/** LabelSettings decode vs Godot 4.6.3 — `scene/resources/label_settings.h:54-65`. */
+/** LabelSettings decode against Godot 4.6.3: `scene/resources/label_settings.h:54-65`. */
 import { describe, expect, it } from 'vitest';
 import { decodeLabelSettings, labelSettingsFromResource, resolveLabelSettings } from './decode';
 import type { TscnInternalResource } from '../../../parser/types';

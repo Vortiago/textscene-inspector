@@ -1,14 +1,7 @@
 /**
- * Generic `typeName → value` registry (ADR-0002).
- *
- * The parse, 3D-render, and 2D-render domains each keep a SEPARATE registry —
- * that separation is what keeps the linter bundle React/THREE-free — but they
- * all share this one tested implementation instead of re-rolling the Map
- * boilerplate (`NodeRegistry` wraps it for the parser domain; the two render
- * registries consume it directly). Registration silently overwrites
- * (HMR-friendly) but warns, so all three ADR-0002 registries behave
- * identically on a duplicate `typeName`, whether that's a genuine
- * slice-registration collision or an expected HMR re-import.
+ * Generic `typeName → value` registry (ADR-0002). The parse, 3D-render and 2D-render domains
+ * each keep a separate one, which keeps the linter bundle free of React and THREE. A duplicate
+ * `typeName` overwrites, for HMR, and warns, whether it is a slice collision or a re-import.
  */
 import { warn } from '../logger.js';
 
@@ -23,9 +16,8 @@ export interface TypeRegistry<T> {
 }
 
 /**
- * @param label - Optional registry name surfaced in the duplicate-registration
- *   warning (e.g. "NodeComponentRegistry") so the log line says which
- *   registry collided, not just which typeName.
+ * @param label - Optional registry name in the duplicate-registration warning, such as
+ *   "NodeComponentRegistry", so the log line names the registry as well as the typeName.
  */
 export function createTypeRegistry<T>(label?: string): TypeRegistry<T> {
   const entries = new Map<string, T>();

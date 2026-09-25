@@ -1,17 +1,8 @@
 /**
- * Guard: every slice that has lint code is wired into the linter barrel.
- *
- * Walks `src/nodes/**` for `index.linter.ts` and `src/resources/**` for each
- * slice's entry point, and asserts `linter/index.ts` imports each one — so
- * "slice has lint code but the barrel forgot it" turns red instead of silently
- * shipping a linter that skips the slice. Both halves of the barrel are
- * covered: rooted at nodes/ alone, a deleted resource import took every
- * Environment validator with it and left the suite green. The inverse is asserted too: every relative
- * import in the barrel resolves to a file on disk (no stale imports after a
- * slice moves or is deleted).
- *
- * A slice with no `index.linter.ts` has no lint code to wire and is out of
- * scope here; every slice under `nodes/2d/ui/` ships one and is in the barrel.
+ * Guard: every slice with lint code is wired into the linter barrel. It walks `src/nodes/**` for `index.linter.ts` and
+ * `src/resources/**` for each slice's entry point, and asserts `linter/index.ts` imports each one: rooted at nodes/
+ * alone, a lost resource import would take every Environment validator with it. Every relative import in the barrel
+ * must also resolve to a file on disk. A slice with no `index.linter.ts` has no lint code to wire.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -26,11 +17,8 @@ const resourcesRoot = resolve(srcRoot, 'resources');
 const barrelPath = resolve(here, 'index.ts');
 
 /**
- * Intentional exclusions: barrel specifiers (e.g.
- * `'../nodes/2d/ui/control/index.linter.js'`) for slices whose lint entry
- * point deliberately stays OUT of the barrel. Empty: every slice's lint entry
- * ships in the linter bundle. Add an entry here, with a reason, only when one
- * must not.
+ * Barrel specifiers (for example `'../nodes/2d/ui/control/index.linter.js'`) whose lint entry point stays out of the
+ * barrel on purpose. Empty: every slice's lint entry ships in the linter bundle. Add one, with a reason, only when it must not.
  */
 const ALLOWLIST: string[] = [];
 
@@ -47,7 +35,7 @@ function findLinterEntryPoints(dir: string): string[] {
 /**
  * A resource slice's lint entry point: its `index.linter.ts` when it has one,
  * else its `linterValidators.ts`. Both exist under `resources/environment/`,
- * where the index is the entry point and imports the validators itself — so
+ * where the index is the entry point and imports the validators itself, so
  * requiring both would demand an import the barrel deliberately does not make.
  */
 function findResourceEntryPoints(dir: string): string[] {

@@ -1,9 +1,7 @@
 /**
- * <LightOccluder2D> component tests — topology, gizmo gate, absent resource,
- * and publication to the shadow-caster registry.
- *
- * Mirrors the contract in the Behavioral Contract (lightoccluder2d-contract.test.tsx)
- * but is standalone: no imports from the contract test file.
+ * <LightOccluder2D>: topology, gizmo gate, absent resource, and publication to the
+ * shadow-caster registry. It mirrors lightoccluder2d-contract.test.tsx but
+ * imports nothing from it.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -28,7 +26,7 @@ import {
 import { fixturesDir } from '../../../parser/testing/parserKit';
 import { parseOccluderCullMode, polygonToSegments } from './polygonShapes';
 
-// Import the slice's self-registration side effects.
+// Importing the slice registers it.
 import '../../2d/lightoccluder2d/index';
 import '../../2d/lightoccluder2d/index.r3f';
 import '../../../linter/index';
@@ -154,7 +152,7 @@ describe('LightOccluder2D publishes to the shadow-caster registry', () => {
     const registry = await renderIntoRegistry(occScene());
     const [entry] = worldShadowCasters(registry, 1);
     // 4 points closed → 4 edges → 8 world points. The polygon's (16,16) corner
-    // sits at Godot (216,116), i.e. three-space (216,-116).
+    // sits at Godot (216,116), which is three-space (216,-116).
     expect(entry!.segments).toHaveLength(16);
     const points: [number, number][] = [];
     for (let i = 0; i < entry!.segments.length; i += 2) {

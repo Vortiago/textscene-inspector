@@ -1,47 +1,8 @@
 /**
- * Semantic linter rules for BoneTwistDisperser3D.
- *
- * Format and range validation is linterParser.ts's, which checks each
- * `settings/<i>/…` key in isolation. This file holds the two claims that need a
- * SIBLING property to be decidable, so no per-property validator can make them.
- * Both are the same defect at two nesting depths: an index past the count that
- * sizes its container, which Godot refuses outright.
- *
- * ## A setting index past `setting_count`
- *
- * `BoneTwistDisperser3D::_set` opens with `ERR_FAIL_INDEX_V(which,
- * (int)settings.size(), false)` (bone_twist_disperser_3d.cpp:39), and `settings`
- * is resized only by `set_setting_count` (:649-666), the body behind the
- * `ADD_ARRAY_COUNT` key. An index at or past that count is refused, so every
- * leaf under it is dropped on load. The validator already errors on a NEGATIVE
- * index against the same guard; only the high end needs the sibling.
- *
- * ## A joint index past that setting's `joint_count`
- *
- * `set_joint_twist_amount` guards with `ERR_FAIL_INDEX(p_joint,
- * (int)joints.size())` (:502), and that vector is resized only by
- * `set_joint_count` (:485-491), the body behind `settings/<i>/joint_count`.
- * Load order makes the file's own `joint_count` the one that governs:
- * `_get_property_list` pushes it (:158) before the joints it counts (:159-164),
- * and `_update_joints`, which later rebuilds the list from the skeleton, is
- * deferred to NOTIFICATION_ENTER_TREE (:220-222, :597).
- *
- * ## Why Godot's own saver cannot trip either
- *
- * `setting_count` is ClassDB-bound (`ADD_ARRAY_COUNT`, :561), so
- * `Object::get_property_list` places it ahead of the leaves
- * `_get_property_list` appends, and both counts are read straight off the live
- * vectors at save time. These fire only against a hand-edited scene.
- *
- * ## What is deliberately NOT a rule here
- *
- * A `damping_curve` alongside `joints/<j>/twist_amount` looks like a conflict:
- * `_update_curve` (:389-399) overwrites every `custom_amount` from the curve, so
- * the file's amounts are outputs rather than inputs. But
- * `_validate_dynamic_prop` only adds `PROPERTY_USAGE_READ_ONLY` in that state
- * (:208-210), never clearing `PROPERTY_USAGE_STORAGE`, so Godot writes the pair
- * on every save that uses a curve. Warning on it would fire on scenes the engine
- * itself produced.
+ * BoneTwistDisperser3D's two rules that need a sibling property: an index past the count that sizes
+ * its container, which Godot refuses, at two depths. Godot's saver cannot trip either: `setting_count`
+ * is ClassDB-bound (`ADD_ARRAY_COUNT`, :561), so `Object::get_property_list` puts it ahead of the
+ * leaves, and both counts are read off the live vectors at save time.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -53,12 +14,9 @@ import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 
 /**
- * Any `settings/<i>/…` leaf, whatever its depth, with the index text captured.
- *
- * `_set` reads both index positions with a bare
- * `path.get_slicec('/', n).to_int()` and no validity gate
- * (bone_twist_disperser_3d.cpp:37, :66), so the grammar is the whole segment
- * and {@link toIntIndex} is what turns it into a number.
+ * Any `settings/<i>/…` leaf, with the index text captured. `_set` reads both index positions with a
+ * bare `path.get_slicec('/', n).to_int()` and no validity gate (bone_twist_disperser_3d.cpp:37, :66),
+ * so the grammar is the whole segment and {@link toIntIndex} turns it into a number.
  */
 const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/', 'to_int');
 /** The one nested leaf a scene can write, with both index texts captured. */
@@ -67,16 +25,9 @@ const JOINT_AMOUNT_KEY_RE = indexedKeyRegex('^settings/(#)/joints/(#)/twist_amou
 const JOINT_COUNT_KEY_RE = indexedKeyRegex('^settings/(#)/joint_count$', 'to_int');
 
 /**
- * Which setting each `joint_count` key actually sizes, keyed by the RESOLVED
- * index rather than the text.
- *
- * `_set` resolves the index with `to_int` (bone_twist_disperser_3d.cpp:37), so
- * `settings/00/joint_count` and `settings/0/joint_count` size the same vector.
- * Matching on the text instead reads a ceiling of zero for a key spelled `00`,
- * and warns that a write Godot applies was dropped.
- *
- * A later key wins, because `Object.keys` keeps insertion order and Godot
- * applies the properties in file order too.
+ * Which setting each `joint_count` key sizes, keyed by the resolved index, not the text: `_set` uses
+ * `to_int` (bone_twist_disperser_3d.cpp:37), so `settings/00/joint_count` sizes setting 0. A later
+ * key wins, as `Object.keys` keeps insertion order and Godot applies properties in file order.
  */
 function resolveJointCounts(properties: Record<string, string>): Map<number, number> {
   const counts = new Map<number, number>();
@@ -86,9 +37,9 @@ function resolveJointCounts(properties: Record<string, string>): Map<number, num
     const settingIndex = toIntIndex(match[1]!);
     // A negative index is refused before the count is read at all.
     if (settingIndex < 0) continue;
-    // A malformed count is its own validator's error; ignoring it here leaves
+    // A malformed count is its own validator's error. Ignoring it here leaves
     // the setting at its zero default rather than inventing a ceiling. A
-    // NEGATIVE one is refused outright (`ERR_FAIL_COND(p_count < 0)`, :487), so
+    // negative one is refused outright (`ERR_FAIL_COND(p_count < 0)`, :487), so
     // `ruleCount` reads the size the vector keeps rather than the authored text.
     const count = ruleCount(properties[key]);
     if (count === null) continue;
@@ -106,13 +57,12 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
   // Absent means zero: `LocalVector<BoneTwistDisperser3DSetting *> settings`
   // (bone_twist_disperser_3d.h:86) starts empty, which is the XML's default="0".
   const settingCountRaw = rawProps.setting_count;
-  // `ruleCount`, not `ruleInt`: `set_setting_count` refuses a negative outright
-  // (`ERR_FAIL_COND(p_count < 0)`, :650), so `settings` keeps the empty length
-  // it loaded with and a rule counting against -1 names a size Godot never held
-  // — beside the `enforced:` validator that already errored on the same value.
+  // `ruleCount`, not `ruleInt`: `set_setting_count` refuses a negative (`ERR_FAIL_COND(p_count < 0)`,
+  // :650), so `settings` keeps its loaded length. Counting against -1 names a size Godot never held,
+  // beside the `enforced:` validator that already errored.
   const settingCount = ruleCount(settingCountRaw);
   // Neither an unreadable count nor a non-finite one is a ceiling to count
-  // against; each is already its own validator's diagnostic.
+  // against. Each is already its own validator's diagnostic.
   if (settingCount === null) return diagnostics;
 
   const jointCounts = resolveJointCounts(rawProps);
@@ -125,8 +75,11 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
     if (!indexed) continue;
     const settingIndex = toIntIndex(indexed[1]!);
     // A negative index is the validator's error, against the same
-    // ERR_FAIL_INDEX_V; reporting it again here would double up on one defect.
+    // ERR_FAIL_INDEX_V. Reporting it again here would double up on one defect.
     if (settingIndex < 0) continue;
+    // `_set` opens with `ERR_FAIL_INDEX_V(which, (int)settings.size(), false)`
+    // (bone_twist_disperser_3d.cpp:39), and only `set_setting_count` (:649-666) resizes `settings`,
+    // so every leaf of an index at or past the count is dropped on load.
     if (settingIndex >= settingCount) {
       outOfRangeSettings.add(settingIndex);
       // The whole setting is refused, so its joints never get their own turn.
@@ -137,9 +90,10 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
     if (!joint) continue;
     const jointIndex = toIntIndex(joint[2]!);
     if (jointIndex < 0) continue;
-    // Absent means zero: `LocalVector<DisperseJointSetting> joints`
-    // (bone_twist_disperser_3d.h:69) starts empty, so nothing is addressable
-    // until a joint_count sizes it.
+    // `set_joint_twist_amount` guards with `ERR_FAIL_INDEX(p_joint, (int)joints.size())` (:502), and
+    // only `set_joint_count` (:485-491) resizes it. The file's count governs: it is pushed (:158) before
+    // its joints (:159-164), and `_update_joints` waits for ENTER_TREE (:220-222, :597). Absent means
+    // zero: `LocalVector<DisperseJointSetting> joints` (bone_twist_disperser_3d.h:69) starts empty.
     const jointCount = jointCounts.get(settingIndex) ?? 0;
     if (jointIndex >= jointCount) outOfRangeJoints.push([settingIndex, jointIndex]);
   }
@@ -181,6 +135,9 @@ function checkBoneTwistDisperser3D(context: RuleContext): Diagnostic[] {
   return diagnostics;
 }
 
+// No rule for `damping_curve` beside `joints/<j>/twist_amount`: `_update_curve` (:389-399) overwrites
+// each amount from the curve, but `_validate_dynamic_prop` only adds `PROPERTY_USAGE_READ_ONLY`
+// (:208-210) and keeps STORAGE, so Godot writes the pair on every save that uses a curve.
 const boneTwistDisperser3DValidationRule: LintRule = {
   meta: {
     name: 'valid-bonetwistdisperser3d-settings',

@@ -1,17 +1,7 @@
 /**
- * The ported Godot blend table, and the claim that three's presets equal it.
- *
- * Two separate assertions, deliberately:
- *
- *  1. `GODOT_BLEND_ATTACHMENTS` is the transcription of
- *     `MaterialStorage::ShaderData::blend_mode_to_blend_attachment`. Pinning it
- *     as data means a mis-transcription is a failure here rather than a subtly
- *     wrong composite three modes away.
- *  2. For the modes that resolve to a three PRESET, the preset's own documented
- *     factors are restated and compared against the ported ones. That equality
- *     is a claim about three's internals, so it needs an assertion of its own —
- *     otherwise a change in `WebGLState.setBlending` would silently turn a
- *     "provably equal preset" into a divergence.
+ * The ported Godot blend table, pinned as data against
+ * `blend_mode_to_blend_attachment`, and the claim that three's presets equal it. That
+ * claim is about three's internals, so a change in `WebGLState.setBlending` fails here.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -84,8 +74,8 @@ describe('GODOT_BLEND_ATTACHMENTS', () => {
 
 /**
  * What three's `WebGLState.setBlending` programs for each preset, in the
- * NON-premultiplied branch (`material.premultipliedAlpha === false`, which every
- * StandardMaterial3D keeps). `gl.blendFunc` / `gl.blendEquation` set BOTH
+ * non-premultiplied branch (`material.premultipliedAlpha === false`, which every
+ * StandardMaterial3D keeps). `gl.blendFunc` / `gl.blendEquation` set both
  * channels, which is why the alpha pair repeats the colour pair for two of them.
  */
 const PRESET_FACTORS: Readonly<Record<number, GodotBlendAttachment>> = {
@@ -105,7 +95,7 @@ const PRESET_FACTORS: Readonly<Record<number, GodotBlendAttachment>> = {
     srcAlpha: 'src-alpha',
     dstAlpha: 'one',
   },
-  // `blendFunc(ZERO, SRC_COLOR)` — the operands of Godot's `DST_COLOR/ZERO` are
+  // `blendFunc(ZERO, SRC_COLOR)`: the operands of Godot's `DST_COLOR/ZERO` are
   // swapped, and multiplication commutes, so colour and alpha both land on the
   // same products (`src × dst`, `a_src × a_dst`).
   [THREE.MultiplyBlending]: {
@@ -164,9 +154,8 @@ describe('godotBlendState', () => {
   });
 
   it('does not approximate SUB with three’s SubtractiveBlending', () => {
-    // three spells that as `FUNC_ADD` with `ZERO / ONE_MINUS_SRC_COLOR`, which
-    // is a different operation from Godot's reverse-subtract — the
-    // approximation this table replaces.
+    // three spells that as `FUNC_ADD` with `ZERO / ONE_MINUS_SRC_COLOR`, a different
+    // operation from Godot's reverse-subtract.
     expect(godotBlendState(BlendMode.SUB).blending).not.toBe(THREE.SubtractiveBlending);
   });
 

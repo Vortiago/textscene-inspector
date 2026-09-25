@@ -1,14 +1,12 @@
-/**
- * StandardMaterial3D parser - Color parsing for StandardMaterial3D resources.
- */
+/** The StandardMaterial3D slice's throwing Color reader. */
 
 import type { Color } from './types';
 import { COLOR_RE } from '../../../parser/vectors';
 import { matchedFloat } from '../../../godot/number.js';
 
 /**
- * Parse Color from Godot format: Color(r, g, b, a)
- * Values are in range 0-1
+ * Parse `Color(r, g, b, a)`, throwing on a malformed literal. Channels are not clamped,
+ * as an HDR colour exceeds 1.
  */
 export function parseColor(value: string): Color {
   const match = value.match(COLOR_RE);

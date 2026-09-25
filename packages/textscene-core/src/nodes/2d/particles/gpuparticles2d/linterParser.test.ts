@@ -1,14 +1,7 @@
 /**
- * GPUParticles2D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Assertions check `error?.code` rather than message text, per the property
- * error codes the `v` DSL auto-derives (`INVALID_<NAME>_FORMAT` /
- * `INVALID_<NAME>_VALUE`, or `_REFERENCE` / `_PATH` for resource/NodePath).
+ * Tests the GPUParticles2D strict validators through `validatorRegistry`. They
+ * assert the `error?.code` the `v` DSL derives (`INVALID_<NAME>_FORMAT`,
+ * `_VALUE`, `_REFERENCE` or `_PATH`), not message text.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -28,8 +21,7 @@ describe('GPUParticles2D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format.
     const accepted = validatorRegistry
       .getOwnKeys('GPUParticles2D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -37,11 +29,9 @@ describe('GPUParticles2D strict validators', () => {
   });
 
   describe('draw_order', () => {
-    // gpu_particles_2d.cpp:964, ADD_PROPERTY hints PROPERTY_HINT_ENUM
-    // "Index,Lifetime,Reverse Lifetime" (enum 0-2). set_draw_order
-    // (gpu_particles_2d.cpp:308-311) is `draw_order = p_order;` — no
-    // ERR_FAIL_INDEX and no CLAMP — so out of range is a WARNING, not an
-    // error (ADR-0032).
+    // gpu_particles_2d.cpp:964 hints PROPERTY_HINT_ENUM "Index,Lifetime,Reverse
+    // Lifetime" (0-2). set_draw_order (gpu_particles_2d.cpp:308-311) has no
+    // ERR_FAIL_INDEX and no CLAMP, so out of range warns (ADR-0032).
     it('accepts every labelled value 0-2 (gpu_particles_2d.cpp:964)', () => {
       expect(check('draw_order', '0')).toBeNull();
       expect(check('draw_order', '1')).toBeNull();
@@ -65,10 +55,8 @@ describe('GPUParticles2D strict validators', () => {
     });
 
     it('warns (not errors) on the value CPUParticles2D\'s platformer demo ships for the identically-named property', () => {
-      // enemy.tscn:296 is a CPUParticles2D node, not GPUParticles2D — no
-      // GPUParticles2D fixture carries an out-of-range draw_order — but the
-      // same reasoning applies: the setter has no guard, so any int format-
-      // validates and only a warning follows.
+      // The setter has no guard, so any int passes the format check and only
+      // warns.
       const warning = check('draw_order', '215832976');
       expect(warning?.code).toBe('INVALID_DRAW_ORDER_VALUE');
       expect(warning?.severity).toBe('warning');
@@ -94,8 +82,8 @@ describe('GPUParticles2D strict validators', () => {
   describe('amount', () => {
     // gpu_particles_2d.cpp:942 hints "1,1000000,1,exp"; set_amount
     // (gpu_particles_2d.cpp:71-72) ERR_FAILs below 1, enforcing the floor as
-    // an error, but never enforces the 1000000 ceiling — that end is a
-    // hint-only warning (ADR-0032).
+    // an error, but never enforces the 1000000 ceiling, which only warns
+    // (ADR-0032).
     it('accepts a mid-range value', () => {
       expect(check('amount', '64')).toBeNull();
     });
@@ -182,8 +170,8 @@ describe('GPUParticles2D strict validators', () => {
 
   describe('lifetime', () => {
     // gpu_particles_2d.cpp:947 hints "0.01,600.0,0.01,or_greater,…", but
-    // set_lifetime (gpu_particles_2d.cpp:78) ERR_FAILs only at `<= 0` —
-    // the setter, not the hint, governs (ADR-0032), so 0.001 is legal.
+    // set_lifetime (gpu_particles_2d.cpp:78) ERR_FAILs only at `<= 0`. The
+    // setter, not the hint, governs (ADR-0032), so 0.001 loads.
     it('accepts a typical value', () => {
       expect(check('lifetime', '2.0')).toBeNull();
     });
@@ -239,10 +227,9 @@ describe('GPUParticles2D strict validators', () => {
   });
 
   describe('preprocess', () => {
-    // gpu_particles_2d.cpp:950 hints "0.00,10.0,0.01,or_greater,…" — 0 is the
-    // hard floor, 10 is a soft `or_greater` ceiling. set_pre_process_time
-    // (gpu_particles_2d.cpp:99-101) assigns unconditionally, so the floor is
-    // a warning (ADR-0032).
+    // gpu_particles_2d.cpp:950 hints "0.00,10.0,0.01,or_greater,…": `or_greater`
+    // opens the ceiling. set_pre_process_time (gpu_particles_2d.cpp:99-101)
+    // assigns unconditionally, so the floor warns (ADR-0032).
     it('accepts a typical value', () => {
       expect(check('preprocess', '1.2')).toBeNull();
     });
@@ -264,9 +251,8 @@ describe('GPUParticles2D strict validators', () => {
   });
 
   describe('speed_scale', () => {
-    // gpu_particles_2d.cpp:951 hints "0,64,0.01" — no or_greater/or_less, hard
-    // both ends. set_speed_scale (gpu_particles_2d.cpp:252-254) assigns
-    // unconditionally, so out of range is a warning (ADR-0032).
+    // gpu_particles_2d.cpp:951 hints "0,64,0.01", closed both ends.
+    // set_speed_scale (gpu_particles_2d.cpp:252-254) assigns unconditionally, so out of range is a warning (ADR-0032).
     it('accepts a typical value', () => {
       expect(check('speed_scale', '1.0')).toBeNull();
     });
@@ -309,8 +295,8 @@ describe('GPUParticles2D strict validators', () => {
 
   describe('seed', () => {
     // gpu_particles_2d.cpp:955 hints "0,4294967295,1" (0..UINT32_MAX); set_seed
-    // (gpu_particles_2d.cpp:360-362) assigns unconditionally — the uint32_t
-    // param coerces rather than rejects, so out of range is a warning.
+    // (gpu_particles_2d.cpp:360-362) assigns unconditionally: the uint32_t
+    // param coerces rather than rejects, so out of range warns.
     it('accepts a typical value', () => {
       expect(check('seed', '4242')).toBeNull();
     });
@@ -336,7 +322,7 @@ describe('GPUParticles2D strict validators', () => {
   });
 
   describe('fixed_fps', () => {
-    // gpu_particles_2d.cpp:956 hints "0,1000,1,suffix:FPS" — hard both ends.
+    // gpu_particles_2d.cpp:956 hints "0,1000,1,suffix:FPS", closed both ends.
     // set_fixed_fps (gpu_particles_2d.cpp:317-319) assigns unconditionally,
     // so out of range is a warning.
     it('accepts a typical value', () => {
@@ -360,10 +346,9 @@ describe('GPUParticles2D strict validators', () => {
   });
 
   describe('collision_base_size', () => {
-    // gpu_particles_2d.cpp:960 hints "0,128,0.01,or_greater" — 0 is the hard
-    // floor, 128 is a soft `or_greater` ceiling. set_collision_base_size
-    // (gpu_particles_2d.cpp:243-246) assigns unconditionally, so the floor
-    // is a warning.
+    // gpu_particles_2d.cpp:960 hints "0,128,0.01,or_greater": `or_greater` opens
+    // the ceiling. set_collision_base_size (gpu_particles_2d.cpp:243-246) assigns
+    // unconditionally, so the floor warns.
     it('accepts a typical value', () => {
       expect(check('collision_base_size', '1.0')).toBeNull();
     });
@@ -385,7 +370,7 @@ describe('GPUParticles2D strict validators', () => {
   });
 
   describe('visibility_rect', () => {
-    // gpu_particles_2d.cpp:962, PROPERTY_HINT_NONE — format only, no range.
+    // gpu_particles_2d.cpp:962, PROPERTY_HINT_NONE: format only, no range.
     it('accepts a Rect2 literal', () => {
       expect(check('visibility_rect', 'Rect2(-100, -100, 200, 200)')).toBeNull();
     });
@@ -414,7 +399,7 @@ describe('GPUParticles2D strict validators', () => {
     });
 
     it('accepts trail_sections within 2..128 and errors outside it', () => {
-      // gpu_particles_2d.cpp:968 hints "2,128,1" — hard both ends;
+      // gpu_particles_2d.cpp:968 hints "2,128,1", closed both ends.
       // set_trail_sections (gpu_particles_2d.cpp:194-197) ERR_FAILs outside
       // [2, 128], so both ends are enforced errors.
       expect(check('trail_sections', '8')).toBeNull();
@@ -428,7 +413,7 @@ describe('GPUParticles2D strict validators', () => {
     });
 
     it('accepts trail_section_subdivisions within 1..1024 and rejects outside it', () => {
-      // gpu_particles_2d.cpp:969 hints "1,1024,1" — hard both ends.
+      // gpu_particles_2d.cpp:969 hints "1,1024,1", closed both ends.
       expect(check('trail_section_subdivisions', '4')).toBeNull();
       expect(check('trail_section_subdivisions', '1')).toBeNull();
       expect(check('trail_section_subdivisions', '1024')).toBeNull();

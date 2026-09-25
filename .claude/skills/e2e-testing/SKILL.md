@@ -3,25 +3,17 @@ name: e2e-testing
 description: Run end-to-end tests for TextScene Inspector rendering validation. Use when running tests, validating rendering output, checking build integration, or automating browser testing with Chrome DevTools MCP.
 ---
 
-# End-to-End Testing
+# End-to-end testing
 
-Validate complete flows across all packages.
+End-to-end tests check complete flows across all packages:
 
-## Scope
+- Web previewer: file upload to rendering.
+- VS Code extension: file open to custom editor to rendering.
+- Integration: all packages together.
 
-- Web previewer: File upload → rendering
-- VS Code extension: File open → custom editor → rendering
-- Integration: All packages working together
+AGENTS.md lists the automated gates (`pnpm test:e2e:web`, `pnpm test:vscode:csp`, `pnpm test:visual`). Use this skill for manual browser checks with the Chrome DevTools MCP server: navigate, run JavaScript in the page, capture screenshots and read console errors.
 
-## Chrome DevTools MCP
-
-Use for browser automation:
-- Launch browser and navigate
-- Execute JavaScript in page
-- Capture screenshots
-- Monitor console errors
-
-## Web Previewer Testing
+## Web previewer
 
 ```bash
 # Build and start
@@ -29,13 +21,13 @@ cd packages/textscene-core && pnpm build
 cd ../../apps/textscene-web && pnpm build && pnpm preview
 ```
 
-Via Chrome DevTools MCP:
-1. Navigate to http://localhost:4173
-2. Execute test script (locate elements, trigger upload, verify canvas)
-3. Check console for errors
-4. Capture screenshot
+With the Chrome DevTools MCP server:
+1. Open http://localhost:4173.
+2. Run a test script: find the elements, upload the file, check the canvas.
+3. Read the console for errors.
+4. Capture a screenshot.
 
-## VS Code Extension Testing
+## VS Code extension
 
 ```bash
 # Build and package
@@ -43,33 +35,28 @@ cd packages/textscene-core && pnpm build
 cd ../../apps/textscene-vscode && pnpm build && pnpm package
 
 # Install
-code --install-extension tscn-previewer-*.vsix --force
+code --install-extension textscene-inspector-*.vsix --force
 ```
 
-Verify:
-- Extension builds without errors
-- Package creates valid .vsix
-- No runtime errors in logs
+Check that:
+- The extension builds with no errors.
+- The package step creates a valid `.vsix`.
+- The logs show no runtime errors.
 
-## Integration Testing
+## Integration
 
-From project root:
+From the project root:
 ```bash
 pnpm build && pnpm test && pnpm type-check && pnpm lint
 ```
 
-## Test Fixtures
+## Fixtures
 
-Create in `tests/fixtures/`:
-- `simple-mesh.tscn` - Basic test
-- `multi-object.tscn` - Multiple nodes
-- `with-camera.tscn` - Camera test
-- `complex-scene.tscn` - Large scene
-- `invalid.tscn` - Error handling
+Put fixtures in `scenes/fixtures/` with `unit-*` or `edge-*` names. Cover a basic mesh, several nodes, a camera, a large scene and an invalid file (error handling).
 
-## Testing Principles
+## Principles
 
-- **Automate everything**: Use scripts and MCP tools, not manual testing
-- **Test real builds**: Use production builds, not dev mode
-- **Fail fast**: Stop on first error, don't continue
-- **Keep tests simple**: Focus on critical paths only
+- Automate every check with scripts and MCP tools. Do not test by hand.
+- Test production builds, not dev mode.
+- Stop at the first error.
+- Test the critical paths only.

@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-/**
- * Auto-generate fixtures.ts from filesystem
- */
+/** Generates the web previewer's fixture manifests from the scenes on disk. */
 
 import { readdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'fs';
 import { join } from 'path';
@@ -63,7 +61,7 @@ function detectCategory(filename) {
   ) {
     return 'Unit - 2D UI Controls';
   }
-  // 2D canvas (non-UI) nodes rendered in the R3F viewport (Node2D/Sprite2D/Camera2D/TileMap).
+  // 2D canvas nodes, not UI, rendered in the R3F viewport.
   if (
     filename.startsWith('unit-node2d') ||
     filename.startsWith('unit-sprite2d') ||
@@ -74,17 +72,15 @@ function detectCategory(filename) {
     filename.startsWith('unit-path2d') ||
     filename.startsWith('unit-pathfollow2d') ||
     filename.startsWith('unit-line2d') ||
-    // ParallaxBackground is a CanvasLayer, but it hosts world-canvas content
-    // (its ParallaxLayer children are Node2Ds), so both belong with the canvas
-    // fixtures rather than the Control ones.
+    // ParallaxBackground is a CanvasLayer, but its ParallaxLayer children are
+    // Node2Ds, so both belong with the canvas fixtures.
     filename.startsWith('unit-parallax-') ||
     filename.startsWith('unit-2d')
   ) {
     return 'Unit - 2D Canvas';
   }
-  // Nested viewports (ADR-0033) — a sub-viewport and the surfaces that display
-  // it. Its own category because it is neither 2D-canvas nor 2D-UI content: a
-  // sub-viewport hosts BOTH kinds and is a plain Node itself.
+  // Nested viewports (ADR-0033): a sub-viewport hosts both 2D kinds and is a
+  // plain Node itself, so it gets its own category.
   if (filename.startsWith('unit-sub-viewport')) return 'Unit - Viewports';
   if (filename.startsWith('edge-')) return 'Edge Cases';
   if (filename.startsWith('integration-external')) return 'Integration - External Scenes';
@@ -107,7 +103,6 @@ function generateName(filename) {
     .join(' ');
 }
 
-// Read fixtures
 const rootDir = join(__dirname, '..');
 const fixturesDir = join(rootDir, 'scenes/fixtures');
 
@@ -118,13 +113,9 @@ const fixtureFiles = readdirSync(fixturesDir)
   .filter(f => f.endsWith('.tscn'))
   .sort();
 
-// Top-level ld-58 scenes (their res:// deps live in scenes/ld58/<subdirs> and
-// are NOT listed as selectable fixtures). copy-fixtures mirrors the closure
-// under public/fixtures/ so the res:// references resolve.
-// Walk scenes/ld58/ RECURSIVELY: top-level scenes (hallway-geometry) plus
-// nested ones (Scenes/GameUI/GameUI.tscn, components/WallSection.tscn, …) are
-// all selectable. `file` is the res://-relative path (forward slashes) so it
-// matches the mirror copy-fixtures writes under public/fixtures/.
+// Every ld-58 scene at any depth is selectable. `file` is the res://-relative
+// path with forward slashes, which matches the closure copy-fixtures mirrors
+// under public/fixtures/.
 const ld58Dir = join(rootDir, 'scenes/ld58');
 function walkTscn(dir, base = '') {
   const out = [];
@@ -132,7 +123,7 @@ function walkTscn(dir, base = '') {
   try {
     entries = readdirSync(dir, { withFileTypes: true });
   } catch {
-    return out; // No ld58 directory — skip.
+    return out; // A missing directory holds no scenes.
   }
   for (const entry of entries) {
     const rel = base ? `${base}/${entry.name}` : entry.name;
@@ -146,29 +137,21 @@ function walkTscn(dir, base = '') {
 }
 const ld58Files = walkTscn(ld58Dir).sort();
 
-// The vendored godot-demo-projects isometric dungeon (scenes/isometric/) —
-// same mirroring scheme as ld-58: copy-fixtures lays its closure out at the
-// public/fixtures root so `res://tileset/...` references resolve.
+// The vendored isometric dungeon, mirrored at the public/fixtures root as ld-58
+// is, so `res://tileset/...` references resolve.
 const isometricDir = join(rootDir, 'scenes/isometric');
 const isometricFiles = walkTscn(isometricDir).sort();
 
-// Vendored godot-demo-projects corpora (scenes/demos/<top>/<project>/) —
-// each project keeps its own res:// namespace: copy-fixtures mirrors the
-// whole tree under public/fixtures/demos/, and each fixture entry carries a
-// `root` so the web provider resolves res:// against that project's subtree.
-//
-// EVERY scene in a project is listed so subscenes (e.g. a platformer's
-// coin.tscn) are browsable in the selector, not just the project's main
-// scene. The main scene keeps the tidy `Project (Label)` name; subscenes are
-// path-qualified (`Project (Label): coin/coin`) to stay globally unique — the
-// generator asserts uniqueness below.
+// Each demo project (scenes/demos/<top>/<project>/) keeps its own res://
+// namespace: copy-fixtures mirrors it under public/fixtures/demos/, and each
+// entry's `root` scopes res://. Every scene is listed, subscenes included.
 const demosDir = join(rootDir, 'scenes/demos');
 function demoProjects() {
   let tops;
   try {
     tops = readdirSync(demosDir, { withFileTypes: true });
   } catch {
-    return []; // No demos vendored — skip.
+    return []; // No demos vendored.
   }
   const out = [];
   for (const top of tops) {
@@ -201,7 +184,7 @@ function demoMainScene(projDir) {
     const projectGodot = readFileSync(join(projDir, 'project.godot'), 'utf8');
     declared = /run\/main_scene="([^"]+)"/.exec(projectGodot)?.[1] ?? null;
   } catch {
-    // No project.godot vendored — fall through to the heuristics.
+    // No project.godot vendored: the heuristics below decide.
   }
   if (declared?.startsWith('res://')) {
     const rel = declared.slice('res://'.length);
@@ -226,9 +209,8 @@ const demoFixtures = demoProjects().flatMap(({ top, project }) => {
     const isMain = rel === mainScene;
     const stem = rel.replace(/\.tscn$/, '');
     return {
-      // (project, top) is unique; the label disambiguates cross-category name
-      // twins (2d/platformer vs 3d/platformer). The main scene keeps the tidy
-      // name; subscenes append their project-relative path to stay unique.
+      // The label separates cross-category twins (2d/platformer, 3d/platformer).
+      // Subscenes append their project-relative path to stay unique.
       name: isMain
         ? `${humanizeProject(project)} (${label})`
         : `${humanizeProject(project)} (${label}): ${stem}`,
@@ -239,13 +221,8 @@ const demoFixtures = demoProjects().flatMap(({ top, project }) => {
   });
 });
 
-// Vendored open-source Godot *games* (scenes/games/<dir>/) — the "proper
-// games" corpus (scripts/vendor-godot-games.mjs). Same per-project res://
-// scheme as the demos: copy-fixtures mirrors each under
-// public/fixtures/games/<dir>/ and the web provider resolves res:// against
-// the fixture's `root`. Editor scenes under addons/ are kept on disk (so refs
-// resolve) but are NOT listed as selectable fixtures — they would flood the
-// selector with engine-plugin UI rather than game content.
+// Vendored open-source games (scenes/games/<dir>/, scripts/vendor-godot-games.mjs),
+// with the demos' per-project res:// scheme under public/fixtures/games/<dir>/.
 const gamesDir = join(rootDir, 'scenes/games');
 const GAME_LABELS = {
   'kenney-platformer': 'Kenney Platformer',
@@ -259,7 +236,7 @@ function gameDirs() {
       .map(entry => entry.name)
       .sort();
   } catch {
-    return []; // No games vendored — skip.
+    return []; // No games vendored.
   }
 }
 const gameFixtures = gameDirs().flatMap(dir => {
@@ -267,8 +244,8 @@ const gameFixtures = gameDirs().flatMap(dir => {
   const label = GAME_LABELS[dir] ?? humanizeProject(dir);
   const projDir = join(gamesDir, dir);
   const scenes = walkTscn(projDir)
-    // Exclude engine-plugin editor scenes at any depth (res://addons/** and
-    // any nested addons/ folder), not just the project-root addons/ dir.
+    // Editor scenes under an addons/ folder at any depth stay on disk so refs
+    // resolve, but would flood the selector with plugin UI.
     .filter(rel => !/(^|\/)addons\//.test(rel))
     .sort();
   if (scenes.length === 0) return [];
@@ -277,8 +254,7 @@ const gameFixtures = gameDirs().flatMap(dir => {
     const isMain = rel === mainScene;
     const stem = rel.replace(/\.tscn$/, '');
     return {
-      // The main scene keeps the tidy game label; subscenes append their
-      // project-relative path to stay globally unique (asserted below).
+      // Subscenes append their project-relative path to stay unique.
       name: isMain ? label : `${label}: ${stem}`,
       file: `${root}/${rel}`,
       category: `Games - ${label}`,
@@ -287,11 +263,8 @@ const gameFixtures = gameDirs().flatMap(dir => {
   });
 });
 
-// The optional ld-58 corpus (scenes/ld58/) — a repo-external project vendored on
-// demand (`pnpm vendor:ld58`), not committed. Same split as the games corpus: on
-// a fresh clone ld58Files is empty and this manifest is written to a SEPARATE,
-// gitignored file that fixturesAll.ts merges via import.meta.glob when present.
-// Its scenes' res:// deps are mirrored under public/fixtures/ by copy-fixtures.
+// The optional ld-58 corpus (scenes/ld58/), vendored on demand with
+// `pnpm vendor:ld58` and not committed, like the games corpus.
 const ld58Fixtures = ld58Files.map(file => ({
   // Vendored scenes keep Godot's CamelCase / snake_case basenames; split those
   // into words so the selector shows "Clue Container", not "ClueContainer".
@@ -320,12 +293,9 @@ const fixtures = [
   ...demoFixtures,
 ];
 
-// Fixture names must be unique: the showcase recorder and scene selector both
-// resolve a fixture by name (first match), so a duplicate would silently load
-// the wrong scene. Fail the generation instead of producing an ambiguous
-// manifest. Games and the optional ld-58 corpus are written to separate files
-// (below) but share the name space at runtime, so check collisions across ALL
-// sets here.
+// The showcase recorder and the scene selector resolve a fixture by its first
+// matching name, so a duplicate would load the wrong scene. The optional
+// corpora share the name space at runtime, so all sets are checked.
 const seenNames = new Map();
 for (const fixture of [...fixtures, ...gameFixtures, ...ld58Fixtures]) {
   const prior = seenNames.get(fixture.name);
@@ -338,9 +308,8 @@ for (const fixture of [...fixtures, ...gameFixtures, ...ld58Fixtures]) {
   seenNames.set(fixture.name, fixture.file);
 }
 
-// Group fixtures by category, preserving first-seen category order and each
-// category's declaration order. Returns the sorted list plus the category set
-// (for the count in the log).
+// Groups fixtures by category, in first-seen category order and declaration
+// order within each.
 function groupByCategory(items) {
   const categories = [...new Set(items.map(f => f.category))];
   return { categories, sorted: categories.flatMap(cat => items.filter(f => f.category === cat)) };
@@ -348,7 +317,6 @@ function groupByCategory(items) {
 
 const { categories, sorted: sortedFixtures } = groupByCategory(fixtures);
 
-// Generate TypeScript file
 const output = `/**
  * Scene manifest for the web previewer.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm generate:fixtures
@@ -384,13 +352,10 @@ writeFileSync(outputPath, output);
 console.log(`✅ Generated fixtures.ts with ${fixtures.length} fixtures across ${categories.length} categories`);
 
 /**
- * Optional vendored corpora (games, ld-58) are fetched on demand, not
- * committed, so each manifest goes to a SEPARATE, gitignored file that
- * fixturesAll.ts merges via one wildcard import.meta.glob when present. Every
- * manifest exports the SAME conventional `corpusFixtures` name — that is what
- * lets the consumer stay a single glob with no per-corpus code; a new corpus
- * only adds a call below. On a fresh clone the corpus is absent; any stale
- * manifest is removed so the committed state stays corpus-free.
+ * An optional corpus manifest goes to its own gitignored file, which
+ * fixturesAll.ts merges through one import.meta.glob. Each exports
+ * `corpusFixtures`, so the glob needs no per-corpus code. With no corpus on
+ * disk, a stale manifest is removed.
  */
 function writeOptionalCorpusManifest({ fileName, corpusLabel, vendorCmd, items }) {
   const outPath = join(rootDir, 'apps/textscene-web/src', fileName);

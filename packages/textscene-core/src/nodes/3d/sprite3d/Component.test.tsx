@@ -1,10 +1,7 @@
 /**
- * Sprite3D component tests.
- *
- * Texture loading, billboard persistence, quad sizing, modulate,
- * transparency, the alpha_cut arms, the derived sampler wrap mode,
- * spritesheet UV, region cropping, render priority and transform
- * application.
+ * Sprite3D component tests: texture loading, billboard persistence, quad sizing, modulate,
+ * transparency, the alpha_cut arms, the derived wrap mode, sprite-sheet UV, region cropping, render
+ * priority and transform application.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -33,8 +30,8 @@ const TEXTURE_PATH = 'res://textures/sprite.png';
 /** Build a THREE.Texture with explicit image dimensions for sizing/region tests. */
 function makeTexture(imageWidth = 256, imageHeight = 256): THREE.Texture {
   const t = new THREE.Texture();
-  // The test renderer needs only width/height to drive quad sizing.
-  // No actual GPU upload happens — `needsUpdate` stays false.
+  // The test renderer needs only width and height to drive quad sizing. No GPU upload happens, so
+  // `needsUpdate` stays false.
   (t as unknown as { image: { width: number; height: number } }).image = {
     width: imageWidth,
     height: imageHeight,
@@ -213,7 +210,6 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     // Y-flip: offset.y = 1 - (25 + 50) / 100 = 0.25
     expect(mat.map?.offset.x).toBeCloseTo(0.25, 5);
     expect(mat.map?.offset.y).toBeCloseTo(0.25, 5);
-    // Quad sized to the sub-region.
     const geom = mesh.geometry as unknown as { parameters: { width: number; height: number } };
     expect(geom.parameters.width).toBeCloseTo(0.5, 5);
     expect(geom.parameters.height).toBeCloseTo(0.5, 5);
@@ -265,7 +261,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
         texture: 'ExtResource("1_tex")',
         hframes: 3,
         vframes: 1,
-        frame: 0, // ignored
+        frame: 0,
         frame_coords: { x: 2, y: 0 },
       }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
@@ -310,11 +306,10 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
   });
 
   it('alpha_cut=DISABLED blends at full modulate alpha', async () => {
-    // `sprite_3d.cpp:293` → TRANSPARENCY_ALPHA, which writes ALPHA in the
-    // generated shader (`material.cpp:1836`) and so raises the compile-time
-    // `uses_alpha` (`scene_shader_forward_clustered.cpp:123`). The alpha list is
-    // chosen from that flag alone (`scene_shader_forward_clustered.h:279-287`,
-    // `render_forward_clustered.cpp:4079-4090`) — no colour is read.
+    // `sprite_3d.cpp:293` → TRANSPARENCY_ALPHA, which writes ALPHA in the generated shader
+    // (`material.cpp:1836`) and so raises `uses_alpha` (`scene_shader_forward_clustered.cpp:123`).
+    // That flag alone picks the alpha list (`scene_shader_forward_clustered.h:279-287`,
+    // `render_forward_clustered.cpp:4079-4090`), and no colour is read.
     const tex = makeTexture(8, 8);
     const renderer = await render({
       node: makeNode({ texture: 'ExtResource("1_tex")' }),
@@ -347,10 +342,9 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
   });
 
   it('alpha_cut=OPAQUE_PREPASS keeps blending and still writes depth', async () => {
-    // `sprite_3d.cpp:289` → TRANSPARENCY_ALPHA_DEPTH_PRE_PASS: the colour pass
-    // still blends, the depth pass cuts. The cut is the SCENE's
-    // `opaque_prepass_threshold` (`render_forward_clustered.cpp:1791`), never
-    // the node's own `alpha_scissor_threshold` — authoring one must not move it.
+    // `sprite_3d.cpp:289` → TRANSPARENCY_ALPHA_DEPTH_PRE_PASS: the colour pass still blends, and
+    // the depth pass cuts at the scene's `opaque_prepass_threshold`
+    // (`render_forward_clustered.cpp:1791`), never the node's own `alpha_scissor_threshold`.
     const tex = makeTexture(8, 8);
     const renderer = await render({
       node: makeNode({
@@ -369,9 +363,9 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
   });
 
   it('alpha_cut=HASH hashes rather than blends', async () => {
-    // `sprite_3d.cpp:291-292` → TRANSPARENCY_ALPHA_HASH, whose fragment tail
-    // forces `alpha = 1.0` (`scene_forward_clustered.glsl:1414-1416`) — a
-    // dithered discard into the opaque pass, never a blend.
+    // `sprite_3d.cpp:291-292` → TRANSPARENCY_ALPHA_HASH, whose fragment tail forces `alpha = 1.0`
+    // (`scene_forward_clustered.glsl:1414-1416`): a dithered discard into the opaque pass, never a
+    // blend.
     const tex = makeTexture(8, 8);
     const renderer = await render({
       node: makeNode({

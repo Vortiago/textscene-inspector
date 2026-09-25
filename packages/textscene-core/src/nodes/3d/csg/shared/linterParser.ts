@@ -1,11 +1,8 @@
 /**
- * Validators shared by every CSGShape3D-derived node: the six primitives and
- * the combiner.
- *
- * Registered under the abstract key 'CSGShape3D', which Godot cannot
- * instantiate, so it appears in no .tscn and owns no slice; it reaches its
- * seven subclasses through the NODE_BASE_TYPES base-walk. The primitives reach
- * it through the CSGPrimitive3D tier, the combiner imports it directly.
+ * Validators shared by every CSGShape3D-derived node: the primitives and the combiner. The
+ * abstract key 'CSGShape3D' is in no .tscn, since Godot cannot instantiate it, and reaches its
+ * subclasses through the NODE_BASE_TYPES base-walk. The primitives reach it through the
+ * CSGPrimitive3D tier, and the combiner imports it directly.
  */
 
 import '../../geometryinstance3d/linterParser.js';

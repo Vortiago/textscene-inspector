@@ -1,5 +1,5 @@
 /**
- * OpenXRCompositionLayerEquirect draws nothing here YET — the badge reads "not implemented". The
+ * OpenXRCompositionLayerEquirect draws nothing here yet, so the badge reads "not implemented". The
  * Node3D base still mounts, for `visible` and the workspace split.
  */
 

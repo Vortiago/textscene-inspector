@@ -1,5 +1,5 @@
 /**
- * `TscnDefinitionProvider` — headings the scan must tolerate, and references at the file’s edges.
+ * `TscnDefinitionProvider`: headings the scan must tolerate, and references at the file’s edges.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
@@ -17,10 +17,6 @@ describe('TscnDefinitionProvider', () => {
       onCancellationRequested: vi.fn(),
     };
   });
-
-  // ============================================================================
-  // EDGE CASES - Malformed Input
-  // ============================================================================
 
   describe('Malformed Input', () => {
     it('should return null when resource heading is missing id attribute', () => {
@@ -76,10 +72,6 @@ describe('TscnDefinitionProvider', () => {
       expect(definition.range.start.line).toBe(2);
     });
   });
-
-  // ============================================================================
-  // BOUNDARY CONDITIONS - Document Boundaries
-  // ============================================================================
 
   describe('Document Boundaries', () => {
     it('should find definition when resource heading is on last line', () => {

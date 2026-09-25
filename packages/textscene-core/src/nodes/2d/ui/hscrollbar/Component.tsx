@@ -1,21 +1,8 @@
 /**
- * `<HScrollBar>` — the native (WebGL canvas) painter for `HScrollBar`. Draws
- * the two parts `ScrollBar::_notification(NOTIFICATION_DRAW)` paints under
- * this codebase's theme scope (`shared/scrollBarSolver.ts`'s own doc — no
- * increment/decrement icons, both empty in the default theme): the `scroll`
- * track StyleBox across the bar's own full rect, then the `grabber` StyleBox
- * on top, sized/offset from THIS bar's own `Range`
- * (`value`/`min_value`/`max_value`/`page`) — not a ScrollContainer's content,
- * which is `scrollcontainer/Component.tsx`'s own concern. Shared geometry
- * lives in `shared/scrollBarSolver.ts` (also `vscrollbar/Component.tsx`,
- * this component at `vertical = true`); this component only resolves
- * theme/state and draws.
- *
- * Tint: the walker's `tint.own` — composed onto each StyleBox's two base
- * colours, in sRGB, exactly like every other `<StyleBoxQuad>` user here.
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * `<HScrollBar>`, the native (WebGL canvas) painter for `ScrollBar::_notification(NOTIFICATION_DRAW)`:
+ * the `scroll` track, then the `grabber` from the bar's `Range`, each composed with
+ * `tint.own` in sRGB. The default theme's arrow icons are empty. `shared/scrollBarSolver.ts`
+ * owns the geometry, and `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';

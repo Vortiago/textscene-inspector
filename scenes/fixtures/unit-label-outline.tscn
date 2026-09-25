@@ -1,9 +1,7 @@
-; font_outline_color/outline_size — the ONE variable no other Label fixture
-; sets. The MSDF text engine composites the outline into the SAME mesh as
-; the fill, at a second distance threshold (`msdfMaterial.ts`'s own doc); a
-; regression that sizes the fill's own coverage correctly while drawing no
-; border, or a border of the wrong width, is invisible in a diff that only
-; checks the fill glyph's own ink.
+; font_outline_color and outline_size, the one variable no other Label fixture sets. The MSDF
+; text engine composites the outline into the fill's mesh at a second distance threshold
+; (`msdfMaterial.ts`). Drawing no border, or one of the wrong width, beside a correct fill is
+; invisible to a diff that checks only the fill's ink.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitlabeloutline"]
 

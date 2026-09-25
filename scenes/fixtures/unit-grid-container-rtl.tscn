@@ -1,10 +1,7 @@
-; The ONE variable: `layout_direction = 3` on a GridContainer. Godot restarts
-; every row at the container's trailing edge and walks the columns back the
-; other way (grid_container.cpp:190-194,220-228). The three cells have
-; different widths so a reversal cannot be mistaken for a mirror of equal
-; blocks, and the LTR grid above holds the unmirrored order beside it. No
-; other fixture pairs a grid with a direction, so a regression in the column
-; walk is invisible everywhere else.
+; One variable: `layout_direction = 3` on a GridContainer. Godot restarts every row at the
+; trailing edge and walks the columns back (grid_container.cpp:190-194,220-228). The cells differ
+; in width, so a reversal is not a mirror of equal blocks, and the LTR grid holds the unmirrored
+; order. No other fixture pairs a grid with a direction.
 
 [gd_scene format=3]
 

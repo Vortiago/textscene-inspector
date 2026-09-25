@@ -1,25 +1,9 @@
 [gd_scene load_steps=2 format=3 uid="uid://unitsprite3dnestmod"]
 
-; ONE VARIABLE: what a Sprite3D's PARENT contributes to its drawn colour —
-; `SpriteBase3D::_get_color_accum()` (`scene/3d/sprite_3d.cpp:36-52`).
-;
-; The accumulation walks the IMMEDIATE parent only (`:75` casts `get_parent()`
-; to SpriteBase3D and stops), so it is a no-op in every other scene in the
-; corpus: a Sprite3D parented to a Node3D accumulates from white and draws
-; exactly its own modulate, which is what a renderer that ignores the rule
-; entirely also draws. A regression is therefore invisible anywhere a sprite is
-; not directly nested under another sprite, and nothing else nests them.
-;
-; All four columns carry the SAME child modulate. The leftmost is the control
-; and shows it unaccumulated; only the second may differ from it. Columns three
-; and four re-run the second through an intervening Node3D and an intervening
-; Label3D — Label3D derives from GeometryInstance3D (`label_3d.h:38`) exactly
-; as SpriteBase3D does (`sprite_3d.h:36`), so it is a sibling, not an ancestor,
-; and breaks the chain despite carrying a `modulate` of its own.
-;
-; The two modulates differ in every channel and in alpha, and neither equals
-; the product, so an RGB-only accumulation and a skipped one both read as a
-; different picture rather than a subtler one.
+; One variable: what a Sprite3D's parent adds to its drawn colour,
+; `SpriteBase3D::_get_color_accum()` (`scene/3d/sprite_3d.cpp:36-52`). The walk reads only the
+; immediate parent (`:75` casts `get_parent()` to SpriteBase3D and stops), so a Sprite3D under a
+; Node3D accumulates from white, as a renderer ignoring the rule draws. Nothing else nests sprites.
 
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_sprite_tex"]
 
@@ -34,6 +18,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.6, 0)
 text = "control / nested / via Node3D / via Label3D"
 pixel_size = 0.005
 
+; All four columns carry the same child modulate. This control column shows it unaccumulated,
+; and only the second may differ from it. The two modulates differ in every channel and alpha and
+; neither equals the product, so an RGB-only or skipped accumulation reads as a different picture.
 [node name="Control_Parent" type="Sprite3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.6, 1.5, 0)
 texture = ExtResource("1_sprite_tex")
@@ -58,6 +45,9 @@ texture = ExtResource("1_sprite_tex")
 pixel_size = 0.01
 modulate = Color(0.5, 0.9, 0.6, 0.7)
 
+; Columns three and four re-run the second through an intervening Node3D and Label3D. Label3D
+; derives from GeometryInstance3D (`label_3d.h:38`) as SpriteBase3D does (`sprite_3d.h:36`), a
+; sibling, not an ancestor, so it breaks the chain despite its own `modulate`.
 [node name="ViaNode3D_Parent" type="Sprite3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 1.5, 0)
 texture = ExtResource("1_sprite_tex")

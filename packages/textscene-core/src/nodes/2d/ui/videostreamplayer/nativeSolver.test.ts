@@ -1,8 +1,8 @@
 /**
- * `videoStreamPlayerMinimumSize` — `video_stream_player.cpp:232-238`: always
- * `Size2()` here, since nothing in this codebase decodes a `VideoStream`
- * frame and `texture.is_valid()` is therefore always false.
+ * `videoStreamPlayerMinimumSize` (`video_stream_player.cpp:232-238`): always `Size2()` here,
+ * since nothing decodes a `VideoStream` frame, so `texture.is_valid()` is always false.
  */
+
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';

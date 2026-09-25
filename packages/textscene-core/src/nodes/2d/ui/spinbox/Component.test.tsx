@@ -1,9 +1,7 @@
 /**
- * `<SpinBox>` render contract — field chrome (LineEdit-style) + one clipped
- * run of formatted text + up/down stepper icons. No button background mesh
- * absent an explicit `theme_override_styles/*` override (both are `StyleBoxEmpty`
- * in the default theme). Structure/tint/render-order assertions only (pixels
- * are a golden-image concern via `pnpm ref:godot`, not this suite).
+ * `<SpinBox>` render contract: LineEdit-style field chrome, one clipped run of formatted text and
+ * the stepper icons, with no button background without a `theme_override_styles/*` override (both
+ * are `StyleBoxEmpty` by default). It asserts structure, tint and render order, not pixels.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -53,7 +51,7 @@ function solveNode(
   return { ...emptySolveNode(), path: 'MySpinBox', node, styleBoxes };
 }
 
-/** A `<StyleBoxQuad>` mesh — the only kind carrying a `color` vertex attribute. */
+/** A `<StyleBoxQuad>` mesh, the only kind carrying a `color` vertex attribute. */
 function findChromeMeshes(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
@@ -69,7 +67,7 @@ function findTextMesh(scene: Rendered['scene']) {
     .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
-/** The two arrow icon `ControlQuad` meshes — `PlaneGeometry`, in source order (up, then down). */
+/** The two arrow icon `ControlQuad` meshes (`PlaneGeometry`), in source order: up, then down. */
 function findIconMeshes(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
@@ -114,7 +112,7 @@ describe('<SpinBox> — field chrome + text', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SpinBox {...painterEnv()} solveNode={solveNode()} rect={RECT} renderOrder={0} />
     );
-    // The ONE chrome mesh with vertex colours is the field itself.
+    // The one chrome mesh with vertex colours is the field itself.
     expect(findChromeMeshes(renderer.scene).length).toBe(1);
   });
 

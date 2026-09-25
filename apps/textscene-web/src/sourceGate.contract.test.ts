@@ -1,23 +1,7 @@
 /**
- * Source pane slice 2: the pure renderable-gate helper (criterion 6).
- *
- * RED contract. Pins the SEAM the slice must expose so the gate decision is unit-testable
- * without WebGL (the issue: "Extract the gate decision into a pure helper (given the buffer +
- * the last-good content, return the content to forward)"):
- *
- *   apps/textscene-web/src/sourceGate.ts
- *     export function resolveForwardedContent(buffer: string, lastGood: string): string
- *
- * Semantics (ADR-0020 §3 — hold last valid):
- *   - a buffer that parses RENDERABLY under the LENIENT parser (`TscnParser`) is forwarded;
- *   - anything else (garbage, empty, headings that never resolve to a node) returns `lastGood`;
- *   - the gate is on the lenient parse, NOT on zero lint findings — strict-only nitpicks that
- *     still render must pass through;
- *   - pure + total: no exceptions on pathological input, no state between calls (recovery is
- *     simply the next call returning the now-clean buffer).
- *
- * This file is the pinned contract; the slice's own co-located `sourceGate.test.ts` cases
- * (criterion 6) are additional and belong to the implementation.
+ * The contract of `resolveForwardedContent(buffer, lastGood)` (ADR-0020 §3): a buffer the
+ * lenient `TscnParser` renders is forwarded, anything else returns `lastGood`. Strict-only lint
+ * findings still pass. It is pure and total: no throw on hostile input, no state between calls.
  */
 import { describe, expect, it } from 'vitest';
 import { resolveForwardedContent } from './sourceGate';
@@ -74,7 +58,7 @@ describe('#201 sourceGate — recovers on the next clean edit', () => {
   it('holds through garbage, then forwards the next valid buffer', () => {
     const held = resolveForwardedContent(GARBAGE, VALID_TSCN);
     expect(held).toBe(VALID_TSCN);
-    // The next call with a clean buffer forwards it — no sticky failure state.
+    // The next call with a clean buffer forwards it: no failure state sticks.
     expect(resolveForwardedContent(NEXT_VALID_TSCN, held)).toBe(NEXT_VALID_TSCN);
   });
 });

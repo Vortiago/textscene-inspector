@@ -1,12 +1,7 @@
 /**
- * The borrow half of the procedural texture cache: what a mounted consumer
- * pins, and — just as load-bearing — what it must NOT pin.
- *
- * A key pinned for a reference the cache holds nothing for is silent today
- * (`LRUCache.pin` tolerates an absent key) and wrong the moment the pinning
- * walk and the resolving walk disagree about which references are procedural.
- * Resolution and pinning are one operation here so they cannot drift; these
- * tests hold that line.
+ * The borrow half of the procedural texture cache: what a mounted consumer pins, and what it must
+ * not pin. `LRUCache.pin` tolerates an absent key, so a pin for a non-procedural reference is
+ * silent. These tests hold resolution and pinning to one operation.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -19,10 +14,7 @@ import {
   proceduralTextureKey,
 } from './textures/proceduralTextureCache';
 
-/**
- * Pin traffic is otherwise invisible — the cache exposes no counter — so the
- * two entry points are wrapped, still calling through to the real cache.
- */
+/** The cache exposes no pin counter, so the two entry points are wrapped, calling through. */
 const traffic = vi.hoisted(() => ({ pinned: [] as string[], unpinned: [] as string[] }));
 
 vi.mock('./textures/proceduralTextureCache', async (importOriginal) => {
@@ -41,10 +33,7 @@ vi.mock('./textures/proceduralTextureCache', async (importOriginal) => {
   };
 });
 
-/**
- * Two gradients plus a sub-resource that is a texture but not a procedural one
- * — the reference form that used to mint a key the cache never held.
- */
+/** Two gradients plus a texture sub-resource that is not procedural, which must mint no key. */
 function scene(): TscnInternalResource[] {
   return [
     {

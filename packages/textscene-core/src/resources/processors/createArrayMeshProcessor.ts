@@ -1,10 +1,8 @@
 /**
- * Factory for the ArrayMesh resource processor — fetches a Godot ArrayMesh
- * `.tres` (format=4) through the FileEventBus and decodes it into geometry +
- * per-surface material paths on the 'arraymesh' bus slot. Unlike GLB meshes
- * (THREE.Object3D, single-parent → cloned per consumer), a BufferGeometry is
- * shared by identity; consumers wrap it in their own <mesh> and resolve the
- * material paths through the StandardMaterial3D pipeline.
+ * The ArrayMesh processor: a `.tres` (format=4) through the FileEventBus into
+ * geometry and material paths on the 'arraymesh' slot. Unlike a GLB Object3D, a
+ * BufferGeometry is shared by identity: each consumer wraps it in its own <mesh>
+ * and resolves the material paths through the StandardMaterial3D pipeline.
  */
 
 import * as THREE from 'three';

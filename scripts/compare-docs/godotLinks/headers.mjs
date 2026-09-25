@@ -1,19 +1,13 @@
-/** What a candidate header CONTAINS: one cached fetch, and the GDCLASS verification. */
+/** What a candidate header contains: one cached fetch, and the GDCLASS verification. */
 
 const RAW_BASE = 'https://raw.githubusercontent.com/godotengine/godot/master/';
 
 const MAX_ATTEMPTS = 3;
 
 /**
- * Fetch a header once. The PROMISE is cached, not the text, so concurrent
- * resolvers asking for the same file share one request instead of racing.
- *
- * Only 404 is a durable answer: it really means "no such header". A 429 or 5xx
- * says nothing about the file, so caching it as `null` would turn one throttled
- * request into a permanent verification failure reported as an upstream rename.
- * Such a path is retried — but a BOUNDED number of times, with backoff. Simply
- * evicting the entry would drop memoisation exactly when the API is rate-limiting
- * and let the directory sweep re-request everything in a loop.
+ * Fetches a header once. The promise is cached, so concurrent resolvers share a
+ * request. Only a 404 is final: a 429 or 5xx is retried a bounded number of
+ * times with backoff, since evicting it would re-request in a loop under a limit.
  */
 export function makeFetcher() {
   const cache = new Map();
@@ -50,11 +44,8 @@ export function makeFetcher() {
 }
 
 /**
- * The class is really DEFINED here, not merely forward-declared or mentioned.
- *
- * Deliberately does NOT match `GDSOFTCLASS(`: if Godot migrates a node to that
- * macro the class becomes a loud unresolved miss, which is the designed failure
- * mode — better than a link nobody re-verified.
+ * The class is defined here, not only forward-declared or mentioned. Not
+ * `GDSOFTCLASS(`: a class moved to that macro becomes a loud unresolved miss.
  */
 export const defines = (text, name) =>
   text !== null && new RegExp(`GDCLASS\\(\\s*${name}\\s*,`).test(text);

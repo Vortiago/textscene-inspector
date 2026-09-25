@@ -26,8 +26,8 @@
   pointer-events: none;
 }
 
-/* Origin axes through world (0, 0) — Godot's 2D-editor red X / green Y, glued
-   to the stage pan so they cross at the viewport rect's top-left corner. */
+/* Godot's 2D-editor red X and green Y axes through world (0, 0), glued to the
+   stage pan so they cross at the viewport rect's top-left corner. */
 .originAxis {
   position: absolute;
   pointer-events: none;
@@ -47,8 +47,8 @@
   background: rgba(135, 214, 3, 0.5);
 }
 
-/* The parity-capture frame: same transform as .canvasFrame, used by the
-   visual-regression harness to clip to the project viewport rect. */
+/* The parity-capture frame, with the transform of .canvasFrame. The
+   visual-regression harness clips to it. */
 .overlayFrame {
   position: absolute;
   top: 0;

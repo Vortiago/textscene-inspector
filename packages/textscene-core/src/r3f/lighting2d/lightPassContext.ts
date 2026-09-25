@@ -1,9 +1,7 @@
 /**
- * What the 2D light pass publishes to the canvas beneath it: the accumulations
- * in force, and the declarations a light or an item makes to shape them.
- *
- * The pass itself — why there are classes at all, and what each buffer holds —
- * is documented in `CanvasLighting2D.tsx`.
+ * What the 2D light pass publishes to the canvas beneath it: the accumulations in force, and the
+ * declarations a light or an item makes to shape them. `CanvasLighting2D.tsx` says why there are
+ * classes.
  */
 
 import { createContext, useContext } from 'react';
@@ -12,7 +10,7 @@ import type { LightCullKey } from './lightCullKey.js';
 
 /** One cull tuple's accumulation. */
 export interface CanvasLightClass {
-  /** The cull tuple every light in this class shares — see `lightCullKey`. */
+  /** The cull tuple every light in this class shares (`lightCullKey`). */
   readonly key: LightCullKey;
   /**
    * `S` seeded from the canvas modulate in rgb, and this class's summed cookie
@@ -22,7 +20,7 @@ export interface CanvasLightClass {
   /** The same accumulation seeded from an unmodulated white, for Light Only items. */
   readonly lightOnlyBuffer: THREE.Texture | null;
   /**
-   * The albedo-free `shadow_color` accumulation, added AFTER an item multiplies
+   * The albedo-free `shadow_color` accumulation, added after an item multiplies
    * by its albedo. Null unless some light in this class tints its shadow, which
    * is Godot's default and so the usual case.
    */
@@ -30,11 +28,9 @@ export interface CanvasLightClass {
   /** The camera layer this class's light quads draw on. */
   readonly layer: number;
   /**
-   * The camera layer this class's `shadow_color` quads draw on — set only while
-   * `shadowTintBuffer` is, so a light is never told to draw a tint quad into a
-   * pass that does not run. The two are allocated together and withdrawn
-   * together; splitting them would put an untinted frame on screen for the
-   * commit between a light declaring its tint and its class getting a target.
+   * The camera layer for this class's `shadow_color` quads, set only while `shadowTintBuffer` is,
+   * so no light draws a tint quad into a pass that does not run. Split, they would show an
+   * untinted frame between a light declaring its tint and its class getting a target.
    */
   readonly shadowTintLayer: number | undefined;
 }
@@ -42,9 +38,9 @@ export interface CanvasLightClass {
 /** One light's place in its class's pass, handed out by `register`. */
 export interface CanvasLightSlot {
   /**
-   * This light's index among the lights of its class — dense, reused on
-   * withdrawal, and distinct only WITHIN the class, which is all the stencil
-   * needs since a class pass renders no other class's layer.
+   * This light's index among the lights of its class: dense, reused on withdrawal, and distinct
+   * only within the class, which is all the stencil needs, since a class pass renders no other
+   * class's layer.
    */
   readonly ordinal: number;
   /** Withdraws the light and frees the ordinal. Idempotent. */
@@ -59,9 +55,8 @@ export interface CanvasLighting2D {
    */
   readonly classes: readonly CanvasLightClass[];
   /**
-   * The accumulators' size in DEVICE pixels, which is what `gl_FragCoord` is
-   * measured in. MUTATED in place each frame, so an item that binds it as a
-   * uniform value stays in step without re-rendering.
+   * The accumulators' size in device pixels, the unit of `gl_FragCoord`. Mutated in place each
+   * frame, so an item that binds it as a uniform value stays in step without re-rendering.
    */
   readonly resolution: THREE.Vector2;
   /**
@@ -72,7 +67,7 @@ export interface CanvasLighting2D {
   /** Declares an item that needs the unmodulated accumulation. */
   registerLightOnly(): () => void;
   /**
-   * Declares a light that tints its shadow, so ITS class allocates the extra
+   * Declares a light that tints its shadow, so its class allocates the extra
    * pass. Keyed, unlike `registerLightOnly`: an item can read any class, but a
    * light belongs to exactly one.
    */

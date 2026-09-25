@@ -1,11 +1,7 @@
 /**
- * esbuild configuration for bundling the extension and webview.
- *
- * The webview build uses esbuild-css-modules-plugin so that `*.module.css`
- * files imported from `@textscene/core` (the R3F components) emit a
- * separate CSS bundle alongside the JS bundle.
- * The webview HTML links that CSS file with the CSP nonce so it loads
- * under VS Code's restrictive content-security policy.
+ * esbuild configuration for the extension and the webview. The webview build emits
+ * the `*.module.css` of core's R3F components as a separate CSS bundle, which the
+ * webview HTML links with the CSP nonce so it loads under VS Code's CSP.
  */
 import * as esbuild from 'esbuild';
 import { rm, writeFile } from 'node:fs/promises';
@@ -16,18 +12,11 @@ const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 const skipTests = process.argv.includes('--skip-tests');
 
-// esbuild never deletes outputs from previous builds, so both build dirs
-// accumulate stale files across runs:
-//   - dist/webview: content-hashed chunks (chunks/[name]-[hash].js) pile up
-//     and would get packaged into the VSIX.
-//   - dist/test: the integration-test build (outdir 'dist' + outbase 'src')
-//     emits every suite into dist/test/..., so a deleted or renamed
-//     `*.test.ts` leaves a compiled `.test.js` behind that suite/index.ts
-//     still globs and runs locally (CI is immune — it builds a fresh
-//     checkout). Nothing else emits into dist/test (tsconfig.test.json is
-//     noEmit), so clearing it wholesale is safe.
-// Clear both output dirs up front so every build starts clean.
+// esbuild never deletes old outputs. Content-hashed chunks pile up in dist/webview
+// and get packaged into the VSIX.
 await rm('dist/webview', { recursive: true, force: true });
+// A deleted `*.test.ts` leaves a `.test.js` here that suite/index.ts still globs.
+// Nothing else emits into dist/test (tsconfig.test.json is noEmit).
 await rm('dist/test', { recursive: true, force: true });
 
 /**
@@ -44,21 +33,17 @@ const extensionOptions = {
   sourcemap: !production,
   minify: production,
   logLevel: 'info',
-  // The metafile lists every input module bundled into the host — written
-  // to dist/*.meta.json below so `scripts/check-bundle-size.mjs` can assert
-  // precisely that no react/three module was pulled in, instead of
-  // heuristically token-scanning the minified output.
+  // The metafile lists every module bundled into the host. Written to
+  // dist/*.meta.json, it lets `scripts/check-bundle-size.mjs` assert that no
+  // react/three module is in, rather than scan the minified output for tokens.
   metafile: true,
 };
 
 /**
- * Web extension host build (vscode.dev / VS Code for Web).
- *
- * Web extension hosts load a single CommonJS-shaped file in a web
- * worker, so this mirrors the Node extension build except for
- * `platform: 'browser'`. That platform switch is also the guard: any
- * Node-builtin import sneaking into the extension-host graph makes
- * this build fail loudly instead of breaking silently at runtime.
+ * Web extension host build (vscode.dev). A web host loads one CommonJS-shaped file
+ * in a worker, so this mirrors the Node build but for `platform: 'browser'`. That
+ * switch is also the guard: a Node-builtin import in the host graph fails this
+ * build rather than breaking at runtime.
  *
  * @type {esbuild.BuildOptions}
  */
@@ -70,28 +55,20 @@ const extensionWebOptions = {
 };
 
 /**
- * @type {esbuild.BuildOptions}
+ * This build only produces `dist/webview/`. The initial-paint budget gate
+ * (main + 200 KB gzipped) lives in `scripts/check-bundle-size.mjs`, run by the
+ * root `check:bundle-size` script. ARCHITECTURE.md, "Bundle Size Target", has
+ * the numbers and why the gate is informational.
  *
- * The webview initial-paint budget gate (main + 200 KB gzipped) is NOT
- * enforced here — this file only produces `dist/webview/`. The gate itself
- * lives in `scripts/check-bundle-size.mjs`, invoked via the root
- * `check:bundle-size` npm script (see ARCHITECTURE.md, "Bundle Size
- * Target", for current numbers and why it's still informational).
+ * @type {esbuild.BuildOptions}
  */
 const webviewOptions = {
   entryPoints: ['src/webview/webview.ts'],
   bundle: true,
-  // ESM + splitting. The previous `format: 'iife'` couldn't
-  // code-split, which forced every transitive import of the entry into
-  // the single `webview.js` bundle — including the (large) DOM panels
-  // we'd ideally lazy-load. ESM + splitting moves those panels (and
-  // their drei/three.js dependencies) into separate chunks that load
-  // on demand via dynamic `import()`. The dist layout becomes:
-  //   dist/webview/webview.js                — initial chunk
-  //   dist/webview/chunks/<panel>-<hash>.js  — lazy chunks
-  //   dist/webview/webview.css               — co-located CSS
-  // The HTML uses `<script type="module">` and the CSP allows
-  // chunk URIs via `script-src ${cspSource}` (see webviewHtml.ts).
+  // ESM, not iife, because only ESM code-splits: the DOM panels and their
+  // drei/three.js dependencies load on demand as chunks/<panel>-<hash>.js beside
+  // the initial webview.js and webview.css. The HTML loads it as a module script,
+  // and the CSP allows the chunks through `script-src ${cspSource}` (webviewHtml.ts).
   outdir: 'dist/webview',
   entryNames: '[name]',
   chunkNames: 'chunks/[name]-[hash]',
@@ -118,17 +95,10 @@ const webviewOptions = {
 };
 
 /**
- * Integration-test build.
- *
- * The extension host loads these files by PATH at runtime (runTests spawns
- * Electron pointing at suite/index, which then globs `**\/*.test.js` next to
- * itself), so every runtime-loaded file must be its own entry point. The
- * `*.test.ts` entries are globbed rather than listed so a new suite file is
- * picked up automatically. Everything they import — including the real
- * `TscnPreviewPanel` and `@textscene/core` — is BUNDLED: `@textscene/core`'s
- * dist is bundler-only ESM (extensionless relative imports), so Node's own
- * resolver cannot load it from a plain tsc-compiled CJS tree; esbuild
- * resolves it exactly like the production extension bundle does.
+ * Integration-test build. The extension host loads suite/index by path, and it
+ * globs `**\/*.test.js` beside itself, so each runtime-loaded file is its own
+ * entry and the suites are globbed. Their imports, core included, are bundled:
+ * core's dist is bundler-only ESM (extensionless imports), which Node cannot load.
  *
  * @type {esbuild.BuildOptions}
  */

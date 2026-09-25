@@ -1,24 +1,8 @@
 /**
- * Semantic linter rules for PathFollow2D (mirrors PathFollow3D, adapted to 2D).
- *
- * Format validation is in linterParser.ts. This file covers context-dependent
- * checks: PathFollow2D MUST be a direct child of a Path2D, and the two ways of
- * authoring a position along the curve behave nothing alike in a `.tscn`.
- *
- * `progress` and `progress_ratio` are NOT two spellings of one value at load
- * time. `PackedScene::instantiate` applies a node's stored properties BEFORE
- * adding it to its parent (packed_scene.cpp:492 sets, :541 parents), and
- * `PathFollow2D::path` is only assigned on NOTIFICATION_ENTER_TREE
- * (path_2d.cpp:347). So:
- *
- *   - `set_progress` finds `path == nullptr`, skips the wrap/clamp branch
- *     entirely, and stores whatever was written — including a negative value,
- *     which nothing later rewrites;
- *   - `set_progress_ratio` opens with `ERR_FAIL_NULL_MSG(path)`
- *     (path_2d.cpp:472), so EVERY authored ratio is dropped, in range or not.
- *
- * Which is why file order does not decide a contest between them: `progress`
- * wins even when `progress_ratio` is written after it.
+ * PathFollow2D semantic rules. Godot sets properties before parenting
+ * (packed_scene.cpp:492 sets, :541 parents) and binds `PathFollow2D::path` only
+ * on enter-tree (path_2d.cpp:347), so in a `.tscn` `progress` and
+ * `progress_ratio` load unlike each other.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -34,14 +18,10 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as Record<string, string>;
 
-  // path_2d.cpp:384-388 — the placement Godot itself flags, and it is a
-  // get_configuration_warnings() entry, so it is advisory (ADR-0032) rather
-  // than a setter that refuses a value. Both arms are one `push_back` behind
-  // `is_visible_in_tree()`: at the root the cast is `cast_to<Path2D>(nullptr)`,
-  // which is null. `parentTypeVerdict` supplies the instanced/untyped-parent
-  // exemption: a parent whose type lives in a sub-scene the linter never opens
-  // may well BE a Path2D. The progress checks below are this repo's own and
-  // carry no such gate.
+  // path_2d.cpp:384-388, a get_configuration_warnings() entry behind
+  // `is_visible_in_tree()`: advisory (ADR-0032), and the root warns too, as its
+  // parent cast is null. `parentTypeVerdict` exempts an untyped instanced parent.
+  // The progress checks below are this repo's own and carry no such gate.
   if (!hiddenOrUnknowableInTree(scene, node)) {
     const placement = parentTypeVerdict(scene, node, 'Path2D');
     if (placement.kind === 'root') {
@@ -63,9 +43,9 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // The value survives; what does not survive is the travel it asks for. Every
-  // sampler clamps the offset into the curve, so the follower parks at the
-  // start rather than extrapolating backwards off the end.
+  // `set_progress` finds no path, skips its wrap and clamp, and stores the value,
+  // a negative one included. The sampler clamps the offset into the curve, so
+  // the follower parks at the start rather than extrapolating off the end.
   if (rawProps.progress !== undefined) {
     const progress = parseGodotFloat(rawProps.progress);
     // `set_progress` opens with ERR_FAIL_COND(!std::isfinite(p_progress))
@@ -82,7 +62,8 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Unconditional: the guard is on the missing parent, not on the value.
+  // Unconditional: `set_progress_ratio` opens with ERR_FAIL_NULL_MSG(path)
+  // (path_2d.cpp:472), so every ratio drops and `progress` wins in any file order.
   if (rawProps.progress_ratio !== undefined) {
     diagnostics.push({
       severity: 'error',

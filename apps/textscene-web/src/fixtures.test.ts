@@ -1,22 +1,10 @@
 // @vitest-environment node
 
 /**
- * Guards the generated fixture manifest against the source tree, BOTH ways:
- * a declared entry with no scene behind it, and a committed scene the manifest
- * never picked up.
- *
- * Mirrors the path mapping used by scripts/copy-fixtures.js (and the root
- * scripts/generate-fixtures.js): scenes/fixtures/ is mirrored onto
- * public/fixtures/ as its res:// root (a selectable entry's `file` is a
- * basename, since every selectable scene sits at that root), while
- * scenes/isometric/** is mirrored recursively (entry `file` is a res://-relative
- * path) and scenes/demos/** is mirrored under public/fixtures/demos/ (entry
- * `file` starts with 'demos/'). A manifest entry is therefore valid iff its
- * `file` resolves under one of those source roots, and the manifest is complete
- * iff every committed scene under them appears. Optional vendored corpora
- * (games, ld-58) live in separate gitignored manifests merged by fixturesAll.ts
- * and are out of this guard's scope — the committed fixtures.ts never carries
- * their entries.
+ * Guards the generated fixture manifest against scenes/ both ways: an entry with no
+ * scene, and a committed scene with no entry. The vendored corpora (games, ld-58)
+ * have their own gitignored manifests, which fixturesAll.ts merges, so they are out
+ * of scope.
  */
 
 import { existsSync, readdirSync } from 'node:fs';
@@ -31,14 +19,13 @@ const scenesRoot = join(__dirname, '../../../scenes');
 const sourceRoots = [join(scenesRoot, 'fixtures'), join(scenesRoot, 'isometric')];
 
 function fixtureExistsOnDisk(file: string): boolean {
-  // demos/<top>/<project>/… entries mirror scenes/demos/ 1:1 (not flattened).
+  // demos/<top>/<project>/… entries mirror scenes/demos/ one to one, not flattened.
   if (file.startsWith('demos/')) return existsSync(join(scenesRoot, file));
   return sourceRoots.some((root) => existsSync(join(root, file)));
 }
 
-// Taken from the generator, never re-typed: a category it starts emitting has
-// to reach this walk too, or the completeness check below reports clean over a
-// corpus it never looked at.
+// Taken from the generator, never re-typed, so a new category reaches this walk
+// and the completeness check never reports clean over a corpus it skipped.
 const DEMO_TOPS = Object.keys(DEMO_CATEGORY_LABELS);
 
 /** `.tscn` files directly in `dir`, as the manifest spells them (basenames). */
@@ -54,7 +41,7 @@ function scenesDeep(dir: string, prefix: string): string[] {
   try {
     entries = readdirSync(dir, { withFileTypes: true });
   } catch {
-    return []; // Corpus not vendored — the manifest carries nothing for it either.
+    return []; // Not vendored, so the manifest carries nothing for it either.
   }
   return entries.flatMap((entry) => {
     const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
@@ -64,13 +51,9 @@ function scenesDeep(dir: string, prefix: string): string[] {
 }
 
 /**
- * Every COMMITTED scene the generator would list, spelled as a manifest `file`.
- *
- * Mirrors generate-fixtures.js: flat basenames for scenes/fixtures,
- * res://-relative paths for scenes/isometric, and
- * `demos/<top>/<project>/…` for each project directory under the four demo
- * categories. The on-demand corpora (games, ld-58) are gitignored and go to
- * separate manifests, so they are out of scope here exactly as they are above.
+ * Every committed scene the generator lists, spelled as generate-fixtures.js spells
+ * a `file`: a basename for scenes/fixtures, a res://-relative path for
+ * scenes/isometric, and `demos/<top>/<project>/…` under each demo category.
  */
 function committedScenesOnDisk(): string[] {
   const demos = DEMO_TOPS.flatMap((top) => {
@@ -92,7 +75,7 @@ function committedScenesOnDisk(): string[] {
   ];
 }
 
-/** Committed scenes absent from a manifest — the direction the guard was missing. */
+/** Committed scenes absent from a manifest. */
 function unlisted(declared: Iterable<string>): string[] {
   const have = new Set(declared);
   return committedScenesOnDisk().filter((file) => !have.has(file));
@@ -108,22 +91,20 @@ describe('fixtures manifest', () => {
       .filter((fixture) => !fixtureExistsOnDisk(fixture.file))
       .map((fixture) => `${fixture.name} -> ${fixture.file}`);
 
-    // A non-empty list means fixtures.ts drifted from scenes/. Re-run
-    // `pnpm generate:fixtures` instead of hand-editing the manifest.
+    // A non-empty list means fixtures.ts and scenes/ disagree. Re-run
+    // `pnpm generate:fixtures` rather than hand-editing the manifest.
     expect(missing).toEqual([]);
   });
 
   it('lists every committed scene in the source tree', () => {
-    // The other direction. Manifest -> disk catches a deleted scene; this
-    // catches an ADDED one, which is the drift that actually happens: a new
-    // slice's fixture lands in scenes/fixtures without `pnpm generate:fixtures`,
-    // and its ?fixture= deep link silently falls back with every test green.
+    // The other direction catches an added scene: a new fixture in scenes/fixtures
+    // without `pnpm generate:fixtures`, whose ?fixture= deep link falls back.
     expect(unlisted(fixtures.map((fixture) => fixture.file))).toEqual([]);
   });
 
   it('would report a scene the manifest had drifted away from', () => {
     // The guard above passes on a correct manifest whether or not it works, so
-    // this is the half that proves it bites.
+    // this proves it fails on a missing entry.
     const declared = fixtures.map((fixture) => fixture.file);
     const dropped = declared[0]!;
     expect(unlisted(declared.filter((file) => file !== dropped))).toEqual([dropped]);

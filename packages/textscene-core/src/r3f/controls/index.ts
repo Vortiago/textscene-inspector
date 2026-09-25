@@ -1,8 +1,6 @@
 /**
- * 2D-UI barrel. Imports each Control slice's `index.r3f` for its native
- * (WebGL canvas) painter self-registration (side effect) — the same
- * render-registration entry-point convention as 3D slices (ADR-0001), into
- * ControlComponentRegistry — and re-exports the native mount point the app
+ * 2D-UI barrel. Each import registers a Control slice's canvas painter into
+ * ControlComponentRegistry (ADR-0001). It re-exports the mount point the app
  * shell mounts in 2D viewport mode.
  */
 
@@ -29,9 +27,9 @@ import '../../nodes/2d/ui/vslider/index.r3f';
 import '../../nodes/2d/ui/texturerect/index.r3f';
 import '../../nodes/2d/ui/richtextlabel/index.r3f';
 import '../../nodes/2d/ui/canvaslayer/index.r3f';
-// Not a `ui/` slice, but it IS a `CanvasLayer` (`parallax_background.h:34`) and
-// so a canvas boundary the Control walk has to know about; its own `index.r3f`
-// registers both halves, and the world barrel imports the same module.
+// Not a `ui/` slice, but a `CanvasLayer` (`parallax_background.h:34`), so a
+// canvas boundary for the Control walk. Its `index.r3f` registers both halves,
+// and the world barrel imports it too.
 import '../../nodes/2d/parallaxbackground/index.r3f';
 import '../../nodes/2d/ui/codeedit/index.r3f';
 import '../../nodes/2d/ui/colorpicker/index.r3f';

@@ -1,13 +1,6 @@
 /**
- * GraphEdit strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * GraphEdit strict validators, asserted through `validatorRegistry` so a failure
+ * points at the validator and not at scene parsing. linter.test.ts covers the rules.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,14 +17,12 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * GraphEdit binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * Set exactly one, from the source: the keys GraphEdit binds, or DECLARES_NOTHING when
+ * it binds no ADD_PROPERTY. Both unset fails on purpose. Do not delete an assertion to pass.
  */
 const KEYS: string[] = [
-  // Every ADD_PROPERTY GraphEdit binds, graph_edit.cpp:3069-3102, in source
-  // order. `clip_contents` and `focus_mode` are Control overrides (the XML marks
-  // them `overrides="Control"`), so they stay registered on Control.
+  // Every ADD_PROPERTY GraphEdit binds, graph_edit.cpp:3069-3102, in source order.
+  // `clip_contents` and `focus_mode` are `overrides="Control"`, so Control keeps them.
   'scroll_offset',
   'show_grid',
   'grid_pattern',
@@ -71,18 +62,14 @@ describe('GraphEdit strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture lints with zero errors and warnings against this test's imports.
+    // `fixtureLint` covers the whole registry through the barrel.
     expectFixtureClean('unit-graph-edit.tscn');
   });
 
   it('classifies every validator as format-only or grounded, and cites a real line', () => {
-    // `boundGrounding.test.ts` owns this repo-wide but needs the barrel, so it
-    // cannot run mid-wave. Both hand-rolled validators here are `shape`d and
-    // both bounded ones carry a `graph_edit.cpp:<line>` citation; an untagged
-    // one would be a bound nobody audited.
+    // `boundGrounding.test.ts` covers this repo-wide through the barrel. The hand-rolled
+    // validators here are `shape`d, and the bounded ones cite a `graph_edit.cpp:<line>`.
     const unclassified = validatorRegistry.getOwnKeys('GraphEdit').filter((property) => {
       const validator = validatorRegistry.declarationFor('GraphEdit', property)!;
       return !validator.formatOnly && !validator.grounding;
@@ -103,15 +90,13 @@ describe('GraphEdit strict validators', () => {
         kind: 'enforced',
         cite: 'graph_edit.cpp:2907, graph_edit.cpp:3081',
       },
-      // Two separate guards on one setter: the finite check at :2466 and the
-      // std::abs rewrite at :2465, both recorded.
+      // Two guards on one setter: the finite check at :2466 and the std::abs rewrite at :2465.
       zoom_step: { kind: 'enforced', cite: 'graph_edit.cpp:2466, graph_edit.cpp:2465' },
     });
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format.
     const accepted = validatorRegistry
       .getOwnKeys('GraphEdit')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -302,11 +287,9 @@ describe.each(['scroll_offset', 'minimap_size'])('GraphEdit.%s', (property) => {
   });
 
   it('accepts negative and fractional components', () => {
-    // scroll_offset is routinely negative; both setters clamp against sizes
-    // known only at runtime (graph_edit.cpp:407 clamps to
-    // [min_scroll_offset, max_scroll_offset - get_size()], and
-    // graph_edit.cpp:2771 hands the size to Control::set_size, which raises it
-    // to the minimum size), so no static component bound exists.
+    // scroll_offset is often negative. Both setters clamp against runtime sizes
+    // (graph_edit.cpp:407 to [min_scroll_offset, max_scroll_offset - get_size()],
+    // graph_edit.cpp:2771 through Control::set_size), so no static bound exists.
     expect(check(property, 'Vector2(-128.5, -4)')).toBeNull();
   });
 
@@ -325,11 +308,9 @@ describe('GraphEdit.connections', () => {
   });
 
   it('accepts the typed wrapper the getter forces', () => {
-    // The ADD_PROPERTY declares Variant::ARRAY (graph_edit.cpp:3083) but the
-    // getter returns TypedArray<Dictionary> (graph_edit.h:355), and
-    // Array::is_typed() makes the writer emit the `Array[Type](…)` wrapper
-    // (core/variant/variant_parser.cpp:2341-2344). Rejecting this shape would
-    // reject a file Godot itself saved.
+    // ADD_PROPERTY declares Variant::ARRAY (graph_edit.cpp:3083), but the getter returns
+    // TypedArray<Dictionary> (graph_edit.h:355), so the writer emits `Array[Type](…)`
+    // (core/variant/variant_parser.cpp:2341-2344): a file Godot itself saves.
     expect(
       check(
         'connections',
@@ -376,11 +357,9 @@ describe('GraphEdit.type_names', () => {
 
 describe('GraphEdit fixture reachability', () => {
   it('actually validates the single-line dictionary and array the fixture uses', () => {
-    // StrictTscnParser skips multi-line values outright, and Godot's own writer
-    // WRAPS a populated Dictionary or Array across several lines. The fixture
-    // therefore keeps `type_names` and `connections` on one line each, which is
-    // only worth doing if a bad one-line value really is reported. Proving that
-    // here stops the fixture's "zero diagnostics" claim from being vacuous.
+    // StrictTscnParser skips multi-line values, and Godot wraps a populated Dictionary or
+    // Array across lines. So the fixture keeps `type_names` and `connections` on one line,
+    // and this proves a bad one-line value is reported.
     const content =
       `[gd_scene format=3]\n\n[node name="Root" type="Control"]\n\n` +
       `[node name="MyGraphEdit" type="GraphEdit" parent="."]\n` +

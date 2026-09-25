@@ -1,18 +1,8 @@
 /**
- * A node grafted into an instanced sub-scene resolves its ids against the scene
- * that AUTHORED it, for BOTH kinds of id.
- *
- * `.tscn` ids are per-file: `SubResource("1")` in the host scene and
- * `SubResource("1")` in the scene it instances are unrelated resources that
- * happen to share a name. A host child parented deep inside an instance renders
- * under the sub-scene's provider, so without its authoring scope it reads the
- * sub-scene's `1` — a resource that exists, parses, and draws, which is why this
- * fails as something plausible rather than as nothing.
- *
- * Only a COLLISION can tell the two apart: `SceneResourcesProvider` inherits the
- * ambient pool, so a host id absent from the sub-scene resolves either way. That
- * is what kept this open — and Godot's own ids collide readily, since a
- * hand-written scene numbers its sub-resources from 1.
+ * A node grafted into an instanced sub-scene resolves both kinds of id against the scene
+ * that authored it. Ids are per file, and a hand-written scene numbers from 1, so they
+ * collide readily. Only a collision tells the scopes apart: the provider inherits the
+ * ambient pool, and the wrong `1` still parses and draws.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -46,7 +36,7 @@ function subScene(): TscnScene {
     ],
     externalResources: [],
     internalResources: [
-      // Same id, different resource — BLUE.
+      // Same id, different resource: blue.
       { id: '1', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0, 0, 1, 1)' } },
     ],
   };

@@ -1,10 +1,7 @@
 /**
- * The small pieces the sweep is built out of: the outline's own geometry, the
- * frame basis every extrusion step is placed on, and the once-per-session
- * approximation warnings.
- *
- * Part of the CSGPolygon3D port; the derivation notice is in
- * `polygonGeometry.ts`.
+ * The small pieces the sweep is built out of: the outline's own geometry, the frame basis every
+ * extrusion step is placed on, and the once-per-session approximation warnings. Part of the
+ * CSGPolygon3D port, whose derivation notice is in `polygonGeometry.ts`.
  */
 
 import * as THREE from 'three';

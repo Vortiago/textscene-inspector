@@ -1,7 +1,6 @@
 /**
- * `Container::as_sortable_control` (`scene/gui/container.cpp:143-155`) — which
- * children a container arranges at all, and the four ways a child falls out of
- * that list.
+ * `Container::as_sortable_control` (`scene/gui/container.cpp:143-155`): which children a container
+ * arranges, and the four ways a child falls out of that list.
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -45,17 +44,15 @@ describe('isSortableControl', () => {
   });
 
   it('skips a top_level child, whose flag the cast rejects before visibility', () => {
-    // `if (!c || c->is_set_as_top_level()) return nullptr;` (container.cpp:144-146)
-    // — ahead of every visibility mode, so even `SortableVisibilityMode::IGNORE`
-    // drops it.
+    // `if (!c || c->is_set_as_top_level()) return nullptr;` (container.cpp:144-146) runs ahead of
+    // every visibility mode, so even `SortableVisibilityMode::IGNORE` drops it.
     expect(isSortableControl(child({ topLevel: true }))).toBe(false);
   });
 });
 
 /**
- * `Container::fit_child_in_rect`'s horizontal shrink arms
- * (`scene/gui/container.cpp:103-112`), where `rtl` is the CONTAINER's own
- * `is_layout_rtl()` and swaps which edge "begin" and "end" name.
+ * `Container::fit_child_in_rect`'s horizontal shrink arms (`scene/gui/container.cpp:103-112`), where
+ * `rtl` is the container's `is_layout_rtl()` and swaps which edge "begin" and "end" name.
  */
 describe('fitChildInRect — the horizontal shrink arms under RTL', () => {
   const NO_FLAGS = 0;
@@ -95,8 +92,8 @@ describe('fitChildInRect — the horizontal shrink arms under RTL', () => {
   });
 
   it('SHRINK_CENTER and the vertical axis ignore the direction entirely', () => {
-    // `container.cpp:107` has no `rtl` ternary, and `:114-122` names no `rtl`
-    // at all — only the horizontal begin/end pair mirrors.
+    // `container.cpp:107` has no `rtl` ternary, and `:114-122` names no `rtl`: only the horizontal
+    // begin/end pair mirrors.
     expect(fitChildInRect(CELL, MIN, SIZE_SHRINK_CENTER, SIZE_SHRINK_END, true)).toEqual(
       fitChildInRect(CELL, MIN, SIZE_SHRINK_CENTER, SIZE_SHRINK_END, false)
     );

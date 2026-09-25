@@ -1,4 +1,4 @@
-/** TabBar registration — native (WebGL canvas) painter + rect solver. */
+/** TabBar registration: native painter and rect solver. */
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { TabBar } from './Component';
 import './nativeSolver';

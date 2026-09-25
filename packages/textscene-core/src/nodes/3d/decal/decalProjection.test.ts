@@ -1,13 +1,8 @@
 /**
- * Decal projection maths — pure over THREE objects, so the projection is
- * verified here without a canvas or the R3F component (which the test-renderer
- * cannot exercise: it populates no `matrixWorld` and mounts no sibling meshes).
- *
- * Coverage: the box AABB in world space; the receiver filter (real meshes in,
- * decal projections / non-meshes out, non-overlapping out, `cull_mask`-culled
- * render layers out); and the projection itself — a horizontal floor inside the
- * box bakes to geometry that lies on the floor, stays within the footprint, and
- * carries in-range UVs; a floor outside the box clips to nothing.
+ * Decal projection maths, verified without a canvas or the R3F component, which the test-renderer
+ * cannot exercise (it populates no `matrixWorld` and mounts no sibling meshes). Covers the
+ * world-space box AABB, the receiver filter, and the projection: a floor inside the box bakes onto
+ * the floor within the footprint with in-range UVs, and a floor outside clips to nothing.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -44,7 +39,7 @@ function decalAt(x: number, y: number, z: number): THREE.Matrix4 {
 
 const SIZE = { x: 3, y: 3, z: 3 };
 
-/** Exponent 0 on both sides means pow(x, 0) === 1 — no depth fade to confound a test. */
+/** Exponent 0 on both sides means pow(x, 0) === 1: no depth fade to confound a test. */
 const NO_FADE = { upperFade: 0, lowerFade: 0, normalFade: 0 };
 
 describe('computeDecalBoxWorldAABB', () => {
@@ -117,8 +112,8 @@ describe('collectDecalReceivers', () => {
 
     const box = computeDecalBoxWorldAABB(decalAt(0, 1, 0), SIZE);
     expect(collectDecalReceivers(root, box, 0xfffff).map((m) => m.name)).toEqual(['vehicle']);
-    // An omitted mask behaves as Godot's default, so a decal that never
-    // authored `cull_mask` keeps every receiver it used to have.
+    // An omitted mask behaves as Godot's default, so a decal that never authored `cull_mask`
+    // keeps every receiver.
     expect(collectDecalReceivers(root, box).map((m) => m.name)).toEqual(['vehicle']);
   });
 
@@ -183,8 +178,8 @@ describe('buildDecalProjectionGeometry', () => {
   });
 
   it('bakes the depth fade onto the emitted geometry', () => {
-    // The same geometry as the happy path above — a floor 1 unit below a
-    // size.y = 3 decal, i.e. uv_local.y = -2/3 — so Godot's lower_fade 0.3
+    // The same geometry as the happy path above, a floor 1 unit below a
+    // size.y = 3 decal (uv_local.y = -2/3), so Godot's lower_fade 0.3
     // gives (1 - 2/3)^0.3 = 0.7192231 at every vertex.
     const floor = horizontalFloor();
     floor.updateMatrixWorld(true);

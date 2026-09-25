@@ -1,7 +1,6 @@
 /**
- * The slice's routing claim: importing the entry point must register
- * `SpriteFrames` on the generic `resource` slot (its `animations` value is text,
- * so it rides a ParsedResource — not a texture).
+ * The slice's routing claim: importing the entry point registers `SpriteFrames`
+ * on the `resource` slot, since its `animations` value is text.
  */
 import { describe, it, expect } from 'vitest';
 import './index';

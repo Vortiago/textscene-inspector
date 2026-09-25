@@ -1,8 +1,6 @@
 /**
- * The INT-slot verdicts, at the seam that produces them.
- *
- * The sweeps in `nonFiniteInts.test.ts` ask the whole registry whether every
- * slot is silent; these ask the shared helpers what they say and at which tier.
+ * The INT-slot verdicts, at the seam that produces them: what the shared
+ * helpers say and at which tier. `nonFiniteInts.test.ts` sweeps the registry.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -30,11 +28,9 @@ describe('truncatedComponent', () => {
   it.each(['inf', '-inf', 'inf_neg', 'nan', '1e999'])(
     'says nothing about the non-finite %s, whose stored value is unnameable',
     (spelling) => {
-      // Its callers match on the linter's WIDENED grammar, which admits these
-      // deliberately, and `Number.isInteger(Infinity)` is false — so they
-      // reached the truncation arm and printed "stores Infinity". ADR-0032
-      // forbids naming a value the conversion leaves undefined; the caller's
-      // own unstorable arm is what reports these.
+      // The callers' widened grammar admits these, and `Number.isInteger(Infinity)`
+      // is false. ADR-0032 forbids naming a value the conversion leaves
+      // undefined, so the caller's own unstorable arm reports these.
       expect(truncatedComponent('size', 'size', 1, [spelling, '2'], 'CODE')).toBeNull();
     }
   );
@@ -69,9 +65,8 @@ describe('storedNotWritten', () => {
   });
 
   it('answers from the float its caller read, never from the text again', () => {
-    // The proof it parses once. A re-reading implementation reads "5", finds it
-    // whole and says nothing; this one follows the read it was handed. The
-    // message still quotes the LITERAL, which is what the file says.
+    // The proof it parses once: a re-reading implementation reads "5" and says
+    // nothing. The message still quotes the literal, which is what the file says.
     expect(
       storedNotWritten('hframes', 'hframes', '5', 1, 'CODE', { asFloat: 5.5, stored: 5 })
     ).not.toBeNull();

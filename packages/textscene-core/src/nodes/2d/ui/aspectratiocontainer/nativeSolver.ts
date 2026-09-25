@@ -1,29 +1,7 @@
 /**
- * AspectRatioContainer's native (WebGL canvas) layout solver — a port of
- * `AspectRatioContainer::get_minimum_size` and its `NOTIFICATION_SORT_CHILDREN`
- * handler (`scene/gui/aspect_ratio_container.cpp`), plus the shared
- * `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`) it calls.
- *
- * Unlike CenterContainer/GridContainer, EVERY child gets its own rect here —
- * there is no "first child only" special case: `_notification` loops
- * `get_child_count()` exactly like `get_minimum_size` does
- * (`aspect_ratio_container.cpp:98-173`), fitting each child independently into
- * the SAME container-relative rect computed from `ratio`/`stretch_mode`.
- *
- * A TextureRect child with a `PROPORTIONAL` fit expand mode is skipped
- * entirely (`:109-116`, Godot's own "Temporary fix for editor crash" —
- * `WARN_PRINT_ONCE("Proportional TextureRect is currently not supported
- * inside AspectRatioContainer")`) — this solver never assigns it a rect,
- * which `controlRectSolver.ts`'s `dispatchChildren` floors to `(0,0,0,0)`.
- *
- * All-float (`Size2`, not `Size2i`) — unlike GridContainer/FlowContainer,
- * nothing here truncates.
- *
- * RTL mirrors the aligned rect against the container's own width
- * (`aspect_ratio_container.cpp:164-168`) and reaches `fit_child_in_rect`'s own
- * RTL arm (`container.cpp:99,105,109`).
- *
- * Pure data + functions, no React, no THREE.
+ * AspectRatioContainer's native (WebGL canvas) layout solver, a port of `get_minimum_size`,
+ * `NOTIFICATION_SORT_CHILDREN` (`scene/gui/aspect_ratio_container.cpp`) and the shared
+ * `Container::fit_child_in_rect` (`scene/gui/container.cpp:95-128`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -53,7 +31,7 @@ const ALIGNMENT_BEGIN = 0;
 const ALIGNMENT_CENTER = 1;
 const ALIGNMENT_END = 2;
 
-// TextureRect::ExpandMode (texture_rect.h:40-45) — the two PROPORTIONAL modes.
+// The two proportional modes of TextureRect::ExpandMode (texture_rect.h:40-45).
 const EXPAND_FIT_WIDTH_PROPORTIONAL = 3;
 const EXPAND_FIT_HEIGHT_PROPORTIONAL = 5;
 
@@ -63,7 +41,7 @@ function props(n: SolveNode): AspectRatioContainerProperties {
   return n.node.properties as AspectRatioContainerProperties;
 }
 
-/** `aspect_ratio_container.cpp:109-116` — see module doc. */
+/** A proportional TextureRect child, which the sort skips (`aspect_ratio_container.cpp:109-116`). */
 function isUnsupportedTextureRect(child: SolveNode): boolean {
   if (child.node.type !== 'TextureRect') return false;
   const mode = (child.node.properties as TextureRectProperties).expandMode;
@@ -71,9 +49,9 @@ function isUnsupportedTextureRect(child: SolveNode): boolean {
 }
 
 /**
- * `AspectRatioContainer::get_minimum_size` (`aspect_ratio_container.cpp:35-46`):
- * componentwise max of every visible child's own combined minimum size —
- * `ratio`/`stretch_mode`/alignment play no part in the container's OWN floor.
+ * `AspectRatioContainer::get_minimum_size` (`aspect_ratio_container.cpp:35-46`): the
+ * componentwise max of each visible child's combined minimum size. `ratio`,
+ * `stretch_mode` and alignment play no part in it.
  */
 export const aspectRatioContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   let maxW = 0;
@@ -90,15 +68,10 @@ export const aspectRatioContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
 controlSolverRegistry.registerMinimumSize('AspectRatioContainer', aspectRatioContainerMinimumSize);
 
 /**
- * `AspectRatioContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN`
- * (`aspect_ratio_container.cpp:98-173`): each child's target size is
- * `(ratio, 1.0)` scaled by a factor derived from `stretch_mode` against the
- * container's own full size, then floored to the child's own combined
- * minimum (`:136-137`), then aligned inside the container per
- * `alignment_horizontal`/`alignment_vertical` (`:139-163`). `fit_child_in_rect`
- * (shared) applies the child's OWN size flags on top — a child without
- * `SIZE_FILL` ends up at its own minimum inside this rect regardless of the
- * aspect-derived size, exactly as every other container's fit-in-rect call.
+ * `NOTIFICATION_SORT_CHILDREN` (`aspect_ratio_container.cpp:98-173`): each child is
+ * `(ratio, 1.0)` scaled by the `stretch_mode` factor, floored to its combined minimum
+ * (`:136-137`) and aligned (`:139-163`). `fit_child_in_rect` then applies the child's
+ * own size flags, so a child without `SIZE_FILL` stays at its minimum.
  */
 export const aspectRatioContainerLayout: ContainerLayoutFn = (n, children, contentRect, _ctx) => {
   const p = props(n);
@@ -113,8 +86,11 @@ export const aspectRatioContainerLayout: ContainerLayoutFn = (n, children, conte
   const baseH = 1.0;
 
   const out = new Map<string, Rect2>();
+  // Every child gets its own rect in the same box, as `_notification` loops every child
+  // (`aspect_ratio_container.cpp:98-173`), not only the first.
   for (const { node: child, minSize } of children) {
     if (!isSortableControl(child)) continue;
+    // `WARN_PRINT_ONCE` and no rect (`:109-116`), which `dispatchChildren` floors to (0, 0, 0, 0).
     if (isUnsupportedTextureRect(child)) continue;
 
     let scaleFactor = 1.0;
@@ -137,6 +113,7 @@ export const aspectRatioContainerLayout: ContainerLayoutFn = (n, children, conte
         break;
     }
 
+    // All float (`Size2`, not `Size2i`): nothing truncates, unlike GridContainer.
     const childW = Math.max(baseW * scaleFactor, minSize.x);
     const childH = Math.max(baseH * scaleFactor, minSize.y);
 
@@ -150,8 +127,9 @@ export const aspectRatioContainerLayout: ContainerLayoutFn = (n, children, conte
     const hFlags = cp.sizeFlagsHorizontal ?? DEFAULT_SIZE_FLAGS;
     const vFlags = cp.sizeFlagsVertical ?? DEFAULT_SIZE_FLAGS;
 
-    // `aspect_ratio_container.cpp:164-168` — the aligned x is measured from the
-    // trailing edge instead, the whole container width away.
+    // `aspect_ratio_container.cpp:164-168`: the aligned x is measured from the
+    // trailing edge, the whole container width away. The flag also reaches
+    // `fit_child_in_rect`'s RTL arm (`container.cpp:99,105,109`).
     const x = rtl ? size.x - offsetX - childW : offsetX;
 
     out.set(

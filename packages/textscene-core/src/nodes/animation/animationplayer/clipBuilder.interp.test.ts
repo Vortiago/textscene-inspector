@@ -1,19 +1,8 @@
 /**
- * Godot's per-track `interp` mode reaches the THREE KeyframeTrack.
- *
- * `buildTracks` never called `setInterpolation`, so every track played back
- * LINEAR whatever the scene said — a NEAREST track that should hold its value
- * between keys eased through them instead.
- *
- * `Animation.InterpolationType`: NEAREST 0, LINEAR 1 (the default when the key
- * is absent — `animation.h`: `InterpolationType interpolation = INTERPOLATION_LINEAR`),
- * CUBIC 2, LINEAR_ANGLE 3, CUBIC_ANGLE 4. NEAREST is a step/hold —
- * `animation.cpp` returns `p_keys[idx].value` for the key at-or-before the
- * time, not a round-to-nearest — so it maps to three's InterpolateDiscrete.
- *
- * One extra constraint from the same file: a VALUE track whose
- * `update_mode` is UPDATE_DISCRETE (1) is FORCED to NEAREST regardless of
- * `interp`.
+ * Godot's per-track `interp` reaches the THREE KeyframeTrack. `Animation.InterpolationType` is
+ * NEAREST 0, LINEAR 1 (the default when the key is absent, `animation.h`), CUBIC 2, LINEAR_ANGLE 3,
+ * CUBIC_ANGLE 4. NEAREST holds the key at or before the time (`animation.cpp`), so it maps to
+ * InterpolateDiscrete. A VALUE track with `update_mode` UPDATE_DISCRETE (1) is always NEAREST.
  */
 import { describe, expect, it } from 'vitest';
 import { InterpolateDiscrete, InterpolateLinear, InterpolateSmooth } from 'three';

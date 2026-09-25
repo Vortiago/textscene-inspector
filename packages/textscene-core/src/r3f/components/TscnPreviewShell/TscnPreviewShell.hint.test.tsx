@@ -1,9 +1,7 @@
 /**
- * ADR-0006 (Godot-parity amendment): scenes whose ROOT keeps the viewport in
- * 3D but which carry CanvasItem content (a HUD, embedded 2D world nodes)
- * float a "switch to 2D" hint over the canvas — that content only renders in
- * the 2D workspace, like Godot's editor. Pure-3D scenes show no hint;
- * CanvasItem-root scenes auto-open in 2D, so no hint either.
+ * ADR-0006: a scene with a 3D root and CanvasItem content floats a "switch to
+ * 2D" hint, since that content renders only in the 2D workspace. A pure-3D
+ * scene and a CanvasItem-root scene show no hint.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -75,9 +73,8 @@ describe('<TscnPreviewShell> 2D discoverability hint (ADR-0006)', () => {
   });
 
   it('shows the hint when the 2D content lives inside an instanced sub-scene', async () => {
-    // 3D-root level instances a HUD sub-scene (Control). The static walk over
-    // the root scene's nodes never saw it (the instance is a leaf there); the
-    // live tree descends into the loaded sub-scene and finds the Control.
+    // The Control lives inside an instanced HUD sub-scene, which only the live
+    // tree descends into.
     const hud = new TscnParser().parse(`[gd_scene format=3]\n\n[node name="Hud" type="Control"]\n`);
     const loader = makeLoader({ 'res://hud.tscn': hud as TscnScene });
     const content = `[gd_scene format=3]\n\n[ext_resource type="PackedScene" path="res://hud.tscn" id="h"]\n\n[node name="Root" type="Node3D"]\n\n[node name="Hud" parent="." instance=ExtResource("h")]\n`;

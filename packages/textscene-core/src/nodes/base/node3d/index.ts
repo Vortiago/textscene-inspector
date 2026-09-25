@@ -1,5 +1,5 @@
 /**
- * Node3D registration — parser + formatter.
+ * Node3D registration: parser and formatter.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

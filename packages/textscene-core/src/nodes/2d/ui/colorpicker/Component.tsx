@@ -1,41 +1,8 @@
 /**
- * `<ColorPicker>` — the native (WebGL canvas) painter for ColorPicker.
- * ColorPicker builds its whole widget as INTERNAL children in its C++
- * constructor (`scene/gui/color_picker.cpp:2069-2260`); none of that
- * structure is a `.tscn` property, so this ONE painter draws the composite
- * directly from `nativeSolver.ts`'s `colorPickerRows` rather than a subtree
- * the solve tree could walk.
- *
- * Row order (`real_vbox`'s own child order): shape, sample, mode, sliders,
- * hex, swatches — `nativeSolver.ts`'s own doc for which rows always
- * participate in the stack vs. drop out (and their `separation` gap) per
- * visibility flag.
- *
- * ICON GAP: `themeIcons.ts` is out of this packet's files, so `btn_pick`/
- * `btn_shape`/`btn_mode`/`menu_btn`/`text_type`'s own icons are not drawn —
- * their box (where they have a real one) and text still are.
- * `btn_shape`/`btn_mode`/`menu_btn` all use the `FlatMenuButton` type
- * variation, whose "normal"/"hover"/"disabled" styleboxes are
- * `StyleBoxEmpty` (`default_theme.cpp:360,372-375`), and `mode_btns[0..2]`'s
- * own `mode_button_normal/pressed/hover/hover_pressed` overrides are never
- * registered under "ColorPicker" in `default_theme.cpp` either, so they
- * resolve to the SAME empty fallback — none of these five buttons ever
- * draws a background box in an unfocused, unhovered static frame, `color_mode`
- * included (no button visibly differs by which mode is current). Only
- * `btn_pick` (a plain `Button`, `default_theme.cpp:138-141`) has a real one.
- *
- * SLIDER CHROME: only the 16px gradient band every `slider_draw` override
- * paints on TOP of the stock `HSlider` is drawn — the `HSlider`'s own
- * background/grabber-area/grabber icon (`shared/sliderSolver.ts`'s own
- * recipe) is not modelled here, documented on the comparison sheet.
- *
- * Tint: every draw call on a CanvasItem is subject to its own accumulated
- * modulate at the rendering-server level, so `tint.own` is folded into every
- * vertex/quad/text colour below, sRGB-space, before this painter's single
- * decode (the shader injection for the gradient meshes, `useGodotLinearColor`
- * for the flat `ControlQuad`s, `<TextRun>`'s own internal decode for text) —
- * the same ordering `StyleBoxQuad.tsx` and `ColorRect`'s own `Component.tsx`
- * already establish.
+ * The native (WebGL canvas) painter for ColorPicker. ColorPicker builds its
+ * widget as internal children in its constructor
+ * (`scene/gui/color_picker.cpp:2069-2260`), and no `.tscn` property reaches
+ * them, so this one painter draws the rows of `nativeSolver.ts`'s `colorPickerRows`.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -133,10 +100,10 @@ import {
 } from './colorModes';
 import type { ColorPickerProperties } from './types';
 
-/** `default_theme.cpp`'s `control_font_color` — the shared default text colour for Label/Button (`:100`). None of `btn_preset`/`btn_recent_preset`/`text_type`/`hex_label` override it; `mode_btns`' own PRESSED state does (`MODE_BUTTON_PRESSED_FONT_COLOR` below). */
+/** `control_font_color` in `default_theme.cpp` (`:100`), the default text colour of Label and Button. Only the pressed `mode_btns` entry reads another colour. */
 const CONTROL_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 
-/** `control_font_pressed_color` = `Color(1, 1, 1)` (`default_theme.cpp:105,156`) — `Button`'s own `font_pressed_color`, which the CURRENT `mode_btns[i]` (toggled on) reads instead of the plain `font_color` above. */
+/** `control_font_pressed_color` (`default_theme.cpp:105,156`): `Button`'s `font_pressed_color`, which the toggled-on `mode_btns[i]` reads. */
 const MODE_BUTTON_PRESSED_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 
 function buildGeometry(g: QuadGeometry): THREE.BufferGeometry {
@@ -149,11 +116,9 @@ function buildGeometry(g: QuadGeometry): THREE.BufferGeometry {
 
 /**
  * `Color::srgb_to_linear` (`core/math/color.h:192-198`) as GLSL, applied to
- * the INTERPOLATED vertex colour rather than the attribute that feeds it —
- * `StyleBoxQuad.tsx`'s own `decodeVertexColorsFromSRGB` establishes why
- * (interpolating between two different sRGB colours in linear space moves
- * the ramp's midpoint), duplicated here rather than imported since that
- * function is private to a slice this packet does not own.
+ * the interpolated vertex colour, not the attribute: interpolating two sRGB
+ * colours in linear space moves the ramp's midpoint. A copy of the private
+ * `decodeVertexColorsFromSRGB` in `StyleBoxQuad.tsx`.
  */
 function decodeVertexColorsFromSRGB(shader: { fragmentShader: string }): void {
   shader.fragmentShader = shader.fragmentShader.replace(
@@ -178,11 +143,11 @@ interface GradientMeshProps {
   geometry: THREE.BufferGeometry;
   renderOrder: number;
   clippingPlanes: THREE.Plane[];
-  /** `true` when `geometry`'s own vertex colours are ALREADY linear (`svGradient.ts`'s `linearizeStops`) — skips the usual sRGB-decode injection so the GPU's own linear lerp is the final value, reproducing `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`Component.tsx`'s module doc). */
+  /** The vertex colours are already linear (`linearizeStops`), so the sRGB decode is skipped and the GPU's linear lerp reproduces `GRADIENT_COLOR_SPACE_LINEAR_SRGB`. */
   linear?: boolean;
 }
 
-/** One vertex-coloured, single-pass quad — the SV square's two layers, the hue strip and every channel-slider band all share this recipe. sRGB-decoded by default; `linear` skips that for a caller whose own vertex colours are already linear. */
+/** One vertex-coloured, single-pass mesh: the SV square's two layers, the hue strip and every channel-slider band. */
 function GradientMesh({ geometry, renderOrder, clippingPlanes, linear }: GradientMeshProps) {
   useEffect(() => () => geometry.dispose(), [geometry]);
   const program = materialProgramInputs({
@@ -203,6 +168,11 @@ function GradientMesh({ geometry, renderOrder, clippingPlanes, linear }: Gradien
   );
 }
 
+/**
+ * The rendering server applies a CanvasItem's accumulated modulate to every draw call,
+ * so `tint.own` multiplies each colour in sRGB space before this painter's one decode,
+ * the same order as `StyleBoxQuad.tsx`.
+ */
 function tintVertexColors(colors: number[], tint: { r: number; g: number; b: number; a: number }): number[] {
   const out = new Array<number>(colors.length);
   for (let i = 0; i < colors.length; i += 4) {
@@ -221,17 +191,17 @@ interface LabelledTextProps {
   tint: ControlColor;
   clippingPlanes: THREE.Plane[];
   renderOrder: number;
-  /** Right-aligns within `rect` (the SpinBox's own `LineEdit`, `line_edit.cpp`'s default alignment for a numeric value) instead of the left (every plain `Label`). */
+  /** Right-aligns within `rect`, as the SpinBox's `LineEdit` does for a number (`line_edit.cpp`). A plain `Label` aligns left. */
   alignRight?: boolean;
-  /** Centres within `rect` — `Button`'s own default `alignment` (`button.h:54`), which `mode_btns`/`text_type` never override (contrast `btn_preset`/`btn_recent_preset`'s explicit LEFT, `color_picker.cpp:2248,2283`). Takes precedence over `alignRight`. */
+  /** Centres within `rect`: `Button`'s default `alignment` (`button.h:54`), which `mode_btns` and `text_type` keep. `btn_preset` and `btn_recent_preset` set LEFT (`color_picker.cpp:2248,2283`). Wins over `alignRight`. */
   center?: boolean;
-  /** `LineEdit::_notification(NOTIFICATION_DRAW)`'s own `x_ofs` floor: text sits `contentMargin` in from whichever edge it's aligned to, never flush against the box — 0 for a plain Label/Button (no box under the text at all). */
+  /** The `x_ofs` floor of `LineEdit::_notification(NOTIFICATION_DRAW)`: the gap between the text and its aligned edge. 0 for a Label or Button, which has no box under the text. */
   inset?: number;
-  /** `Control::is_layout_rtl()` (`SolveNode.rtl`) — swaps the leading and trailing arms, which is all RTL does to a single line of text: `Label::_get_line_rect` (`label.cpp:497-509`), `LineEdit`'s own `x_ofs` switch (`line_edit.cpp:1397-1421`) and `Button`'s alignment swap (`button.cpp:262-276`) each carry the same pair, and none of them has a CENTER arm. */
+  /** `Control::is_layout_rtl()`: swaps the leading and trailing arms and leaves centre alone, as `label.cpp:497-509`, `line_edit.cpp:1397-1421` and `button.cpp:262-276` do. */
   rtl?: boolean;
 }
 
-/** One row of shaped text, vertically centred in `rect` — every label/value/hex run below shares this placement. */
+/** One row of shaped text, vertically centred in `rect`. */
 function LabelledText({ rect, layout, fontSizePx, tint, clippingPlanes, renderOrder, alignRight, center, inset = 0, rtl = false }: LabelledTextProps) {
   if (!layout) return null;
   const width = shapedTextSizeWidthPx(layout.widthPx);
@@ -253,7 +223,7 @@ interface CenteredIconProps {
   renderOrder: number;
 }
 
-/** One icon, centred inside `rect` — every button icon below (`btn_pick`/`btn_shape`/`btn_mode`/`menu_btn`) shares this placement. */
+/** One button icon, centred inside `rect`. */
 function CenteredIcon({ rect, size, texture, tint, renderOrder }: CenteredIconProps) {
   if (!texture) return null;
   const x = (rect.w - size) / 2;
@@ -274,7 +244,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const scale = colorPickerScale(theme);
 
   const fontSizePx = theme.fontSize;
-  // Read INSIDE the render body, not a `useMemo` (`Label`'s own `Component.tsx` for why).
+  // Read in the render body, not a `useMemo` (`Label`'s `Component.tsx` says why).
   const fontMetrics = resolveNodeFontMetrics(solveNode, COLOR_PICKER_THEME_FONT_KEY);
   const layoutCache = useMemo(() => new Map<string, TextLayoutResult>(), []);
   const shape = (text: string): TextLayoutResult => {
@@ -299,20 +269,20 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
 
   const fontColor = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
   const pressedFontColor = useMemo(() => multiplyModulate(tint.own, MODE_BUTTON_PRESSED_FONT_COLOR), [tint.own]);
-  // `LineEdit::_notification(NOTIFICATION_DRAW)`'s own `x_ofs` floor — the
-  // SAME box every value/hex `LineEdit` uses, so one constant covers both.
+  // Every value and hex `LineEdit` uses the same box, so one inset covers both.
   const lineEditInsetX = theme.widgets.lineEdit.normal.contentMargin.left;
 
-  // --- Sample row -------------------------------------------------------
   const sampleFill = useMemo(() => multiplyModulate(tint.own, fill), [tint.own, fill]);
   const sampleColor = useGodotLinearColor(sampleFill);
   const overbrightTexture = useNodeIcon(solveNode.icons.overbright_indicator, COLOR_PICKER_OVERBRIGHT_ICON);
   const overbright = isColorOverbright(fill);
   const sampleCols = rows.sample ? sampleRowColumns(rows.sample, theme, props.pickerShape, solveNode.rtl) : null;
   const sampleQuadRect = sampleCols ? { w: sampleCols.sample.w, h: sampleCols.sample.h * COLOR_PICKER_SAMPLE_HEIGHT_FRACTION } : null;
+  // `btn_shape`, `btn_mode` and `menu_btn` use `FlatMenuButton`, whose boxes are `StyleBoxEmpty`
+  // (`default_theme.cpp:360,372-375`). Only `btn_pick`, a plain `Button` (`default_theme.cpp:138-141`), draws one.
   const pickButtonBox = theme.widgets.button.normal;
   const pickIconTexture = useNodeIcon(solveNode.icons.screen_picker, COLOR_PICKER_PIPETTE_ICON);
-  // `shape_rect` is only correct at `SHAPE_HSV_RECTANGLE` — every other shape stays undrawn (out of scope, `comparison.md`).
+  // `shape_rect` is correct only at `SHAPE_HSV_RECTANGLE`. No other shape is drawn (`comparison.md`).
   const isHsvRectangle = (props.pickerShape ?? SHAPE_HSV_RECTANGLE) === SHAPE_HSV_RECTANGLE;
   const shapeIconTexture = useNodeIcon(solveNode.icons.shape_rect, isHsvRectangle ? COLOR_PICKER_SHAPE_RECT_ICON : null);
   const menuIconTexture = useNodeIcon(solveNode.icons.menu_option, COLOR_PICKER_MENU_ICON);
@@ -320,10 +290,9 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const defaultGrabberTexture = useNodeIcon(solveNode.icons.grabber, SLIDER_GRABBER_ICONS.grabber);
   const spinUpTexture = useNodeIcon(solveNode.icons.up, SPIN_BOX_ICONS.up);
   const spinDownTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
-  // `up_icon_modulate`/`down_icon_modulate` default `control_font_color` (`default_theme.cpp:634,638`) — the SAME grey `CONTROL_FONT_COLOR` every label/value text already reads.
+  // `up_icon_modulate` and `down_icon_modulate` default to `control_font_color` (`default_theme.cpp:634,638`).
   const spinArrowColor = useMemo(() => srgbToLinearColor(multiplyModulate(tint.own, CONTROL_FONT_COLOR)), [tint.own]);
 
-  // --- Shape row (SHAPE_HSV_RECTANGLE only) ------------------------------
   const shapeRects = rows.shape ? svAndHueRects(rows.shape, theme, solveNode.rtl) : null;
 
   const baseTint = tint.own;
@@ -361,10 +330,8 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const hueLineLinear = useGodotLinearColor(hueLineColor);
   const hueY = shapeRects ? hueIndicatorY(shapeRects.hueSlider.h, hsv.h) : 0;
 
-  // --- Mode row -----------------------------------------------------------
   const modeCols = rows.mode ? modeRowButtonRects(rows.mode, theme, solveNode.rtl) : null;
 
-  // --- Slider grid ----------------------------------------------------------
   const colorMode = props.colorMode ?? MODE_RGB;
   const editAlpha = props.editAlpha ?? true;
   const editIntensity = props.editIntensity ?? true;
@@ -384,22 +351,19 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     valueText: string;
     stops: ControlColor[];
     overlay?: { base: ControlColor; alpha: number };
-    /** `value/max` (every channel's own `min` is 0 but intensity's, handled separately) — the grabber's own position, both the overridden `bar_arrow` and the stock chrome's default circle read this. */
+    /** The grabber position, `value/max`. Every channel's `min` is 0 except intensity's, which has its own ratio. */
     ratio: number;
-    /** `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`color_mode.cpp:311`) — only `MODE_LINEAR`'s own R/G/B rows (`svGradient.ts`'s `linearizeStops` own doc). */
+    /** `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`color_mode.cpp:311`): only the R, G and B rows of `MODE_LINEAR`. */
     linearSpace?: boolean;
   }
 
-  // The single tested source of truth for row ORDER (`colorModes.test.ts`'s
-  // own `colorPickerSliderLabels` cases) — every push below is checked
-  // against it once, right after the loop, rather than trusted to stay in
-  // sync by construction.
+  // The tested source of the row order: each row below takes its label from here by index.
   const sliderLabels = useMemo(() => colorPickerSliderLabels(colorMode, editAlpha, editIntensity), [colorMode, editAlpha, editIntensity]);
 
   const sliderRows: SliderRowContent[] = useMemo(() => {
     const out: SliderRowContent[] = [];
-    // `SpinBox::_update_text` (`spin_box.cpp:97-99`): `value = prefix + " " + value`
-    // — a SPACE joins the prefix and the number, never a bare concatenation.
+    // `SpinBox::_update_text` (`spin_box.cpp:97-99`): `value = prefix + " " + value`,
+    // so a space joins the prefix and the number.
     const formatValue = (c: ColorModeChannel, prefixPlus?: boolean) => {
       const text = formatSliderValue(c.value, c.decimals);
       return prefixPlus && c.value >= 0 ? `+ ${text}` : text;
@@ -462,20 +426,15 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     [sliderRows, sliderCols, baseTint, scale]
   );
 
-  // --- Hex row --------------------------------------------------------------
   const hexCols = rows.hex ? hexRowColumns(rows.hex, theme, solveNode.rtl) : null;
   const hexContent = useMemo(() => hexFieldText(fill, editAlpha), [fill, editAlpha]);
 
-  // --- Swatches row -----------------------------------------------------
   const swatchesCols = rows.swatches ? swatchesRowRects(rows.swatches, theme, solveNode.rtl) : null;
-  // `btn_preset`/`btn_recent_preset` start unpressed (never toggled — no
-  // `.tscn` property reaches either, `swatchesRowRects`' own doc for why the
-  // grid stays collapsed), so `_update_drop_down_arrow` always picks
-  // `folded_arrow` (`color_picker.cpp:1024-1030`), never `expanded_arrow`.
+  // No `.tscn` property presses `btn_preset` or `btn_recent_preset`, so
+  // `_update_drop_down_arrow` picks `folded_arrow` (`color_picker.cpp:1024-1030`).
   const dropdownArrowTexture = useNodeIcon(solveNode.icons.folded_arrow, FOLDABLE_CONTAINER_ICONS.foldedArrow);
-  // `h_separation`, "Button" (`default_theme.cpp:171`) — numerically the SAME
-  // `round(4 * scale)` as `theme.separation` (BoxContainer's own), a
-  // different theme key that coincides in value, not identity.
+  // Button's `h_separation` (`default_theme.cpp:171`) is a different theme key
+  // from BoxContainer's `separation`, with the same value `round(4 * scale)`.
   const buttonIconTextSeparation = theme.separation;
 
   return (
@@ -564,10 +523,9 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
           const col = sliderCols[i];
           if (!col) return null;
           const geometry = sliderGeometries[i];
-          // `_reset_sliders_theme` (`color_picker.cpp:628-651`): every row but
-          // intensity overrides the grabber to `bar_arrow` (this module's own
-          // doc) — `row.overlay`/`row.stops` both only ever populate for a
-          // colorized row, so their presence doubles as that same test.
+          // `_reset_sliders_theme` (`color_picker.cpp:628-651`) gives every row but intensity the
+          // `bar_arrow` grabber and a gradient band. Only such a row has `overlay` or `stops`.
+          // Intensity keeps the stock `HSlider` track, fill and grabber.
           const isColorized = row.stops.length >= 2 || !!row.overlay;
           const grabberIconSize = isColorized ? { x: COLOR_PICKER_BUTTON_ICON_SIZE, y: COLOR_PICKER_BUTTON_ICON_SIZE } : { x: theme.sliderGrabberSize, y: theme.sliderGrabberSize };
           const sliderBox = colorPickerSliderBoxRect(col.slider, theme, grabberIconSize);
@@ -619,10 +577,8 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                   })()}
               </CanvasItemGroup>
               {(() => {
-                // `SpinBox::_compute_sizes` (`spin_box.cpp:392-397`): the
-                // `LineEdit` box and the up/down buttons block share the
-                // column — the box (and the right-aligned text inside it)
-                // covers only `fieldRect`, never the buttons block beside it.
+                // `SpinBox::_compute_sizes` (`spin_box.cpp:392-397`): the `LineEdit` box
+                // covers only `fieldRect`, and the up/down buttons block sits beside it.
                 const spinLayout = spinBoxLayout({ x: col.value.w, y: col.value.h }, SPIN_BOX_ARROW_ICON_SIZE.x, solveNode.rtl);
                 const fieldRect = { x: col.value.x + spinLayout.fieldRect.x, y: col.value.y + spinLayout.fieldRect.y, w: spinLayout.fieldRect.w, h: spinLayout.fieldRect.h };
                 const upRect = { x: col.value.x + spinLayout.upRect.x, y: col.value.y + spinLayout.upRect.y, w: spinLayout.upRect.w, h: spinLayout.upRect.h };
@@ -669,11 +625,9 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
             { key: 'swatches', box: swatchesCols.swatchesButton, text: 'Swatches' },
             { key: 'recent', box: swatchesCols.recentColorsButton, text: 'Recent Colors' },
           ].map(({ key, box, text }) => {
-            // `btn_preset`/`btn_recent_preset` both carry the folded arrow at
-            // the default `icon_alignment` and an explicit LEFT text alignment
-            // (`color_picker.cpp:2242-2248,2279-2283`); RTL swaps BOTH sides
-            // once, up front (`button.cpp:262-276`), which puts the icon on
-            // the trailing edge and right-aligns the text in what is left.
+            // Both buttons have the default `icon_alignment` and LEFT text
+            // (`color_picker.cpp:2242-2248,2279-2283`). RTL swaps both sides (`button.cpp:262-276`),
+            // so the icon goes to the trailing edge and the text aligns right.
             const iconX = solveNode.rtl ? box.x + box.w - COLOR_PICKER_BUTTON_ICON_SIZE : box.x;
             const textBox = {
               ...box,
@@ -704,7 +658,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   );
 }
 
-/** `useGodotLinearColor` is a hook and cannot run inside a conditional/`.map()` callback — this reproduces its one-line sRGB→linear conversion directly for the (rare, alpha-uniform) HSV hue-row base layer. */
+/** The conversion of `useGodotLinearColor`, for a colour inside a `.map()` callback, where a hook cannot run. */
 function srgbToLinearColor(c: ControlColor): THREE.Color {
   const toLinear = (v: number) => (v < 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
   return new THREE.Color(toLinear(c.r), toLinear(c.g), toLinear(c.b));

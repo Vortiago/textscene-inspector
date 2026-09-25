@@ -1,14 +1,7 @@
 /**
- * `CanvasItemMaterial` resource slice entry point (ADR-0031): the routing claim
- * plus the decode surface. THREE-free — `build.ts` is the only file here that
- * imports three, and nothing routing-side may pull it in.
- *
- * The claim is what makes an `[ext_resource] type="CanvasItemMaterial"` load:
- * the substring routing this replaces sent it to the material processor (which
- * builds THREE materials and refuses it), so a working decode sat behind a
- * permanent missing-resources row. A `.tres` CanvasItemMaterial is a
- * ParsedResource — the generic `resource` slot — and this slice's decode gives
- * that body meaning.
+ * `CanvasItemMaterial` resource slice entry point (ADR-0031): the routing claim and the
+ * decode surface. The claim routes a `.tres` CanvasItemMaterial to the generic `resource`
+ * slot, not the material processor, which refuses it. THREE-free: only `build.ts` imports three.
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';

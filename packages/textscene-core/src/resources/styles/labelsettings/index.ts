@@ -1,13 +1,7 @@
 /**
- * LabelSettings resource slice — entry point (ADR-0031).
- *
- * Claims Godot's `LabelSettings` (the font/colour/outline/spacing bundle a
- * Label's `label_settings` overrides its theme with), decoded from either
- * arrival path by `decode.ts`. Resolves to no THREE object at all, so the
- * slice has no `build.ts`.
- *
- * THREE-free and React-free, so claim consumers can read the registration
- * without pulling a renderer into their import closure.
+ * LabelSettings resource slice entry point (ADR-0031). It resolves to no THREE
+ * object, so it has no `build.ts`. THREE-free and React-free, so a claim
+ * consumer pulls in no renderer.
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';

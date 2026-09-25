@@ -1,5 +1,5 @@
 /**
- * StrictTscnParser: how a defect is reported — the property-format error, the
+ * StrictTscnParser: how a defect is reported: the property-format error, the
  * line and column it carries, several errors in one file, and the degenerate
  * inputs at the edges.
  */

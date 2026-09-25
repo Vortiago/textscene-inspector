@@ -1,5 +1,5 @@
 /**
- * Tests for Linter — the two-phase contract, and the end-to-end runs over a
+ * Tests for Linter: the two-phase contract, and the end-to-end runs over a
  * whole scene.
  */
 
@@ -35,8 +35,8 @@ describe('Linter', () => {
 
     it('should detect parse errors in Phase 1', () => {
       // `[node type=…]` with no `name=`, not a typeless heading: a heading
-      // stating none of type/index/instance is LEGAL (Godot assumes it was
-      // instantiated, resource_format_text.cpp:218-221) and now warns.
+      // stating none of type/index/instance is legal (Godot assumes it was
+      // instantiated, resource_format_text.cpp:218-221) and warns.
       const content = `[gd_scene load_steps=1 format=3]
 
 [node type="Node2D"]
@@ -104,7 +104,7 @@ describe('Linter', () => {
 
       // A typeless heading 0: Godot assumes it was instantiated
       // (resource_format_text.cpp:218-221) and, with no base scene, refuses
-      // the instantiate (packed_scene.cpp:220) — an error that still leaves
+      // the instantiate (packed_scene.cpp:220), an error that still leaves
       // the scene to phase 2.
       const content = `[gd_scene load_steps=1 format=3]
 
@@ -140,11 +140,9 @@ invalidproperty
 
       const diagnostics = linter.lint(content);
 
-      // Semantic rules run alongside parse errors rather than being suppressed
-      // by the first one, so the set is not errors-only. The typeless `Root`
-      // heading is an ERROR: Godot reads the absence as "assume this was
-      // instantiated" (resource_format_text.cpp:218-221) and refuses a root
-      // with no base scene (packed_scene.cpp:220).
+      // Semantic rules run alongside parse errors, so the set is not errors-only. The typeless `Root` heading is an
+      // error: Godot assumes it was instantiated (resource_format_text.cpp:218-221) and refuses a root with no base
+      // scene (packed_scene.cpp:220).
       expect(diagnostics.filter((d) => d.severity === 'error').length).toBeGreaterThanOrEqual(3);
       expect(
         diagnostics.filter(

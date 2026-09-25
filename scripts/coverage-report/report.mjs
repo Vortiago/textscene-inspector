@@ -1,7 +1,4 @@
-/**
- * The CLI surface: what the flags mean and how the ledger is printed.
- */
-
+/** The CLI surface: what the flags mean and how the ledger is printed. */
 
 export function parseArgs(argv) {
   const opts = { json: false };

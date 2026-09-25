@@ -1,21 +1,8 @@
 /**
- * Bulk lint guard over `scenes/fixtures`, this package's OWN test corpus.
- *
- * Positive fixtures must produce zero error-severity diagnostics (warnings are
- * allowed — some scenes intentionally carry advisory warnings). Negative
- * `edge-*` fixtures listed in INTEGRATION_FIXTURES_WITH_ERRORS must produce at
- * least one error, pinning that the rules they exist to trigger actually
- * fire — the gap class where a rule exists but its fixture silently stops
- * exercising it.
- *
- * Scope is deliberately ONE directory, and it is the one `fixtureCheck.ts`
- * already reads: these files back this package's unit tests, so the coupling
- * is to its own data rather than to the repository's layout. Which OTHER
- * directories get swept is the caller's decision, made where the linter is
- * invoked (`pnpm lint:scenes`, and the CI step beside it), not encoded here.
- * Sweeping two directories from inside the library is what kept
- * `scenes/demos` — 220 vendored Godot scenes — out of every gate, and two
- * false positives shipped behind that gap.
+ * Lint guard over `scenes/fixtures`, this package's own corpus. A positive fixture produces no error (warnings are
+ * allowed). A negative `edge-*` fixture in INTEGRATION_FIXTURES_WITH_ERRORS produces at least one, so its rule still
+ * fires. Scope is the one directory `fixtureCheck.ts` reads: which other directories get linted is the caller's choice
+ * (`pnpm lint:scenes` and its CI step), never encoded in the library.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -31,22 +18,10 @@ const here = dirname(fileURLToPath(import.meta.url)); // .../packages/textscene-
 const scenesRoot = resolve(here, '../../../../scenes');
 
 /**
- * `unit-*` fixtures allowed to carry an advisory — warning or info alike, since
- * both tiers are legal Godot the fixture is meant to be free of — keyed by the
- * EXACT rules they may trip.
- *
- * A unit fixture exists to demonstrate one node configured correctly, so an
- * advisory on it usually means the fixture is wrong, not the rule. The gap this
- * closes is specific: a rule shipped in the same wave as the leaves it covers
- * fires on their own fixtures, and the error-only check above stays green.
- *
- * Keyed by rule, not by filename, and asserted as SET EQUALITY. A filename-only
- * exemption would blind a fixture to every FUTURE rule too, which is the very
- * hole this exists to close - and the broad multi-node fixtures here are the
- * ones a later wave is most likely to trip.
- *
- * Add an entry only when the advisory is the fixture's POINT; fixing the
- * fixture is the default.
+ * `unit-*` fixtures allowed an advisory (warning or info), keyed by the exact rules they may trip and asserted as set
+ * equality. A unit fixture shows one node configured correctly, so an advisory usually means the fixture is wrong.
+ * Keyed by rule, not filename, so the exemption does not blind a fixture to every later rule. Add an entry only when
+ * the advisory is the fixture's point: fixing the fixture is the default.
  */
 const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; reason: string }>> = {
   'unit-legacy-format.tscn': {
@@ -107,21 +82,10 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
 };
 
 /**
- * Fixtures that must produce >=1 error, read from the one file that lists them.
- *
- * Each is a file Godot refuses to load: the app-shell and extension
- * integration fixtures (a selectable, really broken file the VS Code suite
- * opens, and that `docs/user-guide-web.md` walks a user through to demonstrate
- * the parse-error banner), and a render fixture carrying a dangling resource
- * id. A unit test cannot stand in for them, because the thing under test is
- * the host reacting to a file a user picked.
- *
- * `lint-staged.config.mjs` reads the same JSON to skip them in the pre-commit
- * hook, which would otherwise fail on every commit touching one. Sharing the
- * list is what keeps "must error" and "do not lint" from disagreeing.
- *
- * A linter red test does NOT belong here: assert the validator or the rule
- * directly, which is faster and localises the failure.
+ * Fixtures that must produce an error, from the one file that lists them: files Godot refuses to load, which the
+ * app-shell and extension suites open as a user would (`docs/user-guide-web.md` walks through the parse-error banner).
+ * `lint-staged.config.mjs` reads the same JSON to skip them in the pre-commit hook, so "must error" and "do not lint"
+ * agree. A linter red test does not belong here: assert the validator or the rule directly.
  */
 const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
   (
@@ -135,16 +99,14 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 const NEGATIVE_FIXTURE_COUNT = 4;
 
 /**
- * Both text formats Godot writes, via the predicate the CLI walk and the
- * editor's document filter also use — a `.tres` validates against the same
- * registry a `[sub_resource]` block does, so leaving it out left the resource
- * slices' own fixtures ungated.
+ * Both text formats Godot writes, through the predicate the CLI walk and the editor's document filter use: a `.tres`
+ * validates against the same registry a `[sub_resource]` block does, so the resource slices' fixtures are gated too.
  */
 function tscnFiles(dir: string): string[] {
   return readdirSync(dir).filter(isGodotTextResourcePath).sort();
 }
 
-/** Diagnostics for one file, linted once and reused by all three sweeps below. */
+/** Diagnostics for one file, linted once and reused by all three checks below. */
 const diagnosticCache = new Map<string, Diagnostic[]>();
 
 function diagnosticsFor(dir: string, file: string): Diagnostic[] {
@@ -217,7 +179,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
   });
 
   it('keeps the negative list honest: every entry exists and still errors', () => {
-    // Take an entry away and the sweep above must fail. A listed fixture that
+    // Take an entry away and the check above must fail. A listed fixture that
     // was deleted, or that someone fixed, exempts nothing and has silently
     // stopped being a negative test. Existence is checked first, so a deleted
     // entry reports as stale rather than as an ENOENT out of the linter.

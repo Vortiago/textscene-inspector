@@ -1,19 +1,8 @@
 /**
- * `menuBarMinimumSize` vs Godot 4.6.3 (`MenuBar::get_minimum_size`,
- * `scene/gui/menu_bar.cpp:865-886`). Expected numbers reuse the same worked
- * OpenSans_SemiBold example `button/nativeSolver.test.ts` derives
- * (`unitsPerEm=2048`, `ascent=2189`, `descent=600`; 'A' hmtx advance = 1354
- * design units) and the default theme's Button margin MenuBar shares byte-
- * for-byte (`default_theme.cpp:176-194` registers the SAME `button_normal`
- * StyleBox and the SAME `Math::round(4 * scale)` literal for `h_separation`
- * as Button's own section, `:145-172`) — an independent worked example, never
- * the implementation's own output.
- *
- * At font size 16, `font->get_height()` = ascent + descent = 23
- * (`ceil(2189*16/2048)=18`, `ceil(600*16/2048)=5`). 'A' shaped width =
- * `ceil(1354*16/2048)` = `ceil(10.578125)` = 11. `content_margin` = 4 all
- * sides at scale 1, so one title's own item size is `(8+11, 8+23)` =
- * `(19, 31)`. `h_separation` = `round(4*1)` = 4.
+ * Tests `menuBarMinimumSize` against Godot 4.6.3 (`scene/gui/menu_bar.cpp:865-886`) with the hand-derived
+ * OpenSans_SemiBold example of `button/nativeSolver.test.ts`: font height 23, 'A' 11. MenuBar registers
+ * Button's `button_normal` box and `Math::round(4 * scale)` `h_separation` (`default_theme.cpp:176-194`,
+ * `:145-172`), so margins are 4 and one title is (8+11, 8+23) = (19, 31).
  */
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../../parser/types';

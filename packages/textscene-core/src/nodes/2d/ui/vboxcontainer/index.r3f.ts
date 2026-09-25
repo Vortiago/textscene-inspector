@@ -1,7 +1,6 @@
 /**
- * VBoxContainer registration — the native (WebGL canvas) rect solve + painter.
- * `./nativeSolver` registers the container-layout/minimum-size functions as a
- * side effect of import.
+ * VBoxContainer registration: the native (WebGL canvas) painter and rect solver. Importing
+ * `./nativeSolver` registers the container-layout and minimum-size functions.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

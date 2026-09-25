@@ -1,12 +1,7 @@
 /**
- * Curve2D resource slice — entry point (ADR-0031).
- *
- * Claims Godot's `Curve2D`, the Bézier path a Path2D holds and a PathFollow2D
- * walks. It decodes to plain numbers (control points, then a tessellated
- * polyline sampler), never a THREE object, so the slice has no `build.ts`.
- *
- * THREE-free and React-free, so claim consumers can read the registration
- * without pulling a renderer into their import closure.
+ * Curve2D resource slice entry point (ADR-0031): claims the Bézier path a Path2D
+ * holds. It decodes to plain numbers, so there is no `build.ts`. THREE-free and
+ * React-free, so a claim consumer pulls in no renderer.
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';

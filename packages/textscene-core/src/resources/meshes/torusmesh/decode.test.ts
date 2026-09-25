@@ -1,11 +1,8 @@
 /**
- * Tests for the TorusMesh decode.
- *
- * Defaults from Godot `primitive_meshes.h:377-380`. `set_rings`
- * (`primitive_meshes.cpp:2344-2355`) ERR_FAILs below 3 and `set_ring_segments`
- * (:2357-2368) does the same, so either keeps its default rather than storing a
- * count no ring can be built from. The radii have no setter guard (:2320-2341);
- * their inner > outer / inner == outer handling is mesh-build time, in `build.ts`.
+ * TorusMesh decode. Defaults: `primitive_meshes.h:377-380`. `set_rings`
+ * (`primitive_meshes.cpp:2344-2355`) and `set_ring_segments` (:2357-2368) ERR_FAIL
+ * below 3 and keep the default. The radii have no setter guard (:2320-2341): their
+ * swap and equal-radii refusal happen at mesh build, in `build.ts`.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

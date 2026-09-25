@@ -1,9 +1,7 @@
 /**
- * `connections` — `graph_edit.cpp:3083`'s `Array[Dictionary]`. `set_connections`
- * (`:2533-2543`) reads each entry with a bare `d["from_node"]`/`["from_port"]`/
- * `["to_node"]`/`["to_port"]`, which auto-vivifies a null `Variant` for a
- * missing key rather than failing — a malformed or incomplete entry here just
- * drops out, matching that leniency.
+ * `connections`, the `Array[Dictionary]` of `graph_edit.cpp:3083`. `set_connections` (`:2533-2543`)
+ * reads each field with a bare `d["from_node"]`, which yields a null `Variant` for a missing key
+ * rather than failing, so a malformed or incomplete entry here drops out.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -19,7 +17,7 @@ import type { GraphEditConnection } from './types';
 /** One `{...}` Dictionary block; connection entries hold only scalar fields, so no nested brace ever occurs. */
 const DICT_BLOCK_RE = /\{[^{}]*\}/g;
 
-/** A Dictionary field whose value is a quoted string, optionally StringName-jacketed (`d[key]` written as a `StringName` — `variant_writer.cpp`'s `&"…"`). */
+/** A Dictionary field with a quoted string value, which may carry the StringName prefix `&"…"` (`variant_writer.cpp`). */
 function dictStringField(key: string): RegExp {
   return new RegExp(`"${key}"\\s*:\\s*([&@]?"(?:[^"\\\\]|\\\\[\\s\\S])*")\\s*(?=[,}])`);
 }

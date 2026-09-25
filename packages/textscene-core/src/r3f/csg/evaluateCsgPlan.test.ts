@@ -1,13 +1,7 @@
 /**
- * The booleans, run for real against the installed three-bvh-csg.
- *
- * Statically imported HERE only. Production code reaches the library through the single
- * lazy site in `csgModule.ts`; a test has no bundle to protect and gains determinism from
- * importing it directly.
- *
- * Assertions are volume and bounds rather than triangle counts, because the exact
- * tessellation of a boolean result is the library's business and would make these tests
- * break on a dependency bump that changed nothing observable.
+ * Runs the booleans against the installed three-bvh-csg, imported statically, since a test has no
+ * bundle to protect. It asserts volume and bounds, not triangle counts, because the tessellation
+ * belongs to the library and changes on a dependency bump.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -56,11 +50,8 @@ function plan(contributions: CsgContribution[], surfaces: (string | undefined)[]
 }
 
 /**
- * Solid volume via the divergence theorem.
- *
- * `toNonIndexed()` first, and not optionally: a `BoxGeometry` is INDEXED with 24 unique
- * positions and 36 indices, so walking positions in triples integrates eight arbitrary
- * triangles instead of the real twelve and reports 1/12 of the true volume.
+ * Solid volume by the divergence theorem, after `toNonIndexed()`: a `BoxGeometry` is indexed, with
+ * 24 positions and 36 indices, so walking positions in triples integrates eight arbitrary triangles.
  */
 function volumeOf(geometry: THREE.BufferGeometry): number {
   const p = (geometry.index ? geometry.toNonIndexed() : geometry).getAttribute('position');

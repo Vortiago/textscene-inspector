@@ -1,15 +1,8 @@
 /**
- * SpinBox native solver vs Godot 4.6.3 — `SpinBox::get_minimum_size`
- * (`spin_box.cpp:82-86`), `_compute_sizes` (`:382-411`), `_update_text`
- * (`:88-114`), `_update_buttons_state_for_current_value` (`:635-645`) and
- * `Math::step_decimals`/`String::num` (`core/math/math_funcs.cpp:61-85`,
+ * SpinBox native solver against Godot 4.6.3: `SpinBox::get_minimum_size` (`spin_box.cpp:82-86`),
+ * `_compute_sizes` (`:382-411`), `_update_text` (`:88-114`), `_update_buttons_state_for_current_value`
+ * (`:635-645`) and `Math::step_decimals`/`String::num` (`core/math/math_funcs.cpp:61-85`,
  * `core/string/ustring.cpp:1405-1481`).
- *
- * At font size 16 (no theme anywhere in the chain, so every default applies):
- * fontHeightPx = ceil(2189*16/2048) + ceil(600*16/2048) = 18 + 5 = 23 (no
- * `line_spacing`, matching LineEdit's own solver). 'W' advance at 16px =
- * 1936*(16/2048) = 15.125 (`openSansMetrics.ts`'s vendored hmtx). LineEdit's
- * default content margin is 4px all sides (`content_margin` = `round(4*scale)`).
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -34,7 +27,10 @@ import {
   spinBoxWidestButtonIconWidth,
 } from './nativeSolver';
 
-const W_ADVANCE = 1936 * (16 / 2048); // 15.125
+// At font size 16 with no theme in the chain: 'W' advances 1936*(16/2048) = 15.125
+// (`openSansMetrics.ts`'s hmtx), and the line is ceil(2189*16/2048) + ceil(600*16/2048) = 23 with
+// no `line_spacing`, as in LineEdit's solver. LineEdit's content margin is `round(4*scale)`, 4px.
+const W_ADVANCE = 1936 * (16 / 2048);
 const FONT_HEIGHT = 23;
 
 function node(props: Partial<SpinBoxProperties> = {}): SolveNode {
@@ -110,7 +106,7 @@ describe('spinBoxLayout', () => {
   it('mirrors the internal field rect under RTL layout (spin_box.cpp:394-395, control.cpp:1785-1787)', () => {
     // The field is the internal LineEdit's full-rect preset at offsets [0, -block]
     // (:394-395), so its own `_size_changed` mirror moves it to
-    // `parent_width - x - w` — the far side of the buttons block.
+    // `parent_width - x - w`, the far side of the buttons block.
     const layout = spinBoxLayout({ x: 100, y: 30 }, 16, true);
     expect(layout.fieldRect).toEqual({ x: 18, y: 0, w: 82, h: 30 });
   });
@@ -160,7 +156,7 @@ describe('spinBoxDisplayText', () => {
   });
 
   it('falls back to step=1 (Range default) when unset (edge case)', () => {
-    expect(spinBoxDisplayText({ name: 'S' }, 5.5)).toBe('6'); // step_decimals(1) = 0 -> String::num rounds via %.0lf
+    expect(spinBoxDisplayText({ name: 'S' }, 5.5)).toBe('6'); // step_decimals(1) = 0, so String::num rounds with %.0lf
   });
 });
 
@@ -227,7 +223,7 @@ describe('spinBoxMinimumSize', () => {
   it('widens the buttons block on a themed "down" icon wider than the vendored 16 (spin_box.cpp:82-86,382-397)', () => {
     const n = { ...node(), textureSlots: { down: { x: 40, y: 8 } } };
     const result = spinBoxMinimumSize(n, ctx(false));
-    // blockWidth = max(18, 40+2) = 42, vs the untethered 18.
+    // blockWidth = max(18, 40+2) = 42, against the untethered 18.
     expect(result.x).toBe(8 + 42);
   });
 });

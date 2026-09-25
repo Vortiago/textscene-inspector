@@ -1,14 +1,7 @@
 /**
- * Node2D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- *
- * `scale` keeps a bespoke validator that folds a Vector2 format check with a
- * per-component non-zero check (a zero axis collapses the node — a genuine
- * rendering breaker). Extreme-but-nonzero magnitudes are NOT flagged: the
- * renderer draws them and real Godot scenes use near-zero "hide" scales, so
- * erroring on them would re-introduce the parser/linter divergence this base
- * validator (inherited by every Node2D subclass via the base-walk) exists
- * to remove.
+ * Node2D strict validators, inherited by every Node2D subclass through the base walk. `scale` folds
+ * a Vector2 format check with a per-component non-zero check. A large or near-zero nonzero
+ * magnitude passes: the renderer draws it, and Godot scenes use near-zero "hide" scales.
  */
 
 import '../../canvasitem/shared/linterParser.js';
@@ -46,8 +39,4 @@ validatorRegistry.registerAll('Node2D', {
   global_scale: v.vector2('global_scale'),
   global_skew: v.float('global_skew'),
   global_transform: v.transform2d('global_transform'),
-  // CanvasItem light culling: ANDed against a 2D light's range_item_cull_mask.
-  // CanvasItem material slot. The reference is format-checked; whether it names
-  // a CanvasItemMaterial (the only kind the renderer applies) is not, because a
-  // ShaderMaterial there is valid Godot, just unimplemented here.
 });

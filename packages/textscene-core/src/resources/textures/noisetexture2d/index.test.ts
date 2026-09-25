@@ -1,7 +1,6 @@
 /**
- * The slice's routing claim. A NoiseTexture2D generates its own pixels, so the
- * claim exists for the standalone-`.tres` arrival; nothing is ever fetched for
- * an inline one.
+ * The slice's routing claim, for a standalone `.tres`. A NoiseTexture2D generates
+ * its own pixels, so nothing is fetched for an inline one.
  */
 import { describe, expect, it } from 'vitest';
 import './index';

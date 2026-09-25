@@ -1,4 +1,4 @@
-/** NinePatchRect — Control + texture ref, patch margins, region, axis stretch. */
+/** NinePatchRect's parsed properties: Control plus texture ref, patch margins, region and axis stretch. */
 
 import type { ControlProperties } from '../control/types';
 
@@ -10,7 +10,7 @@ export interface Rect2 {
 }
 
 export interface NinePatchRectProperties extends ControlProperties {
-  /** Raw `texture` ref (e.g. `ExtResource("id")`); undefined draws nothing. */
+  /** Raw `texture` ref (for example `ExtResource("id")`). Undefined draws nothing. */
   texture?: string;
   /** Godot AxisStretchMode: 0 stretch, 1 tile, 2 tile-fit. Default 0 (`nine_patch_rect.h:50-51`). */
   axisStretchHorizontal?: number;
@@ -22,6 +22,6 @@ export interface NinePatchRectProperties extends ControlProperties {
   patchMarginTop?: number;
   patchMarginRight?: number;
   patchMarginBottom?: number;
-  /** Source window within the texture; unset (or all-zero) means the whole texture. */
+  /** Source window within the texture. Unset or all-zero means the whole texture. */
   regionRect?: Rect2;
 }

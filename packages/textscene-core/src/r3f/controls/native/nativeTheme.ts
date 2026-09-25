@@ -1,30 +1,8 @@
 /**
- * `NativeTheme` — the default-theme data the native (WebGL) Control solver and
- * painters read, extending `ScaledGodotTheme` (`../godotDefaultTheme.ts`, kept
- * framework-free on purpose) with the numeric StyleBoxFlat fill colours a
- * native painter needs (`godotDefaultTheme.ts` only exports them as CSS
- * strings).
- *
- * `scaledGodotTheme(scale)` is NOT re-transcribed here — every scalable
- * metric (font size, corner radius, margins, separation, slider geometry)
- * passes through unchanged. What's added is genuinely new for this renderer:
- * the default flat stylebox's fill colour per draw state, as raw
- * `Color(r, g, b, a)` components (0..1 floats) rather than the `rgba(...)`
- * CSS strings `godotDefaultTheme.ts` exports, because the native painter
- * multiplies vertex colours instead of setting a CSS background.
- *
- * Colours are NOT scaled — `default_theme_scale` only affects geometry
- * (`scene/theme/default_theme.cpp::fill_default_theme` scales every length it
- * passes to `make_flat_stylebox`, never a `Color` literal).
- *
- * `widgets` composes per-widget `StyleBoxFlatData` structs
- * FROM `STYLE_FILL` and `scaledGodotTheme`'s already-scaled numbers — never
- * re-transcribing a colour literal, and reusing `contentMargin`/`cornerRadius`
- * wherever a widget's own `scene/theme/default_theme.cpp` call site passes
- * the SAME underlying constant (`default_margin` = 4, `default_corner_radius`
- * = 3) that those two fields are already `Math.round(x * scale)` of. A widget
- * whose own call passes a DIFFERENT literal (ScrollBar's `10`) gets its own
- * `Math.round(10 * scale)`, cited against its own call site below.
+ * The default-theme data the native Control solver and painters read:
+ * `ScaledGodotTheme` unchanged, plus the StyleBoxFlat fill colours as 0..1
+ * `Color` components, because a native painter multiplies vertex colours
+ * rather than setting a CSS `rgba(...)` background.
  */
 
 import type { ControlColor } from '../../../nodes/2d/ui/control/types';
@@ -33,36 +11,32 @@ import { LINE_EDIT_BORDER_BOTTOM_WIDTH, scaledGodotTheme, STYLE_FILL, type Scale
 import type { StyleBoxFlatData } from './styleBoxFlat';
 
 /**
- * The default flat stylebox's fill, by draw state — `scene/theme/default_theme.cpp`,
- * `fill_default_theme`:
- *  - `style_normal_color` = `Color(0.1, 0.1, 0.1, 0.6)`.
- *  - `style_hover_color` = `Color(0.225, 0.225, 0.225, 0.6)`.
- *  - `style_pressed_color` = `Color(0, 0, 0, 0.6)`.
- *  - `style_disabled_color` = `Color(0.1, 0.1, 0.1, 0.3)`.
- *  - `style_popup_color` = `Color(0.25, 0.25, 0.25, 1)`.
- *  - `style_progress_color` = `Color(1, 1, 1, 0.4)` (the sliders' filled
- *    `grabber_area`).
+ * The default flat stylebox's fill by draw state, from `scene/theme/default_theme.cpp`'s
+ * `fill_default_theme`, which scales every length it passes to `make_flat_stylebox` but never a
+ * `Color` literal, so the colours are not scaled.
  */
 export interface NativeThemeStyleFill {
+  /** `style_normal_color` = `Color(0.1, 0.1, 0.1, 0.6)`. */
   normal: ControlColor;
+  /** `style_hover_color` = `Color(0.225, 0.225, 0.225, 0.6)`. */
   hover: ControlColor;
+  /** `style_pressed_color` = `Color(0, 0, 0, 0.6)`. */
   pressed: ControlColor;
+  /** `style_disabled_color` = `Color(0.1, 0.1, 0.1, 0.3)`. */
   disabled: ControlColor;
+  /** `style_popup_color` = `Color(0.25, 0.25, 0.25, 1)`. */
   popup: ControlColor;
+  /** `style_progress_color` = `Color(1, 1, 1, 0.4)`, the sliders' filled `grabber_area`. */
   progress: ControlColor;
 }
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /**
- * `make_flat_stylebox` (`default_theme.cpp:57-70`), restricted to what
- * `StyleBoxFlatData` models: every input here is ALREADY the scaled,
- * rounded number the caller wants (`Math.round(x * scale)`), so this helper
- * never scales — it only assembles the struct. `border_color`/`expand_margin`/
- * `border_blend`/`anti_aliased`/`aa_size`/`corner_detail` are never touched
- * by `make_flat_stylebox`, so they stay at `StyleBoxFlat`'s own defaults;
- * `draw_center` defaults true and no widget built here overrides it (Button's
- * "focus" stylebox does, but focus styles are out of scope).
+ * `make_flat_stylebox` (`default_theme.cpp:57-70`) for the fields
+ * `StyleBoxFlatData` models. Every input is already scaled and rounded, so this
+ * never scales. The fields `make_flat_stylebox` leaves alone keep `StyleBoxFlat`'s
+ * defaults, and no widget here overrides `draw_center` (only a focus style does).
  */
 function flatStyleBox(
   bgColor: ControlColor,
@@ -73,14 +47,10 @@ function flatStyleBox(
 }
 
 /**
- * LineEdit's own `normal`/`read_only` styleboxes (`default_theme.cpp:405-417`):
- * `make_flat_stylebox(fill)` — same scaled margin/radius `flatStyleBox` above
- * already produces for Button — PLUS a bottom border Godot sets directly on
- * the built box via `set_border_width(SIDE_BOTTOM, 2)`/`set_border_color`,
- * bypassing `make_flat_stylebox` entirely. That is why the border width is a
- * bare `2`, never `Math.round(2 * scale)`: the comment above `make_flat_stylebox`
- * in `default_theme.cpp` scales every length it's ROUTED THROUGH, and this
- * call never routes the border through it.
+ * LineEdit's `normal`/`read_only` styleboxes (`default_theme.cpp:405-417`):
+ * `make_flat_stylebox(fill)` plus a bottom border set directly with
+ * `set_border_width(SIDE_BOTTOM, 2)`. The border bypasses `make_flat_stylebox`,
+ * so its width is a bare `2`, never `Math.round(2 * scale)`.
  */
 function lineEditStyleBox(
   bgColor: ControlColor,
@@ -95,10 +65,10 @@ function lineEditStyleBox(
   };
 }
 
-/** `style_pressed_color` (`default_theme.cpp:115`) — LineEdit `normal`'s own bottom-border colour (`:408`). */
+/** `style_pressed_color` (`default_theme.cpp:115`): LineEdit `normal`'s bottom-border colour (`:408`). */
 const LINE_EDIT_NORMAL_BORDER_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 0.6 };
 
-/** `style_pressed_color * Color(1, 1, 1, 0.5)` (`default_theme.cpp:416`) — `read_only`'s own bottom-border colour, half `normal`'s alpha. */
+/** `style_pressed_color * Color(1, 1, 1, 0.5)` (`default_theme.cpp:416`): `read_only`'s bottom-border colour. */
 const LINE_EDIT_READ_ONLY_BORDER_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 0.3 };
 
 /**
@@ -113,60 +83,50 @@ export interface NativeThemeWidgets {
     pressed: StyleBoxFlatData;
     disabled: StyleBoxFlatData;
   };
-  /** LineEdit's own `normal`/`read_only` styleboxes — `default_theme.cpp:405-417`. */
+  /** LineEdit's `normal`/`read_only` styleboxes, `default_theme.cpp:405-417`. */
   lineEdit: {
     normal: StyleBoxFlatData;
     readOnly: StyleBoxFlatData;
   };
   /**
    * `sb_optbutton_normal`/`sb_optbutton_disabled` (`default_theme.cpp:212-215`):
-   * the same corner radius as every other default-theme flat stylebox, with
-   * content margins unique to OptionButton (asymmetric X vs Y). Only the two
-   * states `ButtonDrawState` can select in a pointer-less static preview are
-   * built — hover/pressed never arise.
+   * the shared corner radius with OptionButton's own asymmetric X and Y margins.
+   * A static preview has no pointer, so hover and pressed never arise.
    */
   optionButton: {
     normal: StyleBoxFlatData;
     disabled: StyleBoxFlatData;
   };
   /**
-   * HSlider/VSlider's `slider` (track) and `grabber_area` (fill) styleboxes —
-   * `make_flat_stylebox(color, 4, 4, 4, 4, 4)` (`default_theme.cpp:579-580`),
-   * the identical shape for both orientations. `contentMargin` stays zero:
-   * on-screen thickness comes from `sliderTrackThickness` via the solver's
-   * rect math, never from summing this struct's margins.
+   * HSlider/VSlider's `slider` (track) and `grabber_area` (fill), both
+   * `make_flat_stylebox(color, 4, 4, 4, 4, 4)` (`default_theme.cpp:579-580`).
+   * `contentMargin` stays zero: the solver takes thickness from `sliderTrackThickness`.
    */
   slider: {
     track: StyleBoxFlatData;
     fill: StyleBoxFlatData;
   };
   scrollBar: {
-    /** HScrollBar's "scroll" (track) stylebox — `style_h_scrollbar`, `default_theme.cpp:543`. */
+    /** HScrollBar's "scroll" (track) stylebox, `style_h_scrollbar`, `default_theme.cpp:543`. */
     scrollHorizontal: StyleBoxFlatData;
-    /** VScrollBar's "scroll" (track) stylebox — `style_v_scrollbar`, `default_theme.cpp:544`: the same box, transposed. */
+    /** VScrollBar's "scroll" (track) stylebox, `style_v_scrollbar`, `default_theme.cpp:544`: the same box, transposed. */
     scrollVertical: StyleBoxFlatData;
-    /** `style_scrollbar_grabber`, `default_theme.cpp:545` — identical for HScrollBar and VScrollBar. */
+    /** `style_scrollbar_grabber`, `default_theme.cpp:545`, for both orientations. */
     grabber: StyleBoxFlatData;
   };
   /**
-   * SplitContainer/HSplitContainer/VSplitContainer's own theme entries
-   * (`default_theme.cpp:1258-1266`) — no `StyleBoxFlatData` here at all: the
-   * grabber is drawn from an ICON (`native/themeIcons.ts`'s
-   * `SPLIT_CONTAINER_ICONS`, `hsplitter.svg`/`vsplitter.svg`), and
-   * `split_bar_background` (`:1275-1277`) is an EMPTY stylebox that draws
-   * nothing, so there is no fill to model. `minimum_grab_thickness`
-   * (`:1261-1263`) is deliberately NOT reproduced here — it only enlarges the
-   * INVISIBLE mouse drag hitbox (`SplitContainer::_resort`'s
-   * `dragging_area_controls[i]->set_rect`, `split_container.cpp:764-778`),
-   * never the separation band or the icon's own placement; dragging is not
-   * modelled.
+   * SplitContainer's theme entries (`default_theme.cpp:1258-1266`) hold no
+   * stylebox: the grabber is an icon (`native/themeIcons.ts`'s
+   * `SPLIT_CONTAINER_ICONS`), and `split_bar_background` (`:1275-1277`) is empty.
    */
   splitContainer: {
-    /** `separation` (`default_theme.cpp:1258-1260`) — floored by the grabber icon's own extent at the call site (`shared/splitContainerSolver.ts`'s `separationOf`, mirroring `SplitContainer::_get_separation`, `split_container.cpp:305-316`). */
+    // No `minimum_grab_thickness` (`:1261-1263`): it only enlarges the mouse drag
+    // hitbox (`split_container.cpp:764-778`), and dragging is not modelled.
+    /** `separation` (`default_theme.cpp:1258-1260`), floored by the grabber icon's extent at the call site (`shared/splitContainerSolver.ts`'s `separationOf`, mirroring `SplitContainer::_get_separation`, `split_container.cpp:305-316`). */
     separation: number;
-    /** The grabber icon's extent along the split axis (`hsplitter.svg`/`vsplitter.svg`'s short dimension, both 8×1 at scale 1 — see `native/themeIcons.ts`). Icons scale with the theme like every other metric here (`generate_icon` rasterises through the same scale). */
+    /** The grabber icon's extent along the split axis (`native/themeIcons.ts`). It scales with the theme, since `generate_icon` rasterises through the same scale. */
     grabberExtent: number;
-    /** `autohide` (`default_theme.cpp:1264-1266`) — a THEME CONSTANT (0/1), not a stylebox. Default true hides the grabber icon absent a hover/drag state; see `shared/splitContainerSolver.ts`'s `isSplitGrabberVisible` for what that means for a static previewer. NOT scaled — it is a boolean flag, not a length. */
+    /** `autohide` (`default_theme.cpp:1264-1266`): a 0/1 theme constant, not scaled. True hides the grabber icon without a hover or drag state (`shared/splitContainerSolver.ts`'s `isSplitGrabberVisible`). */
     autohide: boolean;
   };
 }
@@ -179,15 +139,18 @@ export interface NativeTheme extends ScaledGodotTheme {
 /** ScrollBar's own corner radius (`default_theme.cpp:543-545` pass `10`, not `default_corner_radius`). */
 const SCROLL_BAR_CORNER_RADIUS = 10;
 
-/** SplitContainer/HSplitContainer/VSplitContainer's own `separation` (`default_theme.cpp:1258-1260` pass `12`, not `default_theme.cpp`'s BoxContainer `separation` of `4`). */
+/** SplitContainer's own `separation` (`default_theme.cpp:1258-1260` pass `12`, not BoxContainer's `4`). */
 const SPLIT_CONTAINER_SEPARATION = 12;
 
-/** `hsplitter.svg`/`vsplitter.svg`'s own short dimension (`scene/theme/icons/`) — both authored at 8px along the split axis, 48px across it. */
+/** `hsplitter.svg`/`vsplitter.svg`'s short dimension (`scene/theme/icons/`): 8px along the split axis, 48px across it. */
 const SPLIT_CONTAINER_GRABBER_EXTENT = 8;
 
-/** `autohide` (`default_theme.cpp:1264-1266`) — a plain boolean theme constant, not scaled. */
+/** `autohide` (`default_theme.cpp:1264-1266`). */
 const SPLIT_CONTAINER_AUTOHIDE = true;
 
+// A widget reuses `contentMargin`/`cornerRadius` where its `default_theme.cpp` call passes
+// `default_margin` (4) or `default_corner_radius` (3). A call passing another
+// literal, such as ScrollBar's 10, gets its own scaled constant.
 /** `NativeTheme` at a project's `gui/theme/default_theme_scale`. */
 export function nativeTheme(scale: number): NativeTheme {
   const scaled = scaledGodotTheme(scale);
@@ -212,7 +175,7 @@ export function nativeTheme(scale: number): NativeTheme {
       // default_theme.cpp:134: make_flat_stylebox(style_normal_color, 0, 0, 0, 0).
       panel: flatStyleBox(STYLE_FILL.normal, ZERO_SIDES, scaled.cornerRadius),
       button: {
-        // default_theme.cpp:138-141: make_flat_stylebox(color) — every default arg.
+        // default_theme.cpp:138-141: make_flat_stylebox(color), every default arg.
         normal: flatStyleBox(STYLE_FILL.normal, buttonMargin, scaled.cornerRadius),
         hover: flatStyleBox(STYLE_FILL.hover, buttonMargin, scaled.cornerRadius),
         pressed: flatStyleBox(STYLE_FILL.pressed, buttonMargin, scaled.cornerRadius),
@@ -236,7 +199,7 @@ export function nativeTheme(scale: number): NativeTheme {
       },
       optionButton: {
         // default_theme.cpp:212-215: make_flat_stylebox(color, 2*default_margin,
-        // default_margin, 2*default_margin, default_margin) — X and Y differ.
+        // default_margin, 2*default_margin, default_margin): X and Y differ.
         normal: flatStyleBox(STYLE_FILL.normal, optionButtonMargin, scaled.cornerRadius),
         disabled: flatStyleBox(STYLE_FILL.disabled, optionButtonMargin, scaled.cornerRadius),
       },

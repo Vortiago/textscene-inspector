@@ -1,11 +1,6 @@
 /**
- * BaseButton strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. There is no genuine cross-field rule for BaseButton, so there
- * is no `linter.ts` / `linter.test.ts` — see linterParser.ts for why.
+ * BaseButton strict validators: format and range checks through `validatorRegistry`,
+ * not a linted `.tscn`, so a failure points at the validator rather than at scene parsing.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -26,7 +21,7 @@ describe('BaseButton strict validators', () => {
 
   it('rejects a malformed value on every property it validates', () => {
     // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases below are the real check.
+    // sweep is generic on purpose. Per-property cases below are the real check.
     const accepted = validatorRegistry
       .getOwnKeys('BaseButton')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -113,9 +108,8 @@ describe('BaseButton strict validators', () => {
 
     it('accepts a bit beyond the 3 named editor flags (XBUTTON1 = 128)', () => {
       // base_button.cpp:394-396: set_button_mask assigns the BitField with no
-      // CLAMP, and MouseButtonMask itself extends to MOUSE_BUTTON_MASK_MB_XBUTTON1/2
-      // (doc/classes/@GlobalScope.xml) — a value beyond the editor's 3-flag hint
-      // still parses in the engine, so it is not a malformed file.
+      // clamp, and MouseButtonMask extends to MOUSE_BUTTON_MASK_MB_XBUTTON1/2
+      // (doc/classes/@GlobalScope.xml), so a value beyond the 3-flag hint is not malformed.
       expect(check('button_mask', '128')).toBeNull();
     });
 

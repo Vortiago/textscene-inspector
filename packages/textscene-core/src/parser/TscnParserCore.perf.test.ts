@@ -1,20 +1,8 @@
 /**
- * Perf regression test for multi-line property value scanning.
- *
- * `TscnParserCore` accumulates an unterminated string/array value across
- * physical lines (`multilineStrings.test.ts` pins the correctness contract).
- * The accumulation used to be O(L^2) in the number of lines the value spans:
- * each new line re-concatenated the whole growing string (`+=`) AND
- * `isIncompleteValue` rescanned that whole string from index 0. Measured on
- * the unfixed code: 5k lines ~7.7s, 20k lines ~119s — catastrophic on large
- * or pathological scenes (a single huge multi-line label/BBCode value).
- *
- * This test builds a large multi-line string value and asserts the parse
- * completes within a generous absolute ceiling. A ratio-based assertion would
- * work too, but an absolute bound is the more robust discriminator here: the
- * blowup is dramatic (100x+ over a 4x input growth), so a wide margin still
- * cleanly separates "fixed" from "still quadratic" on any CI machine without
- * being sensitive to timer noise the way a small-vs-small ratio would be.
+ * Multi-line value accumulation in `TscnParserCore` stays O(total length).
+ * `multilineStrings.test.ts` pins correctness. A quadratic scan takes about 119s at
+ * 20k lines, so an absolute ceiling separates the two on any CI machine without the
+ * timer noise a small-versus-small ratio has.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,8 +12,7 @@ import { TscnParser } from './TscnParser';
 function buildMultilineScene(lineCount: number): string {
   const bodyLines: string[] = [];
   for (let i = 0; i < lineCount; i++) {
-    // Vary content slightly so the accumulated value isn't trivially
-    // compressible/cacheable by an unrelated optimization.
+    // Varied content, so no unrelated optimisation can compress or cache the value.
     bodyLines.push(`Line number ${i} of a very long pathological label value.`);
   }
 
@@ -50,17 +37,14 @@ describe('multi-line value scanning performance', () => {
     const scene = new TscnParser().parse(content);
     const elapsedMs = performance.now() - start;
 
-    // Sanity: still parses correctly (the multi-line value still rejoins and
-    // parsing continues past it) — the perf fix must not change output.
+    // The value still rejoins and parsing continues past it.
     const title = scene.nodes.find(n => n.name === 'Title');
     const titleProps = title?.properties as Record<string, unknown> | undefined;
     expect(titleProps?.text).toContain('Line number 0 of a very long pathological label value.');
     expect(titleProps?.horizontalAlignment).toBe(1);
 
-    // O(L) target: comfortably under a second on any reasonable machine.
-    // O(L^2) on the unfixed code took ~119s at this size — this bound is
-    // ~50x the expected fixed-code time yet ~50x below the broken time,
-    // cleanly separating the two without being sensitive to timer noise.
+    // O(L) runs well under a second. O(L^2) takes about 119s at this size, so the
+    // bound sits about 50x from each.
     expect(elapsedMs).toBeLessThan(2000);
   });
 });

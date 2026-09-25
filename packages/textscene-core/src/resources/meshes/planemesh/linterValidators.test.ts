@@ -1,9 +1,7 @@
 /**
- * Tests for PlaneMesh linter validators, own and inherited.
- *
- * The full barrel rather than `./linterValidators`, because `flip_faces` is
- * PrimitiveMesh's: asking for it through PlaneMesh is the point, and importing
- * this slice alone would not have loaded the class that declares it.
+ * PlaneMesh linter validators, own and inherited. The full barrel, not
+ * `./linterValidators`: `flip_faces` is PrimitiveMesh's, and this slice alone
+ * does not load the class that declares it.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -109,7 +107,6 @@ flip_faces = true
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      // Should have no errors for valid flip_faces
       const flipFacesErrors = diagnostics.filter(d =>
         d.message.includes('flip_faces')
       );
@@ -188,7 +185,6 @@ flip_faces = true
       const linter = new Linter();
       const diagnostics = linter.lint(content);
 
-      // Should have no errors - all properties are valid
       expect(diagnostics.filter(d => d.severity === 'error')).toHaveLength(0);
     });
 

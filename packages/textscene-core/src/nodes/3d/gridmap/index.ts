@@ -1,6 +1,4 @@
-/**
- * GridMap registration — parser.
- */
+/** GridMap parser registration. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseGridMap } from './parser';

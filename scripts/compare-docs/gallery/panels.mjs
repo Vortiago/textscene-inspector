@@ -1,7 +1,6 @@
 /**
- * A panel: one node's sheet, whatever shape it takes — a legacy single-pair
- * sheet, a sectioned one, an injected "not implemented" card, or the shared
- * notes.
+ * A panel: one node's sheet, whatever its shape: a legacy single-pair sheet, a
+ * sectioned one, an injected "not implemented" card, or the shared notes.
  */
 
 import { escapeHtml, inline } from './markdown.mjs';
@@ -9,8 +8,7 @@ import { DEFAULT_STATUS, PREVIEW_URL, STATUS_LABEL } from './vocabulary.mjs';
 
 /**
  * Every field the panel template reads. Each panel source spreads this and
- * overrides what it knows, so adding a field is one edit rather than three, and
- * a source that does not set it renders empty rather than `undefined`.
+ * overrides what it knows, so an unset field renders empty, not `undefined`.
  */
 export const BLANK_PANEL = {
   docs: '',

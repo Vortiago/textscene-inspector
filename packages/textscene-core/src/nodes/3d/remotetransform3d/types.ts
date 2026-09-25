@@ -11,6 +11,6 @@ export interface RemoteTransform3DProperties extends Node3DProperties {
   update_rotation?: boolean;
   /** Whether the remote node's scale is updated. Godot default is true. */
   update_scale?: boolean;
-  /** Whether the update uses global (vs local) coordinates. Godot default is true. */
+  /** Whether the update uses global rather than local coordinates. Godot default is true. */
   use_global_coordinates?: boolean;
 }

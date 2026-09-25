@@ -1,17 +1,8 @@
 /**
- * Reusable Playwright record harness for the web-previewer feature showcase.
- *
- * Records a real .webm screen capture of the web app while a scenario callback
- * drives it (browser selection + WebGL flags: see browser.mjs). Output:
- * docs/showcase/web/<name>.webm (+ a poster <name>.png that the scenario
- * captures mid-run).
- *
- * The scenario receives `(page, helpers)`; `helpers` are reliable interaction
- * primitives (selectScene, orbit, expandTree, clickNode, useThisCamera,
- * resetCamera, fillSearch, poster) so scenarios demonstrate ACTUAL feature
- * behavior — e.g. switching between Camera3D nodes — not just a generic orbit.
- * They live in `record/helpers.mjs`; this file owns the recording lifecycle
- * (context, video, cleanup) around them.
+ * Records a .webm of the web previewer while a scenario drives it with `(page, helpers)`, into
+ * docs/showcase/web/<name>.webm plus a mid-run poster <name>.png. The helpers in
+ * `record/helpers.mjs` drive real controls. This file owns the context, video and cleanup, and
+ * browser.mjs picks the browser and the WebGL flags.
  */
 
 import { mkdirSync, renameSync, statSync, existsSync, rmSync } from 'node:fs';
@@ -34,14 +25,14 @@ import {
 
 const OUT_DIR = process.env.SHOWCASE_OUT || join(REPO_ROOT, 'docs/showcase/web');
 
-/** Capture the poster frame used for verification + the showcase thumbnail. */
+/** Captures the poster frame, used for verification and as the showcase thumbnail. */
 async function poster(page, name) {
   await page.screenshot({ path: join(OUT_DIR, `${name}.png`) });
 }
 
 export async function recordShowcase(name, file, scenario, opts = {}) {
-  // Read at call time (not module load) so an orchestrator that picks a port
-  // after import — regenerate.mjs — can point us at it via SHOWCASE_URL.
+  // Read at call time, so an orchestrator that picks a port after import (regenerate.mjs) can set
+  // SHOWCASE_URL.
   const BASE_URL = process.env.SHOWCASE_URL || 'http://localhost:4173';
   const width = opts.width ?? 1280;
   const height = opts.height ?? 800;
@@ -53,9 +44,8 @@ export async function recordShowcase(name, file, scenario, opts = {}) {
     deviceScaleFactor: 1,
     recordVideo: { dir: OUT_DIR, size: { width, height } },
   });
-  // Fail-fast actionability policy: a covered/missing control should cost a
-  // scenario seconds, not Playwright's 30s default. Explicit timeouts and
-  // navigation keep their own budgets.
+  // A covered or missing control costs a scenario seconds, not Playwright's 30 s default. Explicit
+  // timeouts and navigation keep their own budgets.
   context.setDefaultTimeout(ACTION_TIMEOUT_MS);
   context.setDefaultNavigationTimeout(30000);
   const page = await context.newPage();
@@ -65,12 +55,12 @@ export async function recordShowcase(name, file, scenario, opts = {}) {
   });
   page.on('pageerror', (e) => errors.push(String(e)));
 
-  // Open DIRECTLY on the target fixture via the ?fixture= deep-link so the clip
-  // doesn't waste its first half on the white load + the default scene.
+  // The ?fixture= deep link opens the target fixture, so the clip does not spend its first half on
+  // the white load and the default scene.
   const url = file ? `${BASE_URL}/?fixture=${encodeURIComponent(file)}` : BASE_URL;
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForSelector('canvas', { timeout: 30000 });
-  await page.waitForTimeout(1500); // scene parse/load + CameraFit settle on the target
+  await page.waitForTimeout(1500); // Scene parse, load and CameraFit settle.
 
   const helpers = {
     orbit,
@@ -85,8 +75,8 @@ export async function recordShowcase(name, file, scenario, opts = {}) {
     uploadResource,
     poster: (n = name) => poster(page, n),
   };
-  // On a scenario throw the browser must still close and the auto-named
-  // recorder temp video (page@<hash>.webm) must not survive to be committed.
+  // On a scenario throw the browser still closes, and the recorder's temp video
+  // (page@<hash>.webm) is deleted so it cannot be committed.
   let ok = false;
   let video;
   try {
@@ -96,12 +86,11 @@ export async function recordShowcase(name, file, scenario, opts = {}) {
   } finally {
     video = page.video();
     try {
-      await context.close(); // finalizes the .webm
+      await context.close(); // Finalises the .webm.
       await browser.close();
       if (video && !ok) rmSync(await video.path(), { force: true });
     } catch (cleanupErr) {
-      // A crashed browser rejects close() too — log it, but never let the
-      // cleanup error mask the scenario's own failure.
+      // A crashed browser rejects close() too. The log keeps it from masking the scenario's failure.
       console.warn(`[record] cleanup failed: ${cleanupErr?.message ?? cleanupErr}`);
     }
   }

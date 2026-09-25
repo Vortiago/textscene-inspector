@@ -1,12 +1,7 @@
-; GPUParticles3D emitting a visible burst. Without a `draw_pass_1` mesh Godot
-; renders nothing at all (it warns about exactly that), so the earlier fixture
-; showed an empty frame in BOTH engines and proved nothing. `preprocess` runs
-; the simulation forward before the first frame, so a still capture catches a
-; spread of particles rather than the instant of emission.
-;
-; The previewer renders GPUParticles3D as a transform-only node (ADR-0008) — it
-; does not simulate — so this fixture's whole point on the comparison sheet is
-; to show Godot's particle cloud beside our deliberate nothing.
+; GPUParticles3D emitting a visible burst. Without a `draw_pass_1` mesh Godot renders nothing
+; and warns. `preprocess` runs the simulation forward, so a still capture catches spread
+; particles rather than the instant of emission. The previewer draws GPUParticles3D
+; transform-only (ADR-0008), so the sheet shows Godot's cloud beside a deliberate nothing.
 [gd_scene load_steps=4 format=3]
 
 [sub_resource type="ParticleProcessMaterial" id="Process_1"]

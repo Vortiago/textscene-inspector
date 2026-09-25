@@ -1,9 +1,6 @@
 /**
- * The flags, because getting one wrong overwrites committed images.
- *
- * `recapture` re-renders every comparison image the sheets reference and writes
- * them over the checked-in PNGs. That makes a silently-dropped `--only` the
- * expensive failure: the run does far MORE than asked and reports success.
+ * The recapture flags: a dropped `--only` re-renders every committed image and
+ * reports success.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,8 +21,6 @@ describe('recapture flags', () => {
   });
 
   it('refuses a flag it does not know, rather than re-rendering everything', () => {
-    // `--onl unit-decal` used to leave `only` null, and every committed image
-    // was re-rendered from the working tree with no complaint.
     expect(() => parseArgs(['--onl', 'unit-decal'])).toThrow(/Unknown flag --onl/);
     expect(() => parseArgs(['--force'])).toThrow(/Unknown flag --force/);
   });
@@ -35,8 +30,6 @@ describe('recapture flags', () => {
   });
 
   it('refuses the pair that selects neither side', () => {
-    // Each flag turns the OTHER off, so both together rendered nothing and
-    // still exited 0 after printing a re-render count.
     expect(() => parseArgs(['--godot', '--ours'])).toThrow(/mutually exclusive/);
   });
 });

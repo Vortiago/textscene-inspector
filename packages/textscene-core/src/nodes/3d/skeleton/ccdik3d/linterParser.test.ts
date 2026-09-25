@@ -1,25 +1,8 @@
 /**
- * CCDIK3D strict validators: it has none, and these pin that down rather than
- * treat it as work not yet done.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing. There is no `linter.ts` beside this file and no
- * rule test, because a cross-field rule needs two fields and CCDIK3D adds none.
- *
- * The ancestor imports below are load-bearing, not tidiness. A slice test sees
- * only the registrations it pulled in itself, so a base-walk case that names an
- * ancestor's key has to import that ancestor by name or it observes a null it
- * would have observed with the walk broken.
- *
- * `./linterParser` reaches IterateIK3D, and since the tier chain was stitched
- * mid-wave it now transitively reaches ChainIK3D and IKModifier3D too, so two
- * of the three explicit imports are redundant today. They stay: the stitching
- * is one line per file that did not exist when this slice was written, and
- * relying on it would make this test's coverage contingent on someone else's
- * slice with nothing going red if the line were dropped. Nothing here affects
- * the shipped bundle either way, since every module involved is a linterParser
- * with no Component import.
+ * CCDIK3D strict validators: it has none, and these tests pin that. It adds no field, so no rule
+ * exists to test. A slice test sees only the registrations it imports, so each base-walk case imports
+ * the ancestor it names, even where `./linterParser` reaches it transitively: a dropped line in
+ * another slice must not cut this test's coverage in silence.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -35,27 +18,21 @@ import '../../../base/node3d/linterParser';
 const check = checkerFor('CCDIK3D');
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * CCDIK3D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * The keys CCDIK3D binds, read from the source. Set this or DECLARES_NOTHING, not both.
+ * Leaving both unset is red on purpose: do not delete an assertion to go green.
  */
 const KEYS: string[] = [];
 /**
- * True: CCDIK3D binds nothing. `ccd_ik_3d.h:35-40` is the entire class body,
- * `GDCLASS` plus one `_solve_iteration` override whose definition
- * (`ccd_ik_3d.cpp:33`) is the entire `.cpp`. No `_bind_methods`, so no
- * `ADD_PROPERTY` or `ADD_ARRAY_COUNT`; no `_get_property_list` and no
- * unprefixed `get_property_list` either, so no hand-rolled `settings/` leaf.
+ * True: CCDIK3D binds nothing. `ccd_ik_3d.h:35-40` is the whole class body, `GDCLASS` plus one
+ * `_solve_iteration` override, defined at `ccd_ik_3d.cpp:33`. It has no `_bind_methods`, and no
+ * `_get_property_list` or unprefixed `get_property_list`, so no key reaches a scene by any route.
  */
 const DECLARES_NOTHING = true;
 
 /**
- * Ancestor keys CCDIK3D must inherit rather than restate, with their owners.
- *
- * CCDIK3D owes two things on each: that it shadows neither with a copy of its
- * own, and that the walk hands back the owner's own function rather than a
- * lookalike. Asserting non-null as well is what keeps the identity comparison
- * from passing as a matching pair of nulls the day an owner stops registering.
+ * Ancestor keys CCDIK3D must inherit rather than restate, with their owners. CCDIK3D must not shadow
+ * either, and the walk must return the owner's own function. The non-null assertion stops the
+ * identity check passing as two nulls if an owner stops registering.
  */
 const INHERITED: ReadonlyArray<readonly [owner: string, key: string]> = [
   // iterate_ik_3d.cpp:394, one hop up.
@@ -74,20 +51,15 @@ describe('CCDIK3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
-    //
-    // With no own keys that is the INHERITED validators only — `linterParser`
-    // imports the parent chain — so it covers what IterateIK3D up declares and
-    // becomes this slice's own claim the moment KEYS gains an entry.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned, against only what this
+    // test imported. With no own keys, that is the validators IterateIK3D and up declare, and it
+    // becomes this slice's own claim once KEYS gains an entry.
     expectFixtureClean('unit-ccdik-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // Empty by construction while CCDIK3D owns no key, and kept for the day it
-    // does: a validator that accepts arbitrary prose is not validating a format.
+    // Empty while CCDIK3D owns no key, and kept for when it does: a validator that accepts
+    // arbitrary prose is not validating a format.
     const accepted = validatorRegistry
       .getOwnKeys('CCDIK3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -121,7 +93,7 @@ describe('CCDIK3D strict validators', () => {
     // skeleton_modifier_3d.cpp:161 hints influence to "0,1,0.001", so 1.5 is
     // outside the inspector's own control and draws a diagnostic.
     expect(check('influence', '1.5')).not.toBeNull();
-    // A Transform3D needs twelve components; three is not a parse Godot makes.
+    // A Transform3D needs twelve components, so three is not a parse Godot makes.
     expect(check('transform', 'Transform3D(1, 2, 3)')).not.toBeNull();
   });
 

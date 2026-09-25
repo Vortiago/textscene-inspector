@@ -59,7 +59,7 @@ describe('visualLayersOf', () => {
 describe('stampVisualLayers', () => {
   it('stamps the subtree root and every descendant', () => {
     // One glTF node with several primitives arrives as a Group of Meshes, and
-    // readers look at a single object — so the meshes must carry it themselves.
+    // readers look at a single object, so the meshes must carry it themselves.
     const root = new THREE.Group();
     const group = new THREE.Group();
     const mesh = new THREE.Mesh();

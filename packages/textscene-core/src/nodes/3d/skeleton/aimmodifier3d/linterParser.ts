@@ -1,38 +1,8 @@
 /**
- * AimModifier3D strict validators for linting.
- *
- * Declare only AimModifier3D's OWN members. Everything from BoneConstraint3D up
- * is registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk,
- * so re-declaring an inherited key shadows it and duplicates the rule.
- *
- * ## ADD_PROPERTY is not the surface here
- *
- * doc/classes/AimModifier3D.xml lists one member, `setting_count`, and
- * `_bind_methods` binds exactly one ADD_ARRAY_COUNT (aim_modifier_3d.cpp:190)
- * and no ADD_PROPERTY at all. The rest of what a scene carries is a hand-rolled
- * indexed family: `AimModifier3D::_get_property_list` (aim_modifier_3d.cpp:84-97)
- * builds `String path = "settings/" + itos(i) + "/"` and pushes five leaves,
- * with `_set`/`_get` (aim_modifier_3d.cpp:34-82) reading them back. Registered
- * under `settings/#/*` so ValidatorRegistry's glued-index matcher applies: the
- * index is glued to the prefix by `itos(i)` exactly as `PropertyListHelper`
- * glues it, so a scene writes `settings/0/forward_axis`.
- *
- * ## Two classes share the one `settings/` family
- *
- * `_get_property_list` calls `BoneConstraint3D::get_property_list(p_list)` first
- * (aim_modifier_3d.cpp:85), so the SAME `settings/<i>/` prefix also carries
- * BoneConstraint3D's own seven leaves (bone_constraint_3d.cpp:102-108). They are
- * recognised below so a real scene is not reported as carrying unknown keys, and
- * deliberately left unvalidated: their bounds are the base's to declare, and
- * validating them here would claim a key this class does not own.
- *
- * ## Both axis enums are hints, not enforcement
- *
- * `set_forward_axis` (aim_modifier_3d.cpp:117) and `set_primary_rotation_axis`
- * (aim_modifier_3d.cpp:144) are bare assignments past an index guard. The
- * `static_cast<BoneAxis>` at aim_modifier_3d.cpp:43 is a cast, not a clamp, so
- * an out-of-range value is stored intact and only the PROPERTY_HINT_ENUM is
- * exceeded: warning, never error (ADR-0032).
+ * AimModifier3D strict validators: its own members, as the base-walk delivers BoneConstraint3D and
+ * up. doc/classes/AimModifier3D.xml lists one, the ADD_ARRAY_COUNT (aim_modifier_3d.cpp:190), with no
+ * ADD_PROPERTY. The rest is the family `_get_property_list` builds as `"settings/" + itos(i)`
+ * (aim_modifier_3d.cpp:84-97), which `_set`/`_get` read back (aim_modifier_3d.cpp:34-82).
  */
 
 // Chains through BoneConstraint3D, not past it: that tier owns the seven
@@ -47,17 +17,15 @@ import { BONE_AXIS } from '../skeletonmodifier3d/linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
 
 /**
- * The five leaves AimModifier3D itself pushes (aim_modifier_3d.cpp:91-95).
- *
- * `primary_rotation_axis` and `use_secondary_rotation` carry a usage that is
- * PROPERTY_USAGE_DEFAULT only while `use_euler` is true (the ternary at
- * aim_modifier_3d.cpp:89), so both serialise in that configuration and both
- * need a validator; the conditional NONE is a visibility switch, not a
- * permanently unserialised key.
+ * The five leaves AimModifier3D itself pushes (aim_modifier_3d.cpp:91-95). `primary_rotation_axis`
+ * and `use_secondary_rotation` are PROPERTY_USAGE_DEFAULT while `use_euler` is true (the ternary at
+ * aim_modifier_3d.cpp:89), so both serialise and need a validator.
  */
 const AIM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
-  // aim_modifier_3d.cpp:91, Variant::INT, PROPERTY_HINT_ENUM
-  // "+X,-X,+Y,-Y,+Z,-Z" (skeleton_modifier_3d.h:52), values 0-5.
+  // aim_modifier_3d.cpp:91, Variant::INT, PROPERTY_HINT_ENUM "+X,-X,+Y,-Y,+Z,-Z"
+  // (skeleton_modifier_3d.h:52), values 0-5. The static_cast at aim_modifier_3d.cpp:43 does not
+  // clamp, and set_forward_axis (aim_modifier_3d.cpp:117) and set_primary_rotation_axis
+  // (aim_modifier_3d.cpp:144) assign past an index guard, so both axis enums warn (ADR-0032).
   forward_axis: v.enumInt('forward_axis', 0, 5, BONE_AXIS, { hinted: 'aim_modifier_3d.cpp:91' }),
   // aim_modifier_3d.cpp:92, Variant::BOOL, no hint.
   use_euler: v.boolean('use_euler'),
@@ -73,6 +41,9 @@ const AIM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 
 const settingValidator = indexedFamilyValidator({
   prefix: 'settings/',
+  // `_get_property_list` calls `BoneConstraint3D::get_property_list` first (aim_modifier_3d.cpp:85),
+  // so the prefix also carries the base's seven leaves (bone_constraint_3d.cpp:102-108). They route
+  // to the base, which owns their bounds.
   leaves: { ...AIM_LEAVES, ...boneConstraintBaseLeaves() },
   unknownCode: 'INVALID_SETTING_KEY',
   describes: 'setting',
@@ -88,13 +59,9 @@ const settingValidator = indexedFamilyValidator({
   },
 });
 
-// `leaves` drives `boundGrounding`'s recursion, so it must list BOUNDS, not
-// routes. The seven BASE_LEAVES entries above are routers into
-// BoneConstraint3D, where the real validators are swept with their own
-// citations; leaving them here would ask this slice to classify a bound it
-// does not own, and the only honest tag for a router is neither `formatOnly`
-// (it does reject real values) nor a citation (it forwards to seven different
-// ones).
+// `leaves` drives `boundGrounding`'s recursion, so it lists bounds, not routes. The seven base
+// leaves route into BoneConstraint3D, which cites their bounds. A router is neither `formatOnly`
+// (it rejects real values) nor one citation (it forwards to seven).
 settingValidator.leaves = Object.values(AIM_LEAVES);
 
 validatorRegistry.registerAll('AimModifier3D', {
@@ -104,5 +71,7 @@ validatorRegistry.registerAll('AimModifier3D', {
   // outright: a delegated setter carries the delegate's guard.
   setting_count: v.int('setting_count', { min: 0, enforced: 'bone_constraint_3d.cpp:131' }),
 
+  // `itos(i)` glues the index to the prefix as `PropertyListHelper` does, so the glued-index
+  // matcher reads `settings/0/forward_axis`.
   'settings/#/*': settingValidator,
 });

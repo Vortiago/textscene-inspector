@@ -1,13 +1,7 @@
 /**
- * LightmapGI strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * LightmapGI strict validators, asserted through `validatorRegistry` so a
+ * failure points at the validator, not at scene parsing. One case per property
+ * (happy, malformed, any bound), with the Godot line beside each bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -20,13 +14,10 @@ import './linterParser';
 const check = checkerFor('LightmapGI');
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * LightmapGI binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
- *
- * scene/3d/lightmap_gi.cpp:1918-1943 — the 22 `ADD_PROPERTY` calls in
- * `LightmapGI::_bind_methods`, matching doc/classes/LightmapGI.xml's 22
- * `<members>`, none carrying `overrides=`.
+ * The `ADD_PROPERTY` calls of `LightmapGI::_bind_methods`
+ * (scene/3d/lightmap_gi.cpp:1918-1943), matching doc/classes/LightmapGI.xml's
+ * `<members>`, none with `overrides=`. Set exactly one of this and DECLARES_NOTHING,
+ * from the source. Both unset is red on purpose.
  */
 const KEYS: string[] = [
   'quality',
@@ -52,29 +43,14 @@ const KEYS: string[] = [
   'generate_probes_subdiv',
   'light_data',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys LightmapGI does NOT declare, each paired with the ancestor that does.
- * Name at least one; VisualInstance3D is where to start.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives LightmapGI no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart, and it is red until filled for the same reason
- * KEYS is.
- *
- * `sorting_offset` and `sorting_use_aabb_center` are ALSO documented
- * VisualInstance3D members, but that class's own `ADD_PROPERTY` for both passes
- * `PROPERTY_USAGE_NONE` explicitly, and LightmapGI never overrides
- * `_validate_property` to re-enable them (its own override, lightmap_gi.cpp:1825,
- * touches six different property names, none of them these two) — so on
- * LightmapGI neither one serialises, and VisualInstance3D's own linterParser
- * registers neither. `layers` is the one VisualInstance3D member that actually
- * reaches a LightmapGI `.tscn`.
+ * Keys LightmapGI does not declare, each with the ancestor that does. `layers`
+ * is the only VisualInstance3D member that serialises here: the sorting keys are
+ * `PROPERTY_USAGE_NONE`, and LightmapGI's `_validate_property`
+ * (lightmap_gi.cpp:1825) does not restore them.
  */
 const INHERITED: [owner: string, key: string][] = [['VisualInstance3D', 'layers']];
 
@@ -88,17 +64,14 @@ describe('LightmapGI strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // `fixtureLint` checks the whole registry but needs the barrel. This checks
+    // the same file against what this test imported.
     expectFixtureClean('unit-lightmap-gi.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // LightmapGI declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose checks no format. Vacuous when
+    // the class declares nothing, which INHERITED covers.
     const accepted = validatorRegistry
       .getOwnKeys('LightmapGI')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -113,8 +86,8 @@ describe('LightmapGI strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
-      // LightmapGI would answer here while drifting from the ancestor's rule.
+      // The same function, not merely some validator: a shadowing copy would
+      // answer here while its rule differs from the ancestor's.
       expect(validatorRegistry.findValidator('LightmapGI', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('LightmapGI')).not.toContain(key);
     }
@@ -195,7 +168,7 @@ describe('LightmapGI strict validators', () => {
 
     it('warns that a fractional value is truncated, never refusing it', () => {
       // `Variant::_to_int` (variant.h:369-370) converts rather than refusing,
-      // so the file loads — with 5 where it says 5.9.
+      // so the file loads, with 5 where it says 5.9.
       expectWarning(check('bounces', '5.9'), 'is an integer slot, so Godot drops the fractional part of "5.9" and stores 5.');
     });
   });
@@ -406,7 +379,7 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('accepts the literal null, a cleared slot Godot loads', () => {
-      // Omitting a cleared slot is what the WRITER does. The loader still
+      // Omitting a cleared slot is what the writer does. The loader still
       // takes a hand-written `null`: variant_parser.cpp:699 reads it as
       // Variant(), can_convert_strict allows NIL -> OBJECT (variant.cpp:543),
       // and the Ref setter accepts an invalid Ref.
@@ -453,7 +426,7 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('accepts the literal null, a cleared slot Godot loads', () => {
-      // Omitting a cleared slot is what the WRITER does. The loader still
+      // Omitting a cleared slot is what the writer does. The loader still
       // takes a hand-written `null`: variant_parser.cpp:699 reads it as
       // Variant(), can_convert_strict allows NIL -> OBJECT (variant.cpp:543),
       // and the Ref setter accepts an invalid Ref.
@@ -489,7 +462,7 @@ describe('LightmapGI strict validators', () => {
     });
 
     it('accepts the literal null, a cleared slot Godot loads', () => {
-      // Omitting a cleared slot is what the WRITER does. The loader still
+      // Omitting a cleared slot is what the writer does. The loader still
       // takes a hand-written `null`: variant_parser.cpp:699 reads it as
       // Variant(), can_convert_strict allows NIL -> OBJECT (variant.cpp:543),
       // and the Ref setter accepts an invalid Ref.

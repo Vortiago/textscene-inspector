@@ -1,5 +1,5 @@
 /**
- * Tests for TileMap strict validators (format validation).
+ * Tests the TileMap strict validators.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

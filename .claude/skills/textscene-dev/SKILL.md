@@ -3,18 +3,19 @@ name: textscene-dev
 description: Full-stack development for TextScene Inspector monorepo. Use for all TypeScript implementation work including core library (@textscene/core), VS Code extension, and web previewer. Covers feature implementation, debugging, testing, and integration across the stack.
 ---
 
-# TextScene Inspector Development
+# TextScene Inspector development
 
-**Monorepo Stack:**
-- `packages/textscene-core` - Core library (`@textscene/core`): TSCN parsing, linting, and react-three-fiber rendering
-- `apps/textscene-vscode` - VS Code preview extension
-- `apps/textscene-web` - Vite-based web previewer for debugging
+This skill orients you in the monorepo. AGENTS.md holds the gates and conventions, and the `implement-feature` skill holds the per-feature checklist.
 
-## Core Library Development
+- `packages/textscene-core`: the core library (`@textscene/core`): TSCN parsing, linting and react-three-fiber rendering.
+- `apps/textscene-vscode`: the VS Code preview extension.
+- `apps/textscene-web`: the Vite web previewer, for debugging.
 
-### Vertical Slicing Pattern
+## Core library
 
-Each TSCN node type gets its own self-contained folder (categories: `2d`, `3d`, `animation`, `audio`, `base`, `node`, `paths`, `physics`):
+### Vertical slices
+
+Each TSCN node type has its own folder, grouped by category (for example `2d`, `3d`, `physics`):
 
 ```
 packages/textscene-core/src/nodes/[category]/[nodetype]/
@@ -24,50 +25,43 @@ packages/textscene-core/src/nodes/[category]/[nodetype]/
 ├── linter.ts            # Semantic lint rules
 ├── propertyFormatter.ts # Format properties for UI display (optional)
 ├── types.ts             # TypeScript type definitions
+├── comparison.md        # Godot-parity sheet
 ├── index.ts             # Parser/formatter registration with NodeRegistry
 ├── index.r3f.ts         # Component registration with nodeComponentRegistry
 ├── index.linter.ts      # Linter registration (imports linterParser + linter)
 └── *.test.ts(x)         # Co-located tests
 ```
 
-**Same pattern for resources:**
+Resources follow the Resource slice pattern (ADR-0031):
 ```
 packages/textscene-core/src/resources/meshes/[meshtype]/
 packages/textscene-core/src/resources/materials/[materialtype]/
 ```
 
-### Adding a New Node Type
+### Add a node type
 
-> For the COMPLETE per-feature layer checklist — including the layers the walkthrough below omits
-> (the `pnpm new:node` scaffolder, the linter's two sub-layers, fixture-catalog regeneration, docs,
-> golden images, the meta-guards, and the material/mesh central-dispatch shape) — use the
-> **`implement-feature`** skill. The walkthrough below is the node-type essentials.
+The **`implement-feature`** skill has the complete layer checklist: the scaffolder, the two linter layers, fixture-catalog regeneration, docs, golden images, the conformance guards and the resource slice shape. The steps below are the essentials for a node type, with DirectionalLight3D as the example.
 
-**Example: Adding DirectionalLight3D support**
+1. **Research** with the `tscn-threejs-docs-researcher` agent:
+   - The Godot node's properties and inheritance.
+   - The matching three.js class and API.
+   - The property mappings and format conversions.
 
-1. **Research Phase** - Use `tscn-threejs-docs-researcher` agent:
-   - Look up Godot documentation for node properties and inheritance
-   - Find corresponding three.js class and API
-   - Identify property mappings and format conversions
+2. **Scaffold the slice** with `pnpm new:node DirectionalLight3D 3d/lights --intent draws --linter`.
 
-2. **Create Folder Structure**
-   ```bash
-   mkdir packages/textscene-core/src/nodes/3d/lights/directionallight3d
-   ```
+3. **Implement the parser** (`parser.ts`):
+   - Parse the TSCN heading `[node type="DirectionalLight3D" ...]`.
+   - Extract the properties with their type conversions.
+   - Name the function `parseDirectionalLight3D()`.
 
-3. **Implement Parser** (`parser.ts`)
-   - Parse TSCN heading: `[node type="DirectionalLight3D" ...]`
-   - Extract properties with type conversions
-   - Follow naming: `parseDirectionalLight3D()`
+4. **Implement the component** (`Component.tsx`):
+   - Build a react-three-fiber component (for example `<directionalLight>`).
+   - Apply the properties with their conversions.
+   - Name the component after the node type: `DirectionalLight3D`.
 
-4. **Implement Component** (`Component.tsx`)
-   - Build a react-three-fiber component (e.g., `<directionalLight>`)
-   - Apply properties with conversions
-   - Name the component after the node type: `DirectionalLight3D`
-
-5. **Register Node Type** (three entry points)
+5. **Register the node type** in three entry points:
    ```typescript
-   // index.ts — parser + optional formatter
+   // index.ts: parser + optional formatter
    import { nodeRegistry } from '../../../../core/NodeRegistry';
    import { parseDirectionalLight3D } from './parser';
 
@@ -77,88 +71,79 @@ packages/textscene-core/src/resources/materials/[materialtype]/
    });
    ```
    ```typescript
-   // index.r3f.ts — R3F component
+   // index.r3f.ts: R3F component
    import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
    import { DirectionalLight3D } from './Component';
 
    nodeComponentRegistry.register({ typeName: 'DirectionalLight3D', Component: DirectionalLight3D });
    ```
    ```typescript
-   // index.linter.ts — linter registrations (side-effect imports only)
+   // index.linter.ts: linter registrations (side-effect imports only)
    import './linterParser.js';
    import './linter.js';
    ```
-   Then wire the side-effect imports:
+   The side-effect imports in the barrels (the scaffolder writes them):
    - `parser/TscnParser.ts`: `import '../nodes/3d/lights/directionallight3d/index.js';`
    - `r3f/nodes/index.ts`: `import '../../nodes/3d/lights/directionallight3d/index.r3f';`
    - `linter/index.ts`: `import '../nodes/3d/lights/directionallight3d/index.linter.js';`
-     (keeps the linter bundle free of THREE.js — never import a node's `index.ts` there)
 
-6. **Write Tests** (`*.test.ts` / `*.test.tsx`)
-   - Test parser with various property combinations
-   - Test the component with `@react-three/test-renderer`
-   - Test edge cases and defaults
+   Never import a node's `index.ts` from `linter/index.ts`: that keeps the linter bundle free of THREE.js.
 
-7. **Validation Workflow**
-   ```bash
-   cd packages/textscene-core
-   pnpm type-check && pnpm lint:fix && pnpm test && pnpm build
-   ```
+6. **Write the tests** (`*.test.ts`, `*.test.tsx`):
+   - The parser, with different property combinations.
+   - The component, with `@react-three/test-renderer`.
+   - Edge cases and defaults.
 
-### Common Patterns
+7. **Run the gates** listed in AGENTS.md.
 
-#### Property Naming Conventions
-- Godot: `snake_case` → three.js: `camelCase`
-- Example: `light_energy` (Godot) → `intensity` (three.js)
+### Common patterns
 
-#### Type Conversions
-- **Colors**: `Color(r, g, b, a)` → `new THREE.Color(r, g, b)` (three.js ignores alpha)
-- **Vectors**: `Vector3(x, y, z)` → `new THREE.Vector3(x, y, z)`
-- **Transforms**: Godot uses column-major, three.js uses row-major matrices
-- **Angles**: Godot degrees → three.js radians (multiply by `Math.PI / 180`)
+Property names: Godot uses `snake_case`, three.js uses `camelCase`, and the names often differ (`light_energy` in Godot is `intensity` in three.js).
 
-#### Utilities Available
-- `utils/colorParser.ts` - Parse Godot Color format
-- `utils/transform.ts` - Transform matrix conversions
-- `r3f/lightConstants.ts` - Light-related constants (render-side only)
-- `utils/shadowUtils.ts` - Shadow configuration helpers
-- `utils/lightTargetUtils.ts` - Light target positioning
-- `utils/nodePath.ts` - Scene-tree node path helpers
+Type conversions:
+- **Colours**: `Color(r, g, b, a)` → `new THREE.Color(r, g, b)`. `THREE.Color` has no alpha.
+- **Vectors**: `Vector3(x, y, z)` → `new THREE.Vector3(x, y, z)`.
+- **Transforms**: Godot stores a Basis as three rows (`Vector3 rows[3]`), so the parsed `basis_x`, `basis_y` and `basis_z` are rows, not columns. `THREE.Matrix4.elements` is column-major. `decomposeTransform3D` in `utils/transform.ts` turns a Transform3D into position, XYZ Euler rotation and scale.
+- **Angles**: a property Godot stores in degrees becomes radians in three.js (multiply by `Math.PI / 180`).
+
+Utilities:
+- `utils/colorParser.ts`: parses the Godot Color format.
+- `utils/transform.ts`: parses and decomposes a Transform3D.
+- `r3f/lightConstants.ts`: light constants (render side only).
+- `utils/nodePath.ts`: scene-tree node path helpers.
+- `src/godot/`: engine facts (constants, tolerances, grammar). Look there before you declare a constant.
 
 ### Troubleshooting
 
-**Parser Issues:**
-- Check TSCN docs for exact property format
-- Properties may be in `sub_resource` blocks, not node headings
-- Use regex for complex values (Vector3, Color, etc.)
+**Parser**
+- Check the TSCN documentation for the exact property format.
+- A property can be in a `sub_resource` block, not in the node heading.
+- Use the canonical value parsers (`parser/valueParsers.ts`) for complex values (Vector3, Color, and so on).
 
-**Component Issues:**
-- Verify three.js property names match documentation (R3F props mirror three.js)
-- Use `tscn-threejs-docs-researcher` agent to confirm mappings
-- Some Godot properties don't have direct three.js equivalents
-- Check coordinate system conversions (both use Y-up but transforms may differ)
+**Component**
+- Check that the three.js property names match the documentation. R3F props mirror three.js.
+- Confirm mappings with the `tscn-threejs-docs-researcher` agent.
+- Some Godot properties have no direct three.js counterpart.
+- Check coordinate conversions: both use Y-up, but transforms can differ.
 
-**Visual Differences:**
-- Lighting, materials, post-processing differ from Godot
-- Focus on structural correctness first, visual parity second
+**Visual differences**
+- Lighting, materials and post-processing differ from Godot.
+- Get the structure right first, then the visual parity.
+- `pnpm ref:godot` measures the Godot side (AGENTS.md).
 
-### TSCN Format Reference
+### TSCN format
 
-Heading-based format: `[type key=value ...]`
+The format is heading-based: `[type key=value ...]`. It has three main parts:
+- `[node ...]`: scene tree nodes.
+- `[ext_resource ...]`: references to external files.
+- `[sub_resource ...]`: embedded data such as meshes, materials and shaders.
 
-Three main components:
-- `[node ...]` - Scene tree nodes
-- `[ext_resource ...]` - External file references
-- `[sub_resource ...]` - Embedded data like meshes, materials, shaders
-
-**Godot 4.x Documentation:**
+**Godot 4.x documentation:**
 https://docs.godotengine.org/en/4.4/contributing/development/file_formats/tscn.html
 
----
+## VS Code extension
 
-## VS Code Extension Development
-
-### Architecture
+### Structure
 
 ```
 apps/textscene-vscode/src/
@@ -173,23 +158,21 @@ apps/textscene-vscode/src/
     └── WebviewResourceProvider.ts
 ```
 
-### Preview Panel Pattern
+### Preview panel
 
-1. `extension.ts` registers the `textscene.openPreviewToSide` command
-2. `TscnPreviewPanel.create()` builds one `vscode.WebviewPanel` per .tscn file
-3. Bidirectional message passing (typed in `protocol.ts`) between the extension and the React webview
+1. `extension.ts` registers the `textscene.openPreviewToSide` command.
+2. `TscnPreviewPanel.create()` builds one `vscode.WebviewPanel` per `.tscn` file.
+3. The extension and the React webview exchange messages in both directions. `protocol.ts` types them.
 
-### Message Passing
-
-**Extension → Webview:**
+**Extension → webview:**
 ```typescript
 panel.webview.postMessage({
-  type: 'loadScene',
+  type: 'loadTscn',
   content: tscnFileContent
 });
 ```
 
-**Webview → Extension:**
+**Webview → extension:**
 ```typescript
 vscode.postMessage({
   type: 'error',
@@ -197,7 +180,7 @@ vscode.postMessage({
 });
 ```
 
-### Development Workflow
+### Workflow
 
 ```bash
 cd apps/textscene-vscode
@@ -205,22 +188,18 @@ cd apps/textscene-vscode
 # Development (watch mode)
 pnpm dev
 
-# Full validation and packaging
-pnpm type-check && pnpm lint:fix && pnpm test && pnpm build && pnpm package
+# Build and package
+pnpm build && pnpm package
 
 # Install for testing
 code --install-extension textscene-inspector-*.vsix
 ```
 
----
+## Web previewer
 
-## Web Previewer Development
+The web previewer is a Vite app for fast testing and debugging of `@textscene/core`.
 
-### Purpose
-
-Vite-based web app for rapid testing and debugging of the @textscene/core library.
-
-### Architecture
+### Structure
 
 ```
 apps/textscene-web/src/
@@ -230,7 +209,7 @@ apps/textscene-web/src/
 └── logger.ts         # Log adapter wiring
 ```
 
-### Implementation Pattern
+### Use of the core library
 
 ```tsx
 // Parsing with @textscene/core
@@ -239,13 +218,13 @@ import { TscnParser, TscnPreviewShell } from '@textscene/core';
 const parser = new TscnParser();
 const scene = parser.parse(tscnContent); // lenient: recovers from bad input
 
-// Rendering is react-three-fiber components — there is no imperative
-// renderer class. <TscnPreviewShell> parses `content` itself and renders
-// the full viewer (canvas, scene tree, details, missing-resources panel):
+// Rendering is react-three-fiber components, with no imperative renderer
+// class. <TscnPreviewShell> parses `content` itself and renders the full
+// viewer (canvas, scene tree, details, missing-resources panel):
 <TscnPreviewShell panelId="my-panel" content={tscnContent} />
 ```
 
-### Development Workflow
+### Workflow
 
 ```bash
 cd apps/textscene-web
@@ -254,13 +233,13 @@ cd apps/textscene-web
 pnpm dev  # http://localhost:5173
 
 # Build and preview production
-pnpm type-check && pnpm lint:fix && pnpm build
+pnpm build
 pnpm preview  # http://localhost:4173
 ```
 
-### Testing Library Changes
+### Test a core library change
 
-**IMPORTANT:** Always rebuild the core library first:
+The web app resolves `@textscene/core` from its `dist/`. Rebuild the core library first:
 ```bash
 # Rebuild library
 cd packages/textscene-core && pnpm build
@@ -269,13 +248,9 @@ cd packages/textscene-core && pnpm build
 cd ../../apps/textscene-web && pnpm build
 ```
 
----
+## Integration and testing
 
-## Integration & Testing
-
-### Complete Build Validation
-
-From project root:
+From the project root:
 ```bash
 pnpm install         # Install/update dependencies
 pnpm type-check      # TypeScript validation across all packages
@@ -285,43 +260,35 @@ pnpm test            # Run all unit tests (Vitest)
 pnpm build           # Build all packages in dependency order
 ```
 
-### End-to-End Testing
+AGENTS.md lists the full gates.
 
-Use the `e2e-testing` skill for browser automation testing:
-- Web previewer: File upload → rendering validation
-- VS Code extension: File open → custom editor → rendering validation
-- Visual regression testing with screenshots
+For browser tests, use the `e2e-testing` skill:
+- Web previewer: file upload to rendering.
+- VS Code extension: file open to custom editor to rendering.
+- Visual regression with screenshots.
 
----
+## Principles
 
-## Development Principles
+**KISS and DRY**
+- Keep implementations simple, and avoid premature abstraction.
+- Extract a utility at the third clear duplication (Rule of Three).
+- Keep single-use code inline until duplication appears.
 
-### KISS and DRY
-- Keep implementations simple, avoid premature abstraction
-- Extract utilities when you see clear duplication (Rule of Three)
-- Use generic functions for repeated patterns (see `resourceResolver.ts`, `shadowUtils.ts`)
-- Keep single-use code inline until duplication emerges
+**Fast iteration**
+- Use the web previewer for fast visual feedback.
+- Co-locate tests with the implementation.
 
-### Quick Iterations
-- Prioritize working code over architectural perfection
-- Use web previewer for rapid visual feedback
-- Co-locate tests with implementation files
+**Self-registration**
+- Node types register through NodeRegistry (parsing), nodeComponentRegistry (rendering) and the linter registries.
+- A new node type needs one new line in each of the three side-effect import barrels, and no conditional or switch statement.
 
-### Self-Registering Patterns
-- New node types register themselves via NodeRegistry (parsing), nodeComponentRegistry (rendering), and the linter registries
-- Only the three side-effect import barrels need a new line when adding a node type
-- Eliminates hardcoded conditionals and switch statements
+**Feature parity**
+- Keep the web previewer and the VS Code extension at the same function.
+- Both use the same `@textscene/core` library, so every feature works in both apps.
 
-### Feature Parity
-- Keep web-previewer and vscode-extension functionality in sync
-- Both use the same @textscene/core library
-- All features should work in both apps
+## Context7 documentation
 
----
-
-## Context7 Documentation References
-
-Use Context7 MCP tool for up-to-date documentation:
+Use the Context7 MCP tool for current documentation:
 
 - **three.js**: `/mrdoob/three.js`
 - **Godot Engine**: `websites/godotengine_en_stable`
@@ -330,23 +297,21 @@ Use Context7 MCP tool for up-to-date documentation:
 - **Vitest**: `websites/vitest_dev`
 - **pnpm**: `pnpm/pnpm`
 
-See [REFERENCES.md](../../REFERENCES.md) for links and additional documentation.
+[REFERENCES.md](../../../REFERENCES.md) has the links and more documentation.
 
----
+## When to use this skill
 
-## When to Use This Skill
+Use this skill for:
+- ✅ New TSCN node types or sub-resources.
+- ✅ Features in the core library.
+- ✅ VS Code extension features.
+- ✅ Debugging rendering in the web previewer.
+- ✅ Refactoring existing code.
+- ✅ Utilities and shared functions.
+- ✅ Integration across packages.
+- ✅ TypeScript work in the monorepo.
 
-**Use this skill for:**
-- ✅ Implementing new TSCN node types or sub-resources
-- ✅ Adding features to the core library
-- ✅ Working on VS Code extension features
-- ✅ Debugging rendering issues in the web previewer
-- ✅ Refactoring or improving existing code
-- ✅ Adding utilities or shared functionality
-- ✅ Integration work across packages
-- ✅ TypeScript development in the monorepo
-
-**Use other skills/agents for:**
-- 🔬 **tscn-threejs-docs-researcher agent**: Documentation research for Godot and three.js APIs
-- 🧪 **e2e-testing skill**: End-to-end browser automation testing
-- 🏗️ **codebase-architect agent**: Architecture analysis and refactoring planning
+Use other skills and agents for:
+- 🔬 **tscn-threejs-docs-researcher agent**: documentation research for Godot and three.js APIs.
+- 🧪 **e2e-testing skill**: end-to-end browser tests.
+- 🏗️ **codebase-architect agent**: architecture analysis and refactoring plans.

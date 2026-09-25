@@ -1,6 +1,6 @@
 /**
- * Skeleton2D registration — it is parsed, and it draws nothing on purpose
- * (ADR-0008) rather than for want of an implementation.
+ * Skeleton2D is parsed, and draws nothing on purpose (ADR-0008) rather than
+ * for want of an implementation.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -30,10 +30,9 @@ describe('Skeleton2D registration', () => {
   });
 
   it('reads its own fixture through the lenient parser, stack sub-resource and all', () => {
-    // The fixture carries a SkeletonModificationStack2D sub-resource, a type
-    // the previewer models nowhere. The strict side is covered by
-    // linterParser.test.ts; this is the path the previewer actually takes, and
-    // it must survive the unknown resource rather than drop the node with it.
+    // The fixture carries a SkeletonModificationStack2D sub-resource, a type the
+    // previewer does not model. The lenient path must survive it rather than
+    // drop the node.
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
     const scene = new TscnParser().parse(readFixture('unit-skeleton-2d.tscn'));

@@ -1,25 +1,8 @@
 /**
- * Every diagnostic a semantic rule reports must say where its authority is.
- *
- * `boundGrounding.test.ts` does this for validators and `rangeAdvisoryGrounding`
- * for advisory arms. A `LintRule`'s `check()` was the remaining hole: it is free
- * code, so a hand-rolled condition with no engine counterpart looked exactly
- * like a ported `get_configuration_warnings()` row, and the only way to tell
- * them apart was to read all 118 corpus diagnostics by hand. That audit found
- * nine with no counterpart at all.
- *
- * `RuleMeta.emits` now carries an `EmitGrounding` per entry, and it is REQUIRED
- * - the same move `RangeArm.cite` makes. The compiler rejects an ungrounded
- * diagnostic at every site, so there is no sweep to keep complete and no budget
- * number to ratchet down. What a type cannot check is whether the claim is
- * true, and that is this file:
- *
- *   - a `configuration-warning` arm names a rule the census actually holds a
- *     row for, so the `file.cpp:line` is stated once and cannot drift;
- *   - an `engine` arm cites a real source location, and is NOT quietly
- *     re-typing a citation the census already holds;
- *   - a `no-engine-counterpart` arm gives a reason, since its whole claim is
- *     that no engine line exists to cite.
+ * Every diagnostic a semantic rule reports says where its authority is. `RuleMeta.emits` carries a required
+ * `EmitGrounding` per entry, so the compiler rejects an ungrounded one. This file checks the claim is true: a
+ * `configuration-warning` arm names a rule the census holds a row for (its `file.cpp:line` is stated once), an `engine` arm cites a real location without
+ * re-typing a census cite, and a `no-engine-counterpart` arm gives a reason.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -52,12 +35,8 @@ interface Entry {
 }
 
 /**
- * Every emits entry in the live registry, tagged with the rule declaring it —
- * plus the file-level diagnostics, which no rule can own.
- *
- * `Linter` stamps those directly, so they reach no `RuleMeta.emits` and would
- * otherwise be the one place a citation lives in a prose comment and nothing
- * checks it. They carry the same shape, so they sweep with everything else.
+ * Every emits entry in the live registry, tagged with its rule, plus the file-level diagnostics no rule can own.
+ * `Linter` stamps those directly, so they reach no `RuleMeta.emits`, but they carry the same shape and are checked alike.
  */
 function entries(): Entry[] {
   return [
@@ -94,8 +73,8 @@ describe('emit grounding', () => {
 
   it('sweeps the whole registry, not an empty set', () => {
     // A guard that silently matches nothing passes everything below it. The
-    // floor sits just under the real population (246 at the time of writing),
-    // so a failed barrel import or an emptied registry fails HERE.
+    // floor sits just under the real population, so a failed barrel import or an
+    // emptied registry fails here.
     expect(all.length).toBeGreaterThan(200);
     expect(new Set(all.map((e) => e.rule)).size).toBeGreaterThan(100);
   });
@@ -155,12 +134,9 @@ describe('emit grounding', () => {
   });
 
   it('keeps the census the only place a ported LINE is cited, too', () => {
-    // The name check above misses the subtler duplication: two rule names for
-    // one `warnings.push_back`, one resolving through the census and the other
-    // re-typing its `file.cpp:line`. `collisionshape2d-no-parent` and
-    // `collisionshape2d-invalid-parent` are the same push at
-    // `collision_shape_2d.cpp:176`. The fix is a census ROW for the second name
-    // (the PathFollow parentless pair is the precedent), never a second cite.
+    // Two rule names for one `warnings.push_back`, one resolving through the census and one re-typing its `file.cpp:line`:
+    // `collisionshape2d-no-parent` and `collisionshape2d-invalid-parent` are one push at `collision_shape_2d.cpp:176`.
+    // The fix is a census row for the second name (as for the PathFollow parentless pair), never a second cite.
     const censusLines = new Set([...census.values()].flat());
     const reCited = all
       .filter(
@@ -198,7 +174,7 @@ describe('emit grounding', () => {
     // `ruleCoverage.test.ts` finds the end of an `emits: [ … ]` array by
     // counting brackets. A `[` or `]` inside a `because:` desyncs that count and
     // silently deletes real diagnostics from its scrape - the guard would then
-    // pass because it can no longer see what it checks.
+    // pass because it cannot see what it checks.
     const bracketed = all
       .filter((e) => /[[\]]/.test(resolve(e, census)) || /[[\]]/.test(e.ruleName))
       .map((e) => `${e.rule}: ${e.ruleName}`);
@@ -231,8 +207,8 @@ describe('the grounding guard bites', () => {
   });
 
   it('keeps an inert claim distinguishable from a bound', () => {
-    // The two arms cite the same KIND of string and would be indistinguishable
-    // once resolved, which is the collapse this split exists to prevent.
+    // The two arms cite the same kind of string and would be indistinguishable
+    // after resolution, which is the collapse this split exists to prevent.
     const inert = entry({
       kind: 'engine-inert',
       at: 'sprite_2d.cpp:98',

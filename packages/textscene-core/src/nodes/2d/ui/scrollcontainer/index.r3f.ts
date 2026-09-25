@@ -1,13 +1,7 @@
 /**
- * ScrollContainer registration — the native (WebGL canvas) painter, and the
- * native rect solver's minimum-size/container-layout registrations
- * `nativeSolver.ts` exports.
- *
- * `wrapsChildren: true` — the second type (after `CanvasLayer`) that needs
- * it: `ScrollContainer` establishes a NEW ambient clip-plane scope for
- * its subtree (`ControlClipProvider`), which only reaches descendants if the
- * walker renders them as this painter's REACT children rather than as
- * siblings.
+ * Registers the native (WebGL canvas) painter for ScrollContainer and its
+ * minimum-size and container-layout solvers. `wrapsChildren` makes the
+ * descendants React children, so the painter's clip-plane scope reaches them.
  */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

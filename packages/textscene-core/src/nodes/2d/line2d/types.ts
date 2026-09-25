@@ -1,4 +1,4 @@
-/** Line2D — a stroked polyline drawn as mesh quads (extends Node2D). */
+/** Line2D: a stroked polyline drawn as mesh quads (extends Node2D). */
 
 import type { Color, Node2DProperties } from '../../base/node2d/types';
 
@@ -7,7 +7,7 @@ export interface Line2DProperties extends Node2DProperties {
   points: Float32Array;
   /** Stroke width in Godot pixels (default 10). */
   width: number;
-  /** Flat fill color (Godot `default_color`, sRGB; default white). Multiplies with modulate. */
+  /** Flat fill color (Godot `default_color`, sRGB, default white). Multiplies with modulate. */
   defaultColor: Color;
   /**
    * Whether to close the polyline back to the first vertex (default false).
@@ -15,8 +15,8 @@ export interface Line2DProperties extends Node2DProperties {
    */
   closed: boolean;
   /**
-   * Corner style. Godot has no "no joint" value — `LINE_JOINT_SHARP` (0) is the
-   * default, so interior corners are ALWAYS filled.
+   * Corner style. Godot has no "no joint" value: `LINE_JOINT_SHARP` (0) is the
+   * default, so interior corners are always filled.
    */
   jointMode: number;
   /** Miter length limit in half-widths before SHARP bevels. Default 2.0. */

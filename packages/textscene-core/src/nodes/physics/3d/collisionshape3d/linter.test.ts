@@ -1,6 +1,4 @@
-/**
- * Tests for CollisionShape3D linter (strict parser + semantic rules)
- */
+/** CollisionShape3D linter: the strict parser and the semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -177,11 +175,9 @@ shape = SubResource("shape_1")
 
     it('reports nothing missing for a shape that is not a reference at all', () => {
       // `variant_parser.cpp:1089` takes only the `Resource` / `SubResource` /
-      // `ExtResource` identifiers into the resource arm, so a quoted string
-      // names no id and nothing can be absent. Its format is the strict
-      // parser's diagnostic, and a second "not found" beside it names a
-      // resource nobody wrote — while a well-formed `SubResource("nonexistent")`
-      // still errors, per the case above.
+      // `ExtResource` identifiers into the resource arm, so a quoted string names no id and
+      // nothing can be absent. The strict parser reports its format, and a "not found" beside
+      // it would name a resource nobody wrote.
       const content = scene(
         node('StaticBody3D', {}, { name: 'StaticBody' }),
         node('CollisionShape3D', { shape: '"invalid_format"' }, { name: 'BadFormat', parent: '.' })
@@ -310,11 +306,10 @@ shape = SubResource("shape_1")
     });
 
     it('says nothing about a parent whose type is declared in another scene', () => {
-      // An `instance=` heading names a PackedScene, so `type` is the
-      // ExtResource ref; an override heading has neither `type=` nor
-      // `instance=` and parses with the index fallback's truthy "0". Neither is
-      // a class this file states, and warning anyway fires on every body
-      // assembled by instancing one.
+      // An `instance=` heading names a PackedScene, so `type` is the ExtResource ref. An
+      // override heading has neither `type=` nor `instance=` and parses with the index
+      // fallback's truthy "0". Neither is a class this file states, and a warning would fire on
+      // every body built by instancing one.
       const instancedParent = scene(
         packedScene,
         subResource('BoxShape3D', {}, 'shape_1'),
@@ -430,11 +425,10 @@ transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 1, 0)
     });
 
     it('does not warn on a flattened basis, where SIGN(det) makes Godot read (0, 0, 0)', () => {
-      // `Basis::get_scale()` is `SIGN(determinant()) * get_scale_abs()`
-      // (basis.cpp:321), and `SIGN` is three-valued (typedefs.h:123-126). A
-      // determinant of 0 therefore reads as a UNIFORM (0, 0, 0) and
-      // collision_shape_3d.cpp:153-156 stays silent, however unequal the
-      // column magnitudes are.
+      // `Basis::get_scale()` is `SIGN(determinant()) * get_scale_abs()` (basis.cpp:321), and
+      // `SIGN` is three-valued (typedefs.h:123-126). A determinant of 0 reads as a uniform
+      // (0, 0, 0), so collision_shape_3d.cpp:153-156 stays silent, however unequal the column
+      // magnitudes are.
       expectNoDiagnostic(
         `[gd_scene format=3]
 
@@ -501,7 +495,7 @@ shape = SubResource("concave_1")
         contains: ['VehicleBody3D'],
       });
       // Godot picks the more specific name once cast_to<VehicleBody3D> succeeds
-      // (collision_shape_3d.cpp:137-140); the generic "RigidBody3D" never appears.
+      // (collision_shape_3d.cpp:137-140). The generic "RigidBody3D" never appears.
       expect(diag.message).not.toContain('RigidBody3D');
     });
 
@@ -607,13 +601,12 @@ shape = SubResource("convex_1")
       );
 
       const diagnostics = lint(content);
-      // Expect: missing shape (error), invalid parent (warning), invalid disabled format (error)
-      // However, strict parser errors may stop semantic validation
+      // Missing shape (error), invalid parent (warning), invalid disabled format (error), though
+      // strict parser errors may stop semantic validation.
       expect(diagnostics.length).toBeGreaterThanOrEqual(1);
       const hasShapeError = diagnostics.some(d => d.message.includes('missing required property'));
       const hasParentWarning = diagnostics.some(d => d.message.includes('invalid-parent') || d.message.includes('should be a child'));
       const hasDisabledError = diagnostics.some(d => d.message.includes('disabled'));
-      // At least one error should be present
       expect(hasShapeError || hasParentWarning || hasDisabledError).toBe(true);
     });
 
@@ -693,7 +686,6 @@ disabled = true
         node('StaticBody3D', {}, { name: 'StaticBody' }),
         node('CollisionShape3D', {}, { name: 'EmptyCollision', parent: '.' })
       );
-      // Should have error for missing shape
       expectDiagnostic(content, { prop: 'missing required property' });
     });
   });

@@ -1,4 +1,4 @@
-/** ItemList parser — Control base, ItemList's own members, and the `item_N/*` row family. */
+/** ItemList parser: Control base, ItemList's own members, and the `item_N/*` row family. */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalFloat, parseOptionalInt, parseOptionalVector2i } from '../../../../parser/valueParsers';
@@ -15,12 +15,9 @@ import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 import type { ItemListItem, ItemListProperties } from './types';
 
 /**
- * `item_N/*` (`PropertyListHelper`, `item_list.cpp:2461-2467`), restricted to
- * `N < item_count`: `ItemList::_set` routes to `property_helper.property_set_value`,
- * whose setters all open with `ERR_FAIL_INDEX(p_idx, items.size())`
- * (e.g. `set_item_text`, `item_list.cpp:93`) — a `.tscn` authoring an index
- * past the array `set_item_count` allocated is a DROPPED write, never an
- * implicit grow, so this builds exactly `itemCount` slots and never more.
+ * `item_N/*` (`PropertyListHelper`, `item_list.cpp:2461-2467`) for `N < item_count`.
+ * Each setter opens with `ERR_FAIL_INDEX(p_idx, items.size())` (as `set_item_text`,
+ * `item_list.cpp:93`), so an index past the count is a dropped write, never a grow.
  */
 function parseItems(properties: Record<string, string>, itemCount: number): ItemListItem[] {
   const count = Math.min(itemCount, MAX_WALKED_ELEMENTS);
@@ -45,11 +42,9 @@ function parseItems(properties: Record<string, string>, itemCount: number): Item
 
 /**
  * `ItemList::_set`'s deprecated fallback (`item_list.cpp:2242-2259`): a flat
- * `[text, icon, disabled, …]` triple array a pre-`PropertyListHelper` save
- * wrote. `arr.size() % 3` refuses the WHOLE write before `clear()` runs
- * (`ERR_FAIL_COND_V`, `:2246`), so a wrong arity yields no rows rather than a
- * partial read. Neither `add_item` nor the loop touches `selectable`, so
- * every row keeps `Item`'s own default (true, `item_list.h:65`).
+ * `[text, icon, disabled, …]` array. A wrong arity refuses the whole write before
+ * `clear()` (`ERR_FAIL_COND_V`, `:2246`), so it yields no rows. `selectable` keeps
+ * `Item`'s default, true (`item_list.h:65`).
  */
 function parseDeprecatedItems(value: string): ItemListItem[] | null {
   const body = arrayLiteralBody(value);
@@ -72,8 +67,8 @@ export function parseItemList(
   properties: Record<string, string>
 ): ItemListProperties {
   const itemCount = ruleCount(properties.item_count) ?? 0;
-  // Godot's own saver never writes BOTH forms — item_count/item_N/* replaced
-  // `items` outright — so a file carrying `item_count` always wins, and the
+  // Godot's own saver never writes both forms: item_count/item_N/* replaced
+  // `items` outright. So a file carrying `item_count` always wins, and the
   // legacy array is read only for a pure old-format file.
   const legacyItems =
     properties.item_count === undefined && properties.items !== undefined

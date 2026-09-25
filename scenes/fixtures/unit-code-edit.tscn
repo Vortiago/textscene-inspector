@@ -1,9 +1,6 @@
-; Three buffer lines with every gutter turned on: the main gutter (blank —
-; breakpoint/bookmark/executing state is never serialised), the line-number
-; gutter (the one gutter this previewer paints), and the fold gutter (blank —
-; can_fold_line depends on delimiter/comment analysis this previewer does not
-; perform; see comparison.md). A missing gutter-width reservation is invisible
-; without at least one drawn gutter shifting the text right.
+; Three buffer lines with every gutter on. The main gutter is blank, since its state is not
+; serialised. The fold gutter draws an arrow only where can_fold_line finds a region. A missing
+; gutter-width reservation needs a drawn gutter pushing the text right to show.
 [gd_scene format=3]
 
 [node name="Root" type="Control"]

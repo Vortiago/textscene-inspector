@@ -12,12 +12,9 @@ export async function captureGodot(fixtures, force) {
   const modes = new Map();
   for (const [i, fixture] of fixtures.entries()) {
     const out = imagePath(fixture, 'godot');
-    // The sidecar is half the entry, and it has to be a READABLE half.
-    // Without a workspace `resolveModes` refuses the fixture with "capture
-    // --godot first" — a remedy that could never run while this pass answered
-    // "have it" off a sidecar that merely existed. `readRecordedMode` is the
-    // same reader that side uses, so the two agree on what counts as an answer
-    // and a recorded `unknown` re-renders instead of sticking.
+    // A cached entry needs a readable mode sidecar, or `resolveModes` refuses
+    // the fixture with "capture --godot first". The same reader as that side, so
+    // a recorded `unknown` re-renders.
     if (!force && existsSync(out) && readRecordedMode(out)) {
       console.log(`[godot] ${i + 1}/${fixtures.length} ${fixture} — have it`);
       continue;
@@ -30,18 +27,15 @@ export async function captureGodot(fixtures, force) {
       });
       if (mode) {
         modes.set(fixture, mode);
-        // Beside the image, so a later run that reuses the cache still knows
-        // which workspace it is — the image's own size no longer says.
+        // Beside the image, so a run that reuses the cache knows the workspace.
         writeFileSync(modePath(out), `${mode}\n`);
       } else {
-        // Written even with no answer, so the miss above does not re-render
-        // this scene on every run. `readRecordedMode` reads anything that is
-        // not `2d` or `3d` as no answer, which is what this is.
+        // `readRecordedMode` reads `unknown` as no answer.
         writeFileSync(modePath(out), 'unknown\n');
       }
       console.log(`ok (${mode ?? 'mode unknown'})`);
     } catch (error) {
-      // One unrenderable scene must not cost the other sixty.
+      // One unrenderable scene must not cost the others.
       console.log(`FAILED: ${error.message.split('\n')[0]}`);
       failures.push({ fixture, error: error.message.split('\n')[0] });
     }

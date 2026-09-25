@@ -1,20 +1,8 @@
 /**
- * NavigationMesh decode: property bag → vertices + polygon index loops.
- *
- * Godot serializes the walkable surface as two internal properties
- * (`scene/resources/navigation_mesh.cpp:572-573`); every other property on the
- * resource is a bake setting that says nothing about the baked result:
- *
- *   vertices = PackedVector3Array(x, y, z, …)
- *   polygons = [PackedInt32Array(i, …), …]
- *
- * The bare wrapper is what `_get_polygons` returning a plain `Array` prints
- * (`navigation_mesh.cpp:326-335`) — the 2D sibling's `TypedArray` prints
- * `Array[PackedInt32Array](…)` instead. Neither spelling is load-bearing here:
- * the shared PackedInt32Array reader accepts both.
- *
- * Pure (no THREE): the geometry builders in `r3f/navigationOverlay.ts` turn this
- * into the debug overlay, so this slice has no `build.ts`.
+ * NavigationMesh decode: `vertices = PackedVector3Array(x, y, z, …)` and
+ * `polygons = [PackedInt32Array(i, …), …]`, the two internal properties that hold
+ * the walkable surface (`scene/resources/navigation_mesh.cpp:572-573`). The rest
+ * are bake settings. No THREE: `r3f/navigationOverlay.ts` builds the overlay.
  */
 
 import { warn } from '../../../logger';
@@ -29,7 +17,7 @@ const FLOATS_PER_VERTEX = 3;
 
 /**
  * Decode a NavigationMesh's properties, or null when it describes nothing
- * drawable — absent, empty, unreadable, or without one surviving polygon. Never
+ * drawable: absent, empty, unreadable, or without one surviving polygon. Never
  * throws: a malformed value degrades to null so a render pass cannot fault on it.
  */
 export function decodeNavigationMesh(
@@ -54,7 +42,7 @@ export function decodeNavigationMesh(
   const vertexCount = Math.floor(flat.length / FLOATS_PER_VERTEX);
   if (vertexCount === 0) return null;
   // A trailing partial vertex would leave the position buffer's item count
-  // fractional; drop it instead of handing THREE a ragged array.
+  // fractional, so it is dropped rather than hand THREE a ragged array.
   const vertices =
     flat.length === vertexCount * FLOATS_PER_VERTEX
       ? flat
@@ -62,6 +50,9 @@ export function decodeNavigationMesh(
 
   let indexLists: number[][];
   try {
+    // `_get_polygons` returns a plain `Array`, so Godot prints the bare wrapper
+    // (`navigation_mesh.cpp:326-335`). The shared reader also takes the typed
+    // `Array[PackedInt32Array](…)` the 2D sibling prints.
     indexLists = parsePackedInt32Arrays(polygonsLiteral);
   } catch {
     warn(`[NavigationMesh] Unreadable polygons, no navmesh drawn: ${polygonsLiteral}`);

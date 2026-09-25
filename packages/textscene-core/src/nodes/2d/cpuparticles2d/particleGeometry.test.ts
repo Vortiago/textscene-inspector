@@ -49,7 +49,7 @@ describe('buildParticleGeometry', () => {
     const position = geometry.getAttribute('position');
     const uv = geometry.getAttribute('uv');
     for (let i = 0; i < 4; i++) {
-      // Three-space +Y is up; Godot's V origin is the image top, and textures
+      // Three-space +Y is up. Godot's V origin is the image top, and textures
       // upload flipped, so the top corners must carry V = 1.
       expect(uv.getY(i)).toBeCloseTo(position.getY(i) > 0 ? 1 : 0, 6);
     }
@@ -82,7 +82,7 @@ describe('buildParticleGeometry', () => {
       2
     )!;
     const color = geometry.getAttribute('color');
-    // sRGB 0.5 decodes to ~0.214 linear; an unconverted 0.5 would read washed out.
+    // sRGB 0.5 decodes to ~0.214 linear. An unconverted 0.5 would read washed out.
     expect(color.getX(0)).toBeCloseTo(0.2140, 3);
   });
 
@@ -109,8 +109,7 @@ describe('buildParticleGeometry', () => {
     const strip = { hFrames: 11, vFrames: 1, loop: false };
 
     it('shrinks the quad to one CELL, not the whole sheet', () => {
-      // The candle's fire.png is an 11-frame strip. Drawing the strip whole is
-      // what makes the emitter render as a row of eleven flames.
+      // An 11-frame strip drawn whole renders as a row of eleven flames.
       const geometry = buildParticleGeometry([particle()], 110, 20, strip)!;
       geometry.computeBoundingBox();
       const box = geometry.boundingBox!;
@@ -144,7 +143,7 @@ describe('buildParticleGeometry', () => {
 
     it('walks a v-frames grid down the sheet as well as across', () => {
       const grid = { hFrames: 2, vFrames: 2, loop: false };
-      // Frame 2 is the first cell of the SECOND row.
+      // Frame 2 is the first cell of the second row.
       const geometry = buildParticleGeometry([particle({ anim: 2 / 4 })], 20, 20, grid)!;
       const uv = geometry.getAttribute('uv');
       const us = Array.from({ length: 4 }, (_, i) => uv.getX(i));

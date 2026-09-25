@@ -1,12 +1,8 @@
 [gd_scene load_steps=8 format=3 uid="uid://unit_animation_tree_state_machine"]
 
-; AnimationTree(active = true) whose tree_root is an AnimationNodeStateMachine
-; with two states (idle/walk) over an AnimationLibrary — the state-machine
-; counterpart to unit-animationtree-blend.tscn's BlendTree. The
-; `transitions` array's "Start" -> "idle" entry picks idle as the start state
-; (evaluateTree's StateMachine case, `parameters/current_state` unauthored ->
-; startState). Selecting the AnimationTree row and pressing play drives the
-; Mesh through the idle clip.
+; AnimationTree (active = true) with an AnimationNodeStateMachine root: states idle and walk over an
+; AnimationLibrary. The "Start" -> "idle" transition picks the start state while
+; `parameters/current_state` is unauthored. Selecting the tree and pressing play drives idle.
 
 [sub_resource type="BoxMesh" id="BoxMesh_box"]
 

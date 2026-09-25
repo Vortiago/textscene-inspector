@@ -1,13 +1,8 @@
 /**
- * HSeparator strict validators: declares none of its own.
- *
- * doc/classes/HSeparator.xml lists zero <members>, and its constructor
- * (separator.cpp:71-73) only sets the protected `orientation` field, which is
- * not a property (see linterParser.ts). The scaffold's original sweep,
- * `getOwnKeys('HSeparator').filter(...)` over an empty key set, would pass
- * vacuously on nothing, so it is replaced with an honest emptiness assertion
- * plus proof the base-walk still delivers Control, CanvasItem, and the
- * theme-override wildcard through Separator.
+ * HSeparator declares no validator: doc/classes/HSeparator.xml has no members, and its
+ * constructor (separator.cpp:71-73) only sets the protected `orientation`. A malformed-value
+ * check over an empty key set passes vacuously, so these tests assert the emptiness and that
+ * the base-walk delivers Control, CanvasItem and the theme-override wildcard.
  */
 
 import { describe, expect, it } from 'vitest';

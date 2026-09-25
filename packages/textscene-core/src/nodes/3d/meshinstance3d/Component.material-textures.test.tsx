@@ -1,11 +1,7 @@
 /**
- * Strict-verification harness (group D) — 8 assertions covering
- * StandardMaterial3D texture slots. The key question for each slot is
- * "did the loaded THREE.Texture actually land on the corresponding map
- * property of <meshStandardMaterial>?".
- *
- *
- * UV-applies-to-all-maps lives in `Component.material-uv.test.tsx`.
+ * Each StandardMaterial3D texture slot's loaded THREE.Texture lands on the
+ * matching map of <meshStandardMaterial>. UV transforms applying to every map
+ * live in `Component.material-uv.test.tsx`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -127,8 +123,8 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
   });
 
   it('heightmap_texture loaded → material.displacementMap is a THREE.Texture (+ scale)', async () => {
-    // The scalar (displacementScale) alone displaces nothing — the height
-    // TEXTURE must reach material.displacementMap for any relief to render.
+    // displacementScale alone displaces nothing: the height texture must reach
+    // material.displacementMap.
     const tex = makeTexture();
     const renderer = await renderWithTexture({
       matData: {
@@ -237,12 +233,8 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     expect(mat.emissiveMap).toBeInstanceOf(THREE.Texture);
   });
 
-  // Regression: unit-uv-scale.tscn uses `surface_material_override/0`
-  // (not `material_override`) to attach a textured StandardMaterial3D. The
-  // browser-verifier caught all three planes rendering as solid white because
-  // the chain MeshInstance3D → surface_material_override/0 → SubResource
-  // StandardMaterial3D → ExtResource Texture2D wasn't reaching `material.map`.
-  // This test pins the surface-override chain so that regression can't recur.
+  // The chain surface_material_override/0 → SubResource StandardMaterial3D → ExtResource
+  // Texture2D reaches `material.map`, with no `material_override` set.
   it('WI-R3F-11 surface_material_override/0 → albedo_texture lands on material.map', async () => {
     const tex = makeTexture();
     const fake = createFakeResourceLoader();
@@ -256,7 +248,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
       properties: {
         name: 'SurfacePlane',
         mesh: 'SubResource("Plane_1")',
-        // NOTE: deliberately no `materialOverride` — only the surface slot.
+        // No `materialOverride`: only the surface slot.
         surfaceMaterialOverrides: surfaceMap,
       } as MeshInstance3DProperties,
     };
@@ -281,18 +273,11 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     expect(mat.map).toBeInstanceOf(THREE.Texture);
   });
 
-  // Regression: when a texture arrives async (via eventBus emit
-  // *after* first render), the material's `map` prop must end up bound to
-  // the loaded texture. The earlier unit tests pre-seeded the cache so the
-  // texture was already present on first render and the bug went unseen;
-  // production loads textures via fetch → blob → THREE.ImageLoader which
-  // is always async, so the empty-cache → emit → re-render path is the
-  // real one.
+  // Production loads every texture asynchronously, so the empty cache, then the
+  // `loaded` emit, then the re-render is the real path, which a seeded cache skips.
   it('WI-R3F-11 async texture load (cache empty on first render) → material.map binds after load event', async () => {
     const fake = createFakeResourceLoader();
-    // NOTE: nothing seeded. The texture isn't in the cache when the
-    // component first renders; it arrives via the bus afterwards, mimicking
-    // the production fetch-then-decode flow.
+    // Nothing seeded: the texture arrives through the bus after the first render.
 
     const surfaceMap = new Map<number, string>([[0, 'SubResource("Mat")']]);
     const node: TscnNode = {
@@ -326,9 +311,7 @@ describe('StandardMaterial3D textures (assertions 32–39)', () => {
     const matBefore = findMesh(renderer.scene).material as THREE.MeshStandardMaterial;
     expect(matBefore.map).toBeNull();
 
-    // Now simulate the file pipeline emitting `loaded` after the fetch
-    // completes — this mirrors what happens in production when a real
-    // SVG/PNG is decoded into a THREE.Texture by createTextureFromBuffer.
+    // The file pipeline emits `loaded` once createTextureFromBuffer has decoded the file.
     const tex = makeTexture();
     await ReactThreeTestRenderer.act(async () => {
       fake.eventBus.emit<THREE.Texture>('texture', 'loaded', TEXTURE_PATH, tex);

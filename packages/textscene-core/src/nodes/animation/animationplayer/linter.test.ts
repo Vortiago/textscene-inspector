@@ -27,9 +27,7 @@ const scene = (...blocks: string[]) => sceneOf(ANIMATIONS, ...blocks);
 describe('AnimationPlayer Linter', () => {
   describe('the next/<name> property-list family', () => {
     // It reaches a `.tscn` only through `_set`/`_get` (animation_player.cpp:40,
-    // :75), so no ADD_PROPERTY or XML sweep sees it — and it had no test at
-    // all until a `quotedString` validator shipped and errored on Godot's own
-    // output across the corpus.
+    // :75), so no ADD_PROPERTY or XML search sees it.
     const withNext = (value: string) =>
       scene(node('AnimationPlayer', { 'next/walk': value }, { name: 'Anim' }));
 
@@ -47,10 +45,8 @@ describe('AnimationPlayer Linter', () => {
   });
 
   describe('the inactive-player advisory', () => {
-    // `active` and `playback_active` are ONE field (animation_player.cpp:59,98
-    // forward the deprecated alias into set_active), and only the deprecated
-    // spelling was ever checked — so the key Godot actually writes went by
-    // unreported.
+    // `active` and `playback_active` are one field: animation_player.cpp:59,98
+    // forward the deprecated alias into set_active.
     const withActive = (properties: Record<string, string>) =>
       scene(node('AnimationPlayer', { 'anims/idle': 'SubResource("Animation_1")', ...properties }, { name: 'Anim' }));
 
@@ -115,8 +111,8 @@ describe('AnimationPlayer Linter', () => {
       { nodeType: 'AnimationPlayer', acceptMode: 'no-error', prefix: [ANIMATIONS] },
       [
         {
-          // animation_player.cpp:1048 hints "-4,4,0.001,or_less,or_greater" — BOTH
-          // ends open — and set_speed_scale (:648) is a bare assignment, so no
+          // animation_player.cpp:1048 hints "-4,4,0.001,or_less,or_greater", both
+          // ends open, and set_speed_scale (:648) is a bare assignment, so no
           // magnitude is out of band and 0 is legal (it pauses playback).
           prop: 'speed_scale',
           valid: [0.001, 0.5, 1.0, 2.0, 10.0, 100.0, -1.0, 0, 0.00001, 10000],
@@ -203,7 +199,7 @@ describe('AnimationPlayer Linter', () => {
   });
 
   describe('Semantic Validation', () => {
-    // animation_player.cpp:1048 — speed_scale PROPERTY_HINT_RANGE
+    // animation_player.cpp:1048: speed_scale PROPERTY_HINT_RANGE
     // "-4,4,0.001,or_less,or_greater": both ends open, so no speed is out of band.
     describe('speed_scale carries no advisory', () => {
       it.each([0.05, 0.5, 1.0, 2.0, 5.0, 50, -2.0, 0])(
@@ -279,7 +275,7 @@ describe('AnimationPlayer Linter', () => {
       });
     });
 
-    // animation_player.cpp:1046 — playback_default_blend_time PROPERTY_HINT_RANGE
+    // animation_player.cpp:1046: playback_default_blend_time PROPERTY_HINT_RANGE
     // "0,4096,0.01,suffix:s", closed at both ends and enforced at neither, so the
     // bound lives on the validator and no rule reports it.
     describe('blend time warnings', () => {
@@ -350,9 +346,9 @@ describe('AnimationPlayer Linter', () => {
           })
         )
       );
-      // Errors for the three enum/boolean properties. speed_scale = 0 and a
-      // negative blend time are no longer errors: their setters (:648 / :822) are
-      // bare assignments, so the blend time only warns and speed_scale is silent.
+      // Errors for the three enum and boolean properties. speed_scale = 0 and a
+      // negative blend time are not errors: their setters (:648, :822) are bare
+      // assignments, so the blend time only warns and speed_scale is silent.
       expect(diagnostics.length).toBeGreaterThan(2);
       expect(diagnostics.some(d => d.message.includes('playback_process_mode'))).toBe(true);
       expect(diagnostics.some(d => d.message.includes('method_call_mode'))).toBe(true);
@@ -424,12 +420,10 @@ describe('AnimationPlayer Linter', () => {
         'warning'
       );
 
-      // root_node: '&""' is a StringName, which variant.cpp:746-749 does not
-      // convert into a NodePath, so it fails the format check (error) +
-      // out-of-hint blend time (warning).
-      // playback_process_mode/method_call_mode no longer produce an error out of
-      // range: animation_mixer.cpp:501-525 is a bare assignment for both, so
-      // out-of-range is a warning (ADR-0032), not an error.
+      // root_node '&""' is a StringName, which variant.cpp:746-749 does not convert into a
+      // NodePath, so it fails the format check (error). The blend time is out of hint (warning).
+      // playback_process_mode and method_call_mode are bare assignments
+      // (animation_mixer.cpp:501-525), so out of range warns (ADR-0032).
       expectSeverity(
         scene(
           node('AnimationPlayer', {
@@ -495,13 +489,10 @@ describe('AnimationPlayer Linter', () => {
 });
 
 /**
- * An ExtResource-backed clip is unenumerable here, so it SUPPRESSES the
- * missing-clip claim rather than feeding it. Godot's tokenizer discards every
- * character <= 32 before a token (variant_parser.cpp:415-417) and the
- * `ExtResource` branch then asks only for the next token to be `(`
- * (:1089-1093), so the padded spelling loads and must suppress too — the reader
- * that ENUMERATES the clips is already whitespace-tolerant, so a tighter
- * suppression check calls a live clip name dangling.
+ * An ExtResource-backed clip cannot be enumerated here, so it suppresses the missing-clip claim.
+ * Godot's tokenizer discards every character <= 32 before a token (variant_parser.cpp:415-417)
+ * and the `ExtResource` branch asks only for `(` next (:1089-1093), so the padded spelling loads.
+ * The suppression matches the whitespace-tolerant clip reader, or a live clip reads as dangling.
  */
 describe('AnimationPlayer clip existence — the padding Godot discards', () => {
   const withLibrary = (entry: string, props: Record<string, string>) =>
@@ -523,8 +514,7 @@ describe('AnimationPlayer clip existence — the padding Godot discards', () => 
     });
   });
 
-  // The claim still stands where the clip set IS enumerable, so the fix widens
-  // the suppression rather than retiring the rule.
+  // The claim still stands where the clip set is enumerable.
   it('still reports a clip no SubResource entry defines', () => {
     expectDiagnostic(withLibrary('SubResource("Anim_idle")', { current_animation: '"walk"' }), {
       ruleName: 'animationplayer-current-animation-missing',

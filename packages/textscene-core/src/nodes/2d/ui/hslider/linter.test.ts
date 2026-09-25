@@ -1,23 +1,8 @@
 /**
- * HSlider property-order rule.
- *
- * `Range::set_min`/`set_max`/`set_page` (`scene/gui/range.cpp:211-226`,
- * `:228-241`, `:254-266`) each end by calling `set_value(shared->val)`,
- * re-clamping the CURRENT `value` against whatever `min`/`max`/`page` are at
- * that moment (`_calc_value`, `:182-200`). `min_value`, `max_value`, `page`,
- * and `value` are all independently `.tscn`-serializable
- * (`range.cpp:405,406,408,409` — no `PROPERTY_USAGE_EDITOR`-only restriction,
- * unlike `Node3D`'s decomposed transform properties). Traced by hand against
- * the struct defaults (`min=0.0`, `max=100.0`, `page=0.0`,
- * `allow_greater`/`allow_lesser` both `false` — `range.h:39-46`): a `.tscn`
- * that writes `value = 150` BEFORE `min_value = 0` / `max_value = 200` clamps
- * `value` against the still-default `max = 100` the instant `value`'s own
- * setter runs (`!allow_greater && 150 > 100-0` → clamps to `100`), and the
- * later `min_value`/`max_value` lines only re-clamp the ALREADY-corrupted
- * `100` into the new range — they never recover the authored `150`. The same
- * three lines in the editor's own order (`min_value`, `max_value`, `value`)
- * land at the correct `150`. Measured by hand from source, not from a Godot
- * render — see ADR-0035.
+ * HSlider property-order rule. `Range::set_min`/`set_max`/`set_page`
+ * (`scene/gui/range.cpp:211-226`, `:228-241`, `:254-266`) each end in
+ * `set_value(shared->val)`, which re-clamps `value` (`_calc_value`, `:182-200`).
+ * All four keys serialise (`range.cpp:405,406,408,409`). Traced from source (ADR-0035).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -26,6 +11,9 @@ import './linter';
 
 describe('HSlider property-order rule', () => {
   it('warns when value is authored before min_value/max_value — Range re-clamps it against stale defaults', () => {
+    // Defaults min 0, max 100, page 0, no allow_greater/allow_lesser (`range.h:39-46`):
+    // `value = 150` clamps to 100 at once (`150 > 100-0`), and the later bounds only
+    // re-clamp that 100. The editor's order (`min_value`, `max_value`, `value`) keeps 150.
     const content = scene(
       node('HSlider', {
         layout_mode: 1,

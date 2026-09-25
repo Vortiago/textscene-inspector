@@ -1,12 +1,8 @@
 /**
- * The image slice's loader-facing adapter (ADR-0031): what the factory adds on
- * top of the shared processor loop is the GATE (which bytes are an image) and
- * the MIME derivation it hands the decoder.
- *
- * The decoder itself is faked. happy-dom fires neither `load` nor `error` on an
- * image element, so the real `THREE.TextureLoader` path never settles here —
- * `formats/image/textureProcessing.test.ts` pins that function's own contract
- * against a controllable fake instead.
+ * The image slice's loader-facing adapter (ADR-0031): the gate (which bytes are
+ * an image) and the MIME it hands a faked decoder. happy-dom fires neither `load`
+ * nor `error` on an image, so `formats/image/textureProcessing.test.ts` pins the
+ * real `THREE.TextureLoader` path against a controllable fake.
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
@@ -20,14 +16,14 @@ vi.mock('../formats/image/textureProcessing', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../formats/image/textureProcessing')>();
   return {
     ...actual,
-    // Real `getMimeType` / `isTexturePath`; only the decode is faked.
+    // Real `getMimeType` / `isTexturePath`. Only the decode is faked.
     createTextureFromBuffer: vi.fn(async () => new THREE.Texture()),
   };
 });
 
 const decode = vi.mocked(createTextureFromBuffer);
 
-/** The established settle window for the byte bus → processor round trip. */
+/** The settle window for the byte bus → processor round trip. */
 const flush = (ms = 20): Promise<unknown> => new Promise((r) => setTimeout(r, ms));
 
 const PNG_PATH = 'res://art/tile.png';

@@ -1,12 +1,7 @@
 /**
- * GraphEdit semantic rules: `zoom_min` authored above `zoom_max`, and a
- * `scroll_offset` the load clamps away.
- *
- * Driven through the rule's own `check`, over a scene the STRICT parser built,
- * rather than through `Linter`: `Linter` imports the linter barrel and so loads
- * every slice in the repo, which is unusable while sibling slices are being
- * written. `StrictTscnParser` pulls no barrel, so the node this feeds the rule
- * is still the real parser's output rather than a hand-built literal.
+ * GraphEdit rules: `zoom_min` above `zoom_max`, and a `scroll_offset` the load
+ * clamps away. The tests call the rule's `check` on `StrictTscnParser` output, so
+ * the node is real parser output and no linter barrel loads.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -44,11 +39,9 @@ describe('GraphEdit zoom-limit rule', () => {
   });
 
   it('reports an error, because a setter refuses one of the two writes', () => {
-    // Both values are things Godot's parser reads perfectly well, so this is
-    // not a format failure. It is the ADR-0032 error tier all the same:
-    // set_zoom_min / set_zoom_max guard against each other, so whichever the
-    // loader applies second is dropped and that limit keeps its constructor
-    // default rather than the authored one.
+    // Both values parse, so this is no format failure. It is the ADR-0032 error tier:
+    // set_zoom_min and set_zoom_max guard against each other, so the second write is
+    // dropped and that limit keeps its constructor default.
     expect(diagnose('zoom_min = 4.0\nzoom_max = 0.25\n')[0]!.severity).toBe('error');
   });
 
@@ -59,8 +52,8 @@ describe('GraphEdit zoom-limit rule', () => {
   });
 
   it('stays silent when only one limit is authored', () => {
-    // The other side is then whatever GraphEdit's constructor computed
-    // (graph_edit.cpp:3175, 3177), which this rule deliberately does not model.
+    // The other side is what the constructor computed (graph_edit.cpp:3175, 3177),
+    // which this rule does not model.
     expect(diagnose('zoom_min = 4.0\n')).toEqual([]);
     expect(diagnose('zoom_max = 0.25\n')).toEqual([]);
   });
@@ -70,17 +63,15 @@ describe('GraphEdit zoom-limit rule', () => {
   });
 
   it('reports an inverted pair spelled with infinities', () => {
-    // `inf` is a float literal the tokenizer reads (variant_parser.cpp:701-707)
-    // and the writer emits, so this is a file Godot produces and reloads — and
-    // graph_edit.cpp:2480 compares it like any other double.
+    // `inf` is a float literal the tokenizer reads (variant_parser.cpp:701-707) and the
+    // writer emits, and graph_edit.cpp:2480 compares it like any other double.
     expect(diagnose('zoom_min = inf\nzoom_max = 1.0\n')).toHaveLength(1);
     expect(diagnose('zoom_min = 1.0\nzoom_max = inf_neg\n')).toHaveLength(1);
   });
 
   it('stays silent on a nan pair, which neither setter refuses', () => {
-    // Both guards are strict comparisons, and every comparison against nan is
-    // false, so nan passes graph_edit.cpp:2480 and :2495 and BOTH limits land.
-    // There is no dropped limit to report.
+    // Every comparison with nan is false, so nan passes graph_edit.cpp:2480 and :2495
+    // and both limits land.
     expect(diagnose('zoom_min = nan\nzoom_max = 1.0\n')).toEqual([]);
     expect(diagnose('zoom_min = 4.0\nzoom_max = nan\n')).toEqual([]);
     expect(diagnose('zoom_min = nan\nzoom_max = nan\n')).toEqual([]);
@@ -92,10 +83,8 @@ describe('GraphEdit zoom-limit rule', () => {
   });
 
   it('is offered only to GraphEdit nodes', () => {
-    // Applicability is the REGISTRY's filter, not `check`'s: linter/types.ts
-    // forbids a rule re-testing its own node type inside `check`, since the
-    // duplicate predicate can drift from the declared one. So the seam for
-    // "leaves other types alone" is `getRulesForNodeType`.
+    // The registry filters by type, not `check`: linter/types.ts forbids a rule to test
+    // its own node type again. So `getRulesForNodeType` is the seam for other types.
     const named = (type: string) =>
       ruleRegistry.getRulesForNodeType(type).map((rule) => rule.meta.name);
     expect(named('GraphEdit')).toContain('valid-graphedit-properties');
@@ -122,10 +111,9 @@ describe('GraphEdit scroll_offset rule', () => {
   });
 
   it('reports it as info, because nothing is refused and nothing is out of bounds', () => {
-    // ADD_PROPERTY binds scroll_offset PROPERTY_HINT_NONE (graph_edit.cpp:3069)
-    // and the setter has no ERR_FAIL. The claim is that the clamp reads load
-    // state no child has filled in yet: an `engine-inert` grounding, which
-    // severityFixedBy pins at info.
+    // scroll_offset is PROPERTY_HINT_NONE (graph_edit.cpp:3069) and the setter has no ERR_FAIL.
+    // The clamp reads load state no child has filled: `engine-inert`, which severityFixedBy
+    // pins at info.
     expect(diagnose(`${SIZED_400_320}scroll_offset = Vector2(32, 16)\n`)[0]!.severity).toBe('info');
   });
 
@@ -136,8 +124,7 @@ describe('GraphEdit scroll_offset rule', () => {
   });
 
   it('says that omitting the property is what an explicit (0, 0) does not do', () => {
-    // The whole point of the rule: writing the class default stores -size while
-    // leaving the line out stores (0, 0).
+    // Writing the class default stores -size, while leaving the line out stores (0, 0).
     const diagnostics = diagnose(`${SIZED_400_320}scroll_offset = Vector2(0, 0)\n`);
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]!.message).toContain('Vector2(-400, -320)');
@@ -155,8 +142,7 @@ describe('GraphEdit scroll_offset rule', () => {
   });
 
   it('stays silent on an explicit (0, 0) in a GraphEdit with no rect', () => {
-    // Both clamp ends are 0 - 0, so the write stores exactly what it asked for
-    // and there is nothing the author could be surprised by.
+    // Both clamp ends are 0 - 0, so the write stores what it asked for.
     expect(diagnose('scroll_offset = Vector2(0, 0)\n')).toEqual([]);
   });
 

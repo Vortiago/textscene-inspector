@@ -1,8 +1,7 @@
 /**
- * AnimatedSprite2D render behavior: resolves the current animation frame from
- * the SpriteFrames SubResource and draws it as a modulated quad; missing
- * sprite_frames falls back to the placeholder. Pinned before the CanvasItem2D
- * migration so the refactor runs under green.
+ * AnimatedSprite2D render behaviour: resolves the current animation frame from
+ * the SpriteFrames SubResource and draws it as a modulated quad. A missing
+ * sprite_frames falls back to the placeholder.
  */
 import type { ReactElement } from 'react';
 import { afterEach, describe, it, expect, vi } from 'vitest';
@@ -96,7 +95,7 @@ describe('AnimatedSprite2D render', () => {
 });
 
 describe('AnimatedSprite2D playback (transport-driven)', () => {
-  // Two-frame "right" at 5 fps (0.2s/frame, 0.4s loop); distinct widths per frame.
+  // Two-frame "right" at 5 fps (0.2s/frame, 0.4s loop). Distinct widths per frame.
   const FRAMES_2 =
     '[{"frames": [{"duration": 1.0, "texture": ExtResource("2")}, {"duration": 1.0, "texture": ExtResource("3")}], "loop": true, "name": &"right", "speed": 5.0}]';
   const SPRITE_PATH = 'Root/A';
@@ -218,19 +217,16 @@ describe('AnimatedSprite2D playback (transport-driven)', () => {
   });
 
   it('advances in real time despite the WI-213 reportTime throttle (local playhead, not transport.time)', async () => {
-    // 25 frames × 16ms ≈ 0.41s of wall clock inside ONE throttle window
-    // (Date.now barely moves in tests, so transport.time stays frozen after
-    // the first commit). Integrating the throttled transport.time would leave
-    // the playhead at ~2 frame-deltas (frame 0); the local accumulator
-    // reaches ~0.4s → wraps the 0.4s loop → lands in frame 0/1 territory
-    // having actually TRAVERSED frame 1 — assert via a non-wrapping check at
-    // 0.3s instead for determinism.
+    // Date.now barely moves in tests, so transport.time stays frozen after the first
+    // commit and the throttled time would leave the playhead in frame 0. The local
+    // accumulator reaches frame 1. The check stops at 0.3s, short of the 0.4s loop
+    // end, because a wrap lands on either frame.
     const r = await mount('0');
     await select(SPRITE_PATH);
     await ReactThreeTestRenderer.act(async () => transport.play());
     await r.advanceFrames(18, 1 / 60); // 0.3s accumulated in ~0ms of wall time
     await settle();
-    expect(frameWidth(r)).toBe(64); // frame 1 — a throttle-frozen clock stays on frame 0 (32)
+    expect(frameWidth(r)).toBe(64); // frame 1: a throttle-frozen clock stays on frame 0 (32)
   });
 
   it('honours the #224 preview Speed multiplier', async () => {
@@ -250,8 +246,8 @@ describe('AnimatedSprite2D playback (transport-driven)', () => {
     await ReactThreeTestRenderer.act(async () => transport.play());
     await r.advanceFrames(1, 0.55); // past the 0.4s clip end
     await settle();
-    // 'auto' would wrap ((0.55 % 0.4) = 0.15s → frame 0); 'once' clamps to the
-    // end and holds the LAST frame.
+    // 'auto' would wrap ((0.55 % 0.4) = 0.15s → frame 0). 'once' clamps to the
+    // end and holds the last frame.
     expect(frameWidth(r)).toBe(64);
   });
 
@@ -322,19 +318,15 @@ describe('AnimatedSprite2D authored-frame reactivity', () => {
       await r.update(tree(fake, '1')); // edit frame 0 → 1 on the same fiber
     });
     await ReactThreeTestRenderer.act(async () => {}); // settle the texture swap
-    expect(width()).toBe(64); // frame 1 — reactive, not frozen at 0
+    expect(width()).toBe(64); // frame 1: reactive, not frozen at 0
   });
 });
 
 describe('AnimatedSprite2D AtlasTexture frames (sprite-sheet packing)', () => {
-  // Each frame is a SubResource AtlasTexture sampling a region of one sheet —
-  // the coins_counter.tscn form. Frame 0 = a 16×16 cell at (0,0); frame 1 = a
-  // 16×32 cell at (16,0). Both share the 64×64 atlas.
-  //
-  // The cell reaches this component as a texture of its OWN size — the shared
-  // Texture2D resolver crops it — so the quad is sized from `image`, not from a
-  // UV window this slice applies. happy-dom has no 2D context, so the crop is
-  // asserted through a recording canvas stub.
+  // Each frame is a SubResource AtlasTexture over one 64×64 sheet: frame 0 is a
+  // 16×16 cell at (0,0), frame 1 a 16×32 cell at (16,0). The shared Texture2D
+  // resolver crops the cell, so the quad is sized from `image`, not a UV window.
+  // happy-dom has no 2D context, so a recording canvas stub asserts the crop.
   const ATLAS_ANIM =
     '[{"frames": [{"duration": 1.0, "texture": SubResource("Atlas_a")}, {"duration": 1.0, "texture": SubResource("Atlas_b")}], "loop": true, "name": &"spin", "speed": 5.0}]';
 
@@ -342,7 +334,7 @@ describe('AnimatedSprite2D AtlasTexture frames (sprite-sheet packing)', () => {
 
   /**
    * Only the 2D context is faked, on the prototype: the R3F test renderer makes
-   * a canvas of its own and must keep getting whatever it gets today.
+   * a canvas of its own and must keep its real context.
    */
   function stubCanvas2D() {
     const ctx = {
@@ -407,8 +399,8 @@ describe('AnimatedSprite2D AtlasTexture frames (sprite-sheet packing)', () => {
     expect(geom.parameters.height).toBe(16);
     expect(drawCalls[0]).toEqual([0, 0, 16, 16, 0, 0, 16, 16]);
 
-    // The crop IS the cell, so the quad samples all of it — a leftover UV
-    // window here would show a sixteenth of the cell.
+    // The crop is the cell, so the quad samples all of it. A leftover UV window
+    // here would show a sixteenth of the cell.
     const map = (mesh.material as THREE.MeshBasicMaterial).map!;
     expect(map).toBeTruthy();
     expect([map.repeat.x, map.repeat.y]).toEqual([1, 1]);
@@ -425,9 +417,8 @@ describe('AnimatedSprite2D AtlasTexture frames (sprite-sheet packing)', () => {
 });
 
 describe('AnimatedSprite2D external .tres SpriteFrames', () => {
-  // sprite_frames = ExtResource(".tres") — the character.tscn / anim_player.tres
-  // form. The frame ExtResource ids are scoped to the .tres file, not the scene,
-  // so they must resolve against the file's own ext section.
+  // sprite_frames = ExtResource(".tres"): the frame ExtResource ids are scoped to
+  // the .tres file, not the scene, so they resolve against the file's own ext section.
   const tresDrawCalls: number[][] = [];
 
   afterEach(() => {
@@ -503,10 +494,8 @@ animations = [{
   });
 
   it('crops an AtlasTexture that lives in the .tres, against the FILE’s own pools', async () => {
-    // The only caller whose frames resolve against pools that are not the
-    // scene's: the cell is a sub-resource of the .tres, and its `atlas` is an
-    // ext id scoped to the .tres too. Resolving either against the scene finds
-    // nothing at all.
+    // The cell is a sub-resource of the .tres, and its `atlas` is an ext id scoped
+    // to the .tres too. Resolving either against the scene finds nothing.
     const ATLAS_TRES = `[gd_resource type="SpriteFrames" format=3]
 
 [ext_resource type="Texture2D" path="res://sheet.png" id="1_sheet"]
@@ -576,8 +565,8 @@ animations = [{
   });
 
   it('renders nothing (not the missing placeholder) while the .tres is still loading', async () => {
-    // No resource seeded → useResource('Resource') stays pending; a valid,
-    // loading .tres must NOT flash the magenta missing-resource placeholder.
+    // No resource seeded, so useResource('Resource') stays pending. A valid,
+    // loading .tres must not flash the magenta missing-resource placeholder.
     const fake = createFakeResourceLoader();
     const node: TscnNode = {
       name: 'A',

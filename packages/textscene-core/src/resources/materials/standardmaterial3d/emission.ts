@@ -1,21 +1,8 @@
 /**
- * Godot `StandardMaterial3D` emission, decomposed into what three.js offers.
- *
- * The one home for this arithmetic, because emission arrives by two routes — an
- * inline `SubResource` material read as raw strings, and an external `.tres` read
- * as typed properties — and the two rendering the same material differently is
- * exactly the bug this replaces.
- *
- * Godot's generated fragment code is
- *
- *     EMISSION = (emission.rgb + emission_tex) * emission_energy;   // ADD
- *     EMISSION = (emission.rgb * emission_tex) * emission_energy;   // MULTIPLY
- *
- * over a `uniform vec4 emission : source_color` and a `sampler2D
- * texture_emission : source_color, hint_default_black`. Both hints are
- * load-bearing: `source_color` means the colour is sRGB→linear converted BEFORE
- * the energy multiply, and `hint_default_black` means an ABSENT texture samples
- * as zero rather than white.
+ * Godot `StandardMaterial3D` emission in three.js terms, one home for both arrival routes.
+ * Godot computes `(emission.rgb + emission_tex) * emission_energy`, or `*` for MULTIPLY.
+ * `source_color` converts the colour to linear before the energy multiply, and
+ * `hint_default_black` samples an absent texture as zero.
  */
 
 import type { Color } from './types';
@@ -29,33 +16,18 @@ export const EmissionOperator = {
 
 export interface EmissionScalars {
   /**
-   * Linear RGB in [0,1]; `[0,0,0]` means "no emission". An ARRAY, not a hex
-   * number, so r3f applies it via `Color.fromArray` (already-linear, no decode).
-   * A hex number would go through `Color.setHex(hex, SRGBColorSpace)`, decoding
-   * these already-linear values sRGB→linear a SECOND time and rendering emission
-   * far too dark. The albedo colour is an array for the same reason.
+   * Linear RGB in [0,1], `[0,0,0]` for no emission. An array, which r3f applies with
+   * `Color.fromArray`: a hex number goes through `Color.setHex(hex, SRGBColorSpace)`,
+   * which decodes these linear values again. The albedo colour is an array too.
    */
   emissive: [number, number, number];
   emissiveIntensity: number;
 }
 
 /**
- * The authored colour and energy as a linear colour plus an intensity.
- *
- * Deliberately separate from `resolveEmission`: the inline-SubResource path
- * cannot resolve the operator until it knows whether a texture landed, which is
- * only knowable in the component, so the two must stay independently callable
- * even though the external-`.tres` path has both facts at once.
- *
- * The sRGB→linear conversion has to happen BEFORE the peak is taken, because it
- * is not a linear function: normalising first and scaling after is a different
- * mapping. For `Color(2, 0.5, 0)` that difference is `(2, 0.102, 0)` against
- * Godot's `(4.954, 0.214, 0)` — wrong in magnitude AND hue. Since the peak is
- * what the glow bright-pass gates on, the error also changes what blooms.
- *
- * three carries emission as a [0,1] colour times an unbounded intensity, so the
- * linear colour is split at its peak: the peak becomes the intensity and the hue
- * survives undistorted.
+ * The authored colour and energy as a linear colour plus an intensity. It stays apart
+ * from `resolveEmission`, since the inline path learns whether a texture landed only
+ * in the component.
  */
 export function emissionScalars(
   color: Color | undefined,
@@ -63,10 +35,14 @@ export function emissionScalars(
   enabled = true
 ): EmissionScalars {
   if (!enabled) return { emissive: [0, 0, 0], emissiveIntensity: 0 };
+  // Convert before taking the peak, as sRGB→linear is not linear: for `Color(2, 0.5, 0)`
+  // the other order gives `(2, 0.102, 0)` against Godot's `(4.954, 0.214, 0)`.
   const linear = color ? sRGBToLinearRGB(color.r, color.g, color.b) : null;
+  // three's emission is a [0,1] colour times an unbounded intensity, so the colour
+  // splits at its peak, which the glow bright pass gates on, and the hue survives.
   const peak = linear ? Math.max(linear[0], linear[1], linear[2], 1) : 1;
   // Floored at zero per channel: the peak is `max(..., 1)`, so dividing by it
-  // cannot lift a negative channel back up, and a negative emissive SUBTRACTS
+  // cannot lift a negative channel back up, and a negative emissive subtracts
   // light from the surface rather than adding none.
   return {
     emissive: linear
@@ -81,25 +57,8 @@ export function emissionScalars(
 }
 
 /**
- * The colour and texture combined the way `emission_operator` says.
- *
- * `hint_default_black` on the sampler decides three of the five cases:
- *
- *   MULTIPLY, no texture  → `emission * 0 * energy`, i.e. no emission at all.
- *       A Godot content trap, faithfully reproduced: the material looks unlit
- *       however bright its colour.
- *   MULTIPLY, texture     → exactly three's own `emissive * tex * intensity`.
- *   ADD, no texture       → `emission * energy`; the texture term is zero.
- *   ADD, texture, black colour → `(0 + tex) * energy` reduces to `tex * energy`,
- *       which three spells as a WHITE emissive at the same intensity. This is the
- *       case that matters most: Godot's `emission` defaults to black, so a
- *       material carrying only an emission texture omits the colour entirely, and
- *       multiplying that black through would render nothing where Godot renders
- *       the full texture.
- *
- * PARITY LIMITATION (ADD, texture, non-black colour): `(emission + tex)` is a sum
- * three's multiply-only emissive chain cannot express. The colour is applied as a
- * multiply instead, so such a material reads darker and more tinted than Godot's.
+ * The colour and texture combined the way `emission_operator` says. `hint_default_black`
+ * on the sampler decides three of the five cases.
  */
 export function resolveEmission(
   scalars: EmissionScalars,
@@ -107,14 +66,21 @@ export function resolveEmission(
   hasEmissiveMap: boolean
 ): EmissionScalars {
   const { emissive, emissiveIntensity } = scalars;
+  // With a texture this is three's own `emissive * tex * intensity`. Without one it is
+  // `emission * 0 * energy`, a Godot content trap reproduced: no emission at all.
   if (operator === EmissionOperator.MULTIPLY) {
     return hasEmissiveMap
       ? { emissive, emissiveIntensity }
       : { emissive: [0, 0, 0], emissiveIntensity: 0 };
   }
   const colourIsBlack = emissive[0] === 0 && emissive[1] === 0 && emissive[2] === 0;
+  // `(0 + tex) * energy` is a white emissive in three. Godot's `emission` defaults to
+  // black, so a material with only an emission texture omits the colour.
   if (hasEmissiveMap && colourIsBlack) {
     return { emissive: [1, 1, 1], emissiveIntensity };
   }
+  // ADD without a texture is `emission * energy`. With a texture and a non-black colour
+  // this is a parity limitation: three's multiply-only chain cannot express the sum,
+  // so the material reads darker and more tinted than Godot's.
   return { emissive, emissiveIntensity };
 }

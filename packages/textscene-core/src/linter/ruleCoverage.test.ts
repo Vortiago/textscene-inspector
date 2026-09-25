@@ -1,32 +1,8 @@
 /**
- * Lint-rule and validator coverage meta-guard.
- *
- * Cross-checks the filesystem against the live registries so a rule or
- * validator can never ship unregistered:
- *
- *   1. The union of rule names declared in every `linter.ts` under
- *      `src/nodes/` equals the names in `ruleRegistry` — catching dead rule
- *      files (declared but never imported by an index.linter.ts) and rules
- *      registered outside slices.
- *   2. Every `registerAll('Type', ...)` / `registerUnavailable('Type', ...)`
- *      in a `linterParser.ts` is live in `validatorRegistry` after importing
- *      the linter barrel — catching a linterParser.ts whose registration
- *      never runs.
- *   3. Every slice `linter.ts` has a sibling `linter.test.ts`, and every
- *      registering `linterParser.ts` sits in a directory holding at least one
- *      test file.
- *
- * 3 asks EXISTENCE, and deliberately nothing else. Reading those test files
- * for a token was the gameable half — a name in a comment paid for it — but a
- * file being absent is not gameable, and it is the state `pnpm new:node`
- * leaves behind: a scaffolded slice registers, wires up, and every other gate
- * here reads it as covered. Suite quality is judged at /code-review. The floors
- * that stop any of these sweeps passing over an empty walk are inline:
- * `ruleFiles()` throws below 100 inside the scrape, and each sweep pins its own
- * count again.
- *
- * The `meta.emits` drift guard, which reads the same declarations, is the
- * sibling `ruleCoverage.emits.test.ts`.
+ * Cross-checks the filesystem against the live registries, so no rule or
+ * validator ships unregistered or without a test file. The test check asks only
+ * existence: a token read from a test is gameable, and `pnpm new:node` leaves a
+ * slice with none. `ruleCoverage.emits.test.ts` guards `meta.emits`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -50,8 +26,8 @@ describe('lint rule coverage meta-guard', () => {
   const files = ruleFiles();
 
   it('every slice linter.ts has a sibling linter.test.ts', () => {
-    // The floor is what stops a broken walk reporting "nothing untested" about
-    // a population of zero. 121 slices declare a rule.
+    // The floor stops a broken walk reporting "nothing untested" about a
+    // population of zero. `ruleFiles()` also throws below it.
     expect(files.length).toBeGreaterThan(100);
     const untested = files
       .filter((f) => !existsSync(join(dirname(f), 'linter.test.ts')))
@@ -67,11 +43,11 @@ describe('lint rule coverage meta-guard', () => {
     const declaredButNotRegistered = [...declared].filter((n) => !registered.has(n)).sort();
     const registeredOutsideSlices = [...registered].filter((n) => !declared.has(n)).sort();
 
-    // A name here means a slice's linter.ts exists but is never imported
-    // (missing index.linter.ts wiring) — the rule silently does not run.
+    // A name here means a slice's linter.ts is never imported (missing
+    // index.linter.ts wiring), so the rule does not run.
     expect(declaredButNotRegistered).toEqual([]);
-    // A name here means a rule registered from outside src/nodes — rules
-    // belong to slices.
+    // A name here means a rule registered from outside src/nodes: rules belong
+    // to slices.
     expect(registeredOutsideSlices).toEqual([]);
   });
 });
@@ -83,17 +59,16 @@ describe('validator coverage meta-guard', () => {
     .filter((e) => e.types.length > 0);
 
   it('counts the slices whose whole contribution is a removal', () => {
-    // They call `registerUnavailable` and no `registerAll`, so the narrow
-    // scrape never visited them and neither of the two sweeps below could see a
-    // removal that stopped running.
+    // They call `registerUnavailable` and no `registerAll`, so a scrape of
+    // `registerAll` alone hides a removal that stopped running.
     expect(registering.flatMap((e) => e.types)).toEqual(
       expect.arrayContaining(['HBoxContainer', 'VSplitContainer', 'VFlowContainer'])
     );
   });
 
   it('every registered node type is live in validatorRegistry', () => {
-    // 248 linterParser.ts files register today; a walk that found none would
-    // otherwise report an empty `dead` list and pass.
+    // A walk that found no registering file would report an empty `dead`
+    // list and pass.
     expect(registering.length).toBeGreaterThan(200);
     // Removals are registered separately from validators: a fixed-orientation
     // container adds none of its own, so it is absent from
@@ -104,15 +79,14 @@ describe('validator coverage meta-guard', () => {
       .filter(({ t }) => !live.has(t))
       .map(({ t, file }) => `${t} (${file.slice(nodesRoot.length + 1)})`);
     // A type here means the linterParser.ts exists but its registration
-    // never runs — missing index.linter.ts wiring.
+    // never runs: missing index.linter.ts wiring.
     expect(dead).toEqual([]);
   });
 
   it('every registering linterParser.ts sits beside at least one test', () => {
     expect(registering.length).toBeGreaterThan(200);
-    // Any test file, not a `linterParser.test.ts` by name: 19 slices exercise
-    // their registration from `linter.test.ts` or a shared slice test instead,
-    // and a name rule would have to carry all 19 as exemptions to say less.
+    // Any test file, not a `linterParser.test.ts` by name: some slices exercise
+    // their registration from `linter.test.ts` or a shared slice test.
     const untested = registering
       .map((e) => dirname(e.file))
       .filter((dir) => !readdirSync(dir).some((t) => /\.test\.tsx?$/.test(t)))
@@ -121,10 +95,9 @@ describe('validator coverage meta-guard', () => {
   });
 
   it('every exact-class exemption cites an engine guard and needs no matcher', () => {
-    // The claim lives on the rule (`RuleMeta.exactClassByDesign`), so a stale
-    // one cannot outlive its rule the way a name-keyed list elsewhere could.
-    // What still needs checking is that it is a real claim: an engine citation,
-    // and no matcher — a rule with a matcher is not exact-class at all.
+    // The claim lives on the rule (`RuleMeta.exactClassByDesign`), so it cannot
+    // outlive its rule. It needs an engine citation and no matcher, since a rule
+    // with a matcher is not exact-class.
     const problems = ruleRegistry
       .getRules()
       .filter((r) => r.meta.exactClassByDesign)
@@ -140,13 +113,10 @@ describe('validator coverage meta-guard', () => {
   });
 
   it('reaches every subclass of a type a rule applies to', () => {
-    // `RuleRegistry` matches `applicableNodeTypes` by exact name, so a rule
-    // naming a type that HAS descendants goes silent on every one of them: the
-    // subclass inherits the engine's configuration warning but not ours. A
-    // matcher is the fix, but only if it matches the subclasses too, so both
-    // forms are checked against the committed catalog's ancestry. A rule
-    // targeting a childless leaf (the common case) stays free to use the
-    // simpler exact list.
+    // `RuleRegistry` matches `applicableNodeTypes` by exact name, so a rule on a
+    // type with descendants is silent on each subclass that inherits the engine's
+    // warning. Both forms are checked against the catalog's ancestry, and a
+    // childless leaf may keep the exact list.
     const catalog = JSON.parse(
       readFileSync(resolve(linterDir, '../../../../scripts/compare-docs/node-catalog.json'), 'utf8')
     ) as { nodes: { name: string; chain: string[] }[] };
@@ -185,7 +155,7 @@ describe('validator coverage meta-guard', () => {
   it('no rule re-checks its own applicability with an early return', () => {
     // `applicableNodeTypes` / `applicableNodeTypeMatcher` already decide which
     // nodes reach `check`; a `node.type !== 'X'` guard inside it restates that
-    // decision where the registry cannot see it, and 50 rules once carried one.
+    // decision where the registry cannot see it.
     const guard = /if \(\s*node\.type\s*!==\s*'[A-Za-z0-9]+'\s*\)\s*return \[\];/;
     const restating = ruleFiles()
       .filter((f) => guard.test(readFileSync(f, 'utf8')))

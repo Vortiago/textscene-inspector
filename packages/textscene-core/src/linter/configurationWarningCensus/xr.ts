@@ -1,11 +1,7 @@
 /**
- * XR and OpenXR nodes.
- *
- * This family is where the per-`push_back` visibility gate shows: `XROrigin3D`
- * and `OpenXRCompositionLayer` each gate SOME of their rows and leave the rest
- * unconditional. `OpenXRRenderModel` and `OpenXRRenderModelManager` are also the
- * only two overrides in the closure that start a fresh `PackedStringArray` and
- * never call their parent, so both carry an `appliesTo`.
+ * XR and OpenXR nodes. `XROrigin3D` and `OpenXRCompositionLayer` gate some of their rows on visibility and leave the
+ * rest unconditional. `OpenXRRenderModel` and `OpenXRRenderModelManager` start a fresh `PackedStringArray` without
+ * calling their parent, so both carry an `appliesTo`.
  */
 import type { WarningRow } from './types.js';
 

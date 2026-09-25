@@ -10,10 +10,9 @@ import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 
 /**
- * The `res://` root for a scene: the nearest ancestor holding a `project.godot`
- * (each vendored demo is its own Godot project), else the scene's own directory
- * — `scenes/fixtures` is a flat bag whose `res://` paths are relative to itself
- * and which deliberately carries no project file.
+ * The `res://` root for a scene: the nearest ancestor holding a `project.godot`,
+ * else the scene's own directory. `scenes/fixtures` carries no project file on
+ * purpose, and its `res://` paths are relative to itself.
  */
 export function resolveProjectRoot(scenePath) {
   let dir = dirname(resolve(scenePath));
@@ -31,23 +30,10 @@ export function resolveProjectRoot(scenePath) {
 }
 
 /**
- * The source project's `display/window/size/viewport_*`, or Godot's default
- * pair — the rect a 2D scene is COMPOSED against, and what a root Control
- * resolves its anchors to. 23 of the corpus's 81 projects set it
- * (`demos/2d/platformer` is 800x480, `demos/2d/pong` 640x400).
- *
- * This is the case `projectConfig`'s "must not vary" rule does not cover. That
- * rule is about 3D FRAME determinism: the 3D camera renders whatever aspect the
- * harness asks for, so pinning it keeps a 3D reference comparable run to run.
- * A 2D scene is different in kind — the viewport rect is part of the scene's
- * layout, not of the camera, so overriding it composes the scene differently
- * from how Godot would and no amount of matching frame sizes recovers that.
- * The 2D path therefore takes its size from HERE and the 3D path keeps the
- * override.
- *
- * `projectViewportSize` in `parser/projectSettingsParser.ts` is the authority;
- * this is the same two keys read without a build step, as with the localStorage
- * keys in `previewServer.mjs`.
+ * The project's `display/window/size/viewport_*`, or Godot's default pair: the
+ * rect a 2D scene is composed against, so the 2D path takes its size from here
+ * and the 3D path overrides it. `projectViewportSize` in
+ * `parser/projectSettingsParser.ts` is the authority, read here with no build.
  */
 export function projectViewportSizeFromIni(sourceIni) {
   const axis = (key, fallback) => {
@@ -63,9 +49,8 @@ export function projectViewportSizeFromIni(sourceIni) {
 }
 
 /**
- * The generated `project.godot`. Carries the source project's settings forward
- * (msaa, shadow quality and friends change the picture) minus the two things
- * that must not vary: the default environment, and the viewport size.
+ * The generated `project.godot`: the source project's settings, which change
+ * the picture, minus the default environment and the viewport size.
  */
 export function projectConfig(sourceIni, { width, height }) {
   const drop = [
@@ -75,12 +60,9 @@ export function projectConfig(sourceIni, { width, height }) {
     /^window\/size\/viewport_height\s*=/,
     /^run\/main_scene\s*=/,
     /^config_version\s*=/,
-    // Redraws only when something changes, so a settled scene stops producing
-    // frames and the bootstrap's `frame_post_draw` await never resumes: the
-    // render walks off the end of `--quit-after` having written nothing, and
-    // reports "produced no image (exit 0)" with an empty stderr. Godot
-    // recommends it for non-game UI projects, which is where this harness is
-    // pointed whenever a Control scene is the subject.
+    // Low-processor mode stops a settled scene producing frames, so the
+    // bootstrap's `frame_post_draw` await never resumes and the render writes
+    // nothing. Godot recommends it for UI projects, which a Control scene is.
     /^run\/low_processor_mode\s*=/,
   ];
 

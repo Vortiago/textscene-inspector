@@ -1,8 +1,7 @@
 /**
- * The Split Dock's detail pane (ADR-0007): a tab strip over Inspector /
- * Resources / Cameras / Animation. The Inspector follows selection, so it stays
- * mounted and is hidden rather than unmounted — no tab hop when the user picks
- * a node.
+ * The Split Dock's detail pane (ADR-0007): tabs for Inspector, Resources,
+ * Cameras and Animation. The Inspector follows the selection, so it hides
+ * instead of unmounting.
  */
 
 import { lazy, Suspense } from 'react';
@@ -11,10 +10,8 @@ import { MissingResourcesPanel } from '../MissingResourcesPanel/MissingResources
 import { CamerasPanel } from './CamerasPanel.js';
 import styles from './TscnPreviewShell.module.css';
 
-// Bundle reduction: lazy-load the DOM panel so it doesn't land in the initial
-// canvas-paint bundle. The first frame doesn't need it — it hydrates after the
-// canvas is up. A `React.lazy` of the module's default export; the underlying
-// file re-exports the named component as the default to satisfy that contract.
+// Lazy, so the panel stays out of the first canvas-paint bundle. `React.lazy`
+// takes a default export, so the `.then` maps the named export to one.
 const NodeDetailsPanel = lazy(() =>
   import('../NodeDetailsPanel/NodeDetailsPanel.js').then((m) => ({
     default: m.NodeDetailsPanel,
@@ -35,7 +32,7 @@ export function DetailTabs({
   setActiveTab: (tab: DetailTab) => void;
   /** ADR-0012: the Animation tab exists only while an AnimationPlayer is selected. */
   animationTabVisible: boolean;
-  /** The master's fraction of the dock height; this pane takes the rest. */
+  /** The tree's fraction of the dock height. This pane takes the rest. */
   treeShare: number;
   onResourceUpload?: (path: string, file: File) => void;
   onResourceRemove?: (path: string) => void;

@@ -17,7 +17,7 @@ describe('decodeCanvasItemMaterial', () => {
   });
 
   it('reads the enums the isometric dungeon authors', () => {
-    // Its `TopLight` polygons carry both at once: additive AND unshaded.
+    // A polygon can carry both at once: additive and unshaded.
     const m = decodeCanvasItemMaterial({ blend_mode: '1', light_mode: '1' });
     expect(m.blendMode).toBe(CanvasItemBlendMode.ADD);
     expect(m.lightMode).toBe(CanvasItemLightMode.UNSHADED);
@@ -46,10 +46,8 @@ describe('decodeCanvasItemMaterial', () => {
 });
 
 /**
- * The ext_resource arrival path's slice half: an external `.tres`
- * CanvasItemMaterial reaches the slice as a ParsedResource, whose `[resource]`
- * body must decode identically to an inline `[sub_resource]` property bag — one
- * decode, two arrival paths (ADR-0031).
+ * An external `.tres` CanvasItemMaterial's `[resource]` body must decode identically to an
+ * inline `[sub_resource]` property bag: one decode, two arrival paths (ADR-0031).
  */
 describe('decodeCanvasItemMaterial over a ParsedResource body', () => {
   const TRES = `[gd_resource type="CanvasItemMaterial" format=3]

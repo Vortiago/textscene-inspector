@@ -1,20 +1,8 @@
 /**
- * Tests for StandardMaterial3D feature completion.
- *
- * Verifies that <MeshInstance3D>:
- *   - Wires every loaded texture map (albedo / normal / roughness /
- *     metalness / emission) onto the rendered <meshStandardMaterial>.
- *   - Applies the material's `uv1_scale` and `uv1_offset` to every
- *     loaded texture, cloning before mutating so two consumers of the
- *     same texture path with different UV transforms don't clobber
- *     each other.
- *   - Honors `emission_enabled = false` (forces emissive to 0x000000
- *     regardless of the emission color).
- *
- * The tests inject pre-cached textures directly into the
- * `ResourceLoader.textures` cache so they resolve synchronously on
- * first render, avoiding the async load path that's already covered
- * by `Component.missing-texture.test.tsx`.
+ * StandardMaterial3D features on <MeshInstance3D>: every loaded texture map, the
+ * `uv1_scale` and `uv1_offset` on a clone per consumer, and `emission_enabled = false`
+ * forcing a black emissive. Textures are pre-cached, and
+ * `Component.missing-texture.test.tsx` covers the async load path.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -35,10 +23,7 @@ import type {
 import type { MeshInstance3DProperties } from './types';
 import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 
-/**
- * Provider that always returns null; we never let the file pipeline
- * fire in these tests because we pre-cache textures directly.
- */
+/** Provider that always returns null: these tests pre-cache textures. */
 class NoopProvider implements ResourceProvider {
   async loadResource(): Promise<string | ArrayBuffer | null> {
     return null;
@@ -54,14 +39,9 @@ function makeLoader(): ResourceLoader {
 }
 
 /**
- * Inject a fake texture into the loader's texture processor as if it
- * had been successfully loaded by the file pipeline. We monkey-patch
- * `request()` and `getCached()` to short-circuit the FileEventBus
- * round-trip — there's no other public surface for "pre-cache a
- * texture" today, and the missing-texture test only exercises
- * the failure path. The `loaded` event fires synchronously on
- * `request()` so the `useResource` hook's effect picks it up just like
- * a real cache hit.
+ * Inject a texture as if the file pipeline had loaded it, by patching `request()`
+ * and `getCached()`, since no public surface pre-caches one. `loaded` fires
+ * synchronously on `request()`, so `useResource` sees a cache hit.
  */
 function preloadTexture(loader: ResourceLoader, path: string, texture: THREE.Texture): void {
   const fakes = new Map<string, THREE.Texture>();
@@ -170,8 +150,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     expect(material!.map).toBeDefined();
     expect(material!.map!.repeat.x).toBe(2);
     expect(material!.map!.repeat.y).toBe(2);
-    // The cloned texture must NOT be the same THREE.Texture instance —
-    // mutating in place would clobber every other consumer.
+    // The clone is not the cached THREE.Texture, which other consumers share.
     expect(material!.map).not.toBe(tex);
   });
 
@@ -221,12 +200,9 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
     const material = findMaterial(renderer);
     expect(material).toBeDefined();
     expect(material!.normalMap).toBeDefined();
-    // NOT identity, unlike the colour maps: a normal map is sampled RAW
-    // (`scene/resources/material.cpp:1092` declares `texture_normal :
-    // hint_roughness_normal`, with no `source_color` — `textureBinding.ts` has
-    // the full citation), so the binding hands the material an undecoded CLONE.
-    // The clone shares the decoded `Source`, which is what identifies it as
-    // this same texture.
+    // Not identity, unlike the colour maps: `scene/resources/material.cpp:1092`
+    // declares `texture_normal : hint_roughness_normal` with no `source_color`, so
+    // the material gets an undecoded clone. The shared `Source` identifies it.
     expect(material!.normalMap).not.toBe(normal);
     expect(material!.normalMap!.source).toBe(normal.source);
     expect(material!.normalMap!.colorSpace).toBe(THREE.NoColorSpace);
@@ -241,7 +217,7 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
         type: 'StandardMaterial3D',
         data: {
           id: 'mat',
-          // emission_enabled NOT set (defaults to false). Even with a
+          // emission_enabled not set (defaults to false). Even with a
           // color set, the rendered material's emissive must be black.
           emission: 'Color(1, 0, 0, 1)',
           emission_energy_multiplier: '5',
@@ -381,9 +357,8 @@ describe('<MeshInstance3D> material features (WI-R3F-8)', () => {
   });
 
   it('keeps a material with no clearcoat on the standard (non-physical) material', async () => {
-    // Guardrail: the common path must stay MeshStandardMaterial so existing
-    // behaviour — and the material type every other test asserts on — is
-    // unchanged; only an enabled coat upgrades to MeshPhysicalMaterial.
+    // The common path stays MeshStandardMaterial, the type every other test
+    // asserts on. Only an enabled coat upgrades to MeshPhysicalMaterial.
     const loader = makeLoader();
     const internalResources: TscnInternalResource[] = [
       { id: 'box', type: 'BoxMesh', data: { id: 'box' } },

@@ -1,8 +1,7 @@
 /**
- * The rendered half of the parallax model. The pure arithmetic is pinned in
- * `parallaxScroll.test.ts`; what is asserted here is the wiring the arithmetic
- * hangs off — the cut transform chain, the view anchor, and the two surfaces
- * telling themselves apart by which camera the render uses.
+ * Tests the parallax wiring: the cut transform chain, the view anchor, and how
+ * the two surfaces tell themselves apart by the render's camera. The arithmetic
+ * is in `parallaxScroll.test.ts`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -52,9 +51,8 @@ const CAMERA_TAG: Camera2DTag = {
 };
 
 /**
- * The 1152x648 view a Camera2D at (600, 400) frames — the exact rect
- * `orthoFrameForCamera2D` produces, and the one the Godot probe measured, so
- * its top-left is (24, 76) in Godot canvas pixels.
+ * The 1152x648 view a Camera2D at (600, 400) frames, as `orthoFrameForCamera2D`
+ * produces it and the Godot probe measured it: top-left (24, 76) in canvas pixels.
  */
 function viewportPassCamera(): THREE.OrthographicCamera {
   const camera = new THREE.OrthographicCamera(-576, 576, 324, -324, 0.1, 4000);
@@ -181,18 +179,15 @@ describe('<ParallaxBackground>', () => {
     expect(wrappers[0]!.position.x).toBe(-24);
     expect(wrappers[0]!.position.y).toBe(76);
     // `_update_scroll` only walks direct children, so the nested one keeps the
-    // background's own anchor and scrolls WITH the view.
+    // background's own anchor and scrolls with the view.
     expect(wrappers[1]!.position.x).toBe(0);
     expect(wrappers[1]!.position.y).toBe(0);
   });
 
   it('does not scroll on the free 2D stage even when the scene holds a Camera2D', async () => {
-    // The corpus shape this guards is `game_singleplayer.tscn`: a
-    // ParallaxBackground and an enabled Camera2D in the SAME root scene, drawn
-    // on the stage. Godot's editor never applies the canvas transform there and
-    // `ref:godot` disables the camera to match, so the layers must stay put —
-    // losing the "is this a viewport pass" branch would slide the platformer's
-    // clouds 550 px left on its `motion_offset` alone.
+    // A ParallaxBackground and an enabled Camera2D in one root scene, drawn on
+    // the stage. Godot's editor applies no canvas transform there, and `ref:godot`
+    // disables the camera to match, so the layers stay put.
     const storeCamera = { current: null as THREE.Camera | null };
     const layer = layerNode('Clouds', {
       motion_scale: 'Vector2(0.1, 1)',
@@ -222,7 +217,7 @@ describe('<ParallaxBackground>', () => {
 
   it('leaves every layer at its authored pose when no Camera2D is current', async () => {
     // Godot never calls `set_base_offset_and_scale` without one, so
-    // motion_scale is inert — measured, not assumed.
+    // motion_scale is inert.
     const layer = layerNode('Sky', { motion_scale: 'Vector2(0, 0)' });
     const renderer = await ReactThreeTestRenderer.create(
       <NodePathProvider path="BG">

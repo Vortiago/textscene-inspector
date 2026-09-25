@@ -1,13 +1,7 @@
-; The ONE variable: `reverse_fill` beside `layout_direction = 3` on a
-; VFlowContainer. On a VERTICAL flow both flips land on the same axis, and
-; Godot XORs them — `(rtl != reverse_fill) && vertical`
-; (flow_container.cpp:248) — so setting both cancels and the columns sit
-; exactly where a plain LTR flow puts them. Three columns, each a different
-; width, in three containers: LTR, RTL alone (columns mirrored), and
-; RTL + reverse_fill (columns back where LTR had them). An implementation
-; that ORed the two flags, or that applied the mirror unconditionally, agrees
-; with the middle container and disagrees with the third, which no other
-; fixture can tell apart.
+; One variable: `reverse_fill` beside `layout_direction = 3` on a VFlowContainer. On a vertical
+; flow Godot XORs the two flips, `(rtl != reverse_fill) && vertical` (flow_container.cpp:248),
+; so both together cancel. Three containers: LTR, RTL alone (columns mirrored) and RTL +
+; reverse_fill (columns back where LTR has them).
 
 [gd_scene format=3]
 
@@ -22,6 +16,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
+; The three columns differ in width. An implementation that ORs the two flags, or mirrors
+; unconditionally, agrees with the middle container and not the third, which no other fixture
+; can tell apart.
 [node name="Ltr" type="VFlowContainer" parent="."]
 layout_mode = 1
 offset_left = 40.0

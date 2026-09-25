@@ -1,11 +1,7 @@
 /**
- * CollisionShape2D/3D `shape` accepts an ExtResource `.tres`, not only an
- * inline SubResource.
- *
- * `resolveSubResourceRef` returns undefined for the ExtResource form, so the
- * gizmo rendered nothing at all — silently, since the `warn` fallback inside
- * CollisionGizmo is only reached once a resource exists. Three vendored physics
- * scenes reference `godot3_robot_head_collision.tres` that way.
+ * CollisionShape2D/3D `shape` accepts an ExtResource `.tres`, not only an inline SubResource.
+ * `resolveSubResourceRef` returns undefined for the ExtResource form, and the `warn` fallback in
+ * CollisionGizmo runs only once a resource exists, so a miss here draws nothing, silently.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

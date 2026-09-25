@@ -1,11 +1,6 @@
 /**
- * Tests for FileDialog's semantic linter rule (strict parser format checks
- * live in linterParser.test.ts and are asserted through validatorRegistry
- * there).
- *
- * Uses `Linter` directly (via testkit), not the `linter/index.ts` barrel: that
- * barrel side-effect-imports every in-flight slice, so pulling it here would
- * fail flakily on a sibling's half-written file mid-wave.
+ * FileDialog's semantic linter rule, through `Linter` and the testkit rather than
+ * the `linter/index.ts` barrel, which imports every slice.
  */
 
 import { describe, it } from 'vitest';
@@ -81,7 +76,7 @@ describe('FileDialog semantic rules', () => {
 
 describe('FileDialog index grammar', () => {
   it('errors on a `+`-signed index past option_count', () => {
-    // `is_valid_int` skips ONE leading sign, `+` as readily as `-`
+    // `is_valid_int` skips one leading sign, `+` as readily as `-`
     // (ustring.cpp:4752), so `option_+2/name` resolves to option 2 and
     // `_get_property` drops it for being past the count
     // (property_list_helper.cpp:58).

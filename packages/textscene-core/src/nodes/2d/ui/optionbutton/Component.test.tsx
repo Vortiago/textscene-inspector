@@ -1,7 +1,7 @@
 /**
- * `<OptionButton>` render contract — chrome (StyleBox) + selected-item
- * text + the chevron arrow icon. Structure/tint/render-order assertions only
- * (pixels are a golden-image concern via `pnpm ref:godot`, not this suite).
+ * Tests the `<OptionButton>` render contract: StyleBox chrome, the selected item's text and the chevron
+ * arrow. It asserts structure, tint and render order only: pixels belong to the golden images and
+ * `pnpm ref:godot`.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -74,7 +74,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
     // style_normal_color = Color(0.1, 0.1, 0.1, 0.6).
-    // Raw sRGB — the StyleBox vertex attribute is decoded per fragment (`StyleBoxQuad.tsx`).
+    // Raw sRGB: the StyleBox vertex attribute is decoded per fragment (`StyleBoxQuad.tsx`).
     expect(color.getX(0)).toBeCloseTo(0.1, 5);
     expect(color.getW(0)).toBeCloseTo(0.6, 5);
   });
@@ -89,10 +89,8 @@ describe('<OptionButton> (isolated painter contract)', () => {
   });
 
   it('skips the chrome StyleBox when flat, keeping the arrow', async () => {
-    // `OptionButton : Button`, and the DRAW branch that paints the stylebox is
-    // Button's own `if (!flat)` (`button.cpp:216`); everything OptionButton
-    // draws on top of it is unaffected. The MINIMUM size still carries the
-    // stylebox's margins either way (`button.cpp:525`), so nothing moves.
+    // `OptionButton : Button`, and Button's `if (!flat)` (`button.cpp:216`) paints the stylebox beneath
+    // everything OptionButton draws. The minimum size keeps the margins either way (`button.cpp:525`).
     const renderer = await ReactThreeTestRenderer.create(
       <OptionButton {...painterEnv()} solveNode={solveNode({ flat: true })} rect={RECT} renderOrder={0} />
     );
@@ -179,7 +177,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
       expect(arrowMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.25), 4);
 
       const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-      // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, THEN linearised.
+      // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
       expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
     }
   );
@@ -200,12 +198,9 @@ describe('<OptionButton> (isolated painter contract)', () => {
 });
 
 /**
- * The SCENE-FONT (canvas-kind `FontMetrics`) path end to end. OptionButton's
- * own text placement is `option_button.cpp:113-121` plus Button's
- * internal-margin reservation, with NOTHING font-kind-specific in it — this
- * pins that, since an atlas-bake anchor leaking back into the placement would
- * be invisible on the atlas path (where it would read as the correct total)
- * and wrong here by `ascentPx - base*fontSizePx/42` px.
+ * The scene-font path (canvas-kind `FontMetrics`) end to end. OptionButton's placement
+ * (`option_button.cpp:113-121` plus Button's internal margin) has nothing font-kind-specific, so an
+ * atlas-bake anchor leaking into it reads correct on the atlas path and is `ascentPx - base*fontSizePx/42` px off here.
  */
 describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
@@ -220,7 +215,7 @@ describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', ()
     );
   }
 
-  /** The canvas painter's mesh — a plain `MeshBasicMaterial` over a `CanvasTexture`, never the MSDF `ShaderMaterial` `findTextMesh` looks for. */
+  /** The canvas painter's mesh: a plain `MeshBasicMaterial` over a `CanvasTexture`, never the MSDF `ShaderMaterial` `findTextMesh` looks for. */
   function findCanvasTextMesh(scene: Rendered['scene']) {
     return scene
       .findAllByType('Mesh')
@@ -239,16 +234,10 @@ describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', ()
   it('places the text at the pure option_button.cpp offset — no atlas-bake anchor anywhere in it', async () => {
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene)!;
-    // Scene font at 16px: ascentPx = ceil(800*16/1000) = 13, descentPx =
-    // ceil(200*16/1000) = 4; OptionButton is Button-family and reads no
-    // line_spacing (lineSpacingPx: 0), so linePitchPx = 17 and
-    // textNaturalSize.y = 17. OptionButton's own stylebox margins are 8
-    // horizontal / 4 vertical (default_theme.cpp:212-215), so
-    // customElementHeight = 32 - 4 - 4 = 24 and
-    // y = floor((24 - 17)/2 + 4) = floor(7.5) = 7 (never floored in the
-    // source itself, only per-glyph downstream — `buttonBase.ts`'s
-    // `layoutButtonContent` has the full citation); x = styleMargin.left = 8.
-    // three's Y is negated Godot px.
+    // Scene font at 16px: ascent ceil(800*16/1000) = 13, descent 4, and a Button-family control reads no
+    // line_spacing, so textNaturalSize.y = 17. OptionButton's margins are 8 by 4 (default_theme.cpp:212-215),
+    // so customElementHeight = 32 - 8 = 24 and y = floor((24 - 17)/2 + 4) = 7, floored per glyph downstream
+    // (`layoutButtonContent`). x = styleMargin.left = 8, and three's Y is negated Godot px.
     const group = mesh.parent as THREE.Object3D;
     expect(group.position.x).toBe(8);
     expect(group.position.y).toBe(-7);
@@ -261,10 +250,9 @@ describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', ()
     expect(mesh.geometry.getAttribute('position').getY(0)).toBeCloseTo(4, 6);
   });
 
-  // `option_button.cpp:126`: the arrow sits `arrow_margin` in from the LEADING
-  // edge under RTL, against `:128`'s `size.width - arrow width - arrow_margin`.
-  // `arrow_margin` is 4 and the vendored chevron is 12 wide, so the LTR arm is
-  // 150 - 12 - 4 = 134.
+  // `option_button.cpp:126`: under RTL the arrow sits `arrow_margin` in from the leading edge, against
+  // `:128`'s `size.width - arrow width - arrow_margin`. With `arrow_margin` 4 and the 12-wide chevron, the
+  // LTR arm is 150 - 12 - 4 = 134.
   it('draws the arrow at arrow_margin from the LEFT edge under RTL', async () => {
     const arrowX = async (rtl: boolean) => {
       const renderer = await ReactThreeTestRenderer.create(

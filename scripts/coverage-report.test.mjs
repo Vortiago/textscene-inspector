@@ -1,23 +1,8 @@
 /**
- * Guards the coverage ledger against the three ways it could quietly lie.
- *
- * The ledger is the resume point for a long node-coverage push — "what is left"
- * is computed, never written down, so it cannot drift the way a checklist does.
- * That only holds while its notion of "registered" matches the catalog's
- * `supported`, and while the catalog is regenerated after the registry changes.
- *
- * The failure this file exists to prevent already happened: `supported` was a
- * `typeName: '…'` scrape of slice sources, and `StaticBody2D`, `RigidBody2D` and
- * `CharacterBody2D` are registered by a loop with no string literal to match. The
- * catalog called three shipped node types "not implemented" for as long as that
- * scrape lived. Both sides now read the same live registry, and this asserts it.
- *
- * The third way is the build: that live registry is the one in `dist/`, so an
- * unbuilt or out-of-date `dist/` makes every assertion here agree about a
- * previous revision. It is checked first, and refused rather than measured.
- * `pnpm validate` builds before it tests, so that precheck never fires in CI —
- * it guards the local workflow alone, and its own cases live beside the module
- * it belongs to, in `distFreshness.test.mjs`.
+ * The coverage ledger's "registered" must match the catalog's `supported`, the
+ * catalog must be regenerated after the registry changes, and `dist/` must be
+ * fresh. Both sides read the same live registry, since a source scrape misses
+ * types a loop registers.
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -31,14 +16,12 @@ const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
 
 const CORE = join(import.meta.dirname, '../packages/textscene-core');
 
-// Both computed in `beforeAll`, never at module scope: the walk reads a tree a
-// concurrent `tsc --build` may be writing, and a throw during module evaluation
-// surfaces as a vitest collection error instead of the actionable message.
+// Computed in `beforeAll`, not at module scope, where a throw during a
+// concurrent `tsc --build` surfaces as a collection error instead of the message.
 let coverage;
 
 describe('coverage ledger', () => {
-  // Fails every assertion below with one actionable message rather than letting
-  // them agree with stale data.
+  // One actionable message on a stale `dist/`, not assertions that agree with it.
   beforeAll(async () => {
     requireFreshDist(CORE, 'this ledger');
     coverage = await collectCoverage();
@@ -66,8 +49,8 @@ describe('coverage ledger', () => {
   });
 
   it('has no registration for a type absent from Godot ClassDB', () => {
-    // AreaLight3D is the one sanctioned exception and is filtered upstream — see
-    // NOT_IN_CLASSDB. Anything else here is a typo in a `typeName`.
+    // AreaLight3D is filtered upstream (NOT_IN_CLASSDB). Anything else here is a
+    // typo in a `typeName`.
     expect(coverage.phantom).toEqual([]);
   });
 });

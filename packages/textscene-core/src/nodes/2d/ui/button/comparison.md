@@ -54,5 +54,5 @@ becomes `undefined` and the render default applies.
 
 - **Approximated** The label's paragraph direction is not applied, so under
   `layout_direction = 3` or `text_direction = 2` a right-to-left script, or a label
-  ending in punctuation, keeps left-to-right glyph order. Which SIDE the label, the
+  ending in punctuation, keeps left-to-right glyph order. Which side the label, the
   icon and the chrome sit on does follow the layout direction.

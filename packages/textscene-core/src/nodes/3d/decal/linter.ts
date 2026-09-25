@@ -1,26 +1,8 @@
 /**
- * Semantic linter rules for Decal.
- *
- * Format validation (size/modulate/fade ranges, cull_mask bounds) lives in
- * linterParser.ts. This file covers scene-context checks: that referenced
- * textures resolve, and three of Decal's own `get_configuration_warnings()`
- * checks (decal.cpp:184-193):
- *
- *     if (textures[TEXTURE_ALBEDO].is_null() && textures[TEXTURE_NORMAL].is_null()
- *             && textures[TEXTURE_ORM].is_null() && textures[TEXTURE_EMISSION].is_null()) {
- *         warnings.push_back(RTR("no textures loaded ..."));
- *     }
- *     if ((textures[TEXTURE_NORMAL].is_valid() || textures[TEXTURE_ORM].is_valid())
- *             && textures[TEXTURE_ALBEDO].is_null()) {
- *         warnings.push_back(RTR("has a Normal and/or ORM texture, but no Albedo texture ..."));
- *     }
- *     if (cull_mask == 0) {
- *         warnings.push_back(RTR("Cull Mask has no bits enabled ..."));
- *     }
- *
- * The renderer-method check at decal.cpp:179 (`gl_compatibility`/`dummy`) is
- * runtime-only and not modelled — same as `decal-requires-texture` already
- * ignores its own EARLY RETURN in that branch (decal.cpp:180).
+ * Semantic linter rules for Decal: referenced textures resolve, and three of Decal's own
+ * `get_configuration_warnings()` checks (decal.cpp:184-193). linterParser.ts validates format.
+ * The renderer-method check at decal.cpp:179 (`gl_compatibility`/`dummy`) is runtime-only and not
+ * modelled, as `decal-requires-texture` ignores its early return in that branch (decal.cpp:180).
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -41,8 +23,8 @@ function checkDecal(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as unknown as Record<string, string>;
 
-  // A decal with no texture at all projects nothing — valid in Godot, but
-  // almost certainly a mistake, so flag it as a warning.
+  // A decal with no texture at all projects nothing: valid in Godot, but almost certainly a
+  // mistake, so a warning.
   if (TEXTURE_PROPS.every((prop) => resourceSlotIsEmpty(rawProps[prop]))) {
     diagnostics.push({
       severity: 'warning',
@@ -72,7 +54,7 @@ function checkDecal(context: RuleContext): Diagnostic[] {
   }
 
   // decal.cpp:191-192. Default cull_mask is (1 << 20) - 1 (decal.h:54), so an
-  // absent key never trips this — only an explicit 0. The setter takes uint32_t
+  // absent key never trips this, only an explicit 0. The setter takes uint32_t
   // (decal.h:106), which is the width the validator declares too.
   if (rawProps.cull_mask !== undefined && ruleInt(rawProps.cull_mask, null, 'uint32') === 0) {
     diagnostics.push({

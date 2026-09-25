@@ -1,15 +1,10 @@
 /**
- * Unit tests for the capture layer's pure decisions.
- *
- * Most of `previewServer.mjs` is browser and process lifecycle, answerable only
- * by a real Chromium (`pnpm test:visual`). What IS testable with a stub page is
- * `settleCanvas`'s contract, and that is the piece worth pinning: it decides
- * WHICH frame every measurement in this repo is taken from. Its two failure
- * modes are silent — a frame accepted before the picture stopped moving, and a
- * frame taken at a different simulated instant from the Godot reference it will
- * be compared against — so neither shows up in the image it corrupts.
+ * Tests the capture layer's pure decisions and the preview group's teardown. The browser needs a
+ * real Chromium (`pnpm test:visual`). `settleCanvas` decides which frame every measurement uses, and
+ * both its failures are silent: a frame taken before the picture stopped moving, and one taken at
+ * a different simulated instant from the Godot reference.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -21,12 +16,19 @@ import {
   canvas2DViewportFor,
   isUniformImage,
   settleCanvas,
+  startPreview,
   writeCaptureImage,
   SETTLE_SIM_SECONDS,
 } from './previewServer.mjs';
 import { bootstrapScript } from '../godot-ref/run.mjs';
 
-/** A PNG whose every pixel is the same colour — what a dead GL context reads back as. */
+// The real spawn, so a test can replace one call without launching `vite preview`.
+vi.mock('node:child_process', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, spawn: vi.fn(actual.spawn) };
+});
+
+/** A PNG whose every pixel is the same colour, as a dead GL context reads back. */
 function uniformPng(width = 8, height = 8) {
   const png = new PNG({ width, height });
   png.data.fill(0);
@@ -64,8 +66,8 @@ describe('settleCanvas', () => {
   });
 
   it('reports a scene that never stops moving rather than returning a frame', async () => {
-    // Every capture differs, so nothing here is a measurement — the harness has
-    // to say so instead of handing back whichever frame the loop stopped on.
+    // Every capture differs, so nothing is a measurement, and the harness says so instead of
+    // returning the last frame.
     let n = 0;
     const page = { waitForTimeout: async () => {} };
     const canvas = { screenshot: async () => Buffer.from(String(n++)) };
@@ -87,11 +89,9 @@ describe('settleCanvas', () => {
   });
 
   /**
-   * The settle contract, from this side. Two byte-identical frames prove the
-   * picture stopped moving; they prove nothing about WHERE a clock stands, so
-   * this side can only honour a settle of zero. Answering a non-zero one with
-   * the convergence heuristic anyway would sample the load instant while the
-   * reference sampled a later one — a mismatch invisible in both images.
+   * Two byte-identical frames prove the picture stopped moving, not where a clock stands, so this
+   * side honours only a settle of zero. A non-zero one would sample the load instant while the
+   * reference sampled a later one, a mismatch neither image shows.
    */
   it('refuses a non-zero settle instead of converging and calling it that instant', async () => {
     const { page, canvas } = stubCanvas(['x', 'x']);
@@ -102,11 +102,8 @@ describe('settleCanvas', () => {
 });
 
 /**
- * One contract, one number, both harnesses. A second copy of the settle amount
- * is the specific failure this guards: each side would stay internally
- * consistent and deterministic while capturing a different moment, so every
- * ours-vs-Godot number measured afterwards compares two different pictures and
- * nothing fails.
+ * One settle number for both harnesses. With a second copy each side would stay deterministic
+ * while capturing a different moment, and every later comparison would fail to notice.
  */
 describe('the settle contract is shared, not duplicated', () => {
   const godotScript = (simSeconds) =>
@@ -133,9 +130,8 @@ describe('the settle contract is shared, not duplicated', () => {
   });
 
   it('has the Godot side honour it before the scene exists, not after', async () => {
-    // Simulated time cannot be given back once it has run, so the pause has to
-    // precede instantiation; a pause moved below add_child() still reads as
-    // "frozen" while having already advanced the scene by a frame.
+    // Simulated time cannot be given back, so the pause precedes instantiation. A pause below
+    // add_child() still reads as frozen after it has advanced the scene a frame.
     const lines = godotScript(SETTLE_SIM_SECONDS).split('\n');
     const pause = lines.findIndex((l) => l.includes('get_tree().paused = true'));
     const instantiate = lines.findIndex((l) => l.includes('load(SCENE_PATH).instantiate()'));
@@ -150,21 +146,17 @@ describe('the settle contract is shared, not duplicated', () => {
   });
 
   it('keeps the convergence knobs out of the contract', () => {
-    // Godot steps a fixed frame count, we screenshot until two match. Neither
-    // number is the contract, and a future reader must not "align" them: the
-    // Godot side's own loop is named for what it does.
+    // Godot steps a fixed frame count, and ours captures until two match. Neither number is the
+    // contract, so they are not aligned, and the Godot loop is named for what it does.
     expect(godotScript(SETTLE_SIM_SECONDS)).toContain('func _converge() -> void:');
     expect(godotScript(SETTLE_SIM_SECONDS)).not.toContain('func _settle() -> void:');
   });
 });
 
 /**
- * The preview server is spawned `detached`, which is what lets one signal reach
- * the whole `shell`→`pnpm`→`vite preview` group — and equally what lets that
- * group outlive the harness. Every harness calls `killPreviewGroup` from a
- * `finally`, and Node runs no `finally` when the process is signalled, so an
- * interrupted run leaves a server holding its port with nothing left to reap
- * it. `assertPortFree` already DETECTS the leftover; these pin the prevention.
+ * The `detached` preview group can outlive the harness, and Node runs no `finally` on a signal, so
+ * an interrupted run would leave a server holding its port. `assertPortFree` detects the leftover,
+ * and these pin the prevention.
  */
 describe('an interrupted harness does not orphan its preview group', () => {
   /** Runs `body` in a real child node process; returns its stdout and pid. */
@@ -195,53 +187,80 @@ describe('an interrupted harness does not orphan its preview group', () => {
     return fn();
   };
 
-  // A stand-in for the real spawn: same `detached` group shape, no build.
-  const harness = () => `
+  const exitOf = (child) =>
+    new Promise((resolve) => child.once('exit', (code, signal) => resolve({ code, signal })));
+
+  /**
+   * A stand-in for the real spawn: the same `detached` group shape and the teardown `startPreview`
+   * registers, with no build. `keepAlive: false` unrefs the group, so the harness ends normally.
+   */
+  const harness = ({ keepAlive = true } = {}) => `
 import { spawn } from 'node:child_process';
-import { registerPreviewGroupTeardown } from ${JSON.stringify(
+import { reapPreviewGroupOnExit } from ${JSON.stringify(
     new URL('./previewServer.mjs', import.meta.url).href
   )};
 const proc = spawn('sh', ['-c', 'sleep 120'], { detached: true, stdio: 'ignore' });
-registerPreviewGroupTeardown(proc);
+reapPreviewGroupOnExit(proc);
 console.log(String(proc.pid));
-setTimeout(() => {}, 120000);
+${keepAlive ? 'setTimeout(() => {}, 120000);' : 'proc.unref();'}
 `;
 
-  it('reaps the group when the harness is interrupted with SIGINT', async () => {
-    const h = runHarness(harness());
+  /** Starts the harness and waits for the pid of its preview group. */
+  async function startHarness(options) {
+    const h = runHarness(harness(options));
+    const exited = exitOf(h.child);
     await until(() => h.out().trim().length > 0);
-    const groupPid = Number(h.out().trim());
-    expect(alive(groupPid)).toBe(true);
+    return { ...h, exited, groupPid: Number(h.out().trim()) };
+  }
 
-    h.child.kill('SIGINT');
-    const reaped = await until(() => !alive(groupPid));
+  // The exit code, not death by the signal: `process.exit` is what runs Playwright's browser close.
+  it.each([
+    ['SIGINT', 130],
+    ['SIGTERM', 143],
+    ['SIGHUP', 129],
+  ])('reaps the group and exits with the shell code when the harness gets %s', async (signal, code) => {
+    const h = await startHarness();
+    expect(alive(h.groupPid)).toBe(true);
+
+    h.child.kill(signal);
+    const exit = await h.exited;
+    const reaped = await until(() => !alive(h.groupPid));
     h.cleanup();
+    expect(exit).toEqual({ code, signal: null });
     expect(reaped).toBe(true);
   }, 20000);
 
-  it('reaps the group when the harness is terminated with SIGTERM', async () => {
-    const h = runHarness(harness());
-    await until(() => h.out().trim().length > 0);
-    const groupPid = Number(h.out().trim());
+  it('reaps the group when the harness ends normally', async () => {
+    const h = await startHarness({ keepAlive: false });
 
-    h.child.kill('SIGTERM');
-    const reaped = await until(() => !alive(groupPid));
+    const exit = await h.exited;
+    const reaped = await until(() => !alive(h.groupPid));
     h.cleanup();
+    expect(exit).toEqual({ code: 0, signal: null });
     expect(reaped).toBe(true);
   }, 20000);
+
+  it('is the teardown startPreview registers for the group it spawns', () => {
+    spawn.mockReturnValueOnce({ pid: 4242 });
+    const once = vi.spyOn(process, 'once').mockReturnValue(process);
+    const kill = vi.spyOn(process, 'kill').mockReturnValue(true);
+    try {
+      startPreview(1);
+      const handlers = Object.fromEntries(once.mock.calls);
+      expect(Object.keys(handlers).sort()).toEqual(['SIGHUP', 'SIGINT', 'SIGTERM', 'exit']);
+      handlers.exit();
+      expect(kill).toHaveBeenCalledWith(-4242, 'SIGTERM');
+    } finally {
+      once.mockRestore();
+      kill.mockRestore();
+    }
+  });
 });
 
 /**
- * The write path's own blind spot.
- *
- * `settleCanvas` accepts a capture once two consecutive screenshots are
- * byte-identical, and it cannot tell a settled frame from a DEAD one — two
- * reads of a lost WebGL context are byte-identical too. On a comparing
- * harness that is harmless: a blank frame diffs hugely and fails. On a
- * WRITING harness it is not, because the blank image becomes the published
- * picture (or the baseline every future compare is measured against), and
- * nothing ever fails again. The guard has to live at the write, which is the
- * only place that distinction still exists.
+ * `settleCanvas` cannot tell a settled frame from a lost WebGL context, whose reads are
+ * byte-identical too. A compare fails on the blank frame, but a write publishes it or makes it the
+ * baseline, and nothing fails again. So the guard lives at the write.
  */
 describe('a dead GL context cannot be written as a capture', () => {
   const scratch = mkdtempSync(join(tmpdir(), 'capture-write-'));
@@ -285,11 +304,9 @@ describe('a dead GL context cannot be written as a capture', () => {
 
 describe('canvas2DViewportFor', () => {
   /**
-   * The 2D capture used a fixed browser viewport sized for this repo's own
-   * corpus, and a project whose `display/window/size/viewport_*` is larger
-   * simply overflowed the stage — the frame is laid out at 1:1, so it hangs
-   * past the edge and `findCanvas2DFrame` rejects the whole capture. 1280x720
-   * is the commonest project rect there is and misses by five pixels.
+   * The stage lays a project's `display/window/size/viewport_*` rect out at 1:1, so a rect larger
+   * than the default window hangs past the edge and `findCanvas2DFrame` rejects the capture.
+   * 1280x720 misses by five pixels.
    */
   it('grows the window so a frame larger than the default still fits the stage', () => {
     const viewport = canvas2DViewportFor({ width: 1280, height: 720 });

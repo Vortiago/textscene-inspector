@@ -1,15 +1,14 @@
 /**
- * `useSceneSource` — the fixture fetch: what a resolution sets, what a rejection holds, and the no-fixture start.
- *
- * The hook owns the hold-last-valid edit-loop invariant (ADR-0020): a resolving
- * fixture load must never stomp newer keystrokes. Shared scaffolding is in
+ * `useSceneSource`'s fixture fetch: what a resolution sets, what a rejection holds, and the
+ * start with no fixture.
+ * The hook keeps the hold-last-valid invariant (ADR-0020). The shared scaffolding is in
  * `useSceneSource.testkit.ts`.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
-// Stub resolveForwardedContent: valid TSCN passes through, garbage is rejected.
-// Hoisted per module graph, so every suite in this split declares its own.
+// A stub resolveForwardedContent passes valid TSCN and rejects garbage. `vi.mock` is hoisted
+// per module graph, so every suite in this split declares its own.
 vi.mock('./sourceGate', () => ({
   resolveForwardedContent: (buffer: string, lastGood: string) =>
     buffer.trim().startsWith('[gd_scene') ? buffer : lastGood,
@@ -27,17 +26,13 @@ beforeEach(() => {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // ignore
+    // Clearing storage is optional.
   }
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-// ---------------------------------------------------------------------------
-// Fixture load: happy path
-// ---------------------------------------------------------------------------
 
 describe('fixture load — happy path', () => {
   it('sets buffer and forwardedContent to fetched text on successful load', async () => {
@@ -95,10 +90,6 @@ describe('fixture load — happy path', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Fetch failure: buffer cleared, forwardedContent held (last valid render)
-// ---------------------------------------------------------------------------
-
 describe('fixture load — fetch failure', () => {
   it('clears the buffer, sets loadError, and holds forwardedContent on fetch failure', async () => {
     // First load succeeds to establish a valid forwardedContent baseline.
@@ -141,10 +132,6 @@ describe('fixture load — fetch failure', () => {
     expect(result.current.isFetching).toBe(false);
   });
 });
-
-// ---------------------------------------------------------------------------
-// No fixture + no upload: empty state
-// ---------------------------------------------------------------------------
 
 describe('empty state — no fixtureFile and no uploadedTscnName', () => {
   it('starts with empty buffer and forwardedContent when fixtureFile is empty', () => {

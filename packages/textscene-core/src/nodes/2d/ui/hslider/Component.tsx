@@ -1,25 +1,8 @@
 /**
- * `<HSlider>` — the native (WebGL canvas) painter for `HSlider`. Draws
- * the four parts `Slider::_notification(NOTIFICATION_DRAW)` paints, in
- * Godot's own draw order (`scene/gui/slider.cpp:333-363`): the `slider` track
- * StyleBox across the full width, the `grabber_area` fill from the low end to
- * the grabber's centre, each painted `tick` icon, and the `grabber` icon last
- * (on top of everything else) at the value's position. All geometry is
- * `shared/sliderSolver.ts`'s job (shared with `vslider/Component.tsx`,
- * which is this component at `vertical = true`); this component only resolves
- * theme/state and draws.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`.
- * A StyleBox carries two base colours (`PanelChrome.tsx`'s rule), so `tint.own`
- * (raw sRGB) is handed straight to each `<StyleBoxQuad>`'s own `color` prop,
- * which composes it internally before its single sRGB→linear conversion; the
- * grabber/tick icons have no separate theme colour of their own (Slider draws
- * them with the canvas item's own modulate and nothing else), so they take
- * `tint.color`/`tint.opacity` directly, mirroring `HSplitContainer`'s icon.
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * `<HSlider>`, the native (WebGL canvas) painter for `Slider::_notification(NOTIFICATION_DRAW)`
+ * in Godot's order (`scene/gui/slider.cpp:333-363`): the `slider` track, the
+ * `grabber_area` fill to the grabber's centre, each `tick`, then the `grabber`.
+ * `shared/sliderSolver.ts` owns the geometry, `ControlCanvasWalker` `visible`, `children` and the transform.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
@@ -39,6 +22,9 @@ import {
 import { SLIDER_DEFAULT_EDITABLE, sliderTickIndices } from '../shared/slider';
 import type { HSliderProperties } from './types';
 
+// A StyleBox has two base colours, so each `<StyleBoxQuad>` takes the raw sRGB
+// `tint.own`. Slider draws its icons with the modulate alone, so they take
+// `tint.color`/`tint.opacity`.
 export function HSlider({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<HSliderProperties>(solveNode);
   const size = { x: rect.w, y: rect.h };

@@ -1,36 +1,8 @@
 /**
- * <ShadowVolumeMask> — the stencil half of a shadowed 2D light, and ONLY of an
- * UNFILTERED one.
- *
- * Draws one light's extruded shadow volumes with colour writes off, stamping a
- * stencil value over everything that light cannot see. The light's own cookie
- * quad then draws with `litQuadStencilProps(ordinal)`, which rejects exactly
- * those pixels. Both sides take their ref and render order from the helpers
- * here, because the two MUST agree and a hand-written pair silently rots.
- *
- * SCOPE. `shadow_filter = PCF5/PCF13` makes Godot's shadow a FRACTION, which no
- * stencil test can carry, so a filtered light mounts none of this: no mask, no
- * ref, and neither `litQuadStencilProps` nor `shadowColorQuadStencilProps` on
- * its quads. It samples `shadowPolarMap` per fragment instead (ADR-0030), and
- * its cookie and `shadow_color` quads BOTH cover the light's whole rect — the
- * `NotEqual`/`Equal` partition below is the unfiltered branch's answer to the
- * same problem, not the only one. The render-order helpers are shared by both
- * branches; the stencil helpers are not.
- *
- * WHY A PER-LIGHT REF AND NOT A CLEAR. Lights accumulate into one target in a
- * single pass, so a shared ref of 1 leaks: light N's cookie would reject every
- * pixel any earlier light had shadowed, and the scene reads "shadows too dark"
- * rather than "stencil bug". Giving each light its own ref makes an earlier
- * light's leftover stamp simply unequal, so it costs one stencil clear per PASS
- * instead of one per light, and no restore pass at all.
- *
- * WHY `transparent`. An additive cookie quad sorts into three's transparent
- * group. A colour-write-off mask reads as opaque unless told otherwise, and
- * three draws the whole opaque group first — every light's volumes before any
- * light's cookie, which scrambles the stamps no matter how the refs are
- * assigned. Both meshes must sit in the same group for `renderOrder` to
- * interleave them, and three's transparent sort compares `renderOrder` ahead of
- * z, so the 2n / 2n+1 pairing holds.
+ * `<ShadowVolumeMask>`: the stencil half of an unfiltered shadowed 2D light. It draws the light's
+ * shadow volumes with colour writes off, stamping a stencil value its cookie quad rejects through
+ * `litQuadStencilProps(ordinal)`. A PCF5/PCF13 shadow is a fraction no stencil carries, so a filtered
+ * light samples `shadowPolarMap` (ADR-0030) over the whole rect and uses only the render-order helpers.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -40,33 +12,32 @@ import { canvasItemFacing } from '../canvasItemFacing';
 import { materialProgramInputs } from '../materialProgramInputs';
 
 /**
- * Distinct stencil values available to one pass. The buffer is 8-bit and 0 is
- * the cleared state, so refs run 1..255 and wrap — exact for any pass with at
- * most this many shadowed lights, and a pass with more needs a stencil clear
- * every 255 lights to stay exact.
+ * Distinct stencil values in one pass. The buffer is 8-bit and 0 is the cleared state, so refs run
+ * 1..255 and wrap: exact up to this many shadowed lights, and beyond it a pass needs a stencil
+ * clear every 255 lights.
  */
 export const SHADOW_STENCIL_REFS = 255;
 
-/** The stencil value light `ordinal` stamps. Distinct per light within a pass. */
+/**
+ * The stencil value light `ordinal` stamps, distinct per light in a pass. The lights share one
+ * target, so a shared ref would make each cookie reject every earlier light's shadow. A distinct
+ * ref makes a leftover stamp unequal, so one stencil clear per pass suffices.
+ */
 export function shadowStencilRef(ordinal: number): number {
   const n = Math.abs(Math.trunc(ordinal)) % SHADOW_STENCIL_REFS;
   return n + 1;
 }
 
 /**
- * Render order for a light's volumes — immediately before its own quad.
- *
- * The argument is the light's SEQUENCE (its place in the canvas light list),
- * not its stencil ordinal. Godot applies lights in attach order and MIX is
- * order-dependent; the ordinal is reused on unmount and handed out in cookie-
- * resolution order, so ordering by it made an overlap's colour depend on load
- * timing. See `lightSequence.ts`.
+ * Render order for a light's volumes, just before its own quad. It takes the light's place in the
+ * canvas light list (`lightSequence.ts`), not its ordinal: Godot applies lights in attach order,
+ * MIX depends on it, and ordinals follow cookie load timing.
  */
 export function shadowVolumeRenderOrder(sequence: number): number {
   return sequence * 2;
 }
 
-/** Render order for a light's cookie quad — immediately after its own volumes. */
+/** Render order for a light's cookie quad, just after its own volumes. */
 export function litQuadRenderOrder(sequence: number): number {
   return sequence * 2 + 1;
 }
@@ -90,7 +61,7 @@ export function litQuadStencilProps(ordinal: number) {
 /**
  * Spread onto the `shadow_color` quad's material so it covers exactly the region
  * the lit quad skips. Same ref, `Equal` where the lit quad is `NotEqual`, so the
- * pair partitions the light's rect once — no seam, no doubled pixel.
+ * pair partitions the light's rect once, with no seam and no doubled pixel.
  */
 export function shadowColorQuadStencilProps(ordinal: number) {
   return {
@@ -102,20 +73,20 @@ export function shadowColorQuadStencilProps(ordinal: number) {
 export interface ShadowVolumeMaskProps {
   /** Shadow origin and the rect the light reaches, in the previewer's 2D world space. */
   light: ShadowLight;
-  /** This light's casters — `worldShadowCasters` filtered by `shadow_item_cull_mask`. */
+  /** `worldShadowCasters` filtered by this light's `shadow_item_cull_mask`. */
   casters: readonly ShadowCasterEdges[];
   /**
    * This light's index within the pass. Only distinctness matters, not order or
    * density; two lights sharing an ordinal shadow each other.
    */
   ordinal: number;
-  /** This light's place in the canvas light list — its render-order slot. */
+  /** This light's place in the canvas light list: its render-order slot. */
   sequence: number;
-  /** The layer the light's cookie quad draws on — the mask must share it. */
+  /** The layer the light's cookie quad draws on, which the mask shares. */
   layer: number;
   /**
    * The `shadow_color` layer, when this light tints its shadow. The stamp has to
-   * exist in that pass too: it renders the tint quad WITHOUT the cookie quads,
+   * exist in that pass too: it renders the tint quad without the cookie quads,
    * and the tint quad tests the very stencil this mesh writes.
    */
   tintLayer?: number | undefined;
@@ -140,6 +111,9 @@ export function ShadowVolumeMask({ light, casters, ordinal, sequence, layer, tin
       colorWrite: false,
       depthWrite: false,
       depthTest: false,
+      // An additive cookie quad is transparent, and three draws the opaque group first, so an
+      // opaque mask would stamp every light's volumes before any cookie. `renderOrder` interleaves
+      // only within one group, and three's transparent sort puts it ahead of z.
       transparent: true,
       stencilWrite: true,
       stencilRef: shadowStencilRef(ordinal),
@@ -148,12 +122,9 @@ export function ShadowVolumeMask({ light, casters, ordinal, sequence, layer, tin
       stencilZFail: THREE.ReplaceStencilOp,
       stencilZPass: THREE.ReplaceStencilOp,
     },
-    // A volume is the fan of `[a, b, bFar, mFar, aFar]` (`shadowVolumes.ts`), so
-    // its winding follows whether its caster edge runs clockwise or
-    // counter-clockwise about the light — and the default `CULL_DISABLED` admits
-    // both, leaving the array mixed by construction. `ReplaceStencilOp` above
-    // happens to be idempotent, so a doubled draw would stamp the same value
-    // twice rather than corrupt the mask; an incrementing op would not survive it.
+    // A volume fans `[a, b, bFar, mFar, aFar]` (`shadowVolumes.ts`), so its winding follows its
+    // edge's direction about the light, and `CULL_DISABLED` admits both. `ReplaceStencilOp` is
+    // idempotent, so a doubled draw stamps the same value. An incrementing op would corrupt it.
     merge: [canvasItemFacing()],
   });
 
@@ -162,11 +133,9 @@ export function ShadowVolumeMask({ light, casters, ordinal, sequence, layer, tin
       renderOrder={shadowVolumeRenderOrder(sequence)}
       layers-mask={(1 << layer) | (tintLayer === undefined ? 0 : 1 << tintLayer)}
       frustumCulled={false}
-      // `light` and `casters` are already WORLD coordinates, so the mesh must
-      // stay at the identity however deep in the light's CanvasItem chain it is
-      // mounted; inheriting that chain would apply the transform a second time.
-      // Nothing forces an update past this flag: three's `updateMatrixWorld`
-      // only recurses into a child that opts in.
+      // `light` and `casters` are world coordinates, so the mesh stays at the identity, or the
+      // CanvasItem chain applies twice. three's `updateMatrixWorld` recurses only into a child
+      // that opts in, so nothing forces an update past this flag.
       matrixWorldAutoUpdate={false}
     >
       <primitive object={geometry} attach="geometry" />

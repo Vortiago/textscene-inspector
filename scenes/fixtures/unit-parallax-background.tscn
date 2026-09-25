@@ -1,21 +1,13 @@
 [gd_scene format=3]
 
-; ONE VARIABLE: a ParallaxBackground is a CanvasLayer, so its subtree is laid
-; out against the VIEWPORT and not under its parent node's transform.
-;
-; `Displaced` moves its whole subtree 300 px right and 200 px down. The
-; `Reference` polygon under it shows where that displacement lands; the
-; ParallaxBackground beside it draws its bar at the canvas origin anyway. Every
-; other 2D fixture composes transforms the ordinary way, so a regression that
-; re-attached a CanvasLayer to its parent chain would move nothing in any of
-; them — this is the only place it shows.
-;
-; The CanvasLayer's OWN placement rides along (`offset` shifts the bar down
-; 40 px): "ignores the parent" and "ignores its own transform" look identical in
-; a fixture that leaves `offset` at zero.
+; One variable: a ParallaxBackground is a CanvasLayer, so its subtree lays out against the
+; viewport, not under its parent's transform. Every other 2D fixture composes transforms the
+; ordinary way, so re-attaching a CanvasLayer to its parent chain shows only here.
 
 [node name="Root" type="Node2D"]
 
+; Moves its subtree 300 px right and 200 px down. `Reference` shows where that lands. The
+; ParallaxBackground beside it still draws its bar at the canvas origin.
 [node name="Displaced" type="Node2D" parent="."]
 position = Vector2(300, 200)
 
@@ -23,6 +15,8 @@ position = Vector2(300, 200)
 color = Color(0.9, 0.3, 0.2, 1)
 polygon = PackedVector2Array(0, 0, 120, 0, 120, 40, 0, 40)
 
+; Its own `offset` shifts the bar down 40 px: with `offset` at zero, "ignores the parent" and
+; "ignores its own transform" look identical.
 [node name="ParallaxBackground" type="ParallaxBackground" parent="Displaced"]
 offset = Vector2(0, 40)
 

@@ -1,12 +1,7 @@
 /**
- * Parses Godot resource references (`SubResource("id")` / `ExtResource("id")`).
- *
- * Reference parsing only: there is no resolver layer here. An R3F component
- * resolves geometry and material synchronously in its own `Component.tsx`,
- * through the parsers in `meshes/` and `materials/`.
- *
- * `parseResourceReference` is shared because both R3F MeshInstance3D and R3F
- * WorldEnvironment read raw TSCN property strings through it.
+ * Parses Godot resource references (`SubResource("id")`, `ExtResource("id")`) and
+ * resolves them against the scene's resource tables. An R3F component resolves
+ * geometry and material itself, through the parsers in `meshes/` and `materials/`.
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
@@ -20,11 +15,9 @@ export function parseResourceReference(
 }
 
 /**
- * Resolve an `ExtResource("id")` reference — or a raw `res://` path, which
- * passes through — to a `res://` path against the scene's external resources.
- * Returns null when the reference matches neither form or the id isn't
- * registered. The shared primitive behind both instance-path and texture-path
- * resolution (Sprite2D/Sprite3D/AnimatedSprite2D/TextureRect all need it).
+ * Resolve an `ExtResource("id")` reference, or a raw `res://` path that passes
+ * through, to a `res://` path. Null when the reference matches neither form or
+ * the id is not registered.
  */
 export function resolveExtResourcePath(
   ref: string | null | undefined,
@@ -42,10 +35,8 @@ export function resolveExtResourcePath(
 }
 
 /**
- * Find a SubResource by id — the `SubResource("id")` counterpart to
- * `resolveExtResourcePath`. Matches both the parser's structural `id` field and
- * the runtime `data.id` key for cross-pipeline compatibility. Pure (React-free)
- * so callers in either the resource layer or R3F components can share it.
+ * Find a SubResource by id. It matches both the parser's structural `id` field and
+ * the runtime `data.id` key, since both pipelines call it.
  */
 export function findSubResource(
   internalResources: readonly TscnInternalResource[],
@@ -58,11 +49,8 @@ export function findSubResource(
 }
 
 /**
- * Resolve a raw `SubResource("id")` property string straight to the internal
- * resource it names — `parseResourceReference` + `findSubResource` in one
- * step. Returns undefined for an absent value, a non-SubResource reference
- * (ExtResource / malformed), or an unknown id. Shared by the R3F components
- * that read a sub-resource-valued property (CollisionShape2D/3D `shape`).
+ * Resolve a raw `SubResource("id")` property string to the internal resource it
+ * names. Undefined for an absent value, a reference of another form, or an unknown id.
  */
 export function resolveSubResourceRef(
   ref: string | undefined,
@@ -75,31 +63,19 @@ export function resolveSubResourceRef(
 }
 
 /**
- * Peel `CanvasTexture` wrappers off a Texture2D reference, down to the first
- * reference that is not one.
- *
- * A `CanvasTexture` is a first-class Texture2D that wraps a `diffuse_texture`
- * (plus normal/specular maps we do not sample); Godot draws that diffuse map,
- * whatever kind of texture it is. Returning the INNER reference rather than a
- * path is what lets the wrapper compose with every other form: an image, or an
- * inline `GradientTexture2D` with no file behind it at all.
- *
- * To FIXED POINT, not a fixed count: a `diffuse_texture` is itself an ordinary
- * Texture2D slot and may name another wrapper, so peeling N levels makes each
- * caller's answer depend on how deep the chain happens to be — and two callers
- * that must agree, the painter's and the layout solve's, then agree only up to
- * the shallower count. Non-wrappers pass through unchanged, and applying this
- * twice changes nothing, so callers apply it unconditionally. A wrapper naming
- * no `diffuse_texture`, or a chain that leads back into itself, returns
- * undefined: neither names anything to draw.
+ * Peel `CanvasTexture` wrappers off a Texture2D reference, to fixed point, down to
+ * the inner `diffuse_texture` reference Godot draws. The reference, not a path, lets
+ * it compose with an image or an inline `GradientTexture2D`. A wrapper with no
+ * `diffuse_texture`, or a cycle, returns undefined: neither names anything to draw.
  */
 export function unwrapCanvasTextureRef(
   ref: string | null | undefined,
   internalResources: readonly TscnInternalResource[]
 ): string | undefined {
   let current = ref;
-  // Allocated only once a wrapper is actually found — most references are not
-  // one and leave on the first pass.
+  // Fixed point, not a fixed count: a painter and a layout solve that peel N levels
+  // agree only up to the shallower chain. Applying it twice changes nothing. `peeled`
+  // is allocated only on the first wrapper, since most references are not one.
   let peeled: Set<string> | undefined;
   while (current) {
     if (peeled?.has(current)) return undefined;
@@ -113,27 +89,10 @@ export function unwrapCanvasTextureRef(
 }
 
 /**
- * The TEXT-RESOURCE path an `ExtResource` reference names — a `.tres`/`.res`
- * file rather than an image — which the caller must fetch and parse before it
- * knows what the file actually holds. Null for every other reference form.
- *
- * The `[ext_resource]`'s own `type=` CANNOT gate this: Godot writes it from the
- * property SLOT, not from the target's class, so an AtlasTexture sitting in a
- * `texture` slot is recorded `type="Texture2D"`. Measured across a real corpus,
- * `type="AtlasTexture"` appeared zero times while the referenced files' own
- * `[gd_resource type=]` headers said AtlasTexture throughout — which is why
- * gating on the declared type silently matched nothing and every such icon
- * went undrawn.
- *
- * Returning the path for ANY text resource, not only an atlas, is correct for
- * this resolver's callers: a `.tres` is never an image the texture bus can
- * decode, so it must leave the image path regardless of what it turns out to
- * hold. `decodeExtAtlasTextureRef` reads the parsed file's own header and
- * declines the ones that are not atlases.
- *
- * Lives here, not in the atlastexture slice, so `resolveTexture2DPath` can
- * consult it without a circular import (the atlastexture slice already
- * imports `parseResourceReference` from this module).
+ * The text-resource (`.tres`, `.res`) path an `ExtResource` reference names, which
+ * the caller parses to learn what it holds. Null for any other form. Any text
+ * resource, not only an atlas: the texture bus never decodes one, and
+ * `decodeExtAtlasTextureRef` declines the non-atlases.
  */
 export function resolveExtAtlasTexturePath(
   ref: string | null | undefined,
@@ -143,6 +102,9 @@ export function resolveExtAtlasTexturePath(
   if (!parsed || parsed.type !== 'ExtResource') return null;
   const resource = externalResources.find((r) => r.id === parsed.id);
   if (!resource) return null;
+  // The `[ext_resource]` `type=` cannot gate this: Godot writes it from the property
+  // slot, so an AtlasTexture in a `texture` slot is recorded `type="Texture2D"`.
+  // It lives here, not in the atlastexture slice, which imports this module.
   return isTextResourcePath(resource.path) ? resource.path : null;
 }
 
@@ -152,31 +114,10 @@ function isTextResourcePath(path: string): boolean {
 }
 
 /**
- * Resolve a **Texture2D-valued** property to the `res://` path of a FILE to
- * load. Covers the forms of such a slot that name one:
- *
- *   `res://path`        — passes straight through
- *   `ExtResource("id")` — an external image or `.tres`
- *   `SubResource("id")` — a `CanvasTexture`, unwrapped to its `diffuse_texture`
- *
- * `resolveExtResourcePath` alone returns null for the SubResource form, which
- * renders a CanvasTexture-textured node as a missing-resource placeholder.
- *
- * NOT the resolver a node component should reach for. A Texture2D slot can also
- * hold a texture with no file behind it at all — an inline `GradientTexture2D`,
- * described entirely by the scene — and this returns null for every one of
- * those, because there is no path to return. Components ask `useTexture2D` for
- * a texture instead; this is the path-only half it delegates to, useful on its
- * own only where the caller genuinely wants a file path.
- *
- * An `AtlasTexture` deliberately resolves to NULL rather than to its sheet —
- * inline (`SubResource`) OR standalone (`ExtResource` naming a `.tres`, one
- * cell per file). The sheet's path is a fine thing to load, but this
- * resolver's answer is also read as "how big is this slot" (a Control's
- * minimum size, via the loader cache), and an AtlasTexture is the size of its
- * REGION, never of the sheet. `useTexture2D` resolves either form explicitly
- * and windows the sheet it loads; `inlineTexture2DSize` /
- * `extResourceAtlasTextureSize` answer the size half, one per form.
+ * Resolve a **Texture2D-valued** property (`res://path`, `ExtResource("id")`, or a
+ * `SubResource("id")` CanvasTexture) to the path of a file to load. A node component
+ * asks `useTexture2D` instead: this returns null for a texture with no file, such as
+ * an inline `GradientTexture2D`.
  */
 export function resolveTexture2DPath(
   ref: string | null | undefined,
@@ -184,17 +125,14 @@ export function resolveTexture2DPath(
   internalResources: readonly TscnInternalResource[]
 ): string | null {
   const unwrapped = unwrapCanvasTextureRef(ref, internalResources);
+  // An AtlasTexture, inline or `.tres`, resolves to null, not its sheet: this answer
+  // also sizes a Control's slot, and an atlas is the size of its region.
+  // `inlineTexture2DSize` and `extResourceAtlasTextureSize` answer that size.
   if (resolveExtAtlasTexturePath(unwrapped, externalResources)) return null;
   return resolveExtResourcePath(unwrapped, externalResources);
 }
 
-/**
- * Resolve a Node's `instance` PackedScene reference to a `res://` scene path.
- * Shared by every R3F caller that turns an instance ref into a path:
- * NodeDispatcher's `InstancedSceneSubtree`, the scene tree's
- * `useSubSceneChildren`, and the live-tree `resolveLiveNode`. Distinct from the same-named
- * resolver on ResourceLoader (metadata + logging), which takes different inputs.
- */
+/** Resolve a Node's `instance` PackedScene reference to a `res://` scene path. */
 export function resolveInstancePath(
   instanceRef: string,
   externalResources: readonly TscnExternalResource[]

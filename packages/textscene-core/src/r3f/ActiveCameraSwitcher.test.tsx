@@ -1,14 +1,8 @@
 /**
- * `<ActiveCameraSwitcher>` makes a scene Camera3D the render camera when one is
- * "used" (the Cameras panel) or deep-linked (`?camera=`, seeded as the
- * provider's initial active path).
- *
- * A node camera is authored with a fixed 16/9 placeholder aspect because at
- * mount it cannot know the canvas size, and R3F only re-syncs a camera's aspect
- * on a resize event — which never fires for a fixed-size (headless) canvas. So
- * the switcher matches the activated camera's aspect to the live canvas, or an
- * activated scene camera renders horizontally stretched. The test-renderer
- * canvas is 1280x800, so a synced camera reads 1.6, not the authored 16/9.
+ * `<ActiveCameraSwitcher>` makes a used or deep-linked (`?camera=`) Camera3D the render
+ * camera and matches its aspect to the live canvas. The node camera mounts with a 16/9
+ * placeholder, and R3F re-syncs aspect only on a resize a fixed-size canvas never fires.
+ * The test canvas is 1280x800, so a synced camera reads 1.6.
  */
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';

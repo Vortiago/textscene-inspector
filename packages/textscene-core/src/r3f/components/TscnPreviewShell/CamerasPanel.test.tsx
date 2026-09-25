@@ -1,8 +1,7 @@
 /**
- * The Cameras panel lists BOTH camera kinds: Camera3D rows drive the 3D
- * viewport swap (CameraControlContext.switchToCamera); Camera2D rows frame
- * the 2D stage on the camera's view (requestFrame2D + switch to the 2D
- * workspace) — the 2D "use this camera" equivalent.
+ * The Cameras panel lists both camera kinds. A Camera3D row swaps the 3D
+ * viewport camera. A Camera2D row frames the 2D stage on the camera's view
+ * and switches to the 2D workspace.
  */
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
@@ -104,7 +103,7 @@ describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
   }
 
   it('lists a Camera3D nested inside an instance (absent from flattenedNodes)', () => {
-    // Root scene instances player.tscn; the follow-camera lives inside it.
+    // The root scene instances player.tscn, which holds the follow-camera.
     const root = `[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://player.tscn" id="4_ray"]
@@ -144,10 +143,8 @@ describe('<CamerasPanel> with cameras inside instanced sub-scenes', () => {
   });
 
   it('frames a Camera2D inside an instanced sub-scene at its world position, not the origin', () => {
-    // game.tscn: Game → Player (instance of player.tscn at 100,50).
-    // player.tscn: PlayerRoot → Cam (Camera2D at 20,10, zoom 2). The camera's
-    // world position is 120,60 — composed over the LIVE tree (the sub-scene Cam
-    // is absent from flattenedNodes, so the old static walk framed at 0,0).
+    // Player instances player.tscn at 100,50, whose Cam sits at 20,10 with zoom 2.
+    // The live tree composes the camera's world position to 120,60.
     const root = `[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://player.tscn" id="p"]
@@ -190,9 +187,8 @@ zoom = Vector2(2, 2)
 });
 
 describe('<CamerasPanel> with a Camera3D subclass', () => {
-  // The panel follows Godot's class tree, not the literal type name: an
-  // XRCamera3D IS a Camera3D and mounts that component, so it belongs in the
-  // 3D list, the rows that swap the viewport camera.
+  // The panel follows Godot's class tree: an XRCamera3D is a Camera3D and mounts
+  // that component, so it belongs in the 3D list.
   it('lists an XRCamera3D as a 3D camera row and activates it on click', () => {
     const parsed = new TscnParser().parse(`[gd_scene format=3]
 
@@ -217,8 +213,7 @@ describe('<CamerasPanel> with a Camera3D subclass', () => {
     const row = screen.getByRole('button', { name: /Headset/ });
     fireEvent.click(row);
 
-    // `data-active` is the 3D row's own marker; a 2D row would have switched
-    // the workspace instead.
+    // `data-active` marks only a 3D row. A 2D row switches the workspace instead.
     expect(screen.getByRole('button', { name: /Headset/ }).getAttribute('data-active')).toBe(
       'true'
     );

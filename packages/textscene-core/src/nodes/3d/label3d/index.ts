@@ -1,6 +1,4 @@
-/**
- * Label3D registration — parser + formatter.
- */
+/** Label3D parser and formatter registration. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseLabel3D } from './parser';

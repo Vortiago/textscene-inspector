@@ -1,10 +1,8 @@
 /**
- * `aspectRatioContainerMinimumSize`/`aspectRatioContainerLayout` vs Godot
- * 4.6.3 (`scene/gui/aspect_ratio_container.cpp`, `scene/gui/container.cpp`).
- * Every expected rect below is hand-derived from that source (cited beside
- * each assertion). Children are synthetic `custom_minimum_size` Controls,
- * never Labels, so a font-metric regression and a layout regression can
- * never present as the same test failure.
+ * `aspectRatioContainerMinimumSize` and `aspectRatioContainerLayout` against Godot 4.6.3
+ * (`scene/gui/aspect_ratio_container.cpp`, `scene/gui/container.cpp`), each rect hand-derived.
+ * Children are `custom_minimum_size` Controls, not Labels, so a font-metric regression
+ * cannot show as a layout one.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';

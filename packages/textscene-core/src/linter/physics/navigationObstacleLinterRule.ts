@@ -1,39 +1,8 @@
 /**
- * Dimension-parameterized semantic linter rule for NavigationObstacle2D / NavigationObstacle3D.
- *
- * Both dimensions gate the same way: `navmesh_parse_source_geometry` returns
- * before `carve_navigation_mesh` is ever read once `affect_navigation_mesh`
- * is off.
- *
- *   2D — navigation_obstacle_2d.cpp:363 (`if (!obstacle->get_affect_navigation_mesh()) return;`),
- *        carve read at :392 and :413.
- *   3D — navigation_obstacle_3d.cpp:443 (identical early return),
- *        carve read at :474 and :496.
- *
- * doc/classes/NavigationObstacle{2D,3D}.xml both state the dependency in
- * prose on `carve_navigation_mesh` itself: "Requires [member
- * affect_navigation_mesh] to be enabled." Advisory — the scene loads and both
- * properties are individually well-formed;
- * `carve_navigation_mesh` is simply dead configuration until
- * `affect_navigation_mesh` is also on.
- *
- * The 2D instantiation ALSO carries `NavigationObstacle2D::get_configuration_warnings()`
- * (navigation_obstacle_2d.cpp:328-345), via `node2dGlobalTransform.ts`'s static
- * ancestor-transform walk — see that module's docblock for exactly what it
- * composes and where it gives up:
- *
- *     const Vector2 global_scale = get_global_scale();
- *     if (global_scale.x < 0.001 || global_scale.y < 0.001) { ... }                      // :331-333
- *     if (radius > 0.0 && !get_global_transform().is_conformal()) { ... }                // :336-338
- *     if (radius > 0.0 && get_global_skew() != 0.0) { ... }                              // :340-342
- *
- * NOT ported here: NavigationObstacle3D's `get_configuration_warnings()`
- * (navigation_obstacle_3d.cpp:408-425) warns on non-y-axis GLOBAL rotation,
- * zero/negative GLOBAL scale, and non-uniform GLOBAL scale with a radius set —
- * declined as runtime-only in this repo's coverage table. The 3D twin needs a
- * Transform3D composition this helper does not do — Node3D serialises one
- * `transform` where Node2D serialises position/rotation/scale/skew separately —
- * so answering it is a real piece of work, not a call away.
+ * The NavigationObstacle2D/3D rules. `carve_navigation_mesh` is dead configuration
+ * while `affect_navigation_mesh` is off, as doc/classes/NavigationObstacle{2D,3D}.xml
+ * say: "Requires [member affect_navigation_mesh] to be enabled." The scene loads and
+ * both properties are well-formed, so that report is advisory.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
@@ -51,18 +20,17 @@ import { armEmits, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js
 import { boolSlotValue } from '../../godot/index.js';
 
 /**
- * `navigation_obstacle_2d.cpp:332`, the floor `get_global_scale()` must clear
- * on both axes. The SAME literal also floors the "safe scale" `get_global_scale().abs().maxf(0.001)`
- * used at `:254`, `:367`, `:431`, `:445` — a single magic number, not
- * independently chosen per call site. It stays local all the same: `src/godot/`
- * admits a fact only when more than one DOMAIN needs it, and this one has a
- * single consumer. Move it there when a second turns up, not before.
+ * `navigation_obstacle_2d.cpp:332`, the floor `get_global_scale()` must clear on both
+ * axes. The same literal floors the safe scale `get_global_scale().abs().maxf(0.001)`
+ * at `:254`, `:367`, `:431`, `:445`. It stays local: `src/godot/` admits a fact only
+ * when a second domain needs it.
  */
 const MIN_GLOBAL_SCALE = 0.001;
 
 export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
-  // The `affect_navigation_mesh` early return, per dimension: the two families
-  // gate in their own source parser, so one literal cannot stand for both.
+  // `navmesh_parse_source_geometry` returns while `affect_navigation_mesh` is off,
+  // before reading `carve_navigation_mesh`: navigation_obstacle_2d.cpp:363 (carve read
+  // at :392 and :413) and navigation_obstacle_3d.cpp:443 (carve read at :474 and :496).
   const CARVE_GATE_AT =
     dim === '2D' ? 'navigation_obstacle_2d.cpp:363' : 'navigation_obstacle_3d.cpp:443';
   const type = `NavigationObstacle${dim}`;
@@ -81,8 +49,9 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
         unused: 'the source-geometry parser returns before it reads carve_navigation_mesh',
       },
     },
-    // The global transform is a 2D concern only: `NavigationObstacle2D` guards
-    // it in `get_configuration_warnings`, and the 3D class has no equivalent.
+    // The global-transform warnings are 2D only: `NavigationObstacle2D::get_configuration_warnings()`
+    // (navigation_obstacle_2d.cpp:328-345), read through `node2dGlobalTransform.ts`'s
+    // static ancestor walk.
     nonPositiveScale: is2D
       ? {
           severity: 'warning',
@@ -118,6 +87,10 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
       report(arms.carveWithoutAffect, `${type} '${node.name}' has 'carve_navigation_mesh' enabled but 'affect_navigation_mesh' is not. Navmesh baking checks 'affect_navigation_mesh' first and returns before carving is ever considered, so 'carve_navigation_mesh' has no effect.`);
     }
 
+    // Not ported: NavigationObstacle3D's warnings (navigation_obstacle_3d.cpp:408-425)
+    // on non-y-axis global rotation and non-positive or non-uniform global scale, declined
+    // as runtime-only in the coverage table. Node3D serialises one `transform`, which
+    // needs a Transform3D composition the 2D helper does not do.
     if (arms.nonPositiveScale) {
       const verdict = resolveGlobalTransform2D(scene, node);
       if (verdict.kind === 'known') {

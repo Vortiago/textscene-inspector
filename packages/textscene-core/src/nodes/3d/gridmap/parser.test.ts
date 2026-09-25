@@ -53,8 +53,7 @@ describe('parseGridMap', () => {
   it('returns the SAME cellCenter instance across parses when nothing overrides it', () => {
     // The renderer's instance-matrix memo keys on these values, and the pane
     // re-parses on every debounced keystroke. A fresh object per parse would
-    // rebuild every cell matrix and the InstancedMesh GPU buffer for a file
-    // that did not change.
+    // rebuild every cell matrix and the InstancedMesh GPU buffer.
     const a = parseGridMap(heading('GridMap', { name: 'G' }), {});
     const b = parseGridMap(heading('GridMap', { name: 'G' }), {});
     expect(a.cellCenter).toBe(b.cellCenter);

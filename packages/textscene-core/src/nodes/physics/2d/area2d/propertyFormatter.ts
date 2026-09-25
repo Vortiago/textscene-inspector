@@ -1,5 +1,5 @@
 /**
- * Area2D property formatter — surfaces monitoring/monitorable/layer/mask
+ * Area2D property formatter: shows monitoring, monitorable, layer and mask
  * (Godot defaults when the TSCN omits them) ahead of the shared Node2D
  * transform sections.
  */

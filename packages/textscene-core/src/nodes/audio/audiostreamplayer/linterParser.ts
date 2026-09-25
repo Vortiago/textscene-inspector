@@ -1,16 +1,12 @@
 /**
- * AudioStreamPlayer strict validators for linting.
- *
- * `playback_type` mirrors AudioStreamPlayer3D's validator of the same name:
- * both forward straight into AudioStreamPlayerInternal::set_playback_type
- * (audio_stream_player_internal.cpp:337-339), the SAME AudioServer::PlaybackType
- * enum (audio_server.h:194-199, "Default,Stream,Sample"), so the two are
- * genuinely one shared bound, not a coincidence of matching names.
+ * AudioStreamPlayer strict validators. `playback_type` shares its bound with AudioStreamPlayer3D's:
+ * both forward into AudioStreamPlayerInternal::set_playback_type
+ * (audio_stream_player_internal.cpp:337-339) and the same AudioServer::PlaybackType enum
+ * (audio_server.h:194-199, "Default,Stream,Sample").
  */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
+// The base chain. Registration happens on import, so a test that loads only this slice resolves
+// an inherited key only when the ancestor is imported too.
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
@@ -21,11 +17,10 @@ const MIX_TARGET = { 0: 'STEREO', 1: 'SURROUND', 2: 'CENTER' };
 
 validatorRegistry.registerAll('AudioStreamPlayer', {
   stream: v.resourceReference('stream'),
-  // audio_stream_player.cpp:282, PROPERTY_HINT_RANGE "-80,24,suffix:dB": both
-  // ends closed, and set_volume_db assigns straight through, so out of range
-  // warns. Its one refusal is ERR_FAIL_COND_MSG(Math::is_nan(p_volume), ...):
-  // `nan` is dropped and the field keeps its previous value, while `inf` and
-  // `-inf` are stored unaltered.
+  // audio_stream_player.cpp:282, PROPERTY_HINT_RANGE "-80,24,suffix:dB": both ends closed, and
+  // set_volume_db assigns straight through, so out of range warns. Its one refusal is
+  // ERR_FAIL_COND_MSG(Math::is_nan(p_volume), ...): `nan` is dropped and the field keeps its
+  // previous value, while `inf` and `-inf` are stored unaltered.
   volume_db: v.float('volume_db', {
     min: -80,
     max: 24,
@@ -34,7 +29,7 @@ validatorRegistry.registerAll('AudioStreamPlayer', {
   }),
   // audio_stream_player_internal.cpp:314, ERR_FAIL_COND(p_pitch_scale <= 0.0),
   // against a hint (audio_stream_player.cpp:284) of
-  // "0.01,4,0.01,or_greater" — `or_greater` opens the ceiling. The two floors
+  // "0.01,4,0.01,or_greater", where `or_greater` opens the ceiling. The two floors
   // sit apart, so (0, 0.01) loads into Godot and only warns.
   pitch_scale: v.positiveFloat('pitch_scale', undefined, {
     min: 0.01,

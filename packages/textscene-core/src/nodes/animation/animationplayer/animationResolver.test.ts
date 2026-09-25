@@ -1,5 +1,5 @@
 /**
- * animationResolver tests — render-side resolution of AnimationLibrary +
+ * animationResolver tests: render-side resolution of AnimationLibrary and
  * Animation SubResources into GodotAnimation[] (THREE-free).
  */
 
@@ -133,10 +133,9 @@ describe('resolveAnimations — keyframe values (B4)', () => {
   });
 
   it('decodes the `i`-suffixed vectors, which share a prefix with their float twins', () => {
-    // `'Vector2i(...)'.startsWith('Vector2')` is TRUE, so the integer literal
-    // reached `parseVector2`, missed its float grammar and THREW — taking the
-    // whole scene down rather than one keyframe. `SubViewport.size` is declared
-    // `Variant::VECTOR2I` (viewport.cpp:5579), so this is what Godot writes.
+    // `'Vector2i(...)'.startsWith('Vector2')` is true, so a prefix match hands the integer literal
+    // to `parseVector2`, which throws and takes the whole scene down. `SubViewport.size` is
+    // declared `Variant::VECTOR2I` (viewport.cpp:5579), so this is what Godot writes.
     const internal = [
       res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
       res('A', 'Animation', {
@@ -232,7 +231,7 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
   });
 
   it('drops a value track whose key overflows the finite grammar to Infinity', () => {
-    // `1e999` is ordinary digits and an exponent, so no grammar refuses it —
+    // `1e999` is ordinary digits and an exponent, so no grammar refuses it:
     // only the read result is non-finite.
     const internal = [
       res('Lib', 'AnimationLibrary', { _data: '{\n"a": SubResource("A")\n}' }),
@@ -364,8 +363,8 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
 
   it('a method track contributes nothing (not even a placeholder) alongside a resolving value track', () => {
     // A mixed clip (method call + transform track) keeps only what the
-    // parser understands — the method track is filtered out entirely
-    // during resolution, never becoming a GodotTrack of any type.
+    // parser understands: the method track is filtered out during
+    // resolution, never becoming a GodotTrack of any type.
     const internal = [
       res('Lib', 'AnimationLibrary', { _data: '{\n"mixed": SubResource("A")\n}' }),
       res('A', 'Animation', {
@@ -387,7 +386,7 @@ describe('resolveAnimations — graceful degradation (B5)', () => {
 
 describe('resolveAnimations — 3D transform tracks (position_3d/rotation_3d/scale_3d)', () => {
   // Godot 4's dedicated 3D transform tracks store keys as a flat
-  // PackedFloat32Array(time, transition, comps…) — NOT the value-track dict —
+  // PackedFloat32Array(time, transition, comps…), not the value-track dict,
   // and the property is implied by the track type, not a NodePath `:suffix`.
   it('decodes a position_3d flat key array to Vector3 values on the position property', () => {
     const internal = [
@@ -549,8 +548,7 @@ libraries = {
     expect(anims.map((a) => a.name)).toEqual(['spin']);
   });
 
-  // Regression for the symptom "3D animations don't move": a Godot-4
-  // position_3d track (flat PackedFloat32Array keys) must resolve to a
+  // A Godot 4 position_3d track (flat PackedFloat32Array keys) must resolve to a
   // position track through the full parse → resolve chain.
   it('resolves a position_3d transform track from a parsed scene', () => {
     const scene = new TscnParser().parse(`[gd_scene format=3]
@@ -599,8 +597,8 @@ describe('resolveAnimations — a scalar the tokenizer cannot read', () => {
 describe('a fractional composite keyframe', () => {
   it('keeps its fractional components, because a keyframe is not a slot write', () => {
     // `{ exact: true }` on COMPOSITE_KEYS. Without it the widened `Vector3i`
-    // arm matches `Vector3(...)` first and every component is truncated —
-    // `[0, 1.5, 0]` silently became `[0, 1, 0]` with the whole suite green.
+    // arm matches `Vector3(...)` first and truncates every component, so
+    // `[0, 1.5, 0]` becomes `[0, 1, 0]`.
     const internal = [
       res('Lib', 'AnimationLibrary', { _data: '{\n"spin": SubResource("A")\n}' }),
       res('A', 'Animation', {
@@ -622,11 +620,10 @@ describe('a fractional composite keyframe', () => {
 });
 
 /**
- * `hasUnresolvableClips` is a SUPPRESSION guard: missing an ExtResource here
- * lets a caller call a live clip name dangling. Godot's tokenizer discards
- * every character <= 32 before a token (variant_parser.cpp:415-417) and the
- * `ExtResource` branch then asks only for the next token to be `(` (:1089-1093),
- * so the padded spelling is a file that loads.
+ * `hasUnresolvableClips` is a suppression guard: a missed ExtResource lets a caller call a live clip
+ * name dangling. Godot's tokenizer discards every character <= 32 before a token
+ * (variant_parser.cpp:415-417), and the `ExtResource` branch asks only for the next token to be `(`
+ * (:1089-1093), so the padded spelling loads.
  */
 describe('hasUnresolvableClips — the padding Godot discards', () => {
   const libAt = (data: string): TscnInternalResource[] => [res('Lib', 'AnimationLibrary', { _data: data })];

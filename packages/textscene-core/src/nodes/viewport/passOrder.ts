@@ -1,36 +1,20 @@
 /**
- * Ordered viewport pass driver — the pure sort behind it.
- *
- * A viewport's offscreen pass may SAMPLE another viewport's published target
- * (a `ViewportTexture` on content nested inside it, most commonly a nested
- * `SubViewport`). Godot has no such ordering problem — it walks the viewport
- * tree bottom-up every frame — but this previewer drives every offscreen pass
- * from one `useFrame` orchestrator instead, so the passes themselves must be
- * fed to it dependencies-first: a pass that samples another must run AFTER
- * the one it samples, never before.
- *
- * `computePassOrder` is a plain topological sort (depth-first, post-order)
- * over `{ id, dependsOn }` records — no THREE, no React — so the ordering
- * rule is asserted directly rather than inferred from a rendered frame. A
- * cycle (two passes each depending, directly or transitively, on the other)
- * has no valid order; the sort still has to return SOMETHING for every pass
- * every frame, so it breaks the closing edge, keeps going, and reports which
- * pass discovered the impossible dependency — the offending sampler — plus
- * the cycle itself, so a caller can single that pass out (skip driving it,
- * warn) without losing the order of everything else.
+ * The order of the offscreen viewport passes. One `useFrame` orchestrator drives
+ * them all, where Godot walks the viewport tree bottom-up, so a pass that samples
+ * another's target (a `ViewportTexture`, often on a nested `SubViewport`) runs after it.
  */
 
 /** One pass in the dependency graph. */
 export interface ViewportPassDependency {
-  /** This pass's own identity — a dispatcher-absolute node path. */
+  /** This pass's own identity: a dispatcher-absolute node path. */
   id: string;
-  /** ids of the OTHER passes this pass's content samples — must render before this one. */
+  /** ids of the other passes this pass's content samples, which render before it. */
   dependsOn: readonly string[];
 }
 
 /** A cycle the sort found: no valid order exists between these passes. */
 export interface ViewportPassCycle {
-  /** The pass whose dependency chain loops back to itself — the offending sampler. */
+  /** The offending sampler: the pass whose dependency chain loops back to itself. */
   sampler: string;
   /** The cycle, starting and ending at the ancestor the closing edge points back to. */
   path: readonly string[];
@@ -38,10 +22,9 @@ export interface ViewportPassCycle {
 
 export interface ViewportPassOrder {
   /**
-   * Every pass id, dependencies before dependents wherever the graph allows
-   * it. A pass inside a cycle still appears — using only whatever acyclic
-   * dependencies it has — so the orchestrator has somewhere to put it (even
-   * if it then chooses not to drive it).
+   * Every pass id, dependencies before dependents wherever the graph allows.
+   * A pass inside a cycle still appears, ordered by its acyclic dependencies,
+   * so the orchestrator can place it or skip it.
    */
   order: readonly string[];
   /** Every cycle the sort found, in discovery order. Empty when the graph is a DAG. */
@@ -51,12 +34,10 @@ export interface ViewportPassOrder {
 type VisitState = 'visiting' | 'done';
 
 /**
- * Depth-first post-order over `dependsOn` edges, with cycle detection by the
- * standard white/gray/black colouring: a dependency still marked `visiting`
- * is an ancestor of the current DFS path, so recursing into it again would
- * never terminate. That edge is dropped (not followed) rather than the whole
- * pass being dropped — an unrelated acyclic dependency of the SAME pass must
- * still be ordered correctly.
+ * Depth-first post-order over `dependsOn` edges, with white/gray/black cycle
+ * detection. A cycle has no valid order, so the closing edge is dropped, not the
+ * pass: its other dependencies still order, and the cycle is reported with the
+ * sampler that closed it, so a caller can skip or warn about that pass alone.
  */
 export function orderViewportPasses(
   passes: readonly ViewportPassDependency[]
@@ -76,11 +57,11 @@ export function orderViewportPasses(
     stack.push(id);
 
     for (const dep of dependsOn.get(id) ?? []) {
-      if (!dependsOn.has(dep)) continue; // dangling reference — nothing to order against
+      if (!dependsOn.has(dep)) continue; // A dangling reference has nothing to order against.
       if (state.get(dep) === 'visiting') {
         const cycleStart = stack.indexOf(dep);
         cycles.push({ sampler: id, path: [...stack.slice(cycleStart), dep] });
-        continue; // break the closing edge; this pass's other deps still order normally
+        continue; // Break the closing edge. This pass's other dependencies still order.
       }
       visit(dep);
     }

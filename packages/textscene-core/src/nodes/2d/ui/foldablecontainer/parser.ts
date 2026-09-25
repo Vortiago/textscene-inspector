@@ -1,4 +1,4 @@
-/** FoldableContainer parser — Control plus the five own properties that change what draws. */
+/** FoldableContainer parser: the Control parse plus the five properties that change the drawing. */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';

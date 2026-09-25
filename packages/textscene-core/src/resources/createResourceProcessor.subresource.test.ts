@@ -1,11 +1,8 @@
 /**
- * `createResourceProcessor` against a **Sub-resource path** (`file::id`).
- *
- * This is where the third kind of reference is hidden: the processor caches,
- * dedupes and announces under the whole address, while only the owning file
- * ever reaches the `FileEventBus` and the host `ResourceProvider`. Every
- * consumer keeps its existing path-keyed contract for free — which is the
- * point, so it is pinned at the factory rather than in one processor.
+ * `createResourceProcessor` against a **Sub-resource path** (`file::id`): it caches,
+ * dedupes and announces under the whole address, while only the owning file reaches
+ * the `FileEventBus` and the provider. Pinned at the factory, since every consumer
+ * keeps its path-keyed contract through it.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createResourceProcessor, type ResourceProcessor } from './createResourceProcessor';
@@ -110,10 +107,9 @@ describe('createResourceProcessor with a sub-resource path', () => {
     processor.clearCache('res://wheel.tres');
 
     expect(processor.getCached('res://wheel.tres::StandardMaterial3D_shvqh')).toBeUndefined();
-    // A per-path clear is otherwise silent because its caller re-requests the
-    // path itself; nobody re-requests a sub-resource of it, so without the
-    // announcement a mounted consumer would keep serving the stale value
-    // forever after a **Dependency hot-reload** of the owning `.tres`.
+    // A per-path clear is otherwise silent, since its caller re-requests the path.
+    // Nobody re-requests a sub-resource, so without the announcement a mounted
+    // consumer serves the stale value after a **Dependency hot-reload**.
     expect(invalidated).toHaveBeenCalledWith(
       'res://wheel.tres::StandardMaterial3D_shvqh',
       undefined
@@ -128,11 +124,9 @@ describe('createResourceProcessor with a sub-resource path', () => {
   });
 
   it('refuses an address when the processor has not opted in', async () => {
-    // The fetch/cache/dedupe plumbing is free for every processor, but the
-    // SEMANTICS are not: a `process` that ignores its path would return the
-    // whole file's resource and it would be cached under the address — a wrong
-    // resource under a right-looking name. Default to failing rather than
-    // guessing, so a processor whose author never heard of addresses is safe.
+    // A `process` that ignores its path would cache the whole file's resource under
+    // the address: a wrong resource under a right-looking name. The default fails
+    // instead, so a processor that does not know about addresses is safe.
     const failed = vi.fn();
     eventBus.on<Error>('resource', 'failed', failed);
     const unaware = createResourceProcessor<string>({

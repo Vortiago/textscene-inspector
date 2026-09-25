@@ -1,15 +1,8 @@
 /**
- * Structural checks for the `.tscn` TextMate grammar (syntaxes/tscn.tmLanguage.json).
- *
- * Full tokenization would need vscode-textmate + vscode-oniguruma (a new,
- * fairly heavy dependency plus a .wasm binary) just to exercise a
- * declarative asset — disproportionate for what's ultimately eyeballed
- * against a real `.tscn` file in the editor. Instead this pins the grammar's
- * *shape*: it parses, every `#`-reference resolves to a real repository
- * entry (a dangling include is silently invisible in VS Code — no error, just
- * missing highlighting), and the section-keyword/value regexes recognize the
- * exact token vocabulary the core parser (`parser/utils.ts`) scans for, so
- * the grammar can't silently drift from the format it's meant to color.
+ * Structural checks for syntaxes/tscn.tmLanguage.json, not full tokenization,
+ * which needs vscode-textmate, vscode-oniguruma and a .wasm. The grammar parses,
+ * every `#` include resolves (VS Code drops a dangling one without error), and its
+ * regexes match the tokens the core parser (`parser/utils.ts`) scans for.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -40,7 +33,7 @@ function loadGrammar(): Grammar {
   return JSON.parse(readFileSync(GRAMMAR_PATH, 'utf-8')) as Grammar;
 }
 
-/** Recursively collect every `#name` referenced via `{"include": "#name"}`. */
+/** Recursively collects every `#name` that an `{"include": "#name"}` references. */
 function collectIncludes(node: unknown, found: Set<string>): void {
   if (Array.isArray(node)) {
     for (const item of node) collectIncludes(item, found);

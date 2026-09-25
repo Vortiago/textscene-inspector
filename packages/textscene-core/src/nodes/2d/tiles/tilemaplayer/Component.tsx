@@ -1,7 +1,7 @@
 /**
- * <TileMapLayer> — renders the layer's placed cells (decoded at parse time) as
+ * <TileMapLayer> renders the layer's placed cells (decoded at parse time) as
  * batched textured quads, one mesh per atlas source. The TileSet resolves from
- * the scene's SubResources; an unresolvable TileSet or undecodable tile data
+ * the scene's SubResources. An unresolvable TileSet or undecodable tile data
  * degrades to the transform-only group with children intact (ADR-0008).
  */
 
@@ -20,10 +20,8 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
   const { model, status } = useTileSetModel(props.tile_set);
   const cells = props.cells ?? null;
 
-  // The tree-order band this layer may spread its atlas sources across.
-
-  // Stable per-source partition: parsed cells never change identity, so the
-  // batched geometries survive unrelated re-renders (and only rebuild on data).
+  // Parsed cells never change identity, so the batched geometries survive
+  // unrelated re-renders and rebuild only on new data.
   const cellsBySource = useMemo(
     () => (model && cells?.length ? drawnSources(model, cells) : null),
     [model, cells]

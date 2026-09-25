@@ -1,8 +1,6 @@
 /**
- * Gap 7: when a parse error is shown in the banner, the tree
- * pane must not present its "Loading scene…" empty state — that looks
- * like a hang. A dedicated empty-state message points the user at the
- * actionable banner instead.
+ * With a parse error in the banner, the tree pane shows a message that points
+ * at the banner, not its "Loading scene…" state, which looks like a hang.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -14,10 +12,8 @@ vi.mock('../../TscnCanvas', () => ({
 
 import { TscnPreviewShell } from './TscnPreviewShell';
 
-// Non-empty body that the lenient parser can't extract any nodes from —
-// triggers the "Parser could not extract any nodes from the content"
-// error path that previously also left the tree pane stuck on the
-// "Loading scene…" indicator.
+// The lenient parser extracts no node from this body, which takes the
+// "Parser could not extract any nodes from the content" error path.
 const MALFORMED_TSCN = '[this is { not valid tscn at all';
 
 describe('<TscnPreviewShell> parse-error empty state (WI-UX-4 / Gap 7)', () => {
@@ -29,9 +25,6 @@ describe('<TscnPreviewShell> parse-error empty state (WI-UX-4 / Gap 7)', () => {
 
   it('does not render the "Loading scene…" tree-pane empty state when there is a parse error', () => {
     render(<TscnPreviewShell panelId="parse-err" content={MALFORMED_TSCN} />);
-    // The previous behaviour mounted <SceneTreeViewer> with sceneGraph=null,
-    // which fell through to that component's "Loading scene…" branch.
-    // Post-fix the shell substitutes a dedicated empty-state message.
     expect(screen.queryByText(/Loading scene/i)).toBeNull();
   });
 

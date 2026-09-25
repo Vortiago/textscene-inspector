@@ -1,8 +1,7 @@
 /**
- * The pre-pass itself: for each class, point the camera at that class's layer
- * (plus the seed) and let the already-mounted tree draw itself into that class's
- * accumulators. Why there is a pass per class, and why three of them per class,
- * is in `CanvasLighting2D.tsx`.
+ * The pre-pass: for each class, point the camera at that class's layer and the seed, and let the
+ * mounted tree draw itself into that class's accumulators. `CanvasLighting2D.tsx` and
+ * `lightPassLayers.ts` say why each class takes up to three passes.
  */
 
 import { useFrame } from '@react-three/fiber';
@@ -24,14 +23,13 @@ export interface LightAccumulationPass {
   seedMaterial: THREE.ShaderMaterial;
   /** The canvas tint `S` starts from for an ordinary item. */
   canvasModulate: { r: number; g: number; b: number };
-  /** The published resolution vector, MUTATED in place each frame. */
+  /** The published resolution vector, mutated in place each frame. */
   resolution: THREE.Vector2;
 }
 
 /**
- * Runs the class pre-passes ahead of R3F's own render. Priority is negative so
- * this runs first, which still leaves fiber's render in place: it only takes the
- * loop over for POSITIVE priorities.
+ * Runs the class pre-passes ahead of R3F's own render. A negative priority runs first and leaves
+ * fiber's render in place, which it takes over only for a positive priority.
  */
 export function useLightAccumulationPass({
   gl,
@@ -56,11 +54,9 @@ export function useLightAccumulationPass({
     const previousMask = camera.layers.mask;
 
     const seed = seedMaterial.uniforms.uSeed!.value as THREE.Vector3;
-    // `finally`, like the SubViewport offscreen pass: a throw out of `gl.render`
-    // (a shader link failure, a lost context) would otherwise leave the renderer
-    // pointed at an accumulation buffer with most layers masked off, and r3f's
-    // own main render then draws the whole scene into it — a black canvas rather
-    // than one broken light.
+    // `finally`, as in the SubViewport pass: a throw out of `gl.render` (a link failure, a lost
+    // context) would leave the renderer on an accumulation buffer with most layers masked, and
+    // r3f's main render would draw the scene into it: a black canvas, not one broken light.
     try {
       for (let index = 0; index < targets.length; index += 1) {
         for (const pass of [
@@ -68,11 +64,9 @@ export function useLightAccumulationPass({
           // Light Only skips `color *= canvas_modulation`, so its accumulation is
           // the same lights over an unmodulated seed.
           { rt: lightOnlyTargets[index], seed: [1, 1, 1] as const, layer: LIGHT_LAYER + index },
-          // The albedo-free term. Its layer carries the shadow_color quads and the
-          // volume masks (which sit on both layers) but NOT the cookie quads, so
-          // this buffer holds only what a shadowed pixel adds. The seed is black,
-          // which is how the target gets zeroed without touching the renderer's
-          // clear colour.
+          // The albedo-free term. Its layer carries the shadow_color quads and the volume masks,
+          // not the cookie quads, so it holds only what a shadowed pixel adds. The black seed
+          // zeroes it without touching the renderer's clear colour.
           {
             rt: shadowTintTargets[index],
             seed: [0, 0, 0] as const,
@@ -87,7 +81,7 @@ export function useLightAccumulationPass({
           }
           seed.set(pass.seed[0], pass.seed[1], pass.seed[2]);
           gl.setRenderTarget(pass.rt);
-          // One clear per PASS, not per light: within a pass each light stamps its
+          // One clear per pass, not per light: within a pass each light stamps its
           // own ref, so last frame's stamps are the only ones that could be
           // mistaken for this frame's. Leaving them would make a light that has
           // stopped casting keep the hole it cut.

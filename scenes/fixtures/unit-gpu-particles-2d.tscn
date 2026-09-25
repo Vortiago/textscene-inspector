@@ -1,8 +1,7 @@
-; GPUParticles2D emitting upward sparks. Godot draws a particle cloud here;
-; the previewer draws nothing yet (ADR-0008 transform-only fallback), so this
-; fixture exists to exercise the strict validators at valid, non-default
-; values across every property group: emission core, timing, seeding,
-; drawing, collision, and trails.
+; GPUParticles2D emitting upward sparks. Godot draws a particle cloud and the previewer draws
+; nothing (ADR-0008 transform-only fallback), so this fixture exercises the strict validators at
+; valid, non-default values in every property group: emission core, timing, seeding, drawing,
+; collision and trails.
 [gd_scene load_steps=2 format=3]
 
 [sub_resource type="ParticleProcessMaterial" id="Process_1"]

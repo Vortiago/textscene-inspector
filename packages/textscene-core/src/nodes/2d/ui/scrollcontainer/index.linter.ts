@@ -1,6 +1,4 @@
-/**
- * scrollcontainer linter registration - imports linter components to trigger self-registration.
- */
+/** Registers the ScrollContainer validators and rules. */
 
 import './linterParser.js';
 import './linter.js';

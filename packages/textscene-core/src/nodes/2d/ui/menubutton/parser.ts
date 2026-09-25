@@ -1,11 +1,7 @@
 /**
- * MenuButton parser — Button's, with `flat` defaulting to true.
- *
- * `MenuButton::MenuButton()` calls `set_flat(true)` (`menu_button.cpp:264`) —
- * a class-default OVERRIDE of Button's own `flat=false`, not a new property
- * (`doc/classes/MenuButton.xml`'s `flat` carries `overrides="Button"`). A
- * `.tscn` only ever WRITES `flat` when it differs from that default, so an
- * absent key means true here, not Button's own false.
+ * Parses a MenuButton as a Button with `flat` defaulting to true. `MenuButton::MenuButton()` calls
+ * `set_flat(true)` (`menu_button.cpp:264`), a default override (`doc/classes/MenuButton.xml`), so an
+ * absent `flat` means true.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';

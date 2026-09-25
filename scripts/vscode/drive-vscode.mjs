@@ -1,35 +1,9 @@
 #!/usr/bin/env node
 /**
- * CLI over `driveScene.mjs`: drive the REAL VS Code with the TextScene
- * extension loaded, screenshot the preview webview and count its ink pixels.
- *
- * Usage:
- *   node scripts/vscode/drive-vscode.mjs <scene.tscn> [options]
- *
- *   --out <dir>        output dir (default scripts/vscode/output/<scene-name>)
- *   --workspace <dir>  workspace folder to open (default: the scene's dir)
- *   --port <n>         CDP port (default 9444)
- *   --settle <ms>      wait after the canvas settles before capturing (default 6000)
- *   --eval <file.mjs>  ES module whose default export is a self-contained
- *                      function; it is serialised, run inside the webview
- *                      frame, and its JSON result lands in report.evalResult
- *   --split            keep the .tscn source editor open beside the preview
- *                      (default: close it so the webview fills the window)
- *   --no-preserve-buffer
- *                      skip the `preserveDrawingBuffer` patch (the canvas
- *                      readback then reads blank — kept so the claim in
- *                      `.claude/skills/drive-vscode-extension` stays testable)
- *   --headed           use the ambient DISPLAY instead of xvfb-run
- *   --keep-open <ms>   keep VS Code alive this long after capture (debugging)
- *   --verbose          stream VS Code stdout/stderr
- *
- * Writes `<out>/workbench.png`, `<out>/webview.png`, `<out>/canvas.png` (the
- * WebGL readback, when it succeeds) and `<out>/report.json`, and prints a
- * summary. Exits non-zero if the preview never opened or the webview frame
- * never appeared.
- *
- * The automated regression gate over the same machinery is
- * `webview-csp-gate.mjs` (`pnpm test:vscode:csp`).
+ * CLI over `driveScene.mjs`: drives the real VS Code with the TextScene
+ * extension loaded, screenshots the preview webview and counts its ink pixels.
+ * `webview-csp-gate.mjs` (`pnpm test:vscode:csp`) is the automated gate.
+ * Usage: `node scripts/vscode/drive-vscode.mjs <scene.tscn> [options]`.
  */
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -39,10 +13,6 @@ import {
   REPO_ROOT,
   resolveVscodeBinary,
 } from './driveScene.mjs';
-
-// ============================================================================
-// Args
-// ============================================================================
 
 function parseArgs(argv) {
   const opts = {
@@ -62,15 +32,30 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     switch (arg) {
+      // Default: scripts/vscode/output/<scene-name>.
       case '--out': opts.out = argv[++i]; break;
+      // The folder to open. Default: the scene's directory.
       case '--workspace': opts.workspace = argv[++i]; break;
+      // The CDP port.
       case '--port': opts.port = Number(argv[++i]); break;
+      // Milliseconds to wait after the canvas settles, before the capture.
       case '--settle': opts.settle = Number(argv[++i]); break;
+      // An ES module whose default export is a self-contained function. It is
+      // serialised and run inside the webview frame, and its JSON result lands
+      // in report.evalResult.
       case '--eval': opts.evalFile = argv[++i]; break;
+      // Uses the ambient DISPLAY instead of xvfb-run.
       case '--headed': opts.headed = true; break;
+      // Keeps the .tscn source editor open beside the preview. By default it
+      // closes, so the webview fills the window.
       case '--split': opts.split = true; break;
+      // Skips the `preserveDrawingBuffer` patch, so the canvas readback reads
+      // blank. It keeps the claim in `.claude/skills/drive-vscode-extension`
+      // testable.
       case '--no-preserve-buffer': opts.preserveBuffer = false; break;
+      // Keeps VS Code alive this many milliseconds after the capture, to debug.
       case '--keep-open': opts.keepOpen = Number(argv[++i]); break;
+      // Streams VS Code stdout and stderr.
       case '--verbose': opts.verbose = true; break;
       default:
         if (arg.startsWith('--')) throw new Error(`Unknown option: ${arg}`);
@@ -82,18 +67,20 @@ function parseArgs(argv) {
   return opts;
 }
 
-// ============================================================================
-// Main
-// ============================================================================
-
+/**
+ * Writes `<out>/workbench.png`, `<out>/webview.png`, `<out>/canvas.png` (the
+ * WebGL readback, when it succeeds) and `<out>/report.json`, and prints a
+ * summary. Exits non-zero when the preview never opens or the webview frame
+ * never appears.
+ */
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const scene = path.resolve(opts.scene);
   if (!existsSync(scene)) throw new Error(`Scene not found: ${scene}`);
   assertExtensionBuilt();
-  // `download: false` — an interactive run should fail fast rather than start
-  // a multi-minute download; the gate, which must work in a fresh checkout,
-  // opts into the download instead.
+  // `download: false`: an interactive run fails fast rather than start a
+  // multi-minute download. The gate, which must work in a fresh checkout, opts
+  // into the download.
   const binary = await resolveVscodeBinary({ download: false });
   const workspace = path.resolve(opts.workspace ?? path.dirname(scene));
   const outDir = path.resolve(

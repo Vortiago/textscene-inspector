@@ -1,9 +1,6 @@
 /**
- * Bone2D registration — parser.
- *
- * Reuses the Node2D parse; property knowledge lives in linterParser.ts.
- * Draws nothing by design (ADR-0008), so index.r3f.ts registers Node2D
- * and its children still land in the right transform space.
+ * Bone2D registration: the parser, which reuses the Node2D parse.
+ * linterParser.ts holds the property validators.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

@@ -1,13 +1,7 @@
 /**
- * The one claim that is ShapeCast3D's alone: this slice contributes the shared cast
- * rule to the registry under its own name and node type.
- *
- * Everything the rule DOES — which conditions fire, on which family, with which
- * severity — is one factory's behaviour and is tested once beside it, in
- * linter/physics/castLinterRule.test.ts. Restating it here would be four copies
- * of one matrix, and the copies drift: an earlier draft of this file asserted
- * that a ray cast stays silent on `shapecast3d-missing-shape`, a rule only the
- * shape casts can emit, so the assertion could never fail.
+ * The one claim that is ShapeCast3D's alone: this slice registers the shared cast rule under
+ * its own name and node type. What the rule does is the factory's behaviour, tested once in
+ * linter/physics/castLinterRule.test.ts rather than copied into each of the four casts.
  */
 
 import { describe, expect, it } from 'vitest';

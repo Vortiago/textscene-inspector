@@ -1,15 +1,7 @@
 /**
- * `<ToneMapLayer>` — Godot's tonemap pass as a compositor pass.
- *
- *   RenderPass (scene → linear HDR)  →  GodotToneMapEffect
- *
- * `render_forward_clustered.cpp:2514`: Godot tonemaps the finished colour buffer,
- * after the alpha pass at `:2389`, never per fragment. The composer disables the
- * renderer's in-material tonemapping while mounted, so `EnvironmentApplier` must
- * skip its own on this path.
- *
- * One effect, not a bloom pass then a tonemap pass: `tonemap.glsl` is one shader,
- * and the glow blend sits on a different side of the curve per blend mode.
+ * Godot's tonemap pass as a compositor pass: Godot tonemaps the finished colour buffer after the alpha
+ * pass (`render_forward_clustered.cpp:2514`, `:2389`), never per fragment. One effect, not bloom then
+ * tonemap: `tonemap.glsl` is one shader, and the glow blend sits either side of the curve per mode.
  */
 
 import { useEffect, useMemo } from 'react';

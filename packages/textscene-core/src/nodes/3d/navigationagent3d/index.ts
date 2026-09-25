@@ -1,5 +1,5 @@
 /**
- * NavigationAgent3D registration — parser + property formatter.
+ * NavigationAgent3D registration: parser + property formatter.
  *
  * NavigationAgent3D extends Node (non-spatial helper): it has no visual
  * representation, so the render component (index.r3f.ts) reuses the base

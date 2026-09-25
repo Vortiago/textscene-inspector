@@ -1,7 +1,6 @@
 /**
- * RemoteTransform3D render contract: no component of its own — the registry
- * reuses the Node3D transform group (ADR-0008), registered as a pure 3D-only
- * type (neither `canvasItem` nor `container`).
+ * RemoteTransform3D render contract: no component of its own. The registry reuses the Node3D
+ * transform group (ADR-0008) as a 3D-only type (neither `canvasItem` nor `container`).
  */
 
 import { describe, expect, it } from 'vitest';

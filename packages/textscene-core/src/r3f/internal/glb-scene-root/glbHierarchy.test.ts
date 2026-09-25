@@ -1,7 +1,4 @@
-/**
- * buildGlbHierarchy — deterministic walk of a loaded GLB Object3D into a
- * display hierarchy with stable, disambiguated relative paths.
- */
+/** `buildGlbHierarchy`: stable, disambiguated relative paths for a loaded GLB. */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {

@@ -1,7 +1,6 @@
 /**
- * Polygon2D parser — Node2D transform/modulate plus the filled-polygon surface
- * (polygon outline, flat fill color, offset, optional texture reference).
- * Godot defaults: color = white, offset = (0,0).
+ * Parses a Polygon2D: the Node2D surface plus the filled-polygon surface. Godot
+ * defaults `color` to white and `offset` to (0,0).
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
@@ -34,7 +33,7 @@ export function parsePolygon2D(
   }
 
   // `polygons` is an Array of PackedInt32Array index lists. A malformed value
-  // degrades to "no sub-polygons", i.e. the stored vertex order.
+  // degrades to no sub-polygons, so to the stored vertex order.
   let polygons: number[][] = [];
   if (properties.polygons) {
     try {
@@ -46,8 +45,8 @@ export function parsePolygon2D(
     }
   }
 
-  // `uv` and `vertex_colors` degrade to empty, which is exactly Godot's
-  // "sizes don't match" branch: point coordinates stand in for UVs, and the
+  // `uv` and `vertex_colors` degrade to empty, which is Godot's
+  // "sizes do not match" branch: point coordinates stand in for UVs, and the
   // flat `color` stands in for per-vertex colors.
   let uv: Float32Array = new Float32Array(0);
   if (properties.uv) {

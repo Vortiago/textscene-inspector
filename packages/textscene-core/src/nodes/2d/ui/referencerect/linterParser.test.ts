@@ -1,13 +1,7 @@
 /**
- * ReferenceRect strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property (happy, malformed, and any bound), and
- * quote the governing Godot source line beside every numeric bound.
+ * ReferenceRect strict validators: format and range checks, asserted through
+ * `validatorRegistry` so a failure points at the validator, not at scene parsing.
+ * Each numeric bound quotes its governing Godot source line.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -28,7 +22,7 @@ function check(property: string, value: string) {
  * border_width, editor_only.
  */
 const KEYS: string[] = ['border_color', 'border_width', 'editor_only'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 describe('ReferenceRect strict validators', () => {
@@ -41,16 +35,13 @@ describe('ReferenceRect strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // Runs the fixture against only this test's imports. `fixtureLint` runs
+    // it against the whole registry.
     expectFixtureClean('unit-reference-rect.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format.
     const accepted = validatorRegistry
       .getOwnKeys('ReferenceRect')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);

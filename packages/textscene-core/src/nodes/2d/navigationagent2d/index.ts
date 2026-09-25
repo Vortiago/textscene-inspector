@@ -1,9 +1,6 @@
 /**
- * NavigationAgent2D registration — parser.
- *
- * Reuses the Node parse; property knowledge lives in linterParser.ts.
- * Draws nothing by design (ADR-0008), so index.r3f.ts registers Node
- * and its children still land in the right transform space.
+ * NavigationAgent2D registration: the parser, which reuses the Node parse.
+ * linterParser.ts holds the property validators.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

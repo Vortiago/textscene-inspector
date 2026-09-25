@@ -1,37 +1,8 @@
 /**
- * <Decal> — Godot's texture projector, rendered as a real projection.
- *
- * Godot projects `texture_albedo` down the node's local -Y axis onto whatever
- * surfaces sit inside an axis-aligned box of dimensions `size` (centred on the
- * origin), clips the texture to that box, and blends it onto the LIT surface.
- * We reproduce that with three's `DecalGeometry` (see `decalProjection.ts`):
- * after mount, we walk the live THREE scene for meshes the box touches and bake
- * a decal mesh onto each, in the decal's own local frame. The projections hang
- * under a plain (unscaled) group so they inherit only the decal's world
- * transform — `size` enters solely as the projector's box dimensions.
- *
- * Material: an unlit-albedo-over-a-lit-surface blend via `MeshStandardMaterial`
- * (so the projected texture is shaded by the same lights as the surface beneath
- * it, matching Godot). `albedo_mix × modulate.a` drives opacity — the stand-in
- * for "how strongly the albedo replaces the surface"; `modulate` tints it.
- *
- * Gizmo: Godot's editor outlines the projector box, but its RUNTIME (what our
- * reference renders) draws none — so the box wireframe is selection-gated via
- * `useGizmoVisible()` (ADR-0018), matching Marker3D/Path3D. An unselected decal
- * shows only its projection, exactly like Godot at runtime.
- *
- * Honoured: `texture_albedo`, `size`, `modulate`, `albedo_mix`, `cull_mask` —
- * Godot's exact rule, `decal.cull_mask & instance.layers`, applied when the
- * receivers are collected (`decalProjection.ts`) — and all four fades. The two
- * geometric ones bake per vertex into the projection's `color` attribute
- * (`decalFade.ts`); `distance_fade_*` is a per-frame `opacity` write, because
- * Godot computes it per decal on the CPU rather than per fragment.
- *
- * Parsed but not yet projected: the normal/ORM/emission maps and
- * `emission_energy`. (Godot's distance fade scales `emission_energy` alongside
- * modulate alpha; irrelevant until emission is wired.)
- *
- * Wraps `<Node3D>` so transform, visibility, and children come from the base.
+ * <Decal>: Godot's texture projector, rendered as a real projection of `texture_albedo` down local
+ * -Y, clipped to an origin-centred box of `size` and blended onto the lit surfaces inside it.
+ * Wraps `<Node3D>` for transform, visibility and children. Parsed but not yet projected: the
+ * normal/ORM/emission maps and `emission_energy`, which Godot's distance fade also scales.
  */
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -76,6 +47,8 @@ const cameraOrigin = new THREE.Vector3();
 export function Decal({ node, children }: NodeComponentProps) {
   const properties = node.properties as DecalProperties;
   const { externalResources, internalResources } = useSceneResources();
+  // Godot's editor outlines the projector box but its runtime, which the reference renders, draws
+  // none, so the wireframe is selection-gated (ADR-0018), as for Marker3D and Path3D.
   const gizmoVisible = useGizmoVisible();
 
   const scene = useThree((s) => s.scene);
@@ -86,9 +59,9 @@ export function Decal({ node, children }: NodeComponentProps) {
   // built imperatively inside the effect, so a ref is the only handle on it.
   const materialRef = useRef<THREE.MeshStandardMaterial | null>(null);
 
-  // Unit-cube projection-volume wireframe — `size` scales the gizmo group, so
-  // animating `size` (ADR-0017) stays a cheap scale write. Handed to R3F via
-  // `primitive`, which does NOT auto-dispose; release on unmount.
+  // Unit-cube projection-volume wireframe. `size` scales the gizmo group, so animating `size`
+  // (ADR-0017) stays a cheap scale write. R3F's `primitive` does not auto-dispose, so this
+  // releases it on unmount.
   const boxEdges = useMemo(() => {
     const box = new THREE.BoxGeometry(1, 1, 1);
     const edges = new THREE.EdgesGeometry(box);
@@ -97,12 +70,9 @@ export function Decal({ node, children }: NodeComponentProps) {
   }, []);
   useEffect(() => () => boxEdges.dispose(), [boxEdges]);
 
-  // `useTexture2D`, not the path-only resolver: `texture_albedo` may name an
-  // inline procedural texture, which is described entirely by the scene and
-  // has no file to load. The projection material below borrows this texture as
-  // its `map` and never disposes it — `Material.dispose()` releases the
-  // material only — so the shared cache entry behind it stays valid for every
-  // other consumer.
+  // `useTexture2D`, not the path-only resolver: `texture_albedo` may name an inline procedural
+  // texture with no file to load. The projection material borrows it as `map` and never disposes
+  // it (`Material.dispose()` releases the material only), so the shared cache entry stays valid.
   const { texture: albedoTexture } = useTexture2D(
     properties.texture_albedo,
     externalResources,
@@ -133,10 +103,10 @@ export function Decal({ node, children }: NodeComponentProps) {
   // fold it with modulate alpha into the projection's opacity.
   const opacity = clamp01(properties.albedo_mix * modulate.a);
 
-  // Build the projection meshes IMPERATIVELY (via the group ref, not React
-  // state) so a scene-walk that mutates THREE objects can never feed a render
-  // loop — the two-frame visual gate needs the output to converge. Re-runs when
-  // the albedo, box, tint, or the live tree (async receiver loads) change.
+  // Build the projection imperatively, through the group ref, not React state: walk the live
+  // scene for meshes the box touches and bake a `DecalGeometry` mesh onto each in the decal's
+  // local frame (`decalProjection.ts`). A scene-walk that mutates THREE objects then never feeds
+  // a render loop, and the two-frame visual gate needs the output to converge.
   useEffect(() => {
     const group = projectionRef.current;
     if (!group || !albedo) return undefined;
@@ -147,8 +117,11 @@ export function Decal({ node, children }: NodeComponentProps) {
     const decalWorld = group.matrixWorld;
     const decalWorldInverse = decalWorld.clone().invert();
     const boxAABB = computeDecalBoxWorldAABB(decalWorld, size);
+    // Godot's rule, `decal.cull_mask & instance.layers`, applies as the receivers are collected.
     const receivers = collectDecalReceivers(scene, boxAABB, properties.cull_mask);
 
+    // Unlit albedo over a lit surface: the same lights shade the projection as the surface
+    // beneath it, as in Godot.
     const material = new THREE.MeshStandardMaterial({
       map: albedo,
       color,
@@ -156,14 +129,13 @@ export function Decal({ node, children }: NodeComponentProps) {
       roughness: 1,
       transparent: true,
       opacity,
-      // Godot's depth/normal fades ride the baked RGBA `color` attribute, whose
-      // RGB is 1 so only alpha is scaled. three enables vertex ALPHA only at
-      // itemSize 4; `buildDecalProjectionGeometry` always writes the attribute,
-      // so this flag can never meet a geometry without one (which would sample
-      // the material default rather than merely skip the fade).
+      // Godot's depth/normal fades ride the baked RGBA `color` attribute, whose RGB is 1, so only
+      // alpha scales. three enables vertex alpha only at itemSize 4, and
+      // `buildDecalProjectionGeometry` always writes the attribute, so no geometry lacks one,
+      // which would sample the material default instead of skipping the fade.
       vertexColors: true,
       depthWrite: false,
-      // Sit the projection ON the surface without z-fighting the coincident
+      // Sit the projection on the surface without z-fighting the coincident
       // receiver face.
       polygonOffset: true,
       polygonOffsetFactor: -1,
@@ -171,6 +143,7 @@ export function Decal({ node, children }: NodeComponentProps) {
     });
     materialRef.current = material;
 
+    // The upper, lower and normal fades bake per vertex into the `color` attribute (`decalFade.ts`).
     const fade: DecalGeometricFade = {
       upperFade: properties.upper_fade,
       lowerFade: properties.lower_fade,
@@ -184,8 +157,8 @@ export function Decal({ node, children }: NodeComponentProps) {
       mesh.userData.isDecalProjection = true;
       mesh.receiveShadow = true;
       mesh.renderOrder = 3;
-      // A projection is a visual overlay, not pickable geometry — let clicks
-      // fall through to the surface beneath it (and never re-select via it).
+      // A projection is a visual overlay, not pickable geometry: clicks fall through to the
+      // surface beneath it and never re-select through it.
       mesh.raycast = () => {};
       group.add(mesh);
     }
@@ -202,7 +175,7 @@ export function Decal({ node, children }: NodeComponentProps) {
     };
     // `size` is the authored Vector3 (stable identity) unless an
     // AnimationPlayer is driving it, in which case a size keyframe rebuilds the
-    // projection — acceptable for the rare animated-decal case.
+    // projection, acceptable for the rare animated-decal case.
   }, [
     scene,
     invalidate,
@@ -217,27 +190,21 @@ export function Decal({ node, children }: NodeComponentProps) {
     resourceVersion,
   ]);
 
-  // Distance fade is the one term Godot computes per DECAL per frame rather
-  // than per fragment: `update_decal_buffer` measures camera-to-decal-origin,
-  // culls anything past `begin + length`, and folds the rest into the decal's
-  // modulate alpha. Mirroring it as an opacity write means no shader and no
-  // rebuild — the projection geometry is untouched. Hooks cannot be conditional,
-  // so the enabled test is the guard inside, not around, the callback.
+  // Distance fade is the one term Godot computes per decal per frame, not per fragment:
+  // `update_decal_buffer` measures camera-to-decal-origin, culls past `begin + length` and folds
+  // the rest into modulate alpha. An opacity write mirrors it with no shader and no rebuild.
   useFrame((state) => {
     const group = projectionRef.current;
     const material = materialRef.current;
     if (!group || !material) return;
 
-    // The DISABLED case still has to run, and settle at fade = 1: the effect
-    // above does not depend on `distance_fade_enabled`, so turning the feature
-    // off on a re-parse rebuilds nothing — a decal left faded (or hidden) by an
-    // earlier frame would stay that way for the rest of the session.
+    // Hooks cannot be conditional, so the enabled test sits inside. The disabled case settles at
+    // fade = 1: the effect above ignores `distance_fade_enabled`, so a decal faded or hidden by an
+    // earlier frame would otherwise stay that way after the feature is turned off.
     let fade = 1;
     if (properties.distance_fade_enabled) {
-      // Both ends read the same way — straight off `matrixWorld`, no update
-      // forced. `getWorldPosition` would call `updateWorldMatrix` first, ~20x
-      // the cost, and buy no extra consistency since the decal end is a raw
-      // read.
+      // Both ends read straight off `matrixWorld`, with no update forced. `getWorldPosition` would
+      // call `updateWorldMatrix` first, ~20x the cost, for no extra consistency.
       decalOrigin.setFromMatrixPosition(group.matrixWorld);
       cameraOrigin.setFromMatrixPosition(state.camera.matrixWorld);
       fade = decalDistanceFade(
@@ -268,7 +235,7 @@ export function Decal({ node, children }: NodeComponentProps) {
           </lineSegments>
         </group>
       )}
-      {/* Projection meshes are attached here imperatively — an unscaled group so
+      {/* Projection meshes attach here imperatively, to an unscaled group, so
           they inherit only the decal's world transform, not `size`. */}
       <group ref={projectionRef} />
       {children}

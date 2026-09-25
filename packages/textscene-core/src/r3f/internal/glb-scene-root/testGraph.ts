@@ -1,12 +1,6 @@
 /**
- * Build a THREE graph from `parent/child` path strings, for the GLB-override
- * suites.
- *
- * Both `matchGlbTarget` and `applyGlbNodeOverrides` are tested against a graph
- * shaped like a loaded glTF, and hand-building one per suite is the kind of
- * duplication that lets two tests drift into testing different shapes. Nodes are
- * `Mesh` because that is what the override paths actually target — and a `Mesh`
- * IS an `Object3D`, so path-matching tests read the same.
+ * A glTF-shaped THREE graph from `parent/child` paths, shared by the GLB-override suites so they
+ * test one shape. Nodes are `Mesh`, the type override paths target.
  */
 
 import * as THREE from 'three';

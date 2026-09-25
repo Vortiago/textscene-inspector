@@ -1,11 +1,8 @@
 /**
- * Node2D parser — parses the 2D transform + draw-order surface.
- *
- * Godot serialises a Node2D's placement either as discrete
- * `position`/`rotation`/`scale`/`skew` properties or as a single
- * `transform = Transform2D(xx, xy, yx, yy, ox, oy)` (x-axis, y-axis, origin).
- * When the matrix form is present it wins and is decomposed; otherwise the
- * discrete props are read. Angles are radians (`rotation_degrees` is converted).
+ * Node2D parser for the 2D transform and draw-order surface. Godot writes the placement as discrete
+ * `position`/`rotation`/`scale`/`skew` or as one `transform = Transform2D(xx, xy, yx, yy, ox, oy)`
+ * (x-axis, y-axis, origin), which wins and is decomposed. Angles are radians, and
+ * `rotation_degrees` is converted.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

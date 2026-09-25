@@ -1,12 +1,8 @@
 /**
- * `parentTypeVerdict`'s three ways of not knowing.
- *
- * The union exists so a rule has to choose deliberately between them, and the
- * arm that matters most is `unknowable`: getting it wrong means announcing a
- * defect in a scene the linter cannot actually see into.
- *
- * `visibleInTreeVerdict`, the other family in `parentType.ts`, is the siblings
- * `parentType.visibility.test.ts` and `parentType.canvasItemVisibility.test.ts`.
+ * `parentTypeVerdict`'s three ways of not knowing, a union so a rule chooses
+ * between them. A wrong `unknowable` announces a defect in a scene the linter
+ * cannot see into. `visibleInTreeVerdict` is tested in `parentType.visibility.test.ts`
+ * and `parentType.canvasItemVisibility.test.ts`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -42,9 +38,8 @@ describe('the two doors to a parent', () => {
   it('declines a parent whose stated type ClassDB does not know', () => {
     // Godot's own check is a runtime `cast_to` against a ClassDB with every
     // GDExtension registered (collision_shape_3d.cpp:125-128). A `.tscn` names
-    // only the class, so for a class outside the catalog ancestry is
-    // undecidable — and `descendsFrom` returning false read as a confident
-    // "is NOT a CollisionObject3D" about `JBody3D`, a Jolt extension class.
+    // only the class, so ancestry outside the catalog is undecidable, as for
+    // `JBody3D`, a Jolt extension class.
     const scene = new TscnParser().parse(
       `[gd_scene format=3]
 
@@ -78,7 +73,7 @@ describe('the two doors to a parent', () => {
 
   it('parentIdentity hands the same node back, because identity is knowable', () => {
     // A NodePath `..` is `get_parent()` and never reads the class, so declining
-    // here stopped a walk over a node the file names perfectly well.
+    // here would stop a walk over a node the file names.
     const scene = overridden();
     expect(parentIdentity(scene, byName(scene.nodes, 'Leaf'))?.name).toBe('Mid');
   });
@@ -157,13 +152,10 @@ describe('parentTypeVerdict', () => {
   });
 
   it('cannot know the type of a parent that only OVERRIDES one inside an instance', () => {
-    // The regression this file was written for. A heading with neither `type=`
-    // nor `instance=` overrides a node already present inside an instanced
-    // ancestor, and its real type lives in that other scene. But
+    // A heading with neither `type=` nor `instance=` overrides a node inside an
+    // instanced ancestor, whose real type lives in that other scene. But
     // `NodeRegistry.ts:109` defaults a missing type to `'Node'`, so a check of
-    // `!parent.type` sees a confident `'Node'` and answers `mismatch` — which
-    // made the linter report a misplaced skeleton modifier in Godot's own
-    // shipped ragdoll demo.
+    // `!parent.type` sees a confident `'Node'` and answers `mismatch`.
     const scene = parse(
       `[gd_scene load_steps=2 format=3]
 
@@ -201,9 +193,9 @@ describe('an ancestor Godot\'s catalog does not know', () => {
 
   it('is unknowable at the walk, not a mismatch at each caller', () => {
     // `descendsFrom` is false for "not a subclass" and "never heard of it"
-    // alike, so a GDExtension parent read as the former warns about a scene
-    // that is correct. The check lives in `knownParent` because four callers
-    // reading `ancestor.type` through `searchAncestors` never had it.
+    // alike, so a GDExtension parent read as the former warns about a correct
+    // scene. The check lives in `knownParent`, so every caller reading
+    // `ancestor.type` through `searchAncestors` gets it.
     expect(knownParent(scene, bone).kind).toBe('unknowable');
     expect(parentTypeVerdict(scene, bone, 'Skeleton2D').kind).toBe('unknowable');
   });

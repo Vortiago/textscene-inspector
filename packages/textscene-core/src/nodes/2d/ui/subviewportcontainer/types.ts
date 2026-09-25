@@ -1,8 +1,6 @@
 /**
- * SubViewportContainer — the Control that displays its SubViewport children's
- * render targets (a **viewport surface**, ADR-0033).
- *
- * Godot draws EVERY SubViewport child, stacked in tree order
+ * SubViewportContainer: the Control that displays its SubViewport children's render targets (a
+ * **viewport surface**, ADR-0033). Godot draws every SubViewport child, stacked in tree order
  * (`SubViewportContainer::_notification(NOTIFICATION_DRAW)`).
  */
 
@@ -16,9 +14,8 @@ export interface SubViewportContainerProperties extends ControlProperties {
    */
   stretch: boolean;
   /**
-   * Integer divisor applied to the container rect when `stretch` is on — the
-   * target renders smaller and is scaled up. Godot `ERR_FAIL_COND(p_shrink < 1)`.
-   * Ignored entirely when `stretch` is false.
+   * Integer divisor of the container rect when `stretch` is on: the target renders smaller and is
+   * scaled up. Godot `ERR_FAIL_COND(p_shrink < 1)`. Ignored when `stretch` is false.
    */
   stretch_shrink: number;
 }

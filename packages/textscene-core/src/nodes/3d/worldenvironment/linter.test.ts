@@ -1,10 +1,7 @@
 /**
- * Tests for WorldEnvironment linter (strict parser + semantic rules)
- *
- * Fixtures use `sub_resource`/`ext_resource` headings (resource existence is the
- * point of these rules), which the kit's node()/scene() builders can't express,
- * so the content strings stay raw — but every assert triplet collapses onto the
- * kit helpers.
+ * WorldEnvironment linter tests, strict parser and semantic rules. The fixtures need
+ * `sub_resource`/`ext_resource` headings, which the kit's node()/scene() builders cannot express,
+ * so the content strings stay raw and the asserts use the kit helpers.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -174,7 +171,7 @@ camera_attributes = SubResource("Cam_1")
       it('treats a leading cleared environment as an empty slot, not as the winner', () => {
         // `environment = null` is `Ref::is_null()`, so the node never joins the
         // group (world_environment.cpp:39-40) and the next one along is the one
-        // Godot honours — while the cleared node itself has no visible effect.
+        // Godot honours, while the cleared node itself has no visible effect.
         const content = `[gd_scene format=3]
 
 [sub_resource type="Environment" id="env_1"]
@@ -437,7 +434,7 @@ environment = SubResource("env_2")
       expect(named.map((d) => d.nodeName)).toEqual(['WorldEnvironment2']);
     });
 
-    // The engine's test is `Ref<Environment> != environment`, i.e. resource
+    // The engine's test is `Ref<Environment> != environment`, that is, resource
     // identity. Two nodes naming one ExtResource hold the same instance.
     it('stays silent when both nodes name the same environment resource', () => {
       expectNoDiagnostic(
@@ -586,8 +583,8 @@ camera_attributes = ExtResource("cam_ext")
     });
 
     it('should handle missing environment and format error together', () => {
-      // When there's a format error during strict parsing, semantic validation doesn't run
-      // So we only expect the format error from the strict parser
+      // The strict parser reports the malformed value. The semantic rules still run, and this test
+      // asserts only the format error.
       expectDiagnostic(
         `[gd_scene format=3]
 
@@ -601,13 +598,10 @@ camera_attributes = invalid_format
     });
 
     it('reads an empty environment value as an empty slot, not as a reference that failed to resolve', () => {
-      // `environment = ` is a format error, and the strict parser reports it.
-      // The semantic rule must then read the slot the way every other swept
-      // resource slot reads it, as holding nothing, rather than resolving
-      // `''` as a reference and reporting a second, rule-level error, and
-      // rather than counting the node as one that declares an environment,
-      // which hands it the group's first place and blames the node that
-      // actually has one.
+      // `environment = ` is a format error, and the strict parser reports it. The semantic rule must
+      // read the slot as holding nothing. Resolving `''` as a reference reports a second error, and
+      // counting the node as declaring an environment hands it the group's first place and blames
+      // the node that has one.
       const content = `[gd_scene format=3]
 
 [sub_resource type="Environment" id="env_1"]

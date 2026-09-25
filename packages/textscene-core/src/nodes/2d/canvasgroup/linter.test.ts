@@ -1,11 +1,8 @@
 /**
- * CanvasGroup linter tests — the ancestor-chain checks
- * `CanvasGroup::get_configuration_warnings()` performs (canvas_group.cpp:67-95).
- *
- * Through `Linter` (via testkit), matching every other `linter.test.ts` in this
- * repo (`Linter` reads only `ruleRegistry`/`validatorRegistry`, populated here
- * solely by this file's own `./linterParser` and `./linter` imports — it does
- * NOT pull the aggregation barrel that self-registers every node type).
+ * CanvasGroup linter: the ancestor-chain checks of
+ * `CanvasGroup::get_configuration_warnings()` (canvas_group.cpp:67-95), through
+ * `Linter`. Only this file's `./linterParser` and `./linter` imports register
+ * anything, since the aggregation barrel is not imported.
  */
 import { describe, it, expect } from 'vitest';
 import { node, scene, lint, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
@@ -40,7 +37,7 @@ describe('CanvasGroup Linter', () => {
 
     it('warns when an ancestor carries the value the serialiser writes for -1', () => {
     // Measured on 4.6.3: `clip_children = -1` is written `4294967295`, which
-    // narrows to -1 on the write, sails past ERR_FAIL_COND and CLIPS.
+    // narrows to -1 on the write, passes ERR_FAIL_COND and clips.
     for (const mode of ['4294967295', '2147483648']) {
       expectDiagnostic(
         scene(

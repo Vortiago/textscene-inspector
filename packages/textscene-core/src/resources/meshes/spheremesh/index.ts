@@ -1,4 +1,4 @@
-/** SphereMesh resource slice — claims the type name, re-exports its decode. */
+/** SphereMesh resource slice: claims the type name, re-exports its decode. */
 
 import { registerMeshSlice } from '../registerMeshSlice.js';
 

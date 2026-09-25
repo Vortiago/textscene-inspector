@@ -1,12 +1,8 @@
 /**
- * Which owner's `%Name` table a rendered node resolves against, and what that
- * table holds once instanced content is composed in.
- *
- * `_acquire_unique_name_in_owner` registers on the node's OWNER
- * (node.cpp:2222-2234); `get_node` reads the caller's own table, else its
- * owner's (node.cpp:1930-1938). `packed_scene.cpp:565-570` acquires a
- * sub-scene's names while THAT scene instantiates, before the outer file's
- * override properties land (:492), so the sub-scene's claimants come first.
+ * Which owner's `%Name` table a rendered node resolves against, and what that table
+ * holds once instanced content is composed in. `packed_scene.cpp:565-570` acquires a
+ * sub-scene's names before the outer file's override properties land (:492), so the
+ * sub-scene's claimants come first.
  */
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
@@ -166,11 +162,10 @@ describe('ownerClaims', () => {
 });
 
 describe('ownership the outer file cannot see', () => {
-  // `Widget` is instanced by hud.tscn, not by this file, so an override of a
-  // node inside it keeps Widget as its owner (resource_format_text.cpp:264-265
-  // leaves the owner alone) and `%Face` registers on Widget's table
-  // (node.cpp:2222-2234): a consumer inside Widget resolves it, one directly
-  // under the HUD instance does not (node.cpp:1930-1938).
+  // hud.tscn instances `Widget`, so an override inside it keeps Widget as owner
+  // (resource_format_text.cpp:264-265) and `%Face` registers on Widget's table
+  // (node.cpp:2222-2234). A consumer inside Widget resolves it, one directly under
+  // the HUD instance does not (node.cpp:1930-1938).
   const nested = new TscnParser().parse(`[gd_scene format=3]
 [ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
 

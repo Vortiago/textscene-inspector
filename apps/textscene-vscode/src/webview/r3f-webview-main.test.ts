@@ -1,26 +1,8 @@
 /**
- * Tests for `r3f-webview-main.tsx`, the R3F webview entry point.
- *
- * This file previously had ZERO test coverage. It is the webview-side half
- * of the host<->webview protocol (`../protocol.ts`): it installs the
- * `message` listener, replies with the `webviewReady` handshake, applies
- * `loadTscn` / `incrementalUpdate` / `resourceChanged` messages, forwards
- * `jumpToNode` on node-reveal, and wires the log adapter — all exercised
- * here via a fully-synthetic `@textscene/core` mock (no real R3F/three.js
- * ever loads, so this runs in plain happy-dom).
- *
- * Kept as `.test.ts` (not `.test.tsx`): this project's `vitest.config.ts`
- * only includes `src/**\/*.{test,spec}.ts` (environment: 'node', no React
- * Testing Library dependency) — a `.test.tsx` file here would type-check
- * and lint cleanly but Vitest would never collect or run it. Mock
- * components are built with `createElement` so no JSX literal is needed.
- *
- * Message capture avoids real DOM event dispatch (matching
- * `WebviewResourceProvider.test.ts`'s convention): `window.addEventListener`
- * is spied with a non-passthrough implementation that only records 'message'
- * listeners into a local array, which tests invoke directly. React's
- * `useEffect` still runs on a real macrotask, so callers `await flush()`
- * after mounting/dispatching before asserting on effect-driven state.
+ * Tests for `r3f-webview-main.tsx`, the webview half of `../protocol.ts`. `.ts`,
+ * not `.tsx`: `vitest.config.ts` collects only `src/**\/*.{test,spec}.ts`, so the
+ * mocks use `createElement`. A spied `addEventListener` records 'message' listeners
+ * for direct calls, and `useEffect` runs on a macrotask, so tests `await flush()`.
  */
 // @vitest-environment happy-dom
 
@@ -52,10 +34,8 @@ const captured: {
   pipelineProvider?: unknown;
 } = {};
 
-// Fully synthetic mock (no `importActual`): this test only exercises the
-// message-plumbing glue in `r3f-webview-main.tsx`, never the real
-// `<TscnPreviewShell>` (which would pull in three.js/r3f — unusable under
-// happy-dom without a WebGL context).
+// A synthetic mock, no `importActual`: the real `<TscnPreviewShell>` pulls in
+// three.js/r3f, which happy-dom cannot run without a WebGL context.
 vi.mock('@textscene/core', () => ({
   createResourcePipeline: vi.fn((provider: unknown) => {
     captured.pipelineProvider = provider;
@@ -79,12 +59,9 @@ function flush(): Promise<void> {
 }
 
 /**
- * Poll `predicate` until it's true. The FIRST mount in a test file pays for
- * `react-dom/client`'s cold-start (module init + first commit), which can
- * take longer than a single 10ms macrotask tick — a fixed-delay `flush()`
- * after `mountR3FWebview()` was observed to flake on exactly that first
- * mount. Every later effect (dispatch-driven re-renders) settles well
- * within one `flush()`, so only the initial mount uses this.
+ * Polls `predicate` until it is true. The first mount in a file pays for
+ * `react-dom/client`'s cold start, which can outlast one 10ms `flush()`. Every
+ * later effect settles within one `flush()`, so only the first mount polls.
  */
 async function waitFor(predicate: () => boolean, timeoutMs = process.env.CI ? 5000 : 1000): Promise<void> {
   const start = Date.now();
@@ -135,9 +112,8 @@ async function mountFresh(config?: Record<string, unknown>): Promise<{ vscodeApi
   const mod = await import('./r3f-webview-main');
   mod.mountR3FWebview();
 
-  // Every successful mount's first observable effect is the webviewReady
-  // handshake — wait for it so callers see a fully-settled mount rather
-  // than racing the first commit's passive-effect flush.
+  // A mount's first observable effect is the webviewReady handshake, so waiting
+  // for it settles the mount past the first commit's passive effects.
   await waitFor(() =>
     vscodeApi.postMessage.mock.calls.some(
       (call) => (call[0] as { type?: string } | undefined)?.type === 'webviewReady'
@@ -237,9 +213,8 @@ describe('incrementalUpdate handling', () => {
     await waitFor(() => captured.shellProps?.content === 'original');
 
     dispatch({ type: 'incrementalUpdate', data: { changes: [], sceneData: {} } });
-    // A fixed beat, not a `waitFor` — this proves the update did NOT change
-    // content, so a condition-based wait on "still 'original'" would pass
-    // instantly without giving a (would-be) unwanted update any chance to land.
+    // A fixed beat, not a `waitFor`: a wait on "still 'original'" passes at once,
+    // before an unwanted update has a chance to land.
     await flush();
 
     expect(captured.shellProps?.content).toBe('original');

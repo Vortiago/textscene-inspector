@@ -1,11 +1,8 @@
 /**
- * Tests for the CylinderShape3D decode.
- *
- * Defaults ported from Godot `cylinder_shape_3d.h:39-40`
- * (`float radius = 0.5`, `float height = 2.0`). Unlike CapsuleShape3D the
- * setters are independent — `cylinder_shape_3d.cpp:94` and `:105` assign and
- * update the shape without touching the other property — so a squat cylinder
- * (height < 2 * radius) is legal and must survive the decode unchanged.
+ * CylinderShape3D decode. Defaults: `cylinder_shape_3d.h:39-40` (`float radius = 0.5`,
+ * `float height = 2.0`). Unlike CapsuleShape3D the setters are independent
+ * (`cylinder_shape_3d.cpp:94` and `:105`), so a squat cylinder (height < 2 * radius)
+ * survives the decode unchanged.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

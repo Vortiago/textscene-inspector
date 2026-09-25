@@ -1,59 +1,10 @@
 /**
- * How a canvas item receives the accumulated light.
- *
- * The accumulator holds `S` (see `CanvasLighting2D`), so an item's whole job is
- * `color.rgb = albedo x S`. The albedo is what the CPU side already produced —
- * `useCanvasItemTint` composes `albedo x canvas_modulation`, so the injection
- * divides that tint back out to recover the per-fragment albedo, which is the
- * only quantity a texture and vertex colours leave available per fragment.
- *
- * That division is exact rather than lossy, because the divisor is FLOORED: the
- * CPU folds `max(canvas_modulation, CANVAS_MODULATE_FLOOR)` and the shader
- * divides by the same. Without the floor a black CanvasModulate — the ordinary
- * way to author night — annihilates the albedo, and no light can ever bring it
- * back. The floor costs at most one 8-bit step on the base term, and nothing at
- * all on the lit result, because `S` still carries the TRUE canvas modulate.
- *
- * All of it happens in Godot's space. A non-HDR 2D viewport (`hdr_2d` defaults
- * false) never enters a linear working space, so the injection decodes three's
- * linear fragment to sRGB, does Godot's arithmetic there — including the [0, 1]
- * clamp Godot's framebuffer applies — and re-encodes; three's own
- * `colorspace_fragment` then converts once more on the way out.
- *
- * LIGHT CULLING. Godot applies a light to an item only when the item's
- * `light_mask`, its accumulated `z_final` and its canvas's layer all pass the
- * light's window (`lightCullKey`), so the accumulation is split into one buffer
- * per distinct cull TUPLE and this item reads the ones it is not culled from.
- * WHICH ones is decided on the CPU, once per item per frame, and arrives as a
- * per-slot weight. GLSL ES 1.00, which is what three compiles an
- * `onBeforeCompile` injection as, has no bitwise operators at all, and a
- * per-fragment test would recompute a per-item constant at every pixel. The
- * slots are UNROLLED because the same GLSL version cannot index a sampler array
- * by anything but a constant expression.
- *
- * Combining several classes is `S = seed + Σ (S_class − seed)`, which is what
- * Godot's loop produces whenever the blends commute. One class (the ordinary
- * case, and every masked scene in the corpus) is reproduced EXACTLY, as is any
- * number of ADD/SUB classes, because each contributes an independent `± light·a`
- * term to the same sum. Only a MIX light in one class over a light in ANOTHER
- * class reaching the SAME item diverges, since MIX interpolates the accumulator
- * and so does not commute across the split.
- *
- * Both `light_mode` exclusions are here, matching the guards in `canvas.glsl`:
- * `MODE_UNSHADED` skips the canvas tint AND the light loop, while
- * `MODE_LIGHT_ONLY` skips only the canvas tint — so it reads the accumulation
- * seeded from an unmodulated white instead — and is then masked by the summed
- * cookie coverage. Measured against Godot 4.6.3, a Light Only item keeps its own
- * albedo where light reaches it and fades to nothing where none does: it is an
- * alpha mask, not a recolouring. An unlit Light Only panel renders fully
- * transparent, and a lit one at full cookie alpha renders its authored colour.
- *
- * LIGHT MODE IS A UNIFORM, NOT A VARIANT. Godot picks a shader version per draw;
- * three bakes its program inputs in at a material's first compile
- * (`materialProgramInputs.ts`) while a re-parse edits `light_mode` under a MOUNTED
- * item. So the mode rides `uLightMode`, as "which lights exist" already rides
- * `uLightClassWeight`.
- *
+ * How a canvas item takes the light, per `canvas.glsl`: `color.rgb = albedo × S`. `useCanvasItemTint`
+ * composes `albedo × canvas_modulation`, so the injection divides the tint out. A non-HDR 2D
+ * viewport (`hdr_2d` false) never goes linear, so the injection decodes to sRGB, does Godot's
+ * arithmetic with its [0, 1] clamp, and re-encodes before three's `colorspace_fragment`.
+ */
+/*
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -66,9 +17,9 @@ import { MAX_LIGHT_CLASSES } from './CanvasLighting2D.js';
 import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from './srgbTransfer.js';
 
 /**
- * The smallest canvas-modulate channel the CPU will fold into an item's colour.
- * One 8-bit step: below it the tint is indistinguishable from black on screen,
- * but dividing by it still recovers the albedo the lights need.
+ * The floor of the canvas modulate the CPU folds in and the shader divides by, so the divide-out
+ * is exact. Without it a black CanvasModulate, the usual night, erases the albedo. One 8-bit step
+ * costs at most that on the base term and nothing lit, since `S` carries the true modulate.
  */
 export const CANVAS_MODULATE_FLOOR = 1 / 255;
 
@@ -93,32 +44,37 @@ const CLASS_SLOTS = Array.from({ length: MAX_LIGHT_CLASSES }, (_unused, index) =
  */
 export interface CanvasItemLightingProps {
   /**
-   * Light Only is an alpha mask, so it must reach the blend. Unconditional
-   * because `transparent` is itself a program input (three's `OPAQUE`) — and
-   * spread LAST, so it overrides an item's own value and the key follows the
-   * merged result rather than the item's.
+   * Light Only is an alpha mask, so it must reach the blend. Unconditional because `transparent`
+   * is a program input (three's `OPAQUE`), and spread last, so it overrides the item's value and
+   * the key follows the merged result.
    */
   readonly transparent: true;
   readonly injection: ProgramInjection;
 }
 
 /**
- * Stable uniform objects, created once per item and MUTATED as the light state
- * changes. They cannot be recreated: three captures whatever `onBeforeCompile`
- * assigns at the material's first compile, and R3F never bumps
- * `material.needsUpdate` when the prop changes (verified in the fiber 9.6.1
- * dist), so a later value would simply never reach the GPU.
+ * Stable uniform objects, created once per item and mutated as the light state changes. three
+ * captures what `onBeforeCompile` assigns at first compile, and R3F never sets
+ * `material.needsUpdate` on a prop change (fiber 9.6.1 dist), so a new object never reaches the GPU.
  */
 export interface CanvasItemLightingUniforms {
   /** One accumulator sampler per class slot; unmatched slots hold a 1x1 stand-in. */
   readonly classBuffers: readonly THREE.IUniform[];
   /** One `shadow_color` accumulator per class slot; a 1x1 black stand-in when unused. */
   readonly shadowTintBuffers: readonly THREE.IUniform[];
-  /** `1` in the slots whose cull mask this item's `light_mask` selects, else `0`. */
+  /**
+   * `1` in the class slots this item is not culled from (`lightCullKey`), else `0`, set on the CPU
+   * once per item per frame: GLSL ES 1.00 has no bitwise operators. The slots are unrolled, since
+   * it indexes a sampler array only by a constant.
+   */
   readonly classWeights: THREE.IUniform;
   readonly resolution: THREE.IUniform;
   readonly canvasModulate: THREE.IUniform;
-  /** The item's `CanvasItemLightMode`, which is Godot's own LightMode ordinal. */
+  /**
+   * The item's `CanvasItemLightMode`, Godot's LightMode ordinal. A uniform, not a program variant:
+   * three bakes program inputs at first compile, and a re-parse edits `light_mode` under a mounted
+   * item. On Godot 4.6.3 Light Only masks alpha: transparent where unlit, authored colour where lit.
+   */
   readonly lightMode: THREE.IUniform;
 }
 
@@ -139,6 +95,9 @@ const midpoint = (a: number, b: number) => ((a + b) / 2).toFixed(1);
 const ABOVE_NORMAL = midpoint(CanvasItemLightMode.NORMAL, CanvasItemLightMode.UNSHADED);
 const ABOVE_UNSHADED = midpoint(CanvasItemLightMode.UNSHADED, CanvasItemLightMode.LIGHT_ONLY);
 
+// Classes combine as `S = seed + Σ (S_class − seed)`, Godot's loop whenever the blends commute:
+// exact for one class and for any number of ADD/SUB classes. Only a MIX light over a light of
+// another class on the same item diverges, since MIX does not commute across the split.
 const LIGHT_INJECTION = `bool unshaded = uLightMode > ${ABOVE_NORMAL} && uLightMode < ${ABOVE_UNSHADED};
 bool lightOnly = uLightMode > ${ABOVE_UNSHADED};
 // canvas.glsl:719 — MODE_UNSHADED skips the canvas tint and the light loop,
@@ -172,12 +131,9 @@ ${CLASS_SLOTS.map(
 const PROGRAM_CACHE_KEY = 'godot-canvas-light';
 
 /**
- * Material props that make an ordinary `meshBasicMaterial` sample the light
- * accumulators. Handed to `materialProgramInputs()` as a merge part; an item
- * that passes nothing simply stays unlit, which is what every 3D consumer needs.
- *
- * The SAME props whatever the light mode, and whether or not the scene has
- * lights: both are uniforms, not programs (see the module note).
+ * Props that make a `meshBasicMaterial` sample the light accumulators, as a merge part for
+ * `materialProgramInputs()`. An item that passes none stays unlit, as every 3D consumer needs. The
+ * props are the same for every light mode, with or without lights: both are uniforms.
  */
 export function canvasItemLightingProps(
   uniforms: CanvasItemLightingUniforms

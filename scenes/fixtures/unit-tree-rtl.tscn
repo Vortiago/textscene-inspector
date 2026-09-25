@@ -1,13 +1,7 @@
-; The ONE variable: `layout_direction = 3` on a Tree with three visible column
-; titles. Godot mirrors each header cell inside the Tree's OWN width,
-; `get_size().width - tbrect.size.x - tbrect.position.x` (tree.cpp:5158-5160).
-; The width is deliberately 100: `get_column_width` splits the content rect by
-; C integer division (:5668-5687), and 100 leaves a remainder of 2
-; ((100 - 8) - 3 * 8 = 68, 68 / 3 = 22 each), so the mirrored header band
-; starts 2px in from the unmirrored one. A width whose remainder is zero makes
-; the RTL row pixel-identical to the LTR row and proves nothing. unit-tree.tscn
-; is the same Tree at the default direction, so a regression in the mirror is
-; invisible there.
+; One variable: `layout_direction = 3` on a Tree with three column titles. Godot mirrors each
+; header cell in the Tree's width, `get_size().width - tbrect.size.x - tbrect.position.x`
+; (tree.cpp:5158-5160). unit-tree.tscn is the same Tree at the default direction, so a regression
+; in the mirror is invisible there.
 
 [gd_scene format=3 uid="uid://unit_tree_rtl"]
 
@@ -22,6 +16,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
+; Width 100: `get_column_width` splits the content rect by integer division (:5668-5687),
+; and 100 leaves a remainder of 2 ((100 - 8) - 3 * 8 = 68, 68 / 3 = 22 each), so the mirrored band
+; starts 2px in from the unmirrored one. A zero remainder makes the rows identical and proves
+; nothing.
 [node name="Ltr" type="Tree" parent="."]
 layout_mode = 1
 offset_left = 16.0

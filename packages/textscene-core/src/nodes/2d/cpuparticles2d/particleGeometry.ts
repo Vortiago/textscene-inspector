@@ -1,25 +1,8 @@
 /**
- * Turn a frozen particle pose into ONE `THREE.BufferGeometry`.
- *
- * Godot draws the emitter as a MultiMesh of identical textured quads whose
- * per-instance data is a `Transform2D` plus an RGBA colour. three has no
- * per-instance ALPHA (`InstancedMesh.instanceColor` is RGB), and the alpha is
- * exactly what `color_ramp` animates, so the pose becomes one merged geometry
- * with a four-component vertex-colour attribute instead. That also gives the
- * draw order for free: within a single geometry, triangles blend in index
- * order, which is what `draw_order` decides.
- *
- * The quad Godot builds is `texture.get_size()` across, centred on the origin
- * (`cpu_particles_2d.cpp:186-199`), so one pixel is one world unit like every
- * other 2D slice. Positions are computed in Godot's +Y-down space and then
- * Y-negated for the conjugated Node2D group frame (see `node2dTransform`), and
- * the V coordinate is mirrored because textures upload bottom-up.
- *
- * A `CanvasItemMaterial` with `particles_animation` makes the texture a
- * FLIPBOOK rather than one image, and that is a shrink of the quad as much as a
- * window on the UVs — Godot's generated vertex shader divides `VERTEX.xy` by
- * the frame counts before the per-particle transform is applied. Both happen
- * here, per particle, because each one is on its own cell.
+ * Turns a frozen particle pose into one `THREE.BufferGeometry`. Godot draws a
+ * MultiMesh with per-instance RGBA, but three has no per-instance alpha, which
+ * `color_ramp` animates. One merged geometry with RGBA vertex colours also blends
+ * in index order, which is what `draw_order` decides.
  */
 
 import * as THREE from 'three';
@@ -27,8 +10,8 @@ import { godotColorToLinear } from '../../../r3f/godotColor';
 import type { RenderedParticle } from './simulate';
 
 /**
- * Quad-local corners in Godot 2D space, paired with their GODOT UVs (origin
- * top-left, +V down — `_update_mesh_texture`'s own winding).
+ * Quad-local corners in Godot 2D space, paired with their Godot UVs: origin
+ * top-left, +V down, `_update_mesh_texture`'s own winding.
  */
 const CORNERS: ReadonlyArray<{ cx: number; cy: number; u: number; v: number }> = [
   { cx: -0.5, cy: -0.5, u: 0, v: 0 },
@@ -46,11 +29,10 @@ export interface ParticleFlipbook {
 }
 
 /**
- * Build the merged quad geometry, or null for an empty pose (a caller with no
- * particles must render no mesh at all rather than an empty draw call).
- *
- * `width`/`height` are the texture's pixel size; Godot falls back to 1×1 when
- * the emitter has no texture, and so does the caller.
+ * The merged quad geometry, or null for an empty pose, which renders no mesh.
+ * `width`/`height` are the texture's pixel size, 1×1 with no texture as in Godot.
+ * The quad is that size, centred on the origin (`cpu_particles_2d.cpp:186-199`),
+ * so one pixel is one world unit.
  */
 export function buildParticleGeometry(
   pose: readonly RenderedParticle[],
@@ -63,6 +45,8 @@ export function buildParticleGeometry(
   const hFrames = flipbook ? Math.max(1, Math.floor(flipbook.hFrames)) : 1;
   const vFrames = flipbook ? Math.max(1, Math.floor(flipbook.vFrames)) : 1;
   const totalFrames = hFrames * vFrames;
+  // A flipbook shrinks the quad as well as windowing the UVs: Godot's vertex
+  // shader divides `VERTEX.xy` by the frame counts before the particle transform.
   const cellWidth = width / hFrames;
   const cellHeight = height / vFrames;
 
@@ -89,12 +73,13 @@ export function buildParticleGeometry(
 
       const v = (i * 4 + c) * 3;
       positions[v] = gx;
+      // Godot's +Y-down space, Y-negated for the conjugated Node2D group frame.
       positions[v + 1] = 0 - gy;
       positions[v + 2] = 0;
 
       const t = (i * 4 + c) * 2;
       uvs[t] = corner.u / hFrames + uOffset;
-      // Godot's V runs top-down; three's texture upload is bottom-up.
+      // Godot's V runs top-down. Three's texture upload is bottom-up.
       uvs[t + 1] = 1 - (corner.v / vFrames + vOffset);
 
       const k = (i * 4 + c) * 4;
@@ -117,8 +102,8 @@ export function buildParticleGeometry(
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-  // itemSize 4 is what makes three define USE_COLOR_ALPHA, i.e. what carries
-  // the per-particle alpha a colour ramp fades out with.
+  // itemSize 4 makes three define USE_COLOR_ALPHA, which carries the per-particle
+  // alpha a colour ramp fades out with.
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   geometry.computeBoundingSphere();
@@ -134,7 +119,7 @@ export function buildParticleGeometry(
  */
 function flipbookFrame(anim: number, totalFrames: number, loop: boolean): number {
   const frame = Math.floor(anim * totalFrames);
-  // A non-finite anim would poison every UV in the quad; the first cell is the
+  // A non-finite anim would poison every UV in the quad. The first cell is the
   // one reading a broken value should fall back to.
   if (!Number.isFinite(frame)) return 0;
   if (!loop) return Math.min(totalFrames - 1, Math.max(0, frame));

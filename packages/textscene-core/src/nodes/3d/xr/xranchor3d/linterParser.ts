@@ -1,10 +1,7 @@
 /**
- * XRAnchor3D strict validators for linting.
- *
- * Declare only XRAnchor3D's OWN members — the ones doc/classes/XRAnchor3D.xml
- * lists without an `overrides=` attribute. Everything from XRNode3D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * XRAnchor3D strict validators for its own members, the ones doc/classes/XRAnchor3D.xml lists
+ * without `overrides=`. Keys from XRNode3D up arrive through the NODE_BASE_TYPES base-walk, so
+ * re-declaring one would shadow the ancestor's rule.
  */
 
 import '../xrnode3d/linterParser.js';

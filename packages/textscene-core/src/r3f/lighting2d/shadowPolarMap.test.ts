@@ -1,30 +1,6 @@
 /**
- * Expected values come from Godot's own two halves of the mechanism, quoted here
- * so a drifting port fails against the engine rather than against itself:
- *
- *  - `drivers/gles3/shaders/canvas.glsl:821-843` — the box mapping a fragment
- *    uses to address the map:
- *
- *      vec2 pos_box = pos_norm / max(pos_abs.x, pos_abs.y);
- *      +X: tex_ofs = pos_box.y *  0.125 + 0.125;         dist =  shadow_pos.x
- *      +Y: tex_ofs = pos_box.x * -0.125 + (0.25 + 0.125); dist =  shadow_pos.y
- *      -X: tex_ofs = pos_box.y * -0.125 + (0.5 + 0.125);  dist = -shadow_pos.x
- *      -Y: tex_ofs = pos_box.x *  0.125 + (0.75 + 0.125); dist = -shadow_pos.y
- *
- *  - `drivers/gles3/shaders/canvas_occlusion.glsl:28,56` — what a bin holds:
- *
- *      depth = dot(direction, vtx.xy);   out_depth = depth / z_far;
- *
- *    i.e. the AXIS distance to the nearest occluder in that direction, not the
- *    Euclidean one, normalised by `z_far`.
- *
- *  - `servers/rendering/renderer_viewport.cpp:485,556` — `radius_cache =
- *    local_rect.size.length()`, `near = radius/1000`, `far = radius * 1.1`.
- *
- * The bin the sampler lands in is pinned independently: quadrant 0's viewport is
- * `glViewport(0, …, shadow_texture_size / 4, 2)` and its projection maps
- * `(x, y, 0) → (y, 0, -x)`, so `ndc.x = y/x` and the screen column is
- * `(y/x) * 256 + 256` — the same texel `tex_ofs * 2048` addresses.
+ * Expected values quote Godot's sources, so a drifting port fails against the
+ * engine rather than against itself.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -44,10 +20,7 @@ import {
   type ShadowCasterEdges,
 } from './shadowVolumes';
 
-/**
- * A rect no occluder can fall outside, so a test that is not ABOUT the occluder
- * cull measures only the thing it names.
- */
+/** A rect no occluder can fall outside, so a test not about the cull measures only its own subject. */
 const UNBOUNDED: LightRect = {
   minX: -Infinity,
   minY: -Infinity,
@@ -60,7 +33,11 @@ function lightAt(x: number, y: number, radius: number): ShadowPolarLight {
   return { worldToLocal: [1, 0, -x, 0, 1, -y], radius, rect: UNBOUNDED };
 }
 
-/** `tex_ofs * SHADOW_MAP_BINS` rounded to the bin whose centre is nearest. */
+/**
+ * `tex_ofs * SHADOW_MAP_BINS` rounded to the nearest bin centre. Pinned apart
+ * from the mapping: quadrant 0 draws into `glViewport(0, …, shadow_texture_size / 4, 2)`
+ * through `(x, y, 0) → (y, 0, -x)`, so its column is `(y/x) * 256 + 256`.
+ */
 function binOf(u: number): number {
   return Math.round(u * SHADOW_MAP_BINS - 0.5);
 }
@@ -75,10 +52,16 @@ function segment(
   return { segments: [ax, ay, bx, by], cullMode };
 }
 
+/**
+ * `drivers/gles3/shaders/canvas.glsl:821-843`, with `pos_box = pos_norm / max(pos_abs.x, pos_abs.y)`:
+ * +X `tex_ofs = pos_box.y * 0.125 + 0.125`, +Y `pos_box.x * -0.125 + (0.25 + 0.125)`,
+ * -X `pos_box.y * -0.125 + (0.5 + 0.125)`, -Y `pos_box.x * 0.125 + (0.75 + 0.125)`.
+ * `dist` is `shadow_pos.x`, `shadow_pos.y`, `-shadow_pos.x` and `-shadow_pos.y` in turn.
+ */
 describe('shadowMapCoord', () => {
   it('places the four axes at the four quadrant centres', () => {
-    // Godot's local space is Y-DOWN; the previewer's is Y-up, so the builder is
-    // handed previewer coordinates and negates Y itself. +X stays +X.
+    // Godot's local space is Y-down and the previewer's is Y-up, so the builder
+    // takes previewer coordinates and negates Y itself. +X stays +X.
     expect(shadowMapCoord(1, 0)).toBeCloseTo(0.125, 12);
     // Godot +Y (down) is previewer -Y.
     expect(shadowMapCoord(0, -1)).toBeCloseTo(0.375, 12);
@@ -87,14 +70,14 @@ describe('shadowMapCoord', () => {
   });
 
   it('is the tan (box) mapping inside a quadrant, not uniform angle', () => {
-    // Halfway along the +X quadrant by BOX coordinate is pos_box.y = 0.5, which
+    // Halfway along the +X quadrant by box coordinate is pos_box.y = 0.5, which
     // is 26.57 degrees, not the 22.5 a uniform-angle map would put there.
     expect(shadowMapCoord(1, -0.5)).toBeCloseTo(0.125 + 0.0625, 12);
     expect(shadowMapCoord(2, -1)).toBeCloseTo(0.125 + 0.0625, 12);
   });
 
   it('runs monotonically 0 to 1 once around, and wraps at the -Y/+X seam', () => {
-    // The seam is Godot (1, -1)/sqrt2 — previewer (1, 1). `pos_rot.y` is exactly
+    // The seam is Godot (1, -1)/sqrt2, previewer (1, 1). `pos_rot.y` is exactly
     // zero there, so Godot's `> 0.0` sends it to the -Y branch and it reads 1.0,
     // the same texel as 0.0 under the atlas's GL_REPEAT wrap.
     expect(shadowMapCoord(1, 1)).toBeCloseTo(1, 12);
@@ -104,8 +87,8 @@ describe('shadowMapCoord', () => {
   });
 
   it('places an antipodal direction exactly half a turn away', () => {
-    // u(theta + pi) = u(theta) + 0.5 for the box mapping — the property the
-    // builder relies on to pick the SHORT arc between a segment's endpoints.
+    // u(theta + pi) = u(theta) + 0.5 for the box mapping: the builder relies on
+    // it to pick the short arc between a segment's endpoints.
     for (const [x, y] of [[3, 1], [1, 4], [-2, 5], [-7, -3]] as const) {
       const opposite = (shadowMapCoord(x, y) + 0.5) % 1;
       expect(shadowMapCoord(-x, -y)).toBeCloseTo(opposite, 12);
@@ -113,7 +96,13 @@ describe('shadowMapCoord', () => {
   });
 });
 
+/**
+ * `drivers/gles3/shaders/canvas_occlusion.glsl:28,56`: a bin holds the axis distance,
+ * `depth = dot(direction, vtx.xy); out_depth = depth / z_far;`.
+ */
 describe('buildShadowPolarMap', () => {
+  // `servers/rendering/renderer_viewport.cpp:485,556`: `radius_cache =
+  // local_rect.size.length()`, `near = radius/1000`, `far = radius * 1.1`.
   const RADIUS = 1000;
   const ZFAR = RADIUS * 1.1;
 
@@ -126,7 +115,7 @@ describe('buildShadowPolarMap', () => {
   it('stores the AXIS distance, not the Euclidean one', () => {
     // A vertical segment at x = 100 spanning y in [-50, 50] (previewer space).
     // Every ray that reaches it crosses x = 100, so every covered bin holds
-    // 100 / zfar however far along the segment the hit lands — a Euclidean map
+    // 100 / zfar however far along the segment the hit lands. A Euclidean map
     // would hold up to hypot(100, 50) / zfar at the ends.
     const map = buildShadowPolarMap(lightAt(0, 0, RADIUS), [segment(100, -50, 100, 50)]);
     const centre = binOf(shadowMapCoord(100, 0));
@@ -164,7 +153,7 @@ describe('buildShadowPolarMap', () => {
     // A horizontal segment 100 above the light in previewer space, reaching 150
     // either side. Its endpoints sit at u = 0.708 and u = 0.042, so the covered
     // arc runs through the -X quadrant, the whole of -Y, and across the seam
-    // into +X — which only holds together if the walk takes the SHORT way.
+    // into +X, which holds only if the walk takes the short way.
     const map = buildShadowPolarMap(lightAt(0, 0, RADIUS), [segment(-150, 100, 150, 100)]);
     // Straight up: Godot -Y, the quadrant centre at u = 0.875, axis distance 100.
     expect(map[binOf(0.875)]).toBeCloseTo(100 / ZFAR, 6);
@@ -188,8 +177,8 @@ describe('buildShadowPolarMap', () => {
   });
 
   it('fills every bin when the light sits inside a closed polygon', () => {
-    // A square wound as a closed occluder — the wrap edge is already appended,
-    // which is the shape `polygonToSegments` hands over.
+    // A square wound as a closed occluder, the wrap edge already appended, as
+    // `polygonToSegments` hands it over.
     const square: ShadowCasterEdges = {
       segments: [
         -80, -80, 80, -80,
@@ -207,17 +196,16 @@ describe('buildShadowPolarMap', () => {
   });
 
   it('packs the quadrants contiguously across a diagonal, switching the axis', () => {
-    // The Godot-local segment x = 100, y in [50, 150] crosses the +X/+Y frustum
-    // boundary y = x at (100, 100). `light_update_shadow` gives quadrant 0 the
-    // texels [0, 512) and quadrant 1 [512, 1024), so the run must be UNBROKEN at
-    // 512 while the stored quantity switches from `shadow_pos.x` to
-    // `shadow_pos.y` — the seam a polar builder gets wrong.
+    // The Godot-local segment x = 100, y in [50, 150] crosses y = x at (100, 100).
+    // `light_update_shadow` gives quadrant 0 the texels [0, 512) and quadrant 1
+    // [512, 1024), so the run is unbroken at 512 while the stored quantity
+    // switches from `shadow_pos.x` to `shadow_pos.y`.
     const map = buildShadowPolarMap(lightAt(0, 0, RADIUS), [segment(100, -50, 100, -150)]);
 
     // Quadrant 0's last texel: ray (1, 8u − 1), axis +X, so it stores x = 100.
     expect(map[511]).toBeCloseTo(100 / ZFAR, 6);
     // Quadrant 1's first: ray (3 − 8u, 1), axis +Y, so it stores y where the ray
-    // meets x = 100 — a different number for a neighbouring texel, by design.
+    // meets x = 100: a different number for a neighbouring texel, by design.
     expect(map[512]).toBeCloseTo(100 / (3 - 8 * (512.5 / SHADOW_MAP_BINS)) / ZFAR, 6);
     expect(map[512]).not.toBeCloseTo(map[511]!, 6);
 
@@ -232,10 +220,9 @@ describe('buildShadowPolarMap', () => {
 
   it('normalises by radius * 1.1, which is what makes z_far cancel in the test', () => {
     // `canvas_occlusion.glsl:56` divides the stored depth by z_far and
-    // `canvas.glsl:845` multiplies the fragment's own axis distance by
-    // `shadow_zfar_inv` — the SAME z_far, so `step(sd, dist)` is scale-free. The
-    // builder must therefore use Godot's divisor and no other, or the shader's
-    // uniform (1 / (radius * 1.1)) would compare against a different scale.
+    // `canvas.glsl:845` multiplies the fragment's axis distance by the same
+    // `shadow_zfar_inv`, so `step(sd, dist)` is scale-free only while the builder
+    // uses Godot's divisor, the shader's uniform 1 / (radius * 1.1).
     const small = buildShadowPolarMap(lightAt(0, 0, 500), [segment(100, -50, 100, 50)]);
     const large = buildShadowPolarMap(lightAt(0, 0, 2000), [segment(100, -50, 100, 50)]);
     expect(small[binOf(0.125)]).toBeCloseTo(100 / (500 * 1.1), 6);

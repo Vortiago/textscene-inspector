@@ -1,18 +1,16 @@
-/** ItemList property definitions — Control plus ItemList's own members and its `item_N/*` family. */
+/** ItemList property definitions: Control plus ItemList's own members and its `item_N/*` family. */
 
 import type { ControlProperties } from '../control/types';
 
 /**
- * One row's own four serialised leaves (`item_list.cpp:2463-2466`,
- * `PropertyListHelper`-backed — `linterParser.ts`'s own doc has the full
- * grounding for why this is the whole set: `tooltip`/`custom_bg_color`/
- * `icon_modulate`/… are real ItemList members but none is registered on
- * `base_property_helper`, so none can ever appear in a `.tscn`).
+ * One row's four serialised leaves (`item_list.cpp:2463-2466`). `tooltip`,
+ * `custom_bg_color`, `icon_modulate` and the rest are not registered on
+ * `base_property_helper`, so they never reach a `.tscn`.
  */
 export interface ItemListItem {
   /** `item_N/text`. Godot default "". */
   text?: string;
-  /** `item_N/icon` — the raw resource-reference text (`ExtResource(...)`/`SubResource(...)`), resolved at paint time like Button's `icon`. */
+  /** `item_N/icon`: the raw resource-reference text (`ExtResource(...)`/`SubResource(...)`), resolved at paint time like Button's `icon`. */
   icon?: string;
   /** `item_N/selectable`. Godot default true. */
   selectable?: boolean;
@@ -51,6 +49,6 @@ export interface ItemListProperties extends ControlProperties {
   fixedIconSize?: { x: number; y: number };
   /** `TextServer::OverrunBehavior`. Godot default 3 (OVERRUN_TRIM_ELLIPSIS). */
   textOverrunBehavior?: number;
-  /** Rows 0..`itemCount-1`, dense — `items[i]` is `{}` for an index no `item_i/*` key names. */
+  /** Rows 0..`itemCount-1`, dense: `items[i]` is `{}` for an index no `item_i/*` key names. */
   items: ItemListItem[];
 }

@@ -1,46 +1,39 @@
-/**
- * Label3D types and interfaces
- */
+/** Label3D node data and its enums. */
 
 import type { Node3DProperties } from '../../base/node3d/types';
 import type { Color } from '../../../utils/colorParser';
 
-/**
- * Billboard modes for Label3D
- * Based on BaseMaterial3D.BillboardMode enum in Godot
- */
+/** Label3D billboard modes: Godot's `BaseMaterial3D.BillboardMode`. */
 export enum BillboardMode {
-  /** Billboard disabled - text faces forward */
+  /** Text faces forward. */
   BILLBOARD_DISABLED = 0,
-  /** Billboard enabled - text always faces camera */
+  /** Text always faces the camera. */
   BILLBOARD_ENABLED = 1,
-  /** Billboard Y-axis only - text rotates around Y to face camera */
+  /** Text rotates around Y to face the camera. */
   BILLBOARD_FIXED_Y = 2,
-  /** Billboard particles mode - not supported in Label3D */
+  /** Particles mode: not supported in Label3D. */
   BILLBOARD_PARTICLES = 3,
 }
 
 export interface Label3DProperties extends Node3DProperties {
-  /** The text to display */
   text: string;
 
-  /** Size of one pixel's width in 3D world units (default: 0.01) */
+  /** Size of one pixel's width in 3D world units (default 0.005). */
   pixel_size: number;
 
   /**
-   * Billboard mode. Default: BILLBOARD_DISABLED — a deliberate parser
-   * default (see `Component.parity.test.tsx`: "was ENABLED → labels
-   * wrongly tracked camera"), same as Sprite3D's default.
+   * Billboard mode. Default BILLBOARD_DISABLED, as for Sprite3D
+   * (`Component.parity.test.tsx`).
    */
   billboard: BillboardMode;
 
-  /** Text color/tint (default: white) */
+  /** Text tint (default white). */
   modulate: Color;
 
-  /** Outline thickness in pixels (default: 0) */
+  /** Outline thickness in pixels (default 12). */
   outline_size: number;
 
-  /** Outline color (default: black) */
+  /** Outline colour (default black). */
   outline_modulate: Color;
 
   /** Visible from behind (Godot default true → THREE.DoubleSide). */
@@ -64,7 +57,7 @@ export interface Label3DProperties extends Node3DProperties {
   /** Paint order of the fill surface (`label_3d.h:124`, default 0). */
   render_priority: number;
 
-  /** Paint order of the outline surface (`label_3d.h:123`, default -1 — behind the fill). */
+  /** Paint order of the outline surface (`label_3d.h:123`, default -1, behind the fill). */
   outline_render_priority: number;
 
   /** Transparency mode (`label_3d.h:61`, default DISABLED). */

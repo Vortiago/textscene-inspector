@@ -1,7 +1,4 @@
-/**
- * CharacterBody2D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- */
+/** CharacterBody2D strict validators for linting. */
 
 import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
@@ -29,7 +26,7 @@ validatorRegistry.registerAll('CharacterBody2D', {
   floor_constant_speed: v.boolean('floor_constant_speed'),
   floor_block_on_wall: v.boolean('floor_block_on_wall'),
   // character_body_2d.cpp:748, PROPERTY_HINT_RANGE "0,180,0.1,radians_as_degrees",
-  // no or_greater; the setter (:622-624) is a bare assignment, so out-of-range warns.
+  // no or_greater. The setter (:622-624) is a bare assignment, so out-of-range warns.
   floor_max_angle: v.radians('floor_max_angle', {
     minDeg: 0,
     maxDeg: 180,
@@ -41,8 +38,8 @@ validatorRegistry.registerAll('CharacterBody2D', {
     message: "Property 'floor_snap_length' must be >= 0",
     enforced: 'character_body_2d.cpp:631',
   }),
-  // character_body_2d.cpp:742, PROPERTY_HINT_RANGE "0,180,0.1,radians_as_degrees";
-  // the setter (:639-641) is a bare assignment, so out-of-range warns.
+  // character_body_2d.cpp:742, PROPERTY_HINT_RANGE "0,180,0.1,radians_as_degrees".
+  // The setter (:639-641) is a bare assignment, so out-of-range warns.
   wall_min_slide_angle: v.radians('wall_min_slide_angle', {
     minDeg: 0,
     maxDeg: 180,
@@ -54,12 +51,11 @@ validatorRegistry.registerAll('CharacterBody2D', {
     hinted: 'character_body_2d.cpp:752',
   }),
   // character_body_2d.cpp:753/754, PROPERTY_HINT_LAYERS_2D_PHYSICS (no range
-  // hint). Shares the layerBitmask() factory instead of hand-inlining the same
-  // 0..4294967295 bound.
+  // hint), through the shared layerBitmask() factory.
   platform_floor_layers: layerBitmask('platform_floor_layers', { hinted: 'character_body_2d.cpp:753', width: 'uint32' /* character_body_2d.h:101 */ }),
   platform_wall_layers: layerBitmask('platform_wall_layers', { hinted: 'character_body_2d.cpp:754', width: 'uint32' /* character_body_2d.h:104 */ }),
   // character_body_2d.cpp:757 hints "0.001,256,0.001,suffix:px", closed both
-  // ends; set_safe_margin (:538) is a bare assignment, so both ends warn.
+  // ends. set_safe_margin (:538) is a bare assignment, so both ends warn.
   safe_margin: v.float('safe_margin', {
     min: 0.001,
     max: 256,

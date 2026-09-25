@@ -1,9 +1,7 @@
 /**
- * Tests for the PrismMesh decode.
- *
- * Defaults from Godot `primitive_meshes.h:303-307` (`left_to_right = 0.5`,
- * `size = Vector3(1, 1, 1)`, subdivisions 0). The three subdivide setters
- * (`primitive_meshes.cpp:1921-1955`) floor at 0; `set_left_to_right` (:1896) and
+ * PrismMesh decode. Defaults: `primitive_meshes.h:303-307` (`left_to_right = 0.5`,
+ * `size = Vector3(1, 1, 1)`, subdivisions 0). The subdivide setters
+ * (`primitive_meshes.cpp:1921-1955`) floor at 0. `set_left_to_right` (:1896) and
  * `set_size` (:1908) have no guard.
  */
 

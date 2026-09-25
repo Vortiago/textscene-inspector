@@ -1,14 +1,13 @@
 /** RemoteTransform3D strict validators for linting. */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
+// The base chain. Registration happens on import, so a test that loads only this slice resolves
+// an inherited key only when this line imports the ancestor.
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 
-// Spatial validators (transform/position/...) are inherited from Node3D via
-// the nodeBaseTypes chain — only the type-specific surface is registered here.
+// Node3D's spatial validators arrive through the nodeBaseTypes chain, so only the type's own keys
+// register here.
 validatorRegistry.registerAll('RemoteTransform3D', {
   remote_path: v.nodePath('remote_path'),
   update_position: v.boolean('update_position'),

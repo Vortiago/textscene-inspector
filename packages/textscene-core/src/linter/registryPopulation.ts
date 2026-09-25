@@ -1,27 +1,8 @@
 /**
- * What the registry HOLDS, as the three populations a sweep can ask for.
- *
- * Beside `ValidatorRegistry.ts` rather than under `testing/`, because a sweep
- * author has to find it: the correct walk lived in a test-support directory for
- * five recurrences of the same defect, once written in a file whose own sibling
- * had already been migrated.
- *
- * Point lookups on a NAMED type stay the registry's interface — `findValidator`,
- * `getOwnKeys`, `baseChainOf`. Asking what the registry holds WITHOUT naming a
- * type is this module's alone. That line is what the population guard enforces.
- *
- * The populations are not nested, and choosing between them is the caller's one
- * real decision:
- *
- * - **types** — `registeredTypes(scope)`. Neither scope is a superset of the
- *   other, so the argument is required.
- * - **keys** — `registeredKeys()`. One entry per registration, declarations and
- *   removals alike, each tagged. Roots only, deliberately: a leaf is not a
- *   registration.
- * - **validators** — `everyValidator(keep)`. Every callable the registry can
- *   reach, dispatchers descended, shared leaf instances reported once. This is
- *   the only function that returns validators, and it cannot be made to stop at
- *   the roots.
+ * What the registry holds, as three populations: types, keys and validators. A
+ * point lookup on a named type stays the registry's, and the population guard
+ * keeps every walk without a named type here. It sits beside `ValidatorRegistry.ts`
+ * so a sweep author finds it.
  */
 
 import { validatorRegistry, type ValidatorRegistry } from './ValidatorRegistry.js';
@@ -30,11 +11,14 @@ import type { PropertyValidator } from './propertyValidator.js';
 /** Which map a registration came from. */
 export type KeyKind = 'declaration' | 'removal';
 
-/** One key ONE type registered, spelled as the registration spells it. */
+/**
+ * One key one type registered, spelled as the registration spells it. Roots
+ * only: a leaf is not a registration.
+ */
 export interface RegisteredKey {
   readonly nodeType: string;
   /**
-   * A literal key, or a wildcard PATTERN (`settings/#/*`). Never a scene key —
+   * A literal key, or a wildcard pattern (`settings/#/*`). Never a scene key:
    * no `.tscn` contains `*` or `#`.
    */
   readonly key: string;
@@ -46,7 +30,7 @@ export interface Subject {
   /** `Type.key` at a root, plus one `[i]` per `leaves` hop below it. */
   readonly label: string;
   readonly nodeType: string;
-  /** The registered pattern the root resolved under — the same at every depth. */
+  /** The registered pattern the root resolved under, the same at every depth. */
   readonly key: string;
   readonly kind: KeyKind;
   /** 0 at a root. Unbounded: a leaf can itself dispatch. */
@@ -55,13 +39,10 @@ export interface Subject {
 }
 
 /**
- * A validator to start a walk from, and the label to report it under.
- *
- * A root MAY carry the registration it came from; `registryRoots` fills those in
- * and an injected fixture usually does not. Declared rather than sniffed off the
- * object, so the walk reads them by type instead of casting — and a root that
- * carries none leaves the subject's site fields empty rather than having them
- * invented by splitting its label.
+ * A validator to start a walk from, and the label to report it under. It may
+ * carry its registration, which `registryRoots` fills in and a fixture usually
+ * does not. Declared, so the walk reads it by type, and a root without one
+ * leaves the site fields empty.
  */
 export interface Root extends Partial<RegisteredKey> {
   readonly label: string;
@@ -71,35 +52,28 @@ export interface Root extends Partial<RegisteredKey> {
 /** How a walk is scoped and how it refuses to be vacuous. */
 export interface WalkOptions {
   /**
-   * Walk exactly these instead of the registry's own registrations. The seam a
-   * guard uses to prove its own bite against scratch validators rather than
-   * resting on whatever the registry happens to hold.
+   * Walk exactly these instead of the registry's own registrations: the seam a
+   * guard uses to prove its bite against scratch validators.
    */
   readonly roots?: readonly Root[];
   /**
    * Walk this registry rather than the live singleton, as both sibling
-   * populations already allow. Without it a test driving a scratch registry had
-   * to rebuild the root list by hand — the recomposition this module exists to
-   * make unnecessary, in the module's own test.
+   * populations allow, so a scratch-registry test needs no hand-built roots.
    */
   readonly registry?: ValidatorRegistry;
   /**
-   * Fail below this many validators VISITED. Counted before `keep`, because
-   * every real sweep's `keep` is an offender filter whose expected answer is
-   * `[]` — flooring the kept subjects would ask nothing, and could only ever be
-   * satisfied by passing 0. A sweep that forgot `import './index.js'` walks
-   * nothing and now says so.
+   * Fail below this many validators visited, counted before `keep`: a real
+   * sweep's `keep` is an offender filter expecting `[]`. A sweep that forgot
+   * `import './index.js'` walks nothing and says so.
    */
   readonly atLeast?: number;
 }
 
 /**
- * Types the registry can answer for.
- *
- * `'declaring'` is the validator map's key set — it includes a type that
- * registered an empty map on purpose (`CheckButton`) and excludes a type that
- * only takes a key away (`HBoxContainer`). `'answering'` unions the removals in.
- * Neither contains the other, which is why there is no default.
+ * Types the registry can answer for. `'declaring'` is the validator map's key
+ * set, with an empty map (`CheckButton`) but without a removal-only type
+ * (`HBoxContainer`). `'answering'` adds the removals. Neither contains the other,
+ * so there is no default.
  */
 export function registeredTypes(
   scope: 'declaring' | 'answering',
@@ -111,11 +85,8 @@ export function registeredTypes(
 }
 
 /**
- * Every key any type registered, declarations then removals.
- *
- * Two walks, not a nested loop: a removal-only type never appears in the
- * validator map, so folding removals into the declaration loop visits none of
- * them.
+ * Every key any type registered, declarations then removals, in two walks: a
+ * removal-only type never appears in the validator map.
  */
 export function registeredKeys(
   registry: ValidatorRegistry = validatorRegistry
@@ -135,18 +106,9 @@ export function registeredKeys(
 }
 
 /**
- * Every validator the registry can run, dispatchers descended.
- *
- * `keep` decides what is REPORTED, never what is descended: a dispatcher that
- * fails it is still walked into, because excusing a validator must not excuse
- * the subtree behind it.
- *
- * Every root is a subject: a registration is reported under its own
- * `(nodeType, key)` even when its function is also a leaf of another root, or
- * the same function another type registered (`unavailableValidator` memoises on
- * reason and cite, so two removed keys are often one function). Only the walk
- * INTO leaves dedupes, by function identity: one leaf instance can back several
- * dispatchers and is reported once, under the first path that reaches it.
+ * Every validator the registry can run, dispatchers descended; the only function
+ * that returns validators. `keep` decides what is reported, never what is
+ * descended, so excusing a dispatcher never excuses its subtree.
  */
 export function everyValidator(
   keep: (validator: PropertyValidator) => boolean,
@@ -173,6 +135,9 @@ export function everyValidator(
     });
   };
 
+  // Every root is a subject under its own `(nodeType, key)`, even when its
+  // function is shared (`unavailableValidator` memoises on reason and cite). Only
+  // the walk into leaves dedupes, by identity, under the first path to reach one.
   for (const root of roots) {
     const at = siteOf(root);
     report(at, root.validator, root.label, 0);
@@ -201,7 +166,7 @@ const siteOf = (root: Root): Site => ({
   kind: root.kind ?? 'declaration',
 });
 
-/** The same walk, labels only and sorted — a sweep that only NAMES what it found. */
+/** The same walk, labels only and sorted, for a sweep that only names what it found. */
 export function everyValidatorLabel(
   keep: (validator: PropertyValidator) => boolean,
   opts: WalkOptions = {}

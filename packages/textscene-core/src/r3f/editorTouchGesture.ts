@@ -1,6 +1,6 @@
 /**
- * The touch half of viewport navigation, which Godot has no equivalent for —
- * one-finger drag orbits, two fingers pan and pinch at once.
+ * The touch half of viewport navigation, which Godot has no equivalent for: one finger orbits, two
+ * fingers pan and pinch at once.
  *
  * Each entry point edits the cursor directly and reports whether the view
  * moved, so the caller owns the single `invalidate()`.
@@ -21,21 +21,16 @@ import {
   type TouchPoint,
 } from './pointerGesture.js';
 
-/** Where the fingers were on the previous move — a touch gesture's origin. */
+/** Where the fingers were on the previous move: a touch gesture's origin. */
 export interface TouchGesture {
   /** Previous centroid. The pan is incremental, so this moves every event. */
   centroid: TouchPoint;
   /** Previous separation, kept only to recognise an event that changed nothing. */
   span: number;
   /**
-   * Separation and orbit radius when the gesture was seeded — the pinch's
-   * anchor, which is why the zoom is measured rather than accumulated. A
-   * browser fires one `pointermove` PER POINTER, so two fingers sliding
-   * together transit mixed-time states whose span swings hard: 100px apart,
-   * briefly 40px once one has moved, 100px again once the other catches up.
-   * Multiplying those ratios unwinds the excursion only while nothing clamps
-   * it, and `scaleCursorDistance` clamps on every call — so one clamped
-   * excursion never unwinds and a pure pan silently rescales the view.
+   * Separation and orbit radius at the seed: the pinch anchor the zoom is measured from. One
+   * `pointermove` fires per pointer, so the span swings between moves (100 px, 40 px, 100 px), and
+   * accumulated ratios would not unwind once `scaleCursorDistance` clamps one.
    */
   startSpan: number;
   startDistance: number;
@@ -44,10 +39,8 @@ export interface TouchGesture {
 export type TouchGestureRef = { current: TouchGesture | null };
 
 /**
- * A finger landing. Touch pointers are implicitly captured to the target, so no
- * explicit capture — and no preventDefault, which would cost tap-to-select the
- * pointerup R3F picks it out of. `touch-action: none` on the canvas is what
- * stops the browser scrolling instead.
+ * A finger landing. Touch pointers are captured to the target implicitly. No `preventDefault`,
+ * which would cost tap-to-select its pointerup; `touch-action: none` on the canvas stops scrolling.
  */
 export function beginEditorTouch(
   event: PointerEvent,
@@ -55,9 +48,8 @@ export function beginEditorTouch(
   gestureRef: TouchGestureRef
 ): void {
   touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
-  // A finger landing or leaving changes the centroid and the span
-  // discontinuously; dropping the origin re-seeds both on the next move
-  // so the view doesn't jump.
+  // A finger landing changes the centroid and span discontinuously, so dropping the origin
+  // re-seeds both on the next move and the view does not jump.
   gestureRef.current = null;
 }
 
@@ -115,13 +107,8 @@ export function applyEditorTouchMove(
   if (mode === 'orbit') {
     handle.applyCursor(orbitCursor(handle.cursor(), dx, dy));
   } else {
-    // Two fingers pan and pinch at once, exactly as they do on a map: the
-    // centroid drives the pan, the span between them drives the zoom.
-    //
-    // The zoom is measured from the anchor, never accumulated (see
-    // `TouchGesture`), which makes each event idempotent: a clamp on one
-    // cannot carry into the next. Inverted, because spreading the fingers
-    // pulls the eye IN — the radius goes as the reciprocal of the spread.
+    // The centroid drives the pan and the span the zoom, measured from the anchor so a clamp on one
+    // event cannot carry into the next. Inverted: spreading the fingers pulls the eye in.
     const spread = pinchSpanRatio(previous.startSpan, span);
     const anchored: EditorCursor = { ...handle.cursor(), distance: previous.startDistance };
     const zoomed = scaleCursorDistance(anchored, 1 / spread, handle.zoomRange());

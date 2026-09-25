@@ -1,10 +1,6 @@
 /**
- * Strict-verification harness (group K) — fallback assertions.
- *
- * Assertion 95 (userData carries nodeType/nodeName) still holds. Assertion 96
- * ("fallback is visible — non-zero placeholder mesh") is SUPERSEDED by ADR-0008:
- * the fallback now renders an invisible transform-only group with no placeholder
- * mesh, so unsupported types don't clutter the viewport.
+ * The fallback carries `nodeType` and `nodeName` in userData and, per ADR-0008, renders an
+ * invisible transform-only group with no placeholder mesh.
  */
 
 import { describe, expect, it } from 'vitest';

@@ -1,5 +1,5 @@
 /**
- * staticbody3d linter registration - imports linter components to trigger self-registration.
+ * StaticBody3D linter registration: the imports self-register.
  */
 
 import '../../shared/linter.js';

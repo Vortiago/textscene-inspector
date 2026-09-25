@@ -1,9 +1,7 @@
-; A StandardMaterial3D with billboard_mode = ENABLED on a QuadMesh: the quad must
-; turn to FACE the camera. The golden frames it from the editor's isometric angle,
-; where a non-billboarded +Z quad would foreshorten to a thin sliver — so if
-; billboarding ever regresses, the asymmetric walk sprite collapses and the golden
-; fails. A second quad (billboard_mode = DISABLED) sits beside it as the fixed
-; reference that SHOULD foreshorten.
+; A StandardMaterial3D with billboard_mode = ENABLED on a QuadMesh: the quad must face the camera.
+; The golden frames it from the editor's isometric angle, where a +Z quad without billboarding
+; foreshortens to a sliver, so a regression collapses the asymmetric walk sprite. A second quad
+; (billboard_mode = DISABLED) beside it is the reference that should foreshorten.
 [gd_scene load_steps=5 format=3]
 
 [ext_resource type="Texture2D" path="res://textures/dodge-walk1.png" id="1_tex"]

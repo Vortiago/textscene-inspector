@@ -1,10 +1,7 @@
 /**
- * XRBodyModifier3D strict validators - format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * XRBodyModifier3D strict validators: format and range checks. Asserted through
+ * `validatorRegistry`, not by linting a `.tscn`, so a failure points at the validator and not at
+ * scene parsing. linter.test.ts tests rule behaviour through `Linter`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -26,7 +23,7 @@ function check(property: string, value: string) {
  * `PropertyListHelper` and no `ADD_ARRAY_COUNT`, and has no `.compat.inc`).
  */
 const KEYS: string[] = ['body_tracker', 'body_update', 'bone_update'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 describe('XRBodyModifier3D strict validators', () => {
@@ -39,16 +36,14 @@ describe('XRBodyModifier3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // Runs the fixture's "zero errors and zero warnings" claim against the validators this test
+    // imports. `fixtureLint` checks the same file against the whole registry.
     expectFixtureClean('unit-xr-body-modifier-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format. This loop is generic, and the
+    // per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('XRBodyModifier3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -74,11 +69,9 @@ describe('XRBodyModifier3D strict validators', () => {
     });
 
     it('accepts a name outside the hint suggestion, so it needs no citation', () => {
-      // PROPERTY_HINT_ENUM_SUGGESTION (xr_body_modifier_3d.cpp:46) seeds the
-      // inspector's dropdown and still takes an arbitrary string, and
-      // set_body_tracker bare-assigns (:60), so there is no bound to ground.
-      // Whether a tracker of that name is registered with XRServer is a runtime
-      // question no `.tscn` can answer.
+      // PROPERTY_HINT_ENUM_SUGGESTION (xr_body_modifier_3d.cpp:46) seeds the inspector's dropdown
+      // and still takes any string, and set_body_tracker bare-assigns (:60), so no bound exists.
+      // Whether XRServer registers a tracker of that name is a runtime question.
       expect(check('body_tracker', '&"/user/custom_body_tracker"')).toBeNull();
       const validator = validatorRegistry.declarationFor('XRBodyModifier3D', 'body_tracker');
       expect(validator!.formatOnly).toBe(true);
@@ -96,10 +89,9 @@ describe('XRBodyModifier3D strict validators', () => {
     });
 
     it('warns for a bit the inspector flag list does not offer', () => {
-      // set_body_update bare-assigns (xr_body_modifier_3d.cpp:68) with no mask,
-      // so Godot KEEPS bit 8: the scene loads, the BitField holds 15, and
-      // _get_joint_data simply never tests a bit nobody defined. Only the
-      // inspector cannot reach it, which is the hint tier and not the setter tier.
+      // set_body_update bare-assigns (xr_body_modifier_3d.cpp:68) with no mask, so Godot keeps bit
+      // 8: the scene loads, the BitField holds 15, and _get_joint_data never tests an undefined
+      // bit. Only the inspector cannot reach it: the hint tier, not the setter tier.
       const error = check('body_update', '15');
       expect(error?.severity).toBe('warning');
       expect(error?.message).toContain('BODY_UPDATE_UPPER_BODY');

@@ -33,11 +33,11 @@ Strict parsing format-checks the inherited set (3 inherited from FlowContainer, 
 <!-- lint:end -->
 
 `index.ts` reuses FlowContainer's parser directly, which never reads `vertical`. A scene
-carrying that key parses silently, with no error and no stored value — the solver reads
-this node's own TYPE, not the property, to fix its orientation vertical.
+carrying that key parses silently, with no error and no stored value. The solver reads
+this node's own type, not the property, to fix its orientation as vertical.
 
 ## Known limitations
 
 - **Approximated** A TextureRect child using a `Fit` expand mode inside a multi-line
-  flow is sized like any other child; Godot instead keeps its previous frame's size,
-  which a static render has no analogue for.
+  flow is sized like any other child. Godot keeps its previous frame's size, which a
+  static render has no analogue for.

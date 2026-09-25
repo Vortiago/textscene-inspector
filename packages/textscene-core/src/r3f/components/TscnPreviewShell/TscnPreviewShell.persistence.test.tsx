@@ -1,10 +1,6 @@
 /**
- * Persisted dock layout + viewport mode. `usePersistedState` itself
- * is unit-tested in isolation (usePersistedState.test.ts); this file only
- * proves the SHELL actually wires it up — a representative field from each
- * (dockCollapsed for layout, viewport mode for ViewportModeContext) rather
- * than exhaustively re-testing every dock field, which would just be
- * re-testing the same already-proven hook mechanics.
+ * The shell wires `usePersistedState` to the dock layout and the viewport
+ * mode, one field each. usePersistedState.test.ts tests the hook itself.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
@@ -21,13 +17,9 @@ const MINIMAL_TSCN = `[gd_scene load_steps=1 format=3]
 [node name="Root" type="Node3D"]
 `;
 
-// A PLAIN "Node" root claims neither workspace (workspaceForRoot returns
-// null for a container type), so <WorkspaceAutoSelect> — Godot-editor
-// parity: auto-picks 2D/3D from a TYPED root, once per scene — does not
-// override the mode on mount. That auto-select behavior is deliberate and
-// pre-existing; the persisted-mode restoration below is only observable
-// where it doesn't have an opinion, exactly like Godot itself re-deriving
-// per scene tab rather than remembering a global 2D/3D preference.
+// A plain "Node" root claims neither workspace, so <WorkspaceAutoSelect> does
+// not override the mode on mount. The persisted mode is observable only there,
+// as Godot derives the workspace per scene tab.
 const PLAIN_ROOT_TSCN = `[gd_scene load_steps=1 format=3]
 
 [node name="Root" type="Node"]
@@ -45,8 +37,7 @@ describe('<TscnPreviewShell> persisted dock layout + viewport mode (#224)', () =
     unmount();
 
     render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
-    // A fresh mount that reads the persisted "collapsed" state starts
-    // collapsed too — the expand affordance is present, not the collapse one.
+    // A fresh mount reads the persisted "collapsed" state, so it shows the expand control.
     expect(screen.getByLabelText('Show the side panel')).toBeTruthy();
     expect(screen.queryByLabelText('Collapse the side panel')).toBeNull();
   });
@@ -76,20 +67,15 @@ describe('<TscnPreviewShell> persisted dock layout + viewport mode (#224)', () =
     fireEvent.click(screen.getByRole('button', { name: '2D' }));
     unmount();
 
-    // Load a Node3D-rooted scene next — WorkspaceAutoSelect's Godot-editor
-    // parity claim (typed root -> its workspace, every scene) takes
-    // precedence over the persisted preference, exactly as it does for a
-    // manually-toggled mode.
+    // A Node3D root's claim wins over the persisted preference, as it does over
+    // a manual toggle.
     render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
     expect(screen.getByRole('button', { name: '3D' }).getAttribute('aria-pressed')).toBe('true');
   });
 
   it("WorkspaceAutoSelect's programmatic mode pick does NOT overwrite the persisted user preference", () => {
-    // Persist an explicit 2D choice, then visit a typed Node3D scene: the
-    // auto-select shows 3D for THAT scene (previous test) but must not write
-    // 3D into storage — only the toolbar's explicit click persists. A later
-    // plain-Node scene (where auto-select has no opinion) restores the 2D
-    // preference the user actually made.
+    // Auto-select shows 3D for a Node3D scene but writes nothing to storage: only
+    // the toolbar click persists. A later plain-Node scene restores the 2D choice.
     const first = render(<TscnPreviewShell panelId="p1" content={PLAIN_ROOT_TSCN} />);
     fireEvent.click(screen.getByRole('button', { name: '2D' }));
     first.unmount();

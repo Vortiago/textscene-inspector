@@ -1,7 +1,7 @@
 /**
- * Area3D registration — parser.
+ * Area3D registration: the parser.
  *
- * Transform-only group (ADR-0005): reuses the Node3D transform parse; the
+ * A transform-only group (ADR-0005): it reuses the Node3D transform parse, and the
  * render component (index.r3f.ts) reuses Node3D.
  */
 

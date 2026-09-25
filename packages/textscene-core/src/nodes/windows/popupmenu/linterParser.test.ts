@@ -1,12 +1,7 @@
 /**
- * PopupMenu strict validators, format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through
- * `Linter`: the item index's high end is a cross-property bound no validator
- * can see.
+ * PopupMenu strict validators, asserted through `validatorRegistry` so a failure points
+ * at the validator, not at scene parsing. The item index's high end is a cross-property
+ * bound, so linter.test.ts covers it through `Linter`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -126,8 +121,8 @@ describe('PopupMenu strict validators', () => {
 
   describe('system_menu_id', () => {
     it('accepts every id the hint names', () => {
-      // popup_menu.cpp:3262 — "None:0,Application Menu:2,Window Menu:3,
-      // Help Menu:4,Dock:5". The `:value` suffixes make the set sparse; the
+      // popup_menu.cpp:3262: "None:0,Application Menu:2,Window Menu:3,
+      // Help Menu:4,Dock:5". The `:value` suffixes make the set sparse. The
       // underlying NativeMenu::SystemMenus enum is contiguous
       // (native_menu.cpp:125-130, native_menu.h:59-66).
       for (const value of ['0', '2', '3', '4', '5']) {
@@ -181,12 +176,9 @@ describe('PopupMenu strict validators', () => {
 
   describe('the item_<idx>/<leaf> family (registered but not yet routed)', () => {
     /**
-     * `PropertyListHelper` glues the index straight onto the prefix: a real
-     * key is `item_0/text` (property_list_helper.cpp:149), but
-     * `ValidatorRegistry`'s wildcard match requires the fixed prefix to be
-     * followed immediately by a literal `/`, which `item_0/text` never is
-     * (see this slice's `linterParser.ts` header). Godot glues the index onto
-     * the prefix, so these resolve through the `item_#/*` pattern, not `item_/*`.
+     * `PropertyListHelper` glues the index to the prefix (`item_0/text`,
+     * property_list_helper.cpp:149), and a wildcard needs a literal `/` after its fixed
+     * prefix, so these resolve through `item_#/*`, not `item_/*`.
      */
     it('resolves a real per-item key through the indexed wildcard', () => {
       expect(validatorRegistry.findValidator('PopupMenu', 'item_0/text')).not.toBeNull();
@@ -194,24 +186,20 @@ describe('PopupMenu strict validators', () => {
     });
 
     it('rejects a key whose index is not an integer, as the engine does', () => {
-      // `PopupMenu::_set` routes per-item keys through
-      // `property_helper.property_set_value` (popup_menu.cpp:3092), whose
-      // `_get_property` returns nullptr unless the index `is_valid_int()`
-      // (property_list_helper.cpp:53-55); `_set` then returns false and Godot
-      // DROPS the write. Reporting that requires the key to reach the
-      // dispatcher, so it routes rather than resolving to no validator.
+      // `PopupMenu::_set` routes per-item keys through `property_set_value`
+      // (popup_menu.cpp:3092), whose `_get_property` drops the write unless the index
+      // `is_valid_int()` (property_list_helper.cpp:53-55). The key must reach the
+      // dispatcher to report that, so it routes rather than resolving to no validator.
       const nonNumeric = validatorRegistry.findValidator('PopupMenu', 'item_x/text');
       expect(nonNumeric).not.toBeNull();
       expect(nonNumeric!('item_x/text', '"x"', 1)?.severity).toBe('error');
-      // A NEGATIVE index is a well-formed key Godot resolves and then refuses
-      // (is_valid_int accepts the sign, property_list_helper.cpp:52, and the
-      // index < 0 guard rejects it at :57). It must reach the dispatcher so the
-      // diagnostic fires; returning null here meant a key the engine silently
-      // drops read as clean.
+      // A negative index is well formed: is_valid_int accepts the sign
+      // (property_list_helper.cpp:52) and the index < 0 guard rejects it at :57. It must
+      // reach the dispatcher, or a key the engine drops reads as clean.
       const negative = validatorRegistry.findValidator('PopupMenu', 'item_-1/text');
       expect(negative).not.toBeNull();
       expect(negative!('item_-1/text', '"x"', 1)?.code).toBe('INVALID_ITEM_INDEX');
-      // An EMPTY index fails the same `is_valid_int()` gate
+      // An empty index fails the same `is_valid_int()` gate
       // (property_list_helper.cpp:53), so the write is dropped and the key
       // routes to the dispatcher, which reports it as an unknown item key.
       const empty = validatorRegistry.findValidator('PopupMenu', 'item_/text');

@@ -1,11 +1,8 @@
 /**
- * Factory for the generic `.tres` resource processor — fetches a Godot
- * resource file's text through the FileEventBus and parses it into a
- * `ParsedResource` (header type + ext/sub resources + [resource] body, raw
- * strings) on the previously-unused 'resource' bus slot. Consumers give the
- * parsed file meaning (e.g. the TileSet resolver); the pipeline only fetches
- * and parses the format. Coexists with the material processor on .tres paths:
- * each processor only handles paths it has in flight.
+ * The generic `.tres` processor: a resource file's text through the FileEventBus
+ * into a `ParsedResource` (header type, ext/sub resources, raw `[resource]` body)
+ * on the 'resource' bus slot, for consumers such as the TileSet resolver. It shares
+ * .tres paths with the material processor, since each handles only its own flights.
  */
 
 import type { FileEventBus } from '../FileEventBus';

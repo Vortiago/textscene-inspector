@@ -24,10 +24,9 @@ export async function captureGodotFrames(fixture, framesDir, mode) {
     const ini = existsSync(join(root, 'project.godot'))
       ? await readFile(join(root, 'project.godot'), 'utf8')
       : null;
-    // A 3D animation renders Godot at the SAME frame the previewer's canvas
-    // produces (CANVAS_CAPTURE), exactly as the still-3D comparison does, so the
-    // two GIFs share a size/aspect and the gallery slider overlays them 1:1
-    // instead of stretching ours into Godot's differently-shaped box.
+    // A 3D animation renders Godot at the previewer canvas's frame (CANVAS_CAPTURE), as the still
+    // 3D comparison does, so the two GIFs share a size and aspect and the gallery slider overlays
+    // them 1:1 instead of stretching one into the other's box.
     const size =
       mode === '2d'
         ? { width: CANVAS_2D_CAPTURE.width, height: CANVAS_2D_CAPTURE.height }

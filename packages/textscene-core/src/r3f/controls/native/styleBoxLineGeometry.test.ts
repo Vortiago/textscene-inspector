@@ -1,5 +1,5 @@
 /**
- * `styleBoxLineDrawRect` — `scene/resources/style_box_line.cpp:86-100`
+ * `styleBoxLineDrawRect` against `scene/resources/style_box_line.cpp:86-100`
  * (Godot 4.6.3).
  */
 import { describe, expect, it } from 'vitest';

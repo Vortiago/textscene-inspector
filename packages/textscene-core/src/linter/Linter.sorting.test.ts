@@ -1,5 +1,5 @@
 /**
- * Linter: the order diagnostics come back in — by position, then by severity.
+ * Linter: the order diagnostics come back in: by severity, with the order kept inside one severity.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -28,12 +28,9 @@ describe('Linter', () => {
   });
 
   describe('Diagnostic Sorting', () => {
-    // Derived from what each test registered, so a new case cannot leak a rule
-    // into the next by being left off a hand-written roster. Declared beside
-    // the `afterEach` that drains it: `ruleRegistry` is a module singleton, so
-    // a case registering outside that hook's reach reports on every later test
-    // in this file. Vitest isolates the module graph per FILE, so the reach
-    // stops there.
+    // Derived from what each test registered, so no case leaks a rule into the next through a hand-written roster.
+    // `ruleRegistry` is a module singleton, so a case registering outside the `afterEach` beside this reports on every
+    // later test in this file. Vitest isolates the module graph per file.
     const registered: string[] = [];
 
     const register = (...rules: LintRule[]): void => {
@@ -77,9 +74,9 @@ describe('Linter', () => {
 
     it('ranks a severity outside the union last, rather than comparing it to NaN', () => {
       // `SEVERITY_ORDER[<off-union>]` is `undefined` and the subtraction is
-      // then `NaN`, which the sort reads as "equal" — so with the offending
-      // rule registered FIRST, an unfloored comparator hands back registration
-      // order and the most severe finding is no longer at the top.
+      // then `NaN`, which the sort reads as "equal". With the offending rule
+      // registered first, an unfloored comparator keeps registration order and
+      // the most severe finding is not at the top.
       register(
         rule('test-off-union-rule', 'bogus' as unknown as Diagnostic['severity'], 'Odd'),
         rule('test-error-rule', 'error', 'Error')

@@ -1,22 +1,8 @@
 /**
- * `BaseMaterial3D.blend_mode` → three.js blending state, ported from Godot.
- *
- * Godot turns the mode into a `render_mode blend_*` line on the generated
- * spatial shader (`scene/resources/material.cpp` `_update_shader`, the
- * `switch (blend_mode)` emitting `blend_mix` / `blend_add` / `blend_sub` /
- * `blend_mul` / `blend_premul_alpha`); the shader compiler maps those names back
- * to a `BlendMode` (`scene_shader_forward_clustered.cpp`
- * `render_mode_values["blend_add"]` …), and
- * `MaterialStorage::ShaderData::blend_mode_to_blend_attachment`
- * (`servers/rendering/renderer_rd/storage_rd/material_storage.cpp`) picks the
- * actual factors. `GODOT_BLEND_ATTACHMENTS` below IS that function's table,
- * transcribed — the same engine enum `CanvasItemMaterial` blends 2D with.
- *
- * Three of the five modes come out identical to a three.js PRESET, so those use
- * the preset (fewer moving parts, and the material keeps the blending constant
- * existing consumers assert on). `blendState.test.ts` pins the equivalence
- * against the ported factors, so a change in either engine surfaces as a
- * failure rather than a silent divergence.
+ * `BaseMaterial3D.blend_mode` → three.js blending state. `_update_shader` in
+ * `scene/resources/material.cpp` emits `render_mode blend_*`, which
+ * `scene_shader_forward_clustered.cpp` maps to a `BlendMode`. `GODOT_BLEND_ATTACHMENTS`
+ * transcribes the factors of `servers/rendering/renderer_rd/storage_rd/material_storage.cpp`.
  */
 
 import * as THREE from 'three';
@@ -45,9 +31,9 @@ export interface GodotBlendAttachment {
 }
 
 /**
- * `blend_mode_to_blend_attachment`, verbatim. Every mode enables blending; the
- * alpha channel gets its own factors in all five, which is why a mode cannot be
- * expressed by a colour-only `gl.blendFunc` reading.
+ * `blend_mode_to_blend_attachment`, verbatim. Every mode enables blending, and the alpha
+ * channel gets its own factors in all five, so no colour-only `gl.blendFunc` reading
+ * expresses a mode.
  */
 export const GODOT_BLEND_ATTACHMENTS: Readonly<Record<BlendMode, GodotBlendAttachment>> = {
   [BlendMode.MIX]: {
@@ -107,28 +93,18 @@ const THREE_FACTOR: Readonly<Record<GodotBlendFactor, THREE.BlendingDstFactor>> 
 };
 
 /**
- * The modes a three preset already expresses EXACTLY, with the equality each
- * claim rests on (three's `WebGLState.setBlending`, non-premultiplied branch):
- *
- *   MIX → NormalBlending: `blendFuncSeparate(SRC_ALPHA, ONE_MINUS_SRC_ALPHA,
- *         ONE, ONE_MINUS_SRC_ALPHA)` with `FUNC_ADD` on both channels.
- *   ADD → AdditiveBlending: `blendFunc(SRC_ALPHA, ONE)` — a colour-and-alpha
- *         call, so the alpha channel gets the same pair Godot's does.
- *   MUL → MultiplyBlending: `blendFunc(ZERO, SRC_COLOR)`, i.e. `src × dst` for
- *         colour and `a_src × a_dst` for alpha (GL takes SRC_COLOR's alpha
- *         component for the alpha channel) — the same products as Godot's
- *         `DST_COLOR/ZERO` + `DST_ALPHA/ZERO`, with the operands swapped.
- *
- * SUB is NOT `SubtractiveBlending` (three spells that `FUNC_ADD` with
- * `ZERO/ONE_MINUS_SRC_COLOR`, a different operation entirely), and
- * PREMULT_ALPHA is not NormalBlending-with-`premultipliedAlpha` either: that
- * flag makes three premultiply the shader output (`gl_FragColor.rgb *= a` under
- * `#define PREMULTIPLIED_ALPHA`), which would double-apply against a Godot
- * material whose source is already premultiplied. Both take the real factors.
+ * The modes a three preset expresses exactly, kept as presets for the blending constant
+ * consumers assert on (`WebGLState.setBlending`, non-premultiplied; `blendState.test.ts`).
+ * SUB is not `SubtractiveBlending` (`FUNC_ADD` with `ZERO/ONE_MINUS_SRC_COLOR`), and
+ * PREMULT_ALPHA is not `premultipliedAlpha`, which premultiplies a premultiplied source again.
  */
 const PRESETS: Readonly<Partial<Record<BlendMode, THREE.Blending>>> = {
+  // `blendFuncSeparate(SRC_ALPHA, ONE_MINUS_SRC_ALPHA, ONE, ONE_MINUS_SRC_ALPHA)`, `FUNC_ADD`.
   [BlendMode.MIX]: THREE.NormalBlending,
+  // `blendFunc(SRC_ALPHA, ONE)` sets colour and alpha, so alpha gets Godot's pair.
   [BlendMode.ADD]: THREE.AdditiveBlending,
+  // `blendFunc(ZERO, SRC_COLOR)`: `src × dst` and `a_src × a_dst`, Godot's
+  // `DST_COLOR/ZERO` and `DST_ALPHA/ZERO` products with the operands swapped.
   [BlendMode.MUL]: THREE.MultiplyBlending,
 };
 

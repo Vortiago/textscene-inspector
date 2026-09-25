@@ -1,16 +1,7 @@
 /**
- * `richTextLabelMinimumSize` vs Godot 4.6.3 (`scene/gui/rich_text_label.cpp:
- * 8036-8047`, backed by `get_content_height`/`get_content_width` at
- * `:7491-7522`). Expected numbers use the SAME vendored OpenSans_SemiBold
- * atlas/metrics worked example `label/nativeSolver.test.ts` derives from
- * (`unitsPerEm=2048`, `ascent=2189`, `descent=600`, atlas bake size 42) — an
- * independent worked example, never the implementation's own output.
- *
- * At font size 16: ascentPx=18, descentPx=5 -> RichTextLabel's OWN line pitch
- * is 23 (NOT Label's 26): `default_theme.cpp:1217` sets `line_separation` to 0
- * for RichTextLabel, unlike Label's `line_spacing=3` (`:392`), so
- * `getLinePitchPx(fontSizePx, 0)` — not the default-3 call Label uses — is
- * this widget's own per-line step.
+ * Tests the RichTextLabel solve against `scene/gui/rich_text_label.cpp`
+ * (`:8036-8047`, `:7491-7522`), with OpenSans_SemiBold (`unitsPerEm=2048`, `ascent=2189`,
+ * `descent=600`, bake 42) worked by hand, never from the implementation.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { ControlProperties } from '../control/types';
@@ -71,17 +62,15 @@ function ctx(withMeasurer = true): SolveContext {
   };
 }
 
-// 'A's hmtx advance width is 1354 design units (openSansMetrics.ts's
-// CONTINUOUS advanceWidths, NOT openSansAtlas.ts's atlas-bake-resolution-42
-// xadvance). 'B's is 1350 design units, DIFFERENT from 'A's 1354 — the
-// two only coincided at the OLD atlas-bake-resolution-42 xadvance (both
-// rounded to the integer 28), not a fact about the font.
+// hmtx advance widths from openSansMetrics.ts, not the atlas xadvance:
+// 'A' is 1354 design units and 'B' 1350.
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
-// The SHAPED size of 'AB' — `TS->shaped_text_get_size(...).x` ceils the pen
-// advance to a whole pixel (`text_server_adv.cpp:7524-7537`), and every
-// minimum size below is built from that, not from the fractional sum.
+// The shaped size of 'AB': `TS->shaped_text_get_size(...).x` ceils the pen
+// advance (`text_server_adv.cpp:7524-7537`), and every minimum size uses it.
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
-const OWN_LINE_PITCH = 23; // getLinePitchPx(16, 0): ceil(2189*16/2048) + ceil(600*16/2048) + 0.
+// getLinePitchPx(16, 0): ceil(2189*16/2048) + ceil(600*16/2048) + 0, not Label's 26:
+// `default_theme.cpp:1217` sets `line_separation` 0, not Label's 3 (`:392`).
+const OWN_LINE_PITCH = 23;
 
 describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
   it('is (1, 0) without fit_content, default autowrap (WORD_SMART, non-OFF floors width to 1, height never counts text at all)', () => {
@@ -132,13 +121,10 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
   });
 
   it('fit_content + autowrap ON: the height is the text WRAPPED at the width a completed pass resolved', () => {
-    // `_validate_line_caches` resizes every line at
-    // `text_rect.get_size().width - scroll_w` and then calls
-    // `update_minimum_size()` when `fit_content` is set
-    // (`rich_text_label.cpp:3873,3880`), so the reported height is the wrapped
-    // one — the same width self-reference Label closes through
-    // `SolveContext.tentativeRect`. 'AB AB' at 22px of shaped width per 'AB'
-    // wraps to two lines in a 30px box.
+    // `_validate_line_caches` resizes lines at `text_rect.get_size().width - scroll_w`,
+    // then calls `update_minimum_size()` under `fit_content` (`rich_text_label.cpp:3873,3880`),
+    // so the height is the wrapped one. 'AB AB' at 22px per 'AB' wraps to two
+    // lines in a 30px box.
     const wrapped = 
       richTextLabelMinimumSize(node({ fitContent: true, text: 'AB AB' }), {
         ...ctx(),
@@ -150,8 +136,8 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
   });
 
   it('fit_content + autowrap ON: the FIRST pass, with no resolved width yet, reports the unwrapped height', () => {
-    // No `tentativeRect` answer means no completed pass — exactly Godot's own
-    // pre-resize state, and what keeps the exchange non-circular.
+    // No `tentativeRect` answer means no completed pass: Godot's pre-resize
+    // state, which keeps the exchange non-circular.
     const first = richTextLabelMinimumSize(node({ fitContent: true, text: 'AB AB' }), ctx());
     expect(first.y).toBe(OWN_LINE_PITCH);
   });
@@ -221,14 +207,10 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
         ctx()
       )
     ;
-    // Both 'A's now shape at 32px. 32 is above
-    // SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so each advance is rounded to a
-    // whole pixel with the remainder carried (text_server_adv.cpp:7079-7084):
-    // 'A' quantizes to 1354/64 = 21.15625, giving 21 then
-    // round(21.15625 + 0.15625) = 21, so 42 of pen advance — NOT the 42.3125
-    // a continuous scale would produce. Real Godot 4.6.3 agrees:
-    // `ThemeDB.fallback_font.get_string_size("AA", HORIZONTAL_ALIGNMENT_LEFT,
-    // -1, 32).x` is 42.
+    // Both 'A's shape at 32px, above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so
+    // each advance rounds to a whole pixel with the remainder carried
+    // (text_server_adv.cpp:7079-7084): 21 + 21 = 42, not 42.3125. Godot's
+    // `ThemeDB.fallback_font.get_string_size("AA", HORIZONTAL_ALIGNMENT_LEFT, -1, 32).x` is 42.
     expect(result.x).toBe(42);
   });
 
@@ -239,10 +221,8 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
         ctx()
       )
     ;
-    // A solo image's own decorated advance is exact (10, shapedTextSizeWidthPx
-    // ceils a whole number to itself); centre/centre alignment on an
-    // image-only line (textAscent=textDescent=0) splits the 40px height
-    // evenly (imageBaselineOffsetPx's own doc/tests).
+    // A solo image's decorated advance is exact (10), and centre/centre on an
+    // image-only line (textAscent=textDescent=0) splits the 40px height evenly.
     expect(result).toEqual({ x: 10, y: 40 });
   });
 
@@ -271,8 +251,8 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
 });
 
 describe(`richTextLabelMinimumSize — resolves this RichTextLabel's own PARAGRAPH theme font key ("${RICH_TEXT_LABEL_THEME_FONT_KEY}", default_theme.cpp:1194)`, () => {
-  // See `resolveNodeFontMetrics.test.ts`'s own doc for why an UNRESOLVABLE
-  // font's warn is the observable proof here, not a resolved FontMetrics value.
+  // An unresolvable font's warn is the observable proof here, as
+  // `resolveNodeFontMetrics.test.ts` explains.
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
@@ -333,8 +313,8 @@ describe('richTextLabelTextTheme / RICH_TEXT_LABEL_THEME_KEYS / RICH_TEXT_LABEL_
 
 describe('styledTextRuns', () => {
   const WHITE = { r: 1, g: 1, b: 1, a: 1 };
-  // Distinct from the fallback (16) below so a test failing to isolate the two
-  // shows up as a wrong NUMBER, not a coincidentally-equal one.
+  // Distinct from the fallback (16), so a failure to isolate them shows as a
+  // wrong number.
   const NORMAL = 18;
   const FALLBACK = 16;
 
@@ -575,7 +555,7 @@ describe('styledTextRuns', () => {
     it('bold/italic/bold+italic spans, each repeated, walk their own key ONCE each — 3 calls total, not 6', () => {
       const text = '[b]a[/b][i]b[/i][b][i]c[/i][/b][b]d[/b][i]e[/i][b][i]f[/i][/b]';
       const runs = styledTextRuns(node({}), { text, bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
-      // Correctness is unaffected by memoising — still 6 runs, still resolved individually.
+      // The memo changes nothing: still 6 runs, each resolved.
       expect(runs).toHaveLength(6);
       expect(sizeSpy).toHaveBeenCalledTimes(3);
       const keys = sizeSpy.mock.calls.map((call: unknown[]) => call[1]).sort();
@@ -617,7 +597,7 @@ describe('styledTextRuns', () => {
 
     it('a %-form dimension resolves to 0 (unresolvable) when boxWidthPx is not yet known (a solve tree\'s first pass)', () => {
       const runs = styledTextRuns(node({}), { text: '[img=50%]a.png[/img]', bbcodeEnabled: true } as RichTextLabelProperties, WHITE, NORMAL, FALLBACK);
-      expect(runs).toEqual([]); // width resolves to 0, no height, no region — unresolvable.
+      expect(runs).toEqual([]); // width resolves to 0, with no height and no region: unsizable.
     });
 
     it('an image run never carries bold/italic/underline, and its top-level color mirrors the parsed [img] color=', () => {
@@ -839,7 +819,7 @@ describe('layoutRichTextRuns', () => {
     return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx, autowrapMode, lineSpacingPx: 0 });
   }
 
-  /** `shape`, but with each character shaped at ITS run's own size — the only way a wrapped line can end up carrying a font size the paragraph's own key never mentions. */
+  /** `shape`, with each character at its run's size, so a line can carry a size the paragraph key never names. */
   function shapeMixed(
     text: string,
     runs: Parameters<typeof fontSizePxAtFromRuns>[0],
@@ -944,16 +924,15 @@ describe('layoutRichTextRuns', () => {
   it("anchors EVERY run on a line at that LINE's own baseline — the MAX ascent over the fonts on it, not each run's own — so a 16px run and an 18px run on one line share one baseline", () => {
     // `text_server_adv.cpp:5486` (`_shape_substr`):
     // `p_new_sd->ascent = MAX(p_new_sd->ascent, MAX(cached_font_ascent + ..., -gl.y_off))`
-    // over the LINE's own glyphs, and `rich_text_label.cpp:1055`'s
-    // `off.y += l_ascent` is applied once for the whole line — `off_step.y`
-    // never varies per glyph, so both runs draw from the same baseline.
+    // over the line's glyphs, and `rich_text_label.cpp:1055`'s `off.y += l_ascent`
+    // applies once per line, so both runs share one baseline.
     const runs = [
       { text: 'plain', bold: false, italic: false, underline: false, color: WHITE, fontSizePx: 18, alignment: 0 },
       { text: 'BOLD', bold: true, italic: false, underline: false, color: WHITE, fontSizePx: 16, alignment: 0 },
     ];
     const layout = shape('plainBOLD');
     const placements = layoutRichTextRuns(runs, layout);
-    const lineAscent = getFontAscentPx(OPEN_SANS_FONT_METRICS, 18); // 20 — the larger of the two.
+    const lineAscent = getFontAscentPx(OPEN_SANS_FONT_METRICS, 18); // 20, the larger of the two.
     expect(placements[0]!.layout.baselineOffsetPx).toBe(lineAscent);
     expect(placements[1]!.layout.baselineOffsetPx).toBe(lineAscent);
     expect(getFontAscentPx(OPEN_SANS_FONT_METRICS, 16)).not.toBe(lineAscent);
@@ -981,17 +960,13 @@ describe('layoutRichTextRuns', () => {
     expect(placements[1]!.layout.baselineOffsetPx).toBe(18);
   });
 
-  // `_draw_line` measures the line as `text_buf->get_line_size(line).x`
-  // (`rich_text_label.cpp:984`) — `TextParagraph::get_line_size`
-  // (`text_paragraph.cpp:773-779`) returns `TS->shaped_text_get_size`, which
-  // is `Size2(sd->width, ...).ceil()` (`text_server_adv.cpp:7524-7537`),
-  // never the raw pen advance. The box it aligns against is `int p_width`
-  // (`rich_text_label.h:672,678`), truncated once from the control rect, so
-  // only a FRACTIONAL box width tells the ceiled measure apart from the raw
-  // one: at a whole box width the outer floor absorbs the fraction.
+  // `_draw_line` measures `text_buf->get_line_size(line).x` (`rich_text_label.cpp:984`,
+  // `text_paragraph.cpp:773-779`), `Size2(sd->width, ...).ceil()` (`text_server_adv.cpp:7524-7537`).
+  // The box is an `int p_width` (`rich_text_label.h:672,678`), so only a
+  // fractional box width tells the ceiled measure from the raw one.
   describe('line measure (rich_text_label.cpp:984,1000-1014)', () => {
-    // "Threat level" at 16px: raw pen advance 91.03125, ceiled 92 - both read
-    // out of the running engine (`textLayout.test.ts`'s own advance table).
+    // "Threat level" at 16px: raw pen advance 91.03125, ceiled 92, both from the
+    // running engine (`textLayout.test.ts`'s advance table).
     const TEXT = 'Threat level';
     const BOX_WIDTH_PX = 201.5;
 
@@ -1021,13 +996,13 @@ describe('layoutRichTextRuns', () => {
         italic: false,
         underline: false,
         color: WHITE,
-        fontSizePx: widthPx, // repurposed — imageObjectFontMetrics's own doc.
+        fontSizePx: widthPx, // carries the width: imageObjectFontMetrics.
         alignment: 0,
         image: { spec: { path, width: widthPx, height: heightPx, widthInPercent: false, heightInPercent: false, color: WHITE, region: undefined, pad: false, tooltip: '', altText: '', alignment: CENTER_CENTER }, sizePx: { x: widthPx, y: heightPx } },
       };
     }
 
-    /** `shape`, decorated so an image run's placeholder shapes at its OWN width — the real Component.tsx/nativeSolver.ts pipeline. */
+    /** `shape`, decorated so an image placeholder shapes at the image width, as Component.tsx does. */
     function shapeWithImages(text: string, runs: Parameters<typeof fontSizePxAtFromRuns>[0], boxWidthPx = 0, autowrapMode = AutowrapMode.OFF): TextLayoutResult {
       return shapeText(text, {
         fontSizePx: FONT_SIZE,
@@ -1106,9 +1081,9 @@ describe('richTextUnderlineMetrics', () => {
       { text: 'big', bold: true, italic: false, underline: false, color: WHITE, fontSizePx: 18, alignment: 0 },
       { text: 'small', bold: false, italic: false, underline: true, color: WHITE, fontSizePx: 16, alignment: 0 },
     ];
-    // -(-100 - 50/2)*18/2048 and 50*18/2048 — the 18px run's, though it is the
-    // 16px run that carries [u]. The -thickness/2 term is FreeType's own
-    // top-edge-to-centre conversion (sfobjs.c:1424-1425).
+    // -(-100 - 50/2)*18/2048 and 50*18/2048: the 18px run's, though the 16px
+    // run carries [u]. The -thickness/2 term is FreeType's top-edge-to-centre
+    // conversion (sfobjs.c:1424-1425).
     expect(richTextUnderlineMetrics(runs)).toEqual({
       positionPx: 1.0986328125,
       thicknessPx: 0.439453125,
@@ -1121,9 +1096,9 @@ describe('richTextUnderlineMetrics', () => {
 });
 
 describe('underlineRectPx', () => {
-  // -(-100 - 50/2)*16/2048 and 50*16/2048 — one paragraph's worth of upos/uthk at 16px.
+  // -(-100 - 50/2)*16/2048 and 50*16/2048: one paragraph's upos/uthk at 16px.
   const METRICS_16 = { positionPx: 0.9765625, thicknessPx: 0.390625 };
-  // -(-100 - 50/2)*18/2048 and 50*18/2048 — the same paragraph at 18px.
+  // -(-100 - 50/2)*18/2048 and 50*18/2048: the same paragraph at 18px.
   const METRICS_18 = { positionPx: 1.0986328125, thicknessPx: 0.439453125 };
   const GLYPHS = [
     { char: 'u', x: 10, advance: 5, glyph: null },
@@ -1170,7 +1145,7 @@ describe('underlineRectPx', () => {
       18,
       METRICS_16
     );
-    // ceil(10.4-0.5)=10 .. ceil(23.2-0.5)-1=22, i.e. columns 10..22 inclusive.
+    // ceil(10.4-0.5)=10 .. ceil(23.2-0.5)-1=22: columns 10..22 inclusive.
     expect(rect!.x0).toBe(10);
     expect(rect!.x1).toBe(23);
   });
@@ -1181,18 +1156,10 @@ describe('underlineRectPx', () => {
 });
 
 /**
- * `fit_content`'s width comes from `get_content_width`, which maxes
- * `l.text_buf->get_size().x` over the lines
- * (`rich_text_label.cpp`'s content-width accumulation) —
- * `TextParagraph::get_size` is itself a max over
- * `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`),
- * and that accessor returns `Size2(sd->width, ...).ceil()`
- * (`text_server_adv.cpp:7524-7537`).
- *
- * Godot 4.6.3, a `fit_content` RichTextLabel with `autowrap_mode = 0` and
- * `text = "Master volume"` inside a VBoxContainer in a 1152x648 SubViewport:
- * `get_combined_minimum_size()` = (116, 23) — the same whole pixel a Label of
- * that text reports, not the 115.84375 pen advance behind it.
+ * `fit_content`'s width is `get_content_width` (`rich_text_label.cpp`), a max of
+ * `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`), ceiled
+ * (`text_server_adv.cpp:7524-7537`). In Godot, "Master volume" reports
+ * `get_combined_minimum_size()` (116, 23), not its 115.84375 pen advance.
  */
 describe('richTextLabelMinimumSize — the shaped extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
   it("reports Godot's own whole-pixel 116 for a fit_content, non-wrapping 'Master volume'", () => {
@@ -1214,27 +1181,10 @@ describe('richTextLabelMinimumSize — the shaped extent is ceiled (text_server_
 });
 
 /**
- * `horizontal_alignment`/`vertical_alignment` and the `[center]`/`[right]`/
- * `[left]`/`[fill]` tags that override them per paragraph.
- *
- * The arithmetic is NOT Label's. RichTextLabel aligns through
- * `TextParagraph::draw` (`scene/resources/text_paragraph.cpp:989-1023`), which
- * floors and measures against `shaped_text_get_width` — the raw pen advance —
- * while Label goes through `Label::_get_line_rect`, which truncates and
- * measures against the CEILED shaped size. A synthetic line width (Label's own
- * test style) keeps these cases about the offset arithmetic rather than about
- * font metrics.
- *
- * Engine-checked end to end: "Hello" in a 300x150 RichTextLabel inside a
- * 400x200 SubViewport, ink columns/rows read back off
- * `SubViewport.get_texture().get_image()` per alignment pair. LEFT put the ink
- * at x 1..38, CENTER at 131..168, RIGHT at 261..298 — a 130px and a 260px
- * shift of a 40px line in a 300px box, i.e. `floor((300-40)/2)` and `300-40`.
- * Vertically, TOP/CENTER/BOTTOM put the same ink on rows 6, 69 and 133: a 23px
- * line in a 150px box, so `vbegin` is 63.5 and 127 — the CENTER row confirms
- * Godot keeps that half pixel until the glyph floor (63.5 + 6 = 69.5, drawn on
- * row 69), which is why these functions return floats and the line top is
- * floored once, downstream.
+ * `horizontal_alignment`, `vertical_alignment` and the `[center]`/`[right]`/
+ * `[left]`/`[fill]` tags. RichTextLabel aligns in `_draw_line`, not
+ * `TextParagraph::draw` (`scene/resources/text_paragraph.cpp:989-1023`), and
+ * floors where Label truncates. Synthetic line widths keep this off font metrics.
  */
 describe('RichTextLabel paragraph alignment', () => {
   describe('resolveParagraphAlignment (rich_text_label.cpp:3492-3505)', () => {
@@ -1255,19 +1205,21 @@ describe('RichTextLabel paragraph alignment', () => {
 
     it('ignores a styling tag — only the four push_paragraph tags carry an alignment', () => {
       // `[b]`/`[u]`/`[color]` are `push_bold`/`push_underline`/`push_color`,
-      // not `push_paragraph` — none creates an ITEM_PARAGRAPH to be found.
+      // not `push_paragraph`, so none creates an ITEM_PARAGRAPH.
       expect(resolveParagraphAlignment([{ name: 'b' }, { name: 'u' }, { name: 'color' }], 2)).toBe(2);
     });
   });
 
+  // In Godot, "Hello" in a 300x150 RichTextLabel inks x 1..38, 131..168 and 261..298
+  // for LEFT, CENTER and RIGHT: `floor((300-40)/2)` and `300-40`.
   describe('richTextHorizontalOffsetPx (rich_text_label.cpp:1000-1014)', () => {
     it('leaves LEFT at the box origin', () => {
       expect(richTextHorizontalOffsetPx(70, 200, 0)).toBe(0);
     });
 
     it('floors half the slack for CENTER', () => {
-      // `ofs.x += Math::floor((l_width - length) / 2.0)` — a single floor,
-      // unlike Label's two truncations.
+      // `ofs.x += Math::floor((l_width - length) / 2.0)`: one floor, where
+      // Label truncates twice.
       expect(richTextHorizontalOffsetPx(70, 200, 1)).toBe(65);
       expect(richTextHorizontalOffsetPx(70, 201, 1)).toBe(65);
       expect(richTextHorizontalOffsetPx(70.5, 201, 1)).toBe(65);
@@ -1284,10 +1236,9 @@ describe('RichTextLabel paragraph alignment', () => {
     });
 
     it('CENTER keeps centring once the line OVERFLOWS its box (rich_text_label.cpp:1007-1010)', () => {
-      // `_draw_line`'s own arm is `off.x += Math::floor((width - length) / 2.0)`
-      // with no `length <= l_width` guard — that guard belongs to
-      // `TextParagraph::draw` (text_paragraph.cpp:1004), which RichTextLabel's
-      // main text path does not go through. Engine-checked against Godot 4.6.3.
+      // `_draw_line`'s arm is `off.x += Math::floor((width - length) / 2.0)`, with
+      // no `length <= l_width` guard: that guard is `TextParagraph::draw`'s
+      // (text_paragraph.cpp:1004), which RichTextLabel does not use.
       expect(richTextHorizontalOffsetPx(287, 200, 1)).toBe(-44);
       expect(richTextHorizontalOffsetPx(201, 200, 1)).toBe(-1);
     });
@@ -1299,10 +1250,9 @@ describe('RichTextLabel paragraph alignment', () => {
     });
 
     it('still aligns a ZERO-width paragraph, which TextParagraph::draw would have skipped', () => {
-      // `if (width > 0)` (text_paragraph.cpp:990) guards that switch, not
-      // `_draw_line`'s — so CENTER/RIGHT keep subtracting the line and pull
-      // the text off the leading edge. `RichTextLabel` clips its own contents
-      // (`:8225`), so a control that narrow shows none of it either way.
+      // `if (width > 0)` (text_paragraph.cpp:990) guards the other switch, so
+      // CENTER and RIGHT pull the text off the leading edge. `RichTextLabel`
+      // clips its contents (`:8225`), so a control this narrow shows none of it.
       expect(richTextHorizontalOffsetPx(70, 0, 1)).toBe(-35);
       expect(richTextHorizontalOffsetPx(70, 0, 2)).toBe(-70);
     });
@@ -1315,14 +1265,17 @@ describe('RichTextLabel paragraph alignment', () => {
     });
   });
 
+  // In the same label, TOP, CENTER and BOTTOM ink rows 6, 69 and 133: `vbegin` 63.5 and 127,
+  // and 63.5 + 6 = 69.5 draws on row 69, so these return floats and the line top floors once,
+  // downstream.
   describe('richTextVerticalOffsets (rich_text_label.cpp:1619-1652)', () => {
     it('leaves TOP untouched', () => {
       expect(richTextVerticalOffsets(100, 300, 0, 3)).toEqual({ vbeginPx: 0, vsepPx: 0 });
     });
 
     it('halves the slack for CENTER and takes all of it for BOTTOM, without truncating', () => {
-      // `float vbegin = 0` (`:1628`), NOT the `int` pair Label declares — so a
-      // half pixel survives here where Label would drop it.
+      // `float vbegin = 0` (`:1628`), not Label's `int` pair, so a half pixel
+      // survives here.
       expect(richTextVerticalOffsets(100, 300, 1, 3)).toEqual({ vbeginPx: 100, vsepPx: 0 });
       expect(richTextVerticalOffsets(101, 300, 1, 3)).toEqual({ vbeginPx: 99.5, vsepPx: 0 });
       expect(richTextVerticalOffsets(100, 300, 2, 3)).toEqual({ vbeginPx: 200, vsepPx: 0 });
@@ -1334,9 +1287,8 @@ describe('RichTextLabel paragraph alignment', () => {
     });
 
     it('stays TOP-aligned when the text is TALLER than its box, whatever the alignment', () => {
-      // `:1630`'s `text_rect.size.y > total_height` guard. Label has no such
-      // guard and pulls its own text UPWARD here instead, which is why the two
-      // are transcribed separately.
+      // `:1630`'s `text_rect.size.y > total_height` guard. Label has none and
+      // pulls its text upward here.
       for (const alignment of [1, 2, 3]) {
         expect(richTextVerticalOffsets(400, 300, alignment, 3)).toEqual({ vbeginPx: 0, vsepPx: 0 });
       }

@@ -1,13 +1,8 @@
 /**
- * SkeletonModifier3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour is tested through `Linter` in linter.test.ts.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * SkeletonModifier3D strict validators: format and range checks. Asserted through
+ * `validatorRegistry`, not by linting a `.tscn`, so a failure points at the validator and not at
+ * scene parsing. linter.test.ts tests rule behaviour through `Linter`. Quote the governing Godot
+ * source line beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -27,8 +22,8 @@ describe('SkeletonModifier3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format. This loop is generic, and the
+    // per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('SkeletonModifier3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -57,7 +52,8 @@ describe('SkeletonModifier3D strict validators', () => {
     });
 
     it('accepts the lower bound 0', () => {
-      // scene/3d/skeleton_modifier_3d.cpp: ADD_PROPERTY(..., "influence", PROPERTY_HINT_RANGE, "0,1,0.001")
+      // scene/3d/skeleton_modifier_3d.cpp: ADD_PROPERTY(..., "influence", PROPERTY_HINT_RANGE,
+      // "0,1,0.001")
       expect(check('influence', '0')).toBeNull();
     });
 

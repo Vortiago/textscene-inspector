@@ -1,9 +1,7 @@
 /**
- * ParallaxLayer parser — the Node2D surface plus the `motion_*` group.
- *
- * `motion_mirroring` is clamped at 0 per axis, matching
- * `ParallaxLayer::set_mirroring`'s `p_mirroring.maxf(0)`: a negative interval
- * would make the repeat wrap the wrong way, so Godot never stores one.
+ * Parses a ParallaxLayer: the Node2D surface plus the `motion_*` group.
+ * `motion_mirroring` clamps at 0 per axis, as `ParallaxLayer::set_mirroring`'s
+ * `p_mirroring.maxf(0)` does, so Godot never stores a negative interval.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

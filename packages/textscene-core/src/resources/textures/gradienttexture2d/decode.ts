@@ -1,16 +1,8 @@
 /**
- * Decoders for the slice's two claimed types, `Gradient` and
- * `GradientTexture2D`, whichever serialization they arrived in — an inline
- * `[sub_resource]` block or the `[resource]` body of a standalone `.tres`.
- *
- * Every default below is the value Godot's own constructor installs
- * (`scene/resources/gradient.cpp`, `scene/resources/gradient_texture.cpp`) — a
- * resource that omits a property is the common case (the coin's texture sets
- * only `fill`/`fill_from`/`fill_to`), so getting the defaults wrong is
- * indistinguishable from getting the fill wrong.
- *
- * Pure `.ts`, no THREE — `sample.ts` evaluates these typed values and `build.ts`
- * rasterises them.
+ * Decoders for `Gradient` and `GradientTexture2D`, inline or from a `.tres`. Every
+ * default is the value Godot's constructor installs (`scene/resources/gradient.cpp`,
+ * `scene/resources/gradient_texture.cpp`): most resources omit most properties.
+ * No THREE.
  */
 
 import type { Color } from '../../../utils/colorParser';
@@ -33,13 +25,9 @@ import {
   type GradientTexture2D,
 } from './types';
 
-// All three spellings each slot loads, not the constructor alone.
-// `can_convert_strict` lists ARRAY as a valid source for every PACKED_* type
-// (variant.cpp:467-473), and `Gradient::set_offsets`/`set_colors` take
-// `PackedFloat32Array`/`PackedColorArray` (gradient.cpp:80-81), so
-// `colors = [Color(1, 0, 0, 1), …]` is a file Godot loads. Reading only the
-// constructor threw here, `safeColors` swallowed it, and the gradient sampled
-// as opaque black with nothing reported.
+// All three spellings each slot loads: `can_convert_strict` lists ARRAY as a source
+// for every PACKED_* type (variant.cpp:467-473), and `Gradient::set_offsets`/`set_colors`
+// take the packed arrays (gradient.cpp:80-81), so `colors = [Color(1, 0, 0, 1), …]` loads.
 const OFFSETS_FORMS = packedArrayForms('PackedFloat32Array');
 
 /** Parse a `PackedFloat32Array` slot, in any of its three spellings, into a `number[]`. */
@@ -55,14 +43,9 @@ export function parsePackedFloat32Array(value: string): number[] {
 }
 
 /**
- * Parse a `PackedColorArray` slot into a `Color[]`. A trailing partial
- * quadruple is dropped.
- *
- * Named apart from `parsePackedColorArray` in `resources/shapes/packedArray.ts`,
- * which reads the same slot into a flat `Float32Array`: two exports under
- * one name were two contracts a caller had to pick between by import path. The
- * flat reader is what groups the components here, so the tuple bodies of the
- * bare and typed spellings are read once rather than in two places.
+ * Parses a `PackedColorArray` slot into a `Color[]`, dropping a trailing partial
+ * quadruple. It groups the output of `parsePackedColorArray`
+ * (`resources/shapes/packedArray.ts`), and a distinct name keeps the two contracts apart.
  */
 export function parseColorStops(value: string): Color[] {
   const nums = packedTupleNumbers(value, 'PackedColorArray', PACKED_COLOR_ARRAY_SPELLINGS, 4);
@@ -74,11 +57,9 @@ export function parseColorStops(value: string): Color[] {
 }
 
 /**
- * Decode a `Gradient` sub-resource. Pairs `offsets` with `colors` into sorted
- * stops. When `offsets` is absent (Godot keeps it implicit for a bare
- * `colors =` assignment), the stops are spread evenly across 0..1, which is the
- * default two-point gradient's spacing and the correct reading for N colours.
- * Mismatched lengths fall back to the shorter of the two.
+ * Pairs `offsets` with `colors` into sorted stops. Absent `offsets` spreads the
+ * stops evenly across 0..1, the default two-point spacing. Mismatched lengths
+ * use the shorter of the two.
  */
 export function decodeGradient(data: Record<string, string>): Gradient {
   const colors = data.colors ? safeColors(data.colors) : [];
@@ -94,8 +75,8 @@ export function decodeGradient(data: Record<string, string>): Gradient {
         : 0;
     stops.push({ offset, color: colors[i]! });
   }
-  // Godot sorts points by offset before sampling; a stable ascending sort keeps
-  // equal-offset stops in authored order (matching the binary search).
+  // Godot sorts points by offset before sampling. A stable sort keeps equal
+  // offsets in authored order, as the binary search expects.
   stops.sort((a, b) => a.offset - b.offset);
 
   return {
@@ -114,11 +95,9 @@ export function decodeGradient(data: Record<string, string>): Gradient {
 }
 
 /**
- * The `Gradient` a `SubResource("id")` property names, or null when the
- * reference is absent, is not a SubResource, names nothing, or names something
- * else. Godot's CPUParticles2D takes a bare `Gradient` (not the
- * `GradientTexture1D` its GPU sibling uses), so a colour ramp resolves through
- * here rather than through the texture path.
+ * The `Gradient` a `SubResource("id")` property names, or null for anything else.
+ * CPUParticles2D takes a bare `Gradient`, not a `GradientTexture1D`, so its
+ * colour ramp resolves here, not through the texture path.
  */
 export function resolveGradient(
   ref: string | undefined,
@@ -130,19 +109,18 @@ export function resolveGradient(
 }
 
 /**
- * The `Gradient` a standalone resource file carries, or null when the file is
- * some other resource type. The `[resource]` body holds exactly the properties
- * an inline `[sub_resource type="Gradient"]` block does, so it decodes through
- * the same `decodeGradient`.
+ * The `Gradient` a standalone resource file carries, or null for another type.
+ * Its `[resource]` body decodes through the same `decodeGradient` as an inline block.
  */
 export function gradientFromResource(parsed: ParsedResource): Gradient | null {
   if (parsed.resourceType !== 'Gradient') return null;
   return decodeGradient(parsed.properties);
 }
 
-/** Decode a `GradientTexture2D` sub-resource (the `gradient` ref is resolved
- *  separately by the caller). Defaults: 64×64, linear fill, from (0,0) to
- *  (1,0), no repeat, LDR. */
+/**
+ * A `GradientTexture2D` sub-resource. The caller resolves the `gradient` ref.
+ * Defaults: 64×64, linear fill, from (0,0) to (1,0), no repeat, LDR.
+ */
 export function decodeGradientTexture2D(data: Record<string, string>): GradientTexture2D {
   return {
     width: Math.max(1, intOr(data.width, 64, 'GradientTexture2D.width')),

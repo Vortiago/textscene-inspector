@@ -166,10 +166,8 @@ describe('parseAnimationPlayer library extraction', () => {
     expect(props.libraries).toEqual([]);
   });
 
-  // Godot 4 actually serializes libraries as a single Dictionary property:
+  // Godot 4 serialises libraries as a single Dictionary property, possibly multi-line:
   //   libraries = { "": SubResource("AnimationLibrary_x") }
-  // (multi-line). This is the common real-world form (e.g. every inline-library
-  // AnimationPlayer in the GDQuest Open RPG corpus).
   it('captures the default library from the Godot 4 dictionary form', () => {
     const props = parseAnimationPlayer(HEADING, {
       libraries: '{\n"": SubResource("AnimationLibrary_fggt1")\n}',
@@ -186,7 +184,7 @@ describe('parseAnimationPlayer library extraction', () => {
   });
 
   it('ignores ExtResource (external/binary) entries in the dictionary form', () => {
-    // External .res libraries can't be resolved (binary); only inline
+    // External `.res` libraries are binary and cannot be resolved. Only inline
     // SubResource libraries are captured.
     const props = parseAnimationPlayer(HEADING, {
       libraries: '{\n"": ExtResource("4_eruca")\n}',

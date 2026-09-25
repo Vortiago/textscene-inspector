@@ -1,24 +1,14 @@
 /**
- * `frameSceneBounds` — which objects reach the bounds union, and from which
- * direction it then frames them.
- *
- * The `tscnEmptyState`-tag exclusion (shared by `EmptySceneIndicator` and the
- * opt-in `ContentGroundGrid`, TscnCanvas.tsx) is the first of them.
- *
- * `THREE.Object3D.traverse()` always recurses into every descendant
- * regardless of what the visitor callback does for an ancestor, so a tag on
- * a WRAPPING group does not exclude that group's children — only a tag on
- * the object being visited itself is actually honored. This pins the fix:
- * the grid must be excluded when tagged directly, and a scene with only
- * small gizmo content plus a large tagged grid must frame around the real
- * content, not the grid.
+ * Which objects reach the bounds union of `frameSceneBounds`, and from which direction it frames.
+ * `traverse()` recurses into every descendant, so only a `tscnEmptyState` tag on the visited object
+ * excludes it, not a tag on a wrapping group.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { frameSceneBounds } from './frameSceneBounds';
 import { editorCameraDirection } from './godotEditorCamera';
 
-/** Mirrors TscnCanvas.tsx's `GroundGrid()` — a large, framing-exempt grid. */
+/** Mirrors `GroundGrid()` in TscnCanvas.tsx: a large, framing-exempt grid. */
 function taggedGrid(): THREE.GridHelper {
   const grid = new THREE.GridHelper(10, 10);
   grid.userData = { tscnEmptyState: true };
@@ -46,8 +36,7 @@ describe('frameSceneBounds — tscnEmptyState exclusion', () => {
     const scene = new THREE.Scene();
     scene.add(taggedGrid()); // 10x10 units, must be excluded
 
-    // Tiny real content: a tiny line segment near the origin (a gizmo-only
-    // scene shape, e.g. a lone Path3D with no Mesh).
+    // A tiny line segment near the origin, as a lone Path3D draws.
     const geometry = new THREE.BufferGeometry().setFromPoints([
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0.1, 0.1, 0.1),
@@ -66,9 +55,7 @@ describe('frameSceneBounds — tscnEmptyState exclusion', () => {
   });
 
   it('frames around the full 10-unit grid when it is the ONLY (untagged) content', () => {
-    // Sanity check: an ordinary, non-exempt LineSegments-based gizmo of the
-    // same size as the grid IS framed normally — the exclusion is specific
-    // to the tscnEmptyState tag, not to grids/LineSegments in general.
+    // An untagged grid of the same size frames normally: the exclusion follows the tag, not the type.
     const scene = new THREE.Scene();
     const untaggedGrid = new THREE.GridHelper(10, 10);
     scene.add(untaggedGrid);
@@ -82,10 +69,8 @@ describe('frameSceneBounds — tscnEmptyState exclusion', () => {
 
 describe('frameSceneBounds — dimensionally flat scenes use Godot\'s own editor orbit', () => {
   it('a scene whose geometry is entirely coplanar (z spread 0) still frames from editorCameraDirection(), not head-on', () => {
-    // A quad lying flat in the XY plane — genuinely z-flat, the exact shape
-    // that used to trip frameSceneBounds's now-removed isFlat branch (head-on
-    // dir (0,0,1), a picture Godot's own reference camera never produces: its
-    // editor orbit is fixed regardless of scene flatness).
+    // A quad flat in the XY plane. Godot's editor orbit is fixed whatever the scene's flatness, so
+    // it never frames head-on along (0,0,1).
     const geometry = new THREE.PlaneGeometry(2, 2);
     const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
     const scene = new THREE.Scene();
@@ -94,8 +79,7 @@ describe('frameSceneBounds — dimensionally flat scenes use Godot\'s own editor
     const camera = makeCamera();
     frameSceneBounds(scene, camera, null);
 
-    // The camera must sit along the SAME direction from the origin (the
-    // plane's centre) as Godot's fixed editor orbit — never straight down -Z.
+    // The camera sits along the editor orbit direction from the plane's centre.
     const actualDir = camera.position.clone().normalize();
     const expectedDir = editorCameraDirection();
     expect(actualDir.dot(expectedDir)).toBeGreaterThan(0.999);
@@ -113,8 +97,8 @@ describe('frameSceneBounds — a bounds union with no extent', () => {
   }
 
   it('does not let a point mesh defeat the gizmo fallback', () => {
-    // A point is not a mesh to frame FROM, so the light-only fallback still applies —
-    // otherwise a scene whose only CSG content is invisible frames nothing at all.
+    // A point is not a mesh to frame from, so the light-only fallback still applies, or a scene
+    // whose only CSG content is invisible frames nothing.
     const scene = new THREE.Scene();
     scene.add(pointProxy(0));
     const gizmo = new THREE.LineSegments(
@@ -150,9 +134,8 @@ describe('frameSceneBounds — a bounds union with no extent', () => {
 
 describe('frameSceneBounds — CSG contributor bounds proxies', () => {
   it('frames a contributor solid the boolean subtracted away', () => {
-    // modules/csg/csg_shape.cpp:507 — every shape's node_aabb is its OWN brush,
-    // filled in by the root's recursive build, so the subtracted solid is inside
-    // Godot's scene AABB too. Skipping the proxy frames a smaller, different box.
+    // Each shape's node_aabb is its own brush, filled by the root's recursive build
+    // (modules/csg/csg_shape.cpp:507), so the subtracted solid is inside Godot's scene AABB too.
     const scene = new THREE.Scene();
     const result = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 0.4), new THREE.MeshBasicMaterial());
     scene.add(result);

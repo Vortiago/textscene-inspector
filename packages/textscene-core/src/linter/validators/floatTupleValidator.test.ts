@@ -1,10 +1,8 @@
 /**
- * What a FLOAT-tuple slot says about the `i`-suffixed spelling it converts.
- *
+ * What a float-tuple slot says about the `i`-suffixed spelling it converts.
  * `Vector2i(1.5, 2)` narrows through `_parse_construct<int32_t>`
- * (`variant_parser.cpp:721-723`) to `(1, 2)` BEFORE the widening into the
- * float slot, so the stored value is not the written one — the same
- * truncation `v.vector2i` warns about on the same text.
+ * (`variant_parser.cpp:721-723`) to `(1, 2)` before the widening into the
+ * float slot, the same truncation `v.vector2i` warns about.
  */
 
 import { describe, expect, it } from 'vitest';

@@ -33,6 +33,6 @@ export function csgMesh3DGeometryKey(
   const ref = parseResourceReference(p.mesh);
   if (!ref || ref.type !== 'SubResource') return `mesh:${p.mesh}`;
   const resource = findSubResource(ctx.internalResources, ref.id);
-  // Keyed on the sub-resource's CONTENT: the parser allocates a fresh one per reparse.
+  // Keyed on the sub-resource's content, since the parser allocates a fresh one per reparse.
   return resource ? `mesh:${primitiveMeshGeometryKey(resource)}` : `mesh:missing:${ref.id}`;
 }

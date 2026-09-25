@@ -1,7 +1,6 @@
 /**
- * XRCamera3D registration. It IS a Camera3D — Godot's chain, and the parse this
- * slice already reuses — so both halves resolve to that ancestor rather than to
- * the coarse Node3D base.
+ * XRCamera3D registration. It is a Camera3D in Godot's chain, so both halves resolve to that
+ * ancestor, not to the coarse Node3D base.
  */
 
 import { describe, expect, it } from 'vitest';

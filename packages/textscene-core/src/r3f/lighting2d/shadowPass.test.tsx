@@ -1,25 +1,7 @@
 /**
- * The 2D shadow pass, end to end through the real dispatcher.
- *
- * Every expected value here is derived from Godot's own sources, not from a
- * reference image:
- *
- *   drivers/gles3/shaders/canvas.glsl, light_compute
- *     shadow_color.a *= light_color.a;
- *     light_color = mix(light_color, shadow_color, shadow);
- *
- * so a fully shadowed pixel takes `light_color = vec4(shadow_color.rgb,
- * shadow_color.a * cookie.a)` — the light's own colour and energy drop out
- * entirely — and with `Light2D`'s default `shadow_color = Color(0, 0, 0, 0)`
- * the whole term vanishes and the surface keeps the value it had unlit.
- *
- *   servers/rendering/renderer_canvas_cull.cpp, _light_find_shadow
- *     an occluder casts only while `occluder_light_mask & shadow_item_cull_mask`
- *     is non-zero, and only while it is visible in the tree.
- *
- * Those are stencil geometry, blend state and uniforms — all observable without
- * a GPU. The PIXELS are measured against the engine by the
- * `unit-lightoccluder2d-*` sheets and pinned by their goldens.
+ * The 2D shadow pass, end to end through the real dispatcher. Expected values
+ * come from Godot's sources and are read as stencil geometry, blend state and
+ * uniforms, with no GPU. The `unit-lightoccluder2d-*` goldens pin the pixels.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -123,7 +105,7 @@ async function render(tscn: string, probe?: ReactNode) {
   return renderer;
 }
 
-/** The classes the provider settled on — what the lights actually read. */
+/** The classes the provider settled on, which the lights read. */
 async function renderClasses(tscn: string): Promise<readonly CanvasLightClass[]> {
   let latest: readonly CanvasLightClass[] = [];
   function Probe() {
@@ -155,7 +137,7 @@ function lightQuads(renderer: Rendered): THREE.Mesh[] {
   );
 }
 
-/** The lit halves — the quads that carry the light's own colour. */
+/** The lit halves: the quads that carry the light's own colour. */
 function litQuads(renderer: Rendered): THREE.Mesh[] {
   return lightQuads(renderer).filter(
     (mesh) => !!(mesh.material as THREE.ShaderMaterial).uniforms?.uColor
@@ -216,6 +198,9 @@ occluder = SubResource("bar")
   });
 });
 
+// `servers/rendering/renderer_canvas_cull.cpp`, `_light_find_shadow`: an occluder
+// casts only while `occluder_light_mask & shadow_item_cull_mask` is non-zero and
+// it is visible in the tree.
 describe('what does not cast', () => {
   it('casts nothing when shadow_enabled is left off', async () => {
     const renderer = await render(
@@ -258,7 +243,7 @@ describe('what does not cast', () => {
 
   it('casts nothing from an occluder outside the light rect', async () => {
     // The cookie is 1024 px wide at texture_scale 1, so a light at x=100 reaches
-    // to x=612 and an occluder at x=1100 is culled — Godot's own rect test.
+    // to x=612 and Godot's rect test culls an occluder at x=1100.
     const renderer = await render(scene(`${lamp('Lamp', 100)}${caster('Caster', 1100)}`));
     expect(maskMeshes(renderer)).toHaveLength(0);
   });
@@ -268,9 +253,8 @@ describe('two shadowed lights in one pass', () => {
   const TWO = scene(`${lamp('Warm', 380)}${lamp('Cool', 772)}${caster('Caster', 576)}`);
 
   it('gives each light its own stencil ref', async () => {
-    // A shared ref of 1 makes the SECOND light reject every pixel the first
-    // shadowed, which reads as "shadows too dark" and points nowhere near the
-    // stencil. Distinctness is the whole fix.
+    // A shared ref of 1 makes the second light reject every pixel the first
+    // shadowed, which reads as "shadows too dark".
     const renderer = await render(TWO);
     const refs = maskMeshes(renderer).map((mesh) => (mesh.material as THREE.Material).stencilRef);
     expect(refs).toHaveLength(2);
@@ -278,7 +262,7 @@ describe('two shadowed lights in one pass', () => {
   });
 
   it('finishes each light before the next one stamps', async () => {
-    // The pass replays mask, quad, mask, quad — nothing of light B's may fall
+    // The pass replays mask, quad, mask, quad: nothing of light B's may fall
     // between light A's stamp and light A's quad, or A would read B's stencil.
     const renderer = await render(TWO);
     const masks = maskMeshes(renderer).map((mesh) => ({ mesh, kind: 'mask' as const }));
@@ -303,17 +287,19 @@ describe('two shadowed lights in one pass', () => {
   });
 });
 
+/**
+ * `drivers/gles3/shaders/canvas.glsl`, `light_compute`: a fully shadowed pixel takes
+ * `shadow_color`, and the default `Color(0, 0, 0, 0)` leaves the surface unlit.
+ *
+ *     shadow_color.a *= light_color.a;
+ *     light_color = mix(light_color, shadow_color, shadow);
+ */
 describe('shadow_color', () => {
   it('adds a second quad covering exactly what the cookie quad skips', async () => {
-    // Godot's shadow term is `mix(light_color, shadow_color, shadow)` applied
-    // AFTER `light_color.rgb *= base_color.rgb`, so an authored shadow_color
-    // lands on the canvas WITHOUT the item's albedo — measured on two surfaces
-    // (0.25 and 0.75) inside one shadow at equal distance from the light, which
-    // read rgb(78,99,167) and rgb(207,228,255): a constant 129 apart per
-    // channel, where an albedo-scaled term would differ by 135 and 146.
-    //
-    // So the term rides its own albedo-free accumulator, and the two quads
-    // partition the light's rect: NotEqual for the cookie, Equal for the tint.
+    // The `mix` runs after `light_color.rgb *= base_color.rgb`, so shadow_color
+    // lands without the item's albedo. Measured: surfaces 0.25 and 0.75 in one
+    // shadow read rgb(78,99,167) and rgb(207,228,255), 129 apart per channel,
+    // where an albedo-scaled term differs by 135 and 146.
     const authored = await render(
       scene(
         `${lamp('Lamp', 400, 'shadow_color = Color(0.15, 0.35, 1, 1)\n')}${caster('Caster', 576)}`
@@ -321,6 +307,8 @@ describe('shadow_color', () => {
     );
     expect(maskMeshes(authored)).toHaveLength(1);
 
+    // The term rides its own albedo-free accumulator, and the two quads
+    // partition the light's rect: NotEqual for the cookie, Equal for the tint.
     const material = litQuads(authored)[0]!.material as THREE.Material;
     expect(material.stencilRef).toBe(shadowStencilRef(0));
     expect(material.stencilFunc).toBe(THREE.NotEqualStencilFunc);
@@ -332,11 +320,9 @@ describe('shadow_color', () => {
   });
 
   it('gives the tint pass to the class that tints, and only that one', async () => {
-    // The albedo-free accumulation is allocated PER CLASS, so a canvas holding
-    // one tinting light and one that does not must run the extra pass for the
-    // first class alone. Two `range_item_cull_mask` windows make two classes;
-    // `compareLightCullKeys` sorts them by tuple, so mask 1 is class 0 and mask
-    // 2 is class 1 whatever order they mounted in.
+    // The albedo-free accumulation is allocated per class, so only the tinting
+    // light's class runs the extra pass. `compareLightCullKeys` sorts the two
+    // `range_item_cull_mask` classes by tuple: mask 1 is class 0, mask 2 class 1.
     const renderer = await render(
       scene(
         `${lamp('Plain', 300, 'range_item_cull_mask = 1\n')}` +
@@ -345,27 +331,24 @@ describe('shadow_color', () => {
       )
     );
 
-    // A tint quad has `uShadowColor` but no `uColor` — it carries no light term.
+    // A tint quad has `uShadowColor` but no `uColor`: it carries no light term.
     const tintQuads = lightQuads(renderer).filter((mesh) => {
       const uniforms = (mesh.material as THREE.ShaderMaterial).uniforms;
       return !!uniforms?.uShadowColor && !uniforms?.uColor;
     });
     expect(tintQuads).toHaveLength(1);
 
-    // It must land on ITS OWN class's tint layer — class 1, since mask 2 sorts
-    // second. Landing on class 0's would draw into the wrong accumulator, and
-    // landing on a class with no target at all would draw into none.
+    // It lands on its own class's tint layer, class 1. Class 0's would draw
+    // into the wrong accumulator.
     const onClassOne = new THREE.Layers();
     onClassOne.set(SHADOW_TINT_LAYER + 1);
     expect(tintQuads[0]!.layers.test(onClassOne)).toBe(true);
   });
 
   it('publishes a tint LAYER for exactly the classes that got a tint BUFFER', async () => {
-    // The pairing is the invariant: a light told to draw its `shadow_color`
-    // quad onto a layer whose pass never runs would paint an untinted shadow.
-    // Asserted on the published classes rather than on the quads, because the
-    // node above already withholds the layer from a light that does not tint —
-    // so the quads look identical either way and only the classes show it.
+    // A `shadow_color` quad on a layer whose pass never runs paints an untinted
+    // shadow. Asserted on the classes, since the node already withholds the
+    // layer from a light that does not tint and the quads look the same.
     const classes = await renderClasses(
       scene(
         `${lamp('Plain', 300, 'range_item_cull_mask = 1\n')}` +
@@ -407,16 +390,10 @@ describe('shadow_color', () => {
 });
 
 /**
- * `shadow_filter` picks the MECHANISM, not a parameter of one.
- *
- *   drivers/gles3/shaders/canvas.glsl, light_shadow_compute
- *     NONE  : one SHADOW_TEST       -> shadow is 0 or 1
- *     PCF5  : five taps / 5.0       -> a fraction with five steps
- *     PCF13 : thirteen taps / 13.0
- *
- * A stencil is binary by construction, so only NONE is expressible as one. The
- * gate below is what keeps the measured-at-parity stencil path untouched for
- * every scene that leaves the property at its default.
+ * `shadow_filter` picks the mechanism. In `drivers/gles3/shaders/canvas.glsl`,
+ * `light_shadow_compute`, NONE takes one `SHADOW_TEST` (0 or 1), PCF5 five taps
+ * over 5.0 and PCF13 thirteen over 13.0. Only NONE is binary, so only NONE keeps
+ * the stencil path, which stays untouched at the default.
  */
 describe('shadow_filter selects the shadow mechanism', () => {
   /** The light's polar map, wherever in the tree its quad ended up. */
@@ -447,9 +424,9 @@ describe('shadow_filter selects the shadow mechanism', () => {
     expect(material.stencilWrite).toBeFalsy();
     expect(material.defines?.SHADOW_FILTER).toBe(1);
     expect(material.uniforms.uShadowMap!.value).toBeInstanceOf(THREE.DataTexture);
-    // rasterizer_canvas_gles3.cpp:182 — (1 / 2048) * (1 + shadow_smooth).
+    // rasterizer_canvas_gles3.cpp:182: (1 / 2048) * (1 + shadow_smooth).
     expect(material.uniforms.uShadowPixelSize!.value).toBe(9 / 2048);
-    // renderer_viewport.cpp:485,556 — z_far is radius_cache * 1.1, and
+    // renderer_viewport.cpp:485,556: z_far is radius_cache * 1.1, and
     // radius_cache is the 1024x1024 cookie rect's diagonal.
     expect(material.uniforms.uShadowZFarInv!.value).toBeCloseTo(1 / (1024 * Math.SQRT2 * 1.1), 9);
   });
@@ -483,10 +460,9 @@ describe('shadow_filter selects the shadow mechanism', () => {
   });
 
   it('carries an authored shadow_color through the filter, without a stencil', async () => {
-    // The `mix` expands to two terms with no cross term, so the tint keeps its
-    // own albedo-free quad — it just computes its own fraction instead of being
-    // stencilled into the umbra. Note the tint quad exists at all only because
-    // `shadowColorContributes` gates on `shadow_color.a > 0`.
+    // The `mix` has no cross term, so the tint keeps its own albedo-free quad and
+    // computes its own fraction instead of a stencilled umbra. The quad exists
+    // only because `shadowColorContributes` gates on `shadow_color.a > 0`.
     const renderer = await render(
       scene(
         `${lamp('Lamp', 400, 'shadow_filter = 1\nshadow_color = Color(0.15, 0.35, 1, 1)\n')}${caster('Caster', 576)}`

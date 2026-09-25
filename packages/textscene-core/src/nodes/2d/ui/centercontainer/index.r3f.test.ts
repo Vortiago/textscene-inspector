@@ -1,8 +1,7 @@
 /**
- * CenterContainer self-registration: importing `index.r3f` must wire the
+ * CenterContainer self-registration (ADR-0001): importing `index.r3f` wires the
  * native (WebGL canvas) painter and both native rect-solver functions into
- * their respective registries — the whole point of the self-registration
- * convention (ADR-0001) is that nothing else has to.
+ * their registries.
  */
 import { describe, expect, it } from 'vitest';
 import './index.r3f';

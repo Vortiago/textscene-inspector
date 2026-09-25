@@ -1,6 +1,6 @@
 /**
- * Marker3D validator coverage — the `gizmo_extents` float format check and the
- * hinted floor at 0 (marker_3d.cpp:49, `or_greater` leaves the top open).
+ * Marker3D validators: the `gizmo_extents` float format check and the hinted
+ * floor at 0 (marker_3d.cpp:49, `or_greater` leaves the top open).
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';

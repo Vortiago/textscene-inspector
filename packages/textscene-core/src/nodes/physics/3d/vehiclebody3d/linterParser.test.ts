@@ -1,10 +1,7 @@
 /**
- * VehicleBody3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * VehicleBody3D strict validators, asserted through `validatorRegistry` so a
+ * failure points at the validator, not at scene parsing. Rule behaviour is in
+ * linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,8 +21,8 @@ describe('VehicleBody3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format. The
+    // per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('VehicleBody3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -70,10 +67,9 @@ describe('VehicleBody3D strict validators', () => {
   });
 
   // scene/3d/physics/vehicle_body_3d.cpp ADD_PROPERTY: PROPERTY_HINT_RANGE
-  // "-180,180,0.01,radians_as_degrees" — no or_less/or_greater, a hard bound.
-  // The hint's degrees describe the inspector slider; the value serialised
-  // into a .tscn is radians (doc/classes/VehicleBody3D.xml), so the bound is
-  // ±π radians, not ±180.
+  // "-180,180,0.01,radians_as_degrees", with no or_less or or_greater. The hint's
+  // degrees describe the slider. A .tscn stores radians
+  // (doc/classes/VehicleBody3D.xml), so the bound is ±π.
   describe('steering', () => {
     it('accepts a value inside ±π radians', () => {
       expect(check('steering', '0.5')).toBeNull();

@@ -1,16 +1,8 @@
 /**
- * Integration regression for the corpus-switch staleness hole: a mounted
- * `useResource` consumer holds its value in React STATE, so a full
- * `loader.clearCaches()` (corpus switch) used to leave it serving the
- * cleared corpus's value forever — the clear emitted nothing, the hook's
- * effect deps never changed, and nothing ever re-read the cache.
- *
- * The fix chain under test: `ResourceLoader.clearCaches` (the announcement's
- * single owner — processors' own full clears are silent) emits `invalidated`
- * per dropped path → the hook re-requests under the NEW provider state →
- * the fresh `loaded` event replaces the stale value. Also covered: the
- * announcement ordering, in-flight-at-clear consumers, and a path absent
- * from the new corpus.
+ * A mounted `useResource` consumer holds its value in React state, so a corpus switch must reach
+ * it: `ResourceLoader.clearCaches`, the one announcer, emits `invalidated` per dropped path, the
+ * hook requests again, and the fresh `loaded` event replaces the value. Also covered: the
+ * announcement order, a load in flight at the clear, and a path absent from the new corpus.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
@@ -99,7 +91,7 @@ describe('useResource corpus-switch invalidation', () => {
     });
 
     // Corpus switch: the same res:// path now resolves to different content,
-    // and the host clears the caches — exactly what useCorpusRoot does.
+    // and the host clears the caches, as useCorpusRoot does.
     provider.setFile(SUB_SCENE_PATH, SCENE_B);
     act(() => {
       loader.clearCaches();
@@ -117,11 +109,9 @@ describe('useResource corpus-switch invalidation', () => {
       expect(loader.scenes.isCached(SUB_SCENE_PATH)).toBe(true);
     });
 
-    // Handlers run synchronously inside clearCaches' announcement loop —
-    // they must observe fully-reset CACHES, but metadata must still be
-    // present: scene loads validate their registration synchronously at
-    // request time, and the consumers being healed are exactly the ones
-    // whose register effects will not re-run.
+    // Handlers run inside clearCaches' announcement loop and see reset caches but present metadata:
+    // a scene load validates its registration at request time, and these consumers' register
+    // effects do not run again.
     const observed: { sceneCached: boolean; metadataPresent: boolean }[] = [];
     loader.eventBus.on('scene', 'invalidated', (path) => {
       observed.push({
@@ -138,10 +128,8 @@ describe('useResource corpus-switch invalidation', () => {
   });
 
   it('a consumer whose load is IN FLIGHT at clear time is announced too — it heals instead of hanging pending forever', async () => {
-    // The old scene's fetch departs but hasn't resolved when the corpus
-    // switches: its completion is dropped as a cleared-era flight, so
-    // without the in-flight announcement no event of ANY kind would ever
-    // reach the consumer.
+    // The old scene's fetch is still in flight at the switch, and its completion is dropped, so
+    // only the in-flight announcement reaches the consumer.
     provider.setFile(SUB_SCENE_PATH, SCENE_A);
     provider.armGate();
     render(

@@ -1,5 +1,5 @@
 /**
- * SubViewport registration — parser.
+ * SubViewport parser registration.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

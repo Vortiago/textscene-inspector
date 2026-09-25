@@ -1,6 +1,4 @@
-/**
- * Drag-and-drop of files onto the whole app root.
- */
+/** Drag-and-drop of files onto the whole app root. */
 
 import { useRef, useState, type DragEvent as ReactDragEvent } from 'react';
 
@@ -13,17 +11,14 @@ export interface FileDrop {
 }
 
 export function useFileDrop(onFiles: (files: readonly File[]) => void): FileDrop {
-  // Drag-and-drop a .tscn (+ resource files) onto the page. A counter,
-  // not a boolean, because dragenter/dragleave bubble from every descendant
-  // as the cursor crosses child element boundaries during one continuous
-  // drag over the app root — only net-zero really means "left the window".
+  // A counter, not a boolean: dragenter and dragleave bubble from every descendant the
+  // cursor crosses, so only net zero means the drag left the window.
   const dragCounterRef = useRef(0);
   const [dragActive, setDragActive] = useState(false);
 
-  // A drag carrying no files is someone else's — dragging a selection inside
-  // the Source textarea to move it is the everyday case. `preventDefault()`
-  // cancels the browser's own handling of it, so the check comes FIRST in
-  // every handler that calls it.
+  // A drag with no files belongs to someone else, such as a selection moved inside the Source
+  // textarea. `preventDefault()` cancels the browser's own handling, so this check comes first
+  // in every handler that calls it.
   function carriesFiles(e: ReactDragEvent): boolean {
     return e.dataTransfer.types.includes('Files');
   }
@@ -35,8 +30,7 @@ export function useFileDrop(onFiles: (files: readonly File[]) => void): FileDrop
     setDragActive(true);
   }
 
-  // Required so the browser's default "reject the drop" behavior doesn't
-  // win — without this, `onDrop` never fires.
+  // Without this, the browser rejects the drop and `onDrop` never fires.
   function handleDragOver(e: ReactDragEvent) {
     if (!carriesFiles(e)) return;
     e.preventDefault();

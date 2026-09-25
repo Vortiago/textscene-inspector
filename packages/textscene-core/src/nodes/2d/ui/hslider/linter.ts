@@ -1,12 +1,8 @@
 /**
- * Semantic linter rule for HSlider: the `Range` property-order hazard.
- *
- * See `linter.test.ts` for the full `range.cpp` derivation and citations, and
- * `shared/rangeLinter.ts` for the shared order arithmetic (`VSlider`'s own
- * `linter.ts` registers the identical check under its own rule name — Range
- * has no authorable intermediate type in `NODE_BASE_TYPES` to hang one shared
- * rule off, the same reason `CONTROL_LEAVES` links HSlider/VSlider straight
- * to `Control`).
+ * Semantic rule for HSlider: the `Range` property-order hazard, derived from
+ * range.cpp in `linter.test.ts` and computed by `shared/rangeLinter.ts`. VSlider registers
+ * the same check under its own name: `NODE_BASE_TYPES` has no authorable Range
+ * type to hang one shared rule on.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';

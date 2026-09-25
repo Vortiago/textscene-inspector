@@ -1,11 +1,7 @@
 /**
  * Environment's Background, Sky, Ambient Light and Reflected Light groups
- * (`environment.cpp:1236-1270`).
- *
- * One enforced bound in here, and the rest are the hinted tier:
- * `set_ambient_light_sky_contribution` stores `CLAMP(p_ratio, 0.0, 1.0)`
- * (environment.cpp:173), so a ratio outside it is altered rather than merely
- * outside the inspector's slider.
+ * (`environment.cpp:1236-1270`). One bound is enforced: `set_ambient_light_sky_contribution`
+ * stores `CLAMP(p_ratio, 0.0, 1.0)` (environment.cpp:173). The rest are the hinted tier.
  */
 
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
@@ -58,7 +54,7 @@ export const backgroundKeys: Record<string, PropertyValidator> = {
   // the hint names, unlike `sky_rotation` below.
   sky_custom_fov: v.float('sky_custom_fov', { min: 0, max: 180, hinted: 'environment.cpp:1247' }),
   // environment.cpp:1248 hints "-360,360,0.1,or_less,or_greater,radians_as_degrees":
-  // BOTH ends open, so any rotation is legal and only the Vector3 shape is checkable.
+  // both ends open, so any rotation is legal and only the Vector3 shape is checkable.
   sky_rotation: v.vector3('sky_rotation'),
 
   // environment.cpp:1264, set_ambient_source (:151-155) is a bare assignment.

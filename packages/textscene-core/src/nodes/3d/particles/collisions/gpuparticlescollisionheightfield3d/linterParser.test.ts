@@ -1,13 +1,8 @@
 /**
- * GPUParticlesCollisionHeightField3D strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property (happy, malformed, and any bound) and
- * quote the governing Godot source line beside every numeric bound.
+ * GPUParticlesCollisionHeightField3D strict validators, asserted through `validatorRegistry` so a
+ * failure points at the validator rather than at scene parsing. Rule-level
+ * behaviour belongs in linter.test.ts. Quote the governing Godot source line
+ * beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -27,8 +22,7 @@ describe('GPUParticlesCollisionHeightField3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format.
     const accepted = validatorRegistry
       .getOwnKeys('GPUParticlesCollisionHeightField3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -83,9 +77,8 @@ describe('GPUParticlesCollisionHeightField3D strict validators', () => {
     });
 
     it('pins the real upper bound: the hint lists 6 entries (indices 0-5), so 6 is out of range', () => {
-      // gpu_particles_collision_3d.cpp:734: PROPERTY_HINT_ENUM has exactly 6
-      // comma-separated entries ("256 (Fastest)" … "8192 (Slowest)"), so the
-      // .tscn stores an INDEX 0-5, never the literal resolution (e.g. 1024).
+      // gpu_particles_collision_3d.cpp:734: the PROPERTY_HINT_ENUM has 6 entries, so the
+      // .tscn stores an index 0-5, never a literal resolution such as 1024.
       const error = check('resolution', '6');
       expect(error?.code).toBe('INVALID_RESOLUTION_VALUE');
     });

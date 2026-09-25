@@ -1,36 +1,6 @@
 /**
- * `<Label>` — the native (WebGL canvas) painter for Label: the first
- * text-bearing Control, drawing through the shared MSDF text engine
- * (`native/text/textLayout.ts` + `TextRun.tsx`) instead of the empty-outline
- * `<ControlFallback>` every other text widget still falls back to.
- *
- * Godot aligns EVERY LINE of a Label independently by its own width
- * (`Label::_get_line_rect`) — a single merged multi-line `<TextRun>` (sharing
- * one x origin) cannot express that once lines differ in width, so this
- * draws one `<TextRun>` per line, each in its own positioned `<CanvasItemGroup>`
- * (`nativeSolver.ts`'s `layoutLabelLines`, which returns each line's own box
- * top — `<TextRun>` anchors the line at its baseline from there itself,
- * `buildGlyphQuadArrays`'s own doc).
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`. The resolved text COLOUR multiplies into `tint.own`
- * while both are still sRGB, matching `TextRun`'s own contract (its `tint`
- * prop is sRGB, converted internally) — one conversion, at the end.
- *
- * DRAW ORDER. Two halves, and getting only the first right is what once made
- * every Label's glyphs disappear behind the backdrop they were drawn over:
- * `renderOrder` is passed to each line's `<TextRun>` directly, because three
- * reads it per rendered object and never inherits it from a wrapping group —
- * but three reads the nearest enclosing GROUP's order FIRST, so each line's
- * group must carry the Control's canvas key too. `<CanvasItemGroup>` is what
- * supplies that; a bare `<group>` here resets it to zero
- * (`r3f/canvasPaintOrder.ts`).
- *
- * TEXT LAYOUT: calls `nativeSolver.ts`'s `labelUnwrappedShape` — the **solve
- * handoff** share `labelMinimumSize` calls too — when autowrap is OFF
- * (Label's default), instead of re-shaping. The branch is on
- * `autowrap_mode` itself, not on whether a shape happens to be available:
- * autowrap ON shapes locally against `rect.w`, which no share can know.
+ * `<Label>`, the native (WebGL canvas) painter for Label, drawing through the
+ * MSDF text engine (`native/text/textLayout.ts` and `TextRun.tsx`).
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -71,11 +41,9 @@ import {
 import type { LabelProperties } from './types';
 
 /**
- * The per-line `TextLayoutResult`s, memoised together with the placements they
- * come from. `TextRun` keys its geometry off its `layout` prop's identity and
- * disposes the old one on every change, so building these inline would re-mesh
- * every line of every Label on every render — not just when the text or rect
- * actually changed.
+ * The per-line `TextLayoutResult`s, memoised with their placements. `TextRun`
+ * rebuilds its geometry whenever its `layout` identity changes, so building these
+ * inline would re-mesh each line on each render.
  */
 function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayoutResult): TextLayoutResult[] {
   return useMemo(
@@ -91,15 +59,15 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     () => resolveNodeLabelSettings(props, solveNode.resources.internalResources),
     [props, solveNode.resources.internalResources]
   );
-  // A valid `label_settings` beats the theme OUTRIGHT — see its own doc.
+  // A valid `label_settings` beats the theme outright: see its own doc.
   const textTheme = useMemo(() => labelEffectiveTextTheme(themeResolved, labelSettings), [themeResolved, labelSettings]);
 
+  // Composed in sRGB: `TextRun` converts its `tint` once, internally.
   const tintColor = multiplyModulate(tint.own, textTheme.color);
 
-  // label.cpp:762-767,876-878 — outline draws OVER the fill at the SAME pen
-  // position (composited by `<TextRun>`'s own `outlineColor`/`outlineWidthPx`,
-  // this file's own doc has why one pass suffices); shadow draws BEHIND, at
-  // its own offset, in its own colour, with its own outline-expand.
+  // label.cpp:762-767,876-878: the outline draws over the fill at the same pen
+  // position, so `<TextRun>` composites both in one pass. The shadow draws behind,
+  // at its own offset, colour and outline size.
   const outlineTheme = useMemo(() => labelOutlineTheme(solveNode, labelSettings), [solveNode, labelSettings]);
   const shadowTheme = useMemo(() => labelShadowTheme(solveNode, labelSettings), [solveNode, labelSettings]);
   const outlineColor = multiplyModulate(tint.own, outlineTheme.color);
@@ -107,29 +75,26 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   const hasOutline = outlineTheme.size > 0 && outlineColor.a !== 0;
   const hasShadow = shadowColor.a > 0;
   const inheritedClippingPlanes = useControlClipPlanes();
-  // `clip_text` scissors this Label's OWN drawn ink to its rect
-  // (`label.cpp:733-734`'s `canvas_item_set_clip`) — always called (hooks run
-  // unconditionally) but only CONSUMED below when `props.clipText` is set.
+  // `clip_text` scissors this Label's own drawn ink to its rect
+  // (`label.cpp:733-734`'s `canvas_item_set_clip`): always called (hooks run
+  // unconditionally) but only consumed below when `props.clipText` is set.
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
   const { anchorRef, clippingPlanes: ownClippingPlanes } = useWorldClipPlanes(ownRect);
   const clippingPlanes = props.clipText ? ownClippingPlanes : inheritedClippingPlanes;
 
-  // VC_CHARS_BEFORE_SHAPING (the default) truncates BEFORE shaping — see
+  // VC_CHARS_BEFORE_SHAPING (the default) truncates before shaping: see
   // `labelPreShapeText`'s own doc; every other behaviour trims at draw time,
   // below.
   const text = labelPreShapeText(props.text ?? '', props.visibleCharacters, props.visibleCharactersBehavior);
   // Label's own default is OFF (`label.h`'s `autowrap_mode` initialiser).
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
-  // The share windows to lines_skipped/max_lines_visible itself
-  // (`nativeSolver.ts`'s own doc), so this must NOT window it a second time.
+  // Autowrap off reuses `labelUnwrappedShape`, the solve handoff `labelMinimumSize`
+  // shares. Autowrap on shapes against `rect.w`, which no share knows. The share
+  // is already windowed to lines_skipped/max_lines_visible, so it is not windowed again.
   const sharedLayout = autowrapMode === AutowrapMode.OFF ? labelUnwrappedShape(solveNode, theme) : null;
-  // Read INSIDE the render body, not the `useMemo` below: `peekSceneFontMetrics`
-  // (`resolveNodeFontMetrics`'s own doc) answers synchronously from a WeakMap
-  // cache that a later async load mutates in place, so this must re-run every
-  // render to see a settled font — the `useMemo`'s own dependency array
-  // (which includes `fontMetrics`) is what limits the actual re-SHAPE to when
-  // this value's identity changes (the bundled default vs. a just-settled
-  // scene font), not every render.
+  // Read in the render body, not the `useMemo`: `peekSceneFontMetrics` reads a
+  // WeakMap cache that a later async load fills in place, so each render must look.
+  // The `useMemo` dependency on `fontMetrics` limits re-shaping to an identity change.
   const fontMetrics = resolveNodeFontMetrics(solveNode, LABEL_THEME_FONT_KEY);
   const layout = useMemo(() => {
     if (sharedLayout) return sharedLayout;
@@ -169,6 +134,8 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     return props.tabStopsPx && props.tabStopsPx.length > 0 ? base | JustificationFlag.AFTER_LAST_TAB : base;
   }, [props.justificationFlags, props.tabStopsPx]);
 
+  // Godot aligns each line by its own width (`Label::_get_line_rect`), so each line
+  // gets its own box top here, and `<TextRun>` anchors it at the baseline.
   const placements = useMemo(
     () =>
       layoutLabelLines(
@@ -193,12 +160,10 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     ]
   );
 
-  // label.cpp:302-332 (autowrap OFF): every line is overrun-trimmed at the
-  // SAME shaping width `layout` was wrapped at, regardless of clip_text —
-  // that key only collapses the minimum size (`nativeSolver.ts`) and gates
-  // the scissor above. The autowrap-ON branch (`:269-301`) only trims the
-  // ONE line `max_lines_visible` hides, which this engine does not model
-  // (see `LabelProperties.overrunBehavior`'s own doc), so it is skipped here.
+  // label.cpp:302-332 (autowrap OFF): each line is overrun-trimmed at the shaping
+  // width, whatever clip_text says. The autowrap-ON branch (`:269-301`) trims only
+  // the line `max_lines_visible` hides, which is not modelled
+  // (`LabelProperties.overrunBehavior`).
   const overrunFlags = useMemo(
     () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING),
     [props.overrunBehavior]
@@ -216,11 +181,9 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     }));
   }, [placements, autowrapMode, overrunFlags, rect.w, fontMetrics, textTheme.fontSizePx, props.ellipsisChar]);
 
-  // label.cpp:778-883's draw-time reveal, on top of the overrun trim above —
-  // both are independent per-glyph skip conditions Godot ORs together in the
-  // SAME draw loop. `props.visibleCharacters`/`visibleRatio` are already
-  // `parseLabel`'s FINAL cross-derived numbers (`resolveVisibleChars`'s own
-  // doc). VC_CHARS_BEFORE_SHAPING (the default) already ran above, pre-shape.
+  // label.cpp:778-883's draw-time reveal: Godot ORs it with the overrun trim in
+  // one draw loop. `visibleCharacters`/`visibleRatio` are `parseLabel`'s final
+  // numbers, and VC_CHARS_BEFORE_SHAPING, the default, already ran before shaping.
   const revealedPlacements = useMemo(() => {
     const revealed = applyVisibleCharsReveal(
       trimmedPlacements.map((placement) => placement.line),
@@ -236,6 +199,9 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
 
   const lineLayouts = useSoloLineLayouts(revealedPlacements, layout);
 
+  // Each `<TextRun>` takes `renderOrder` itself, since three never inherits it,
+  // and sits in a `<CanvasItemGroup>`, since three reads the nearest group's order
+  // first and a bare `<group>` resets it to zero (`r3f/canvasPaintOrder.ts`).
   return (
     <CanvasItemGroup ref={anchorRef}>
       {hasShadow &&

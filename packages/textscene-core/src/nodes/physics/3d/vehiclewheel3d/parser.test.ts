@@ -48,9 +48,8 @@ describe('parseVehicleWheel3D', () => {
   });
 
   it('leaves unauthored properties undefined rather than substituting Godot defaults', () => {
-    // 12 of the corpus's 20 wheels omit suspension_travel, and none of them
-    // author damping_relaxation. Baking the default in at parse time would make
-    // "author wrote 0.2" and "author wrote nothing" indistinguishable downstream.
+    // Baking the default in at parse time would make "author wrote 0.2" and
+    // "author wrote nothing" indistinguishable downstream.
     const props = parseVehicleWheel3D(wheel, { wheel_radius: '0.18' });
 
     expect(props.wheel_radius).toBeCloseTo(0.18, 5);

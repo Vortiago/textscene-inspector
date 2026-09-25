@@ -1,13 +1,8 @@
 /**
- * MultiMeshInstance3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * MultiMeshInstance3D strict validators, asserted through `validatorRegistry` so a
+ * failure points at the validator rather than at scene parsing. Rule-level
+ * behaviour belongs in linter.test.ts. Quote the governing Godot source line
+ * beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,30 +18,20 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * MultiMeshInstance3D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
- *
- * scene/3d/multimesh_instance_3d.cpp:57 — the ONLY ADD_PROPERTY in
- * MultiMeshInstance3D::_bind_methods, and the only member doc/classes/MultiMeshInstance3D.xml
- * lists. No PropertyListHelper/register_property, no ADD_ARRAY_COUNT, no `_set`/`_get`/
- * `get_property_list` override anywhere in multimesh_instance_3d.cpp or .h.
+ * The keys MultiMeshInstance3D binds: scene/3d/multimesh_instance_3d.cpp:57 is its one
+ * ADD_PROPERTY and doc/classes/MultiMeshInstance3D.xml's one member, and
+ * multimesh_instance_3d.cpp has no other route. Set this or
+ * DECLARES_NOTHING: both unset fails on purpose. Never delete an assertion to pass.
  */
 const KEYS: string[] = ['multimesh'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys MultiMeshInstance3D does NOT declare, each paired with the ancestor that does.
- * Name at least one; GeometryInstance3D is where to start.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives MultiMeshInstance3D no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart, and it is red until filled for the same reason
- * KEYS is.
+ * At least one key MultiMeshInstance3D inherits, with the ancestor that declares it.
+ * The malformed-value sweep iterates `getOwnKeys`, so it passes vacuously on a
+ * class that declares nothing. Resolving a key to the ancestor's own validator
+ * tells "declares nothing" apart from "not written yet".
  */
 const INHERITED: [owner: string, key: string][] = [
   ['GeometryInstance3D', 'cast_shadow'],
@@ -66,17 +51,14 @@ describe('MultiMeshInstance3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // Runs the fixture's zero-diagnostic claim against what this test imports.
+    // `fixtureLint` covers the whole registry but needs the barrel.
     expectFixtureClean('unit-multi-mesh-instance-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // MultiMeshInstance3D declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose is not validating a format. Vacuous
+    // when MultiMeshInstance3D declares nothing, which INHERITED covers.
     const accepted = validatorRegistry
       .getOwnKeys('MultiMeshInstance3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -91,7 +73,7 @@ describe('MultiMeshInstance3D strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
+      // The same function, not merely some validator: a shadowing copy on
       // MultiMeshInstance3D would answer here while drifting from the ancestor's rule.
       expect(validatorRegistry.findValidator('MultiMeshInstance3D', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('MultiMeshInstance3D')).not.toContain(key);
@@ -112,9 +94,8 @@ describe('MultiMeshInstance3D strict validators', () => {
     });
 
     it('accepts the literal null, a cleared slot Godot loads', () => {
-      // Omitting a cleared slot is what the WRITER does; the loader still
-      // takes a hand-written `null` (variant_parser.cpp:699, NIL -> OBJECT at
-      // variant.cpp:543), so reporting it would flag a file Godot opens.
+      // The writer omits a cleared slot, but the loader takes a hand-written `null`
+      // (variant_parser.cpp:699, NIL -> OBJECT at variant.cpp:543).
       expect(check('multimesh', 'null')).toBeNull();
     });
   });

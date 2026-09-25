@@ -1,28 +1,21 @@
 /**
- * Reads the extension host's `window.__TEXTSCENE_CONFIG__` global (embedded
- * by `generateWebviewHtml`, see `webviewHtml.ts`) and resolves it into the
- * `initialViewportMode` prop `<TscnPreviewShell>` expects. Split out of
- * `r3f-webview-main.tsx` so this pure logic is testable without mounting
- * React — this package's vitest config runs in a Node environment, and the
- * webview itself only ever runs inside a real VS Code webview.
+ * Resolves the `window.__TEXTSCENE_CONFIG__` global `generateWebviewHtml` embeds
+ * into `<TscnPreviewShell>`'s `initialViewportMode`. It is apart from
+ * `r3f-webview-main.tsx`, so a node-environment test runs it without React.
  */
 import type { WebviewInitialConfig } from './webviewHtml.js';
 
 /**
- * The subset of `TscnPreviewShellProps['initialViewportMode']` this host
- * ever passes through — kept as a local literal union (rather than importing
- * `@textscene/core`'s internal `ViewportMode` type) since only `'2D'`/`'3D'`
- * are meaningful overrides here.
+ * The subset of `TscnPreviewShellProps['initialViewportMode']` this host passes:
+ * a local union, not core's internal `ViewportMode`, since only `'2D'`/`'3D'`
+ * override.
  */
 export type ForcedViewportMode = Exclude<WebviewInitialConfig['viewportMode'], 'auto'>;
 
 /**
- * The host->webview config contract, reader side. Derived from
- * `WebviewInitialConfig` (the writer/serializer side in `webviewHtml.ts`) so
- * the two ends of this serialized contract can't drift apart — `Partial`
- * because `window.__TEXTSCENE_CONFIG__` may be entirely absent (the config
- * script is only embedded when `initialConfig` was passed to
- * `generateWebviewHtml`).
+ * The reader side of the host->webview config, derived from the writer's
+ * `WebviewInitialConfig` so the two ends agree. `Partial`, because the global is
+ * absent when `generateWebviewHtml` got no `initialConfig`.
  */
 export type TextSceneWebviewConfig = Partial<WebviewInitialConfig>;
 
@@ -33,10 +26,8 @@ export function readInitialConfig(): TextSceneWebviewConfig {
 }
 
 /**
- * `'auto'` (or an absent setting) leaves Godot-parity auto-select in control
- * — no override, so `undefined`. An explicit `'2D'`/`'3D'` passes through
- * unchanged for `<TscnPreviewShell initialViewportMode>` to seed and suppress
- * auto-select with.
+ * `'auto'` or an absent setting gives `undefined`, which keeps Godot-parity
+ * auto-select. `'2D'`/`'3D'` passes through to seed the viewport and suppress it.
  */
 export function resolveInitialViewportMode(
   config: TextSceneWebviewConfig

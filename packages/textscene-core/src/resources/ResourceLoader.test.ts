@@ -1,15 +1,7 @@
 /**
- * Tests for ResourceLoader covering ONLY the gaps not exercised elsewhere:
- *
- *   - useResource*.test.tsx covers hook-level status transitions and the
- *     late-arrival flow at the React layer.
- *   - processors/createSceneProcessor.test.ts covers processor-level cache,
- *     dedupe, and failure semantics.
- *
- * Here we pin the loader-level surface: register() idempotence, the
- * provideFile() late-arrival flow (file cache + processor cache cleared,
- * then re-requested through the right processor), the metadata-less
- * fan-out, failed loads caching null, and the unknown-type guard.
+ * The loader-level surface: `register()` idempotence, the `provideFile()` late
+ * arrival (both caches cleared, then re-requested), the metadata-less fan-out,
+ * failed loads caching null, and the unknown-type guard. Hooks and processors have their own tests.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ResourceLoader } from './ResourceLoader';
@@ -62,9 +54,8 @@ describe('ResourceLoader (loader-level gaps)', () => {
 
   describe('scene addresses no [ext_resource] declares', () => {
     it('loads a raw `res://` scene path nothing ever registered', async () => {
-      // A node's `instance` may name the path directly. No ExtResource declares
-      // it, so nothing calls `register` for it — and an address the MetadataStore
-      // cannot answer used to fail permanently, in BOTH walks that request one.
+      // A node's `instance` may name the path directly. No ExtResource declares it,
+      // so nothing calls `register`, and both walks that request it must still load it.
       const rawPath = 'res://scenes/never-registered.tscn';
       provider.files.set(rawPath, VALID_TSCN);
       const loaded = loader.eventBus.once<TscnScene>('scene', 'loaded', rawPath);
@@ -73,8 +64,8 @@ describe('ResourceLoader (loader-level gaps)', () => {
 
       const scene = await loaded;
       expect(scene.nodes[0]!.name).toBe('Root');
-      // Nothing declared a TYPE for it either, but the channel it was asked
-      // through is still what the provider is being asked to fetch.
+      // Nothing declared a type for it either, but the channel it was asked
+      // through is still what the provider is asked to fetch.
       expect(provider.loadResource).toHaveBeenCalledWith(rawPath, 'PackedScene');
     });
 
@@ -131,11 +122,9 @@ describe('ResourceLoader (loader-level gaps)', () => {
     });
 
     it('treats a sub-resource path as its owning file', () => {
-      // Bytes only ever belong to a file, and a caller holding a **Sub-resource
-      // path** (a missing-resources row, say) is telling us about the file that
-      // owns it. Routing the address instead would miss the metadata, fan out to
-      // the wrong processors, and skip the file-level clear that announces
-      // `invalidated` to every address inside that file.
+      // Bytes belong to a file, so a **Sub-resource path** names its owning file.
+      // Routing the address would miss the metadata, fan out to the wrong processors,
+      // and skip the file-level clear that announces `invalidated` to its addresses.
       const matSpy = vi.spyOn(loader.materials, 'request');
       const resSpy = vi.spyOn(loader.resources, 'request');
       const fileCacheSpy = vi.spyOn(fileEventBus, 'clearCache');
@@ -162,9 +151,8 @@ describe('ResourceLoader (loader-level gaps)', () => {
     });
 
     it('fans an unregistered .tres out to all three .tres processors (material + generic resource + font)', () => {
-      // A raw `res://…tres` reference (e.g. a tile_set path never declared as
-      // ExtResource) must reach every .tres-capable processor, or a
-      // late-arrival upload can never resolve depending on which one it is.
+      // A raw `res://…tres` reference, such as an undeclared tile_set path, must reach
+      // every .tres-capable processor, or a late upload of the wrong kind never resolves.
       const matSpy = vi.spyOn(loader.materials, 'request');
       const resSpy = vi.spyOn(loader.resources, 'request');
       const fontSpy = vi.spyOn(loader.fonts, 'request');
@@ -216,9 +204,8 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(loader.scenes.isCached(SCENE_PATH)).toBe(false);
       expect(loader.metadata.getAll()).toHaveLength(0);
 
-      // A CALLER subscriber registered before the clear still receives events
-      // — unlike clear(), which wipes every subscriber, caller ones
-      // included, and only re-registers the loader's OWN internal callbacks.
+      // A caller subscriber registered before the clear still receives events,
+      // unlike `clear()`, which re-registers only the loader's own callbacks.
       loader.register(SCENE_META);
       const second = loader.eventBus.once<TscnScene>('scene', 'loaded', SCENE_PATH);
       loader.request('scene', SCENE_PATH);
@@ -317,10 +304,9 @@ describe('ResourceLoader (loader-level gaps)', () => {
 
   describe('clear() — safety (#217)', () => {
     it('re-registers its own failure callbacks so onResourceNeeded still fires after a clear()', async () => {
-      // clear() wipes the ENTIRE event bus, including the loader's own
-      // setupFailureCallbacks subscriptions — if it didn't re-register them,
-      // calling clear() on a live loader would permanently silence the
-      // missing-resources reporting for the rest of that loader's lifetime.
+      // `clear()` wipes the whole event bus, including the loader's own failure
+      // callbacks. Without re-registering them, missing-resources reporting would go
+      // silent for the rest of the loader's life.
       const onResourceNeeded = vi.fn();
       loader.setOnResourceNeeded(onResourceNeeded);
 
@@ -363,9 +349,8 @@ describe('ResourceLoader (loader-level gaps)', () => {
       expect(loader.scenes.isCached(SCENE_PATH)).toBe(false);
     });
   });
-  // The signal CameraFit uses to know loading has actually finished. A timer
-  // can only guess, and guessed wrong for a scene whose meshes are large
-  // external .tres files: the fit framed whatever had decoded by then.
+  // The signal CameraFit uses to know loading has finished. A timer can only guess,
+  // and frames whatever has decoded when large external .tres meshes are still loading.
   describe('pending-resource activity', () => {
     it('starts settled', () => {
       expect(loader.pendingResourceCount).toBe(0);

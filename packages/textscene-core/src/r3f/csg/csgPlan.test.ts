@@ -39,7 +39,7 @@ function node(
   return { name, type, children, properties: { name, ...properties } as never };
 }
 
-/** The fold's geometry-bearing nodes in pre-order — what the flat plan used to be. */
+/** The fold's geometry-bearing nodes in pre-order. */
 function solids(plan: CsgPlan): CsgContribution[] {
   const out: CsgContribution[] = [];
   const walk = (c: CsgContribution | null): void => {
@@ -152,9 +152,8 @@ describe('buildCsgPlan', () => {
     });
 
     it('carries the eye toggle down the subtree, as the local flag does', () => {
-      // _get_brush() tests child->is_visible(), the LOCAL flag — hiding a node does not
-      // mark its descendants, the recursion simply never reaches them, so their
-      // node_aabb goes unwritten too. Same set either way.
+      // _get_brush() tests child->is_visible(), the local flag: the recursion never reaches the
+      // descendants, so their node_aabb goes unwritten too.
       const tree = () => [
         node('CSGBox3D', 'Kept'),
         node('CSGBox3D', 'Off', {}, [node('CSGSphere3D', 'Under')]),

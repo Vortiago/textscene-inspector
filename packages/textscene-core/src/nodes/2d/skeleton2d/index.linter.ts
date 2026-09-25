@@ -1,5 +1,3 @@
-/**
- * skeleton2d linter registration - imports linter components to trigger self-registration.
- */
+/** Imports the Skeleton2D linter modules so they self-register. */
 
 import './linterParser.js';

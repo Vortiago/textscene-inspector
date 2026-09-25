@@ -1,5 +1,3 @@
-/**
- * Tree linter registration: the slice's strict validators.
- */
+/** Tree linter registration: importing the modules registers them. */
 
 import './linterParser.js';

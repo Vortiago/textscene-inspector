@@ -1,10 +1,7 @@
 /**
- * End-to-end check that the GLB animation driver binds to the SAME node path
- * the scene tree selects. The unit tests wrap GLBSceneRoot in an explicit
- * NodePathProvider; this drives the real NodeDispatcher → InstancedNode →
- * GLBSceneRoot path so a regression in path composition (joinPath of the
- * instance node + the synthesised GLB root's basename) would surface as the
- * Animation tab failing to populate on selection.
+ * The GLB animation driver binds to the node path the scene tree selects, through the real
+ * NodeDispatcher → InstancedNode → GLBSceneRoot path. A broken `joinPath` of the instance node
+ * and the GLB root's basename leaves the Animation tab empty on selection.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -31,8 +28,7 @@ import { initGlbModules } from '../../../resources/processing/glbProcessing';
 // Register node-type components (Node3D / GLBSceneRoot / …).
 import '../../nodes/index';
 
-// GLBSceneRoot clones Object3D via cloneWithMaterials which requires the lazy
-// GLB module cache to be initialised first.
+// GLBSceneRoot clones through cloneWithMaterials, which needs the lazy GLB module cache.
 beforeAll(async () => {
   await initGlbModules();
 });
@@ -112,8 +108,8 @@ describe('GLB driver — selection path through the real dispatcher', () => {
     // Nothing selected → no driver registered.
     expect(transport.clips).toEqual([]);
 
-    // Selecting the GLB ROOT row no longer drives the tab (Godot parity: the
-    // clips live on the AnimationPlayer child).
+    // Selecting the GLB root row does not drive the tab: as in Godot, the clips live on the
+    // AnimationPlayer child.
     await ReactThreeTestRenderer.act(async () =>
       selection?.setSelectedNodePath('Player/player')
     );

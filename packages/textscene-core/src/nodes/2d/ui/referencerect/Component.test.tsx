@@ -1,7 +1,7 @@
 /**
- * `<ReferenceRect>` (isolated painter contract) — `scene/gui/reference_rect.cpp`
- * composed with `scene/main/canvas_item.cpp`'s unfilled `draw_rect` (Godot
- * 4.6.3). Exact border quads are cross-checked in `borderGeometry.test.ts`.
+ * Tests the `<ReferenceRect>` painter against `scene/gui/reference_rect.cpp` and
+ * the unfilled `draw_rect` of `scene/main/canvas_item.cpp`.
+ * `borderGeometry.test.ts` checks the exact quads.
  */
 import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -101,7 +101,7 @@ describe('<ReferenceRect> (isolated painter contract)', () => {
     );
     const mesh = renderer.scene.findAllByType('Mesh')[0]!.instance as THREE.Mesh;
     const mat = mesh.material as THREE.MeshBasicMaterial;
-    // border_color(1,0,0) * tint(0.5) = 0.5 red, sRGB, then linearised — stays below the untinted value.
+    // border_color(1,0,0) * tint(0.5) = 0.5 red in sRGB, then linearised: below the untinted value.
     expect(mat.color.r).toBeGreaterThan(0);
     expect(mat.color.r).toBeLessThan(1);
   });

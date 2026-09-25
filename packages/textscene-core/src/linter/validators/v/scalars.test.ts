@@ -1,12 +1,8 @@
 /**
- * The string combinators: which jackets and escapes a STRING slot takes.
- *
- * `variant_parser.cpp:263-265` tokenizes `&"…"` and the 3.x-compatible `@"…"`
- * as one StringName, `variant.cpp:582-587` lists `STRING_NAME` as a strict
- * source for `STRING`, and `VariantCasterAndValidate` (`binder_common.h:175`)
- * gates a setter argument on `can_convert_strict` — so `text = &"Hello"`
- * stores `Hello`. There is no `^` token in the tokenizer, so `^"…"` stays a
- * format error.
+ * Which jackets and escapes a STRING slot takes. `variant_parser.cpp:263-265`
+ * tokenizes `&"…"` and `@"…"` as one StringName, a strict source for STRING
+ * (`variant.cpp:582-587`, gated by `binder_common.h:175`). There is no `^`
+ * token, so `^"…"` stays a format error.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -36,7 +32,7 @@ describe('v.singleCharacter', () => {
     expect(validator('secret_character', '&"**"', 1)?.message).toContain('2 characters');
   });
 
-  // `variant_parser.cpp:299-300`: `case 'b': res = 8` — one character, and
+  // `variant_parser.cpp:299-300`: `case 'b': res = 8` is one character, and
   // `:350-351` `default: res = next` makes `\'` a single `'`.
   it('counts an escape the tokenizer decodes as one character', () => {
     const validator = v.singleCharacter('secret_character', { enforced: CUT });

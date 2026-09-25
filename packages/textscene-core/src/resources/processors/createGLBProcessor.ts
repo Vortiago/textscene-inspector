@@ -1,5 +1,5 @@
 /**
- * Factory for creating GLB mesh processors — the GLB slice's loader-facing
+ * Factory for creating GLB mesh processors, the GLB slice's loader-facing
  * adapter (`resources/formats/glb/`, ADR-0031). Stays here because the
  * `ResourceLoader` constructs it alongside its peer factories.
  */
@@ -29,13 +29,13 @@ import * as logger from '../../logger';
 import { isMaterialOwnedTexture, pinNoColorSpace } from '../textures/applyTextureState';
 import { releaseOwnedTextures } from '../materials/standardmaterial3d/textureBinding';
 
-/** Loads a material by its `res://` path; null when it cannot be had. */
+/** Loads a material by its `res://` path, or null when it cannot be had. */
 export type MaterialLoaderFn = (path: string) => Promise<THREE.Material | null>;
 
 /**
  * Dispose of a GLB mesh and all its resources. Unlike a per-consumer clone
- * (whose geometry is shared with this template — see
- * `disposeClonedMaterials`), the TEMPLATE owns its geometry too.
+ * (whose geometry is shared with this template, see
+ * `disposeClonedMaterials`), the template owns its geometry too.
  */
 function disposeGLBMesh(mesh: THREE.Object3D): void {
   // Materials through the same slot-gated walker the sidecar writes through, so a
@@ -51,17 +51,10 @@ function disposeGLBMesh(mesh: THREE.Object3D): void {
 }
 
 /**
- * Correct a freshly loaded asset by its **Import sidecar** (ADR-0028).
- *
- * Done HERE, once per path, rather than in a consumer: the processor owns the cached
- * template, so every downstream reader — render, bounds, selection, the scene tree —
- * sees one already-correct object, and none of them can disagree about it. It is also
- * where Godot does it: the importer writes both corrections into the ImporterMesh before
- * the scene is serialised, so they belong to the ASSET, not to a scene instancing it.
- *
- * A sidecar is found by convention (`scene.gltf` → `scene.gltf.import`), never declared
- * by a scene, so it is read with `tryLoad`: absent is the common case and means "Godot's
- * import defaults", not a **Missing resource**.
+ * Correct a loaded asset by its **Import sidecar** (ADR-0028), once per path on the
+ * cached template, so render, bounds, selection and the tree see one object. Godot's
+ * importer too writes both corrections into the asset. A sidecar is found by convention
+ * (`scene.gltf.import`), so `tryLoad`: absent means import defaults, not a **Missing resource**.
  */
 async function applyImportSidecar(
   object: THREE.Object3D,
@@ -98,12 +91,9 @@ function applySidecarRootScale(
 
 /**
  * `_subresources`' per-node `mesh_instance/layers`, matched by node path
- * (`resource_importer_scene.cpp:1836`).
- *
- * Resolved through `matchGlbTarget` — its header carries why the two importers' node
- * lists differ. Godot's key holds the raw glTF names, so each segment is sanitized into
- * three's spelling first; the nearest-ancestor fallback is OFF, because a mask belongs to
- * one mesh instance and an ancestor would stamp every sibling under it.
+ * (`resource_importer_scene.cpp:1836`) through `matchGlbTarget`, each raw glTF segment
+ * sanitized into three's spelling first. No nearest-ancestor fallback: a mask belongs
+ * to one mesh instance, and an ancestor would stamp every sibling under it.
  */
 function applySidecarNodeLayers(
   object: THREE.Object3D,
@@ -145,14 +135,10 @@ function adoptOwnedTextures(material: THREE.Material): THREE.Material {
 }
 
 /**
- * `_subresources`' external materials, matched to surfaces by glTF material name —
+ * `_subresources`' external materials, matched to surfaces by glTF material name:
  * Godot's `mat->get_meta("import_id", mat->get_name())` key
- * (`editor/import/3d/resource_importer_scene.cpp:1583`), which for glTF is the name.
- *
- * The replaced material is CLONED: the material processor owns and caches the original,
- * while `disposeGLBMesh` frees whatever sits on the template's surfaces. An unresolvable
- * `.tres` leaves the glTF's own material, which is what Godot's null `external_mat`
- * branch does (`:1622-1636`).
+ * (`editor/import/3d/resource_importer_scene.cpp:1583`). An unresolvable `.tres` keeps
+ * the glTF's own material, as Godot's null `external_mat` branch does (`:1622-1636`).
  */
 async function applySidecarMaterials(
   object: THREE.Object3D,
@@ -179,6 +165,8 @@ async function applySidecarMaterials(
   await Promise.all(
     [...wanted].map(async ([name, external]) => {
       const material = await loadMaterial(external);
+      // Cloned: the material processor caches the original, and `disposeGLBMesh`
+      // frees whatever sits on the template's surfaces.
       if (material) built.set(name, adoptOwnedTextures(material.clone()));
       else logger.warn(`[GLBProcessor] ${path}: external material ${external} did not load`);
     })

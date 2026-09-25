@@ -1,4 +1,4 @@
-/** NinePatchRect parser — Control + texture ref, patch margins, region, axis stretch. */
+/** Parses a NinePatchRect: Control plus texture ref, patch margins, region and axis stretch. */
 
 import { type ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt, parseOptionalRect2 } from '../../../../parser/valueParsers';
@@ -10,8 +10,7 @@ export function parseNinePatchRect(
   properties: Record<string, string>
 ): NinePatchRectProperties {
   const result: NinePatchRectProperties = { ...parseControl(heading, properties) };
-  // `texture` stays a raw resource ref — the component resolves it via the
-  // scene's own resource scope (do not unquote).
+  // `texture` stays a raw resource ref, not unquoted: the component resolves it in the scene's own scope.
   if (properties.texture !== undefined) result.texture = properties.texture;
   result.axisStretchHorizontal = parseOptionalInt(properties.axis_stretch_horizontal);
   result.axisStretchVertical = parseOptionalInt(properties.axis_stretch_vertical);

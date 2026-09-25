@@ -3,9 +3,8 @@ import { heading } from '../../../parser/testing/parserKit';
 import { parseSubViewport } from './parser';
 
 /**
- * Defaults are Godot's own (doc/classes/SubViewport.xml + Viewport.xml, 4.4),
- * not guesses — a wrong default silently changes what an unset property renders
- * as, which no fixture would catch.
+ * Defaults are Godot's own (doc/classes/SubViewport.xml and Viewport.xml): a wrong
+ * default changes what an unset property renders as, which no fixture catches.
  */
 describe('parseSubViewport', () => {
   it('parses name and parent, and carries no transform (happy path)', () => {
@@ -15,9 +14,8 @@ describe('parseSubViewport', () => {
     );
     expect(result.name).toBe('RenderBooth');
     expect(result.parent).toBe('.');
-    // A SubViewport derives from Viewport < Node — it has no spatial transform,
-    // and `SubViewportProperties` omits the field entirely rather than merely
-    // leaving it unset.
+    // A SubViewport derives from Viewport and Node, so it has no spatial
+    // transform, and `SubViewportProperties` omits the field.
     expect('transform' in result).toBe(false);
   });
 

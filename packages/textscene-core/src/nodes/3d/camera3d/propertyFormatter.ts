@@ -1,5 +1,5 @@
 /**
- * Camera3D property formatter - formats camera properties for display with camera switching
+ * Camera3D property formatter: formats camera properties for display, with camera switching.
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';

@@ -1,13 +1,10 @@
 /// <reference types="vitest/globals" />
 
 /**
- * Test setup file for VSCode extension tests (`vitest.config.ts` → setupFiles).
- *
- * Two jobs, and both have to happen HERE: installing the `vscode` module mock,
- * and clearing every spy between tests. The mock's own pieces live in
- * `vscodeMocks.testkit.ts` (the `vi.fn()` namespaces) and `vscodeMockClasses.testkit.ts` (the
- * classes and enums) — this file assembles them, and re-exports the surface a
- * dozen tests import from `'./test-setup'`.
+ * Setup file for the extension tests: it installs the `vscode` module mock and
+ * clears every spy between tests. It assembles `vscodeMocks.testkit.ts` (the
+ * `vi.fn()` namespaces) and `vscodeMockClasses.testkit.ts` (classes and enums), and
+ * re-exports the surface tests import from `'./test-setup'`.
  */
 
 import { vi, afterEach } from 'vitest';
@@ -42,14 +39,6 @@ export {
   MockSelection,
 } from './vscodeMockClasses.testkit';
 
-// ============================================================================
-// VSCode Module Mock
-// ============================================================================
-
-/**
- * Complete vscode module mock
- * Add more APIs as needed by tests
- */
 vi.mock('vscode', () => ({
   Uri: mockUri,
   workspace: mockWorkspace,
@@ -65,7 +54,6 @@ vi.mock('vscode', () => ({
   Location: MockLocation,
   Diagnostic: MockDiagnostic,
 
-  // Enums
   DiagnosticSeverity: MockDiagnosticSeverity,
   ViewColumn: MockViewColumn,
   FileType: MockFileType,
@@ -73,19 +61,13 @@ vi.mock('vscode', () => ({
   SymbolKind: MockSymbolKind,
 }));
 
-// ============================================================================
-// Global Test Setup
-// ============================================================================
-
-// Reset all mocks after each test
 afterEach(() => {
   vi.clearAllMocks();
 });
 
 /**
- * The same objects the module mock is built from, reachable by name — a test
- * that needs to arrange `vscode.workspace.fs.readFile` reads it from here
- * rather than re-deriving it from the mocked import.
+ * The objects the module mock is built from, by name: a test arranges
+ * `vscode.workspace.fs.readFile` through here, not through the mocked import.
  */
 export const vscode: {
   Uri: typeof mockUri;

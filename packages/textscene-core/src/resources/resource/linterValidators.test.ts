@@ -1,10 +1,7 @@
 /**
- * The `Resource` base validators, and the reach that makes them worth having.
- *
- * Driven through the full barrel rather than the module, because the claim is
- * not "these two validators work" but "every resource in a scene gets them",
- * and that depends on the barrel importing this file and on the resource
- * base-walk arriving here from whatever type the scene names.
+ * The `Resource` base validators, through the full barrel: the claim is that
+ * every resource in a scene gets them, so the barrel must import this file and
+ * the base-walk must arrive here from whatever type the scene names.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -28,7 +25,7 @@ runResourcePropertyValidation('StandardMaterial3D', [
 describe('Resource base validators', () => {
   it('reaches a resource type that registers nothing of its own', () => {
     // Three hops up from a leaf whose own slice is only a decoder. Any
-    // Resource class would do; this one is in the corpus.
+    // Resource class would do, and this one is in the corpus.
     expect(validatorRegistry.findValidator('QuadMesh', 'resource_name')).not.toBeNull();
     expect(validatorRegistry.findValidator('Animation', 'resource_local_to_scene')).not.toBeNull();
   });

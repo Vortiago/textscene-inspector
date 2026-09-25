@@ -1,16 +1,8 @@
 /**
- * GraphNode parser — GraphElement + `title`/`ignore_invalid_connection_type`/
- * `slots_focus_mode` + the hand-rolled `slot/<index>/<leaf>` family.
- *
- * `GraphNode::_set` (`graph_node.cpp:38-88`) applies ONE leaf write at a time:
- * it reads the slot's CURRENT accumulated state (or a fresh `Slot()` default),
- * assigns the one leaf, then calls `set_slot`, which ERASES the entry outright
- * (`:705-713`) whenever every leaf but `draw_stylebox` is still at its class
- * default. A later write to the SAME index rebuilds from `Slot()` again (the
- * erased entry is gone), so the erase/recreate sequence depends on FILE ORDER
- * within one slot's own keys — replayed below over `Object.entries`, which
- * preserves that order for the non-array-index string keys `slot/N/leaf`
- * always is.
+ * GraphNode parser: GraphElement plus `title`, `ignore_invalid_connection_type`, `slots_focus_mode`
+ * and the `slot/<index>/<leaf>` family. `GraphNode::_set` (`graph_node.cpp:38-88`) applies one leaf,
+ * and `set_slot` erases an entry whose leaves other than `draw_stylebox` are default (`:705-713`), so
+ * a later write restarts from `Slot()`. `Object.entries` keeps file order for these non-index keys.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -25,11 +17,11 @@ import { indexedKeyRegex, toIntIndex } from '../../../../godot/index.js';
 import type { GraphNodeProperties, GraphNodeSlot } from './types';
 import { parseGraphElement } from '../graphelement/parser';
 
-/** `graph_node.cpp:45` — bare `str.get_slicec('/', 1).to_int()`, no validity gate. */
+/** `graph_node.cpp:45`: bare `str.get_slicec('/', 1).to_int()`, no validity gate. */
 const SLOT_KEY_RE = indexedKeyRegex('^slot/(#)/(.+)$', 'to_int');
 
 /**
- * `Slot`'s own class defaults (`graph_node.h:41-52`) — also what
+ * `Slot`'s own class defaults (`graph_node.h:41-52`): also what
  * `HashMap<int, Slot>::operator[]` auto-vivifies for an undeclared index
  * during `_resort`/`NOTIFICATION_DRAW` (`nativeSolver.ts`'s own doc).
  */
@@ -51,7 +43,7 @@ function colorEquals(a: GraphNodeSlot['leftColor'], b: GraphNodeSlot['leftColor'
 
 /**
  * `GraphNode::set_slot`'s erase condition (`graph_node.cpp:708-713`):
- * `draw_stylebox` is NOT one of its tested fields, so a slot authoring only
+ * `draw_stylebox` is not one of its tested fields, so a slot authoring only
  * `draw_stylebox = false` (every other leaf at its class default) is erased
  * outright, not stored with `drawStylebox: false`.
  */
@@ -105,7 +97,7 @@ function applyLeaf(slot: GraphNodeSlot, leaf: string, value: string): GraphNodeS
       return v === undefined ? slot : { ...slot, drawStylebox: v };
     }
     default:
-      // `_set` returns false for any other leaf name — no-op (graph_node.cpp:71-73).
+      // `_set` returns false for any other leaf name: no-op (graph_node.cpp:71-73).
       return slot;
   }
 }
@@ -117,7 +109,7 @@ function parseSlots(properties: Record<string, string>): Map<number, GraphNodeSl
     if (!m) continue;
     const index = toIntIndex(m[1]!);
     // `set_slot`'s own `ERR_FAIL_COND_MSG(p_slot_index < 0, ...)` (:706) refuses
-    // a negative index outright — the write never lands.
+    // a negative index outright: the write never lands.
     if (!(index >= 0)) continue;
     const leaf = m[2]!;
     const current = slots.get(index) ?? defaultGraphNodeSlot();

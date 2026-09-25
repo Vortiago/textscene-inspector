@@ -1,9 +1,9 @@
 /**
- * `<TabContainer>` render contract — the panel StyleBox, and the internal
- * tab strip delegated to `<TabBar>` against a synthetic node built from this
- * TabContainer's own children. Structure/order assertions only — pixels are
- * a golden-image concern via `pnpm ref:godot`.
+ * `<TabContainer>` render contract: the panel StyleBox, and the internal strip
+ * delegated to `<TabBar>` on a synthetic node built from the children. Structure
+ * and order only: pixels are a golden-image concern (`pnpm ref:godot`).
  */
+
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -121,9 +121,8 @@ describe('<TabContainer> (isolated painter contract)', () => {
       />
     );
     const stripMesh = (scene: Rendered['scene']) => findTextMeshes(scene)[0]!;
-    // Default (false): the strip's own StyleBox/text draws at the
-    // subtree-chrome slot (9.5), AFTER the current page — Godot's own
-    // INTERNAL_MODE_BACK. true: this node's own paint slot (5) instead.
+    // Default (false): the strip draws at the subtree-chrome slot (9.5), after the
+    // current page, as Godot's INTERNAL_MODE_BACK does. true: this node's paint slot (5).
     expect(stripMesh(behind.scene).renderOrder).toBeCloseTo(9.5, 5);
     expect(stripMesh(front.scene).renderOrder).toBe(5);
   });
@@ -169,12 +168,10 @@ describe('<TabContainer> panel band', () => {
 });
 
 describe('<TabContainer> internal strip at a font-size override', () => {
-  // TabContainer binds its own `tab_font_size` under the item name "font_size"
-  // (tab_container.cpp:1265) and pushes it onto the internal bar as that bar's
-  // own `font_size` override (tab_container.cpp:339). `_get_tab_height`
-  // (tab_container.cpp:51-58) then turns the bar's minimum size into the
-  // header band the current page is offset by, so the shaped buffer sets the
-  // band AND the glyphs in it.
+  // TabContainer binds `tab_font_size` as the item "font_size" (tab_container.cpp:1265) and
+  // pushes it onto the internal bar as its `font_size` override (tab_container.cpp:339).
+  // `_get_tab_height` (tab_container.cpp:51-58) turns the bar's minimum size into the
+  // header band, so the shaped buffer sets both the band and its glyphs.
   const measured = { measureText: () => ({ x: 0, y: 0 }) };
 
   async function strip(properties: Partial<TabContainerProperties>) {

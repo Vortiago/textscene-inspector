@@ -1,12 +1,8 @@
 /**
- * Dimension-parameterized semantic linter rule for NavigationRegion2D / NavigationRegion3D.
- *
- * The genuine dimension-specific seam is the navigation resource property:
- * 2D references a `navigation_polygon`, 3D a `navigation_mesh`. Neither is
- * baked for you — `bake_navigation_mesh` (navigation_region_2d.cpp,
- * navigation_region_3d.cpp) both open with an `ERR_FAIL_COND_MSG` on a null
- * resource — and both overrides raise the same configuration warning for an
- * absent one, behind the same visibility gate.
+ * The NavigationRegion2D/3D warning for an absent navigation resource:
+ * `navigation_polygon` in 2D, `navigation_mesh` in 3D. Both `bake_navigation_mesh`
+ * (navigation_region_2d.cpp, navigation_region_3d.cpp) open with an
+ * `ERR_FAIL_COND_MSG` on a null resource, so neither is baked for you.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';

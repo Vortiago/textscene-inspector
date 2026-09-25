@@ -1,8 +1,6 @@
 /**
- * MeshInstance3D strict validators: format and bound checks.
- *
- * `blend_shapes/<name>` is the hand-rolled route
- * propertyListRouteCoverage.test.ts tracks — see linterParser.ts's header.
+ * MeshInstance3D strict validators: format and bound checks. `blend_shapes/<name>`
+ * is the hand-rolled route propertyListRouteCoverage.test.ts tracks.
  */
 
 import { describe, expect, it } from 'vitest';

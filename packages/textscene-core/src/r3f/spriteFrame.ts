@@ -1,58 +1,35 @@
 /**
- * Sprite-frame composition — the shared region_rect + hframes/vframes UV math
- * for SpriteBase nodes (Sprite2D and Sprite3D consume it; AnimatedSprite2D /
- * TileMap are future consumers).
- *
- * Godot's SpriteBase computes a base_rect (the region when `region_enabled`,
- * else the full texture) and THEN subdivides it by hframes/vframes — region and
- * frames COMPOSE, they are not mutually exclusive. This module is the single
- * home of that math; it was previously hand-synced between the two sprite
- * slices and diverged once (the B12 parity bug).
- *
- * What stays per-slice (the parts that legitimately differ):
- *   - flip_h/flip_v: Sprite2D mirrors via mesh scale, Sprite3D via UV negation.
- *   - World sizing: Sprite2D uses pixels directly (1 px = 1 unit); Sprite3D
- *     multiplies the frame pixel size by `pixel_size`.
- *   - The sampler wrap mode — see `SpriteWrapMode`.
+ * Sprite-frame composition: the region_rect and hframes/vframes UV math for
+ * Sprite2D and Sprite3D. Godot's SpriteBase takes a base rect (the region when
+ * `region_enabled`, else the full texture) and then subdivides it by the frame
+ * grid, so region and frames compose.
  */
 
 import * as THREE from 'three';
 import { pinNoColorSpace } from './canvas2DTextureDecode';
 
 /**
- * What shows where a frame's UVs fall outside the texture.
- *
- * This only ever matters for a `region_rect` bigger than its texture. Godot
- * does NOT clip such a region: `Sprite2D::_get_rects` takes `base_rect =
- * region_rect` verbatim, and `Texture2D::get_rect_region` is a pass-through
- * (`r_src_rect = p_src_rect`), so the quad keeps the full region size and the
- * UVs simply run past 1.0. Only the sampler decides what is drawn there — and
- * the two sprite families sample through different ones:
- *
- *   'clamp'  — the 2D canvas. `Viewport::default_canvas_item_texture_repeat`
- *              defaults to `DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_DISABLED`
- *              (scene/main/viewport.h), which the renderer maps to
- *              `sampler_state.repeat_u = RD::SAMPLER_REPEAT_MODE_CLAMP_TO_EDGE`
- *              (renderer_rd/storage_rd/material_storage.cpp). The overrun shows
- *              the edge texel column stretched — transparent when that column
- *              is transparent, which is why an oversized background region
- *              reads as "the texture, then nothing".
- *   'repeat' — Sprite3D, and only where it must. `SpriteBase3D` DERIVES the
- *              `texture_repeat` it passes to `get_material_for_2d` from the
- *              frame's own UV corners (`sprite_3d.cpp:163`), so a window inside
- *              `[0, 1]` clamps and only an overrun tiles. `spriteWrapMode()` is
- *              that derivation.
- *
- * Required rather than defaulted on purpose: a default is exactly the silent
- * hand-syncing this module exists to prevent.
+ * What shows where a frame's UVs fall outside the texture, which only a
+ * `region_rect` bigger than its texture reaches: Godot does not clip it
+ * (`Sprite2D::_get_rects`, and `Texture2D::get_rect_region` passes it through).
+ * Required, since a default is the silent hand-syncing this module prevents.
  */
 export type SpriteWrapMode = 'clamp' | 'repeat';
 
 const WRAP: Record<SpriteWrapMode, THREE.Wrapping> = {
+  // The 2D canvas: `default_canvas_item_texture_repeat` defaults to DISABLED
+  // (scene/main/viewport.h), which maps to `SAMPLER_REPEAT_MODE_CLAMP_TO_EDGE`
+  // (renderer_rd/storage_rd/material_storage.cpp): the edge texel column stretches.
   clamp: THREE.ClampToEdgeWrapping,
+  // Sprite3D: `SpriteBase3D` derives `texture_repeat` from the frame's UV corners
+  // (`sprite_3d.cpp:163`), so only an overrun tiles. `spriteWrapMode()` derives it.
   repeat: THREE.RepeatWrapping,
 };
 
+/**
+ * Flip and world size stay per slice: Sprite2D mirrors by mesh scale at 1 px per
+ * unit, and Sprite3D negates UVs and multiplies by `pixel_size`.
+ */
 export interface SpriteFrameProps {
   region_enabled: boolean;
   region_rect?: { x: number; y: number; width: number; height: number };
@@ -64,21 +41,10 @@ export interface SpriteFrameProps {
 }
 
 /**
- * Clone the loaded texture and window its UVs to the current frame
- * (region_rect and/or sprite-sheet grid). The clone is essential: `useResource`
- * returns the same THREE.Texture reference to every consumer of a given path,
- * so mutating in place would clobber other sprites' repeat/offset state.
- *
- * `colorSpace` is required rather than inherited from the source texture for
- * the same reason `wrap` is (see `SpriteWrapMode`'s own comment): Sprite2D's
- * 2D canvas and Sprite3D's 3D billboard sample through Godot's two different
- * filtering rules (`r3f/canvas2DTextureDecode.ts`) — Sprite2D passes
- * `THREE.NoColorSpace` (paired with `useCanvasDecodeDefines` at its own
- * material), Sprite3D passes `THREE.SRGBColorSpace` to keep its current,
- * already-correct hardware decode. A default here is exactly the silent
- * hand-syncing this module exists to prevent.
- *
- * Returns undefined when no texture is loaded yet.
+ * Clone the loaded texture and window its UVs to the current frame, or undefined
+ * before it loads. `useResource` shares one texture per path, so an in-place edit
+ * clobbers other sprites. `colorSpace` is required like `wrap`: Sprite2D passes
+ * NoColorSpace and Sprite3D SRGBColorSpace (`r3f/canvas2DTextureDecode.ts`).
  */
 export function composeFrameTexture(
   texture: THREE.Texture | undefined,
@@ -89,10 +55,9 @@ export function composeFrameTexture(
   if (!texture) return undefined;
 
   const cloned = texture.clone();
-  // `pinNoColorSpace` when the caller wants NoColorSpace: a plain assignment
-  // loses to `@react-three/fiber`'s own auto sRGB-tagging the moment this
-  // clone reaches a `map` JSX prop (see that function's doc comment).
-  // SRGBColorSpace needs no pin — it's what that auto-tagging already forces.
+  // A plain assignment loses to R3F's auto sRGB-tagging once the clone reaches a
+  // `map` prop, so NoColorSpace is pinned, and Sprite2D pairs it with
+  // `useCanvasDecodeDefines`. SRGBColorSpace is what that tagging forces anyway.
   if (colorSpace === THREE.NoColorSpace) {
     pinNoColorSpace(cloned);
   } else {
@@ -130,24 +95,21 @@ export function frameSizePx(
 }
 
 /**
- * The offset/repeat pair the frame math writes, and the image it needs to do
- * it. `THREE.Texture` satisfies it structurally, so `spriteWrapMode()` can run
- * the SAME two helpers over a throwaway window rather than a second
- * implementation that could drift from the one that draws.
+ * The offset/repeat pair the frame math writes, and the image it reads.
+ * `THREE.Texture` satisfies it, so `spriteWrapMode()` runs the same helpers over
+ * a throwaway window rather than a second copy that could drift.
  */
 interface UvWindow {
   offset: THREE.Vector2;
   repeat: THREE.Vector2;
-  /** `unknown`, as three types it — narrowed where the dimensions are read. */
+  /** `unknown`, as three types it, narrowed where the dimensions are read. */
   image: unknown;
 }
 
 /**
- * Godot's `texture_repeat` (`sprite_3d.cpp:163`): REPEAT only where the frame's
- * UV window leaves `[0, 1]`, on strict `< 0` / `> 1` tests. flip_h/flip_v swap
- * the uv pairs and hand the test the other diagonal of the same bounding box,
- * so they cannot change the answer; and our v-window is Godot's mirrored about
- * 0.5, which the `min < 0 || max > 1` pair is symmetric under.
+ * Godot's `texture_repeat` (`sprite_3d.cpp:163`): repeat only where the frame's UV
+ * window leaves `[0, 1]`, on strict tests. Flips only swap the box's diagonal,
+ * and our v-window is Godot's mirrored about 0.5, which the test is symmetric under.
  */
 export function spriteWrapMode(
   texture: THREE.Texture | undefined,
@@ -210,8 +172,8 @@ function applyRegionRect(
   rect: { x: number; y: number; width: number; height: number }
 ): void {
   const image = texture.image as { width?: number; height?: number } | undefined;
-  // Without dimensions we can't compute a sensible sub-rectangle; the sprite
-  // renders with the full texture (the linter warns on region misuse).
+  // Without dimensions there is no sub-rectangle, so the sprite renders the full
+  // texture (the linter warns on region misuse).
   if (!image?.width || !image.height) return;
   texture.repeat.set(rect.width / image.width, rect.height / image.height);
   texture.offset.set(rect.x / image.width, 1 - (rect.y + rect.height) / image.height);

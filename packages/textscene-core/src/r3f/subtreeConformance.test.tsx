@@ -1,20 +1,8 @@
 /**
- * Conformance guard: every registered node component must render the
- * `children` the dispatcher hands it.
- *
- * In Godot a node's descendants are part of the scene tree unconditionally —
- * no node type has leaf semantics. Our dispatchers already build the whole
- * subtree and pass it down as `children`, so a component that destructures
- * only `{ node }` silently deletes everything parented under it. That is
- * invisible to per-slice tests (they render the component alone) and to the
- * goldens (the fixtures put nothing under those nodes), which is exactly how
- * MeshInstance3D came to drop 144 authored child nodes across 19 vendored
- * demo scenes.
- *
- * The check renders each registered type with a probe child and asserts the
- * probe survives. Properties come from the type's real parser (a synthesised
- * one-node scene), so components that destructure parsed sub-objects get the
- * shape they expect instead of a bare `{}`.
+ * Conformance guard: every registered node component renders the `children` the
+ * dispatcher hands it, since no Godot node has leaf semantics. Each type renders
+ * with a probe child and properties from its real parser, and the probe must
+ * survive. Per-slice tests and goldens cannot see a dropped subtree.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -26,7 +14,7 @@ import type { TscnNode } from '../parser/types';
 
 /**
  * A node of `type` with only the properties its own parser produces for an
- * empty property block — i.e. every default, nothing authored.
+ * empty property block: every default, nothing authored.
  */
 function parseBareNode(type: string): TscnNode {
   const scene = new TscnParser().parse(

@@ -1,9 +1,6 @@
 /**
- * Node strict validators — format and range checks.
- *
- * These reach every registered type, so the inheritance assertions matter as
- * much as the per-property ones: a bound that is wrong here is wrong on all 240
- * types simultaneously.
+ * Node strict validators: format and range checks. These reach every registered type, so the
+ * inheritance assertions matter as much as the per-property ones.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -40,7 +37,7 @@ describe('Node strict validators', () => {
 
     it('warns one past each end: -1 and 5', () => {
       // node.cpp:4056 hints five labels and set_process_mode (node.cpp:663-689)
-      // carries no ERR_FAIL_INDEX, so the hint is the only bound — warning tier.
+      // carries no ERR_FAIL_INDEX, so the hint is the only bound: warning tier.
       expect(check('process_mode', '5')?.severity).toBe('warning');
       expect(check('process_mode', '-1')?.severity).toBe('warning');
     });
@@ -110,12 +107,10 @@ describe('Node strict validators', () => {
   });
 
   /**
-   * node.cpp:4063 is PROPERTY_HINT_FLAGS "Process,Physics Process", and
-   * ProcessThreadMessages (node.h:89-93) declares no bit outside it, so the
-   * hint's set IS the whole legal set. set_process_thread_messages
-   * (node.cpp:1233-1240) bare-assigns with no mask: measured on 4.6.3, writing
-   * 7 stores 7, so an unlisted bit is kept and merely unreachable from the
-   * inspector — a warning, never an error.
+   * node.cpp:4063 is PROPERTY_HINT_FLAGS "Process,Physics Process", and ProcessThreadMessages
+   * (node.h:89-93) declares no bit outside it. set_process_thread_messages (node.cpp:1233-1240)
+   * bare-assigns with no mask: measured on 4.6.3, writing 7 stores 7, so an unlisted bit is kept
+   * but unreachable from the inspector, a warning, never an error.
    */
   describe('process_thread_messages', () => {
     it.each(['0', '1', '2', '3'])('accepts %s, a subset of the hinted bits', (value) => {
@@ -159,7 +154,7 @@ describe('Node strict validators', () => {
   });
 
   it('omits the four PROPERTY_USAGE_NONE members Godot never serialises', () => {
-    // node.cpp:4049, :4051, :4052, :4053 — a node's name and instance path live
+    // node.cpp:4049, :4051, :4052, :4053: a node's name and instance path live
     // in the [node …] heading, not in a property line.
     const own = validatorRegistry.getOwnKeys('Node');
     expect(own).not.toContain('name');

@@ -1,34 +1,27 @@
-/**
- * Mocha test suite setup for integration tests.
- */
+/** Mocha setup for the integration tests. */
 import * as path from 'path';
 import Mocha from 'mocha';
 import { glob } from 'glob';
 
 /**
- * The test workspace is populated by the launcher, not here: this runs inside
- * a window that has already resolved its workspace folder, so creating the
- * directory now would be too late to become one. See `integrationLaunch.ts`.
+ * The launcher populates the test workspace, not this: the window has already
+ * resolved its workspace folder (`integrationLaunch.ts`).
  */
 export async function run(): Promise<void> {
-  // Create the mocha test
   const mocha = new Mocha({
-    ui: 'tdd', // Use TDD interface for suite() and test()
+    ui: 'tdd', // suite() and test()
     color: true,
-    timeout: 20000, // 20 seconds for integration tests
+    timeout: 20000,
   });
 
   const testsRoot = __dirname;
 
   return new Promise((resolve, reject) => {
-    // Find all test files
     glob('**/**.test.js', { cwd: testsRoot })
       .then((files) => {
-        // Add files to the test suite
         files.forEach((f) => mocha.addFile(path.resolve(testsRoot, f)));
 
         try {
-          // Run the mocha test
           mocha.run((failures) => {
             if (failures > 0) {
               reject(new Error(`${failures} tests failed.`));

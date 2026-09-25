@@ -1,20 +1,8 @@
 /**
- * Where a global-coords emitter spawns from, read off its own group.
- *
- * With `local_coords = false` — Godot's DEFAULT — particles live in canvas
- * space: Godot spawns them through the emitter's global transform and then
- * draws the canvas item with an IDENTITY transform
- * (`set_canvas_item_use_identity_transform(!local_coords)`,
- * `cpu_particles_2d.cpp:120`). We render inside the emitter's own group, which
- * carries that transform, so the pose has to be mapped back through its
- * inverse. The visible consequence is not subtle: a node scaled to 0.6 does NOT
- * shrink its particles, because the two scalings cancel.
- *
- * A node's world transform is not a React value — it is the product of every
- * ancestor Node2D transform, assembled by three — so it is SAMPLED from the
- * object, the same way `shadowLightPose` samples a light's. Unlike a light this
- * needs no per-frame refresh: the pose is frozen by construction (see
- * simulate.ts), so a layout-pass read is the whole story.
+ * Where a global-coords emitter spawns from, read off its own group. With
+ * `local_coords = false`, the default, Godot draws the canvas item with an
+ * identity transform (`cpu_particles_2d.cpp:120`), so a pose drawn inside the
+ * emitter's group maps back through that group's inverse.
  */
 
 import { useLayoutEffect, useRef, useState } from 'react';
@@ -48,9 +36,9 @@ export function sameAffine(a: Affine2D, b: Affine2D): boolean {
 }
 
 /**
- * The emitter's world transform in Godot pixel space, or the identity while
- * `container` is not yet in the tree — and always the identity for a
- * `local_coords` emitter, which needs no mapping at all.
+ * The emitter's world transform in Godot pixel space. The identity while
+ * `container` is not in the tree, and always for a `local_coords` emitter. Three
+ * assembles the world transform, so it is sampled once: the pose is frozen.
  */
 export function useEmissionTransform(
   container: THREE.Object3D | null,

@@ -1,7 +1,6 @@
 /**
- * RemoteTransform2D linter tests —
- * `RemoteTransform2D::get_configuration_warnings()` (remote_transform_2d.cpp:213-220):
- * `remote_path` absent, unresolvable, or not a Node2D.
+ * Tests the RemoteTransform2D rule from `RemoteTransform2D::get_configuration_warnings()`
+ * (remote_transform_2d.cpp:213-220): `remote_path` absent, unresolvable, or not a Node2D.
  */
 import { describe, it, expect } from 'vitest';
 import { node, scene, lint, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
@@ -62,7 +61,7 @@ describe('RemoteTransform2D Linter', () => {
     );
   });
 
-  // `data.children.getptr(name)` is the referencing node's OWN children
+  // `data.children.getptr(name)` is the referencing node's own children
   // (node.cpp:1941), so a sibling needs `../` and a bare name resolves to null.
   it('warns on a bare sibling name, which names nothing from this node', () => {
     expectDiagnostic(

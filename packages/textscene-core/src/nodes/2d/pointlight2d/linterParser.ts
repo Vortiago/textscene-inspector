@@ -1,13 +1,8 @@
-/**
- * PointLight2D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- */
+/** PointLight2D strict validators. */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it. Light2D's own
-// properties (enabled, color, energy, blend_mode, the range/shadow family) now
-// live on the tier, which carries the hop to Node2D in turn.
+// Registration happens on import, so a test that loads only this slice
+// resolves an inherited key only when this line imports the ancestor. Light2D's
+// own properties live on that tier, which carries the hop to Node2D.
 import '../lights/shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v, propertyError } from '../../../linter/validators/index.js';
@@ -18,6 +13,11 @@ import { parseGodotFloat } from '../../../linter/validators/commonValidators.js'
 const TEXTURE_SCALE_HINT_MIN = 0.01;
 const TEXTURE_SCALE_HINT_MAX = 50;
 
+/**
+ * Hand-rolled, since no single bound holds both tiers. Exactly 0 is altered to
+ * CMP_EPSILON (light_2d.cpp:444-446): an error. Any other value, negative
+ * included, passes unclamped, so only the closed hint (light_2d.cpp:479) warns.
+ */
 const textureScaleValidator: PropertyValidator = (key, value, line) => {
   // `parseGodotFloat`, not `parseFloat`: `light_2d.cpp:444` substitutes only for
   // exactly 0, so a non-finite literal is a value the setter keeps.
@@ -61,26 +61,14 @@ textureScaleValidator.tiers = { min: 'warning', max: 'warning' };
 textureScaleValidator.bounds = { min: TEXTURE_SCALE_HINT_MIN, max: TEXTURE_SCALE_HINT_MAX };
 
 validatorRegistry.registerAll('PointLight2D', {
-  // light_2d.cpp:480 hints "0,1024,1,or_greater,suffix:px" (or_greater opens
-  // the ceiling, so only the 0 floor is checked). The shared setter
-  // Light2D::set_height (light_2d.cpp:89-92) assigns unconditionally.
-  // DirectionalLight2D hints the SAME property "0,1,0.01" (light_2d.cpp:503) —
-  // a different bound on the same setter — so this stays per-leaf rather than
-  // moving to the Light2D tier.
+  // light_2d.cpp:480 hints "0,1024,1,or_greater,suffix:px", so only the floor is
+  // checked. Light2D::set_height (light_2d.cpp:89-92) assigns unconditionally.
+  // DirectionalLight2D hints "0,1,0.01" (light_2d.cpp:503) on the same setter, so
+  // this stays per leaf.
   height: v.nonNegativeFloat('height', { hinted: 'light_2d.cpp:480' }),
   offset: v.vector2('offset'),
   texture: v.resourceReference('texture'),
-  // Two statements with DIFFERENT authority over different values, which no
-  // single bound can express, so this one is hand-rolled.
-  //
-  // Exactly 0 is ALTERED: set_texture_scale bumps it to CMP_EPSILON
-  // (light_2d.cpp:444-446) to avoid a zero-scale quad. An altered value is the
-  // error tier. Every OTHER out-of-range value, negative included, passes
-  // through unclamped, so only the hint "0.01,50,0.01" (light_2d.cpp:479,
-  // closed at both ends) excludes it, which is a warning.
-  //
-  // A plain `min: 0.01, enforced` would error on -5, a value Godot keeps; the
-  // earlier `nonNegativeFloat` floored at 0 and so let the one genuinely
-  // altered value through clean. Both are wrong in opposite directions.
+  // A plain `min: 0.01, enforced` would error on -5, a value Godot keeps, and a
+  // `nonNegativeFloat` would pass the one altered value, 0.
   texture_scale: textureScaleValidator,
 });

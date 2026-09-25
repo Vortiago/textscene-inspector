@@ -1,8 +1,4 @@
-/**
- * Unit tests for `useFixtureSelection` — deep-link init, localStorage
- * persistence, URL writeback. Pure selection persistence; zero buffer
- * interaction.
- */
+/** Tests for `useFixtureSelection`: the deep link, the localStorage choice and the URL writeback. */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { useFixtureSelection } from './useFixtureSelection';
@@ -21,7 +17,7 @@ beforeEach(() => {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // ignore
+    // Clearing storage is optional.
   }
   window.history.replaceState(null, '', '/');
 });
@@ -30,10 +26,6 @@ afterEach(() => {
   vi.restoreAllMocks();
   window.history.replaceState(null, '', '/');
 });
-
-// ---------------------------------------------------------------------------
-// Initial fixture selection
-// ---------------------------------------------------------------------------
 
 describe('initial selection', () => {
   it('returns the defaultFixture when localStorage and URL have no stored choice', () => {
@@ -96,10 +88,6 @@ describe('initial selection', () => {
     expect(result.current.fixtureFile).toBe(DEFAULT_FILE);
   });
 });
-
-// ---------------------------------------------------------------------------
-// URL writeback on fixture change
-// ---------------------------------------------------------------------------
 
 describe('URL writeback', () => {
   it('writes ?fixture= to the URL when the fixture changes', async () => {

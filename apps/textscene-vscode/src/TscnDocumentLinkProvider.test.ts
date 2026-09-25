@@ -1,9 +1,6 @@
 /**
- * Tests for TscnDocumentLinkProvider: turns `res://` references in a `.tscn`
- * document into clickable links. `provideDocumentLinks` only computes ranges
- * (cheap, synchronous, no IO); `resolveDocumentLink` fills in the target Uri
- * lazily — only for the link the user actually hovers/clicks — by walking up
- * for `project.godot` via the shared `findGodotProjectRoot` helper.
+ * Tests for TscnDocumentLinkProvider. `provideDocumentLinks` computes ranges only,
+ * and `resolveDocumentLink` fills in the target through `findGodotProjectRoot`.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -137,11 +134,8 @@ describe('TscnDocumentLinkProvider', () => {
     });
 
     it('resolves two sibling Godot projects in the same workspace folder independently (cache is per-directory, not per-workspace-folder)', async () => {
-      // /workspace contains TWO independent Godot projects, game1/ and
-      // game2/, each with its own project.godot — a plausible monorepo
-      // layout. Both documents share the same workspaceFolder, so a cache
-      // keyed by workspace folder alone would incorrectly reuse game1's
-      // resolved root for game2's document.
+      // /workspace holds two Godot projects, game1/ and game2/, under one workspace
+      // folder, so a cache keyed by the folder alone reuses game1's root for game2.
       const workspaceRoot = createMockUri('/workspace');
       (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
         uri: workspaceRoot,
@@ -154,8 +148,8 @@ describe('TscnDocumentLinkProvider', () => {
         return Promise.reject(new Error('Not found'));
       });
 
-      // ONE provider instance resolves both documents, in order — exercising
-      // whatever the instance cached from the first resolution.
+      // One provider resolves both documents in order, so the second reads what the
+      // first cached.
       const provider = new TscnDocumentLinkProvider();
 
       const line = 'path="res://props/crate.png"';
@@ -173,7 +167,7 @@ describe('TscnDocumentLinkProvider', () => {
         Parameters<NonNullable<TscnDocumentLinkProvider['resolveDocumentLink']>>[0]
       >;
       const resolved2 = await provider.resolveDocumentLink!(link2!, TOKEN);
-      // Must resolve against game2's OWN project.godot, not game1's cached root.
+      // game2's own project.godot, not game1's cached root.
       expect((resolved2!.target as unknown as { fsPath: string }).fsPath).toBe(
         '/workspace/game2/props/crate.png'
       );

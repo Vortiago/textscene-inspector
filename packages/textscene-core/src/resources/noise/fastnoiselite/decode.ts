@@ -1,13 +1,8 @@
 /**
- * FastNoiseLite decode — a `[sub_resource type="FastNoiseLite"]` property bag
- * into the generator settings, through the shared value decoders.
- *
- * Every default is Godot's own (`modules/noise/fastnoise_lite.h:97-124`); a
- * `.tres` writes only what differs from them, so the corpus's eight procedural
- * materials lean on the defaults far more than on what they author.
- *
- * Pure `.ts`, no THREE and no noise library: this decides WHAT the generator is,
- * `noisetexture2d/build.ts` runs it.
+ * FastNoiseLite decode: a `[sub_resource type="FastNoiseLite"]` property bag into
+ * generator settings, with Godot's defaults (`modules/noise/fastnoise_lite.h:97-124`)
+ * for what a `.tres` omits. No THREE and no noise library: this decides what the
+ * generator is, and `noisetexture2d/build.ts` runs it.
  */
 
 import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
@@ -114,7 +109,7 @@ export function decodeFastNoiseLite(properties: Record<string, string>): FastNoi
 
 const ZERO = { x: 0, y: 0, z: 0 };
 
-/** `Vector3(x, y, z)` → offset; absent or malformed keeps Godot's zero offset. */
+/** `Vector3(x, y, z)` → offset. Absent or malformed keeps Godot's zero offset. */
 function vec3(value: string | undefined): { x: number; y: number; z: number } {
   if (value === undefined) return ZERO;
   try {

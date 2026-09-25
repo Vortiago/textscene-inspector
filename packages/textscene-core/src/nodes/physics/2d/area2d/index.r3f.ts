@@ -1,5 +1,5 @@
 /**
- * Area2D renders as a transform-only Node2D group — reuse the Node2D
+ * Area2D renders as a transform-only Node2D group, so it reuses the Node2D
  * component (ADR-0005/ADR-0008). `canvasItem: true` keeps it Node2D-world
  * content: never drawn in the 3D viewport, always in the 2D world canvas.
  */

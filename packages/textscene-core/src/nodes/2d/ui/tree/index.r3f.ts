@@ -1,4 +1,4 @@
-/** Tree registration — native (WebGL canvas) painter. No solver: Tree overrides no `get_minimum_size` (`nativeSolver.ts`'s own doc). */
+/** Tree registration: the native (WebGL canvas) painter. No solver, since Tree overrides no `get_minimum_size` (`nativeSolver.ts`). */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Tree } from './Component';

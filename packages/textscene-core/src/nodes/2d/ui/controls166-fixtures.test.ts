@@ -1,7 +1,7 @@
 /**
- * Fixtures contract: the slice ships unit-*.tscn fixtures for ColorRect,
- * the 2D UI Label, and VBoxContainer under scenes/fixtures (named `unit-*` so
- * generate:fixtures categorizes them as "Unit - 2D UI Controls").
+ * The unit-*.tscn fixtures for ColorRect, the 2D UI Label and VBoxContainer exist
+ * under scenes/fixtures. The `unit-*` name puts them under "Unit - 2D UI Controls"
+ * in generate:fixtures.
  */
 import { describe, it, expect } from 'vitest';
 import { resolve } from 'node:path';

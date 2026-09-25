@@ -1,24 +1,6 @@
 /**
- * Semantic linter rule for Timer — `Timer::get_configuration_warnings()`
- * (timer.cpp:200-208):
- *
- *     PackedStringArray warnings = Node::get_configuration_warnings();
- *     if (wait_time < 0.05 - CMP_EPSILON) {
- *         warnings.push_back(RTR("Very low timer wait times (< 0.05 seconds)
- *             may behave in significantly different ways depending on the
- *             rendered or physics frame rate.\nConsider using a script's
- *             process loop instead of relying on a Timer for very low wait
- *             times."));
- *     }
- *
- * The engine's own guard has no lower bound — `wait_time <= 0` also satisfies
- * `< 0.05 - CMP_EPSILON` — but `wait_time`'s OWN setter already
- * `ERR_FAIL_COND_MSG(p_time <= 0, ...)` (timer.cpp:93), which `linterParser.ts`
- * reports as an ERROR via `v.positiveFloat`. Repeating that range here at
- * warning tier would report the same defect twice at two severities, so this
- * rule narrows to `wait_time > 0`. That extra clause is THIS REPO's
- * de-duplication, not a second engine guard — do not read it back into
- * `timer.cpp`.
+ * Semantic linter rule for Timer: `Timer::get_configuration_warnings()`
+ * (timer.cpp:200-208) warns when `wait_time < 0.05 - CMP_EPSILON`.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -38,8 +20,9 @@ function checkTimerWaitTime(context: RuleContext): Diagnostic[] {
   const waitTime = parseGodotFloat(raw);
   if (waitTime === null || !Number.isFinite(waitTime)) return [];
 
-  // wait_time <= 0 is already an ERROR via v.positiveFloat (timer.cpp:93) —
-  // this repo's de-dup, not part of Godot's own guard.
+  // Godot's guard has no lower bound, but the setter refuses `<= 0` (timer.cpp:93),
+  // an error from v.positiveFloat. The `> 0` clause is this repo's, not timer.cpp's:
+  // it keeps one defect from being reported at two severities.
   if (waitTime <= 0 || waitTime >= LOW_WAIT_TIME_THRESHOLD) return [];
 
   return [

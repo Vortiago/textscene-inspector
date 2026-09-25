@@ -1,10 +1,7 @@
 /**
- * OpenXRVisibilityMask strict validators for linting.
- *
- * Declare only OpenXRVisibilityMask's OWN members — the ones doc/classes/OpenXRVisibilityMask.xml
- * lists without an `overrides=` attribute. Everything from VisualInstance3D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * OpenXRVisibilityMask strict validators for its own members, the ones doc/classes/OpenXRVisibilityMask.xml lists
+ * without `overrides=`. Keys from VisualInstance3D up arrive through the NODE_BASE_TYPES base-walk, so
+ * re-declaring one would shadow the ancestor's rule.
  */
 
 import '../../visualinstance3d/linterParser.js';

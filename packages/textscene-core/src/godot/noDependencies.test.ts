@@ -1,21 +1,8 @@
 /**
- * Guard for `src/godot/`'s defining property: it imports NOTHING.
- *
- * The module exists so linter, parser, resources and nodes can all share an
- * engine fact without importing each other. That only holds while it is a leaf.
- * One import of `../linter/validators/propertyError.js` would make every
- * resource file that reads `CMP_EPSILON` pull the linter's diagnostic machinery
- * into the render bundle — the exact coupling the module was created to remove,
- * reintroduced invisibly, since nothing about the call site would change.
- *
- * Bare specifiers are banned alongside relative ones: a dependency on `three` or
- * on a util package is still a dependency, and `node:` builtins would make the
- * module unusable in the webview.
- *
- * Type-only imports are banned too, unlike in `reactFree.test.ts`. There the
- * bundler erases them so they cost nothing; here the point is not bundle weight
- * but that this module answers to no other domain's vocabulary, and a
- * `import type { ParseError }` would tie it to one just as firmly.
+ * `src/godot/` imports nothing, so linter, parser, resources and nodes share engine facts without
+ * importing each other: one import there would carry a domain into every bundle that reads
+ * `CMP_EPSILON`. Bare specifiers too (`three`, and `node:` breaks the webview), and type-only imports,
+ * unlike `reactFree.test.ts`, as `import type { ParseError }` ties the module to a domain's vocabulary.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -26,12 +13,8 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/godot
 
 /**
- * Every non-test source file in this directory TREE.
- *
- * Recursive, because the flat listing filtered a subdirectory out as "not a
- * `.ts`" and never opened it — so one file under `godot/tiles/` could import
- * three and stay green while becoming the bridge that carries it into every
- * bundle reading `CMP_EPSILON`.
+ * Every non-test source file in this directory tree. Recursive, so a file in a subdirectory such as
+ * `godot/tiles/` cannot import three unseen.
  */
 function sourceFiles(dir: string = here, prefix = ''): string[] {
   const found: string[] = [];
@@ -44,12 +27,8 @@ function sourceFiles(dir: string = here, prefix = ''): string[] {
 }
 
 /**
- * Any `import`/`export … from` specifier, `import type` included, plus bare
- * side-effect imports and dynamic `import()`.
- *
- * The clause between the keyword and `from` is `[^;]*?`, not `[^\n;]*?`: a
- * braced specifier list spans lines, which is the form most of this directory
- * uses, and a newline-bounded class saw none of them.
+ * Any `import`/`export … from` specifier, `import type` included, plus bare side-effect imports and
+ * dynamic `import()`. The clause is `[^;]*?`, not `[^\n;]*?`, as a braced specifier list spans lines.
  */
 const IMPORT_RE =
   /(?:^|\n)\s*(?:import|export)\b[^;]*?from\s*['"]([^'"]+)['"]|(?:^|\n)\s*import\s*['"]([^'"]+)['"]|\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
@@ -100,11 +79,9 @@ describe('src/godot is a dependency-free leaf', () => {
     const violations: string[] = [];
     for (const name of sourceFiles()) {
       for (const spec of specifiersIn(readFileSync(resolve(here, name), 'utf8'))) {
-        // A specifier that stays inside this DIRECTORY TREE is the one legal
-        // one: `index.ts` re-exports `./math.js`, a file in a subdirectory
-        // reaches its own root as `../math.js`, and the module is allowed its
-        // own shape. Resolved rather than pattern-matched, so `../../logger.js`
-        // is caught however many hops it takes.
+        // Only a specifier inside this directory tree is legal: `index.ts` re-exports `./math.js`,
+        // and a subdirectory file reaches its root as `../math.js`. Resolved rather than
+        // pattern-matched, so `../../logger.js` is caught however many hops it takes.
         const resolved = resolve(dirname(resolve(here, name)), spec);
         if (!spec.startsWith('.') || relative(here, resolved).startsWith('..')) {
           violations.push(`${name} imports '${spec}'`);

@@ -1,7 +1,6 @@
 /**
- * `<CheckButton>` render contract — a toggle-switch icon (always drawn, right
- * edge) + optional label text, NO chrome mesh. Structure/tint/render-order
- * assertions only (pixels are a golden-image concern via `pnpm ref:godot`).
+ * `<CheckButton>` render contract: a toggle-switch icon, always drawn at the right edge, and
+ * optional label text, with no chrome mesh. Structure, tint and render order only.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -152,7 +151,7 @@ describe('<CheckButton> (isolated painter contract)', () => {
     );
     const leftGroup = findTextMesh(rendererLeft.scene)!.parent as THREE.Object3D;
     const centerGroup = findTextMesh(rendererCenter.scene)!.parent as THREE.Object3D;
-    // marginX(6) alone for the default; an explicit CENTER override shifts it further right.
+    // marginX(6) alone for the default. An explicit CENTER override shifts it further right.
     expect(leftGroup.position.x).toBe(6);
     expect(centerGroup.position.x).toBeGreaterThan(leftGroup.position.x);
   });

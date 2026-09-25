@@ -1,11 +1,8 @@
 /**
- * Full-file `.tres` (Godot resource file) parsing — a .tres is a .tscn without
- * [node] sections: a [gd_resource] header, [ext_resource]/[sub_resource]
- * sections, and one [resource] body. Rides the shared TscnParserCore scanning
- * loop: ext/sub resources come back from the core; a ParseObserver captures
- * what the core drops for non-scene files (the header type and the [resource]
- * properties). Values stay raw strings — typed decoding belongs to consumers
- * (e.g. the TileSet resolver, the material path).
+ * Parses a whole `.tres`: a `.tscn` without `[node]` sections, with a `[gd_resource]`
+ * header and one `[resource]` body. Rides TscnParserCore. A ParseObserver captures the
+ * header type and `[resource]` properties the core drops. Values stay raw strings for
+ * consumers such as the TileSet resolver to decode.
  */
 
 import { TscnParserCore, type ParseObserver } from './TscnParserCore.js';

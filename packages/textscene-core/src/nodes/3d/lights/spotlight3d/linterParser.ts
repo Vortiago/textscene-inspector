@@ -1,9 +1,6 @@
 /**
- * SpotLight3D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- *
- * Light3D base validators (light_* / shadow_*) are inherited via the
- * base-walk: SpotLight3D → Light3D → Node3D.
+ * SpotLight3D strict validators. The base-walk SpotLight3D → Light3D → Node3D
+ * delivers the light_* and shadow_* validators.
  */
 
 import '../shared/linterParser.js';
@@ -19,10 +16,9 @@ validatorRegistry.registerAll('SpotLight3D', {
   // light_3d.cpp:673, PROPERTY_HINT_RANGE "-10,10,0.01,or_greater,or_less":
   // negative is legal and means an inverse falloff curve.
   spot_attenuation: v.float('spot_attenuation'),
-  // light_3d.cpp:674, PROPERTY_HINT_RANGE "0,180,0.01,degrees" — both ends
-  // closed. The bare "degrees" token is a display-only suffix, distinct from
-  // "radians_as_degrees", so the stored value is degrees already and the hint
-  // bound applies unconverted. Light3D::set_param:36 guards the param index,
+  // light_3d.cpp:674, PROPERTY_HINT_RANGE "0,180,0.01,degrees", both ends closed.
+  // The bare "degrees" token is a display suffix, not "radians_as_degrees", so
+  // the bound applies unconverted. Light3D::set_param:36 guards the param index,
   // not the value, so both ends warn.
   spot_angle: v.float('spot_angle', { min: 0, max: 180, hinted: 'light_3d.cpp:674' }),
   // light_3d.cpp:675, PROPERTY_HINT_EXP_EASING: no range is stated, so no bound.

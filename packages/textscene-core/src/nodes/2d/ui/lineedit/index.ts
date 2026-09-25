@@ -1,4 +1,4 @@
-/** LineEdit registration — parser. */
+/** Registers the LineEdit parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseLineEdit } from './parser';

@@ -1,13 +1,7 @@
 /**
- * CopyTransformModifier3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it.
- *
- * Every bound quotes the Godot 4.6.3 line that states it, matching the
- * citations in `linterParser.ts`.
+ * CopyTransformModifier3D strict validators, asserted through `validatorRegistry`, not by linting a
+ * `.tscn`, so a failure points at the validator and no fixture text needs upkeep. Every bound quotes
+ * the Godot 4.6.3 line that states it, as `linterParser.ts` does.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -23,14 +17,12 @@ function check(property: string, value: string) {
 }
 
 /**
- * The keys CopyTransformModifier3D declares: `setting_count` from
- * `ADD_ARRAY_COUNT` (copy_transform_modifier_3d.cpp:358) and the
- * `settings/<i>/<leaf>` family its `_get_property_list` materialises
- * (copy_transform_modifier_3d.cpp:83-101). `getOwnKeys` returns registered
- * PATTERNS, so the family counts once, as `settings/#/*`.
+ * The keys CopyTransformModifier3D declares: `setting_count` from `ADD_ARRAY_COUNT`
+ * (copy_transform_modifier_3d.cpp:358) and the `settings/<i>/<leaf>` family `_get_property_list` builds
+ * (copy_transform_modifier_3d.cpp:83-101). `getOwnKeys` returns patterns, so the family is `settings/#/*`.
  */
 const KEYS: string[] = ['setting_count', 'settings/#/*'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 
 /** The three flag leaves, each hinted PROPERTY_HINT_FLAGS with three bits. */
@@ -46,16 +38,15 @@ describe('CopyTransformModifier3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint`
+    // checks it against the whole registry through the barrel. This checks the same file
+    // against only what this test imported.
     expectFixtureClean('unit-copy-transform-modifier-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('CopyTransformModifier3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -126,12 +117,10 @@ describe('CopyTransformModifier3D strict validators', () => {
     });
 
     it('accepts relative on a node-referencing setting, where it is inert', () => {
-      // copy_transform_modifier_3d.cpp:107-109 hides the key when the setting
-      // references a node, so Godot omits it from the save, and
-      // `is_relative()` then reads false whatever is stored
-      // (copy_transform_modifier_3d.h:61-66). set_relative still assigns
-      // (copy_transform_modifier_3d.cpp:303), so a scene carrying it is inert,
-      // not invalid: no removal, no rule, no diagnostic.
+      // copy_transform_modifier_3d.cpp:107-109 hides the key when the setting references a node, so
+      // Godot omits it, and `is_relative()` then reads false (copy_transform_modifier_3d.h:61-66).
+      // set_relative still assigns (copy_transform_modifier_3d.cpp:303), so the value is inert, not
+      // invalid: no diagnostic.
       expect(check('settings/1/relative', 'true')).toBeNull();
     });
   });
@@ -152,7 +141,7 @@ describe('CopyTransformModifier3D strict validators', () => {
     it('leaves a NON-NUMERIC index alone, which _set resolves to setting 0', () => {
       // `path.get_slicec('/', 1).to_int()` (copy_transform_modifier_3d.cpp:37)
       // has no is_valid_int() gate ahead of it and `_to_int` skips non-digits
-      // (ustring.cpp:2268-2298), so `x` reads as 0 and the write LANDS. The
+      // (ustring.cpp:2268-2298), so `x` reads as 0 and the write lands. The
       // leaf still decides: it resolved whatever the index came to.
       expect(check('settings/x/relative', 'true')).toBeNull();
       expect(check('settings/x/copy', '9')?.severity).toBe('warning');
@@ -167,17 +156,14 @@ describe('CopyTransformModifier3D strict validators', () => {
     });
 
     it('rejects a key that is not <prefix><index>/<leaf>', () => {
-      // `settings/copy` has no `/` past the prefix, so the registry's matcher
-      // routes it to no family and no validator claims it. `settings/0/` has
-      // one and routes: `_set` reads an empty leaf at `get_slicec('/', 2)`
-      // (copy_transform_modifier_3d.cpp:37-40), matches no branch and returns
-      // false — a dropped write the dispatcher reports as an unknown key.
+      // `settings/copy` has no `/` past the prefix, so no family claims it. `settings/0/` routes, and
+      // `_set` reads an empty leaf at `get_slicec('/', 2)` (copy_transform_modifier_3d.cpp:37-40),
+      // matches no branch and returns false: a dropped write, reported as an unknown key.
       expect(validatorRegistry.findValidator('CopyTransformModifier3D', 'settings/copy')).toBeNull();
       const emptyLeaf = validatorRegistry.findValidator('CopyTransformModifier3D', 'settings/0/');
       expect(emptyLeaf!('settings/0/', '7', 1)?.code).toBe('INVALID_SETTING_KEY');
-      // Handed one anyway — which is what the registered PATTERN itself is when
-      // the sweep above validates `settings/#/*` — the dispatcher rejects it
-      // rather than forwarding an unparseable key to the base.
+      // Handed one anyway, as the malformed-value check above hands it the pattern `settings/#/*`,
+      // the dispatcher rejects it rather than forwarding an unparseable key to the base.
       const dispatcher = validatorRegistry.findValidator(
         'CopyTransformModifier3D',
         'settings/0/copy'
@@ -210,7 +196,7 @@ describe('CopyTransformModifier3D strict validators', () => {
 
     it('accepts the unresolved -1 bone indices a saved scene carries', () => {
       // `apply_bone` and `reference_bone` are PROPERTY_USAGE_NO_EDITOR INTs
-      // (bone_constraint_3d.cpp:104, :107), so they DO serialise, and both
+      // (bone_constraint_3d.cpp:104, :107), so they do serialise, and both
       // default to -1 (bone_constraint_3d.h:48, :53). Whoever declares the base
       // family must not floor them at 0.
       expect(check('settings/0/apply_bone', '-1')).toBeNull();

@@ -1,15 +1,7 @@
 /**
- * R3F entry point for the web app.
- *
- * Mounts `<TscnPreviewShell>` inside `<ResourceLoaderProvider>` so node
- * components can call `useResource()` to load textures and other
- * external resources. Missing-resource uploads are driven by the
- * shell's `<MissingResourcesPanel>` (one row per missing path,
- * per-row file input) instead of a global filename-guessing input.
- * The toolbar carries
- * three top-level app-shell entry points: scene-fixture dropdown,
- * "Upload TSCN File" for user-supplied .tscn content, and
- * "Reset Camera" to frame the orbit controls back to default.
+ * The web app's R3F entry point. It mounts `<TscnPreviewShell>` inside
+ * `<ResourceLoaderProvider>`, so node components load resources with `useResource()`.
+ * The shell's `<MissingResourcesPanel>` takes one upload per missing path.
  */
 import { useCallback, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -41,13 +33,11 @@ import styles from './r3f-main.module.css';
 export function R3FApp() {
   const { sourcePane, toggleVisible: toggleSourcePane, onSplitterMouseDown } = useSourcePane();
 
-  // When non-null, the user has loaded a TSCN file from their disk via
-  // the toolbar's Upload button. We track the display name so the
-  // toolbar can show what's active when the fixture dropdown is
-  // deselected.
+  // The display name of a .tscn the user loaded from disk, which the toolbar shows while
+  // no fixture is selected.
   const [uploadedTscnName, setUploadedTscnName] = useState<string | null>(null);
 
-  // useFixtureSelection owns: deep-link init, localStorage persistence, URL writeback.
+  // Owns the deep-link start, the localStorage persistence and the URL writeback.
   const { fixtureFile, setFixtureFile } = useFixtureSelection({
     fixtures,
     defaultFixture: DEFAULT_FIXTURE,
@@ -56,23 +46,17 @@ export function R3FApp() {
   // `?camera=<node path>` deep-link: look through a scene Camera3D on open.
   const initialActiveCameraPath = useCameraDeepLink();
 
-  // Wire the resource pipeline. One provider + bus + loader for
-  // the lifetime of the app; React component identity preserves them
-  // across fixture switches so an already-uploaded texture survives a
-  // fixture reload.
+  // One provider, bus and loader for the app's lifetime, so an uploaded texture survives a
+  // fixture switch.
   const pipeline = useMemo(() => createResourcePipeline(new WebResourceProvider()), []);
   const { provider, loader } = pipeline;
 
-  // Each vendored demo project keeps its own res:// namespace. The switch into
-  // a subtree happens at the scene swap below — never while a scene is on
-  // screen, which would make the OUTGOING scene re-request its res:// paths out
-  // of the incoming corpus (see useCorpusRoot).
+  // Each vendored demo project keeps its own res:// namespace. The root switches at the
+  // scene swap, never while a scene is on screen: the outgoing scene would re-request its
+  // res:// paths from the incoming corpus (useCorpusRoot).
   const applyCorpusRoot = useCorpusRoot(pipeline);
 
-  // useSceneSource owns the hold-last-valid invariant's full span: fixture
-  // fetch + cancellation + editedSinceLoad tracking + debounced edit forward +
-  // authoritative replace (ADR-0020). `onBeforeSwap` is read from a ref there,
-  // so a plain function — not a useCallback — is what it wants.
+  // `onBeforeSwap` is read from a ref, so a plain function serves, not a useCallback.
   const { buffer, forwardedContent, renderedFixtureFile, isFetching: isFetchingFixture, loadError, onBufferChange: handleSourceChange, replace, clearRender, reload, editedSinceLoad } =
     useSceneSource({
       fixtureFile,
@@ -80,40 +64,30 @@ export function R3FApp() {
       onBeforeSwap: (file) => applyCorpusRoot(corpusRootFor(file, fixtures)),
     });
 
-  // The corpus root of the scene ON SCREEN. Keyed on the rendered fixture, not
-  // the selected one: during a fixture fetch the selection has already moved on
-  // while the previous scene — and its res:// namespace — is still live.
+  // The corpus root of the scene on screen. During a fetch the selection has moved on
+  // while the previous scene and its res:// namespace are still live.
   const resourceRoot = useMemo(
     () => corpusRootFor(renderedFixtureFile, fixtures),
     [renderedFixtureFile]
   );
 
   /**
-   * Cross a corpus boundary with the viewport EMPTY (the reason: `useCorpusRoot`).
-   * Every scene replacement that may change corpus goes through here.
-   *
-   * `flushSync` so the unmount is COMMITTED, not merely scheduled, before the
-   * root moves — a scene still mounted when the caches clear is the leak itself.
-   * Both callers are event handlers, which is where flushSync is legal.
-   *
-   * The root is deliberately NOT re-pointed here, tempting as it looks: the
-   * viewport is r3f's own reconciler root, and its unmount does NOT land inside
-   * the parent's flushSync — it is scheduled. Clearing the caches at this
-   * instant announces invalidation to scene consumers that are still
-   * subscribed, and they answer it by refetching their res:// paths under the
-   * new root. That is the original leak, measured, not theorised. The root
-   * moves at the swap instead, a network round-trip later, by which point the
-   * outgoing consumers are provably gone.
+   * Cross a corpus boundary with the viewport empty (`useCorpusRoot` says why). Every
+   * scene replacement that may change corpus goes through here.
    */
   const tearDownIfCrossingCorpus = (nextRoot: string) => {
     if (nextRoot === resourceRoot) return;
+    // Commits the unmount before the root moves: a scene mounted when the caches clear
+    // leaks. Both callers are event handlers, where flushSync is legal.
     flushSync(() => clearRender());
+    // Not the root too: r3f's own reconciler schedules its unmount outside this flushSync,
+    // and still-subscribed consumers answer a cache clear by refetching under the new
+    // root. The root moves at the swap, a network round trip later.
   };
 
-  // Edits are ephemeral (ADR-0020) — but the one-click switch affordances
-  // (fixture palette, the tree's ⤢ open-sub-scene, a scene-replacing drop)
-  // put total loss one misclick away, so loss must not be SILENT. Confirm
-  // before any scene replacement that would discard pane keystrokes.
+  // Edits are ephemeral (ADR-0020), but one misclick on a switch (fixture palette, ⤢
+  // open-sub-scene, a scene-replacing drop) loses them all. Confirm before any scene
+  // replacement that would discard pane keystrokes.
   const confirmDiscardEdits = () =>
     !editedSinceLoad() ||
     window.confirm(
@@ -128,10 +102,8 @@ export function R3FApp() {
   // the current set without re-rendering R3FApp on each missing-path change.
   const missingPathsRef = useRef<ReadonlySet<string>>(new Set());
   const handleMissingPathsChange = useCallback((paths: ReadonlySet<string>) => {
-    // A missing path may be a resource INSIDE a `.tres`, and the matcher below
-    // keys on basename — an address's basename still carries its `::id`, so no
-    // droppable file could ever match it and the right file would be discarded
-    // with a misleading error. What the user can drop is the owning file.
+    // The matcher keys on basename, and the basename of a resource inside a `.tres` carries
+    // its `::id`, which no dropped file matches. Map it to the owning file the user can drop.
     missingPathsRef.current = new Set([...paths].map(resourceFilePath));
   }, []);
 
@@ -141,22 +113,16 @@ export function R3FApp() {
   const options = useMemo(() => fixtureOptions(uploadedTscnName), [uploadedTscnName]);
 
   function handleFixtureChange(newFixture: string) {
-    // Re-selecting the already-active fixture is a state no-op (the fetch
-    // effect never re-runs) — return before the guard so the user isn't
-    // shown a "discard your edits?" prompt whose acceptance discards nothing.
-    // Unless the last load FAILED: picking the scene again is the only retry
-    // affordance there is, and after a corpus crossing there is nothing on
-    // screen to fall back to. (An edit since the failure clears `loadError`,
-    // so this can never stomp the user's own buffer.)
+    // Re-selecting the active fixture is a state no-op, so return before a discard prompt
+    // that discards nothing. After a failed load, picking it again is the only retry. An
+    // edit since the failure clears `loadError`, so a retry never overwrites the buffer.
     if (newFixture === fixtureFile && !uploadedTscnName) {
       if (loadError) reload();
       return;
     }
-    // Guards the fixture palette AND the tree's ⤢ open-sub-scene (which
-    // routes through here).
+    // Guards the fixture palette and the tree's ⤢ open-sub-scene, which routes through here.
     if (!confirmDiscardEdits()) return;
-    // Switching to a fixture replaces any user-loaded TSCN content — and
-    // supersedes any upload-path error still on screen.
+    // A fixture replaces any uploaded scene and any upload error still on screen.
     setUploadedTscnName(null);
     clearUploadError();
     tearDownIfCrossingCorpus(corpusRootFor(newFixture, fixtures));
@@ -172,12 +138,9 @@ export function R3FApp() {
   function handleTscnUpload(file: File, text: string) {
     setFixtureFile(NO_FIXTURE);
     setUploadedTscnName(file.name);
-    // An uploaded scene lives in the base ('') corpus — this is its scene swap,
-    // so the root switch (and its cache clear) lands here, before the content:
-    // companion files added synchronously after this call (multi-file upload)
-    // must be keyed — and URL-resolved — under the uploaded scene's corpus, not
-    // the fixture corpus being left behind. `handleFilesUpload` has already torn
-    // the outgoing scene down when the two corpora differ.
+    // An upload lives in the base ('') corpus, and this is its scene swap. The root moves
+    // before the content, so companion files added after this call resolve under the
+    // upload's corpus. `handleFilesUpload` has already torn down a scene from another corpus.
     applyCorpusRoot('');
     replace(text);
   }
@@ -209,11 +172,8 @@ export function R3FApp() {
   }
 
   function handleResourceRemove(path: string) {
-    // Drop the uploaded file AND re-request through the loader
-    // so dependents flip back to `missing`. Without provideFile() the
-    // dispatcher's `useResource` would keep its `loaded` value (cached
-    // texture) and the panel row would never reappear in the missing
-    // list — defeating the "Remove → row reappears" round-trip.
+    // provideFile() re-requests, so dependents flip back to `missing` and the panel row
+    // reappears. Without it `useResource` keeps its cached `loaded` value.
     provider.removeUploadedFile(path);
     loader.provideFile(path);
   }
@@ -222,22 +182,15 @@ export function R3FApp() {
     downloadTscn(buffer, downloadFilename(uploadedTscnName, fixtureFile));
   }
 
-  // Nothing has EVER rendered (forwardedContent stays '' once a valid
-  // render has occurred — hold-last-valid never reverts it) AND the current
-  // buffer isn't blank either — so the user pasted/typed something that
-  // simply doesn't parse. The shell's own content==='' state ("Loading
-  // scene…") would otherwise look identical to a genuinely empty pane, so
-  // this notice — outside the (unmodified) shared shell — fills that gap.
-  // `!effectiveLoadError` keeps this mutually exclusive with the toolbar's own
-  // role="alert" banner by construction, not by relying on every call site
-  // that sets one to also clear the other.
+  // Nothing has rendered (hold-last-valid never reverts forwardedContent to '') and the
+  // buffer is not blank, so the input does not parse. The shell's "Loading scene…" state
+  // looks the same. `!effectiveLoadError` excludes the toolbar's alert banner by construction.
   const showUnrenderableNotice =
     !effectiveLoadError &&
     forwardedContent.trim().length === 0 &&
     buffer.trim().length > 0 &&
-    // Only the user's OWN unparseable input earns this notice. A corpus-boundary
-    // teardown also empties the render while the pane still holds the outgoing
-    // source — that is a load in progress, not a buffer that fails to parse.
+    // Only the user's own input: a corpus-boundary teardown also empties the render while
+    // the pane holds the outgoing source, and that is a load in progress.
     editedSinceLoad();
 
   return (
@@ -310,9 +263,8 @@ export function R3FApp() {
             panelId={`web-${fixtureFile || uploadedTscnName || 'empty'}`}
             content={forwardedContent}
             rootScenePath={
-              // The scene's res:// identity is relative to its corpus root — so
-              // it names the RENDERED fixture, which is what `resourceRoot` is
-              // relative to; an uploaded scene is named by its upload name.
+              // Relative to `resourceRoot`, so it names the rendered fixture. An upload is
+              // named by its file name.
               renderedFixtureFile
                 ? fixtureFileToRes(renderedFixtureFile, resourceRoot)
                 : `res://${uploadedTscnName || 'empty.tscn'}`

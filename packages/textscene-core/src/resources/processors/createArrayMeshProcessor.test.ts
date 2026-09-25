@@ -1,5 +1,5 @@
 /**
- * ArrayMesh processor — fetches a Godot ArrayMesh .tres through the
+ * ArrayMesh processor: fetches a Godot ArrayMesh .tres through the
  * FileEventBus and emits a THREE.BufferGeometry on the 'arraymesh' bus slot.
  */
 import { describe, it, expect, vi } from 'vitest';
@@ -99,9 +99,9 @@ describe('createArrayMeshProcessor', () => {
   });
 
   it('keeps materialPaths aligned with the draw groups when a surface is dropped', async () => {
-    // materialPaths is built from the decoded surfaces while each group's
-    // materialIndex comes from the builder's own loop, so the two only agree as
-    // long as one list is the source of both — the decoder's.
+    // materialPaths comes from the decoded surfaces and each group's
+    // materialIndex from the builder's loop, so they agree only while the
+    // decoder's list is the source of both.
     const file = mockFileBus();
     const eventBus = new ResourceEventBus();
     const processor = createArrayMeshProcessor(file.bus, eventBus);
@@ -119,15 +119,14 @@ describe('createArrayMeshProcessor', () => {
     expect(resource.geometry.groups).toHaveLength(1);
     expect(resource.materialPaths).toHaveLength(1);
     expect(resource.geometry.groups[0]!.materialIndex).toBe(0);
-    // The draw group is Godot's surface 0 — the readable one is FIRST here, so
-    // the compaction has not moved it and this is the case the index agrees on.
+    // The draw group is Godot's surface 0: the readable surface comes first, so
+    // the compaction has not moved it and the indices agree.
     expect(resource.surfaceIndices).toEqual([0]);
   });
 
   it("carries each draw group's ORIGINAL surface index", async () => {
     // `surface_material_override/N` names the index in `_surfaces`, not the draw
-    // group, so a consumer needs the two spellings kept apart once a surface
-    // above has been dropped.
+    // group, so a consumer keeps the two apart when a surface above is dropped.
     const file = mockFileBus();
     const eventBus = new ResourceEventBus();
     const processor = createArrayMeshProcessor(file.bus, eventBus);

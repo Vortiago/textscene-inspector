@@ -1,4 +1,4 @@
-/** NinePatchRect registration: parser and native (WebGL canvas) painter. */
+/** Tests the NinePatchRect registration: parser and native painter. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';

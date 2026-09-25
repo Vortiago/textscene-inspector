@@ -1,10 +1,7 @@
 /**
  * `tryLoad` is the optional-file read: it answers the caller and tells nobody else.
- *
- * `request()` is wrong for an **Import sidecar** because absence is the norm rather than
- * a fault — most assets have none — and `request()`'s miss path warns and fires the
- * `failed` handlers, which is how a missing file becomes a user-visible **Missing
- * resource**. A sidecar that is not there simply means "Godot's import defaults".
+ * An absent **Import sidecar** means Godot's import defaults, while `request()`'s
+ * miss fires the `failed` handlers and shows a **Missing resource**.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { FileEventBus } from './FileEventBus';
@@ -42,8 +39,8 @@ describe('FileEventBus.tryLoad', () => {
   });
 
   it('does not fire the loaded handlers either', async () => {
-    // A sidecar is not a resource any consumer subscribes to; waking every handler for
-    // one would be noise at best and a re-entrant load at worst.
+    // No consumer subscribes to a sidecar, and waking every handler for one risks a
+    // re-entrant load.
     const { bus } = busWith({ 'res://a.gltf.import': 'x' });
     const loaded = vi.fn();
     bus.on('loaded', loaded);

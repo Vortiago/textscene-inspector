@@ -1,9 +1,7 @@
 /**
- * F-to-frame target resolution: frame the selected node if one is
- * selected AND its Object3D is registered (`SelectionContext.nodeObjectMap`,
- * the same map `SelectionHighlight` uses); otherwise frame the whole scene —
- * matching common DCC-tool convention (Blender/Godot: F frames the
- * selection, or everything when nothing is selected).
+ * F-to-frame target resolution: the selected node when its Object3D is in
+ * `SelectionContext.nodeObjectMap`, else the whole scene, as F does in Blender
+ * and Godot.
  */
 import type * as THREE from 'three';
 

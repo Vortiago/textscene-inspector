@@ -1,16 +1,8 @@
 /**
- * <WorldEnvironment> — applies the scene's own Environment: background, sky,
- * ambient, tonemapping, fog and glow. Adjustments and SSR are not reproduced.
- *
- * The reference chain — environment → sky → sky material — is followed by
- * `useResolvedEnvironment`, which accepts either the inline or the external `.tres`
- * form at every level.
- *
- * The application itself lives in `<EnvironmentLayer>`, shared with the editor
- * preview environment (ADR-0025) so the two cannot drift.
- *
- * WorldEnvironment does not render visible geometry, but children are still
- * rendered so the node remains part of the scene tree.
+ * <WorldEnvironment> applies the scene's Environment: background, sky, ambient, tonemapping, fog and
+ * glow, but not adjustments or SSR. `useResolvedEnvironment` follows the reference chain. The
+ * application lives in `<EnvironmentLayer>`, shared with the editor preview environment (ADR-0025)
+ * so the two cannot drift. The node draws no geometry, and its children still render.
  */
 
 import type { WorldEnvironmentProperties } from './types';

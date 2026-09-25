@@ -1,8 +1,6 @@
 /**
- * Semantic linter rules for Camera2D
- *
- * Note: Format validation is handled by linterParser.ts during strict parsing.
- * This file focuses on semantic validation requiring full context (e.g., logical consistency).
+ * Semantic linter rules for Camera2D: the checks that need the whole node or
+ * scene. linterParser.ts validates each value's format during strict parsing.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -15,31 +13,18 @@ import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValid
 import { boolSlotValue } from '../../../godot/index.js';
 
 /**
- * The Viewport a node draws into, or null for the scene's own viewport.
- *
- * Godot's current-camera slot is per-viewport: `Camera2D` takes
- * `viewport = get_viewport()` (camera_2d.cpp:342), joins
- * `"__cameras_" + itos(vp.get_id())` (:349), and `make_current` is gated on
- * `!viewport->get_camera_2d()` (:354), where `camera_2d` is a member of
- * Viewport itself (viewport.h:764). Two enabled cameras in different viewports
- * each become current in their own and never contend.
- *
- * The scope is therefore the nearest Viewport ANCESTOR (`node.cpp:345-347`),
- * every subclass included: `Window` is a Viewport (`window.h:43`), so a camera
- * inside a window, popup or dialog is scoped exactly as one inside a
- * SubViewport. Read off the base chain rather than a type list, so a subclass
- * needs no edit here.
- *
- * `undefined` rather than `null` for an ancestor whose class this file does not
- * declare: an instanced sub-scene may be rooted at a Viewport, and reading it
- * as an ordinary node pools its cameras into the outer viewport's scope — the
- * very false positive this scoping exists to prevent. Distinct from `null`,
- * which is the real scene-root viewport, so two such cameras never compare equal.
+ * The nearest Viewport ancestor (`node.cpp:345-347`), or null for the scene's own
+ * viewport. `undefined` for an ancestor whose class this file does not declare: it
+ * may be an instanced Viewport, and pooling its cameras into the outer scope is
+ * the false positive this scoping prevents.
  */
 function viewportScopeOf(scene: TscnScene, node: TscnNode): TscnNode | null | undefined {
-  // `searchAncestors` hands `visit` only ancestors whose type this file states
-  // and the catalog knows, which is what makes a bare `descendsFrom` correct.
+  // The current-camera slot is per viewport: `viewport = get_viewport()`
+  // (camera_2d.cpp:342), the group `"__cameras_" + itos(vp.get_id())` (:349), and
+  // `make_current` gated on `!viewport->get_camera_2d()` (:354, viewport.h:764).
+  // `Window` is a Viewport (`window.h:43`), so the base chain scopes a dialog too.
   const search = searchAncestors(scene, node, (ancestor) =>
+    // `visit` gets only ancestors whose type this file states and the catalog knows.
     descendsFrom(ancestor.type, 'Viewport') ? ancestor : undefined
   );
   if (search.kind === 'unknowable') return undefined;
@@ -53,15 +38,10 @@ function cameraIsEnabled(node: TscnNode): boolean {
 }
 
 /**
- * Enabled Camera2D nodes per viewport scope, tallied once per scene.
- *
- * The rule runs on every Camera2D and every one of them asks for the same
- * table, so it is built from the shared per-type index rather than recursed
- * per call: a fresh walk of `scene.nodes` with a depth-N ancestor climb inside
- * it made this O(matches x nodes x depth), and the pathological input is
- * exactly the scene the rule exists to detect. Keyed on the roots array like
- * every other per-scene fact, and correct on the same terms — `searchAncestors`
- * reads nothing of `scene` but `nodes`.
+ * Enabled Camera2D nodes per viewport scope, tallied once per scene from the
+ * per-type index. A walk per camera is O(matches x nodes x depth) on the very
+ * scene the rule detects. Keyed on the roots array, since `searchAncestors` reads
+ * nothing of `scene` but `nodes`.
  */
 const enabledCamerasByScope = new WeakMap<TscnNode[], Map<TscnNode | null, number>>();
 
@@ -84,21 +64,10 @@ function countEnabledCamerasInScope(scene: TscnScene, scope: TscnNode | null): n
 }
 
 /**
- * Smoothing is on, but the speed freezes it: enabled with a speed of exactly 0.
- *
- * ZERO is the only tier this rule owns. `MAX(0, p_speed)` (camera_2d.cpp:703,
- * :715) does refuse a NEGATIVE speed, but so does this slice's own
- * `v.nonNegativeFloat(…, { enforced: 'camera_2d.cpp:703' })`, at the same tier
- * and from the same line — a rule for it reports the one value twice and still
- * misses `-inf`, which the validator reads and `parseFloat` does not. Zero is
- * what the validator cannot see: a legal non-negative value that the setter
- * stores unchanged, leaving the interpolation factor at 0 so the smoothed
- * position never moves (:199-200, :216-217).
- *
- * Only the CLASSIFICATION is shared between the two axes. Each `ruleName` stays
- * a literal at its push site, because `ruleCoverage.test.ts` pairs `severity:`
- * with the next `ruleName:` by reading the source — a name reached through a
- * config object is a name the guard cannot see, so it reads as invented.
+ * Smoothing is on with a speed of exactly 0: the setter stores it, and the
+ * interpolation factor stays 0 (camera_2d.cpp:199-200, :216-217). A negative speed
+ * belongs to `v.nonNegativeFloat(…, { enforced: 'camera_2d.cpp:703' })`, grounded
+ * in `MAX(0, p_speed)` (camera_2d.cpp:703, :715).
  */
 function smoothingIsFrozen(
   rawProps: Record<string, string>,
@@ -110,16 +79,12 @@ function smoothingIsFrozen(
   return parseGodotFloat(raw) === 0;
 }
 
-/**
- * Validate Camera2D semantic rules
- */
 function checkCamera2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
 
-  // Check for multiple enabled cameras first (before properties guard)
-  // This check should run even if properties are empty (defaults to enabled=true)
+  // Before the properties guard: a camera with no properties is enabled.
   const rawProps = isValidProperties(node.properties) ? (node.properties as Record<string, string>) : {};
   const scope = viewportScopeOf(scene, node);
   if (cameraIsEnabled(node) && scope !== undefined) {
@@ -135,12 +100,10 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
     }
   }
 
-  // Type guard for remaining validations (skip if no properties)
   if (!isValidProperties(node.properties)) {
     return diagnostics;
   }
 
-  // Validate limit consistency
   if (rawProps.limit_left !== undefined && rawProps.limit_right !== undefined) {
     const left = ruleInt(rawProps.limit_left);
     const right = ruleInt(rawProps.limit_right);
@@ -171,6 +134,8 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
     }
   }
 
+  // Each `ruleName` stays a literal at its push site: `ruleCoverage.test.ts` pairs
+  // `severity:` with the next `ruleName:` by reading the source.
   if (smoothingIsFrozen(rawProps, 'position_smoothing_enabled', 'position_smoothing_speed')) {
     diagnostics.push({
       severity: 'info',
@@ -194,9 +159,6 @@ function checkCamera2D(context: RuleContext): Diagnostic[] {
   return diagnostics;
 }
 
-/**
- * Camera2D semantic validation rule
- */
 const camera2DValidationRule: LintRule = {
   meta: {
     name: 'valid-camera2d-properties',
@@ -254,8 +216,6 @@ const camera2DValidationRule: LintRule = {
   check: checkCamera2D,
 };
 
-// Self-register the rule
 ruleRegistry.register(camera2DValidationRule);
 
-// Export for testing
 export { camera2DValidationRule };

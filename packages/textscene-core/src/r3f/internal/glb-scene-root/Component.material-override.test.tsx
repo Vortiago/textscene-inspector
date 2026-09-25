@@ -1,12 +1,7 @@
 /**
- * `surface_material_override/N` on a mesh INSIDE an instanced GLB, from either
- * arrival — an `ExtResource` `.tres` or a `[sub_resource]` of the scene that
- * authored the override.
- *
- * Godot models no difference between the two (`MeshInstance3D::
- * set_surface_override_material` takes a `Ref<Material>`), so a GLB mesh cannot
- * either. Without this the glTF's own material survives, which reads as a
- * correctly-rendered surface rather than as a dropped override.
+ * `surface_material_override/N` on a mesh inside an instanced GLB, from an `ExtResource` `.tres`
+ * or a `[sub_resource]` of the overriding scene. Godot treats both alike
+ * (`MeshInstance3D::set_surface_override_material` takes a `Ref<Material>`).
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -29,7 +24,7 @@ beforeAll(async () => {
 
 const GLB_PATH = 'res://assets/town.glb';
 const TRES_PATH = 'res://assets/road.tres';
-/** The glTF's own material — what survives when an override is dropped. */
+/** The glTF's own material: what survives when an override is dropped. */
 const GLTF_COLOR = 0x123456;
 
 function makeFakeGlb(): THREE.Object3D {
@@ -132,8 +127,7 @@ describe('GLBSceneRoot — surface_material_override on a GLB-internal mesh', ()
     const renderer = await render(seeded().loader, 'SubResource("Mat_road")');
 
     const material = roadMaterial(renderer);
-    // Not the glTF's own: an override the renderer drops leaves a surface that
-    // looks deliberately authored, which is the failure worth naming.
+    // A dropped override leaves the glTF's own material, which looks deliberately authored.
     expect(material.color.getHex()).not.toBe(GLTF_COLOR);
     const linear = material.color.getRGB(
       { r: 0, g: 0, b: 0 } as THREE.Color,

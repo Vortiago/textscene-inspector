@@ -1,6 +1,4 @@
-/**
- * Tests for the AnimatedSprite2D property formatter.
- */
+/** The AnimatedSprite2D property formatter. */
 
 import { describe, it, expect } from 'vitest';
 import { formatAnimatedSprite2DProperties } from './propertyFormatter';

@@ -5,18 +5,13 @@ import type { TscnNode } from '../../../parser/types.js';
 import { isCamera3DType } from '../../cameraNodeTypes.js';
 import styles from './TscnPreviewShell.module.css';
 
-/** Stable predicate so `useLiveSceneNodes`' memo doesn't recompute each render. */
+/** A stable predicate, so the memo of `useLiveSceneNodes` does not recompute each render. */
 const isCamera3D = (n: TscnNode): boolean => isCamera3DType(n.type);
 
 /**
- * Compact scene stat chips for the top bar. Each chip's text is a single node
- * (e.g. "4 nodes", "2 cameras") so it never collides with the tree's node-name
- * elements that tests match via `findByText('Root')`.
- *
- * Node count is the AUTHORED count (`flattenedNodes` — instances counted as one,
- * matching Godot's collapsed scene dock). Camera count comes from the LIVE scene
- * tree so cameras inside instanced sub-scenes are included (consistent with the
- * Cameras panel).
+ * Each chip's text is one node, such as "4 nodes", so it never matches a tree
+ * row's `findByText`. The node count is authored, an instance counting once as
+ * in Godot's scene dock. The camera count reads the live scene tree.
  */
 export function SceneStats() {
   const { sceneGraph } = useHierarchy();

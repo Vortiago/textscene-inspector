@@ -1,12 +1,8 @@
 /**
- * A `visible = false` override on an instance whose OWN root is an instance.
- *
- * Found against a real project: a settings menu hiding an instanced language
- * dialog drew it full-screen over the whole scene. The host heading and the
- * sub-scene root heading both carry `instance=` and therefore no `type=`, so
- * neither has a registered parser — the override rides in `rawProperties` and
- * only lands once a level with a real type re-parses it. Collapsing one level
- * stops short of that level.
+ * A `visible = false` override on an instance whose own root is an instance.
+ * Neither heading carries a `type=`, so the override rides in `rawProperties`
+ * until a level with a real type re-parses it, and one level of collapse stops
+ * short of that level.
  */
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser';
@@ -20,7 +16,7 @@ anchors_preset = 15
 color = Color(1, 0, 0, 1)
 `;
 
-/** Its root is itself an instance, AND it adds a child — which is what forces the nested topology. */
+/** Its root is itself an instance, and it adds a child, which forces the nested topology. */
 const INNER = `[gd_scene load_steps=2 format=3]
 
 [ext_resource type="PackedScene" path="res://leaf.tscn" id="1_l"]

@@ -1,4 +1,4 @@
-/** CSGBox3D registration — parser. */
+/** CSGBox3D registration: the parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseCSGBox3D } from './parser';

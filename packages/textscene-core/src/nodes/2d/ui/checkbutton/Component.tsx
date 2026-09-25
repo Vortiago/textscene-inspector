@@ -1,25 +1,8 @@
 /**
- * `<CheckButton>` — the native (WebGL canvas) painter for `CheckButton`: a
- * toggle-switch icon (always drawn, flush against the content margin on the
- * side layout direction puts it — opposite CheckBox's check glyph) beside the
- * label text —
- * NO StyleBox chrome mesh at all, CheckButton's own StyleBoxes all being the
- * SAME `StyleBoxEmpty` (`nativeSolver.ts`'s own doc). Draws the vendored
- * theme icons (`themeIcons.ts`'s `CHECK_BUTTON_ICONS`).
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`. The icon's own theme colour
- * (`button_checked_color`/`button_unchecked_color`, default opaque white,
- * `theme_override_colors`-able) is multiplied by it BEFORE the single
- * sRGB→linear conversion, matching Button's icon — CheckButton's own default
- * literal happens to be white too, but unlike CheckBox's painter it is not
- * hardcoded: a scene CAN override either key.
- *
- * `renderOrder` reaches both meshes (the icon `ControlQuad` and the label
- * `<TextRun>`); `clippingPlanes` reaches the text material explicitly.
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * `<CheckButton>`, the native (WebGL canvas) painter: a toggle-switch icon, always drawn, at the
+ * content margin on the side opposite CheckBox's glyph, beside the label. No chrome: every
+ * StyleBox is the same `StyleBoxEmpty`. `ControlCanvasWalker` owns `visible`, the children and
+ * the transform.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -58,9 +41,10 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const props = painterView<CheckButtonProperties>(solveNode);
   const state = resolveCheckButtonDrawState(props);
 
+  // `renderOrder` reaches both meshes. `<TextRun>` builds its own material, so it takes
+  // the clip planes explicitly, while the icon quad reads them itself.
   const clippingPlanes = useControlClipPlanes();
 
-  // --- Icon: always drawn, on/off per button_pressed + disabled -----------
   const iconKey = resolveCheckButtonIconKey(props, solveNode.rtl);
   const iconTexture = useNodeIcon(solveNode.icons[CHECK_BUTTON_ICON_THEME_NAME[iconKey]], CHECK_BUTTON_ICONS[iconKey]);
   const iconSize = useMemo(
@@ -72,25 +56,25 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
     [solveNode, props.disabled]
   );
 
+  // Unlike CheckBox's fixed white, the icon colour is a theme key a scene can override, so it
+  // takes the tint before its one sRGB-to-linear conversion, as Button's icon does.
   const baseIconColor = checkButtonIconColor(props, solveNode.colors);
   const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
   const iconLinearColor = useGodotLinearColor(tintedIconColorSrgb);
 
-  // --- Text: theme resolution + shaping ------------------------------------
   const text = props.text ?? '';
   const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = checkButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
-  // Read INSIDE the render body, not the `useMemo` below — see Label's own
-  // Component.tsx for why.
+  // Read inside the render body, not the `useMemo` below: Label's Component.tsx
+  // gives the reason.
   const fontMetrics = resolveNodeFontMetrics(solveNode, CHECKBUTTON_THEME_FONT_KEY);
   const layout: TextLayoutResult | null = useMemo(
     () => (hasText ? shapeButtonLabel(text, fontSizePx, fontMetrics) : null),
     [hasText, text, fontSizePx, fontMetrics]
   );
 
-  // --- Content layout: icon + text placement within the solved rect -------
   const content = useMemo(
     () =>
       layoutCheckButtonContent({

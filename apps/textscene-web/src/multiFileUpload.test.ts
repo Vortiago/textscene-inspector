@@ -43,8 +43,8 @@ describe('pickRootMostTscn', () => {
     expect(result.file).toBe(parent);
     expect(result.text).toBe(PARENT_SCENE);
     expect(result.ambiguous).toBe(false);
-    // A multi-file pick already parsed the scene — it exposes the paths so the
-    // caller's resource matching doesn't re-parse.
+    // A multi-file pick already parsed the scene and exposes the paths, so the
+    // caller's resource matching does not parse again.
     expect(result.extResourcePaths).toEqual([
       'res://scenes/child.tscn',
       'res://textures/bg.png',
@@ -54,7 +54,7 @@ describe('pickRootMostTscn', () => {
   it('root-most is found regardless of file order (reversed)', () => {
     const parent = makeFile('parent.tscn');
     const child = makeFile('child.tscn');
-    // reversed order — parent is still root-most
+    // In reverse order, parent is still root-most.
     const result = pickRootMostTscn([
       { file: child, text: CHILD_SCENE },
       { file: parent, text: PARENT_SCENE },
@@ -64,7 +64,7 @@ describe('pickRootMostTscn', () => {
   });
 
   it('falls back to first when all tscns form a cycle (each references the other)', () => {
-    // a.tscn references b.tscn, b.tscn references a.tscn — cycle; fall back to first
+    // a.tscn and b.tscn reference each other: a cycle falls back to the first.
     const cycleA = `[gd_scene load_steps=1 format=3]
 [ext_resource type="PackedScene" path="res://scenes/b.tscn" id="1"]
 [node name="A" type="Node3D"]
@@ -84,8 +84,8 @@ describe('pickRootMostTscn', () => {
   });
 
   it('flags a tie when several dropped scenes are all unreferenced', () => {
-    // Neither scene references the other — two independent roots, so the
-    // pick falls back to the first and must be flagged ambiguous.
+    // Neither scene references the other: two roots, so the pick falls back to
+    // the first and is flagged ambiguous.
     const a = makeFile('a.tscn');
     const b = makeFile('b.tscn');
     const result = pickRootMostTscn([
@@ -111,9 +111,8 @@ describe('pickRootMostTscn', () => {
   });
 
   it('a reference to a same-named file elsewhere does not disqualify the referencing scene', () => {
-    // door.tscn instances res://variants/door.tscn — a DIFFERENT file that
-    // happens to share its basename. A scene can't instance itself, so
-    // door.tscn must stay the unambiguous root.
+    // door.tscn instances res://variants/door.tscn, a different file with the same
+    // basename. A scene cannot instance itself, so door.tscn stays the root.
     const rootWithSameNameRef = `[gd_scene load_steps=2 format=3]
 [ext_resource type="PackedScene" path="res://variants/door.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://child.tscn" id="2"]
@@ -202,7 +201,7 @@ describe('matchResourceFiles', () => {
     const file = makeFile('player.png');
     const missingPaths = new Set(['res://other/player.png']);
     const result = matchResourceFiles(extResourcePaths(SCENE_WITH_RESOURCES), [file], missingPaths);
-    // Should match the ExtResource path, not the missing path
+    // The ExtResource path wins over the missing path.
     expect(result.matches).toEqual([{ path: 'res://textures/player.png', file }]);
   });
 
@@ -236,7 +235,7 @@ describe('matchResourceFiles', () => {
 
   it('reports ambiguous match when multiple missing paths share a basename', () => {
     const file = makeFile('player.png');
-    // Two missing paths share "player.png" basename — no ExtResource for it
+    // Two missing paths share the "player.png" basename, with no ExtResource for it.
     const missingPaths = new Set([
       'res://textures/player.png',
       'res://other/player.png',

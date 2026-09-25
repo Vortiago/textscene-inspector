@@ -1,47 +1,34 @@
 [gd_scene load_steps=5 format=3 uid="uid://unitmaterialtexfilter"]
 
-; Two quads sampling ONE image through two StandardMaterial3D sub-resources that
-; differ in exactly one property: `texture_filter`. Left is 0 (NEAREST, no
-; mipmaps), right is 3 (LINEAR_WITH_MIPMAPS, Godot's default).
-;
-; The texture is deliberately 8x8 with antialiasing turned off at authoring
-; time, so a quad this size magnifies it ~25x and magFilter is the DOMINANT
-; term: left must show razor-hard 2px-cell blocks, right a smooth gradient
-; between them. A 256px source would have been near 1:1 here, leaving only a
-; sub-pixel minification difference and a golden that barely discriminates.
-;
-; This is also the only scene in the corpus that witnesses per-material texture
-; CLONING. `texture_filter` is a material property in Godot but lives on the
-; Texture in three, and the loader caches one THREE.Texture per path — so a
-; renderer that writes filter state onto the shared cached texture renders both
-; quads with whichever material happened to build last, and the two become
-; identical. No other fixture pairs one image with two filter states.
-;
-; Deliberately INLINE sub-resources rather than external .tres materials: the
-; two material construction paths are independent implementations, and this is
-; the larger one by corpus count. The external path is covered by
-; texture-filter.integration.test.ts.
-;
-; Failure modes: property ignored → both quads soft. Applied at texture load
-; instead of material build → both take one filter, non-deterministically.
-; magFilter set but not minFilter/generateMipmaps → the near quad sharpens and
-; a minified one would not.
+; One variable: `texture_filter`, left 0 (NEAREST, no mipmaps), right 3 (LINEAR_WITH_MIPMAPS,
+; Godot's default), on two quads that sample one image. The only scene that witnesses per-material
+; texture cloning, as no other fixture pairs one image with two filter states.
 
 [ext_resource type="Texture2D" path="res://textures/checkerboard-8px.svg" id="1_tex"]
 
+; Inline sub-resources, not external .tres: the two material construction paths are independent,
+; and this is the larger one by corpus count. texture-filter.integration.test.ts covers the
+; external path.
 [sub_resource type="QuadMesh" id="QuadMesh_panel"]
 size = Vector2(2.6, 2.6)
 
 [sub_resource type="StandardMaterial3D" id="Material_nearest"]
+; The 8x8 texture, authored without antialiasing, magnifies about 25x, so magFilter dominates:
+; left shows hard 2px-cell blocks, right a smooth gradient. A 256px source would be near 1:1.
 albedo_texture = ExtResource("1_tex")
 texture_filter = 0
 roughness = 1.0
 
 [sub_resource type="StandardMaterial3D" id="Material_linear"]
 albedo_texture = ExtResource("1_tex")
+; A material property in Godot, but the Texture's in three, and the loader caches one THREE.Texture
+; per path: filter state written onto it renders both quads with whichever material built last.
 texture_filter = 3
 roughness = 1.0
 
+; Failure modes: property ignored, both quads soft. Applied at texture load instead of material
+; build, both take one filter, non-deterministically. magFilter set without minFilter and
+; generateMipmaps, the near quad sharpens and a minified one would not.
 [node name="Scene" type="Node3D"]
 
 [node name="Nearest" type="MeshInstance3D" parent="."]

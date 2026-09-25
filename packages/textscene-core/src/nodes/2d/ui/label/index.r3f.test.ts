@@ -1,17 +1,8 @@
 /**
- * Label self-registration: importing `index.r3f` must wire the native (WebGL
- * canvas) painter and the native rect solver into their respective registries —
- * the whole point of the self-registration convention (ADR-0001) is that
- * nothing else has to.
- *
- * The size-dependent declaration is the load-bearing one and the reason this
- * file exists at all. `solveControlTree` decides whether to run its second
- * solve pass by asking `controlSolverRegistry.isSizeDependentMinimum` about
- * each node's TYPE during `assignPaintIndex`, never by inspecting the
- * registered function. So an autowrapping Label's height would silently revert
- * to its unwrapped one-line substitute if this single line went missing —
- * `nativeSolver.test.ts` registers the declaration itself and would stay green
- * throughout.
+ * Importing `index.r3f` registers Label's painter and rect solver (ADR-0001).
+ * The size-dependent declaration matters most: `solveControlTree` asks
+ * `isSizeDependentMinimum` by type, so without it an autowrapping Label falls
+ * back to one line, while `nativeSolver.test.ts`, which registers it itself, stays green.
  */
 import { describe, expect, it } from 'vitest';
 import './index.r3f';

@@ -1,12 +1,10 @@
-/** Dock chrome for the Split Dock (ADR-0007): the master/detail resize handle
- * and the collapsed-dock strip. */
+/** The Split Dock's resize handle and collapsed strip (ADR-0007). */
 import { useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import styles from './TscnPreviewShell.module.css';
 
 /**
- * Draggable horizontal handle splitting the dock's master (tree) and detail
- * sections. Writes `value` = the master's height fraction (0..1), clamped so
- * neither section disappears.
+ * The handle between the tree and the detail pane. `value` is the tree's
+ * height fraction (0..1), clamped so neither section disappears.
  */
 export function MasterDetailHandle({
   value,
@@ -16,9 +14,8 @@ export function MasterDetailHandle({
   setValue: (v: number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  // Pointer capture (like <Splitter>) keeps the resize tracking off the thin
-  // handle with NO window listeners — so unmounting mid-drag (e.g. collapsing
-  // the dock) can't leak a listener or setValue on an unmounted component.
+  // Pointer capture, not window listeners, so an unmount mid-drag leaks no
+  // listener and sets no value on an unmounted component.
   const dragging = useRef(false);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {

@@ -1,5 +1,3 @@
-/**
- * tabcontainer linter registration - imports linter components to trigger self-registration.
- */
+/** TabContainer linter registration: importing the modules registers them. */
 
 import './linterParser.js';

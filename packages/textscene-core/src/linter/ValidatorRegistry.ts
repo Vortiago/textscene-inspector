@@ -1,13 +1,8 @@
 /**
- * Registry for property validators used by strict TSCN parser
- *
- * The registry is the storage and the resolution order; the three things it
- * resolves TO live beside it — `propertyValidator.ts` (what a validator is and
- * declares), `wildcardIndex.ts` (the two wildcard key shapes Godot writes) and
- * `unavailableKey.ts` (a key a type takes away from its base). All three are
- * re-exported here, so no importer moves. The resolution walk lives in
- * `validatorResolution.ts` and the removal rules in `removalKeys.ts`; this file
- * is the storage and the public surface.
+ * Storage and public surface of the property validators the strict TSCN parser runs. What it resolves to lives beside
+ * it and is re-exported here: `propertyValidator.ts` (what a validator declares), `wildcardIndex.ts` (the two wildcard key
+ * shapes Godot writes) and `unavailableKey.ts` (a key a type takes away from its base). The resolution walk is in
+ * `validatorResolution.ts`, and the removal rules are in `removalKeys.ts`.
  */
 
 import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
@@ -48,7 +43,7 @@ export class ValidatorRegistry {
    * The declared base of `type`, or `undefined`.
    *
    * `Object.hasOwn`, because the key is a node type the `.tscn` chooses: bare
-   * indexing answers the `Object` FUNCTION for `type="constructor"`, which then
+   * indexing answers the `Object` function for `type="constructor"`, which then
    * travels as a `string` through every walk below.
    */
   private baseOf(type: string): string | undefined {
@@ -57,7 +52,7 @@ export class ValidatorRegistry {
 
   /**
    * Register multiple validators for a node type
-   * @param nodeType - TSCN node type (e.g., "MeshInstance3D")
+   * @param nodeType - TSCN node type (for example "MeshInstance3D")
    * @param validators - Map of property keys to validator functions
    */
   registerAll(nodeType: string, validators: Record<string, PropertyValidator>): void {
@@ -71,13 +66,12 @@ export class ValidatorRegistry {
   }
 
   /**
-   * Declare that `nodeType` REMOVES properties its base chain declares — see
-   * `removalKeys.ts` for what makes a key a removal rather than an inert one.
+   * Declare that `nodeType` removes properties its base chain declares. `removalKeys.ts` says what makes a key a
+   * removal rather than an inert one.
    *
    * @param nodeType - the concrete type that cannot carry the properties.
-   * @param removals - property key → `{ reason, cite }`; `reason` is used
-   *   verbatim in the diagnostic, `cite` is the `file:line` of the guard that
-   *   refuses the write (ADR-0032).
+   * @param removals - property key → `{ reason, cite }`: `reason` is the diagnostic's text, and `cite` is the
+   *   `file:line` of the guard that refuses the write (ADR-0032).
    */
   registerUnavailable(nodeType: string, removals: Record<string, Removal>): void {
     refuseOverlap(nodeType, Object.keys(removals), this.validators, 'declares');
@@ -87,33 +81,24 @@ export class ValidatorRegistry {
     Object.assign(this.unavailable.get(nodeType)!, removals);
   }
 
-  /** Every removal declared directly on `nodeType`, for the grounding sweep. */
+  /** Every removal declared directly on `nodeType`, for the grounding guard. */
   getOwnRemovals(nodeType: string): Record<string, Removal> {
     return this.unavailable.get(nodeType) ?? {};
   }
 
   /**
-   * @internal — like {@link ValidatorRegistry.typesWithRegistrations}, this
-   * enumerates what the registry holds without naming a type, which is
-   * `registryPopulation.ts`'s alone. A discipline enforced on one of two
-   * equivalent doors is one the next author walks around without noticing.
-   *
-   * Types declaring a removal, which is NOT a subset of
-   * `registeredTypes('declaring')`: `HBoxContainer` only takes `vertical` away and
-   * registers no validator of its own, so it appears in `unavailable` alone. A
-   * sweep over the validator map misses every such type entirely.
+   * @internal Like {@link ValidatorRegistry.typesWithRegistrations}, this lists the registry without naming a type, which
+   * is `registryPopulation.ts`'s job alone. Types declaring a removal are not a subset of `registeredTypes('declaring')`:
+   * `HBoxContainer` only takes `vertical` away and registers no validator, so a scan of the validator map misses it.
    */
   getTypesWithRemovals(): string[] {
     return [...this.unavailable.keys()];
   }
 
   /**
-   * Keys `nodeType` removes, whether declared here or inherited.
-   *
-   * Resolved the same way `findValidator` resolves them, because the two answer
-   * one question and a disagreement would put a key in a sheet's "unavailable"
-   * list while the linter still accepted it: a removal wins at the hop that
-   * declares it, but a NEARER type re-declaring the key takes it back.
+   * Keys `nodeType` removes, declared here or inherited, resolved as `findValidator` resolves them so a sheet's
+   * "unavailable" list never holds a key the linter accepts: a removal wins at the hop that declares it, and a nearer
+   * type re-declaring the key takes it back.
    */
   getUnavailableKeys(nodeType: string): string[] {
     return unavailableKeysOf(this.tables, nodeType);
@@ -123,7 +108,7 @@ export class ValidatorRegistry {
    * The validator for a property, the owner type first and then each base in
    * turn (`validatorResolution.ts`).
    *
-   * @returns Something to CALL, or null if neither the type nor its bases match.
+   * @returns Something to call, or null if neither the type nor its bases match.
    *   Deliberately untagged: see {@link ValidatorFn}. A caller introspecting a
    *   declaration asks {@link ValidatorRegistry.declarationFor} instead.
    */
@@ -132,27 +117,17 @@ export class ValidatorRegistry {
     }
 
   /**
-   * The same resolution, as something to CALL.
-   *
-   * A `PropertyValidator` is a `ValidatorFn` with tags, so narrowing needs no
-   * assertion — the walk above returns the wide type and this hands back the
-   * narrow one. Two questions share one walk and differ only in what the caller
-   * may then read: running a validator needs no tags, and reading a tag is
-   * introspection that belongs to a sweep. Keeping them apart at the type level
-   * is what stops a hand-assembled roots-only population from compiling —
-   * `findValidator(...).intSlot` does not type-check.
+   * The same resolution, as something to call. A `PropertyValidator` is a `ValidatorFn` with tags, so the narrowing needs
+   * no assertion. Running a validator needs no tags, and reading one is introspection for a guard: keeping them apart at
+   * the type level stops a hand-assembled roots-only population, since `findValidator(...).intSlot` does not type-check.
    */
   findValidator(nodeType: string, propertyKey: string): ValidatorFn | null {
     return this.declarationFor(nodeType, propertyKey);
   }
 
   /**
-   * The chain `findValidator` walks above `nodeType`, nearest first.
-   *
-   * Exposed so a guard about inheritance asks the registry what it inherits
-   * FROM instead of importing a table and assuming it is the same one: the
-   * shadow-copy guard read the node table after this walk had gained Godot's
-   * resource ancestry, and `QuadMesh` shadowing `PlaneMesh` read as clean.
+   * The chain `findValidator` walks above `nodeType`, nearest first. A guard about inheritance asks this rather than
+   * import a table that may not be the walk's own: a node-only table misses `QuadMesh` shadowing `PlaneMesh`.
    */
   baseChainOf(nodeType: string): string[] {
     const chain: string[] = [];
@@ -165,11 +140,10 @@ export class ValidatorRegistry {
   }
 
   /**
-   * Node types that currently have validators registered.
+   * Node types that have validators registered.
    *
-   * @internal — `registryPopulation.ts` is the only caller. Enumerating what the
-   * registry holds WITHOUT naming a type is that module's alone; reaching this
-   * directly is how a sweep comes to assemble the roots-only population by hand.
+   * @internal `registryPopulation.ts` is the only caller: listing the registry without naming a type is its job alone,
+   * so no guard assembles the roots-only population by hand.
    */
   typesWithRegistrations(): string[] {
     return [...this.validators.keys()];
@@ -195,8 +169,7 @@ export class ValidatorRegistry {
 }
 
 /**
- * Singleton instance of ValidatorRegistry, wired with Godot's real ancestry —
- * node and resource alike (classBaseTypes.ts) — so every subclass inherits its
- * base validators.
+ * The ValidatorRegistry, wired with Godot's real node and resource ancestry (classBaseTypes.ts), so every subclass
+ * inherits its base validators.
  */
 export const validatorRegistry = new ValidatorRegistry(CLASS_BASE_TYPES);

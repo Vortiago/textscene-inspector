@@ -1,18 +1,14 @@
 /**
- * NavigationObstacle2D strict validators for linting.
- *
- * Declare only NavigationObstacle2D's OWN members — the ones doc/classes/NavigationObstacle2D.xml
- * lists without an `overrides=` attribute. Everything from Node2D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * NavigationObstacle2D strict validators. Declare only the members
+ * doc/classes/NavigationObstacle2D.xml lists without
+ * `overrides=`: the base-walk delivers the inherited ones, and a re-declared
+ * key shadows its ancestor.
  */
 
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 
-// Node2D transform/position/... validators are inherited via the
-// nodeBaseTypes base-walk — only the type-specific surface is registered here.
 validatorRegistry.registerAll('NavigationObstacle2D', {
   // navigation_obstacle_2d.cpp:247, ERR_FAIL_COND_MSG(p_radius < 0.0, ...) is an
   // enforced floor. The ADD_PROPERTY hint (:72, "0.0,500,0.01,suffix:px") also
@@ -24,9 +20,8 @@ validatorRegistry.registerAll('NavigationObstacle2D', {
     hinted: { max: 'navigation_obstacle_2d.cpp:72' },
   }),
   // navigation_obstacle_2d.cpp:73, PACKED_VECTOR2_ARRAY with a plain
-  // `const Vector<Vector2> &get_vertices() const` getter — serialises as
-  // PackedVector2Array(...), not a TypedArray spelling. set_vertices (:216)
-  // only recomputes clockwise/valid debug flags, no format or range guard.
+  // `const Vector<Vector2> &` getter, so it serialises as PackedVector2Array(...).
+  // set_vertices (:216) only recomputes debug flags: no format or range guard.
   vertices: v.packedVector2Array('vertices'),
   // navigation_obstacle_2d.cpp:75, plain BOOL, set_affect_navigation_mesh
   // (:312) assigns straight through.
@@ -35,10 +30,10 @@ validatorRegistry.registerAll('NavigationObstacle2D', {
   // (:320) assigns straight through.
   carve_navigation_mesh: v.boolean('carve_navigation_mesh'),
   // navigation_obstacle_2d.cpp:78, PROPERTY_HINT_GROUP_ENABLE is an inspector
-  // grouping widget, not a range hint; set_avoidance_enabled (:291) assigns
+  // grouping widget, not a range hint. set_avoidance_enabled (:291) assigns
   // straight through.
   avoidance_enabled: v.boolean('avoidance_enabled'),
-  // navigation_obstacle_2d.cpp:79, PROPERTY_USAGE_NO_EDITOR is ALSO
+  // navigation_obstacle_2d.cpp:79, PROPERTY_USAGE_NO_EDITOR is also
   // PROPERTY_USAGE_STORAGE (object.h:132): it hides from the inspector but
   // still serialises. set_velocity (:307) assigns straight through, no bound.
   velocity: v.vector2('velocity'),

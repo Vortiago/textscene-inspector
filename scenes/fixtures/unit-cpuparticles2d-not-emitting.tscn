@@ -1,10 +1,7 @@
 [gd_scene load_steps=2 format=3]
 
-; `emitting = false` must draw NOTHING, however generous the rest of the
-; emitter is — Godot's `_update_internal` returns before it fills the multimesh
-; buffer. Six of the eleven CPUParticles2D nodes in the vendored demos rely on
-; it. The node must still position its child, so the marker below is visible
-; while the particles are not.
+; `emitting = false` draws nothing: Godot's `_update_internal` returns before it fills the multimesh
+; buffer. The node still positions its child, so the marker shows while the particles do not.
 
 [ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
 

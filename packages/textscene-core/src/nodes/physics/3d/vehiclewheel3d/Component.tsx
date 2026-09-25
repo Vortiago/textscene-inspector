@@ -1,11 +1,8 @@
 /**
- * <VehicleWheel3D> — a transform group that positions the wheel's child mesh
- * (ADR-0005, ADR-0008) and draws the Godot wheel gizmo while selected.
- *
- * Godot draws that gizmo for every wheel at all times; we gate it on selection
- * via useGizmoVisible(), the same viewer-vs-editor divergence ADR-0018 records
- * for Marker3D and Path3D — a four-wheeled vehicle would otherwise fill the
- * viewport with coils.
+ * <VehicleWheel3D>: a transform group that positions the wheel's child mesh
+ * (ADR-0005, ADR-0008) and draws the Godot wheel gizmo while selected. Godot draws
+ * it for every wheel at all times. useGizmoVisible() gates it on selection
+ * (ADR-0018), since a four-wheeled vehicle would otherwise fill the viewport with coils.
  */
 
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';

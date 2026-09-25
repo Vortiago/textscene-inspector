@@ -1,6 +1,6 @@
 /**
- * OpenXRRenderModel registration — it is parsed, and it draws nothing on purpose
- * (ADR-0008) rather than for want of an implementation.
+ * OpenXRRenderModel registration: it is parsed, and it draws nothing on purpose (ADR-0008), not for want
+ * of an implementation.
  */
 
 import { describe, expect, it } from 'vitest';

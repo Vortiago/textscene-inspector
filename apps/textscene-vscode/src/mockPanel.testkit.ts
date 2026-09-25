@@ -1,10 +1,8 @@
 /// <reference types="vitest/globals" />
 
 /**
- * Webview panel test harness.
- *
- * Separate from the `vscode` namespace mocks it wires itself into: this one
- * builds a panel and hands back the seams a test drives it through.
+ * Webview panel test harness: it builds a panel, wires it into the `vscode`
+ * namespace mocks, and hands back the seams a test drives it through.
  */
 
 import { vi } from 'vitest';
@@ -45,14 +43,10 @@ export interface MockPanelHarness {
 }
 
 /**
- * Build a mocked webview panel and wire `vscode.window.createWebviewPanel` to
- * return it.
- *
- * Both event mocks take the real `vscode.Event` signature —
- * `(listener, thisArgs?, disposables?)`, pushing the subscription they return
- * into `disposables`. A one-argument mock silently leaves a panel's
- * `_disposables` empty, and its teardown loop then passes whether or not
- * production ever registered anything for it to dispose.
+ * Builds a mocked webview panel that `vscode.window.createWebviewPanel` returns.
+ * Both event mocks take the real `(listener, thisArgs?, disposables?)` signature
+ * and push their subscription into `disposables`. A one-argument mock leaves
+ * `_disposables` empty, so a teardown test passes whatever production registers.
  */
 export function setupMockPanel(): MockPanelHarness {
   let messageHandler: ((message: unknown) => void) | null = null;

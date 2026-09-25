@@ -1,40 +1,8 @@
 /**
- * <Sprite3D> — billboarded 2D texture rendered in 3D space.
- *
- * Architecture:
- *   - Texture state machine: `useTexture2D`, which covers an image
- *     file, an inline procedural texture and a CanvasTexture alike.
- *     Pending → render nothing (lets the scene continue);
- *     missing/error → magenta placeholder mesh + drei `<Text>` label
- *     naming the path (matches MeshInstance3D UX).
- *   - Quad geometry: `<planeGeometry>` sized by `pixel_size` × the
- *     active texture region (full image, sprite-sheet tile, or
- *     `region_rect` sub-image). Same pattern as Label3D's textured
- *     plane, but the texture comes from the host file provider rather
- *     than a runtime canvas rasteriser.
- *   - UV math: region_rect + hframes/vframes composition lives in the
- *     shared `r3f/spriteFrame` module (one home for Sprite2D +
- *     Sprite3D). flip_h/flip_v stay here — 3D mirrors via UV negation
- *     where 2D mirrors via mesh scale — as does the wrap mode, which
- *     Sprite3D derives per frame (`spriteWrapMode`) where the 2D
- *     canvas always clamps.
- *
- * Material:
- *   - `meshBasicMaterial`, or `meshStandardMaterial` when `shaded`
- *     (`material.cpp:3045`: SHADING_MODE_UNSHADED vs SHADING_MODE_PER_PIXEL)
- *   - `color`     ← modulate RGB
- *   - `opacity`   ← clamp01(modulate.a * (1 - transparency)); a uniform,
- *                   never a term of `transparent` — see `alphaCutSurface`
- *   - `transparent`/`alphaTest`/`alphaHash`/`depthWrite` ← the alpha_cut arm
- *                   alone (`alphaCutSurface`)
- *   - `side`      ← DoubleSide (sprite quads should be visible from
- *                   the back too — Godot's runtime behaviour)
- *   - `renderOrder` on the mesh ← render_priority
- *
- * Billboard handling is deferred to a runtime per-frame look-at via
- * `mesh.userData.billboardMode` (the same convention Label3D uses).
- * Wiring the runtime billboarding loop is a separate concern; this
- * component just persists the mode and axis so the consumer can act.
+ * <Sprite3D>: a 2D texture drawn as a quad in 3D space, sized by `pixel_size` × the active region
+ * (full image, sheet tile or `region_rect`). `useTexture2D` resolves an image file, an inline
+ * procedural texture or a CanvasTexture. `meshStandardMaterial` when `shaded`, else
+ * `meshBasicMaterial` (`material.cpp:3045`: SHADING_MODE_PER_PIXEL versus SHADING_MODE_UNSHADED).
  */
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -86,17 +54,14 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     internalResources
   );
 
-  // Compose the visible texture (shared spriteFrame module clones + windows
-  // the UVs to the region/frame), then mirror via UV negation: flip the
-  // (already cropped) UV window by negating the repeat and shifting the
-  // offset to the opposite edge.
+  // The shared `r3f/spriteFrame` module (Sprite2D and Sprite3D) clones the texture and windows the
+  // UVs to the region or frame. Flip mirrors through UV negation, where 2D mirrors through mesh
+  // scale: negate the repeat and shift the offset to the opposite edge.
   const displayedTexture = useMemo(() => {
-    // The wrap mode is DERIVED, not fixed: `sprite_3d.cpp:163` reads it off the
-    // frame's own UV corners, so only an overrunning window tiles.
-    // SRGBColorSpace: Sprite3D draws through Godot's 3D pipeline (always a
-    // hardware sRGB decode before filtering, `canvas2DTextureDecode.ts`), so
-    // it keeps the shared cache entry's own colour space rather than the 2D
-    // canvas's `NoColorSpace` retag.
+    // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the frame's own UV
+    // corners, so only an overrunning window tiles. SRGBColorSpace: Godot's 3D pipeline decodes
+    // sRGB in hardware before filtering (`canvas2DTextureDecode.ts`), so the clone keeps the cache
+    // entry's colour space, not the 2D canvas's `NoColorSpace` retag.
     const wrap = spriteWrapMode(sourceTexture ?? undefined, properties);
     const cloned = composeFrameTexture(sourceTexture ?? undefined, properties, wrap, THREE.SRGBColorSpace);
     if (!cloned) return undefined;
@@ -113,7 +78,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     }
     return cloned;
   }, [sourceTexture, properties]);
-  // `composeFrameTexture` hands back a CLONE, never the loader's cached entry, so
+  // `composeFrameTexture` hands back a clone, never the loader's cached entry, so
   // the clone is this component's to release; the shared source is left alone.
   useEffect(() => () => displayedTexture?.dispose(), [displayedTexture]);
 
@@ -124,16 +89,17 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     return { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
   }, [sourceTexture, properties]);
 
-  // `_get_color_accum()` (`sprite_3d.cpp:36-52`) folds the parent sprite's
-  // accumulation into this node's modulate, r/g/b and a. Godot multiplies the
-  // STORED colours and converts once, so the sRGB→linear step stays here, after
-  // the product (matching Sprite2D / WorldEnvironment).
+  // `_get_color_accum()` (`sprite_3d.cpp:36-52`) folds the parent sprite's accumulation into this
+  // node's modulate, r/g/b and a. Godot multiplies the stored colours and converts once, so the
+  // sRGB→linear step stays here, after the product (matching Sprite2D and WorldEnvironment).
   const accum = useSpriteBase3DColorAccum(properties.modulate);
   const color = useGodotLinearColor(accum);
-  // `transparency` is a per-instance GeometryInstance3D property, outside the
-  // accumulation — only `modulate` accumulates.
+  // `transparency` is a per-instance GeometryInstance3D property outside the accumulation: only
+  // `modulate` accumulates. Opacity is a uniform, never a term of `transparent` (see
+  // `alphaCutSurface`).
   const opacity = clamp01(accum.a * (1 - properties.transparency));
 
+  // `transparent`, `alphaTest`, `alphaHash` and `depthWrite` come from the alpha_cut arm alone.
   const cut = alphaCutSurface({
     mode: properties.alpha_cut,
     scissorThreshold: properties.alpha_scissor_threshold,
@@ -152,17 +118,13 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     if (ox !== 0 || oy !== 0) geom.translate(ox, oy, 0);
     return geom;
   }, [width, height, properties.offset.x, properties.offset.y, properties.centered, properties.pixel_size]);
-  // We pass `geometry` via `<primitive>`, which R3F does NOT auto-dispose (only
-  // JSX-declared geometries are managed) — release the GPU buffers ourselves
-  // when a new one replaces it / on unmount.
+  // `geometry` goes through `<primitive>`, which R3F does not auto-dispose, so this releases the
+  // GPU buffers on replacement and unmount.
   useEffect(() => () => geometry.dispose(), [geometry]);
 
-  // Descendants ride in a SIBLING group carrying the same transform rather
-  // than inside the sprite quad: `billboard` re-aims the quad at the camera,
-  // and in Godot that is a shader-side effect on the sprite alone — it never
-  // spins the node's children. Every branch below renders it, including the
-  // placeholder and pending ones, so a missing or slow texture cannot delete
-  // the subtree parented under the sprite.
+  // Descendants ride in a sibling group with the same transform, not inside the quad: in Godot
+  // `billboard` is a shader-side effect that never spins the node's children. Every branch below
+  // renders it, placeholder and pending included, so a missing or slow texture keeps the subtree.
   const subtree =
     children === undefined ? null : (
       <group position={position} rotation={rotation} scale={scale}>
@@ -170,9 +132,8 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       </group>
     );
 
-  // No texture referenced at all: render a stub placeholder so users
-  // see that the sprite node exists in the scene even without a texture.
-  // (Linter would already flag this as `sprite3d-requires-texture`.)
+  // No texture referenced: a stub placeholder shows the sprite node exists. The linter flags this
+  // as `sprite3d-requires-texture`.
   if (!properties.texture) {
     return (
       <>
@@ -188,8 +149,8 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     );
   }
 
-  // Texture failed to load: magenta-quad placeholder. The in-3D path
-  // label was moved to the DOM `<MissingResourcesPanel>`.
+  // Texture failed to load: a magenta-quad placeholder. The DOM `<MissingResourcesPanel>` names the
+  // path.
   if (textureMissing) {
     return (
       <>
@@ -205,9 +166,8 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     );
   }
 
-  // Pending: render nothing visible yet. Wait for the texture to arrive
-  // (which `useTexture2D` will pick up automatically on the next render
-  // cycle once the host provides the file).
+  // Pending: nothing visible until `useTexture2D` picks the texture up on a later render, once the
+  // host provides the file.
   if (!displayedTexture) {
     return (
       <>
@@ -235,6 +195,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       depthWrite: cut.depthWrite,
       // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
       depthTest: !properties.no_depth_test,
+      // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.
       side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
     },
     merge: [properties.shaded ? SHADED_SCALARS : undefined],

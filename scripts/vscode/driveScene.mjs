@@ -1,21 +1,7 @@
 /**
- * Drives the REAL VS Code with the TextScene extension loaded, over CDP, and
- * reports what the preview webview painted.
- *
- * The extension renders into a webview — a sandboxed `vscode-webview://` iframe
- * the extension host cannot see into. The extension-host integration suite
- * therefore proves only that the panel loads and completes its handshake, never
- * that anything painted. This module closes that gap: it launches the VS Code
- * build `@vscode/test-electron` downloads, attaches Playwright over CDP, opens
- * the preview through the extension's OWN contributed command, walks into the
- * webview frame and counts ink pixels.
- *
- * CDP injection and evaluation are not subject to the page's CSP, which is what
- * lets this instrument a webview whose CSP is `default-src 'none'` without any
- * test-only branch in the rendering code.
- *
- * Two callers: `drive-vscode.mjs` (the CLI, for screenshots and one-off
- * measurements) and `webview-csp-gate.mjs` (the automated regression gate).
+ * Drives the real VS Code with the TextScene extension loaded, over CDP, and
+ * reports what the preview webview painted. Two callers: `drive-vscode.mjs`,
+ * the CLI, and `webview-csp-gate.mjs`, the automated gate.
  */
 /* global document, HTMLCanvasElement, addEventListener */
 // Those globals appear only inside `evaluate`/`addInitScript` callbacks, which
@@ -39,10 +25,6 @@ const PNG_DATA_URL_PREFIX = 'data:image/png;base64,';
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// ============================================================================
-// Preflight
-// ============================================================================
-
 /**
  * The VS Code build a previous `test:integration` run left behind, or `null`.
  * Nothing else in the repo ships a VS Code binary.
@@ -62,8 +44,7 @@ function cachedVscodeBinary() {
  * the two suites share a single download rather than racing two of them.
  *
  * @param {{ download?: boolean }} [options] `download: false` fails instead of
- *   fetching — the CLI's preflight, which would otherwise stall for minutes on
- *   a typo.
+ *   fetching, so the CLI does not stall for minutes on a typo.
  */
 export async function resolveVscodeBinary(options = {}) {
   const cached = cachedVscodeBinary();
@@ -90,10 +71,6 @@ export function assertExtensionBuilt() {
   }
 }
 
-// ============================================================================
-// Launch
-// ============================================================================
-
 /** Seeds a throwaway user-data dir with the shared first-run settings. */
 function seedUserDataDir(extraSettings) {
   const dir = mkdtempSync(path.join(tmpdir(), 'textscene-vscode-drive-'));
@@ -109,9 +86,8 @@ function seedUserDataDir(extraSettings) {
 function launchVscode({ binary, scene, workspace, userDataDir, port, headed, verbose }) {
   const codeArgs = [
     `--extensionDevelopmentPath=${EXTENSION_DIR}`,
-    // Disables every INSTALLED extension. The one under
-    // --extensionDevelopmentPath is still loaded — that is exactly the combo
-    // the integration suite uses.
+    // Disables every installed extension. The one under
+    // --extensionDevelopmentPath still loads, as in the integration suite.
     '--disable-extensions',
     '--disable-workspace-trust',
     '--skip-welcome',
@@ -119,12 +95,12 @@ function launchVscode({ binary, scene, workspace, userDataDir, port, headed, ver
     '--disable-updates',
     '--new-window',
     // The cached build's chrome-sandbox is not setuid, so the namespace
-    // sandbox is unavailable; without the GL flags the GPU process fails to
-    // bind a command buffer under Xvfb and every WebGL context creation
-    // throws ("BindToCurrentSequence failed") — the canvas then stays at its
-    // unsized 300x150 default and nothing paints.
+    // sandbox is unavailable.
     '--no-sandbox',
     '--disable-gpu-sandbox',
+    // Without the GL flags the GPU process under Xvfb cannot bind a command
+    // buffer, every WebGL context throws ("BindToCurrentSequence failed"), and
+    // the canvas stays at its unsized 300x150 default.
     ...SWIFTSHADER_GL_ARGS,
     `--user-data-dir=${userDataDir}`,
     `--remote-debugging-port=${port}`,
@@ -134,9 +110,9 @@ function launchVscode({ binary, scene, workspace, userDataDir, port, headed, ver
 
   const useXvfb = !headed;
   const command = useXvfb ? 'xvfb-run' : binary;
-  // 24-bit depth is required for GL; the geometry also sizes the VS Code
-  // window and therefore every screenshot. `--server-args=` is ONE argv
-  // element — no shell is involved, so the spaces inside it are safe.
+  // GL needs 24-bit depth. The geometry also sizes the VS Code window and every
+  // screenshot. `--server-args=` is one argv element with no shell, so its
+  // spaces are safe.
   const args = useXvfb
     ? ['-a', '--server-args=-screen 0 1920x1080x24', binary, ...codeArgs]
     : codeArgs;
@@ -162,20 +138,21 @@ function launchVscode({ binary, scene, workspace, userDataDir, port, headed, ver
 }
 
 /**
- * Tears down the launch. SIGKILL rather than SIGTERM: the Electron main
- * process catches SIGTERM and shuts down slowly under Xvfb, leaving orphaned
- * renderers and an Xvfb server behind. The negative pid targets the whole
- * process group (xvfb-run's shell, its Xvfb, the dev-host and its helpers);
- * the pkill sweep catches any helper that got re-parented out of the group,
- * matched on the absolute user-data-dir so a concurrent run in a sibling
- * worktree — or the developer's own VS Code — is never touched.
+ * Tears down the launch. SIGKILL, not SIGTERM: the Electron main process
+ * catches SIGTERM and shuts down slowly under Xvfb, leaving orphaned renderers
+ * and an Xvfb server behind.
  */
 async function stopVscode(child, userDataDir) {
   try {
+    // The negative pid targets the whole process group: xvfb-run's shell, its
+    // Xvfb, the dev host and its helpers.
     if (child.pid) process.kill(-child.pid, 'SIGKILL');
   } catch {
     /* already gone */
   }
+  // Catches a helper re-parented out of the group. It matches the absolute
+  // user-data dir, so a run in a sibling worktree, or the developer's own
+  // VS Code, is never touched.
   try {
     execSync(`pkill -9 -f -- ${userDataDir}`, { stdio: 'ignore' });
   } catch {
@@ -183,10 +160,6 @@ async function stopVscode(child, userDataDir) {
   }
   await sleep(500);
 }
-
-// ============================================================================
-// CDP attach
-// ============================================================================
 
 async function waitForCdp(port, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
@@ -221,20 +194,11 @@ async function findWorkbenchPage(browser, timeoutMs) {
   throw new Error('No workbench page appeared over CDP');
 }
 
-// ============================================================================
-// Origin attribution
-// ============================================================================
-
 /**
  * Whether a URL belongs to the preview webview rather than the workbench.
- *
- * Webview content is served to a `vscode-webview://` document from VS Code's
- * local resource origin (`<scheme>+<authority>.vscode-resource.vscode-cdn.net`,
- * intercepted by a service worker — despite the hostname, no network is
- * involved). The workbench itself lives on `vscode-file://` and talks to
- * `main.vscode-cdn.net` and the marketplace during startup, so a page-wide
- * count of console errors or failed requests is never zero and cannot be
- * asserted on.
+ * Webview content comes from VS Code's local resource origin
+ * (`<scheme>+<authority>.vscode-resource.vscode-cdn.net`), which a service
+ * worker intercepts, so despite the hostname no network is involved.
  */
 export function isWebviewUrl(url) {
   if (!url) return false;
@@ -259,10 +223,6 @@ export function isOfflineWebviewOrigin(key) {
     ['data', 'blob', 'file', 'vscode-webview', 'vscode-file'].includes(key)
   );
 }
-
-// ============================================================================
-// Opening the preview
-// ============================================================================
 
 /**
  * Runs a command-palette command by its visible label.
@@ -292,15 +252,10 @@ async function palette(page, label) {
 }
 
 /**
- * Clicks the editor-title "Open Preview to the Side" action the extension
- * contributes for `.tscn` files, falling back to the command palette. Either
- * way the preview is opened by the extension's own contributed command, so the
- * webview and its CSP are the production ones.
- *
- * The title-bar button is preferred because it is a real mouse event on a
- * visible element: the command palette is a quick-input widget that VS Code
- * dismisses when the window loses focus, and a window under a bare Xvfb (no
- * window manager) does not reliably have focus.
+ * Opens the preview through the extension's own command, so the webview and
+ * its CSP are the production ones. The editor-title button comes first: it is
+ * a real click, while VS Code closes the palette when the window loses focus,
+ * and a window under a bare Xvfb has no reliable focus.
  */
 async function openPreview(page) {
   const titleAction = page.locator('[aria-label*="Open Preview to the Side"]').first();
@@ -317,13 +272,10 @@ async function openPreview(page) {
 }
 
 /**
- * Finds the preview's webview frame.
- *
- * VS Code nests webviews two deep — a `vscode-webview://<uuid>/index.html`
- * host frame inside the workbench, and the extension's own content in an
- * `about:blank`-ish child of THAT. Both report a `vscode-webview://` origin,
- * so identify the extension's frame by its DOM (`#r3f-root`) rather than by
- * URL. Frames whose evaluate throws are detached or still navigating.
+ * Finds the preview's webview frame. VS Code nests the extension's content in a
+ * child of a `vscode-webview://<uuid>/index.html` host frame. Both report a
+ * `vscode-webview://` origin, so the DOM (`#r3f-root`) identifies it. A frame
+ * whose evaluate throws is detached or still navigating.
  */
 async function findWebviewFrame(page, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
@@ -340,10 +292,9 @@ async function findWebviewFrame(page, timeoutMs) {
 }
 
 /**
- * Waits for a WebGL canvas that has actually been sized. An unsized 300x150
- * canvas means either the React tree has not laid out yet, or WebGL context
- * creation failed — in both cases anything read back would be a false
- * negative.
+ * Waits for a sized WebGL canvas. An unsized 300x150 canvas means the React
+ * tree has not laid out or WebGL context creation failed, and either way a
+ * readback would be a false negative.
  */
 async function waitForSizedCanvas(frame, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
@@ -379,15 +330,10 @@ function readCanvasDataUrl(frame) {
 }
 
 /**
- * Waits until two consecutive canvas readbacks are byte-identical.
- *
- * This is the settle signal a fixed sleep only approximates: resources arrive
- * over the host message channel and the atlas decodes asynchronously, so a read
- * taken too early sees a canvas that has been sized but not yet painted — which
- * scores zero ink and looks exactly like "nothing rendered". Mirrors the
- * two-identical-captures rule the golden-image harness uses.
- *
- * Returns the last data URL and whether it stabilized inside the deadline.
+ * Waits until two consecutive readbacks are byte-identical, as the golden
+ * harness does. Resources arrive over the host channel and the atlas decodes
+ * asynchronously, so an early read sees a sized, unpainted canvas with zero
+ * ink. Returns the last data URL and whether it stabilised in time.
  */
 async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
   const deadline = Date.now() + timeoutMs;
@@ -402,10 +348,6 @@ async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
   }
   return { dataUrl: current, stable: false };
 }
-
-// ============================================================================
-// Drive
-// ============================================================================
 
 /**
  * @typedef {object} DriveSceneOptions
@@ -433,7 +375,12 @@ async function stabilizeCanvas(frame, { timeoutMs, intervalMs }) {
  * @property {(message: string) => void} [log] progress sink
  */
 
-/** @param {DriveSceneOptions} options */
+/**
+ * Launches the build `@vscode/test-electron` downloads, opens the preview and
+ * counts the ink in its webview frame. The extension-host suite cannot see
+ * into the sandboxed webview, so it proves the handshake but never a paint.
+ * @param {DriveSceneOptions} options
+ */
 export async function driveScene(options) {
   const {
     scene,
@@ -522,14 +469,12 @@ export async function driveScene(options) {
     await sleep(3000);
 
     // Injected before the webview iframe exists, so it lands in that frame too.
-    // CDP injection is not subject to the page's CSP, which is what lets us
-    // instrument a webview whose CSP is `default-src 'none'`.
-    //   1. `preserveDrawingBuffer` — three.js does not set it, so a WebGL
-    //      canvas reads back BLANK from outside the app's own render call.
-    //      Forcing it on only preserves what was drawn; it cannot create ink.
-    //   2. a `securitypolicyviolation` listener, because a blocked resource
-    //      does not always reach the console channel CDP exposes.
+    // CDP injection is exempt from the page's CSP, so it instruments a webview
+    // whose CSP is `default-src 'none'` with no test-only branch in the app.
     await page.addInitScript((patchBuffer) => {
+      // three.js does not set `preserveDrawingBuffer`, so a WebGL canvas reads
+      // back blank outside the app's own render call. Forcing it on only
+      // preserves what was drawn: it cannot create ink.
       if (patchBuffer) {
         const original = HTMLCanvasElement.prototype.getContext;
         HTMLCanvasElement.prototype.getContext = function patched(type, attributes) {
@@ -542,6 +487,7 @@ export async function driveScene(options) {
           return original.call(this, type, attributes);
         };
       }
+      // A blocked resource does not always reach the console channel CDP exposes.
       globalThis.__textsceneCspViolations = [];
       addEventListener('securitypolicyviolation', (event) => {
         globalThis.__textsceneCspViolations.push({
@@ -557,9 +503,9 @@ export async function driveScene(options) {
     report.preserveDrawingBuffer = preserveBuffer;
 
     if (prepareLayout) {
-      // The Chat/Copilot auxiliary bar is open on a fresh profile and steals ~300px
-      // from the editor area. A toggle is only deterministic because the profile
-      // IS fresh — it is visible on every first launch.
+      // The Chat/Copilot auxiliary bar is open on a fresh profile and takes
+      // ~300px from the editor area. The toggle is deterministic only because
+      // the profile is fresh.
       await palette(page, 'View: Toggle Secondary Side Bar Visibility');
     }
 
@@ -589,7 +535,7 @@ export async function driveScene(options) {
     report.sizedCanvas = true;
 
     if (prepareLayout && !split) {
-      // Drop the raw .tscn editor so the webview fills the editor area — a
+      // Drop the raw .tscn editor so the webview fills the editor area: a
       // half-width canvas makes small text unreadable in the screenshot.
       await palette(page, 'View: Close Editors in Other Groups');
       await waitForSizedCanvas(frame, 20_000);
@@ -600,20 +546,18 @@ export async function driveScene(options) {
       await palette(page, 'Notifications: Clear All Notifications');
     }
 
-    // --- settle -------------------------------------------------------------
     if (preserveBuffer) {
       const settled = await stabilizeCanvas(frame, { timeoutMs: 60_000, intervalMs: 500 });
       report.canvasStable = settled.stable;
       emit(`canvas ${settled.stable ? 'stabilized' : 'NEVER stabilized'}`);
     } else {
-      // Without the readback patch there is nothing to compare consecutive
-      // reads of — every one comes back blank.
+      // Without the readback patch every read comes back blank, so there is
+      // nothing to compare.
       report.canvasStable = null;
     }
     if (settle > 0) await sleep(settle);
     const dataUrl = await readCanvasDataUrl(frame);
 
-    // --- in-frame evaluation ------------------------------------------------
     report.frameProbe = await frame.evaluate(() => {
       const canvases = [...document.querySelectorAll('canvas')].map((canvas) => ({
         width: canvas.width,
@@ -630,8 +574,8 @@ export async function driveScene(options) {
         cspViolations: globalThis.__textsceneCspViolations ?? [],
       };
     });
-    // The in-frame listener runs INSIDE the preview document, so anything it
-    // caught is a violation of the preview's own CSP by definition.
+    // The in-frame listener runs inside the preview document, so anything it
+    // caught violates the preview's own CSP.
     report.cspViolations.push(
       ...(report.frameProbe.cspViolations ?? []).map((entry) => ({ ...entry, origin: 'webview' }))
     );
@@ -644,7 +588,6 @@ export async function driveScene(options) {
       report.canvasReadback = { error: dataUrl ?? 'no canvas' };
     }
 
-    // --- screenshots --------------------------------------------------------
     if (screenshots) {
       const workbenchShot = await page.screenshot();
       writeFileSync(path.join(outDir, 'workbench.png'), workbenchShot);
@@ -656,7 +599,6 @@ export async function driveScene(options) {
       report.webviewScreenshot = inkStats(webviewShot);
     }
 
-    // --- optional user evaluation ------------------------------------------
     if (evalFile) {
       const source = await import(path.resolve(evalFile));
       report.evalResult = await frame.evaluate(source.default);
@@ -685,9 +627,9 @@ export async function driveScene(options) {
 }
 
 /**
- * The preview-scoped slice of a report — everything the workbench itself
- * contributes (marketplace lookups, built-in extension warnings, its own CDN)
- * is filtered out, so these counts are the ones a gate can require to be zero.
+ * The preview-scoped slice of a report. The workbench on `vscode-file://`
+ * contributes marketplace lookups, built-in extension warnings and its own CDN
+ * at startup, so only these filtered counts can be required to be zero.
  */
 export function summarizeWebview(report) {
   return {

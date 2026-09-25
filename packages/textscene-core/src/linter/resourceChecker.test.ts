@@ -1,7 +1,6 @@
 /**
- * Tests for resourceChecker utility: resolving a well-formed reference against
- * the resources a scene declares. The degenerate references — malformed text,
- * and one id living in both tables — are the sibling
+ * Resolving a well-formed reference against the resources a scene declares.
+ * Malformed text and one id in both tables are in
  * `resourceChecker.edgeCases.test.ts`.
  */
 

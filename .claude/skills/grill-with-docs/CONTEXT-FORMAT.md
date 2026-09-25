@@ -1,4 +1,4 @@
-# CONTEXT.md Format
+# CONTEXT.md format
 
 ## Structure
 
@@ -24,16 +24,16 @@ _Avoid_: Client, buyer, account
 
 ## Rules
 
-- **Be opinionated.** When multiple words exist for the same concept, pick the best one and list the others under `_Avoid_`.
-- **Keep definitions tight.** One or two sentences max. Define what it IS, not what it does.
-- **Only include terms specific to this project's context.** General programming concepts (timeouts, error types, utility patterns) don't belong even if the project uses them extensively. Before adding a term, ask: is this a concept unique to this context, or a general programming concept? Only the former belongs.
-- **Group terms under subheadings** when natural clusters emerge. If all terms belong to a single cohesive area, a flat list is fine.
+- **Choose one word.** When several words exist for one concept, pick the best one and list the others under `_Avoid_`.
+- **Keep definitions tight.** One or two sentences. Define what the term is, not what it does.
+- **Include only terms specific to this project.** A general programming concept (timeouts, error types, utility patterns) does not belong, even if the project uses it a lot.
+- **Group terms under subheadings** when natural clusters appear. A flat list is correct for one cohesive area.
 
-## Single vs multi-context repos
+## Single and multiple contexts
 
-**Single context (most repos):** One `CONTEXT.md` at the repo root.
+**Single context (most repos):** one `CONTEXT.md` at the repo root.
 
-**Multiple contexts:** A `CONTEXT-MAP.md` at the repo root lists the contexts, where they live, and how they relate to each other:
+**Multiple contexts:** a `CONTEXT-MAP.md` at the repo root lists the contexts, where they live and how they relate:
 
 ```md
 # Context Map
@@ -51,10 +51,10 @@ _Avoid_: Client, buyer, account
 - **Ordering ↔ Billing**: Shared types for `CustomerId` and `Money`
 ```
 
-The skill infers which structure applies:
+To find the structure:
 
-- If `CONTEXT-MAP.md` exists, read it to find contexts
-- If only a root `CONTEXT.md` exists, single context
-- If neither exists, create a root `CONTEXT.md` lazily when the first term is resolved
+- If `CONTEXT-MAP.md` exists, read it to find the contexts.
+- If only a root `CONTEXT.md` exists, there is one context.
+- If neither exists, create a root `CONTEXT.md` when the first term is resolved.
 
-When multiple contexts exist, infer which one the current topic relates to. If unclear, ask.
+With multiple contexts, find the one the current topic belongs to. If it is unclear, ask.

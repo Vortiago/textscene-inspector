@@ -22,7 +22,7 @@ import { stripScripts } from './stripScripts.mjs';
 export const TARGET = join(REPO_ROOT, 'scenes/ld58');
 const DEFAULT_URL = 'https://github.com/Vortiago/ld-58.git';
 
-/** Parse `--flag value` out of argv (undefined if absent). */
+/** The value of `--flag` in argv, or undefined. */
 function argValue(argv, flag) {
   const i = argv.indexOf(flag);
   return i >= 0 ? argv[i + 1] : undefined;
@@ -53,8 +53,8 @@ export function vendorLd58() {
       console.log('done');
     }
   } catch {
-    // Only source ACQUISITION gets the friendly no-stack message — a fetch
-    // failure is a network/remote problem, not a bug in this script.
+    // Only acquisition gets the message without a stack: a fetch failure is a network or remote
+    // problem, not a bug here.
     console.error(
       `\n[vendor-ld58] Could not obtain the ld-58 source` +
         (srcArg ? ` from ${srcArg}.` : ` from ${url} (ref ${ref}).`) +
@@ -67,8 +67,7 @@ export function vendorLd58() {
     return;
   }
 
-  // Past this point the source WAS obtained — a failure is a real bug and
-  // must surface with its actual error, not the access message above.
+  // The source is here, so a failure is a real bug and surfaces with its own error.
   try {
     rmSync(TARGET, { recursive: true, force: true });
     mkdirSync(TARGET, { recursive: true });

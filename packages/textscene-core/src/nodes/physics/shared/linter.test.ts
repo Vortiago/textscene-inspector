@@ -1,11 +1,8 @@
 /**
- * Tests for the shared CollisionObject3D non-uniform-scale rule
- * (`collisionobject3d-non-uniform-scale`), collision_object_3d.cpp:744.
- *
- * Driven through `Linter`, which registers nothing of its own and does not
- * consult `nodeRegistry` to parse (`StrictTscnParser` is type-agnostic), so
- * importing only this rule is enough to isolate it from sibling slices being
- * written concurrently.
+ * The shared CollisionObject3D non-uniform-scale rule
+ * (`collisionobject3d-non-uniform-scale`, collision_object_3d.cpp:744). `Linter`
+ * registers nothing and `StrictTscnParser` is type-agnostic, so importing only
+ * this rule isolates it from sibling slices.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -51,10 +48,9 @@ describe('CollisionObject3D non-uniform-scale rule', () => {
     expect(warningsOf(linter.lint(content))).toEqual([]);
   });
 
-  // Every concrete CollisionObject3D descendant this repo registers —
-  // collision_object_3d.cpp:744 reaches all of them via virtual dispatch, and
-  // this is the reach assertion: a family missing here is a family the rule
-  // silently never runs on.
+  // Every concrete CollisionObject3D descendant this repo registers:
+  // collision_object_3d.cpp:744 reaches all of them through virtual dispatch,
+  // so a family missing here is one the rule never runs on.
   const reachedTypes = [
     'Area3D',
     'StaticBody3D',

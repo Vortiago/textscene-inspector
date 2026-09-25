@@ -1,19 +1,11 @@
 /**
- * Godot's tonemapping curves, ported for three's `CustomToneMapping` hook.
- *
- * three ships Reinhard / Cineon / ACESFilmic / AgX, and none of them is the
- * curve Godot draws with. Measured against a real Godot render of the same
- * fixture (`scripts/godot-ref`), mapping Godot's FILMIC onto three's Cineon
- * left every lit surface at ~0.87 of Godot's value — a flat 13% too dark,
- * consistent across luminances, which is the signature of a wrong curve rather
- * than wrong lighting.
- *
- * The reason is structural: Godot scales its input by an `exposure_bias` and
- * then divides the result by the curve evaluated at `tonemap_white`, so the
- * mapping is normalised to put white at 1.0. FILMIC's bias of 2.0 alone
- * brightens by ~1.73x.
- *
- * ---------------------------------------------------------------------------
+ * Godot's tonemapping curves, ported for three's `CustomToneMapping` hook. No three
+ * curve is Godot's: Godot scales input by an `exposure_bias` and divides by the curve
+ * at `tonemap_white`, so white maps to 1.0. FILMIC's bias of 2.0 alone brightens by
+ * 1.73x, and three's Cineon in its place measures a flat 13% dark against Godot.
+ */
+
+/*
  * The curves are derived from Godot Engine (`drivers/gles3/shaders/
  * tonemap_inc.glsl`), used under the MIT licence:
  *
@@ -21,7 +13,6 @@
  *   Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  *
  * See THIRD-PARTY-NOTICES.md for the full notice.
- * ---------------------------------------------------------------------------
  */
 
 import { glslFloat } from './glslLiterals';
@@ -36,7 +27,7 @@ export const GodotToneMapper = {
   AGX: 4,
 } as const;
 
-/** `exposure_bias` per curve — Godot bakes these into the shader constants. */
+/** `exposure_bias` per curve. Godot bakes these into the shader constants. */
 const FILMIC_EXPOSURE_BIAS = 2.0;
 const ACES_EXPOSURE_BIAS = 1.8;
 
@@ -52,9 +43,9 @@ function filmic(x: number): number {
 }
 
 /**
- * ACES for a neutral grey. Both of Godot's colour matrices have rows summing to
- * 1, so a grey passes through them as a plain scale by the exposure bias — all
- * the normalisation constant needs.
+ * ACES for a neutral grey, which is all the normalisation constant needs. Both of
+ * Godot's colour matrices have rows summing to 1, so a grey passes through them as a
+ * plain scale by the exposure bias.
  */
 function acesGrey(x: number): number {
   const A = 0.0245786;
@@ -67,29 +58,20 @@ function acesGrey(x: number): number {
 }
 
 /**
- * Godot's `environment_get_white` — the authored white after the per-curve
- * FLOOR the engine applies before anything reads it
- * (`servers/rendering/storage/environment_storage.cpp`). Godot's own reason:
- * "Glow with screen blend mode does not work when white < 1.0, so make sure it
- * is at least 1.0 for all tonemappers".
- *
- *   LINEAR         → 1.0 (`output_max_value`; the authored value is ignored)
- *   FILMIC / ACES  → max(1, white)
- *   AGX            → max(2, white), on the desktop/Forward+ path this previewer
- *                    mirrors (the 10-bit Mobile path pins it to a flat 2.0)
- *   REINHARDT      → max(1, white)
- *
- * Everything downstream of the authored property goes through here, so the
- * curve's normalisation and SCREEN's glow clamp cannot disagree about which
- * white they are anchored to — Godot hands both the same
- * `environment_get_white` result.
+ * Godot's `environment_get_white` (`servers/rendering/storage/environment_storage.cpp`):
+ * the authored white after a per-curve floor, because "Glow with screen blend mode does
+ * not work when white < 1.0". The curve's normalisation and SCREEN's glow clamp both
+ * read this, as Godot hands both the same result.
  */
 export function resolvedWhite(mode: number, white: number): number {
   switch (mode) {
+    // The desktop and Forward+ floor. The 10-bit Mobile path pins a flat 2.0.
     case GodotToneMapper.AGX:
       return Math.max(2, white);
+    // `output_max_value`: LINEAR ignores the authored value.
     case GodotToneMapper.LINEAR:
       return 1;
+    // FILMIC, ACES and REINHARDT.
     default:
       return Math.max(1, white);
   }
@@ -97,14 +79,9 @@ export function resolvedWhite(mode: number, white: number): number {
 
 /**
  * The `tonemapper_params.x` Godot computes on the CPU from the resolved white
- * (`environment_get_tonemap_parameters`). Reinhard wants white squared;
- * FILMIC/ACES want the curve at white, which is what normalises the output so
- * white maps to 1.0.
- *
- * AgX is different: white is not a normalisation divisor but the shoulder's
- * high-clip point — the input the curve is shaped to just reach `output_max`.
- * The AgX GLSL reads it as `godotToneMapWhite` and derives the remaining curve
- * parameters from it, exactly as Godot's CPU code does.
+ * (`environment_get_tonemap_parameters`): white squared for Reinhard, and the curve at
+ * white for FILMIC and ACES, so white maps to 1.0. For AgX it is the high-clip point,
+ * where the curve reaches `output_max`, and the AgX GLSL derives its other parameters from it.
  */
 export function toneMappingWhiteParam(mode: number, white: number): number {
   const resolved = resolvedWhite(mode, white);
@@ -125,7 +102,7 @@ export function toneMappingWhiteParam(mode: number, white: number): number {
 /**
  * The GLSL body for `CustomToneMapping`, per mode. three calls this after its
  * own `toneMappingExposure` is in scope but does NOT apply it for the custom
- * hook, so each curve multiplies it in first — which is also where Godot puts
+ * hook, so each curve multiplies it in first, which is also where Godot puts
  * `tonemap_exposure`.
  */
 export function toneMappingShaderChunk(
@@ -145,17 +122,10 @@ ${body}
 }
 
 /**
- * The same curve, packaged for a full-screen post-process instead of the
- * per-material `CustomToneMapping` hook. When glow is enabled the render layer
- * cannot let three tonemap in-material (bloom must read pre-tonemap HDR), so
- * tonemapping moves to a final pass that runs after bloom — this is its GLSL.
- *
- * Emits a `godotToneMap(vec3, float exposure)` function with the white
- * normalisation baked in, exactly as `toneMapping.ts` bakes it into the chunk.
- * Total across every mode, LINEAR included: LINEAR is not "no curve" but the
- * curve that applies exposure and nothing else, and saying so here keeps all five
- * bodies in one place rather than leaving consumers to supply the fifth. AGX is a
- * real curve on both paths, so it returns GLSL like the others.
+ * The same curve as the final pass after bloom, since bloom reads pre-tonemap HDR and
+ * three cannot tonemap in-material then. It bakes the white in, as `toneMapping.ts`
+ * does. Every mode gets a body: LINEAR is the curve that applies exposure and nothing
+ * else, so no consumer supplies a fifth.
  */
 export function toneMappingEffectGlsl(
   mode: number,
@@ -221,22 +191,10 @@ const CURVES: Record<number, CurveBody> = {
   tonemapped *= odt_to_rgb;
   return tonemapped / godotToneMapWhite;`,
 
-  // EaryChow's AgX, as shipped in Godot 4.6.3 — `tonemap_agx` and the
-  // `allenwp_curve` sigmoid from `tonemap.glsl`. Unlike three's AgX (a
-  // different approximation, with a log2 EV encoding and a 6th-order polynomial)
-  // this runs directly on linear light: a rec709→rec2020+inset matrix, a
-  // piecewise Reinhard-shoulder / power-toe curve about middle grey, a clamp,
-  // then an outset+rec2020→rec709 matrix. Its harder toe is what crushes an
-  // ambient-lit surface inside a cast shadow toward black, where three's leaves
-  // it dim-but-lit.
-  //
-  // The four curve parameters are `environment_get_tonemap_parameters`'s AgX
-  // branch, computed here from `godotToneMapWhite` (Godot's `high_clip`, i.e.
-  // `max(2, white)`) and `awp_contrast` (the Environment's
-  // `tonemap_agx_contrast`, default 1.25). Godot fills these on the CPU into a
-  // push constant; recomputing them in-shader from the two injected constants is
-  // the same arithmetic and keeps AgX on the same bake-a-literal seam as the
-  // curves above.
+  // EaryChow's AgX from Godot 4.6.3's `tonemap.glsl` (`tonemap_agx`, `allenwp_curve`),
+  // on linear light, unlike three's log2 approximation. Its harder toe crushes a shadowed
+  // ambient-lit surface toward black. The parameters repeat Godot's CPU arithmetic
+  // (`environment_get_tonemap_parameters`) in-shader, so AgX keeps the bake-a-literal seam.
   [GodotToneMapper.AGX]: (agxContrast) => /* glsl */ `
   color = max(color, vec3(0.0));
 
@@ -283,9 +241,9 @@ const CURVES: Record<number, CurveBody> = {
 };
 
 /**
- * Whether this previewer draws `mode` with Godot's own curve. LINEAR is
- * "no tone mapping" and needs no curve; every other mode — REINHARDT, FILMIC,
- * ACES and AGX — is ported from Godot's shader.
+ * Whether this previewer draws `mode` with Godot's own curve. LINEAR is "no tone
+ * mapping" and needs no curve. REINHARDT, FILMIC, ACES and AGX are ported from
+ * Godot's shader.
  */
 export function hasGodotCurve(mode: number): boolean {
   return mode in CURVES;

@@ -1,12 +1,6 @@
-; The ONE variable: whether a ParallaxBackground hosts the canvas its Control
-; children draw on. `ParallaxBackground` derives from `CanvasLayer`
-; (parallax_background.h:34) and defaults its `layer` to -100, so the red rect
-; below belongs to a canvas UNDER the world's and the blue world polygon covers
-; it. A Control walk that hoists past the ParallaxBackground puts the red rect
-; on the world canvas instead, where its canvas-root rank is after the polygon
-; and it covers the polygon instead. The two rects overlap for exactly that
-; reason; unit-parallax-background.tscn carries no Control at all, so it cannot
-; see this.
+; The one variable: whether a ParallaxBackground hosts its Control children's canvas. It derives from
+; CanvasLayer (parallax_background.h:34) at layer -100, so the blue world polygon covers the red rect.
+; A walk that hoists past it puts red on top. unit-parallax-background.tscn has no Control.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitctrlinparallax"]
 

@@ -1,9 +1,7 @@
 /**
- * AnimationTree type definitions.
- *
- * Property surface mirrors linterParser.ts validators.
- * AnimationTree coordinates an AnimationPlayer and a tree-root resource
- * (AnimationNodeBlendTree / AnimationNodeStateMachine) for blended playback.
+ * AnimationTree type definitions. The property surface mirrors the linterParser.ts validators.
+ * An AnimationTree coordinates an AnimationPlayer and a tree-root resource
+ * (AnimationNodeBlendTree or AnimationNodeStateMachine) for blended playback.
  */
 
 import type { NodeProperties } from '../../node/types';
@@ -33,8 +31,8 @@ export interface AnimationTreeProperties extends NodeProperties {
   tree_root?: string;
 
   /**
-   * Authored blend-tree / state-machine state, keyed WITHOUT the `parameters/`
-   * prefix (e.g. `gun/blend_amount` → `0.0`). A static previewer has no game
+   * Authored blend-tree or state-machine state, keyed without the `parameters/`
+   * prefix (for example `gun/blend_amount` → `0.0`). A static previewer has no game
    * script driving these, so the tree evaluates against this saved state.
    */
   parameters: Record<string, string>;
@@ -54,7 +52,7 @@ export interface AnimationTreeProperties extends NodeProperties {
   /** Callback mode for methods (default: DEFERRED). */
   callback_mode_method: CallbackModeMethod;
 
-  /** Callback mode for discrete transitions (default: DOMINANT). */
+  /** Callback mode for discrete transitions (default: FORCE_CONTINUOUS, AnimationTree's override). */
   callback_mode_discrete: CallbackModeDiscrete;
 
   /** NodePath track used for root motion extraction (empty = disabled). */
@@ -69,7 +67,7 @@ export interface AnimationTreeProperties extends NodeProperties {
   /** NodePath to the node the tree roots from (default: NodePath("..")). */
   root_node: string;
 
-  /** Whether timing is deterministic (default: false). */
+  /** Whether timing is deterministic (default: true, AnimationTree's override). */
   deterministic: boolean;
 
   /** Reset the tree to the bind pose on save (default: true). */

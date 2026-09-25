@@ -1,4 +1,4 @@
-/** ScrollContainer registration — parser. */
+/** Registers the ScrollContainer parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseScrollContainer } from './parser';

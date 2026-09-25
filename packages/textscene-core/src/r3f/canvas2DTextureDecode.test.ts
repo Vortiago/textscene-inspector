@@ -1,12 +1,7 @@
 /**
- * canvas2DTextureDecode: the 2D-canvas texture retag + its paired shader
- * define. `pinNoColorSpace` is the load-bearing line of the whole
- * colour-space fix — it exists only because `@react-three/fiber`'s own
- * `applyProps` silently rewrites a `map`-slot texture's `colorSpace` back to
- * `SRGBColorSpace` on commit (`colorMaps.includes(key)`, `events-*.js`),
- * defeating a plain assignment. These tests pin that mechanism against a
- * regression (an R3F version bump reordering or changing that branch), not
- * just the golden that first caught it.
+ * The 2D-canvas texture retag and its define. `pinNoColorSpace` exists because
+ * R3F's `applyProps` rewrites a `map`-slot texture's `colorSpace` to `SRGBColorSpace`
+ * on commit (`colorMaps.includes(key)`, `events-*.js`), so an R3F bump can break it.
  */
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';

@@ -1,5 +1,3 @@
-/**
- * parallax2d linter registration - imports linter components to trigger self-registration.
- */
+/** Imports the Parallax2D linter modules so they self-register. */
 
 import './linterParser.js';

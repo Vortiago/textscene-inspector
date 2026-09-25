@@ -1,22 +1,8 @@
 /**
- * `buttonMinimumSize` vs Godot 4.6.3
- * (`Button::get_minimum_size_for_text_and_icon`, `scene/gui/button.cpp:481-526`).
- * Expected numbers are hand-derived from the vendored OpenSans_SemiBold
- * metrics/atlas (same constants `label/nativeSolver.test.ts` cites:
- * `unitsPerEm=2048`, `ascent=2189`, `descent=600`; `hmtx` advance width for
- * 'A' is 1354 design units — `openSansMetrics.ts`'s CONTINUOUS
- * `advanceWidths`, not `openSansAtlas.ts`'s own atlas-bake-resolution-42
- * `xadvance`) and the default theme's Button margin (`content_margin` =
- * `round(4*scale)` = 4 at scale 1, all four sides — `nativeTheme.ts`'s
- * `buttonMargin`) — an independent worked example, never the implementation's
- * own output.
- *
- * At font size 16 a Button floors on `font->get_height()` = ascent + descent =
- * 23 (`ascentPx=ceil(2189*16/2048)=18`, `descentPx=ceil(600*16/2048)=5`), NOT
- * on a line pitch. `line_spacing` is Label's own theme constant; Button sets
- * none, so nothing separates lines it never stacks. Measured against real
- * Godot 4.6.3: a `content_margin` 6 button is 12 + 23 = 35.
- * 'A' advance at 16px = 1354*(16/2048) = 10.578125; 'AB' = (1354+1350)*(16/2048) = 21.125.
+ * `buttonMinimumSize` against Godot 4.6.3 (`scene/gui/button.cpp:481-526`), hand-derived from
+ * OpenSans SemiBold (unitsPerEm 2048, ascent 2189, descent 600, `openSansMetrics.ts` advances)
+ * and the default margin of 4 a side. At 16px a Button floors on the font height 18 + 5 = 23,
+ * not a line pitch, since it sets no `line_spacing`. Measured: a `content_margin` 6 button is 35.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -41,12 +27,9 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const minSize = buttonMinimumSize;
 
-// 'A's hmtx advance width is 1354 design units, 'B's is 1350 — a DIFFERENT
-// glyph, so 'AB's width is their SUM (the two only coincided at the OLD
-// atlas-bake-resolution-42 xadvance, where both rounded to the integer 28 —
-// a coincidence of that rounding, not a fact about the font).
+// 'A' advances 1354 design units and 'B' 1350, so at 16px 'A' is 10.578125 and 'AB' 21.125.
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
-// The SHAPED size of 'AB' — `TS->shaped_text_get_size(...).x` ceils the pen
+// The shaped size of 'AB': `TS->shaped_text_get_size(...).x` ceils the pen
 // advance to a whole pixel (`text_server_adv.cpp:7524-7537`), and every
 // minimum size below is built from that, not from the fractional sum.
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
@@ -63,8 +46,8 @@ function node(
     node: { name: 'B', type: 'Button', children: [], properties: { name: 'B', ...props } as ButtonProperties },
     styleBoxes,
     textureSize,
-    // A local theme_override_colors/* now reaches `resolveTextTheme` through
-    // `n.colors` (the walker folds it in unconditionally), not through props.
+    // A local theme_override_colors/* reaches `resolveTextTheme` through
+    // `n.colors`, which the walker folds in, not through props.
     colors: props.themeOverrideColors ?? {},
     constants: props.themeOverrideConstants ?? {},
   };
@@ -333,12 +316,9 @@ describe('buttonIconColor — icon_normal_color / icon_disabled_color (default_t
 });
 
 describe(`buttonMinimumSize — resolves this Button's own theme font key ("${BUTTON_THEME_FONT_KEY}", default_theme.cpp:152)`, () => {
-  // `peekSceneFontMetrics` (`sceneFontLoader.ts`) always answers the bundled
-  // default under this DOM-less test environment, so a resolved `FontMetrics`
-  // VALUE cannot be observed — but it warns unconditionally for an
-  // UNRESOLVABLE font (a SystemFont), which proves the lookup found
-  // something at all (`resolveNodeFontMetrics.test.ts`'s own doc has the
-  // full reasoning).
+  // Without a DOM, `peekSceneFontMetrics` always answers the bundled default, so a
+  // resolved value cannot be observed. It warns for an unresolvable font (a SystemFont),
+  // which proves the lookup found something.
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
@@ -363,25 +343,10 @@ describe(`buttonMinimumSize — resolves this Button's own theme font key ("${BU
 });
 
 /**
- * The whole-pixel shaped extent, end to end through `buttonMinimumSize`.
- *
- * `Button::get_minimum_size_for_text_and_icon` starts from
- * `paragraph->get_size()` (`button.cpp:492`), and `TextParagraph::get_size`
- * is a max over `TS->shaped_text_get_size(lines_rid[i])`
- * (`text_paragraph.cpp:601-608`), which returns `Size2(sd->width, ...).ceil()`
- * (`text_server_adv.cpp:7524-7537`) — so a Button's minimum width is the
- * CEILED text extent plus its whole-pixel StyleBox margins, never a
- * fractional pen advance.
- *
- * Godot 4.6.3, `scenes/fixtures/complex-2d-gui.tscn` in a 1152x648
- * SubViewport, `Control.get_combined_minimum_size()` per node:
- *
- *   Actions/Apply    "Apply"                min = (52, 31)
- *   Actions/Restore  "Restore defaults"     min = (135, 31)
- *   Actions/Back     "Back to bridge"       min = (119, 31)
- *
- * The buttons there carry no StyleBox override, so the default theme's
- * `content_margin` 4 (both sides, 8 total) is all that is added to the text.
+ * The minimum width is the ceiled text extent plus the margins: `paragraph->get_size()` (`button.cpp:492`)
+ * is a max over `shaped_text_get_size` (`text_paragraph.cpp:601-608`), which ceils (`text_server_adv.cpp:7524-7537`).
+ * Expected widths are `get_combined_minimum_size()` (height 31) in Godot 4.6.3 on
+ * `scenes/fixtures/complex-2d-gui.tscn` at 1152x648, whose buttons add only the default margin 4 a side.
  */
 describe('buttonMinimumSize — the shaped text extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
   it.each([
@@ -401,15 +366,10 @@ describe('buttonMinimumSize — the shaped text extent is ceiled (text_server_ad
 });
 
 /**
- * `autowrap_mode` / `autowrap_trim_flags` (`button.cpp:332,428-432,493,546-561`).
- *
- * `Button::_shape` maps the mode to the same break flags Label's does and ORs
- * `autowrap_flags_trim` on top (`:546-561`), and the draw path shapes the
- * paragraph at `Math::ceil(MAX(1.0f, drawable_size_remained.width))`
- * (`:428-432`). `get_minimum_size_for_text_and_icon` then drops the TEXT's own
- * width contribution entirely (`:493`, the same `is_clipped` trigger
- * `clip_text` and a trimming overrun behaviour already pull), because a
- * narrower box simply wraps instead of overflowing.
+ * `Button::_shape` ORs `autowrap_flags_trim` onto Label's break flags (`button.cpp:546-561`), and the
+ * draw path shapes at `Math::ceil(MAX(1.0f, drawable_size_remained.width))` (`:428-432`). The minimum
+ * size drops the text's width (`:493`), the `is_clipped` trigger (`button.cpp:332`) that `clip_text`
+ * and a trimming overrun share, since a narrower box wraps instead of overflowing.
  */
 describe('Button.autowrap_mode (button.cpp:493,546-561)', () => {
   const LONG = 'alpha bravo charlie delta';
@@ -464,8 +424,8 @@ describe('buttonLabelShape — the wrap width and trim flags reach the shaper (b
   });
 
   it('keeps the trailing edge space when autowrap_trim_flags clears it (label.h:45)', () => {
-    // BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES is 64 | 128;
-    // authoring 0 keeps both edges.
+    // BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES is 64 | 128.
+    // Authoring 0 keeps both edges.
     expect(rows({ text: 'alpha bravo', autowrapMode: 2, autowrapTrimFlags: 0 }, 50)).toEqual(['alpha ', 'bravo']);
   });
 });

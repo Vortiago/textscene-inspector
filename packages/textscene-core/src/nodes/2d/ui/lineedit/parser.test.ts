@@ -1,4 +1,4 @@
-/** LineEdit parser contract — Control base plus the text/placeholder/echo properties. */
+/** Tests the LineEdit parser: the Control base plus the text, placeholder and echo properties. */
 import { describe, it, expect } from 'vitest';
 import { parseLineEdit } from './parser';
 
@@ -61,8 +61,8 @@ describe('parseLineEdit', () => {
   });
 
   it('distinguishes an explicitly empty string from an absent one (error path)', () => {
-    // "" is authored intent — it must not read as "property not set", which is
-    // what decides whether the placeholder or the text branch wins.
+    // "" is authored intent, not an unset property: it decides whether the placeholder or the
+    // text branch wins.
     const result = parseLineEdit(heading, { text: '""' });
     expect(result.text).toBe('');
     expect(result.placeholderText).toBeUndefined();

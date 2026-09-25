@@ -1,18 +1,8 @@
 /**
- * `labelMinimumSize` vs Godot 4.6.3 (`scene/gui/label.cpp:973-998`, backed by
- * `_update_visible` at `:344-388` and `get_line_height` at `:111-136`).
- * Expected numbers are hand-derived from the vendored OpenSans_SemiBold
- * metrics (`unitsPerEm=2048`, `ascent=2189`, `descent=600`) and atlas advances
- * — an independent worked example, never the implementation's own output.
- *
- * At font size 16: ascentPx = ceil(2189*16/2048) = 18, descentPx =
- * ceil(600*16/2048) = 5, line_spacing = 3 (default_theme.cpp:392, scale 1) ->
- * linePitchPx = 26, fontHeightPx (no spacing) = 23.
- * Per-glyph `hmtx` advance width, design units (`openSansMetrics.ts`'s
- * `advanceWidths`, unitsPerEm 2048 — the CONTINUOUS source, not
- * `openSansAtlas.ts`'s own atlas-bake-resolution-42 `xadvance`, which is
- * itself INTEGER-rounded at that resolution before this repo's bake script
- * ever reads it back): 'A' = 1354.
+ * Tests `labelMinimumSize` against Godot 4.6.3 (`scene/gui/label.cpp:973-998`, `:344-388`, `:111-136`)
+ * with numbers derived by hand from OpenSans_SemiBold's `hmtx` advances (`openSansMetrics.ts`, not the
+ * atlas's rounded `xadvance`), never from the code. At size 16: ascent ceil(2189*16/2048) = 18, descent
+ * ceil(600*16/2048) = 5, line_spacing 3 (default_theme.cpp:392): pitch 26, font height 23.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { ControlProperties } from '../control/types';
@@ -73,15 +63,10 @@ function ctx(withMeasurer = true): SolveContext {
   };
 }
 
-// 'A's hmtx advance width is 1354 design units, 'B's is 1350 — a DIFFERENT
-// glyph, so 'AB's width is their SUM, not `A_ADVANCE * 2` (the two only
-// coincided at the OLD atlas-bake-resolution-42 xadvance, where both rounded
-// to the same integer 28 — a coincidence of that rounding, not a fact about
-// the font).
+// 'A' is 1354 design units and 'B' 1350, so 'AB' is their sum, not `A_ADVANCE * 2`.
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
-// The SHAPED size of 'AB' — `TS->shaped_text_get_size(...).x` ceils the pen
-// advance to a whole pixel (`text_server_adv.cpp:7524-7537`), and every
-// minimum size below is built from that, not from the fractional sum.
+// `TS->shaped_text_get_size(...).x` ceils the pen advance (`text_server_adv.cpp:7524-7537`), and every
+// minimum size below builds on that, not on the fractional sum.
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
 
 describe('labelMinimumSize (label.cpp:973-998)', () => {
@@ -99,7 +84,7 @@ describe('labelMinimumSize (label.cpp:973-998)', () => {
   it('autowrap OFF, explicit hard break: height sums per-line (asc+dsc+spacing) then drops ONE trailing spacing (label.cpp:379-387) — 2*26-3=49, not the naive 2*26=52', () => {
     const result = minSize(node({ text: 'A\nAB', autowrapMode: 0 }), ctx());
     expect(result.y).toBe(49);
-    // width floors to the WIDER of the two unwrapped lines ('AB'), not 'A'.
+    // width floors to the wider of the two unwrapped lines ('AB'), not 'A'.
     expect(result.x).toBeCloseTo(AB_SHAPED_WIDTH, 6);
   });
 
@@ -150,8 +135,7 @@ describe('labelMinimumSize (label.cpp:973-998)', () => {
   });
 
   it('uppercase transforms the text BEFORE measuring (label.cpp:154, read by get_minimum_size via _ensure_shaped) — uppercase glyphs are WIDER in this atlas', () => {
-    // Same source text, only `uppercase` differs — 'ab' -> lowercase glyphs
-    // (narrower), 'AB' -> uppercase glyphs (wider, this atlas's own advances).
+    // Only `uppercase` differs, and uppercase glyphs are wider in this atlas.
     const lower = minSize(node({ text: 'ab', autowrapMode: 0 }), ctx());
     const upper = minSize(node({ text: 'ab', uppercase: true, autowrapMode: 0 }), ctx());
     expect(upper.x).toBeCloseTo(AB_SHAPED_WIDTH, 6);
@@ -160,23 +144,15 @@ describe('labelMinimumSize (label.cpp:973-998)', () => {
 });
 
 /**
- * Godot 4.6.3, `scenes/fixtures/complex-2d-gui.tscn` in a 1152x648 SubViewport
- * after `scripts/godot-ref/run.mjs`'s own 6-frame settle, reading
- * `Control.get_combined_minimum_size()` per node:
- *
- *   Frame/Shell/LeftColumn/HeaderCard/HeaderRow/HeaderText/Subtitle
- *     rect = (0, 41, 640, 49)   min = (1, 49)
- *   Frame/Shell/RightColumn/StatusCard/StatusRow/StatusColumn/SquadNote
- *     rect = (0, 102, 282, 49)  min = (1, 49)
- *
- * Both are autowrapped Labels wrapping to TWO lines, and both report the
- * two-line height (2*26 - 3 = 49) as their minimum — NOT a one-line 23. The
- * expected numbers below are that engine reading, at the same font size 16.
+ * Godot 4.6.3 on `scenes/fixtures/complex-2d-gui.tscn` (1152x648 SubViewport, `scripts/godot-ref/run.mjs`'s
+ * 6-frame settle, `get_combined_minimum_size()`): the autowrapped Subtitle has rect (0, 41, 640, 49) and
+ * SquadNote (0, 102, 282, 49), each with minimum (1, 49). That is the two-line height 2*26 - 3, not a
+ * one-line 23, at font size 16.
  */
 describe('labelMinimumSize — autowrap ON reports the WRAPPED height once a prior pass has resolved its width', () => {
   const SUBTITLE = 'Changes apply to the active deployment only, and are discarded when the corridor closes.';
 
-  /** A `SolveContext` whose `tentativeRect` answers for every node — a completed prior pass. */
+  /** A `SolveContext` whose `tentativeRect` answers for every node, as after a completed pass. */
   function ctxAt(width: number): SolveContext {
     return { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: width, h: 0 }) };
   }
@@ -220,19 +196,10 @@ describe('labelMinimumSize — autowrap ON reports the WRAPPED height once a pri
 });
 
 /**
- * The whole point of the second pass, end to end: an autowrapped Label's
- * WRAPPED height has to reach the container that decided its width, or the
- * container believes a two-line Label fits in one line's worth of space and the
- * overflow is drawn outside it.
- *
- * The subtree is `complex-2d-gui.tscn`'s header card, cut to the two nodes that
- * carry the effect (Godot's own numbers for the full card are in the
- * `autowrap ON reports the WRAPPED height` block above):
- *
- *   PanelContainer  content margins 14/12/14/12  ->  min height 114
- *     VBoxContainer separation 2                 ->  min height  90
- *       Label  font_size 28, no wrap             ->  min height  39
- *       Label  autowrap WORD, box 640            ->  min height  49
+ * An autowrapped Label's wrapped height must reach the container that set its width, or the overflow
+ * draws outside it. `complex-2d-gui.tscn`'s header card, cut to two Labels: PanelContainer (margins
+ * 14/12/14/12) min height 114, VBoxContainer (separation 2) 90, unwrapped Label (font_size 28) 39,
+ * wrapped Label (autowrap WORD, box 640) 49.
  */
 describe('labelMinimumSize wired through the registry + full solve — the wrapped height reaches the container', () => {
   afterEach(() => {
@@ -250,11 +217,7 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
     controlSolverRegistry.registerContainerLayout('VBoxContainer', makeBoxContainerLayout(true));
   }
 
-  /**
-   * `PanelContainer > VBoxContainer > [unwrapped Label, wrapped Label]`, the
-   * shape both measured scenes reduce to. `margin`/`separation`/the two Labels
-   * are the only things that differ between them.
-   */
+  /** `PanelContainer > VBoxContainer > [unwrapped Label, wrapped Label]`, the shape both measured scenes reduce to. */
   function card(
     margin: number,
     separation: number,
@@ -276,8 +239,8 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
         properties: { name: 'Column', themeOverrideConstants: { separation } } as ControlProperties,
       },
       children: [label('Heading', heading), label('Body', body)],
-      // A local theme_override_constants/* now reaches `separationOf` through
-      // `n.constants` (the walker folds it in unconditionally), not props.
+      // A local theme_override_constants/* reaches `separationOf` through `n.constants`, which the
+      // walker fills unconditionally, not through props.
       constants: { separation },
     };
     return {
@@ -351,13 +314,9 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
   });
 
   /**
-   * `scenes/fixtures/unit-label-autowrap-in-container.tscn`, the single-variable
-   * scene for this. Godot 4.6.3, same 1152x648 SubViewport and 6-frame settle:
-   *
-   *   Card    rect (64, 64, 400, 130)  min (189, 130)
-   *   Column  rect (12, 12, 376, 106)  min (165, 106)
-   *   Heading rect (0, 0, 376, 23)     min (165, 23)   1 line
-   *   Body    rect (0, 31, 376, 75)    min (1, 75)     3 lines
+   * `scenes/fixtures/unit-label-autowrap-in-container.tscn` in Godot 4.6.3, same settle, as rect and min:
+   * Card (64, 64, 400, 130) and (189, 130). Column (12, 12, 376, 106) and (165, 106). Heading
+   * (0, 0, 376, 23) and (165, 23), one line. Body (0, 31, 376, 75) and (1, 75), three lines.
    */
   describe('unit-label-autowrap-in-container.tscn (margins 12, separation 8, three wrapped lines)', () => {
     const VIEWPORT: Rect2 = { x: 0, y: 0, w: 400, h: 130 };
@@ -491,12 +450,9 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
     expect(placements[2]!.y).toBeCloseTo(2 * (PITCH + vsep), 6);
   });
 
-  // `Label::get_layout_data` declares `int vbegin = 0, vsep = 0;` and assigns
-  // the floating-point alignment expressions into them, so both land on whole
-  // pixels with C++'s truncation-toward-zero. Expected rows below come from a
-  // Godot 4.6.3 render of a Label whose box is 100px tall around one 23px line
-  // of 16px text: its glyphs land on the SAME row as the identical Label in a
-  // 99px box, which only a truncated offset can produce.
+  // `get_layout_data` assigns into `int vbegin = 0, vsep = 0;`, so both truncate toward zero. A Godot
+  // 4.6.3 render puts one 23px line of 16px text in a 100px box on the same row as in a 99px box,
+  // which only a truncated offset produces.
   it('vertical CENTER (1) truncates a half-pixel offset: a 100px box and a 99px box around the same 23px line place their text on the SAME row (38, not 38.5)', () => {
     const layout = layoutFor('A'); // one line: contentHeight = 26 - 3 = 23
     const odd = layoutLabelLines(layout, 200, 99, undefined, 1);
@@ -544,53 +500,16 @@ describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_re
 });
 
 /**
- * `Label::_get_line_rect`'s x (`label.cpp:487-512`) measured in Godot 4.6.3
- * rather than derived. One Label per row, `text = "Wave rift"` at the default
- * font size 16, whose single shaped line is exactly 70.0 px wide; the box width
- * comes from the node's own offsets, and the origin is read back through the
- * public `Label.get_character_bounds(0).position.x`, which `label.cpp:935-936`
- * seeds from `_get_line_rect(p, i).position.x` with a zero glyph offset for the
- * first character.
- *
- * `theme_cache.normal_style` is Label's `StyleBoxEmpty` (`default_theme.cpp:379`),
- * so both `style->get_offset().x` and `style->get_margin(SIDE_RIGHT)` are 0 and
- * drop out of every branch below.
- *
- *   H_CENTER, `int(size.width - line_size.width) / 2`
- *     box 200    -> 65     box 202   -> 66     box 20    -> -25
- *     box 200.5  -> 65     box 203   -> 66     box 20.5  -> -24
- *     box 201    -> 65     box 204   -> 67     box 21    -> -24
- *     box 201.5  -> 65     box 260.25 -> 95    box 23    -> -23
- *
- *   H_RIGHT, `int(size.width - margin - line_size.width)`
- *     box 200    -> 130    box 202   -> 132    box 20    -> -50
- *     box 200.5  -> 130    box 203   -> 133    box 20.5  -> -49
- *     box 201    -> 131    box 260.25 -> 190   box 21.5  -> -48
- *     box 201.5  -> 131    box 260.75 -> 190   box 25    -> -45
- *
- * The negative rows come from `clip_text = true`, which drops Label's own
- * width floor to 1 (`label.cpp:997-998`) so the box can be narrower than its
- * unwrapped line — the only configuration in which `size.width -
- * line_size.width` goes negative, and the only one that separates a C++ `int`
- * conversion from a floor.
- *
- * Godot's H_CENTER rounds TWICE (an `int` conversion, then C++ integer
- * division). Measured, that is indistinguishable from one truncation of the
- * halved difference at every width above, including the odd ones — box 201
- * (difference 131) and box 21 (difference -49) both land where a single
- * `Math.trunc(d / 2)` does. The transcription below keeps both steps because
- * that is what the source writes, not because a case has been found where they
- * disagree.
+ * `Label::_get_line_rect`'s x (`label.cpp:487-512`) measured in Godot 4.6.3: "Wave rift" at size 16, one
+ * 70.0px line, read back through `get_character_bounds(0).position.x` (`label.cpp:935-936`). Label's
+ * `StyleBoxEmpty` (`default_theme.cpp:379`) zeroes offset and margin. A negative row needs `clip_text`,
+ * which drops the width floor to 1 (`label.cpp:997-998`), and only it separates an `int` from a floor.
  */
 describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-512)', () => {
   const FONT_SIZE = 16;
   const GODOT_LINE_WIDTH_PX = 70;
 
-  /**
-   * A one-line layout whose width is pinned to the engine's own measurement of
-   * `"Wave rift"`, so this compares the PLACEMENT formula against Godot's
-   * numbers and not the MSDF atlas's advances against FreeType's.
-   */
+  /** A one-line layout pinned to Godot's measured width of "Wave rift", so this tests the placement formula, not the atlas advances against FreeType's. */
   function lineOfWidth(widthPx: number) {
     const layout = shapeText('Wave rift', { fontSizePx: FONT_SIZE, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
     return { ...layout, lines: layout.lines.map((l) => ({ ...l, widthPx })), widthPx };
@@ -639,14 +558,9 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
   );
 
   /**
-   * `_shape` justifies with the same `int width` it broke lines at
-   * (`label.cpp:297,331`), while `_get_line_rect` aligns against the raw
-   * `get_size()` — two different widths, and both measured. Godot 4.6.3, a
-   * `HORIZONTAL_ALIGNMENT_FILL` Label wrapping at three box widths, walking
-   * `get_character_bounds` across the first line and taking the last
-   * character's right edge:
-   *
-   *   box 300.0 -> 300.0    box 300.7 -> 300.0    box 301.4 -> 301.0
+   * `_shape` justifies at the `int width` it broke lines at (`label.cpp:297,331`), while
+   * `_get_line_rect` aligns against the raw `get_size()`. Measured in Godot 4.6.3 as the first line's
+   * last right edge under `HORIZONTAL_ALIGNMENT_FILL`.
    */
   it.each([
     [300, 300],
@@ -666,8 +580,7 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
 });
 
 describe(`labelMinimumSize — resolves this Label's own theme font key ("${LABEL_THEME_FONT_KEY}", default_theme.cpp:381)`, () => {
-  // See `resolveNodeFontMetrics.test.ts`'s own doc for why an UNRESOLVABLE
-  // font's warn is the observable proof here, not a resolved FontMetrics value.
+  // An unresolvable font's warn is the observable proof here (`resolveNodeFontMetrics.test.ts`).
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
@@ -692,30 +605,10 @@ describe(`labelMinimumSize — resolves this Label's own theme font key ("${LABE
 });
 
 /**
- * The whole-pixel shaped extent, end to end through `labelMinimumSize`.
- *
- * `Label::_shape` folds `TS->shaped_text_get_size(line_rid).x` into
- * `minsize.width` (`label.cpp:252-257`), and that accessor returns
- * `Size2(sd->width, ...).ceil()` (`text_server_adv.cpp:7524-7537`) — so a
- * Label's own minimum width is a WHOLE number however fractional its pen
- * advances are. Godot 4.6.3, `scenes/fixtures/complex-2d-gui.tscn` in a
- * 1152x648 SubViewport, `Control.get_combined_minimum_size()` per node:
- *
- *   MasterLabel      "Master volume"     min.x = 116
- *   MusicLabel       "Music bed"         min.x = 79
- *   CallsignLabel    "Callsign"          min.x = 60
- *   SubtitlesLabel   "Comms"             min.x = 59
- *   DifficultyLabel  "Threat level"      min.x = 92
- *   Title            "FIELD OPERATIONS"  min.x = 257  (font_size 28)
- *
- * The same engine's `get_string_size` on those strings returns 116/79/60/59
- * while its own per-character advance sums are 115.875/78.453125/59.671875/
- * 58.234375 — the ceil, not the advances, is what makes them integers.
- *
- * These are the numbers a GridContainer's `Size2i` column bookkeeping
- * (`grid_container.cpp:290`) truncates: a minimum a fraction below the whole
- * pixel truncates a whole pixel DOWN, and every column past it opens one
- * pixel early.
+ * `Label::_shape` folds `TS->shaped_text_get_size(line_rid).x`, which is `Size2(sd->width, ...).ceil()`
+ * (`text_server_adv.cpp:7524-7537`), into `minsize.width` (`label.cpp:252-257`). Godot 4.6.3 on `complex-2d-gui.tscn`
+ * measures the whole values below from advance sums 115.875, 78.453125, 59.671875 and 58.234375. `Size2i` columns
+ * (`grid_container.cpp:290`) truncate them, so a minimum a fraction short opens each later column a pixel early.
  */
 describe('labelMinimumSize — the shaped extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
   it.each([
@@ -723,10 +616,8 @@ describe('labelMinimumSize — the shaped extent is ceiled (text_server_adv.cpp:
     ['Music bed', 79],
     ['Callsign', 60],
     ['Comms', 59],
-    // 'l' (571 design units) and 'T' (1157) both have ODD advances, which
-    // FreeType's 26.6 grid rounds UP where a continuous scale leaves them
-    // between two steps: the pen sum is 91.03125, not the 91.0 flat scaling
-    // gives, and only the former ceils to Godot's own 92.
+    // 'l' (571 units) and 'T' (1157) have odd advances, which FreeType's 26.6 grid rounds up: the pen
+    // sum is 91.03125, not the 91.0 of flat scaling, and only the former ceils to 92.
     ['Threat level', 92],
   ])('%p floors this Label at Godot\'s own whole-pixel minimum width %p', (text, expected) => {
     expect(minSize(node({ text, autowrapMode: 0 }), ctx()).x).toBe(expected);
@@ -735,9 +626,8 @@ describe('labelMinimumSize — the shaped extent is ceiled (text_server_adv.cpp:
   it('a font_size above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE floors on WHOLE-pixel advances, which is NARROWER than the fractional sum', () => {
     const n = node({ text: 'FIELD OPERATIONS', autowrapMode: 0, themeOverrideFontSizes: { font_size: 28 } });
     // Godot rounds each advance to a whole pixel with the remainder carried
-    // (text_server_adv.cpp:7079-7084), summing to exactly 257 — where the
-    // unrounded 26.6 advances sum to 257.140625 and a flat scale of the hmtx
-    // table to 257.099609375, both of which would ceil to 258.
+    // (text_server_adv.cpp:7079-7084), summing to 257. The unrounded 26.6 sum (257.140625) and a flat
+    // hmtx scale (257.099609375) would both ceil to 258.
     expect(minSize(n, ctx()).x).toBe(257);
   });
 
@@ -748,10 +638,8 @@ describe('labelMinimumSize — the shaped extent is ceiled (text_server_adv.cpp:
       autowrapMode: AutowrapMode.OFF,
       lineSpacingPx: 3,
     }).widthPx;
-    // Real Godot 4.6.3 reports the same fractional extent for this string:
-    // `ThemeDB.fallback_font.get_string_size("Master volume",
-    // HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x` is 116, and summing the same
-    // font's own `get_char_size(c, 16).x` over the characters gives 115.875.
+    // Godot 4.6.3: `ThemeDB.fallback_font.get_string_size("Master volume", HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x`
+    // is 116, and the font's `get_char_size(c, 16).x` sum is 115.875.
     expect(raw).toBeCloseTo(115.875, 6);
     expect(Math.trunc(raw)).toBe(115);
     expect(minSize(node({ text: 'Master volume', autowrapMode: 0 }), ctx()).x).toBe(116);
@@ -767,7 +655,7 @@ describe('labelMinimumSize — the shaped extent is ceiled (text_server_adv.cpp:
   });
 });
 
-// --- lines_skipped / max_lines_visible ---------------------------------------
+// lines_skipped and max_lines_visible
 
 describe('labelVisibleLineRange (label.cpp:344-361)', () => {
   it('drops the first linesSkipped lines, uncapped when maxLinesVisible is unset (happy path)', () => {
@@ -820,7 +708,7 @@ describe('windowLabelLines', () => {
   });
 });
 
-// --- visible_characters / visible_characters_behavior ------------------------
+// visible_characters and visible_characters_behavior
 
 describe('labelPreShapeText (label.cpp:155-156)', () => {
   it('truncates at the default behaviour, VC_CHARS_BEFORE_SHAPING (happy path)', () => {
@@ -897,7 +785,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
   });
 });
 
-// --- label_settings precedence (label.cpp:186,346,759,761) -------------------
+// label_settings precedence (label.cpp:186,346,759,761)
 
 describe('labelEffectiveTextTheme', () => {
   const themeResolved = { fontSizePx: 40, color: { r: 1, g: 0, b: 0, a: 1 } };
@@ -925,7 +813,7 @@ describe('labelEffectiveTextTheme', () => {
   });
 });
 
-// --- Outline/shadow theme resolution (label.cpp:765-767, default_theme.cpp:385-391) ---
+// Outline and shadow theme resolution (label.cpp:765-767, default_theme.cpp:385-391)
 
 describe('labelOutlineTheme', () => {
   it('defaults to Label\'s own theme (outline_size=0, font_outline_color opaque black) absent everything (happy path)', () => {
@@ -964,7 +852,7 @@ describe('labelShadowTheme', () => {
   });
 });
 
-// --- Integration: labelMinimumSize honouring all four properties together ---
+// Integration: labelMinimumSize with all four properties together
 
 describe('labelMinimumSize — lines_skipped / max_lines_visible / label_settings / visible_characters', () => {
   it('lines_skipped windows the reported height (label.cpp:344-361)', () => {
@@ -1011,8 +899,8 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
   }
 
   it('H_LEFT takes the trailing edge under RTL (:481-486)', () => {
-    // `offset.x = int(size.width - style->get_margin(SIDE_RIGHT) - line_size.width)`,
-    // the margin being 0 for Label's StyleBoxEmpty — the SAME value LTR H_RIGHT gets.
+    // `offset.x = int(size.width - style->get_margin(SIDE_RIGHT) - line_size.width)`, with a zero
+    // margin for Label's StyleBoxEmpty: the value LTR H_RIGHT gets.
     expect(originAt(0, true)).toBe(130);
     expect(originAt(0, false)).toBe(0);
   });
@@ -1032,12 +920,9 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
   const UNJUSTIFIED_FLAGS = JustificationFlag.WORD_BOUND | JustificationFlag.SKIP_LAST_LINE;
 
   it('H_FILL keeps every line at x 0 under RTL — its own arm reads the PARAGRAPH direction (:472-478)', () => {
-    // `if (rtl && autowrap_mode != AUTOWRAP_OFF)`, where `rtl` is
-    // `shaped_text_get_inferred_direction` (:470), not `rtl_layout` (:471).
-    // `text_direction` decides that, and its default is TEXT_DIRECTION_AUTO
-    // (`label.h:70`) — NOT INHERITED — so `:179` hands the TextServer
-    // DIRECTION_AUTO and a Latin paragraph infers LTR
-    // (`text_server_adv.cpp:7241-7247`).
+    // `if (rtl && autowrap_mode != AUTOWRAP_OFF)` reads `shaped_text_get_inferred_direction` (:470),
+    // not `rtl_layout` (:471). `text_direction` defaults to TEXT_DIRECTION_AUTO (`label.h:70`), so `:179`
+    // hands the TextServer DIRECTION_AUTO and a Latin paragraph infers LTR (`text_server_adv.cpp:7241-7247`).
     const placements = layoutLabelLines(lineOfWidth(70), 200, 100, 3, undefined, UNJUSTIFIED_FLAGS, FONT_SIZE, {
       rtl: true,
     });
@@ -1047,9 +932,8 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
 
 describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
   it('VC_GLYPHS_AUTO reveals from the BACK under RTL layout', () => {
-    // `trim_glyphs_rtl = ... || ((behavior == VC_GLYPHS_AUTO) && rtl_layout)` —
-    // AUTO resolves to the layout's own direction, so the SAME budget hides the
-    // opposite end from the LTR case.
+    // `trim_glyphs_rtl = ... || ((behavior == VC_GLYPHS_AUTO) && rtl_layout)`: AUTO follows the
+    // layout direction, so the same budget hides the opposite end from the LTR case.
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
       behavior: VC_GLYPHS_AUTO,
       visibleChars: undefined,

@@ -1,9 +1,7 @@
 /**
- * `S`'s starting value, written by a full-screen quad rather than by a clear
- * colour — so the seed passes through no colour-management path on its way into
- * a `NoColorSpace` target, and the renderer's global clear state is never
- * touched. Which value it writes is the pass's business (`CanvasLighting2D.tsx`
- * swaps the uniform per pass); this module is only the quad.
+ * The full-screen quad that writes `S`'s starting value, which the pass swaps per pass. A quad,
+ * not a clear colour, so the seed skips colour management on its way into a `NoColorSpace` target
+ * and the renderer's global clear state stays untouched.
  */
 
 import { useCallback } from 'react';
@@ -32,9 +30,8 @@ export function createSeedMaterial(): THREE.ShaderMaterial {
     vertexShader: SEED_VERTEX,
     fragmentShader: SEED_FRAGMENT,
     uniforms: { uSeed: { value: new THREE.Vector3(1, 1, 1) } },
-    // NoBlending, so the quad overwrites rather than accumulates — this IS the
-    // clear. `transparent` puts it in the same sorted list as the light quads,
-    // which is what lets `renderOrder` place it beneath them.
+    // NoBlending, so the quad overwrites: it is the clear. `transparent` puts it in the light
+    // quads' sorted list, so `renderOrder` places it beneath them.
     blending: THREE.NoBlending,
     transparent: true,
     depthTest: false,

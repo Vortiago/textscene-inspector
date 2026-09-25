@@ -1,10 +1,6 @@
 /**
- * `resolveTextTheme` — the override key-name mapping a Control authors as
- * `theme_override_font_sizes/<key>` / `theme_override_colors/<key>`, resolved
- * to plain data a painter can read. Font size and colour both go through an
- * ancestor-Theme walk (`resolveNodeFontSizePx`/`Control::get_theme_font_size`
- * for size; `n.colors`, already folded by `buildSolveTree.ts`'s
- * `resolveThemedColors`/`Control::get_theme_color`, for colour).
+ * `resolveTextTheme` maps the `theme_override_font_sizes/<key>` and `theme_override_colors/<key>`
+ * names to plain data. Size walks the ancestor themes, and colour reads the folded `n.colors`.
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from './solveTree';

@@ -1,8 +1,6 @@
 /**
- * `<BoxContainer>` — a Container draws no chrome of its own;
- * `ControlCanvasWalker` positions this node's group at its solved rect and
- * renders its children as siblings regardless, so there is nothing left for
- * this component to paint. Identical reasoning to `hboxcontainer/Component.tsx`.
+ * `<BoxContainer>` paints nothing: a Container draws no chrome, and
+ * `ControlCanvasWalker` places the node and its children.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 

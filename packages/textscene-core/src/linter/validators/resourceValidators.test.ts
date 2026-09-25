@@ -1,10 +1,8 @@
 /**
- * The NodePath slot validator and the spellings Godot loads into one.
- *
- * `variant.cpp:746-749`: `case NODE_PATH: valid[] = { STRING, NIL }`, and
- * `Variant::operator NodePath()` (`:2001`) builds the path from a STRING, so
- * `remote_path = "../Body"` stores the same path as `NodePath("../Body")`. A
- * StringName is not in that list and stays a format error.
+ * The NodePath slot validator. `variant.cpp:746-749` converts `{ STRING, NIL }`
+ * into a NODE_PATH and `Variant::operator NodePath()` (`:2001`) builds it, so
+ * `remote_path = "../Body"` equals `NodePath("../Body")`. A StringName stays a
+ * format error.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -42,12 +40,10 @@ describe('a bare-string NodePath through the linter', () => {
 });
 
 /**
- * The old-style integer index. `_parse_ext_resource` and `_parse_sub_resource`
- * take TK_NUMBER as well as TK_STRING (`resource_format_text.cpp:107,128`:
- * "Expected number (old style sub-resource index) or string") and
- * `String id = token.value` stringifies it, while the header side reads
- * `String id = next_tag.fields["id"]` (`:488`, `:1048`) — so `id=1` and
- * `ExtResource(1)` meet as the string "1" and the file loads.
+ * The old-style integer index: `_parse_ext_resource` and `_parse_sub_resource`
+ * take TK_NUMBER as well as TK_STRING (`resource_format_text.cpp:107,128`) and
+ * stringify it, as the header's `next_tag.fields["id"]` is (`:488`, `:1048`), so
+ * `id=1` and `ExtResource(1)` meet as the string "1" and the file loads.
  */
 describe('a resource slot holding an integer index', () => {
   const validator = createResourceReferenceValidator('texture');

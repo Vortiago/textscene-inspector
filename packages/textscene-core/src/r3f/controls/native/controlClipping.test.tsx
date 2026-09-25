@@ -1,14 +1,7 @@
 /**
- * `controlClipping` carries the accumulated canvas clip down the native Control
- * tree — a verified spike established that clip PLANES, not stencil, are
- * correct here: the on-screen 2D canvas requests no stencil buffer at all, so a
- * stencil-based clip would be a silent no-op. The clip is a RECT first, because
- * Godot's `final_clip_rect` is one rect that becomes one scissor, intersected
- * with the enclosing clipper's and then rounded — position and size
- * INDEPENDENTLY, which is the whole reason the rect travels alongside the
- * planes. These tests pin the seam: default-empty, inheritance through the
- * provider, the three pure steps (world rect, intersection, quantization), the
- * rect-to-planes conversion, and the hook that composes them.
+ * Pins the clip seam: empty by default, inherited through the provider, the
+ * world rect, intersection and quantization steps, the rect-to-planes
+ * conversion, and the hook that composes them.
  */
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
@@ -58,11 +51,8 @@ describe('withAdditionalClipPlanes', () => {
 });
 
 describe('localRectClipPlanes', () => {
-  // rect.ts: Rect2 is Godot pixels, +Y down, local to this node's own
-  // top-left — the SAME frame `NativeControlComponentProps.rect` uses. The
-  // four planes convert Y at this boundary (this module's job, same as the
-  // walker's own `[rect.x, -rect.y, 0]` conversion), so a point is "kept" iff
-  // it falls inside the rect once Y is negated.
+  // A Rect2 is Godot pixels, +Y down (`rect.ts`). The planes negate Y, so a
+  // point is kept if and only if it falls inside the rect once Y is negated.
   const rect: Rect2 = { x: 100, y: 50, w: 200, h: 80 }; // local x in [100,300], y in [50,130]
 
   function distances(planes: readonly THREE.Plane[], x: number, y: number): number[] {
@@ -264,7 +254,7 @@ describe('useWorldClipPlanes', () => {
       />
     );
     // World rect (698.75, 361.25, 402.5, 243.75) -> (699, 361, 403, 244):
-    // right edge x = 1102, bottom edge Godot y = 605 i.e. world y = -605.
+    // right edge x = 1102, bottom edge Godot y = 605, that is world y = -605.
     expect(constants(captured)).toEqual([-699, 1102, 605, -361]);
   });
 

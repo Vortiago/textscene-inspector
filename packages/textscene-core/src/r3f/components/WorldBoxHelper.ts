@@ -1,8 +1,7 @@
 /**
- * `WorldBoxHelper` — a `THREE.BoxHelper` whose box is sourced from
- * {@link computeWorldBoundingBox} instead of `THREE.Box3.setFromObject`, so
- * skinned GLB nodes get a selection box at the rendered model rather than the
- * world origin. See `bounds.ts` for why `setFromObject` misbehaves here.
+ * A `THREE.BoxHelper` whose box comes from {@link computeWorldBoundingBox}, not
+ * `THREE.Box3.setFromObject`, so a skinned GLB node gets its box at the
+ * rendered model, not the world origin. `bounds.ts` says why.
  */
 import * as THREE from 'three';
 import { computeWorldBoundingBox } from '../bounds.js';
@@ -10,10 +9,9 @@ import { computeWorldBoundingBox } from '../bounds.js';
 const _helperBox = /*@__PURE__*/ new THREE.Box3();
 
 /**
- * Drop-in `THREE.BoxHelper` that overrides `update()` to source its box from
- * {@link computeWorldBoundingBox}. Stays `instanceof THREE.BoxHelper` so
- * existing selection/hover lookups and the `useSceneHelper` lifecycle (which
- * calls `update()` each frame and `dispose()` on teardown) work unchanged.
+ * Overrides `update()` with {@link computeWorldBoundingBox} and stays
+ * `instanceof THREE.BoxHelper`, so the selection and hover lookups and the
+ * `useSceneHelper` lifecycle work unchanged.
  */
 export class WorldBoxHelper extends THREE.BoxHelper {
   override update(): void {

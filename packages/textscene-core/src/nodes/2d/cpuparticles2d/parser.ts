@@ -1,9 +1,7 @@
 /**
- * CPUParticles2D parser — the Node2D transform plus the emitter surface.
- *
- * The twelve parameter slots are read from a table rather than twelve hand
- * written blocks: they differ only in their serialised prefix and (for Scale)
- * their default, and Godot itself stores them as three parallel arrays.
+ * CPUParticles2D parser: the Node2D transform and the emitter properties. The
+ * parameter slots come from one table, as they differ only in their serialised
+ * prefix and (for Scale) their default, and Godot stores them as parallel arrays.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
@@ -20,12 +18,6 @@ import {
 
 /** Godot's inspector range for `amount` is `1,1000000,1,exp`. */
 export const MAX_PARTICLE_AMOUNT = 1_000_000;
-
-/**
- * Serialised prefix and default for each parameter slot, in `Parameter` order.
- * The curve property is `<prefix>_curve` — except InitialLinearVelocity, which
- * Godot exposes no curve for at all.
- */
 
 export function parseCPUParticles2D(
   heading: ParsedHeading,
@@ -45,8 +37,8 @@ export function parseCPUParticles2D(
     explosiveness: floatOr(properties.explosiveness, 0, `${context}.explosiveness`),
     randomness: floatOr(properties.randomness, 0, `${context}.randomness`),
     use_fixed_seed: boolOr(properties.use_fixed_seed, false, context),
-    // cpu_particles_2d.h:261 — the setter takes uint32_t, so 4294967295 is
-    // the seed the file states rather than -1.
+    // cpu_particles_2d.h:261: the setter takes uint32_t, so 4294967295 is the
+    // seed the file states, not -1.
     seed: intOr(properties.seed, 0, `${context}.seed`, 'uint32'),
     lifetime_randomness: floatOr(properties.lifetime_randomness, 0, `${context}.lifetime_randomness`),
     fixed_fps: intOr(properties.fixed_fps, 0, `${context}.fixed_fps`),

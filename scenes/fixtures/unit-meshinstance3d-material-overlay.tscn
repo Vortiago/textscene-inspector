@@ -1,27 +1,9 @@
 [gd_scene load_steps=5 format=3]
 
-; ONE VARIABLE: whether `material_overlay` draws a SECOND time over the surface
-; material, rather than replacing it or doing nothing.
-;
-; `_geometry_instance_add_surface` resolves the surface's own material chain and
-; then adds another surface for the overlay
-; (`render_forward_clustered.cpp:4228-4241`), so the drawn colour is the overlay
-; composited OVER the surface's — never one or the other alone.
-;
-; The two boxes are the whole test, and they differ in exactly one property.
-; LEFT carries only its surface material; RIGHT carries the same surface
-; material plus a half-transparent red overlay. Three failure modes are told
-; apart by the right box's colour alone: green means the overlay never drew,
-; opaque red means it REPLACED the surface instead of covering it, and the
-; muddied red-over-green means it composited. The left box is the control that
-; keeps a whole-scene tint from reading as success.
-;
-; The overlay is deliberately TRANSPARENT. An opaque one would look identical
-; whether it composited or replaced, which is the distinction this fixture
-; exists to make. Its alpha also puts it in the alpha pass, where draw order is
-; the thing most likely to regress.
-;
-; No corpus scene sets `material_overlay` at all, so nothing else can see this.
+; One variable: whether `material_overlay` draws a second time over the surface material rather
+; than replacing it or doing nothing. `_geometry_instance_add_surface` resolves the surface's own
+; material chain, then adds a surface for the overlay (`render_forward_clustered.cpp:4228-4241`),
+; so the overlay composites over the surface. No corpus scene sets `material_overlay`.
 
 [sub_resource type="BoxMesh" id="BoxMesh_body"]
 size = Vector3(1.6, 1.6, 1.6)
@@ -37,11 +19,16 @@ roughness = 0.3
 
 [node name="MaterialOverlay" type="Node3D"]
 
+; The control, with only its surface material: it keeps a whole-scene tint from reading as success.
 [node name="Surface" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.15, 0, 0)
 mesh = SubResource("BoxMesh_body")
 surface_material_override/0 = SubResource("StandardMaterial3D_surface")
 
+; The same surface material plus a half-transparent red overlay. Green means the overlay never
+; drew, opaque red that it replaced the surface, muddied red over green that it composited. An
+; opaque overlay looks the same composited or replaced. Its alpha also puts it in the alpha pass,
+; where draw order is most likely to regress.
 [node name="SurfacePlusOverlay" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.15, 0, 0)
 mesh = SubResource("BoxMesh_body")

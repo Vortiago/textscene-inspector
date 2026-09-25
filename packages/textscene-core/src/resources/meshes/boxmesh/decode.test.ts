@@ -1,10 +1,8 @@
 /**
- * Tests for the BoxMesh decode.
- *
- * Defaults from Godot `primitive_meshes.h:164-167` (`Vector3(1, 1, 1)`, all
- * subdivisions 0). `set_subdivide_width/height/depth`
- * (`primitive_meshes.cpp:999-1035`) floor at 0 (`p_divisions > 0 ? p_divisions : 0`).
- * `set_size` (:985) has no guard, so a negative extent is Godot's own behaviour.
+ * BoxMesh decode. Defaults: `primitive_meshes.h:164-167` (`Vector3(1, 1, 1)`,
+ * subdivisions 0). `set_subdivide_width/height/depth` (`primitive_meshes.cpp:999-1035`)
+ * floor at 0 (`p_divisions > 0 ? p_divisions : 0`). `set_size` (:985) has no guard,
+ * so a negative extent is Godot's own behaviour.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

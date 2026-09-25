@@ -1,9 +1,6 @@
 /**
- * Ground-plane grid toggle. Default OFF: a sibling hardening bucket
- * regenerates ALL visual-regression baselines in this same round, so an
- * on-by-default visual change here would invalidate that work. Only a
- * user who explicitly turns it on (persisted host-side) sees it in a
- * non-empty scene.
+ * The ground-plane grid toggle, off by default: a non-empty scene shows the grid
+ * only when the user turns it on.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -75,18 +72,14 @@ describe('<TscnSceneContents> ground-plane grid toggle (#224)', () => {
       </ViewportModeProvider>
     );
     // Empty scene already shows its own grid regardless of the toggle;
-    // the toggle must not add a SECOND overlapping grid.
+    // the toggle must not add a second overlapping grid.
     expect(countGrids(renderer)).toBe(1);
   });
 
   it('tags the rendered grid so frameSceneBounds excludes it from auto-fit framing', async () => {
-    // THREE.Object3D.traverse() always recurses into every descendant
-    // regardless of what a visitor callback does for an ancestor, so ONLY a
-    // tag on the grid object itself (not a wrapping <group>) is actually
-    // honored by frameSceneBounds's traversal (see frameSceneBounds.test.ts
-    // for the exclusion mechanism itself). This pins the OTHER half: the
-    // rendered <gridHelper> instance actually carries that tag, in BOTH the
-    // empty-state and the opt-in content-grid case.
+    // `traverse()` visits every descendant, so frameSceneBounds honours only a
+    // tag on the grid itself. The `<gridHelper>` carries it in both the empty and
+    // the content-grid case.
     const graph = createSceneGraphFromTscnScene({ nodes: [makeMeshInstance('Cube')] });
     const contentGridRenderer = await ReactThreeTestRenderer.create(
       <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>

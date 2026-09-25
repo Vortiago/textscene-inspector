@@ -13,19 +13,19 @@ Control is the base UI node. It draws nothing of its own. A Control directly und
 anchors against its rect. One separated from it by another node anchors against that
 node instead. Where that node is not a canvas item the Control is a canvas root: it
 anchors against the viewport, and draws after everything under the root it hangs in.
-`top_level` makes it one wherever it sits, and nothing above it composes onto it — no
-transform, no tint, no z, no rect to anchor against, and no container lays it out.
+`top_level` makes it a canvas root wherever it sits, and nothing above it composes onto
+it: no transform, no tint, no z, no rect to anchor against, and no container layout.
 Visibility is the exception: it follows the scene tree rather than the canvas parenting,
 so a hidden ancestor still hides a `top_level` Control, while a non-canvas-item ancestor
 between them releases it again.
 
 `layout_direction` resolves to one answer per node. An explicit LTR or RTL answers from
-the value alone; INHERITED climbs to the nearest ancestor Control or Window, stepping
-over every other node type — a `SubViewport` included, so the Controls inside one inherit
-the direction of the Control that encloses the viewport — and at the top of the tree falls
-back to `internationalization/rendering/root_node_layout_direction` and the project's test
-locale. A right-to-left Control is mirrored inside its parent, and an HBoxContainer also
-reverses its children.
+the value alone. INHERITED climbs to the nearest ancestor Control or Window and steps
+over every other node type. That includes a `SubViewport`, so the Controls inside one
+inherit the direction of the Control that encloses the viewport. At the top of the tree
+it falls back to `internationalization/rendering/root_node_layout_direction` and the
+project's test locale. A right-to-left Control is mirrored inside its parent, and an
+HBoxContainer also reverses its children.
 
 ## Linting
 
@@ -118,14 +118,14 @@ renderer applies its own default. `theme_override_styles/*` is stored unparsed.
   the resolved direction, but the runs themselves are never reordered, so a `Label`,
   `Button` title or `ItemList` row holding right-to-left script draws its characters in
   code-point order. The bundled atlas carries no right-to-left script, and neither does
-  Godot's own: its default theme ships the same `OpenSans_SemiBold.woff2` this repo
-  vendors, and reaches right-to-left glyphs through the host machine's fonts
+  Godot's: its default theme ships the same `OpenSans_SemiBold.woff2` this repo vendors,
+  and reaches right-to-left glyphs through the host machine's fonts
   (`Font.allow_system_fallback`, default true, `scene/resources/font.h`). An atlas baked
-  at build time has no equivalent of that, so the gap is a platform difference rather
-  than a bundling shortcut.
-- **Approximated** A widget's per-node `text_direction` is not read. It defaults to AUTO
-  rather than INHERITED (`label.h:70`, `line_edit.h:144`, `text_edit.h:327`,
-  `rich_text_label.h:615`), so every engine branch that consults the PARAGRAPH direction
-  rather than the layout direction is dead at the default and is deliberately not ported.
+  at build time has no equivalent, so the gap is a platform difference, not a bundling
+  shortcut.
+- **Approximated** A widget's per-node `text_direction` is not read. It defaults to AUTO,
+  not INHERITED (`label.h:70`, `line_edit.h:144`, `text_edit.h:327`,
+  `rich_text_label.h:615`), so every engine branch that reads the paragraph direction
+  rather than the layout direction is dead at the default, and is deliberately not ported.
 - **Needs runtime** The direction reaches hit-testing, keyboard and drag arms in TabBar,
   Tree, ItemList, the sliders and the text controls. A frozen frame has none of those.

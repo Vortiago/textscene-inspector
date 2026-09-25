@@ -1,23 +1,14 @@
 /**
- * Unit tests for scene-tree "jump to node definition".
- *
- * Bug: `jumpToNode` resolved the target by a name-only text search and stopped at
- * the first `[node name="X"` line. With two same-named siblings it always jumped
- * to the first. These tests pin resolution by name + the Godot `parent=` value the
- * message now carries.
+ * Unit tests for scene-tree "jump to node definition". `jumpToNode` resolves the
+ * target by name and the `parent=` value the message carries, so two same-named
+ * nodes under different parents resolve apart.
  */
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
 import { createMockUri, createMockFileData, setupMockPanel } from './test-setup';
 
-// Two nodes both named "Leaf" under different parents. Line indices:
-//   0 [gd_scene ...]
-//   1 [node name="Root" ...]
-//   2 [node name="A" ... parent="."]
-//   3 [node name="B" ... parent="."]
-//   4 [node name="Leaf" ... parent="A"]   <- parent "A"
-//   5 [node name="Leaf" ... parent="B"]   <- parent "B"
+// Two nodes named "Leaf", under A (line 4) and under B (line 5).
 const TWO_SIBLINGS_TSCN = [
   '[gd_scene format=3]',
   '[node name="Root" type="Node3D"]',
@@ -93,7 +84,7 @@ describe('TscnPreviewPanel jumpToNode parent resolution', () => {
     triggerMessage({ type: 'jumpToNode', nodeName: 'Item', path: 'Root/Item', parent: '.' });
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    // The direct child (parent=".") is line 4 — not the first name match (line 3).
+    // The direct child (parent=".") is line 4, not the first name match (line 3).
     expect(editor.selection?.start.line).toBe(4);
   });
 

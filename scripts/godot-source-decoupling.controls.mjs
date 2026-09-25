@@ -1,9 +1,7 @@
 /**
- * Synthetic files fed to the sweeps in `godot-source-decoupling.test.mjs`, so
- * its controls prove what the patterns catch without depending on what the
- * repo happens to contain. They stay in memory; this module is on both
- * allowlists because it carries the offending strings by design, and a
- * scratch file on disk carrying them would be a real violation.
+ * In-memory files for the sweeps in `godot-source-decoupling.test.mjs`, so its controls prove what
+ * the patterns catch whatever the repo holds. This module carries the offending strings, so it is
+ * on both allowlists, and a scratch file on disk that held them would be a real violation.
  */
 
 /**

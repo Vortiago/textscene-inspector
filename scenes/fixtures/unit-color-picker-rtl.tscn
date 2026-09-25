@@ -1,22 +1,7 @@
-; The ONE variable: `layout_direction = 3` (RTL) on a ColorPicker. Every other
-; property is left at the default `unit-color-picker.tscn` already covers, so
-; the two scenes differ in exactly this flag.
-;
-; `color_picker.cpp` never calls `is_layout_rtl()`. ColorPicker builds its
-; whole widget tree from ordinary containers in its constructor, so the
-; mirroring is each container's own: `BoxContainer::_resort` walks an RTL
-; horizontal box's children in REVERSE (box_container.cpp:184-192) and
-; `GridContainer` starts `col_ofs` at the grid's right edge
-; (grid_container.cpp:193-197,218-223). Every row therefore swaps ends at
-; once — the sample row, the shape row, the mode row, the channel grid, the
-; hex row and the swatches row — which no other RTL fixture can show, because
-; no other node type nests six differently-shaped rows inside one control.
-;
-; The picker is centred in the 1152px viewport, so its OWN rect mirror
-; (control.cpp:1785-1787) is the identity and cannot be mistaken for the
-; internal row mirroring this fixture is for. Its width is chosen so the mode
-; row's three equal buttons divide the row exactly (354 / 3), keeping the
-; picture clear of BoxContainer's own leftover-pixel distribution.
+; The one variable: `layout_direction = 3` (RTL). color_picker.cpp never reads it: each container
+; mirrors itself (box_container.cpp:184-192, grid_container.cpp:193-197,218-223), so all six rows
+; swap ends. The picker is centred, so its own mirror (control.cpp:1785-1787) is the identity, and its
+; width (354 / 3) splits the mode buttons exactly. No other RTL fixture nests six row shapes.
 
 [gd_scene format=3]
 

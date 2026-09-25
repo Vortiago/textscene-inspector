@@ -1,7 +1,6 @@
 /**
- * VSplitContainer parsing. Shares its base with HSplitContainer, so this pins
- * the wiring rather than re-testing the base: a slice registered against the
- * wrong parser would still parse Control and silently drop the three
+ * VSplitContainer parsing. It shares its base with HSplitContainer, so this pins the wiring, not
+ * the base: a slice registered against the wrong parser still parses Control and drops the three
  * SplitContainer properties.
  */
 

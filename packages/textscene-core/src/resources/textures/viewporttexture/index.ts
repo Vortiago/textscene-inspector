@@ -1,15 +1,8 @@
 /**
- * ViewportTexture resource slice — registration only.
- *
- * `busType: null` because this is the one texture type the loader never serves:
- * a ViewportTexture names a NODE (`viewport_path = NodePath("…")`), so its pixels
- * come from whatever a `<SubViewport>` rendered offscreen, never from a file.
- * Routing must therefore answer "no bus" rather than guess a texture slot and
- * park a request that can never complete.
- *
- * The consumer adapter (`useViewportTextureSlot.ts`) lives beside this file but
- * is deliberately NOT imported here: it reads three r3f contexts, and this entry
- * point stays THREE-free and React-free like every other slice index.
+ * ViewportTexture resource slice, registration only. `busType: null`: it names a
+ * node (`viewport_path = NodePath("…")`), not a file, so a texture slot would park
+ * a request that never completes. `useViewportTextureSlot.ts` reads r3f contexts,
+ * so this THREE-free, React-free index does not import it.
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';

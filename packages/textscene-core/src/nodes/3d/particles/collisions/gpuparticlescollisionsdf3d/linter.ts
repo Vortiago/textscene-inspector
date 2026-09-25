@@ -1,27 +1,8 @@
 /**
- * Semantic linter rule for GPUParticlesCollisionSDF3D: ports Godot's own
- * `GPUParticlesCollisionSDF3D::get_configuration_warnings()`
- * (gpu_particles_collision_3d.cpp:526-534):
- *
- *     PackedStringArray warnings = GPUParticlesCollision3D::get_configuration_warnings();
- *     if (bake_mask == 0) {
- *         warnings.push_back(RTR("The Bake Mask has no bits enabled, which means
- *         baking will not produce any collision for this GPUParticlesCollisionSDF3D.
- *         To resolve this, enable at least one bit in the Bake Mask property."));
- *     }
- *
- * Fully decidable from scene text: `bake_mask` is a plain int property, no
- * referenced-resource internals or NodePath target type needed, so the whole
- * check ports. `GPUParticlesCollision3D` (and every sibling collision/attractor
- * class in this `.cpp`) has no `get_configuration_warnings` override of its own;
- * `GPUParticlesCollisionSDF3D` is the only one, so the base call in the quoted
- * source falls through to the generic default and there is nothing else to port.
- *
- * `bake_mask` defaults to 4294967295, all layers, per
- * `ADD_PROPERTY(PropertyInfo(Variant::INT, "bake_mask", PROPERTY_HINT_LAYERS_3D_RENDER), ...)`
- * (gpu_particles_collision_3d.cpp:557), and Godot's serializer omits a property
- * left at its default. So an ABSENT key means "all layers enabled", not zero;
- * only an EXPLICIT `bake_mask = 0` fires this.
+ * GPUParticlesCollisionSDF3D's configuration warning for a zero `bake_mask`
+ * (gpu_particles_collision_3d.cpp:526-534), the only such override among the
+ * collision and attractor classes. It needs only the node's own `bake_mask`, so
+ * the whole check ports.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../../linter/types.js';
@@ -35,6 +16,8 @@ function checkGPUParticlesCollisionSDF3D(context: RuleContext): Diagnostic[] {
   if (!isValidProperties(node.properties)) return [];
 
   const rawProps = node.properties as Record<string, string>;
+  // `bake_mask` defaults to 4294967295, all layers (gpu_particles_collision_3d.cpp:557), and
+  // the serialiser omits a default, so only an explicit `bake_mask = 0` fires.
   if (rawProps.bake_mask === undefined) return [];
 
   // uint32_t setter (gpu_particles_collision_3d.h:183).

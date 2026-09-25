@@ -1,52 +1,29 @@
 /**
- * Missing-resource badge: today a scene's missing `res://`
- * dependencies are silent unless the user has the Resources tab open.
- *
- * `useMissingResources()` (from `@textscene/core`) is the shell's own
- * aggregation of "which paths did a node in the tree report as missing" —
- * the context lives in `<MissingResourcesProvider>`, which wraps
- * `TscnPreviewShell`'s entire rendered tree INCLUDING the `toolbar` slot, so
- * a badge inside our own `<Toolbar>` reads the same live state the shell's
- * `<MissingResourcesPanel>` does.
- *
- * `TscnCanvas` normally renders `<Canvas><TscnSceneContents/></Canvas>` —
- * inaccessible under happy-dom (no WebGL). `ViewportArea` (inside the real,
- * unmocked `TscnPreviewShell`) imports `TscnCanvas` via a relative path
- * INTO the core package, not through the `@textscene/core` root barrel — so
- * mocking the barrel's `TscnCanvas` export (the pattern the other
- * `r3f-main.*.test.tsx` files use) never actually replaces what
- * `ViewportArea` renders; Vitest/Vite key `vi.mock` by resolved absolute
- * module path, so the mock target here is the concrete source file itself.
- * The stand-in calls the REAL `report()` from `useMissingResources()` on
- * mount (when `reportOnMount` is true), simulating "a node in the tree
- * asked for a resource that isn't there" without needing the full
- * useResource/fetch machinery (already covered by
- * `MissingResourcesPanel.test.tsx` in core). `ViewportArea` mounts
- * `<TscnCanvas>` unconditionally in 3D mode, so a module-level flag — not
- * the fetch outcome — toggles whether the stand-in reports, keeping the
- * "nothing missing" case in the same mocked module.
+ * The toolbar's missing-resource badge. `<MissingResourcesProvider>` wraps the shell's whole
+ * tree, the `toolbar` slot included, so the badge reads the same live state from
+ * `useMissingResources()` as `<MissingResourcesPanel>`.
  */
 import { useEffect } from 'react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-// Type-only — resolves through the package's own dist declaration under
-// plain `tsc`, so it carries no `rootDir` baggage. The runtime imports below
-// are untyped `vi.importActual` calls specifically so they DON'T pull the
-// raw internal source files (reached via a bare relative path, bypassing the
-// package's `exports` map entirely) into this app's TypeScript program.
+// Type-only, so plain `tsc` resolves it through the package's dist declaration. The runtime
+// imports below are untyped `vi.importActual` calls, which keep the raw internal sources
+// (a relative path past the `exports` map) out of this app's TypeScript program.
 import type { MissingResourcesContextValue } from '@textscene/core';
 
+// `ViewportArea` mounts `<TscnCanvas>` in 3D mode whatever the fetch does, so this flag
+// decides whether the stand-in reports a missing path.
 let reportOnMount = true;
 
+// `ViewportArea` imports `TscnCanvas` by relative path, not through the barrel, and `vi.mock`
+// keys by resolved path, so the mock targets the source file. The stand-in calls the real
+// `report()` on mount, without the useResource and fetch machinery.
 vi.mock('../../../packages/textscene-core/src/r3f/TscnCanvas', async () => {
   const real = (await vi.importActual(
     '../../../packages/textscene-core/src/r3f/TscnCanvas'
   )) as Record<string, unknown>;
-  // Import straight from the leaf context module, NOT the `@textscene/core`
-  // barrel: the barrel's own module graph passes back through this very
-  // `TscnCanvas` file, so `importActual`-ing the barrel from inside its mock
-  // factory hits a half-initialized circular module (`useMissingResources`
-  // resolves to `undefined` there).
+  // The leaf context module, not the barrel: the barrel's graph passes back through this
+  // `TscnCanvas` file, so its `useMissingResources` is `undefined` inside this factory.
   const { useMissingResources } = (await vi.importActual(
     '../../../packages/textscene-core/src/r3f/contexts/MissingResourcesContext'
   )) as { useMissingResources: () => MissingResourcesContextValue };
@@ -71,7 +48,7 @@ function resetPersistence() {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // happy-dom may throw in edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
 }
 

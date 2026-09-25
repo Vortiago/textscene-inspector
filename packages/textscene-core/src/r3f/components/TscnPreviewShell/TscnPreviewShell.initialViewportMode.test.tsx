@@ -1,11 +1,7 @@
 /**
- * `initialViewportMode` (VS Code `textscene.defaultViewportMode` setting):
- * an explicit host-provided mode SEEDS the viewport AND suppresses
- * Godot-parity auto-select (WorkspaceAutoSelect) for that panel, so the
- * user's forced choice isn't immediately clobbered by the scene root's own
- * claim. Omitting the prop (the default) preserves today's exact behavior —
- * auto-select decides, as pinned by the sibling
- * `TscnPreviewShell.viewport-isolation.test.tsx` file.
+ * `initialViewportMode`, from the VS Code `textscene.defaultViewportMode`
+ * setting, seeds the viewport and turns off WorkspaceAutoSelect for that
+ * panel, so the root's claim cannot override it. Without it, auto-select decides.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';

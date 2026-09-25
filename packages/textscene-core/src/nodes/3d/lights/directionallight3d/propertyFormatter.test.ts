@@ -1,6 +1,4 @@
-/**
- * Tests for the DirectionalLight3D property formatter.
- */
+/** DirectionalLight3D property formatter. */
 
 import { describe, it, expect } from 'vitest';
 import { formatDirectionalLight3DProperties } from './propertyFormatter';

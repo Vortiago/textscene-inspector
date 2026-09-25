@@ -16,8 +16,8 @@ function runGodot(args, { display }) {
   const command = display ? 'xvfb-run' : 'godot';
   const argv = display ? ['-a', 'godot', ...args] : args;
   const result = spawnSync(command, argv, { encoding: 'utf8', timeout: 300_000 });
-  // `error` carries a spawn failure (ENOENT when godot/xvfb-run is missing, or a
-  // timeout) that `status` alone (null in that case) does not — callers surface it.
+  // `error` carries a spawn failure that a null `status` does not name: ENOENT
+  // or a timeout. Callers surface it.
   return {
     status: result.status,
     error: result.error ?? null,
@@ -60,11 +60,8 @@ export async function renderReference({
     return await renderInto(work, { root, scenePath, out, width, height, previews, camera,
       lookAt, frame, sceneCamera, sceneCameraPath, mode, boundsOut, fov, fovExplicit });
   } finally {
-    // Each run copies the whole res:// root, and `keepWork` is the only reason
-    // to hold one afterwards. On a tmpfs /tmp these accumulate in RAM: 236 of
-    // them, ~260MB, had piled up on the development host before this cleanup
-    // existed — and the engine-gated tests now run inside `pnpm test:unit`,
-    // so every suite run added more.
+    // Each run copies the whole res:// root, which a tmpfs /tmp holds in RAM,
+    // and every `pnpm test:unit` runs engine-gated tests.
     if (!keepWork) await rm(work, { recursive: true, force: true });
   }
 }
@@ -108,23 +105,18 @@ async function renderInto(
   );
   await writeFile(join(work, '__ref_main.tscn'), MAIN_SCENE);
 
-  // Delete any prior image at these paths BEFORE rendering. Success is judged by
-  // the file existing afterwards; the default `out` path is reused across runs, so
-  // a stale image from an earlier render would otherwise be reported as this run's
-  // result if Godot now crashes/times out — the exact silent-wrong-measurement this
-  // tool exists to prevent.
+  // Success is the file existing afterwards, and the default `out` path is
+  // reused, so a stale image would pass for this run's result.
   await rm(resolve(out), { force: true });
   if (boundsOut) await rm(resolve(boundsOut), { force: true });
 
-  // Import first, headless: textures and meshes must exist as .godot/imported
-  // artefacts before a render can resolve them. Failures here are not fatal —
-  // a scene with no importable assets legitimately has nothing to do.
+  // Import first, headless: a render resolves textures and meshes from
+  // .godot/imported. A failure is not fatal, since a scene may import nothing.
   runGodot(['--headless', '--path', work, '--import'], { display: false });
 
   const render = runGodot(['--path', work, '--quit-after', '400'], { display: true });
   if (!existsSync(resolve(out))) {
-    // Surface the spawn error (missing godot/xvfb-run, timeout) that a bare
-    // "produced no image" would otherwise hide with empty stderr.
+    // The spawn error, which a bare "produced no image" would hide.
     const why = render.error ? `\n${render.error.message}` : '';
     throw new Error(
       `Godot produced no image for ${basename(scenePath)} (exit ${render.status}).${why}\n${render.stdout}\n${render.stderr}`

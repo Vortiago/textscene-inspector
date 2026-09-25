@@ -1,13 +1,8 @@
 /**
- * Blend-program evaluation tests.
- *
- * `evaluateTree` walks a resolved `AnimNode` graph at the AnimationTree's
- * AUTHORED `parameters/*` state (a static previewer has no game script to
- * drive them) and produces the per-clip weights + time scales to feed the
- * mixer. Godot's blend math at a clip-weight approximation:
- *   Blend2:  out = in0·(1−amount) + in1·amount
- *   Add2:    out = base + add·amount
- *   TimeScale multiplies the playback rate of its input.
+ * `evaluateTree` walks a resolved `AnimNode` graph at the authored `parameters/*` state into
+ * per-clip weights and time scales, at a clip-weight approximation of Godot's blend math: Blend2
+ * `in0·(1−amount) + in1·amount`, Add2 `base + add·amount`, and TimeScale multiplies the playback
+ * rate of its input.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -106,7 +101,7 @@ describe('evaluateTree — StateMachine', () => {
         { name: 'walk', node: leaf('walk') },
       ],
     };
-    // Godot writes `parameters/sm/current_state`; the bare key must NOT match.
+    // Godot writes `parameters/sm/current_state`; the bare key must not match.
     expect(evaluateTree(nested, { 'sm/current_state': '&"walk"' })).toEqual([
       { clip: 'walk', weight: 1, timeScale: 1 },
     ]);
@@ -194,8 +189,7 @@ describe('evaluateTree — platformer blend tree (real fixture)', () => {
 
 describe('a blend parameter the tokenizer cannot read', () => {
   it('falls back rather than reading a prefix of it', () => {
-    // `parseFloat` read `0.5abc` as 0.5, so a parameter Godot refuses to load
-    // produced a confident half-and-half blend.
+    // Godot refuses to load `0.5abc`, so it gives the default, not a half-and-half blend.
     const tree: AnimNode = {
       kind: 'blend2',
       name: 'mix',

@@ -1,12 +1,8 @@
 [gd_scene load_steps=4 format=3 uid="uid://unit_animation_3d_transform_tracks"]
 
-; AnimationPlayer driving a plain Node3D (MeshInstance3D) via Godot 4's dedicated
-; 3D transform tracks: position_3d, rotation_3d (quaternion) and scale_3d. Unlike
-; value tracks (`{ "times": …, "values": … }`), these serialize keys as a flat
-; PackedFloat32Array(time, transition, comps…) — stride 5 for position/scale,
-; stride 6 for the rotation quaternion. Exercises the flat-keys decoder and the
-; QuaternionKeyframeTrack path. Skeletal bone sub-paths (Node:bone) are a separate
-; deferred case; this fixture animates a plain node so it renders end-to-end.
+; AnimationPlayer driving a plain Node3D through position_3d, rotation_3d and scale_3d tracks. These
+; store keys as a flat PackedFloat32Array(time, transition, comps…): stride 5 for position and
+; scale, 6 for the rotation quaternion. Exercises the flat-keys decoder and QuaternionKeyframeTrack.
 
 [sub_resource type="BoxMesh" id="BoxMesh_box"]
 

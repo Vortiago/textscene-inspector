@@ -1,14 +1,7 @@
 /**
- * Tests for `createSceneProcessor` — the PackedScene-specific factory
- * built on top of `createResourceProcessor`'s direct-load mode.
- *
- * Coverage carries over from the deleted `loaders/SceneLoader.test.ts`:
- * metadata-driven resolution (id ↔ path), event-bus emissions,
- * cache + inflight semantics, type validation, content validation,
- * reload-after-failure, and tear-down during loading. The shape now
- * matches the other three processors (texture/material/glb), so the
- * cache/inflight/event machinery is implicitly co-tested with them
- * via the shared `createResourceProcessor` loop.
+ * `createSceneProcessor`, the PackedScene factory on `createResourceProcessor`'s
+ * direct-load mode: id ↔ path resolution, event-bus emissions, cache and inflight,
+ * type and content validation, reload after failure, and tear-down while loading.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createSceneProcessor } from './createSceneProcessor';
@@ -154,10 +147,9 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
     });
 
     it('emits failed for a BINARY .scn scene instead of silently parsing garbage', async () => {
-      // Godot binary resources start with the RSRC magic. The lenient text
-      // parser would "succeed" with an empty scene — the level just vanishes
-      // with no placeholder and no missing-resources row (3d/platformer's
-      // grid_map.scn). It must fail so the standard missing UX kicks in.
+      // Godot binary resources start with the RSRC magic. The lenient text parser
+      // would "succeed" with an empty scene that vanishes with no placeholder or
+      // missing-resources row, so it must fail into the standard missing UX.
       const handler = vi.fn();
       eventBus.on<Error>('scene', 'failed', handler);
       mockProvider.loadResource = vi.fn().mockResolvedValue('RSRC\u0000\u0001binarygarbage');
@@ -308,8 +300,8 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
 
     it('lets an address with no registered type through to the content checks', async () => {
       // A raw `res://` path no `[ext_resource]` declares has no registered type
-      // to disagree with, so the pre-check must abstain rather than guess — but
-      // abstaining is not a bypass: the content is still what decides.
+      // to disagree with, so the pre-check abstains rather than guess. That is
+      // not a bypass: the content still decides.
       const handler = vi.fn();
       eventBus.on<Error>('scene', 'failed', handler);
       mockProvider.loadResource = vi.fn().mockResolvedValue('[gd_resource type="Theme"]');
@@ -323,8 +315,8 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
     });
 
     it('abstains for a declared resource whose heading carried no type=', async () => {
-      // The lenient parser keeps an absent `type=` as `''`, which is the same
-      // "nothing declared one" the null case is — not a type that disagrees.
+      // The lenient parser keeps an absent `type=` as `''`: the same "nothing
+      // declared one" as the null case, not a type that disagrees.
       const loadedHandler = vi.fn();
       eventBus.on<TscnScene>('scene', 'loaded', loadedHandler);
       registerMetadata('1', { id: '1', path: 'res://scenes/typeless.tscn', type: '' });
@@ -426,12 +418,10 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
   });
 
   describe('content gate (supersedes the old fully-lenient behavior)', () => {
-    // The TscnParser recovers from errors INSIDE a scene, but content that
-    // is not a text scene at all (empty file, HTML fallback, binary RSRC)
-    // used to "parse" into an empty scene — the instanced subtree silently
-    // vanished with no placeholder and no missing-resources row. Such
-    // content now fails the load; lenient recovery still applies to
-    // malformed lines within a real [gd_scene] file.
+    // The TscnParser recovers from errors inside a scene, but content that is not
+    // a text scene (empty file, HTML fallback, binary RSRC) fails the load rather
+    // than parse into an empty scene. Lenient recovery still applies to malformed
+    // lines within a real [gd_scene] file.
 
     it('rejects empty content (no [gd_scene header)', async () => {
       mockProvider.loadResource = vi.fn().mockResolvedValue('');
@@ -465,8 +455,7 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
 
     it('loads a scene whose [gd_scene] header is preceded by ; comment lines', async () => {
       // A leading comment block is valid and renders at top level, so it must
-      // also load when instanced; the guard used to demand the tag on line 1,
-      // silently vanishing the instanced subtree.
+      // also load when instanced, not only a file with the tag on line 1.
       mockProvider.loadResource = vi
         .fn()
         .mockResolvedValue('; a documentation header\n; second line\n\n[gd_scene format=3]\n\n[node name="A" type="Node3D"]\n');
@@ -485,14 +474,9 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
   });
 
   /**
-   * PackedScene references can point at .glb / .gltf binary
-   * files (e.g. a fixture's chest.glb or lamp.glb).
-   * Previously the processor threw "Scene must be text content" on
-   * ArrayBuffer input; users saw magenta placeholders instead of the
-   * actual models. Now the processor branches on path
-   * extension and synthesises a single-node `GLBSceneRoot` TscnScene
-   * for binary inputs; the R3F dispatch then routes through the
-   * GLBSceneRoot component which loads via `useResource('GLBMesh', ...)`.
+   * A PackedScene reference can point at a .glb / .gltf binary. The processor
+   * branches on the path extension and synthesises a single-node `GLBSceneRoot`
+   * scene, whose component loads through `useResource('GLBMesh', ...)`.
    */
   describe('GLB / GLTF PackedScene (WI-HALL-3)', () => {
     it('accepts ArrayBuffer content for a .glb path and synthesises a single-node scene', async () => {
@@ -512,19 +496,18 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
       expect(scene).toBeDefined();
       expect(scene!.nodes).toHaveLength(1);
       const root = scene!.nodes[0]!;
-      // The synthesised root is the GLBSceneRoot node type — the R3F
+      // The synthesised root is the GLBSceneRoot node type: the R3F
       // dispatcher routes this through the GLBSceneRoot component which
       // owns the actual GLB load lifecycle.
       expect(root.type).toBe('GLBSceneRoot');
-      // The basename (no extension) is used so the SceneTreeViewer
-      // shows a meaningful label after sub-scene inlining lands.
+      // The basename (no extension) gives the SceneTreeViewer a meaningful label.
       expect(root.name).toBe('chest');
       // The GLB path is carried verbatim on the synthesised node's
-      // properties so the consumer can load it via useResource.
+      // properties so the consumer can load it through useResource.
       expect((root.properties as Record<string, unknown>).glbPath).toBe(
         'res://models/chest.glb'
       );
-      // No children / no resource refs on a synthesised scene — the GLB
+      // No children and no resource refs on a synthesised scene: the GLB
       // hierarchy lives inside the THREE.Object3D returned by the
       // GLBMesh processor.
       expect(root.children).toHaveLength(0);
@@ -550,7 +533,7 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
 
     it('rejects string content for a .glb path with a descriptive error', async () => {
       // Sanity: a binary path that somehow returned text should fail
-      // loudly so the caller doesn't get a malformed synthesised scene.
+      // loudly so the caller does not get a malformed synthesised scene.
       mockProvider.loadResource = vi.fn().mockResolvedValue('not binary');
       registerMetadata('frame1', {
         id: 'frame1',
@@ -570,8 +553,8 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
     });
 
     it('still rejects ArrayBuffer content for a .tscn path (sanity)', async () => {
-      // The branch is path-extension driven, not content-type driven —
-      // a .tscn path that somehow got binary content is still an error.
+      // The branch is driven by path extension, not content type: a .tscn path
+      // that somehow got binary content is still an error.
       const buffer = new ArrayBuffer(8);
       mockProvider.loadResource = vi.fn().mockResolvedValue(buffer);
       registerMetadata('scene1', {

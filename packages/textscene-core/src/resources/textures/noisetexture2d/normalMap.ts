@@ -1,20 +1,16 @@
 /**
- * `Image::bump_map_to_normal_map` — the last stage of the NoiseTexture2D
- * pipeline, run when `as_normal_map` is set.
+ * `Image::bump_map_to_normal_map`: the last stage of the NoiseTexture2D pipeline,
+ * run when `as_normal_map` is set.
  */
 
 import { clamp8 } from './noiseBytes';
 
 /**
- * `Image::bump_map_to_normal_map` (core/io/image.cpp:4083-4128).
+ * `Image::bump_map_to_normal_map` (core/io/image.cpp:4083-4128). Godot keeps only
+ * red (`FORMAT_RF`), so a ramped height field is the ramp's red. Neighbours wrap,
+ * and the normal is `across x up`, packed as `127.5 + n * 127.5`.
  *
- * Godot converts the image to `FORMAT_RF` first, which keeps only the RED
- * channel — so after a `color_ramp` the height field is the ramp's red, not its
- * luminance. `stride` names where that channel sits: 4 for an RGBA field (the
- * ramped path), 1 for a raw grayscale field, which spares the no-ramp path a
- * full RGBA expansion it would read one byte in four of. Neighbours wrap at the
- * edges, and the normal is `across x up` normalised, packed as
- * `127.5 + n * 127.5`.
+ * @param stride Where red sits: 4 for RGBA, 1 for raw grayscale with no ramp.
  */
 export function bumpMapToNormalMap(
   heights: Uint8Array,

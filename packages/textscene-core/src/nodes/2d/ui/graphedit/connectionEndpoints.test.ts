@@ -81,7 +81,7 @@ describe('resolveGraphEditConnections (graph_edit.cpp:1614-1660 _update_connecti
     const resolved = resolveGraphEditConnections(graphEdit, childRects, props, nativeTheme(1), null);
 
     expect(resolved).toHaveLength(1);
-    // port local (120, 53) — `connectionPorts.test.ts`'s own hand-derived row.
+    // Port local (120, 53), the hand-derived row of `connectionPorts.test.ts`.
     // (120 + 40) * 1.5 = 240 in graph space, less scroll_offset 32 = 208;
     // (53 + 56) * 1.5 = 163.5, less 16 = 147.5.
     expect(resolved[0]!.from).toEqual({ pos: { x: 208, y: 147.5 }, graphPos: { x: 240, y: 163.5 }, color: RED });

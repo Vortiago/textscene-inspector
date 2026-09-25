@@ -1,4 +1,4 @@
-/** Sprite2D registration — parser + formatter. */
+/** Registers the Sprite2D parser and property formatter. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseSprite2D } from './parser';

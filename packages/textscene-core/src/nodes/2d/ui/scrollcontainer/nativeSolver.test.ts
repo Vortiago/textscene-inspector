@@ -1,20 +1,8 @@
 /**
- * `scrollContainerMinimumSize`/`scrollContainerScrollBars`/`scrollContainerLayout`
- * vs Godot 4.6.3 (`scene/gui/scroll_container.cpp`, `scene/gui/scroll_bar.cpp`,
- * `scene/gui/range.cpp`). Every rect/page/ratio expected value below was
- * cross-checked against the real engine: a scratch project instantiated
- * `scenes/fixtures/unit-scroll-container.tscn` in a 1152x648 `SubViewport` and
- * printed `Control.get_rect()`/`get_combined_minimum_size()` plus each
- * scrollbar's `Range` (value/min/max/page/get_as_ratio) per node — the exact
- * numbers this suite's "wired through the registry" describe block asserts.
- * The grabber's own boundary (not readable from any Control API) was measured
- * with `pnpm ref:godot scenes/fixtures/unit-scroll-container.tscn --mode 2d
- * --probe x,y`: the grabber/track colour transition falls at local y in
- * (475,476), matching the formula's predicted 476.16 (the ~1px gap is the
- * anti-aliasing feather `styleBoxFlatGeometry.ts` deliberately doesn't model).
- * Driven with synthetic `custom_minimum_size` children where the scenario
- * doesn't need the real fixture's Labels, so a font-metric regression can
- * never masquerade as a layout regression here.
+ * Tests the ScrollContainer solve against `scene/gui/scroll_container.cpp`,
+ * `scene/gui/scroll_bar.cpp` and `scene/gui/range.cpp`. Children use
+ * `custom_minimum_size` where the fixture's Labels are not needed, so a
+ * font-metric regression cannot show as a layout one.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
@@ -33,10 +21,9 @@ import {
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 /**
- * `scrollContainerLayout`'s child-rects half only — every test below except the dedicated `meta` describe cares only
- * about this, exactly like before `{ rects, meta }` existed. `'rects' in result`, not `instanceof Map`: a plain `Map`
- * is not STRUCTURALLY a subtype of the read-only `ReadonlyMap` interface's own view (see `controlRectSolver.ts`'s
- * `normalizeContainerLayoutResult`, the same discriminator this mirrors), so `instanceof` cannot safely narrow it.
+ * The child-rects half of `scrollContainerLayout`. `'rects' in result`, not
+ * `instanceof Map`: a `Map` is not structurally a `ReadonlyMap`, so
+ * `instanceof` cannot narrow it (as in `normalizeContainerLayoutResult`).
  */
 function layoutRects(...args: Parameters<typeof scrollContainerLayout>): ReadonlyMap<string, Rect2> {
   const result = scrollContainerLayout(...args);
@@ -44,9 +31,8 @@ function layoutRects(...args: Parameters<typeof scrollContainerLayout>): Readonl
 }
 
 const THEME = nativeTheme(1);
-// scaled.contentMargin = 4 at scale 1; a scrollbar's own thickness is
-// 2 * contentMargin (scroll_bar.cpp::get_minimum_size, scroll_container.h:104-105
-// default 0 separation) — see this module's own header comment.
+// A scrollbar's thickness is 2 * contentMargin = 8 at scale 1
+// (scroll_bar.cpp::get_minimum_size, scroll_container.h:104-105 default 0 separation).
 const THICKNESS = 8;
 
 function ctx() {
@@ -138,9 +124,9 @@ describe('scrollContainerScrollBars (scroll_container.cpp::_update_scrollbars/_u
   });
 
   it("dodges the OTHER bar's thickness in its own rect only when that bar is VISIBLE, not merely reserved", () => {
-    // vertical_scroll_mode = RESERVE, but content fits vertically: v_scroll stays
-    // invisible (RESERVE only auto-shows on overflow, like AUTO) yet still
-    // reserves content width — scroll_container.cpp:592-593 / 351,357-363.
+    // vertical_scroll_mode = RESERVE with content that fits: v_scroll stays
+    // invisible, as AUTO would, yet reserves content width
+    // (scroll_container.cpp:592-593 / 351,357-363).
     const child = leaf('Scroll/Child', { customMinimumSize: { x: 500, y: 100 } }); // h overflows
     const n = scrollContainer({ verticalScrollMode: 4 }, [child]);
     const out = scrollContainerScrollBars(n, ctx(), OWN_RECT);
@@ -162,12 +148,10 @@ describe('scrollContainerScrollBars (scroll_container.cpp::_update_scrollbars/_u
   });
 
   it("clamps page to the range (Range::set_page's own CLAMP), matching the real engine's fixture numbers", () => {
-    // scenes/fixtures/unit-scroll-container.tscn at 1152x648, ScrollContainer
-    // rect (16,16,1120,616): Content's combined min is (399,800) (399 from the
-    // wider Label, 800 from custom_minimum_size). Oracle: h_scroll invisible,
-    // max=399, page=399 (clamped down from the raw 1112 = 1120-8, since page
-    // cannot exceed max); v_scroll visible, max=800, page=616 (unclamped, the
-    // full own height since h_scroll is invisible).
+    // scenes/fixtures/unit-scroll-container.tscn: rect (16,16,1120,616), Content
+    // min (399,800). h_scroll is invisible with max=399 and page=399, clamped
+    // from 1120-8 = 1112. v_scroll is visible with max=800 and page=616, the
+    // full height.
     const child = leaf('Scroll/Content', { customMinimumSize: { x: 399, y: 800 } });
     const n = scrollContainer({}, [child]);
     const rect: Rect2 = { x: 16, y: 16, w: 1120, h: 616 };
@@ -191,11 +175,9 @@ describe('scrollContainerScrollBars (scroll_container.cpp::_update_scrollbars/_u
   });
 
   it('never lets an over-range authored offset push the grabber past the end of its track', () => {
-    // The grabber's ratio reads the SETTLED value, so its far edge lands
-    // exactly on the track's: offset = area * (600/800) = 144, size = 200/800
-    // * 192 + 8 = 56, and 144 + 56 = 200 = the bar's own length. Reading the
-    // raw authored value instead put the grabber at the full area_size and
-    // drew it hanging off the end.
+    // The grabber's ratio reads the settled value, so its far edge lands on
+    // the track's: offset = area * (600/800) = 144, size = 200/800 * 192 + 8 =
+    // 56, and 144 + 56 = 200, the bar's length.
     const child = leaf('Scroll/Content', { customMinimumSize: { x: 0, y: 800 } });
     const n = scrollContainer({ scrollVertical: 5000 }, [child]);
     const out = scrollContainerScrollBars(n, ctx(), { x: 0, y: 0, w: 300, h: 200 });
@@ -204,11 +186,9 @@ describe('scrollContainerScrollBars (scroll_container.cpp::_update_scrollbars/_u
   });
 
   it('keeps a fractional bar rect at FULL precision — the whole-pixel snap belongs to the drawn transform, not the solve', () => {
-    // `Control::_update_canvas_item_transform` floors the CANVAS ITEM's
-    // translation and leaves `get_rect()` untouched, so a ScrollBar whose own
-    // origin lands on a half pixel still reports that half pixel — the
-    // container's own reservation arithmetic below reads these numbers, and
-    // rounding them here would feed the solve its own rendering compromise.
+    // `Control::_update_canvas_item_transform` floors only the canvas item's
+    // translation, so `get_rect()` keeps the half pixel that the reservation
+    // arithmetic reads.
     const child = leaf('Scroll/Content', { customMinimumSize: { x: 1200, y: 900 } });
     const n = scrollContainer({}, [child]);
     const out = scrollContainerScrollBars(n, ctx(), { x: 0, y: 0, w: 900.5, h: 600.5 });
@@ -246,7 +226,7 @@ describe('scrollContainerLayout (scroll_container.cpp::_reposition_children)', (
     const child = leaf('Scroll/Child', {
       customMinimumSize: { x: 50, y: 500 },
       sizeFlagsHorizontal: 3,
-      sizeFlagsVertical: 1, // FILL only on Y — height stays at its own minimum
+      sizeFlagsVertical: 1, // FILL only on Y: height stays at its own minimum
     });
     const n = scrollContainer({}, [child]);
     const children = [{ node: child, minSize: { x: 50, y: 500 } }];
@@ -264,13 +244,10 @@ describe('scrollContainerLayout (scroll_container.cpp::_reposition_children)', (
   });
 
   it('settles an authored offset past `max - page` AT `max - page`, never further', () => {
-    // `Range::_calc_value` (`range.cpp:191-193`): a value above `max - page`
-    // is pinned there before the `min` clamp below it. `ScrollContainer::
-    // _update_scrollbars` (`:598-599`) gives the v-bar `max` = the largest
-    // child minimum and `page` = the content viewport height, and BOTH
-    // `Range::set_max` and `Range::set_page` re-run `set_value(val)`
-    // (`range.cpp`), so the settled value is clamped however late the sizes
-    // arrive. Engine-checked: authoring 5000 here settles at 600.
+    // `Range::_calc_value` (`range.cpp:191-193`) pins a value above `max - page`.
+    // `_update_scrollbars` (`:598-599`) sets max and page, and both setters re-run
+    // `set_value(val)` (`range.cpp`), so late sizes still clamp. Godot settles
+    // an authored 5000 at 600.
     const child = leaf('Scroll/Child', { customMinimumSize: { x: 50, y: 800 } });
     const n = scrollContainer({ scrollVertical: 5000 }, [child]);
     const children = [{ node: child, minSize: { x: 50, y: 800 } }];
@@ -280,11 +257,10 @@ describe('scrollContainerLayout (scroll_container.cpp::_reposition_children)', (
   });
 
   it('ignores an authored offset entirely when the content does not overflow', () => {
-    // `Range::set_page` CLAMPs page to `max - min` (`range.cpp:254-256`), so a
-    // viewport wider than the content gives `page == max` and `max - page ==
-    // 0`: every authored offset settles at 0 and the child never moves.
-    // Engine-checked: `scroll_horizontal = 30`/`scroll_vertical = 70` on a
-    // 300x200 container holding a 50x50 child both read back 0.
+    // `Range::set_page` clamps page to `max - min` (`range.cpp:254-256`), so a
+    // viewport wider than the content settles every offset at 0. In Godot,
+    // `scroll_horizontal = 30` and `scroll_vertical = 70` on a 300x200
+    // container with a 50x50 child both read back 0.
     const child = leaf('Scroll/Child', { customMinimumSize: { x: 50, y: 50 } });
     const n = scrollContainer({ scrollHorizontal: 30, scrollVertical: 70 }, [child]);
     const children = [{ node: child, minSize: { x: 50, y: 50 } }];
@@ -319,12 +295,16 @@ describe('scrollContainerLayout — the sealed solve handoff carries the FULL Sc
     const expected = scrollContainerScrollBars(n, solveCtx, RECT);
 
     expect(result).not.toBeInstanceOf(Map);
-    // `'rects' in result`, not `instanceof Map`: see `layoutRects`'s own doc for why.
+    // `'rects' in result`, not `instanceof Map`: see `layoutRects`.
     if (!('rects' in result)) throw new Error('unreachable');
     expect(scrollContainerLayoutChannel.open(result.meta)).toEqual(expected);
   });
 });
 
+// The rect, page and ratio values come from `scenes/fixtures/unit-scroll-container.tscn`
+// in a 1152x648 `SubViewport`, read from `get_rect()` and each bar's `Range`.
+// `pnpm ref:godot scenes/fixtures/unit-scroll-container.tscn --mode 2d --probe x,y`
+// puts the grabber edge at local y (475,476), formula 476.16.
 describe('wired through the registry + full solve, against the real fixture numbers', () => {
   const TYPE = 'ScrollContainer';
 
@@ -433,24 +413,18 @@ describe('ScrollContainer under RTL', () => {
 });
 
 /**
- * `draw_focus_border` reaches a STILL frame only through `_get_margins`.
- * The focus PANEL itself is gated on focus
- * (`scroll_container.cpp:474-475`: `focus_border_is_drawn = draw_focus_border
- * && (has_focus(true) || child_has_focus())`), which no `.tscn` can author —
- * but `_get_margins` (`:103-130`) raises each side to the `focus` StyleBox's
- * own margin whenever the flag is set, and every layout formula reads it:
- * `get_minimum_size` (`:74-75`), `_update_scrollbars` (`:583-585`),
- * `_update_scrollbar_position` (`:289-306`) and `_reposition_children`
- * (`:344-348`).
- *
- * Default theme: `panel` is a `StyleBoxEmpty` (`default_theme.cpp:655-657`),
- * so every side starts at 0; `focus` is `make_flat_stylebox(style_focus_color)`
- * (`:659`), whose `set_content_margin_individual(Math::round(4 * scale) …)`
- * (`:60`, `default_margin = 4` at `:54`) gives 4 on all four sides at scale 1.
+ * `draw_focus_border` reaches a still frame only through `_get_margins`
+ * (`:103-130`). The focus panel needs focus (`scroll_container.cpp:474-475`:
+ * `focus_border_is_drawn = draw_focus_border && (has_focus(true) || child_has_focus())`),
+ * which no `.tscn` can author.
  */
 describe('ScrollContainer.draw_focus_border (scroll_container.cpp::_get_margins)', () => {
   const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
 
+  // The margins feed `get_minimum_size` (`:74-75`), `_update_scrollbars` (`:583-585`),
+  // `_update_scrollbar_position` (`:289-306`) and `_reposition_children` (`:344-348`).
+  // `panel` is a `StyleBoxEmpty` (`default_theme.cpp:655-657`), and `focus`
+  // (`:659`, `:60`, `default_margin = 4` at `:54`) gives 4 per side at scale 1.
   it('insets the content rect by the focus style margin on all four sides (scroll_container.cpp:344-348)', () => {
     const child = leaf('Scroll/Child', {
       customMinimumSize: { x: 50, y: 50 },
@@ -478,7 +452,7 @@ describe('ScrollContainer.draw_focus_border (scroll_container.cpp::_get_margins)
   });
 
   it('measures overflow against the margin-reduced size, so a child that only just fits now overflows (scroll_container.cpp:583-585)', () => {
-    // 296 wide content vs a 298-wide child: no bar without the flag, a bar with it.
+    // 296 wide content against a 298-wide child: no bar without the flag, a bar with it.
     const child = leaf('Scroll/Child', { customMinimumSize: { x: 298, y: 50 } });
     const without = scrollContainer({}, [child]);
     const with_ = scrollContainer({ drawFocusBorder: true }, [child]);
@@ -499,26 +473,17 @@ describe('ScrollContainer.draw_focus_border (scroll_container.cpp::_get_margins)
 });
 
 /**
- * `_update_scroll_hints` (`scroll_container.cpp:606-658`) — the two
- * `TextureRect` hints that fade the edge the content continues past.
- *
- * Both hint keys drive `set_visible()` on those nodes, and both conditions a
- * STILL frame can satisfy are reachable from a `.tscn`: `v_scroll_below_max`
- * holds at the default scroll offset whenever the content overflows by more
- * than a pixel, and `v_scroll_value > 1` holds whenever `scroll_vertical` was
- * authored. The one quirk worth pinning is the mutual exclusion — a container
- * overflowing on BOTH axes draws no hint at all, because the vertical branch
- * is gated on `!show_horizontal_hints` and the horizontal branch on
- * `!show_vertical_hints` (`:623,633,641,651`).
- *
- * Icon extents are the vendored SVGs' own: `scroll_hint_vertical.svg` is
- * 32x24 and `scroll_hint_horizontal.svg` 24x32 (`scene/theme/icons/`), and
- * only the extent ACROSS the fade is read (`get_height()` at `:627,636`,
- * `get_width()` at `:643,652`).
+ * `_update_scroll_hints` (`scroll_container.cpp:606-658`): the two hints that
+ * fade the edge the content continues past. Each branch is gated on the other
+ * axis showing no hint (`:623,633,641,651`), so overflow on both axes draws none.
  */
 describe('ScrollContainer.scroll_hint_mode (scroll_container.cpp::_update_scroll_hints)', () => {
   const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
 
+  // `v_scroll_below_max` holds on overflow of more than a pixel, and
+  // `v_scroll_value > 1` when `scroll_vertical` is authored. `scene/theme/icons/`:
+  // `scroll_hint_vertical.svg` is 32x24 and `scroll_hint_horizontal.svg` 24x32,
+  // read only across the fade (`get_height()` at `:627,636`, `get_width()` at `:643,652`).
   function hints(props: Partial<ScrollContainerProperties>, minSize: { x: number; y: number }) {
     const child = leaf('Scroll/Child', { customMinimumSize: minSize });
     return scrollContainerScrollBars(scrollContainer(props, [child]), ctx(), RECT).hints;

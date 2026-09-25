@@ -1,6 +1,4 @@
-/**
- * Tests for Path3D linter (strict parser + semantic rules)
- */
+/** Path3D linter: the strict parser and the semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -17,7 +15,7 @@ describe('Path3D Linter', () => {
   describe('Strict Parser Validation (Format)', () => {
     it('should pass format validation for a valid Path3D with curve, even with no PathFollow3D child', () => {
       // Path3D declares no get_configuration_warnings() at all (only
-      // PathFollow3D/PathFollow2D do, for the opposite condition) — a
+      // PathFollow3D/PathFollow2D do, for the opposite condition), so a
       // followerless Path3D is not a Godot warning.
       expectClean(`[gd_scene format=3]
 
@@ -61,7 +59,6 @@ curve = SubResource("curve_1")
 `;
 
         const diagnostics = lint(content);
-        // Should only have unused warning, no format errors
         const formatErrors = diagnostics.filter(d => d.message.includes('resource reference'));
         expect(formatErrors).toHaveLength(0);
       });
@@ -76,7 +73,6 @@ curve = ExtResource("curve_ext")
 `;
 
         const diagnostics = lint(content);
-        // Should only have unused warning, no format errors
         const formatErrors = diagnostics.filter(d => d.message.includes('resource reference'));
         expect(formatErrors).toHaveLength(0);
       });
@@ -205,7 +201,6 @@ curve = ExtResource("curve_ext")
       const diagnostics = lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
 
-      // Path3D1: should have curve resource not found error
       const curveError = diagnostics.find(d =>
         d.nodeName === 'Path3D1' &&
         d.message.includes("'curve'")
@@ -266,8 +261,7 @@ curve = ExtResource("curve_ext")
     });
 
     it('should handle Path3D with invalid curve format', () => {
-      // When there's a format error during strict parsing, semantic validation doesn't run
-      // So we only expect the format error from the strict parser
+      // A format error in strict parsing stops semantic validation, so only the format error shows.
       expectDiagnostic(scene(node('Path3D', { curve: 'invalid_value' })), {
         ruleName: 'strict-parser',
         severity: 'error',
@@ -330,11 +324,9 @@ curve = SubResource("nonexistent")
       const diagnostics = lint(content);
       expect(diagnostics.length).toBeGreaterThan(0);
 
-      // ValidPath should have no errors
       const validPathErrors = diagnostics.filter(d => d.nodeName === 'ValidPath');
       expect(validPathErrors).toHaveLength(0);
 
-      // InvalidPath should have resource not found error
       const resourceError = diagnostics.find(d =>
         d.nodeName === 'InvalidPath' &&
         d.message.includes("'curve'")

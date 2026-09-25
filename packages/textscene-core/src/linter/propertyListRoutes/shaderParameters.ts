@@ -6,10 +6,9 @@
 import type { RouteRow } from './types.js';
 
 export const shaderParameterRoutes: readonly RouteRow[] = [
-  // --- Shader-reflected instance parameters ---
   {
     // Storage is per-instance-state (canvas_item.cpp:637-656): granted only
-    // once an override for that name actually exists locally. The base type
+    // once an override for that name exists locally. The base type
     // and hint come from RS::canvas_item_get_instance_shader_parameter_list at
     // runtime, from whatever the attached shader declares.
     type: 'CanvasItem',
@@ -33,7 +32,7 @@ export const shaderParameterRoutes: readonly RouteRow[] = [
   },
   {
     // Resolved whole, not by index parsing: blend_shape_properties maps the
-    // FULL "blend_shapes/<name>" string to a track index, rebuilt from the
+    // full "blend_shapes/<name>" string to a track index, rebuilt from the
     // Mesh resource every time it changes (mesh_instance_3d.cpp:413-414). The
     // -1..1 PROPERTY_HINT_RANGE (mesh_instance_3d.cpp:103) is never enforced.
     type: 'MeshInstance3D',
@@ -49,12 +48,9 @@ export const shaderParameterRoutes: readonly RouteRow[] = [
   },
   {
     // get_viewport_composition_layer_extension_properties is a GDVIRTUAL
-    // (openxr_extension_wrapper.cpp:379-387); zero concrete
-    // OpenXRExtensionWrapper subclasses in this checkout implement it, and the
-    // only engine-side constraint on a name is containing a '/'
-    // (openxr_composition_layer.cpp:712-715). There is no fixed prefix to
-    // register a wildcard against, so the sample below is illustrative only —
-    // no such key exists in this build to validate even in principle.
+    // (openxr_extension_wrapper.cpp:379-387) that no shipped wrapper implements,
+    // and a name need only contain a '/' (openxr_composition_layer.cpp:712-715).
+    // With no fixed prefix, the sample is illustrative only.
     type: 'OpenXRCompositionLayer',
     at: 'openxr_composition_layer.cpp:705-716',
     sample: 'example_extension/enabled',

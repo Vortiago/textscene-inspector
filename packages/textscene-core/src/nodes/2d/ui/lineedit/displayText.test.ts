@@ -1,25 +1,8 @@
 /**
- * Godot-parity contract for what a LineEdit paints, from `LineEdit::_shape()`
- * (scene/gui/line_edit.cpp):
- *
- *     String t;
- *     if (text.is_empty() && ime_text.is_empty()) {
- *       t = placeholder_translated;
- *     } else if (pass) {
- *       String s = secret_character.is_empty() ? U"•" : secret_character.left(1);
- *       t = s.repeat(text.length() + ime_text.length());
- *     } else {
- *       t = text;
- *     }
- *
- * The distinguishing case is the BRANCH ORDER: the empty-text test runs before
- * the `pass` (secret) test, so a secret field with no text shows its
- * placeholder in the clear rather than a row of bullets. An implementation that
- * checked `secret` first would print nothing there and look plausible.
- *
- * Measured: real Godot 4.6 draws "Enter text here..." on the LineEdit in
- * `scenes/demos/viewport/gui_in_3d/gui_panel_3d.tscn`, which sets only
- * `placeholder_text` and no `text`.
+ * Tests what a LineEdit paints against `LineEdit::_shape()` (scene/gui/line_edit.cpp), whose empty-text
+ * branch runs before the `pass` branch: a secret field with no text shows its placeholder, not bullets.
+ * Godot 4.6 draws "Enter text here..." on the LineEdit in
+ * `scenes/demos/viewport/gui_in_3d/gui_panel_3d.tscn`, which sets only `placeholder_text`.
  */
 import { describe, it, expect } from 'vitest';
 import { lineEditDisplayText, DEFAULT_SECRET_CHARACTER } from './displayText';
@@ -78,7 +61,7 @@ describe('lineEditDisplayText', () => {
   });
 
   it('truncates text longer than max_length (happy path)', () => {
-    // set_max_length re-runs set_text, which truncates via insert_text_at_caret's
+    // set_max_length re-runs set_text, which truncates through insert_text_at_caret's
     // available_chars check (line_edit.cpp:2409-2412).
     expect(lineEditDisplayText({ name: 'L', text: 'hello world', maxLength: 5 })).toEqual({
       text: 'hello',

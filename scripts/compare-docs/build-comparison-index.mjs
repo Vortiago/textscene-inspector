@@ -1,12 +1,8 @@
 /**
- * Write the node index in `docs/comparison/README.md` from the sheets.
- *
- * Each row restates its sheet's `renders_as:`, so the list is generated rather
- * than kept by hand. `sheets.test.mjs` checks only that every type is PRESENT,
- * never that its description is current, which is why a hand-kept list drifted
- * without failing anything.
- *
- * `--check` fails instead of writing, and `validate` runs it.
+ * Writes the node index in `docs/comparison/README.md` from the sheets: each row restates its
+ * sheet's `renders_as:`. `sheets.test.mjs` checks only that every type is present, not that its
+ * description is current, so a hand-kept list goes stale unseen. `--check` fails instead of
+ * writing, and `validate` runs it.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
@@ -32,7 +28,7 @@ function rows() {
     const href = relative(dirname(INDEX), file).replaceAll('\\', '/');
     const renders = (sheet.meta.renders_as ?? '').trim();
     byCategory.get(category).push(
-      `- [${sheet.meta.type}](${href})${renders ? ` — ${renders}` : ''}`
+      `- [${sheet.meta.type}](${href})${renders ? `: ${renders}` : ''}`
     );
   }
   const out = [];

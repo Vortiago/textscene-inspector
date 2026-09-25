@@ -1,6 +1,4 @@
-/**
- * Tests for shared light parsing utilities
- */
+/** Shared light parsing. */
 
 import { describe, it, expect } from 'vitest';
 import { parseBaseLightProperties, parseBaseLightWithNormalBias } from './parser';

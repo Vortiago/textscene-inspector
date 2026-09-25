@@ -1,8 +1,8 @@
 [gd_scene load_steps=2 format=3 uid="uid://edge_area2d_inactive"]
 
-; Area2D with both `monitoring` and `monitorable` false, so it detects nothing
-; and nothing detects it. Warning-level (area2d-detects-nothing); its gravity
-; and damping overrides still apply, and it renders its shape normally.
+; Area2D with both `monitoring` and `monitorable` false, so it detects nothing and nothing detects
+; it: a warning (area2d-detects-nothing). Its gravity and damping overrides still apply, and it
+; renders its shape normally.
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1"]
 radius = 20.0

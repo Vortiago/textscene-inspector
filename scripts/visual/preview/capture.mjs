@@ -1,7 +1,6 @@
 /**
- * Opening a fixture and getting one trustworthy frame out of it: the app's own
- * resource chain awaited, the requested scene confirmed, and the canvas proven
- * settled before it is read.
+ * Opens a fixture and gets one trustworthy frame out of it: the app's own resource chain awaited,
+ * the requested scene confirmed, and the canvas proven settled before it is read.
  */
 
 import {
@@ -16,12 +15,10 @@ import { writeFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 
 /**
- * Navigate to a fixture and wait for the app's OWN resource chain to go quiet.
- * `load` fires well before that chain finishes — a scene fetches its .tscn,
- * then an ArrayMesh .tres, then that surface's material, then the material's
- * texture, each only discoverable once the previous one parsed. Without this
- * the settle gate below happily finds two identical frames of the untextured
- * placeholder. A scene that never idles still falls through to the gate.
+ * Navigates to a fixture and waits for the app's own resource chain to go quiet. `load` fires
+ * first: a scene fetches its .tscn, then an ArrayMesh .tres, its material and that texture, each
+ * found only after the previous one parsed. Otherwise the settle gate accepts two identical
+ * frames of the untextured placeholder. A scene that never idles still falls through to the gate.
  */
 export async function gotoFixture(page, baseUrl, fixture, onSlow = () => {}, extraParams = {}) {
   let url = `${baseUrl}/?fixture=${encodeURIComponent(fixture)}`;
@@ -30,8 +27,7 @@ export async function gotoFixture(page, baseUrl, fixture, onSlow = () => {}, ext
   }
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_MS }).catch((err) => {
-    // Anything that is NOT a timeout (crashed target, closed page) is a real
-    // failure and must not be mistaken for one.
+    // Anything but a timeout, such as a crashed target or a closed page, is a real failure.
     if (err?.name !== 'TimeoutError') throw err;
     onSlow(NETWORK_IDLE_MS);
   });
@@ -39,13 +35,9 @@ export async function gotoFixture(page, baseUrl, fixture, onSlow = () => {}, ext
 }
 
 /**
- * Fail when the app did not open the fixture we asked for.
- *
- * `useFixtureSelection` validates `?fixture=` against the catalog and silently falls back
- * to the stored or default scene when it does not match — correct for a shared link, fatal
- * for a measurement. It writes the scene it actually opened back into the URL, so the
- * post-load query string is the app's own answer to "what am I showing?". Without this a
- * mistyped or wrongly-derived name yields a confident number for the wrong scene.
+ * Fails when the app did not open the requested fixture. `useFixtureSelection` falls back to the
+ * stored or default scene for an unknown `?fixture=`, which suits a shared link but not a
+ * measurement. It writes the scene it opened back into the URL, which this reads.
  */
 function assertOpenedFixture(page, requested) {
   const opened = new URL(page.url()).searchParams.get('fixture');
@@ -57,13 +49,12 @@ function assertOpenedFixture(page, requested) {
   );
 }
 
-/** The single canvas the scene renders into, or a reason there isn't exactly one. */
+/** The single canvas the scene renders into, or a reason there is not exactly one. */
 export async function findCanvas(page) {
   const canvases = page.locator('canvas');
   try {
-    // 90s: under host contention (parallel agents + software GL) a healthy
-    // scene can take over 30s to first paint. A timeout REPORTS rather than
-    // throws — one slow scene must cost one 'unstable' row, not the whole run.
+    // 90 s: under host contention with software GL a healthy scene can take over 30 s to first
+    // paint. A timeout reports, so one slow scene costs one 'unstable' row, not the whole run.
     await canvases.first().waitFor({ timeout: 90000 });
   } catch {
     return { canvas: null, reason: 'no canvas appeared within 90s' };
@@ -88,10 +79,9 @@ export async function findCaptureTarget(page, { canvas2D = false } = {}) {
 }
 
 /**
- * Screenshot the canvas once it is provably settled: two consecutive
- * byte-identical captures. A scene that never settles is a measurement that
- * cannot be trusted, so it returns a reason rather than whatever frame was up —
- * flakiness is rejected here, not absorbed by tolerance downstream.
+ * Screenshots the canvas once two consecutive captures are byte-identical. A scene that never
+ * settles returns a reason instead of a frame, so flakiness is rejected here, not absorbed by a
+ * tolerance downstream.
  */
 export async function settleCanvas(
   page,
@@ -106,10 +96,8 @@ export async function settleCanvas(
         'Reaching a non-zero settle needs a driveable elapsed-time hook in the renderer first.'
     );
   }
-  // A whole game world under SwiftShader can take longer to rasterise ONE frame
-  // than Playwright's default action timeout allows, which surfaces as a
-  // screenshot timeout rather than as "never settled". Raising it per scene
-  // keeps an ordinary scene's genuine hang from taking that long to report.
+  // A whole game world under SwiftShader can take longer to rasterise one frame than Playwright's
+  // default action timeout. A per-scene raise keeps an ordinary scene's hang quick to report.
   const shot = () => canvas.screenshot(screenshotTimeout ? { timeout: screenshotTimeout } : {});
   await page.waitForTimeout(SETTLE_INITIAL_MS);
   let prev = await shot();
@@ -127,7 +115,7 @@ export async function settleCanvas(
   };
 }
 
-/** Every pixel the same RGBA — a dead GL context or an unrendered scene, never a real frame. */
+/** Every pixel the same RGBA: a dead GL context or an unrendered scene, never a real frame. */
 export function isUniformImage(buffer) {
   const { data } = PNG.sync.read(buffer);
   const [r0, g0, b0, a0] = data;
@@ -140,13 +128,8 @@ export function isUniformImage(buffer) {
 }
 
 /**
- * Write a capture, refusing a uniform one.
- *
- * `settleCanvas` accepts two byte-identical screenshots as settled, and two
- * captures of a LOST context are byte-identical — so the settle gate cannot
- * tell them apart. On a compare that is harmless (a blank frame diffs hugely
- * and fails); on a write it is permanent, because a blank baseline makes every
- * later compare pass.
+ * Writes a capture, refusing a uniform one. Two captures of a lost context pass `settleCanvas`. A
+ * compare then fails on the diff, but a blank baseline, once written, passes every later compare.
  */
 export function writeCaptureImage(path, buffer, what) {
   if (isUniformImage(buffer)) {

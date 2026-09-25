@@ -1,6 +1,6 @@
 /**
- * ShaderGlobalsOverride draws nothing of its own (ADR-0008) — reuse the Node
- * component so its children still land in the right transform space.
+ * ShaderGlobalsOverride draws nothing of its own (ADR-0008): the Node component keeps
+ * its children in the right transform space.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';

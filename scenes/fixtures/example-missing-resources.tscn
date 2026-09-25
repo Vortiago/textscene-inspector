@@ -1,12 +1,8 @@
 [gd_scene load_steps=11 format=3 uid="uid://example_missing_resources"]
 
-; A small lit room (floor + two walls + a crate) whose three albedo textures
-; point at deliberately-absent res://demo/missing/* paths. The scene renders
-; with flat base colours and reports the three textures as MISSING, so the
-; shell's Resources tab lists them with per-row upload inputs. Uploading a
-; file for each path drives the late-arrival pipeline (provideFile ->
-; useResource 'loaded' -> re-render) and the surfaces gain their textures.
-; Used by the "missing-upload" showcase clip to keep that flow on film.
+; A lit room whose three albedo textures point at absent res://demo/missing/* paths. It renders
+; flat colours and lists the three as missing, with upload inputs. An upload drives the late-arrival
+; pipeline (provideFile -> useResource 'loaded' -> re-render). The "missing-upload" clip uses it.
 
 [ext_resource type="Texture2D" path="res://demo/missing/floor_albedo.png" id="tex_floor"]
 [ext_resource type="Texture2D" path="res://demo/missing/wall_albedo.png" id="tex_wall"]

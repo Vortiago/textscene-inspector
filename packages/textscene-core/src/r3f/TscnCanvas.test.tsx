@@ -8,11 +8,8 @@ import { frameSceneBounds } from './frameSceneBounds';
 
 describe('the canvas container CSS', () => {
   it('claims every touch gesture, so touch navigation gets pointermove at all', () => {
-    // Read from source, because this is invisible to every other gate: the
-    // WebGL goldens do not see CSS, and happy-dom has neither a cascade nor
-    // layout. @react-three/fiber sets no touch-action of its own (checked
-    // against 9.x), so without this line the browser consumes a one-finger
-    // drag as a scroll and <GodotEditorControls> never sees the gesture.
+    // Read from source: the goldens do not see CSS, and happy-dom has no cascade.
+    // R3F 9.x sets no touch-action, so without it a one-finger drag scrolls.
     const css = readFileSync(path.join(import.meta.dirname, 'TscnCanvas.module.css'), 'utf8');
     const root = /\.root\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
     expect(root).toContain('touch-action: none');
@@ -26,8 +23,8 @@ describe('<TscnSceneContents> (preview lighting)', () => {
   });
 
   it('places it at Godot’s preview angles, casting a shadow', async () => {
-    // altitude 60° above the horizon, azimuth 150° — the light TRAVELS
-    // (-0.25, -0.866, 0.433), so it sits on the opposite side.
+    // Altitude 60°, azimuth 150°: the light travels (-0.25, -0.866, 0.433),
+    // so it sits on the opposite side.
     const renderer = await ReactThreeTestRenderer.create(<TscnSceneContents />);
     const sun = renderer.scene.findByType('DirectionalLight');
     const position = sun.instance.position as THREE.Vector3;
@@ -57,9 +54,8 @@ describe('frameSceneBounds — near plane', () => {
   }
 
   it('keeps the near plane below the framing distance for a microscopic scene', () => {
-    // Regression for the Decal `size=0.001` demo: the camera framed the tiny
-    // scene at distance ~0.0012 while the near floor stayed 0.01, so the
-    // content sat inside the near plane and the viewport rendered black.
+    // A scene 0.001 across frames at a distance near 0.0012. A near floor of 0.01
+    // would put the content inside the near plane and render black.
     const cam = camera();
     frameSceneBounds(sceneWithBox(0.001), cam, null);
     const distance = cam.position.length(); // bounds centred on the origin

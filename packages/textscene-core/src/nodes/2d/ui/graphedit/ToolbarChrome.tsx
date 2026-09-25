@@ -1,21 +1,7 @@
 /**
- * `<GraphEditToolbarChrome>` — paints the `menu_panel`/`menu_hbox` row
- * `GraphEdit`'s constructor builds (`scene/gui/graph_edit.cpp:3229-3324`),
- * off the geometry `toolbar.ts` solves.
- *
- * Its children are `INTERNAL_MODE_*` nodes of `top_layer`, itself added
- * `INTERNAL_MODE_BACK` (`:3183`), so the whole row paints AFTER every
- * GraphElement child — hence `renderOrder` here is the caller's
- * `subtreeChromeRenderOrder` band, never GraphEdit's own paint slot.
- *
- * Every button is a `FlatButton` (`:3249` and its siblings), whose `normal`
- * and `disabled` styleboxes are both `StyleBoxEmpty` (`default_theme.cpp:
- * 360-370`): only a PRESSED toggle draws a box. `icon_normal_color` and
- * `icon_pressed_color` are both opaque white (`default_theme.cpp:164-165`),
- * so those two states leave an icon's modulate alone — but `DRAW_DISABLED`
- * swaps in `icon_disabled_color` (`button.cpp:321-329`), and the variation
- * inherits `Button`'s own `Color(1, 1, 1, 0.4)` (`default_theme.cpp:169`).
- * With the box unchanged, that alpha is the entire drawn difference.
+ * `<GraphEditToolbarChrome>`: paints the `menu_panel` row the `GraphEdit` constructor builds
+ * (`scene/gui/graph_edit.cpp:3229-3324`) from the geometry of `toolbar.ts`. The row is chrome
+ * of `top_layer` (`:3183`), so `renderOrder` is the caller's `subtreeChromeRenderOrder` band.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -42,15 +28,24 @@ import type { ControlColor } from '../control/types';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
 
-/** `Label`'s own `font_color` (`default_theme.cpp:384`) — opaque white, unlike every other control's grey. */
+/** The `font_color` of `Label` (`default_theme.cpp:384`): opaque white, where other controls use grey. */
 const LABEL_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
-/** `control_font_color` (`default_theme.cpp:101`) — `LineEdit`'s own `font_color` (`:422`) and both SpinBox arrow modulates (`:634,638`). */
+/** `control_font_color` (`default_theme.cpp:101`): the `font_color` of `LineEdit` (`:422`) and both SpinBox arrow modulates (`:634,638`). */
 const CONTROL_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 
-/** `icon_disabled_color` for `Button` (`default_theme.cpp:169`) — `Color(1, 1, 1, 0.4)`, so only the alpha moves. */
+/**
+ * `DRAW_DISABLED` swaps in `icon_disabled_color` (`button.cpp:321-329`), `Color(1, 1, 1, 0.4)` for
+ * `Button` (`default_theme.cpp:169`). `icon_normal_color` and `icon_pressed_color` are opaque white
+ * (`default_theme.cpp:164-165`), so a disabled icon differs only in alpha.
+ */
 const ICON_DISABLED_ALPHA = 0.4;
 
-/** `flat_button_pressed` (`default_theme.cpp:363-364`): `button_pressed` duplicated with `bg_color * Color(1, 1, 1, 0.85)`. */
+/**
+ * `flat_button_pressed` (`default_theme.cpp:363-364`): `button_pressed` with `bg_color * Color(1, 1, 1, 0.85)`.
+ * Every button is a `FlatButton` (`:3249`), whose `normal` and `disabled` boxes are `StyleBoxEmpty`
+ * (`default_theme.cpp:
+ * 360-370`), so only a pressed toggle draws a box.
+ */
 function flatButtonPressedStyleBox(base: StyleBoxFlatData): StyleBoxFlatData {
   return { ...base, bgColor: { ...base.bgColor, a: base.bgColor.a * 0.85 } };
 }
@@ -58,14 +53,14 @@ function flatButtonPressedStyleBox(base: StyleBoxFlatData): StyleBoxFlatData {
 
 export interface GraphEditToolbarProps {
   toolbar: GraphEditToolbar;
-  /** `solveNode.icons` — a scene's own `theme_override_icons/<key>` for any of the seven keys. */
+  /** `solveNode.icons`: the scene's `theme_override_icons/<key>` for any of the seven keys. */
   icons: NativeControlComponentProps['solveNode']['icons'];
   theme: NativeControlComponentProps['theme'];
   tint: NativeControlComponentProps['tint'];
-  /** `snapping_distance_spinbox`'s displayed value and the zoom label's text, already formatted. */
+  /** The formatted value of `snapping_distance_spinbox` and the text of the zoom label. */
   text: { zoomLabel: string; snappingDistance: string };
   shape: (text: string) => TextLayoutResult;
-  /** `SpinBox`'s buttons block sits on the trailing edge (`spin_box.cpp:403,409`). */
+  /** The `SpinBox` buttons block sits on the trailing edge (`spin_box.cpp:403,409`). */
   rtl: boolean;
   renderOrder: number;
 }
@@ -79,10 +74,9 @@ interface ButtonIconProps {
 }
 
 /**
- * One button's icon — `Button::_notification(NOTIFICATION_DRAW)`
- * (`button.cpp:349-400`) at the default LEFT/CENTER icon alignment
- * (`button.h:55-56`): flush against the stylebox's left margin, centred in
- * what the margins leave vertically.
+ * One button icon, `Button::_notification(NOTIFICATION_DRAW)` (`button.cpp:349-400`) at the
+ * default LEFT and CENTER icon alignment (`button.h:55-56`): at the stylebox's left margin,
+ * centred vertically between the margins.
  */
 function ButtonIcon({ item, texture, contentMargin, tint, renderOrder }: ButtonIconProps) {
   if (!texture) return null;
@@ -109,9 +103,9 @@ interface ToolbarTextProps {
   tint: ControlColor;
   clippingPlanes: THREE.Plane[];
   renderOrder: number;
-  /** `HORIZONTAL_ALIGNMENT_CENTER` — `zoom_label`'s own (`graph_edit.cpp:3242`). The SpinBox field is LEFT (`spin_box.cpp:731`). */
+  /** `HORIZONTAL_ALIGNMENT_CENTER`, as `zoom_label` sets (`graph_edit.cpp:3242`). The SpinBox field is LEFT (`spin_box.cpp:731`). */
   centred?: boolean;
-  /** `LineEdit::_notification(NOTIFICATION_DRAW)`'s own `x_ofs` — the field text sits one content margin in. */
+  /** The `x_ofs` of `LineEdit::_notification(NOTIFICATION_DRAW)`: the field text sits one content margin in. */
   inset?: number;
 }
 
@@ -200,7 +194,7 @@ export function GraphEditToolbarChrome({ toolbar, icons, theme, tint, text, shap
         }
 
         // `SpinBox::_compute_sizes` (`spin_box.cpp:382-410`): the field box and
-        // the up/down buttons block share the item's own rect.
+        // the up/down buttons block share the item's rect.
         const layout = spinBoxLayout({ x: item.rect.w, y: item.rect.h }, SPIN_BOX_ARROW_ICON_SIZE.x, rtl);
         const fieldRect = { x: item.rect.x, y: item.rect.y, w: layout.fieldRect.w, h: layout.fieldRect.h };
         const upPos = {

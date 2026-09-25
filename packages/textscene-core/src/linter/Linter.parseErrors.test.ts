@@ -1,5 +1,5 @@
 /**
- * Linter: turning a strict-parser `ParseError` into a diagnostic — position,
+ * Linter: turning a strict-parser `ParseError` into a diagnostic: position,
  * severity, message and the `strict-parser` rule name. `Diagnostic` has no
  * `code`, so the `ParseError` one does not survive the conversion.
  */
@@ -31,7 +31,7 @@ describe('Linter', () => {
 
     it('names the node a heading diagnostic is about, and only guesses the part it lacks', () => {
       // The heading declares a name and no type, which is the very thing being
-      // reported — so the name is known and the type genuinely is not.
+      // reported, so the name is known and the type genuinely is not.
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root"]
@@ -47,12 +47,9 @@ describe('Linter', () => {
     });
 
     it('names the node the scan was inside, not the first one in the file', () => {
-      // The stamp has to TRACK the current heading. A scene whose defect is on
-      // its third node catches a conversion that just reports node one — and a
-      // property refusal, the linter's core product, is attributed by the same
-      // mechanism. (Property validators need the slice barrel, which this
-      // registry-free suite deliberately does not import, so the heading arm
-      // stands in; `fixtureLint` and the CLI cover the property arm end to end.)
+      // The stamp tracks the current heading: a defect on the third node catches a conversion that reports node one.
+      // A property refusal is attributed the same way, but property validators need the slice barrel this suite does
+      // not import, so the heading arm stands in. `fixtureLint` and the CLI cover the property arm end to end.
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root" type="Node3D"]
@@ -70,7 +67,7 @@ describe('Linter', () => {
     });
 
     it('keeps <unknown> for a diagnostic that belongs to no node', () => {
-      // A malformed heading is the line that would have OPENED a node, so there
+      // A malformed heading is the line that would have opened a node, so there
       // is no node to name and the previous one must not be borrowed.
       const content = `[gd_scene format=3
 

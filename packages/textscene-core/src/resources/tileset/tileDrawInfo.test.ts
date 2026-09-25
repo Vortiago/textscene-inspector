@@ -1,7 +1,6 @@
 /**
- * tileDrawInfo — the pure lookup from decoder output (atlas coords +
- * alternative id) to everything the geometry builder needs: the atlas pixel
- * region, the draw orientation, and the texture origin.
+ * tileDrawInfo: from atlas coords and alternative id to the atlas pixel region, the draw
+ * orientation and the texture origin the geometry builder needs.
  */
 import { describe, it, expect } from 'vitest';
 import {

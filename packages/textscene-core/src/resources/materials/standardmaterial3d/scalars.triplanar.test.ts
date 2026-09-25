@@ -1,14 +1,8 @@
 /**
- * StandardMaterial3D triplanar handling.
- *
- * Godot's `uv1_triplanar` (+ `uv1_world_triplanar`) project the albedo /
- * normal / etc. texture from world (or object) axes and tile it once per
- * world unit × `uv1_scale`, independent of the mesh's own UVs. We don't run a
- * triplanar shader; the scalar parse exposes a boolean `triplanar` flag so the
- * consumer (MeshInstance3D) can reproduce the tiling DENSITY for the planar
- * meshes that dominate level geometry (floors/walls/ceilings) — see
- * `triplanarPlaneScale`. Without the flag the floor/ceiling textures rendered
- * stretched once across the whole plane ("too big").
+ * StandardMaterial3D triplanar. Godot's `uv1_triplanar` and `uv1_world_triplanar` tile a
+ * texture once per world unit × `uv1_scale`, whatever the mesh's UVs. With no triplanar
+ * shader, the `triplanar` flag lets MeshInstance3D reproduce the tiling density on planar
+ * meshes (`triplanarPlaneScale`).
  */
 import { describe, expect, it } from 'vitest';
 import { parseStandardMaterial3DScalars } from './scalars';
@@ -28,8 +22,8 @@ describe('parseStandardMaterial3DScalars — triplanar flag (WI-HALL-5)', () => 
   });
 
   it('does not suppress other scalar parsing when triplanar is on', () => {
-    // Load-bearing: the triplanar flag must NOT short-circuit albedo/metal/
-    // roughness parsing — the texture binding still flows through useResource.
+    // The triplanar flag must not short-circuit albedo/metal/roughness parsing: the
+    // texture binding still flows through useResource.
     const result = parseStandardMaterial3DScalars({
       uv1_triplanar: 'true',
       albedo_color: 'Color(0.8, 0.4, 0.2, 1)',

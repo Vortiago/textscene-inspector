@@ -1,27 +1,8 @@
 /**
- * Drift guard: a 2D canvas painter may not spell `THREE.DoubleSide` itself.
- *
- * `WebGLRenderer.renderObject` draws a `transparent` + `DoubleSide` material
- * twice — back faces, then front faces — unless `forceSinglePass` is set, and
- * for a flat canvas item that split ranges from wasted draw call to reordered
- * geometry. `canvasItemFacing.ts` has the full mechanism and the three ways it
- * goes wrong; this file is what stops a painter from re-deriving the recipe by
- * hand and getting only half of it, which is exactly how the `StyleBoxFlat`
- * ring fan was introduced.
- *
- * Requiring `forceSinglePass` NEXT TO a hand-written `THREE.DoubleSide` was the
- * weaker alternative, and it does not hold: two of the materials in scope take
- * `transparent` from a spread object rather than a literal prop, so a rule that
- * reads both halves off the source would have to model spreads. Routing every
- * canvas material through the one seam is checkable by inspection instead, and
- * the properties can no longer be set independently at all.
- *
- * A SOURCE check, for `paintGroupConformance.test.ts`'s reason: a per-painter
- * render harness only covers the painters it can drive with a probe, whereas
- * every painter has source. The materials built imperatively — where `side` is
- * a variable and no textual scan can ever see it — are covered instead by the
- * behavioural half at the bottom of this file, which asks the factories
- * themselves.
+ * A 2D canvas painter spreads `canvasItemFacing()` and never spells
+ * `THREE.DoubleSide`, so `forceSinglePass` cannot be left out. A check for both
+ * halves would have to model spreads. A source scan reaches every painter, and the
+ * factories answer for the imperatively built materials.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -41,19 +22,10 @@ import { createCanvasTextMaterial } from './controls/native/text/canvasTextPaint
 import { createLightQuadMaterial, createShadowColorQuadMaterial } from './lighting2d/lightQuad';
 
 /**
- * The 2D canvas, and ONLY the 2D canvas. A double-sided translucent 3D shell is
- * what the two-pass split exists for, so `nodes/3d`, `r3f/materials`
- * (StandardMaterial3D's cull modes), `r3f/csg`, `r3f/environment` and `r3f/sky`
- * are deliberately outside every root here — this guard must not be able to
- * reach them even to report.
- *
- * `r3f/components` is in scope because the shared canvas widgets live there;
- * an editor gizmo that lands beside them and genuinely wants the split takes
- * the marker below rather than a wider exclusion.
- *
- * `nodes/base` is named one level deeper than `paintGroupConformance.test.ts`
- * names it, for the same reason: `node2d` and `node3d` are siblings under it,
- * and taking the parent would put the 3D base inside a 2D-only guard.
+ * The 2D canvas alone, since a double-sided translucent 3D shell needs the split:
+ * `nodes/3d`, `r3f/materials`, `r3f/csg`, `r3f/environment` and `r3f/sky` stay out,
+ * and `nodes/base/node2d` is named without its `node3d` sibling. A gizmo in
+ * `r3f/components` that wants the split takes the marker.
  */
 const SOURCE_ROOTS = [
   '../nodes/2d',
@@ -79,24 +51,10 @@ function scannedSources(): SourceFile[] {
 }
 
 /**
- * Lines naming `THREE.DoubleSide` outside the seam.
- *
- * One line is the whole unit here, unlike `paintGroupConformance`'s
- * whole-opening-tag scan: the offence is the identifier itself, wherever it
- * appears — a JSX prop, a constructor options bag, a default parameter — so
- * there is no surrounding construct to read. That also makes the check
- * insensitive to formatting, which the tag scan is not.
- *
- * The line is read RAW rather than through `offendingLines()`, which strips a
- * trailing `//` before matching: `side = THREE.DoubleSide; // …` is a use, and
- * a comment after it launders nothing here.
- *
- * Skipped: lines inside a comment (a doc comment that NAMES the constant is not
- * a use of it, and several of these modules explain their facing in prose), and
- * a tag whose preamble carries `facing-split-intended:` with a reason — looked
- * for in the ten lines above rather than in the comment block touching it,
- * since a reason lands above a `return (`, or inside a braced JSX comment, as
- * often as not.
+ * Lines naming `THREE.DoubleSide` outside the seam, one line at a time, since the
+ * identifier is the offence wherever it appears. Read raw, so a trailing `//`
+ * launders nothing. It skips comment lines, and a line with `facing-split-intended:`
+ * and a reason in the ten lines above.
  */
 export function unroutedDoubleSideLines(source: string): number[] {
   const lines = source.split('\n');
@@ -157,12 +115,10 @@ describe('Canvas-item single-pass conformance', () => {
 });
 
 /**
- * The half no source scan can cover: four materials are built imperatively, and
- * in two of them `side` is a variable the caller supplies. Asking the factory
- * for the finished material is the only check that reaches them, and it is also
- * what proves `forceSinglePass` survives `Material#setValues` — the constructor
- * silently DROPS a key that is not already an instance property (which is why
- * `canvasTextPainter.ts` assigns `defines` after construction instead).
+ * Four materials are built imperatively, two with a caller's `side`, so only the
+ * factory can answer. It proves `forceSinglePass` survives `Material#setValues`,
+ * which drops a key the instance lacks: `canvasTextPainter.ts` assigns `defines`
+ * after construction for that reason.
  */
 describe('Imperatively built canvas materials', () => {
   const texture = (): THREE.Texture => new THREE.Texture();
@@ -184,7 +140,7 @@ describe('Imperatively built canvas materials', () => {
     expect(material.forceSinglePass).toBe(true);
     expect(material.side).toBe(THREE.DoubleSide);
 
-    // Label3D's `double_sided = false` — one-sided, still one pass. Label3D
+    // Label3D's `double_sided = false`: one-sided, still one pass. Label3D
     // rasterises its glyphs through this painter, not the MSDF atlas.
     const oneSided = createCanvasTextMaterial({ map: texture(), opacity: 1, side: THREE.FrontSide });
     expect(oneSided.forceSinglePass).toBe(true);

@@ -28,13 +28,11 @@ export async function jumpToNodeDefinition(
       return;
     }
 
-    // Open the document and jump to the line
     const editor = await vscode.window.showTextDocument(document, {
       viewColumn: vscode.ViewColumn.One,
       preserveFocus: false,
     });
 
-    // Set selection to the line with the node definition
     const position = new vscode.Position(targetLine, 0);
     const range = new vscode.Range(position, position);
     editor.selection = new vscode.Selection(range.start, range.end);

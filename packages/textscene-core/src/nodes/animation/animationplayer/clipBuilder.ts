@@ -1,13 +1,8 @@
 /**
- * Builds a THREE.AnimationClip from a resolved GodotAnimation.
- *
- * KeyframeTrack names are THREE name-paths (`Target.position`) that
- * THREE.PropertyBinding resolves against the animation root (ADR-0011).
- * Supports the transform tracks — position, scale, rotation and
- * rotation_degrees — over both 3D (Vector3) and 2D (Vector2 position/scale,
- * scalar rotation) targets, plus the `quaternion` property emitted by Godot's
- * dedicated `rotation_3d` tracks (driven through a QuaternionKeyframeTrack).
- * Degrees are converted to radians; everything else is dropped.
+ * Builds a THREE.AnimationClip from a resolved GodotAnimation. Track names are THREE name-paths
+ * (`Target.position`) that THREE.PropertyBinding resolves against the animation root (ADR-0011).
+ * It builds position, scale, rotation and rotation_degrees (as radians) in 3D and 2D, and the
+ * `quaternion` of Godot's `rotation_3d` tracks. It drops every other track.
  */
 
 import {
@@ -30,37 +25,22 @@ import { warn } from '../../../logger';
 import { degToRad } from '../../../godot/math.js';
 
 
-/**
- * How a track's Godot NodePath binds against the animation root.
- *
- * `root` — the path resolves to the animation root itself. THREE binds that
- * through an EMPTY node name, so `NodePath(".")` and the colon-only
- * `NodePath(":position")` form both land here, as does anything that cancels
- * out (`Sprite/..`).
- *
- * `name` — bind by this name. THREE.PropertyBinding reads only the final
- * segment and searches the root's whole subtree, so the ancestors buy nothing;
- * `A/Target` and `B/Target` are indistinguishable to it, and a duplicated name
- * binds to whichever it finds first.
- *
- * `unbindable` — the path climbs above the animation root, which
- * PropertyBinding cannot reach: its search never leaves the root's subtree, and
- * a literal `..` in a track name is outside its grammar and throws while the
- * action is built. Such a track is dropped with a warning.
- */
+/** How a track's Godot NodePath binds against the animation root. */
 export type TrackBinding =
+  // The root itself, bound through an empty node name: `NodePath(".")`, the colon-only
+  // `NodePath(":position")` and a path that cancels out (`Sprite/..`).
   | { kind: 'root' }
+  // PropertyBinding reads only the final segment and searches the root's whole subtree, so
+  // `A/Target` and `B/Target` are the same to it, and a duplicated name binds the first found.
   | { kind: 'name'; name: string }
+  // Above the root: PropertyBinding never leaves the root's subtree, and a literal `..` in a
+  // track name throws while the action is built. The track is dropped with a warning.
   | { kind: 'unbindable' };
 
 /**
- * Resolve a NodePath the way Godot does — `..` cancels the segment before it —
- * and report how THREE can bind the result.
- *
- * The single source of truth for both the clip's track names and
- * `resolveTrackTarget`. Two functions computing this separately is how the
- * Euler reorder and the base-transform snapshot come to miss a target the mixer
- * is driving.
+ * Resolves a NodePath the way Godot does, with `..` cancelling the segment before it, and reports
+ * how THREE can bind the result. The clip's track names and `resolveTrackTarget` both read it, so
+ * the Euler reorder and the base-transform snapshot see every target the mixer drives.
  */
 export function resolveTrackBinding(targetPath: string): TrackBinding {
   const stack: string[] = [];
@@ -121,19 +101,13 @@ function buildTracks(track: GodotTrack): KeyframeTrack[] {
 }
 
 /**
- * Godot's per-track `interp` → the THREE interpolation constant.
- *
- * NEAREST is a step/hold, not a round-to-nearest: `animation.cpp` returns
- * `p_keys[idx].value` for the key at-or-before the query time, which is exactly
- * `InterpolateDiscrete`. CUBIC is a time-aware Catmull-Rom, closest to
- * `InterpolateSmooth` (not bit-identical for unevenly-spaced keys). The
- * `*_ANGLE` variants only add shortest-path rotation, which THREE's quaternion
- * tracks already take, so they reduce to their base mode.
- *
- * A VALUE track in UPDATE_DISCRETE mode is FORCED to nearest whatever `interp`
- * says — same file.
+ * Godot's per-track `interp` to the THREE interpolation constant. NEAREST holds the key at or
+ * before the query time (`animation.cpp`), which is `InterpolateDiscrete`. CUBIC is closest to
+ * `InterpolateSmooth`, not bit-identical for unevenly spaced keys. The `*_ANGLE` modes add only
+ * shortest-path rotation, which THREE's quaternion tracks already take.
  */
 function threeInterpolation(track: GodotTrack): InterpolationModes {
+  // A VALUE track in UPDATE_DISCRETE mode is nearest whatever `interp` says (same file).
   if (track.type === 'value' && track.updateMode === 1) return InterpolateDiscrete;
   switch (track.interp) {
     case 0:
@@ -148,19 +122,18 @@ function threeInterpolation(track: GodotTrack): InterpolationModes {
 
 function buildTrackData(track: GodotTrack): KeyframeTrack[] {
   const times = track.keys.map((k) => k.time);
-  // A track targeting the animation root itself binds through an empty node
-  // name — THREE.PropertyBinding resolves that to the mixer root. Every other
-  // target binds by its final name, which is all PropertyBinding reads.
+  // An empty node name binds the mixer root. Every other target binds by its final name,
+  // which is all PropertyBinding reads.
   const binding = resolveTrackBinding(track.targetPath);
   const prefix = binding.kind === 'name' ? binding.name : '';
 
   switch (track.property) {
     case 'position':
-      // 2D position is conjugated by diag(1,-1,1) — negate Y (node2dTransform).
+      // 2D position is conjugated by diag(1,-1,1), so Y negates (node2dTransform).
       return vectorOrComponents(`${prefix}.position`, times, track.keys, true);
 
     case 'scale':
-      // Scale is NOT conjugated (node2dGroupProps keeps scale.y as-is).
+      // Scale is not conjugated: node2dGroupProps keeps scale.y as it is.
       return vectorOrComponents(`${prefix}.scale`, times, track.keys, false);
 
     case 'rotation':
@@ -180,8 +153,8 @@ function buildTrackData(track: GodotTrack): KeyframeTrack[] {
 /**
  * Godot `rotation_3d` keys are quaternions `(x, y, z, w)`, the same component
  * order THREE.Quaternion uses, so they flatten straight into a
- * QuaternionKeyframeTrack on `.quaternion` (THREE slerps between them). 3D
- * transforms aren't conjugated (Godot and THREE are both Y-up right-handed).
+ * QuaternionKeyframeTrack on `.quaternion`. 3D transforms are not conjugated, since Godot and
+ * THREE are both Y-up and right-handed.
  */
 function quaternionTracks(prefix: string, times: number[], keys: GodotKeyframe[]): KeyframeTrack[] {
   const first = keys[0]?.value;
@@ -191,12 +164,9 @@ function quaternionTracks(prefix: string, times: number[], keys: GodotKeyframe[]
 }
 
 /**
- * Rotation must drive `.rotation[x|y|z]` per component (NumberKeyframeTrack),
- * NOT a VectorKeyframeTrack on `.rotation`: a whole-Euler write bypasses
- * Euler's onChange, leaving `.quaternion` (which builds the matrix) stale, so
- * nothing rotates. Per-component writes go through the Euler setters and sync
- * the quaternion. Per-component lerp also matches Godot and supports a full
- * >180° turn (quaternion slerp would short-circuit it).
+ * Per-component `.rotation[x|y|z]` tracks, not a VectorKeyframeTrack on `.rotation`: a whole-Euler
+ * write bypasses Euler's onChange and leaves `.quaternion`, which builds the matrix, stale.
+ * Per-component lerp also matches Godot and turns more than 180°, which quaternion slerp shortens.
  */
 function rotationTracks(
   prefix: string,
@@ -227,12 +197,9 @@ function rotationTracks(
 }
 
 /**
- * Vector3 keys -> one VectorKeyframeTrack on `vectorName` (3D transforms aren't
- * conjugated; `.position`/`.scale` write straight to the matrix, so the
- * whole-vector binding is fine here).
- * Vector2 keys -> per-component NumberKeyframeTracks (`name[x]`, `name[y]`).
- * `negateY` applies the diag(1,-1,1) conjugation that node2dTransform bakes into
- * the static 2D render (position negates Y, scale does not), so an animated 2D
+ * Vector3 keys give one VectorKeyframeTrack, since `.position` and `.scale` write straight to the
+ * matrix. Vector2 keys give per-component tracks (`name[x]`, `name[y]`). `negateY` applies the
+ * diag(1,-1,1) conjugation node2dTransform bakes into the static 2D render, so an animated 2D
  * transform agrees with its authored pose.
  */
 function vectorOrComponents(

@@ -1,26 +1,7 @@
 /**
- * Canvas-side mesh picker. Returns ONE set of R3F pointer-event handlers
- * (event-delegated) that drive `<SelectionContext>` from the
- * viewport — attach them to a single root group in `NodeDispatcher`, not to
- * every node. Replaces the imperative
- * `packages/textscene-core/src/ui/ViewportSelector.ts` mesh picker.
- *
- * Previously every node's wrapper `<group>` carried its own copy of these
- * handlers, bound to that node's path via a `withNodePath(path)` factory.
- * R3F treats every object with a registered pointer handler as its own
- * interactive raycast root, so a mesh at depth d got triangle-tested once
- * PER ANCESTOR wrapper on every pointer move (O(meshes × depth)). With one
- * delegated root, R3F raycasts the whole subtree exactly once per pointer
- * move; `resolvePathFromObject` recovers which node owns the hit mesh
- * (`e.object`) by walking its own THREE parent chain against the reverse
- * `objectPathMap` `<SelectionContext>` already builds — the CHILD node's
- * wrapper sits closer to the hit mesh than any ancestor's, so this
- * reproduces the historical "innermost node wins" behavior without R3F
- * bubbling.
- *
- * Drag-vs-click discrimination keeps navigation drags from selecting:
- * pointer-down records the position; pointer-up fires `setSelectedNodePath`
- * only if pointer travel stayed within `dragThresholdPx`.
+ * The canvas mesh picker: one set of delegated pointer handlers, for the single root group in
+ * `NodeDispatcher`, that drive `<SelectionContext>`. A pointer-up selects only when travel stayed
+ * within `dragThresholdPx`, so a navigation drag does not select.
  */
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
@@ -38,7 +19,7 @@ export interface UseViewportSelectionOptions {
   autoExpandAncestors?: boolean;
 }
 
-/** The ONE set of pointer handlers attached to the viewport's single delegated root group. */
+/** The pointer handlers for the viewport's single delegated root group. */
 export interface DelegatedPointerHandlers {
   onPointerDown: (e: ThreeEvent<PointerEvent>) => void;
   onPointerUp: (e: ThreeEvent<PointerEvent>) => void;
@@ -47,7 +28,7 @@ export interface DelegatedPointerHandlers {
 }
 
 export interface UseViewportSelectionResult {
-  /** Bind these to the SINGLE root group wrapping the dispatched scene tree. */
+  /** Bind these to the one root group wrapping the dispatched scene tree. */
   handlers: DelegatedPointerHandlers;
 }
 
@@ -107,21 +88,10 @@ export function useViewportSelection(
         e.stopPropagation();
         select(path);
       },
-      // Hover tracks whichever registered node is nearest under the pointer
-      // as it moves across the (single, delegated) interactive root —
-      // onPointerOver/onPointerOut fire once for the WHOLE root, not per
-      // descendant, so onPointerMove is what carries the per-mesh `e.object`.
-      //
-      // R3F dispatches onPointerMove once PER INTERSECTED MESH along the ray,
-      // nearest-to-farthest, and keeps going to the next one unless
-      // `stopPropagation()` is called — exactly like `onPointerUp` above.
-      // Without it, every intersected mesh's handler call would overwrite
-      // the previous one, so the LAST (farthest, most likely occluded) mesh
-      // would win instead of the nearest — the opposite of "hover tracks
-      // whichever registered node is nearest". Stopping only when a path
-      // resolves (mirroring onPointerUp) still lets an unregistered nearest
-      // hit (e.g. the empty-state grid) fall through to a registered mesh
-      // behind it.
+      // Over and out fire once for the whole root, so move carries the per-mesh `e.object`. R3F
+      // calls it per intersected mesh, nearest first, until `stopPropagation()`: without the stop
+      // the farthest mesh wins. Stopping only on a resolved path lets an unregistered nearest hit,
+      // such as the grid, fall through to a registered mesh behind it.
       onPointerMove(e) {
         const path = resolvePathFromObject(e.object, objectPathMap);
         hoverStore.set(path);

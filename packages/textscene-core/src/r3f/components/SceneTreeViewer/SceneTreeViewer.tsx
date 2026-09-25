@@ -1,7 +1,6 @@
 /**
- * Interactive scene-tree panel. Reads `sceneGraph` from `<HierarchyContext>`
- * and selection state from `<SelectionContext>`. Replaces the imperative
- * `packages/textscene-core/src/ui/SceneTreeViewer.ts`.
+ * The interactive scene-tree panel. It reads `sceneGraph` from
+ * `<HierarchyContext>` and the selection from `<SelectionContext>`.
  */
 import { useCallback, useMemo, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
@@ -15,17 +14,16 @@ import { TreeNode } from './TreeNode.js';
 import styles from './SceneTreeViewer.module.css';
 
 /**
- * The node path for a treeitem row. `data-node-path` lives on the OUTER
- * `.node` wrapper (also used elsewhere to look up a row by path), not the
- * treeitem div itself — duplicating it onto the treeitem would break every
- * `[data-node-path="X"]` query that assumes exactly one match per row.
+ * `data-node-path` lives on the outer `.node` wrapper, not the treeitem: a
+ * copy on the treeitem breaks every `[data-node-path="X"]` query that
+ * expects one match per row.
  */
 function nodePathFor(row: HTMLElement): string | null {
   return row.closest<HTMLElement>('[data-node-path]')?.dataset.nodePath ?? null;
 }
 
 export interface SceneTreeViewerProps {
-  /** Optional callback fired when a tree row is double-clicked (host can jump to source). */
+  /** Fired when a row is double-clicked, so the host can jump to the source. */
   onNodeReveal?: (path: string, node: TscnNode) => void;
   onOpenSubScene?: (scenePath: string) => void;
 }
@@ -51,11 +49,8 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     return sceneGraph.scenes.get(sceneGraph.rootScene)?.nodes ?? [];
   }, [sceneGraph]);
 
-  // The root scene's externalResources are how
-  // `node.instance = ExtResource("id")` references get resolved to a
-  // `res://` path. Threaded into every TreeNode so each row can
-  // attempt sub-scene resolution on its own without re-reading the
-  // sceneGraph.
+  // Every TreeNode resolves `ExtResource("id")` against these, with no
+  // re-read of the sceneGraph.
   const externalResources = useMemo<readonly TscnExternalResource[]>(() => {
     if (!sceneGraph) return [];
     return sceneGraph.scenes.get(sceneGraph.rootScene)?.externalResources ?? [];
@@ -63,12 +58,9 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
 
   const term = searchTerm.trim().toLowerCase();
 
-  // Search + expand resolve over the LIVE tree (collapsed instances, loaded
-  // sub-scenes, GLB internals) — the same rows the tree renders — so a node
-  // inside an instance is reachable, not just root-scene nodes. `matchingPaths`
-  // is the set of paths to keep visible: every match plus its ancestors (so the
-  // path to a match shows). null = no search (show everything). Recomputed as
-  // sub-scenes/GLBs stream in (the live-tree version tick).
+  // Search and expand walk the live tree, so a node inside an instance is
+  // reachable. `matchingPaths` holds every match and its ancestors, and null
+  // means no search. It recomputes on the live-tree version tick.
   const matchingPaths = useMemo<ReadonlySet<string> | null>(() => {
     if (!term) return null;
     const lt = liveTreeContext(sceneGraph, loader);
@@ -83,9 +75,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
       }
     });
     return found;
-    // `version` is an intentional cache-buster: it increments each time a
-    // sub-scene or GLB finishes loading so the search result updates to include
-    // newly-visible nodes. The value itself is not read inside the callback.
+    // `version` is a cache-buster: it increments when a sub-scene or GLB loads.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [term, sceneGraph, loader, version]);
 
@@ -110,11 +100,9 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     setSearchTerm(e.target.value);
   }, []);
 
-  // WAI-ARIA APG Tree View keyboard pattern. One handler on the tree
-  // container (event delegation) instead of one per row. Arrow keys move
-  // focus AND selection together — this app has no separate "focused but
-  // unselected" concept, so treating them as one keeps the roving-tabIndex
-  // row in TreeNode.tsx in sync for free.
+  // The WAI-ARIA APG Tree View keyboard pattern, delegated from the container.
+  // Arrow keys move focus and selection together, since the app has no
+  // focused-but-unselected state, so the roving tab stop follows the selection.
   const handleTreeKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
       const currentRow = (e.target as HTMLElement).closest<HTMLElement>('[role="treeitem"]');
@@ -160,10 +148,8 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
           if (expanded === 'true') {
             if (path) toggleExpandedNodePath(path);
           } else if (path) {
-            // Move to the parent row via the slash-joined path model the
-            // whole handler already leans on (rather than walking TreeNode's
-            // private DOM nesting): the nearest ancestor path is the parent;
-            // a root row has none.
+            // The parent is the nearest ancestor path, not TreeNode's private DOM
+            // nesting. A root row has none.
             const parentPath = getAncestorPaths(path).pop();
             if (parentPath) {
               focusAndSelect(allRows.find((row) => nodePathFor(row) === parentPath));
@@ -186,12 +172,9 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     [setSelectedNodePath, toggleExpandedNodePath]
   );
 
-  // Roving tabIndex: the selected row is normally the tree's one tab
-  // stop, but only while it is actually RENDERED — collapsing an ancestor or
-  // filtering it out via search unmounts it, and without a fallback every
-  // remaining row would be tabIndex -1 (Tab would skip the tree entirely).
-  // A row renders iff it survives the search filter and every ancestor is
-  // expanded — the same conditions TreeNode's recursion applies.
+  // The selected row is the tab stop only while it renders, that is while it
+  // survives the search and every ancestor is expanded. Otherwise the first
+  // root row is, or Tab would skip the tree.
   const selectedRowRendered =
     selectedNodePath !== null &&
     matches(selectedNodePath) &&

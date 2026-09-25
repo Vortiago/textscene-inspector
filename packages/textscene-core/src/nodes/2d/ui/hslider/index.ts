@@ -1,4 +1,4 @@
-/** HSlider registration — parser. */
+/** HSlider registration: parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseHSlider } from './parser';

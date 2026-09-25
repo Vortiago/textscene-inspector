@@ -54,7 +54,7 @@ describe('graphNodePorts (graph_node.cpp:1027-1059 _port_pos_update, via a re-so
   it('places a single right port at (outerWidth, rowCenterY) — title \'\' floors the band to fontHeightPx(23)', () => {
     // panel margin round(18*1)/round(12*1) = 18/12, titlebar margin = contentMargin(4):
     // ofsY = 12 + (23 + 4 + 4) = 43; the one child (min height 20, drawStylebox: false)
-    // solves to {x:18, y:43, w:84, h:20} — slotY = 43 + 20/2 = 53.
+    // solves to {x:18, y:43, w:84, h:20}, so slotY = 43 + 20/2 = 53.
     const node = graphNode('Source', new Map([[0, slot({ rightEnabled: true, rightColor: RED })]]), [
       leaf('Value', 20),
     ]);
@@ -79,10 +79,9 @@ describe('graphNodePorts (graph_node.cpp:1027-1059 _port_pos_update, via a re-so
   });
 
   it('compacts by rawIndex ascending — an earlier undeclared slot still occupies port index 0', () => {
-    // Only rawIndex 1 declares a slot, but `_resort` auto-vivifies a default
-    // Slot() for rawIndex 0 too (`nativeSolver.ts`'s own doc) — that default
-    // has both ports disabled, so it contributes no port, and the declared
-    // slot at rawIndex 1 becomes right_port_cache[0], not [1].
+    // Only rawIndex 1 declares a slot, but `_resort` also creates a default Slot() for
+    // rawIndex 0, with both ports disabled. So the declared slot becomes
+    // right_port_cache[0], not [1].
     const node = graphNode(
       'N',
       new Map([[1, slot({ rightEnabled: true, rightColor: RED })]]),

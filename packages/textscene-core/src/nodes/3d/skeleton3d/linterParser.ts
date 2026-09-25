@@ -1,16 +1,11 @@
 /**
- * Skeleton3D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- *
- * Bone properties (`bones/<idx>/<sub>`) keep a bespoke dispatcher: the index
- * resolution, the leaf whitelist and the self-parent refusal all read parts of
- * the KEY, which `v`'s per-property combinators never see. The per-leaf checks
- * behind it are ordinary combinators, in `boneLeaves.ts`.
+ * Skeleton3D strict validators. `bones/<idx>/<sub>` keeps a bespoke dispatcher, because the index,
+ * the leaf whitelist and the self-parent refusal read the key, which `v`'s per-property combinators
+ * never see. The per-leaf checks behind it are ordinary combinators in `boneLeaves.ts`.
  */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
+// The base chain. Registration happens on import, so a test that loads only this slice resolves an
+// inherited key only when the ancestor is imported too.
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { keyShapeError, propertyError, v } from '../../../linter/validators/index.js';
@@ -21,11 +16,9 @@ import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 const MODIFIER_CALLBACK_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
 
 /**
- * `bones/<idx>/<sub>` — the index is a bare
- * `path.get_slicec('/', 1).to_int()` with no validity gate
- * (skeleton_3d.cpp:82), so the grammar is the whole path segment and
- * `toIntIndex` decides the number: `bones/x/position` names bone 0 and Godot
- * applies it.
+ * `bones/<idx>/<sub>`: the index is a bare `path.get_slicec('/', 1).to_int()` with no validity gate
+ * (skeleton_3d.cpp:82), so `toIntIndex` decides the number: `bones/x/position` names bone 0, and
+ * Godot applies it.
  */
 const BONE_KEY_RE = indexedKeyRegex('^bones/(#)/(.+)$', 'to_int');
 
@@ -51,11 +44,10 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
     };
   }
 
-  // The index lands in a `uint32_t which` (:82), so a negative `to_int` result
-  // is held as a value past 2^31. `bones` only ever grows one at a time,
-  // through `which == bones.size() && what == "name"` (:85), so no file reaches
-  // a count that would satisfy `ERR_FAIL_UNSIGNED_INDEX_V(which, bones.size(),
-  // false)` (:90) — the write is refused.
+  // The index lands in a `uint32_t which` (:82), so a negative `to_int` result is held past 2^31.
+  // `bones` grows one at a time, through `which == bones.size() && what == "name"` (:85), so no
+  // file reaches a count that passes `ERR_FAIL_UNSIGNED_INDEX_V(which, bones.size(), false)` (:90):
+  // the write is refused.
   const signedIndex = toIntIndex(match[1]!);
   if (!(signedIndex >= 0)) {
     // NaN is the other arm: `to_int` saturates at INT64_MAX for a magnitude no
@@ -72,10 +64,9 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
     };
   }
 
-  // Slice 2 alone decides the arm, so everything below it is invisible to the
-  // dispatch: `bones/0/bone_meta/<key>` reaches the `bone_meta` arm with the
-  // key read separately at :105, and a trailing slice on any other leaf is
-  // ignored rather than refused — the same setter still gets the same value.
+  // Slice 2 alone decides the arm: `bones/0/bone_meta/<key>` reaches the `bone_meta` arm with the
+  // key read separately at :105, and a trailing slice on any other leaf is ignored, so the same
+  // setter gets the same value.
   const what = match[2]!.split('/', 1)[0]!;
 
   // skeleton_3d.cpp:135: the chain closes `} else { return false; }`, so a leaf
@@ -93,10 +84,9 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
   const verdict = leaf(key, value, line);
   if (verdict) return verdict;
 
-  // skeleton_3d.cpp:722: `ERR_FAIL_COND(p_bone == p_parent)`. Both halves come
-  // off this one key — `which` from the path, the parent from the value — so it
-  // is the one sibling-free refusal the dispatcher can answer. Compared as
-  // NUMBERS, because `bones/03/parent = 3` names bone 3 twice.
+  // skeleton_3d.cpp:722: `ERR_FAIL_COND(p_bone == p_parent)`. Both halves come off this one key
+  // (`which` from the path, the parent from the value), so the dispatcher can answer it. Compared
+  // as numbers, because `bones/03/parent = 3` names bone 3 twice.
   if (what === 'parent') {
     const parent = parseGodotInt(value);
     if (parent !== null && parent === signedIndex) {
@@ -113,10 +103,9 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
 };
 
 validatorRegistry.registerAll('Skeleton3D', {
-  // skeleton_3d.cpp:586-588: `if (p_motion_scale <= 0) { motion_scale = 1;
-  // ERR_FAIL_MSG(...); }` — an alteration, not a refusal. The hint (:1293,
-  // "0.001,10,0.001,or_greater") floors higher and opens the ceiling, so
-  // (0, 0.001) is stored as authored and only warns.
+  // skeleton_3d.cpp:586-588: `if (p_motion_scale <= 0) { motion_scale = 1; ERR_FAIL_MSG(...); }`,
+  // an alteration, not a refusal. The hint (:1293, "0.001,10,0.001,or_greater") floors higher and
+  // opens the ceiling, so (0, 0.001) is stored as authored and only warns.
   motion_scale: v.positiveFloat(
     'motion_scale',
     "Property 'motion_scale' must be greater than 0. Godot substitutes 1.0 for anything at or below it.",
@@ -149,8 +138,8 @@ validatorRegistry.registerAll('Skeleton3D', {
 // carrying a composite name as a hand-rolled literal grammar.
 bonesValidator.accepts =
   'leaf `name` (non-empty, no colon or slash), `parent` (int from -1, never the bone itself), `rest` (Transform3D), `enabled` (bool), `position` and `scale` (Vector3), `rotation` (Quaternion), `bone_meta`, or the 3.x `pose` and `bound_children`';
-// Tagged by hand (not built through `v`) so `boundGrounding.test.ts`'s sweep
-// sees the out-of-range bound too.
+// Tagged by hand, not built through `v`, so `boundGrounding.test.ts` sees the out-of-range bound
+// too.
 bonesValidator.grounding = { kind: 'enforced', cite: 'skeleton_3d.cpp:90' };
 // The dispatcher's tag says nothing about the bounds behind it, so the sweep
 // has to recurse past it (`indexedFamilyValidator` exposes its leaves for the

@@ -1,18 +1,7 @@
-; ONE VARIABLE: `layout_direction = 3` (RTL) on the lower TabBar.
-;
-; Under RTL a TabBar draws every tab at `size.width - ofs_cache - size_cache`
-; (tab_bar.cpp:552,1929) and then flows that tab's own icon, title and close
-; icon BACK from `size_cache - the style's LEFT margin` (:660,668,676,721) —
-; the left margin measured off the right edge, which is why `tab_selected` is
-; overridden here with a deliberately lopsided 24/6 pair. The inline
-; GradientTexture2D on the first tab is asymmetric along X, so a mirrored icon
-; cannot be mistaken for an unmirrored one, and `tab_close_display_policy = 2`
-; keeps a close icon on every tab as the trailing element of that flow. Both
-; bars anchor to the same symmetric rect, so the node's OWN rect is
-; mirror-invariant and only the inside of the strip can move.
-;
-; `unit-tab-bar-rtl-scroll` moves the scroll arrows under the same property
-; and draws no icon or close button; every other TabBar scene is LTR.
+; One variable: `layout_direction = 3` on the lower TabBar. Under RTL a TabBar draws each tab at
+; `size.width - ofs_cache - size_cache` (tab_bar.cpp:552,1929) and flows its icon, title and close
+; icon back from `size_cache - the style's LEFT margin` (:660,668,676,721): the left margin
+; measured off the right edge, so `tab_selected` gets a lopsided 24/6 override.
 
 [gd_scene load_steps=4 format=3]
 
@@ -45,6 +34,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.12, 0.12, 0.18, 1)
 
+; The first tab's inline GradientTexture2D is asymmetric along X, so a mirrored icon differs from
+; an unmirrored one, and `tab_close_display_policy = 2` keeps a close icon trailing every tab. Both
+; bars anchor to one symmetric rect, so only the inside of the strip can move.
+; `unit-tab-bar-rtl-scroll` moves the scroll arrows, and every other TabBar scene is LTR.
 [node name="Ltr" type="TabBar" parent="."]
 layout_mode = 1
 anchor_right = 1.0

@@ -1,6 +1,4 @@
-/**
- * Tests for Skeleton3D linter (strict parser + semantic rules)
- */
+/** Tests for the Skeleton3D strict validators and semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -71,14 +69,12 @@ describe('Skeleton3D Linter', () => {
       });
 
       it('should accept very small positive motion_scale', () => {
-        // Should pass format validation (> 0)
         expectNoErrors(scene(node('Skeleton3D', { motion_scale: '0.001' })), {
           ruleName: 'strict-parser',
         });
       });
 
       it('should accept large motion_scale', () => {
-        // Should pass format validation (> 0)
         expectNoErrors(scene(node('Skeleton3D', { motion_scale: '100.0' })), {
           ruleName: 'strict-parser',
         });
@@ -167,9 +163,8 @@ describe('Skeleton3D Linter', () => {
         });
       });
 
-      // `to_int` flips the sign on a `-` seen while the total is still 0
-      // (ustring.cpp:2291-2292), so `a-1` is -1 — the same refusal, and a
-      // `-\d+` spelling never saw it.
+      // `to_int` flips the sign on a `-` seen while the total is still 0 (ustring.cpp:2291-2292),
+      // so `a-1` is -1: the same refusal.
       it('should reject a bone index to_int resolves negative', () => {
         expectDiagnostic(scene(node('Skeleton3D', { 'bones/a-1/position': 'Vector3(0, 0, 0)' })), {
           prop: 'Bone index',
@@ -177,9 +172,9 @@ describe('Skeleton3D Linter', () => {
         });
       });
 
-      // `_set` dispatches `what = path.get_slicec('/', 2)` through a whitelist
-      // and closes with `} else { return false; }` (skeleton_3d.cpp:135) — the
-      // write is dropped, which ADR-0032 grounds at the error tier.
+      // `_set` dispatches `what = path.get_slicec('/', 2)` through a whitelist and closes with
+      // `} else { return false; }` (skeleton_3d.cpp:135): the write is dropped, which ADR-0032
+      // grounds at the error tier.
       it('rejects a bone leaf the _set chain has no arm for', () => {
         expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/nonsense': '5' })), {
           prop: 'bones/0/nonsense',
@@ -189,8 +184,8 @@ describe('Skeleton3D Linter', () => {
       });
 
       // `bones/<i>/name` reaches `add_bone` (skeleton_3d.cpp:86), which opens
-      // `ERR_FAIL_COND_V_MSG(p_name.is_empty() || p_name.contains_char(':') ||
-      // p_name.contains_char('/'), -1, ...)` (:605) — the bone is never added.
+      // `ERR_FAIL_COND_V_MSG(p_name.is_empty() || p_name.contains_char(':') || p_name.contains_char('/'), -1, ...)`
+      // (:605), so the bone is never added.
       describe('bone name refusals (skeleton_3d.cpp:605)', () => {
         it('rejects an empty bone name', () => {
           expectDiagnostic(scene(node('Skeleton3D', { 'bones/0/name': '""' })), {
@@ -227,10 +222,9 @@ describe('Skeleton3D Linter', () => {
         });
       });
 
-      // skeleton_3d.cpp:721: `ERR_FAIL_COND(p_parent != -1 && (p_parent < 0))`
-      // — the setter REFUSES anything below -1. The hint on :196 states the
-      // same -1 floor, so it adds no second tier. The ceiling there is
-      // `bones.size() - 1`, sibling state no per-property validator can see.
+      // skeleton_3d.cpp:721: `ERR_FAIL_COND(p_parent != -1 && (p_parent < 0))`, so the setter
+      // refuses anything below -1. The hint on :196 states the same floor, so it adds no second
+      // tier. The ceiling is `bones.size() - 1`, sibling state no per-property validator can see.
       describe('bone parent (skeleton_3d.cpp:721, :722)', () => {
         it('accepts the -1 root sentinel and a real parent index', () => {
           expectNoErrors(
@@ -297,12 +291,11 @@ describe('Skeleton3D Linter', () => {
         });
       });
 
-      // Fences, not red-first cases: every one of them passed before the
-      // whitelist existed, because the validator accepted every leaf. They
-      // exist to hold the whitelist to the arms `_set` actually has.
+      // Fences: they hold the whitelist to the arms `_set` has, and a validator that accepts every
+      // leaf passes them too.
       describe('leaves the _set chain does have an arm for (fences)', () => {
-        // skeleton_3d.cpp:85 (`name`, through add_bone), :92, :94, :96 — no
-        // format check is claimed for these, only that the key is recognised.
+        // skeleton_3d.cpp:85 (`name`, through add_bone), :92, :94, :96. No format check is claimed
+        // for these, only that the key is recognised.
         it('accepts the leaves written beside the pose components', () => {
           expectNoErrors(
             scene(
@@ -331,11 +324,10 @@ describe('Skeleton3D Linter', () => {
           );
         });
 
-        // The trap a `BONE_LEAVES.has(match[2])` whitelist springs: `_set`
-        // dispatches on `path.get_slicec('/', 2)` (skeleton_3d.cpp:83) and
-        // reads the meta key from slice 3 separately (:105), so the arm is
-        // `bone_meta` and the key below it is never part of the leaf name.
-        // `_get_property_list` writes exactly this shape (:204).
+        // The trap a `BONE_LEAVES.has(match[2])` whitelist springs: `_set` dispatches on
+        // `path.get_slicec('/', 2)` (skeleton_3d.cpp:83) and reads the meta key from slice 3
+        // (:105), so the key is never part of the leaf name. `_get_property_list` writes this shape
+        // (:204).
         it('accepts a bone_meta key below the leaf', () => {
           expectNoErrors(
             scene(node('Skeleton3D', { 'bones/0/bone_meta/custom_tag': '"spine"' })),
@@ -343,9 +335,8 @@ describe('Skeleton3D Linter', () => {
           );
         });
 
-        // Slice 3 of `bones/0/bone_meta` is empty, and `set_bone_meta`
-        // (skeleton_3d.cpp:686) guards only the bone index — never the key — so
-        // the write lands under an empty meta name.
+        // Slice 3 of `bones/0/bone_meta` is empty, and `set_bone_meta` (skeleton_3d.cpp:686) guards
+        // only the bone index, never the key, so the write lands under an empty meta name.
         it('accepts bone_meta with no key below it', () => {
           expectNoErrors(scene(node('Skeleton3D', { 'bones/0/bone_meta': '"spine"' })), {
             ruleName: 'strict-parser',
@@ -387,11 +378,10 @@ describe('Skeleton3D Linter', () => {
 
   describe('Semantic Validation (Usage Context)', () => {
     describe('motion_scale is the validator\u2019s, not this rule\u2019s', () => {
-      // Both bounds live on the validator: `set_motion_scale`
-      // (skeleton_3d.cpp:586) substitutes 1 at or below 0, and the hint
-      // (:1293, "0.001,10,0.001,or_greater") warns above that. A rule arm here
-      // repeating the enforced end reported it twice on the same node. The
-      // clean cases are in `motion_scale validation` above.
+      // Both bounds live on the validator: `set_motion_scale` (skeleton_3d.cpp:586) substitutes 1
+      // at or below 0, and the hint (:1293, "0.001,10,0.001,or_greater") warns above that. A rule
+      // arm repeating the enforced end would report it twice. The clean cases are in
+      // `motion_scale validation`.
       it('reports the refused value exactly once', () => {
         const diagnostics = lint(scene(node('Skeleton3D', { motion_scale: '-1.0' })));
         const errors = diagnostics.filter((d) => d.severity === 'error');
@@ -501,9 +491,9 @@ describe('Skeleton3D Linter', () => {
         });
       });
 
-      // add_bone refuses a name already taken (skeleton_3d.cpp:606), so that
-      // bone is never added and every later slot shifts — the count has to
-      // model it or the next name reports a refusal that never happened.
+      // add_bone refuses a name already taken (skeleton_3d.cpp:606), so that bone is never added
+      // and every later slot shifts. The count models it, or the next name would report a refusal
+      // that never happened.
       it('reports a duplicate bone name', () => {
         expectDiagnostic(
           scene(node('Skeleton3D', { 'bones/0/name': '"Root"', 'bones/1/name': '"Root"' })),
@@ -556,9 +546,8 @@ describe('Skeleton3D Linter', () => {
     // overrides no get_configuration_warnings.
     describe('skeleton usage validation', () => {
       it('reports nothing when no MeshInstance3D references the skeleton', () => {
-        // Every mesh states `parent="."`. Without it the heading is a second
-        // ROOT, which the tree build drops — so "no MeshInstance3D references
-        // the skeleton" held because there was no MeshInstance3D in the tree.
+        // Every mesh states `parent="."`: without it the heading is a second root, which the tree
+        // build drops, leaving no MeshInstance3D in the tree.
         expectClean(
           scene(
             node('Node3D', {}, { name: 'Root' }),
@@ -597,7 +586,6 @@ describe('Skeleton3D Linter', () => {
           })
         )
       );
-      // Should have multiple warning messages (show_rest_only + animate_physical_bones)
       expect(diagnostics.length).toBeGreaterThanOrEqual(2);
       const warnings = diagnostics.filter(d => d.severity === 'warning');
       expect(warnings.length).toBeGreaterThan(0);
@@ -642,9 +630,8 @@ describe('Skeleton3D Linter', () => {
       );
     });
 
-    // The whole bone block `scenes/fixtures/unit-bone-attachment-3d.tscn`
-    // carries, verbatim: the only skeleton in the corpus, and the shape Godot
-    // itself writes. Every leaf check added here has to leave it clean.
+    // The whole bone block `scenes/fixtures/unit-bone-attachment-3d.tscn` carries, verbatim, in the
+    // shape Godot itself writes. Every leaf check has to leave it clean.
     it('leaves a Godot-written bone block clean', () => {
       expectClean(
         scene(

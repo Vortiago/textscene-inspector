@@ -1,13 +1,8 @@
 /**
- * The animated reference and the still one are the same capture at different
- * times, so they must light a scene the same way. This file pins that they emit
- * ONE preview-lighting program rather than two texts that drift.
- *
- * A hand-copied second version had already drifted: it coupled the sun to the
- * environment behind a single early return, and dropped the sun's light_color,
- * light_energy, directional_shadow_mode and directional_shadow_max_distance and
- * the sky's energy_multiplier. Every such difference lands in a compare-docs
- * report as OUR renderer being wrong.
+ * The animated reference and the still one are the same capture at different times, so they
+ * must light a scene the same way: they emit one preview-lighting program, not two texts. Any
+ * difference, such as a sun coupled to the environment or a dropped light_color, lands in a
+ * compare-docs report as the previewer being wrong.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -33,10 +28,9 @@ describe('the animated 3D reference lights a scene as the still one does', () =>
 
   /**
    * `Node3DEditor::_update_preview_environment` derives `disable_light` from
-   * `directional_light_count` alone and `disable_env` from `world_env_count`
-   * alone (`editor/scene/3d/node_3d_editor_plugin.cpp:9528`). A scene carrying
-   * its own WorldEnvironment and no DirectionalLight3D therefore still gets the
-   * preview sun; one early return over both checks swallows it.
+   * `directional_light_count` and `disable_env` from `world_env_count`, each alone
+   * (`editor/scene/3d/node_3d_editor_plugin.cpp:9528`), so a scene with its own WorldEnvironment
+   * and no DirectionalLight3D still gets the preview sun. One early return over both swallows it.
    */
   it('gates the sun and the environment on two independent checks', () => {
     const body = gdFunction(script3D, '_apply_preview_lighting');

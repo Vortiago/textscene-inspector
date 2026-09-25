@@ -118,9 +118,7 @@ describe('formatSeverity', () => {
   });
 
   it('floors an off-union severity to the info tier, styled or not', () => {
-    // The stdout tier has to match the one `toJsonFindings` reports for the
-    // same diagnostic; printing the raw word left the two outputs of one run
-    // disagreeing about what the finding is.
+    // The stdout tier matches the one `toJsonFindings` reports for the same diagnostic.
     expect(formatSeverity('bogus', true)).toBe('\x1b[36minfo\x1b[0m');
     expect(formatSeverity('bogus', false)).toBe('info');
   });
@@ -246,8 +244,8 @@ describe('formatGithubAnnotations', () => {
 
   it('falls back to ::notice for a severity outside the union, including a prototype key', () => {
     // A bare index reaches Object.prototype, so `'constructor'` reads back a
-    // function and any other unknown value throws — which would cost the run
-    // every annotation, not just this finding's level.
+    // function and any other unknown value throws, which costs the run every
+    // annotation, not only this finding's level.
     const file: FileDiagnostics = {
       filePath: 'odd.tscn',
       diagnostics: [
@@ -264,8 +262,7 @@ describe('formatGithubAnnotations', () => {
     ]);
 
     // The JSON output is the contract a CI tool switches on, and its `severity`
-    // is declared as the closed union — so the floor has to reach it too, not
-    // only the annotation level above.
+    // is declared as the closed union, so the floor reaches it too.
     expect(toJsonFindings([file]).map((f) => f.severity)).toEqual(['info', 'info']);
   });
 

@@ -1,22 +1,8 @@
 /**
- * Every node type that reads a Texture2D-valued property, given an INLINE
- * procedural texture instead of an image file.
- *
- * The defect this sweep exists for was localised once, as a Sprite2D problem,
- * and it was never Sprite2D's: `resolveTexture2DPath` answers with a PATH, so a
- * `SubResource` survives it only when it happens to CARRY one (a
- * `CanvasTexture`'s `diffuse_texture`). Every slot that went through it — a
- * sprite's texture, a Button's icon, a TextureRect's texture, a Sprite3D's
- * texture, a Decal's albedo — dropped an inline `GradientTexture2D` on the
- * floor and fell back to a placeholder, while the three slots that happened to
- * use `useTexture2D` resolved it fine.
- *
- * Each consumer is therefore checked HERE, at the shared seam, rather than only
- * inside its own slice: a per-slice test proves one node type works, and this
- * defect was precisely a set of node types that each looked fine on its own.
- *
- * Godot 4.6.3 renders all five (`scenes/fixtures/unit-*-gradienttexture.tscn`,
- * probes quoted per case), so "nothing drawn" is a divergence, not a choice.
+ * Every node type that reads a Texture2D slot, given an inline procedural texture. A path resolver
+ * finds no path in a `SubResource`, so each consumer is checked here at the shared seam, not only
+ * in its slice. Godot 4.6.3 renders all five (`scenes/fixtures/unit-*-gradienttexture.tscn`,
+ * probes per case), so drawing nothing is a divergence.
  */
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
@@ -87,10 +73,8 @@ function provide(children: ReactNode, workspace?: '2d') {
 }
 
 /**
- * A decoded texture's pixel dimensions. `THREE.Texture.image` is `unknown` in
- * three's types, since it can be an ImageData, a canvas or a video element;
- * every texture these cases produce is a rasterised gradient, which carries a
- * width and a height.
+ * A decoded texture's pixel dimensions. three types `THREE.Texture.image` as `unknown`, and every
+ * texture here is a rasterised gradient with a width and a height.
  */
 function imageSize(texture: THREE.Texture): { width: number; height: number } {
   return texture.image as { width: number; height: number };
@@ -120,7 +104,7 @@ function node(type: string, properties: TscnNode['properties']): TscnNode {
 
 function solveNodeFor(n: TscnNode): SolveNode {
   // The same pools `provide` puts in the ambient context: a Control painter
-  // resolves its own refs in its OWN scope, and here the two are one scene.
+  // resolves its own refs in its own scope, and here the two are one scene.
   return {
     ...emptySolveNode(),
     path: n.name,
@@ -136,7 +120,7 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
   it('Sprite2D — draws the rasterised gradient instead of a missing-resource placeholder', async () => {
     // Godot 4.6.3, `unit-sprite2d-gradienttexture.tscn` at the project
     // viewport: the sprite's centre pixel reads rgb(27, 153, 230) against an
-    // rgb(216, 216, 204) backdrop, i.e. the gradient's own opaque centre.
+    // rgb(216, 216, 204) backdrop: the gradient's own opaque centre.
     const renderer = await provide(
       <Sprite2D node={node('Sprite2D', parseSprite2D(heading('Sprite2D'), { texture: INLINE_REF }))} />,
       '2d'
@@ -162,15 +146,9 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
   });
 
   it('Sprite2D — borrows one rasterisation and paints a CLONE of it per node', async () => {
-    // The procedural cache OWNS what `useTexture2D` hands back; consumers only
-    // borrow. Sprite2D is the one consumer of the five that disposes what it
-    // draws (`composeFrameTexture` advances per animated frame), so if it drew
-    // the cache's own texture, one sprite unmounting would free the buffer that
-    // every other node pointing at the same gradient is still sampling — and
-    // nothing would re-rasterise, since no memo dep changed. Two sprites on one
-    // gradient pin both halves of the contract at once: ONE pixel buffer
-    // (rasterised once, shared), TWO texture objects (so each sprite's own
-    // dispose reaches only its own clone).
+    // Sprite2D disposes what it draws, while the procedural cache owns the texture. Two sprites on
+    // one gradient pin both halves: one shared pixel buffer, and two texture objects, so each
+    // sprite's dispose reaches only its own clone and never the buffer another node samples.
     const sprite = () => (
       <Sprite2D node={node('Sprite2D', parseSprite2D(heading('Sprite2D'), { texture: INLINE_REF }))} />
     );
@@ -191,7 +169,7 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
 
   it('Sprite3D — draws the rasterised gradient instead of a missing-resource placeholder', async () => {
     // Godot 4.6.3, `unit-sprite3d-gradienttexture.tscn`: the quad is painted,
-    // not absent — probe (400, 378) reads rgb(215, 70, 88) where the unlit
+    // not absent: probe (400, 378) reads rgb(215, 70, 88) where the unlit
     // background would be rgb(164, 165, 167).
     const renderer = await provide(
       <Sprite3D node={node('Sprite3D', parseSprite3D(heading('Sprite3D'), { texture: INLINE_REF }))} />
@@ -219,7 +197,7 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
 
   it('Button — paints its icon slot from the inline gradient', async () => {
     // Godot 4.6.3, `unit-button-icon-gradienttexture.tscn`: probe (158, 136)
-    // reads rgb(254, 214, 51) — the icon's own centre — inside a button whose
+    // reads rgb(254, 214, 51), the icon's own centre, inside a button whose
     // box is rgb(51, 128, 89).
     const n = node(
       'Button',
@@ -247,7 +225,7 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
   it('Decal — projects the inline gradient onto a receiver surface', async () => {
     // Godot 4.6.3, `unit-decal-gradienttexture.tscn`: probe (477, 378) reads
     // rgb(237, 165, 160) on the floor where the undecorated plane reads
-    // rgb(225, 228, 232) — the projection is drawn.
+    // rgb(225, 228, 232): the projection is drawn.
     const decal = node(
       'Decal',
       parseDecal(heading('Decal'), { texture_albedo: INLINE_REF, size: 'Vector3(3, 3, 3)' })
@@ -262,7 +240,7 @@ describe('inline GradientTexture2D reaches every Texture2D-valued slot', () => {
       </>
     );
 
-    // The projection meshes are added IMPERATIVELY to the decal's own group
+    // The projection meshes are added imperatively to the decal's own group
     // (see that component's doc for why), so they live in the THREE scene
     // rather than in the test renderer's React view of it.
     const projected: THREE.Texture[] = [];

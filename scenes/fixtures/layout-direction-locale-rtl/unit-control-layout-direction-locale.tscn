@@ -1,13 +1,7 @@
-; The ONE variable: `internationalization/locale/test`, set to a right-to-left
-; language in this directory's own project.godot. Every node leaves
-; `layout_direction` at INHERITED and `root_node_layout_direction` is unset, so
-; the root falls through to the application locale (control.cpp:3607) —
-; `TranslationServer::setup` seeds that from the test locale when the project
-; states one (translation_server.cpp:592-599) and
-; `TextServerAdvanced::_is_locale_right_to_left` answers from a fixed
-; seven-code table (text_server_adv.cpp:534-541). Invisible in every loose
-; fixture, and in the two sibling directories: they answer from a setting that
-; never consults a locale at all.
+; The one variable: `internationalization/locale/test`, an RTL language in this directory's
+; project.godot. Every node inherits, so the root reads the application locale (control.cpp:3607),
+; seeded from the test locale (translation_server.cpp:592-599) and a seven-code RTL table
+; (text_server_adv.cpp:534-541). No loose fixture or sibling directory consults a locale.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitctrlldlocale"]
 

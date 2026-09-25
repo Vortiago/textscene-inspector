@@ -1,8 +1,6 @@
 /**
- * `<CheckBox>` render contract — icon (always drawn, checked/unchecked/
- * radio variant) + optional label text, NO chrome mesh. Structure/tint/
- * render-order assertions only (pixels are a golden-image concern via
- * `pnpm ref:godot`, not this suite).
+ * `<CheckBox>` render contract: the icon, always drawn, and optional label text, with no
+ * chrome mesh. Structure, tint and render order only. Pixels belong to the golden images.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -59,9 +57,8 @@ describe('<CheckBox> (isolated painter contract)', () => {
       <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
-    // Every mesh here is either the icon (PlaneGeometry, .parameters) or the
-    // text run (BufferGeometry, no .parameters) — none carries a `color`
-    // vertex attribute the way a StyleBoxQuad chrome mesh would.
+    // Every mesh here is the icon (PlaneGeometry) or the text run (BufferGeometry).
+    // Neither carries the `color` vertex attribute of a StyleBoxQuad chrome mesh.
     for (const mesh of meshes) {
       expect((mesh.geometry as THREE.BufferGeometry).attributes.color).toBeUndefined();
     }
@@ -140,7 +137,7 @@ describe('<CheckBox> (isolated painter contract)', () => {
       />
     );
     const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    // font_disabled_color, NOT font_pressed_color.
+    // font_disabled_color, not font_pressed_color.
     expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.5, 5);
   });
 
@@ -161,7 +158,7 @@ describe('<CheckBox> (isolated painter contract)', () => {
       expect(iconMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.25), 4);
 
       const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-      // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, THEN linearised.
+      // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
       expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
     }
   );
@@ -195,20 +192,16 @@ describe('<CheckBox> (isolated painter contract)', () => {
       <CheckBox {...painterEnv()} solveNode={themedIconNode} rect={RECT} renderOrder={0} />
     );
     const iconMaterial = findIconMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
-    // The vendored icon loads through `THREE.TextureLoader` (a plain `Texture`);
-    // a themed `GradientTexture2D` rasterises to a `DataTexture` — the two are
-    // distinguishable without inspecting image bytes.
+    // The vendored icon loads as a plain `Texture`, and a themed `GradientTexture2D`
+    // rasterises to a `DataTexture`, so the two differ without reading image bytes.
     expect((iconMaterial.map as THREE.DataTexture | null)?.isDataTexture).toBe(true);
   });
 });
 
 /**
- * The SCENE-FONT (canvas-kind `FontMetrics`) path end to end. CheckBox's own
- * text placement is `check_box.cpp:126-133` + Button's internal-margin
- * reservation, with NOTHING font-kind-specific in it — this pins that, since
- * an atlas-bake anchor leaking back into the placement would be invisible on
- * the atlas path (where it would look like the correct total) and wrong here
- * by `ascentPx - base*fontSizePx/42` px.
+ * The scene-font (canvas-kind `FontMetrics`) path. Text placement (`check_box.cpp:126-133`) has
+ * nothing font-kind-specific in it. An atlas-bake anchor leaking into it reads correct on the
+ * atlas path and is off here by `ascentPx - base*fontSizePx/42` px.
  */
 describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
@@ -223,7 +216,7 @@ describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => 
     );
   }
 
-  /** The canvas painter's mesh — a plain `MeshBasicMaterial` over a `CanvasTexture`, never the MSDF `ShaderMaterial` `findTextMesh` looks for. */
+  /** The canvas painter's mesh: a `MeshBasicMaterial` over a `CanvasTexture`, not the MSDF `ShaderMaterial`. */
   function findCanvasTextMesh(scene: Rendered['scene']) {
     return scene
       .findAllByType('Mesh')
@@ -242,15 +235,9 @@ describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => 
   it('places the text at the pure check_box.cpp offset — no atlas-bake anchor anywhere in it', async () => {
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene)!;
-    // Scene font at 16px: ascentPx = ceil(800*16/1000) = 13, descentPx =
-    // ceil(200*16/1000) = 4; CheckBox is Button-family and reads no
-    // line_spacing (lineSpacingPx: 0), so linePitchPx = 17 and
-    // textNaturalSize.y = 17. contentMargin 4 -> customElementHeight =
-    // 28 - 2*4 = 20; y = floor((20 - 17)/2 + 4) = floor(5.5) = 5 (never
-    // floored in the source itself, only per-glyph downstream —
-    // `buttonBase.ts`'s `layoutButtonContent` has the full citation).
-    // x = margin(4) + icon(16) + h_separation(4) = 24. three's Y is negated
-    // Godot px.
+    // At 16px: ascent 13, descent 4, and no line_spacing, so the pitch is 17. Margin 4
+    // gives a height of 20, so y = floor((20 - 17)/2 + 4) = 5. Godot floors only per glyph downstream.
+    // x = margin(4) + icon(16) + h_separation(4) = 24. three's Y is negated Godot px.
     const group = mesh.parent as THREE.Object3D;
     expect(group.position.x).toBe(24);
     expect(group.position.y).toBe(-5);
@@ -260,7 +247,7 @@ describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => 
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene)!;
     const position = mesh.geometry.getAttribute('position');
-    // Vertex order TL, TR, BL, BR; canvasTextPainter.ts's VERTICAL_PAD_PX is 4.
+    // Vertex order TL, TR, BL, BR. canvasTextPainter.ts's VERTICAL_PAD_PX is 4.
     expect(position.getY(0)).toBeCloseTo(4, 6);
   });
 

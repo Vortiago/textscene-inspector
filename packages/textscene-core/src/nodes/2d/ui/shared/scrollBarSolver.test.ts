@@ -1,9 +1,7 @@
 /**
- * `scrollBarMinimumSize`/`scrollBarAreaSize`/`scrollBarGrabberGeometry`/
- * `scrollBarTrackRect`/`scrollBarGrabberRect` vs Godot 4.6.3
- * (`scene/gui/scroll_bar.cpp`). Numbers at `default_theme_scale = 1`, where
- * `contentMargin = 4` and every grabber/track along-axis minimum is therefore
- * 8 (`scroll_bar.cpp:473-477`, `default_theme.cpp:543-545`).
+ * The scrollbar geometry against Godot 4.6.3 (`scene/gui/scroll_bar.cpp`) at
+ * `default_theme_scale = 1`: `contentMargin = 4`, so every grabber and track along-axis minimum is 8
+ * (`scroll_bar.cpp:473-477`, `default_theme.cpp:543-545`).
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -18,7 +16,7 @@ import {
 const THEME = nativeTheme(1);
 const GRABBER_MIN = 8; // 2 * contentMargin (scroll_bar.cpp:473-477, default_theme.cpp:545).
 const BAR_LENGTH = 300;
-const AREA_SIZE = BAR_LENGTH - GRABBER_MIN; // scroll_bar.cpp:491-513 — track/icon along-axis terms are 0.
+const AREA_SIZE = BAR_LENGTH - GRABBER_MIN; // scroll_bar.cpp:491-513, with the track and icon along-axis terms 0.
 
 describe('scrollBarMinimumSize (scroll_bar.cpp:519-548)', () => {
   it('is (8, 8) at scale 1 for HORIZONTAL — track cross-axis minimum + grabber along-axis minimum, both 2*contentMargin', () => {

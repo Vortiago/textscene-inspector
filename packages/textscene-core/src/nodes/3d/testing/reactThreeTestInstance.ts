@@ -1,25 +1,19 @@
 /**
- * `@react-three/test-renderer` types every `ReactThreeTestInstance.instance` as
- * the bare `THREE.Object3D` — the class is generic
- * (`ReactThreeTestInstance<TObject extends THREE.Object3D = THREE.Object3D>`)
- * but `findByType`/`findAllByType`/`find` all return the default parameter, so
- * the concrete Three.js subclass a test found by name (`'Mesh'`, the canvas
- * root `Scene`) is lost. Every call site here already knows that subclass from
- * how it found the node — this narrows it once instead of re-asserting the
- * same cast at every `.instance.geometry` / `.instance.material` / `.instance.fog`.
- *
- * Build-excluded via the `src/**\/testing/**` tsconfig rule (test-only).
+ * `@react-three/test-renderer` types every `ReactThreeTestInstance.instance` as the bare
+ * `THREE.Object3D`, since `findByType`/`findAllByType`/`find` return the default type parameter. A
+ * call site knows the subclass from how it found the node, so these helpers narrow it once.
+ * Build-excluded through the `src/**\/testing/**` tsconfig rule (test-only).
  */
 
 import type * as THREE from 'three';
 import type { ReactThreeTest } from '@react-three/test-renderer';
 
-/** The library exports this only via its `ReactThreeTest` namespace, not at the top level. */
+/** The library exports this only through its `ReactThreeTest` namespace, not at the top level. */
 type ReactThreeTestInstance = ReactThreeTest.ReactThreeTestInstance;
 
 /**
  * Narrow a test-renderer node's `.instance` to a concrete `THREE.Object3D`
- * subclass — `instanceAs<THREE.Mesh>(scene.findByType('Mesh'))`.
+ * subclass: `instanceAs<THREE.Mesh>(scene.findByType('Mesh'))`.
  */
 export function instanceAs<T extends THREE.Object3D>(node: ReactThreeTestInstance): T {
   return node.instance as unknown as T;
@@ -31,13 +25,9 @@ export function findMesh(scene: ReactThreeTestInstance, type = 'Mesh'): THREE.Me
 }
 
 /**
- * Narrow a test-renderer node's `.instance` to a non-`Object3D` Three.js class —
- * `findAllByType('MeshBasicMaterial')` walks the fiber tree by JSX element name,
- * so it legitimately finds `THREE.Material` instances too, but
- * `ReactThreeTestInstance`'s type parameter is bounded to `THREE.Object3D` and
- * can't express that. Unlike `instanceAs`, this can't lean on Object3D-subtype
- * assignability, so it goes through `unknown` like the rest of this file's
- * mock-narrowing casts.
+ * Narrow a test-renderer node's `.instance` to a non-`Object3D` Three.js class. `findAllByType`
+ * walks the fiber tree by JSX element name, so it finds `THREE.Material` instances too, which the
+ * type parameter, bounded to `THREE.Object3D`, cannot express.
  */
 export function materialInstanceAs<T extends THREE.Material>(node: ReactThreeTestInstance): T {
   return node.instance as unknown as T;

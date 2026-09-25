@@ -1,12 +1,6 @@
 /**
- * `useTexture2D` — one answer for "what texture does this Texture2D slot hold?".
- *
- * The case that motivated it: every PointLight2D in the vendored isometric
- * dungeon uses a `GradientTexture2D` sub-resource for its cookie. That is
- * described entirely inside the scene, so the path-based resolver returns
- * nothing for it and all 23 lights fell back to a missing-resource placeholder,
- * even though a faithful rasteriser for it already existed — reachable only
- * from MeshInstance3D.
+ * `useTexture2D`: the texture a Texture2D slot holds. A PointLight2D cookie is a `GradientTexture2D`
+ * sub-resource, which a path resolver finds nothing for.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
@@ -227,9 +221,8 @@ describe('useTexture2D — reference forms', () => {
   });
 
   it('rasterises a GradientTexture2D wrapped in a CanvasTexture', () => {
-    // A CanvasTexture is a Texture2D wrapper; Godot draws its `diffuse_texture`,
-    // whatever that is. Resolving the wrapper to a PATH can only see the map
-    // that HAS one, so an inline diffuse resolved to nothing at all.
+    // Godot draws a CanvasTexture's `diffuse_texture`, whatever it is. A path resolver sees only a
+    // diffuse that has a path, so an inline one resolves to nothing.
     const wrapped: TscnInternalResource[] = [
       ...gradientResources,
       {
@@ -249,11 +242,8 @@ describe('useTexture2D — reference forms', () => {
     expect(result.current.missing).toBe(false);
   });
 
-  // The two wrappers compose: Godot's CanvasTexture draws whatever its
-  // `diffuse_texture` is, and that can be an AtlasTexture. Resolving the atlas
-  // against the OUTER ref sees a CanvasTexture, finds no atlas, and hands back
-  // the whole sheet — the region silently ignored — so the unwrap has to happen
-  // first and the atlas resolve has to run on what it produces.
+  // A CanvasTexture's `diffuse_texture` can be an AtlasTexture. The atlas resolve against the
+  // outer ref finds no atlas and hands back the whole sheet, so the unwrap runs first.
   it('crops an AtlasTexture that is reached through a CanvasTexture', () => {
     const sheet = new THREE.Texture();
     sheet.image = { width: 128, height: 128 };
@@ -304,11 +294,8 @@ describe('useTexture2D — reference forms', () => {
 });
 
 /**
- * The size question, asked without React. A Control's minimum size is solved
- * outside any component (`r3f/controls/native/buildSolveTree.ts`), so it cannot
- * call the hook above — but it needs the same answer for the same slot, and
- * "how big" and "what pixels" drifting apart is the whole defect this module
- * exists to close.
+ * The size, asked without React: `r3f/controls/native/buildSolveTree.ts` solves a Control's
+ * minimum size outside any component, and must agree with the hook's pixels for the same slot.
  */
 describe('inlineTexture2DSize', () => {
   const resources: TscnInternalResource[] = [
@@ -374,12 +361,9 @@ describe('inlineTexture2DSize', () => {
   });
 
   it('still reports the declared size when the gradient itself is unresolvable', () => {
-    // Measured against Godot 4.6.3: a TextureRect holding a GradientTexture2D
-    // with no `gradient` still reserves the declared 160x160 in a
-    // VBoxContainer (the sibling below it does not move up), because
-    // `get_width`/`get_height` read the authored members and never consult the
-    // gradient. Tying the size to a successful rasterisation would collapse
-    // the node's layout on a resource error.
+    // Godot 4.6.3: a TextureRect with a GradientTexture2D and no `gradient` still reserves the
+    // declared 160x160 in a VBoxContainer, since `get_width`/`get_height` read the authored
+    // members. A size tied to rasterisation would collapse the layout on a resource error.
     expect(inlineTexture2DSize('SubResource("GradientTexture2D_bare")', resources)).toEqual({
       x: 160,
       y: 96,
@@ -416,9 +400,8 @@ describe('inlineTexture2DSize', () => {
   });
 
   it("reports the REGION size through a CanvasTexture, not the sheet's", () => {
-    // The size half of the same composition the hook resolves: answering from
-    // the raw ref sees only the wrapper, declines, and leaves the caller's
-    // cache lookup to reserve the whole sheet for a 64x64 cell.
+    // The raw ref sees only the wrapper, so the caller's cache would reserve the whole sheet for a
+    // 64x64 cell.
     const wrapped: TscnInternalResource[] = [
       ...resources,
       {
@@ -434,9 +417,8 @@ describe('inlineTexture2DSize', () => {
   });
 
   it('reports the size through a CHAIN of CanvasTexture wrappers', () => {
-    // The painter resolves the whole chain, so the size must too: stopping at
-    // any fixed depth reserves 0x0 for a slot that draws at its declared size,
-    // and inside a BoxContainer that collapses the node over its siblings.
+    // The painter resolves the whole chain, so the size must too: a fixed depth reserves 0x0 for a
+    // slot that draws at its declared size, collapsing the node in a BoxContainer.
     const chained: TscnInternalResource[] = [
       ...resources,
       {
@@ -457,9 +439,8 @@ describe('inlineTexture2DSize', () => {
   });
 
   it("reports a chained wrapper's REGION size, never the sheet's", () => {
-    // The window is found only once every wrapper is off: an atlas lookup run
-    // against a half-peeled reference still sees a CanvasTexture and answers
-    // with the whole sheet through the caller's cache instead of the cell.
+    // The window shows only with every wrapper off: a half-peeled ref still sees a CanvasTexture,
+    // and the caller's cache answers the whole sheet.
     const chained: TscnInternalResource[] = [
       ...resources,
       {
@@ -480,8 +461,8 @@ describe('inlineTexture2DSize', () => {
   });
 
   it('declines an AtlasTexture whose region falls back to the atlas size', () => {
-    // A zero-size axis reports `atlas->get_width()` (:34-38) — only the loaded
-    // sheet knows that, so this answer belongs to the cache lookup instead.
+    // A zero-size axis reports `atlas->get_width()` (:34-38), which only the loaded sheet knows,
+    // so the cache lookup answers it.
     expect(inlineTexture2DSize('SubResource("AtlasTexture_wholesheet")', resources)).toBeNull();
   });
 
@@ -494,13 +475,9 @@ describe('inlineTexture2DSize', () => {
 });
 
 /**
- * An inline `AtlasTexture` — a sprite-sheet cell — in a PLAIN Texture2D slot.
- *
- * Godot presents one as a texture of the REGION's size that draws the sheet's
- * sub-rectangle, so the slot must hand its consumer a texture of that size: a
- * consumer reads `image.width`/`image.height` for its own sizing and overwrites
- * `repeat`/`offset` for its own cropping, so a shared sheet handed over with
- * pre-windowed UVs paints the WHOLE sheet at the WHOLE sheet's size.
+ * An inline `AtlasTexture` cell in a plain Texture2D slot. Godot presents it as a texture of the
+ * region's size, so the slot hands over one: a consumer sizes from `image.width`/`image.height`
+ * and overwrites `repeat`/`offset`, so a pre-windowed shared sheet paints whole.
  */
 describe('useTexture2D — inline AtlasTexture', () => {
   const externalResources: TscnExternalResource[] = [
@@ -534,9 +511,8 @@ describe('useTexture2D — inline AtlasTexture', () => {
   }
 
   /**
-   * happy-dom has no 2D context, so the crop is recorded through one — faked on
-   * the prototype rather than by replacing `createElement`, which every other
-   * element in the tree (and the R3F renderer's own canvas) still needs.
+   * happy-dom has no 2D context, so a fake on the prototype records the crop. Replacing
+   * `createElement` would break every other element, the R3F renderer's canvas included.
    */
   function stubCanvas() {
     const calls: number[][] = [];
@@ -629,19 +605,15 @@ describe('useTexture2D — inline AtlasTexture', () => {
 });
 
 /**
- * The same cell, saved as its OWN `.tres` instead of an inline sub-resource —
- * how Kenney's input-prompt packs ship every icon. The outer ExtResource's
- * declared `type=` routes the fetch through the `resource` bus; the image
- * pipeline can't decode the file at all (it isn't an image).
+ * The same cell saved as its own `.tres`, as Kenney's input-prompt packs ship every icon. The
+ * ExtResource's `type=` routes the fetch to the `resource` bus, since the file is no image.
  */
 describe('useTexture2D — .tres AtlasTexture', () => {
   const externalResources: TscnExternalResource[] = [
     { id: '1_atlas', type: 'AtlasTexture', path: 'res://icons/keyboard_arrow_left.tres' },
   ];
 
-  // A real Kenney-shaped file, run through the actual `.tres` parser rather
-  // than a hand-built `ParsedResource` — the region matches the fake sheet
-  // below instead of the task's own (much larger) example coordinates.
+  // A Kenney-shaped file through the real `.tres` parser, its region sized to the fake sheet below.
   const atlasTres: ParsedResource = parseTresFile(`[gd_resource type="AtlasTexture" format=3]
 
 [ext_resource type="Texture2D" path="res://sheet.png" id="1_tk63f"]
@@ -660,7 +632,7 @@ region = Rect2(32, 32, 64, 64)
     return texture;
   }
 
-  /** Same fake as the inline block's — records the crop the canvas 2D path draws. */
+  /** The inline block's fake: it records the crop the canvas 2D path draws. */
   function stubCanvas() {
     const calls: number[][] = [];
     const cut = { canvas: null as HTMLCanvasElement | null };
@@ -759,9 +731,8 @@ region = Rect2(32, 32, 64, 64)
   });
 
   it('leaves an ExtResource declared some OTHER type to the ordinary image pipeline', () => {
-    // The outer reference never even reads as an atlas .tres — it falls
-    // through to the normal path resolution, which fails the same way any
-    // unloadable Texture2D path does.
+    // The outer reference never reads as an atlas .tres, so it fails as any unloadable Texture2D
+    // path does.
     stubCanvas();
     const { Wrapper } = withLoader();
     const otherType: TscnExternalResource[] = [

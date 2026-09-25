@@ -1,92 +1,18 @@
 /**
- * The MSDF quad shader shared by every glyph mesh (`TextRun.tsx`): a standard
- * median-of-3 signed-distance decode against the vendored atlas
- * (`openSansAtlas.ts`), screen-space antialiased via `fwidth`, plus a
- * `distanceBias` uniform a synthesized-bold pass can push positive to
- * embolden strokes (widening the shape by shifting the zero-crossing before
- * thresholding) without re-baking the atlas, plus an optional `outline` pass
- * (a second, wider fill composited behind — see `MsdfMaterialOptions.outline`'s
- * own doc for the Godot citation and why it is two thresholds of one field
- * rather than a port of Godot's own MTSDF ring shader).
- *
- * This shader serves the 2D Control text path only. Godot's default project
- * font is NOT MSDF (`servers/text/text_server.cpp:2386`, read by
- * `scene/theme/theme_db.cpp:59`), so nothing here is a port of the path an
- * unconfigured scene actually takes; Godot's own MSDF-font branch is
- * `scene/resources/material.cpp:1639-1656`, and its TextServer carries both
- * a FreeType-bitmap and an MSDF rasteriser
- * (`modules/text_server_adv/text_server_adv.cpp`, `rasterize_bitmap` /
- * `rasterize_msdf`). The decode below is msdfgen's own standard shading
- * technique (Chlumsky, "Shape Decomposition for Multi-Channel Distance
- * Fields") against this repo's own bake.
- *
- * TONE CURVE + ENCODE — the two trailing chunks, and why a hand-written shader
- * needs both spelled out. Every built-in three material ends with
- * `<tonemapping_fragment>` then `<colorspace_fragment>`; a `ShaderMaterial`
- * inherits neither, and each omission is silent, luminance-shaped, and has a
- * fixed point at white — which is why both survived a long time here:
- *
- *   - No encode: the shader's LINEAR `uColor` is written straight into an sRGB
- *     buffer, so every glyph lands at `srgbToLinear(c)` — Godot's font colour
- *     223 rendered as 188.
- *   - No tone curve: a 3D scene tone maps, and this previewer installs Godot's
- *     own curve as `THREE.CustomToneMapping`
- *     (`resources/environment/toneMapping.ts`), which three expands PER
- *     MATERIAL, exactly where that chunk sits. Skip it and the decode and the
- *     encode simply cancel, putting the RAW authored channel in the
- *     framebuffer — measured against Godot 4.6.3 on a Label3D `modulate` of
- *     `Color(1, 1, 0.7)` under the editor preview environment's FILMIC: Godot
- *     fills rgb(255, 255, 210), this shader filled rgb(255, 255, 179), i.e.
- *     0.7 x 255 exactly. 0 and 1 are fixed points of that curve, so a tint
- *     built from those two alone shows nothing at all.
- *
- * The curve is unconditional here rather than an opt-in some 3D caller passes,
- * and this material IS the painter for 2D Control text at the bundled font —
- * the sibling `MeshBasicMaterial` painter (`canvasTextPainter.ts`'s
- * `createCanvasTextMaterial`) takes every canvas-rasterised branch. What
- * keeps the chunk inert in 2D is that the
- * 2D world canvas is mounted `flat`, i.e. `NoToneMapping`
- * (`r3f/components/Canvas2DStage/World2DCanvas.tsx` — Godot composites canvas
- * items AFTER tone mapping the 3D buffers, so authored 2D colour reaches the
- * framebuffer as written). With no curve selected three compiles this chunk
- * out entirely. So `flat` is load-bearing for text colour, not merely for
- * fills: removing it would tone-map every glyph in the 2D stage.
- *
- * Neither `tonemapping_pars_fragment` nor `colorspace_pars_fragment` belongs
- * in this source: `WebGLProgram` injects both into the fragment PREFIX (that
- * is where `toneMapping()` and `linearToOutputTexel()` come from), so a second
- * copy would be a redefinition, not a declaration.
- *
- * `clippingPlanes` is spread onto the material rather than shared by
- * reference: three.js clip planes are per-material state, and a later
- * mutation of the caller's array (say, a ScrollContainer resizing) must not
- * reach back into a material already built from an earlier snapshot of it.
- * A custom shader also has to opt IN to clipping twice over — `clipping: true`
- * on the material (so the renderer binds the `clippingPlanes` uniform at all
- * for a `ShaderMaterial`) and the four `clipping_planes_*` chunks in the
- * shader source (which is where the actual `discard` lives; a built-in
- * material gets them from its own template). Miss either and the planes are
- * accepted and then ignored, with no error anywhere.
- *
- * No `#extension GL_OES_standard_derivatives` pragma: a plain `ShaderMaterial`
- * (this is one — `isRawShaderMaterial` is never set) is ALWAYS promoted to
- * `#version 300 es` by three's own `WebGLProgram` (`RawShaderMaterial` is the
- * only opt-out), so `fwidth`/`textureSize` are core ESSL3 built-ins needing no
- * extension at all — and the directive would be actively wrong to keep: three
- * prepends real function bodies (`sRGBTransferOETF` et al., for
- * `outputColorSpace` handling) before this template's own source, so an
- * `#extension` line here no longer sits before every non-preprocessor token
- * once assembled, which ESSL3 hard-rejects ("extension directive must occur
- * before any non-preprocessor tokens"). Confirmed by rendering a real WebGL2
- * context (Chromium/SwiftShader): with the pragma present the fragment shader
- * fails to compile and every glyph mesh draws nothing, silently, in every
- * consumer of this file — caught only once a real browser (not the
- * `@react-three/test-renderer` mock GL this module's own unit tests run
- * under) attempted the first real render.
+ * The MSDF quad shader for every glyph mesh (`TextRun.tsx`): msdfgen's median-of-3
+ * decode against the vendored atlas (`openSansAtlas.ts`), antialiased with `fwidth`,
+ * a `distanceBias` that emboldens synthesised bold without a re-bake, and an optional
+ * outline pass. It paints 2D Control text at the bundled font.
  */
+// Godot's default project font is not MSDF (`servers/text/text_server.cpp:2386`,
+// `scene/theme/theme_db.cpp:59`). Its MSDF branch is `scene/resources/material.cpp:1639-1656`,
+// and its TextServer has both rasterisers (`modules/text_server_adv/text_server_adv.cpp`'s
+// `rasterize_bitmap`/`rasterize_msdf`).
 import * as THREE from 'three';
 import { canvasItemFacing } from '../../../canvasItemFacing';
 
+// The `clipping_planes_*` chunks hold the `discard`. A `ShaderMaterial` needs them and
+// `clipping: true`, or it accepts the planes and ignores them without an error.
 const VERTEX = /* glsl */ `
 varying vec2 vUv;
 #include <clipping_planes_pars_vertex>
@@ -98,6 +24,10 @@ void main() {
 }
 `;
 
+// FRAGMENT ends with `<tonemapping_fragment>` and `<colorspace_fragment>`, which a `ShaderMaterial`
+// does not inherit, but not their `_pars_` chunks, which `WebGLProgram` injects into the prefix. It
+// has no `#extension` directive, which ESSL3 rejects. `msdfMaterial.md` gives the failure behind
+// each.
 const FRAGMENT = /* glsl */ `
 uniform sampler2D uMap;
 uniform vec3 uColor;
@@ -157,46 +87,34 @@ void main() {
 export interface MsdfMaterialOptions {
   /** The vendored Open Sans MSDF atlas (`OPEN_SANS_ATLAS_PNG_DATA_URL` loaded to a texture), or a stand-in for tests. */
   map: THREE.Texture;
-  /** Tint, LINEAR rgb (convert an authored sRGB Godot colour before calling, e.g. via `sRGBToLinearRGB`). */
+  /** Tint, linear rgb: convert an authored sRGB Godot colour first, such as with `sRGBToLinearRGB`. */
   color: { r: number; g: number; b: number };
   /** Tint alpha, combined with the shape's own coverage in the shader. */
   opacity: number;
-  /** `OPEN_SANS_ATLAS_INFO.distanceRange` — the MSDF field's range, atlas-bake-size px. */
+  /** `OPEN_SANS_ATLAS_INFO.distanceRange`: the MSDF field's range, atlas-bake-size px. */
   pxRange: number;
-  /** Synthesized-bold embolden. 0 (default) leaves the baked stroke weight untouched. */
+  /** Synthesised-bold embolden: shifts the zero-crossing outward. The default 0 keeps the baked weight. */
   distanceBias?: number;
-  /** Per-mesh clip planes (`controlClipping.tsx`'s hook) — spread onto the material, never shared by reference. */
+  /** Per-mesh clip planes (`controlClipping.tsx`), copied so a later change to the caller's array cannot reach a built material. */
   clippingPlanes?: readonly THREE.Plane[];
   /**
-   * `false` (default) — every 2D-UI Control text run draws on top of its own
-   * flat canvas with no notion of depth. A 3D consumer (Label3D's
-   * `no_depth_test`, Godot default `false` = depth-tested) needs this on a
-   * per-material basis, so it is a widened option rather than a second
-   * hardcoded template.
+   * `false` by default: a 2D Control text run draws on its flat canvas without
+   * depth. Label3D's `no_depth_test` (Godot default `false`) sets it per material.
    */
   depthTest?: boolean;
   /**
-   * Omitted (default) takes `canvasItemFacing()`'s `THREE.DoubleSide` — every
-   * 2D-UI Control text run is a flat quad always viewed face-on. A 3D consumer
-   * (Label3D's `double_sided`) needs `FrontSide` when explicitly disabled;
-   * either way the run is drawn in ONE pass, for the reason that module gives.
+   * Omitted, it takes `canvasItemFacing()`'s `THREE.DoubleSide` for a face-on 2D run.
+   * Label3D with `double_sided` off needs `FrontSide`. Either way the run draws in one pass.
    */
   side?: THREE.Side;
+  // Godot's MSDF outline (`servers/rendering/renderer_rd/shaders/canvas.glsl:606-623`)
+  // reads an MTSDF alpha channel (`msdf_sample.a`) this `"msdf"` atlas lacks, so this
+  // uses two median thresholds of one field, msdfgen's technique. For an opaque
+  // outline colour it looks the same as Godot's two draws.
   /**
-   * A second fill pass at a distance threshold shifted OUTWARD by
-   * `widthPx` screen px, composited BEHIND the normal fill — the MSDF analog
-   * of Godot's `TextServer::draw_hex_code_box`-adjacent `draw_outline` (a
-   * SEPARATE, larger, solid-filled glyph drawn first, `label.cpp:876-878`).
-   * Godot's own MSDF outline shader
-   * (`servers/rendering/renderer_rd/shaders/canvas.glsl:606-623`) instead
-   * clamps against a true-signed-distance ALPHA channel (`msdf_sample.a`) to
-   * draw a hollow ring — this atlas bakes plain 3-channel MSDF (`fieldType:
-   * "msdf"`, not `"mtsdf"`, `openSansAtlas.ts`), which carries no such
-   * channel, so this composites two MEDIAN thresholds of the SAME RGB field
-   * instead (msdfgen's own documented technique for a combined fill+border
-   * effect from a plain MSDF) — a filled second shape under the first, which
-   * is visually identical to Godot's two separate draws for an opaque
-   * outline colour. Omitted (default) draws exactly the un-outlined shader.
+   * A second fill at a threshold `widthPx` screen px outward, composited behind
+   * the fill, like Godot's larger outline glyph drawn first (`label.cpp:876-878`).
+   * Omitted, the shader draws no outline.
    */
   outline?: {
     /** LINEAR rgb, same convention as `color`. */
@@ -236,11 +154,9 @@ export function createMsdfMaterial(options: MsdfMaterialOptions): THREE.ShaderMa
     depthWrite: false,
     depthTest,
     ...canvasItemFacing(side),
-    // `clipping: true` is not optional for a ShaderMaterial: `WebGLRenderer`
-    // only binds the `clippingPlanes` uniform for a shader material that asks
-    // for it (`( !material.isShaderMaterial && !material.isRawShaderMaterial )
-    // || material.clipping === true`), so without it the planes below are
-    // accepted, stored, and silently ignored at draw time.
+    // `WebGLRenderer` binds `clippingPlanes` only when `( !material.isShaderMaterial &&
+    // !material.isRawShaderMaterial ) || material.clipping === true`, and otherwise
+    // ignores the planes.
     clipping: true,
     clippingPlanes: [...clippingPlanes],
   });

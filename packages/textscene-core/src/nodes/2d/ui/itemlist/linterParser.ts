@@ -1,13 +1,7 @@
 /**
- * ItemList strict validators for linting.
- *
- * Declare only ItemList's OWN members: the ones doc/classes/ItemList.xml
- * lists without an `overrides=` attribute. Everything from Control up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
- *
- * `clip_contents` and `focus_mode` both carry `overrides="Control"` (ItemList's
- * constructor only changes their defaults), so they stay on Control.
+ * ItemList strict validators: only the members doc/classes/ItemList.xml lists
+ * without `overrides=` (so not `clip_contents` or `focus_mode`), since the
+ * NODE_BASE_TYPES walk delivers inherited keys and a re-declared key shadows one.
  */
 
 import '../control/linterParser.js';
@@ -39,33 +33,19 @@ const SCROLL_HINT_MODE = {
 };
 
 /**
- * `item_<idx>/<leaf>` leaves, keyed by leaf name: the four properties
- * `base_property_helper.register_property` adds (item_list.cpp:2463-2466). They
- * are not `ADD_PROPERTY` calls and appear nowhere in `_bind_methods`'s property
- * block; ItemList delegates `_set`/`_get`/`_get_property_list` to the helper
- * (item_list.h, the `property_helper` forwards), so this family is only visible
- * by reading the helper setup.
- *
- * Every leaf setter is reached through `PropertyListHelper::_call_setter`, which
- * forwards `(index, value)` to the bound method, and all four ItemList setters
- * are bare assignments past an `ERR_FAIL_INDEX` on the index (an array-bounds
- * guard, not a value bound). So no leaf carries a magnitude bound.
- *
- * The setters themselves fold a negative index from the end (`p_idx +=
- * get_item_count()`), but a `.tscn` never reaches that: the helper refuses to
- * resolve a negative index first (property_list_helper.cpp:58), so the
- * end-relative form is a GDScript convenience only, and that line, not any
- * setter, is what grounds the dispatcher's negative-index error below.
+ * `item_<idx>/<leaf>` leaves: the four `base_property_helper.register_property`
+ * adds (item_list.cpp:2463-2466), not `ADD_PROPERTY`. ItemList forwards
+ * `_set`/`_get`/`_get_property_list` to the helper (item_list.h).
  */
 const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
+  // `PropertyListHelper::_call_setter` forwards `(index, value)`, and each setter
+  // assigns past an `ERR_FAIL_INDEX` on the index, so no leaf has a value bound.
   // item_list.cpp:2463, Variant::STRING, no hint. set_item_text
   // (item_list.cpp:89-105) assigns past the index guard.
   text: v.quotedString('text'),
-  // item_list.cpp:2464, Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE
-  // "Texture2D". set_item_icon (item_list.cpp:206-228) assigns past the index
-  // guard. An unset icon is normally omitted rather than written as `null`, for
-  // want of PROPERTY_USAGE_STORE_IF_NULL, but that is a write-side fact and the
-  // literal still loads, so the combinator accepts it.
+  // item_list.cpp:2464, Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE "Texture2D".
+  // set_item_icon (item_list.cpp:206-228) assigns past the index guard. Without
+  // PROPERTY_USAGE_STORE_IF_NULL the saver omits an unset icon, but `null` still loads.
   icon: v.resourceReference('icon'),
   // item_list.cpp:2465, Variant::BOOL, no hint. set_item_selectable
   // (item_list.cpp:368-376) assigns past the index guard. Defaults to true, so
@@ -84,8 +64,10 @@ const itemValidator = indexedFamilyValidator({
   // `_set` routes straight to `property_helper.property_set_value`
   // (item_list.cpp:2238), whose `_get_property` returns nullptr unless the
   // index `is_valid_int()` (property_list_helper.cpp:53-55), so a non-numeric
-  // index is a DROPPED write.
+  // index is a dropped write.
   indexParse: 'is_valid_int',
+  // The setters fold a negative index from the end (`p_idx += get_item_count()`),
+  // but the helper refuses it first (property_list_helper.cpp:58), so that line grounds this.
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',
     code: 'INVALID_ITEM_INDEX',
@@ -159,14 +141,10 @@ validatorRegistry.registerAll('ItemList', {
   // item_list.cpp:2407, PROPERTY_HINT_RANGE "0,100,1,or_greater,suffix:px",
   // max end open. ERR_FAIL_COND(p_size < 0) at item_list.cpp:589.
   fixed_column_width: v.int('fixed_column_width', { min: 0, enforced: 'item_list.cpp:589' }),
-  // item_list.cpp:2410, Variant::FLOAT with PROPERTY_HINT_NONE: no range in the
-  // hint and none in the setter, so a negative or fractional scale is stored as
-  // written. The one guard is ERR_FAIL_COND(!Math::is_finite(p_scale)) at
-  // item_list.cpp:2098, and `inf` / `inf_neg` / `nan` are exactly the spellings
-  // the unbounded numeric check already refuses, so no extra bound is needed.
-  // set_icon_scale (item_list.cpp:2098) opens with
-  // ERR_FAIL_COND(!Math::is_finite), the only bound on this property:
-  // item_list.cpp:2410 is PROPERTY_HINT_NONE and negatives are legal.
+  // item_list.cpp:2410, Variant::FLOAT with PROPERTY_HINT_NONE, so a negative or
+  // fractional scale is stored as written. The one guard is
+  // ERR_FAIL_COND(!Math::is_finite(p_scale)) at item_list.cpp:2098, which
+  // `finite` reports for `inf`, `inf_neg` and `nan`.
   icon_scale: v.float('icon_scale', { finite: 'item_list.cpp:2098' }),
   // item_list.cpp:2411, Variant::VECTOR2I, PROPERTY_HINT_NONE ("suffix:px" only).
   // set_fixed_icon_size (item_list.cpp:691-699) assigns past an equality

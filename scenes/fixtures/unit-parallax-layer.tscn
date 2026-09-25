@@ -1,19 +1,15 @@
 [gd_scene format=3]
 
-; ONE VARIABLE: `motion_mirroring` — the only ParallaxLayer property a STATIC
-; preview can show. Every other one (motion_scale, motion_offset, and the whole
-; scroll_* surface) reaches the layer through `set_base_offset_and_scale`, which
-; Godot never calls while no Camera2D is current, so a camera-less scene keeps
-; each layer's authored position and scale. Measured through Godot 4.6.3.
-;
-; `Mirrored` repeats every 200 px, `Once` does not, and both hold the same 60x60
-; square — so the fixture reads as one square above two squares 200 px apart.
-; Nothing else in the corpus repeats a canvas subtree: mirroring is drawn by the
-; SERVER (`canvas_set_item_mirroring`), not by any node, so no other scene would
-; notice if the repeat vanished or started tiling the whole view.
+; One variable: `motion_mirroring`, the only ParallaxLayer property a static preview shows. The
+; others (motion_scale, motion_offset and the scroll_* surface) reach the layer through
+; `set_base_offset_and_scale`, which Godot never calls without a current Camera2D, so a
+; camera-less scene keeps each layer's authored position and scale. Measured through Godot 4.6.3.
 
 [node name="ParallaxBackground" type="ParallaxBackground"]
 
+; `Mirrored` repeats every 200 px and `Once` does not, each holding the same 60x60 square: one
+; square above two squares 200 px apart. The server draws mirroring
+; (`canvas_set_item_mirroring`), not a node, and no other scene repeats a canvas subtree.
 [node name="Once" type="ParallaxLayer" parent="."]
 position = Vector2(40, 40)
 

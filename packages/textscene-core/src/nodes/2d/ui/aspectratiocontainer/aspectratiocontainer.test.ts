@@ -1,4 +1,4 @@
-/** AspectRatioContainer registration — parser. Render registration: `index.r3f.test.ts`. */
+/** AspectRatioContainer registration: the parser. Render registration: `index.r3f.test.ts`. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';

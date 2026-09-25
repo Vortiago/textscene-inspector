@@ -1,19 +1,8 @@
 /**
- * A GraphEdit connection endpoint's port position, in the referenced
- * GraphNode's OWN local space — `GraphNode::_port_pos_update`
- * (`scene/gui/graph_node.cpp:1007-1059`), fed by `get_output_port_position`/
- * `get_input_port_position` (`:1078-1123`).
- *
- * Re-solved here rather than read off a shared intermediate: GraphNode's own
- * `ContainerLayoutFn` attaches no `meta`, and even if it did,
- * `ControlCanvasWalker` only ever forwards a node's `meta` to that SAME
- * node's own painter — a sibling painter (GraphEdit's) has no route to a
- * child's `meta` at all without widening the walker's own contract
- * (`ControlComponentRegistry.ts`'s `meta` doc). `controlSolverRegistry` is
- * the other existing mechanism, and this re-invokes exactly that: the SAME
- * registered layout function production uses, given the child's own
- * already-solved outer size, so the port geometry can never diverge from
- * what that child's own painter draws.
+ * A connection endpoint's port position in the GraphNode's local space: `GraphNode::_port_pos_update`
+ * (`scene/gui/graph_node.cpp:1007-1059`) through `get_output_port_position` and
+ * `get_input_port_position` (`:1078-1123`). A sibling painter cannot reach a child's `meta`, so this
+ * reruns the child's registered layout at its solved size, and the ports match what its painter draws.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -37,9 +26,9 @@ export interface GraphNodePort {
 }
 
 export interface GraphNodePorts {
-  /** `right_port_cache`, compacted by ascending raw child index — `from_port` indexes this. */
+  /** `right_port_cache`, compacted by ascending raw child index. `from_port` indexes it. */
   outputs: readonly GraphNodePort[];
-  /** `left_port_cache`, compacted by ascending raw child index — `to_port` indexes this. */
+  /** `left_port_cache`, compacted by ascending raw child index. `to_port` indexes it. */
   inputs: readonly GraphNodePort[];
 }
 

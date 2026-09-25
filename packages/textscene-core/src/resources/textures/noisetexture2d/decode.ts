@@ -1,10 +1,7 @@
 /**
- * NoiseTexture2D decode — the texture's own properties, through the shared
- * value decoders. The `noise` and `color_ramp` references stay raw (the leaf
- * rule the AtlasTexture slice follows); `resolveNoiseTexture.ts` resolves them
- * against the owning file's table.
- *
- * Defaults: `noise_texture_2d.h:47-62`.
+ * NoiseTexture2D decode through the shared value decoders, with defaults from
+ * `noise_texture_2d.h:47-62`. The `noise` and `color_ramp` refs stay raw, and
+ * `resolveNoiseTexture.ts` resolves them against the owning file's table.
  */
 
 import { boolOr, floatOr, intOr } from '../../../parser/valueParsers';

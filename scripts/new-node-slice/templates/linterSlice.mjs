@@ -1,9 +1,7 @@
 /**
- * The linter half of a slice: the validator registration, the barrel entry that
- * triggers it, and the test that keeps it honest about what the class actually
- * binds.
- *
- * The indentation below is the emitted file's, not this module's.
+ * The linter half of a slice: the validator registration, the barrel entry that triggers it, and
+ * the test that checks it against what the class binds. The indentation below is the emitted
+ * file's, not this module's.
  */
 
 export function linterFiles({ typeName, lower, chain, kebabName, base, toSrc, parentLinterImport }) {

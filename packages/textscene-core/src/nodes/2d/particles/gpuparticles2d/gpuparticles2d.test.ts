@@ -1,8 +1,6 @@
 /**
- * GPUParticles2D registration — parsed and validated, not yet rendered.
- *
- * The slice registers a base component under `renderIntent: 'pending'`, so the
- * badge reads a gap while `visible` and the workspace split still behave.
+ * GPUParticles2D is parsed and validated, not yet rendered. Its base component
+ * registers under `renderIntent: 'pending'`, so the badge reads a gap.
  */
 
 import { describe, expect, it } from 'vitest';

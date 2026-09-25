@@ -1,6 +1,4 @@
-/**
- * menubutton linter registration - imports linter components to trigger self-registration.
- */
+/** Registers the MenuButton validators and rule by importing them. */
 
 import './linterParser.js';
 import './linter.js';

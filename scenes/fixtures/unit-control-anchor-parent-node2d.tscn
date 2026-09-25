@@ -1,10 +1,6 @@
-; The ONE variable: which rect a Control anchors against when its DIRECT parent
-; is a CanvasItem that is not a Control. `get_parent_anchorable_rect` reads
-; `data.parent_canvas_item` (control.cpp:685-711) — the direct parent, from
-; `get_parent_item()` — and `CanvasItem::get_anchorable_rect` is
-; `Rect2(0, 0, 0, 0)` (canvas_item.h:414), which Control alone overrides. The
-; enclosing Panel is deliberately NOT full-rect, so anchoring against IT rather
-; than against the zero rect lands the box somewhere else entirely.
+; The one variable: the rect a Control anchors to when its direct parent is a non-Control CanvasItem.
+; get_parent_anchorable_rect reads the direct parent (control.cpp:685-711), whose rect is
+; Rect2(0, 0, 0, 0) (canvas_item.h:414). The Panel is not full-rect, so anchoring to it lands elsewhere.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitctrlanchornode2d"]
 

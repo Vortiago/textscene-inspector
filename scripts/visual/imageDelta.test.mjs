@@ -1,17 +1,13 @@
 /**
- * Unit tests for the comparison metric both image harnesses assert on.
- *
- * The cases that matter are the ones a perceptual (YIQ-distance) metric scores
- * as zero: a flat luminance shift and a chroma-direction shift. Each of those
- * tests computes the YIQ distance inline and asserts it lands under the
- * customary cutoff — so the test states, in arithmetic, the reason this module
- * does not delegate to one.
+ * Tests the comparison metric both image harnesses assert on. A flat luminance shift and a
+ * chroma-direction shift score zero under a YIQ-distance metric, so each of those tests computes
+ * the YIQ distance inline and asserts it lands under the customary cutoff.
  */
 import { describe, expect, it } from 'vitest';
 import { PNG } from 'pngjs';
 import { compareImages, formatDelta } from './imageDelta.mjs';
 
-/** The pixelmatch/YIQ distance and its `threshold: 0.1` cutoff, for reference. */
+/** The pixelmatch YIQ distance and its `threshold: 0.1` cutoff, for reference. */
 const YIQ_MAX_DELTA = 35215 * 0.1 ** 2;
 function yiqDelta([r1, g1, b1], [r2, g2, b2]) {
   const y = (r, g, b) => r * 0.29889531 + g * 0.58662247 + b * 0.11448223;
@@ -63,9 +59,8 @@ describe('compareImages', () => {
   });
 
   it('counts a chroma-direction shift a YIQ metric scores as zero however large it is', () => {
-    // The YIQ distance weights the DIRECTION of a colour change, so along the
-    // least-weighted direction it stays under the cutoff at a per-channel
-    // excursion of 105/255 — over 40% of the range, scored as no change.
+    // The YIQ distance weights the direction of a colour change, so along the least-weighted one it
+    // stays under the cutoff at a per-channel excursion of 105/255, over 40% of the range.
     const before = [140, 120, 150];
     const after = [111, 142, 45];
     expect(yiqDelta(before, after)).toBeLessThan(YIQ_MAX_DELTA);
@@ -84,8 +79,8 @@ describe('compareImages', () => {
     const result = compareImages(buffer(expected), buffer(actual));
     expect(result.changedPixels).toBe(4);
     expect(result.maxChannelDelta).toBe(55);
-    // The colour channels are untouched, so the parity statistic stays at zero
-    // — detection sees alpha, the mean deliberately does not.
+    // The colour channels are untouched, so the parity statistic stays at zero: detection sees
+    // alpha, and the mean does not.
     expect(result.meanChannelError).toBe(0);
   });
 
@@ -97,8 +92,8 @@ describe('compareImages', () => {
     expect(result.changedPixels).toBe(1);
     expect(result.changedPct).toBe(1);
     expect(result.maxChannelDelta).toBe(255);
-    // Mean error is area-weighted, so a single pixel barely moves it — which
-    // is why the gate asserts on the pair and not on this.
+    // Mean error is area-weighted, so a single pixel barely moves it, and the gate asserts on the
+    // pair instead.
     expect(result.meanChannelError).toBeCloseTo(255 / (100 * 3), 6);
   });
 

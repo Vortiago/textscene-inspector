@@ -1,28 +1,20 @@
 /**
- * `StyleBox` decode — a property bag (an inline `[sub_resource]` theme override
- * or a ParsedResource `[resource]` body) into typed data. Godot's defaults come
- * from the member initialisers in `scene/resources/style_box_flat.h`, since the
- * editor omits every property still at its default from the saved scene:
- *
- *   bg_color Color(0.6, 0.6, 0.6) (h:38) · shadow_color Color(0, 0, 0, 0.6)
- *   (h:39) · border_color Color(0.8, 0.8, 0.8) (h:40) · border_width 0 (h:42) ·
- *   corner_radius 0 (h:44) · draw_center true (h:46) · shadow_size 0 (h:52) ·
- *   shadow_offset (0, 0) (h:53) · content_margin −1 (style_box.cpp:141-145).
+ * `StyleBox` decode: an inline `[sub_resource]` or a `[resource]` body into typed
+ * data. The editor omits a property at its default, so each default is a member
+ * initialiser in `scene/resources/style_box_flat.h`, cited by line as `h:<n>`.
  */
 
 import { boolOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import { colorOr } from '../../../utils/colorParser';
 import type { StyleBoxData, StyleBoxFlatData, StyleBoxSides } from './types';
 
-const BG_DEFAULT = { r: 0.6, g: 0.6, b: 0.6, a: 1 };
-const BORDER_DEFAULT = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
-const SHADOW_DEFAULT = { r: 0, g: 0, b: 0, a: 0.6 };
+const BG_DEFAULT = { r: 0.6, g: 0.6, b: 0.6, a: 1 }; // h:38
+const BORDER_DEFAULT = { r: 0.8, g: 0.8, b: 0.8, a: 1 }; // h:40
+const SHADOW_DEFAULT = { r: 0, g: 0, b: 0, a: 0.6 }; // h:39
 
 /**
- * Decode one StyleBox. Returns `null` for a type this slice does not claim
- * (`StyleBoxTexture`, `StyleBoxLine`, or a reference that resolved to something
- * that is not a StyleBox at all) so callers can tell "not ours" from
- * "ours, and it paints nothing".
+ * `null` for a type this slice does not claim (`StyleBoxTexture`, `StyleBoxLine`,
+ * a non-StyleBox), so callers can tell "not ours" from "ours, paints nothing".
  */
 export function decodeStyleBox(
   type: string,
@@ -34,12 +26,13 @@ export function decodeStyleBox(
 }
 
 function decodeFlat(properties: Record<string, string>): StyleBoxFlatData {
-  const borderWidth = sides(properties, 'border_width');
+  const borderWidth = sides(properties, 'border_width'); // 0 (h:42)
 
   return {
     kind: 'flat',
     bgColor: colorOr(properties.bg_color, BG_DEFAULT),
-    drawCenter: boolOr(properties.draw_center, true, 'StyleBoxFlat.draw_center'),
+    drawCenter: boolOr(properties.draw_center, true, 'StyleBoxFlat.draw_center'), // h:46
+    // 0 (h:44)
     cornerRadius: {
       topLeft: radius(properties.corner_radius_top_left, 'corner_radius_top_left'),
       topRight: radius(properties.corner_radius_top_right, 'corner_radius_top_right'),
@@ -54,11 +47,11 @@ function decodeFlat(properties: Record<string, string>): StyleBoxFlatData {
       right: contentMargin(properties.content_margin_right, borderWidth.right, 'right'),
       bottom: contentMargin(properties.content_margin_bottom, borderWidth.bottom, 'bottom'),
     },
-    // `int shadow_size` (h:52) — read as an int so a hand-written fraction
-    // truncates the way Godot's Variant conversion does.
+    // `int shadow_size` (h:52): read as an int, so a fraction truncates as Godot's
+    // Variant conversion does.
     shadowSize: intOr(properties.shadow_size, 0, 'StyleBoxFlat.shadow_size'),
     shadowColor: colorOr(properties.shadow_color, SHADOW_DEFAULT),
-    shadowOffset: vec2Or(properties.shadow_offset, { x: 0, y: 0 }, 'StyleBoxFlat.shadow_offset'),
+    shadowOffset: vec2Or(properties.shadow_offset, { x: 0, y: 0 }, 'StyleBoxFlat.shadow_offset'), // h:53
   };
 }
 
@@ -76,9 +69,9 @@ function sides(properties: Record<string, string>, key: string): StyleBoxSides {
 }
 
 /**
- * `StyleBox::get_margin` (style_box.cpp:78-86): a negative content margin — the
- * −1 default — reports `get_style_margin`, which for a flat box is the side's
- * border width (style_box_flat.cpp:37-40).
+ * `StyleBox::get_margin` (style_box.cpp:78-86): a negative content margin (the
+ * −1 default, style_box.cpp:141-145) reports `get_style_margin`, which for a
+ * flat box is the side's border width (style_box_flat.cpp:37-40).
  */
 function contentMargin(value: string | undefined, borderWidth: number, side: string): number {
   const declared = floatOr(value, -1, `StyleBoxFlat.content_margin_${side}`);

@@ -1,11 +1,7 @@
 /**
- * The once-per-frame world snapshot of the occluders.
- *
- * The contract has two halves: the snapshot must FOLLOW the world matrices
- * (which are not React values, so nothing re-renders when an occluder moves),
- * and it must be REFERENTIALLY STABLE while nothing moves — a light memoises its
- * shadow geometry on it, so a new array every frame would rebuild every
- * volume in the scene 60 times a second.
+ * The occluders' world snapshot follows the world matrices, which are not React values, and stays
+ * referentially stable while nothing moves: a light memoises its shadow geometry on it, so a new
+ * array per frame rebuilds every volume 60 times a second.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -110,8 +106,7 @@ async function frames(renderer: Awaited<ReturnType<typeof mountStage>>['renderer
 
 describe('ShadowCasterStage', () => {
   it('publishes the world flatten during mount, before any frame runs', async () => {
-    // A still capture never advances the loop far, and the previewer draws one
-    // frame per pan step; waiting for a frame would mean the first one is
+    // A still capture barely advances the loop, so waiting for a frame leaves the first one
     // shadowless. The local matrices are committed by layout time, which is all
     // `updateWorldMatrix` needs.
     const object = new THREE.Group();

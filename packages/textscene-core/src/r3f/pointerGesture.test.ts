@@ -1,9 +1,4 @@
-/**
- * Browser pointer input reduced to numbers a camera can use: gesture geometry
- * and wheel-delta normalisation. Not Godot maths — Godot's editor has no touch
- * scheme and its native input carries no `deltaMode` (ADR-0029) — so these live
- * apart from `godotEditorCursor.ts` and are shared by both viewports.
- */
+/** Browser pointer input reduced to numbers a camera can use: gesture geometry and wheel-delta normalisation. */
 import { describe, expect, it } from 'vitest';
 import {
   clampWheelNotches,
@@ -52,7 +47,7 @@ describe('touchCentroid / touchSpan', () => {
 
 describe('pinchSpanRatio', () => {
   it('reports how far the fingers spread, direction-free', () => {
-    // Deliberately NOT pre-inverted: 3D divides by this (a spreading pinch
+    // Not pre-inverted: 3D divides by this (a spreading pinch
     // shrinks the orbit radius) while 2D multiplies by it (a CSS scale grows),
     // and each call site should show which way it goes.
     expect(pinchSpanRatio(100, 200)).toBeCloseTo(2, 9);

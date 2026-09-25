@@ -1,10 +1,7 @@
 /**
- * BaseMaterial3D's Transparency, Shading and Vertex Color groups
- * (`material.cpp:3586-3609`).
- *
- * Every enum setter here bare-assigns behind an equality early-return
- * (`set_blend_mode`, :2359, is the shape), so an out-of-range mode is stored as
- * written: hinted tier throughout.
+ * BaseMaterial3D's Transparency, Shading and Vertex Color groups (`material.cpp:3586-3609`).
+ * Every enum setter bare-assigns behind an equality early-return (`set_blend_mode`,
+ * :2359), so an out-of-range mode is stored as written: hinted tier throughout.
  */
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';

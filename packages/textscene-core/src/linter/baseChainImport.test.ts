@@ -1,21 +1,16 @@
 /**
- * Every module that registers validators — a node slice's `linterParser.ts`, a
- * resource slice's `linterValidators.ts` — must reach its nearest
- * validator-bearing ancestor in `CLASS_BASE_TYPES` through its own imports, so
- * that loading it alone registers the whole chain `findValidator` walks.
- *
- * Registration is a module side effect, so an ancestor nothing imported has
- * registered nothing for the walk to find and an inherited key resolves to
- * null. Production never sees it — `linter/index.ts` imports every slice — but
- * a scoped slice test loads only its own module graph.
+ * Every module that registers validators (a node slice's `linterParser.ts`, a resource slice's `linterValidators.ts`)
+ * reaches its nearest validator-bearing ancestor in `CLASS_BASE_TYPES` through its own imports. Registration is a
+ * module side effect, so an unimported ancestor leaves an inherited key resolving to null. `linter/index.ts` imports
+ * every slice, but a scoped slice test loads only its own module graph.
  */
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
-// The table the registry is CONSTRUCTED with: both hierarchies merged, catalog
+// The table the registry is constructed with: both hierarchies merged, catalog
 // plus the uncatalogued entries. Walking the node half alone gives every
-// resource type a null chain, and the sweep passes over them vacuously.
+// resource type a null chain, and the check passes over them vacuously.
 import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
 import { allSourceFiles, srcRoot, walk } from './testing/ruleNameScrape.js';
 
@@ -32,20 +27,10 @@ const findSourceModules = (): string[] => allSourceFiles();
 const REGISTRATION_CALL = /\bvalidatorRegistry\.register(?:All|Unavailable)\(/;
 
 /**
- * EVERY registration module a file imports, named and side-effect alike.
- *
- * A named import registers the module just as a bare one does — `AimModifier3D`
- * pulls `boneConstraintBaseLeaves` from its base and is thereby chained. Matching
- * only the side-effect form reported two such slices as broken when they were not.
- *
- * Returns every specifier rather than a boolean, because "imports SOMETHING"
- * is not the property under test. A slice importing a sibling's or a cousin's
- * parser satisfies that and still fails to register its own chain, which is the
- * very defect this file exists to catch.
- *
- * The two names are enumerated, never a wildcard: `linter\w*\.js` would drag a
- * node slice's `linter.js` rule module in, and `\w*Validators\.js` a resource
- * slice's `backgroundValidators.js` key modules. Neither registers anything.
+ * Every registration module a file imports, named and side-effect alike: a named import registers the module too
+ * (`AimModifier3D` pulls `boneConstraintBaseLeaves` from its base). It returns every specifier, since importing a
+ * sibling's parser does not register the file's own chain. The two names are enumerated: a wildcard would take in a
+ * node slice's `linter.js` and a resource slice's `backgroundValidators.js`, which register nothing.
  */
 const REGISTRATION_IMPORT =
   /^import\s+(?:[^;]*?\sfrom\s+)?'([^']*linter(?:Parser|Validators)\.js)';/gm;
@@ -55,15 +40,9 @@ function importedRegistrationModules(source: string): string[] {
 }
 
 /**
- * Type -> the file that owns its validators, tiers included.
- *
- * Both spellings count. A slice whose whole relationship to its base is
- * SUBTRACTIVE — the six fixed-orientation containers, which only take away the
- * `vertical` their base exposes — calls `registerUnavailable` and no
- * `registerAll` at all. Scraping the one spelling dropped them from the
- * population AND from the ancestor set this sweep resolves against, so a
- * descendant could reach BoxContainer, skip VBoxContainer entirely, and read as
- * clean while quietly accepting the removed key.
+ * Type -> the file that owns its validators, tiers included. Both spellings count: a fixed-orientation container only
+ * takes away its base's `vertical`, calling `registerUnavailable` and no `registerAll`. Without it, a descendant could
+ * reach BoxContainer past VBoxContainer and read as clean while accepting the removed key.
  */
 function buildOwners(files: string[]): Map<string, string> {
   const owners = new Map<string, string>();
@@ -77,14 +56,9 @@ function buildOwners(files: string[]): Map<string, string> {
 }
 
 /**
- * Every registration module reachable from `file` by following imports, itself
- * included.
- *
- * TRANSITIVE, because registration is: `ColorPicker` imports VBoxContainer's
- * parser, which imports BoxContainer's, and BoxContainer is thereby registered.
- * Demanding a DIRECT import of the nearest ancestor called nine slices broken
- * when seven were and two were not — and told the same story about both, which
- * is worse than either answer alone.
+ * Every registration module reachable from `file` by following imports, itself included. Transitive, because
+ * registration is: `ColorPicker` imports VBoxContainer's parser, which imports BoxContainer's, so BoxContainer is
+ * registered. Demanding a direct import of the nearest ancestor would call such a slice broken.
  */
 function reachableRegistrationModules(file: string): Set<string> {
   const seen = new Set<string>();
@@ -150,7 +124,7 @@ describe('base-chain imports', () => {
 
   it('counts a slice whose whole contribution is a removal', () => {
     // A fixed-orientation container calls only `registerUnavailable`, so a
-    // population scraped from `registerAll` alone never visits it — and a
+    // population scraped from `registerAll` alone never visits it, and a
     // descendant that reached BoxContainer while skipping VBoxContainer would
     // silently accept the `vertical` the removal exists to take away.
     expect([...owners.keys()]).toEqual(
@@ -191,11 +165,9 @@ describe('base-chain imports', () => {
   });
 
   it('registers only names the base table knows', () => {
-    // A name absent from `CLASS_BASE_TYPES` has no chain to walk, so the sweep
-    // below skips it — and a skipped slice reads exactly like a clean one. The
-    // registry-side sweep cannot close this: `registeredTypes('declaring')` excludes
-    // a type whose whole contribution is a removal, which is the half of the
-    // population that reaches this file and nothing else.
+    // A name absent from `CLASS_BASE_TYPES` has no chain, so the check below would skip it as if clean. The
+    // registry-side guard cannot close this: `registeredTypes('declaring')` excludes a type whose whole contribution
+    // is a removal.
     const unknown = [...owners]
       .filter(([type]) => !HIERARCHY_ROOTS.has(type) && CLASS_BASE_TYPES[type] === undefined)
       .map(([type, file]) => `${type} (${relative(srcRoot, file)})`)

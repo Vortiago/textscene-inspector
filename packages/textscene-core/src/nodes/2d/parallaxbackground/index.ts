@@ -1,6 +1,4 @@
-/**
- * ParallaxBackground registration — parser.
- */
+/** Registers the ParallaxBackground parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
 import { parseParallaxBackground } from './parser';

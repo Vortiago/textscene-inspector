@@ -1,13 +1,8 @@
 /**
- * <GridMap> tiles whose ArrayMesh `.tres` carries its OWN surface material as a
- * `[sub_resource]`.
- *
- * This is the reuse check for the **Sub-resource path** seam: GridMap already
- * feeds `ArrayMeshResource.materialPaths[0]` straight into
- * `useResource(path, 'material')`, so it picks the third kind of
- * reference up with NO change of its own. If that stops being true, the seam has
- * grown a per-consumer special case and this goes red while
- * `Component.arraymesh.test.tsx` stays green.
+ * <GridMap> tiles whose ArrayMesh `.tres` carries its own surface material as a
+ * `[sub_resource]`. GridMap feeds `ArrayMeshResource.materialPaths[0]` into
+ * `useResource(path, 'material')`, so the **Sub-resource path** seam needs no
+ * per-consumer case. A red here with `Component.arraymesh.test.tsx` green means one grew.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

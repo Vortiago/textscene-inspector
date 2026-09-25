@@ -15,11 +15,8 @@ function wrap({ children }: { children: ReactNode }) {
 }
 
 /**
- * A ThreeEvent-shaped mock. Event delegation resolves the node path
- * from `e.object` (the nearest raycasted mesh) via the reverse
- * `objectPathMap`, instead of a per-node `withNodePath(path)` handler
- * factory — so tests register a real Object3D at a path and put it on the
- * mock event, exactly like R3F would hand it to a single delegated root.
+ * A ThreeEvent-shaped mock. The node path resolves from `e.object` through `objectPathMap`, so a
+ * test registers a real Object3D at a path and puts it on the event, as R3F does.
  */
 function mockPointerEvent(
   x: number,
@@ -40,9 +37,8 @@ function mockPointerEvent(
 }
 
 /**
- * Same shape as `mockPointerEvent`, but with a spy-able `stopPropagation` —
- * for tests asserting on WHETHER it was called (real R3F only advances past
- * the nearest hit to a farther one when it wasn't).
+ * `mockPointerEvent` with a spy on `stopPropagation`: R3F advances past the nearest hit only when
+ * it was not called.
  */
 function mockPointerEventWithSpy(
   x: number,
@@ -141,7 +137,7 @@ describe('useViewportSelection (WI-213: event-delegated)', () => {
 
     expect(result.current.sel.expandedNodePaths.has('A')).toBe(true);
     expect(result.current.sel.expandedNodePaths.has('A/B')).toBe(true);
-    // The leaf itself is selected, not expanded (it's the destination, not an ancestor).
+    // The leaf itself is selected, not expanded: it is the destination, not an ancestor.
     expect(result.current.sel.expandedNodePaths.has('A/B/C')).toBe(false);
   });
 
@@ -177,11 +173,8 @@ describe('useViewportSelection (WI-213: event-delegated)', () => {
   });
 
   it('stops propagation on a resolved pointer-move hit, so a farther-intersected mesh cannot overwrite it', () => {
-    // R3F dispatches onPointerMove once PER intersected mesh along the ray,
-    // nearest-to-farthest, and only stops calling it further out if
-    // stopPropagation() was called on a nearer hit. Without that call, the
-    // FARTHEST (likely-occluded) mesh would win instead of the nearest —
-    // this pins the actual mechanism real R3F relies on to prevent that.
+    // R3F calls onPointerMove per intersected mesh, nearest first, until a nearer hit calls
+    // stopPropagation(). Without that call the farthest, likely occluded, mesh wins.
     const { result } = setup();
     const mesh = registerObjectAt(result.current.sel, 'Root/Near');
     const event = mockPointerEventWithSpy(0, 0, mesh);

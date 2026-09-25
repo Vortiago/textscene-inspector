@@ -1,48 +1,29 @@
 /**
- * lint-staged runs in the pre-commit hook (fast: only the staged files).
- * The full `pnpm validate` gate runs in the pre-push hook and in CI, so nothing
- * reaches a shared branch unvalidated.
- *
- * The *.{ts,...} entry uses function form so the type-check commands below can
- * be appended per package. The scene entry uses it so the staged filenames are
- * NOT appended to `pnpm build:linter` — lint-staged appends matched files to
- * every string command, and passing scene paths to the esbuild build would
- * treat them as extra entry points and fail; only the lint CLI should get them.
- *
- * TYPE-CHECK: `eslint` and `vitest` both transpile without checking types, so
- * before this the pre-commit hook could not see a type error at all — and a
- * long local-only session never reaches pre-push or CI, so errors accumulated
- * across commits invisibly. The check is per PACKAGE rather than per file
- * because `tsc` has no meaningful single-file mode inside a project.
- *
- * The negative fixtures are skipped: they exist to produce an error, so linting
- * them here would fail every commit that touches one. `fixtureLint.test.ts`
- * asserts the same list DOES error, and both read it from one file so the two
- * cannot drift apart.
+ * The pre-commit hook's checks, over the staged files only. The full `pnpm validate` gate runs in
+ * the pre-push hook and in CI, so nothing reaches a shared branch unvalidated.
  */
 
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 
+// A negative fixture exists to error, so linting it would fail every commit that touches one.
+// `fixtureLint.test.ts` reads the same list and asserts each one does error.
 const NEGATIVE_FIXTURES = new Set(
   JSON.parse(readFileSync(new URL('./scenes/fixtures/negative-fixtures.json', import.meta.url), 'utf8'))
     .files
 );
 
 /**
- * One argument for the command string lint-staged parses.
- *
- * Plain double quotes rather than `JSON.stringify`: lint-staged splits the
- * returned string with `string-argv`, which strips quotes without unescaping,
- * so JSON's doubled backslashes reached the CLI as part of the path and no
- * Windows path resolved.
+ * One argument for the command string lint-staged parses. Plain double quotes, not
+ * `JSON.stringify`: `string-argv` strips quotes without unescaping, so JSON's doubled backslashes
+ * reached the CLI and no Windows path resolved.
  */
 const quote = (f) => `"${f}"`;
 
 /**
- * The workspace package owning a repo-relative path, or `null` for a file
- * outside one (`scripts/`, config at the root) — those are covered by eslint
- * and the `scripts` vitest project, and belong to no `tsc` project.
+ * The workspace package owning a repo-relative path, or `null` for a file outside one (`scripts/`,
+ * config at the root). eslint and the `scripts` vitest project cover those, and no `tsc` project
+ * owns them.
  */
 function owningPackage(file) {
   const parts = file.split('/');
@@ -58,11 +39,12 @@ function owningPackage(file) {
 
 /** @type {import('lint-staged').Configuration} */
 export default {
-  // ONE key, so the three run in SEQUENCE. lint-staged runs different glob keys
-  // CONCURRENTLY, and a second key overlapping this one would put `tsc` on the
-  // same files `eslint --fix` is rewriting.
+  // One key, so the three run in sequence. lint-staged runs glob keys concurrently, and a second
+  // key over these files would put `tsc` on the files `eslint --fix` is rewriting.
   '*.{ts,tsx,js,jsx,mjs}': (files) => {
     const quoted = files.map(quote).join(' ');
+    // eslint and vitest transpile without checking types, so only this step sees a type error
+    // before a push. Per package, since `tsc` has no single-file mode inside a project.
     const packages = [
       ...new Set(
         files
@@ -77,10 +59,11 @@ export default {
       ...packages.map((name) => `pnpm --filter ${name} type-check`),
     ];
   },
+  // Function form, so the staged paths reach only the lint CLI: lint-staged appends them to every
+  // string command, and the esbuild build behind `build:linter` would read them as entry points.
   '*.{tscn,tres}': (files) => {
-    // `basename`, not a split: lint-staged hands the hook absolute paths, and
-    // `node:path` is `path.win32` on Windows, so it cuts a backslash path there
-    // and leaves a backslash in a POSIX filename alone.
+    // `basename`, not a split: lint-staged hands the hook absolute paths, and `node:path` is
+    // `path.win32` on Windows, so it cuts a backslash path there and leaves a POSIX name alone.
     const lintable = files.filter((f) => !NEGATIVE_FIXTURES.has(basename(f)));
     if (lintable.length === 0) return [];
     return [

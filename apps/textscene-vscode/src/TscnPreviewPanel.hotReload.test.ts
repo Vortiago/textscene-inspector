@@ -1,10 +1,7 @@
 /**
- * Unit tests for dependency hot-reload.
- *
- * Bug: editing a scene dependency (texture, `.tres`, instanced sub-scene) never
- * refreshed the preview — the watcher re-read the unchanged main `.tscn`, whose
- * content-diff guard then no-oped. The fix pushes a `resourceChanged` message so
- * the webview re-fetches just that resource, independent of the main-scene text.
+ * Unit tests for dependency hot-reload. A changed dependency (texture, `.tres`,
+ * instanced sub-scene) leaves the main `.tscn` unchanged, so the panel posts
+ * `resourceChanged` and the webview re-fetches only that resource.
  */
 import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
@@ -37,7 +34,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     const { webview, triggerMessage } = setupMockPanel();
     const panel = await createReadyPanel(triggerMessage);
 
-    // The main .tscn content never changed — the loadTscn path would no-op here.
+    // The main .tscn content is unchanged, so the loadTscn path no-ops here.
     panel.invalidateResource('res://textures/wood.png');
 
     const calls = resourceChangedCalls(webview);
@@ -172,7 +169,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
       uri: createMockUri('/workspace'),
     });
 
-    // Initial load fails — the texture is referenced but doesn't exist on disk yet.
+    // The initial load fails: the texture is referenced but not on disk yet.
     (vscode.workspace.fs.readFile as Mock).mockRejectedValue(new Error('ENOENT'));
     triggerMessage({
       type: 'loadResource',
@@ -198,7 +195,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
       uri: createMockUri('/workspace'),
     });
 
-    // Establish relevance: the resource was previously served.
+    // Establish relevance: the panel has served the resource.
     triggerMessage({
       type: 'loadResource',
       path: 'res://textures/wood.png',
@@ -213,8 +210,8 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     (vscode.workspace.fs.readFile as Mock).mockRejectedValue(new Error('ENOENT'));
     await panel.handleDependencyChange(createMockUri('/workspace/textures/wood.png'));
 
-    // resourceChanged causes the webview to re-fetch; that fetch will fail and
-    // flip to the magenta missing placeholder — same path as a failed load.
+    // resourceChanged makes the webview re-fetch. That fetch fails and flips to
+    // the magenta missing placeholder, as a failed load does.
     expect(resourceChangedCalls(webview)).toEqual([
       { type: 'resourceChanged', path: 'res://textures/wood.png' },
     ]);
@@ -237,8 +234,8 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     panel.update(createMockUri('/workspace/scene.tscn'));
     await new Promise<void>((r) => setTimeout(r, 10));
 
-    // The panel shows an error message but does NOT send a new loadTscn
-    // (the previous render is left in place).
+    // The panel shows an error but sends no new loadTscn, so the previous render
+    // stays.
     expect(showError).toHaveBeenCalledWith(
       expect.stringContaining('Failed to load TSCN file')
     );

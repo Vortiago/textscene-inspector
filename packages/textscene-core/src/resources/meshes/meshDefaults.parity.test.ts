@@ -1,8 +1,7 @@
 /**
- * Parity: when a primitive mesh omits a detail property, the parser must fall
- * back to Godot 4.4's documented default (not an arbitrary three.js value).
- * Wrong defaults render the mesh more faceted (or, for PrismMesh, 8× too big)
- * than Godot whenever the .tscn leaves the property out.
+ * A primitive mesh that omits a detail property falls back to Godot's documented
+ * default, not a three.js one. A wrong default renders the mesh more faceted
+ * (or, for PrismMesh, 8× too big) than Godot.
  */
 import { describe, it, expect } from 'vitest';
 import { decodeSphereMesh } from './spheremesh/decode';

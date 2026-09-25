@@ -1,11 +1,9 @@
 /**
- * Shared BoxContainer base — the single owner of the `alignment` grammar and
- * its CSS mapping for the HBox/VBox slice family. The slices' own tests pin
- * the wired behavior; this pins the base directly (the lights/shared
- * precedent) so a base regression reports here, not as a slice failure.
+ * Shared BoxContainer base, the one owner of the `alignment` grammar. Pinned here directly so a base
+ * regression reports here, not as a slice failure.
  */
 import { describe, expect, it } from 'vitest';
-import { alignmentJustify, parseBoxContainer } from './boxContainer';
+import { parseBoxContainer } from './boxContainer';
 
 const heading = { type: 'node', attributes: { type: 'HBoxContainer', name: 'Row' } };
 
@@ -22,16 +20,3 @@ describe('parseBoxContainer', () => {
   });
 });
 
-describe('alignmentJustify', () => {
-  it('maps BEGIN/CENTER/END to flex packing', () => {
-    expect(alignmentJustify(0)).toBe('flex-start');
-    expect(alignmentJustify(1)).toBe('center');
-    expect(alignmentJustify(2)).toBe('flex-end');
-  });
-
-  it('treats absent and out-of-range as BEGIN (the Godot default)', () => {
-    expect(alignmentJustify(undefined)).toBe('flex-start');
-    expect(alignmentJustify(7)).toBe('flex-start');
-    expect(alignmentJustify(-1)).toBe('flex-start');
-  });
-});

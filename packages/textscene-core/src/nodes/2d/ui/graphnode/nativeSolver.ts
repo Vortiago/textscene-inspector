@@ -1,29 +1,8 @@
 /**
- * GraphNode's native (WebGL canvas) rect solve — `GraphNode::_resort`,
- * `GraphNode::get_minimum_size` (`scene/gui/graph_node.cpp:153-293,977-1008`),
- * `scene/gui/container.cpp` (`Container::fit_child_in_rect`) and this node's
- * own titlebar band (`../graphelement/graphTitlebar.ts`).
- *
- * Two DIFFERENT per-child index spaces, ported exactly as the source keeps
- * them separate:
- *
- *  - `get_minimum_size` (`:993`) gates the slot-stylebox floor behind
- *    `slot_table.has(i)` — an UNDECLARED slot contributes NOTHING.
- *  - `_resort` (`:183,278-279`) reads `slot_table[i]` through `HashMap`'s
- *    `operator[]`, which AUTO-VIVIFIES a class-default `Slot()`
- *    (`draw_stylebox = true`) for a missing key — so an undeclared slot's
- *    child STILL gets the `sb_slot` margin/floor added during layout, and
- *    (by the time `NOTIFICATION_DRAW` iterates `slot_table`'s own keys) an
- *    otherwise-invisible `sb_slot` box drawn at its row once a scene supplies
- *    a real `theme_override_styles/slot`.
- *
- * Both loops index by the RAW child position (`i`, 0-based among ALL
- * `get_child_count(false)` children, hidden ones included in the count) —
- * never a "visible children so far" counter — matching `graph_node.cpp`
- * literally: `if (i > 0) minsize.height += separation;` fires on the raw
- * index, so a HIDDEN leading child still costs its sibling one `separation`.
- *
- * Pure data + functions, no React, no THREE.
+ * GraphNode's native (WebGL canvas) rect solve: `GraphNode::_resort` and `get_minimum_size`
+ * (`scene/gui/graph_node.cpp:153-293,977-1008`), `Container::fit_child_in_rect` and the titlebar
+ * band (`../graphelement/graphTitlebar.ts`). The two loops treat an undeclared slot differently:
+ * see `declaredSlot` and `graphNodeEffectiveSlot`.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -51,10 +30,10 @@ import type { GraphNodeProperties, GraphNodeSlot } from './types';
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 const ZERO_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
 
-/** `graph_node.cpp` theme type variation for its internal title Label — `graph_node.cpp:1328`. */
+/** `graph_node.cpp` theme type variation for its internal title Label: `graph_node.cpp:1328`. */
 export const GRAPH_NODE_TITLE_VARIATION = 'GraphNodeTitleLabel';
 
-/** `control_font_color` — `default_theme.cpp:819`, `GraphNodeTitleLabel`'s own `font_color`. */
+/** `control_font_color`: `default_theme.cpp:819`, `GraphNodeTitleLabel`'s own `font_color`. */
 export const GRAPH_NODE_TITLE_DEFAULT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 
 /** `Color::lightened` (`core/math/color.cpp`): moves each channel toward white by `amount`. */
@@ -71,20 +50,16 @@ function flatBox(
 }
 
 /**
- * GraphNode's default-theme StyleBoxes — `default_theme.cpp:788-802`. Not in
+ * GraphNode's default-theme StyleBoxes: `default_theme.cpp:788-802`. Not in
  * `nativeTheme.ts`'s `widgets` (no entry for GraphNode there); derived here
  * from `theme.styleFill`/`theme.cornerRadius`/`theme.contentMargin` the same
  * way `nativeTheme.ts` itself builds every other widget's.
  */
 function defaultStyles(theme: NativeTheme) {
-  // `make_flat_stylebox(style_normal_color, 18, 12, 18, 12)` — margins its
-  // OWN literals, not `default_margin` (4), so each needs its own scale.
-  // `NativeTheme` carries no raw `default_theme_scale` (only pre-scaled
-  // products, `godotDefaultTheme.ts`'s own doc) — recovered here from
-  // `theme.contentMargin`, itself `Math.round(DEFAULT_CONTENT_MARGIN * scale)`,
-  // exact at any scale that keeps that rounding lossless (every scale this
-  // previewer's own UI exposes, `gui/theme/default_theme_scale`'s [0.5, 8]
-  // clamp at typical increments).
+  // `make_flat_stylebox(style_normal_color, 18, 12, 18, 12)` scales literal margins,
+  // not `default_margin` (4). `NativeTheme` holds no raw scale, so it comes from
+  // `theme.contentMargin` (`Math.round(DEFAULT_CONTENT_MARGIN * scale)`), exact where
+  // that rounding is lossless, as at each scale the previewer's UI offers.
   const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
   const panelMargin = {
     left: Math.round(18 * scale),
@@ -94,7 +69,7 @@ function defaultStyles(theme: NativeTheme) {
   };
   const panel = flatBox(theme.styleFill.normal, panelMargin, theme.cornerRadius);
   // `graphn_sb_titlebar_selected = graphnode_normal->duplicate()` then
-  // `set_bg_color(...)` — clones the PANEL's own margins, not the titlebar's.
+  // `set_bg_color(...)`: clones the panel's own margins, not the titlebar's.
   const titlebarSelected = flatBox({ r: 1.0, g: 0.625, b: 0.625, a: 0.6 }, panelMargin, theme.cornerRadius);
   const titlebar = flatBox(lightened(theme.styleFill.normal, 0.3), {
     left: theme.contentMargin,
@@ -102,7 +77,7 @@ function defaultStyles(theme: NativeTheme) {
     right: theme.contentMargin,
     bottom: theme.contentMargin,
   }, theme.cornerRadius);
-  // `make_empty_stylebox(0, 0, 0, 0)` — draws nothing, zero margin.
+  // `make_empty_stylebox(0, 0, 0, 0)`: draws nothing, zero margin.
   const slot = flatBox({ r: 0, g: 0, b: 0, a: 0 }, ZERO_MARGIN, 0);
   return { panel, panelSelected: panel, titlebar, titlebarSelected, slot };
 }
@@ -118,7 +93,7 @@ export function graphNodeStyles(n: SolveNode, theme: NativeTheme) {
   };
 }
 
-/** `theme_override_constants/separation`, else `Math.round(2 * scale)` (`default_theme.cpp`, GraphNode's own `separation`) — scale recovered as `defaultStyles`'s own doc explains. */
+/** `theme_override_constants/separation`, else `Math.round(2 * scale)` (`default_theme.cpp`, GraphNode's own `separation`): scale recovered as `defaultStyles`'s own doc explains. */
 function separationOf(n: SolveNode, theme: NativeTheme): number {
   const override = n.constants.separation;
   if (override !== undefined) return override;
@@ -136,12 +111,16 @@ function stretchRatioOf(n: SolveNode): number {
   return (n.node.properties as GraphNodeProperties).sizeFlagsStretchRatio ?? 1;
 }
 
-/** `_get_minimum_size`'s own gate: a slot only floors the row when it is DECLARED (`.has(i)`, `graph_node.cpp:993`) — no auto-vivify here. */
+/** `_get_minimum_size`'s own gate: a slot only floors the row when it is declared (`.has(i)`, `graph_node.cpp:993`): no auto-vivify here. */
 function declaredSlot(slots: Map<number, GraphNodeSlot>, rawIndex: number): GraphNodeSlot | undefined {
   return slots.get(rawIndex);
 }
 
-/** `_resort`/`NOTIFICATION_DRAW`'s own gate: `operator[]` auto-vivifies a class-default `Slot()` for an undeclared index. */
+/**
+ * `_resort`/`NOTIFICATION_DRAW`'s own gate (`:183,278-279`): `operator[]` inserts a class-default
+ * `Slot()` (`draw_stylebox = true`) for an undeclared index, so the child gets the `sb_slot` margin
+ * and the draw pass boxes that slot under a real `theme_override_styles/slot`.
+ */
 export function graphNodeEffectiveSlot(slots: Map<number, GraphNodeSlot>, rawIndex: number): GraphNodeSlot {
   return slots.get(rawIndex) ?? defaultGraphNodeSlot();
 }
@@ -174,6 +153,8 @@ export const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
     }
     height += h;
     width = Math.max(width, w);
+    // `i` counts every child, hidden ones included, so the sibling of a hidden leading child
+    // still pays one `separation`.
     if (i > 0) height += separationOf(n, ctx.theme);
   });
 
@@ -289,27 +270,17 @@ controlSolverRegistry.registerContainerLayout('GraphNode', graphNodeLayout);
 export interface GraphNodeDrawRow {
   rawIndex: number;
   slot: GraphNodeSlot;
-  /** `slot_y_cache[slot_index]` — the row's vertical CENTER, Godot px. */
+  /** `slot_y_cache[slot_index]`: the row's vertical centre, Godot px. */
   slotY: number;
   /** `child_rect` for `draw_stylebox`, or `null` when no visible child sits at `rawIndex` (`graph_node.cpp:687-693`). */
   styleboxRect: Rect2 | null;
 }
 
 /**
- * `NOTIFICATION_DRAW`'s port/slot-stylebox loop (`graph_node.cpp:648-696`):
- * iterates `slot_table`'s keys (declared slots PLUS every VISIBLE child's
- * raw index, auto-vivified during `_resort` — this module's own doc), gated
- * by `slot_index < slot_y_cache.size()` (the COMPACTED visible-child count —
- * so a slot numbered past the last visible child draws nothing at all, ports
- * or stylebox alike). `slot_y_cache` itself is compacted-by-visibility, so a
- * hidden EARLIER child shifts every later slot's row up by one position —
- * ported exactly, not smoothed over.
- *
- * The stylebox rect does NOT read `slot_y_cache`: `get_child(slot_index,
- * false)` fetches the child AT THE RAW POSITION `slot_index` directly and
- * uses ITS OWN solved rect's `y`/height, only overriding `x`/width
- * (`graph_node.cpp:687-693`) — a second, independent read of the same
- * `childRects` this function is handed.
+ * `NOTIFICATION_DRAW`'s port/slot-stylebox loop (`graph_node.cpp:648-696`) over
+ * `slot_table`'s keys: declared slots plus each visible child's raw index. It
+ * stops at `slot_y_cache.size()`, the visible-child count, so a hidden earlier
+ * child shifts each later row up one, and a slot past the last visible child draws nothing.
  */
 export function graphNodeDrawRows(
   n: SolveNode,
@@ -330,6 +301,8 @@ export function graphNodeDrawRows(
   });
 
   const rows: GraphNodeDrawRow[] = [];
+  // The stylebox rect skips `slot_y_cache`: `get_child(slot_index, false)` takes the
+  // child at the raw position and keeps its solved y/height (`graph_node.cpp:687-693`).
   for (const rawIndex of keys) {
     if (rawIndex < 0 || rawIndex >= yCenters.length) continue;
     const slot = graphNodeEffectiveSlot(props.slots, rawIndex);

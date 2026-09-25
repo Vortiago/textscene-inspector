@@ -1,25 +1,8 @@
 /**
- * `<CodeEdit>` — the native (WebGL canvas) painter for `CodeEdit`: renders
- * `<TextEditBody>` (`../textedit/Component.tsx`) for the chrome/text/
- * highlight/glyph-icon half — identical to TextEdit's own, since
- * `CodeEdit::get_minimum_size` and its `NOTIFICATION_DRAW` row loop are both
- * TextEdit's, unchanged — with this node's OWN gutter band folded in so the
- * text shifts right to make room, then draws the ONE gutter this previewer
- * paints on top: the line-numbers column (`nativeSolver.ts`'s own doc for
- * why the main/fold gutters reserve width but draw nothing), plus the
- * `line_length_guidelines` rules, which `_draw_guidelines` puts UNDER the
- * text (`text_edit.cpp:1319-1322`), and the FOLD gutter's own arrows, which
- * `delimiter_comments`/`delimiter_strings` and the buffer's indentation decide
- * between them (`lineFolding.ts`).
- *
- * SYNTAX HIGHLIGHTING, `syntax_highlighter`'s `CodeHighlighter` colour data,
- * and `indent_size`'s effect on a tab's rendered width, are both applied by
- * `<TextEditBody>` itself (`../textedit/Component.tsx`,
- * `resources/styles/codehighlighter/`) — this painter passes `indentSize`
- * through as `tabSize` and otherwise defers entirely.
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * `<CodeEdit>`, the native (WebGL canvas) painter. `<TextEditBody>` draws the chrome, text, syntax
+ * highlighting and tab width, since the minimum size and draw loop are TextEdit's. This adds the
+ * gutter band that shifts the text, the line numbers, the `line_length_guidelines` under the text
+ * (`text_edit.cpp:1319-1322`) and the fold arrows (`lineFolding.ts`).
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -88,13 +71,9 @@ export function CodeEdit(props: NativeControlComponentProps) {
     [tint.own]
   );
 
-  // Buffer-line start rows — line numbers draw once per buffer line, on its
-  // FIRST wrapped row only (text_edit.cpp:1410: `if (line_wrap_index == 0)`).
-  // Shaped at the SAME wrap width `<TextEditBody>` uses internally (its own
-  // `gutterBandWidthPx` is this node's `band.totalWidthPx`, handed down two
-  // lines below) — otherwise a wrapped CodeEdit's row count here would
-  // disagree with the rows `<TextEditBody>` actually draws, and every line
-  // number past the first would sit beside the wrong row.
+  // Line numbers draw once per buffer line, on its first wrapped row (text_edit.cpp:1410).
+  // The rows are shaped at `<TextEditBody>`'s wrap width, whose gutter band is
+  // `band.totalWidthPx`, or each number past the first sits beside the wrong row.
   const wrapWidthPx = useMemo(
     () =>
       textEditWrapWidthPx(
@@ -164,7 +143,6 @@ export function CodeEdit(props: NativeControlComponentProps) {
     [tint.own]
   );
 
-  // --- Fold gutter ---------------------------------------------------------
   const foldContext = useMemo(
     () =>
       buildFoldContext(
@@ -191,10 +169,11 @@ export function CodeEdit(props: NativeControlComponentProps) {
     band.foldDrawn ? CODE_EDIT_FOLD_ICONS.canFoldCodeRegion : null
   );
 
-  // LOCAL, not `rect` — `../textedit/Component.tsx`'s own `ownRect` doc.
+  // Local, not `rect`: `../textedit/Component.tsx`'s `ownRect` doc gives the reason.
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
   const { anchorRef, clippingPlanes } = useWorldClipPlanes(ownRect);
 
+  // `ControlCanvasWalker` owns `visible`, the children and the transform.
   return (
     <CanvasItemGroup ref={anchorRef}>
       <TextEditBody
@@ -249,7 +228,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
             lineSpacingPx: 0,
             fontMetrics,
           });
-          // The gutter cell is the row's own BAND (`text_edit.cpp:1448`), so
+          // The gutter cell is the row's own band (`text_edit.cpp:1448`), so
           // it starts where the band does, not at the control's top edge.
           const rowTopPx = textEditRowBandTopPx(startRow, rowHeightPx, styleBox.contentMargin.top, theme.separation);
           const textTopPx = codeEditGutterCellTextTopPx(rowTopPx, rowHeightPx, layout.heightPx);

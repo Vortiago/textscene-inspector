@@ -1,7 +1,6 @@
 /**
- * ViewportToolbar drives the real ViewportModeProvider state: the 3D/2D
- * segmented switch and the collision toggle. Rendered under the actual provider
- * so a click round-trips through context back into the button's pressed state.
+ * The 3D/2D switch and the collision toggle drive the real ViewportModeProvider,
+ * so a click round-trips through context to the button's pressed state.
  */
 
 import { useEffect } from 'react';
@@ -77,14 +76,13 @@ describe('ViewportToolbar', () => {
 
   it('hides the grid checkbox in 2D mode (a 3D-only affordance)', () => {
     renderToolbar('2D');
-    // Opened, so this asserts the toggle is absent from the menu rather than
-    // just absent from a closed popover — which would pass either way.
+    // Open, since a closed popover lacks the toggle either way.
     openDisplayMenu();
     expect(screen.queryByRole('checkbox', { name: 'Grid' })).toBeNull();
   });
 });
 
-/** Mount with the camera + hierarchy contexts the Reset Camera button needs. */
+/** Mounts with the camera and hierarchy contexts that Reset Camera needs. */
 function renderWithChrome({
   mode = '3D' as '2D' | '3D',
   sceneGraph = {} as unknown,
@@ -148,10 +146,8 @@ describe('ViewportToolbar — Screenshot (#224)', () => {
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => {});
 
-    // Mount FIRST, with the real appendChild — testing-library's own render()
-    // attaches its container via document.body.appendChild too, so mocking it
-    // beforehand would break the mount itself. Only wrap it afterwards, still
-    // calling through to the original so the DOM keeps working normally.
+    // Mount first, since render() itself calls document.body.appendChild. The
+    // wrap afterwards still calls through to the original.
     render(
       <HierarchyProvider value={{ sceneGraph: {} as never, panelId: 'p' }}>
         <CameraControlProvider>

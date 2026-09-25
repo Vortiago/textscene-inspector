@@ -1,4 +1,4 @@
-/** FlowContainer registration — parser. Render side: `./index.r3f`. */
+/** FlowContainer registration: the parser. `./index.r3f` registers the render side. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseFlowContainer } from './parser';

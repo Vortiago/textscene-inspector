@@ -1,10 +1,7 @@
 /**
- * ShapeCast2D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * ShapeCast2D strict validators, asserted through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator and no fixture text needs upkeep.
+ * Rule-level behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -25,14 +22,14 @@ describe('ShapeCast2D strict validators', () => {
 
   it('registers no validator for collision_result: shape_cast_2d.cpp:475 binds it with an empty setter string', () => {
     // ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "collision_result", PROPERTY_HINT_NONE, "",
-    // PROPERTY_USAGE_NO_EDITOR), "", "get_collision_result") — the "" is the setter name.
+    // PROPERTY_USAGE_NO_EDITOR), "", "get_collision_result"): the "" is the setter name.
     // A `.tscn` cannot write this key at all, so there is nothing to validate.
     expect(validatorRegistry.findValidator('ShapeCast2D', 'collision_result')).toBeNull();
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('ShapeCast2D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -55,7 +52,7 @@ describe('ShapeCast2D strict validators', () => {
   });
 
   describe('shape', () => {
-    // scene/2d/physics/shape_cast_2d.cpp:469 — PROPERTY_HINT_RESOURCE_TYPE, "Shape2D"
+    // scene/2d/physics/shape_cast_2d.cpp:469: PROPERTY_HINT_RESOURCE_TYPE, "Shape2D"
     it('accepts a SubResource reference', () => {
       expect(check('shape', 'SubResource("CircleShape2D_1")')).toBeNull();
     });
@@ -72,7 +69,7 @@ describe('ShapeCast2D strict validators', () => {
   });
 
   describe('target_position', () => {
-    // scene/2d/physics/shape_cast_2d.cpp:471 — PROPERTY_HINT_NONE, "suffix:px" (unit hint only, no range)
+    // scene/2d/physics/shape_cast_2d.cpp:471: PROPERTY_HINT_NONE, "suffix:px" (unit hint only, no range)
     it('accepts a Vector2 literal', () => {
       expect(check('target_position', 'Vector2(0, 50)')).toBeNull();
     });
@@ -89,7 +86,7 @@ describe('ShapeCast2D strict validators', () => {
   });
 
   describe('margin', () => {
-    // scene/2d/physics/shape_cast_2d.cpp:472 — PROPERTY_HINT_RANGE, "0,100,0.01,suffix:px".
+    // scene/2d/physics/shape_cast_2d.cpp:472: PROPERTY_HINT_RANGE, "0,100,0.01,suffix:px".
     // set_margin is a bare assignment, so out-of-range warns rather than errors.
     it('accepts the minimum bound', () => {
       expect(check('margin', '0')).toBeNull();
@@ -125,7 +122,7 @@ describe('ShapeCast2D strict validators', () => {
   });
 
   describe('max_results', () => {
-    // scene/2d/physics/shape_cast_2d.cpp:473 — plain INT, no PROPERTY_HINT_RANGE
+    // scene/2d/physics/shape_cast_2d.cpp:473: plain INT, no PROPERTY_HINT_RANGE
     it('accepts the documented default', () => {
       expect(check('max_results', '32')).toBeNull();
     });
@@ -142,7 +139,7 @@ describe('ShapeCast2D strict validators', () => {
   });
 
   describe('collision_mask', () => {
-    // scene/2d/physics/shape_cast_2d.cpp:474 — PROPERTY_HINT_LAYERS_2D_PHYSICS
+    // scene/2d/physics/shape_cast_2d.cpp:474: PROPERTY_HINT_LAYERS_2D_PHYSICS
     it('accepts a single-layer mask', () => {
       expect(check('collision_mask', '1')).toBeNull();
     });

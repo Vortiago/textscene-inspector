@@ -1,23 +1,12 @@
 /**
- * A CanvasItem's effective `texture_filter`/`texture_repeat`
- * (`CanvasItem::TextureFilter`/`TextureRepeat`, `scene/main/canvas_item.h:52-69`):
- * PARENT_NODE (0, shared by both enums) walks up to the nearest ancestor that
- * names a concrete one, falling back to the viewport default when none does
- * (`CanvasItem::_refresh_texture_filter_cache`/`_refresh_texture_repeat_cache`,
- * `scene/main/canvas_item.cpp:1625-1699` — a PARENT_NODE ancestor just relays
- * whatever ITS OWN cache already resolved, so it is transparent rather than a
- * wall). The two properties propagate through separate caches in Godot and
- * resolve independently here too.
- *
- * Lives here rather than under `controls/native/` (unlike `Modulate2DContext`'s
- * neighbour `controlTint.ts`): `texture_filter`/`texture_repeat` belong to
- * EVERY CanvasItem, not just Control, so a future Node2D walk can subscribe to
- * the same context once it starts parsing these properties (out of scope
- * here — see `nodes/2d/ui/texturerect/comparison.md`).
+ * A CanvasItem's effective `texture_filter` and `texture_repeat`
+ * (`scene/main/canvas_item.h:52-69`): PARENT_NODE (0 in both) takes the nearest
+ * concrete ancestor value or the viewport default, each through its own cache
+ * (`scene/main/canvas_item.cpp:1625-1699`). Only the Control walk reads it so far.
  */
 import { createContext, useContext, useMemo } from 'react';
 
-/** `TEXTURE_FILTER_PARENT_NODE` / `TEXTURE_REPEAT_PARENT_NODE` — both 0. */
+/** `TEXTURE_FILTER_PARENT_NODE` and `TEXTURE_REPEAT_PARENT_NODE`, both 0. */
 export const CANVAS_ITEM_SAMPLER_INHERIT = 0;
 
 export interface CanvasItemTextureSampler {
@@ -27,12 +16,12 @@ export interface CanvasItemTextureSampler {
   repeat: number | undefined;
 }
 
-/** No ancestor names either property — the viewport-default cue every reader already treats an absent value as. */
+/** No ancestor names either property: the viewport default, as every reader reads an absent value. */
 export const ROOT_TEXTURE_SAMPLER: CanvasItemTextureSampler = { filter: undefined, repeat: undefined };
 
 export const TextureSampler2DContext = createContext<CanvasItemTextureSampler>(ROOT_TEXTURE_SAMPLER);
 
-/** The ambient sampler — what an unnamed (PARENT_NODE) property resolves to. */
+/** The ambient sampler, which an unnamed (PARENT_NODE) property resolves to. */
 export function useParentTextureSampler(): CanvasItemTextureSampler {
   return useContext(TextureSampler2DContext);
 }
@@ -50,11 +39,9 @@ export function resolveInheritedSamplerValue(
 }
 
 /**
- * This node's effective filter/repeat — also the value its descendants inherit.
- *
- * Idempotent, unlike modulate's multiplicative fold: a painter may call this on
- * its own properties even though the walker already did, which is what keeps a
- * painter correct when mounted without one.
+ * This node's effective filter and repeat, which its descendants inherit.
+ * Idempotent, unlike the modulate product, so a painter mounted without a walker
+ * may call it on its own properties.
  */
 export function useInheritedTextureSampler(
   ownFilter: number | undefined,

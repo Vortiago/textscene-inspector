@@ -1,15 +1,8 @@
 /**
- * `rasterizeAtlasTexture` over a RAW-PIXEL sheet — the shape a `DataTexture`
- * carries in `.image`: `{ data, width, height }`, not a `CanvasImageSource`.
- *
- * Two production paths put one there. `applyAlphaBorderFix`
- * (`resources/formats/image/textureProcessing.ts`) substitutes a `DataTexture`
- * for any binary-alpha image whose transparent texels all border an opaque one
- * — the pixel-art sheets an AtlasTexture is cut from are exactly that — and
- * every procedural texture (`GradientTexture2D`, `NoiseTexture2D`) is one from
- * the start. `drawImage` rejects both, and a canvas could not be the answer
- * anyway: its backing store is premultiplied, so round-tripping through one
- * zeroes the very RGB behind alpha 0 that the alpha-border pass just wrote.
+ * `rasterizeAtlasTexture` over a raw-pixel sheet, a `DataTexture`'s
+ * `{ data, width, height }`. `applyAlphaBorderFix` (`resources/formats/image/textureProcessing.ts`)
+ * makes one from a pixel-art sheet, and every procedural texture is one.
+ * `drawImage` rejects it, and a premultiplied canvas zeroes RGB behind alpha 0.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';

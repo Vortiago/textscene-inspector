@@ -1,4 +1,4 @@
-/** AspectRatioContainer parser — Control plus ratio/stretch_mode/alignment. */
+/** AspectRatioContainer parser: Control plus ratio, stretch_mode and alignment. */
 
 import { type ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalFloat, parseOptionalInt } from '../../../../parser/valueParsers';

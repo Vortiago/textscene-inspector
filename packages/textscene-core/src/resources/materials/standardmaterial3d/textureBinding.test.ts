@@ -1,24 +1,7 @@
 /**
- * The binding seam: which StandardMaterial3D slots decode sRGB, which sample
- * raw bytes, and what a caller gets back for each.
- *
- * The expected values are Godot's, read off the shader `BaseMaterial3D`
- * generates — a sampler declared `source_color` is bound to the texture's
- * sRGB-typed GPU view and decoded by the sampling hardware, and one without it
- * reads stored bytes:
- *
- *   scene/resources/material.cpp:969   texture_albedo        : source_color
- *   scene/resources/material.cpp:1066  texture_emission      : source_color, hint_default_black
- *   scene/resources/material.cpp:1024  texture_metallic      : hint_default_white
- *   scene/resources/material.cpp:1030  texture_roughness     : hint_roughness_r
- *   scene/resources/material.cpp:1092  texture_normal        : hint_roughness_normal
- *   scene/resources/material.cpp:1122  texture_flowmap       : hint_anisotropy
- *   scene/resources/material.cpp:1128  texture_ambient_occlusion : hint_default_white
- *   scene/resources/material.cpp:1172  texture_heightmap     : hint_default_black
- *
- * A roughness value, a normal vector and a height are data, not light; decoding
- * them reads far too dark, which shows up as a surface far too glossy and as
- * normals bent toward the surface.
+ * The binding seam: which StandardMaterial3D slots decode sRGB, which sample raw bytes,
+ * and what a caller gets back for each. A roughness, a normal and a height are data, so
+ * decoding them reads too dark: too glossy, with normals bent toward the surface.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -40,8 +23,17 @@ function loaded(): THREE.Texture {
 
 const DEFAULTS = materialTextureState(parseStandardMaterial3DScalars({}));
 
-/** Godot's `source_color` samplers, and only those. */
+/**
+ * Godot's `source_color` samplers, and only those:
+ *
+ *   scene/resources/material.cpp:969   texture_albedo        : source_color
+ *   scene/resources/material.cpp:1066  texture_emission      : source_color, hint_default_black
+ */
 const DECODED: TextureSlot[] = ['albedo_texture', 'emission_texture'];
+/**
+ * Every other slot reads stored bytes, for example `texture_metallic`
+ * (`scene/resources/material.cpp:1024`, `hint_default_white`). `textureBinding.md` lists each sampler.
+ */
 const RAW = TEXTURE_SLOTS.filter((slot) => !DECODED.includes(slot));
 
 describe('bindSlotTexture — colour space per Godot texture slot', () => {

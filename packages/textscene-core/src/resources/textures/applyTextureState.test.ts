@@ -1,17 +1,8 @@
 /**
- * `applyTextureState` — the clone-on-divergence helper both material paths share.
- *
- * The identity-equality contract is what these tests protect: `useResource`
- * hands every consumer of a path the SAME cached `THREE.Texture`, so a material
- * that needs different sampler state must clone rather than mutate, and a
- * material that needs none must get the original reference back.
- *
- * The case worth naming: a texture can diverge for several independent reasons
- * (a UV transform, a `texture_filter`, a colour space the binding needs and the
- * producer did not tag), and it must still produce ONE clone.
- *
- * Colour space arrives here as a plain input — WHICH one a Godot slot requires
- * is `standardmaterial3d/textureBinding.ts`'s knowledge, and is tested there.
+ * `applyTextureState` protects the identity-equality contract: a material that
+ * needs different sampler state gets one clone, however many reasons diverge,
+ * and a material that needs none gets the original. Which colour space a slot
+ * requires is tested in `standardmaterial3d/textureBinding.ts`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -136,17 +127,15 @@ describe('applyTextureState', () => {
 
   describe('textures that must never be cloned for filtering', () => {
     it('leaves a render-target texture alone even when its sampling differs', () => {
-      // A ViewportTexture IS its render target's texture. Cloning it hands the
-      // material a copy that no longer receives the target's renders — a frozen
-      // frame. Its sampler state legitimately differs from Godot's material
-      // default, so a naive "does it match row 3?" test would clone every one.
+      // A ViewportTexture is its render target's texture, and a clone is a frozen
+      // frame. Its sampler state differs from Godot's default, so a naive match
+      // test would clone every one.
       const target = new THREE.WebGLRenderTarget(64, 64);
       expect(target.texture.isRenderTargetTexture).toBe(true);
 
       expect(applyTextureState(target.texture, state({ filter: 0 }))).toBe(target.texture);
       expect(applyTextureState(target.texture, state({}))).toBe(target.texture);
-      // The UV transform is no different: a tiled ViewportTexture that froze
-      // would be the same bug arriving through the other divergence.
+      // The same holds for the UV transform.
       expect(
         applyTextureState(
           target.texture,
@@ -171,8 +160,8 @@ describe('applyTextureState', () => {
     it('clones a clamped arrival to Repeat for the default, Godot\'s repeat', () => {
       // The loader ships three's clamp default. A default material asks for
       // Repeat (`BaseMaterial3D` FLAG_USE_TEXTURE_REPEAT = true), so the binding
-      // clones to tile it: the terrain-stripes guard. The shared entry stays
-      // clamp for a 2D consumer of the same path.
+      // clones to tile it, which guards against terrain stripes. The shared entry
+      // stays clamp for a 2D consumer of the same path.
       const texture = new THREE.Texture();
       const result = applyTextureState(texture, state({}));
 
@@ -255,8 +244,8 @@ describe('applyTextureState', () => {
       expect(result).not.toBe(texture);
       expect(result.repeat.x).toBe(2);
       expect(result.magFilter).toBe(THREE.NearestFilter);
-      // A second clone would have copied the first's image reference too, so
-      // identity here is not the discriminator — the source being pristine is.
+      // A second clone copies the image reference too, so the discriminator is a
+      // pristine source, not identity.
       expect(result.image).toBe(image);
       expect(texture.repeat.x).toBe(1);
       expect(texture.magFilter).toBe(THREE.LinearFilter);
@@ -265,8 +254,8 @@ describe('applyTextureState', () => {
 
   describe('cross-material contamination', () => {
     it('gives two materials sharing one image their own sampler state', () => {
-      // The whole reason filter state is applied at material build rather than
-      // at texture load: the loader caches ONE texture per path.
+      // The loader caches one texture per path, so filter state applies at
+      // material build, not texture load.
       const shared = new THREE.Texture();
 
       const nearest = applyTextureState(shared, state({ filter: 0 }));
@@ -312,9 +301,8 @@ describe('applyTextureState', () => {
     });
 
     it('clones and DECODES when the binding needs a decode the producer skipped', () => {
-      // The other direction is a real case, not a theoretical one: a producer
-      // that tags its output raw is describing the bytes, while the binding
-      // describes the sampler — and the sampler wins.
+      // A producer's raw tag describes the bytes, the binding describes the
+      // sampler, and the sampler wins.
       const shared = new THREE.Texture();
       expect(shared.colorSpace).toBe(THREE.NoColorSpace);
 

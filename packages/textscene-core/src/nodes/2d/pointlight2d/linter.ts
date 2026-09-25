@@ -1,30 +1,6 @@
 /**
- * PointLight2D semantic rules.
- *
- * Format validation lives in `linterParser.ts`; this file is for what only the
- * whole node says. Two things live here.
- *
- * `PointLight2D::get_configuration_warnings` (light_2d.cpp:431-439) warns in
- * Godot's own editor when `texture` is unset, because the light then has no
- * shape to draw. Absence is Godot's default serialised form for an unset
- * `Ref`, so this keys on the property being MISSING, not on any value — a
- * scene that never authors `texture` is legal input, just one the engine
- * itself flags.
- *
- * The other is a range window whose minimum is above its maximum.
- *
- * Godot tests both windows inclusively (`_record_item_commands` in
- * `drivers/gles3/rasterizer_canvas_gles3.cpp` for z, `_draw_viewport`'s
- * per-canvas loop in `servers/rendering/renderer_viewport.cpp` for the layer)
- * and never swaps an inverted pair — `Light2D`'s four setters assign and
- * forward, nothing more. So `min > max` is an EMPTY interval: the light stays
- * enabled, still costs its own accumulation pass, and reaches nothing at all.
- * That is an authoring mistake this previewer flags, not a complaint Godot's
- * own editor makes, and nothing refuses the value, so it is advisory.
- *
- * The comparison uses Godot's defaults for whichever half is absent, because
- * `range_z_max = -2000` alone — already empty against the default `range_z_min`
- * of -1024 — is the commonest way to write the mistake.
+ * PointLight2D semantic rules: the missing-`texture` configuration warning
+ * (light_2d.cpp:431-439), and an inverted z or layer window.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -34,6 +10,12 @@ import { POINT_LIGHT_2D_RANGE_DEFAULTS } from './types.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 
+/**
+ * Godot tests both windows inclusively (`_record_item_commands` in
+ * drivers/gles3/rasterizer_canvas_gles3.cpp for z, `_draw_viewport` in
+ * servers/rendering/renderer_viewport.cpp for the layer). Light2D's setters only
+ * assign, so `min > max` reaches nothing yet costs its pass: advisory.
+ */
 const WINDOWS = [
   {
     min: 'range_z_min',
@@ -65,8 +47,8 @@ function checkPointLight2D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
 
   // light_2d.cpp:431-439: PointLight2D::get_configuration_warnings pushes this
-  // exact message when `texture` is null. A `.tscn` that never authors the key
-  // IS that null default, so absence is the trigger.
+  // exact message when `texture` is null. Absence is Godot's serialised form for
+  // an unset `Ref`, so absence is the trigger.
   if (resourceSlotIsEmpty(props.texture)) {
     diagnostics.push({
       severity: 'warning',
@@ -80,6 +62,8 @@ function checkPointLight2D(context: RuleContext): Diagnostic[] {
     });
   }
 
+  // An absent half takes Godot's default: `range_z_max = -2000` alone is already
+  // empty against the default `range_z_min` of -1024.
   for (const window of WINDOWS) {
     const min = ruleInt(props[window.min], window.minDefault);
     const max = ruleInt(props[window.max], window.maxDefault);

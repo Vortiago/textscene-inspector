@@ -11,8 +11,7 @@ afterEach(() => {
   warnSpy.mockRestore();
 });
 
-// Defaults are Godot's, from class_csgcylinder3d: radius 0.5, height 2.0,
-// sides 8, cone false. This file previously pinned radius 1 / height 1.
+// Defaults are Godot's, from class_csgcylinder3d: radius 0.5, height 2.0, sides 8, cone false.
 describe('parseCSGCylinder3D', () => {
   it('parses radius and height', () => {
     const props = parseCSGCylinder3D(heading('CSGCylinder3D', { name: 'Plant' }), {

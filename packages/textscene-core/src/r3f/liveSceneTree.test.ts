@@ -1,9 +1,6 @@
 /**
- * The live scene tree: a single traversal that composes the SceneGraph's root
- * Nodes with instance sub-scenes (Instance root merge, ADR-0013) and GLB
- * internals into one consistent path space — so consumers (inspector, cameras,
- * stats) stop re-deriving it (and stop truncating at the first instance via
- * flattenedNodes).
+ * The live scene tree: one traversal that composes the root nodes, instance
+ * sub-scenes (Instance root merge, ADR-0013) and GLB internals into one path space.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -32,10 +29,8 @@ function cacheOf(entries: Record<string, TscnScene>): CachedSceneSource {
 }
 
 /**
- * A {@link SceneScope} from its parts. Most cases here only care about the
- * ExtResource half, so the SubResource pool defaults to empty — but it is named
- * at the call site rather than omitted, which is the whole point of the two
- * pools travelling as one value.
+ * A {@link SceneScope} from its parts. The SubResource pool defaults to empty,
+ * since most cases here read only the ExtResource half.
  */
 function scopeOf(
   externalResources: readonly TscnExternalResource[],
@@ -55,7 +50,7 @@ function intRes(id: string, type: string, data: Record<string, unknown> = {}): T
 describe('collectLiveNodes', () => {
   it('collects a Camera3D inside an instanced sub-scene, at its tree-matching path', () => {
     // game.tscn instances player.tscn; player.tscn's Target/Camera3D lives
-    // inside the instance — absent from flattenedNodes, present in the live tree.
+    // inside the instance: absent from flattenedNodes, present in the live tree.
     const playerScene: TscnScene = {
       nodes: [
         makeNode('Player', 'CharacterBody3D', {
@@ -133,10 +128,9 @@ describe('collectLiveNodes', () => {
   });
 
   describe('descend option', () => {
-    // Some consumers ask "what is in THIS view", which is not the same as "what
-    // is in the tree": a sub-viewport's content is only visible through its
-    // surface, so a consumer answering the first question must be able to stop
-    // at that boundary (ADR-0033).
+    // "What is in this view" differs from "what is in the tree": a sub-viewport's
+    // content shows only through its surface, so a view consumer stops at that
+    // boundary (ADR-0033).
     const roots = [
       makeNode('Root', 'Node3D', {
         children: [
@@ -175,10 +169,9 @@ describe('collectLiveNodes', () => {
 });
 
 describe('collapseLiveNode — identity contract', () => {
-  // The viewport + tree retrofits branch on `collapseLiveNode(node) !== node` to
-  // decide collapse-vs-fallback. That contract — same reference on every
-  // fallback, a fresh node only when the single-root merge applies — must hold,
-  // or those branches silently take the wrong path.
+  // The viewport and tree walkers branch on `collapseLiveNode(node) !== node`, so
+  // every fallback returns the same reference and only a single-root merge
+  // returns a fresh node.
   const single = (type: string): TscnScene => ({
     nodes: [makeNode('Root', type, { children: [makeNode('Child', 'Node3D')] })],
     externalResources: [],
@@ -231,7 +224,7 @@ describe('collapseLiveNode — identity contract', () => {
 describe('liveNodeChain — the root→target chain of EFFECTIVE nodes (for ancestor-composed transforms)', () => {
   it('returns the collapsed-node chain descending into an instanced sub-scene', () => {
     // game.tscn instances player.tscn; the chain to the sub-scene camera must
-    // include the COLLAPSED Player (type adopted from the sub-scene root) so an
+    // include the collapsed Player (type adopted from the sub-scene root) so an
     // ancestor-transform walk sees the instance node's merged properties.
     const playerScene: TscnScene = {
       nodes: [
@@ -280,8 +273,7 @@ describe('liveNodeChain — the root→target chain of EFFECTIVE nodes (for ance
 });
 
 describe('resolveLiveNode — single-node path resolution (the inspector adapter)', () => {
-  // Rehomed from the former SceneTreeViewer/resolveNodeByPath forwarder: these
-  // exercise the public single-node entry point the NodeDetailsPanel reads via
+  // The single-node entry point the NodeDetailsPanel reads through
   // `useLiveNode`, so the inspector resolves any tree row.
   const EXT: TscnExternalResource[] = [ext('3_as5ck', 'res://ceiling_lamp.tscn')];
 
@@ -344,7 +336,7 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
     expect(node?.name).toBe('plafoniera');
     expect(node?.type).toBe('MeshInstance3D');
 
-    // The collapsed root's own name is NOT a path segment.
+    // The collapsed root's own name is not a path segment.
     expect(resolveLiveNode('RoomGeometry/ceiling_lamp/LampBody/plafoniera', roots, ctx)).toBeNull();
   });
 
@@ -359,17 +351,16 @@ describe('resolveLiveNode — single-node path resolution (the inspector adapter
       externalResources: EXT,
       sceneCache: cacheOf({ 'res://ceiling_lamp.tscn': subScene }),
     });
-    // The inspector must see the SAME identity the tree row + viewport show:
+    // The inspector sees the identity the tree row and viewport show:
     // the merged node keeps the instance name but adopts the root's type.
     expect(node?.name).toBe('Coin1');
     expect(node?.type).toBe('Area3D');
   });
 
   it('descends into a nested instance using the SUB-scene externalResources, not the outer scene', () => {
-    // The platformer bug: game.tscn instances player.tscn, which instances
-    // player.glb via player.tscn's OWN ExtResource id — absent from game.tscn's
-    // resources. Descent must resolve the inner instance against the sub-scene's
-    // resource table.
+    // game.tscn instances player.tscn, which instances player.glb through its own
+    // ExtResource id, absent from game.tscn. Descent resolves the inner instance
+    // against the sub-scene's resource table.
     const subB: TscnScene = {
       nodes: [makeNode('BRoot', 'Node3D', { children: [makeNode('Leaf', 'MeshInstance3D')] })],
       externalResources: [],
@@ -422,9 +413,9 @@ describe('resolveLiveEntry — effective node + ORIGINATING instance ref (for th
   const EXT: TscnExternalResource[] = [ext('3_as5ck', 'res://ceiling_lamp.tscn')];
 
   it('returns the collapsed type AND the originating instance ref for an instance ROOT', () => {
-    // The merged node adopts the sub-scene root's type and DROPS its own
-    // instance ref (it becomes the plain root's, undefined here). The tree's 📦
-    // badge keys off the ORIGINATING ref, so resolveLiveEntry surfaces it.
+    // The merged node adopts the sub-scene root's type and drops its own
+    // instance ref (the plain root's, undefined here). The tree's 📦 badge reads
+    // the originating ref, so resolveLiveEntry surfaces it.
     const subScene: TscnScene = {
       nodes: [makeNode('Coin', 'Area3D', { children: [makeNode('Circle', 'MeshInstance3D')] })],
       externalResources: [],
@@ -505,8 +496,8 @@ describe('singleSceneCache — one-entry adapter the tree + viewport hand their 
   });
 
   it('drives collapseLiveNode + liveChildGroups so children switch to the sub-scene resource scope', () => {
-    // The platformer-player pattern: player.tscn instances player.glb via
-    // player.tscn's OWN ext id — absent from the outer scene's scope.
+    // player.tscn instances player.glb through its own ext id, absent from the
+    // outer scene's scope.
     const sub: TscnScene = {
       nodes: [
         makeNode('Player', 'CharacterBody3D', {
@@ -532,8 +523,7 @@ describe('singleSceneCache — one-entry adapter the tree + viewport hand their 
 });
 
 describe('liveChildGroups — origin-tagged child groups with per-group scope', () => {
-  // Helper: extract just (origin, childNames) pairs from a group array for
-  // concise assertions.
+  // (origin, childNames) pairs, for concise assertions.
   function digest(groups: LiveChildGroup[]) {
     return groups.map((g) => ({ origin: g.origin, names: g.children.map((c) => c.name) }));
   }
@@ -601,8 +591,7 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
   });
 
   it('fallback multi-root instance → inline group (OUTER scope) + subscene group (sub scope)', () => {
-    // BUG FIX: the old flattened form gave sub-scope to the concatenated list.
-    // The correct split: inline children → OUTER scope, loaded roots → sub scope.
+    // Inline children take the outer scope, loaded roots the sub-scene scope.
     const outer = [ext('1', 'res://multi.tscn')];
     const subExt = [ext('inner', 'res://inner.tscn')];
     const multi: TscnScene = {
@@ -620,7 +609,7 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
     const inlineGroup = groups.find((g) => g.origin === 'inline')!;
     expect(inlineGroup).toBeDefined();
     expect(inlineGroup.children.map((c) => c.name)).toEqual(['InlineChild']);
-    // Inline children are authored in the host scene — they must resolve against OUTER resources.
+    // Inline children are authored in the host scene, so they resolve against outer resources.
     expect(inlineGroup.scope.externalResources).toBe(outer);
 
     const subsceneGroup = groups.find((g) => g.origin === 'subscene')!;
@@ -659,15 +648,13 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
     expect(groups).toHaveLength(1);
     expect(groups[0]!.origin).toBe('glb');
     expect(groups[0]!.children.map((c) => c.name)).toEqual(['body']);
-    // GLB nodes carry no instance refs — they stay in OUTER scope.
+    // GLB nodes carry no instance refs, so they stay in the outer scope.
     expect(groups[0]!.scope.externalResources).toBe(outer);
   });
 
   it('fallback-inline scope fix: inline children of a multi-root instance resolve OUTER ExtResources', () => {
-    // The documented divergence: the old flattened form gave sub-scope to the
-    // concatenated list, making inline children (host-authored) unable to
-    // resolve ExtResource ids that are only in the outer scene. liveChildGroups
-    // gives OUTER scope to the inline group, fixing this.
+    // A host-authored inline child resolves an ExtResource id that exists only
+    // in the outer scene.
     const outerOnlyExt = ext('gadget', 'res://gadget.tscn');
     const outer = [outerOnlyExt, ext('1', 'res://multi.tscn')];
     const multi: TscnScene = {
@@ -682,18 +669,16 @@ describe('liveChildGroups — origin-tagged child groups with per-group scope', 
     });
     const groups = liveChildGroups(node, scopeOf(outer), cacheOf({ 'res://multi.tscn': multi }));
     const inlineGroup = groups.find((g) => g.origin === 'inline')!;
-    // The gadget ext id resolves only in the outer scene; inline group has outer scope.
+    // The gadget ext id resolves only in the outer scene, and the inline group has its scope.
     expect(inlineGroup.scope.externalResources).toContain(outerOnlyExt);
     expect(inlineGroup.scope.externalResources).toBe(outer);
   });
 });
 
 describe('liveChildGroups — internalResources scope (a sub-scene\'s own SubResource pool)', () => {
-  // StyleBox resolution (buildSolveTree.ts) needs a sub-scene's own SubResource
-  // pool the same way it needs ExtResource scope: a StyleBox authored INSIDE an
-  // instanced sub-scene must resolve against that sub-scene's own
-  // `internalResources`, never the host's — ids are per-file, so two files can
-  // both declare SubResource "1" for entirely different StyleBoxes.
+  // StyleBox resolution (buildSolveTree.ts) reads a sub-scene's own
+  // `internalResources`, never the host's: ids are per-file, so two files can
+  // both declare SubResource "1" for different StyleBoxes.
 
   it('collapsed single-root instance → merged group carries the SUB-SCENE\'s own internalResources, not the host\'s', () => {
     const outer = [ext('1', 'res://player.tscn')];
@@ -749,10 +734,9 @@ describe('liveChildGroups — internalResources scope (a sub-scene\'s own SubRes
   });
 
   it('a NESTED instance resolves against ITS OWN pool at each level, never the host\'s or an intermediate ancestor\'s', () => {
-    // Host instances A; A instances B. Each of the three levels declares a
-    // DIFFERENT StyleBoxFlat under the SAME SubResource id "1" — the shape a
-    // real project produces, since ids are per-file — so resolving against the
-    // wrong level's pool is loud (wrong data) rather than silently missing.
+    // Host instances A, and A instances B. Each level declares a different
+    // StyleBoxFlat under the same SubResource id "1", so the wrong level's pool
+    // gives wrong data rather than a silent miss.
     const hostInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'HOST' })];
     const aInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'A' })];
     const bInternal = [intRes('1', 'StyleBoxFlat', { bg_color: 'B' })];
@@ -774,14 +758,13 @@ describe('liveChildGroups — internalResources scope (a sub-scene\'s own SubRes
     const outer = [ext('1_subA', 'res://subA.tscn')];
     const sceneCache = cacheOf({ 'res://subA.tscn': subA, 'res://subB.tscn': subB });
 
-    // Level 1: host → A. Merged group must carry A's OWN pool, not the host's.
+    // Level 1: host → A. The merged group carries A's own pool, not the host's.
     const level1 = liveChildGroups(node, scopeOf(outer, hostInternal), sceneCache);
     const merged1 = level1.find((g) => g.origin === 'merged')!;
     expect(merged1.scope.internalResources).toBe(aInternal);
 
-    // Level 2: A's child 'Inner' instances B. Descending with A's OWN pool
-    // threaded in (as a recursive walker does) must resolve B's merged group
-    // against B's OWN pool — neither the host's nor A's.
+    // Level 2: A's child 'Inner' instances B. Descending with A's pool, as a
+    // recursive walker does, resolves B's merged group against B's own pool.
     const inner = merged1.children.find((c) => c.name === 'Inner')!;
     const level2 = liveChildGroups(inner, merged1.scope, sceneCache);
     const merged2 = level2.find((g) => g.origin === 'merged')!;

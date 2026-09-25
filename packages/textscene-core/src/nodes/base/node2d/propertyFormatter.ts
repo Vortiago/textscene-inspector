@@ -1,7 +1,7 @@
 /**
- * Node2D property formatter — formats the 2D transform, draw order, and
- * CanvasItem tint for display. The 2D analogue of `formatNode3DProperties`;
- * 2D slices append these sections after their own type-specific ones.
+ * Node2D property formatter: the 2D transform, draw order and CanvasItem tint.
+ * The 2D analogue of `formatNode3DProperties`. 2D slices append these sections
+ * after their own type-specific ones.
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';

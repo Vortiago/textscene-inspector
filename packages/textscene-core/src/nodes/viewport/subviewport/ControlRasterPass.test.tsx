@@ -1,16 +1,13 @@
 /**
- * `<ControlRasterPasses>` — the native (WebGL) render-to-texture publisher
- * for a Control-only sub-viewport. Replaces the DOM/SVG rasteriser
- * (`ControlRasterHost`, deleted) with the same offscreen-portal technique
- * `<SubViewport>`'s own 3D/2D pass uses, so every viewport kind now publishes
- * a texture consumers sample directly — no CPU round trip, no `readPixels`.
+ * `<ControlRasterPasses>`: the native (WebGL) render-to-texture publisher for a
+ * Control-only sub-viewport, publishing a texture consumers sample directly.
  */
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
-// `gui/common/snap_controls_to_pixels` is the ROOT window's setting; the
+// `gui/common/snap_controls_to_pixels` is the root window's setting. The
 // Controls this pass rasterises live in a SubViewport, which never gets it.
 const projectSettingsMock = vi.hoisted(() => ({
   settings: null as Record<string, string> | null,
@@ -75,10 +72,9 @@ function GlSpy({ captured }: { captured: { current: THREE.WebGLRenderer | null }
 }
 
 /**
- * Runs one frame with the renderer's target/render entry points stubbed out,
- * recording every non-null bind — mirrors
- * `Component.publish.test.tsx`'s own `advanceFrameWithStubbedGl`: the test
- * renderer's fake WebGL context cannot service a real bind or draw.
+ * Runs one frame with the renderer's target and render entry points stubbed,
+ * recording every non-null bind: the test renderer's fake WebGL context cannot
+ * service a real bind or draw.
  */
 async function advanceFrameWithStubbedGl(
   renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>,
@@ -123,10 +119,9 @@ describe('<ControlRasterPasses>', () => {
   });
 
   /**
-   * The mirror-image colour contract of the 3D/2D pass's `createOffscreenTarget`
-   * (see `ControlRasterPass.tsx`'s own module doc): Godot draws a viewport's
-   * canvas items AFTER its tonemap pass, so this target holds ordinary sRGB
-   * values with no curve of its own and no `isXRRenderTarget` pre-tonemap tag.
+   * The opposite colour contract to the 3D/2D pass: Godot draws a viewport's
+   * canvas items after its tonemap pass, so this target holds ordinary sRGB
+   * values with no curve and no `isXRRenderTarget` pre-tonemap tag.
    */
   it('publishes a target tagged sRGB, without the 3D/2D pass\'s isXRRenderTarget tag', async () => {
     const seen: (ViewportTextureEntry | null)[] = [];
@@ -155,22 +150,15 @@ describe('<ControlRasterPasses>', () => {
       if (seenAtBind === null && target !== null) seenAtBind = gl.toneMapping;
     });
     expect(seenAtBind).toBe(THREE.NoToneMapping);
-    // Restored after the pass, exactly like the 3D/2D pass restores its own.
+    // Restored after the pass, as the 3D/2D pass restores its own.
     expect(gl.toneMapping).toBe(THREE.CustomToneMapping);
   });
 
   /**
-   * `scene/main/viewport.h` initialises `snap_controls_to_pixels` to `true` on
-   * every Viewport, and `main/main.cpp` hands the project setting to
-   * `sml->get_root()` alone — so a project that opts out leaves a
-   * SubViewport's own Controls snapped.
-   *
-   * Measured through Godot 4.6.3 on
-   * `scenes/fixtures/subviewport-snap-off/unit-subviewport-snap-off.tscn`
-   * (root window reporting `is_snap_controls_to_pixels_enabled() == false`,
-   * its SubViewport reporting `true`): a four-deep chain of 0.5 offsets draws
-   * its leaf at (102, 62) in the root window and at (104, 64) inside the
-   * sub-viewport.
+   * `scene/main/viewport.h` sets `snap_controls_to_pixels` true on every Viewport,
+   * and `main/main.cpp` hands the project setting to the root alone. Measured on
+   * `scenes/fixtures/subviewport-snap-off/unit-subviewport-snap-off.tscn`: a four-deep
+   * chain of 0.5 offsets draws its leaf at (102, 62) in the root, (104, 64) inside.
    */
   it('snaps the rasterised Controls even when the project opts out', async () => {
     projectSettingsMock.settings = { 'gui/common/snap_controls_to_pixels': 'false' };
@@ -200,9 +188,8 @@ offset_bottom = 100.5
         </ViewportTextureProvider>
       );
 
-      // The walker mounts into a DETACHED portal scene, which never appears in
-      // the test renderer's own tree — the pass hands it to `gl.render`, so
-      // that call is where a test can reach it.
+      // The walker mounts into a detached portal scene, outside the test
+      // renderer's tree. The pass hands it to `gl.render`, where a test reaches it.
       const gl = capturedGl.current!;
       // Held on an object rather than in a `let`: a local assigned only from
       // inside a callback stays narrowed to its initialiser, so `portalScene`

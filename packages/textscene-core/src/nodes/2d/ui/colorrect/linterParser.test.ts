@@ -1,10 +1,6 @@
 /**
- * ColorRect strict validators — the single `color` fill property, plus proof
- * the base-walk still delivers Control's and CanvasItem's inherited keys
- * without colliding with it.
- *
- * doc/classes/ColorRect.xml lists exactly one member, `color`, and
- * color_rect.cpp's `_bind_methods` binds exactly one `ADD_PROPERTY` to match.
+ * ColorRect strict validators: `color`, its one member in doc/classes/ColorRect.xml
+ * and the `_bind_methods` of color_rect.cpp, and the inherited Control and CanvasItem keys beside it.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -33,8 +29,8 @@ describe('ColorRect strict validators', () => {
   });
 
   it('rejects a Color literal with the wrong arity', () => {
-    // color_rect.cpp:65 declares Variant::COLOR; the RGB-only 3-tuple Godot's
-    // own parser could not read as a Color is a format rejection, not a bound.
+    // color_rect.cpp:65 declares Variant::COLOR. Godot cannot read an RGB-only
+    // 3-tuple as a Color, so this is a format rejection, not a bound.
     const error = check('Color(1, 1, 1)');
     expect(error?.message).toContain('Color');
   });
@@ -44,10 +40,8 @@ describe('ColorRect strict validators', () => {
   });
 
   it('places no numeric bound on the color: HDR components outside 0-1 are legal', () => {
-    // color_rect.cpp:65, ADD_PROPERTY carries no PROPERTY_HINT at all
-    // (PROPERTY_HINT_NONE). set_color (color_rect.cpp:33-40) assigns any
-    // Color unaltered once it differs from the current one, no clamp, no
-    // ERR_FAIL — a component past 0-1 (HDR) is exactly as valid as one inside.
+    // color_rect.cpp:65 has PROPERTY_HINT_NONE, and set_color (color_rect.cpp:33-40)
+    // assigns any Color with no clamp or ERR_FAIL, so an HDR component is valid.
     expect(check('Color(2.5, -1, 0, 1)')).toBeNull();
   });
 
@@ -57,10 +51,8 @@ describe('ColorRect strict validators', () => {
   });
 
   it('reaches modulate through the CanvasItem base-walk, distinct from its own color key', () => {
-    // CanvasItem's `modulate` tints the whole node (and its children); the
-    // rect's own `color` is the fill it draws. Same Color shape, two separate
-    // properties, and the base-walk must deliver both without one shadowing
-    // the other.
+    // `modulate` tints the node and its children, and `color` is the fill. The
+    // base-walk delivers both, and neither shadows the other.
     expect(validatorRegistry.findValidator('ColorRect', 'modulate')).not.toBeNull();
     expect(validatorRegistry.getOwnKeys('ColorRect')).not.toContain('modulate');
   });

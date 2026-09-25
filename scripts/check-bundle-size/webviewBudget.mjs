@@ -1,12 +1,7 @@
 /**
- * Walks the static import closure starting from `dist/webview/webview.js`,
- * gzips the concatenation, and compares against the absolute
- * budget (`BUDGET_GZ`). Dynamic `import()` (React.lazy) chunks are
- * deliberately excluded — they don't load on the canvas-paint critical
- * path, so they don't count against this budget.
- *
- * The webview builds as `esm` + splitting so React.lazy can code-split; only
- * the initial chunk is measured here.
+ * The webview budget: walks the static import closure from `dist/webview/webview.js`, gzips the
+ * concatenation and compares it with `BUDGET_GZ`. The webview builds as `esm` with splitting, so
+ * dynamic `import()` (React.lazy) chunks stay off the canvas-paint critical path and do not count.
  */
 
 import { gzipSync } from 'node:zlib';
@@ -14,36 +9,29 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { ENTRY, WEBVIEW_DIR, formatKb } from './paths.mjs';
 
-// The ceiling guards against an accidental import pulling a whole library into
-// the canvas-paint path. It is not a cap on deliberate, measured growth: a
-// parser is registered for every one of Godot's instantiable node types and
-// each registration is bundled code even though its linter half is not, so no
-// tighter ceiling would fail on a real regression rather than on the next slice.
-// MEASURED_GZ is that closure as last measured here, and the report's delta is
-// read against it — growth inside the headroom is invisible in a PASS line.
-const MEASURED_GZ = 607_514; // 8-file closure, measured 2026-08-29
+// The ceiling catches an accidental import that pulls a whole library into the canvas-paint
+// path, not deliberate growth: every instantiable Godot node type bundles a parser (its linter
+// half stays out), so a tighter ceiling fails on the next slice, not on a regression. The report
+// reads growth against MEASURED_GZ, since growth inside the headroom is invisible in a PASS line.
+const MEASURED_GZ = 607_514; // the 8-file closure as last measured
 const BUDGET_GZ = 700_000; // absolute ceiling, gzipped
 
-// Dead-weight chunks that must never ship in the VSIX. These appear when
-// someone imports from the `@react-three/drei` barrel instead of the
-// per-module subpaths (`@react-three/drei/core/<Module>`): esbuild then
-// bundles drei's unused video/face modules, whose dynamic import('hls.js')
-// / import('@mediapipe/tasks-vision') emit ~656 KB of lazy chunks that no
-// code path ever loads.
+// Dead-weight chunks that must never ship in the VSIX. Importing the `@react-three/drei` barrel
+// instead of `@react-three/drei/core/<Module>` bundles drei's video and face modules, whose
+// `import('hls.js')` and `import('@mediapipe/tasks-vision')` emit about 656 KB of lazy chunks
+// that no code path loads.
 const DEAD_CHUNK_RE = /^(hls|vision_bundle)-/;
 
 /**
- * Find static (non-dynamic) imports in a JS file. Dynamic `import()`
- * calls are stripped to a sentinel first so they don't show up as
- * static deps in the closure walk — those chunks load on demand.
+ * Static imports of a JS file. Dynamic `import()` calls become a sentinel first, since those
+ * chunks load on demand and stay out of the closure.
  */
 function findStaticImports(content) {
   const stripped = content.replace(/import\([^)]*\)/g, '__DYN__()');
   const out = new Set();
-  // import ... from '...';  export ... from '...';  export * from '...';
-  // (re-export forwards pull the target chunk onto the critical path just
-  // like imports do, even though esbuild's current splitting output happens
-  // to emit only the import form — the gate must not depend on that.)
+  // `import ... from`, `export ... from` and `export * from`: a re-export pulls its target onto
+  // the critical path as an import does. esbuild emits only the import form, and the gate must
+  // not depend on that.
   const re1 = /(?:import|export)[^'";]*?from[^'"]*["']\.\/(?:chunks\/)?([^'"]+)["']/g;
   let m;
   while ((m = re1.exec(stripped))) out.add(m[1]);
@@ -54,12 +42,9 @@ function findStaticImports(content) {
 }
 
 /**
- * Where an import specifier lands on disk, or `null` when nothing does.
- *
- * The bundler's layout is a convention this walker reproduces rather than
- * reads, so both spellings are tried: a chunk under `chunks/`, and a sibling
- * beside the entry. Returning `null` rather than guessing is what lets an
- * unreachable file FAIL the gate instead of shrinking the closure.
+ * Where an import specifier lands on disk, or `null`, which fails the gate instead of shrinking
+ * the closure. The walker reproduces the bundler's layout rather than reading it, so it tries
+ * both a chunk under `chunks/` and a sibling beside the entry.
  */
 function resolveImport(dir, from, spec) {
   const bare = spec.split('/').pop();
@@ -70,14 +55,10 @@ function resolveImport(dir, from, spec) {
 }
 
 /**
- * BFS the static-import closure starting at `entry`. Returns the set of file
- * names (relative to the webview dir) that load on the critical canvas-paint
- * path, and every specifier that resolved to nothing.
- *
- * An unresolvable import is reported, never skipped. Skipping made the walk
- * degrade quietly: a layout change the convention above stopped matching would
- * shrink the closure to the entry file alone and leave `--enforce` passing on a
- * measurement that had stopped covering the bundle.
+ * Breadth-first walk of the static-import closure from `entry`: the files (relative to the
+ * webview dir) on the canvas-paint path, and every specifier that resolved to nothing. An
+ * unresolved import is reported, never skipped, or a layout the resolver stopped matching would
+ * shrink the closure to the entry alone and still pass `--enforce`.
  */
 function staticClosure(dir, entry) {
   const visited = new Set();

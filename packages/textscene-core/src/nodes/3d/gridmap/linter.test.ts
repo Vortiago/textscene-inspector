@@ -1,12 +1,7 @@
 /**
- * Tests for GridMap semantic linter rules.
- *
- * GridMap references a MeshLibrary via the `mesh_library` property. If the
- * reference is provided, it must resolve to a declared resource (a dangling
- * reference is an error). A GridMap with NO mesh_library renders nothing — it
- * is valid but almost certainly a mistake, so it's a WARNING, not an error
- * (mirrors decal's requires-texture). (Format validation of cell_size etc.
- * lives in linterParser.ts.)
+ * GridMap semantic rules. A `mesh_library` reference must resolve (a dangling
+ * one is an error). A GridMap without one is valid and renders nothing, so it
+ * warns, as Decal's requires-texture does.
  */
 
 import { describe, it } from 'vitest';

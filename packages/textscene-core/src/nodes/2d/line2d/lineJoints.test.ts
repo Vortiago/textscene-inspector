@@ -1,10 +1,6 @@
 /**
- * Line2D joint wedges.
- *
- * The stroke draws one independent butt-capped quad per segment, leaving a
- * pie-slice gap outside every interior corner. Godot has no "no joint" mode —
- * `joint_mode` defaults to LINE_JOINT_SHARP — so the gap is always filled, and
- * a polyline without one reads as a broken chain of bars.
+ * Line2D joint wedges, which fill the pie-slice gap outside every interior corner
+ * of the butt-capped segment quads. Godot has no "no joint" mode.
  */
 import { describe, expect, it } from 'vitest';
 import { jointWedge, LINE_JOINT_BEVEL, LINE_JOINT_ROUND, LINE_JOINT_SHARP } from './lineJoints';
@@ -41,8 +37,8 @@ describe('jointWedge', () => {
   });
 
   it('falls back to a bevel when the miter runs past sharp_limit', () => {
-    // The line nearly doubles back on itself — an acute turn whose miter tip
-    // runs far out. Godot bevels those instead of drawing a long spike.
+    // The line nearly doubles back on itself: an acute turn whose miter tip runs
+    // far out. Godot bevels those instead of drawing a long spike.
     const doublesBack = { x: -10, y: -1 };
     expect(triangleCount(jointWedge(PREV, CORNER, doublesBack, 5, SHARP))).toBe(1);
     // The same corner miters happily once the limit is raised past its length.

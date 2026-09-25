@@ -1,8 +1,4 @@
-/**
- * Strict-verification harness (group F) — 12 assertions covering
- * the 7 primitive mesh types and their key parameters.
- *
- */
+/** The primitive mesh types and their key parameters. */
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -64,8 +60,8 @@ describe('Mesh primitives (assertions 48–59)', () => {
   });
 
   it('#50 SphereMesh.height parser side-effect → heightSegments mapped through SphereMesh.rings', async () => {
-    // Godot SphereMesh has separate `height` (hemisphere) and `rings`
-    // (segments). THREE's heightSegments is driven by `rings` in our parser.
+    // SphereMesh has separate `height` and `rings`. The parser drives THREE's
+    // heightSegments from `rings`.
     const geom = (await renderGeometry(
       sub('SphereMesh', 'S', { radius: '1', rings: '24' })
     )) as unknown as THREE.SphereGeometry & {
@@ -94,8 +90,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
   });
 
   it('#53 PlaneMesh.center_offset → geometry translated', async () => {
-    // The plane's bounding box should be shifted by center_offset.
-    // We assert by computing bounding box center after render.
+    // center_offset shifts the plane's bounding box centre.
     const geom = await renderGeometry(
       sub('PlaneMesh', 'P', { size: 'Vector2(2, 2)', center_offset: 'Vector3(1, 0, 0)' })
     );
@@ -106,9 +101,8 @@ describe('Mesh primitives (assertions 48–59)', () => {
   });
 
   it('#54 PlaneMesh.orientation FACE_X/FACE_Y/FACE_Z → rotation applied', async () => {
-    // FACE_Y (orientation=1) leaves plane in XZ — normal points up.
-    // We assert by checking bounding box dimensions: a (2,2) XY plane
-    // rotated to FACE_Y still has 2-unit extents in X and Z (zero in Y).
+    // FACE_Y (orientation=1) lays the plane in XZ with its normal up, so a (2,2) plane
+    // has 2-unit extents in X and Z and none in Y.
     const geom = await renderGeometry(
       sub('PlaneMesh', 'P', { size: 'Vector2(2, 2)', orientation: '1' })
     );
@@ -162,8 +156,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
   it('#59 PrismMesh.size → a triangular prism filling that box', async () => {
     const geom = await renderGeometry(sub('PrismMesh', 'Pr', { size: 'Vector3(2, 2, 2)' }));
 
-    // Godot's own prism: 8 triangles (two caps, two slanted sides, one base),
-    // not the 3-segment cylinder this used to approximate it with.
+    // Godot's prism: 8 triangles for two caps, two slanted sides and one base.
     expect(geom.getIndex()!.count).toBe(24);
     geom.computeBoundingBox();
     expect(geom.boundingBox!.max.toArray()).toEqual([1, 1, 1]);

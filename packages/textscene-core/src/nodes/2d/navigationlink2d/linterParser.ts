@@ -1,10 +1,7 @@
 /**
- * NavigationLink2D strict validators for linting.
- *
- * Declare only NavigationLink2D's OWN members — the ones doc/classes/NavigationLink2D.xml
- * lists without an `overrides=` attribute. Everything from Node2D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * NavigationLink2D strict validators. Declare only the members
+ * doc/classes/NavigationLink2D.xml lists without `overrides=`: the base-walk
+ * delivers the inherited ones, and a re-declared key shadows its ancestor.
  */
 
 import '../../base/node2d/linterParser.js';
@@ -14,7 +11,7 @@ import { layerBitmask, v } from '../../../linter/validators/index.js';
 validatorRegistry.registerAll('NavigationLink2D', {
   enabled: v.boolean('enabled'),
   bidirectional: v.boolean('bidirectional'),
-  // navigation_link_2d.cpp:75, PROPERTY_HINT_LAYERS_2D_NAVIGATION — a UI-control
+  // navigation_link_2d.cpp:75, PROPERTY_HINT_LAYERS_2D_NAVIGATION is a UI-control
   // hint, not a range the setter enforces: set_navigation_layers (:205-213) is a
   // bare assignment with no ERR_FAIL or mask.
   navigation_layers: layerBitmask('navigation_layers', { hinted: 'navigation_link_2d.cpp:75', width: 'uint32' /* navigation_link_2d.h:79 */ }),

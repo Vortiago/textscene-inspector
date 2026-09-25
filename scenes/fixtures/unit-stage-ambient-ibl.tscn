@@ -1,10 +1,7 @@
-; BG_SKY over a GOLD sky with AMBIENT_SOURCE_COLOR (flat 0.6,
-; ambient_light_sky_contribution = 0) and AgX tonemapping. The gold sky lets two
-; things separate by colour:
-;   * the shadowed grass, lit only by the flat grey ambient, must stay grey —
-;     a warm tint means sky IBL is leaking into diffuse despite contribution 0;
-;   * the metallic sphere, reflecting the sky, must read GOLD — a grey/black
-;     sphere means the reflection was switched off with the ambient.
+; BG_SKY over a gold sky with AMBIENT_SOURCE_COLOR (flat 0.6, ambient_light_sky_contribution = 0)
+; and AgX tonemapping. The gold separates two cases by colour: the shadowed grass, lit only by
+; the grey ambient, stays grey (a warm tint is sky IBL leaking into diffuse), and the metallic
+; sphere reads gold (a grey or black one means the reflection went off with the ambient).
 [gd_scene load_steps=8 format=3 uid="uid://unitstageambientibl"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat_gold"]

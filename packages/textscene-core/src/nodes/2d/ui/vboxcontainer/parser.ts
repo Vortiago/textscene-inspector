@@ -1,8 +1,6 @@
 /**
- * VBoxContainer parser — delegates to the shared BoxContainer base (Control
- * plus `alignment`); the vertical stacking itself and
- * `theme_override_constants/separation` are handled by the Component + the
- * base Control parser's theme-override collection.
+ * Parses a VBoxContainer through the shared BoxContainer base (Control plus `alignment`). The
+ * Control parser collects `theme_override_constants/separation`, and the layout stacks vertically.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';

@@ -1,38 +1,8 @@
 /**
- * GraphEdit's native (WebGL canvas) rect solve — `GraphEdit::_update_scroll_offset`
- * (`scene/gui/graph_edit.cpp:435-462`), the ONLY place Godot positions a
- * GraphElement child: `set_position(position_offset * zoom - scroll_offset)`,
- * `set_scale(Vector2(zoom, zoom))`.
- *
- * `GraphEdit` is a plain `Control`, not a `Container` (`graph_edit.h:114`) —
- * this registration exists only because our own solver has no OTHER way to
- * hand a child a computed position outside the free/anchored path. Doing so
- * has one unavoidable cost: `ControlCanvasWalker`'s `isFreeParent` gate forces
- * EVERY child of a registered container to scale=1/rotation=0
- * (`ControlCanvasWalker.tsx:210-216`), so the `set_scale(zoom, zoom)` half of
- * the port above is NOT reachable from this slice without editing that
- * (forbidden) file. Only the POSITION half is implemented; at `zoom = 1`
- * (the property's own default) this is exact. See `Component.tsx`'s own doc
- * for the matching gap on the DRAW side.
- *
- * A child that is NOT a GraphElement (`GraphNode`/`GraphFrame`, or a bare
- * `GraphElement`) is never touched by `_update_scroll_offset`'s own
- * `Object::cast_to<GraphElement>` guard (`:441-444`) and instead resolves as
- * an ordinary free/anchored Control against GraphEdit's own rect — ported
- * here via `resolveControlLayout` (`r3f/controls/controlAnchors.ts`) plus the
- * one-line anchor formula (`Control::_size_changed`,
- * `scene/gui/control.cpp:1531-1541`: `edge_pos[i] = offset[i] + anchor[i] *
- * area`), since a registered container's children never reach the
- * OTHERWISE-automatic free/anchored path at all
- * (`controlRectSolver.ts`'s own doc).
- *
- * No `MinimumSizeFn` is registered: `GraphEdit` overrides no
- * `get_minimum_size` (confirmed against the source — the brief that
- * commissioned this slice named one; it does not exist), so it is left
- * unregistered, matching Godot's own `Control::get_minimum_size` default of
- * `(0, 0)`.
- *
- * Pure data + functions, no React, no THREE.
+ * GraphEdit's native (WebGL canvas) rect solve: `GraphEdit::_update_scroll_offset`
+ * (`scene/gui/graph_edit.cpp:435-462`), the only place Godot positions a GraphElement child, with
+ * `set_position(position_offset * zoom - scroll_offset)`. No `MinimumSizeFn` is registered:
+ * `GraphEdit` overrides no `get_minimum_size`, so `Control`'s `(0, 0)` holds.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -64,8 +34,10 @@ function anchoredRect(
 }
 
 /**
- * `GraphEdit::_update_scroll_offset` (`:435-462`), position only —
- * this module's own doc for the unreachable `set_scale(zoom, zoom)` half.
+ * `GraphEdit::_update_scroll_offset` (`:435-462`), position half only: GraphEdit is a plain `Control`
+ * (`graph_edit.h:114`) registered as a container to place its children, and `ControlCanvasWalker`
+ * then forces each child to scale 1 and rotation 0 (`ControlCanvasWalker.tsx:210-216`). Exact at the
+ * default `zoom = 1`. `Component.tsx` has the matching gap.
  */
 export const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const props = n.node.properties as GraphEditProperties;
@@ -76,12 +48,10 @@ export const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx
   for (const { node: child } of children) {
     const childProps = child.node.properties as ControlProperties;
     const layout = resolveControlLayout(childProps, controlLayoutOrder(child), () => ctx.combinedMinimumSize(child));
-    // `Control::set_position(pos)` (no `keep_offsets`) re-derives the offsets
-    // from the NEW position against the CURRENT anchors/size, so the anchored
-    // rect's own width/height survive untouched — only x/y are overwritten
-    // below for a GraphElement child. `dispatchChildren` re-floors this
-    // against the child's own minimum size afterward (solverRegistry.ts's
-    // own doc), so no floor is applied here.
+    // `Control::set_position(pos)` (no `keep_offsets`) keeps the anchored width
+    // and height, so a GraphElement child overwrites only x/y below.
+    // `dispatchChildren` floors the rect at the child's minimum size afterwards
+    // (solverRegistry.ts), so no floor applies here.
     const natural = anchoredRect(layout.anchors, layout.offsets, contentRect);
 
     if (GRAPH_ELEMENT_TYPES.has(child.node.type)) {
@@ -93,6 +63,8 @@ export const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx
         h: natural.h,
       });
     } else {
+      // `_update_scroll_offset` skips a non-GraphElement (`:441-444`), so it keeps its anchored rect.
+      // A registered container's child never reaches `controlRectSolver.ts`'s own anchored path.
       rects.set(child.path, natural);
     }
   }

@@ -1,20 +1,7 @@
-; Sky ambient with a GRADED sky — the shape half of the IBL, where
-; `unit-light-transport-sky` pins only its scale.
-;
-; A uniform sky cannot tell a correct hemispherical convolution from a
-; whole-sphere average: a constant convolves to itself, so every filter agrees.
-; This sky carries Godot's own editor-preview gradient — bright above, dark
-; below — so an up-facing surface and a down-facing one see very different
-; irradiance, and the ratio between them measures the filter's directionality.
-;
-; Two probe surfaces share one albedo: the floor faces +Y and sees almost only
-; sky, while the wall faces +Z and sees half sky, half ground. The unshaded
-; square gives the albedo itself, so each surface reads as a pure irradiance
-; multiple that compares across renderers without matching cameras.
-;
-; LINEAR tonemapping deliberately: this is the measurement that must not run
-; through a curve, because a curve compresses exactly the high end where a
-; distribution error shows up.
+; Sky ambient with a graded sky: the shape half of the IBL, where `unit-light-transport-sky` pins
+; its scale. A uniform sky convolves to itself, so every filter agrees. This sky carries Godot's
+; editor-preview gradient, bright above and dark below, so up- and down-facing surfaces see very
+; different irradiance, and their ratio measures the filter's directionality.
 [gd_scene load_steps=9 format=3]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMat_1"]
@@ -54,19 +41,23 @@ shading_mode = 0
 
 [node name="LightTransportSkyGraded" type="Node3D"]
 
+; LINEAR tonemapping: a curve compresses the high end, where a distribution error shows.
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Env_1")
 
 [node name="DarkSun" type="DirectionalLight3D" parent="."]
 light_energy = 0.0
 
+; The floor faces +Y and sees almost only sky. It shares one albedo with the wall, and the
+; unshaded square gives that albedo, so each surface reads as an irradiance multiple that
+; compares across renderers without matching cameras.
 [node name="LitGround" type="MeshInstance3D" parent="."]
 mesh = SubResource("Ground_1")
 surface_material_override/0 = SubResource("Lit_1")
 
-; Rotated 90 degrees about X so its normal points at +Z — a vertical wall,
-; which sees half sky and half ground where the floor sees almost only sky.
-; The floor/wall ratio is what measures the filter's directionality.
+; Rotated 90 degrees about X so its normal points at +Z: a vertical wall that sees half sky and
+; half ground where the floor sees almost only sky. The floor/wall ratio measures the filter's
+; directionality.
 [node name="LitWall" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 2, -3)
 mesh = SubResource("Wall_1")

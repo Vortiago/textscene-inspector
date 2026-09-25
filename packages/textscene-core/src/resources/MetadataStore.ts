@@ -1,23 +1,15 @@
-/**
- * Simple storage for resource metadata.
- * Replaces the metadata management from the old ResourceRegistry class.
- */
+/** External-resource metadata, looked up by id or by path. */
 
 import type { ExtResource } from '../parser/types';
 import * as logger from '../logger';
 
-/**
- * Stores resource metadata for lookup by ID or path.
- */
 export class MetadataStore {
   private resources = new Map<string, ExtResource>();
 
   /**
-   * Register a resource for lookup by both ID and path.
-   *
-   * Re-registering a known id under a new path (hot-reload rename) evicts
-   * the stale old-path entry so lookups by the old path miss. The eviction
-   * is skipped when another id still owns the old path entry (aliases).
+   * Register a resource for lookup by both id and path. Re-registering an id under a
+   * new path (hot-reload rename) evicts the old-path entry, unless another id still
+   * owns it.
    */
   register(resource: ExtResource): void {
     if (resource.id) {
@@ -35,23 +27,14 @@ export class MetadataStore {
     logger.info(`[MetadataStore] Registered: ${resource.type} id="${resource.id}" at ${resource.path}`);
   }
 
-  /**
-   * Get resource metadata by ID or path.
-   */
   get(idOrPath: string): ExtResource | undefined {
     return this.resources.get(idOrPath);
   }
 
-  /**
-   * Check if a resource exists.
-   */
   has(idOrPath: string): boolean {
     return this.resources.has(idOrPath);
   }
 
-  /**
-   * Get all unique resources.
-   */
   getAll(): ExtResource[] {
     const seen = new Set<string>();
     const unique: ExtResource[] = [];
@@ -66,17 +49,11 @@ export class MetadataStore {
     return unique;
   }
 
-  /**
-   * Clear all stored metadata.
-   */
   clear(): void {
     this.resources.clear();
     logger.info('[MetadataStore] Cleared');
   }
 
-  /**
-   * Get the number of unique resources.
-   */
   get size(): number {
     return this.getAll().length;
   }

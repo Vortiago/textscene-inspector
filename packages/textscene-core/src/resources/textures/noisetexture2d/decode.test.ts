@@ -37,7 +37,7 @@ describe('decodeNoiseTexture2D', () => {
       seamless: true,
       noise: 'SubResource("FastNoiseLite_qbhty")',
       colorRamp: 'SubResource("Gradient_16ij7")',
-      // Untouched by that resource, so still Godot's defaults.
+      // Not set by that resource, so still Godot's defaults.
       normalize: true,
       asNormalMap: false,
       bumpStrength: 8,

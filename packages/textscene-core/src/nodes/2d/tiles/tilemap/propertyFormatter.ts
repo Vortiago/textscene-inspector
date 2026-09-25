@@ -1,4 +1,4 @@
-/** TileMap property formatter for the details panel. */
+/** Formats TileMap properties for the details panel. */
 
 import type { PropertySection } from '../../../../core/NodeRegistry';
 import { formatNode2DProperties } from '../../../base/node2d/propertyFormatter';

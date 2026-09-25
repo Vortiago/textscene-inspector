@@ -1,6 +1,4 @@
-/**
- * pointlight2d linter registration - imports linter components to trigger self-registration.
- */
+/** Imports the PointLight2D linter modules so they self-register. */
 
 import './linterParser.js';
 import './linter.js';

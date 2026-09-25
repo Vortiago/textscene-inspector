@@ -1,16 +1,6 @@
 /**
  * Guard: slice registrations stay renderer-free, and Godot-resource parsing
  * stays inside the loading layer (ADR-0031).
- *
- *  1. Every slice `index.ts` is a THREE-free, React-free closure — a claim
- *     table a linter entry point can read without pulling a renderer in
- *     (the `buildableMaterialTypes` precedent, enforced repo-wide).
- *  2. `parseTresFile` is VALUE-imported only by the loading layer (the tres
- *     processor and the two slices whose decode consumes whole-file content);
- *     `import type { ParsedResource }` stays legal everywhere.
- *  3. Nobody value-shape-sniffs a property bag (`startsWith('Color(')` …) —
- *     the pattern the campaign retired; survivors are enumerated so the list
- *     can only shrink.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -46,6 +36,8 @@ function allSourceFiles(dir: string): string[] {
   return out;
 }
 
+// Every slice `index.ts` is a THREE-free, React-free closure: a claim table a
+// linter entry point can read without pulling a renderer in.
 describe('slice index closures are renderer-free', () => {
   it('no slice index.ts value-imports three or react, or reaches a .tsx', () => {
     const indexes = findRegisteringIndexes(here);
@@ -62,18 +54,19 @@ describe('slice index closures are renderer-free', () => {
       if (tsx.length) failures.push(`${relative(srcRoot, index)}: reaches ${tsx[0]}`);
     }
     expect(failures).toEqual([]);
-    // A walk that follows nothing reports no bare specifier, no `.tsx` and no
-    // unresolved specifier either, so all three checks above pass over 39
-    // one-file closures. Floored on the LARGEST rather than on each: five
-    // slice indexes legitimately reach only two files, so a per-closure floor
-    // able to catch a collapse would redden on them. Largest is 31 today.
+    // A walk that follows nothing passes all three checks above over one-file
+    // closures. The floor is on the largest closure, not on each, since some
+    // slice indexes legitimately reach only two files.
     expect(Math.max(...sizes)).toBeGreaterThan(15);
   });
 });
 
+// `parseTresFile` is value-imported only by the loading layer, and nobody
+// value-shape-sniffs a property bag (`startsWith('Color(')` …). Survivors of
+// either are enumerated, so each list can only shrink.
 describe('Godot-resource parsing stays in the loading layer', () => {
   // Value-imports of the ParsedResource module. `import type` is erased and
-  // legal everywhere; a VALUE import means "I parse file content myself".
+  // legal everywhere. A value import means "I parse file content myself".
   const PARSE_ALLOWED = new Set([
     'parser/parsedResource.test.ts',
     'resources/processors/createTresResourceProcessor.ts',
@@ -108,9 +101,9 @@ describe('Godot-resource parsing stays in the loading layer', () => {
   });
 
   const SNIFF_RE = /\.startsWith\(\s*['"](?:Color|Vector[23]i?|Rect2)\(/;
-  // Empty: bbcode used to sniff `[color=Color(…)]`, and no longer does —
-  // `Color::from_string` (`color.cpp:450-456`) has no constructor-literal branch
-  // at all, so that string resolves to the fallback like any unrecognised name.
+  // Empty: `Color::from_string` (`color.cpp:450-456`) has no constructor-literal
+  // branch, so bbcode's `[color=Color(…)]` resolves to the fallback like any
+  // unrecognised name.
   const SNIFF_ALLOWED = new Set<string>();
 
   it('nobody value-shape-sniffs a property bag', () => {

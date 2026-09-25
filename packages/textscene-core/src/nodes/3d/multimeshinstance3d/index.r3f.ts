@@ -1,5 +1,5 @@
 /**
- * MultiMeshInstance3D draws nothing here YET — the badge reads "not implemented". The
+ * MultiMeshInstance3D draws nothing, so the badge reads "not implemented". The
  * Node3D base still mounts, for `visible` and the workspace split.
  */
 

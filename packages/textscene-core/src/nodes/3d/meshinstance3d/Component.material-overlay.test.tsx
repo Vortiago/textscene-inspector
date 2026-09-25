@@ -1,23 +1,8 @@
 /**
- * `material_overlay` — a GeometryInstance3D material drawn OVER the surface
- * material rather than instead of it.
- *
- * `_geometry_instance_add_surface`
- * (`servers/rendering/renderer_rd/forward_clustered/render_forward_clustered.cpp:4228-4241`)
- * resolves the surface's own material chain first, and THEN, for the same
- * surface, adds a second one for `material_overlay`:
- *
- *   `_geometry_instance_add_surface_with_material_chain(ginstance, p_surface, material, m_src, p_mesh);`
- *   `if (ginstance->data->material_overlay.is_valid()) { … add it too … }`
- *
- * Two things follow, and they are the ones a "just swap the material" reading
- * gets wrong. It is an EXTRA draw of the same geometry, not a replacement. And
- * it is independent of `material_override`, which was already applied at `:4206`
- * to pick which material the first chain used — so a node carrying both draws
- * the override AND the overlay.
- *
- * The property has been parsed, typed and linted since the slice was written and
- * read by no render site, so it silently did nothing at all.
+ * `material_overlay` draws over the surface material, an extra draw of the same
+ * geometry (`servers/rendering/renderer_rd/forward_clustered/render_forward_clustered.cpp:4228-4241`).
+ * It is independent of `material_override`, applied at `:4206`, so a node with
+ * both draws both.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -95,8 +80,8 @@ describe('MeshInstance3D — material_overlay', () => {
     // Not a replacement: the surface keeps its own material.
     expect(which(drawn[0]!)).toBe('mesh');
     expect(which(drawn[1]!)).toBe('overlay');
-    // The SAME geometry, not a second copy — Godot re-adds the surface it
-    // already has rather than building another.
+    // The same geometry, not a second copy: Godot re-adds the surface it
+    // already has.
     expect(drawn[1]!.geometry).toBe(drawn[0]!.geometry);
   });
 
@@ -116,20 +101,18 @@ describe('MeshInstance3D — material_overlay', () => {
   it('draws the overlay after the surface, whichever pass they land in', async () => {
     const drawn = meshes(await render({ materialOverlay: 'SubResource("Mat_overlay")' }));
 
-    // Explicit rather than left to three's sort tie-breaks: the transparent list
-    // falls back to object id and the opaque list to material id, and both are
-    // creation order — which a re-parse can invert by remounting one material
-    // and not the other, silently swapping the overlay under its own surface.
+    // Explicit, not left to three's sort tie-breaks: those fall back to object or
+    // material id, creation order, which a re-parse can invert by remounting one
+    // material and not the other.
     expect(drawn[1]!.renderOrder).toBeGreaterThan(drawn[0]!.renderOrder);
   });
 
   it('leaves shadow casting to the surface it covers', async () => {
     const drawn = meshes(await render({ materialOverlay: 'SubResource("Mat_overlay")' }));
 
-    // `cast_shadow` is a property of the INSTANCE, not of a surface
-    // (`GeometryInstance3D`), so the overlay must not cast one of its own — the
-    // geometry is identical, so a second caster is redundant work that can only
-    // differ by acne. It still RECEIVES, because Godot lights it like any surface.
+    // `cast_shadow` belongs to the instance (`GeometryInstance3D`), not a surface,
+    // so the overlay casts no shadow of its own: the geometry is identical. It
+    // still receives, because Godot lights it like any surface.
     expect(drawn[1]!.castShadow).toBe(false);
     expect(drawn[1]!.receiveShadow).toBe(true);
   });

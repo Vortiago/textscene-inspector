@@ -1,18 +1,11 @@
 /**
- * Vendored default-theme icons GraphNode/GraphFrame need — `scene/theme/icons/`
- * (Godot 4.6.3), the same `data:` base64 embedding `native/themeIcons.ts` uses.
- * Kept in this slice (not `native/themeIcons.ts`, which is orchestrator-owned)
- * because both consumers are packet-owned; see that file's own doc for the
- * embedding rationale.
- *
- *  - GraphElement (`default_theme.cpp:261`, inherited by GraphNode/GraphFrame
- *    which each BIND_THEME_ITEM their own copy of the SAME key):
- *      set_icon("resizer", "GraphElement"/"GraphNode"/"GraphFrame", icons["resizer_se"])
- *  - GraphNode only (`default_theme.cpp:799`):
- *      set_icon("port", "GraphNode", icons["graph_port"])
- *
- * Licence: Godot Engine, MIT — see THIRD-PARTY-NOTICES.md.
+ * Default-theme icons from Godot 4.6.3's `scene/theme/icons/`, embedded as
+ * `data:` base64 like `native/themeIcons.ts`. `resizer` is `resizer_se` for
+ * GraphElement, GraphNode and GraphFrame (`default_theme.cpp:261`), and `port`
+ * is GraphNode's `graph_port` (`default_theme.cpp:799`).
  */
+
+// Licence: Godot Engine, MIT: see THIRD-PARTY-NOTICES.md.
 
 function svgDataUrl(base64: string): string {
   return `data:image/svg+xml;base64,${base64}`;

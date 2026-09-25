@@ -1,10 +1,7 @@
 /**
- * PinJoint3D strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * PinJoint3D strict validators, asserted through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator and no fixture text needs upkeep.
+ * Rule-level behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,15 +21,15 @@ describe('PinJoint3D strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('PinJoint3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
     expect(accepted).toEqual([]);
   });
 
-  // pin_joint_3d.cpp:37 — PROPERTY_HINT_RANGE "0.01,0.99,0.01", no or_greater/or_less: both bounds hard.
+  // pin_joint_3d.cpp:37: PROPERTY_HINT_RANGE "0.01,0.99,0.01", no or_greater/or_less: both bounds hard.
   describe('params/bias', () => {
     it('accepts a value inside 0.01-0.99', () => {
       expect(check('params/bias', '0.3')).toBeNull();
@@ -55,7 +52,7 @@ describe('PinJoint3D strict validators', () => {
     });
   });
 
-  // pin_joint_3d.cpp:38 — PROPERTY_HINT_RANGE "0.01,8.0,0.01", no or_greater/or_less: both bounds hard.
+  // pin_joint_3d.cpp:38: PROPERTY_HINT_RANGE "0.01,8.0,0.01", no or_greater/or_less: both bounds hard.
   describe('params/damping', () => {
     it('accepts a value inside 0.01-8.0', () => {
       expect(check('params/damping', '1.0')).toBeNull();
@@ -78,7 +75,7 @@ describe('PinJoint3D strict validators', () => {
     });
   });
 
-  // pin_joint_3d.cpp:39 — PROPERTY_HINT_RANGE "0.0,64.0,0.01", no or_greater/or_less: both bounds hard.
+  // pin_joint_3d.cpp:39: PROPERTY_HINT_RANGE "0.0,64.0,0.01", no or_greater/or_less: both bounds hard.
   describe('params/impulse_clamp', () => {
     it('accepts a value inside 0.0-64.0', () => {
       expect(check('params/impulse_clamp', '32.0')).toBeNull();

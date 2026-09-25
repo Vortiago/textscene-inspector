@@ -1,42 +1,8 @@
 /**
- * CPU-extruded 2D shadow volumes — the geometry half of Godot's `Light2D`
- * shadow pass, as plain vector math with no GL and no THREE.
- *
- * Godot builds a per-light polar depth map and samples it in `canvas.glsl`.
- * Under `shadow_filter = SHADOW_FILTER_NONE` that sampling is ONE `step()`, so
- * the result is a HARD in/out test — exactly what a stencil mask reproduces.
- * This module emits the mask geometry: for every occluder edge, the convex
- * region of points whose sightline to the light crosses that edge, extruded
- * past the light's reach.
- *
- * THIS IS THE UNFILTERED BRANCH ONLY, and unfiltered is only the property's
- * DEFAULT. PCF5/PCF13 average five or thirteen taps into a fraction, which a
- * stencil cannot carry, so a filtered light takes the other mechanism instead —
- * `shadowPolarMap.ts` plus the sampling variant in `lightQuad.ts` (ADR-0030).
- * The two are never both active on one light: `PointLight2D`'s gate picks one.
- *
- * What this module keeps is the case it is EXACT for, and it is exact rather
- * than approximate — under NONE the boundary is a one-pixel step, and analytic
- * volumes place it more precisely than the polar map's 2048 bins (0.18° each)
- * would. That precision is why the gate exists rather than one unified
- * mechanism: the `unit-lightoccluder2d-*` baselines measure ~1/255 mean here.
- *
- * SPACE. Everything here is the previewer's 2D world space: Godot pixels with
- * Y negated (three.js +Y up), which is what `polygonToSegments` already
- * produces. `edgeCastsShadow`'s winding test is stated for THAT space; the
- * signs are the negation of Godot's own Y-down convention.
- *
- * MEASURED, not derived (Godot 4.6.3, `pnpm ref:godot --probe`):
- *  - with the filter off, the lit/shadowed transition is one pixel wide and
- *    lands on the light→endpoint ray to within ~1 px (Godot's shadow map
- *    quantises the boundary by angle, so its wedge is a fraction of a pixel
- *    narrower). That boundary is the umbra edge under a filter too — PCF just
- *    ramps across it — so it is the right thing for this module to emit;
- *  - a fully shadowed pixel reads back the unlit surface colour exactly,
- *    because `Light2D.shadow_color` defaults to `Color(0, 0, 0, 0)`;
- *  - `cull_mode` selects edges by winding relative to the light, so a closed
- *    convex polygon under CULL_COUNTER_CLOCKWISE shadows only from its FAR
- *    edges and its own interior stays lit.
+ * CPU-extruded 2D shadow volumes: the stencil geometry for a `Light2D` under
+ * `shadow_filter = NONE`, whose one `step()` in `canvas.glsl` is a hard test. A filtered
+ * light samples `shadowPolarMap.ts` instead (ADR-0030), and `PointLight2D`'s
+ * gate picks one. Everything is in the previewer's 2D world space, Y up.
  */
 
 /** `OccluderPolygon2D.CullMode`. */
@@ -58,7 +24,7 @@ export interface LightRect {
 }
 
 export interface ShadowLight {
-  /** Shadow origin — the light node's world position. Rays radiate from here. */
+  /** Shadow origin: the light node's world position. Rays radiate from here. */
   x: number;
   y: number;
   /**
@@ -71,7 +37,7 @@ export interface ShadowLight {
 
 export interface ShadowCasterEdges {
   /**
-   * Flat world-space `[ax,ay, bx,by, …]` — FOUR numbers per edge, one pair per
+   * Flat world-space `[ax,ay, bx,by, …]`: four numbers per edge, one pair per
    * endpoint. A closed polygon has already had its wrap-around edge appended.
    */
   segments: ArrayLike<number>;
@@ -79,14 +45,9 @@ export interface ShadowCasterEdges {
 }
 
 /**
- * How far past the light's reach a volume's far cap is pushed.
- *
- * The cap is two chords across the wedge (see `edgeShadowRing`), so its closest
- * approach to the light is `far · cos(θ/4)` for a wedge of angle θ. θ is capped
- * at π — an edge can only subtend more by containing the light, which is the
- * degenerate case `edgeCastsShadow` already rejects — so `cos(θ/4) ≥ cos(45°)`
- * and a factor of √2 is the exact requirement. 1.5 keeps a margin over it
- * without pushing coordinates far enough to lose float precision.
+ * How far past the light's reach a volume's far cap is pushed. The two-chord cap
+ * comes within `far · cos(θ/4)` of the light, and θ ≤ π for a casting edge, so
+ * √2 is the exact requirement. 1.5 keeps a margin without losing float precision.
  */
 const CAP_MARGIN = 1.5;
 
@@ -102,13 +63,10 @@ function orientation(ax: number, ay: number, bx: number, by: number, lx: number,
 }
 
 /**
- * Does edge a→b cast a shadow from a light at (lx, ly) under `cullMode`?
- *
- * CULL_DISABLED takes every edge; the two winding modes take the half that
- * faces the light under one polygon winding and the half that faces away under
- * the reverse. A collinear edge (orientation 0) casts nothing in any mode — its
- * shadow has no area, and that single test also covers a light sitting exactly
- * on the edge's line, in front of it or between its endpoints.
+ * Does edge a→b cast a shadow from a light at (lx, ly) under `cullMode`? The
+ * winding modes take the edges facing toward or away from the light, with signs
+ * that negate Godot's Y-down convention. Measured: a closed convex polygon under
+ * CULL_COUNTER_CLOCKWISE shadows only from its far edges.
  */
 export function edgeCastsShadow(
   ax: number,
@@ -120,6 +78,8 @@ export function edgeCastsShadow(
   cullMode: OccluderCullMode
 ): boolean {
   const orient = orientation(ax, ay, bx, by, lx, ly);
+  // A collinear edge has no shadow area, and this also covers a light on the
+  // edge's line, in front of it or between its endpoints.
   if (!Number.isFinite(orient) || orient === 0) return false;
   if (cullMode === OCCLUDER_CULL_CLOCKWISE) return orient > 0;
   if (cullMode === OCCLUDER_CULL_COUNTER_CLOCKWISE) return orient < 0;
@@ -127,16 +87,10 @@ export function edgeCastsShadow(
 }
 
 /**
- * The convex ring of one edge's shadow volume, as flat `[x,y, …]`:
- * `[a, b, bFar, mFar, aFar]`.
- *
- * `a`/`b` are the edge itself (the near boundary — points between the light and
- * the edge stay lit). `aFar`/`bFar` sit on the two boundary rays past the
- * light's reach, and `mFar` caps the gap between them along the angular
- * bisector so the cap cannot cut back inside the lit area for a wide wedge.
- *
- * Returns null when the volume has no area: a zero-length edge, an endpoint
- * exactly on the light, or an edge collinear with it.
+ * The convex ring `[a, b, bFar, mFar, aFar]` of one edge's shadow volume, or null
+ * when it has no area. The edge is the near boundary. `mFar` caps the far ends
+ * along the bisector, so a wide wedge's cap cannot cut back into the lit area.
+ * Measured: Godot's unfiltered boundary lands on the light→endpoint ray within ~1 px.
  */
 export function edgeShadowRing(
   ax: number,
@@ -173,7 +127,7 @@ export function edgeShadowRing(
   mx /= ml;
   my /= ml;
 
-  // Past the light's reach AND past both endpoints, so the cap never lands
+  // Past the light's reach and past both endpoints, so the cap never lands
   // between the light and the edge for an occluder outside the lit rect.
   const far = CAP_MARGIN * Math.max(reach, da, db);
   if (!Number.isFinite(far)) return null;
@@ -197,9 +151,8 @@ export function lightReach(light: ShadowLight): number {
 
 /**
  * Godot's occluder cull: keep an occluder only while its bounds overlap the
- * light's rect (`RendererCanvasRenderRD::light_update_shadow`). Ours bounds the
- * already-transformed points, so it is at least as tight as Godot's transformed
- * -AABB test — never looser, so it can only agree.
+ * light's rect (`RendererCanvasRenderRD::light_update_shadow`). Bounding the
+ * transformed points is never looser than Godot's transformed-AABB test.
  */
 export function casterInLightRect(segments: ArrayLike<number>, rect: LightRect): boolean {
   if (segments.length < 4) return false;
@@ -220,16 +173,10 @@ export function casterInLightRect(segments: ArrayLike<number>, rect: LightRect):
 }
 
 /**
- * Every casting edge's volume, triangulated into one non-indexed `[x,y,z, …]`
- * buffer (z is 0 — the 2D canvas plane; position the mesh, not the vertices).
- *
- * Fed to a stencil pre-pass with colour writes off and face culling OFF: the
- * rings are emitted in whichever winding the polygon gave, and overlapping
- * volumes are idempotent under a `REPLACE` stencil op, so neither winding nor
- * overlap needs resolving.
- *
- * Returns null when nothing casts, which is the common case and lets the caller
- * skip the stencil clear entirely.
+ * Every casting edge's volume as one non-indexed `[x,y,z, …]` buffer, z 0, or
+ * null when nothing casts. Drawn with face culling off under a `REPLACE` stencil,
+ * so winding and overlap need no resolving. Under NONE this beats the polar
+ * map's 0.18° bins at the one-pixel step: the goldens measure ~1/255 mean.
  */
 export function buildShadowVolumes(
   light: ShadowLight,

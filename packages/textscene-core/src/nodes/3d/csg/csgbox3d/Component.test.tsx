@@ -57,9 +57,8 @@ describe('<CSGBox3D>', () => {
     );
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     const mat = mesh.material as THREE.MeshStandardMaterial;
-    // sRGB→linear conversion at parse time means the channel is darker than
-    // the raw 0.4 but still non-zero and below the input — proves the
-    // material scalars were applied (not the default 0xcccccc grey).
+    // sRGB→linear conversion at parse time makes the channel darker than the raw 0.4 but still
+    // non-zero, which proves the material scalars applied, not the default 0xcccccc grey.
     expect(mat.color.r).toBeGreaterThan(0);
     expect(mat.color.r).toBeLessThan(0.4);
     expect(mat.color.r).toBeGreaterThan(mat.color.b); // reddish-brown, r > b

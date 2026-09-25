@@ -1,14 +1,7 @@
 /**
- * What the two grounding tiers DO, once a bound carries one.
- *
- * ADR-0032 splits a bound by who enforces it: `enforced` means Godot's setter
- * refuses or alters the value, `hinted` means only the inspector's
- * `PROPERTY_HINT_RANGE` says so. That distinction is worth nothing unless it
- * reaches the diagnostic, and per END rather than per bound — a floor and a
- * ceiling are routinely grounded differently on the same property.
- *
- * The registry-wide sweep that requires every bound to carry one of the two is
- * the sibling `boundGrounding.test.ts`.
+ * What the two grounding tiers do to a diagnostic. ADR-0032: `enforced` means Godot's setter refuses or alters the value,
+ * `hinted` means only `PROPERTY_HINT_RANGE` says so. The tier applies per end, since a floor and a ceiling are often
+ * grounded differently. The registry-wide check that every bound carries one is the sibling `boundGrounding.test.ts`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -69,8 +62,6 @@ describe('per-end grounding', () => {
   });
 
   it('grounds every bounded combinator, not just float and int', () => {
-    // The audit found eight combinators that could not carry a citation, which
-    // covered a large share of the bounds needing one.
     const cases: PropertyValidator[] = [
       v.radians('angle', { maxDeg: 180, hinted: 'a.cpp:1' }),
       v.nonNegativeFloat('n', { hinted: 'b.cpp:2' }),
@@ -98,12 +89,8 @@ describe('per-end grounding', () => {
   });
 
   it('splits float and int the same way strictInt does', () => {
-    // `float`/`int` must split the tier per END rather than through
-    // `boundSeverity`, which returns 'error'
-    // unless BOTH ends are hinted — so `{ enforced: { min }, hinted: { max } }`
-    // typechecked but silently made the whole bound an error. CSGCylinder3D's
-    // `sides` (enforced floor csg_shape.cpp:1876, hinted ceiling :1849) is the
-    // real shape this fixes.
+    // `float`/`int` split the tier per end, not through `boundSeverity`, which returns 'error' unless both ends are
+    // hinted. CSGCylinder3D's `sides` (enforced floor csg_shape.cpp:1876, hinted ceiling :1849) is the real shape.
     const floatV = v.float('extra_cull_margin', {
       min: 0,
       max: 16384,
@@ -124,7 +111,7 @@ describe('per-end grounding', () => {
   });
 
   it('splits enumInt per end too, rather than collapsing both to error', () => {
-    // `boundSeverity` returned 'warning' only when BOTH ends were hinted, so an
+    // `boundSeverity` returned 'warning' only when both ends were hinted, so an
     // enforced floor made the whole bound error, ceiling included.
     const split = v.enumInt(
       'mode',
@@ -150,7 +137,7 @@ describe('per-end grounding', () => {
 
   it('keeps BOTH citations when the ends are grounded differently', () => {
     // Recording only the enforced one discarded the hinted end's file:line, so
-    // the citation sweep could never check it.
+    // the citation check could never see it.
     const split = v.float('extra_cull_margin', {
       min: 0,
       max: 16384,
@@ -164,7 +151,7 @@ describe('per-end grounding', () => {
   it('keeps both ENFORCED citations too, not just the first', () => {
     // `Control.anchors_preset` is the live shape: a -1 early return at one line
     // and an ERR_FAIL_INDEX at another. Dropping the max cite put it outside the
-    // citation sweep, so a wrong or malformed one could never fail.
+    // citation check, so a wrong or malformed one could never fail.
     const preset = v.int('anchors_preset', {
       min: -1,
       max: 15,
@@ -177,18 +164,10 @@ describe('per-end grounding', () => {
 
 describe('an end no value can reach reports at the setter\'s tier', () => {
   it('holds for every bounded validator in the live registry', () => {
-    // The tier split is unfalsifiable from inside one combinator: `endSeverity`
-    // derives its own answer, so a wrong one looks exactly like a right one.
-    // This is the second file. A hint end sits behind a setter end that is at
-    // or INSIDE it — no value can be outside the hint without the setter having
-    // refused it first — so the band the hint's tier would describe is empty
-    // and the end must report the setter's `error`.
-    // `everyValidator`, not `registeredTypes('declaring') x getOwnKeys()`: the
-    // latter reaches ROOTS only, so the 88 leaf validators behind a wildcard
-    // dispatcher — Generic6DOFJoint3D, `PhysicalBone3D.joint_constraints/*`,
-    // `MenuButton.popup/item_#/*`, `Skeleton3D.bones/*` — were never examined,
-    // and the floor below passed on roots alone. Its sibling
-    // `boundGrounding.test.ts` had already been migrated; this one had not.
+    // `endSeverity` derives its own answer, so this second file checks it: a hint end at or inside a setter end
+    // describes an empty band, since the setter refuses first, so the end reports the setter's `error`.
+    // `everyValidator` reaches the leaves behind a wildcard dispatcher (Generic6DOFJoint3D,
+    // `PhysicalBone3D.joint_constraints/*`, `MenuButton.popup/item_#/*`, `Skeleton3D.bones/*`), not only roots.
     const wrong: string[] = [];
     let examined = 0;
     for (const { label, validator } of everyValidator(
@@ -205,7 +184,7 @@ describe('an end no value can reach reports at the setter\'s tier', () => {
       }
     }
     // Anti-vacuity, above the 1,613 ends the roots-only walk reached: a
-    // regression to that population has to FAIL rather than look thorough.
+    // regression to that population has to fail rather than look thorough.
     expect(examined).toBeGreaterThan(1650);
     expect(wrong).toEqual([]);
   });

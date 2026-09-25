@@ -1,7 +1,7 @@
 /**
- * `<TextRun>` — merged glyph quads at a `shapeText` layout's positions.
- * Assertions are scene-graph structure only (mesh/geometry/material shape),
- * never pixels — the paint itself is a golden-image concern elsewhere.
+ * `<TextRun>`: merged glyph quads at a `shapeText` layout's positions. The
+ * assertions read scene-graph structure only, never pixels: the paint is a
+ * golden-image concern.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -70,16 +70,10 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
       "(0.2 * distance below line top) would shift every ascender-height vertex LEFT, which is the " +
       "wrong direction and (for a run boundary) eats into the space that precedes it.",
     () => {
-      // 'A' (fontSize 16, atlas bake size 42, SCALE = 16/42): yoffset=12.8916015625,
-      // height=34, bake `base` = 44.8916015625 (both floats — `roundDecimal: null`
-      // leaves the bake tool's own unrounded numbers, but `base - yoffset` is an
-      // integer 32 either way, since both carry the SAME baseline offset).
-      // baselineOffsetPx at fontSize 16 = ceil(2189 * 16/2048) = 18.
-      // topPx = 18 - (44.8916015625 - 12.8916015625)*(16/42) = 5.809523809...;
-      // bottomPx = topPx + 34*(16/42) = 18.761904761... — the bitmap's own bottom
-      // edge sits a shade BELOW the baseline (the bake's anti-aliasing padding:
-      // 12.8916015625 + 34 - 44.8916015625 = 2 bake px), not the ~18.8 below the
-      // line top a top-edge pivot would use.
+      // 'A' at 16 (bake size 42, SCALE = 16/42): yoffset 12.8916015625, height 34,
+      // `base` 44.8916015625, so `base - yoffset` = 32. baselineOffsetPx = ceil(2189 *
+      // 16/2048) = 18, topPx = 18 - 32*(16/42) = 5.809523809..., bottomPx = topPx +
+      // 34*(16/42) = 18.761904761..., 2 bake px of AA padding below the baseline.
       const skewed = buildGlyphQuadArrays(layoutFor('A'), 16, 0.2);
       const straight = buildGlyphQuadArrays(layoutFor('A'), 16, 0);
       const topDx = skewed.positions[0]! - straight.positions[0]!;
@@ -105,23 +99,13 @@ describe('buildGlyphQuadArrays (pure geometry math)', () => {
       const topPx = -arrays.positions[1]!;
       expect(layout.baselineOffsetPx).toBe(18);
       expect(topPx).toBeCloseTo(18 - (OPEN_SANS_ATLAS_INFO.base - a.yoffset) * SCALE, 6);
-      // The reconciliation is genuinely nonzero: the bake anchor and the shaped
-      // ascent are DIFFERENT quantities, so a painter that ignored one would be
-      // wrong by this much on every line.
+      // The reconciliation is nonzero: the bake anchor and the shaped ascent are
+      // different quantities, so a painter that ignored one is wrong on every line.
       expect(OPEN_SANS_ATLAS_INFO.base * SCALE).not.toBeCloseTo(layout.baselineOffsetPx, 3);
-      // `OPEN_SANS_ATLAS_INFO.base` is msdf-bmfont-xml's own `baseline`
-      // (`index.js:346`): `os2.sTypoAscender * (fontSize / unitsPerEm)`, ATLAS
-      // fontSize = 42 here. For OpenSans_SemiBold, OS/2 `sTypoAscender` (2189)
-      // equals the hhea `ascent` `OPEN_SANS_METRICS.ascent` bakes separately —
-      // so `base * (16/42)` reduces to `2189 * (16/2048)` regardless of the
-      // atlas's own bake size, and the reconciliation below is really just
-      // Godot's ceiling rule's own discarded remainder
-      // (`getFontAscentPx`/`text_server_adv.cpp:1515-1516`): `ceil(2189*16/2048)
-      // - 2189*16/2048 = 18 - 17.1015625 = 0.8984375`. It is unrounded (`bake-
-      // metrics.mjs` bakes `roundDecimal: null`) but bake-size-independent
-      // either way — the fix changed `base`'s exact float (was 45 pre-fix,
-      // the whole-bake-pixel round of 44.8916015625) without changing which
-      // constants this reconciliation is actually built from.
+      // `base` is msdf-bmfont-xml's `baseline` (`index.js:346`), `os2.sTypoAscender *
+      // (42 / unitsPerEm)`, and OpenSans_SemiBold's `sTypoAscender` equals its hhea ascent
+      // (2189). So the reconciliation is Godot's ceiling remainder (`text_server_adv.cpp:1515-1516`):
+      // `ceil(2189*16/2048) - 2189*16/2048 = 18 - 17.1015625 = 0.8984375`, whatever the bake size.
       expect(OPEN_SANS_ATLAS_INFO.base * (2048 / 42)).toBe(2189);
       expect(18 - OPEN_SANS_ATLAS_INFO.base * SCALE).toBeCloseTo(0.8984375, 10);
     }
@@ -300,10 +284,8 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
       '`renderOrder` is deliberately NOT a `useMemo` dep (`TextRun.tsx`\'s own deps list), so ' +
       'changing only it forces a second commit of the SAME material/texture object.',
     async () => {
-      // SAME layout object reference across both renders -- `layout` is a
-      // `useMemo` dep, so calling `canvasLayoutFor('Hi')` a second time (a
-      // fresh object, equal contents but different identity) would rebuild
-      // the material for that reason alone, defeating the point of this test.
+      // The same layout object across both renders: `layout` is a `useMemo` dep,
+      // so a fresh `canvasLayoutFor('Hi')` would rebuild the material by identity alone.
       const layout = canvasLayoutFor('Hi');
       const renderer = await ReactThreeTestRenderer.create(
         <TextRun layout={layout} fontSizePx={16} tint={WHITE} renderOrder={0} />

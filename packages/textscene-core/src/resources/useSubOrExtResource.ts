@@ -1,15 +1,7 @@
 /**
- * Resolve a resource-valued property to its `{ type, data }` regardless of which
- * of the two forms the scene uses:
- *
- *   `SubResource("id")` — an inline `[sub_resource]` block, resolved synchronously
- *   `ExtResource("id")` — a standalone `.tres`, loaded through the resource
- *                         pipeline and adapted to the same shape
- *
- * Either resolver alone silently drops half the scenes in the wild: a
- * CollisionShape whose `shape` is a `.tres` drew no gizmo (three vendored
- * physics scenes reference `godot3_robot_head_collision.tres` that way), and a
- * NavigationRegion whose polygon is inline drew no navmesh.
+ * A resource-valued property as `{ type, data }`, from either form: `SubResource("id")` resolves
+ * synchronously, and `ExtResource("id")` loads its `.tres` through the resource pipeline. A
+ * CollisionShape's `shape` and a NavigationRegion's polygon each come in both forms.
  */
 
 import { useMemo } from 'react';
@@ -28,8 +20,7 @@ export function useSubOrExtResource(
     [ref, internalResources]
   );
 
-  // Called unconditionally with '' when the shape is inline or absent (rules of
-  // hooks); '' short-circuits to pending inside the hook.
+  // Called with '' when the shape is inline or absent, to keep the hook count stable.
   const externalPath = useMemo(
     () => (inline ? null : resolveExtResourcePath(ref, externalResources)),
     [inline, ref, externalResources]

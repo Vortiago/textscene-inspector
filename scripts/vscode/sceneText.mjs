@@ -1,13 +1,8 @@
 /**
- * Builds the text-free twin of a `.tscn` used as the negative control in
- * `webview-csp-gate.mjs`.
- *
- * The twin is derived from the real fixture at run time rather than committed
- * beside it: a committed copy drifts silently the moment the fixture is edited,
- * and the whole point of the control is that the two scenes differ in exactly
- * one thing — whether any glyph is asked for. Everything else (node types,
- * anchors, rects) stays byte-identical, so ink that survives the blanking is
- * ink the text pipeline did not paint.
+ * Builds the text-free twin of a `.tscn`, the negative control in
+ * `webview-csp-gate.mjs`. It is derived at run time, since a committed copy
+ * drifts when the fixture changes. Only the glyphs differ, so ink that
+ * survives the blanking is ink the text pipeline did not paint.
  */
 
 /**

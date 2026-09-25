@@ -1,6 +1,6 @@
 /**
- * SpriteFrames decode: the `animations` dict-array literal → per-animation
- * frames + timing, with Godot's own defaults and duration clamp.
+ * SpriteFrames decode: the `animations` dict-array literal to per-animation
+ * frames and timing, with Godot's defaults and duration clamp.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -9,7 +9,7 @@ import {
   SPRITE_FRAME_MINIMUM_DURATION,
 } from './decode';
 
-// The exact shape Godot writes (from dodge_the_creeps' player.tscn).
+// The exact shape Godot writes.
 const ANIMATIONS = `[{
 "frames": [{
 "duration": 1.0,
@@ -116,9 +116,8 @@ describe('parseSpriteFramesAnimations', () => {
   });
 
   it('clamps a zero duration to Godot\'s frame minimum, not to 1.0', () => {
-    // `MAX(SPRITE_FRAME_MINIMUM_DURATION, (float)f["duration"])` — sprite_frames.cpp:225.
-    // A 0-duration frame BLINKS in Godot (0.01/fps); rounding it up to a full
-    // frame time instead made such a frame linger 100x too long.
+    // `MAX(SPRITE_FRAME_MINIMUM_DURATION, (float)f["duration"])`, sprite_frames.cpp:225.
+    // A 0-duration frame blinks in Godot (0.01/fps), not a full frame time.
     const map = parseSpriteFramesAnimations(
       '[{"frames": [{"duration": 0.0, "texture": ExtResource("1")}, {"duration": 1.0, "texture": ExtResource("2")}], "name": &"x", "speed": 4.0, "loop": true}]'
     );
@@ -134,8 +133,8 @@ describe('parseSpriteFramesAnimations', () => {
 
   it('keeps its neighbours when one duration is written `inf`', () => {
     // `add_frame` has no is_finite guard (sprite_frames.cpp:39) and `rtos_fix`
-    // spells infinity `inf`, so Godot writes this file. The scan must consume
-    // the literal to stay paired with the frames; only the VALUE falls back.
+    // spells infinity `inf`, so Godot writes this file. The scan consumes the
+    // literal to stay paired with the frames. Only the value falls back.
     const map = parseSpriteFramesAnimations(
       '[{"frames": [{"duration": 3.0, "texture": ExtResource("1")}, {"duration": inf, "texture": ExtResource("2")}, {"duration": 2.0, "texture": ExtResource("3")}], "name": &"x", "speed": 4.0, "loop": true}]'
     );
@@ -143,12 +142,9 @@ describe('parseSpriteFramesAnimations', () => {
   });
 
   it('keeps a frame whose texture slot is null, with its authored duration', () => {
-    // `_get_animations` writes `f["texture"]` unconditionally
-    // (sprite_frames.cpp:184) and the writer spells a null Ref `null`;
-    // `_set_animations` gates only on `f.has("texture")` (:222) and `add_frame`
-    // has no null guard (:35-41), so Godot round-trips a blank frame. Dropping
-    // it here shortened the animation AND, via the frame-count guard,
-    // flattened every authored duration to 1.
+    // `_get_animations` writes `f["texture"]` unconditionally (sprite_frames.cpp:184)
+    // as `null`. `_set_animations` gates only on `f.has("texture")` (:222) and
+    // `add_frame` has no null guard (:35-41), so Godot round-trips a blank frame.
     const map = parseSpriteFramesAnimations(
       '[{"frames": [{"duration": 0.5, "texture": ExtResource("1")}, {"duration": 3.0, "texture": null}, {"duration": 0.5, "texture": ExtResource("2")}], "name": &"blink", "speed": 1.0, "loop": true}]'
     );

@@ -43,9 +43,9 @@ pixel_size = 0.01
         invalid: [{ value: '"invalid_format"', contains: ['texture', 'resource reference'] }],
       },
       {
-        // sprite_3d.cpp:685 hints only 3 labels, and set_billboard_mode:598
-        // ERR_FAIL_INDEX(p_mode, 3) explicitly excludes BILLBOARD_PARTICLES
-        // (StandardMaterial3D's 4th value) — 3 is not a legal Sprite3D value.
+        // sprite_3d.cpp:685 hints only 3 labels, and set_billboard_mode:598 ERR_FAIL_INDEX(p_mode,
+        // 3) excludes BILLBOARD_PARTICLES (StandardMaterial3D's 4th value), so 3 is not a legal
+        // Sprite3D value.
         prop: 'billboard',
         valid: [0, 1, 2],
         invalid: [
@@ -67,11 +67,9 @@ pixel_size = 0.01
         invalid: [{ value: 10, contains: ['axis', '0-2'] }],
       },
       {
-        // sprite_3d.cpp:682 hints "0.0001,128" closed at both ends and the
-        // setter assigns straight through, so out-of-band is the hinted tier:
-        // a warning, and the ceiling reports as well as the floor. A bare
-        // "> 0" error would invent a severity and let `pixel_size = 500.0`
-        // through in silence.
+        // sprite_3d.cpp:682 hints "0.0001,128" closed at both ends, and the setter assigns straight
+        // through, so out-of-band values warn at both the floor and the ceiling. A bare "> 0" error
+        // would invent a severity and pass `pixel_size = 500.0` in silence.
         prop: 'pixel_size',
         valid: [0.01, 0.0001, 128],
         invalid: [
@@ -121,7 +119,7 @@ pixel_size = 0.01
       {
         prop: 'frame_coords',
         valid: ['Vector2i(1, 2)'],
-        // A grid that HOLDS the cell: `set_frame_coords` ERR_FAIL_INDEXes both
+        // A grid that holds the cell: `set_frame_coords` ERR_FAIL_INDEXes both
         // components (sprite_3d.cpp:894-895), so on the default 1x1 grid
         // `Vector2i(1, 2)` is a write Godot refuses, not a valid example.
         with: { hframes: 4, vframes: 4 },
@@ -213,8 +211,8 @@ pixel_size = 0.01
     });
 
     it('reads an exponent-spelled grid at its real size', () => {
-      // `parseInt` stopped at the `e` and read `2e1` as 2, so a frame inside a
-      // twenty-column grid was reported out of range at error tier.
+      // `2e1` is 20, not the 2 `parseInt` would read, so the frame lies inside a twenty-column
+      // grid.
       expectClean(
         scene(
           node(
@@ -396,9 +394,8 @@ pixel_size = 0.01
 
 describe('frame_coords against the authored grid', () => {
   it('reports a column past hframes, as the 2D twin does', () => {
-    // `set_frame_coords` ERR_FAIL_INDEXes both components against the grid
-    // (sprite_3d.cpp:894-895) — the same guard `sprite2d-frame-coords-range`
-    // reports on, cited by this slice's own validator and never checked.
+    // `set_frame_coords` ERR_FAIL_INDEXes both components against the grid (sprite_3d.cpp:894-895),
+    // the same guard `sprite2d-frame-coords-range` reports on.
     expectDiagnostic(
       scene(node('Sprite3D', { texture: 1, hframes: 4, vframes: 2, frame_coords: 'Vector2i(4, 0)' })),
       { ruleName: 'sprite3d-frame-coords-range', severity: 'error', contains: ['Maximum is 3'] }
@@ -421,13 +418,10 @@ describe('frame_coords against the authored grid', () => {
 });
 
 /**
- * Phase 2 runs after a phase-1 error (`linter/Linter.ts:32` gates on a parsed
- * scene, not an error-free one), so a converted spelling whose component no
- * int32 holds reaches this rule. `Vector2` holds DOUBLES: `4294967295` narrows
- * through `double -> int32` to the UB sentinel, not the -1 the `Vector2i`
- * spelling of the same digits wraps to. Measured on 4.6.3. The rule owes
- * silence on the whole literal — the sibling component is no more authored
- * than the unstorable one — and phase 1 reports the value itself.
+ * Phase 2 runs after a phase-1 error (`linter/Linter.ts:32` gates on a parsed scene), so a
+ * converted spelling whose component no int32 holds reaches this rule. `Vector2` holds doubles, so
+ * `4294967295` narrows to the UB sentinel, not the -1 the `Vector2i` spelling wraps to (measured on
+ * 4.6.3). The rule stays silent, and phase 1 reports the value.
  */
 describe('Sprite3D frame_coords with a converted component no int32 holds', () => {
   it('says nothing about the sibling row, and phase 1 still errors', () => {

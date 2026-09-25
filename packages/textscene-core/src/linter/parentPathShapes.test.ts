@@ -1,23 +1,8 @@
 /**
- * Every shape a `parent=` can take, and where Godot actually puts the node.
- *
- * This is the COMPLETENESS check, and it is a table because the per-shape cases
- * in `Linter.orphanedNodes.test.ts` could never be one: each tests a spelling
- * somebody thought of, so a shape nobody thought of is invisible — which is how
- * an override heading between an instance and the path shipped broken, along
- * with declaration order and `%Name`. Here the axes are named — the spelling,
- * the opacity of the ancestor the path crosses, and the DECLARATION ORDER of
- * what it names — so a missing shape is a visibly absent ROW.
- *
- * Those cases stay: they assert that a PLACED node is reachable by the phase-2
- * rules, which is a different claim from where it was placed, and this file
- * asserts nothing about it. Neither subsumes the other.
- *
- * The `godot` column is measured, not derived: each row was instantiated by
- * `godot --headless` (4.7.2) and the column is where `Body` came out. A `#` in
- * it means the path vanished and Godot re-rooted under that name, so the one
- * column drives both assertions — placement when it resolves, and the exact
- * rename when it does not. Deriving these by hand got four of them wrong.
+ * Every shape a `parent=` can take, and where Godot puts the node: the
+ * completeness table. Its axes are the spelling, the opacity of the ancestor the
+ * path crosses and the declaration order of what it names, so a missing shape is
+ * an absent row. `Linter.orphanedNodes.test.ts` asserts a placed node's reach.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -34,15 +19,18 @@ const ROOT = node('Node2D', {}, { name: 'Root' });
 const body = (parent: string) => node('Node2D', {}, { name: 'Body', parent });
 
 interface Shape {
-  /** Where `Body` lands, from the headless run. `X#Body` means Godot re-rooted it. */
+  /**
+   * Where `Body` lands, measured by `godot --headless` (4.7.2), never derived.
+   * `X#Body` means the path vanished and Godot re-rooted it under that name.
+   */
   readonly godot: string;
   readonly source: string;
   /**
    * Why this parser deliberately answers differently. Only ever leniency: a
-   * name inside instanced content, which no parse of THIS file can rule out.
+   * name inside instanced content, which no parse of this file can rule out.
    */
   readonly divergence?: string;
-  /** Where it lands HERE, on the rows the divergence above moves. */
+  /** Where it lands here, on the rows the divergence above moves. */
   readonly ours?: string;
 }
 
@@ -56,7 +44,7 @@ const SHAPES: Record<string, Shape> = {
   'Mid:position': { godot: 'Mid/Body', source: scene(ROOT, ...MID, body('Mid:position')) },
   '.': { godot: 'Body', source: scene(ROOT, ...MID, body('.')) },
 
-  // `..`, which is a WALK: it only steps back from a name that resolved.
+  // `..`, which is a walk: it only steps back from a name that resolved.
   'Other/../Mid': { godot: 'Mid/Body', source: scene(ROOT, ...MID, body('Other/../Mid')) },
   'Missing/../Mid': { godot: 'Missing____Mid#Body', source: scene(ROOT, ...MID, body('Missing/../Mid')) },
   '../Mid': { godot: '___Mid#Body', source: scene(ROOT, ...MID, body('../Mid')) },
@@ -106,12 +94,9 @@ const SHAPES: Record<string, Shape> = {
 };
 
 /**
- * Where `Body` sits in the LENIENT tree, spelled the way Godot spells a live
- * path: an `instanceSubPath` is the segments the sub-scene supplies, so it goes
- * back in. Null when the node was stranded and is in no tree at all.
- *
- * The renderer walks this tree, so asserting it is what keeps the table a guard
- * on both surfaces rather than only on the diagnostic.
+ * Where `Body` sits in the lenient tree the renderer walks, spelled as Godot
+ * spells a live path: an `instanceSubPath` holds the segments the sub-scene
+ * supplies, so it goes back in. Null when the node was stranded in no tree.
  */
 function livePathOfBody(source: string): string | null {
   let found: string | null = null;
@@ -134,17 +119,16 @@ describe('every parent= shape, against a headless Godot run', () => {
       const orphans = lint(source).filter((d) => d.ruleName === ORPHAN);
 
       if (reRooted && !divergence) {
-        // The rename is the whole claim: it encodes the path Godot could not
-        // walk, spelled through `prepend_period` and `validate_node_name`. And
-        // a re-rooted node is in NO tree here, which is what makes every rule
-        // skip it — assert that too, or the row passes on a node we placed.
+        // The rename encodes the path Godot could not walk, spelled through
+        // `prepend_period` and `validate_node_name`. A re-rooted node is in no
+        // tree here, which makes every rule skip it, so that is asserted too.
         expect(orphans.map((d) => d.nodeName)).toEqual(['Body']);
         expect(orphans[0]?.message).toContain(`"${godot}"`);
         expect(livePathOfBody(source)).toBeNull();
       } else {
-        // Resolved — or resolved only because we cannot see inside an instance.
-        // The path assertion is what stops this arm passing on a scene that
-        // failed to parse at all, which produces no orphan either.
+        // Resolved, or resolved only because an instance's content is unseen. The
+        // path assertion stops this arm passing on a scene that failed to parse,
+        // which produces no orphan either.
         expect(orphans).toEqual([]);
         expect(livePathOfBody(source)).toBe(ours ?? godot);
       }

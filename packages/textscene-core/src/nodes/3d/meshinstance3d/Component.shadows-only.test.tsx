@@ -1,22 +1,8 @@
 /**
- * `cast_shadow = SHADOWS_ONLY` (3) hides the MESH, not its shadow and not its
- * descendants.
- *
- * class_geometryinstance3d.html: "Will only show the shadows casted from this
- * object. In other words, the actual mesh will not be visible, only the shadows
- * casted from the mesh will be."
- *
- * We implemented it as `visible = false` on the R3F `<mesh>`, which is wrong
- * twice over — three.js's `WebGLShadowMap.renderObject` opens with
- * `if (object.visible === false) return;`, so an invisible mesh is skipped in
- * the shadow pass AND its whole subtree is never walked. A SHADOWS_ONLY mesh
- * therefore cast nothing (the one thing the mode exists for) and deleted every
- * node parented under it.
- *
- * `material.visible = false` is no better: the same function gates the depth
- * material on it. What DOES separate the two passes is writing neither colour
- * nor depth — `getDepthMaterial` copies alphaMap/alphaTest/map but never
- * `colorWrite`, so the shadow is unaffected.
+ * `cast_shadow = SHADOWS_ONLY` (3) hides the mesh, not its shadow and not its
+ * descendants (class_geometryinstance3d.html). `visible = false` would skip the
+ * shadow pass and the subtree in `WebGLShadowMap.renderObject`, so the mesh
+ * writes neither colour nor depth instead.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -58,9 +44,8 @@ function meshOf(renderer: Awaited<ReturnType<typeof render>>) {
 }
 
 /**
- * Whether the child would actually be RENDERED. three walks the graph and bails
- * on the first `visible === false`, so presence in the tree proves nothing —
- * every ancestor has to be visible too.
+ * Whether the child would be rendered. three stops at the first
+ * `visible === false`, so every ancestor has to be visible too.
  */
 function childIsRendered(renderer: Awaited<ReturnType<typeof render>>) {
   const child = renderer.scene
@@ -100,8 +85,7 @@ describe('<MeshInstance3D> cast_shadow = SHADOWS_ONLY', () => {
   });
 
   it('still hides a mesh whose `visible` is false — and its subtree with it', async () => {
-    // Godot's own visibility IS hierarchical (class_node3d.html
-    // `is_visible_in_tree`), so this one is correct as-is.
+    // Godot's visibility is hierarchical (class_node3d.html `is_visible_in_tree`).
     const renderer = await render({ visible: false });
     expect(meshOf(renderer).visible).toBe(false);
     expect(childIsRendered(renderer)).toBe(false);

@@ -9,42 +9,25 @@ import { valueCode } from './v/codes.js';
 import { TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.js';
 
 /**
- * Build the anchored regex for a fixed-arity float tuple like `Vector3(x, y, z)`
- * or `Color(r, g, b, a)`. Each component is a capture group, so callers that
- * `.exec()` the returned regex still read `match[1..arity]`.
- *
- * Components use {@link TSCN_FLOAT_PATTERN_SOURCE} — Godot's tokenizer grammar,
- * which is the renderer's `FLOAT_PATTERN_SOURCE` (`5.`, scientific notation, no
- * leading `+` or `.`) PLUS `inf` / `-inf` / `inf_neg` / `nan`. The linter deliberately
- * accepts MORE than the renderer parses here: Godot writes a non-finite
- * component into every real-typed composite, so reporting one is a false
- * positive, while feeding `Infinity` to three.js is NaN geometry. The renderer
- * keeps its finite grammar and substitutes its documented default instead;
- * `TSCN_FLOAT_PATTERN_SOURCE`'s docblock holds the full argument.
- *
- * The type name and the `(` are two separate tokens, so whitespace between them
- * is legal: `_parse_construct` takes `TK_PARENTHESIS_OPEN` from its own
- * `get_token` call (variant_parser.cpp:553-557), and `get_token` discards every
- * character <= 32 before a token (:416-418). `Vector2 (1, 2)` is therefore a
- * file Godot loads, and refusing it reported a format error on a hand-edited
- * scene the engine opens — which is the file a linter exists for. The finite
- * sibling `slotTupleRegex` spells the same thing; the two must stay identical
- * outside the component grammar, which `godotLiteralGrammar.guard.test.ts` now
- * asserts behaviourally.
+ * The anchored regex for a fixed-arity float tuple like `Vector3(x, y, z)`, one
+ * capture group per component. Components use {@link TSCN_FLOAT_PATTERN_SOURCE},
+ * which adds `inf`/`-inf`/`inf_neg`/`nan` to the renderer's finite grammar,
+ * since Godot writes a non-finite component into every real-typed composite.
  */
 export function makeFloatTupleRegex(typeName: string, arity: number): RegExp {
   const component = `(${TSCN_FLOAT_PATTERN_SOURCE})`;
   const body = Array.from({ length: arity }, () => component).join('\\s*,\\s*');
-  // Same alternation as the renderer's builder, from the same table: a slot
-  // accepts every spelling `can_convert_strict` converts into it.
+  // A slot accepts every spelling `can_convert_strict` converts into it.
+  // Whitespace before `(` is legal: `_parse_construct` takes the parenthesis from
+  // its own `get_token` (variant_parser.cpp:553-557), which skips chars <= 32 (:416-418).
+  // `slotTupleRegex` must match outside the component grammar (`godotLiteralGrammar.guard.test.ts`).
   return new RegExp(`^${compositeSpellings(typeName)}\\s*\\(\\s*${body}\\s*\\)$`);
 }
 
 /**
  * A validator that a property value is `typeName(<arity floats>)`. `expectation`
- * is the human-readable "must be …" suffix (kept per-type so wording stays
- * exact, e.g. `Vector3 with 3 numbers like Vector3(0, 0, 0)` vs `Rect2 format
- * like Rect2(0, 0, 100, 100)`).
+ * is the per-type "must be …" suffix, for example `Vector3 with 3 numbers like
+ * Vector3(0, 0, 0)`.
  */
 export function floatTupleValidator(
   propertyName: string,
@@ -54,12 +37,9 @@ export function floatTupleValidator(
   errorCode: string
 ): PropertyValidator {
   const regex = makeFloatTupleRegex(typeName, arity);
-  // The alteration is reported HERE rather than by each bound that reads the
-  // components, because it is a property of the SPELLING and every float-tuple
-  // slot in the registry is built from this one function. A slot with no bound
-  // at all — `v.vector2('start_position')` — has no other reporter, and the
-  // rules that read such a slot must stay silent about a number the engine
-  // narrowed, so without this the write is dropped by Godot and named nowhere.
+  // The alteration is reported here, not by each bound: it is a property of the
+  // spelling, and a slot with no bound, such as `v.vector2('start_position')`,
+  // has no other reporter.
   const alteredCode = valueCode(propertyName);
   return (key, value, line) => {
     const match = regex.exec(value);
@@ -71,13 +51,10 @@ export function floatTupleValidator(
         errorCode
       );
     }
-    // `compositeSpellings` admits the `i`-suffixed constructor
-    // `can_convert_strict` converts, whose arguments are narrowed through
-    // `_parse_construct<int32_t>` BEFORE the widening into this float slot. A
-    // component that survives that is a value the file states; one that does
-    // not is stored as something the file never names — the ADR-0032 error
-    // tier. The message quotes the literal and never the stored number, which
-    // is architecture-specific (`variant.h:369-370`) or a wrap.
+    // The `i`-suffixed spelling narrows through `_parse_construct<int32_t>`
+    // before widening into this float slot. A component that does not survive
+    // is the ADR-0032 error tier. The message quotes the literal, not the stored
+    // number, which is architecture-specific (`variant.h:369-370`) or a wrap.
     if (slotComponentsAltered(value, typeName, match.slice(1, arity + 1))) {
       return propertyError(
         key,
@@ -88,10 +65,9 @@ export function floatTupleValidator(
         alteredCode
       );
     }
-    // The same narrowing on a component the engine CAN store: `Vector2i(1.5, 2)`
+    // The same narrowing on a component the engine can store: `Vector2i(1.5, 2)`
     // reaches `_parse_construct<int32_t>` (variant_parser.cpp:721-723) and is
-    // stored as `(1, 2)` — the truncation the scalar int slot already warns
-    // about on the same text.
+    // stored as `(1, 2)`, the truncation the scalar int slot warns about.
     if (isConvertedSpelling(typeName, compositeTypeName(value))) {
       return truncatedComponent(propertyName, key, line, match.slice(1, arity + 1), alteredCode);
     }

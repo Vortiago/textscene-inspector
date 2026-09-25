@@ -1,18 +1,8 @@
 /**
- * Builds a `BufferGeometry` from a Godot PrimitiveMesh sub-resource.
- *
- * A dispatch over the mesh slices: each slice owns its own decode (`decode.ts`,
- * property bag → typed data) and its own THREE construction (`build.ts`,
- * ADR-0031), so the axis fixes and off-by-30-degree corrections live next to the
- * type they belong to. This file only chooses which slice a `type=` names.
- *
- * Callers that need geometry as DATA rather than as JSX share this one
- * definition: CSGMesh3D wraps a mesh resource as a CSG contribution, and the
- * boolean evaluator needs triangles, not a React element.
- *
- * Returns `null` for unknown, external (GLB) or unresolvable mesh types, and for
- * a mesh Godot itself would refuse to build; the caller decides whether that
- * means a placeholder or nothing at all.
+ * Builds a `BufferGeometry` from a Godot PrimitiveMesh sub-resource by choosing
+ * the mesh slice a `type=` names: each slice owns its decode and its THREE
+ * build (ADR-0031). Plain data, not JSX, so CSGMesh3D's boolean evaluator shares
+ * the one definition.
  */
 
 import type * as THREE from 'three';
@@ -34,11 +24,9 @@ import { decodePrismMesh } from '../../../resources/meshes/prismmesh/decode';
 import { buildPrismMeshGeometry } from '../../../resources/meshes/prismmesh/build';
 
 /**
- * A stable key over the sub-resource's CONTENT, for memoizing the build.
- *
- * Keying on the resource object instead would rebuild (and never dispose) the geometry on
- * every reparse, because the parser allocates a fresh resource per parse and the source
- * pane reparses on every keystroke.
+ * A stable key over the sub-resource's content, for memoising the build. The parser
+ * allocates a fresh resource on every keystroke, so an identity key would rebuild the
+ * geometry each time and never dispose it.
  */
 export function primitiveMeshGeometryKey(resource: TscnInternalResource): string {
   return `${resource.type}|${JSON.stringify(resource.data)}`;
@@ -60,6 +48,7 @@ const BUILDERS: Record<string, (data: Record<string, string>) => THREE.BufferGeo
   PrismMesh: (data) => buildPrismMeshGeometry(decodePrismMesh(data)),
 };
 
+/** Null for an unknown, external (GLB) or unresolvable type, or a mesh Godot would refuse to build. */
 export function buildPrimitiveMeshGeometry(
   resource: TscnInternalResource
 ): THREE.BufferGeometry | null {

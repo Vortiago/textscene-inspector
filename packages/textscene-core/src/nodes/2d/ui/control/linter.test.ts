@@ -1,18 +1,7 @@
 /**
- * Control property-order rule.
- *
- * `Control::_set_anchors_layout_preset` is a setter with sibling side effects
- * (`scene/gui/control.cpp:982-1032`), and `SceneState::instantiate` applies a
- * node's properties in FILE order (`scene/resources/packed_scene.cpp`). So an
- * `anchor_*`/`offset_*`/`grow_*` line written before `anchors_preset` is
- * silently overwritten by it, and `anchors_preset` written before `layout_mode`
- * no-ops entirely — both measured against real Godot 4.6.3, not derived here.
- * `node()` (testkit) renders `[key = value]` lines in the ORDER its `props`
- * object lists them, which is exactly the file order this rule reads.
- *
- * Control linter tests — `Control::get_configuration_warnings()`
- * (control.cpp:246-256): a tooltip that can never show because the resolved
- * Mouse Filter is Ignore.
+ * Control rules: the `anchors_preset` file order (`scene/gui/control.cpp:982-1032`,
+ * `scene/resources/packed_scene.cpp`, measured in Godot 4.6.3), and the tooltip that
+ * Mouse Filter Ignore hides (control.cpp:246-256). `node()` writes the props in key order.
  */
 
 import { describe, it, expect } from 'vitest';

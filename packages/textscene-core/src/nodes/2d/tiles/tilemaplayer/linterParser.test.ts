@@ -73,9 +73,8 @@ tile_set = NotARef(1)
     });
 
     it('accepts the exact base64 value scenes/demos/2d/dynamic_tilemap_layers/world.tscn writes', () => {
-      // resource_format_text.cpp:1724-1728 switches the WHOLE FILE to base64
-      // once any PackedByteArray in it exceeds 64 bytes — the spelling every
-      // Godot-exported demo in this corpus actually carries.
+      // resource_format_text.cpp:1724-1728 switches the whole file to base64
+      // once any PackedByteArray in it passes 64 bytes.
       const real =
         'PackedByteArray("AAAOABoAAAAAAAAAAAAOABsAAAAAAAAAAAAOABwAAAAAAAAAAAAPABoAAAAAAAAAAAAPABsAAAAAAAAAAAAPABwAAAAAAAAAAAAQABoAAAAAAAAAAAAQABsAAAAAAAAAAAAQABwAAAAAAAAAAAARABoAAAAAAAAAAAARABsAAAAAAAAAAAARABwAAAAAAAAAAAASABoAAAAAAAAAAAASABsAAAAAAAAAAAASABwAAAAAAAAAAAATABoAAAAAAAAAAAATABsAAAAAAAAAAAATABwAAAAAAAAAAAAUABoAAAAAAAAAAAAUABsAAAAAAAAAAAAUABwAAAAAAAAAAAA=")';
       expect(check('tile_map_data', real)).toBeNull();
@@ -99,12 +98,8 @@ tile_set = NotARef(1)
   });
 
   describe('bare-assignment booleans — no ERR_FAIL, no PROPERTY_HINT_RANGE, so no bound in either direction', () => {
-    // Godot omits every one of these at its default value (all default
-    // true/false and are simply absent from a scene that never overrides
-    // them), so the corpus carries zero real occurrences to pin against —
-    // confirmed by grepping scenes/**/*.tscn for each key.
-    // The grounding differs per row and stays a column: four cite a
-    // bare-assignment setter, while navigation_enabled's PROPERTY_HINT_GROUP_ENABLE
+    // Godot omits each of these at its default, so no scene holds one to pin against.
+    // Four rows cite a bare-assignment setter. navigation_enabled's PROPERTY_HINT_GROUP_ENABLE
     // only makes the inspector group checkable and adds no value constraint.
     it.each([
       ['occlusion_enabled', 'bare assignment (tile_map_layer.cpp:3442-3450)'],
@@ -220,13 +215,9 @@ describe('tile_map_data element storage', () => {
   });
 
   /*
-   * Every element converts through `Variant::operator uint8_t()`
-   * (variant.cpp:1519-1521), because `_parse_byte_array`
-   * (variant_parser.cpp:600) pushes into a `Vector<uint8_t>` (:650). Measured
-   * on 4.6.3: `PackedByteArray(0, 0, 300, 0)` -> [0, 0, 44, 0],
-   * `PackedByteArray(-1, 0)` -> [255, 0],
-   * `PackedByteArray(1000000000, 0)` -> [0, 0],
-   * `PackedByteArray(300.5, 0)` -> [44, 0].
+   * `_parse_byte_array` (variant_parser.cpp:600) pushes into a `Vector<uint8_t>` (:650)
+   * through `Variant::operator uint8_t()` (variant.cpp:1519-1521). Measured on 4.6.3,
+   * an element of 300 stores 44, -1 stores 255, 1000000000 stores 0 and 300.5 stores 44.
    */
   it.each(['300', '-1', '1000000000', '300.5'])(
     'reports an element outside a byte as an error (%s)',
@@ -239,15 +230,15 @@ describe('tile_map_data element storage', () => {
   );
 
   it('never names the byte a value outside the band is stored as', () => {
-    // `uint8_t(300.5)` is undefined behaviour (variant.h:369-370); the 44 this
+    // `uint8_t(300.5)` is undefined behaviour (variant.h:369-370). The 44 this
     // x86_64 build stores is not a portable claim, so the message reports the
-    // ALTERATION and quotes the literal only.
+    // alteration and quotes the literal only.
     const diagnostic = validator('tile_map_data', 'PackedByteArray(300.5, 0)', 1);
     expect(diagnostic?.message).not.toMatch(/stores/);
   });
 
   it('warns rather than errors on a fraction the byte range holds', () => {
-    // `uint8_t(1.5)` is 1, defined and nameable — the truncation tier, which the
+    // `uint8_t(1.5)` is 1, defined and nameable: the truncation tier, which the
     // narrower band must not swallow.
     const diagnostic = validator('tile_map_data', 'PackedByteArray(1.5, 0)', 1);
     expect(diagnostic?.severity).toBe('warning');

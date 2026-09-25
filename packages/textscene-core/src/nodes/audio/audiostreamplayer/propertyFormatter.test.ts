@@ -1,6 +1,6 @@
 /**
- * AudioStreamPlayer property-formatter tests — the non-spatial player surfaces
- * the Stream + Mixing sections in the details panel.
+ * AudioStreamPlayer property formatter: the non-spatial player shows the Stream
+ * and Mixing sections in the details panel.
  */
 
 import { describe, it, expect } from 'vitest';

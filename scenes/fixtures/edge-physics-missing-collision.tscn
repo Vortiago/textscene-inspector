@@ -1,8 +1,7 @@
 [gd_scene format=3 uid="uid://edge_physics_missing_collision"]
 
-; StaticBody3D with NO CollisionShape3D child. Warning-level
-; (staticbody3d-needs-collision-shape) — the body still mounts/renders fine,
-; it's simply inert in physics. Lints with exactly that one warning.
+; StaticBody3D with no CollisionShape3D child: one warning (staticbody3d-needs-collision-shape).
+; The body mounts and renders, and is inert in physics.
 
 [node name="Scene" type="Node3D"]
 

@@ -1,71 +1,8 @@
 /**
- * ScrollContainer's native (WebGL canvas) container solve — a port of
- * `ScrollContainer::get_minimum_size`/`_update_scrollbars`/
- * `_update_scrollbar_position`/`_reposition_children` (`scene/gui/
- * scroll_container.cpp`), on top of `ScrollBar::get_minimum_size`/
- * `get_grabber_size`/`get_area_size`/`get_grabber_offset`
- * (`scene/gui/scroll_bar.cpp`) — `shared/scrollBarSolver.ts`'s
- * `scrollBarMinimumSize`/`scrollBarGrabberGeometry`, the SAME geometry a
- * standalone HScrollBar/VScrollBar registers under, called here with `min`
- * fixed at 0 (ScrollContainer's embedded bars never author `min_value`) —
- * plus `Range::get_as_ratio`/`set_page`'s own CLAMP (`scene/gui/range.cpp`).
- *
- * `scrollContainerScrollBars` is the ONE function both `scrollContainerLayout`
- * (this module, registered as this type's `ContainerLayoutFn`) and
- * `Component.tsx` (the painter) call: it is the single source of the
- * scrollbar geometry (visibility, each bar's own rect, its grabber's rect),
- * so the content-reservation math the layout function needs and the pixels
- * the painter draws can never drift apart into two formulas that happen to
- * agree today. Neither caller may recompute any of this from a narrower
- * subset of the inputs (e.g. re-deriving overflow from `custom_minimum_size`
- * alone) — that reintroduces exactly the drift this module exists to
- * prevent.
- *
- * `theme_override_styles/panel` (`ScrollContainer`'s own background chrome,
- * `NOTIFICATION_DRAW`'s `draw_style_box(theme_cache.panel_style, ...)`) is
- * NOT modelled: the DEFAULT theme registers it as `empty` for this class
- * specifically (`default_theme.cpp:657`, NOT the flat grey fill Panel/
- * PanelContainer default to), and the existing DOM `Component.tsx` renders no
- * background either — adding one here would be a NEW divergence, not a
- * closed one. Its MARGINS are, through `scrollContainerMargins`
- * (`_get_margins`, `:103-130`), because `draw_focus_border` raises them.
- *
- * `scrollbar_h_separation`/`scrollbar_v_separation` (`scroll_container.h:
- * 104-105`) default to 0 and have no `default_theme.cpp` override for the
- * `ScrollContainer` class specifically (only for `Tree`, an unrelated
- * class's OWN internal scrollbars) — so both are always 0 here, never
- * transcribed as a separate constant.
- *
- * Circularity note on `get_minimum_size()` (`scroll_container.cpp:57-71`):
- * Godot's OWN formula reads this Control's CURRENT `get_size()` to decide
- * whether the OTHER axis' AUTO-mode scrollbar would show, before that size
- * is known — workable in Godot's live, incremental layout (which simply
- * reads last frame's size) but not in this codebase's clean two-phase solve,
- * where minimum size is computed bottom-up BEFORE any rect is assigned. This
- * port therefore only reserves the OTHER axis' scrollbar thickness for the
- * SHOW_ALWAYS/RESERVE sub-case (unconditional, no circularity); the
- * DISABLED-axis + OTHER-axis-AUTO combination — content requires disabled-
- * axis DISABLED and the OTHER axis' AUTO scrollbar to depend on a
- * not-yet-known size — approximates that scrollbar as not shown. A narrow,
- * documented gap, not a silent one: `scrollContainerMinimumSize`'s own tests
- * pin exactly this scope.
- *
- * RTL moves the vertical bar to the leading edge and shifts the content past
- * the strip it reserves. Both bars are ANCHORED children, so
- * `Control::_size_changed` mirrors each one's whole rect
- * (`control.cpp:1785-1787`); the content children are not, since Godot places
- * them through `fit_child_in_rect`/`set_rect`, whose `_compute_offsets`
- * un-mirrors precisely what `_size_changed` mirrors back (`control.cpp:906-909`)
- * — `_reposition_children`'s own `ofs.x += width` (`:357-363`) is the whole
- * horizontal move. `_update_scrollbar_position`'s `lmar`/`rmar` swap
- * (`:294-295`) mirrors the left and right margins, which `_get_margins`
- * leaves EQUAL under every theme this codebase resolves, so the swap is an
- * identity here and each bar's rect is mirrored as the anchored child it is. `_update_scroll_hints` (`:605-658`) draws the
- * `scroll_hint_*` TextureRects, which this codebase does not render at all.
- *
- * Every rect/page/ratio formula below was cross-checked against the real
- * engine and `pnpm ref:godot --probe` pixels — see `nativeSolver.test.ts`'s
- * own header for the measurements.
+ * ScrollContainer's native container solve: a port of `ScrollContainer::get_minimum_size`,
+ * `_update_scrollbars`, `_update_scrollbar_position` and `_reposition_children`
+ * (`scroll_container.cpp`, `scroll_container.h`), over `shared/scrollBarSolver.ts` for the
+ * `scene/gui/scroll_bar.cpp` geometry and the CLAMPs of `scene/gui/range.cpp`.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -89,7 +26,7 @@ export const SCROLL_MODE_SHOW_ALWAYS = 2;
 export const SCROLL_MODE_SHOW_NEVER = 3;
 export const SCROLL_MODE_RESERVE = 4;
 
-/** `scroll_container.h:104-105`'s own default; no theme override for this class (see module doc). */
+/** `scrollbar_h_separation`/`scrollbar_v_separation` default to 0 (`scroll_container.h:104-105`), and `default_theme.cpp` overrides them only for `Tree`. */
 const SCROLLBAR_SEPARATION = 0;
 
 /** The four content insets `_get_margins` returns, spelled by side rather than as Godot's `Rect2(left, top, right, bottom)` packing. */
@@ -101,28 +38,20 @@ export interface ScrollContainerMargins {
 }
 
 /**
- * `ScrollContainer::_get_margins` (`scroll_container.cpp:103-130`): the
- * `panel` StyleBox's own margins, each raised to the `focus` StyleBox's when
- * `draw_focus_border` is set.
- *
- * This is the ONLY way `draw_focus_border` reaches a still frame. The focus
- * PANEL is gated on `has_focus(true) || child_has_focus()`
- * (`:474-475`) — runtime state no `.tscn` can author — but the margins are
- * unconditional, and `get_minimum_size` (`:74-75`), `_update_scrollbars`
- * (`:583-585`), `_update_scrollbar_position` (`:289-306`) and
- * `_reposition_children` (`:344-348`) all read them.
- *
- * Default theme: `panel` is a `StyleBoxEmpty` for this class
- * (`default_theme.cpp:655-657`), so every side is 0 without the flag; `focus`
- * is `make_flat_stylebox(style_focus_color)` (`:659`), whose
- * `set_content_margin_individual(Math::round(4 * scale) …)` (`:60`,
- * `default_margin = 4` at `:54`) is `theme.contentMargin`. A
- * `theme_override_styles/panel` or `/focus` on the node wins over either,
- * the same `n.styleBoxes`-first order every other solver follows.
+ * `ScrollContainer::_get_margins` (`scroll_container.cpp:103-130`): the `panel` margins, each
+ * raised to the `focus` margins under `draw_focus_border`. The focus panel needs runtime focus
+ * (`:474-475`), but these margins are unconditional: `get_minimum_size` (`:74-75`), `_update_scrollbars`
+ * (`:583-585`), `_update_scrollbar_position` (`:289-306`) and `_reposition_children` (`:344-348`) read them.
  */
 export function scrollContainerMargins(n: SolveNode, theme: SolveContext['theme']): ScrollContainerMargins {
+  // The default `panel` is a `StyleBoxEmpty` (`default_theme.cpp:655-657`), so every side is 0. It
+  // is never drawn: `default_theme.cpp:657` registers it `empty`, unlike Panel's grey fill. A
+  // node's `theme_override_styles/panel` or `/focus` wins over either default.
   const panel = n.styleBoxes.panel?.contentMargin ?? { left: 0, top: 0, right: 0, bottom: 0 };
   if (props(n).drawFocusBorder !== true) return { ...panel };
+  // The default `focus` is `make_flat_stylebox(style_focus_color)` (`:659`), whose
+  // `set_content_margin_individual(Math::round(4 * scale) …)` (`:60`, `default_margin = 4` at
+  // `:54`) is `theme.contentMargin`.
   const m = theme.contentMargin;
   const focus = n.styleBoxes.focus?.contentMargin ?? { left: m, top: m, right: m, bottom: m };
   return {
@@ -138,12 +67,9 @@ function props(n: SolveNode): ScrollContainerProperties {
 }
 
 /**
- * HScrollBar's own minimum HEIGHT / VScrollBar's own minimum WIDTH — the
- * cross-axis thickness `_update_scrollbar_position` reserves for each embedded
- * bar (`h_scroll->get_combined_minimum_size().height` /
- * `v_scroll->get_combined_minimum_size().width`, `scroll_container.cpp:291-292`)
- * — `scrollBarMinimumSize` (`shared/scrollBarSolver.ts`, the same geometry a
- * standalone HScrollBar/VScrollBar registers under).
+ * The cross-axis thickness `_update_scrollbar_position` reserves for each embedded bar
+ * (`h_scroll->get_combined_minimum_size().height` / `v_scroll->get_combined_minimum_size().width`,
+ * `scroll_container.cpp:291-292`): `scrollBarMinimumSize`, the geometry a standalone bar uses.
  */
 function hScrollThickness(ctx: SolveContext): number {
   return scrollBarMinimumSize(false, ctx.theme).y;
@@ -167,9 +93,10 @@ function largestChildMinSize(n: SolveNode, ctx: SolveContext): Vec2 {
 }
 
 /**
- * `ScrollContainer::get_minimum_size` (`scroll_container.cpp:39-77`), with the
- * DISABLED-axis/OTHER-axis-AUTO combination approximated per the module doc's
- * circularity note.
+ * `ScrollContainer::get_minimum_size` (`scroll_container.cpp:39-77`). Godot reads the current
+ * `get_size()` (`scroll_container.cpp:57-71`) to decide whether the other axis' AUTO bar shows,
+ * which a bottom-up solve cannot know. So only SHOW_ALWAYS and RESERVE reserve the other bar's
+ * thickness, and a disabled axis beside an AUTO axis treats that bar as hidden.
  */
 export const scrollContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const p = props(n);
@@ -193,8 +120,8 @@ export const scrollContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
     }
   }
 
-  // `min_size += margins.position + margins.size` (`scroll_container.cpp:74-75`)
-  // — outside both DISABLED branches, so it applies whatever the scroll modes say.
+  // `min_size += margins.position + margins.size` (`scroll_container.cpp:74-75`) sits outside
+  // both DISABLED branches, so it applies whatever the scroll modes say.
   const margins = scrollContainerMargins(n, ctx.theme);
   return { x: x + margins.left + margins.right, y: y + margins.top + margins.bottom };
 };
@@ -215,18 +142,16 @@ const SCROLL_HINT_MODE_TOP_AND_LEFT = 2;
 const SCROLL_HINT_MODE_BOTTOM_AND_RIGHT = 3;
 
 /**
- * `scroll_hint_vertical.svg` / `scroll_hint_horizontal.svg`
- * (`scene/theme/icons/`) — 32x24 and 24x32 at scale 1. Only the extent ACROSS
- * each fade is ever read (`get_height()` at `scroll_container.cpp:627,636`,
- * `get_width()` at `:643,652`), since the other axis is anchored to the
- * container.
+ * `scroll_hint_vertical.svg`/`scroll_hint_horizontal.svg` (`scene/theme/icons/`) are 32x24 and
+ * 24x32 at scale 1. Only the extent across each fade is read (`get_height()` at
+ * `scroll_container.cpp:627,636`, `get_width()` at `:643,652`): the other axis is anchored.
  */
 const SCROLL_HINT_VERTICAL_HEIGHT = 24;
 const SCROLL_HINT_HORIZONTAL_WIDTH = 24;
 
 /** One `scroll_hint_*` TextureRect that `_update_scroll_hints` left visible. */
 export interface ScrollHintPlacement {
-  /** This hint's rect relative to the ScrollContainer's own top-left, exactly as the anchors compute it — which for a vertical hint is TWICE the container wide (`scroll_container.cpp:625`) and cut back by the clip. */
+  /** This hint's rect relative to the ScrollContainer's own top-left, as the anchors compute it. A vertical hint is twice the container wide (`scroll_container.cpp:625`), cut back by the clip. */
   rect: Rect2;
   /** `true` for the `scroll_hint_vertical` icon (the fade runs down the rect), `false` for `scroll_hint_horizontal`. */
   vertical: boolean;
@@ -244,38 +169,20 @@ export interface ScrollContainerLayout {
   /** The content viewport's size after scrollbar-strip reservation (`_reposition_children`'s own `size`). */
   contentSize: Vec2;
   /**
-   * Each axis' authored scroll offset as its `Range` SETTLES it — never the
-   * raw property. Both the grabber's own ratio and the child's own position
-   * read this one pair, so the drawn grabber and the scrolled content can
-   * never disagree about how far the container actually scrolled.
+   * Each axis' authored scroll offset as its `Range` settles it, never the raw property. The
+   * grabber ratio and the child position both read this pair, so they always agree.
    */
   scroll: Vec2;
   horizontal: ScrollBarPlacement;
   vertical: ScrollBarPlacement;
-  /** `_update_scroll_hints` (`scroll_container.cpp:606-658`) — the edge fades, drawn over the content and under the scrollbars (both are `INTERNAL_MODE_BACK` children added BEFORE the bars, `:905-915`). */
+  /** `_update_scroll_hints` (`scroll_container.cpp:606-658`): the edge fades, drawn over the content and under the scrollbars (both are `INTERNAL_MODE_BACK` children added before the bars, `:905-915`). */
   hints: ScrollContainerHints;
 }
 
 /**
- * `ScrollContainer::_update_scroll_hints` (`scroll_container.cpp:606-658`).
- *
- * The two branches are mutually exclusive by construction: the vertical arm
- * hides both nodes unless `!show_horizontal_hints` (`:623,633`) and the
- * horizontal arm unless `!show_vertical_hints` (`:641,651`), so a container
- * overflowing on BOTH axes draws no hint at all.
- *
- * RTL needs no rect of its own. Each hint is an ANCHORED child, so
- * `Control::_size_changed` mirrors its whole rect, and the RTL arms of every
- * `set_anchor_and_offset` here pre-compensate for exactly that mirror — the
- * two cancel, leaving the LTR rect in both directions. What RTL DOES change
- * is which END `SCROLL_HINT_MODE_TOP_AND_LEFT` names on the horizontal axis
- * (`:641,651`), which is a mode test rather than a geometry one.
- *
- * `tile_scroll_hint` is deliberately absent: it only picks `STRETCH_TILE`
- * over `STRETCH_SCALE` on these same nodes (`:751-752`), and both hint icons
- * are gradients UNIFORM along the axis they would tile on, while the other
- * axis is the texture's own extent — so the two stretch modes are
- * pixel-identical under every theme this codebase resolves.
+ * `ScrollContainer::_update_scroll_hints` (`scroll_container.cpp:606-658`). The arms exclude each
+ * other: the vertical arm hides both nodes unless `!show_horizontal_hints` (`:623,633`) and the
+ * horizontal arm unless `!show_vertical_hints` (`:641,651`), so overflow on both axes draws no hint.
  */
 function scrollContainerHints(
   mode: number,
@@ -285,6 +192,8 @@ function scrollContainerHints(
   largest: Vec2,
   scroll: Vec2
 ): ScrollContainerHints {
+  // `tile_scroll_hint` only picks `STRETCH_TILE` over `STRETCH_SCALE` (`:751-752`). Both icons are
+  // gradients uniform along the tiled axis and texture-sized on the other, so the modes match.
   if (mode === SCROLL_HINT_MODE_DISABLED) return { topLeft: null, bottomRight: null };
 
   const vBelowMax = scroll.y < largest.y - innerSize.y - 1;
@@ -314,6 +223,9 @@ function scrollContainerHints(
   }
 
   const rectAt = (x: number): Rect2 => ({ x, y: 0, w: SCROLL_HINT_HORIZONTAL_WIDTH, h: size.y });
+  // Each hint is anchored, and the RTL arms of `set_anchor_and_offset` cancel
+  // `Control::_size_changed`'s mirror, so RTL keeps the LTR rect. It changes only which end
+  // `SCROLL_HINT_MODE_TOP_AND_LEFT` names on this axis (`:641,651`).
   const leading = rtl ? SCROLL_HINT_MODE_BOTTOM_AND_RIGHT : SCROLL_HINT_MODE_TOP_AND_LEFT;
   const trailing = rtl ? SCROLL_HINT_MODE_TOP_AND_LEFT : SCROLL_HINT_MODE_BOTTOM_AND_RIGHT;
   return {
@@ -333,50 +245,37 @@ function scrollContainerHints(
   };
 }
 
-/** `Range::set_page`'s own CLAMP (`range.cpp:254-256`): a page can never exceed the range. */
+/** `Range::set_page`'s CLAMP (`range.cpp:254-256`): a page can never exceed the range. */
 function clampPage(page: number, range: number): number {
   return Math.max(0, Math.min(page, range));
 }
 
 /**
- * One axis' authored `scroll_horizontal`/`scroll_vertical` as its own
- * `ScrollBar` settles it — `Range::_calc_value` (`range.cpp:182-200`), which
- * pins a value above `max - page` at `max - page` and only then floors it at
- * `min` (0 here). `ScrollContainer::_update_scrollbars` (`:595-599`) supplies
- * `max` = the largest child's own minimum on this axis and `page` = the
- * content viewport's own extent, and BOTH `Range::set_max` and
- * `Range::set_page` re-run `set_value(shared->val)` — so the offset a `.tscn`
- * authored before either was known is re-clamped once they are, which is why
- * this is the settled value rather than the authored one.
- *
- * `min` is 0 and never authored (`ScrollContainer` leaves its bars' `min_value`
- * at `Range`'s own default), so `max - page < 0` — a viewport bigger than its
- * content — collapses to 0: an offset authored on a container that does not
- * overflow moves nothing at all.
- *
- * `Range::_calc_value`'s step-snapping branch never runs: `ScrollBar`'s own
- * constructor sets `step` to 0 (`scroll_bar.cpp:708`), so a fractional offset
- * survives verbatim.
+ * One axis' authored `scroll_horizontal`/`scroll_vertical` as its `ScrollBar` settles it:
+ * `Range::_calc_value` (`range.cpp:182-200`) pins a value above `max - page` at `max - page`, then
+ * floors it at `min`, which is never authored and so 0. The step snap never runs: `ScrollBar`'s
+ * constructor sets `step` to 0 (`scroll_bar.cpp:708`), so a fractional offset survives.
  */
 function settledScrollValue(raw: number, range: number, rawPage: number): number {
+  // `_update_scrollbars` (`:595-599`) sets `max` to the largest child minimum and `page` to the
+  // viewport extent. `set_max` and `set_page` both re-run `set_value(shared->val)`, so the
+  // authored offset is re-clamped, and a container that does not overflow scrolls by 0.
   return Math.max(0, Math.min(raw, range - clampPage(rawPage, range)));
 }
 
 /**
- * `Range::get_as_ratio()`'s own CLAMP (`range.cpp:308-324`) with `min` fixed
- * at 0 — ScrollContainer's embedded bars never author `min_value`, so this is
- * the ratio `scrollBarGrabberGeometry` (`shared/scrollBarSolver.ts`) takes
- * rather than a `RangeProperties`-driven `rangeRatio`, which this axis has no
- * scene properties to feed.
+ * `Range::get_as_ratio()`'s CLAMP (`range.cpp:308-324`) with `min` fixed at 0, since the embedded
+ * bars never author `min_value`. `rangeRatio` would need `RangeProperties`, which this axis lacks.
  */
 function scrollRatio(value: number, range: number): number {
   return Math.max(0, Math.min(1, value / range));
 }
 
 /**
- * The full scrollbar geometry for one solve of `n` at its own `rect` — the
- * single source `scrollContainerLayout` and `Component.tsx` both read
- * (see this module's own doc for why neither may recompute it independently).
+ * The scrollbar geometry for one solve of `n` at its `rect`: visibility, each bar's rect and its
+ * grabber's rect. `scrollContainerLayout` and `Component.tsx` both read it. Neither may recompute
+ * it from a narrower input (overflow from `custom_minimum_size` alone, for example), or the
+ * reserved content space and the drawn bars drift apart.
  */
 export function scrollContainerScrollBars(
   n: SolveNode,
@@ -396,9 +295,9 @@ export function scrollContainerScrollBars(
   const innerW = rect.w - margins.left - margins.right;
   const innerH = rect.h - margins.top - margins.bottom;
 
-  // _update_scrollbars (scroll_container.cpp:592-593): both checks read the
-  // SAME un-reserved own size — Godot does not iterate to a fixed point when
-  // one bar's reservation would newly cause the other axis to overflow.
+  // _update_scrollbars (scroll_container.cpp:592-593): both checks read the same un-reserved
+  // size. Godot does not iterate to a fixed point when one bar's reservation would make the
+  // other axis overflow.
   const hVisible =
     hMode === SCROLL_MODE_SHOW_ALWAYS ||
     ((hMode === SCROLL_MODE_AUTO || hMode === SCROLL_MODE_RESERVE) && largest.x > innerW);
@@ -413,17 +312,15 @@ export function scrollContainerScrollBars(
     y: innerH - (hReserved ? hThickness + SCROLLBAR_SEPARATION : 0),
   };
 
-  // _update_scrollbar_position (scroll_container.cpp:284-308): each bar
-  // dodges the OTHER bar's OWN width/height only when that other bar is
-  // actually VISIBLE (hmin/vmin there are Size2() when invisible) — a
-  // RESERVE-mode bar that isn't currently shown does not push the other
-  // bar's own rect around, even though it still reserves content space.
-  // `lmar`/`rmar` (`:294-295`) swap under RTL; the two are equal here (module doc).
+  // _update_scrollbar_position (scroll_container.cpp:284-308): each bar dodges the other bar
+  // only while that bar is visible (`hmin`/`vmin` are `Size2()` otherwise), so a hidden RESERVE
+  // bar reserves content space but moves no bar. `lmar`/`rmar` swap under RTL (`:294-295`), an
+  // identity: `_get_margins` keeps them equal under every theme this codebase resolves.
   const lmar = n.rtl ? margins.right : margins.left;
   const rmar = n.rtl ? margins.left : margins.right;
   const hWidth = rect.w - lmar - rmar - (vVisible ? vThickness : 0);
   const hRect: Rect2 = {
-    // An anchored child's rect is mirrored whole under RTL (module doc).
+    // Both bars are anchored, so `Control::_size_changed` mirrors each whole rect (`control.cpp:1785-1787`).
     x: n.rtl ? rect.w - lmar - hWidth : lmar,
     y: rect.h - hThickness - margins.bottom,
     w: hWidth,
@@ -487,30 +384,19 @@ export function scrollContainerScrollBars(
 }
 
 /**
- * `ScrollContainer::_reposition_children`'s content-child half
- * (`scroll_container.cpp:341-391`): every visible child is fit into a rect
- * whose SIZE is its own minimum (or the content viewport, for an EXPAND
- * axis) and whose POSITION is the negative authored scroll offset, then
- * passed through the shared `Container::fit_child_in_rect`.
- *
- * Seals the FULL `ScrollContainerLayout` `scrollContainerScrollBars` already
- * computed onto {@link scrollContainerLayoutChannel}, not only the
- * `contentSize` this function itself needs — `horizontal`/`vertical` (each
- * bar's visibility and rect, its grabber's rect) are exactly what
- * `Component.tsx`'s painter needs to draw the scrollbars, computed here from
- * the REAL solve's `ctx` (whose `combinedMinimumSize` cache already has every
- * descendant's minimum size memoised) rather than discarded and later rebuilt
- * by the painter from a FRESH, empty-cache `SolveContext` that re-walks the
- * whole subtree.
+ * `ScrollContainer::_reposition_children`'s content half (`scroll_container.cpp:341-391`): each
+ * visible child fits a rect sized to its minimum (or the viewport, on an EXPAND axis) at the
+ * negative scroll offset, through `Container::fit_child_in_rect`. It seals the whole layout onto
+ * {@link scrollContainerLayoutChannel}, so the painter reuses this solve's memoised `ctx`.
  */
 export const scrollContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
   const layout = scrollContainerScrollBars(n, ctx, rect);
   const { contentSize } = layout;
   const { x: scrollX, y: scrollY } = layout.scroll;
-  // `Point2 ofs = margins.position` (`scroll_container.cpp:348`), then
-  // `if (reserve_vscroll) { ...; if (rtl) ofs.x += width; }`
-  // (`:357-363`) — the reserved strip sits at the leading
-  // edge under RTL, so the content starts past it.
+  // `Point2 ofs = margins.position` (`scroll_container.cpp:348`), then `if (reserve_vscroll) { ...;
+  // if (rtl) ofs.x += width; }` (`:357-363`): the reserved strip leads under RTL. `set_rect`'s
+  // `_compute_offsets` un-mirrors what `_size_changed` mirrors (`control.cpp:906-909`), so this is
+  // the whole RTL move for a content child.
   const margins = scrollContainerMargins(n, ctx.theme);
   const ofsX = margins.left + (n.rtl ? rect.w - margins.left - margins.right - contentSize.x : 0);
   const ofsY = margins.top;
@@ -534,11 +420,8 @@ export const scrollContainerLayout: ContainerLayoutFn = (n, children, rect, ctx)
 };
 
 /**
- * The **solve handoff** channel (`r3f/controls/native/solveHandoff.ts`)
- * `scrollContainerLayout` seals and `Component.tsx` opens.
- *
- * A channel rather than a share: `scrollContainerScrollBars` reads
- * `ctx.combinedMinimumSize` for the whole content subtree, so it genuinely is
- * solve output and cannot be recomputed from the node and the theme alone.
+ * The solve-handoff channel (`r3f/controls/native/solveHandoff.ts`) `scrollContainerLayout` seals
+ * and `Component.tsx` opens. A channel, not a share: the layout reads `ctx.combinedMinimumSize`
+ * for the whole content subtree, which the node and the theme alone cannot give.
  */
 export const scrollContainerLayoutChannel = defineChannel<ScrollContainerLayout>('ScrollContainer.layout');

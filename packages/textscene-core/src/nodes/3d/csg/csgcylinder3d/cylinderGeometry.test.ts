@@ -1,11 +1,8 @@
 /**
  * CSGCylinder3D geometry, pinned against `CSGCylinder3D::_build_brush`
- * (`modules/csg/csg_shape.cpp:1693`) rather than against three's `CylinderGeometry`.
- *
- * The two disagree in a way that shows up on screen. Measured against real Godot 4.6.3,
- * `unit-csg-cylinder.tscn` rendered 0.788% different (7.9x the visual gate) entirely
- * because of the cone, whose collapsed apex three gives one radial normal per segment and
- * Godot gives a single averaged one.
+ * (`modules/csg/csg_shape.cpp:1693`), not three's `CylinderGeometry`. The two disagree visibly on
+ * the cone: three gives its collapsed apex one radial normal per segment, and Godot a single
+ * averaged one.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -47,7 +44,7 @@ describe('buildCsgCylinderGeometry', () => {
     it('places the first ring vertex on +X, not +Z', () => {
       // Godot: `face_base(cos(ang), 0, sin(ang))` with ang = 0 for i = 0, so vertex 0 is
       // at +X. three's CylinderGeometry starts at +Z (x = r*sin, z = r*cos). At 8 sides
-      // the vertex SET happens to coincide, which is why a smooth-shaded cylinder hides
+      // the vertex set happens to coincide, which is why a smooth-shaded cylinder hides
       // the difference and the faceted cone does not.
       const first = vertex(build({ radius: 0.5, height: 2, sides: 8 }), 0);
       expect(first.x).toBeCloseTo(0.5, 6);
@@ -81,7 +78,7 @@ describe('buildCsgCylinderGeometry', () => {
 
   describe('smooth_faces', () => {
     it('gives the cone apex ONE averaged normal, not one per segment', () => {
-      // The measured bug. three gives nine distinct radial normals here.
+      // three gives nine distinct radial normals here.
       const geometry = build({ radius: 0.4, height: 1, cone: true, sides: 8, smoothFaces: true });
       const apexNormals = [...Array(geometry.getAttribute('position').count).keys()]
         .filter((i) => Math.abs(vertex(geometry, i).y - 0.5) < 1e-6)

@@ -1,23 +1,16 @@
 /**
- * Types for `fastnoise-lite` (1.1.1), which ships JSDoc but no `.d.ts`.
- *
- * Declares only the surface the NoiseTexture2D slice drives — a green tsc on
- * an undeclared member would misread as "supported". The enums are
- * STRING-valued in the JS port where Godot's are integer ordinals, which is why
- * the slice keeps Godot's ordinals in its decoded data and maps them here.
- *
- * Domain warp is deliberately absent: the library's entry point is spelled
- * `DomainWrap` (a typo for `DomainWarp` in the published package) and is
- * unusable from outside the module — it dispatches on `arguments[0] instanceof
- * Vector2`, and that class is not exported, so a plain `{x, y}` is silently
- * ignored (verified against 1.1.1). That is why the slice decodes warp
- * settings but never applies them.
+ * Types for `fastnoise-lite` (1.1.1), which ships no `.d.ts`: only the surface the NoiseTexture2D
+ * slice drives, so a green tsc never implies an undeclared member works. No domain warp: its
+ * `DomainWrap` tests `instanceof Vector2`, a class the package does not export, and ignores a
+ * plain `{x, y}` (verified on 1.1.1). So the slice decodes warp settings and never applies them.
  */
 
 declare module 'fastnoise-lite' {
   export default class FastNoiseLite {
     constructor(seed?: number);
 
+    // Every enum is string-valued, where Godot's are integer ordinals: the slice keeps Godot's
+    // ordinals in its decoded data and maps them here.
     static readonly NoiseType: {
       OpenSimplex2: string;
       OpenSimplex2S: string;

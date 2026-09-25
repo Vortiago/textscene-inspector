@@ -1,10 +1,6 @@
 /**
- * Dimension-parameterized semantic linter rule for RigidBody2D / RigidBody3D.
- *
- * The two slices were identical apart from the 2D↔3D token, so a single factory
- * builds both. Format validation (mass > 0, enum values, vector format, etc.)
- * stays in each slice's linterParser.ts; this rule handles the semantic checks
- * that need full scene context (resource references, collision-shape children).
+ * The RigidBody2D/3D rules that need full scene context. Format validation (mass > 0,
+ * enum values, vector format and so on) stays in each slice's linterParser.ts.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
@@ -18,34 +14,26 @@ import { ruleInt, tupleComponent } from '../validators/commonValidators.js';
 import { boolSlotValue } from '../../godot/index.js';
 
 /**
- * Per-axis scale tolerance, shared by both dimensions: rigid_body_3d.cpp:667
- * and rigid_body_2d.cpp:648, `Math::abs(scale.n - 1.0) > 0.05`. NOT the
- * pairwise x≈y≈z uniformity test `collisionobject3d-non-uniform-scale` and
- * `collisionshape3d-non-uniform-scale` run (collision_object_3d.cpp:744,
- * collision_shape_3d.cpp:155) — a UNIFORM (2,2,2) scale trips this one too.
- *
- * Local rather than in `godot/`: it is a rigid-body tolerance, not a maths
- * constant, and this is its only reader.
+ * Per-axis scale tolerance: rigid_body_3d.cpp:667 and rigid_body_2d.cpp:648,
+ * `Math::abs(scale.n - 1.0) > 0.05`. Not the pairwise uniformity test of
+ * collision_object_3d.cpp:744 and collision_shape_3d.cpp:155: a uniform (2,2,2) trips
+ * this one. A rigid-body tolerance with one reader, so it stays out of `godot/`.
  */
 const RIGID_BODY_SCALE_TOLERANCE = 0.05;
 
-
 /**
- * Node2D's own `scale` (node_2d.cpp:499), defaulting to `(1, 1)` when absent —
- * the field default (node_2d.h:39) and the serialised default agree, so an
- * absent key is never the trigger. `transform` is NOT read as a fallback:
- * unlike Node3D, Node2D's `transform` ADD_PROPERTY carries
- * `PROPERTY_USAGE_NONE` (node_2d.cpp:501) and is never written by the engine.
+ * Node2D's own `scale` (node_2d.cpp:499), `(1, 1)` when absent, since the field
+ * default (node_2d.h:39) and the serialised default agree. Not `transform`: Node2D's
+ * `transform` carries `PROPERTY_USAGE_NONE` (node_2d.cpp:501) and is never written.
  */
 function parseScale2D(raw: string | undefined): { x: number; y: number } | null {
   if (raw === undefined) return { x: 1, y: 1 };
   const match = VECTOR2_REGEX.exec(raw);
   if (!match) return { x: 1, y: 1 }; // malformed is linterParser.ts's job, not this rule's
   const captures = [match[1], match[2]];
-  // `null`, not the NaN `slotComponents` answers with: the engine stores a
-  // number the file does not state, and none this rule may name — `_to_int`'s
-  // float branch is undefined behaviour (variant.h:369-370). The NaN reached
-  // the message, which printed `scale (NaN, 5)` at the author.
+  // `null`, not the NaN `slotComponents` answers with: the engine stores a number
+  // the file does not state, and none this rule may name, since `_to_int`'s float
+  // branch is undefined behaviour (variant.h:369-370). A NaN would reach the message.
   if (slotComponentsAltered(raw, 'Vector2', captures)) return null;
   // `slotComponents`: the grammar admits the `Vector2i(...)` spelling Godot
   // converts, whose arguments are narrowed to int32 before the widening, so
@@ -63,35 +51,27 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
   const bodyFile = dim === '2D' ? 'rigid_body_2d.cpp' : 'rigid_body_3d.cpp';
   const contactMonitorCite = `${bodyFile}:181`;
   // `_sync_body_state`'s `contact_count = p_state->get_contact_count()`. Unlike the
-  // guard above, this one does NOT coincide: the 3D body assigns an inverse inertia
+  // guard above, this one does not coincide: the 3D body assigns an inverse inertia
   // tensor the 2D one has no counterpart for, putting the line one earlier.
   const countLine = dim === '2D' ? 155 : 154;
 
   function check(context: RuleContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const { node } = context;
-
-    // Access raw properties from the node (Record<string, string>)
     const rawProps = node.properties as unknown as Record<string, string>;
 
-    // `linear_damp` / `angular_damp` get no advisory: both hints
-    // (rigid_body_2d.cpp:763/767 "-1,100,0.001,or_greater",
-    // rigid_body_3d.cpp:785/789 "0,100,0.001,or_greater") leave the high end
-    // open, and their low ends are exactly the setters' ERR_FAIL_COND bounds
-    // (2D :425/:435 reject < -1, 3D :443/:453 reject < 0), which
-    // linterParser.ts reports as errors.
+    // `linear_damp` / `angular_damp` get no advisory: both hints (rigid_body_2d.cpp:763/767
+    // "-1,100,0.001,or_greater", rigid_body_3d.cpp:785/789 "0,100,0.001,or_greater") leave
+    // the high end open, and each low end is the setter's ERR_FAIL_COND bound (2D :425/:435
+    // reject < -1, 3D :443/:453 reject < 0), which linterParser.ts reports as an error.
 
-    // max_contacts_reported > 0 but contact_monitor=false.
-    // The flag gates the contact LIST and the signals, not the reporting itself. `_sync_body_state` writes `contact_count` from the
-    // state unconditionally (:155, called at :179 ahead of the guard), and the
-    // server's `can_report_contacts()` is `!contacts.is_empty()`, sized by
-    // max_contacts_reported alone. Saying the property "won't work" claimed more
-    // than the guard supports.
-    // The VALUE, not the key: 0 is the default (rigid_body_2d.h:85,
-    // rigid_body_3d.h:82) and sizes the contact list to nothing, so a written
-    // 0 leaves no list for the guard to withhold; an unreadable literal never
-    // landed and configures nothing either.
+    // max_contacts_reported > 0 but contact_monitor is off. The flag gates the contact
+    // list and the signals, not the count: `_sync_body_state` writes `contact_count`
+    // unconditionally (:155, called at :179 ahead of the guard), and the server's
+    // `can_report_contacts()` is `!contacts.is_empty()`, sized by max_contacts_reported.
     const maxContacts = ruleInt(rawProps.max_contacts_reported, 0);
+    // The value, not the key: 0 is the default (rigid_body_2d.h:85, rigid_body_3d.h:82)
+    // and sizes the list to nothing, and an unreadable literal never landed.
     if (maxContacts !== null && maxContacts > 0) {
       const contactMonitor = rawProps.contact_monitor;
       if (boolSlotValue(contactMonitor) !== true) {
@@ -112,16 +92,12 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       }
     }
 
-    // Warning: per-axis scale the physics engine overrides at runtime (3D —
-    // rigid_body_3d.cpp:667; the 2D counterpart is the branch below). Reaches
-    // VehicleBody3D too, via the matcher below.
+    // Per-axis scale the physics engine overrides at runtime (3D: rigid_body_3d.cpp:667,
+    // with 2D below). The matcher reaches VehicleBody3D too.
     if (dim === '3D' && rawProps.transform !== undefined) {
-      // Godot-float-grammar parsing, not `basisColumnScales`: rigid_body_3d.cpp:666
-      // measures `abs(scale.axis - 1) > 0.05`, which is true for an infinite
-      // basis column and false for a `nan` one — a distinction
-      // `basisColumnScales.ts`'s docblock explains this variant exists to keep.
-      // It is also the SIGNED scale, because comparing each axis against 1.0 does
-      // not cancel `get_scale`'s shared `det_sign` the way a pairwise test does.
+      // The Godot-float, signed variant: rigid_body_3d.cpp:666's `abs(scale.axis - 1) > 0.05`
+      // is true for an infinite column and false for a `nan` one, and comparing each
+      // axis against 1.0 does not cancel `get_scale`'s shared `det_sign`.
       const scales = basisColumnScalesGodotFloat(rawProps.transform);
       if (scales) {
         const [sx, sy, sz] = scales;
@@ -145,18 +121,13 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       }
     }
 
-    // Warning: per-axis scale the physics engine overrides at runtime (2D —
-    // rigid_body_2d.cpp:648, `Math::abs(t.columns[n].length() - 1.0) > 0.05`).
-    // `columns[n].length()` is the UNSIGNED axis magnitude, which for a
-    // discrete position/rotation/scale/skew transform equals `|scale.n|`
-    // regardless of rotation or skew (neither changes a column's length) — so
-    // reading `scale` directly reproduces it without composing a matrix.
-    // Reaches PhysicalBone2D too, which inherits this check unchanged
-    // (physical_bone_2d.cpp:109, `RigidBody2D::get_configuration_warnings()`).
-    // `null` when a component is narrowed at parse time: the rule then has no
-    // scale it may quote, so it reports none. `v.vector2('scale')` on Node2D is
-    // a shape check today and says nothing about that literal either.
+    // Per-axis scale overridden at runtime (2D: rigid_body_2d.cpp:648,
+    // `Math::abs(t.columns[n].length() - 1.0) > 0.05`). An unsigned column length is
+    // `|scale.n|` whatever the rotation or skew, so reading `scale` needs no matrix.
     const scale2D = dim === '2D' ? parseScale2D(rawProps.scale) : null;
+    // PhysicalBone2D inherits this check (physical_bone_2d.cpp:109). A narrowed
+    // component gives `null` and no report, since no scale may be quoted, and
+    // `v.vector2('scale')` on Node2D checks only the shape.
     if (scale2D !== null) {
       const sx = Math.abs(scale2D.x);
       const sy = Math.abs(scale2D.y);

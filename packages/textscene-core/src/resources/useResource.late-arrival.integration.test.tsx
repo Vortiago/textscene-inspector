@@ -1,14 +1,7 @@
 /**
- * Integration test for the hard gate: the late-arrival flow.
- *
- * Loads `scenes/fixtures/test-multiple-meshes-shared-texture.tscn`, mounts
- * a stub component for each MeshInstance3D that calls `useResource` for
- * the resource path that node depends on, simulates the missing-file
- * scenario, then injects the file later and asserts that ONLY the meshes
- * which depend on the path transition to `'loaded'`.
- *
- * `<MeshInstance3D>` and the real R3F-side rendering arrive later;
- * here we use a tiny stub that's just enough to drive the hook.
+ * The late-arrival flow over `scenes/fixtures/test-multiple-meshes-shared-texture.tscn`: a stub per
+ * MeshInstance3D calls `useResource` for its path, every file starts missing, and a file provided
+ * later turns only the meshes that depend on it `'loaded'`.
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { act, render } from '@testing-library/react';
@@ -33,10 +26,7 @@ const FIXTURE_PATH = resolve(
   '../../../../scenes/fixtures/test-multiple-meshes-shared-texture.tscn'
 );
 
-/**
- * Controllable ResourceProvider used to simulate the host filesystem
- * acquiring a previously-missing file partway through the test.
- */
+/** A ResourceProvider whose host gains a missing file partway through the test. */
 class MockProvider implements ResourceProvider {
   private files = new Map<string, ArrayBuffer | string>();
 
@@ -56,13 +46,7 @@ class MockProvider implements ResourceProvider {
   }
 }
 
-/**
- * A 1x1 PNG (red pixel) as ArrayBuffer. Used as the texture payload so
- * THREE.ImageLoader / DataTexture can decode it under jsdom. We don't
- * actually inspect pixel content — only the status transition.
- *
- * Bytes: minimal valid PNG. Source: hand-built header.
- */
+/** A hand-built 1x1 red PNG. The tests read only the status transition, never the pixels. */
 const RED_PIXEL_PNG = new Uint8Array([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49,
   0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02,
@@ -72,11 +56,7 @@ const RED_PIXEL_PNG = new Uint8Array([
   0xae, 0x42, 0x60, 0x82,
 ]).buffer;
 
-/**
- * Tiny consumer component that reports its hook result via the testid'd
- * div, so the integration test can read each mesh's status without
- * mounting a real <Canvas>.
- */
+/** Reports its hook result in a test-id div, so no real <Canvas> mounts. */
 function MeshStub(props: { path: string; resourcePath: string }) {
   const result = useResource<THREE.Texture>(props.resourcePath, 'texture');
   return (
@@ -125,9 +105,7 @@ describe('useResource late-arrival integration', () => {
     expect(declaredPaths.has(sharedPath)).toBe(true);
     expect(declaredPaths.has(differentPath)).toBe(true);
 
-    // Step 1: Mount three consumer stubs (one per mesh) with their
-    //         respective resource paths. The host has neither file yet,
-    //         so every consumer should land in `'unavailable'`.
+    // The host has neither file yet, so every consumer lands in `'unavailable'`.
     const { getByTestId } = render(
       <ResourceLoaderProvider loader={loader}>
         <MeshStub path="Mesh1" resourcePath={sharedPath} />
@@ -136,10 +114,8 @@ describe('useResource late-arrival integration', () => {
       </ResourceLoaderProvider>
     );
 
-    // The hook fires `request()` synchronously on mount, which routes
-    // through FileEventBus.loadAsync (async via Promise). Wait one
-    // microtask tick for the failures to settle so we observe the
-    // missing state, not pending.
+    // `request()` routes through the async FileEventBus.loadAsync, so a 50 ms wait lets the
+    // failures settle before the missing state is read.
     await act(async () => {
       await new Promise<void>((r) => setTimeout(r, 50));
     });
@@ -148,22 +124,9 @@ describe('useResource late-arrival integration', () => {
     expect(getByTestId('mesh-Mesh2').dataset.status).toBe('unavailable');
     expect(getByTestId('mesh-Mesh3').dataset.status).toBe('unavailable');
 
-    // Step 2: The host receives `shared.png` from the user. In production
-    //         the flow is: provider.addUploadedFile() → provideFile() →
-    //         FileEventBus loads bytes → textureProcessor decodes →
-    //         eventBus.emit('texture:loaded', path, texture).
-    //
-    //         Under happy-dom we don't have an image decoder, so the
-    //         real `createTextureFromBuffer` path can't decode an PNG.
-    //         The contract this test is verifying is the *bus
-    //         subscription* path — that subscribers transition on a
-    //         `texture:loaded` emit for a previously-failed path. We
-    //         exercise the same bus emit that the processor would do on
-    //         a real decode:
-    //           1. Clear the failed cache (what provideFile does first).
-    //           2. Emit `texture:loaded` with a fake Texture (what the
-    //              processor would emit on a successful decode in a
-    //              browser environment).
+    // happy-dom has no image decoder, so this does what provideFile and a real decode do: clear
+    // the failed cache, then emit `texture:loaded` with a fake texture. Under test is the bus
+    // subscription.
     provider.setFile(sharedPath, RED_PIXEL_PNG);
     const fakeTexture = new THREE.Texture();
     fakeTexture.name = 'fake-shared';
@@ -173,10 +136,7 @@ describe('useResource late-arrival integration', () => {
       await new Promise<void>((r) => setTimeout(r, 20));
     });
 
-    // Step 3: Mesh1 and Mesh2 transitioned to `'loaded'` because they
-    //         both depend on `shared.png`. Mesh3 stayed `'unavailable'`
-    //         because it depends on `different.png`, which the host
-    //         still hasn't provided.
+    // Mesh3 depends on `different.png`, which the host has not provided.
     expect(getByTestId('mesh-Mesh1').dataset.status).toBe('loaded');
     expect(getByTestId('mesh-Mesh2').dataset.status).toBe('loaded');
     expect(getByTestId('mesh-Mesh3').dataset.status).toBe('unavailable');

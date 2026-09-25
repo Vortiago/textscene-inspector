@@ -1,13 +1,8 @@
 /**
- * `centerContainerMinimumSize`/`centerContainerLayout` vs Godot 4.6.3
- * (`scene/gui/center_container.cpp`, `scene/gui/container.cpp`). Every
- * expected rect below was cross-checked against the real engine: a scratch
- * project instantiated the equivalent scene tree in a `SubViewport` sized
- * 1152×648 and printed `Control.get_rect()`/`get_combined_minimum_size()` per
- * node — the same probe technique the sibling container suites use. Children are
- * synthetic `custom_minimum_size` Controls, never Labels, so a font-metric
- * regression and a `_resort` regression can never present as the same test
- * failure.
+ * `centerContainerMinimumSize` and `centerContainerLayout` against Godot 4.6.3
+ * (`scene/gui/center_container.cpp`, `scene/gui/container.cpp`), each rect measured in a 1152×648
+ * `SubViewport` with `get_rect()` and `get_combined_minimum_size()`. Children are
+ * `custom_minimum_size` Controls, not Labels, so a font-metric regression cannot show as a layout one.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
@@ -19,7 +14,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { centerContainerMinimumSize, centerContainerLayout } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-/** `centerContainerLayout`'s `rects` half only — see `ContainerLayoutResult`'s own doc for why the union is here at all. */
+/** The `rects` half of `centerContainerLayout`'s `ContainerLayoutResult`. */
 function asMap(
   result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
 ): ReadonlyMap<string, Rect2> {
@@ -83,11 +78,9 @@ describe('centerContainerLayout', () => {
   const viewport = { x: 0, y: 0, w: 1152, h: 648 };
 
   it('centres each child independently on its OWN minimum size, ignoring FILL/EXPAND flags entirely — oracle: Leaf rect=[476,274,200,100]', () => {
-    // size_flags = 3 (FILL|EXPAND) on both axes. `_notification` hands
-    // `fit_child_in_rect` a rect whose SIZE already equals the child's own
-    // minimum (`Rect2(ofs, minsize)`, center_container.cpp:83-84), so FILL's
-    // branch — `r.size.x = p_rect.size.x` — is a no-op: the child never
-    // grows to fill the container, no matter its size flags.
+    // size_flags = 3 (FILL|EXPAND) on both axes. `fit_child_in_rect` receives
+    // `Rect2(ofs, minsize)` (center_container.cpp:83-84), so FILL's `r.size.x = p_rect.size.x`
+    // is a no-op: the child never grows to fill the container.
     const child = leaf('Leaf', {
       customMinimumSize: { x: 200, y: 100 },
       sizeFlagsHorizontal: 3,
@@ -107,14 +100,10 @@ describe('centerContainerLayout', () => {
   });
 
   it('use_top_left floors a NEGATIVE half-size, which truncation would get wrong — oracle: Leaf rect=[-51,-31,101,61]', () => {
-    // `ofs = (-minsize * 0.5).floor()` (center_container.cpp:83): for an odd
-    // minimum this argument is always a negative .5, where floor and
-    // truncation diverge — floor(-50.5) = -51, but Math.trunc(-50.5) = -50.
-    // This is the one branch where the distinction is observable at all: the
-    // NORMAL (non-top-left) branch's argument, `size - minsize`, is never
-    // negative in a real Godot layout (minimum-size aggregation guarantees
-    // an ancestor is never smaller than a descendant's combined minimum), so
-    // floor and truncation agree there in practice.
+    // `ofs = (-minsize * 0.5).floor()` (center_container.cpp:83): an odd minimum gives a
+    // negative .5, where floor(-50.5) = -51 and Math.trunc(-50.5) = -50. The centred branch's
+    // `size - minsize` is never negative, since an ancestor is never smaller than a
+    // descendant's combined minimum, so only this branch can tell floor from truncation.
     const child = leaf('Leaf', { customMinimumSize: { x: 101, y: 61 } });
     const n = container('C', { useTopLeft: true }, [child]);
     const rects = asMap(centerContainerLayout(n, [{ node: child, minSize: { x: 101, y: 61 } }], viewport, ctx()));
@@ -122,8 +111,8 @@ describe('centerContainerLayout', () => {
   });
 
   it('ignores contentRect.x/y — child rects are relative to the CONTAINER, not its parent', () => {
-    // Mirrors the MarginContainer regression: `contentRect` plays the same
-    // role `computeAnchoredRect` gives `parentRect` — only `.w`/`.h` matter.
+    // `contentRect` plays the role `computeAnchoredRect` gives `parentRect`:
+    // only `.w` and `.h` matter.
     const child = leaf('Leaf', { customMinimumSize: { x: 101, y: 61 } });
     const n = container('C', {}, [child]);
     const nestedContentRect = { x: 514, y: 267, w: 1152, h: 648 };

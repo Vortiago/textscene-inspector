@@ -1,16 +1,8 @@
 /**
- * Position for the crash-fallback placeholder. `transformFromNode3DProperties`
- * reads `properties.transform` — a field only `Node3DProperties` carries, so
- * casting a Node2D-world node's properties to it silently resolves to the
- * origin (Node2DProperties has no `.transform`), placing the fallback box at
- * its parent's local origin instead of near where the crashed node actually
- * was. Route Node2D-world types (`nodeComponentRegistry.isCanvasItem` — the
- * SAME classification `<Node2D>` itself is built on, `node2dGroupProps`)
- * through the matching 2D transform math instead. Control/UI types
- * (`TWO_D_UI_TYPES`) keep the Node3D-shaped fallback: they lay out via
- * anchors/offsets, not position/rotation/scale, so there is no equivalent
- * "local transform" to place a 3D-space placeholder at — same origin
- * fallback `<GenericNodeFallback>` already uses for them today.
+ * Position for the crash-fallback placeholder. A Node2D-world type
+ * (`nodeComponentRegistry.isCanvasItem`) takes the 2D transform math, since
+ * `transformFromNode3DProperties` reads a `.transform` it lacks. A Control keeps
+ * the Node3D-shaped origin fallback: it lays out by anchors, not a local transform.
  */
 
 import type { TscnNode } from '../parser/types.js';
@@ -22,11 +14,9 @@ import { transformFromNode3DProperties, type NodeTransform } from './nodeTransfo
 
 export function fallbackTransform(node: TscnNode): NodeTransform {
   if (nodeComponentRegistry.isCanvasItem(node.type)) {
-    // Read defensively: this runs INSIDE an ErrorBoundary's own fallback, where
-    // a throw escapes the boundary and blanks the whole viewport. Not every
-    // canvas-item slice publishes the discrete Node2D transform —
-    // ParallaxBackground parses `offset` and no `position` at all — so the
-    // absent field must fall back rather than deref.
+    // Read defensively: a throw inside an ErrorBoundary's fallback blanks the
+    // whole viewport, and not every canvas item has a Node2D transform
+    // (ParallaxBackground parses `offset` and no `position`).
     const props = node.properties as Partial<Node2DProperties>;
     const { position, rotation, scale } = node2dGroupProps({
       position: props.position ?? { x: 0, y: 0 },

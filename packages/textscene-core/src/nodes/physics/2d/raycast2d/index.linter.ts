@@ -1,6 +1,4 @@
-/**
- * raycast2d linter registration - imports linter components to trigger self-registration.
- */
+/** RayCast2D linter registration: importing the modules registers them. */
 
 import './linterParser.js';
 import './linter.js';

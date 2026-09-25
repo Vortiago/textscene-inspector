@@ -1,15 +1,8 @@
 /**
- * Tests for SpringBoneSimulator3D's semantic linter rules (strict-parser format
- * checks live in linterParser.test.ts and are asserted through
- * `validatorRegistry` there).
- *
- * Uses `Linter` directly (via testkit), not the `linter/index.ts` barrel: that
- * barrel side-effect-imports every in-flight slice, so pulling it here would
- * fail flakily on a sibling's half-written file mid-wave.
- *
- * This file also owns the fixture's RULE cleanliness. `expectFixtureClean` runs
- * `StrictTscnParser`, which never reaches a rule, so a fixture that trips one of
- * the four rules below would look clean everywhere else.
+ * Tests for SpringBoneSimulator3D's semantic linter rules. linterParser.test.ts asserts the format
+ * checks through `validatorRegistry`. Uses `Linter` directly (through testkit), not the
+ * `linter/index.ts` barrel, which imports every slice. This file owns the fixture's rule
+ * cleanliness: `expectFixtureClean` runs `StrictTscnParser`, which never reaches a rule.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -299,11 +292,9 @@ describe('SpringBoneSimulator3D semantic rules', () => {
 describe('SpringBoneSimulator3D index grammar', () => {
   it('reads individual_config from the setting the engine resolves, not the index text', () => {
     // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
-    // (spring_bone_simulator_3d.cpp:42), so `settings/00/…` and `settings/0/…`
-    // are ONE setting: the shared radius below is written while that setting is
-    // individual, and `set_radius` returns before assigning (:644). Keying the
-    // sibling lookup on the index TEXT found no individual_config and read the
-    // default false instead.
+    // (spring_bone_simulator_3d.cpp:42), so `settings/00/…` and `settings/0/…` are one setting. The
+    // shared radius below is written while that setting is individual, and `set_radius` returns
+    // before assigning (:644).
     expectDiagnostic(
       scene(
         node('SpringBoneSimulator3D', {

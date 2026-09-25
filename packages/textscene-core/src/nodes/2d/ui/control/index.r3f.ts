@@ -1,4 +1,4 @@
-/** Control registration — native (WebGL canvas) painter. */
+/** Control registration: the native (WebGL canvas) painter. */
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Control } from './Component';

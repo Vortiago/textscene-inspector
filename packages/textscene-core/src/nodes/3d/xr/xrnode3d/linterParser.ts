@@ -1,23 +1,18 @@
 /**
- * XRNode3D strict validators for linting.
- *
- * Declare only XRNode3D's OWN members — the ones doc/classes/XRNode3D.xml
- * lists without an `overrides=` attribute. Everything from Node3D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * XRNode3D strict validators for its own members, the ones doc/classes/XRNode3D.xml lists
+ * without `overrides=`. Keys from Node3D up arrive through the NODE_BASE_TYPES base-walk, so
+ * re-declaring one would shadow the ancestor's rule.
  */
 
-// The base chain. Registration happens on import, so a test that loads only
-// this slice resolves an inherited key ONLY if the ancestor is pulled in too;
-// without this line just the full barrel ever registers it.
+// The base chain. Registration happens on import, so a test that loads only this slice resolves an
+// inherited key only if this line pulls in the ancestor.
 import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
-// scene/3d/xr/xr_nodes.h: get_tracker()/get_pose_name() both return StringName,
-// so Godot always serialises them `&"..."` — but the variant text parser also
-// accepts a plain `"..."` literal (implicit StringName cast on the setter),
-// same leniency as Window's theme_type_variation and the shared audio busValidator.
+// scene/3d/xr/xr_nodes.h: get_tracker()/get_pose_name() both return StringName, so Godot serialises
+// them `&"..."`. The variant text parser also accepts a plain `"..."` literal, which the setter casts
+// to StringName.
 
 validatorRegistry.registerAll('XRNode3D', {
   // scene/3d/xr/xr_nodes.cpp: ADD_PROPERTY(PropertyInfo(Variant::STRING, "pose", ...))

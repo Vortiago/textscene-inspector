@@ -1,5 +1,5 @@
 /**
- * SphereShape3D decode — property bag in, sphere radius out.
+ * SphereShape3D decode: property bag in, sphere radius out.
  *
  * `sphere_shape_3d.cpp:86` ERR_FAILs a negative radius, so one is refused rather
  * than stored (`:105` constructs with 0.5).

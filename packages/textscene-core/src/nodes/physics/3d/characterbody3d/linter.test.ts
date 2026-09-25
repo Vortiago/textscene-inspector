@@ -1,6 +1,4 @@
-/**
- * Tests for CharacterBody3D linter (strict parser + semantic rules)
- */
+/** CharacterBody3D linter: the strict parser and the semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -97,8 +95,8 @@ describe('CharacterBody3D Linter', () => {
       { prop: 'platform_wall_layers', valid: [0, 1, 65535, 4294967295] },
       { prop: 'collision_priority', valid: [0.0, 0.5, 1.0, -1.0, 100.5], invalid: [{ value: '"high"' }] },
       {
-        // 2 is KEEP_ACTIVE — collision_object_2d.cpp:654 and its 3D twin bind
-        // three constants. This table asserted 0-1 and encoded the bug.
+        // 2 is KEEP_ACTIVE: collision_object_2d.cpp:654 and its 3D twin bind
+        // three constants.
         prop: 'disable_mode',
         valid: [0, 1, 2],
         invalid: [{ value: 5, contains: ['0-2'] }],
@@ -108,7 +106,6 @@ describe('CharacterBody3D Linter', () => {
     describe('floor_snap_length validation', () => {
       it('should accept valid floor_snap_length values', () => {
         for (const value of [0, 0.001, 0.1, 1.0, 5.0]) {
-          // May have warnings for extreme values, but no errors
           expectNoErrors(scene(node('CharacterBody3D', { floor_snap_length: value }), collisionShape3d));
         }
       });
@@ -121,8 +118,8 @@ describe('CharacterBody3D Linter', () => {
         });
       });
 
-      // character_body_3d.cpp:934 hints "0,1,0.01,or_greater" — the high end is
-      // open and the low end is the setter's own ERR_FAIL — so no advisory survives.
+      // character_body_3d.cpp:934 hints "0,1,0.01,or_greater": the high end is
+      // open and the low end is the setter's own ERR_FAIL, so no advisory survives.
       it.each([0.0001, 5, 50, 500])('says nothing about floor_snap_length %s', (snap) => {
         expectClean(scene(node('CharacterBody3D', { floor_snap_length: snap }), collisionShape3d));
       });
@@ -131,14 +128,13 @@ describe('CharacterBody3D Linter', () => {
     describe('safe_margin validation', () => {
       it('should accept valid safe_margin values', () => {
         for (const value of [0, 0.001, 0.01, 0.1]) {
-          // May have warnings for large values, but no errors
           expectNoErrors(scene(node('CharacterBody3D', { safe_margin: value }), collisionShape3d));
         }
       });
 
       // character_body_3d.cpp:637 is a bare assignment, so the hint at :942
-      // ("0.001,256,0.001,suffix:m") only warns — a negative is not an error.
-      // The bound lives on the validator; no rule reports it.
+      // ("0.001,256,0.001,suffix:m") only warns, and a negative is not an error.
+      // The bound lives on the validator, and no rule reports it.
       it('should warn, not error, on negative safe_margin', () => {
         expectDiagnostic(scene(node('CharacterBody3D', { safe_margin: -0.5 }), collisionShape3d), {
           prop: 'safe_margin',
@@ -185,7 +181,6 @@ describe('CharacterBody3D Linter', () => {
     describe('collision_layer validation', () => {
       it('should accept valid collision_layer values', () => {
         for (const value of [0, 1, 100, 1048575]) {
-          // May have warning for 0 layer, but no errors
           expectNoErrors(scene(node('CharacterBody3D', { collision_layer: value }), collisionShape3d));
         }
       });
@@ -209,7 +204,6 @@ describe('CharacterBody3D Linter', () => {
     describe('collision_mask validation', () => {
       it('should accept valid collision_mask values', () => {
         for (const value of [0, 1, 255, 1048575]) {
-          // May have warning for 0 mask, but no errors
           expectNoErrors(scene(node('CharacterBody3D', { collision_mask: value }), collisionShape3d));
         }
       });
@@ -225,7 +219,6 @@ describe('CharacterBody3D Linter', () => {
     describe('max_slides validation', () => {
       it('should accept valid max_slides values', () => {
         for (const value of [1, 4, 6, 10]) {
-          // May have warnings for low values, but no errors
           expectNoErrors(scene(node('CharacterBody3D', { max_slides: value }), collisionShape3d));
         }
       });
@@ -361,7 +354,7 @@ describe('CharacterBody3D Linter', () => {
 
     it('has no grounded-mode arm for wall_min_slide_angle: :300-303 reads it there', () => {
       // The 2D twin's `_validate_property` hides it in GROUNDED
-      // (character_body_2d.cpp:676); character_body_3d.cpp has no such `else`.
+      // (character_body_2d.cpp:676). character_body_3d.cpp has no such `else`.
       expectNoErrors(
         scene(
           node('CharacterBody3D', { motion_mode: 0, wall_min_slide_angle: 0.5 }),
@@ -385,8 +378,7 @@ describe('CharacterBody3D Linter', () => {
   });
 
   describe('Semantic Validation (Collision Layers)', () => {
-    // No `collision_layer == 0` check on CharacterBody3D: no engine warning
-    // exists for it, and the voxel demo's Player ships with it deliberately.
+    // No `collision_layer == 0` check on CharacterBody3D: no engine warning exists for it.
     it('stays quiet when collision_layer is 0', () => {
       expectClean(scene(node('CharacterBody3D', { collision_layer: 0 }), collisionShape3d));
     });
@@ -405,7 +397,6 @@ describe('CharacterBody3D Linter', () => {
           })
         )
       );
-      // Should have multiple errors: motion_mode, floor_max_angle, max_slides, collision_layer
       expect(diagnostics.length).toBeGreaterThanOrEqual(4);
     });
 
@@ -438,7 +429,6 @@ describe('CharacterBody3D Linter', () => {
     });
 
     it('should handle node with minimal properties', () => {
-      // Should pass without errors
       expectNoErrors(scene(node('CharacterBody3D'), collisionShape3d));
     });
 
@@ -479,7 +469,7 @@ describe('CharacterBody3D Linter', () => {
             // rather than errors.
             motion_mode: 10,
             floor_snap_length: 50,
-            // collision_layer warns rather than errors now: its width comes
+            // collision_layer warns rather than errors: its width comes
             // from the 32-checkbox widget, not the engine. max_slides carries
             // the error, since set_max_slides ERR_FAILs below 1 (character_body_3d.cpp:813).
             collision_layer: -5,
@@ -492,7 +482,7 @@ describe('CharacterBody3D Linter', () => {
       const errors = diagnostics.filter(d => d.severity === 'error');
       expect(errors.length).toBeGreaterThan(0);
       expect(errors.some(d => d.message.includes('max_slides'))).toBe(true);
-      // No collision_layer diagnostic any more: -1 is a legal 32-bit mask.
+      // No collision_layer diagnostic: -1 is a legal 32-bit mask.
       expect(diagnostics.find(d => d.message.includes('collision_layer'))).toBeUndefined();
       const motionModeDiagnostic = diagnostics.find(d => d.message.includes('motion_mode'));
       expect(motionModeDiagnostic).toBeDefined();
@@ -500,7 +490,6 @@ describe('CharacterBody3D Linter', () => {
     });
 
     it('should handle zero values correctly', () => {
-      // Zero values are valid for these properties
       expectNoErrors(
         scene(
           node('CharacterBody3D', {

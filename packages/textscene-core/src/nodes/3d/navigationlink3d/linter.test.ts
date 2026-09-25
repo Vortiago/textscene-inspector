@@ -6,9 +6,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Linter } from '../../../linter/Linter';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
-// Both ancestor rules reach NavigationLink3D (Node's all-nodes rule, and
-// Node3D's type-family matcher), so the fixture's "no diagnostics" claim
-// below is only honest with them loaded too.
+// Node's all-nodes rule and Node3D's type-family matcher both reach NavigationLink3D,
+// so the fixture's "no diagnostics" claim needs them loaded too.
 import '../../node/linter';
 import '../../base/node3d/linter';
 import './linterParser';
@@ -37,9 +36,8 @@ describe('NavigationLink3D position rule', () => {
   });
 
   it('leaves the committed fixture with no diagnostic at all', () => {
-    // The fixture's "zero errors AND zero warnings" claim on the rule side.
-    // `expectFixtureClean` in linterParser.test.ts runs validators only, so it
-    // cannot see this rule firing.
+    // The fixture's zero-diagnostic claim on the rule side: `expectFixtureClean` in
+    // linterParser.test.ts runs validators only.
     expect(linter.lint(readFixture('unit-navigation-link-3d.tscn'))).toEqual([]);
   });
 

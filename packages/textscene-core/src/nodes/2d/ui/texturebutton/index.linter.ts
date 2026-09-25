@@ -1,5 +1,3 @@
-/**
- * texturebutton linter registration - imports linter components to trigger self-registration.
- */
+/** TextureButton linter registration: importing the modules registers them. */
 
 import './linterParser.js';

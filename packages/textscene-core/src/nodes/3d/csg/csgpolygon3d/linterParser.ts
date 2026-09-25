@@ -25,10 +25,9 @@ validatorRegistry.registerAll('CSGPolygon3D', {
     hinted: { min: 'csg_shape.cpp:2601' },
   }),
   // Two tiers on the floor, one on the ceiling. set_spin_degrees:2681 is
-  // `ERR_FAIL_COND(p_spin_degrees < 0.01 || p_spin_degrees > 360)`, so 0.01 is
-  // refused below and 360 is refused above; the hint (:2602, "1,360,0.1")
-  // floors at 1, so [0.01, 1) loads and only warns. The two agree at 360, so
-  // that end carries the setter's tier alone.
+  // `ERR_FAIL_COND(p_spin_degrees < 0.01 || p_spin_degrees > 360)`. The hint (:2602,
+  // "1,360,0.1") floors at 1, so [0.01, 1) loads and only warns. The two agree at 360, where the
+  // setter's tier stands alone.
   spin_degrees: v.float('spin_degrees', {
     enforcedMin: { at: 0.01 },
     min: 1,

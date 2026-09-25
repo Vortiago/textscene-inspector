@@ -1,10 +1,8 @@
 /**
- * GPUParticlesCollisionSDF3D strict validators: format and range checks.
- *
- * Declare only GPUParticlesCollisionSDF3D's OWN members: the ones doc/classes/GPUParticlesCollisionSDF3D.xml
- * lists without an `overrides=` attribute. Everything from GPUParticlesCollision3D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * GPUParticlesCollisionSDF3D strict validators for linting: only its own members, the ones
+ * doc/classes/GPUParticlesCollisionSDF3D.xml lists without `overrides=`. The NODE_BASE_TYPES
+ * base-walk delivers everything from GPUParticlesCollision3D up, so re-declaring an inherited key
+ * shadows it and duplicates the rule.
  */
 
 import '../shared/linterParser.js';

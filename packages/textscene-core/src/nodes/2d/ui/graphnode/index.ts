@@ -1,4 +1,4 @@
-/** GraphNode registration — parser. */
+/** GraphNode registration: parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseGraphNode } from './parser';

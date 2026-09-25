@@ -1,45 +1,9 @@
 #!/usr/bin/env node
 /**
- * Bakes the OpenSans_SemiBold font metrics + MSDF glyph atlas that the native
- * (WebGL) Control text painter reads, from the vendored font, into three
- * COMMITTED TypeScript modules:
- *
- *   packages/textscene-core/src/r3f/controls/native/text/openSansMetrics.ts
- *   packages/textscene-core/src/r3f/controls/native/text/openSansAtlas.ts
- *   packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts
- *
- * ## Why a pre-baked MSDF atlas, not a runtime font
- *
- * The obvious alternative — troika-three-text / drei's `<Text>`, which parses
- * a real font at runtime — is blocked TWICE over by the VS Code webview CSP:
- * its SDF-generation worker needs
- * `worker-src blob:` and its font fetch needs `connect-src`, and this CSP has
- * neither (both fall back to `default-src 'none'`). A pre-baked MSDF atlas
- * PNG works because it rides `img-src ... data:`, which the CSP explicitly
- * grants.
- *
- * ## Why vendor the woff2 (not the TTF) as the checked-in font asset
- *
- * Godot ships `thirdparty/fonts/OpenSans_SemiBold.woff2` — that IS upstream's
- * distributed artifact (smaller than a TTF, and it's what
- * `THIRD-PARTY-NOTICES.md`'s licence entry describes). Neither `fontkit`
- * (metrics) nor `msdf-bmfont-xml` (atlas, via its bundled `opentype.js`)
- * decompresses real Brotli woff2 itself, so this script decompresses it to a
- * TTF IN MEMORY at bake time with `wawoff2` (Google's `woff2` build via
- * WebAssembly) before handing that buffer to either tool. Nothing but this
- * script ever needs the TTF form — it is not written to disk, and it is not
- * a committed artifact. The two generated `.ts` modules below (plus the
- * vendored `.woff2`) are the only things production ever loads.
- *
- * ## `--check`
- *
- * Re-runs the exact same bake and diffs the result, byte for byte, against
- * the committed files — so the committed artifacts can never silently drift
- * from the vendored font. Exits 1 (with a message naming which file and
- * where) if anything differs; exits 0 if they match.
- *
- *   node scripts/fonts/bake-metrics.mjs           # writes the committed files
- *   node scripts/fonts/bake-metrics.mjs --check   # verifies, writes nothing
+ * Bakes the vendored OpenSans_SemiBold's metrics, MSDF atlas and bytes into the
+ * committed `openSans{Metrics,Atlas,FontBytes}.ts` modules the native Control
+ * text painter reads: `node scripts/fonts/bake-metrics.mjs [--check]`. `--check`
+ * diffs a fresh bake against them byte for byte and exits 1 on a difference.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -54,42 +18,38 @@ const fontkit = fontkitNs.default ?? fontkitNs;
 const __filename = fileURLToPath(import.meta.url);
 const REPO_ROOT = join(dirname(__filename), '..', '..');
 
+// The woff2 is Godot's own distributed `thirdparty/fonts/OpenSans_SemiBold.woff2`,
+// the file `THIRD-PARTY-NOTICES.md` describes. Neither `fontkit` nor
+// `msdf-bmfont-xml` decompresses Brotli woff2, so `wawoff2` turns it into a TTF
+// in memory. The TTF is never written.
 const WOFF2_PATH = join(REPO_ROOT, 'packages/textscene-core/assets/fonts/OpenSans_SemiBold.woff2');
 const TEXT_DIR = join(REPO_ROOT, 'packages/textscene-core/src/r3f/controls/native/text');
 const METRICS_OUT = join(TEXT_DIR, 'openSansMetrics.ts');
 const ATLAS_OUT = join(TEXT_DIR, 'openSansAtlas.ts');
 const FONT_BYTES_OUT = join(TEXT_DIR, 'openSansFontBytes.ts');
 
-// Full ASCII printable, 0x20 (space) .. 0x7E (~) — 95 glyphs. Do not narrow it.
+// Full ASCII printable, 0x20 (space) to 0x7E (~), 95 glyphs. Do not narrow it.
 const CHARSET_START = 0x20;
 const CHARSET_END = 0x7e;
 
-// Latin-1 Supplement, 0xA0 (NBSP) .. 0xFF (ÿ) — the standard second tier for
-// European-language coverage (accented Latin letters used by French, German,
-// Spanish, etc.), independent of any single Godot call site. 0xAD (SOFT
-// HYPHEN) is deliberately EXCLUDED: it is a Unicode Cf (Format) character —
-// invisible by design, a hyphenation hint, not a printable glyph — and this
-// specific font maps it to a visible hyphen-shaped bitmap with unusually
-// large GPOS kerning against nearly every other baked character (verified:
-// 199 kerning pairs, all involving 0xAD, once it was in this range). Nothing
-// in Godot's own defaults or this repo's scene fixtures needs it rendered,
-// and baking it would assert a specific visible-ink behavior for a format
-// character nothing here has measured against real Godot.
+// Latin-1 Supplement, 0xA0 (NBSP) to 0xFF, for European accented letters.
+// 0xAD (SOFT HYPHEN) is left out: an invisible Cf character that this font
+// draws as a hyphen with GPOS kerning against almost every baked character,
+// a visible-ink behaviour nothing here has measured against Godot.
 const LATIN1_SUPPLEMENT_START = 0xa0;
 const LATIN1_SUPPLEMENT_END = 0xff;
 const LATIN1_SUPPLEMENT_EXCLUDE = new Set([0xad]);
 
-// Individual punctuation codepoints outside both ranges above, each with its
-// own reason to be baked rather than silently falling back:
+// Punctuation outside both ranges, each baked for its own reason.
 const EXTRA_CODEPOINTS = [
-  0x2022, // BULLET — LineEdit's default `secret_character` when the scene sets none (`line_edit.cpp:3094`: `secret_character.is_empty() ? U"•" : ...`).
-  0x2026, // HORIZONTAL ELLIPSIS — Label's default overrun/truncation character (`label.cpp:294`, three sibling call sites at :299/:324/:328: `(el_char.length() > 0) ? el_char[0] : 0x2026`).
-  0x2013, // EN DASH — common scene-author prose punctuation (not itself a Godot GUI default literal).
-  0x2014, // EM DASH — ditto; the character this repo's own ScrollContainer fixture's Label text uses.
+  0x2022, // BULLET: LineEdit's default `secret_character` (`line_edit.cpp:3094`: `secret_character.is_empty() ? U"•" : ...`).
+  0x2026, // HORIZONTAL ELLIPSIS: Label's default overrun character (`label.cpp:294`, also :299/:324/:328: `(el_char.length() > 0) ? el_char[0] : 0x2026`).
+  0x2013, // EN DASH: common prose punctuation in scenes.
+  0x2014, // EM DASH: common prose punctuation, used by the ScrollContainer fixture's Label.
   0x2018,
-  0x2019, // single curly quotes — common scene-author prose punctuation.
+  0x2019, // Single curly quotes: common prose punctuation.
   0x201c,
-  0x201d, // double curly quotes — ditto.
+  0x201d, // Double curly quotes: common prose punctuation.
 ];
 
 const CHARSET = [];
@@ -99,9 +59,10 @@ for (let cp = LATIN1_SUPPLEMENT_START; cp <= LATIN1_SUPPLEMENT_END; cp++) {
 }
 for (const cp of EXTRA_CODEPOINTS) CHARSET.push(String.fromCodePoint(cp));
 
-// The atlas is baked at a larger font size than any Godot theme default (16)
-// so glyph edges keep enough MSDF resolution when magnified for headings —
-// spike S2's own asset-budget measurement used the same values.
+// A pre-baked atlas, not a runtime font such as troika-three-text: the webview
+// CSP has no `worker-src blob:` or `connect-src`, and grants `img-src ... data:`.
+// Baked above any Godot theme default size (16), so glyph edges keep MSDF
+// resolution when magnified for headings.
 const ATLAS_FONT_SIZE = 42;
 const ATLAS_DISTANCE_RANGE = 4;
 const ATLAS_TEXTURE_SIZE = [512, 512]; // smartSize below shrinks to the tightest fit
@@ -125,11 +86,9 @@ async function loadFont() {
 }
 
 /**
- * GPOS/kern pairwise advance adjustments over the full CHARSET x CHARSET
- * product, design units. A real shaper (HarfBuzz, which Godot's
- * TextServerAdvanced uses) applies exactly this kind of pairwise adjustment
- * for GPOS kerning pairs; fontkit's `layout()` exposes the same positioning
- * data for a 2-glyph run.
+ * GPOS/kern pairwise advance adjustments over CHARSET x CHARSET, design units,
+ * as HarfBuzz applies them in Godot's TextServerAdvanced. fontkit's `layout()`
+ * exposes the same positioning for a 2-glyph run.
  */
 function bakeKerning(font) {
   const kerning = {};
@@ -148,32 +107,15 @@ function bakeKerning(font) {
 }
 
 /**
- * Per-glyph `hmtx` advance width, design units, over the SAME `CHARSET` the
- * atlas bakes — the RAW, UNQUANTIZED source `fontMetrics.ts`'s
- * `getFontGlyphAdvancePx` puts through FreeType's own fixed-point chain,
- * instead of `openSansAtlas.ts`'s `xadvance` (msdf-bmfont-xml's OWN
- * atlas-bake-resolution-42 glyph table). Even with this bake script now
- * passing `roundDecimal: null` explicitly (see `bakeAtlas`'s own comment —
- * the library rounded every atlas field to a whole bake-pixel unless asked
- * not to), the atlas's `xadvance` is still the WRONG source for a shaper: it
- * is `glyph.advanceWidth * (fontSize / unitsPerEm)` fixed at bake size 42
- * (`msdf-bmfont-xml`'s `index.js:400`), not at the size the text is actually
- * shaped at.
- *
- * The two are not the same kind of number, which is the whole reason this
- * table exists separately. Godot's advance is HarfBuzz's `x_advance`
- * (`text_server_adv.cpp:7077`), which IS quantized — `hb-ft.cc:523`'s
- * `(v + (1<<9)) >> 10` lands it on a whole number of 1/64 px at the TARGET
- * font size — but quantized at the size the text is actually shaped at, from
- * this raw table (`ftadvanc.c:52`'s `FT_MulFix(1024 * advance, x_scale)`,
- * FreeType's unhinted `hmtx` fast path, `hb-ft.cc:115`). The atlas's
- * `xadvance` is fixed to bake size 42 instead, so scaling it down to a
- * 14-28px UI size does not reproduce HarfBuzz's own target-size shaping.
- *
- * Nothing here is pre-scaled or pre-rounded: the quantization is a function
- * of the target size, so it can only be applied at shaping time, and
- * `fontMetrics.ts` is where it lives.
+ * Raw `hmtx` advance widths, design units, over `CHARSET`: the source
+ * `fontMetrics.ts` quantizes at the shaped size, not the atlas's `xadvance`,
+ * which msdf-bmfont-xml's `index.js:400` fixes at bake size 42. Godot quantizes
+ * at the target size, so nothing here is pre-scaled or pre-rounded.
  */
+// Godot's advance is HarfBuzz's `x_advance` (`text_server_adv.cpp:7077`), which
+// `hb-ft.cc:523`'s `(v + (1<<9)) >> 10` rounds to 1/64 px after
+// `ftadvanc.c:52`'s `FT_MulFix(1024 * advance, x_scale)` scales this table,
+// FreeType's unhinted `hmtx` fast path (`hb-ft.cc:115`).
 function bakeAdvanceWidths(font) {
   const advanceWidths = {};
   for (const ch of CHARSET) {
@@ -191,20 +133,15 @@ function bakeMetrics(font, kerning, advanceWidths) {
     lineGap: font.lineGap,
     kerning,
     advanceWidths,
-    // `post` table, design units — `fontkit`'s `TTFFont#underlinePosition`/
-    // `#underlineThickness` read `post.underlinePosition`/`post.underlineThickness`
-    // directly (fontkit's `src/tables/post.js`, `src/TTFFont.js:189-201`), the
-    // SAME raw values FreeType exposes as `face->underline_position`/
-    // `face->underline_thickness` — what `text_server_adv.cpp:1517-1518` scales
-    // to pixels (see `getUnderlinePositionPx`/`getUnderlineThicknessPx` below).
+    // Raw `post` table values, design units (fontkit's `src/TTFFont.js:189-201`),
+    // which FreeType exposes as `face->underline_*` and
+    // `text_server_adv.cpp:1517-1518` scales (`getUnderlinePositionPx` and
+    // `getUnderlineThicknessPx` below).
     underlinePosition: font.underlinePosition,
     underlineThickness: font.underlineThickness,
-    // OS/2 `xAvgCharWidth`, design units — a standard per-font "typical
-    // glyph width" metric (the same field browsers/other engines already
-    // use to estimate the width of a character they cannot shape) rather
-    // than a magic constant. Used as the fallback advance for a codepoint
-    // outside the baked charset — see `OPEN_SANS_ATLAS_GLYPHS`'s doc in
-    // `renderAtlasModule` and `textLayout.ts`'s `glyphAdvancePx`.
+    // OS/2 `xAvgCharWidth`, design units: the font's typical glyph width, not a
+    // magic constant. The fallback advance outside the baked charset in
+    // `textLayout.ts`'s `glyphAdvancePx`.
     averageAdvanceUnits: font['OS/2'].xAvgCharWidth,
   };
 }
@@ -224,37 +161,10 @@ function bakeAtlas(ttfBuffer) {
         distanceRange: ATLAS_DISTANCE_RANGE,
         fieldType: 'msdf',
         outputType: 'json',
-        // Explicit `null` (not omitted): `index.js:111`'s
-        // `utils.valueQueue([opt.roundDecimal, reuse.roundDecimal])` returns
-        // the FIRST value that is `!== undefined` — `null` qualifies,
-        // `undefined` does not — so this reaches `index.js:298`'s
-        // `if (roundDecimal !== null) utils.roundAllValue(...)` as `null` and
-        // that STRICT check turns the round off. Leaving the key out entirely
-        // is NOT equivalent: `valueQueue` then falls off the end and returns
-        // `undefined`, which is `!== null` too, so the round fires anyway —
-        // `utils.roundAllValue(fontData, decimal = 0, ...)`'s default
-        // parameter rounds every NUMERIC atlas field to a whole bake-pixel.
-        // Verified directly: `valueQueue([undefined, undefined])` returns
-        // `undefined`, and `undefined !== null` is `true`.
-        //
-        // In practice this only CHANGES `base`, `lineHeight`, and each
-        // glyph's `yoffset`/`xadvance` — the only fields that are non-integer
-        // before the round ever runs. `base`/`lineHeight` scale OS/2
-        // `sTypoAscender`/`sTypoDescender`/`sTypoLineGap` by `fontSize /
-        // unitsPerEm` (`index.js:346`, `:281`); `xadvance` is
-        // `glyph.advanceWidth * scale` (`index.js:400`); `yoffset` is
-        // `Math.round(bBox.y1) - pad + baseline` (`index.js:399`), an integer
-        // plus that SAME non-integer `baseline`. Every glyph's own
-        // `width`/`height`/`xoffset` (`index.js:396-398`) and its packed
-        // `x`/`y` (`index.js:233-234`, from bin-packing integer rectangles)
-        // are ALREADY whole numbers by construction, so rounding them is a
-        // no-op either way.
-        //
-        // Full float precision, not a large explicit decimal count: a chosen
-        // decimal count would be an arbitrary second quantization step with
-        // no Godot-side counterpart to justify it; `null` reaches the tool's
-        // own unrounded floats, and `JSON.stringify` already serializes a JS
-        // double losslessly.
+        // Explicit `null`, not omitted: `index.js:111`'s `valueQueue` returns the
+        // first value `!== undefined`, so `null` reaches `index.js:298` and turns
+        // off the round of `base`, `lineHeight`, `xadvance` and `yoffset` to whole
+        // bake-pixels. Not a decimal count, a second rounding Godot does not do.
         roundDecimal: null,
       },
       (err, textures, font) => {
@@ -262,9 +172,8 @@ function bakeAtlas(ttfBuffer) {
           reject(err instanceof Error ? err : new Error(String(err)));
           return;
         }
-        // Everything below runs inside the library's own callback, not the
-        // executor, so a `throw` here would escape as an unhandled exception
-        // rather than rejecting this promise — hence the explicit reject.
+        // This runs in the library's callback, not the executor, so a `throw`
+        // would escape unhandled instead of rejecting the promise.
         try {
           const data = JSON.parse(font.data);
           const glyphsByChar = {};

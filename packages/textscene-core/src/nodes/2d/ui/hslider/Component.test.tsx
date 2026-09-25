@@ -1,10 +1,8 @@
 /**
- * `<HSlider>` — pins the four parts `Slider::_notification(NOTIFICATION_DRAW)`
- * paints (`scene/gui/slider.cpp`): the `slider` track, the `grabber_area`
- * fill, painted `tick`s, and the `grabber` icon last (drawn on top). Exact
- * numbers are proved once in `shared/sliderSolver.test.ts`; this pins that the
- * painter WIRES them up — draws the right COUNT of meshes, in the right
- * draw order, with the grabber texture the `editable` state selects.
+ * `<HSlider>` draws the `slider` track, the `grabber_area` fill, the `tick`s and
+ * the `grabber` icon last (`scene/gui/slider.cpp`): the mesh count, the draw order
+ * and the grabber texture `editable` selects. `shared/sliderSolver.test.ts` owns
+ * the exact numbers.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';

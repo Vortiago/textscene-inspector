@@ -1,6 +1,6 @@
 /**
- * The routing claim (ADR-0031): exactly the two box types this slice decodes,
- * on the generic resource bus.
+ * The routing claim (ADR-0031): the two box types this slice decodes, on the
+ * generic resource bus.
  */
 
 import { describe, expect, it } from 'vitest';

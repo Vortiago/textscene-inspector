@@ -1,45 +1,8 @@
 /**
- * CPUParticles2D's simulation, evaluated ONCE to a frozen pose.
+ * CPUParticles2D's simulation, evaluated once to a frozen pose: a pure, React-free
+ * and THREE-free port of `CPUParticles2D::_particles_process` and the settle loop
+ * `_update_internal` spends `pre_process_time` through (`cpu_particles_2d.cpp:727-738`).
  *
- * This is a port of `CPUParticles2D::_particles_process` plus the settle loop
- * `_update_internal` spends `pre_process_time` through. It is deliberately not
- * a live emitter:
- *
- *  - That settle steps at a FIXED 1/30 s (or `fixed_fps`) with `speed_scale`
- *    forced to 1 (`cpu_particles_2d.cpp:727-738`), so the pose it reaches is a
- *    pure function of the scene file and a named number of seconds — nothing in
- *    it reads a clock.
- *  - The golden-image harness fails a scene that never settles, and the
- *    isometric dungeon instances a candle, so a running emitter would make a
- *    shipped golden permanently unstable.
- *  - The animation transport is selection-driven and starts stopped
- *    (ADR-0012); particles belong to neither half of that contract, and a
- *    second always-on clock is the cross-cutting machinery it exists to avoid.
- *
- * The instant it freezes at is `settleSeconds` — the authored `preprocess`, or
- * one lifetime substituted for a scene that authors none. Godot's editor has no
- * such instant: `set_process_internal(emitting)` (`:1262`) carries no
- * `is_editor_hint` guard, so an emitter animates on wall clock while you look at
- * it, and the pose it happens to hold is not something a file, a reference
- * render or a golden can name. What CAN be named is a settle, which is why the
- * substituted window is one. `pnpm ref:godot --particles <seconds>` asks the
- * real engine for the same settle, through `request_particles_process`, so a
- * substituted pose is measurable against Godot rather than merely plausible.
- *
- * The `seed` behind it is a different matter: Godot's is randomised in the
- * constructor and unserialised, so a scene without `use_fixed_seed` renders
- * differently in Godot every run. Ours substitutes a constant, which is what
- * makes the same file always render the same pixels. Where the scene does pin
- * its seed, the shared PCG32 port (godotRng.ts) puts the particles in Godot's
- * actual places rather than statistically similar ones.
- *
- * A pure function of its input, React-free and THREE-free — `Component.tsx`
- * turns the returned poses into geometry. A colour ramp is sampled per particle
- * and never becomes a texture, so it reads the gradient slice's pure `sample.ts`
- * rather than its rasteriser: the canonical `Gradient::get_color_at_offset` port
- * without a renderer in this file's import closure.
- *
- * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`scene/2d/cpu_particles_2d.cpp`), used under the
  * MIT licence:
  *
@@ -66,13 +29,13 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * See THIRD-PARTY-NOTICES.md.
- * ---------------------------------------------------------------------------
  */
 
 import type { Color, Vector2 } from '../../base/node2d/types';
 import type { Curve } from '../../../resources/curves/curve/types';
 import { sampleCurve } from '../../../resources/curves/curve/sample';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
+// The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
 import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from './godotRng';
 import {
@@ -83,17 +46,17 @@ import {
 } from './types';
 
 /**
- * A Godot `Transform2D`: two basis columns plus the origin column. Named after
- * the columns rather than as a matrix so the port reads like the C++.
+ * A Godot `Transform2D`: two basis columns and the origin column, named after the
+ * columns so the port reads like the C++.
  */
 export interface Affine2D {
-  /** `columns[0]` — the local X axis. */
+  /** `columns[0]`: the local X axis. */
   ax: number;
   ay: number;
-  /** `columns[1]` — the local Y axis. */
+  /** `columns[1]`: the local Y axis. */
   bx: number;
   by: number;
-  /** `columns[2]` — the origin. */
+  /** `columns[2]`: the origin. */
   ox: number;
   oy: number;
 }
@@ -101,20 +64,19 @@ export interface Affine2D {
 export const IDENTITY_AFFINE: Affine2D = { ax: 1, ay: 0, bx: 0, by: 1, ox: 0, oy: 0 };
 
 /**
- * The seed we substitute when a scene does not set `use_fixed_seed`. Godot uses
- * `Math::rand()` there, which is unserialised — any constant is as faithful as
- * any other, and a constant is what makes OUR render byte-stable.
+ * The seed substituted when a scene does not set `use_fixed_seed`. Godot uses
+ * `Math::rand()`, randomised in the constructor and unserialised, so any constant
+ * is as faithful as another, and a constant makes this render byte-stable.
  */
 export const DEFAULT_PREVIEW_SEED = 0;
 
 /**
- * Ceiling on preprocess/settle steps. A scene asking for `preprocess = 100000`
- * would otherwise spin three million iterations before the first paint. Real
- * emitters need tens of steps; this only stops a pathological file.
+ * Ceiling on settle steps: `preprocess = 100000` would otherwise spin three
+ * million iterations before the first paint. Real emitters need tens of steps.
  */
 export const MAX_SIM_STEPS = 4096;
 
-/** Godot's `Curve` slots, indexed by `CPUParticles2DParam`; null where unset. */
+/** Godot's `Curve` slots, indexed by `CPUParticles2DParam`. Null where unset. */
 export type ParticleCurves = ReadonlyArray<Curve | null>;
 
 export interface ParticleSimInput {
@@ -123,10 +85,9 @@ export interface ParticleSimInput {
   colorRamp: Gradient | null;
   colorInitialRamp: Gradient | null;
   /**
-   * The emitter's world transform in Godot 2D pixel space. Used only when
-   * `local_coords` is false, where Godot spawns in global space and draws the
-   * canvas item with an identity transform; we render inside the node's group,
-   * so the pose is mapped back through this transform's inverse.
+   * The emitter's world transform in Godot 2D pixel space, used only when
+   * `local_coords` is false: Godot spawns in global space and draws with an
+   * identity transform, so the pose maps back through this transform's inverse.
    */
   emissionTransform: Affine2D;
 }
@@ -135,7 +96,7 @@ export interface ParticleSimInput {
 export interface RenderedParticle {
   /** Item-local `Transform2D` mapping the texture quad's local corners. */
   transform: Affine2D;
-  /** Godot's `p.color` — sRGB, alpha included, curve/ramp/hue already applied. */
+  /** Godot's `p.color`: sRGB, alpha included, curve, ramp and hue applied. */
   color: Color;
   /**
    * Godot's `p.custom[2]`, reaching the canvas shader as `INSTANCE_CUSTOM.z`:
@@ -145,7 +106,7 @@ export interface RenderedParticle {
   anim: number;
   /** `p.time`, in seconds. The `draw_order = Lifetime` sort key. */
   age: number;
-  /** The particle's index in the emitter, i.e. its `draw_order = Index` order. */
+  /** The particle's index in the emitter, which is its `draw_order = Index` order. */
   index: number;
 }
 
@@ -168,31 +129,14 @@ interface Particle {
   seed: number;
 }
 
-/** Godot's inspector floor for `lifetime`; its setter rejects anything lower. */
+/** Godot's inspector floor for `lifetime`. Its setter rejects anything lower. */
 const MIN_LIFETIME = 0.01;
 
 /**
- * How many seconds of settle the frozen pose sits at.
- *
- * `preprocess` when the scene authors one — that is Godot's own settle and the
- * only instant the file itself names. Otherwise one lifetime, which is where a
- * continuous emitter reaches steady state, halved for a `one_shot` burst so it
- * is caught mid-flight rather than a frame from death.
- *
- * Whichever it is, it is spent the SAME way: `_update_internal` runs both an
- * authored `preprocess` and an externally requested advance through one loop —
- * `while (todo > 0) { _particles_process(frame_time); todo -= frame_time; }`
- * with `speed_scale` saved, forced to 1, and restored afterwards
- * (`cpu_particles_2d.cpp:727-738`). So `speed_scale` does not move a settled
- * pose at all, and a window that is not an exact multiple of `frame_time` lands
- * PAST the number it names, because the last step is a whole frame rather than
- * the remainder.
- *
- * That is why the substituted window is a `preprocess` in everything but where
- * the number came from: it is the only shape an instant can have and still be
- * measurable against the engine. `request_particles_process` is the API that
- * asks Godot for one from outside, and `pnpm ref:godot --particles <seconds>`
- * is how a reference render is taken at the same instant this returns.
+ * Seconds of settle the frozen pose sits at: the authored `preprocess`, else one
+ * lifetime (steady state), halved for a `one_shot` burst to catch it mid-flight.
+ * `_update_internal` spends both through one loop (`cpu_particles_2d.cpp:727-738`),
+ * so `pnpm ref:godot --particles <seconds>` renders the same instant in Godot.
  */
 export function settleSeconds(props: CPUParticles2DProperties): number {
   if (props.preprocess > 0) return props.preprocess;
@@ -201,14 +145,16 @@ export function settleSeconds(props: CPUParticles2DProperties): number {
 }
 
 /**
- * Evaluate the emitter to a single pose, in the emitter node's local space and
- * in the order it must be drawn.
+ * Evaluate the emitter to a single pose, in the emitter node's local space and in the order
+ * it must be drawn. No clock: a running emitter makes a golden unstable (ADR-0012), and the
+ * editor animates on wall clock (`set_process_internal(emitting)`, `cpu_particles_2d.cpp:1262`,
+ * no `is_editor_hint` guard), at an instant that no file or reference render can name.
  */
 export function simulateFrozenPose(input: ParticleSimInput): RenderedParticle[] {
   const { props } = input;
   // `_update_internal` bails before touching the buffer when the emitter is
   // neither active nor emitting, and a scene file cannot make `active` true
-  // without `emitting` — script-triggered one-shots ship this way.
+  // without `emitting`.
   if (!props.emitting) return [];
 
   const pcount = props.amount;
@@ -228,14 +174,10 @@ export function simulateFrozenPose(input: ParticleSimInput): RenderedParticle[] 
     emissionXform: props.local_coords ? IDENTITY_AFFINE : input.emissionTransform,
   };
 
-  // Godot's settle steps a whole frame while any time remains and lets the last
-  // one overshoot: `while (todo > 0) { _particles_process(frame_time); todo -=
-  // frame_time; }` (`cpu_particles_2d.cpp:733-736`). It never shortens the final
-  // step to the remainder, so shortening ours puts a replayed settle up to a
-  // full frame behind the engine — a 1.0 s window over a 1/30 s step is 31 full
-  // frames there, i.e. 1.0333 s. `speed_scale` is forced to 1 around the loop
-  // (`:732,738`), so it scales how fast wall clock reaches a settle, never the
-  // pose the settle arrives at.
+  // Godot's settle steps whole frames and the last one overshoots: `while (todo >
+  // 0) { _particles_process(frame_time); todo -= frame_time; }`
+  // (`cpu_particles_2d.cpp:733-736`), so 1.0 s at 1/30 s is 31 frames, 1.0333 s.
+  // `speed_scale` is forced to 1 around the loop (`:732,738`) and never moves the pose.
   let todo = settleSeconds(props);
   for (let step = 0; todo > 0 && step < MAX_SIM_STEPS; step++) {
     particlesProcess(state, input, frameTime);
@@ -294,7 +236,7 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
     if (props.one_shot && state.cycle > 0) state.emitting = false;
   }
 
-  // A global-coords emitter spawns in world space; `velocity_xform` is the same
+  // A global-coords emitter spawns in world space. `velocity_xform` is the same
   // transform with its translation dropped, since a velocity is a direction.
   const emissionXform = state.emissionXform;
   const velocityXform: Affine2D = { ...emissionXform, ox: 0, oy: 0 };
@@ -305,9 +247,8 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
     const p = state.particles[i]!;
     if (!state.emitting && !p.active) continue;
 
-    // The birth phase is the particle's slot in the stream: particle i is born
-    // i/pcount of the way through each cycle, which is what makes a continuous
-    // emitter show every age at once.
+    // Particle i is born i/pcount of the way through each cycle, so a continuous
+    // emitter shows every age at once.
     let restartPhase = i / pcount;
 
     if (props.randomness > 0) {
@@ -353,33 +294,28 @@ function particlesProcess(state: SimState, input: ParticleSimInput, delta: numbe
 
     applyAppearance(input, p, tv);
 
-    // Godot integrates position AFTER the appearance pass, and does it on the
+    // Godot integrates position after the appearance pass, and does it on the
     // restart frame too, so a newborn particle is already one step along.
     p.transform.ox += p.velocity.x * localDelta;
     p.transform.oy += p.velocity.y * localDelta;
   }
 }
 
-/** `restartStep`'s return: whether particle `i` restarts this step, and the delta its position should integrate with. */
+/** Whether particle `i` restarts this step, and the delta its position integrates with. */
 export interface RestartStep {
   restart: boolean;
-  /** `local_delta` — the whole step unless a restart shortens it (fract_delta). */
+  /** `local_delta`: the whole step unless a restart shortens it (fract_delta). */
   localDelta: number;
 }
 
 /**
- * Whether particle `i` restarts THIS step, and the `local_delta` it should
- * integrate position with — `cpu_particles_2d.cpp:807,829-852`. `local_delta`
- * starts as the whole step and is narrowed only inside a restart branch, and
- * only when `fractionalDelta` (Godot's `fract_delta`, default true) is set:
- * a particle born partway through the step is credited only the REMAINDER of
- * the step after its own restart instant, not the whole thing. Without that,
- * every particle that restarts in the same step lands at the same
- * displacement — Godot's actual comb-vs-bar mechanism.
- *
- * `prevTime`/`time` are the emitter's cycle time before/after this step
- * (`time` already wrapped mod `lifetime` if the step crossed it); `restartTime`
- * is `restartPhase * lifetime` for this particle.
+ * Whether particle `i` restarts this step, and its `local_delta`
+ * (`cpu_particles_2d.cpp:807,829-852`). With `fractionalDelta` (`fract_delta`,
+ * default true) a particle born mid-step gets only the remainder after its restart
+ * instant, so same-step births spread into a bar instead of one displacement.
+ * @param prevTime The emitter's cycle time before this step.
+ * @param time The cycle time after this step, wrapped mod `lifetime`.
+ * @param restartTime `restartPhase * lifetime` for this particle.
  */
 export function restartStep(
   prevTime: number,
@@ -400,11 +336,9 @@ export function restartStep(
       if (fractionalDelta) localDelta = time - restartTime;
     }
   } else if (delta > 0.0) {
-    // The step wrapped past `lifetime`: `time` is now on the OTHER side of
-    // zero from `prevTime`, so a restart phase near the tail of the cycle
-    // (restartTime >= prevTime) gets the slice up to the old boundary plus
-    // however far past zero `time` has gone; one right after zero
-    // (restartTime < time) gets the ordinary slice.
+    // The step wrapped past `lifetime`. A restart near the tail of the cycle gets
+    // the slice up to the old boundary plus `time`, and one right after zero
+    // gets the ordinary slice.
     if (restartTime >= prevTime) {
       restart = true;
       if (fractionalDelta) localDelta = lifetime - restartTime + time;
@@ -417,7 +351,10 @@ export function restartStep(
   return { restart, localDelta };
 }
 
-/** `p.time > p.lifetime` (`cpu_particles_2d.cpp:971`) — strict, so a particle exactly at its lifetime gets one more advancing step before it dies. */
+/**
+ * `p.time > p.lifetime` (`cpu_particles_2d.cpp:971`): strict, so a particle
+ * exactly at its lifetime gets one more advancing step before it dies.
+ */
 export function particleExpired(time: number, lifetime: number): boolean {
   return time > lifetime;
 }
@@ -434,10 +371,9 @@ function restartParticle(
 
   const angleCurve = curves[CPUParticles2DParam.Angle] ?? null;
   const texAngle = angleCurve ? sampleCurve(angleCurve, tv) : 1.0;
-  // Godot samples the ANGLE curve here for the anim offset too — its own
-  // copy-paste (`cpu_particles_2d.cpp:916-919`), reproduced so a scene that
-  // sets an angle curve gets the same anim offset it does in the engine. Same
-  // curve, same `tv`, so it is the same value rather than a second search.
+  // Godot samples the angle curve for the anim offset too
+  // (`cpu_particles_2d.cpp:916-919`), and this reproduces it. Same curve, same
+  // `tv`, so it reuses the value rather than a second search.
   const texAnimOffset = texAngle;
 
   p.active = true;
@@ -481,10 +417,9 @@ function restartParticle(
 }
 
 /**
- * The emission-shape offset. POINTS / DIRECTED_POINTS / RING are absent on
- * purpose: those three draw from Godot's unserialised GLOBAL RNG
- * (`cpu_particles_2d.cpp:975, 992, 995`), not the per-particle one, so no
- * frozen pose can match the engine. The linter warns instead.
+ * The emission-shape offset. POINTS / DIRECTED_POINTS / RING draw from Godot's
+ * unserialised global RNG (`cpu_particles_2d.cpp:975, 992, 995`), so no frozen
+ * pose can match them, and the linter reports them instead.
  */
 function emitAtShape(props: CPUParticles2DProperties, p: Particle, rng: GodotRandomPCG): void {
   switch (props.emission_shape) {
@@ -504,12 +439,9 @@ function emitAtShape(props: CPUParticles2DProperties, p: Particle, rng: GodotRan
       break;
     }
     case CPUParticles2DEmissionShape.Rectangle: {
-      // Godot writes this as ONE `Vector2(rng->randf() …, rng->randf() …)`
-      // constructor call, and C++ leaves argument evaluation order
-      // unspecified — the shipped builds draw Y FIRST. Measured, not derived:
-      // rendering this emitter through Godot 4.6.3 puts particle 0 at
-      // (+44.5, +9.3) from the node, which is the y-first draw; the x-first
-      // reading lands at (+25.4, +16.9) and matches nothing on screen.
+      // One `Vector2(rng->randf() …, rng->randf() …)` call, and C++ leaves the
+      // argument order unspecified. Measured on Godot 4.6.3: particle 0 lands at
+      // (+44.5, +9.3), the y-first draw. The x-first reading gives (+25.4, +16.9).
       const y = rng.randf();
       const x = rng.randf();
       p.transform.ox = (x * 2.0 - 1.0) * props.emission_rect_extents.x;
@@ -551,7 +483,7 @@ function advanceParticle(
   const pos: Vector2 = { x: p.transform.ox, y: p.transform.oy };
 
   // Each of the three accelerations sits behind a C++ ternary, so its
-  // `rand_from_seed` draw is CONSUMED ONLY when the branch is taken. Drawing
+  // `rand_from_seed` draw is consumed only when the branch is taken. Drawing
   // unconditionally would desynchronise every later value in the same step.
   const speed = Math.hypot(p.velocity.x, p.velocity.y);
   if (speed > 0) {
@@ -570,7 +502,7 @@ function advanceParticle(
     force.y += (diff.y / diffLength) * radial;
   }
 
-  // `yx` is `(diff.y, diff.x)` mirrored in X — the perpendicular Godot spins
+  // `yx` is `(diff.y, diff.x)` mirrored in X: the perpendicular Godot spins
   // tangential acceleration around. Its length is `diff`'s.
   if (diffLength > 0) {
     const tangential =
@@ -593,7 +525,7 @@ function advanceParticle(
   }
 
   if (curves[CPUParticles2DParam.InitialLinearVelocity]) {
-    // With a velocity curve the SPEED is the curve, not an acceleration.
+    // With a velocity curve, the speed is the curve, not an acceleration.
     const length = Math.hypot(p.velocity.x, p.velocity.y);
     if (length > 0) {
       p.velocity.x = (p.velocity.x / length) * texLinearVelocity;
@@ -633,7 +565,7 @@ function advanceParticle(
   return tv;
 }
 
-/** Scale, colour, hue rotation and the quad's basis — run for every particle. */
+/** Scale, colour, hue rotation and the quad's basis, run for every particle. */
 function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void {
   const { props, curves, colorRamp } = input;
 
@@ -652,10 +584,9 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
   const base = colorRamp
     ? multiplyColor(sampleGradientColor(colorRamp, tv), props.color)
     : { ...props.color };
-  // Called unconditionally, and NOT short-circuited at angle 0: Godot's basis is
-  // not quite the identity there. The blue column comes out at -0.001/-0.001/1,
-  // so every particle in every scene takes a slight tint, and skipping the call
-  // would silently diverge from the engine on the most common path of all.
+  // Called unconditionally, not short-circuited at angle 0: Godot's basis is not
+  // quite the identity there. The blue column comes out at -0.001/-0.001/1, so
+  // every particle takes a slight tint.
   const rotated = rotateHue(base, hueRotAngle);
 
   p.color = multiplyColor(multiplyColor(rotated, p.baseColor), p.startColorRand);
@@ -691,15 +622,15 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
 }
 
 /**
- * `_update_particle_data_buffer` — collect the live particles in draw order,
- * mapped back into the emitter node's local space.
+ * `_update_particle_data_buffer`: the live particles in draw order, mapped back
+ * into the emitter node's local space.
  */
 function collectPose(state: SimState, props: CPUParticles2DProperties): RenderedParticle[] {
   const inverse = affineInverse(state.emissionXform);
 
   const order = state.particles.map((_, index) => index);
   if (props.draw_order === CPUParticles2DDrawOrder.Lifetime) {
-    // SortLifetime compares `time > time`, i.e. oldest first.
+    // SortLifetime compares `time > time`, so oldest first.
     order.sort((a, b) => state.particles[b]!.time - state.particles[a]!.time);
   }
 
@@ -707,7 +638,7 @@ function collectPose(state: SimState, props: CPUParticles2DProperties): Rendered
   for (const index of order) {
     const p = state.particles[index]!;
     // Godot zeroes an inactive particle's transform, collapsing its quad to a
-    // point; omitting it draws the same nothing for a fraction of the vertices.
+    // point. Omitting it draws the same nothing for a fraction of the vertices.
     if (!p.active) continue;
     pose.push({
       transform: multiplyAffine(inverse, p.transform),
@@ -748,8 +679,8 @@ function multiplyColor(a: Color, b: Color): Color {
 }
 
 /**
- * Godot's YIQ-style hue rotation: three constant bases blended by cos/sin of
- * the angle, then applied with `Basis::xform_inv` (i.e. the TRANSPOSE).
+ * Godot's YIQ-style hue rotation: three constant bases blended by cos/sin of the
+ * angle, then applied with `Basis::xform_inv`, the transpose.
  */
 function rotateHue(color: Color, angle: number): Color {
   const c = Math.cos(angle);
@@ -760,8 +691,8 @@ function rotateHue(color: Color, angle: number): Color {
   const lg = 0.587;
   const lb = 0.114;
 
-  // Columns of the blended basis. Godot applies it with `Basis::xform_inv`, the
-  // TRANSPOSE, so each output channel reads down a column rather than across a row.
+  // Columns of the blended basis: with the transpose, each output channel reads
+  // down a column, not across a row.
   const xr = lr + 0.701 * c + 0.168 * s;
   const xg = lg + -0.587 * c + 0.33 * s;
   const xb = lb + -0.114 * c + -0.497 * s;
@@ -782,12 +713,12 @@ function rotateHue(color: Color, angle: number): Color {
   };
 }
 
-/** `Transform2D::basis_xform` — the linear part only. */
+/** `Transform2D::basis_xform`: the linear part only. */
 function basisXform(t: Affine2D, v: Vector2): Vector2 {
   return { x: t.ax * v.x + t.bx * v.y, y: t.ay * v.x + t.by * v.y };
 }
 
-/** `Transform2D::operator*` — `a` applied to `b`. */
+/** `Transform2D::operator*`: `a` applied to `b`. */
 function multiplyAffine(a: Affine2D, b: Affine2D): Affine2D {
   const col0 = basisXform(a, { x: b.ax, y: b.ay });
   const col1 = basisXform(a, { x: b.bx, y: b.by });
@@ -803,9 +734,9 @@ function multiplyAffine(a: Affine2D, b: Affine2D): Affine2D {
 }
 
 /**
- * `Transform2D::affine_inverse`. A singular transform (a scene that scales a
- * node to zero) has no inverse; Godot's own `ERR_FAIL_COND` leaves the matrix
- * untouched, so we answer identity rather than propagate NaN through the pose.
+ * `Transform2D::affine_inverse`. A singular transform (a node scaled to zero) has
+ * no inverse, and Godot's `ERR_FAIL_COND` leaves the matrix untouched, so this
+ * answers the identity, not NaN.
  */
 function affineInverse(t: Affine2D): Affine2D {
   const det = t.ax * t.by - t.ay * t.bx;

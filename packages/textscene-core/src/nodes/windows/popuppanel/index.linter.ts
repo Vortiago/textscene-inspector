@@ -1,5 +1,5 @@
 /**
- * popuppanel linter registration - imports linter components to trigger self-registration.
+ * PopupPanel linter registration: the imports self-register.
  */
 
 import './linterParser.js';

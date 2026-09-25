@@ -1,16 +1,12 @@
-/** TabBar property definitions — `scene/gui/tab_bar.h`. */
+/** TabBar properties, from `scene/gui/tab_bar.h`. */
 
 import type { ControlProperties } from '../control/types';
 
 /**
- * One `tab_<idx>/<leaf>` element — the four `base_property_helper` leaves
- * TabBar itself serialises (`tab_bar.cpp:2190-2193`). `hidden` is a real
- * `Tab` struct field (`tab_bar.h:84`) but not one of the four, so `parseTabBar`
- * never sets it — always `undefined` on a standalone TabBar's own tabs. It
- * stays on this shared shape because TabContainer's OWN `tab_<idx>/hidden`
- * override (a DIFFERENT `PropertyListHelper` family,
- * `tab_container.cpp:1275`) reaches the same tabs array when
- * `nativeSolver.ts`'s layout functions are reused for its internal strip.
+ * One `tab_<idx>/<leaf>` element: the four leaves TabBar serialises (`tab_bar.cpp:2190-2193`).
+ * `hidden` (`tab_bar.h:84`) is not one of them, so `parseTabBar` never sets it. It stays for
+ * TabContainer's own `tab_<idx>/hidden` family (`tab_container.cpp:1275`), which reaches this
+ * array when `nativeSolver.ts` lays out TabContainer's internal strip.
  */
 export interface TabBarTabProperties {
   title: string;
@@ -21,7 +17,7 @@ export interface TabBarTabProperties {
 }
 
 export interface TabBarProperties extends ControlProperties {
-  /** Dense, one slot per index 0..tab_count-1 — built from `tab_<idx>/*`. */
+  /** Dense, one slot per index 0..tab_count-1, built from `tab_<idx>/*`. */
   tabs?: TabBarTabProperties[];
   /** `tab_bar.h:113`, default -1 (no tab selected). */
   currentTab?: number;

@@ -1,12 +1,7 @@
 /**
- * <Marker2D> — a Node2D transform anchor (positions its children) that draws a
- * small "+" cross gizmo at its origin, mirroring Godot's 2D editor marker.
- *
- * The cross is an editor decoration, so it is **selection-gated** via
- * `useGizmoVisible()` — it renders only while this node is the selected node,
- * keeping the workspace clean (the viewer equivalent of Godot drawing the gizmo
- * always; see ADR-0018). The cross is symmetric about the origin, so the Node2D
- * group's diag(1,-1,1) conjugation leaves it unchanged.
+ * <Marker2D> positions its children and draws Godot's "+" editor cross at its
+ * origin, only while selected (`useGizmoVisible()`, ADR-0018). The cross is
+ * symmetric, so the Node2D group's diag(1,-1,1) conjugation leaves it unchanged.
  */
 
 import { useMemo } from 'react';

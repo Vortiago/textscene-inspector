@@ -1,5 +1,5 @@
 /**
- * Decal property formatter — formats decal properties for the details panel.
+ * Decal property formatter: formats decal properties for the details panel.
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';

@@ -1,21 +1,9 @@
 [gd_scene format=3]
 
-; MyColorPicker: `picker_shape = 0` (SHAPE_HSV_RECTANGLE, also Godot's own
-; default) draws the SV square + hue slider; every row-visibility flag stays
-; UNSET so Godot's own default (true) applies, so the sample, mode, slider
-; grid, hex field and swatches rows all draw too, at the default `color_mode`
-; (RGB, 0) — a regression in any ONE row's paint is visible here without a
-; second cause to rule out, since every other row around it is drawn from an
-; independently-tested function. `color`'s alpha (0.8) exercises the sample
-; row's checkerboard. `can_add_swatches`/`deferred_mode` stay non-default for
-; the strict parser's grammar coverage only — neither reaches a drawn pixel
-; (comparison.md's own "Known limitations").
-;
-; MyColorPickerOkhsl: the ONE variable this node moves is `color_mode = 3`
-; (OKHSL) — `picker_shape = 4` (SHAPE_NONE) and every other row but the
-; slider grid turned off isolate the OKHSL channel math (hue/saturation/
-; lightness gradients + values) from every row MyColorPicker already covers,
-; so a regression here can only be the OKHSL slider-grid port.
+; MyColorPicker draws every row at Godot's defaults (HSV rectangle, RGB mode), so a regression in one
+; row shows beside tested rows. Its alpha 0.8 shows the checkerboard. MyColorPickerOkhsl moves
+; `color_mode = 3` (OKHSL) with only the slider grid on. `can_add_swatches` and `deferred_mode` are
+; non-default for grammar coverage only.
 
 [node name="Root" type="Control"]
 anchors_preset = 15

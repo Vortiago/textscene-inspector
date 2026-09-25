@@ -1,7 +1,6 @@
 /**
- * `<CodeEdit>` render contract — `<TextEditBody>` reused for chrome/text,
- * plus this slice's own line-number gutter. Structure assertions only;
- * pixels are `pnpm ref:godot`'s job.
+ * `<CodeEdit>` render contract: `<TextEditBody>` for chrome and text, plus the line-number
+ * gutter. Structure only. Pixels belong to `pnpm ref:godot`.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -28,7 +27,7 @@ function solveNode(properties: Partial<CodeEditProperties> = {}): SolveNode {
   return { ...emptySolveNode(), path: 'MyCodeEdit', node };
 }
 
-/** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute — the chrome `<TextEditBody>` itself draws. */
+/** The chrome `<TextEditBody>` draws: a `<StyleBoxQuad>` mesh with a `color` vertex attribute. */
 function findChromeMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
@@ -36,7 +35,7 @@ function findChromeMesh(scene: Rendered['scene']) {
     .find((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
 }
 
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms) — text AND line numbers alike. */
+/** `<TextRun>` meshes, text and line numbers alike: they carry the MSDF `ShaderMaterial`. */
 function findTextMeshes(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
@@ -56,7 +55,7 @@ describe('<CodeEdit> — reuses TextEditBody for chrome and text', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CodeEdit {...painterEnv()} solveNode={solveNode({ text: 'a\nb' })} rect={RECT} renderOrder={0} />
     );
-    // 2 buffer-line TextRuns; the gutter is off by default, so no line-number meshes.
+    // 2 buffer-line TextRuns. The gutter is off by default, so no line-number meshes.
     expect(findTextMeshes(renderer.scene)).toHaveLength(2);
   });
 });
@@ -83,9 +82,8 @@ describe('<CodeEdit> — line-number gutter', () => {
   });
 
   it('shifts the body text right by the gutter band width once any gutter draws', async () => {
-    // The main gutter's own width (`get_line_height()`) does not depend on
-    // `measureText`, unlike the line-number gutter's char-width term — this
-    // isolates the shift from that dependency.
+    // The main gutter's width (`get_line_height()`) does not depend on `measureText`,
+    // unlike the line-number gutter's, so this isolates the shift from it.
     const withoutGutter = await ReactThreeTestRenderer.create(
       <CodeEdit {...painterEnv()} solveNode={solveNode({ text: 'a' })} rect={RECT} renderOrder={0} />
     );
@@ -97,8 +95,8 @@ describe('<CodeEdit> — line-number gutter', () => {
         renderOrder={0}
       />
     );
-    // The body text's own group sits at the LARGEST x among every text-bearing
-    // group: the line-number gutter (when present) always starts to its left.
+    // The body text's group sits at the largest x among the text-bearing groups:
+    // the line-number gutter, when present, starts to its left.
     const bodyGroupX = (scene: Rendered['scene']) =>
       Math.max(
         ...scene
@@ -130,9 +128,8 @@ describe('<CodeEdit> — line-number gutter', () => {
         renderOrder={0}
       />
     );
-    // The line-number gutter's own groups sit at the SMALLEST x among every
-    // text-bearing group (the body text, shifted right by the gutter band,
-    // never does) — the deepest one (most negative y) is buffer line 2's.
+    // The line-number groups sit at the smallest x among the text-bearing groups,
+    // left of the shifted body text. The deepest (most negative y) is buffer line 2's.
     const deepestLineNumberY = (scene: Rendered['scene']) => {
       const textGroups = scene
         .findAllByType('Group')

@@ -1,6 +1,4 @@
-/**
- * Tests for Area2D linter (strict parser + semantic rules)
- */
+/** Area2D linter: the strict parser and the semantic rules. */
 
 import { describe, it, expect } from 'vitest';
 import {
@@ -208,7 +206,7 @@ describe('Area2D Linter', () => {
   describe('Semantic Validation (Point Gravity)', () => {
     it('should NOT error when gravity_point is true and the unit distance is absent (Godot omits the 0.0 default)', () => {
       // 0.0 means constant point gravity with no distance falloff, and the
-      // serializer omits default values — absence is the editor's own output.
+      // serializer omits default values: absence is the editor's own output.
       expectClean(scene(node('Area2D', { gravity_point: true }), collisionShape2d));
     });
 
@@ -226,11 +224,9 @@ describe('Area2D Linter', () => {
   });
 
   describe('Semantic Validation (Collision Layers)', () => {
-    // No `collision_layer == 0` + monitoring check: no engine warning exists
-    // for it, and the premise would be wrong anyway — Area monitoring matches a target
-    // body's `collision_layer` against the AREA's `collision_mask`, not the
-    // area's own `collision_layer`, so the area's own layer has no bearing on
-    // what it detects. dodge-the-creeps' Coin ships with it deliberately.
+    // No `collision_layer == 0` with monitoring check: no engine warning exists for it. Area
+    // monitoring matches a target body's `collision_layer` against the area's `collision_mask`,
+    // so the area's own layer has no bearing on what it detects.
     it('stays quiet when collision_layer is 0 and monitoring is true', () => {
       expectClean(scene(node('Area2D', { monitoring: true, collision_layer: 0 }), collisionShape2d));
     });

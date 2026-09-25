@@ -1,36 +1,24 @@
 /**
  * The population `boundGrounding.test.ts` sweeps: every key that resolves to a
  * validator, and which of those declare none of `formatOnly`, `grounding` or
- * `intSlot`.
- *
- * Shared so the sweep and the tests that prove the sweep BITES read the same
- * key list — a guard whose fixture and whose subject drift apart stops
- * protecting anything. Reads the live singleton, so a caller must have imported
- * the linter barrel first; every consumer asserts a floor on the count for
- * exactly that reason.
+ * `intSlot`, shared by the sweep and the tests that prove it bites. It reads the
+ * live singleton, so a caller imports the linter barrel and asserts a count floor.
  */
 
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { everyValidatorLabel, type Root } from '../registryPopulation.js';
 
 /**
- * The one bound that cannot be grounded against the pinned reference, with the
- * reason.
- *
- * Empty, and meant to stay that way. A bound nobody can cite is not an
- * exemption to record but a bound ADR-0032 puts at the "nothing" tier: a hint
- * can only warn, only a setter can error, and a class absent from the pinned
- * reference offers neither. The validator drops the bound instead of being
- * listed here.
+ * Bounds that cannot be grounded against the pinned reference. Empty by policy:
+ * ADR-0032 puts an uncitable bound at the "nothing" tier, so the validator drops
+ * the bound instead of being listed here.
  */
 const UNGROUNDABLE: ReadonlySet<string> = new Set<string>();
 
 /**
  * The sweep, with the exemption set as a parameter so it can be emptied.
- *
- * The exemption is applied to the LABEL after the walk, never inside `keep`:
- * excusing a validator must not excuse the subtree behind it, and one exempt
- * wildcard key would otherwise cover every leaf it dispatches to.
+ * The exemption applies to the label after the walk, not inside `keep`: one
+ * exempt wildcard key would otherwise cover every leaf it dispatches to.
  */
 function ungroundedLabels(exempt: ReadonlySet<string>, roots?: readonly Root[]): string[] {
   return everyValidatorLabel(isUnclassified, { roots }).filter((l) => !exempt.has(l));
@@ -42,13 +30,10 @@ export function unclassifiedKeys(): string[] {
 }
 
 /**
- * A validator nobody has said where the authority for its rejections comes from.
- *
- * `intSlot` classifies only an UNBOUNDED validator. The slot's own refusal is
- * cited once, centrally, and covers `v.lenientInt('limit_left')`, which rejects
- * nothing else. A bounded one still owes a citation for the bound: without this
- * split, `v.strictInt('s', { min: 0, max: 9 })` with no `enforced:`/`hinted:`
- * reported its range at error tier and the ratchet stayed green.
+ * A validator that names no authority for its rejections. `intSlot` classifies
+ * only an unbounded validator, since the slot's own refusal is cited centrally.
+ * A bounded one, such as `v.strictInt('s', { min: 0, max: 9 })`, still owes a
+ * citation for its bound.
  */
 export function isUnclassified(v: PropertyValidator): boolean {
   if (v.formatOnly || v.grounding) return false;
@@ -56,26 +41,16 @@ export function isUnclassified(v: PropertyValidator): boolean {
 }
 
 /**
- * An `accepts` string that states a numeric range — `float 0-1`, `integer >= 0`,
+ * An `accepts` string that states a numeric range: `float 0-1`, `integer >= 0`,
  * `enum 0-3 (…)`. A bare `float` or a `Vector3(x, y, z)` states none.
  */
 const STATES_A_RANGE = /^(?:float|integer) (?:-?[\d.]+-|>= |<= )|^enum -?\d+-/;
 
 /**
  * Validators whose `accepts` states a range while `tiers` says nothing about
- * exceeding it — the pairing the generated sheet renders side by side.
- *
- * The two cells come from one validator and must agree: a row reading
- * `integer 1-16384` beside an empty `Out of range` tells a reader the bound has
- * no consequence. `accepts` and `grounding` each already have a registry sweep;
- * `tiers` shipped without one and 55 validators built from an inline arrow
- * (`v.strictInt`, `v.positiveInt` and their kin) went untagged — including
- * three with an enforced floor and a hinted ceiling, the very split the field
- * exists to express.
- *
- * Keyed on `accepts` rather than on `grounding` because plenty of grounded
- * validators bound something other than a magnitude — a flags mask, an array's
- * element type — and have no ends to report.
+ * exceeding it. The generated sheet renders both cells side by side, so they
+ * must agree. Keyed on `accepts`, not `grounding`: a grounded validator can
+ * bound a flags mask or an element type, which has no ends to report.
  */
 export function rangeWithoutTiers(): string[] {
   return everyValidatorLabel(
@@ -84,21 +59,17 @@ export function rangeWithoutTiers(): string[] {
 }
 
 /**
- * Exemptions that exempt nothing: the label resolves to no validator at all, or
- * to one that has since been grounded.
- *
- * Asked by emptying the set rather than by re-deriving each label, so the check
- * consumes the sweep's own output and cannot disagree with it about what a
- * label means. A dead entry is worse than none: it silently pre-forgives the
- * next validator to be registered under that exact name.
+ * Exemptions that exempt nothing: the label resolves to no ungrounded
+ * validator. The check empties the set and reads the sweep's own output, so it
+ * cannot disagree with the sweep about a label. A dead entry pre-forgives the
+ * next validator registered under that name.
  */
 export function staleUngroundable(
   entries: ReadonlySet<string> = UNGROUNDABLE,
   /**
-   * What the labels are resolved against. The live registry by default; a test
-   * supplies scratch roots because the ungrounded population is empty by
-   * policy, so against the registry alone every label is stale and the arm that
-   * must NOT report has no live subject to stand on.
+   * What the labels resolve against: the live registry by default. A test
+   * supplies scratch roots, because the live ungrounded population is empty by
+   * policy and the arm that must not report needs a subject.
    */
   roots?: readonly Root[]
 ): string[] {

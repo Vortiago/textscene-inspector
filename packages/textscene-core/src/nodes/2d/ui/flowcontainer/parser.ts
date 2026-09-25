@@ -1,10 +1,7 @@
 /**
- * FlowContainer parser — Control plus alignment/last_wrap_alignment/vertical/
- * reverse_fill. Shared by HFlowContainer/VFlowContainer (`../hflowcontainer`,
- * `../vflowcontainer` import this directly rather than duplicating it) — the
- * one difference, that the fixed subclasses never serialise `vertical`, is a
- * matter of which keys are PRESENT in `properties`, not of how any key is
- * read, so one parser covers all three.
+ * FlowContainer parser: the Control parse plus alignment, last_wrap_alignment,
+ * vertical and reverse_fill. HFlowContainer and VFlowContainer share it: they
+ * only omit `vertical`, which changes the keys present and not how a key reads.
  */
 
 import { type ParsedHeading } from '../../../../parser/utils';

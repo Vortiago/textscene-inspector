@@ -1,9 +1,6 @@
 /**
- * Loading indicator: the fixture fetch has no pending state
- * today (only success/failure), so a slow fixture load looks identical to a
- * stuck app. Reuses the `r3f-main.*.test.tsx` WebGL-mock pattern; the
- * fetch's `.text()` promise is held open with a manually-resolved deferred
- * so the test can observe the in-flight state before resolving it.
+ * The loading indicator, which tells a slow fixture load from a stuck app. A deferred holds
+ * the fetch's `.text()` promise open, so the test sees the in-flight state.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -32,7 +29,7 @@ function resetPersistence() {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // happy-dom may throw in edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
 }
 

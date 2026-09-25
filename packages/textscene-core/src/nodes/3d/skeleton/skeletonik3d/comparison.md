@@ -36,4 +36,4 @@ Strict parsing format-checks these `SkeletonIK3D` properties, plus 2 inherited f
 | `valid-skeletonmodifier3d-parent` (type-family match) | `skeletonmodifier3d-parent-not-skeleton3d` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, so all nine keys are dropped rather than substituted, with no fallback to name. Strict checks only their format, since every setter in `skeleton_ik_3d.cpp` is a bare assignment, so a negative `max_iterations` or a bone name matching no bone passes.
+The lenient parser reuses `parseNode3D`, so every key above is dropped rather than substituted, with no fallback to name. Strict checks only their format, since every setter in `skeleton_ik_3d.cpp` is a bare assignment, so a negative `max_iterations` or a bone name matching no bone passes.

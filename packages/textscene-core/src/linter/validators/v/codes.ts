@@ -11,8 +11,8 @@ function upper(name: string): string {
 
 /**
  * The code a branch reports under: `INVALID_<NAME>_FORMAT` by default, and the
- * one spelling of that template. `kind` names a branch of its own — a reference
- * that is not a `SubResource(…)`, a path that is not a `NodePath(…)`.
+ * one spelling of that template. `kind` names a branch of its own, such as a
+ * reference that is not a `SubResource(…)`.
  */
 export function formatCode(name: string, kind = 'FORMAT'): string {
   return `INVALID_${upper(name)}_${kind}`;
@@ -29,7 +29,11 @@ interface RangeEnd {
   exclusive?: boolean;
 }
 
-/** The tighter of two ends at the same side, `exclusive` breaking a tie. */
+/**
+ * The tighter of two ends at the same side, `exclusive` breaking a tie. Unlike
+ * `outerEndIsReachable` (grounding.ts), which asks only whether a band is
+ * non-empty, this is where the endpoint decides.
+ */
 function tighter(hint: RangeEnd | undefined, setter: RangeEnd | undefined, end: 'min' | 'max') {
   if (!hint) return setter;
   if (!setter) return hint;
@@ -39,22 +43,10 @@ function tighter(hint: RangeEnd | undefined, setter: RangeEnd | undefined, end: 
 }
 
 /**
- * `float 0-1` / `float >= 0` / `integer 1-256` / `float`, from the bounds.
- *
- * Built per END, taking the tighter of the two tiers at each side, because this
- * column is the domain that reports NOTHING. Returning on the hint's ends the
- * moment either exists is wrong in two directions at once: a setter ceiling
- * with a hinted floor prints `integer >= 0` and drops the ceiling entirely
- * (`max_contacts_reported`, `bounces`, `max_distance`), and a setter end
- * COINCIDING with the hint's but excluding it printed `float 0-100` for a
- * property whose setter refuses 0 (`aspect_ratio`).
- *
- * `exclusive` is consulted here and NOT in `outerEndIsReachable` (grounding.ts):
- * that one asks whether a band is non-empty, which the endpoint cannot change;
- * this one asks which of two coinciding ends is tighter, which is exactly what
- * the endpoint decides.
- *
- * The tier each end reports at belongs in the sheet's "Out of range" column.
+ * `float 0-1` / `float >= 0` / `integer 1-256` / `float`, from the bounds. Built
+ * per end, taking the tighter tier at each side, since this column is the domain
+ * that reports nothing. The tier each end reports at belongs in the sheet's
+ * "Out of range" column.
  */
 export function numericRange(
   kind: 'float' | 'integer',
@@ -68,9 +60,8 @@ export function numericRange(
   const lo = tighter(min !== undefined ? { at: min } : undefined, ends.enforcedMin, 'min');
   const hi = tighter(max !== undefined ? { at: max } : undefined, ends.enforcedMax, 'max');
   if (!lo && !hi) return kind;
-  // Two inclusive ends keep the compact `0-1` spelling every other row uses —
-  // and, with no `ends` at all, keep the user-visible messages that interpolate
-  // this (integers.ts, vectors.ts) byte-identical.
+  // Two inclusive ends keep the compact `0-1` spelling, which the messages in
+  // integers.ts and vectors.ts interpolate.
   if (lo && hi && !lo.exclusive && !hi.exclusive) return `${kind} ${lo.at}-${hi.at}`;
   return `${kind} ${[
     lo && `${lo.exclusive ? '>' : '>='} ${lo.at}`,

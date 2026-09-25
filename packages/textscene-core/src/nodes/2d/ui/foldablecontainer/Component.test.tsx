@@ -1,7 +1,6 @@
 /**
- * `<FoldableContainer>` render contract — title bar chrome + arrow icon +
- * title text, plus the content panel only when NOT folded. Structure/tint
- * assertions only (pixels are a golden-image concern via `pnpm ref:godot`).
+ * `<FoldableContainer>` draws the title bar, the arrow and the title text, and the
+ * content panel only when not folded. The tests assert structure and tint, not pixels.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -124,8 +123,8 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
 
   it('under RTL puts the arrow at the trailing edge and the text at the leading margin (foldable_container.cpp:293-300)', async () => {
     // `icon_pos.x = size.width - title_style->get_margin(SIDE_RIGHT) - icon->get_width()`
-    // and `title_text_pos.x += title_controls_width` (0 — `title_controls` is
-    // never serialised), leaving the style's own LEFT margin.
+    // and `title_text_pos.x += title_controls_width`, which is 0 because `title_controls`
+    // is never serialised. That leaves the style's left margin.
     const rtlNode = { ...solveNode({ folded: true, title: 'A', titleAlignment: 2 }), rtl: true };
     const renderer = await ReactThreeTestRenderer.create(
       <FoldableContainer {...painterEnv()} solveNode={rtlNode} rect={RECT} renderOrder={0} />
@@ -193,10 +192,8 @@ describe('<FoldableContainer> chrome placement', () => {
   }
 
   it('draws the content panel BELOW the title bar, not over it (foldable_container.cpp:317-321)', async () => {
-    // `Rect2 panel_rect(Point2(0, title_minimum_size.height), ...)` — the panel
-    // starts where the title bar ends. `StyleBoxQuad` takes only a SIZE, so the
-    // offset has to come from the group around it, the same way the arrow and
-    // the title text already reach theirs.
+    // `Rect2 panel_rect(Point2(0, title_minimum_size.height), ...)`: the panel starts where
+    // the title bar ends. `StyleBoxQuad` takes only a size, so the group supplies the offset.
     const renderer = await ReactThreeTestRenderer.create(
       <FoldableContainer {...painterEnv()} solveNode={solveNode({ folded: false, title: 'A' })} rect={RECT} renderOrder={0} />
     );

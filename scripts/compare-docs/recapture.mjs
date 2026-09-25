@@ -1,23 +1,8 @@
 #!/usr/bin/env node
 /**
- * Re-render EVERY comparison image the sheets reference — one command to refresh
- * the whole gallery after a renderer change, so no sheet is left showing a stale
- * frame. The sheets are the source of truth: each sheet's `image:`/`fixture:` and
- * each section's `<!-- compare: image= fixture= -->` marker names an image and the
- * scene that produces it.
- *
- *   pnpm recapture              # re-render godot + ours for every sheet image
- *   pnpm recapture --ours       # only ours (Godot is deterministic; this is the
- *                               # usual case — our renderer is what drifts)
- *   pnpm recapture --only sky   # limit to images whose name contains "sky"
- *
- * Godot detects 2D vs 3D from the scene, so both sides frame the same way with no
- * per-image config; a sheet's `camera:` (a scene Camera3D path) is looked through
- * on both sides when present.
- *
- * The parts live in `recapture/`: `cli` (the flags), `targets` (what the sheets
- * ask for, where it lands, and which script owns it), `godotSide` / `oursSide`
- * (the two renderers) and `complex` (the delegation to capture-complex.mjs).
+ * Re-renders each comparison image the sheets name in `image:` and `<!-- compare: -->` markers:
+ * `pnpm recapture [--ours|--godot] [--only sky]`. `--ours` is the usual case, as Godot is deterministic and
+ * our renderer drifts. `--only` keeps names that contain the fragment. Godot picks 2D or 3D from the scene.
  */
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
@@ -49,8 +34,7 @@ async function main() {
   }
 }
 
-// Guarded so an unguarded main() cannot start rendering the moment anything
-// imports this entry.
+// Guarded so an import of this entry does not start rendering.
 if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
   main().catch((e) => {
     console.error(e);

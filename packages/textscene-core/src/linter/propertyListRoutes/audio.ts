@@ -7,11 +7,9 @@ import type { RouteRow } from './types.js';
 export const audioRoutes: readonly RouteRow[] = [
   {
     // All three players delegate `_set`/`_get`/`_get_property_list` to
-    // AudioStreamPlayerInternal, which pushes one key per parameter the ASSIGNED
-    // STREAM declares (audio_stream_player_internal.cpp:235-251). The usage bit
-    // is cleared only where the held value equals the stream's default (:245-247),
-    // so a non-default parameter IS serialised — 142 files in the scraped corpus
-    // carry one.
+    // AudioStreamPlayerInternal, which pushes one key per parameter the assigned
+    // stream declares (audio_stream_player_internal.cpp:235-251). The usage bit
+    // clears only at the stream's default (:245-247), so a non-default one is serialised.
     type: 'AudioStreamPlayer',
     at: 'audio_stream_player_internal.cpp:235-251',
     sample: 'parameters/looping',

@@ -104,11 +104,9 @@ describe('isViewportTextureRef', () => {
 
 describe('useViewportTextureSlot', () => {
   /**
-   * `viewport_path` counts from the LOCAL SCENE ROOT
-   * (`ViewportTexture::_setup_local_to_scene` resolves it with
-   * `p_loc_scene->get_node_or_null(path)`), while the registry is keyed by the
-   * dispatcher-absolute path. A consumer deep in the tree must still find a
-   * sub-viewport that is a child of the root, not of itself.
+   * `viewport_path` counts from the local scene root (`ViewportTexture::_setup_local_to_scene`,
+   * `p_loc_scene->get_node_or_null(path)`), and the registry uses dispatcher-absolute
+   * paths. A deep consumer still finds a sub-viewport that is a child of the root.
    */
   it('resolves a root-relative viewport path from a consumer deep in the tree', () => {
     const { resolved, texture } = mount(
@@ -129,9 +127,8 @@ describe('useViewportTextureSlot', () => {
   });
 
   /**
-   * A target that has not been published yet is null, never a placeholder
-   * texture — the publisher's effect runs after mount, so every consumer sees
-   * null on its first render and re-renders when the reactive map updates.
+   * An unpublished target is null, never a placeholder: the publisher's effect
+   * runs after mount, so a consumer re-renders when the reactive map updates.
    */
   it('returns null until the sub-viewport publishes', () => {
     const { resolved } = mount('SubResource("ViewportTexture_1")', 'Root/Screen');
@@ -186,9 +183,8 @@ describe('useViewportTextureSlot', () => {
 
   describe('a target sitting in an unrenderable pass cycle', () => {
     /**
-     * `viewport_path` counts from the local scene root, so
-     * `SubResource("ViewportTexture_1")` above resolves to the registry key
-     * `Root/SubViewport` — the exact path a cyclic pass registers under.
+     * `SubResource("ViewportTexture_1")` resolves to the registry key
+     * `Root/SubViewport`, the path the cyclic pass registers under.
      */
     const VIEWPORT_TEXTURE_REF = 'SubResource("ViewportTexture_1")';
     const ATLAS_REF = 'SubResource("Atlas_1")';
@@ -235,11 +231,8 @@ describe('useViewportTextureSlot', () => {
     });
 
     /**
-     * `CyclicRegistration` alone makes `ViewportPassProvider`'s own
-     * cycle-detection effect warn (unrelated to this hook) — the assertion
-     * here is specifically that THIS hook's own "falls back" warning, keyed
-     * off a real ViewportTexture resolution, does not additionally fire for
-     * a slot that never named one.
+     * `ViewportPassProvider` warns for the cycle itself. This hook's own "falls
+     * back" warning must not fire for a slot that names no ViewportTexture.
      */
     it('does not warn its own fallback message when the slot names no ViewportTexture at all', () => {
       warnCalls.length = 0;

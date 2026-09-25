@@ -1,13 +1,8 @@
 /**
- * Reach guard for `canvasitem-ancestor-clips-children` /
- * `canvasitem-ancestor-is-canvasgroup` (canvas_item.cpp:1297-1323): the rule
- * must run on every concrete registered CanvasItem descendant — both the
- * Node2D tree and the Control tree.
- *
- * See `nodes/2d/ui/control/linter.reach.test.ts` for why this exists apart
- * from `configurationWarningCoverage.test.ts`: that guard is a baked literal
- * this task cannot edit, and still lists the CanvasItem rows as
- * `unimplemented`, so it does not exercise this rule at all yet.
+ * `canvasitem-ancestor-clips-children` and `canvasitem-ancestor-is-canvasgroup`
+ * (canvas_item.cpp:1297-1323) run on every concrete registered CanvasItem descendant, in both the
+ * Node2D tree and the Control tree. `nodes/2d/ui/control/linter.reach.test.ts` says why this guard
+ * stands apart from `configurationWarningCoverage.test.ts`.
  */
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';

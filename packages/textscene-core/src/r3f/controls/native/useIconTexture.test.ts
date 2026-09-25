@@ -1,19 +1,7 @@
 /**
- * `useIconTexture` allocates a GPU texture, and a painter cannot put the call
- * behind its own early return — hook order is fixed. So the hook itself has to
- * accept "no icon this render", or a widget whose icon is conditionally drawn
- * decodes an image and holds a texture for a quad it never renders. The
- * SplitContainers are exactly that case: `autohide` defaults true, so their
- * grabber is invisible in the common scene.
- *
- * These pin the null path, which is the part with no visible symptom when it
- * regresses — a wasted decode looks identical on screen.
- *
- * They also pin the sampling colour space and the decode that must accompany
- * it. That pair has no visible symptom either until an icon is MAGNIFIED: the
- * two orderings — decode each texel then filter, versus filter the encoded
- * bytes then decode — agree exactly wherever the filter lands on a texel
- * centre, and diverge only across the ramp between two texels.
+ * Pins the null path, where a wasted decode looks identical on screen, and the sampling colour
+ * space. Decode-then-filter and filter-then-decode agree on texel centres and differ only across
+ * the ramp between texels, so a regression shows only on a magnified icon.
  */
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';

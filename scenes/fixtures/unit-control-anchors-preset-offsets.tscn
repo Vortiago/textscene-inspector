@@ -1,24 +1,9 @@
 [gd_scene format=3]
 
-; ONE variable: the `offset_*` side effect an operational `anchors_preset` has.
-; `Control::_set_anchors_layout_preset` does not only set anchors — it calls
-; `set_offsets_preset` too, which writes all four offsets from the node's
-; minimum size AT THAT INSTANT (an orphan with no children and none of its own
-; type's properties set yet, so a Button's is its StyleBox margins alone).
-;
-; Those offsets are normally invisible, because they place a rect exactly where
-; the min-size floor would have placed it using the SAME preset's grow
-; directions. They move a pixel only when a scene authors a `grow_*` that
-; CONTRADICTS its preset — so each cell below holds one wide-preset Button, and
-; the cells differ only in whether that contradiction is present:
-;   Agreeing     grow left to the preset (BOTH) — the side effect cancels out
-;   ContradictV  grow_vertical = END against HCENTER_WIDE's BOTH
-;   ContradictH  grow_horizontal = END against VCENTER_WIDE's BOTH
-;
-; A regression here is invisible in every other scene: no fixture and no demo
-; in the corpus pairs an operational preset with a contradicting `grow_*` on a
-; type that has a non-zero minimum size of its own, which is the only shape
-; where these offsets survive the floor.
+; The one variable: the offsets an operational `anchors_preset` writes through set_offsets_preset,
+; from the minimum size at that instant. They move a pixel only when a `grow_*` contradicts the
+; preset: Agreeing does not, ContradictV and ContradictH set grow END. No other fixture or demo pairs
+; a preset with a contradicting grow on a type with a minimum size.
 
 [node name="Root" type="Control"]
 anchor_right = 1.0

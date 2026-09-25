@@ -1,20 +1,9 @@
 [gd_scene format=3]
 
-; Two BoneTwistDisperser3D settings, because one cannot carry every serialised
-; leaf at once: _validate_dynamic_prop (bone_twist_disperser_3d.cpp:173-216)
-; clears a leaf to PROPERTY_USAGE_NONE outside the mode that reads it, and
-; weight_position (Weighted) and damping_curve / joints twist_amount (Custom)
-; are mutually exclusive within a setting.
-;
-; Setting 0 is Weighted with an extended end bone and an explicit twist_from, so
-; end_bone_direction and twist_from stay live. Setting 1 is Custom without an
-; extended end bone, so damping_curve is live and the LAST joint's twist_amount
-; is hidden (:204-206), hence two amounts for three joints.
-;
-; reference_bone_name and the joints/<j>/bone* pair are deliberately absent:
-; their PropertyInfos carry no PROPERTY_USAGE_STORAGE (:151, :161-162), so the
-; packer never writes them (packed_scene.cpp:865) and _set refuses them (:71,
-; :74).
+; Two settings, since _validate_dynamic_prop (bone_twist_disperser_3d.cpp:173-216) hides a leaf outside
+; its mode. Setting 0 is Weighted (end_bone_direction, twist_from). Setting 1 is Custom (damping_curve,
+; and no twist_amount on the last joint, :204-206). reference_bone_name and joints/<j>/bone* lack STORAGE
+; (:151, :161-162): the packer skips them (packed_scene.cpp:865) and _set refuses them (:71, :74).
 
 [node name="Root" type="Node3D"]
 

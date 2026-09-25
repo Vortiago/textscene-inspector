@@ -1,4 +1,4 @@
-/** Hand the complex slugs to capture-complex.mjs, so one command still refreshes everything. */
+/** Hands the complex slugs to capture-complex.mjs, so one command refreshes everything. */
 
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';

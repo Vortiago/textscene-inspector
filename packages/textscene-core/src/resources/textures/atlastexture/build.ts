@@ -1,24 +1,8 @@
 /**
- * Compose an `AtlasTexture`'s layout into a texture of its OWN size.
- *
- * Godot presents an AtlasTexture to every consumer as a texture whose size is
- * the region's, drawing the sheet's sub-rectangle wherever the texture is drawn
- * (`AtlasTexture::draw`, `scene/resources/atlas_texture.cpp:158-164`, and
- * `get_image` :245-256, which materialises exactly this crop). Producing that
- * crop as a real texture is what lets a windowed sheet reach EVERY Texture2D
- * slot: consumers read `image.width`/`image.height` for their sizing and set
- * their own `repeat`/`offset` for their own cropping, so a shared sheet handed
- * over with pre-windowed UVs would be silently re-windowed to the whole sheet.
- *
- * The copy is a whole-texel blit with smoothing off, so a 1:1 draw of the crop
- * is byte-identical to a 1:1 draw of the same texels through the sheet.
- *
- * Two sheet shapes arrive here. A decoded image goes through a 2D canvas; a
- * RAW-PIXEL image (`{data, width, height}` — what a `DataTexture` carries) is
- * copied row by row instead. Not merely because `drawImage` rejects it: a
- * canvas backing store is PREMULTIPLIED, so routing those bytes through one
- * would zero the RGB behind alpha 0 that `applyAlphaBorderFix` exists to
- * preserve.
+ * An `AtlasTexture`'s layout as a texture of its own size, as Godot presents it
+ * (`AtlasTexture::draw`, `scene/resources/atlas_texture.cpp:158-164`; `get_image`
+ * :245-256). Consumers size by `image.width`/`image.height` and set their own
+ * `repeat` and `offset`, so a sheet with pre-windowed UVs would be re-windowed.
  */
 
 import * as THREE from 'three';
@@ -26,14 +10,10 @@ import { imageSize } from '../../../r3f/controls/withImageCanvas';
 import type { AtlasTextureLayout } from './types';
 
 /**
- * The crop `layout` describes, drawn from the decoded atlas `image`, or null
- * when it cannot be produced: an image that has not decoded, a region that
- * misses the atlas entirely, or an environment with no 2D canvas (node and
- * happy-dom tests). Null is deliberately NOT "draw the sheet instead" — a
- * consumer showing the whole sprite sheet reads as a pass while being the
- * exact failure this module exists to prevent.
+ * The `{data, width, height}` a `DataTexture` carries. It is copied row by row:
+ * a premultiplied canvas would zero the RGB behind alpha 0 that
+ * `applyAlphaBorderFix` preserves.
  */
-/** The `{data, width, height}` an image-less texture (`DataTexture`) carries. */
 interface RawPixels {
   data: Uint8Array | Uint8ClampedArray;
   width: number;
@@ -45,13 +25,17 @@ function rawPixels(image: unknown, atlas: { width: number; height: number }): Ra
   const candidate = image as Partial<RawPixels> | null;
   const data = candidate?.data;
   if (!ArrayBuffer.isView(data)) return null;
-  // Anything but 4 bytes per texel is a format this crop cannot index (a
-  // compressed or single-channel DataTexture); leave it to the canvas path,
-  // which will decline in turn.
+  // A crop indexes 4 bytes per texel only. Other formats go to the canvas path,
+  // which declines in turn.
   if (data.length !== atlas.width * atlas.height * 4) return null;
   return { data: data as Uint8Array, width: atlas.width, height: atlas.height };
 }
 
+/**
+ * The crop `layout` describes, as a whole-texel blit with smoothing off, or null:
+ * an undecoded image, a region that misses the atlas, or no 2D canvas. Null never
+ * means "draw the sheet": a whole sprite sheet is the failure this prevents.
+ */
 export function rasterizeAtlasTexture(
   image: unknown,
   layout: AtlasTextureLayout
@@ -96,14 +80,13 @@ export function rasterizeAtlasTexture(
     );
 
     const texture = new THREE.CanvasTexture(canvas);
-    // The same tag `createTextureFromBuffer` puts on a loaded image: these are
-    // the sheet's own undecoded sRGB bytes, and consumers that need another
-    // colour space retag their own clone.
+    // The tag `createTextureFromBuffer` puts on a loaded image: these are the
+    // sheet's sRGB bytes, and a consumer that needs another retags its own clone.
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.needsUpdate = true;
     return texture;
   } catch {
-    return null; // tainted canvas / unsupported image source
+    return null; // A tainted canvas or an unsupported image source.
   }
 }
 
@@ -141,8 +124,8 @@ function cropRawPixels(
 
   const texture = new THREE.DataTexture(out, layout.width, layout.height, THREE.RGBAFormat);
   texture.colorSpace = THREE.SRGBColorSpace;
-  // Row 0 is the sheet's own row 0, copied straight across, and a DataTexture
-  // uploads unflipped — so the crop lines up with the sheet it came from.
+  // Row 0 is the sheet's row 0, and a DataTexture uploads unflipped, so the crop
+  // lines up with its sheet.
   texture.flipY = false;
   texture.needsUpdate = true;
   return texture;

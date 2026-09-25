@@ -1,7 +1,7 @@
 /**
  * StrictTscnParser: values that span lines.
  *
- * The three blocks are one subject from three sides — a continuation line that
+ * The three blocks are one subject from three sides: a continuation line that
  * looks like a section heading, the multi-line property itself, and the salvage
  * that ends an unterminated one at the next section boundary.
  */
@@ -17,9 +17,9 @@ describe('StrictTscnParser', () => {
   });
 
   describe('multi-line values with heading-looking content', () => {
-    // A multi-line value's continuation lines can look like headings — BBCode
-    // tags (`[u]…[/u]`, `[center]`) and bracketed array/dict elements — but are
-    // CONTENT, not a new section. They must not be flagged as malformed.
+    // A multi-line value's continuation lines can look like headings (BBCode
+    // tags such as `[u]…[/u]` and `[center]`, and bracketed array/dict elements),
+    // but are content, not a new section. They must not be flagged as malformed.
     const expectNoFormatError = (content: string) => {
       const codes = parser.parse(content).errors.map((e) => e.code);
       expect(codes).not.toContain('INVALID_PROPERTY_FORMAT');

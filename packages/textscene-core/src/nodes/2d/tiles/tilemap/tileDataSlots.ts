@@ -16,16 +16,14 @@ export const TILE_MAP_DATA_FORMAT_DEFAULT = 2;
 
 /**
  * A literal the tokenizer types INT: an optional `-` and digits, nothing else
- * (variant_parser.cpp:420-448 — a `.` or an exponent makes it FLOAT).
+ * (variant_parser.cpp:420-448: a `.` or an exponent makes it FLOAT).
  */
 const INT_LITERAL_RE = /^-?\d+$/;
 
 /**
- * `TileMap::_set` stores `format` only when `p_value.get_type() == Variant::INT`
- * (tile_map.cpp:688-691); any other Variant falls through every arm to
- * `return false` (:724), so a FLOAT or BOOL spelling is a DROPPED write and the
- * member keeps its default. The INT cast itself is unchecked — no ERR_FAIL, no
- * clamp — so no bound belongs here.
+ * `TileMap::_set` stores `format` only from a `Variant::INT` (tile_map.cpp:688-691).
+ * Any other type falls through to `return false` (:724), so a FLOAT or BOOL
+ * spelling is a dropped write. The INT cast is unchecked, so no bound applies.
  */
 export const formatValidator: PropertyValidator = accepts((key, value, line) => {
   const text = value.trim();
@@ -45,9 +43,9 @@ formatValidator.grounding = { kind: 'enforced', cite: 'tile_map.cpp:689' };
 /**
  * The `format` in effect when `key` (a `layer_<i>/tile_data`) is applied.
  *
- * Properties apply in file order, so only a `format` ABOVE the key governs its
- * decode; one below, or absent, leaves the default. So does any spelling that
- * is not an INT literal — a dropped write, {@link formatValidator}'s diagnostic.
+ * Properties apply in file order, so only a `format` above the key governs its
+ * decode. One below, an absent one, or a non-INT spelling (a dropped write, see
+ * {@link formatValidator}) leaves the default.
  */
 export function formatWhenApplied(rawProps: Record<string, string>, key: string): number {
   const raw = replayPositions(rawProps, key, ['format']).format!.applied;
@@ -64,12 +62,9 @@ export function formatWhenApplied(rawProps: Record<string, string>, key: string)
 const TILE_DATA_RE = packedArrayLiteral('PackedInt32Array');
 
 /**
- * `layer_<i>/tile_data`: registered `PropertyInfo(Variant::PACKED_INT32_ARRAY,
- * "tile_data", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR)`
- * (tile_map.cpp:1039), storage-bearing. Shape-only: the format-AWARE decode
- * (triplet layout, which depends on the sibling `format` property) is
- * `tilemap-invalid-tile-data`'s job (linter.ts), which runs this check first so
- * a value refused here is never reported twice.
+ * `layer_<i>/tile_data`: a storage-bearing PACKED_INT32_ARRAY (tile_map.cpp:1039).
+ * Shape only: the format-aware triplet decode is `tilemap-invalid-tile-data`'s
+ * job (linter.ts), which runs this check first so no value reports twice.
  */
 export const tileDataValidator: PropertyValidator = accepts((key, value, line) => {
   const match = TILE_DATA_RE.exec(value.trim());
@@ -92,6 +87,6 @@ export const tileDataValidator: PropertyValidator = accepts((key, value, line) =
   return bad.error ?? bad.truncated;
 }, 'PackedInt32Array(…) of cell triplets (decoded by the tilemap-invalid-tile-data rule)');
 // An INT slot, not format-only: it rejects a literal the tokenizer reads.
-// The tag never reaches the registry — `indexedFamilyValidator` re-tags the
-// family wrapper — but the `.leaves` sweep in validatorClassification reads it.
+// `indexedFamilyValidator` re-tags the family wrapper, but the `.leaves` sweep
+// in validatorClassification reads this tag.
 markIntSlot(tileDataValidator);

@@ -1,24 +1,15 @@
 /**
- * Multi-file upload via the toolbar's file input and drag-and-drop.
- * Covers the Multi-file matching contract:
- * 1. Root-most scene pick (regardless of file order in the batch)
- * 2. Missing-list matching (non-tscn files fulfill missing res:// rows on
- *    repeated drops, not just the scene's direct ExtResources)
- * 3. No-.tscn drops fulfill missing rows instead of erroring
- *
- * Spies on `WebResourceProvider.prototype.addUploadedFile` — the exact seam
- * `handleFilesUpload` calls through — a real, non-mocked integration between
- * the file-input handler, the pure helpers in multiFileUpload.ts (already
- * covered by co-located unit tests), and the resource pipeline.
+ * Multi-file upload through the file input and drag-and-drop: the root-most scene wins in
+ * any file order, other files fulfil missing res:// rows on repeated drops, and a drop with
+ * no .tscn fulfils rows instead of erroring. It spies on `addUploadedFile`, the seam
+ * `handleFilesUpload` calls, with the rest of the pipeline real.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-// Under happy-dom nothing mounts inside the Canvas, so no `useResource()`
-// call ever reports a missing path. Tests that need missing rows inject them
-// through this hoisted override, delivered via the SAME prop contract the
-// production shell uses (`onMissingPathsChange`) — which is exactly the seam
-// `handleFilesUpload` reads.
+// Under happy-dom nothing mounts inside the Canvas, so no `useResource()` reports a missing
+// path. A test injects missing rows through this override, on the production prop
+// `onMissingPathsChange` that `handleFilesUpload` reads.
 const missingPathsOverride = vi.hoisted(() => ({
   current: null as ReadonlySet<string> | null,
 }));
@@ -31,8 +22,7 @@ vi.mock('@textscene/core', async () => {
     TscnCanvas: () => null,
     TscnSceneContents: () => null,
     TscnPreviewShell: (props: Parameters<typeof real.TscnPreviewShell>[0]) =>
-      // Substitute the override AT the provider's own observer seam — no
-      // parent effect racing the provider's report, no ordering dependency.
+      // At the provider's own observer seam, so no parent effect races the provider's report.
       React.createElement(real.TscnPreviewShell, {
         ...props,
         onMissingPathsChange: (paths: ReadonlySet<string>) =>
@@ -83,7 +73,7 @@ function resetPersistence() {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // happy-dom may throw in edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
   window.history.replaceState(null, '', '/');
 }
@@ -194,7 +184,7 @@ describe('root-most scene pick (acceptance criteria)', () => {
     expect(screen.getByTestId('uploaded-tscn-label').textContent).toBe('parent.tscn');
     // bg.png is a direct ExtResource of parent.tscn and should be uploaded.
     expect(addUploadedFileSpy).toHaveBeenCalledWith('res://textures/bg.png', bgTexture);
-    // child.tscn is an ExtResource of parent — it should also be uploaded as a resource.
+    // child.tscn is an ExtResource of parent, so it is uploaded as a resource too.
     expect(addUploadedFileSpy).toHaveBeenCalledWith('res://scenes/child.tscn', childFile);
   });
 });
@@ -217,7 +207,7 @@ describe('no-.tscn drop fulfills missing rows', () => {
     await waitFor(() => {
       expect(addUploadedFileSpy).toHaveBeenCalledWith('res://textures/child_tex.png', textureFile);
     });
-    // Fulfilled, not errored — and the active scene is untouched.
+    // Fulfilled, not errored, and the active scene is untouched.
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByText('StubRoot')).toBeTruthy();
   });
@@ -226,7 +216,7 @@ describe('no-.tscn drop fulfills missing rows', () => {
     render(<R3FApp />);
     await waitForScene();
 
-    // Drop a texture with no .tscn and no missing rows yet — should error.
+    // A texture with no .tscn and no missing rows yet errors.
     const textureFile = new File(['bytes'], 'player.png', { type: 'image/png' });
     await act(async () => {
       dropFiles([textureFile]);
@@ -254,7 +244,7 @@ describe('no-.tscn drop fulfills missing rows', () => {
     });
     await waitForScene('MultiUploadRoot');
 
-    // Now drop an unrelated texture (not player.png) — should error since nothing matches.
+    // An unrelated texture (not player.png) errors, since nothing matches.
     await act(async () => {
       dropFiles([new File(['bytes'], 'unrelated.png', { type: 'image/png' })]);
     });

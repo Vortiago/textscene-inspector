@@ -39,7 +39,7 @@ describe('<CSGSphere3D>', () => {
     const geom = findMesh(renderer.scene).geometry;
     geom.computeBoundingSphere();
     expect(geom.boundingSphere!.radius).toBeCloseTo(1.25, 5);
-    // csg_shape.cpp:1329 — two triangles per segment per ring, one fewer at each pole.
+    // csg_shape.cpp:1329: two triangles per segment per ring, one fewer at each pole.
     expect(geom.getAttribute('position').count / 3).toBe(24 * 48 * 2 - 48 * 2);
   });
 

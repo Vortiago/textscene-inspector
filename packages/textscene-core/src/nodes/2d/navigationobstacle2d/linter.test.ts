@@ -122,7 +122,7 @@ describe('NavigationObstacle2D global-scale check (navigation_obstacle_2d.cpp:33
   });
 
   it('warns on a negative scale — the guard is < 0.001, not merely <= 0', () => {
-    // Vector2(1, -1): a UNIT mirror. get_scale() folds the determinant's sign
+    // Vector2(1, -1): a unit mirror. get_scale() folds the determinant's sign
     // into y alone (transform_2d.cpp:115-118), so y comes out negative here,
     // well under the 0.001 floor, even though |scale| is 1 on both axes.
     expect(
@@ -158,7 +158,7 @@ top_level = true
 
   it('says nothing when composing through a plain Node parent (a known, non-CanvasItem terminus)', () => {
     // "Root" is a plain Node, not a CanvasItem, so get_parent_item() returns
-    // null for Obstacle regardless — Obstacle's own scale alone decides this.
+    // null for Obstacle, and Obstacle's own scale alone decides this.
     const content = `[gd_scene format=3]
 
 [node name="Root" type="Node"]
@@ -257,12 +257,10 @@ describe('NavigationObstacle2D global-skew check (navigation_obstacle_2d.cpp:340
   });
 
   it('says nothing when a transform component is narrowed at parse time', () => {
-    // `Vector2i(...)` arguments run `_parse_construct<int32_t>`, whose
-    // identifier branch reads `inf` through `stor_fix`
-    // (variant_parser.cpp:149-159, :577-586), and `_to_int<int32_t>` then
-    // narrows it (variant.h:369-370). Godot composes an unskewed transform from
-    // whatever int32 it lands on; the NaN that stood in for it made
-    // `hasZeroGlobalSkew` answer false and report skew that is not there.
+    // `Vector2i(...)` arguments read `inf` through `stor_fix`
+    // (variant_parser.cpp:149-159, :577-586), and `_to_int<int32_t>` narrows it
+    // (variant.h:369-370). Godot composes an unskewed transform from whatever
+    // int32 it lands on, so a NaN stand-in would report skew that is not there.
     const content = `[gd_scene format=3]\n\n[node name="Obstacle" type="NavigationObstacle2D"]\nradius = 10.0\nscale = Vector2i(inf, 1)\n`;
     expect(only(SKEW_RULE, content)).toEqual([]);
     expect(only(NON_UNIFORM_RULE, content)).toEqual([]);
@@ -276,23 +274,20 @@ describe('NavigationObstacle2D global-skew check (navigation_obstacle_2d.cpp:340
   });
 
   it('says nothing on a degenerate (zero-length) axis, matching Vector2::normalize()\'s zero-vector guard', () => {
-    // core/math/vector2.cpp's normalize() guards `if (l != 0)`, so a
-    // zero-length column normalizes to the zero vector; the dot is then 0,
-    // acos(0) is PI/2, and get_skew() returns exactly 0 — Godot stays silent
-    // here even though the transform is otherwise degenerate (and DOES trip
-    // the separate scale-floor check below).
+    // core/math/vector2.cpp's normalize() guards `if (l != 0)`, so a zero-length
+    // column normalises to the zero vector, the dot is 0, and get_skew() returns
+    // exactly 0. Godot stays silent here, though the separate scale-floor check
+    // still fires.
     const content = `[gd_scene format=3]\n\n[node name="Obstacle" type="NavigationObstacle2D"]\nradius = 10.0\nscale = Vector2(0, 1)\n`;
     expect(only(SKEW_RULE, content)).toEqual([]);
     expect(only(SCALE_RULE, content)).toHaveLength(1);
   });
 
   it("says nothing when the two axes are parallel but non-zero, where SIGN(det) is 0", () => {
-    // The zero-LENGTH guard above does not cover a zero DETERMINANT: here both
-    // columns have length, but they are parallel. `get_skew()` multiplies
-    // `columns[1].normalized()` by `SIGN(det)` (transform_2d.cpp:74), which is
-    // exactly 0 (typedefs.h:123-126), so the dot is 0 and the skew is exactly
-    // 0 — navigation_obstacle_2d.cpp:340 compares `!= 0.0` and stays silent.
-    // Composed, since Node2D never serialises `transform` directly.
+    // Parallel columns with length: `get_skew()` multiplies by `SIGN(det)`
+    // (transform_2d.cpp:74), which is exactly 0 (typedefs.h:123-126), so the skew
+    // is 0 and navigation_obstacle_2d.cpp:340 (`!= 0.0`) stays silent. Composed,
+    // since Node2D never serialises `transform` directly.
     const content = `[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\nscale = Vector2(1, 0)\n\n[node name="Obstacle" type="NavigationObstacle2D" parent="."]\nradius = 10.0\nrotation = 0.785398\n`;
     expect(only(SKEW_RULE, content)).toEqual([]);
   });

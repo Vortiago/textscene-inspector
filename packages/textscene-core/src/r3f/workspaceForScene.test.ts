@@ -1,7 +1,7 @@
 /**
  * Which Godot editor workspace a scene root claims (ADR-0006 amendment):
  * CanvasItemEditor claims any CanvasItem, Node3DEditor claims Node3D, and a
- * plain `Node` root is claimed by neither — the editor stays where it was.
+ * plain `Node` root is claimed by neither, so the editor stays where it was.
  */
 import { describe, expect, it } from 'vitest';
 import { isCanvasItemNode, workspaceForRoot } from './workspaceForScene';

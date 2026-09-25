@@ -1,14 +1,8 @@
 [gd_scene format=3]
 
-; ConvertTransformModifier3D: no visuals. Exercises setting_count and both
-; two-segment leaf groups, apply/ and reference/, across all three transform
-; modes: Position (0), Rotation (1) and Scale (2). Each mode selects a different
-; PROPERTY_HINT_RANGE for the range_min/range_max pair beside it, so all three
-; arms of that hint are covered.
-; settings/0/apply_bone sits beside settings/0/apply/axis on purpose: one flat
-; leaf and one nested group whose names share a prefix.
-; settings/1 omits relative because its reference_type is Node, the state in
-; which _validate_dynamic_prop clears that key to PROPERTY_USAGE_NONE.
+; No visuals. setting_count plus the apply/ and reference/ groups in all three modes, each with its
+; own range_min/range_max hint. settings/0/apply_bone shares a prefix with settings/0/apply/axis.
+; settings/1 omits relative: a Node reference_type clears it to PROPERTY_USAGE_NONE.
 
 [node name="Root" type="Node3D"]
 

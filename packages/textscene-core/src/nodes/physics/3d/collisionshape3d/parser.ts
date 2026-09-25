@@ -1,4 +1,4 @@
-/** CollisionShape3D parser - parses CollisionShape3D nodes from TSCN. */
+/** CollisionShape3D parser: the Node3D transform plus the shape, disabled and debug colour. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { CollisionShape3DProperties } from './types';

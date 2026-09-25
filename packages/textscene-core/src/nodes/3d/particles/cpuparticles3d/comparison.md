@@ -106,7 +106,7 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 | `valid-cpuparticles3d-mesh` | `cpuparticles3d-requires-mesh` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`, so none of the 77 keys strict validates is ever read. A `spread = 400.0` or a dangling `mesh` reference is dropped silently, and `linter.ts` ports the "no mesh assigned" configuration warning.
+The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`, so none of the keys strict validates is ever read. A `spread = 400.0` or a dangling `mesh` reference is dropped silently, and `linter.ts` ports the "no mesh assigned" configuration warning.
 
 ## Known limitations
 

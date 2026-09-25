@@ -1,26 +1,17 @@
 /**
- * The test-kit's own severity plumbing.
- *
- * `InvalidCase.severity` is how ~40 slice tests state an ADR-0032 tier, and every
- * one of them asserts nothing unless the field survives the trip into
- * `expectDiagnostic`. Drop it anywhere along that path and all of them still pass,
- * silently, so the claim needs a test of its own: a severity that does NOT match the
- * diagnostic must make the assertion throw. `expectInvalidCase` is the body of every
- * generated reject `it`, driven directly here because an `it` that should have failed
- * cannot be caught from outside.
- *
- * Two honest Camera2D diagnostics stand in for the two tiers — a hinted range warning
- * and an enforced setter error — pinned by the first test so a `toThrow` can never
- * pass merely because no diagnostic was found.
+ * The test-kit's own severity plumbing. `InvalidCase.severity` states an
+ * ADR-0032 tier, and a dropped field passes silently, so a mismatched severity
+ * must throw. Two Camera2D diagnostics stand in for the two tiers, and the
+ * first test pins them so a `toThrow` never passes on a missing diagnostic.
  */
 
 import { describe, it, expect } from 'vitest';
 import { expectDiagnostic, expectInvalidCase, lint, node, scene } from './testing/testkit';
 import './index.js'; // trigger all validator + rule registrations
 
-/** drag_left_margin's 0..1 bound is a PROPERTY_HINT_RANGE (camera_2d.cpp:989) — warns. */
+/** drag_left_margin's 0..1 bound is a PROPERTY_HINT_RANGE (camera_2d.cpp:989), so it warns. */
 const HINTED_WARNING = scene(node('Camera2D', { drag_left_margin: 1.5 }));
-/** set_zoom ERR_FAIL_CONDs on a near-zero component (camera_2d.cpp:103-105) — errors. */
+/** set_zoom ERR_FAIL_CONDs on a near-zero component (camera_2d.cpp:103-105), so it errors. */
 const ENFORCED_ERROR = scene(node('Camera2D', { zoom: 'Vector2(0, 1)' }));
 
 function severityOf(content: string, prop: string): string | undefined {

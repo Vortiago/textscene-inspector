@@ -1,15 +1,7 @@
 /**
- * Source pane slice 4: download + paste-to-preview polish.
- *
- * RED contract. Behavioral `<R3FApp>` tests reusing the `r3f-main.*.test.tsx`
- * WebGL-mock pattern (happy-dom has no WebGL; `TscnCanvas`/`TscnSceneContents`
- * stubbed, everything else real).
- *
- * The "no prior valid render, fatally broken" empty/error state can only be
- * reached when the very first load never produces a valid render — the app
- * always fetches `DEFAULT_FIXTURE` on mount, so the fixture fetch itself must
- * be made to fail before typing garbage, otherwise hold-last-valid already
- * has a good render to fall back on and the new state is unreachable.
+ * The source pane's download button and paste-to-preview notice. The app fetches
+ * `DEFAULT_FIXTURE` on mount, so the "nothing has rendered" state needs that fetch to fail
+ * before the garbage is typed: otherwise hold-last-valid has a render to fall back on.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -37,7 +29,7 @@ function resetPersistence() {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // happy-dom may throw in edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
 }
 
@@ -137,8 +129,7 @@ describe('#203 empty/error state — fatally-broken paste with no prior valid re
 
     typeBuffer(GARBAGE);
     await waitFor(() => {
-      // hold-last-valid keeps the old render; the "nothing has ever rendered"
-      // notice must NOT appear since a valid render already happened.
+      // hold-last-valid keeps the old render, so the "nothing has rendered" notice stays away.
       expect(screen.queryByText('StubRoot')).toBeTruthy();
     });
     expect(screen.queryByTestId('unrenderable-buffer-notice')).toBeNull();
@@ -183,8 +174,8 @@ describe('#203 Download .tscn', () => {
     const anchor = clickSpy.mock.instances[0] as HTMLAnchorElement;
     expect(anchor.download.endsWith('.tscn')).toBe(true);
 
-    // Not yet: `click()` only SCHEDULES the navigation, so the blob URL has to
-    // outlive this turn or the browser can lose the race to fetch it.
+    // Not yet: `click()` only schedules the navigation, so the blob URL outlives this turn or
+    // the browser can lose the race to fetch it.
     expect(revokeObjectURL).not.toHaveBeenCalled();
     await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url'));
   });

@@ -1,4 +1,8 @@
-/** Our side: one build, one preview server, one browser, serially over every fixture. */
+/**
+ * Our side: one build, one preview server, one browser, serially over every
+ * fixture. A `ref:ours` per fixture rebuilds each time, and in parallel the
+ * runs fight over one port.
+ */
 
 import {existsSync, mkdirSync } from 'node:fs';
 import { chromium } from 'playwright';
@@ -47,13 +51,12 @@ export async function captureOurs(fixtures, force, godotModes) {
   try {
     await waitForServer(`${baseUrl}/`);
     browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
-    // Burn the first-WebGL-context-lost risk before any published image is
-    // captured — see warmUpGLContext's own doc comment.
+    // Spends the first-context-lost risk before any published image.
     await warmUpGLContext(browser);
 
-    // One context per workspace, not per fixture: the two need different
-    // browser viewports and different seeded preferences, and a context is far
-    // more expensive than the navigation it hosts.
+    // One context per workspace, not per fixture: the workspaces need different
+    // viewports and seeded preferences, and a context costs far more than a
+    // navigation.
     let done = 0;
     for (const mode of ['3d', '2d']) {
       const group = capturable.filter((f) => modes.get(f) === mode);
@@ -76,9 +79,8 @@ export async function captureOurs(fixtures, force, godotModes) {
             if (!target) throw new Error(targetReason);
             const { buffer, reason } = await settleCanvas(page, target);
             if (!buffer) throw new Error(reason);
-            // Asked once the frame has settled, not before: the workspace claim
-            // is re-derived as a scene's sub-resources land, so a page read
-            // early enough can still be showing the 3D default.
+            // Asked after the frame settles: the workspace is re-derived as
+            // sub-resources land, so an early read can show the 3D default.
             const opened = await readViewportMode(page);
             if (opened !== mode) {
               throw new Error(

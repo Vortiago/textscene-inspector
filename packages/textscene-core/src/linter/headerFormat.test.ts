@@ -15,14 +15,13 @@ describe('readHeaderFormat', () => {
   });
 
   it('skips leading blank and comment lines to find the header', () => {
-    // 40 scenes under scenes/ open with a `;` block and carry the header below
-    // it, so a line-1 read misses every one of them.
+    // A scene may open with a `;` block and carry the header below it.
     const content = '; A comment\n;; another\n\n[gd_scene format=2]\n';
     expect(readHeaderFormat(content)).toEqual({ format: 2, line: 4 });
   });
 
   it('reports no version when the header declares none', () => {
-    // Absent is CURRENT, not oldest — the engine defaults it to FORMAT_VERSION
+    // Absent is current, not oldest: the engine defaults it to FORMAT_VERSION
     // (resource_format_text.cpp:1147-1148).
     expect(readHeaderFormat('[gd_scene]\n')).toEqual({ format: null, line: 1 });
     expect(readHeaderFormat('[gd_scene load_steps=2 uid="uid://abc"]\n')).toEqual({
@@ -35,16 +34,15 @@ describe('readHeaderFormat', () => {
     expect(readHeaderFormat('[gd_scene format=abc]\n')?.format).toBeNull();
     expect(readHeaderFormat('[gd_scene format=]\n')?.format).toBeNull();
     // Digits and an exponent, but it overflows: a grammar cannot catch this,
-    // so the finite check is on the parsed RESULT.
+    // so the finite check is on the parsed result.
     expect(readHeaderFormat('[gd_scene format=1e999]\n')?.format).toBeNull();
   });
 
   it('truncates a number spelling, because the engine assigns it to an int', () => {
     // `format_version = tag.fields["format"]` (resource_format_text.cpp:1140)
     // targets `int format_version` (resource_format_text.h:68), so the field is
-    // read as a Variant number and truncated. Reading only `\d+` reported
-    // `format=2.0` as ABSENT, and absent means CURRENT (:1147-1148) — so a
-    // legacy file was linted against a grammar it predates.
+    // read as a Variant number and truncated. Reading `format=2.0` as absent
+    // would mean current (:1147-1148), and lint a legacy file.
     expect(readHeaderFormat('[gd_scene format=3.0]\n')?.format).toBe(3);
     expect(readHeaderFormat('[gd_scene format=2.0]\n')?.format).toBe(2);
     expect(readHeaderFormat('[gd_scene format=2.9]\n')?.format).toBe(2);
@@ -52,11 +50,9 @@ describe('readHeaderFormat', () => {
   });
 
   it('reads the bare-exponent spellings Godot loads, which `Number` calls NaN', () => {
-    // `READING_EXP` takes a sign and ZERO digits (variant_parser.cpp:466-472),
-    // so `2e` and `1e-` load as 2 and 1. `Number('2e')` is NaN, which is the
-    // ABSENT case, and absent means CURRENT — so reading the field with
-    // `Number` linted a format-2 file against a grammar it predates, the same
-    // defect the `\d+`-only read had.
+    // `READING_EXP` takes a sign and zero digits (variant_parser.cpp:466-472),
+    // so `2e` and `1e-` load as 2 and 1. `Number('2e')` is NaN, the absent case,
+    // which means current and would lint a format-2 file.
     expect(readHeaderFormat('[gd_scene format=2e]\n')?.format).toBe(2);
     expect(readHeaderFormat('[gd_scene format=1e-]\n')?.format).toBe(1);
     expect(readHeaderFormat('[gd_scene format=5.e2]\n')?.format).toBe(500);
@@ -64,7 +60,7 @@ describe('readHeaderFormat', () => {
 
   it('stops at an unreadable header rather than advancing past it', () => {
     // `edge-malformed-bracket.tscn`'s shape. Advancing would hand the caller an
-    // `[ext_resource …]` line and let it answer for the file.
+    // `[ext_resource …]` line to answer for the file.
     const content = '[gd_scene format=3\n\n[ext_resource type="Texture2D" path="res://a.png" id="1"]\n';
     expect(readHeaderFormat(content)).toBeNull();
   });

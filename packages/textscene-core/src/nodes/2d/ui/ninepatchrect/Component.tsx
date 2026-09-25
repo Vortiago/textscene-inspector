@@ -1,26 +1,8 @@
 /**
- * `<NinePatchRect>` — the native (WebGL canvas) painter: a hand-built
- * `BufferGeometry` from `ninePatchGeometry.ts` (this node's own `texture`,
- * `patch_margin_*`, `region_rect` and `axis_stretch_*` translated to that
- * module's primitive nine-patch shape), textured through `useTexture2D` so an
- * image file and an inline procedural texture reach it the same way —
- * `nodes/2d/ui/texturerect/Component.tsx` is the precedent for both that
- * resolution and the `NoColorSpace` + `ControlQuad`-style decode this mirrors
- * (a bespoke mesh rather than `<ControlQuad>` itself, since that component is
- * a single quad and a nine-patch draws several).
- *
- * Positions come out of `ninePatchGeometry` in Godot pixels, +Y down,
- * dest-rect-local — the same uncooked convention `styleBoxFlatGeometry`
- * documents — so this mesh sits in a `scale={[1,-1,1]}` group exactly like
- * `<StyleBoxQuad>`.
- *
- * Tint: the walker's own `tint` prop — `self_modulate` already folded onto
- * the inherited `modulate`. NinePatchRect has no base colour of its own to
- * fold in first (its `canvas_item_add_nine_patch` call passes no `p_modulate`
- * of its own, `nine_patch_rect.cpp:48` — unlike `StyleBoxTexture::draw`,
- * which bakes its OWN `modulate` member into that same call's final
- * argument, `style_box_texture.cpp:183`), so it is used as-is, same as
- * TextureRect.
+ * `<NinePatchRect>`, the native painter: a `BufferGeometry` from `ninePatchGeometry.ts`, textured through
+ * `useTexture2D` as `texturerect/Component.tsx` does, since a `<ControlQuad>` draws one quad. Positions are
+ * Godot px, +Y down, so the mesh sits in a `scale={[1,-1,1]}` group like `<StyleBoxQuad>`. The walker's `tint`
+ * applies as-is: no modulate reaches `canvas_item_add_nine_patch` (`nine_patch_rect.cpp:48`, unlike `style_box_texture.cpp:183`).
  */
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
@@ -68,8 +50,8 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
   const props = painterView<NinePatchRectProperties>(solveNode);
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
 
-  // The node's OWN scope, not the ambient provider's — a NinePatchRect that
-  // arrived through an instanced sub-scene names ids from that scene.
+  // The node's own scope, not the ambient provider's: a NinePatchRect from an instanced sub-scene
+  // names ids from that scene.
   const { externalResources, internalResources } = solveNode.resources;
   const { texture: rawTexture } = useTexture2D(props.texture, externalResources, internalResources);
 
@@ -79,9 +61,8 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
     if (!rawTexture || textureSize.x <= 0 || textureSize.y <= 0) return null;
 
     const region = props.regionRect;
-    // `region_rect != Rect2()` (`renderer_canvas_render_rd.cpp`'s nine-patch
-    // batch setup) — an ALL-zero region (including the parsed default, which
-    // never sets it) means "the whole texture", not a zero-size crop.
+    // `region_rect != Rect2()` (`renderer_canvas_render_rd.cpp`'s nine-patch batch setup): an all-zero
+    // region, the parsed default too, means the whole texture, not a zero-size crop.
     const regionSet = region !== undefined && (region.x !== 0 || region.y !== 0 || region.width !== 0 || region.height !== 0);
     const regionOffset = regionSet ? { x: region!.x, y: region!.y } : { x: 0, y: 0 };
     const regionSize = regionSet ? { x: region!.width, y: region!.height } : textureSize;
@@ -118,9 +99,8 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
   ]);
   useEffect(() => () => geometry?.dispose(), [geometry]);
 
-  // Clone: the resolved texture is a SHARED cache entry, mutated per-consumer
-  // below (colour space, filter) — the same reason TextureRect's own painter
-  // clones (`texturerect/Component.tsx`).
+  // Clone: the resolved texture is a shared cache entry, and this sets colour space and filter per
+  // consumer, as `texturerect/Component.tsx` does.
   const preparedTexture = useMemo(() => {
     if (!rawTexture || !geometry) return null;
     const cloned = rawTexture.clone();
@@ -128,10 +108,8 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
     const filter = FILTER[resolveNinePatchFilter(sampler.filter)];
     cloned.magFilter = filter;
     cloned.minFilter = filter;
-    // Every UV this module emits stays inside the sampled texture/region by
-    // construction (no wraparound sampling — TILE/TILE_FIT are discrete
-    // repeated quads, not a repeat-wrapped sampler), so a clamp is always
-    // correct here regardless of the item's own `texture_repeat`.
+    // Every UV stays inside the texture or region: TILE and TILE_FIT emit repeated quads, not a wrapping
+    // sampler, so a clamp is right whatever the item's `texture_repeat`.
     cloned.wrapS = cloned.wrapT = THREE.ClampToEdgeWrapping;
     cloned.needsUpdate = true;
     return cloned;

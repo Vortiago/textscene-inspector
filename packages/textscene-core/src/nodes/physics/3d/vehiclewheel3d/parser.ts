@@ -1,7 +1,7 @@
 /**
- * VehicleWheel3D parser — the Node3D transform surface plus the wheel's own
- * geometric and simulation properties. Unauthored keys stay `undefined`; see
- * types.ts for why the Godot defaults are not baked in here.
+ * VehicleWheel3D parser: the Node3D transform surface plus the wheel's own
+ * geometric and simulation properties. Unauthored keys stay `undefined`, for the
+ * reason types.ts gives.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';

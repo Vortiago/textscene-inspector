@@ -1,39 +1,8 @@
 /**
- * Semantic linter rule for BoneAttachment3D, from Godot's own configuration
- * warnings, `BoneAttachment3D::get_configuration_warnings()`
- * (bone_attachment_3d.cpp:63-72):
- *
- *     if (use_external_skeleton) {
- *         if (external_skeleton_node_cache.is_null()) {
- *             warnings.push_back(RTR("External Skeleton3D node not set! ..."));
- *         }
- *     } else {
- *         Skeleton3D *parent = Object::cast_to<Skeleton3D>(get_parent());
- *         if (!parent) {
- *             warnings.push_back(RTR("Parent node is not a Skeleton3D node! ..."));
- *         }
- *     }
- *
- * The two arms are the two ways `get_skeleton()` (cpp:128-142) can find a
- * skeleton, and they are exclusive: with the flag off it returns
- * `cast_to<Skeleton3D>(get_parent())` and never looks at `external_skeleton`;
- * with it on it resolves the path and never looks at the parent. A
- * BoneAttachment3D that resolves neither relays no bone transform at all, which
- * is its entire job, so the whole node is inert. Advisory, hence a warning: the
- * scene loads and every property is well-formed.
- *
- * Two states this deliberately stays quiet about:
- *
- * - A parent whose type the linter cannot know (a heading with `instance=` and
- *   no `type=`) takes its type from a scene the linter never opens.
- * - The flag on with an EMPTY path under a parent BoneAttachment3D:
- *   `_update_external_skeleton_cache` (cpp:93-108) then inherits the parent's
- *   external skeleton, so an empty path there is a real authoring state.
- *
- * `bone_idx == -1` (cpp:74-76) is Godot's third configuration warning and gets
- * no rule: -1 is the property's serialised default, so the file Godot writes
- * for an unbound attachment carries no `bone_idx` line at all, and flagging its
- * absence would demand a key the engine omits.
+ * BoneAttachment3D's configuration warnings (bone_attachment_3d.cpp:63-72), the two exclusive ways
+ * `get_skeleton()` (cpp:128-142) finds a skeleton: with `use_external_skeleton` on, an unset external
+ * cache warns, and with it off, a parent that is not a Skeleton3D warns. A node that resolves neither
+ * relays no bone transform, but the scene loads and every property is well-formed, so both warn.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -47,6 +16,9 @@ import { boolSlotValue } from '../../../../godot/index.js';
 const PARENT_RULE = 'boneattachment3d-parent-not-skeleton3d';
 const EXTERNAL_RULE = 'boneattachment3d-external-skeleton-unset';
 
+// `bone_idx == -1` (cpp:74-76) is Godot's third warning and gets no rule: -1 is the serialised
+// default, so an unbound attachment's file carries no `bone_idx` line to flag.
+
 function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
   const properties = node.properties as unknown as Record<string, string>;
@@ -55,12 +27,10 @@ function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
     // which is exactly the "no path" case the engine's null cache covers.
     const path = extractNodePath(properties.external_skeleton ?? '');
     if (path !== null) {
-      // A path being PRESENT is not the same as the cache being set.
-      // `_update_external_skeleton_cache` (cpp:81-92) fills it only when
-      // `has_node(external_skeleton_node)` AND the node casts to Skeleton3D —
-      // its `ERR_FAIL_NULL_MSG(sk, …)` returns with the cache still null for
-      // anything else. Both misses leave `external_skeleton_node_cache.is_null()`
-      // true at cpp:64, so Godot warns and this must not stay quiet.
+      // A present path does not set the cache. `_update_external_skeleton_cache` (cpp:81-92) fills
+      // it only when `has_node(external_skeleton_node)` holds and the node casts to Skeleton3D, and
+      // its `ERR_FAIL_NULL_MSG(sk, …)` returns with the cache null otherwise. Either miss leaves
+      // `external_skeleton_node_cache.is_null()` true at cpp:64, so Godot warns.
       const target = resolveNodePath(scene, node, path);
       if (target.status === 'unknowable') return [];
       if (target.status === 'found' && descendsFrom(target.node.type, 'Skeleton3D')) return [];
@@ -79,8 +49,9 @@ function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
         },
       ];
     }
-    // An unknowable parent may well BE the BoneAttachment3D this one would
-    // inherit a skeleton from, so it is not something to warn about.
+    // An empty path inherits a parent BoneAttachment3D's external skeleton
+    // (`_update_external_skeleton_cache`, cpp:93-108). An unknowable parent may be that
+    // BoneAttachment3D, so it does not warn either.
     const inherited = parentTypeVerdict(scene, node, 'BoneAttachment3D');
     if (inherited.kind === 'satisfied' || inherited.kind === 'unknowable') return [];
 
@@ -95,6 +66,7 @@ function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
     ];
   }
 
+  // A parent with `instance=` and no `type=` takes its type from a scene the linter never opens.
   const attached = parentTypeVerdict(scene, node, 'Skeleton3D');
   if (attached.kind === 'satisfied' || attached.kind === 'unknowable') return [];
 

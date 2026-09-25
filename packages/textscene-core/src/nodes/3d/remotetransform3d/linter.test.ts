@@ -1,12 +1,8 @@
 /**
- * Tests for the RemoteTransform3D remote_path rule
- * (`remotetransform3d-invalid-remote-path`).
- *
- * Driven through `StrictTscnParser` and the rule's own `check`, not through
- * `Linter`: `Linter` imports the linter barrel, which loads every slice in the
- * repo and so cannot run while sibling slices are being written. The parse is
- * still the real one, so the properties the rule reads are the ones a scene
- * really produces.
+ * The RemoteTransform3D remote_path rule (`remotetransform3d-invalid-remote-path`),
+ * driven through `StrictTscnParser` and the rule's own `check`, since `Linter`
+ * loads the whole linter barrel. The parse is real, so the rule reads the
+ * properties a scene produces.
  */
 
 import { describe, expect, it } from 'vitest';

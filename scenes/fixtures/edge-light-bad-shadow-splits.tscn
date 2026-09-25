@@ -1,8 +1,7 @@
 [gd_scene format=3 uid="uid://edge_light_bad_shadow_splits"]
 
-; `directional_shadow_mode=1` (PARALLEL_2_SPLITS) but split_2/split_3 are
-; ALSO set, even though only split_1 is used in 2-split mode. This pins the
-; "unused splits" WARNING (directionallight3d-unused-splits).
+; `directional_shadow_mode = 1` (PARALLEL_2_SPLITS) with split_2 and split_3 also set, though
+; 2-split mode reads only split_1. Pins the directionallight3d-unused-splits warning.
 
 [node name="Scene" type="Node3D"]
 

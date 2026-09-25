@@ -1,12 +1,8 @@
 /**
- * Tile-data decoder — turns the on-disk tile serializations into a normalized
- * placed-cell list. Pure data module (no React/THREE): it sits in the parser
- * closure of both tile slices and in the linter's validators.
- *
- * TileMapLayer (Godot 4.3+) `tile_map_data` PackedByteArray layout:
- * a 2-byte little-endian format header, then one 12-byte record per cell —
- * int16 x, int16 y, uint16 source_id, uint16 atlas_x, uint16 atlas_y,
- * uint16 alternative_tile.
+ * Decodes the on-disk tile serialisations into a placed-cell list, free of React
+ * and THREE. TileMapLayer's `tile_map_data` is a 2-byte little-endian format
+ * header, then one 12-byte record per cell: int16 x, int16 y, uint16 source_id,
+ * uint16 atlas_x, uint16 atlas_y, uint16 alternative_tile.
  */
 
 import { warn } from '../../../../logger';
@@ -36,16 +32,9 @@ const PACKED_INT32_ARRAY_RE = packedArrayLiteral('PackedInt32Array');
 const QUOTED_BASE64_RE = /^"([A-Za-z0-9+/]*={0,2})"$/;
 
 /**
- * Why Godot's TEXT PARSER would refuse this `tile_map_data` literal.
- *
- * A fault here is a whole-file `ERR_PARSE_ERROR`, not a bad value: an
- * unreadable base64 body returns one from `_parse_byte_array`
- * (variant_parser.cpp:618-622). It therefore outranks every question about
- * what the bytes MEAN, and the semantic decode must not report on a literal
- * that never loads — which is what put two errors on one value.
- *
- * One owner for the grammar, two readers: the property validator turns each
- * fault into its own message, and the tile-data rule skips a faulted literal.
+ * Why Godot's text parser would refuse this `tile_map_data` literal. A fault is a
+ * whole-file `ERR_PARSE_ERROR` (variant_parser.cpp:618-622), so the validator
+ * reports it and the tile-data rule skips the literal rather than report twice.
  */
 export function readTileMapDataLiteral(
   value: string
@@ -86,19 +75,14 @@ export function decodeTileMapData(value: string): PlacedCell[] | null {
 }
 
 /**
- * The elements of a packed INT body, `null` per element for one no int32 slot
- * can hold, and `null` overall for text Godot's own tokenizer cannot read.
- *
- * Two failure modes, two answers. Text outside the grammar (`nope`, `0x10`) is
- * a file Godot refuses to load, so the decode gives up. A legal-but-unstorable
- * element (`inf`, `1e20`) is a file Godot DOES load, narrowing the element to
- * an architecture-specific sentinel — so only the cell it belongs to is
- * unknowable, and {@link dropUnstorableRecords} drops that cell alone.
+ * The elements of a packed int body: null overall for text Godot cannot read,
+ * which fails the load, and null per element for one no int32 holds (`inf`,
+ * `1e20`), which Godot loads as a sentinel, so only its cell is unknowable and
+ * {@link dropUnstorableRecords} drops that cell alone.
  */
 function readInt32Elements(body: string, context: string): (number | null)[] | null {
-  // An empty body is an empty array, not an unreadable one: `''.split(',')`
-  // yields `['']`, which matches no grammar and would report a legal empty
-  // layer as corrupt tile data.
+  // An empty body is an empty array: `''.split(',')` yields `['']`, which would
+  // report a legal empty layer as corrupt.
   if (body.trim() === '') return [];
   const out: (number | null)[] = [];
   for (const part of body.split(',')) {
@@ -113,15 +97,10 @@ function readInt32Elements(body: string, context: string): (number | null)[] | n
 }
 
 /**
- * Every fixed-stride record that has no unstorable element in it.
- *
- * Both serializations pack cells at a fixed stride, so an element the engine
- * cannot hold costs exactly the cell it belongs to. Voiding the whole stream
- * instead rendered zero cells for a file Godot opens, and substituting zero
- * drew a cell at the origin — the two failures this sits between.
- *
- * A trailing partial record is passed through untouched, so the caller's own
- * truncation check still sees it.
+ * Every fixed-stride record with no unstorable element, so an unstorable element
+ * costs only its own cell: voiding the stream draws nothing, and a zero draws a
+ * cell at the origin. A trailing partial record passes through to the caller's
+ * truncation check.
  */
 function dropUnstorableRecords(
   elements: (number | null)[],
@@ -149,11 +128,9 @@ function dropUnstorableRecords(
 }
 
 /**
- * Legacy TileMap `layer_N/tile_data` (PackedInt32Array). The TSCN `format`
- * property is the 0-indexed TileMapDataFormat enum: 2 = TILE_MAP_DATA_FORMAT_3,
- * whose int32 triplets reinterpret as exactly the 12-byte record above (no
- * header). Formats 0/1 are Godot-3-era encodings that require the original
- * TileSet's compatibility mapping — out of scope, degrade with a warn.
+ * Decodes legacy TileMap `layer_N/tile_data`. `format` is the TileMapDataFormat
+ * enum: 2 (TILE_MAP_DATA_FORMAT_3) packs int32 triplets as the 12-byte record
+ * above. Formats 0 and 1 are Godot 3 encodings, out of scope, so they warn.
  */
 export function decodeLegacyTileData(value: string, format: number): PlacedCell[] | null {
   if (format !== 2) {

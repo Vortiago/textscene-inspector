@@ -1,4 +1,4 @@
-/** SpinBox parser contract — Control + Range bases plus SpinBox's own properties. */
+/** SpinBox parser contract: Control and Range bases plus SpinBox's own properties. */
 import { describe, it, expect } from 'vitest';
 import { parseSpinBox } from './parser';
 
@@ -52,7 +52,7 @@ describe('parseSpinBox', () => {
     expect(result.name).toBe('');
     expect(result.editable).toBeUndefined();
     expect(result.prefix).toBeUndefined();
-    // NOT undefined: SpinBox's constructor sets `step = 1.0`, and
+    // Not undefined: SpinBox's constructor sets `step = 1.0`, and
     // `Range::_calc_value` snaps `value` to it whether or not the scene says so.
     expect(result.step).toBe(1);
   });

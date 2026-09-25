@@ -1,7 +1,4 @@
-/**
- * RemoteTransform3D parser — extends the Node3D base parse with the
- * remote_path + update-flag property surface.
- */
+/** RemoteTransform3D parser: the Node3D base parse plus remote_path and the update flags. */
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';

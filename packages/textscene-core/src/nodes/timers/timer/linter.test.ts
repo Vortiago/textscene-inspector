@@ -1,5 +1,5 @@
 /**
- * Timer linter tests — `Timer::get_configuration_warnings()` (timer.cpp:200-208):
+ * Timer linter: `Timer::get_configuration_warnings()` (timer.cpp:200-208) warns on
  * a positive wait_time below 0.05 - CMP_EPSILON.
  */
 import { describe, it, expect } from 'vitest';

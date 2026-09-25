@@ -1,5 +1,5 @@
 /**
- * `TscnDefinitionProvider` — several references, several resources, and the two namespaces side by side.
+ * `TscnDefinitionProvider`: several references, several resources, and the two namespaces side by side.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
@@ -17,10 +17,6 @@ describe('TscnDefinitionProvider', () => {
       onCancellationRequested: vi.fn(),
     };
   });
-
-  // ============================================================================
-  // EDGE CASES - Multiple References
-  // ============================================================================
 
   describe('Multiple References', () => {
     it('should handle multiple references to the same resource', () => {
@@ -100,10 +96,6 @@ collision_mesh = SubResource("BoxMesh_1")
       expect(definition.range.start.line).toBe(2); // First match
     });
   });
-
-  // ============================================================================
-  // EDGE CASES - Mixed SubResource and ExtResource
-  // ============================================================================
 
   describe('Mixed SubResource and ExtResource', () => {
     // Same id in both namespaces: the only shape where a kind-blind lookup is catchable.

@@ -31,7 +31,7 @@ Strict parsing format-checks these `MultiMeshInstance2D` properties, plus 12 inh
 <!-- lint:end -->
 
 A bare string in `multimesh` or `texture`, such as `"res://grass.tres"`, is stored as-is
-with no warning. Nothing reads it back, since no render component exists yet.
+with no warning. Nothing reads it back, since no render component exists.
 
 ## Known limitations
 

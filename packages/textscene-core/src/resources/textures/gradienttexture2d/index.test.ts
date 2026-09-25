@@ -2,9 +2,8 @@ import { describe, expect, it } from 'vitest';
 import * as gradientSlice from './index';
 import { resourceSliceRegistry } from '../../sliceRegistration';
 
-// Importing the entry point is what registers the claims; the assertions read
-// the registry, never `all()` — that array's contents depend on which other
-// slice indexes a given test file happens to pull in.
+// Importing the entry point registers the claims. The assertions read the registry
+// by name, not `all()`: its contents depend on which other slice indexes load.
 describe('gradient slice registration', () => {
   it('claims both `Gradient` and `GradientTexture2D` for one slice (happy path)', () => {
     expect(resourceSliceRegistry.byTypeName('Gradient')?.slice).toBe('gradienttexture2d');
@@ -26,10 +25,8 @@ describe('gradient slice registration', () => {
   });
 
   it('claims resource types, not the Nodes that consume one (error path)', () => {
-    // Negatives name NODE types on purpose: a sibling resource type
-    // (`GradientTexture1D`, `NoiseTexture2D`) is claimable by another slice, so
-    // asserting it is unclaimed passes alone and fails under the aggregation
-    // barrel.
+    // Negatives name node types: another slice can claim a sibling resource type
+    // (`GradientTexture1D`, `NoiseTexture2D`), which fails under the aggregation barrel.
     expect(resourceSliceRegistry.byTypeName('PointLight2D')).toBeNull();
     expect(resourceSliceRegistry.byTypeName('CPUParticles2D')).toBeNull();
   });

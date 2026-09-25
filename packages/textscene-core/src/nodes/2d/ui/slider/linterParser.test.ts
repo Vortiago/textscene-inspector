@@ -1,7 +1,6 @@
 /**
- * The Slider set must reach HSlider and VSlider, which is the whole point of
- * the tier. Assert through `findValidator` on the real leaves, not just on the
- * abstract key: a tier that registers but is never imported registers nothing.
+ * The Slider set must reach HSlider and VSlider. Assert through `findValidator` on the real leaves,
+ * not the abstract key: a tier that is never imported registers nothing.
  */
 
 import { describe, expect, it } from 'vitest';

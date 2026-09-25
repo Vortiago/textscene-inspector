@@ -1,14 +1,7 @@
 /**
- * Acceptance for ADR-0012/ADR-0013: an AnimationPlayer INSIDE an
- * instanced sub-scene binds the selection-driven Animation transport through
- * the COLLAPSED node path.
- *
- * Instance root merge drops the sub-scene wrapper level, so the player that
- * Godot shows at `Coins/Coin1/Animation` must be dispatched at exactly that
- * path (not `Coins/Coin1/Coin/Animation`). Because the tree, the dispatcher,
- * and `resolveLiveNode` all run the same merge, `selectedNodePath` matches
- * the player's `useNodePath()` and the tab activates. This test pins that the
- * collapsed path activates the transport and the old wrapper path does not.
+ * ADR-0012 and ADR-0013: an AnimationPlayer inside an instanced sub-scene binds
+ * the Animation transport through the merged path `Coins/Coin1/Animation`,
+ * which Godot shows, and not through `Coins/Coin1/Coin/Animation`.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -118,7 +111,7 @@ describe('instanced AnimationPlayer — selection-driven tab via the collapsed p
     const fake = createFakeResourceLoader();
     fake.scenes.seed('res://coin/coin.tscn', makeCoinScene());
 
-    // Root scene: Coins → Coin1 (instance). After merge, Coin1 BECOMES the
+    // Root scene: Coins → Coin1 (instance). After merge, Coin1 becomes the
     // Area3D root, so the AnimationPlayer sits at 'Coins/Coin1/Animation'.
     const nodes: TscnNode[] = [
       {
@@ -151,13 +144,12 @@ describe('instanced AnimationPlayer — selection-driven tab via the collapsed p
     await setSelection(null);
     expect(transport.hasPlayer).toBe(false);
 
-    // Selecting the COLLAPSED path activates the instanced player.
+    // Selecting the collapsed path activates the instanced player.
     await setSelection('Coins/Coin1/Animation');
     expect(transport.hasPlayer).toBe(true);
     expect(transport.clips).toContain('slide');
 
-    // The OLD wrapper path (with the redundant 'Coin' segment) no longer
-    // matches any player — proving the wrapper level is genuinely gone.
+    // The wrapper path, with the 'Coin' segment, matches no player.
     await setSelection('Coins/Coin1/Coin/Animation');
     expect(transport.hasPlayer).toBe(false);
   });

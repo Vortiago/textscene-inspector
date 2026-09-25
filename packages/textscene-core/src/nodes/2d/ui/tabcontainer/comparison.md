@@ -44,18 +44,19 @@ Strict parsing format-checks these `TabContainer` properties, plus 53 inherited 
 |  | `control-property-order` | warning |
 <!-- lint:end -->
 
-The lenient parser reads the scalars above plus a SPARSE `tab_<idx>/title,icon,disabled,
-hidden` override map, keyed by whatever index the file names — TabContainer's own
-`array_length_getter` is its live child count, unknown at parse time, so unlike TabBar's
-`tab_count`-sized walk this one builds no dense array and applies no walk ceiling.
+The lenient parser reads the scalars above plus a sparse
+`tab_<idx>/title,icon,disabled,hidden` override map, keyed by whatever index the file
+names. TabContainer's own `array_length_getter` is its live child count, which is unknown
+at parse time. So, unlike TabBar's `tab_count`-sized walk, this one builds no dense array
+and applies no walk ceiling.
 
 ## Known limitations
 
 - **Approximated** The selected tab's `font_selected_color` and its `tab_selected`
   StyleBox are not distinguished from the unselected ones, so the current tab
   reads as the same colour and box as its neighbours. Its position, width and
-  the underline above it are exact; this is the whole of the residual any tab
-  fixture still measures against Godot.
+  the underline above it are exact. This is the only difference a tab fixture
+  measures against Godot.
 - **Approximated** A tab title's paragraph direction is not applied, so under
   `layout_direction = 3` a right-to-left script keeps left-to-right glyph order.
   Where the strip and each tab in it sit does follow the layout direction.

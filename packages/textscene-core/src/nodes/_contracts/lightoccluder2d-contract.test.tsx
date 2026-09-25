@@ -1,35 +1,7 @@
 /**
- * LightOccluder2D slice behavioral contract — written RED before the slice shipped.
- *
- * Godot: LightOccluder2D (a Node2D) references an OccluderPolygon2D resource (a
- * `polygon` of points, `closed` default true). It is INVISIBLE at runtime and cast
- * shadows for 2D lights; the editor shows its polygon as an outline gizmo. The
- * previewer had NO LightOccluder2D, so the isometric dungeon's 7 occluders rendered
- * as inert groups. This slice adds the vertical: parse (LightOccluder2D props + the
- * OccluderPolygon2D SubResource) + register + render the occluder polygon as a
- * selection-gated LineSegments OUTLINE (editor-parity gizmo, ADR-0018) + a lint-clean
- * fixture + property validators.
- *
- * SCOPE — the occluder-outline VISUALIZATION only. Shadow-CASTING (the actual light
- * effect) is OUT of scope (a tracked follow-up); this slice adds an inspection
- * outline that shows when the node is selected, and adds NOTHING to the default
- * dungeon render. Do NOT implement shadows here.
- *
- * RED-lever notes (this repo's own lessons):
- *  - An UNREGISTERED type already parses to type === 'LightOccluder2D' (base-Node
- *    fallback), so type-presence is NOT a valid failing lever. These pins key off
- *    the registry entries, the TYPED props + Godot property-ABSENT defaults, the
- *    rendered LineSegments TOPOLOGY, the selection gate, and the property validators.
- *  - Assert on the rendered GEOMETRY's TOPOLOGY (LineSegments `position.count`), not
- *    a bbox — a closed N-gon → N segments → 2N positions; an OPEN path → 2(N-1). The
- *    `closed` property-absent default (true) is coupled to that count, so one pair of
- *    fixtures (closed vs open) locks resource parse + the `closed` default + topology
- *    + the actual render, and catches a naive always-closing loop builder.
- *  - The occluder gizmo is SELECTION-gated (useGizmoVisible): it renders only when
- *    its node is the selected node. So the render pins select the node's path and a
- *    guardrail pin asserts NOTHING renders unselected.
- *  - Linter validator registration is a KNOWN blind spot — pinned as a lint-error
- *    DELTA (an invalid `sdf_collision` => strictly more errors than a valid one).
+ * LightOccluder2D contract: the OccluderPolygon2D outline, a selection-gated LineSegments gizmo
+ * (ADR-0018), not shadow casting. The pins assert topology: a closed N-gon has 2N positions and an
+ * open path 2(N-1), so a closed and open fixture pair also pins the `closed` default (true).
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -115,7 +87,7 @@ function SelectSeeder({ path }: { path: string }) {
 
 /**
  * Render a .tscn through NodeDispatcher (2D workspace), optionally selecting a
- * node. `seed` runs against the fake loader before render — used to make an
+ * node. `seed` runs against the fake loader before render, to make an
  * ExtResource `.tres` occluder resolvable.
  */
 async function renderOcc(
@@ -260,7 +232,7 @@ occluder = ExtResource("1_occ")
 
   it('registers a linter validator that REJECTS a non-boolean sdf_collision', () => {
     // No validator → an invalid value passes silently and NO gate catches it. Delta
-    // isolates the validator from any baseline (e.g. sub-resource) errors.
+    // isolates the validator from any baseline (for example sub-resource) errors.
     expect(lintErrorCount(occScene({ nodeProps: 'sdf_collision = "maybe"' }))).toBeGreaterThan(
       lintErrorCount(occScene({ nodeProps: 'sdf_collision = true' }))
     );

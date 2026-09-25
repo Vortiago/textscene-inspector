@@ -16,9 +16,8 @@ function check(property: string, value: string) {
 
 describe('SubViewportContainer validators', () => {
   describe('mouse_target', () => {
-    // subviewport_container.cpp:249-251 — `set_mouse_target` is a bare
-    // assignment, no ERR_FAIL and no hint on the BOOL property
-    // (subviewport_container.cpp:302), so format-only like every other bool.
+    // subviewport_container.cpp:249-251: `set_mouse_target` only assigns, with no ERR_FAIL and no
+    // hint on the BOOL property (subviewport_container.cpp:302), so it is format only.
     it('accepts true and false', () => {
       expect(check('mouse_target', 'true')).toBeNull();
       expect(check('mouse_target', 'false')).toBeNull();

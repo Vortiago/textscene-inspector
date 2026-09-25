@@ -1,24 +1,7 @@
-; The ONE variable: `autowrap_mode` (and, on the third node,
-; `autowrap_trim_flags`) on a Button.
-;
-; `Button::_shape` maps the mode to break flags and ORs `autowrap_flags_trim`
-; onto them (`button.cpp:546-561`); the draw path then shapes the label at
-; `Math::ceil(MAX(1.0f, drawable_size_remained.width))` (`:428-432`), which is
-; the button's own rect less the stylebox margins. Every node below is 120px
-; wide with a label far wider than that, so the mode is the whole of what
-; decides the rows.
-;
-; `Off` overflows its box on one line — the previewer's behaviour before this,
-; and the control that proves a regression is in the wrap and not the box.
-; `Word` breaks on spaces, `Arbitrary` mid-word, and `NoTrim` is `Word` again
-; with `autowrap_trim_flags = 0`, which keeps the edge space the default
-; `BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES` removes — a
-; sub-pixel-to-one-pixel shift of every centred row, and the only thing that
-; separates the trim flags from the mode.
-;
-; No other Button-family fixture authors either key, and a Label's own autowrap
-; runs through a different `_shape`, so a regression here is invisible in all
-; of them.
+; The one variable: `autowrap_mode`, plus `autowrap_trim_flags` on NoTrim. Button::_shape ORs the trim
+; flags onto the mode's break flags (button.cpp:546-561) and shapes at the rect less the stylebox
+; margins (:428-432). Off is the control. NoTrim keeps the edge space the default trim removes.
+; No other Button fixture authors either key, and a Label wraps through a different _shape.
 
 [gd_scene format=3 uid="uid://unit_button_autowrap"]
 

@@ -1,18 +1,7 @@
 /**
- * `resolveNodeFontMetrics` — the join between the Theme slice's
- * `resolveThemeFontIn` (walking `SolveNode.fontOverrides`/`.themeChain`/
- * `.projectTheme`) and `sceneFontLoader.ts`'s `peekSceneFontMetrics`.
- *
- * `peekSceneFontMetrics` never returns anything but the bundled default under
- * this test environment's `IS_VITEST` short-circuit (`sceneFontLoader.ts`'s
- * own doc — no `FontFace`/canvas under happy-dom), so a resolved
- * `FontMetrics` VALUE cannot be observed here. What CAN be observed: whether
- * `resolveThemeFontIn` was fed the right `themeKey`/`nativeType`/`typeVariation`
- * at all, via `peekSceneFontMetrics`'s own warn-on-unresolvable side effect
- * (a `SystemFont` always warns, resolved or not — `sceneFontLoader.test.ts`'s
- * own coverage of that branch). A warn firing (or not) for a given lookup
- * therefore proves whether THIS call actually found the font at that
- * type/key, independent of the DOM-gated metrics value itself.
+ * Under vitest, `peekSceneFontMetrics` always returns the bundled default, so a resolved value is
+ * not observable. A `SystemFont` always warns, so a warn proves the lookup found the font at that
+ * type and key.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import type { SolveNode } from '../solveTree';
@@ -25,10 +14,8 @@ import * as logger from '../../../../logger';
 import * as themeLookup from '../../../../resources/styles/theme/lookup';
 import * as sceneFontLoader from './sceneFontLoader';
 
-// `sceneFontLoader.ts`'s own warn-dedupe is keyed by RESOURCE OBJECT IDENTITY
-// (a `WeakSet`, module-level, never reset between tests) — a fresh object per
-// test, not a shared constant, or an earlier test's warn silently suppresses
-// a later one for the "same" SystemFont.
+// A fresh object per test: the warn dedupe in `sceneFontLoader.ts` is a module-level `WeakSet`
+// keyed by resource identity, so a shared constant lets an earlier warn suppress a later one.
 function systemFont(): FontResource {
   return { kind: 'system', fontNames: ['sans-serif'], properties: {} };
 }
@@ -101,9 +88,8 @@ describe('resolveNodeFontMetrics', () => {
     const theme: ThemeResource = { ...emptyTheme(), fonts: { Label: { font: systemFont() } } };
     const n = labelNode({ fontOverrides: { font: null }, themeChain: [theme] });
     const metrics = resolveNodeFontMetrics(n, 'font');
-    // The override (null, "authored but invalid") wins unconditionally over
-    // the ancestor theme's SystemFont — resolveThemeFontIn's own contract — so
-    // this resolves to no font at all, and no SystemFont warn ever fires.
+    // The null override ("authored but invalid") wins over the ancestor SystemFont, so no font
+    // resolves and no warn fires.
     expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
     expect(warnSpy).not.toHaveBeenCalled();
   });

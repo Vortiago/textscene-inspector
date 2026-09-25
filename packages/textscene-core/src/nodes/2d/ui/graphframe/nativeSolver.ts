@@ -1,21 +1,8 @@
 /**
- * GraphFrame's native (WebGL canvas) rect solve — `GraphFrame::_resort`,
- * `GraphFrame::get_minimum_size` (`scene/gui/graph_frame.cpp:145-169,324-346`),
- * `scene/gui/container.cpp` (`Container::fit_child_in_rect`) and this node's
- * own titlebar band (`../graphelement/graphTitlebar.ts`).
- *
- * Unlike GraphNode, EVERY child shares the SAME content rect
- * (`_resort`'s one `Rect2(offset, size)` fed to every `fit_child_in_rect`
- * call, `:167`) — there is no per-child stacking, separation, or slot
- * concept at all.
- *
- * `get_minimum_size`'s own height fold (`:340`) is `minsize.y += MAX(minsize.y,
- * size.y)`, not `minsize.y = MAX(minsize.y, size.y)` — an apparent upstream
- * bug (each child at least DOUBLES the running height whenever it is not
- * itself taller than everything summed before it) ported literally, because
- * the engine source is the spec, not a rule this previewer can silently fix.
- *
- * Pure data + functions, no React, no THREE.
+ * GraphFrame's native (WebGL canvas) rect solve: `GraphFrame::_resort` and `get_minimum_size`
+ * (`scene/gui/graph_frame.cpp:145-169,324-346`), `Container::fit_child_in_rect` and the titlebar
+ * band (`../graphelement/graphTitlebar.ts`). Unlike GraphNode, every child shares one content rect
+ * (`:167`), with no stacking, separation or slots.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -40,20 +27,19 @@ import type { GraphFrameProperties } from './types';
 
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 
-/** `graph_frame.cpp` theme type variation for its internal title Label — `graph_frame.cpp:354`. */
+/** `graph_frame.cpp` theme type variation for its internal title Label: `graph_frame.cpp:354`. */
 export const GRAPH_FRAME_TITLE_VARIATION = 'GraphFrameTitleLabel';
 
-/** `default_theme.cpp:849` — `GraphFrameTitleLabel`'s own `font_color`, opaque white. */
+/** `default_theme.cpp:849`: `GraphFrameTitleLabel`'s own `font_color`, opaque white. */
 export const GRAPH_FRAME_TITLE_DEFAULT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
 
 /**
- * `default_theme.cpp:848` — `theme->set_font_size(font_size, "GraphFrameTitleLabel", 22)`,
- * a LITERAL `22`, not `Math::round(22 * scale)` the way every other constant
- * in this same function is written. Ported as the source has it: unscaled.
+ * `default_theme.cpp:848`: `theme->set_font_size(font_size, "GraphFrameTitleLabel", 22)`,
+ * a literal `22` where the function scales each other constant, so it stays unscaled.
  */
 export const GRAPH_FRAME_TITLE_FONT_SIZE_PX = 22;
 
-/** `control_font_color` — `default_theme.cpp:841`, `GraphFrame`'s own `resizer_color`. */
+/** `control_font_color`: `default_theme.cpp:841`, `GraphFrame`'s own `resizer_color`. */
 export const GRAPH_FRAME_RESIZER_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 
 function flatBox(
@@ -84,14 +70,14 @@ function flatBox(
 }
 
 /**
- * GraphFrame's default-theme StyleBoxes — `default_theme.cpp:828-841`. Not in
+ * GraphFrame's default-theme StyleBoxes: `default_theme.cpp:828-841`. Not in
  * `nativeTheme.ts`'s `widgets` (no entry for GraphFrame there).
  */
 function defaultStyles(theme: NativeTheme) {
-  // `make_flat_stylebox(style_pressed_color, 18, 12, 18, 12, 3, true, 2)` —
-  // margins its OWN literals (18, 12), corner radius the shared default (3),
+  // `make_flat_stylebox(style_pressed_color, 18, 12, 18, 12, 3, true, 2)`:
+  // margins its own literals (18, 12), corner radius the shared default (3),
   // border_width 2 (all scaled). Scale recovered the same way GraphNode's
-  // own `defaultStyles` does — see that module's doc.
+  // own `defaultStyles` does: see that module's doc.
   const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
   const panelMargin = {
     left: Math.round(18 * scale),
@@ -103,7 +89,7 @@ function defaultStyles(theme: NativeTheme) {
   const expandTop = Math.round(38 * scale);
   const panel = flatBox(theme.styleFill.pressed, theme.styleFill.pressed, borderWidth, panelMargin, expandTop, theme.cornerRadius);
   const panelSelected = flatBox(theme.styleFill.pressed, theme.styleFill.hover, borderWidth, panelMargin, expandTop, theme.cornerRadius);
-  // `make_empty_stylebox(4, 4, 4, 4)` — draws nothing, margin `default_margin`.
+  // `make_empty_stylebox(4, 4, 4, 4)`: draws nothing, margin `default_margin`.
   const titlebarMargin = {
     left: theme.contentMargin,
     top: theme.contentMargin,
@@ -156,7 +142,8 @@ export const graphFrameMinimumSize: MinimumSizeFn = (n, ctx) => {
     const cms = ctx.combinedMinimumSize(child);
     const w = cms.x + panel.contentMargin.left + panel.contentMargin.right;
     width = Math.max(width, w);
-    // graph_frame.cpp:340 — `minsize.y += MAX(minsize.y, size.y)`, literal.
+    // graph_frame.cpp:340: `minsize.y += MAX(minsize.y, size.y)`, not `=`, so each child at least
+    // doubles the running height. The port keeps it: the engine source is the spec.
     height += Math.max(height, cms.y);
   }
 

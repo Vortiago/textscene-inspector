@@ -1,74 +1,8 @@
 /**
- * `<StyleBoxQuad>` — draws a resolved StyleBox (`native/parseStyleBox.ts`'s
- * `ResolvedStyleBox`, any of the four concrete kinds) as canvas geometry.
- *
- * `StyleBoxFlat`/`StyleBoxEmpty` (the bare, untagged `ResolvedStyleBox`
- * member) and `StyleBoxLine` both draw through `styleBoxFlatGeometry`'s
- * vertex-coloured pipeline: a line override is a degenerate flat fill —
- * single colour, no border/corner/shadow — at its OWN draw rect
- * (`StyleBoxLine::draw`'s grow/thicken, `styleBoxLineDrawRect`, applied here
- * regardless of caller). `StyleBoxTexture` is a genuinely different draw (a
- * textured nine-patch mesh, `StyleBoxTextureMesh` below) and never touches
- * this module's vertex-colour machinery.
- *
- * A hand-built `BufferGeometry` attached via `<primitive>` (following
- * `Polygon2D`'s `FilledPolygon`, `nodes/2d/polygon2d/Component.tsx`), painted
- * with the house recipe every flat-shaded 2D item in this codebase uses —
- * `meshBasicMaterial`, `vertexColors`, `transparent`, `depthWrite={false}`
- * and the shared `canvasItemFacing()`.
- *
- * SINGLE PASS (flat/line branch) — this mesh is the reason
- * `canvasItemFacing()` exists, and the worst case that module describes.
- * `StyleBoxFlat::draw` emits a PAINTER'S ORDER triangle array — shadow, then
- * border ring, then each antialiasing feather — whose whole meaning is the
- * order the rings blend in, and the ring pattern it is ported from
- * (`style_box_flat.cpp:403-408`, `(i, i+2, i+1)` over alternating
- * inner/outer vertices) gives the two triangles of every ring quad OPPOSITE
- * screen-space winding. Drawn back-faces-then-front-faces, each pass keeps
- * one triangle per quad and drops the other, so the border loses a wedge per
- * corner-detail step and the shadow ring's second-pass half lands ON TOP of
- * the border's first-pass half — a fan of shadow-coloured slivers along
- * every rounded corner, visible only once something dark sits behind the
- * border. One pass draws the array once, in index order, which is what the
- * port means.
- *
- * Positions pass straight through from `styleBoxFlatGeometry` (Godot pixels,
- * +Y down, no axis flip — that is the caller's job, same as every other
- * `native/` module).
- *
- * COLOUR SPACE (flat/line branch) — the vertex attribute stays in sRGB and
- * the shader decodes it per fragment (`decodeVertexColorsFromSRGB`), rather
- * than the attribute being linearised on the way in. three applies no
- * conversion of its own to a `vertexColors` attribute (unlike a texture's
- * `SRGBColorSpace` tag), so either place works for a CONSTANT colour — the
- * two are the same number. They stop being the same the moment the
- * rasterizer interpolates BETWEEN two different colours, which is exactly
- * what a `border_blend` ring is: Godot ramps `border_color` to
- * `border_color_blend` in sRGB, and linearising the endpoints first makes
- * the GPU ramp through linear instead. Measured against Godot 4.6.3 on a
- * 16 px blended border, that put the ramp's midpoint 38 counts high on the
- * red channel while both endpoints stayed exact — the signature of a curve
- * applied on the wrong side of an interpolation.
- *
- * Subdividing the ring so the linear interpolation tracks the sRGB one was
- * the alternative, and it is not close: the error only falls as the square
- * of the step count, so even 16 radial bands leave 1.3 counts, against 32x
- * the vertices. Decoding per fragment is exact at any ring width.
- *
- * The optional `color` prop is a CanvasItem tint (`useCanvasItemTint`'s
- * `own`, RAW sRGB, alpha included). For a flat/line box it is composed into
- * `styleBox`'s base colour(s) INTERNALLY, via `tintStyleBox`, while both are
- * still sRGB — unlike `ControlQuad`'s `color`/`opacity` pair (already-linear
- * `THREE.Color` + a separate alpha scalar, because a plain quad has ONE
- * colour to hand the material directly), a flat StyleBox has TWO base
- * colours and the shader's own decode downstream, so multiplying a linear
- * tint in here would double-convert. For a texture box it is instead
- * multiplied with `modulate_color` and handed to the material's `color`/
- * `opacity` directly (`StyleBoxTextureMesh`'s own doc) — a texture has no
- * vertex-colour pipeline to fold it into.
- *
- * R3F does not auto-dispose a geometry passed via `attach="geometry"`
- * (`Polygon2D`'s own comment) — released on rebuild/unmount here too.
+ * Draws a resolved StyleBox (`ResolvedStyleBox`, `native/parseStyleBox.ts`) as
+ * canvas geometry. Flat, empty and line boxes share the vertex-coloured
+ * `styleBoxFlatGeometry` path: a line is a one-colour flat fill at its own draw
+ * rect (`styleBoxLineDrawRect`). A texture box is a nine-patch mesh.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -98,19 +32,15 @@ export interface StyleBoxQuadProps {
   styleBox: ResolvedStyleBox;
   rect: Rect2;
   /**
-   * A CanvasItem tint (raw sRGB, alpha included — pass `useCanvasItemTint`'s
-   * `own`, never its already-linear `color`), composed into the box's own
-   * colour(s) BEFORE this component's single sRGB→linear conversion.
-   * Defaults to opaque white (no tint), the `WHITE_MODULATE` no-op
-   * `tintStyleBox` already fast-paths.
+   * A CanvasItem tint in raw sRGB with alpha: `useCanvasItemTint`'s `own`, never its
+   * linear `color`. A flat box has two base colours and a decode downstream, so the
+   * tint multiplies in before it. Defaults to `WHITE_MODULATE`, no tint.
    */
   color?: RGBA;
   /**
-   * Paint order within the 2D transparent bucket. Load-bearing rather than
-   * cosmetic: nothing here writes depth, so three's transparent sort — which
-   * reads `renderOrder` before camera distance — is the *only* thing deciding
-   * which Control covers which. A quad that drops it paints in traversal order
-   * and silently ignores both `z_index` and `CanvasLayer.layer`.
+   * Paint order in the 2D transparent bucket. Nothing writes depth, so three's sort,
+   * which reads `renderOrder` before distance, alone decides which Control covers
+   * which. Without it, `z_index` and `CanvasLayer.layer` are ignored.
    */
   renderOrder: number;
 }
@@ -120,11 +50,8 @@ function styleBoxKindOf(box: ResolvedStyleBox): 'flat' | 'line' | 'texture' {
 }
 
 /**
- * A `StyleBoxLine` as a degenerate `StyleBoxFlatData`: single solid fill
- * (`drawCenter: true`, zero border/corner/shadow), coloured by the line's
- * own `color`. `styleBoxFlatGeometry` against this emits exactly a
- * two-triangle coloured rect — the whole of what `StyleBoxLine::draw`'s
- * `canvas_item_add_rect` call paints.
+ * A `StyleBoxLine` as a one-colour flat fill with no border, corner or shadow:
+ * the two-triangle rect `StyleBoxLine::draw`'s `canvas_item_add_rect` paints.
  */
 function lineAsFlatStyleBox(line: StyleBoxLineData): StyleBoxFlatData {
   return {
@@ -147,17 +74,9 @@ function lineAsFlatStyleBox(line: StyleBoxLineData): StyleBoxFlatData {
 }
 
 export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQuadProps) {
-  // Godot space → three space, once, here.
-  //
-  // `styleBoxFlatGeometry` is a faithful transcription of `StyleBoxFlat::draw`,
-  // so it emits ABSOLUTE Godot coordinates: `rect.x`/`rect.y` are added onto
-  // every vertex and +Y points down. But the walker has already translated this
-  // painter's group to `[rect.x, -rect.y, 0]`, so passing the rect through
-  // unchanged offsets the box a second time and mirrors it vertically.
-  //
-  // Only the size reaches the geometry, and the y flip is applied by a wrapping
-  // group. Every Panel until now happened to be drawn at rect (0,0), where both
-  // errors vanish — which is also why no test caught it.
+  // `styleBoxFlatGeometry` emits absolute Godot coordinates, +Y down, and the
+  // walker has already placed this group at `[rect.x, -rect.y, 0]`. So only the
+  // size reaches the geometry, and a wrapping group flips Y.
   const size = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
   const kind = styleBoxKindOf(styleBox);
   const clippingPlanes = useControlClipPlanes();
@@ -170,13 +89,13 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
     return { flatBox: styleBox, flatRect: size };
   }, [styleBox, size, kind]);
   const tintedStyleBox = useMemo(() => tintStyleBox(flatBox, color ?? WHITE_MODULATE), [flatBox, color]);
-  // Skipped (not built) for a texture box — it draws through
-  // `StyleBoxTextureMesh` below instead — but the hook itself always runs, so
-  // this component's own hook order never depends on `kind`.
+  // Not built for a texture box, but the hook always runs, so the hook order
+  // never depends on `kind`.
   const flatGeometry = useMemo(
     () => (kind === 'texture' ? null : buildGeometry(tintedStyleBox, flatRect)),
     [tintedStyleBox, flatRect, kind]
   );
+  // R3F does not dispose a geometry passed through `attach="geometry"`.
   useEffect(() => () => flatGeometry?.dispose(), [flatGeometry]);
 
   if (kind === 'texture') {
@@ -202,14 +121,17 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
       clippingPlanes: clippingPlanes as THREE.Plane[],
       injection: STYLEBOX_SRGB_VERTEX_COLORS,
     },
+    // Single pass: `StyleBoxFlat::draw` emits rings in painter's order, and its
+    // `(i, i+2, i+1)` pattern (`style_box_flat.cpp:403-408`) gives each ring quad's
+    // two triangles opposite winding. Two passes would drop a wedge per corner
+    // step and draw shadow slivers over the border.
     merge: [canvasItemFacing()],
   });
 
   return (
-    // The flip group carries `renderOrder` as well as the mesh: three reads a
-    // drawn object's place in the canvas from its NEAREST enclosing group
-    // (`canvasPaintOrder.ts`), so a bare group here would reset every StyleBox
-    // in the previewer to the front of the canvas.
+    // The flip group carries `renderOrder` too: three takes an object's place from
+    // its nearest enclosing group (`canvasPaintOrder.ts`), so a bare group would
+    // reset every StyleBox to the front of the canvas.
     <group scale={[1, -1, 1]} renderOrder={renderOrder}>
       <mesh renderOrder={renderOrder}>
         <primitive object={flatGeometry} attach="geometry" />
@@ -231,11 +153,9 @@ function buildGeometry(styleBox: StyleBoxFlatData, rect: Rect2): THREE.BufferGeo
 }
 
 /**
- * The sRGB decode below and the cache-key contribution that distinguishes the
- * program it produces from a stock `MeshBasicMaterial`'s — paired, so the patch
- * cannot be applied without it (`materialProgramInputs.ts`). Without a
- * contribution of its own, a StyleBox mesh and any other vertex-coloured basic
- * material in the same scene are handed each other's compiled program.
+ * The sRGB decode paired with its own cache key (`materialProgramInputs.ts`).
+ * Without the key, a StyleBox mesh and any other vertex-coloured basic material
+ * share one compiled program.
  */
 const STYLEBOX_SRGB_VERTEX_COLORS: ProgramInjection = {
   cacheKey: 'godot-stylebox-srgb-vertex-colors',
@@ -243,20 +163,14 @@ const STYLEBOX_SRGB_VERTEX_COLORS: ProgramInjection = {
 };
 
 /**
- * `Color::srgb_to_linear` (`utils/colorSpace.ts`'s `sRGBChannelToLinear`) as
- * GLSL, applied to the interpolated vertex colour instead of to the attribute
- * that feeds it.
- *
- * Injected into `<color_fragment>`, which is where the stock chunk does
- * `diffuseColor *= vColor` — so the decode lands after interpolation and
- * before every downstream stage (the tone curve and the output encode both
- * still run from the material's own template, unchanged).
- *
- * Only `.rgb` is decoded. Alpha carries no transfer function, and the AA
- * feather rings are ramps in exactly that channel — running them through the
- * curve would bend every anti-aliased edge in the previewer.
+ * `Color::srgb_to_linear` in GLSL on the interpolated colour, in `<color_fragment>`.
+ * Godot ramps a `border_blend` in sRGB, and linear endpoints put the midpoint 38
+ * counts high in Godot 4.6.3. Alpha stays: the AA feathers are alpha ramps, and
+ * the curve would bend every edge.
  */
 function decodeVertexColorsFromSRGB(shader: { fragmentShader: string }): void {
+  // Exact at any ring width. Subdividing rings instead leaves 1.3 counts at 16
+  // bands, for 32x the vertices.
   shader.fragmentShader = shader.fragmentShader.replace(
     '#include <color_fragment>',
     /* glsl */ `
@@ -271,23 +185,10 @@ function decodeVertexColorsFromSRGB(shader: { fragmentShader: string }): void {
 }
 
 /**
- * Multiplies a composed tint into a flat/line StyleBox's base colour(s), in
- * raw sRGB. A `StyleBoxLineBox`/`StyleBoxTextureBox`'s wrapped
- * `StyleBoxFlatData` core is what a caller who bypasses this component
- * entirely (drawing a `solveNode.styleBoxes` entry directly) sees — see
- * `native/parseStyleBox.ts`'s module doc — so this only ever runs on the
- * wrapper's neutral core or a genuine flat box, never `bgColor`/`borderColor`
- * fields a texture box's own draw would read (it has none).
- *
- * `<StyleBoxQuad>`'s own `color` prop is this function applied internally —
- * still exported (and independently tested) because `styleBoxFlat.ts` sits
- * inside the solver's framework-free closure and cannot import the modulate
- * helpers, so a painter that needs a tinted StyleBox for something OTHER than
- * feeding `<StyleBoxQuad>` (there is none today, but the seam is cheap to
- * keep) still has it available directly. `styleBoxFlatGeometry` performs the
- * single sRGB→linear conversion downstream of both call sites, so multiplying
- * after that point would double-convert — invisible at tint 1, wrong
- * everywhere else.
+ * Multiplies a tint into a flat or line StyleBox's base colours in raw sRGB, ahead
+ * of the one sRGB→linear conversion in `styleBoxFlatGeometry`. Exported for a
+ * painter that tints a StyleBox outside `<StyleBoxQuad>`: `styleBoxFlat.ts` cannot
+ * import the modulate helpers to offer one.
  */
 export function tintStyleBox(styleBox: StyleBoxFlatData, tint: RGBA): StyleBoxFlatData {
   if (tint.r === 1 && tint.g === 1 && tint.b === 1 && tint.a === 1) return styleBox;
@@ -300,7 +201,7 @@ export function tintStyleBox(styleBox: StyleBoxFlatData, tint: RGBA): StyleBoxFl
 
 interface StyleBoxTextureMeshProps {
   texture: StyleBoxTextureData;
-  /** Zero-origin, size-only — the same contract `StyleBoxQuad`'s own `rect` prop keeps. */
+  /** Zero-origin, size only. */
   rect: Rect2;
   /** Raw sRGB CanvasItem tint; multiplied with `texture.modulateColor` below. */
   tint: RGBA;
@@ -314,22 +215,10 @@ interface ImageLike {
 }
 
 /**
- * `StyleBoxTexture::draw` (`style_box_texture.cpp:165-184`) as a textured
- * nine-patch mesh — the identical `canvas_item_add_nine_patch` shape
- * `NinePatchRect` draws (`native/ninePatchGeometry.ts`'s own doc), so this
- * mirrors `nodes/2d/ui/ninepatchrect/Component.tsx`'s resolution rather than
- * re-deriving it.
- *
- * `texture.resources` (embedded on `StyleBoxTextureData` at parse time,
- * `native/styleBoxTexture.ts`) is the node's OWN scope — never
- * `useSceneResources()` — so this needs no scope prop threaded in from
- * whichever painter reached this box.
- *
- * The final `canvas_item_add_nine_patch` argument is `modulate`
- * (`style_box_texture.cpp:183`): the STYLEBOX's own `modulate_color`, which
- * the render server multiplies against the OWNING CanvasItem's already-
- * accumulated modulate/self_modulate (`tint`) — the same total tint pattern
- * `<StyleBoxQuad>`'s flat/line branch applies to `bgColor`/`borderColor`.
+ * `StyleBoxTexture::draw` (`style_box_texture.cpp:165-184`): the
+ * `canvas_item_add_nine_patch` that `NinePatchRect` draws, resolved as
+ * `ninepatchrect/Component.tsx` does. `texture.resources` is the node's own
+ * scope, embedded at parse time, so no scope prop is needed.
  */
 function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes }: StyleBoxTextureMeshProps) {
   const { texture: rawTexture } = useTexture2D(
@@ -353,9 +242,8 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
     };
 
     const region = texture.regionRect;
-    // `region_rect != Rect2()` — an ALL-zero region (including the parsed
-    // default) means "the whole texture", the same renderer-level convention
-    // `ninepatchrect/Component.tsx` already applies for the identical call.
+    // `region_rect != Rect2()`: an all-zero region, the parsed default included,
+    // means the whole texture.
     const regionSet =
       region !== undefined && (region.x !== 0 || region.y !== 0 || region.width !== 0 || region.height !== 0);
     const regionOffset = regionSet ? { x: region!.x, y: region!.y } : { x: 0, y: 0 };
@@ -389,13 +277,10 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
   }, [rawTexture, rect, texture]);
   useEffect(() => () => geometry?.dispose(), [geometry]);
 
-  // Clone: the resolved texture is a SHARED cache entry, mutated per-consumer
-  // below (colour space, filter) — the same reason `ninepatchrect/Component.tsx`
-  // clones. Filter is pinned LINEAR/clamp-to-edge rather than threaded through
-  // an inherited `texture_filter`: unlike `NinePatchRect`, a StyleBoxTexture
-  // override can land on ANY Control type, none of which hand this quad their
-  // own sampler — `Viewport::default_canvas_item_texture_filter`'s own class
-  // default, so the common case (no authored filter anywhere) is unaffected.
+  // A clone: the cached texture is shared, and this mutates colour space and
+  // filter. Linear and clamp-to-edge, the `Viewport::default_canvas_item_texture_filter`
+  // class default: a StyleBoxTexture can land on any Control, and none hands
+  // this quad its own sampler.
   const preparedTexture = useMemo(() => {
     if (!rawTexture || !geometry) return null;
     const cloned = rawTexture.clone();
@@ -408,6 +293,8 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
   }, [rawTexture, geometry]);
   useEffect(() => () => preparedTexture?.dispose(), [preparedTexture]);
 
+  // The last `canvas_item_add_nine_patch` argument, `modulate_color`
+  // (`style_box_texture.cpp:183`), times the owner's accumulated modulate.
   const combinedTint = useMemo(() => multiplyModulate(tint, texture.modulateColor), [tint, texture.modulateColor]);
   const linearColor = useGodotLinearColor(combinedTint);
   const decodeDefines = useCanvasDecodeDefines(preparedTexture);

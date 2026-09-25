@@ -1,8 +1,8 @@
 /**
- * VideoStreamPlayer self-registration: importing `index.r3f` must wire the
- * native (WebGL canvas) painter (draws nothing) and its constant-zero
- * minimum-size solver.
+ * VideoStreamPlayer self-registration: importing `index.r3f` wires the native (WebGL canvas)
+ * painter, which draws nothing, and its constant-zero minimum-size solver.
  */
+
 import { describe, expect, it } from 'vitest';
 import './index.r3f';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';

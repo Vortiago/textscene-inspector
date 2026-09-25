@@ -9,7 +9,7 @@ import { decodeGradient, decodeGradientTexture2D } from './decode';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
 import type { Gradient, GradientTexture2D } from './types';
 
-// The coin's radial white→transparent falloff, cubic-interpolated.
+// A radial white-to-transparent falloff, cubic-interpolated.
 const coinGradient = (): Gradient =>
   decodeGradient({
     interpolation_mode: '2',
@@ -133,12 +133,8 @@ describe('rasterizeGradientTexture2D', () => {
   });
 
   it('puts Godot\'s TOP row at v = 1, matching a file-backed texture', () => {
-    // The orientation nothing covered, which is why a linear gradient rendered
-    // upside-down against the same gradient shipped as a PNG. A DataTexture is
-    // uploaded from a typed array, and WebGL's UNPACK_FLIP_Y does not apply to
-    // those — so `flipY` cannot express this and the BUFFER has to carry it.
-    // Every 2D UV path here assumes the flipY=true layout, i.e. v = 1 samples
-    // the last row of the buffer and must hold Godot's top row.
+    // WebGL's UNPACK_FLIP_Y does not apply to a typed-array DataTexture, so the
+    // buffer carries the flip: v = 1 samples the last row, Godot's top row.
     const tex: GradientTexture2D = {
       width: 1,
       height: 4,
@@ -177,7 +173,7 @@ describe('rasterizeGradientTexture2D', () => {
     expect(centre.g).toBe(255);
     expect(centre.b).toBe(255);
     expect(centre.a).toBeGreaterThan(240);
-    // Corner: fully faded (RGB stays white; alpha goes to 0).
+    // Corner: fully faded. RGB stays white and alpha goes to 0.
     const corner = at(0, 0);
     expect(corner.r).toBe(255);
     expect(corner.a).toBe(0);

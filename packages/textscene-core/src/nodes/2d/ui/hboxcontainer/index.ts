@@ -1,4 +1,4 @@
-/** HBoxContainer registration — parser. */
+/** HBoxContainer registration: parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseHBoxContainer } from './parser';

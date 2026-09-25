@@ -1,20 +1,7 @@
-; ONE VARIABLE: `theme_override_font_sizes/font_size = 28` on the right-hand
-; TabBar and the right-hand TabContainer; their left-hand twins author none
-; and resolve the default 16.
-;
-; `TabBar::_shape` shapes every tab at `theme_cache.font_size`
-; (tab_bar.cpp:365), which is a theme ITEM (tab_bar.cpp:2179), so a node-local
-; override reaches it (control.cpp:3113-3117). The ONE shaped buffer then feeds
-; both `get_minimum_size` (tab_bar.cpp:82) and the draw pass (tab_bar.cpp:677),
-; so the override has to move the glyphs AND the strip's own height together.
-; TabContainer binds the same item name onto its own `tab_font_size`
-; (tab_container.cpp:1265) and pushes it onto its internal bar
-; (tab_container.cpp:339), where the strip height also sets the content band's
-; offset — the TabBar twin cannot show that, since its own rect is authored.
-;
-; No other TabBar or TabContainer scene authors a font-size override, so in
-; every one of them the override rung and the default rung resolve to the same
-; number and a strip measured at the wrong one is invisible.
+; One variable: `theme_override_font_sizes/font_size = 28` on the right-hand TabBar and
+; TabContainer. Their left-hand twins author none and resolve the default 16. No other TabBar or
+; TabContainer scene authors a font-size override, so the override and default rungs resolve
+; to one number there and a strip measured at the wrong one is invisible.
 
 [gd_scene format=3]
 
@@ -29,6 +16,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.12, 0.12, 0.18, 1)
 
+; `TabBar::_shape` shapes every tab at `theme_cache.font_size` (tab_bar.cpp:365), a theme item
+; (tab_bar.cpp:2179), so a node-local override reaches it (control.cpp:3113-3117). One shaped
+; buffer feeds `get_minimum_size` (tab_bar.cpp:82) and the draw pass (tab_bar.cpp:677), so the
+; override moves the glyphs and the strip height together.
 [node name="BarDefault" type="TabBar" parent="."]
 layout_mode = 1
 offset_left = 40.0
@@ -58,6 +49,9 @@ tab_0/title = "Inventory"
 tab_1/title = "Map"
 tab_2/title = "Journal"
 
+; TabContainer binds the same item name onto its `tab_font_size` (tab_container.cpp:1265) and
+; pushes it onto its internal bar (tab_container.cpp:339), where the strip height also sets the
+; content band's offset. The TabBar twin cannot show that, since its rect is authored.
 [node name="ContainerDefault" type="TabContainer" parent="."]
 layout_mode = 1
 offset_left = 40.0

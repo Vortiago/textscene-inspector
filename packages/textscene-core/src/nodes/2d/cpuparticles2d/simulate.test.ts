@@ -57,10 +57,9 @@ describe('settleSeconds', () => {
 });
 
 describe('restartStep (cpu_particles_2d.cpp:829-852)', () => {
-  // Godot's own local variable is `local_delta`, seeded from `p_delta` each
-  // particle-iteration and left alone unless a restart branch below
-  // overwrites it. `restartStep` returns that pair rather than mutating in
-  // place, since it has no `Particle` to close over.
+  // Godot's `local_delta` is seeded from `p_delta` each particle iteration and
+  // changes only in a restart branch. `restartStep` returns the pair, since it
+  // has no `Particle` to mutate.
   it('branch A: time advancing normally, restart inside [prevTime, time) — local_delta = time - restartTime (:830-836)', () => {
     // prevTime=0.2, time=0.3, restartTime=0.25, lifetime irrelevant here.
     expect(restartStep(0.2, 0.3, 0.25, 1.0, 0.1, true)).toEqual({
@@ -77,10 +76,8 @@ describe('restartStep (cpu_particles_2d.cpp:829-852)', () => {
   });
 
   it('branch B1: wrapped (time <= prevTime), restartTime >= prevTime — local_delta = lifetime - restartTime + time (:839-844)', () => {
-    // The particle's restart phase sits at the tail of the cycle: it should
-    // have restarted just BEFORE the wrap, so its slice runs from restartTime
-    // to the old lifetime boundary, plus however far past zero `time` has
-    // already gone.
+    // The restart phase sits at the tail of the cycle, just before the wrap, so
+    // its slice runs from restartTime to the old lifetime boundary plus `time`.
     expect(restartStep(0.9, 0.05, 0.92, 1.0, 0.15, true)).toEqual({
       restart: true,
       localDelta: 1.0 - 0.92 + 0.05,
@@ -124,24 +121,14 @@ describe('particleExpired (cpu_particles_2d.cpp:971 `p.time > p.lifetime`)', () 
   });
 });
 
+// Godot integrates `p.transform[2] += p.velocity * local_delta` for every
+// particle, restart included (`cpu_particles_2d.cpp:1151`). With `fract_delta`
+// (default on, `cpu_particles_2d.h:138`) a mid-frame restart gets only the
+// remainder of the frame, which spreads same-step births into a solid bar.
 describe('a restarting particle’s partial first step (comb vs. bar)', () => {
-  // Godot integrates `p.transform[2] += p.velocity * local_delta` for EVERY
-  // particle, restart included (`cpu_particles_2d.cpp:1151`), and `local_delta`
-  // for a particle that restarts mid-frame is only the REMAINDER of the frame
-  // after its own restart instant when `fract_delta` is on (Godot's default —
-  // `cpu_particles_2d.h:138`). A frozen pose that always uses the whole frame
-  // gives every particle restarting in the same step the SAME displacement,
-  // i.e. a comb of discrete bands; the fractional step spreads them
-  // continuously into a solid bar, which is what Godot draws.
-  //
-  // amount=100, lifetime=1.0, fixed_fps=30 (frame_time = 1/30) — with
-  // explosiveness = randomness = 0, particle i's restart phase is i/100 of the
-  // cycle, so restartTime_i = i/100. At the very first step (prevTime=0,
-  // time=1/30=0.0333…), only i=0..3 have restartTime < time, and each gets
-  // local_delta = time - i/100. With direction=(1,0), spread=0, gravity=0 and
-  // initial_velocity pinned to 120, a restarting particle's spawn transform is
-  // the identity (ox=oy=0) and NOTHING else moves it this frame (no advance
-  // pass runs on a restart), so ox is exactly `120 * local_delta`.
+  // Particle i restarts at i/100. At the first step (time = 1/30) only i=0..3
+  // restart, each with local_delta = time - i/100, and a restarting particle
+  // spawns at the origin, so ox is exactly `120 * local_delta`.
   const streamProps = {
     amount: '100',
     lifetime: '1.0',
@@ -174,9 +161,8 @@ describe('a restarting particle’s partial first step (comb vs. bar)', () => {
     );
     const oxOf = (index: number) => pose.find((p) => p.index === index)!.transform.ox;
 
-    // Every particle that restarted this step gets the WHOLE frame's worth of
-    // motion, landing at the same displacement regardless of when in the
-    // frame it was actually born.
+    // Every particle that restarted this step gets the whole frame's motion, so
+    // all land at the same displacement.
     expect(oxOf(0)).toBeCloseTo(4.0, 6);
     expect(oxOf(1)).toBeCloseTo(4.0, 6);
     expect(oxOf(2)).toBeCloseTo(4.0, 6);
@@ -185,14 +171,10 @@ describe('a restarting particle’s partial first step (comb vs. bar)', () => {
 });
 
 describe('the substituted window is one of Godot’s own settles', () => {
-  // `_update_internal` spends an externally requested advance and an authored
-  // `preprocess` through the SAME loop, at the same `frame_time`, with
-  // `speed_scale` forced to 1 and the last step overshooting
-  // (`cpu_particles_2d.cpp:727-738`). So a window we invent is only comparable
-  // against Godot if it is that same kind of advance. Measured: a fixture with
-  // its `preprocess` line deleted, rendered through
-  // `pnpm ref:godot … --particles <that preprocess>`, is byte-identical to the
-  // fixture rendered with the line in place.
+  // `_update_internal` spends a requested advance and an authored `preprocess`
+  // through one loop, with `speed_scale` forced to 1 (`cpu_particles_2d.cpp:727-738`).
+  // Measured: a fixture without its `preprocess` line, rendered with
+  // `pnpm ref:godot … --particles <that preprocess>`, is byte-identical.
   it('matches the pose the same emitter would settle to with `preprocess = lifetime`', () => {
     const substituted = simulateFrozenPose(
       input({ props: props({ preprocess: '0', lifetime: '0.95' }) })
@@ -212,12 +194,9 @@ describe('the substituted window is one of Godot’s own settles', () => {
   });
 
   it('runs whole frames, so a window that is not a multiple of the step overshoots', () => {
-    // At `fixed_fps = 30` both 0.95 s (28.5 steps) and 0.96 s (28.8) are spent
-    // as 29 WHOLE frames and land on the identical pose, 0.9667 s in. Shortening
-    // the last step to the remainder would separate them and put each a fraction
-    // of a frame behind the engine — the arithmetic that cost `emission-shapes`
-    // 234 px before the preprocess branch was corrected. 0.9 s is 27 frames and
-    // must not land there, or this would pass on any two inputs.
+    // At `fixed_fps = 30`, 0.95 s and 0.96 s are both spent as 29 whole frames
+    // and land on one pose, 0.9667 s in. A shortened last step would separate
+    // them. 0.9 s is 27 frames and must not land there, or any two inputs pass.
     const substituted = simulateFrozenPose(
       input({ props: props({ preprocess: '0', lifetime: '0.95' }) })
     );
@@ -257,9 +236,8 @@ describe('simulateFrozenPose', () => {
   });
 
   it('produces the same pose without `use_fixed_seed` as with the fixed preview seed', () => {
-    // Godot randomises the seed on construction; our substitute is a constant,
-    // so the two spellings must agree or a scene's look would depend on whether
-    // it happened to write `use_fixed_seed`.
+    // Godot randomises the seed on construction, and the substitute is a
+    // constant, so the two spellings must agree.
     const authored = simulateFrozenPose(
       input({ props: props({ use_fixed_seed: 'false', seed: '999', amount: '10' }) })
     );
@@ -301,7 +279,7 @@ describe('simulateFrozenPose', () => {
     for (const particle of pose) {
       expect(Math.hypot(particle.transform.ox, particle.transform.oy)).toBeLessThanOrEqual(10.001);
     }
-    // A filled disc puts SOME particles well inside; a surface ring would not.
+    // A filled disc puts some particles well inside, and a surface ring would not.
     expect(pose.some((p) => Math.hypot(p.transform.ox, p.transform.oy) < 7)).toBe(true);
   });
 
@@ -342,12 +320,10 @@ describe('simulateFrozenPose', () => {
   });
 
   it('places Rectangle particles where Godot 4.6.3 actually puts them', () => {
-    // Measured, not derived. `pnpm ref:godot` on
-    // scenes/fixtures/unit-cpuparticles2d-emission-shapes.tscn renders its
-    // Rectangle emitter (seed 11, extents 80x30) with particle 0 at
-    // (+44.5, +9.3) from the node origin. That is only reproducible if the two
-    // `rng->randf()` arguments of Godot's single `Vector2(…)` constructor are
-    // drawn RIGHT to LEFT, which C++ permits and the shipped builds do.
+    // Measured with `pnpm ref:godot` on unit-cpuparticles2d-emission-shapes.tscn:
+    // the Rectangle emitter (seed 11, extents 80x30) puts particle 0 at
+    // (+44.5, +9.3). Only a right-to-left draw of the two `rng->randf()`
+    // arguments of Godot's one `Vector2(…)` call reproduces it.
     const pose = simulateFrozenPose(
       input({
         props: props({
@@ -457,7 +433,7 @@ describe('simulateFrozenPose', () => {
       input({ props: props({ amount: '24', lifetime: '1' }), curves })
     );
     // A steady-state emitter holds particles at every age, so the curve must
-    // produce a RANGE of quad sizes rather than one.
+    // give a range of quad sizes.
     const sizes = pose.map((p) => Math.hypot(p.transform.ax, p.transform.ay));
     expect(Math.max(...sizes) - Math.min(...sizes)).toBeGreaterThan(0.2);
   });
@@ -485,11 +461,10 @@ describe('simulateFrozenPose', () => {
     );
     expect(pose.length).toBeGreaterThan(0);
     for (const particle of pose) {
-      // Godot runs the hue-rotation matrix unconditionally, and at zero hue
-      // variation that matrix is only NEARLY the identity: its third row is
-      // (-0.300, -0.588, 0.886) + (0.299, 0.587, 0.114), i.e. (-0.001, -0.001, 1).
-      // So a blue channel of 1 costs the red and green channels 0.001 each. This
-      // 0.1% bleed is the engine's, and reproducing it is the point.
+      // Godot always runs the hue-rotation matrix, and at zero variation its third
+      // row is (-0.300, -0.588, 0.886) + (0.299, 0.587, 0.114), that is
+      // (-0.001, -0.001, 1). A blue channel of 1 costs red and green 0.001 each,
+      // the engine's own bleed.
       expect(particle.color.r).toBeCloseTo(0.5 - 0.001, 6);
       expect(particle.color.g).toBeCloseTo(0.25 - 0.001, 6);
       expect(particle.color.b).toBeCloseTo(1, 6);
@@ -528,14 +503,14 @@ describe('simulateFrozenPose', () => {
       })
     );
     for (const particle of pose) {
-      // Y column points along +X (the velocity); X column is its orthogonal.
+      // Y column points along +X (the velocity). X column is its orthogonal.
       expect(particle.transform.bx).toBeCloseTo(1, 4);
       expect(particle.transform.by).toBeCloseTo(0, 4);
     }
   });
 
   it('undoes the emitter transform when `local_coords` is false', () => {
-    // A doubled emitter scale must NOT double the particle quads: Godot draws a
+    // A doubled emitter scale must not double the particle quads: Godot draws a
     // global-coords emitter with an identity canvas transform.
     const emissionTransform = { ax: 2, ay: 0, bx: 0, by: 2, ox: 0, oy: 0 };
     const global = simulateFrozenPose(

@@ -1,15 +1,8 @@
 /**
- * BaseMaterial3D's Stencil group (`material.cpp:3774-3781`).
- *
- * `stencil_flags` is both tiers, for two reasons:
- *
- * - Read and write are mutually exclusive. `set_stencil_flags` reduces a value
- *   asking for both to READ alone (:3267), and that branch tests the incoming
- *   value against itself, so a freshly loaded material takes it too. An altered
- *   write is the error tier.
- * - A bit outside the three the hint lists is KEPT — the setter bare-assigns
- *   what survives, with no `& MASK`. Stored but unreachable from the inspector,
- *   which is `hintedBitField`'s warning.
+ * BaseMaterial3D's Stencil group (`material.cpp:3774-3781`). `stencil_flags` is both tiers:
+ * `set_stencil_flags` reduces read with write to READ alone (:3267), on load too, which
+ * errors. A bit outside the three the hint lists is kept, with no `& MASK`, so it is
+ * stored but off-inspector: `hintedBitField`'s warning.
  */
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
@@ -38,11 +31,9 @@ function stencilFlags(): PropertyValidator {
     // A malformed literal is the one thing that stops the exclusivity check
     // from having a number to read.
     if (unlisted?.severity === 'error') return unlisted;
-    // `listed` errors on anything unreadable OR unstorable, so a usable number
-    // is the only thing that reaches here.
-    // Same width as `listed`, which is `hintedBitField`: read at int32 while it
-    // read at int64, a value past 32 bits came back NaN here and the wrapper
-    // returned early, dropping the warning `listed` had produced.
+    // `listed` errors on anything unreadable or unstorable, so a usable number
+    // reaches here. Read at int64, the width `listed` uses: at int32 a value past
+    // 32 bits reads NaN and drops the warning `listed` produced.
     const bits = parseGodotInt(value, 'int64');
     if (bits === null || Number.isNaN(bits)) return null;
     if ((bits & STENCIL_FLAG_READ) !== 0 && (bits & STENCIL_WRITE_FLAGS) !== 0) {

@@ -1,9 +1,7 @@
 /**
- * `<Panel>` — the native (WebGL canvas) painter for `Panel`. Draws its
- * `theme_override_styles/panel` StyleBox (falling back to the default-theme
- * `panel` struct) across the node's whole solved rect, exactly like
- * `panel.cpp`'s `NOTIFICATION_DRAW`:
- * `theme_cache.panel_style->draw(ci, Rect2(Point2(), get_size()))`.
+ * Tests the native painter for `Panel`: it draws its StyleBox, or the
+ * default-theme `panel` struct, across the whole solved rect, as `panel.cpp`'s
+ * `theme_cache.panel_style->draw(ci, Rect2(Point2(), get_size()))` does.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -83,7 +81,7 @@ describe('<Panel> (isolated painter contract)', () => {
     const color = geom.attributes.color as THREE.BufferAttribute;
     // Default-theme `panel` stylebox fill is `style_normal_color` =
     // Color(0.1, 0.1, 0.1, 0.6) (default_theme.cpp:134, nativeTheme.ts's
-    // STYLE_FILL.normal), read raw — see `StyleBoxQuad.tsx` on colour space.
+    // STYLE_FILL.normal), read raw sRGB.
     expect(color.getX(0)).toBeCloseTo(0.1, 5);
     expect(color.getW(0)).toBeCloseTo(0.6, 5);
   });

@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# Reject a commit whose header is not a Conventional Commit. The rules and the message live in
+# the vendored skill in .claude/skills/conventional-commits/.
+
+# HUSKY=0 skips the hook. Existing tools already set that name.
+[ "${HUSKY-}" = "0" ] && exit 0
+
+exec sh "$(git rev-parse --show-toplevel)/.claude/skills/conventional-commits/commit-msg.sh" "$1"

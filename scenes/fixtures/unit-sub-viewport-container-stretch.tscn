@@ -1,15 +1,7 @@
-; SubViewportContainer with stretch = true.
-;
-; The one variable against unit-sub-viewport-container.tscn: stretch. Identical
-; geometry otherwise. Measured through Godot 4.6.3 — the surface now fills the
-; container's own 300x200 rect, because `recalc_force_viewport_sizes` overwrites
-; the child viewport's size with `get_size() / stretch_shrink`. The authored
+; One variable against unit-sub-viewport-container.tscn: `stretch = true`. Measured through
+; Godot 4.6.3, the surface fills the container's 300x200, because `recalc_force_viewport_sizes`
+; overwrites the child viewport's size with `get_size() / stretch_shrink`. The authored
 ; `size = Vector2i(200, 150)` is dead.
-;
-; Consequences visible in the render: Inner (200x150) no longer covers the
-; surface, so the viewport's clear colour shows in the uncovered band, and
-; Overflow is clipped at 300x200 instead of 200x150 — a bigger green rect than
-; in the non-stretch fixture.
 
 [gd_scene format=3]
 
@@ -35,11 +27,13 @@ stretch = true
 size = Vector2i(200, 150)
 render_target_update_mode = 4
 
+; 200x150 no longer covers the surface, so the viewport's clear colour shows in the uncovered band.
 [node name="Inner" type="ColorRect" parent="Booth/SubViewport"]
 offset_right = 200.0
 offset_bottom = 150.0
 color = Color(1, 0.6, 0, 1)
 
+; Clipped at 300x200 instead of 200x150, a bigger green rect than in the non-stretch fixture.
 [node name="Overflow" type="ColorRect" parent="Booth/SubViewport"]
 offset_left = 150.0
 offset_top = 100.0

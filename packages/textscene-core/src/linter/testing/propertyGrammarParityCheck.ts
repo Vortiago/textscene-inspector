@@ -1,11 +1,7 @@
 /**
- * The parity comparison itself: one inventory of the slices, and the asymmetries
- * left once the allowlist has had its say.
- *
- * Kept beside the guard rather than inside it because the inventory is a single
- * filesystem sweep several assertions share, and because the comparison is the
- * part worth reading on its own — the allowlist is consulted up the base chain,
- * so a base entry answers for every leaf below it.
+ * The parity comparison: one inventory of the slices, and the asymmetries left
+ * after the allowlist, which is read up the base chain so a base entry answers
+ * for every leaf. The inventory is one filesystem sweep the assertions share.
  */
 
 import { readFileSync } from 'node:fs';
@@ -30,10 +26,6 @@ export function getFullValidatorKeys(nodeType: string): Set<string> {
   return result;
 }
 
-// ---------------------------------------------------------------------------
-// Slice inventory: one walk + one scrape per slice, shared by all tests.
-// ---------------------------------------------------------------------------
-
 export interface SliceInfo {
   /** Slice directory relative to src/nodes. */
   slice: string;
@@ -52,7 +44,7 @@ export function collectSlices(): SliceInfo[] {
   for (const dir of findSliceDirs(nodesRoot).sort()) {
     const linterSrc = readFileSync(join(dir, 'linterParser.ts'), 'utf8');
     const nodeType = extractNodeType(linterSrc);
-    if (!nodeType) continue; // shared-helper file — no registerAll
+    if (!nodeType) continue; // a shared-helper file, with no registerAll
 
     cachedSlices.push({
       slice: dir.slice(nodesRoot.length + 1),
@@ -67,10 +59,6 @@ export function collectSlices(): SliceInfo[] {
   return cachedSlices;
 }
 
-// ---------------------------------------------------------------------------
-// Core guard logic
-// ---------------------------------------------------------------------------
-
 export interface ParityViolation {
   slice: string;
   nodeType: string;
@@ -82,16 +70,14 @@ export function checkParity(): ParityViolation[] {
   const violations: ParityViolation[] = [];
 
   for (const { slice, nodeType, parserProps, validatorKeys } of collectSlices()) {
-    // Collect allowlist entries from this type AND all ancestor types so a
-    // base-type entry (e.g. Node3D.linterOnly) applies to every leaf slice.
+    // A base-type entry, such as Node3D.linterOnly, applies to every leaf slice.
     const allowedParserOnly = new Set<string>();
     const allowedLinterOnly = new Set<string>();
     for (const t of [nodeType, ...baseChain(nodeType)]) {
       const e = ASYMMETRY_ALLOWLIST[t];
       if (!e) continue;
       for (const k of e.parserOnly ?? []) allowedParserOnly.add(k);
-      // Both suppress the failure; they differ in what they claim about WHY,
-      // which is what a reader and the census below need.
+      // Both suppress the failure. They differ only in the reason they claim.
       for (const k of e.linterOnly ?? []) allowedLinterOnly.add(k);
       for (const k of e.renderGap ?? []) allowedLinterOnly.add(k);
     }

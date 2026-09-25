@@ -1,10 +1,7 @@
 /**
- * Blend-state parity, ported from
- * `MaterialStorage::ShaderData::blend_mode_to_blend_attachment`
- * (servers/rendering/renderer_rd/storage_rd/material_storage.cpp:651-716) — the
- * one function the canvas renderer asks for a mode's blend attachment
- * (renderer_canvas_render_rd.cpp:1516). The table below is that C++ switch
- * transcribed, so a factor edited here has to disagree with Godot to pass.
+ * Blend-state parity with `blend_mode_to_blend_attachment`
+ * (servers/rendering/renderer_rd/storage_rd/material_storage.cpp:651-716), which the canvas
+ * renderer calls (renderer_canvas_render_rd.cpp:1516). The table below transcribes that switch.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -84,7 +81,7 @@ const GODOT: Array<[CanvasItemBlendMode, string, GodotAttachment]> = [
       alphaOp: OP_ADD,
       alphaSrc: ONE,
       alphaDst: ONE_MINUS_SRC_ALPHA,
-      // Factors only — Godot's canvas shader never premultiplies in-shader,
+      // Factors only: Godot's canvas shader never premultiplies in-shader,
       // so three's flag (which adds `rgb *= a`) must stay off (see build.ts).
       premultipliedAlpha: false,
     },
@@ -106,7 +103,7 @@ describe('canvasItemBlendState', () => {
 
   it('leaves MIX to NormalBlending, which is Godot MIX exactly (cpp:655-662)', () => {
     // Godot MIX: colour SRC_ALPHA / ONE_MINUS_SRC_ALPHA, alpha ONE /
-    // ONE_MINUS_SRC_ALPHA, both ADD — the pair three's NormalBlending sets for a
+    // ONE_MINUS_SRC_ALPHA, both ADD: the pair three's NormalBlending sets for a
     // straight-alpha material, so no custom factors are needed and none are set.
     const state = canvasItemBlendState(CanvasItemBlendMode.MIX);
     expect(state.blending).toBe(THREE.NormalBlending);

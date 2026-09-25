@@ -1,5 +1,5 @@
 /**
- * HSlider registration — the native (WebGL canvas) rect solve + painter.
+ * HSlider registration: the native (WebGL canvas) rect solve + painter.
  * `./nativeSolver` registers the minimum-size function as a side effect of
  * import.
  */

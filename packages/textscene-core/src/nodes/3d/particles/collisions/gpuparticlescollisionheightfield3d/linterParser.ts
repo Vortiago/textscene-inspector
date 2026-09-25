@@ -1,10 +1,8 @@
 /**
- * GPUParticlesCollisionHeightField3D strict validators for linting.
- *
- * Declare only GPUParticlesCollisionHeightField3D's OWN members: the ones doc/classes/GPUParticlesCollisionHeightField3D.xml
- * lists without an `overrides=` attribute. Everything from GPUParticlesCollision3D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * GPUParticlesCollisionHeightField3D strict validators for linting: only its own members, the ones
+ * doc/classes/GPUParticlesCollisionHeightField3D.xml lists without `overrides=`. The NODE_BASE_TYPES
+ * base-walk delivers everything from GPUParticlesCollision3D up, so re-declaring an inherited key
+ * shadows it and duplicates the rule.
  */
 
 import '../shared/linterParser.js';
@@ -33,11 +31,9 @@ validatorRegistry.registerAll('GPUParticlesCollisionHeightField3D', {
   // max, so 1024 is not a cap; the min carries no `or_less`, so 0.01 is the
   // hint's floor. set_size:769-774 is a bare assignment, so it is a warning.
   size: v.boundedVector3('size', { min: 0.01, hinted: 'gpu_particles_collision_3d.cpp:733' }),
-  // gpu_particles_collision_3d.cpp:734, PROPERTY_HINT_ENUM with 6 comma-separated
-  // entries: the .tscn stores the 0-based INDEX into that list (RESOLUTION_256=0
-  // through RESOLUTION_8192=5, gpu_particles_collision_3d.cpp:739-744 /
-  // BIND_ENUM_CONSTANT), never the literal resolution value. set_resolution:780-785
-  // is a bare assignment.
+  // gpu_particles_collision_3d.cpp:734: the .tscn stores the enum index, RESOLUTION_256=0
+  // to RESOLUTION_8192=5 (gpu_particles_collision_3d.cpp:739-744), never the literal
+  // resolution. set_resolution:780-785 is a bare assignment.
   resolution: v.enumInt('resolution', 0, 5, RESOLUTION, {
     hinted: 'gpu_particles_collision_3d.cpp:734',
   }),

@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# Lint and test the staged files only. The pre-push hook runs the full gate.
+
+# HUSKY=0 skips the hook. Existing tools already set that name.
+[ "${HUSKY-}" = "0" ] && exit 0
+
+pnpm exec lint-staged

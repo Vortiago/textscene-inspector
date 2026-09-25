@@ -1,8 +1,7 @@
 [gd_scene load_steps=2 format=3 uid="uid://edge_area3d_bad_gravity_point"]
 
-; Point gravity with `gravity_point_center` omitted: Area3D falls back to the
-; default center (the node's own origin), like every omitted property takes
-; Godot's default. Lints clean.
+; Point gravity with `gravity_point_center` omitted: Area3D falls back to the default centre (the
+; node's own origin), as every omitted property takes Godot's default. Lints clean.
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1"]
 size = Vector3(3, 3, 3)

@@ -14,12 +14,9 @@ export const escapeHtml = (s) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /**
- * `ADR-0025` in sheet prose becomes a link to the decision record.
- *
- * Absolute, not relative: sheets now live at varying depths inside the slice
- * tree, the gallery HTML resolves relative paths against its own location, and
- * the deployed /parity/ site has no docs/ directory at all. One generated
- * absolute URL is correct in all three places, so no sheet hand-writes one.
+ * `ADR-0025` in sheet prose becomes an absolute link to the decision record.
+ * Sheets live at varying depths, the gallery resolves relative paths against
+ * itself, and the deployed /parity/ site has no docs/ directory.
  */
 const ADR_FILES = existsSync(join(REPO_ROOT, 'docs/adr'))
   ? readdirSync(join(REPO_ROOT, 'docs/adr')).filter((f) => f.endsWith('.md'))
@@ -27,9 +24,8 @@ const ADR_FILES = existsSync(join(REPO_ROOT, 'docs/adr'))
 const ADR_BLOB = 'https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/';
 
 function linkAdrs(html) {
-  // Split on existing anchors and rewrite only outside them. Ordering alone does
-  // not protect: `\bADR-\d{4}\b` matches an anchor's inner text just as happily
-  // and would nest <a> inside <a>.
+  // Rewrite only outside existing anchors: `\bADR-\d{4}\b` matches an anchor's
+  // inner text too and would nest <a> inside <a>.
   return html
     .split(/(<a\b[^>]*>[\s\S]*?<\/a>)/g)
     .map((segment) =>
@@ -51,9 +47,8 @@ export function inline(text) {
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    // A sheet cites the shared-causes file by name; in the gallery that file is
-    // the notes panel, so the citation becomes an in-page link to it rather than
-    // a path the deployed site does not carry.
+    // A citation of the shared-causes file becomes an in-page link to the
+    // notes panel, since the deployed site does not carry the file.
     .replace(
       /docs\/comparison\/README\.md/g,
       `<a class="adr" href="#${encodeURIComponent(NOTES_TYPE)}">${NOTES_TYPE}</a>`
@@ -62,9 +57,9 @@ export function inline(text) {
 }
 
 /**
- * Render the strict Markdown subset the sheet standard permits: `##` headings,
- * pipe tables, paragraphs. The `# H1` and the two `![]()` images are dropped —
- * the gallery supplies the title and lays the images out itself.
+ * Renders the sheet standard's Markdown subset: `##` headings, pipe tables,
+ * lists and paragraphs. The `# H1` and the `![]()` images are dropped, since
+ * the gallery supplies the title and lays out the images.
  */
 export function renderBody(body) {
   const lines = body.split('\n');
@@ -81,7 +76,6 @@ export function renderBody(body) {
     const line = lines[i];
     if (/^#\s/.test(line) || /^!\[/.test(line.trim())) continue; // H1 and images handled elsewhere
     // HTML comments are machine markers (`<!-- lint:begin … -->`), never content.
-    // Without this they fall through to the paragraph branch and render escaped.
     if (/^<!--/.test(line.trim())) continue;
     if (/^##\s/.test(line)) {
       flush();
@@ -92,10 +86,8 @@ export function renderBody(body) {
       while (i + 1 < lines.length && /^\|/.test(lines[i + 1].trim())) rows.push(lines[++i]);
       out.push(renderTable(rows));
     } else if (/^-\s/.test(line.trim())) {
-      // A `- ` bullet list ("What it exercises" in every sheet). Without this it
-      // fell through to the paragraph branch and every item collapsed into one
-      // run-on `<p>- a - b - c</p>`. A wrapped continuation line (indented, not a
-      // new bullet or a blank) joins the current item, as paragraphs collapse wraps.
+      // A `- ` bullet list. An indented continuation line joins the current
+      // item, as a paragraph joins its wrapped lines.
       flush();
       const items = [];
       let item = line.trim().replace(/^-\s+/, '');

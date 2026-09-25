@@ -1,10 +1,6 @@
 /**
- * Curve2D slice types.
- *
- * Coordinates stay in Godot 2D space (+Y down) throughout: the Path2D component
- * negates Y per vertex when it builds the gizmo geometry, and PathFollow2D
- * negates Y when it conjugates the follow transform — both matching the Node2D
- * `diag(1,-1,1)` convention.
+ * Curve2D slice types, in Godot 2D space (+Y down). Path2D and PathFollow2D negate Y
+ * themselves, by the Node2D `diag(1,-1,1)` convention.
  */
 
 export interface Vec2 {

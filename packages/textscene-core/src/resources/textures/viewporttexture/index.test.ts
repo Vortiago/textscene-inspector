@@ -1,6 +1,6 @@
 /**
- * The slice's routing claim: `ViewportTexture` is REGISTERED but explicitly
- * unroutable — it resolves by NodePath, never by file.
+ * The slice's routing claim: `ViewportTexture` is registered but unroutable,
+ * since it resolves by NodePath, never by file.
  */
 import { describe, it, expect } from 'vitest';
 import './index';
@@ -21,9 +21,8 @@ describe('viewporttexture slice registration', () => {
   });
 
   it('is distinguishable from an unclaimed type by the claim itself, not by its bus', () => {
-    // `busTypeFor` collapses "registered, unroutable" and "unknown type" to null,
-    // so a router must consult `byTypeName` to tell a ViewportTexture (skip the
-    // load, it is fine) from a genuinely unsupported type.
+    // `busTypeFor` returns null for both "registered, unroutable" and "unknown", so
+    // a router consults `byTypeName` to tell a ViewportTexture from an unsupported type.
     expect(resourceSliceRegistry.byTypeName('NotARealResourceType')).toBeNull();
     expect(resourceSliceRegistry.byTypeName('ViewportTexture')).not.toBeNull();
   });

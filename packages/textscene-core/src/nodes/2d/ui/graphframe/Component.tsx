@@ -1,31 +1,8 @@
 /**
- * `<GraphFrame>` — the native (WebGL canvas) painter for `GraphFrame`:
- * `GraphFrame::_notification(NOTIFICATION_DRAW)` (`scene/gui/graph_frame.cpp:93-143`),
- * in source order — body panel (tint-substituted or plain), titlebar, title
- * text, resizer.
- *
- * `tint_color_enabled` does not TINT the panel's existing colours — it
- * REPLACES `bg_color` with `tint_color` outright and sets `border_color` to
- * `selected ? <the untinted default's own border colour> :
- * tint_color.lightened(0.3)` (`:113-124`), building a fresh StyleBox rather
- * than multiplying. A `StyleBoxTexture` panel takes the OTHER branch
- * (`:120-124`), which does multiply: `set_modulate(tint_color)`.
- *
- * With `tint_color_enabled` false the else arm draws `sb_panel_flat` alone
- * (`:126`), so a texture panel is not drawn at all — that is the engine's own
- * behaviour, not a gap here.
- *
- * The resize handle draws only when `resizable && !autoshrink_enabled`
- * (`:133`, mirrored in `get_cursor_shape`, `:84`) — `autoshrink_enabled`
- * defaults `true`, so an unauthored GraphFrame never shows one even with
- * `resizable = true`.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`, composed with each base colour while both are still
- * sRGB (`PanelChrome`'s own pattern).
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * `<GraphFrame>`, the native (WebGL canvas) painter for `GraphFrame::_notification(NOTIFICATION_DRAW)`
+ * (`scene/gui/graph_frame.cpp:93-143`) in source order: body panel, titlebar, title text, resizer.
+ * The walker's `tint` composes with each base colour in sRGB, as in `PanelChrome`, and
+ * `ControlCanvasWalker` owns `visible`, `children` and the transform.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -69,12 +46,10 @@ function lightened(c: ControlColor, amount: number): ControlColor {
 }
 
 /**
- * `graph_frame.cpp:113-124` — the two tint arms, which do different things.
- *
- * A flat panel has its `bg_color` SUBSTITUTED by `tint_color` and its
- * `border_color` derived from it (`:114-119`); a texture panel is MODULATED by
- * it instead (`:120-124`). Neither is the other, and the engine picks by which
- * kind the theme slot holds.
+ * The two tint arms (`graph_frame.cpp:113-124`), picked by the theme slot's kind.
+ * A flat panel gets a fresh StyleBox: `bg_color` becomes `tint_color`, and
+ * `border_color` keeps the untinted border when selected, else
+ * `tint_color.lightened(0.3)` (`:114-119`). A texture panel is modulated (`:120-124`).
  */
 function tintedPanel(
   base: ResolvedStyleBox,
@@ -99,8 +74,8 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
   const selected = props.selected === true;
   const styles = graphFrameStyles(solveNode, theme);
   const basePanel = selected ? styles.panelSelected : styles.panel;
-  // `:126` — the untinted arm draws the FLAT box alone, so a texture panel
-  // with tinting off draws nothing, exactly as the engine does.
+  // `:126`: the untinted arm draws `sb_panel_flat` alone, so a texture panel
+  // with tinting off draws nothing, as in the engine.
   const tinted = props.tintColorEnabled === true;
   const panelStyle = tinted
     ? tintedPanel(basePanel, props.tintColor ?? { r: 0.3, g: 0.3, b: 0.3, a: 0.75 }, selected)
@@ -135,7 +110,7 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
   const titlePlacements = useMemo(
     () =>
       titleLayout
-        ? // `title_label` sets `HORIZONTAL_ALIGNMENT_CENTER` explicitly (`graph_frame.cpp:356`) — alignment 1.
+        ? // `title_label` sets `HORIZONTAL_ALIGNMENT_CENTER` explicitly (`graph_frame.cpp:356`): alignment 1.
           layoutLabelLines(titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h, 1, undefined)
         : [],
     [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h]
@@ -146,7 +121,8 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
   );
   const titleTintColor = useMemo(() => multiplyModulate(tint.own, fontTheme.color), [tint.own, fontTheme.color]);
 
-  // `resizable && !autoshrink_enabled` — `autoshrink_enabled` defaults true (graph_frame.cpp:133).
+  // `resizable && !autoshrink_enabled` (graph_frame.cpp:133, and `get_cursor_shape` at `:84`):
+  // `autoshrink_enabled` defaults true, so `resizable = true` alone shows no handle.
   const showResizer = props.resizable === true && props.autoshrinkEnabled === false;
   const resizerTexture = useNodeIcon(showResizer ? solveNode.icons.resizer : undefined, showResizer ? RESIZER_SE_ICON : null);
   const resizerCombined = useMemo(() => multiplyModulate(tint.own, GRAPH_FRAME_RESIZER_COLOR), [tint.own]);
@@ -154,8 +130,8 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
 
   return (
     <>
-      {/* `StyleBoxQuad` consumes only the SIZE of the rect it is given (its own
-          doc), so a box drawn at an offset INSIDE this control needs that
+      {/* `StyleBoxQuad` consumes only the size of the rect it is given (its own
+          doc), so a box drawn at an offset inside this control needs that
           offset from the group around it. */}
       {drawsPanel && (
         <CanvasItemGroup position={[bodyRect.x, -bodyRect.y, 0]}>

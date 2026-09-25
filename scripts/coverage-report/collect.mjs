@@ -1,7 +1,6 @@
 /**
- * The coverage ledger itself: what the live registries know, measured against
- * Godot's own ClassDB as captured in `node-catalog.json`. Nothing is written
- * down, so nothing can drift.
+ * The coverage ledger: what the live registries know, measured against Godot's
+ * ClassDB in `node-catalog.json`. Nothing is written down, so nothing drifts.
  */
 
 import { readFileSync } from 'node:fs';
@@ -11,9 +10,8 @@ import { loadCoreLinter, loadCoreParser } from '../compare-docs/loadCoreLinter.m
 const CATALOG = join(import.meta.dirname, '../compare-docs/node-catalog.json');
 
 /**
- * Godot 4.6.3 parses `AreaLight3D` but emits nothing from it, so the node
- * postdates that build and never appears in its ClassDB. It is implemented here
- * regardless; without this note it reads as a phantom registration.
+ * Types this repo implements that the 4.6.3 ClassDB never lists, so they are not
+ * phantom registrations: Godot 4.6.3 parses `AreaLight3D` but emits nothing.
  */
 const NOT_IN_CLASSDB = new Set(['AreaLight3D']);
 
@@ -23,17 +21,15 @@ export async function collectCoverage() {
   const { validatorRegistry, registeredTypes } = await loadCoreLinter();
 
   const registered = new Set(nodeRegistry.getAllTypeNames());
-  // A registration entry is not coverage: a slice may call registerAll with an
-  // empty map, which is correct for a type Godot gives no own members but
-  // indistinguishable from a slice nobody finished. Count declared keys.
+  // A registration entry is not coverage: an empty registerAll map is correct
+  // for a type with no own members and also for an unfinished slice.
   const validated = new Set(
     registeredTypes('declaring')
       .filter((t) => validatorRegistry.getOwnKeys(t).length > 0)
   );
 
-  // Registered by the parser, declaring nothing of its own. These read as
-  // covered in the `registered` count while StrictTscnParser accepts every
-  // value on them, so they are listed rather than left to be inferred.
+  // Registered by the parser, declaring nothing of its own, so StrictTscnParser
+  // accepts every value on them.
   const undeclared = [...registered].filter((t) => !validated.has(t)).sort();
 
   const catalogued = new Set(catalog.nodes.map((n) => n.name));
@@ -42,8 +38,7 @@ export async function collectCoverage() {
     .filter((n) => !registered.has(n.name))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // A registration for a type Godot's ClassDB never listed is either a node
-  // newer than the catalog's engine build or a typo; either way, say so.
+  // A type ClassDB never listed is newer than the catalog's engine or a typo.
   const phantom = [...registered].filter((t) => !catalogued.has(t) && !NOT_IN_CLASSDB.has(t));
 
   return {

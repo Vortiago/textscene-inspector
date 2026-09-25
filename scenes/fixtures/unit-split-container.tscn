@@ -1,41 +1,28 @@
-; SplitContainer layout: where the boundary between the two children falls.
-;
-; The one variable: `_compute_split_offset`'s three branches, selected by which
-; children carry SIZE_EXPAND. Every other container fixture
-; (unit-control-containers.tscn) exercises box/grid/margin flow, which places
-; children one after another; a SplitContainer instead solves for ONE number —
-; `computed_split_offset` — and derives both rects from it, so a regression in
-; that solve is invisible in every other container.
-;
-;   both expanded    wished = size * ratio - sep * 0.5 + split_offset
-;   first expanded   wished = size - sep + split_offset
-;   neither          wished = split_offset
-;
-; Each row is 400 wide and 60 tall, at x = 20, stacked 80 apart. The children
-; are ColorRects so the boundary is a hard colour edge that a probe can find.
-;
-; Row 1  Both      both children expand, split_offset 0  -> even split
-; Row 2  Offset    both expand, split_offset = 60        -> boundary moves right
-; Row 3  Ratio     both expand, stretch_ratio 3 : 1      -> 3/4 of the width
-; Row 4  FirstOnly only the first expands                -> first eats the rest
-; Row 5  Neither   neither expands, split_offset = 120   -> first is exactly 120
-;
-; Vertical is the same solve on the other axis; unit-split-container-vertical
-; .tscn carries it so a transposed axis cannot pass here.
+; SplitContainer layout: where the boundary between two children falls. The one variable is
+; `_compute_split_offset`'s three branches, chosen by which children carry SIZE_EXPAND. Box, grid
+; and margin containers (unit-control-containers.tscn) place children in sequence, but a
+; SplitContainer solves one number, `computed_split_offset`, and derives both rects from it.
 
 [gd_scene format=3]
 
+;   both expanded    wished = size * ratio - sep * 0.5 + split_offset
+;   first expanded   wished = size - sep + split_offset
+;   neither          wished = split_offset
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; Each row is 400 wide and 60 tall at x = 20, 80 apart. ColorRect children make the boundary a
+; hard colour edge a probe can find. unit-split-container-vertical.tscn carries the other axis,
+; so a transposed axis cannot pass here.
 [node name="Backdrop" type="ColorRect" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
+; Both children expand, split_offset 0: an even split.
 [node name="Both" type="HSplitContainer" parent="."]
 offset_left = 20.0
 offset_top = 20.0
@@ -52,6 +39,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 color = Color(0, 1, 0, 1)
 
+; Both expand, split_offset = 60: the boundary moves right.
 [node name="Offset" type="HSplitContainer" parent="."]
 offset_left = 20.0
 offset_top = 100.0
@@ -69,6 +57,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 color = Color(0, 1, 0, 1)
 
+; Both expand, stretch_ratio 3 : 1: the first takes 3/4 of the width.
 [node name="Ratio" type="HSplitContainer" parent="."]
 offset_left = 20.0
 offset_top = 180.0
@@ -86,6 +75,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 color = Color(0, 1, 0, 1)
 
+; Only the first expands: it takes the rest.
 [node name="FirstOnly" type="HSplitContainer" parent="."]
 offset_left = 20.0
 offset_top = 260.0
@@ -101,6 +91,7 @@ color = Color(1, 0, 0, 1)
 layout_mode = 2
 color = Color(0, 1, 0, 1)
 
+; Neither expands, split_offset = 120: the first is exactly 120.
 [node name="Neither" type="HSplitContainer" parent="."]
 offset_left = 20.0
 offset_top = 340.0
@@ -168,10 +159,9 @@ layout_mode = 2
 size_flags_horizontal = 3
 color = Color(0, 1, 0, 1)
 
-; SplitContainer itself (not HSplitContainer/VSplitContainer) is `status:
-; unimplemented` — it parses and validates but does not draw, so this node
-; exercises every one of its own 11 members at a valid value for linter
-; coverage rather than for pixel measurement.
+; SplitContainer itself (not HSplitContainer or VSplitContainer) has `status: unimplemented`: it
+; parses and validates but does not draw, so this node exercises every own member at a valid
+; value for linter coverage, not for pixel measurement.
 [node name="LinterCoverage" type="SplitContainer" parent="."]
 offset_left = 20.0
 offset_top = 660.0

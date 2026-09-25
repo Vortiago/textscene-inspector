@@ -1,12 +1,8 @@
 /**
- * The three TileSet families whose key carries no leaf name: `sources/<id>`,
- * `pattern_<n>` and the fixed `tile_proxies/<level>` triple
- * (tile_set.cpp:3961-4006, :4218-4230).
- *
- * `sources/<id>` and `pattern_<n>` are an index and nothing else, so the shared
- * `indexedFamilyValidator` — which resolves by LEAF name — cannot express
- * either; the key grammar comes from `indexedKeyRegex` with the index in
- * terminal position instead.
+ * The three TileSet families with no leaf name in the key: `sources/<id>`,
+ * `pattern_<n>` and `tile_proxies/<level>` (tile_set.cpp:3961-4006, :4218-4230).
+ * `indexedFamilyValidator` resolves by leaf name, so `indexedKeyRegex` puts the
+ * index last instead.
  */
 
 import {
@@ -24,18 +20,10 @@ const unknownKey = (key: string, line: number, describes: string, code: string) 
   keyShapeError(key, line, `Unknown TileSet ${describes} property: "${key}"`, code);
 
 /**
- * A resource slot whose `add_*` method opens with an `ERR_FAIL_COND_V(…
- * is_null())`, so the usual "null is legal in every resource slot" does not
- * hold: the value is read, found empty, and nothing is added.
- *
- * `_set` reaches both guards with the Variant unexamined — `add_source(p_value,
- * source_id)` at tile_set.cpp:3968, and `add_pattern(p_value)` inside the fill
- * loop at :3997 — so a bare `null` in either key does arrive as a null `Ref`.
- *
- * `nilShapeError` keeps that message: the strict parser otherwise substitutes
- * the claim that the slot stores a zero value, which is what a slot whose
- * CONVERSION discards the null does. These are OBJECT slots, where `NIL` does
- * convert, and the refusal happens afterwards — nothing is stored at all.
+ * A resource slot whose `add_*` opens with `ERR_FAIL_COND_V(…is_null())`, so null
+ * is not legal here. `_set` passes the Variant unexamined (`add_source(p_value,
+ * source_id)` at tile_set.cpp:3968, `add_pattern(p_value)` at :3997), so a bare
+ * `null` arrives as a null `Ref`.
  */
 function requiredResource(name: string, cite: string, code: string): PropertyValidator {
   const format = v.resourceReference(name);
@@ -43,6 +31,9 @@ function requiredResource(name: string, cite: string, code: string): PropertyVal
     const bad = format(key, value, line);
     if (bad) return bad;
     if (!isNilLiteral(value)) return null;
+    // `nilShapeError` keeps this message. The strict parser would otherwise claim
+    // the slot stores a zero value, but an OBJECT slot converts `NIL` and then
+    // refuses it, so nothing is stored.
     return nilShapeError(
       key,
       line,
@@ -63,12 +54,9 @@ const SOURCE_KEY = indexedKeyRegex('^sources/(#)$', 'is_valid_int');
 const sourceResource = requiredResource('source', 'tile_set.cpp:477', 'INVALID_TILESET_SOURCE');
 
 /**
- * `sources/<id>` — the atlas sources, `PROPERTY_USAGE_NO_EDITOR` (the storage
- * bit alone) at tile_set.cpp:4218.
- *
- * A negative id never names itself. `-1` IS `TileSet::INVALID_SOURCE`
- * (tile_set.h:214), so it clears :479's guard and is then re-seated at the
- * auto-assigned `next_source_id` (:481); anything below it is refused outright.
+ * `sources/<id>`: the atlas sources, `PROPERTY_USAGE_NO_EDITOR` (storage only) at
+ * tile_set.cpp:4218. `-1` is `TileSet::INVALID_SOURCE` (tile_set.h:214), so it clears
+ * :479's guard and re-seats at `next_source_id` (:481). Anything below is refused.
  */
 export const sourceValidator: PropertyValidator = accepts((key, value, line) => {
   const match = SOURCE_KEY.exec(key);
@@ -103,12 +91,9 @@ const PATTERN_KEY = indexedKeyRegex('^pattern_(#)$', 'is_valid_int');
 const patternResource = requiredResource('pattern', 'tile_set.cpp:1359', 'INVALID_TILESET_PATTERN');
 
 /**
- * `pattern_<n>` — a `TileMapPattern` slot whose whole key below the prefix is
- * the index (tile_set.cpp:4230).
- *
- * A negative index is dropped in SILENCE rather than refused: `_set` fills up to
- * the index with `for (int i = patterns.size(); i <= pattern_index; i++)`
- * (:3997), which never runs when the index is below zero, and then returns true.
+ * `pattern_<n>`: a `TileMapPattern` slot keyed by its index (tile_set.cpp:4230). A
+ * negative index is dropped silently: the fill loop `for (int i = patterns.size();
+ * i <= pattern_index; i++)` (:3997) never runs, and `_set` returns true.
  */
 export const patternValidator: PropertyValidator = accepts((key, value, line) => {
   const match = PATTERN_KEY.exec(key);
@@ -134,23 +119,19 @@ patternValidator.leaves = [patternResource];
  * own format validator so the diagnostic names the level rather than the group.
  */
 const PROXY_LEVELS: Readonly<Record<string, PropertyValidator>> = {
-  // `_set` gates on the Variant TYPE alone — `p_value.get_type() != Variant::ARRAY`
-  // (tile_set.cpp:3971) — and a typed Array IS `Variant::ARRAY`, so
-  // `Array[int]([0, 4, 2, 4])` loads exactly as the bare literal does.
+  // `_set` gates on the Variant type alone (`p_value.get_type() != Variant::ARRAY`,
+  // tile_set.cpp:3971), and a typed Array is `Variant::ARRAY`, so
+  // `Array[int]([0, 4, 2, 4])` loads as the bare literal does.
   source_level: v.arrayLiteral('source_level', { anyElementType: true }),
   coords_level: v.arrayLiteral('coords_level', { anyElementType: true }),
   alternative_level: v.arrayLiteral('alternative_level', { anyElementType: true }),
 };
 
 /**
- * `tile_proxies/<level>` — three `Variant::ARRAY` slots, `PROPERTY_USAGE_NO_EDITOR`
- * (tile_set.cpp:4224-4226).
- *
- * Each array is read PAIRWISE — `for (int i = 0; i < a.size(); i += 2)` — so
- * `_set` refuses an odd length outright with
- * `ERR_FAIL_COND_V(a.size() % 2 != 0, false)` (:3973). The elements themselves
- * go unchecked: each pair is forwarded to a `set_*_tile_proxy` whose own guards
- * are about ids rather than about the literal.
+ * `tile_proxies/<level>`: three `Variant::ARRAY` slots, `PROPERTY_USAGE_NO_EDITOR`
+ * (tile_set.cpp:4224-4226). Each is read pairwise, so `_set` refuses an odd length
+ * (`ERR_FAIL_COND_V(a.size() % 2 != 0, false)`, :3973). The elements go unchecked:
+ * each pair goes to a `set_*_tile_proxy`, whose guards are about ids.
  */
 export const tileProxyValidator: PropertyValidator = accepts((key, value, line) => {
   const level = key.slice('tile_proxies/'.length);

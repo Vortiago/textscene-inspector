@@ -1,6 +1,6 @@
 /**
- * AudioStreamPlayer3D property formatter — sections shown in the
- * details panel. Calls out the "not played in preview" status so users
+ * AudioStreamPlayer3D property formatter: the sections the details panel
+ * shows. Calls out the "not played in preview" status so users
  * understand the gizmo is metadata-only.
  */
 

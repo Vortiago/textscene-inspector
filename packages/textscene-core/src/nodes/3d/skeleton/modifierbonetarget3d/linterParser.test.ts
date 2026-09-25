@@ -1,10 +1,7 @@
 /**
- * ModifierBoneTarget3D strict validators, format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * ModifierBoneTarget3D strict validators, asserted through `validatorRegistry`, not by linting a
+ * `.tscn`, so a failure points at the validator and no fixture text needs upkeep. Rule-level
+ * behaviour belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -20,17 +17,12 @@ function check(property: string, value: string) {
 }
 
 /**
- * Every key ModifierBoneTarget3D declares, read from the source.
- *
- * Both are plain `ADD_PROPERTY` calls in `_bind_methods`
- * (modifier_bone_target_3d.cpp:96-97), and that is the class's WHOLE serialised
- * surface: the file contains no `PropertyListHelper`, no `register_property`,
- * no `ADD_ARRAY_COUNT` and no `_set`/`_get`/`get_property_list` override in
- * either the `.cpp` or `.h`. `_validate_property` (:71) only edits entries the
- * two `ADD_PROPERTY` calls already created.
+ * Every key ModifierBoneTarget3D declares: two `ADD_PROPERTY` calls (modifier_bone_target_3d.cpp:96-97),
+ * its whole serialised surface, with no `PropertyListHelper`, `register_property`, `ADD_ARRAY_COUNT`
+ * or property-list override. `_validate_property` (:71) only edits the entries those two create.
  */
 const KEYS: string[] = ['bone', 'bone_name'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 
 describe('ModifierBoneTarget3D strict validators', () => {
@@ -43,16 +35,15 @@ describe('ModifierBoneTarget3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint`
+    // checks it against the whole registry through the barrel. This checks the same file
+    // against only what this test imported.
     expectFixtureClean('unit-modifier-bone-target-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('ModifierBoneTarget3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -95,7 +86,7 @@ describe('ModifierBoneTarget3D strict validators', () => {
     it('errors below -1, where the setter rewrites the value', () => {
       // modifier_bone_target_3d.cpp:58-60. The WARN_PRINT on :59 is not the
       // grounds, since a warning alone would leave the value intact. The `bone = -1`
-      // on :60 is: the write is ALTERED, which ADR-0032 puts in the error tier.
+      // on :60 is: the write is altered, which ADR-0032 puts in the error tier.
       const error = check('bone', '-2');
       expect(error?.severity).toBe('error');
       expect(error?.code).toBe('INVALID_BONE_VALUE');
@@ -111,13 +102,10 @@ describe('ModifierBoneTarget3D strict validators', () => {
   });
 
   it('inherits SkeletonModifier3D keys through the base-walk without re-declaring them', () => {
-    // `influence` is the interesting one: this class strips it to a bare
-    // PROPERTY_USAGE_READ_ONLY (modifier_bone_target_3d.cpp:72-74), so Godot
-    // never writes it for a ModifierBoneTarget3D. That is not a
-    // `registerUnavailable` removal, which this repo reserves for a real
-    // "Godot would reject this" claim: SkeletonModifier3D::set_influence
-    // (skeleton_modifier_3d.cpp:111) is a bare assignment, so a hand-written
-    // value is inert rather than invalid, and it keeps the base's 0..1 bound.
+    // This class strips `influence` to a bare PROPERTY_USAGE_READ_ONLY
+    // (modifier_bone_target_3d.cpp:72-74), so Godot never writes it. That is no `registerUnavailable`
+    // removal: set_influence (skeleton_modifier_3d.cpp:111) assigns, so a hand-written value is inert,
+    // and it keeps the base's 0..1 bound.
     expect(validatorRegistry.findValidator('ModifierBoneTarget3D', 'influence')).not.toBeNull();
     expect(validatorRegistry.getOwnKeys('ModifierBoneTarget3D')).not.toContain('influence');
   });

@@ -8,21 +8,18 @@ const scenesRoot = join(__dirname, '../../../scenes');
 const fixturesSource = join(scenesRoot, 'fixtures');
 const fixturesTarget = join(__dirname, '../public/fixtures');
 
-// Cloudflare Pages rejects any deployment containing a file larger than 25 MiB.
-// Some vendored godot-demo assets (e.g. uncompressed .hdr sky backgrounds) blow
-// past it, so we never copy them into the deploy bundle — the previewer falls
-// back to the standard missing-resource placeholder for those few files.
+// Cloudflare Pages rejects a deployment holding a file over 25 MiB, such as an
+// uncompressed .hdr sky in the godot demos. Such a file is not copied, and the
+// previewer shows the missing-resource placeholder for it.
 const MAX_DEPLOY_FILE_BYTES = 25 * 1024 * 1024;
 const skippedLargeFiles = [];
 
 mkdirSync(fixturesTarget, { recursive: true });
 
 /**
- * Mirror a source tree verbatim, minus files the deploy target refuses.
- * The size skip is the ONLY filter: what a directory contains IS the res://
- * namespace, so anything else here would make the previewer resolve res://
- * differently from Godot (which reads the directory) and from VS Code (which
- * opens it).
+ * Mirrors a source tree, minus files the deploy target refuses. The size skip is
+ * the only filter: the directory is the res:// namespace, so any other filter makes
+ * the previewer resolve res:// unlike Godot and VS Code, which read the directory.
  */
 function copyRecursive(src, dest) {
   for (const entry of readdirSync(src, { withFileTypes: true })) {
@@ -39,27 +36,16 @@ function copyRecursive(src, dest) {
   }
 }
 
-// scenes/fixtures/ IS the res:// root of the previewer's default corpus, so it
-// is mirrored whole: every scene, every resource it references, at the same
-// relative path. Godot resolves res:// from the directory holding the scene
-// (or its project.godot), and VS Code opens that same directory — mirroring it
-// is what makes all three agree on what res:// means.
+// scenes/fixtures/ is the res:// root of the default corpus, so it is mirrored
+// whole at the same relative paths. Godot resolves res:// from that directory and
+// VS Code opens it, so the mirror makes all three agree on res://.
 copyRecursive(fixturesSource, fixturesTarget);
 console.log('Mirrored scenes/fixtures/ to public/fixtures/ (res:// root)');
 
-// Mirror each flattened corpus (scenes/<root>/**) into public/fixtures/
-// PRESERVING its res:// subpath structure (components/, decorations/,
-// tileset/, …) so each scene's `res://...` reference resolves to /fixtures/...
-// at fetch time, and a scene one level down keeps that subpath as its fixture
-// id (`decorations/candle.tscn`).
-//
-// This is the DEFINITION of the flattening; scripts/corpusRoots.mjs names the
-// roots, and the Godot reference renderer and the sheet resolver read the same
-// list to undo it. A root copied here but missing there renders in the
-// previewer and nowhere else, which is why the list is shared rather than
-// spelled out three times.
-//
-// Absent on a fresh clone — the try/catch no-ops until the corpus is vendored.
+// This defines the flattening: each scenes/<root>/** lands in public/fixtures/ with
+// its res:// subpaths, and a nested scene keeps its subpath as its id
+// (`decorations/candle.tscn`). scripts/corpusRoots.mjs names the roots for the Godot
+// reference renderer and the sheet resolver too, so no root renders here alone.
 for (const root of FLATTENED_CORPUS_ROOTS) {
   const source = join(scenesRoot, root);
   try {
@@ -68,14 +54,13 @@ for (const root of FLATTENED_CORPUS_ROOTS) {
       console.log(`Copied ${root} closure to public/fixtures/ (res:// mirrored)`);
     }
   } catch {
-    // Corpus not vendored — skip.
+    // A fresh clone has not vendored the corpus.
   }
 }
 
-// Mirror the godot-demo-projects corpora (scenes/demos/**) PRESERVING the
-// demos/<top>/<project>/ structure — unlike the flattened corpora above these
-// are NOT flattened to the root: each project keeps its own res:// namespace,
-// and the web provider resolves res:// against the fixture's `root` subtree.
+// The godot-demo-projects corpora keep their demos/<top>/<project>/ structure,
+// not flattened: each project has its own res:// namespace, which the web provider
+// resolves against the fixture's `root` subtree.
 const demosSource = join(scenesRoot, 'demos');
 const demosTarget = join(fixturesTarget, 'demos');
 try {
@@ -85,25 +70,18 @@ try {
     console.log('Copied godot-demo-projects corpora to public/fixtures/demos/');
   }
 } catch {
-  // No demos directory — skip.
+  // No demos directory.
 }
 
-// Mirror the vendored open-source games (scenes/games/**) the same way as the
-// demos corpora — each game keeps its own res:// namespace under
-// public/fixtures/games/<dir>/, resolved against the fixture's `root`.
-//
-// DEPLOY-ONLY. The games corpus is gitignored and vendored on demand, and a
-// developer who ran `pnpm vendor:games` (to verify against a real game) should
-// not thereby get ~140 game scenes in their local scene selector. The deployed
-// site does want them, so `pnpm build:deploy` sets the flag; `pnpm dev` and a
-// plain `pnpm build` leave them out. `fixturesAll.ts` gates the matching
-// manifest on the same variable, so the two halves cannot drift apart.
+// The vendored games keep their own res:// namespace under public/fixtures/games/<dir>/,
+// as the demos do. Deploy only: `pnpm vendor:games` does not fill the local scene
+// selector, and only `pnpm build:deploy` sets the flag. `fixturesAll.ts` gates the
+// matching manifest on the same variable.
 const includeGames = process.env.VITE_INCLUDE_GAMES === '1';
 const gamesSource = join(scenesRoot, 'games');
 const gamesTarget = join(fixturesTarget, 'games');
 if (!includeGames) {
-  // Remove a copy left by an earlier deploy build, so toggling the flag off
-  // actually takes effect instead of serving a stale mirror.
+  // A copy from an earlier deploy build goes, so turning the flag off takes effect.
   rmSync(gamesTarget, { recursive: true, force: true });
   console.log('Skipped vendored games (set VITE_INCLUDE_GAMES=1 to include them)');
 } else {
@@ -114,8 +92,8 @@ if (!includeGames) {
       console.log('Copied vendored Godot games to public/fixtures/games/');
     }
   } catch {
-    // No games directory — skip. A deploy build runs `pnpm vendor:games` first,
-    // so this only fires when the flag is set without vendoring.
+    // A deploy build runs `pnpm vendor:games` first, so this fires only when the
+    // flag is set without vendoring.
     console.warn('VITE_INCLUDE_GAMES=1 but scenes/games/ is absent — run `pnpm vendor:games`');
   }
 }

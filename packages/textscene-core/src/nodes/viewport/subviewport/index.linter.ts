@@ -1,15 +1,8 @@
 /**
- * SubViewport registration — strict validators.
- * Imports only `.ts` (never `./Component`), preserving the React-free linter boundary.
- *
- * No semantic rule: the only condition one checked, a degenerate size, is a
- * clamp the engine applies (viewport.cpp:1120), so `linterParser.ts` reports it
- * as an error and a warning restating it would be a second voice on one fact.
- *
- * Also not a rule: `render_target_update_mode` and `handle_input_locally` under
- * a `SubViewportContainer`. The container forces `ALWAYS` and `false` on its
- * viewports at enter-tree, so both keys are dead there, but Godot's own editor
- * serialises them anyway, and a rule would fire on every editor-saved scene.
+ * SubViewport strict validators, React-free. No semantic rule: a degenerate size
+ * is an engine clamp (viewport.cpp:1120) that `linterParser.ts` reports. Under a
+ * `SubViewportContainer`, `render_target_update_mode` and `handle_input_locally`
+ * are forced to `ALWAYS` and `false`, but Godot's editor still writes them.
  */
 
 import './linterParser.js';

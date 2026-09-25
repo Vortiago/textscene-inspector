@@ -1,9 +1,6 @@
 /**
- * Generates the HTML shell for the TSCN preview webview.
- *
- * The full UI lives in the React tree mounted inside `#r3f-root` by
- * `r3f-webview-main.tsx`. This file is just the CSP, body scaffolding,
- * and the script + linked-CSS tags.
+ * Generates the HTML shell for the preview webview: the CSP, the `#r3f-root` that
+ * `r3f-webview-main.tsx` mounts into, and the script and stylesheet tags.
  */
 
 export function generateNonce(): string {
@@ -16,11 +13,8 @@ export function generateNonce(): string {
 }
 
 /**
- * Extension-host settings the webview reads once at mount, before
- * `r3f-webview-main.tsx` renders `<TscnPreviewShell>`. Embedded as a global
- * (see `generateWebviewHtml`) rather than posted, since the shell needs the
- * value on its very first render — before any `postMessage` round-trip could
- * land.
+ * Extension-host settings the webview reads once at mount. A global, not a post,
+ * since the shell needs them on its first render, before any round-trip lands.
  */
 export interface WebviewInitialConfig {
   /**
@@ -36,14 +30,13 @@ export interface WebviewHtmlOptions {
   scriptUri: string;
   nonce: string;
   /**
-   * URI to the CSS bundle emitted by `esbuild-css-modules-plugin`.
-   * Optional because the file may not exist on first build before any
-   * `.module.css` is imported; callers should pass it only when present.
+   * URI to the CSS bundle `esbuild-css-modules-plugin` emits. Absent until some
+   * `.module.css` is imported, so a caller passes it only when present.
    */
   cssUri?: string;
   /**
-   * The webview's CSP source (`webview.cspSource`). The CSP needs this
-   * to allow loading the stylesheet via `<link>`.
+   * The webview's CSP source (`webview.cspSource`), which lets the CSP load the
+   * stylesheet through `<link>`.
    */
   cspSource: string;
   /** Settings to expose to the webview at mount. Omit to skip the config script entirely. */
@@ -56,19 +49,15 @@ export function generateWebviewHtml(options: WebviewHtmlOptions): string {
     ? `<link rel="stylesheet" nonce="${nonce}" href="${cssUri}">`
     : '';
 
-  // `<` is escaped so a config value can never close this script tag early
-  // (or open a new one) — defense in depth even though today's only field
-  // (`viewportMode`) is a closed enum that can't carry it.
+  // `<` is escaped, so a config value never closes or opens a script tag. The
+  // closed `viewportMode` enum cannot carry one, so this is defence in depth.
   const configScript = initialConfig
     ? `<script nonce="${nonce}">window.__TEXTSCENE_CONFIG__ = ${JSON.stringify(initialConfig).replace(/</g, '\\u003c')};</script>`
     : '';
 
-  // The webview build emits ESM with code-splitting.
-  // `<script type="module">` is required for dynamic `import()` to load
-  // chunks; the CSP must also allow chunk URIs (the entry script's
-  // module imports), which means `script-src` permits `${cspSource}`
-  // in addition to the nonce'd entry. The nonce still applies to the
-  // entry tag — chunk imports inherit the module context.
+  // Dynamic `import()` of the ESM chunks needs `<script type="module">`, and
+  // `script-src` permits `${cspSource}` for the chunk URIs beside the nonce'd
+  // entry. Chunk imports inherit the entry's module context.
   return `
     <!DOCTYPE html>
     <html lang="en">

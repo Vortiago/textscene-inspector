@@ -1,10 +1,6 @@
 /**
- * Regression: when a previously-missing path is uploaded the
- * panel must keep the row visible with the `uploaded ✓` state (and a
- * Remove button), not silently delete it. Mirrors main's
- * `apps/textscene-web/src/main.ts:46-140` behaviour where uploaded
- * rows persisted with a green ✓ until the user explicitly clicked
- * Remove.
+ * An uploaded path keeps its row, in the `uploaded ✓` state with a Remove
+ * button, until the user clicks Remove.
  */
 import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -15,10 +11,7 @@ import {
 } from '../../contexts/MissingResourcesContext';
 import { MissingResourcesPanel } from './MissingResourcesPanel';
 
-/**
- * Drives the panel via a single context action button so the test can
- * step from `missing` → `uploaded` without remounting the provider.
- */
+/** One button steps from `missing` to `uploaded` without a remount of the provider. */
 function ReportThenMark({
   path,
 }: {
@@ -54,16 +47,12 @@ describe('<MissingResourcesPanel> uploaded-state (WI-UX-6)', () => {
     expect(panel.querySelectorAll('[data-state="missing"]')).toHaveLength(1);
     expect(panel.querySelectorAll('[data-state="uploaded"]')).toHaveLength(0);
 
-    // Simulate the host providing the file — `markUploaded` is what
-    // useResource calls when it transitions from `'missing'` to
-    // `'loaded'` for a previously-reported-missing path.
+    // `useResource` calls `markUploaded` when a reported-missing path loads.
     await act(async () => {
       fireEvent.click(screen.getByTestId('trigger-upload'));
     });
 
-    // The row is still visible — now with the uploaded state. This is
-    // the load-bearing parity property: main never dropped uploaded
-    // rows from the panel.
+    // The row stays, now in the uploaded state.
     expect(panel.querySelectorAll('[data-state="missing"]')).toHaveLength(0);
     const uploadedRow = panel.querySelector('[data-state="uploaded"]');
     expect(uploadedRow).toBeTruthy();
@@ -118,7 +107,7 @@ describe('<MissingResourcesPanel> uploaded-state (WI-UX-6)', () => {
     });
 
     expect(onRemove).toHaveBeenCalledWith('res://textures/shared.png');
-    // Panel empties (both sets empty) → returns null.
+    // Both sets are empty, so the panel renders nothing.
     expect(screen.queryByTestId('missing-resources-panel')).toBeNull();
   });
 });

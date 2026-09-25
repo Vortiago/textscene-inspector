@@ -1,65 +1,49 @@
-# Claude Code Validation Hooks
+# Claude Code commit hooks
 
-This directory contains validation hooks for Claude Code (Web version).
+These `PreToolUse` hooks make every commit that Claude Code makes pass the checks of the git pre-commit hook.
+Each hook is an ES module that `node` runs. Claude Code sends the tool input to the hook as JSON on
+stdin.
 
-## Purpose
+## Exit codes
 
-These hooks ensure that Claude Code running in the web interface validates commits before they're created, similar to how Husky validates commits locally.
+- Exit code 2 blocks the tool call. Claude Code shows the hook's stderr to Claude.
+- Exit code 0 lets the tool call continue.
+- Any other exit code, or a timeout, is a hook error. The tool call continues.
+
+A hook that cannot read its input exits 0. A hook that crashes exits 1. Neither blocks a commit.
 
 ## Files
 
-### `check-no-verify.sh`
+### `check-no-verify.mjs`
 
-Blocks `git commit --no-verify` attempts to ensure validation always runs.
+Blocks a `git commit` that skips the pre-commit hook. It runs for every Bash command.
 
-**What it does:**
-1. Reads JSON input from stdin (hook receives tool input as JSON)
-2. Extracts the bash command using `jq`
-3. Checks if command matches `git commit.*--no-verify`
-4. Blocks the command with exit code 2 if matched
-5. Exits cleanly (code 0) for all other commands
+1. Reads the Bash command from `tool_input.command`.
+2. Removes the quoted text, so a commit message that holds `-n` is not a flag.
+3. Splits the command at `&&`, `||`, `;`, `|` and new lines.
+4. Finds each part that holds `git` and then `commit`.
+5. If an option after `commit` is `--no-verify`, or a short-option cluster that holds `n` (`-n`,
+   `-anm`), exits with code 2.
+6. Exits with code 0 for every other command.
 
-**Why a separate script?**
-- Hooks receive JSON via **stdin**, not command line arguments
-- Inline bash in `settings.json` can't easily read from stdin and parse JSON
-- Separate script properly handles stdin reading with `cat`
+### `validate-commit.mjs`
 
-### `validate-commit.sh`
+Runs the pre-commit checks for `mcp__github_file_ops__commit_files`. That tool commits
+through the GitHub API, so no git hook runs for it.
 
-The main validation script that runs before git commits in Claude Code Web.
+1. Reads the committed paths from `tool_input.files`.
+2. Loads `lint-staged.config.mjs`, the configuration of the pre-commit hook.
+3. Gets the commands of each task whose glob matches a committed path.
+4. Runs the commands in order in `$CLAUDE_PROJECT_DIR`. Their output goes to stderr.
+5. If a command fails, exits with code 2 and names the command.
+6. Exits with code 0 when all commands pass, or when no path matches a glob.
 
-**What it does:**
-1. Detects if running in Claude Code Web (`$CLAUDE_CODE_REMOTE`)
-2. Parses the git command being executed
-3. Blocks `git commit --no-verify` attempts
-4. Runs `pnpm validate` before allowing commits
-5. Blocks the commit if validation fails
+A Bash `git commit` does not need this hook. The git pre-commit hook runs the same checks, and
+`pnpm install` points git at `githooks/` in every checkout.
 
-**Validation checks (`pnpm validate`) in order:**
-1. Build - Compiles all packages and verifies TypeScript compilation
-2. Type Check - Explicit TypeScript type validation across all packages
-3. ESLint - Code style and quality checks
-4. All Tests - Runs all unit and integration tests (2500+ tests)
+## Configuration
 
-## How It Works
-
-### Trigger Conditions
-
-The hook runs automatically when:
-1. Claude Code Web executes `git commit` (any variant)
-2. Claude Code Web uses GitHub MCP tool to commit
-3. The command does NOT include `--no-verify`
-
-### In Claude Code CLI
-
-The hook does NOT run in CLI mode because:
-- Husky handles validation locally
-- No need for duplicate validation
-- Respects `$CLAUDE_CODE_REMOTE` environment variable
-
-## Hook Configuration
-
-The hooks are configured in `.claude/settings.json`:
+`.claude/settings.json` configures the hooks:
 
 ```json
 {
@@ -70,22 +54,17 @@ The hooks are configured in `.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-no-verify.sh"
-          },
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/validate-commit.sh",
-            "timeout": 120
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-no-verify.mjs"
           }
         ]
       },
       {
-        "matcher": "mcp__github.*commit.*",
+        "matcher": "mcp__github_file_ops__commit_files",
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/validate-commit.sh",
-            "timeout": 120
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/validate-commit.mjs",
+            "timeout": 300
           }
         ]
       }
@@ -94,128 +73,40 @@ The hooks are configured in `.claude/settings.json`:
 }
 ```
 
-**Hook Execution Order:**
-1. `check-no-verify.sh` - Blocks `--no-verify` (fast, exits early for non-git commands)
-2. `validate-commit.sh` - Runs validation if git commit detected (slower, runs `pnpm validate`)
+A `matcher` is compared with the tool name only, so the Bash hook runs for every Bash command.
+`check-no-verify.mjs` finds the `git commit` in the command itself.
 
-## Validation Flow
+## Test the hooks
 
-```
-┌─────────────────────────────────────┐
-│ Claude Code Web: git commit         │
-└─────────────┬───────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────┐
-│ PreToolUse Hook Triggers            │
-└─────────────┬───────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────┐
-│ Check for --no-verify               │
-│ (blocked if present)                │
-└─────────────┬───────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────┐
-│ Run validate-commit.sh              │
-└─────────────┬───────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────┐
-│ Execute: pnpm validate              │
-│ - eslint                            │
-│ - type-check                        │
-│ - tests                             │
-└─────────────┬───────────────────────┘
-              │
-        ┌─────┴─────┐
-        │           │
-        ▼           ▼
-    Success     Failure
-        │           │
-        ▼           ▼
-   Commit      Commit
-   Allowed     Blocked
-```
-
-## Testing the Hook
-
-### Test in Claude Code Web
-
-1. Make a change to any file
-2. Stage the change: `git add .`
-3. Try to commit: `git commit -m "test"`
-4. Should see: "🔍 Running validation before commit (Claude Code Web)..."
-5. If validation passes: commit succeeds
-6. If validation fails: commit is blocked
-
-### Test --no-verify blocking
+Send a sample input on stdin and read the exit code. Run these commands from the project root.
 
 ```bash
-git commit --no-verify -m "test"
+echo '{"tool_name":"Bash","tool_input":{"command":"git commit --no-verify -m wip"}}' \
+  | node .claude/hooks/check-no-verify.mjs; echo $?
 ```
 
-Should see:
-```
-❌ --no-verify is not allowed. Validation is required.
-```
+The hook prints the refused flag and the reason, and the exit code is 2. The same command without
+`--no-verify` gives exit code 0.
 
-### Test in CLI (hook should skip)
-
-When running in CLI, the hook detects `$CLAUDE_CODE_REMOTE != "true"` and exits early, letting Husky handle validation instead.
-
-## Troubleshooting
-
-### Hook doesn't run
-
-1. Check `.claude/settings.json` exists and has correct hook configuration
-2. Verify `validate-commit.sh` is executable: `chmod +x .claude/hooks/validate-commit.sh`
-3. Check that `jq` is installed (required for JSON parsing)
-
-### Validation always fails
-
-Run manually to debug:
 ```bash
-pnpm validate
+echo '{"tool_name":"mcp__github_file_ops__commit_files","tool_input":{"files":["README.md"]}}' \
+  | CLAUDE_PROJECT_DIR=$PWD node .claude/hooks/validate-commit.mjs; echo $?
 ```
 
-This will show specific errors from:
-- ESLint issues
-- TypeScript type errors
-- Test failures
+`README.md` matches no lint-staged glob, so the exit code is 0. A path to a `.mjs` file with an
+ESLint error gives exit code 2.
 
-### Hook runs but doesn't block
+## Comparison with the git hooks
 
-Check the exit code in the script:
-- `exit 0` = success (allows commit)
-- `exit 2` = blocks tool use (blocks commit)
+| Feature | Git hooks (`githooks/`) | Claude Code (`.claude/hooks/`) |
+|---------|-------------------------|--------------------------------|
+| **Runs for** | A local `git commit` or `git push` | A Claude Code tool call |
+| **Commit checks** | `lint-staged` on the staged files | The same `lint-staged` tasks on the files of a GitHub API commit |
+| **Push checks** | The checks that match the pushed files | None. The git pre-push hook runs them. |
+| **--no-verify** | Allowed | Blocked for Claude Code |
 
-## Environment Variables
+## More information
 
-- `$CLAUDE_CODE_REMOTE` - Set to "true" when running in Claude Code Web
-- `$CLAUDE_PROJECT_DIR` - Project root directory path
-
-## Comparison with Husky
-
-| Feature | Husky (.husky/pre-commit) | Claude Code (.claude/hooks/) |
-|---------|---------------------------|------------------------------|
-| **Runs in** | Local git commits | Claude Code Web commits |
-| **Trigger** | Git pre-commit hook | PreToolUse hook |
-| **Validation** | `pnpm validate` | `pnpm validate` |
-| **--no-verify** | Allowed (user choice) | Blocked (enforced) |
-| **Environment** | CLI | Web UI |
-
-## Benefits
-
-✅ **Consistency**: Same validation in web and CLI
-✅ **Safety**: Can't bypass with `--no-verify` in Claude Code Web
-✅ **Transparency**: Claude sees validation output in real-time
-✅ **Team-wide**: All Claude Code users get validation automatically
-✅ **Fail-fast**: Catches issues before commit, not in CI
-
-## More Information
-
-- See `.husky/README.md` for local Husky hooks documentation
-- See `CLAUDE.md` for full development workflow
-- Claude Code hooks documentation: https://docs.claude.com/
+- `githooks/README.md` documents the git hooks.
+- `AGENTS.md` documents the gates.
+- The Claude Code hooks reference: https://code.claude.com/docs/en/hooks

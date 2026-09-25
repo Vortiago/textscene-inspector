@@ -1,13 +1,8 @@
 /**
- * ReflectionProbe strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * ReflectionProbe strict validators, asserted through `validatorRegistry` so a
+ * failure points at the validator rather than at scene parsing. Rule-level
+ * behaviour belongs in linter.test.ts. Quote the governing Godot source line
+ * beside every numeric bound.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,9 +18,8 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * ReflectionProbe binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * The keys ReflectionProbe binds, read from the source. Set this or DECLARES_NOTHING:
+ * both unset fails on purpose. Never delete an assertion to pass.
  */
 const KEYS: string[] = [
   'update_mode',
@@ -44,24 +38,18 @@ const KEYS: string[] = [
   'ambient_color',
   'ambient_color_energy',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys ReflectionProbe does NOT declare, each paired with the ancestor that does.
- * Name at least one; VisualInstance3D is where to start.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives ReflectionProbe no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart, and it is red until filled for the same reason
- * KEYS is.
+ * At least one key ReflectionProbe inherits, with the ancestor that declares it.
+ * The malformed-value sweep iterates `getOwnKeys`, so it passes vacuously on a
+ * class that declares nothing. Resolving a key to the ancestor's own validator
+ * tells "declares nothing" apart from "not written yet".
  */
 const INHERITED: [owner: string, key: string][] = [
-  // visual_instance_3d.cpp:182, PROPERTY_HINT_LAYERS_3D_RENDER — ReflectionProbe
-  // never overrides `layers`, so it inherits VisualInstance3D's own validator.
+  // visual_instance_3d.cpp:182, PROPERTY_HINT_LAYERS_3D_RENDER. ReflectionProbe never
+  // overrides `layers`.
   ['VisualInstance3D', 'layers'],
 ];
 
@@ -75,17 +63,14 @@ describe('ReflectionProbe strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // Runs the fixture's zero-diagnostic claim against what this test imports.
+    // `fixtureLint` covers the whole registry but needs the barrel.
     expectFixtureClean('unit-reflection-probe.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // ReflectionProbe declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose is not validating a format. Vacuous
+    // when ReflectionProbe declares nothing, which INHERITED covers.
     const accepted = validatorRegistry
       .getOwnKeys('ReflectionProbe')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -100,7 +85,7 @@ describe('ReflectionProbe strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
+      // The same function, not merely some validator: a shadowing copy on
       // ReflectionProbe would answer here while drifting from the ancestor's rule.
       expect(validatorRegistry.findValidator('ReflectionProbe', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('ReflectionProbe')).not.toContain(key);
@@ -108,7 +93,7 @@ describe('ReflectionProbe strict validators', () => {
   });
 
   describe('update_mode', () => {
-    // reflection_probe.cpp:260 — PROPERTY_HINT_ENUM "Once (Fast),Always (Slow)".
+    // reflection_probe.cpp:260: PROPERTY_HINT_ENUM "Once (Fast),Always (Slow)".
     it.each([0, 1])('accepts %i', (n) => {
       expect(check('update_mode', String(n))).toBeNull();
     });
@@ -125,7 +110,7 @@ describe('ReflectionProbe strict validators', () => {
   });
 
   describe('intensity', () => {
-    // reflection_probe.cpp:261 — PROPERTY_HINT_RANGE "0,1,0.01", both ends hinted.
+    // reflection_probe.cpp:261: PROPERTY_HINT_RANGE "0,1,0.01", both ends hinted.
     it('accepts the low end', () => {
       expect(check('intensity', '0')).toBeNull();
     });
@@ -151,8 +136,8 @@ describe('ReflectionProbe strict validators', () => {
   });
 
   describe('blend_distance', () => {
-    // reflection_probe.cpp:262 — "0,8,0.01,or_greater,suffix:m": or_greater
-    // opens the max end, so only the 0 floor is a real (hinted) bound.
+    // reflection_probe.cpp:262: "0,8,0.01,or_greater,suffix:m", so only the 0 floor is
+    // hinted.
     it('accepts the hinted floor', () => {
       expect(check('blend_distance', '0')).toBeNull();
     });
@@ -173,9 +158,8 @@ describe('ReflectionProbe strict validators', () => {
   });
 
   describe('max_distance', () => {
-    // reflection_probe.cpp:81 — `max_distance = CLAMP(p_distance, 0.0, 262'144.0)`.
-    // The hint's "0,16384,...,or_greater" is a soft slider extent that the
-    // clamp overrides; 16384 must never behave as a bound.
+    // reflection_probe.cpp:81: `max_distance = CLAMP(p_distance, 0.0, 262'144.0)`.
+    // The hint's "0,16384,...,or_greater" is only a slider extent, never a bound.
     it('accepts the enforced ceiling', () => {
       expect(check('max_distance', '262144')).toBeNull();
     });
@@ -212,8 +196,8 @@ describe('ReflectionProbe strict validators', () => {
   });
 
   describe('size', () => {
-    // reflection_probe.cpp:99-117 — set_size stores the component UNCLAMPED;
-    // the local half_size it derives only re-clamps origin_offset. Format only.
+    // reflection_probe.cpp:99-117: set_size stores the value unclamped. Its local
+    // half_size only re-clamps origin_offset.
     it('accepts a Vector3 literal', () => {
       expect(check('size', 'Vector3(20, 20, 20)')).toBeNull();
     });
@@ -232,10 +216,9 @@ describe('ReflectionProbe strict validators', () => {
   });
 
   describe('origin_offset', () => {
-    // reflection_probe.cpp:123-136 — set_origin_offset DOES clamp each
-    // component, but to `size[i]/2 - 0.01`, a bound that depends on `size`'s
-    // CURRENT value and on file order (see linterParser.ts). No fixed literal
-    // is citable, so this stays format only, same as `size`.
+    // reflection_probe.cpp:123-136: set_origin_offset clamps each component to
+    // `size[i]/2 - 0.01`, which depends on the current `size` and on file order.
+    // No literal is citable, so this stays format-only.
     it('accepts a Vector3 literal', () => {
       expect(check('origin_offset', 'Vector3(0, 0, 0)')).toBeNull();
     });
@@ -250,7 +233,7 @@ describe('ReflectionProbe strict validators', () => {
   });
 
   describe('box_projection / interior / enable_shadows', () => {
-    // reflection_probe.cpp:266-268 — plain BOOL, no hint.
+    // reflection_probe.cpp:266-268: plain BOOL, no hint.
     it.each(['box_projection', 'interior', 'enable_shadows'])('accepts true and false for %s', (key) => {
       expect(check(key, 'true')).toBeNull();
       expect(check(key, 'false')).toBeNull();
@@ -262,9 +245,8 @@ describe('ReflectionProbe strict validators', () => {
   });
 
   describe('cull_mask / reflection_mask', () => {
-    // reflection_probe.cpp:269/270 — PROPERTY_HINT_LAYERS_3D_RENDER, a
-    // 32-checkbox widget; both setters are bare assignments, so out-of-range is
-    // a warning (ADR-0032), not an error.
+    // reflection_probe.cpp:269/270: PROPERTY_HINT_LAYERS_3D_RENDER, a 32-checkbox widget.
+    // Both setters are bare assignments, so out-of-range warns (ADR-0032).
     it.each(['cull_mask', 'reflection_mask'])('accepts the default (all 20 3D render layers)', (key) => {
       expect(check(key, '1048575')).toBeNull();
     });
@@ -285,8 +267,7 @@ describe('ReflectionProbe strict validators', () => {
   });
 
   describe('mesh_lod_threshold', () => {
-    // reflection_probe.cpp:271 — PROPERTY_HINT_RANGE "0,1024,0.1", no
-    // or_greater/or_less, so both ends are hinted only.
+    // reflection_probe.cpp:271: PROPERTY_HINT_RANGE "0,1024,0.1", both ends hinted.
     it('accepts the low end', () => {
       expect(check('mesh_lod_threshold', '0')).toBeNull();
     });
@@ -306,7 +287,7 @@ describe('ReflectionProbe strict validators', () => {
   });
 
   describe('ambient_mode', () => {
-    // reflection_probe.cpp:274 — PROPERTY_HINT_ENUM "Disabled,Environment,Constant Color".
+    // reflection_probe.cpp:274: PROPERTY_HINT_ENUM "Disabled,Environment,Constant Color".
     it.each([0, 1, 2])('accepts %i', (n) => {
       expect(check('ambient_mode', String(n))).toBeNull();
     });
@@ -323,9 +304,8 @@ describe('ReflectionProbe strict validators', () => {
   });
 
   describe('ambient_color', () => {
-    // reflection_probe.cpp:275 — PROPERTY_HINT_COLOR_NO_ALPHA is an editor
-    // widget hint (hides the alpha slider), not a value constraint; the alpha
-    // component still round-trips.
+    // reflection_probe.cpp:275: PROPERTY_HINT_COLOR_NO_ALPHA only hides the alpha
+    // slider, and the alpha component still round-trips.
     it('accepts a Color literal, alpha included', () => {
       expect(check('ambient_color', 'Color(0.2, 0.4, 0.6, 1)')).toBeNull();
     });
@@ -340,7 +320,7 @@ describe('ReflectionProbe strict validators', () => {
   });
 
   describe('ambient_color_energy', () => {
-    // reflection_probe.cpp:276 — PROPERTY_HINT_RANGE "0,16,0.01", both ends hinted.
+    // reflection_probe.cpp:276: PROPERTY_HINT_RANGE "0,16,0.01", both ends hinted.
     it('accepts the low end', () => {
       expect(check('ambient_color_energy', '0')).toBeNull();
     });

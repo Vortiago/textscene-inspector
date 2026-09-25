@@ -1,30 +1,8 @@
 /**
- * The canvas paint-order key — Godot's draw order for a 2D canvas, as one
- * integer per canvas item.
- *
- * Godot draws a canvas by walking it once in pre-order, appending each visible
- * item to a linked list indexed by its accumulated `z_final`
- * (`_attach_canvas_item_for_draw`, `servers/rendering/renderer_canvas_cull.cpp`
- * lines 274-283), then drawing those lists in z order. Two rules follow, and
- * they are the whole of this module:
- *
- *  - `z_final` DOMINATES. Every item in a lower z bucket draws before every
- *    item in a higher one, whatever the tree says.
- *  - Within one bucket, order is the WALK's order — which is tree pre-order,
- *    except that `show_behind_parent` children are visited before their parent
- *    and a y-sorted subtree is visited in its sorted order
- *    (`_cull_canvas_item` lines 477-490).
- *
- * A canvas item's node TYPE never enters either rule: a `Control` and a
- * `Node2D` are both `CanvasItem`s and interleave purely by the above. That is
- * what `canvasPaintOrder.contract.test.tsx` pins end-to-end; this file pins the
- * arithmetic underneath it.
- *
- * The key is an integer because it lands on `THREE.Object3D.renderOrder`, which
- * three compares EXACTLY and before camera distance
- * (`reversePainterSortStable`). The fractional-z scheme this replaces could
- * only ever approximate the ordering, and had to ration a shrinking float
- * budget across nesting depth to do it.
+ * The paint-order key's arithmetic (`servers/rendering/renderer_canvas_cull.cpp`
+ * lines 274-283): `z_final` dominates, and a bucket keeps the walk's pre-order, with
+ * `show_behind_parent` children first and a y-sorted subtree sorted (lines 477-490).
+ * `canvasPaintOrder.contract.test.tsx` pins the end-to-end order.
  */
 import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types';
@@ -59,8 +37,8 @@ describe('canvasRenderOrder', () => {
   });
 
   it('orders by canvas layer before everything else', () => {
-    // A CanvasLayer is a canvas of its own, drawn whole in layer order — so
-    // even z_index 4096 on a lower layer stays under a lower z on a higher one.
+    // A CanvasLayer is a canvas of its own, drawn whole in layer order, so even
+    // z_index 4096 on a lower layer stays under a lower z on a higher one.
     const lowLayerHighZ = canvasRenderOrder({ layerRank: 0, zFinal: 4096, sequence: 1000 });
     const highLayerLowZ = canvasRenderOrder({ layerRank: 1, zFinal: -4096, sequence: 0 });
     expect(lowLayerHighZ).toBeLessThan(highLayerLowZ);
@@ -75,15 +53,15 @@ describe('canvasRenderOrder', () => {
   });
 
   it('saturates a sequence past the stride rather than carrying into the next bucket', () => {
-    // Carrying would move the item to a z or layer it does not belong to — a
-    // structural inversion. A tie inside its own bucket is the lesser failure.
+    // A carry would move the item to another z or layer. A tie inside its own
+    // bucket is the lesser failure.
     const overflowed = canvasRenderOrder({ layerRank: 0, zFinal: 0, sequence: PAINT_SEQUENCE_STRIDE + 5 });
     const nextBucket = canvasRenderOrder({ layerRank: 0, zFinal: 1, sequence: 0 });
     expect(overflowed).toBeLessThan(nextBucket);
   });
 
   it('clamps z_final to the canvas envelope rather than letting a bucket escape', () => {
-    // Godot clamps the ACCUMULATED z (`accumulateCanvasItemZ`); a value past the
+    // Godot clamps the accumulated z (`accumulateCanvasItemZ`); a value past the
     // envelope arriving here would otherwise index a bucket belonging to the
     // next layer up.
     expect(canvasRenderOrder({ layerRank: 0, zFinal: 99999, sequence: 0 })).toBe(
@@ -96,15 +74,15 @@ describe('layerRanks', () => {
   it('ranks the layers a scene actually uses, world layer included', () => {
     // Ranking rather than using `CanvasLayer.layer` raw: the property is a plain
     // int32 assignment in Godot (`CanvasLayer::set_layer`), so the raw value
-    // would blow the key's budget while only its ORDER carries meaning.
+    // would blow the key's budget while only its order carries meaning.
     const declared = layerRanks([-5, 3, 3]);
     expect(layerRankOf(declared, -5)).toBeLessThan(layerRankOf(declared, 0));
     expect(layerRankOf(declared, 0)).toBeLessThan(layerRankOf(declared, 3));
   });
 
   it('always ranks the world layer, even in a scene with no CanvasLayer', () => {
-    // Only the ORDER of a rank is meaningful, never its value — so this asserts
-    // the world layer is ranked at all, and sits above a layer below it.
+    // Only a rank's order means anything, so this asserts that the world layer
+    // is ranked and sits above a layer below it.
     const declared = layerRanks([]);
     expect(Number.isInteger(layerRankOf(declared, 0))).toBe(true);
     expect(layerRankOf(declared, -1)).toBeLessThan(layerRankOf(declared, 0));
@@ -132,29 +110,23 @@ describe('paintRangeSize', () => {
   });
 
   it('reserves room in a tile layer for the rows a y-sort pass expands it into', () => {
-    // A y_sort_enabled TileMapLayer draws one group per distinct tile row, and
-    // those rows interleave with the layer's SIBLINGS — so they need sequence
-    // values of their own, and how many is only known once the tileset loads.
+    // A y-sorted TileMapLayer draws one group per tile row, interleaved with its
+    // siblings, and the row count is known only once the tileset loads.
     expect(paintRangeSize(node('Tiles', 'TileMapLayer'))).toBeGreaterThan(1000);
   });
 });
 
 describe('canvasRootRanges', () => {
-  // A `CanvasItem` whose own parent is not one parents at the CANVAS rather
-  // than at an ancestor item (`_enter_canvas`, canvas_item.cpp:246-267) and
-  // takes its draw index from `gui_get_canvas_sort_index()` /
-  // `CanvasLayer::get_sort_index()` (canvas_item.cpp:222-232,
-  // viewport.cpp:3721-3724, canvas_layer.cpp:261-267). Those counters are
-  // handed out while SceneTree iterates the `_root_canvas` group
-  // (canvas_item.cpp:453-466), which `_update_group_order` sorts with
-  // `Node::Comparator` — tree pre-order (scene_tree.cpp:333-348,
-  // node.h:132-134, node.cpp:2152-2187). The canvas then draws its children in
-  // that index order (`Canvas::ChildItem::operator<`,
-  // renderer_canvas_cull.h:146-151, sorted in render_canvas, :494-511), each
-  // root's subtree whole, so a root nested in the tree still draws AFTER
-  // everything under the root it is nested in.
+  // A `CanvasItem` whose parent is not one parents at the canvas
+  // (`_enter_canvas`, canvas_item.cpp:246-267), and its draw index comes from
+  // `gui_get_canvas_sort_index()` or `CanvasLayer::get_sort_index()`
+  // (canvas_item.cpp:222-232, viewport.cpp:3721-3724, canvas_layer.cpp:261-267).
 
   it('draws a nested canvas root after the whole subtree of the root it hangs under', () => {
+    // The counters go out over the `_root_canvas` group (canvas_item.cpp:453-466)
+    // in tree pre-order (scene_tree.cpp:333-348, node.h:132-134, node.cpp:2152-2187).
+    // The canvas draws in that order (renderer_canvas_cull.h:146-151, :494-511), each
+    // root whole, so a nested root draws after everything under the root it hangs under.
     const detached = node('Detached', 'ColorRect');
     const root = node('Root', 'Control', [
       node('Holder', 'Node', [detached]),
@@ -170,9 +142,8 @@ describe('canvasRootRanges', () => {
   });
 
   it('keeps a nested canvas root before the NEXT root of the same canvas', () => {
-    // Pre-order among the canvas's roots: [First, Detached, Second]. A canvas
-    // is not free to draw the detached item last — that is the CanvasLayer
-    // case, where the layer's own children are the roots being ordered.
+    // Pre-order among the canvas's roots: [First, Detached, Second]. Drawing it
+    // last is the CanvasLayer case, where the layer's own children are the roots.
     const detached = node('Detached', 'ColorRect');
     const first = node('First', 'Control', [node('Holder', 'Node', [detached])]);
     const second = node('Second', 'Control');
@@ -186,12 +157,10 @@ describe('canvasRootRanges', () => {
   });
 
   it('makes a top_level item a canvas root under a CanvasItem parent', () => {
-    // `get_parent_item()` returns nullptr for a top_level item
-    // (canvas_item.cpp:565-571), so `_enter_canvas` parents it at the canvas
-    // and its draw index comes from the canvas's own sort counter
-    // (`_top_level_raise_self`, canvas_item.cpp:222-232) — the same slot a
-    // broken CanvasItem chain gives, out of the tail of the root it hangs
-    // under rather than the sequence its nesting would give it.
+    // `get_parent_item()` returns nullptr for a top_level item (canvas_item.cpp:565-571),
+    // so it parents at the canvas and takes the canvas's sort counter
+    // (`_top_level_raise_self`, canvas_item.cpp:222-232): the tail of the root it
+    // hangs under, as a broken CanvasItem chain gives.
     const detached = node('Detached', 'ColorRect', [], { top_level: true });
     const root = node('Root', 'Node2D', [detached, node('Later', 'Sprite2D')]);
     const ranges = allocatePaintRange(WHOLE_CANVAS_RANGE, [root]).children;
@@ -255,11 +224,9 @@ describe('allocatePaintRange', () => {
   });
 
   it('puts a y-sorting parent at the FRONT of its range, ignoring show_behind_parent', () => {
-    // `_cull_canvas_item` never runs its behind/ahead loops for a y-sorted
-    // node — it takes `_collect_ysort_children` and re-orders by Y instead. If
-    // the split were applied anyway the parent's own sequence would sit past
-    // `range.base`, and the y-sort pass, which packs its items AFTER that,
-    // would run off the end of the very range it was given.
+    // `_cull_canvas_item` takes `_collect_ysort_children` for a y-sorted node and
+    // runs no behind/ahead split. With one, the parent's sequence moves past
+    // `range.base`, and the y-sort pass runs off the end of its range.
     const children = [
       node('Behind', 'Sprite2D', [], { show_behind_parent: true }),
       node('Front', 'Sprite2D'),
@@ -268,8 +235,7 @@ describe('allocatePaintRange', () => {
     const sorted = allocatePaintRange(range, children, true);
 
     expect(sorted.self).toBe(range.base);
-    // The whole re-pack — every child, in whatever order the sort chooses —
-    // still fits after it.
+    // The whole re-pack, in any order, still fits after it.
     const packed = children.reduce((total, child) => total + paintRangeSize(child), 0);
     expect(sorted.self + 1 + packed).toBeLessThanOrEqual(range.base + range.size);
   });
@@ -287,7 +253,7 @@ describe('allocatePaintRange', () => {
 
   it('keeps a subtree that needs MORE than its range inside it anyway', () => {
     // The shape a sub-scene takes: an `instance=` node reserves a flat 4096
-    // from the HOST tree, but the loaded scene is allocated from that reserve
+    // from the host tree, but the loaded scene is allocated from that reserve
     // and its own TileMapLayer claims another 4096. Running past the end would
     // put the sub-scene's later nodes on top of the host's next sibling.
     const range = { base: 2, size: 4096 };
@@ -300,14 +266,14 @@ describe('allocatePaintRange', () => {
       expect(child.base).toBeGreaterThanOrEqual(range.base);
       expect(child.base + child.size).toBeLessThanOrEqual(end);
     }
-    // Still ORDERED: the parent first, then the tile layer, then the sprite.
+    // Still ordered: the parent first, then the tile layer, then the sprite.
     expect(allocated.self).toBeLessThan(allocated.children[0]!.base);
     expect(allocated.children[0]!.base).toBeLessThan(allocated.children[1]!.base);
   });
 
   it('keeps a degenerate range ordered as far as it goes, never past its end', () => {
-    // Fewer values than children: they cannot all be distinct, but none may
-    // escape — a tie interleaves two subtrees, an overrun reorders a sibling.
+    // Fewer values than children: they cannot all differ, but none may escape.
+    // A tie interleaves two subtrees, and an overrun reorders a sibling.
     const range = { base: 10, size: 2 };
     const children = [node('A', 'Sprite2D'), node('B', 'Sprite2D'), node('C', 'Sprite2D')];
     const allocated = allocatePaintRange(range, children);

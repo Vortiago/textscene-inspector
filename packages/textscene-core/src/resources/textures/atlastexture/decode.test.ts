@@ -1,12 +1,8 @@
 /**
- * AtlasTexture decode + layout math, against Godot's own accessors.
- *
- * Expected values are read off `scene/resources/atlas_texture.cpp`, not off our
- * renderer: `set_region` (:92-99) floors the SIZE and leaves the POSITION,
- * `get_width`/`get_height` (:33-53) add `margin.size` to the rounded region and
- * fall back to the atlas on a zero axis, `_get_region_rect` (:126-137) makes the
- * same substitution for the sampled rect, and `draw` (:158-164) places that rect
- * at `margin.position` inside the reported box.
+ * AtlasTexture decode and layout, against `scene/resources/atlas_texture.cpp`:
+ * `set_region` (:92-99) floors the size, `get_width`/`get_height` (:33-53) add
+ * `margin.size` or fall back to the atlas, `_get_region_rect` (:126-137) does the
+ * same, and `draw` (:158-164) places the rect at `margin.position`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -96,8 +92,8 @@ describe('atlasTextureLayout', () => {
   });
 
   it('falls back to the atlas size on a zero-size axis, WITHOUT adding that margin', () => {
-    // `get_width` returns `atlas->get_width()` outright on a zero region axis
-    // (:34-38) — the `+ margin.size` term is only on the other branch.
+    // `get_width` returns `atlas->get_width()` on a zero region axis (:34-38),
+    // without the `+ margin.size` term.
     expect(
       atlasTextureLayout(tex('Rect2(0, 0, 0, 0)', 'Rect2(2, 3, 10, 20)'), { width: 128, height: 256 })
     ).toEqual({

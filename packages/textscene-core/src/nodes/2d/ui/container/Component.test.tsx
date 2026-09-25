@@ -1,7 +1,5 @@
 /**
- * `<Container>` — a bare Container paints no chrome of its own and imposes
- * no layout on its children (`container.cpp`'s own `_notification` has no
- * `NOTIFICATION_SORT_CHILDREN` arm — see `Component.tsx`'s module doc).
+ * `<Container>`: a bare Container paints no chrome and lays out no children (`container.cpp`).
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -43,8 +41,7 @@ describe('Container registers no solver', () => {
 
 describe('a bare Container imposes no layout on its children', () => {
   it('leaves a child at its own free/anchored rect, unlike a registered container', () => {
-    // Full-rect preset (anchors 0,0,1,1, offsets 0) so the Container itself
-    // takes the whole 200x100 viewport.
+    // Full-rect preset (anchors 0,0,1,1, offsets 0): the Container takes the whole 200x100 viewport.
     const containerNode: TscnNode = {
       name: 'Wrapper',
       type: 'Container',
@@ -77,10 +74,8 @@ describe('a bare Container imposes no layout on its children', () => {
     const solved = solveControlTree([container], viewport, ctx);
 
     // `Control::_size_changed` (control.cpp:1760-1771): edge_pos[i] = offset[i]
-    // + anchor[i] * area. With every anchor at 0 the child solves against the
-    // Container's own rect exactly like a free Control would — no BoxContainer/
-    // GridContainer-style repositioning ever runs, because none is registered
-    // for 'Container'.
+    // + anchor[i] * area. No layout is registered for 'Container', so the child
+    // solves against its rect as a free Control.
     expect(solved.get('Wrapper/Child')?.rect).toEqual({ x: 10, y: 20, w: 40, h: 40 });
   });
 });

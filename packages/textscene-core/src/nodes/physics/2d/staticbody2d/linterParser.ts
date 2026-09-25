@@ -1,7 +1,4 @@
-/**
- * StaticBody2D strict validators for linting.
- * Migrated to the declarative `v` namespace.
- */
+/** StaticBody2D strict validators for linting. */
 
 import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';

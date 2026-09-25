@@ -1,13 +1,7 @@
 /**
- * ResourcePreloader strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * ResourcePreloader strict validators, asserted through `validatorRegistry` so a failure
+ * points at the validator, not at scene parsing. Each numeric bound quotes its
+ * Godot source line.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,33 +17,26 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * ResourcePreloader binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * The keys ResourcePreloader binds, read from the source. Exactly one of this and
+ * DECLARES_NOTHING is set: both unset is red by design.
  */
 const KEYS: string[] = [
-  // resource_preloader.cpp:147 — the ONE ADD_PROPERTY, PROPERTY_USAGE_NO_EDITOR
+  // resource_preloader.cpp:147: the one ADD_PROPERTY, PROPERTY_USAGE_NO_EDITOR
   // | PROPERTY_USAGE_INTERNAL, which is PROPERTY_USAGE_STORAGE | INTERNAL
-  // (object.h:132), so it still serialises despite being editor-invisible.
+  // (object.h:132), so it serialises though the editor hides it.
   'resources',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, with the source line that proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * Keys ResourcePreloader does NOT declare, each paired with the ancestor that does.
- * Name at least one; Node is where to start.
- *
- * This is the assertion the malformed-value sweep below CANNOT make. That sweep
- * iterates `getOwnKeys`, so on a class that rightly declares nothing it sweeps
- * an EMPTY set and passes while asserting nothing — "Godot gives ResourcePreloader no
- * properties of its own" and "nobody has written this slice yet" look identical
- * to it. Resolving a key through the base-walk to the ancestor's own validator
- * function tells the two apart, and it is red until filled for the same reason
- * KEYS is.
+ * Keys ResourcePreloader does not declare, each paired with the ancestor that does. The
+ * malformed-value loop below iterates `getOwnKeys`, so on a class that declares
+ * nothing it asserts nothing. Resolving a key through the base-walk to the
+ * ancestor's own validator tells "no own properties" from "slice not written".
  */
 const INHERITED: [owner: string, key: string][] = [
-  // node.cpp — enum format-only validator; ResourcePreloader declares no
+  // node.cpp: an enum format-only validator. ResourcePreloader declares no
   // Node-level key of its own.
   ['Node', 'process_mode'],
 ];
@@ -64,17 +51,14 @@ describe('ResourcePreloader strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run against what
+    // this test imported. `fixtureLint` checks the whole registry through the barrel.
     expectFixtureClean('unit-resource-preloader.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next. Vacuous when
-    // ResourcePreloader declares nothing, which is what INHERITED below covers.
+    // A validator that accepts arbitrary prose validates no format. The
+    // per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('ResourcePreloader')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -89,7 +73,7 @@ describe('ResourcePreloader strict validators', () => {
     for (const [owner, key] of INHERITED) {
       const owned = validatorRegistry.findValidator(owner, key);
       expect(owned, `${owner} does not declare '${key}'`).not.toBeNull();
-      // The SAME function, not merely some validator: a shadowing copy on
+      // The same function, not merely some validator: a shadowing copy on
       // ResourcePreloader would answer here while drifting from the ancestor's rule.
       expect(validatorRegistry.findValidator('ResourcePreloader', key)).toBe(owned);
       expect(validatorRegistry.getOwnKeys('ResourcePreloader')).not.toContain(key);

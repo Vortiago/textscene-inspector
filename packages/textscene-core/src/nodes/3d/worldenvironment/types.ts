@@ -5,11 +5,8 @@
 import type { NodeProperties } from '../../node/types.js';
 
 /**
- * WorldEnvironment node properties
- *
- * WorldEnvironment configures the global rendering environment including
- * background, fog, tonemapping, and other post-processing effects via
- * an Environment SubResource.
+ * WorldEnvironment configures the global rendering environment, including background, fog,
+ * tonemapping and other post-processing effects, through an Environment resource.
  */
 export interface WorldEnvironmentProperties extends NodeProperties {
   /**

@@ -1,13 +1,7 @@
 /**
- * Aggregation barrel for resource-slice registrations (ADR-0031) — the
- * resource-side sibling of `parser/TscnParser.ts` / `linter/index.ts` /
- * `r3f/nodes/index.ts`. Importing it populates `resourceSliceRegistry` with
- * every slice's claims; `ResourceLoader` (and the routing conformance guards)
- * import it for that side effect.
- *
- * One import per slice `index.ts`, `./…/index.js` specifiers throughout: a
- * second specifier spelling would give the bundler a second module instance
- * whose re-registration lands as a silent duplicate in `all()`.
+ * Aggregation barrel for resource-slice registrations (ADR-0031). Importing it
+ * populates `resourceSliceRegistry`. Use `./…/index.js` specifiers only: a second
+ * spelling makes a second module instance, a silent duplicate in `all()`.
  */
 
 // Materials

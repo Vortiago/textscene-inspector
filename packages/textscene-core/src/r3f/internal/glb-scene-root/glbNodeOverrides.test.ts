@@ -1,15 +1,7 @@
 /**
- * Applying a host scene's overrides onto nodes inside a loaded GLB.
- *
- * Two shapes reach here. A SHALLOW override names a GLB node directly
- * (`ceiling_lamp.tscn`'s `plafoniera`) and resolves by name, as it always has.
- * A DEEP one carries `instanceSubPath` because its authored path descended into
- * the instance, and resolves through `matchGlbTarget` — which matters because
- * Godot's importer invents nodes three's does not.
- *
- * The property that made this urgent is `layers`: the platformer player's blob
- * shadow clears layer 2 and the robot sets it, so without the override applied
- * the decal paints the robot — the exact class of bug the cull_mask fix was for.
+ * A host scene's overrides on nodes inside a loaded GLB. A shallow override names a GLB node and
+ * resolves by name. A deep one carries `instanceSubPath` and resolves through `matchGlbTarget`,
+ * since Godot's importer invents nodes three's does not.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -65,7 +57,7 @@ describe('applyGlbNodeOverrides', () => {
   });
 
   it('still applies a shallow by-name transform override', () => {
-    // The original case, unchanged: no instanceSubPath, flat name lookup.
+    // No instanceSubPath: a flat name lookup.
     const root = buildTestGlbGraph(['plafoniera']);
     root.children[0]!.position.set(1.11, -9.73, -9.73);
 
@@ -109,11 +101,9 @@ describe('applyGlbNodeOverrides', () => {
   });
 
   it('never applies a TYPED deep child as an override', () => {
-    // The platformer's `CoinCount` is a Label3D that belongs INSIDE the GLB, not
-    // a set of properties for something already there. Its path aliases to
-    // `Skeleton` (three has no CoinCount), so treating it as an override wrote
-    // its 3.33x scale and 7.5-unit offset onto the entire robot and flung it out
-    // of frame. Godot renders the robot centred; so must we.
+    // A typed `CoinCount` Label3D is a new node inside the GLB, not an override. Its path aliases
+    // to `Skeleton`, and applying it would write its 3.33x scale and 7.5-unit offset onto the
+    // whole robot.
     const root = buildTestGlbGraph(['Skeleton/Robot']);
     const skeleton = root.children[0]!;
 

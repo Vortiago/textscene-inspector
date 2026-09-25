@@ -30,7 +30,7 @@ export const postProcessKeys: Record<string, PropertyValidator> = {
     message: "Property 'tonemap_white' must be >= 1.",
     hinted: 'environment.cpp:1288',
   }),
-  // AgX's own white reference — Godot reads it INSTEAD of `tonemap_white` under
+  // AgX's own white reference. Godot reads it instead of `tonemap_white` under
   // TONE_MAPPER_AGX, so a typo in it is invisible in the other one.
   tonemap_agx_white: v.float('tonemap_agx_white', {
     min: 2,

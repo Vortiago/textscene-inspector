@@ -1,33 +1,9 @@
 /**
- * Where a canvas item sits, as Godot's light cull test asks it: the item's
- * accumulated `z_final`, and the layer of the canvas it belongs to.
- *
- * Both are threaded down the tree rather than read off the node, because
- * neither is a property of the node alone.
- *
- * Z accumulates. `servers/rendering/renderer_canvas_cull.cpp`,
- * `_cull_canvas_item` (lines 816-820 on master):
- *
- *   int parent_z = p_z;
- *   if (ci->z_relative) {
- *       p_z = CLAMP(p_z + ci->z_index, RSE::CANVAS_ITEM_Z_MIN, RSE::CANVAS_ITEM_Z_MAX);
- *   } else {
- *       p_z = ci->z_index;
- *   }
- *
- * and `_attach_canvas_item_for_draw` (line 564) stores the result as
- * `ci->z_final`, which is the value the light's z window is tested against.
- * Note the asymmetry: only the accumulating branch clamps.
- *
- * The LAYER does not accumulate — it belongs to the canvas. The world canvas is
- * layer 0; a `CanvasLayer` starts a canvas of its own at its `layer` property,
- * whose Godot default is 1. That default is the whole reason an untouched light
- * (window 0..0) never lights an untouched HUD.
- *
- * These are contexts rather than parameters threaded through every slice
- * because only the light pass cares: a slice renders its pixels and stays
- * ignorant, exactly as it does of the accumulation buffers themselves.
- *
+ * Where a canvas item sits for Godot's light cull test: its accumulated `z_final` and the layer of
+ * its canvas. Neither is a property of the node alone, so both come down the tree as contexts,
+ * which only the light pass reads.
+ */
+/*
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
@@ -37,26 +13,22 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX } from '../../godot/rendering.js';
 
 /**
- * Re-exported rather than re-typed: `godot/rendering.ts` owns the numbers and
- * the reasoning, and its docblock names a slice re-typing them as THE drift
- * risk. The clamp below and the linter's bounds must read one constant.
+ * Re-exported, not re-typed: `godot/rendering.ts` owns the numbers, and the clamp below and the
+ * linter's bounds must read one constant.
  */
 export { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX };
 
 /** The world canvas's layer, which is where everything outside a CanvasLayer draws. */
 export const WORLD_CANVAS_LAYER = 0;
 
-/** `CanvasLayer.layer`'s own Godot default, for a layer that authors none. */
+/** `CanvasLayer.layer`'s Godot default, which is why a default light (window 0..0) never lights a default HUD. */
 export const DEFAULT_CANVAS_LAYER = 1;
 
 /**
- * One item's `z_final`, given its parent's and its own CanvasItem z properties.
- *
- * The ONE integer-z accumulation in the codebase: the y-sort pass buckets by the
- * same value, exactly as Godot does — `_collect_ysort_children` (lines 160-166)
- * and `_cull_canvas_item` (816-820) are the same six lines twice. The result is
- * read twice over: as the light cull's z window, and as the `z_final` term of
- * a canvas item's draw-order key (`canvasPaintOrder.ts`).
+ * `_cull_canvas_item` (`servers/rendering/renderer_canvas_cull.cpp` lines 816-820 on master) clamps
+ * only a `z_relative` sum, and `_attach_canvas_item_for_draw` (line 564) stores it as `z_final`. The
+ * only z accumulation here: the y-sort pass (`_collect_ysort_children`, lines 160-166), the light
+ * cull and the draw-order key (`canvasPaintOrder.ts`) all read it.
  */
 export function accumulateCanvasItemZ(
   parentZ: number,

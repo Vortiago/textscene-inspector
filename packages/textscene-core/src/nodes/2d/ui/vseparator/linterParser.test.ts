@@ -1,13 +1,8 @@
 /**
- * VSeparator strict validators: declares none of its own.
- *
- * doc/classes/VSeparator.xml lists zero <members>, and its constructor
- * (separator.cpp:75-77) only sets the protected `orientation` field, which is
- * not a property (see linterParser.ts). The scaffold's original sweep,
- * `getOwnKeys('VSeparator').filter(...)` over an empty key set, would pass
- * vacuously on nothing, so it is replaced with an honest emptiness assertion
- * plus proof the base-walk still delivers Control, CanvasItem, and the
- * theme-override wildcard through Separator.
+ * VSeparator strict validators: it declares none of its own, and the base-walk still delivers
+ * Control, CanvasItem and the theme-override wildcard through Separator. doc/classes/VSeparator.xml
+ * lists zero <members>, and the constructor (separator.cpp:75-77) only sets the protected
+ * `orientation` field, which is not a property (see linterParser.ts).
  */
 
 import { describe, expect, it } from 'vitest';

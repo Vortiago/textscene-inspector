@@ -1,6 +1,6 @@
 /**
- * SpringArm3D draws nothing of its own (ADR-0008) — reuse the Node3D
- * component so its children still land in the right transform space.
+ * SpringArm3D draws nothing of its own (ADR-0008): the Node3D component keeps
+ * its children in the right transform space.
  */
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../../base/node3d/Component';

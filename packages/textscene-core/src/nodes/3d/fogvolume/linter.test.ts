@@ -1,10 +1,7 @@
 /**
- * Tests for the FogVolume semantic rule — `size` ignored while `shape` is World.
- *
- * Godot does not reject this combination: `set_size` and `set_shape` both take
- * whatever is authored. The warning exists because the collapse to "size does
- * nothing" is otherwise invisible — the .tscn keeps showing the authored size
- * forever, and nothing about loading it fails.
+ * Tests for the FogVolume semantic rule: `size` ignored while `shape` is World. Godot accepts the
+ * combination, since `set_size` and `set_shape` take whatever is authored. The rule exists because
+ * the .tscn keeps showing the authored size while it does nothing, and loading never fails.
  */
 
 import { describe, it } from 'vitest';
@@ -26,11 +23,9 @@ describe('FogVolume size-ignored-for-World rule', () => {
   });
 
   it('leaves the committed fixture clean through the full Linter (validators AND rules)', () => {
-    // `linterParser.test.ts`'s `expectFixtureClean` only runs `StrictTscnParser`,
-    // which never touches `ruleRegistry` — so it cannot see this rule fire (or
-    // fail to). The fixture's "zero warnings" claim spans both halves, and this
-    // is the half only `Linter` proves; shape is 2 (Cylinder), not World, so it
-    // should stay silent.
+    // `linterParser.test.ts`'s `expectFixtureClean` runs only `StrictTscnParser`, which never
+    // touches `ruleRegistry`, so only `Linter` proves the rule half of the fixture's "zero
+    // warnings" claim. Shape is 2 (Cylinder), not World, so the rule stays silent.
     expectClean(readFixture('unit-fog-volume.tscn'));
   });
 

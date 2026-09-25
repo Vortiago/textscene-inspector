@@ -1,10 +1,7 @@
 /**
- * Sprite3D types and interfaces.
- *
- * Mirrors Godot's Sprite3D — a 2D texture rendered as a billboarded quad
- * in 3D space. The property surface here matches the linter's strict
- * validators in linterParser.ts (the authoritative list of recognised
- * properties); the runtime parser converts each one into a typed field.
+ * Sprite3D types: Godot's Sprite3D, a 2D texture drawn as a quad in 3D space. linterParser.ts holds
+ * the authoritative list of recognised properties, and the runtime parser turns each into a typed
+ * field.
  */
 
 import type { Node3DProperties } from '../../base/node3d/types';
@@ -16,11 +13,11 @@ import type { Vector2 } from '../../../parser/vectors';
  * BaseMaterial3D.BillboardMode in Godot).
  */
 export enum BillboardMode {
-  /** Billboard disabled — sprite uses its own orientation. */
+  /** Billboard disabled: the sprite keeps its own orientation. */
   BILLBOARD_DISABLED = 0,
-  /** Billboard enabled — sprite always faces the camera. */
+  /** Billboard enabled: the sprite always faces the camera. */
   BILLBOARD_ENABLED = 1,
-  /** Billboard Y-axis only — sprite rotates around Y to face the camera. */
+  /** Billboard on the Y axis only: the sprite rotates around Y to face the camera. */
   BILLBOARD_FIXED_Y = 2,
   /** Particles billboard mode (not supported in Sprite3D itself). */
   BILLBOARD_PARTICLES = 3,
@@ -31,7 +28,7 @@ export enum BillboardMode {
  * handled with respect to depth writes.
  */
 export enum AlphaCutMode {
-  /** No alpha cut — material uses regular transparency. */
+  /** No alpha cut: the material uses regular transparency. */
   ALPHA_CUT_DISABLED = 0,
   /** Discard fragments below alpha threshold; opaque pixels write depth. */
   ALPHA_CUT_DISCARD = 1,
@@ -88,7 +85,7 @@ export interface Sprite3DProperties extends Node3DProperties {
   /** Texture resource reference (ExtResource or SubResource). */
   texture?: string;
 
-  /** Billboard mode (default: DISABLED — Godot's Sprite3D default differs from Label3D). */
+  /** Billboard mode (default: DISABLED, as for Label3D). */
   billboard: BillboardMode;
 
   /** Alpha-cut mode (default: DISABLED). */
@@ -118,7 +115,7 @@ export interface Sprite3DProperties extends Node3DProperties {
   /** Pixel offset from sprite center (default: 0, 0). */
   offset: Vector2;
 
-  /** Quad origin centered on the node (default true) vs top-left corner. */
+  /** Quad origin: centred on the node (default true), or at its top-left corner. */
   centered: boolean;
 
   /** Mirror the texture horizontally / vertically (default false). */
@@ -141,16 +138,18 @@ export interface Sprite3DProperties extends Node3DProperties {
   modulate: Color;
 
   /**
-   * `FLAG_SHADED` — false (SHADING_MODE_UNSHADED) by default; the
-   * `SpriteBase3D()` flag loop sets only FLAG_TRANSPARENT and
-   * FLAG_DOUBLE_SIDED (`sprite_3d.cpp:712-714`).
+   * `FLAG_SHADED`: false (SHADING_MODE_UNSHADED) by default. The `SpriteBase3D()` flag loop sets
+   * only FLAG_TRANSPARENT and FLAG_DOUBLE_SIDED (`sprite_3d.cpp:712-714`).
    */
   shaded: boolean;
 
   /** `FLAG_DISABLE_DEPTH_TEST` → `render_mode depth_test_disabled` (`material.cpp:863`). Default false. */
   no_depth_test: boolean;
 
-  /** `FLAG_FIXED_SIZE` — depth-proportional rescale in the vertex shader (`material.cpp:1357`). Default false. */
+  /**
+   * `FLAG_FIXED_SIZE`: depth-proportional rescale in the vertex shader (`material.cpp:1357`).
+   * Default false.
+   */
   fixed_size: boolean;
 
   /** Alpha-scissor cutoff (`sprite_3d.h:89`). Default 0.5. */

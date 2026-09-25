@@ -1,8 +1,6 @@
 /**
- * SpringBoneCollision3D registration — parser.
- *
- * Non-visual node: renders as a transform-only group (ADR-0008), reusing the
- * Node3D transform parse; the render component (index.r3f.ts) reuses Node3D.
+ * SpringBoneCollision3D registration: the parser. A non-visual node renders as a transform-only
+ * group (ADR-0008), so both this parse and index.r3f.ts reuse Node3D's.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';

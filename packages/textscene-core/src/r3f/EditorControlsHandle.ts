@@ -27,24 +27,16 @@ function isPerspectiveCamera(camera: R3FCamera): camera is THREE.PerspectiveCame
 }
 
 /**
- * Owns the camera side of navigation: the orbit focus point, which camera is
- * being driven, and the perspective/orthographic pair.
- *
- * It is also the object `<TscnCanvas>` publishes as R3F's `state.controls`,
- * which is how `frameSceneBounds` (F-to-frame, load-time auto-fit) re-points
- * the viewport: it writes `controls.target` and `camera.position` from the
- * outside and calls `update()`. Nothing here caches a pose across calls —
- * every gesture re-derives the cursor from the live camera — so an external
- * write is picked up rather than overwritten on the next drag.
- *
- * Extends `THREE.EventDispatcher` only because that is the type R3F's
- * `state.controls` slot takes.
+ * The orbit focus point, the driven camera and the perspective/orthographic pair. It
+ * is R3F's `state.controls`: `frameSceneBounds` writes `target` and `camera.position`
+ * and calls `update()`. No pose is cached, so a gesture picks up an external write.
+ * Extends `THREE.EventDispatcher` because R3F's `state.controls` slot takes that type.
  */
 export class EditorControlsHandle extends THREE.EventDispatcher {
   /** The orbit focus point. One persistent vector: `frameSceneBounds` copies into it. */
   readonly target = new THREE.Vector3();
 
-  /** The camera being driven — R3F's active one, which may be an authored Camera3D. */
+  /** The camera being driven: R3F's active one, which may be an authored Camera3D. */
   camera: R3FCamera;
 
   private readonly perspectiveCamera: THREE.PerspectiveCamera | null;
@@ -78,14 +70,9 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
   }
 
   /**
-   * The vertical fov the visible frustum is derived from.
-   *
-   * Re-derived from the ACTIVE camera, like `cursor()` and `zoomRange()` — an
-   * authored Camera3D becomes R3F's camera and carries its own fov (Godot
-   * defaults to 75, this editor camera to 70), and anchoring zoom-to-pointer
-   * against the wrong one drifts the subject off the cursor by the ratio of
-   * their half-angle tangents. Falls back to this component's own camera for
-   * orthographic, whose frustum `orthographicHeight` sizes from that fov.
+   * The vertical fov of the active camera: an authored Camera3D's own (Godot default
+   * 75, this editor camera 70), or zoom-to-pointer drifts off the cursor. Orthographic
+   * falls back to this component's camera, whose fov sizes `orthographicHeight`.
    */
   fovDegrees(): number {
     if (isPerspectiveCamera(this.camera)) return this.camera.fov;
@@ -97,7 +84,7 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     return { near: this.camera.near, far: this.camera.far };
   }
 
-  /** Move the camera to a cursor — the only place a gesture's result lands. */
+  /** Move the camera to a cursor: the only place a gesture's result lands. */
   applyCursor(cursor: EditorCursor): void {
     this.target.copy(cursor.target);
     if (cursor.distance > DEGENERATE_DISTANCE) {
@@ -109,10 +96,9 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
   }
 
   /**
-   * R3F's controls contract, and the second half of `frameSceneBounds`: point
-   * the camera at the (possibly just-rewritten) target. Re-orients ONLY — an
-   * `update()` that also repositioned would undo the framing that just wrote
-   * `camera.position`.
+   * R3F's controls contract, and the second half of `frameSceneBounds`: point the
+   * camera at the target. It only re-orients, since repositioning would undo the
+   * framing that just wrote `camera.position`.
    */
   update(): void {
     const cursor = this.cursor();

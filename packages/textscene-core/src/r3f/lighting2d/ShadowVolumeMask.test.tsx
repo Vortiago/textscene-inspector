@@ -34,10 +34,8 @@ function maskMesh(renderer: Awaited<ReturnType<typeof renderMask>>) {
 }
 
 /**
- * The two sides of the seam. `ShadowVolumeMask` stamps and the light's cookie
- * quad tests, so they have to agree on the ref for one light and disagree
- * across lights — that disagreement is the whole reason a shared ref of 1 leaks
- * every earlier light's shadow into every later light.
+ * `ShadowVolumeMask` stamps and the cookie quad tests, so they agree on the ref for one light and
+ * disagree across lights. A shared ref of 1 leaks every earlier light's shadow into every later one.
  */
 describe('stencil ref allocation', () => {
   it('never hands out 0, which is the cleared state', () => {
@@ -130,8 +128,7 @@ describe('<ShadowVolumeMask>', () => {
   });
 
   it('sorts with the additive cookie quads rather than ahead of them', async () => {
-    // Opaque would put EVERY light's volumes before ANY light's quad, which no
-    // ref assignment can rescue.
+    // Opaque puts every light's volumes before any light's quad, which no ref assignment rescues.
     expect((maskMesh(await renderMask())!.material as THREE.Material).transparent).toBe(true);
   });
 
@@ -144,12 +141,9 @@ describe('<ShadowVolumeMask>', () => {
   });
 
   it('takes its ORDER from the sequence and its REF from the ordinal', async () => {
-    // The two numbers do different jobs and are deliberately allowed to differ:
-    // the ordinal is dense within a pass so the 8-bit stencil can hold it and is
-    // reused when a light unmounts, while the sequence is the light's position
-    // in the canvas light list, which is the order Godot applies lights in.
-    // Ordering by the ordinal made an overlap's colour depend on which cookie
-    // finished loading first.
+    // The ordinal is dense within a pass for the 8-bit stencil and reused on unmount. The sequence
+    // is the light's place in the canvas light list, the order Godot applies lights in. Ordering
+    // by the ordinal makes an overlap's colour depend on which cookie loaded first.
     const mesh = maskMesh(await renderMask({ ordinal: 2, sequence: 5 }))!;
     expect(mesh.renderOrder).toBe(shadowVolumeRenderOrder(5));
     expect((mesh.material as THREE.Material).stencilRef).toBe(shadowStencilRef(2));

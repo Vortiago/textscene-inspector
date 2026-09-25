@@ -4,12 +4,12 @@ import '../csgprimitive3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
-// Ranges are Godot's own editor hints (csg_shape.cpp:2072-2075). `transform` is
-// deliberately NOT re-declared: the Node3D base walk supplies it, and a shadow copy
-// here would drift from the base without anything noticing.
+// Ranges are Godot's own editor hints (csg_shape.cpp:2072-2075). `transform` is not
+// re-declared: the Node3D base walk supplies it, and a shadow copy here would drift from the
+// base without anything noticing.
 validatorRegistry.registerAll('CSGTorus3D', {
-  // set_inner_radius/set_outer_radius (csg_shape.cpp:2081-2093) are bare
-  // assignments; the hints (:2072-2073) are advisory only.
+  // set_inner_radius/set_outer_radius (csg_shape.cpp:2081-2093) are bare assignments, so the
+  // hints (:2072-2073) only warn.
   inner_radius: v.float('inner_radius', { min: 0.001, hinted: 'csg_shape.cpp:2072' }),
   outer_radius: v.float('outer_radius', { min: 0.001, hinted: 'csg_shape.cpp:2073' }),
   // set_sides:2100-2101 ERR_FAIL_COND(p_sides < 3): the floor is enforced.

@@ -48,7 +48,7 @@ describe('parseNode', () => {
 
   it('returns identity transform for malformed transform', () => {
     const p = parseNode(heading('Node', { name: 'N' }), { transform: 'not-a-transform' });
-    // Full identity basis + zero origin — asserting the whole 3x3 (not just
+    // Full identity basis and zero origin: asserting the whole 3x3 (not only
     // basis_x.x) so this distinguishes true identity from a partially-wrong basis.
     expect(p.transform).toEqual({
       basis_x: { x: 1, y: 0, z: 0 },

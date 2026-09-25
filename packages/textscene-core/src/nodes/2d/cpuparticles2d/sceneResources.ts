@@ -1,12 +1,7 @@
 /**
- * Turn the emitter's raw `SubResource("id")` property strings into the decoded
- * resources the simulation consumes.
- *
- * The parser sees property strings only — it is handed a node's body, not the
- * scene's resource table — so every Curve/Gradient slot is carried as a raw
- * reference and resolved here, at render time, against `SceneResources`.
- *
- * Pure `.ts`: only the shared decoders, no THREE of its own.
+ * Resolves the emitter's raw `SubResource("id")` strings against `SceneResources`
+ * at render time: the parser sees a node's body, not the scene's resource table.
+ * Pure `.ts`, with only the shared decoders and no THREE of its own.
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
@@ -33,9 +28,8 @@ export function resolveParticleCurves(
 }
 
 /**
- * The `Gradient` a `color_ramp` / `color_initial_ramp` names, or null. Named for
- * the emitter's slots so the simulation reads in its own vocabulary; the
- * reference form and the type check belong to the gradient slice.
+ * The `Gradient` a `color_ramp` / `color_initial_ramp` names, or null. The
+ * gradient slice owns the reference form and the type check.
  */
 export function resolveParticleGradient(
   ref: string | undefined,

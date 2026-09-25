@@ -1,8 +1,6 @@
 /**
- * `<Button>` render contract — chrome (StyleBox) + text + optional
- * icon, composed from `buttonBase.ts` + this node's own theme resolution.
- * Structure/tint/render-order assertions only (pixels are a golden-image
- * concern via `pnpm ref:godot`, not this suite).
+ * `<Button>` render contract: StyleBox chrome, text and an optional icon. Structure,
+ * tint and render order only. Pixels belong to the golden images and `pnpm ref:godot`.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -71,13 +69,13 @@ function solveNode(
 
 const ICON_PATH = 'res://icon.png';
 
-/** The scene scope a painter resolves its own refs in — id `1` is the icon. */
+/** The scene scope a painter resolves its own refs in. Id `1` is the icon. */
 const SCOPE = {
   externalResources: [{ id: '1', type: 'Texture2D', path: ICON_PATH }],
   internalResources: [],
 };
 
-/** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute; `<TextRun>`/`<ControlQuad>` do not. */
+/** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute, and `<TextRun>` and `<ControlQuad>` do not. */
 function findChromeMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
@@ -85,7 +83,7 @@ function findChromeMesh(scene: Rendered['scene']) {
     .find((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
 }
 
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms); nothing else in this painter does. */
+/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor` and `uOpacity` uniforms), and nothing else in this painter does. */
 function findTextMesh(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
@@ -94,12 +92,8 @@ function findTextMesh(scene: Rendered['scene']) {
 }
 
 /**
- * `<ControlQuad>` (the icon) is a `PlaneGeometry` — identified by its own
- * `.parameters.width` (set directly by the constructor, so this survives
- * even under a duplicate-three.js-instance test environment where
- * `instanceof THREE.PlaneGeometry` cannot be trusted), distinguishing it from
- * the chrome's hand-built BufferGeometry (no `.parameters` at all) and the
- * text's glyph BufferGeometry (ditto).
+ * The icon's `PlaneGeometry`, found by `.parameters.width`, which the chrome and text
+ * geometries lack. `instanceof THREE.PlaneGeometry` fails with two three.js copies.
  */
 function findIconMesh(scene: Rendered['scene']) {
   return scene
@@ -120,7 +114,7 @@ describe('<Button> (isolated painter contract)', () => {
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
-    // Raw sRGB — the StyleBox vertex attribute is decoded per fragment (`StyleBoxQuad.tsx`).
+    // Raw sRGB: the StyleBox vertex attribute is decoded per fragment (`StyleBoxQuad.tsx`).
     expect(color.getX(0)).toBeCloseTo(0.9, 4);
   });
 
@@ -130,7 +124,7 @@ describe('<Button> (isolated painter contract)', () => {
     );
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
-    // style_normal_color = Color(0.1, 0.1, 0.1, 0.6). // Raw sRGB — the StyleBox vertex attribute is decoded per fragment (`StyleBoxQuad.tsx`).
+    // style_normal_color = Color(0.1, 0.1, 0.1, 0.6), raw sRGB.
     expect(color.getX(0)).toBeCloseTo(0.1, 5);
     expect(color.getW(0)).toBeCloseTo(0.6, 5);
   });
@@ -203,7 +197,7 @@ describe('<Button> (isolated painter contract)', () => {
       expect(chromeColor.getX(0)).toBeCloseTo(0.25, 4);
 
       const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-      // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, THEN linearised.
+      // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
       expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
     }
   );
@@ -213,8 +207,7 @@ describe('<Button> (isolated painter contract)', () => {
       <Button {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={7} />
     );
     expect(findChromeMesh(renderer.scene)!.renderOrder).toBe(7);
-    // `<TextRun>` takes `renderOrder` itself now, so every mesh carries it —
-    // no reliance on a group-order cascade an intermediate group could reset.
+    // Every mesh takes `renderOrder` itself, so no intermediate group can reset it.
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(7);
   });
@@ -319,12 +312,9 @@ describe('<Button> registered through <ControlCanvasWalker> (end-to-end walker p
 });
 
 /**
- * The SCENE-FONT (canvas-kind `FontMetrics`) path end to end. Button's own
- * text placement is `button.cpp:233-456` (`buttonBase.ts`'s
- * `layoutButtonContent`), with NOTHING font-kind-specific in it — this pins
- * that, since an atlas-bake anchor leaking back into the placement would be
- * invisible on the atlas path (where it would read as the correct total) and
- * wrong here by `ascentPx - base*fontSizePx/42` px.
+ * The scene-font (canvas-kind `FontMetrics`) path. Text placement (`button.cpp:233-456`)
+ * has nothing font-kind-specific in it. An atlas-bake anchor leaking into it reads correct
+ * on the atlas path and is off here by `ascentPx - base*fontSizePx/42` px.
  */
 describe('<Button> — scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
@@ -339,7 +329,7 @@ describe('<Button> — scene-font (canvas-kind FontMetrics) text path', () => {
     );
   }
 
-  /** The canvas painter's mesh — a plain `MeshBasicMaterial` over a `CanvasTexture`, never the MSDF `ShaderMaterial` `findTextMesh` looks for. */
+  /** The canvas painter's mesh: a `MeshBasicMaterial` over a `CanvasTexture`, not the MSDF `ShaderMaterial`. */
   function findCanvasTextMesh(scene: Rendered['scene']) {
     return scene
       .findAllByType('Mesh')
@@ -358,17 +348,10 @@ describe('<Button> — scene-font (canvas-kind FontMetrics) text path', () => {
   it('places the text at the pure button.cpp offset — no atlas-bake anchor anywhere in it', async () => {
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene)!;
-    // Scene font at 16px: ascentPx = ceil(800*16/1000) = 13, descentPx =
-    // ceil(200*16/1000) = 4; Button sets no line_spacing, so linePitchPx = 17
-    // and textNaturalSize = (2 chars * 500*16/1000 = 16, 17). Default theme
-    // contentMargin 4 -> customElementSize = (112, 24), drawable = the same
-    // (no icon); y = floor((24 - 17)/2 + 4) = floor(7.5) = 7 — `text_ofs.y`
-    // itself is never floored in the source, but the per-glyph floor it DOES
-    // apply downstream (`text_server_adv.cpp:4083`) lands on the identical
-    // pixel once ascent (always whole here) is added back, so flooring here
-    // is equivalent (`buttonBase.ts`'s `layoutButtonContent` has the full
-    // citation); alignment defaults to CENTER, so x = 4 + (112 - 16)/2 = 52.
-    // three's Y is negated Godot px.
+    // At 16px: ascent 13, descent 4, no line_spacing, so pitch 17 and natural size (16, 17).
+    // Margin 4 gives (112, 24), so y = floor((24 - 17)/2 + 4) = 7. Godot never floors `text_ofs.y`,
+    // but its per-glyph floor (`text_server_adv.cpp:4083`) lands on the same pixel, as ascent is
+    // whole. CENTER gives x = 4 + (112 - 16)/2 = 52. three's Y is negated Godot px.
     const group = mesh.parent as THREE.Object3D;
     expect(group.position.x).toBe(52);
     expect(group.position.y).toBe(-7);
@@ -377,7 +360,7 @@ describe('<Button> — scene-font (canvas-kind FontMetrics) text path', () => {
   it("the quad's own top edge is the raster's fixed 4px pad, carrying no font-anchor term of its own", async () => {
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene)!;
-    // Vertex order TL, TR, BL, BR; canvasTextPainter.ts's VERTICAL_PAD_PX is 4.
+    // Vertex order TL, TR, BL, BR. canvasTextPainter.ts's VERTICAL_PAD_PX is 4.
     expect(mesh.geometry.getAttribute('position').getY(0)).toBeCloseTo(4, 6);
   });
 

@@ -1,7 +1,4 @@
-/**
- * Where the scaffold writes, and how it gives up. Resolved once so a module's
- * own depth never enters the calculation.
- */
+/** Where the scaffold writes, resolved once so a module's own depth never enters it, and how it fails. */
 
 import { join } from 'node:path';
 import { REPO_ROOT } from '../repoRoot.mjs';

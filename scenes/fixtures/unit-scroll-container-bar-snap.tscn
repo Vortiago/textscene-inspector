@@ -1,92 +1,59 @@
-; A ScrollContainer whose own size is FRACTIONAL, so each scrollbar's own rect
-; origin lands on a half pixel.
-;
-; The one variable: whether a ScrollContainer's scrollbars are snapped to whole
-; pixels at their OWN draw origin. Godot's `h_scroll`/`v_scroll` are real
-; HScrollBar/VScrollBar Control nodes added as INTERNAL_MODE_BACK children, so
-; each is its own CanvasItem and `Control::_update_canvas_item_transform` floors
-; each one's translation INDEPENDENTLY of the container's. Chrome drawn inside
-; the container's own group inherits only the container's snap and never gets
-; its own.
-;
-; `Scroll` is 900.5 x 600.5 at the integer origin (100, 20). Its position is
-; already whole, so the container's own snap is a no-op and cannot mask the
-; bars': everything that moves here moves because a BAR was or was not snapped.
-; The bar thickness is a whole 8 px at every theme scale (`2 * content_margin`),
-; so the horizontal bar's own top is 600.5 - 8 = 592.5 and the vertical bar's
-; own left is 900.5 - 8 = 892.5 — both exactly half a pixel off, the largest
-; error the snap can produce. Snapped they are 593 and 893, i.e. absolute
-; y = 613 and x = 993.
-;
-; `Canvas` is a single flat 1200 x 900 fill, larger than the viewport in both
-; axes so both bars are visible, and BRIGHT so each bar's outer edge is the
-; biggest channel step this scene can offer: the default theme leaves
-; ScrollContainer's own panel empty and the track and grabber styleboxes are
-; near-black AND 60% transparent, so over anything dark a half-pixel edge blend
-; is a couple of levels and reads as noise.
-;
-; That edge is what the picture is. StyleBoxFlat's anti-aliasing feathers an
-; edge over one pixel centred on it, so an edge on a pixel BOUNDARY leaves both
-; neighbouring pixel centres at full coverage or none, while an edge on a pixel
-; CENTRE puts that centre at exactly half. Snapped, the row above the horizontal
-; bar (y = 612) is pure fill and the row below (y = 613) is pure track;
-; unsnapped, y = 612 is a 50/50 blend of the two. Same for x = 992 / 993 at the
-; vertical bar. Nothing else in the goldens has a Control whose own chrome is
-; drawn by a nested CanvasItem, and the other ScrollContainer scene is 600 x 500
-; — whole numbers, whose bar origins are (0, 492) and (592, 0) — so an
-; unsnapped bar is invisible in every other baseline.
-;
-; Measured against Godot 4.6.3 at `--mode 2d`. The fill reads rgb(242, 230, 64)
-; and the track over it rgb(113, 108, 42). Horizontal bar, x = 900:
-; y = 610/611/612 are all rgb(242, 230, 64) and y = 613/614/615 all
-; rgb(113, 108, 42). Vertical bar, y = 550: x = 990/991/992 are all
-; rgb(242, 230, 64) and x = 993/994/995 all rgb(113, 108, 42). No blended pixel
-; at either boundary — only possible if each bar snapped its own origin.
-;
-; The same render proves the feather is live rather than absent, so those crisp
-; edges cannot be an un-antialiased rasteriser resolving a tie: the horizontal
-; grabber's own right edge is a genuinely fractional 765.8, and at y = 616 it
-; reads rgb(170, 167, 127) at x = 763/764, rgb(158, 154, 109) at x = 765 and
-; rgb(113, 108, 42) at x = 766 — the 0.8 coverage a one-pixel feather predicts
-; (0.8 * 170 + 0.2 * 113 = 158.6). A grabber offset is drawn INSIDE the bar's
-; own CanvasItem and so is never snapped; only the bar's own origin is.
-;
-; Snapping pushes each bar's FAR edge INTO the container's clip, which sits on a
-; fraction — the horizontal bar now ends at absolute y = 621 against a clip at
-; 620.5, the vertical one at x = 1001 against 1000.5 — so the scene measures
-; that side too. Godot cuts it whole-pixel, not proportionally: at x = 900,
-; y = 618/619/620 are all rgb(113, 108, 42) and y = 621/622 are the backdrop
-; rgb(20, 23, 31); at y = 550, x = 998/999/1000 are all rgb(113, 108, 42) and
-; x = 1001/1002 the backdrop. No partial row or column at either boundary.
-;
-; The snap also opens a half-pixel SEAM in the corner where the bars meet, which
-; nothing else in the goldens has: the horizontal bar's own right edge is
-; `rect.w - thickness` = 992.5 and stays fractional (it is a size, and sizes are
-; never snapped), while the vertical bar's left edge is the snapped 993. At
-; y = 616 Godot reads rgb(113, 108, 42) at x = 991, rgb(186, 177, 54) at
-; x = 992 and the untouched fill rgb(242, 230, 64) at x = 993/994.
+; One variable: whether each scrollbar snaps to whole pixels at its own draw origin. `h_scroll`
+; and `v_scroll` are HScrollBar/VScrollBar nodes added as INTERNAL_MODE_BACK children, each its
+; own CanvasItem, so `Control::_update_canvas_item_transform` floors each translation apart from
+; the container's. Chrome drawn in the container's own group gets only the container's snap.
 
 [gd_scene format=3]
 
+; Measured against Godot 4.6.3 at `--mode 2d`: fill rgb(242, 230, 64), track over it
+; rgb(113, 108, 42). Horizontal bar at x = 900: y = 610/611/612 fill, 613/614/615 track.
+; Vertical bar at y = 550: x = 990/991/992 fill, 993/994/995 track. No blended pixel at either
+; boundary, which only a bar that snapped its own origin produces.
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; StyleBoxFlat feathers an edge over one pixel centred on it: an edge on a pixel boundary leaves
+; both neighbours at full coverage or none, and one on a pixel centre puts that centre at half.
+; Snapped, y = 612 is pure fill and y = 613 pure track. Unsnapped, y = 612 is a 50/50 blend.
+; The same holds for x = 992 / 993.
 [node name="Backdrop" type="ColorRect" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+; Backdrop rgb(20, 23, 31). The container's clip sits on a fraction, and snapping pushes each
+; bar's far edge into it: y = 621 against 620.5, x = 1001 against 1000.5. Godot cuts it whole:
+; at x = 900, y = 618/619/620 track and 621/622 backdrop. At y = 550, x = 998/999/1000 track and
+; 1001/1002 backdrop.
 color = Color(0.08, 0.09, 0.12, 1)
 
+; 900.5 x 600.5 at the whole origin (100, 20), so the container's own snap is a no-op and cannot
+; mask the bars'. Bars are 8 px thick at every theme scale (`2 * content_margin`), so the bar
+; origins are 592.5 and 892.5, half a pixel off, the largest snap error. Snapped they are 593
+; and 893, that is absolute y = 613 and x = 993.
 [node name="Scroll" type="ScrollContainer" parent="."]
 anchors_preset = 0
 offset_left = 100.0
 offset_top = 20.0
+; No other golden draws a Control's chrome through a nested CanvasItem. The other
+; ScrollContainer scene is 600 x 500, whole numbers with bar origins (0, 492) and (592, 0), so an
+; unsnapped bar is invisible in every other baseline.
 offset_right = 1000.5
 offset_bottom = 620.5
 
+; One flat 1200 x 900 fill, larger than the viewport so both bars show, and bright: the default
+; theme leaves the panel empty and the track and grabber styleboxes near-black at 60%
+; transparency, so over a dark fill a half-pixel blend is a couple of levels of noise.
 [node name="Canvas" type="ColorRect" parent="Scroll"]
 custom_minimum_size = Vector2(1200, 900)
+; The feather is live: the horizontal grabber's right edge is a fractional 765.8, and at y = 616
+; x = 763/764 read rgb(170, 167, 127), x = 765 rgb(158, 154, 109) and x = 766 rgb(113, 108, 42),
+; the 0.8 coverage of a one-pixel feather (0.8 * 170 + 0.2 * 113 = 158.6). A grabber offset draws
+; inside the bar's CanvasItem and is never snapped. Only the bar's origin is.
 layout_mode = 2
+; The snap opens a half-pixel seam where the bars meet: the horizontal bar's right edge,
+; `rect.w - thickness` = 992.5, stays fractional (sizes are never snapped) while the vertical bar
+; starts at 993. At y = 616 Godot reads rgb(113, 108, 42) at x = 991, rgb(186, 177, 54) at
+; x = 992 and the fill rgb(242, 230, 64) at x = 993/994.
 color = Color(0.95, 0.9, 0.25, 1)

@@ -1,18 +1,8 @@
 /**
- * How `findValidator` resolves a key: the base-class walk, the indexed-wildcard
- * routing that mirrors `PropertyListHelper`, and the members it must refuse to
- * resolve at all.
- *
- * A subclass with no validator of its own inherits its base type's validators,
- * so the single Node3D/Node2D/Control base validator sets reach every subclass
- * instead of silently passing. The walk is driven by an injected base-type map;
- * the registry defaults to no inheritance (empty map) and the singleton wires
- * the real NODE_BASE_TYPES.
- *
- * Every case here builds its own scratch registry, so nothing depends on the
- * barrel. The two guards that read the live singleton are the siblings
- * `ValidatorRegistry.unavailableKeys.test.ts` and
- * `ValidatorRegistry.shadowCopies.test.ts`.
+ * How `findValidator` resolves a key: the base-class walk over an injected base-type map (empty by default, the real
+ * NODE_BASE_TYPES in the singleton), the indexed-wildcard routing that mirrors `PropertyListHelper`, and the members it
+ * refuses to resolve. Each case builds its own scratch registry. The guards on the live singleton are the siblings
+ * `ValidatorRegistry.unavailableKeys.test.ts` and `ValidatorRegistry.shadowCopies.test.ts`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -87,11 +77,9 @@ describe('ValidatorRegistry base-class walk', () => {
 
 describe('indexed wildcard routing mirrors the engine', () => {
   /**
-   * Godot tests `is_valid_int()` BEFORE it looks at the value
-   * (property_list_helper.cpp:52-58), so a signed index is a well-formed key that
-   * the helper then refuses to resolve. Routing has to agree, or the dispatcher
-   * that owns the negative-index diagnostic never runs and a key the engine
-   * silently drops reads as clean.
+   * Godot tests `is_valid_int()` before it looks at the value (property_list_helper.cpp:52-58), so a signed index is a
+   * well-formed key the helper refuses to resolve. Routing agrees, or the dispatcher that owns the negative-index
+   * diagnostic never runs and a dropped write reads as clean.
    */
   function registryWithItems() {
     const r = new ValidatorRegistry();
@@ -117,16 +105,10 @@ describe('indexed wildcard routing mirrors the engine', () => {
   });
 
   /**
-   * A NON-NUMERIC index is the same case as a signed one, one step further on.
-   * `PropertyListHelper::_get_property` returns nullptr when the index is not
-   * `is_valid_int()` (property_list_helper.cpp:53-55), so `_set` returns false
-   * and Godot DROPS the write. Routing has to deliver the key to the family's
-   * dispatcher for that to be reportable at all: an unrouted `item_x/text`
-   * reads as clean.
-   *
-   * A lone sign IS a valid index shape to route (the dispatcher decides), which
-   * is why only the empty index below stays unrouted: with nothing between the
-   * prefix and the slash there is no index text to report on.
+   * A non-numeric index is the same case: `PropertyListHelper::_get_property` returns nullptr when the index is not
+   * `is_valid_int()` (property_list_helper.cpp:53-55), so `_set` fails and Godot drops the write, which the family's
+   * dispatcher reports. A lone sign routes too (the dispatcher decides). Only the empty index stays unrouted: there
+   * is no index text to report on.
    */
   it('routes a NON-NUMERIC index to the dispatcher, since Godot drops that write too', () => {
     const { r, seen } = registryWithItems();

@@ -1,38 +1,8 @@
 /**
- * OptionButton cross-field advisory: `selected` against `item_count`.
- *
- * Format validation (including `selected`'s own -1 floor) is handled by
- * linterParser.ts. This rule catches what a single-property validator
- * cannot: `selected` naming an index that `item_count` never provides.
- *
- * The engine-grounded reason this is worth flagging, not just "seems wrong":
- * `ADD_PROPERTY(PropertyInfo(Variant::INT, "selected"), "_select_int", ...)`
- * (option_button.cpp:601) routes every scene-loaded `selected` write through
- * `OptionButton::_select_int` (option_button.cpp:432-443). Its outcome
- * depends on which of `selected`/`item_count` SceneState applies FIRST, an
- * ordering this rule's `node.properties` bag cannot see (it holds only the
- * final key/value pairs):
- *
- * - `selected` applied first — which is Godot's OWN writer order; a packed
- *   OptionButton saves `selected` above `item_count`. `initialized` is still
- *   false, so the `p_which >= popup->get_item_count()` branch stashes the
- *   value in `queued_current` (option_button.cpp:437-438), and the later
- *   `set_item_count` assigns it straight to `current`
- *   (option_button.cpp:329-334) with NO bounds check at all, bypassing the
- *   `ERR_FAIL_INDEX` that guards every other path into `_select`
- *   (option_button.cpp:416). `current` ends up permanently out of range, and
- *   `get_selected()`/`get_selected_id()` return it as-is.
- * - `item_count` applied first: by the time `selected` lands, `initialized`
- *   is already true, so the SAME branch just returns, the write is silently
- *   dropped and `current` keeps its previous value
- *   (option_button.cpp:436-441).
- *
- * Neither outcome selects the intended item, so this reports regardless of
- * which shape a real file turns out to be. Warning rather than error, and
- * this is the ADR-0032 reading that decides it: in the canonical order the
- * authored value is neither refused nor altered — it is stored verbatim, and
- * only unusable. The refusal exists solely in the other order, so the error
- * tier is not available to a rule that cannot see which order applies.
+ * Warns when `selected` names an index `item_count` never provides. Loaded writes go through
+ * `_select_int` (option_button.cpp:601, option_button.cpp:432-443). With `selected` first, Godot's own save
+ * order, `set_item_count` stores it unchecked (option_button.cpp:437-438, option_button.cpp:329-334), past
+ * `_select`'s `ERR_FAIL_INDEX` (option_button.cpp:416). With `item_count` first, the write drops (option_button.cpp:436-441).
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
@@ -47,15 +17,15 @@ function checkOptionButtonSelected(context: RuleContext): Diagnostic[] {
 
   if (props.selected === undefined) return [];
   const selected = ruleInt(props.selected);
-  // -1 ("none selected") and below are the single-property validator's own
-  // concern; this rule only compares a NON-NEGATIVE selected index against
-  // the sibling item_count. A non-finite reads as NaN, which no comparison
-  // places on the number line and which the message must never print.
+  // -1 ("none selected") and below belong to the single-property validator. A non-finite reads as NaN,
+  // which no comparison places and the message must never print.
   if (selected === null || selected < 0) return [];
 
   const itemCount = ruleCount(props.item_count);
   if (itemCount === null) return [];
 
+  // Warning, not error (ADR-0032): in Godot's save order the value is stored verbatim, only unusable,
+  // and the refusal exists only in the other order, which the final property bag cannot show.
   if (selected < itemCount) return [];
 
   return [

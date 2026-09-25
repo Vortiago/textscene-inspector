@@ -1,5 +1,3 @@
-/**
- * pinjoint3d linter registration - imports linter components to trigger self-registration.
- */
+/** PinJoint3D linter registration: importing the modules registers them. */
 
 import './linterParser.js';

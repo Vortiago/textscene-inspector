@@ -1,8 +1,6 @@
-// Stage the Godot-vs-ours comparison gallery into the web app's deploy bundle.
-// Vite copies public/ verbatim into dist/, which Cloudflare Pages serves — so
-// building the gallery under public/parity/ makes it part of the deployment,
-// reachable at /parity/ and linked from the previewer's toolbar. Images are
-// REFERENCED (not inlined) and mirrored beside the HTML, mirroring copy-fixtures.
+// Stages the Godot-versus-previewer comparison gallery under public/parity/, which
+// Vite copies into dist/ for Cloudflare Pages, so it is served at /parity/ and
+// linked from the toolbar. Images are referenced, not inlined, and sit beside the HTML.
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -20,8 +18,8 @@ const MAX_DEPLOY_FILE_BYTES = 25 * 1024 * 1024;
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(imagesTarget, { recursive: true });
 
-// The generator writes an index.html whose <img> src values are `images/…`,
-// resolved against the file — so index.html and images/ sit side by side here.
+// The generator's <img> src values are `images/…`, relative to index.html, so
+// index.html and images/ sit side by side.
 execFileSync(
   'node',
   [join(repoRoot, 'scripts/compare-docs/build-gallery.mjs'), '--out', join(outDir, 'index.html')],

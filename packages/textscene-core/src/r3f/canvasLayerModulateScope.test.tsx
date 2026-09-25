@@ -1,18 +1,8 @@
 /**
- * RED contract — an ancestor's `modulate` must NOT reach into a `CanvasLayer`
- * subtree, on either the Control path or the Node2D path.
- *
- * `CanvasLayer` derives from `Node`, not `CanvasItem`, so
- * `CanvasItem::get_parent_item()` (`scene/main/canvas_item.cpp:565`) returns
- * null for a CanvasItem under one. That child is attached to the LAYER's own
- * canvas RID instead of to the ancestor item (`canvas_item.cpp:264,269`), and
- * `RendererCanvasCull::render_canvas` seeds every canvas's root items at pure
- * white (`servers/rendering/renderer_canvas_cull.cpp:82`). Accumulation is
- * `ci->modulate * p_modulate` along the RS item-parent chain only
- * (`renderer_canvas_cull.cpp:326`), and that chain is severed at the layer.
- *
- * Contrast VISIBILITY, which does cross: `CanvasLayer` propagates it by hand
- * (`scene/main/canvas_layer.cpp:57-63`). There is no colour equivalent.
+ * An ancestor's `modulate` does not reach into a `CanvasLayer` subtree, on the
+ * Control or the Node2D path. `get_parent_item()` is null under a layer
+ * (`scene/main/canvas_item.cpp:565`), and the child attaches to the layer's canvas
+ * (`canvas_item.cpp:264,269`), whose roots start white.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -105,6 +95,10 @@ function meshColorUnder(root: THREE.Object3D, ancestorName: string): THREE.Color
   return color;
 }
 
+// Roots start white (`servers/rendering/renderer_canvas_cull.cpp:82`), and modulate
+// accumulates along the item-parent chain alone (`renderer_canvas_cull.cpp:326`).
+// Visibility crosses only because `scene/main/canvas_layer.cpp:57-63` propagates it
+// by hand. There is no colour equivalent.
 describe('a CanvasLayer severs the inherited modulate chain', () => {
   // One scene carries both families, so one render answers both.
   let root: THREE.Object3D | null = null;

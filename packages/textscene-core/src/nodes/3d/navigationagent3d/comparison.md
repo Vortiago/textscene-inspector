@@ -59,7 +59,7 @@ Strict parsing format-checks these `NavigationAgent3D` properties, plus 10 inher
 | `valid-navigationagent3d` | `navigationagent3d-parent-not-node3d` | warning |
 <!-- lint:end -->
 
-The lenient parser reads eleven keys: `radius`, `height`, `avoidance_enabled`, `avoidance_layers`, `avoidance_mask`, `max_neighbors`, `max_speed`, `navigation_layers`, `target_desired_distance`, `path_desired_distance` and `target_position`. The ten scalars use the optional readers, so a `radius` of `-5` passes through unchanged, and `target_position` warns and stays unset on a malformed `Vector3`. The other 22 keys reach no reader at all.
+The lenient parser reads eleven keys: `radius`, `height`, `avoidance_enabled`, `avoidance_layers`, `avoidance_mask`, `max_neighbors`, `max_speed`, `navigation_layers`, `target_desired_distance`, `path_desired_distance` and `target_position`. The ten scalars use the optional readers, so a `radius` of `-5` passes through unchanged, and `target_position` warns and stays unset on a malformed `Vector3`. The other keys reach no reader.
 
 ## Known limitations
 

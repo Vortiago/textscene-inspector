@@ -9,15 +9,10 @@ import {
   expectNoDiagnostic,
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
-// VehicleBody3D inherits RigidBody3D's validators through nodeBaseTypes, so the
-// sibling slice's registrations must be live for mass / center_of_mass_mode /
-// physics_material_override to be checked at all. Its RULE is imported for the
-// same reason: `rigidBodyLinterRule` matches on descendsFrom, so it is what
-// supplies the shared body checks here, and without it they would be missing
-// rather than merely renamed.
-// The full linter barrel is deliberately NOT imported: it would also register
-// the CollisionShape3D rule, whose shapeless-shape error the testkit's canonical
-// accept-child would then trip on every case.
+// RigidBody3D's validators and its descendsFrom rule reach VehicleBody3D only
+// while the sibling slice is registered, so both are imported. The full linter
+// barrel is not: its CollisionShape3D rule would error on the testkit's
+// shapeless accept-child in every case.
 import '../../../base/node3d/linterParser';
 import '../rigidbody3d/linterParser';
 import '../rigidbody3d/linter';
@@ -53,9 +48,9 @@ describe('VehicleBody3D Linter', () => {
       );
     });
 
-    // VehicleBody3D declares only engine_force/brake/steering of its own; mass,
-    // center_of_mass_mode and physics_material_override must reach it through
-    // the RigidBody3D link in nodeBaseTypes, and transform/visible through Node3D.
+    // VehicleBody3D declares only engine_force, brake and steering. mass,
+    // center_of_mass_mode and physics_material_override reach it through the
+    // RigidBody3D link in nodeBaseTypes, and transform and visible through Node3D.
     runPropertyValidation(
       // 'no-error': a wheel-less body always carries the advisory
       // vehiclebody3d-needs-wheels warning, which these format cases are not about.
@@ -84,9 +79,8 @@ describe('VehicleBody3D Linter', () => {
   });
 
   // The shared body checks below are RigidBody3D's, reaching VehicleBody3D
-  // through `rigidBodyLinterRule`'s descendsFrom matcher. They are asserted here
-  // because a vehicle is where they most need to still fire; the rule name being
-  // `rigidbody3d-*` is the point, not an accident.
+  // through `rigidBodyLinterRule`'s descendsFrom matcher, so each rule name is
+  // `rigidbody3d-*` by design.
   describe('Semantic Validation (Resource References)', () => {
     it('errors when physics_material_override points at a missing resource', () => {
       expectDiagnostic(
@@ -130,7 +124,7 @@ describe('VehicleBody3D Linter', () => {
     });
 
     it('still reports when every wheel is nested under a container — Godot attaches only direct children', () => {
-      // VehicleWheel3D registers itself via cast_to<VehicleBody3D>(get_parent()),
+      // VehicleWheel3D registers itself through cast_to<VehicleBody3D>(get_parent()),
       // so a wheel under an intermediate node is never attached and the vehicle
       // has no working wheels at all.
       expectDiagnostic(
@@ -159,9 +153,8 @@ describe('VehicleBody3D Linter', () => {
 
   describe('Semantic Validation (Scaled Transform, inherited from RigidBody3D)', () => {
     // rigid_body_3d.cpp:667 is RigidBodyLinterRule's (rigidbody3d-scale-overridden-at-runtime),
-    // which reaches VehicleBody3D through the same `descendsFrom` matcher as
-    // the rest of the shared body set. No copy here (`vehiclebody3d-scaled-transform`),
-    // so a scaled VehicleBody3D is not warned about twice under two rule names.
+    // reaching VehicleBody3D through `descendsFrom`. The vehicle rule has no
+    // copy, so a scaled VehicleBody3D is not warned about twice.
     it('warns on a scaled transform — the physics engine overrides it at runtime', () => {
       expectDiagnostic(
         scene(
@@ -178,7 +171,7 @@ describe('VehicleBody3D Linter', () => {
     });
 
     it('stays quiet on a rotated but unscaled transform (edge)', () => {
-      // A pure rotation keeps every basis column at unit length; comparing the
+      // A pure rotation keeps every basis column at unit length. Comparing the
       // raw matrix entries instead of the column lengths would false-positive here.
       const content = scene(
         node(
@@ -194,7 +187,7 @@ describe('VehicleBody3D Linter', () => {
 
     // rigid_body_3d.cpp:665-667 measures `get_basis().get_scale()` and warns when
     // any axis is further than 0.05 from 1. An infinite basis entry makes that
-    // column's length infinite, so Godot warns; a `nan` one makes every
+    // column's length infinite, so Godot warns. A `nan` one makes every
     // comparison false, so it does not.
     it('warns on an infinite basis component, which Godot measures as scaled', () => {
       const diagnostic = expectDiagnostic(
@@ -209,18 +202,15 @@ describe('VehicleBody3D Linter', () => {
         ),
         { ruleName: 'rigidbody3d-scale-overridden-at-runtime', severity: 'warning' }
       );
-      // The measured column lengths, never NaN — the message is the only place
-      // the read shows, and `parseFloat` would make it unreachable entirely.
+      // The measured column lengths, never NaN: the message is the only place
+      // the read shows, and `parseFloat` would make it unreachable.
       expect(diagnostic.message).toContain('(Infinity, 1, 1)');
     });
 
-    // A `nan` component poisons the DETERMINANT, not just its own column, and
-    // `get_scale` multiplies every axis by that one shared sign
-    // (basis.cpp:321-322). `SIGN(nan)` is 0 — both of its comparisons are false
-    // (typedefs.h:124-126) — so the clean columns come back as exactly 0, and
-    // `abs(0 - 1) > 0.05` (rigid_body_3d.cpp:666) is true for them. Only the nan
-    // axis itself stays silent. An unsigned reading makes the whole node look
-    // quiet instead.
+    // A `nan` component poisons the determinant, whose sign `get_scale` applies to
+    // every axis (basis.cpp:321-322). `SIGN(nan)` is 0 (typedefs.h:124-126), so the
+    // clean columns read 0 and `abs(0 - 1) > 0.05` (rigid_body_3d.cpp:666) warns
+    // for them. Only the nan axis stays silent.
     it('warns on a nan basis component, since the poisoned determinant zeroes the rest', () => {
       const content = scene(
         node(
@@ -259,9 +249,8 @@ describe('VehicleBody3D Linter', () => {
     });
 
     it('collects the inherited RigidBody3D checks, each reported exactly once', () => {
-      // VehicleBody3D IS a RigidBody3D, so the base rule must reach it. The
-      // vehicle rule therefore declares only what the base one does not, and
-      // this pins that split: no condition may arrive under both prefixes.
+      // VehicleBody3D is a RigidBody3D, so the base rule reaches it and the
+      // vehicle rule declares only the rest: no condition arrives under both prefixes.
       const diagnostics = lint(scene(node('VehicleBody3D', {}, { name: 'Vehicle' })));
       const names = diagnostics.map((d) => d.ruleName);
 

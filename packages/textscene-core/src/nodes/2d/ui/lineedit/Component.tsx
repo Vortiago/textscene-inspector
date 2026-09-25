@@ -1,54 +1,8 @@
 /**
- * `<LineEdit>` — the native (WebGL canvas) painter for `LineEdit`: the
- * `normal`/`read_only` chrome (unless `flat`), ONE clipped run of text —
- * whichever string `lineEditDisplayText` (this Control's own `_shape()` port)
- * says to paint, at whichever colour that string's state calls for, per
- * `alignment` — the active icon (`right_icon`, or the clear button in its
- * place while it is showing), and the caret while `caret_force_displayed`.
- * No selection, no IME: this is a static preview, never editing/focused, so
- * `LineEdit::_validate_caret_can_draw()`'s other branch never fires.
- *
- * Tint: the walker's `tint` prop — `self_modulate` already folded onto the
- * inherited `modulate`. `tint.own` (raw sRGB) is handed
- * to `<StyleBoxQuad>`'s `color` prop for the chrome, and multiplied into the
- * font/icon/caret colours before their own single sRGB→linear conversion —
- * `Button`'s established ordering.
- *
- * ICON. `right_icon`/the clear button inset the text from the right
- * (`nativeSolver.ts`'s own doc on `layoutLineEditContent`), so this painter's
- * `content` layout is threaded the resolved icon's width whenever one draws —
- * the shared engine's clip/pen-offset math then sees the SAME narrowed
- * width the text itself is laid out against. `right_icon` goes through
- * `useTexture2D` (`solveNode.resources`, its own scope) like
- * `texturerect/Component.tsx`'s texture, retagged `NoColorSpace` for the 2D
- * canvas the same way (`useUndecodedTexture`); the clear button's icon goes
- * through `useNodeIcon` (preferring a themed `"clear"` override over the
- * vendored default), which already applies that same tag internally. Both
- * icons' NATURAL sizes come from `solveNode.textureSlots`
- * (`nativeSolver.ts`'s `lineEditTextureSlots`), not from the loaded texture's
- * own `.image` — the solver needs that size before any texture has painted a
- * pixel, so it is declared once and read here rather than re-derived.
- *
- * CLIPPING. `Control::clip_contents` is never modelled generically in this
- * codebase (`ScrollContainer` is the one type that opts a
- * SUBTREE into it); `LineEdit` instead clips only the single run it draws
- * ITSELF, to `layoutLineEditContent`'s own `contentRect` (the rect inset by
- * the ACTIVE stylebox's margins, and the active icon's width — `ofs_max`/
- * `x_ofs`'s box in `NOTIFICATION_DRAW`, `line_edit.cpp:1392-1485`).
- * `useWorldClipPlanes` (`native/controlClipping.tsx`) does the work — local
- * planes for the rect it is given, transformed to world space through the
- * `<CanvasItemGroup ref={anchorRef}>` below and merged onto whatever this
- * node inherited, so an enclosing `ScrollContainer`'s clip is narrowed
- * further and never overridden. The icon quad itself is NOT clipped to this
- * rect (`ControlQuad` reads only the ambient clip it inherits) — Godot draws
- * it unclipped too, positioned inside the margin so it never needs to be.
- *
- * Unlike `ScrollContainer`, this painter has no descendants to re-publish the
- * merged planes to (`LineEdit` draws no children), so it only CONSUMES the
- * result for its own `<TextRun>` — no `ControlClipProvider` here.
- *
- * This component never checks `props.visible`, never renders `children`, and
- * never applies a transform — all three are `ControlCanvasWalker`'s job.
+ * `<LineEdit>`, the native painter: `normal` or `read_only` chrome unless `flat`, one clipped run of the
+ * text `lineEditDisplayText` picks in its state's colour, the active icon, and the caret while
+ * `caret_force_displayed`, since a static preview never focuses and `_validate_caret_can_draw()`'s other
+ * branch never fires. It draws no selection or IME. `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -87,7 +41,7 @@ import type { LineEditProperties } from './types';
 const HORIZONTAL_ALIGNMENT_LEFT = 0;
 const DEFAULT_CARET_WIDTH_PX = 1;
 
-/** `Color(1, 1, 1, !is_editable() ? .5*.9 : .9)` — `right_icon`'s own draw-time tint (`line_edit.cpp:1443`), never used for the clear button. */
+/** `Color(1, 1, 1, !is_editable() ? .5*.9 : .9)`: `right_icon`'s draw-time tint (`line_edit.cpp:1443`), never the clear button's. */
 function rightIconLocalColor(editable: boolean): ControlColor {
   return { r: 1, g: 1, b: 1, a: editable ? 0.9 : 0.5 * 0.9 };
 }
@@ -99,23 +53,20 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const styleState = resolveLineEditStyleState(editable);
   const baseStyleBox = pickLineEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, styleState);
 
-  // --- Text: which string, which theme colour, shaped -----------------------
+  // Text: which string, which theme colour, shaped
   const { text, isPlaceholder } = lineEditDisplayText(props);
   const hasText = text.length > 0;
   const textState = resolveLineEditTextState(editable, isPlaceholder);
   const { fontSizePx, color: baseFontColor } = lineEditTextTheme(solveNode, props, textState, { theme });
+  // `tint.own` is `self_modulate` folded onto the inherited `modulate`, raw sRGB. The chrome takes it as
+  // `<StyleBoxQuad>`'s `color`, and each font, icon and caret colour multiplies it before its one
+  // sRGB-to-linear conversion, as `Button` does.
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
 
-  // `lineSpacingPx: 0`, not the shared default of 3: `layout.heightPx` is what
-  // feeds `layoutLineEditContent`'s vertical centring as Godot's
-  // `shaped_text_get_size(text_rid).y`, which is the run's bare ascent+descent.
-  // LineEdit sets no `line_spacing` theme constant at all — the same `0` its own
-  // `lineEditMinimumSize` passes to `getLinePitchPx`. Shaping with the default
-  // instead makes the height 3px too tall and lifts every field's text 1.5px
-  // above where both Godot and this slice's own solver put it, past the top of
-  // the content rect it is then clipped to.
-  // Read INSIDE the render body, not the `useMemo` below — see Label's own
-  // Component.tsx for why.
+  // `lineSpacingPx: 0`, not the shared 3: `layout.heightPx` stands in for `shaped_text_get_size(text_rid).y`,
+  // bare ascent plus descent, in the vertical centring. LineEdit sets no `line_spacing` (`lineEditMinimumSize`),
+  // and a spacing of 3 lifts the text 1.5px, past the top of its clip rect. Read in the render body, not
+  // the `useMemo` below, for the reason Label's Component.tsx gives.
   const fontMetrics = resolveNodeFontMetrics(solveNode, LINE_EDIT_THEME_FONT_KEY);
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
   const layout: TextLayoutResult | null = useMemo(
@@ -133,12 +84,14 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     [hasText, text, fontSizePx, fontMetrics, props.drawControlChars]
   );
 
-  // --- Icon: which one draws, its resolved size --------------------------
+  // Icon: which one draws, its resolved size
+  // Natural sizes come from `solveNode.textureSlots` (`lineEditTextureSlots`), not the loaded texture's
+  // `.image`: the solver needs them before any texture loads. The content layout takes the icon width,
+  // so the clip and pen offset see the width the text is laid out against.
   const rightIconNaturalSize = solveNode.textureSlots['right_icon'] ?? null;
   const clearIconNaturalSize = solveNode.textureSlots['clear'] ?? LINE_EDIT_CLEAR_ICON_NATURAL_SIZE;
   // `display_clear_icon = !using_placeholder && is_editable() && clear_button_enabled`
-  // (line_edit.cpp:1289,1444) wins over `right_icon` outright — the two are
-  // never drawn together.
+  // (line_edit.cpp:1289,1444) replaces `right_icon`: the two never draw together.
   const displayClearIcon = !isPlaceholder && editable && props.clearButtonEnabled === true;
   const activeIcon: 'clear' | 'right' | 'none' = displayClearIcon
     ? 'clear'
@@ -157,7 +110,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   );
   const hasIcon = activeIcon !== 'none';
 
-  // --- Content layout: content rect (clip) + pen offset ----------------------
+  // Content layout: the clip rect and the pen offset
   const content = useMemo(
     () =>
       layoutLineEditContent({
@@ -173,11 +126,15 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     [rect.w, rect.h, baseStyleBox.contentMargin, props.alignment, layout, hasIcon, iconSize.x, solveNode.rtl]
   );
 
-  // Text is clipped to the content rect, never the whole widget.
+  // Only this run clips, to `contentRect` (`ofs_max`/`x_ofs`'s box, `line_edit.cpp:1392-1485`), since
+  // `clip_contents` is not modelled generically. The planes merge onto the inherited clip, so an enclosing
+  // ScrollContainer only narrows, and with no children no `ControlClipProvider` is needed. The icon stays
+  // unclipped, as Godot draws it inside the margin.
   const { anchorRef, clippingPlanes } = useWorldClipPlanes(content.contentRect);
 
-  // Both hooks run unconditionally (fixed hook order) and each degrades to
-  // "nothing to show" on its own absent input — `useNodeIcon`'s own doc.
+  // Both hooks run in a fixed order and each shows nothing on an absent input (`useNodeIcon`).
+  // `right_icon` loads in its own scope and is retagged `NoColorSpace` for the 2D canvas
+  // (`useUndecodedTexture`). `useNodeIcon` prefers a themed `"clear"` and applies the same tag.
   const { externalResources, internalResources } = solveNode.resources;
   const { texture: rightIconRawTexture } = useTexture2D(props.rightIcon, externalResources, internalResources);
   const rightIconTexture = useUndecodedTexture(rightIconRawTexture);
@@ -190,15 +147,14 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       : rightIconLocalColor(editable);
   const tintedIconColor = useMemo(() => tintColor(iconLocalColor, tint.own), [iconLocalColor, tint.own]);
   const iconLinearColor = useMemo(() => godotColorToLinear(tintedIconColor), [tintedIconColor]);
-  // Point2(width - icon.width - margin_right, height/2 - icon.height/2) (line_edit.cpp:1457) —
-  // `height/2` is an INTEGER division in the source (both `int`), the rest float.
-  // RTL replaces the x outright with the left margin (line_edit.cpp:1458-1460).
+  // Point2(width - icon.width - margin_right, height/2 - icon.height/2) (line_edit.cpp:1457), where
+  // `height/2` is an integer division. RTL puts the x at the left margin (line_edit.cpp:1458-1460).
   const iconPos = {
     x: solveNode.rtl ? baseStyleBox.contentMargin.left : rect.w - iconSize.x - baseStyleBox.contentMargin.right,
     y: Math.trunc(rect.h / 2) - iconSize.y / 2,
   };
 
-  // --- Caret: only while caret_force_displayed --------------------------
+  // Caret: only while caret_force_displayed
   const caretWidthPx = solveNode.constants['caret_width'] ?? DEFAULT_CARET_WIDTH_PX;
   const caretColor = solveNode.colors['caret_color'] ?? LINE_EDIT_DEFAULT_CARET_COLOR;
   const tintedCaretColor = useMemo(() => tintColor(caretColor, tint.own), [caretColor, tint.own]);

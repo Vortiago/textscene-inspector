@@ -1,17 +1,7 @@
-; GraphEdit's minimap at a NON-default size. The minimap is a bottom-right
-; anchored panel whose four offsets are rebuilt from the size
-; (graph_edit.cpp:2773-2778), so a regression that keeps the constructor's
-; 240x160 — or that anchors from the wrong corner — still lands in the right
-; corner at the default and is invisible in every other scene. The size also
-; drives the minimap's own graph-to-panel letterboxing (:86-99), so the node
-; rect inside it moves too.
-; Every fixture in this family shares one GraphEdit rect and one GraphNode,
-; and `scroll_offset` is deliberately ABSENT from all but
-; unit-graph-edit-scroll-offset-clamped.tscn, which exists to move it:
-; GraphEdit's own `set_scroll_offset` clamps against min/max bounds no laid-out
-; child has widened while a scene's properties are applied (graph_edit.cpp:407),
-; so an authored offset moves the grid, the nodes AND the minimap camera at once
-; and would mask the one variable each file exists to move.
+; GraphEdit's minimap at a non-default size. The minimap is a bottom-right anchored panel whose
+; four offsets derive from the size (graph_edit.cpp:2773-2778), so keeping the constructor's
+; 240x160, or anchoring from the wrong corner, is invisible at the default. The size also drives
+; the minimap's graph-to-panel letterboxing (:86-99), so the node rect inside it moves too.
 
 [gd_scene load_steps=1 format=3 uid="uid://unitgraphedminsize"]
 
@@ -20,6 +10,7 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
+; No `scroll_offset`, as in the whole family: unit-graph-edit-family.md says why.
 [node name="Graph" type="GraphEdit" parent="."]
 layout_mode = 1
 offset_left = 8.0

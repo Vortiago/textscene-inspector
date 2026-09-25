@@ -1,9 +1,7 @@
 /**
- * Font processor — the fifth peer of texture/material/GLB/scene, sharing the
- * same createResourceProcessor cache/inflight/event loop. Exercises the
- * actual corpus shapes: a raw binary font file, a FontFile .tres wrapper
- * whose fallbacks point at that raw file, and a FontVariation whose
- * base_font crosses back into the SAME wrapper file.
+ * The font processor on the corpus shapes: a raw binary font file, a FontFile
+ * .tres whose fallbacks point at it, and a FontVariation whose base_font
+ * crosses back into the same wrapper file.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { FileEventBus } from '../FileEventBus';
@@ -97,8 +95,8 @@ describe('createFontProcessor', () => {
     expect(fallback.bytes).toBe(otfBytes);
     expect(fallback.mimeType).toBe('font/otf');
 
-    // The fallback settles on its OWN bus entry too — a future consumer
-    // requesting the raw .otf directly gets the same identity back.
+    // The fallback settles on its own bus entry too, so a consumer requesting
+    // the raw .otf directly gets the same identity back.
     expect(processor.getCached('res://theme/fonts/montserrat_extra_bold.otf')).toBe(fallback);
   });
 
@@ -171,14 +169,10 @@ describe('createFontProcessor', () => {
   });
 
   it('fails loudly (never hangs pending) for a sub-resource address into a .tscn — the owning file is not a .tres', async () => {
-    // A scene's OWN inline FontVariation/FontFile is resolved synchronously
-    // elsewhere (useSceneResources), never through this processor — but
-    // nothing stops a caller from constructing this address anyway, and
-    // `shouldProcess` cannot see the `::SubId` to decline it up front (it
-    // only ever sees the bare file path). Without `buildFontResource`
-    // throwing on a non-`.tres` file, this address would sit `inflight`
-    // forever: no `loaded`, no `failed`, a `useResource` consumer stuck in
-    // `pending` permanently.
+    // A scene's own inline FontVariation/FontFile resolves in useSceneResources,
+    // but a caller can still build this address, and `shouldProcess` sees only
+    // the bare file path. Unless `buildFontResource` throws on a non-`.tres`
+    // file, the address sits `inflight` and a `useResource` consumer `pending`.
     const tscn = '[gd_scene load_steps=1 format=3]\n\n[node name="Root" type="Node"]\n';
     const { processor, eventBus } = setup({ 'res://scene.tscn': tscn });
 
@@ -216,12 +210,10 @@ describe('createFontProcessor', () => {
   });
 
   it('fails loudly (never silently ignores) a non-font, non-.tres text file requested through it', async () => {
-    // shouldProcess accepts every loaded file — see createFontProcessor's
-    // docstring for why a `.gd` script gets the SAME treatment as a
-    // sub-resource address into a `.tscn`: `buildFontResource` is the one
-    // place that must decide, and it decides by trying to parse and
-    // throwing, never by silently declining and leaving the address
-    // `inflight` forever.
+    // shouldProcess accepts every loaded file, so a `.gd` script gets the same
+    // treatment as a sub-resource address into a `.tscn`: `buildFontResource`
+    // decides by parsing and throwing, never by declining and leaving the
+    // address `inflight` forever.
     const { processor, eventBus } = setup({ 'res://scripts/thing.gd': 'extends Node\n' });
 
     const failed = eventBus.once<Error>('font', 'failed', 'res://scripts/thing.gd', 2000);
@@ -232,11 +224,10 @@ describe('createFontProcessor', () => {
     expect(processor.isLoading('res://scripts/thing.gd')).toBe(false);
   });
 
-  // `base_font`/`fallbacks` are ordinary ExtResource paths, so nothing stops two
-  // files naming each other — Godot itself merely errors on the pair. Without a
-  // guard each load parks on `eventBus.once` waiting for the other, which is
-  // waiting for it: neither `loaded` nor `failed` ever fires, `isLoading` stays
-  // true for both addresses forever, and the parked subscriptions leak.
+  // `base_font`/`fallbacks` are ordinary ExtResource paths, so two files can name
+  // each other, which Godot only errors on. Unguarded, each load parks on
+  // `eventBus.once` for the other: neither `loaded` nor `failed` fires,
+  // `isLoading` stays true for both, and the parked subscriptions leak.
   it('breaks a base_font cycle instead of parking both loads forever', async () => {
     const cyclic = (other: string): string =>
       [
@@ -387,11 +378,11 @@ describe('createFontProcessor', () => {
     processor.request('res://hub.tres');
     await flush();
     // The first leaf load closed the ring while hub was parked on it, so its
-    // own `base_font` is null — and hub is STILL parked, on the slow leg.
+    // own `base_font` is null, and hub is still parked on the slow leg.
     expect((processor.getCached('res://leaf.tres') as FontVariationResource).baseFont).toBeNull();
     expect(processor.isLoading('res://hub.tres')).toBe(true);
 
-    // Reload the leaf. Hub no longer waits on it, so this wait settles.
+    // Reload the leaf. Hub does not wait on it now, so this wait settles.
     const reloaded = eventBus.once<FontResource>('font', 'loaded', 'res://leaf.tres', 2000);
     processor.clearCache('res://leaf.tres');
     processor.request('res://leaf.tres');

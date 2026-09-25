@@ -1,22 +1,7 @@
 /**
- * Semantic linter rule for VoxelGI, from Godot's own
- * `VoxelGI::get_configuration_warnings()` (voxel_gi.cpp:538-550):
- *
- *     PackedStringArray warnings = VisualInstance3D::get_configuration_warnings();
- *     if (OS::get_singleton()->get_current_rendering_method() == "gl_compatibility") {
- *         warnings.push_back(RTR("VoxelGI nodes are not supported when using the Compatibility renderer yet. ..."));
- *     } else if (OS::get_singleton()->get_current_rendering_method() == "dummy") {
- *         warnings.push_back(RTR("VoxelGI nodes are not supported when using the Dummy renderer."));
- *     } else if (probe_data.is_null()) {
- *         warnings.push_back(RTR("No VoxelGI data set, so this node is disabled. Bake static objects to enable GI."));
- *     }
- *     return warnings;
- *
- * The first two branches read `OS::get_current_rendering_method()`, runtime
- * state no `.tscn` carries — not modelled. The third is the property's own
- * ADD_PROPERTY name, `data` (voxel_gi.cpp:573), not the C++ member
- * `probe_data`, and is checkable directly: absence IS the trigger, the same
- * shape as `decal-requires-texture` and `gpuparticles3d-missing-process-material`.
+ * VoxelGI rule from `VoxelGI::get_configuration_warnings()` (voxel_gi.cpp:538-550). Its first two
+ * branches read `OS::get_current_rendering_method()`, runtime state no `.tscn` carries. The third
+ * fires on a null `probe_data`, serialised as `data` (voxel_gi.cpp:573), so absence is the trigger.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';

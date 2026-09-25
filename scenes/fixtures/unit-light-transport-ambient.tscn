@@ -1,19 +1,7 @@
-; Flat ambient, isolated — the same experiment as `unit-light-transport-direct`
-; with the sun replaced by `AMBIENT_SOURCE_COLOR`.
-;
-; Godot adds a constant ambient as `ambient_light * albedo` with no 1/PI, while
-; three's `getAmbientLightIrradiance` returns the colour unscaled and then
-; multiplies by `albedo/PI` — the same factor the directional path needs, on a
-; path that is easy to miss because it is the one Godot writes most simply.
-;
-; White ambient at energy 1.0 therefore renders the surface's own albedo, and
-; the unshaded square sitting on the ground IS that albedo: when the scale is
-; right the square is invisible.
-;
-; The DirectionalLight3D is here at energy 0 purely to suppress Godot's editor
-; preview sun — the yield rule counts node TYPES and never looks at energy or
-; visibility (ADR-0025), so a dark light is the portable way to say "this scene
-; brings its own sun, and it emits nothing".
+; Flat ambient, isolated: `unit-light-transport-direct` with the sun replaced by
+; `AMBIENT_SOURCE_COLOR`. Godot adds constant ambient as `ambient_light * albedo` with no 1/PI,
+; while three's `getAmbientLightIrradiance` returns the colour unscaled and multiplies by
+; `albedo/PI`: the same factor the directional path needs, and easy to miss.
 [gd_scene load_steps=6 format=3]
 
 [sub_resource type="Environment" id="Env_1"]
@@ -45,6 +33,9 @@ shading_mode = 0
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Env_1")
 
+; Energy 0 only suppresses Godot's editor preview sun: the yield rule counts node types, never
+; energy or visibility (ADR-0025), so a dark light says "this scene brings its own sun, and it
+; emits nothing".
 [node name="DarkSun" type="DirectionalLight3D" parent="."]
 light_energy = 0.0
 
@@ -52,6 +43,8 @@ light_energy = 0.0
 mesh = SubResource("Ground_1")
 surface_material_override/0 = SubResource("Lit_1")
 
+; White ambient at energy 1.0 renders the surface's own albedo, and this unshaded square is that
+; albedo: when the scale is right the square is invisible.
 [node name="UnshadedReference" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, 0)
 mesh = SubResource("Patch_1")

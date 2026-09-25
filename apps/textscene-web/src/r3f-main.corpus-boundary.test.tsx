@@ -1,10 +1,7 @@
 /**
- * The corpus boundary is crossed with the viewport EMPTY — the invariant these
- * lock down is that nothing re-points resource resolution while a scene from
- * the outgoing corpus is still the rendered content. The mechanism a breach
- * feeds (clear → invalidation → re-request under the new root) is documented in
- * `useCorpusRoot`; the leak it caused was real, e.g. loading `unit-decal.tscn`
- * after a vendored demo downloaded `dungeon.tscn`'s `res://tileset/tileset.tres`.
+ * The corpus boundary is crossed with the viewport empty: nothing re-points resource
+ * resolution while a scene from the outgoing corpus is rendered. `useCorpusRoot` describes
+ * the leak a breach causes.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -21,7 +18,7 @@ import { fixtures } from './fixturesAll';
 import { buildFixtureTree } from './fixtureTree';
 import { flattenLeaves, type Leaf } from './fixtureTree.testkit';
 
-/** A vendored demo fixture — its corpus root differs from the base ('') one. */
+/** A vendored demo fixture, whose corpus root differs from the base ('') one. */
 const DEMO = fixtures.find((f) => f.root) as (typeof fixtures)[number];
 /** Two base-corpus fixtures (root ''), the second for the same-corpus control. */
 const [BASE, BASE_OTHER] = fixtures.filter((f) => !f.root) as [
@@ -44,9 +41,8 @@ const ROOT_NAME: Record<string, string> = {
 };
 
 /**
- * Scene fetches resolve immediately, EXCEPT for `gatedFile`, whose fetch hangs
- * until `releaseGate()` — the window in which the outgoing scene is still on
- * screen and the incoming one has not arrived.
+ * Scene fetches resolve at once, except `gatedFile`, which hangs until `releaseGate()`: the
+ * window where the outgoing scene is on screen and the incoming one has not arrived.
  */
 let releaseGate: () => void = () => {};
 function mockFetch(gatedFile?: string) {
@@ -58,7 +54,7 @@ function mockFetch(gatedFile?: string) {
     const path = String(url).replace(/^.*\/fixtures\//, '');
     const rootName = ROOT_NAME[path];
     if (rootName === undefined) {
-      // A resource fetch — never resolves to anything usable here.
+      // A resource fetch, which never resolves to anything usable here.
       return { ok: false, status: 404 } as Response;
     }
     if (gatedFile && path === gatedFile) await gate;
@@ -73,7 +69,7 @@ function resetPersistence(path = '/') {
   try {
     globalThis.localStorage.clear();
   } catch {
-    // happy-dom may throw in edge cases; ignore.
+    // happy-dom can throw here, and clearing storage is optional.
   }
   window.history.replaceState(null, '', path);
 }
@@ -102,12 +98,9 @@ let setResourceRoot: ReturnType<typeof vi.spyOn>;
 let clearCaches: ReturnType<typeof vi.spyOn>;
 
 /**
- * Records whether the outgoing demo was still on screen the FIRST time a
- * re-point happened — the leak's fingerprint, since every node rendered then is
- * a consumer that answers with a fetch under the incoming corpus root. First
- * occurrence only: a later, harmless repeat once the swap has settled must not
- * paper over it. `value` stays `undefined` until it fires, so `toBeNull()` also
- * fails a re-point that never happened.
+ * Whether the outgoing demo was on screen at the first re-point: each node rendered then
+ * fetches under the incoming root. First only, so a harmless later repeat cannot hide it.
+ * `value` stays `undefined` until it fires, so `toBeNull()` also fails a missing re-point.
  */
 function firstDemoSighting() {
   let value: HTMLElement | null | undefined;
@@ -166,11 +159,9 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
 
     await switchViaPalette(BASE.file);
 
-    // The incoming fixture's fetch is still in flight. Re-pointing resolution
-    // now is exactly the leak: the demo's consumers — which r3f unmounts on its
-    // own reconciler's schedule, not inside the teardown's flushSync — would
-    // answer the cache clear by re-requesting their res:// paths under the base
-    // corpus. The root waits for the swap, a network round-trip away.
+    // The incoming fetch is in flight. r3f unmounts the demo's consumers on its own schedule,
+    // outside the teardown's flushSync, so a re-point now would make them re-request their
+    // res:// paths under the base corpus. The root waits for the swap.
     expect(setResourceRoot).not.toHaveBeenCalled();
     expect(clearCaches).not.toHaveBeenCalled();
     // And nothing of the demo is left rendering while the base fixture loads.
@@ -210,9 +201,8 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     });
     await waitForScene('UploadedRoot');
 
-    // An uploaded scene lives in the base ('') corpus, so this drop crossed a
-    // boundary — and the demo's scene was torn down before the clear, exactly
-    // as on a fixture switch.
+    // An upload lives in the base ('') corpus, so this drop crossed a boundary, and the demo
+    // was torn down before the clear, as on a fixture switch.
     expect(clearCaches).toHaveBeenCalledTimes(1);
     expect(atClear.value).toBeNull();
     expect(setResourceRoot).toHaveBeenCalledWith('');
@@ -220,9 +210,8 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
   });
 
   it('refetches when the user re-picks a fixture whose load failed', async () => {
-    // The scene fetch fails once, then succeeds — re-picking the same entry is
-    // the only retry affordance, and a corpus crossing leaves nothing on screen
-    // to fall back to.
+    // The scene fetch fails once, then succeeds. Picking the same entry again is the only
+    // retry, and a corpus crossing leaves nothing on screen to fall back to.
     let attempt = 0;
     globalThis.fetch = vi.fn().mockImplementation(async (url: unknown) => {
       const path = String(url).replace(/^.*\/fixtures\//, '');
@@ -257,8 +246,8 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
 
     await switchViaPalette(BASE_OTHER.file);
 
-    // The teardown is the corpus-boundary price only — a switch within one
-    // corpus still holds the last valid render until the new content lands.
+    // Only a corpus crossing tears down: a switch within one corpus holds the last valid
+    // render until the new content lands.
     expect(screen.queryByText('BaseRoot')).toBeTruthy();
 
     await act(async () => {
@@ -267,8 +256,8 @@ describe('corpus boundary — the root never moves under a mounted scene', () =>
     });
     await waitForScene('OtherBaseRoot');
 
-    // Same res:// namespace on both sides — no re-routing, and above all no
-    // cache clear, whose invalidation burst is what leaks across corpora.
+    // The same res:// namespace on both sides, so no re-routing and no cache clear, whose
+    // invalidation burst leaks across corpora.
     expect(setResourceRoot).not.toHaveBeenCalled();
     expect(clearCaches).not.toHaveBeenCalled();
   });

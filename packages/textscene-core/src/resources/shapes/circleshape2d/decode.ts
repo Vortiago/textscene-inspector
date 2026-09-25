@@ -1,5 +1,5 @@
 /**
- * CircleShape2D decode — property bag in, circle radius out.
+ * CircleShape2D decode: property bag in, circle radius out.
  *
  * `circle_shape_2d.cpp:46` ERR_FAILs a negative radius, so one is refused rather
  * than stored.

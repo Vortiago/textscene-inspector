@@ -1,16 +1,7 @@
 /**
  * One resolved TileSet per distinct `tile_set` among a flat sort's y-sorted
- * TileMapLayer items.
- *
- * A tile row's sort key comes from its OWN grid's pitch, so two y-sorted layers
- * naming different TileSets cannot share one model: bucketing 64px rows against
- * a 32px grid interleaves them with their siblings at the wrong depths, while
- * `TileGroupRenderer` re-resolves per layer and draws each row from the right
- * one. The sorter and the renderer have to agree.
- *
- * Resolved by RECURSION because `useTileSetModel` is a hook and the ref count is
- * data-dependent: each level calls it once for its own ref and hands the rest to
- * the next, so every component instance keeps a fixed hook order.
+ * TileMapLayer items. A tile row's sort key comes from its own grid's pitch, and
+ * `TileGroupRenderer` draws each row from its own model, so the sorter must agree.
  */
 
 import { useMemo, type ReactNode } from 'react';
@@ -30,11 +21,9 @@ export function tileSetRefsOf(items: readonly YSortItem[]): string[] {
 }
 
 /**
- * Resolve `refs` and hand the loaded models to `children`, keyed by ref.
- *
- * Only loaded models are in the map, so a ref that is missing from it is one
- * whose TileSet has not arrived — the caller leaves that layer unexpanded, as it
- * does while any TileSet is still loading.
+ * Resolve `refs` and hand the loaded models to `children`, keyed by ref. A ref
+ * missing from the map has not arrived, and the caller leaves that layer unexpanded.
+ * Recursive, one `useTileSetModel` per level, so each instance keeps a fixed hook order.
  */
 export function TileSetModels({
   refs,

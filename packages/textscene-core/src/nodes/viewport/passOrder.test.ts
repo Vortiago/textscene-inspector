@@ -1,8 +1,6 @@
 /**
- * `orderViewportPasses` — pure topological sort over a viewport pass
- * dependency graph. No React, no THREE: the graph is a plain array of
- * `{ id, dependsOn }` records, so the sort itself is asserted directly rather
- * than inferred from a rendered frame.
+ * `orderViewportPasses`: the topological sort over viewport pass dependencies,
+ * asserted on plain `{ id, dependsOn }` records rather than a rendered frame.
  */
 import { describe, expect, it } from 'vitest';
 import { orderViewportPasses } from './passOrder';
@@ -27,7 +25,7 @@ describe('orderViewportPasses', () => {
   });
 
   it('a 3-deep chain orders inner -> outer', () => {
-    // Outer samples Middle, Middle samples Inner — Inner must render first.
+    // Outer samples Middle, and Middle samples Inner, so Inner renders first.
     const result = orderViewportPasses([
       { id: 'Outer', dependsOn: ['Middle'] },
       { id: 'Middle', dependsOn: ['Inner'] },

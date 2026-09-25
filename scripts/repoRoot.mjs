@@ -1,15 +1,7 @@
 /**
- * The monorepo root, found by walking up to `pnpm-workspace.yaml`.
- *
- * Depth-independent on purpose. Counting `..` from a module's own
- * `import.meta.url` is correct exactly until the module moves, and the 150-200
- * LOC ceiling keeps moving them: `scripts/visual/run.mjs` derived its baseline
- * directory that way and going one level down would have repointed all 145
- * goldens at a directory that does not exist — green under `node --check`,
- * eslint and vitest the whole way, and under `--update` it would have written
- * 145 PNGs into the wrong place rather than failing.
- *
- * Same technique as `parser/testing/parserKit.ts` on the TypeScript side.
+ * The monorepo root, found by walking up to `pnpm-workspace.yaml`, as `parser/testing/parserKit.ts`
+ * does in TypeScript. A count of `..` from `import.meta.url` breaks silently when a module moves:
+ * every check stays green, and `--update` writes goldens into the wrong directory.
  */
 
 import { existsSync } from 'node:fs';
@@ -17,12 +9,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * Walk up from `from` (default: this file) until a directory holds
- * `pnpm-workspace.yaml`.
- *
- * Throws rather than falling back to `process.cwd()`: a wrong root resolves to
- * paths that simply do not exist, and a caller that then writes to them is the
- * failure this module exists to prevent.
+ * Walks up from `from` (default: this file) until a directory holds `pnpm-workspace.yaml`. Throws
+ * rather than fall back to `process.cwd()`, since a caller would then write to a wrong root.
  */
 export function findRepoRoot(from = dirname(fileURLToPath(import.meta.url))) {
   let dir = from;

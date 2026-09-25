@@ -1,5 +1,5 @@
 /**
- * `graphElementMinimumSize`/`graphElementLayout` vs
+ * `graphElementMinimumSize`/`graphElementLayout` versus
  * `scene/gui/graph_element.cpp` (Godot 4.6.3).
  */
 import { describe, expect, it } from 'vitest';
@@ -54,7 +54,7 @@ describe('graphElementMinimumSize', () => {
 
 describe('graphElementLayout', () => {
   it('fits every visible child into the full own rect', () => {
-    // graph_element.cpp:47-57 — no chrome, no margin.
+    // graph_element.cpp:47-57: no chrome, no margin.
     const a = leaf('a', { customMinimumSize: { x: 10, y: 10 } });
     const contentRect: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
     const n = { ...solveNode(), path: 'G', node: { name: 'G', type: 'GraphElement', children: [], properties: {} as ControlProperties }, children: [a] };

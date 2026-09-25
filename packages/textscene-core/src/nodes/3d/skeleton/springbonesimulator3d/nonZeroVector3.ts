@@ -8,27 +8,17 @@ import { v } from '../../../../linter/validators/index.js';
 import { CMP_EPSILON, isZeroApprox } from '../../../../godot/index.js';
 
 /**
- * A gravity direction, which the setter refuses outright when it is zero.
- *
- * `set_gravity_direction` and `set_joint_gravity_direction` both open with
- * `ERR_FAIL_COND(p_gravity_direction.is_zero_approx())`, so the write never
- * lands and the previous direction stays. Not `=== 0`:
- * `Vector3::is_zero_approx` is `is_zero_approx(x) && is_zero_approx(y) &&
- * is_zero_approx(z)` (vector3.cpp:149-151), each a `abs(v) < CMP_EPSILON`
- * comparison, so `Vector3(0.000001, 0, 0)` is refused just as `Vector3(0, 0, 0)`
- * is.
- *
- * No `finite:` citation: `abs(nan) < CMP_EPSILON` is false, and so is
- * `abs(inf) < CMP_EPSILON`, so a non-finite component makes the vector NOT
- * zero-approx and Godot's guard lets it through. The linter's component grammar
- * spells all four non-finite literals, so such a value reaches this bound rather
- * than being turned away as a format error first.
- *
+ * A gravity direction, which `set_gravity_direction` and `set_joint_gravity_direction` refuse
+ * through `ERR_FAIL_COND(p_gravity_direction.is_zero_approx())`, keeping the previous one.
+ * `Vector3::is_zero_approx` tests each component against `CMP_EPSILON` (vector3.cpp:149-151), so
+ * `Vector3(0.000001, 0, 0)` is refused too.
  * @param name - the leaf name, for the message.
  * @param cite - `file:line` of that leaf's own `ERR_FAIL_COND`.
  */
 export function nonZeroVector3(name: string, cite: string): PropertyValidator {
   return v.vector3(name, {
+    // No `finite:` cite: `abs(nan)` and `abs(inf)` both fail `< CMP_EPSILON`, so Godot's guard
+    // passes a non-finite vector, and the component grammar lets such a value reach this bound.
     components: (components) =>
       components.every(isZeroApprox)
         ? {

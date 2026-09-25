@@ -1,12 +1,8 @@
 /**
- * Capture/restore a THREE subtree's local transforms — the "restore the
- * authored (bind) pose on stop/deselect" primitive shared by the full-object
- * animation drivers (GLB animation driver, ADR-0014; AnimationTree driver,
- * ADR-0019). Skeletal/blended clips touch arbitrary bones, so the whole driven
- * subtree is snapshotted rather than a track-derived target set.
- *
- * (The AnimationPlayer slice keeps its own track-derived snapshot — it also
- * restores `rotation` Euler order — so it is intentionally not unified here.)
+ * Captures and restores a THREE subtree's local transforms, so the GLB (ADR-0014)
+ * and AnimationTree (ADR-0019) drivers restore the authored pose on stop. A
+ * blended clip touches any bone, so the whole subtree is kept. AnimationPlayer
+ * keeps its own track snapshot, which restores the Euler order too.
  */
 
 import type { Object3D, Quaternion, Vector3 } from 'three';

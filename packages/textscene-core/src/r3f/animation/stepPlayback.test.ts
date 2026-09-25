@@ -1,12 +1,4 @@
-/**
- * stepPlayback — exhaustive transition-table tests for the pure per-frame
- * playback-step reducer.
- *
- * The reducer decides which transport edge fired this frame and what the
- * driver adapter must do, without touching any THREE object or React hook.
- * Tests exercise every documented transition and the deliberate no-flush-on-
- * stop subtlety.
- */
+/** Every transition of the stepPlayback reducer, and no flush on the stop edge. */
 import { describe, expect, it } from 'vitest';
 import { stepPlayback, type StepPlaybackInput } from './stepPlayback';
 import type { PlayState } from '../contexts/AnimationTransportContext';
@@ -24,9 +16,6 @@ function input(overrides: Partial<StepPlaybackInput> = {}): StepPlaybackInput {
   };
 }
 
-// ---------------------------------------------------------------------------
-// stopped → stopped  (the default idle case)
-// ---------------------------------------------------------------------------
 describe('stepPlayback — stopped → stopped', () => {
   it('emits none when nothing changes in stopped state', () => {
     const result = stepPlayback(input());
@@ -36,9 +25,6 @@ describe('stepPlayback — stopped → stopped', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// stopped → playing  (fresh play entry)
-// ---------------------------------------------------------------------------
 describe('stepPlayback — stopped → playing', () => {
   it('emits ensure-playing with resume=true (fresh entry into playback)', () => {
     const result = stepPlayback(input({ prevState: 'stopped', state: 'playing' }));
@@ -48,9 +34,6 @@ describe('stepPlayback — stopped → playing', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// paused → playing  (resume from pause)
-// ---------------------------------------------------------------------------
 describe('stepPlayback — paused → playing', () => {
   it('emits ensure-playing with resume=true (re-entry into playback)', () => {
     const result = stepPlayback(input({ prevState: 'paused', state: 'playing' }));
@@ -60,9 +43,6 @@ describe('stepPlayback — paused → playing', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// playing → playing  (continuing)
-// ---------------------------------------------------------------------------
 describe('stepPlayback — playing → playing', () => {
   it('emits ensure-playing with resume=false when already running', () => {
     const result = stepPlayback(input({ prevState: 'playing', state: 'playing' }));
@@ -81,9 +61,6 @@ describe('stepPlayback — playing → playing', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// playing → paused  (pause edge — must flush time)
-// ---------------------------------------------------------------------------
 describe('stepPlayback — playing → paused', () => {
   it('emits hold-paused + flushTime=true so the paused readout is never stale', () => {
     const result = stepPlayback(
@@ -91,8 +68,7 @@ describe('stepPlayback — playing → paused', () => {
     );
     expect(result.command).toBe('hold-paused');
     expect(result.resume).toBe(false);
-    // The pause-edge flush fires regardless of whether liveTime is provided —
-    // the adapter owns the null-guard (the driver may have no live playhead).
+    // The flush fires without a liveTime too: the adapter owns the null guard.
     expect(result.flushTime).toBe(true);
   });
 
@@ -105,9 +81,6 @@ describe('stepPlayback — playing → paused', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// stopped → paused  (start paused / seek-while-paused first frame)
-// ---------------------------------------------------------------------------
 describe('stepPlayback — stopped → paused', () => {
   it('emits hold-paused with no flush (was not playing before)', () => {
     const result = stepPlayback(input({ prevState: 'stopped', state: 'paused' }));
@@ -117,9 +90,6 @@ describe('stepPlayback — stopped → paused', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// paused → paused (holding; optionally seek)
-// ---------------------------------------------------------------------------
 describe('stepPlayback — paused → paused', () => {
   it('emits hold-paused when the scrub position has not moved', () => {
     const result = stepPlayback(input({ prevState: 'paused', state: 'paused', prevTime: 0.3, transportTime: 0.3 }));
@@ -138,8 +108,7 @@ describe('stepPlayback — paused → paused', () => {
   });
 
   it('emits hold-paused on a stop → pause jump with an unmoved playhead (prevTime === transportTime === 0)', () => {
-    // stopped (prevTime=0) → paused (time=0): no seek because time is unchanged.
-    // This tests the "already at 0" path — no wasted re-seek.
+    // stopped (prevTime=0) → paused (time=0): the time is unchanged, so no seek.
     const result = stepPlayback(
       input({ prevState: 'stopped', state: 'paused', prevTime: 0, transportTime: 0 })
     );
@@ -154,9 +123,6 @@ describe('stepPlayback — paused → paused', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// playing → stopped  (stop edge — must NOT flush time)
-// ---------------------------------------------------------------------------
 describe('stepPlayback — playing → stopped', () => {
   it('emits stop-and-restore with flushTime=false (transport already reset the playhead)', () => {
     const result = stepPlayback(
@@ -164,15 +130,12 @@ describe('stepPlayback — playing → stopped', () => {
     );
     expect(result.command).toBe('stop-and-restore');
     expect(result.resume).toBe(false);
-    // DELIBERATE: stop() resets transport.time to 0; flushing the pre-stop
+    // Deliberate: stop() resets transport.time to 0; flushing the pre-stop
     // playhead here would overwrite that reset (stuck-scrubber bug).
     expect(result.flushTime).toBe(false);
   });
 });
 
-// ---------------------------------------------------------------------------
-// paused → stopped
-// ---------------------------------------------------------------------------
 describe('stepPlayback — paused → stopped', () => {
   it('emits stop-and-restore', () => {
     const result = stepPlayback(input({ prevState: 'paused', state: 'stopped' }));
@@ -182,9 +145,6 @@ describe('stepPlayback — paused → stopped', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// already stopped → stopped (no-op, no double-restore)
-// ---------------------------------------------------------------------------
 describe('stepPlayback — stopped → stopped (no-op)', () => {
   it('emits none, not stop-and-restore, so drivers do not restore twice', () => {
     const result = stepPlayback(input({ prevState: 'stopped', state: 'stopped' }));
@@ -194,9 +154,6 @@ describe('stepPlayback — stopped → stopped (no-op)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Clip-switch resume: playing and the clip changed
-// ---------------------------------------------------------------------------
 describe('stepPlayback — clip switch during playback', () => {
   it('sets resume=true so the adapter re-seeds the local clock', () => {
     const result = stepPlayback(
@@ -213,9 +170,6 @@ describe('stepPlayback — clip switch during playback', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Complete transition table — every (prevState, state) pair
-// ---------------------------------------------------------------------------
 describe('stepPlayback — full transition table', () => {
   type Row = [PlayState, PlayState, string, boolean, boolean];
   const table: Row[] = [

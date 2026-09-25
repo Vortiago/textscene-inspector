@@ -1,18 +1,10 @@
 /**
- * Unit tests for the shared `[node …]` heading resolver, extracted from the
- * "jump to node" fix so `TscnDocumentSymbolProvider` can reuse the same
- * duplicate-sibling disambiguation logic.
+ * Unit tests for the shared `[node …]` heading resolver.
  */
 import { describe, expect, it } from 'vitest';
 import { findNodeHeadingLine } from './nodeHeadingResolver';
 
-// Two nodes both named "Leaf" under different parents. Line indices:
-//   0 [gd_scene ...]
-//   1 [node name="Root" ...]
-//   2 [node name="A" ... parent="."]
-//   3 [node name="B" ... parent="."]
-//   4 [node name="Leaf" ... parent="A"]   <- parent "A"
-//   5 [node name="Leaf" ... parent="B"]   <- parent "B"
+// Two nodes named "Leaf", under A (line 4) and under B (line 5).
 const TWO_SIBLINGS_LINES = [
   '[gd_scene format=3]',
   '[node name="Root" type="Node3D"]',

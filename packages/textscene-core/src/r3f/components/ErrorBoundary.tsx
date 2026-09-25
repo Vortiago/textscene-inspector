@@ -1,43 +1,26 @@
 /**
- * Generic render-time error boundary.
- *
- * The architecture invests heavily in graceful degradation for RESOLUTION
- * failures (fallback cubes, missing-resource placeholders) but had nothing
- * catching an actual THROWN exception during render (NaN into a
- * BufferGeometry, an unexpected GLB structure) — one bad node blanked the
- * entire preview in both apps.
- *
- * Renderer-agnostic: `componentDidCatch`/`getDerivedStateFromError` are a
- * core React feature, not specific to react-dom, so the SAME class works
- * both in the outer DOM tree (`PreviewErrorBoundary` around `<ViewportArea>`)
- * and inside `<Canvas>`'s own React root (`NodeDispatcher`'s per-node catch)
- * — R3F mounts its scene tree via a separate `react-reconciler` root, so an
- * outer, DOM-tree boundary can never catch an error thrown by a component
- * rendered inside `<Canvas>`; each tree needs its own boundary.
- *
- * `fallback` is a render-prop (not a plain ReactNode) so callers can show
- * the caught error and/or offer a retry via the supplied `reset()`, which
- * clears the caught state and re-renders `children` from scratch.
- *
- * `resetKeys` (mirrors the `react-error-boundary` convention) clears a
- * caught error the moment any entry changes (`Object.is` per-entry), via
- * `componentDidUpdate` — a normal props update, NOT a `key`-driven remount.
- * `PreviewErrorBoundary` passes `[sceneGraph]` so a crash clears the instant
- * a fixed file re-parses. A `key`-based remount would work too but would
- * also tear down and rebuild everything the boundary wraps (losing
- * the viewport camera state / animation playback state) on EVERY scene
- * change, not just when recovering from a crash.
+ * A render-time error boundary for an exception thrown in render, such as NaN in
+ * a BufferGeometry. R3F mounts its scene in a separate reconciler root, which an
+ * outer boundary cannot catch, so the same class serves `PreviewErrorBoundary`
+ * and `NodeDispatcher`'s per-node catch.
  */
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import * as logger from '../../logger.js';
 
 export interface ErrorBoundaryProps {
   children: ReactNode;
-  /** Rendered instead of `children` once an error is caught. */
+  /**
+   * Rendered instead of `children` once an error is caught. `reset()` clears the
+   * caught state and re-renders `children` from scratch.
+   */
   fallback: (error: Error, reset: () => void) => ReactNode;
-  /** Fired once per catch — e.g. to surface the error elsewhere in the UI. */
+  /** Fired once per catch, for example to show the error elsewhere in the UI. */
   onError?: (error: Error, info: ErrorInfo) => void;
-  /** When any entry changes (`Object.is`) while an error is caught, clear it. */
+  /**
+   * When any entry changes (`Object.is`) while an error is caught, clear it: a
+   * props update, not a `key` remount, which would rebuild the wrapped tree and
+   * lose camera and playback state on every scene change.
+   */
   resetKeys?: readonly unknown[];
 }
 

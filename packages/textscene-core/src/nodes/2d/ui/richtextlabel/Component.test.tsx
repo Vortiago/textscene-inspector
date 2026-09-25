@@ -1,8 +1,7 @@
 /**
- * `<RichTextLabel>` — the native (WebGL canvas) painter for
- * RichTextLabel: one `<TextRun>` mesh per (line, contiguous bbcode-style-run)
- * pair. Assertions are scene-graph structure and material properties, never
- * pixels — `pnpm ref:godot` is the pixel-measurement tool.
+ * Tests the `<RichTextLabel>` painter: one `<TextRun>` per line and style run.
+ * It asserts scene-graph structure and materials, never pixels, which
+ * `pnpm ref:godot` measures.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -97,11 +96,9 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
       };
       const plainWidth = widthOf(meshes[0]!);
       const boldWidth = widthOf(meshes[1]!);
-      // Atlas 'A' bitmap width 32 @ bake 42 (openSansAtlas.ts). At 32px: 32*32/42.
-      // At the 16px fallback: 32*16/42 — exactly HALF the plain run's width,
-      // since normal_font_size (32) here is exactly double the 16px fallback.
-      // Float32Array-backed geometry (three's own BufferAttribute) — 4 digits
-      // clears its precision loss without loosening the assertion's INTENT.
+      // Atlas 'A' bitmap width 32 at bake 42 (openSansAtlas.ts): 32*32/42 at 32px,
+      // and half that at the 16px fallback. 4 digits absorb the Float32Array
+      // precision loss.
       expect(plainWidth).toBeCloseTo((32 * 32) / 42, 4);
       expect(boldWidth).toBeCloseTo((32 * 16) / 42, 4);
       expect(boldWidth).toBeCloseTo(plainWidth / 2, 4);
@@ -113,10 +110,9 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     const italic = await render({ text: '[i]AB[/i]', bbcodeEnabled: true });
     const plainPos = (meshesOf(plain)[0]!.geometry as THREE.BufferGeometry).getAttribute('position');
     const italicPos = (meshesOf(italic)[0]!.geometry as THREE.BufferGeometry).getAttribute('position');
-    // A real per-vertex shear moves the top (index 0) and bottom (index 2) of
-    // the SAME glyph by different amounts, proportional to each vertex's own
-    // depth below the line top (TextRun.test.tsx's own skew fixture proves
-    // the same shape) — a uniform translation would move both identically.
+    // A shear moves the top (index 0) and bottom (index 2) of one glyph by
+    // amounts proportional to their depth below the line top. A uniform
+    // translation would move both the same.
     const topDx = italicPos.getX(0) - plainPos.getX(0);
     const bottomDx = italicPos.getX(2) - plainPos.getX(2);
     expect(topDx).not.toBe(0);
@@ -146,11 +142,9 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
       const textMat = text.material as THREE.ShaderMaterial;
       const textColor = textMat.uniforms.uColor!.value as THREE.Vector3;
       const textOpacity = textMat.uniforms.uOpacity!.value as number;
-      // The text run's own uColor is already sRGB->linear-converted (TextRun.tsx);
-      // ControlQuad's meshBasicMaterial takes an sRGB THREE.Color (three's own
-      // colour-management path does the same conversion on upload), so compare
-      // both against the SAME independently-computed expectation this file
-      // already uses for the text-run case below.
+      // The text run's uColor is already linear (TextRun.tsx), and three converts
+      // ControlQuad's sRGB colour on upload, so both compare against the same
+      // expectation as the text-run case below.
       const expected = expectedLinear(0xe0 / 255, 0xa0 / 255, 0x30 / 255);
       expect(strokeMat.color.r).toBeCloseTo(expected.r, 5);
       expect(strokeMat.color.g).toBeCloseTo(expected.g, 5);
@@ -171,8 +165,7 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
   });
 
   it("multiplies the walker-composed tint by each RUN's own bbcode colour, in sRGB", async () => {
-    // Neither factor is white here, which is the point: a painter that dropped
-    // either one still matches the two single-factor tests above.
+    // Neither factor is white, so a painter that drops either one fails here.
     const renderer = await ReactThreeTestRenderer.create(
       <RichTextLabel
         {...painterEnv()}
@@ -270,12 +263,9 @@ describe('<RichTextLabel> registered through <ControlCanvasWalker> (end-to-end w
 });
 
 /**
- * The SCENE-FONT (canvas-kind `FontMetrics`) path end to end. RichTextLabel
- * has no alignment pass at all — a line's y is its own box top,
- * `lineIndex * linePitchPx` — so this pins that the placement carries no
- * atlas-bake anchor, which would be invisible on the atlas path (where it
- * would read as the correct total) and wrong here by
- * `ascentPx - base*fontSizePx/42` px.
+ * The scene-font (canvas-kind `FontMetrics`) path. A line's y is its box top,
+ * so the placement must carry no atlas-bake anchor: the atlas path would hide
+ * one, and here it would be off by `ascentPx - base*fontSizePx/42` px.
  */
 describe('<RichTextLabel> — scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
@@ -304,9 +294,8 @@ describe('<RichTextLabel> — scene-font (canvas-kind FontMetrics) text path', (
     const meshes = canvasMeshes(renderer);
     expect(meshes).toHaveLength(2);
     // Scene font at 16px: ascentPx = ceil(800*16/1000) = 13, descentPx =
-    // ceil(200*16/1000) = 4; RichTextLabel's own line_separation default is 0
-    // (default_theme.cpp:1217), so linePitchPx = 17. three's Y is negated
-    // Godot px, and line 0 sits at its own box top with NO offset of any kind.
+    // ceil(200*16/1000) = 4, and line_separation is 0 (default_theme.cpp:1217),
+    // so linePitchPx = 17. three's Y is negated Godot px, with no offset.
     const ys = meshes.map((m) => (m.parent as THREE.Object3D).position.y);
     expect(ys[0]).toBeCloseTo(0, 10);
     expect(ys[1]).toBeCloseTo(-17, 10);
@@ -321,10 +310,8 @@ describe('<RichTextLabel> — scene-font (canvas-kind FontMetrics) text path', (
 });
 
 /**
- * `[img]` — a `res://` path resolves DIRECTLY (`useTexture2D`'s own
- * `resolveExtResourcePath`: `ref.startsWith('res://')` short-circuits before
- * any `ExtResource` lookup), so these need no `externalResources` entry, only
- * the loader seeded at the same path string the bbcode names.
+ * `[img]`: `resolveExtResourcePath` resolves a `res://` path before any
+ * `ExtResource` lookup, so these seed only the loader at the path the BBCode names.
  */
 describe('<RichTextLabel> — [img]', () => {
   const IMG = 'res://logo.png';
@@ -358,11 +345,9 @@ describe('<RichTextLabel> — [img]', () => {
     return ReactThreeTestRenderer.create(tree);
   }
 
-  // `.type` string, not `instanceof` — `@react-three/fiber`'s JSX intrinsics
-  // construct through its OWN resolved `three` module copy, which is not
-  // always object-identical to this file's `import * as THREE from 'three'`
-  // (the "Multiple instances of Three.js being imported" warning), so an
-  // `instanceof THREE.MeshBasicMaterial` check silently never matches.
+  // `.type` string, not `instanceof`: `@react-three/fiber` can construct
+  // through another copy of `three`, so `instanceof THREE.MeshBasicMaterial`
+  // can silently never match.
   function materialOf(mesh: THREE.Mesh): THREE.Material {
     return mesh.material as THREE.Material;
   }
@@ -447,7 +432,7 @@ describe('<RichTextLabel> — [img]', () => {
     const renderer = await renderImage(`[img=20x10 region=8,4,16,8]${IMG}[/img]`, [64, 32]);
     const map = imageMeshOf(renderer).material as THREE.MeshBasicMaterial;
     const texture = map.map!;
-    // repeat = region size / texture size; offset.y flipped (three's V is bottom-up, Godot's region.y is top-down) — texturerect/Component.tsx's own convention.
+    // repeat = region size / texture size; offset.y flips, since three's V is bottom-up and Godot's region.y top-down.
     expect(texture.repeat.x).toBeCloseTo(16 / 64, 6);
     expect(texture.repeat.y).toBeCloseTo(8 / 32, 6);
     expect(texture.offset.x).toBeCloseTo(8 / 64, 6);

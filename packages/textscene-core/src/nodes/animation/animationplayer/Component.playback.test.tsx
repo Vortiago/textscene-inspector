@@ -1,10 +1,10 @@
 /**
- * AnimationPlayer playback integration tests (E) — the Component drives a
+ * AnimationPlayer playback integration tests (E): the Component drives a
  * sibling object's transform through a THREE.AnimationMixer rooted at
  * root_node, gated by the scene-level AnimationTransport.
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AnimationPlayer } from './Component';
@@ -40,7 +40,7 @@ const INTERNAL: TscnInternalResource[] = [
   },
 ];
 
-// A constant multi-axis "tilt" rotation on Target: with XYZ vs YXZ Euler order
+// A constant multi-axis "tilt" rotation on Target: with XYZ or YXZ Euler order
 // the resulting quaternion differs, so tests using it pin the order.
 const ROT_EULER = [0.3, 0.5, 0.7] as const;
 const ROT_INTERNAL: TscnInternalResource[] = [
@@ -77,6 +77,13 @@ function makeAP(overrides: Partial<AnimationPlayerProperties> = {}): TscnNode {
 }
 
 const AP_PATH = 'Root/AnimationPlayer';
+
+// Every mounted root is torn down after its test. A root left alive can still re-render its
+// Capture after the next test mounts, pointing `transport` at the stale scene.
+const mounted: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>[] = [];
+afterEach(async () => {
+  for (const renderer of mounted.splice(0)) await renderer.unmount();
+});
 
 let transport: AnimationTransport;
 let selection: SelectionContextValue | null;
@@ -118,6 +125,7 @@ async function mountScene(
       </SelectionProvider>
     </SceneResourcesProvider>
   );
+  mounted.push(renderer);
   await setSelection(select);
   return renderer;
 }
@@ -182,7 +190,7 @@ describe('AnimationPlayer playback (E)', () => {
   });
 
   it('applies nothing while `active` is false, however it is told to play', async () => {
-    // animation_player.cpp:664 — `seek_internal` opens with `if (!active) {
+    // animation_player.cpp:664: `seek_internal` opens with `if (!active) {
     // return; }`, so the scrub this transport performs is refused outright,
     // not merely the runtime process callback (animation_mixer.cpp:446-455).
     const renderer = await mountScene({ active: false });
@@ -250,7 +258,7 @@ describe('AnimationPlayer playback (E)', () => {
 });
 
 describe('AnimationPlayer playback — loop override (#224)', () => {
-  // Authored to loop linearly (loop_mode 1) so 'auto' vs an explicit override
+  // Authored to loop linearly (loop_mode 1) so 'auto' and an explicit override
   // produce clearly distinguishable outcomes past the clip's 1s length.
   const LOOPING_INTERNAL: TscnInternalResource[] = [
     { id: 'Lib', type: 'AnimationLibrary', data: { _data: '{\n"slide": SubResource("A")\n}' } },

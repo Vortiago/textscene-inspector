@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { isColorOverbright } from './colorOverbright';
 
 describe('isColorOverbright', () => {
-  // scene/gui/color_picker.cpp:56-58 — any channel strictly greater than 1.
+  // scene/gui/color_picker.cpp:56-58: any channel strictly greater than 1.
   it('is false for every channel within [0,1]', () => {
     expect(isColorOverbright({ r: 1, g: 0.5, b: 0 })).toBe(false);
   });

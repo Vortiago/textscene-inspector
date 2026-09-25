@@ -1,9 +1,9 @@
 /**
- * `radialFill.ts` vs Godot 4.6.3 (`texture_progress_bar.cpp:181-256,483-524`).
- * `unitValToUv` worked by hand at the four cardinal angles (a centred
- * `center = (0.5, 0.5)`): 0 -> top, 0.25 -> right, 0.5 -> bottom, 0.75 -> left
- * — a clockwise sweep starting at 12 o'clock.
+ * `radialFill.ts` against Godot 4.6.3 (`texture_progress_bar.cpp:181-256,483-524`). `unitValToUv`
+ * is worked by hand at the four cardinal angles around `center = (0.5, 0.5)`: 0 top, 0.25 right,
+ * 0.5 bottom, 0.75 left, a clockwise sweep from 12 o'clock.
  */
+
 import { describe, expect, it } from 'vitest';
 import {
   radialRelativeCenter,

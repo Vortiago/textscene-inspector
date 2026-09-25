@@ -1,12 +1,8 @@
 /**
- * `fixed_size` — the vertex rescale `FLAG_FIXED_SIZE` emits
- * (`scene/resources/material.cpp:1357-1381`), which keeps the sprite quad the
- * same size on screen however far away it is. Parsed since the slice landed
- * and honoured by nothing, exactly as `billboard` once was; ported alongside
- * Label3D's, which sets the same flag on the same cached shader.
- *
- * Driven against an explicit camera per frame, the same shape
- * `Component.billboard.test.tsx` uses for this node's other per-frame effect.
+ * `fixed_size`: the vertex rescale `FLAG_FIXED_SIZE` emits
+ * (`scene/resources/material.cpp:1357-1381`), which keeps the sprite quad the same size on screen
+ * at any distance. Label3D sets the same flag on the same cached shader. Driven against an explicit
+ * camera per frame, as `Component.billboard.test.tsx` is.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -92,9 +88,9 @@ describe('<Sprite3D> fixed_size', () => {
   });
 
   it('scales by the viewport half-height under an orthographic camera, not by depth', async () => {
-    // `material.cpp:1361-1364`: `h = abs(1/(2*PROJECTION_MATRIX[1][1]))`, then
-    // `sc = h * 2`. With top-bottom = 4, `PROJECTION_MATRIX[1][1]` is 0.5, so
-    // `h` is 1 and `sc` is 2 — the same at every depth, unlike the arm above.
+    // `material.cpp:1361-1364`: `h = abs(1/(2*PROJECTION_MATRIX[1][1]))`, then `sc = h * 2`. With
+    // top-bottom = 4, `PROJECTION_MATRIX[1][1]` is 0.5, so `h` is 1 and `sc` is 2, the same at
+    // every depth, unlike the arm above.
     const atOrigin = await spriteAfterFrame({ fixed_size: 'true', transform: AT_ORIGIN }, orthographic());
     expect(atOrigin.scale.x).toBeCloseTo(2, 5);
 

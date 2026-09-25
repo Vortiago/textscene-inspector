@@ -1,13 +1,8 @@
 /**
- * Evaluate a Godot `Curve` at an offset.
+ * Evaluate a Godot `Curve` at an offset. Each span is the engine's cubic Bézier, with control
+ * points a third of the span apart and lifted by the tangents, not the equivalent Hermite
+ * spline, so the arithmetic matches Godot's and not only its exact maths.
  *
- * Godot draws the span between two points as a cubic Bézier whose two control
- * points sit a THIRD of the span apart horizontally, lifted by the authored
- * tangents — not as a Hermite spline, even though the two are algebraically the
- * same family. Reproducing the Bézier form keeps the arithmetic identical to
- * the engine's rather than merely equivalent in exact maths.
- *
- * ---------------------------------------------------------------------------
  * Derived from Godot Engine (`scene/resources/curve.cpp`, `Curve::sample`,
  * `Curve::sample_local_nocheck`, `Curve::get_index`, and
  * `Math::bezier_interpolate`), used under the MIT licence:
@@ -35,7 +30,6 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * See THIRD-PARTY-NOTICES.md.
- * ---------------------------------------------------------------------------
  */
 
 import type { Curve, CurvePoint } from './types';
@@ -43,9 +37,9 @@ import { CMP_EPSILON } from '../../../godot/index.js';
 
 
 /**
- * `Curve::sample` — the value at `offset`. Out-of-range offsets clamp to the
- * first/last point's value; an empty curve answers 0, which is what a caller
- * that treats a missing curve as "no curve" must NOT confuse with a flat 1.
+ * `Curve::sample`: the value at `offset`. An out-of-range offset clamps to the first
+ * or last point's value. An empty curve answers 0, which a caller must not confuse
+ * with a flat 1.
  */
 export function sampleCurve(curve: Curve, offset: number): number {
   const points = curve.points;
@@ -62,12 +56,9 @@ export function sampleCurve(curve: Curve, offset: number): number {
 }
 
 /**
- * `Curve::get_index` — a lower-bound binary search for the span containing
- * `offset`. Answers the LAST index when the offset is past the end and 0 when
- * it is before the start, so `sample` can clamp on both sides.
- *
- * Exported because `decode.ts` seats a padded point through the same search
- * `Curve::_add_point` uses.
+ * `Curve::get_index`: a lower-bound binary search for the span containing `offset`.
+ * It answers the last index past the end and 0 before the start. Exported for
+ * `pointCount.ts`, which seats a padded point through it, as `Curve::_add_point` does.
  */
 export function curveIndex(points: readonly CurvePoint[], offset: number): number {
   let imin = 0;
@@ -86,7 +77,7 @@ export function curveIndex(points: readonly CurvePoint[], offset: number): numbe
 }
 
 /**
- * `Curve::sample_local_nocheck` — the span between `index` and `index + 1`,
+ * `Curve::sample_local_nocheck`: the span between `index` and `index + 1`,
  * `localOffset` measured from the left point in curve units (not normalised).
  */
 function sampleLocalNoCheck(
@@ -110,7 +101,7 @@ function sampleLocalNoCheck(
   return bezierInterpolate(a.position.y, yac, ybc, b.position.y, t);
 }
 
-/** `Math::bezier_interpolate` — the scalar cubic Bézier. */
+/** `Math::bezier_interpolate`: the scalar cubic Bézier. */
 function bezierInterpolate(
   start: number,
   control1: number,

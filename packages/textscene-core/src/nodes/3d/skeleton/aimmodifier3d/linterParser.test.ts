@@ -1,10 +1,7 @@
 /**
- * AimModifier3D strict validators, format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts.
+ * AimModifier3D strict validators, asserted through `validatorRegistry`, not by linting a `.tscn`,
+ * so a failure points at the validator and no fixture text needs upkeep. Rule-level behaviour
+ * belongs in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -21,23 +18,18 @@ function check(property: string, value: string) {
 }
 
 /**
- * Every key AimModifier3D declares, read from the source.
- *
- * `setting_count` is the ADD_ARRAY_COUNT at aim_modifier_3d.cpp:190, the one
- * member doc/classes/AimModifier3D.xml lists. `settings/#/*` is the hand-rolled
- * indexed family AimModifier3D builds in `_get_property_list`
- * (aim_modifier_3d.cpp:84-97), which appears in no ADD_PROPERTY call at all.
+ * Every key AimModifier3D declares, read from the source. `setting_count` is the ADD_ARRAY_COUNT at
+ * aim_modifier_3d.cpp:190, the one member doc/classes/AimModifier3D.xml lists. `settings/#/*` is the
+ * indexed family `_get_property_list` builds (aim_modifier_3d.cpp:84-97), in no ADD_PROPERTY call.
  */
 const KEYS: string[] = ['setting_count', 'settings/#/*'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 
 /**
- * The leaves BoneConstraint3D contributes to the SAME `settings/<i>/` family
- * (bone_constraint_3d.cpp:102-108). AimModifier3D::_get_property_list calls
- * `BoneConstraint3D::get_property_list` first (aim_modifier_3d.cpp:85), so a
- * real AimModifier3D node carries these keys, and the dispatcher must not
- * report them as unknown.
+ * The leaves BoneConstraint3D adds to the same `settings/<i>/` family (bone_constraint_3d.cpp:102-108).
+ * `_get_property_list` calls `BoneConstraint3D::get_property_list` first (aim_modifier_3d.cpp:85),
+ * so a real node carries these keys and the dispatcher must not report them as unknown.
  */
 const BASE_LEAF_KEYS: Readonly<Record<string, string>> = {
   amount: '0.5',
@@ -51,9 +43,8 @@ const BASE_LEAF_KEYS: Readonly<Record<string, string>> = {
 
 describe('AimModifier3D strict validators', () => {
   it('covers every leaf BoneConstraint3D actually contributes', () => {
-    // The sample values above cannot be derived, but the KEY SET can. Without
-    // this, an eighth base leaf leaves the case below silently under-covering
-    // exactly the key that would newly be misreported as unknown.
+    // The sample values cannot be derived, but the key set can. Without this, a new base leaf
+    // leaves the case below missing the one key that would be misreported as unknown.
     expect(Object.keys(BASE_LEAF_KEYS).sort()).toEqual(
       Object.keys(BONE_CONSTRAINT_SETTING_LEAVES).sort()
     );
@@ -68,16 +59,15 @@ describe('AimModifier3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint`
+    // checks it against the whole registry through the barrel. This checks the same file
+    // against only what this test imported.
     expectFixtureClean('unit-aim-modifier-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
     // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // check is generic on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('AimModifier3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -110,7 +100,7 @@ describe('AimModifier3D strict validators', () => {
     });
 
     it('warns past the hint, which no setter enforces', () => {
-      // aim_modifier_3d.cpp:91 hints "+X,-X,+Y,-Y,+Z,-Z"; set_forward_axis
+      // aim_modifier_3d.cpp:91 hints "+X,-X,+Y,-Y,+Z,-Z", and set_forward_axis
       // (aim_modifier_3d.cpp:117) assigns straight through.
       const above = check('settings/0/forward_axis', '6');
       expect(above?.severity).toBe('warning');
@@ -131,7 +121,7 @@ describe('AimModifier3D strict validators', () => {
     });
 
     it('warns past the hint, which no setter enforces', () => {
-      // aim_modifier_3d.cpp:93 hints "X,Y,Z"; set_primary_rotation_axis
+      // aim_modifier_3d.cpp:93 hints "X,Y,Z", and set_primary_rotation_axis
       // (aim_modifier_3d.cpp:144) assigns straight through.
       expect(check('settings/1/primary_rotation_axis', '3')?.severity).toBe('warning');
     });
@@ -163,11 +153,9 @@ describe('AimModifier3D strict validators', () => {
     });
 
     it("applies the base's bound to a base leaf, by delegating rather than owning it", () => {
-      // `amount` is BoneConstraint3D's (bone_constraint_3d.cpp:102). This class
-      // does not re-declare it, but its dispatcher shadows the base's
-      // registration for this node type, so it forwards instead. Accepting the
-      // key unconditionally would make `settings/0/amount = 5` legal here while
-      // the identical key is bounded 0..1 on a plain BoneConstraint3D.
+      // `amount` is BoneConstraint3D's (bone_constraint_3d.cpp:102), and this dispatcher shadows the
+      // base's registration for this type, so it forwards. Accepting the key unconditionally would
+      // make `settings/0/amount = 5` legal here while a plain BoneConstraint3D bounds it to 0..1.
       expect(check('settings/0/amount', 'definitely-not-a-float')?.severity).toBe('error');
       expect(check('settings/0/amount', '5')?.severity).toBe('warning');
       expect(check('settings/0/amount', '0.5')).toBeNull();
@@ -187,16 +175,14 @@ describe('AimModifier3D strict validators', () => {
     });
 
     it('leaves a non-integer index alone, because Godot applies that write', () => {
-      // `path.get_slicec('/', 1).to_int()` (aim_modifier_3d.cpp:38) reads "x" as
-      // 0, with no is_valid_int() guard ahead of it, so `settings/x/relative`
-      // lands on setting 0 rather than being dropped. The key still ROUTES here
-      // (an unrecognised leaf under it is dropped and has to be reportable);
-      // it is the index alone that draws no diagnostic.
+      // `path.get_slicec('/', 1).to_int()` (aim_modifier_3d.cpp:38) reads "x" as 0, with no
+      // is_valid_int() guard, so `settings/x/relative` lands on setting 0. The key still routes
+      // here, since an unrecognised leaf under it is dropped and must be reportable.
       expect(check('settings/x/relative', 'true')).toBeNull();
     });
 
     it('still rejects an unknown leaf behind a non-integer index', () => {
-      // The index resolved to something; the leaf did not, so `_set` falls to
+      // The index resolved to something, the leaf did not, so `_set` falls to
       // `return false` (aim_modifier_3d.cpp:52-54) and the write is dropped.
       expect(check('settings/x/bogus', 'true')?.code).toBe('INVALID_SETTING_KEY');
     });

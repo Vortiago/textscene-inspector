@@ -1,5 +1,5 @@
 /**
- * HSeparator registration — the native (WebGL canvas) painter + minimum-size
+ * HSeparator registration: the native (WebGL canvas) painter + minimum-size
  * solver, self-registered on import (ADR-0001).
  */
 

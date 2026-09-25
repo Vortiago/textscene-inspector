@@ -1,16 +1,7 @@
 /**
- * Tests for ConvertTransformModifier3D's semantic linter rule. Strict-parser
- * format checks live in linterParser.test.ts and are asserted through
- * validatorRegistry there.
- *
- * The rule exists because the range hint is chosen from a SIBLING property, so
- * these cases are all about which of the three hint arms a given
- * `transform_mode` selects, and each one pins a value the other two arms would
- * judge differently.
- *
- * Uses `Linter` directly (via testkit), not the `linter/index.ts` barrel: that
- * barrel side-effect-imports every in-flight slice, so pulling it here would
- * fail flakily on a sibling's half-written file mid-wave.
+ * ConvertTransformModifier3D's semantic rule. The range hint comes from a sibling `transform_mode`, so
+ * each case pins a value the other two hint arms judge differently. It uses `Linter` through testkit,
+ * not the `linter/index.ts` barrel, which imports every slice and so fails on a half-written sibling.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -151,7 +142,7 @@ describe('ConvertTransformModifier3D range-versus-mode rule', () => {
   });
 
   it('reads each group and each index against its OWN sibling', () => {
-    // apply is Rotation and out of range; reference is Position and must stay
+    // apply is Rotation and out of range, and reference is Position and must stay
     // clean beside it, at a different index than the one that warns.
     const diagnostics = lint(
       scene(
@@ -193,9 +184,8 @@ describe('ConvertTransformModifier3D index grammar', () => {
   it('reads transform_mode from the setting the engine resolves, not the index text', () => {
     // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`
     // (convert_transform_modifier_3d.cpp:41), so `settings/00/…` and
-    // `settings/0/…` are ONE setting: the mode below is Rotation and the range
-    // above PI belongs to it. Keying the sibling lookup on the index TEXT
-    // found no mode and read the default Position instead.
+    // `settings/0/…` are one setting: the mode below is Rotation and the range
+    // above PI belongs to it.
     expectDiagnostic(
       scene(
         node('ConvertTransformModifier3D', {

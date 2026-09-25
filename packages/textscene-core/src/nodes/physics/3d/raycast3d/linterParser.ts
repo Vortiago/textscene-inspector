@@ -1,10 +1,7 @@
 /**
- * RayCast3D strict validators for linting.
- *
- * Declare only RayCast3D's OWN members — the ones doc/classes/RayCast3D.xml
- * lists without an `overrides=` attribute. Everything from Node3D up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
+ * RayCast3D strict validators: only the members doc/classes/RayCast3D.xml lists without
+ * `overrides=`. The NODE_BASE_TYPES base-walk delivers everything from Node3D up, and a
+ * re-declared key shadows it.
  */
 
 import '../../../base/node3d/linterParser.js';
@@ -14,8 +11,8 @@ import { layerBitmask, v } from '../../../../linter/validators/index.js';
 validatorRegistry.registerAll('RayCast3D', {
   enabled: v.boolean('enabled'),
   exclude_parent: v.boolean('exclude_parent'),
-  // scene/3d/physics/ray_cast_3d.cpp:379: PROPERTY_HINT_NONE, "suffix:m" — a unit
-  // display hint, not a range; only the Vector3 format is enforceable.
+  // scene/3d/physics/ray_cast_3d.cpp:379: PROPERTY_HINT_NONE, "suffix:m", a unit
+  // display hint, not a range. Only the Vector3 format is enforceable.
   target_position: v.vector3('target_position'),
   // scene/3d/physics/ray_cast_3d.cpp:380: PROPERTY_HINT_LAYERS_3D_PHYSICS
   collision_mask: layerBitmask('collision_mask', { hinted: 'ray_cast_3d.cpp:380', width: 'uint32' /* ray_cast_3d.h:100 */ }),

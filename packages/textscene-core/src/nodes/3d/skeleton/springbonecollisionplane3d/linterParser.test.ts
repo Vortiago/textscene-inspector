@@ -1,23 +1,8 @@
 /**
- * SpringBoneCollisionPlane3D strict validators: coverage and base-walk checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * The class binds nothing of its own (see linterParser.ts for the four-route
- * proof), so there is no per-property happy/malformed/bound case to grow here.
- * What has to hold instead is that the base-walk still reaches every inherited
- * key a scene author can legally set on a plane, and that none of them was
- * quietly re-declared on this type, which would shadow the ancestor.
- *
- * The walk is asserted only as far as SpringBoneCollision3D. Node3D's keys,
- * `transform` among them, resolve in the app because `linter/index.ts` loads
- * every slice, but not from this file's import graph: the ancestor-import chain
- * that Control keeps up to CanvasItem stops at SpringBoneCollision3D, which
- * imports no ancestor. So `expectFixtureClean` below leaves the fixture's
- * `transform` line unchecked, and `fixtureLint` stays the gate that sees it.
+ * SpringBoneCollisionPlane3D strict validators: coverage and base-walk checks. The class binds
+ * nothing of its own (linterParser.ts has the four-route proof), so the tests assert that the
+ * base-walk reaches every inherited key a scene can set on a plane, and that this type re-declares
+ * none of them.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -30,17 +15,16 @@ import './linterParser';
 const check = checkerFor('SpringBoneCollisionPlane3D');
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * SpringBoneCollisionPlane3D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * Set exactly one, from the source rather than from expectation: list the keys
+ * SpringBoneCollisionPlane3D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY. Both
+ * unset is red on purpose. Do not delete an assertion to go green.
  */
 const KEYS: string[] = [];
 /**
- * True: the class binds no property by any of the four routes. The whole
- * translation unit is scene/3d/spring_bone_collision_plane_3d.cpp:31-43, an
- * include plus the `_collide` override, with no `_bind_methods` and no
- * `.compat.inc`; scene/3d/spring_bone_collision_plane_3d.h:38-39 declares only
- * that override; doc/classes/SpringBoneCollisionPlane3D.xml has no `<members>`.
+ * True: no route binds a property. scene/3d/spring_bone_collision_plane_3d.cpp:31-43 is an include
+ * plus the `_collide` override, with no `_bind_methods` or `.compat.inc`.
+ * scene/3d/spring_bone_collision_plane_3d.h:38-39 declares only that override, and
+ * doc/classes/SpringBoneCollisionPlane3D.xml has no `<members>`.
  */
 const DECLARES_NOTHING = true;
 
@@ -54,14 +38,9 @@ describe('SpringBoneCollisionPlane3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
-    //
-    // With no own keys that is the INHERITED validators only — `linterParser`
-    // imports the parent chain — so it covers what SpringBoneCollision3D up declares and
-    // becomes this slice's own claim the moment KEYS gains an entry.
+    // Runs the fixture's "zero errors and zero warnings" claim against the validators this test
+    // imports. `fixtureLint` checks the same file against the whole registry. With no own keys,
+    // that is the inherited validators from SpringBoneCollision3D up.
     expectFixtureClean('unit-spring-bone-collision-plane-3d.tscn');
   });
 

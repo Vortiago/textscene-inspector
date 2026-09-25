@@ -1,5 +1,5 @@
 /**
- * HFlowContainer registration — parser. Reuses FlowContainer's parser
+ * HFlowContainer registration: parser. Reuses FlowContainer's parser
  * directly: the only difference between the two is which keys `vertical`
  * appears under in the file, not how any key is read. Render side: `./index.r3f`.
  */

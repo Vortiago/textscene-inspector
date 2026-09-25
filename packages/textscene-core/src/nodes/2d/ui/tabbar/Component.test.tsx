@@ -1,8 +1,6 @@
 /**
- * `<TabBar>` render contract — one StyleBox + text run per drawn tab, the
- * current tab's own chrome, and the close icon where the display policy
- * shows it. Structure/colour assertions only — pixels are a golden-image
- * concern via `pnpm ref:godot`.
+ * `<TabBar>` render contract: one StyleBox and text run per drawn tab, the current tab's chrome, and
+ * the close icon where the display policy shows it. It asserts structure and colour, not pixels.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -95,9 +93,8 @@ describe('<TabBar> (isolated painter contract)', () => {
     const meshes = findChromeMeshes(renderer.scene);
     // Selected (tab_selected, default_theme.cpp:975-976) fills with
     // style_normal_color (0.1, 0.1, 0.1, 0.6); unselected fills with
-    // style_pressed_color (0, 0, 0, 0.6) — distinct RGB, same alpha. The
-    // border ring (`StyleBoxQuad.tsx`'s own vertex order) precedes the fill
-    // in the buffer, so every vertex is scanned rather than assuming index 0.
+    // style_pressed_color (0, 0, 0, 0.6): distinct RGB, same alpha. The border ring precedes the
+    // fill in the buffer (`StyleBoxQuad.tsx`), so every vertex is scanned.
     const hasFillRGBA = (mesh: THREE.Mesh, r: number, a: number) => {
       const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
       for (let i = 0; i < color.count; i++) {
@@ -124,7 +121,7 @@ describe('<TabBar> (isolated painter contract)', () => {
     );
     const mesh = findChromeMeshes(renderer.scene)[0]!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
-    // style_disabled_color alpha 0.3 — some vertex in the fill carries it (see the note above on vertex order).
+    // style_disabled_color alpha 0.3: some fill vertex carries it, in the vertex order noted above.
     let sawDisabledAlpha = false;
     for (let i = 0; i < color.count; i++) {
       if (Math.abs(color.getW(i) - 0.3) < 1e-5) sawDisabledAlpha = true;

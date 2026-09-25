@@ -1,14 +1,8 @@
 /**
- * Decal parser — parses Decal TSCN properties into a typed shape.
- *
- * Defaults follow Godot's Decal:
- *   - size = Vector3(2, 2, 2)
- *   - modulate = white opaque
- *   - albedo_mix = 1, emission_energy = 1
- *   - normal_fade = 0, upper_fade = lower_fade = 0.3
- *   - cull_mask = 0xFFFFF (1048575 — Godot's default: the 20 editor-visible layers)
- *   - distance_fade_enabled = false, distance_fade_begin = 40, distance_fade_length = 10
- * Texture references are optional and only set when present.
+ * Decal parser: parses Decal TSCN properties into a typed shape, with Godot's defaults: size
+ * (2, 2, 2), white opaque modulate, albedo_mix and emission_energy 1, normal_fade 0, upper and
+ * lower fade 0.3, cull_mask 0xFFFFF (the 20 editor-visible layers), and distance fade off at
+ * begin 40 and length 10. Texture references are set only when present.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
@@ -23,7 +17,7 @@ import type { DecalProperties } from './types';
 const DEFAULT_SIZE: Vector3 = { x: 2, y: 2, z: 2 };
 
 /**
- * Godot Decal default `cull_mask` — all 20 render layers enabled
+ * Godot Decal default `cull_mask`: all 20 render layers enabled
  * (`Decal::cull_mask = (1 << 20) - 1`). Exported so the projection's own default
  * argument cannot drift from what the parser hands it.
  */

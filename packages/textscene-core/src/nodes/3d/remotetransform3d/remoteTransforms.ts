@@ -1,48 +1,8 @@
 /**
- * RemoteTransform resolution pass (Godot `RemoteTransform3D`/`RemoteTransform2D`).
- *
- * A RemoteTransform node copies its OWN transform onto the node its
- * `remote_path` resolves to — Godot's `_update_remote()`. This fires on
- * enter-tree, so in a static render (no game loop) the target already sits at
- * the relay's transform. It is therefore a deterministic, description-level
- * effect over the parsed tree, NOT runtime simulation: it does not conflict
- * with ADR-0008 (which only governs whether a node DRAWS anything — the relay
- * still draws nothing; this pass just resolves where its target ends up).
- *
- * The pass runs ONCE over the whole authored scene tree, right after parse and
- * before the SceneGraph is assembled (see `useParsedScene.toParseResult`), so
- * every downstream consumer — 3D render, 2D world canvas, gizmos, bounds,
- * selection, the tree viewer and the inspector — reads the moved target for
- * free. It mutates the freshly-parsed, not-yet-shared tree in place (the parse
- * is memoized per content, so re-running is idempotent).
- *
- * Semantics reproduced (measured against real Godot 4.6.3 via the ref harness):
- *   - `use_global_coordinates` (default true): the target's GLOBAL transform is
- *     set from the relay's GLOBAL transform, per the enabled update flags. With
- *     all three flags true it is a straight global-transform copy.
- *   - `use_global_coordinates = false`: a NO-OP in a static render. Measured on
- *     a matched pair (same tree, flag the only difference): the global-mode
- *     relay repositions its target, the local-mode one leaves it at its authored
- *     transform. Godot's `_update_remote` keys off the relay's transform-changed
- *     notification, which the global path satisfies on load and the local path
- *     does not — so a static previewer (no game loop moving the relay) only ever
- *     shows the global-coordinate drive. Reproduced, not derived.
- *   - `update_position`/`update_rotation`/`update_scale` (each default true)
- *     select which components are pushed; disabled components keep the target's.
- *
- * Scope / limits:
- *   - The pass sees only the authored root scene. Instanced sub-scenes are
- *     composed later by the live scene tree (ADR-0013), so a `remote_path`
- *     crossing into/out of an instance — or a relay living inside an instanced
- *     sub-scene — is not resolved here.
- *   - A relay whose target is itself a relay resolves in document (pre-order)
- *     order, matching Godot's tree-order enter-tree application for the common
- *     single-direction chain. Feedback loops (a relay driving one of its own
- *     ancestors) are not iterated to a fixed point.
- *   - Partial-flag composition of rotation/scale is done at the global level and
- *     matches Godot exactly when the target's parent carries no rotation/scale
- *     (translation-only) — the case the fixtures exercise. Under a rotated or
- *     scaled parent Godot's own `set_rotation`/`set_scale` quirk diverges.
+ * The RemoteTransform pass. A RemoteTransform3D or RemoteTransform2D copies its own transform onto
+ * the node its `remote_path` names on enter-tree (Godot's `_update_remote()`), so a static render
+ * shows the target at the relay's transform. It is a description-level effect, not simulation, so
+ * ADR-0008 (what a node draws) does not govern it. Semantics are measured on Godot 4.6.3.
  */
 
 import * as THREE from 'three';
@@ -71,24 +31,18 @@ interface RelayProps {
 }
 
 /**
- * Resolve every RemoteTransform in `nodes`, mutating each target's parsed
- * transform in place. Returns the same array for call-site convenience.
+ * Resolve every RemoteTransform in `nodes`, mutating each target's transform in place, and return
+ * the same array. It runs once, after parse and before the SceneGraph (`useParsedScene.toParseResult`),
+ * so every consumer reads the moved target. The parse is memoized per content, so a re-run is idempotent.
  */
 export function applyRemoteTransforms(nodes: TscnNode[]): TscnNode[] {
   const nodeByPath = new Map<string, TscnNode>();
   const relays: Array<{ node: TscnNode; path: string }> = [];
 
-  // `remote_path = NodePath("%Target")` addresses the owner's claim table rather
-  // than a child, so the table has to be in hand before any relay resolves. It
-  // is collected in THIS walk: the claim is first-one-wins in the same
-  // depth-first order, and a second traversal rebuilt every path string only to
-  // keep a handful of them.
-  //
-  // The RULE is not restated here — `isUniqueNameInOwner` and the key spelling
-  // both come from `utils/uniqueNames`, which owns them — only the loop that
-  // applies it, fused into a walk this function needs anyway. That the two
-  // still answer alike is pinned in this module's test rather than left to a
-  // reader to notice.
+  // `NodePath("%Target")` addresses the owner's claim table, so the table must exist before any
+  // relay resolves. This walk collects it, first-one-wins in the same depth-first order, since a
+  // second walk rebuilds every path string to keep a few. `utils/uniqueNames` owns the rule and the
+  // key spelling, and this module's test pins that both answer alike.
   const uniquePaths = new Map<string, string>();
 
   const walk = (node: TscnNode, parentPath: string): void => {
@@ -101,18 +55,20 @@ export function applyRemoteTransforms(nodes: TscnNode[]): TscnNode[] {
     }
     for (const child of node.children) walk(child, path);
   };
+  // Only the authored root scene. The live scene tree (ADR-0013) composes instanced sub-scenes
+  // later, so a relay inside an instance, or a `remote_path` that crosses one, is not resolved.
   for (const node of nodes) walk(node, '');
 
   if (relays.length === 0) return nodes;
 
+  // Document (pre-order) order, as Godot's enter-tree order applies a one-direction chain. A relay
+  // that drives its own ancestor is not iterated to a fixed point.
   for (const { node, path } of relays) {
     if (node.type === 'RemoteTransform3D') applyRelay3D(node, path, nodeByPath, uniquePaths);
     else applyRelay2D(node, path, nodeByPath, uniquePaths);
   }
   return nodes;
 }
-
-// --- Shared helpers -------------------------------------------------------
 
 /** Parse a relay's flags, each defaulting to Godot's `true`. */
 function readFlags(props: RelayProps): RemoteFlags {
@@ -129,8 +85,6 @@ function parentPathOf(path: string): string | null {
   return idx === -1 ? null : path.slice(0, idx);
 }
 
-// --- 3D -------------------------------------------------------------------
-
 function applyRelay3D(
   relay: TscnNode,
   relayPath: string,
@@ -144,8 +98,9 @@ function applyRelay3D(
   if (!target) return;
 
   const flags = readFlags(props);
-  // Local-coordinate mode does not reposition the target in a static render
-  // (measured — see module header). Only the global-coordinate drive applies.
+  // Local mode leaves the target at its authored transform in a static render (a matched pair,
+  // measured). `_update_remote` keys off the relay's transform-changed notification, which the
+  // global path satisfies on load and the local path does not.
   if (!flags.useGlobal) return;
 
   const relayGlobal = globalMatrix3D(relayPath, nodeByPath);
@@ -161,9 +116,9 @@ function applyRelay3D(
 }
 
 /**
- * Take `base` and replace its position/rotation/scale with `source`'s per the
- * flags. All-on is a straight copy of `source`; otherwise decompose both and
- * recombine the selected components.
+ * `base` with each flagged component (position, rotation, scale) taken from `source`, composed in
+ * global space, as the 2D path is too. This matches Godot exactly when the target's parent has no
+ * rotation or scale. Under a rotated or scaled parent, Godot's `set_rotation`/`set_scale` quirk diverges.
  */
 function composeSelected3D(
   base: THREE.Matrix4,
@@ -188,10 +143,8 @@ function composeSelected3D(
   );
 }
 
-// --- 2D -------------------------------------------------------------------
-
 /**
- * A Godot Transform2D as its two basis columns + origin:
+ * A Godot Transform2D as its two basis columns and origin:
  * `x' = a·x + c·y + tx`, `y' = b·x + d·y + ty`.
  */
 interface Affine2D {
@@ -218,8 +171,7 @@ function applyRelay2D(
   if (!target) return;
 
   const flags = readFlags(props);
-  // Local-coordinate mode does not reposition the target in a static render
-  // (measured — see module header). Only the global-coordinate drive applies.
+  // Local mode leaves the target in place, as in `applyRelay3D`.
   if (!flags.useGlobal) return;
 
   const relayGlobal = globalAffine2D(relayPath, nodeByPath);
@@ -229,8 +181,7 @@ function applyRelay2D(
   const parentGlobal = parentPath ? globalAffine2D(parentPath, nodeByPath) : IDENTITY_2D;
   const newLocal = mulAffine2D(invertAffine2D(parentGlobal), desired);
 
-  // Godot's RemoteTransform2D pushes position/rotation/scale only; the target
-  // keeps its own `skew`.
+  // Godot's RemoteTransform2D pushes position, rotation and scale only. The target keeps its `skew`.
   const dec = decomposeAffine2D(newLocal);
   const tp = target.properties as Node2DProperties;
   tp.position = dec.position;
@@ -306,7 +257,7 @@ function invertAffine2D(m: Affine2D): Affine2D {
   return { a, b, c, d, tx: -(a * m.tx + c * m.ty), ty: -(b * m.tx + d * m.ty) };
 }
 
-/** Godot Transform2D decomposition (position/rotation/scale; skew dropped). */
+/** Godot Transform2D decomposition into position, rotation and scale. Skew is dropped. */
 function decomposeAffine2D(m: Affine2D): { position: Vector2; rotation: number; scale: Vector2 } {
   const rotation = Math.atan2(m.b, m.a);
   const det = m.a * m.d - m.b * m.c;

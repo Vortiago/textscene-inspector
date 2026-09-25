@@ -1,12 +1,7 @@
 /**
- * LimitAngularVelocityModifier3D strict validators: format, range and the
- * degree-versus-radian question `max_angular_velocity` raises.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour would belong in linter.test.ts, through
- * `Linter`; this slice registers no rules, for the reason linterParser.ts gives.
+ * LimitAngularVelocityModifier3D strict validators: format, range and whether `max_angular_velocity`
+ * is in degrees or radians. Asserted through `validatorRegistry`, not by linting a `.tscn`, so a
+ * failure points at the validator. The slice registers no rules, for the reason linterParser.ts gives.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,13 +17,9 @@ function check(property: string, value: string, nodeType = 'LimitAngularVelocity
 }
 
 /**
- * Every key LimitAngularVelocityModifier3D registers.
- *
- * Two `ADD_PROPERTY` calls (limit_angular_velocity_modifier_3d.cpp:272-273) and
- * one of the two `ADD_ARRAY_COUNT` calls (:274; :275 declares `joint_count`
- * with an empty setter, so it is getter-only and gets no validator), plus the
- * two families `_get_property_list` builds by hand (:98, :106), which appear in
- * no `ADD_*` call at all.
+ * Every key LimitAngularVelocityModifier3D registers: two `ADD_PROPERTY` calls
+ * (limit_angular_velocity_modifier_3d.cpp:272-273), one `ADD_ARRAY_COUNT` (:274, since :275's
+ * `joint_count` has an empty setter), and the two families `_get_property_list` builds (:98, :106).
  */
 const KEYS: string[] = [
   'max_angular_velocity',
@@ -37,7 +28,7 @@ const KEYS: string[] = [
   'chains/#/*',
   'joints/#/*',
 ];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
 const DECLARES_NOTHING = false;
 
 /** One concrete key per chain leaf, as a real scene spells it. */
@@ -58,16 +49,15 @@ describe('LimitAngularVelocityModifier3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // The fixture's "zero errors and zero warnings" claim, run, not reasoned. `fixtureLint`
+    // checks it against the whole registry through the barrel. This checks the same file
+    // against only what this test imported.
     expectFixtureClean('unit-limit-angular-velocity-modifier-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose is not validating a format. This check is generic
+    // on purpose, and per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('LimitAngularVelocityModifier3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -95,20 +85,10 @@ describe('LimitAngularVelocityModifier3D strict validators', () => {
 });
 
 /**
- * The whole point of the slice.
- *
- * `ADD_PROPERTY(..., PROPERTY_HINT_RANGE, "0,720,or_greater,radians_as_degrees,
- * suffix:°/s")` at limit_angular_velocity_modifier_3d.cpp:272, whose suffix the
- * source concatenates from `String(U"°") + "/s"`. The hint's numbers are
- * DEGREES per second; the `.tscn` stores RADIANS per second. The
- * degree-to-radian pairs, side by side:
- *
- * |   hint (degrees/s) | stored (radians/s) | bounded here? |
- * | -----------------: | -----------------: | ------------- |
- * |                  0 |                  0 | yes, the floor, and the two units agree at it |
- * |                360 |          6.2831855 | no, it is the class default (h:53, Math::TAU) |
- * |                720 |          12.566371 | no, `or_greater` opens the max end |
- * |              45836 |                800 | no, same reason |
+ * `max_angular_velocity`, `PROPERTY_HINT_RANGE "0,720,or_greater,radians_as_degrees,suffix:°/s"`
+ * (limit_angular_velocity_modifier_3d.cpp:272): the hint is in degrees per second, the `.tscn` in
+ * radians. Only the floor, 0 in both units, is bounded. 360 (6.2831855, the Math::TAU default at h:53),
+ * 720 (12.566371) and 45836 (800) are all open, since `or_greater` opens the max end.
  */
 describe('LimitAngularVelocityModifier3D max_angular_velocity', () => {
   it('accepts the default Godot itself writes', () => {
@@ -120,18 +100,16 @@ describe('LimitAngularVelocityModifier3D max_angular_velocity', () => {
 
   it('accepts the hint ceiling converted into the unit the file stores', () => {
     // 720 degrees is 4 * PI = 12.566371 radians. Accepted, and so is the value
-    // just past it, which is what proves the ceiling is OPEN rather than
+    // just past it, which is what proves the ceiling is open rather than
     // converted-and-closed: `v.radians({ maxDeg: 720 })` would reject 12.6.
     expect(check('max_angular_velocity', '12.566371')).toBeNull();
     expect(check('max_angular_velocity', '12.6')).toBeNull();
   });
 
   it('accepts a value above the hint number, which is not a radian bound', () => {
-    // 800 RADIANS per second is 45836 degrees per second. A validator bounded on
-    // the raw hint number (`max: 720`) would accept it too, so the pair that
-    // separates the two mistakes is this one and the 12.6 above; a validator
-    // bounded at 720 RADIANS rejects nothing a scene can contain, which is the
-    // trap `radians_as_degrees` sets.
+    // 800 radians per second is 45836 degrees per second. A validator bounded on the raw hint number
+    // (`max: 720`) would accept it too, so this and the 12.6 above separate the two mistakes. A bound
+    // of 720 radians rejects nothing a scene can contain: the trap `radians_as_degrees` sets.
     expect(check('max_angular_velocity', '800.0')).toBeNull();
     expect(check('max_angular_velocity', '20.0')).toBeNull();
   });
@@ -171,7 +149,7 @@ describe('LimitAngularVelocityModifier3D max_angular_velocity', () => {
 
 describe('LimitAngularVelocityModifier3D exclude', () => {
   it('accepts both boolean literals', () => {
-    // limit_angular_velocity_modifier_3d.cpp:273, Variant::BOOL, no hint;
+    // limit_angular_velocity_modifier_3d.cpp:273, Variant::BOOL, no hint.
     // set_exclude (:239-241) assigns whatever it is given.
     expect(check('exclude', 'true')).toBeNull();
     expect(check('exclude', 'false')).toBeNull();
@@ -258,16 +236,9 @@ describe('LimitAngularVelocityModifier3D chains family', () => {
   });
 
   it('says nothing about a non-integer index, which Godot reads as a chain anyway', () => {
-    // `_set` reads it with a bare `get_slicec('/', 1).to_int()` (:37), and
-    // `to_int` skips non-digits rather than stopping at them, so `chains/x/...`
-    // resolves to chain 0 and the write lands. Nothing refuses it, so ADR-0032
-    // grounds no diagnostic on the index; the LEAF still decides, which is the
-    // shared `indexedFamilyValidator`'s documented `to_int` behaviour.
-    //
-    // ChainIK3D reads the other way on the same construct
-    // (`check('settings/x/root_bone', '-5')` is null there) because it predates
-    // the helper and hand-rolls a dispatcher that returns before the leaf. The
-    // divergence is that dispatcher's, not a disagreement about the engine.
+    // `_set` reads it with a bare `get_slicec('/', 1).to_int()` (:37), and `to_int` skips non-digits,
+    // so `chains/x/...` resolves to chain 0 and the write lands. Nothing refuses it, so ADR-0032
+    // grounds no diagnostic on the index, and the leaf still decides.
     expect(check('chains/x/root_bone_name', '"Head"')).toBeNull();
     expect(check('chains/x/root_bone', '-5')?.severity).toBe('error');
   });
@@ -286,7 +257,7 @@ describe('LimitAngularVelocityModifier3D joints family', () => {
     'reports %s as read-only, since the write is discarded',
     (key) => {
       // Neither PropertyInfo carries STORAGE (:107 is EDITOR | READ_ONLY, :108
-      // is a bare READ_ONLY), so Godot never writes these; and `_set` has no
+      // is a bare READ_ONLY), so Godot never writes these, and `_set` has no
       // `joints/` branch, so a hand-written one falls through to `return true`
       // (:53) having assigned nothing.
       const error = check(key, '2');
@@ -313,7 +284,7 @@ describe('LimitAngularVelocityModifier3D inherited keys', () => {
     (key) => {
       expect(validatorRegistry.findValidator('LimitAngularVelocityModifier3D', key)).not.toBeNull();
       expect(validatorRegistry.getOwnKeys('LimitAngularVelocityModifier3D')).not.toContain(key);
-      // The SAME function object, so the slice cannot have shadowed it with a
+      // The same function object, so the slice cannot have shadowed it with a
       // copy that then drifts from SkeletonModifier3D's.
       expect(validatorRegistry.findValidator('LimitAngularVelocityModifier3D', key)).toBe(
         validatorRegistry.findValidator('SkeletonModifier3D', key)

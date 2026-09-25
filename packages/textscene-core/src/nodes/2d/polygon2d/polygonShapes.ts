@@ -1,36 +1,17 @@
 /**
- * Turn a Polygon2D's raw arrays into the rings the renderer fills.
- *
- * Godot's `polygon_2d.cpp` NOTIFICATION_DRAW decides the shape in one place:
- *
- *   if (invert || polygons.is_empty())  → triangulate `polygon` in stored order
- *   else                                → one sub-polygon per `polygons` entry,
- *                                          each indexing into `polygon`
- *
- * and drops the last `internal_vertex_count` vertices on that first branch —
- * the engine's condition is `(invert || polygons.is_empty()) && internal_vertices > 0`,
- * so the trim applies whenever invert is on as well — because internal vertices
- * are UV/skinning helpers rather than part of the outline.
- *
- * `invert_enabled` fills the polygon's AABB grown by `invert_border` with the
- * polygon punched out — Godot builds that as one bridged ring, which is
- * equivalent to (and much clearer as) an outline plus a hole.
- *
- * Pure geometry, in Godot's +Y-down pixel space: the caller applies `offset`
- * and the Y negation.
+ * Turns a Polygon2D's raw arrays into the rings the renderer fills, in Godot's
+ * +Y-down pixels. As in `polygon_2d.cpp` NOTIFICATION_DRAW: with `invert` or no
+ * `polygons`, one ring in stored order, less the trailing `internal_vertex_count`
+ * UV/skinning helpers. Otherwise, one ring per `polygons` entry.
  */
 
 import type { Vector2 } from '../../base/node2d/types';
 
 export interface PolygonRings {
   /**
-   * The vertex pool every ring indexes into, in Godot pixel space and in the
-   * authored order — `polygon` itself, plus the corners `invert_enabled` adds.
-   *
-   * Rings are INDICES rather than points so a caller can carry any per-vertex
-   * attribute (`uv`, `vertex_colors`) through to the mesh: Godot pairs those
-   * arrays with the polygon positionally, so anything that renumbers or
-   * duplicates vertices silently mismatches them.
+   * The vertex pool every ring indexes into, in authored order: `polygon`, plus
+   * the corners `invert_enabled` adds. Rings are indices so `uv` and
+   * `vertex_colors`, which Godot pairs with points by position, stay aligned.
    */
   points: Vector2[];
   /** Filled outlines. One per `polygons` entry, or a single stored-order ring. */
@@ -53,11 +34,10 @@ export function polygonRings(
   const allIndices = all.map((_, i) => i);
 
   if (invertEnabled) {
-    // Invert ignores `polygons`, but NOT the internal-vertex trim — Godot's
-    // condition is `(invert || polygons.is_empty()) && internal_vertices > 0`,
-    // so the trim applies on this branch as much as on the stored-order one.
-    // The grown bounds are NEW vertices, appended to the pool so they get
-    // indices (and therefore UVs) of their own, as they do in Godot.
+    // Invert ignores `polygons` but still trims. Godot builds one bridged ring,
+    // and an outline of the bounds grown by `invert_border` with the polygon as a hole
+    // is equivalent. The bound corners are new vertices with their own indices,
+    // so their own UVs, as in Godot.
     const ring = trimInternal(allIndices, all.length, internalVertexCount);
     if (ring.length < MIN_RING) return { points: all, outlines: [], hole: null };
     const bounds = grownBounds(ring.map((i) => all[i]!), invertBorder);

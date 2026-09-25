@@ -1,7 +1,6 @@
 /**
- * Tests for the useResource hook. Exercises the public contract from
- * R3F-contracts.md §1: status transitions, identity equality vs Object3D
- * clone semantics, and the late-arrival flow (the hard gate).
+ * The useResource contract: status transitions, identity for shared values against a clone per
+ * consumer for an Object3D, and the late-arrival flow.
  */
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { renderHook, act, render } from '@testing-library/react';
@@ -14,10 +13,8 @@ import { createFakeResourceLoader, type FakeProcessor } from './testing/createFa
 import { initGlbModules } from './processing/glbProcessing';
 
 /**
- * A fake ResourceLoader whose cache + event emits these hook tests drive
- * directly. The shared `createFakeResourceLoader` fixture holds the
- * assembly; `MockLoader` narrows the loader's processor handles back to
- * their driving API (`_resolve` / `_fail` / `setRequestImpl` / `cache`).
+ * A fake ResourceLoader from `createFakeResourceLoader`, whose processor handles `MockLoader`
+ * narrows to their driving API: `_resolve`, `_fail`, `setRequestImpl` and `cache`.
  */
 type MockLoader = ResourceLoader & {
   textures: FakeProcessor<THREE.Texture>;
@@ -35,8 +32,7 @@ function withLoader(loader: ResourceLoader) {
   };
 }
 
-// GLBMesh tests call cloneWithMaterials (via the hook), which requires
-// SkeletonUtils to be lazily loaded first. Initialise once for the file.
+// The hook's cloneWithMaterials needs SkeletonUtils loaded first.
 beforeAll(async () => {
   await initGlbModules();
 });
@@ -69,8 +65,7 @@ describe('useResource', () => {
 
   it('pending -> loaded: starts pending, transitions on bus event', () => {
     const requestSpy = vi.fn((path: string) => {
-      // Simulate async-ish behavior: the request method just records;
-      // the test drives the resolution via _resolve below.
+      // The request only records, and the test resolves it with _resolve below.
       void path;
     });
     loader.textures.setRequestImpl(requestSpy);
@@ -123,15 +118,11 @@ describe('useResource', () => {
       loader.textures._fail('res://broken.png', 'failed to parse/decode image');
     });
 
-    // Every load failure maps to the single `unavailable` status — the
-    // error string carries the human-readable detail for diagnostics.
     expect(result.current.status).toBe('unavailable');
     expect(result.current.error).toBe('failed to parse/decode image');
   });
 
-  // -------------------------------------------------------------------
-  // THE HARD GATE — `missing → loaded` late-arrival.
-  // -------------------------------------------------------------------
+  // The late arrival: `unavailable` turns `loaded`.
   it('unavailable -> loaded: the late-arrival hard gate fires a loaded event after a previous failure', () => {
     loader.textures.setRequestImpl(() => {});
 
@@ -140,28 +131,23 @@ describe('useResource', () => {
       { wrapper: withLoader(loader) }
     );
 
-    // 1. Initial state: hook fires request, status pending.
+    // The hook fires its request and waits pending.
     expect(result.current.status).toBe('pending');
 
-    // 2. Host fails the initial request (no file uploaded yet).
+    // The host has no file yet.
     act(() => {
       loader.textures._fail('res://late.png', 'File not found');
     });
     expect(result.current.status).toBe('unavailable');
     expect(result.current.value).toBeUndefined();
 
-    // 3. Later, the host provides the file. The real ResourceLoader.provideFile
-    //    clears the cache and re-routes through the processor; here we
-    //    simulate the resulting emit directly because the mock loader's
-    //    `request` is a no-op.
+    // The mock's `request` does nothing, so this emits what provideFile causes: a cleared cache
+    // entry, then a fresh `loaded` event.
     act(() => {
-      // Mimic clearCache(path) clearing the failed null entry, then a
-      // fresh loaded event firing from the late re-load.
       loader.textures.cache.delete('res://late.png');
       loader.textures._resolve('res://late.png', textureA);
     });
 
-    // 4. Subscribers re-render with status loaded and the now-available value.
     expect(result.current.status).toBe('loaded');
     expect(result.current.value).toBe(textureA);
     expect(result.current.error).toBeUndefined();
@@ -188,16 +174,13 @@ describe('useResource', () => {
 
     expect(consumerA.result.current.status).toBe('loaded');
     expect(consumerB.result.current.status).toBe('loaded');
-    // For non-Object3D resources the contract requires identity equality.
     expect(consumerA.result.current.value).toBe(consumerB.result.current.value);
   });
 
   it('Object3D clone: two GLBMesh consumers receive distinct clones, not the cached template', () => {
     loader.glbMeshes.setRequestImpl(() => {});
 
-    // Build a template Object3D with one child mesh + material so we can
-    // observe that the clone copies structure and that the materials are
-    // also cloned (per cloneWithMaterials).
+    // One child mesh with a material, so the clone's structure and material copy both show.
     const template = new THREE.Object3D();
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(),
@@ -223,27 +206,21 @@ describe('useResource', () => {
 
     expect(a).toBeDefined();
     expect(b).toBeDefined();
-    // Different instances (different uuids) — single-parent rule.
+    // Different instances, since an Object3D has one parent.
     expect(a.uuid).not.toBe(b.uuid);
     expect(a).not.toBe(b);
-    // Neither consumer received the original template.
     expect(a).not.toBe(template);
     expect(b).not.toBe(template);
-    // Structure is preserved: each clone has one child mesh.
     expect(a.children).toHaveLength(1);
     expect(b.children).toHaveLength(1);
-    // Materials are cloned, not shared.
     const matA = (a.children[0] as THREE.Mesh).material as THREE.Material;
     const matB = (b.children[0] as THREE.Mesh).material as THREE.Material;
     expect(matA).not.toBe(matB);
     expect(matA.uuid).not.toBe(matB.uuid);
   });
 
-  // -------------------------------------------------------------------
-  // Per-consumer GLB clone disposal (materials only; geometry is shared
-  // with the cached template and every other consumer's clone via
-  // `cloneWithMaterials`, so disposing it here would corrupt them).
-  // -------------------------------------------------------------------
+  // A consumer's clone disposes its materials only: `cloneWithMaterials` shares the geometry with
+  // the cached template and every other clone.
   it('disposes the cloned material on unmount, but never the shared geometry', () => {
     loader.glbMeshes.setRequestImpl(() => {});
 
@@ -269,8 +246,7 @@ describe('useResource', () => {
     unmount();
 
     expect(materialDisposeSpy).toHaveBeenCalledTimes(1);
-    // Geometry is shared (never cloned) — disposing it here would break
-    // the cached template and any other live consumer.
+    // The shared geometry stays: its disposal would break the template and every live clone.
     expect(geometryDisposeSpy).not.toHaveBeenCalled();
   });
 
@@ -335,7 +311,7 @@ describe('useResource', () => {
     );
 
     expect(requestSpy).not.toHaveBeenCalled();
-    // We rendered three times — the component ran, but no new request fired.
+    // Three renders, and no new request.
     expect(renderCount).toBeGreaterThanOrEqual(3);
   });
 
@@ -344,10 +320,7 @@ describe('useResource', () => {
       useResource<THREE.Texture>('res://t.png', 'texture')
     );
 
-    // The no-provider case is a programming error, but it surfaces through
-    // the same `unavailable` status as a missing resource — callers render
-    // their placeholder either way. The descriptive `error` string is kept
-    // so a developer who forgot the provider can still diagnose it.
+    // A missing provider shares `unavailable` with a missing resource, and `error` names the cause.
     expect(result.current.status).toBe('unavailable');
     expect(result.current.value).toBeUndefined();
     expect(result.current.error).toMatch(/outside <ResourceLoaderProvider>/);
@@ -367,7 +340,7 @@ describe('useResource', () => {
       loader.textures._resolve('res://other.png', textureB);
     });
 
-    // Still pending — the other path's event must not affect this consumer.
+    // Still pending: the other path's event must not reach this consumer.
     expect(result.current.status).toBe('pending');
   });
 
@@ -388,9 +361,7 @@ describe('useResource', () => {
     expect(result.current.value).toBe(material);
   });
 
-  // -------------------------------------------------------------------
-  // Unmount / path-swap races.
-  // -------------------------------------------------------------------
+  // Unmount and path-swap races.
   describe('unmount and path-swap races', () => {
     it('removes its loaded/failed bus listeners on unmount (no leaked subscriptions)', () => {
       loader.textures.setRequestImpl(() => {});
@@ -424,8 +395,7 @@ describe('useResource', () => {
 
       rerender({ path: 'res://b.png' });
 
-      // One old handler removed, one new handler added — net count unchanged,
-      // not accumulating a handler per path visited.
+      // One handler off and one on: the count does not grow per path visited.
       expect(loader.eventBus.getHandlerCount('texture', 'loaded')).toBe(before + 1);
     });
 
@@ -447,12 +417,11 @@ describe('useResource', () => {
         loader.textures._resolve('res://a.png', textureA);
       });
 
-      // Must still reflect 'res://b.png' — a stale event for the
-      // abandoned path must never resurrect it into the current result.
+      // Still 'res://b.png': a stale event for the abandoned path must not reach the result.
       expect(result.current.status).toBe('pending');
       expect(result.current.value).toBeUndefined();
 
-      // The CURRENT path resolving still works normally afterwards.
+      // The current path still resolves afterwards.
       act(() => {
         loader.textures._resolve('res://b.png', textureB);
       });
@@ -477,12 +446,8 @@ describe('useResource', () => {
     });
   });
 
-  // -------------------------------------------------------------------
-  // Reference-counting: pin / unpin wiring.
-  // The hook must increment the processor pin count on mount and
-  // decrement on unmount so the LRU cache never evicts a cached entry
-  // that a mounted consumer still holds.
-  // -------------------------------------------------------------------
+  // The hook pins on mount and unpins on unmount, so the LRU cache never evicts an entry a
+  // mounted consumer holds.
   describe('pin / unpin lifecycle', () => {
     it('pins the resource on mount and unpins on unmount', () => {
       loader.textures.cache.set('res://t.png', textureA);
@@ -539,9 +504,8 @@ describe('useResource', () => {
     });
 
     it('StrictMode double-invoke: mount->unmount->mount ends at pin count 1 and never evicts', () => {
-      // A real <StrictMode> wrapper makes React run the effect, its
-      // cleanup, then the effect again on mount. Net result must be
-      // pin count = 1, with no disposal in the gap.
+      // <StrictMode> runs the effect, its cleanup and the effect again: the net pin count is 1,
+      // with no disposal in the gap.
       loader.textures.cache.set('res://t.png', textureA);
       const StrictWrapper = ({ children }: { children: ReactNode }) => (
         <StrictMode>
@@ -556,7 +520,6 @@ describe('useResource', () => {
 
       expect(loader.textures.pinCounts.get('res://t.png')).toBe(1);
       expect(result.current.status).toBe('loaded');
-      // The resource must still be in cache (not disposed in the gap).
       expect(loader.textures.cache.has('res://t.png')).toBe(true);
 
       // The real unmount releases the last pin.

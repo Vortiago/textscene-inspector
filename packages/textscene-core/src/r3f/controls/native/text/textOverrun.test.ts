@@ -1,14 +1,7 @@
 /**
- * `trimLineToWidth` — a port of `TextServer::shaped_text_overrun_trim_to_width`
- * (`modules/text_server_adv/text_server_adv.cpp:5935-6154`), LTR-only.
- *
- * Every expected glyph advance below is `getFontGlyphAdvancePx` against the
- * real vendored Open Sans metrics at size 16 (an independent source from the
- * search loop under test): 'A' 1354 design units -> 10.578125px, 'B' 1350 ->
- * 10.546875px, space 532 -> 4.15625px, the baked ellipsis '…' 1672 ->
- * 13.0625px — all EVEN design units at unitsPerEm 2048, so size 16 (which
- * `fontUsesSubpixelPositioning` keeps unrounded) lands on the exact
- * continuous scale with no 26.6/whole-pixel quantization to also trace.
+ * `trimLineToWidth` ports `shaped_text_overrun_trim_to_width` (`modules/text_server_adv/text_server_adv.cpp:5935-6154`).
+ * Advances at size 16 are even design units at 2048/em, so each lands on the continuous scale:
+ * 'A' 1354 -> 10.578125, 'B' 1350 -> 10.546875, space 532 -> 4.15625, '…' 1672 -> 13.0625.
  */
 import { describe, expect, it } from 'vitest';
 import { AutowrapMode, shapeText } from './textLayout';

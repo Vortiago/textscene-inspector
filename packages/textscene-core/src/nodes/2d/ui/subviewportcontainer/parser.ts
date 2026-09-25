@@ -1,8 +1,6 @@
 /**
- * SubViewportContainer parser — Control layout plus the two properties that
- * decide how big the displayed target is and where it sits.
- *
- * Defaults from `doc/classes/SubViewportContainer.xml`: `stretch = false`,
+ * SubViewportContainer parser: Control layout plus the two properties that size and place the
+ * displayed target. Defaults from `doc/classes/SubViewportContainer.xml`: `stretch = false`,
  * `stretch_shrink = 1`.
  */
 

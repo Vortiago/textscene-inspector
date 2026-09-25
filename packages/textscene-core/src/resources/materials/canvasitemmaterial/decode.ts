@@ -1,9 +1,7 @@
 /**
- * `CanvasItemMaterial` decode — a property bag (an inline `[sub_resource]` or a
- * ParsedResource `[resource]` body) into typed data. Godot defaults from
- * `scene/resources/canvas_item_material.cpp`: blend_mode MIX and light_mode
- * NORMAL (each enum's first constant, cpp:268/274), particles_animation off with
- * 1×1 frames and no loop (the constructor, cpp:283-285).
+ * `CanvasItemMaterial` decode: a property bag into typed data, with the defaults of
+ * `scene/resources/canvas_item_material.cpp`. blend_mode MIX and light_mode NORMAL (cpp:268/274),
+ * particles_animation off with 1×1 frames and no loop (the constructor, cpp:283-285).
  */
 
 import { boolOr, enumOr, intOr } from '../../../parser/valueParsers';
@@ -14,10 +12,9 @@ import {
 } from './types';
 
 /**
- * The authorable blend modes. `BLEND_MODE_DISABLED` (5) exists in the C++ enum
- * (canvas_item_material.h:45) but is bound to neither the script API
- * (`BIND_ENUM_CONSTANT`, cpp:268-272) nor the inspector hint (cpp:260), so no
- * scene can author it — it stays out of the allowed set and reads as MIX.
+ * The authorable blend modes. `BLEND_MODE_DISABLED` (5) is in the C++ enum
+ * (canvas_item_material.h:45) but bound to neither the script API
+ * (`BIND_ENUM_CONSTANT`, cpp:268-272) nor the inspector hint (cpp:260), so it reads as MIX.
  */
 const BLEND_MODES = [
   CanvasItemBlendMode.MIX,

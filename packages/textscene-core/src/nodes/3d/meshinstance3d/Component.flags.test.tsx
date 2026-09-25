@@ -1,8 +1,6 @@
 /**
- * Strict-verification harness (group B) — 7 assertions covering
  * MeshInstance3D's structural flags: mesh resolution, material override
- * precedence, visibility, shadow casting.
- *
+ * precedence, visibility and shadow casting.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -85,13 +83,10 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
   });
 
   it('#14 surface_material_override/1 on a one-surface primitive is DROPPED', async () => {
-    // `MeshInstance3D::_set` (`scene/3d/mesh_instance_3d.cpp:65-73`) returns
-    // false for `idx >= surface_override_materials.size()`, and `_mesh_changed`
-    // (`:407`) sizes that array to `mesh->get_surface_count()` — 1 for every
-    // PrimitiveMesh. So the override never reaches the server, and the mesh
-    // keeps ONE material rather than growing a second slot: a BoxGeometry
-    // declares six groups, and WebGLRenderer skips any group whose
-    // `material[i]` is undefined, so four faces would have vanished.
+    // `MeshInstance3D::_set` (`scene/3d/mesh_instance_3d.cpp:65-73`) refuses
+    // `idx >= surface_override_materials.size()`, which `_mesh_changed` (`:407`)
+    // sizes to 1 for a PrimitiveMesh. One material, not a second slot: WebGLRenderer
+    // skips a BoxGeometry group whose `material[i]` is undefined.
     const surfaceMap = new Map<number, string>([[1, 'SubResource("Surf1")']]);
     const node = makeNode({
       mesh: 'SubResource("Box_1")',
@@ -111,7 +106,7 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
 
   it('#15 visible=false propagates to mesh.visible', async () => {
     const node = makeNode({ name: 'invisible', mesh: 'SubResource("Box_1")' });
-    // Node3DProperties has no `visible` field today — set on properties record.
+    // Node3DProperties has no `visible` field, so it is set on the properties record.
     (node.properties as unknown as { visible: boolean }).visible = false;
     const renderer = await render(node, [sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
     const mesh = renderer.scene.findByType('Mesh');
@@ -126,8 +121,7 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
 
   it('an absent cast_shadow is ON, not OFF — Godot defaults it to 1', async () => {
     // class_geometryinstance3d.html properties table: cast_shadow default 1
-    // (SHADOW_CASTING_SETTING_ON). Treating undefined as OFF meant no mesh in
-    // the corpus cast a shadow unless the scene said so explicitly.
+    // (SHADOW_CASTING_SETTING_ON), so an absent key casts.
     const node = makeNode({ mesh: 'SubResource("Box_1")' });
     const renderer = await render(node, [sub('BoxMesh', 'Box_1', { size: 'Vector3(1, 1, 1)' })]);
     expect(renderer.scene.findByType('Mesh').instance.castShadow).toBe(true);
@@ -141,7 +135,7 @@ describe('MeshInstance3D flags (assertions 11–17)', () => {
 
   it('a blend-mode (additive) material writes no shadow, even with cast_shadow ON', async () => {
     // Godot excludes additive/subtractive/multiply surfaces from the shadow
-    // pass — a glow sprite must not drop a solid silhouette.
+    // pass, so a glow sprite drops no solid silhouette.
     const node = makeNode({
       mesh: 'SubResource("Box_1")',
       materialOverride: 'SubResource("Additive")',

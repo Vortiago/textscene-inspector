@@ -1,4 +1,4 @@
-/** Sprite2D — a textured quad in 2D space (extends Node2D). */
+/** The Sprite2D property shape: a textured quad in 2D space, on Node2D. */
 
 import type { Node2DProperties, Vector2 } from '../../base/node2d/types';
 
@@ -12,7 +12,7 @@ export interface Rect2 {
 export interface Sprite2DProperties extends Node2DProperties {
   /** `ExtResource("id")` or `res://…` reference; undefined → placeholder. */
   texture?: string;
-  /** Quad centered on the node origin (default true) vs. top-left at origin. */
+  /** Quad centred on the node origin (default true), else its top-left sits there. */
   centered: boolean;
   /** Pixel offset of the quad (Godot 2D, +Y down). */
   offset: Vector2;
@@ -24,5 +24,4 @@ export interface Sprite2DProperties extends Node2DProperties {
   vframes: number;
   frame: number;
   frame_coords?: Vector2;
-  // `modulate` (CanvasItem RGBA tint) is inherited from Node2DProperties.
 }

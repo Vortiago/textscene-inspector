@@ -1,7 +1,6 @@
 /**
- * VBoxContainer's native (WebGL canvas) rect solve — the shared BoxContainer
- * port at `vertical = true`. Registration only; the algorithm itself lives
- * once in `../shared/boxContainerSolver.ts` for both HBox and VBox.
+ * VBoxContainer's native (WebGL canvas) rect solve: the shared BoxContainer port at
+ * `vertical = true`, registered here. `../shared/boxContainerSolver.ts` holds the algorithm.
  */
 
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';

@@ -1,19 +1,16 @@
 /**
  * The Control rect solver is pure TS: no React, no THREE, anywhere in
  * `native/{rect,solveTree,nativeTheme,solverRegistry,controlRectSolver,solveHandoff}.ts`.
- * Walked as six SEPARATE entries (not just `controlRectSolver.ts`) because
- * most of the cross-file references between them are `import type` — erased
- * by the bundler, and correctly skipped by the walker — so a value-import
- * closure rooted at just one file would never traverse into, say,
- * `nativeTheme.ts`, which nothing here value-imports. The union of all six
- * closures is what actually ships if any one of them is imported on its own.
  */
+// Six separate entries: most references between them are `import type`, which
+// the walker skips, so a closure rooted at one file never reaches `nativeTheme.ts`.
+// The union of the six closures is what ships.
 import { describe, expect, it } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { walkImportClosure, bareSpecifiers, tsxFiles, FRAMEWORK_BARE_RE } from '@textscene/dev-kit';
 
-const here = dirname(fileURLToPath(import.meta.url)); // .../r3f/controls/native
+const here = dirname(fileURLToPath(import.meta.url));
 
 const entries = ['rect.ts', 'solveTree.ts', 'nativeTheme.ts', 'solverRegistry.ts', 'controlRectSolver.ts', 'solveHandoff.ts'];
 

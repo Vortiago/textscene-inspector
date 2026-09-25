@@ -1,7 +1,4 @@
-/**
- * Custom event bus for resource loading events.
- * Provides type-safe event emission and subscription for textures, materials, and scenes.
- */
+/** Typed event bus for resource loading events, one slot per resource type. */
 
 import * as THREE from 'three';
 
@@ -12,10 +9,9 @@ export type ResourceEventType =
   | 'loaded'
   | 'failed'
   /**
-   * A previously-cached path was dropped by a FULL cache clear (corpus
-   * switch) with no replacement on the way. Mounted consumers re-request so
-   * they never keep serving a value from the cleared era; a per-path clear
-   * (hot-reload) does NOT emit this — its caller re-requests itself.
+   * A cached path was dropped by a full cache clear (corpus switch) with no
+   * replacement on the way, so mounted consumers re-request. A per-path clear
+   * (hot-reload) does not emit this: its caller re-requests itself.
    */
   | 'invalidated';
 // One bus-tag union repo-wide: the slice claim table (ADR-0031) is the
@@ -38,14 +34,12 @@ export class ResourceEventBus {
   constructor() {
     this.threeManager = new THREE.LoadingManager();
 
-    // Integrate with THREE.LoadingManager for automatic progress tracking
     this.threeManager.onProgress = (url, loaded, total) => {
       this.emit<ProgressData>('texture', 'progress', url, { loaded, total });
     };
   }
 
   /**
-   * Subscribe to resource events.
    * @param resourceType - Type of resource (texture, material, scene)
    * @param eventType - Type of event (requested, loading, loaded, failed)
    * @param handler - Callback function receiving (id, data)
@@ -62,9 +56,6 @@ export class ResourceEventBus {
     this.handlers.get(key)!.add(handler as EventHandler<unknown>);
   }
 
-  /**
-   * Unsubscribe from resource events.
-   */
   off<T = unknown>(
     resourceType: ResourceType,
     eventType: ResourceEventType,
@@ -74,9 +65,6 @@ export class ResourceEventBus {
     this.handlers.get(key)?.delete(handler as EventHandler<unknown>);
   }
 
-  /**
-   * Emit resource event to all subscribers.
-   */
   emit<T = unknown>(
     resourceType: ResourceType,
     eventType: ResourceEventType,
@@ -97,14 +85,9 @@ export class ResourceEventBus {
   }
 
   /**
-   * Promise wrapper for one-time event subscription.
-   * Resolves when the specified event fires for the given resource ID.
-   * Rejects if the 'failed' event fires instead — or if 'invalidated' fires:
-   * a full cache clear drops the awaited flight's completion without any
-   * loaded/failed emit, so without this the promise (and its handlers) would
-   * hang forever.
-   *
-   * Used for backward-compatible promise API.
+   * Resolve when `eventType` fires for `id`. Reject on `failed`, or on `invalidated`:
+   * a full cache clear drops the awaited flight with no loaded or failed emit, and the
+   * promise would hang.
    */
   once<T = unknown>(
     resourceType: ResourceType,
@@ -152,7 +135,7 @@ export class ResourceEventBus {
 
       this.on<T>(resourceType, eventType, loadedHandler);
 
-      // Also listen for failed/invalidated unless that's what we wait for.
+      // Also listen for failed and invalidated, unless that is the awaited event.
       if (eventType !== 'failed') {
         this.on<Error>(resourceType, 'failed', failedHandler);
       }
@@ -160,7 +143,6 @@ export class ResourceEventBus {
         this.on(resourceType, 'invalidated', invalidatedHandler);
       }
 
-      // Optional timeout
       if (timeoutMs && timeoutMs > 0) {
         timeoutId = setTimeout(() => {
           cleanup();
@@ -195,24 +177,17 @@ export class ResourceEventBus {
     return results;
   }
 
-  /**
-   * Get THREE.js LoadingManager for integration with THREE loaders.
-   */
   getThreeManager(): THREE.LoadingManager {
     return this.threeManager;
   }
 
-  /**
-   * Get handler count for memory leak testing.
-   */
+  /** For memory-leak tests. */
   getHandlerCount(resourceType: ResourceType, eventType: ResourceEventType): number {
     const key = `${resourceType}:${eventType}`;
     return this.handlers.get(key)?.size || 0;
   }
 
-  /**
-   * Get total handler count across all event types.
-   */
+  /** For memory-leak tests. */
   getTotalHandlerCount(): number {
     let total = 0;
     for (const handlers of this.handlers.values()) {
@@ -221,9 +196,7 @@ export class ResourceEventBus {
     return total;
   }
 
-  /**
-   * Clear all handlers (for cleanup/testing).
-   */
+  /** For cleanup and tests. */
   clear(): void {
     this.handlers.clear();
   }

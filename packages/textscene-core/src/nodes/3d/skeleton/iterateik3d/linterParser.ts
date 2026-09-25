@@ -1,22 +1,12 @@
 /**
- * Validators shared by every IterateIK3D-derived node.
- *
- * Registered under the abstract key 'IterateIK3D', which Godot cannot
- * instantiate, so it appears in no .tscn and owns no slice. It reaches its
- * 3 subclasses (CCDIK3D, FABRIK3D, JacobianIK3D) through the NODE_BASE_TYPES
- * base-walk.
- *
- * Declare only IterateIK3D's OWN members: the ones doc/classes/IterateIK3D.xml
- * lists without an `overrides=` attribute, cross-checked against ADD_PROPERTY
- * in the .cpp. Quote the governing source line beside every non-obvious bound.
+ * Validators for every IterateIK3D-derived node, under the abstract key 'IterateIK3D', which Godot
+ * cannot instantiate. The base-walk delivers them to CCDIK3D, FABRIK3D and JacobianIK3D. Only its own
+ * members: those doc/classes/IterateIK3D.xml lists without `overrides=`, checked against ADD_PROPERTY.
  */
 
-// Load-bearing, not decorative: the `settings/*` dispatcher below hands every
-// key it does not own back to ChainIK3D, and a base tier is only ever loaded by
-// something that imports it. CCDIK3D, FABRIK3D and JacobianIK3D import THIS
-// file and nothing else in the chain, so without this line ChainIK3D would
-// register only when SplineIK3D happened to be loaded, and every ChainIK3D
-// bound would silently disappear for the three IterateIK3D leaves.
+// The `settings/*` dispatcher hands every key it does not own to ChainIK3D, and a tier loads only
+// when imported. CCDIK3D, FABRIK3D and JacobianIK3D import only this file, so without this line
+// ChainIK3D would register only with SplineIK3D loaded, and its bounds would vanish for all three.
 import '../chainik3d/linterParser.js';
 import { validatorRegistry, type PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
@@ -37,13 +27,9 @@ const negativeSettingIndex = (index: number): string =>
 
 
 /**
- * `settings/<i>/joints/<j>/…`, pushed at iterate_ik_3d.cpp:120-125.
- *
- * Keyed by everything after the JOINT index, so `limitation/right_axis` is one
- * leaf name rather than a further nesting level. Every setter behind these is a
- * bare assignment guarded only by ERR_FAIL_INDEX on the two indices
- * (iterate_ik_3d.cpp:216-324), so each PROPERTY_HINT_ENUM warns and never
- * errors.
+ * `settings/<i>/joints/<j>/…`, pushed at iterate_ik_3d.cpp:120-125, keyed by everything after the
+ * joint index, so `limitation/right_axis` is one leaf name. Every setter assigns past ERR_FAIL_INDEX
+ * on the two indices only (iterate_ik_3d.cpp:216-324), so each PROPERTY_HINT_ENUM warns.
  */
 const JOINT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   rotation_axis: v.enumInt('rotation_axis', 0, 4, ROTATION_AXIS, {
@@ -64,16 +50,13 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 };
 
 /**
- * The depth-3 level, which is exactly the `<prefix><int>/<leaf>` shape the
- * shared dispatcher parses. It also supplies the negative-index branch: a
- * `.tscn` write enters through `_set`, whose first act is
- * `ERR_FAIL_INDEX_V(which, settings.size(), false)`, so the value never lands.
+ * The depth-3 `<prefix><int>/<leaf>` level the shared dispatcher parses. It supplies the
+ * negative-index branch: `_set` opens with `ERR_FAIL_INDEX_V(which, settings.size(), false)`.
  */
 const settingLeafValidator = indexedFamilyValidator({
-  // `_set` reads the index with a BARE `to_int` and no `is_valid_int` gate
-  // (iterate_ik_3d.cpp:37), and `_to_int` skips non-digits (ustring.cpp:2268-2298), so
-  // `settings/first/x` resolves to setting 0 and the write LANDS. Reporting it
-  // was a false positive: that is the PropertyListHelper behaviour, not this one.
+  // `_set` reads the index with a bare `to_int` and no `is_valid_int` gate (iterate_ik_3d.cpp:37),
+  // and `_to_int` skips non-digits (ustring.cpp:2268-2298), so `settings/first/x` lands on setting 0.
+  // Dropping such a key is PropertyListHelper's behaviour, not this class's.
   indexParse: 'to_int',
   prefix: 'settings/',
   leaves: SETTING_LEAVES,
@@ -87,35 +70,18 @@ const settingLeafValidator = indexedFamilyValidator({
 });
 
 /**
- * The joint sub-tree, which the shared dispatcher cannot reach.
- *
- * `indexedFamilyValidator` splits at the FIRST `/` past the prefix
- * (`indexedFamily.ts:214-219`) and hands everything below it over as one leaf
- * NAME, so `settings/0/joints/1/rotation_axis` reaches it as the leaf
- * `joints/1/rotation_axis`, which no leaf table can declare — the second index
- * has to be matched, not named. One more level of nesting is one more level than
- * the shape it mirrors ever has.
- *
- * Both index halves go through `indexedKeyRegex` under `to_int`: `_set` reads
- * each with a bare `get_slicec(...).to_int()` and no validity gate (:37, :44),
- * so a spelling `is_valid_int` rejects still resolves to a setting and a joint
- * and the write lands there. Demanding digits handed those keys back to
- * ChainIK3D, which knows none of these leaves and accepted every value on them.
+ * The joint sub-tree, which the shared dispatcher cannot reach: it splits at the first `/` past the
+ * prefix (`indexedFamily.ts:214-219`), so `joints/1/rotation_axis` arrives as one leaf name with an
+ * index inside. Both indices parse under `to_int`, as `_set` reads each with a bare
+ * `get_slicec(...).to_int()` and no gate (:37, :44), so a non-digit spelling still lands.
  */
 const JOINT_KEY = indexedKeyRegex('^settings/(#)/joints/#/(.+)$', 'to_int');
 
 /**
- * `settings/…` on IterateIK3D, which is HALF of a family ChainIK3D also builds.
- *
- * `_get_property_list` pushes IterateIK3D's own leaves and then calls
- * `ChainIK3D::get_property_list` (iterate_ik_3d.cpp:129), so one serialised
- * family has two owners. The base-walk resolves the FIRST matching wildcard, so
- * this registration shadows ChainIK3D's for every IterateIK3D descendant:
- * reporting an unrecognised leaf here would flag `settings/0/root_bone_name` on
- * a CCDIK3D that legitimately carries it. Anything this file does not own is
- * therefore handed back to ChainIK3D, which keeps the last word on a leaf name
- * neither tier declares. `findValidator` walks upwards only, so the hand-back
- * cannot return here.
+ * `settings/…` on IterateIK3D, half of a family: `_get_property_list` pushes its own leaves, then
+ * calls `ChainIK3D::get_property_list` (iterate_ik_3d.cpp:129). This wildcard shadows ChainIK3D's, so
+ * a leaf this file does not own, such as `settings/0/root_bone_name`, goes back to ChainIK3D, which
+ * has the last word. `findValidator` walks upwards only, so the hand-back cannot return here.
  */
 const settingsValidator = accepts((key, value, line) => {
   const joint = JOINT_KEY.exec(key);
@@ -145,7 +111,7 @@ const settingsValidator = accepts((key, value, line) => {
 }, 'IterateIK3D setting key, or the ChainIK3D setting key it inherits');
 
 // The only value this dispatcher refuses on its own authority is a negative
-// setting index, which `_set` refuses outright; every magnitude bound lives in
+// setting index, which `_set` refuses outright. Every magnitude bound lives in
 // the leaves, exposed so `boundGrounding`'s sweep recurses past this function.
 settingsValidator.grounding = { kind: 'enforced', cite: 'iterate_ik_3d.cpp:39' };
 settingsValidator.leaves = [settingLeafValidator, ...Object.values(JOINT_LEAVES)];
@@ -162,12 +128,10 @@ validatorRegistry.registerAll('IterateIK3D', {
   // is_finite guard, so `inf` is accepted above the open end.
   min_distance: v.float('min_distance', { min: 0, hinted: 'iterate_ik_3d.cpp:395' }),
 
-  // iterate_ik_3d.cpp:396, PROPERTY_HINT_RANGE "0,180,0.001,radians_as_degrees".
-  // The flag means the inspector shows DEGREES while the .tscn stores RADIANS,
-  // so the hint's 180 is a stored ceiling of PI. IterateIK3D.xml's documented
-  // default of 0.034906585 is deg_to_rad(2) (iterate_ik_3d.h:255) and proves
-  // the stored unit. set_angular_delta_limit (iterate_ik_3d.cpp:185) assigns
-  // straight through, so both ends warn.
+  // iterate_ik_3d.cpp:396, PROPERTY_HINT_RANGE "0,180,0.001,radians_as_degrees": the inspector shows
+  // degrees, the .tscn stores radians, so 180 is a stored PI. IterateIK3D.xml's default 0.034906585
+  // is deg_to_rad(2) (iterate_ik_3d.h:255), which proves the unit. set_angular_delta_limit (iterate_ik_3d.cpp:185)
+  // assigns straight through, so both ends warn.
   angular_delta_limit: v.radians('angular_delta_limit', {
     minDeg: 0,
     maxDeg: 180,
@@ -178,12 +142,9 @@ validatorRegistry.registerAll('IterateIK3D', {
   // (iterate_ik_3d.cpp:193) is a bare assignment.
   deterministic: v.boolean('deterministic'),
 
-  // iterate_ik_3d.cpp:398, ADD_ARRAY_COUNT, which really is a serialised INT
-  // property (class_db.cpp:1492) but carries PROPERTY_HINT_NONE, so there is no
-  // hint to bound it. The floor comes from the setter instead:
-  // IterateIK3D::set_setting_count (iterate_ik_3d.h:287) forwards to the shared
-  // template `_set_setting_count`, which opens `ERR_FAIL_COND(p_count < 0)`
-  // (ik_modifier_3d.h:98), so a negative count is an error, not a warning.
+  // iterate_ik_3d.cpp:398, ADD_ARRAY_COUNT, a serialised INT (class_db.cpp:1492) with
+  // PROPERTY_HINT_NONE. IterateIK3D::set_setting_count (iterate_ik_3d.h:287) forwards to
+  // `_set_setting_count`, which opens `ERR_FAIL_COND(p_count < 0)` (ik_modifier_3d.h:98): an error.
   setting_count: v.int('setting_count', { min: 0, enforced: 'ik_modifier_3d.h:98' }),
 
   'settings/*': settingsValidator,

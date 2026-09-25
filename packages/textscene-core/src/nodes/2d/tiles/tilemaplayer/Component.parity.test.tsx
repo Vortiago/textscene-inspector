@@ -1,7 +1,7 @@
 /**
  * Parity: TileMapLayer renders its placed cells as one batched mesh per atlas
- * source — geometry attributes from the pure builder, Sprite2D's unlit
- * material recipe, modulate sRGB→linear.
+ * source: geometry attributes from the pure builder, Sprite2D's unlit
+ * material recipe, and modulate converted from sRGB to linear.
  */
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
@@ -297,7 +297,7 @@ sources/0 = SubResource("Atlas_a")
   it('renders nothing while pending, then tiles on late arrival', async () => {
     const fake = createFakeResourceLoader();
     const r = await renderTres(fake);
-    expect(r.scene.findAllByType('Mesh')).toHaveLength(0); // pending — no flash
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(0); // pending: no flash
 
     await ReactThreeTestRenderer.act(async () => {
       fake.resources._resolve(TRES_PATH, parseTresFile(TILESET_TRES));
@@ -313,8 +313,8 @@ sources/0 = SubResource("Atlas_a")
   });
 
   it('degrades immediately for a binary TileSet (.res) instead of hanging pending forever', async () => {
-    // Godot legally serializes `[ext_resource type="TileSet" path="res://tiles.res"]`;
-    // the text-resource processor can never parse it, so requesting it would
+    // Godot legally serializes `[ext_resource type="TileSet" path="res://tiles.res"]`.
+    // The text-resource processor can never parse it, so requesting it would
     // park the load in-flight with no resolution.
     const fake = createFakeResourceLoader();
     const requested: string[] = [];

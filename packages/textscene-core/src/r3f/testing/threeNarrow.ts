@@ -1,15 +1,8 @@
 /**
- * Cross-realm THREE narrowing for r3f test suites.
- *
- * `@react-three/test-renderer` resolves its own `three` module copy, so
- * `instanceof THREE.*` is FALSE at runtime even for genuine three objects
- * (`instanceof THREE.Object3D` included) while compiling clean — a
- * tsc-green, suite-red trap. three's own `.isMesh`-style flags are the
- * library's cross-copy answer, so predicates over them are the only
- * narrowing that works across the renderer's realm.
- *
- * Test-only: the `testing/` directories under `src` are excluded from the
- * build, like `parser/testing` and `resources/testing`.
+ * Cross-realm THREE narrowing for r3f tests. `@react-three/test-renderer` resolves its
+ * own `three` copy, so `instanceof THREE.*` is false at runtime though it compiles:
+ * three's `.isMesh`-style flags are the narrowing that works. Test-only: `testing/`
+ * directories are excluded from the build.
  */
 
 import type * as THREE from 'three';

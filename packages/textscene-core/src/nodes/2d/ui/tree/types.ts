@@ -1,4 +1,4 @@
-/** Tree property definitions — the subset a static preview draws. Rows are never serialised — see `parser.ts`'s own doc. */
+/** Tree properties: the subset a static preview draws. Rows are never serialised (`parser.ts`). */
 
 import type { ControlProperties } from '../control/types';
 

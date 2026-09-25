@@ -1,13 +1,7 @@
 /**
- * ScriptCreateDialog strict validators: coverage check.
- *
- * ScriptCreateDialog declares no property of its own (see linterParser.ts for
- * how that was established), so there is no format/bound behaviour to
- * exercise here. What this asserts instead: the registration is genuinely
- * empty, and the base-walk still reaches ConfirmationDialog's, AcceptDialog's
- * and Window's own keys through it. Asserted through `validatorRegistry`
- * rather than `Linter`, since `linter/index.ts` imports every sibling slice
- * and is being edited concurrently elsewhere.
+ * ScriptCreateDialog strict validators: the registration is empty, and the base walk
+ * still reaches ConfirmationDialog's, AcceptDialog's and Window's keys. Asserted
+ * through `validatorRegistry`, since `linter/index.ts` imports every sibling slice.
  */
 
 import { describe, expect, it } from 'vitest';

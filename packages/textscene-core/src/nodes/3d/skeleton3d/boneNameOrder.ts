@@ -1,13 +1,8 @@
 /**
- * What `add_bone` does with a `bones/<i>/name` write, modelled across the whole
- * node because the answer depends on the writes before it.
- *
- * `_set` reaches `add_bone` only while `which == bones.size()`
- * (skeleton_3d.cpp:85), and `name` has no arm below the index guard at :90, so
- * a name addressing any other slot is a dropped write. `add_bone` then refuses
- * an unusable name (:605) or one already taken (:606), and a refused bone is
- * never added — which shifts every slot after it, so the count has to model
- * both or the next name reports a refusal that never happened.
+ * What `add_bone` does with a `bones/<i>/name` write, modelled across the node because each answer
+ * depends on the writes before it. `_set` reaches `add_bone` only while `which == bones.size()`
+ * (skeleton_3d.cpp:85), and `name` has no arm below the index guard at :90, so a name for any other
+ * slot is dropped. A refused bone (:605, :606) is never added, which shifts every later slot.
  */
 
 import { indexedKeyRegex, literalText, toIntIndex } from '../../../godot/index.js';
@@ -42,7 +37,7 @@ export interface BoneNameFinding {
   key: string;
   /** The bone slot the key addresses. */
   index: number;
-  /** The slot `add_bone` would have filled — the live bone count. */
+  /** The slot `add_bone` would have filled: the live bone count. */
   expected: number;
   name: string;
   /** For a duplicate, the bone already carrying the name. */
@@ -50,12 +45,9 @@ export interface BoneNameFinding {
 }
 
 /**
- * Every dropped `bones/<i>/name` write, in file order.
- *
- * Two keys are deliberately skipped rather than reported: a negative index,
- * which phase 1 reports as `INVALID_BONE_INDEX`, and a name :605 refuses, which
- * phase 1 reports on the same key. Reporting either again would put two voices
- * on one line. Both still leave the bone unadded, which is what `added` records.
+ * Every dropped `bones/<i>/name` write, in file order. A negative index (`INVALID_BONE_INDEX`) and
+ * a name :605 refuses are skipped, since phase 1 reports both on the same key. Both still leave the
+ * bone unadded, which `added` records.
  */
 export function boneNameFindings(properties: Record<string, string>): BoneNameFinding[] {
   const findings: BoneNameFinding[] = [];

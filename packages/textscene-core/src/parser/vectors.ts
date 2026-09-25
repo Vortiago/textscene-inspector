@@ -24,10 +24,9 @@ const VECTOR2_RE = slotTupleRegex('Vector2', 2);
 const VECTOR3_RE = slotTupleRegex('Vector3', 3);
 
 /**
- * `Color(r, g, b, a)` — the SAME float grammar as the vectors above. Compiled ONCE and shared by
- * the material/Environment Color decoder and linter validators so render and lint agree on
- * the channel grammar and never rebuild this regex per parse/lint call. No `g` flag, so `.test()`
- * and `.match()` on the shared instance are stateless.
+ * `Color(r, g, b, a)`, with the vectors' float grammar. Compiled once and shared by the
+ * Color decoder and linter validators, so render and lint agree on the channel grammar.
+ * No `g` flag, so `.test()` and `.match()` on the shared instance are stateless.
  */
 export const COLOR_RE = slotTupleRegex('Color', 4);
 

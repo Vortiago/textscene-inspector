@@ -1,7 +1,6 @@
 /**
- * Tests for AreaLight3D linting. The slice declares no semantic rule: its one
- * advisory was a `light_energy` range band, now the inherited Light3D
- * validator's bound (light_3d.cpp:389).
+ * AreaLight3D linting. The slice declares no semantic rule: the `light_energy`
+ * band is the inherited Light3D validator's bound (light_3d.cpp:389).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -54,7 +53,7 @@ describe('AreaLight3D Linter', () => {
       },
       {
         prop: 'area_range',
-        // 0 and negatives are VALID: nothing in the pinned reference refuses
+        // 0 and negatives are valid: nothing in the pinned reference refuses
         // them, so only the format check stands.
         valid: [2.0, 0, -5.0],
         invalid: [{ value: 'invalid', contains: ['must be a number'] }],
@@ -81,9 +80,9 @@ describe('AreaLight3D Linter', () => {
   });
 
   describe('Semantic Validation', () => {
-    // light_3d.cpp:389 — light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater":
+    // light_3d.cpp:389: light_energy PROPERTY_HINT_RANGE "0,16,0.001,or_greater".
     // `or_greater` opens the high end, so only a negative is out of band, and
-    // the inherited Light3D validator is what reports it.
+    // the inherited Light3D validator reports it.
     describe('light energy warnings', () => {
       it('warns rather than errors on negative light_energy', () => {
         const diagnostics = lint(
@@ -110,7 +109,7 @@ describe('AreaLight3D Linter', () => {
     });
 
     it('should handle shadow_enabled = true without errors', () => {
-      // RectAreaLight doesn't actually cast shadows; shadow_enabled is just validated as boolean
+      // RectAreaLight casts no shadows. shadow_enabled is validated as a boolean only.
       expectNoErrors(scene(node('AreaLight3D', { shadow_enabled: true })));
     });
   });

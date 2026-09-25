@@ -1,34 +1,8 @@
 /**
- * The guard that asks the ENGINE what it declared, rather than asking us what
- * we wrote.
- *
- * Every other coverage check in this repo is anchored on something that exists
- * here: the ledger diffs registered against unregistered types, the grounding
- * audit verifies citations that are already written, `propertyGrammarParity`
- * compares our parser against our validators. All of them ask what is present.
- * A property Godot serialises and we validate nowhere has no artefact to anchor
- * on, so it is invisible to all of them, and `Light3D` sat with 15 validators
- * against its 27 own properties through a node-coverage campaign and a
- * 283-diagnostic audit without either being able to see it.
- *
- * `node-properties.json` is a live `ClassDB.class_get_property_list(c, true)`
- * captured by `pnpm nodes:properties`, so this compares against the engine's own
- * declaration with no engine present, which is what CI requires.
- *
- * The number below is a ledger, not a pass mark. It should only ever go DOWN.
- *
- * Known over-count, stated because the number would otherwise be read as pure
- * work: a getter-only property is STORAGE-flagged and appears here, but nothing
- * can assign it from a `.tscn`, so the right outcome is no validator.
- * `ShapeCast2D`/`ShapeCast3D`'s `collision_result` are the two known cases
- * (`ADD_PROPERTY(… "collision_result"), "", "get_collision_result")`, an empty
- * setter string). `class_get_property_list` does not report setters, and the
- * tempting filter is wrong: those two carry `usage == 2`, STORAGE without
- * EDITOR, which is PROPERTY_USAGE_NO_EDITOR and means hidden-from-inspector,
- * NOT unserialised. `SpringBoneCollision3D.bone` carries the same flag and is
- * correctly validated, so filtering on it would silently drop real work to make
- * this number look better. Each one is settled by reading the ADD_PROPERTY
- * during the sweep, and the ledger drops either way.
+ * Asks the engine what it declared, where every other coverage check asks what
+ * exists here: an unvalidated property has no artefact here to anchor on.
+ * `node-properties.json` is `ClassDB.class_get_property_list(c, true)` from
+ * `pnpm nodes:properties`, so CI needs no engine.
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -40,47 +14,19 @@ import { keyMatcher, unvalidatedByClass } from './registryKeys.mjs';
 
 const PROPS = join(import.meta.dirname, 'node-properties.json');
 const CORE = join(import.meta.dirname, '../../packages/textscene-core');
-// Not `existsSync(dist)`: that cannot tell a fresh build from one predating
-// the very change being measured, and it SKIPS rather than fails, so a run
-// with no build at all reads green over a guard that never executed.
-//
-// Computed in `beforeAll`, never at module scope: it walks a tree a concurrent
-// `tsc --build` may be writing, and a throw during module evaluation surfaces
-// as a vitest collection error instead of the actionable message.
-
-/**
- * Unvalidated properties, per class, counted where the ENGINE declares them.
- *
- * Attribution matters: a validator for a `Control` property belongs in
- * `Control`'s slice, not in each of the forty leaves that inherit it, so the
- * diff is per declaring class and the base-walk is deliberately not applied.
- */
-// The four left are all correctly unvalidated, and the number should stay at 4
-// rather than reaching 0. `ShapeCast2D`/`ShapeCast3D.collision_result` and
-// `LimitAngularVelocityModifier3D.joint_count` each pass an empty setter string
-// to their ADD_PROPERTY, so `ClassDB::set_property` drops the write before any
-// `_set` runs and a .tscn cannot express them. `OpenXRRenderModel.render_model`
-// is a DIFFERENT shape and its setter is real (`set_render_model`): it is
-// `Variant::RID`, a runtime handle with no literal a scene author could write.
-//
-// Each is pinned by a test asserting `findValidator` returns null, so a later
-// sweep cannot "close" them by inventing coverage.
+// A ledger, not a pass mark: it only goes down, counted per declaring class
+// with no base-walk, since a `Control` validator belongs in `Control`'s slice.
+// The four left stay unvalidated, each pinned by a `findValidator` null test.
 const EXPECTED_UNVALIDATED = 4;
+// Three pass an empty setter string to ADD_PROPERTY, so `ClassDB::set_property`
+// drops the write: `ShapeCast2D`/`ShapeCast3D.collision_result` and
+// `LimitAngularVelocityModifier3D.joint_count`. `OpenXRRenderModel.render_model`
+// is a `Variant::RID`, a runtime handle with no literal a scene can write.
 
 /**
- * The classes this ledger measures: only ones this repo already claims, closed
- * over the base chain.
- *
- * An unregistered type's properties are the coverage ledger's business, not
- * this guard's, and mixing the two populations would make both numbers
- * unreadable. Derived from the registries, which is why the test above names
- * the load-bearing members outright.
- *
- * The closure is what reaches an abstract tier that declares NOTHING: it
- * registers no parser and no validator, so neither seed sees it, and its
- * engine properties (`CSGShape3D` had six, `PhysicsBody3D` six) sat outside the
- * count while every heir read as covered. Same walk `resourcePropertyCoverage`
- * applies to its hierarchy.
+ * The classes this ledger measures: the ones this repo claims, closed over the
+ * base chain. The closure reaches an abstract tier that registers nothing, such
+ * as `CSGShape3D`. Unregistered types belong to the coverage ledger.
  */
 function coveredClasses(nodeRegistry, declaringTypes, baseChainOf) {
   const covered = new Set([...nodeRegistry.getAllTypeNames(), ...declaringTypes]);
@@ -88,37 +34,31 @@ function coveredClasses(nodeRegistry, declaringTypes, baseChainOf) {
   return covered;
 }
 
-// Loading the built barrel (every slice self-registers) comfortably exceeds
-// vitest's 5s default, and under a full-monorepo run it exceeded it in the one
-// place the isolated run never did. Same shape as loadCoreLinter.test.mjs.
+// Loading the built barrel exceeds vitest's 5s default under a full run.
 describe('engine property coverage', { timeout: 60_000 }, () => {
   const engine = JSON.parse(readFileSync(PROPS, 'utf8'));
 
-  // Fails every assertion below with one actionable message rather than letting
-  // them agree with a previous revision's registry.
+  // Not `existsSync(dist)`, which skips on no build and passes a stale one. In
+  // `beforeAll`, not at module scope, where a throw during a concurrent `tsc
+  // --build` surfaces as a collection error instead of this message.
   beforeAll(() => {
     requireFreshDist(CORE, 'this coverage ledger');
   });
 
-
-  // One load for the whole file: two independent awaits paid the barrel cost
-  // twice and raced the timeout separately.
+  // One load for the whole file, not one per await.
   let validatorRegistry;
   let registeredTypes;
   let nodeRegistry;
-  // 60s, matching the suite option above rather than the 10s hook default.
-  // Loading the built barrel is the whole cost of this file, and three ledgers
-  // do it at once under a full `--project scripts` run — comfortably fast
-  // alone, and over the default when they contend.
+  // 60s, not the 10s hook default: three ledgers load the barrel at once under
+  // a full `--project scripts` run.
   beforeAll(async () => {
     ({ validatorRegistry, registeredTypes } = await loadCoreLinter());
     ({ nodeRegistry } = await loadCoreParser());
   }, 60_000);
 
   it('the captured table covers the classes it should', () => {
-    // Abstract bases are the point: they declare the most and can never be
-    // instantiated, so a table built from the catalog's instantiable list would
-    // miss exactly the classes that own the properties.
+    // Abstract bases declare the most, so a table from the catalog's
+    // instantiable list would miss the classes that own the properties.
     expect(Object.keys(engine).length).toBeGreaterThan(200);
     expect(engine.Light3D?.length).toBe(27);
     expect(engine.Control?.length).toBeGreaterThan(0);
@@ -139,12 +79,8 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
 
   it('scopes to the classes this repo claims, named rather than only derived', () => {
     const covered = coveredClasses(nodeRegistry, registeredTypes('declaring'), (cls) => validatorRegistry.baseChainOf(cls));
-    // NAMED, because the scope is derived from the very registry this ledger
-    // audits: deregistering a class removes its rows from the count instead of
-    // failing it. Measured — 262 of the 266 contribute no unvalidated property,
-    // so they could all be deregistered wholesale and the total below would
-    // still read 4 and pass. The floor and these names are what make coverage
-    // going away a failure rather than a smaller population.
+    // Named, since the scope derives from the registry this ledger audits:
+    // deregistering a class shrinks the count instead of failing it.
     for (const cls of [
       'Node',
       'CanvasItem',
@@ -156,8 +92,7 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
       'Camera3D',
       'MeshInstance3D',
       'Viewport',
-      // Reached only through the closure: nothing instantiates them and,
-      // emptied, nothing would register them either.
+      // Reached only through the closure.
       'CSGShape3D',
       'CSGPrimitive3D',
       'PhysicsBody3D',
@@ -165,14 +100,16 @@ describe('engine property coverage', { timeout: 60_000 }, () => {
       expect([...covered]).toContain(cls);
     }
     expect(covered.size).toBeGreaterThanOrEqual(266);
-    // Editor internals are not ours to validate, and stay outside the scope
-    // rather than counting as a gap in it.
     expect(covered.has('EditorFileDialog')).toBe(false);
   });
 
   it('the unvalidated-property ledger has not grown', () => {
     const covered = coveredClasses(nodeRegistry, registeredTypes('declaring'), (cls) => validatorRegistry.baseChainOf(cls));
 
+    // Not a filter on `usage == 2`: that is STORAGE without EDITOR, hidden from the
+    // inspector but serialised, as `SpringBoneCollision3D.bone` is, and validated.
+    // `class_get_property_list` does not report setters, so a getter-only property
+    // counts here until its ADD_PROPERTY is read.
     const rows = unvalidatedByClass(engine, validatorRegistry, covered);
     const total = rows.reduce((sum, r) => sum + r.missing.length, 0);
     const report = rows.map((r) => `  ${r.cls} (${r.missing.length}): ${r.missing.join(', ')}`);

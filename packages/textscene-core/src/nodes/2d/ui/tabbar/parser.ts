@@ -1,4 +1,4 @@
-/** TabBar parser — Control + scalar tab-bar properties + the `tab_<idx>/*` family. */
+/** Parses a TabBar: Control, the scalar tab-bar properties and the `tab_<idx>/*` family. */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';

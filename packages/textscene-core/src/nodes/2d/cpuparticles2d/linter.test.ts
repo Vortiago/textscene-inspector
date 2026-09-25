@@ -44,11 +44,10 @@ describe('CPUParticles2D preview rule', () => {
   it.each(['4.0', '4e0', ' 4 ', '5.9'])(
     'reports at info that `emission_shape = %s` is stored as a global-RNG shape',
     (value) => {
-      // The tokenizer types `4.0`/`4e0` FLOAT (variant_parser.cpp:442-448) and
-      // the write converts through `_to_int` (variant.h:369-370), truncating
-      // toward zero — so `set_emission_shape` (cpu_particles_2d.cpp:480-481)
-      // receives EMISSION_SHAPE_POINTS and the preview diverges exactly as it
-      // does for the `4` spelling.
+      // The tokenizer types `4.0`/`4e0` FLOAT (variant_parser.cpp:442-448), and
+      // `_to_int` (variant.h:369-370) truncates toward zero, so
+      // `set_emission_shape` (cpu_particles_2d.cpp:480-481) receives
+      // EMISSION_SHAPE_POINTS, as for `4`.
       expect(namesOf(scene(`emission_shape = ${value}\n`))).toContain(
         'cpuparticles2d-nondeterministic-emission-shape'
       );
@@ -57,7 +56,7 @@ describe('CPUParticles2D preview rule', () => {
 
   it('stays silent for `+4`, which Godot refuses to tokenize at all', () => {
     // `get_token` takes a leading `-` and nothing else before a digit
-    // (variant_parser.cpp:420-423); a `+` reaches no branch and raises
+    // (variant_parser.cpp:420-423). A `+` reaches no branch and raises
     // "Unexpected character" (:508), so the file does not load and this rule
     // has no shape to report.
     expect(namesOf(scene('emission_shape = +4\n'))).not.toContain(
@@ -78,8 +77,8 @@ describe('CPUParticles2D preview rule', () => {
   });
 
   it('stays silent when `fract_delta` is omitted, though Godot defaults it TRUE', () => {
-    // Warning on the default would fire for every emitter in every scene and
-    // so tell the reader nothing about THIS one.
+    // A report on the default would fire for every emitter and say nothing about
+    // this one.
     expect(namesOf(scene('amount = 8\n'))).not.toContain('cpuparticles2d-fract-delta-ignored');
   });
 
@@ -164,8 +163,8 @@ describe('CPUParticles2D strict validators', () => {
 
   it('warns (not errors) on an out-of-range explosiveness', () => {
     // cpu_particles_2d.cpp:1499 hints "0,1,0.01" but set_explosiveness_ratio
-    // (cpu_particles_2d.cpp:98-100) assigns unconditionally — hint-only, so
-    // out of range is a warning, not an error.
+    // (cpu_particles_2d.cpp:98-100) assigns unconditionally: hint-only, so out of
+    // range is a warning, not an error.
     const diagnostics = linter.lint(scene('explosiveness = 4.0\n'));
     expect(errorsOf(scene('explosiveness = 4.0\n'))).toEqual([]);
     const warning = diagnostics.find((d) => d.message.includes('explosiveness'));
@@ -174,7 +173,7 @@ describe('CPUParticles2D strict validators', () => {
 
   it('warns (not errors) on a spread beyond 180 degrees', () => {
     // cpu_particles_2d.cpp:1598 hints "0,180,0.01" but set_spread
-    // (cpu_particles_2d.cpp:344-348) assigns unconditionally — hint-only.
+    // (cpu_particles_2d.cpp:344-348) assigns unconditionally: hint-only.
     const diagnostics = linter.lint(scene('spread = 400.0\n'));
     expect(errorsOf(scene('spread = 400.0\n'))).toEqual([]);
     const warning = diagnostics.find((d) => d.message.includes('spread'));
@@ -201,7 +200,7 @@ describe('CPUParticles2D strict validators', () => {
 
   it('accepts a negative emission_ring_radius (cpu_particles_2d.cpp:1593 has no hint at all)', () => {
     // set_emission_ring_radius (cpu_particles_2d.cpp:531-533) assigns
-    // unconditionally; the property was never bounded on the Godot side.
+    // unconditionally, and Godot places no bound on the property.
     expect(errorsOf(scene('emission_ring_radius = -5.0\n'))).toEqual([]);
   });
 
@@ -219,9 +218,8 @@ describe('CPUParticles2D dangling texture', () => {
   const linter = () => new Linter();
 
   // `texture` is the emitter's only resource slot (cpu_particles_2d.cpp:1493).
-  // The GPUParticles2D twin and the CPUParticles3D `mesh` slot both error on a
-  // dangling id; this one reported nothing, so the particles rendered
-  // untextured with no diagnostic.
+  // A dangling id errors, as in the GPUParticles2D twin and the CPUParticles3D
+  // `mesh` slot.
   it('errors when texture names an id the file never declares', () => {
     const content =
       '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\n\n' +

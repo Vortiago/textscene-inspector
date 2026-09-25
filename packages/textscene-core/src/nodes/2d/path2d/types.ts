@@ -1,4 +1,4 @@
-/** Path2D — a Node2D holding a Curve2D, drawn as a polyline gizmo. */
+/** The Path2D property shape: a Node2D holding a Curve2D, drawn as a polyline gizmo. */
 
 import type { Node2DProperties } from '../../base/node2d/types';
 

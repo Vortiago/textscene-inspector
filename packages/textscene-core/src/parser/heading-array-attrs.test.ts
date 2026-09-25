@@ -1,14 +1,8 @@
 /**
- * Regression contract: parseHeading must not truncate array-valued attributes.
- *
- * The heading attribute scanner matched unquoted values with `[^\s]+`, so an
- * array literal like `node_paths=PackedStringArray("a", "b")` or `groups=["a",
- * "b"]` was cut off at the first space (after the comma). The full balanced
- * `PackedStringArray(...)` / `[...]` value must be captured.
- *
- * Adversarial by design: the array cases (which fail today) are paired with
- * regression cases (simple unquoted + quoted-with-space + an attribute AFTER an
- * array) so a naive "match to the last bracket" fix can't pass by over-capturing.
+ * parseHeading captures an array-valued attribute whole: `node_paths=PackedStringArray("a",
+ * "b")` and `groups=["a", "b"]` must not stop at the space after a comma. Paired with
+ * simple, quoted-with-space and after-array cases, so a greedy "match to the last
+ * bracket" fix fails by over-capturing.
  */
 
 import { describe, it, expect } from 'vitest';

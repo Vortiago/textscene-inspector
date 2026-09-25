@@ -1,11 +1,8 @@
 /**
- * CSGTorus3D geometry, pinned against `CSGTorus3D::_build_brush`
- * (`modules/csg/csg_shape.cpp:1925`).
- *
- * The axis test is the one that matters. Godot's ring lies in XZ with the hole on +Y,
- * while `THREE.TorusGeometry` lies in XY with the hole on +Z, and Godot's `sides` counts
- * segments around the RING where three's `radialSegments` counts them around the TUBE. Get
- * either wrong and the torus still looks like a torus.
+ * CSGTorus3D geometry, pinned against `CSGTorus3D::_build_brush` (`modules/csg/csg_shape.cpp:1925`).
+ * Godot's ring lies in XZ with the hole on +Y, where `THREE.TorusGeometry` lies in XY with the
+ * hole on +Z, and Godot's `sides` counts segments around the ring where three's `radialSegments`
+ * counts them around the tube. Either error still looks like a torus.
  */
 
 import { describe, expect, it } from 'vitest';

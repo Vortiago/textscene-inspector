@@ -19,10 +19,9 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
 
   const rawProps = node.properties as unknown as Record<string, string>;
   // The loaded vector, not the written keys: `get_configuration_warnings`
-  // iterates the real `layers` (tile_map.cpp:848), which the constructor seeds
-  // with a "Layer0" (:1014-1021) and `_set`'s grow loop fills up to the highest
-  // index written (:701-710). A gap layer sits at TileMapLayer's own defaults —
-  // not y-sorted, z_index 0 — and takes part in the comparison below.
+  // iterates the real `layers` (tile_map.cpp:848), seeded with "Layer0"
+  // (:1014-1021) and grown to the highest index written (:701-710). A gap layer
+  // is not y-sorted, at z_index 0, and takes part in the comparison below.
   const layers = tileMapLayerVector(rawProps);
   // Keyed by the resolved index, so a layer the engine never builds carries no
   // tile data here either, and the key a message names is the one the loaded
@@ -32,8 +31,7 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
     const tileData = leaves.get('tile_data');
     if (tileData !== undefined) layerData.push([`layer_${index}/tile_data`, tileData]);
   }
-  // tile_map.cpp:843 — unconditional; every TileMap node carries this, whatever
-  // it's configured with.
+  // tile_map.cpp:843: unconditional, on every TileMap whatever its configuration.
   diagnostics.push({
     severity: 'warning',
     message: `TileMap '${node.name}' is deprecated, superseded by TileMapLayer nodes. Use the editor's "Extract TileMap layers as individual TileMapLayer nodes" action to convert it.`,
@@ -54,16 +52,15 @@ function checkTileMap(context: RuleContext): Diagnostic[] {
     });
   }
 
-  // Each layer decodes under the `format` in effect when ITS key is applied
-  // (file order, tileDataSlots.ts). The decoder for the older formats is
-  // compiled in, but the guard above it is not: tile_map.cpp:71 refuses
-  // anything but the newest format whenever DISABLE_DEPRECATED is UNSET, which
-  // is every stock build, so the layer's tile data is dropped whole.
+  // Each layer decodes under the `format` in effect when its key applies (file
+  // order, tileDataSlots.ts). tile_map.cpp:71 refuses any but the newest format
+  // when DISABLE_DEPRECATED is unset, as in every stock build, so the layer's
+  // tile data drops whole.
   const refused: string[] = [];
   for (const [key, value] of layerData) {
     const format = formatWhenApplied(rawProps, key);
     if (format !== TILE_MAP_DATA_FORMAT_DEFAULT) {
-      // Only a `format` ABOVE the key reaches here, so the raw literal is the one applied.
+      // Only a `format` above the key reaches here, so the raw literal is the one applied.
       refused.push(`'${key}' (format = ${rawProps.format})`);
     } else if (tileDataValidator(key, value, 0) === null && decodeLegacyTileData(value, format) === null) {
       // Phase 1 has already refused the shape; only a value it accepted can

@@ -1,10 +1,7 @@
 /**
- * Camera3D strict validators — format checks for the three Resource-reference
- * members `_bind_methods` declares alongside the numeric ones already covered.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing.
+ * Camera3D strict validators: format checks for the three Resource-reference members
+ * `_bind_methods` declares beside the numeric ones. Asserted through `validatorRegistry`, not by
+ * linting a `.tscn`, so a failure points at the validator, not at scene parsing.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -47,13 +44,10 @@ describe('Camera3D attributes', () => {
 });
 
 /**
- * `compositor` is declared IDENTICALLY on Camera3D (camera_3d.cpp:676) and
- * WorldEnvironment (world_environment.cpp:221): the same
- * `ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "compositor",
- * PROPERTY_HINT_RESOURCE_TYPE, "Compositor"), "set_compositor",
- * "get_compositor")`, and both setters are bare assignments (camera_3d.cpp:572,
- * world_environment.cpp:159). worldenvironment/linterParser.ts registers the
- * identical `v.resourceReference('compositor')`.
+ * `compositor` is declared identically on Camera3D (camera_3d.cpp:676) and WorldEnvironment
+ * (world_environment.cpp:221), an OBJECT with PROPERTY_HINT_RESOURCE_TYPE "Compositor", and both
+ * setters are bare assignments (camera_3d.cpp:572, world_environment.cpp:159).
+ * worldenvironment/linterParser.ts registers the identical `v.resourceReference('compositor')`.
  */
 describe('Camera3D compositor', () => {
   it('accepts a SubResource reference', () => {
@@ -122,7 +116,7 @@ describe('Camera3D environment', () => {
 });
 
 /**
- * Every key Camera3D binds via `ADD_PROPERTY` (camera_3d.cpp:672-686), matching
+ * Every key Camera3D binds through `ADD_PROPERTY` (camera_3d.cpp:672-686), matching
  * doc/classes/Camera3D.xml's members without an `overrides=` attribute.
  */
 const KEYS: string[] = [

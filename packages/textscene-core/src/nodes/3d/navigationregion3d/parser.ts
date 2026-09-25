@@ -1,5 +1,5 @@
 /**
- * NavigationRegion3D parser — Node3D plus the navigation_mesh reference.
+ * NavigationRegion3D parser: Node3D plus the navigation_mesh reference.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';

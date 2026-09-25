@@ -1,33 +1,24 @@
 [gd_scene load_steps=2 format=3]
 
-; ONE VARIABLE: a `region_rect` larger than its texture on a Sprite3D — the 3D
-; half of the same overrun `unit-sprite2d-region-oversized.tscn` pins, and it
-; resolves the OPPOSITE way.
-;
-; Neither sprite family clips the region (`base_rect = region_rect`;
-; `Texture2D::get_rect_region` is a pass-through), so both quads keep the full
-; region size and both sets of UVs run past 1.0. Only the sampler differs:
-; SpriteBase3D DERIVES the `texture_repeat` it hands `get_material_for_2d` from
-; the frame's own UV corners (`sprite_3d.cpp:163`), and this window runs to 3.0,
-; so it emits `repeat_enable`. The overrun TILES here where the 2D canvas, whose
-; viewport default is repeat-DISABLED, clamps. Measured against Godot 4.6.3: 0.007%, at the harness's antialiasing
-; floor — this side was already correct, and clamping it "for consistency" with
-; the 2D fix would BE the regression.
-;
-; The texture is 96x96 and the region 288x192, so this reads as a 3x2 grid of "F"
-; markers. Its 2D twin, same texture and same region, reads as ONE "F" plus a
-; blue smear — the pair is the point, and asserting either alone would let the
-; shared UV compositor be "fixed" into agreeing with the wrong one.
-;
-; Invisible elsewhere: this is the only Sprite3D window that leaves `[0, 1]` at
-; all, so it is the only one the derivation can answer REPEAT for.
+; One variable: a `region_rect` larger than its texture on a Sprite3D, the 3D half of the overrun
+; `unit-sprite2d-region-oversized.tscn` pins, resolving the other way. This is the only Sprite3D
+; window that leaves `[0, 1]`, so the only one SpriteBase3D answers REPEAT for, and it tiles where
+; the 2D canvas clamps.
 
 [ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
 
 [node name="Scene" type="Node3D"]
 
+; 96x96 texture, 288x192 region: a 3x2 grid of "F" markers, where the 2D twin shows one "F" and a
+; blue smear. The pair is the point: either alone lets the shared UV compositor be "fixed" into
+; the wrong answer. Measured against Godot 4.6.3: 0.007%, the harness's antialiasing floor, so
+; clamping this side for consistency with 2D would be the regression.
 [node name="OversizedRegion" type="Sprite3D" parent="."]
 texture = ExtResource("1_marker")
 pixel_size = 0.01
 region_enabled = true
+; Neither sprite family clips the region (`base_rect = region_rect`, and
+; `Texture2D::get_rect_region` passes through), so both keep the full region size and UVs past 1.0.
+; SpriteBase3D derives the `texture_repeat` it hands `get_material_for_2d` from the frame's UV
+; corners (`sprite_3d.cpp:163`): this window runs to 3.0, so it emits `repeat_enable`.
 region_rect = Rect2(0, 0, 288, 192)

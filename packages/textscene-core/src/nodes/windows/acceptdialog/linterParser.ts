@@ -1,21 +1,8 @@
 /**
- * AcceptDialog strict validators for linting.
- *
- * Declare only AcceptDialog's OWN members — the ones doc/classes/AcceptDialog.xml
- * lists without an `overrides=` attribute. Everything from Node up is
- * registered on the ancestor and delivered by the NODE_BASE_TYPES base-walk, so
- * re-declaring an inherited key shadows it and duplicates the rule.
- *
- * Of AcceptDialog's 13 documented members, 8 carry `overrides="Window"` and are
- * skipped here — they are default-value overrides already validated on Window:
- * exclusive, keep_title_visible, maximize_disabled, minimize_disabled, title,
- * transient, visible, wrap_controls. Only 5 are genuinely its own, all bound in
- * scene/gui/dialogs.cpp's AcceptDialog::_bind_methods with plain ADD_PROPERTY
- * (no PROPERTY_HINT_RANGE, no PROPERTY_USAGE_NONE), so each is a bare bool or
- * String check.
- *
- * AcceptDialog is itself a base for ConfirmationDialog (and FileDialog beneath
- * that), which chain here rather than re-declaring these.
+ * AcceptDialog strict validators. Declare only its own members, the ones
+ * doc/classes/AcceptDialog.xml lists without `overrides=`: the base-walk delivers
+ * Window's, and ConfirmationDialog and FileDialog inherit these. Each is a plain
+ * ADD_PROPERTY in scene/gui/dialogs.cpp, so a bare bool or String check.
  */
 
 import '../window/linterParser.js';

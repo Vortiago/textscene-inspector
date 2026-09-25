@@ -1,22 +1,8 @@
 /**
- * Semantic linter rule for AimModifier3D, its one cross-field condition.
- *
- * `AimModifier3D::get_configuration_warnings()` (aim_modifier_3d.cpp:99-108)
- * walks every setting and emits "Forward axis and primary rotation axis must
- * not be parallel in setting %s." when
- * `is_using_euler(i) && get_axis_from_bone_axis(get_forward_axis(i)) ==
- * get_primary_rotation_axis(i)` (aim_modifier_3d.cpp:102). Godot raises it
- * itself, as a warning, so the tier is settled: neither setter refuses the
- * value, and the two properties are only wrong together.
- *
- * It bites at runtime. With `use_euler` on, `_process_aim` projects the target
- * onto the plane of `primary_rotation_axis` (aim_modifier_3d.cpp:235-238); a
- * forward axis parallel to that rotation axis projects to a degenerate vector,
- * so the rotation it computes is meaningless.
- *
- * No condition here is checkable per property, which is why it is a rule rather
- * than a validator: `use_euler`, `forward_axis` and `primary_rotation_axis` are
- * three separate keys of one setting, and each is individually legal.
+ * AimModifier3D's cross-field condition, from `get_configuration_warnings()` (aim_modifier_3d.cpp:99-108):
+ * with `use_euler` on, a forward axis parallel to the primary rotation axis warns
+ * (aim_modifier_3d.cpp:102). Neither setter refuses a value, and the three keys of one setting are
+ * each legal alone, so it is a rule, not a validator.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
@@ -37,17 +23,10 @@ const DEFAULT_FORWARD_AXIS = 2; // BONE_AXIS_PLUS_Y
 const DEFAULT_PRIMARY_ROTATION_AXIS = 0; // Vector3::AXIS_X
 
 /**
- * Every setting the scene declares, keyed by the index `_set` RESOLVES it to.
- *
- * `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()` and no
- * validity gate (aim_modifier_3d.cpp:38), so `settings/x/…` and
- * `settings/00/…` both land on setting 0. Requiring the index to be spelled in
- * digits missed those keys entirely, and reading a leaf back as
- * `settings/${index}/${leaf}` would miss them again.
- *
- * Bounded by `setting_count`, which defaults to 0: `_set` refuses an index at
- * or past `settings.size()` (aim_modifier_3d.cpp:40), so keys beyond the count
- * never land and the condition cannot arise for them.
+ * Every setting the scene declares, keyed by the index `_set` resolves it to. `_set` reads the index
+ * with a bare `path.get_slicec('/', 1).to_int()` and no validity gate (aim_modifier_3d.cpp:38), so
+ * `settings/x/…` and `settings/00/…` land on setting 0. It refuses an index at or past
+ * `settings.size()` (aim_modifier_3d.cpp:40), so a key beyond `setting_count` (default 0) never lands.
  */
 function declaredSettings(properties: Record<string, string>): Map<number, Map<string, string>> {
   const settingCount = ruleCount(properties.setting_count) ?? 0;
@@ -67,8 +46,8 @@ function settingNumber(
   const raw = leaves.get(leaf);
   if (raw === undefined) return fallback;
   const parsed = ruleInt(raw);
-  // A malformed value is the validator's to report; NaN here would compare
-  // false against everything and quietly suppress the rule instead.
+  // A malformed value is the validator's to report. NaN here would compare false against
+  // everything and suppress the rule.
   return parsed ?? fallback;
 }
 
@@ -88,6 +67,8 @@ function checkAimModifier3D(context: RuleContext): Diagnostic[] {
       'primary_rotation_axis',
       DEFAULT_PRIMARY_ROTATION_AXIS
     );
+    // `_process_aim` projects the target onto the plane of the primary axis
+    // (aim_modifier_3d.cpp:235-238), and a parallel forward axis projects to a degenerate vector.
     if (axisFromBoneAxis(forwardAxis) !== primaryAxis) continue;
 
     const forwardLabel = BONE_AXIS[forwardAxis] ?? String(forwardAxis);

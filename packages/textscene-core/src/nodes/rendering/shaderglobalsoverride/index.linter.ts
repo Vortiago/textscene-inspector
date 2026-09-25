@@ -1,5 +1,5 @@
 /**
- * shaderglobalsoverride linter registration - imports linter components to trigger self-registration.
+ * ShaderGlobalsOverride linter registration: the imports self-register.
  */
 
 import './linterParser.js';

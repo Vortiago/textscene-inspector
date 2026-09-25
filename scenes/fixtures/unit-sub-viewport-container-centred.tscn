@@ -1,30 +1,7 @@
-; A SubViewportContainer whose rect comes from a parent that CONSUMES its
-; minimum size, instead of from its own offsets.
-;
-; The one variable against unit-sub-viewport-container.tscn: the container is a
-; CenterContainer child with no offsets of its own, so its position is
-; `floor((parent - get_minimum_size()) / 2)` and its minimum size is the only
-; thing deciding where the surface lands. Every other SubViewportContainer
-; fixture pins the container with explicit offsets under a plain Control, where
-; a minimum size of zero and a minimum size of 300x180 place the surface in the
-; SAME pixel — the anchor formula never reads the minimum size once the
-; authored rect already exceeds it. A regression in
-; `SubViewportContainer::get_minimum_size` is therefore invisible in every one
-; of them, and displaces the surface by exactly half the sub-viewport here.
-;
-; Measured through Godot 4.6.3 at the 1152x648 project viewport: Centre is
-; (100, 80) 800x480, the sub-viewport's 300x180 is the container's minimum
-; size, so Booth sits at (100 + floor((800-300)/2), 80 + floor((480-180)/2)) =
-; (350, 230) and the orange surface spans x 350..649, y 230..409.
-;
-; Mark is what makes the displacement falsifiable rather than merely shifted.
-; It sits at the sub-viewport's right edge (x 260..289 of 300), so at the
-; correct placement it lands at x 610..639 — inside the blue backdrop's frame —
-; while a surface placed at its own half-extent instead puts it at x 760..789.
-; No amount of scaling turns one into the other, and the two never overlap.
-;
-; The sub-viewport holds Controls only, so the surface is filled by the
-; Control-raster pass rather than the 2D-world one.
+; One variable against unit-sub-viewport-container.tscn: the container is a CenterContainer
+; child with no offsets, at `floor((parent - get_minimum_size()) / 2)`, so its minimum size alone
+; places the surface. Elsewhere explicit offsets exceed the minimum, which the anchor formula then
+; never reads, so a `SubViewportContainer::get_minimum_size` regression shows only here.
 
 [gd_scene format=3]
 
@@ -39,6 +16,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0, 0, 0.4, 1)
 
+; Measured through Godot 4.6.3 at the 1152x648 project viewport: Centre is (100, 80) 800x480 and
+; the sub-viewport's 300x180 is the container's minimum size, so Booth sits at
+; (100 + floor((800-300)/2), 80 + floor((480-180)/2)) = (350, 230) and the orange surface spans
+; x 350..649, y 230..409. A regression displaces it by half the sub-viewport.
 [node name="Centre" type="CenterContainer" parent="."]
 offset_left = 100.0
 offset_top = 80.0
@@ -47,6 +28,7 @@ offset_bottom = 560.0
 
 [node name="Booth" type="SubViewportContainer" parent="Centre"]
 
+; Controls only, so the Control-raster pass fills the surface, not the 2D-world one.
 [node name="SubViewport" type="SubViewport" parent="Centre/Booth"]
 size = Vector2i(300, 180)
 render_target_update_mode = 4
@@ -57,6 +39,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(1, 0.6, 0, 1)
 
+; At the sub-viewport's right edge (x 260..289 of 300), so correct placement puts it at
+; x 610..639, inside the blue backdrop's frame, and a surface placed at its own half-extent puts
+; it at x 760..789. No scaling turns one into the other, and the two never overlap.
 [node name="Mark" type="ColorRect" parent="Centre/Booth/SubViewport"]
 offset_left = 260.0
 offset_top = 10.0

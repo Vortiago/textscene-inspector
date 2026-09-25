@@ -1,10 +1,7 @@
 /**
- * RetargetModifier3D strict validators - format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
+ * RetargetModifier3D strict validators: format and range checks. Asserted through
+ * `validatorRegistry`, not by linting a `.tscn`, so a failure points at the validator and not at
+ * scene parsing. linter.test.ts tests rule behaviour through `Linter`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -26,7 +23,7 @@ function check(property: string, value: string) {
  * `PropertyListHelper` and no `ADD_ARRAY_COUNT`).
  */
 const KEYS: string[] = ['enable', 'profile', 'use_global_pose'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 describe('RetargetModifier3D strict validators', () => {
@@ -39,16 +36,14 @@ describe('RetargetModifier3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // Runs the fixture's "zero errors and zero warnings" claim against the validators this test
+    // imports. `fixtureLint` checks the same file against the whole registry.
     expectFixtureClean('unit-retarget-modifier-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format. This loop is generic, and the
+    // per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('RetargetModifier3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -65,9 +60,9 @@ describe('RetargetModifier3D strict validators', () => {
     });
 
     it('warns for a bit the inspector flag list does not offer', () => {
-      // set_enable_flags bare-assigns (retarget_modifier_3d.cpp:411), so bit 8
-      // is KEPT rather than masked away: the value loads and runs, and only the
-      // inspector cannot reach it. That is the hint tier, not the setter tier.
+      // set_enable_flags bare-assigns (retarget_modifier_3d.cpp:411), so bit 8 is kept, not masked
+      // away: the value loads and runs, and only the inspector cannot reach it. That is the hint
+      // tier, not the setter tier.
       const error = check('enable', '8');
       expect(error?.severity).toBe('warning');
       expect(error?.message).toContain('TRANSFORM_FLAG_POSITION');
@@ -110,11 +105,9 @@ describe('RetargetModifier3D strict validators', () => {
     });
 
     it('rejects only what Godot could not read either, so it needs no citation', () => {
-      // PROPERTY_HINT_RESOURCE_TYPE "SkeletonProfile"
-      // (retarget_modifier_3d.cpp:273) narrows the inspector's picker, not the
-      // .tscn grammar, and set_profile (:381-386) takes any Ref through
-      // _profile_changed with no guard. Whether the id resolves is
-      // resourceChecker's question, not a format one.
+      // PROPERTY_HINT_RESOURCE_TYPE "SkeletonProfile" (retarget_modifier_3d.cpp:273) narrows the
+      // inspector's picker, not the .tscn grammar, and set_profile (:381-386) takes any Ref through
+      // _profile_changed with no guard. Whether the id resolves is resourceChecker's question.
       const validator = validatorRegistry.declarationFor('RetargetModifier3D', 'profile');
       expect(validator!.formatOnly).toBe(true);
       expect(validator!.grounding).toBeUndefined();

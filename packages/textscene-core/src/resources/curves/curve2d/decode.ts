@@ -1,17 +1,8 @@
 /**
- * Curve2D decode: `_data` property → control points, plus polyline tessellation
- * for Path2D / PathFollow2D.
- *
- * Godot stores a Curve2D as `_data = { "points": PackedVector2Array(...) }`
- * with **six floats per control point**, in the order
- * `in.x, in.y, out.x, out.y, position.x, position.y` — the in/out tangents are
- * cubic-Bézier handles relative to the point's position. Each span between two
- * adjacent points is the cubic Bézier `P0=pos_i, P1=pos_i+out_i,
- * P2=pos_{i+1}+in_{i+1}, P3=pos_{i+1}`.
- *
- * Pure module (no THREE): coordinates stay in Godot 2D space (+Y down), and the
- * tessellated polyline is plain numbers, so the slice has no `build.ts` — the
- * consumers do their own space conversion.
+ * Curve2D decode: `_data = { "points": PackedVector2Array(...) }`, six floats per
+ * point (`in.x, in.y, out.x, out.y, position.x, position.y`, handles relative to the
+ * position), to control points and a tessellated polyline. No THREE: coordinates
+ * stay in Godot 2D space (+Y down).
  */
 
 import { parsePackedVector2Array } from '../../shapes/packedArray';
@@ -124,7 +115,10 @@ export function tessellateCurve2D(
   return { points: flat, length, sampleAt };
 }
 
-/** Append a span's vertices (excluding its start, already pushed) to `flat`. */
+/**
+ * Append a span's vertices (excluding its start, already pushed) to `flat`. The span
+ * is the cubic Bézier `P0=pos_i, P1=pos_i+out_i, P2=pos_{i+1}+in_{i+1}, P3=pos_{i+1}`.
+ */
 function appendSpan(
   flat: number[],
   a: Curve2DControlPoint,

@@ -1,9 +1,7 @@
 /**
- * ColorPicker parser — VBoxContainer's own parse, plus every ColorPicker-own
- * property that changes a drawn row: `color`, `picker_shape`, `color_mode`,
- * `color_modes_visible`, `sliders_visible`, `hex_visible`, `presets_visible`,
- * `sampler_visible`, `edit_alpha`, `edit_intensity`. `can_add_swatches` and
- * `deferred_mode` stay unread — see `linterParserAllowlist`'s own citation.
+ * ColorPicker parser: the VBoxContainer parse plus every ColorPicker property
+ * that changes a drawn row. `can_add_swatches` and `deferred_mode` stay unread
+ * (`linterParserAllowlist`).
  */
 
 import { type ParsedHeading } from '../../../../parser/utils';
@@ -12,11 +10,9 @@ import { parseVBoxContainer } from '../vboxcontainer/parser';
 import type { ColorPickerProperties } from './types';
 
 /**
- * `Color color;` (`color_picker.h:274`) is the base `Color()` constructor,
- * opaque black — but `ColorPicker::ColorPicker()` immediately calls
- * `set_pick_color(Color(1, 1, 1))` (`color_picker.cpp:2289`) before the scene
- * loader ever sees the node, so the value an omitted `color` key actually
- * means is opaque WHITE, not the raw member default.
+ * `Color color;` (`color_picker.h:274`) defaults to opaque black, but the
+ * constructor calls `set_pick_color(Color(1, 1, 1))` (`color_picker.cpp:2289`)
+ * before the loader sees the node, so an omitted `color` means opaque white.
  */
 const DEFAULT_COLOR = 'Color(1, 1, 1, 1)';
 

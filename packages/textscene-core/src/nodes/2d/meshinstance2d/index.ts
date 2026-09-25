@@ -1,9 +1,6 @@
 /**
- * MeshInstance2D registration — parser.
- *
- * Reuses the Node2D parse; property knowledge lives in linterParser.ts.
- * Not rendered yet: index.r3f.ts registers Node2D under `renderIntent: 'pending'`,
- * so the tree still reports a gap while `visible` and the workspace split work.
+ * MeshInstance2D registration: the parser, which reuses the Node2D parse.
+ * linterParser.ts holds the property validators.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

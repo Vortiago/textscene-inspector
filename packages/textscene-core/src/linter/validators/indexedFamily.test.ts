@@ -1,14 +1,7 @@
 /**
  * `indexedFamilyValidator`: the shared parse for Godot's indexed property
- * families, including the NESTED leaf that four Godot classes serialise.
- *
- * The leaf-depth cases are the reason this file exists. Before them the
- * dispatcher split at the LAST `/` and required everything between the prefix
- * and that slash to be digits, so `settings/0/apply/transform_mode` read an
- * index of `0/apply`, failed the integer test and came back as an unknown
- * property. Three slices hand-rolled an outer dispatcher around that, and a
- * fourth (ConvertTransformModifier3D, eight nested leaves) made it worth
- * fixing once.
+ * families, including a nested leaf such as `settings/0/apply/transform_mode`,
+ * whose index ends at the first `/` after the prefix.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -100,8 +93,8 @@ describe('indexedFamilyValidator', () => {
     });
 
     it('parses the index from the FIRST slash, so a nested key is still indexed', () => {
-      // A last-slash split reads `0/apply` here, which is not an integer, so the
-      // whole key falls through to no validator at all.
+      // A last-slash split reads `0/apply` here, which is not an integer, and
+      // the key reaches no validator.
       const error = family('settings/-1/apply/axis', '1', 1);
       expect(error?.code).toBe('INVALID_SETTING');
       expect(nested.calls).not.toContain('settings/-1/apply/axis');
@@ -146,7 +139,7 @@ describe('indexedFamilyValidator', () => {
 
     it('still rejects an unknown leaf under a non-numeric index', () => {
       // The index resolves, but `_set` falls to its `return false` for a leaf
-      // it does not name, so THAT write is dropped.
+      // it does not name, so that write is dropped.
       expect(family('settings/x/made_up', 'true', 1)?.code).toBe('INVALID_SETTING');
     });
 
@@ -205,11 +198,9 @@ describe('indexedFamilyValidator', () => {
 
   describe('grounding tags', () => {
     /**
-     * The `is_valid_int` gate refuses a real value — `item_x/text` reaches
-     * `_get_property`, which returns nullptr, so `_set` returns false and the
-     * write is DROPPED (property_list_helper.cpp:53-55). That is ADR-0032's
-     * error tier, and tagging the family `formatOnly` said the opposite: the
-     * bound sweep then never asked for the citation.
+     * The `is_valid_int` gate refuses a real value: `item_x/text` reaches
+     * `_get_property`, which returns nullptr, so the write is dropped
+     * (property_list_helper.cpp:53-55), ADR-0032's error tier, not `formatOnly`.
      */
     it('cites the index gate even with no negative-index branch', () => {
       const family = indexedFamilyValidator({

@@ -1,46 +1,26 @@
 /**
- * What the linter actually does to one node type, read from the LIVE registries.
- *
- * Two independent families, and the difference matters to a reader:
- *   - **Validators** run during strict parsing, per property. A malformed value
- *     is an `error`; an out-of-range one is an `error` only where Godot's setter
- *     refuses it and a `warning` where only the inspector hint states the bound
- *     (ADR-0032), which is what the `grounding` field carries. They inherit down
- *     the base chain, so a Node3D subclass gets the transform/visible set
- *     without declaring it.
- *   - **Rules** run after parsing. `RuleRegistry` matches the node type exactly,
- *     EXCEPT for a rule carrying an `applicableNodeTypeMatcher` (which is
- *     executed here, not guessed) and a rule declaring no applicable types at
- *     all (which runs for every node).
- *
- * Because matchers are predicates, this can only be computed by running them —
- * which is why the gallery cannot compute it and reads the generated JSON instead.
+ * What the linter does to one node type, read from the live registries: validators per property,
+ * inherited down the base chain, and rules. A rule matches the type exactly, unless it declares no types
+ * (it runs on every node) or an `applicableNodeTypeMatcher` predicate, which only this runs, so the gallery reads the generated JSON.
  */
 
 import { tableLines } from './markdownTable.mjs';
 
 /**
- * The sheet's `Out of range` cell, from the severity each BOUNDED end reports.
- *
- * Not from `grounding.kind`: that collapses to `enforced` when EITHER end is,
- * so a property with an enforced floor and a hinted ceiling (`extra_cull_margin`)
- * rendered a flat "error" and told the reader exceeding the ceiling stops a
- * build, which it does not. The two ends are named separately whenever they
- * disagree, and an open end is simply absent.
+ * The sheet's `Out of range` cell, from the severity each bounded end reports,
+ * not from `grounding.kind`, which is `enforced` when either end is. Ends that
+ * disagree are named apart, and an open end is absent.
  */
 export function outOfRangeCell(tiers, bounds) {
   if (!tiers) return '';
   const { min, max } = tiers;
-  // Where the setter's own end sits outside the hint's, one end reports at two
-  // tiers and the collapsed wording below cannot say so: "warning below" over a
-  // property that ERRORS past 0 states the milder half and hides the other.
+  // A setter end outside the hint's reports one end at two tiers, which the
+  // collapsed wording below cannot say.
   const { enforcedMin, enforcedMax } = bounds ?? {};
   if (enforcedMin || enforcedMax) {
     const parts = [];
-    // An outer end the setter's already subsumes reports nothing reachable:
-    // where the refusal starts at or above the hint's floor, no value can be
-    // below the hint without being refused first, and naming the band anyway
-    // describes a warning that can never fire.
+    // Where the refusal starts at or above the hint's floor, no value can be
+    // below the hint without being refused first, so that band is not named.
     const minReachable = min && bounds?.min !== undefined && (!enforcedMin || enforcedMin.at < bounds.min);
     const maxReachable = max && bounds?.max !== undefined && (!enforcedMax || enforcedMax.at > bounds.max);
     if (enforcedMin) parts.push(`error ${enforcedMin.exclusive ? 'at or below' : 'below'} ${enforcedMin.at}`);
@@ -58,9 +38,8 @@ export function outOfRangeCell(tiers, bounds) {
 export function validatorsFor(type, validatorRegistry, baseTypes) {
   const seen = new Set();
   const out = [];
-  // Keys an ancestor declares that THIS type removes (registerUnavailable).
-  // Resolved against the leaf, not the declaring type, because the removal
-  // lives on the leaf and the declaration lives above it.
+  // Keys an ancestor declares that this type removes (registerUnavailable),
+  // resolved against the leaf, where the removal lives.
   const removed = new Set(validatorRegistry.getUnavailableKeys?.(type) ?? []);
   let current = type;
   const visited = new Set();
@@ -70,30 +49,24 @@ export function validatorsFor(type, validatorRegistry, baseTypes) {
       // A subclass key shadows the base's, exactly as findValidator resolves it.
       if (seen.has(key)) continue;
       seen.add(key);
-      // `accepts` is set by the `v` DSL at construction time, where the bounds
-      // are known. A hand-rolled validator has none and renders blank rather
-      // than being guessed at.
+      // The `v` DSL sets `accepts`. A hand-rolled validator has none and
+      // renders blank.
       const validator = validatorRegistry.declarationFor(current, key);
       out.push({
         property: key,
         declaredOn: current,
         accepts: validator?.accepts ?? '',
-        // What each bounded end actually reports (ADR-0032). Read per end
-        // rather than from `grounding.kind`, which cannot express a property
-        // whose floor the setter enforces and whose ceiling only the inspector
-        // hint states. The tier is the first thing a reader of this table needs,
-        // so a sheet that reads it from `grounding.kind` states it wrongly.
+        // What each bounded end reports (ADR-0032).
         tiers: validator?.tiers,
-        // The NUMBERS behind those tiers, needed only where an end carries two
-        // of them: the cell must name both the refused and the hinted limit.
+        // The numbers behind those tiers, for an end that carries two.
         bounds: validator?.bounds,
         ...(removed.has(key) ? { unavailable: true } : {}),
       });
     }
     current = baseTypes[current];
   }
-  // A removal whose declaring ancestor was never reached still belongs in the
-  // list: the reader needs to know the key is refused, not merely unlisted.
+  // A removal whose declaring ancestor was never reached is still listed as
+  // refused.
   for (const key of [...removed].sort()) {
     if (seen.has(key)) continue;
     out.push({ property: key, declaredOn: type, accepts: '', unavailable: true });
@@ -121,24 +94,17 @@ export function coverageFor(type, { ruleRegistry, validatorRegistry, baseTypes }
 }
 
 /**
- * The `## Linting` body for one node type. Terse: this is an index, not prose.
- *
- * The output is rendered twice — as Markdown in the sheet, and by
- * `build-gallery.mjs`'s `inline()` in the gallery. That renderer supports only
- * `` `code` ``, `**bold**` and `[text](href)`, so stay inside that subset;
- * anything else (italics especially) reaches the page as literal asterisks.
+ * The `## Linting` body for one node type. `gallery/markdown.mjs`'s `inline()`
+ * renders it too, which supports only `` `code` ``, `**bold**` and
+ * `[text](href)`: italics reach the page as literal asterisks.
  */
 export function renderCoverage(type, coverage) {
   const lines = [];
   const { validators, rules } = coverage;
 
-  // Own properties get a table; inherited ones get a count per base type. The
-  // inherited sets are identical across every node sharing a base (all 34 of a
-  // light's validated properties are 31 Node3D/Light3D ones), so listing them in
-  // full would repeat one table across dozens of sheets to no purpose.
-  // A removal belongs in the type's OWN table even though the key it refuses is
-  // declared by an ancestor: refusing it is this type's own statement, and
-  // counting it as "inherited from BoxContainer" would say the opposite.
+  // Own properties get a table. Inherited ones get a count per base type,
+  // since the sets repeat across every node sharing a base. A removal belongs
+  // in the own table: refusing the key is this type's own statement.
   const own = validators.filter((v) => v.declaredOn === type || v.unavailable);
   const inheritedBy = new Map();
   for (const v of validators) {
@@ -154,16 +120,14 @@ export function renderCoverage(type, coverage) {
       `Strict parsing format-checks nothing here: no validators are registered for \`${type}\`, and it inherits none.`
     );
   } else {
-    // A removal is not a check, so a type whose only own entry is a removal must
-    // not be described as format-checking it.
+    // A removal is not a check.
     const checked = own.filter((v) => !v.unavailable);
     const refused = own.filter((v) => v.unavailable);
     const scope = checked.length
       ? `these \`${type}\` properties${inheritedNote ? `, plus ${inheritedNote}` : ''}`
       : `the inherited set (${inheritedNote}); \`${type}\` declares none of its own`;
-    // A removal row carries the ancestor that declares the key as `declaredOn`;
-    // one no ancestor declares carries the type itself, and saying "its base
-    // declares" there states an engine fact the engine does not have.
+    // A removal no ancestor declares carries the type itself as `declaredOn`,
+    // and must not claim "its base declares".
     const keys = (rows) => rows.map((v) => `\`${v.property}\``).join(', ');
     const shadowed = refused.filter((v) => v.declaredOn !== type);
     const outright = refused.filter((v) => v.declaredOn === type);
@@ -182,11 +146,9 @@ export function renderCoverage(type, coverage) {
           ['Property', 'Accepts', 'Out of range'],
           own.map((v) => [
             `\`${v.property}\``,
-            // A removed key is not a property with a narrow domain; it is one this
-            // class refuses outright, so it must not read as an accepted value.
+            // A removed key is refused outright, not a narrow domain.
             v.unavailable ? '**not available on this type**' : v.accepts,
-            // Blank for a validator with no bound to exceed: a format-only check has
-            // no "out of range", and claiming one would invent a tier it never reports.
+            // Blank for a format-only check, which has no bound to exceed.
             v.unavailable ? '' : outOfRangeCell(v.tiers, v.bounds),
           ])
         )
@@ -208,8 +170,7 @@ export function renderCoverage(type, coverage) {
       ruleRows.push([`\`${rule.name}\`${scope}`, '(none)', '(none)']);
       continue;
     }
-    // One row per reported name; a name reported at both severities lists both
-    // rather than occupying two rows.
+    // One row per reported name, listing each severity it reports.
     const severitiesByName = new Map();
     for (const e of rule.emits) {
       if (!severitiesByName.has(e.ruleName)) severitiesByName.set(e.ruleName, []);

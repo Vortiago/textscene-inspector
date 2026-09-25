@@ -1,22 +1,8 @@
 /**
- * The question `enginePropertyCoverage` asks of nodes, asked of the resources a
- * `.tscn` carries in its `[sub_resource]` sections.
- *
- * Nothing asked it before: that guard reads the node capture and the two
- * hierarchies are disjoint, so a material or mesh property Godot serialises and
- * we validate nowhere was invisible to every guard in the repo. It survived a
- * node-coverage campaign, a diagnostic audit and a hint-parity sweep.
- *
- * SCOPE — a resource type we register validators for, and its ancestors. Not
- * all of ClassDB: counting the classes nobody has started on would bury the
- * number this guard exists to hold, the same line `enginePropertyCoverage`
- * draws. Ancestors are in for the reason this guard exists at all: a validator
- * on a leaf whose base declares the property is the defect, so the base's whole
- * declaration has to be counted for the placement to be forced.
- *
- * Resource classes we decode but never lint — ShaderMaterial,
- * ParticleProcessMaterial, ArrayMesh, the shapes and curves — are out, and are
- * the standing resource-lint backlog rather than this ledger's business.
+ * `enginePropertyCoverage`'s question, asked of the resources in a `.tscn`'s
+ * `[sub_resource]` sections. Scope: each resource type we register validators
+ * for, and its ancestors, so a property declared on a base is counted there.
+ * Resource classes we decode but never lint are out.
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -29,20 +15,10 @@ import { unvalidatedByClass } from './registryKeys.mjs';
 const PROPS = join(import.meta.dirname, 'resource-properties.json');
 const BASES = join(import.meta.dirname, 'resource-bases.json');
 const CORE = join(import.meta.dirname, '../../packages/textscene-core');
-// Not `existsSync(dist)`: that cannot tell a fresh build from one predating
-// the very change being measured, and it SKIPS rather than fails, so a run
-// with no build at all reads green over a guard that never executed.
-//
-// Computed in `beforeAll`, never at module scope: it walks a tree a concurrent
-// `tsc --build` may be writing, and a throw during module evaluation surfaces
-// as a vitest collection error instead of the actionable message.
-
 /**
- * Properties in scope with no validator.
- *
- * Zero is the standing state. Raise it only for a property a `.tscn` cannot
- * express — an empty ADD_PROPERTY setter string, a runtime-only RID — and say
- * which.
+ * Properties in scope with no validator. Raise it only for a property a `.tscn`
+ * cannot express, such as an empty ADD_PROPERTY setter string or a runtime-only
+ * RID, and say which.
  */
 const EXPECTED_UNVALIDATED = 0;
 
@@ -66,27 +42,25 @@ describe('resource property coverage', { timeout: 60_000 }, () => {
   const engine = JSON.parse(readFileSync(PROPS, 'utf8'));
   const bases = JSON.parse(readFileSync(BASES, 'utf8'));
 
-  // Fails every assertion below with one actionable message rather than letting
-  // them agree with a previous revision's registry.
+  // Not `existsSync(dist)`, which skips on no build and passes a stale one. In
+  // `beforeAll`, not at module scope, where a throw during a concurrent `tsc
+  // --build` surfaces as a collection error instead of this message.
   beforeAll(() => {
     requireFreshDist(CORE, 'this coverage ledger');
   });
 
   let validatorRegistry;
   let registeredTypes;
-  // 60s, matching the suite option above rather than the 10s hook default.
-  // Loading the built barrel is the whole cost of this file, and three ledgers
-  // do it at once under a full `--project scripts` run — comfortably fast
-  // alone, and over the default when they contend.
+  // 60s, matching the suite option above, not the 10s hook default: three
+  // ledgers load the barrel at once under a full `--project scripts` run.
   beforeAll(async () => {
     ({ validatorRegistry, registeredTypes } = await loadCoreLinter());
   }, 60_000);
 
   it('scopes to the ancestry of what we register', () => {
     const covered = coveredClasses(registeredTypes('declaring'), bases);
-    // Named, because the scope is derived from what is registered: deleting a
-    // registration would drop its rows from the count rather than fail it, so
-    // the ledger's zero would survive the coverage going away.
+    // Named, since the scope derives from what is registered: deleting a
+    // registration shrinks the count instead of failing it.
     for (const cls of [
       'BaseMaterial3D',
       'Material',
@@ -105,8 +79,7 @@ describe('resource property coverage', { timeout: 60_000 }, () => {
 
   it('counts against what the engine declares, which the capture must carry', () => {
     expect(engine.BaseMaterial3D?.length).toBeGreaterThan(100);
-    // The leaf declares nothing of its own, which is exactly why the validators
-    // cannot live there.
+    // The leaf declares nothing of its own, so the validators cannot live there.
     expect(engine.StandardMaterial3D).toBeUndefined();
   });
 

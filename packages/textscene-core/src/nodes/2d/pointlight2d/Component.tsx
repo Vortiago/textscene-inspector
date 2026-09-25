@@ -1,30 +1,7 @@
 /**
- * <PointLight2D> — a 2D point light. It draws nothing on the canvas, as Godot's
- * lights do not: it contributes its cookie to the accumulation buffer that
- * every lit canvas item multiplies its albedo against (see
- * `r3f/lighting2d/CanvasLighting2D`).
- *
- * The quad sits on the light camera layer, so the main pass never sees it and
- * the light pre-pass sees nothing else. It is still wrapped in CanvasItem2D so
- * its transform, `visible` and z come from the same ritual as any other node.
- *
- * A SHADOWED light takes one of TWO mechanisms, chosen by `shadow_filter`,
- * because Godot's own shadow is a fraction and only its unfiltered case happens
- * to be binary:
- *
- *  - NONE — two meshes rather than one, in the order its sequence fixes: its
- *    shadow volumes stamp the stencil, then its cookie draws only where they did
- *    not. Withholding the cookie IS the shadow, because Godot's default
- *    `shadow_color = Color(0, 0, 0, 0)` contributes nothing where it falls.
- *  - PCF5 / PCF13 — no stencil at all. The quads cover the light's whole rect
- *    and each fragment samples the light's polar shadow map (`shadowPolarMap`)
- *    through Godot's tap kernel, so the boundary comes out as the stepped
- *    penumbra Godot draws instead of a hard edge.
- *
- * The gate is what keeps the measured-at-parity stencil path untouched: an
- * unfiltered light runs not one line of the filtered path.
- *
- * When `enabled=false` the body returns null and the light does not register.
+ * PointLight2D draws nothing on the canvas, as in Godot: it adds its cookie to
+ * the accumulation buffer every lit canvas item multiplies its albedo against
+ * (`r3f/lighting2d/CanvasLighting2D`). CanvasItem2D supplies transform, `visible` and z.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
@@ -71,9 +48,8 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PointLight2DProperties;
   const { externalResources, internalResources } = useSceneResources();
 
-  // The light cookie is a Texture2D slot like any other, and in real scenes it
-  // is usually a GradientTexture2D — a radial falloff described inline rather
-  // than shipped as an image. `useTexture2D` resolves either kind.
+  // The cookie is often a GradientTexture2D, a radial falloff described inline,
+  // not an image. `useTexture2D` resolves either kind.
   const { texture: displayedTexture, missing } = useTexture2D(
     props.texture,
     externalResources,
@@ -82,14 +58,10 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const showPlaceholder = missing || !props.texture;
 
   const lights = props.enabled && !!displayedTexture ? 1 : 0;
-  // WHICH ITEMS this light reaches is what partitions the accumulation, so the
-  // whole cull tuple is what the light registers under and what decides the
-  // layer its quad draws on. The node's own `light_mask` is its CanvasItem mask
-  // and has no bearing on either.
-  // Not memoised: every consumer compares it by value. `useRegisterCanvasLight2D`
-  // destructures the five numbers and depends on those, and the two class
-  // lookups run `sameLightCullKey` — so a stable identity would buy nothing and
-  // would add a second list of fields to keep in step.
+  // The cull tuple, not the node's own `light_mask` (its CanvasItem mask), picks
+  // the items this light reaches, so it keys the registration and the quad layer.
+  // Not memoised: every consumer compares it by value, so a stable identity buys
+  // nothing.
   const cullKey: LightCullKey = {
     itemCullMask: props.range_item_cull_mask,
     zMin: props.range_z_min,
@@ -110,7 +82,7 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   useRegisterShadowTint(lights > 0 && tintsShadow, cullKey);
   const shadowTintLayer = useShadowTintLayer(cullKey);
 
-  // Every occluder on the canvas, narrowed to the ones Godot lets THIS light
+  // Every occluder on the canvas, narrowed to the ones Godot lets this light
   // see. The flatten is shared; only the mask test is per light.
   const allCasters = useWorldShadowCasters();
   const shadowItemCullMask = props.shadow_item_cull_mask;
@@ -122,7 +94,6 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
     [props.shadow_enabled, allCasters, shadowItemCullMask]
   );
 
-  // When disabled: return null → no mesh in tree.
   if (!props.enabled) return null;
 
   return (
@@ -158,11 +129,9 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
 }
 
 /**
- * The cookie quad and the `shadow_color` quad are the SAME quad: same size, same
- * offset, same slot in the pass. Only the layer they land on and the material
- * they carry differ, and the complementary stencil test means they never cover
- * the same pixel, so their relative order is moot. Sharing one component is what
- * stops the two drifting on geometry or offset.
+ * The cookie quad and the `shadow_color` quad share this component, so their
+ * geometry and offset cannot drift. Only their layer and material differ, and
+ * complementary stencil tests keep them off each other's pixels.
  */
 function LightQuad({
   meshRef,
@@ -216,19 +185,19 @@ function QuadMesh({
   scale: number;
   offset: { x: number; y: number };
   blendMode: number;
-  /** `Light2D.shadow_color` — what this light contributes where it IS blocked. */
+  /** `Light2D.shadow_color`: what this light contributes where it is blocked. */
   shadowColor: Color;
-  /** `Light2D.shadow_filter` — NONE picks the stencil, PCF5/PCF13 the polar map. */
+  /** `Light2D.shadow_filter`: NONE picks the stencil, PCF5/PCF13 the polar map. */
   shadowFilter: number;
-  /** `Light2D.shadow_filter_smooth` — how wide the PCF taps spread the boundary. */
+  /** `Light2D.shadow_filter_smooth`: how wide the PCF taps spread the boundary. */
   shadowFilterSmooth: number;
   /** The albedo-free pass's layer, set only when this light tints its shadow. */
   shadowTintLayer: number | undefined;
   /** The camera layer of this light's cull-mask class. */
   layer: number;
-  /** This light's index within its class — its stencil ref. NOT its draw order. */
+  /** This light's index within its class: its stencil ref, not its draw order. */
   ordinal: number;
-  /** This light's place in the canvas light list, which IS its draw order. */
+  /** This light's place in the canvas light list, which is its draw order. */
   sequence: number;
   /** The occluders this light is allowed to see, in world space. */
   casters: readonly WorldShadowCaster[];
@@ -236,30 +205,29 @@ function QuadMesh({
   const width = (texture.image as { width?: number } | null | undefined)?.width ?? 1;
   const height = (texture.image as { height?: number } | null | undefined)?.height ?? 1;
 
-  // A callback ref (not useRef) so the pose sampler starts once the quad is in
-  // the tree — the world matrix it needs does not exist before that.
+  // A callback ref, not useRef, so the pose sampler starts once the quad is in
+  // the tree: the world matrix it needs does not exist before that.
   const [quad, setQuad] = useState<THREE.Mesh | null>(null);
   const light = useShadowLightPose(quad, casters.length > 0);
   const shadowed = !!light && casters.length > 0;
+  // `shadow_filter` picks the mechanism. NONE stencils: the volumes stamp and the
+  // cookie draws only where they did not, as Godot's transparent default
+  // `shadow_color` adds nothing there. PCF5/PCF13 sample the polar map through
+  // Godot's tap kernel, for its stepped penumbra.
   const filtered = shadowed && shadowFilter !== SHADOW_FILTER_NONE;
 
-  // The polar map is a pure function of the pose and the casters, so it is
-  // rebuilt on exactly the events the volumes are and is byte-stable in between.
+  // Built only for a filtered light, so an unfiltered one runs none of that path.
+  // It is a pure function of the pose and the casters, so it rebuilds exactly
+  // when the volumes do.
   const bins = useMemo(
     () => (filtered && light ? buildShadowPolarMap(light, casters) : null),
     [filtered, light, casters]
   );
 
-  // The TEXTURE outlives each rebuild: its identity is what both quad materials
-  // hold in `uShadowMap`, so refilling it in place is what stops an occluder
-  // settling during load from rebuilding two ShaderMaterials per light.
-  //
-  // Refilling is a COMMIT-phase job precisely BECAUSE the identity is stable.
-  // The materials already on screen sample this exact texture, so a write from
-  // a render React goes on to discard would put an abandoned occluder position
-  // on the GPU while the committed uniforms still describe the previous one.
-  // Building a fresh texture per render was self-correcting that way; refilling
-  // one is not.
+  // The texture outlives each rebuild: both quad materials hold its identity in
+  // `uShadowMap`, so an occluder settling during load refills it rather than
+  // rebuilding two ShaderMaterials. The refill runs at commit, since a write from
+  // a render React discards would reach the materials already on screen.
   const [shadowMap, setShadowMap] = useState<THREE.DataTexture | null>(null);
   useLayoutEffect(() => {
     if (!bins) {
@@ -298,8 +266,7 @@ function QuadMesh({
         energy,
         blendMode,
         // A filtered light computes its own fraction per fragment, so it needs
-        // no stencil ref and stamps nothing — the two mechanisms are never both
-        // active on one light.
+        // no stencil ref and stamps nothing.
         stencil: shadowed && !filtered ? litQuadStencilProps(ordinal) : undefined,
         shadow: sampling,
       }),
@@ -307,16 +274,14 @@ function QuadMesh({
   );
   useEffect(() => () => material.dispose(), [material]);
 
-  // The other half of `light_shadow_compute`: what the light contributes where
-  // the volumes DID stamp. Null at Godot's transparent default, which is every
-  // ordinary shadow — there the withheld cookie is the entire effect.
-  // `shadowColorContributes` is NOT re-checked here: the node above passes a
-  // layer only for a light that tints, so a defined layer already means it does.
-  // Asking twice would let the two answers drift.
+  // The other half of `light_shadow_compute`: the light's contribution where the
+  // volumes stamped. Null at Godot's transparent default. A defined
+  // `shadowTintLayer` already means the light tints, so `shadowColorContributes`
+  // is not asked twice, where the two answers could drift.
   const tintsShadow = shadowed && shadowTintLayer !== undefined;
   const shadowMaterial = useMemo(() => {
     if (!tintsShadow) return null;
-    // A sampling IS the filtered branch, and it carries the colour, so the two
+    // A sampling is the filtered branch, and it carries the colour, so the two
     // quads of one light cannot be handed different `shadow_color`s.
     return sampling
       ? createShadowColorQuadMaterial({ cookie: texture, blendMode, shadow: sampling })
@@ -329,7 +294,7 @@ function QuadMesh({
   }, [tintsShadow, texture, shadowColor, blendMode, ordinal, sampling]);
   useEffect(() => () => shadowMaterial?.dispose(), [shadowMaterial]);
 
-  // The light layer is what keeps this quad out of the visible pass AND what
+  // The light layer is what keeps this quad out of the visible pass and what
   // sorts it into its cull-mask class: each class's accumulation pre-pass
   // renders its own layer alone, and the main pass renders none of them.
   const toLightLayer = useCallback(

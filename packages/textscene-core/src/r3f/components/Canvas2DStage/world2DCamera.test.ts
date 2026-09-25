@@ -1,8 +1,6 @@
 /**
- * Ortho-camera pose for the 2D world canvas: the camera must place Godot
- * canvas pixel p at exactly the same screen position as the CSS-transformed
- * overlay frame (screen = pan + p·zoom). Screen-pixel ↔ world mapping under
- * R3F's default ortho frustum: screen.x = sw/2 + (wx − camX)·zoom,
+ * The camera places canvas pixel p at the overlay frame's screen = pan + p·zoom.
+ * Under R3F's ortho frustum, screen.x = sw/2 + (wx − camX)·zoom and
  * screen.y = sh/2 − (wy − camY)·zoom, with world = (p.x, −p.y).
  */
 import { describe, it, expect } from 'vitest';

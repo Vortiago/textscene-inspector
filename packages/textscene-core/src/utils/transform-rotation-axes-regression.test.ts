@@ -1,32 +1,8 @@
 /**
- * Regression tests for hallway transforms that exercise rotation axes
- * the wall-width suite never touched.
- *
- * `wall-transform-regression.test.ts` covers the Ry(+90°) walls and the pure
- * Z-scale ShortWall. This suite complements it with the decompose stress
- * cases that the 2026-05-29 positioning hunt confirmed were ALSO correct
- * after the 99c1479 row-vector fix — the cases suspected of still being wrong
- * (ceiling lamps, a photo or window frame, other maths that might be off):
- *
- *   - Rz(180°)            LongCorridor/Ceiling (PlaneMesh)
- *   - Ry(180°) + Z-scale  ShortCorridor/LongWall
- *   - Rz(-90°)            CrownMolding (PrismMesh)
- *
- * The point is convention robustness. A column-major / transpose regression
- * in decomposeTransform3D would mis-map these axes or leak rotation into
- * scale. The asymmetric Rz(-90°) crown-molding case is the decisive
- * discriminator: its axis mapping is only correct under the Godot row-vector
- * convention (a transpose would map local X -> +Y instead of -Y).
- *
- * Ground truth captured from a real-world hallway scene:
- *   RoomGeometry.tscn           (Ceiling, LongWall)
- *   the wall-section component   (CrownMolding)
- *
- * Godot Basis = Vector3 rows[3]: row0=(a,b,c) row1=(d,e,f) row2=(g,h,i),
- * world = Basis*p + origin (world.x = row0·p + ox, ...).
- *
- * Treat the constants here as fixture data — if a refactor changes them, the
- * refactor is almost certainly wrong.
+ * Decompose cases on rotation axes the wall suite leaves alone, from a real hallway scene: Rz(180°)
+ * (LongCorridor/Ceiling), Ry(180°) with Z-scale (ShortCorridor/LongWall) and Rz(-90°)
+ * (CrownMolding). A transpose regression would mis-map these axes: the asymmetric Rz(-90°) maps
+ * local X to -Y only under Godot's row convention, world = Basis*p + origin.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -45,6 +21,7 @@ function composeObject(transformString: string): THREE.Object3D {
   return o;
 }
 
+// The Transform3D constants below are fixture data: a refactor that changes them is wrong.
 describe('hallway rotation/scale decompose — regression suite', () => {
   describe('LongCorridor/Ceiling — Rz(180°) PlaneMesh', () => {
     // rows: r0=(-1, 8.74e-08, 0) r1=(-8.74e-08, -1, 0) r2=(0,0,1) origin=(0,4,0)
@@ -62,8 +39,7 @@ describe('hallway rotation/scale decompose — regression suite', () => {
     });
 
     it('maps unit axes as Rz(180°): X->-X, Y->-Y, Z->+Z', () => {
-      // Asserted via the composed matrix so the result is euler-convention
-      // independent (Rz180 can be expressed as z=±π or x=π,y=0).
+      // Through the composed matrix, since Rz(180°) has two Euler forms: z=±π, or x=π with y=0.
       const o = composeObject(CEILING);
       const xMapped = new THREE.Vector3(1, 0, 0).transformDirection(o.matrix);
       const yMapped = new THREE.Vector3(0, 1, 0).transformDirection(o.matrix);
@@ -139,7 +115,7 @@ describe('hallway rotation/scale decompose — regression suite', () => {
       expect(d.position.z).toBeCloseTo(0, 4);
       expect(d.rotation.x).toBeCloseTo(0, 4);
       expect(d.rotation.y).toBeCloseTo(0, 4);
-      // Sign matters: Godot row math => Rz(-90°), NOT +90°.
+      // Godot row math gives Rz(-90°), not +90°.
       expect(d.rotation.z).toBeCloseTo(-HALF_PI, 4);
     });
 

@@ -1,31 +1,8 @@
 /**
- * Semantic linter rule for CanvasGroup — Godot's own configuration warning,
- * `CanvasGroup::get_configuration_warnings()` (canvas_group.cpp:67-95):
- *
- *     Node *n = get_parent();
- *     while (n) {
- *         CanvasItem *as_canvas_item = Object::cast_to<CanvasItem>(n);
- *         if (!warned_about_ancestor_clipping && as_canvas_item &&
- *                 as_canvas_item->get_clip_children_mode() != CLIP_CHILDREN_DISABLED) {
- *             warnings.push_back(...); warned_about_ancestor_clipping = true;
- *         }
- *         CanvasGroup *as_canvas_group = Object::cast_to<CanvasGroup>(n);
- *         if (!warned_about_canvasgroup_ancestor && as_canvas_group) {
- *             warnings.push_back(...); warned_about_canvasgroup_ancestor = true;
- *         }
- *         if (warned_about_ancestor_clipping && warned_about_canvasgroup_ancestor) break;
- *         n = n->get_parent();
- *     }
- *
- * Both a clipping ancestor and a CanvasGroup ancestor break the backbuffer this
- * node relies on, so both arms need the WHOLE ancestor chain, not just the direct
- * parent: each fires at most once, naming the FIRST (nearest) ancestor that
- * trips it, and the walk keeps going until both have fired or the root is
- * reached. `clip_children` is a serialised CanvasItem property
- * (canvas_item.cpp:1465-1466, `ClipChildrenMode` in canvas_item.h:72-75:
- * DISABLED=0, ONLY=1, AND_DRAW=2); the engine's test is `!= DISABLED`, so any
- * non-zero value trips it, and Godot omits the key entirely at its default 0
- * (ADR-0032's absence rule), so a missing key must NOT trip the rule.
+ * Semantic linter rule for CanvasGroup, ported from
+ * `CanvasGroup::get_configuration_warnings()` (canvas_group.cpp:67-95). A clipping
+ * ancestor and a CanvasGroup ancestor each break this node's backbuffer, so each
+ * warns once over the whole chain, naming the nearest ancestor that trips it.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -36,8 +13,10 @@ function checkCanvasGroup(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const { node, scene } = context;
 
-  // No own-node gate, unlike the CanvasItem tier: a CanvasGroup always wants to
-  // clip via backbuffer compositing, whatever its own `clip_children` says.
+  // No own-node gate, unlike the CanvasItem tier: a CanvasGroup always clips through
+  // backbuffer compositing. An ancestor's `clip_children` (canvas_item.cpp:1465-1466,
+  // `ClipChildrenMode` in canvas_item.h:72-75) trips at any mode but DISABLED (0),
+  // and an absent key is DISABLED.
   const { clippingAncestor, canvasGroupAncestor } = clipAncestry(scene, node);
 
   if (clippingAncestor) {

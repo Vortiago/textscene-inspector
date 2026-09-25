@@ -1,9 +1,8 @@
 [gd_scene load_steps=2 format=3]
 
-; PhysicalBone3D collision_object_3d.cpp:739 ("needs a collision shape") warns
-; without one, so both bones below carry a CollisionShape3D child — the real
-; ragdoll corpus (demos/3d/ragdoll_physics) pairs every PhysicalBone3D with
-; exactly one too.
+; PhysicalBone3D warns without a collision shape (collision_object_3d.cpp:739, "needs a
+; collision shape"), so both bones carry a CollisionShape3D child. The ragdoll corpus
+; (demos/3d/ragdoll_physics) pairs every PhysicalBone3D with exactly one too.
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_bone"]
 radius = 0.1

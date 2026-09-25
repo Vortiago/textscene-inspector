@@ -6,9 +6,9 @@ parsing (`StrictTscnParser` catches syntax and format errors with line and
 column), then semantic lint rules (missing resources, invalid references,
 property constraints).
 
-Its subject is the whole text scene file. Godot has no text-scene linter of its
-own. The goal is to help you author a sound, valid file regardless of what any
-previewer draws. Coverage therefore tracks what the engine serialises. A
+Godot has no text-scene linter of its own. This one covers every valid text
+scene file, not only what a previewer draws, so coverage tracks what the engine
+serialises. A
 property is worth validating because Godot writes it and reads it back, not
 because a renderer consumes it. Every diagnostic is grounded in a line of
 Godot's own source. Its severity (error, warning or info) follows what the
@@ -34,17 +34,15 @@ This bundles `src/cli.ts` to `dist/cli.js`. The `tscn-lint` bin, and
 # Single file
 node apps/textscene-linter/dist/cli.js scenes/fixtures/unit-plane-mesh.tscn
 
-# Multiple files via shell glob
+# Multiple files through a shell glob
 node apps/textscene-linter/dist/cli.js scenes/fixtures/*.tscn scenes/isometric/*.tscn
 
-# Directory argument — recurses into every .tscn file underneath
+# Directory argument: recurses into every .tscn and .tres file underneath
 node apps/textscene-linter/dist/cli.js scenes/
 
-# Plain output (no ANSI colors), e.g. for CI logs
-node apps/textscene-linter/dist/cli.js --no-color scenes/examples/example-hallway-mockup.tscn
+# Plain output (no ANSI colors), for example for CI logs
+node apps/textscene-linter/dist/cli.js --no-color scenes/fixtures/example-hallway-mockup.tscn
 ```
-
-A directory argument is walked for both `.tscn` and `.tres` files.
 
 Diagnostics print to stdout in every format. In `text` format a read failure
 (missing file, permissions) prints to stderr. In the `json` and `github`

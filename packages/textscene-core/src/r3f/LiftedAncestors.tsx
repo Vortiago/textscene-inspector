@@ -25,13 +25,10 @@ import { CanvasSpaceProvider, useCanvasSpace } from './canvasRootScope.js';
 import { joinPath } from '../utils/nodePath.js';
 
 /**
- * Rebuild the local `<group>` transforms of the y_sort_enabled ancestors an
- * item was lifted past, outermost first, around `element`.
- *
- * Deliberately the SAME `node2dGroupProps` conjugation every CanvasItem renders
- * through rather than a composed matrix of its own: `F·M1·F · F·M2·F =
- * F·(M1·M2)·F`, so nesting the groups reproduces the tree's composition exactly
- * (skew included) with no second transform path to keep in step.
+ * Rebuild the `<group>` transforms of the y_sort_enabled ancestors an item was lifted
+ * past, outermost first, around `element`. The same `node2dGroupProps` conjugation as
+ * every CanvasItem: `F·M1·F · F·M2·F = F·(M1·M2)·F`, so nesting reproduces the tree's
+ * composition, skew included, with no second transform path.
  */
 export function LiftedAncestors({
   liftedPast,
@@ -40,12 +37,9 @@ export function LiftedAncestors({
   liftedPast: readonly TscnNode[];
   children: ReactNode;
 }) {
-  // Flattening drops the ancestors' CanvasItem state along with their groups.
-  // `visible` and `modulate` both inherit down the tree in Godot, so an
-  // invisible or tinted y-sorted container has to keep hiding/tinting the
-  // descendants that were lifted out of it — otherwise half a subtree takes the
-  // tint (the ancestor's own body still goes through CanvasItem2D) and half
-  // does not.
+  // Flattening drops the ancestors' CanvasItem state. `visible` and `modulate` inherit
+  // in Godot, so a hidden or tinted y-sorted container keeps hiding or tinting the
+  // descendants lifted out of it, as its own body does through CanvasItem2D.
   const parentModulate = useParentModulate();
   // The same goes for the z the lights are culled against: `z_index` accumulates
   // down the tree, so an item lifted out of two nested containers has to be told
@@ -104,13 +98,10 @@ export function LiftedAncestors({
     );
   }
 
-  // `modulate` inherits; `self_modulate` does not, so only the former is folded
-  // in here. Applied outside the groups because it is a colour, not a transform.
-  // Memoised for its IDENTITY, not its cost: `multiplyModulate` mints a fresh
-  // object, and this one feeds a context — an unmemoised fold re-renders every
-  // consumer in the lifted subtree on each render with the same four numbers.
-  // With no ancestors the fold returns `parentModulate` itself, so the ordinary
-  // unlifted item already pays nothing.
+  // Only `modulate` inherits, not `self_modulate`. A colour, so it applies outside the
+  // groups. Memoised for identity: the fold feeds a context, and a fresh object would
+  // re-render every consumer in the lifted subtree. With no ancestors it returns
+  // `parentModulate` itself.
   const inherited = useMemo(
     () =>
       liftedPast.reduce(

@@ -1,15 +1,8 @@
 /**
  * The reactive half of content classification: `viewportContentKind` over the
- * RESOLVED subtree, re-derived as sub-scenes land.
- *
- * Kept out of `viewportContent.ts` so the rules there stay pure — the classifier
- * and the resolver are both asserted directly, and only the wiring needs React.
- *
- * The version tick matters more here than in most live-tree readers. Classification
- * decides which rasterizer OWNS a target, and both write the same registry key,
- * so a kind that changed silently mid-load would leave two publishers racing.
- * Re-deriving on the tick means the change happens as a normal render, with the
- * publisher's own effects tearing down and re-registering in order.
+ * resolved subtree, re-derived on each live-tree tick. The kind picks which
+ * publisher owns the registry key, so a change renders normally and each
+ * publisher's effects tear down and re-register in order.
  */
 
 import { useMemo } from 'react';
@@ -30,7 +23,7 @@ const NO_SCENES: CachedSceneSource = { getCached: () => undefined };
 
 export function useViewportContentKind(node: TscnNode): ViewportContentKind {
   // The sub-viewport's children resolve their instance refs against the scene
-  // the SUB-VIEWPORT lives in, which is exactly the scope in force here.
+  // the sub-viewport lives in, the scope in force here.
   const { externalResources } = useSceneResources();
   const loader = useResourceLoader();
   const version = useLiveTreeVersion(loader);

@@ -1,23 +1,8 @@
 /**
- * Semantic linter rule for ShaderGlobalsOverride.
- *
- * `ShaderGlobalsOverride::get_configuration_warnings()`
- * (shader_globals_override.cpp:278-286) pushes one warning, at :282, and gates it
- * on `if (!active)` (:281) — so Godot warns the LOSERS and never the winner.
- * `_activate()` (:228-250) sets `active = true` only `if (nodes.is_empty())`
- * (:231), i.e. for the first node to reach NOTIFICATION_ENTER_TREE; every later
- * one finds `shader_overrides_group_active` non-empty and stays inactive for the
- * rest of its life (removing the first only re-activates deferred, at :272).
- *
- * The winner is decidable from the file: `SceneTree` keeps a group in tree order
- * (`_update_group_order`, scene_tree.cpp:333-347, sorting by `Node::Comparator`),
- * which is what `firstNodeOfType` reproduces — the same reading the
- * WorldEnvironment twin uses. No `joins` predicate, unlike that twin: `_activate`
- * runs unconditionally on ENTER_TREE, so every ShaderGlobalsOverride enters the
- * race regardless of what it overrides.
- *
- * Limitation, shared with that twin: a ShaderGlobalsOverride behind `instance=`
- * can be the real first and is invisible here.
+ * ShaderGlobalsOverride's rule: `get_configuration_warnings()`
+ * (shader_globals_override.cpp:278-286) warns at :282 only `if (!active)` (:281), and
+ * `_activate()` (:228-250) activates only the first node to enter the tree (:231).
+ * Removing the first re-activates another only deferred (:272).
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
@@ -28,6 +13,10 @@ function checkShaderGlobalsOverride(context: RuleContext): Diagnostic[] {
   const { node, scene } = context;
   const total = countNodesOfType(scene.nodes, 'ShaderGlobalsOverride');
   if (total <= 1) return [];
+  // A group keeps tree order (scene_tree.cpp:333-347, `Node::Comparator`), which
+  // `firstNodeOfType` reproduces. `_activate` runs on every ENTER_TREE, so no `joins`
+  // predicate filters the race. An override behind `instance=` can be the real
+  // first and is invisible here.
   if (node === firstNodeOfType(scene.nodes, 'ShaderGlobalsOverride')) return [];
 
   return [

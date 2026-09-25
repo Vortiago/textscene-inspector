@@ -1,25 +1,8 @@
 /**
- * Semantic linter rule for RemoteTransform2D, from Godot's own configuration
- * warning, `RemoteTransform2D::get_configuration_warnings()`
- * (remote_transform_2d.cpp:213-220):
- *
- *     if (!has_node(remote_node) || !Object::cast_to<Node2D>(get_node(remote_node))) {
- *         warnings.push_back(RTR("Path property must point to a valid Node2D node to work."));
- *     }
- *
- * One push covering three distinct authoring states, all reported under the
- * same warning because the engine's own text does not distinguish them:
- * `remote_path` absent (defaults to `NodePath()`, and `has_node()` on an empty
- * path is false, so absence IS the trigger — unlike the properties this repo
- * declines as `default-omitted`, this one is genuinely useful to flag, the
- * same call CollisionShape2D's `shape` already makes); present but naming no
- * node in this file (`!has_node`); present and resolving, but to something
- * that is not a Node2D (`!cast_to<Node2D>`, subclasses included).
- *
- * `resolveNodePath` walks the path the engine's way, so `..` is answered rather
- * than declined; its one decline, `unknowable`, covers a walk that touches
- * content another file declares. Same bar as the MultiplayerSpawner /
- * MultiplayerSynchronizer dangling-path rules.
+ * Ports `RemoteTransform2D::get_configuration_warnings()` (remote_transform_2d.cpp:213-220):
+ * one warning for `remote_path` absent, naming no node, or naming a non-Node2D.
+ * An absent path is the empty `NodePath()`, and `has_node()` on it is false, so
+ * absence is the trigger. `resolveNodePath` declines only a walk into another file.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';

@@ -1,4 +1,4 @@
-/** GraphEdit registration — parser wiring. */
+/** GraphEdit registration: the parser wiring. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';

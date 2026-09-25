@@ -1,13 +1,7 @@
 /**
- * BoxContainer strict validators — format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * Grow this into one case per property — happy, malformed, and any bound — and
- * quote the governing Godot source line beside every numeric bound.
+ * BoxContainer strict validators: one case per property, happy, malformed and
+ * each bound, through `validatorRegistry` so a failure points at the validator. Quote
+ * the governing Godot line beside every numeric bound. Rule behaviour is in linter.test.ts.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -32,7 +26,7 @@ describe('BoxContainer strict validators', () => {
 
   it('rejects a malformed value on every property it validates', () => {
     // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // sweep is generic on purpose. Per-property cases come next.
     const accepted = validatorRegistry
       .getOwnKeys('BoxContainer')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -65,8 +59,8 @@ describe('BoxContainer strict validators', () => {
 
   describe('vertical (boolean)', () => {
     // box_container.cpp _bind_methods: ADD_PROPERTY(PropertyInfo(Variant::BOOL,
-    // "vertical")). Serialisable on a plain BoxContainer — see linterParser.ts's
-    // file header for why HBoxContainer/VBoxContainer don't carry this same rule.
+    // "vertical")). A plain BoxContainer serialises it. HBoxContainer and
+    // VBoxContainer hide it (linterParser.ts).
     it('accepts true', () => {
       expect(check('vertical', 'true')).toBeNull();
     });

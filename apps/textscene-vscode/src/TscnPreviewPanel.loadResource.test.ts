@@ -1,12 +1,7 @@
 /**
- * Unit tests for `TscnPreviewPanel`'s `loadResource` handling.
- *
- * `_handleLoadResource` was previously only integration-exercised (mocha,
- * `test/integration/**`) with small fixtures — no unit test pinned the
- * ArrayBuffer->base64 chunked-encoding loop (`chunkSize = 8192`) against a
- * payload big enough to actually cross a chunk boundary, nor the
- * `resourceLoadError` paths (`No workspace folder found`, and the
- * underlying resource read failing).
+ * Unit tests for `TscnPreviewPanel`'s `loadResource` handling: the chunked
+ * ArrayBuffer-to-base64 loop (`chunkSize = 8192`) across chunk boundaries, and the
+ * `resourceLoadError` paths (`No workspace folder found`, and a failed read).
  */
 import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
@@ -73,10 +68,9 @@ describe('TscnPreviewPanel loadResource — binary encoding', () => {
       uri: createMockUri('/workspace'),
     });
 
-    // 20,000 bytes: bigger than 2x the 8,192-byte chunk size, so the chunk
-    // loop crosses a boundary mid-buffer more than once. Deterministic,
-    // non-repeating-mod-256 pattern so a chunk-boundary off-by-one would
-    // show up as a mismatch rather than accidentally matching.
+    // 20,000 bytes: over twice the 8,192-byte chunk, so the loop crosses more than
+    // one boundary. The pattern does not repeat mod 256, so an off-by-one at a
+    // boundary shows as a mismatch.
     const bytes = new Uint8Array(20_000);
     for (let i = 0; i < bytes.length; i++) {
       bytes[i] = (i * 37 + 11) % 256;
@@ -151,9 +145,8 @@ describe('TscnPreviewPanel loadResource — error paths', () => {
   it('posts resourceLoadError "No workspace folder found" when the resource has no owning workspace', async () => {
     const { webview, triggerMessage } = setupMockPanel();
     await createReadyPanel(triggerMessage);
-    // `vi.clearAllMocks()` (test-setup's afterEach) clears call history but not a
-    // previously-set `mockReturnValue` — pin this explicitly so the test doesn't
-    // depend on running before any test that gives it a real workspace folder.
+    // `vi.clearAllMocks()` (test-setup's afterEach) clears calls but not a
+    // `mockReturnValue`, so this pins its own and runs in any order.
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue(undefined);
 
     triggerMessage({

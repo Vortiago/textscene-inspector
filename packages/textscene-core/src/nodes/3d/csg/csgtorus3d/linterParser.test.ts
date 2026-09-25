@@ -64,8 +64,8 @@ describe('CSGTorus3D strict validators', () => {
     // checks it, so exceeding it is a warning (ADR-0032).
     ['sides = 65', 'sides'],
     ['ring_sides = 65', 'ring_sides'],
-    // inner_radius/outer_radius (csg_shape.cpp:2081-2093) are bare
-    // assignments; their hints (:2072-2073) are advisory only.
+    // inner_radius/outer_radius (csg_shape.cpp:2081-2093) are bare assignments, so their hints
+    // (:2072-2073) only warn.
     ['inner_radius = -1', 'inner_radius'],
     ['outer_radius = 0', 'outer_radius'],
     // csg_shape.cpp:1040 hints the operation enum but set_operation:933-937

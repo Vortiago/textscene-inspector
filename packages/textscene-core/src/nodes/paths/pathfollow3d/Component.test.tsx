@@ -79,14 +79,14 @@ describe('<PathFollow3D>', () => {
   it('ignores progress_ratio, which a scene file cannot deliver to the node', async () => {
     // `set_progress_ratio` needs the Path3D parent bound, which happens on
     // enter-tree, after the loader has applied properties (path_3d.cpp:503).
-    // A ratio of 1.0 on a 10 m curve would be the far end; Godot loads 0.
+    // A ratio of 1.0 on a 10 m curve would be the far end. Godot loads 0.
     const renderer = await render(STRAIGHT, { progress_ratio: '1.0' });
     expect(namedGroup(renderer)!.position.x).toBeCloseTo(0, 3);
   });
 
   it('clamps rather than wrapping a progress past the end, whatever loop says', async () => {
     // The sampler clamps (curve.cpp:2024) and nothing wraps a scene-loaded
-    // progress, so 15 on a 10 m curve is the END, not 5 in from the start.
+    // progress, so 15 on a 10 m curve is the end, not 5 in from the start.
     const renderer = await render(STRAIGHT, { progress: '15', loop: 'true' });
     expect(namedGroup(renderer)!.position.x).toBeCloseTo(10, 3);
   });

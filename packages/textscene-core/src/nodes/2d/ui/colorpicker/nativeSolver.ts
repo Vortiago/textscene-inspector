@@ -1,13 +1,7 @@
 /**
- * ColorPicker's native (WebGL canvas) layout + colour math. ColorPicker
- * builds its whole widget as INTERNAL children in its C++ constructor
- * (`scene/gui/color_picker.cpp:2069-2260`), none of which a `.tscn` ever
- * serialises, so this module ports the geometry those constants and formulas
- * would have produced rather than a `_notification(NOTIFICATION_SORT_CHILDREN)`
- * this codebase's solve tree never sees.
- *
- * Pure data + functions, no React, no THREE — matches every other `native/`
- * solver module's convention (painting is `Component.tsx`'s job).
+ * ColorPicker's native layout and colour math. ColorPicker builds its widget
+ * as internal children in its constructor (`scene/gui/color_picker.cpp:2069-2260`),
+ * which no `.tscn` serialises, so this module ports the geometry they produce.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -26,19 +20,19 @@ import { tabBarStyleBoxes } from '../tabbar/nativeSolver';
 import { sliderMinimumSize } from '../shared/sliderSolver';
 import type { ColorPickerProperties } from './types';
 
-/** `MODE_BUTTON_COUNT` (`color_picker.h:184`) — OKHSL has no mode button; only the dropdown reaches it. */
+/** `MODE_BUTTON_COUNT` (`color_picker.h:184`). OKHSL has no mode button: only the dropdown reaches it. */
 export const MODE_BUTTON_COUNT = 3;
 
-/** `ColorMode::get_name()` per mode (`color_mode.h:72,94,118,148`) — `mode_btns[i]`'s own label text for the first 3. */
+/** `ColorMode::get_name()` per mode (`color_mode.h:72,94,118,148`). The first 3 label `mode_btns`. */
 export const COLOR_MODE_NAMES = ['RGB', 'HSV', 'Linear', 'OKHSL'] as const;
 
-/** Every internal Label/Button this painter draws reads Godot's plain "font" theme key — the SAME generic key `Label`/`Button`/`CheckBox` themselves use (`LABEL_THEME_FONT_KEY`/`BUTTON_THEME_FONT_KEY`'s own doc). */
+/** Every internal Label and Button reads the plain "font" theme key, as `Label`, `Button` and `CheckBox` do. */
 export const COLOR_PICKER_THEME_FONT_KEY = 'font';
 
-/** Measures one run of text at this row's own font size — the caller's `ctx.measureText`/`shapeButtonLabel` adapted to this shape (`Component.tsx`'s own doc for why the two callers cannot share one measurement call). */
+/** Measures one run of text at the row's font size. The solver adapts `ctx.measureText` and the painter adapts `shapeButtonLabel`. */
 export type TextWidthMeasurer = (text: string) => Vec2;
 
-/** `set_picker_shape`'s own enum (`color_picker.h`'s `PickerShapeType`) — only the one value this previewer draws. */
+/** The one `PickerShapeType` value (`color_picker.h`) this previewer draws. */
 export const SHAPE_HSV_RECTANGLE = 0;
 
 /** `sv_width`/`sv_height` (`default_theme.cpp:1077-1078`), at scale 1. */
@@ -46,41 +40,32 @@ export const COLOR_PICKER_SV_SIZE = 256;
 /** `h_width` (`default_theme.cpp:1079`), at scale 1. */
 export const COLOR_PICKER_HUE_WIDTH = 30;
 /**
- * `btn_pick`/`btn_shape`/`btn_mode`/`menu_btn`'s own icon size —
- * `color_picker_pipette.svg`/`picker_shape_rectangle.svg`/`tabs_menu_hl.svg`
- * are all 16x16 (`scene/theme/icons/`). `themeIcons.ts` (out of this
- * packet's files) vendors none of these, so every such button draws its
- * box/text but not its icon — this sizes the space the icon would occupy.
+ * The icon size of `btn_pick`, `btn_shape`, `btn_mode` and `menu_btn`:
+ * `color_picker_pipette.svg`, `picker_shape_rectangle.svg` and `tabs_menu_hl.svg`
+ * are 16x16 (`scene/theme/icons/`).
  */
 export const COLOR_PICKER_SAMPLE_ICON_SIZE = 16;
-/** `sample`'s own row-height fraction (`color_picker.cpp:1397`). */
+/** The row-height fraction of `sample` (`color_picker.cpp:1397`). */
 export const COLOR_PICKER_SAMPLE_HEIGHT_FRACTION = 0.95;
-/** `btn_pick`/`btn_shape`/`btn_mode`'s own fixed width (`color_picker.cpp:122-124`), at scale 1. */
+/** The fixed width of `btn_pick`, `btn_shape` and `btn_mode` (`color_picker.cpp:122-124`), at scale 1. */
 export const COLOR_PICKER_BUTTON_WIDTH = 28;
-/** `label_width` (`default_theme.cpp:1080`), at scale 1 — the channel-slider label column's forced width. */
+/** `label_width` (`default_theme.cpp:1080`), at scale 1: the width floor of the channel-slider label column. */
 export const COLOR_PICKER_LABEL_WIDTH = 10;
-/** `hex_label`'s own forced width (`color_picker.cpp:170`), at scale 1. */
+/** The forced width of `hex_label` (`color_picker.cpp:170`), at scale 1. */
 export const COLOR_PICKER_HEX_LABEL_WIDTH = 38;
 /**
- * `text_type`'s own approximate width, at scale 1 — sized like the other
- * 28px buttons (`color_picker.cpp:172` sizes it to match the "script" icon,
- * not vendored here either — see `COLOR_PICKER_SAMPLE_ICON_SIZE`'s own doc).
+ * The approximate width of `text_type`, at scale 1, sized like the other 28px
+ * buttons. `color_picker.cpp:172` sizes it to match the "script" icon.
  */
 export const COLOR_PICKER_TEXT_TYPE_WIDTH = 28;
-/** The channel-slider gradient band's own height (`color_mode.cpp`'s `margin`, every `slider_draw` override), at scale 1 — shared with the hue/alpha strips. */
+/** The height of a channel-slider gradient band (`margin` in every `slider_draw` of `color_mode.cpp`), at scale 1. */
 export const COLOR_PICKER_SLIDER_BAND_HEIGHT = 16;
 
 /**
- * `values[i]`'s own natural width — `create_slider` never calls
- * `set_custom_minimum_size` on the value `SpinBox` (`color_picker.cpp:456-
- * 458`), unlike every fixed-width button/label beside it, so the column
- * floors to `SpinBox::get_minimum_size()` (`spin_box.cpp:82-86`):
- * `line_edit->get_combined_minimum_size()` — `LineEdit::get_minimum_size()`
- * (`line_edit.cpp:2443-2477`), no per-node override reaching the internal
- * field (`spinbox/nativeSolver.ts`'s own doc for why) — plus the buttons
- * block, reused from `spinbox/nativeSolver.ts` rather than re-derived. The
- * vendored 16px arrow icons are always the widest: `values[i]` never carries
- * a `theme_override_icons/up`/`down` of its own.
+ * The natural width of `values[i]`. `create_slider` sets no custom minimum on the
+ * value `SpinBox` (`color_picker.cpp:456-
+ * 458`), so the column floors to `SpinBox::get_minimum_size()` (`spin_box.cpp:82-86`):
+ * `LineEdit::get_minimum_size()` (`line_edit.cpp:2443-2477`) plus the 16px-arrow buttons block.
  */
 export function colorPickerValueColumnWidth(theme: Pick<NativeTheme, 'widgets'>, measure: TextWidthMeasurer | null): number {
   const styleMinX = Math.max(
@@ -93,11 +78,9 @@ export function colorPickerValueColumnWidth(theme: Pick<NativeTheme, 'widgets'>,
 }
 
 /**
- * `c_text`'s own natural width — a plain `LineEdit`, never a `SpinBox`
- * (`color_picker.cpp:2215`), so it is `LineEdit::get_minimum_size()` alone,
- * with no buttons block added. Only `contentMinWidth` below reads this: the
- * field itself always renders at whatever width `hexRowColumns` leaves it
- * (`SIZE_EXPAND_FILL`), never this floor.
+ * The natural width of `c_text`, a plain `LineEdit` (`color_picker.cpp:2215`):
+ * `LineEdit::get_minimum_size()` with no buttons block. Only the minimum size
+ * reads it. The field fills what `hexRowColumns` leaves.
  */
 export function colorPickerHexFieldMinWidth(theme: Pick<NativeTheme, 'widgets'>, measure: TextWidthMeasurer | null): number {
   const styleMinX = Math.max(
@@ -109,17 +92,10 @@ export function colorPickerHexFieldMinWidth(theme: Pick<NativeTheme, 'widgets'>,
 }
 
 /**
- * `menu_btn`'s own natural size — an icon-only `MenuButton` under
- * `"FlatMenuButton"` with no `custom_minimum_size` of its own
- * (`color_picker.cpp:2253-2261`, contrast `btn_pick`/`btn_shape`/`btn_mode`'s
- * fixed 28px): `Button::get_minimum_size_for_text_and_icon` (`button.cpp:
- * 481-523`) with empty text and `menu_option`'s 16×16 icon
- * (`default_theme.cpp:1088`), plus `flat_button_normal`'s content margin —
- * `button_normal`'s own margin (`default_theme.cpp:359-363`), exactly
- * `theme.widgets.button.normal`'s margin already (`nativeTheme.ts`'s
- * `buttonMargin`, the same unbordered `make_flat_stylebox` call), reused
- * rather than re-derived. `btn_mode` shares this same natural size (only its
- * WIDTH is then floored up to 28 by its own `custom_minimum_size`).
+ * The natural size of `menu_btn`, an icon-only `FlatMenuButton` with no custom
+ * minimum (`color_picker.cpp:2253-2261`): `Button::get_minimum_size_for_text_and_icon` (`button.cpp:
+ * 481-523`) with the 16x16 `menu_option` icon (`default_theme.cpp:1088`) plus the margin of
+ * `button_normal` (`default_theme.cpp:359-363`). `btn_mode` has this size, with its width floored to 28.
  */
 export function colorPickerMenuButtonSize(theme: Pick<NativeTheme, 'widgets' | 'scale'>): Vec2 {
   const icon = Math.round(COLOR_PICKER_SAMPLE_ICON_SIZE * colorPickerScale(theme));
@@ -127,17 +103,12 @@ export function colorPickerMenuButtonSize(theme: Pick<NativeTheme, 'widgets' | '
   return { x: icon + margin.x, y: icon + margin.y };
 }
 
-/** `ScaledGodotTheme.scale` (`godotDefaultTheme.ts`) — the raw `gui/theme/default_theme_scale`, exposed directly. */
+/** `ScaledGodotTheme.scale` (`godotDefaultTheme.ts`): the raw `gui/theme/default_theme_scale`. */
 export function colorPickerScale(theme: Pick<NativeTheme, 'scale'>): number {
   return theme.scale;
 }
 
-/**
- * `Color::linear_to_srgb` (`core/math/color.h:199-204`) — the inverse of
- * `sRGBChannelToLinear` (`utils/colorSpace.ts`), needed for
- * `_copy_color_to_normalized_and_intensity`'s HDR normalisation below. Not
- * added to that shared module: it lives outside this packet's slices.
- */
+/** `Color::linear_to_srgb` (`core/math/color.h:199-204`), the inverse of `sRGBChannelToLinear`. */
 function linearChannelToSRGB(c: number): number {
   if (c < 0.0031308) return 12.92 * c;
   return 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
@@ -145,8 +116,7 @@ function linearChannelToSRGB(c: number): number {
 
 /**
  * `Color::from_hsv` (`core/math/color.cpp:458-461`, delegating to
- * `set_hsv`, `:182-227`) — full saturation/value stops for the SV square's
- * gradient and the hue slider's indicator line both need this.
+ * `set_hsv`, `:182-227`).
  */
 export function hsvToRgb(h: number, s: number, v: number): ControlColor {
   if (s === 0) return { r: v, g: v, b: v, a: 1 };
@@ -172,7 +142,7 @@ export function hsvToRgb(h: number, s: number, v: number): ControlColor {
   }
 }
 
-/** `Color::inverted()` (`core/math/color.h`) — flips rgb, leaves alpha. */
+/** `Color::inverted()` (`core/math/color.h`): flips rgb and keeps alpha. */
 export function invertRgb(c: ControlColor): ControlColor {
   return { r: 1 - c.r, g: 1 - c.g, b: 1 - c.b, a: c.a };
 }
@@ -184,14 +154,10 @@ export interface HsvColor {
 }
 
 /**
- * `ColorPicker::_set_pick_color`'s HSV derivation
- * (`color_picker.cpp:324-345`): `_copy_color_to_normalized_and_intensity`
- * (`:593-602`) extracts an HDR `intensity` so `color_normalized`'s own
- * channels never exceed 1, then `_copy_normalized_to_hsv_okhsl` (`:552-565`)
- * reads `get_h`/`get_s`/`get_v` off THAT normalised colour, not the raw one.
- * For every non-overbright colour `multiplier` is exactly 1 and this is
- * `Color::get_h/get_s/get_v` (`core/math/color.cpp:136-180`) on `color`
- * unchanged.
+ * The HSV of `_set_pick_color` (`color_picker.cpp:324-345`): `_copy_color_to_normalized_and_intensity`
+ * (`:593-602`) divides out an HDR `intensity` so no channel of `color_normalized`
+ * exceeds 1. `_copy_normalized_to_hsv_okhsl` (`:552-565`) then reads the HSV of that
+ * normalised colour with `Color::get_h/get_s/get_v` (`core/math/color.cpp:136-180`).
  */
 export function extractHsv(color: ControlColor): HsvColor {
   const linear = {
@@ -225,29 +191,28 @@ export function extractHsv(color: ControlColor): HsvColor {
 }
 
 export interface ColorPickerRows {
-  /** `shape_container`'s own rect, `null` when nothing is drawn there (any `picker_shape` but `SHAPE_HSV_RECTANGLE`). */
+  /** The rect of `shape_container`, `null` at any `picker_shape` but `SHAPE_HSV_RECTANGLE`. */
   shape: Rect2 | null;
-  /** `sample_hbc`'s own rect, `null` when `sampler_visible` is false. */
+  /** The rect of `sample_hbc`, `null` when `sampler_visible` is false. */
   sample: Rect2 | null;
-  /** `mode_hbc`'s own rect, `null` when `color_modes_visible` is false. */
+  /** The rect of `mode_hbc`, `null` when `color_modes_visible` is false. */
   mode: Rect2 | null;
-  /** `slider_gc`'s own rect, `null` when `sliders_visible` is false. */
+  /** The rect of `slider_gc`, `null` when `sliders_visible` is false. */
   sliders: Rect2 | null;
-  /** `hex_hbc`'s own rect, `null` when `hex_visible` is false. */
+  /** The rect of `hex_hbc`, `null` when `hex_visible` is false. */
   hex: Rect2 | null;
-  /** `swatches_vbc`'s own rect (its `palette_box`/`btn_recent_preset` rows), `null` when `presets_visible` is false. */
+  /** The rect of `swatches_vbc`, `null` when `presets_visible` is false. */
   swatches: Rect2 | null;
-  /** The number of channel rows `sliders` actually shows — 3 plus `edit_alpha`/`edit_intensity`. `0` when `sliders` is `null`. */
+  /** The channel rows `sliders` shows: 3, plus one each for `edit_alpha` and `edit_intensity`. `0` when `sliders` is `null`. */
   sliderRowCount: number;
-  /** The combined height every visible row above sums to (`real_vbox`'s own combined minimum height, EXCLUDING `internal_margin`'s own margin). */
+  /** The combined minimum height of `real_vbox`, without the margin of `internal_margin`. */
   totalHeight: number;
 }
 
 /**
- * The shape row's OWN minimum width — `sv_square`'s `custom_minimum_size.x`
- * (`ColorPickerShapeRectangle::update_theme`, `color_picker_shape.cpp:465`)
- * plus the row's `separation` plus `hue_slider`'s fixed `h_width`. `0` when
- * nothing is drawn there.
+ * The minimum width of the shape row: `custom_minimum_size.x` of `sv_square`
+ * (`ColorPickerShapeRectangle::update_theme`, `color_picker_shape.cpp:465`),
+ * plus `separation`, plus the fixed `h_width` of `hue_slider`. `0` when nothing is drawn there.
  */
 function shapeRowMinWidth(theme: Pick<NativeTheme, 'separation' | 'scale'>, pickerShape: number | undefined): number {
   if ((pickerShape ?? SHAPE_HSV_RECTANGLE) !== SHAPE_HSV_RECTANGLE) return 0;
@@ -255,34 +220,26 @@ function shapeRowMinWidth(theme: Pick<NativeTheme, 'separation' | 'scale'>, pick
   return Math.round(COLOR_PICKER_SV_SIZE * scale) + theme.separation + Math.round(COLOR_PICKER_HUE_WIDTH * scale);
 }
 
-/** `edit_alpha`/`edit_intensity`/every row-visibility flag default `true` (`color_picker.h:254,260,286-290`) — an absent `.tscn` key means the row shows. */
+/** `edit_alpha`, `edit_intensity` and every row-visibility flag default to `true` (`color_picker.h:254,260,286-290`). */
 function rowVisible(flag: boolean | undefined): boolean {
   return flag ?? true;
 }
 
-/** `slider_gc`'s own row count for the current mode + `edit_alpha`/`edit_intensity` (`color_picker.cpp:2178-2189`, `_update_controls`'s show/hide loop). */
+/** The row count of `slider_gc` (`color_picker.cpp:2178-2189`). */
 export function colorPickerSliderRowCount(props: Pick<ColorPickerProperties, 'editAlpha' | 'editIntensity'>): number {
   return 3 + (rowVisible(props.editAlpha) ? 1 : 0) + (rowVisible(props.editIntensity) ? 1 : 0);
 }
 
-/** One channel row's own height — the SpinBox's `LineEdit` dominates (`spin_box.cpp:82-86`), its content margin the same box every `LineEdit`/`SpinBox` in this theme uses. */
+/** The height of one channel row, which the SpinBox's `LineEdit` sets (`spin_box.cpp:82-86`). */
 function lineRowHeight(theme: Pick<NativeTheme, 'widgets'>, textHeightPx: number): number {
   return textHeightPx + contentMarginSize(theme.widgets.lineEdit.normal).y;
 }
 
 /**
- * The two rows `measure === null` cannot size at all: `mode_hbc` (3 button
- * labels + the dropdown) and `swatches_vbc` ("Swatches"/"Recent Colors").
- * `measure` follows `solverRegistry.ts`'s own `ctx.measureText` contract —
- * an absent measurer means "text contributes nothing", never a thrown error.
- *
- * Row height is `max` of every child's own natural height, never the old
- * icon-only floor: `mode_btns[0..2]` carry NO icon (`iconHeight` never
- * applied to them), only text over `tab_unselected`/`tab_selected`'s own
- * content margin (`colorPickerModeButtonStyleBox`'s own doc for the stylebox
- * itself); `btn_mode` is the one child with an icon, sized by
- * `colorPickerMenuButtonSize` (its own `custom_minimum_size` floors WIDTH
- * only, `color_picker.cpp:124`, never height).
+ * The size of `mode_hbc`. A `null` `measure` means text contributes nothing
+ * (the `ctx.measureText` contract). The height is the tallest child: `mode_btns`
+ * have text over the tab margin and no icon. `btn_mode` has the icon, and its
+ * custom minimum floors only its width (`color_picker.cpp:124`).
  */
 function modeRowSize(theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>, measure: TextWidthMeasurer | null): Vec2 {
   const scale = colorPickerScale(theme);
@@ -304,12 +261,8 @@ function swatchesRowSize(theme: Pick<NativeTheme, 'separation' | 'scale' | 'widg
   const menuBtn = colorPickerMenuButtonSize(theme);
   const menuBtnWidth = menuBtn.x;
   const menuBtnHeight = menuBtn.y;
-  // `palette_box`'s own row height is `max(btn_preset text, menu_btn icon)` —
-  // `menu_btn` sits in that row regardless of whether `measure` can size the
-  // "Swatches" text beside it, so the icon floor applies either way. An
-  // absent `measure` still means "text contributes nothing" for both rows'
-  // WIDTH and for `btn_recent_preset`'s own height (`solverRegistry.ts`'s
-  // contract), never that the second row disappears.
+  // The `palette_box` row is as tall as `max(btn_preset text, menu_btn)`, with or
+  // without `measure`. A `null` `measure` zeroes the text sizes, and the second row stays.
   const swatches = measure ? measure('Swatches') : { x: 0, y: 0 };
   const recent = measure ? measure('Recent Colors') : { x: 0, y: 0 };
   const row1Height = Math.max(swatches.y, menuBtnHeight);
@@ -318,22 +271,9 @@ function swatchesRowSize(theme: Pick<NativeTheme, 'separation' | 'scale' | 'widg
 }
 
 /**
- * The rows this painter draws, stacked exactly as `real_vbox`
- * (`color_picker.cpp:2071-2082,2129-2287`) would — `sv_square` fills
- * whatever is left after `hue_slider` and the row's `separation`, floored at
- * its own minimum (`shapeRowMinWidth`) exactly as `Control::_size_changed`
- * floors every child against its `fit_child_in_rect` rect; every other row
- * simply takes the FULL solved `width` (every one of them is
- * `SIZE_EXPAND_FILL` inside `real_vbox`, VBoxContainer's own default).
- *
- * `shape_container` stays a participating VBox row (and so keeps its
- * `separation` gap) even at `picker_shape !== SHAPE_HSV_RECTANGLE`: only its
- * CHILDREN hide per-shape (`ColorPicker::_update_controls`), never the row
- * itself. Every OTHER row uses plain `set_visible(false)`
- * (`color_picker.cpp:1906-1956`), which drops the row AND its `separation`
- * gap from the stack entirely — `stackVisible` below reproduces that
- * distinction: `shape` always occupies a stacking slot, every other row only
- * while its own flag is true.
+ * The rows, stacked as `real_vbox` does (`color_picker.cpp:2071-2082,2129-2287`).
+ * The shape row is floored at `shapeRowMinWidth`, as `Control::_size_changed`
+ * floors a child. Every other row is `SIZE_EXPAND_FILL` and takes the full `width`.
  */
 export function colorPickerRows(
   width: number,
@@ -368,9 +308,9 @@ export function colorPickerRows(
     return rowY;
   };
 
-  // `shape_container` always occupies a stacking slot, drawn or not (this
-  // function's own doc) — `place` still runs (and still charges the
-  // trailing separation to whatever comes next) even at `shapeHeight === 0`.
+  // `_update_controls` hides only the children of `shape_container`, so the row keeps its slot
+  // and `separation` at any shape. Every other row uses `set_visible(false)`
+  // (`color_picker.cpp:1906-1956`), which drops the row and its gap.
   const shapeY = place(shapeHeight);
   const shape: Rect2 | null = drawShape ? { x: 0, y: shapeY, w: Math.max(shapeRowMinWidth(theme, props.pickerShape), width), h: svSize } : null;
   const sample: Rect2 | null = rowVisible(props.samplerVisible) ? { x: 0, y: place(sampleHeight), w: width, h: sampleHeight } : null;
@@ -383,13 +323,9 @@ export function colorPickerRows(
 }
 
 /**
- * The widest natural minimum any row needs — `real_vbox`'s own combined
- * minimum WIDTH is the max of its children's, never a sum (`BoxContainer::
- * get_minimum_size`, horizontal axis of a VERTICAL box). Only rows that
- * genuinely contribute their own natural width are measured; `sample`'s own
- * (the pick/shape buttons plus the flexible sample rect) contributes nothing
- * narrower than the shape row ever produces, so it is not modelled here —
- * documented on the comparison sheet.
+ * The widest row minimum: a vertical `BoxContainer` takes the max of its
+ * children's widths, not the sum. The sample row is not measured
+ * (`comparison.md`).
  */
 function contentMinWidth(theme: NativeTheme, props: ColorPickerProperties, measure: TextWidthMeasurer | null): number {
   const scale = colorPickerScale(theme);
@@ -409,11 +345,9 @@ function contentMinWidth(theme: NativeTheme, props: ColorPickerProperties, measu
 }
 
 /**
- * `ColorPicker::get_minimum_size` is not overridden — Godot floors it from
- * `real_vbox`'s own combined minimum, wrapped in `internal_margin`'s own
- * `content_margin` on every side (`color_picker.cpp:161-166`,
- * `default_theme.cpp:1074`, `Math.round(4 * scale)` — `theme.contentMargin`
- * already is that number).
+ * ColorPicker does not override `get_minimum_size`: it is the minimum of `real_vbox`
+ * plus the `content_margin` of `internal_margin` on every side (`color_picker.cpp:161-166`,
+ * `default_theme.cpp:1074`), which equals `theme.contentMargin`.
  */
 export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ColorPickerProperties;
@@ -430,22 +364,15 @@ export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 /**
- * One column mirrored inside the row it was laid out in. `color_picker.cpp`
- * never calls `is_layout_rtl()`: ColorPicker builds its whole widget tree from
- * ordinary containers in its constructor, and each one mirrors its own row.
- * `BoxContainer::_resort` walks an RTL horizontal box's children in REVERSE
- * and places them left to right (`box_container.cpp:184-192`), and
- * `GridContainer` starts `col_ofs` at the grid's right edge and walks left
- * (`grid_container.cpp:193-197,218-223`). Both come out as this reflection
- * wherever the columns tile their row exactly, which every row below does.
- *
- * `Container::fit_child_in_rect` (`container.cpp:95-128`) is not a second
- * mirror: `Control::set_rect` pre-mirrors through `_compute_offsets`
- * (`control.cpp:904-915`) exactly as much as `_size_changed` mirrors back
- * (`:1785-1787`), so a child lands where its container put it either way.
+ * One column mirrored inside its row. Each container mirrors its own row:
+ * `BoxContainer::_resort` walks an RTL box in reverse (`box_container.cpp:184-192`),
+ * `GridContainer` walks left from the right edge (`grid_container.cpp:193-197,218-223`).
+ * Both equal this reflection when the columns tile the row, as every row here does.
  */
 function mirroredColumn(column: Rect2, row: Rect2, rtl: boolean): Rect2 {
   if (!rtl) return column;
+  // `fit_child_in_rect` (`container.cpp:95-128`) adds no second mirror: `_compute_offsets`
+  // (`control.cpp:904-915`) mirrors as much as `_size_changed` mirrors back (`:1785-1787`).
   return { ...column, x: row.x + row.w - (column.x - row.x) - column.w };
 }
 
@@ -455,11 +382,10 @@ export interface ShapeRowSplit {
 }
 
 /**
- * Splits `colorPickerRows`'s own `shape` rect into `sv_square` and
- * `hue_slider` (`ColorPickerShapeRectangle::_initialize_controls`,
- * `color_picker_shape.cpp:436-452`): `hue_slider` keeps its fixed `h_width`,
- * `sv_square` takes everything else (`SIZE_EXPAND_FILL`,
- * `color_picker_shape.cpp:438`), separated by the row's own `separation`.
+ * Splits the shape row into `sv_square` and `hue_slider`
+ * (`ColorPickerShapeRectangle::_initialize_controls`, `color_picker_shape.cpp:436-452`):
+ * `hue_slider` keeps its fixed `h_width`, and `sv_square` takes the rest
+ * (`SIZE_EXPAND_FILL`, `color_picker_shape.cpp:438`), with `separation` between.
  */
 export function svAndHueRects(shape: Rect2, theme: Pick<NativeTheme, 'separation' | 'scale'>, rtl = false): ShapeRowSplit {
   const scale = colorPickerScale(theme);
@@ -473,7 +399,7 @@ export function svAndHueRects(shape: Rect2, theme: Pick<NativeTheme, 'separation
 
 /**
  * `ColorPickerShape::draw_sv_square`'s cursor placement
- * (`color_picker_shape.cpp:259-261`), clamped to the square's own bounds.
+ * (`color_picker_shape.cpp:259-261`), clamped to the square.
  */
 export function svSquareCursorPosition(square: Rect2, s: number, v: number): Vec2 {
   const end = { x: square.x + square.w, y: square.y + square.h };
@@ -495,12 +421,9 @@ export interface SliderGridRowColumns {
 }
 
 /**
- * `labels[i]`/`alpha_label`/`intensity_label`'s own combined-minimum WIDTH:
- * `theme_cache.label_width`'s floor (`color_picker.cpp:145,148,150`) against
- * each row's own shaped single-letter text, the WIDEST of which sets
- * `slider_gc`'s shared column (`GridContainer` sizes a column to its widest
- * cell — `label_width` alone is never enough once a font renders a letter
- * wider than 10px).
+ * The label column width of `slider_gc`: the widest label, floored at
+ * `theme_cache.label_width` (`color_picker.cpp:145,148,150`). `GridContainer`
+ * sizes a column to its widest cell, so a letter wider than 10px widens it.
  */
 export function colorPickerLabelColumnWidth(
   theme: Pick<NativeTheme, 'scale'>,
@@ -515,15 +438,9 @@ export function colorPickerLabelColumnWidth(
 }
 
 /**
- * `slider_gc`'s own 3-column split (`color_picker.cpp:2172-2180`,
- * `create_slider`) for every visible row, TOP to BOTTOM in `create_slider`'s
- * own call order: `MODE_SLIDER_COUNT` (3) channel rows, then intensity
- * (`SLIDER_INTENSITY`), then alpha (`SLIDER_ALPHA`) — `_update_controls`
- * hides whichever of the last two `edit_intensity`/`edit_alpha` turns off,
- * WITHOUT re-ordering the rest (`color_picker.h:156-159`'s own enum order).
- * `labelWidth`/`valueWidth` are the caller's own (`colorPickerLabelColumnWidth`/
- * `colorPickerValueColumnWidth`) — this function only splits columns, it
- * derives neither.
+ * The 3-column split of `slider_gc` (`color_picker.cpp:2172-2180`) for each visible
+ * row, top to bottom in the enum order of `color_picker.h:156-159`. The caller
+ * supplies `labelWidth` and `valueWidth`.
  */
 export function sliderGridRowRects(
   sliders: Rect2,
@@ -557,7 +474,7 @@ export interface HexRowColumns {
   field: Rect2;
 }
 
-/** `hex_hbc`'s own 3-column split (`color_picker.cpp:2191-2222`). */
+/** The 3-column split of `hex_hbc` (`color_picker.cpp:2191-2222`). */
 export function hexRowColumns(hex: Rect2, theme: NativeTheme, rtl = false): HexRowColumns {
   const scale = colorPickerScale(theme);
   const labelWidth = Math.round(COLOR_PICKER_HEX_LABEL_WIDTH * scale);
@@ -576,10 +493,8 @@ export interface ModeRowButtons {
 }
 
 /**
- * `mode_hbc`'s own split (`color_picker.cpp:2129-2154`): `MODE_BUTTON_COUNT`
- * (3) `SIZE_EXPAND_FILL` buttons sharing the row's own width EQUALLY (no
- * other size flag distinguishes them), then the fixed-width `btn_mode`
- * dropdown.
+ * The split of `mode_hbc` (`color_picker.cpp:2129-2154`): 3 `SIZE_EXPAND_FILL`
+ * buttons of equal width, then the fixed-width `btn_mode` dropdown.
  */
 export function modeRowButtonRects(mode: Rect2, theme: NativeTheme, rtl = false): ModeRowButtons {
   const scale = colorPickerScale(theme);
@@ -596,12 +511,9 @@ export function modeRowButtonRects(mode: Rect2, theme: NativeTheme, rtl = false)
 }
 
 /**
- * `mode_button_normal`/`mode_button_pressed` — `BIND_THEME_ITEM_EXT` binds
- * both straight to `TabContainer`'s own `tab_unselected`/`tab_selected`
- * (`color_picker.cpp:2060-2061`), the SAME construction
- * `tabbar/nativeSolver.ts`'s `tabBarStyleBoxes` already reproduces, reused
- * here rather than re-derived. `mode_button_hover`'s bind to `tab_selected`
- * too (`:2062`) is not modelled: a static previewer never hovers.
+ * `mode_button_normal` and `mode_button_pressed`: `BIND_THEME_ITEM_EXT` binds them to
+ * `tab_unselected` and `tab_selected` of `TabContainer` (`color_picker.cpp:2060-2061`).
+ * The `mode_button_hover` bind (`:2062`) is left out: a static preview never hovers.
  */
 export function colorPickerModeButtonStyleBox(theme: Pick<NativeTheme, 'scale'>, pressed: boolean) {
   const boxes = tabBarStyleBoxes(colorPickerScale(theme));
@@ -615,10 +527,9 @@ export interface SampleRowColumns {
 }
 
 /**
- * `sample_hbc`'s own 3-column split (`color_picker.cpp:2081-2098`):
- * `btn_pick` (fixed width), `sample` (`SIZE_EXPAND_FILL`), `btn_shape`
- * (fixed width, hidden at `SHAPE_NONE` — `btn_shape->set_visible(current_shape
- * != SHAPE_NONE)`, `:321`).
+ * The 3-column split of `sample_hbc` (`color_picker.cpp:2081-2098`): fixed-width
+ * `btn_pick`, `SIZE_EXPAND_FILL` `sample`, and fixed-width `btn_shape`, which
+ * `SHAPE_NONE` hides (`:321`).
  */
 export function sampleRowColumns(sample: Rect2, theme: NativeTheme, pickerShape: number | undefined, rtl = false): SampleRowColumns {
   const scale = colorPickerScale(theme);
@@ -648,19 +559,15 @@ export interface SwatchesRowRects {
 }
 
 /**
- * `swatches_vbc`'s own two rows (`color_picker.cpp:2239-2287`):
- * `palette_box` (`btn_preset` "Swatches" + `menu_btn`) then
- * `btn_recent_preset` "Recent Colors" — `preset_container`/
- * `recent_preset_hbc` stay collapsed at load (`comparison.md`'s own doc for
- * why: presets only ever arrive through `add_preset()` at runtime).
+ * The two rows of `swatches_vbc` (`color_picker.cpp:2239-2287`): `palette_box`
+ * ("Swatches" and `menu_btn`), then "Recent Colors". The preset grids stay
+ * collapsed: presets arrive only through `add_preset()` at runtime.
  */
 export function swatchesRowRects(swatches: Rect2, theme: NativeTheme, rtl = false): SwatchesRowRects {
   const menuButtonWidth = colorPickerMenuButtonSize(theme).x;
-  // Both rows share the label's own text height, so the block splits evenly
-  // around the one `theme.separation` gap between them.
+  // Both rows have the text height, so the block splits evenly around the gap.
   const rowHeight = (swatches.h - theme.separation) / 2;
-  // `btn_recent_preset` is the VBox's own full-width child, so its mirror is
-  // the identity — only `palette_box`'s two columns swap.
+  // `btn_recent_preset` spans the row, so only the two columns of `palette_box` mirror.
   return {
     swatchesButton: mirroredColumn(
       { x: swatches.x, y: swatches.y, w: Math.max(0, swatches.w - theme.separation - menuButtonWidth), h: rowHeight },
@@ -672,45 +579,33 @@ export function swatchesRowRects(swatches: Rect2, theme: NativeTheme, rtl = fals
   };
 }
 
-// --- Slider chrome: `Slider::_notification(NOTIFICATION_DRAW)` -------------
+// Slider chrome: `Slider::_notification(NOTIFICATION_DRAW)`.
 
 /**
- * `values[i]`'s sibling `HSlider`'s own rect within its grid cell:
- * `set_h_size_flags(SIZE_EXPAND_FILL)` (full column width) but
- * `set_v_size_flags(SIZE_SHRINK_CENTER)` (`create_slider`, `color_picker.cpp:
- * 452-453`), so it sits at its own natural HEIGHT (`sliderMinimumSize`,
- * reused from `shared/sliderSolver.ts`), centred in the taller cell the
- * SpinBox's own `LineEdit` dominates.
+ * The rect of a channel `HSlider` in its grid cell: `SIZE_EXPAND_FILL` across and
+ * `SIZE_SHRINK_CENTER` down (`create_slider`, `color_picker.cpp:
+ * 452-453`), so it has its natural height, centred in the taller cell.
  */
 export function colorPickerSliderBoxRect(cell: Rect2, theme: NativeTheme, grabber: Vec2): Rect2 {
   const h = sliderMinimumSize(false, theme, grabber).y;
-  // `Control::fit_child_in_rect` (`control.h`, `SIZE_SHRINK_CENTER`):
-  // `r.position.y += Math::floor((p_rect.size.y - minsize.y) / 2)` — FLOOR,
-  // never a bare `/2` (which rounds up on an odd remainder in JS's own
-  // float arithmetic, off by half a pixel on an odd row height).
+  // `Control::fit_child_in_rect` (`control.h`, `SIZE_SHRINK_CENTER`) floors:
+  // `r.position.y += Math::floor((p_rect.size.y - minsize.y) / 2)`.
   const y = cell.y + Math.floor((cell.h - h) / 2);
   return { x: cell.x, y, w: cell.w, h };
 }
 
 /**
- * `_reset_sliders_theme` (`color_picker.cpp:628-651`): every channel slider
- * (`sliders[0..2]`) and `alpha_slider` override `grabber`/`grabber_highlight`
- * to `theme_cache.bar_arrow`, `grabber_offset` to `8 * base_scale`, and (via
- * `theme_cache.center_slider_grabbers`, default `1`) `center_grabber` to
- * true — `intensity_slider` is the one channel `_reset_sliders_theme` never
- * touches, so it alone keeps Slider's own defaults (`shared/sliderSolver.ts`'s
- * own doc for why that shared module assumes them).
+ * `_reset_sliders_theme` (`color_picker.cpp:628-651`) gives `sliders[0..2]` and
+ * `alpha_slider` the `bar_arrow` grabber, `grabber_offset = 8 * base_scale` and
+ * `center_grabber = true`. `intensity_slider` keeps the Slider defaults.
  */
 export const COLOR_PICKER_SLIDER_GRABBER_OFFSET = 8;
 
 /**
- * The overridden `grabber` icon's own rect, `center_grabber = true`
- * (`slider.cpp:322-334,363`, horizontal branch): `areasize` is the FULL
- * slider width (the `center_grabber ? 0 : grabber->get_width()` subtraction
- * drops out), and `grabber_shift = -grabber->get_width() / 2` centres the
- * icon ON the ratio point rather than keeping it fully inside the track.
- * `Point2i`'s cast truncates the whole `x`/`y` expression once, not each
- * term separately — unlike `grabber_offset`'s own separate int addition.
+ * The rect of the overridden grabber with `center_grabber = true` (`slider.cpp:322-334,363`):
+ * `areasize` is the full width, and `grabber_shift = -grabber->get_width() / 2`
+ * centres the icon on the ratio point. `Point2i` truncates each whole expression
+ * once, and `grabber_offset` is a separate int addition.
  */
 export function colorPickerChannelGrabberRect(sliderBoxSize: Vec2, ratio: number, grabber: Vec2, grabberOffsetPx: number, rtl = false): Rect2 {
   const size = { x: Math.trunc(sliderBoxSize.x), y: Math.trunc(sliderBoxSize.y) };
@@ -722,10 +617,8 @@ export function colorPickerChannelGrabberRect(sliderBoxSize: Vec2, ratio: number
 }
 
 /**
- * `intensity_slider`'s own fixed range (`color_picker.cpp:2183-2185`:
- * `set_min(-10)`, `set_max(10)`) — `resolveSliderRatio`
- * (`shared/sliderSolver.ts`) expects a `RangeProperties` this derived value
- * never has, so its ratio is reproduced directly rather than boxed into one.
+ * The ratio in the fixed range of `intensity_slider`, -10 to 10 (`color_picker.cpp:2183-2185`).
+ * The value is derived, so it has no `RangeProperties` for `resolveSliderRatio`.
  */
 export function colorPickerIntensityRatio(value: number): number {
   return (value - -10) / 20;

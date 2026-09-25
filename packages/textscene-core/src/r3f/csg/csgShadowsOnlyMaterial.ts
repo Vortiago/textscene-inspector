@@ -1,13 +1,7 @@
 /**
- * The material `cast_shadow = SHADOWS_ONLY` mounts over a CSG node's own.
- *
- * `visible = false` is not the same thing: three's `WebGLShadowMap.renderObject`
- * returns on it and stops walking the subtree, so the mesh would stop casting
- * too. Writing neither colour nor depth is what separates the two passes —
- * `getDepthMaterial` copies alphaMap/alphaTest/map and never `colorWrite`.
- *
- * Shared by both CSG draw sites (the node's own solid and a root's evaluated
- * mesh), and literal-only so the key is constant and it never remounts.
+ * The material `cast_shadow = SHADOWS_ONLY` mounts over a CSG node's own, at both CSG draw sites.
+ * Not `visible = false`, which stops `WebGLShadowMap.renderObject` casting too. It writes no colour
+ * or depth, and `getDepthMaterial` never copies `colorWrite`. Literal-only, so it never remounts.
  */
 
 import { materialProgramInputs } from '../materialProgramInputs';

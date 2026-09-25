@@ -1,27 +1,11 @@
 /*
- * Design tokens (`--tsi-*`) live in the `:root` block below. The shell is
- * the natural carrier because it wraps every component in the package,
- * and `:root` is implicitly global under CSS Modules (only class
- * selectors get hashed). All sibling component modules consume these
- * vars; this file is the single source of truth.
- *
- * Wave 0 froze the previously-hardcoded hex values verbatim under the
- * `--tsi-*` names recommended by `docs/UI-IMPROVEMENTS.md` §5.1.
- *
- * VS Code theme integration. Every token whose VS Code analog
- * carries semantic weight now reads `var(--vscode-X, <our-hex>)`. In a
- * VS Code webview the host variables resolve (light + dark + high-
- * contrast themes all honored). In the standalone web app the
- * `--vscode-*` vars are undefined, so the fallback kicks in and the
- * appearance is byte-identical to the post-wave-0 baseline.
- *
- * Tokens *without* host equivalents — viewport canvas tone, type-badge
- * palette, instance/value accents, radii, spacing, typography — stay
- * as raw values. Those are first-party design choices, not theme
- * surfaces.
+ * The `--tsi-*` design tokens live here, since the shell wraps every component
+ * and `:root` stays global under CSS Modules. A token with a VS Code analog
+ * reads `var(--vscode-X, <hex>)`, so the webview follows the theme and the web
+ * app gets the fallback. A token with no analog is a raw value.
  */
 :root {
-  /* Surfaces — host backgrounds where applicable. */
+  /* Surfaces */
   --tsi-bg-canvas:     #181818;
   --tsi-bg-shell:      var(--vscode-editor-background, #1e1e1e);
   --tsi-bg-panel:      var(--vscode-sideBar-background, #1a1a1a);
@@ -29,27 +13,25 @@
   --tsi-bg-hover:      var(--vscode-list-hoverBackground, #2a2d2e);
   --tsi-bg-active:     var(--vscode-list-activeSelectionBackground, #3e3e42);
 
-  /* Foreground (text) — host editor / description foregrounds. */
+  /* Foreground */
   --tsi-fg-strong:     var(--vscode-foreground, #f0f0f0);
   --tsi-fg-default:    var(--vscode-foreground, #ddd);
   --tsi-fg-on-control: var(--vscode-button-foreground, #ccc);
   --tsi-fg-muted:      var(--vscode-descriptionForeground, #888);
   --tsi-fg-faint:      #555;
 
-  /* Borders — host panel + widget rules. */
+  /* Borders */
   --tsi-border:        var(--vscode-panel-border, #2a2d2e);
   --tsi-border-strong: var(--vscode-widget-border, #3e3e42);
 
-  /* Accent / selection. The selected-row triplet maps to VS Code's list
-     selection trio so a clicked node in our tree looks like a clicked
-     row anywhere else in the VS Code chrome. */
+  /* The selected-row triplet maps to VS Code's list selection, so a clicked
+     tree row looks like any clicked VS Code row. */
   --tsi-accent:        var(--vscode-focusBorder, #2a8af6);
   --tsi-accent-soft:   var(--vscode-list-activeSelectionBackground, #173d6b);
   --tsi-accent-fg:     var(--vscode-list-activeSelectionForeground, #e7f1ff);
   --tsi-focus-ring:    var(--vscode-focusBorder, #6cf);
 
-  /* Semantic — error tone from host; the deep `*-bg` shades have no
-     direct VS Code analog and stay as our values. */
+  /* The `*-bg` shades have no VS Code analog. */
   --tsi-danger:        var(--vscode-errorForeground, #f04747);
   --tsi-danger-bg:     #5a1d1d;
   --tsi-danger-border: #8a2929;
@@ -59,8 +41,7 @@
   --tsi-warning-fg:    #ffd966;
   --tsi-success:       var(--vscode-terminal-ansiGreen, #4ec9b0);
 
-  /* Per-type accent — wired to existing badge palette in wave 0;
-     later waves consolidate into the per-type strategy in §5.5. */
+  /* Per-type accent */
   --tsi-type-mesh-bg:    #1e4d2b;
   --tsi-type-mesh-fg:    #95e3b3;
   --tsi-type-camera-bg:  #3d2e00;
@@ -73,17 +54,17 @@
   /* External-scene instance accent */
   --tsi-instance-accent: #66c;
 
-  /* Value-cell mono accent (transform values, monospace details) */
+  /* Value-cell mono accent */
   --tsi-value-mono:    #6c9;
 
-  /* Elevation — the shadow a panel floating over the viewport casts. */
+  /* The shadow a panel floating over the viewport casts. */
   --tsi-shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.5);
 
   /* Radii */
   --tsi-radius-sm:     3px;
   --tsi-radius-md:     6px;
 
-  /* Spacing (1 unit = 0.25rem; kept identical to current hardcoded values) */
+  /* Spacing: 1 unit = 0.25rem */
   --tsi-space-1:       0.25rem;
   --tsi-space-2:       0.5rem;
   --tsi-space-3:       0.75rem;
@@ -107,24 +88,16 @@
   color: var(--tsi-fg-default);
 }
 
-/* ── Split Dock chrome (ADR-0007) ────────────────────────────────────────
- * Full-width top bar over two columns: a large center viewport and a single
- * right "dock". The dock is a vertical master-detail — Scene tree on top,
- * Inspector directly below — so a selection's properties appear with no tab
- * hop. No left rail: the VS Code webview already sits right of VS Code's own
- * activity bar + Explorer, so a left rail would clash and waste width.
- */
+/* Split Dock (ADR-0007): a full-width top bar over the viewport and one right
+ * dock, the scene tree over the inspector. */
 
-/* Full-width top bar: brand, host toolbar (fixture picker), scene-stat chips.
-   Viewport-mode controls float over the viewport (see .viewportToolbarOverlay),
-   not here — the row over-constrained when the source pane narrowed it. */
+/* The viewport controls float over the viewport (.viewportToolbarOverlay), not here. */
 .topBar {
   display: flex;
   align-items: center;
   gap: var(--tsi-space-3);
-  /* Definite height: children size to content and center, so nested flex
-     toolbars can't drive a circular auto-height (the old bar ballooned to
-     58px because a stretched child set the height, which stretched it…). */
+  /* A definite height, so a stretched nested toolbar cannot drive a circular
+     auto-height. */
   height: 2.75rem;
   padding: 0 var(--tsi-space-3);
   border-bottom: 1px solid var(--tsi-border);
@@ -152,8 +125,7 @@
   min-height: 0;
 }
 
-/* The single right dock. Resizable width (Splitter) + collapsible. Its
-   children stack vertically into the master/detail split. */
+/* The right dock: resizable through the Splitter, and collapsible. */
 .dock {
   display: flex;
   flex-direction: column;
@@ -168,8 +140,7 @@
   overflow: hidden;
 }
 
-/* Master (scene tree) + detail (inspector) sections. flex-basis:0 so the
-   inline flex-grow values set the proportion; each scrolls internally. */
+/* `flex-basis: 0`, so the inline flex-grow values set the proportion. */
 .masterPane,
 .detailPane {
   display: flex;
@@ -235,7 +206,7 @@
   overflow: auto;
 }
 
-/* Draggable handle between the master (tree) and detail (inspector). */
+/* The handle between the tree and the inspector. */
 .masterDetailHandle {
   flex: 0 0 6px;
   cursor: row-resize;
@@ -248,7 +219,6 @@
   background: var(--tsi-accent);
 }
 
-/* Top-bar spacer + compact scene stat chips. */
 .topSpacer {
   flex: 1 1 auto;
 }
@@ -259,8 +229,6 @@
   gap: var(--tsi-space-2);
 }
 
-/* Help affordance: a small circular "?" badge at the far right of
-   the top bar, matching .collapseButton's minimal icon-button treatment. */
 .helpLink {
   display: flex;
   align-items: center;
@@ -297,7 +265,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Node-count badge in the Scene Tree dock header. */
 .dockCount {
   font-size: var(--tsi-font-xs);
   color: var(--tsi-fg-faint);
@@ -311,7 +278,7 @@
   flex: 1 1 auto;
 }
 
-/* On-pane tab strip switching the detail section (ADR-0007). */
+/* The detail pane's tab strip (ADR-0007). */
 .paneTabs {
   display: flex;
   align-items: stretch;
@@ -343,7 +310,6 @@
   border-bottom-color: var(--tsi-accent);
 }
 
-/* Cameras detail tab — a flat list of Camera3D nodes with a "use" action. */
 .camList {
   display: flex;
   flex-direction: column;
@@ -395,7 +361,6 @@
   color: var(--tsi-accent-fg);
 }
 
-/* Collapsed dock: a thin clickable strip with a vertical label. */
 .collapsedDock {
   appearance: none;
   border: none;
@@ -437,21 +402,15 @@
   background: var(--tsi-bg-canvas);
 }
 
-/* Viewport controls (Reset Camera, 3D/2D switch, toggles) float over the
-   viewport's top-right corner rather than sharing the shell's fixed-height top
-   bar. In the top bar they over-constrained the row once the source pane
-   narrowed the shell, collapsing the host toolbar and burying these controls.
-   As a compact overlay they stay reachable at every width, in both the
-   web app and the VS Code webview. A quiet near-opaque panel keeps the ghost
-   buttons legible over arbitrary 3D content; it sits above the canvas and the
-   2D Control overlay so you can always switch back to 3D. */
+/* The viewport controls float in the top-right corner, since in the top bar a
+   narrow shell buried them. The panel sits above the canvas and the 2D Control
+   overlay, so a switch back to 3D is always reachable. */
 .viewportToolbarOverlay {
   position: absolute;
   top: var(--tsi-space-2);
   right: var(--tsi-space-2);
-  /* Bounded to the viewport so a narrow center (VS Code split editor, a widened
-     dock) can never push the right-anchored controls off the left edge — the
-     toolbar wraps to a second row instead (see .toolbar flex-wrap). */
+  /* Bounded to the viewport, so a narrow centre wraps the toolbar to a second
+     row instead of pushing it off the left edge. */
   max-width: calc(100% - 2 * var(--tsi-space-2));
   z-index: 6;
   display: flex;
@@ -459,18 +418,17 @@
   padding: 2px var(--tsi-space-2);
   border: 1px solid var(--tsi-border);
   border-radius: var(--tsi-radius-md);
-  /* High opacity instead of backdrop-filter: a blur over the always-repainting
-     WebGL canvas would re-blur this region every frame — a standing GPU tax. */
+  /* High opacity, not backdrop-filter: a blur over the WebGL canvas re-blurs
+     this region every frame. */
   background: color-mix(in srgb, var(--tsi-bg-panel) 94%, transparent);
 }
 
 /* The 2D canvas stage's rules live in Canvas2DStage/Canvas2DStage.module.css. */
 
-/* "Contains 2D UI" discoverability hint, floated over the 3D viewport when a
-   scene carries Control/CanvasLayer nodes (ADR-0006). Clicking it flips to 2D. */
+/* The "Contains 2D UI" hint over the 3D viewport (ADR-0006). */
 .viewportHint {
   position: absolute;
-  /* Bottom-center, clear of the top-right viewport toolbar overlay. */
+  /* Bottom centre, clear of the viewport toolbar. */
   bottom: var(--tsi-space-3);
   left: 50%;
   transform: translateX(-50%);
@@ -513,7 +471,7 @@
 }
 
 .errorBanner strong {
-  color: #ffeaea; /* TODO(wave-2): merge with --tsi-danger-fg via color-mix */
+  color: #ffeaea;
 }
 
 .loading {
@@ -553,14 +511,9 @@
 }
 
 /*
- * Narrow-viewport layout (≤768px): there isn't horizontal room for the
- * viewport + side dock, so stack them vertically and the Splitter hides itself
- * (see Splitter.module.css).
- *
- * The dock's basis is a definite percentage of the stack. Content-measured
- * (`auto`, with or without a `max-height` cap) resolves to 8px, because the
- * dock's own children are `flex-basis: 0` panes and the viewport's flex-grow
- * then takes the whole column.
+ * At ≤768px the viewport and dock stack. The dock's basis is a definite
+ * percentage: `auto` resolves to 8px, since the dock's panes are
+ * `flex-basis: 0` and the viewport's flex-grow takes the column.
  */
 @media (max-width: 768px) {
   .columns {

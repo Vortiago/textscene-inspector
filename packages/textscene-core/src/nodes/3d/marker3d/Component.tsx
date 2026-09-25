@@ -1,11 +1,7 @@
 /**
- * <Marker3D> — a Node3D transform anchor (positions its children) that draws a
- * 3-axis cross gizmo at its origin (X red, Y green, Z blue), mirroring Godot's
- * 3D editor marker.
- *
- * Godot draws this cross for every Marker3D "at all times"; we instead gate it on
- * selection via useGizmoVisible() — a deliberate viewer-vs-editor divergence to
- * keep a busy scene clean (ADR-0018, generalizing the light/camera gizmo gate).
+ * <Marker3D>: a Node3D anchor for its children that draws Godot's 3-axis cross
+ * at its origin. Godot draws it at all times. Here `useGizmoVisible()` shows it
+ * only while selected, to keep a busy scene clean (ADR-0018).
  */
 
 import { useMemo } from 'react';
@@ -15,7 +11,7 @@ import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import type { Marker3DProperties } from './types';
 
-// Per-vertex axis colors: X red, Y green, Z blue (independent of size).
+// Per-vertex axis colours, X red, Y green, Z blue, whatever the size.
 const AXIS_COLORS = new Float32Array([
   1, 0, 0, 1, 0, 0,
   0, 1, 0, 0, 1, 0,

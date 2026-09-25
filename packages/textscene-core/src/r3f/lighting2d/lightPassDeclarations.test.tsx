@@ -1,11 +1,7 @@
 /**
- * What a declaration keyed on a cull tuple must survive: a re-render.
- *
- * A light rebuilds its key object on every re-render, so a declaration that
- * depended on the object would withdraw and re-declare on a render that changed
- * nothing — reshuffling every ordinal in the class, and with them the stencil
- * refs the shadow stamps are kept apart by. Every keyed declaration in this
- * module shares that requirement, so every one of them is pinned here.
+ * A declaration keyed on a cull tuple survives a re-render. A light rebuilds its key object each
+ * render, and re-declaring would reshuffle its class's ordinals and with them the stencil refs
+ * that keep shadow stamps apart. Every keyed declaration in the module is pinned here.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -40,10 +36,7 @@ function spyLighting() {
   return { Wrap, register, release, registerShadowTint, releaseTint };
 }
 
-/**
- * Both keyed declarations, under one component that rebuilds its key object on
- * every render — which is what a real light component does.
- */
+/** Both keyed declarations, under a component that rebuilds its key object each render, as a light does. */
 function Light({ cullKey }: { cullKey: LightCullKey }) {
   useRegisterCanvasLight2D(true, { ...cullKey });
   useRegisterShadowTint(true, { ...cullKey });

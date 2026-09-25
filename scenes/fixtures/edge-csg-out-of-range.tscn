@@ -1,15 +1,8 @@
 [gd_scene format=3 uid="uid://edge_csg_out_of_range"]
 
-; The issue asked for CSGCylinder3D `sides=2` or `radius=-1` — both trip hard
-; format errors (v.int min=3 / v.positiveFloat) and would break the
-; fixtureLint gate. This pins the nearest SCHEMA-VALID boundary instead:
-; CSGSphere3D at its minimum tessellation. `radial_segments=4` is the real
-; floor: CSGSphere3D::set_radial_segments (csg_shape.cpp:1489) silently
-; clamps anything <= 4 up to 4 (`p_radial_segments > 4 ? p_radial_segments :
-; 4`), so 1-3 are not actually schema-valid — they are values the engine
-; itself never stores. `rings=1` is genuinely the floor (its own clamp,
-; csg_shape.cpp:1499, `p_rings > 1 ? p_rings : 1`). Renders without crashing;
-; lints completely clean.
+; CSGSphere3D at its minimum tessellation, the lowest values the engine stores.
+; set_radial_segments clamps anything below 4 up to 4 (csg_shape.cpp:1489), and set_rings
+; clamps below 1 up to 1 (csg_shape.cpp:1499). Renders without crashing and lints clean.
 
 [node name="Scene" type="Node3D"]
 

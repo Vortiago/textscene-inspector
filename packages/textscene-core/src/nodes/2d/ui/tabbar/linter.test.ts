@@ -1,12 +1,7 @@
 /**
- * TabBar cross-field advisories: `current_tab` and every `tab_<idx>/<leaf>`
- * index measured against the sibling `tab_count`.
- *
- * Driven through `StrictTscnParser` (the parser `Linter` itself feeds the rule
- * from) and the rule's own `check`, rather than through `Linter`: the rule
- * registry is process-wide, so linting a scene through `Linter` also runs every
- * OTHER slice's rules that happen to be loaded, including siblings under
- * concurrent edit. Calling this rule directly depends on nothing but this file.
+ * TabBar cross-field advisories: `current_tab` and each `tab_<idx>/<leaf>` index against `tab_count`.
+ * Driven through `StrictTscnParser` and the rule's `check`, not `Linter`: the rule registry is
+ * process-wide, so `Linter` would also run every other loaded slice's rules.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -84,8 +79,8 @@ describe('TabBar cross-field rule', () => {
       expect(only({ tab_count: 3, current_tab: -2 })).toHaveLength(0);
     });
     it('reads an exponent-spelled tab_count at its real size', () => {
-      // `parseInt` stopped at the `e` and read `2e1` as 2, so tab 15 of twenty
-      // was reported out of range at ERROR tier on a file Godot loads.
+      // `2e1` is 20. A `parseInt` that stops at the `e` reads 2 and reports tab 15 out of range at
+      // error tier on a file Godot loads.
       expect(only({ tab_count: '2e1', current_tab: 15 })).toHaveLength(0);
     });
     it('says nothing about a non-finite tab_count, which is altered at parse', () => {
@@ -157,7 +152,7 @@ describe('TabBar index grammar', () => {
     ).filter((d) => d.ruleName === 'tabbar-tab-index-out-of-range');
 
   it('errors on a `+`-signed index past tab_count', () => {
-    // `is_valid_int` skips ONE leading sign, `+` as readily as `-`
+    // `is_valid_int` skips one leading sign, `+` as readily as `-`
     // (ustring.cpp:4752), so `tab_+2/title` resolves to tab 2 and
     // `_get_property` drops it for being past the count
     // (property_list_helper.cpp:58).

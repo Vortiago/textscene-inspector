@@ -1,11 +1,7 @@
 /**
- * Tests for TwoBoneIK3D's semantic linter rule (strict-parser format checks
- * live in linterParser.test.ts and are asserted through validatorRegistry
- * there).
- *
- * Uses `Linter` directly (via testkit), not the `linter/index.ts` barrel: that
- * barrel side-effect-imports every in-flight slice, so pulling it here would
- * fail flakily on a sibling's half-written file mid-wave.
+ * Tests for TwoBoneIK3D's semantic linter rule. linterParser.test.ts asserts the format checks
+ * through validatorRegistry. Uses `Linter` directly (through testkit), not the `linter/index.ts`
+ * barrel, which imports every slice.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -126,11 +122,8 @@ describe('TwoBoneIK3D semantic rules', () => {
   });
 
   it('resolves the sibling by NUMBER, so a padded index finds its own pole_direction', () => {
-    // `_set` reads the index with a bare `to_int` (two_bone_ik_3d.cpp:37), so
-    // `settings/00/…` and `settings/0/…` are the SAME setting and Godot applies
-    // the Custom direction to this vector. Matching on index TEXT instead made
-    // the lookup miss, read the direction as None, and warn about a write the
-    // engine honours.
+    // `_set` reads the index with a bare `to_int` (two_bone_ik_3d.cpp:37), so `settings/00/…` and
+    // `settings/0/…` are the same setting, and Godot applies the Custom direction to this vector.
     expectNoDiagnostic(
       scene(
         node('TwoBoneIK3D', {
@@ -204,10 +197,9 @@ describe('TwoBoneIK3D semantic rules', () => {
   });
 
   it('still warns when a stray NEGATIVE index carries the only target', () => {
-    // `unsatisfiedIndices` documents that `satisfied` is already restricted to
-    // `0..count`. A negative index counted as satisfied inflated `satisfied.size`
-    // and cancelled the warning for setting 0, which really has no target —
-    // and Godot refuses the negative write outright (`two_bone_ik_3d.cpp:39`).
+    // `unsatisfiedIndices` expects `satisfied` restricted to `0..count`. A negative index counted
+    // as satisfied would inflate `satisfied.size` and cancel the warning for setting 0, which has
+    // no target, and Godot refuses the negative write outright (`two_bone_ik_3d.cpp:39`).
     const diagnostic = expectDiagnostic(
       scene(
         node('TwoBoneIK3D', {
@@ -263,15 +255,14 @@ describe('TwoBoneIK3D semantic rules', () => {
   });
 
   it('does not double-report a setting already out of range', () => {
-    // Index 1 is both out of range AND would otherwise read as target-less;
-    // only the out-of-range diagnostic should name it.
+    // Index 1 is both out of range and target-less, so only the out-of-range diagnostic names it.
     const diagnostics = lint(
       scene(node('TwoBoneIK3D', { setting_count: 1, 'settings/1/target_node': 'NodePath("../Target")' }))
     );
     const missingTargetWarning = diagnostics.find(
       (d) => d.ruleName === 'twoboneik3d-setting-missing-target-node'
     );
-    // Setting 0 (the only one IN range) has no target_node key, so it still warns.
+    // Setting 0, the only one in range, has no target_node key, so it still warns.
     expect(missingTargetWarning?.message).toContain('setting(s) 0');
   });
 

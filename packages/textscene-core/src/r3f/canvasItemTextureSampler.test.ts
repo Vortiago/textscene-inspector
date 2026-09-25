@@ -1,12 +1,8 @@
 /**
- * `resolveInheritedSamplerValue` — the pure resolution rule behind
- * `CanvasItem::_refresh_texture_filter_cache`/`_refresh_texture_repeat_cache`
- * (`scene/main/canvas_item.cpp:1625-1699`): PARENT_NODE (0, shared by
- * `TextureFilter` and `TextureRepeat`, `scene/main/canvas_item.h:52-69`)
- * defers to the ambient; a concrete value wins outright and is what
- * propagates. No context/React involved — see
- * `ControlCanvasWalker.test.tsx`'s walker-level suite for the propagation
- * itself.
+ * `resolveInheritedSamplerValue`, the rule of the texture caches
+ * (`scene/main/canvas_item.cpp:1625-1699`): PARENT_NODE (0,
+ * `scene/main/canvas_item.h:52-69`) defers to the ambient, and a concrete value
+ * wins. `ControlCanvasWalker.test.tsx` covers the propagation.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -34,11 +30,9 @@ describe('resolveInheritedSamplerValue', () => {
   });
 
   it('a PARENT_NODE ancestor is transparent: it relays whatever IT resolved, never resetting to undefined', () => {
-    // Godot's own chain: grandparent names NEAREST, an in-between PARENT_NODE
-    // node's cache is just its OWN parent's cache (`_refresh...cache`'s
-    // `parent_item->texture_filter_cache` branch) — modelled here as two
-    // resolve calls composed, exactly as the walker composes them one Control
-    // at a time.
+    // Godot's chain: the grandparent names NEAREST, and a PARENT_NODE node between
+    // takes its parent's cache (`parent_item->texture_filter_cache`), so two
+    // composed calls model it, as the walker composes them.
     const grandparentEffective = resolveInheritedSamplerValue(NEAREST, undefined);
     const middleEffective = resolveInheritedSamplerValue(
       CANVAS_ITEM_SAMPLER_INHERIT,

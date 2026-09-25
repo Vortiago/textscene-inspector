@@ -1,39 +1,8 @@
 /**
- * `shapeText` — a framework-free port of Godot's Label line-shaping, against
- * the vendored Open Sans SemiBold atlas/metrics. Every expected
- * pixel width below is hand-derived from `openSansMetrics.ts`'s
- * `OPEN_SANS_METRICS.advanceWidths[ch]` (the font's own `hmtx` advance width,
- * design units) put through the target font size — an independent source of
- * truth from the line-breaking algorithm under test, never the algorithm's
- * own arithmetic fed back at itself, and NOT `openSansAtlas.ts`'s own
- * `xadvance` (that table's own doc has the citation for why it is the wrong
- * source for a glyph's advance: it is msdf-bmfont-xml's OWN atlas-bake-
- * resolution-42 glyph table, integer-rounded at THAT resolution).
- *
- * Where a case below writes the scale as the plain `units * 16/2048`, that is
- * shorthand for a value where FreeType's 26.6 quantization
- * (`fontMetrics.ts`'s `getFontGlyphAdvancePx`) happens to land on the same
- * number — true of every EVEN design-unit advance at `unitsPerEm` 2048 and
- * size 16, which is what those cases pick. The two DO diverge in general, and
- * the suite at the bottom of this file pins that divergence against real
- * Godot glyph advances at both sides of the subpixel-positioning size branch.
- *
- * Citations:
- *   scene/gui/label.cpp :: Label::_shape() (~209-225) -- AUTOWRAP_* -> break
- *     flag mapping (BREAK_WORD_BOUND / BREAK_GRAPHEME_BOUND / BREAK_ADAPTIVE),
- *     ORed with `autowrap_flags_trim`.
- *   scene/gui/label.h:45 -- Label's default trim flags,
- *     BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES, applied even
- *     when a scene sets no trim flags of its own.
- *   servers/text/text_server.cpp :: TextServer::shaped_text_get_line_breaks()
- *     (~1024-1209) -- the scalar-width overflow/backtrack/tail algorithm
- *     ported below (the overload Label actually calls, not the multi-chunk
- *     `_adv` sibling).
- *   modules/text_server_adv/text_server_adv.cpp:1515-1516 -- FreeType's
- *     pixel-quantized ascent/descent, each ceiling-rounded independently
- *     before summing (see `openSansMetrics.ts#getLinePitchPx`).
- *   text_server.cpp:1174-1176 -- BREAK_ADAPTIVE, live only while `wordCount`
- *     is still zero on the current line (no word boundary found yet).
+ * Each expected width is hand-derived from the `hmtx` advance in `OPEN_SANS_METRICS.advanceWidths`,
+ * not from the algorithm under test, and not from atlas `xadvance`, which is fixed at the 42 px bake
+ * size. A plain `units * 16/2048` is used only for even advances, where 26.6 quantisation lands on
+ * the same number. The last suite pins where the two diverge against real Godot advances.
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import { AutowrapMode, shapeText, shapedTextSizeWidthPx, soloLineLayout } from './textLayout';
@@ -41,11 +10,14 @@ import { OPEN_SANS_METRICS } from './openSansMetrics';
 import type { FontMetrics } from './fontMetrics';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
 
-/** Every line's rendered text, in order — the shape most tests care about. */
+/** Every line's rendered text, in order. */
 function lineTexts(text: string, boxWidthPx: number, autowrapMode: AutowrapMode, fontSizePx = 16): string[] {
   return shapeText(text, { fontSizePx, boxWidthPx, autowrapMode, lineSpacingPx: 3 }).lines.map((l) => l.text);
 }
 
+// Break flags per autowrap mode come from `Label::_shape()` (scene/gui/label.cpp, ~209-225), ORed
+// with the default trims (scene/gui/label.h:45). The break algorithm is the scalar-width
+// `shaped_text_get_line_breaks()` (servers/text/text_server.cpp, ~1024-1209).
 describe('shapeText — autowrap OFF', () => {
   it('never soft-wraps, however narrow the box', () => {
     expect(lineTexts('AAAA BBBB CCCC', 5, AutowrapMode.OFF)).toEqual(['AAAA BBBB CCCC']);
@@ -78,6 +50,7 @@ describe('shapeText — autowrap WORD (BREAK_WORD_BOUND, no BREAK_ADAPTIVE)', ()
   });
 });
 
+// BREAK_ADAPTIVE is live only while `wordCount` is zero on the line (text_server.cpp:1174-1176).
 describe('shapeText — autowrap WORD_SMART (BREAK_WORD_BOUND | BREAK_ADAPTIVE | BREAK_MANDATORY)', () => {
   it('breaks at the word boundary that keeps every line under the box width', () => {
     // AAAA=42.667, ' '=4.190, BBBB=42.667 -> "AAAA BBBB"=89.52 (<90) but the
@@ -107,11 +80,8 @@ describe('shapeText — autowrap WORD_SMART (BREAK_WORD_BOUND | BREAK_ADAPTIVE |
   });
 
   it("but the trimmed space's advance still counted toward the width that decided the break", () => {
-    // If the space's advance were dropped before the break decision, "AAAA B"
-    // (46.857+10.667=57.52) would still be well under 90 and the algorithm
-    // would keep pulling "BBBB" onto line 1 too eagerly at a narrower width —
-    // pinned instead at the exact width (90) where S2 measured the real
-    // Godot break, which only holds if the space's advance was counted.
+    // Pinned at 90, the width where Godot was measured to break, which holds only if the space's
+    // advance counts. Without it, "AAAA B" (57.52) stays under 90 and "BBBB" joins line 1.
     expect(lineTexts('AAAA BBBB CCCC', 90, AutowrapMode.WORD_SMART)).toEqual(['AAAA', 'BBBB CCCC']);
   });
 });
@@ -147,31 +117,20 @@ describe('shapeText — a character outside the baked charset', () => {
       'is 1214, unitsPerEm 2048) rather than collapsing to a zero-width gap; the placement still carries ' +
       'no atlas glyph, so it draws no ink, only occupies its own width',
     () => {
-      // GREEK CAPITAL LETTER OMEGA (U+03A9) — outside ASCII, Latin-1 Supplement,
-      // and the individually-baked punctuation set; a character the vendored
-      // font itself could shape but this atlas never bakes. Chosen deliberately:
-      // nothing in Godot's own defaults or this repo's scene fixtures needs it,
-      // so it stands in for "some future unbaked codepoint" to pin the FALLBACK
-      // MECHANISM itself, not a specific known gap — unlike a test that asserts
-      // a character Godot's own default theme actually uses draws nothing,
-      // baking Omega would make this test wrong BY DESIGN (glyph would stop
-      // being null), so don't "fix" it by adding Omega to the charset; pick a
-      // different still-unbaked character instead if this ever needs re-proving.
+      // U+03A9 OMEGA stands in for any unbaked codepoint, to pin the fallback itself. If the charset
+      // ever bakes it, pick another unbaked character rather than changing the assertions.
       const layout = shapeText('AΩB', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
       const [a, omega, b] = layout.lines[0]!.glyphs;
       expect(omega!.glyph).toBeNull();
       expect(omega!.advance).toBeCloseTo(9.484375, 10);
-      // 'A's own advance is unaffected, and 'B's pen x sits right after the
-      // fallback advance — the fallback is folded into the running sum exactly
-      // like every baked glyph's own advance is.
+      // The fallback advance joins the running sum like a baked one.
       expect(b!.x).toBeCloseTo(a!.advance + omega!.advance, 10);
     }
   );
 });
 
 describe('shapeText — preserveControl / control characters (text_server_adv.cpp:6844-6907, char_utils.h:117-118 is_control)', () => {
-  // U+0001 START OF HEADING -- unambiguously `is_control` (<=0x001F), and not
-  // tab/linebreak, so it takes neither of those two's OWN special-casing.
+  // U+0001 START OF HEADING is `is_control` (<=0x001F) and neither tab nor linebreak.
   const CONTROL = '';
 
   it('without preserveControl (the default), a control character contributes ZERO width and no ink -- Godot drops it entirely (no Glyph pushed absent preserve_invalid/preserve_control, :6844)', () => {
@@ -215,13 +174,8 @@ describe('shapeText — preserveControl / control characters (text_server_adv.cp
 });
 
 describe('shapeText — kerning plumbing', () => {
-  // OpenSans_SemiBold carries only mark/mkmk GPOS features -- zero ASCII kern
-  // pairs -- but the table must still be wired in generically (per the
-  // vendoring notes) so a future bold/italic synthesis or a different theme
-  // font, which DOES have pairs, does not need a shape change downstream.
-  // Injecting a synthetic pair into the real (mutable, exported) metrics
-  // object is how that plumbing is exercised without inventing a second,
-  // parallel metrics format just for this test.
+  // The vendored font has no kern pairs, so a synthetic pair injected into the exported metrics
+  // exercises the kerning path.
   afterEach(() => {
     delete OPEN_SANS_METRICS.kerning.AB;
   });
@@ -239,16 +193,9 @@ describe('shapeText — kerning plumbing', () => {
 
 describe('shapeText — fontSizePxAt (per-character size override)', () => {
   it('advances each character by ITS OWN resolved size, not the flat fontSizePx', () => {
-    // 'A' hmtx advance width 1354 design units, unitsPerEm 2048. First char at
-    // 16px, second at 18px — two DIFFERENT scales of the same glyph, an
-    // independent worked example from `glyphAdvancePx`'s own arithmetic.
-    //
-    // At 16 the fixed-point chain (`getFontGlyphAdvancePx`) lands exactly on
-    // the continuous scale, 1354*16/2048 = 10.578125 = 677/64: x_scale is
-    // 0.5 in 16.16, so the 16.16 advance is a whole multiple of 1024 and the
-    // 26.6 round has nothing to round. At 18 it does not — x_scale is 0.5625,
-    // the 16.16 advance is 779904, and (779904 + 512) >> 10 = 762 gives
-    // 762/64 = 11.90625 against a continuous 1354*18/2048 = 11.900390625.
+    // 'A' is 1354 units at 2048/em. At 16 px the fixed-point chain lands on 1354*16/2048 = 677/64.
+    // At 18 px the 16.16 advance is 779904, and (779904 + 512) >> 10 = 762 gives 762/64 = 11.90625,
+    // against a continuous 11.900390625.
     const layout = shapeText('AA', {
       fontSizePx: 16,
       boxWidthPx: 0,
@@ -316,6 +263,8 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
   });
 });
 
+// Ascent and descent are FreeType's pixel-quantised values, each ceiled before summing
+// (modules/text_server_adv/text_server_adv.cpp:1515-1516).
 describe('shapeText — line pitch', () => {
   it('pins line height at font size 16 to 26px (ceil(ascent)+ceil(descent)+3, not the raw float sum of 24.79)', () => {
     const layout = shapeText('X', { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 });
@@ -421,20 +370,10 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
 });
 
 /**
- * `shapedTextSizeWidthPx` vs Godot 4.6.3
- * (`modules/text_server_adv/text_server_adv.cpp:7524-7537`). Corroborated
- * against the running engine: `ThemeDB.fallback_font.get_string_size(text,
- * HORIZONTAL_ALIGNMENT_LEFT, -1, 16)` at font size 16 returns a WHOLE number
- * for every string, while summing the same font's `get_char_size(c, 16).x`
- * over the same characters does not —
- *
- *   "Master volume"  char-advance sum 115.875    get_string_size 116
- *   "Music bed"      char-advance sum  78.453125 get_string_size  79
- *   "Threat level"   char-advance sum  91.03125  get_string_size  92
- *   "Ma"             char-advance sum  24.03125  get_string_size  25
- *   "M"              char-advance sum  14.75     get_string_size  15
- *
- * — i.e. the engine ceils, and does so even for a 0.03 px overhang.
+ * `shapedTextSizeWidthPx` against Godot 4.6.3 (`modules/text_server_adv/text_server_adv.cpp:7524-7537`).
+ * At size 16, `get_string_size` ceils the `get_char_size` sums, even a 0.03 px overhang:
+ * "Master volume" 115.875 to 116, "Music bed" 78.453125 to 79, "Threat level" 91.03125 to 92,
+ * "Ma" 24.03125 to 25, "M" 14.75 to 15.
  */
 describe('shapedTextSizeWidthPx (text_server_adv.cpp:7524-7537)', () => {
   it('ceils a fractional pen advance to the next whole pixel', () => {
@@ -465,25 +404,10 @@ describe('shapedTextSizeWidthPx (text_server_adv.cpp:7524-7537)', () => {
 });
 
 /**
- * Per-glyph advances against real Godot 4.6.3, read out of the running engine
- * rather than derived from this repo's own arithmetic: a scratch project
- * shapes the same string through `TextServer.shaped_text_add_string` +
- * `shaped_text_get_glyphs` at the same font size, against the SAME vendored
- * Open Sans SemiBold (`ThemeDB.fallback_font`), and prints each glyph's
- * `advance`. Both strings below are real `Label.text` values from this repo's
- * composition fixture, and each pins one side of the size branch at
- * `text_server_adv.cpp:6936`:
- *
- * - size 16 (`subpos` TRUE — `SUBPIXEL_POSITIONING_AUTO`, `fs <=
- *   SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE`): every advance is a whole
- *   number of 1/64 px, FreeType's 26.6 fixed point, and NOT a continuous
- *   `hmtx` scale — `l` measures 4.46875 (286/64) where a raw scale of its
- *   571 design units gives 4.4609375.
- * - size 28 (`subpos` FALSE): every advance is a WHOLE pixel
- *   (`text_server_adv.cpp:7080`'s `Math::round`), with the rounding
- *   remainder carried into the next glyph — which is why the two `E`s of
- *   "FIELD OPERATIONS" measure 16 and 15 despite being the same glyph at
- *   the same size.
+ * Per-glyph advances read from Godot 4.6.3 (`shaped_text_get_glyphs` on `ThemeDB.fallback_font`),
+ * one string per side of the size branch at `text_server_adv.cpp:6936`. At 16 (`subpos` true) each
+ * advance is a whole 1/64 px: `l` is 286/64, not 4.4609375. At 28 each is a whole pixel with the
+ * remainder carried (`text_server_adv.cpp:7080`), so the two `E`s of "FIELD OPERATIONS" are 16 and 15.
  */
 describe('shapeText — glyph advances vs real Godot (text_server_adv.cpp:6936,7077-7084)', () => {
   it('size 16, subpixel positioning ON: each advance is FreeType 26.6-quantized, not a continuous hmtx scale', () => {
@@ -515,20 +439,10 @@ describe('shapeText — glyph advances vs real Godot (text_server_adv.cpp:6936,7
   });
 });
 
-// --- Label's paragraph pre-split -------------------------------------------
-// `Label::_shape` does NOT hand the whole string to the line breaker. It splits
-// on `paragraph_separator` first — `txt.split(ps)` keeps empty entries — and
-// gives each paragraph its own shaped text, terminated with a ZERO WIDTH SPACE
-// (`label.cpp:158-166`, `para.text = str + String::chr(0x200B)`). That
-// terminator is what makes an empty paragraph a LINE: the break loop's guard
-// (`text_server.cpp:948`) drops a range whose start equals its end, so a
-// paragraph with no glyph at all would vanish, while one holding a single ZWSP
-// survives at zero width.
-//
-// Scoped to Label deliberately. Label3D shapes the whole string in one pass
-// (`label_3d.cpp:485,530`), and `TextParagraph` — Button's and LineEdit's path
-// — neither splits nor appends a terminator, so their blank lines really do
-// collapse in Godot.
+// `Label::_shape` splits on `paragraph_separator` first, keeping empty entries, and ends each
+// paragraph with a ZERO WIDTH SPACE (`label.cpp:158-166`). The break loop drops an empty range
+// (`text_server.cpp:948`), so the terminator keeps an empty paragraph as a line. Label3D
+// (`label_3d.cpp:485,530`) and `TextParagraph` do not split, so their blank lines collapse.
 describe('shapeText — paragraphSeparator (Label::_shape)', () => {
   const para = (text: string): ReturnType<typeof shapeText> =>
     shapeText(text, {
@@ -550,14 +464,12 @@ describe('shapeText — paragraphSeparator (Label::_shape)', () => {
   });
 
   it('keeps the trailing empty paragraph a final separator produces', () => {
-    // `split` yields ["a", ""] — the second entry is still a paragraph.
+    // `split` yields ["a", ""], and the second entry is still a paragraph.
     expect(para('a\n').lines).toHaveLength(2);
   });
 
-  // The tail push ends at `range.y` — the end of the SHAPED text, terminator
-  // included, with no end-trim (`text_server.cpp:1185-1200`). So the last line
-  // of every paragraph really does carry the ZWSP in Godot too. It advances
-  // nothing and has no atlas bitmap, so it costs no width and paints nothing.
+  // The tail push ends at `range.y`, the shaped text's end with no end trim
+  // (`text_server.cpp:1185-1200`), so the last line of each paragraph carries the ZWSP, at no width.
   it('carries the terminator on the line without moving any visible metric', () => {
     const opts = { fontSizePx: 16, boxWidthPx: 0, autowrapMode: AutowrapMode.OFF, lineSpacingPx: 3 };
     const split = shapeText('AAAA BBBB', { ...opts, paragraphSeparator: '\n' });
@@ -617,11 +529,8 @@ describe('shapeText — autowrap_trim_flags (ShapeTextOptions.autowrapTrimFlags,
   });
 
   it('BREAK_TRIM_END_EDGE_SPACES off (start-only, 64) keeps the trailing spaces the default would drop', () => {
-    // "AAAA   " (4 A's + 3 spaces) = 46.46875+12.46875 = 54.78125; the only
-    // overflow is adding the 4th 'B' (96.96875 > 90), whose recorded safe
-    // break is the THIRD space (word-bound updates it at every space passed)
-    // -- with no END trim the emitted line keeps all three rather than
-    // walking back off them.
+    // "AAAA   " = 54.78125. The 4th 'B' overflows (96.96875 > 90) with the third space as the safe
+    // break, and with no end trim the emitted line keeps all three spaces.
     const layout = shapeText('AAAA   BBBB', {
       fontSizePx: 16, boxWidthPx: 90, autowrapMode: AutowrapMode.WORD, lineSpacingPx: 3, autowrapTrimFlags: 64,
     });
@@ -639,16 +548,10 @@ describe('shapeText — autowrap_trim_flags (ShapeTextOptions.autowrapTrimFlags,
 });
 
 /**
- * `BREAK_TRIM_INDENT` (`servers/text/text_server.cpp:1048-1062,1090-1102,1169`).
- *
- * "Subtract first line indentation width from all lines after the first one"
- * (`doc/classes/TextServer.xml`, the constant's own description): the leading
- * run of tabs and spaces is measured once, capped at `0.6 * width`, and every
- * row that starts past that run breaks at `width - indent` instead. The same
- * `indent_end` also blocks a soft break INSIDE the indent (`:1169`).
- *
- * `TextEdit` is the only caller: `Text::_shape_line` sets the flag whenever
- * `indent_wrapped_lines` is on (`text_edit.cpp:285-287`).
+ * `BREAK_TRIM_INDENT` (`servers/text/text_server.cpp:1048-1062,1090-1102,1169`, `doc/classes/TextServer.xml`):
+ * the leading tabs and spaces are measured once, capped at `0.6 * width`, and later rows break at
+ * `width - indent`. `indent_end` blocks a soft break inside the indent (`:1169`). Only `TextEdit`
+ * sets the flag (`text_edit.cpp:285-287`).
  */
 describe('shapeText — BREAK_TRIM_INDENT (text_server.cpp:1048-1062,1090-1102)', () => {
   const INDENT = '        ';
@@ -677,10 +580,10 @@ describe('shapeText — BREAK_TRIM_INDENT (text_server.cpp:1048-1062,1090-1102)'
   const WIDTH = widthOf('bravo charlie');
 
   it('is the width that makes the flag observable at all', () => {
-    // Row 0 holds the indent and one word, and no more.
+    // Row 0 holds the indent and one word.
     expect(widthOf(`${INDENT}alpha`)).toBeLessThanOrEqual(WIDTH);
     expect(widthOf(`${INDENT}alpha bravo`)).toBeGreaterThan(WIDTH);
-    // The two remaining words fit the FULL width but not the narrowed one.
+    // The two remaining words fit the full width but not the narrowed one.
     expect(WIDTH).toBeGreaterThan(WIDTH - widthOf(INDENT));
     expect(widthOf('bravo charlie')).toBeGreaterThan(WIDTH - widthOf(INDENT));
   });
@@ -698,8 +601,7 @@ describe('shapeText — BREAK_TRIM_INDENT (text_server.cpp:1048-1062,1090-1102)'
   });
 
   it('caps the subtraction at 0.6 of the width, so a continuation row keeps 0.4 of it (text_server.cpp:1062)', () => {
-    // An indent WIDER than 60% of the box: uncapped it would leave a
-    // negative-to-nothing width and break every word apart.
+    // An indent wider than 60% of the box: uncapped, it would leave no width and break every word apart.
     const narrow = Math.ceil(widthOf(INDENT) / 0.8);
     expect(widthOf(INDENT)).toBeGreaterThan(0.6 * narrow);
     const rows = rowsAt(narrow, true);

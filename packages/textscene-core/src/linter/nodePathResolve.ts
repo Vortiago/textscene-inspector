@@ -1,47 +1,8 @@
 /**
- * `Node::get_node_or_null` (node.cpp:1892-1952), ported over the AUTHORED tree.
- *
- * Every NodePath rule needs the same question answered — does this path name a
- * node, and which one. Matching the path's final segment against every name in
- * the scene answers it wrongly in both directions: Godot does not search, it
- * WALKS, one segment at a time, from the referencing node:
- *
- *     if (!p_path.is_absolute()) { current = const_cast<Node *>(this); }   // :1903-1904
- *     ...
- *     } else if (name.is_node_unique_name()) {                            // :1930
- *         Node **unique = current->data.owned_unique_nodes.getptr(name);
- *         if (!unique && current->data.owner) {
- *             unique = current->data.owner->data.owned_unique_nodes.getptr(name);
- *         }
- *         if (!unique) { return nullptr; }
- *         next = *unique;
- *     } else {
- *         const Node *const *node = current->data.children.getptr(name);   // :1941
- *         if (node) { next = const_cast<Node *>(*node); } else { return nullptr; }
- *     }
- *
- * `data.children.getptr(name)` is the referencing node's OWN children, so a bare
- * `"Body"` never reaches a sibling, an ancestor, or an unrelated branch that
- * happens to share the name. A name-anywhere match therefore stayed silent on a
- * genuinely dangling path and, for `%Unique`, reported a working one as missing.
- *
- * ## Where a static reader must decline
- *
- * Three things this file cannot see, and all yield `unknowable` rather than a
- * guess. Walking INTO a node `isTypeUnknowable` covers: its interior children
- * live in another file, so a name that misses among the authored ones may still
- * exist. Walking FROM a node that sits under an instance: the enclosing
- * sub-scene can add siblings and parents this file never lists. And landing ON
- * one: the heading declares a name and a PackedScene, never a class, so every
- * caller that asks `descendsFrom(target.node.type, …)` reads a non-class as a
- * class name and reports a Godot-valid target as the wrong type —
- * `scenes/demos/3d/ik/fps/fps_example.tscn` relays into an instanced `.dae`
- * weapon and was warned about.
- *
- * Unique names are decidable, though: the claim table is exactly the nodes in
- * this file carrying `unique_name_in_owner`, so a `%Name` with no such node
- * really does resolve to null. The table itself is built in
- * `utils/uniqueNames.ts`, which the render path's NodePath resolution shares.
+ * `Node::get_node_or_null` (node.cpp:1892-1952), ported over the authored tree. Godot
+ * walks one segment at a time from the referencing node (:1903-1904), and a plain name
+ * reads `current->data.children.getptr(name)` (:1941), that node's own children, so a
+ * bare `"Body"` never reaches a sibling, an ancestor or an unrelated branch.
  */
 
 import type { TscnNode, TscnScene } from '../parser/types.js';
@@ -51,10 +12,8 @@ import { UNIQUE_NODE_PREFIX } from '../utils/uniqueNames.js';
 import { nodePathWalkNames } from '../godot/nodePath.js';
 
 /**
- * What resolving a NodePath against the authored tree can say.
- *
- * `unknowable` is the only decline: Godot's own walk is deterministic, so there
- * is no "ambiguous" — that arm existed to paper over name-matching, and a rule
+ * What resolving a NodePath against the authored tree can say. `unknowable` is the
+ * only decline: Godot's walk is deterministic, so there is no "ambiguous", and a rule
  * that reports on a guess is worse than one that stays quiet.
  */
 export type NodePathResolution =
@@ -76,9 +35,8 @@ function childNamed(node: TscnNode, name: string): TscnNode | undefined {
  * Resolve `path` as written on `referencingNode`.
  *
  * Absolute paths (`/root/…`) are `unknowable`: `get_node_or_null` measures them
- * from the live SceneTree root (:1898 refuses them outside a tree), and a
- * `.tscn`'s own root is not that node — the autoloads and the main scene sit
- * above it.
+ * from the live SceneTree root (:1898 refuses them outside a tree), and the
+ * autoloads and the main scene sit above a `.tscn`'s own root.
  */
 export function resolveNodePath(
   scene: TscnScene,
@@ -88,10 +46,12 @@ export function resolveNodePath(
   if (path === '') return MISSING; // `p_path.is_empty()` (:1894)
   if (path.startsWith('/')) return UNKNOWABLE;
 
-  // No NAME segments is not an empty path: `is_empty()` is `!data`, true only
+  // No name segments is not an empty path: `is_empty()` is `!data`, true only
   // for a default-constructed NodePath, so `":position"` carries data, runs the
   // `get_name_count()` loop zero times (:1912) and returns `this`.
   const segments = nodePathWalkNames(path);
+  // Under an instance, the enclosing sub-scene can add siblings and parents this
+  // file never lists.
   if (isUnderInstance(scene.nodes, referencingNode)) return UNKNOWABLE;
 
   let current: TscnNode = referencingNode;
@@ -100,43 +60,39 @@ export function resolveNodePath(
     if (name === '.') continue;
 
     if (name === '..') {
-      // `:1920-1922` returns null at the root, and standalone in the editor
-      // that is exactly what happens. But this file's root is only the runtime
-      // root while the scene is open on its own: instanced anywhere, the `..`
-      // lands on a parent the file never names, so the root declines as
-      // unknowable.
-      //
-      // By IDENTITY, not by type — see `parentIdentity`. The result is still
-      // gated through `isTypeUnknowable` below.
+      // `:1920-1922` returns null at the root, but this file's root is the runtime
+      // root only while the scene is open on its own. Instanced, the `..` lands on
+      // a parent the file never names, so the root declines as unknowable.
       const parent = parentIdentity(scene, current);
       if (!parent) return UNKNOWABLE;
+      // By identity, not type: the walk's end still passes `isTypeUnknowable`.
       current = parent;
       continue;
     }
 
     if (name.startsWith(UNIQUE_NODE_PREFIX)) {
-      // The claim table is built from THIS file's headings only, and
-      // `owned_unique_nodes` belongs to the node the walk has REACHED, read
-      // before the owner's table (`node.cpp:1930-1933`) — so a sub-scene root
-      // owns unique names declared in another file, and they win. Reaching an
-      // opaque node makes both answers our blindness: a miss may be a name that
-      // file claims, and a HIT may be shadowed by one. (:1935-1937)
+      // The reached node's `owned_unique_nodes` is read before the owner's table
+      // (`node.cpp:1930-1933`), so a sub-scene root's claims from another file win.
+      // At an opaque node, a miss may be a name that file claims, and a hit may be
+      // shadowed by one (:1935-1937).
       if (isTypeUnknowable(current)) return UNKNOWABLE;
       const claimed = sceneUniqueClaims(scene.nodes).get(name);
+      // The claim table is every node here carrying `unique_name_in_owner`, built in
+      // `utils/uniqueNames.ts` and shared with the renderer, so a miss is a real null.
       if (!claimed) return MISSING;
       current = claimed.node;
       continue;
     }
 
     // Below an `instance=` node the real children are in another file, so a miss
-    // here is our blindness rather than the engine's null.
+    // here is this reader's blindness, not the engine's null.
     const child = childNamed(current, name);
     if (!child) return isTypeUnknowable(current) ? UNKNOWABLE : MISSING;
     current = child;
   }
 
-  // The node exists, but nothing about it beyond its name is readable here: an
-  // `instance=` heading names a PackedScene rather than a class, and a heading
-  // with neither `type=` nor `instance=` overrides a node declared elsewhere.
+  // An `instance=` heading names a PackedScene, not a class, and a heading with
+  // neither `type=` nor `instance=` overrides a node declared elsewhere, so a
+  // caller's `descendsFrom(target.node.type, …)` would read a non-class.
   return isTypeUnknowable(current) ? UNKNOWABLE : { status: 'found', node: current };
 }

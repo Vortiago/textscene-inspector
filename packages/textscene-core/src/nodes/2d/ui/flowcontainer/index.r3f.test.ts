@@ -1,7 +1,6 @@
 /**
- * FlowContainer self-registration: importing `index.r3f` must wire the
- * native (WebGL canvas) painter and both native rect-solver functions for
- * ALL THREE flow types into their respective registries.
+ * FlowContainer self-registration: importing `index.r3f` wires the native painter
+ * and both rect-solver functions for all three flow types.
  */
 import { describe, expect, it } from 'vitest';
 import './index.r3f';

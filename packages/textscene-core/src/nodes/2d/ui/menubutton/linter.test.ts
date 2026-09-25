@@ -1,10 +1,6 @@
 /**
- * Tests for MenuButton's semantic linter rule. Strict-parser format checks live
- * in linterParser.test.ts and are asserted through `validatorRegistry` there.
- *
- * Uses `Linter` via testkit, not the `linter/index.ts` barrel: that barrel
- * side-effect-imports every in-flight slice, so pulling it here would fail
- * flakily on a sibling's half-written file mid-wave.
+ * Tests the MenuButton semantic rule through the testkit `Linter`, not the `linter/index.ts` barrel, which
+ * imports every slice and fails on a sibling's broken file. Format checks live in linterParser.test.ts.
  */
 
 import { describe, it } from 'vitest';
@@ -16,11 +12,9 @@ const RULE = 'menubutton-item-index-out-of-range';
 
 describe('MenuButton semantic rules', () => {
   it('errors when a popup/item_<N>/… index is >= item_count', () => {
-    // `MenuButton::_set` (menu_button.cpp:176) gates only on
-    // `is_property_valid`, which checks the prefix, `is_valid_int` and the leaf
-    // name but NOT the length (property_list_helper.cpp:118-135). The write then
-    // forwards to `popup->set(...)`, and PopupMenu's own helper refuses an index
-    // at or past the array length (property_list_helper.cpp:58).
+    // `MenuButton::_set` (menu_button.cpp:176) checks the prefix, `is_valid_int` and the leaf, not the
+    // length (property_list_helper.cpp:118-135). It forwards to `popup->set(...)`, whose helper refuses an
+    // index at or past the array length (property_list_helper.cpp:58).
     expectDiagnostic(
       scene(
         node('MenuButton', {
@@ -50,8 +44,8 @@ describe('MenuButton semantic rules', () => {
   });
 
   it('errors on a `+`-signed index past item_count', () => {
-    // `is_valid_int` skips ONE leading sign, `+` as readily as `-`
-    // (ustring.cpp:4752), so `popup/item_+2/text` resolves to item 2.
+    // `is_valid_int` skips one leading sign, `+` as readily as `-` (ustring.cpp:4752), so
+    // `popup/item_+2/text` resolves to item 2.
     expectDiagnostic(
       scene(node('MenuButton', { item_count: 1, 'popup/item_+2/text': '"Autosave"' })),
       { ruleName: RULE, severity: 'error', contains: ['2'] }

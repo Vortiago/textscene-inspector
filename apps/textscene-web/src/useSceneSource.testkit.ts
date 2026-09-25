@@ -1,11 +1,7 @@
 /**
- * Shared scaffolding for the `useSceneSource.*.test.ts` suites: the four TSCN
- * texts they drive the hook with, and the four helpers that control when a
- * fetch resolves and when a debounce fires.
- *
- * A non-`.test.ts` module so vitest does not collect it. `vi.mock('./sourceGate')`
- * deliberately does NOT live here — a mock is hoisted per module graph, so each
- * suite declares its own.
+ * Shared scaffolding for the `useSceneSource.*.test.ts` suites: TSCN texts, and helpers that
+ * decide when a fetch resolves and a debounce fires. Not `.test.ts`, so vitest skips it.
+ * `vi.mock('./sourceGate')` is hoisted per module graph, so each suite declares its own.
  */
 import { act } from '@testing-library/react';
 import { vi } from 'vitest';

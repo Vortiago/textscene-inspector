@@ -1,10 +1,6 @@
 /**
- * LinkButton strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing. There is no genuine cross-field rule for
- * LinkButton, so there is no `linter.ts` / `linter.test.ts`.
+ * Tests the LinkButton strict validators through `validatorRegistry`, so a failure points at the
+ * validator, not at scene parsing. LinkButton has no cross-field rule, so no `linter.ts`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -38,8 +34,8 @@ describe('LinkButton strict validators', () => {
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format. Per-property cases follow this
+    // generic check.
     const accepted = validatorRegistry
       .getOwnKeys('LinkButton')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -144,8 +140,8 @@ describe('LinkButton strict validators', () => {
     });
 
     it('warns on -1: the setter loads it, the hint does not offer it', () => {
-      // The setter allows it (its ERR_FAIL_COND opens below -1), so it loads —
-      // and the hint (0-3) does not offer it, so it warns rather than erroring.
+      // The setter allows it, since its ERR_FAIL_COND opens below -1, so it loads. The hint (0-3)
+      // does not offer it, so it warns instead of erroring.
       expect(check('text_direction', '-1')?.severity).toBe('warning');
     });
 

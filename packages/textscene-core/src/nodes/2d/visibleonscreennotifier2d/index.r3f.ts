@@ -1,6 +1,6 @@
 /**
- * VisibleOnScreenNotifier2D draws nothing of its own (ADR-0008) — reuse the Node2D
- * component so its children still land in the right transform space.
+ * VisibleOnScreenNotifier2D draws nothing of its own (ADR-0008). It reuses the Node2D component
+ * so its children still land in the right transform space.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';

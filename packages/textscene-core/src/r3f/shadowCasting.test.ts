@@ -6,7 +6,7 @@ import { ShadowCastingSetting } from '../resources/meshlibrary/types';
 /**
  * three's shadow pass, reproduced: `getDepthMaterial` assigns the flipped side
  * (`WebGLShadowMap.js:51,477`), then the per-object hook runs. three passes the
- * OBJECT second (`WebGLShadowMap.js:535,549`), which its own typing calls a
+ * object second (`WebGLShadowMap.js:535,549`), which its own typing calls a
  * `Scene`.
  */
 function depthSideAfterPass(value: number | undefined, materialSide: THREE.Side): THREE.Side {
@@ -77,7 +77,7 @@ describe('shadowCastingEffects', () => {
   it('undoes three’s flip so every other value keeps the material’s own cull', () => {
     // Godot's shadow pass takes CULL_VARIANT_DOUBLE_SIDED only for
     // FLAG_USES_DOUBLE_SIDED_SHADOWS and otherwise falls through to the
-    // material's own cull (`render_forward_clustered.cpp:395-411`); three flips
+    // material's own cull (`render_forward_clustered.cpp:395-411`). three flips
     // it as its own acne mitigation (`WebGLShadowMap.js:51`).
     for (const value of [undefined, ShadowCastingSetting.OFF, ShadowCastingSetting.ON, ShadowCastingSetting.SHADOWS_ONLY]) {
       expect(depthSideAfterPass(value, THREE.FrontSide)).toBe(THREE.FrontSide);
@@ -87,8 +87,8 @@ describe('shadowCastingEffects', () => {
 
   it('never writes the node’s cast_shadow onto the shared material', () => {
     // `cast_shadow` is GeometryInstance3D state, not material state
-    // (`servers/rendering/renderer_scene_cull.cpp:732`); a `.tres` material is
-    // shared by every node referencing it.
+    // (`servers/rendering/renderer_scene_cull.cpp:732`), and a `.tres` material
+    // is shared by every node referencing it.
     const material = new THREE.MeshStandardMaterial();
     const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
     Object.assign(mesh, {

@@ -1,7 +1,6 @@
 /**
- * BoxContainer parser — the shared BoxContainer base (Control + `alignment`)
- * plus `vertical`, which this base — unlike its fixed-axis HBoxContainer/
- * VBoxContainer subclasses — genuinely serialises (`types.ts`'s own doc).
+ * BoxContainer parser: the shared base (Control and `alignment`) plus `vertical`,
+ * which this class serialises and its fixed-axis subclasses do not.
  */
 
 import type { ParsedHeading } from '../../../../parser/utils';

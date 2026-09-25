@@ -1,5 +1,5 @@
 /**
- * Camera3D registration — parser + formatter.
+ * Camera3D registration: the parser and formatter.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

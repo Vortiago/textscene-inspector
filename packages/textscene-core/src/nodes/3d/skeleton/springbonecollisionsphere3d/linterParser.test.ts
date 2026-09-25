@@ -1,13 +1,8 @@
 /**
- * SpringBoneCollisionSphere3D strict validators: format and range checks.
- *
- * Asserted through `validatorRegistry` rather than by linting a `.tscn`: the
- * unit under test is the validator, so a failure points at the validator
- * instead of at scene parsing, and no fixture text has to be maintained
- * alongside it. Rule-level behaviour belongs in linter.test.ts, through `Linter`.
- *
- * The class binds exactly two properties (spring_bone_collision_sphere_3d.cpp:61-62)
- * and every numeric bound below quotes the governing Godot source line.
+ * SpringBoneCollisionSphere3D strict validators: format and range checks. Asserted through
+ * `validatorRegistry`, so a failure points at the validator, not at scene parsing. The class binds
+ * exactly two properties (spring_bone_collision_sphere_3d.cpp:61-62), and every numeric bound
+ * quotes the governing Godot source line.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -23,12 +18,12 @@ function check(property: string, value: string) {
 }
 
 /**
- * Set exactly ONE, from the source rather than from expectation: list the keys
- * SpringBoneCollisionSphere3D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY at all.
- * Leaving both unset is red on purpose. Do NOT delete an assertion to go green.
+ * Set exactly one, from the source rather than from expectation: list the keys
+ * SpringBoneCollisionSphere3D binds, or set DECLARES_NOTHING when it binds no ADD_PROPERTY. Both
+ * unset is red on purpose. Do not delete an assertion to go green.
  */
 const KEYS: string[] = ['radius', 'inside'];
-/** True only when the class binds NO ADD_PROPERTY. Say which source line proves it. */
+/** True only when the class binds no ADD_PROPERTY. Say which source line proves it. */
 const DECLARES_NOTHING = false;
 
 describe('SpringBoneCollisionSphere3D strict validators', () => {
@@ -41,16 +36,14 @@ describe('SpringBoneCollisionSphere3D strict validators', () => {
   });
 
   it('accepts every value its own fixture carries', () => {
-    // The fixture's "zero errors and zero warnings" claim, RUN rather than
-    // reasoned. `fixtureLint` owns the whole-registry version but needs the
-    // barrel, so it cannot run while sibling slices are being written; this
-    // checks the same file against whatever this test imported.
+    // Runs the fixture's "zero errors and zero warnings" claim against the validators this test
+    // imports. `fixtureLint` checks the same file against the whole registry.
     expectFixtureClean('unit-spring-bone-collision-sphere-3d.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {
-    // A validator that accepts arbitrary prose is not validating a format. The
-    // sweep is generic on purpose; per-property cases come next.
+    // A validator that accepts arbitrary prose validates no format. This loop is generic, and the
+    // per-property cases follow.
     const accepted = validatorRegistry
       .getOwnKeys('SpringBoneCollisionSphere3D')
       .filter((property) => check(property, 'definitely-not-a-valid-value') === null);
@@ -82,11 +75,10 @@ describe('SpringBoneCollisionSphere3D.radius', () => {
   });
 
   it('warns rather than errors below the hinted floor', () => {
-    // set_radius (spring_bone_collision_sphere_3d.cpp:33-38) is a bare
-    // assignment plus a TOOLS_ENABLED gizmo refresh: no clamp, no ERR_FAIL, so
-    // a negative radius is stored verbatim and only the hint's 0 objects to it.
-    // ADR-0032 makes that a WARNING; asserting merely "not null" would also
-    // pass a wrongly-`enforced` bound.
+    // set_radius (spring_bone_collision_sphere_3d.cpp:33-38) is a bare assignment plus a
+    // TOOLS_ENABLED gizmo refresh, so a negative radius is stored verbatim and only the hint's 0
+    // objects. ADR-0032 makes that a warning, and asserting only "not null" would also pass a
+    // wrongly `enforced` bound.
     const diagnostic = check('radius', '-0.5');
     expect(diagnostic).not.toBeNull();
     expect(diagnostic!.severity).toBe('warning');
@@ -137,8 +129,8 @@ describe('SpringBoneCollisionSphere3D.inside', () => {
 
 describe('SpringBoneCollisionSphere3D inherited validators', () => {
   it('resolves a SpringBoneCollision3D key through the base walk instead of re-declaring it', () => {
-    // Re-declaring `bone_name` here would shadow the ancestor and duplicate the
-    // rule, so the slice must NOT own it and must still validate it.
+    // Re-declaring `bone_name` here would shadow the ancestor and duplicate the rule, so the slice
+    // must not own it and must still validate it.
     expect(validatorRegistry.getOwnKeys('SpringBoneCollisionSphere3D')).not.toContain('bone_name');
     expect(validatorRegistry.findValidator('SpringBoneCollisionSphere3D', 'bone_name')).not.toBeNull();
     expect(check('bone_name', '&"Head"')).toBeNull();

@@ -1,22 +1,8 @@
 /**
- * Polygon2D's textured fill — the `texture` + `uv` mapping.
- *
- * Godot builds ONE mesh whose vertices are the polygon points and computes a UV
- * per vertex (`scene/2d/polygon_2d.cpp`, NOTIFICATION_DRAW):
- *
- *   Transform2D texmat(tex_rot, tex_ofs);
- *   texmat.scale(tex_scale);
- *   ...
- *   if (points.size() == uv.size()) uvs[i] = texmat.xform(uv[i])     / tex_size;
- *   else                            uvs[i] = texmat.xform(points[i]) / tex_size;
- *
- * with `points[i] = polygon[i] + offset`. Because `Transform2D::scale` scales
- * the origin along with the basis, that expands to
- * `uv' = tex_scale ⊙ (rot(v) + tex_ofs) / tex_size` — the scale applies to the
- * offset too, which is the part that is easy to get wrong.
- *
- * UVs are per-vertex, so the triangulation must preserve vertex identity: these
- * pin the `uv` buffer against the vertex buffer, not just its presence.
+ * Tests Polygon2D's textured fill. Godot's per-vertex UV (`scene/2d/polygon_2d.cpp`)
+ * expands to `tex_scale ⊙ (rot(v) + tex_ofs) / tex_size`, the scale applying to
+ * the offset too. UVs are per vertex, so these pin the `uv` buffer against the
+ * vertex buffer, not just its presence.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -46,7 +32,7 @@ function loadedTexture(): THREE.Texture {
   const tex = new THREE.Texture();
   // Seeded with Repeat on purpose. A file-loaded entry is clamp, but a producer
   // can hand over Repeat, so `useCanvas2DTexture` forces clamp. Seeding the
-  // opposite wrapping proves the clamp asserted below is forced, not inherited.
+  // opposite wrapping proves the clamp below is forced, not inherited.
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   (tex as unknown as { image: { width: number; height: number } }).image = {
@@ -90,7 +76,7 @@ function uvs(geom: THREE.BufferGeometry): Array<[number, number]> {
   return out;
 }
 
-/** The `position` attribute's (x, y) pairs — three-local, so Godot Y is negated. */
+/** The `position` attribute's (x, y) pairs, three-local, so Godot Y is negated. */
 function positions(geom: THREE.BufferGeometry): Array<[number, number]> {
   const attr = geom.attributes.position!;
   const out: Array<[number, number]> = [];
@@ -104,13 +90,10 @@ describe('<Polygon2D> textured fill', () => {
   it('binds the resolved texture as the material map', async () => {
     const { renderer, tex } = await render({ polygon: SQUARE, texture: 'ExtResource("1")' });
     const mat = mesh(renderer).material as THREE.MeshBasicMaterial;
-    // Not `toBe(tex)`: the 2D canvas gets its own `NoColorSpace`-retagged
-    // clone of the shared cached texture (`useCanvas2DTexture`,
-    // `canvas2DTextureDecode.ts`) so magnifying it blends undecoded sRGB
-    // bytes, matching Godot's own canvas — a 3D consumer of the same path
-    // must keep sampling the untouched, still-`SRGBColorSpace` original.
-    // The clone shares the decoded `Source`, which is what identifies it as
-    // "the same resolved texture" here.
+    // Not `toBe(tex)`: the 2D canvas gets a `NoColorSpace` clone
+    // (`canvas2DTextureDecode.ts`) so it blends undecoded sRGB bytes, as Godot's
+    // canvas does, while a 3D consumer keeps the sRGB original. The shared
+    // `Source` identifies the same resolved texture.
     expect(mat.map).not.toBe(tex);
     expect(mat.map?.source).toBe(tex.source);
     expect(mat.map?.colorSpace).toBe(THREE.NoColorSpace);
@@ -120,14 +103,14 @@ describe('<Polygon2D> textured fill', () => {
     const { renderer } = await render({
       polygon: SQUARE,
       texture: 'ExtResource("1")',
-      // One UV per polygon vertex, in TEXEL space as Godot stores them.
+      // One UV per polygon vertex, in texel space as Godot stores them.
       uv: 'PackedVector2Array(0, 0, 256, 0, 256, 128, 0, 128)',
     });
     const geom = mesh(renderer).geometry;
     // Vertex identity must survive triangulation: four points in, four UVs out,
     // in the authored order.
     expect(positions(geom)).toHaveLength(4);
-    // v is flipped: Godot's texel origin is the texture's TOP-left, three
+    // v is flipped: Godot's texel origin is the texture's top-left, three
     // samples a flipY texture with v = 1 there.
     expect(uvs(geom)).toEqual([
       [0, 1],
@@ -190,11 +173,10 @@ describe('<Polygon2D> textured fill', () => {
   });
 
   it('hands the fill a material three has not yet compiled, when the texture arrives after the mesh', async () => {
-    // The sequence every real load takes: the mesh is on screen with `map =
-    // null` first, and the texture lands one render later. `USE_MAP` is baked
-    // at the material's FIRST compile, so a material that was already compiled
-    // mapless samples nothing however the map is assigned afterwards — it
-    // paints the flat fill colour over the whole polygon.
+    // Every real load shows the mesh with `map = null` first, and the texture
+    // lands one render later. `USE_MAP` is baked at the first compile, so an
+    // already-compiled mapless material paints the flat fill however the map
+    // is assigned afterwards.
     const fake = createFakeResourceLoader();
     const renderer = await mount({ polygon: SQUARE, texture: 'ExtResource("1")' }, fake);
     const mapless = mesh(renderer).material as THREE.MeshBasicMaterial;
@@ -207,11 +189,9 @@ describe('<Polygon2D> textured fill', () => {
 
     const textured = mesh(renderer).material as THREE.MeshBasicMaterial;
     expect(textured.map).not.toBeNull();
-    // Either half satisfies three: a material it has never seen, or the one it
-    // has with its `version` moved past the compiled program's. Asserting the
-    // observable rather than which of the two the seam chose. (The test
-    // renderer never reaches `setProgram`, so this pins the precondition for
-    // the recompile, not the recompile itself.)
+    // Either satisfies three: a new material, or the old one with its `version`
+    // past the compiled program's. The test renderer never reaches `setProgram`,
+    // so this pins the precondition for the recompile, not the recompile.
     expect(textured !== mapless || textured.version > compiledVersion).toBe(true);
   });
 
@@ -250,12 +230,10 @@ describe('<Polygon2D> vertex_colors', () => {
   });
 
   it("does not fold the node's own color.a into opacity once vertex_colors replaces color", async () => {
-    // `polygon_2d.cpp:310-314` assigns the vertex Color OUTRIGHT when
-    // `vertex_colors.size() == points.size()` — `color` (RGB *and* alpha)
-    // never enters the mesh, and `canvas_item_add_mesh` gets a bare
-    // `Color(1, 1, 1)` for its own modulate parameter (`polygon_2d.cpp:401`).
-    // A translucent `color` alongside opaque `vertex_colors` must therefore
-    // leave the material at full opacity, not `color.a`.
+    // `polygon_2d.cpp:310-314` assigns the vertex Color outright when the sizes
+    // match, so `color`, alpha included, never enters the mesh, and
+    // `canvas_item_add_mesh` gets a bare `Color(1, 1, 1)` (`polygon_2d.cpp:401`).
+    // The material stays at full opacity.
     const { renderer } = await render({
       polygon: SQUARE,
       color: 'Color(1, 1, 1, 0.2)',

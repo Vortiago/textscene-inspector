@@ -1,8 +1,6 @@
 /**
- * `<Label>` — the native (WebGL canvas) painter for Label: the first
- * Control that draws text through the shared MSDF text engine. Assertions are
- * scene-graph structure (mesh count, group position, material uniforms) —
- * pixels are `pnpm ref:godot`'s job.
+ * `<Label>` render contract through the MSDF text engine: mesh count, group
+ * position and material uniforms. The golden images own the pixels.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -222,7 +220,7 @@ describe('<Label> (isolated painter contract)', () => {
       themeOverrideConstants: { outline_size: 2 },
     });
     // Still one mesh -- the outline is a second distance threshold in the
-    // SAME shader pass, not a second draw.
+    // same shader pass, not a second draw.
     expect(outlined.scene.findAllByType('Mesh')).toHaveLength(1);
     expect(plain.scene.findAllByType('Mesh')).toHaveLength(1);
     const outlinedMat = (outlined.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;

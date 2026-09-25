@@ -1,4 +1,4 @@
-/** GridContainer registration — parser. */
+/** GridContainer registration: parser. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseGridContainer } from './parser';

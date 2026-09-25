@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { decodeFont, resolveInlineFontResource } from './decode';
 import type { FontLoaderFn, FontResource } from './types';
 
-/** A loader that never resolves anything — for cases with no Font-valued property to recurse into. */
+/** A loader that resolves nothing, for cases with no Font-valued property to recurse into. */
 const NO_OP_LOADER: FontLoaderFn = async () => null;
 
 const FONT_A: FontResource = { kind: 'file', bytes: new ArrayBuffer(1), mimeType: 'font/ttf', fallbacks: [], properties: {} };

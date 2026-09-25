@@ -1,23 +1,8 @@
 /**
- * Godot-parity contract for the shared HSlider/VSlider native (WebGL canvas)
- * geometry — `Slider::get_minimum_size` and
- * `Slider::_notification(NOTIFICATION_DRAW)` (`scene/gui/slider.cpp`, Godot
- * 4.6.3), transposed for `vertical`. Every expected number below is either a
- * hand-derived worked example from the cited source lines, or a pixel
- * measured directly off real Godot 4.6 via `pnpm ref:godot` — never the
- * implementation's own output.
- *
- * At `default_theme_scale = 1` (`nativeTheme(1)`):
- *  - `style_slider`/`style_slider_grabber` are both
- *    `make_flat_stylebox(color, 4, 4, 4, 4, 4)` (`default_theme.cpp:579-580`)
- *    — content margins 4 all round, corner radius 4. `StyleBox::get_minimum_size()`
- *    sums opposing margins, so the track's OWN thickness is 4 + 4 = 8
- *    (`nativeTheme.ts`'s `sliderTrackThickness`).
- *  - `slider_grabber.svg` is a 16x16 texture (`nativeTheme.ts`'s
- *    `sliderGrabberSize`) holding a filled circle.
- *  - `center_grabber` / `grabber_offset` / `tick_offset` are 0 for both
- *    HSlider and VSlider (`default_theme.cpp:594-596,609-611`) — every
- *    formula below already has their (zero) contribution dropped.
+ * Godot-parity contract for the shared HSlider/VSlider geometry (`scene/gui/slider.cpp`, Godot
+ * 4.6.3). Each expected number is worked by hand from the cited lines or measured with
+ * `pnpm ref:godot`, never the implementation's output. The zero `center_grabber`, `grabber_offset`
+ * and `tick_offset` (`default_theme.cpp:594-596,609-611`) are dropped from every formula.
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -36,7 +21,11 @@ import {
 const theme = nativeTheme(1);
 const theme2x = nativeTheme(2);
 
-/** The vendored default grabber is square (`sliderGrabberIconSize`'s own doc). */
+/**
+ * At `nativeTheme(1)` the grabber is the square 16x16 `slider_grabber.svg`, and `style_slider` is
+ * `make_flat_stylebox(color, 4, 4, 4, 4, 4)` (`default_theme.cpp:579-580`), so the track is
+ * 4 + 4 = 8 thick (`sliderTrackThickness`).
+ */
 const grabberOf = (t: NativeTheme) => ({ x: t.sliderGrabberSize, y: t.sliderGrabberSize });
 
 describe('resolveSliderRatio', () => {
@@ -45,9 +34,8 @@ describe('resolveSliderRatio', () => {
   });
 
   it('is NaN-guarded to 0 — `Math::is_nan(get_as_ratio()) ? 0 : get_as_ratio()` (edge case)', () => {
-    // A degenerate min===max range already returns 1 from `rangeRatio`
-    // (Range::get_as_ratio's own is_equal_approx guard), so the only way to
-    // reach the NaN branch here is a genuinely NaN authored value.
+    // A degenerate min===max range already returns 1 from `rangeRatio` (Range::get_as_ratio's
+    // is_equal_approx guard), so only a NaN authored value reaches the NaN branch.
     expect(resolveSliderRatio({ value: Number.NaN })).toBe(0);
   });
 
@@ -112,9 +100,8 @@ describe('sliderGrabberAreaRect — the `grabber_area` fill', () => {
   });
 
   it('floors the half-grabber term — `grabber->get_width() / 2` is INTEGER division (slider.cpp:334)', () => {
-    // A theme scale that lands the grabber on an ODD size is the only way to
-    // see it: 16 * 1.1 rounds to 18 ... so scale to 15 directly via a theme
-    // whose grabber is odd. p = areasize*0 + trunc(grabber/2).
+    // Only an odd grabber shows it, and 16 * 1.1 rounds to 18, so a theme sets 15 directly.
+    // p = areasize*0 + trunc(grabber/2).
     const odd = nativeTheme(1);
     const oddTheme = { ...odd, sliderGrabberSize: 15 };
     expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0, oddTheme, grabberOf(oddTheme), false).w).toBe(7);
@@ -164,9 +151,8 @@ describe('sliderGrabberRect — the `grabber` icon box, a value at min/max pins 
 });
 
 describe('is_layout_rtl() — the ONE draw branch Slider reads it in (slider.cpp:331)', () => {
-  // areasize = 120 - 16 = 104, so `areasize * ratio` is fractional at 0.3 on
-  // BOTH sides — the only inputs that separate Godot's own arithmetic from
-  // mirroring the LTR rect, which every wrong implementation of this reduces to.
+  // areasize = 120 - 16 = 104, so `areasize * ratio` is fractional at 0.3 on both sides: the
+  // inputs that separate Godot's arithmetic from a mirrored LTR rect.
   const size = { x: 120, y: 24 };
   const grabber = grabberOf(theme);
 
@@ -244,11 +230,9 @@ describe('sliderTickRects — the `tick` icon per painted index, TICK_POSITION_B
   });
 });
 
-// --- Size2i narrowing (`Slider::_notification`, NOTIFICATION_DRAW) ----------
-// Every draw formula opens on `Size2i size = get_size()`, so a fractional
-// control size is narrowed ONCE up front and every rect below is integral.
-// A text-derived minimum is fractional in general, which is how a Slider ends
-// up at a non-integer size in the first place.
+// Every draw formula (`Slider::_notification`, NOTIFICATION_DRAW) opens on `Size2i size =
+// get_size()`, so a fractional size, as a text-derived minimum gives, narrows once and every rect
+// is integral.
 describe('slider draw rects — Size2i narrowing', () => {
   it('narrows the control size before the track rect reads it', () => {
     const track = sliderTrackRect(false, { x: 200.6, y: 40.9 }, theme);
@@ -265,10 +249,9 @@ describe('slider draw rects — Size2i narrowing', () => {
   });
 });
 
-// `size.height / 2 - grabber->get_height() / 2` (`slider.cpp:363`) — TWO
-// integer divisions on an int size and an int icon height, not one division of
-// the difference. The two agree whenever the grabber is even, which the theme's
-// own 16 is at scale 1; scale 0.95 rounds it to 15 and separates them.
+// `size.height / 2 - grabber->get_height() / 2` (`slider.cpp:363`): two integer divisions, not
+// one of the difference. They agree for an even grabber, as 16 is at scale 1, and scale 0.95
+// rounds it to 15 and separates them.
 describe('sliderGrabberRect — the two separate integer divisions', () => {
   const odd = nativeTheme(0.95);
 

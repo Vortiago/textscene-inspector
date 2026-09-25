@@ -1,4 +1,4 @@
-/** Tests for the BoxShape3D decode — canonical parseVector3 contract. */
+/** Tests for the BoxShape3D decode: the canonical parseVector3 contract. */
 
 import { describe, expect, it } from 'vitest';
 import { decodeBoxShape3D } from './decode';
@@ -32,7 +32,7 @@ describe('decodeBoxShape3D negative size', () => {
 describe('decodeBoxShape3D on a Godot-3 extents', () => {
   it('reads the doubled size the scan resolved (box_shape_3d.cpp:81-83)', () => {
     // The scan rewrites `extents = Vector3(3, 1, 3)` to `size = Vector3(6, 2, 6)`
-    // (godot/deprecated.ts); the decoder reads only the canonical slot.
+    // (godot/deprecated.ts), and the decoder reads only the canonical slot.
     expect(decodeBoxShape3D(canonicalisePropertyBag('BoxShape3D', { extents: 'Vector3(3, 1, 3)' })).size).toEqual({
       x: 6,
       y: 2,

@@ -1,11 +1,7 @@
 /**
- * ParallaxBackground registration — render component.
- *
- * `canvasItem: true` even though a CanvasLayer is not a CanvasItem in Godot's
- * class hierarchy: the flag is the previewer's workspace classification (ADR-0006
- * amendment), and this node hosts world-canvas content, so the 2D stage must
- * draw it and the 3D viewport must not. It is also what makes a
- * ParallaxBackground-rooted scene (five of them in the corpus) open in 2D.
+ * Registers the ParallaxBackground render component. `canvasItem: true` is the
+ * workspace classification (ADR-0006 amendment), not Godot's hierarchy: the
+ * node hosts world-canvas content, so it draws in the 2D stage and opens in 2D.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
@@ -20,9 +16,8 @@ nodeComponentRegistry.register({
   canvasItem: true,
 });
 
-// The Control walk's half of the same fact: a `CanvasLayer` subclass is where
-// `_enter_canvas`'s climb stops (`canvas_item.cpp:246-252`), so a Control below
-// one parents at ITS canvas rather than hoisting to the viewport's.
+// `_enter_canvas`'s climb stops at a `CanvasLayer` subclass (`canvas_item.cpp:246-252`),
+// so a Control below one parents at its canvas rather than the viewport's.
 controlComponentRegistry.register({
   typeName: 'ParallaxBackground',
   Component: ParallaxBackgroundCanvasScope,

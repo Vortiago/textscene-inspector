@@ -1,9 +1,8 @@
 [gd_scene load_steps=4 format=3]
 
-; The parameter mechanism: every slot is `lerp(min, max, random) * curve(age)`.
-; Here `scale_amount` grows then collapses and `angle` sweeps, both driven by a
-; `Curve` sub-resource, so a steady-state emitter shows the whole curve at once
-; — one particle per age.
+; Every parameter slot is `lerp(min, max, random) * curve(age)`. `scale_amount` grows then collapses
+; and `angle` sweeps, both through a Curve, so the steady-state emitter shows each curve: one
+; particle per age.
 
 [ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
 

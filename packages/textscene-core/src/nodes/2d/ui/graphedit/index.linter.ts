@@ -1,5 +1,5 @@
 /**
- * graphedit linter registration - imports linter components to trigger self-registration.
+ * GraphEdit linter registration: importing the validators and rules registers them.
  */
 
 import './linterParser.js';

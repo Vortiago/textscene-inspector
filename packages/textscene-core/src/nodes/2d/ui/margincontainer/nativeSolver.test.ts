@@ -1,13 +1,8 @@
 /**
- * `marginContainerMinimumSize`/`marginContainerLayout` vs Godot 4.6.3
- * (`scene/gui/margin_container.cpp`, `scene/gui/container.cpp`). Every
- * expected rect below was cross-checked against the real engine: a scratch
- * project instantiated the equivalent scene tree in a `SubViewport` sized
- * 1152×648 (this repo's `DEFAULT_VIEWPORT_WIDTH`/`HEIGHT` fallback) and
- * printed `Control.get_rect()`/`get_combined_minimum_size()` per node — see
- * the same probe technique the sibling container suites use. Children are synthetic
- * `custom_minimum_size` Controls, never Labels, so a font-metric regression
- * and a `_resort` regression can never present as the same test failure.
+ * Tests `marginContainerMinimumSize` and `marginContainerLayout` against Godot 4.6.3 rects, probed in a
+ * 1152x648 `SubViewport` (`scene/gui/margin_container.cpp`, `scene/gui/container.cpp`). Children are
+ * `custom_minimum_size` Controls, never Labels, so a font-metric regression and a `_resort` regression
+ * fail different tests.
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
@@ -18,7 +13,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { marginContainerMinimumSize, marginContainerLayout } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-/** `marginContainerLayout`'s `rects` half only — see `ContainerLayoutResult`'s own doc for why the union is here at all. */
+/** `marginContainerLayout`'s `rects` half only (`ContainerLayoutResult` says why the union exists). */
 function asMap(
   result: ReadonlyMap<string, Rect2> | ContainerLayoutResult
 ): ReadonlyMap<string, Rect2> {
@@ -44,8 +39,8 @@ function container(name: string, props: Partial<ControlProperties>, children: So
       properties: { name, ...props } as ControlProperties,
     },
     children,
-    // A local theme_override_constants/* now reaches `marginsOf` through
-    // `n.constants` (the walker folds it in unconditionally), not props.
+    // A local theme_override_constants/* reaches `marginsOf` through `n.constants`, which the walker
+    // fills unconditionally, not through props.
     constants: props.themeOverrideConstants ?? {},
   };
 }
@@ -74,9 +69,8 @@ describe('marginContainerMinimumSize', () => {
     const a = leaf('A', { customMinimumSize: { x: 30, y: 80 } });
     const b = leaf('B', { customMinimumSize: { x: 90, y: 20 }, sizeFlagsHorizontal: 4, sizeFlagsVertical: 8 });
     const n = container('M', {}, [a, b]);
-    // No theme_override_constants set: default_theme.cpp:1252-1255 sets all
-    // four margins to 0 (unscaled), so the container's own minimum is exactly
-    // the componentwise max of its children.
+    // No theme_override_constants: default_theme.cpp:1252-1255 sets all four margins to 0, unscaled, so
+    // the container's minimum is the componentwise max of its children.
     expect(marginContainerMinimumSize(n, ctx())).toEqual({ x: 90, y: 80 });
   });
 
@@ -99,9 +93,8 @@ describe('marginContainerLayout', () => {
       [child]
     );
     const rects = asMap(marginContainerLayout(n, [{ node: child, minSize: { x: 500, y: 500 } }], viewport, ctx()));
-    // FILL ignores the child's own minimum size entirely (container.cpp:103,114
-    // — the shrink branch that reads `minsize` is inside `if (!FILL)`), so a
-    // minimum LARGER than the padded box still yields the padded box verbatim.
+    // FILL ignores the child's minimum size: the shrink branch that reads `minsize` is inside
+    // `if (!FILL)` (container.cpp:103,114), so a larger minimum still yields the padded box.
     expect(rects.get('Leaf')).toEqual({ x: 32, y: 16, w: 1088, h: 616 });
   });
 
@@ -117,18 +110,15 @@ describe('marginContainerLayout', () => {
       [child]
     );
     const rects = asMap(marginContainerLayout(n, [{ node: child, minSize: { x: 101, y: 61 } }], viewport, ctx()));
-    // Padded box: (50,50,1052,548). Horizontal: floor((1052-101)/2)=475 → x=525.
-    // Vertical: SHRINK_END offsets by the full remainder, not halved: 548-61=487 → y=537.
+    // Padded box: (50,50,1052,548). Horizontal: floor((1052-101)/2) = 475, so x = 525. Vertical:
+    // SHRINK_END offsets by the whole remainder, 548-61 = 487, so y = 537.
     expect(rects.get('Leaf')).toEqual({ x: 525, y: 537, w: 101, h: 61 });
   });
 
   it("claws an EXPAND-without-FILL child back to its minimum, pinned to the begin edge — oracle: Leaf rect=[20,20,80,40]", () => {
-    // size_flags = 2 (SIZE_EXPAND only). `fit_child_in_rect` tests the SIZE_FILL
-    // bit alone (container.cpp:103,114) — EXPAND never satisfies it, so this
-    // child shrinks exactly like a plain SIZE_SHRINK_BEGIN child would, on BOTH
-    // axes: fit_child_in_rect always runs both, it just looks main-axis-only in
-    // BoxContainer because THAT container pre-sizes its main axis outside it.
-    // MarginContainer never pre-sizes anything, so both axes hit the same branch.
+    // size_flags = 2 (SIZE_EXPAND only). `fit_child_in_rect` tests only the SIZE_FILL bit
+    // (container.cpp:103,114), so this child shrinks like SIZE_SHRINK_BEGIN on both axes. BoxContainer
+    // looks main-axis-only because it pre-sizes its main axis first, and MarginContainer pre-sizes nothing.
     const child = leaf('Leaf', {
       customMinimumSize: { x: 80, y: 40 },
       sizeFlagsHorizontal: 2,
@@ -144,14 +134,10 @@ describe('marginContainerLayout', () => {
   });
 
   it('ignores contentRect.x/y — child rects are relative to the CONTAINER, not its parent — oracle: nested Leaf rect=[10,20,84,53] regardless of the Inner MarginContainer sitting at [514,267] in ITS parent', () => {
-    // Reproduces `MarginMinSizeViaCenterWrap/Inner` from the probe transcript:
-    // a MarginContainer nested inside a CenterContainer solves to a non-zero
-    // rect relative to ITS OWN parent (measured [514,267,124,113]), yet its
-    // child's rect is still [10,20,84,53] — the margin offset alone, with no
-    // trace of the 514/267. `contentRect` here plays the same role
-    // `computeAnchoredRect` gives `parentRect`: only `.w`/`.h` matter, exactly
-    // as `controlRectSolver.ts`'s `ContainerLayoutFn` doc promises ("relative
-    // to the CONTAINER's top-left, not the content rect's").
+    // The probe's `MarginMinSizeViaCenterWrap/Inner`: nested in a CenterContainer at [514,267,124,113],
+    // its child's rect is still [10,20,84,53], the margin offset alone. Only `contentRect.w`/`.h` matter,
+    // as `controlRectSolver.ts`'s `ContainerLayoutFn` doc says: rects are "relative to the CONTAINER's
+    // top-left, not the content rect's".
     const child = leaf('Leaf', { customMinimumSize: { x: 84, y: 53 } });
     const n = container(
       'M',
@@ -163,9 +149,8 @@ describe('marginContainerLayout', () => {
     expect(rects.get('Leaf')).toEqual({ x: 10, y: 20, w: 84, h: 53 });
   });
 
-  // `int w = ...; int h = ...` (`margin_container.cpp`) narrows the PADDED
-  // result, after the margins come off — not the incoming rect. A container
-  // sized from a text minimum is fractional, so the two differ in practice.
+  // `int w = ...; int h = ...` (`margin_container.cpp`) narrows the padded result, after the margins
+  // come off, not the incoming rect. A container sized from a text minimum is fractional.
   it('narrows the padded box, not the rect it came from', () => {
     const child = leaf('Leaf', { customMinimumSize: { x: 0, y: 0 } });
     const n = container(
@@ -173,8 +158,8 @@ describe('marginContainerLayout', () => {
       { themeOverrideConstants: { margin_left: 5, margin_top: 5, margin_right: 5, margin_bottom: 5 } },
       [child]
     );
-    // 100.6 - 5 - 5 = 90.6 -> 90. Narrowing the rect first would give 90 too,
-    // so the height picks a fraction that survives the margins: 60.4 - 10 = 50.4.
+    // 100.6 - 5 - 5 = 90.6 -> 90, as narrowing the rect first would give, so the height uses a
+    // fraction that survives the margins: 60.4 - 10 = 50.4.
     const rects = asMap(
       marginContainerLayout(n, [{ node: child, minSize: { x: 0, y: 0 } }], { x: 0, y: 0, w: 100.6, h: 60.4 }, ctx())
     );
@@ -195,9 +180,8 @@ describe('marginContainerLayout', () => {
 
 describe('marginContainerLayout under RTL', () => {
   it('hands its own rtl to fit_child_in_rect, so a non-FILL child sits at the trailing edge (container.cpp:99,109)', () => {
-    // MarginContainer has no RTL branch of its own (`margin_container.cpp` has
-    // no `is_layout_rtl()` call); the flag reaches the child through
-    // `Container::fit_child_in_rect`, which reads it directly.
+    // `margin_container.cpp` has no `is_layout_rtl()` call. The flag reaches the child through
+    // `Container::fit_child_in_rect`, which reads it.
     const child = leaf('C', { customMinimumSize: { x: 20, y: 10 }, sizeFlagsHorizontal: 0 });
     const n = {
       ...container('M', { themeOverrideConstants: { margin_left: 0, margin_top: 0, margin_right: 0, margin_bottom: 0 } }, [child]),

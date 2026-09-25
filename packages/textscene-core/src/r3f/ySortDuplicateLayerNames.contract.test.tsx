@@ -1,14 +1,7 @@
 /**
- * Two same-named y-sorted TileMapLayers in one flat sort must each render every
- * one of their Y-groups.
- *
- * The flat list is keyed per item, and a Y-group is not a tree position: two
- * layers that share a name and land on overlapping numbering hand React the
- * same key twice inside one `.map()`, which keeps a single child. The symptom
- * is a whole tile row of one room missing, and remounting on every re-sort.
- *
- * Duplicate node names are legal here — Godot only makes a name unique among
- * its OWN siblings, so two rooms may each hold a `Floor`.
+ * Two same-named y-sorted TileMapLayers in one flat sort each render every Y-group.
+ * Godot makes a name unique among siblings only, so two rooms may each hold a
+ * `Floor`, and a shared React key inside one `.map()` would keep a single child.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';

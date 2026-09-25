@@ -1,5 +1,3 @@
-/**
- * linkbutton linter registration - imports linter components to trigger self-registration.
- */
+/** Registers the LinkButton validators by importing them. */
 
 import './linterParser.js';

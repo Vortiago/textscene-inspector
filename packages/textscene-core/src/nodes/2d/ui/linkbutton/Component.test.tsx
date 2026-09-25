@@ -1,8 +1,7 @@
 /**
- * `<LinkButton>` render contract — text only, no chrome mesh, plus an
- * underline stroke gated on `underline_mode` and draw state. Structure/tint/
- * render-order assertions only (pixels are a golden-image concern via
- * `pnpm ref:godot`).
+ * Tests the `<LinkButton>` render contract: text with no chrome mesh, plus an underline stroke gated
+ * on `underline_mode` and draw state. It asserts structure, tint and render order only: pixels belong
+ * to the golden images and `pnpm ref:godot`.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -171,9 +170,8 @@ describe('<LinkButton> (isolated painter contract)', () => {
     expect(quadCount(trimmed)).toBeLessThan(quadCount(untrimmed));
   });
 
-  // `link_button.cpp:311`: under RTL the underline runs
-  // `(size.width - width) .. size.width`, so its far end is flush with the
-  // control's own right edge; `:313`'s LTR arm starts at 0 instead.
+  // `link_button.cpp:311`: under RTL the underline runs `(size.width - width) .. size.width`, flush with
+  // the control's right edge. `:313`'s LTR arm starts at 0.
   it('ends the underline at the control\'s right edge under RTL, and starts it at 0 under LTR', async () => {
     const span = async (rtl: boolean) => {
       const renderer = await ReactThreeTestRenderer.create(

@@ -1,22 +1,6 @@
-; ONE VARIABLE: the FORM of a surface's material reference — a `SubResource` of
-; the mesh's OWN `.tres` instead of an `ExtResource` to a shared material file.
-;
-; Both quads carry the SAME albedo/metallic/roughness. The left surface's
-; material is an ExtResource (res://unit-arraymesh-own-material-shared.tres);
-; the right surface's is a `[sub_resource]` declared inside
-; unit-arraymesh-own-material-quad.tres itself. The pair must therefore read as
-; two identical blue plates — the left one is the control, so a regression in the
-; sub-resource form shows as the RIGHT plate turning white while the left keeps
-; its colour, which localises the break to the reference form and nothing else.
-;
-; Why a regression here is invisible in every other scene: no other fixture, and
-; no other golden, contains a `.tres` that declares a material as its own
-; sub-resource. `arraymesh` carries no material at all, `arraymesh-uv` and
-; `arraymesh-compressed` both reference a shared material file by ExtResource,
-; `grid-map` loads a materialless quad, and every scene-level material in the bag
-; is a `[sub_resource]` of the previewed `.tscn` — a different document, resolved
-; by a different mechanism (SceneResourcesContext). So the whole
-; "sub-resource of another .tres" path has no witness but this one.
+; The one variable: a surface material referenced as a `SubResource` of the mesh's own `.tres`,
+; not an ExtResource. Both plates must read blue, and the left is the control. No other .tres
+; declares its own material, and a scene sub-resource resolves through SceneResourcesContext.
 [gd_scene load_steps=2 format=3 uid="uid://unitarraymeshownmat"]
 
 [ext_resource type="ArrayMesh" path="res://unit-arraymesh-own-material-quad.tres" id="1_quad"]

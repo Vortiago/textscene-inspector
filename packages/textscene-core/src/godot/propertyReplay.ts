@@ -1,23 +1,19 @@
 /**
- * The order Godot applies a node's stored properties in.
- *
- * `SceneState::instantiate` walks a node's stored properties in the order the
- * FILE lists them (`packed_scene.cpp:369-492`, over the list
- * `resource_format_text.cpp:304` appends to as it scans). The order a class's
- * `_bind_methods` declares them in is the order Godot SAVES in, and binds
- * nothing a hand-authored body has to follow.
- *
- * That matters wherever one property's setter guards against another's value:
- * the guard sees only what the lines ABOVE it have already applied. Measured on
- * 4.6.3 with a Sprite2D body of `frame = 3` then `hframes = 4`: `set_frame`'s
- * `ERR_FAIL_INDEX` fires against a grid of 1 and the sprite loads on frame 0.
+ * The order Godot applies a node's stored properties in: `SceneState::instantiate` walks them in
+ * the order the file lists them (`packed_scene.cpp:369-492`, over the list
+ * `resource_format_text.cpp:304` appends to as it scans). The `_bind_methods` order is the order
+ * Godot saves in, and binds nothing a hand-authored body has to follow.
  */
 
-/** Where a key sits relative to another in the file's own order. */
+/**
+ * Where a key sits relative to another in the file's own order. A setter that guards against
+ * another property's value sees only the lines above it: on 4.6.3 a Sprite2D body of `frame = 3`
+ * then `hframes = 4` fires `set_frame`'s `ERR_FAIL_INDEX` against a grid of 1 and loads frame 0.
+ */
 export interface ReplayPosition {
-  /** The key's value, when it is listed ABOVE `subject`. */
+  /** The key's value, when it is listed above `subject`. */
   applied: string | undefined;
-  /** The key is listed BELOW `subject`, so its value is not in effect yet. */
+  /** The key is listed below `subject`, so its value is not in effect yet. */
   late: boolean;
 }
 
@@ -26,7 +22,7 @@ export interface ReplayPosition {
  *
  * `rawProperties` preserves insertion order, which is the file's, so this reads
  * the replay order directly rather than reconstructing it. A name the file does
- * not carry answers `{ applied: undefined, late: false }` — absent, not late.
+ * not carry answers `{ applied: undefined, late: false }`: absent, not late.
  */
 export function replayPositions(
   properties: Record<string, string>,

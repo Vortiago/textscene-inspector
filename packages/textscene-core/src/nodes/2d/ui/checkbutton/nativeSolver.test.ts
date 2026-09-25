@@ -1,14 +1,8 @@
 /**
- * `checkbutton/nativeSolver.ts` vs Godot 4.6.3 (`scene/gui/check_button.cpp`,
- * `scene/theme/default_theme.cpp:316-353`). Expected numbers are
- * hand-derived from the source, not recomputed the way the implementation
- * itself computes them — same vendored OpenSans_SemiBold metrics
- * `checkbox/nativeSolver.test.ts` cites (`unitsPerEm=2048`, `ascent=2189`,
- * `descent=600`; 'A' hmtx advance 1354, 'B' 1350 design units).
- *
- * At font size 16: ascentPx=ceil(2189*16/2048)=18, descentPx=ceil(600*16/2048)=5,
- * FONT_HEIGHT=23. 'AB' advance = (1354+1350)*(16/2048) = 21.125, shaped
- * (ceiled) width = 22.
+ * `checkbutton/nativeSolver.ts` against Godot 4.6.3 (`scene/gui/check_button.cpp`,
+ * `scene/theme/default_theme.cpp:316-353`), hand-derived from OpenSans SemiBold (unitsPerEm 2048,
+ * ascent 2189, descent 600, 'A' 1354, 'B' 1350). At 16px the font height is 18 + 5 = 23, and
+ * 'AB' advances 21.125, shaped to 22.
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -46,7 +40,7 @@ function node(props: Partial<CheckButtonProperties>): SolveNode {
       properties: { name: 'CB', ...props } as CheckButtonProperties,
     },
     // A local theme_override_colors/* reaches `resolveTextTheme` through
-    // `n.colors` (the walker folds it in unconditionally), not props.
+    // `n.colors`, which the walker folds in, not through props.
     colors: props.themeOverrideColors ?? {},
     constants: props.themeOverrideConstants ?? {},
   };
@@ -288,14 +282,9 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
 });
 
 /**
- * `CheckButton::_notification`'s RTL arms. The toggle changes side —
- *
- *     if (rtl) { ofs.x = theme_cache.normal_style->get_margin(SIDE_LEFT); }   // check_button.cpp:135
- *
- * — the internal margin reserves SIDE_LEFT instead of SIDE_RIGHT
- * (`:98-104`), and the constructor's `HORIZONTAL_ALIGNMENT_LEFT` (`:174`)
- * becomes RIGHT through `Button::_notification`'s swap
- * (`button.cpp:271-275`).
+ * The RTL arms: the toggle sits at `margin(SIDE_LEFT)` (check_button.cpp:135), the internal margin
+ * reserves SIDE_LEFT (`:98-104`), and the constructor's LEFT alignment (`:174`) becomes RIGHT
+ * through `Button::_notification`'s swap (`button.cpp:271-275`).
  */
 describe('layoutCheckButtonContent — RTL puts the toggle on the left', () => {
   const BASE = {
@@ -330,11 +319,9 @@ describe('layoutCheckButtonContent — RTL puts the toggle on the left', () => {
 });
 
 /**
- * `CheckButton::_notification` and `get_icon_size` both read the
- * `*_mirrored` icon pair under RTL (`check_button.cpp:39-46`, `:109-120`) —
- * four separate Theme entries the default theme fills with the
- * `toggle_*_mirrored` SVGs (`default_theme.cpp:332-335`), not a flip of the
- * plain ones.
+ * `_notification` and `get_icon_size` both read the `*_mirrored` icons under RTL
+ * (`check_button.cpp:39-46`, `:109-120`): separate Theme entries the default theme fills with
+ * the `toggle_*_mirrored` SVGs (`default_theme.cpp:332-335`), not a flip of the plain ones.
  */
 describe('resolveCheckButtonIconKey — RTL selects the mirrored variant', () => {
   it('picks the mirrored twin of whichever state is showing', () => {
