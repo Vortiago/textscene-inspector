@@ -15,22 +15,17 @@ import {
   listWrittenIndices,
   unsatisfiedIndices,
 } from '../../../../linter/reportedIndices.js';
-import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
 
 /**
  * Any `settings/<i>/…` leaf, whatever its depth. `_set` reads the index with a bare
  * `path.get_slicec('/', 1).to_int()` into an `int` and no validity gate (two_bone_ik_3d.cpp:37),
- * so {@link stringToInt} reads the whole segment. All four regexes share this grammar, so a key
- * one admits is always one its siblings can look up.
+ * so {@link stringToInt} reads the whole segment. Both regexes and `indexedElements` share this
+ * grammar, so a key one admits is always one its siblings can look up.
  */
 const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/', 'to_int');
-/** The one leaf whose write depends on a sibling. */
+/** The one leaf whose write depends on a sibling, `pole_direction`. */
 const POLE_VECTOR_KEY_RE = indexedKeyRegex('^settings/(#)/pole_direction_vector$', 'to_int');
-/** `target_node`, indexed canonically like `POLE_DIRECTION_KEY_RE` below. */
-const TARGET_NODE_KEY_RE = indexedKeyRegex('^settings/(#)/target_node$', 'to_int');
-
-/** The sibling a `pole_direction_vector` write depends on. */
-const POLE_DIRECTION_KEY_RE = indexedKeyRegex('^settings/(#)/pole_direction$', 'to_int');
 
 /** `SECONDARY_DIRECTION_CUSTOM`, skeleton_modifier_3d.h:75. */
 const SECONDARY_DIRECTION_CUSTOM = 7;
@@ -55,38 +50,25 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   const outOfRange = new Map<string, number>();
   const ignoredVectors = new Map<string, number>();
 
-  // `target_node`, indexed canonically for the same reason `poleDirections`
-  // below is: `_set`'s bare `to_int` (two_bone_ik_3d.cpp:37) resolves
-  // `settings/00/…` to the same setting as `settings/0/…`.
-  const targetNodes = new Map<number, string>();
-  for (const key of Object.keys(rawProps)) {
-    const m = TARGET_NODE_KEY_RE.exec(key);
-    if (!m) continue;
-    targetNodes.set(stringToInt(m[1]!), rawProps[key]!);
-  }
+  // Grouped by the setting `_set` resolves each key to, not by its text: the bare `to_int`
+  // (two_bone_ik_3d.cpp:37) has no `is_valid_int` gate, so `settings/00/…` and `settings/0/…`
+  // address the same setting.
+  const settings = indexedElements(rawProps, 'settings/', 'to_int');
+
   // Absence is the trigger too, since `target_node` is empty by default (two_bone_ik_3d.h), so
   // every setting in range counts. Derived, not walked: `setting_count` is an INT slot with no
   // ceiling, so `0..count` can be two billion iterations. See `reportedIndices.ts`.
   const targeted = new Set<number>();
-  for (const [at, raw] of targetNodes) {
-    // `at >= 0` too: `unsatisfiedIndices` expects `satisfied` restricted to `0..count`, and a
-    // negative index would inflate `satisfied.size` and cancel a missing target.
-    if (at >= 0 && at < count && extractNodePath(raw) !== null) targeted.add(at);
+  for (const [at, leaves] of settings) {
+    const raw = leaves.get('target_node');
+    // `unsatisfiedIndices` expects `satisfied` restricted to `0..count`. `indexedElements` holds
+    // no negative index, which would inflate `satisfied.size` and cancel a missing target.
+    if (raw !== undefined && at < count && extractNodePath(raw) !== null) targeted.add(at);
   }
   // `get_configuration_warnings()` (two_bone_ik_3d.cpp:194-206) runs two loops, and both test
   // `target_node.is_empty()`: the second, meant for the pole, never reads `pole_node`. One
   // condition, so one diagnostic here, not two.
   const missingTargets = unsatisfiedIndices(count, targeted);
-
-  // `pole_direction` indexed by the number `_set` resolves the index to, not by its text: `_set`
-  // reads it with a bare `to_int` (two_bone_ik_3d.cpp:37) and no `is_valid_int` gate, so
-  // `settings/00/…` and `settings/0/…` address the same setting.
-  const poleDirections = new Map<number, string>();
-  for (const key of Object.keys(rawProps)) {
-    const m = POLE_DIRECTION_KEY_RE.exec(key);
-    if (!m) continue;
-    poleDirections.set(stringToInt(m[1]!), rawProps[key]!);
-  }
 
   for (const key of Object.keys(rawProps)) {
     const indexed = SETTING_KEY_RE.exec(key);
@@ -111,9 +93,8 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
     // getter returns the axis the enum names.
     const vector = POLE_VECTOR_KEY_RE.exec(key);
     if (!vector) continue;
-    const directionRaw = poleDirections.get(index);
-    const direction =
-      ruleInt(directionRaw, SECONDARY_DIRECTION_NONE);
+    const directionRaw = settings.get(index)?.get('pole_direction');
+    const direction = ruleInt(directionRaw, SECONDARY_DIRECTION_NONE);
     if (direction === null) continue;
     if (direction !== SECONDARY_DIRECTION_CUSTOM) ignoredVectors.set(indexText, index);
   }
