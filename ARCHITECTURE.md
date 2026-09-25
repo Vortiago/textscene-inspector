@@ -147,6 +147,18 @@ into the tree. One root `<group>` carries the pointer handlers from
 instead of once per ancestor. `resolvePathFromObject` walks the hit object's
 THREE parent chain to find the owning node.
 
+A node nests in its parent's THREE group only where Godot passes that
+parent's transform and visibility on. Godot links a Node3D only to a Node3D
+parent, and a CanvasItem only to a CanvasItem parent
+(`godot/parentSpace.ts`). So a plain `Node` under a Node3D, a CanvasItem under
+a Node3D and a `CanvasLayer` under a Node2D escape. `<ParentSpaceScope>`
+portals each one to the viewport's **world root**. The world root is an
+`Object3D` that `NodeDispatcher` mounts inside the pointer root. A detached SubViewport
+publishes its own scene as the world root. A `top_level` Node3D keeps its
+parent's visibility, so it stays in place, and `<TopLevelScope>` takes its
+world matrix from the world root instead
+([ADR-0008](./docs/adr/0008-invisible-render-intent.md)).
+
 Each node type owns one unified vertical slice under
 `packages/textscene-core/src/nodes/<category>/<type>/`. The slice holds
 `parser.ts`, `linterParser.ts`, `linter.ts`, `propertyFormatter.ts`,
@@ -175,8 +187,8 @@ flowchart TB
 ```
 
 The `r3f/nodes/index.ts` barrel imports each slice's `index.r3f` for its side
-effect. Unknown types render as `<GenericNodeFallback>` (a labelled
-placeholder cube). It and `GLBSceneRoot` are synthetic render-only types, not
+effect. Unknown types render as `<GenericNodeFallback>`, an invisible group
+that positions its children (ADR-0008). It and `GLBSceneRoot` are synthetic render-only types, not
 Node types, so they live in `r3f/internal/`. Not every slice carries every
 file: `propertyFormatter.ts` is present only for types with non-default
 Inspector formatting, and linter entry points exist only for types with
@@ -712,9 +724,11 @@ breaks the "each component renders itself" invariant
 `THREE.AnimationMixer` can bind:
 
 - **Transform tracks** (`position`, `rotation`, `rotation_degrees`, `scale`)
-  drive a mixer rooted at the player's **Animation root** (`root_node`, default
-  `..`). `THREE.PropertyBinding` resolves each target by name through the
-  dispatcher's unnamed wrapper groups (ADR-0011).
+  resolve from the player's **Animation root** (`root_node`, default `..`) to
+  a scene path. When a driver builds a mixer, `r3f/animation/trackTargets.ts` finds
+  the exact object through the dispatcher's node registry and names the track
+  by that object's uuid. The mixer roots on the scene the player hangs in,
+  above every node, escaped or not (ADR-0011).
 - **Non-transform tracks** (a discrete `Sprite2D:frame`, a continuous
   `Decal:modulate` or `Decal:size`) cannot go through the mixer. The player
   samples the live mixer playhead and pushes values through the

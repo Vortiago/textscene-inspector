@@ -1,8 +1,8 @@
 /**
  * Exact binding for an animation's transform tracks. A clip template names each track by its
- * target's scene path (`Root/Right/Arm.position`), and binding renames it to that object's `uuid`,
- * which `PropertyBinding.findNode` matches anywhere below the mixer root. Two nodes that share a
- * name never collide, and a path through a missing node binds nothing, as Godot's `get_node` does.
+ * target's scene path (`Root/Right/Arm.position`). Binding renames it to that object's `uuid`, which
+ * `PropertyBinding.findNode` matches anywhere below the mixer root. Two same-named nodes never
+ * collide, and a path through a missing node binds nothing, as Godot's `get_node` does.
  */
 
 import type { AnimationClip, KeyframeTrack, Object3D } from 'three';
@@ -15,8 +15,9 @@ function splitTrackName(name: string): { path: string; property: string } {
 }
 
 /**
- * The mixer root for a driver mounted at `object`: the scene it hangs in, the one ancestor of every
- * node a path can name, whether it nests or escaped its parent (`parentSpaceScope.tsx`).
+ * The mixer root for a driver mounted at `object`: the scene it hangs in. The scene is the one
+ * ancestor of every node a path can name, whether that node nests or escapes its parent
+ * (`parentSpaceScope.tsx`).
  */
 export function mixerRootOf(object: Object3D): Object3D {
   let root = object;
@@ -46,24 +47,29 @@ function namedBelow(object: Object3D, name: string, wrappers: ReadonlySet<Object
 }
 
 /**
- * The object a transform track at scene `path` drives: the named group inside the wrapper the
- * dispatcher registered for that path. Content no path registers, such as a glTF scene, is reached
- * from the longest registered prefix by one name per remaining segment. `null` when nothing matches.
+ * Finds the object a transform track at a scene path drives: the named group inside the wrapper
+ * the dispatcher registered for that path. It reaches content that no path registers, such as a
+ * glTF scene, from the longest registered prefix, one name for each remaining segment. `null` when
+ * nothing matches. It reads the registry once, so one finder serves every path of a bind.
  */
-export function findTrackTarget(path: string, nodeObjects: ReadonlyMap<string, Object3D>): Object3D | null {
+export function trackTargetFinder(
+  nodeObjects: ReadonlyMap<string, Object3D>
+): (path: string) => Object3D | null {
   const wrappers = new Set(nodeObjects.values());
-  const segments = path.split('/');
-  for (let depth = segments.length; depth > 0; depth--) {
-    const wrapper = nodeObjects.get(segments.slice(0, depth).join('/'));
-    if (!wrapper) continue;
-    let target = namedBelow(wrapper, segments[depth - 1]!, wrappers);
-    for (const segment of segments.slice(depth)) {
-      if (!target) return null;
-      target = namedBelow(target, segment, wrappers);
+  return (path) => {
+    const segments = path.split('/');
+    for (let depth = segments.length; depth > 0; depth--) {
+      const wrapper = nodeObjects.get(segments.slice(0, depth).join('/'));
+      if (!wrapper) continue;
+      let target = namedBelow(wrapper, segments[depth - 1]!, wrappers);
+      for (const segment of segments.slice(depth)) {
+        if (!target) return null;
+        target = namedBelow(target, segment, wrappers);
+      }
+      return target;
     }
-    return target;
-  }
-  return null;
+    return null;
+  };
 }
 
 /**

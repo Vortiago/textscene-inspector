@@ -39,9 +39,9 @@ export function localMatrix3D(node: TscnNode): THREE.Matrix4 {
 
 /**
  * Global Matrix4: the product of local matrices from the nearest node that carries no Node3D
- * transform, since a Node3D composes only through a Node3D parent (`node_3d.cpp:150`, `:656-660`),
- * and never through it at all when `top_level`. A type-less instance node passes through: its class
- * is the sub-scene root's.
+ * transform, or from the nearest `top_level` node. A Node3D composes only through a Node3D parent
+ * (`node_3d.cpp:150`, `:656-660`). A type-less instance node composes like a Node3D: its class is
+ * the sub-scene root's.
  */
 export function globalMatrix3D(
   path: string,

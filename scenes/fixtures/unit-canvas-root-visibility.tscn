@@ -1,0 +1,23 @@
+[gd_scene format=3 uid="uid://unitcanvasrootvisibility"]
+
+; One variable: the orange square is a Polygon2D under a plain Node under a hidden Node2D. A
+; CanvasItem whose parent is no CanvasItem takes its visibility from the Window
+; (canvas_item.cpp:319-348), so it draws beside the grey reference. No other golden hides a Node2D
+; above a plain Node, so a hide that reaches across one shows only here.
+
+[node name="Root" type="Node2D"]
+
+[node name="Reference" type="Polygon2D" parent="."]
+position = Vector2(400, 260)
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 120, 0, 120, 120, 0, 120)
+
+[node name="Hidden" type="Node2D" parent="."]
+visible = false
+
+[node name="Holder" type="Node" parent="Hidden"]
+
+[node name="Escaped" type="Polygon2D" parent="Hidden/Holder"]
+position = Vector2(620, 260)
+color = Color(0.9, 0.45, 0.1, 1)
+polygon = PackedVector2Array(0, 0, 120, 0, 120, 120, 0, 120)

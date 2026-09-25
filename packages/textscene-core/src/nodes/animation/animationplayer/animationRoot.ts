@@ -1,6 +1,6 @@
 /**
- * Resolves an AnimationPlayer's `root_node` to the scene path of its animation root, which every
- * track NodePath is read from (ADR-0011). The walk is Godot's `get_node`, so `..` climbs one node
+ * Resolves an AnimationPlayer's `root_node` to the scene path of its Animation root, which every
+ * Track NodePath resolves from (ADR-0011). The walk is Godot's `get_node`, so `..` climbs one node
  * and a path above the scene root reaches nothing.
  */
 

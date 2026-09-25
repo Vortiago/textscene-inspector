@@ -1,8 +1,8 @@
 /**
  * <AnimationPlayer>, an invisible node that drives other nodes. Its empty group keeps it in the
  * tree. Each track names its target by scene path, resolved from `root_node` as Godot's `get_node`
- * walks it, and binds that exact object when a mixer is built (ADR-0011). The mixer plays under the
- * scene's AnimationTransport. It loads stopped, and stopping restores the transforms it captured.
+ * walks it. It binds that exact object when a driver builds a mixer (ADR-0011). The mixer plays
+ * under the scene's AnimationTransport. It loads stopped, and stopping restores what it captured.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -31,8 +31,8 @@ import { applyLoopOverride } from '../../../r3f/animation/loopOverride';
 import { useAnimationDriverMount } from '../../../r3f/animation/useAnimationDriverMount';
 import {
   bindClip,
-  findTrackTarget,
   mixerRootOf,
+  trackTargetFinder,
   trackTargetPaths,
 } from '../../../r3f/animation/trackTargets';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
@@ -108,8 +108,8 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     [animations]
   );
 
-  // A callback ref, so state updates when the group mounts: the mixer roots on the scene the group
-  // hangs in, and useAnimationDriverMount needs a reactive value, not a ref read inside useMemo.
+  // A callback ref, so state updates when the group mounts. The mixer roots on the scene the group
+  // hangs in. useAnimationDriverMount needs a reactive value, not a ref read inside useMemo.
   const [mountedGroup, setMountedGroup] = useState<Group | null>(null);
   const groupCallbackRef = useCallback((group: Group | null) => {
     setMountedGroup(group);
@@ -123,13 +123,14 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     [animations]
   );
 
-  // Resolved against the scene as it stands when a mixer is built, this player's or an
-  // AnimationTree's (ADR-0019), so a target that loaded late is found.
+  // `bind` reads the scene as it stands when a driver builds a mixer, this player's or an
+  // AnimationTree's (ADR-0019). So it finds a target that loaded late.
   const nodeObjectMap = useOptionalSelection()?.nodeObjectMap ?? null;
   const bind = useCallback((): BoundClips => {
     const targets = new Map<string, Object3D>();
+    const findTarget = nodeObjectMap ? trackTargetFinder(nodeObjectMap) : null;
     for (const path of trackTargetPaths(clips)) {
-      const target = nodeObjectMap ? findTrackTarget(path, nodeObjectMap) : null;
+      const target = findTarget?.(path);
       if (target) targets.set(path, target);
     }
     applyGodotEulerOrder(clips, targets);

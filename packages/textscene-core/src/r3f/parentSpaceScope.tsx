@@ -1,8 +1,8 @@
 /**
  * The scope a node draws in when its parent's transform and visibility do not reach it
- * (`godot/parentSpace.ts`): a plain Node under a Node3D, a CanvasItem under a Node3D, a CanvasLayer
- * under a Node2D. Such a node re-attaches to its viewport's world root, outside every ancestor
- * group, since three hides a whole subtree below one invisible object and Godot does not.
+ * (`godot/parentSpace.ts`), such as a plain Node or a CanvasItem under a Node3D. Such a node portals
+ * to its viewport's world root, outside every ancestor group. Three hides a whole subtree below one
+ * invisible object, and Godot does not.
  */
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
@@ -34,8 +34,8 @@ export function WorldRootProvider({
 /**
  * Mounts a viewport's world root and publishes it to `children`. An Object3D, not a Group: three
  * takes `groupOrder` from the nearest Group, so this resets no canvas key. It exists from the first
- * render, so a node that escapes has somewhere to go at once. It is mounted first, with no transform
- * of its own, so three has updated its world matrix before any node's.
+ * render, so a node that escapes has somewhere to go at once. `NodeDispatcher` mounts it first, with
+ * no transform of its own, so three has updated its world matrix before any node's.
  */
 export function WorldRoot({ children }: { children: ReactNode }) {
   const [root] = useState(() => new THREE.Object3D());
@@ -79,7 +79,8 @@ export function ParentSpaceScope({ node, children }: { node: TscnNode; children:
   // sub-scene root's, still unknown here, so it stays with its parent.
   const escapes = !node.instance && escapesParentSpace(parentFamily, node.type);
   if (!escapes || !worldRoot) return <>{children}</>;
-  // No ancestor CanvasItem transform reaches the world root, so a canvas root inside cancels nothing.
+  // No ancestor CanvasItem transform reaches the world root, so the CanvasSpace a canvas root
+  // inside inverts is empty.
   return createPortal(<CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>, worldRoot);
 }
 

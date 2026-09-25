@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { AnimationClip, NumberKeyframeTrack, VectorKeyframeTrack } from 'three';
 import * as logger from '../../logger';
-import { bindClip, findTrackTarget, mixerRootOf, trackTargetPaths } from './trackTargets';
+import { bindClip, mixerRootOf, trackTargetFinder, trackTargetPaths } from './trackTargets';
 
 /** The dispatcher's shape: an unnamed wrapper registered by path, around the node's named group. */
 function mountNode(parent: THREE.Object3D, name: string): { wrapper: THREE.Object3D; group: THREE.Object3D } {
@@ -14,12 +14,12 @@ function mountNode(parent: THREE.Object3D, name: string): { wrapper: THREE.Objec
   return { wrapper, group };
 }
 
-describe('findTrackTarget', () => {
+describe('trackTargetFinder', () => {
   it('finds the named group inside the wrapper the path registers', () => {
     const scene = new THREE.Scene();
     const arm = mountNode(scene, 'Arm');
     const objects = new Map([['Root/Right/Arm', arm.wrapper]]);
-    expect(findTrackTarget('Root/Right/Arm', objects)).toBe(arm.group);
+    expect(trackTargetFinder(objects)('Root/Right/Arm')).toBe(arm.group);
   });
 
   it('tells two same-named nodes apart by their paths', () => {
@@ -30,14 +30,14 @@ describe('findTrackTarget', () => {
       ['Root/Left/Arm', left.wrapper],
       ['Root/Right/Arm', right.wrapper],
     ]);
-    expect(findTrackTarget('Root/Right/Arm', objects)).toBe(right.group);
+    expect(trackTargetFinder(objects)('Root/Right/Arm')).toBe(right.group);
   });
 
   it('prefers the node’s own group to a same-named descendant', () => {
     const scene = new THREE.Scene();
     const outer = mountNode(scene, 'Arm');
     mountNode(outer.group, 'Arm');
-    expect(findTrackTarget('Root/Arm', new Map([['Root/Arm', outer.wrapper]]))).toBe(outer.group);
+    expect(trackTargetFinder(new Map([['Root/Arm', outer.wrapper]]))('Root/Arm')).toBe(outer.group);
   });
 
   it('walks by name into content no path registers, such as a glTF scene', () => {
@@ -50,14 +50,14 @@ describe('findTrackTarget', () => {
     armature.add(hip);
     robot.group.add(armature);
     const objects = new Map([['Root/Robot', robot.wrapper]]);
-    expect(findTrackTarget('Root/Robot/Armature/Hip', objects)).toBe(hip);
+    expect(trackTargetFinder(objects)('Root/Robot/Armature/Hip')).toBe(hip);
   });
 
   it('finds nothing for a path whose ancestor does not exist', () => {
     const scene = new THREE.Scene();
     const arm = mountNode(scene, 'Arm');
     const objects = new Map([['Root/Right/Arm', arm.wrapper]]);
-    expect(findTrackTarget('Root/Nope/Arm', objects)).toBeNull();
+    expect(trackTargetFinder(objects)('Root/Nope/Arm')).toBeNull();
   });
 
   it('never walks into another node’s subtree for a node that is not mounted', () => {
@@ -70,11 +70,11 @@ describe('findTrackTarget', () => {
       ['Root/Other', other.wrapper],
       ['Root/Other/Sprite', deeper.wrapper],
     ]);
-    expect(findTrackTarget('Root/Sprite', objects)).toBeNull();
+    expect(trackTargetFinder(objects)('Root/Sprite')).toBeNull();
   });
 
   it('finds nothing for a path no registered prefix covers', () => {
-    expect(findTrackTarget('Root/Arm', new Map())).toBeNull();
+    expect(trackTargetFinder(new Map())('Root/Arm')).toBeNull();
   });
 });
 

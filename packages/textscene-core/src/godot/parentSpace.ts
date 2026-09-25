@@ -1,9 +1,8 @@
 /**
- * Which parent passes its transform and visibility to a child. Godot links a node to its parent for
- * both only within one class family, through a cast that fails across families: Node3D keeps
- * `Object::cast_to<Node3D>(get_parent())` (`node_3d.cpp:150`) and composes its global transform
- * (`:656-660`) and visibility (`:1132-1143`) through it, and CanvasItem does the same through
- * `Object::cast_to<CanvasItem>(parent)` (`canvas_item.cpp:311-314`, `:565-571`).
+ * Which parent passes its transform and visibility to a child. Godot links a node to its parent only
+ * within one class family, through a cast that fails across families. Node3D casts at
+ * `node_3d.cpp:150` and composes its global transform (`:656-660`) and visibility (`:1132-1143`)
+ * through it. CanvasItem casts at `canvas_item.cpp:311-314` and does the same (`:565-571`).
  */
 
 import { descendsFrom } from './nodeBaseTypes.js';

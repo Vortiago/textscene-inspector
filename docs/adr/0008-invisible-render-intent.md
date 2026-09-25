@@ -1,7 +1,7 @@
 # Non-visual nodes render as invisible transform-only groups; no viewport placeholder
 
-- Status: Accepted. Partly amended by ADR-0018, by the Label3D parity amendment and by the
-  render-intent split amendment (all below).
+- Status: Accepted. Partly amended by ADR-0018, by the Label3D parity amendment, by the
+  render-intent split amendment and by the parent-space amendment (all below).
 - Generalises ADR-0005 (physics bodies as transform-only groups).
 - Related: ADR-0006 (viewport-mode seam, `showCollisions` toggle).
 - Supersedes the visible grey-box placeholder of `GenericNodeFallback`.
@@ -85,3 +85,23 @@ omission.
 > and the previewer draws nothing, so it is a gap, not a node that draws nothing by nature. The
 > physics bodies and `Skeleton3D` stay in the first, as do `Path3D` and `PathFollow3D` at runtime.
 > Their runtime output is empty, and what an editor draws for them is the business of ADR-0018.
+
+> **Amendment (parent space):** a transform-only group positions its children only where Godot
+> links them to it. Godot links a Node3D to its parent only when the parent is a Node3D
+> (`node_3d.cpp:150`). It composes both the global transform (`:656-660`) and the visibility
+> (`:1132-1143`) through that link alone. A CanvasItem links only to a CanvasItem parent, and
+> otherwise reads its visibility from a CanvasLayer parent or the Window (`canvas_item.cpp:309-348`).
+> So a Node3D under a plain `Node` (Timer, AnimationPlayer, an organising `Node`) takes nothing from
+> the Node3D above that `Node`.
+>
+> - `godot/parentSpace.ts` states the rule: a child escapes a parent in the Node3D or CanvasItem
+>   family when it is not of that family. `<ParentSpaceScope>` portals such a child to the
+>   viewport's world root, outside every ancestor group, because three hides a whole subtree below
+>   one invisible object. The eye toggle follows the same rule, as the editor's does.
+> - A type-less `instance=` node stays in its parent's group until it merges (ADR-0013). Its class is the
+>   sub-scene root's, unknown until the sub-scene loads, and a `.glb` root is a Node3D.
+> - A `top_level` Node3D keeps its parent link, so it stays in place and still hides with its
+>   parent. `<TopLevelScope>` composes its world matrix from the world root instead of its parent.
+>   The editor and a loaded game agree, since Godot sets the flag before the node enters the tree
+>   (`node_3d.cpp:1044-1058`).
+> - `globalMatrix3D` applies the same rule for the passes that run before anything mounts.
