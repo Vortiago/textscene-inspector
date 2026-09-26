@@ -38,7 +38,8 @@ Strict parsing format-checks these `Camera3D` properties, plus 17 inherited from
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-camera3d-properties` (type-family match) | `camera3d-invalid-clipping-planes` | error |
+| `valid-camera3d-properties` (type-family match) | `camera3d-multiple-current` | info |
+|  | `camera3d-invalid-clipping-planes` | error |
 |  | `camera3d-zero-depth-range` | warning |
 <!-- lint:end -->
 
