@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../parser/types.js';
 import type { Transform3D } from '../nodes/base/node3d/types.js';
+import { identityTransform3D } from '../utils/transform.js';
 import { globalMatrix3D } from './nodeTreeTransforms.js';
 
 function translation(x: number, y: number, z: number): Transform3D {
-  return {
-    basis_x: { x: 1, y: 0, z: 0 },
-    basis_y: { x: 0, y: 1, z: 0 },
-    basis_z: { x: 0, y: 0, z: 1 },
-    origin: { x, y, z },
-  };
+  return { ...identityTransform3D(), origin: { x, y, z } };
 }
 
 function node(name: string, type: string, extra: Partial<TscnNode> = {}, transform?: Transform3D): TscnNode {

@@ -5,24 +5,13 @@
  * collide, and a path through a missing node binds nothing, as Godot's `get_node` does.
  */
 
-import type { AnimationClip, KeyframeTrack, Object3D } from 'three';
+import { AnimationClip, type KeyframeTrack, type Object3D } from 'three';
 import { warn } from '../../logger';
 
 /** A node name never holds a `.` (`godot/nodeName.ts`), so the first one ends the path. */
-function splitTrackName(name: string): { path: string; property: string } {
+export function splitTrackName(name: string): { path: string; property: string } {
   const dot = name.indexOf('.');
   return { path: name.slice(0, dot), property: name.slice(dot) };
-}
-
-/**
- * The mixer root for a driver mounted at `object`: the scene it hangs in. The scene is the one
- * ancestor of every node a path can name, whether that node nests or escapes its parent
- * (`parentSpaceScope.tsx`).
- */
-export function mixerRootOf(object: Object3D): Object3D {
-  let root = object;
-  while (root.parent) root = root.parent;
-  return root;
 }
 
 /** Every scene path the clips' tracks name, once each, in first-seen order. */
@@ -37,8 +26,10 @@ export function trackTargetPaths(clips: readonly AnimationClip[]): string[] {
  * wrapper: that is another node, which answers to its own path.
  */
 function namedBelow(object: Object3D, name: string, wrappers: ReadonlySet<Object3D>): Object3D | null {
+  // Indexed, not `shift`: shifting re-copies the queue on every visit.
   const queue = [...object.children];
-  for (let next = queue.shift(); next; next = queue.shift()) {
+  for (let i = 0; i < queue.length; i++) {
+    const next = queue[i]!;
     if (wrappers.has(next)) continue;
     if (next.name === name) return next;
     queue.push(...next.children);
@@ -77,8 +68,7 @@ export function trackTargetFinder(
  * dropped with a warning, so the rest of the clip still plays.
  */
 export function bindClip(clip: AnimationClip, targets: ReadonlyMap<string, Object3D>): AnimationClip {
-  const bound = clip.clone();
-  bound.tracks = clip.tracks.flatMap((track): KeyframeTrack[] => {
+  const tracks = clip.tracks.flatMap((track): KeyframeTrack[] => {
     const { path, property } = splitTrackName(track.name);
     const target = targets.get(path);
     if (!target) {
@@ -89,5 +79,5 @@ export function bindClip(clip: AnimationClip, targets: ReadonlyMap<string, Objec
     renamed.name = `${target.uuid}${property}`;
     return [renamed];
   });
-  return bound;
+  return new AnimationClip(clip.name, clip.duration, tracks, clip.blendMode);
 }

@@ -101,8 +101,10 @@ omission.
 > - Rejected: an R3F `createPortal`. It gives every component inside a scene of its own, and
 >   WorldEnvironment, Decal and the light helpers write to `useThree().scene`. Only the three
 >   object moves, so the React tree, `useThree()` and every context stay as they were.
-> - A type-less `instance=` node stays in its parent's group until it merges (ADR-0013). Its class is the
->   sub-scene root's, unknown until the sub-scene loads, and a `.glb` root is a Node3D.
+> - A node whose class the file does not state stays in its parent's group (`nodeEscapesParent`).
+>   An `instance=` node takes the sub-scene root's class (ADR-0013), and a `.glb` root is a Node3D.
+>   An override heading takes the class of the node it overrides. The children of a merged
+>   instance escape or stay by the sub-scene root's class.
 > - A `top_level` Node3D keeps its parent link, so it stays in place and still hides with its
 >   parent. `<TopLevelScope>` composes its world matrix from the world root instead of its parent.
 >   The editor and a loaded game agree, since Godot sets the flag before the node enters the tree

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { AnimationClip, NumberKeyframeTrack, VectorKeyframeTrack } from 'three';
 import * as logger from '../../logger';
-import { bindClip, mixerRootOf, trackTargetFinder, trackTargetPaths } from './trackTargets';
+import { bindClip, splitTrackName, trackTargetFinder, trackTargetPaths } from './trackTargets';
 
 /** The dispatcher's shape: an unnamed wrapper registered by path, around the node's named group. */
 function mountNode(parent: THREE.Object3D, name: string): { wrapper: THREE.Object3D; group: THREE.Object3D } {
@@ -129,16 +129,8 @@ describe('bindClip', () => {
   });
 });
 
-describe('mixerRootOf', () => {
-  it('is the scene the object hangs in, above every node a track can name', () => {
-    const scene = new THREE.Scene();
-    const outer = mountNode(scene, 'Root');
-    const player = mountNode(outer.group, 'AnimationPlayer');
-    expect(mixerRootOf(player.group)).toBe(scene);
-  });
-
-  it('is the object itself when nothing holds it', () => {
-    const lone = new THREE.Object3D();
-    expect(mixerRootOf(lone)).toBe(lone);
+describe('splitTrackName', () => {
+  it('splits at the first dot, since a node name holds none', () => {
+    expect(splitTrackName('Root/Arm.rotation[x]')).toEqual({ path: 'Root/Arm', property: '.rotation[x]' });
   });
 });

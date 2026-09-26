@@ -33,15 +33,17 @@ Rejected: a central animation-value context that computes per-frame values and p
 >   nothing. A `%Name` segment reads the owner's unique-name table, the player's for `root_node`
 >   and the Animation root's for a Track. A Track with `enabled = false` is skipped.
 > - Each driver calls `bind()` when it builds a mixer, the player's own or an AnimationTree's
->   (ADR-0019). So `bind()` finds a target that loaded late. `trackTargets.ts` finds the object the
+>   (ADR-0019). `bind()` reads the scene as it stands then: it finds every target mounted by that
+>   build, and one that mounts later binds at the next build. `trackTargets.ts` finds the object the
 >   dispatcher registered at that path: the named group inside its wrapper. It reaches content that
 >   no path registers, such as a glTF scene, from the longest registered prefix, one name for each
 >   remaining segment. That walk never enters another node's wrapper. `bind()` renames the Track
 >   to the object's uuid, which `PropertyBinding.findNode` matches exactly. A path with no target
 >   warns and binds nothing, so `Left/Arm` and `Right/Arm` never collide and `Nope/Arm` moves
 >   nothing.
-> - The mixer roots on the scene the player hangs in. A node can escape its parent's three group
->   (ADR-0008), so only the scene is an ancestor of every target.
+> - The mixer roots on the scene, `useThree().scene`. A node can escape its parent's three group
+>   (ADR-0008), so only the scene is an ancestor of every target. Inside a SubViewport it is the
+>   viewport's own scene.
 > - The driver entry carries `bind()`, which returns the bound clips and the objects they move.
 >   Every driver snapshots exactly those objects. The YXZ Euler reorder happens in `bind`, so an
 >   AnimationTree that plays an unselected player's clips gets it too.

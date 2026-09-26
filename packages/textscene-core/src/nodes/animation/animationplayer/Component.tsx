@@ -5,17 +5,9 @@
  * under the scene's AnimationTransport. It loads stopped, and stopping restores what it captured.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
-import {
-  Euler,
-  Group,
-  Object3D,
-  Quaternion,
-  Vector3,
-  type AnimationClip,
-  type EulerOrder,
-} from 'three';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import type { AnimationClip, EulerOrder, Object3D } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -30,14 +22,18 @@ import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
 import { applyLoopOverride } from '../../../r3f/animation/loopOverride';
 import { useAnimationDriverMount } from '../../../r3f/animation/useAnimationDriverMount';
 import {
+  restoreSnapshot,
+  snapshotPose,
+  type PoseSnapshot,
+} from '../../../r3f/animation/poseSnapshot';
+import {
   bindClip,
-  mixerRootOf,
+  splitTrackName,
   trackTargetFinder,
   trackTargetPaths,
 } from '../../../r3f/animation/trackTargets';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
-import { useUniqueNameClaims } from '../../../r3f/contexts/ViewportTextureContext';
-import { uniqueNameLivePaths } from '../../../utils/uniqueNames';
+import { useUniqueNamePaths } from '../../../r3f/contexts/ViewportTextureContext';
 import { resolveAnimations } from './animationResolver';
 import { resolveAnimationRootPath, resolveTrackScenePath } from './animationRoot';
 import { buildClip, loopSettingsFor } from './clipBuilder';
@@ -51,14 +47,6 @@ import type { AnimationPlayerProperties } from './types';
 
 /** Godot composes Euler rotations in YXZ order; THREE objects default to XYZ. */
 const GODOT_EULER_ORDER: EulerOrder = 'YXZ';
-
-interface Snapshot {
-  object: Object3D;
-  position: Vector3;
-  rotation: Euler;
-  quaternion: Quaternion;
-  scale: Vector3;
-}
 
 export function AnimationPlayer({ node, children }: NodeComponentProps) {
   const properties = node.properties as AnimationPlayerProperties;
@@ -116,13 +104,10 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     [animations]
   );
 
-  // A callback ref, so state updates when the group mounts. The mixer roots on the scene the group
-  // hangs in. useAnimationDriverMount needs a reactive value, not a ref read inside useMemo.
-  const [mountedGroup, setMountedGroup] = useState<Group | null>(null);
-  const groupCallbackRef = useCallback((group: Group | null) => {
-    setMountedGroup(group);
-  }, []);
-  const mixerRoot = useMemo(() => (mountedGroup ? mixerRootOf(mountedGroup) : null), [mountedGroup]);
+  // The mixer roots on the scene, the one ancestor of every node a track can name, whether that
+  // node nests or escapes its parent (`parentSpaceScope.tsx`). Inside a SubViewport it is the
+  // viewport's own scene.
+  const mixerRoot = useThree((state) => state.scene);
 
   // Loop modes indexed by clip name; configureAction below closes over the
   // memo (usePlaybackLoop reads the latest closure each frame).
@@ -132,27 +117,26 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   );
 
   // `bind` reads the scene as it stands when a driver builds a mixer, this player's or an
-  // AnimationTree's (ADR-0019). So it finds a target that loaded late.
+  // AnimationTree's (ADR-0019), so it finds every target mounted by then.
   const nodeObjectMap = useOptionalSelection()?.nodeObjectMap ?? null;
   const bind = useCallback((): BoundClips => {
     const targets = new Map<string, Object3D>();
-    const findTarget = nodeObjectMap ? trackTargetFinder(nodeObjectMap) : null;
+    const findTarget = trackTargetFinder(nodeObjectMap ?? new Map());
     for (const path of trackTargetPaths(clips)) {
-      const target = findTarget?.(path);
+      const target = findTarget(path);
       if (target) targets.set(path, target);
     }
     applyGodotEulerOrder(clips, targets);
     return { clips: clips.map((clip) => bindClip(clip, targets)), targets: [...targets.values()] };
   }, [clips, nodeObjectMap]);
 
-  // Per-driver pose snapshot of the bound targets, which keeps their YXZ Euler order.
-  // GLBSceneRoot snapshots its whole subtree instead.
-  const snapshotRef = useRef<Snapshot[]>([]);
+  // Per-driver pose snapshot of the bound targets. GLBSceneRoot snapshots its whole subtree instead.
+  const snapshotRef = useRef<PoseSnapshot[]>([]);
 
   const restore = useCallback(() => restoreSnapshot(snapshotRef.current), []);
 
   const onMixerBuilt = useCallback((targets: Object3D[]) => {
-    snapshotRef.current = snapshotTargets(targets);
+    snapshotRef.current = snapshotPose(targets);
   }, []);
 
   const { mixerRef, actionsRef } = useAnimationDriverMount({
@@ -256,7 +240,6 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
 
   return (
     <group
-      ref={groupCallbackRef}
       name={node.name}
       position={position}
       rotation={rotation}
@@ -268,12 +251,6 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   );
 }
 
-/** The `%Name` table seen from the node at `path`, as the live paths the dispatcher registers. */
-function useUniqueNamePaths(path: string | null): ReadonlyMap<string, string> | undefined {
-  const claims = useUniqueNameClaims(path);
-  return useMemo(() => (claims ? uniqueNameLivePaths(claims) : undefined), [claims]);
-}
-
 /**
  * Reorder every rotation-track target to Godot's YXZ Euler order, preserving the current orientation
  * (`Euler.reorder`), so multi-axis Euler rotations compose as Godot's do. A rotation template track
@@ -282,28 +259,8 @@ function useUniqueNamePaths(path: string | null): ReadonlyMap<string, string> | 
 function applyGodotEulerOrder(clips: readonly AnimationClip[], targets: ReadonlyMap<string, Object3D>): void {
   for (const clip of clips) {
     for (const track of clip.tracks) {
-      const dot = track.name.indexOf('.');
-      if (!track.name.startsWith('.rotation[', dot)) continue;
-      targets.get(track.name.slice(0, dot))?.rotation.reorder(GODOT_EULER_ORDER);
+      const { path, property } = splitTrackName(track.name);
+      if (property.startsWith('.rotation[')) targets.get(path)?.rotation.reorder(GODOT_EULER_ORDER);
     }
-  }
-}
-
-function snapshotTargets(targets: readonly Object3D[]): Snapshot[] {
-  return targets.map((object) => ({
-    object,
-    position: object.position.clone(),
-    rotation: object.rotation.clone(),
-    quaternion: object.quaternion.clone(),
-    scale: object.scale.clone(),
-  }));
-}
-
-function restoreSnapshot(snapshots: Snapshot[]): void {
-  for (const snap of snapshots) {
-    snap.object.position.copy(snap.position);
-    snap.object.rotation.copy(snap.rotation);
-    snap.object.quaternion.copy(snap.quaternion);
-    snap.object.scale.copy(snap.scale);
   }
 }

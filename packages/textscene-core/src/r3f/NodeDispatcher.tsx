@@ -305,15 +305,16 @@ function PlainNode({
                   <MissingResourcePlaceholder shape="box" name={node.name} {...fallbackTransform(node)} />
                 )}
               >
-                <Component node={node}>
-                  {children.length > 0 ? (
-                    /* At every level, so a non-sprite parent overwrites with white:
-                       `sprite_3d.cpp:75` accumulates from the immediate parent only. */
-                    <SpriteBase3DChildAccum node={node}>
-                      {/* The cast each child runs against its parent (`node_3d.cpp:150`,
-                          `canvas_item.cpp:565-571`), answered with this node's type:
-                          for a merged instance, the sub-scene root's type. */}
-                      <ParentSpaceFamilyProvider value={spaceFamilyOf(node.type)}>
+                {/* The cast each descendant the component renders runs against this node
+                    (`node_3d.cpp:150`, `canvas_item.cpp:565-571`), answered with its type: for a
+                    merged instance, the sub-scene root's type. A y-sort reorder keeps it, since
+                    every level it lifts past is a CanvasItem. */}
+                <ParentSpaceFamilyProvider value={spaceFamilyOf(node.type)}>
+                  <Component node={node}>
+                    {children.length > 0 ? (
+                      /* At every level, so a non-sprite parent overwrites with white:
+                         `sprite_3d.cpp:75` accumulates from the immediate parent only. */
+                      <SpriteBase3DChildAccum node={node}>
                         {startsCanvas ? (
                           <CanvasLayerScope node={node}>
                             {/* `<CanvasLayerScope>` is shared with the Control walk's
@@ -323,10 +324,10 @@ function PlainNode({
                         ) : (
                           <>{children}</>
                         )}
-                      </ParentSpaceFamilyProvider>
-                    </SpriteBase3DChildAccum>
-                  ) : null}
-                </Component>
+                      </SpriteBase3DChildAccum>
+                    ) : null}
+                  </Component>
+                </ParentSpaceFamilyProvider>
               </ErrorBoundary>
             </CanvasRootScope>
           </TopLevelScope>

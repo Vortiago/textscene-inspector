@@ -50,7 +50,7 @@ export function loopSettingsFor(loopMode: number): LoopSettings {
  * Maps a track's NodePath to its target's scene path, or `null` when the walk leaves the scene, as
  * `get_node` returns null for a path through a missing node.
  */
-export type ScenePathOf = (targetPath: string) => string | null;
+type ScenePathOf = (targetPath: string) => string | null;
 
 export function buildClip(animation: GodotAnimation, scenePathOf: ScenePathOf): AnimationClip {
   const tracks: KeyframeTrack[] = [];

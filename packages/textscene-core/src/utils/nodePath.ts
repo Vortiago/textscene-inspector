@@ -60,13 +60,15 @@ function walkNodePath(
 /**
  * A relative node path resolved against the base node itself, not its parent, so `"Child"` is a
  * child and `"../Sibling"` a sibling. The base path's first segment is the scene root, the floor:
- * null when the path walks above it.
+ * null when the path walks above it. An absolute path measures from the SceneTree root
+ * (node.cpp:1903-1909), which a preview has no counterpart for, so it reaches nothing.
  */
 export function resolveRelativePath(
   basePath: string,
   relative: string,
   uniquePaths?: ReadonlyMap<string, string>
 ): string | null {
+  if (relative.startsWith('/')) return null;
   return walkNodePath(basePath.split('/'), relative, 1, uniquePaths)?.join('/') ?? null;
 }
 

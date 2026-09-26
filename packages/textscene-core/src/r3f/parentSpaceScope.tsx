@@ -5,19 +5,20 @@
  * subtree below one invisible object, and Godot does not.
  */
 
-import { createContext, useContext, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { extend } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
-import type { Node3DProperties } from '../nodes/base/node3d/types.js';
-import { escapesParentSpace, spaceFamilyOf, type SpaceFamily } from '../godot/parentSpace.js';
+import { spaceFamilyOf, type SpaceFamily } from '../godot/parentSpace.js';
+import { isTopLevelItem } from './canvasPaintOrder.js';
+import { nodeEscapesParent } from './nodeEscapesParent.js';
 import { CanvasSpaceProvider } from './canvasRootScope.js';
 
 const WorldRootContext = createContext<THREE.Object3D | null>(null);
 WorldRootContext.displayName = 'WorldRootContext';
 
 /** The object the viewport's scene tree hangs from, or `null` outside a dispatcher. */
-export function useWorldRoot(): THREE.Object3D | null {
+function useWorldRoot(): THREE.Object3D | null {
   return useContext(WorldRootContext);
 }
 
@@ -73,11 +74,8 @@ export function ParentSpaceFamilyProvider({
  * where it is.
  */
 export function ParentSpaceScope({ node, children }: { node: TscnNode; children: ReactNode }) {
-  const parentFamily = useParentSpaceFamily();
+  const escapes = nodeEscapesParent(node, useParentSpaceFamily());
   const worldRoot = useWorldRoot();
-  // A type-less `instance=` node parses as `Node` until it merges (ADR-0013). Its class is the
-  // sub-scene root's, still unknown here, so it stays with its parent.
-  const escapes = !node.instance && escapesParentSpace(parentFamily, node.type);
   if (!escapes || !worldRoot) return <>{children}</>;
   // No ancestor CanvasItem transform reaches the world root, so the CanvasSpace a canvas root
   // inside inverts is empty.
@@ -90,29 +88,20 @@ export function ParentSpaceScope({ node, children }: { node: TscnNode; children:
 
 /**
  * Moves only the three object, not the React subtree: an R3F portal would hand every component
- * inside its own `scene`, which WorldEnvironment, Decal and the light helpers write to. An
- * `object3D`, not a group, so no canvas key resets.
+ * inside its own `scene`, which WorldEnvironment, Decal and the light helpers write to. R3F calls a
+ * function `attach` on every mount and reorder, and its cleanup on removal. An `object3D`, not a
+ * group, so no canvas key resets. The key remounts it into a new world root.
  */
 function WorldRootAttached({ worldRoot, children }: { worldRoot: THREE.Object3D; children: ReactNode }) {
-  const ref = useRef<THREE.Object3D>(null);
-  /** Written only by the move below: the React parent R3F last added the object to. */
-  const homeRef = useRef<THREE.Object3D | null>(null);
-  // R3F adds the object back to its React parent when siblings reorder, so every commit re-checks.
-  useLayoutEffect(() => {
-    const object = ref.current;
-    if (!object || object.parent === worldRoot) return;
-    homeRef.current = object.parent;
-    worldRoot.add(object);
-  });
-  // R3F removes the object from its React parent on unmount, which misses it anywhere else, so it
-  // goes home first. React runs this before it removes the host subtree.
-  useLayoutEffect(() => {
-    const object = ref.current;
-    return () => {
-      if (object && homeRef.current) homeRef.current.add(object);
-    };
-  }, [worldRoot]);
-  return <object3D ref={ref}>{children}</object3D>;
+  const attachToWorldRoot = (_parent: unknown, self: THREE.Object3D) => {
+    worldRoot.add(self);
+    return () => worldRoot.remove(self);
+  };
+  return (
+    <object3D key={worldRoot.uuid} attach={attachToWorldRoot}>
+      {children}
+    </object3D>
+  );
 }
 
 /**
@@ -126,17 +115,20 @@ class SpaceAnchoredObject extends THREE.Object3D {
   }
 
   override updateMatrixWorld(_force?: boolean): void {
-    if (this.matrixAutoUpdate) this.updateMatrix();
-    this.matrixWorld.multiplyMatrices(this.space.matrixWorld, this.matrix);
+    this.composeFromSpace();
     this.matrixWorldNeedsUpdate = false;
     for (const child of this.children) child.updateMatrixWorld(true);
   }
 
   override updateWorldMatrix(updateParents: boolean, updateChildren: boolean): void {
     if (updateParents) this.space.updateWorldMatrix(true, false);
+    this.composeFromSpace();
+    if (updateChildren) for (const child of this.children) child.updateWorldMatrix(false, true);
+  }
+
+  private composeFromSpace(): void {
     if (this.matrixAutoUpdate) this.updateMatrix();
     this.matrixWorld.multiplyMatrices(this.space.matrixWorld, this.matrix);
-    if (updateChildren) for (const child of this.children) child.updateWorldMatrix(false, true);
   }
 }
 
@@ -146,8 +138,7 @@ const SpaceAnchored = extend(SpaceAnchoredObject);
 /** Wraps a `top_level` Node3D's content so its parent's transform stops reaching it. */
 export function TopLevelScope({ node, children }: { node: TscnNode; children: ReactNode }) {
   const worldRoot = useWorldRoot();
-  const isTopLevel =
-    spaceFamilyOf(node.type) === 'Node3D' && (node.properties as Node3DProperties).top_level === true;
+  const isTopLevel = isTopLevelItem(node) && spaceFamilyOf(node.type) === 'Node3D';
   if (!isTopLevel || !worldRoot) return <>{children}</>;
   return <SpaceAnchored args={[worldRoot]}>{children}</SpaceAnchored>;
 }

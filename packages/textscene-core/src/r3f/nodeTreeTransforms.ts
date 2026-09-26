@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
 import type { Node3DProperties, Transform3D } from '../nodes/base/node3d/types.js';
-import { spaceFamilyOf } from '../godot/parentSpace.js';
+import { nodeEscapesParent } from './nodeEscapesParent.js';
 
 /** A parsed `Transform3D` as a `Matrix4`. `basis_x/y/z` are the matrix's ROWS. */
 export function transform3DToMatrix(t: Transform3D): THREE.Matrix4 {
@@ -40,8 +40,7 @@ export function localMatrix3D(node: TscnNode): THREE.Matrix4 {
 /**
  * Global Matrix4: the product of local matrices from the nearest node that carries no Node3D
  * transform, or from the nearest `top_level` node. A Node3D composes only through a Node3D parent
- * (`node_3d.cpp:150`, `:656-660`). A type-less instance node composes like a Node3D: its class is
- * the sub-scene root's.
+ * (`node_3d.cpp:150`, `:656-660`), and `nodeEscapesParent` names the nodes that break the chain.
  */
 export function globalMatrix3D(
   path: string,
@@ -53,7 +52,7 @@ export function globalMatrix3D(
     acc = acc ? `${acc}/${segment}` : segment;
     const node = nodeByPath.get(acc);
     if (!node) continue;
-    if (!node.instance && spaceFamilyOf(node.type) !== 'Node3D') {
+    if (nodeEscapesParent(node, 'Node3D')) {
       result.identity();
       continue;
     }
