@@ -402,6 +402,30 @@ describe('SpringBoneSimulator3D key tails', () => {
   });
 });
 
+describe('SpringBoneSimulator3D empty setting index', () => {
+  it('reads individual_config under an empty index as setting 0, as "".to_int() does', () => {
+    // `get_slicec('/', 1).to_int()` (:42) of an empty segment is 0 (ustring.cpp:2304-2305), so the
+    // setting is individual and the shared radius beside it is dropped (:644).
+    expectDiagnostic(
+      scene(
+        node('SpringBoneSimulator3D', {
+          setting_count: 1,
+          'settings//individual_config': true,
+          'settings/0/radius/value': 0.5,
+        })
+      ),
+      { ruleName: 'springbonesimulator3d-shared-config-ignored' }
+    );
+  });
+
+  it('counts an empty index against setting_count as setting 0', () => {
+    expectDiagnostic(
+      scene(node('SpringBoneSimulator3D', { 'settings//individual_config': false })),
+      { ruleName: 'springbonesimulator3d-setting-index-out-of-range' }
+    );
+  });
+});
+
 describe('SpringBoneSimulator3D index grammar', () => {
   it('reads individual_config from the setting the engine resolves, not the index text', () => {
     // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`

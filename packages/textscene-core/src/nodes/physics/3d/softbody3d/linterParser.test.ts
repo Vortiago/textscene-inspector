@@ -317,6 +317,9 @@ describe('SoftBody3D strict validators', () => {
       // refusing them, so the index resolves to some attachment and the leaf
       // lookup is the only thing left to reject.
       expect(checkAttachment('attachments/x/offset', 'Vector3(0, 0, 0)')).toBeNull();
+      // `"".to_int()` is 0 (ustring.cpp:2304-2305), so an empty index is attachment 0 too.
+      expect(checkAttachment('attachments//offset', 'Vector3(0, 0, 0)')).toBeNull();
+      expect(checkAttachment('attachments//offset', 'Vector3(0, 0)')).not.toBeNull();
     });
 
     it('rejects an unrecognised leaf name', () => {

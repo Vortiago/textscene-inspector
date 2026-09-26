@@ -136,14 +136,29 @@ describe('indexedElements', () => {
     expect([...elements.get(0)!]).toEqual([['joints/1/bone', '"A"']]);
   });
 
-  it('ignores a key with no leaf below the index, and one with no index', () => {
+  it('ignores a key with no leaf below the index', () => {
     const elements = indexedElements(
-      { setting_count: '2', 'settings/0': 'x', 'settings//bone': '"A"' },
+      { setting_count: '2', 'settings/0': 'x', 'settings/0/': 'y' },
       'settings/',
       'to_int',
       NO_DECLARED_LEAVES
     );
     expect(elements.size).toBe(0);
+  });
+
+  it('seats an empty index on element 0 under to_int, as "".to_int() does', () => {
+    // `to_int` returns 0 for an empty string (ustring.cpp:2304-2305).
+    const elements = indexedElements(
+      { 'settings//bone': '"A"' },
+      'settings/',
+      'to_int',
+      NO_DECLARED_LEAVES
+    );
+    expect(elements.get(0)?.get('bone')).toBe('"A"');
+  });
+
+  it('seats no element for an empty index under is_valid_int, which refuses it', () => {
+    expect(indexedElements({ 'item_/text': '"a"' }, 'item_', 'is_valid_int').size).toBe(0);
   });
 
   it('lets a later key win, the way Godot applies properties in file order', () => {

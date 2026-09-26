@@ -9,7 +9,7 @@
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { keyShapeError, propertyError, v } from '../../../linter/validators/index.js';
-import { indexedKeyRegex, parseGodotInt, stringToInt } from '../../../godot/index.js';
+import { firstSegment, indexedKeyRegex, parseGodotInt, stringToInt } from '../../../godot/index.js';
 import { writtenIndex } from '../../../linter/reportedIndices.js';
 import { BONE_LEAVES } from './boneLeaves.js';
 import { UNREACHABLE_BONE_SLOT } from './boneNameOrder.js';
@@ -63,7 +63,7 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
   // Slice 2 alone decides the arm: `bones/0/bone_meta/<key>` reaches the `bone_meta` arm with the
   // key read separately at :105, and a trailing slice on any other leaf is ignored, so the same
   // setter gets the same value.
-  const what = match[2]!.split('/', 1)[0]!;
+  const what = firstSegment(match[2]!);
 
   // skeleton_3d.cpp:135: the chain closes `} else { return false; }`, so a leaf
   // with no arm is a write Godot silently drops.

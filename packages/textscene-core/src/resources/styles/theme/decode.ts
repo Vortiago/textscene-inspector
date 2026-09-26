@@ -15,23 +15,24 @@ import { resolveRefToResourcePath, subResourceTypeGate } from '../../subResource
 import type { ScannedTheme, ThemeAddresses, ThemeResource } from './types';
 import { indexedKeyRegex } from '../../../godot/index.js';
 
-// Godot splits a theme key with `split("/", true, 2)` (`theme.cpp`), so its
-// segments use the shared segment grammar (`indexedKeyGrammar.guard.test.ts`).
-// `to_int` names the segment class. Nothing here reads a segment as a number.
+// `Theme::_set` reads three slices with `get_slicec('/', n)` (`theme.cpp:40-42`) and nothing below
+// them, so a tail after the item name is ignored. Its segments use the shared segment grammar
+// (`indexedKeyGrammar.guard.test.ts`): `to_int` names the segment class, and nothing here reads a
+// segment as a number.
 /** `<Type>/fonts/<name>`. */
-const FONT_ENTRY = indexedKeyRegex(String.raw`^(#)/fonts/(#)$`, 'to_int');
+const FONT_ENTRY = indexedKeyRegex(String.raw`^(#)/fonts/(#)(?:/|$)`, 'to_int');
 /** `<Type>/font_sizes/<name>`. */
-const FONT_SIZE_ENTRY = indexedKeyRegex(String.raw`^(#)/font_sizes/(#)$`, 'to_int');
+const FONT_SIZE_ENTRY = indexedKeyRegex(String.raw`^(#)/font_sizes/(#)(?:/|$)`, 'to_int');
 /** `<Type>/styles/<name>`. */
-const STYLE_ENTRY = indexedKeyRegex(String.raw`^(#)/styles/(#)$`, 'to_int');
+const STYLE_ENTRY = indexedKeyRegex(String.raw`^(#)/styles/(#)(?:/|$)`, 'to_int');
 /** `<Type>/icons/<name>`. */
-const ICON_ENTRY = indexedKeyRegex(String.raw`^(#)/icons/(#)$`, 'to_int');
+const ICON_ENTRY = indexedKeyRegex(String.raw`^(#)/icons/(#)(?:/|$)`, 'to_int');
 /** `<Type>/colors/<name>`. */
-const COLOR_ENTRY = indexedKeyRegex(String.raw`^(#)/colors/(#)$`, 'to_int');
+const COLOR_ENTRY = indexedKeyRegex(String.raw`^(#)/colors/(#)(?:/|$)`, 'to_int');
 /** `<Type>/constants/<name>`. */
-const CONSTANT_ENTRY = indexedKeyRegex(String.raw`^(#)/constants/(#)$`, 'to_int');
+const CONSTANT_ENTRY = indexedKeyRegex(String.raw`^(#)/constants/(#)(?:/|$)`, 'to_int');
 /** `<variationType>/base_type`. */
-const BASE_TYPE_ENTRY = indexedKeyRegex(String.raw`^(#)/base_type$`, 'to_int');
+const BASE_TYPE_ENTRY = indexedKeyRegex(String.raw`^(#)/base_type(?:/|$)`, 'to_int');
 
 /**
  * The one `<Type>/<data_type>/<name>` scan (`Theme::_set`/`_get`,
