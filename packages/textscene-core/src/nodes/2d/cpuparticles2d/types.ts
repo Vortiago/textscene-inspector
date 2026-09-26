@@ -49,10 +49,16 @@ export enum CPUParticles2DParam {
 }
 
 /** `PARAM_MAX`: the length of every parameter array. */
-export const CPU_PARTICLES_2D_PARAM_COUNT = 12;
+export const CPU_PARTICLES_2D_PARAM_COUNT = CPU_PARTICLES_PARAMS.length;
 
 /** The Inspector label, the Godot default of `_min` and `_max`, and whether Godot exposes a curve. */
-const SLOT_DETAILS: Readonly<Record<CpuParticlesParam, { label: string; def: number; curve: boolean }>> = {
+interface SlotDetails {
+  label: string;
+  def: number;
+  curve: boolean;
+}
+
+const SLOT_DETAILS: Readonly<Record<CpuParticlesParam, SlotDetails>> = {
   initial_velocity: { label: 'Initial Velocity', def: 0, curve: false },
   angular_velocity: { label: 'Angular Velocity', def: 0, curve: true },
   orbit_velocity: { label: 'Orbit Velocity', def: 0, curve: true },
@@ -72,12 +78,9 @@ const SLOT_DETAILS: Readonly<Record<CpuParticlesParam, { label: string; def: num
  * (`<prefix>_min` / `_max` / `_curve`) and its {@link SLOT_DETAILS}. The parser applies
  * `def` and the formatter hides a slot that holds it, so one table keeps them agreed.
  */
-export const PARAM_SLOTS: ReadonlyArray<{
-  prefix: CpuParticlesParam;
-  label: string;
-  def: number;
-  curve: boolean;
-}> = CPU_PARTICLES_PARAMS.map((prefix) => ({ prefix, ...SLOT_DETAILS[prefix] }));
+export const PARAM_SLOTS: ReadonlyArray<{ prefix: CpuParticlesParam } & SlotDetails> = CPU_PARTICLES_PARAMS.map(
+  (prefix) => ({ prefix, ...SLOT_DETAILS[prefix] })
+);
 
 /** One parameter slot: the random range plus the optional shaping curve. */
 export interface ParticleParam {

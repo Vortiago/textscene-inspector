@@ -22,6 +22,8 @@ const CONTENT_SCALE_STRETCH_INTEGER = 1;
 const formatSize = (size: Size): string => `Vector2i(${size.x}, ${size.y})`;
 const sameSize = (a: Size, b: Size): boolean => a.x === b.x && a.y === b.y;
 const floorAtZero = (size: Size): Size => ({ x: Math.max(size.x, 0), y: Math.max(size.y, 0) });
+/** `_validate_limit_size`'s first test (window.cpp:473): `Vector2i(0, 0)` sets no maximum. */
+const isMaxSizeSet = (maxSize: Size): boolean => maxSize.x > 0 || maxSize.y > 0;
 
 function checkMaxBelowMin(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
   if (rawProps.max_size === undefined || rawProps.min_size === undefined) return [];
@@ -30,13 +32,12 @@ function checkMaxBelowMin(node: RuleContext['node'], rawProps: Record<string, st
   const minSize = matchVector2i(rawProps.min_size);
   if (!maxSize || !minSize) return [];
 
-  // `_clamp_limit_size` (:461) floors a negative component at 0, so `!== 0` agrees
-  // with Godot's `> 0` in `_validate_limit_size` (scene/main/window.cpp:473).
-  const maxSizeSet = maxSize.x !== 0 || maxSize.y !== 0;
-  // One failing axis invalidates the whole max_size, and Godot uses the rendering
-  // server's maximum: `Vector2i(0, 1080)` under `Vector2i(400, 300)` has no maximum at
-  // all, not a capped height. So this checks each component.
-  if (!maxSizeSet || (maxSize.x >= minSize.x && maxSize.y >= minSize.y)) return [];
+  // Both setters floor a negative component at 0 (`_clamp_limit_size`, :461-469) before
+  // the validity test runs. One failing axis invalidates the whole max_size, and Godot uses
+  // the rendering server's maximum: `Vector2i(0, 1080)` under `Vector2i(400, 300)` has no
+  // maximum at all, not a capped height.
+  const storedMax = floorAtZero(maxSize);
+  if (!isMaxSizeSet(storedMax) || validMaxSize(floorAtZero(minSize), storedMax)) return [];
   return [
     {
       severity: 'info',
@@ -53,7 +54,7 @@ function checkMaxBelowMin(node: RuleContext['node'], rawProps: Record<string, st
  * `null` limit is the rendering server's maximum, which this file cannot state, so it never caps.
  */
 function validMaxSize(minSize: Size, maxSize: Size | null): Size | null {
-  if (maxSize === null || (maxSize.x <= 0 && maxSize.y <= 0)) return null;
+  if (maxSize === null || !isMaxSizeSet(maxSize)) return null;
   return maxSize.x >= minSize.x && maxSize.y >= minSize.y ? maxSize : null;
 }
 
@@ -66,12 +67,12 @@ function clampSize(size: Size, minSize: Size, maxSize: Size | null): Size {
 
 /**
  * The file's `size` and the one Godot holds after it applies the `size`, `min_size` and
- * `max_size` lines in order, or `null` when one of them holds no int32. Each setter runs
- * `_update_window_size` (window.cpp:1183-1229), and its clamp overwrites `size`, so an
- * early cap stands under a later floor. The `wrap_controls` floor is not modelled.
+ * `max_size` lines in order, or `null` when `size` is absent or one of them holds no int32.
+ * Each setter runs `_update_window_size` (window.cpp:1183-1229), and its clamp overwrites
+ * `size`, so an early cap stands under a later floor. The `wrap_controls` floor is not modelled.
  */
 function replaySize(rawProps: Record<string, string>): { written: Size; loaded: Size } | null {
-  let written = DEFAULT_SIZE;
+  let written: Size | null = null;
   let size = DEFAULT_SIZE;
   let minSize: Size = { x: 0, y: 0 };
   let maxSize: Size | null = null;
@@ -94,11 +95,10 @@ function replaySize(rawProps: Record<string, string>): { written: Size; loaded: 
     else maxSize = limit;
     size = clampSize(size, minSize, maxSize);
   }
-  return { written, loaded: size };
+  return written ? { written, loaded: size } : null;
 }
 
 function checkSizeClamped(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
-  if (rawProps.size === undefined) return [];
   if (rawProps.min_size === undefined && rawProps.max_size === undefined) return [];
   const replayed = replaySize(rawProps);
   if (!replayed) return [];

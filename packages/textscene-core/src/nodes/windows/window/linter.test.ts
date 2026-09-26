@@ -9,10 +9,12 @@ import { lint, node, scene, expectClean, expectDiagnostic, expectNoDiagnostic } 
 import './linterParser';
 import './linter';
 
+const windowScene = (props: Record<string, number | string>): string => scene(node('Window', props));
+
 describe('Window semantic rules', () => {
   it('reports when max_size is smaller than min_size in some dimension', () => {
     expectDiagnostic(
-      scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(200, 600)' })),
+      windowScene({ min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(200, 600)' }),
       {
         ruleName: 'window-max-size-below-min-size',
         severity: 'info',
@@ -24,7 +26,7 @@ describe('Window semantic rules', () => {
 
   it('reports when max_size is smaller than min_size in both dimensions', () => {
     expectDiagnostic(
-      scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(100, 100)' })),
+      windowScene({ min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(100, 100)' }),
       {
         ruleName: 'window-max-size-below-min-size',
         severity: 'info',
@@ -34,20 +36,30 @@ describe('Window semantic rules', () => {
   });
 
   it('reports nothing when max_size is at or above min_size', () => {
-    expectNoDiagnostic(scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(800, 600)' })), {
+    expectNoDiagnostic(windowScene({ min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(800, 600)' }), {
       ruleName: 'window-max-size-below-min-size',
     });
   });
 
   it('reports nothing when max_size is Vector2i(0, 0) (the "no maximum" sentinel)', () => {
-    expectNoDiagnostic(scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(0, 0)' })), {
+    expectNoDiagnostic(windowScene({ min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(0, 0)' }), {
       ruleName: 'window-max-size-below-min-size',
     });
   });
 
+  it('floors a negative max_size component at 0 before it compares, as the setter does', () => {
+    expectNoDiagnostic(windowScene({ min_size: 'Vector2i(0, 0)', max_size: 'Vector2i(-1, 600)' }), {
+      ruleName: 'window-max-size-below-min-size',
+    });
+    expectDiagnostic(windowScene({ min_size: 'Vector2i(10, 10)', max_size: 'Vector2i(-1, 600)' }), {
+      ruleName: 'window-max-size-below-min-size',
+      severity: 'info',
+    });
+  });
+
   it('stays quiet when only one of min_size/max_size is set', () => {
-    expectClean(scene(node('Window', { min_size: 'Vector2i(400, 300)' })));
-    expectClean(scene(node('Window', { max_size: 'Vector2i(800, 600)' })));
+    expectClean(windowScene({ min_size: 'Vector2i(400, 300)' }));
+    expectClean(windowScene({ max_size: 'Vector2i(800, 600)' }));
   });
 });
 
@@ -59,14 +71,14 @@ describe('Window semantic rules', () => {
 describe('Window sizes with a converted component no int32 holds', () => {
   it('says nothing rather than naming a max_size the file does not state', () => {
     expectNoDiagnostic(
-      scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2(4294967295, 600)' })),
+      windowScene({ min_size: 'Vector2i(400, 300)', max_size: 'Vector2(4294967295, 600)' }),
       { ruleName: 'window-max-size-below-min-size' }
     );
   });
 
   it('still reports on the canonical spelling of the same digits', () => {
     expectDiagnostic(
-      scene(node('Window', { min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(4294967295, 600)' })),
+      windowScene({ min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(4294967295, 600)' }),
       { ruleName: 'window-max-size-below-min-size', severity: 'info', contains: ['Vector2i(-1, 600)'] }
     );
   });
@@ -82,20 +94,18 @@ describe('Window sizes with a converted component no int32 holds', () => {
 // then reaches `_set_size` through `_update_viewport_size` (window.cpp:1352).
 describe('Window size below the viewport floor', () => {
   it('reports the negative component once, as the validator error, with no warning beside it', () => {
-    const diagnostics = lint(scene(node('Window', { size: 'Vector2i(-3, 400)' })));
+    const diagnostics = lint(windowScene({ size: 'Vector2i(-3, 400)' }));
     expect(diagnostics.map((d) => [d.ruleName, d.severity])).toEqual([['strict-parser', 'error']]);
     expect(diagnostics[0]?.message).toContain('size');
   });
 
   it('says nothing about a size Godot silently floors', () => {
-    expectClean(scene(node('Window', { size: 'Vector2i(1, 1)' })));
+    expectClean(windowScene({ size: 'Vector2i(1, 1)' }));
     // Popup resolves Window's validators through the base-walk, so this covers
     // the whole family the retired rule reached.
     expectClean(scene(node('Popup', { size: 'Vector2i(1, 600)' })));
   });
 });
-
-const windowScene = (props: Record<string, number | string>): string => scene(node('Window', props));
 
 /**
  * `_update_window_size` raises `size` to `min_size` and caps it at a valid `max_size`
