@@ -75,9 +75,12 @@ export function readBezierData(
   const missing = format.otherRequiredKeys.find(({ present }) => !present.test(data));
   if (missing !== undefined) return { refusal: { kind: 'missing-key', key: missing.key } };
 
+  // The flat constructor builds `args.size() / vectorSize` vectors (variant_parser.cpp:1555,
+  // 1573), so a trailing partial vector is dropped before `_set_data` counts `pc`.
   const floats = packedFloatCount(format.pointsForms, points, format.vectorSize);
-  if (floats % format.floatsPerPoint !== 0) return { refusal: { kind: 'partial-point', floats } };
-  return { refusal: null, loaded: { points, controlPoints: floats / format.floatsPerPoint } };
+  const vectors = Math.floor(floats / format.vectorSize);
+  if (vectors % 3 !== 0) return { refusal: { kind: 'partial-point', floats } };
+  return { refusal: null, loaded: { points, controlPoints: vectors / 3 } };
 }
 
 /** The sentence a diagnostic gives for `refusal`, naming its consequence. */

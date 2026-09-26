@@ -64,9 +64,9 @@ describe('curve3d-loadable', () => {
   });
 
   it('rejects a points array that is not a whole number of control points', () => {
-    // Nine floats per point: in.xyz, out.xyz, position.xyz. Ten is a truncated point.
+    // Nine floats per point: in.xyz, out.xyz, position.xyz. Twelve are four vectors, a truncated point.
     const errors = curveErrors(
-      lint('"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),\n"tilts": PackedFloat32Array(0)')
+      lint('"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),\n"tilts": PackedFloat32Array(0)')
     );
     expect(errors).toHaveLength(1);
     expect(errors[0]!.message).toContain('9 floats each');

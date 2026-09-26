@@ -41,6 +41,12 @@ describe('readBezierData', () => {
     });
   });
 
+  it('drops a trailing partial vector before it counts control points (edge case)', () => {
+    const read = readBezierData('{"points": PackedVector2Array(0, 0, 0, 0, 10, 20, 5)}', CURVE2D_DATA);
+    expect(read.refusal).toBeNull();
+    expect(read.refusal === null && read.loaded.controlPoints).toBe(1);
+  });
+
   it('checks "points" before "tilts", as `_set_data` does (edge case)', () => {
     expect(readBezierData('{}', CURVE3D_DATA).refusal).toEqual({ kind: 'missing-key', key: 'points' });
   });

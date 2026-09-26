@@ -65,6 +65,14 @@ describe('decodeCurve2D', () => {
     expect(pointsOf('PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)')).toEqual([]);
   });
 
+  // The variant parser builds `args.size() / 2` vectors, so the odd float is gone
+  // before `_set_data` counts them.
+  it('loads the whole points before a trailing partial vector', () => {
+    expect(pointsOf('PackedVector2Array(1, 2, 3, 4, 10, 20, 5)')).toEqual([
+      { in: { x: 1, y: 2 }, out: { x: 3, y: 4 }, position: { x: 10, y: 20 } },
+    ]);
+  });
+
   describe('point_count', () => {
     const TWO_POINTS = 'PackedVector2Array(0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 20, 0)';
 

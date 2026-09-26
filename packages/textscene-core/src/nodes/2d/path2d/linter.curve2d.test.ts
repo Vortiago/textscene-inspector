@@ -56,6 +56,12 @@ describe('curve2d-loadable', () => {
     expect(errors[0]!.message).toContain('6 floats each');
   });
 
+  // The flat constructor builds `args.size() / 2` vectors (variant_parser.cpp:1555), so
+  // the odd float is gone before `_set_data` counts them, and one whole point loads.
+  it('accepts a trailing partial vector, which the variant parser drops', () => {
+    expect(curveErrors(lint('"points": PackedVector2Array(0, 0, 0, 0, 10, 20, 5)'))).toEqual([]);
+  });
+
   // `curve.cpp:1241` `PackedVector2Array rp = p_data["points"]` is a Variant
   // conversion, and ARRAY is a strict source for PACKED_VECTOR2_ARRAY
   // (variant.cpp:449-478), so both array spellings load.

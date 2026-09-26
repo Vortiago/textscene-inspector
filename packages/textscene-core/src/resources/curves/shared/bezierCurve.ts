@@ -64,8 +64,8 @@ function readControlPoints<P>(value: unknown, reader: BezierCurveReader<P>): P[]
   }
 
   const points: P[] = [];
-  for (let base = 0; base < flat.length; base += reader.format.floatsPerPoint) {
-    points.push(reader.pointAt(flat, base));
+  for (let i = 0; i < read.loaded.controlPoints; i++) {
+    points.push(reader.pointAt(flat, i * reader.format.floatsPerPoint));
   }
   return points;
 }
