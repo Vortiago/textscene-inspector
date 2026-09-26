@@ -1,0 +1,36 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitnode3dplainnodevisibility"]
+
+; One variable: the orange box is a Node3D under a plain Node under a hidden Node3D. Godot climbs
+; visibility only through Node3D parents (node_3d.cpp:1132-1143), so the orange box draws beside
+; the grey reference. No other golden hides a Node3D above a plain Node, so a hide that reaches
+; across one shows only here.
+
+[sub_resource type="BoxMesh" id="BoxMesh_box"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Material_reference"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_escaped"]
+albedo_color = Color(0.9, 0.45, 0.1, 1)
+
+[node name="Scene" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 4, 6)
+fov = 70.0
+
+[node name="Reference" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
+mesh = SubResource("BoxMesh_box")
+surface_material_override/0 = SubResource("Material_reference")
+
+[node name="Hidden" type="Node3D" parent="."]
+visible = false
+
+[node name="Folder" type="Node" parent="Hidden"]
+
+[node name="Escaped" type="MeshInstance3D" parent="Hidden/Folder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+mesh = SubResource("BoxMesh_box")
+surface_material_override/0 = SubResource("Material_escaped")

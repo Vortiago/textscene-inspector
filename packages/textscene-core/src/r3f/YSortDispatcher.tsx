@@ -27,7 +27,6 @@ import {
   useLayerRank,
   usePaintRange,
 } from './contexts/PaintOrderContext.js';
-import { ParentIsCanvasItemProvider } from './canvasRootScope.js';
 import { joinPath } from '../utils/nodePath.js';
 import { useCanvasLayerIndex } from './lighting2d/canvasItemPlacement.js';
 // Sorted children go back through the one dispatcher, so instances, selection,
@@ -170,10 +169,7 @@ function SortedChildren({
   }, [sorted, ownSequence, paintRange]);
 
   return (
-    // Every item descends from this node, and every level `LiftedAncestors`
-    // restores is a CanvasItem, so each node's parent cast succeeds
-    // (`canvas_item.cpp:565-571`) whatever the sort's re-parenting hides.
-    <ParentIsCanvasItemProvider value>
+    <>
       {packed.map(({ item, range }) => {
         const Renderer = item.node ? nodeComponentRegistry.getYSortGroup(item.node.type)?.Renderer : undefined;
         if (item.kind === 'tileGroup' && item.node && Renderer) {
@@ -216,6 +212,6 @@ function SortedChildren({
           <DispatchedNode node={child} path={joinPath(basePath, child.name)} />
         </PaintRangeProvider>
       ))}
-    </ParentIsCanvasItemProvider>
+    </>
   );
 }

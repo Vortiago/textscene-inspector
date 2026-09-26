@@ -1,0 +1,35 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitnode3dtoplevel"]
+
+; One variable: the orange box sets `top_level = true` under a Node3D moved 4 units right. Its
+; global transform is its local one (node_3d.cpp:656-660), so it sits at x = 1, beside the grey
+; reference at x = -1. No other golden sets `top_level` on a Node3D, so a parent transform that
+; still reaches one shows only here.
+
+[sub_resource type="BoxMesh" id="BoxMesh_box"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Material_reference"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_detached"]
+albedo_color = Color(0.9, 0.45, 0.1, 1)
+
+[node name="Scene" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 4, 6)
+fov = 70.0
+
+[node name="Reference" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
+mesh = SubResource("BoxMesh_box")
+surface_material_override/0 = SubResource("Material_reference")
+
+[node name="Moved" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 0)
+
+[node name="Detached" type="MeshInstance3D" parent="Moved"]
+top_level = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+mesh = SubResource("BoxMesh_box")
+surface_material_override/0 = SubResource("Material_detached")

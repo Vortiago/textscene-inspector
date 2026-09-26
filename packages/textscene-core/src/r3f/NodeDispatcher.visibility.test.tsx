@@ -2,12 +2,12 @@
  * The tree-row eye button: `SelectionContext.hiddenNodePaths` sets `visible` on
  * the dispatcher's wrapper `<group>`, or the object stays rendered.
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../parser/types';
 import { NodeDispatcher } from './NodeDispatcher';
-import { SelectionProvider, useSelection } from './contexts/SelectionContext';
+import { SelectionProvider } from './contexts/SelectionContext';
+import { HiddenSeeder } from './testing/HiddenSeeder';
 
 import './nodes/index';
 
@@ -18,14 +18,6 @@ function makeNode(name: string, type: string, children: TscnNode[] = []): TscnNo
     children,
     properties: {},
   };
-}
-
-function HiddenPathSeeder({ paths }: { paths: readonly string[] }) {
-  const { toggleHidden } = useSelection();
-  useEffect(() => {
-    for (const p of paths) toggleHidden(p);
-  }, [paths, toggleHidden]);
-  return null;
 }
 
 interface WrapperInstance {
@@ -58,7 +50,7 @@ describe('<NodeDispatcher> visibility wire-up (WI-UX-1)', () => {
 
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
-        <HiddenPathSeeder paths={['Alpha']} />
+        <HiddenSeeder paths={['Alpha']} />
         <NodeDispatcher nodes={nodes} />
       </SelectionProvider>,
     );
@@ -79,7 +71,7 @@ describe('<NodeDispatcher> visibility wire-up (WI-UX-1)', () => {
 
     const renderer = await ReactThreeTestRenderer.create(
       <SelectionProvider>
-        <HiddenPathSeeder paths={['Parent']} />
+        <HiddenSeeder paths={['Parent']} />
         <NodeDispatcher nodes={nodes} />
       </SelectionProvider>,
     );

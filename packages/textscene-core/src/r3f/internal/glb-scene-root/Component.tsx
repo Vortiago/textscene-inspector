@@ -21,7 +21,12 @@ import { useNodePath } from '../../contexts/NodePathContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { usePlaybackLoop } from '../../animation/usePlaybackLoop';
 import { applyLoopOverride, LOOP_REPEAT_SETTINGS } from '../../animation/loopOverride';
-import { snapshotSubtree, restoreSnapshot, type PoseSnapshot } from '../../animation/poseSnapshot';
+import {
+  restoreSnapshot,
+  snapshotPose,
+  subtreeObjects,
+  type PoseSnapshot,
+} from '../../animation/poseSnapshot';
 import { useAnimationDriverMount } from '../../animation/useAnimationDriverMount';
 import { joinPath } from '../../../utils/nodePath';
 import type { ReactNode } from 'react';
@@ -120,9 +125,13 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   }, [object]);
 
   // A full-subtree snapshot (poseSnapshot.ts), since skeletal and blended clips touch any bone.
-  // AnimationPlayer snapshots only its tracks.
+  // AnimationPlayer snapshots only its tracks. glTF clips come named for three's own binding.
   const snapshotRef = useRef<PoseSnapshot[]>([]);
   const restore = useCallback(() => restoreSnapshot(snapshotRef.current), []);
+  const bind = useCallback(
+    () => ({ clips, targets: object ? subtreeObjects(object) : [] }),
+    [clips, object]
+  );
 
   const { mixerRef, actionsRef } = useAnimationDriverMount({
     // Always passed, so the AnimationDriverRegistry entry exists whatever the selection, and an
@@ -130,17 +139,15 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     // mixer build on isActive.
     object: object ?? null,
     clips,
+    bind,
     // The synthesised AnimationPlayer path, not the GLB root, so an AnimationTree resolving
     // `anim_player` here finds the object and its clips.
     nodePath: animationPlayerPath,
     isActive,
     durations,
-    onMixerBuilt: useCallback(
-      (root) => {
-        snapshotRef.current = snapshotSubtree(root);
-      },
-      []
-    ),
+    onMixerBuilt: useCallback((targets) => {
+      snapshotRef.current = snapshotPose(targets);
+    }, []),
     restore,
   });
 

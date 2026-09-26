@@ -1,21 +1,13 @@
 /**
- * <AnimationPlayer>, an invisible node that drives sibling objects. Its empty group keeps it in the
- * tree, and its THREE.AnimationMixer, rooted at `root_node` (ADR-0011), plays the resolved clips
- * under the scene's AnimationTransport, binding KeyframeTracks by name-path. It loads stopped, and
- * stopping restores the transforms captured at mount.
+ * <AnimationPlayer>, an invisible node that drives other nodes. Its empty group keeps it in the
+ * tree. Each track names its target by scene path, resolved from `root_node` as Godot's `get_node`
+ * walks it. It binds that exact object when a driver builds a mixer (ADR-0011). The mixer plays
+ * under the scene's AnimationTransport. It loads stopped, and stopping restores what it captured.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
-import {
-  Euler,
-  Group,
-  Object3D,
-  Quaternion,
-  Vector3,
-  type AnimationClip,
-  type EulerOrder,
-} from 'three';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import type { AnimationClip, EulerOrder, Object3D } from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -23,34 +15,38 @@ import {
   useAnimationTransport,
   type PlayState,
 } from '../../../r3f/contexts/AnimationTransportContext';
+import type { BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
 import { applyLoopOverride } from '../../../r3f/animation/loopOverride';
 import { useAnimationDriverMount } from '../../../r3f/animation/useAnimationDriverMount';
+import {
+  restoreSnapshot,
+  snapshotPose,
+  type PoseSnapshot,
+} from '../../../r3f/animation/poseSnapshot';
+import {
+  bindClip,
+  splitTrackName,
+  trackTargetFinder,
+  trackTargetPaths,
+} from '../../../r3f/animation/trackTargets';
 import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueContext';
-import { resolveAnimations, type GodotAnimation } from './animationResolver';
-import { buildClip, loopSettingsFor, resolveTrackBinding } from './clipBuilder';
+import { useUniqueNamePaths } from '../../../r3f/contexts/ViewportTextureContext';
+import { resolveAnimations } from './animationResolver';
+import { resolveAnimationRootPath, resolveTrackScenePath } from './animationRoot';
+import { buildClip, loopSettingsFor } from './clipBuilder';
 import {
   sampleSteppedValue,
   sampleInterpolatedValue,
-  resolveTargetNodePath,
   VALUE_PUSH_PROPERTIES,
 } from './valueTracks';
 
-import { resolveAnimationRoot } from './animationRoot';
 import type { AnimationPlayerProperties } from './types';
 
 /** Godot composes Euler rotations in YXZ order; THREE objects default to XYZ. */
 const GODOT_EULER_ORDER: EulerOrder = 'YXZ';
-
-interface Snapshot {
-  object: Object3D;
-  position: Vector3;
-  rotation: Euler;
-  quaternion: Quaternion;
-  scale: Vector3;
-}
 
 export function AnimationPlayer({ node, children }: NodeComponentProps) {
   const properties = node.properties as AnimationPlayerProperties;
@@ -80,12 +76,27 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     [properties.libraries, internalResources]
   );
 
-  // Build THREE.AnimationClips from the resolved GodotAnimations.
-  // Per-driver: AnimationPlayer builds clips from GodotAnimation tracks;
-  // GLBSceneRoot uses ready-made glTF clips.
+  // The scene path `root_node` names from this player, or null when it leaves the scene.
+  // A `%Name` segment reads the table of the node the walk stands on (node.cpp:1930-1938): the
+  // player for `root_node`, the Animation root for each Track.
+  const playerNames = useUniqueNamePaths(nodePath);
+  const rootPath = useMemo(
+    () =>
+      nodePath === null ? null : resolveAnimationRootPath(nodePath, properties.root_node, playerNames),
+    [nodePath, properties.root_node, playerNames]
+  );
+  const rootNames = useUniqueNamePaths(rootPath);
+  const scenePathOf = useCallback(
+    (targetPath: string) =>
+      rootPath === null ? null : resolveTrackScenePath(rootPath, targetPath, rootNames),
+    [rootPath, rootNames]
+  );
+
+  // Clip templates, each track named by its target's scene path. `bind` turns them into clips that
+  // move the exact objects. GLBSceneRoot uses ready-made glTF clips.
   const clips = useMemo<AnimationClip[]>(
-    () => animations.map((a) => buildClip(a)),
-    [animations]
+    () => animations.map((a) => buildClip(a, scenePathOf)),
+    [animations, scenePathOf]
   );
 
   const durations = useMemo(
@@ -93,20 +104,10 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     [animations]
   );
 
-  // A callback ref, so state updates when the group mounts. The mixer root resolves from the group
-  // (root_node may be a sibling), and useAnimationDriverMount needs a reactive value, not a ref
-  // read inside useMemo.
-  const [mountedGroup, setMountedGroup] = useState<Group | null>(null);
-  const groupCallbackRef = useCallback((group: Group | null) => {
-    setMountedGroup(group);
-  }, []);
-
-  // Per-driver mixer root: AnimationPlayer resolves through root_node (sibling/
-  // ancestor), while GLBSceneRoot roots on the object itself.
-  const mixerRoot = useMemo<Object3D | null>(() => {
-    if (!mountedGroup) return null;
-    return resolveAnimationRoot(mountedGroup, properties.root_node) ?? null;
-  }, [mountedGroup, properties.root_node]);
+  // The mixer roots on the scene, the one ancestor of every node a track can name, whether that
+  // node nests or escapes its parent (`parentSpaceScope.tsx`). Inside a SubViewport it is the
+  // viewport's own scene.
+  const mixerRoot = useThree((state) => state.scene);
 
   // Loop modes indexed by clip name; configureAction below closes over the
   // memo (usePlaybackLoop reads the latest closure each frame).
@@ -115,30 +116,33 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     [animations]
   );
 
-  // Godot composes Euler rotations in YXZ order. Reorder each rotation target as soon as the root
-  // resolves, whatever the selection, since an AnimationTree can play these clips without the player
-  // being active (ADR-0019). This runs before the mount hook, so its snapshot keeps the YXZ order
-  // (restoreSnapshot preserves it through Euler.copy).
-  useEffect(() => {
-    if (mixerRoot) applyGodotEulerOrder(mixerRoot, animations);
-  }, [mixerRoot, animations]);
+  // `bind` reads the scene as it stands when a driver builds a mixer, this player's or an
+  // AnimationTree's (ADR-0019), so it finds every target mounted by then.
+  const nodeObjectMap = useOptionalSelection()?.nodeObjectMap ?? null;
+  const bind = useCallback((): BoundClips => {
+    const targets = new Map<string, Object3D>();
+    const findTarget = trackTargetFinder(nodeObjectMap ?? new Map());
+    for (const path of trackTargetPaths(clips)) {
+      const target = findTarget(path);
+      if (target) targets.set(path, target);
+    }
+    applyGodotEulerOrder(clips, targets);
+    return { clips: clips.map((clip) => bindClip(clip, targets)), targets: [...targets.values()] };
+  }, [clips, nodeObjectMap]);
 
-  // Per-driver pose snapshot: track-derived targets + Godot Euler-order reorder.
-  // GLBSceneRoot uses the full-subtree poseSnapshot instead.
-  const snapshotRef = useRef<Snapshot[]>([]);
+  // Per-driver pose snapshot of the bound targets. GLBSceneRoot snapshots its whole subtree instead.
+  const snapshotRef = useRef<PoseSnapshot[]>([]);
 
   const restore = useCallback(() => restoreSnapshot(snapshotRef.current), []);
 
-  const onMixerBuilt = useCallback(
-    (root: Object3D) => {
-      snapshotRef.current = snapshotTargets(root, animations);
-    },
-    [animations]
-  );
+  const onMixerBuilt = useCallback((targets: Object3D[]) => {
+    snapshotRef.current = snapshotPose(targets);
+  }, []);
 
   const { mixerRef, actionsRef } = useAnimationDriverMount({
     object: mixerRoot,
     clips,
+    bind,
     nodePath,
     // Registration stays on selection: Godot lists an inactive player's animations, and an
     // AnimationTree reading them through `anim_player` is gated by its own active flag (ADR-0019).
@@ -179,19 +183,17 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   // The selected clip's value-push tracks with target paths resolved once
   // (the player path / root_node / track target are constant for the clip).
   const valueTargets = useMemo(() => {
-    if (!isDriving || nodePath === null) return null;
+    if (!isDriving) return null;
     const clip = animations.find((a) => a.name === transport.selectedClip);
     if (!clip) return null;
     const targets = clip.tracks
       .filter((t) => t.type === 'value' && Object.hasOwn(VALUE_PUSH_PROPERTIES, t.property))
-      .map((t) => ({
-        path: resolveTargetNodePath(nodePath, properties.root_node, t.targetPath),
-        property: t.property,
-        keys: t.keys,
-        interp: t.interp,
-      }));
+      .flatMap((t) => {
+        const path = scenePathOf(t.targetPath);
+        return path === null ? [] : [{ path, property: t.property, keys: t.keys, interp: t.interp }];
+      });
     return targets.length > 0 ? { clipName: clip.name, targets } : null;
-  }, [isDriving, nodePath, animations, transport.selectedClip, properties.root_node]);
+  }, [isDriving, scenePathOf, animations, transport.selectedClip]);
 
   // Owned (path, property) pairs currently driven, keyed by `${path}:${property}`.
   const ownedValues = useRef<Map<string, { path: string; property: string }>>(new Map());
@@ -238,7 +240,6 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
 
   return (
     <group
-      ref={groupCallbackRef}
       name={node.name}
       position={position}
       rotation={rotation}
@@ -251,62 +252,15 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
 }
 
 /**
- * Resolve a track's target node against the animation root, the object the
- * mixer drives, so the Euler reorder and the base-transform snapshot land on
- * it. Goes through the same `resolveTrackBinding` the track names come from, so
- * the two cannot disagree about which object a path means.
+ * Reorder every rotation-track target to Godot's YXZ Euler order, preserving the current orientation
+ * (`Euler.reorder`), so multi-axis Euler rotations compose as Godot's do. A rotation template track
+ * is named `<path>.rotation[axis]` (`clipBuilder.ts`).
  */
-export function resolveTrackTarget(root: Object3D, targetPath: string): Object3D | undefined {
-  const binding = resolveTrackBinding(targetPath);
-  if (binding.kind === 'root') return root;
-  if (binding.kind === 'unbindable') return undefined;
-  return root.getObjectByName(binding.name);
-}
-
-/**
- * Reorder every rotation-track target to Godot's YXZ Euler order, preserving
- * the current orientation (`Euler.reorder`). Single-axis tracks are unaffected;
- * multi-axis Euler rotations match Godot's composition.
- */
-function applyGodotEulerOrder(root: Object3D, animations: GodotAnimation[]): void {
-  const seen = new Set<string>();
-  for (const animation of animations) {
-    for (const track of animation.tracks) {
-      if (track.property !== 'rotation' && track.property !== 'rotation_degrees') continue;
-      if (seen.has(track.targetPath)) continue;
-      seen.add(track.targetPath);
-      const object = resolveTrackTarget(root, track.targetPath);
-      if (object) object.rotation.reorder(GODOT_EULER_ORDER);
+function applyGodotEulerOrder(clips: readonly AnimationClip[], targets: ReadonlyMap<string, Object3D>): void {
+  for (const clip of clips) {
+    for (const track of clip.tracks) {
+      const { path, property } = splitTrackName(track.name);
+      if (property.startsWith('.rotation[')) targets.get(path)?.rotation.reorder(GODOT_EULER_ORDER);
     }
-  }
-}
-
-function snapshotTargets(root: Object3D, animations: GodotAnimation[]): Snapshot[] {
-  const seen = new Set<string>();
-  const snapshots: Snapshot[] = [];
-  for (const animation of animations) {
-    for (const track of animation.tracks) {
-      if (seen.has(track.targetPath)) continue;
-      seen.add(track.targetPath);
-      const object = resolveTrackTarget(root, track.targetPath);
-      if (!object) continue;
-      snapshots.push({
-        object,
-        position: object.position.clone(),
-        rotation: object.rotation.clone(),
-        quaternion: object.quaternion.clone(),
-        scale: object.scale.clone(),
-      });
-    }
-  }
-  return snapshots;
-}
-
-function restoreSnapshot(snapshots: Snapshot[]): void {
-  for (const snap of snapshots) {
-    snap.object.position.copy(snap.position);
-    snap.object.rotation.copy(snap.rotation);
-    snap.object.quaternion.copy(snap.quaternion);
-    snap.object.scale.copy(snap.scale);
   }
 }

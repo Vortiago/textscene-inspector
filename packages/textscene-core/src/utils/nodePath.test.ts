@@ -3,6 +3,7 @@ import {
   joinPath,
   getAncestorPaths,
   resolveNodePathLiteral,
+  resolveRelativePath,
   resolveParentPath,
   SCENE_ROOT_PATH,
 } from './nodePath';
@@ -37,6 +38,16 @@ describe('nodePath utilities', () => {
 
     it('should handle three-level path', () => {
       expect(getAncestorPaths('A/B/C')).toEqual(['A', 'A/B']);
+    });
+  });
+
+  describe('resolveRelativePath', () => {
+    it('walks from the base node itself', () => {
+      expect(resolveRelativePath('Root/Player', '../Arm')).toBe('Root/Arm');
+    });
+
+    it('reaches nothing for an absolute path, which measures from the live SceneTree', () => {
+      expect(resolveRelativePath('Root/Player', '/root/Root/Arm')).toBeNull();
     });
   });
 

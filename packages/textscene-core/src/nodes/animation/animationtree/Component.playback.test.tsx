@@ -32,6 +32,7 @@ import {
   AnimationDriverProvider,
   useRegisterDriver,
 } from '../../../r3f/contexts/AnimationDriverContext';
+import { subtreeObjects } from '../../../r3f/animation/poseSnapshot';
 
 const TREE_PATH = 'Root/Tree';
 const DRIVER_PATH = 'Root/Player';
@@ -126,8 +127,9 @@ function RegisterDriver({
   clips: THREE.AnimationClip[];
 }) {
   const registerDriver = useRegisterDriver();
+  // glTF-style ready-made clips, bound by name, as GLBSceneRoot publishes them.
   useEffect(
-    () => registerDriver(DRIVER_PATH, { object, clips }),
+    () => registerDriver(DRIVER_PATH, { object, clips, bind: () => ({ clips, targets: subtreeObjects(object) }) }),
     [registerDriver, object, clips]
   );
   return null;

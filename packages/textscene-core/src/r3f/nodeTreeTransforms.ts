@@ -8,6 +8,8 @@
 import * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
 import type { Node3DProperties, Transform3D } from '../nodes/base/node3d/types.js';
+import { isTopLevelItem } from './canvasPaintOrder.js';
+import { nodeEscapesParent } from './nodeEscapesParent.js';
 
 /** A parsed `Transform3D` as a `Matrix4`. `basis_x/y/z` are the matrix's ROWS. */
 export function transform3DToMatrix(t: Transform3D): THREE.Matrix4 {
@@ -36,7 +38,11 @@ export function localMatrix3D(node: TscnNode): THREE.Matrix4 {
   return t ? transform3DToMatrix(t) : new THREE.Matrix4();
 }
 
-/** Global Matrix4 = the root-to-node product of local matrices. */
+/**
+ * Global Matrix4: the product of local matrices from the nearest node that carries no Node3D
+ * transform, or from the nearest `top_level` node. A Node3D composes only through a Node3D parent
+ * (`node_3d.cpp:150`, `:656-660`), and `nodeEscapesParent` names the nodes that break the chain.
+ */
 export function globalMatrix3D(
   path: string,
   nodeByPath: Map<string, TscnNode>
@@ -46,7 +52,13 @@ export function globalMatrix3D(
   for (const segment of path.split('/')) {
     acc = acc ? `${acc}/${segment}` : segment;
     const node = nodeByPath.get(acc);
-    if (node) result.multiply(localMatrix3D(node));
+    if (!node) continue;
+    if (nodeEscapesParent(node, 'Node3D')) {
+      result.identity();
+      continue;
+    }
+    if (isTopLevelItem(node)) result.identity();
+    result.multiply(localMatrix3D(node));
   }
   return result;
 }

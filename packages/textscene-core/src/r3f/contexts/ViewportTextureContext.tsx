@@ -16,7 +16,11 @@ import {
 } from 'react';
 import type { TscnNode } from '../../parser/types.js';
 import { useResourceLoader } from '../../resources/useResource.js';
-import { cachedUniqueNameClaims, type UniqueNameClaim } from '../../utils/uniqueNames.js';
+import {
+  cachedUniqueNameClaims,
+  uniqueNameLivePaths,
+  type UniqueNameClaim,
+} from '../../utils/uniqueNames.js';
 import { claimOwnerOf, ownerClaims } from '../uniqueNameOwner.js';
 import { liveTreeContext, useLiveTreeVersion } from '../useLiveSceneTree.js';
 import { viewportTextureUniqueNameKey } from '../viewportTexturePath.js';
@@ -76,6 +80,23 @@ export function useUniqueNameClaims(
     // owner walk reads and which is mutated outside React.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graph, loader, version, path]);
+}
+
+/**
+ * The `%Name` table the node at `path` resolves against, as the live paths the dispatcher
+ * registers: the composed render tree spells a path as a claim's `livePath`. A rebuilt table with
+ * the same entries keeps the old map, since a sub-scene owner's table is rebuilt on every load.
+ */
+export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, string> | undefined {
+  const claims = useUniqueNameClaims(path);
+  const signature = useMemo(
+    () => (claims ? JSON.stringify([...uniqueNameLivePaths(claims)]) : null),
+    [claims]
+  );
+  return useMemo(
+    () => (signature === null ? undefined : new Map<string, string>(JSON.parse(signature))),
+    [signature]
+  );
 }
 
 /**

@@ -1,5 +1,7 @@
 # AnimationPlayer drives sibling objects through a THREE.AnimationMixer rooted at root_node
 
+- Status: Accepted. Name binding amended by the exact-binding amendment (below).
+
 Every other node component renders only itself (the "each component renders itself" invariant, with non-visual types as transform-only groups per ADR-0005 and ADR-0008). An AnimationPlayer animates *other* nodes, named by `NodePath("Child:property")` tracks. A `THREE.AnimationMixer` built on the player's **Animation root** (`root_node`, default `..`, the parent of the player) drives them. It binds `THREE.KeyframeTrack`s by name-path (`"Mesh.position"`). `THREE.PropertyBinding` resolves each target by a search of the subtree. It finds the named, transform-bearing object through the unnamed pickable wrappers of the dispatcher, so the mixer overrides the base transform of that object while it plays. `useFrame` advances the mixer, gated by the scene-level **Animation transport**. The transport starts stopped on load, showing the authored pose, until the user presses play.
 
 Rejected: a central animation-value context that computes per-frame values and pushes them into every animatable component. The mixer keeps *all* animation logic inside the AnimationPlayer slice, and every target component (sprite2d, meshinstance3d, the Node2D/Node3D bases, …) stays untouched. The cost is three dependencies. The name-based binding of three.js must resolve through the wrapper nesting of the dispatcher (a test pins it). Target names must be unique within the subtree of `root_node`. Tracks must not reach above it.
@@ -13,3 +15,38 @@ Rejected: a central animation-value context that computes per-frame values and p
 - **Rotation fidelity:** rotation drives per-component `.rotation[x|y|z]` (NumberKeyframeTrack), not a whole-`.rotation` VectorKeyframeTrack. A whole-Euler write bypasses the onChange of Euler and leaves `.quaternion` (which builds the matrix) stale, so nothing rotates. Per-component lerp also matches Godot and supports a full turn beyond 180°. Targets are reordered to Godot's `YXZ` Euler order so multi-axis rotations compose identically. `loop_mode` 2 maps to `LoopPingPong`.
 - AnimationPlayer is a *transform-only group that is also an animation driver*: invisible but not inert.
 - Playback is non-deterministic over time, so playback fixtures stay out of the visual-regression manifest (like Label3D). The default (stopped) render stays byte-stable.
+
+> **Amendment (exact binding):** a Track binds the node its NodePath names, not a name found in a
+> subtree. These parts above no longer hold: the mixer rooted at `root_node` in the title, the
+> name-path binding in the first two paragraphs, "at or below the animation root" in the first
+> bullet, and the three bullets on name-only Track names, on dropping a `..` Track and on
+> `resolveTrackBinding`. Now:
+>
+> - `resolveAnimationRootPath` resolves `root_node` from the player's own path, and each Track
+>   resolves from that root, both with Godot's `get_node` walk (`resolveRelativePath`). A clip
+>   template names each Track by its target's scene path (`Root/Right/Arm.position`). A path that
+>   climbs above the scene root reaches nothing, and the player drops it with a warning. A `..`
+>   sibling of the Animation root binds like any other node, and the root does not move.
+> - The walk follows `_update_caches` (`animation_mixer.cpp:661-666`, `:689`, `:714`). An empty
+>   `root_node` reaches nothing, so the player drives nothing (`node.cpp:1894`). An absolute path
+>   measures from the SceneTree root, which a preview has no counterpart for, so it reaches
+>   nothing. A `%Name` segment reads the owner's unique-name table, the player's for `root_node`
+>   and the Animation root's for a Track. A Track with `enabled = false` is skipped.
+> - Each driver calls `bind()` when it builds a mixer, the player's own or an AnimationTree's
+>   (ADR-0019). `bind()` reads the scene as it stands then: it finds every target mounted by that
+>   build, and one that mounts later binds at the next build. `trackTargets.ts` finds the object the
+>   dispatcher registered at that path: the named group inside its wrapper. It reaches content that
+>   no path registers, such as a glTF scene, from the longest registered prefix, one name for each
+>   remaining segment. That walk never enters another node's wrapper. `bind()` renames the Track
+>   to the object's uuid, which `PropertyBinding.findNode` matches exactly. A path with no target
+>   warns and binds nothing, so `Left/Arm` and `Right/Arm` never collide and `Nope/Arm` moves
+>   nothing.
+> - The mixer roots on the scene, `useThree().scene`. A node can escape its parent's three group
+>   (ADR-0008), so only the scene is an ancestor of every target. Inside a SubViewport it is the
+>   viewport's own scene.
+> - The driver entry carries `bind()`, which returns the bound clips and the objects they move.
+>   Every driver snapshots exactly those objects. The YXZ Euler reorder happens in `bind`, so an
+>   AnimationTree that plays an unselected player's clips gets it too.
+> - Rejected: one action per target through `clipAction(clip, target)`. One animation would
+>   become several actions, which the transport, `usePlaybackLoop` and an AnimationTree blend
+>   would all have to start, seek and weight together. The uuid keeps one clip per animation.

@@ -118,9 +118,8 @@ describe('AnimationPlayer degraded paths', () => {
   });
 
   it('invalid root_node NodePath: mounts and tracks are skipped gracefully (no crash, no drive)', async () => {
-    // Climb past the real tree (Root has no further named ancestor) so
-    // resolveAnimationRoot returns null, and the mixer-build effect bails out
-    // before ever creating a THREE.AnimationMixer.
+    // Climb past the scene root, so resolveAnimationRootPath returns null and
+    // every track leaves the scene: the player mounts and drives nothing.
     const renderer = await mountScene(
       { root_node: 'NodePath("../..")', autoplay: 'slide' },
       RESOLVABLE_INTERNAL
@@ -129,7 +128,7 @@ describe('AnimationPlayer degraded paths', () => {
 
     await ReactThreeTestRenderer.act(async () => transport.play());
     await renderer.advanceFrames(2, 0.5);
-    // No mixer was built, so the target keeps its authored position.
+    // Every track was dropped, so the target keeps its authored position.
     expect(targetX(renderer)).toBeCloseTo(0);
   });
 });

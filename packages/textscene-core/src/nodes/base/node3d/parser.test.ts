@@ -8,6 +8,22 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseHeading } from '../../../parser/utils';
 
 describe('Node3D Parser', () => {
+  describe('top_level', () => {
+    const heading = parseHeading('[node name="Free" type="Node3D" parent="."]')!;
+
+    it('reads top_level = true', () => {
+      expect(parseNode3D(heading, { top_level: 'true' }).top_level).toBe(true);
+    });
+
+    it('reads top_level = false', () => {
+      expect(parseNode3D(heading, { top_level: 'false' }).top_level).toBe(false);
+    });
+
+    it('leaves top_level unset when the file omits it', () => {
+      expect(parseNode3D(heading, {}).top_level).toBeUndefined();
+    });
+  });
+
   describe('parseNode3D', () => {
     it('should parse basic Node3D with name and parent', () => {
       const heading = parseHeading('[node name="MyNode" type="Node3D" parent="."]');

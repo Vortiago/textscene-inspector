@@ -14,11 +14,20 @@ import {
 } from 'react';
 import type * as THREE from 'three';
 
-export interface AnimationDriverEntry {
-  /** The object a `THREE.AnimationMixer` roots on. Clips bind to its descendants by name. */
-  object: THREE.Object3D;
-  /** Ready-to-play clips this driver owns. */
+/** A driver's clips bound to the scene as it stands, ready for a mixer on the entry's object. */
+export interface BoundClips {
   clips: THREE.AnimationClip[];
+  /** Every object the bound clips move, whose pose a driver restores on stop. */
+  targets: THREE.Object3D[];
+}
+
+export interface AnimationDriverEntry {
+  /** The object a `THREE.AnimationMixer` roots on, an ancestor of every object the clips move. */
+  object: THREE.Object3D;
+  /** The clips this driver owns, for their names and durations. */
+  clips: THREE.AnimationClip[];
+  /** Binds the clips to the objects they move now. A mixer calls it once, when it is built. */
+  bind: () => BoundClips;
 }
 
 /** Publishes a driver at `path` and returns the cleanup. */

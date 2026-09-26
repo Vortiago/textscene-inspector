@@ -1,8 +1,8 @@
 /**
- * Builds a THREE.AnimationClip from a resolved GodotAnimation. Track names are THREE name-paths
- * (`Target.position`) that THREE.PropertyBinding resolves against the animation root (ADR-0011).
- * It builds position, scale, rotation and rotation_degrees (as radians) in 3D and 2D, and the
- * `quaternion` of Godot's `rotation_3d` tracks. It drops every other track.
+ * Builds a THREE.AnimationClip template from a resolved GodotAnimation. Each track is named by its
+ * target's scene path (`Root/Arm.position`), which `r3f/animation/trackTargets.ts` binds to the
+ * exact object (ADR-0011). It builds position, scale, rotation and rotation_degrees (as radians) in
+ * 3D and 2D, and the `quaternion` of Godot's `rotation_3d` tracks. It drops every other track.
  */
 
 import {
@@ -25,38 +25,6 @@ import { warn } from '../../../logger';
 import { degToRad } from '../../../godot/math.js';
 
 
-/** How a track's Godot NodePath binds against the animation root. */
-export type TrackBinding =
-  // The root itself, bound through an empty node name: `NodePath(".")`, the colon-only
-  // `NodePath(":position")` and a path that cancels out (`Sprite/..`).
-  | { kind: 'root' }
-  // PropertyBinding reads only the final segment and searches the root's whole subtree, so
-  // `A/Target` and `B/Target` are the same to it, and a duplicated name binds the first found.
-  | { kind: 'name'; name: string }
-  // Above the root: PropertyBinding never leaves the root's subtree, and a literal `..` in a
-  // track name throws while the action is built. The track is dropped with a warning.
-  | { kind: 'unbindable' };
-
-/**
- * Resolves a NodePath the way Godot does, with `..` cancelling the segment before it, and reports
- * how THREE can bind the result. The clip's track names and `resolveTrackTarget` both read it, so
- * the Euler reorder and the base-transform snapshot see every target the mixer drives.
- */
-export function resolveTrackBinding(targetPath: string): TrackBinding {
-  const stack: string[] = [];
-  for (const segment of targetPath.split('/')) {
-    if (segment === '' || segment === '.') continue;
-    if (segment !== '..') {
-      stack.push(segment);
-      continue;
-    }
-    // Climbing above the animation root leaves what THREE can address.
-    if (stack.length === 0) return { kind: 'unbindable' };
-    stack.pop();
-  }
-  return stack.length === 0 ? { kind: 'root' } : { kind: 'name', name: stack[stack.length - 1]! };
-}
-
 export interface LoopSettings {
   loop: AnimationActionLoopStyles;
   repetitions: number;
@@ -78,23 +46,30 @@ export function loopSettingsFor(loopMode: number): LoopSettings {
   }
 }
 
-export function buildClip(animation: GodotAnimation): AnimationClip {
+/**
+ * Maps a track's NodePath to its target's scene path, or `null` when the walk leaves the scene, as
+ * `get_node` returns null for a path through a missing node.
+ */
+type ScenePathOf = (targetPath: string) => string | null;
+
+export function buildClip(animation: GodotAnimation, scenePathOf: ScenePathOf): AnimationClip {
   const tracks: KeyframeTrack[] = [];
   for (const track of animation.tracks) {
-    tracks.push(...buildTracks(track));
+    tracks.push(...buildTracks(track, scenePathOf));
   }
   return new AnimationClip(animation.name, animation.length, tracks);
 }
 
-function buildTracks(track: GodotTrack): KeyframeTrack[] {
-  if (resolveTrackBinding(track.targetPath).kind === 'unbindable') {
+function buildTracks(track: GodotTrack, scenePathOf: ScenePathOf): KeyframeTrack[] {
+  const scenePath = scenePathOf(track.targetPath);
+  if (scenePath === null) {
     warn(
-      `[AnimationPlayer] track target "${track.targetPath}" resolves above the animation root, ` +
-        `which THREE cannot bind — dropping the track so the rest of the clip still plays`
+      `[AnimationPlayer] track target "${track.targetPath}" leaves the scene, ` +
+        `so the track is dropped and the rest of the clip still plays`
     );
     return [];
   }
-  const built = buildTrackData(track);
+  const built = buildTrackData(track, scenePath);
   const interpolation = threeInterpolation(track);
   for (const t of built) t.setInterpolation(interpolation);
   return built;
@@ -120,12 +95,8 @@ function threeInterpolation(track: GodotTrack): InterpolationModes {
   }
 }
 
-function buildTrackData(track: GodotTrack): KeyframeTrack[] {
+function buildTrackData(track: GodotTrack, prefix: string): KeyframeTrack[] {
   const times = track.keys.map((k) => k.time);
-  // An empty node name binds the mixer root. Every other target binds by its final name,
-  // which is all PropertyBinding reads.
-  const binding = resolveTrackBinding(track.targetPath);
-  const prefix = binding.kind === 'name' ? binding.name : '';
 
   switch (track.property) {
     case 'position':

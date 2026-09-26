@@ -153,6 +153,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animation Player Parent Relative",
+    "file": "unit-animation-player-parent-relative.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animation Player Sprite Frame",
     "file": "unit-animation-player-sprite-frame.tscn",
     "category": "Other"
@@ -235,6 +240,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Canvas Modulate",
     "file": "unit-canvas-modulate.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Canvas Root Visibility",
+    "file": "unit-canvas-root-visibility.tscn",
     "category": "Other"
   },
   {
@@ -2555,6 +2565,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Node3d Basic",
     "file": "unit-node3d-basic.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Node3d Plain Node Transform",
+    "file": "unit-node3d-plain-node-transform.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Node3d Plain Node Visibility",
+    "file": "unit-node3d-plain-node-visibility.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
+    "name": "Node3d Top Level",
+    "file": "unit-node3d-top-level.tscn",
     "category": "Unit - Basic Nodes"
   },
   {
