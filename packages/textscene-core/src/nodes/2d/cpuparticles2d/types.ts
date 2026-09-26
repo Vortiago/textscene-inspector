@@ -5,6 +5,7 @@
  */
 
 import type { Node2DProperties, Color, Vector2 } from '../../base/node2d/types';
+import { CPU_PARTICLES_PARAMS, type CpuParticlesParam } from '../../../godot/cpuParticles';
 
 /** Godot `CPUParticles2D.EmissionShape`. */
 export enum CPUParticles2DEmissionShape {
@@ -50,31 +51,33 @@ export enum CPUParticles2DParam {
 /** `PARAM_MAX`: the length of every parameter array. */
 export const CPU_PARTICLES_2D_PARAM_COUNT = 12;
 
+/** The Inspector label, the Godot default of `_min` and `_max`, and whether Godot exposes a curve. */
+const SLOT_DETAILS: Readonly<Record<CpuParticlesParam, { label: string; def: number; curve: boolean }>> = {
+  initial_velocity: { label: 'Initial Velocity', def: 0, curve: false },
+  angular_velocity: { label: 'Angular Velocity', def: 0, curve: true },
+  orbit_velocity: { label: 'Orbit Velocity', def: 0, curve: true },
+  linear_accel: { label: 'Linear Accel', def: 0, curve: true },
+  radial_accel: { label: 'Radial Accel', def: 0, curve: true },
+  tangential_accel: { label: 'Tangential Accel', def: 0, curve: true },
+  damping: { label: 'Damping', def: 0, curve: true },
+  angle: { label: 'Angle', def: 0, curve: true },
+  scale_amount: { label: 'Scale Amount', def: 1, curve: true },
+  hue_variation: { label: 'Hue Variation', def: 0, curve: true },
+  anim_speed: { label: 'Anim Speed', def: 0, curve: true },
+  anim_offset: { label: 'Anim Offset', def: 0, curve: true },
+};
+
 /**
  * The parameter slots, in `CPUParticles2DParam` order: the serialised prefix
- * (`<prefix>_min` / `_max` / `_curve`), the Inspector label, the Godot default of
- * `_min` and `_max`, and whether Godot exposes a curve. The parser applies `def`
- * and the formatter hides a slot that holds it, so one table keeps them agreed.
+ * (`<prefix>_min` / `_max` / `_curve`) and its {@link SLOT_DETAILS}. The parser applies
+ * `def` and the formatter hides a slot that holds it, so one table keeps them agreed.
  */
 export const PARAM_SLOTS: ReadonlyArray<{
-  prefix: string;
+  prefix: CpuParticlesParam;
   label: string;
   def: number;
   curve: boolean;
-}> = [
-  { prefix: 'initial_velocity', label: 'Initial Velocity', def: 0, curve: false },
-  { prefix: 'angular_velocity', label: 'Angular Velocity', def: 0, curve: true },
-  { prefix: 'orbit_velocity', label: 'Orbit Velocity', def: 0, curve: true },
-  { prefix: 'linear_accel', label: 'Linear Accel', def: 0, curve: true },
-  { prefix: 'radial_accel', label: 'Radial Accel', def: 0, curve: true },
-  { prefix: 'tangential_accel', label: 'Tangential Accel', def: 0, curve: true },
-  { prefix: 'damping', label: 'Damping', def: 0, curve: true },
-  { prefix: 'angle', label: 'Angle', def: 0, curve: true },
-  { prefix: 'scale_amount', label: 'Scale Amount', def: 1, curve: true },
-  { prefix: 'hue_variation', label: 'Hue Variation', def: 0, curve: true },
-  { prefix: 'anim_speed', label: 'Anim Speed', def: 0, curve: true },
-  { prefix: 'anim_offset', label: 'Anim Offset', def: 0, curve: true },
-];
+}> = CPU_PARTICLES_PARAMS.map((prefix) => ({ prefix, ...SLOT_DETAILS[prefix] }));
 
 /** One parameter slot: the random range plus the optional shaping curve. */
 export interface ParticleParam {

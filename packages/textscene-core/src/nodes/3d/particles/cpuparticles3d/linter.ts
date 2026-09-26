@@ -10,29 +10,17 @@ import { heldResource } from '../../../../linter/resourceChecker.js';
 import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { parseGodotFloat } from '../../../../godot/number.js';
 import { formatReal, storedReal } from '../../../../godot/real.js';
+import { CPU_PARTICLES_PARAMS } from '../../../../godot/cpuParticles.js';
+import { replayPositions } from '../../../../godot/propertyReplay.js';
 
-/** Every `ADD_PROPERTYI` pair bound to `set_param_min`/`set_param_max` (cpu_particles_3d.cpp:1689-1741). */
-const PARAM_PAIRS = [
-  'initial_velocity',
-  'angular_velocity',
-  'orbit_velocity',
-  'linear_accel',
-  'radial_accel',
-  'tangential_accel',
-  'damping',
-  'angle',
-  'scale_amount',
-  'hue_variation',
-  'anim_speed',
-  'anim_offset',
-] as const;
+/** Each `ADD_PROPERTYI` pair bound to `set_param_min`/`set_param_max` (cpu_particles_3d.cpp:1689-1741). */
+const PARAM_KEY_PAIRS = CPU_PARTICLES_PARAMS.map((param) => [`${param}_min`, `${param}_max`] as const);
 
 // `set_mesh` (cpu_particles_3d.cpp:183-192) nulls the multimesh's RID, so nothing
 // renders, whatever the member doc says about spheres.
 // Not ported: the Particle Billboard material case needs the referenced mesh's
 // materials, resource internals this linter reads nowhere, CPUParticles2D included.
-function checkMissingMesh(node: RuleContext['node']): Diagnostic[] {
-  const rawProps = node.properties as unknown as Record<string, string>;
+function checkMissingMesh(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
   if (heldResource(rawProps.mesh) !== undefined) return [];
   return [
     {
@@ -51,15 +39,9 @@ function checkMissingMesh(node: RuleContext['node']): Diagnostic[] {
  * (cpu_particles_3d.cpp:293-296, :310-313). One authored key alone moves only the default.
  * It compares the stored `real_t` values, so `0.30000001` above `0.3` is no crossing.
  */
-function checkParamRanges(node: RuleContext['node']): Diagnostic[] {
-  if (!isValidProperties(node.properties)) return [];
-  const rawProps = node.properties as Record<string, string>;
-  const keys = Object.keys(rawProps);
+function checkParamRanges(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
-
-  for (const pair of PARAM_PAIRS) {
-    const minKey = `${pair}_min`;
-    const maxKey = `${pair}_max`;
+  for (const [minKey, maxKey] of PARAM_KEY_PAIRS) {
     const writtenMin = parseGodotFloat(rawProps[minKey] ?? '');
     const writtenMax = parseGodotFloat(rawProps[maxKey] ?? '');
     if (writtenMin === null || writtenMax === null) continue;
@@ -67,8 +49,8 @@ function checkParamRanges(node: RuleContext['node']): Diagnostic[] {
     const max = storedReal(writtenMax);
     if (!(min > max)) continue;
 
-    const isMinFirst = keys.indexOf(minKey) < keys.indexOf(maxKey);
-    const [movedKey, loadedValue] = isMinFirst ? [minKey, max] : [maxKey, min];
+    const isMaxLater = replayPositions(rawProps, minKey, [maxKey])[maxKey]!.late;
+    const [movedKey, loadedValue] = isMaxLater ? [minKey, max] : [maxKey, min];
     diagnostics.push({
       severity: 'warning',
       message: `'${minKey}' ${formatReal(min)} is above '${maxKey}' ${formatReal(max)}. Godot applies them in the order the file lists them, so '${movedKey}' loads as ${formatReal(loadedValue)}.`,
@@ -81,7 +63,10 @@ function checkParamRanges(node: RuleContext['node']): Diagnostic[] {
 }
 
 function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
-  return [...checkMissingMesh(context.node), ...checkParamRanges(context.node)];
+  const { node } = context;
+  const rawProps = node.properties;
+  if (!isValidProperties(rawProps)) return [];
+  return [...checkMissingMesh(node, rawProps), ...checkParamRanges(node, rawProps)];
 }
 
 const cpuParticles3DValidationRule: LintRule = {

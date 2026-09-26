@@ -95,15 +95,18 @@ describe('Window size below the viewport floor', () => {
   });
 });
 
+const windowScene = (props: Record<string, number | string>): string => scene(node('Window', props));
+
 /**
  * `_update_window_size` raises `size` to `min_size` and caps it at a valid `max_size`
  * (window.cpp:1190-1196). Every setter of the three runs it, in the order the file lists
  * them, so an earlier cap can stand under a later floor. Values measured on 4.6.3.
  */
 describe('Window size clamped by min_size and max_size', () => {
+  const RULE = 'window-size-clamped-by-limits';
   it('warns that a size below min_size loads as min_size', () => {
-    expectDiagnostic(scene(node('Window', { size: 'Vector2i(200, 100)', min_size: 'Vector2i(400, 300)' })), {
-      ruleName: 'window-size-clamped-by-limits',
+    expectDiagnostic(windowScene({ size: 'Vector2i(200, 100)', min_size: 'Vector2i(400, 300)' }), {
+      ruleName: RULE,
       severity: 'warning',
       nodeType: 'Window',
       contains: ['Vector2i(200, 100)', 'Vector2i(400, 300)'],
@@ -111,75 +114,75 @@ describe('Window size clamped by min_size and max_size', () => {
   });
 
   it('warns that a size above a valid max_size loads as max_size', () => {
-    expectDiagnostic(scene(node('Window', { size: 'Vector2i(1000, 800)', max_size: 'Vector2i(800, 600)' })), {
-      ruleName: 'window-size-clamped-by-limits',
+    expectDiagnostic(windowScene({ size: 'Vector2i(1000, 800)', max_size: 'Vector2i(800, 600)' }), {
+      ruleName: RULE,
       severity: 'warning',
       contains: ['Vector2i(1000, 800)', 'Vector2i(800, 600)'],
     });
   });
 
   it('clamps each axis on its own', () => {
-    expectDiagnostic(scene(node('Window', { size: 'Vector2i(500, 100)', min_size: 'Vector2i(400, 300)' })), {
-      ruleName: 'window-size-clamped-by-limits',
+    expectDiagnostic(windowScene({ size: 'Vector2i(500, 100)', min_size: 'Vector2i(400, 300)' }), {
+      ruleName: RULE,
       contains: ['Vector2i(500, 300)'],
     });
   });
 
   it('caps an axis at a zero max_size component when the other component makes max_size valid', () => {
-    expectDiagnostic(scene(node('Window', { size: 'Vector2i(500, 500)', max_size: 'Vector2i(0, 600)' })), {
-      ruleName: 'window-size-clamped-by-limits',
+    expectDiagnostic(windowScene({ size: 'Vector2i(500, 500)', max_size: 'Vector2i(0, 600)' }), {
+      ruleName: RULE,
       contains: ['Vector2i(0, 500)'],
     });
   });
 
   it('keeps a cap that a later min_size invalidates, then floors the capped size', () => {
     const body = { size: 'Vector2i(500, 500)', max_size: 'Vector2i(300, 300)', min_size: 'Vector2i(400, 400)' };
-    expectDiagnostic(scene(node('Window', body)), {
-      ruleName: 'window-size-clamped-by-limits',
+    expectDiagnostic(windowScene(body), {
+      ruleName: RULE,
       contains: ['Vector2i(500, 500)', 'Vector2i(400, 400)'],
     });
   });
 
   it('says nothing when the same three keys list size last, since the invalid max_size never caps', () => {
     const body = { min_size: 'Vector2i(400, 400)', max_size: 'Vector2i(300, 300)', size: 'Vector2i(500, 500)' };
-    expectNoDiagnostic(scene(node('Window', body)), { ruleName: 'window-size-clamped-by-limits' });
+    expectNoDiagnostic(windowScene(body), { ruleName: RULE });
   });
 
   it('says nothing for a size inside the limits or equal to them', () => {
     const inside = { size: 'Vector2i(500, 400)', min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(800, 600)' };
     const onEdge = { size: 'Vector2i(400, 600)', min_size: 'Vector2i(400, 300)', max_size: 'Vector2i(800, 600)' };
-    expectNoDiagnostic(scene(node('Window', inside)), { ruleName: 'window-size-clamped-by-limits' });
-    expectNoDiagnostic(scene(node('Window', onEdge)), { ruleName: 'window-size-clamped-by-limits' });
+    expectNoDiagnostic(windowScene(inside), { ruleName: RULE });
+    expectNoDiagnostic(windowScene(onEdge), { ruleName: RULE });
   });
 
   it('says nothing for the Vector2i(0, 0) max_size sentinel', () => {
-    expectNoDiagnostic(scene(node('Window', { max_size: 'Vector2i(0, 0)', size: 'Vector2i(500, 500)' })), {
-      ruleName: 'window-size-clamped-by-limits',
+    expectNoDiagnostic(windowScene({ max_size: 'Vector2i(0, 0)', size: 'Vector2i(500, 500)' }), {
+      ruleName: RULE,
     });
   });
 
   it('says nothing when min_size or max_size alters a size the file does not state', () => {
-    expectNoDiagnostic(scene(node('Window', { min_size: 'Vector2i(400, 300)' })), {
-      ruleName: 'window-size-clamped-by-limits',
+    expectNoDiagnostic(windowScene({ min_size: 'Vector2i(400, 300)' }), {
+      ruleName: RULE,
     });
   });
 
   it('leaves a negative component to the validator error when no min_size raises it', () => {
-    expectNoDiagnostic(scene(node('Window', { size: 'Vector2i(-3, 50)', min_size: 'Vector2i(0, 0)' })), {
-      ruleName: 'window-size-clamped-by-limits',
+    expectNoDiagnostic(windowScene({ size: 'Vector2i(-3, 50)', min_size: 'Vector2i(0, 0)' }), {
+      ruleName: RULE,
     });
   });
 
   it('says nothing about a limit no int32 holds', () => {
     expectNoDiagnostic(
-      scene(node('Window', { size: 'Vector2i(10, 10)', min_size: 'Vector2(4294967295, 600)' })),
-      { ruleName: 'window-size-clamped-by-limits' }
+      windowScene({ size: 'Vector2i(10, 10)', min_size: 'Vector2(4294967295, 600)' }),
+      { ruleName: RULE }
     );
   });
 
   it('reaches the whole Window family', () => {
     expectDiagnostic(scene(node('Popup', { size: 'Vector2i(10, 10)', min_size: 'Vector2i(20, 5)' })), {
-      ruleName: 'window-size-clamped-by-limits',
+      ruleName: RULE,
       nodeType: 'Popup',
       contains: ['Vector2i(20, 10)'],
     });
@@ -192,9 +195,10 @@ describe('Window size clamped by min_size and max_size', () => {
  * runs it, so the file order does not matter. Values measured on 4.6.3.
  */
 describe('Window content_scale_factor under integer stretch', () => {
+  const RULE = 'window-content-scale-factor-floored';
   it('warns that a fractional factor loads floored', () => {
-    expectDiagnostic(scene(node('Window', { content_scale_stretch: 1, content_scale_factor: 1.5 })), {
-      ruleName: 'window-content-scale-factor-floored',
+    expectDiagnostic(windowScene({ content_scale_stretch: 1, content_scale_factor: 1.5 }), {
+      ruleName: RULE,
       severity: 'warning',
       nodeType: 'Window',
       contains: ['1.5', 'loads as 1'],
@@ -202,48 +206,48 @@ describe('Window content_scale_factor under integer stretch', () => {
   });
 
   it('warns that a factor below 1 loads as 1, whichever key the file lists first', () => {
-    expectDiagnostic(scene(node('Window', { content_scale_factor: 0.5, content_scale_stretch: 1 })), {
-      ruleName: 'window-content-scale-factor-floored',
+    expectDiagnostic(windowScene({ content_scale_factor: 0.5, content_scale_stretch: 1 }), {
+      ruleName: RULE,
       contains: ['0.5', 'loads as 1'],
     });
   });
 
   it('says nothing under fractional stretch', () => {
-    expectNoDiagnostic(scene(node('Window', { content_scale_stretch: 0, content_scale_factor: 1.5 })), {
-      ruleName: 'window-content-scale-factor-floored',
+    expectNoDiagnostic(windowScene({ content_scale_stretch: 0, content_scale_factor: 1.5 }), {
+      ruleName: RULE,
     });
-    expectNoDiagnostic(scene(node('Window', { content_scale_factor: 1.5 })), {
-      ruleName: 'window-content-scale-factor-floored',
+    expectNoDiagnostic(windowScene({ content_scale_factor: 1.5 }), {
+      ruleName: RULE,
     });
   });
 
   it('says nothing for a whole factor, or one float storage makes whole', () => {
-    expectNoDiagnostic(scene(node('Window', { content_scale_stretch: 1, content_scale_factor: 3 })), {
-      ruleName: 'window-content-scale-factor-floored',
+    expectNoDiagnostic(windowScene({ content_scale_stretch: 1, content_scale_factor: 3 }), {
+      ruleName: RULE,
     });
-    expectNoDiagnostic(scene(node('Window', { content_scale_stretch: 1, content_scale_factor: '2.0000001' })), {
-      ruleName: 'window-content-scale-factor-floored',
+    expectNoDiagnostic(windowScene({ content_scale_stretch: 1, content_scale_factor: '2.0000001' }), {
+      ruleName: RULE,
     });
   });
 
   it('leaves a factor the setter refuses to the validator error', () => {
-    expectNoDiagnostic(scene(node('Window', { content_scale_stretch: 1, content_scale_factor: -2 })), {
-      ruleName: 'window-content-scale-factor-floored',
+    expectNoDiagnostic(windowScene({ content_scale_stretch: 1, content_scale_factor: -2 }), {
+      ruleName: RULE,
     });
   });
 
   it('says nothing for nan or inf, which the floor leaves as they are', () => {
-    expectNoDiagnostic(scene(node('Window', { content_scale_stretch: 1, content_scale_factor: 'nan' })), {
-      ruleName: 'window-content-scale-factor-floored',
+    expectNoDiagnostic(windowScene({ content_scale_stretch: 1, content_scale_factor: 'nan' }), {
+      ruleName: RULE,
     });
-    expectNoDiagnostic(scene(node('Window', { content_scale_stretch: 1, content_scale_factor: 'inf' })), {
-      ruleName: 'window-content-scale-factor-floored',
+    expectNoDiagnostic(windowScene({ content_scale_stretch: 1, content_scale_factor: 'inf' }), {
+      ruleName: RULE,
     });
   });
 
   it('reaches the whole Window family', () => {
     expectDiagnostic(scene(node('Popup', { content_scale_stretch: 1, content_scale_factor: 2.7 })), {
-      ruleName: 'window-content-scale-factor-floored',
+      ruleName: RULE,
       nodeType: 'Popup',
       contains: ['2.7', 'loads as 2'],
     });

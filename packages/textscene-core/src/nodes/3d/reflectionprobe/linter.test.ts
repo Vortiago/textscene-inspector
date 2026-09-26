@@ -73,12 +73,13 @@ describe('ReflectionProbe semantic rules', () => {
  */
 describe('ReflectionProbe origin_offset clamped by size', () => {
   it('warns that an offset outside the size loads clamped, keeping each sign', () => {
-    const diagnostics = checkProbe('size = Vector3(2, 2, 2)\norigin_offset = Vector3(5, 0, -5)\n');
-    expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]?.severity).toBe('warning');
-    expect(diagnostics[0]?.ruleName).toBe('reflectionprobe-origin-offset-clamped');
-    expect(diagnostics[0]?.message).toContain('Vector3(5, 0, -5)');
-    expect(diagnostics[0]?.message).toContain('loads as Vector3(0.99, 0, -0.99)');
+    expect(checkProbe('size = Vector3(2, 2, 2)\norigin_offset = Vector3(5, 0, -5)\n')).toEqual([
+      expect.objectContaining({
+        severity: 'warning',
+        ruleName: 'reflectionprobe-origin-offset-clamped',
+        message: expect.stringMatching(/Vector3\(5, 0, -5\) loads as Vector3\(0\.99, 0, -0\.99\)/),
+      }),
+    ]);
   });
 
   it('clamps an offset listed before size against the default size', () => {

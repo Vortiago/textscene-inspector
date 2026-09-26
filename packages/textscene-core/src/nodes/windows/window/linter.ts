@@ -12,11 +12,7 @@ import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
 import { parseGodotFloat } from '../../../godot/number.js';
 import { formatReal, storedReal } from '../../../godot/real.js';
-
-interface Size {
-  x: number;
-  y: number;
-}
+import type { Vector2 as Size } from '../../../parser/vectors.js';
 
 /** window.h:105,126: `size = Size2i(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE)`, 100. */
 const DEFAULT_SIZE: Size = { x: 100, y: 100 };
@@ -53,58 +49,60 @@ function checkMaxBelowMin(node: RuleContext['node'], rawProps: Record<string, st
 }
 
 /**
- * The `size` Godot holds after it applies the file's `size`, `min_size` and `max_size`
- * lines in order, or `null` when one of them holds no int32. Each setter runs
- * `_update_window_size` (window.cpp:1183-1229), and its clamp overwrites `size`, so an
- * early cap stands under a later floor. A `null` limit is the rendering server's maximum,
- * which this file cannot state, so it never caps. The `wrap_controls` floor is not modelled.
+ * `max_size` while `_validate_limit_size` (window.cpp:471-475) accepts it, else `null`. A
+ * `null` limit is the rendering server's maximum, which this file cannot state, so it never caps.
  */
-function loadedSize(rawProps: Record<string, string>): Size | null {
+function validMaxSize(minSize: Size, maxSize: Size | null): Size | null {
+  if (maxSize === null || (maxSize.x <= 0 && maxSize.y <= 0)) return null;
+  return maxSize.x >= minSize.x && maxSize.y >= minSize.y ? maxSize : null;
+}
+
+/** `_update_window_size`'s clamp (window.cpp:1190-1196). */
+function clampSize(size: Size, minSize: Size, maxSize: Size | null): Size {
+  const floored = { x: Math.max(size.x, minSize.x), y: Math.max(size.y, minSize.y) };
+  const cap = validMaxSize(minSize, maxSize);
+  return cap ? { x: Math.min(floored.x, cap.x), y: Math.min(floored.y, cap.y) } : floored;
+}
+
+/**
+ * The file's `size` and the one Godot holds after it applies the `size`, `min_size` and
+ * `max_size` lines in order, or `null` when one of them holds no int32. Each setter runs
+ * `_update_window_size` (window.cpp:1183-1229), and its clamp overwrites `size`, so an
+ * early cap stands under a later floor. The `wrap_controls` floor is not modelled.
+ */
+function replaySize(rawProps: Record<string, string>): { written: Size; loaded: Size } | null {
+  let written = DEFAULT_SIZE;
   let size = DEFAULT_SIZE;
   let minSize: Size = { x: 0, y: 0 };
   let maxSize: Size | null = null;
-  let maxSizeUsed: Size | null = null;
-
-  // `_validate_limit_size` (window.cpp:471-475).
-  const validateLimits = (): void => {
-    const isMaxValid =
-      maxSize !== null && (maxSize.x > 0 || maxSize.y > 0) && maxSize.x >= minSize.x && maxSize.y >= minSize.y;
-    maxSizeUsed = isMaxValid ? maxSize : null;
-  };
-  // window.cpp:1190-1196.
-  const clampSize = (): void => {
-    size = { x: Math.max(size.x, minSize.x), y: Math.max(size.y, minSize.y) };
-    if (maxSizeUsed) size = { x: Math.min(size.x, maxSizeUsed.x), y: Math.min(size.y, maxSizeUsed.y) };
-  };
 
   for (const [key, raw] of Object.entries(rawProps)) {
     if (key !== 'size' && key !== 'min_size' && key !== 'max_size') continue;
-    const written = matchVector2i(raw);
-    if (!written) return null;
+    const value = matchVector2i(raw);
+    if (!value) return null;
     if (key === 'size') {
-      size = written;
-      clampSize();
+      written = value;
+      size = clampSize(value, minSize, maxSize);
       continue;
     }
     // `set_min_size` and `set_max_size` (window.cpp:477-515) return early on an unchanged
     // limit, after `_clamp_limit_size` (:461-469) floors it at 0.
-    const limit = floorAtZero(written);
+    const limit = floorAtZero(value);
     const current = key === 'min_size' ? minSize : maxSize;
     if (current && sameSize(current, limit)) continue;
     if (key === 'min_size') minSize = limit;
     else maxSize = limit;
-    validateLimits();
-    clampSize();
+    size = clampSize(size, minSize, maxSize);
   }
-  return size;
+  return { written, loaded: size };
 }
 
 function checkSizeClamped(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
   if (rawProps.size === undefined) return [];
   if (rawProps.min_size === undefined && rawProps.max_size === undefined) return [];
-  const written = matchVector2i(rawProps.size);
-  const loaded = loadedSize(rawProps);
-  if (!written || !loaded) return [];
+  const replayed = replaySize(rawProps);
+  if (!replayed) return [];
+  const { written, loaded } = replayed;
   // A negative component is the validator's error on this same clamp, so the floor at 0
   // is not reported twice.
   if (sameSize(loaded, floorAtZero(written))) return [];
@@ -142,8 +140,8 @@ function checkContentScaleFloored(node: RuleContext['node'], rawProps: Record<st
 
 function checkWindow(context: RuleContext): Diagnostic[] {
   const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
-  const rawProps = node.properties as Record<string, string>;
+  const rawProps = node.properties;
+  if (!isValidProperties(rawProps)) return [];
   return [
     ...checkMaxBelowMin(node, rawProps),
     ...checkSizeClamped(node, rawProps),

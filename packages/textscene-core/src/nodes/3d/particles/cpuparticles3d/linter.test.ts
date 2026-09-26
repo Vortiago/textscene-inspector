@@ -58,11 +58,12 @@ mesh = SubResource("1_mesh")
  * Values measured on 4.6.3.
  */
 describe('CPUParticles3D min above max', () => {
+  const RULE = 'cpuparticles3d-param-min-above-max';
   const particles = (props: Record<string, number | string>) => scene(node('CPUParticles3D', props));
 
   it('warns that a min listed first loads as the max', () => {
     expectDiagnostic(particles({ initial_velocity_min: 5, initial_velocity_max: 2 }), {
-      ruleName: 'cpuparticles3d-param-min-above-max',
+      ruleName: RULE,
       severity: 'warning',
       nodeType: 'CPUParticles3D',
       contains: ["'initial_velocity_min' 5", "'initial_velocity_max' 2", "'initial_velocity_min' loads as 2"],
@@ -71,7 +72,7 @@ describe('CPUParticles3D min above max', () => {
 
   it('warns that a max listed first loads as the min', () => {
     expectDiagnostic(particles({ initial_velocity_max: 2, initial_velocity_min: 5 }), {
-      ruleName: 'cpuparticles3d-param-min-above-max',
+      ruleName: RULE,
       contains: ["'initial_velocity_max' loads as 5"],
     });
   });
@@ -93,7 +94,7 @@ describe('CPUParticles3D min above max', () => {
     ];
     for (const pair of pairs) {
       expectDiagnostic(particles({ [`${pair}_min`]: 0.75, [`${pair}_max`]: 0.25 }), {
-        ruleName: 'cpuparticles3d-param-min-above-max',
+        ruleName: RULE,
         contains: [`'${pair}_min' loads as 0.25`],
       });
     }
@@ -101,27 +102,27 @@ describe('CPUParticles3D min above max', () => {
 
   it('says nothing when min is at or below max', () => {
     expectNoDiagnostic(particles({ angle_min: -30, angle_max: 30 }), {
-      ruleName: 'cpuparticles3d-param-min-above-max',
+      ruleName: RULE,
     });
     expectNoDiagnostic(particles({ angle_min: 30, angle_max: 30 }), {
-      ruleName: 'cpuparticles3d-param-min-above-max',
+      ruleName: RULE,
     });
   });
 
   it('says nothing when float storage makes the pair equal', () => {
     expectNoDiagnostic(particles({ scale_amount_min: '0.30000001', scale_amount_max: '0.3' }), {
-      ruleName: 'cpuparticles3d-param-min-above-max',
+      ruleName: RULE,
     });
   });
 
   it('says nothing when only one key of a pair is authored, since only the default moves', () => {
-    expectNoDiagnostic(particles({ scale_amount_min: 5 }), { ruleName: 'cpuparticles3d-param-min-above-max' });
-    expectNoDiagnostic(particles({ scale_amount_max: 0.5 }), { ruleName: 'cpuparticles3d-param-min-above-max' });
+    expectNoDiagnostic(particles({ scale_amount_min: 5 }), { ruleName: RULE });
+    expectNoDiagnostic(particles({ scale_amount_max: 0.5 }), { ruleName: RULE });
   });
 
   it('says nothing for nan, which no comparison crosses', () => {
     expectNoDiagnostic(particles({ angle_min: 'nan', angle_max: 0 }), {
-      ruleName: 'cpuparticles3d-param-min-above-max',
+      ruleName: RULE,
     });
   });
 });
