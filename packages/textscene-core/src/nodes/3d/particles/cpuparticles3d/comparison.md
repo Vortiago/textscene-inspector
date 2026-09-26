@@ -103,7 +103,8 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 | `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
 |  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
-| `valid-cpuparticles3d-mesh` | `cpuparticles3d-requires-mesh` | warning |
+| `valid-cpuparticles3d-properties` | `cpuparticles3d-requires-mesh` | warning |
+|  | `cpuparticles3d-param-min-above-max` | warning |
 <!-- lint:end -->
 
 The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`, so none of the keys strict validates is ever read. A `spread = 400.0` or a dangling `mesh` reference is dropped silently, and `linter.ts` ports the "no mesh assigned" configuration warning.
