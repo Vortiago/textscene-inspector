@@ -102,10 +102,9 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
         stringToInt(indexText) < 0 ? unknown(key, line) : null;
 
   /**
-   * The leaf a key reaches. `PropertyListHelper` cuts at the last `/`
-   * (property_list_helper.cpp:47), so there a trailing segment fails `is_valid_int` and only the
-   * exact leaf resolves, found with hasOwnProperty so `toString` cannot resolve an inherited
-   * function. A hand-rolled `_set` ignores a tail below the segment it reads.
+   * The leaf a key reaches: {@link declaredLeafResolver} for a hand-rolled `_set`, and the exact
+   * leaf for `PropertyListHelper`, whose last-`/` cut (property_list_helper.cpp:47) makes a tail
+   * fail `is_valid_int`. hasOwnProperty, so `toString` cannot resolve an inherited function.
    */
   const resolveLeaf: LeafResolver = gatesOnValidInt
     ? (leafName) => (Object.prototype.hasOwnProperty.call(leaves, leafName) ? leafName : null)

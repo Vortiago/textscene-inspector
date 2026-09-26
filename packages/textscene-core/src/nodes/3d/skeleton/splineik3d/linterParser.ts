@@ -12,8 +12,7 @@ import { settingCount } from '../shared/settingCount.js';
 // Declare only SplineIK3D's own members, the ones doc/classes/SplineIK3D.xml lists without
 // `overrides=`. The NODE_BASE_TYPES base-walk delivers every key from ChainIK3D up, and
 // re-declaring one shadows it and duplicates the rule.
-import { CHAIN_IK_SETTING_LEAVES } from '../chainik3d/linterParser.js';
-import { declaredLeafResolver } from '../../../../godot/index.js';
+import { chainIkSubclassSettings } from '../chainik3d/linterParser.js';
 
 /**
  * The four leaves SplineIK3D adds to the inherited `settings/<i>/` family, keyed as
@@ -39,24 +38,10 @@ const OWN_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   tilt_fade_out: v.strictInt('tilt_fade_out', { min: -1, hinted: 'spline_ik_3d.cpp:86' }),
 };
 
-const SETTINGS_PREFIX = 'settings/';
-
-/**
- * The leaf `_set` applies a path below the index to, across both classes' leaves, so ChainIK3D's
- * `end_bone` still reads its option. `what = path.get_slicec('/', 2)` (spline_ik_3d.cpp:38).
- */
-export const resolveSplineSettingLeaf = declaredLeafResolver([
-  ...Object.keys(OWN_LEAVES),
-  ...Object.keys(CHAIN_IK_SETTING_LEAVES),
-]);
-
-/** Whether the key reaches one of the four leaves declared here. */
-function ownsLeaf(key: string): boolean {
-  const slash = key.indexOf('/', SETTINGS_PREFIX.length);
-  if (slash < 0) return false;
-  const leaf = resolveSplineSettingLeaf(key.slice(slash + 1));
-  return leaf !== null && Object.prototype.hasOwnProperty.call(OWN_LEAVES, leaf);
-}
+/** `what = path.get_slicec('/', 2)` (spline_ik_3d.cpp:38). */
+const { resolveLeaf: resolveSplineSettingLeaf, ownsKey: ownsLeaf } =
+  chainIkSubclassSettings(OWN_LEAVES);
+export { resolveSplineSettingLeaf };
 
 /**
  * The four own leaves and the negative-index guard. Reached only for a key whose leaf is one of the
@@ -64,7 +49,7 @@ function ownsLeaf(key: string): boolean {
  * and a ChainIK3D leaf look alike here. `INVALID_SPLINE_IK_3D_SETTING` is a code no scene produces.
  */
 const ownFamily = indexedFamilyValidator({
-  prefix: SETTINGS_PREFIX,
+  prefix: 'settings/',
   leaves: OWN_LEAVES,
   unknownCode: 'INVALID_SPLINE_IK_3D_SETTING',
   describes: 'SplineIK3D setting',

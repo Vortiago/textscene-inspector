@@ -7,7 +7,7 @@
 // The `settings/*` dispatcher hands every key it does not own to ChainIK3D, and a tier loads only
 // when imported. CCDIK3D, FABRIK3D and JacobianIK3D import only this file, so without this line
 // ChainIK3D would register only with SplineIK3D loaded, and its bounds would vanish for all three.
-import { CHAIN_IK_SETTING_LEAVES } from '../chainik3d/linterParser.js';
+import { chainIkSubclassSettings } from '../chainik3d/linterParser.js';
 import { validatorRegistry, type PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { accepts, v } from '../../../../linter/validators/v.js';
@@ -79,17 +79,9 @@ const settingLeafValidator = indexedFamilyValidator({
 const JOINT_KEY = indexedKeyRegex('^settings/(#)/joints/#/(.+)$', 'to_int');
 /** `prop = get_slicec('/', 4)` (:45), and `limitation` reads `opt` below itself (:51). */
 const resolveJointLeaf = declaredLeafResolver(Object.keys(JOINT_LEAVES));
-/** A flat `settings/<i>/…` key, the path below the index captured. */
-const SETTING_KEY = indexedKeyRegex('^settings/#/(.+)$', 'to_int');
-
-/**
- * For the dispatcher and the rule, across both classes' leaves so ChainIK3D's `end_bone` still
- * reads its option: `what = get_slicec('/', 2)` (:38).
- */
-export const resolveIterateSettingLeaf = declaredLeafResolver([
-  ...Object.keys(SETTING_LEAVES),
-  ...Object.keys(CHAIN_IK_SETTING_LEAVES),
-]);
+/** `what = get_slicec('/', 2)` (:38). */
+const { resolveLeaf: resolveIterateSettingLeaf, ownsKey } = chainIkSubclassSettings(SETTING_LEAVES);
+export { resolveIterateSettingLeaf };
 
 /**
  * `settings/…` on IterateIK3D, half of a family: `_get_property_list` pushes its own leaves, then
@@ -115,12 +107,8 @@ const settingsValidator = accepts((key, value, line) => {
       if (negative) return negative;
       return JOINT_LEAVES[leafName]!(key, value, line);
     }
-  } else {
-    const leaf = SETTING_KEY.exec(key)?.[1];
-    const resolved = leaf === undefined ? null : resolveIterateSettingLeaf(leaf);
-    if (resolved !== null && Object.prototype.hasOwnProperty.call(SETTING_LEAVES, resolved)) {
-      return settingLeafValidator(key, value, line);
-    }
+  } else if (ownsKey(key)) {
+    return settingLeafValidator(key, value, line);
   }
 
   const inherited = validatorRegistry.findValidator('ChainIK3D', key);

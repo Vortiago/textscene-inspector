@@ -14,6 +14,7 @@ import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import {
   boolSlotValue,
   declaredLeafResolver,
+  firstSegment,
   indexedElements,
   indexedKeyRegex,
   stringToInt,
@@ -143,8 +144,7 @@ function checkSpringBoneSimulator3D(context: RuleContext): Diagnostic[] {
     const allChildCollisions = readBool(siblings?.get('enable_all_child_collisions'), true);
 
     // `what = get_slicec('/', 2)` (:43), the segment every branch of `_set` tests.
-    const slash = leaf.indexOf('/');
-    const what = slash < 0 ? leaf : leaf.slice(0, slash);
+    const what = firstSegment(leaf);
     const joint = JOINT_KEY_RE.exec(leaf);
     if (joint) {
       if (!individual && JOINT_CONFIG_LEAVES.has(joint[1]!)) jointIgnored.set(indexText, index);

@@ -129,7 +129,7 @@ export function declaredLeafResolver(leafNames: Iterable<string>): LeafResolver 
 }
 
 /** The text before the first `/`, or all of it: the `what` a hand-rolled `_set` tests. */
-function firstSegment(path: string): string {
+export function firstSegment(path: string): string {
   const slash = path.indexOf('/');
   return slash < 0 ? path : path.slice(0, slash);
 }

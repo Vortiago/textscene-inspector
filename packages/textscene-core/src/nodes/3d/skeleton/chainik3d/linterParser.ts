@@ -89,11 +89,28 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   joint_count: v.strictInt('joint_count', { min: 0, enforced: 'chain_ik_3d.cpp:333' }),
 };
 
-/**
- * The leaf `_set` reaches through a tail it ignores: `what = get_slicec('/', 2)` (chain_ik_3d.cpp:38)
- * makes `root_bone/extra` a write to `root_bone`.
- */
+/** `what = get_slicec('/', 2)` (chain_ik_3d.cpp:38). */
 const resolveSettingLeaf = declaredLeafResolver(Object.keys(SETTING_LEAVES));
+
+/**
+ * A subclass's half of `settings/<i>/…`, whose own leaves share the prefix with ChainIK3D's.
+ * `resolveLeaf` spans both tables, so `end_bone` still reads its option. `ownsKey` reads the `what`
+ * segment alone, which holds while every own leaf is terminal, as IterateIK3D's and SplineIK3D's are.
+ */
+export function chainIkSubclassSettings(ownLeaves: Readonly<Record<string, PropertyValidator>>) {
+  const resolveLeaf = declaredLeafResolver([
+    ...Object.keys(ownLeaves),
+    ...Object.keys(SETTING_LEAVES),
+  ]);
+  const ownsKey = (key: string): boolean => {
+    const start = key.indexOf('/', SETTINGS_PREFIX.length) + 1;
+    if (start === 0) return false;
+    const end = key.indexOf('/', start);
+    const what = end < 0 ? key.slice(start) : key.slice(start, end);
+    return Object.prototype.hasOwnProperty.call(ownLeaves, what);
+  };
+  return { resolveLeaf, ownsKey };
+}
 
 const negativeSettingIndex = (index: string): string =>
   `Setting index ${index} is out of range: Godot refuses a negative index and drops the write`;

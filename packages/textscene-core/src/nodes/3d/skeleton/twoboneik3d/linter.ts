@@ -86,11 +86,10 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
       continue;
     }
 
-    // `set_pole_direction_vector` (two_bone_ik_3d.cpp:444-448) returns unless `pole_direction` is
-    // `SECONDARY_DIRECTION_CUSTOM`, dropping the write silently (ADR-0032).
-    // `_validate_dynamic_prop` (two_bone_ik_3d.cpp:186-188) hides the key in that state, and the
-    // getter returns the axis the enum names.
-    // The one leaf whose write depends on a sibling, `pole_direction`.
+    // The one leaf whose write depends on a sibling: `set_pole_direction_vector`
+    // (two_bone_ik_3d.cpp:444-448) returns unless `pole_direction` is `SECONDARY_DIRECTION_CUSTOM`,
+    // dropping the write silently (ADR-0032). `_validate_dynamic_prop` (two_bone_ik_3d.cpp:186-188)
+    // hides the key in that state, and the getter returns the axis the enum names.
     if (resolveTwoBoneSettingLeaf(indexed[2]!) !== 'pole_direction_vector') continue;
     const directionRaw = settings.get(index)?.get('pole_direction');
     const direction = ruleInt(directionRaw, SECONDARY_DIRECTION_NONE);

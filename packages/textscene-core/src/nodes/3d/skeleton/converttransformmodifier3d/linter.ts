@@ -12,7 +12,7 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { firstSegment, indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
 import { resolveConvertSettingLeaf } from './linterParser.js';
 
 const RULE_NAME = 'converttransformmodifier3d-range-outside-mode-hint';
@@ -103,8 +103,7 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
     // in `_set`. Reporting it again here would double up on one defect.
     if (index < 0) continue;
 
-    const group = leaf.slice(0, leaf.indexOf('/'));
-    const modeRaw = settings.get(index)?.get(`${group}/transform_mode`);
+    const modeRaw = settings.get(index)?.get(`${firstSegment(leaf)}/transform_mode`);
     // Absent means Position, the struct's initialiser
     // (convert_transform_modifier_3d.h:46, :51), which Godot omits when unchanged.
     const mode = ruleInt(modeRaw, TRANSFORM_MODE_POSITION);
