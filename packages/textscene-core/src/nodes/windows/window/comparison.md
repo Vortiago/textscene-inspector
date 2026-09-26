@@ -68,6 +68,8 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
+|  | `window-size-clamped-by-limits` | warning |
+|  | `window-content-scale-factor-floored` | warning |
 <!-- lint:end -->
 
 The lenient parser registers the plain `Node` reader, which reads only the heading attributes and an optional `transform`. A malformed `mode` or any other Window key is never read, substituted or reported, and the node mounts as the same empty group either way.

@@ -43,6 +43,8 @@ Strict parsing format-checks these `FileDialog` properties, plus 1 inherited fro
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
+|  | `window-size-clamped-by-limits` | warning |
+|  | `window-content-scale-factor-floored` | warning |
 | `valid-filedialog-properties` (type-family match) | `filedialog-option-index-out-of-range` | error |
 <!-- lint:end -->
 

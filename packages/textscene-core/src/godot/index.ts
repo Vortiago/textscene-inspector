@@ -59,6 +59,8 @@ export {
   CANVAS_LAYER_MIN,
   CANVAS_LAYER_MAX,
 } from './rendering.js';
+export { CPU_PARTICLES_PARAMS, type CpuParticlesParam } from './cpuParticles.js';
+export { formatReal, storedReal } from './real.js';
 export { GRADIENT_TEXTURE_MAX_SIZE, IMAGE_MAX_PIXELS } from './texture.js';
 export { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX, CLIP_CHILDREN_MODES } from './canvasItem.js';
 export {
