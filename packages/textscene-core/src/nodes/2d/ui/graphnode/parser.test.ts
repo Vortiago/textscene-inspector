@@ -85,4 +85,18 @@ describe('parseGraphNode', () => {
     });
     expect(p.slots.get(0)?.leftIcon).toBe('ExtResource("1_abc")');
   });
+
+  it('applies a slot property written with a tail, which _set ignores', () => {
+    // `slot_property_name = str.get_slicec('/', 2)` (graph_node.cpp:46) reads that segment alone.
+    const p = parseGraphNode(h({ name: 'N', type: 'GraphNode' }), {
+      'slot/0/left_enabled/extra': 'true',
+    });
+    expect(p.slots.get(0)?.leftEnabled).toBe(true);
+  });
+
+  it('applies an empty slot index to slot 0, as "".to_int() does', () => {
+    // `get_slicec('/', 1).to_int()` (graph_node.cpp:45) of an empty segment is 0 (ustring.cpp:2304-2305).
+    const p = parseGraphNode(h({ name: 'N', type: 'GraphNode' }), { 'slot//left_enabled': 'true' });
+    expect(p.slots.get(0)?.leftEnabled).toBe(true);
+  });
 });

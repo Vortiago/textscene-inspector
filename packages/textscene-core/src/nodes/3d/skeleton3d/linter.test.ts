@@ -152,6 +152,13 @@ describe('Skeleton3D Linter', () => {
         });
       });
 
+      // An empty segment is bone 0 too: `"".to_int()` returns 0 (ustring.cpp:2304-2305).
+      it('should accept an empty bone index, which to_int reads as bone 0', () => {
+        expectNoErrors(scene(node('Skeleton3D', { 'bones//position': 'Vector3(0, 0, 0)' })), {
+          ruleName: 'strict-parser',
+        });
+      });
+
       // `uint32_t which` (:82) holds -1 as 4294967295, which
       // `ERR_FAIL_UNSIGNED_INDEX_V(which, bones.size(), false)` (:90) then
       // refuses: bones grows one at a time through `which == bones.size()` (:85),

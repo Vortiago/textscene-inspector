@@ -221,6 +221,13 @@ describe('SpringBoneSimulator3D strict validators', () => {
       expect(check('settings/0/radius/value/extra', '-1')?.severity).toBe('warning');
     });
 
+    it('applies an empty setting index to setting 0, as "".to_int() does', () => {
+      // `get_slicec('/', 1).to_int()` (:42) of an empty segment is 0 (ustring.cpp:2304-2305).
+      expect(check('settings//radius/value', '0.5')).toBeNull();
+      expect(check('settings//radius/value', '-1')?.severity).toBe('warning');
+      expect(check('settings/0/joints//radius', '-1')?.severity).toBe('warning');
+    });
+
     it('refuses an option the branch does not know', () => {
       // Neither `value` nor `damping_curve`, so `_set` returns false (:85).
       expect(check('settings/0/radius/extra', '0.5')?.code).toBe('INVALID_SPRING_BONE_SETTING_KEY');

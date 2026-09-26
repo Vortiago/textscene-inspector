@@ -117,6 +117,15 @@ describe('ChainIK3D settings index', () => {
   });
 });
 
+describe('ChainIK3D empty setting index', () => {
+  it('checks a leaf under an empty index, which "".to_int() reads as setting 0', () => {
+    // `get_slicec('/', 1).to_int()` (chain_ik_3d.cpp:37) of an empty segment is 0 (ustring.cpp:2304-2305),
+    // so set_root_bone runs and clamps the value (:186-188).
+    expect(check('settings//root_bone', '-2')?.severity).toBe('error');
+    expect(check('settings//root_bone', '3')).toBeNull();
+  });
+});
+
 describe('ChainIK3D key tails', () => {
   it('checks a leaf carrying a tail, since _set reads one segment', () => {
     // `what = path.get_slicec('/', 2)` (chain_ik_3d.cpp:38) is `root_bone`, so set_root_bone
@@ -149,9 +158,12 @@ describe('chainIkSubclassSettings', () => {
     expect(ownsKey('settings/0/toString')).toBe(false);
   });
 
-  it('owns no key ChainIK3D reads as indexless or leafless', () => {
-    // The base dispatcher passes these (its `slash <= 0` guard), so a subclass must not report them.
-    expect(ownsKey('settings//target_node')).toBe(false);
+  it('owns a key with an empty index, which "".to_int() reads as setting 0', () => {
+    // `get_slicec('/', 1).to_int()` (chain_ik_3d.cpp:37) of an empty segment is 0 (ustring.cpp:2304-2305).
+    expect(ownsKey('settings//target_node')).toBe(true);
+  });
+
+  it('owns no leafless key and no key outside the family', () => {
     expect(ownsKey('settings/0')).toBe(false);
     expect(ownsKey('settings/0/')).toBe(false);
     expect(ownsKey('other/0/target_node')).toBe(false);
