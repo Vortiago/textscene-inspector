@@ -318,8 +318,12 @@ function PlainNode({
                         {startsCanvas ? (
                           <CanvasLayerScope node={node}>
                             {/* `<CanvasLayerScope>` is shared with the Control walk's
-                                `CanvasLayer` painter. */}
-                            <CanvasRootRangesProvider value={canvasRoots}>{children}</CanvasRootRangesProvider>
+                                `CanvasLayer` painter. A canvas root below draws on this
+                                layer's canvas (`canvas_item.cpp:246-252`), so a node that
+                                escapes inside it stays under the layer's own group. */}
+                            <WorldRoot>
+                              <CanvasRootRangesProvider value={canvasRoots}>{children}</CanvasRootRangesProvider>
+                            </WorldRoot>
                           </CanvasLayerScope>
                         ) : (
                           <>{children}</>

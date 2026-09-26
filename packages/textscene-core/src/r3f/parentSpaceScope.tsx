@@ -1,8 +1,9 @@
 /**
  * The scope a node draws in when its parent's transform and visibility do not reach it
  * (`godot/parentSpace.ts`), such as a plain Node or a CanvasItem under a Node3D. Such a node's three
- * object moves to its viewport's world root, outside every ancestor group. Three hides a whole
- * subtree below one invisible object, and Godot does not.
+ * object moves to the nearest world root, outside every ancestor group: its viewport's, or its
+ * CanvasLayer's, whose canvas a canvas root draws on. Three hides a whole subtree below one
+ * invisible object, and Godot does not.
  */
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
@@ -33,10 +34,10 @@ export function WorldRootProvider({
 }
 
 /**
- * Mounts a viewport's world root and publishes it to `children`. An Object3D, not a Group: three
- * takes `groupOrder` from the nearest Group, so this resets no canvas key. It exists from the first
- * render, so a node that escapes has somewhere to go at once. `NodeDispatcher` mounts it first, with
- * no transform of its own, so three has updated its world matrix before any node's.
+ * Mounts a world root and publishes it to `children`. An Object3D, not a Group: three takes
+ * `groupOrder` from the nearest Group, so this resets no canvas key. It exists from the first
+ * render, so a node that escapes has somewhere to go at once. `NodeDispatcher` and each CanvasLayer
+ * mount it before their children, with no transform of its own, so three updates it first.
  */
 export function WorldRoot({ children }: { children: ReactNode }) {
   const [root] = useState(() => new THREE.Object3D());

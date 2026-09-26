@@ -96,8 +96,9 @@ omission.
 >
 > - `godot/parentSpace.ts` states the rule: a child escapes a parent in the Node3D or CanvasItem
 >   family when it is not of that family. `<ParentSpaceScope>` moves such a child's three object
->   to the viewport's world root, outside every ancestor group, because three hides a whole subtree
->   below one invisible object. The eye toggle follows the same rule, as the editor's does.
+>   to the nearest world root, outside every ancestor group, because three hides a whole subtree
+>   below one invisible object. That is the viewport's, or a CanvasLayer's, since a canvas root
+>   draws on its CanvasLayer's canvas. The eye toggle follows the same rule, as the editor's does.
 > - Rejected: an R3F `createPortal`. It gives every component inside a scene of its own, and
 >   WorldEnvironment, Decal and the light helpers write to `useThree().scene`. Only the three
 >   object moves, so the React tree, `useThree()` and every context stay as they were.

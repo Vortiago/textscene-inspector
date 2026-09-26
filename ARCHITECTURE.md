@@ -155,7 +155,9 @@ a Node3D and a `CanvasLayer` under a Node2D escape. `<ParentSpaceScope>`
 moves each one's THREE object to the viewport's **world root**, and leaves its
 React subtree where it is, so `useThree()` and every context still apply. The
 world root is an `Object3D` that `NodeDispatcher` mounts inside the pointer
-root. A detached SubViewport publishes its own scene as the world root. A `top_level` Node3D keeps its
+root. A detached SubViewport publishes its own scene as the world root. A
+`CanvasLayer` mounts one inside its own group, because a canvas root below it
+draws on that layer's canvas. A `top_level` Node3D keeps its
 parent's visibility, so it stays in place, and `<TopLevelScope>` takes its
 world matrix from the world root instead
 ([ADR-0008](./docs/adr/0008-invisible-render-intent.md)).

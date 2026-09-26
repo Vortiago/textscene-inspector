@@ -383,6 +383,28 @@ ${RECT}
     expect(isRenderedVisible(named(root, 'Art'))).toBe(true);
   });
 
+  it('stays on its CanvasLayer’s canvas when it escapes a Node2D inside the layer', async () => {
+    const root = await renderWorld(
+      `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Background" type="ParallaxBackground" parent="."]
+offset = Vector2(200, 0)
+
+[node name="Layer" type="ParallaxLayer" parent="Background"]
+
+[node name="Holder" type="Node" parent="Background/Layer"]
+
+[node name="Art" type="Polygon2D" parent="Background/Layer/Holder"]
+${RECT}
+`,
+      { workspace: '2d' }
+    );
+    expect(isAncestor(named(root, 'Background'), named(root, 'Art'))).toBe(true);
+    expect(isAncestor(named(root, 'Layer'), named(root, 'Art'))).toBe(false);
+  });
+
   it('still drops the ancestor transform once, not twice', async () => {
     const root = await renderWorld(
       `[gd_scene format=3]
