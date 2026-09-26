@@ -1,64 +1,59 @@
 /**
  * Curve3D decode: `_data = { "points": PackedVector3Array(...), "tilts": ... }`, nine
  * floats per point (`in.xyz, out.xyz, position.xyz`, handles relative to the
- * position), to control points and a tessellated polyline. `tilts` is ignored. No
- * THREE: Godot 3D space is right-handed Y-up, as three.js is.
+ * position), to control points and a tessellated polyline. `tilts` must be present but is
+ * not read. No THREE: Godot 3D space is right-handed Y-up, as three.js is.
  */
 
 import { parsePackedVector3Array } from '../../shapes/packedArray';
+import { ruleInt } from '../../../godot/int.js';
+import { CURVE3D_DATA, bezierDataRefusal, bezierPointsLiteral } from '../shared/bezierData';
+import { resizeBezierPoints } from '../shared/pointCount';
 import type {
   Curve3DControlPoint,
   Curve3DSample,
   Curve3DSampler,
 } from './types';
-import { dictPackedField } from '../../../godot/packedArrayFields.js';
-
-const FLOATS_PER_POINT = 9;
 
 /**
- * Parse a Curve3D `_data` value into control points. Accepts the raw TSCN string
- * (`{ "points": PackedVector3Array(...), … }`) or, defensively, an object with a
- * `points` string. A trailing partial point is dropped. Returns `[]` for
- * missing/empty/malformed input.
+ * Decode a Curve3D resource body to its control points. `_data` loads first, then
+ * `point_count` resizes the list, the order Godot's writer emits them in. A `_data`
+ * that `_set_data` refuses, or that does not parse, loads no points.
  */
-export function parseCurve3DPoints(dataValue: unknown): Curve3DControlPoint[] {
-  const literal = extractPointsLiteral(dataValue);
-  if (!literal) return [];
+export function decodeCurve3D(data: Record<string, string>): Curve3DControlPoint[] {
+  const points = readControlPoints(data._data);
+  const count = ruleInt(data.point_count);
+  return count === null ? points : resizeBezierPoints(points, count, originPoint);
+}
+
+function readControlPoints(value: string | undefined): Curve3DControlPoint[] {
+  if (value === undefined || bezierDataRefusal(value, CURVE3D_DATA) !== null) return [];
 
   let flat: Float32Array;
   try {
-    flat = parsePackedVector3Array(literal);
+    flat = parsePackedVector3Array(bezierPointsLiteral(value, CURVE3D_DATA)!);
   } catch {
     return [];
   }
 
-  const count = Math.floor(flat.length / FLOATS_PER_POINT);
   const points: Curve3DControlPoint[] = [];
-  for (let i = 0; i < count; i++) {
-    const b = i * FLOATS_PER_POINT;
+  for (let base = 0; base < flat.length; base += CURVE3D_DATA.floatsPerPoint) {
     points.push({
-      in: { x: flat[b + 0]!, y: flat[b + 1]!, z: flat[b + 2]! },
-      out: { x: flat[b + 3]!, y: flat[b + 4]!, z: flat[b + 5]! },
-      position: { x: flat[b + 6]!, y: flat[b + 7]!, z: flat[b + 8]! },
+      in: { x: flat[base + 0]!, y: flat[base + 1]!, z: flat[base + 2]! },
+      out: { x: flat[base + 3]!, y: flat[base + 4]!, z: flat[base + 5]! },
+      position: { x: flat[base + 6]!, y: flat[base + 7]!, z: flat[base + 8]! },
     });
   }
   return points;
 }
 
-/** Built once: a non-global instance carries no `lastIndex`, so it is safe to share. */
-const POINTS_FIELD_RE = dictPackedField('points', 'PackedVector3Array');
-
-/**
- * The `points` value out of a `_data` string or object, in whichever of the
- * three spellings `parsePackedVector3Array` takes.
- */
-function extractPointsLiteral(dataValue: unknown): string | null {
-  if (typeof dataValue === 'string') return POINTS_FIELD_RE.exec(dataValue)?.[1] ?? null;
-  if (dataValue && typeof dataValue === 'object') {
-    const points = (dataValue as { points?: unknown }).points;
-    return typeof points === 'string' ? points : null;
-  }
-  return null;
+/** The point `_add_point(Vector3())` appends: every handle and the position at zero. */
+function originPoint(): Curve3DControlPoint {
+  return {
+    in: { x: 0, y: 0, z: 0 },
+    out: { x: 0, y: 0, z: 0 },
+    position: { x: 0, y: 0, z: 0 },
+  };
 }
 
 /**

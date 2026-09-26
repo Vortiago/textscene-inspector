@@ -30,7 +30,7 @@ describe('curve3d slice registration', () => {
   });
 
   it('re-exports the decode surface', () => {
-    expect(typeof curve3dSlice.parseCurve3DPoints).toBe('function');
+    expect(typeof curve3dSlice.decodeCurve3D).toBe('function');
     expect(typeof curve3dSlice.tessellateCurve3D).toBe('function');
   });
 });

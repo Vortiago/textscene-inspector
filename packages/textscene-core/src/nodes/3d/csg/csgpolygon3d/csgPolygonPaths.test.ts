@@ -14,7 +14,8 @@ import type { TscnNode } from '../../../../parser/types';
 
 const CURVE = `[sub_resource type="Curve3D" id="Curve3D_road"]
 _data = {
-"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -4, 0, 0, 0, 0, 0, 0, 3, 0, -6)
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -4, 0, 0, 0, 0, 0, 0, 3, 0, -6),
+"tilts": PackedFloat32Array(0, 0, 0)
 }
 point_count = 3`;
 
@@ -158,7 +159,8 @@ path_node = NodePath("../Nowhere")`;
 
 [sub_resource type="Curve3D" id="Curve3D_stub"]
 _data = {
-"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0)
+"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0),
+"tilts": PackedFloat32Array(0)
 }
 point_count = 1
 
@@ -173,6 +175,34 @@ curve = SubResource("Curve3D_stub")`;
     const parsed = new TscnParser().parse(scene);
     resolveCsgPolygonPaths(parsed.nodes, parsed.internalResources);
     expect(resolvedOf(parsed.nodes, 'Poly')).toBeUndefined();
+  });
+
+  // `Curve3D::set_point_count` drops the tail after `_data` loads (curve.cpp:1455-1456),
+  // so the sweep follows two points, not the three `_data` lists.
+  it('sweeps only the points point_count keeps', () => {
+    const truncated = CURVE.replace('point_count = 3', 'point_count = 2');
+    const parsed = new TscnParser().parse(
+      `[gd_scene load_steps=2 format=3]\n\n${truncated}\n\n${CHILD_SCENE}\n`
+    );
+    resolveCsgPolygonPaths(parsed.nodes, parsed.internalResources);
+    expect(resolvedOf(parsed.nodes, 'Racetrack')!.curvePoints).toHaveLength(2);
+  });
+
+  // `Curve3D::_set_data` refuses a `_data` without "tilts" (curve.cpp:2280), and
+  // `point_count = 3` then appends three origin points to the empty list
+  // (curve.cpp:1459-1460): the sweep follows no authored point.
+  it('sweeps only origin points when the curve has no "tilts"', () => {
+    const noTilts = CURVE.replace(',\n"tilts": PackedFloat32Array(0, 0, 0)', '');
+    const parsed = new TscnParser().parse(
+      `[gd_scene load_steps=2 format=3]\n\n${noTilts}\n\n${CHILD_SCENE}\n`
+    );
+    resolveCsgPolygonPaths(parsed.nodes, parsed.internalResources);
+    const positions = resolvedOf(parsed.nodes, 'Racetrack')!.curvePoints.map((p) => p.position);
+    expect(positions).toEqual([
+      { x: 0, y: 0, z: 0 },
+      { x: 0, y: 0, z: 0 },
+      { x: 0, y: 0, z: 0 },
+    ]);
   });
 
   it('does not touch polygons that are not in PATH mode', () => {

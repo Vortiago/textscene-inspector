@@ -12,7 +12,7 @@ import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { findSubResource, parseResourceReference } from '../../../resources/SubResourceResolver';
 import {
-  parseCurve3DPoints,
+  decodeCurve3D,
   tessellateCurve3D,
   type Curve3DSampler,
 } from '../../../resources/curves/curve3d';
@@ -36,7 +36,7 @@ export function Path3D({ node, children }: NodeComponentProps) {
     if (!ref || ref.type !== 'SubResource') return null;
     const sub = findSubResource(internalResources, ref.id);
     if (!sub) return null;
-    const points = parseCurve3DPoints(sub.data['_data']);
+    const points = decodeCurve3D(sub.data as Record<string, string>);
     if (points.length < 2) return null;
     return tessellateCurve3D(points);
   }, [props.curve, internalResources]);

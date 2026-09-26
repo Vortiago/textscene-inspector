@@ -11,7 +11,7 @@ import type { Path3DProperties } from '../../../../nodes/paths/path3d/types.js';
 import { joinPath, resolveNodePathLiteral, unclaimedUniqueNames } from '../../../../utils/nodePath.js';
 import { uniqueNamePaths } from '../../../../utils/uniqueNames.js';
 import { findSubResource, parseResourceReference } from '../../../../resources/SubResourceResolver.js';
-import { parseCurve3DPoints } from '../../../../resources/curves/curve3d/index.js';
+import { decodeCurve3D } from '../../../../resources/curves/curve3d/index.js';
 import { globalMatrix3D, matrixToTransform3D } from '../../../../r3f/nodeTreeTransforms.js';
 import { warn } from '../../../../logger.js';
 
@@ -87,7 +87,7 @@ export function resolveCsgPolygonPaths(
     const sub = findSubResource(internalResources, ref.id);
     if (!sub) continue;
 
-    const curvePoints = parseCurve3DPoints(sub.data['_data']);
+    const curvePoints = decodeCurve3D(sub.data as Record<string, string>);
     if (curvePoints.length < MIN_CURVE_POINTS) continue;
 
     // `path_local` builds the sweep in the polygon's own space. Otherwise Godot uses the Path3D's

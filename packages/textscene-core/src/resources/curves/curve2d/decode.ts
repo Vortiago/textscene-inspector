@@ -6,36 +6,38 @@
  */
 
 import { parsePackedVector2Array } from '../../shapes/packedArray';
-import { dictPackedField } from '../../../godot/packedArrayFields.js';
+import { ruleInt } from '../../../godot/int.js';
+import { CURVE2D_DATA, bezierDataRefusal, bezierPointsLiteral } from '../shared/bezierData';
+import { resizeBezierPoints } from '../shared/pointCount';
 import type {
   Curve2DControlPoint,
   Curve2DSample,
   Curve2DSampler,
 } from './types';
 
-const FLOATS_PER_POINT = 6;
-
 /**
- * Parse a Curve2D `_data` value into control points. Accepts the raw TSCN
- * string form (`{ "points": PackedVector2Array(...) }`) or, defensively, an
- * object carrying a `points` string. A trailing partial point (float count not
- * a multiple of six) is dropped. Returns `[]` for missing/empty/malformed input.
+ * Decode a Curve2D resource body to its control points. `_data` loads first, then
+ * `point_count` resizes the list, the order Godot's writer emits them in. A `_data`
+ * that `_set_data` refuses, or that does not parse, loads no points.
  */
-export function parseCurve2DPoints(dataValue: unknown): Curve2DControlPoint[] {
-  const pointsLiteral = extractPointsLiteral(dataValue);
-  if (!pointsLiteral) return [];
+export function decodeCurve2D(data: Record<string, string>): Curve2DControlPoint[] {
+  const points = readControlPoints(data._data);
+  const count = ruleInt(data.point_count);
+  return count === null ? points : resizeBezierPoints(points, count, originPoint);
+}
+
+function readControlPoints(value: string | undefined): Curve2DControlPoint[] {
+  if (value === undefined || bezierDataRefusal(value, CURVE2D_DATA) !== null) return [];
 
   let flat: Float32Array;
   try {
-    flat = parsePackedVector2Array(pointsLiteral);
+    flat = parsePackedVector2Array(bezierPointsLiteral(value, CURVE2D_DATA)!);
   } catch {
     return [];
   }
 
-  const count = Math.floor(flat.length / FLOATS_PER_POINT);
   const points: Curve2DControlPoint[] = [];
-  for (let i = 0; i < count; i++) {
-    const base = i * FLOATS_PER_POINT;
+  for (let base = 0; base < flat.length; base += CURVE2D_DATA.floatsPerPoint) {
     points.push({
       in: { x: flat[base + 0]!, y: flat[base + 1]! },
       out: { x: flat[base + 2]!, y: flat[base + 3]! },
@@ -45,20 +47,9 @@ export function parseCurve2DPoints(dataValue: unknown): Curve2DControlPoint[] {
   return points;
 }
 
-/** Built once: a non-global instance carries no `lastIndex`, so it is safe to share. */
-const POINTS_FIELD_RE = dictPackedField('points', 'PackedVector2Array');
-
-/**
- * The `points` value out of a `_data` string or object, in whichever of the
- * three spellings `parsePackedVector2Array` takes.
- */
-function extractPointsLiteral(dataValue: unknown): string | null {
-  if (typeof dataValue === 'string') return POINTS_FIELD_RE.exec(dataValue)?.[1] ?? null;
-  if (dataValue && typeof dataValue === 'object') {
-    const points = (dataValue as { points?: unknown }).points;
-    return typeof points === 'string' ? points : null;
-  }
-  return null;
+/** The point `_add_point(Vector2())` appends: every handle and the position at zero. */
+function originPoint(): Curve2DControlPoint {
+  return { in: { x: 0, y: 0 }, out: { x: 0, y: 0 }, position: { x: 0, y: 0 } };
 }
 
 /**
