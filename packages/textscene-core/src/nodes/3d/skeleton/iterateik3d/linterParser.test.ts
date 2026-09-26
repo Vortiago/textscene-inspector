@@ -276,6 +276,14 @@ describe('key tails IterateIK3D ignores', () => {
   });
 });
 
+describe('an empty setting index', () => {
+  it('reports nothing, as ChainIK3D does for its own leaves', () => {
+    // ChainIK3D's dispatcher passes an empty index, so an own leaf there must not report it either.
+    expect(check('settings//target_node', 'NodePath("../Target")')).toBeNull();
+    expect(check('settings//root_bone', '3')).toBeNull();
+  });
+});
+
 describe('the settings/ keys ChainIK3D owns', () => {
   // This registration shadows ChainIK3D's `settings/` wildcard for every IterateIK3D descendant,
   // since the base-walk stops at the first match. A key IterateIK3D does not add goes back to

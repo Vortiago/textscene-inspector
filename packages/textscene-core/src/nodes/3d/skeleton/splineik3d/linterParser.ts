@@ -91,8 +91,8 @@ validatorRegistry.registerAll('SplineIK3D', {
   // IKModifier3D's `_set_setting_count<T>`.
   setting_count: settingCount('IKModifier3D'),
 
-  // `settings/#/*` matches a single leaf segment (`ValidatorRegistry.matchesIndexedKey`), so
-  // `end_bone/direction`, `end_bone/length` and the nested `joints/<j>/` block skip this dispatcher
-  // and reach ChainIK3D through the base-walk.
+  // `settings/#/*` routes every depth below the index (`wildcardIndex.ts`), so `end_bone/direction`,
+  // `end_bone/length` and the nested `joints/<j>/` block reach this dispatcher, which hands them to
+  // ChainIK3D.
   'settings/#/*': settingsFamily,
 });

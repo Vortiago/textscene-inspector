@@ -4,7 +4,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { declaredLeafResolver, indexedElements, visitIndexedKeys } from './indexedKey.js';
+import {
+  declaredLeafResolver,
+  firstSegment,
+  indexedElements,
+  visitIndexedKeys,
+} from './indexedKey.js';
 
 /** A class that declares no leaf, so every leaf keeps its own text. */
 const NO_DECLARED_LEAVES = declaredLeafResolver([]);
@@ -243,6 +248,22 @@ describe('declaredLeafResolver', () => {
   it('resolves nothing for a prototype name', () => {
     expect(resolve('toString')).toBeNull();
     expect(resolve('constructor/extra')).toBeNull();
+  });
+});
+
+describe('firstSegment', () => {
+  it('returns the text before the first slash', () => {
+    expect(firstSegment('apply/transform_mode')).toBe('apply');
+    expect(firstSegment('joints/0/bone')).toBe('joints');
+  });
+
+  it('returns the whole path when it has no slash', () => {
+    expect(firstSegment('root_bone')).toBe('root_bone');
+    expect(firstSegment('')).toBe('');
+  });
+
+  it('returns an empty segment for a leading slash', () => {
+    expect(firstSegment('/root_bone')).toBe('');
   });
 });
 

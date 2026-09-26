@@ -94,8 +94,9 @@ const resolveSettingLeaf = declaredLeafResolver(Object.keys(SETTING_LEAVES));
 
 /**
  * A subclass's half of `settings/<i>/…`, whose own leaves share the prefix with ChainIK3D's.
- * `resolveLeaf` spans both tables, so `end_bone` still reads its option. `ownsKey` reads the `what`
- * segment alone, which holds while every own leaf is terminal, as IterateIK3D's and SplineIK3D's are.
+ * `resolveLeaf` spans both tables, so `end_bone` still reads its option. `ownsKey` claims a key only
+ * where ChainIK3D's dispatcher would read one, a non-empty index then a leaf, and leaves the rest to
+ * it, so a subclass never reports a key its base passes.
  */
 export function chainIkSubclassSettings(ownLeaves: Readonly<Record<string, PropertyValidator>>) {
   const resolveLeaf = declaredLeafResolver([
@@ -103,11 +104,11 @@ export function chainIkSubclassSettings(ownLeaves: Readonly<Record<string, Prope
     ...Object.keys(SETTING_LEAVES),
   ]);
   const ownsKey = (key: string): boolean => {
-    const start = key.indexOf('/', SETTINGS_PREFIX.length) + 1;
-    if (start === 0) return false;
-    const end = key.indexOf('/', start);
-    const what = end < 0 ? key.slice(start) : key.slice(start, end);
-    return Object.prototype.hasOwnProperty.call(ownLeaves, what);
+    if (!key.startsWith(SETTINGS_PREFIX)) return false;
+    const slash = key.indexOf('/', SETTINGS_PREFIX.length);
+    if (slash <= SETTINGS_PREFIX.length) return false;
+    const leaf = resolveLeaf(key.slice(slash + 1));
+    return leaf !== null && Object.prototype.hasOwnProperty.call(ownLeaves, leaf);
   };
   return { resolveLeaf, ownsKey };
 }
@@ -149,8 +150,8 @@ settingsFamily.grounding = { kind: 'enforced', cite: 'chain_ik_3d.cpp:39' };
 settingsFamily.leaves = [...Object.values(SETTING_LEAVES), jointBoneReadOnly];
 
 validatorRegistry.registerAll('ChainIK3D', {
-  // Plain, not `settings/#/*`: `matchesIndexedKey` takes one leaf segment, so it misses
-  // `end_bone/direction`, `end_bone/length` and `joints/<j>/bone`.
+  // Both wildcard shapes route every depth below the index (`wildcardIndex.ts`), so
+  // `end_bone/direction` and `joints/<j>/bone` reach this dispatcher, which reads the leaf itself.
   'settings/*': settingsFamily,
 });
 
