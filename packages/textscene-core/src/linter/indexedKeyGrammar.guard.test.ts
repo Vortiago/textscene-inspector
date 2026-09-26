@@ -254,5 +254,8 @@ describe('Godot indexed-key grammar', () => {
     // Still a segment: the index ends at the first `/`, or `settings/0/joints`
     // would read an index of `0/joints` and match no leaf at all.
     expect(toInt.exec('settings/0/joints/1/bone')?.[1]).toBe('0');
+    // An empty segment too: `"".to_int()` is 0 (ustring.cpp:2304-2305), and `is_valid_int` refuses it.
+    expect(toInt.exec('settings//bone_name')?.[1]).toBe('');
+    expect(validInt.test('item_/text')).toBe(false);
   });
 });

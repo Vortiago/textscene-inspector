@@ -277,10 +277,13 @@ describe('key tails IterateIK3D ignores', () => {
 });
 
 describe('an empty setting index', () => {
-  it('reports nothing, as ChainIK3D does for its own leaves', () => {
-    // ChainIK3D's dispatcher passes an empty index, so an own leaf there must not report it either.
+  it('checks the value, since "".to_int() applies it to setting 0', () => {
+    // `get_slicec('/', 1).to_int()` (iterate_ik_3d.cpp:37) of an empty segment is 0
+    // (ustring.cpp:2304-2305), so the write lands on setting 0 like any other.
     expect(check('settings//target_node', 'NodePath("../Target")')).toBeNull();
-    expect(check('settings//root_bone', '3')).toBeNull();
+    expect(check('settings//target_node', '&"../Target"')?.severity).toBe('error');
+    expect(check('settings//root_bone', '-2')?.severity).toBe('error');
+    expect(check('settings//joints//rotation_axis', '9')?.severity).toBe('warning');
   });
 });
 
