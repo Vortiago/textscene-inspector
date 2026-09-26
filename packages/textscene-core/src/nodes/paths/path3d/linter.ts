@@ -6,36 +6,22 @@
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
-import type { TscnInternalResource } from '../../../parser/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
-import { findSubResource } from '../../../resources/SubResourceResolver.js';
+import { findSubResourceOfType } from '../../../resources/SubResourceResolver.js';
 import {
-  packedArrayBody,
-  packedArrayForms,
-  splitTopLevel,
-  subResourceRefAnywhere,
-} from '../../../godot/index.js';
-import { dictPackedField } from '../../../godot/packedArrayFields.js';
+  CURVE3D_DATA,
+  bezierDataRefusal,
+  bezierPointsLiteral,
+  type BezierDataRefusal,
+} from '../../../resources/curves/shared/bezierData.js';
+import { packedArrayForms, subResourceRefAnywhere } from '../../../godot/index.js';
+import { dictPackedField, packedFloatCount } from '../../../godot/packedArrayFields.js';
 
-// Both fields convert through the Variant (curve.cpp:2282, :2291), so each takes
-// the three spellings `packedArrayForms` lists.
-const POINTS_RE = dictPackedField('points', 'PackedVector3Array');
+// "tilts" converts through the Variant (curve.cpp:2291), so it takes the three
+// spellings `packedArrayForms` lists.
 const TILTS_RE = dictPackedField('tilts', 'PackedFloat32Array');
-const POINTS_FORMS = packedArrayForms('PackedVector3Array');
 const TILTS_FORMS = packedArrayForms('PackedFloat32Array');
-
-/**
- * How many floats a field's value holds: the packed constructor lists them
- * flat, the two array spellings hold one `groupSize`-float element each.
- */
-function floatCount(forms: readonly RegExp[], value: string, groupSize: number): number {
-  const matched = packedArrayBody(forms, value);
-  if (!matched || matched.body === '') return 0;
-  const parts = matched.flat ? matched.body.split(',') : splitTopLevel(matched.body);
-  const count = parts.filter((s) => s.trim() !== '').length;
-  return matched.flat ? count : count * groupSize;
-}
 
 function checkPath3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -62,21 +48,6 @@ function checkPath3D(context: RuleContext): Diagnostic[] {
 }
 
 /**
- * The first Curve3D in declaration order declared under `id`. The id map answers when that id's
- * first holder is the Curve3D. A file that repeats the id with another type first falls back to
- * the scan. An id the map lacks has no holder at all, so the scan would find nothing either.
- */
-function firstCurve3DWithId(
-  resources: readonly TscnInternalResource[],
-  id: string
-): TscnInternalResource | undefined {
-  const firstHolder = findSubResource(resources, id);
-  if (!firstHolder) return undefined;
-  if (firstHolder.id === id && firstHolder.type === 'Curve3D') return firstHolder;
-  return resources.find((r) => r.id === id && r.type === 'Curve3D');
-}
-
-/**
  * Validate the referenced Curve3D's `_data` against what Godot loads. `Curve3D::_set_data`
  * (`scene/resources/curve.cpp:2278-2299`) fails on a missing `points` or `tilts` key, and on a
  * `points` length that is not a multiple of three Vector3s (in, out, position). The curve then
@@ -87,63 +58,58 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
   const id = subResourceRefAnywhere(curveRef);
   if (id === null) return [];
 
-  const resource = firstCurve3DWithId(scene.internalResources ?? [], id);
-  if (!resource) return [];
-
-  const data = (resource.data as Record<string, string>)['_data'];
+  const data = findSubResourceOfType(scene.internalResources ?? [], id, 'Curve3D')?.data._data;
   if (typeof data !== 'string') return [];
 
-  const problem = (message: string): Diagnostic => ({
-    severity: 'error',
-    message: `Path3D '${node.name}': ${message}`,
-    nodeName: node.name,
-    nodeType: node.type,
-    ruleName: 'curve3d-loadable',
-  });
+  const problem = refusalProblem(bezierDataRefusal(data, CURVE3D_DATA)) ?? shortTiltsProblem(data);
+  if (problem === null) return [];
+  return [
+    {
+      severity: 'error',
+      message: `Path3D '${node.name}': ${problem}`,
+      nodeName: node.name,
+      nodeType: node.type,
+      ruleName: 'curve3d-loadable',
+    },
+  ];
+}
 
-  const pointsLiteral = POINTS_RE.exec(data);
-  if (!pointsLiteral) {
-    return [problem("its Curve3D has no \"points\" in `_data`; Godot loads the curve with zero points and the path draws nothing.")];
+function refusalProblem(refusal: BezierDataRefusal | null): string | null {
+  if (refusal === null) return null;
+  if (refusal.kind === 'partial-point') {
+    return (
+      `its Curve3D "points" holds ${refusal.floats} floats. Godot needs a whole number of control ` +
+      'points at nine floats each (in / out / position) and rejects the resource otherwise.'
+    );
   }
-  if (!/"tilts"\s*:/.test(data)) {
-    return [
-      problem(
-        'its Curve3D has no "tilts" in `_data`. Godot requires both "points" and "tilts" ' +
-          '(curve.cpp:2279-2280) and loads the curve with zero points without it, so the path ' +
-          'silently disappears even though the scene looks valid.'
-      ),
-    ];
+  if (refusal.key === 'points') {
+    return 'its Curve3D has no "points" in `_data`. Godot loads the curve with zero points and the path draws nothing.';
   }
+  return (
+    `its Curve3D has no "${refusal.key}" in \`_data\`. Godot requires both "points" and "tilts" ` +
+    '(curve.cpp:2279-2280) and loads the curve with zero points without it, so the path ' +
+    'silently disappears even though the scene looks valid.'
+  );
+}
 
-  const floats = floatCount(POINTS_FORMS, pointsLiteral[1]!, 3);
-  const vector3s = floats / 3;
-  if (floats % 3 !== 0 || vector3s % 3 !== 0) {
-    return [
-      problem(
-        `its Curve3D "points" holds ${floats} floats; Godot needs a whole number of control ` +
-          'points at nine floats each (in / out / position) and rejects the resource otherwise.'
-      ),
-    ];
-  }
-
-  const tiltsLiteral = TILTS_RE.exec(data);
-  if (tiltsLiteral) {
-    const tilts = floatCount(TILTS_FORMS, tiltsLiteral[1]!, 1);
-    const expected = vector3s / 3;
-    // Too few only. `Curve3D::_set_data`'s fill loop is bounded by `points.size()`
-    // (curve.cpp:2294) and indexes `rt[i]` inside it, so a short `tilts` reads past the end
-    // while a long one leaves its extra values untouched and loads.
-    if (tilts < expected) {
-      return [
-        problem(
-          `its Curve3D has ${tilts} tilt values for ${expected} control points; Godot indexes ` +
-            'tilts by point and reads past the end when there are too few.'
-        ),
-      ];
-    }
-  }
-
-  return [];
+/**
+ * Too few only. `Curve3D::_set_data`'s fill loop is bounded by `points.size()`
+ * (curve.cpp:2294) and indexes `rt[i]` inside it, so a short `tilts` reads past the end
+ * while a long one leaves its extra values untouched and loads.
+ */
+function shortTiltsProblem(data: string): string | null {
+  const tiltsLiteral = TILTS_RE.exec(data)?.[1];
+  const pointsLiteral = bezierPointsLiteral(data, CURVE3D_DATA);
+  if (tiltsLiteral === undefined || pointsLiteral === null) return null;
+  const tilts = packedFloatCount(TILTS_FORMS, tiltsLiteral, 1);
+  const points =
+    packedFloatCount(CURVE3D_DATA.pointsForms, pointsLiteral, CURVE3D_DATA.vectorSize) /
+    CURVE3D_DATA.floatsPerPoint;
+  if (tilts >= points) return null;
+  return (
+    `its Curve3D has ${tilts} tilt values for ${points} control points. Godot indexes ` +
+    'tilts by point and reads past the end when there are too few.'
+  );
 }
 
 const path3DValidationRule: LintRule = {
