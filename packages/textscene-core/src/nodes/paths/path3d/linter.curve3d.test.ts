@@ -69,7 +69,7 @@ describe('curve3d-loadable', () => {
       lint('"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0),\n"tilts": PackedFloat32Array(0)')
     );
     expect(errors).toHaveLength(1);
-    expect(errors[0]!.message).toContain('nine floats');
+    expect(errors[0]!.message).toContain('9 floats each');
   });
 
   it('rejects fewer tilts than control points, which Godot reads past the end of', () => {

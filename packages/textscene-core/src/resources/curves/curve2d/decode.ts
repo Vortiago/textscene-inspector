@@ -5,52 +5,39 @@
  * stay in Godot 2D space (+Y down).
  */
 
+import type { TscnInternalResource } from '../../../parser/types';
 import { parsePackedVector2Array } from '../../shapes/packedArray';
-import { ruleInt } from '../../../godot/int.js';
-import { CURVE2D_DATA, bezierDataRefusal, bezierPointsLiteral } from '../shared/bezierData';
-import { cubicBezier } from '../shared/bezier';
-import { resizeBezierPoints } from '../shared/pointCount';
+import { bezierInterpolate } from '../../../godot/index.js';
+import { CURVE2D_DATA } from '../shared/bezierData';
+import { decodeBezierCurve, resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
 import type {
   Curve2DControlPoint,
   Curve2DSample,
   Curve2DSampler,
 } from './types';
 
-/**
- * Decode a Curve2D resource body to its control points. `_data` loads first, then
- * `point_count` resizes the list, the order Godot's writer emits them in. A `_data`
- * that `_set_data` refuses, or that does not parse, loads no points.
- */
-export function decodeCurve2D(data: Record<string, string>): Curve2DControlPoint[] {
-  const points = readControlPoints(data._data);
-  const count = ruleInt(data.point_count);
-  return count === null ? points : resizeBezierPoints(points, count, originPoint);
+const CURVE2D: BezierCurveReader<Curve2DControlPoint> = {
+  format: CURVE2D_DATA,
+  parse: parsePackedVector2Array,
+  pointAt: (flat, base) => ({
+    in: { x: flat[base + 0]!, y: flat[base + 1]! },
+    out: { x: flat[base + 2]!, y: flat[base + 3]! },
+    position: { x: flat[base + 4]!, y: flat[base + 5]! },
+  }),
+  origin: () => ({ in: { x: 0, y: 0 }, out: { x: 0, y: 0 }, position: { x: 0, y: 0 } }),
+};
+
+/** The control points of a Curve2D resource body, as Godot loads them. */
+export function decodeCurve2D(data: Readonly<Record<string, unknown>>): Curve2DControlPoint[] {
+  return decodeBezierCurve(data, CURVE2D);
 }
 
-function readControlPoints(value: string | undefined): Curve2DControlPoint[] {
-  if (value === undefined || bezierDataRefusal(value, CURVE2D_DATA) !== null) return [];
-
-  let flat: Float32Array;
-  try {
-    flat = parsePackedVector2Array(bezierPointsLiteral(value, CURVE2D_DATA)!);
-  } catch {
-    return [];
-  }
-
-  const points: Curve2DControlPoint[] = [];
-  for (let base = 0; base < flat.length; base += CURVE2D_DATA.floatsPerPoint) {
-    points.push({
-      in: { x: flat[base + 0]!, y: flat[base + 1]! },
-      out: { x: flat[base + 2]!, y: flat[base + 3]! },
-      position: { x: flat[base + 4]!, y: flat[base + 5]! },
-    });
-  }
-  return points;
-}
-
-/** The point `_add_point(Vector2())` appends: every handle and the position at zero. */
-function originPoint(): Curve2DControlPoint {
-  return { in: { x: 0, y: 0 }, out: { x: 0, y: 0 }, position: { x: 0, y: 0 } };
+/** The control points of the Curve2D a `SubResource("id")` value names, or none. */
+export function resolveCurve2D(
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[]
+): Curve2DControlPoint[] {
+  return resolveBezierCurve(ref, internalResources, CURVE2D);
 }
 
 /**
@@ -130,6 +117,6 @@ function appendSpan(
   const steps = Math.max(1, segmentsPerSpan);
   for (let s = 1; s <= steps; s++) {
     const t = s / steps;
-    flat.push(cubicBezier(p0.x, p1.x, p2.x, p3.x, t), cubicBezier(p0.y, p1.y, p2.y, p3.y, t));
+    flat.push(bezierInterpolate(p0.x, p1.x, p2.x, p3.x, t), bezierInterpolate(p0.y, p1.y, p2.y, p3.y, t));
   }
 }

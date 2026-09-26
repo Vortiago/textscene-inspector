@@ -11,9 +11,9 @@ import { heldResource } from '../../../linter/resourceChecker.js';
 import { findSubResourceOfType } from '../../../resources/SubResourceResolver.js';
 import {
   CURVE3D_DATA,
-  bezierDataRefusal,
-  bezierPointsLiteral,
-  type BezierDataRefusal,
+  bezierRefusalProblem,
+  readBezierData,
+  type BezierDataPoints,
 } from '../../../resources/curves/shared/bezierData.js';
 import { packedArrayForms, subResourceRefAnywhere } from '../../../godot/index.js';
 import { dictPackedField, packedFloatCount } from '../../../godot/packedArrayFields.js';
@@ -58,10 +58,15 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
   const id = subResourceRefAnywhere(curveRef);
   if (id === null) return [];
 
-  const data = findSubResourceOfType(scene.internalResources ?? [], id, 'Curve3D')?.data._data;
+  const curve = findSubResourceOfType(scene.internalResources ?? [], id, CURVE3D_DATA.className);
+  const data = curve?.data._data;
   if (typeof data !== 'string') return [];
 
-  const problem = refusalProblem(bezierDataRefusal(data, CURVE3D_DATA)) ?? shortTiltsProblem(data);
+  const read = readBezierData(data, CURVE3D_DATA);
+  const problem =
+    read.refusal !== null
+      ? bezierRefusalProblem(read.refusal, CURVE3D_DATA)
+      : shortTiltsProblem(data, read.loaded);
   if (problem === null) return [];
   return [
     {
@@ -74,40 +79,18 @@ function checkCurve3DData(context: RuleContext, curveRef: string): Diagnostic[] 
   ];
 }
 
-function refusalProblem(refusal: BezierDataRefusal | null): string | null {
-  if (refusal === null) return null;
-  if (refusal.kind === 'partial-point') {
-    return (
-      `its Curve3D "points" holds ${refusal.floats} floats. Godot needs a whole number of control ` +
-      'points at nine floats each (in / out / position) and rejects the resource otherwise.'
-    );
-  }
-  if (refusal.key === 'points') {
-    return 'its Curve3D has no "points" in `_data`. Godot loads the curve with zero points and the path draws nothing.';
-  }
-  return (
-    `its Curve3D has no "${refusal.key}" in \`_data\`. Godot requires both "points" and "tilts" ` +
-    '(curve.cpp:2279-2280) and loads the curve with zero points without it, so the path ' +
-    'silently disappears even though the scene looks valid.'
-  );
-}
-
 /**
  * Too few only. `Curve3D::_set_data`'s fill loop is bounded by `points.size()`
  * (curve.cpp:2294) and indexes `rt[i]` inside it, so a short `tilts` reads past the end
  * while a long one leaves its extra values untouched and loads.
  */
-function shortTiltsProblem(data: string): string | null {
+function shortTiltsProblem(data: string, { controlPoints }: BezierDataPoints): string | null {
   const tiltsLiteral = TILTS_RE.exec(data)?.[1];
-  const pointsLiteral = bezierPointsLiteral(data, CURVE3D_DATA);
-  if (tiltsLiteral === undefined || pointsLiteral === null) return null;
+  if (tiltsLiteral === undefined) return null;
   const tilts = packedFloatCount(TILTS_FORMS, tiltsLiteral, 1);
-  const points =
-    packedFloatCount(CURVE3D_DATA.pointsForms, pointsLiteral, CURVE3D_DATA.vectorSize) /
-    CURVE3D_DATA.floatsPerPoint;
-  if (tilts >= points) return null;
+  if (tilts >= controlPoints) return null;
   return (
-    `its Curve3D has ${tilts} tilt values for ${points} control points. Godot indexes ` +
+    `its Curve3D has ${tilts} tilt values for ${controlPoints} control points. Godot indexes ` +
     'tilts by point and reads past the end when there are too few.'
   );
 }

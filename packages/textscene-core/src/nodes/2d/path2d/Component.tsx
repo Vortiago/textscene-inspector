@@ -10,9 +10,8 @@ import { Node2D } from '../../base/node2d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { findSubResource, parseResourceReference } from '../../../resources/SubResourceResolver';
 import {
-  decodeCurve2D,
+  resolveCurve2D,
   tessellateCurve2D,
   type Curve2DSampler,
 } from '../../../resources/curves/curve2d';
@@ -28,15 +27,10 @@ export function Path2D({ node, children }: NodeComponentProps) {
   const gizmoVisible = useGizmoVisible();
 
   const sampler = useMemo<Curve2DSampler | null>(() => {
-    if (!props.curve) return null;
-    const ref = parseResourceReference(props.curve);
     // Only an embedded SubResource Curve2D resolves synchronously. Any other
     // curve gives a null sampler: no gizmo, and children keep their authored
     // transform. A script often sets the curve at runtime, so absence is normal.
-    if (!ref || ref.type !== 'SubResource') return null;
-    const sub = findSubResource(internalResources, ref.id);
-    if (!sub) return null;
-    const points = decodeCurve2D(sub.data as Record<string, string>);
+    const points = resolveCurve2D(props.curve, internalResources);
     if (points.length < 2) return null;
     return tessellateCurve2D(points);
   }, [props.curve, internalResources]);

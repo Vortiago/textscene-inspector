@@ -14,7 +14,7 @@ registerResourceSlice({
   failureLabel: 'Resource',
 });
 
-export { decodeCurve3D, tessellateCurve3D } from './decode';
+export { decodeCurve3D, resolveCurve3D, tessellateCurve3D } from './decode';
 export type {
   Curve3DControlPoint,
   Curve3DSample,

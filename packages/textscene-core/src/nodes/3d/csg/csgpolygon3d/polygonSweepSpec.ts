@@ -5,7 +5,7 @@
  */
 
 import type * as THREE from 'three';
-import type { Curve3DSampler } from '../../../../resources/shapes/curve3d';
+import type { Curve3DSampler } from '../../../../resources/curves/curve3d/index.js';
 
 /** Godot `CSGPolygon3D.Mode`. */
 export const PolygonMode = { DEPTH: 0, SPIN: 1, PATH: 2 } as const;

@@ -10,9 +10,8 @@ import { Node3D } from '../../base/node3d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { findSubResource, parseResourceReference } from '../../../resources/SubResourceResolver';
 import {
-  decodeCurve3D,
+  resolveCurve3D,
   tessellateCurve3D,
   type Curve3DSampler,
 } from '../../../resources/curves/curve3d';
@@ -31,12 +30,7 @@ export function Path3D({ node, children }: NodeComponentProps) {
   // unlike the 2D twin. A missing, ExtResource (.tres) or unfound curve gives a null sampler:
   // no gizmo, and children keep their authored transform.
   const sampler = useMemo<Curve3DSampler | null>(() => {
-    if (!props.curve) return null;
-    const ref = parseResourceReference(props.curve);
-    if (!ref || ref.type !== 'SubResource') return null;
-    const sub = findSubResource(internalResources, ref.id);
-    if (!sub) return null;
-    const points = decodeCurve3D(sub.data as Record<string, string>);
+    const points = resolveCurve3D(props.curve, internalResources);
     if (points.length < 2) return null;
     return tessellateCurve3D(points);
   }, [props.curve, internalResources]);

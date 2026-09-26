@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { decodeCurve2D, tessellateCurve2D } from './decode';
+import type { TscnInternalResource } from '../../../parser/types';
+import { decodeCurve2D, resolveCurve2D, tessellateCurve2D } from './decode';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
 
 /** A Curve2D body whose `_data` holds `points` as written, plus any other properties. */
@@ -106,6 +107,31 @@ describe('decodeCurve2D', () => {
       const points = decodeCurve2D(body(TWO_POINTS, { point_count: '100000000' }));
       expect(points).toHaveLength(MAX_PADDED_POINTS);
     });
+  });
+});
+
+describe('resolveCurve2D', () => {
+  const curve: TscnInternalResource = {
+    id: 'Path_1',
+    type: 'Curve2D',
+    data: body('PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 480, 0)', { point_count: '2' }),
+  };
+
+  it('decodes the Curve2D a SubResource reference names', () => {
+    const points = resolveCurve2D('SubResource("Path_1")', [curve]);
+    expect(points.map((p) => p.position)).toEqual([{ x: 0, y: 0 }, { x: 480, y: 0 }]);
+  });
+
+  it('resolves no points for an absent, ExtResource or unknown reference', () => {
+    expect(resolveCurve2D(undefined, [curve])).toEqual([]);
+    expect(resolveCurve2D('ExtResource("Path_1")', [curve])).toEqual([]);
+    expect(resolveCurve2D('SubResource("Missing")', [curve])).toEqual([]);
+  });
+
+  // The path linter checks the first Curve2D under the id, so the preview draws that one.
+  it('skips a first holder of the id that is not a Curve2D (edge case)', () => {
+    const other: TscnInternalResource = { id: 'Path_1', type: 'Curve', data: {} };
+    expect(resolveCurve2D('SubResource("Path_1")', [other, curve])).toHaveLength(2);
   });
 });
 

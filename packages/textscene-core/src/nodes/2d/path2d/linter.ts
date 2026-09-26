@@ -9,7 +9,11 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { checkResourceExists, heldResource } from '../../../linter/resourceChecker.js';
 import { findSubResourceOfType } from '../../../resources/SubResourceResolver.js';
-import { CURVE2D_DATA, bezierDataRefusal } from '../../../resources/curves/shared/bezierData.js';
+import {
+  CURVE2D_DATA,
+  bezierRefusalProblem,
+  readBezierData,
+} from '../../../resources/curves/shared/bezierData.js';
 import { subResourceRefAnywhere } from '../../../godot/index.js';
 
 function checkPath2D(context: RuleContext): Diagnostic[] {
@@ -51,22 +55,16 @@ function checkCurve2DData(context: RuleContext, curveRef: string): Diagnostic[] 
   const id = subResourceRefAnywhere(curveRef);
   if (id === null) return [];
 
-  const data = findSubResourceOfType(scene.internalResources ?? [], id, 'Curve2D')?.data._data;
+  const curve = findSubResourceOfType(scene.internalResources ?? [], id, CURVE2D_DATA.className);
+  const data = curve?.data._data;
   if (typeof data !== 'string') return [];
 
-  const refusal = bezierDataRefusal(data, CURVE2D_DATA);
+  const { refusal } = readBezierData(data, CURVE2D_DATA);
   if (refusal === null) return [];
-  const problem =
-    refusal.kind === 'missing-key'
-      ? `its Curve2D has no "${refusal.key}" in \`_data\`. Godot requires it (curve.cpp:1239) ` +
-        'and loads the curve with zero points, so the path draws nothing.'
-      : `its Curve2D "points" holds ${refusal.floats} floats. Godot needs a whole number of ` +
-        'control points at six floats each (in / out / position) and loads the curve with zero ' +
-        'points otherwise.';
   return [
     {
       severity: 'error',
-      message: `Path2D '${node.name}': ${problem}`,
+      message: `Path2D '${node.name}': ${bezierRefusalProblem(refusal, CURVE2D_DATA)}`,
       nodeName: node.name,
       nodeType: node.type,
       ruleName: 'curve2d-loadable',

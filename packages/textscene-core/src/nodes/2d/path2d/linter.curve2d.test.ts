@@ -53,7 +53,7 @@ describe('curve2d-loadable', () => {
     expect(errors).toHaveLength(1);
     expect(errors[0]!.severity).toBe('error');
     expect(errors[0]!.message).toContain('holds 10 floats');
-    expect(errors[0]!.message).toContain('six floats');
+    expect(errors[0]!.message).toContain('6 floats each');
   });
 
   // `curve.cpp:1241` `PackedVector2Array rp = p_data["points"]` is a Variant

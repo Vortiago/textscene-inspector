@@ -5,56 +5,43 @@
  * not read. No THREE: Godot 3D space is right-handed Y-up, as three.js is.
  */
 
+import type { TscnInternalResource } from '../../../parser/types';
 import { parsePackedVector3Array } from '../../shapes/packedArray';
-import { ruleInt } from '../../../godot/int.js';
-import { CURVE3D_DATA, bezierDataRefusal, bezierPointsLiteral } from '../shared/bezierData';
-import { cubicBezier } from '../shared/bezier';
-import { resizeBezierPoints } from '../shared/pointCount';
+import { bezierInterpolate } from '../../../godot/index.js';
+import { CURVE3D_DATA } from '../shared/bezierData';
+import { decodeBezierCurve, resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
 import type {
   Curve3DControlPoint,
   Curve3DSample,
   Curve3DSampler,
 } from './types';
 
-/**
- * Decode a Curve3D resource body to its control points. `_data` loads first, then
- * `point_count` resizes the list, the order Godot's writer emits them in. A `_data`
- * that `_set_data` refuses, or that does not parse, loads no points.
- */
-export function decodeCurve3D(data: Record<string, string>): Curve3DControlPoint[] {
-  const points = readControlPoints(data._data);
-  const count = ruleInt(data.point_count);
-  return count === null ? points : resizeBezierPoints(points, count, originPoint);
-}
-
-function readControlPoints(value: string | undefined): Curve3DControlPoint[] {
-  if (value === undefined || bezierDataRefusal(value, CURVE3D_DATA) !== null) return [];
-
-  let flat: Float32Array;
-  try {
-    flat = parsePackedVector3Array(bezierPointsLiteral(value, CURVE3D_DATA)!);
-  } catch {
-    return [];
-  }
-
-  const points: Curve3DControlPoint[] = [];
-  for (let base = 0; base < flat.length; base += CURVE3D_DATA.floatsPerPoint) {
-    points.push({
-      in: { x: flat[base + 0]!, y: flat[base + 1]!, z: flat[base + 2]! },
-      out: { x: flat[base + 3]!, y: flat[base + 4]!, z: flat[base + 5]! },
-      position: { x: flat[base + 6]!, y: flat[base + 7]!, z: flat[base + 8]! },
-    });
-  }
-  return points;
-}
-
-/** The point `_add_point(Vector3())` appends: every handle and the position at zero. */
-function originPoint(): Curve3DControlPoint {
-  return {
+const CURVE3D: BezierCurveReader<Curve3DControlPoint> = {
+  format: CURVE3D_DATA,
+  parse: parsePackedVector3Array,
+  pointAt: (flat, base) => ({
+    in: { x: flat[base + 0]!, y: flat[base + 1]!, z: flat[base + 2]! },
+    out: { x: flat[base + 3]!, y: flat[base + 4]!, z: flat[base + 5]! },
+    position: { x: flat[base + 6]!, y: flat[base + 7]!, z: flat[base + 8]! },
+  }),
+  origin: () => ({
     in: { x: 0, y: 0, z: 0 },
     out: { x: 0, y: 0, z: 0 },
     position: { x: 0, y: 0, z: 0 },
-  };
+  }),
+};
+
+/** The control points of a Curve3D resource body, as Godot loads them. */
+export function decodeCurve3D(data: Readonly<Record<string, unknown>>): Curve3DControlPoint[] {
+  return decodeBezierCurve(data, CURVE3D);
+}
+
+/** The control points of the Curve3D a `SubResource("id")` value names, or none. */
+export function resolveCurve3D(
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[]
+): Curve3DControlPoint[] {
+  return resolveBezierCurve(ref, internalResources, CURVE3D);
 }
 
 /**
@@ -145,9 +132,9 @@ function appendSpan(
   for (let s = 1; s <= steps; s++) {
     const t = s / steps;
     flat.push(
-      cubicBezier(p0.x, p1.x, p2.x, p3.x, t),
-      cubicBezier(p0.y, p1.y, p2.y, p3.y, t),
-      cubicBezier(p0.z, p1.z, p2.z, p3.z, t)
+      bezierInterpolate(p0.x, p1.x, p2.x, p3.x, t),
+      bezierInterpolate(p0.y, p1.y, p2.y, p3.y, t),
+      bezierInterpolate(p0.z, p1.z, p2.z, p3.z, t)
     );
   }
 }

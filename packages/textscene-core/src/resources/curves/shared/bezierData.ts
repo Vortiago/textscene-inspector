@@ -10,65 +10,88 @@ import { dictPackedField, packedFloatCount } from '../../../godot/packedArrayFie
 
 /** The `_data` layout of one Bézier curve class. */
 export interface BezierDataFormat {
+  readonly className: string;
+  /** Where `_set_data` refuses, for a diagnostic's citation. */
+  readonly refusedAt: string;
+  /** Floats per control point: the in handle, the out handle and the position. */
+  readonly floatsPerPoint: number;
   /** `"points"` in `_data`, with its value text in `[1]`. */
   readonly pointsField: RegExp;
   readonly pointsForms: readonly RegExp[];
-  /** Components in one vector of `"points"`: 2 or 3. */
   readonly vectorSize: number;
-  /** Floats per control point: the in handle, the out handle and the position. */
-  readonly floatsPerPoint: number;
   /** The keys besides `"points"` that `_set_data` refuses the dictionary without. */
-  readonly otherRequiredKeys: readonly string[];
+  readonly otherRequiredKeys: readonly { readonly key: string; readonly present: RegExp }[];
 }
 
 function bezierDataFormat(
-  pointsType: string,
+  className: string,
+  refusedAt: string,
   vectorSize: number,
   otherRequiredKeys: readonly string[]
 ): BezierDataFormat {
+  const pointsType = `PackedVector${vectorSize}Array`;
   return {
+    className,
+    refusedAt,
+    floatsPerPoint: vectorSize * 3,
     pointsField: dictPackedField('points', pointsType),
     pointsForms: packedArrayForms(pointsType),
     vectorSize,
-    floatsPerPoint: vectorSize * 3,
-    otherRequiredKeys,
+    otherRequiredKeys: otherRequiredKeys.map((key) => ({
+      key,
+      present: new RegExp(`"${key}"\\s*:`),
+    })),
   };
 }
 
 /** `Curve2D::_set_data` (curve.cpp:1238-1259). */
-export const CURVE2D_DATA = bezierDataFormat('PackedVector2Array', 2, []);
+export const CURVE2D_DATA = bezierDataFormat('Curve2D', 'curve.cpp:1239-1243', 2, []);
 
 /** `Curve3D::_set_data` (curve.cpp:2278-2299) also requires `"tilts"` (curve.cpp:2280). */
-export const CURVE3D_DATA = bezierDataFormat('PackedVector3Array', 3, ['tilts']);
+export const CURVE3D_DATA = bezierDataFormat('Curve3D', 'curve.cpp:2279-2284', 3, ['tilts']);
 
 /** Why `_set_data` refuses a `_data` value, which leaves the curve with no points. */
 export type BezierDataRefusal =
   | { readonly kind: 'missing-key'; readonly key: string }
   | { readonly kind: 'partial-point'; readonly floats: number };
 
-/** The `"points"` value text, or null when `_data` holds none this reader can read. */
-export function bezierPointsLiteral(data: string, format: BezierDataFormat): string | null {
-  return format.pointsField.exec(data)?.[1] ?? null;
+/** A `_data` value `_set_data` loads: its `"points"` value text and how many control points it holds. */
+export interface BezierDataPoints {
+  readonly points: string;
+  readonly controlPoints: number;
 }
 
 /**
- * The reason `_set_data` refuses `data`, or null when it loads. It fails on a missing
- * key, then on `pc % 3 != 0`, where `pc` counts vectors (curve.cpp:1239-1243,
- * 2279-2284). Either way it returns before it touches the point list.
+ * Read `data` as `_set_data` does. It fails on a missing key, then on `pc % 3 != 0`,
+ * where `pc` counts vectors (curve.cpp:1239-1243, 2279-2284). Either way it returns
+ * before it touches the point list.
  */
-export function bezierDataRefusal(
+export function readBezierData(
   data: string,
   format: BezierDataFormat
-): BezierDataRefusal | null {
-  const points = bezierPointsLiteral(data, format);
-  if (points === null) return { kind: 'missing-key', key: 'points' };
-  const missing = format.otherRequiredKeys.find((key) => !hasKey(data, key));
-  if (missing !== undefined) return { kind: 'missing-key', key: missing };
+): { readonly refusal: BezierDataRefusal } | { readonly refusal: null; readonly loaded: BezierDataPoints } {
+  const points = format.pointsField.exec(data)?.[1];
+  if (points === undefined) return { refusal: { kind: 'missing-key', key: 'points' } };
+  const missing = format.otherRequiredKeys.find(({ present }) => !present.test(data));
+  if (missing !== undefined) return { refusal: { kind: 'missing-key', key: missing.key } };
 
   const floats = packedFloatCount(format.pointsForms, points, format.vectorSize);
-  return floats % format.floatsPerPoint === 0 ? null : { kind: 'partial-point', floats };
+  if (floats % format.floatsPerPoint !== 0) return { refusal: { kind: 'partial-point', floats } };
+  return { refusal: null, loaded: { points, controlPoints: floats / format.floatsPerPoint } };
 }
 
-function hasKey(data: string, key: string): boolean {
-  return new RegExp(`"${key}"\\s*:`).test(data);
+/** The sentence a diagnostic gives for `refusal`, naming its consequence. */
+export function bezierRefusalProblem(refusal: BezierDataRefusal, format: BezierDataFormat): string {
+  const { className, refusedAt, floatsPerPoint } = format;
+  if (refusal.kind === 'missing-key') {
+    return (
+      `its ${className} has no "${refusal.key}" in \`_data\`. Godot requires it (${refusedAt}) ` +
+      'and loads the curve with zero points, so the path draws nothing.'
+    );
+  }
+  return (
+    `its ${className} "points" holds ${refusal.floats} floats. Godot needs a whole number of ` +
+    `control points at ${floatsPerPoint} floats each (in / out / position) and loads the curve ` +
+    'with zero points otherwise.'
+  );
 }
