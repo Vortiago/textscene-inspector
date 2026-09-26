@@ -12,6 +12,7 @@ import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { listIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { indexedElements } from '../../../../godot/index.js';
+import { resolveIterateSettingLeaf } from './linterParser.js';
 
 const RULE_NAME = 'iterateik3d-setting-missing-target-node';
 
@@ -31,7 +32,7 @@ function checkIterateIK3D(context: RuleContext): Diagnostic[] {
   // Grouped by the setting `_set` resolves each key to: it reads the index with a bare
   // `path.get_slicec('/', 1).to_int()` and no validity gate (iterate_ik_3d.cpp:37), so
   // `settings/x0/target_node` sets setting 0's target.
-  const settings = indexedElements(rawProps, 'settings/', 'to_int');
+  const settings = indexedElements(rawProps, 'settings/', 'to_int', resolveIterateSettingLeaf);
 
   // The walk is bounded as well as the message: `setting_count` is an INT slot
   // with no ceiling, so `0..count` can be two billion iterations. See

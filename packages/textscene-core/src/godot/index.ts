@@ -35,6 +35,9 @@ export {
 } from './basis.js';
 export {
   type IndexParse,
+  type LeafResolver,
+  declaredLeafResolver,
+  firstSegment,
   indexedElements,
   indexedKeyRegex,
   visitIndexedKeys,

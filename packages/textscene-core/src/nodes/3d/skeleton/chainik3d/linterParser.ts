@@ -10,7 +10,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { accepts, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { indexedKeyRegex } from '../../../../godot/index.js';
+import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/index.js';
 import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 // The surface is a hand-built `settings/<i>/<leaf>` family: `_set` (chain_ik_3d.cpp:33) and `_get`
@@ -89,6 +89,30 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   joint_count: v.strictInt('joint_count', { min: 0, enforced: 'chain_ik_3d.cpp:333' }),
 };
 
+/** `what = get_slicec('/', 2)` (chain_ik_3d.cpp:38). */
+const resolveSettingLeaf = declaredLeafResolver(Object.keys(SETTING_LEAVES));
+
+/**
+ * A subclass's half of `settings/<i>/…`, whose own leaves share the prefix with ChainIK3D's.
+ * `resolveLeaf` spans both tables, so `end_bone` still reads its option. `ownsKey` claims a key only
+ * where ChainIK3D's dispatcher would read one, a non-empty index then a leaf, and leaves the rest to
+ * it, so a subclass never reports a key its base passes.
+ */
+export function chainIkSubclassSettings(ownLeaves: Readonly<Record<string, PropertyValidator>>) {
+  const resolveLeaf = declaredLeafResolver([
+    ...Object.keys(ownLeaves),
+    ...Object.keys(SETTING_LEAVES),
+  ]);
+  const ownsKey = (key: string): boolean => {
+    if (!key.startsWith(SETTINGS_PREFIX)) return false;
+    const slash = key.indexOf('/', SETTINGS_PREFIX.length);
+    if (slash <= SETTINGS_PREFIX.length) return false;
+    const leaf = resolveLeaf(key.slice(slash + 1));
+    return leaf !== null && Object.prototype.hasOwnProperty.call(ownLeaves, leaf);
+  };
+  return { resolveLeaf, ownsKey };
+}
+
 const negativeSettingIndex = (index: string): string =>
   `Setting index ${index} is out of range: Godot refuses a negative index and drops the write`;
 
@@ -118,17 +142,16 @@ const settingsFamily: PropertyValidator = accepts((key, value, line) => {
   // A subclass's leaf passes: IterateIK3D's `target_node` and `joints/<j>/` (iterate_ik_3d.cpp:117-125)
   // and SplineIK3D's `path_3d`/`tilt_*` (spline_ik_3d.cpp:83-86). A base cannot close a set its
   // descendants extend, so `indexedFamilyValidator`, whose `unknownCode` closes it, does not fit.
-  if (!Object.prototype.hasOwnProperty.call(SETTING_LEAVES, leafName)) return null;
-  const leaf = SETTING_LEAVES[leafName];
-  return leaf ? leaf(key, value, line) : null;
+  const resolved = resolveSettingLeaf(leafName);
+  return resolved === null ? null : SETTING_LEAVES[resolved]!(key, value, line);
 }, 'settings/<i>/ bone chain setup');
 
 settingsFamily.grounding = { kind: 'enforced', cite: 'chain_ik_3d.cpp:39' };
 settingsFamily.leaves = [...Object.values(SETTING_LEAVES), jointBoneReadOnly];
 
 validatorRegistry.registerAll('ChainIK3D', {
-  // Plain, not `settings/#/*`: `matchesIndexedKey` takes one leaf segment, so it misses
-  // `end_bone/direction`, `end_bone/length` and `joints/<j>/bone`.
+  // Both wildcard shapes route every depth below the index (`wildcardIndex.ts`), so
+  // `end_bone/direction` and `joints/<j>/bone` reach this dispatcher, which reads the leaf itself.
   'settings/*': settingsFamily,
 });
 

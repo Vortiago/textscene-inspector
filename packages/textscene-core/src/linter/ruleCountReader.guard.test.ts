@@ -51,11 +51,15 @@ const COUNT_ACCESS = /(?:\.|\[\s*['"])(\w+_count)\b/;
 
 /**
  * A key an `indexedKeyRegex` shape admits, every index position 0: `^settings/(#)/joint_count$`
- * gives `settings/0/joint_count`. Null for a shape with a group or an alternation left, which names
- * no single key.
+ * gives `settings/0/joint_count`, and so does the tail-tolerant `…/joint_count(?:/|$)`. Null for a
+ * shape with a group or an alternation left, which names no single key.
  */
 function concreteKey(shape: string): string | null {
-  const key = shape.replace(/^\^/, '').replace(/\$$/, '').replaceAll('(#)', '0').replaceAll('#', '0');
+  const key = shape
+    .replace(/^\^/, '')
+    .replace(/(?:\$|\(\?:\/\|\$\))$/, '')
+    .replaceAll('(#)', '0')
+    .replaceAll('#', '0');
   return /^[\w/]+$/.test(key) ? key : null;
 }
 
@@ -205,6 +209,10 @@ describe('rule-layer count reads', () => {
       "const JOINT_COUNT_KEY_RE = indexedKeyRegex('^settings/(#)/joint_count$', 'to_int');\n" +
       'for (const key of Object.keys(properties)) { const match = JOINT_COUNT_KEY_RE.exec(key); ';
     expect(countKeyRead('properties[key]', loop, loop.length)).toBe('settings/0/joint_count');
+    const tailLoop = loop.replace('joint_count$', 'joint_count(?:/|$)');
+    expect(countKeyRead('properties[key]', tailLoop, tailLoop.length)).toBe(
+      'settings/0/joint_count'
+    );
 
     expect(countKeyRead('rawProps.current_tab', '', 0)).toBeNull();
     const other = 'const raw = leaves.get("z_index");';
