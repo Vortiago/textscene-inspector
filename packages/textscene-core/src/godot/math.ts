@@ -93,6 +93,26 @@ export function smoothstep(from: number, to: number, x: number): number {
 }
 
 /**
+ * `Math::bezier_interpolate` (math_funcs.h:442-451): one component of the cubic Bézier through
+ * `start`, the two control values and `end`, at `t` in [0, 1]. The terms keep the engine's order,
+ * so a curve sampled here rounds as Godot's does.
+ */
+export function bezierInterpolate(
+  start: number,
+  control1: number,
+  control2: number,
+  end: number,
+  t: number
+): number {
+  const omt = 1 - t;
+  const omt2 = omt * omt;
+  const omt3 = omt2 * omt;
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return start * omt3 + control1 * omt2 * t * 3 + control2 * omt * t2 * 3 + end * t3;
+}
+
+/**
  * `Basis::determinant()` (`basis.h:350-354`) over the nine row-major components, expanded along the
  * first column as the engine writes it. The first row gives the same number except with `inf`:
  * `Transform3D(1, inf, 0, 0, 1, 1, 1, 0, 1, …)` is NaN (sign 0) one way and `1 + inf` the other. Here,

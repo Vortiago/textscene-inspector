@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { curveFromResource, decodeCurve, resolveCurve } from './decode';
-import { MAX_PADDED_POINTS } from './pointCount';
+import { MAX_PADDED_POINTS } from '../shared/pointCount';
 import { sampleCurve } from './sample';
 import { CurveTangentMode, EMPTY_CURVE } from './types';
 import { parseTresFile } from '../../../parser/parsedResource';

@@ -29,7 +29,9 @@ Strict parsing format-checks these `Path2D` properties, plus 12 inherited from N
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-path2d` | `path2d-missing-curve` | info |
+|  | `curve2d-loadable` | error |
 <!-- lint:end -->
 
-`curve` is only checked for presence. A malformed reference is stored as-is and surfaces
-when the component fails to resolve it.
+The parser stores a malformed `curve` reference as-is, and it surfaces when the component
+fails to resolve it. `curve2d-loadable` reports a Curve2D whose `_data` Godot refuses, which
+loads with zero points.
