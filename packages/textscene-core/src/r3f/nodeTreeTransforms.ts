@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
 import type { Node3DProperties, Transform3D } from '../nodes/base/node3d/types.js';
+import { isTopLevelItem } from './canvasPaintOrder.js';
 import { nodeEscapesParent } from './nodeEscapesParent.js';
 
 /** A parsed `Transform3D` as a `Matrix4`. `basis_x/y/z` are the matrix's ROWS. */
@@ -56,7 +57,7 @@ export function globalMatrix3D(
       result.identity();
       continue;
     }
-    if ((node.properties as Node3DProperties).top_level === true) result.identity();
+    if (isTopLevelItem(node)) result.identity();
     result.multiply(localMatrix3D(node));
   }
   return result;

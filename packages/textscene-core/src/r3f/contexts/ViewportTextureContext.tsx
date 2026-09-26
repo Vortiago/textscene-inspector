@@ -89,11 +89,14 @@ export function useUniqueNameClaims(
  */
 export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, string> | undefined {
   const claims = useUniqueNameClaims(path);
-  const paths = useMemo(() => (claims ? uniqueNameLivePaths(claims) : undefined), [claims]);
-  const signature = useMemo(() => (paths ? JSON.stringify([...paths]) : null), [paths]);
-  // `signature` stands for `paths`: a new map with the same entries is the same answer.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(() => paths, [signature]);
+  const signature = useMemo(
+    () => (claims ? JSON.stringify([...uniqueNameLivePaths(claims)]) : null),
+    [claims]
+  );
+  return useMemo(
+    () => (signature === null ? undefined : new Map<string, string>(JSON.parse(signature))),
+    [signature]
+  );
 }
 
 /**
