@@ -1,10 +1,11 @@
 /**
- * CPUParticles2D semantic rules: the advisory warning for the one setting the
- * frozen pose cannot reproduce.
+ * CPUParticles2D semantic rules: the advisories for the settings the frozen pose
+ * cannot reproduce, and the warning for a `*_min` above its `*_max`.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Linter } from '../../../linter/Linter';
+import { node, scene as sceneOf, expectDiagnostic, expectNoDiagnostic } from '../../../linter/testing/testkit';
 import './linterParser';
 import './linter';
 
@@ -260,5 +261,51 @@ describe('CPUParticles2D dangling texture', () => {
           .filter((d) => d.ruleName === 'dangling-resource-reference')
       ).toEqual([]);
     }
+  });
+});
+
+/**
+ * `set_param_min` raises the max above it and `set_param_max` lowers the min below it
+ * (cpu_particles_2d.cpp:352-376), in the order the file lists the keys, so the earlier key
+ * of a crossed pair loads as the later one's value. Values measured on 4.6.3.
+ */
+describe('CPUParticles2D min above max', () => {
+  const RULE = 'cpuparticles2d-param-min-above-max';
+  const particles = (props: Record<string, number | string>) => sceneOf(node('CPUParticles2D', props));
+
+  it('warns that a min listed first loads as the max', () => {
+    expectDiagnostic(particles({ initial_velocity_min: 5, initial_velocity_max: 2 }), {
+      ruleName: RULE,
+      severity: 'warning',
+      nodeType: 'CPUParticles2D',
+      contains: ["'initial_velocity_min' 5", "'initial_velocity_max' 2", "'initial_velocity_min' loads as 2"],
+    });
+  });
+
+  it('warns that a max listed first loads as the min', () => {
+    expectDiagnostic(particles({ initial_velocity_max: 2, initial_velocity_min: 5 }), {
+      ruleName: RULE,
+      contains: ["'initial_velocity_max' loads as 5"],
+    });
+  });
+
+  it('reports each crossed pair on its own', () => {
+    expectDiagnostic(particles({ anim_offset_min: 0.75, anim_offset_max: 0.25, angle_min: 10, angle_max: -10 }), {
+      ruleName: RULE,
+      contains: ["'anim_offset_min' loads as 0.25"],
+    });
+    expectDiagnostic(particles({ anim_offset_min: 0.75, anim_offset_max: 0.25, angle_min: 10, angle_max: -10 }), {
+      ruleName: RULE,
+      contains: ["'angle_min' loads as -10"],
+    });
+  });
+
+  it('says nothing when min is at or below max, or equal in float storage', () => {
+    expectNoDiagnostic(particles({ angle_min: -30, angle_max: 30 }), { ruleName: RULE });
+    expectNoDiagnostic(particles({ scale_amount_min: '0.30000001', scale_amount_max: '0.3' }), { ruleName: RULE });
+  });
+
+  it('says nothing when only one key of a pair is authored', () => {
+    expectNoDiagnostic(particles({ scale_amount_min: 5 }), { ruleName: RULE });
   });
 });

@@ -147,8 +147,9 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-cpuparticles2d-preview` | `cpuparticles2d-nondeterministic-emission-shape` | info |
+| `valid-cpuparticles2d-properties` | `cpuparticles2d-nondeterministic-emission-shape` | info |
 |  | `cpuparticles2d-fract-delta-ignored` | info |
+|  | `cpuparticles2d-param-min-above-max` | warning |
 <!-- lint:end -->
 
 Where strict rejects a value, the lenient parser substitutes Godot's constructor
