@@ -16,8 +16,9 @@ import {
 
 /**
  * A texture as the loader hands it out: tagged `SRGBColorSpace` before any slot is
- * known. A colour slot gets the same object back and a raw slot a retagged clone, so
- * identity is a meaningful assertion below.
+ * known, with wrapping at three's clamp default. A default material asks for
+ * Repeat, so a slot gets a clone that shares the source, and `.source` identity
+ * proves the decoded image reached the slot below.
  */
 function loadedTexture(): THREE.Texture {
   const texture = new THREE.Texture();
@@ -100,7 +101,11 @@ describe('createMaterialFromContent', () => {
     )) as THREE.MeshStandardMaterial;
 
     expect(loadTexture).toHaveBeenCalledWith('res://textures/albedo.png');
-    expect(material.map).toBe(texture);
+    // A default material asks for Repeat and the loader hands clamp, so the
+    // colour slot binds a source-shared Repeat clone, not the entry itself.
+    expect(material.map).not.toBe(texture);
+    expect(material.map!.source).toBe(texture.source);
+    expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
   });
 
   it('skips loading a texture whose ExtResource id has no matching ext_resource header', async () => {
@@ -161,7 +166,11 @@ describe('createMaterialFromContent', () => {
       loadTexture
     )) as THREE.MeshStandardMaterial;
 
-    expect(material.emissiveMap).toBe(texture);
+    // Emission is a colour slot: a default material tiles the clamped entry on
+    // a source-shared Repeat clone.
+    expect(material.emissiveMap).not.toBe(texture);
+    expect(material.emissiveMap!.source).toBe(texture.source);
+    expect(material.emissiveMap!.wrapS).toBe(THREE.RepeatWrapping);
     // A normal map is sampled raw (`scene/resources/material.cpp:1092`), so the
     // binding hands over a retagged clone of the same decoded image.
     expect(material.normalMap).not.toBe(texture);
@@ -319,7 +328,9 @@ describe('createMaterialFromContent for a sub-resource', () => {
     )) as THREE.MeshStandardMaterial;
 
     expect(loadTexture).toHaveBeenCalledWith('res://vehicles/tire_albedo.png');
-    expect(material.map).toBe(texture);
+    expect(material.map).not.toBe(texture);
+    expect(material.map!.source).toBe(texture.source);
+    expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
   });
 
   it('rejects an id the file does not declare', async () => {

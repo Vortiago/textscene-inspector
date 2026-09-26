@@ -68,3 +68,16 @@ export function bindSlotTexture(
 export function releaseBoundTexture(texture: THREE.Texture | null | undefined): void {
   if (texture && isMaterialOwnedTexture(texture)) texture.dispose();
 }
+
+/**
+ * Release every texture a binding produced for this material. It leaves the
+ * material itself, and any procedural pin it holds, to the caller.
+ */
+export function releaseOwnedTextures(material: THREE.Material): void {
+  // Walk the material's own values rather than a hand-listed set of slot names:
+  // three assigns every map in its constructor, so this cannot go stale the day
+  // a new one is wired, and the ownership tag is the real discriminator anyway.
+  for (const value of Object.values(material)) {
+    if (value instanceof THREE.Texture) releaseBoundTexture(value);
+  }
+}

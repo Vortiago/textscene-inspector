@@ -233,7 +233,7 @@ describe('buildStandardMaterial — shading_mode', () => {
     const material = buildStandardMaterial(parseStandardMaterial3DScalars({ shading_mode: '0' }), {
       albedo_texture: texture,
     }) as THREE.MeshBasicMaterial;
-    expect(material.map).toBe(texture);
+    expect(material.map!.source).toBe(texture.source);
   });
 
   it('drops emission on the unshaded material (Godot never reads it there)', () => {
@@ -341,7 +341,21 @@ describe('buildStandardMaterial — blend modes', () => {
 describe('buildStandardMaterial — texture slots', () => {
   it('applies the albedo map', () => {
     const texture = loadedTexture();
-    expect(build({}, { albedo_texture: texture }).map).toBe(texture);
+    const material = build({}, { albedo_texture: texture });
+    expect(material.map!.source).toBe(texture.source);
+  });
+
+  it('tiles a clamped arriving texture for the default material', () => {
+    // The loader ships three's clamp default. A default StandardMaterial3D asks
+    // for Repeat (Godot's `texture_repeat`), so a clamped arrival must end
+    // Repeat on the map slot or a surface whose UVs leave 0..1 smears its edge
+    // texel into stripes. The shared entry stays clamp for a 2D consumer.
+    const texture = loadedTexture();
+    const material = build({}, { albedo_texture: texture });
+    expect(material.map).not.toBe(texture);
+    expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
+    expect(material.map!.wrapT).toBe(THREE.RepeatWrapping);
+    expect(texture.wrapS).toBe(THREE.ClampToEdgeWrapping);
   });
 
   it('applies the normal map', () => {
@@ -384,9 +398,8 @@ describe('buildStandardMaterial — texture slots', () => {
 
   it('applies the emission map', () => {
     const texture = loadedTexture();
-    expect(build({ emission_enabled: 'true' }, { emission_texture: texture }).emissiveMap).toBe(
-      texture
-    );
+    const material = build({ emission_enabled: 'true' }, { emission_texture: texture });
+    expect(material.emissiveMap!.source).toBe(texture.source);
   });
 
   it('gives an emission texture over Godot’s default black colour a white emissive', () => {
@@ -420,7 +433,7 @@ describe('buildStandardMaterial — texture slots', () => {
       { normal_enabled: 'true', normal_texture: 'ExtResource("2")' },
       { albedo_texture: albedo, normal_texture: normal }
     );
-    expect(material.map).toBe(albedo);
+    expect(material.map!.source).toBe(albedo.source);
     expectBoundRaw(material.normalMap, normal);
   });
 
@@ -518,18 +531,23 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
     expect(material.map!.repeat.y).toBe(2.0);
   });
 
-  it('hands back the shared texture for an identity transform', () => {
-    // An identity scale asks for nothing, so there is nothing to clone. A clone would
-    // also flip wrapping, which is `texture_repeat`'s business.
+  it('adds no tiling for an identity transform, yet still tiles under the default', () => {
+    // An identity scale asks for no transform. A default material still asks for
+    // Repeat, which is `texture_repeat`'s business, so a clamped arrival clones
+    // to tile at scale 1.
     const texture = loadedTexture();
     const material = build({ uv1_scale: 'Vector3(1, 1, 1)' }, { albedo_texture: texture });
-    expect(material.map).toBe(texture);
     expect(material.map!.repeat.x).toBe(1);
+    expect(material.map!.wrapS).toBe(THREE.RepeatWrapping);
+    expect(texture.repeat.x).toBe(1);
   });
 
-  it('hands back the shared texture when no transform is authored', () => {
+  it('adds no tiling when no transform is authored', () => {
+    // The default Repeat wrapping on a clamped arrival is covered under texture
+    // slots. This checks only that no `uv1_scale` leaves the scale at 1.
     const texture = loadedTexture();
-    expect(build({}, { albedo_texture: texture }).map).toBe(texture);
+    const material = build({}, { albedo_texture: texture });
+    expect(material.map!.repeat.x).toBe(1);
     expect(texture.repeat.x).toBe(1);
   });
 
@@ -552,9 +570,10 @@ describe('buildStandardMaterial — UV transform (uv1_scale / uv1_offset)', () =
   });
 
   it('clamps its own copy when the material turns texture_repeat off', () => {
-    // Textures load with RepeatWrapping because Godot's material default is
-    // repeat, so a material authoring `texture_repeat = false` must diverge or
-    // its atlas wraps to the opposite edge where Godot clamps.
+    // A material authoring `texture_repeat = false` over a texture that already
+    // tiles must diverge and clamp its own copy, or its atlas wraps to the
+    // opposite edge where Godot clamps. The loader hands out a clamped entry
+    // (ADR-0042), so the test seeds the tiled arrival directly.
     const texture = loadedTexture();
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;

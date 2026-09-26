@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { info } from '../../../logger';
+import { debug } from '../../../logger';
 import { standardMaterialBag, type StandardMaterialBag } from './materialBag';
 import { bindSlotTexture, materialTextureState } from './textureBinding';
 import type { ResolvedTextureSlots, StandardMaterial3DScalars, TextureSlot } from './types';
@@ -51,8 +51,10 @@ function boundTextures(
     const texture = textures[slot];
     if (!texture) continue;
     const applied = bindSlotTexture(texture, slot, state);
+    // Debug, not info: a default material clones every loader texture for its
+    // Repeat wrapping (ADR-0042), so a clone is the ordinary case.
     if (applied !== texture) {
-      info(
+      debug(
         `[StandardMaterial3D] Cloned ${slot} for uv1_scale=${scalars.uv1Scale.x},${scalars.uv1Scale.y} ` +
           `texture_filter=${scalars.textureFilter} texture_repeat=${scalars.textureRepeat} ` +
           `colorSpace=${applied.colorSpace || 'none'}`

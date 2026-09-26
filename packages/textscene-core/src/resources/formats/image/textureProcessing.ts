@@ -42,12 +42,10 @@ export async function createTextureFromBuffer(
         blobUrl,
         (loadedTexture: THREE.Texture) => {
           loadedTexture.colorSpace = THREE.SRGBColorSpace;
-          // Godot's BaseMaterial3D defaults FLAG_USE_TEXTURE_REPEAT to true, and
-          // three's clamp-to-edge smears an edge texel wherever UVs leave 0..1. The
-          // shared texture carries the shared default, and a material that authors
-          // `texture_repeat = false` clones, like any other per-material state.
-          loadedTexture.wrapS = THREE.RepeatWrapping;
-          loadedTexture.wrapT = THREE.RepeatWrapping;
+          // Wrapping stays at three's clamp-to-edge default. One entry is cached
+          // per path and shared, and Godot gives it two opposite defaults:
+          // `BaseMaterial3D` tiles (`FLAG_USE_TEXTURE_REPEAT`) and a `CanvasItem`
+          // clamps. Each consumer states its own at bind time (ADR-0042).
           resolve(loadedTexture);
         },
         undefined,

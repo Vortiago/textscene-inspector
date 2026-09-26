@@ -26,6 +26,8 @@ import {
   type ParsedImportFile,
 } from '../../parser/importParser';
 import * as logger from '../../logger';
+import { isMaterialOwnedTexture, pinNoColorSpace } from '../textures/applyTextureState';
+import { releaseOwnedTextures } from '../materials/standardmaterial3d/textureBinding';
 
 /** Loads a material by its `res://` path, or null when it cannot be had. */
 export type MaterialLoaderFn = (path: string) => Promise<THREE.Material | null>;
@@ -37,8 +39,12 @@ export type MaterialLoaderFn = (path: string) => Promise<THREE.Material | null>;
  */
 function disposeGLBMesh(mesh: THREE.Object3D): void {
   // Materials through the same slot-gated walker the sidecar writes through, so a
-  // surface it can reach is a surface this can free.
-  forEachSurfaceMaterial(mesh, (material) => material.dispose());
+  // surface it can reach is a surface this can free. The owned textures are the
+  // ones `adoptOwnedTextures` gave the template, and a glTF's own carry no tag.
+  forEachSurfaceMaterial(mesh, (material) => {
+    releaseOwnedTextures(material);
+    material.dispose();
+  });
   mesh.traverse((node) => {
     if (node instanceof THREE.Mesh) node.geometry?.dispose();
   });
@@ -111,6 +117,24 @@ function applySidecarNodeLayers(
 }
 
 /**
+ * Gives a cloned material its own copy of each texture the source material owns.
+ * `Material.clone()` shares texture references, and the material processor frees
+ * its owned textures when it evicts the `.tres`, which would pull them from under
+ * the template. A shared cache entry stays shared: the loader owns it.
+ */
+function adoptOwnedTextures(material: THREE.Material): THREE.Material {
+  const slots = material as unknown as Record<string, unknown>;
+  for (const [key, value] of Object.entries(slots)) {
+    if (!(value instanceof THREE.Texture) || !isMaterialOwnedTexture(value)) continue;
+    const copy = value.clone();
+    // `copy` reads the pinned getter but not the pin, so it is pinned again.
+    if (value.colorSpace === THREE.NoColorSpace) pinNoColorSpace(copy);
+    slots[key] = copy;
+  }
+  return material;
+}
+
+/**
  * `_subresources`' external materials, matched to surfaces by glTF material name:
  * Godot's `mat->get_meta("import_id", mat->get_name())` key
  * (`editor/import/3d/resource_importer_scene.cpp:1583`). An unresolvable `.tres` keeps
@@ -143,7 +167,7 @@ async function applySidecarMaterials(
       const material = await loadMaterial(external);
       // Cloned: the material processor caches the original, and `disposeGLBMesh`
       // frees whatever sits on the template's surfaces.
-      if (material) built.set(name, material.clone());
+      if (material) built.set(name, adoptOwnedTextures(material.clone()));
       else logger.warn(`[GLBProcessor] ${path}: external material ${external} did not load`);
     })
   );

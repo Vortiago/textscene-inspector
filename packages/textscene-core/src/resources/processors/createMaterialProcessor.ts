@@ -15,7 +15,7 @@ import {
   type TextureLoaderFn,
 } from '../materials/standardmaterial3d/loadMaterial';
 import { parseSubResourcePath } from '../subResourcePath';
-import { releaseBoundTexture } from '../materials/standardmaterial3d/textureBinding';
+import { releaseOwnedTextures } from '../materials/standardmaterial3d/textureBinding';
 
 /**
  * @param loadTexture - Function to load textures by resolved res:// path (for materials with texture references)
@@ -49,11 +49,6 @@ function disposeMaterialAndOwnedTextures(material: THREE.Material): void {
   // be lent elsewhere, so its pin is released, not the texture: eviction reclaims
   // it after the last borrower, and never while this material samples it.
   releaseProceduralTextures(material);
-  // Walk the material's own values rather than a hand-listed set of slot names:
-  // three assigns every map in its constructor, so this cannot go stale the day
-  // a new one is wired, and the ownership tag is the real discriminator anyway.
-  for (const value of Object.values(material)) {
-    if (value instanceof THREE.Texture) releaseBoundTexture(value);
-  }
+  releaseOwnedTextures(material);
   material.dispose();
 }

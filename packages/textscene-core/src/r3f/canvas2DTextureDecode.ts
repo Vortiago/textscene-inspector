@@ -27,8 +27,9 @@ export function useCanvas2DTexture(texture: THREE.Texture | null | undefined): T
     if (!undecoded) return null;
     // A canvas item's `texture_repeat` resolves to the viewport default, disabled
     // (`scene/main/viewport.h:420`, `scene/main/viewport.cpp:4009`,
-    // `scene/main/canvas_item.cpp:1686-1694`). The cache loads REPEAT for 3D
-    // (`FLAG_USE_TEXTURE_REPEAT`), so a Polygon2D's overrunning UVs would tile.
+    // `scene/main/canvas_item.cpp:1686-1694`). A file-loaded entry arrives clamped
+    // (ADR-0042), but a producer can hand over Repeat, such as a seamless
+    // `NoiseTexture2D`. So the clamp is stated here, not inherited.
     undecoded.wrapS = THREE.ClampToEdgeWrapping;
     undecoded.wrapT = THREE.ClampToEdgeWrapping;
     undecoded.needsUpdate = true;
