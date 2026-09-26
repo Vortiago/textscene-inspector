@@ -33,8 +33,11 @@ Rejected: a central animation-value context that computes per-frame values and p
 >   nothing. A `%Name` segment reads the owner's unique-name table, the player's for `root_node`
 >   and the Animation root's for a Track. A Track with `enabled = false` is skipped.
 > - Each driver calls `bind()` when it builds a mixer, the player's own or an AnimationTree's
->   (ADR-0019). `bind()` reads the scene as it stands then: it finds every target mounted by that
->   build, and one that mounts later binds at the next build. `trackTargets.ts` finds the object the
+>   (ADR-0019). `bind()` reads the scene as it stands then. A target inside a sub-scene or glTF
+>   that loads later is missing, so each `scene` or `glb` load asks the binding `isStale()`: whether
+>   a path it missed now resolves. Only then does the driver rebuild its mixer (`useRebindKey`), and
+>   playback resumes from the transport's time. A path that stays missing never rebuilds, and
+>   never warns twice. `trackTargets.ts` finds the object the
 >   dispatcher registered at that path: the named group inside its wrapper. It reaches content that
 >   no path registers, such as a glTF scene, from the longest registered prefix, one name for each
 >   remaining segment. That walk never enters another node's wrapper. `bind()` renames the Track

@@ -244,3 +244,86 @@ ${PLAYER_BODY}
     warn.mockRestore();
   });
 });
+
+describe('a track whose target mounts after the player binds', () => {
+  const ARM_SCENE = `[gd_scene format=3]
+
+[node name="ArmRoot" type="Node3D"]
+
+[node name="Arm" type="Node3D" parent="."]
+`;
+
+  const HOST_SCENE = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://arm.tscn" id="1_arm"]
+
+${moveAnimation('Inst/Arm')}
+[node name="Root" type="Node3D"]
+
+[node name="Inst" parent="." instance=ExtResource("1_arm")]
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+${PLAYER_BODY}
+`;
+
+  /** Mounts the host with the player selected, so its mixer binds before the sub-scene loads. */
+  async function mountBeforeLoad() {
+    const parsed = new TscnParser().parse(HOST_SCENE);
+    const fake = createFakeResourceLoader();
+    const renderer = await ReactThreeTestRenderer.create(
+      <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(parsed), panelId: 'p' }}>
+        <SceneStack workspace="3d" loader={fake.loader} scene={parsed} selectedPath="Root/AnimationPlayer">
+          <AnimationTransportProvider>
+            <Capture />
+            <NodeDispatcher nodes={parsed.nodes} />
+          </AnimationTransportProvider>
+        </SceneStack>
+      </HierarchyProvider>
+    );
+    mounted.push(renderer);
+    return { renderer, fake };
+  }
+
+  function sceneRoot(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>): THREE.Object3D {
+    let root = (renderer.scene as unknown as { children: Array<{ instance: THREE.Object3D }> }).children[0]!
+      .instance;
+    while (root.parent) root = root.parent;
+    return root;
+  }
+
+  it('binds it once the sub-scene holding it loads', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const { renderer, fake } = await mountBeforeLoad();
+    await ReactThreeTestRenderer.act(async () => {
+      fake.scenes._resolve('res://arm.tscn', new TscnParser().parse(ARM_SCENE));
+    });
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 0.5);
+    expect(objectAt(sceneRoot(renderer), 'Inst', 'Arm').position.x).toBeCloseTo(5, 1);
+    warn.mockRestore();
+  });
+
+  it('does not rebind for a load that leaves the target missing', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const { fake } = await mountBeforeLoad();
+    const warningsBefore = warn.mock.calls.length;
+    await ReactThreeTestRenderer.act(async () => {
+      fake.scenes._resolve('res://unrelated.tscn', new TscnParser().parse('[gd_scene format=3]\n'));
+    });
+    expect(warn.mock.calls.length).toBe(warningsBefore);
+    warn.mockRestore();
+  });
+
+  it('keeps playing from the transport time when the target arrives mid-play', async () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const { renderer, fake } = await mountBeforeLoad();
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 0.4);
+    await ReactThreeTestRenderer.act(async () => {
+      fake.scenes._resolve('res://arm.tscn', new TscnParser().parse(ARM_SCENE));
+    });
+    await renderer.advanceFrames(1, 0.1);
+    expect(objectAt(sceneRoot(renderer), 'Inst', 'Arm').position.x).toBeCloseTo(5, 1);
+    warn.mockRestore();
+  });
+});

@@ -19,6 +19,8 @@ export interface BoundClips {
   clips: THREE.AnimationClip[];
   /** Every object the bound clips move, whose pose a driver restores on stop. */
   targets: THREE.Object3D[];
+  /** Whether a bind now would find a target this one missed, so the driver binds again. */
+  isStale: () => boolean;
 }
 
 export interface AnimationDriverEntry {

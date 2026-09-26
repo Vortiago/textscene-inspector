@@ -8,6 +8,7 @@ import { useEffect, useRef, type MutableRefObject } from 'react';
 import { AnimationMixer, type AnimationAction, type AnimationClip, type Object3D } from 'three';
 import { useAnimationTransport } from '../contexts/AnimationTransportContext';
 import { useRegisterDriver, type BoundClips } from '../contexts/AnimationDriverContext';
+import { useRebindKey } from './useRebindKey';
 
 export interface UseAnimationDriverMountParams {
   /**
@@ -74,6 +75,9 @@ export function useAnimationDriverMount(
 
   const mixerRef = useRef<AnimationMixer | null>(null);
   const actionsRef = useRef<Map<string, AnimationAction>>(new Map());
+  /** Written only by the mixer build below: the binding it plays, until teardown. */
+  const boundRef = useRef<BoundClips | null>(null);
+  const rebindKey = useRebindKey(boundRef);
 
   // Registered while selected, even with zero clips, so the Animation tab shows
   // "no animations" for an instanced driver outside the parse-time flattenedNodes.
@@ -90,7 +94,8 @@ export function useAnimationDriverMount(
     return registerDriver(nodePath, { object, clips, bind });
   }, [object, clips, bind, nodePath, registerDriver]);
 
-  // Built only while the driver would use one and is loaded (ADR-0012). The
+  // Built only while the driver would use one and is loaded (ADR-0012), and again when a load
+  // mounts a target the binding missed. The
   // teardown stops, then restores, so the driver's snapshot wins over THREE's
   // own binding restore.
   useEffect(() => {
@@ -98,6 +103,7 @@ export function useAnimationDriverMount(
 
     const mixer = new AnimationMixer(object);
     const bound = bind();
+    boundRef.current = bound;
     const actions = new Map<string, AnimationAction>();
     for (const clip of bound.clips) {
       actions.set(clip.name, mixer.clipAction(clip));
@@ -113,8 +119,9 @@ export function useAnimationDriverMount(
       restore();
       mixerRef.current = null;
       actionsRef.current = new Map();
+      boundRef.current = null;
     };
-  }, [buildMixer, object, clips, bind, onMixerBuilt, restore]);
+  }, [buildMixer, object, clips, bind, onMixerBuilt, restore, rebindKey]);
 
   return { mixerRef, actionsRef };
 }

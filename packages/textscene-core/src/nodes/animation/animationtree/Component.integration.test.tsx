@@ -54,11 +54,13 @@ async function setSelection(path: string | null) {
   await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
 }
 
-/** Mounts the parsed fixture through the dispatcher, as production does. */
-async function mountFixture(file: string, { select = AT_PATH }: { select?: string | null } = {}) {
-  const scene = parseFixture(file);
+/** Mounts the parsed scene through the dispatcher, as production does. */
+async function mountScene(
+  scene: TscnScene,
+  { select = AT_PATH, fake = createFakeResourceLoader() }: MountOptions = {}
+) {
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="3d" loader={createFakeResourceLoader().loader} scene={scene}>
+    <SceneStack workspace="3d" loader={fake.loader} scene={scene}>
       <AnimationTransportProvider>
         <AnimationDriverProvider>
           <Capture />
@@ -69,6 +71,15 @@ async function mountFixture(file: string, { select = AT_PATH }: { select?: strin
   );
   await setSelection(select);
   return renderer;
+}
+
+interface MountOptions {
+  select?: string | null;
+  fake?: ReturnType<typeof createFakeResourceLoader>;
+}
+
+async function mountFixture(file: string, options: MountOptions = {}) {
+  return mountScene(parseFixture(file), options);
 }
 
 /** The Mesh node's own group: the first object named after it. */
@@ -128,6 +139,40 @@ describe('AnimationTree integration — unit-animation-tree-stateless.tscn', () 
   it('never registers a transport entry, even when selected', async () => {
     const renderer = await mountFixture('unit-animation-tree-stateless.tscn');
     expect(transport.hasPlayer).toBe(false);
+    await renderer.unmount();
+  });
+});
+
+describe('AnimationTree integration — a target that mounts after the tree binds', () => {
+  const HOLDER_SCENE = `[gd_scene format=3]
+
+[node name="HolderRoot" type="Node3D"]
+
+[node name="Mesh" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+`;
+
+  /** The state-machine fixture with its Mesh moved into a sub-scene instance, `Holder`. */
+  function heldMeshScene(): TscnScene {
+    const source = readFileSync(resolve(fixturesDir(), 'unit-animation-tree-state-machine.tscn'), 'utf8')
+      .replace(/^(\[gd_scene[^\n]*\]\n)/, '$1\n[ext_resource type="PackedScene" path="res://holder.tscn" id="1_holder"]\n')
+      .replaceAll('NodePath("Mesh:', 'NodePath("Holder/Mesh:')
+      .replace(
+        /\[node name="Mesh" type="MeshInstance3D" parent="\."\]\n[^[]*/,
+        '[node name="Holder" parent="." instance=ExtResource("1_holder")]\n\n'
+      );
+    return new TscnParser().parse(source);
+  }
+
+  it('drives the target once the sub-scene holding it loads', async () => {
+    const fake = createFakeResourceLoader();
+    const renderer = await mountScene(heldMeshScene(), { fake });
+    await ReactThreeTestRenderer.act(async () => {
+      fake.scenes._resolve('res://holder.tscn', new TscnParser().parse(HOLDER_SCENE));
+    });
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 0.25);
+    expect(meshY(renderer)).toBeGreaterThan(0.5);
     await renderer.unmount();
   });
 });

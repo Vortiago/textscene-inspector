@@ -37,8 +37,11 @@ function Harness({
   configureAction?: PlaybackLoopParams['configureAction'];
   reconfigureKey?: unknown;
 }) {
+  // Follows the prop, as a driver's refs follow its latest mixer build.
   const mixerRef = useRef(mixerBox.mixer);
   const actionsRef = useRef(mixerBox.actions);
+  mixerRef.current = mixerBox.mixer;
+  actionsRef.current = mixerBox.actions;
   usePlaybackLoop({
     playState,
     selectedClip: 'clip',
@@ -187,3 +190,56 @@ describe('usePlaybackLoop — reconfigureKey (#224 live loop-override)', () => {
   });
 });
 
+describe('usePlaybackLoop — a mixer rebuilt under a running transport', () => {
+  function Rebuilt(props: { playState: PlayState; transportTime: number; mixerBox: ReturnType<typeof makeMixer> }) {
+    return <Harness {...props} reportTime={() => {}} />;
+  }
+
+  function moverOf(mixerBox: ReturnType<typeof makeMixer>): THREE.Object3D {
+    return mixerBox.mixer.getRoot() as THREE.Object3D;
+  }
+
+  it('starts the new action at the transport time while playing', async () => {
+    const first = makeMixer();
+    const renderer = await ReactThreeTestRenderer.create(
+      <Rebuilt playState="playing" transportTime={0.4} mixerBox={first} />
+    );
+    await renderer.advanceFrames(1, 0.1);
+    const rebuilt = makeMixer();
+    await renderer.update(<Rebuilt playState="playing" transportTime={0.4} mixerBox={rebuilt} />);
+    await renderer.advanceFrames(1, 0.1);
+    expect(rebuilt.actions.get('clip')!.time).toBeCloseTo(0.5);
+  });
+
+  it('samples the new action at the transport time while paused', async () => {
+    const first = makeMixer();
+    const renderer = await ReactThreeTestRenderer.create(
+      <Rebuilt playState="paused" transportTime={0.3} mixerBox={first} />
+    );
+    await renderer.advanceFrames(1, 0.1);
+    const rebuilt = makeMixer();
+    await renderer.update(<Rebuilt playState="paused" transportTime={0.3} mixerBox={rebuilt} />);
+    await renderer.advanceFrames(1, 0.1);
+    expect(moverOf(rebuilt).position.x).toBeCloseTo(3);
+  });
+
+  it('configures the new action as it configured the old one', async () => {
+    const configureAction = vi.fn();
+    const first = makeMixer();
+    const view = (mixerBox: ReturnType<typeof makeMixer>) => (
+      <Harness
+        playState="playing"
+        transportTime={0}
+        reportTime={() => {}}
+        mixerBox={mixerBox}
+        configureAction={configureAction}
+      />
+    );
+    const renderer = await ReactThreeTestRenderer.create(view(first));
+    await renderer.advanceFrames(1, 0.1);
+    const rebuilt = makeMixer();
+    await renderer.update(view(rebuilt));
+    await renderer.advanceFrames(1, 0.1);
+    expect(configureAction).toHaveBeenLastCalledWith(rebuilt.actions.get('clip'), 'clip');
+  });
+});

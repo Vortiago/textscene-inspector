@@ -129,7 +129,8 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   const snapshotRef = useRef<PoseSnapshot[]>([]);
   const restore = useCallback(() => restoreSnapshot(snapshotRef.current), []);
   const bind = useCallback(
-    () => ({ clips, targets: object ? subtreeObjects(object) : [] }),
+    // Every target is in the glTF's own subtree, which arrives whole, so nothing is missing.
+    () => ({ clips, targets: object ? subtreeObjects(object) : [], isStale: () => false }),
     [clips, object]
   );
 

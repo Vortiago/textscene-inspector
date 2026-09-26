@@ -117,17 +117,25 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
   );
 
   // `bind` reads the scene as it stands when a driver builds a mixer, this player's or an
-  // AnimationTree's (ADR-0019), so it finds every target mounted by then.
+  // AnimationTree's (ADR-0019). A target that mounts later makes the binding stale.
   const nodeObjectMap = useOptionalSelection()?.nodeObjectMap ?? null;
   const bind = useCallback((): BoundClips => {
+    const nodeObjects = nodeObjectMap ?? new Map<string, Object3D>();
+    const findTarget = trackTargetFinder(nodeObjects);
     const targets = new Map<string, Object3D>();
-    const findTarget = trackTargetFinder(nodeObjectMap ?? new Map());
+    const missing: string[] = [];
     for (const path of trackTargetPaths(clips)) {
       const target = findTarget(path);
       if (target) targets.set(path, target);
+      else missing.push(path);
     }
     applyGodotEulerOrder(clips, targets);
-    return { clips: clips.map((clip) => bindClip(clip, targets)), targets: [...targets.values()] };
+    return {
+      clips: clips.map((clip) => bindClip(clip, targets)),
+      targets: [...targets.values()],
+      // The registry is live, so a fresh finder sees what has mounted since.
+      isStale: () => missing.some((path) => trackTargetFinder(nodeObjects)(path) !== null),
+    };
   }, [clips, nodeObjectMap]);
 
   // Per-driver pose snapshot of the bound targets. GLBSceneRoot snapshots its whole subtree instead.
