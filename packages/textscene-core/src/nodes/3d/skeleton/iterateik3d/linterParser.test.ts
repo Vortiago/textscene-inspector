@@ -243,6 +243,47 @@ describe('the settings/ family IterateIK3D adds', () => {
   });
 });
 
+describe('key tails IterateIK3D ignores', () => {
+  // `_set` reads each level with one `get_slicec('/', n)` and never looks past it
+  // (iterate_ik_3d.cpp:37-61), so a tail below the slice reaches the same setter.
+  it('applies a target_node carrying a tail', () => {
+    // `what` is `target_node` (:41).
+    expect(check('settings/0/target_node/extra', 'NodePath("../Target")')).toBeNull();
+    expect(check('settings/0/target_node/extra', '&"../Target"')?.severity).toBe('error');
+  });
+
+  it('applies a joint leaf carrying a tail, and still checks its value', () => {
+    // `prop` is `rotation_axis` (:45).
+    expect(check('settings/0/joints/1/rotation_axis/extra', '2')).toBeNull();
+    expect(check('settings/0/joints/1/rotation_axis/extra', '9')?.severity).toBe('warning');
+  });
+
+  it('applies a limitation option carrying a tail', () => {
+    // `opt` is `right_axis` (:51, :54).
+    expect(check('settings/0/joints/1/limitation/right_axis/extra', '8')?.severity).toBe(
+      'warning'
+    );
+  });
+
+  it('does not read an unknown limitation option as the limitation itself', () => {
+    // The `limitation` branch reads `opt` below it and returns false on `extra` (:61), so
+    // the tail is not ignored there and the limitation validator never judges the value.
+    const limitation = check('settings/0/joints/1/limitation', '1');
+    expect(limitation?.severity).toBe('error');
+    expect(check('settings/0/joints/1/limitation/extra', '1')?.message).not.toBe(
+      limitation?.message
+    );
+  });
+});
+
+describe('an empty setting index', () => {
+  it('reports nothing, as ChainIK3D does for its own leaves', () => {
+    // ChainIK3D's dispatcher passes an empty index, so an own leaf there must not report it either.
+    expect(check('settings//target_node', 'NodePath("../Target")')).toBeNull();
+    expect(check('settings//root_bone', '3')).toBeNull();
+  });
+});
+
 describe('the settings/ keys ChainIK3D owns', () => {
   // This registration shadows ChainIK3D's `settings/` wildcard for every IterateIK3D descendant,
   // since the base-walk stops at the first match. A key IterateIK3D does not add goes back to

@@ -12,17 +12,24 @@ import { isValidProperties } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
 import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { firstSegment, indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { resolveConvertSettingLeaf } from './linterParser.js';
 
 const RULE_NAME = 'converttransformmodifier3d-range-outside-mode-hint';
 
 /**
- * `settings/<i>/apply|reference/range_min|range_max`, the four mode-dependent leaves. `_set` reads
- * the index with a bare `path.get_slicec('/', 1).to_int()` and no validity gate
- * (convert_transform_modifier_3d.cpp:41), so {@link stringToInt} reads the whole segment as the
- * `int` Godot stores.
+ * Any `settings/<i>/…` key, its index and the path below it captured. `_set` reads the index with a
+ * bare `path.get_slicec('/', 1).to_int()` and no validity gate (convert_transform_modifier_3d.cpp:41),
+ * so {@link stringToInt} reads the whole segment as the `int` Godot stores.
  */
-const RANGE_KEY_RE = indexedKeyRegex('^settings/(#)/(apply|reference)/(range_min|range_max)$', 'to_int');
+const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/(.+)$', 'to_int');
+/** The four mode-dependent leaves, as `resolveConvertSettingLeaf` names them. */
+const RANGE_LEAVES: ReadonlySet<string> = new Set([
+  'apply/range_min',
+  'apply/range_max',
+  'reference/range_min',
+  'reference/range_max',
+]);
 
 /** ConvertTransformModifier3D::TransformMode (convert_transform_modifier_3d.h:39-43). */
 const TRANSFORM_MODE_POSITION = 0;
@@ -83,18 +90,20 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
 
   // Grouped by the setting `_set` resolves each key to, so `settings/00/…` and `settings/0/…` are
   // one setting and a range finds the mode written beside it under either spelling.
-  const settings = indexedElements(props, 'settings/', 'to_int');
+  const settings = indexedElements(props, 'settings/', 'to_int', resolveConvertSettingLeaf);
 
   const table: Record<string, RangeArm[]> = {};
   for (const key of Object.keys(props)) {
-    const match = RANGE_KEY_RE.exec(key);
+    const match = SETTING_KEY_RE.exec(key);
     if (!match) continue;
+    const leaf = resolveConvertSettingLeaf(match[2]!);
+    if (leaf === null || !RANGE_LEAVES.has(leaf)) continue;
     const index = stringToInt(match[1]!);
     // A negative index is the validator's error, against the ERR_FAIL_INDEX_V
     // in `_set`. Reporting it again here would double up on one defect.
     if (index < 0) continue;
 
-    const modeRaw = settings.get(index)?.get(`${match[2]!}/transform_mode`);
+    const modeRaw = settings.get(index)?.get(`${firstSegment(leaf)}/transform_mode`);
     // Absent means Position, the struct's initialiser
     // (convert_transform_modifier_3d.h:46, :51), which Godot omits when unchanged.
     const mode = ruleInt(modeRaw, TRANSFORM_MODE_POSITION);

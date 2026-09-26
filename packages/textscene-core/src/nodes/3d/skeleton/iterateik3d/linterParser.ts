@@ -7,7 +7,7 @@
 // The `settings/*` dispatcher hands every key it does not own to ChainIK3D, and a tier loads only
 // when imported. CCDIK3D, FABRIK3D and JacobianIK3D import only this file, so without this line
 // ChainIK3D would register only with SplineIK3D loaded, and its bounds would vanish for all three.
-import '../chainik3d/linterParser.js';
+import { chainIkSubclassSettings } from '../chainik3d/linterParser.js';
 import { validatorRegistry, type PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { accepts, v } from '../../../../linter/validators/v.js';
@@ -16,7 +16,7 @@ import {
   ROTATION_AXIS,
   SECONDARY_DIRECTION,
 } from '../skeletonmodifier3d/linterParser.js';
-import { indexedKeyRegex } from '../../../../godot/index.js';
+import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/index.js';
 import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 /**
@@ -77,6 +77,11 @@ const settingLeafValidator = indexedFamilyValidator({
  * `get_slicec(...).to_int()` and no gate (:37, :44), so a non-digit spelling still lands.
  */
 const JOINT_KEY = indexedKeyRegex('^settings/(#)/joints/#/(.+)$', 'to_int');
+/** `prop = get_slicec('/', 4)` (:45), and `limitation` reads `opt` below itself (:51). */
+const resolveJointLeaf = declaredLeafResolver(Object.keys(JOINT_LEAVES));
+/** `what = get_slicec('/', 2)` (:38). */
+const { resolveLeaf: resolveIterateSettingLeaf, ownsKey } = chainIkSubclassSettings(SETTING_LEAVES);
+export { resolveIterateSettingLeaf };
 
 /**
  * `settings/…` on IterateIK3D, half of a family: `_get_property_list` pushes its own leaves, then
@@ -87,8 +92,8 @@ const JOINT_KEY = indexedKeyRegex('^settings/(#)/joints/#/(.+)$', 'to_int');
 const settingsValidator = accepts((key, value, line) => {
   const joint = JOINT_KEY.exec(key);
   if (joint) {
-    const leafName = joint[2]!;
-    if (Object.prototype.hasOwnProperty.call(JOINT_LEAVES, leafName)) {
+    const leafName = resolveJointLeaf(joint[2]!);
+    if (leafName !== null) {
       // The joint index is deliberately unchecked: each leaf's ERR_FAIL_INDEX
       // sits in its own setter, so there is no single line to cite, and the
       // setting index below already covers what `_set` refuses uniformly.
@@ -102,7 +107,7 @@ const settingsValidator = accepts((key, value, line) => {
       if (negative) return negative;
       return JOINT_LEAVES[leafName]!(key, value, line);
     }
-  } else if (key.endsWith('/target_node')) {
+  } else if (ownsKey(key)) {
     return settingLeafValidator(key, value, line);
   }
 

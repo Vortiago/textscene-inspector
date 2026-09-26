@@ -307,6 +307,101 @@ describe('SpringBoneSimulator3D semantic rules', () => {
   });
 });
 
+describe('SpringBoneSimulator3D key tails', () => {
+  // Every branch of `_set` reads a fixed slice, `get_slicec('/', n)`, and never looks past it
+  // (spring_bone_simulator_3d.cpp:42-150). A tail below that slice reaches the same setter, so
+  // the same mode gate drops it.
+  it('reports a joint tunable carrying a tail while individual_config is false', () => {
+    // `prop = path.get_slicec('/', 4)` (:123) is `radius`, so set_joint_radius runs and returns.
+    expectDiagnostic(
+      scene(
+        node('SpringBoneSimulator3D', {
+          ...SHARED_SETTING,
+          'settings/0/joints/0/radius/extra': 0.5,
+        })
+      ),
+      { ruleName: 'springbonesimulator3d-joint-config-ignored' }
+    );
+  });
+
+  it('reads individual_config through a tail, as set_individual_config does', () => {
+    // `what` is `individual_config` (:73), so the setting is individual and the shared
+    // radius beside it is dropped.
+    expectDiagnostic(
+      scene(
+        node('SpringBoneSimulator3D', {
+          setting_count: 1,
+          'settings/0/individual_config/extra': true,
+          'settings/0/radius/value': 0.5,
+        })
+      ),
+      { ruleName: 'springbonesimulator3d-shared-config-ignored' }
+    );
+  });
+
+  it('leaves a shared-block key the radius branch refuses to the validator', () => {
+    // `opt` is `extra`, neither `value` nor `damping_curve`, so `_set` returns false (:85)
+    // before any mode gate: the key is unknown, not ignored for its mode.
+    expectNoDiagnostic(
+      scene(
+        node('SpringBoneSimulator3D', {
+          ...INDIVIDUAL_SETTING,
+          'settings/0/radius/extra': 0.5,
+        })
+      ),
+      { ruleName: 'springbonesimulator3d-shared-config-ignored' }
+    );
+  });
+
+  it('reports a shared-block value carrying a tail while individual_config is true', () => {
+    expectDiagnostic(
+      scene(
+        node('SpringBoneSimulator3D', {
+          ...INDIVIDUAL_SETTING,
+          'settings/0/radius/value/extra': 0.5,
+        })
+      ),
+      { ruleName: 'springbonesimulator3d-shared-config-ignored' }
+    );
+  });
+
+  it.each([
+    'settings/0/collisions/0/extra',
+    'settings/0/collision_count/extra',
+    // No index segment: `get_slicec('/', 3)` is empty, and `"".to_int()` is collision 0 (:149).
+    'settings/0/collisions',
+    'settings/0/collisions/',
+  ])('reports %s while enable_all_child_collisions is true', (key) => {
+    expectDiagnostic(
+      scene(
+        node('SpringBoneSimulator3D', {
+          setting_count: 1,
+          'settings/0/enable_all_child_collisions': true,
+          [key]: key.includes('count') ? 1 : 'NodePath("Sphere")',
+        })
+      ),
+      { ruleName: 'springbonesimulator3d-collision-list-ignored', contains: ['1150-1152'] }
+    );
+  });
+
+  it.each([
+    'settings/0/exclude_collisions/0/extra',
+    'settings/0/exclude_collision_count/extra',
+    'settings/0/exclude_collisions',
+  ])('reports %s while enable_all_child_collisions is false', (key) => {
+    expectDiagnostic(
+      scene(
+        node('SpringBoneSimulator3D', {
+          setting_count: 1,
+          'settings/0/enable_all_child_collisions/extra': false,
+          [key]: key.includes('count') ? 1 : 'NodePath("Sphere")',
+        })
+      ),
+      { ruleName: 'springbonesimulator3d-collision-list-ignored', contains: ['1094-1096'] }
+    );
+  });
+});
+
 describe('SpringBoneSimulator3D index grammar', () => {
   it('reads individual_config from the setting the engine resolves, not the index text', () => {
     // `_set` reads the index with a bare `path.get_slicec('/', 1).to_int()`

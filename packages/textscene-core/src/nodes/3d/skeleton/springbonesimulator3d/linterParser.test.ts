@@ -214,6 +214,20 @@ describe('SpringBoneSimulator3D strict validators', () => {
     });
   });
 
+  describe('the shared-block leaves', () => {
+    it('ignores whatever follows the option segment', () => {
+      // `opt = path.get_slicec('/', 3)` (:80) is `value`, so set_radius runs.
+      expect(check('settings/0/radius/value/extra', '0.5')).toBeNull();
+      expect(check('settings/0/radius/value/extra', '-1')?.severity).toBe('warning');
+    });
+
+    it('refuses an option the branch does not know', () => {
+      // Neither `value` nor `damping_curve`, so `_set` returns false (:85).
+      expect(check('settings/0/radius/extra', '0.5')?.code).toBe('INVALID_SPRING_BONE_SETTING_KEY');
+      expect(check('settings/0/radius', '0.5')?.code).toBe('INVALID_SPRING_BONE_SETTING_KEY');
+    });
+  });
+
   describe('the bone-index leaves', () => {
     it('accepts -1, the unset sentinel the setter itself writes', () => {
       for (const leaf of ['root_bone', 'end_bone', 'center_bone']) {
@@ -379,6 +393,22 @@ describe('SpringBoneSimulator3D strict validators', () => {
       // NODE_PATH (variant.cpp:746-749), STRING_NAME does not.
       expect(check('settings/0/collisions/0/extra', '"Sphere"')).toBeNull();
       expect(check('settings/0/collisions/0/extra', '&"Sphere"')?.severity).toBe('error');
+    });
+
+    it('reads a missing collision index as collision 0', () => {
+      // `get_slicec('/', 3)` of `settings/0/collisions` is empty, and `"".to_int()` is 0, so
+      // the path lands on collision 0 (:143-145, :148-150).
+      expect(check('settings/0/collisions', 'NodePath("Sphere")')).toBeNull();
+      expect(check('settings/0/collisions/', 'NodePath("Sphere")')).toBeNull();
+      expect(check('settings/0/exclude_collisions', 'NodePath("Sphere")')).toBeNull();
+      expect(check('settings/0/collisions', '&"Sphere"')?.severity).toBe('error');
+    });
+
+    it('still refuses a leaf that only starts like a collision list', () => {
+      // `what` is the whole segment, and `collisionsx` matches no branch (:151-152).
+      expect(check('settings/0/collisionsx/0', 'NodePath("Sphere")')?.code).toBe(
+        'INVALID_SPRING_BONE_SETTING_KEY'
+      );
     });
 
     it('errors on a negative count, which LocalVector::resize cannot represent', () => {

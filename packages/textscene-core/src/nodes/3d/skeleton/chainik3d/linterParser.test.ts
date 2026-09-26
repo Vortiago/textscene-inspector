@@ -7,13 +7,14 @@
 
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import './linterParser.js';
+import { v } from '../../../../linter/validators/index.js';
+import { chainIkSubclassSettings } from './linterParser.js';
 
 /**
  * Every key ChainIK3D registers. It has no `ADD_PROPERTY`: `_set` (chain_ik_3d.cpp:33), `_get` (:69)
  * and the unprefixed `get_property_list` (:115) build the `settings/<i>/` family. One plain
- * `settings/*` wildcard carries it, since leaves are two and three segments deep (`end_bone/length`,
- * `joints/<j>/bone`) and the glued-index `settings/#/*` reaches only one.
+ * `settings/*` wildcard carries it, and its leaves are two and three segments deep (`end_bone/length`,
+ * `joints/<j>/bone`).
  */
 const KEYS: string[] = ['settings/*'];
 /** True only when the class binds no ADD_PROPERTY, beside the source line that proves it. */
@@ -113,6 +114,53 @@ describe('ChainIK3D settings index', () => {
     // close the leaf set.
     expect(check('settings/0/target_node', 'NodePath("../Target")')).toBeNull();
     expect(check('settings/0/path_3d', 'NodePath("../Path3D")')).toBeNull();
+  });
+});
+
+describe('ChainIK3D key tails', () => {
+  it('checks a leaf carrying a tail, since _set reads one segment', () => {
+    // `what = path.get_slicec('/', 2)` (chain_ik_3d.cpp:38) is `root_bone`, so set_root_bone
+    // runs and clamps the value (:186-188).
+    expect(check('settings/0/root_bone/extra', '-2')?.severity).toBe('error');
+    expect(check('settings/0/root_bone/extra', '3')).toBeNull();
+    // `opt = path.get_slicec('/', 3)` (:48) is `length`, so set_end_bone_length runs.
+    expect(check('settings/0/end_bone/length/extra', '-1')?.severity).toBe('warning');
+  });
+
+  it('does not read an unknown end_bone option as end_bone itself', () => {
+    // The `end_bone` branch reads `opt` and returns false on `extra` (:55-56), so the
+    // end_bone clamp never sees the value.
+    expect(check('settings/0/end_bone/extra', '-2')).toBeNull();
+  });
+});
+
+describe('chainIkSubclassSettings', () => {
+  const { resolveLeaf, ownsKey } = chainIkSubclassSettings({ target_node: v.nodePath('target_node') });
+
+  it('owns a key that reaches a subclass leaf, with or without a tail', () => {
+    expect(ownsKey('settings/0/target_node')).toBe(true);
+    expect(ownsKey('settings/a1/target_node/extra')).toBe(true);
+  });
+
+  it('leaves a ChainIK3D leaf and an unknown leaf to the base', () => {
+    expect(ownsKey('settings/0/root_bone')).toBe(false);
+    expect(ownsKey('settings/0/end_bone/direction')).toBe(false);
+    expect(ownsKey('settings/0/target')).toBe(false);
+    expect(ownsKey('settings/0/toString')).toBe(false);
+  });
+
+  it('owns no key ChainIK3D reads as indexless or leafless', () => {
+    // The base dispatcher passes these (its `slash <= 0` guard), so a subclass must not report them.
+    expect(ownsKey('settings//target_node')).toBe(false);
+    expect(ownsKey('settings/0')).toBe(false);
+    expect(ownsKey('settings/0/')).toBe(false);
+    expect(ownsKey('other/0/target_node')).toBe(false);
+  });
+
+  it('resolves across both tables, so end_bone still reads its option', () => {
+    expect(resolveLeaf('target_node/extra')).toBe('target_node');
+    expect(resolveLeaf('end_bone/direction')).toBe('end_bone/direction');
+    expect(resolveLeaf('end_bone/extra')).toBeNull();
   });
 });
 
