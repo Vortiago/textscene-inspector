@@ -8,6 +8,7 @@
 import { parsePackedVector2Array } from '../../shapes/packedArray';
 import { ruleInt } from '../../../godot/int.js';
 import { CURVE2D_DATA, bezierDataRefusal, bezierPointsLiteral } from '../shared/bezierData';
+import { cubicBezier } from '../shared/bezier';
 import { resizeBezierPoints } from '../shared/pointCount';
 import type {
   Curve2DControlPoint,
@@ -129,11 +130,6 @@ function appendSpan(
   const steps = Math.max(1, segmentsPerSpan);
   for (let s = 1; s <= steps; s++) {
     const t = s / steps;
-    flat.push(cubic(p0.x, p1.x, p2.x, p3.x, t), cubic(p0.y, p1.y, p2.y, p3.y, t));
+    flat.push(cubicBezier(p0.x, p1.x, p2.x, p3.x, t), cubicBezier(p0.y, p1.y, p2.y, p3.y, t));
   }
-}
-
-function cubic(a: number, b: number, c: number, d: number, t: number): number {
-  const u = 1 - t;
-  return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
 }
