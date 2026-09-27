@@ -116,14 +116,14 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
     // (`property_list_helper.cpp:47`), as `TwoBoneIK3D`'s
     // `settings/<i>/end_bone/direction` does.
     const slash = key.indexOf('/', prefix.length);
-    const indexText = slash < 0 ? '' : key.slice(prefix.length, slash);
-    const leafName = slash < 0 ? '' : key.slice(slash + 1);
-    if (!key.startsWith(prefix) || indexText === '' || leafName === '') {
-      return unknown(key, line);
-    }
+    if (!key.startsWith(prefix) || slash < 0) return unknown(key, line);
+    const indexText = key.slice(prefix.length, slash);
+    const leafName = key.slice(slash + 1);
+    if (leafName === '') return unknown(key, line);
 
-    // A class that gates on `is_valid_int` has no index at all for text the
-    // regex rejects, so the key is unrecognised before an index is ever read.
+    // A class that gates on `is_valid_int` has no index at all for text the regex rejects, the empty
+    // text included, so the key is unrecognised before an index is ever read. Under `to_int` an
+    // empty index is element 0 (`ustring.cpp:2304-2305`).
     if (gatesOnValidInt && !IS_VALID_INT_RE.test(indexText)) return unknown(key, line);
     const negative = refuseNegative(indexText, key, line);
     if (negative) return negative;

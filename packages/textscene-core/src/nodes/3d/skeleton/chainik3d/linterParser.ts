@@ -95,7 +95,7 @@ const resolveSettingLeaf = declaredLeafResolver(Object.keys(SETTING_LEAVES));
 /**
  * A subclass's half of `settings/<i>/…`, whose own leaves share the prefix with ChainIK3D's.
  * `resolveLeaf` spans both tables, so `end_bone` still reads its option. `ownsKey` claims a key only
- * where ChainIK3D's dispatcher would read one, a non-empty index then a leaf, and leaves the rest to
+ * where ChainIK3D's dispatcher would read one, an index segment then a leaf, and leaves the rest to
  * it, so a subclass never reports a key its base passes.
  */
 export function chainIkSubclassSettings(ownLeaves: Readonly<Record<string, PropertyValidator>>) {
@@ -106,7 +106,7 @@ export function chainIkSubclassSettings(ownLeaves: Readonly<Record<string, Prope
   const ownsKey = (key: string): boolean => {
     if (!key.startsWith(SETTINGS_PREFIX)) return false;
     const slash = key.indexOf('/', SETTINGS_PREFIX.length);
-    if (slash <= SETTINGS_PREFIX.length) return false;
+    if (slash < 0) return false;
     const leaf = resolveLeaf(key.slice(slash + 1));
     return leaf !== null && Object.prototype.hasOwnProperty.call(ownLeaves, leaf);
   };
@@ -126,7 +126,8 @@ const settingsFamily: PropertyValidator = accepts((key, value, line) => {
   if (!key.startsWith(SETTINGS_PREFIX)) return null;
   const rest = key.slice(SETTINGS_PREFIX.length);
   const slash = rest.indexOf('/');
-  if (slash <= 0) return null;
+  // An empty index is setting 0: `"".to_int()` returns 0 (ustring.cpp:2304-2305).
+  if (slash < 0) return null;
 
   const negative = negativeIndexError(
     rest.slice(0, slash),

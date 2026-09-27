@@ -14,11 +14,12 @@ export type IndexParse = 'is_valid_int' | 'to_int';
  * The text each parse admits at an index, as regex source. `is_valid_int` is {@link IS_VALID_INT_RE}'s
  * body: one optional sign, `+` or `-` (`ustring.cpp:4752`), then digits. `to_int` skips what it cannot
  * use (`ustring.cpp:2280-2293`), so it takes the whole segment and {@link stringToInt} reads it.
- * Non-empty, as in `indexedFamilyValidator`, so `settings//leaf` reaches neither phase.
+ * That segment may be empty: `"".to_int()` is 0 (`ustring.cpp:2304-2305`), so `settings//leaf` is
+ * element 0.
  */
 const INDEX_SOURCE: Readonly<Record<IndexParse, string>> = {
   is_valid_int: `(?:${IS_VALID_INT_SOURCE})`,
-  to_int: '(?:[^/]+)',
+  to_int: '(?:[^/]*)',
 };
 
 /**
@@ -53,8 +54,9 @@ export function visitIndexedKeys(
     if (slash < prefix.length) continue;
     const indexText = key.slice(prefix.length, slash);
     const leaf = key.slice(slash + 1);
-    if (indexText === '' || leaf === '') continue;
-    // `layer_9/tile_data/x` gives the index text `9/tile_data`, so `_set` builds no layer 9.
+    if (leaf === '') continue;
+    // `layer_9/tile_data/x` gives the index text `9/tile_data`, so `_set` builds no layer 9, and an
+    // empty index is no int either. Under `to_int` an empty index is element 0.
     if (indexParse === 'is_valid_int' && !IS_VALID_INT_RE.test(indexText)) continue;
     const index = stringToInt(indexText);
     // A negative index never lands: `_get_property` refuses it (`property_list_helper.cpp:58`) and

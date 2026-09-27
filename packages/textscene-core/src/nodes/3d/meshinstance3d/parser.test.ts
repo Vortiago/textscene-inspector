@@ -316,21 +316,27 @@ describe('MeshInstance3D Parser', () => {
       expect(result.surfaceMaterialOverrides.has(-1)).toBe(false);
     });
 
-    it('should ignore properties with invalid surface_material_override format', () => {
+    it('should ignore a surface_material_override with no slash', () => {
       const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
 
-      const properties = {
-        // `begins_with("surface_material_override/")` (mesh_instance_3d.cpp:65)
-        // never sees this one.
+      // `begins_with("surface_material_override/")` (mesh_instance_3d.cpp:65) never sees this one.
+      const result = parseMeshInstance3D(h, {
         'surface_material_override': 'SubResource("Material_invalid")',
-        // An empty index segment: the shared grammar requires a non-empty one,
-        // so this reaches no reader here (`godot/indexedKey.ts`).
-        'surface_material_override/': 'SubResource("Material_empty")',
-      };
-
-      const result = parseMeshInstance3D(h, properties);
+      });
 
       expect(result.surfaceMaterialOverrides.size).toBe(0);
+    });
+
+    it('should apply an empty surface index to surface 0, as "".to_int() does', () => {
+      const h = heading('MeshInstance3D', { name: 'Cube', parent: '.' });
+
+      // `get_slicec('/', 1).to_int()` (mesh_instance_3d.cpp:66) of an empty segment is 0
+      // (ustring.cpp:2304-2305), so the override lands on surface 0.
+      const result = parseMeshInstance3D(h, {
+        'surface_material_override/': 'SubResource("Material_empty")',
+      });
+
+      expect(result.surfaceMaterialOverrides.get(0)).toBe('SubResource("Material_empty")');
     });
   });
 });
