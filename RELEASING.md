@@ -126,9 +126,14 @@ proves that this workflow may publish as `vortiago`. Nothing is hosted on Azure.
     repository `textscene-inspector` with the repository ID `1083105066`, the
     entity type **Environment** and the environment `release`. The subject
     becomes `repo:Vortiago@1761895/textscene-inspector@1083105066:environment:release`.
-12. In the repository's GitHub OpenID Connect (OIDC) settings, opt in to
-    immutable subject claims. GitHub sends the subject with the IDs only to
-    repositories created after 2026-07-15, and this one is older.
+12. Opt the repository in to immutable subject claims. GitHub sends the
+    subject with the IDs only to repositories created after 2026-07-15, and
+    this one is older:
+
+    ```bash
+    gh api -X PUT repos/Vortiago/textscene-inspector/actions/oidc/customization/sub \
+      -F use_default=true -F use_immutable_subject=true
+    ```
 13. In GitHub, open **Settings → Secrets and variables → Actions →
     Variables**.
 14. Add the repository variables `AZURE_CLIENT_ID`, `AZURE_TENANT_ID` and
