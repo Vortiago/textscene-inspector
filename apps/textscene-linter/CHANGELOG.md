@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Published to npm as `@textscene/linter`: `npm install --global @textscene/linter`
+  gives the `tscn-lint` command.
 - `--format json`: a single pretty-printed JSON array of findings (one object
   per diagnostic, plus a synthetic `file-read-error` finding per unreadable
   file) for machine consumption in CI.

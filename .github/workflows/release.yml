@@ -5,14 +5,21 @@ on:
     tags: ['v*']
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
+
+      # First, so a tag that does not match the manifests fails before the long gate.
+      - name: Check the tag against the package versions
+        id: version
+        run: node scripts/ci/releaseVersion.mjs "$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
 
       - uses: ./.github/actions/setup
 
@@ -22,6 +29,8 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
 
@@ -33,6 +42,7 @@ jobs:
       - name: Build Linter CLI
         run: pnpm --filter @textscene/linter build
 
+      # pnpm pack, not npm: it rewrites the catalog: and workspace: specifiers.
       - name: Pack Linter Tarball
         run: cd apps/textscene-linter && pnpm pack
 
@@ -43,6 +53,18 @@ jobs:
       - name: Archive Web Previewer Dist
         run: tar -czf web-dist.tar.gz -C apps/textscene-web dist
 
+      - uses: actions/upload-artifact@v7
+        with:
+          name: vscode-extension
+          path: apps/textscene-vscode/*.vsix
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linter-tarball
+          path: apps/textscene-linter/*.tgz
+          if-no-files-found: error
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
@@ -52,40 +74,104 @@ jobs:
             apps/textscene-linter/*.tgz
             web-dist.tar.gz
 
-      # Marketplace publishing is optional: steps are skipped (not failed) when the
-      # corresponding secret is absent. Secrets cannot be used directly in `if:`
-      # conditions, so they are exposed as env vars and surfaced via step outputs.
-      - name: Detect marketplace secrets
-        id: marketplace
+  # Each registry is its own job, so "Re-run failed jobs" retries only the one that failed,
+  # and each publish skips a version the registry already holds. The publish jobs install
+  # no workspace dependencies: an install script would run beside the OIDC token.
+
+  npm:
+    name: Publish the linter to npm
+    needs: [validate, release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      id-token: write
+    env:
+      VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Trusted publishing needs npm 11.5.1 or later, newer than some Node 24 releases bundle.
+      - run: npm install --global npm@11
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: linter-tarball
+
+      # npm authenticates through the trusted publisher (OIDC) and attaches provenance.
+      # `npm view` prints nothing, and exits 0, for a version the registry does not hold.
+      - name: Publish @textscene/linter
+        run: |
+          if [ -n "$(npm view "@textscene/linter@$VERSION" version 2>/dev/null)" ]; then
+            echo "@textscene/linter@$VERSION is already on npm: skipping"
+            exit 0
+          fi
+          npm publish "textscene-linter-$VERSION.tgz"
+
+  vscode-marketplace:
+    name: Publish the extension to the VS Code Marketplace
+    needs: [validate, release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      id-token: write
+    env:
+      VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: vscode-extension
+
+      # Microsoft Entra ID through a federated managed identity. The Marketplace's Azure
+      # DevOps PATs are global PATs, which Azure DevOps retires on 2026-12-01.
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Pinned to the version in the lockfile, since this job installs no workspace.
+      - name: Publish textscene-inspector
+        run: >-
+          npx --yes @vscode/vsce@4.0.0 publish --azure-credential --skip-duplicate
+          --packagePath "textscene-inspector-$VERSION.vsix"
+
+  open-vsx:
+    name: Publish the extension to Open VSX
+    needs: [validate, release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    env:
+      VERSION: ${{ needs.validate.outputs.version }}
+    steps:
+      # Optional: skipped, not failed, without the secret. A secret cannot appear in `if:`,
+      # so a step output carries whether it is set.
+      - name: Detect the Open VSX token
+        id: token
         env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
         run: |
-          if [ -n "$VSCE_PAT" ]; then
-            echo "vsce=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "vsce=false" >> "$GITHUB_OUTPUT"
-            echo "VSCE_PAT not configured - skipping VS Code Marketplace publish"
-          fi
           if [ -n "$OVSX_PAT" ]; then
-            echo "ovsx=true" >> "$GITHUB_OUTPUT"
+            echo "present=true" >> "$GITHUB_OUTPUT"
           else
-            echo "ovsx=false" >> "$GITHUB_OUTPUT"
-            echo "OVSX_PAT not configured - skipping Open VSX publish"
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "OVSX_PAT not configured: skipping Open VSX publish"
           fi
 
-      - name: Publish to VS Code Marketplace
-        if: steps.marketplace.outputs.vsce == 'true'
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: |
-          VSIX_FILE=$(ls "$GITHUB_WORKSPACE"/apps/textscene-vscode/*.vsix)
-          pnpm --filter textscene-inspector exec vsce publish --packagePath "$VSIX_FILE"
+      - uses: actions/download-artifact@v8
+        if: steps.token.outputs.present == 'true'
+        with:
+          name: vscode-extension
 
-      - name: Publish to Open VSX
-        if: steps.marketplace.outputs.ovsx == 'true'
+      - name: Publish textscene-inspector
+        if: steps.token.outputs.present == 'true'
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
-        run: |
-          VSIX_FILE=$(ls "$GITHUB_WORKSPACE"/apps/textscene-vscode/*.vsix)
-          pnpm dlx ovsx publish "$VSIX_FILE" -p "$OVSX_PAT"
+        run: >-
+          npx --yes ovsx@1.2.0 publish "textscene-inspector-$VERSION.vsix"
+          --skip-duplicate -p "$OVSX_PAT"

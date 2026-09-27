@@ -10,6 +10,9 @@
     "dist",
     "bin"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "prebuild": "pnpm --filter @textscene/core build",
     "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --outfile=dist/cli.js --external:commander",

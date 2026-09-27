@@ -1,0 +1,36 @@
+name: Marketplace identity
+
+# Run by hand. It logs in as the release job's managed identity, prints the member ID the
+# Marketplace publisher needs, then checks that the identity can publish as `vortiago`.
+# The check fails until the ID is a Contributor member of the publisher (RELEASING.md).
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+jobs:
+  identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # The same environment as the release job, so the same federated credential applies.
+    environment: release
+    permissions:
+      id-token: write
+    steps:
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # 499b84ac-1321-427f-aa17-267ca6975798 is the Azure DevOps resource, which the
+      # Marketplace authenticates against.
+      - name: Print the Marketplace member ID
+        run: |
+          MEMBER_ID=$(az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
+            --resource 499b84ac-1321-427f-aa17-267ca6975798 --query id -o tsv)
+          echo "Marketplace member ID: $MEMBER_ID"
+          echo "Marketplace member ID: \`$MEMBER_ID\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check publish rights for vortiago
+        run: npx --yes @vscode/vsce@4.0.0 verify-pat vortiago --azure-credential
