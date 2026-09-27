@@ -19,7 +19,7 @@ Only the Godot 4 `Decal:size` property is driven, **not** the Godot 3 `Decal:ext
 ## Consequences
 
 - **Cubic interpolation (`interp = 2`) and keyframe `transition` easing are approximated as linear.** A note in the sampler records the limit. `method` tracks and the `bezier`, `audio` and `animation` track types stay deferred.
-- NodePath depth does not constrain this path. `resolveTargetNodePath` resolves the path of the track against the player's own, applying `..` and any number of named segments, and the registry is keyed by the resulting absolute node path. A value track therefore binds where a mixer-driven transform track, which depends on the name lookup of THREE inside the mixer root, does not (ADR-0011).
+- NodePath depth does not constrain this path. `resolveTrackScenePath` resolves the path of the track from the Animation root, applying `..` and any number of named segments, and the registry is keyed by the resulting scene path. A value track and a mixer-driven transform track resolve through the same walk (ADR-0011).
 - Per-frame pushes stay cheap as in ADR-0016: the registry is ref-backed, so a push never re-renders consumers. Only the setter of the target component re-renders, and only while that target animates.
 - Colour is interpolated in Godot's stored sRGB space. The consumer applies its own semantics to the result, identical to its static path: the Decal computes `opacity = albedo_mix × a` and converts RGB with `godotColorToLinear`.
 - Playback stays non-deterministic over time, so animated-decal fixtures stay out of the visual-regression manifest. The stopped/authored pose stays byte-stable.

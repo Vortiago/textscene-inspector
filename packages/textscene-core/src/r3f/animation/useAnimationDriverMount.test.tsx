@@ -4,35 +4,40 @@
  * teardown restores the pose. A host harness observes the transport and registry.
  */
 
-import { describe, expect, it, vi } from 'vitest';
-import { useCallback, useMemo } from 'react';
-import ReactThreeTestRenderer from '@react-three/test-renderer';
-import * as THREE from 'three';
+import { describe, expect, it, vi } from "vitest";
+import { useCallback, useMemo } from "react";
+import ReactThreeTestRenderer from "@react-three/test-renderer";
+import * as THREE from "three";
 import {
   useAnimationDriverMount,
   type UseAnimationDriverMountResult,
-} from './useAnimationDriverMount';
+} from "./useAnimationDriverMount";
 import {
   AnimationTransportProvider,
   useAnimationTransport,
   type AnimationTransport,
-} from '../contexts/AnimationTransportContext';
+} from "../contexts/AnimationTransportContext";
 import {
   AnimationDriverProvider,
   useAnimationDriver,
   type AnimationDriverEntry,
-} from '../contexts/AnimationDriverContext';
+  type BoundClips,
+} from "../contexts/AnimationDriverContext";
 import {
   SelectionProvider,
   useOptionalSelection,
-} from '../contexts/SelectionContext';
-import { NodePathProvider } from '../contexts/NodePathContext';
+} from "../contexts/SelectionContext";
+import { NodePathProvider } from "../contexts/NodePathContext";
+import { ResourceLoaderProvider } from "../../resources/ResourceLoaderContext";
+import type { ResourceLoader } from "../../resources/ResourceLoader";
+import { createFakeResourceLoader } from "../../resources/testing/createFakeResourceLoader";
+import { TscnParser } from "../../parser/TscnParser";
 
 // ---- helpers ---------------------------------------------------------------
 
-const NODE_PATH = 'Root/Player';
+const NODE_PATH = "Root/Player";
 
-function makeObject(name = 'Root'): THREE.Object3D {
+function makeObject(name = "Root"): THREE.Object3D {
   const obj = new THREE.Group();
   obj.name = name;
   return obj;
@@ -40,7 +45,11 @@ function makeObject(name = 'Root'): THREE.Object3D {
 
 function makeClip(name: string, duration = 1): THREE.AnimationClip {
   return new THREE.AnimationClip(name, duration, [
-    new THREE.VectorKeyframeTrack(`${name}.position`, [0, duration], [0, 0, 0, 0, 0, 0]),
+    new THREE.VectorKeyframeTrack(
+      `${name}.position`,
+      [0, duration],
+      [0, 0, 0, 0, 0, 0],
+    ),
   ]);
 }
 
@@ -53,7 +62,9 @@ interface HarnessProps {
   buildMixer?: boolean;
   autoplay?: string;
   durations?: Record<string, number>;
-  onMixerBuilt?: (obj: THREE.Object3D) => void;
+  onMixerBuilt?: (targets: THREE.Object3D[]) => void;
+  /** Defaults to the clips as given, moving `object`. */
+  bind?: () => BoundClips;
   restore?: () => void;
 }
 
@@ -84,23 +95,35 @@ function Harness({
   autoplay,
   durations,
   onMixerBuilt,
+  bind,
   restore,
 }: HarnessProps) {
   const computedDurations = useMemo(
-    () => durations ?? Object.fromEntries(clips.map((c) => [c.name, c.duration])),
-    [durations, clips]
+    () =>
+      durations ?? Object.fromEntries(clips.map((c) => [c.name, c.duration])),
+    [durations, clips],
   );
   const stableOnMixerBuilt = useCallback(
-    (obj: THREE.Object3D) => {
-      onMixerBuilt?.(obj);
+    (targets: THREE.Object3D[]) => {
+      onMixerBuilt?.(targets);
     },
-    [onMixerBuilt]
+    [onMixerBuilt],
+  );
+  const stableBind = useCallback(
+    () =>
+      bind?.() ?? {
+        clips,
+        targets: object ? [object] : [],
+        isStale: () => false,
+      },
+    [bind, clips, object],
   );
   const stableRestore = useCallback(() => restore?.(), [restore]);
 
   capturedResult = useAnimationDriverMount({
     object,
     clips,
+    bind: stableBind,
     nodePath: NODE_PATH,
     isActive,
     buildMixer,
@@ -112,40 +135,45 @@ function Harness({
   return null;
 }
 
-async function mountHarness(props: HarnessProps) {
+async function mountHarness(
+  props: HarnessProps,
+  loader: ResourceLoader = createFakeResourceLoader().loader,
+) {
   const renderer = await ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      <AnimationTransportProvider>
-        <AnimationDriverProvider>
-          <Capture />
-          <DriverCapture />
-          <NodePathProvider path={NODE_PATH}>
-            <Harness {...props} />
-          </NodePathProvider>
-        </AnimationDriverProvider>
-      </AnimationTransportProvider>
-    </SelectionProvider>
+    <ResourceLoaderProvider loader={loader}>
+      <SelectionProvider>
+        <AnimationTransportProvider>
+          <AnimationDriverProvider>
+            <Capture />
+            <DriverCapture />
+            <NodePathProvider path={NODE_PATH}>
+              <Harness {...props} />
+            </NodePathProvider>
+          </AnimationDriverProvider>
+        </AnimationTransportProvider>
+      </SelectionProvider>
+    </ResourceLoaderProvider>,
   );
   return renderer;
 }
 
 // ---- tests -----------------------------------------------------------------
 
-describe('useAnimationDriverMount — registerPlayer (transport registration)', () => {
-  it('registers clips with the transport when isActive is true', async () => {
-    const clips = [makeClip('idle'), makeClip('run')];
+describe("useAnimationDriverMount — registerPlayer (transport registration)", () => {
+  it("registers clips with the transport when isActive is true", async () => {
+    const clips = [makeClip("idle"), makeClip("run")];
     const object = makeObject();
 
     const renderer = await mountHarness({ object, clips, isActive: true });
 
     expect(capturedTransport.hasPlayer).toBe(true);
-    expect(capturedTransport.clips).toEqual(['idle', 'run']);
+    expect(capturedTransport.clips).toEqual(["idle", "run"]);
 
     await renderer.unmount();
   });
 
-  it('does not register when isActive is false', async () => {
-    const clips = [makeClip('idle')];
+  it("does not register when isActive is false", async () => {
+    const clips = [makeClip("idle")];
     const object = makeObject();
 
     const renderer = await mountHarness({ object, clips, isActive: false });
@@ -157,7 +185,11 @@ describe('useAnimationDriverMount — registerPlayer (transport registration)', 
   });
 
   it('registers even with zero clips (shows "no animations" in the tab)', async () => {
-    const renderer = await mountHarness({ object: makeObject(), clips: [], isActive: true });
+    const renderer = await mountHarness({
+      object: makeObject(),
+      clips: [],
+      isActive: true,
+    });
 
     expect(capturedTransport.hasPlayer).toBe(true);
     expect(capturedTransport.clips).toEqual([]);
@@ -165,19 +197,24 @@ describe('useAnimationDriverMount — registerPlayer (transport registration)', 
     await renderer.unmount();
   });
 
-  it('pre-selects the autoplay clip on registration', async () => {
-    const clips = [makeClip('idle'), makeClip('run')];
+  it("pre-selects the autoplay clip on registration", async () => {
+    const clips = [makeClip("idle"), makeClip("run")];
     const object = makeObject();
 
-    const renderer = await mountHarness({ object, clips, isActive: true, autoplay: 'run' });
+    const renderer = await mountHarness({
+      object,
+      clips,
+      isActive: true,
+      autoplay: "run",
+    });
 
-    expect(capturedTransport.selectedClip).toBe('run');
+    expect(capturedTransport.selectedClip).toBe("run");
 
     await renderer.unmount();
   });
 
-  it('unregisters from the transport when the driver becomes inactive', async () => {
-    const clips = [makeClip('idle')];
+  it("unregisters from the transport when the driver becomes inactive", async () => {
+    const clips = [makeClip("idle")];
     const object = makeObject();
 
     const renderer = await mountHarness({ object, clips, isActive: true });
@@ -194,7 +231,7 @@ describe('useAnimationDriverMount — registerPlayer (transport registration)', 
             </NodePathProvider>
           </AnimationDriverProvider>
         </AnimationTransportProvider>
-      </SelectionProvider>
+      </SelectionProvider>,
     );
 
     expect(capturedTransport.hasPlayer).toBe(false);
@@ -202,16 +239,21 @@ describe('useAnimationDriverMount — registerPlayer (transport registration)', 
     await renderer.unmount();
   });
 
-  it('unregisters from the transport on unmount (cleanup fires during unmount)', async () => {
+  it("unregisters from the transport on unmount (cleanup fires during unmount)", async () => {
     // Verify indirectly: the restore callback is called during unmount teardown,
     // which means the mixer effect's cleanup (which calls restore) fired.
     // The "unregisters when inactive" test already covers the registerPlayer
     // cleanup path; here we confirm unmount triggers the same teardown.
     const restore = vi.fn();
-    const clips = [makeClip('idle')];
+    const clips = [makeClip("idle")];
     const object = makeObject();
 
-    const renderer = await mountHarness({ object, clips, isActive: true, restore });
+    const renderer = await mountHarness({
+      object,
+      clips,
+      isActive: true,
+      restore,
+    });
     restore.mockClear();
 
     await renderer.unmount();
@@ -220,9 +262,9 @@ describe('useAnimationDriverMount — registerPlayer (transport registration)', 
   });
 });
 
-describe('useAnimationDriverMount — registerDriver (registry publication)', () => {
-  it('publishes { object, clips } into the AnimationDriverRegistry when object + clips are ready', async () => {
-    const clips = [makeClip('idle')];
+describe("useAnimationDriverMount — registerDriver (registry publication)", () => {
+  it("publishes { object, clips } into the AnimationDriverRegistry when object + clips are ready", async () => {
+    const clips = [makeClip("idle")];
     const object = makeObject();
 
     const renderer = await mountHarness({ object, clips, isActive: false });
@@ -234,7 +276,7 @@ describe('useAnimationDriverMount — registerDriver (registry publication)', ()
     await renderer.unmount();
   });
 
-  it('does not publish when clips array is empty', async () => {
+  it("does not publish when clips array is empty", async () => {
     const object = makeObject();
 
     const renderer = await mountHarness({ object, clips: [], isActive: false });
@@ -244,20 +286,28 @@ describe('useAnimationDriverMount — registerDriver (registry publication)', ()
     await renderer.unmount();
   });
 
-  it('does not publish when object is null (async arrival)', async () => {
-    const clips = [makeClip('idle')];
+  it("does not publish when object is null (async arrival)", async () => {
+    const clips = [makeClip("idle")];
 
-    const renderer = await mountHarness({ object: null, clips, isActive: false });
+    const renderer = await mountHarness({
+      object: null,
+      clips,
+      isActive: false,
+    });
 
     expect(capturedDriver).toBeNull();
 
     await renderer.unmount();
   });
 
-  it('publishes once object arrives (async arrival scenario)', async () => {
-    const clips = [makeClip('idle')];
+  it("publishes once object arrives (async arrival scenario)", async () => {
+    const clips = [makeClip("idle")];
 
-    const renderer = await mountHarness({ object: null, clips, isActive: false });
+    const renderer = await mountHarness({
+      object: null,
+      clips,
+      isActive: false,
+    });
     expect(capturedDriver).toBeNull();
 
     const object = makeObject();
@@ -272,7 +322,7 @@ describe('useAnimationDriverMount — registerDriver (registry publication)', ()
             </NodePathProvider>
           </AnimationDriverProvider>
         </AnimationTransportProvider>
-      </SelectionProvider>
+      </SelectionProvider>,
     );
 
     expect(capturedDriver).not.toBeNull();
@@ -281,15 +331,19 @@ describe('useAnimationDriverMount — registerDriver (registry publication)', ()
     await renderer.unmount();
   });
 
-  it('unregisters from the registry on unmount (cleanup fires during unmount)', async () => {
+  it("unregisters from the registry on unmount (cleanup fires during unmount)", async () => {
     // After unmount the Capture component is also unmounted, so capturedDriver
     // is stale. Verify indirectly: a second tree that reads the same registry
     // path after the first tree is unmounted sees null.
-    const clips = [makeClip('idle')];
+    const clips = [makeClip("idle")];
     const object = makeObject();
 
     // Mount the publishing harness.
-    const publisherRenderer = await mountHarness({ object, clips, isActive: false });
+    const publisherRenderer = await mountHarness({
+      object,
+      clips,
+      isActive: false,
+    });
     expect(capturedDriver).not.toBeNull();
 
     // Unmounting the publisher triggers registerDriver's cleanup.
@@ -297,7 +351,8 @@ describe('useAnimationDriverMount — registerDriver (registry publication)', ()
 
     // Mount a fresh consumer that reads the same path; if the cleanup fired the
     // driver entry is gone.
-    let driverAfterUnmount: AnimationDriverEntry | null = undefined as unknown as null;
+    let driverAfterUnmount: AnimationDriverEntry | null =
+      undefined as unknown as null;
     function DriversReader() {
       driverAfterUnmount = useAnimationDriver(NODE_PATH);
       return null;
@@ -305,7 +360,7 @@ describe('useAnimationDriverMount — registerDriver (registry publication)', ()
     const readerRenderer = await ReactThreeTestRenderer.create(
       <AnimationDriverProvider>
         <DriversReader />
-      </AnimationDriverProvider>
+      </AnimationDriverProvider>,
     );
 
     expect(driverAfterUnmount).toBeNull();
@@ -313,62 +368,123 @@ describe('useAnimationDriverMount — registerDriver (registry publication)', ()
   });
 });
 
-describe('useAnimationDriverMount — mixer build (ADR-0012)', () => {
-  it('calls onMixerBuilt when active + object + clips are ready', async () => {
-    const onMixerBuilt = vi.fn();
-    const clips = [makeClip('idle')];
+describe("useAnimationDriverMount — mixer build (ADR-0012)", () => {
+  it("plays the clips bind() returns, not the templates it was given", async () => {
+    const templates = [makeClip("idle")];
+    const bound = makeClip("idle");
     const object = makeObject();
 
-    const renderer = await mountHarness({ object, clips, isActive: true, onMixerBuilt });
+    const renderer = await mountHarness({
+      object,
+      clips: templates,
+      isActive: true,
+      bind: () => ({ clips: [bound], targets: [object], isStale: () => false }),
+    });
+
+    expect(capturedResult.actionsRef.current.get("idle")?.getClip()).toBe(
+      bound,
+    );
+    await renderer.unmount();
+  });
+
+  it("publishes bind with the entry, so an AnimationTree binds the same way", async () => {
+    const clips = [makeClip("idle")];
+    const object = makeObject();
+    const bound = makeClip("idle");
+
+    const renderer = await mountHarness({
+      object,
+      clips,
+      isActive: false,
+      bind: () => ({ clips: [bound], targets: [object], isStale: () => false }),
+    });
+
+    expect(capturedDriver?.bind().clips).toEqual([bound]);
+    await renderer.unmount();
+  });
+
+  it("calls onMixerBuilt with the bound targets when active + object + clips are ready", async () => {
+    const onMixerBuilt = vi.fn();
+    const clips = [makeClip("idle")];
+    const object = makeObject();
+
+    const renderer = await mountHarness({
+      object,
+      clips,
+      isActive: true,
+      onMixerBuilt,
+    });
 
     expect(onMixerBuilt).toHaveBeenCalledTimes(1);
-    expect(onMixerBuilt).toHaveBeenCalledWith(object);
-    expect(capturedResult.mixerRef.current).toBeInstanceOf(THREE.AnimationMixer);
-    expect(capturedResult.actionsRef.current.has('idle')).toBe(true);
+    expect(onMixerBuilt).toHaveBeenCalledWith([object]);
+    expect(capturedResult.mixerRef.current).toBeInstanceOf(
+      THREE.AnimationMixer,
+    );
+    expect(capturedResult.actionsRef.current.has("idle")).toBe(true);
 
     await renderer.unmount();
   });
 
-  it('does not call onMixerBuilt when inactive', async () => {
+  it("does not call onMixerBuilt when inactive", async () => {
     const onMixerBuilt = vi.fn();
-    const clips = [makeClip('idle')];
+    const clips = [makeClip("idle")];
     const object = makeObject();
 
-    const renderer = await mountHarness({ object, clips, isActive: false, onMixerBuilt });
+    const renderer = await mountHarness({
+      object,
+      clips,
+      isActive: false,
+      onMixerBuilt,
+    });
 
     expect(onMixerBuilt).not.toHaveBeenCalled();
 
     await renderer.unmount();
   });
 
-  it('does not call onMixerBuilt when object is null', async () => {
+  it("does not call onMixerBuilt when object is null", async () => {
     const onMixerBuilt = vi.fn();
-    const clips = [makeClip('idle')];
+    const clips = [makeClip("idle")];
 
-    const renderer = await mountHarness({ object: null, clips, isActive: true, onMixerBuilt });
+    const renderer = await mountHarness({
+      object: null,
+      clips,
+      isActive: true,
+      onMixerBuilt,
+    });
 
     expect(onMixerBuilt).not.toHaveBeenCalled();
 
     await renderer.unmount();
   });
 
-  it('does not call onMixerBuilt when clips array is empty', async () => {
+  it("does not call onMixerBuilt when clips array is empty", async () => {
     const onMixerBuilt = vi.fn();
     const object = makeObject();
 
-    const renderer = await mountHarness({ object, clips: [], isActive: true, onMixerBuilt });
+    const renderer = await mountHarness({
+      object,
+      clips: [],
+      isActive: true,
+      onMixerBuilt,
+    });
 
     expect(onMixerBuilt).not.toHaveBeenCalled();
 
     await renderer.unmount();
   });
 
-  it('calls restore and clears refs on deselect (mixer teardown)', async () => {
+  it("calls restore and clears refs on deselect (mixer teardown)", async () => {
     const restore = vi.fn();
-    const clips = [makeClip('idle')];
+    const clips = [makeClip("idle")];
     const object = makeObject();
 
-    const renderer = await mountHarness({ object, clips, isActive: true, restore });
+    const renderer = await mountHarness({
+      object,
+      clips,
+      isActive: true,
+      restore,
+    });
 
     await renderer.update(
       <SelectionProvider>
@@ -377,11 +493,16 @@ describe('useAnimationDriverMount — mixer build (ADR-0012)', () => {
             <Capture />
             <DriverCapture />
             <NodePathProvider path={NODE_PATH}>
-              <Harness object={object} clips={clips} isActive={false} restore={restore} />
+              <Harness
+                object={object}
+                clips={clips}
+                isActive={false}
+                restore={restore}
+              />
             </NodePathProvider>
           </AnimationDriverProvider>
         </AnimationTransportProvider>
-      </SelectionProvider>
+      </SelectionProvider>,
     );
 
     expect(restore).toHaveBeenCalledTimes(1);
@@ -391,12 +512,17 @@ describe('useAnimationDriverMount — mixer build (ADR-0012)', () => {
     await renderer.unmount();
   });
 
-  it('calls restore on unmount', async () => {
+  it("calls restore on unmount", async () => {
     const restore = vi.fn();
-    const clips = [makeClip('idle')];
+    const clips = [makeClip("idle")];
     const object = makeObject();
 
-    const renderer = await mountHarness({ object, clips, isActive: true, restore });
+    const renderer = await mountHarness({
+      object,
+      clips,
+      isActive: true,
+      restore,
+    });
     restore.mockClear();
 
     await renderer.unmount();
@@ -404,11 +530,16 @@ describe('useAnimationDriverMount — mixer build (ADR-0012)', () => {
     expect(restore).toHaveBeenCalledTimes(1);
   });
 
-  it('rebuilds the mixer when the object changes (async arrival)', async () => {
+  it("rebuilds the mixer when the object changes (async arrival)", async () => {
     const onMixerBuilt = vi.fn();
-    const clips = [makeClip('idle')];
+    const clips = [makeClip("idle")];
 
-    const renderer = await mountHarness({ object: null, clips, isActive: true, onMixerBuilt });
+    const renderer = await mountHarness({
+      object: null,
+      clips,
+      isActive: true,
+      onMixerBuilt,
+    });
     expect(onMixerBuilt).not.toHaveBeenCalled();
 
     const object = makeObject();
@@ -419,11 +550,16 @@ describe('useAnimationDriverMount — mixer build (ADR-0012)', () => {
             <Capture />
             <DriverCapture />
             <NodePathProvider path={NODE_PATH}>
-              <Harness object={object} clips={clips} isActive={true} onMixerBuilt={onMixerBuilt} />
+              <Harness
+                object={object}
+                clips={clips}
+                isActive={true}
+                onMixerBuilt={onMixerBuilt}
+              />
             </NodePathProvider>
           </AnimationDriverProvider>
         </AnimationTransportProvider>
-      </SelectionProvider>
+      </SelectionProvider>,
     );
 
     expect(onMixerBuilt).toHaveBeenCalledTimes(1);
@@ -431,21 +567,25 @@ describe('useAnimationDriverMount — mixer build (ADR-0012)', () => {
     await renderer.unmount();
   });
 
-  it('actions map contains one entry per clip', async () => {
-    const clips = [makeClip('idle'), makeClip('run'), makeClip('jump', 0.5)];
+  it("actions map contains one entry per clip", async () => {
+    const clips = [makeClip("idle"), makeClip("run"), makeClip("jump", 0.5)];
     const object = makeObject();
 
     const renderer = await mountHarness({ object, clips, isActive: true });
 
-    expect([...capturedResult.actionsRef.current.keys()]).toEqual(['idle', 'run', 'jump']);
+    expect([...capturedResult.actionsRef.current.keys()]).toEqual([
+      "idle",
+      "run",
+      "jump",
+    ]);
 
     await renderer.unmount();
   });
 });
 
-describe('useAnimationDriverMount — combined effects', () => {
-  it('publishes to the registry (isActive=false) AND registers with the transport (isActive=true) independently', async () => {
-    const clips = [makeClip('idle')];
+describe("useAnimationDriverMount — combined effects", () => {
+  it("publishes to the registry (isActive=false) AND registers with the transport (isActive=true) independently", async () => {
+    const clips = [makeClip("idle")];
     const object = makeObject();
 
     // isActive=true: both effects fire.
@@ -457,8 +597,8 @@ describe('useAnimationDriverMount — combined effects', () => {
     await renderer.unmount();
   });
 
-  it('registry publication persists when the driver becomes inactive (availability is not tied to selection)', async () => {
-    const clips = [makeClip('idle')];
+  it("registry publication persists when the driver becomes inactive (availability is not tied to selection)", async () => {
+    const clips = [makeClip("idle")];
     const object = makeObject();
 
     const renderer = await mountHarness({ object, clips, isActive: true });
@@ -474,7 +614,7 @@ describe('useAnimationDriverMount — combined effects', () => {
             </NodePathProvider>
           </AnimationDriverProvider>
         </AnimationTransportProvider>
-      </SelectionProvider>
+      </SelectionProvider>,
     );
 
     // Transport unregistered (isActive false), but driver registry entry persists.
@@ -484,18 +624,22 @@ describe('useAnimationDriverMount — combined effects', () => {
     await renderer.unmount();
   });
 
-  describe('buildMixer', () => {
-    it('defaults to isActive, so a caller that omits it is unaffected', async () => {
-      const renderer = await mountHarness({ object: makeObject(), clips: [makeClip('idle')], isActive: true });
+  describe("buildMixer", () => {
+    it("defaults to isActive, so a caller that omits it is unaffected", async () => {
+      const renderer = await mountHarness({
+        object: makeObject(),
+        clips: [makeClip("idle")],
+        isActive: true,
+      });
       expect(capturedResult.mixerRef.current).not.toBeNull();
       await renderer.unmount();
     });
 
-    it('skips the mixer when narrower than isActive, but still registers the clips', async () => {
+    it("skips the mixer when narrower than isActive, but still registers the clips", async () => {
       const onMixerBuilt = vi.fn();
       const renderer = await mountHarness({
         object: makeObject(),
-        clips: [makeClip('idle')],
+        clips: [makeClip("idle")],
         isActive: true,
         buildMixer: false,
         onMixerBuilt,
@@ -514,10 +658,15 @@ describe('useAnimationDriverMount — combined effects', () => {
       await renderer.unmount();
     });
 
-    it('builds the mixer once it turns true', async () => {
+    it("builds the mixer once it turns true", async () => {
       const object = makeObject();
-      const clips = [makeClip('idle')];
-      const renderer = await mountHarness({ object, clips, isActive: true, buildMixer: false });
+      const clips = [makeClip("idle")];
+      const renderer = await mountHarness({
+        object,
+        clips,
+        isActive: true,
+        buildMixer: false,
+      });
       expect(capturedResult.mixerRef.current).toBeNull();
 
       await renderer.update(
@@ -527,15 +676,68 @@ describe('useAnimationDriverMount — combined effects', () => {
               <Capture />
               <DriverCapture />
               <NodePathProvider path={NODE_PATH}>
-                <Harness object={object} clips={clips} isActive={true} buildMixer={true} />
+                <Harness
+                  object={object}
+                  clips={clips}
+                  isActive={true}
+                  buildMixer={true}
+                />
               </NodePathProvider>
             </AnimationDriverProvider>
           </AnimationTransportProvider>
-        </SelectionProvider>
+        </SelectionProvider>,
       );
 
       expect(capturedResult.mixerRef.current).not.toBeNull();
       await renderer.unmount();
     });
+  });
+});
+
+describe("useAnimationDriverMount — rebinding a target that mounts late", () => {
+  const EMPTY_SCENE = new TscnParser().parse("[gd_scene format=3]\n");
+
+  it("rebuilds the mixer when a load makes its binding stale", async () => {
+    const fake = createFakeResourceLoader();
+    const onMixerBuilt = vi.fn();
+    let stale = false;
+    const object = makeObject();
+    const clips = [makeClip("move")];
+    await mountHarness(
+      {
+        object,
+        clips,
+        isActive: true,
+        onMixerBuilt,
+        bind: () => ({ clips, targets: [object], isStale: () => stale }),
+      },
+      fake.loader,
+    );
+    stale = true;
+    await ReactThreeTestRenderer.act(async () =>
+      fake.scenes._resolve("res://late.tscn", EMPTY_SCENE),
+    );
+    expect(onMixerBuilt).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the mixer when a load leaves its binding current", async () => {
+    const fake = createFakeResourceLoader();
+    const onMixerBuilt = vi.fn();
+    const object = makeObject();
+    const clips = [makeClip("move")];
+    await mountHarness(
+      {
+        object,
+        clips,
+        isActive: true,
+        onMixerBuilt,
+        bind: () => ({ clips, targets: [object], isStale: () => false }),
+      },
+      fake.loader,
+    );
+    await ReactThreeTestRenderer.act(async () =>
+      fake.scenes._resolve("res://late.tscn", EMPTY_SCENE),
+    );
+    expect(onMixerBuilt).toHaveBeenCalledTimes(1);
   });
 });
