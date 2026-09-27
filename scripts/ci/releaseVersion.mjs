@@ -1,21 +1,18 @@
 #!/usr/bin/env node
 /**
- * Reads a release tag before anything is built: which package it releases, and whether that
- * package's manifest holds the tagged version. The registries take the version from the
- * manifest, never the tag, so a mismatch would publish a version nobody tagged. Prints
- * `package`, `version` and `previous_tag` lines for $GITHUB_OUTPUT, or the error on stderr
- * and exits 1.
+ * Reads a release tag before anything is built: which package it releases, and at which
+ * version. The tag is the version's only source: the release jobs write it into the
+ * package's manifest before they pack. Prints `package`, `directory`, `version` and
+ * `previous_tag` lines for $GITHUB_OUTPUT, or the error on stderr and exits 1.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
 
-/** Each tag prefix, and the manifest of the one package that tag releases. */
+/** Each tag prefix, and the repo-relative directory of the one package that tag releases. */
 export const RELEASE_PACKAGES = {
-  vscode: 'apps/textscene-vscode/package.json',
-  linter: 'apps/textscene-linter/package.json',
+  vscode: 'apps/textscene-vscode',
+  linter: 'apps/textscene-linter',
 };
 
 /**
@@ -36,30 +33,6 @@ function parseReleaseTag(tag) {
   return { package: match[1], version: parts.join('.'), parts };
 }
 
-/**
- * @param {string} tag - the pushed tag name, as `GITHUB_REF_NAME` gives it.
- * @param {(manifestPath: string) => string} readVersion - the `version` of a repo-relative manifest.
- * @returns {{ package: string, version: string } | { error: string }}
- */
-export function checkReleaseTag(tag, readVersion) {
-  const release = parseReleaseTag(tag);
-  if (!release) {
-    return { error: `expected a tag like vscode-v1.2.3 or linter-v1.2.3, got ${JSON.stringify(tag)}` };
-  }
-  const manifestPath = RELEASE_PACKAGES[release.package];
-  if (!manifestPath) {
-    const known = Object.keys(RELEASE_PACKAGES).join(', ');
-    return { error: `expected a tag prefix out of ${known}, got ${JSON.stringify(release.package)}` };
-  }
-  const manifestVersion = readVersion(manifestPath);
-  if (manifestVersion !== release.version) {
-    return {
-      error: `${manifestPath} has version ${manifestVersion}, the tag says ${release.version}`,
-    };
-  }
-  return { package: release.package, version: release.version };
-}
-
 function compareParts(a, b) {
   for (let i = 0; i < a.length; i += 1) {
     if (a[i] !== b[i]) return a[i] - b[i];
@@ -67,25 +40,38 @@ function compareParts(a, b) {
   return 0;
 }
 
-/**
- * The highest release tag of the same package below `tag`, the base the release notes
- * compare against. Without it, GitHub may compare against the other package's tag.
- * @param {string} tag - a valid release tag.
- * @param {string[]} tags - every tag in the repository.
- * @returns {string} the tag, or '' for a package's first release.
- */
-export function previousReleaseTag(tag, tags) {
-  const current = parseReleaseTag(tag);
-  const earlier = tags
+/** The other release tags of `release`'s package, highest version first. */
+function sameSeries(release, tags) {
+  return tags
     .map((name) => ({ name, release: parseReleaseTag(name) }))
-    .filter(({ release }) => release?.package === current.package)
-    .filter(({ release }) => compareParts(release.parts, current.parts) < 0)
+    .filter(({ release: other }) => other?.package === release.package)
+    .filter(({ release: other }) => other.version !== release.version)
     .sort((a, b) => compareParts(b.release.parts, a.release.parts));
-  return earlier[0]?.name ?? '';
 }
 
-function readVersion(manifestPath) {
-  return JSON.parse(readFileSync(join(REPO_ROOT, manifestPath), 'utf8')).version;
+/**
+ * @param {string} tag - the pushed tag name, as `GITHUB_REF_NAME` gives it.
+ * @param {string[]} tags - every tag in the repository.
+ * @returns {{ package: string, directory: string, version: string, previousTag: string }
+ *   | { error: string }} `previousTag` is the base the release notes compare against, or ''
+ *   for a package's first release.
+ */
+export function checkReleaseTag(tag, tags) {
+  const release = parseReleaseTag(tag);
+  if (!release) {
+    return { error: `expected a tag like vscode-v1.2.3 or linter-v1.2.3, got ${JSON.stringify(tag)}` };
+  }
+  const directory = RELEASE_PACKAGES[release.package];
+  if (!directory) {
+    const known = Object.keys(RELEASE_PACKAGES).join(', ');
+    return { error: `expected a tag prefix out of ${known}, got ${JSON.stringify(release.package)}` };
+  }
+  // A lower version would still publish, and npm would move its `latest` tag back to it.
+  const [newest] = sameSeries(release, tags);
+  if (newest && compareParts(newest.release.parts, release.parts) > 0) {
+    return { error: `expected a version above the newest ${release.package} tag ${newest.name}, got ${tag}` };
+  }
+  return { package: release.package, directory, version: release.version, previousTag: newest?.name ?? '' };
 }
 
 function listTags() {
@@ -95,15 +81,15 @@ function listTags() {
 }
 
 function main() {
-  const tag = process.argv[2] ?? '';
-  const result = checkReleaseTag(tag, readVersion);
+  const result = checkReleaseTag(process.argv[2] ?? '', listTags());
   if ('error' in result) {
     console.error(`[releaseVersion] ${result.error}`);
     process.exit(1);
   }
   console.log(`package=${result.package}`);
+  console.log(`directory=${result.directory}`);
   console.log(`version=${result.version}`);
-  console.log(`previous_tag=${previousReleaseTag(tag, listTags())}`);
+  console.log(`previous_tag=${result.previousTag}`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) main();

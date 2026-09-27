@@ -1,6 +1,7 @@
 name: Release
 
 # A tag releases one package: `vscode-v1.2.3` the extension, `linter-v1.2.3` the linter.
+# The tag is the version: the release jobs write it into the package's manifest.
 on:
   push:
     tags: ['vscode-v*', 'linter-v*']
@@ -14,6 +15,7 @@ jobs:
     timeout-minutes: 30
     outputs:
       package: ${{ steps.tag.outputs.package }}
+      directory: ${{ steps.tag.outputs.directory }}
       version: ${{ steps.tag.outputs.version }}
       previous_tag: ${{ steps.tag.outputs.previous_tag }}
     steps:
@@ -23,8 +25,8 @@ jobs:
       - name: Fetch the tags
         run: git fetch --no-tags --depth=1 origin '+refs/tags/*:refs/tags/*'
 
-      # First, so a tag that does not match its manifest fails before the long gate.
-      - name: Check the tag against the package version
+      # First, so a malformed or lower tag fails before the long gate.
+      - name: Read the package and version from the tag
         id: tag
         run: node scripts/ci/releaseVersion.mjs "$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
 
@@ -44,6 +46,12 @@ jobs:
       - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup
+
+      - name: Set the version from the tag
+        run: npm pkg set version="$VERSION" --prefix "$DIRECTORY"
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          DIRECTORY: ${{ needs.validate.outputs.directory }}
 
       - name: Package VS Code Extension
         run: pnpm vsc:package
@@ -65,7 +73,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          generate_release_notes: true
+          # A first release has no earlier tag, and generated notes would then list every
+          # pull request ever merged.
+          generate_release_notes: ${{ needs.validate.outputs.previous_tag != '' }}
+          body: ${{ needs.validate.outputs.previous_tag == '' && 'First public release.' || '' }}
           previous_tag: ${{ needs.validate.outputs.previous_tag }}
           make_latest: true
           files: |
@@ -85,6 +96,12 @@ jobs:
 
       - uses: ./.github/actions/setup
 
+      - name: Set the version from the tag
+        run: npm pkg set version="$VERSION" --prefix "$DIRECTORY"
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          DIRECTORY: ${{ needs.validate.outputs.directory }}
+
       - name: Build Linter CLI
         run: pnpm --filter @textscene/linter build
 
@@ -101,7 +118,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          generate_release_notes: true
+          # A first release has no earlier tag, and generated notes would then list every
+          # pull request ever merged.
+          generate_release_notes: ${{ needs.validate.outputs.previous_tag != '' }}
+          body: ${{ needs.validate.outputs.previous_tag == '' && 'First public release.' || '' }}
           previous_tag: ${{ needs.validate.outputs.previous_tag }}
           make_latest: false
           files: apps/textscene-linter/*.tgz

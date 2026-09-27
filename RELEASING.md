@@ -3,7 +3,8 @@
 A release starts when someone pushes a tag. The tag names one package, and
 `.github/workflows/release.yml` releases that package only. The extension and
 the linter have their own versions, so the extension can release without the
-linter.
+linter. The tag is the version: nobody edits a version or a changelog to
+release.
 
 | Tag | Package | Registry | Authentication |
 | --- | --- | --- | --- |
@@ -16,16 +17,23 @@ short-lived OIDC token from GitHub for the `release` environment.
 
 ## What the workflow does
 
-1. `validate` reads the package from the tag prefix and checks the tag against
-   that package's `version` (`scripts/ci/releaseVersion.mjs`). Then it runs
-   `pnpm validate`.
-2. For a `vscode-v` tag, `release-vscode` builds the `.vsix` and the web
+1. `validate` reads the package and the version from the tag
+   (`scripts/ci/releaseVersion.mjs`). Then it runs `pnpm validate`.
+2. For a `vscode-v` tag, `release-vscode` writes the version into
+   `apps/textscene-vscode/package.json`, builds the `.vsix` and the web
    previewer archive and attaches them to a GitHub Release. Then
    `vscode-marketplace` and `open-vsx` publish the `.vsix`.
-3. For a `linter-v` tag, `release-linter` builds the linter tarball and attaches
+3. For a `linter-v` tag, `release-linter` writes the version into
+   `apps/textscene-linter/package.json`, builds the linter tarball and attaches
    it to a GitHub Release. Then `npm` publishes the tarball.
 
-The release notes compare against the previous tag of the same package. The
+The `version` in each `package.json` in the repository is only a placeholder
+for local builds. The published version always comes from the tag.
+
+GitHub writes the release notes from the pull requests merged since the
+previous tag of the same package. A package's first release has no previous
+tag, so it gets the text "First public release." instead. Edit the notes on the
+release page if needed. Each `CHANGELOG.md` points to the releases page. The
 extension's release is marked as the repository's latest release. The linter's
 release is not.
 
@@ -33,8 +41,12 @@ Each publish job skips a version that its registry already holds. If one
 registry fails, fix the cause and use **Re-run failed jobs**. The other
 registries are not published twice.
 
-The Marketplace refuses a semver pre-release version, so the tag check refuses
-a tag like `vscode-v1.0.0-rc.1`.
+The tag check refuses two kinds of tag:
+
+- A pre-release tag, like `vscode-v1.0.0-rc.1`. The Marketplace refuses a
+  semver pre-release version.
+- A version below the newest tag of the same package. npm would publish it and
+  move its `latest` tag back to it.
 
 ## One-time setup
 
@@ -59,25 +71,26 @@ first version goes up by hand.
    authentication.
 2. Create the organisation `textscene` (**Add Organization**, free plan). The
    `@textscene` scope does not exist yet.
-3. Check out the commit you will tag `linter-v<version>`, with that version in
-   `apps/textscene-linter/package.json`.
-4. Run `pnpm install`.
-5. Run `pnpm build:linter`.
-6. In `apps/textscene-linter`, run `pnpm pack`. Use pnpm, not npm: it rewrites
+3. Check out the commit you will tag `linter-v<version>`.
+4. Set the version locally, without committing it:
+   `npm pkg set version=<version> --prefix apps/textscene-linter`.
+5. Run `pnpm install`.
+6. Run `pnpm build:linter`.
+7. In `apps/textscene-linter`, run `pnpm pack`. Use pnpm, not npm: it rewrites
    the `catalog:` and `workspace:` specifiers.
-7. Run `npm login`.
-8. Run `npm publish textscene-linter-<version>.tgz`. `publishConfig` makes the
+8. Run `npm login`.
+9. Run `npm publish textscene-linter-<version>.tgz`. `publishConfig` makes the
    scoped package public.
-9. Open the package's **Settings** page on npmjs.com.
-10. Under **Trusted Publisher**, select **GitHub Actions**.
-11. Enter the organisation or user `Vortiago`, the repository
+10. Open the package's **Settings** page on npmjs.com.
+11. Under **Trusted Publisher**, select **GitHub Actions**.
+12. Enter the organisation or user `Vortiago`, the repository
     `textscene-inspector`, the workflow filename `release.yml` and the
     environment `release`. The fields are case-sensitive, and npm does not
     check them when you save.
-12. Under **Allowed actions**, allow `npm publish`. A configuration made after
+13. Under **Allowed actions**, allow `npm publish`. A configuration made after
     2026-09-03 allows only `npm stage publish` by default, and the workflow runs
     `npm publish`.
-13. Optional: under **Publishing access**, select **Require two-factor
+14. Optional: under **Publishing access**, select **Require two-factor
     authentication and disallow tokens**. Trusted publishing still works.
 
 When the `linter-v<version>` tag runs, the `npm` job finds the version on npm and
@@ -140,18 +153,13 @@ Release the extension with the prefix `vscode`, and the linter with the prefix
 `linter`. `<package>` below is one of those two, and `<version>` is the new
 version.
 
-1. Set `<version>` in the package's `package.json`: `apps/textscene-vscode` or
-   `apps/textscene-linter`.
-2. Move the `[Unreleased]` entries in that package's `CHANGELOG.md` under
-   `<version>` and the date.
-3. Merge that change to `main` through a pull request.
-4. Tag the merge commit: `git tag <package>-v<version> <commit>`.
-5. Push the tag: `git push origin <package>-v<version>`.
-6. Watch the **Release** run under **Actions**.
+1. Merge the changes to `main`.
+2. Tag the commit on `main`: `git tag <package>-v<version> origin/main`.
+3. Push the tag: `git push origin <package>-v<version>`.
+4. Watch the **Release** run under **Actions**.
 
-For example, `git tag vscode-v1.3.0` releases extension 1.3.0 and publishes
-nothing to npm.
+For example, `git tag vscode-v1.3.0 origin/main` releases extension 1.3.0 and
+publishes nothing to npm.
 
-If the tag does not match the package's `version`, `validate` fails in its
-first step and nothing is published. Delete the tag, fix the version, and tag
-again.
+If `validate` refuses the tag, nothing is published. Delete the tag, and push a
+correct one.
