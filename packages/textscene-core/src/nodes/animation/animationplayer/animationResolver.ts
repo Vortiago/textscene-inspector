@@ -9,6 +9,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { parseValueArray } from './keyframeValues.js';
 import type { GodotKeyframeValue } from './keyframeValues.js';
 import { parseGodotFloat } from '../../../godot/number.js';
+import { boolSlotValue } from '../../../godot/variantBool.js';
 import { info, warn } from '../../../logger';
 import {
   EXT_RESOURCE_CALL_ANYWHERE_RE,
@@ -108,10 +109,20 @@ export function resolveAudioTrackPaths(
   return paths;
 }
 
-/** Every audio track's raw NodePath inner string within one Animation resource's data. */
+/**
+ * Whether track `i` takes part in playback. `Track::enabled` defaults to true (animation.h:114),
+ * `tracks/N/enabled` sets it (animation.cpp:156-157), and `_update_caches` skips a disabled track
+ * of every type (animation_mixer.cpp:689).
+ */
+function trackEnabled(data: Record<string, unknown>, i: number): boolean {
+  return boolSlotValue(asString(data[`tracks/${i}/enabled`])) !== false;
+}
+
+/** Every enabled audio track's raw NodePath inner string within one Animation resource's data. */
 function audioTrackPaths(data: Record<string, unknown>): string[] {
   const paths: string[] = [];
   for (let i = 0; data[`tracks/${i}/type`] !== undefined; i++) {
+    if (!trackEnabled(data, i)) continue;
     const type = literalText(asString(data[`tracks/${i}/type`]) ?? '');
     if (type !== 'audio') continue;
     const inner = extractNodePathInner(asString(data[`tracks/${i}/path`]) ?? '');
@@ -174,6 +185,7 @@ const TRANSFORM_3D_TRACKS: Record<string, { property: string; components: number
 function parseTracks(data: Record<string, unknown>): GodotTrack[] {
   const tracks: GodotTrack[] = [];
   for (let i = 0; data[`tracks/${i}/type`] !== undefined; i++) {
+    if (!trackEnabled(data, i)) continue;
     const type = literalText(asString(data[`tracks/${i}/type`]) ?? '');
     const rawPath = asString(data[`tracks/${i}/path`]) ?? '';
     const rawKeys = asString(data[`tracks/${i}/keys`]) ?? '';

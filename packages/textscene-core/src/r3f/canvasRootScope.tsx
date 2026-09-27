@@ -42,24 +42,6 @@ export function CanvasSpaceProvider({
   return <CanvasSpaceContext.Provider value={value}>{children}</CanvasSpaceContext.Provider>;
 }
 
-const ParentIsCanvasItemContext = createContext(false);
-ParentIsCanvasItemContext.displayName = 'ParentIsCanvasItemContext';
-
-/** Whether the node rendering this subtree is itself a `CanvasItem`. */
-export function useParentIsCanvasItem(): boolean {
-  return useContext(ParentIsCanvasItemContext);
-}
-
-export function ParentIsCanvasItemProvider({
-  value,
-  children,
-}: {
-  value: boolean;
-  children: ReactNode;
-}) {
-  return <ParentIsCanvasItemContext.Provider value={value}>{children}</ParentIsCanvasItemContext.Provider>;
-}
-
 /**
  * Wraps a node's content, resetting the canvas scope when it parents at the
  * canvas. A node that nests normally gets no extra group or context. The node
@@ -76,9 +58,10 @@ export function CanvasRootScope({
 }) {
   const ambient = useCanvasSpace();
   const isRoot = isCanvasRoot(node, parentIsCanvasItem);
-  // Visibility still crosses: `_handle_visibility_change` propagates into a top_level child
-  // (`canvas_item.cpp:102-108`). So the root stays inside its ancestors' groups, where an eye
-  // toggle and `visible = false` reach it, and cancels their transform with this inverse.
+  // Visibility still crosses into a top_level child: `_handle_visibility_change` propagates to
+  // every CanvasItem child (`canvas_item.cpp:102-108`). So that root stays inside its ancestors'
+  // groups, where an eye toggle and `visible = false` reach it, and cancels their transform with
+  // this inverse. A root whose parent is no CanvasItem escaped them (`parentSpaceScope.tsx`).
   const inverse = useMemo(
     () => (isRoot && ambient ? ambient.clone().invert() : null),
     [isRoot, ambient]
