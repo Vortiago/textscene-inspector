@@ -126,9 +126,9 @@ proves that this workflow may publish as `vortiago`. Nothing is hosted on Azure.
     repository `textscene-inspector` with the repository ID `1083105066`, the
     entity type **Environment** and the environment `release`. The subject
     becomes `repo:Vortiago@1761895/textscene-inspector@1083105066:environment:release`.
-12. Opt the repository in to immutable subject claims. GitHub sends the
-    subject with the IDs only to repositories created after 2026-07-15, and
-    this one is older:
+12. Check that the repository's OpenID Connect (OIDC) settings show **Use
+    immutable subject claim** as enabled. GitHub enables it for this
+    repository, because it was renamed after 2026-07-15. If it is off, opt in:
 
     ```bash
     gh api -X PUT repos/Vortiago/textscene-inspector/actions/oidc/customization/sub \
