@@ -17,10 +17,11 @@ import {
 } from '../../../r3f/contexts/AnimationTransportContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
-import { useAnimationDriver } from '../../../r3f/contexts/AnimationDriverContext';
+import { useAnimationDriver, type BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
+import { useRebindKey } from '../../../r3f/animation/useRebindKey';
 import { stepPlayback } from '../../../r3f/animation/stepPlayback';
 import { startAction, seekAction } from '../../../r3f/animation/actionHelpers';
-import { snapshotSubtree, restoreSnapshot } from '../../../r3f/animation/poseSnapshot';
+import { snapshotPose, restoreSnapshot } from '../../../r3f/animation/poseSnapshot';
 import { resolveTreeRoot } from './treeResources';
 import { evaluateTree } from './evaluateTree';
 import { resolveAnimPlayerPath } from './resolveAnimPlayer';
@@ -106,14 +107,19 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
 
   // Build a mixer rooted on the driver's object with one weighted action per
   // program clip, only while active, so a deselected tree never touches the scene.
-  // Snapshot the subtree so stop or deselect restores it.
+  // Snapshot what the clips move so stop or deselect restores it.
   const mixerRef = useRef<AnimationMixer | null>(null);
   const actionsRef = useRef<Map<string, AnimationAction>>(new Map());
-  const snapshotRef = useRef<ReturnType<typeof snapshotSubtree>>([]);
+  const snapshotRef = useRef<ReturnType<typeof snapshotPose>>([]);
+  /** Written only by the mixer build below: the binding it plays, until teardown. */
+  const boundRef = useRef<BoundClips | null>(null);
+  const rebindKey = useRebindKey(boundRef);
   useEffect(() => {
     if (!isActive || !driver || program.length === 0) return;
-    const { object, clips } = driver;
-    const mixer = new AnimationMixer(object);
+    const bound = driver.bind();
+    boundRef.current = bound;
+    const { clips, targets } = bound;
+    const mixer = new AnimationMixer(driver.object);
     const actions = new Map<string, AnimationAction>();
     for (const { clip } of program) {
       const found = clips.find((c) => c.name === clip);
@@ -122,21 +128,24 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
     }
     mixerRef.current = mixer;
     actionsRef.current = actions;
-    snapshotRef.current = snapshotSubtree(object);
+    snapshotRef.current = snapshotPose(targets);
     return () => {
       mixer.stopAllAction();
       restoreSnapshot(snapshotRef.current);
       mixerRef.current = null;
       actionsRef.current = new Map();
       snapshotRef.current = [];
+      boundRef.current = null;
     };
-  }, [isActive, driver, program]);
+  }, [isActive, driver, program, rebindKey]);
 
   // Thin adapter: build the stepPlayback input from refs, call the pure reducer, then actuate
   // its command on N weighted actions. Blend weighting stays here, out of usePlaybackLoop, until
   // a second weighted driver exists (ADR-0011/0014/0015/0019).
   const prevStateRef = useRef<PlayState>('stopped');
   const prevTimeRef = useRef(0);
+  /** Written only by the frame below: the mixer it last drove. */
+  const prevMixerRef = useRef<AnimationMixer | null>(null);
   useFrame((_, delta) => {
     const mixer = mixerRef.current;
     const state: PlayState = isActive ? transport.playState : 'stopped';
@@ -144,13 +153,17 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
       prevStateRef.current = state;
       return;
     }
+    // A rebuilt mixer holds fresh actions at time 0, so it resumes from the transport.
+    const mixerRebuilt = prevMixerRef.current !== null && mixer !== prevMixerRef.current;
+    prevMixerRef.current = mixer;
     const actions = actionsRef.current;
 
     const liveTime = dominantActionTime(dominant, actions);
     const step = stepPlayback({
       prevState: prevStateRef.current,
       state,
-      prevTime: prevTimeRef.current,
+      // NaN differs from every time, so a paused rebuild samples its new actions once.
+      prevTime: mixerRebuilt ? Number.NaN : prevTimeRef.current,
       transportTime: transport.time,
       liveTime,
       clipChanged: false,
@@ -169,6 +182,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
             // Weights/time scales are static (authored parameter state), so set
             // them once when the action starts rather than every frame.
             startAction(action, { weight, timeScale });
+            if (mixerRebuilt) action.time = transport.time;
           }
         }
         // The global preview speed multiplier applies here too. The loop override does not: a

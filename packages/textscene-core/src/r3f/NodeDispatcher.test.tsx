@@ -185,4 +185,24 @@ describe('<NodeDispatcher> per-node error boundary (#216)', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('still shows the placeholder for a crashing CanvasItem that parses no position', async () => {
+    // ParallaxBackground parses `offset` and no `position`, and a throw inside the
+    // fallback itself escapes the boundary.
+    function BombNoPosition(_: NodeComponentProps): never {
+      throw new Error('2D node without a position exploded');
+    }
+    nodeComponentRegistry.register({ typeName: 'BombNoPosition', Component: BombNoPosition, canvasItem: true });
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const node: TscnNode = { name: 'Bad', type: 'BombNoPosition', children: [], properties: {} };
+    const renderer = await renderWithProviders(
+      <CanvasWorkspaceProvider workspace="2d">
+        <NodeDispatcher nodes={[node]} />
+      </CanvasWorkspaceProvider>
+    );
+
+    expect(renderer.scene.findAllByType('Mesh')).not.toHaveLength(0);
+    consoleSpy.mockRestore();
+  });
 });

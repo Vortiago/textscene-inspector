@@ -125,6 +125,22 @@ export function findSubResource(
 }
 
 /**
+ * The first resource of `type` declared under `id`, in declaration order. The id map
+ * answers when that id's first holder has the type. A file that repeats the id with
+ * another type first falls back to the scan. An id the map lacks has no holder at all.
+ */
+export function findSubResourceOfType(
+  internalResources: readonly TscnInternalResource[],
+  id: string,
+  type: string
+): TscnInternalResource | undefined {
+  const firstHolder = findSubResource(internalResources, id);
+  if (!firstHolder) return undefined;
+  if (firstHolder.id === id && firstHolder.type === type) return firstHolder;
+  return internalResources.find((r) => r.id === id && r.type === type);
+}
+
+/**
  * Resolve a raw `SubResource("id")` property string to the internal resource it
  * names. Undefined for an absent value, a reference of another form, or an unknown id.
  */

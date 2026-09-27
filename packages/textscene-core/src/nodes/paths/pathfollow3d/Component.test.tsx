@@ -12,7 +12,7 @@ import { Path3DCurveProvider } from '../../../r3f/contexts/Path3DCurveContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import {
-  parseCurve3DPoints,
+  decodeCurve3D,
   tessellateCurve3D,
   type Curve3DSampler,
 } from '../../../resources/curves/curve3d';
@@ -20,7 +20,9 @@ import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 // Straight curve along +X, (0,0,0) → (10,0,0), length 10.
 const STRAIGHT: Curve3DSampler = tessellateCurve3D(
-  parseCurve3DPoints('{"points": PackedVector3Array(0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,10,0,0)}')
+  decodeCurve3D({
+    _data: '{"points": PackedVector3Array(0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,10,0,0), "tilts": PackedFloat32Array(0, 0)}',
+  })
 );
 
 function followNode(name = 'MyFollow', props: Record<string, string> = {}): TscnNode {

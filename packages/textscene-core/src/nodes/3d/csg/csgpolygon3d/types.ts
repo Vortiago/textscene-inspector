@@ -1,7 +1,7 @@
 /** CSGPolygon3D type definitions. */
 
 import type { Node3DProperties, Transform3D } from '../../../base/node3d/types';
-import type { Curve3DControlPoint } from '../../../../resources/shapes/curve3d';
+import type { Curve3DControlPoint } from '../../../../resources/curves/curve3d/index.js';
 
 /**
  * What the scene-wide `path_node` pass resolves and writes back onto the node.

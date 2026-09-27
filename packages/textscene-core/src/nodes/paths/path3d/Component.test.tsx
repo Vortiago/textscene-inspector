@@ -69,4 +69,12 @@ describe('<Path3D>', () => {
     const renderer = await renderPath('MyPath', { curve: 'SubResource("Missing")' }, []);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
+
+  // `point_count` resizes the list after `_data` loads (curve.cpp:1448-1464), so a
+  // count of 1 leaves a single point and no span to draw.
+  it('draws nothing when point_count truncates the curve to one point (edge)', async () => {
+    const truncated: TscnInternalResource = { ...CURVE, data: { ...CURVE.data, point_count: '1' } };
+    const renderer = await renderPath('MyPath', { curve: 'SubResource("Curve3D_1")' }, [truncated]);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
+  });
 });

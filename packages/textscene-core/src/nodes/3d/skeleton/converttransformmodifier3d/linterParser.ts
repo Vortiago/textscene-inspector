@@ -15,6 +15,7 @@ import { v } from '../../../../linter/validators/index.js';
 import { settingCount } from '../shared/settingCount.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
+import { declaredLeafResolver } from '../../../../godot/index.js';
 
 /** ConvertTransformModifier3D::TransformMode (convert_transform_modifier_3d.h:39-43). */
 const TRANSFORM_MODE = { 0: 'Position', 1: 'Rotation', 2: 'Scale' };
@@ -75,13 +76,21 @@ const OWN_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   additive: v.boolean('additive'),
 };
 
+/**
+ * Every leaf under the prefix. `_get_property_list` calls the unprefixed
+ * `BoneConstraint3D::get_property_list` first (:126), so it also carries the base's seven leaves
+ * (bone_constraint_3d.cpp:91-115). This wildcard shadows the base's, so they route back to
+ * `findValidator('BoneConstraint3D', …)`. The index split ends at the first `/` after the index,
+ * so the base's `apply_bone` and this `apply/axis` never collide.
+ */
+const SETTING_LEAVES = { ...OWN_LEAVES, ...boneConstraintBaseLeaves() };
+
+/** For the rule: `where` and `what` are slices 2 and 3 (convert_transform_modifier_3d.cpp:42, :44). */
+export const resolveConvertSettingLeaf = declaredLeafResolver(Object.keys(SETTING_LEAVES));
+
 const settingValidator = indexedFamilyValidator({
   prefix: 'settings/',
-  // `_get_property_list` calls the unprefixed `BoneConstraint3D::get_property_list` first (:126), so the
-  // prefix also carries the base's seven leaves (bone_constraint_3d.cpp:91-115). This wildcard shadows
-  // the base's, so they route back to `findValidator('BoneConstraint3D', …)`. The index split ends at
-  // the first `/` after the index, so the base's `apply_bone` and this `apply/axis` never collide.
-  leaves: { ...OWN_LEAVES, ...boneConstraintBaseLeaves() },
+  leaves: SETTING_LEAVES,
   unknownCode: 'INVALID_SETTING_KEY',
   describes: 'setting',
   // No angle brackets: the sheet generator drops this straight into a Markdown

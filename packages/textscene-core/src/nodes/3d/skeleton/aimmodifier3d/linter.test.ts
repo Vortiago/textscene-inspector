@@ -184,4 +184,17 @@ settings/x/primary_rotation_axis = 2
     );
     expect(warnings).toHaveLength(1);
   });
+
+  it('reads a sibling written with a tail, which _set ignores', () => {
+    // `what = path.get_slicec('/', 2)` (aim_modifier_3d.cpp:39) is `use_euler`, so the tail
+    // below it never reaches the comparison and set_use_euler runs.
+    const warnings = warningsFor(
+      scene(`setting_count = 1
+settings/0/forward_axis = 4
+settings/0/use_euler/extra = true
+settings/0/primary_rotation_axis = 2
+`)
+    );
+    expect(warnings).toHaveLength(1);
+  });
 });

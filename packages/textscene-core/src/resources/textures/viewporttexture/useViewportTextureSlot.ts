@@ -5,7 +5,7 @@
  * `resolveTexture2DPath`, whose `string | null` cannot carry it.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
 
 import * as logger from '../../../logger.js';
@@ -14,7 +14,7 @@ import { resolveSubResourceRef } from '../../SubResourceResolver.js';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext.js';
 import { useViewportPassCycle } from '../../../r3f/contexts/ViewportPassRegistryContext.js';
 import {
-  useUniqueNameClaims,
+  useUniqueNamePaths,
   useViewportTexture,
 } from '../../../r3f/contexts/ViewportTextureContext.js';
 import {
@@ -22,7 +22,6 @@ import {
   viewportTextureRegistryKey,
 } from '../../../r3f/viewportTexturePath.js';
 import { unclaimedUniqueNames } from '../../../utils/nodePath.js';
-import { uniqueNameLivePaths } from '../../../utils/uniqueNames.js';
 import { warn } from '../../../logger.js';
 import { VIEWPORT_TEXTURE_TYPE } from './types.js';
 
@@ -106,13 +105,7 @@ export function useViewportTextureSlot(
   // The owner's table: a `%Name` inside an instanced sub-scene is claimed on its
   // root (node.cpp:1930-1938). Only for a ViewportTexture slot, since every
   // texture slot calls this and the owner walk is per node.
-  const claims = useUniqueNameClaims(viewportPath === null ? null : consumerPath);
-  // Live paths, not authored ones: the registry is keyed as the composed render
-  // tree spells a path, a claim's `livePath`.
-  const uniquePaths = useMemo(
-    () => (viewportPath !== null && claims ? uniqueNameLivePaths(claims) : undefined),
-    [claims, viewportPath]
-  );
+  const uniquePaths = useUniqueNamePaths(viewportPath === null ? null : consumerPath);
   // `viewport_path` counts from the local scene root: `_setup_local_to_scene` calls
   // `p_loc_scene->get_node_or_null(path)`, `PROPERTY_USAGE_NODE_PATH_FROM_SCENE_ROOT`.
   // The constructor calls `set_local_to_scene(true)`, so a `.tscn` need not write

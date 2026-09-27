@@ -466,8 +466,8 @@ It is listed in the clip selector like any animation but skipped when the **Anim
 _Avoid_: treating `RESET` as an ordinary playable clip.
 
 **Animation root** (`root_node`):
-The THREE object a clip's **Track** NodePaths resolve against and the **AnimationPlayer**'s mixer is rooted on. Default `..`, the player's parent node.
-`THREE.PropertyBinding` resolves a Track's target by name through the dispatcher's unnamed pickable wrappers. The named, transform-bearing object the binding finds is the one the mixer overrides.
+The scene node a clip's **Track** NodePaths resolve from. Default `..`, the player's parent node.
+Each Track resolves to a scene path with Godot's `get_node` walk. That path resolves to the exact object the dispatcher registered there: the named, transform-bearing group inside its wrapper. The mixer roots on the scene the player hangs in, not on the Animation root (ADR-0011).
 _Avoid_: "target root".
 
 **GLB-embedded clip**:
@@ -508,7 +508,7 @@ _Avoid_: mounting the **AnimationTree driver** this way (it owns no clips, so it
 - The three registries (**NodeRegistry**, **NodeComponentRegistry**, **ControlComponentRegistry**) are keyed by the same `typeName` but kept separate to preserve the **React-free linter boundary**.
 - A unified **vertical slice** exposes its behaviour through three **slice entry points**, one per registry domain.
 - **Label3D** and **Label** / **RichTextLabel** share one shaping engine and one bundled font, but not one painter. The painter that draws a run follows the path Godot's own text server takes for it. Label3D's stroked outline is a real contour that a distance field cannot encode, so it rasterises to a `CanvasTexture`. 2D Control text draws the same font from the vendored Open Sans MSDF atlas as glyph-quad geometry (ADR-0040).
-- An **AnimationPlayer** references one **Animation library** through `libraries/`. The library's **GodotAnimation**s carry **Track**s. The **Animation transport** plays them by building a `THREE.AnimationClip` and driving a `THREE.AnimationMixer` rooted at the **Animation root** (ADR-0011).
+- An **AnimationPlayer** references one **Animation library** through `libraries/`. The library's **GodotAnimation**s carry **Track**s. The **Animation transport** plays them by building a `THREE.AnimationClip` and driving a `THREE.AnimationMixer` rooted on the scene the player hangs in (ADR-0011).
 - An **AnimationTree driver** owns no clips. It evaluates its `tree_root` at the authored `parameters/*` into a **blend program**. It drives the **AnimationPlayer** or **GLB animation driver** that its `anim_player` resolves to, found through the **AnimationDriverRegistry** (ADR-0019).
 - A **sub-viewport** publishes its render target into the **ViewportTextureRegistry**. A **viewport surface** or a `ViewportTexture` consumer resolves it back by node path. The parent's **NodeDispatcher** and **ControlCanvasWalker** both stop at the boundary, so only its surface dispatches the subtree, exactly once (ADR-0033).
 - Both **Host (app)**s mount the same preview shell. They differ in the resource-loading adapter and in how source text arrives: **Save-driven refresh** from disk in VS Code, and the live-typed **Source pane** buffer under **Hold-last-valid** in the web. **Progressive fill-in** is shared.

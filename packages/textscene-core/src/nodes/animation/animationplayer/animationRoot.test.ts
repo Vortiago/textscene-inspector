@@ -1,71 +1,56 @@
-/**
- * animationRoot tests: resolving the mixer root (D1) and the standing
- * feasibility guard for ADR-0011's name-path binding through the
- * dispatcher's unnamed pickable wrappers (D2).
- */
+import { describe, expect, it } from 'vitest';
+import { resolveAnimationRootPath, resolveTrackScenePath } from './animationRoot';
 
-import { describe, it, expect } from 'vitest';
-import {
-  AnimationClip,
-  AnimationMixer,
-  Object3D,
-  VectorKeyframeTrack,
-} from 'three';
-import { resolveAnimationRoot } from './animationRoot';
-
-/**
- * Mirror the dispatcher's nesting: a named node group wraps an UNNAMED
- * pickable wrapper that wraps the child's named component group.
- */
-function namedNode(name: string, child?: Object3D): Object3D {
-  const group = new Object3D();
-  group.name = name;
-  if (child) {
-    const wrapper = new Object3D(); // unnamed pickable wrapper
-    wrapper.add(child);
-    group.add(wrapper);
-  }
-  return group;
-}
-
-describe('resolveAnimationRoot (D1)', () => {
-  it('resolves root_node ".." to the parent node group, skipping the unnamed wrapper', () => {
-    const player = new Object3D();
-    player.name = 'AnimationPlayer';
-    const character = namedNode('Character', player);
-
-    expect(resolveAnimationRoot(player, 'NodePath("..")')).toBe(character);
+describe('resolveAnimationRootPath', () => {
+  it('resolves the default root_node (..) to the player’s parent', () => {
+    expect(resolveAnimationRootPath('Root/Coin/AnimationPlayer', 'NodePath("..")')).toBe('Root/Coin');
   });
 
-  it('resolves root_node "." to the player\'s own object', () => {
-    const player = new Object3D();
-    player.name = 'AnimationPlayer';
-    namedNode('Character', player);
-
-    expect(resolveAnimationRoot(player, 'NodePath(".")')).toBe(player);
+  it('is null for an empty root_node, which get_node_or_null refuses (node.cpp:1894)', () => {
+    expect(resolveAnimationRootPath('Root/Coin/AP', 'NodePath("")')).toBeNull();
   });
 
-  it('returns null when no named ancestor exists for ".."', () => {
-    const orphan = new Object3D();
-    orphan.name = 'AnimationPlayer';
-    expect(resolveAnimationRoot(orphan, 'NodePath("..")')).toBeNull();
+  it('is null for an absolute root_node, which measures from a SceneTree the preview has not', () => {
+    expect(resolveAnimationRootPath('Root/Coin/AP', 'NodePath("/root/Main")')).toBeNull();
+  });
+
+  it('resolves a %Name root_node through the owner’s unique-name table', () => {
+    const uniquePaths = new Map([['%Rig', 'Root/Body/Rig']]);
+    expect(resolveAnimationRootPath('Root/AP', 'NodePath("%Rig")', uniquePaths)).toBe('Root/Body/Rig');
+  });
+
+  it('resolves a self root_node (.) to the player', () => {
+    expect(resolveAnimationRootPath('Root/Coin/AP', 'NodePath(".")')).toBe('Root/Coin/AP');
+  });
+
+  it('resolves a root_node that descends past a sibling', () => {
+    expect(resolveAnimationRootPath('Root/Rig/AP', 'NodePath("../../Body/Mesh")')).toBe('Root/Body/Mesh');
+  });
+
+  it('accepts the bare path text as well as the NodePath literal', () => {
+    expect(resolveAnimationRootPath('Root/Rig/AP', '..')).toBe('Root/Rig');
+  });
+
+  it('is null for a root_node that climbs above the scene root', () => {
+    expect(resolveAnimationRootPath('Root/AP', 'NodePath("../..")')).toBeNull();
   });
 });
 
-describe('PropertyBinding feasibility guard (D2)', () => {
-  it('binds a single-level track name to a named object through an unnamed wrapper', () => {
-    // root("Character") > wrapper(unnamed) > mesh("Mesh")
-    const mesh = new Object3D();
-    mesh.name = 'Mesh';
-    const root = namedNode('Character', mesh);
+describe('resolveTrackScenePath', () => {
+  it('walks a track path from the animation root', () => {
+    expect(resolveTrackScenePath('Root/Rig', '../Lamp')).toBe('Root/Lamp');
+  });
 
-    const clip = new AnimationClip('a', 1, [
-      new VectorKeyframeTrack('Mesh.position', [0, 1], [0, 0, 0, 5, 0, 0]),
-    ]);
-    const mixer = new AnimationMixer(root);
-    mixer.clipAction(clip).play();
-    mixer.update(0.5); // sample mid-clip (avoid the loop-wrap at t=duration)
+  it('resolves a %Name track through the owner’s unique-name table', () => {
+    const uniquePaths = new Map([['%Lamp', 'Root/Props/Lamp']]);
+    expect(resolveTrackScenePath('Root', '%Lamp', uniquePaths)).toBe('Root/Props/Lamp');
+  });
 
-    expect(mesh.position.x).toBeCloseTo(2.5);
+  it('is null for a %Name no node claims', () => {
+    expect(resolveTrackScenePath('Root', '%Lamp', new Map())).toBeNull();
+  });
+
+  it('is null for an absolute track path', () => {
+    expect(resolveTrackScenePath('Root', '/root/Main/Lamp')).toBeNull();
   });
 });
