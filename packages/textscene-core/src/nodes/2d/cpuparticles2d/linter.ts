@@ -1,12 +1,14 @@
 /**
  * Semantic rules for CPUParticles2D: the two settings whose result the frozen pose
- * cannot reproduce. Both are advisory, as each is legal Godot, and the emitter
- * still draws particles, only not where the property puts them.
+ * cannot reproduce, and a `*_min` above its `*_max`, which the setters resolve by
+ * moving one of the two. The preview two are info: each is legal Godot, and the
+ * emitter still draws particles, only not where the property puts them.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { isValidProperties } from '../../../linter/linterUtils.js';
+import { paramMinAboveMaxDiagnostics } from '../../../linter/particleParamRanges.js';
 import { ruleInt, boolSlotValue} from '../../../godot/index.js';
 
 /**
@@ -21,11 +23,7 @@ const GLOBAL_RNG_SHAPES = new Map<number, string>([
   [6, 'RING'],
 ]);
 
-function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
-  const { node } = context;
-  if (!isValidProperties(node.properties)) return [];
-
-  const props = node.properties as Record<string, string>;
+function checkPreviewLimits(node: RuleContext['node'], props: Record<string, string>): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
 
   // Keyed by the stored int, so `4.0` and `4e0`, FLOAT tokens the write truncates
@@ -57,11 +55,18 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   return diagnostics;
 }
 
-const cpuParticles2DPreviewRule: LintRule = {
+function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
+  const { node } = context;
+  const props = node.properties;
+  if (!isValidProperties(props)) return [];
+  return [...checkPreviewLimits(node, props), ...paramMinAboveMaxDiagnostics(node, props, 'cpuparticles2d')];
+}
+
+const cpuParticles2DValidationRule: LintRule = {
   meta: {
-    name: 'valid-cpuparticles2d-preview',
+    name: 'valid-cpuparticles2d-properties',
     description:
-      'Flags CPUParticles2D settings the previewer’s frozen pose cannot reproduce: global-RNG emission shapes',
+      'Flags CPUParticles2D settings the previewer’s frozen pose cannot reproduce (global-RNG emission shapes, fract_delta), and a *_min above its *_max, where one of the two loads as the other',
     category: 'validation',
     applicableNodeTypes: ['CPUParticles2D'],
     emits: [
@@ -83,11 +88,16 @@ const cpuParticles2DPreviewRule: LintRule = {
           because: 'the frozen pose steps at a fixed rate, so a partial first step is unreachable',
         },
       },
+      {
+        ruleName: 'cpuparticles2d-param-min-above-max',
+        severity: 'warning',
+        grounding: { kind: 'engine', at: 'cpu_particles_2d.cpp:352-376' },
+      },
     ],
   },
   check: checkCPUParticles2D,
 };
 
-ruleRegistry.register(cpuParticles2DPreviewRule);
+ruleRegistry.register(cpuParticles2DValidationRule);
 
-export { cpuParticles2DPreviewRule };
+export { cpuParticles2DValidationRule };

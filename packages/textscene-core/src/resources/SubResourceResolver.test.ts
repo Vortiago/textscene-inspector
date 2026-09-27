@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   findExtResource,
   findSubResource,
+  findSubResourceOfType,
   parseResourceReference,
   resolveExtAtlasTexturePath,
   resolveInstancePath,
@@ -341,5 +342,26 @@ describe('findSubResource', () => {
     const appended = { id: 'Sphere_1', type: 'SphereMesh', data: {} };
     table.push(appended);
     expect(findSubResource(table, 'Sphere_1')).toBe(appended);
+  });
+});
+
+describe('findSubResourceOfType', () => {
+  const curve2d = { id: 'Path_1', type: 'Curve2D', data: {} };
+
+  it('finds the resource of that type declared under the id (happy path)', () => {
+    expect(findSubResourceOfType([curve2d], 'Path_1', 'Curve2D')).toBe(curve2d);
+  });
+
+  it('returns undefined for another type, an undeclared id and an empty table (error path)', () => {
+    expect(findSubResourceOfType([curve2d], 'Path_1', 'Curve3D')).toBeUndefined();
+    expect(findSubResourceOfType([curve2d], 'Missing_1', 'Curve2D')).toBeUndefined();
+    expect(findSubResourceOfType([], 'Path_1', 'Curve2D')).toBeUndefined();
+  });
+
+  it('skips a first holder of another type, and takes the first of that type (edge case)', () => {
+    const curve = { id: 'Shared', type: 'Curve', data: {} };
+    const first = { id: 'Shared', type: 'Curve2D', data: { _data: 'first' } };
+    const second = { id: 'Shared', type: 'Curve2D', data: { _data: 'second' } };
+    expect(findSubResourceOfType([curve, first, second], 'Shared', 'Curve2D')).toBe(first);
   });
 });

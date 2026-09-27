@@ -4,7 +4,8 @@ import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
 import { truncatedComponent } from './intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
-import { ruleInt } from './commonValidators.js';
+import { ruleInt, tupleComponent } from './commonValidators.js';
+import { slotComponents, slotComponentsAltered } from '../../godot/int.js';
 import { compositeTypeName, isConvertedSpelling } from '../../godot/variantConversion.js';
 
 /**
@@ -41,6 +42,25 @@ export function matchVector2i(raw: string): { x: number; y: number } | null {
   const x = ruleInt(match[1], null, 'int32', converted);
   const y = ruleInt(match[2], null, 'int32', converted);
   return x === null || y === null ? null : { x, y };
+}
+
+/**
+ * The three components a `Vector3` slot holds, for every phase-2 rule over one, or
+ * `null` when the literal is malformed or one component does not survive. On `null`
+ * the rule skips and the format validator's finding stands.
+ */
+export function matchVector3(raw: string): { x: number; y: number; z: number } | null {
+  const trimmed = raw.trim();
+  const match = VECTOR3_REGEX.exec(trimmed);
+  if (!match) return null;
+  const captures = [match[1], match[2], match[3]];
+  // Withheld, not NaN: the engine stores a number, but not the one written, and
+  // `_to_int`'s float branch is undefined behaviour (variant.h:369-370).
+  if (slotComponentsAltered(trimmed, 'Vector3', captures)) return null;
+  // The `Vector3i(...)` spelling Godot converts narrows its arguments to int32
+  // before the widening.
+  const [x, y, z] = slotComponents(trimmed, 'Vector3', captures, tupleComponent);
+  return { x: x!, y: y!, z: z! };
 }
 
 /** A `Vector2(x, y)` format validator. */

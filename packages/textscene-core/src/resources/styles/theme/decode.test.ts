@@ -27,6 +27,24 @@ describe('decodeThemeAddresses', () => {
     expect(addresses.icons?.CheckBox?.checked).toBe('SubResource("2")');
   });
 
+  it('decodes a theme item written with a tail, which Theme::_set ignores', () => {
+    // `prop_name = sname.get_slicec('/', 2)` (theme.cpp:42) reads that segment alone, so
+    // `CheckBox/icons/checked/extra` sets the `checked` icon.
+    const addresses = decodeThemeAddresses(
+      'res://theme.tres',
+      {
+        'CheckBox/icons/checked/extra': 'SubResource("2")',
+        'Label/colors/font_color/extra': 'Color(1, 0, 0, 1)',
+        'Fancy/base_type/extra': '&"Button"',
+      },
+      [],
+      []
+    );
+    expect(addresses.icons?.CheckBox?.checked).toBe('SubResource("2")');
+    expect(addresses.colors?.Label?.font_color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(addresses.typeVariations?.Fancy).toBe('Button');
+  });
+
   it('decodes <Type>/styles/<name> as a raw ref string, and carries the theme file\'s own resource pools', () => {
     const ext = [{ id: '1', path: 'res://fonts/a.ttf', type: 'FontFile' }];
     const sub = [{ id: '2', type: 'StyleBoxFlat', data: {} }];

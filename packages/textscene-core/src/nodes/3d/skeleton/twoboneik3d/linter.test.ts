@@ -343,4 +343,45 @@ describe('TwoBoneIK3D index grammar', () => {
       { ruleName: 'twoboneik3d-setting-missing-target-node' }
     );
   });
+
+  it('credits a target written with a tail, which _set ignores', () => {
+    // `what = path.get_slicec('/', 2)` (two_bone_ik_3d.cpp:38) is `target_node`.
+    expectNoDiagnostic(
+      scene(
+        node('TwoBoneIK3D', {
+          setting_count: 1,
+          'settings/0/target_node/extra': 'NodePath("../Target")',
+        })
+      ),
+      { ruleName: 'twoboneik3d-setting-missing-target-node' }
+    );
+  });
+
+  it('reports a pole vector written with a tail, since set_pole_direction_vector still runs', () => {
+    // `what` is `pole_direction_vector` (:55), so the setter returns at :446 as on the bare key.
+    expectDiagnostic(
+      scene(
+        node('TwoBoneIK3D', {
+          setting_count: 1,
+          'settings/0/pole_direction': 3,
+          'settings/0/pole_direction_vector/extra': 'Vector3(0, 0, 1)',
+        })
+      ),
+      { ruleName: 'twoboneik3d-pole-direction-vector-ignored' }
+    );
+  });
+
+  it('reads pole_direction written with a tail as the live direction', () => {
+    // `what` is `pole_direction` (:53), so Custom (7) lands and the vector beside it is live.
+    expectNoDiagnostic(
+      scene(
+        node('TwoBoneIK3D', {
+          setting_count: 1,
+          'settings/0/pole_direction/extra': 7,
+          'settings/0/pole_direction_vector': 'Vector3(0, 0, 1)',
+        })
+      ),
+      { ruleName: 'twoboneik3d-pole-direction-vector-ignored' }
+    );
+  });
 });

@@ -54,6 +54,11 @@ describe('indexedFamilyValidator', () => {
     it('rejects a key that does not carry the prefix', () => {
       expect(family('other_0/text', '"hi"', 1)?.code).toBe('INVALID_ITEM');
     });
+
+    it('rejects an empty index, which is_valid_int refuses', () => {
+      // `property_list_helper.cpp:53-55`: an empty string is not a valid int, so no index resolves.
+      expect(family('item_/text', '"hi"', 1)?.code).toBe('INVALID_ITEM');
+    });
   });
 
   describe('a nested leaf', () => {
@@ -162,6 +167,14 @@ describe('indexedFamilyValidator', () => {
 
     it('still rejects a key with no index segment at all', () => {
       expect(family('settings/relative', 'true', 1)?.code).toBe('INVALID_SETTING');
+    });
+
+    it('applies an empty index to element 0, as "".to_int() does', () => {
+      // `get_slicec('/', 1)` of `settings//relative` is empty, and `to_int` returns 0 for an empty
+      // string (ustring.cpp:2304-2305), so `set_relative(0, …)` runs.
+      expect(family('settings//relative', 'true', 1)).toBeNull();
+      expect(leaf.calls).toContain('settings//relative');
+      expect(family('settings//made_up', 'true', 1)?.code).toBe('INVALID_SETTING');
     });
   });
 

@@ -24,7 +24,7 @@ const negativeSettingIndex = (index: string): string =>
  * The depth-3 level, the `<prefix><int>/<leaf>` shape the shared dispatcher parses.
  * SpringBoneSimulator3D has no subclass in 4.6.3, so the leaf set closes: `_set` returns false on
  * an unknown leaf (:151-152). It reads two segments below the index at most, so
- * `settings/0/radius/value/junk` lands on `set_radius` though this reports it.
+ * `settings/0/radius/value/junk` lands on `set_radius`, and the shared dispatcher resolves it there.
  */
 const settingLeafValidator = indexedFamilyValidator({
   indexParse: 'to_int',
@@ -46,11 +46,12 @@ const settingLeafValidator = indexedFamilyValidator({
  * `settings/0/joints/0/radius/extra` reaches `set_joint_radius`.
  */
 const JOINT_KEY = indexedKeyRegex('^settings/(#)/joints/#/([^/]+)(?:/.*)?$', 'to_int');
-/** `settings/<i>/collisions/<j>` and `settings/<i>/exclude_collisions/<j>`. */
-const COLLISION_KEY = indexedKeyRegex(
-  '^settings/(#)/(?:exclude_)?collisions/#(?:/.*)?$',
-  'to_int'
-);
+/**
+ * `settings/<i>/collisions/<j>` and `settings/<i>/exclude_collisions/<j>`, the collision index
+ * unchecked and optional: `get_slicec('/', 3)` of `settings/0/collisions` is empty
+ * (ustring.cpp:958-959), and `"".to_int()` is collision 0 (ustring.cpp:2304-2305).
+ */
+const COLLISION_KEY = indexedKeyRegex('^settings/(#)/(?:exclude_)?collisions(?:/|$)', 'to_int');
 
 /**
  * The negative-setting-index branch every level shares, or null. `_set` reads the index with a bare

@@ -20,10 +20,16 @@ import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
  * {@link stringToInt} reads the number Godot stores.
  */
 const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/', 'to_int');
-/** The one nested leaf a scene can write, with both index texts captured. */
-const JOINT_AMOUNT_KEY_RE = indexedKeyRegex('^settings/(#)/joints/(#)/twist_amount$', 'to_int');
-/** The per-setting joint array size, which every joint index is measured against. */
-const JOINT_COUNT_KEY_RE = indexedKeyRegex('^settings/(#)/joint_count$', 'to_int');
+/**
+ * The one nested leaf a scene can write, with both index texts captured. `prop =
+ * path.get_slicec('/', 4)` (:67) reads that segment alone, so a tail below it reaches the setter.
+ */
+const JOINT_AMOUNT_KEY_RE = indexedKeyRegex('^settings/(#)/joints/(#)/twist_amount(?:/|$)', 'to_int');
+/**
+ * The per-setting joint array size, which every joint index is measured against. `what` is one
+ * segment (:38, :63), so `joint_count/extra` sizes the array too.
+ */
+const JOINT_COUNT_KEY_RE = indexedKeyRegex('^settings/(#)/joint_count(?:/|$)', 'to_int');
 
 /**
  * Which setting each `joint_count` key sizes, keyed by the resolved index, not the text: `_set` uses

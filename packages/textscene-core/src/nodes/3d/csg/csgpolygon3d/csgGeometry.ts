@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import type { CsgGeometryBuilder } from '../../../../r3f/csg/csgRegistration';
 import { transform3DToMatrix } from '../../../../r3f/nodeTreeTransforms';
-import { tessellateCurve3D, type Vec3 } from '../../../../resources/shapes/curve3d';
+import { tessellateCurve3D, type Vec3 } from '../../../../resources/curves/curve3d/index.js';
 import type { Transform3D } from '../../../base/node3d/types';
 import { buildCsgPolygonGeometry, PolygonMode, type CsgPolygonPathPlan } from './polygonGeometry';
 import type { CSGPolygon3DProperties } from './types';

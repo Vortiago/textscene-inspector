@@ -1,37 +1,34 @@
 /**
- * Resolves an AnimationPlayer's `root_node` to the THREE object its mixer roots on (ADR-0011).
- * Track NodePaths bind relative to it through THREE.PropertyBinding's subtree search. The dispatcher
- * wraps every node in an unnamed pickable `<group>`, so each `..` climbs to the nearest named
- * ancestor. Only leading `..` segments are followed.
+ * Resolves an AnimationPlayer's `root_node`, and each Track from it, to scene paths (ADR-0011). Both
+ * walk as `get_node_or_null` does: `_update_caches` reads the root from the player
+ * (animation_mixer.cpp:661) and each Track from that root (:714). A `%Name` segment reads the
+ * owner's unique-name table.
  */
 
-import type { Object3D } from 'three';
+import { resolveRelativePath } from '../../../utils/nodePath';
 import { extractNodePathInner } from './animationResolver';
 
-export function resolveAnimationRoot(
-  playerObject: Object3D,
-  rootNode: string
-): Object3D | null {
-  const path = extractPath(rootNode);
-
-  if (path === '.' || path === '') return playerObject;
-
-  // Each ".." segment climbs to the next named ancestor.
-  let current: Object3D | null = playerObject;
-  for (const segment of path.split('/')) {
-    if (segment !== '..') break; // named down-segments are unsupported
-    current = nearestNamedAncestor(current);
-    if (current === null) return null;
-  }
-  return current;
+/**
+ * The Animation root's scene path, or `null` when `root_node` reaches nothing. An empty path does:
+ * `get_node_or_null` refuses it (node.cpp:1894), and the mixer then builds no caches
+ * (animation_mixer.cpp:662-666). The parser supplies the `NodePath("..")` default for an absent
+ * property.
+ */
+export function resolveAnimationRootPath(
+  playerPath: string,
+  rootNode: string,
+  uniquePaths?: ReadonlyMap<string, string>
+): string | null {
+  const path = (extractNodePathInner(rootNode) ?? rootNode).trim();
+  if (path === '') return null;
+  return resolveRelativePath(playerPath, path, uniquePaths);
 }
 
-function extractPath(rootNode: string): string {
-  return (extractNodePathInner(rootNode) ?? rootNode).trim();
-}
-
-function nearestNamedAncestor(object: Object3D): Object3D | null {
-  let node = object.parent;
-  while (node && node.name === '') node = node.parent;
-  return node ?? null;
+/** A Track's target as a scene path, or `null` when the walk reaches nothing. */
+export function resolveTrackScenePath(
+  rootPath: string,
+  targetPath: string,
+  uniquePaths?: ReadonlyMap<string, string>
+): string | null {
+  return resolveRelativePath(rootPath, targetPath, uniquePaths);
 }
