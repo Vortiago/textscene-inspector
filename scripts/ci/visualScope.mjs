@@ -21,7 +21,7 @@ export const NON_RENDERING_PATHS = [
   /^\.claude\//,
   /^githooks\//,
   /^\.github\/(ISSUE_TEMPLATE\/|pull_request_template\.md$|dependabot\.yml$)/,
-  /^\.github\/workflows\/(marketplace-identity|pages|pr-title|release)\.yml$/,
+  /^\.github\/workflows\/(pages|pr-title|release)\.yml$/,
   // The other apps: the harness builds and drives the web previewer alone.
   /^apps\/textscene-(linter|vscode)\//,
   // The linter's half of core. It feeds the Source pane's gutter, never the canvas.

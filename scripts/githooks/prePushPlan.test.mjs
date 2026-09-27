@@ -8,9 +8,13 @@ describe('planChecks', () => {
     expect(plan(['README.md', '.claude/skills/other/SKILL.md', 'docs/adr/0001-x.md'])).toEqual([]);
   });
 
+  it('runs nothing for a workflow change, which only CI reads', () => {
+    expect(plan(['.github/workflows/release.yml'], ['.github/workflows/old.yml'])).toEqual([]);
+  });
+
   it('runs the full gate when the toolchain changes', () => {
     for (const path of ['package.json', 'apps/textscene-web/package.json', 'pnpm-lock.yaml', 'githooks/pre-push',
-      'packages/textscene-core/tsconfig.tests.json', '.github/workflows/ci.yml', 'eslint.config.js']) {
+      'packages/textscene-core/tsconfig.tests.json', 'eslint.config.js']) {
       expect(plan([path])).toEqual(['pnpm validate']);
     }
   });

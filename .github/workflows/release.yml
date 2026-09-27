@@ -182,6 +182,13 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
+      # The publisher needs this ID as a Contributor member before the publish can pass.
+      - name: Show the Marketplace member ID
+        run: |
+          MEMBER_ID=$(az rest -u https://app.vssps.visualstudio.com/_apis/profile/profiles/me \
+            --resource 499b84ac-1321-427f-aa17-267ca6975798 --query id -o tsv)
+          echo "Marketplace member ID: \`$MEMBER_ID\`" >> "$GITHUB_STEP_SUMMARY"
+
       # Pinned to the version in the lockfile, since this job installs no workspace.
       - name: Publish textscene-inspector
         run: >-
