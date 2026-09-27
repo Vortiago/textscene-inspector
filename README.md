@@ -15,32 +15,17 @@ It reads the `.tscn` text and draws it with react-three-fiber over three.js. The
 
 | Tool | Get it | Guide |
 | --- | --- | --- |
-| VS Code extension (desktop and vscode.dev) | [Marketplace](https://marketplace.visualstudio.com/items?itemName=vortiago.textscene-inspector) | [VS Code guide](./docs/user-guide-vscode.md) |
+| VS Code extension (desktop and vscode.dev) | [Marketplace](https://marketplace.visualstudio.com/items?itemName=vortiago.textscene-inspector) | [Extension README](./apps/textscene-vscode/README.md) |
 | Web previewer | [Open in the browser](https://vortiago.github.io/textscene-inspector/) | [Web guide](./docs/user-guide-web.md) |
 | CLI linter for `.tscn` and `.tres` | `npm install --global @textscene/linter` | [Linter README](./apps/textscene-linter/README.md) |
 
-The dev edition of the web previewer adds the built-in test scenes and the parity gallery: [textscene-inspector.pages.dev](https://textscene-inspector.pages.dev/).
+The dev edition of the web previewer adds the built-in test scenes: [textscene-inspector.pages.dev](https://textscene-inspector.pages.dev/).
 
 ## What it renders
 
-All 240 of Godot 4.6.3's instantiable node types are parsed and linted. Some draw nothing, because that is correct (a Timer) or because rendering is not done yet. The parity gallery shows which.
+All 240 of Godot 4.6.3's instantiable node types are parsed and linted. Most of them also render: meshes, CSG, lights, materials, 2D, Control UI, viewports and animation.
 
-| Category | Types |
-|---|---|
-| Meshes | Box, Sphere, Cylinder, Plane, Capsule, Torus, Prism, Quad, GLB |
-| CSG | All CSG shapes, with real union, intersection and subtraction |
-| Lights and cameras | Spot, Directional, Omni, Area (with shadows), Camera3D, Camera2D, WorldEnvironment |
-| Physics | Bodies, and collision-shape gizmos |
-| 2D | Sprite2D, AnimatedSprite2D, Polygon2D, Line2D, TileMap, TileMapLayer, Path2D, parallax |
-| 3D | Sprite3D, Label3D, Decal, GridMap, Path3D, navigation regions |
-| Viewports | SubViewport, and `ViewportTexture` on 3D surfaces |
-| UI | Control nodes, drawn in the WebGL canvas |
-
-Also:
-
-- **Materials:** StandardMaterial3D PBR, with external textures.
-- **Resources:** instanced sub-scenes, textures, materials and GLB meshes. A file that arrives late still applies.
-- **Animation:** AnimationPlayer, AnimationTree and AnimatedSprite2D, with play, pause and scrub.
+The [parity gallery](https://textscene-inspector.pages.dev/parity/index.html) compares each node type with real Godot. It is the one list of what renders and where the output differs.
 
 ## Build from source
 

@@ -6,8 +6,8 @@ Screen recordings of the real renderer. Each clip is a `.webm` with a `.png` pos
 
 | Clip | Shows |
 | --- | --- |
-| [hallway](web/hallway.webm) | A CSG corridor with portrait frames and Label3D name plates. Triplanar tiling matches Godot on flat surfaces. |
-| [dcc-layout](web/dcc-layout.webm) | The viewport and the right dock, then a 2D UI scene. The clip shows an older 3-column layout. |
+| [hallway](web/hallway.webm) | A CSG corridor with portrait frames and Label3D name plates. |
+| [dcc-layout](web/dcc-layout.webm) | The viewport and the right dock, then a 2D UI scene. |
 | [ui-hint](web/ui-hint.webm) | A Control-only scene offers a switch to 2D (ADR-0006). |
 | [all-primitives](web/all-primitives.webm) | Prism, torus and capsule on a ground plane |
 | [all-meshes](web/all-meshes.webm) | Every primitive mesh type |

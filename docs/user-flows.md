@@ -99,22 +99,6 @@ Expected:
 
 Screenshots: WEB-06-a viewport click, WEB-06-b tree click.
 
-### WEB-07: The camera survives a content-only reload
-
-1. Open `unit-box-mesh.tscn`.
-2. Middle-drag to orbit the camera.
-3. Record the camera position and target.
-4. Change a transform in the fixture file and save.
-5. Record the camera again.
-
-Expected:
-- The mesh moves.
-- The camera matches step 3 within 0.001.
-
-The web previewer fails this flow. It does not watch files on disk, so it shows an edit only when you open the scene again, and that resets the camera. VSCODE-08 passes.
-
-Screenshots: WEB-07-a before, WEB-07-b after.
-
 ### WEB-08: A type that does not draw stays in the tree
 
 1. Open `unit-unsupported-nodes.tscn`.
@@ -202,8 +186,6 @@ Screenshots: VSCODE-03-a two panels, VSCODE-03-b two selections.
 
 Expected: the referenced file opens.
 
-`TscnDocumentLinkProvider` answers this click. `TscnDefinitionProvider` answers `SubResource("id")` and `ExtResource("id")`.
-
 Screenshots: VSCODE-04-a before, VSCODE-04-b after.
 
 ### VSCODE-05: The Outline lists the scene tree
@@ -227,8 +209,6 @@ Screenshot: VSCODE-05-a.
 Expected:
 - After step 2, the tree and the Inspector show the middle cube.
 - After step 3, they show the leftmost cube.
-
-No automated check clicks the canvas yet. The tree click is covered.
 
 Screenshot: VSCODE-06-a.
 
@@ -254,8 +234,6 @@ Screenshot: VSCODE-07-a.
 Expected:
 - The box moves.
 - The camera does not move.
-
-The capture script cannot read the camera inside the webview, so it checks only that the panel is not remounted.
 
 Screenshots: VSCODE-08-a before, VSCODE-08-b after.
 

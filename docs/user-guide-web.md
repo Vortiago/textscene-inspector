@@ -14,6 +14,7 @@ The web previewer renders a Godot `.tscn` scene in the browser.
 - Press <kbd>Ctrl/Cmd+K</kbd> to open the scene palette. The dev edition also lists the built-in scenes.
 
 The app reopens your last scene on the next visit.
+It does not watch files on disk. After you edit a file, open it again. This resets the camera.
 
 In the dev edition, a link can open a scene:
 
@@ -22,34 +23,12 @@ In the dev edition, a link can open a scene:
 | `?fixture=<file>` | That built-in scene |
 | `&camera=<node path>` | The view through that Camera3D, for example `Root/Camera3D` |
 
-## Move the 3D camera
+## Move the camera
 
-The viewport uses Godot's editor controls. Press <kbd>?</kbd> for the full list.
-
-| Input | Action |
-| --- | --- |
-| Left-click | Select |
-| Middle-drag | Orbit |
-| Shift + middle-drag | Pan |
-| Wheel, or Ctrl + middle-drag | Zoom toward the pointer |
-| Right-drag + W A S D Q E | Fly. Shift is faster. |
-| Alt + left-drag | Orbit, without a middle button |
-| Alt + Shift + left-drag | Pan, without a middle button |
-| Numpad 1 / 3 / 7 | Front / right / top view. Ctrl gives the opposite side. |
-| Numpad 5 | Perspective or orthographic |
-| F | Frame the selection, or the whole scene |
-
-Trackpad: two-finger scroll zooms, Shift + scroll pans, pinch zooms.
-Touch: tap selects, one finger orbits, two fingers pan, pinch zooms.
-
+The 3D viewport uses Godot's editor controls. Press <kbd>?</kbd> in the viewport for the full list, including trackpad and touch.
 If zoom stops before you are close enough, select the node and press <kbd>F</kbd>.
 
-**Reset Camera** over the viewport returns to the default view.
-
-## 2D scenes
-
-Use the **3D/2D** switch over the viewport. A scene with only Control or Node2D content shows a hint to switch.
-In 2D, drag to pan and use the wheel or a pinch to zoom. The −, + and **Fit** buttons are at the bottom.
+The **3D/2D** switch over the viewport changes the view. A scene with only Control or Node2D content shows a hint to switch.
 
 ## Inspect nodes
 
@@ -88,10 +67,5 @@ If the file cannot be parsed, a red banner shows the error. The app keeps workin
 ## Other tools
 
 - **Timeline:** select an AnimationPlayer, AnimationTree or AnimatedSprite2D to play, pause and scrub it.
-- **Display:** show or hide collisions, labels, navigation, the grid, and the editor preview sun and sky.
+- **Display:** show or hide the viewport overlays.
 - **Screenshot:** save the current 3D view as a PNG.
-
-## Limitations
-
-- The previewer does not watch files on disk. After you edit a file, open it again. This resets the camera.
-- Rendering approximates Godot. Custom shaders and some material and lighting features look different.
